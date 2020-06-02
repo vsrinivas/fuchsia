@@ -32,8 +32,8 @@
 namespace feedback {
 namespace {
 
-using testing::ElementsAre;
 using testing::IsEmpty;
+using testing::UnorderedElementsAreArray;
 
 constexpr char kHasReportedOnPath[] = "/tmp/has_reported_on_reboot_log.txt";
 
@@ -42,7 +42,8 @@ struct TestParam {
   std::string input_reboot_log;
   std::string output_crash_signature;
   std::optional<zx::duration> output_uptime;
-  cobalt::RebootReason output_event_code;
+  cobalt::LegacyRebootReason output_reboot_reason;
+  cobalt::LastRebootReason output_last_reboot_reason;
 };
 
 class ReporterTest : public UnitTestFixture,
@@ -84,9 +85,10 @@ class ReporterTest : public UnitTestFixture,
 };
 
 TEST_F(ReporterTest, Succeed_WellFormedRebootLog) {
+  const zx::duration uptime = zx::msec(74715002);
   const RebootLog reboot_log(RebootReason::kKernelPanic,
                              "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002",
-                             zx::msec(74715002));
+                             uptime);
 
   SetUpCrashReporterServer(
       std::make_unique<stubs::CrashReporter>(stubs::CrashReporter::Expectations{
@@ -99,7 +101,10 @@ TEST_F(ReporterTest, Succeed_WellFormedRebootLog) {
   ReportOn(reboot_log);
 
   EXPECT_THAT(ReceivedCobaltEvents(),
-              ElementsAre(cobalt::Event(cobalt::RebootReason::kKernelPanic)));
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::LegacyRebootReason::kKernelPanic),
+                  cobalt::Event(cobalt::LastRebootReason::kKernelPanic, uptime.to_usecs()),
+              }));
   EXPECT_TRUE(files::IsFile(kHasReportedOnPath));
 }
 
@@ -118,20 +123,27 @@ TEST_F(ReporterTest, Succeed_NoUptime) {
   ReportOn(reboot_log);
 
   EXPECT_THAT(ReceivedCobaltEvents(),
-              ElementsAre(cobalt::Event(cobalt::RebootReason::kKernelPanic)));
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::LegacyRebootReason::kKernelPanic),
+                  cobalt::Event(cobalt::LastRebootReason::kKernelPanic, /*duration=*/0u),
+              }));
 }
 
 TEST_F(ReporterTest, Succeed_NoCrashReportFiledCleanReboot) {
+  const zx::duration uptime = zx::msec(74715002);
   const RebootLog reboot_log(RebootReason::kGenericGraceful,
-                             "ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n74715002",
-                             zx::msec(74715002));
+                             "ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n74715002", uptime);
 
   SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterNoFileExpected>());
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
   ReportOn(reboot_log);
 
-  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(cobalt::Event(cobalt::RebootReason::kClean)));
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::LegacyRebootReason::kClean),
+                  cobalt::Event(cobalt::LastRebootReason::kGenericGraceful, uptime.to_usecs()),
+              }));
 }
 
 TEST_F(ReporterTest, Succeed_NoCrashReportFiledColdReboot) {
@@ -142,20 +154,28 @@ TEST_F(ReporterTest, Succeed_NoCrashReportFiledColdReboot) {
 
   ReportOn(reboot_log);
 
-  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(cobalt::Event(cobalt::RebootReason::kCold)));
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::LegacyRebootReason::kCold),
+                  cobalt::Event(cobalt::LastRebootReason::kCold, /*duration=*/0u),
+              }));
 }
 
 TEST_F(ReporterTest, Fail_CrashReporterFailsToFile) {
+  const zx::duration uptime = zx::msec(74715002);
   const RebootLog reboot_log(RebootReason::kKernelPanic,
                              "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002",
-                             zx::msec(74715002));
+                             uptime);
   SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterAlwaysReturnsError>());
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
   ReportOn(reboot_log);
 
   EXPECT_THAT(ReceivedCobaltEvents(),
-              ElementsAre(cobalt::Event(cobalt::RebootReason::kKernelPanic)));
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::LegacyRebootReason::kKernelPanic),
+                  cobalt::Event(cobalt::LastRebootReason::kKernelPanic, uptime.to_usecs()),
+              }));
 }
 
 TEST_F(ReporterTest, Succeed_DoesNothingIfAlreadyReportedOn) {
@@ -180,42 +200,48 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, ReporterTest,
                                  "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n65487494",
                                  "fuchsia-kernel-panic",
                                  zx::msec(65487494),
-                                 cobalt::RebootReason::kKernelPanic,
+                                 cobalt::LegacyRebootReason::kKernelPanic,
+                                 cobalt::LastRebootReason::kKernelPanic,
                              },
                              {
                                  "OOM",
                                  "ZIRCON REBOOT REASON (OOM)\n\nUPTIME (ms)\n65487494",
                                  "fuchsia-oom",
                                  zx::msec(65487494),
-                                 cobalt::RebootReason::kOOM,
+                                 cobalt::LegacyRebootReason::kOOM,
+                                 cobalt::LastRebootReason::kSystemOutOfMemory,
                              },
                              {
                                  "Spontaneous",
                                  "ZIRCON REBOOT REASON (UNKNOWN)\n\nUPTIME (ms)\n65487494",
                                  "fuchsia-reboot-unknown",
                                  zx::msec(65487494),
-                                 cobalt::RebootReason::kUnknown,
+                                 cobalt::LegacyRebootReason::kUnknown,
+                                 cobalt::LastRebootReason::kBriefPowerLoss,
                              },
                              {
                                  "SoftwareWatchdogTimeout",
                                  "ZIRCON REBOOT REASON (SW WATCHDOG)\n\nUPTIME (ms)\n65487494",
                                  "fuchsia-sw-watchdog-timeout",
                                  zx::msec(65487494),
-                                 cobalt::RebootReason::kSoftwareWatchdog,
+                                 cobalt::LegacyRebootReason::kSoftwareWatchdog,
+                                 cobalt::LastRebootReason::kSoftwareWatchdogTimeout,
                              },
                              {
                                  "HardwareWatchdogTimeout",
                                  "ZIRCON REBOOT REASON (HW WATCHDOG)\n\nUPTIME (ms)\n65487494",
                                  "fuchsia-hw-watchdog-timeout",
                                  zx::msec(65487494),
-                                 cobalt::RebootReason::kHardwareWatchdog,
+                                 cobalt::LegacyRebootReason::kHardwareWatchdog,
+                                 cobalt::LastRebootReason::kHardwareWatchdogTimeout,
                              },
                              {
                                  "BrownoutPower",
                                  "ZIRCON REBOOT REASON (BROWNOUT)\n\nUPTIME (ms)\n65487494",
                                  "fuchsia-brownout",
                                  zx::msec(65487494),
-                                 cobalt::RebootReason::kBrownout,
+                                 cobalt::LegacyRebootReason::kBrownout,
+                                 cobalt::LastRebootReason::kBrownout,
                              },
                          })),
                          [](const testing::TestParamInfo<TestParam>& info) {
@@ -236,7 +262,13 @@ TEST_P(ReporterTest, Succeed) {
 
   ReportOnRebootLog();
 
-  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(cobalt::Event(param.output_event_code)));
+  const zx::duration expected_uptime =
+      (param.output_uptime.has_value()) ? param.output_uptime.value() : zx::usec(0);
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(param.output_reboot_reason),
+                  cobalt::Event(param.output_last_reboot_reason, expected_uptime.to_usecs()),
+              }));
 }
 
 }  // namespace

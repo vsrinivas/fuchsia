@@ -44,30 +44,56 @@ std::optional<bool> OptionallyGraceful(const RebootReason reboot_reason) {
   return reboot_reason == RebootReason::kGenericGraceful;
 }
 
-cobalt::RebootReason ToCobaltRebootReason(const RebootReason reboot_reason) {
+cobalt::LegacyRebootReason ToCobaltLegacyRebootReason(const RebootReason reboot_reason) {
   switch (reboot_reason) {
     case RebootReason::kNotParseable:
       // TODO(50946): Stop assuming a kernel panic if the file can't be parsed.
-      return cobalt::RebootReason::kKernelPanic;
+      return cobalt::LegacyRebootReason::kKernelPanic;
     case RebootReason::kGenericGraceful:
-      return cobalt::RebootReason::kClean;
+      return cobalt::LegacyRebootReason::kClean;
     case RebootReason::kCold:
-      return cobalt::RebootReason::kCold;
+      return cobalt::LegacyRebootReason::kCold;
     case RebootReason::kSpontaneous:
-      return cobalt::RebootReason::kUnknown;
+      return cobalt::LegacyRebootReason::kUnknown;
     case RebootReason::kKernelPanic:
-      return cobalt::RebootReason::kKernelPanic;
+      return cobalt::LegacyRebootReason::kKernelPanic;
     case RebootReason::kOOM:
-      return cobalt::RebootReason::kOOM;
+      return cobalt::LegacyRebootReason::kOOM;
     case RebootReason::kHardwareWatchdogTimeout:
-      return cobalt::RebootReason::kHardwareWatchdog;
+      return cobalt::LegacyRebootReason::kHardwareWatchdog;
     case RebootReason::kSoftwareWatchdogTimeout:
-      return cobalt::RebootReason::kSoftwareWatchdog;
+      return cobalt::LegacyRebootReason::kSoftwareWatchdog;
     case RebootReason::kBrownout:
-      return cobalt::RebootReason::kBrownout;
+      return cobalt::LegacyRebootReason::kBrownout;
     case RebootReason::kNotSet:
       FX_LOGS(FATAL) << "Not expecting a Cobalt reboot reason for " << ToString(reboot_reason);
-      return cobalt::RebootReason::kKernelPanic;
+      return cobalt::LegacyRebootReason::kKernelPanic;
+  }
+}
+
+cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reboot_reason) {
+  switch (reboot_reason) {
+    case RebootReason::kNotParseable:
+      return cobalt::LastRebootReason::kUnknown;
+    case RebootReason::kGenericGraceful:
+      return cobalt::LastRebootReason::kGenericGraceful;
+    case RebootReason::kCold:
+      return cobalt::LastRebootReason::kCold;
+    case RebootReason::kSpontaneous:
+      return cobalt::LastRebootReason::kBriefPowerLoss;
+    case RebootReason::kKernelPanic:
+      return cobalt::LastRebootReason::kKernelPanic;
+    case RebootReason::kOOM:
+      return cobalt::LastRebootReason::kSystemOutOfMemory;
+    case RebootReason::kHardwareWatchdogTimeout:
+      return cobalt::LastRebootReason::kHardwareWatchdogTimeout;
+    case RebootReason::kSoftwareWatchdogTimeout:
+      return cobalt::LastRebootReason::kSoftwareWatchdogTimeout;
+    case RebootReason::kBrownout:
+      return cobalt::LastRebootReason::kBrownout;
+    case RebootReason::kNotSet:
+      FX_LOGS(FATAL) << "Not expecting a Cobalt last reboot reason for " << ToString(reboot_reason);
+      return cobalt::LastRebootReason::kUnknown;
   }
 }
 

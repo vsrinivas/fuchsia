@@ -35,7 +35,8 @@ enum class RebootReason {
 };
 
 std::optional<bool> OptionallyGraceful(RebootReason reboot_reason);
-cobalt::RebootReason ToCobaltRebootReason(RebootReason reboot_reason);
+cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reboot_reason);
+cobalt::LegacyRebootReason ToCobaltLegacyRebootReason(RebootReason reboot_reason);
 std::string ToCrashSignature(RebootReason reboot_reason);
 std::string ToCrashProgramName(RebootReason reboot_reason);
 std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(RebootReason reboot_reason);

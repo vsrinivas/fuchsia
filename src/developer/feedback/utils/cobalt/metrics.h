@@ -12,7 +12,7 @@ namespace cobalt {
 
 constexpr auto kProjectId = cobalt_registry::kProjectId;
 
-enum class RebootReason {
+enum class LegacyRebootReason {
   kKernelPanic = cobalt_registry::RebootMetricDimensionReason::KernelPanic,
   kOOM = cobalt_registry::RebootMetricDimensionReason::Oom,
   kCold = cobalt_registry::RebootMetricDimensionReason::Cold,
@@ -74,6 +74,25 @@ enum class BugreportGenerationFlow {
   kFailure = cobalt_registry::BugreportGenerationDurationUsecsMetricDimensionFlow::Failure,
 };
 
+enum class LastRebootReason {
+  kUnknown = cobalt_registry::LastRebootUptimeMetricDimensionReason::Unknown,
+  kGenericGraceful = cobalt_registry::LastRebootUptimeMetricDimensionReason::GenericGraceful,
+  kGenericUngraceful = cobalt_registry::LastRebootUptimeMetricDimensionReason::GenericUngraceful,
+  kCold = cobalt_registry::LastRebootUptimeMetricDimensionReason::Cold,
+  kBriefPowerLoss = cobalt_registry::LastRebootUptimeMetricDimensionReason::BriefPowerLoss,
+  kBrownout = cobalt_registry::LastRebootUptimeMetricDimensionReason::Brownout,
+  kKernelPanic = cobalt_registry::LastRebootUptimeMetricDimensionReason::KernelPanic,
+  kSystemOutOfMemory = cobalt_registry::LastRebootUptimeMetricDimensionReason::SystemOutOfMemory,
+  kHardwareWatchdogTimeout =
+      cobalt_registry::LastRebootUptimeMetricDimensionReason::HardwareWatchdogTimeout,
+  kSoftwareWatchdogTimeout =
+      cobalt_registry::LastRebootUptimeMetricDimensionReason::SoftwareWatchdogTimeout,
+};
+
+inline constexpr uint32_t MetricIDForEventCode(const LastRebootReason bug_report) {
+  return cobalt_registry::kLastRebootUptimeMetricId;
+}
+
 inline constexpr uint32_t MetricIDForEventCode(const BugreportGenerationFlow bug_report) {
   return cobalt_registry::kBugreportGenerationDurationUsecsMetricId;
 }
@@ -82,7 +101,7 @@ inline constexpr uint32_t MetricIDForEventCode(const TimedOutData data) {
   return cobalt_registry::kFeedbackDataCollectionTimeoutMetricId;
 }
 
-inline constexpr uint32_t MetricIDForEventCode(const RebootReason reason) {
+inline constexpr uint32_t MetricIDForEventCode(const LegacyRebootReason reason) {
   return cobalt_registry::kRebootMetricId;
 }
 
@@ -135,6 +154,10 @@ enum class EventType {
   kMultidimensionalOccurrence,
 };
 
+inline constexpr EventType EventTypeForEventCode(const LastRebootReason status) {
+  return EventType::kTimeElapsed;
+}
+
 inline constexpr EventType EventTypeForEventCode(const BugreportGenerationFlow status) {
   return EventType::kTimeElapsed;
 }
@@ -143,7 +166,7 @@ inline constexpr EventType EventTypeForEventCode(const TimedOutData data) {
   return EventType::kOccurrence;
 }
 
-inline constexpr EventType EventTypeForEventCode(const RebootReason reason) {
+inline constexpr EventType EventTypeForEventCode(const LegacyRebootReason reason) {
   return EventType::kOccurrence;
 }
 

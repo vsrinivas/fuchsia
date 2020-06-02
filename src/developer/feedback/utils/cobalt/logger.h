@@ -59,6 +59,13 @@ class Logger {
     LogEvent(Event(dimension, GetTimerDurationUSecs(timer_id)));
   }
 
+  // Log a duration in microseconds. If the service is not accessible, keep the parameters to try
+  // again later.
+  template <typename DimensionType>
+  void LogDuration(DimensionType dimension, zx::duration duration) {
+    LogEvent(Event(dimension, duration.to_usecs()));
+  }
+
   // Immediately shutdown |Logger| so it can no longer be used to log events.
   void Shutdown();
 
