@@ -27,15 +27,18 @@ bool suspend_on_start_test_handler(inferior_data_t* data, const zx_port_packet_t
   BEGIN_HELPER;
 
   // This test is supposed to only get an exception and nothing else.
-  ASSERT_EQ(tu_get_koid(data->exception_channel), packet->key);
+  zx_info_handle_basic_t basic_info;
+  zx_status_t status = zx_object_get_info(data->exception_channel, ZX_INFO_HANDLE_BASIC,
+                                          &basic_info, sizeof(basic_info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(basic_info.koid, packet->key);
 
   zx::exception exception;
   zx_exception_info_t info;
   uint32_t num_bytes = sizeof(info);
   uint32_t num_handles = 1;
-  zx_status_t status =
-      zx_channel_read(data->exception_channel, 0, &info, exception.reset_and_get_address(),
-                      num_bytes, num_handles, nullptr, nullptr);
+  status = zx_channel_read(data->exception_channel, 0, &info, exception.reset_and_get_address(),
+                           num_bytes, num_handles, nullptr, nullptr);
   ASSERT_EQ(status, ZX_OK);
 
   switch (info.type) {

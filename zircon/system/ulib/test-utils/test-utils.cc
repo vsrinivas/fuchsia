@@ -349,43 +349,17 @@ void tu_resume_from_exception(zx_handle_t exception_handle) {
 }
 
 void tu_object_wait_async(zx_handle_t handle, zx_handle_t port, zx_signals_t signals) {
-  uint64_t key = tu_get_koid(handle);
-  uint32_t options = ZX_WAIT_ASYNC_ONCE;
-  zx_status_t status = zx_object_wait_async(handle, port, key, signals, options);
-  if (status < 0)
-    tu_fatal(__func__, status);
-}
-
-void tu_handle_get_basic_info(zx_handle_t handle, zx_info_handle_basic_t* info) {
+  zx_info_handle_basic_t info;
   zx_status_t status =
-      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, info, sizeof(*info), NULL, NULL);
+      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    tu_fatal(__func__, status);
+  }
+  uint64_t key = info.koid;
+  uint32_t options = ZX_WAIT_ASYNC_ONCE;
+  status = zx_object_wait_async(handle, port, key, signals, options);
   if (status < 0)
     tu_fatal(__func__, status);
-}
-
-zx_koid_t tu_get_koid(zx_handle_t handle) {
-  zx_info_handle_basic_t info;
-  tu_handle_get_basic_info(handle, &info);
-  return info.koid;
-}
-
-zx_koid_t tu_get_related_koid(zx_handle_t handle) {
-  zx_info_handle_basic_t info;
-  tu_handle_get_basic_info(handle, &info);
-  return info.related_koid;
-}
-
-zx_info_thread_t tu_thread_get_info(zx_handle_t thread) {
-  zx_info_thread_t info;
-  zx_status_t status = zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info), NULL, NULL);
-  if (status < 0)
-    tu_fatal("zx_object_get_info(ZX_INFO_THREAD)", status);
-  return info;
-}
-
-uint32_t tu_thread_get_state(zx_handle_t thread) {
-  zx_info_thread_t info = tu_thread_get_info(thread);
-  return info.state;
 }
 
 const char* tu_exception_to_string(uint32_t exception) {

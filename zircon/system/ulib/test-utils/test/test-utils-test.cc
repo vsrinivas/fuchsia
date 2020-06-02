@@ -52,8 +52,15 @@ class TestProcess {
     ASSERT_EQ(status, ZX_OK);
 
     // Sanity check, make sure this is our exception.
-    ASSERT_EQ(tu_get_koid(process_.get()), info.pid);
-    ASSERT_EQ(tu_get_koid(thread_.get()), info.tid);
+    zx_info_handle_basic_t basic_info;
+    status =
+        process_.get_info(ZX_INFO_HANDLE_BASIC, &basic_info, sizeof(basic_info), nullptr, nullptr);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(basic_info.koid, info.pid);
+    status =
+        thread_.get_info(ZX_INFO_HANDLE_BASIC, &basic_info, sizeof(basic_info), nullptr, nullptr);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(basic_info.koid, info.tid);
 
     *out_info = info;
     *out_exception = std::move(exception);
@@ -82,7 +89,16 @@ TEST(TestUtils, ThreadException) {
   zx::process process;
   zx::thread exception_thread;
   ASSERT_OK(exception.get_thread(&exception_thread));
-  EXPECT_EQ(tu_get_koid(test_process.thread().get()), tu_get_koid(exception_thread.get()));
+  zx_info_handle_basic_t basic_info;
+  zx_status_t status = test_process.thread().get_info(ZX_INFO_HANDLE_BASIC, &basic_info,
+                                                      sizeof(basic_info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t test_koid = basic_info.koid;
+  status = exception_thread.get_info(ZX_INFO_HANDLE_BASIC, &basic_info, sizeof(basic_info), nullptr,
+                                     nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t exception_koid = basic_info.koid;
+  EXPECT_EQ(test_koid, exception_koid);
   EXPECT_NOT_OK(exception.get_process(&process));
 
   // Kill the process before the exception closes or else it will bubble up
@@ -108,11 +124,28 @@ TEST(TestUtils, ProcessDebugException) {
   // Process exceptions can retrieve both the thread and process handles.
   zx::thread exception_thread;
   ASSERT_OK(exception.get_thread(&exception_thread));
-  EXPECT_EQ(tu_get_koid(test_process.thread().get()), tu_get_koid(exception_thread.get()));
+  zx_info_handle_basic_t basic_info;
+  zx_status_t status = test_process.thread().get_info(ZX_INFO_HANDLE_BASIC, &basic_info,
+                                                      sizeof(basic_info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t test_koid = basic_info.koid;
+  status = exception_thread.get_info(ZX_INFO_HANDLE_BASIC, &basic_info, sizeof(basic_info), nullptr,
+                                     nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t exception_koid = basic_info.koid;
+  EXPECT_EQ(test_koid, exception_koid);
 
   zx::process exception_process;
   ASSERT_OK(exception.get_process(&exception_process));
-  EXPECT_EQ(tu_get_koid(test_process.process().get()), tu_get_koid(exception_process.get()));
+  status = test_process.process().get_info(ZX_INFO_HANDLE_BASIC, &basic_info, sizeof(basic_info),
+                                           nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t test_process_koid = basic_info.koid;
+  status = exception_process.get_info(ZX_INFO_HANDLE_BASIC, &basic_info, sizeof(basic_info),
+                                      nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t exception_process_koid = basic_info.koid;
+  EXPECT_EQ(test_process_koid, exception_process_koid);
 
   EXPECT_OK(test_process.process().kill());
 }

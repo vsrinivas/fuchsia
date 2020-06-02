@@ -315,7 +315,9 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
     // Don't check too frequently here as it can blow up tracing output
     // when debugging with kernel tracing turned on.
     zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
-    thread_info = tu_thread_get_info(thread);
+    zx_status_t status = zx_object_get_info(thread, ZX_INFO_THREAD, &thread_info,
+                                            sizeof(thread_info), nullptr, nullptr);
+    ASSERT_EQ(status, ZX_OK);
   } while (thread_info.state != expected_blocked_reason);
   ASSERT_EQ(thread_info.wait_exception_channel_type, ZX_EXCEPTION_CHANNEL_TYPE_NONE);
 
@@ -421,7 +423,13 @@ bool suspended_in_exception_handler(inferior_data_t* data, const zx_port_packet_
 
   auto suspend_data = reinterpret_cast<suspend_in_exception_data_t*>(handler_arg);
 
-  if (packet->key != tu_get_koid(data->exception_channel)) {
+  zx_info_handle_basic_t basic_info;
+  zx_status_t status = zx_object_get_info(data->exception_channel, ZX_INFO_HANDLE_BASIC,
+                                          &basic_info, sizeof(basic_info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t exception_channel_koid = basic_info.koid;
+
+  if (packet->key != exception_channel_koid) {
     // Must be a signal on one of the threads.
     ASSERT_TRUE(packet->key != suspend_data->process_id);
     zx_koid_t pkt_tid = packet->key;
@@ -448,9 +456,8 @@ bool suspended_in_exception_handler(inferior_data_t* data, const zx_port_packet_
     zx_exception_info_t info;
     uint32_t num_bytes = sizeof(info);
     uint32_t num_handles = 1;
-    zx_status_t status =
-        zx_channel_read(data->exception_channel, 0, &info, exception.reset_and_get_address(),
-                        num_bytes, num_handles, nullptr, nullptr);
+    status = zx_channel_read(data->exception_channel, 0, &info, exception.reset_and_get_address(),
+                             num_bytes, num_handles, nullptr, nullptr);
     ASSERT_EQ(status, ZX_OK);
 
     switch (info.type) {
@@ -528,8 +535,20 @@ bool SuspendedInExceptionRegAccessTest() {
   data.suspend_count.store(0);
   data.resume_count.store(0);
   ASSERT_TRUE(get_inferior_thread_handle(channel, &data.thread_handle));
-  data.process_id = tu_get_koid(inferior);
-  data.thread_id = tu_get_koid(data.thread_handle);
+
+  zx_info_handle_basic_t basic_info;
+  zx_status_t status = zx_object_get_info(inferior, ZX_INFO_HANDLE_BASIC, &basic_info,
+                                          sizeof(basic_info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t inferior_koid = basic_info.koid;
+
+  status = zx_object_get_info(data.thread_handle, ZX_INFO_HANDLE_BASIC, &basic_info,
+                              sizeof(basic_info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t handle_koid = basic_info.koid;
+
+  data.process_id = inferior_koid;
+  data.thread_id = handle_koid;
 
   // Defer attaching until after the inferior is running to test
   // attach_inferior's recording of existing threads. If that fails

@@ -83,10 +83,19 @@ bool debugger_test_exception_handler(inferior_data_t* data, const zx_port_packet
   // Note: This may be NULL if the test is not expecting a page fault.
   std::atomic<int>* segv_count = static_cast<std::atomic<int>*>(handler_arg);
 
-  zx_koid_t pid = tu_get_koid(data->inferior);
+  zx_info_handle_basic_t basic_info;
+  zx_status_t status = zx_object_get_info(data->inferior, ZX_INFO_HANDLE_BASIC, &basic_info,
+                                          sizeof(basic_info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t pid = basic_info.koid;
 
   ASSERT_TRUE(ZX_PKT_IS_SIGNAL_ONE(packet->type));
-  if (packet->key != tu_get_koid(data->exception_channel)) {
+
+  status = zx_object_get_info(data->exception_channel, ZX_INFO_HANDLE_BASIC, &basic_info,
+                              sizeof(basic_info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+
+  if (packet->key != basic_info.koid) {
     ASSERT_TRUE(packet->key != pid);
     // Must be a signal on one of the threads.
     // Here we're only expecting TERMINATED.

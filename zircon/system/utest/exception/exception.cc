@@ -641,7 +641,13 @@ bool ExceptionHasThread(const zx::exception& exception, zx_koid_t koid = ZX_KOID
   if (exception.get_thread(&thread) != ZX_OK) {
     return false;
   }
-  return koid == ZX_KOID_INVALID || koid == tu_get_koid(thread.get());
+  if (koid == ZX_KOID_INVALID) {
+    return true;
+  }
+  zx_info_handle_basic_t info;
+  zx_status_t status = thread.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  ZX_ASSERT(status == ZX_OK);
+  return koid == info.koid;
 }
 
 // Returns true if the exception has a process handle. If |koid| is given,
@@ -651,7 +657,14 @@ bool ExceptionHasProcess(const zx::exception& exception, zx_koid_t koid = ZX_KOI
   if (exception.get_process(&process) != ZX_OK) {
     return false;
   }
-  return koid == ZX_KOID_INVALID || koid == tu_get_koid(process.get());
+  if (koid == ZX_KOID_INVALID) {
+    return true;
+  }
+  zx_info_handle_basic_t info;
+  zx_status_t status =
+      process.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  ZX_ASSERT(status == ZX_OK);
+  return koid == info.koid;
 }
 
 uint32_t GetExceptionStateProperty(const zx::exception& exception) {
@@ -740,7 +753,8 @@ void TaskRequiresRight(zx_rights_t right) {
   const auto& task = (loop.*task_func)();
 
   zx_info_handle_basic_t info;
-  tu_handle_get_basic_info(task.get(), &info);
+  zx_status_t status = task.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
 
   auto reduced_task = typename std::remove_reference<decltype(task)>::type();
   ASSERT_OK(task.duplicate(info.rights & ~right, &reduced_task));
@@ -815,10 +829,19 @@ void receive_test(uint32_t create_flags, uint32_t expected_type, bool has_proces
       ReadException(exception_channel, ZX_EXCP_FATAL_PAGE_FAULT, &exception_info);
 
   // Make sure exception info is correct.
-  EXPECT_EQ(exception_info.tid, tu_get_koid(loop.aux_thread().get()));
+  zx_info_handle_basic_t basic_info;
+  zx_status_t status = loop.aux_thread().get_info(ZX_INFO_HANDLE_BASIC, &basic_info,
+                                                  sizeof(basic_info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t aux_thread_koid = basic_info.koid;
+  EXPECT_EQ(exception_info.tid, aux_thread_koid);
   EXPECT_TRUE(ExceptionHasThread(exception, exception_info.tid));
 
-  EXPECT_EQ(exception_info.pid, tu_get_koid(loop.process().get()));
+  status = loop.process().get_info(ZX_INFO_HANDLE_BASIC, &basic_info, sizeof(basic_info), nullptr,
+                                   nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t process_koid = basic_info.koid;
+  EXPECT_EQ(exception_info.pid, process_koid);
   if (has_process) {
     EXPECT_TRUE(ExceptionHasProcess(exception, exception_info.pid));
   } else {
@@ -826,7 +849,10 @@ void receive_test(uint32_t create_flags, uint32_t expected_type, bool has_proces
   }
 
   // Make sure the thread state is correct.
-  zx_info_thread_t thread_info = tu_thread_get_info(loop.aux_thread().get());
+  zx_info_thread_t thread_info;
+  status = loop.aux_thread().get_info(ZX_INFO_THREAD, &thread_info, sizeof(thread_info), nullptr,
+                                      nullptr);
+  ASSERT_EQ(status, ZX_OK);
   EXPECT_EQ(thread_info.state, ZX_THREAD_STATE_BLOCKED_EXCEPTION);
   EXPECT_EQ(thread_info.wait_exception_channel_type, expected_type);
 
@@ -1233,7 +1259,12 @@ TEST(ExceptionTest, ThreadLifecycleChannelExceptions) {
   {
     zx::exception exception =
         ReadException(exception_channel, ZX_EXCP_THREAD_STARTING, &primary_start_info);
-    EXPECT_EQ(primary_start_info.pid, tu_get_koid(loop.process().get()));
+    zx_info_handle_basic_t basic_info;
+    zx_status_t status = loop.process().get_info(ZX_INFO_HANDLE_BASIC, &basic_info,
+                                                 sizeof(basic_info), nullptr, nullptr);
+    ASSERT_EQ(status, ZX_OK);
+    zx_koid_t process_koid = basic_info.koid;
+    EXPECT_EQ(primary_start_info.pid, process_koid);
     EXPECT_TRUE(ExceptionHasThread(exception, primary_start_info.tid));
     EXPECT_TRUE(ExceptionHasProcess(exception, primary_start_info.pid));
   }
@@ -1242,7 +1273,12 @@ TEST(ExceptionTest, ThreadLifecycleChannelExceptions) {
   {
     zx::exception exception =
         ReadException(exception_channel, ZX_EXCP_THREAD_STARTING, &aux_start_info);
-    EXPECT_EQ(aux_start_info.pid, tu_get_koid(loop.process().get()));
+    zx_info_handle_basic_t basic_info;
+    zx_status_t status = loop.process().get_info(ZX_INFO_HANDLE_BASIC, &basic_info,
+                                                 sizeof(basic_info), nullptr, nullptr);
+    ASSERT_EQ(status, ZX_OK);
+    zx_koid_t process_koid = basic_info.koid;
+    EXPECT_EQ(aux_start_info.pid, process_koid);
     EXPECT_TRUE(ExceptionHasThread(exception, aux_start_info.tid));
     EXPECT_TRUE(ExceptionHasProcess(exception, aux_start_info.pid));
   }
@@ -1250,7 +1286,12 @@ TEST(ExceptionTest, ThreadLifecycleChannelExceptions) {
   // We don't have access to the primary thread handle so just check the aux
   // thread TID to make sure it's correct.
   loop.Step3ReadAuxThreadHandle();
-  EXPECT_EQ(aux_start_info.tid, tu_get_koid(loop.aux_thread().get()));
+  zx_info_handle_basic_t basic_info;
+  zx_status_t status = loop.aux_thread().get_info(ZX_INFO_HANDLE_BASIC, &basic_info,
+                                                  sizeof(basic_info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t aux_thread_koid = basic_info.koid;
+  EXPECT_EQ(aux_start_info.tid, aux_thread_koid);
 
   loop.Step4ShutdownAuxThread();
   zx_exception_info_t aux_exit_info;
@@ -1296,7 +1337,11 @@ void VerifyProcessLifecycle() {
     zx_exception_info_t info;
     {
       zx::exception exception = ReadException(exception_channel, ZX_EXCP_PROCESS_STARTING, &info);
-      EXPECT_EQ(info.pid, tu_get_koid(loop.process().get()));
+      zx_info_handle_basic_t basic_info;
+      zx_status_t status = loop.process().get_info(ZX_INFO_HANDLE_BASIC, &basic_info,
+                                                   sizeof(basic_info), nullptr, nullptr);
+      ASSERT_EQ(status, ZX_OK);
+      EXPECT_EQ(info.pid, basic_info.koid);
       EXPECT_TRUE(ExceptionHasThread(exception, info.tid));
       EXPECT_TRUE(ExceptionHasProcess(exception, info.pid));
     }
@@ -1385,7 +1430,10 @@ zx_thread_state_t GetExceptionThreadState(const zx::exception& exception) {
   if (exception.get_thread(&thread) != ZX_OK) {
     return ~0;
   }
-  return tu_thread_get_info(thread.get()).state;
+  zx_info_thread_t info;
+  zx_status_t status = thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
+  ZX_ASSERT(status == ZX_OK);
+  return info.state;
 }
 
 // A lifecycle exception blocks due to:

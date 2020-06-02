@@ -129,7 +129,9 @@ bool setup_inferior(const char* name, springboard_t** out_sb, zx_handle_t* out_i
   ASSERT_NE(inferior, ZX_HANDLE_INVALID, "can't get process handle");
 
   zx_info_handle_basic_t process_info;
-  tu_handle_get_basic_info(inferior, &process_info);
+  zx_status_t status = zx_object_get_info(inferior, ZX_INFO_HANDLE_BASIC, &process_info,
+                                          sizeof(process_info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
   unittest_printf("Inferior pid = %llu\n", (long long)process_info.koid);
 
   *out_sb = sb;
@@ -261,7 +263,11 @@ bool wait_thread_state(zx_handle_t proc, zx_handle_t thread, zx_handle_t port,
                        zx_signals_t wait_until) {
   BEGIN_HELPER;
 
-  zx_koid_t tid = tu_get_koid(thread);
+  zx_info_handle_basic_t basic_info;
+  zx_status_t status = zx_object_get_info(thread, ZX_INFO_HANDLE_BASIC, &basic_info,
+                                          sizeof(basic_info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t tid = basic_info.koid;
 
   // The input state we're looking for must be one of the signals we're waiting for. More signals
   // can be added later if needed.
@@ -271,7 +277,7 @@ bool wait_thread_state(zx_handle_t proc, zx_handle_t thread, zx_handle_t port,
   tu_object_wait_async(thread, port, signals);
   while (true) {
     zx_port_packet_t packet;
-    zx_status_t status = zx_port_wait(port, zx_deadline_after(ZX_SEC(1)), &packet);
+    status = zx_port_wait(port, zx_deadline_after(ZX_SEC(1)), &packet);
     if (status == ZX_ERR_TIMED_OUT) {
       // This shouldn't really happen unless the system is really loaded. Just flag it and try
       // again. The watchdog will catch failures.
@@ -289,7 +295,9 @@ bool wait_thread_state(zx_handle_t proc, zx_handle_t thread, zx_handle_t port,
     // already been closed so we just needed to pop the packet out of the port.
   }
 
-  zx_info_thread_t info = tu_thread_get_info(thread);
+  zx_info_thread_t info;
+  status = zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
   ASSERT_EQ(info.wait_exception_channel_type, ZX_EXCEPTION_CHANNEL_TYPE_NONE);
 
   END_HELPER;
@@ -304,7 +312,10 @@ bool handle_thread_exiting(zx_handle_t inferior, const zx_exception_info_t* info
 
   zx::thread thread;
   ASSERT_EQ(exception.get_thread(&thread), ZX_OK);
-  zx_info_thread_t thread_info = tu_thread_get_info(thread.get());
+  zx_info_thread_t thread_info;
+  zx_status_t status =
+      thread.get_info(ZX_INFO_THREAD, &thread_info, sizeof(thread_info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
   // The thread could still transition to DEAD here (if the
   // process exits), so check for either DYING or DEAD.
   EXPECT_TRUE(thread_info.state == ZX_THREAD_STATE_DYING ||
@@ -334,8 +345,14 @@ bool handle_thread_exiting(zx_handle_t inferior, const zx_exception_info_t* info
 static bool wait_inferior_thread_worker(inferior_data_t* inferior_data,
                                         wait_inferior_exception_handler_t* handler,
                                         void* handler_arg) {
+  BEGIN_HELPER;
+
   zx_handle_t inferior = inferior_data->inferior;
-  zx_koid_t pid = tu_get_koid(inferior);
+  zx_info_handle_basic_t basic_info;
+  zx_status_t status = zx_object_get_info(inferior, ZX_INFO_HANDLE_BASIC, &basic_info,
+                                          sizeof(basic_info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t pid = basic_info.koid;
   zx_handle_t port = inferior_data->port;
 
   while (true) {
@@ -349,22 +366,31 @@ static bool wait_inferior_thread_worker(inferior_data_t* inferior_data,
         return true;
       }
       tu_object_wait_async(inferior, port, ZX_PROCESS_TERMINATED);
-    } else if (packet.key != tu_get_koid(inferior_data->exception_channel)) {
-      zx_signals_t thread_signals = ZX_THREAD_TERMINATED;
-      if (packet.signal.observed & ZX_THREAD_RUNNING)
-        thread_signals |= ZX_THREAD_SUSPENDED;
-      if (packet.signal.observed & ZX_THREAD_SUSPENDED)
-        thread_signals |= ZX_THREAD_RUNNING;
-      zx_handle_t thread = tu_process_get_thread(inferior, packet.key);
-      if (thread == ZX_HANDLE_INVALID) {
-        continue;
+    } else {
+      status = zx_object_get_info(inferior_data->exception_channel, ZX_INFO_HANDLE_BASIC,
+                                  &basic_info, sizeof(basic_info), nullptr, nullptr);
+      ASSERT_EQ(status, ZX_OK);
+      if (packet.key != basic_info.koid) {
+        zx_signals_t thread_signals = ZX_THREAD_TERMINATED;
+        if (packet.signal.observed & ZX_THREAD_RUNNING)
+          thread_signals |= ZX_THREAD_SUSPENDED;
+        if (packet.signal.observed & ZX_THREAD_SUSPENDED)
+          thread_signals |= ZX_THREAD_RUNNING;
+        zx_handle_t thread = tu_process_get_thread(inferior, packet.key);
+        if (thread == ZX_HANDLE_INVALID) {
+          continue;
+        }
+        tu_object_wait_async(thread, port, thread_signals);
       }
-      tu_object_wait_async(thread, port, thread_signals);
     }
 
     bool handler_success = handler(inferior_data, &packet, handler_arg);
 
-    if (packet.key == tu_get_koid(inferior_data->exception_channel)) {
+    zx_info_handle_basic_t basic_info;
+    zx_status_t status = zx_object_get_info(inferior_data->exception_channel, ZX_INFO_HANDLE_BASIC,
+                                            &basic_info, sizeof(basic_info), nullptr, nullptr);
+    ASSERT_EQ(status, ZX_OK);
+    if (packet.key == basic_info.koid) {
       // Don't re-wait on READABLE until after handler() has read the
       // exception out of the channel or it will trigger again
       // immediately.
@@ -378,6 +404,8 @@ static bool wait_inferior_thread_worker(inferior_data_t* inferior_data,
       return false;
     }
   }
+
+  END_HELPER;
 }
 
 struct wait_inferior_args_t {

@@ -119,26 +119,6 @@ void tu_resume_from_exception(zx_handle_t exception_handle);
 // packet is sent to |port| with the key being the koid of |handle|.
 void tu_object_wait_async(zx_handle_t handle, zx_handle_t port, zx_signals_t signals);
 
-// Get basic handle info for |handle|.
-
-void tu_handle_get_basic_info(zx_handle_t handle, zx_info_handle_basic_t* info);
-
-// Return the koid of the object of |handle|.
-
-zx_koid_t tu_get_koid(zx_handle_t handle);
-
-// Return the "related" koid of the object of |handle|.
-
-zx_koid_t tu_get_related_koid(zx_handle_t handle);
-
-// Return zx_info_thread_t of |thread|.
-
-zx_info_thread_t tu_thread_get_info(zx_handle_t thread);
-
-// Return the state of |thread|, one of ZX_THREAD_STATE_*.
-
-uint32_t tu_thread_get_state(zx_handle_t thread);
-
 const char* tu_exception_to_string(uint32_t exception);
 
 __END_CDECLS

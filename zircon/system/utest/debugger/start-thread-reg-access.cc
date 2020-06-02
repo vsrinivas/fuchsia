@@ -92,7 +92,9 @@ bool test_thread_start_register_access(reg_access_test_state_t* test_state, zx_h
   zx::thread thread{tu_process_get_thread(inferior, tid)};
   ASSERT_TRUE(thread.is_valid());
 
-  zx_info_thread_t info = tu_thread_get_info(thread.get());
+  zx_info_thread_t info;
+  zx_status_t status = thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
   EXPECT_EQ(info.state, ZX_THREAD_STATE_BLOCKED_EXCEPTION, "");
 
   zx_thread_state_general_regs_t regs;
@@ -184,8 +186,18 @@ bool thread_start_test_exception_handler_worker(inferior_data_t* data,
 
   auto test_state = reinterpret_cast<reg_access_test_state_t*>(handler_arg);
 
-  if (packet->key != tu_get_koid(data->exception_channel)) {
-    ASSERT_TRUE(packet->key != tu_get_koid(data->inferior));
+  zx_info_handle_basic_t basic_info;
+  zx_status_t status = zx_object_get_info(data->exception_channel, ZX_INFO_HANDLE_BASIC,
+                                          &basic_info, sizeof(basic_info), nullptr, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+  zx_koid_t exception_channel_koid = basic_info.koid;
+
+  if (packet->key != exception_channel_koid) {
+    zx_object_get_info(data->inferior, ZX_INFO_HANDLE_BASIC, &basic_info, sizeof(basic_info),
+                       nullptr, nullptr);
+    ASSERT_EQ(status, ZX_OK);
+    zx_koid_t inferior_koid = basic_info.koid;
+    ASSERT_TRUE(packet->key != inferior_koid);
     // Must be a signal on one of the threads.
     // Here we're only expecting TERMINATED.
     ASSERT_TRUE(packet->signal.observed & ZX_THREAD_TERMINATED);
@@ -194,9 +206,8 @@ bool thread_start_test_exception_handler_worker(inferior_data_t* data,
     zx_exception_info_t info;
     uint32_t num_bytes = sizeof(info);
     uint32_t num_handles = 1;
-    zx_status_t status =
-        zx_channel_read(data->exception_channel, 0, &info, exception.reset_and_get_address(),
-                        num_bytes, num_handles, nullptr, nullptr);
+    status = zx_channel_read(data->exception_channel, 0, &info, exception.reset_and_get_address(),
+                             num_bytes, num_handles, nullptr, nullptr);
     ASSERT_EQ(status, ZX_OK);
 
     switch (info.type) {

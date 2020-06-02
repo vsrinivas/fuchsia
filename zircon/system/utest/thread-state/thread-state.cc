@@ -418,8 +418,11 @@ static bool get_child_thread(zx_handle_t channel, zx_handle_t* thread) {
 
 static void wait_thread_blocked(zx_handle_t thread, uint32_t reason) {
   while (true) {
-    auto state = tu_thread_get_state(thread);
-    if (state == reason)
+    zx_info_thread_t info;
+    zx_status_t status =
+        zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
+    ZX_ASSERT(status == ZX_OK);
+    if (info.state == reason)
       break;
     zx_nanosleep(zx_deadline_after(THREAD_BLOCKED_WAIT_DURATION));
   }
