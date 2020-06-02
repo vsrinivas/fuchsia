@@ -8,7 +8,7 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.location.sensor",
+            "fuchsia.location.sensor.WlanBaseStationWatcher",
             "fuchsia.logger.LogSink",
             "fuchsia.stash.SecureStore",
             "fuchsia.wlan.device.service.DeviceService"
