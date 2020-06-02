@@ -147,11 +147,21 @@ void main() {
     // connection on the expected port.
     for (var i = 0; i < 5; i++) {
       await Future.delayed(Duration(seconds: 1));
-      final result = await helper.sl4fDriver.ssh.run(
-          'iquery --recursive /hub/c/netstack.cmx/*/out/diagnostics/sockets');
-      if (result.exitCode == 0 &&
-          result.stdout.contains('LocalAddress = :$port')) {
-        return;
+      final inspect = Inspect(helper.sl4fDriver);
+      final results =
+          await inspect.snapshot(['netstack.cmx:Socket Info/*:LocalAddress']);
+      if (results != null && results.isNotEmpty) {
+        for (var j = 0; j < results.length; j++) {
+          if (results[j]['payload'] != null &&
+              results[j]['payload']['Socket Info'] != null) {
+            for (final entry in results[j]['payload']['Socket Info'].entries) {
+              if (entry.value['LocalAddress'] != null &&
+                  entry.value['LocalAddress'] == ':$port') {
+                return;
+              }
+            }
+          }
+        }
       }
     }
     throw Sl4fException('Failed to start Iperf server.');
