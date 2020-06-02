@@ -56,7 +56,7 @@ func TestBoot(t *testing.T) {
 		Arch: arch,
 		ZBI:  zbiPath(t),
 		// This test uses additional memory on ASAN builds than normal.
-		Memory: 3072,
+		Memory: 4096,
 	})
 
 	i.Start()
