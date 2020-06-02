@@ -79,6 +79,13 @@ migrated_manifest("usb-hid-manifest") {
   deps = [ ":usb-hid" ]
 }
 
+group("fake") {
+  deps = [
+    ":usb-one-endpoint-hid-fake-usb",
+    ":usb-two-endpoint-hid-fake-usb",
+  ]
+}
+
 migrated_manifest("usb-hid-fake-usb-manifest") {
   deps = [
     ":usb-one-endpoint-hid-fake-usb",

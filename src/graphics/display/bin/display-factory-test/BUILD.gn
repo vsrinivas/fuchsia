@@ -50,6 +50,13 @@ executable("display-color") {
   ]
 }
 
+group("display-factory-test") {
+  deps = [
+    ":display-color",
+    ":display-detect",
+  ]
+}
+
 migrated_manifest("display-factory-test-manifest") {
   deps = [
     ":display-color",
