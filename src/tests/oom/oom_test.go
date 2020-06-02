@@ -42,22 +42,22 @@ func TestOOM(t *testing.T) {
 	defer i.Kill()
 
 	// Ensure the kernel OOM system was properly initialized.
-	i.WaitForLogMessage("OOM: memory availability state Normal")
+	i.WaitForLogMessage("memory-pressure: memory availability state - Normal")
 
 	// Make sure the shell is ready to accept commands over serial.
 	i.WaitForLogMessage("vc: Successfully attached")
 
 	// Trigger a simulated OOM.
 	i.RunCommand("k pmm oom")
-	i.WaitForLogMessage("OOM: memory availability state OutOfMemory")
+	i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory")
 
 	// Make sure the file system is notified and unmounts.
 	i.WaitForLogMessage("Successfully waited for VFS exit completion")
 
 	// Ensure the OOM thread reboots the target.
-	i.WaitForLogMessage("OOM: rebooting")
+	i.WaitForLogMessage("memory-pressure: rebooting due to OOM")
 
 	// Ensure that the reboot has stowed a correct crashlog.
-	i.WaitForLogMessage("stowing crashlog")
+	i.WaitForLogMessage("memory-pressure: stowing crashlog")
 	i.WaitForLogMessage("ZIRCON REBOOT REASON (OOM)")
 }

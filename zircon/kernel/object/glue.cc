@@ -56,7 +56,7 @@ static const char* PressureLevelToString(PressureLevel level) {
 static ktl::array<fbl::RefPtr<EventDispatcher>, PressureLevel::kNumLevels> mem_pressure_events;
 
 // Event used for communicating memory state between the mem_avail_state_updated_cb callback and the
-// oom thread.
+// memory-pressure thread.
 static AutounsignalEvent mem_state_signal;
 
 static ktl::atomic<PressureLevel> mem_event_idx = PressureLevel::kNormal;
@@ -91,7 +91,7 @@ static void mem_avail_state_updated_cb(uint8_t idx) {
   mem_state_signal.Signal();
 }
 
-// Helper called by the oom thread when low memory mode is entered.
+// Helper called by the memory-pressure thread when OOM state is entered.
 static void on_oom() {
   const char* oom_behavior_str = gCmdline.GetString("kernel.oom.behavior");
 
@@ -110,7 +110,7 @@ static void on_oom() {
     case OomBehavior::kJobKill:
 
       if (!gExecutor.GetRootJobDispatcher()->KillJobWithKillOnOOM()) {
-        printf("OOM: no alive job has a kill bit\n");
+        printf("memory-pressure: no alive job has a kill bit\n");
       }
 
       // Since killing is asynchronous, sleep for a short period for the system to quiesce. This
@@ -121,17 +121,17 @@ static void on_oom() {
 
     case OomBehavior::kReboot:
       const int kSleepSeconds = 8;
-      printf("OOM: pausing for %ds after low mem signal\n", kSleepSeconds);
+      printf("memory-pressure: pausing for %ds after OOM mem signal\n", kSleepSeconds);
       zx_status_t status = Thread::Current::SleepRelative(ZX_SEC(kSleepSeconds));
       if (status != ZX_OK) {
-        printf("OOM: sleep failed: %d\n", status);
+        printf("memory-pressure: sleep after OOM failed: %d\n", status);
       }
-      printf("OOM: rebooting\n");
+      printf("memory-pressure: rebooting due to OOM\n");
 
       // Tell the oom_tests host test that we are about to generate an OOM
       // crashlog to keep it happy.  Without these messages present in a
       // specific order in the log, the test will fail.
-      printf("stowing crashlog\nZIRCON REBOOT REASON (OOM)\n");
+      printf("memory-pressure: stowing crashlog\nZIRCON REBOOT REASON (OOM)\n");
 
       // It is important that we don't hang while trying to reboot.  Set a deadline by which we must
       // successfully reboot, else panic.
@@ -143,7 +143,7 @@ static void on_oom() {
   }
 }
 
-static int oom_thread(void* unused) {
+static int memory_pressure_thread(void* unused) {
   while (true) {
     // Get a local copy of the atomic. It's possible by the time we read this that we've already
     // exited the last observed state, but that's fine as we don't necessarily need to signal every
@@ -158,20 +158,21 @@ static int oom_thread(void* unused) {
     // 2) |kHysteresisSeconds| have elapsed since the last time we examined the state.
     if (idx < prev_mem_event_idx ||
         zx_time_sub_time(time_now, prev_mem_state_eval_time) >= kHysteresisSeconds) {
-      printf("OOM: memory availability state %s\n", PressureLevelToString(idx));
+      printf("memory-pressure: memory availability state - %s\n", PressureLevelToString(idx));
 
       // Unsignal the last event that was signaled.
       zx_status_t status =
           mem_pressure_events[prev_mem_event_idx]->user_signal_self(ZX_EVENT_SIGNALED, 0);
       if (status != ZX_OK) {
-        panic("OOM: unsignal memory event %s failed: %d\n",
+        panic("memory-pressure: unsignal memory event %s failed: %d\n",
               PressureLevelToString(prev_mem_event_idx), status);
       }
 
       // Signal event corresponding to the new memory state.
       status = mem_pressure_events[idx]->user_signal_self(0, ZX_EVENT_SIGNALED);
       if (status != ZX_OK) {
-        panic("OOM: signal memory event %s failed: %d\n", PressureLevelToString(idx), status);
+        panic("memory-pressure: signal memory event %s failed: %d\n", PressureLevelToString(idx),
+              status);
       }
       prev_mem_event_idx = idx;
       prev_mem_state_eval_time = time_now;
@@ -202,7 +203,8 @@ static void memory_pressure_init() {
     zx_rights_t rights;
     zx_status_t status = EventDispatcher::Create(0, &event, &rights);
     if (status != ZX_OK) {
-      panic("mem pressure event %s create: %d\n", PressureLevelToString(level), status);
+      panic("memory-pressure: create memory event %s failed: %d\n", PressureLevelToString(level),
+            status);
     }
     mem_pressure_events[i] = event.release();
   }
@@ -225,17 +227,18 @@ static void memory_pressure_init() {
         pmm_init_reclamation(&mem_watermarks[PressureLevel::kOutOfMemory], kNumWatermarks,
                              watermark_debounce, mem_avail_state_updated_cb);
     if (status != ZX_OK) {
-      panic("failed to initialize pmm reclamation: %d\n", status);
+      panic("memory-pressure: failed to initialize pmm reclamation: %d\n", status);
     }
 
     printf(
-        "OOM: memory watermarks - OutOfMemory: %zuMB, Critical: %zuMB, Warning: %zuMB, "
+        "memory-pressure: memory watermarks - OutOfMemory: %zuMB, Critical: %zuMB, Warning: %zuMB, "
         "Debounce: %zuMB\n",
         mem_watermarks[PressureLevel::kOutOfMemory] / MB,
         mem_watermarks[PressureLevel::kCritical] / MB, mem_watermarks[PressureLevel::kWarning] / MB,
         watermark_debounce / MB);
 
-    auto thread = Thread::Create("oom-thread", oom_thread, nullptr, HIGH_PRIORITY);
+    auto thread =
+        Thread::Create("memory-pressure-thread", memory_pressure_thread, nullptr, HIGH_PRIORITY);
     DEBUG_ASSERT(thread);
     thread->Detach();
     thread->Resume();
