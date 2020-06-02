@@ -4,7 +4,7 @@
 
 #include <lib/async-testing/dispatcher_stub.h>
 #include <lib/async/time.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -17,9 +17,7 @@ class FakeClockAsync : public async::DispatcherStub {
   zx::time current_time_;
 };
 
-bool time_telling_test() {
-  BEGIN_TEST;
-
+TEST(TimeTests, time_telling_test) {
   FakeClockAsync dispatcher;
   EXPECT_EQ(0u, dispatcher.Now().get());
   EXPECT_EQ(0u, async_now(&dispatcher));
@@ -31,12 +29,6 @@ bool time_telling_test() {
   dispatcher.SetTime(zx::time(1853u));
   EXPECT_EQ(1853u, dispatcher.Now().get());
   EXPECT_EQ(1853u, async_now(&dispatcher));
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(time_tests)
-RUN_TEST(time_telling_test)
-END_TEST_CASE(time_tests)

@@ -9,13 +9,11 @@
 
 #include <future>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
-bool running_tasks() {
-  BEGIN_TEST;
-
+TEST(ExecutorTests, running_tasks) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::Executor executor(loop.dispatcher());
   uint64_t run_count[3] = {};
@@ -40,13 +38,9 @@ bool running_tasks() {
   EXPECT_EQ(1, run_count[0]);
   EXPECT_EQ(1, run_count[1]);
   EXPECT_EQ(1, run_count[2]);
-
-  END_TEST;
 }
 
-bool suspending_and_resuming_tasks() {
-  BEGIN_TEST;
-
+TEST(ExecutorTests, suspending_and_resuming_tasks) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::Executor executor(loop.dispatcher());
 
@@ -123,13 +117,9 @@ bool suspending_and_resuming_tasks() {
   EXPECT_EQ(100, run_count[4]);
   EXPECT_EQ(99, resume_count[4]);
   EXPECT_EQ(99, resume_count4b);
-
-  END_TEST;
 }
 
-bool abandoning_tasks() {
-  BEGIN_TEST;
-
+TEST(ExecutorTests, abandoning_tasks) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::Executor executor(loop.dispatcher());
   uint64_t run_count[4] = {};
@@ -182,13 +172,9 @@ bool abandoning_tasks() {
   EXPECT_EQ(1, destruction[2]);
   EXPECT_EQ(1, run_count[3]);
   EXPECT_EQ(1, destruction[3]);
-
-  END_TEST;
 }
 
-bool dispatcher_property() {
-  BEGIN_TEST;
-
+TEST(ExecutorTests, dispatcher_property) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::Executor executor(loop.dispatcher());
   EXPECT_EQ(loop.dispatcher(), executor.dispatcher());
@@ -204,13 +190,9 @@ bool dispatcher_property() {
   // We expect that all of the tasks will run to completion.
   loop.RunUntilIdle();
   EXPECT_EQ(loop.dispatcher(), received_dispatcher);
-
-  END_TEST;
 }
 
-bool tasks_scheduled_after_loop_shutdown_are_immediately_destroyed() {
-  BEGIN_TEST;
-
+TEST(ExecutorTests, tasks_scheduled_after_loop_shutdown_are_immediately_destroyed) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::Executor executor(loop.dispatcher());
 
@@ -220,13 +202,9 @@ bool tasks_scheduled_after_loop_shutdown_are_immediately_destroyed() {
   bool was_destroyed = false;
   executor.schedule_task(fit::make_promise([d = fit::defer([&] { was_destroyed = true; })] {}));
   EXPECT_TRUE(was_destroyed);
-
-  END_TEST;
 }
 
-bool when_loop_is_shutdown_all_remaining_tasks_are_immediately_destroyed() {
-  BEGIN_TEST;
-
+TEST(ExecutorTests, when_loop_is_shutdown_all_remaining_tasks_are_immediately_destroyed) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::Executor executor(loop.dispatcher());
 
@@ -251,17 +229,6 @@ bool when_loop_is_shutdown_all_remaining_tasks_are_immediately_destroyed() {
   loop.Shutdown();
   EXPECT_TRUE(was_destroyed[0]);
   EXPECT_TRUE(was_destroyed[1]);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(executor_tests)
-RUN_TEST(running_tasks)
-RUN_TEST(suspending_and_resuming_tasks)
-RUN_TEST(abandoning_tasks)
-RUN_TEST(dispatcher_property)
-RUN_TEST(tasks_scheduled_after_loop_shutdown_are_immediately_destroyed)
-RUN_TEST(when_loop_is_shutdown_all_remaining_tasks_are_immediately_destroyed)
-END_TEST_CASE(executor_tests)

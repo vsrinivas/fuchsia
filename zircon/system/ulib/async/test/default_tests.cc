@@ -7,26 +7,20 @@
 #include <threads.h>
 
 #include <lib/async-testing/dispatcher_stub.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
 int default_test_thread(void*) {
-  BEGIN_TEST;
-
   EXPECT_NULL(async_get_default_dispatcher(), "other thread's default is initially null");
 
   async::DispatcherStub async;
   async_set_default_dispatcher(&async);
   EXPECT_EQ(&async, async_get_default_dispatcher(), "other thread's default can be changed");
-
-  END_TEST;
   return 1;
 }
 
-bool get_set_default_test() {
-  BEGIN_TEST;
-
+TEST(DefaultTests, get_set_default_test) {
   // Default is initially null.
   EXPECT_NULL(async_get_default_dispatcher(), "default is initially null");
 
@@ -44,11 +38,6 @@ bool get_set_default_test() {
   EXPECT_EQ(&async, async_get_default_dispatcher(), "this thread's default is unchanged");
 
   async_set_default_dispatcher(nullptr);
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(default_tests)
-RUN_TEST(get_set_default_test)
-END_TEST_CASE(default_tests)
