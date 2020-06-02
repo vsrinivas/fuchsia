@@ -19,6 +19,7 @@ group("tests") {
     "clock:tests",
     "effects_loader:tests",
     "format:tests",
+    "test:tests",
     "wav:tests",
   ]
 }

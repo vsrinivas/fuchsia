@@ -67,7 +67,7 @@ class AudioPerformance {
   static void ProfileSamplerChansRateScaleMix(uint32_t num_input_chans, uint32_t num_output_chans,
                                               Mixer::Resampler sampler_type, uint32_t source_rate,
                                               GainType gain_type, bool accumulate);
-  template <typename SampleType>
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
   static void ProfileMixer(uint32_t num_input_chans, uint32_t num_output_chans,
                            Mixer::Resampler sampler_type, uint32_t source_rate, GainType gain_type,
                            bool accumulate);
@@ -79,7 +79,7 @@ class AudioPerformance {
 
   static void ProfileOutputChans(uint32_t num_chans);
   static void ProfileOutputRange(uint32_t num_chans, OutputDataRange data_range);
-  template <typename SampleType>
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
   static void ProfileOutputType(uint32_t num_chans, OutputDataRange data_range);
 };
 

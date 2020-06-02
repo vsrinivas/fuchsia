@@ -11,7 +11,7 @@
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
-#include "src/media/audio/audio_core/mixer/test/audio_analysis.h"
+#include "src/media/audio/lib/test/analysis.h"
 
 namespace media::audio::test {
 
@@ -76,6 +76,11 @@ constexpr double kFullScaleFloatAccumAmplitude = 1.0f;
 // TODO(mpuryear): refactor this so that tests just call mixer->Mix directly.
 void DoMix(Mixer* mixer, const void* src_buf, float* accum_buf, bool accumulate, int32_t num_frames,
            float gain_db = 0.0f);
+
+// Returns a pair of (format_amplitude, double_amplitude) where
+// |format_amplitude| is the amplitude that should be applied in the given format |f|, and
+// |double_amplitude| is the expected amplitude after translation from |f| to double.
+std::pair<double, double> SampleFormatToAmplitudes(fuchsia::media::AudioSampleFormat f);
 
 }  // namespace media::audio::test
 

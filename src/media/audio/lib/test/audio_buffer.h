@@ -10,57 +10,17 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
+#include <cmath>
 #include <memory>
 
 #include "src/media/audio/lib/format/format.h"
+#include "src/media/audio/lib/format/traits.h"
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
 #include "src/media/audio/lib/wav/wav_reader.h"
 
 namespace media::audio::test {
 
 // TODO(49807): This file is sufficiently complex that it should be tested
-
-template <fuchsia::media::AudioSampleFormat SampleFormat>
-struct SampleFormatTraits {
-  using SampleT = void;
-};
-
-template <>
-struct SampleFormatTraits<fuchsia::media::AudioSampleFormat::UNSIGNED_8> {
-  using SampleT = uint8_t;
-  static constexpr SampleT kSilentValue = 0x80;
-  static constexpr SampleT kSequentialIncrement = 1;
-  static void PrintSample(SampleT sample) { printf("%02x", 0x0ff & sample); }
-};
-
-template <>
-struct SampleFormatTraits<fuchsia::media::AudioSampleFormat::SIGNED_16> {
-  using SampleT = int16_t;
-  static constexpr SampleT kSilentValue = 0;
-  static constexpr SampleT kSequentialIncrement = 1;
-  static void PrintSample(SampleT sample) { printf("%04x", 0x0ffff & sample); }
-};
-
-template <>
-struct SampleFormatTraits<fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32> {
-  using SampleT = int32_t;
-  static constexpr SampleT kSilentValue = 0;
-  static constexpr SampleT kSequentialIncrement = 0x100;  // LSB is ignored
-  static void PrintSample(SampleT sample) {
-    printf("%02x", 0x0ff & (sample >> 24));  // MSB first
-    printf("%02x", 0x0ff & (sample >> 16));
-    printf("%02x", 0x0ff & (sample >> 8));
-    printf("%02x", 0x0ff & sample);
-  }
-};
-
-template <>
-struct SampleFormatTraits<fuchsia::media::AudioSampleFormat::FLOAT> {
-  using SampleT = float;
-  static constexpr SampleT kSilentValue = 0;
-  static constexpr SampleT kSequentialIncrement = 1e-5;
-  static void PrintSample(SampleT sample) { printf("%.6f", sample); }
-};
 
 // A buffer of audio data. Each entry in the vector is a single sample.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -90,7 +50,7 @@ struct AudioBuffer {
       }
       for (auto chan = 0u; chan < format.channels(); ++chan) {
         auto offset = frame * format.channels() + chan;
-        SampleFormatTraits<SampleFormat>::PrintSample(samples[offset]);
+        printf("%s", SampleFormatTraits<SampleFormat>::ToString(samples[offset]).c_str());
       }
     }
     printf("\n");
@@ -132,18 +92,64 @@ AudioBuffer<SampleFormat> GenerateSilentAudio(Format format, size_t num_frames) 
 }
 
 // Construct a stream of synthetic audio data that is sequentially incremented. For integer types,
-// payload data values increase by 1. For FLOAT, data increases by 10^-5.
+// payload data values increase by 1. For FLOAT, data increases by 2^-16, which is about 10^-5.
+//
+// As this does not create a meaningful sound, this is intended to be used in test scenarios that
+// perform bit-for-bit comparisons on the output of an audio pipeline.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 AudioBuffer<SampleFormat> GenerateSequentialAudio(
-    Format format, size_t num_frames,
-    typename AudioBuffer<SampleFormat>::SampleT first_val =
-        SampleFormatTraits<SampleFormat>::kSequentialIncrement) {
+    Format format, size_t num_frames, typename AudioBuffer<SampleFormat>::SampleT first_val = 0) {
+  typename AudioBuffer<SampleFormat>::SampleT increment = 1;
+  if (SampleFormat == fuchsia::media::AudioSampleFormat::FLOAT) {
+    increment = pow(2.0, -16);
+  }
   AudioBuffer<SampleFormat> out(format, num_frames);
   for (size_t sample = 0; sample < out.samples.size(); ++sample) {
     out.samples[sample] = first_val;
-    first_val += SampleFormatTraits<SampleFormat>::kSequentialIncrement;
+    first_val += increment;
     if (SampleFormat == fuchsia::media::AudioSampleFormat::FLOAT && first_val > 1) {
       first_val = -1;
+    }
+  }
+  return out;
+}
+
+// Construct a stream of sinusoidal values of the given number of frames, determined by equation
+// "buffer[idx] = magn * cosine(idx*freq/num_frames*2*M_PI + phase)". If the format has >1 channels,
+// each channel is assigned a duplicate value.
+//
+// Restated: |freq| is the number of **complete sinusoidal periods** that should perfectly fit into
+// the buffer; |magn| is a multiplier applied to the output (default value is 1.0); |phase| is an
+// offset (default value 0.0) which shifts the signal along the x-axis (value expressed in radians,
+// so runs from -M_PI to +M_PI).
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+AudioBuffer<SampleFormat> GenerateCosineAudio(Format format, size_t num_frames, double freq,
+                                              double magn = 1.0, double phase = 0.0) {
+  // If frequency is 0 (constant val), phase offset causes reduced amplitude
+  FX_CHECK(freq > 0.0 || (freq == 0.0 && phase == 0.0));
+
+  // Freqs above num_frames/2 (Nyquist limit) will alias into lower frequencies.
+  FX_CHECK(freq * 2.0 <= num_frames) << "Buffer too short--requested frequency will be aliased";
+
+  // freq is defined as: cosine recurs exactly 'freq' times within buf_size.
+  const double mult = 2.0 * M_PI / num_frames * freq;
+
+  AudioBuffer<SampleFormat> out(format, num_frames);
+  for (size_t frame = 0; frame < num_frames; ++frame) {
+    auto val = magn * std::cos(mult * frame + phase);
+    switch (SampleFormat) {
+      case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
+        val = round(val) + 0x80;
+        break;
+      case fuchsia::media::AudioSampleFormat::SIGNED_16:
+      case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
+        val = round(val);
+        break;
+      case fuchsia::media::AudioSampleFormat::FLOAT:
+        break;
+    }
+    for (size_t chan = 0; chan < format.channels(); chan++) {
+      out.samples[out.SampleIndex(frame, chan)] = val;
     }
   }
   return out;
@@ -226,9 +232,9 @@ void CompareAudioBuffers(AudioBufferSlice<SampleFormat> got_slice,
       if (want != got) {
         size_t raw_frame = got_slice.start_frame + frame;
         ADD_FAILURE() << options.test_label << ": unexpected value at frame " << raw_frame
-                      << ", channel " << chan << ":\n   got[" << raw_frame << "] = 0x" << std::hex
-                      << got << std::dec << "\n  want[" << raw_frame << "] = 0x" << std::hex
-                      << want;
+                      << ", channel " << chan << ":\n   got[" << raw_frame
+                      << "] = " << SampleFormatTraits<SampleFormat>::ToString(got) << "\n  want["
+                      << raw_frame << "] = " << SampleFormatTraits<SampleFormat>::ToString(want);
 
         // Relative to got_slice.buf.
         size_t packet = raw_frame / options.num_frames_per_packet;
@@ -245,19 +251,23 @@ void CompareAudioBuffers(AudioBufferSlice<SampleFormat> got_slice,
             printf(" | ");
           }
           for (auto chan = 0u; chan < got_slice.format().channels(); ++chan) {
-            SampleFormatTraits<SampleFormat>::PrintSample(got_slice.buf->SampleAt(frame, chan));
+            printf("%s",
+                   SampleFormatTraits<SampleFormat>::ToString(got_slice.buf->SampleAt(frame, chan))
+                       .c_str());
           }
           printf(" vs ");
           for (auto chan = 0u; chan < got_slice.format().channels(); ++chan) {
             // Translate to the equivalent offset in want_slice.buf.
             size_t want_frame = frame + (static_cast<ssize_t>(want_slice.start_frame) -
                                          static_cast<ssize_t>(got_slice.start_frame));
+            std::string str;
             if (want_slice.buf && want_frame < want_slice.buf->NumFrames()) {
-              SampleFormatTraits<SampleFormat>::PrintSample(
+              str = SampleFormatTraits<SampleFormat>::ToString(
                   want_slice.buf->SampleAt(want_frame, chan));
             } else {
-              SampleFormatTraits<SampleFormat>::PrintSample(kSilentValue);
+              str = SampleFormatTraits<SampleFormat>::ToString(kSilentValue);
             }
+            printf("%s", str.c_str());
           }
         }
         printf("\n");

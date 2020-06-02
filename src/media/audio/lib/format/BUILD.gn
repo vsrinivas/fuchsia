@@ -12,6 +12,7 @@ source_set("format") {
     "format.cc",
     "format.h",
     "frames.h",
+    "traits.h",
   ]
 
   public_deps = [
@@ -23,7 +24,10 @@ source_set("format") {
     "//zircon/system/ulib/trace",
   ]
 
-  deps = [ "//zircon/system/ulib/audio-proto-utils" ]
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/system/ulib/audio-proto-utils",
+  ]
 }
 
 executable("unittest-bin") {

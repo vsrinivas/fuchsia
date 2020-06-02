@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test/test_package.gni")
+
 # This source set contains a broad variety of test-related classes.
 source_set("test") {
   testonly = true
@@ -43,6 +45,8 @@ source_set("hermetic_audio_test") {
   testonly = true
 
   sources = [
+    "analysis.cc",
+    "analysis.h",
     "audio_buffer.h",
     "capturer_shim.h",
     "hermetic_audio_environment.cc",
@@ -73,6 +77,7 @@ source_set("hermetic_audio_test") {
   deps = [
     "//sdk/fidl/fuchsia.media.tuning",
     "//sdk/fidl/fuchsia.scheduler",
+    "//zircon/public/lib/fbl",
   ]
 }
 
@@ -97,4 +102,39 @@ source_set("null_renderer_capturer") {
   ]
 
   deps = [ "//sdk/fidl/fuchsia.media" ]
+}
+
+executable("unittest-bin") {
+  visibility = [ ":*" ]
+  testonly = true
+  output_name = "audio-libtest-unittests"
+
+  sources = [
+    "analysis_unittest.cc",
+    "audio_buffer_unittest.cc",
+  ]
+
+  deps = [
+    ":test",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+
+  libs = [ "zircon" ]
+}
+
+test_package("audio-libtest-unittests") {
+  deps = [ ":unittest-bin" ]
+
+  tests = [
+    {
+      name = "audio-libtest-unittests"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":audio-libtest-unittests" ]
 }

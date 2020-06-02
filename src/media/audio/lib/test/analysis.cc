@@ -1,7 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/media/audio/audio_core/mixer/test/audio_analysis.h"
+#include "src/media/audio/lib/test/analysis.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -10,97 +10,11 @@
 
 #include <fbl/algorithm.h>
 
+#include "src/media/audio/lib/format/traits.h"
+
 namespace media::audio::test {
 
-//
-// This lib contains standalone functions, enabling tests to analyze audio- or gain-related outputs.
-//
-// The GenerateCosine function populates audio buffers with sinusoidal values of the given
-// frequency, magnitude and phase. The FFT function performs Fast Fourier Transforms on the provided
-// real and imaginary arrays. The MeasureAudioFreq function analyzes the given audio buffer at the
-// specified frequency, returning the magnitude of signal that resides at that frequency, as well as
-// the combined magnitude of all other frequencies (useful for computing signal-to-noise and other
-// metrics).
-//
-
-// Display array of values
-template <typename T>
-void DisplayVals(const T* buf, uint32_t buf_size) {
-  printf("\n    ********************************************************");
-  printf("\n **************************************************************");
-  printf("\n ***       Displaying raw array data for length %5d       ***", buf_size);
-  printf("\n **************************************************************");
-  for (uint32_t idx = 0; idx < buf_size; ++idx) {
-    if (idx % 8 == 0) {
-      printf("\n [%d]  ", idx);
-    }
-    if constexpr (std::is_same_v<T, int32_t>) {
-      printf("0x%08x    ", buf[idx]);
-    } else if constexpr (std::is_same_v<T, float>) {
-      printf("%.8f    ", buf[idx]);
-    } else if constexpr (std::is_same_v<T, double>) {
-      printf("%.15lf    ", buf[idx]);
-    }
-  }
-  printf("\n **************************************************************");
-  printf("\n    ********************************************************");
-  printf("\n");
-}
-
-// Given a val with fractional content, prep it to be put in an int container.
-//
-// Used specifically when generating high-precision audio content for source buffers, these
-// functions round double-precision floating point values into the appropriate container sizes
-// (assumed to be integer, although float destination types are specialized).
-// In the general case, values are rounded -- and unsigned 8-bit integers further biased by 0x80 --
-// so that the output data is exactly as it would be when arriving from an audio source (such as
-// .wav file with int16 values, or audio input device operating in uint8 mode). Float and double
-// specializations need not do anything, as double-to-float cast poses no real risk of distortion
-// from truncation.
-// Used only within this file by GenerateCosine, these functions do not check for overflow/clamp,
-// leaving that responsibility on users of GenerateCosine.
-template <typename T>
-inline T Finalize(double value) {
-  return round(value);
-}
-template <>
-inline uint8_t Finalize(double value) {
-  return round(value) + 0x80;
-}
-template <>
-inline float Finalize(double value) {
-  return static_cast<float>(value);
-}
-template <>
-inline double Finalize(double value) {
-  return value;
-}
-
-// Populate this buffer with cosine values. Frequency is set so that wave repeats itself 'freq'
-// times within buffer length; 'magn' specifies peak value. Accumulates these values with
-// preexisting array vals, if bool is set.
-template <typename T>
-void GenerateCosine(T* buffer, uint32_t buf_size, double freq, bool accumulate, double magn,
-                    double phase) {
-  // If frequency is 0 (constant val), phase offset causes reduced amplitude
-  FX_DCHECK(freq > 0.0 || (freq == 0.0 && phase == 0.0));
-
-  // Freqs above buf_size/2 (Nyquist limit) will alias into lower frequencies.
-  FX_DCHECK(freq * 2.0 <= buf_size) << "Buffer too short--requested frequency will be aliased";
-
-  // freq is defined as: cosine recurs exactly 'freq' times within buf_size.
-  const double mult = 2.0 * M_PI / buf_size * freq;
-
-  if (accumulate) {
-    for (uint32_t idx = 0; idx < buf_size; ++idx) {
-      buffer[idx] += Finalize<T>(magn * std::cos(mult * idx + phase));
-    }
-  } else {
-    for (uint32_t idx = 0; idx < buf_size; ++idx) {
-      buffer[idx] = Finalize<T>(magn * std::cos(mult * idx + phase));
-    }
-  }
-}
+namespace internal {
 
 // Perform a Fast Fourier Transform on the provided data arrays.
 //
@@ -311,33 +225,37 @@ void InverseFFT(double* reals, double* imags, uint32_t buf_size) {
   }
 }
 
+}  // namespace internal
+
 // For specified audio buffer & length, analyze the contents and return the magnitude (and phase) of
 // signal at given frequency (i.e. frequency at which 'freq' periods fit perfectly within buffer
 // length). Also return the magnitude of all other content. Useful for frequency response and
-// signal-to-noise. Internally uses an FFT, so buf_size must be a power-of-two.
-template <typename T>
-void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq, double* magn_signal,
+// signal-to-noise. Internally uses an FFT, so slice.NumFrames() must be a power-of-two.
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+void MeasureAudioFreq(AudioBufferSlice<SampleFormat> slice, size_t freq, double* magn_signal,
                       double* magn_other, double* phase_signal) {
-  FX_DCHECK(fbl::is_pow2(buf_size));
+  FX_DCHECK(fbl::is_pow2(slice.NumFrames()));
+  FX_CHECK(slice.format().channels() == 1);
 
-  uint32_t buf_sz_2 = buf_size >> 1;
-  bool freq_out_of_range = (freq > buf_sz_2);
+  const size_t buf_size = slice.NumFrames();
+  const size_t buf_sz_2 = buf_size >> 1;
+  const bool freq_out_of_range = (freq > buf_sz_2);
 
   // Copy input to double buffer, before doing a high-res FFT (freq-analysis). Note that we set
   // imags[] to zero: MeasureAudioFreq retrieves a REAL (not Complex) FFT for the data, the return
   // real and imaginary frequency-domain data only spans 0...N/2 (inclusive).
   std::vector<double> reals(buf_size);
   std::vector<double> imags(buf_size);
-  for (uint32_t idx = 0; idx < buf_size; ++idx) {
-    reals[idx] = audio[idx];
-    imags[idx] = 0.0;
+  for (size_t frame = 0; frame < buf_size; ++frame) {
+    reals[frame] = slice.SampleAt(frame, 0);
+    imags[frame] = 0.0;
 
     // In case of uint8 input data, bias from a zero of 0x80 to 0.0
-    if (std::is_same_v<T, uint8_t>) {
-      reals[idx] -= 128.0;
+    if (SampleFormat == fuchsia::media::AudioSampleFormat::UNSIGNED_8) {
+      reals[frame] -= 128.0;
     }
   }
-  FFT(reals.data(), imags.data(), buf_size);
+  internal::FFT(reals.data(), imags.data(), buf_size);
 
   // Convert real FFT results from frequency domain into sinusoid amplitudes
   //
@@ -379,32 +297,18 @@ void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq, double* magn_s
 
   // Calculate phase of primary signal
   if (phase_signal) {
-    *phase_signal = GetPhase(reals[freq], imags[freq]);
+    *phase_signal = internal::GetPhase(reals[freq], imags[freq]);
   }
 }
 
-template void DisplayVals(const int32_t* buf, uint32_t buf_size);
-template void DisplayVals(const float* buf, uint32_t buf_size);
-template void DisplayVals(const double* buf, uint32_t buf_size);
+// Explicitly instantiate all possible implementations.
+#define INSTANTIATE(T)                                                                           \
+  template void MeasureAudioFreq<T>(AudioBufferSlice<T> slice, size_t freq, double* magn_signal, \
+                                    double* magn_other, double* phase_signal);
 
-template void GenerateCosine<uint8_t>(uint8_t*, uint32_t, double, bool, double, double);
-template void GenerateCosine<int16_t>(int16_t*, uint32_t, double, bool, double, double);
-template void GenerateCosine<int32_t>(int32_t*, uint32_t, double, bool, double, double);
-template void GenerateCosine<float>(float*, uint32_t, double, bool, double, double);
-template void GenerateCosine<double>(double*, uint32_t, double, bool, double, double);
-
-template void MeasureAudioFreq<uint8_t>(uint8_t* audio, uint32_t buf_size, uint32_t freq,
-                                        double* magn_signal, double* magn_other = nullptr,
-                                        double* phase_signal = nullptr);
-template void MeasureAudioFreq<int16_t>(int16_t* audio, uint32_t buf_size, uint32_t freq,
-                                        double* magn_signal, double* magn_other = nullptr,
-                                        double* phase_signal = nullptr);
-template void MeasureAudioFreq<int32_t>(int32_t* audio, uint32_t buf_size, uint32_t freq,
-                                        double* magn_signal, double* magn_other = nullptr,
-                                        double* phase_signal = nullptr);
-
-template void MeasureAudioFreq<float>(float* audio, uint32_t buf_size, uint32_t freq,
-                                      double* magn_signal, double* magn_other = nullptr,
-                                      double* phase_signal = nullptr);
+INSTANTIATE(fuchsia::media::AudioSampleFormat::UNSIGNED_8)
+INSTANTIATE(fuchsia::media::AudioSampleFormat::SIGNED_16)
+INSTANTIATE(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32)
+INSTANTIATE(fuchsia::media::AudioSampleFormat::FLOAT)
 
 }  // namespace media::audio::test

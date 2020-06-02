@@ -1,88 +1,38 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include "src/media/audio/lib/test/analysis.h"
+
 #include <fbl/algorithm.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/media/audio/audio_core/mixer/test/audio_analysis.h"
-
-using testing::Each;
-using testing::ElementsAreArray;
-using testing::Eq;
-using testing::FloatEq;
-using testing::Pointwise;
+using ASF = fuchsia::media::AudioSampleFormat;
 
 namespace media::audio::test {
 
+namespace {
+
 constexpr double RT_2 = 1.4142135623730950488016887242;
 
-// GenerateCosine writes a cosine wave into given buffer & length, at given frequency, magnitude
-// (default 1.0), and phase offset (default false). The 'accumulate' flag specifies whether to add
-// into previous contents. OverwriteCosine/AccumulateCosine variants eliminate this flag.
-//
-// The uint8_t variant also provides the 0x80 offset to generated values.
-TEST(AnalysisHelpers, GenerateCosine_8) {
-  uint8_t source[] = {0, 0xFF};
-  // false: overwrite previous values in source[]
-  GenerateCosine(source, fbl::count_of(source), 0.0, false, 0.0, 0.0);
+// Local version of GenerateCosineAudio that uses doubles, the same type used by our FFT methods.
+void OverwriteCosine(double* buffer, uint32_t buf_size, double freq, double magn = 1.0,
+                     double phase = 0.0) {
+  // If frequency is 0 (constant val), phase offset causes reduced amplitude
+  FX_DCHECK(freq > 0.0 || (freq == 0.0 && phase == 0.0));
 
-  // Frequency 0.0 produces constant value. Val 0 is shifted to 0x80.
-  EXPECT_THAT(source, Each(Eq(0x80)));
+  // Freqs above buf_size/2 (Nyquist limit) will alias into lower frequencies.
+  FX_DCHECK(freq * 2.0 <= buf_size) << "Buffer too short--requested frequency will be aliased";
+
+  // freq is defined as: cosine recurs exactly 'freq' times within buf_size.
+  const double mult = 2.0 * M_PI / buf_size * freq;
+
+  for (uint32_t idx = 0; idx < buf_size; ++idx) {
+    buffer[idx] = magn * std::cos(mult * idx + phase);
+  }
 }
 
-TEST(AnalysisHelpers, GenerateCosine_16) {
-  int16_t source[] = {12345, -6543};
-  GenerateCosine(source, fbl::count_of(source), 0.0, false, -32766.4);
-
-  // Frequency of 0.0 produces constant value, with -.4 rounded toward zero.
-  EXPECT_THAT(source, Each(Eq(-32766)));
-
-  // Test default bool value (false): also overwrite
-  OverwriteCosine(source, 1, 0.0, -41.5, 0.0);
-
-  // Should only overwrite one value, and -.5 rounds away from zero.
-  EXPECT_EQ(source[0], -42);
-  EXPECT_EQ(source[1], -32766);
-}
-
-TEST(AnalysisHelpers, GenerateCosine_32) {
-  int32_t source[] = {-4000, 0, 4000, 8000};
-
-  // true: add generated signal into existing source[] values
-  GenerateCosine(source, fbl::count_of(source), 1.0, true, 12345.6, M_PI);
-
-  // PI phase leads to effective magnitude of -12345.6. At frequency 1.0, the change to the buffer
-  // is [-12345.6, 0, +12345.6, 0], with +.6 values being rounded away from zero.
-  int32_t expect[] = {-16346, 0, 16346, 8000};
-  EXPECT_THAT(source, ElementsAreArray(expect));
-}
-
-// Test float-based version of AccumCosine, including default amplitude (1.0)
-TEST(AnalysisHelpers, GenerateCosine_Float) {
-  float source[] = {-1.0f, -2.0f, 3.0f, 4.0f};  // to be overwritten
-
-  OverwriteCosine(source, fbl::count_of(source), 0.0);
-  float expect[] = {1.0f, 1.0f, 1.0f, 1.0f};
-  EXPECT_THAT(source, Pointwise(FloatEq(), expect));
-
-  // PI/2 shifts the freq:1 wave left by 1 here
-  AccumulateCosine(source, fbl::count_of(source), 1.0, 0.5, M_PI / 2.0);
-  float expect2[] = {1.0f, 0.5f, 1.0f, 1.5f};
-  EXPECT_THAT(source, Pointwise(FloatEq(), expect2));
-}
-
-// Test double-based version of AccumCosine (no int-based rounding)
-TEST(AnalysisHelpers, GenerateCosine_Double) {
-  double source[] = {-4000.0, -83000.0, 4000.0, 78000.0};
-  AccumulateCosine(source, fbl::count_of(source), 1.0, 12345.5,
-                   M_PI);  // add to existing
-
-  // PI phase leads to effective magnitude of -12345.5. At frequency 1.0, the change to the buffer
-  // is [-12345.5, 0, +12345.5, 0], with no rounding because input is double.
-  double expect[] = {-16345.5, -83000.0, 16345.5, 78000.0};
-  EXPECT_THAT(source, Pointwise(FloatEq(), expect));
-}
+}  // namespace
 
 TEST(AnalysisHelpers, GetPhase) {
   double reals[] = {0.5, 23, 0, -42, -0.1, -123, 0, 68, 0};
@@ -93,7 +43,7 @@ TEST(AnalysisHelpers, GetPhase) {
   static_assert(fbl::count_of(expect) == fbl::count_of(reals), "buf mismatch");
 
   for (uint32_t idx = 0; idx < fbl::count_of(reals); ++idx) {
-    EXPECT_DOUBLE_EQ(expect[idx], GetPhase(reals[idx], imags[idx]));
+    EXPECT_DOUBLE_EQ(expect[idx], internal::GetPhase(reals[idx], imags[idx]));
   }
 }
 
@@ -104,7 +54,7 @@ TEST(AnalysisHelpers, RectToPolar) {
   double phase[10];
   const double epsilon = 0.00000001;
 
-  RectangularToPolar(real, imag, fbl::count_of(real), magn, phase);
+  internal::RectangularToPolar(real, imag, fbl::count_of(real), magn, phase);
   double expect_magn[] = {1.0, RT_2, 1.0, RT_2, 1.0, RT_2, 1.0, RT_2, 0.0, 0.0};
 
   double expect_phase[] = {0.0,           M_PI / 4,  M_PI / 2,  3 * M_PI / 4, M_PI,
@@ -134,7 +84,7 @@ TEST(AnalysisHelpers, RealDFT) {
   // impulse
   OverwriteCosine(reals, buf_size, 0.0, 0.0);
   reals[0] = 1000000.0;
-  RealDFT(reals, buf_size, real_freq, imag_freq);
+  internal::RealDFT(reals, buf_size, real_freq, imag_freq);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
     const double expect = 1000000.0;
@@ -147,7 +97,7 @@ TEST(AnalysisHelpers, RealDFT) {
 
   // DC
   OverwriteCosine(reals, buf_size, 0.0, 700000.0);
-  RealDFT(reals, buf_size, real_freq, imag_freq);
+  internal::RealDFT(reals, buf_size, real_freq, imag_freq);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
     const double expect = (idx == 0 ? 700000.0 * static_cast<double>(buf_size) : 0.0);
@@ -160,7 +110,7 @@ TEST(AnalysisHelpers, RealDFT) {
 
   // folding freq
   OverwriteCosine(reals, buf_size, buf_size / 2.0, 1001001.0);
-  RealDFT(reals, buf_size, real_freq, imag_freq);
+  internal::RealDFT(reals, buf_size, real_freq, imag_freq);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
     const double expect = (idx == buf_size / 2) ? (1001001.0 * static_cast<double>(buf_size)) : 0.0;
@@ -173,7 +123,7 @@ TEST(AnalysisHelpers, RealDFT) {
 
   // 1
   OverwriteCosine(reals, buf_size, 1.0, 20202020.0);
-  RealDFT(reals, buf_size, real_freq, imag_freq);
+  internal::RealDFT(reals, buf_size, real_freq, imag_freq);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
     const double expect = (idx == 1) ? (20202020.0 * static_cast<double>(buf_size) / 2.0) : 0.0;
@@ -186,7 +136,7 @@ TEST(AnalysisHelpers, RealDFT) {
 
   // 1, with -PI/2 phase
   OverwriteCosine(reals, buf_size, 1.0, 20202020.0, -M_PI / 2.0);
-  RealDFT(reals, buf_size, real_freq, imag_freq);
+  internal::RealDFT(reals, buf_size, real_freq, imag_freq);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
     EXPECT_LE(real_freq[idx], epsilon) << idx;
@@ -215,7 +165,7 @@ TEST(AnalysisHelpers, IDFT) {
   OverwriteCosine(real_freq, buf_sz_2 + 1, 0.0, 123.0);
   OverwriteCosine(imag_freq, buf_sz_2 + 1, 0.0, 0.0);
 
-  InverseDFT(real_freq, imag_freq, buf_size, reals);
+  internal::InverseDFT(real_freq, imag_freq, buf_size, reals);
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     const double expect = (idx == 0 ? 123.0 : 0.0);
     EXPECT_LE(reals[idx], expect + epsilon) << idx;
@@ -227,7 +177,7 @@ TEST(AnalysisHelpers, IDFT) {
   real_freq[0] = 4321.0 * buf_size;
   OverwriteCosine(imag_freq, buf_sz_2 + 1, 0.0, 0.0);
 
-  InverseDFT(real_freq, imag_freq, buf_size, reals);
+  internal::InverseDFT(real_freq, imag_freq, buf_size, reals);
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     const double expect = 4321.0;
     EXPECT_LE(reals[idx], expect + epsilon) << idx;
@@ -239,7 +189,7 @@ TEST(AnalysisHelpers, IDFT) {
   real_freq[buf_sz_2] = 10203.0 * buf_size;
   OverwriteCosine(imag_freq, buf_sz_2 + 1, 0.0, 0.0);
 
-  InverseDFT(real_freq, imag_freq, buf_size, reals);
+  internal::InverseDFT(real_freq, imag_freq, buf_size, reals);
 
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     const double expect = (idx % 2 == 0 ? 10203.0 : -10203.0);
@@ -253,7 +203,7 @@ TEST(AnalysisHelpers, IDFT) {
   OverwriteCosine(imag_freq, buf_sz_2 + 1, 0.0, 0.0);
 
   OverwriteCosine(expects, buf_size, 1.0, 20202020.0);
-  InverseDFT(real_freq, imag_freq, buf_size, reals);
+  internal::InverseDFT(real_freq, imag_freq, buf_size, reals);
 
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     EXPECT_LE(reals[idx], expects[idx] + epsilon) << idx;
@@ -267,7 +217,7 @@ TEST(AnalysisHelpers, IDFT) {
   imag_freq[1] = 20202020.0 / RT_2 * buf_sz_2;
 
   OverwriteCosine(expects, buf_size, 1.0, 20202020.0, 3.0 * M_PI / 4.0);
-  InverseDFT(real_freq, imag_freq, buf_size, reals);
+  internal::InverseDFT(real_freq, imag_freq, buf_size, reals);
 
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     EXPECT_LE(reals[idx], expects[idx] + epsilon) << idx;
@@ -288,7 +238,7 @@ TEST(AnalysisHelpers, FFT) {
   OverwriteCosine(reals, buf_size, 0.0, 0.0);
   reals[0] = 1000000.0;
   OverwriteCosine(imags, buf_size, 0.0, 0.0);
-  FFT(reals, imags, buf_size);
+  internal::FFT(reals, imags, buf_size);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
     const double expect = 1000000.0;
@@ -302,7 +252,7 @@ TEST(AnalysisHelpers, FFT) {
   // DC input produces val only in frequency bin 0
   OverwriteCosine(reals, buf_size, 0.0, 700000.0);
   OverwriteCosine(imags, buf_size, 0.0, 0.0);
-  FFT(reals, imags, buf_size);
+  internal::FFT(reals, imags, buf_size);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
     const double expect = (idx == 0 ? 700000.0 * static_cast<double>(buf_size) : 0.0);
@@ -317,7 +267,7 @@ TEST(AnalysisHelpers, FFT) {
   double test_val = 1001001.0;
   OverwriteCosine(reals, buf_size, buf_sz_2, test_val);
   OverwriteCosine(imags, buf_size, 0.0, 0.0);
-  FFT(reals, imags, buf_size);
+  internal::FFT(reals, imags, buf_size);
 
   for (uint32_t idx = 0; idx < buf_sz_2; ++idx) {
     EXPECT_LE(reals[idx], epsilon) << idx;
@@ -335,7 +285,7 @@ TEST(AnalysisHelpers, FFT) {
   test_val = 20202020.0;
   OverwriteCosine(reals, buf_size, 1.0, test_val);
   OverwriteCosine(imags, buf_size, 0.0, 0.0);
-  FFT(reals, imags, buf_size);
+  internal::FFT(reals, imags, buf_size);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
     const double expect = (idx == 1) ? (test_val * buf_size / 2.0) : 0.0;
@@ -349,7 +299,7 @@ TEST(AnalysisHelpers, FFT) {
   // That cosine shifted by PI/2 should have identical results, flipped between real and imaginary.
   OverwriteCosine(reals, buf_size, 1.0, test_val, -M_PI / 2.0);
   OverwriteCosine(imags, buf_size, 0.0, 0.0, 0.0);
-  FFT(reals, imags, buf_size);
+  internal::FFT(reals, imags, buf_size);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
     EXPECT_LE(reals[idx], epsilon) << idx;
@@ -376,7 +326,7 @@ TEST(AnalysisHelpers, IFFT) {
   OverwriteCosine(reals, buf_size, 0.0, 123.0);
   OverwriteCosine(imags, buf_size, 0.0, 0.0);
 
-  InverseFFT(reals, imags, buf_size);
+  internal::InverseFFT(reals, imags, buf_size);
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     const double expect = (idx == 0 ? 123.0 : 0.0);
     EXPECT_LE(reals[idx], expect + epsilon) << idx;
@@ -391,7 +341,7 @@ TEST(AnalysisHelpers, IFFT) {
   reals[0] = 4321.0 * buf_size;
   OverwriteCosine(imags, buf_size, 0.0, 0.0);
 
-  InverseFFT(reals, imags, buf_size);
+  internal::InverseFFT(reals, imags, buf_size);
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     const double expect = 4321.0;
     EXPECT_LE(reals[idx], expect + epsilon) << idx;
@@ -403,7 +353,7 @@ TEST(AnalysisHelpers, IFFT) {
   reals[buf_sz_2] = 10203.0 * buf_size;
   OverwriteCosine(imags, buf_size, 0.0, 0.0);
 
-  InverseFFT(reals, imags, buf_size);
+  internal::InverseFFT(reals, imags, buf_size);
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     const double expect = (idx % 2 == 0 ? 10203.0 : -10203.0);
     EXPECT_LE(reals[idx], expect + epsilon) << idx;
@@ -416,7 +366,7 @@ TEST(AnalysisHelpers, IFFT) {
   OverwriteCosine(imags, buf_size, 0.0, 0.0);
 
   OverwriteCosine(expects, buf_size, 1.0, 20202020.0);
-  InverseFFT(reals, imags, buf_size);
+  internal::InverseFFT(reals, imags, buf_size);
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     EXPECT_LE(reals[idx], expects[idx] + epsilon) << idx;
     EXPECT_GE(reals[idx], expects[idx] - epsilon) << idx;
@@ -429,7 +379,7 @@ TEST(AnalysisHelpers, IFFT) {
   imags[1] = 20202020.0 / RT_2 * buf_size;
 
   OverwriteCosine(expects, buf_size, 1.0, 20202020.0, 3.0 * M_PI / 4.0);
-  InverseFFT(reals, imags, buf_size);
+  internal::InverseFFT(reals, imags, buf_size);
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     EXPECT_LE(reals[idx], expects[idx] + epsilon) << idx;
     EXPECT_GE(reals[idx], expects[idx] - epsilon) << idx;
@@ -440,17 +390,25 @@ TEST(AnalysisHelpers, IFFT) {
 // analyze audio. It returns magnitude of signal at that frequency, and combined (root-sum-square)
 // magnitude of all OTHER frequencies. For inputs of magnitude 3 and 4, their combination equals 5.
 TEST(AnalysisHelpers, MeasureAudioFreq_32) {
-  int32_t reals[] = {5, -3, 13, -3};  // cos freq 0,1,2; mag 3,4,6; phase 0,pi,0
-  double magn_signal = -54.32;        // will be overwritten
-  double magn_other = 42.0;           // will be overwritten
+  auto format = Format::Create(fuchsia::media::AudioStreamType{
+                                   .sample_format = ASF::SIGNED_24_IN_32,
+                                   .channels = 1,
+                                   .frames_per_second = 48000 /* unused */,
+                               })
+                    .take_value();
 
-  MeasureAudioFreq(reals, fbl::count_of(reals), 0, &magn_signal);
+  AudioBuffer<ASF::SIGNED_24_IN_32> reals(format, 4);
+  reals.samples = {5, -3, 13, -3};  // cos freq 0,1,2; mag 3,4,6; phase 0,pi,0
+  double magn_signal = -54.32;      // will be overwritten
+  double magn_other = 42.0;         // will be overwritten
+
+  MeasureAudioFreq(AudioBufferSlice(&reals), 0, &magn_signal);
   EXPECT_DOUBLE_EQ(3.0, magn_signal);
 
-  MeasureAudioFreq(reals, fbl::count_of(reals), 1, &magn_signal, &magn_other);
+  MeasureAudioFreq(AudioBufferSlice(&reals), 1, &magn_signal, &magn_other);
   EXPECT_DOUBLE_EQ(4.0, magn_signal);
 
-  MeasureAudioFreq(reals, fbl::count_of(reals), 2, &magn_signal, &magn_other);
+  MeasureAudioFreq(AudioBufferSlice(&reals), 2, &magn_signal, &magn_other);
   EXPECT_DOUBLE_EQ(6.0, magn_signal);
   EXPECT_DOUBLE_EQ(5.0, magn_other);
 }
@@ -458,17 +416,25 @@ TEST(AnalysisHelpers, MeasureAudioFreq_32) {
 // Test float-based MeasureAudioFreq (only needed to validate OutputProducer).
 // Reals[] consists of cosines with freq 0,1,2; magnitude 3,4,6; phase 0,pi,pi.
 TEST(AnalysisHelpers, MeasureAudioFreq_Float) {
-  float reals[] = {-7.0f, 9.0f, 1.0f, 9.0f};
+  auto format = Format::Create(fuchsia::media::AudioStreamType{
+                                   .sample_format = ASF::FLOAT,
+                                   .channels = 1,
+                                   .frames_per_second = 48000 /* unused */,
+                               })
+                    .take_value();
+
+  AudioBuffer<ASF::FLOAT> reals(format, 4);
+  reals.samples = {-7.0f, 9.0f, 1.0f, 9.0f};
   double magn_signal = -54.32;
   double magn_other = 42.0;
 
-  MeasureAudioFreq(reals, fbl::count_of(reals), 0, &magn_signal);
+  MeasureAudioFreq(AudioBufferSlice(&reals), 0, &magn_signal);
   EXPECT_DOUBLE_EQ(3.0, magn_signal);
 
-  MeasureAudioFreq(reals, fbl::count_of(reals), 1, &magn_signal, &magn_other);
+  MeasureAudioFreq(AudioBufferSlice(&reals), 1, &magn_signal, &magn_other);
   EXPECT_DOUBLE_EQ(4.0, magn_signal);
 
-  MeasureAudioFreq(reals, fbl::count_of(reals), 2, &magn_signal, &magn_other);
+  MeasureAudioFreq(AudioBufferSlice(&reals), 2, &magn_signal, &magn_other);
   EXPECT_DOUBLE_EQ(6.0, magn_signal);  // Magnitude is absolute value (ignore phase)
   EXPECT_DOUBLE_EQ(5.0, magn_other);
 }

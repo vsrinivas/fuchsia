@@ -9,6 +9,8 @@
 
 #include "src/media/audio/audio_core/mixer/test/frequency_set.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
+#include "src/media/audio/lib/format/traits.h"
+#include "src/media/audio/lib/test/audio_buffer.h"
 
 namespace media::audio::test {
 
@@ -18,6 +20,7 @@ float to_frac_usecs(zx::duration duration) {
 
 // Convenience abbreviation within this source file to shorten names
 using Resampler = ::media::audio::Mixer::Resampler;
+using ASF = fuchsia::media::AudioSampleFormat;
 
 // For the given resampler, measure elapsed time over a number of mix jobs.
 void AudioPerformance::Profile() {
@@ -85,22 +88,21 @@ void AudioPerformance::ProfileMixerCreationTypeChan(Mixer::Resampler sampler_typ
                                                     uint32_t num_output_chans) {
   if (num_input_chans == 4 && num_output_chans == 4) {
     ProfileMixerCreationTypeChanFormat(sampler_type, num_input_chans, num_output_chans,
-                                       fuchsia::media::AudioSampleFormat::UNSIGNED_8);
+                                       ASF::UNSIGNED_8);
     ProfileMixerCreationTypeChanFormat(sampler_type, num_input_chans, num_output_chans,
-                                       fuchsia::media::AudioSampleFormat::SIGNED_16);
+                                       ASF::SIGNED_16);
     ProfileMixerCreationTypeChanFormat(sampler_type, num_input_chans, num_output_chans,
-                                       fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32);
+                                       ASF::SIGNED_24_IN_32);
   }
-  ProfileMixerCreationTypeChanFormat(sampler_type, num_input_chans, num_output_chans,
-                                     fuchsia::media::AudioSampleFormat::FLOAT);
+  ProfileMixerCreationTypeChanFormat(sampler_type, num_input_chans, num_output_chans, ASF::FLOAT);
 }
 
 // skip some of the permutations, to optimize test running time
-void AudioPerformance::ProfileMixerCreationTypeChanFormat(
-    Mixer::Resampler sampler_type, uint32_t num_input_chans, uint32_t num_output_chans,
-    fuchsia::media::AudioSampleFormat sample_format) {
-  if (num_input_chans == 4 && num_output_chans == 4 &&
-      sample_format == fuchsia::media::AudioSampleFormat::FLOAT) {
+void AudioPerformance::ProfileMixerCreationTypeChanFormat(Mixer::Resampler sampler_type,
+                                                          uint32_t num_input_chans,
+                                                          uint32_t num_output_chans,
+                                                          ASF sample_format) {
+  if (num_input_chans == 4 && num_output_chans == 4 && sample_format == ASF::FLOAT) {
     ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
                                            sample_format, 8000, 8000);
     ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
@@ -116,8 +118,7 @@ void AudioPerformance::ProfileMixerCreationTypeChanFormat(
   }
   ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
                                          sample_format, 48000, 48000);
-  if (num_input_chans == 1 && num_output_chans == 1 &&
-      sample_format == fuchsia::media::AudioSampleFormat::FLOAT) {
+  if (num_input_chans == 1 && num_output_chans == 1 && sample_format == ASF::FLOAT) {
     ProfileMixerCreationTypeChanFormatRate(sampler_type, num_input_chans, num_output_chans,
                                            sample_format, 48000, 96000);
 
@@ -135,7 +136,7 @@ void AudioPerformance::ProfileMixerCreationTypeChanFormat(
 
 void AudioPerformance::ProfileMixerCreationTypeChanFormatRate(
     Mixer::Resampler sampler_type, uint32_t num_input_chans, uint32_t num_output_chans,
-    fuchsia::media::AudioSampleFormat sample_format, uint32_t source_rate, uint32_t dest_rate) {
+    ASF sample_format, uint32_t source_rate, uint32_t dest_rate) {
   zx::duration first, worst, best, total_elapsed{0}, total_elapsed_cached{0};
 
   for (uint32_t i = 0; i < kNumMixerCreationRuns; ++i) {
@@ -183,13 +184,13 @@ void AudioPerformance::ProfileMixerCreationTypeChanFormatRate(
   }
 
   std::string format;
-  if (sample_format == fuchsia::media::AudioSampleFormat::UNSIGNED_8) {
+  if (sample_format == ASF::UNSIGNED_8) {
     format = "Un8";
-  } else if (sample_format == fuchsia::media::AudioSampleFormat::SIGNED_16) {
+  } else if (sample_format == ASF::SIGNED_16) {
     format = "I16";
-  } else if (sample_format == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32) {
+  } else if (sample_format == ASF::SIGNED_24_IN_32) {
     format = "I24";
-  } else if (sample_format == fuchsia::media::AudioSampleFormat::FLOAT) {
+  } else if (sample_format == ASF::FLOAT) {
     format = "F32";
   } else {
     ASSERT_TRUE(false) << "Unknown mix sample format for testing";
@@ -284,37 +285,32 @@ void AudioPerformance::ProfileSamplerChansRateScaleMix(uint32_t num_input_chans,
                                                        uint32_t num_output_chans,
                                                        Resampler sampler_type, uint32_t source_rate,
                                                        GainType gain_type, bool accumulate) {
-  ProfileMixer<uint8_t>(num_input_chans, num_output_chans, sampler_type, source_rate, gain_type,
-                        accumulate);
-  ProfileMixer<int16_t>(num_input_chans, num_output_chans, sampler_type, source_rate, gain_type,
-                        accumulate);
-  ProfileMixer<int32_t>(num_input_chans, num_output_chans, sampler_type, source_rate, gain_type,
-                        accumulate);
-  ProfileMixer<float>(num_input_chans, num_output_chans, sampler_type, source_rate, gain_type,
-                      accumulate);
+  ProfileMixer<ASF::UNSIGNED_8>(num_input_chans, num_output_chans, sampler_type, source_rate,
+                                gain_type, accumulate);
+  ProfileMixer<ASF::SIGNED_16>(num_input_chans, num_output_chans, sampler_type, source_rate,
+                               gain_type, accumulate);
+  ProfileMixer<ASF::SIGNED_24_IN_32>(num_input_chans, num_output_chans, sampler_type, source_rate,
+                                     gain_type, accumulate);
+  ProfileMixer<ASF::FLOAT>(num_input_chans, num_output_chans, sampler_type, source_rate, gain_type,
+                           accumulate);
 }
 
-template <typename SampleType>
+template <ASF SampleFormat>
 void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_output_chans,
                                     Resampler sampler_type, uint32_t source_rate,
                                     GainType gain_type, bool accumulate) {
-  fuchsia::media::AudioSampleFormat sample_format;
   double amplitude;
   std::string format;
-  if (std::is_same_v<SampleType, uint8_t>) {
-    sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8;
+  if constexpr (SampleFormat == ASF::UNSIGNED_8) {
     amplitude = std::numeric_limits<int8_t>::max();
     format = "Un8";
-  } else if (std::is_same_v<SampleType, int16_t>) {
-    sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
+  } else if constexpr (SampleFormat == ASF::SIGNED_16) {
     amplitude = std::numeric_limits<int16_t>::max();
     format = "I16";
-  } else if (std::is_same_v<SampleType, int32_t>) {
-    sample_format = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
+  } else if constexpr (SampleFormat == ASF::SIGNED_24_IN_32) {
     amplitude = std::numeric_limits<int32_t>::max() & ~0x0FF;
     format = "I24";
-  } else if (std::is_same_v<SampleType, float>) {
-    sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
+  } else if constexpr (SampleFormat == ASF::FLOAT) {
     amplitude = 1.0;
     format = "F32";
   } else {
@@ -323,23 +319,30 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
   }
 
   uint32_t dest_rate = 48000;
-  auto mixer = SelectMixer(sample_format, num_input_chans, source_rate, num_output_chans, dest_rate,
+  auto mixer = SelectMixer(SampleFormat, num_input_chans, source_rate, num_output_chans, dest_rate,
                            sampler_type);
   if (mixer == nullptr) {
     return;
   }
 
+  Format source_format = Format::Create(fuchsia::media::AudioStreamType{
+                                            .sample_format = SampleFormat,
+                                            .channels = num_input_chans,
+                                            .frames_per_second = source_rate,
+                                        })
+                             .take_value();
+
   uint32_t source_buffer_size = kFreqTestBufSize * dest_rate / source_rate;
   uint32_t source_frames = source_buffer_size;
 
-  auto source = std::make_unique<SampleType[]>(source_frames * num_input_chans);
+  auto source = GenerateCosineAudio<SampleFormat>(
+      source_format, source_frames, FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx],
+      amplitude);
+
   auto accum = std::make_unique<float[]>(kFreqTestBufSize * num_output_chans);
   uint32_t frac_src_frames = source_frames * Mixer::FRAC_ONE;
   int32_t frac_src_offset;
   uint32_t dest_offset, previous_dest_offset;
-
-  OverwriteCosine(source.get(), source_buffer_size * num_input_chans,
-                  FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx], amplitude);
 
   auto& info = mixer->bookkeeping();
   info.step_size = (source_rate * Mixer::FRAC_ONE) / dest_rate;
@@ -396,7 +399,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
 
     while (dest_offset < kFreqTestBufSize) {
       previous_dest_offset = dest_offset;
-      mixer->Mix(accum.get(), kFreqTestBufSize, &dest_offset, source.get(), frac_src_frames,
+      mixer->Mix(accum.get(), kFreqTestBufSize, &dest_offset, &source.samples[0], frac_src_frames,
                  &frac_src_offset, accumulate);
 
       // Mix() might process less than all of accum, so Advance() after each.
@@ -481,56 +484,60 @@ void AudioPerformance::ProfileOutputChans(uint32_t num_chans) {
 }
 
 void AudioPerformance::ProfileOutputRange(uint32_t num_chans, OutputDataRange data_range) {
-  ProfileOutputType<uint8_t>(num_chans, data_range);
-  ProfileOutputType<int16_t>(num_chans, data_range);
-  ProfileOutputType<int32_t>(num_chans, data_range);
-  ProfileOutputType<float>(num_chans, data_range);
+  ProfileOutputType<ASF::UNSIGNED_8>(num_chans, data_range);
+  ProfileOutputType<ASF::SIGNED_16>(num_chans, data_range);
+  ProfileOutputType<ASF::SIGNED_24_IN_32>(num_chans, data_range);
+  ProfileOutputType<ASF::FLOAT>(num_chans, data_range);
 }
 
-template <typename SampleType>
+template <ASF SampleFormat>
 void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange data_range) {
-  fuchsia::media::AudioSampleFormat sample_format;
   std::string format;
   char range;
 
-  if (std::is_same_v<SampleType, uint8_t>) {
-    sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8;
+  if constexpr (SampleFormat == ASF::UNSIGNED_8) {
     format = "Un8";
-  } else if (std::is_same_v<SampleType, int16_t>) {
-    sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
+  } else if constexpr (SampleFormat == ASF::SIGNED_16) {
     format = "I16";
-  } else if (std::is_same_v<SampleType, int32_t>) {
-    sample_format = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
+  } else if constexpr (SampleFormat == ASF::SIGNED_24_IN_32) {
     format = "I24";
-  } else if (std::is_same_v<SampleType, float>) {
-    sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
+  } else if constexpr (SampleFormat == ASF::FLOAT) {
     format = "F32";
   } else {
     ASSERT_TRUE(false) << "Unknown output sample format for testing";
     return;
   }
 
-  auto output_producer = SelectOutputProducer(sample_format, num_chans);
+  auto output_producer = SelectOutputProducer(SampleFormat, num_chans);
 
+  using SampleT = typename SampleFormatTraits<SampleFormat>::SampleT;
   uint32_t num_samples = kFreqTestBufSize * num_chans;
+  auto dest = std::make_unique<SampleT[]>(num_samples);
 
-  auto accum = std::make_unique<float[]>(num_samples);
-  auto dest = std::make_unique<SampleType[]>(num_samples);
+  Format accum_format = Format::Create(fuchsia::media::AudioStreamType{
+                                           .sample_format = SampleFormat,
+                                           .channels = num_chans,
+                                           .frames_per_second = 48000 /* unused */,
+                                       })
+                            .take_value();
+  AudioBuffer<ASF::FLOAT> accum(accum_format, 0);
 
   switch (data_range) {
     case OutputDataRange::Silence:
       range = 'S';
+      accum = GenerateSilentAudio<ASF::FLOAT>(accum_format, kFreqTestBufSize);
       break;
     case OutputDataRange::OutOfRange:
       range = 'O';
+      accum = AudioBuffer<ASF::FLOAT>(accum_format, kFreqTestBufSize);
       for (size_t idx = 0; idx < num_samples; ++idx) {
-        accum[idx] = (idx % 2 ? -1.5f : 1.5f);
+        accum.samples[idx] = (idx % 2 ? -1.5f : 1.5f);
       }
       break;
     case OutputDataRange::Normal:
       range = 'N';
-      OverwriteCosine(accum.get(), num_samples,
-                      FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx]);
+      accum = GenerateCosineAudio<ASF::FLOAT>(
+          accum_format, kFreqTestBufSize, FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx]);
       break;
     default:
       ASSERT_TRUE(false) << "Unknown output sample format for testing";
@@ -560,7 +567,7 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
     for (uint32_t i = 0; i < kNumOutputProfilerRuns; ++i) {
       auto start_time = zx::clock::get_monotonic();
 
-      output_producer->ProduceOutput(accum.get(), dest.get(), kFreqTestBufSize);
+      output_producer->ProduceOutput(&accum.samples[0], dest.get(), kFreqTestBufSize);
       auto elapsed = zx::clock::get_monotonic() - start_time;
 
       if (i > 0) {

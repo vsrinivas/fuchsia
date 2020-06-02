@@ -4,23 +4,30 @@
 
 #include "src/media/audio/audio_core/mixer/test/audio_result.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
+#include "src/media/audio/lib/test/audio_buffer.h"
 
 namespace media::audio::test {
 
-// Convenience abbreviation within this source file to shorten names
+// Convenience abbreviations within this source file to shorten names.
 using Resampler = ::media::audio::Mixer::Resampler;
+using ASF = fuchsia::media::AudioSampleFormat;
 
 // Ideal dynamic range measurement is exactly equal to the reduction in gain.
 // Ideal accompanying noise is ideal noise floor, minus the reduction in gain.
 void MeasureSummaryDynamicRange(float gain_db, double* level_db, double* sinad_db) {
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
-                           Resampler::SampleAndHold);
+  auto mixer = SelectMixer(ASF::FLOAT, 1, 48000, 1, 48000, Resampler::SampleAndHold);
 
-  std::vector<float> source(kFreqTestBufSize);
-  std::vector<float> accum(kFreqTestBufSize);
+  Format format = Format::Create(fuchsia::media::AudioStreamType{
+                                     .sample_format = ASF::FLOAT,
+                                     .channels = 1,
+                                     .frames_per_second = 48000,
+                                 })
+                      .take_value();
 
   // Populate source buffer; mix it (pass-thru) to accumulation buffer
-  OverwriteCosine(source.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq);
+  auto source =
+      GenerateCosineAudio<ASF::FLOAT>(format, kFreqTestBufSize, FrequencySet::kReferenceFreq);
+  AudioBuffer<ASF::FLOAT> accum(format, kFreqTestBufSize);
 
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
@@ -28,14 +35,14 @@ void MeasureSummaryDynamicRange(float gain_db, double* level_db, double* sinad_d
   auto& info = mixer->bookkeeping();
   info.gain.SetSourceGain(gain_db);
 
-  mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
+  mixer->Mix(&accum.samples[0], kFreqTestBufSize, &dest_offset, &source.samples[0],
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
   EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   double magn_signal, magn_other;
-  MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq, &magn_signal,
+  MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq, &magn_signal,
                    &magn_other);
 
   *level_db = Gain::DoubleToDb(magn_signal);
@@ -116,33 +123,46 @@ TEST(DynamicRange, 90Down) {
 
 // Test our mix level and noise floor, when rechannelizing mono into stereo.
 TEST(DynamicRange, MonoToStereo) {
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000, 2, 48000,
-                           Resampler::SampleAndHold);
+  auto mixer = SelectMixer(ASF::FLOAT, 1, 48000, 2, 48000, Resampler::SampleAndHold);
 
-  std::vector<float> source(kFreqTestBufSize);
-  std::vector<float> accum(kFreqTestBufSize * 2);
-  std::vector<float> left(kFreqTestBufSize);
+  Format mono_format = Format::Create(fuchsia::media::AudioStreamType{
+                                          .sample_format = ASF::FLOAT,
+                                          .channels = 1,
+                                          .frames_per_second = 48000,
+                                      })
+                           .take_value();
+
+  Format stereo_format = Format::Create(fuchsia::media::AudioStreamType{
+                                            .sample_format = ASF::FLOAT,
+                                            .channels = 2,
+                                            .frames_per_second = 48000,
+                                        })
+                             .take_value();
 
   // Populate mono source buffer; mix it (no SRC/gain) to stereo accumulator
-  OverwriteCosine(source.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq);
+  auto source =
+      GenerateCosineAudio<ASF::FLOAT>(mono_format, kFreqTestBufSize, FrequencySet::kReferenceFreq);
+
+  AudioBuffer<ASF::FLOAT> accum(stereo_format, kFreqTestBufSize);
+  AudioBuffer<ASF::FLOAT> left(mono_format, kFreqTestBufSize);
 
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
 
-  mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
+  mixer->Mix(&accum.samples[0], kFreqTestBufSize, &dest_offset, &source.samples[0],
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
   EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
 
   // Copy left result to double-float buffer, FFT (freq-analyze) it at high-res
   for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
-    EXPECT_FLOAT_EQ(accum[idx * 2], accum[(idx * 2) + 1]);
-    left[idx] = accum[idx * 2];
+    EXPECT_FLOAT_EQ(accum.samples[idx * 2], accum.samples[(idx * 2) + 1]);
+    left.samples[idx] = accum.samples[idx * 2];
   }
 
   // Only need to analyze left side, since we verified that right is identical.
   double magn_left_signal, magn_left_other, level_left_db, sinad_left_db;
-  MeasureAudioFreq(left.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq, &magn_left_signal,
+  MeasureAudioFreq(AudioBufferSlice(&left), FrequencySet::kReferenceFreq, &magn_left_signal,
                    &magn_left_other);
 
   level_left_db = Gain::DoubleToDb(magn_left_signal);
@@ -157,39 +177,53 @@ TEST(DynamicRange, MonoToStereo) {
 
 // Test our mix level and noise floor, when rechannelizing stereo into mono.
 TEST(DynamicRange, StereoToMono) {
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 1, 48000,
-                           Resampler::SampleAndHold);
+  auto mixer = SelectMixer(ASF::FLOAT, 2, 48000, 1, 48000, Resampler::SampleAndHold);
 
-  std::vector<float> mono(kFreqTestBufSize);
-  std::vector<float> source(kFreqTestBufSize * 2);
-  std::vector<float> accum(kFreqTestBufSize);
+  Format mono_format = Format::Create(fuchsia::media::AudioStreamType{
+                                          .sample_format = ASF::FLOAT,
+                                          .channels = 1,
+                                          .frames_per_second = 48000,
+                                      })
+                           .take_value();
+
+  Format stereo_format = Format::Create(fuchsia::media::AudioStreamType{
+                                            .sample_format = ASF::FLOAT,
+                                            .channels = 2,
+                                            .frames_per_second = 48000,
+                                        })
+                             .take_value();
 
   // Populate a mono source buffer; copy it into left side of stereo buffer.
-  OverwriteCosine(mono.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                  kFullScaleFloatInputAmplitude);
+  auto mono =
+      GenerateCosineAudio<ASF::FLOAT>(mono_format, kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                                      kFullScaleFloatInputAmplitude, 0.0);
+  AudioBuffer<ASF::FLOAT> source(stereo_format, kFreqTestBufSize);
+  AudioBuffer<ASF::FLOAT> accum(mono_format, kFreqTestBufSize);
+
   for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
-    source[idx * 2] = mono[idx];
+    source.samples[idx * 2] = mono.samples[idx];
   }
 
   // Populate a mono source buffer with same frequency and amplitude, phase-
   // shifted by PI/2 (1/4 of a cycle); copy it into right side of stereo buffer.
-  OverwriteCosine(mono.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                  kFullScaleFloatInputAmplitude, M_PI / 2);
+  mono =
+      GenerateCosineAudio<ASF::FLOAT>(mono_format, kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                                      kFullScaleFloatInputAmplitude, M_PI / 2);
   for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
-    source[(idx * 2) + 1] = mono[idx];
+    source.samples[(idx * 2) + 1] = mono.samples[idx];
   }
 
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
 
-  mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
+  mixer->Mix(&accum.samples[0], kFreqTestBufSize, &dest_offset, &source.samples[0],
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
   EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   double magn_signal, magn_other;
-  MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq, &magn_signal,
+  MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq, &magn_signal,
                    &magn_other);
 
   AudioResult::LevelStereoMono = Gain::DoubleToDb(magn_signal);
@@ -225,40 +259,27 @@ TEST(DynamicRange, StereoToMono) {
 // after applying a 0.5 master gain scaling we would expect this 91-92 dB
 // SINAD to be reduced to perhaps 98 dB. Today master gain is combined with
 // AudioRenderer (stream) gain, so it is pre-Sum.
-template <typename T>
+template <ASF SampleFormat>
 void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
-  std::unique_ptr<Mixer> mixer;
-  double amplitude, expected_amplitude;
+  auto mixer = SelectMixer(SampleFormat, 1, 48000, 1, 48000, Resampler::SampleAndHold);
+  auto [amplitude, expected_amplitude] = SampleFormatToAmplitudes(SampleFormat);
 
-  // Why isn't expected_amplitude 1.0?  int16 and int8 have more negative values
-  // than positive ones. To be linear without clipping, a full-scale signal
-  // reaches the max (such as 0x7FFF) but not the min (such as -0x8000). Thus,
-  // this magnitude is slightly less than the 1.0 we expect for float signals.
-  if (std::is_same_v<T, uint8_t>) {
-    mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000,
-                        Resampler::SampleAndHold);
-    amplitude = kFullScaleInt8InputAmplitude;
-    expected_amplitude = kFullScaleInt8AccumAmplitude;
-  } else if (std::is_same_v<T, int16_t>) {
-    mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                        Resampler::SampleAndHold);
-    amplitude = kFullScaleInt16InputAmplitude;
-    expected_amplitude = kFullScaleInt16AccumAmplitude;
-  } else if (std::is_same_v<T, int32_t>) {
-    mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 48000, 1, 48000,
-                        Resampler::SampleAndHold);
-    amplitude = kFullScaleInt24In32InputAmplitude;
-    expected_amplitude = kFullScaleInt24In32AccumAmplitude;
-  } else {
-    mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
-                        Resampler::SampleAndHold);
-    amplitude = kFullScaleFloatInputAmplitude;
-    expected_amplitude = kFullScaleFloatAccumAmplitude;
-  }
-  std::vector<T> source(kFreqTestBufSize);
-  std::vector<float> accum(kFreqTestBufSize);
+  Format format = Format::Create(fuchsia::media::AudioStreamType{
+                                     .sample_format = SampleFormat,
+                                     .channels = 1,
+                                     .frames_per_second = 48000,
+                                 })
+                      .take_value();
+  Format float_format = Format::Create(fuchsia::media::AudioStreamType{
+                                           .sample_format = ASF::FLOAT,
+                                           .channels = 1,
+                                           .frames_per_second = 48000,
+                                       })
+                            .take_value();
 
-  OverwriteCosine(source.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq, amplitude);
+  auto source = GenerateCosineAudio<SampleFormat>(format, kFreqTestBufSize,
+                                                  FrequencySet::kReferenceFreq, amplitude);
+  AudioBuffer<ASF::FLOAT> accum(float_format, kFreqTestBufSize);
 
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
@@ -267,21 +288,21 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   auto& info = mixer->bookkeeping();
   info.gain.SetSourceGain(-6.0205999f);
 
-  EXPECT_TRUE(mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
+  EXPECT_TRUE(mixer->Mix(&accum.samples[0], kFreqTestBufSize, &dest_offset, &source.samples[0],
                          kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false));
 
   // Accumulate the same (reference-frequency) wave.
   dest_offset = 0;
   frac_src_offset = 0;
 
-  EXPECT_TRUE(mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
+  EXPECT_TRUE(mixer->Mix(&accum.samples[0], kFreqTestBufSize, &dest_offset, &source.samples[0],
                          kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, true));
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
   EXPECT_EQ(frac_src_offset, static_cast<int32_t>(dest_offset << kPtsFractionalBits));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   double magn_signal, magn_other;
-  MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq, &magn_signal,
+  MeasureAudioFreq(AudioBufferSlice(&accum), FrequencySet::kReferenceFreq, &magn_signal,
                    &magn_other);
 
   *level_mix_db = Gain::DoubleToDb(magn_signal / expected_amplitude);
@@ -290,7 +311,7 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
 
 // Test our mix level and noise floor, when accumulating 8-bit sources.
 TEST(DynamicRange, Mix_8) {
-  MeasureMixFloor<uint8_t>(&AudioResult::LevelMix8, &AudioResult::FloorMix8);
+  MeasureMixFloor<ASF::UNSIGNED_8>(&AudioResult::LevelMix8, &AudioResult::FloorMix8);
 
   EXPECT_NEAR(AudioResult::LevelMix8, 0.0, AudioResult::kPrevLevelToleranceMix8);
   AudioResult::LevelToleranceMix8 =
@@ -305,7 +326,7 @@ TEST(DynamicRange, Mix_8) {
 
 // Test our mix level and noise floor, when accumulating 16-bit sources.
 TEST(DynamicRange, Mix_16) {
-  MeasureMixFloor<int16_t>(&AudioResult::LevelMix16, &AudioResult::FloorMix16);
+  MeasureMixFloor<ASF::SIGNED_16>(&AudioResult::LevelMix16, &AudioResult::FloorMix16);
 
   EXPECT_NEAR(AudioResult::LevelMix16, 0.0, AudioResult::kPrevLevelToleranceMix16);
   AudioResult::LevelToleranceMix16 =
@@ -319,7 +340,7 @@ TEST(DynamicRange, Mix_16) {
 
 // Test our mix level and noise floor, when accumulating 24-bit sources.
 TEST(DynamicRange, Mix_24) {
-  MeasureMixFloor<int32_t>(&AudioResult::LevelMix24, &AudioResult::FloorMix24);
+  MeasureMixFloor<ASF::SIGNED_24_IN_32>(&AudioResult::LevelMix24, &AudioResult::FloorMix24);
 
   EXPECT_NEAR(AudioResult::LevelMix24, 0.0, AudioResult::kPrevLevelToleranceMix24);
   AudioResult::LevelToleranceMix24 =
@@ -333,7 +354,7 @@ TEST(DynamicRange, Mix_24) {
 
 // Test our mix level and noise floor, when accumulating float sources.
 TEST(DynamicRange, Mix_Float) {
-  MeasureMixFloor<float>(&AudioResult::LevelMixFloat, &AudioResult::FloorMixFloat);
+  MeasureMixFloor<ASF::FLOAT>(&AudioResult::LevelMixFloat, &AudioResult::FloorMixFloat);
 
   EXPECT_NEAR(AudioResult::LevelMixFloat, 0.0, AudioResult::kPrevLevelToleranceMixFloat);
   AudioResult::LevelToleranceMixFloat =

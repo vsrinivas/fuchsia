@@ -86,4 +86,35 @@ void DoMix(Mixer* mixer, const void* src_buf, float* accum_buf, bool accumulate,
   EXPECT_EQ(frac_src_offset, static_cast<int32_t>(dest_offset << kPtsFractionalBits));
 }
 
+std::pair<double, double> SampleFormatToAmplitudes(fuchsia::media::AudioSampleFormat f) {
+  double format_amplitude, double_amplitude;
+
+  // Why isn't double_amplitude 1.0?  int16 and int8 have more negative values
+  // than positive ones. To be linear without clipping, a full-scale signal
+  // reaches the max (such as 0x7FFF) but not the min (such as -0x8000). Thus,
+  // this magnitude is slightly less than the 1.0 we expect for float signals.
+  switch (f) {
+    case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
+      format_amplitude = kFullScaleInt8InputAmplitude;
+      double_amplitude = kFullScaleInt8AccumAmplitude;
+      break;
+    case fuchsia::media::AudioSampleFormat::SIGNED_16:
+      format_amplitude = kFullScaleInt16InputAmplitude;
+      double_amplitude = kFullScaleInt16AccumAmplitude;
+      break;
+    case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
+      format_amplitude = kFullScaleInt24In32InputAmplitude;
+      double_amplitude = kFullScaleInt24In32AccumAmplitude;
+      break;
+    case fuchsia::media::AudioSampleFormat::FLOAT:
+      format_amplitude = kFullScaleFloatInputAmplitude;
+      double_amplitude = kFullScaleFloatAccumAmplitude;
+      break;
+    default:
+      FX_CHECK(false) << "Unsupported source format";
+  }
+
+  return std::make_pair(format_amplitude, double_amplitude);
+}
+
 }  // namespace media::audio::test
