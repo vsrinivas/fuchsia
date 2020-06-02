@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("run-vc") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.c" ]
@@ -29,8 +27,4 @@ executable("run-vc") {
     "//build/config:temporarily_disable_ubsan_do_not_use",
     "$zx_build/public/gn/config:static-libc++",
   ]
-}
-
-migrated_manifest("run-vc-manifest") {
-  deps = [ ":run-vc" ]
 }

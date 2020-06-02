@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("zxcrypt") {
   defines = [ "_ALL_SOURCE" ]
@@ -61,7 +60,4 @@ driver_module("zxcrypt") {
     #"//zircon/public/lib/fdio",
     "//src/security/zxcrypt:zxcrypt-fdio",
   ]
-}
-migrated_manifest("zxcrypt-manifest") {
-  deps = [ ":zxcrypt" ]
 }

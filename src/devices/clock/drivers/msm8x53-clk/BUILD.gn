@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("msm8x53-clk") {
   defines = [ "_ALL_SOURCE" ]
@@ -70,12 +69,4 @@ test("msm8x53-clk-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("msm8x53-clk-manifest") {
-  deps = [ ":msm8x53-clk" ]
-}
-
-migrated_manifest("msm8x53-clk-test-manifest") {
-  deps = [ ":msm8x53-clk-test" ]
 }

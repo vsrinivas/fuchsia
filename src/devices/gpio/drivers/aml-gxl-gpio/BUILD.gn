@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("aml-gxl-gpio") {
   defines = [ "_ALL_SOURCE" ]
@@ -27,8 +26,4 @@ driver_module("aml-gxl-gpio") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
-}
-
-migrated_manifest("aml-gxl-gpio-manifest") {
-  deps = [ ":aml-gxl-gpio" ]
 }

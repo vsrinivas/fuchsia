@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 # Separated into own target, so it is easier to cleanup later.
 test("metrics-composite-latency-event") {
@@ -109,16 +108,4 @@ group("test") {
     ":metrics-composite-latency-event",
     ":metrics-inspect",
   ]
-}
-
-migrated_manifest("metrics-composite-latency-event-manifest") {
-  deps = [ ":metrics-composite-latency-event" ]
-}
-
-migrated_manifest("metrics-inspect-manifest") {
-  deps = [ ":metrics-inspect" ]
-}
-
-migrated_manifest("metrics-cobalt-manifest") {
-  deps = [ ":metrics-cobalt" ]
 }

@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("disk-inspect") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
@@ -13,8 +11,4 @@ executable("disk-inspect") {
     "//zircon/system/ulib/disk_inspector",
     "//zircon/system/ulib/minfs",
   ]
-}
-
-migrated_manifest("disk-inspect-manifest") {
-  deps = [ ":disk-inspect" ]
 }

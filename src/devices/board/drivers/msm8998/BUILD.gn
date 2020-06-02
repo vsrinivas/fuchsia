@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("msm8998") {
   defines = [ "_ALL_SOURCE" ]
@@ -24,8 +23,4 @@ driver_module("msm8998") {
 
   # TODO(47406): restore some form of data dependency on msm8998
   # boot shim.
-}
-
-migrated_manifest("msm8998-manifest") {
-  deps = [ ":msm8998" ]
 }

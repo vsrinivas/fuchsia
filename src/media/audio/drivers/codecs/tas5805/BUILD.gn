@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("tas5805") {
   defines = [ "_ALL_SOURCE" ]
@@ -51,10 +50,6 @@ test("tas5805-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("tas5805-manifest") {
-  deps = [ ":tas5805" ]
 }
 
 unittest_package("tas5805-test-package") {

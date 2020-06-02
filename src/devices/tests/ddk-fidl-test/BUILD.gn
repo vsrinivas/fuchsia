@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 test("ddk-fidl-test") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -24,8 +23,4 @@ test("ddk-fidl-test") {
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/driver-integration-test",
   ]
-}
-
-migrated_manifest("ddk-fidl-test-manifest") {
-  deps = [ ":ddk-fidl-test" ]
 }

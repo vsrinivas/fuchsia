@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("as370-gpio") {
   defines = [ "_ALL_SOURCE" ]
@@ -53,10 +52,6 @@ test("as370-gpio-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("as370-gpio-manifest") {
-  deps = [ ":as370-gpio" ]
 }
 
 unittest_package("as370-gpio-test-package") {

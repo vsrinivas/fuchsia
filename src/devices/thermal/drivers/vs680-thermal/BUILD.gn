@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("vs680-thermal") {
   defines = [ "_ALL_SOURCE" ]
@@ -32,10 +31,6 @@ driver_module("vs680-thermal") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-utils",
   ]
-}
-
-migrated_manifest("vs680-thermal-manifest") {
-  deps = [ ":vs680-thermal" ]
 }
 
 test("vs680-thermal-test") {

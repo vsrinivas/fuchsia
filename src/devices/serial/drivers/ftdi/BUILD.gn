@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("ftdi") {
   defines = [ "_ALL_SOURCE" ]
@@ -56,12 +55,4 @@ driver_module("ftdi-fake-usb") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
   ]
-}
-
-migrated_manifest("ftdi-manifest") {
-  deps = [ ":ftdi" ]
-}
-
-migrated_manifest("ftdi-fake-usb-manifest") {
-  deps = [ ":ftdi-fake-usb" ]
 }

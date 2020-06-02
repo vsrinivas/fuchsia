@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 # The generation depends only on the source, so do it only once.
 if (current_toolchain == default_toolchain) {

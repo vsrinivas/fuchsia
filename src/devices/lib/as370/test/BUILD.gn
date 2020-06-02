@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 test("syn-audio-in-test") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -74,12 +73,4 @@ test("audio-dsp-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fzl",
   ]
-}
-
-migrated_manifest("syn-audio-in-test-manifest") {
-  deps = [ ":syn-audio-in-test" ]
-}
-
-migrated_manifest("audio-dsp-test-manifest") {
-  deps = [ ":audio-dsp-test" ]
 }

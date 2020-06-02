@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("skip-block") {
   defines = [ "_ALL_SOURCE" ]
@@ -60,10 +59,6 @@ test("skip-block-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fzl",
   ]
-}
-
-migrated_manifest("skip-block-manifest") {
-  deps = [ ":skip-block" ]
 }
 
 unittest_package("skip-block-test-package") {

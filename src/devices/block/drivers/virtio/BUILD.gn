@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("virtio_block") {
   defines = [ "_ALL_SOURCE" ]
@@ -109,14 +108,6 @@ test("virtio-scsi-test") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/unittest",
   ]
-}
-
-migrated_manifest("virtio_block-manifest") {
-  deps = [ ":virtio_block" ]
-}
-
-migrated_manifest("virtio_scsi-manifest") {
-  deps = [ ":virtio_scsi" ]
 }
 
 group("tests") {

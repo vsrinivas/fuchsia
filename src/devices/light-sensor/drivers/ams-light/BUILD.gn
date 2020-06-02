@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("ams-light") {
   defines = [ "_ALL_SOURCE" ]
@@ -63,10 +62,6 @@ test("ams-light-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hid",
   ]
-}
-
-migrated_manifest("ams-light-manifest") {
-  deps = [ ":ams-light" ]
 }
 
 unittest_package("ams-light-test-package") {

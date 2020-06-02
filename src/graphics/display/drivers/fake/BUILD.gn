@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("fake-display") {
   defines = [ "_ALL_SOURCE" ]
@@ -36,8 +35,4 @@ source_set("fake-lib") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format",
   ]
-}
-
-migrated_manifest("fake-manifest") {
-  deps = [ ":fake-display" ]
 }

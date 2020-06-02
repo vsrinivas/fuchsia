@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -87,16 +86,4 @@ test("usb-desc-lib-test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("usb-request-test-manifest") {
-  deps = [ ":usb-request-test" ]
-}
-
-migrated_manifest("usb-wrapper-test-manifest") {
-  deps = [ ":usb-wrapper-test" ]
-}
-
-migrated_manifest("usb-desc-lib-test-manifest") {
-  deps = [ ":usb-desc-lib-test" ]
 }

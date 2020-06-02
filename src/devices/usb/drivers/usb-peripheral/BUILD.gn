@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("usb-peripheral") {
   defines = [ "_ALL_SOURCE" ]
@@ -39,8 +38,4 @@ driver_module("usb-peripheral") {
     "USB_DEVICE_SERIAL=\"0123456789ABCDEF\"",
     "USB_DEVICE_FUNCTIONS=\"cdc\"",
   ]
-}
-
-migrated_manifest("usb-peripheral-manifest") {
-  deps = [ ":usb-peripheral" ]
 }

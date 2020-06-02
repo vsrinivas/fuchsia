@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 source_set("src") {
   sources = [
@@ -51,12 +50,4 @@ test("test") {
     ":src",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("acpidump-manifest") {
-  deps = [ ":acpidump" ]
-}
-
-migrated_manifest("acpidump-test-manifest") {
-  deps = [ ":test" ]
 }

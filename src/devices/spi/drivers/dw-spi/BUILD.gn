@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("dw-spi") {
   defines = [ "_ALL_SOURCE" ]
@@ -27,8 +26,4 @@ driver_module("dw-spi") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
   ]
-}
-
-migrated_manifest("dw-spi-manifest") {
-  deps = [ ":dw-spi" ]
 }

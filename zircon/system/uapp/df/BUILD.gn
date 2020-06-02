@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("df") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
@@ -25,8 +23,4 @@ executable("df") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
   ]
-}
-
-migrated_manifest("df-manifest") {
-  deps = [ ":df" ]
 }

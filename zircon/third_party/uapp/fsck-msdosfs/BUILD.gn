@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("fsck-msdosfs") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -32,8 +30,4 @@ executable("fsck-msdosfs") {
     "main.c",
   ]
   deps = [ "//zircon/public/lib/fdio" ]
-}
-
-migrated_manifest("fsck-msdosfs-manifest") {
-  deps = [ ":fsck-msdosfs" ]
 }

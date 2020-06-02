@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("i2c") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "i2c.c" ]
@@ -11,8 +9,4 @@ executable("i2c") {
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_c",
     "//zircon/public/lib/fdio",
   ]
-}
-
-migrated_manifest("i2c-manifest") {
-  deps = [ ":i2c" ]
 }

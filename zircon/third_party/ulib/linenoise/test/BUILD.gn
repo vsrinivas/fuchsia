@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -43,8 +42,4 @@ test("linenoise-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/third_party/ulib/linenoise",
   ]
-}
-
-migrated_manifest("linenoise-test-manifest") {
-  deps = [ ":linenoise-test" ]
 }

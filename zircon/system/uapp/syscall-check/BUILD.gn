@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 # Prints out the status of syscalls used to confirm them being disabled.
 executable("syscall-check") {
   if (is_fuchsia) {
@@ -28,8 +26,4 @@ executable("syscall-check") {
   sources = [ "main.cc" ]
   deps = [ "//zircon/public/lib/fdio" ]
   libs = [ "zircon" ]
-}
-
-migrated_manifest("syscall-check-manifest") {
-  deps = [ ":syscall-check" ]
 }

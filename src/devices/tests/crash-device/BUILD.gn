@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 # A device that causes a crash when it's operated on
 driver_module("crash-device") {
@@ -27,8 +26,4 @@ driver_module("crash-device") {
   # TODO(46921): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
-}
-
-migrated_manifest("crash-device-manifest") {
-  deps = [ ":crash-device" ]
 }

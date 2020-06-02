@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("as370-thermal") {
   defines = [ "_ALL_SOURCE" ]
@@ -66,10 +65,6 @@ test("as370-thermal-test") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/fidl-utils",
   ]
-}
-
-migrated_manifest("as370-thermal-manifest") {
-  deps = [ ":as370-thermal" ]
 }
 
 unittest_package("as370-thermal-test-package") {

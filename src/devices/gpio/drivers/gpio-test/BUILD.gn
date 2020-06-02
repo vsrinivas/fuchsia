@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("gpio-test") {
   defines = [ "_ALL_SOURCE" ]
@@ -25,8 +24,4 @@ driver_module("gpio-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
-}
-
-migrated_manifest("gpio-test-manifest") {
-  deps = [ ":gpio-test" ]
 }

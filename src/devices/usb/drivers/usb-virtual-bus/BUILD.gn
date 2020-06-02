@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("usb-virtual-bus") {
   defines = [ "_ALL_SOURCE" ]
@@ -35,8 +34,4 @@ driver_module("usb-virtual-bus") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
-}
-
-migrated_manifest("usb-virtual-bus-manifest") {
-  deps = [ ":usb-virtual-bus" ]
 }

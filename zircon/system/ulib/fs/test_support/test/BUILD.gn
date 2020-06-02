@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -49,8 +48,4 @@ test("fs_test_support") {
     "//zircon/system/ulib/ramdevice-client",
   ]
   include_dirs = [ "../include" ]
-}
-
-migrated_manifest("fs_test_support-manifest") {
-  deps = [ ":fs_test_support" ]
 }

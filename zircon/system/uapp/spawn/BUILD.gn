@@ -12,15 +12,9 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("spawn") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.c" ]
   deps = [ "//zircon/public/lib/fdio" ]
   libs = [ "zircon" ]
-}
-
-migrated_manifest("spawn-manifest") {
-  deps = [ ":spawn" ]
 }

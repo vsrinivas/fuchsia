@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("sg-micro") {
   defines = [ "_ALL_SOURCE" ]
@@ -60,12 +59,4 @@ test("sgm37603a-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("sg-micro-manifest") {
-  deps = [ ":sg-micro" ]
-}
-
-migrated_manifest("sgm37603a-test-manifest") {
-  deps = [ ":sgm37603a-test" ]
 }

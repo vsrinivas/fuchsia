@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("fragment") {
   defines = [ "_ALL_SOURCE" ]
@@ -94,12 +93,4 @@ driver_module("fragment.proxy") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/trace:trace-driver",
   ]
-}
-
-migrated_manifest("fragment-manifest") {
-  deps = [ ":fragment" ]
-}
-
-migrated_manifest("fragment.proxy-manifest") {
-  deps = [ ":fragment.proxy" ]
 }

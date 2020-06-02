@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 group("fs-fsck") {
   deps = [ ":fsck" ]
 }
@@ -25,8 +23,4 @@ executable("fsck") {
     "//zircon/public/lib/fdio",
     "//zircon/system/ulib/fs-management",
   ]
-}
-
-migrated_manifest("fsck-manifest") {
-  deps = [ ":fsck" ]
 }

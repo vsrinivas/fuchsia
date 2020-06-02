@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("lp50xx-light") {
   defines = [ "_ALL_SOURCE" ]
@@ -57,10 +56,6 @@ test("lp50xx-light-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hwreg-i2c",
   ]
-}
-
-migrated_manifest("lp50xx-light-manifest") {
-  deps = [ ":lp50xx-light" ]
 }
 
 unittest_package("lp50xx-light-test-package") {

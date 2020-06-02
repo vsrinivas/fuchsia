@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 import("//zircon/public/gn/firmware.gni")
 
@@ -53,8 +52,4 @@ firmware("firmware") {
     # "$firmware_dir/adsp.b13",
     # "$firmware_dir/adsp.b14",
   ]
-}
-
-migrated_manifest("qcom-pil-manifest") {
-  deps = [ ":qcom-pil" ]
 }

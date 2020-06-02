@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("aml-axg-gpio") {
   defines = [ "_ALL_SOURCE" ]
@@ -62,12 +61,4 @@ test("aml-axg-gpio-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("aml-axg-gpio-manifest") {
-  deps = [ ":aml-axg-gpio" ]
-}
-
-migrated_manifest("aml-axg-gpio-test-manifest") {
-  deps = [ ":aml-axg-gpio-test" ]
 }

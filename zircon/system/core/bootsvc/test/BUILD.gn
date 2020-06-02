@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 import("//build/unification/zbi/migrated_zbi_test.gni")
 import("//build/unification/zbi/resource.gni")
 import("//build/unification/zbi/zbi_input.gni")
@@ -250,8 +249,4 @@ migrated_zbi_test("bootsvc-root-job-test") {
     # Include the integration test binary, which bootsvc will launch.
     "//zircon/system/utest/mexec:zbi-child",
   ]
-}
-
-migrated_manifest("bootsvc-unit-test-manifest") {
-  deps = [ ":bootsvc-unit-test" ]
 }

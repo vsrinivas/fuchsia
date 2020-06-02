@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 test("astro-audio-out-test") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -42,8 +41,4 @@ test("astro-audio-out-test") {
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/fzl",
   ]
-}
-
-migrated_manifest("astro-audio-out-test-manifest") {
-  deps = [ ":astro-audio-out-test" ]
 }

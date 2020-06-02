@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 import("//src/devices/bus/drivers/pci/pci.gni")
 
 assert(current_cpu == "x64")
@@ -372,32 +371,4 @@ test("x86-cros-ec-test") {
     "//zircon/system/ulib/hid-parser",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
-}
-
-migrated_manifest("platform-bus-x86-manifest") {
-  deps = [ ":platform-bus-x86" ]
-}
-
-migrated_manifest("x86-battery-test-manifest") {
-  deps = [ ":x86-battery-test" ]
-}
-
-migrated_manifest("x86-lid-test-manifest") {
-  deps = [ ":x86-lid-test" ]
-}
-
-migrated_manifest("x86-pwrsrc-test-manifest") {
-  deps = [ ":x86-pwrsrc-test" ]
-}
-
-migrated_manifest("x86-board-test-manifest") {
-  deps = [ ":x86-board-test" ]
-}
-
-migrated_manifest("x86-thermal-test-manifest") {
-  deps = [ ":x86-thermal-test" ]
-}
-
-migrated_manifest("x86-cros-ec-test-manifest") {
-  deps = [ ":x86-cros-ec-test" ]
 }

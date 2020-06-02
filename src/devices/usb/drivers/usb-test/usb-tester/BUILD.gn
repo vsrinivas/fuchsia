@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("usb-tester") {  # TODO: test_driver?
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -25,8 +24,4 @@ driver_module("usb-tester") {  # TODO: test_driver?
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
   ]
-}
-
-migrated_manifest("usb-tester-manifest") {
-  deps = [ ":usb-tester" ]
 }

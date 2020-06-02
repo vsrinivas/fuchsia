@@ -14,7 +14,6 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -136,10 +135,6 @@ test("usb-virtual-bus-cdc-ecm") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
   ]
-}
-
-migrated_manifest("usb-virtual-bus-ums-manifest") {
-  deps = [ ":usb-virtual-bus-ums" ]
 }
 
 unittest_package("usb-virtual-bus-cdc-acm-package") {

@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("clock") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "clock.c" ]
@@ -20,12 +18,4 @@ executable("clkctl") {
     "//sdk/fidl/fuchsia.hardware.clock:fuchsia.hardware.clock_c",
     "//zircon/public/lib/fdio",
   ]
-}
-
-migrated_manifest("clock-manifest") {
-  deps = [ ":clock" ]
-}
-
-migrated_manifest("clkctl-manifest") {
-  deps = [ ":clkctl" ]
 }

@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("pwrbtn-monitor") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -36,8 +34,4 @@ executable("pwrbtn-monitor") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hid-parser",
   ]
-}
-
-migrated_manifest("pwrbtn-monitor-manifest") {
-  deps = [ ":pwrbtn-monitor" ]
 }

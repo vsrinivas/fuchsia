@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("core") {
   defines = [ "_ALL_SOURCE" ]
@@ -79,12 +78,4 @@ source_set("shared") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/storage-metrics",
   ]
-}
-
-migrated_manifest("core-manifest") {
-  deps = [ ":core" ]
-}
-
-migrated_manifest("core-unittest-manifest") {
-  deps = [ ":core-unittest" ]
 }

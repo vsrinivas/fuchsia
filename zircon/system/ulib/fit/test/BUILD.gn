@@ -14,7 +14,6 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -107,10 +106,6 @@ config("shadow") {
   # chromium uses this library, and enables the following flag,
   # so these tests should work with this flag enabled
   cflags_cc = [ "-Wshadow" ]
-}
-
-migrated_manifest("fit-manifest") {
-  deps = [ ":fit" ]
 }
 
 unittest_package("fit-unittest-package") {

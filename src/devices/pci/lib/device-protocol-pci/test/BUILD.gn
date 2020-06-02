@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 test("device-protocol-pci") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -30,8 +29,4 @@ test("device-protocol-pci") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("device-protocol-pci-test-manifest") {
-  deps = [ ":device-protocol-pci" ]
 }

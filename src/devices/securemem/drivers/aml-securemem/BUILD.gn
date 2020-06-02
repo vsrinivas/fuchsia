@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("aml-securemem") {
   defines = [ "_ALL_SOURCE" ]
@@ -88,12 +87,4 @@ test("aml-securemem-test") {
 
   # TODO(46354): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-}
-
-migrated_manifest("aml-securemem-manifest") {
-  deps = [ ":aml-securemem" ]
-}
-
-migrated_manifest("aml-securemem-test-manifest") {
-  deps = [ ":aml-securemem-test" ]
 }

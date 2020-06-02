@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("amlogic-clk") {
   defines = [ "_ALL_SOURCE" ]
@@ -65,12 +64,4 @@ test("amlogic-clk-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("amlogic-clk-manifest") {
-  deps = [ ":amlogic-clk" ]
-}
-
-migrated_manifest("amlogic-clk-test-manifest") {
-  deps = [ ":amlogic-clk-test" ]
 }

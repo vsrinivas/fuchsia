@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -48,8 +47,4 @@ test("io-scheduler-test") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/io-scheduler",
   ]
-}
-
-migrated_manifest("io-scheduler-test-manifest") {
-  deps = [ ":io-scheduler-test" ]
 }

@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 assert(current_cpu == "x64")
 
@@ -19,8 +18,4 @@ driver_module("intel-rtc") {
     "//src/lib/ddk",
     "//zircon/system/ulib/rtc",
   ]
-}
-
-migrated_manifest("intel-rtc-manifest") {
-  deps = [ ":intel-rtc" ]
 }

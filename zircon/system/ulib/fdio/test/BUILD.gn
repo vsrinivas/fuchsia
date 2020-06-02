@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -143,20 +142,4 @@ executable("null-namespace-child") {
   sources = [ "fdio_null_namespace_child.c" ]
   deps = [ "//zircon/public/lib/fdio" ]
   libs = [ "zircon" ]
-}
-
-migrated_manifest("fdio-manifest") {
-  deps = [ ":fdio" ]
-}
-
-migrated_manifest("accept-child-manifest") {
-  deps = [ ":accept-child" ]
-}
-
-migrated_manifest("hello-world-manifest") {
-  deps = [ ":hello-world" ]
-}
-
-migrated_manifest("null-namespace-child-manifest") {
-  deps = [ ":null-namespace-child" ]
 }

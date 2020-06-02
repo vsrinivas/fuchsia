@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("hikey960") {
   defines = [ "_ALL_SOURCE" ]
@@ -62,12 +61,4 @@ driver_module("hi3660-i2c-test") {
     "//src/lib/ddk",
     "//zircon/public/lib/sync",
   ]
-}
-
-migrated_manifest("hikey960-manifest") {
-  deps = [ ":hikey960" ]
-}
-
-migrated_manifest("hi3660-i2c-test-manifest") {
-  deps = [ ":hi3660-i2c-test" ]
 }

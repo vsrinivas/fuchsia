@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("nandpart") {
   defines = [ "_ALL_SOURCE" ]
@@ -62,10 +61,6 @@ test("nandpart-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fzl",
   ]
-}
-
-migrated_manifest("nandpart-manifest") {
-  deps = [ ":nandpart" ]
 }
 
 unittest_package("nandpart-test-package") {

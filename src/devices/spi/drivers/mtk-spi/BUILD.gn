@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("mtk-spi") {
   defines = [ "_ALL_SOURCE" ]
@@ -53,12 +52,4 @@ test("mtk-spi-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("mtk-spi-manifest") {
-  deps = [ ":mtk-spi" ]
-}
-
-migrated_manifest("mtk-spi-test-manifest") {
-  deps = [ ":mtk-spi-test" ]
 }

@@ -12,14 +12,8 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("watch") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "watch.c" ]
   deps = [ "//zircon/public/lib/fdio" ]
-}
-
-migrated_manifest("watch-manifest") {
-  deps = [ ":watch" ]
 }

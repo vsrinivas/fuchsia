@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("disk-pave") {
   deps = [ ":install-disk-image" ]
@@ -83,12 +82,4 @@ test("install-disk-image-test") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fzl",
   ]
-}
-
-migrated_manifest("install-disk-image-manifest") {
-  deps = [ ":install-disk-image" ]
-}
-
-migrated_manifest("install-disk-image-test-manifest") {
-  deps = [ ":install-disk-image-test" ]
 }

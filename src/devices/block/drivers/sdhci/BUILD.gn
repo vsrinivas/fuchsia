@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("sdhci") {
   defines = [ "_ALL_SOURCE" ]
@@ -53,10 +52,6 @@ test("sdhci-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("sdhci-manifest") {
-  deps = [ ":sdhci" ]
 }
 
 unittest_package("sdhci-test-package") {

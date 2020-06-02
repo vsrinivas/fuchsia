@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("aml-scpi-s912") {
   deps = [
@@ -62,12 +61,4 @@ driver_module("scpi") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
   ]
-}
-
-migrated_manifest("aml-scpi-s912.mailbox-manifest") {
-  deps = [ ":aml-scpi-s912.mailbox" ]
-}
-
-migrated_manifest("scpi-manifest") {
-  deps = [ ":scpi" ]
 }

@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("aml-light") {
   defines = [ "_ALL_SOURCE" ]
@@ -57,10 +56,6 @@ test("aml-light-test") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
-}
-
-migrated_manifest("aml-light-manifest") {
-  deps = [ ":aml-light" ]
 }
 
 unittest_package("aml-light-test-package") {

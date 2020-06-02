@@ -3,10 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/zircon_images.gni")
+import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
-import("//build/unification/images/migrated_manifest.gni")
-import("//build/test.gni")
 
 group("tests") {
   testonly = true
@@ -36,10 +35,6 @@ executable("lsusb") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
   ]
-}
-
-migrated_manifest("lsusb-manifest") {
-  deps = [ ":lsusb" ]
 }
 
 # A simple test utility that returns the integer value provided to it in its first argument.

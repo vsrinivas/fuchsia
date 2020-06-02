@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 test("mt8167-audio-lib-test") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -37,8 +36,4 @@ test("mt8167-audio-lib-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("mt8167-audio-lib-test-manifest") {
-  deps = [ ":mt8167-audio-lib-test" ]
 }

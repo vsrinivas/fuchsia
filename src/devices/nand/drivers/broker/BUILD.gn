@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("broker") {
   deps = [ ":nand-broker" ]
@@ -29,8 +28,4 @@ driver_module("nand-broker") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
-}
-
-migrated_manifest("nand-broker-manifest") {
-  deps = [ ":nand-broker" ]
 }

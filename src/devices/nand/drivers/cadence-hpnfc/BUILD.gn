@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("cadence-hpnfc") {
   defines = [ "_ALL_SOURCE" ]
@@ -64,10 +63,6 @@ test("cadence-hpnfc-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fzl",
   ]
-}
-
-migrated_manifest("cadence-hpnfc-manifest") {
-  deps = [ ":cadence-hpnfc" ]
 }
 
 unittest_package("cadence-hpnfc-test-package") {

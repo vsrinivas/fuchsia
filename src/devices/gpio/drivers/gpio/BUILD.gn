@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("gpio") {
   defines = [ "_ALL_SOURCE" ]
@@ -50,10 +49,6 @@ test("gpio-test") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
-}
-
-migrated_manifest("gpio-manifest") {
-  deps = [ ":gpio" ]
 }
 
 unittest_package("gpio-test-package") {

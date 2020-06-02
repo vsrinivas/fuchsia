@@ -4,7 +4,6 @@
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 executable("sdio") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -36,10 +35,6 @@ test("sdio-test") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
-}
-
-migrated_manifest("sdio-manifest") {
-  deps = [ ":sdio" ]
 }
 
 unittest_package("sdio-test-package") {

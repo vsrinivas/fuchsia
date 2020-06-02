@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -80,12 +79,4 @@ test("ftl-volume-wrapper") {
     "//zircon/system/ulib/fvm-host",
     "//zircon/system/ulib/mtd",
   ]
-}
-
-migrated_manifest("nand-volume-driver-manifest") {
-  deps = [ ":nand-volume-driver" ]
-}
-
-migrated_manifest("ftl-volume-wrapper-manifest") {
-  deps = [ ":ftl-volume-wrapper" ]
 }

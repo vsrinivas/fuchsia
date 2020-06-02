@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 declare_args() {
   netsvc_extra_defines = []
@@ -209,20 +208,4 @@ test("netsvc-stress-test") {
     "//zircon/system/ulib/ramdevice-client",
   ]
   data_deps = [ ":netsvc" ]
-}
-
-migrated_manifest("netsvc-manifest") {
-  deps = [ ":netsvc" ]
-}
-
-migrated_manifest("device-name-provider-manifest") {
-  deps = [ ":device-name-provider" ]
-}
-
-migrated_manifest("netsvc-test-manifest") {
-  deps = [ ":netsvc-test" ]
-}
-
-migrated_manifest("netsvc-stress-test-manifest") {
-  deps = [ ":netsvc-stress-test" ]
 }

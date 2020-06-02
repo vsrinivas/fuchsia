@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 import("//build/unification/zx_library.gni")
 
 zx_library("crashsvc") {
@@ -115,12 +114,4 @@ test("crashsvc-test") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/mini-process",
   ]
-}
-
-migrated_manifest("svchost-manifest") {
-  deps = [ ":svchost" ]
-}
-
-migrated_manifest("crashsvc-test-manifest") {
-  deps = [ ":crashsvc-test" ]
 }

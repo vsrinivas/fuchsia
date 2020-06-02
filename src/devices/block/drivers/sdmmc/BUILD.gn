@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("sdmmc") {
   defines = [ "_ALL_SOURCE" ]
@@ -81,10 +80,6 @@ test("sdmmc-test") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace:trace-driver",
   ]
-}
-
-migrated_manifest("sdmmc-manifest") {
-  deps = [ ":sdmmc" ]
 }
 
 unittest_package("sdmmc-test-package") {

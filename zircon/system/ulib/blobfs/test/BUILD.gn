@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 import("//build/fuzzing/fuzzer.gni")
 
@@ -313,16 +312,4 @@ executable("blobfs-load-generator") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs-test-utils",
   ]
-}
-
-migrated_manifest("blobfs-unit-manifest") {
-  deps = [ ":blobfs-unit" ]
-}
-
-migrated_manifest("blobfs-integration-manifest") {
-  deps = [ ":blobfs-integration" ]
-}
-
-migrated_manifest("blobfs-integration-paged-manifest") {
-  deps = [ ":blobfs-integration-paged" ]
 }

@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -55,8 +54,4 @@ test("block-client-unit") {
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage-metrics",
   ]
-}
-
-migrated_manifest("block-client-unit-manifest") {
-  deps = [ ":block-client-unit" ]
 }

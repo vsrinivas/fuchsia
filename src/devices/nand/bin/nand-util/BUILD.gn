@@ -4,7 +4,6 @@
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 executable("nand-util") {
   if (is_fuchsia) {
@@ -74,10 +73,6 @@ test("nand-util-test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("nand-util-manifest") {
-  deps = [ ":nand-util" ]
 }
 
 unittest_package("nand-util-test-package") {

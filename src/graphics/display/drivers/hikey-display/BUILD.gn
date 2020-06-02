@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("hikey-display") {
   defines = [ "_ALL_SOURCE" ]
@@ -82,10 +81,6 @@ test("hikey-display-test") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/mipi-dsi",
   ]
-}
-
-migrated_manifest("hikey-display-manifest") {
-  deps = [ ":hikey-display" ]
 }
 
 group("tests") {

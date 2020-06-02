@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -42,8 +41,4 @@ test("minfs-allocator-unit") {
   ]
 
   include_dirs = [ ".." ]
-}
-
-migrated_manifest("minfs-allocator-unit-manifest") {
-  deps = [ ":minfs-allocator-unit" ]
 }

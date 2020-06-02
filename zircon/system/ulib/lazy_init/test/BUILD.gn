@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -58,8 +57,4 @@ test("lazy_init-test") {
 
   # TODO(47442): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-}
-
-migrated_manifest("lazy_init-test-manifest") {
-  deps = [ ":lazy_init-test" ]
 }

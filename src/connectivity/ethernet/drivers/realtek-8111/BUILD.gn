@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 assert(current_cpu == "x64")
 
@@ -22,8 +21,4 @@ driver_module("realtek-8111") {
     "//src/lib/ddk",
     "//zircon/public/lib/zircon-internal",
   ]
-}
-
-migrated_manifest("realtek-8111-manifest") {
-  deps = [ ":realtek-8111" ]
 }

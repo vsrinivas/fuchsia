@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("vim3") {
   defines = [ "_ALL_SOURCE" ]
@@ -46,8 +45,4 @@ driver_module("vim3") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zx",
   ]
-}
-
-migrated_manifest("vim3-manifest") {
-  deps = [ ":vim3" ]
 }

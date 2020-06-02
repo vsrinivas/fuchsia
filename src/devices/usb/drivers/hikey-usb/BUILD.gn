@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("hikey-usb") {
   defines = [ "_ALL_SOURCE" ]
@@ -22,8 +21,4 @@ driver_module("hikey-usb") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
-}
-
-migrated_manifest("hikey-usb-manifest") {
-  deps = [ ":hikey-usb" ]
 }

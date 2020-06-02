@@ -14,7 +14,6 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -85,10 +84,6 @@ test("paver-test") {
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
   ]
-}
-
-migrated_manifest("paver-test-manifest") {
-  deps = [ ":paver-test" ]
 }
 
 fuzzer("paver-validation-fuzzer") {

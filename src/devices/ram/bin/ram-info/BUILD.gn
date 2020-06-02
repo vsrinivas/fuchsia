@@ -4,7 +4,6 @@
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 executable("ram-info") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -43,10 +42,6 @@ test("ram-info-test") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
-}
-
-migrated_manifest("ram-info-manifest") {
-  deps = [ ":ram-info" ]
 }
 
 unittest_package("ram-info-test-package") {

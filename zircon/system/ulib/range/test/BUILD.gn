@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -36,8 +35,4 @@ test("range") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/range",
   ]
-}
-
-migrated_manifest("range-manifest") {
-  deps = [ ":range" ]
 }

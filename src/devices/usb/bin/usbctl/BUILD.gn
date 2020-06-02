@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("usbctl") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usbctl.cc" ]
@@ -19,8 +17,4 @@ executable("usbctl") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/usb-peripheral-utils",
   ]
-}
-
-migrated_manifest("usbctl-manifest") {
-  deps = [ ":usbctl" ]
 }

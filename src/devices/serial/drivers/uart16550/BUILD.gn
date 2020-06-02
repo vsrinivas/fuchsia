@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("uart16550") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -50,12 +49,4 @@ test("uart16550-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("uart16550-manifest") {
-  deps = [ ":uart16550" ]
-}
-
-migrated_manifest("uart16550-test-manifest") {
-  deps = [ ":uart16550-test" ]
 }

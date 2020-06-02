@@ -4,7 +4,6 @@
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 executable("thermal-cli") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -46,10 +45,6 @@ test("thermal-cli-test") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-utils",
   ]
-}
-
-migrated_manifest("thermal-cli-manifest") {
-  deps = [ ":thermal-cli" ]
 }
 
 unittest_package("thermal-cli-test-package") {

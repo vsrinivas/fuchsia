@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("serial-async") {
   defines = [ "_ALL_SOURCE" ]
@@ -38,10 +37,6 @@ source_set("common") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fidl-utils",
   ]
-}
-
-migrated_manifest("serial-async-manifest") {
-  deps = [ ":serial-async" ]
 }
 
 group("tests") {

@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("storage-metrics") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
@@ -29,8 +27,4 @@ executable("storage-metrics") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/minfs",
   ]
-}
-
-migrated_manifest("storage-metrics-manifest") {
-  deps = [ ":storage-metrics" ]
 }

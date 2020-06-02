@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("sherlock-tdm-output") {
   defines = [ "_ALL_SOURCE" ]
@@ -38,10 +37,6 @@ driver_module("sherlock-tdm-output") {
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/fzl",
   ]
-}
-
-migrated_manifest("sherlock-tdm-output-manifest") {
-  deps = [ ":sherlock-tdm-output" ]
 }
 
 group("tests") {

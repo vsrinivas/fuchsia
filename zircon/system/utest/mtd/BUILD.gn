@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 test("mtd") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -43,8 +42,4 @@ test("mtd") {
   if (current_cpu == "arm64") {
     defines = [ "ASTRO" ]
   }
-}
-
-migrated_manifest("mtd-manifest") {
-  deps = [ ":mtd" ]
 }

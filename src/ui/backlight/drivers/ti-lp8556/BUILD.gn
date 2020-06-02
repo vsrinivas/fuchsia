@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("ti-lp8556") {
   defines = [ "_ALL_SOURCE" ]
@@ -62,12 +61,4 @@ test("ti-lp8556-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("ti-lp8556-manifest") {
-  deps = [ ":ti-lp8556" ]
-}
-
-migrated_manifest("ti-lp8556-test-manifest") {
-  deps = [ ":ti-lp8556-test" ]
 }

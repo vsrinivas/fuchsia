@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 template("blobfs_large_integration_test") {
   test_case_sources = invoker.sources
@@ -62,12 +61,5 @@ template("blobfs_large_integration_test") {
     defines = [
       "BLOBFS_LARGE_INTEGRATION_TEST_EXECUTABLE=\"${test_target_name}-test\"",
     ]
-  }
-
-  migrated_manifest("${test_target_name}-manifest") {
-    deps = [ ":${test_target_name}" ]
-  }
-  migrated_manifest("${paged_target_name}-manifest") {
-    deps = [ ":${paged_target_name}" ]
   }
 }

@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("virtio_rng") {
   defines = [ "_ALL_SOURCE" ]
@@ -23,8 +22,4 @@ driver_module("virtio_rng") {
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
   ]
-}
-
-migrated_manifest("virtio_rng-manifest") {
-  deps = [ ":virtio_rng" ]
 }

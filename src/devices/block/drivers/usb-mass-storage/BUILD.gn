@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("usb-mass-storage") {
   defines = [ "_ALL_SOURCE" ]
@@ -68,10 +67,6 @@ test("ums") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("usb-mass-storage-manifest") {
-  deps = [ ":usb-mass-storage" ]
 }
 
 unittest_package("ums-block-package") {

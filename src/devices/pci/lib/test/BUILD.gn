@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 test("pci-roothost") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -41,8 +40,4 @@ test("pci-roothost") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/dev/lib/pci",
   ]
-}
-
-migrated_manifest("pci-test-manifest") {
-  deps = [ ":pci-roothost" ]
 }

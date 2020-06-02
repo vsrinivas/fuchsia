@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("msm8x53-power") {
   defines = [ "_ALL_SOURCE" ]
@@ -59,12 +58,4 @@ test("msm8x53-power-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("msm8x53-power-manifest") {
-  deps = [ ":msm8x53-power" ]
-}
-
-migrated_manifest("msm8x53-power-test-manifest") {
-  deps = [ ":msm8x53-power-test" ]
 }

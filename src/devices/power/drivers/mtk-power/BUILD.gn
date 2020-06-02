@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("mtk-power") {
   defines = [ "_ALL_SOURCE" ]
@@ -59,10 +58,6 @@ test("mtk-power-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("mtk-power-manifest") {
-  deps = [ ":mtk-power" ]
 }
 
 unittest_package("mtk-power-test-package") {

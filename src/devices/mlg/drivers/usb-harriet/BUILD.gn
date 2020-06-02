@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("usb-harriet") {
   defines = [ "_ALL_SOURCE" ]
@@ -24,8 +23,4 @@ driver_module("usb-harriet") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
   ]
-}
-
-migrated_manifest("usb-harriet-manifest") {
-  deps = [ ":usb-harriet" ]
 }

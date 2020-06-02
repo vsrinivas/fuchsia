@@ -5,8 +5,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("display-detect") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -51,13 +49,6 @@ executable("display-color") {
 }
 
 group("display-factory-test") {
-  deps = [
-    ":display-color",
-    ":display-detect",
-  ]
-}
-
-migrated_manifest("display-factory-test-manifest") {
   deps = [
     ":display-color",
     ":display-detect",

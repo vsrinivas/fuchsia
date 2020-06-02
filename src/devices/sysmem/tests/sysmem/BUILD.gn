@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 test("sysmem") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -35,8 +34,4 @@ test("sysmem") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fidl-async-2",
   ]
-}
-
-migrated_manifest("sysmem-manifest") {
-  deps = [ ":sysmem" ]
 }

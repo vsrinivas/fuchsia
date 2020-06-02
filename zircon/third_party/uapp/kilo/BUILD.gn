@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("kilo") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -39,8 +37,4 @@ config("config") {
   } else {
     cflags = [ "-Wno-incompatible-pointer-types-discards-qualifiers" ]
   }
-}
-
-migrated_manifest("kilo-manifest") {
-  deps = [ ":kilo" ]
 }

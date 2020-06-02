@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 test("runtests-utils") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -289,16 +288,4 @@ group("test-scripts") {
     ":test-with-output-fail.sh",
     ":test-with-output-succeed.sh",
   ]
-}
-
-migrated_manifest("runtests-utils-manifest") {
-  deps = [ ":runtests-utils" ]
-}
-
-migrated_manifest("publish-data-helper-manifest") {
-  deps = [ ":publish-data-helper" ]
-}
-
-migrated_manifest("profile-helper-manifest") {
-  deps = [ ":profile-helper" ]
 }

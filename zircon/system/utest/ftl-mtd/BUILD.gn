@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("ftl-mtd") {
   testonly = true
@@ -44,8 +43,4 @@ test("ftl-volume-wrapper-integration") {
     "//zircon/system/ulib/fvm-host",
     "//zircon/system/ulib/mtd",
   ]
-}
-
-migrated_manifest("ftl-volume-wrapper-integration-manifest") {
-  deps = [ ":ftl-volume-wrapper-integration" ]
 }

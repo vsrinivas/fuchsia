@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -42,8 +41,4 @@ test("driver-integration") {
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fzl",
   ]
-}
-
-migrated_manifest("driver-integration-manifest") {
-  deps = [ ":driver-integration" ]
 }

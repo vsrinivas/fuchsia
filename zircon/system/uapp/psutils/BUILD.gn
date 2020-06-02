@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 group("psutils") {
   deps = [
     ":handles",
@@ -197,48 +195,4 @@ executable("handles") {
     "//zircon/public/lib/fdio",
     "//zircon/system/ulib/task-utils",
   ]
-}
-
-migrated_manifest("ps-manifest") {
-  deps = [ ":ps" ]
-}
-
-migrated_manifest("top-manifest") {
-  deps = [ ":top" ]
-}
-
-migrated_manifest("kill-manifest") {
-  deps = [ ":kill" ]
-}
-
-migrated_manifest("killall-manifest") {
-  deps = [ ":killall" ]
-}
-
-migrated_manifest("vmaps-manifest") {
-  deps = [ ":vmaps" ]
-}
-
-migrated_manifest("vmos-manifest") {
-  deps = [ ":vmos" ]
-}
-
-migrated_manifest("memgraph-manifest") {
-  deps = [ ":memgraph" ]
-}
-
-migrated_manifest("kstats-manifest") {
-  deps = [ ":kstats" ]
-}
-
-migrated_manifest("threads-manifest") {
-  deps = [ ":threads" ]
-}
-
-migrated_manifest("signal-manifest") {
-  deps = [ ":signal" ]
-}
-
-migrated_manifest("handles-manifest") {
-  deps = [ ":handles" ]
 }

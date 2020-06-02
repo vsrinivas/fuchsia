@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("mbr") {
   defines = [ "_ALL_SOURCE" ]
@@ -58,12 +57,4 @@ test("mbr-test") {
     "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/mbr",
   ]
-}
-
-migrated_manifest("mbr-manifest") {
-  deps = [ ":mbr" ]
-}
-
-migrated_manifest("mbr-test-manifest") {
-  deps = [ ":mbr-test" ]
 }

@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 test("dlfcn") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -49,12 +48,4 @@ loadable_module("test-dso-no-note") {
 config("no-build-id") {
   visibility = [ ":*" ]
   ldflags = [ "-Wl,--build-id=none" ]
-}
-
-migrated_manifest("dlfcn-manifest") {
-  deps = [ ":dlfcn" ]
-}
-
-migrated_manifest("dlfcn-test-dso-no-note") {
-  deps = [ ":test-dso-no-note" ]
 }

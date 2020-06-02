@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/unification/firmware.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 # TODO: test_driver?
 driver_module("flash-programmer") {
@@ -42,8 +41,4 @@ driver_module("flash-programmer") {
 
 firmware("fx3-firmware") {
   sources = [ "fx3-boot/Fx3BootAppGcc.img" ]
-}
-
-migrated_manifest("flash-programmer-manifest") {
-  deps = [ ":flash-programmer" ]
 }

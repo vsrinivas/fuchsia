@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("xdc-test") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -36,8 +34,4 @@ executable("xdc-test-host") {
     "//zircon/system/ulib/xdc-host-utils",
     "//zircon/system/ulib/xdc-server-utils",
   ]
-}
-
-migrated_manifest("xdc-test-manifest") {
-  deps = [ ":xdc-test" ]
 }

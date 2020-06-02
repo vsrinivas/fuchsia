@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 import("//build/fuzzing/fuzzer.gni")
 
@@ -65,8 +64,4 @@ fuzzer("tftp-fuzzer") {
     "//zircon/public/lib/tftp",
   ]
   include_dirs = [ ".." ]
-}
-
-migrated_manifest("tftp-test-manifest") {
-  deps = [ ":tftp-test" ]
 }

@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("max98927") {
   defines = [ "_ALL_SOURCE" ]
@@ -27,8 +26,4 @@ driver_module("max98927") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-utils",
   ]
-}
-
-migrated_manifest("max98927-manifest") {
-  deps = [ ":max98927" ]
 }

@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("aml-pwm") {
   defines = [ "_ALL_SOURCE" ]
@@ -49,10 +48,6 @@ group("common") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zircon-internal",
   ]
-}
-
-migrated_manifest("aml-pwm-manifest") {
-  deps = [ ":aml-pwm" ]
 }
 
 unittest_package("aml-pwm-test-package") {

@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("optee") {
   defines = [ "_ALL_SOURCE" ]
@@ -90,12 +89,4 @@ test("optee-message-test") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/tee-client-api:tee-client-api-headers",
   ]
-}
-
-migrated_manifest("optee-manifest") {
-  deps = [ ":optee" ]
-}
-
-migrated_manifest("optee-message-test-manifest") {
-  deps = [ ":optee-message-test" ]
 }

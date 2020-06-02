@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 import("//build/fuzzing/fuzzer.gni")
 
@@ -94,8 +93,4 @@ fuzzer("journal-replay-fuzzer") {
   sources = [ "replay_fuzztest.cc" ]
   deps = [ ":fuzz-utils" ]
   include_dirs = [ "test" ]
-}
-
-migrated_manifest("journal-unit-manifest") {
-  deps = [ ":journal-unit" ]
 }

@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("backlight") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
@@ -12,8 +10,4 @@ executable("backlight") {
     "//zircon/public/lib/fdio",
     "//zircon/system/ulib/fzl",
   ]
-}
-
-migrated_manifest("backlight-manifest") {
-  deps = [ ":backlight" ]
 }

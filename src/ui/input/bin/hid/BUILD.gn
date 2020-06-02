@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("hid") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -22,8 +20,4 @@ executable("hid") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hid-parser",
   ]
-}
-
-migrated_manifest("hid-manifest") {
-  deps = [ ":hid" ]
 }

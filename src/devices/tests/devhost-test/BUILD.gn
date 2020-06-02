@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/fidl/fidl.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 fidl("fuchsia.device.devhost.test") {
   #visibility = [ ":*" ]
@@ -68,16 +67,4 @@ driver_module("devhost-test-child") {
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
   #deprecated_inhibit_driver_shlib_allowlist = true
-}
-
-migrated_manifest("devhost-test-manifest") {
-  deps = [ ":devhost-test" ]
-}
-
-migrated_manifest("devhost-test-manual-manifest") {
-  deps = [ ":devhost-test-manual" ]
-}
-
-migrated_manifest("devhost-test-child-manifest") {
-  deps = [ ":devhost-test-child" ]
 }

@@ -14,7 +14,6 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
 
 executable("fvm") {

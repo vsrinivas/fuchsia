@@ -7,7 +7,6 @@ import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/unification/firmware.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 # All non-test targets.
 group("controller") {
@@ -135,10 +134,6 @@ fuzzer("nhlt-fuzzer") {
 
 firmware("firmware") {
   sources = [ "intel-adsp-sst/dsp_fw_kbl_v3420.bin" ]
-}
-
-migrated_manifest("intel-hda-manifest") {
-  deps = [ ":intel-hda" ]
 }
 
 unittest_package("intel-hda-controller-test") {

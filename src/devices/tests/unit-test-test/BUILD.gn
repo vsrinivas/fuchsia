@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("unit-test-fail") {
   test = true
@@ -31,12 +30,4 @@ driver_module("unit-test-pass") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
   ]
-}
-
-migrated_manifest("unit-test-fail-manifest") {
-  deps = [ ":unit-test-fail" ]
-}
-
-migrated_manifest("unit-test-pass-manifest") {
-  deps = [ ":unit-test-pass" ]
 }

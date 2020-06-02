@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 config("Wno-unused-function") {
   cflags = [ "-Wno-unused-function" ]
@@ -52,8 +51,4 @@ driver_module("usb-audio") {
     "//zircon/system/ulib/dispatcher-pool",
   ]
   public_configs = [ ":Wno-unused-function" ]
-}
-
-migrated_manifest("usb-audio-manifest") {
-  deps = [ ":usb-audio" ]
 }

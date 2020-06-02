@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("driverinfo") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -23,8 +21,4 @@ executable("driverinfo") {
     "//zircon/public/lib/fdio",
     "//zircon/system/ulib/driver-info",
   ]
-}
-
-migrated_manifest("driverinfo-manifest") {
-  deps = [ ":driverinfo" ]
 }

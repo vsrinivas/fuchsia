@@ -4,7 +4,6 @@
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 executable("gpioutil") {
   if (is_fuchsia) {
@@ -44,10 +43,6 @@ test("gpioutil-test") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fidl-utils",
   ]
-}
-
-migrated_manifest("gpioutil-manifest") {
-  deps = [ ":gpioutil" ]
 }
 
 unittest_package("gpioutil-test-package") {

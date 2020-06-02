@@ -5,8 +5,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("display-test") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -27,8 +25,4 @@ executable("display-test") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format:image-format-llcpp",
   ]
-}
-
-migrated_manifest("display-test-manifest") {
-  deps = [ ":display-test" ]
 }

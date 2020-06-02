@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("serial-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "serial-test.cc" ]
@@ -11,8 +9,4 @@ executable("serial-test") {
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_llcpp",
     "//zircon/public/lib/fdio",
   ]
-}
-
-migrated_manifest("serial-test-manifest") {
-  deps = [ ":serial-test" ]
 }

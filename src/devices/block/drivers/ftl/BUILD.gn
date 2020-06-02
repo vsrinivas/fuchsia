@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("ftl") {
   defines = [ "_ALL_SOURCE" ]
@@ -52,8 +51,4 @@ source_set("common") {
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace:trace-driver",
   ]
-}
-
-migrated_manifest("ftl-manifest") {
-  deps = [ ":ftl" ]
 }

@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("tee-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "tee-test.c" ]
@@ -22,8 +20,4 @@ executable("tee-test") {
     "//zircon/system/ulib/tee-client-api",
   ]
   libs = [ "zircon" ]
-}
-
-migrated_manifest("tee-test-manifest") {
-  deps = [ ":tee-test" ]
 }

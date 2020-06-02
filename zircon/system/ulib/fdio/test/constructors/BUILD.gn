@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 import("//zircon/public/gn/toolchain/c_utils.gni")
 
@@ -74,8 +73,4 @@ toolchain_utils_action("no-static-ctor") {
     rebase_path(outputs[0], root_build_dir),
     rebase_path(depfile, root_build_dir),
   ]
-}
-
-migrated_manifest("fdio-constructor-manifest") {
-  deps = [ ":fdio-constructor" ]
 }

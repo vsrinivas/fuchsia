@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("mt8167s-display") {
   defines = [ "_ALL_SOURCE" ]
@@ -87,10 +86,6 @@ test("dsi-host") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/image-format:image-format-llcpp",
   ]
-}
-
-migrated_manifest("mt8167s-display-manifest") {
-  deps = [ ":mt8167s-display" ]
 }
 
 group("tests") {

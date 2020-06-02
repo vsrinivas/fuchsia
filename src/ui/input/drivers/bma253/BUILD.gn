@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("bma253") {
   defines = [ "_ALL_SOURCE" ]
@@ -63,10 +62,6 @@ test("bma253-test") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",
   ]
-}
-
-migrated_manifest("bma253-manifest") {
-  deps = [ ":bma253" ]
 }
 
 unittest_package("bma253-test-package") {

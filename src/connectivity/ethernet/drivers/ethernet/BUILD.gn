@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("ethernet") {
   defines = [ "_ALL_SOURCE" ]
@@ -53,10 +52,6 @@ test("ethernet-unittest") {
 
   # TODO(46872): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-}
-
-migrated_manifest("ethernet-manifest") {
-  deps = [ ":ethernet" ]
 }
 
 unittest_package("ethernet-unittest-package") {

@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -38,8 +37,4 @@ test("storage-metrics") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/storage-metrics",
   ]
-}
-
-migrated_manifest("storage-metrics-manifest") {
-  deps = [ ":storage-metrics" ]
 }

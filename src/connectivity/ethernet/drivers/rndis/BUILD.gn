@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("rndis") {
   defines = [ "_ALL_SOURCE" ]
@@ -22,8 +21,4 @@ driver_module("rndis") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
   ]
-}
-
-migrated_manifest("rndis-manifest") {
-  deps = [ ":rndis" ]
 }

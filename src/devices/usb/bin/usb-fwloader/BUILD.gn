@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("usb-fwloader") {
   configs += [ "//build/unification/config:zircon-migrated" ]
 
@@ -22,8 +20,4 @@ executable("usb-fwloader") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
   ]
-}
-
-migrated_manifest("usb-fwloader-manifest") {
-  deps = [ ":usb-fwloader" ]
 }

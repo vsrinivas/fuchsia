@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 test("x86-umip") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -26,8 +25,4 @@ test("x86-umip") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("x86-umip-manifest") {
-  deps = [ ":x86-umip" ]
 }

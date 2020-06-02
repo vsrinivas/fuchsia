@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 generated_file("zxcrypt_config.txt") {
   # TODO(44278): Remove when converting this file to proper GN build idioms.
@@ -51,8 +50,4 @@ test("fs-recovery") {
 
   # TODO(47413): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-}
-
-migrated_manifest("fs-recovery-manifest") {
-  deps = [ ":fs-recovery" ]
 }

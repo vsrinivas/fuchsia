@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("mt-musb-host") {
   defines = [ "_ALL_SOURCE" ]
@@ -111,20 +110,4 @@ test("mt-hci-request-queue-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("mt-musb-host-manifest") {
-  deps = [ ":mt-musb-host" ]
-}
-
-migrated_manifest("mt-hci-test-manifest") {
-  deps = [ ":mt-hci-test" ]
-}
-
-migrated_manifest("mt-hci-transaction-test-manifest") {
-  deps = [ ":mt-hci-transaction-test" ]
-}
-
-migrated_manifest("mt-hci-request-queue-test-manifest") {
-  deps = [ ":mt-hci-request-queue-test" ]
 }

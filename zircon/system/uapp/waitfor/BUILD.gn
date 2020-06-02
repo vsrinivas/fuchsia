@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("waitfor") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "waitfor.cc" ]
@@ -25,8 +23,4 @@ executable("waitfor") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/gpt",
   ]
-}
-
-migrated_manifest("waitfor-manifest") {
-  deps = [ ":waitfor" ]
 }

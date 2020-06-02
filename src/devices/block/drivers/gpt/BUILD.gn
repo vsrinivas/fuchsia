@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("gpt") {
   defines = [ "_ALL_SOURCE" ]
@@ -49,12 +48,4 @@ test("gpt-device-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/gpt",
   ]
-}
-
-migrated_manifest("gpt-manifest") {
-  deps = [ ":gpt" ]
-}
-
-migrated_manifest("gpt-device-test-manifest") {
-  deps = [ ":gpt-device-test" ]
 }

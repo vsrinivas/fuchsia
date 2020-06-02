@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("platform") {
   deps = [
@@ -67,12 +66,4 @@ driver_module("platform-bus.proxy") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
-}
-
-migrated_manifest("platform-bus-manifest") {
-  deps = [ ":platform-bus" ]
-}
-
-migrated_manifest("platform-bus.proxy-manifest") {
-  deps = [ ":platform-bus.proxy" ]
 }

@@ -14,7 +14,6 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -212,22 +211,6 @@ test("minfs-host") {
     "//zircon/system/ulib/minfs",
   ]
   include_dirs = [ "$zx/system/ulib/minfs" ]
-}
-
-migrated_manifest("minfs-unit-manifest") {
-  deps = [ ":minfs-unit" ]
-}
-
-migrated_manifest("minfs-integration-manifest") {
-  deps = [ ":minfs-integration" ]
-}
-
-migrated_manifest("minfs-power-manifest") {
-  deps = [ ":minfs-power" ]
-}
-
-migrated_manifest("minfs-host-manifest") {
-  deps = [ ":minfs-host" ]
 }
 
 fuzzer("minfs-fuzzer") {

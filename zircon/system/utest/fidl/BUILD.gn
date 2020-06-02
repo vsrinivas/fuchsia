@@ -14,7 +14,6 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 if (is_fuchsia) {
   source_set("common") {
@@ -114,14 +113,6 @@ if (is_fuchsia) {
 
     # TODO(46873): Fix the leaks and remove this.
     deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-  }
-
-  migrated_manifest("fidl-handle-policy-test-app-manifest") {
-    deps = [ ":fidl-handle-policy-test-app" ]
-  }
-
-  migrated_manifest("fidl-manifest") {
-    deps = [ ":fidl" ]
   }
 } else if (current_os == host_os && current_cpu == host_cpu) {
   # Some of the tests can run on host.

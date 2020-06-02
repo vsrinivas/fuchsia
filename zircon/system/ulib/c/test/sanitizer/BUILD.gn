@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("sanitizer") {
   testonly = true
@@ -91,12 +90,4 @@ shared_library("sanitizer-memory-snapshot-test-needed-dso") {
 shared_library("sanitizer-memory-snapshot-test-dlopen-dso") {
   visibility = [ ":*" ]
   sources = [ "sanitizer-memory-snapshot-test-dlopen-dso.cc" ]
-}
-
-migrated_manifest("sanitizer-utils-manifest") {
-  deps = [ ":sanitizer-utils" ]
-}
-
-migrated_manifest("sanitizer-exit-hook-test-helper-manifest") {
-  deps = [ ":sanitizer-exit-hook-test-helper" ]
 }

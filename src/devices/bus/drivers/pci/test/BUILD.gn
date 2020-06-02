@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 # The output of the test code below is made up of several binaries
 # pci-unit-test: A binary to run the unit tests defiend in test/
@@ -117,22 +116,6 @@ driver_module("pci_protocol_test_driver") {
     "//src/lib/ddktl",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("pci-driver-manifest") {
-  deps = [ ":pci-driver" ]
-}
-
-migrated_manifest("pci_fake-manifest") {
-  deps = [ ":pci_fake" ]
-}
-
-migrated_manifest("pci_fake.proxy-manifest") {
-  deps = [ ":pci_fake.proxy" ]
-}
-
-migrated_manifest("pci_protocol_test_driver-manifest") {
-  deps = [ ":pci_protocol_test_driver" ]
 }
 
 unittest_package("pci-unit-package") {

@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("usb-cdc-ecm") {
   defines = [ "_ALL_SOURCE" ]
@@ -47,14 +46,6 @@ test("usb-cdc-ecm-unittest") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("usb-cdc-ecm-manifest") {
-  deps = [ ":usb-cdc-ecm" ]
-}
-
-migrated_manifest("usb-cdc-ecm-unittest-manifest") {
-  deps = [ ":usb-cdc-ecm-unittest" ]
 }
 
 fuzzer("usb-cdc-ecm-descriptor-fuzzer") {

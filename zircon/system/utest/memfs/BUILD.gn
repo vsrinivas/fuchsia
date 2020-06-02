@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 test("memfs") {
   output_dir = "$root_out_dir/zircon-migrated"
@@ -48,8 +47,4 @@ test("memfs") {
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/unittest",
   ]
-}
-
-migrated_manifest("memfs-manifest") {
-  deps = [ ":memfs" ]
 }

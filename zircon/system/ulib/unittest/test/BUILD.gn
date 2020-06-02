@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -31,8 +30,4 @@ test("unittest") {
     "//zircon/public/lib/fdio",
     "//zircon/system/ulib/unittest",
   ]
-}
-
-migrated_manifest("unittest-manifest") {
-  deps = [ ":unittest" ]
 }

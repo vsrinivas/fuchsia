@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 # Common pieces.
 source_set("common") {
@@ -99,12 +98,4 @@ test("trace-static-engine") {
     ":common",
     "//zircon/system/ulib/trace-engine",
   ]
-}
-
-migrated_manifest("trace-manifest") {
-  deps = [ ":trace" ]
-}
-
-migrated_manifest("trace-static-engine-manifest") {
-  deps = [ ":trace-static-engine" ]
 }

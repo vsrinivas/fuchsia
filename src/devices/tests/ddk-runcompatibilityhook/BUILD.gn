@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("ddk-runcompatibilityhook-test") {
   defines = [ "_ALL_SOURCE" ]
@@ -54,16 +53,4 @@ test("ddk-runcompatibilityhook") {
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/driver-integration-test",
   ]
-}
-
-migrated_manifest("ddk-runcompatibilityhook-test-manifest") {
-  deps = [ ":ddk-runcompatibilityhook-test" ]
-}
-
-migrated_manifest("ddk-runcompatibilityhook-test-child-manifest") {
-  deps = [ ":ddk-runcompatibilityhook-test-child" ]
-}
-
-migrated_manifest("ddk-runcompatibilityhook-manifest") {
-  deps = [ ":ddk-runcompatibilityhook" ]
 }

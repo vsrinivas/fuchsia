@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("c18") {
   defines = [ "_ALL_SOURCE" ]
@@ -33,8 +32,4 @@ driver_module("c18") {
 
   # TODO(47406): restore some form of data dependency on c18
   # boot shim.
-}
-
-migrated_manifest("c18-manifest") {
-  deps = [ ":c18" ]
 }

@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("xhci") {
   defines = [ "_ALL_SOURCE" ]
@@ -174,10 +173,6 @@ test("xhci-transfer-ring-unittest") {
     "xhci-transfer-ring.cc",
   ]
   deps = [ ":test-libs" ]
-}
-
-migrated_manifest("xhci-manifest") {
-  deps = [ ":xhci" ]
 }
 
 unittest_package("xhci-unittest-package") {

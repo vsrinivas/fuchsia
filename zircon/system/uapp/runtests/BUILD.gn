@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("runtests") {
   configs += [ "//build/unification/config:zircon-migrated" ]
 
@@ -35,8 +33,4 @@ executable("runtests") {
 
   # TODO(45181): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-}
-
-migrated_manifest("runtests-manifest") {
-  deps = [ ":runtests" ]
 }

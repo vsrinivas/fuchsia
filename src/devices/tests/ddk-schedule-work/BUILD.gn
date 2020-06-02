@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 fidl("fuchsia.device.schedule.work.test") {
   sources = [ "schedule-work.test.fidl" ]
@@ -70,16 +69,4 @@ executable("ddk-schedule-work-perf") {
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/driver-integration-test",
   ]
-}
-
-migrated_manifest("ddk-schedule-work-test-manifest") {
-  deps = [ ":ddk-schedule-work-test" ]
-}
-
-migrated_manifest("ddk-schedule-work-manifest") {
-  deps = [ ":ddk-schedule-work" ]
-}
-
-migrated_manifest("ddk-schedule-work-perf-manifest") {
-  deps = [ ":ddk-schedule-work-perf" ]
 }

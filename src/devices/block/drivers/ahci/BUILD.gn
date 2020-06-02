@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("ahci") {
   defines = [ "_ALL_SOURCE" ]
@@ -65,12 +64,4 @@ source_set("shared") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
-}
-
-migrated_manifest("ahci-manifest") {
-  deps = [ ":ahci" ]
-}
-
-migrated_manifest("ahci-unittest-manifest") {
-  deps = [ ":ahci-unittest" ]
 }

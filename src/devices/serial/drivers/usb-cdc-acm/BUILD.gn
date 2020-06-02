@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("usb-cdc-acm") {
   defines = [ "_ALL_SOURCE" ]
@@ -48,12 +47,4 @@ driver_module("fake-usb-cdc-acm") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
   ]
-}
-
-migrated_manifest("usb-cdc-acm-manifest") {
-  deps = [ ":usb-cdc-acm" ]
-}
-
-migrated_manifest("fake-usb-cdc-acm-manifest") {
-  deps = [ ":fake-usb-cdc-acm" ]
 }

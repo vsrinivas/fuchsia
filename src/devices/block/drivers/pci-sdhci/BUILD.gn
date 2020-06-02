@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("pci-sdhci") {
   defines = [ "_ALL_SOURCE" ]
@@ -21,8 +20,4 @@ driver_module("pci-sdhci") {
     "//src/lib/ddk",
     "//zircon/public/lib/sync",
   ]
-}
-
-migrated_manifest("pci-sdhci-manifest") {
-  deps = [ ":pci-sdhci" ]
 }

@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("mutex_pi_exerciser") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -43,8 +41,4 @@ executable("mutex_pi_exerciser") {
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
-}
-
-migrated_manifest("mutex_pi_exerciser-manifest") {
-  deps = [ ":mutex_pi_exerciser" ]
 }

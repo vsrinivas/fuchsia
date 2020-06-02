@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 test("devfs") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -33,8 +32,4 @@ test("devfs") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fs",
   ]
-}
-
-migrated_manifest("devfs-manifest") {
-  deps = [ ":devfs" ]
 }

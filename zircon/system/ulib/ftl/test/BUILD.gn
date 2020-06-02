@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -46,8 +45,4 @@ test("ftl_test") {
     "//zircon/system/ulib/ftl:private_headers",
   ]
   defines = [ "NDM_DEBUG" ]
-}
-
-migrated_manifest("ftl_test-manifest") {
-  deps = [ ":ftl_test" ]
 }

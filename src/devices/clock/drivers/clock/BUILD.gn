@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("clock") {
   defines = [ "_ALL_SOURCE" ]
@@ -21,8 +20,4 @@ driver_module("clock") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
-}
-
-migrated_manifest("clock-manifest") {
-  deps = [ ":clock" ]
 }

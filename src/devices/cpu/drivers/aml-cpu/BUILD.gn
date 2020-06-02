@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("aml-cpu") {
   defines = [ "_ALL_SOURCE" ]
@@ -71,12 +70,4 @@ test("aml-cpu-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("aml-cpu-manifest") {
-  deps = [ ":aml-cpu" ]
-}
-
-migrated_manifest("aml-cpu-test-manifest") {
-  deps = [ ":aml-cpu-test" ]
 }

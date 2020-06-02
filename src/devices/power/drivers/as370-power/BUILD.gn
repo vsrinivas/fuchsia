@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("as370-power") {
   defines = [ "_ALL_SOURCE" ]
@@ -62,12 +61,4 @@ test("as370-power-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("as370-power-manifest") {
-  deps = [ ":as370-power" ]
-}
-
-migrated_manifest("as370-power-test-manifest") {
-  deps = [ ":as370-power-test" ]
 }

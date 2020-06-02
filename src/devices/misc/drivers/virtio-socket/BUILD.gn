@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("virtio_socket") {
   defines = [ "_ALL_SOURCE" ]
@@ -27,8 +26,4 @@ driver_module("virtio_socket") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
-}
-
-migrated_manifest("virtio_socket-manifest") {
-  deps = [ ":virtio_socket" ]
 }

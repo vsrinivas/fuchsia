@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("vs680-power") {
   defines = [ "_ALL_SOURCE" ]
@@ -27,10 +26,6 @@ driver_module("vs680-power") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
-}
-
-migrated_manifest("vs680-power-manifest") {
-  deps = [ ":vs680-power" ]
 }
 
 test("vs680-power-test") {

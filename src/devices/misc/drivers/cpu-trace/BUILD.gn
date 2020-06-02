@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 source_set("perf-mon") {
   visibility = [ ":*" ]
@@ -79,10 +78,6 @@ test("perf-mon-tests") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("cpu-trace-manifest") {
-  deps = [ ":cpu-trace" ]
 }
 
 unittest_package("perf-mon-tests-package") {

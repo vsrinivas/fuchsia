@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 executable("biotime") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -25,10 +24,6 @@ executable("biotime") {
   ]
 }
 
-migrated_manifest("biotime-manifest") {
-  deps = [ ":biotime" ]
-}
-
 test("biotime-test") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # TODO(44278): Remove when converting this file to proper GN build idioms.
@@ -43,8 +38,4 @@ test("biotime-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/ramdevice-client",
   ]
-}
-
-migrated_manifest("biotime-test-manifest") {
-  deps = [ ":biotime-test" ]
 }

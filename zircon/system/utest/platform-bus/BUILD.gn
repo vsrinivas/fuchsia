@@ -15,7 +15,6 @@ assert(!defined(zx) || zx != "/",
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 test("platform-bus") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -249,42 +248,6 @@ foreach(driver, simple_drivers) {
       "//zircon/public/lib/sync",
     ]
   }
-
-  migrated_manifest("test-$driver-manifest") {
-    deps = [ ":test-$driver" ]
-  }
-}
-
-migrated_manifest("test-board-manifest") {
-  deps = [ ":test-board" ]
-}
-
-migrated_manifest("test-gpio-manifest") {
-  deps = [ ":test-gpio" ]
-}
-
-migrated_manifest("test-power-manifest") {
-  deps = [ ":test-power" ]
-}
-
-migrated_manifest("test-clock-manifest") {
-  deps = [ ":test-clock" ]
-}
-
-migrated_manifest("test-i2c-manifest") {
-  deps = [ ":test-i2c" ]
-}
-
-migrated_manifest("test-spi-manifest") {
-  deps = [ ":test-spi" ]
-}
-
-migrated_manifest("test-audio-codec-manifest") {
-  deps = [ ":test-audio-codec" ]
-}
-
-migrated_manifest("test-pwm-manifest") {
-  deps = [ ":test-pwm" ]
 }
 
 unittest_package("platform-bus-package") {

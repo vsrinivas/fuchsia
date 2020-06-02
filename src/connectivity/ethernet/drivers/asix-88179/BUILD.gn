@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -90,16 +89,4 @@ test("usb-virtual-bus-asix-88179") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
   ]
-}
-
-migrated_manifest("asix-88179-manifest") {
-  deps = [ ":asix-88179" ]
-}
-
-migrated_manifest("fake-asix-88179-manifest") {
-  deps = [ ":fake-asix-88179" ]
-}
-
-migrated_manifest("usb-virtual-bus-asix-88179-manifest") {
-  deps = [ ":usb-virtual-bus-asix-88179" ]
 }

@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("miscsvc") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -35,8 +33,4 @@ executable("miscsvc") {
     "//zircon/system/ulib/svc",
   ]
   output_dir = "$root_out_dir/zircon-migrated"
-}
-
-migrated_manifest("miscsvc-manifest") {
-  deps = [ ":miscsvc" ]
 }

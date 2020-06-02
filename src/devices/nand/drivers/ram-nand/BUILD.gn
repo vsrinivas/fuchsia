@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("ram-nand") {
   defines = [ "_ALL_SOURCE" ]
@@ -75,12 +74,4 @@ test("ram-nand-test") {
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/unittest",
   ]
-}
-
-migrated_manifest("ram-nand-manifest") {
-  deps = [ ":ram-nand" ]
-}
-
-migrated_manifest("ram-nand-test-manifest") {
-  deps = [ ":ram-nand-test" ]
 }

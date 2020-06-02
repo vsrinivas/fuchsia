@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/unification/firmware.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("fx3") {  # TODO: test_driver?
   defines = [ "_ALL_SOURCE" ]
@@ -34,8 +33,4 @@ firmware("firmware") {
     "fx3-flash/cyfxflashprog.img",
     "usb-testing/fx3/fx3.img",
   ]
-}
-
-migrated_manifest("fx3-manifest") {
-  deps = [ ":fx3" ]
 }

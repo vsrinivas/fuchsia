@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 default_stack_size_cases = [
   {
@@ -172,24 +171,5 @@ group("test") {
   }
 }
 
-migrated_manifest("debugdata-test-helper-manifest") {
-  deps = [ ":debugdata-test-helper" ]
-}
-
-migrated_manifest("debugdata-manifest") {
-  deps = [ ":debugdata" ]
-}
-
-migrated_manifest("posix-clocks-manifest") {
-  deps = [ ":posix-clocks" ]
-}
-
-migrated_manifest("atexit-manifest") {
-  deps = [ ":atexit" ]
-}
-
 foreach(case, default_stack_size_cases) {
-  migrated_manifest("default-stack-size-${case.name}-manifest") {
-    deps = [ ":default-stack-size-${case.name}" ]
-  }
 }

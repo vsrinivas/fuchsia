@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -46,8 +45,4 @@ test("device-protocol-pdev-test") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("device-protocol-pdev-test-manifest") {
-  deps = [ ":device-protocol-pdev-test" ]
 }

@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("aml-thermal-s905d2g") {
   defines = [ "_ALL_SOURCE" ]
@@ -86,10 +85,6 @@ test("aml-thermal-s905d2g-test") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-utils",
   ]
-}
-
-migrated_manifest("aml-thermal-s905d2g-manifest") {
-  deps = [ ":aml-thermal-s905d2g" ]
 }
 
 unittest_package("aml-thermal-s905d2g-test-package") {

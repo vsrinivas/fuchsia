@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("trace-example") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
@@ -31,8 +29,4 @@ executable("trace-example") {
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
-}
-
-migrated_manifest("trace-example-manifest") {
-  deps = [ ":trace-example" ]
 }

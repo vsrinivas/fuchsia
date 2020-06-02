@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 executable("console") {
   if (is_fuchsia) {
@@ -90,12 +89,4 @@ test("console-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("console-manifest") {
-  deps = [ ":console" ]
-}
-
-migrated_manifest("console-test-manifest") {
-  deps = [ ":console-test" ]
 }

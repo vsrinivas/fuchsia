@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 executable("ptysvc") {
   if (is_fuchsia) {
@@ -95,12 +94,4 @@ test("ptysvc-test") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
-}
-
-migrated_manifest("ptysvc-manifest") {
-  deps = [ ":ptysvc" ]
-}
-
-migrated_manifest("ptysvc-test-manifest") {
-  deps = [ ":ptysvc-test" ]
 }

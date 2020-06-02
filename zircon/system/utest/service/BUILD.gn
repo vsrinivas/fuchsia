@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 
@@ -47,10 +45,6 @@ if (is_fuchsia) {
       "//zircon/system/ulib/fs",
       "//zircon/system/ulib/service:service-llcpp",
     ]
-  }
-
-  migrated_manifest("service-llcpp-manifest") {
-    deps = [ ":service-llcpp-test" ]
   }
 }
 

@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("virtio_console") {
   defines = [ "_ALL_SOURCE" ]
@@ -29,8 +28,4 @@ driver_module("virtio_console") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs-pty",
   ]
-}
-
-migrated_manifest("virtio_console-manifest") {
-  deps = [ ":virtio_console" ]
 }

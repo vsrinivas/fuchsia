@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 source_set("cmdline") {
   visibility = [
     ":kcounter",
@@ -41,8 +39,4 @@ executable("kcounter") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
   ]
-}
-
-migrated_manifest("kcounter-manifest") {
-  deps = [ ":kcounter" ]
 }

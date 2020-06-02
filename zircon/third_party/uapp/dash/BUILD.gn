@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("dash") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -122,8 +120,4 @@ config("config") {
       "-Wno-string-plus-int",
     ]
   }
-}
-
-migrated_manifest("dash-manifest") {
-  deps = [ ":dash" ]
 }

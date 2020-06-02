@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("amlogic-pcie") {
   defines = [ "_ALL_SOURCE" ]
@@ -34,8 +33,4 @@ driver_module("amlogic-pcie") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
-}
-
-migrated_manifest("amlogic-pcie-manifest") {
-  deps = [ ":amlogic-pcie" ]
 }

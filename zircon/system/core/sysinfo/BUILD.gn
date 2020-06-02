@@ -14,7 +14,6 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 executable("sysinfo") {
   if (is_fuchsia) {
@@ -42,10 +41,6 @@ executable("sysinfo") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/svc",
   ]
-}
-
-migrated_manifest("sysinfo-manifest") {
-  deps = [ ":sysinfo" ]
 }
 
 test("test") {

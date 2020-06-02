@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("minfs") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -48,8 +46,4 @@ executable("minfs") {
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
-}
-
-migrated_manifest("minfs-manifest") {
-  deps = [ ":minfs" ]
 }

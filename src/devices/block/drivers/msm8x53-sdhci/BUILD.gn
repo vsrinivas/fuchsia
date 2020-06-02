@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("msm8x53-sdhci") {
   defines = [ "_ALL_SOURCE" ]
@@ -25,8 +24,4 @@ driver_module("msm8x53-sdhci") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
-}
-
-migrated_manifest("msm8x53-sdhci-manifest") {
-  deps = [ ":msm8x53-sdhci" ]
 }

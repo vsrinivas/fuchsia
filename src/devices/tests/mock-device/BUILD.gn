@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/fidl/fidl.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("mock-device") {
   test = true
@@ -37,8 +36,4 @@ fidl("fuchsia.device.mock") {
   testonly = false
   sources = [ "mock-device.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
-}
-
-migrated_manifest("mock-device-manifest") {
-  deps = [ ":mock-device" ]
 }

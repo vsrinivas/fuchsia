@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 source_set("sysmem_common_srcs") {
   sources = [
@@ -116,12 +115,4 @@ test("sysmem-unittest") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
   ]
-}
-
-migrated_manifest("sysmem-manifest") {
-  deps = [ ":sysmem" ]
-}
-
-migrated_manifest("sysmem-unittest-manifest") {
-  deps = [ ":sysmem-unittest" ]
 }

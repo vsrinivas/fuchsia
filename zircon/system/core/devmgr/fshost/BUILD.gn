@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 source_set("launcher") {
   visibility = [ ":*" ]
@@ -256,20 +255,4 @@ test("block-watcher-test") {
     "//zircon/system/ulib/minfs",
     "//zircon/system/ulib/ramdevice-client",
   ]
-}
-
-migrated_manifest("fshost-manifest") {
-  deps = [ ":fshost" ]
-}
-
-migrated_manifest("fshost-test-manifest") {
-  deps = [ ":fshost-test" ]
-}
-
-migrated_manifest("fshost-metrics-test-manifest") {
-  deps = [ ":fshost-metrics-test" ]
-}
-
-migrated_manifest("block-watcher-test-manifest") {
-  deps = [ ":block-watcher-test" ]
 }

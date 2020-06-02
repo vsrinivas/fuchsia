@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("aml-uart") {
   defines = [ "_ALL_SOURCE" ]
@@ -67,10 +66,6 @@ test("aml-uart-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("aml-uart-manifest") {
-  deps = [ ":aml-uart" ]
 }
 
 unittest_package("aml-uart-test-package") {

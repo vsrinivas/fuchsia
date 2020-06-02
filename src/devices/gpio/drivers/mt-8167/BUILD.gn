@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("mt-8167") {
   defines = [ "_ALL_SOURCE" ]
@@ -60,10 +59,6 @@ test("mtk-gpio") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("mt-8167-manifest") {
-  deps = [ ":mt-8167" ]
 }
 
 unittest_package("mtk-gpio-package") {

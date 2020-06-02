@@ -15,7 +15,6 @@ assert(!defined(zx) || zx != "/",
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 import("//build/unification/firmware.gni")
 
@@ -70,10 +69,6 @@ test("bt-hci-mediatek-test") {
     "//zircon/system/ulib/ddktl",
     "//zircon/system/ulib/fzl",
   ]
-}
-
-migrated_manifest("bt-hci-mediatek-manifest") {
-  deps = [ ":bt-hci-mediatek" ]
 }
 
 unittest_package("bt-hci-mediatek-test-package") {

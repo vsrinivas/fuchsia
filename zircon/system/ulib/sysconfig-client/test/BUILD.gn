@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 group("test") {
   testonly = true
@@ -48,8 +47,4 @@ test("sysconfig-sync-client-test") {
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
     "//zircon/system/ulib/trace-engine",
   ]
-}
-
-migrated_manifest("sysconfig-sync-client-test-manifest") {
-  deps = [ ":sysconfig-sync-client-test" ]
 }

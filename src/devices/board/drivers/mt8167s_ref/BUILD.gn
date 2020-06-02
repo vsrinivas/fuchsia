@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("mt8167s_ref") {
   defines = [ "_ALL_SOURCE" ]
@@ -118,12 +117,4 @@ test("mt8167s_ref-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-}
-
-migrated_manifest("mt8167s_ref-manifest") {
-  deps = [ ":mt8167s_ref" ]
-}
-
-migrated_manifest("mt8167s_ref-test-manifest") {
-  deps = [ ":mt8167s_ref-test" ]
 }

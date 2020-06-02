@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 group("fs-mkfs") {
   deps = [ ":mkfs" ]
 }
@@ -26,8 +24,4 @@ executable("mkfs") {
     "//zircon/public/lib/safemath",
     "//zircon/system/ulib/fs-management",
   ]
-}
-
-migrated_manifest("mkfs-manifest") {
-  deps = [ ":mkfs" ]
 }

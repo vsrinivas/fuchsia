@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("mkfs-msdosfs") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -38,8 +36,4 @@ executable("mkfs-msdosfs") {
       "_GNU_SOURCE",
     ]
   }
-}
-
-migrated_manifest("mkfs-msdosfs-manifest") {
-  deps = [ ":mkfs-msdosfs" ]
 }

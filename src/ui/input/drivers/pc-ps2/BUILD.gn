@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 assert(current_cpu == "x64")
 
@@ -21,8 +20,4 @@ driver_module("pc-ps2") {
     "//src/lib/ddk",
     "//zircon/system/ulib/hid",
   ]
-}
-
-migrated_manifest("pc-ps2-manifest") {
-  deps = [ ":pc-ps2" ]
 }

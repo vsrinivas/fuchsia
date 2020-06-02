@@ -5,7 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("aml-ram") {
   defines = [ "_ALL_SOURCE" ]
@@ -57,10 +56,6 @@ group("common") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
-}
-
-migrated_manifest("aml-ram-manifest") {
-  deps = [ ":aml-ram" ]
 }
 
 unittest_package("aml-ram-test-package") {

@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("lspwr") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "lspwr.cc" ]
@@ -12,8 +10,4 @@ executable("lspwr") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
   ]
-}
-
-migrated_manifest("lspwr-manifest") {
-  deps = [ ":lspwr" ]
 }

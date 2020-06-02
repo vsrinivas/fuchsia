@@ -12,8 +12,6 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("blobfs") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -37,8 +35,4 @@ executable("blobfs") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/storage/buffer",
   ]
-}
-
-migrated_manifest("blobfs-manifest") {
-  deps = [ ":blobfs" ]
 }

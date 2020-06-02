@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/images/migrated_manifest.gni")
-
 executable("cpuctl") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "cpuctl.cc" ]
@@ -18,8 +16,4 @@ executable("cpuctl") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/fidl-async",
   ]
-}
-
-migrated_manifest("cpuctl-manifest") {
-  deps = [ ":cpuctl" ]
 }

@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("usb-bus") {
   defines = [ "_ALL_SOURCE" ]
@@ -71,12 +70,4 @@ test("usb-device") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/utf_conversion",
   ]
-}
-
-migrated_manifest("usb-bus-manifest") {
-  deps = [ ":usb-bus" ]
-}
-
-migrated_manifest("usb-device-manifest") {
-  deps = [ ":usb-device" ]
 }

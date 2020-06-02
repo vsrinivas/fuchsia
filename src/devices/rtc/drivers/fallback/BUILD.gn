@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("fallback") {
   defines = [ "_ALL_SOURCE" ]
@@ -21,10 +20,6 @@ driver_module("fallback") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/rtc",
   ]
-}
-
-migrated_manifest("fallback-manifest") {
-  deps = [ ":fallback" ]
 }
 
 test("fallback-rtc") {
@@ -45,8 +40,4 @@ test("fallback-rtc") {
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/rtc",
   ]
-}
-
-migrated_manifest("fallback-rtc-manifest") {
-  deps = [ ":fallback-rtc" ]
 }

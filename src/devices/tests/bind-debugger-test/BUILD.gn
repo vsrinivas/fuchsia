@@ -6,7 +6,6 @@ import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
-import("//build/unification/images/migrated_manifest.gni")
 import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
 
 executable("tests") {
@@ -72,8 +71,4 @@ driver_module("bind-debugger-test-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
   ]
-}
-
-migrated_manifest("bind-debugger-test-driver-manifest") {
-  deps = [ ":bind-debugger-test-driver" ]
 }

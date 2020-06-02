@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("spi") {
   defines = [ "_ALL_SOURCE" ]
@@ -56,12 +55,4 @@ test("spi-test") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/spi",
   ]
-}
-
-migrated_manifest("spi-manifest") {
-  deps = [ ":spi" ]
-}
-
-migrated_manifest("spi-test-manifest") {
-  deps = [ ":spi-test" ]
 }

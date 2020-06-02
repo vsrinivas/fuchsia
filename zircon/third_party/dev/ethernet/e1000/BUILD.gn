@@ -13,7 +13,6 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("e1000") {
   defines = [ "_ALL_SOURCE" ]
@@ -48,8 +47,4 @@ driver_module("e1000") {
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",
   ]
-}
-
-migrated_manifest("e1000-manifest") {
-  deps = [ ":e1000" ]
 }
