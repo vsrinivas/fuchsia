@@ -87,6 +87,33 @@ impl BacklightFacade {
             }
         }
     }
+
+    pub async fn get_normalized_brightness_scale(&self, _args: Value) -> Result<f64, Error> {
+        match self.get_proxy()?.get_normalized_brightness_scale().await? {
+            Ok(r) => Ok(r),
+            Err(e) => {
+                let tag = "BacklightFacade::get_normalized_brightness_scale";
+                fx_err_and_bail!(
+                    &with_line!(tag),
+                    format_err!("GetNormalizedBrightnessScale failed: {:?}", e)
+                )
+            }
+        }
+    }
+
+    pub async fn set_normalized_brightness_scale(&self, args: Value) -> Result<(), Error> {
+        let scale: f64 = serde_json::from_value(args)?;
+        match self.get_proxy()?.set_normalized_brightness_scale(scale).await? {
+            Ok(r) => Ok(r),
+            Err(e) => {
+                let tag = "BacklightFacade::set_normalized_brightness_scale";
+                fx_err_and_bail!(
+                    &with_line!(tag),
+                    format_err!("SetNormalizedBrightnessScale failed: {:?}", e)
+                )
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -124,6 +151,25 @@ mod tests {
             self.push(move |req| match req {
                 DeviceRequest::SetStateNormalized { state, responder } => {
                     assert_eq!(state, expected_state);
+                    assert_matches!(responder.send(&mut Ok(())), Ok(()));
+                }
+                req => panic!("unexpected request: {:?}", req),
+            })
+        }
+
+        fn expect_get_normalized_brightness_scale(self, scale: f64) -> Self {
+            self.push(move |req| match req {
+                DeviceRequest::GetNormalizedBrightnessScale { responder } => {
+                    assert_matches!(responder.send(&mut Ok(scale)), Ok(()));
+                }
+                req => panic!("unexpected request: {:?}", req),
+            })
+        }
+
+        fn expect_set_normalized_brightness_scale(self, expected_scale: f64) -> Self {
+            self.push(move |req| match req {
+                DeviceRequest::SetNormalizedBrightnessScale { scale, responder } => {
+                    assert_eq!(scale, expected_scale);
                     assert_matches!(responder.send(&mut Ok(())), Ok(()));
                 }
                 req => panic!("unexpected request: {:?}", req),
@@ -169,6 +215,33 @@ mod tests {
             let result = facade
                 .set_state_normalized(json!({"backlight_on": false, "brightness": 0.75}))
                 .await;
+            assert!(result.is_ok());
+        };
+
+        join!(expectations, test);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn get_normalized_brightness_scale() {
+        let (facade, expectations) =
+            MockBacklightBuilder::new().expect_get_normalized_brightness_scale(0.75).build();
+
+        let test = async move {
+            let result = facade.get_normalized_brightness_scale(Value::Null).await;
+            assert!(result.is_ok());
+            assert_eq!(result.unwrap(), 0.75);
+        };
+
+        join!(expectations, test);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn set_normalized_brightness_scale() {
+        let (facade, expectations) =
+            MockBacklightBuilder::new().expect_set_normalized_brightness_scale(0.25).build();
+
+        let test = async move {
+            let result = facade.set_normalized_brightness_scale(json!(0.25)).await;
             assert!(result.is_ok());
         };
 

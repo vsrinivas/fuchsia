@@ -20,6 +20,12 @@ impl Facade for BacklightFacade {
             BacklightMethod::SetStateNormalized => {
                 Ok(to_value(self.set_state_normalized(args).await?)?)
             }
+            BacklightMethod::GetNormalizedBrightnessScale => {
+                Ok(to_value(self.get_normalized_brightness_scale(args).await?)?)
+            }
+            BacklightMethod::SetNormalizedBrightnessScale => {
+                Ok(to_value(self.set_normalized_brightness_scale(args).await?)?)
+            }
             // TODO(bradenkell): Add Get/SetStateAbsolute and GetMaxAbsoluteBrightness if they end
             // up being needed.
             _ => bail!("Invalid Backlight FIDL method: {:?}", method),

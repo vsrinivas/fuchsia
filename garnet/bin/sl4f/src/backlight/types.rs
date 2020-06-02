@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 pub enum BacklightMethod {
     GetStateNormalized,
     SetStateNormalized,
+    GetNormalizedBrightnessScale,
+    SetNormalizedBrightnessScale,
     UndefinedFunc,
 }
 
@@ -17,6 +19,8 @@ impl std::str::FromStr for BacklightMethod {
         Ok(match s.as_ref() {
             "GetStateNormalized" => BacklightMethod::GetStateNormalized,
             "SetStateNoramlized" => BacklightMethod::SetStateNormalized,
+            "GetNormalizedBrightnessScale" => BacklightMethod::GetNormalizedBrightnessScale,
+            "SetNormalizedBrightnessScale" => BacklightMethod::SetNormalizedBrightnessScale,
             _ => BacklightMethod::UndefinedFunc,
         })
     }
