@@ -7,6 +7,7 @@
 use {
     crate::{assert_command, commands::expand_paths, tests::utils, types::Error},
     fuchsia_async as fasync,
+    matches::assert_matches,
     std::path::Path,
     tempfile::tempdir,
 };
@@ -71,7 +72,7 @@ async fn list_files() {
 #[fasync::run_singlethreaded(test)]
 async fn test_selectors_empty() {
     let result = utils::execute_command(&["selectors"]).await;
-    assert!(matches!(result, Err(Error::InvalidArguments(_))));
+    assert_matches!(result, Err(Error::InvalidArguments(_)));
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -98,7 +99,7 @@ async fn test_selectors() {
 #[fasync::run_singlethreaded(test)]
 async fn test_no_paths() {
     let result = utils::execute_command(&["show-file"]).await;
-    assert!(matches!(result, Err(Error::InvalidArguments(_))));
+    assert_matches!(result, Err(Error::InvalidArguments(_)));
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -106,7 +107,7 @@ async fn test_invalid_location() {
     let dir = tempdir().unwrap();
     let file_path = dir.path().join("root.inspect").to_string_lossy().to_string();
     let result = utils::execute_command(&["show-file", &file_path]).await;
-    assert!(matches!(result, Err(Error::ReadLocation(path, _)) if path == file_path));
+    assert_matches!(result, Err(Error::ReadLocation(path, _)) if path == file_path);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -148,8 +149,8 @@ async fn inspect_vmo_file_directly() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_no_selectors() {
-    let result = utils::execute_command(&["show-file"]).await;
-    assert!(matches!(result, Err(Error::InvalidArguments(_))));
+    let result = utils::execute_command(&["show"]).await;
+    assert_matches!(result, Err(Error::InvalidArguments(_)));
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -167,4 +168,14 @@ async fn show_test() {
         ],
         with_retries
     );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn empty_result_on_null_payload() {
+    let (_env, _app) =
+        utils::start_basic_component("show-test-empty").await.expect("create comp 1");
+    let result =
+        utils::execute_command(&["show", "show-test-empty/basic_component.cmx:root/nothing:here"])
+            .await;
+    assert_matches!(result, Ok(res) if res == "");
 }

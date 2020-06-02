@@ -36,19 +36,18 @@ pub async fn fetch_data(selectors: &[String]) -> Result<Vec<(String, NodeHierarc
     }
     let mut results = fetcher.get_raw_json().await.map_err(|e| Error::Fetch(e))?;
 
-    results
-        .as_array_mut()
-        .ok_or(Error::ArchiveInvalidJson)?
-        .into_iter()
-        .map(|result| {
-            let payload =
-                result.get_mut("payload").ok_or(Error::archive_missing_property("payload"))?;
-            let mut hierarchy: NodeHierarchy<String> =
-                RawJsonNodeHierarchySerializer::deserialize(payload.take())
-                    .map_err(|_| Error::ArchiveInvalidJson)?;
-            hierarchy.sort();
-            let moniker = get_moniker_from_result(&result)?;
-            Ok((moniker, hierarchy))
-        })
-        .collect::<Result<Vec<_>, _>>()
+    let mut data = vec![];
+    for result in results.as_array_mut().ok_or(Error::ArchiveInvalidJson)? {
+        let moniker = get_moniker_from_result(&result)?;
+        if let Some(payload) = result.get_mut("payload") {
+            if payload.is_object() {
+                let mut hierarchy: NodeHierarchy<String> =
+                    RawJsonNodeHierarchySerializer::deserialize(payload.take())
+                        .map_err(|_| Error::ArchiveInvalidJson)?;
+                hierarchy.sort();
+                data.push((moniker, hierarchy))
+            }
+        }
+    }
+    Ok(data)
 }
