@@ -251,7 +251,11 @@ template("test_spec") {
           # Trim leading //.
           path = rebase_path(path, root_build_dir)
         }
-        name = path
+
+        # We want the test name to be the same regardless of variant.
+        # Path is of the form <toolchain_variant.name>/<basename>, so
+        # removing the left-most appearance should do what we want.
+        name = string_replace(path, toolchain_variant.suffix, "", 1)
       }
       os = current_os
       cpu = current_cpu
