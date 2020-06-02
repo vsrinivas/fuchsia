@@ -223,8 +223,12 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		}
 		// Cancel context and stop targets to finish other goroutines in group so that if err = nil,
 		// we can return a nil error without waiting for other goroutines.
-		defer r.stopTargets(ctx, targets)
 		defer cancel()
+		defer func() {
+			ctxtime, canceltime := context.WithTimeout(context.Background(), time.Minute)
+			defer canceltime()
+			r.stopTargets(ctxtime, targets)
+		}()
 		return r.runAgainstTarget(ctx, t0, args, socketPath)
 	})
 
