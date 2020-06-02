@@ -14,7 +14,6 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <functional>
-#include <variant>
 
 #include "src/developer/feedback/utils/errors.h"
 #include "src/developer/feedback/utils/fit/bridge_map.h"
@@ -113,10 +112,10 @@ class CachingPtr {
       FX_LOGS(FATAL) << "Attempting to return a result when none has been cached";
     }
 
-    if (value_->index() == 0) {
-      return ::fit::ok(std::get<0>(*value_));
+    if (value_->HasValue()) {
+      return ::fit::ok(value_->Value());
     } else {
-      return ::fit::error(std::get<1>(*value_));
+      return ::fit::error(value_->Error());
     }
   }
 
@@ -133,8 +132,8 @@ class CachingPtr {
     });
   }
 
-  void SetAsDone(std::variant<V, Error> value) {
-    value_ = std::make_unique<std::variant<V, Error>>(std::move(value));
+  void SetAsDone(ErrorOr<V> value) {
+    value_ = std::make_unique<ErrorOr<V>>(std::move(value));
 
     pending_calls_.CompleteAllOk();
     connection_.Unbind();
@@ -150,9 +149,9 @@ class CachingPtr {
   ::fidl::InterfacePtr<Interface> connection_;
   fit::BridgeMap<> pending_calls_;
 
-  // The std::unique_ptr<> indicates whether the value is cached, the std::variant<> indicates
+  // The std::unique_ptr<> indicates whether the value is cached, the ErrorOr<> indicates
   // whether the cached value is a payload or an error.
-  std::unique_ptr<std::variant<V, Error>> value_;
+  std::unique_ptr<ErrorOr<V>> value_;
 
   std::function<void(void)> make_call_;
   async::TaskClosure make_call_task_;
