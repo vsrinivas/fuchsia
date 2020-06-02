@@ -76,10 +76,11 @@ class FakeAgent : public FakeComponent {
     FlushAddAgentServiceIfRunning();
   }
 
- private:
+ protected:
   // |FakeComponent|
   void OnCreate(fuchsia::sys::StartupInfo startup_info) override;
 
+ private:
   // Process the pending AddAgentService() calls which were buffered until is_running() == true.
   void FlushAddAgentServiceIfRunning();
 
