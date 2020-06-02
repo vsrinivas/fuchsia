@@ -11,7 +11,10 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
+
+#include <fbl/string_printf.h>
 
 namespace hwstress {
 namespace {
@@ -29,11 +32,15 @@ std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> GetParser() {
 void PrintUsage() {
   printf(
       R"(usage:
-hwstress [options]
+hwstress [global options] <subcommand> [subcommand options]
 
 Attempts to stress hardware components by placing them under high load.
 
-Options:
+Subcommands:
+  cpu                    Perform a CPU stress test.
+  memory                 Perform a RAM stress test.
+
+Global options:
   -d, --duration=<secs>  Test duration in seconds. A value of "0" (the default)
                          indicates to continue testing until stopped.
   -h, --help             Show this help.
@@ -53,7 +60,7 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
   // If help is provided, ignore any further invalid args and just show the
   // help screen.
   if (result.help) {
-    return fitx::success(std::move(result));
+    return fitx::success(result);
   }
 
   // Validate duration.
@@ -61,7 +68,24 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
     return fitx::error("Test duration cannot be negative.");
   }
 
-  result.params = std::move(params);
+  // Get the next command.
+  if (params.empty()) {
+    return fitx::error("A subcommand specifying what type of test to run must be specified.");
+  }
+  if (params[0] == std::string_view("cpu")) {
+    result.subcommand = StressTest::kCpu;
+  } else if (params[0] == std::string_view("memory")) {
+    result.subcommand = StressTest::kMemory;
+  } else {
+    return fitx::error(
+        fbl::StringPrintf("Unknown subcommand or option: '%s'.", params[0].c_str()).c_str());
+  }
+
+  // Ensure no more parameters were given.
+  if (params.size() > 1) {
+    return fitx::error(fbl::StringPrintf("Unknown option: '%s'.", params[1].c_str()).c_str());
+  }
+
   return fitx::success(result);
 }
 

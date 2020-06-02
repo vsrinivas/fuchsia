@@ -10,11 +10,18 @@
 
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include <fbl/span.h>
 
 namespace hwstress {
+
+// Subcommand to run.
+enum class StressTest {
+  kCpu,
+  kMemory,
+};
 
 struct CommandLineArgs {
   // Show help.
@@ -25,8 +32,8 @@ struct CommandLineArgs {
   // A value of "0" indicates forever.
   double test_duration_seconds = 0.0;
 
-  // Remaining command line arguments.
-  std::vector<std::string> params;
+  // The subcommand to run.
+  StressTest subcommand;
 };
 
 // Print usage information to stdout.

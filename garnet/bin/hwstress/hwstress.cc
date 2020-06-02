@@ -8,11 +8,14 @@
 #include <lib/zx/time.h>
 #include <stdio.h>
 
+#include <complex>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 #include "args.h"
 #include "cpu_stress.h"
+#include "memory_stress.h"
 #include "util.h"
 
 namespace hwstress {
@@ -48,8 +51,16 @@ int Run(int argc, const char** argv) {
     sensor = CreateNullTemperatureSensor();
   }
 
-  // Run the CPU tests.
-  bool success = StressCpu(duration, sensor.get());
+  // Run the stress test.
+  bool success = true;
+  switch (args.subcommand) {
+    case StressTest::kCpu:
+      success = StressCpu(duration, sensor.get());
+      break;
+    case StressTest::kMemory:
+      StressMemory(duration, sensor.get());
+      break;
+  }
 
   return success ? 0 : 1;
 }

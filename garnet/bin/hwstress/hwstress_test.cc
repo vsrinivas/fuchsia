@@ -18,10 +18,16 @@ TEST(HwStress, RunHelp) {
   EXPECT_EQ(0, hwstress::Run(2, args));
 }
 
-TEST(HwStress, RunShort) {
+TEST(HwStress, RunCpuShort) {
   // Run with default args for a short duration.
-  const char* args[] = {"hwstress", "-d", "0.1"};
-  EXPECT_EQ(0, hwstress::Run(3, args));
+  const char* args[] = {"hwstress", "-d", "0.1", "cpu"};
+  EXPECT_EQ(0, hwstress::Run(4, args));
+}
+
+TEST(HwStress, RunMemTestShort) {
+  // Run with default args for a short duration.
+  const char* args[] = {"hwstress", "-d", "0.1", "memory"};
+  EXPECT_EQ(0, hwstress::Run(4, args));
 }
 
 }  // namespace

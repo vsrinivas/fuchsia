@@ -9,6 +9,7 @@
 #include <zircon/syscalls.h>
 
 #include <string>
+#include <variant>
 
 #include <fbl/span.h>
 #include <gtest/gtest.h>
@@ -21,15 +22,26 @@ TEST(Args, ParseHelp) {
   EXPECT_TRUE(ParseArgs({{"hwstress", "-h"}})->help);
 }
 
+TEST(Args, ParseSubcommand) {
+  // Subcommand given.
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu"}})->subcommand, StressTest::kCpu);
+  EXPECT_EQ(ParseArgs({{"hwstress", "memory"}})->subcommand, StressTest::kMemory);
+
+  // No subcommand given.
+  EXPECT_TRUE(ParseArgs({{"hwstress"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "bad_subcommand"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "-d", "3"}}).is_error());
+}
+
 TEST(Args, ParseDuration) {
   // Good duration specified.
-  EXPECT_EQ(ParseArgs({{"hwstress", "-d", "5"}})->test_duration_seconds, 5.0);
-  EXPECT_EQ(ParseArgs({{"hwstress", "-d", "0.1"}})->test_duration_seconds, 0.1);
-  EXPECT_EQ(ParseArgs({{"hwstress", "--duration", "3"}})->test_duration_seconds, 3.0);
+  EXPECT_EQ(ParseArgs({{"hwstress", "-d", "5", "cpu"}})->test_duration_seconds, 5.0);
+  EXPECT_EQ(ParseArgs({{"hwstress", "-d", "0.1", "cpu"}})->test_duration_seconds, 0.1);
+  EXPECT_EQ(ParseArgs({{"hwstress", "--duration", "3", "cpu"}})->test_duration_seconds, 3.0);
 
   // Bad durations.
-  EXPECT_TRUE(ParseArgs({{"hwstress", "-d", "x"}}).is_error());
-  EXPECT_TRUE(ParseArgs({{"hwstress", "-d", "-3"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "-d", "x", "cpu"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "-d", "-3", "cpu"}}).is_error());
 }
 
 }  // namespace
