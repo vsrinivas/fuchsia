@@ -463,15 +463,14 @@ zx_status_t Timer::TrylockOrCancel(SpinLock* lock) {
   return ZX_OK;
 }
 
-void TimerQueue::TransitionOffCpu(cpu_num_t old_cpu) {
+void TimerQueue::TransitionOffCpu(TimerQueue& source) {
   Guard<SpinLock, IrqSave> guard{TimerLock::Get()};
 
   Timer* old_head = list_peek_head_type(&timer_list_, Timer, node_);
 
-  Timer *entry = NULL, *tmp_entry = NULL;
-  // Move all timers from old_cpu to this cpu
-  list_for_every_entry_safe (&percpu::Get(old_cpu).timer_queue.timer_list_, entry, tmp_entry, Timer,
-                             node_) {
+  Timer *entry = nullptr, *tmp_entry = nullptr;
+  // Move all timers from |source| to this TimerQueue.
+  list_for_every_entry_safe (&source.timer_list_, entry, tmp_entry, Timer, node_) {
     list_delete(&entry->node_);
     // We lost the original asymmetric slack information so when we combine them
     // with the other timer queue they are not coalesced again.
@@ -483,14 +482,14 @@ void TimerQueue::TransitionOffCpu(cpu_num_t old_cpu) {
   }
 
   Timer* new_head = list_peek_head_type(&timer_list_, Timer, node_);
-  if (new_head != NULL && new_head != old_head) {
+  if (new_head != nullptr && new_head != old_head) {
     // We just modified the head of the timer queue.
     UpdatePlatformTimer(new_head->scheduled_time_);
   }
 
-  // the old cpu has no tasks left, so reset the deadlines
-  percpu::Get(old_cpu).timer_queue.preempt_timer_deadline_ = ZX_TIME_INFINITE;
-  percpu::Get(old_cpu).timer_queue.next_timer_deadline_ = ZX_TIME_INFINITE;
+  // The old TimerQueue has no tasks left, so reset the deadlines.
+  source.preempt_timer_deadline_ = ZX_TIME_INFINITE;
+  source.next_timer_deadline_ = ZX_TIME_INFINITE;
 }
 
 void TimerQueue::ThawPercpu(void) {

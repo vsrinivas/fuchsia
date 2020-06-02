@@ -339,15 +339,17 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t 
     return status;
   }
 
-  // Wait for the unplug thread to get scheduled on the target
+  // Wait for the unplug thread to get scheduled on the target.
   const bool interruptable = false;
   status = unplug_done.WaitDeadline(deadline, interruptable);
   if (status != ZX_OK) {
     return status;
   }
 
-  // Now that the CPU is no longer processing tasks, move all of its timers
-  get_local_percpu()->timer_queue.TransitionOffCpu(cpu_id);
+  // Now that the cpu is no longer processing tasks, migrate its TimerQueue to
+  // the current cpu's queue.
+  TimerQueue& source = percpu::Get(cpu_id).timer_queue;
+  get_local_percpu()->timer_queue.TransitionOffCpu(source);
 
   // Move the CPU's queued DPCs to the current CPU.
   DpcSystem::ShutdownTransitionOffCpu(cpu_id);

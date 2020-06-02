@@ -114,8 +114,8 @@ struct TimerQueue {
 
   // Internal routines used when bringing cpus online/offline
 
-  // Moves |old_cpu|'s timers (except its preemption timer) to this TimerQueue.
-  void TransitionOffCpu(cpu_num_t old_cpu);
+  // Moves |source|'s timers (except its preemption timer) to this TimerQueue.
+  void TransitionOffCpu(TimerQueue& source);
 
   // This function is to be invoked after resume on each CPU's TimerQueue that
   // may have had timers still on it, in order to restart hardware timers.
