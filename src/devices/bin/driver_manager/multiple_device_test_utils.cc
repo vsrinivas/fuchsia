@@ -108,7 +108,8 @@ void MultipleDeviceTestCase::SetUp() {
     zx::channel local;
     zx_status_t status = zx::channel::create(0, &local, &driver_host_remote_);
     ASSERT_OK(status);
-    driver_host_ = fbl::MakeRefCounted<DriverHost>(&coordinator_, std::move(local), zx::process{});
+    driver_host_ = fbl::MakeRefCounted<DriverHost>(&coordinator_, std::move(local), zx::channel{},
+                                                   zx::process{});
   }
 
   // Start the mock server thread.
