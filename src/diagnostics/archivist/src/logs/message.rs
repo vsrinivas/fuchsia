@@ -320,7 +320,6 @@ impl Default for fx_log_packet_t {
     }
 }
 
-#[cfg(test)]
 impl fx_log_packet_t {
     /// This struct has no padding bytes, but we can't use zerocopy because it needs const
     /// generics to support arrays this large.

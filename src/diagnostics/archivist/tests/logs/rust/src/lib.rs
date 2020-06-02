@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use archivist_lib::logs::message::fx_log_packet_t;
+use fidl::{Socket, SocketOpts};
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
 use fidl_fuchsia_sys::LauncherMarker;
@@ -191,5 +193,67 @@ async fn test_observer_stop_api() {
             (INFO, "my info message.".to_owned()),
             (WARN, "my warn message.".to_owned()),
         ]
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_same_log_sink_simultaneously() {
+    // launch observer.cmx
+    let launcher = connect_to_service::<LauncherMarker>().unwrap();
+    let mut observer = launch_with_options(
+        &launcher,
+        "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx".to_owned(),
+        Some(vec!["--disable-log-connector".to_owned()]),
+        LaunchOptions::new(),
+    )
+    .unwrap();
+
+    // connect multiple identical log sinks
+    for _ in 0..50 {
+        let (message_client, message_server) = Socket::create(SocketOpts::DATAGRAM).unwrap();
+        let log_sink = observer.connect_to_service::<LogSinkMarker>().unwrap();
+        log_sink.connect(message_server).unwrap();
+
+        // each with the same message repeated multiple times
+        let mut packet = fx_log_packet_t::default();
+        packet.metadata.pid = 1000;
+        packet.metadata.tid = 2000;
+        packet.metadata.severity = LogLevelFilter::Info.into_primitive().into();
+        packet.data[0] = 0;
+        packet.add_data(1, "repeated log".as_bytes());
+        for _ in 0..5 {
+            message_client.write(&mut packet.as_bytes()).unwrap();
+        }
+    }
+
+    // run log listener
+    let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
+    let (send_logs, recv_logs) = mpsc::unbounded();
+    fasync::spawn(async move {
+        let listen = Listener { send_logs };
+        let mut options = LogFilterOptions {
+            filter_by_pid: true,
+            pid: 1000,
+            filter_by_tid: true,
+            tid: 2000,
+            verbosity: 0,
+            min_severity: LogLevelFilter::None,
+            tags: Vec::new(),
+        };
+        run_log_listener_with_proxy(&log_proxy, listen, Some(&mut options), false).await.unwrap();
+    });
+
+    // connect to controller and call stop
+    let controller = observer.connect_to_service::<ControllerMarker>().unwrap();
+    controller.stop().unwrap();
+
+    // collect all logs
+    let logs = recv_logs.map(|message| (message.severity, message.msg)).collect::<Vec<_>>().await;
+
+    // recv_logs returned, means observer must be dead. check.
+    assert!(observer.wait().await.unwrap().success());
+    assert_eq!(
+        logs,
+        std::iter::repeat((INFO, "repeated log".to_owned())).take(250).collect::<Vec<_>>()
     );
 }
