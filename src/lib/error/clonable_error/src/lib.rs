@@ -11,6 +11,7 @@ use {
 /// A wrapper for `Error` that implements `Clone`.
 #[derive(Clone, Error)]
 pub struct ClonableError {
+    #[source]
     err: Arc<Error>,
 }
 

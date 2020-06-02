@@ -38,7 +38,7 @@ use {
         startup::Arguments,
         work_scheduler::WorkScheduler,
     },
-    anyhow::{Context as _, Error},
+    anyhow::{format_err, Context as _, Error},
     cm_rust::CapabilityName,
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd, ServiceMarker},
     fidl_fuchsia_io::{
@@ -50,7 +50,7 @@ use {
     fuchsia_component::{client, server::*},
     fuchsia_runtime::{take_startup_handle, HandleType},
     fuchsia_zircon::{self as zx, HandleBased},
-    futures::{lock::Mutex, stream::StreamExt},
+    futures::{channel::oneshot, prelude::*},
     log::info,
     std::{
         path::PathBuf,
@@ -68,7 +68,7 @@ pub struct BuiltinEnvironmentBuilder {
     resolvers: ResolverRegistry,
     // This is used to initialize fuchsia_base_pkg_resolver's Model reference. Resolvers must
     // be created to construct the Model.
-    model_for_resolver: Option<Arc<Mutex<Option<Weak<Model>>>>>,
+    model_for_resolver: Option<oneshot::Sender<Weak<Model>>>,
 }
 
 impl BuiltinEnvironmentBuilder {
@@ -132,15 +132,14 @@ impl BuiltinEnvironmentBuilder {
         } else {
             // There's a circular dependency here. The model needs the resolver register to be
             // created, but fuchsia_base_pkg_resolver needs a reference to model so it can bind to
-            // the pkgfs directory. We create an empty Arc<Mutex<Option<Weak<Model>>>>, give it to
-            // the resolver, create the model with the resolvers, and then use our reference to the
-            // lock to populate the model reference.
-            let model = Arc::new(Mutex::new(None));
+            // the pkgfs directory. We use a futures::oneshot::channel to send the Model to the
+            // resolver once it has been created.
+            let (sender, receiver) = oneshot::channel();
             self.resolvers.register(
                 fuchsia_base_pkg_resolver::SCHEME.to_string(),
-                Box::new(fuchsia_base_pkg_resolver::FuchsiaPkgResolver::new(model.clone())),
+                Box::new(fuchsia_base_pkg_resolver::FuchsiaPkgResolver::new(receiver)),
             );
-            self.model_for_resolver = Some(model);
+            self.model_for_resolver = Some(sender);
         }
         Ok(self)
     }
@@ -155,8 +154,11 @@ impl BuiltinEnvironmentBuilder {
 
         // If we previously created a resolver that requires the Model (in
         // add_available_resolvers_from_namespace), send the just-created model to it.
-        if let Some(model_lock) = self.model_for_resolver {
-            *model_lock.lock().await = Some(Arc::downgrade(&model));
+        if let Some(sender) = self.model_for_resolver {
+            // This only fails if the receiver has been dropped already which shouldn't happen.
+            sender
+                .send(Arc::downgrade(&model))
+                .map_err(|_| format_err!("sending model to resolver failed"))?;
         }
 
         Ok(BuiltinEnvironment::new(model, args, self.config.unwrap_or_default(), self.runners)

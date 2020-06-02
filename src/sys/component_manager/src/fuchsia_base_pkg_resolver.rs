@@ -15,10 +15,13 @@ use {
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_sys2 as fsys,
     fuchsia_url::pkg_url::PkgUrl,
-    futures::lock::Mutex,
-    std::convert::TryInto,
-    std::path::{Path, PathBuf},
-    std::sync::{Arc, Weak},
+    futures::{channel::oneshot, lock::Mutex},
+    std::{
+        convert::TryInto,
+        ops::DerefMut,
+        path::{Path, PathBuf},
+        sync::Weak,
+    },
 };
 
 pub static SCHEME: &str = "fuchsia-pkg";
@@ -38,13 +41,13 @@ pub static SCHEME: &str = "fuchsia-pkg";
 /// TODO(fxb/46491): Replace this with one or more v2 resolver capabilities implemented and exposed
 /// by the package system, and simply used appropriately in the component topology.
 pub struct FuchsiaPkgResolver {
-    model: Arc<Mutex<Option<Weak<Model>>>>,
+    model: Mutex<oneshot::Receiver<Weak<Model>>>,
     pkgfs_proxy: Mutex<Option<DirectoryProxy>>,
 }
 
 impl FuchsiaPkgResolver {
-    pub fn new(model: Arc<Mutex<Option<Weak<Model>>>>) -> FuchsiaPkgResolver {
-        FuchsiaPkgResolver { model, pkgfs_proxy: Mutex::new(None) }
+    pub fn new(model: oneshot::Receiver<Weak<Model>>) -> FuchsiaPkgResolver {
+        FuchsiaPkgResolver { model: Mutex::new(model), pkgfs_proxy: Mutex::new(None) }
     }
 
     // Open a new directory connection to pkgfs, which (for this resolver to work) must be exposed
@@ -53,9 +56,13 @@ impl FuchsiaPkgResolver {
     // - bind to the appropriate component
     // - open the pkgfs directory capability
     async fn open_pkgfs(&self) -> Result<DirectoryProxy, anyhow::Error> {
-        let model_guard = self.model.lock().await;
-        let model = model_guard.as_ref().expect("model reference missing");
-        let model = model.upgrade().ok_or(ResolverError::model_not_available())?;
+        // try_recv is used instead of await so that we don't block forever if the model is never
+        // provided through the channel. This shouldn't happen in practice but this lets us test the
+        // behavior in this case deterministically rather than using a timeout.
+        let mut model_chan = self.model.lock().await;
+        let model = model_chan.deref_mut().try_recv().expect("model channel dropped");
+        let model = model.and_then(|m| m.upgrade()).ok_or(ResolverError::model_not_available())?;
+
         let (capability_path, realm) = routing::find_exposed_root_directory_capability(
             &model.root_realm,
             "/pkgfs".try_into().unwrap(),
@@ -160,13 +167,19 @@ impl Resolver for FuchsiaPkgResolver {
 mod tests {
     use {
         super::*,
+        crate::model::{
+            moniker::AbsoluteMoniker,
+            testing::{routing_test_helpers::*, test_helpers::*},
+        },
         cm_fidl_translator,
-        fidl::endpoints::{create_proxy_and_stream, ServerEnd},
+        cm_rust::*,
+        directory_broker::DirectoryBroker,
+        fidl::endpoints::ServerEnd,
         fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::{DirectoryRequest, NodeMarker},
-        fuchsia_async as fasync,
+        fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
         futures::prelude::*,
-        std::path::Path,
+        std::{path::Path, sync::Arc},
     };
 
     // Simulate a fake pkgfs Directory service that only contains a single package ("hello_world"),
@@ -179,7 +192,13 @@ mod tests {
 
     impl FakePkgfs {
         pub fn new() -> DirectoryProxy {
-            let (proxy, mut stream) = create_proxy_and_stream::<DirectoryMarker>().unwrap();
+            let (proxy, server_end) = create_proxy::<DirectoryMarker>().unwrap();
+            Self::host_dir(server_end);
+            proxy
+        }
+
+        fn host_dir(server_end: ServerEnd<DirectoryMarker>) {
+            let mut stream = server_end.into_stream().expect("failed to create stream");
             fasync::spawn_local(async move {
                 while let Some(request) = stream.try_next().await.unwrap() {
                     match request {
@@ -194,14 +213,15 @@ mod tests {
                     }
                 }
             });
-            proxy
         }
 
         fn handle_open(path: &str, flags: u32, server_end: ServerEnd<NodeMarker>) {
-            if path.is_empty() {
-                // We don't support this in this fake, drop the server_end
+            // Support opening a new connection to the fake
+            if path == "." {
+                Self::host_dir(ServerEnd::new(server_end.into_channel()));
                 return;
             }
+
             let path = Path::new(path);
             let mut path_iter = path.iter();
 
@@ -233,14 +253,60 @@ mod tests {
         }
     }
 
+    async fn setup_fake_pkgfs_test() -> RoutingTest {
+        let components = vec![(
+            "pkgfs",
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source_path: "/pkgfs".try_into().unwrap(),
+                    source: ExposeSource::Self_,
+                    target_path: "/pkgfs".try_into().unwrap(),
+                    target: ExposeTarget::Realm,
+                    rights: Some(fio2::Operations::Connect),
+                    subdir: None,
+                }))
+                .build(),
+        )];
+        let pkgfs_dir = DirectoryBroker::from_directory_proxy(FakePkgfs::new());
+        let routing_test = RoutingTestBuilder::new("pkgfs", components)
+            .add_outgoing_path("pkgfs", "/pkgfs".try_into().unwrap(), pkgfs_dir)
+            .build()
+            .await;
+        routing_test.bind_instance(&AbsoluteMoniker::root()).await.expect("bind failed");
+        routing_test
+    }
+
+    fn assert_model_not_available<T>(result: Result<T, ResolverError>) {
+        let err = result.err().expect("Unexpected success");
+        match &err {
+            ResolverError::ComponentNotAvailable { .. } => {}
+            _ => panic!("Unexpected error before model available: {}", err),
+        }
+
+        // This is nth(2) because of the anyhow::Error layer here + the ClonableError layer.
+        let err = anyhow::Error::new(err);
+        match err.chain().nth(2).and_then(|e| e.downcast_ref::<ResolverError>()) {
+            Some(ResolverError::ModelAccessError) => {}
+            Some(cause) => panic!("Unexpected error cause before model available: {}", cause),
+            None => panic!("Missing error cause before model available"),
+        }
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn resolve_test() {
-        let resolver = FuchsiaPkgResolver {
-            model: Arc::new(Mutex::new(None)),
-            pkgfs_proxy: Mutex::new(Some(FakePkgfs::new())),
-        };
+        let (sender, receiver) = oneshot::channel();
+        let resolver = FuchsiaPkgResolver::new(receiver);
         let url = "fuchsia-pkg://fuchsia.com/hello_world#\
                    meta/component_manager_tests_hello_world.cm";
+
+        // Resolve before model is sent through channel should fail.
+        assert_model_not_available(resolver.resolve_async(url).await);
+
+        let routing_test = setup_fake_pkgfs_test().await;
+        sender
+            .send(Arc::downgrade(&routing_test.model))
+            .map_err(|_| "failed to send model")
+            .unwrap();
         let component = resolver.resolve_async(url).await.expect("resolve failed");
 
         // Check that both the returned component manifest and the component manifest in
@@ -292,6 +358,16 @@ mod tests {
             .expect("failed to open executable file");
     }
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn resolve_model_unavailable() {
+        let (sender, receiver) = oneshot::channel();
+        let resolver = FuchsiaPkgResolver::new(receiver);
+        let url = "fuchsia-pkg://fuchsia.com/hello_world#\
+                meta/component_manager_tests_hello_world.cm";
+        sender.send(Weak::new()).map_err(|_| "failed to send").unwrap();
+        assert_model_not_available(resolver.resolve_async(url).await);
+    }
+
     macro_rules! test_resolve_error {
         ($resolver:ident, $url:expr, $resolver_error_expected:ident) => {
             let url = $url;
@@ -307,8 +383,10 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn resolve_errors_test() {
+        // Create a FuchsiaPkgResolver with the proxy directly initialized (skip the model setup)
+        let (_, receiver) = oneshot::channel();
         let resolver = FuchsiaPkgResolver {
-            model: Arc::new(Mutex::new(None)),
+            model: Mutex::new(receiver),
             pkgfs_proxy: Mutex::new(Some(FakePkgfs::new())),
         };
         test_resolve_error!(
