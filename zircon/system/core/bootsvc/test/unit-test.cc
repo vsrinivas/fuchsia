@@ -5,7 +5,7 @@
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 #include <zircon/types.h>
 
 #include "../util.h"
@@ -18,9 +18,7 @@ struct SplitStringTestCase {
 };
 
 // Test the SplitString util individually.
-bool TestSplitString() {
-  BEGIN_TEST;
-
+TEST(BootsvcUnitTests, TestSplitString) {
   // Makeshift parametrized test.
   struct {
     const char* input;
@@ -39,21 +37,17 @@ bool TestSplitString() {
 
     // We use EXPECT_EQ rather than ASSERT_EQ so that we can continue with
     // other test cases if one fails.
-    EXPECT_EQ(result.size(), expected[n].size(), case_msg.c_str());
+    EXPECT_EQ(result.size(), expected[n].size(), "%s", case_msg.c_str());
     if (result.size() == expected[n].size()) {
       for (size_t i = 0; i < result.size(); ++i) {
-        EXPECT_STR_EQ(result[i].c_str(), expected[n][i].c_str(), case_msg.c_str());
+        EXPECT_STR_EQ(result[i].c_str(), expected[n][i].c_str(), "%s", case_msg.c_str());
       }
     }
   }
-
-  END_TEST;
 }
 
 // Make sure that we can parse boot args from a configuration string
-bool TestParseBootArgs() {
-  BEGIN_TEST;
-
+TEST(BootsvcUnitTests, TestParseBootArgs) {
   const char config1[] = R"(
 # comment
 key
@@ -74,13 +68,6 @@ key=value
   const char config2[] = "k ey=value";
   status = bootsvc::ParseBootArgs(config2, &buf);
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, status);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(bootsvc_unit_tests)
-RUN_TEST(TestParseBootArgs)
-RUN_TEST(TestSplitString)
-END_TEST_CASE(bootsvc_unit_tests)
