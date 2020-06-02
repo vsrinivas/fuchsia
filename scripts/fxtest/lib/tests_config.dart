@@ -27,8 +27,10 @@ class Flags {
 
   final int fuzzyThreshold;
   final bool infoOnly;
+  final String logPath;
   final MatchLength matchLength;
   final bool shouldFailFast;
+  final bool shouldLog;
   final bool simpleOutput;
   final bool shouldOnlyRunDeviceTests;
   final bool shouldOnlyRunHostTests;
@@ -48,8 +50,10 @@ class Flags {
     this.allOutput = false,
     this.fuzzyThreshold,
     this.infoOnly = false,
+    this.logPath,
     this.matchLength = MatchLength.partial,
     this.simpleOutput = false,
+    this.shouldLog = true,
     this.shouldFailFast = false,
     this.shouldOnlyRunDeviceTests = false,
     this.shouldOnlyRunHostTests = false,
@@ -71,11 +75,13 @@ class Flags {
       infoOnly: argResults['info'],
       isVerbose: argResults['verbose'] || argResults['output'],
       limit: int.parse(argResults['limit'] ?? '0'),
+      logPath: argResults['logpath'],
       matchLength: argResults['exact'] ? MatchLength.full : MatchLength.partial,
       realm: argResults['realm'],
       minSeverityLogs: argResults['min-severity-logs'],
       simpleOutput: argResults['simple'],
       shouldFailFast: argResults['fail'],
+      shouldLog: argResults['log'],
       shouldOnlyRunDeviceTests: argResults['device'],
       shouldOnlyRunHostTests: argResults['host'],
       shouldRestrictLogs: argResults['restrict-logs'],
@@ -100,10 +106,13 @@ class Flags {
   isVerbose: $isVerbose
   info: $infoOnly,
   limit: $limit
+  logPath: $logPath,
   matchLength: ${matchLength.toString()},
   realm: $realm
   shouldFailFast: $shouldFailFast
   simpleOutput: $simpleOutput,
+  shouldFailFast: $shouldFailFast
+  shouldLog: $shouldLog
   shouldOnlyRunDeviceTests: $shouldOnlyRunDeviceTests
   shouldOnlyRunHostTests: $shouldOnlyRunHostTests
   shouldRestrictLogs: $shouldRestrictLogs
@@ -156,9 +165,14 @@ class TestsConfig {
 
   factory TestsConfig.fromRawArgs({
     @required List<String> rawArgs,
+    Map<String, String> defaultRawArgs,
     FuchsiaLocator fuchsiaLocator,
   }) {
-    var _testArguments = TestArguments(rawArgs: rawArgs);
+    var _testArguments = TestArguments(
+      parser: fxTestArgParser,
+      rawArgs: rawArgs,
+      defaultRawArgs: defaultRawArgs,
+    );
     var _testArgumentsCollector = TestNamesCollector(
       rawArgs: _testArguments.parsedArgs.arguments,
       rawTestNames: _testArguments.parsedArgs.rest,

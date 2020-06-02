@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:args/args.dart';
 import 'package:async/async.dart';
 import 'package:test/test.dart';
 import 'package:fxtest/fxtest.dart';
@@ -70,6 +71,90 @@ void main() {
       expect(collector.collect(), [
         [MatchableArgument.unrestricted('.')]
       ]);
+    });
+  });
+
+  group('default test arguments are merged correctly', () {
+    test('when the option already exists', () {
+      var args = TestArguments(
+        parser: ArgParser()..addOption('some-option'),
+        rawArgs: ['--some-option', 'RIGHT ANSWER'],
+        defaultRawArgs: {'--some-option': 'WRONG ANSWER'},
+      );
+      expect(args.parsedArgs['some-option'], 'RIGHT ANSWER');
+    });
+
+    test('when the option does not already exist', () {
+      var args = TestArguments(
+        parser: ArgParser()..addOption('some-option'),
+        rawArgs: [],
+        defaultRawArgs: {'--some-option': 'RIGHT ANSWER'},
+      );
+      expect(args.parsedArgs['some-option'], 'RIGHT ANSWER');
+    });
+
+    test('when the flag already exists', () {
+      var args = TestArguments(
+        parser: ArgParser()
+          ..addFlag('some-flag', defaultsTo: false, negatable: true),
+        rawArgs: ['--no-some-flag'],
+        defaultRawArgs: {'--some-flag': null},
+      );
+      expect(args.parsedArgs['some-flag'], false);
+    });
+
+    test('when the flag does not already exist', () {
+      var args = TestArguments(
+        parser: ArgParser()
+          ..addFlag('some-flag', defaultsTo: false, negatable: true),
+        rawArgs: [],
+        defaultRawArgs: {'--some-flag': null},
+      );
+      expect(args.parsedArgs['some-flag'], true);
+    });
+
+    test('with abbreviations', () {
+      // Bit of a null-case, this one
+      var args = TestArguments(
+        parser: ArgParser()
+          ..addFlag('some-flag', defaultsTo: false, negatable: true, abbr: 's'),
+        rawArgs: ['-s'],
+        defaultRawArgs: {'--some-flag': null},
+      );
+      expect(args.parsedArgs['some-flag'], true);
+    });
+
+    test('with abbreviations and opposite default', () {
+      // Bit of a null-case, this one
+      var args = TestArguments(
+        parser: ArgParser()
+          ..addFlag('some-flag', defaultsTo: false, negatable: true, abbr: 's'),
+        rawArgs: ['-s'],
+        defaultRawArgs: {'--no-some-flag': null},
+      );
+      expect(args.parsedArgs['some-flag'], true);
+    });
+
+    test('with abbreviations and options', () {
+      // Bit of a null-case, this one
+      var args = TestArguments(
+        parser: ArgParser()..addOption('some-flag', abbr: 's'),
+        rawArgs: ['-s', 'RIGHT-ANSWER'],
+        defaultRawArgs: {'--some-flag': 'WRONG-ANSWER'},
+      );
+      expect(args.parsedArgs['some-flag'], 'RIGHT-ANSWER');
+    });
+
+    test('when an abbreviation appears as a value', () {
+      // Bit of a null-case, this one
+      var args = TestArguments(
+        parser: ArgParser()
+          ..addOption('some-flag', abbr: 's')
+          ..addOption('other-flag'),
+        rawArgs: ['--other-flag', 's', '--some-flag', 'RIGHT-ANSWER'],
+        defaultRawArgs: {'--some-flag': 'WRONG-ANSWER'},
+      );
+      expect(args.parsedArgs['some-flag'], 'RIGHT-ANSWER');
     });
   });
 
@@ -197,6 +282,26 @@ void main() {
   });
 
   group('flags are parsed correctly', () {
+    test('regarding --log', () {
+      // The default workflow (not using CLI wrappers) doesn't write logs
+      var testsConfig = TestsConfig.fromRawArgs(rawArgs: []);
+      expect(testsConfig.flags.shouldLog, false);
+    });
+
+    test('regarding --log from real code path', () {
+      var envReader = MockEnvReader();
+      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
+          .thenReturn('/root/path/fuchsia/out/default');
+      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+      var cliCmdWrapper = FuchsiaTestCommandCli(
+        [],
+        usage: (argParser) => {},
+        fuchsiaLocator: fuchsiaLocator,
+      );
+      var cmd = cliCmdWrapper.createCommand();
+      expect(cmd.testsConfig.flags.shouldLog, true);
+    });
+
     test('with --info', () {
       var testsConfig = TestsConfig.fromRawArgs(rawArgs: ['--info']);
       expect(testsConfig.flags.infoOnly, true);

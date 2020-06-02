@@ -49,8 +49,8 @@ class FuchsiaTestCommand {
   /// Absolute path of the active Fuchsia build.
   final FuchsiaLocator fuchsiaLocator;
 
-  /// Translator between [TestEvent] instances and output for the user.
-  final OutputFormatter outputFormatter;
+  /// Translators between [TestEvent] instances and output for the user.
+  final List<OutputFormatter> outputFormatters;
 
   /// Function that yields disposable wrappers around tests and [Process]
   /// instances.
@@ -68,17 +68,21 @@ class FuchsiaTestCommand {
   FuchsiaTestCommand({
     @required this.analyticsReporter,
     @required this.fuchsiaLocator,
-    @required this.outputFormatter,
+    @required this.outputFormatters,
     @required this.checklist,
     @required this.testsConfig,
     @required this.testRunnerBuilder,
     ExitCodeSetter exitCodeSetter,
   })  : _exitCodeSetter = exitCodeSetter ?? setExitCode,
         _numberOfTests = 0 {
-    if (outputFormatter == null) {
-      throw AssertionError('`outputFormatter` must not be null');
+    if (outputFormatters == null || outputFormatters.isEmpty) {
+      throw AssertionError('Must provide at least one OutputFormatter');
     }
-    stream.listen(outputFormatter.update);
+    stream.listen((output) {
+      for (var formatter in outputFormatters) {
+        formatter.update(output);
+      }
+    });
   }
 
   factory FuchsiaTestCommand.fromConfig(
@@ -91,6 +95,7 @@ class FuchsiaTestCommand {
     fuchsiaLocator = fuchsiaLocator ?? FuchsiaLocator.shared;
     var _outputFormatter =
         outputFormatter ?? OutputFormatter.fromConfig(testsConfig);
+    var _fileFormatter = FileFormatter.fromConfig(testsConfig);
     return FuchsiaTestCommand(
       analyticsReporter: testsConfig.flags.dryRun
           ? AnalyticsReporter.noop()
@@ -102,7 +107,10 @@ class FuchsiaTestCommand {
         eventSink: _outputFormatter.update,
       ),
       fuchsiaLocator: fuchsiaLocator,
-      outputFormatter: _outputFormatter,
+      outputFormatters: [
+        _outputFormatter,
+        if (_fileFormatter != null) _fileFormatter
+      ],
       testRunnerBuilder: testRunnerBuilder,
       testsConfig: testsConfig,
       exitCodeSetter: exitCodeSetter,
@@ -118,11 +126,15 @@ class FuchsiaTestCommand {
   }
 
   void dispose() {
+    for (var formatter in outputFormatters) {
+      formatter.close();
+    }
     _eventStreamController.close();
   }
 
   Future<void> runTestSuite([TestsManifestReader manifestReader]) async {
     manifestReader ??= TestsManifestReader();
+    advertiseLogFile();
     var parsedManifest = await readManifest(manifestReader);
 
     manifestReader.reportOnTestBundles(
@@ -269,6 +281,23 @@ class FuchsiaTestCommand {
         action: 'number',
         label: '$_numberOfTests',
       );
+    }
+  }
+
+  void advertiseLogFile() {
+    for (var outputFormatter in outputFormatters) {
+      if (outputFormatter is FileFormatter) {
+        // ignore: avoid_as
+        (outputFormatter.buffer.stdout as FileStandardOut).initPath();
+        // ignore: avoid_as
+        var path = (outputFormatter.buffer.stdout as FileStandardOut).path;
+        emitEvent(TestInfo(testsConfig.wrapWith(
+          'Logging all output to: $path\n'
+          'Use the `--logpath` argument to specify a log location or '
+          '`--no-log` to disable\n',
+          [darkGray],
+        )));
+      }
     }
   }
 }

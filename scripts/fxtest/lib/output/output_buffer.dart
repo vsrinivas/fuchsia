@@ -7,6 +7,8 @@ import 'dart:convert';
 import 'dart:io' as io;
 import 'dart:math';
 import 'package:fxtest/exceptions.dart';
+import 'package:meta/meta.dart';
+import 'package:path/path.dart' as p;
 
 abstract class StandardOut {
   void write(String line);
@@ -24,6 +26,66 @@ class RealStandardOut implements StandardOut {
   Future<dynamic> get done => io.stdout.done;
   @override
   Future<dynamic> close() => io.stdout.close();
+}
+
+/// Implementation of an [OutputBuffer]'s [StandardOut] that writes all content
+/// to a file on disk.
+class FileStandardOut implements StandardOut {
+  final bool deleteIfExisting;
+
+  /// If true, we create the full path as a folder and then place our test
+  /// file in there.
+  final Completer<bool> _closedCompleter;
+  String path;
+  io.File _file;
+  io.IOSink _sink;
+
+  FileStandardOut(this.path, {this.deleteIfExisting = false})
+      : _closedCompleter = Completer<bool>(),
+        assert(path != null),
+        assert(path != '');
+
+  void initPath() {
+    if (_file == null && io.Directory(path).existsSync()) {
+      // If the path points to a directory, create a timestamped file.
+      path = p.join(path, 'fxtest-${DateTime.now().toIso8601String()}.log');
+    }
+  }
+
+  void initFile() {
+    initPath();
+    if (_file == null) {
+      if (deleteIfExisting && io.File(path).existsSync()) {
+        // If the path points to an existing file, delete it if requested.
+        // (Otherwise, we'll append our output.)
+        io.File(path).deleteSync();
+      }
+      _file = io.File(path);
+      _sink = _file.openWrite(mode: io.FileMode.append);
+    }
+  }
+
+  @override
+  Future<dynamic> close() async {
+    _sink?.writeln('');
+    await _sink?.close();
+    _closedCompleter.complete(true);
+  }
+
+  @override
+  Future get done => _closedCompleter.future;
+
+  @override
+  void write(String line) {
+    initFile();
+    _sink?.add(utf8.encode(line));
+  }
+
+  @override
+  void writeln(String line) {
+    initFile();
+    _sink?.add(utf8.encode('\n$line'));
+  }
 }
 
 class LocMemStandardOut implements StandardOut {
@@ -115,8 +177,8 @@ class OutputBuffer {
   OutputBuffer._({
     this.stdout,
 
-    // Controls how the buffer should receive its first content.
-    // Does not have a visual impact immediately
+    // Controls how the buffer should receive its first content. Does not have
+    // immediate visual impact.
     bool cursorStartsOnNewLine = false,
   })  : content = [],
         _stdoutCompleter = Completer(),
@@ -130,6 +192,13 @@ class OutputBuffer {
     return OutputBuffer._(
       cursorStartsOnNewLine: cursorStartsOnNewLine,
       stdout: RealStandardOut(),
+    );
+  }
+
+  factory OutputBuffer.fileIO({@required String path}) {
+    return OutputBuffer._(
+      cursorStartsOnNewLine: false,
+      stdout: FileStandardOut(path),
     );
   }
 

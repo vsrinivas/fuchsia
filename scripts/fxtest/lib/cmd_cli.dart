@@ -18,7 +18,7 @@ class FuchsiaTestCommandCli {
 
   /// Fully-hydrated object containing answers to every runtime question.
   /// Derivable from the set of raw arguments passed in by the user.
-  TestsConfig _testsConfig;
+  TestsConfig testsConfig;
 
   /// The underlying class which does all the work.
   FuchsiaTestCommand _cmd;
@@ -30,8 +30,13 @@ class FuchsiaTestCommandCli {
     @required this.usage,
     FuchsiaLocator fuchsiaLocator,
   }) : _fuchsiaLocator = fuchsiaLocator ?? FuchsiaLocator.shared {
-    _testsConfig = TestsConfig.fromRawArgs(
+    testsConfig = TestsConfig.fromRawArgs(
       rawArgs: rawArgs,
+      // When running real tests, turn on logging. Passing `--no-log` explicitly
+      // will still override this.
+      // The `null` value is not a falsy indicator - it is because `--log` is a
+      // flag and thus does not accept a value.
+      defaultRawArgs: {'--log': null},
       fuchsiaLocator: _fuchsiaLocator,
     );
   }
@@ -40,11 +45,11 @@ class FuchsiaTestCommandCli {
     String fxLocation,
     Function(Object) stdoutWriter,
   ) async {
-    if (_testsConfig.testArguments.parsedArgs['help']) {
+    if (testsConfig.testArguments.parsedArgs['help']) {
       usage(fxTestArgParser);
       return false;
     }
-    if (_testsConfig.testArguments.parsedArgs['printtests']) {
+    if (testsConfig.testArguments.parsedArgs['printtests']) {
       ProcessResult result = await Process.run('cat', ['tests.json'],
           workingDirectory: FuchsiaLocator.shared.buildDir);
       stdoutWriter(result.stdout);
@@ -62,10 +67,10 @@ class FuchsiaTestCommandCli {
   }
 
   Future<void> run() async {
-    _cmd = createCommand(_testsConfig);
+    _cmd = createCommand();
 
-    if (_testsConfig.flags.shouldRebuild) {
-      _cmd.outputFormatter.update(
+    if (testsConfig.flags.shouldRebuild) {
+      _cmd.emitEvent(
         TestInfo(wrapWith('> fx build', [green, styleBold])),
       );
       await fxCommandRun(FuchsiaLocator.shared.fx, 'build');
@@ -77,26 +82,26 @@ class FuchsiaTestCommandCli {
       // stdout future.
       _cmd.runTestSuite(TestsManifestReader()).then((_) {
         // Once the actual command finishes without problems, close the stdout.
-        _cmd.outputFormatter.close();
+        _cmd.dispose();
       }),
     );
 
     // Register a listener for when the `stdout` closes.
-    await _cmd.outputFormatter.stdOutClosedFuture.catchError((err) {
-      // If we have not yet determined a failing error code, then go with
-      // whatever is baked into this error.
+    try {
+      await Future.wait(
+        _cmd.outputFormatters.map((var f) => f.stdOutClosedFuture),
+        eagerError: true,
+      );
+    } on Exception {
       if (exitCode == 0) {
-        throw err;
+        rethrow;
       } else {
-        // However, if we do already have an `exitCode` (from a failing test),
-        // use that
         throw OutputClosedException(exitCode);
       }
-    });
+    }
   }
 
-  FuchsiaTestCommand createCommand(TestsConfig testsConfig) =>
-      FuchsiaTestCommand.fromConfig(
+  FuchsiaTestCommand createCommand() => FuchsiaTestCommand.fromConfig(
         testsConfig,
         testRunnerBuilder: (TestsConfig testsConfig) => SymbolizingTestRunner(
           fx: testsConfig.fuchsiaLocator.fx,

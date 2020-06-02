@@ -87,6 +87,17 @@ and component.''',
       defaultsTo: false,
       negatable: false,
       help: 'If true, halts test suite execution on the first failed test')
+  ..addFlag('log',
+      defaultsTo: false,
+      negatable: true,
+      help: '''If true, emits all output from all tests to a file. Turned on
+when running real tests unless `--no-log` is passed.''')
+  ..addOption('logpath',
+      defaultsTo: null,
+      help: '''If passed and if --no-log is not passed, customizes the
+destination of the log artifact.
+
+Defaults to a timestamped file at the root of ${getFriendlyBuildDir()}.''')
   ..addOption('limit',
       defaultsTo: null,
       help: 'If passed, ends test suite execution after N tests')

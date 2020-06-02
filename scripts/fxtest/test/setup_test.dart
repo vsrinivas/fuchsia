@@ -14,23 +14,23 @@ class FuchsiaTestCommandCliFake extends FuchsiaTestCommandCli {
         );
 
   @override
-  FuchsiaTestCommand createCommand(TestsConfig testsConfig) {
+  FuchsiaTestCommand createCommand() {
     return FuchsiaTestCommandFake(
       testsConfig: testsConfig,
-      outputFormatter: StdOutClosingFormatter(),
+      outputFormatters: [StdOutClosingFormatter()],
     );
   }
 }
 
 class FuchsiaTestCommandFake extends FuchsiaTestCommand {
   FuchsiaTestCommandFake({
-    OutputFormatter outputFormatter,
+    List<OutputFormatter> outputFormatters,
     TestsConfig testsConfig,
   }) : super(
           analyticsReporter: AnalyticsFaker(),
           checklist: AlwaysAllowChecklist(),
           fuchsiaLocator: FuchsiaLocator.shared,
-          outputFormatter: outputFormatter,
+          outputFormatters: outputFormatters,
           testsConfig: testsConfig,
           testRunnerBuilder: (testsConfig) => TestRunner(),
         );
@@ -268,10 +268,12 @@ void main() {
         analyticsReporter: AnalyticsFaker(),
         checklist: AlwaysAllowChecklist(),
         fuchsiaLocator: fuchsiaLocator,
-        outputFormatter: OutputFormatter.fromConfig(
-          testsConfig,
-          buffer: OutputBuffer.locMemIO(),
-        ),
+        outputFormatters: [
+          OutputFormatter.fromConfig(
+            testsConfig,
+            buffer: OutputBuffer.locMemIO(),
+          )
+        ],
         testRunnerBuilder: (testsConfig) => FakeTestRunner.passing(),
         testsConfig: TestsConfig.fromRawArgs(rawArgs: []),
       );
@@ -301,10 +303,12 @@ void main() {
         analyticsReporter: AnalyticsFaker(),
         checklist: AlwaysAllowChecklist(),
         fuchsiaLocator: fuchsiaLocator,
-        outputFormatter: OutputFormatter.fromConfig(
-          testsConfig,
-          buffer: OutputBuffer.locMemIO(),
-        ),
+        outputFormatters: [
+          OutputFormatter.fromConfig(
+            testsConfig,
+            buffer: OutputBuffer.locMemIO(),
+          )
+        ],
         testRunnerBuilder: (testsConfig) => FakeTestRunner.passing(),
         testsConfig: TestsConfig.fromRawArgs(rawArgs: ['--dry']),
       );

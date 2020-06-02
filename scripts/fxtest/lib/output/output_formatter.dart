@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:io';
 import 'package:fxtest/fxtest.dart';
 import 'package:io/ansi.dart';
 import 'package:meta/meta.dart';
+import 'package:path/path.dart' as p;
 
 class Emoji {
   final String emoji;
@@ -26,7 +26,7 @@ abstract class OutputFormatter {
   final List<TestInfo> _infoEvents;
   final List<TestStarted> _testStartedEvents;
   final List<TestResult> _testResultEvents;
-  final OutputBuffer _buffer;
+  final OutputBuffer buffer;
   DateTime _testSuiteStartTime;
   DateTime _lastTestStartTime;
   bool _hasStartedTests;
@@ -42,13 +42,13 @@ abstract class OutputFormatter {
     @required this.slowTestThreshold,
     this.simpleOutput = false,
     OutputBuffer buffer,
-  })  : _testResultEvents = [],
+  })  : buffer = buffer ?? OutputBuffer.realIO(),
+        _testResultEvents = [],
         _infoEvents = [],
         _testStartedEvents = [],
         _numPassed = 0,
         _numRun = 0,
         _numFailed = 0,
-        _buffer = buffer ?? OutputBuffer.realIO(),
         _currentTestIsSlow = false,
         _hasStartedTests = false,
         _lastTestHadOutput = false;
@@ -92,12 +92,12 @@ abstract class OutputFormatter {
   }
 
   /// Future that resolves when the stdout closes for any reason
-  Future get stdOutClosedFuture => _buffer.stdOutClosedFuture();
+  Future get stdOutClosedFuture => buffer.stdOutClosedFuture();
 
   /// Pass-thru to the actual buffer's close method
-  void close() => _buffer.close();
+  void close() => buffer.close();
 
-  void forcefullyClose() => _buffer.forcefullyClose();
+  void forcefullyClose() => buffer.forcefullyClose();
 
   String colorize(String content, Iterable<AnsiCode> args) {
     return simpleOutput ? content : wrapWith(content, args);
@@ -150,9 +150,6 @@ abstract class OutputFormatter {
       _handleTimeElapsedEvent(event);
     } else if (event is TestInfo) {
       _handleTestInfo(event);
-    } else if (event is FatalError) {
-      stderr.writeln(event.message);
-      _finalizeOutput();
     } else if (event is AllTestsCompleted) {
       _finalizeOutput();
     }
@@ -166,7 +163,7 @@ abstract class OutputFormatter {
   void _handleSlowTest(TimeElapsedEvent event) {
     var hint =
         colorize('(adjust this value with the -s|--slow flag)', [darkGray]);
-    _buffer
+    buffer
       ..addLine(
         colorize(
             ' >> Runtime has exceeded ${slowTestThreshold.inSeconds} '
@@ -198,9 +195,9 @@ abstract class OutputFormatter {
   void _finalizeOutput();
 
   void _reportSummary() {
-    _buffer.reduceEmptyRowsTo(0);
+    buffer.reduceEmptyRowsTo(0);
     if (_testResultEvents.isEmpty) {
-      _buffer.addLines(['Ran zero tests']);
+      buffer.addLines(['Ran zero tests']);
       return;
     }
     String failures = numFailures != 1 ? 'failures' : 'failure';
@@ -215,7 +212,7 @@ abstract class OutputFormatter {
         green
       ])} ${addEmoji(Emoji.party)}';
     }
-    _buffer.addLines([summary]);
+    buffer.addLines([summary]);
   }
 
   bool get cleanEndOfOutput =>
@@ -257,7 +254,7 @@ class StandardOutputFormatter extends OutputFormatter {
 
   @override
   void _handleTestInfo(TestInfo event) {
-    _buffer.addLines([
+    buffer.addLines([
       // Padding for info events that appear in the middle of the result stream
       if (hasStartedTests && event.requiresPadding) ' ',
       // The message itself
@@ -275,27 +272,27 @@ class StandardOutputFormatter extends OutputFormatter {
     String testName = colorize(event.testName, [cyan]);
     // Add some padding for our first test event
     if (_testStartedEvents.length == 1) {
-      _buffer.addLine('');
+      buffer.addLine('');
     }
     _lastTestHadOutput = false;
 
     var output =
         '$ratioDisplay $testExecutionTime ${addEmoji(Emoji.thinking)}  $testName';
     if (isVerbose) {
-      _buffer.addLine(output);
+      buffer.addLine(output);
     } else {
       // Add some more padding for our first test event
       if (_testStartedEvents.length == 1) {
-        _buffer.addLine('');
+        buffer.addLine('');
       }
-      _buffer.updateLines([output]);
+      buffer.updateLines([output]);
     }
   }
 
   /// Prints something like "[numPassed/numRun] TT:TT <emoji> <test-name>"
   @override
   void _handleTestResult(TestResult event) {
-    if (_lastTestHadOutput) _buffer.addLines(['']);
+    if (_lastTestHadOutput) buffer.addLines(['']);
 
     String testName = colorize(event.testName, [cyan]);
     String emoji = event.isDryRun
@@ -312,16 +309,16 @@ class StandardOutputFormatter extends OutputFormatter {
     // it's likely some output from the test.
     // We do the same for slow tests because we print realtime output for them.
     if (hasRealTimeOutput || _currentTestIsSlow) {
-      _buffer.addLines([output]);
+      buffer.addLines([output]);
     } else {
-      _buffer.updateLines([output]);
+      buffer.updateLines([output]);
     }
 
     // Report for failed messages
     if (!event.isSuccess && event.message != null) {
       // But only if not already doing realtime
       if (!hasRealTimeOutput && !_currentTestIsSlow) {
-        _buffer.addLines([event.message, '']);
+        buffer.addLines([event.message, '']);
       }
     }
   }
@@ -332,7 +329,7 @@ class StandardOutputFormatter extends OutputFormatter {
       ' (use the -v flag to see each test)',
       [darkGray],
     );
-    _buffer.updateLines([
+    buffer.updateLines([
       '$ratioDisplay $suiteExecutionTime All tests completed$verboseHint',
     ]);
   }
@@ -363,7 +360,7 @@ class InfoFormatter extends OutputFormatter {
   void _handleTestInfo(TestInfo event) {}
   @override
   void _handleTestStarted(TestStarted event) {
-    _buffer.addLines([
+    buffer.addLines([
       ...infoPrint(event.testDefinition),
       '',
     ]);
@@ -395,6 +392,39 @@ List<String> infoPrint(TestDefinition testDefinition) {
     _isTruthy(testDefinition.path) ? 'path: ${testDefinition.path}' : null,
   ].where((_val) => _val != null).toList()
     ..sort();
+}
+
+/// Variant [OutputFormatter] which writes all content to a file instead of
+/// to the usual file descriptor [stdout].
+///
+/// [FileFormatter] accomplishes its task by accepting a file path as its lone
+/// constructor argument and using that to hydrate a special, file-based version
+/// of its [OutputBuffer].
+class FileFormatter extends StandardOutputFormatter {
+  /// Internal constructor which sets all variables appropriately for writing
+  /// output to a file.
+  FileFormatter._({@required String path, @required bool pathIsFolder})
+      : assert(path != null),
+        super(
+          isVerbose: true,
+          hasRealTimeOutput: true,
+          slowTestThreshold: null,
+          simpleOutput: true,
+          buffer: OutputBuffer.fileIO(path: path),
+        );
+
+  /// Main (and currently only) constructor which accepts a [TestsConfig] object
+  /// and either instantiates and returns an object if appropriate, or [null] if
+  /// no file logging is desired.
+  factory FileFormatter.fromConfig(TestsConfig testsConfig) {
+    if (testsConfig.flags.shouldLog) {
+      return FileFormatter._(
+        path: testsConfig.flags.logPath ?? testsConfig.fuchsiaLocator.buildDir,
+        pathIsFolder: testsConfig.flags.logPath == null,
+      );
+    }
+    return null;
+  }
 }
 
 bool _isTruthy(String val) => val != null && val != '';
