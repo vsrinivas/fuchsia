@@ -1,5 +1,5 @@
 toc:
-- title: "Internationalization"
+- title: "Overview"
   path: /docs/development/internationalization/README.md
 - title: "ICU"
   path: /docs/development/internationalization/icu.md

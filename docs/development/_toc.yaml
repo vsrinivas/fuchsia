@@ -46,6 +46,9 @@ toc:
 - title: "Languages"
   section:
   - include: /docs/development/languages/_toc.yaml
+- title: "Internationalization"
+  section:
+  - include: /docs/development/internationalization/_toc.yaml
 - heading: "Test and debug"
 - title: "Test"
   section:
@@ -69,10 +72,3 @@ toc:
 - title: "Publish prebuilt packages"
   section:
   - include: /docs/development/prebuilt_packages/_toc.yaml
-- heading: "Others"
-- title: "Internationalization"
-  section:
-  - include: /docs/development/internationalization/_toc.yaml
-- title: "UI Input"
-  section:
-  - include: /docs/development/input/_toc.yaml

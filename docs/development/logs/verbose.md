@@ -1,4 +1,4 @@
-# How to enable verbose logging
+# Enable verbose logging
 
 At times, it is handy to have extra logging for input event dispatch, so that we
 can see what (and how) components are handling event dispatch. We can enable
