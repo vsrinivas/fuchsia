@@ -28,15 +28,9 @@ pub async fn command(proxy: SystemProxy, login_override: Option<String>) -> Resu
             }
         }
         None => {
-            let setting = proxy.watch().await?;
-
-            match setting {
-                Ok(setting) => {
-                    let setting_string = describe_login_override(setting.mode)?;
-                    output.push_str(&setting_string);
-                }
-                Err(err) => output.push_str(&format!("{:?}", err)),
-            }
+            let setting = proxy.watch2().await?;
+            let setting_string = describe_login_override(setting.mode)?;
+            output.push_str(&setting_string);
         }
     }
 

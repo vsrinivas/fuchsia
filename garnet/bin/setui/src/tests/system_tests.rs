@@ -11,8 +11,11 @@ use {
         Action, HardwarePowerStatecontrolService, Response,
     },
     crate::tests::fakes::service_registry::ServiceRegistry,
+    crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
-    fidl_fuchsia_settings::{Error as SettingsError, SystemMarker, SystemSettings},
+    fidl::Error::ClientChannelClosed,
+    fidl_fuchsia_settings::{Error as SettingsError, SystemMarker, SystemProxy, SystemSettings},
+    fuchsia_zircon::Status,
     futures::lock::Mutex,
     std::sync::Arc,
 };
@@ -20,6 +23,15 @@ use {
 const ENV_NAME: &str = "settings_service_system_test_environment";
 const CONTEXT_ID: u64 = 0;
 const FACTORY_RESET_FLAG: &str = "FactoryReset";
+
+/// Creates an environment that will fail on a get request.
+async fn create_system_test_env_with_failures() -> SystemProxy {
+    let storage_factory = InMemoryStorageFactory::create();
+    create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::System)
+        .await
+        .connect_to_service::<SystemMarker>()
+        .unwrap()
+}
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_system() {
@@ -61,7 +73,7 @@ async fn test_system() {
 
     let system_proxy = env.connect_to_service::<SystemMarker>().unwrap();
 
-    let settings = system_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = system_proxy.watch2().await.expect("watch completed");
 
     assert_eq!(settings.mode, Some(STARTING_LOGIN_MODE));
 
@@ -69,7 +81,7 @@ async fn test_system() {
     system_settings.mode = Some(CHANGED_LOGIN_MODE);
     system_proxy.set(system_settings).await.expect("set completed").expect("set successful");
 
-    let settings = system_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = system_proxy.watch2().await.expect("watch completed");
 
     assert_eq!(settings.mode, Some(CHANGED_LOGIN_MODE));
 
@@ -142,7 +154,7 @@ async fn test_failed_reboot() {
 
     let system_proxy = env.connect_to_service::<SystemMarker>().unwrap();
 
-    let settings = system_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = system_proxy.watch2().await.expect("watch completed");
 
     assert_eq!(settings.mode, Some(STARTING_LOGIN_MODE));
 
@@ -156,7 +168,7 @@ async fn test_failed_reboot() {
         "set should have failed"
     );
 
-    let settings = system_proxy.watch().await.expect("watch completed").expect("watch successful");
+    let settings = system_proxy.watch2().await.expect("watch completed");
 
     assert_eq!(settings.mode, Some(CHANGED_LOGIN_MODE));
 
@@ -180,4 +192,40 @@ async fn test_failed_reboot() {
 
     // Ensure reboot was not completed by the controller (note the not)
     assert!(hardware_power_statecontrol_service_handle.lock().await.verify_action_sequence(vec![]));
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_channel_failure_watch() {
+    let system_service = create_system_test_env_with_failures().await;
+    let result = system_service.watch().await.ok();
+    assert_eq!(result, Some(Err(SettingsError::Failed)));
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_channel_failure_watch2() {
+    let system_service = create_system_test_env_with_failures().await;
+    let result = system_service.watch2().await;
+    assert!(result.is_err());
+    assert_eq!(
+        ClientChannelClosed(Status::INTERNAL).to_string(),
+        result.err().unwrap().to_string()
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_simultaneous_watch() {
+    let factory = InMemoryStorageFactory::create();
+
+    let env = EnvironmentBuilder::new(factory)
+        .settings(&[SettingType::System])
+        .spawn_and_get_nested_environment(ENV_NAME)
+        .await
+        .unwrap();
+
+    let system_service = env.connect_to_service::<SystemMarker>().unwrap();
+
+    let settings =
+        system_service.watch().await.expect("watch completed").expect("watch successful");
+    let settings2 = system_service.watch2().await.expect("watch completed");
+    assert_eq!(settings, settings2);
 }
