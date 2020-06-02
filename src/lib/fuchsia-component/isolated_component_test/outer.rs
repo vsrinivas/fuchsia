@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl_fuchsia_sys::{ComponentControllerEvent, TerminationReason},
+    fidl_fuchsia_sys::{ComponentControllerEvent, EnvironmentOptions, TerminationReason},
     fidl_fuchsia_test_echos::{
         EchoExposedByParentRequest, EchoExposedByParentRequestStream, EchoExposedBySiblingMarker,
         EchoHiddenByParentRequest, EchoHiddenByParentRequestStream,
@@ -56,7 +56,13 @@ async fn main() -> Result<(), Error> {
         .add_fidl_service(Services::Hidden)
         .add_proxy_service_to::<EchoExposedBySiblingMarker, _>(sibling.directory_request()?.clone());
 
-    let env = fs.create_nested_environment(ENV_NAME)?;
+    let options = EnvironmentOptions {
+        inherit_parent_services: false,
+        use_parent_runners: false,
+        kill_on_oom: false,
+        delete_storage_on_death: false,
+    };
+    let env = fs.create_nested_environment_with_options(ENV_NAME, options)?;
 
     // spawn the child components within the newly created environment
     let sibling = sibling.spawn(env.launcher())?;

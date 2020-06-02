@@ -699,6 +699,32 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         ServiceObjTy: From<Proxy<LoaderMarker, O>>,
         ServiceObjTy: ServiceObjTrait<Output = O>,
     {
+        self.create_nested_environment_with_options(
+            environment_label,
+            EnvironmentOptions {
+                inherit_parent_services: false,
+                use_parent_runners: false,
+                kill_on_oom: false,
+                delete_storage_on_death: false,
+            },
+        )
+    }
+
+    /// Creates a new environment, with custom options, that only has access to the services
+    /// provided through this `ServiceFs` and the enclosing environment's `Loader` service.
+    ///
+    /// Note that the resulting `NestedEnvironment` must be kept alive for the environment to
+    /// continue to exist. Once dropped, the environment and all components launched within it
+    /// will be destroyed.
+    pub fn create_nested_environment_with_options<O>(
+        &mut self,
+        environment_label: &str,
+        mut options: EnvironmentOptions,
+    ) -> Result<NestedEnvironment, Error>
+    where
+        ServiceObjTy: From<Proxy<LoaderMarker, O>>,
+        ServiceObjTy: ServiceObjTrait<Output = O>,
+    {
         let env = crate::client::connect_to_service::<EnvironmentMarker>()
             .context("connecting to current environment")?;
         let services_with_loader = self.add_proxy_service::<LoaderMarker, _>();
@@ -714,12 +740,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             controller_server_end,
             environment_label,
             Some(&mut service_list),
-            &mut EnvironmentOptions {
-                inherit_parent_services: false,
-                use_parent_runners: false,
-                kill_on_oom: false,
-                delete_storage_on_death: false,
-            },
+            &mut options,
         )
         .context("creating isolated environment")?;
 
