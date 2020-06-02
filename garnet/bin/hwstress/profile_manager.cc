@@ -17,7 +17,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include <fbl/string_printf.h>
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace hwstress {
 
@@ -76,7 +76,7 @@ zx_status_t ProfileManager::SetThreadPriority(const zx::thread& thread, uint32_t
         zx::profile profile;
         zx_status_t server_status;
         zx_status_t status = profile_provider_->GetProfile(
-            priority, fbl::StringPrintf("hwstress-priority-%d", priority).c_str(), &server_status,
+            priority, fxl::StringPrintf("hwstress-priority-%d", priority), &server_status,
             &profile);
         if (status != ZX_OK) {
           return zx::error(status);

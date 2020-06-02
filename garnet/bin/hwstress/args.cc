@@ -14,7 +14,7 @@
 #include <string_view>
 #include <vector>
 
-#include <fbl/string_printf.h>
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace hwstress {
 namespace {
@@ -78,12 +78,12 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
     result.subcommand = StressTest::kMemory;
   } else {
     return fitx::error(
-        fbl::StringPrintf("Unknown subcommand or option: '%s'.", params[0].c_str()).c_str());
+        fxl::StringPrintf("Unknown subcommand or option: '%s'.", params[0].c_str()).c_str());
   }
 
   // Ensure no more parameters were given.
   if (params.size() > 1) {
-    return fitx::error(fbl::StringPrintf("Unknown option: '%s'.", params[1].c_str()).c_str());
+    return fitx::error(fxl::StringPrintf("Unknown option: '%s'.", params[1].c_str()).c_str());
   }
 
   return fitx::success(result);

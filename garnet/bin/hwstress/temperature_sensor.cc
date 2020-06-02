@@ -18,10 +18,9 @@
 #include <string_view>
 #include <utility>
 
-#include <fbl/string.h>
-#include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 
+#include "src/lib/fxl/strings/string_printf.h"
 #include "status.h"
 #include "util.h"
 
@@ -96,9 +95,8 @@ TemperatureSensor* GetNullTemperatureSensor() {
   return &sensor;
 }
 
-fbl::String TemperatureToString(std::optional<double> temperature) {
-  return temperature.has_value() ? fbl::StringPrintf("%0.1f°C", temperature.value())
-                                 : fbl::String("unknown");
+std::string TemperatureToString(std::optional<double> temperature) {
+  return temperature.has_value() ? fxl::StringPrintf("%0.1f°C", temperature.value()) : "unknown";
 }
 
 }  // namespace hwstress

@@ -13,8 +13,6 @@
 #include <string_view>
 #include <vector>
 
-#include <fbl/string.h>
-
 namespace hwstress {
 
 // A TemperatureSensor monitors the hardware's temperature.
@@ -41,7 +39,7 @@ std::unique_ptr<TemperatureSensor> CreateNullTemperatureSensor();
 TemperatureSensor* GetNullTemperatureSensor();
 
 // Convert a temperature to a human-readable string.
-fbl::String TemperatureToString(std::optional<double> temperature);
+std::string TemperatureToString(std::optional<double> temperature);
 
 }  // namespace hwstress
 

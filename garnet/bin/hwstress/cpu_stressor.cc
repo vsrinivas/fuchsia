@@ -15,8 +15,6 @@
 #include <unordered_map>
 #include <utility>
 
-#include <fbl/string_printf.h>
-
 #include "cpu_workloads.h"
 #include "profile_manager.h"
 #include "status.h"

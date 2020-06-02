@@ -17,8 +17,6 @@
 #include <thread>
 #include <utility>
 
-#include <fbl/string_printf.h>
-
 #include "cpu_stressor.h"
 #include "cpu_workloads.h"
 #include "status.h"

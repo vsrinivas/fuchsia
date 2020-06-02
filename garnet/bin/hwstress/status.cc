@@ -12,8 +12,7 @@
 #include <string>
 #include <utility>
 
-#include <fbl/string_printf.h>
-
+#include "src/lib/fxl/strings/string_printf.h"
 #include "util.h"
 
 namespace hwstress {
@@ -49,7 +48,7 @@ void StatusLine::Log(std::string_view s) {
 }
 
 void StatusLine::Log(const char* fmt, va_list ap) {
-  fbl::String s = fbl::StringVPrintf(fmt, ap);
+  std::string s = fxl::StringVPrintf(fmt, ap);
   Log(std::string_view(s.data(), s.size()));
 }
 
@@ -73,7 +72,7 @@ void StatusLine::Set(std::string_view status) {
 }
 
 void StatusLine::Set(const char* fmt, va_list ap) {
-  fbl::String s = fbl::StringVPrintf(fmt, ap);
+  std::string s = fxl::StringVPrintf(fmt, ap);
   Set(std::string_view(s.data(), s.size()));
 }
 
