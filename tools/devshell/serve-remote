@@ -74,23 +74,32 @@ fi
 echo "Using remote ${host}:${dir}"
 echo "Using target device $(get-device-name)"
 
-# First we need to check if we already have a control master for the
-# host, if we do, we might already have the forwards and so we don't
-# need to worry about tearing down:
-if ! ssh -O check "${host}" > /dev/null 2>&1; then
-  # If we didn't have a control master, and the device already has 8022
-  # bound, then there's a good chance there's a stale sshd instance
-  # running from another device or another session that will block the
-  # forward, so we'll check for that and speculatively attempt to clean
-  # it up. Unfortunately this means authing twice, but it's likely the
-  # best we can do for now.
-  if ssh "${host}" 'ss -ln | grep :8022' > /dev/null; then
-    ssh "${host}" 'pkill -u $USER sshd'
-    ssh "${host}" -O exit > /dev/null 2>&1
-  fi
-fi
 
-args=(
+# Use a dedicated ControlPath so script can manage a connection seperately from the user's. We
+# intentionally do not use %h/%p in the control path because there can only be one forwarding
+# session at a time (due to the local forward of 8083).
+ssh_base_args=(
+  "${host}"
+  -S "~/.ssh/control-fuchsia-fx-remote"
+  -o ControlMaster=auto
+)
+
+ssh_exit() {
+  ssh ${ssh_base_args[@]}  -O exit > /dev/null 2>&1
+}
+
+# If there is already control master then exit it. We can't be sure its to the right host and it
+# also could be stale.
+ssh_exit
+
+# When we exit the script, close the background ssh connection.
+trap_exit() {
+  ssh_exit
+  exit
+}
+trap trap_exit EXIT
+
+ssh_tunnel_args=(
   -6 # We want ipv6 binds for the port forwards
   -L "\*:8083:localhost:8083"     # fx serve
   -R "8022:[${target_addr}]:22"   # fx shell
@@ -99,26 +108,40 @@ args=(
   -R "8443:[${target_addr}]:8443" # Google-specific
   -R "9080:[${target_addr}]:80"   # SL4F_HTTP_PORT
   -o ExitOnForwardFailure=yes
-  "${host}"
+  # Match google default server timeout so in spotty network situations the client doesn't timeout
+  # before server (and leave the server process still holding on to tunneling port).
+  -o ServerAliveInterval=30
+  -o ServerAliveCountMax=20
 )
 
+# Start tunneling session in background. It's started seperately from the command invocations below
+# to allow the script to be consistent on how it is exited for both serve and non-serve cases. It
+# also allows script to explicitly close the control session (to better avoid stale sshd sessions).
+
+# Use `&` in addition to `-f` so so ssh doesn't receive script's SIGINT. And then `wait` to ensure
+# tunnels are established before continuing.
+ssh ${ssh_base_args[@]} ${ssh_tunnel_args[@]} -nNTf &
+wait $!
+
 # If the user requested serving, then we'll check to see if there's a
-# server already running and kill it, this prevents most cases where
+# remote server already running and kill it, this prevents most cases where
 # signal propagation seems to sometimes not make it to "pm".
 # TODO(drees) This can be combined with the serve-updates call later to reduce ssh calls.
-if "${serve}" && ssh "${args[@]}" 'ss -ln | grep :8083' > /dev/null; then
-  ssh "${args[@]}" 'pkill -x -u $USER pm'
+if "${serve}" && ssh ${ssh_base_args[@]} 'ss -ln | grep :8083' > /dev/null; then
+  ssh "${ssh_base_args[@]}" 'pkill -x -u $USER pm'
 fi
 
 if "${serve}"; then
-  # Starts a package server
-  args+=(
+  # Ctrl-C will exit the ssh remote command and this ssh session. Then script exit will trigger
+  # `trap_exit` to close the ssh connection.
+  echo -e "Press Ctrl-C to stop remote serving and tunneling.\n"
+  ssh_serve_args=(
     "-tt" # explicitly force a pty, for HUP'ing on the remote
     "cd ${dir} && ./.jiri_root/bin/fx set-device '[::1]:8022' && ./.jiri_root/bin/fx serve-updates"
   )
+  ssh ${ssh_base_args[@]} ${ssh_serve_args[@]}
 else
-  # Starts nothing, just goes to sleep
-  args+=("-nNT")
+  echo "Press Ctrl-C to stop tunneling."
+  # Wait for user Ctrl-C. Then script exit will trigger trap_exit to close the ssh connection.
+  read -r -d '' _ </dev/tty
 fi
-
-exec ssh  "${args[@]}"
