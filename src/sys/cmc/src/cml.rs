@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::one_or_many::{OneOrMany, OneOrManyBorrow},
+    crate::one_or_many::OneOrMany,
     cm_json::cm,
+    cmc_macro::Ref,
     serde::Deserialize,
     serde_json::{Map, Value},
-    std::{collections::HashMap, fmt, str::FromStr},
+    std::{collections::HashMap, fmt},
     thiserror::Error,
 };
 
@@ -19,92 +20,174 @@ pub const PERSISTENT: &str = "persistent";
 pub const TRANSIENT: &str = "transient";
 pub const STRONG: &str = "strong";
 
-/// A relative reference to another object.
+/// An error that occurs during validation.
+#[derive(Debug, Error)]
+pub enum ValidationError {
+    #[error("Named reference is not valid")]
+    NamedRefInvalid(cm_types::NameValidationError),
+    #[error("Reference is more than 100 characters")]
+    RefTooLong,
+    #[error("`use from` reference is not valid")]
+    UseFromRefInvalid,
+    #[error("`expose from` reference is not valid")]
+    ExposeFromRefInvalid,
+    #[error("`expose to` reference is not valid")]
+    ExposeToRefInvalid,
+    #[error("`offer from` reference is not valid")]
+    OfferFromRefInvalid,
+    #[error("`offer to` reference is not valid")]
+    OfferToRefInvalid,
+    #[error("environment reference is not valid")]
+    EnvironmentRefInvalid,
+    #[error("`storage from` reference is not valid")]
+    StorageFromRefInvalid,
+    #[error("`runner from` reference is not valid")]
+    RunnerFromRefInvalid,
+    #[error("Environment registration reference is not valid")]
+    RegistrationRefInvalid,
+}
+
+/// A relative reference to another object. This is a generic type that can encode any supported
+/// reference subtype. For named references, it holds a reference to the name instead of the name
+/// itself.
 ///
-/// This type can be parsed from a string. See the individual variants
-/// for details.
+/// Objects of this type are usually derived from conversions of context-specific reference
+/// types that `#[derive(Ref)]`. This type makes it easy to write helper functions that operate on
+/// generic references.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub enum Ref {
+pub enum AnyRef<'a> {
     /// A named reference. Parsed as `#name`, where `name` contains only
     /// alphanumeric characters, `-`, `_`, and `.`.
-    Named(Name),
+    Named(&'a Name),
     /// A reference to the realm. Parsed as `realm`.
     Realm,
     /// A reference to the framework (component manager). Parsed as `framework`.
     Framework,
-    /// A reference to self, the component that declares this reference. Parsed as `self`.
+    /// A reference to this component. Parsed as `self`.
     Self_,
 }
 
-/// Format a `Ref` as a string.
-impl fmt::Display for Ref {
+/// Format an `AnyRef` as a string.
+impl fmt::Display for AnyRef<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Ref::Named(name) => write!(f, "#{}", name),
-            Ref::Realm => write!(f, "realm"),
-            Ref::Framework => write!(f, "framework"),
-            Ref::Self_ => write!(f, "self"),
+            Self::Named(name) => write!(f, "#{}", name),
+            Self::Realm => write!(f, "realm"),
+            Self::Framework => write!(f, "framework"),
+            Self::Self_ => write!(f, "self"),
         }
     }
 }
 
-/// An error that occurs during `Ref` validation.
-#[derive(Debug, Error)]
-pub enum RefValidationError {
-    #[error("must be one of `#name`, `realm`, `framework`, or `self`")]
-    InvalidRefType,
-    #[error("name is invalid")]
-    InvalidNamedRef(cm_types::NameValidationError),
+/// A reference in a `use from`.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
+#[expected = "a `use from` reference"]
+#[parse_error(ValidationError::UseFromRefInvalid)]
+pub enum UseFromRef {
+    /// A reference to the containing realm.
+    Realm,
+    /// A reference to the framework.
+    Framework,
 }
 
-impl FromStr for Ref {
-    type Err = RefValidationError;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        if value.starts_with("#") {
-            return value[1..]
-                .parse::<Name>()
-                .map(Ref::Named)
-                .map_err(RefValidationError::InvalidNamedRef);
-        }
-        Ok(match value {
-            "framework" => Ref::Framework,
-            "realm" => Ref::Realm,
-            "self" => Ref::Self_,
-            _ => return Err(RefValidationError::InvalidRefType),
-        })
-    }
+/// A reference in an `expose from`.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
+#[expected = "an `expose from` reference"]
+#[parse_error(ValidationError::ExposeFromRefInvalid)]
+pub enum ExposeFromRef {
+    /// A reference to a child or collection.
+    Named(Name),
+    /// A reference to the framework.
+    Framework,
+    /// A reference to this component.
+    Self_,
 }
 
-/// Deserialize a string into a valid Ref.
-impl<'de> serde::de::Deserialize<'de> for Ref {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::de::Deserializer<'de>,
-    {
-        struct RefVisitor;
-        impl<'de> serde::de::Visitor<'de> for RefVisitor {
-            type Value = Ref;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a relative object reference")
-            }
-
-            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                value
-                    .parse()
-                    .map_err(|e| E::custom(format!("invalid reference: \"{}\": {}", value, e)))
-            }
-        }
-        deserializer.deserialize_str(RefVisitor)
-    }
+/// A reference in an `expose to`.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
+#[expected = "an `expose to` reference"]
+#[parse_error(ValidationError::ExposeToRefInvalid)]
+pub enum ExposeToRef {
+    /// A reference to the realm.
+    Realm,
+    /// A reference to the framework.
+    Framework,
 }
 
-/// Converts a valid cml right (including aliases) into a Vec<cm::Right> expansion. This function will
-/// expand all valid right aliases and pass through non-aliased rights through to
+/// A reference in an `offer from`.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
+#[expected = "an `offer from` reference"]
+#[parse_error(ValidationError::OfferFromRefInvalid)]
+pub enum OfferFromRef {
+    /// A reference to a child or collection.
+    Named(Name),
+    /// A reference to the realm.
+    Realm,
+    /// A reference to the framework.
+    Framework,
+    /// A reference to this component.
+    Self_,
+}
+
+/// A reference in an `offer to`.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
+#[expected = "an `offer to` reference"]
+#[parse_error(ValidationError::OfferToRefInvalid)]
+pub enum OfferToRef {
+    /// A reference to a child or collection.
+    Named(Name),
+}
+
+/// A reference in an environment.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
+#[expected = "an environment reference"]
+#[parse_error(ValidationError::EnvironmentRefInvalid)]
+pub enum EnvironmentRef {
+    /// A reference to an environment defined in this component.
+    Named(Name),
+}
+
+/// A reference in a `storage from`.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
+#[expected = "a `storage from` reference"]
+#[parse_error(ValidationError::StorageFromRefInvalid)]
+pub enum StorageFromRef {
+    /// A reference to a child.
+    Named(Name),
+    /// A reference to the realm.
+    Realm,
+    /// A reference to this component.
+    Self_,
+}
+
+/// A reference in a `runner from`.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
+#[expected = "a `runner from` reference"]
+#[parse_error(ValidationError::RunnerFromRefInvalid)]
+pub enum RunnerFromRef {
+    /// A reference to a child.
+    Named(Name),
+    /// A reference to the realm.
+    Realm,
+    /// A reference to this component.
+    Self_,
+}
+
+/// A reference in an environment registration.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
+#[expected = "a registration reference"]
+#[parse_error(ValidationError::RegistrationRefInvalid)]
+pub enum RegistrationRef {
+    /// A reference to a child.
+    Named(Name),
+    /// A reference to the containing realm.
+    Realm,
+    /// A reference to this component.
+    Self_,
+}
+
+/// Converts a valid cml right (including aliases) into a Vec<cm::Right> expansion. This function
+/// will expand all valid right aliases and pass through non-aliased rights through to
 /// Rights::map_token. None will be returned for invalid rights.
 pub fn parse_right_token(token: &str) -> Option<Vec<cm::Right>> {
     match token {
@@ -157,8 +240,8 @@ pub fn parse_right_token(token: &str) -> Option<Vec<cm::Right>> {
 }
 
 /// Converts a set of cml right tokens (including aliases) into a well formed cm::Rights expansion.
-/// This function will expand all valid right aliases and pass through non-aliased rights through to
-/// Rights::map_token. A cm::RightsValidationError will be returned on invalid rights.
+/// This function will expand all valid right aliases and pass through non-aliased rights through
+/// to Rights::map_token. A cm::RightsValidationError will be returned on invalid rights.
 pub fn parse_rights(right_tokens: &Vec<String>) -> Result<cm::Rights, cm::RightsValidationError> {
     let mut rights = Vec::<cm::Right>::new();
     for right_token in right_tokens.iter() {
@@ -233,7 +316,7 @@ impl Document {
         }
     }
 
-    pub fn all_storage_and_sources<'a>(&'a self) -> HashMap<&'a Name, &'a Ref> {
+    pub fn all_storage_and_sources<'a>(&'a self) -> HashMap<&'a Name, &'a StorageFromRef> {
         if let Some(storage) = self.storage.as_ref() {
             storage.iter().map(|s| (&s.name, &s.from)).collect()
         } else {
@@ -291,14 +374,14 @@ pub struct Environment {
 #[derive(Deserialize, Debug)]
 pub struct RunnerRegistration {
     pub runner: Name,
-    pub from: Ref,
+    pub from: RegistrationRef,
     pub r#as: Option<Name>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct ResolverRegistration {
     pub resolver: Name,
-    pub from: Ref,
+    pub from: RegistrationRef,
     pub scheme: cm_types::UrlScheme,
 }
 
@@ -309,7 +392,7 @@ pub struct Use {
     pub directory: Option<String>,
     pub storage: Option<String>,
     pub runner: Option<String>,
-    pub from: Option<Ref>,
+    pub from: Option<UseFromRef>,
     pub r#as: Option<String>,
     pub rights: Option<Vec<String>>,
     pub subdir: Option<String>,
@@ -325,9 +408,9 @@ pub struct Expose {
     pub directory: Option<String>,
     pub runner: Option<String>,
     pub resolver: Option<Name>,
-    pub from: OneOrMany<Ref>,
+    pub from: OneOrMany<ExposeFromRef>,
     pub r#as: Option<String>,
-    pub to: Option<Ref>,
+    pub to: Option<ExposeToRef>,
     pub rights: Option<Vec<String>>,
     pub subdir: Option<String>,
 }
@@ -341,8 +424,8 @@ pub struct Offer {
     pub runner: Option<String>,
     pub resolver: Option<Name>,
     pub event: Option<OneOrMany<Name>>,
-    pub from: OneOrMany<Ref>,
-    pub to: Vec<Ref>,
+    pub from: OneOrMany<OfferFromRef>,
+    pub to: Vec<OfferToRef>,
     pub r#as: Option<String>,
     pub rights: Option<Vec<String>>,
     pub subdir: Option<String>,
@@ -355,7 +438,7 @@ pub struct Child {
     pub name: Name,
     pub url: String,
     pub startup: Option<String>,
-    pub environment: Option<Ref>,
+    pub environment: Option<EnvironmentRef>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -367,14 +450,14 @@ pub struct Collection {
 #[derive(Deserialize, Debug)]
 pub struct Storage {
     pub name: Name,
-    pub from: Ref,
+    pub from: StorageFromRef,
     pub path: String,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Runner {
     pub name: Name,
-    pub from: Ref,
+    pub from: RunnerFromRef,
     pub path: String,
 }
 
@@ -385,7 +468,7 @@ pub struct Resolver {
 }
 
 pub trait FromClause {
-    fn from(&self) -> OneOrManyBorrow<Ref>;
+    fn from_(&self) -> OneOrMany<AnyRef<'_>>;
 }
 
 pub trait CapabilityClause {
@@ -470,8 +553,8 @@ impl AsClause for Use {
 }
 
 impl FromClause for Expose {
-    fn from(&self) -> OneOrManyBorrow<Ref> {
-        self.from.as_ref()
+    fn from_(&self) -> OneOrMany<AnyRef<'_>> {
+        one_or_many_from_impl(&self.from)
     }
 }
 
@@ -532,8 +615,8 @@ impl FilterClause for Expose {
 }
 
 impl FromClause for Offer {
-    fn from(&self) -> OneOrManyBorrow<Ref> {
-        self.from.as_ref()
+    fn from_(&self) -> OneOrMany<AnyRef<'_>> {
+        one_or_many_from_impl(&self.from)
     }
 }
 
@@ -594,27 +677,39 @@ impl FilterClause for Offer {
 }
 
 impl FromClause for Storage {
-    fn from(&self) -> OneOrManyBorrow<Ref> {
-        OneOrManyBorrow::One(&self.from)
+    fn from_(&self) -> OneOrMany<AnyRef<'_>> {
+        OneOrMany::One(AnyRef::from(&self.from))
     }
 }
 
 impl FromClause for Runner {
-    fn from(&self) -> OneOrManyBorrow<Ref> {
-        OneOrManyBorrow::One(&self.from)
+    fn from_(&self) -> OneOrMany<AnyRef<'_>> {
+        OneOrMany::One(AnyRef::from(&self.from))
     }
 }
 
 impl FromClause for RunnerRegistration {
-    fn from(&self) -> OneOrManyBorrow<Ref> {
-        OneOrManyBorrow::One(&self.from)
+    fn from_(&self) -> OneOrMany<AnyRef<'_>> {
+        OneOrMany::One(AnyRef::from(&self.from))
     }
 }
 
 impl FromClause for ResolverRegistration {
-    fn from(&self) -> OneOrManyBorrow<Ref> {
-        OneOrManyBorrow::One(&self.from)
+    fn from_(&self) -> OneOrMany<AnyRef<'_>> {
+        OneOrMany::One(AnyRef::from(&self.from))
     }
+}
+
+fn one_or_many_from_impl<'a, T>(from: &'a OneOrMany<T>) -> OneOrMany<AnyRef<'a>>
+where
+    AnyRef<'a>: From<&'a T>,
+    T: 'a,
+{
+    let r = match from {
+        OneOrMany::One(r) => OneOrMany::One(r.into()),
+        OneOrMany::Many(v) => OneOrMany::Many(v.into_iter().map(|r| r.into()).collect()),
+    };
+    r.into()
 }
 
 #[cfg(test)]
@@ -623,39 +718,42 @@ mod tests {
     use cm_json::{self, Error};
     use matches::assert_matches;
 
+    // Exercise reference parsing tests on `OfferFromRef` because it contains every reference
+    // subtype.
+
     #[test]
     fn test_parse_named_reference() {
-        assert_matches!("#some-child".parse::<Ref>(), Ok(Ref::Named(name)) if name == "some-child");
-        assert_matches!("#-".parse::<Ref>(), Ok(Ref::Named(name)) if name == "-");
-        assert_matches!("#_".parse::<Ref>(), Ok(Ref::Named(name)) if name == "_");
-        assert_matches!("#7".parse::<Ref>(), Ok(Ref::Named(name)) if name == "7");
+        assert_matches!("#some-child".parse::<OfferFromRef>(), Ok(OfferFromRef::Named(name)) if name == "some-child");
+        assert_matches!("#-".parse::<OfferFromRef>(), Ok(OfferFromRef::Named(name)) if name == "-");
+        assert_matches!("#_".parse::<OfferFromRef>(), Ok(OfferFromRef::Named(name)) if name == "_");
+        assert_matches!("#7".parse::<OfferFromRef>(), Ok(OfferFromRef::Named(name)) if name == "7");
 
-        assert_matches!("#".parse::<Ref>(), Err(_));
-        assert_matches!("some-child".parse::<Ref>(), Err(_));
+        assert_matches!("#".parse::<OfferFromRef>(), Err(_));
+        assert_matches!("some-child".parse::<OfferFromRef>(), Err(_));
     }
 
     #[test]
     fn test_parse_reference_test() {
-        assert_matches!("realm".parse::<Ref>(), Ok(Ref::Realm));
-        assert_matches!("realm".parse::<Ref>(), Ok(Ref::Realm));
-        assert_matches!("framework".parse::<Ref>(), Ok(Ref::Framework));
-        assert_matches!("self".parse::<Ref>(), Ok(Ref::Self_));
-        assert_matches!("#child".parse::<Ref>(), Ok(Ref::Named(name)) if name == "child");
+        assert_matches!("realm".parse::<OfferFromRef>(), Ok(OfferFromRef::Realm));
+        assert_matches!("realm".parse::<OfferFromRef>(), Ok(OfferFromRef::Realm));
+        assert_matches!("framework".parse::<OfferFromRef>(), Ok(OfferFromRef::Framework));
+        assert_matches!("self".parse::<OfferFromRef>(), Ok(OfferFromRef::Self_));
+        assert_matches!("#child".parse::<OfferFromRef>(), Ok(OfferFromRef::Named(name)) if name == "child");
 
-        assert_matches!("invalid".parse::<Ref>(), Err(_));
-        assert_matches!("#invalid-child^".parse::<Ref>(), Err(_));
+        assert_matches!("invalid".parse::<OfferFromRef>(), Err(_));
+        assert_matches!("#invalid-child^".parse::<OfferFromRef>(), Err(_));
     }
 
-    fn parse_as_ref(input: &str) -> Result<Ref, Error> {
-        serde_json::from_value::<Ref>(cm_json::from_json_str(input)?)
+    fn parse_as_ref(input: &str) -> Result<OfferFromRef, Error> {
+        serde_json::from_value::<OfferFromRef>(cm_json::from_json_str(input)?)
             .map_err(|e| Error::parse(format!("{}", e)))
     }
 
     #[test]
     fn test_deserialize_ref() -> Result<(), Error> {
-        assert_matches!(parse_as_ref("\"self\""), Ok(Ref::Self_));
-        assert_matches!(parse_as_ref("\"realm\""), Ok(Ref::Realm));
-        assert_matches!(parse_as_ref("\"#child\""), Ok(Ref::Named(name)) if name == "child");
+        assert_matches!(parse_as_ref("\"self\""), Ok(OfferFromRef::Self_));
+        assert_matches!(parse_as_ref("\"realm\""), Ok(OfferFromRef::Realm));
+        assert_matches!(parse_as_ref("\"#child\""), Ok(OfferFromRef::Named(name)) if name == "child");
 
         assert_matches!(parse_as_ref(r#""invalid""#), Err(_));
 

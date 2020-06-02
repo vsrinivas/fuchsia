@@ -142,7 +142,7 @@ struct ValidationContext<'a> {
     document: &'a cml::Document,
     all_children: HashMap<&'a cml::Name, &'a cml::Child>,
     all_collections: HashSet<&'a cml::Name>,
-    all_storage_and_sources: HashMap<&'a cml::Name, &'a cml::Ref>,
+    all_storage_and_sources: HashMap<&'a cml::Name, &'a cml::StorageFromRef>,
     all_runners: HashSet<&'a cml::Name>,
     all_resolvers: HashSet<&'a cml::Name>,
     all_environment_names: HashSet<&'a cml::Name>,
@@ -361,14 +361,14 @@ impl<'a> ValidationContext<'a> {
         // Validate "storage".
         if let Some(storage) = self.document.storage.as_ref() {
             for s in storage.iter() {
-                self.validate_component_ref("\"storage\" source", &s.from)?;
+                self.validate_component_ref("\"storage\" source", cml::AnyRef::from(&s.from))?;
             }
         }
 
         // Validate "runners".
         if let Some(runners) = self.document.runners.as_ref() {
             for r in runners.iter() {
-                self.validate_component_ref("\"runner\" source", &r.from)?;
+                self.validate_component_ref("\"runner\" source", cml::AnyRef::from(&r.from))?;
             }
         }
 
@@ -405,7 +405,7 @@ impl<'a> ValidationContext<'a> {
     ) -> Result<(), Error> {
         if let Some(environment_ref) = &child.environment {
             match environment_ref {
-                cml::Ref::Named(environment_name) => {
+                cml::EnvironmentRef::Named(environment_name) => {
                     if !self.all_environment_names.contains(&environment_name) {
                         return Err(Error::validate(format!(
                             "\"{}\" does not appear in \"environments\"",
@@ -415,11 +415,6 @@ impl<'a> ValidationContext<'a> {
                     let source = DependencyNode::Environment(environment_name.as_str());
                     let target = DependencyNode::Child(child.name.as_str());
                     strong_dependencies.add_edge(source, target);
-                }
-                _ => {
-                    return Err(Error::validate(
-                        "\"environment\" must be a named reference, e.g: \"#name\"",
-                    ))
                 }
             }
         }
@@ -547,10 +542,11 @@ impl<'a> ValidationContext<'a> {
         self.validate_from_clause("expose", expose)?;
 
         // Ensure that if the expose target is framework, the source target is self always.
-        if expose.to == Some(cml::Ref::Framework) {
+        if expose.to == Some(cml::ExposeToRef::Framework) {
             match &expose.from {
-                OneOrMany::One(cml::Ref::Self_) => {}
-                OneOrMany::Many(vec) if vec.iter().all(|from| *from == cml::Ref::Self_) => {}
+                OneOrMany::One(cml::ExposeFromRef::Self_) => {}
+                OneOrMany::Many(vec)
+                    if vec.iter().all(|from| *from == cml::ExposeFromRef::Self_) => {}
                 _ => {
                     return Err(Error::validate("Expose to framework can only be done from self."))
                 }
@@ -560,7 +556,7 @@ impl<'a> ValidationContext<'a> {
         // Ensure directory rights are specified if exposing from self.
         if expose.directory.is_some() {
             // Directories can only have a single `from` clause.
-            if *expose.from.one().unwrap() == cml::Ref::Self_ || expose.rights.is_some() {
+            if *expose.from.one().unwrap() == cml::ExposeFromRef::Self_ || expose.rights.is_some() {
                 match &expose.rights {
                     Some(rights) => self.validate_directory_rights(&rights)?,
                     None => return Err(Error::validate(
@@ -571,7 +567,7 @@ impl<'a> ValidationContext<'a> {
 
             // Exposing a subdirectory makes sense for routing but when exposing to framework,
             // the subdir should be exposed directly.
-            if expose.to == Some(cml::Ref::Framework) {
+            if expose.to == Some(cml::ExposeToRef::Framework) {
                 if expose.subdir.is_some() {
                     return Err(Error::validate(
                         "`subdir` is not supported for expose to framework. Directly expose the subdirectory instead."
@@ -583,7 +579,7 @@ impl<'a> ValidationContext<'a> {
         // Ensure that resolvers exposed from self are defined in `resolvers`.
         if let Some(resolver_name) = &expose.resolver {
             // Resolvers can only have a single `from` clause.
-            if *expose.from.one().unwrap() == cml::Ref::Self_ {
+            if *expose.from.one().unwrap() == cml::ExposeFromRef::Self_ {
                 if !self.all_resolvers.contains(resolver_name) {
                     return Err(Error::validate(format!(
                        "Resolver \"{}\" is exposed from self, so it must be declared in \"resolvers\"", resolver_name
@@ -600,7 +596,7 @@ impl<'a> ValidationContext<'a> {
                     "\"{}\" is a duplicate \"expose\" target {} for \"{}\"",
                     capability_id.as_str(),
                     capability_id.type_str(),
-                    expose.to.as_ref().unwrap_or(&cml::Ref::Realm)
+                    expose.to.as_ref().unwrap_or(&cml::ExposeToRef::Realm)
                 )));
             }
         }
@@ -619,7 +615,7 @@ impl<'a> ValidationContext<'a> {
         // Ensure directory rights are specified if offering from self.
         if offer.directory.is_some() {
             // Directories can only have a single `from` clause.
-            if *offer.from.one().unwrap() == cml::Ref::Self_ || offer.rights.is_some() {
+            if *offer.from.one().unwrap() == cml::OfferFromRef::Self_ || offer.rights.is_some() {
                 match &offer.rights {
                     Some(rights) => self.validate_directory_rights(&rights)?,
                     None => {
@@ -634,7 +630,7 @@ impl<'a> ValidationContext<'a> {
         // Ensure that resolvers offered from self are defined in `resolvers`.
         if let Some(resolver_name) = &offer.resolver {
             // Resolvers can only have a single `from` clause.
-            if *offer.from.one().unwrap() == cml::Ref::Self_ {
+            if *offer.from.one().unwrap() == cml::OfferFromRef::Self_ {
                 if !self.all_resolvers.contains(resolver_name) {
                     return Err(Error::validate(format!(
                         "Resolver \"{}\" is offered from self, so it must be declared in \
@@ -661,10 +657,8 @@ impl<'a> ValidationContext<'a> {
         // Validate every target of this offer.
         for to in offer.to.iter() {
             // Ensure the "to" value is a child.
-            let to_target = if let cml::Ref::Named(name) = to {
-                name
-            } else {
-                return Err(Error::validate(format!("invalid \"offer\" target: \"{}\"", to)));
+            let to_target = match to {
+                cml::OfferToRef::Named(ref name) => name,
             };
 
             // Check that any referenced child actually exists.
@@ -703,8 +697,10 @@ impl<'a> ValidationContext<'a> {
             if offer.storage.is_some() {
                 // Storage can only have a single `from` clause and this has been
                 // verified.
-                if let cml::Ref::Named(name) = &offer.from.one().unwrap() {
-                    if let Some(cml::Ref::Named(source)) = self.all_storage_and_sources.get(name) {
+                if let cml::OfferFromRef::Named(name) = &offer.from.one().unwrap() {
+                    if let Some(cml::StorageFromRef::Named(source)) =
+                        self.all_storage_and_sources.get(name)
+                    {
                         if to_target == source {
                             return Err(Error::validate(format!(
                                 "Storage offer target \"{}\" is same as source",
@@ -716,7 +712,7 @@ impl<'a> ValidationContext<'a> {
             } else {
                 for reference in &offer.from {
                     match reference {
-                        cml::Ref::Named(name) if name == to_target => {
+                        cml::OfferFromRef::Named(name) if name == to_target => {
                             return Err(Error::validate(format!(
                                 "Offer target \"{}\" is same as source",
                                 to
@@ -737,11 +733,13 @@ impl<'a> ValidationContext<'a> {
                     true
                 };
                 if is_strong {
-                    if let cml::Ref::Named(from) = from {
-                        if let cml::Ref::Named(to) = to {
-                            let source = DependencyNode::Child(from.as_str());
-                            let target = DependencyNode::Child(to.as_str());
-                            strong_dependencies.add_edge(source, target);
+                    if let cml::OfferFromRef::Named(from) = from {
+                        match to {
+                            cml::OfferToRef::Named(to) => {
+                                let source = DependencyNode::Child(from.as_str());
+                                let target = DependencyNode::Child(to.as_str());
+                                strong_dependencies.add_edge(source, target);
+                            }
                         }
                     }
                 }
@@ -762,7 +760,7 @@ impl<'a> ValidationContext<'a> {
     where
         T: cml::CapabilityClause + cml::FromClause,
     {
-        let from = cap.from();
+        let from = cap.from_();
         if cap.service().is_none() && from.is_many() {
             return Err(Error::validate(format!(
                 "\"{}\" capabilities cannot have multiple \"from\" clauses",
@@ -771,7 +769,7 @@ impl<'a> ValidationContext<'a> {
         }
 
         if from.is_many() {
-            ensure_no_duplicate_values(&cap.from())?;
+            ensure_no_duplicate_values(&cap.from_())?;
         }
 
         // If offered cap is a storage type, then "from" should be interpreted
@@ -779,11 +777,11 @@ impl<'a> ValidationContext<'a> {
         // or collection.
         let reference_description = format!("\"{}\" source", verb);
         if cap.storage().is_some() {
-            for from_clause in &from {
+            for from_clause in from {
                 self.validate_storage_ref(&reference_description, from_clause)?;
             }
         } else {
-            for from_clause in &from {
+            for from_clause in from {
                 self.validate_component_ref(&reference_description, from_clause)?;
             }
         }
@@ -799,10 +797,10 @@ impl<'a> ValidationContext<'a> {
     fn validate_component_ref(
         &self,
         reference_description: &str,
-        component_ref: &cml::Ref,
+        component_ref: cml::AnyRef,
     ) -> Result<(), Error> {
         match component_ref {
-            cml::Ref::Named(name) => {
+            cml::AnyRef::Named(name) => {
                 // Ensure we have a child defined by that name.
                 if !self.all_children.contains_key(name) {
                     return Err(Error::validate(format!(
@@ -825,9 +823,9 @@ impl<'a> ValidationContext<'a> {
     fn validate_storage_ref(
         &self,
         reference_description: &str,
-        storage_ref: &cml::Ref,
+        storage_ref: cml::AnyRef,
     ) -> Result<(), Error> {
-        if let cml::Ref::Named(name) = storage_ref {
+        if let cml::AnyRef::Named(name) = storage_ref {
             if !self.all_storage_and_sources.contains_key(name) {
                 return Err(Error::validate(format!(
                     "{} \"{}\" does not appear in \"storage\"",
@@ -930,7 +928,7 @@ impl<'a> ValidationContext<'a> {
                 }
 
                 // Ensure that the environment is defined in `runners` if it comes from `self`.
-                if registration.from == cml::Ref::Self_
+                if registration.from == cml::RegistrationRef::Self_
                     && !self.all_runners.contains(&registration.runner)
                 {
                     return Err(Error::validate(format!(
@@ -941,12 +939,12 @@ impl<'a> ValidationContext<'a> {
 
                 self.validate_component_ref(
                     &format!("\"{}\" runner source", &registration.runner),
-                    &registration.from,
+                    cml::AnyRef::from(&registration.from),
                 )?;
 
                 // Ensure there are no cycles, such as a resolver in an environment being assigned
                 // to a child which the resolver depends on.
-                if let cml::Ref::Named(child_name) = &registration.from {
+                if let cml::RegistrationRef::Named(child_name) = &registration.from {
                     let source = DependencyNode::Child(child_name.as_str());
                     let target = DependencyNode::Environment(environment.name.as_str());
                     strong_dependencies.add_edge(source, target);
@@ -970,11 +968,11 @@ impl<'a> ValidationContext<'a> {
 
                 self.validate_component_ref(
                     &format!("\"{}\" resolver source", &registration.resolver),
-                    &registration.from,
+                    cml::AnyRef::from(&registration.from),
                 )?;
                 // Ensure there are no cycles, such as a resolver in an environment being assigned
                 // to a child which the resolver depends on.
-                if let cml::Ref::Named(child_name) = &registration.from {
+                if let cml::RegistrationRef::Named(child_name) = &registration.from {
                     let source = DependencyNode::Child(child_name.as_str());
                     let target = DependencyNode::Environment(environment.name.as_str());
                     strong_dependencies.add_edge(source, target);
@@ -2370,7 +2368,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("\"environment\" must be a named reference, e.g: \"#name\"")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /children/0/environment")),
         },
         test_cml_children_unknown_environment => {
             input = json!({
@@ -3683,7 +3681,7 @@ mod tests {
             runner: None,
             resolver: None,
             event: None,
-            from: OneOrMany::One(cml::Ref::Self_),
+            from: OneOrMany::One(cml::OfferFromRef::Self_),
             to: vec![],
             r#as: None,
             rights: None,

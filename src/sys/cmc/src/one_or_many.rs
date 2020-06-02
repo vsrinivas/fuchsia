@@ -22,11 +22,11 @@ pub enum OneOrMany<T> {
 }
 
 impl<T> OneOrMany<T> {
-    /// Returns an unowned view of `OneOrMany<T>`.
-    pub fn as_ref(&self) -> OneOrManyBorrow<T> {
+    /// Returns `true` if this `OneOrMany<T>` is a `Many` value.
+    pub fn is_many(&self) -> bool {
         match self {
-            OneOrMany::One(item) => OneOrManyBorrow::One(item),
-            OneOrMany::Many(items) => OneOrManyBorrow::Many(items),
+            Self::One(_) => false,
+            Self::Many(_) => true,
         }
     }
 
@@ -80,69 +80,11 @@ impl<T: Clone> OneOrMany<T> {
     }
 }
 
-/// An unowned version of [`OneOrMany`].
-///
-/// [`OneOrMany`]: struct.OneOrMany.html
-#[derive(Debug, Clone)]
-pub enum OneOrManyBorrow<'a, T> {
-    /// A single instance of T.
-    One(&'a T),
-    /// One or more instances of T.
-    Many(&'a [T]),
-}
-
-impl<'a, T> OneOrManyBorrow<'a, T> {
-    /// Returns `true` if this `OneOrManyBorrow<T>` is a `Many` value.
-    pub fn is_many(&self) -> bool {
-        match self {
-            OneOrManyBorrow::One(_) => false,
-            OneOrManyBorrow::Many(_) => true,
-        }
-    }
-
-    /// Transforms the `OneOrManyBorrow<T>` into an `Option<&T>`, where `One(t)` maps to
-    /// `Some(&t)` and `Many(_)` maps to None.
-    pub fn one(&self) -> Option<&T> {
-        match self {
-            OneOrManyBorrow::One(item) => Some(*item),
-            _ => None,
-        }
-    }
-
-    /// Returns an iterator over the values of `OneOrManyBorrow<T>`.
-    pub fn iter(&self) -> Iter<'a, T> {
-        match self {
-            OneOrManyBorrow::One(item) => Iter { inner_one: Some(*item), inner_many: None },
-            OneOrManyBorrow::Many(items) => {
-                Iter { inner_one: None, inner_many: Some(items.iter()) }
-            }
-        }
-    }
-}
-
-impl<'a, T> IntoIterator for OneOrManyBorrow<'a, T> {
-    type Item = &'a T;
-    type IntoIter = Iter<'a, T>;
-
-    fn into_iter(self) -> Iter<'a, T> {
-        self.iter()
-    }
-}
-
-impl<'a, T> IntoIterator for &'a OneOrManyBorrow<'a, T> {
-    type Item = &'a T;
-    type IntoIter = Iter<'a, T>;
-
-    fn into_iter(self) -> Iter<'a, T> {
-        self.iter()
-    }
-}
-
-impl<'a, T: Display> Display for OneOrManyBorrow<'a, T> {
+impl<'a, T: Display> Display for OneOrMany<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            OneOrManyBorrow::One(item) => Display::fmt(item, f),
-            OneOrManyBorrow::Many(items) => {
+            OneOrMany::One(item) => Display::fmt(item, f),
+            OneOrMany::Many(items) => {
                 let mut iter = items.iter();
                 if let Some(first_item) = iter.next() {
                     Display::fmt(first_item, f)?;
@@ -157,11 +99,10 @@ impl<'a, T: Display> Display for OneOrManyBorrow<'a, T> {
     }
 }
 
-/// Immutable iterator over a `OneOrMany` or `OneOrManyBorrow`.
-/// This `struct` is created by the [`OneOrMany::iter`] and [`OneOrManyBorrow::iter`] methods.
+/// Immutable iterator over a `OneOrMany`.
+/// This `struct` is created by [`OneOrMany::iter`].
 ///
 /// [`OneOrMany::iter`]: struct.OneOrMany.html#method.iter
-/// [`OneOrManyBorrow::iter`]: struct.OneOrManyBorrow.html#method.iter
 pub struct Iter<'a, T> {
     inner_one: Option<&'a T>,
     inner_many: Option<slice::Iter<'a, T>>,
@@ -244,22 +185,11 @@ mod tests {
 
         let v = OneOrMany::Many(vec![1, 2, 3]);
         assert_matches!(v.one(), None);
-
-        let v = OneOrManyBorrow::One(&34);
-        assert_matches!(v.one(), Some(&34));
-
-        let v = OneOrManyBorrow::Many(&[1, 2, 3]);
-        assert_matches!(v.one(), None);
     }
 
     #[test]
     fn test_iter_one() {
         let v = OneOrMany::One(34);
-        let mut iter = v.iter();
-        assert_matches!(iter.next(), Some(&34));
-        assert_matches!(iter.next(), None);
-
-        let v = OneOrManyBorrow::One(&34);
         let mut iter = v.iter();
         assert_matches!(iter.next(), Some(&34));
         assert_matches!(iter.next(), None);
@@ -273,21 +203,14 @@ mod tests {
         assert_matches!(iter.next(), Some(&2));
         assert_matches!(iter.next(), Some(&3));
         assert_matches!(iter.next(), None);
-
-        let v = OneOrManyBorrow::Many(&[1, 2, 3]);
-        let mut iter = v.iter();
-        assert_matches!(iter.next(), Some(&1));
-        assert_matches!(iter.next(), Some(&2));
-        assert_matches!(iter.next(), Some(&3));
-        assert_matches!(iter.next(), None);
     }
 
     #[test]
     fn test_is_many() {
-        let v = OneOrManyBorrow::One(&34);
+        let v = OneOrMany::One(34);
         assert_eq!(v.is_many(), false);
 
-        let v = OneOrManyBorrow::Many(&[1, 2, 3]);
+        let v = OneOrMany::Many(vec![1, 2, 3]);
         assert_eq!(v.is_many(), true);
     }
 
@@ -303,11 +226,11 @@ mod tests {
     #[test]
     fn test_display() {
         let val = 34;
-        let v = OneOrManyBorrow::One(&val);
+        let v = OneOrMany::One(val);
         assert_eq!(v.to_string(), "34");
 
         let val = vec![1, 2, 3];
-        let v = OneOrManyBorrow::Many(&val);
+        let v = OneOrMany::Many(val);
         assert_eq!(v.to_string(), "1, 2, 3");
     }
 
@@ -331,6 +254,6 @@ mod tests {
             "key": [ "foo" ],
         });
         let v: Wrapper = serde_json::from_value(j).expect("json parsed");
-        assert_matches!(v.key.as_ref(), OneOrManyBorrow::Many(&[ ref val ]) if val == "foo");
+        assert_matches!(v.key, OneOrMany::Many(v) if v == vec!["foo"]);
     }
 }

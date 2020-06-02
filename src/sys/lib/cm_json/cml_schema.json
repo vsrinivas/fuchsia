@@ -1114,6 +1114,7 @@
           "environment": {
             "title": "Assigned environment",
             "description": "The environment assigned to the child.",
+            "pattern": "^#[0-9a-z_\\-\\.]+$",
             "allOf": [
               {
                 "$ref": "#/definitions/relative-ref-clause"
