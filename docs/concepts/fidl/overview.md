@@ -615,8 +615,8 @@ reference][language-reference], or the [contributing doc][fidl-contributing].
 
 <!-- xrefs -->
 [fidl-tutorials]: /docs/development/languages/fidl/tutorials/overview.md
-[language-reference]: /docs/reference/fidl/bindings/overview.md
-[bindings-reference]: /docs/reference/fidl/language/language.md
+[language-reference]: /docs/reference/fidl/language/language.md
+[bindings-reference]: /docs/reference/fidl/bindings/overview.md
 [wire-format]: /docs/reference/fidl/language/wire-format
 [language-spec]: /docs/reference/fidl/language/language.md
 [developer-guides]: /docs/development/languages/fidl/
