@@ -269,11 +269,10 @@ impl
     pub fn new_stub() -> Self {
         let config = crate::configuration::test_support::config_generator();
 
-        let app_set = AppSet::new(vec![App::new(
-            "{00000000-0000-0000-0000-000000000001}",
-            [1, 2, 3, 4],
-            crate::protocol::Cohort::new("stable-channel"),
-        )]);
+        let app_set =
+            AppSet::new(vec![App::builder("{00000000-0000-0000-0000-000000000001}", [1, 2, 3, 4])
+                .with_cohort(crate::protocol::Cohort::new("stable-channel"))
+                .build()]);
         let mock_time = MockTimeSource::new_from_now();
 
         Self::new(

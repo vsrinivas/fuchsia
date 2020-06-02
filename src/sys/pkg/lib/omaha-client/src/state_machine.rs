@@ -987,11 +987,9 @@ mod tests {
     use std::time::Duration;
 
     fn make_test_app_set() -> AppSet {
-        AppSet::new(vec![App::new(
-            "{00000000-0000-0000-0000-000000000001}",
-            [1, 2, 3, 4],
-            Cohort::new("stable-channel"),
-        )])
+        AppSet::new(vec![App::builder("{00000000-0000-0000-0000-000000000001}", [1, 2, 3, 4])
+            .with_cohort(Cohort::new("stable-channel"))
+            .build()])
     }
 
     // Assert that the last request made to |http| is equal to the request built by
@@ -1655,11 +1653,11 @@ mod tests {
     #[test]
     fn test_load_app() {
         block_on(async {
-            let app_set = AppSet::new(vec![App::new(
+            let app_set = AppSet::new(vec![App::builder(
                 "{00000000-0000-0000-0000-000000000001}",
                 [1, 2, 3, 4],
-                Cohort::default(),
-            )]);
+            )
+            .build()]);
             let mut storage = MemStorage::new();
             let persisted_app = PersistedApp {
                 cohort: Cohort {

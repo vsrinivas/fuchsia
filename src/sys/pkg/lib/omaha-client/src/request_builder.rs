@@ -118,6 +118,7 @@ impl From<AppEntry> for ProtocolApp {
             update_check: if entry.update_check { Some(UpdateCheck::default()) } else { None },
             events: entry.events,
             ping,
+            extra_fields: entry.app.extra_fields,
         }
     }
 }

@@ -5,6 +5,7 @@
 use crate::protocol::Cohort;
 use serde::Serialize;
 use serde_repr::Serialize_repr;
+use std::collections::HashMap;
 
 #[cfg(test)]
 mod tests;
@@ -161,6 +162,18 @@ pub struct App {
     /// An optional status ping.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ping: Option<Ping>,
+
+    /// Extra fields to include (App-specific fields used to extend the protocol).
+    ///
+    /// # NOTE:  Can break the omaha protocol if improperly used.
+    ///
+    /// This is listed last in the struct, and should remain so, due to how Serde behaves when
+    /// flattening fields into the parent.  If this map contains a field whose name matches that of
+    /// another field in the struct (such as `id`), it will overwrite that field.  If that field is
+    /// optionally serialized (such as `update_check`), it will still overwrite that field
+    /// (regardless of the presence or not of the field it's overwriting).
+    #[serde(flatten)]
+    pub extra_fields: HashMap<String, String>,
 }
 
 /// This is an update check for the parent App object.

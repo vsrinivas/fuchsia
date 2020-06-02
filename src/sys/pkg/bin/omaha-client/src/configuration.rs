@@ -7,7 +7,7 @@ use anyhow::{anyhow, Error};
 use fidl_fuchsia_boot::{ArgumentsMarker, ArgumentsProxy};
 use log::{error, info, warn};
 use omaha_client::{
-    common::{App, AppSet, UserCounting, Version},
+    common::{App, AppSet, Version},
     configuration::{Config, Updater},
     protocol::{request::OS, Cohort},
 };
@@ -81,16 +81,16 @@ pub async fn get_app_set(
             Version::from([0])
         }
     };
-    let cohort = Cohort { hint: channel.clone(), name: channel, ..Cohort::default() };
     (
         // Fuchsia only has a single app.
-        AppSet::new(vec![App {
-            id,
-            version,
-            fingerprint: None,
-            cohort,
-            user_counting: UserCounting::ClientRegulatedByDate(None),
-        }]),
+        AppSet::new(vec![App::builder(id, version)
+            .with_cohort(Cohort {
+                hint: channel.clone(),
+                name: channel.clone(),
+                ..Cohort::default()
+            })
+            .with_extra("channel", channel.unwrap_or("".to_string()))
+            .build()]),
         channel_source,
     )
 }

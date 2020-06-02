@@ -26,12 +26,12 @@ fn test_simple_request() {
         &config,
         &RequestParams { source: InstallSource::OnDemand, use_configured_proxies: false },
     )
-    .add_update_check(&App::with_fingerprint(
-        "app id",
-        [5, 6, 7, 8],
-        "fp",
-        Cohort::new("some-channel"),
-    ))
+    .add_update_check(
+        &App::builder("app id", [5, 6, 7, 8])
+            .with_fingerprint("fp")
+            .with_cohort(Cohort::new("some-channel"))
+            .build(),
+    )
     .build_intermediate();
 
     // Assert that all the request fields are accurate (this is in their order of declaration)
@@ -66,6 +66,26 @@ fn test_simple_request() {
     assert!(headers.contains(&(HEADER_INTERACTIVITY, "fg".to_string())));
 }
 
+/// Test that a request attaches the extras to the protocol App from the common App.
+#[test]
+fn test_app_includes_extras() {
+    let config = config_generator();
+
+    let intermediate = RequestBuilder::new(
+        &config,
+        &RequestParams { source: InstallSource::OnDemand, use_configured_proxies: false },
+    )
+    .add_update_check(&App::builder("app id", [5, 6, 7, 8]).with_extra("key", "value").build())
+    .build_intermediate();
+    let request = intermediate.body.request;
+
+    // Validate that the App was added, with the expected extra fields
+    let app = &request.apps[0];
+    assert_eq!(app.id, "app id");
+    assert_eq!(app.extra_fields.len(), 1);
+    assert_eq!(app.extra_fields["key"], "value");
+}
+
 /// Test that a simple update check results in the correct HTTP request:
 ///  - service url
 ///  - headers
@@ -78,7 +98,9 @@ fn test_single_request() {
         &config,
         &RequestParams { source: InstallSource::OnDemand, use_configured_proxies: false },
     )
-    .add_update_check(&App::new("app id", [5, 6, 7, 8], Cohort::new("some-channel")))
+    .add_update_check(
+        &App::builder("app id", [5, 6, 7, 8]).with_cohort(Cohort::new("some-channel")).build(),
+    )
     .build()
     .unwrap()
     .into_parts();
@@ -139,12 +161,12 @@ fn test_simple_ping() {
         &config,
         &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
     )
-    .add_ping(&App::with_user_counting(
-        "ping app id",
-        [6, 7, 8, 9],
-        Cohort::new("ping-channel"),
-        UserCounting::ClientRegulatedByDate(Some(34)),
-    ))
+    .add_ping(
+        &App::builder("ping app id", [6, 7, 8, 9])
+            .with_cohort(Cohort::new("ping-channel"))
+            .with_user_counting(UserCounting::ClientRegulatedByDate(Some(34)))
+            .build(),
+    )
     .build_intermediate();
 
     // Validate that the App was added, with it's cohort
@@ -178,7 +200,9 @@ fn test_simple_event() {
         &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
     )
     .add_event(
-        &App::new("event app id", [6, 7, 8, 9], Cohort::new("event-channel")),
+        &App::builder("event app id", [6, 7, 8, 9])
+            .with_cohort(Cohort::new("event-channel"))
+            .build(),
         &Event {
             event_type: EventType::UpdateDownloadStarted,
             event_result: EventResult::Success,
@@ -207,7 +231,9 @@ fn test_multiple_events() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App::new("event app id", [6, 7, 8, 9], Cohort::new("event-channel"));
+    let app_1 = App::builder("event app id", [6, 7, 8, 9])
+        .with_cohort(Cohort::new("event-channel"))
+        .build();
 
     // Make the call to the RequestBuilder that is being tested.
     let request = RequestBuilder::new(
@@ -265,15 +291,15 @@ fn test_ping_added_to_first_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App::with_user_counting(
-        "first app id",
-        [1, 2, 3, 4],
-        Cohort::new("some-channel"),
-        UserCounting::ClientRegulatedByDate(Some(34)),
-    );
+    let app_1 = App::builder("first app id", [1, 2, 3, 4])
+        .with_cohort(Cohort::new("some-channel"))
+        .with_user_counting(UserCounting::ClientRegulatedByDate(Some(34)))
+        .build();
 
     // Setup the second app and its cohort
-    let app_2 = App::new("second app id", [5, 6, 7, 8], Cohort::new("some-other-channel"));
+    let app_2 = App::builder("second app id", [5, 6, 7, 8])
+        .with_cohort(Cohort::new("some-other-channel"))
+        .build();
 
     // Now make the call to the RequestBuilder that is being tested.
     let request = RequestBuilder::new(
@@ -316,15 +342,14 @@ fn test_ping_added_to_second_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App::new("first app id", [1, 2, 3, 4], Cohort::new("some-channel"));
+    let app_1 =
+        App::builder("first app id", [1, 2, 3, 4]).with_cohort(Cohort::new("some-channel")).build();
 
     // Setup the second app and its cohort
-    let app_2 = App::with_user_counting(
-        "second app id",
-        [5, 6, 7, 8],
-        Cohort::new("some-other-channel"),
-        UserCounting::ClientRegulatedByDate(Some(34)),
-    );
+    let app_2 = App::builder("second app id", [5, 6, 7, 8])
+        .with_cohort(Cohort::new("some-other-channel"))
+        .with_user_counting(UserCounting::ClientRegulatedByDate(Some(34)))
+        .build();
 
     // Now make the call to the RequestBuilder that is being tested.
     let builder = RequestBuilder::new(
@@ -366,10 +391,13 @@ fn test_event_added_to_first_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App::new("first app id", [1, 2, 3, 4], Cohort::new("some-channel"));
+    let app_1 =
+        App::builder("first app id", [1, 2, 3, 4]).with_cohort(Cohort::new("some-channel")).build();
 
     // Setup the second app and its cohort
-    let app_2 = App::new("second app id", [5, 6, 7, 8], Cohort::new("some-other-channel"));
+    let app_2 = App::builder("second app id", [5, 6, 7, 8])
+        .with_cohort(Cohort::new("some-other-channel"))
+        .build();
 
     // Now make the call to the RequestBuilder that is being tested.
     let request = RequestBuilder::new(
@@ -419,10 +447,13 @@ fn test_event_added_to_second_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App::new("first app id", [1, 2, 3, 4], Cohort::new("some-channel"));
+    let app_1 =
+        App::builder("first app id", [1, 2, 3, 4]).with_cohort(Cohort::new("some-channel")).build();
 
-    let app_2 = App::new("second app id", [5, 6, 7, 8], Cohort::new("some-other-channel"));
     // Setup the second app and its cohort
+    let app_2 = App::builder("second app id", [5, 6, 7, 8])
+        .with_cohort(Cohort::new("some-other-channel"))
+        .build();
 
     // Now make the call to the RequestBuilder that is being tested.
     let builder = RequestBuilder::new(

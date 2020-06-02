@@ -188,7 +188,7 @@ mod tests {
             ProtocolStateNode::new(inspector.root().create_child("protocol_state"));
         let last_results_node = LastResultsNode::new(inspector.root().create_child("last_results"));
         let platform_metrics_node = inspector.root().create_child("platform_metrics");
-        let app_set = AppSet::new(vec![App::new("id", [1, 2], Cohort::default())]);
+        let app_set = AppSet::new(vec![App::builder("id", [1, 2]).build()]);
         FuchsiaObserver::new(
             fidl,
             schedule_node,

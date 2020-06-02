@@ -497,7 +497,6 @@ mod stub {
         installer::{stub::StubInstaller, Plan},
         metrics::StubMetricsReporter,
         policy::{CheckDecision, PolicyEngine, UpdateDecision},
-        protocol::Cohort,
         request_builder::RequestParams,
         state_machine::StateMachineBuilder,
         storage::MemStorage,
@@ -605,7 +604,7 @@ mod stub {
             let config = configuration::get_config("0.1.2").await;
             let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
             let app_set = if self.apps.is_empty() {
-                AppSet::new(vec![App::new("id", [1, 0], Cohort::default())])
+                AppSet::new(vec![App::builder("id", [1, 0]).build()])
             } else {
                 AppSet::new(self.apps)
             };
@@ -875,11 +874,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_channel() {
-        let apps = vec![App::new(
-            "id",
-            [1, 0],
-            Cohort { name: Some("current-channel".to_string()), ..Cohort::default() },
-        )];
+        let apps = vec![App::builder("id", [1, 0])
+            .with_cohort(Cohort { name: Some("current-channel".to_string()), ..Cohort::default() })
+            .build()];
         let fidl = FidlServerBuilder::new().with_apps(apps).build().await;
 
         let proxy =
@@ -890,11 +887,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_provider_get_channel() {
-        let apps = vec![App::new(
-            "id",
-            [1, 0],
-            Cohort { name: Some("current-channel".to_string()), ..Cohort::default() },
-        )];
+        let apps = vec![App::builder("id", [1, 0])
+            .with_cohort(Cohort { name: Some("current-channel".to_string()), ..Cohort::default() })
+            .build()];
         let fidl = FidlServerBuilder::new().with_apps(apps).build().await;
 
         let proxy = spawn_fidl_server::<ProviderMarker>(fidl, IncomingServices::ChannelProvider);
@@ -904,7 +899,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_target() {
-        let apps = vec![App::new("id", [1, 0], Cohort::from_hint("target-channel"))];
+        let apps = vec![App::builder("id", [1, 0])
+            .with_cohort(Cohort::from_hint("target-channel"))
+            .build()];
         let fidl = FidlServerBuilder::new().with_apps(apps).build().await;
 
         let proxy =

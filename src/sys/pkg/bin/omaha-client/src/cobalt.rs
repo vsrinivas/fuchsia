@@ -41,11 +41,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_notify_cobalt() {
-        let app_set = AppSet::new(vec![App::new(
-            "id",
-            [1, 2],
-            Cohort { name: Some("current-channel".to_string()), ..Cohort::default() },
-        )]);
+        let app_set = AppSet::new(vec![App::builder("id", [1, 2])
+            .with_cohort(Cohort { name: Some("current-channel".to_string()), ..Cohort::default() })
+            .build()]);
 
         let (proxy, mut stream) = create_proxy_and_stream::<SystemDataUpdaterMarker>().unwrap();
         let stream_fut = async move {

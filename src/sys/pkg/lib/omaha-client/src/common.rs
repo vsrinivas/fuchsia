@@ -16,6 +16,7 @@ use itertools::Itertools;
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 use std::str::FromStr;
@@ -155,6 +156,11 @@ pub struct App {
     /// The app's current user-counting information.  This is both provided to Omaha as well as
     /// returned by Omaha.
     pub user_counting: UserCounting,
+
+    /// Extra fields to include in requests to Omaha.  The client library does not inspect or
+    /// operate on these, it just sends them to the service as part of the "app" objects in each
+    /// request.
+    pub extra_fields: HashMap<String, String>,
 }
 
 /// Structure used to serialize per app data to be persisted.
@@ -172,46 +178,70 @@ impl From<&App> for PersistedApp {
 }
 
 impl App {
-    /// Construct an App from an ID and version, from anything that can be converted into a String
-    /// and a Version.
-    pub fn new<I: Into<String>, V: Into<Version>>(id: I, version: V, cohort: Cohort) -> Self {
-        App {
+    /// Start cnstructing an App.
+    pub fn builder<I: Into<String>, V: Into<Version>>(id: I, version: V) -> AppBuilder {
+        AppBuilder {
             id: id.into(),
             version: version.into(),
             fingerprint: None,
-            cohort,
-            user_counting: UserCounting::ClientRegulatedByDate(None),
+            cohort: None,
+            user_counting: None,
+            extra_fields: HashMap::new(),
         }
     }
+}
 
-    /// Construct an App from an ID, version, and fingerprint.  From anything that can be converted
-    /// into a String and a Version.
-    pub fn with_fingerprint<I: Into<String>, V: Into<Version>, F: Into<String>>(
-        id: I,
-        version: V,
-        fingerprint: F,
-        cohort: Cohort,
-    ) -> Self {
+/// Builder for an App, enforces minimim requirements are met.
+pub struct AppBuilder {
+    id: String,
+    version: Version,
+    fingerprint: Option<String>,
+    cohort: Option<Cohort>,
+    user_counting: Option<UserCounting>,
+    extra_fields: HashMap<String, String>,
+}
+impl AppBuilder {
+    /// Add a cohort for the app.
+    pub fn with_cohort(mut self, cohort: Cohort) -> Self {
+        self.cohort = Some(cohort);
+        self
+    }
+
+    /// Add a fingerprint to the constructed app.
+    pub fn with_fingerprint(mut self, fingerprint: impl Into<String>) -> Self {
+        self.fingerprint = Some(fingerprint.into());
+        self
+    }
+
+    /// Specify the user-counting mechanism to use
+    pub fn with_user_counting(mut self, user_counting: UserCounting) -> Self {
+        self.user_counting = Some(user_counting);
+        self
+    }
+
+    /// Add additional fields for including in the update check requests.
+    ///
+    /// # Use with caution
+    ///
+    /// This can overwrite fields used by the protocol itself.
+    pub fn with_extra(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.extra_fields.insert(key.into(), value.into());
+        self
+    }
+
+    pub fn build(self) -> App {
         App {
-            id: id.into(),
-            version: version.into(),
-            fingerprint: Some(fingerprint.into()),
-            cohort,
-            user_counting: UserCounting::ClientRegulatedByDate(None),
+            id: self.id,
+            version: self.version,
+            fingerprint: self.fingerprint,
+            cohort: self.cohort.unwrap_or_default(),
+            user_counting: self.user_counting.unwrap_or(UserCounting::ClientRegulatedByDate(None)),
+            extra_fields: self.extra_fields,
         }
     }
+}
 
-    /// Construct an App from an ID, version, and user counting.  From anything that can be
-    /// converted into a String and a Version.
-    pub fn with_user_counting<I: Into<String>, V: Into<Version>>(
-        id: I,
-        version: V,
-        cohort: Cohort,
-        user_counting: UserCounting,
-    ) -> Self {
-        App { id: id.into(), version: version.into(), fingerprint: None, cohort, user_counting }
-    }
-
+impl App {
     /// Load data from |storage|, only overwrite existing fields if data exists.
     pub async fn load<'a>(&'a mut self, storage: &'a impl Storage) {
         if let Some(app_json) = storage.get_string(&self.id).await {
@@ -625,7 +655,8 @@ mod tests {
 
     #[test]
     fn test_app_new_version() {
-        let app = App::new("some_id", [1, 2], Cohort::from_hint("some-channel"));
+        let app =
+            App::builder("some_id", [1, 2]).with_cohort(Cohort::from_hint("some-channel")).build();
         assert_eq!(app.id, "some_id");
         assert_eq!(app.version, [1, 2].into());
         assert_eq!(app.fingerprint, None);
@@ -633,16 +664,15 @@ mod tests {
         assert_eq!(app.cohort.name, None);
         assert_eq!(app.cohort.id, None);
         assert_eq!(app.user_counting, UserCounting::ClientRegulatedByDate(None));
+        assert!(app.extra_fields.is_empty(), "Extra fields are not empty");
     }
 
     #[test]
     fn test_app_with_fingerprint() {
-        let app = App::with_fingerprint(
-            "some_id_2",
-            [4, 6],
-            "some_fp",
-            Cohort::from_hint("test-channel"),
-        );
+        let app = App::builder("some_id_2", [4, 6])
+            .with_cohort(Cohort::from_hint("test-channel"))
+            .with_fingerprint("some_fp")
+            .build();
         assert_eq!(app.id, "some_id_2");
         assert_eq!(app.version, [4, 6].into());
         assert_eq!(app.fingerprint, Some("some_fp".to_string()));
@@ -650,6 +680,40 @@ mod tests {
         assert_eq!(app.cohort.name, None);
         assert_eq!(app.cohort.id, None);
         assert_eq!(app.user_counting, UserCounting::ClientRegulatedByDate(None));
+        assert!(app.extra_fields.is_empty(), "Extra fields are not empty");
+    }
+
+    #[test]
+    fn test_app_with_user_counting() {
+        let app = App::builder("some_id_2", [4, 6])
+            .with_cohort(Cohort::from_hint("test-channel"))
+            .with_user_counting(UserCounting::ClientRegulatedByDate(Some(42)))
+            .build();
+        assert_eq!(app.id, "some_id_2");
+        assert_eq!(app.version, [4, 6].into());
+        assert_eq!(app.cohort.hint, Some("test-channel".to_string()));
+        assert_eq!(app.cohort.name, None);
+        assert_eq!(app.cohort.id, None);
+        assert_eq!(app.user_counting, UserCounting::ClientRegulatedByDate(Some(42)));
+        assert!(app.extra_fields.is_empty(), "Extra fields are not empty");
+    }
+
+    #[test]
+    fn test_app_with_extras() {
+        let app = App::builder("some_id_2", [4, 6])
+            .with_cohort(Cohort::from_hint("test-channel"))
+            .with_extra("key1", "value1")
+            .with_extra("key2", "value2")
+            .build();
+        assert_eq!(app.id, "some_id_2");
+        assert_eq!(app.version, [4, 6].into());
+        assert_eq!(app.cohort.hint, Some("test-channel".to_string()));
+        assert_eq!(app.cohort.name, None);
+        assert_eq!(app.cohort.id, None);
+        assert_eq!(app.user_counting, UserCounting::ClientRegulatedByDate(None));
+        assert_eq!(app.extra_fields.len(), 2);
+        assert_eq!(app.extra_fields["key1"], "value1");
+        assert_eq!(app.extra_fields["key2"], "value2");
     }
 
     #[test]
@@ -666,7 +730,7 @@ mod tests {
                 "ClientRegulatedByDate":123
             }});
             let json = serde_json::to_string(&json).unwrap();
-            let mut app = App::new("some_id", [1, 2], Cohort::default());
+            let mut app = App::builder("some_id", [1, 2]).build();
             storage.set_string(&app.id, &json).await.unwrap();
             app.load(&storage).await;
 
@@ -689,8 +753,10 @@ mod tests {
                 hint: Some("some_hint".to_string()),
                 name: Some("some_name".to_string()),
             };
-            let mut app = App::new("some_id", [1, 2], cohort);
-            app.user_counting = UserCounting::ClientRegulatedByDate(Some(123));
+            let mut app = App::builder("some_id", [1, 2])
+                .with_cohort(cohort)
+                .with_user_counting(UserCounting::ClientRegulatedByDate(Some(123)))
+                .build();
             app.load(&storage).await;
 
             // existing data not overwritten
@@ -713,9 +779,11 @@ mod tests {
                 hint: Some("some_hint".to_string()),
                 name: Some("some_name".to_string()),
             };
-            let mut app = App::new("some_id", [1, 2], cohort);
+            let mut app = App::builder("some_id", [1, 2])
+                .with_cohort(cohort)
+                .with_user_counting(UserCounting::ClientRegulatedByDate(Some(123)))
+                .build();
             storage.set_string(&app.id, "not a json").await.unwrap();
-            app.user_counting = UserCounting::ClientRegulatedByDate(Some(123));
             app.load(&storage).await;
 
             // existing data not overwritten
@@ -747,9 +815,11 @@ mod tests {
                 hint: Some("some_hint".to_string()),
                 name: Some("some_name".to_string()),
             };
-            let mut app = App::new("some_id", [1, 2], cohort);
+            let mut app = App::builder("some_id", [1, 2])
+                .with_cohort(cohort)
+                .with_user_counting(UserCounting::ClientRegulatedByDate(Some(123)))
+                .build();
             storage.set_string(&app.id, &json).await.unwrap();
-            app.user_counting = UserCounting::ClientRegulatedByDate(Some(123));
             app.load(&storage).await;
 
             // existing data not overwritten
@@ -782,9 +852,11 @@ mod tests {
                 hint: Some("some_hint".to_string()),
                 name: None,
             };
-            let mut app = App::new("some_id", [1, 2], cohort);
+            let mut app = App::builder("some_id", [1, 2])
+                .with_cohort(cohort)
+                .with_user_counting(UserCounting::ClientRegulatedByDate(Some(123)))
+                .build();
             storage.set_string(&app.id, &json).await.unwrap();
-            app.user_counting = UserCounting::ClientRegulatedByDate(Some(123));
             app.load(&storage).await;
 
             // existing data not overwritten
@@ -807,8 +879,10 @@ mod tests {
                 hint: Some("some_hint".to_string()),
                 name: Some("some_name".to_string()),
             };
-            let mut app = App::new("some_id", [1, 2], cohort);
-            app.user_counting = UserCounting::ClientRegulatedByDate(Some(123));
+            let app = App::builder("some_id", [1, 2])
+                .with_cohort(cohort)
+                .with_user_counting(UserCounting::ClientRegulatedByDate(Some(123)))
+                .build();
             app.persist(&mut storage).await;
 
             let expected = serde_json::json!({
@@ -831,8 +905,7 @@ mod tests {
         block_on(async {
             let mut storage = MemStorage::new();
             let cohort = Cohort { id: None, hint: None, name: None };
-            let mut app = App::new("some_id", [1, 2], cohort);
-            app.user_counting = UserCounting::ClientRegulatedByDate(None);
+            let app = App::builder("some_id", [1, 2]).with_cohort(cohort).build();
             app.persist(&mut storage).await;
 
             let expected = serde_json::json!({
@@ -849,39 +922,39 @@ mod tests {
     #[test]
     fn test_app_get_current_channel() {
         let cohort = Cohort { name: Some("current-channel-123".to_string()), ..Cohort::default() };
-        let app = App::new("some_id", [0, 1], cohort);
+        let app = App::builder("some_id", [0, 1]).with_cohort(cohort).build();
         assert_eq!("current-channel-123", app.get_current_channel());
     }
 
     #[test]
     fn test_app_get_current_channel_default() {
-        let app = App::new("some_id", [0, 1], Cohort::default());
+        let app = App::builder("some_id", [0, 1]).build();
         assert_eq!("", app.get_current_channel());
     }
 
     #[test]
     fn test_app_get_target_channel() {
         let cohort = Cohort::from_hint("target-channel-456");
-        let app = App::new("some_id", [0, 1], cohort);
+        let app = App::builder("some_id", [0, 1]).with_cohort(cohort).build();
         assert_eq!("target-channel-456", app.get_target_channel());
     }
 
     #[test]
     fn test_app_get_target_channel_fallback() {
         let cohort = Cohort { name: Some("current-channel-123".to_string()), ..Cohort::default() };
-        let app = App::new("some_id", [0, 1], cohort);
+        let app = App::builder("some_id", [0, 1]).with_cohort(cohort).build();
         assert_eq!("current-channel-123", app.get_target_channel());
     }
 
     #[test]
     fn test_app_get_target_channel_default() {
-        let app = App::new("some_id", [0, 1], Cohort::default());
+        let app = App::builder("some_id", [0, 1]).build();
         assert_eq!("", app.get_target_channel());
     }
 
     #[test]
     fn test_app_set_target_channel() {
-        let mut app = App::new("some_id", [0, 1], Cohort::default());
+        let mut app = App::builder("some_id", [0, 1]).build();
         assert_eq!("", app.get_target_channel());
         app.set_target_channel(Some("new-target-channel".to_string()));
         assert_eq!("new-target-channel", app.get_target_channel());
@@ -891,15 +964,15 @@ mod tests {
 
     #[test]
     fn test_app_valid() {
-        let app = App::new("some_id", [0, 1], Cohort::default());
+        let app = App::builder("some_id", [0, 1]).build();
         assert!(app.valid());
     }
 
     #[test]
     fn test_app_not_valid() {
-        let app = App::new("", [0, 1], Cohort::default());
+        let app = App::builder("", [0, 1]).build();
         assert!(!app.valid());
-        let app = App::new("some_id", [0], Cohort::default());
+        let app = App::builder("some_id", [0]).build();
         assert!(!app.valid());
     }
 
@@ -911,7 +984,7 @@ mod tests {
 
     #[test]
     fn test_appset_update_from_omaha() {
-        let mut app_set = AppSet::new(vec![App::new("some_id", [0, 1], Cohort::default())]);
+        let mut app_set = AppSet::new(vec![App::builder("some_id", [0, 1]).build()]);
         let cohort = Cohort { name: Some("some-channel".to_string()), ..Cohort::default() };
         let user_counting = UserCounting::ClientRegulatedByDate(Some(42));
         let app_responses = vec![AppResponse {
@@ -931,7 +1004,7 @@ mod tests {
     #[test]
     fn test_appset_to_vec() {
         block_on(async {
-            let app_set = AppSet::new(vec![App::new("some_id", [0, 1], Cohort::default())]);
+            let app_set = AppSet::new(vec![App::builder("some_id", [0, 1]).build()]);
             let mut vec = app_set.to_vec().await;
             vec[0].id = "some_other_id".to_string();
             assert_eq!("some_id", app_set.to_vec().await[0].id);
@@ -941,11 +1014,11 @@ mod tests {
     #[test]
     fn test_appset_valid() {
         block_on(async {
-            let app_set = AppSet::new(vec![App::new("some_id", [0, 1], Cohort::default())]);
+            let app_set = AppSet::new(vec![App::builder("some_id", [0, 1]).build()]);
             assert!(app_set.valid().await);
             let app_set = AppSet::new(vec![
-                App::new("some_id", [0, 1], Cohort::default()),
-                App::new("some_id_2", [1], Cohort::default()),
+                App::builder("some_id", [0, 1]).build(),
+                App::builder("some_id_2", [1]).build(),
             ]);
             assert!(app_set.valid().await);
         });
@@ -955,18 +1028,18 @@ mod tests {
     fn test_appset_not_valid() {
         block_on(async {
             let app_set = AppSet::new(vec![
-                App::new("some_id", [0, 1], Cohort::default()),
-                App::new("", [0, 1], Cohort::default()),
+                App::builder("some_id", [0, 1]).build(),
+                App::builder("", [0, 1]).build(),
             ]);
             assert!(!app_set.valid().await);
             let app_set = AppSet::new(vec![
-                App::new("some_id", [0], Cohort::default()),
-                App::new("some_id_2", [0, 1], Cohort::default()),
+                App::builder("some_id", [0]).build(),
+                App::builder("some_id_2", [0, 1]).build(),
             ]);
             assert!(!app_set.valid().await);
             let app_set = AppSet::new(vec![
-                App::new("some_id", [0], Cohort::default()),
-                App::new("", [0, 1], Cohort::default()),
+                App::builder("some_id", [0]).build(),
+                App::builder("", [0, 1]).build(),
             ]);
             assert!(!app_set.valid().await);
         });

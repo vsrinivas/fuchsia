@@ -78,7 +78,7 @@ pub async fn install_update(
     };
 
     let cohort = Cohort { hint: Some(channel.clone()), name: Some(channel), ..Cohort::default() };
-    let app_set = AppSet::new(vec![App::new(appid, version, cohort)]);
+    let app_set = AppSet::new(vec![App::builder(appid, version).with_cohort(cohort).build()]);
 
     let config = get_omaha_config(&current_version, &service_url).await;
     install_update_with_http(
@@ -227,11 +227,9 @@ mod tests {
     }
 
     fn get_test_app_set() -> AppSet {
-        AppSet::new(vec![App::new(
-            TEST_APP_ID.to_owned(),
-            [20200101, 0, 0, 0],
-            Cohort::new(TEST_CHANNEL),
-        )])
+        AppSet::new(vec![App::builder(TEST_APP_ID.to_owned(), [20200101, 0, 0, 0])
+            .with_cohort(Cohort::new(TEST_CHANNEL))
+            .build()])
     }
 
     fn get_test_config() -> Config {

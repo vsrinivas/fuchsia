@@ -252,8 +252,8 @@ mod tests {
         let inspector = Inspector::new();
         let node = AppsNode::new(inspector.root().create_child("apps"));
         let apps = vec![
-            App::new("id", [1, 0], Cohort::default()),
-            App::new("id_2", [1, 2, 4], Cohort::new("cohort")),
+            App::builder("id", [1, 0]).build(),
+            App::builder("id_2", [1, 2, 4]).with_cohort(Cohort::new("cohort")).build(),
         ];
         node.set(&apps);
 
