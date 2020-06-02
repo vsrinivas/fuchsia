@@ -181,7 +181,7 @@ fuchsia_component("my-other-component-under-test") {
 }
 
 fuchsia_test_package("my-integration-test") {
-  tests = [ ":my-test-component" ]
+  test_components = [ ":my-test-component" ]
   components = [ ":my-other-component-under-test" ]
   environments = [ vim2_env ]
 }

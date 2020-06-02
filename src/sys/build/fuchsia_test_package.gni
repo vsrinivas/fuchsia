@@ -23,7 +23,7 @@ import("//src/sys/build/fuchsia_test.gni")
 # fuchsia_component("fonts-ui-test") { ... }
 #
 # fuchsia_test_package("fonts-ui-test-package") {
-#   tests = [ ":fonts-ui-test" ]
+#   test_components = [ ":fonts-ui-test" ]
 #   components = [ ":fonts-ui" ],
 #   test_specs = {
 #     environments = [
