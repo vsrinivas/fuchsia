@@ -124,10 +124,10 @@ async fn async_main() -> Result<(), Error> {
         Subcommand::Echo(c) => {
             match Cli::new().await?.echo(c.text).await {
                 Ok(r) => {
-                    println!("SUCCESS: received {:?}", r);
+                    eprintln!("SUCCESS: received {:?}", r);
                 }
                 Err(e) => {
-                    println!("ERROR: {:?}", e);
+                    eprintln!("ERROR: {:?}", e);
                 }
             }
             Ok(())
@@ -143,7 +143,7 @@ async fn async_main() -> Result<(), Error> {
                     }
                 },
                 Err(e) => {
-                    println!("ERROR: {:?}", e);
+                    eprintln!("ERROR: {:?}", e);
                 }
             }
             Ok(())
@@ -152,7 +152,7 @@ async fn async_main() -> Result<(), Error> {
             match Cli::new().await?.quit().await {
                 Ok(_) => {}
                 Err(e) => {
-                    println!("ERROR: {:?}", e);
+                    eprintln!("ERROR: {:?}", e);
                 }
             }
             Ok(())
@@ -165,7 +165,14 @@ async fn async_main() -> Result<(), Error> {
 
 fn main() {
     hoist::run(async move {
-        async_main().await.map_err(|e| println!("{}", e)).expect("could not start ffx");
+        match async_main().await {
+            Ok(_) => std::process::exit(0),
+            Err(err) => {
+                eprintln!("BUG: An internal command error occurred.\nError:\n\t{}\nCause:", err);
+                err.chain().skip(1).for_each(|cause| eprintln!("\t{}", cause));
+                std::process::exit(1);
+            }
+        }
     })
 }
 
