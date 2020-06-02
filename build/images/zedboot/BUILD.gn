@@ -229,7 +229,6 @@ if (custom_signing_script != "") {
 if (use_vbmeta) {
   vbmeta("zedboot.vbmeta") {
     output_name = "zedboot"
-    testonly = true
     if (custom_signing_script != "") {
       deps = [ ":signed" ]
       zbi = get_target_outputs(":signed")
@@ -299,5 +298,8 @@ group("zedboot") {
   }
   if (custom_signing_script != "" || use_vboot) {
     deps += [ ":signed" ]
+    if (bootfs_only && use_vbmeta) {
+      deps += [ ":zedboot.vbmeta" ]
+    }
   }
 }
