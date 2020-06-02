@@ -871,7 +871,7 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
       const auto& method = *method_with_info.method;
       NamedMethod named_method;
       std::string method_name = NameMethod(named_protocol.c_name, method);
-      named_method.ordinal = static_cast<uint64_t>(method.generated_ordinal32->value) << 32;
+      named_method.ordinal = static_cast<uint64_t>(method.generated_ordinal64->value);
       named_method.ordinal_name = NameOrdinal(method_name);
       named_method.generated_ordinal = static_cast<uint64_t>(method.generated_ordinal64->value);
       named_method.generated_ordinal_name = NameGenOrdinal(method_name);
@@ -1145,7 +1145,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
     file_ << kIndent << method_info.request->c_name << "* _request = ("
           << method_info.request->c_name << "*)_wr_bytes;\n";
     file_ << kIndent << "memset(_wr_bytes, 0, sizeof(_wr_bytes));\n";
-    EmitTxnHeader(&file_, "_request", method_info.generated_ordinal_name);
+    EmitTxnHeader(&file_, "_request", method_info.ordinal_name);
     EmitLinearizeMessage(&file_, "_request", "_wr_bytes", request);
     const char* handles_value = "NULL";
     if (max_hcount > 0) {
@@ -1399,9 +1399,6 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
   for (const auto& method_info : named_protocol.methods) {
     if (!method_info.request)
       continue;
-    if (method_info.ordinal != method_info.generated_ordinal) {
-      file_ << kIndent << "case " << method_info.generated_ordinal_name << ":\n";
-    }
     file_ << kIndent << "case " << method_info.ordinal_name << ": {\n";
     file_ << kIndent << kIndent << "status = fidl_decode_msg(&" << method_info.request->coded_name
           << ", msg, NULL);\n";
@@ -1506,7 +1503,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
     file_ << kIndent << method_info.response->c_name << "* _response = ("
           << method_info.response->c_name << "*)_wr_bytes;\n";
     file_ << kIndent << "memset(_wr_bytes, 0, sizeof(_wr_bytes));\n";
-    EmitTxnHeader(&file_, "_response", method_info.generated_ordinal_name);
+    EmitTxnHeader(&file_, "_response", method_info.ordinal_name);
     EmitLinearizeMessage(&file_, "_response", "_wr_bytes", response);
     const char* handle_value = "NULL";
     if (hcount > 0) {

@@ -168,18 +168,12 @@ static bool loader_test(void) {
 // GenOrdinal, then change LDMSG_*, and then change Ordinal.
 static bool ordinals_are_consistent(void) {
   BEGIN_TEST;
-  static_assert(LDMSG_OP_DONE == fuchsia_ldsvc_LoaderDoneOrdinal ||
-                    LDMSG_OP_DONE == fuchsia_ldsvc_LoaderDoneGenOrdinal,
-                "Done ordinals need to match");
-  static_assert(LDMSG_OP_LOAD_OBJECT == fuchsia_ldsvc_LoaderLoadObjectOrdinal ||
-                    LDMSG_OP_LOAD_OBJECT == fuchsia_ldsvc_LoaderLoadObjectGenOrdinal,
+  static_assert(LDMSG_OP_DONE == fuchsia_ldsvc_LoaderDoneOrdinal, "Done ordinals need to match");
+  static_assert(LDMSG_OP_LOAD_OBJECT == fuchsia_ldsvc_LoaderLoadObjectOrdinal,
                 "LoadObject ordinals need to match");
-  static_assert(LDMSG_OP_CONFIG == fuchsia_ldsvc_LoaderConfigOrdinal ||
-                    LDMSG_OP_CONFIG == fuchsia_ldsvc_LoaderConfigGenOrdinal,
+  static_assert(LDMSG_OP_CONFIG == fuchsia_ldsvc_LoaderConfigOrdinal,
                 "Config ordinals need to match");
-  static_assert(LDMSG_OP_CLONE == fuchsia_ldsvc_LoaderCloneOrdinal ||
-                    LDMSG_OP_CLONE == fuchsia_ldsvc_LoaderCloneGenOrdinal,
-                "Clone ordinals need to match");
+  static_assert(LDMSG_OP_CLONE == fuchsia_ldsvc_LoaderCloneOrdinal, "Clone ordinals need to match");
   END_TEST;
 }
 

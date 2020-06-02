@@ -768,112 +768,112 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
   auto hdr = static_cast<fidl_message_header_t*>(msg->bytes);
 
   zx_status_t r;
-  // This is an if statement because, depending on the state of the ordinal
-  // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
   uint64_t ordinal = hdr->ordinal;
-  if (ordinal == fuchsia_io_NodeCloneOrdinal || ordinal == fuchsia_io_NodeCloneGenOrdinal) {
-    DECODE_REQUEST(msg, NodeClone);
-    DEFINE_REQUEST(msg, NodeClone);
-    zx_handle_t h = request->object;
-    uint32_t flags = request->flags;
-    if (request->flags & ZX_FS_FLAG_CLONE_SAME_RIGHTS) {
-      flags |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
+  switch (ordinal) {
+    case fuchsia_io_NodeCloneOrdinal: {
+      DECODE_REQUEST(msg, NodeClone);
+      DEFINE_REQUEST(msg, NodeClone);
+      zx_handle_t h = request->object;
+      uint32_t flags = request->flags;
+      if (request->flags & ZX_FS_FLAG_CLONE_SAME_RIGHTS) {
+        flags |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
+      }
+      char path[] = ".";
+      devfs_open(dn, dispatcher, h, path, flags | ZX_FS_FLAG_NOREMOTE);
+      return ZX_OK;
     }
-    char path[] = ".";
-    devfs_open(dn, dispatcher, h, path, flags | ZX_FS_FLAG_NOREMOTE);
-    return ZX_OK;
-  } else if (ordinal == fuchsia_io_NodeDescribeOrdinal ||
-             ordinal == fuchsia_io_NodeDescribeGenOrdinal) {
-    DECODE_REQUEST(msg, NodeDescribe);
+    case fuchsia_io_NodeDescribeOrdinal: {
+      DECODE_REQUEST(msg, NodeDescribe);
 
-    DescribeMsg msg;
-    memset(&msg, 0, sizeof(msg));
-    fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeDescribeGenOrdinal);
-    msg.primary.hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
-    SetNodeInfoAsDirectory(&msg.primary.node_info);
+      DescribeMsg msg;
+      memset(&msg, 0, sizeof(msg));
+      fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeDescribeOrdinal);
+      msg.primary.hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+      SetNodeInfoAsDirectory(&msg.primary.node_info);
 
-    fidl_msg_t raw_msg = {
-        .bytes = reinterpret_cast<uint8_t*>(&msg),
-        .handles = nullptr,
-        .num_bytes = sizeof(msg),
-        .num_handles = 0,
-    };
-    return txn->reply(txn, &raw_msg);
-  } else if (ordinal == fuchsia_io_DirectoryOpenOrdinal ||
-             ordinal == fuchsia_io_DirectoryOpenGenOrdinal) {
-    DECODE_REQUEST(msg, DirectoryOpen);
-    DEFINE_REQUEST(msg, DirectoryOpen);
-    uint32_t len = static_cast<uint32_t>(request->path.size);
-    zx_handle_t h = request->object;
-    uint32_t flags = request->flags;
-    if (len == 0 || len > fuchsia_io_MAX_PATH) {
-      zx_handle_close(h);
-    } else {
-      char path[fuchsia_io_MAX_PATH + 1];
-      memcpy(path, request->path.data, len);
-      path[len] = 0;
-      devfs_open(dn, dispatcher, h, path, flags);
+      fidl_msg_t raw_msg = {
+          .bytes = reinterpret_cast<uint8_t*>(&msg),
+          .handles = nullptr,
+          .num_bytes = sizeof(msg),
+          .num_handles = 0,
+      };
+      return txn->reply(txn, &raw_msg);
     }
-    return ZX_OK;
-  } else if (ordinal == fuchsia_io_NodeGetAttrOrdinal ||
-             ordinal == fuchsia_io_NodeGetAttrGenOrdinal) {
-    DECODE_REQUEST(msg, NodeGetAttr);
-    uint32_t mode;
-    if (devnode_is_dir(dn)) {
-      mode = V_TYPE_DIR | V_IRUSR | V_IWUSR;
-    } else {
-      mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
+    case fuchsia_io_DirectoryOpenOrdinal: {
+      DECODE_REQUEST(msg, DirectoryOpen);
+      DEFINE_REQUEST(msg, DirectoryOpen);
+      uint32_t len = static_cast<uint32_t>(request->path.size);
+      zx_handle_t h = request->object;
+      uint32_t flags = request->flags;
+      if (len == 0 || len > fuchsia_io_MAX_PATH) {
+        zx_handle_close(h);
+      } else {
+        char path[fuchsia_io_MAX_PATH + 1];
+        memcpy(path, request->path.data, len);
+        path[len] = 0;
+        devfs_open(dn, dispatcher, h, path, flags);
+      }
+      return ZX_OK;
     }
+    case fuchsia_io_NodeGetAttrOrdinal: {
+      DECODE_REQUEST(msg, NodeGetAttr);
+      uint32_t mode;
+      if (devnode_is_dir(dn)) {
+        mode = V_TYPE_DIR | V_IRUSR | V_IWUSR;
+      } else {
+        mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
+      }
 
-    fuchsia_io_NodeAttributes attributes;
-    memset(&attributes, 0, sizeof(attributes));
-    attributes.mode = mode;
-    attributes.content_size = 0;
-    attributes.link_count = 1;
-    attributes.id = dn->ino;
-    return fuchsia_io_NodeGetAttr_reply(txn, ZX_OK, &attributes);
-  } else if (ordinal == fuchsia_io_DirectoryRewindOrdinal ||
-             ordinal == fuchsia_io_DirectoryRewindGenOrdinal) {
-    DECODE_REQUEST(msg, DirectoryRewind);
-    ios->readdir_ino_ = 0;
-    return fuchsia_io_DirectoryRewind_reply(txn, ZX_OK);
-  } else if (ordinal == fuchsia_io_DirectoryReadDirentsOrdinal ||
-             ordinal == fuchsia_io_DirectoryReadDirentsGenOrdinal) {
-    DECODE_REQUEST(msg, DirectoryReadDirents);
-    DEFINE_REQUEST(msg, DirectoryReadDirents);
-
-    if (request->max_bytes > fuchsia_io_MAX_BUF) {
-      return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
+      fuchsia_io_NodeAttributes attributes;
+      memset(&attributes, 0, sizeof(attributes));
+      attributes.mode = mode;
+      attributes.content_size = 0;
+      attributes.link_count = 1;
+      attributes.id = dn->ino;
+      return fuchsia_io_NodeGetAttr_reply(txn, ZX_OK, &attributes);
     }
-
-    uint8_t data[fuchsia_io_MAX_BUF];
-    size_t actual = 0;
-    r = devfs_readdir(dn, &ios->readdir_ino_, data, request->max_bytes);
-    if (r >= 0) {
-      actual = r;
-      r = ZX_OK;
+    case fuchsia_io_DirectoryRewindOrdinal: {
+      DECODE_REQUEST(msg, DirectoryRewind);
+      ios->readdir_ino_ = 0;
+      return fuchsia_io_DirectoryRewind_reply(txn, ZX_OK);
     }
-    return fuchsia_io_DirectoryReadDirents_reply(txn, r, data, actual);
-  } else if (ordinal == fuchsia_io_DirectoryWatchOrdinal ||
-             ordinal == fuchsia_io_DirectoryWatchGenOrdinal) {
-    DECODE_REQUEST(msg, DirectoryWatch);
-    DEFINE_REQUEST(msg, DirectoryWatch);
-    zx::channel watcher(request->watcher);
+    case fuchsia_io_DirectoryReadDirentsOrdinal: {
+      DECODE_REQUEST(msg, DirectoryReadDirents);
+      DEFINE_REQUEST(msg, DirectoryReadDirents);
 
-    request->watcher = ZX_HANDLE_INVALID;
-    if (request->mask & (~fuchsia_io_WATCH_MASK_ALL) || request->options != 0) {
-      return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_INVALID_ARGS);
+      if (request->max_bytes > fuchsia_io_MAX_BUF) {
+        return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
+      }
+
+      uint8_t data[fuchsia_io_MAX_BUF];
+      size_t actual = 0;
+      r = devfs_readdir(dn, &ios->readdir_ino_, data, request->max_bytes);
+      if (r >= 0) {
+        actual = r;
+        r = ZX_OK;
+      }
+      return fuchsia_io_DirectoryReadDirents_reply(txn, r, data, actual);
     }
-    r = devfs_watch(dn, std::move(watcher), request->mask);
-    return fuchsia_io_DirectoryWatch_reply(txn, r);
-  } else if (ordinal == fuchsia_io_DirectoryAdminQueryFilesystemOrdinal ||
-             ordinal == fuchsia_io_DirectoryAdminQueryFilesystemGenOrdinal) {
-    DECODE_REQUEST(msg, DirectoryAdminQueryFilesystem);
-    fuchsia_io_FilesystemInfo info;
-    memset(&info, 0, sizeof(info));
-    strlcpy((char*)info.name, "devfs", fuchsia_io_MAX_FS_NAME_BUFFER);
-    return fuchsia_io_DirectoryAdminQueryFilesystem_reply(txn, ZX_OK, &info);
-  }
+    case fuchsia_io_DirectoryWatchOrdinal: {
+      DECODE_REQUEST(msg, DirectoryWatch);
+      DEFINE_REQUEST(msg, DirectoryWatch);
+      zx::channel watcher(request->watcher);
+
+      request->watcher = ZX_HANDLE_INVALID;
+      if (request->mask & (~fuchsia_io_WATCH_MASK_ALL) || request->options != 0) {
+        return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_INVALID_ARGS);
+      }
+      r = devfs_watch(dn, std::move(watcher), request->mask);
+      return fuchsia_io_DirectoryWatch_reply(txn, r);
+    }
+    case fuchsia_io_DirectoryAdminQueryFilesystemOrdinal: {
+      DECODE_REQUEST(msg, DirectoryAdminQueryFilesystem);
+      fuchsia_io_FilesystemInfo info;
+      memset(&info, 0, sizeof(info));
+      strlcpy((char*)info.name, "devfs", fuchsia_io_MAX_FS_NAME_BUFFER);
+      return fuchsia_io_DirectoryAdminQueryFilesystem_reply(txn, ZX_OK, &info);
+    }
+  }  // switch
 
   // close inbound handles so they do not leak
   zx_handle_close_many(msg->handles, msg->num_handles);

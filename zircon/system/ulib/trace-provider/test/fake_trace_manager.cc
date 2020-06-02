@@ -96,16 +96,14 @@ bool FakeTraceManager::DecodeAndDispatch(uint8_t* buffer, uint32_t num_bytes, zx
   }
 
   auto hdr = reinterpret_cast<fidl_message_header_t*>(buffer);
-  // This is an if statement because, depending on the state of the ordinal
-  // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
   uint64_t ordinal = hdr->ordinal;
-  if (ordinal == fuchsia_tracing_provider_RegistryRegisterProviderOrdinal ||
-      ordinal == fuchsia_tracing_provider_RegistryRegisterProviderGenOrdinal) {
-    printf("FakeTraceManager: Got RegisterProvider request\n");
-    // We currently don't need to do anything more here.
-    return true;
-  } else {
-    return false;
+  switch (ordinal) {
+    case fuchsia_tracing_provider_RegistryRegisterProviderOrdinal:
+      printf("FakeTraceManager: Got RegisterProvider request\n");
+      // We currently don't need to do anything more here.
+      return true;
+    default:
+      return false;
   }
 }
 

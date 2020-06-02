@@ -335,10 +335,8 @@ zx_status_t DeviceControllerConnection::HandleRead() {
   }
 
   auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
-  // Depending on the state of the migration, GenOrdinal and Ordinal may be the
-  // same value.  See FIDL-524.
   uint64_t ordinal = hdr->ordinal;
-  if (ordinal == fuchsia_io_DirectoryOpenOrdinal || ordinal == fuchsia_io_DirectoryOpenGenOrdinal) {
+  if (ordinal == fuchsia_io_DirectoryOpenOrdinal) {
     VLOGD(1, dev(), "Opening device %p", dev().get());
     zx::unowned_channel conn = channel();
     DevmgrFidlTxn txn(std::move(conn), hdr->txid);
