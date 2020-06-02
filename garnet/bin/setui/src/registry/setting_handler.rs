@@ -21,7 +21,7 @@ use thiserror::Error;
 pub trait StorageFactory: DeviceStorageFactory + Send + Sync {}
 impl<T: DeviceStorageFactory + Send + Sync> StorageFactory for T {}
 
-#[derive(Error, Debug, Clone)]
+#[derive(Error, Debug, Clone, PartialEq)]
 pub enum ControllerError {
     #[error("Unimplemented Request")]
     Unimplemented {},
@@ -230,6 +230,13 @@ pub mod persist {
     pub trait Storage: DeviceStorageCompatible + Send + Sync {}
     impl<T: DeviceStorageCompatible + Send + Sync> Storage for T {}
 
+    #[derive(PartialEq, Clone, Debug)]
+    /// Enum for describing whether writing affected persistent value.
+    pub enum UpdateState {
+        Unchanged,
+        Updated,
+    }
+
     pub mod controller {
         use super::ClientProxy;
         use super::*;
@@ -248,7 +255,7 @@ pub mod persist {
     }
 
     impl<S: Storage + 'static> ClientProxy<S> {
-        async fn new<F: StorageFactory + 'static>(
+        pub async fn new<F: StorageFactory + 'static>(
             base_proxy: BaseProxy,
             context: Context<F>,
         ) -> Self {
@@ -269,18 +276,45 @@ pub mod persist {
             self.storage.lock().await.get().await
         }
 
-        pub async fn write(&self, value: S, write_through: bool) -> Result<(), ControllerError> {
+        /// Returns a boolean indicating whether the value was written or an
+        /// Error if write failed. the argument `write_through` will block
+        /// returning until the value has been completely written to persistent
+        /// store, rather than any temporary in-memory caching.
+        pub async fn write(
+            &self,
+            value: S,
+            write_through: bool,
+        ) -> Result<UpdateState, ControllerError> {
             if value == self.read().await {
-                return Ok(());
+                return Ok(UpdateState::Unchanged);
             }
 
             match self.storage.lock().await.write(&value, write_through).await {
                 Ok(_) => {
                     self.notify().await;
-                    Ok(())
+                    Ok(UpdateState::Updated)
                 }
                 Err(_) => Err(ControllerError::WriteFailure { setting_type: self.setting_type }),
             }
+        }
+    }
+
+    /// A trait for interpreting a `Result` into whether a notification occurred
+    /// and converting the `Result` into a `SettingResponseResult`.
+    pub trait WriteResult {
+        /// Indicates whether a notification occurred as a result of the write.
+        fn notified(&self) -> bool;
+        /// Converts the result into a `SettingResponseResult`.
+        fn into_response_result(self) -> SettingResponseResult;
+    }
+
+    impl WriteResult for Result<UpdateState, SwitchboardError> {
+        fn notified(&self) -> bool {
+            self.as_ref().map_or(false, |update_state| UpdateState::Updated == *update_state)
+        }
+
+        fn into_response_result(self) -> SettingResponseResult {
+            self.map(|_| None)
         }
     }
 
@@ -288,16 +322,16 @@ pub mod persist {
         client: &ClientProxy<S>,
         value: S,
         write_through: bool,
-    ) -> SettingResponseResult {
-        match client.write(value, write_through).await {
-            Ok(_) => Ok(None),
-            Err(ControllerError::WriteFailure { setting_type }) => {
-                Err(SwitchboardError::StorageFailure { setting_type: setting_type })
+    ) -> Result<UpdateState, SwitchboardError> {
+        client.write(value, write_through).await.map_err(|e| {
+            if let ControllerError::WriteFailure { setting_type } = e {
+                SwitchboardError::StorageFailure { setting_type: setting_type }
+            } else {
+                SwitchboardError::UnexpectedError {
+                    description: "client write failure".to_string(),
+                }
             }
-            _ => Err(SwitchboardError::UnexpectedError {
-                description: "client write failure".to_string(),
-            }),
-        }
+        })
     }
 
     pub struct Handler<

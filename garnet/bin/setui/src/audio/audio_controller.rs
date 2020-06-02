@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use crate::registry::base::State;
 use crate::registry::setting_handler::persist::{
-    controller as data_controller, write, ClientProxy,
+    controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::registry::setting_handler::{controller, ControllerError};
 use async_trait::async_trait;
@@ -174,11 +174,12 @@ impl VolumeController {
     /// If [push_to_audio_core] is true, pushes the changes to the audio core.
     /// If not, just sets it on the local stored state. Should be called with
     /// true on first restore and on volume changes, and false otherwise.
+    /// Returns whether the change triggered a notification.
     async fn update_volume_streams(
         &mut self,
         new_streams: &Vec<AudioStream>,
         push_to_audio_core: bool,
-    ) {
+    ) -> bool {
         if push_to_audio_core {
             self.check_and_bind_volume_controls(&default_audio_info().streams.to_vec()).await.ok();
             for stream in new_streams {
@@ -194,7 +195,8 @@ impl VolumeController {
 
         let mut stored_value = self.client.read().await;
         stored_value.streams = get_streams_array_from_map(&self.stream_volume_controls);
-        write(&self.client, stored_value, false).await.ok();
+
+        write(&self.client, stored_value, false).await.notified()
     }
 
     /// Populates the local state with the given [streams] and binds it to the audio core service.

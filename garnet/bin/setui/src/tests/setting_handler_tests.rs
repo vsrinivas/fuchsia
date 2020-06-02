@@ -7,12 +7,14 @@ use {
     crate::internal::handler::{message, Address, Payload},
     crate::message::base::{Audience, MessageEvent, MessengerType},
     crate::registry::base::{Command, ContextBuilder, State},
-    crate::registry::device_storage::testing::*,
+    crate::registry::device_storage::{testing::*, DeviceStorageCompatible},
+    crate::registry::setting_handler::persist::WriteResult,
     crate::registry::setting_handler::{
-        controller, persist::controller as data_controller,
+        controller, persist, persist::controller as data_controller, persist::write,
         persist::ClientProxy as DataClientProxy, persist::Handler as DataHandler, persist::Storage,
         BoxedController, ClientImpl, ClientProxy, ControllerError, GenerateController, Handler,
     },
+    crate::switchboard::accessibility_types::AccessibilityInfo,
     crate::switchboard::base::{
         get_all_setting_types, ControllerStateResult, DoNotDisturbInfo, SettingRequest,
         SettingResponseResult, SettingType, SwitchboardError,
@@ -127,6 +129,84 @@ async fn test_spawn() {
     verify_data_handler::<FailControl>(true).await;
 }
 
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_write_notify() {
+    let factory = message::create_hub();
+    let (handler_messenger, handler_receptor) =
+        factory.create(MessengerType::Unbound).await.unwrap();
+    let context = ContextBuilder::new(
+        SettingType::Accessibility,
+        InMemoryStorageFactory::create(),
+        handler_messenger,
+        handler_receptor,
+        CONTEXT_ID,
+    )
+    .build();
+
+    let (client_tx, mut client_rx) =
+        futures::channel::mpsc::unbounded::<persist::ClientProxy<AccessibilityInfo>>();
+
+    ClientImpl::create(
+        context.clone(),
+        Box::new(move |proxy| {
+            let client_tx = client_tx.clone();
+            let context = context.clone();
+            Box::pin(async move {
+                client_tx
+                    .unbounded_send(
+                        persist::ClientProxy::<AccessibilityInfo>::new(proxy, context).await,
+                    )
+                    .ok();
+                Ok(Box::new(BlankController {}) as BoxedController)
+            })
+        }),
+    )
+    .await
+    .expect("client should be created");
+
+    // Get the proxy.
+    let mut proxy = client_rx.next().await.unwrap();
+
+    verify_write_behavior(
+        &mut proxy,
+        AccessibilityInfo {
+            audio_description: None,
+            screen_reader: None,
+            color_inversion: None,
+            enable_magnification: None,
+            color_correction: None,
+            captions_settings: None,
+        },
+        false,
+    )
+    .await;
+
+    verify_write_behavior(
+        &mut proxy,
+        AccessibilityInfo {
+            audio_description: Some(true),
+            screen_reader: None,
+            color_inversion: None,
+            enable_magnification: None,
+            color_correction: None,
+            captions_settings: None,
+        },
+        true,
+    )
+    .await;
+}
+
+async fn verify_write_behavior<S: DeviceStorageCompatible + Send + Sync>(
+    proxy: &mut persist::ClientProxy<S>,
+    value: S,
+    notified: bool,
+) {
+    let result = write(proxy, value, false).await;
+
+    assert_eq!(notified, result.notified());
+    assert!(result.is_ok() && result.into_response_result().is_ok());
+}
+
 async fn verify_handler<C: Control + Sync + Send + 'static>(should_succeed: bool) {
     assert_eq!(
         should_succeed,
@@ -193,13 +273,26 @@ impl StateController {
 #[async_trait]
 impl controller::Handle for StateController {
     async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
-        return None;
+        None
     }
 
     async fn change_state(&mut self, state: State) -> Option<ControllerStateResult> {
         self.invocation_counts.entry(state).and_modify(|e| *e += 1);
         self.invocation_counts_reporter.unbounded_send(self.invocation_counts.clone()).ok();
         self.state_reporter.unbounded_send(state).ok();
+        None
+    }
+}
+
+struct BlankController {}
+
+#[async_trait]
+impl controller::Handle for BlankController {
+    async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
+        return None;
+    }
+
+    async fn change_state(&mut self, _: State) -> Option<ControllerStateResult> {
         return None;
     }
 }

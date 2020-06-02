@@ -4,7 +4,7 @@
 
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
-    controller as data_controller, write, ClientProxy,
+    controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::registry::setting_handler::{controller, ControllerError};
 use crate::switchboard::base::{
@@ -41,7 +41,7 @@ impl controller::Handle for SystemController {
                 let mut value = self.client.read().await;
                 value.login_override_mode = SystemLoginOverrideMode::from(mode);
 
-                Some(write(&self.client, value, false).await)
+                Some(write(&self.client, value, false).await.into_response_result())
             }
             SettingRequest::Get => {
                 Some(Ok(Some(SettingResponse::System(self.client.read().await))))

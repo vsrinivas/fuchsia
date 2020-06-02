@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
-    controller as data_controller, write, ClientProxy,
+    controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::registry::setting_handler::{controller, ControllerError};
 use crate::switchboard::accessibility_types::AccessibilityInfo;
@@ -46,9 +46,11 @@ impl controller::Handle for AccessibilityController {
                 // TODO(fxb/52060): Figure out how to report persistent storage epitaphs.
                 Some(Ok(Some(SettingResponse::Accessibility(self.client.read().await))))
             }
-            SettingRequest::SetAccessibilityInfo(info) => {
-                Some(write(&self.client, info.merge(self.client.read().await), false).await)
-            }
+            SettingRequest::SetAccessibilityInfo(info) => Some(
+                write(&self.client, info.merge(self.client.read().await), false)
+                    .await
+                    .into_response_result(),
+            ),
             _ => None,
         }
     }

@@ -4,7 +4,7 @@
 
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
-    controller as data_controller, write, ClientProxy,
+    controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::registry::setting_handler::{controller, ControllerError};
 use crate::switchboard::base::{
@@ -41,7 +41,7 @@ impl controller::Handle for PrivacyController {
 
                 // Save the value locally.
                 current.user_data_sharing_consent = user_data_sharing_consent;
-                Some(write(&self.client, current, false).await)
+                Some(write(&self.client, current, false).await.into_response_result())
             }
             SettingRequest::Get => {
                 Some(Ok(Some(SettingResponse::Privacy(self.client.read().await))))

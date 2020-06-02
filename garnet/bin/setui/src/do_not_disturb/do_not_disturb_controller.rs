@@ -4,7 +4,7 @@
 
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
-    controller as data_controller, write, ClientProxy,
+    controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::registry::setting_handler::{controller, ControllerError};
 use crate::switchboard::base::{
@@ -44,7 +44,7 @@ impl controller::Handle for DoNotDisturbController {
                 if dnd_info.night_mode_dnd.is_some() {
                     stored_value.night_mode_dnd = dnd_info.night_mode_dnd;
                 }
-                Some(write(&self.client, stored_value, false).await)
+                Some(write(&self.client, stored_value, false).await.into_response_result())
             }
             SettingRequest::Get => {
                 Some(Ok(Some(SettingResponse::DoNotDisturb(self.client.read().await))))

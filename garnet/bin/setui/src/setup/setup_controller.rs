@@ -4,7 +4,7 @@
 
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
-    controller as data_controller, write, ClientProxy,
+    controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::registry::setting_handler::{controller, ControllerError};
 use crate::switchboard::base::{
@@ -40,7 +40,7 @@ impl controller::Handle for SetupController {
                 let mut info = self.client.read().await;
                 info.configuration_interfaces = interfaces;
 
-                return Some(write(&self.client, info, true).await);
+                return Some(write(&self.client, info, true).await.into_response_result());
             }
             SettingRequest::Get => {
                 return Some(Ok(Some(SettingResponse::Setup(self.client.read().await))));

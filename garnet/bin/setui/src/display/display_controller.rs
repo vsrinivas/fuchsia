@@ -4,7 +4,7 @@
 
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
-    controller as data_controller, write, ClientProxy,
+    controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::registry::setting_handler::{controller, ControllerError};
 use crate::switchboard::base::{
@@ -77,5 +77,5 @@ async fn store_brightness(
     info: DisplayInfo,
     client: &ClientProxy<DisplayInfo>,
 ) -> SettingResponseResult {
-    write(&client, info, false).await
+    write(&client, info, false).await.into_response_result()
 }

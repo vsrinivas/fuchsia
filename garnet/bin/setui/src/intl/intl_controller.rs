@@ -4,7 +4,7 @@
 
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
-    controller as data_controller, write, ClientProxy,
+    controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::registry::setting_handler::{controller, ControllerError};
 use crate::switchboard::base::{
@@ -92,7 +92,7 @@ impl IntlController {
 
         let current = self.client.read().await;
 
-        write(&self.client, info.merge(current), false).await
+        write(&self.client, info.merge(current), false).await.into_response_result()
     }
 
     /// Checks if the given IntlInfo is valid.
