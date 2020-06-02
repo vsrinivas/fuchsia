@@ -49,7 +49,7 @@ to make them unique in a consistent way rather than remembering odd rules like
 Names should use the following scheme, joining parts with hyphens or
 underscores:
 
-    [ host_x64/ ] tool [ bindings ] [ category [ subcategory ] ] tests
+> _tool_ [ _bindings_ ] [ _category_ [ _subcategory_ ] ] [ **host** ] **tests**
 
 Where _tool_ is one of:
 
@@ -60,10 +60,6 @@ Where _tool_ is one of:
 
 And the other parts are:
 
-*   _host_x64/_
-    *   You do not actually type this anywhere in BUILD.gn, but host tests are
-        implicitly named `host_x64/binary_name` (i.e. the test binary's relative
-        path from out/default) for the purposes of `fx test` [[1]](#footnote1)
 *   _bindings_
     *   One of **c**, **llcpp**, **hlcpp**, **rust**, **go**, **dart** (note:
         **hlcpp**, _not_ **cpp**)
@@ -71,6 +67,10 @@ And the other parts are:
     *   Example categories: **conformance**, **types**, **parser**, **lib**
     *   Do _not_ use: **frontend**, **backend**, **bindings** (_tool_
         distinguishes these)
+*   **host**
+    * Include this for a host test only if it also runs on device, to
+      distinguish them
+
 
 ## Hierarchy
 
@@ -207,28 +207,31 @@ end up in out/default/tests.json:
 }
 ```
 
-Running `fx test host_x64/fidl_bar_tests` works because of the "name" field in
+Running `fx test fidl_bar_tests` works because of the "name" field in
 tests.json.
 
 ## Host/Device tests
 
 Tests that run both on host and device fall in two categories. In the first
 category, the test target simply builds under either toolchain. In this case, we
-should **use the same name for the test target and the test component**. For
-example:
+need to **change the test_spec name on host to distinguish it from the test
+component name**. For example:
 
 ```gn
 import("//build/test/test_package.gni")
 
-rustc_test("fidl_rust_conformance_tests") {  # host test name (minus host_x64/)
+rustc_test("fidl_rust_conformance_tests") {
   ...
+  if (!is_fuchsia) {
+    target_name = "fidl_rust_conformance_host_tests"  # host test name
+  }
 }
 
 unittest_package("fidl-rust-tests") {
   deps = [ ":fidl_rust_conformance_tests" ]
   tests = [
     {
-      name = "fidl_rust_conformance_tests"   # device test name
+      name = "fidl_rust_conformance_tests"            # device test name
       environments = basic_envs
     },
   ]
@@ -246,12 +249,10 @@ group("tests") {
 We can now run the test both ways:
 
 *   on device: `fx test fidl_rust_conformance_tests`
-*   on host: `fx test host_x64/fidl_rust_conformance_tests`
+*   on host: `fx test fidl_rust_conformance_host_tests`
 
 In the second category, the device and host tests share source code, but they
-are sufficiently different that they must be defined by separate targets. This
-time, **use the same name for the _host_ test target and the component name**.
-This will require choosing a different name for the _device_ test target. For
+are sufficiently different that they must be defined by separate targets. For
 example:
 
 ```gn
@@ -261,7 +262,7 @@ source_set("conformance_test_sources") {
   ...
 }
 
-test("fidl_hlcpp_conformance_tests") {       # host test name (minus host_x64/)
+test("fidl_hlcpp_conformance_host_tests") {   # host test name
   ...
   deps = [
     ":conformance_test_sources",
@@ -269,20 +270,16 @@ test("fidl_hlcpp_conformance_tests") {       # host test name (minus host_x64/)
   ]
 }
 
-test("fidl_hlcpp_conformance_tests_fuchsia") {
-  # We had to append _fuchsia to distinguish this from the host test target.
-  # But we want the binary name to be fidl_hlcpp_conformance_tests to match
-  # up with the same-named test component in the unittest_package.
-  output_name = "fidl_hlcpp_conformance_tests"
-  ...
+test("fidl_hlcpp_conformance_tests") {
+  …
   deps = [
     ":conformance_test_sources",
-    ...
+    …
   ]
 }
 
 unittest_package("fidl-hlcpp-tests") {
-  deps = [ ":fidl_hlcpp_conformance_tests_fuchsia" ]
+  deps = [ ":fidl_hlcpp_conformance_tests" ]
   tests = [
     {
       name = "fidl_hlcpp_conformance_tests"  # device test name
@@ -294,7 +291,7 @@ unittest_package("fidl-hlcpp-tests") {
 group("tests") {
   testonly = true
   deps = [
-    ":fidl_hlcpp_conformance_tests($host_toolchain)",
+    ":fidl_hlcpp_conformance_host_tests($host_toolchain)",
     ":fidl-hlcpp-tests"
   ]
 }
@@ -303,7 +300,7 @@ group("tests") {
 Now, we can run the test both ways:
 
 *   on device: `fx test fidl_hlcpp_conformance_tests`
-*   on host: `fx test host_x64/fidl_hlcpp_conformance_tests`
+*   on host: `fx test fidl_hlcpp_conformance_host_tests`
 
 ## C++ Zircon tests
 
@@ -371,7 +368,7 @@ We should have test targets for the leaves:
 
 *   `fx test fidl_rust_conformance_tests`
 *   `fx test fidl_rust_integration_tests`
-*   `fx test host_x64/fidl_rust_conformance_tests`
+*   `fx test fidl_rust_conformance_host_tests`
 
 We should **not** make additional targets for running various subsets of the
 tests. Using `fx test`, we can already
@@ -387,13 +384,6 @@ tests. Using `fx test`, we can already
 *   [Running tests as components][running_tests_as_components]
 *   [Fuchsia component manifest][component_manifest]
 *   [Fuchsia package URLs][package_url]
-
---------------------------------------------------------------------------------
-
-##### Footnote1
-
-This is effective since [fxr/387463](https://fuchsia-review.googlesource.com/c/fuchsia/+/387463).
-See also the discussion on [fxb/50400](http://fxbug.dev/50400).
 
 <!-- xrefs -->
 [gn-targets]: https://gn.googlesource.com/gn/+/refs/heads/master/docs/language.md#Targets
