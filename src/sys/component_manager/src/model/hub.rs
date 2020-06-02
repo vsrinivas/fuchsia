@@ -563,12 +563,11 @@ mod tests {
     use {
         super::*,
         crate::{
-            builtin_environment::BuiltinEnvironment,
+            builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
             model::{
                 binding::Binder,
-                model::{ComponentManagerConfig, Model, ModelParams},
+                model::Model,
                 realm::BindReason,
-                resolver::ResolverRegistry,
                 rights,
                 testing::mocks,
                 testing::{
@@ -579,7 +578,7 @@ mod tests {
                     test_hook::HubInjectionTestHook,
                 },
             },
-            startup,
+            startup::Arguments,
         },
         cm_rust::{
             self, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
@@ -659,7 +658,6 @@ mod tests {
         additional_hooks: Vec<HooksRegistration>,
     ) -> (Arc<Model>, BuiltinEnvironment, DirectoryProxy) {
         let resolved_root_component_url = format!("{}_resolved", root_component_url);
-        let mut resolver = ResolverRegistry::new();
         let runner = Arc::new(mocks::MockRunner::new());
         let mut mock_resolver = mocks::MockResolver::new();
         for component in components.into_iter() {
@@ -672,28 +670,18 @@ mod tests {
                 runner.add_runtime_host_fn(&resolved_root_component_url, runtime_host_fn);
             }
         }
-        resolver.register("test".to_string(), Box::new(mock_resolver));
 
-        let startup_args = startup::Arguments {
-            use_builtin_process_launcher: false,
-            root_component_url: root_component_url.clone(),
-            debug: false,
-        };
-        let model = Arc::new(Model::new(ModelParams {
-            root_component_url,
-            root_resolver_registry: resolver,
-        }));
-        let builtin_environment = BuiltinEnvironment::new(
-            &startup_args,
-            &model,
-            ComponentManagerConfig::default(),
-            &vec![(TEST_RUNNER_NAME.into(), runner.clone() as _)].into_iter().collect(),
-        )
-        .await
-        .expect("failed to set up builtin environment");
+        let builtin_environment = BuiltinEnvironmentBuilder::new()
+            .set_args(Arguments { root_component_url, ..Default::default() })
+            .add_resolver("test".to_string(), Box::new(mock_resolver))
+            .add_runner(TEST_RUNNER_NAME.into(), runner)
+            .build()
+            .await
+            .expect("failed to set up builtin environment");
         let hub_proxy =
             builtin_environment.bind_service_fs_for_hub().await.expect("unable to bind service_fs");
 
+        let model = builtin_environment.model.clone();
         model.root_realm.hooks.install(additional_hooks).await;
 
         let root_moniker = AbsoluteMoniker::root();

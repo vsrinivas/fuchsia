@@ -17,8 +17,8 @@ pub struct ComponentManagerConfig {
     pub list_children_batch_size: usize,
 }
 
-impl ComponentManagerConfig {
-    pub fn default() -> Self {
+impl Default for ComponentManagerConfig {
+    fn default() -> Self {
         ComponentManagerConfig { list_children_batch_size: 1000 }
     }
 }

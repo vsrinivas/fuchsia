@@ -5,11 +5,10 @@
 use {
     anyhow::Error,
     component_manager_lib::{
-        builtin_environment::BuiltinEnvironment,
+        builtin_environment::BuiltinEnvironmentBuilder,
         elf_runner::{ElfRunner, ProcessLauncherConnector},
         model::{
-            binding::Binder, model::ComponentManagerConfig, moniker::AbsoluteMoniker,
-            realm::BindReason, testing::test_helpers,
+            binding::Binder, moniker::AbsoluteMoniker, realm::BindReason, testing::test_helpers,
         },
         startup,
     },
@@ -37,24 +36,21 @@ async fn main() -> Result<(), Error> {
         }
     };
 
-    let model = startup::model_setup(&args).await?;
-
     // Create an ELF runner for the root component.
     let launcher_connector = ProcessLauncherConnector::new(&args);
     let runner = Arc::new(ElfRunner::new(launcher_connector));
 
     // Set up environment.
-    let builtin_environment = BuiltinEnvironment::new(
-        &args,
-        &model,
-        ComponentManagerConfig::default(),
-        &vec![("elf".into(), runner as _)].into_iter().collect(),
-    )
-    .await?;
+    let builtin_environment = BuiltinEnvironmentBuilder::new()
+        .set_args(args)
+        .add_runner("elf".into(), runner)
+        .add_available_resolvers_from_namespace()?
+        .build()
+        .await?;
     let hub_proxy = builtin_environment.bind_service_fs_for_hub().await?;
 
     let root_moniker = AbsoluteMoniker::root();
-    match model.bind(&root_moniker, &BindReason::Root).await {
+    match builtin_environment.model.bind(&root_moniker, &BindReason::Root).await {
         Ok(_) => {
             // TODO: Exit the component manager when the root component's binding is lost
             // (when it terminates).

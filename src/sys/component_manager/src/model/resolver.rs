@@ -22,13 +22,14 @@ pub trait Resolver {
 pub type ResolverFut<'a> = BoxFuture<'a, Result<fsys::Component, ResolverError>>;
 
 /// Resolves a component URL using a resolver selected based on the URL's scheme.
+#[derive(Default)]
 pub struct ResolverRegistry {
     resolvers: HashMap<String, Box<dyn Resolver + Send + Sync + 'static>>,
 }
 
 impl ResolverRegistry {
     pub fn new() -> ResolverRegistry {
-        ResolverRegistry { resolvers: HashMap::new() }
+        Default::default()
     }
 
     pub fn register(

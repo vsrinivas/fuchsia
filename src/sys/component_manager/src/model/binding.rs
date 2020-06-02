@@ -132,17 +132,15 @@ mod tests {
     use super::*;
     use {
         crate::{
-            builtin_environment::BuiltinEnvironment,
+            builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
             model::{
                 actions::{Action, ActionSet},
                 events::event::SyncMode,
                 hooks::{EventPayload, EventType, HooksRegistration},
-                model::{ComponentManagerConfig, ModelParams},
                 moniker::PartialMoniker,
-                resolver::ResolverRegistry,
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::TestHook},
             },
-            startup,
+            startup::Arguments,
         },
         cm_rust::{
             CapabilityName, CapabilityPath, OfferDecl, OfferRunnerDecl, OfferRunnerSource,
@@ -166,25 +164,17 @@ mod tests {
         mock_runner: Arc<MockRunner>,
         additional_hooks: Vec<HooksRegistration>,
     ) -> (Arc<Model>, BuiltinEnvironment) {
-        let mut resolver = ResolverRegistry::new();
-        resolver.register("test".to_string(), Box::new(mock_resolver));
-        let startup_args = startup::Arguments {
-            use_builtin_process_launcher: false,
-            root_component_url: "".to_string(),
-            debug: false,
-        };
-        let model = Arc::new(Model::new(ModelParams {
-            root_component_url: "test:///root".to_string(),
-            root_resolver_registry: resolver,
-        }));
-        let builtin_environment = BuiltinEnvironment::new(
-            &startup_args,
-            &model,
-            ComponentManagerConfig::default(),
-            &vec![(TEST_RUNNER_NAME.into(), mock_runner.clone() as _)].into_iter().collect(),
-        )
-        .await
-        .expect("builtin environment setup failed");
+        let builtin_environment = BuiltinEnvironmentBuilder::new()
+            .set_args(Arguments {
+                root_component_url: "test:///root".to_string(),
+                ..Default::default()
+            })
+            .add_resolver("test".to_string(), Box::new(mock_resolver))
+            .add_runner(TEST_RUNNER_NAME.into(), mock_runner)
+            .build()
+            .await
+            .expect("builtin environment setup failed");
+        let model = builtin_environment.model.clone();
         model.root_realm.hooks.install(additional_hooks).await;
         (model, builtin_environment)
     }

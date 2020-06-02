@@ -2,27 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::{
-        fuchsia_base_pkg_resolver,
-        fuchsia_boot_resolver::{self, FuchsiaBootResolver},
-        fuchsia_pkg_resolver,
-        model::{
-            model::{Model, ModelParams},
-            resolver::ResolverRegistry,
-        },
-    },
-    anyhow::{format_err, Context as _, Error},
-    fidl::endpoints::ServiceMarker,
-    fidl_fuchsia_sys::{LoaderMarker, LoaderProxy},
-    fuchsia_component::client,
-    futures::lock::Mutex,
-    log::info,
-    std::{
-        path::PathBuf,
-        sync::{Arc, Weak},
-    },
-};
+use anyhow::{format_err, Error};
 
 /// Command line arguments that control component_manager's behavior. Use [Arguments::from_args()]
 /// or [Arguments::new()] to create an instance.
@@ -105,70 +85,6 @@ impl Arguments {
             std::env::args().next().unwrap_or("component_manager".to_string())
         )
     }
-}
-
-/// Returns a ResolverRegistry configured with the component resolvers available to the current
-/// process.
-pub fn available_resolvers(
-    model_for_resolver: Arc<Mutex<Option<Weak<Model>>>>,
-) -> Result<ResolverRegistry, Error> {
-    let mut resolver_registry = ResolverRegistry::new();
-
-    // Either the fuchsia-boot or fuchsia-pkg resolver may be unavailable in certain contexts.
-    let boot_resolver = FuchsiaBootResolver::new().context("Failed to create boot resolver")?;
-    match boot_resolver {
-        None => info!("No /boot directory in namespace, fuchsia-boot resolver unavailable"),
-        Some(r) => {
-            resolver_registry.register(fuchsia_boot_resolver::SCHEME.to_string(), Box::new(r));
-        }
-    };
-
-    if let Some(loader) = connect_sys_loader()? {
-        resolver_registry.register(
-            fuchsia_pkg_resolver::SCHEME.to_string(),
-            Box::new(fuchsia_pkg_resolver::FuchsiaPkgResolver::new(loader)),
-        );
-    } else {
-        resolver_registry.register(
-            fuchsia_base_pkg_resolver::SCHEME.to_string(),
-            Box::new(fuchsia_base_pkg_resolver::FuchsiaPkgResolver::new(model_for_resolver)),
-        );
-    }
-
-    Ok(resolver_registry)
-}
-
-/// Checks if the appmgr loader service is available through our namespace and connects to it if
-/// so. If not availble, returns Ok(None).
-fn connect_sys_loader() -> Result<Option<LoaderProxy>, Error> {
-    let service_path = PathBuf::from(format!("/svc/{}", LoaderMarker::NAME));
-    if !service_path.exists() {
-        return Ok(None);
-    }
-
-    let loader = client::connect_to_service::<LoaderMarker>()
-        .context("error connecting to system loader")?;
-    return Ok(Some(loader));
-}
-
-/// Creates and sets up a model with standard parameters. This is easier than setting up the
-/// model manually with `Model::new()`.
-pub async fn model_setup(args: &Arguments) -> Result<Arc<Model>, Error> {
-    // The model needs the resolver registry to be created, but the resolver registry needs the
-    // model to be created so that the fuchsia_pkg resolver can route the pkgfs handle. Thus we
-    // create an empty Arc<Mutex<<Option<Model>>>, give it to the resolvers, create the model with
-    // the resolvers, and then lock this mutex and set it to a clone of the model we just created.
-    let model_for_resolver = Arc::new(Mutex::new(None));
-
-    let resolver_registry = available_resolvers(model_for_resolver.clone())?;
-    let params = ModelParams {
-        root_component_url: args.root_component_url.clone(),
-        root_resolver_registry: resolver_registry,
-    };
-    let model = Arc::new(Model::new(params));
-
-    *model_for_resolver.lock().await = Some(Arc::downgrade(&model));
-    Ok(model)
 }
 
 #[cfg(test)]

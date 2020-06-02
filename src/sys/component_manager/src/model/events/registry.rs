@@ -367,7 +367,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn drop_dispatcher_when_event_stream_dropped() {
-        let model = Arc::new(new_test_model("root", Vec::new()));
+        let (model, _, _) = new_test_model("root", Vec::new()).await;
         let event_registry = EventRegistry::new(Arc::downgrade(&model));
 
         assert_eq!(0, event_registry.dispatchers_per_event_type(EventType::Discovered).await);
@@ -417,7 +417,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn event_error_dispatch() {
-        let model = Arc::new(new_test_model("root", Vec::new()));
+        let (model, _, _) = new_test_model("root", Vec::new()).await;
         let event_registry = EventRegistry::new(Arc::downgrade(&model));
 
         assert_eq!(0, event_registry.dispatchers_per_event_type(EventType::Resolved).await);

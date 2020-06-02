@@ -17,6 +17,7 @@ use {
         },
         capability_ready_notifier::CapabilityReadyNotifier,
         framework::RealmCapabilityHost,
+        fuchsia_base_pkg_resolver, fuchsia_boot_resolver, fuchsia_pkg_resolver,
         model::{
             binding::Binder,
             error::ModelError,
@@ -28,7 +29,8 @@ use {
             },
             hooks::EventType,
             hub::Hub,
-            model::{ComponentManagerConfig, Model},
+            model::{ComponentManagerConfig, Model, ModelParams},
+            resolver::{Resolver, ResolverRegistry},
             runner::Runner,
         },
         root_realm_stop_notifier::RootRealmStopNotifier,
@@ -36,25 +38,154 @@ use {
         startup::Arguments,
         work_scheduler::WorkScheduler,
     },
+    anyhow::{Context as _, Error},
     cm_rust::CapabilityName,
-    fidl::endpoints::{create_endpoints, create_proxy, ServerEnd},
+    fidl::endpoints::{create_endpoints, create_proxy, ServerEnd, ServiceMarker},
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
+    fidl_fuchsia_sys::{LoaderMarker, LoaderProxy},
     fuchsia_async as fasync,
-    fuchsia_component::server::*,
+    fuchsia_component::{client, server::*},
     fuchsia_runtime::{take_startup_handle, HandleType},
     fuchsia_zircon::{self as zx, HandleBased},
-    futures::stream::StreamExt,
-    std::{collections::HashMap, sync::Arc},
+    futures::{lock::Mutex, stream::StreamExt},
+    log::info,
+    std::{
+        path::PathBuf,
+        sync::{Arc, Weak},
+    },
 };
 
-/// The built-in environment consists of the set of the root services and framework services.
-/// The available built-in capabilities depends on the  configuration provided in Arguments:
+// TODO(viktard): Merge Arguments, ComponentManagerConfig and root_component_url from
+// ModelParams
+#[derive(Default)]
+pub struct BuiltinEnvironmentBuilder {
+    args: Option<Arguments>,
+    config: Option<ComponentManagerConfig>,
+    runners: Vec<Arc<BuiltinRunner>>,
+    resolvers: ResolverRegistry,
+    // This is used to initialize fuchsia_base_pkg_resolver's Model reference. Resolvers must
+    // be created to construct the Model.
+    model_for_resolver: Option<Arc<Mutex<Option<Weak<Model>>>>>,
+}
+
+impl BuiltinEnvironmentBuilder {
+    pub fn new() -> Self {
+        BuiltinEnvironmentBuilder::default()
+    }
+
+    pub fn set_args(mut self, args: Arguments) -> Self {
+        self.args = Some(args);
+        self
+    }
+
+    pub fn set_config(mut self, config: ComponentManagerConfig) -> Self {
+        self.config = Some(config);
+        self
+    }
+
+    pub fn add_runner(mut self, name: CapabilityName, runner: Arc<dyn Runner>) -> Self {
+        self.runners.push(Arc::new(BuiltinRunner::new(name, runner)));
+        self
+    }
+
+    pub fn add_resolver(
+        mut self,
+        scheme: String,
+        resolver: Box<dyn Resolver + Send + Sync + 'static>,
+    ) -> Self {
+        self.resolvers.register(scheme, resolver);
+        self
+    }
+
+    /// Adds standard resolvers whose dependencies are available in the process's namespace. This
+    /// includes:
+    ///   - A fuchsia-boot resolver if /boot is available.
+    ///   - One of two different fuchsia-pkg resolver implementations, either:
+    ///       - If /svc/fuchsia.sys.Loader is present, then an implementation that proxies to that
+    ///         protocol (which is the v1 resolver equivalent). This is used for tests or other
+    ///         scenarios where component_manager runs as a v1 component.
+    ///       - Otherwise, an implementation that resolves packages from a /pkgfs directory
+    ///         capability if one is exposed from the root component. (See fuchsia_base_pkg_resolver
+    ///         for more details.)
+    ///
+    /// TODO(fxb/46491): fuchsia_base_pkg_resolver should be replaced with a resolver provided by
+    /// the topology.
+    pub fn add_available_resolvers_from_namespace(mut self) -> Result<Self, Error> {
+        // Either the fuchsia-boot or fuchsia-pkg resolver may be unavailable in certain contexts.
+        let boot_resolver = fuchsia_boot_resolver::FuchsiaBootResolver::new()
+            .context("Failed to create boot resolver")?;
+        match boot_resolver {
+            None => info!("No /boot directory in namespace, fuchsia-boot resolver unavailable"),
+            Some(r) => {
+                self.resolvers.register(fuchsia_boot_resolver::SCHEME.to_string(), Box::new(r));
+            }
+        };
+
+        if let Some(loader) = Self::connect_sys_loader()? {
+            self.resolvers.register(
+                fuchsia_pkg_resolver::SCHEME.to_string(),
+                Box::new(fuchsia_pkg_resolver::FuchsiaPkgResolver::new(loader)),
+            );
+        } else {
+            // There's a circular dependency here. The model needs the resolver register to be
+            // created, but fuchsia_base_pkg_resolver needs a reference to model so it can bind to
+            // the pkgfs directory. We create an empty Arc<Mutex<Option<Weak<Model>>>>, give it to
+            // the resolver, create the model with the resolvers, and then use our reference to the
+            // lock to populate the model reference.
+            let model = Arc::new(Mutex::new(None));
+            self.resolvers.register(
+                fuchsia_base_pkg_resolver::SCHEME.to_string(),
+                Box::new(fuchsia_base_pkg_resolver::FuchsiaPkgResolver::new(model.clone())),
+            );
+            self.model_for_resolver = Some(model);
+        }
+        Ok(self)
+    }
+
+    pub async fn build(self) -> Result<BuiltinEnvironment, Error> {
+        let args = self.args.unwrap_or_default();
+        let params = ModelParams {
+            root_component_url: args.root_component_url.clone(),
+            root_resolver_registry: self.resolvers,
+        };
+        let model = Arc::new(Model::new(params));
+
+        // If we previously created a resolver that requires the Model (in
+        // add_available_resolvers_from_namespace), send the just-created model to it.
+        if let Some(model_lock) = self.model_for_resolver {
+            *model_lock.lock().await = Some(Arc::downgrade(&model));
+        }
+
+        Ok(BuiltinEnvironment::new(model, args, self.config.unwrap_or_default(), self.runners)
+            .await?)
+    }
+
+    /// Checks if the appmgr loader service is available through our namespace and connects to it if
+    /// so. If not available, returns Ok(None).
+    fn connect_sys_loader() -> Result<Option<LoaderProxy>, Error> {
+        let service_path = PathBuf::from(format!("/svc/{}", LoaderMarker::NAME));
+        if !service_path.exists() {
+            return Ok(None);
+        }
+
+        let loader = client::connect_to_service::<LoaderMarker>()
+            .context("error connecting to system loader")?;
+        return Ok(Some(loader));
+    }
+}
+
+/// The built-in environment consists of the set of the root services and framework services. Use
+/// BuiltinEnvironmentBuilder to construct one.
+///
+/// The available built-in capabilities depends on the configuration provided in Arguments:
 /// * If [Arguments::use_builtin_process_launcher] is true, a fuchsia.process.Launcher service
 ///   is available.
 pub struct BuiltinEnvironment {
+    pub model: Arc<Model>,
+
     // Framework capabilities.
     pub boot_args: Arc<BootArguments>,
     pub kernel_stats: Option<Arc<KernelStats>>,
@@ -70,7 +201,7 @@ pub struct BuiltinEnvironment {
     pub work_scheduler: Arc<WorkScheduler>,
     pub realm_capability_host: Arc<RealmCapabilityHost>,
     pub hub: Arc<Hub>,
-    pub builtin_runners: HashMap<CapabilityName, Arc<BuiltinRunner>>,
+    pub builtin_runners: Vec<Arc<BuiltinRunner>>,
     pub event_source_factory: Arc<EventSourceFactory>,
     pub stop_notifier: Arc<RootRealmStopNotifier>,
     pub capability_ready_notifier: Arc<CapabilityReadyNotifier>,
@@ -79,12 +210,11 @@ pub struct BuiltinEnvironment {
 }
 
 impl BuiltinEnvironment {
-    // TODO(fsamuel): Consider merging Arguments and ComponentManagerConfig.
-    pub async fn new(
-        args: &Arguments,
-        model: &Arc<Model>,
+    async fn new(
+        model: Arc<Model>,
+        args: Arguments,
         config: ComponentManagerConfig,
-        builtin_runners: &HashMap<CapabilityName, Arc<dyn Runner>>,
+        builtin_runners: Vec<Arc<BuiltinRunner>>,
     ) -> Result<BuiltinEnvironment, ModelError> {
         // Set up ProcessLauncher if available.
         let process_launcher = if args.use_builtin_process_launcher {
@@ -173,7 +303,7 @@ impl BuiltinEnvironment {
 
         // Set up work scheduler.
         let work_scheduler =
-            WorkScheduler::new(Arc::new(Arc::downgrade(model)) as Arc<dyn Binder>).await;
+            WorkScheduler::new(Arc::new(Arc::downgrade(&model)) as Arc<dyn Binder>).await;
         model.root_realm.hooks.install(work_scheduler.hooks()).await;
 
         // Set up the realm service.
@@ -181,23 +311,20 @@ impl BuiltinEnvironment {
         model.root_realm.hooks.install(realm_capability_host.hooks()).await;
 
         // Set up the builtin runners.
-        let mut builtin_runner_hooks = HashMap::new();
-        for (name, runner) in builtin_runners.iter() {
-            let runner = Arc::new(BuiltinRunner::new(name.clone(), runner.clone()));
+        for runner in &builtin_runners {
             model.root_realm.hooks.install(runner.hooks()).await;
-            builtin_runner_hooks.insert(name.clone(), runner);
         }
 
         // Set up the root realm stop notifier.
         let stop_notifier = Arc::new(RootRealmStopNotifier::new());
         model.root_realm.hooks.install(stop_notifier.hooks()).await;
 
-        let hub = Arc::new(Hub::new(model, args.root_component_url.clone())?);
+        let hub = Arc::new(Hub::new(&model, args.root_component_url.clone())?);
         model.root_realm.hooks.install(hub.hooks()).await;
 
         // Set up the capability ready notifier.
         let capability_ready_notifier =
-            Arc::new(CapabilityReadyNotifier::new(Arc::downgrade(model)));
+            Arc::new(CapabilityReadyNotifier::new(Arc::downgrade(&model)));
         model.root_realm.hooks.install(capability_ready_notifier.hooks()).await;
 
         // Set up the event source factory.
@@ -221,6 +348,7 @@ impl BuiltinEnvironment {
         };
 
         Ok(BuiltinEnvironment {
+            model,
             boot_args,
             process_launcher,
             root_job,
@@ -235,7 +363,7 @@ impl BuiltinEnvironment {
             work_scheduler,
             realm_capability_host,
             hub,
-            builtin_runners: builtin_runner_hooks,
+            builtin_runners,
             event_source_factory,
             stop_notifier,
             capability_ready_notifier,

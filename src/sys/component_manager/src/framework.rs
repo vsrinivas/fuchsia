@@ -336,17 +336,15 @@ mod tests {
     use super::*;
     use {
         crate::{
-            builtin_environment::BuiltinEnvironment,
+            builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
             model::{
                 binding::Binder,
                 events::{event::SyncMode, source::EventSource, stream::EventStream},
-                model::ModelParams,
                 moniker::AbsoluteMoniker,
                 realm::BindReason,
-                resolver::ResolverRegistry,
-                testing::{mocks::*, out_dir::OutDir, test_helpers, test_helpers::*, test_hook::*},
+                testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::*},
             },
-            startup,
+            startup::Arguments,
         },
         cm_rust::{
             self, CapabilityName, CapabilityPath, ChildDecl, ExposeDecl, ExposeProtocolDecl,
@@ -384,30 +382,21 @@ mod tests {
             events: Vec<CapabilityName>,
         ) -> Self {
             // Init model.
-            let mut resolver = ResolverRegistry::new();
-            resolver.register("test".to_string(), Box::new(mock_resolver));
-            let mut config = ComponentManagerConfig::default();
-            config.list_children_batch_size = 2;
-            let startup_args = startup::Arguments {
-                use_builtin_process_launcher: false,
-                root_component_url: "".to_string(),
-                debug: false,
-            };
-            let model = Arc::new(Model::new(ModelParams {
-                root_component_url: "test:///root".to_string(),
-                root_resolver_registry: resolver,
-            }));
             let builtin_environment = Arc::new(
-                BuiltinEnvironment::new(
-                    &startup_args,
-                    &model,
-                    config,
-                    &vec![(test_helpers::TEST_RUNNER_NAME.into(), mock_runner as _)]
-                        .into_iter()
-                        .collect(),
-                )
-                .await
-                .expect("failed to set up builtin environment"),
+                BuiltinEnvironmentBuilder::new()
+                    .set_config(ComponentManagerConfig {
+                        list_children_batch_size: 2,
+                        ..Default::default()
+                    })
+                    .set_args(Arguments {
+                        root_component_url: "test:///root".to_string(),
+                        ..Default::default()
+                    })
+                    .add_resolver("test".to_string(), Box::new(mock_resolver))
+                    .add_runner(TEST_RUNNER_NAME.into(), mock_runner)
+                    .build()
+                    .await
+                    .expect("failed to set up builtin environment"),
             );
             let builtin_environment_inner = builtin_environment.clone();
 
@@ -428,6 +417,7 @@ mod tests {
                 Some(EventsData { _event_source: event_source, event_stream })
             };
 
+            let model = builtin_environment.model.clone();
             model.root_realm.hooks.install(hooks).await;
 
             // Look up and bind to realm.

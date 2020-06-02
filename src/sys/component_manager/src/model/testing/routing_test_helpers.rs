@@ -4,20 +4,19 @@
 
 use {
     crate::{
-        builtin_environment::BuiltinEnvironment,
+        builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
         klog,
         model::{
             binding::Binder,
             error::ModelError,
             hooks::HooksRegistration,
-            model::{ComponentManagerConfig, Model, ModelParams},
+            model::Model,
             moniker::{AbsoluteMoniker, PartialMoniker, RelativeMoniker},
             realm::BindReason,
-            resolver::ResolverRegistry,
             runner::Runner,
             testing::{echo_service::*, mocks::*, out_dir::OutDir, test_helpers::*},
         },
-        startup,
+        startup::Arguments,
     },
     cm_rust::*,
     fidl::{
@@ -199,8 +198,7 @@ impl RoutingTest {
         // Ensure that kernel logging has been set up
         klog::KernelLogger::init();
 
-        let mut resolver = ResolverRegistry::new();
-        let runner = Arc::new(MockRunner::new());
+        let mock_runner = Arc::new(MockRunner::new());
 
         let test_dir = TempDir::new_in("/tmp").expect("failed to create temp directory");
 
@@ -229,36 +227,29 @@ impl RoutingTest {
                 )
                 .host_fn(),
             };
-            runner.add_host_fn(&format!("test:///{}_resolved", name), host_fn);
+            mock_runner.add_host_fn(&format!("test:///{}_resolved", name), host_fn);
             mock_resolver.add_component(name, decl.clone());
         }
-        resolver.register("test".to_string(), Box::new(mock_resolver));
+
+        let echo_service = Arc::new(EchoService::new());
 
         // Set up runners for the system, including a default runner "test_runner"
         // backed by mock_runner.
-        let mut builtin_runners = builder.builtin_runners;
-        builtin_runners.insert(TEST_RUNNER_NAME.into(), runner.clone());
-
-        let startup_args = startup::Arguments {
-            use_builtin_process_launcher: false,
-            root_component_url: "".to_string(),
-            debug: false,
-        };
-        let echo_service = Arc::new(EchoService::new());
-
-        let model = Arc::new(Model::new(ModelParams {
+        let args = Arguments {
             root_component_url: format!("test:///{}", builder.root_component),
-            root_resolver_registry: resolver,
-        }));
-        let builtin_environment = BuiltinEnvironment::new(
-            &startup_args,
-            &model,
-            ComponentManagerConfig::default(),
-            &builtin_runners,
-        )
-        .await
-        .expect("builtin environment setup failed");
+            ..Default::default()
+        };
+        let mut env_builder = BuiltinEnvironmentBuilder::new()
+            .set_args(args)
+            .add_resolver("test".to_string(), Box::new(mock_resolver))
+            .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone());
+        for (name, runner) in builder.builtin_runners {
+            env_builder = env_builder.add_runner(name, runner);
+        }
+        let builtin_environment =
+            env_builder.build().await.expect("builtin environment setup failed");
 
+        let model = builtin_environment.model.clone();
         model.root_realm.hooks.install(builder.additional_hooks).await;
         model.root_realm.hooks.install(echo_service.hooks()).await;
 
@@ -267,7 +258,7 @@ impl RoutingTest {
             model,
             builtin_environment,
             _echo_service: echo_service,
-            mock_runner: runner,
+            mock_runner,
             _test_dir: test_dir,
             test_dir_proxy,
             root_component_name: builder.root_component,

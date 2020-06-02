@@ -8,15 +8,10 @@
 use {
     anyhow::{Context as _, Error},
     component_manager_lib::{
-        builtin_environment::BuiltinEnvironment,
+        builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
         elf_runner::{ElfRunner, ProcessLauncherConnector},
         klog,
-        model::{
-            binding::Binder,
-            model::{ComponentManagerConfig, Model},
-            moniker::AbsoluteMoniker,
-            realm::BindReason,
-        },
+        model::{binding::Binder, moniker::AbsoluteMoniker, realm::BindReason},
         startup,
     },
     fuchsia_async as fasync,
@@ -78,7 +73,7 @@ fn main() -> Result<(), Error> {
 
     let fut = async {
         match run_root(args).await {
-            Ok((_model, builtin_environment)) => {
+            Ok(builtin_environment) => {
                 builtin_environment.wait_for_root_realm_stop().await;
             }
             Err(err) => {
@@ -91,28 +86,27 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-async fn run_root(args: startup::Arguments) -> Result<(Arc<Model>, BuiltinEnvironment), Error> {
-    let model = startup::model_setup(&args).await.context("failed to set up model")?;
-
+async fn run_root(args: startup::Arguments) -> Result<BuiltinEnvironment, Error> {
     // Create an ELF runner for the root component.
     let launcher_connector = ProcessLauncherConnector::new(&args);
     let runner = Arc::new(ElfRunner::new(launcher_connector));
 
-    let builtin_environment = BuiltinEnvironment::new(
-        &args,
-        &model,
-        ComponentManagerConfig::default(),
-        &vec![("elf".into(), runner as _)].into_iter().collect(),
-    )
-    .await?;
+    let root_url = args.root_component_url.clone();
+    let builtin_environment = BuiltinEnvironmentBuilder::new()
+        .set_args(args)
+        .add_runner("elf".into(), runner)
+        .add_available_resolvers_from_namespace()?
+        .build()
+        .await?;
     builtin_environment.bind_service_fs_to_out().await?;
 
     let root_moniker = AbsoluteMoniker::root();
-    model
+    builtin_environment
+        .model
         .bind(&root_moniker, &BindReason::Root)
         .await
         .map_err(|e| Error::from(e))
-        .context(format!("failed to bind to root component {}", args.root_component_url))?;
+        .context(format!("failed to bind to root component {}", root_url))?;
 
-    Ok((model, builtin_environment))
+    Ok(builtin_environment)
 }

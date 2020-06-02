@@ -4,14 +4,13 @@
 
 use {
     crate::{
-        builtin_environment::BuiltinEnvironment,
+        builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
         klog,
         model::{
             hooks::HooksRegistration,
-            model::{ComponentManagerConfig, Model, ModelParams},
+            model::Model,
             moniker::{AbsoluteMoniker, PartialMoniker},
             realm::Realm,
-            resolver::ResolverRegistry,
             testing::{
                 mocks::{ControlMessage, MockResolver, MockRunner},
                 test_hook::TestHook,
@@ -518,22 +517,30 @@ pub async fn wait_for_runner_request(
     start_info
 }
 
-pub fn new_test_model(
+pub async fn new_test_model(
     root_component: &'static str,
     components: Vec<(&'static str, ComponentDecl)>,
-) -> Model {
-    let mut resolver = ResolverRegistry::new();
-
+) -> (Arc<Model>, Arc<BuiltinEnvironment>, Arc<MockRunner>) {
+    let mock_runner = Arc::new(MockRunner::new());
     let mut mock_resolver = MockResolver::new();
     for (name, decl) in &components {
         mock_resolver.add_component(name, decl.clone());
     }
-    resolver.register("test".to_string(), Box::new(mock_resolver));
 
-    Model::new(ModelParams {
+    let args = Arguments {
         root_component_url: format!("test:///{}", root_component),
-        root_resolver_registry: resolver,
-    })
+        ..Default::default()
+    };
+    let builtin_environment = Arc::new(
+        BuiltinEnvironmentBuilder::new()
+            .set_args(args)
+            .add_resolver("test".to_string(), Box::new(mock_resolver))
+            .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone())
+            .build()
+            .await
+            .expect("builtin environment setup failed"),
+    );
+    (builtin_environment.model.clone(), builtin_environment, mock_runner)
 }
 
 /// A test harness for tests that wish to register or verify actions.
@@ -563,29 +570,13 @@ impl ActionsTest {
         // Ensure that kernel logging has been set up
         let _ = klog::KernelLogger::init();
 
-        let runner = Arc::new(MockRunner::new());
-        let model = Arc::new(new_test_model(root_component, components));
-
-        // TODO(fsamuel): Don't install the Hub's hooks because the Hub expects components
-        // to start and stop in a certain lifecycle ordering. In particular, some unit
-        // tests will destroy component instances before binding to their parents.
-        let args = Arguments { use_builtin_process_launcher: false, ..Default::default() };
-        let builtin_environment = Arc::new(
-            BuiltinEnvironment::new(
-                &args,
-                &model,
-                ComponentManagerConfig::default(),
-                &vec![(TEST_RUNNER_NAME.into(), runner.clone() as _)].into_iter().collect(),
-            )
-            .await
-            .expect("failed to set up builtin environment"),
-        );
-        let builtin_environment_inner = builtin_environment.clone();
+        let (model, builtin_environment, runner) = new_test_model(root_component, components).await;
         let test_hook = Arc::new(TestHook::new());
         model.root_realm.hooks.install(test_hook.hooks()).await;
         model.root_realm.hooks.install(extra_hooks).await;
 
         // Host framework service for root realm, if requested.
+        let builtin_environment_inner = builtin_environment.clone();
         let realm_proxy = if let Some(realm_moniker) = realm_moniker {
             let (realm_proxy, stream) =
                 endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
