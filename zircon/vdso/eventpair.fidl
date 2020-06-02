@@ -7,5 +7,5 @@ library zx;
 [Transport = "Syscall"]
 protocol eventpair {
     /// Create an event pair.
-    eventpair_create(uint32 options) -> (status status, handle<event> out0, handle<event> out1);
+    eventpair_create(uint32 options) -> (status status, handle:EVENT out0, handle:EVENT out1);
 };

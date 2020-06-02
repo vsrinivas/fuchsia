@@ -64,29 +64,29 @@ struct PciInitArg {
 [Transport = "Syscall"]
 protocol pci {
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    pci_get_nth_device(handle<resource> handle, uint32 index)
+    pci_get_nth_device(handle:RESOURCE handle, uint32 index)
         -> (status status, PcieDeviceInfo out_info, handle out_handle);
 
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE.
-    pci_enable_bus_master(handle<pcidevice> handle, bool enable) -> (status status);
+    pci_enable_bus_master(handle:PCI_DEVICE handle, bool enable) -> (status status);
 
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE.
-    pci_reset_device(handle<pcidevice> handle) -> (status status);
+    pci_reset_device(handle:PCI_DEVICE handle) -> (status status);
 
     // TODO(scottmg): In banjo/abigen out_val wasn't optional, but was an input
     // OUT, so didn't get the __NONNULL() tag, so we match by making it optional
     // here. I think this is probably not the intention, and it should be
     // non-optional.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
-    pci_config_read(handle<pcidevice> handle, uint16 offset, usize width)
+    pci_config_read(handle:PCI_DEVICE handle, uint16 offset, usize width)
         -> (status status, optional_uint32 out_val);
 
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
-    pci_config_write(handle<pcidevice> handle, uint16 offset, usize width, uint32 val)
+    pci_config_write(handle:PCI_DEVICE handle, uint16 offset, usize width, uint32 val)
         -> (status status);
 
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    pci_cfg_pio_rw(handle<resource> handle,
+    pci_cfg_pio_rw(handle:RESOURCE handle,
                    uint8 bus,
                    uint8 dev,
                    uint8 func,
@@ -100,27 +100,27 @@ protocol pci {
     // TODO(scottmg): In banjo/abigen out_bar wasn't optional, but was an input
     // OUT, so has no __NONNULL(). I think this is probably not the intention.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
-    pci_get_bar(handle<pcidevice> handle, uint32 bar_num)
+    pci_get_bar(handle:PCI_DEVICE handle, uint32 bar_num)
         -> (status status, optional_PciBar out_bar, handle out_handle);
 
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ.
-    pci_map_interrupt(handle<pcidevice> handle, int32 which_irq)
+    pci_map_interrupt(handle:PCI_DEVICE handle, int32 which_irq)
         -> (status status, handle out_handle);
 
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ.
-    pci_query_irq_mode(handle<pcidevice> handle, uint32 mode)
+    pci_query_irq_mode(handle:PCI_DEVICE handle, uint32 mode)
         -> (status status, uint32 out_max_irqs);
 
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE.
-    pci_set_irq_mode(handle<pcidevice> handle, uint32 mode, uint32 requested_irq_count)
+    pci_set_irq_mode(handle:PCI_DEVICE handle, uint32 mode, uint32 requested_irq_count)
         -> (status status);
 
     // Note that init_buf isn't a vector of PciInitArg, it's a variable sized
     // structure starting with a zx_pci_init_arg_t.
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    pci_init(handle<resource> handle, PciInitArg init_buf, uint32 len) -> (status status);
+    pci_init(handle:RESOURCE handle, PciInitArg init_buf, uint32 len) -> (status status);
 
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    pci_add_subtract_io_range(handle<resource> handle, bool mmio, uint64 base, uint64 len, bool add)
+    pci_add_subtract_io_range(handle:RESOURCE handle, bool mmio, uint64 base, uint64 len, bool add)
         -> (status status);
 };

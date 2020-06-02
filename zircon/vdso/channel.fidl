@@ -45,7 +45,7 @@ protocol channel {
     /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ.
     [ArgReorder = "handle, options, bytes, handles, num_bytes, num_handles, actual_bytes, actual_handles",
     HandleUnchecked]
-    channel_read(handle<channel> handle,
+    channel_read(handle:CHANNEL handle,
                  uint32 options)
         -> (status status,
             vector_void_u32size bytes,
@@ -56,7 +56,7 @@ protocol channel {
     /// Read a message from a channel.
     /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ.
     [ArgReorder = "handle, options, bytes, handles, num_bytes, num_handles, actual_bytes, actual_handles"]
-    channel_read_etc(handle<channel> handle,
+    channel_read_etc(handle:CHANNEL handle,
                      uint32 options)
         -> (status status,
             vector_void_u32size bytes,
@@ -67,7 +67,7 @@ protocol channel {
     /// Write a message to a channel.
     /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_WRITE.
     /// Rights: Every entry of handles must have ZX_RIGHT_TRANSFER.
-    channel_write(handle<channel> handle,
+    channel_write(handle:CHANNEL handle,
                   uint32 options,
                   vector_void_u32size bytes,
                   vector_handle_u32size handles)
@@ -76,7 +76,7 @@ protocol channel {
     /// Write a message to a channel.
     /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_WRITE.
     /// Rights: Every entry of handles must have ZX_RIGHT_TRANSFER.
-    channel_write_etc(handle<channel> handle,
+    channel_write_etc(handle:CHANNEL handle,
                       uint32 options,
                       vector_void_u32size bytes,
                       mutable_vector_HandleDisposition_u32size handles)
@@ -85,7 +85,7 @@ protocol channel {
     /// Rights: handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
     /// Rights: All wr_handles of args must have ZX_RIGHT_TRANSFER.
     [internal]
-    channel_call_noretry(handle<channel> handle,
+    channel_call_noretry(handle:CHANNEL handle,
                          uint32 options,
                          time deadline,
                          ChannelCallArgs args)

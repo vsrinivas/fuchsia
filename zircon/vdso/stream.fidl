@@ -13,31 +13,31 @@ enum stream_seek_origin : uint32 {
 [Transport = "Syscall"]
 protocol stream {
     /// Create a stream from a VMO.
-    stream_create(uint32 options, handle<vmo> vmo, off seek)
-        -> (status status, handle<stream> out_stream);
+    stream_create(uint32 options, handle:VMO vmo, off seek)
+        -> (status status, handle:STREAM out_stream);
 
     /// Write data to a stream at the current seek offset.
     /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_WRITE.
-    stream_writev(handle<stream> handle, uint32 options, vector_iovec vector)
+    stream_writev(handle:STREAM handle, uint32 options, vector_iovec vector)
         -> (status status, optional_usize actual);
 
     /// Write data to a stream at the given offset.
     /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_WRITE.
-    stream_writev_at(handle<stream> handle, uint32 options, off offset, vector_iovec vector)
+    stream_writev_at(handle:STREAM handle, uint32 options, off offset, vector_iovec vector)
         -> (status status, optional_usize actual);
 
     /// Read data from a stream at the current seek offset.
     /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ.
-    stream_readv(handle<stream> handle, uint32 options)
+    stream_readv(handle:STREAM handle, uint32 options)
         -> (status status, vector_iovec vector, optional_usize actual);
 
     /// Read data from a stream at the given offset.
     /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ.
-    stream_readv_at(handle<stream> handle, uint32 options, off offset)
+    stream_readv_at(handle:STREAM handle, uint32 options, off offset)
         -> (status status, vector_iovec vector, optional_usize actual);
 
     /// Modify the seek offset.
     /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ or have ZX_RIGHT_WRITE.
-    stream_seek(handle<stream> handle, stream_seek_origin whence, int64 offset)
+    stream_seek(handle:STREAM handle, stream_seek_origin whence, int64 offset)
         -> (status status, optional_off out_seek);
 };

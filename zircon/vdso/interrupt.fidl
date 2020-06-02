@@ -8,35 +8,35 @@ library zx;
 protocol interrupt {
     /// Create an interrupt object.
     /// Rights: src_obj must have resource kind ZX_RSRC_KIND_IRQ.
-    interrupt_create(handle<resource> src_obj, uint32 src_num, uint32 options)
-        -> (status status, handle<interrupt> out_handle);
+    interrupt_create(handle:RESOURCE src_obj, uint32 src_num, uint32 options)
+        -> (status status, handle:INTERRUPT out_handle);
 
     /// Bind an interrupt object to a port.
     /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_READ.
     /// Rights: port_handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
-    interrupt_bind(handle<interrupt> handle, handle<port> port_handle, uint64 key, uint32 options)
+    interrupt_bind(handle:INTERRUPT handle, handle:PORT port_handle, uint64 key, uint32 options)
         -> (status status);
 
     /// Wait for an interrupt.
     /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_WAIT.
     [blocking]
-    interrupt_wait(handle<interrupt> handle) -> (status status, optional_time out_timestamp);
+    interrupt_wait(handle:INTERRUPT handle) -> (status status, optional_time out_timestamp);
 
     // TODO(ZX-2967): No DESTROY rights here.
     /// Destroys an interrupt object.
-    interrupt_destroy(handle<interrupt> handle) -> (status status);
+    interrupt_destroy(handle:INTERRUPT handle) -> (status status);
 
     /// Acknowledge an interrupt and re-arm it.
     /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_WRITE.
-    interrupt_ack(handle<interrupt> handle) -> (status status);
+    interrupt_ack(handle:INTERRUPT handle) -> (status status);
 
     /// Triggers a virtual interrupt object.
     /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_SIGNAL.
-    interrupt_trigger(handle<interrupt> handle, uint32 options, time timestamp) -> (status status);
+    interrupt_trigger(handle:INTERRUPT handle, uint32 options, time timestamp) -> (status status);
 
     /// Bind an interrupt object to a VCPU.
     /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_READ.
     /// Rights: vcpu must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_WRITE.
-    interrupt_bind_vcpu(handle<interrupt> handle, handle<vcpu> vcpu, uint32 options)
+    interrupt_bind_vcpu(handle:INTERRUPT handle, handle:VCPU vcpu, uint32 options)
         -> (status status);
 };

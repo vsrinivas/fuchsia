@@ -28,7 +28,7 @@ protocol object {
     /// Subscribe for signals on an object.
     /// Rights: handle must have ZX_RIGHT_WAIT.
     /// Rights: port must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
-    object_wait_async(handle handle, handle<port> port, uint64 key, signals signals, uint32 options)
+    object_wait_async(handle handle, handle:PORT port, uint64 key, signals signals, uint32 options)
         -> (status status);
 
     /// Signal an object.
@@ -92,6 +92,6 @@ protocol object {
     /// Apply a scheduling profile to a thread.
     /// Rights: handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_MANAGE_THREAD.
     /// Rights: profile must be of type ZX_OBJ_TYPE_PROFILE and have ZX_RIGHT_APPLY_PROFILE.
-    object_set_profile(handle<thread> handle, handle<profile> profile, uint32 options)
+    object_set_profile(handle:THREAD handle, handle:PROFILE profile, uint32 options)
         -> (status status);
 };

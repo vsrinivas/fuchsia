@@ -41,5 +41,5 @@ protocol syscall {
     syscall_test_wrapper(int32 a, int32 b, int32 c) -> (status status);
 
     [testonly]
-    syscall_test_handle_create(status return_value) -> (status status, handle<event> out);
+    syscall_test_handle_create(status return_value) -> (status status, handle:EVENT out);
 };

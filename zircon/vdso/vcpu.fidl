@@ -8,23 +8,24 @@ library zx;
 protocol vcpu {
     /// Create a VCPU.
     /// Rights: guest must be of type ZX_OBJ_TYPE_GUEST and have ZX_RIGHT_MANAGE_PROCESS.
-    vcpu_create(handle<guest> guest, uint32 options, vaddr entry) -> (status status, handle<vcpu> out);
+    vcpu_create(handle:GUEST guest, uint32 options, vaddr entry)
+        -> (status status, handle:VCPU out);
 
     // See port.fidl for definition of PortPacket.
     /// Resume execution of a VCPU.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_EXECUTE.
     [blocking]
-    vcpu_resume(handle<vcpu> handle) -> (status status, PortPacket packet);
+    vcpu_resume(handle:VCPU handle) -> (status status, PortPacket packet);
 
     /// Raise an interrupt on a VCPU.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_SIGNAL.
-    vcpu_interrupt(handle<vcpu> handle, uint32 vector) -> (status status);
+    vcpu_interrupt(handle:VCPU handle, uint32 vector) -> (status status);
 
     /// Read the state of a VCPU.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_READ.
-    vcpu_read_state(handle<vcpu> handle, uint32 kind) -> (status status, vector_void buffer);
+    vcpu_read_state(handle:VCPU handle, uint32 kind) -> (status status, vector_void buffer);
 
     /// Write the state of a VCPU.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_WRITE.
-    vcpu_write_state(handle<vcpu> handle, uint32 kind, vector_void buffer) -> (status status);
+    vcpu_write_state(handle:VCPU handle, uint32 kind, vector_void buffer) -> (status status);
 };

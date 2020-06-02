@@ -7,8 +7,8 @@ library zx;
 [Transport = "Syscall"]
 protocol ioports {
     /// Rights: resource must have resource kind ZX_RSRC_KIND_IOPORT.
-    ioports_request(handle<resource> resource, uint16 io_addr, uint32 len) -> (status status);
+    ioports_request(handle:RESOURCE resource, uint16 io_addr, uint32 len) -> (status status);
 
     /// Rights: resource must have resource kind ZX_RSRC_KIND_IOPORT.
-    ioports_release(handle<resource> resource, uint16 io_addr, uint32 len) -> (status status);
+    ioports_release(handle:RESOURCE resource, uint16 io_addr, uint32 len) -> (status status);
 };

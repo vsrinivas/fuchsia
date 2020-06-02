@@ -13,25 +13,25 @@ protocol process {
     // TODO(ZX-2967): job with ZX_RIGHT_WRITE is also accepted.
     /// Create a new process.
     /// Rights: job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_PROCESS.
-    process_create(handle<job> job, string name, uint32 options)
-        -> (status status, handle<process> proc_handle, handle<vmar> vmar_handle);
+    process_create(handle:JOB job, string name, uint32 options)
+        -> (status status, handle:PROCESS proc_handle, handle:VMAR vmar_handle);
 
     /// Start execution on a process.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
     /// Rights: thread must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_WRITE.
     /// Rights: arg1 must have ZX_RIGHT_TRANSFER.
-    process_start(handle<process> handle, handle<thread> thread,
+    process_start(handle:PROCESS handle, handle:THREAD thread,
                   vaddr entry, vaddr stack,
                   handle arg1, uintptr arg2)
         -> (status status);
 
     /// Read from the given process's address space.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
-    process_read_memory(handle<process> handle, vaddr vaddr)
+    process_read_memory(handle:PROCESS handle, vaddr vaddr)
         -> (status status, vector_void buffer, usize actual);
 
     /// Write into the given process's address space.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
-    process_write_memory(handle<process> handle, vaddr vaddr, vector_void buffer)
+    process_write_memory(handle:PROCESS handle, vaddr vaddr, vector_void buffer)
         -> (status status, usize actual);
 };

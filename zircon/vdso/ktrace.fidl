@@ -12,14 +12,14 @@ protocol ktrace {
     //   (handle, data, data_size, offset).
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
     [ArgReorder = "handle, data, offset, data_size, actual"]
-    ktrace_read(handle<resource> handle, uint32 offset)
+    ktrace_read(handle:RESOURCE handle, uint32 offset)
         -> (status status, vector_void data, usize actual);
 
     // TODO(scottmg): syscalls.banjo had the length of |ptr| being |action|?
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    ktrace_control(handle<resource> handle, uint32 action, uint32 options, voidptr ptr)
+    ktrace_control(handle:RESOURCE handle, uint32 action, uint32 options, voidptr ptr)
         -> (status status);
 
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    ktrace_write(handle<resource> handle, uint32 id, uint32 arg0, uint32 arg1) -> (status status);
+    ktrace_write(handle:RESOURCE handle, uint32 id, uint32 arg0, uint32 arg1) -> (status status);
 };

@@ -7,7 +7,7 @@ library zx;
 [Transport = "Syscall"]
 protocol mtrace {
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    mtrace_control(handle<resource> handle,
+    mtrace_control(handle:RESOURCE handle,
                    uint32 kind,
                    uint32 action,
                    uint32 options,

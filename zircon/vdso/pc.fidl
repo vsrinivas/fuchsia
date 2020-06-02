@@ -7,5 +7,5 @@ library zx;
 [Transport = "Syscall"]
 protocol pc {
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    pc_firmware_tables(handle<resource> handle) -> (status status, paddr acpi_rsdp, paddr smbios);
+    pc_firmware_tables(handle:RESOURCE handle) -> (status status, paddr acpi_rsdp, paddr smbios);
 };

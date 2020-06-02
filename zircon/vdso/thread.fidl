@@ -12,19 +12,19 @@ protocol thread {
 
     /// Create a thread.
     /// Rights: process must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_MANAGE_THREAD.
-    thread_create(handle<process> process, string name, uint32 options)
-        -> (status status, handle<thread> out);
+    thread_create(handle:PROCESS process, string name, uint32 options)
+        -> (status status, handle:THREAD out);
 
     /// Start execution on a thread.
     /// Rights: handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_MANAGE_THREAD.
-    thread_start(handle<thread> handle, vaddr thread_entry, vaddr stack, uintptr arg1, uintptr arg2)
+    thread_start(handle:THREAD handle, vaddr thread_entry, vaddr stack, uintptr arg1, uintptr arg2)
         -> (status status);
 
     /// Read one aspect of thread state.
     /// Rights: handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_READ.
-    thread_read_state(handle<thread> handle, uint32 kind) -> (status status, vector_void buffer);
+    thread_read_state(handle:THREAD handle, uint32 kind) -> (status status, vector_void buffer);
 
     /// Write one aspect of thread state.
     /// Rights: handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_WRITE.
-    thread_write_state(handle<thread> handle, uint32 kind, vector_void buffer) -> (status status);
+    thread_write_state(handle:THREAD handle, uint32 kind, vector_void buffer) -> (status status);
 };

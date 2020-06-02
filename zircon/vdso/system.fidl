@@ -45,20 +45,20 @@ protocol system {
 
     /// Retrieve a handle to a system event.
     /// Rights: None.
-    system_get_event(handle<job> root_job, uint32 kind) -> (status status, handle<event> event);
+    system_get_event(handle:JOB root_job, uint32 kind) -> (status status, handle:EVENT event);
 
     /// Soft reboot the system with a new kernel and bootimage.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
     /// Rights: kernel_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
     /// Rights: bootimage_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
-    system_mexec(handle<resource> resource, handle<vmo> kernel_vmo, handle<vmo> bootimage_vmo)
+    system_mexec(handle:RESOURCE resource, handle:VMO kernel_vmo, handle:VMO bootimage_vmo)
         -> (status status);
 
     /// Return a ZBI containing ZBI entries necessary to boot this system.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
-    system_mexec_payload_get(handle<resource> resource) -> (status status, vector_void buffer);
+    system_mexec_payload_get(handle:RESOURCE resource) -> (status status, vector_void buffer);
 
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
-    system_powerctl(handle<resource> resource, uint32 cmd, SystemPowerctlArg arg)
+    system_powerctl(handle:RESOURCE resource, uint32 cmd, SystemPowerctlArg arg)
         -> (status status);
 };

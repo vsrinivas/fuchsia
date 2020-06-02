@@ -7,7 +7,7 @@ library zx;
 [Transport = "Syscall"]
 protocol vmo {
     /// Create a VM object.
-    vmo_create(uint64 size, uint32 options) -> (status status, handle<vmo> out);
+    vmo_create(uint64 size, uint32 options) -> (status status, handle:VMO out);
 
     // TODO(scottmg): This syscall is very weird, it's currently:
     //    (handle, buffer, offset, buffer_size)
@@ -20,22 +20,22 @@ protocol vmo {
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
     [blocking,
     ArgReorder = "handle, buffer, offset, buffer_size"]
-    vmo_read(handle<vmo> handle, uint64 offset) -> (status status, vector_void buffer);
+    vmo_read(handle:VMO handle, uint64 offset) -> (status status, vector_void buffer);
 
     // TODO(scottmg): Same problem as Read() above.
     /// Write bytes to the VMO.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
     [blocking,
     ArgReorder = "handle, buffer, offset, buffer_size"]
-    vmo_write(handle<vmo> handle, vector_void buffer, uint64 offset) -> (status status);
+    vmo_write(handle:VMO handle, vector_void buffer, uint64 offset) -> (status status);
 
     // TODO(ZX-2967): No rights required?
     /// Read the current size of a VMO object.
-    vmo_get_size(handle<vmo> handle) -> (status status, uint64 size);
+    vmo_get_size(handle:VMO handle) -> (status status, uint64 size);
 
     /// Resize a VMO object.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
-    vmo_set_size(handle<vmo> handle, uint64 size) -> (status status);
+    vmo_set_size(handle:VMO handle, uint64 size) -> (status status);
 
     /// Perform an operation on a range of a VMO.
     /// Rights: If op is ZX_VMO_OP_COMMIT, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
@@ -45,7 +45,7 @@ protocol vmo {
     /// Rights: If op is ZX_VMO_OP_CACHE_CLEAN, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
     /// Rights: If op is ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
     [blocking]
-    vmo_op_range(handle<vmo> handle,
+    vmo_op_range(handle:VMO handle,
                  uint32 op,
                  uint64 offset,
                  uint64 size,
@@ -54,27 +54,27 @@ protocol vmo {
 
     /// Create a child of a VM Object.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_READ.
-    vmo_create_child(handle<vmo> handle, uint32 options, uint64 offset, uint64 size)
-        -> (status status, handle<vmo> out);
+    vmo_create_child(handle:VMO handle, uint32 options, uint64 offset, uint64 size)
+        -> (status status, handle:VMO out);
 
     /// Set the caching policy for pages held by a VMO.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_MAP.
-    vmo_set_cache_policy(handle<vmo> handle, uint32 cache_policy) -> (status status);
+    vmo_set_cache_policy(handle:VMO handle, uint32 cache_policy) -> (status status);
 
     // TODO(ZX-2967): handle: No rights required, ZX_RIGHT_EXECUTE added to dup out
     // TODO(ZX-2967): vmex == ZX_HANDLE_INVALID also accepted.
     /// Add execute rights to a VMO.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMO.
     /// Rights: vmex must have resource kind ZX_RSRC_KIND_VMEX.
-    vmo_replace_as_executable([Release] handle<vmo> handle, handle<resource> vmex)
-        -> (status status, handle<vmo> out);
+    vmo_replace_as_executable([Release] handle:VMO handle, handle:RESOURCE vmex)
+        -> (status status, handle:VMO out);
 
     /// Rights: bti must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_MAP.
-    vmo_create_contiguous(handle<bti> bti, usize size, uint32 alignment_log2)
-        -> (status status, handle<vmo> out);
+    vmo_create_contiguous(handle:BTI bti, usize size, uint32 alignment_log2)
+        -> (status status, handle:VMO out);
 
     /// Create a VM object referring to a specific contiguous range of physical memory.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_MMIO.
-    vmo_create_physical(handle<resource> resource, paddr paddr, usize size)
-        -> (status status, handle<vmo> out);
+    vmo_create_physical(handle:RESOURCE resource, paddr paddr, usize size)
+        -> (status status, handle:VMO out);
 };

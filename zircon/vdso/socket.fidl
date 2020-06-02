@@ -11,15 +11,15 @@ protocol socket {
 
     /// Write data to a socket.
     /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.
-    socket_write(handle<socket> handle, uint32 options, vector_void buffer)
+    socket_write(handle:SOCKET handle, uint32 options, vector_void buffer)
         -> (status status, optional_usize actual);
 
     /// Read data from a socket.
     /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_READ.
-    socket_read(handle<socket> handle, uint32 options)
+    socket_read(handle:SOCKET handle, uint32 options)
         -> (status status, vector_void buffer, optional_usize actual);
 
     /// Prevent reading or writing.
     /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.
-    socket_shutdown(handle<socket> handle, uint32 options) -> (status status);
+    socket_shutdown(handle:SOCKET handle, uint32 options) -> (status status);
 };

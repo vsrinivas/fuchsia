@@ -8,15 +8,15 @@ library zx;
 protocol fifo {
     /// Create a fifo.
     fifo_create(usize elem_count, usize elem_size, uint32 options)
-        -> (status status, handle<fifo> out0, handle<fifo> out1);
+        -> (status status, handle:FIFO out0, handle:FIFO out1);
 
     /// Read data from a fifo.
     /// Rights: handle must be of type ZX_OBJ_TYPE_FIFO and have ZX_RIGHT_READ.
-    fifo_read(handle<fifo> handle, usize elem_size)
+    fifo_read(handle:FIFO handle, usize elem_size)
         -> (status status, vector_void data, optional_usize actual_count);
 
     /// Write data to a fifo.
     /// Rights: handle must be of type ZX_OBJ_TYPE_FIFO and have ZX_RIGHT_WRITE.
-    fifo_write(handle<fifo> handle, usize elem_size, const_voidptr data, usize count)
+    fifo_write(handle:FIFO handle, usize elem_size, const_voidptr data, usize count)
         -> (status status, optional_usize actual_count);
 };

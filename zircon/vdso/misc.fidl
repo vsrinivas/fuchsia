@@ -30,7 +30,7 @@ protocol misc {
 
     /// Unmap memory, close handle, exit.
     [vdsocall]
-    vmar_unmap_handle_close_thread_exit(handle<vmar> vmar_handle,
+    vmar_unmap_handle_close_thread_exit(handle:VMAR vmar_handle,
                                         vaddr addr, usize size,
                                         [Release] handle close_handle)
         -> (status status);

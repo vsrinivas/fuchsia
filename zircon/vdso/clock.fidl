@@ -20,7 +20,7 @@ protocol clock {
     clock_get_monotonic() -> (time time);
 
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    clock_adjust(handle<resource> handle, Clock clock_id, int64 offset) -> (status status);
+    clock_adjust(handle:RESOURCE handle, Clock clock_id, int64 offset) -> (status status);
 
     // Read clock monotonic, but demand that the read be performed using a
     // syscall, instead of a vdso call.
@@ -30,7 +30,7 @@ protocol clock {
     [internal]
     clock_get_monotonic_via_kernel() -> (time time);
 
-    // TODO: handle<clock> for all of these.
+    // TODO: handle:CLOCK for all of these.
 
     /// Create a new clock object.
     /// Rights: None.

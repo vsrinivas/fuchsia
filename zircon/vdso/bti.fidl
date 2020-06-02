@@ -9,7 +9,7 @@ protocol bti {
     /// Create a new bus transaction initiator.
     /// Rights: iommu must be of type ZX_OBJ_TYPE_IOMMU and have ZX_RIGHT_NONE.
     // TODO(ZX-2967): This is an unusual rights spec.
-    bti_create(handle<iommu> iommu, uint32 options, uint64 bti_id) -> (status status, handle<bti> out);
+    bti_create(handle:IOMMU iommu, uint32 options, uint64 bti_id) -> (status status, handle:BTI out);
 
     /// Pin pages and grant devices access to them.
     /// Rights: handle must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_MAP.
@@ -18,14 +18,14 @@ protocol bti {
     /// Rights: If options & ZX_BTI_PERM_WRITE, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
     /// Rights: If options & ZX_BTI_PERM_EXECUTE, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
     // READ is intentional in the EXECUTE condition.
-    bti_pin(handle<bti> handle,
+    bti_pin(handle:BTI handle,
             uint32 options,
-            handle<vmo> vmo,
+            handle:VMO vmo,
             uint64 offset,
             uint64 size)
-        -> (status status, vector_paddr addrs, handle<pmt> pmt);
+        -> (status status, vector_paddr addrs, handle:PMT pmt);
 
     /// Releases all quarantined PMTs.
     /// Rights: handle must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_WRITE.
-    bti_release_quarantine(handle<bti> handle) -> (status status);
+    bti_release_quarantine(handle:BTI handle) -> (status status);
 };

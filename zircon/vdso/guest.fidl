@@ -8,17 +8,17 @@ library zx;
 protocol guest {
     /// Create a guest.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_HYPERVISOR.
-    guest_create(handle<resource> resource, uint32 options)
-        -> (status status, handle<guest> guest_handle, handle<vmar> vmar_handle);
+    guest_create(handle:RESOURCE resource, uint32 options)
+        -> (status status, handle:GUEST guest_handle, handle:VMAR vmar_handle);
 
     /// Sets a trap within a guest.
     /// Rights: handle must be of type ZX_OBJ_TYPE_GUEST and have ZX_RIGHT_WRITE.
     /// Rights: port_handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
-    guest_set_trap(handle<guest> handle,
+    guest_set_trap(handle:GUEST handle,
                    uint32 kind,
                    vaddr addr,
                    usize size,
-                   handle<port> port_handle,
+                   handle:PORT port_handle,
                    uint64 key)
         -> (status status);
 };

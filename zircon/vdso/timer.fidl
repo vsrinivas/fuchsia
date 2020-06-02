@@ -7,13 +7,13 @@ library zx;
 [Transport = "Syscall"]
 protocol timer {
     /// Create a timer.
-    timer_create(uint32 options, Clock clock_id) -> (status status, handle<timer> out);
+    timer_create(uint32 options, Clock clock_id) -> (status status, handle:TIMER out);
 
     /// Start a timer.
     /// Rights: handle must be of type ZX_OBJ_TYPE_TIMER and have ZX_RIGHT_WRITE.
-    timer_set(handle<timer> handle, time deadline, duration slack) -> (status status);
+    timer_set(handle:TIMER handle, time deadline, duration slack) -> (status status);
 
     /// Cancel a timer.
     /// Rights: handle must be of type ZX_OBJ_TYPE_TIMER and have ZX_RIGHT_WRITE.
-    timer_cancel(handle<timer> handle) -> (status status);
+    timer_cancel(handle:TIMER handle) -> (status status);
 };

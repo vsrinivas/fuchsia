@@ -8,6 +8,6 @@ library zx;
 protocol iommu {
     /// Create a new IOMMU object in the kernel.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
-    iommu_create(handle<resource> resource, uint32 type, vector_void desc)
-        -> (status status, handle<iommu> out);
+    iommu_create(handle:RESOURCE resource, uint32 type, vector_void desc)
+        -> (status status, handle:IOMMU out);
 };

@@ -8,9 +8,9 @@ library zx;
 protocol exception {
     /// Create a handle for the exception's thread.
     /// Rights: handle must be of type ZX_OBJ_TYPE_EXCEPTION.
-    exception_get_thread(handle<exception> handle) -> (status status, handle<thread> out);
+    exception_get_thread(handle:EXCEPTION handle) -> (status status, handle:THREAD out);
 
     /// Create a handle for the exception's process.
     /// Rights: handle must be of type ZX_OBJ_TYPE_EXCEPTION.
-    exception_get_process(handle<exception> handle) -> (status status, handle<process> out);
+    exception_get_process(handle:EXCEPTION handle) -> (status status, handle:PROCESS out);
 };

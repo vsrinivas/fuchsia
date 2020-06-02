@@ -8,10 +8,10 @@ library zx;
 protocol resource {
     /// Create a resource object.
     /// Rights: parent_rsrc must be of type ZX_OBJ_TYPE_RESOURCE and have ZX_RIGHT_WRITE.
-    resource_create(handle<resource> parent_rsrc,
+    resource_create(handle:RESOURCE parent_rsrc,
                     uint32 options,
                     uint64 base,
                     usize size,
                     string name)
-        -> (status status, handle<resource> resource_out);
+        -> (status status, handle:RESOURCE resource_out);
 };

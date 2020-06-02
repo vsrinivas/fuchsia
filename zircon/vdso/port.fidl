@@ -128,18 +128,18 @@ struct PortPacket {
 [Transport = "Syscall"]
 protocol port {
     /// Create an IO port.
-    port_create(uint32 options) -> (status status, handle<port> out);
+    port_create(uint32 options) -> (status status, handle:PORT out);
 
     /// Queue a packet to a port.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
-    port_queue(handle<port> handle, PortPacket packet) -> (status status);
+    port_queue(handle:PORT handle, PortPacket packet) -> (status status);
 
     /// Wait for a packet arrival in a port.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_READ.
     [blocking]
-    port_wait(handle<port> handle, time deadline) -> (status status, optional_PortPacket packet);
+    port_wait(handle:PORT handle, time deadline) -> (status status, optional_PortPacket packet);
 
     /// Cancels async port notifications on an object.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
-    port_cancel(handle<port> handle, handle source, uint64 key) -> (status status);
+    port_cancel(handle:PORT handle, handle source, uint64 key) -> (status status);
 };

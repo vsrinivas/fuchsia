@@ -6,7 +6,7 @@ library zx;
 
 [Transport = "Syscall"]
 protocol task {
-    // TODO(scottmg): Need something like handle<task> in this file to mean {job, process, thread}.
+    // TODO(scottmg): Need something like handle:TASK in this file to mean {job, process, thread}.
     // Or otherwise some way to express multiple options for constraints on inputs in this protocol.
 
     /// Suspend the given task. Currently only thread or process handles may be suspended.
@@ -20,7 +20,7 @@ protocol task {
     /// Create an exception channel for a given job, process, or thread.
     /// Rights: handle must have ZX_RIGHT_INSPECT and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_TRANSFER and have ZX_RIGHT_MANAGE_THREAD.
     /// Rights: If handle is of type ZX_OBJ_TYPE_JOB or ZX_OBJ_TYPE_PROCESS, it must have ZX_RIGHT_ENUMERATE.
-    task_create_exception_channel(handle handle, uint32 options) -> (status status, handle<channel> out);
+    task_create_exception_channel(handle handle, uint32 options) -> (status status, handle:CHANNEL out);
 
     /// Kill the provided task (job, process, or thread).
     /// Rights: handle must have ZX_RIGHT_DESTROY.
