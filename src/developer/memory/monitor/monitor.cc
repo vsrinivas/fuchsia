@@ -81,19 +81,19 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       tracing_(false),
       delay_(zx::sec(1)),
       dispatcher_(dispatcher),
-      component_context_(std::move(context)) {
+      component_context_(std::move(context)),
+      inspector_(component_context_.get()) {
   auto s = Capture::GetCaptureState(&capture_state_);
   if (s != ZX_OK) {
     FX_LOGS(ERROR) << "Error getting capture state: " << zx_status_get_string(s);
     exit(EXIT_FAILURE);
   }
 
-  vfs::PseudoDir* dir = component_context_->outgoing()->GetOrCreateDirectory("diagnostics");
-  auto capture_file = std::make_unique<vfs::PseudoFile>(
-      1024 * 1024, [this](std::vector<uint8_t>* output, size_t max_bytes) {
-        return Inspect(output, max_bytes);
-      });
-  dir->AddEntry("root.inspect", std::move(capture_file));
+  // Expose lazy values under the root, populated from the Inspect method.
+  inspector_.root().CreateLazyValues(
+      "memory_measurements", [this] { return fit::make_result_promise(fit::ok(Inspect())); },
+      &inspector_);
+
   component_context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 
   if (command_line.HasOption("help")) {
@@ -170,7 +170,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       return;
     }
     metrics_ = std::make_unique<Metrics>(
-        kMetricsPollFrequency, dispatcher, component_context_.get(), logger_.get(),
+        kMetricsPollFrequency, dispatcher, &inspector_, logger_.get(),
         [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
   }
 
@@ -237,7 +237,7 @@ void Monitor::PrintHelp() {
   std::cout << "  --delay=msecs" << std::endl;
 }
 
-zx_status_t Monitor::Inspect(std::vector<uint8_t>* output, size_t max_bytes) {
+inspect::Inspector Monitor::Inspect() {
   inspect::Inspector inspector(inspect::InspectSettings{.maximum_size = 1024 * 1024});
   auto& root = inspector.GetRoot();
   Capture capture;
@@ -250,15 +250,14 @@ zx_status_t Monitor::Inspect(std::vector<uint8_t>* output, size_t max_bytes) {
   auto current_string = summary_stream.str();
   auto high_water_string = high_water_.GetHighWater();
   auto previous_high_water_string = high_water_.GetPreviousHighWater();
-  inspect::StringProperty current, high_water, previous_high_water;
   if (!current_string.empty()) {
-    current = root.CreateString("current", current_string);
+    root.CreateString("current", current_string, &inspector);
   }
   if (!high_water_string.empty()) {
-    high_water = root.CreateString("high_water", high_water_string);
+    root.CreateString("high_water", high_water_string, &inspector);
   }
   if (!previous_high_water_string.empty()) {
-    previous_high_water = root.CreateString("high_water_previous_boot", previous_high_water_string);
+    root.CreateString("high_water_previous_boot", previous_high_water_string, &inspector);
   }
 
   Digester digester;
@@ -269,24 +268,18 @@ zx_status_t Monitor::Inspect(std::vector<uint8_t>* output, size_t max_bytes) {
   auto current_digest_string = digest_stream.str();
   auto high_water_digest_string = high_water_.GetHighWaterDigest();
   auto previous_high_water_digest_string = high_water_.GetPreviousHighWaterDigest();
-  inspect::StringProperty current_digest, high_water_digest, previous_high_water_digest;
   if (!current_digest_string.empty()) {
-    current_digest = root.CreateString("current_digest", current_digest_string);
+    root.CreateString("current_digest", current_digest_string, &inspector);
   }
   if (!high_water_digest_string.empty()) {
-    high_water_digest = root.CreateString("high_water_digest", high_water_digest_string);
+    root.CreateString("high_water_digest", high_water_digest_string, &inspector);
   }
   if (!previous_high_water_digest_string.empty()) {
-    previous_high_water_digest =
-        root.CreateString("high_water_digest_previous_boot", previous_high_water_digest_string);
+    root.CreateString("high_water_digest_previous_boot", previous_high_water_digest_string,
+                      &inspector);
   }
 
-  *output = inspector.CopyBytes();
-  if (output->empty()) {
-    return ZX_ERR_INTERNAL;
-  } else {
-    return ZX_OK;
-  }
+  return inspector;
 }
 
 void Monitor::SampleAndPost() {

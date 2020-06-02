@@ -36,7 +36,7 @@ static const std::map<zx_duration_t, TimeSinceBoot> UptimeLevelMap = {
 // Metrics polls the memory state periodically asynchroniously using the passed dispatcher and sends
 // information about the memory Digests to Cobalt, in the form of several Events.
 Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
-                 sys::ComponentContext* context, fuchsia::cobalt::Logger_Sync* logger,
+                 sys::ComponentInspector* inspector, fuchsia::cobalt::Logger_Sync* logger,
                  CaptureFn capture_cb)
     : poll_frequency_(poll_frequency),
       dispatcher_(dispatcher),
@@ -70,8 +70,8 @@ Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
           {"Audio", MemoryMetricDimensionBucket::Audio},
           {"Context", MemoryMetricDimensionBucket::Context},
       }),
-      inspector_(context),
-      platform_metric_node_(inspector_.root().CreateChild(kInspectPlatformNodeName)),
+      inspector_(inspector),
+      platform_metric_node_(inspector_->root().CreateChild(kInspectPlatformNodeName)),
       // Diagram of hierarchy can be seen below:
       // root
       // - platform_metrics

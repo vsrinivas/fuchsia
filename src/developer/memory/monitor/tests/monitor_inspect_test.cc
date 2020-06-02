@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async/cpp/executor.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/inspect/cpp/reader.h>
+#include <lib/inspect/service/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <stdlib.h>
@@ -71,40 +73,30 @@ class InspectTest : public sys::testing::TestWithEnvironment {
   // Open the root object connection on the given sync pointer.
   // Returns ZX_OK on success.
   fit::result<inspect::Hierarchy> GetInspectHierarchy() {
-    files::Glob glob(Substitute("/hub/r/$1/*/c/$0/*/out/diagnostics/root.inspect", kTestProcessName,
-                                std::string_view(test_case_)));
+    files::Glob glob(Substitute("/hub/r/$1/*/c/$0/*/out/diagnostics/fuchsia.inspect.Tree",
+                                kTestProcessName, std::string_view(test_case_)));
     if (glob.size() == 0) {
       return fit::error();
     }
     auto path = std::string(*glob.begin());
 
-    fuchsia::io::FileSyncPtr file;
+    fuchsia::inspect::TreePtr tree_ptr;
     zx_status_t status;
-    status =
-        fdio_open(path.c_str(), ZX_FS_RIGHT_READABLE, file.NewRequest().TakeChannel().release());
+    status = fdio_service_connect(path.c_str(), tree_ptr.NewRequest().TakeChannel().release());
     if (status != ZX_OK) {
       return fit::error();
     }
 
-    EXPECT_TRUE(file.is_bound());
+    EXPECT_TRUE(tree_ptr.is_bound());
 
-    fuchsia::io::NodeInfo info;
-    auto get_status = file->Describe(&info);
-    if (get_status != ZX_OK) {
-      printf("get failed\n");
-      return fit::error();
-    }
-
-    if (!info.is_file()) {
-      printf("not a file");
-      return fit::error();
-    }
-
-    std::vector<uint8_t> data;
-    if (!files::ReadFileToVector(path, &data)) {
-      return fit::error();
-    }
-    return inspect::ReadFromBuffer(std::move(data));
+    async::Executor executor(dispatcher());
+    fit::result<inspect::Hierarchy> ret;
+    executor.schedule_task(
+        inspect::ReadFromTree(std::move(tree_ptr)).then([&](fit::result<inspect::Hierarchy>& res) {
+          ret = std::move(res);
+        }));
+    RunLoopUntil([&] { return ret.is_ok() || ret.is_error(); });
+    return ret;
   }
 
  private:

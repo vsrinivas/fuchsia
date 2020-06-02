@@ -19,8 +19,9 @@ namespace monitor {
 
 class Metrics {
  public:
-  Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher, sys::ComponentContext* context,
-          fuchsia::cobalt::Logger_Sync* logger, memory::CaptureFn capture_cb);
+  Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
+          sys::ComponentInspector* inspector, fuchsia::cobalt::Logger_Sync* logger,
+          memory::CaptureFn capture_cb);
 
   // Reader side must use the exact name to read from Inspect.
   // Design doc in go/fuchsia-metrics-to-inspect-design.
@@ -28,7 +29,6 @@ class Metrics {
   // Details about config file are in b/151984065#comment16
   static constexpr const char* kMemoryNodeName = "memory_usages";
   static constexpr const char* kReadingMemoryTimestamp = "timestamp";
-  inspect::Inspector Inspector(){ return *(inspector_.inspector()); }
 
  private:
   void CollectMetrics();
@@ -50,7 +50,9 @@ class Metrics {
   memory::Digester digester_;
   FXL_DISALLOW_COPY_AND_ASSIGN(Metrics);
 
-  sys::ComponentInspector inspector_;
+  // The component inspector to publish data to.
+  // Not owned.
+  sys::ComponentInspector* inspector_;
   inspect::Node platform_metric_node_;
   inspect::Node metric_memory_node_;
   std::map<std::string, inspect::UintProperty> inspect_memory_usages_;

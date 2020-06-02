@@ -16,6 +16,7 @@
 
 #include <memory>
 
+#include "lib/sys/inspect/cpp/component.h"
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/monitor/high_water.h"
 #include "src/developer/memory/monitor/metrics.h"
@@ -45,7 +46,7 @@ class Monitor : public fuchsia::memory::Monitor {
   void SampleAndPost();
   void MeasureBandwidthAndPost();
   void PrintHelp();
-  zx_status_t Inspect(std::vector<uint8_t>* output, size_t max_bytes);
+  inspect::Inspector Inspect();
 
   // Destroys a watcher proxy (called upon a connection error).
   void ReleaseWatcher(fuchsia::memory::Watcher* watcher);
@@ -66,6 +67,7 @@ class Monitor : public fuchsia::memory::Monitor {
   fidl::BindingSet<fuchsia::memory::Monitor> bindings_;
   std::vector<fuchsia::memory::WatcherPtr> watchers_;
   trace::TraceObserver trace_observer_;
+  sys::ComponentInspector inspector_;
   std::unique_ptr<Metrics> metrics_;
   std::unique_ptr<PressureNotifier> pressure_notifier_;
   fuchsia::hardware::ram::metrics::DevicePtr ram_device_;

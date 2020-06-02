@@ -26,7 +26,8 @@ namespace {
 
 class MetricsUnitTest : public gtest::RealLoopFixture {
  public:
-  MetricsUnitTest() : executor_(dispatcher()){}
+  MetricsUnitTest() : executor_(dispatcher()) {}
+
  protected:
   // Run a promise to completion on the default async executor.
   void RunPromiseToCompletion(fit::promise<> promise) {
@@ -37,66 +38,66 @@ class MetricsUnitTest : public gtest::RealLoopFixture {
   }
   std::vector<CaptureTemplate> Template() {
     return std::vector<CaptureTemplate>{{
-      .time = zx_nsec_from_duration(zx_duration_from_hour(7)),
-      .kmem =
-          {
-              .total_bytes = 2000,
-              .free_bytes = 800,
-              .wired_bytes = 60,
-              .total_heap_bytes = 200,
-              .free_heap_bytes = 80,
-              .vmo_bytes = 900,
-              .mmu_overhead_bytes = 60,
-              .ipc_bytes = 10,
-              .other_bytes = 20,
-          },
-      .vmos =
-          {
-              {.koid = 1, .name = "uncompressed-bootfs", .committed_bytes = 1},
-              {.koid = 2, .name = "magma_create_buffer", .committed_bytes = 2},
-              {.koid = 3, .name = "Sysmem:buf", .committed_bytes = 3},
-              {.koid = 4, .name = "test", .committed_bytes = 4},
-              {.koid = 5, .name = "test", .committed_bytes = 5},
-              {.koid = 6, .name = "test", .committed_bytes = 6},
-              {.koid = 7, .name = "test", .committed_bytes = 7},
-              {.koid = 8, .name = "test", .committed_bytes = 8},
-              {.koid = 9, .name = "test", .committed_bytes = 9},
-              {.koid = 10, .name = "test", .committed_bytes = 10},
-              {.koid = 11, .name = "test", .committed_bytes = 11},
-              {.koid = 12, .name = "test", .committed_bytes = 12},
-              {.koid = 13, .name = "test", .committed_bytes = 13},
-              {.koid = 14, .name = "test", .committed_bytes = 14},
-              {.koid = 15, .name = "test", .committed_bytes = 15},
-              {.koid = 16, .name = "test", .committed_bytes = 16},
-              {.koid = 17, .name = "test", .committed_bytes = 17},
-              {.koid = 18, .name = "test", .committed_bytes = 18},
-              {.koid = 19, .name = "test", .committed_bytes = 19},
-              {.koid = 20, .name = "test", .committed_bytes = 20},
-          },
-      .processes =
-          {
-              {.koid = 1, .name = "bin/bootsvc", .vmos = {1}},
-              {.koid = 2, .name = "test", .vmos = {2}},
-              {.koid = 3, .name = "driver_host:sys", .vmos = {3}},
-              {.koid = 4, .name = "/boot/bin/minfs", .vmos = {4}},
-              {.koid = 5, .name = "/boot/bin/blobfs", .vmos = {5}},
-              {.koid = 6, .name = "io.flutter.product_runner.aot", .vmos = {6}},
-              {.koid = 7, .name = "/pkg/web_engine_exe:renderer", .vmos = {7}},
-              {.koid = 8, .name = "kronk.cmx", .vmos = {8}},
-              {.koid = 9, .name = "scenic.cmx", .vmos = {9}},
-              {.koid = 10, .name = "driver_host:pdev:05:00:f", .vmos = {10}},
-              {.koid = 11, .name = "netstack.cmx", .vmos = {11}},
-              {.koid = 12, .name = "amber.cmx", .vmos = {12}},
-              {.koid = 13, .name = "pkgfs", .vmos = {13}},
-              {.koid = 14, .name = "cast_agent.cmx", .vmos = {14}},
-              {.koid = 15, .name = "chromium.cmx", .vmos = {15}},
-              {.koid = 16, .name = "fshost.cm", .vmos = {16}},
-              {.koid = 17, .name = "archivist.cmx", .vmos = {17}},
-              {.koid = 18, .name = "cobalt.cmx", .vmos = {18}},
-              {.koid = 19, .name = "audio_core.cmx", .vmos = {19}},
-              {.koid = 20, .name = "context_provider.cmx", .vmos = {20}},
-          },
-  }};
+        .time = zx_nsec_from_duration(zx_duration_from_hour(7)),
+        .kmem =
+            {
+                .total_bytes = 2000,
+                .free_bytes = 800,
+                .wired_bytes = 60,
+                .total_heap_bytes = 200,
+                .free_heap_bytes = 80,
+                .vmo_bytes = 900,
+                .mmu_overhead_bytes = 60,
+                .ipc_bytes = 10,
+                .other_bytes = 20,
+            },
+        .vmos =
+            {
+                {.koid = 1, .name = "uncompressed-bootfs", .committed_bytes = 1},
+                {.koid = 2, .name = "magma_create_buffer", .committed_bytes = 2},
+                {.koid = 3, .name = "Sysmem:buf", .committed_bytes = 3},
+                {.koid = 4, .name = "test", .committed_bytes = 4},
+                {.koid = 5, .name = "test", .committed_bytes = 5},
+                {.koid = 6, .name = "test", .committed_bytes = 6},
+                {.koid = 7, .name = "test", .committed_bytes = 7},
+                {.koid = 8, .name = "test", .committed_bytes = 8},
+                {.koid = 9, .name = "test", .committed_bytes = 9},
+                {.koid = 10, .name = "test", .committed_bytes = 10},
+                {.koid = 11, .name = "test", .committed_bytes = 11},
+                {.koid = 12, .name = "test", .committed_bytes = 12},
+                {.koid = 13, .name = "test", .committed_bytes = 13},
+                {.koid = 14, .name = "test", .committed_bytes = 14},
+                {.koid = 15, .name = "test", .committed_bytes = 15},
+                {.koid = 16, .name = "test", .committed_bytes = 16},
+                {.koid = 17, .name = "test", .committed_bytes = 17},
+                {.koid = 18, .name = "test", .committed_bytes = 18},
+                {.koid = 19, .name = "test", .committed_bytes = 19},
+                {.koid = 20, .name = "test", .committed_bytes = 20},
+            },
+        .processes =
+            {
+                {.koid = 1, .name = "bin/bootsvc", .vmos = {1}},
+                {.koid = 2, .name = "test", .vmos = {2}},
+                {.koid = 3, .name = "driver_host:sys", .vmos = {3}},
+                {.koid = 4, .name = "/boot/bin/minfs", .vmos = {4}},
+                {.koid = 5, .name = "/boot/bin/blobfs", .vmos = {5}},
+                {.koid = 6, .name = "io.flutter.product_runner.aot", .vmos = {6}},
+                {.koid = 7, .name = "/pkg/web_engine_exe:renderer", .vmos = {7}},
+                {.koid = 8, .name = "kronk.cmx", .vmos = {8}},
+                {.koid = 9, .name = "scenic.cmx", .vmos = {9}},
+                {.koid = 10, .name = "driver_host:pdev:05:00:f", .vmos = {10}},
+                {.koid = 11, .name = "netstack.cmx", .vmos = {11}},
+                {.koid = 12, .name = "amber.cmx", .vmos = {12}},
+                {.koid = 13, .name = "pkgfs", .vmos = {13}},
+                {.koid = 14, .name = "cast_agent.cmx", .vmos = {14}},
+                {.koid = 15, .name = "chromium.cmx", .vmos = {15}},
+                {.koid = 16, .name = "fshost.cm", .vmos = {16}},
+                {.koid = 17, .name = "archivist.cmx", .vmos = {17}},
+                {.koid = 18, .name = "cobalt.cmx", .vmos = {18}},
+                {.koid = 19, .name = "audio_core.cmx", .vmos = {19}},
+                {.koid = 20, .name = "context_provider.cmx", .vmos = {20}},
+            },
+    }};
   }
   async::Executor executor_;
   sys::testing::ComponentContextProvider context_provider_;
@@ -105,15 +106,17 @@ class MetricsUnitTest : public gtest::RealLoopFixture {
 TEST_F(MetricsUnitTest, Inspect) {
   CaptureSupplier cs(Template());
   cobalt::FakeLogger_Sync logger;
-  Metrics m(zx::min(5), dispatcher(), context_provider_.context(), &logger, [&cs](Capture* c, CaptureLevel l) {
+  sys::ComponentInspector inspector(context_provider_.context());
+  Metrics m(zx::min(5), dispatcher(), &inspector, &logger, [&cs](Capture* c, CaptureLevel l) {
     return cs.GetCapture(c, l, true /*use_capture_supplier_time*/);
   });
   RunLoopUntil([&cs] { return cs.empty(); });
 
   // [START get_hierarchy]
   fit::result<inspect::Hierarchy> hierarchy;
-  RunPromiseToCompletion(inspect::ReadFromInspector( m.Inspector()).then(
-      [&](fit::result<inspect::Hierarchy>& result) { hierarchy = std::move(result); }));
+  RunPromiseToCompletion(
+      inspect::ReadFromInspector(*inspector.inspector())
+          .then([&](fit::result<inspect::Hierarchy>& result) { hierarchy = std::move(result); }));
   ASSERT_TRUE(hierarchy.is_ok());
   // [END get_hierarchy]
 
@@ -132,7 +135,8 @@ TEST_F(MetricsUnitTest, Inspect) {
 TEST_F(MetricsUnitTest, All) {
   CaptureSupplier cs(Template());
   cobalt::FakeLogger_Sync logger;
-  Metrics m(zx::msec(10), dispatcher(), context_provider_.context(), &logger, [&cs](Capture* c, CaptureLevel l) {
+  sys::ComponentInspector inspector(context_provider_.context());
+  Metrics m(zx::msec(10), dispatcher(), &inspector, &logger, [&cs](Capture* c, CaptureLevel l) {
     return cs.GetCapture(c, l, true /*use_capture_supplier_time*/);
   });
   RunLoopUntil([&cs] { return cs.empty(); });
@@ -244,7 +248,8 @@ TEST_F(MetricsUnitTest, One) {
           },
   }});
   cobalt::FakeLogger_Sync logger;
-  Metrics m(zx::msec(10), dispatcher(), context_provider_.context(), &logger,
+  sys::ComponentInspector inspector(context_provider_.context());
+  Metrics m(zx::msec(10), dispatcher(), &inspector, &logger,
             [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
   RunLoopUntil([&cs] { return cs.empty(); });
   EXPECT_EQ(21U, logger.event_count());  // 1 + 10 + 10
@@ -276,7 +281,8 @@ TEST_F(MetricsUnitTest, Undigested) {
           },
   }});
   cobalt::FakeLogger_Sync logger;
-  Metrics m(zx::msec(10), dispatcher(), context_provider_.context(), &logger,
+  sys::ComponentInspector inspector(context_provider_.context());
+  Metrics m(zx::msec(10), dispatcher(), &inspector, &logger,
             [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
   RunLoopUntil([&cs] { return cs.empty(); });
   EXPECT_EQ(22U, logger.event_count());  // 2 + 10 + 10
