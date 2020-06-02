@@ -173,55 +173,6 @@ void MatrixMultiplicationWorkload(const StopIndicator& indicator) {
   } while (!indicator.ShouldStop());
 }
 
-// Calculate the square root of "v" using Newton's Method [1].
-//
-// [1]: https://en.wikipedia.org/wiki/Newton%27s_method
-inline double NewtonsMethodSqrt(double f) {
-  double v = f;
-  for (int n = 0; n < 32; n++) {
-    v = v - ((v * v) - f) / (2.0 * v);
-  }
-  return v;
-}
-
-// Manually calculate square roots on random numbers, using Newton's method.
-//
-// Exercises floating point.
-void NewtonsMethodWorkload(const StopIndicator& indicator) {
-  do {
-    std::mt19937_64 generator{};
-    std::uniform_real_distribution<> dist(1.0, 2'000'000'000);
-
-    for (int i = 0; i < 10'000; i++) {
-      // Calculate the square root.
-      double target = dist(generator);
-      double v = NewtonsMethodSqrt(target);
-
-      // We don't have any guarantee that we can get an exact square
-      // root. Ensure that we got a pretty good value: in particular,
-      // make sure that (v - epsilon)**2 < target < (v + epsilon)**2.
-      double v_plus_epsilon = std::nextafter(v, std::numeric_limits<double>::infinity());
-      double v_minus_epsilon = std::nextafter(v, -std::numeric_limits<double>::infinity());
-      AssertThat(
-          v_minus_epsilon * v_minus_epsilon < target && target < v_plus_epsilon * v_plus_epsilon,
-          "Attempted to calculate v = sqrt(target):\n"
-          "\n"
-          "  target        :  %.19g\n"
-          "  v²            :  %.19g\n"
-          "\n"
-          "  sqrt(target)  :  %.19g\n"
-          "  v             :  %.19g\n"
-          "\n"
-          "  Expected that:\n"
-          "      (v - ε)²  :  %.19g\n"
-          "   <  target    :  %.19g\n"
-          "   <  (v + ε)²  :  %.19g\n",
-          std::sqrt(target), v, target, v * v, v_minus_epsilon * v_minus_epsilon, target,
-          v_plus_epsilon * v_plus_epsilon);
-    }
-  } while (!indicator.ShouldStop());
-}
-
 // Run the Mersenne Twister random number generator algorithm.
 //
 // This exercises integer bitwise operation and multiplication.
@@ -245,10 +196,11 @@ void MersenneTwisterWorkload(const StopIndicator& indicator) {
 }  // namespace
 
 std::vector<Workload> GetWorkloads() {
-  return std::vector<Workload>{
-      {"fibonacci", FibonacciWorkload},  {"matrix", MatrixMultiplicationWorkload},
-      {"memset", MemsetWorkload},        {"mersenne", MersenneTwisterWorkload},
-      {"newton", NewtonsMethodWorkload}, {"trigonometry", SinCosWorkload}};
+  return std::vector<Workload>{{"fibonacci", FibonacciWorkload},
+                               {"matrix", MatrixMultiplicationWorkload},
+                               {"memset", MemsetWorkload},
+                               {"mersenne", MersenneTwisterWorkload},
+                               {"trigonometry", SinCosWorkload}};
 }
 
 }  // namespace hwstress
