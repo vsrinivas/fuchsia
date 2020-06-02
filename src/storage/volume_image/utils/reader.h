@@ -24,7 +24,7 @@ class Reader {
   // |buffer|.
   //
   // On error the returned result to contains a string describing the error.
-  virtual std::string Read(uint64_t offset, fbl::Span<uint8_t> buffer) = 0;
+  virtual std::string Read(uint64_t offset, fbl::Span<uint8_t> buffer) const = 0;
 };
 
 }  // namespace storage::volume_image
