@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/images/migrated_manifest.gni")
+import("//build/unification/future/data/fini_manifest.gni")
 
 # Define inputs to a dependent zbi() target.
 #
@@ -62,9 +62,9 @@ import("//build/unification/images/migrated_manifest.gni")
 #   by $prefix).
 #
 template("zbi_input") {
-  manifest_file = "$target_out_dir/$target_name.unification.manifest"
+  manifest_file = "$target_gen_dir/$target_name.fini"
 
-  migrated_manifest(target_name) {
+  fini_manifest(target_name) {
     prefix = ""
     forward_variables_from(invoker,
                            "*",
@@ -116,7 +116,7 @@ template("zbi_input") {
       }
 
       # Always include the manifest generated from the deps here.  The
-      # `migrated_manifest_barrier` in migrated_manifest() will prevent zbi()
+      # `migrated_manifest_barrier` in fini_manifest() will prevent zbi()
       # from collecting `migrated_manifest_lines` that are redundant with this
       # manifest.
       migrated_zbi_input_args += [

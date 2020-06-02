@@ -65,7 +65,7 @@ template("resource") {
         forward_variables_from(invoker.metadata, "*")
       }
 
-      # Stop migrated_manifest() and zbi_test() from picking up files or
+      # Stop *_manifest() and zbi_test() from picking up files or
       # zbi_input() items from the deps, but let them reach the data_deps.
       if (defined(data_deps)) {
         migrated_manifest_barrier += data_deps

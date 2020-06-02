@@ -1,0 +1,111 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Generates a manifest in the FINI (Fuchsia INI) format.
+#
+# This format maps a source file to its destination in a container with the
+# following line:
+# ```
+# target=source
+# ```
+#
+# The output of this template is a manifest file that lists all packageable
+# elements encountered within `deps`.
+#
+# Parameters
+#
+#   deps (optional)
+#     [list of labels] The targets to generate a manifest for.
+#     See `gn help` for more details.
+#
+#   testonly (optional)
+#     See `gn help`.
+#
+#   output_dir (optional)
+#     See `gn help`.
+#     Defaults to `target_gen_dir`.
+#
+#   output_name (optional)
+#     See `gn help`.
+#     Defaults to `$target_name`.
+#
+#   output_extension (optional)
+#     See `gn help`.
+#     Defaults to `fini`.
+template("fini_manifest") {
+  main_target = target_name
+  generate_target = "${target_name}_generate"
+
+  # Build the name of the final output.
+  manifest_file = target_gen_dir
+  if (defined(invoker.output_dir)) {
+    manifest_file = invoker.output_dir
+  }
+  output_name = target_name
+  if (defined(invoker.output_name)) {
+    output_name = invoker.output_name
+  }
+  manifest_file += "/$output_name"
+  if (defined(invoker.output_extension)) {
+    output_extension = invoker.output_extension
+    if (output_extension != "") {
+      manifest_file += ".$output_extension"
+    }
+  } else {
+    manifest_file += ".fini"
+  }
+  intermediate_file = "$manifest_file.intermediate"
+
+  # Gather metadata about runtime objects.
+  generated_file(generate_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+
+    data_keys = [
+      "migrated_manifest_files",
+      "migrated_manifest_lines",
+    ]
+    walk_keys = [ "migrated_manifest_barrier" ]
+
+    outputs = [ intermediate_file ]
+  }
+
+  # Resolve file references in the gathered metadata to produce the final
+  # output.
+  action(main_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    script = "//build/unification/future/data/expand_fini_manifest.py"
+
+    inputs = [ intermediate_file ]
+    outputs = [ manifest_file ]
+
+    args = [
+      "--input",
+      rebase_path(intermediate_file, root_build_dir),
+      "--output",
+      rebase_path(manifest_file, root_build_dir),
+    ]
+
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ ":$generate_target" ]
+
+    metadata = {
+      migrated_manifest_barrier = []
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+    }
+  }
+}

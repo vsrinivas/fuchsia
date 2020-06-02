@@ -28,8 +28,8 @@ declare_args() {
 
 import("aggregate_manifest.gni")
 import("artifacts.gni")
-import("migrated_manifest.gni")
 import("zircon_artifact.gni")
+import("//build/unification/future/data/fini_manifest.gni")
 
 foreach(artifact, zircon_artifacts) {
   zircon_artifact(artifact.name) {
@@ -116,7 +116,11 @@ aggregate_manifest("legacy-tests") {
 #  - a formerly migrated binary is being better integrated into the GN build
 #    using idiomatic constructs - the edit should be a removal.
 
-migrated_manifest("migrated-image") {
+fini_manifest("migrated-image") {
+  # Use the same naming scheme as `aggregate_manifest`.
+  output_dir = target_out_dir
+  output_extension = "unification.manifest"
+
   deps = [
     "//examples/drivers//fifo:demo-fifo",
     "//src/bringup/bin/debuglog",
@@ -493,7 +497,11 @@ migrated_manifest("migrated-image") {
   }
 }
 
-migrated_manifest("migrated-aux") {
+fini_manifest("migrated-aux") {
+  # Use the same naming scheme as `aggregate_manifest`.
+  output_dir = target_out_dir
+  output_extension = "unification.manifest"
+
   deps = [
     "//src/connectivity/ethernet/drivers/usb-cdc-ecm:usb-cdc-ecm-unittest",
     "//src/devices/block/bin/biotime:biotime-test",
@@ -693,7 +701,11 @@ migrated_manifest("migrated-aux") {
   }
 }
 
-migrated_manifest("migrated-tests") {
+fini_manifest("migrated-tests") {
+  # Use the same naming scheme as `aggregate_manifest`.
+  output_dir = target_out_dir
+  output_extension = "unification.manifest"
+
   deps = [
     "//src/connectivity/ethernet/drivers/asix-88179:usb-virtual-bus-asix-88179",
     "//src/connectivity/ethernet/drivers/usb-cdc-ecm:usb-cdc-ecm-unittest",
