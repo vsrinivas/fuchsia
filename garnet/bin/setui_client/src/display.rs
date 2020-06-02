@@ -52,15 +52,9 @@ pub async fn command(
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
     } else {
-        let setting = proxy.watch().await?;
-
-        match setting {
-            Ok(setting_value) => {
-                let setting_string = describe_display_setting(&setting_value);
-                output.push_str(&setting_string);
-            }
-            Err(err) => output.push_str(&format!("{:?}", err)),
-        }
+        let setting_value = proxy.watch2().await?;
+        let setting_string = describe_display_setting(&setting_value);
+        output.push_str(&setting_string);
     }
 
     Ok(output)

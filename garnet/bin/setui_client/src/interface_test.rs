@@ -385,13 +385,13 @@ async fn validate_display(
                 panic!("Unexpected call to set");
             }
         },
-        DisplayRequest::Watch { responder } => {
-            responder.send(&mut Ok(DisplaySettings {
+        DisplayRequest::Watch2 { responder } => {
+            responder.send(DisplaySettings {
                 auto_brightness: Some(false),
                 brightness_value: Some(0.5),
                 user_brightness_offset: Some(0.5),
                 low_light_mode: Some(LowLightMode::Disable),
-            }))?;
+            })?;
         }
     );
 
@@ -551,21 +551,6 @@ async fn validate_audio(expected: &'static ExpectedStreamSettingsStruct) -> Resu
                     responder.send(&mut (Ok(())))?;
                 }
             }
-        },
-        AudioRequest::Watch { responder } => {
-            responder.send(&mut Ok(AudioSettings {
-                streams: Some(vec![AudioStreamSettings {
-                    stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
-                    source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
-                    user_volume: Some(Volume {
-                        level: Some(0.6),
-                        muted: Some(false)
-                    }),
-                }]),
-                input: Some(AudioInput {
-                    muted: Some(true)
-                }),
-            }))?;
         },
         AudioRequest::Watch2 { responder } => {
             responder.send(AudioSettings {
