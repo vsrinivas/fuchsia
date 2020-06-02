@@ -188,6 +188,10 @@ class MockPager : public UserPager {
     return blob_registry_[identifier].get();
   }
 
+  void SetDoPartialTransfer(bool do_partial_transfer=true) {
+    do_partial_transfer_ = do_partial_transfer;
+  }
+
  private:
   zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) override {
     vmo_ = zx::unowned_vmo(transfer_vmo);
@@ -201,7 +205,13 @@ class MockPager : public UserPager {
     EXPECT_EQ(offset % kBlobfsBlockSize, 0);
     EXPECT_LE(offset + length, blob.raw_data_size());
     // Fill the transfer buffer with the blob's data, to service page requests.
-    EXPECT_OK(vmo_->write(blob.raw_data() + offset, 0, length));
+    if (do_partial_transfer_) {
+      // Zero the entire range, and then explicitly fill the first half.
+      EXPECT_OK(vmo_->op_range(ZX_VMO_OP_ZERO, offset, length, nullptr, 0));
+      EXPECT_OK(vmo_->write(blob.raw_data() + offset, 0, length / 2));
+    } else {
+      EXPECT_OK(vmo_->write(blob.raw_data() + offset, 0, length));
+    }
     return ZX_OK;
   }
 
@@ -223,6 +233,7 @@ class MockPager : public UserPager {
   std::map<char, std::unique_ptr<MockBlob>> blob_registry_;
   MockBlobFactory factory_;
   zx::unowned_vmo vmo_;
+  bool do_partial_transfer_ = false;
 };
 
 class BlobfsPagerTest : public zxtest::Test {
@@ -236,6 +247,8 @@ class BlobfsPagerTest : public zxtest::Test {
   }
 
   void ResetPager() { pager_.reset(); }
+
+  MockPager& pager() { return *pager_; }
 
  private:
   std::unique_ptr<MockPager> pager_;
@@ -457,6 +470,14 @@ TEST_F(BlobfsPagerTest, NoDataLeaked_Chunked) {
     new_blob->CommitRange(0, 1);
     ASSERT_NO_FAILURES(AssertNoLeaksInVmo(new_blob->vmo(), 'y'));
   }
+}
+
+TEST_F(BlobfsPagerTest, PartiallyCommittedBuffer) {
+  // The blob contents must be zero, since we want verification to pass but we also want the
+  // data to only be half filled (the other half defaults to zero because it is decommitted.)
+  MockBlob* blob = CreateBlob('\0', CompressionAlgorithm::UNCOMPRESSED);
+  pager().SetDoPartialTransfer();
+  blob->CommitRange(0, kDefaultPagedVmoSize);
 }
 
 }  // namespace
