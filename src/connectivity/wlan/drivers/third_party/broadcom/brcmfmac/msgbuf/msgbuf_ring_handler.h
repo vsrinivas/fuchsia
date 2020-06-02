@@ -29,6 +29,15 @@ namespace brcmfmac {
 // threads, it is designed to be thread-safe.
 class MsgbufRingHandler : public InterruptProviderInterface::InterruptHandler {
  public:
+  // This is the interface for event handlers that can be registered to the MsgbufRingHandler.
+  class EventHandler {
+   public:
+    virtual ~EventHandler();
+
+    // Callback to handle a firmware event.
+    virtual void HandleWlEvent(const void* data, size_t size) = 0;
+  };
+
   MsgbufRingHandler();
   ~MsgbufRingHandler();
 
@@ -36,7 +45,7 @@ class MsgbufRingHandler : public InterruptProviderInterface::InterruptHandler {
   static zx_status_t Create(DmaRingProviderInterface* dma_ring_provider,
                             InterruptProviderInterface* interrupt_provider,
                             std::unique_ptr<DmaPool> rx_buffer_pool,
-                            std::unique_ptr<DmaPool> tx_buffer_pool,
+                            std::unique_ptr<DmaPool> tx_buffer_pool, EventHandler* event_handler,
                             std::unique_ptr<MsgbufRingHandler>* out_handler);
 
   // Get a buffer for use with submitting data over DMA.
@@ -56,6 +65,8 @@ class MsgbufRingHandler : public InterruptProviderInterface::InterruptHandler {
 
  private:
   // TL;WR: MsgbufRingHandler is thread-safe on its external API, and in its interrupt handling.
+  // Callbacks performed through the EventHandler interface will be performed from a common, but
+  // internal worker thread.
   //
   // MsgbufRingHandler provides a thread-safe API, but it has to deal with API calls being made from
   // multiple threads:
@@ -101,6 +112,8 @@ class MsgbufRingHandler : public InterruptProviderInterface::InterruptHandler {
 
   // Handle each of the relevant types of MSGBUF messages.
   void HandleMsgbufIoctlResponse(const MsgbufIoctlResponse& ioctl_response, WorkList* work_list)
+      __TA_REQUIRES(interrupt_handler_mutex_);
+  void HandleMsgbufWlEvent(const MsgbufWlEvent& wl_event, WorkList* work_list)
       __TA_REQUIRES(interrupt_handler_mutex_);
 
   // Process events on each DMA completion ring.
@@ -166,6 +179,7 @@ class MsgbufRingHandler : public InterruptProviderInterface::InterruptHandler {
   int required_event_rx_buffers_ __TA_GUARDED(worker_thread_mutex_) = 0;
   int required_rx_buffers_ __TA_GUARDED(worker_thread_mutex_) = 0;
 
+  EventHandler* event_handler_ __TA_GUARDED(worker_thread_mutex_) = nullptr;
   IoctlState* ioctl_state_ __TA_GUARDED(worker_thread_mutex_) = nullptr;
   uint16_t ioctl_transaction_id_ __TA_GUARDED(worker_thread_mutex_) = 0;
 

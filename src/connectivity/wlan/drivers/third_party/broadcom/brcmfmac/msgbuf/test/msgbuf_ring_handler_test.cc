@@ -12,12 +12,14 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <utility>
 
 #include "gtest/gtest.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_buffer.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_pool.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fweh.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_structs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/test/fake_msgbuf_interfaces.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/test/test_utils.h"
@@ -62,11 +64,26 @@ void CreateDmaPool(FakeMsgbufInterfaces* interfaces, size_t buffer_size, int buf
   *dma_pool_out = std::move(dma_pool);
 }
 
+// Stub implementation of the EventHandler interface.
+class StubEventHandler : public MsgbufRingHandler::EventHandler {
+ public:
+  ~StubEventHandler();
+
+  // MsgbufRingHandler::EventHandler implementation.
+  void HandleWlEvent(const void* data, size_t size) override;
+};
+
+StubEventHandler::~StubEventHandler() = default;
+
+void StubEventHandler::HandleWlEvent(const void* data, size_t size) {}
+
 // Test creation of the MsgbufRingHandler using various creation parameters.
 TEST(MsgbufRingHandlerTest, CreationParameters) {
   std::unique_ptr<FakeMsgbufInterfaces> fake_interfaces;
   std::unique_ptr<DmaPool> rx_buffer_pool;
   std::unique_ptr<DmaPool> tx_buffer_pool;
+  StubEventHandler event_handler;
+
   ASSERT_EQ(ZX_OK, FakeMsgbufInterfaces::Create(&fake_interfaces));
   CreateDmaPool(fake_interfaces.get(), kPoolBufferSize, kPoolBufferCount, &rx_buffer_pool);
   CreateDmaPool(fake_interfaces.get(), kPoolBufferSize, kPoolBufferCount, &tx_buffer_pool);
@@ -74,7 +91,7 @@ TEST(MsgbufRingHandlerTest, CreationParameters) {
   std::unique_ptr<MsgbufRingHandler> ring_handler;
   EXPECT_EQ(ZX_OK, MsgbufRingHandler::Create(fake_interfaces.get(), fake_interfaces.get(),
                                              std::move(rx_buffer_pool), std::move(tx_buffer_pool),
-                                             &ring_handler));
+                                             &event_handler, &ring_handler));
 }
 
 // Test the ioctl interfaces of the MsgbufRingHandler.  This test sends `kTestIterationCount`
@@ -102,6 +119,7 @@ TEST(MsgbufRingHandlerTest, Ioctl) {
   std::unique_ptr<FakeMsgbufInterfaces> fake_interfaces;
   std::unique_ptr<DmaPool> rx_buffer_pool;
   std::unique_ptr<DmaPool> tx_buffer_pool;
+  StubEventHandler event_handler;
   std::unique_ptr<MsgbufRingHandler> ring_handler;
 
   ASSERT_EQ(ZX_OK, FakeMsgbufInterfaces::Create(&fake_interfaces));
@@ -109,7 +127,7 @@ TEST(MsgbufRingHandlerTest, Ioctl) {
   CreateDmaPool(fake_interfaces.get(), kPoolBufferSize, kPoolBufferCount, &tx_buffer_pool);
   ASSERT_EQ(ZX_OK, MsgbufRingHandler::Create(fake_interfaces.get(), fake_interfaces.get(),
                                              std::move(rx_buffer_pool), std::move(tx_buffer_pool),
-                                             &ring_handler));
+                                             &event_handler, &ring_handler));
 
   // Set up the expectations for the control submit ring.
   for (int i = 0; i < kTestIterationCount; ++i) {
@@ -187,6 +205,60 @@ TEST(MsgbufRingHandlerTest, Ioctl) {
     for (size_t i = 0; i < compare_size; ++i) {
       EXPECT_EQ(static_cast<char>(~datum.data[i]), rx_buffer_data_char[i]);
     }
+  }
+}
+
+// Test the MsgbufRingHandler WlEvent handling by sending a series of events.
+TEST(MsgbufRingHandlerTest, WlEvent) {
+  static constexpr size_t kMaxEventSize = kPoolBufferSize;
+
+  // We expect a series of events with increasing event size, where the data is just a (wrapping)
+  // array of increasing bytes.
+  class WlEventHandler : public StubEventHandler {
+   public:
+    void HandleWlEvent(const void* data, size_t size) override {
+      EXPECT_EQ(event_size_, size);
+      const auto char_data = reinterpret_cast<const int8_t*>(data);
+      int8_t expected_data = 0;
+      for (size_t i = 0; i < size; ++i) {
+        EXPECT_EQ(expected_data, char_data[i]);
+        ++expected_data;
+      }
+
+      // The next event will be one larger.
+      ++event_size_;
+    }
+
+   private:
+    size_t event_size_ = 0;
+  };
+
+  std::unique_ptr<FakeMsgbufInterfaces> fake_interfaces;
+  std::unique_ptr<DmaPool> rx_buffer_pool;
+  std::unique_ptr<DmaPool> tx_buffer_pool;
+  WlEventHandler event_handler;
+  std::unique_ptr<MsgbufRingHandler> ring_handler;
+
+  ASSERT_EQ(ZX_OK, FakeMsgbufInterfaces::Create(&fake_interfaces));
+  CreateDmaPool(fake_interfaces.get(), kPoolBufferSize, kPoolBufferCount, &rx_buffer_pool);
+  CreateDmaPool(fake_interfaces.get(), kPoolBufferSize, kPoolBufferCount, &tx_buffer_pool);
+  ASSERT_EQ(ZX_OK, MsgbufRingHandler::Create(fake_interfaces.get(), fake_interfaces.get(),
+                                             std::move(rx_buffer_pool), std::move(tx_buffer_pool),
+                                             &event_handler, &ring_handler));
+
+  for (size_t event_size = 0; event_size < kMaxEventSize; ++event_size) {
+    auto rx_event_buffer = fake_interfaces->GetEventRxBuffer();
+    ASSERT_LE(event_size, rx_event_buffer.size);
+    const auto rx_event_buffer_data = reinterpret_cast<int8_t*>(rx_event_buffer.address);
+    std::iota(rx_event_buffer_data, rx_event_buffer_data + event_size, 0);
+
+    MsgbufWlEvent wl_event = {};
+    wl_event.msg.msgtype = MsgbufWlEvent::kMsgType;
+    wl_event.msg.request_id = rx_event_buffer.index;
+    wl_event.event_data_len = event_size;
+
+    EXPECT_EQ(ZX_OK, SpinInvoke(&FakeMsgbufInterfaces::AddControlCompleteRingEntry,
+                                fake_interfaces.get(), &wl_event, sizeof(wl_event)));
   }
 }
 

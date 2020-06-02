@@ -13,6 +13,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_buffer.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_pool.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fweh.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_ring_handler.h"
 
 namespace wlan {
@@ -83,6 +84,42 @@ zx_status_t CreateDmaPool(DmaBufferProviderInterface* dma_buffer_provider, size_
 
 }  // namespace
 
+class MsgbufProto::RingEventHandler : public MsgbufRingHandler::EventHandler {
+ public:
+  RingEventHandler();
+  ~RingEventHandler() override;
+
+  // Static factory function for RingEventHandler instances.
+  static zx_status_t Create(brcmf_pub* drvr, std::unique_ptr<RingEventHandler>* out_handler);
+
+  // MsgbufRingHandler::EventHandler implementation.
+  void HandleWlEvent(const void* data, size_t size) override;
+
+ private:
+  brcmf_pub* drvr_ = nullptr;
+};
+
+MsgbufProto::RingEventHandler::RingEventHandler() = default;
+
+MsgbufProto::RingEventHandler::~RingEventHandler() = default;
+
+// static
+zx_status_t MsgbufProto::RingEventHandler::Create(brcmf_pub* drvr,
+                                                  std::unique_ptr<RingEventHandler>* out_handler) {
+  auto handler = std::make_unique<RingEventHandler>();
+  handler->drvr_ = drvr;
+  *out_handler = std::move(handler);
+  return ZX_OK;
+}
+
+void MsgbufProto::RingEventHandler::HandleWlEvent(const void* data, size_t size) {
+  if (size < sizeof(brcmf_event)) {
+    BRCMF_ERR("Event size %zu too small, min %zu", size, sizeof(brcmf_event));
+    return;
+  }
+  brcmf_fweh_process_event(drvr_, reinterpret_cast<const brcmf_event*>(data), size);
+}
+
 MsgbufProto::MsgbufProto() = default;
 
 MsgbufProto::~MsgbufProto() {
@@ -116,10 +153,16 @@ zx_status_t MsgbufProto::Create(Device* device, DmaBufferProviderInterface* dma_
     return status;
   }
 
+  std::unique_ptr<RingEventHandler> ring_event_handler;
+  if ((status = RingEventHandler::Create(device->drvr(), &ring_event_handler)) != ZX_OK) {
+    BRCMF_ERR("Failed to create RingEventHandler: %s", zx_status_get_string(status));
+    return status;
+  }
+
   std::unique_ptr<MsgbufRingHandler> ring_handler;
   if ((status = MsgbufRingHandler::Create(dma_ring_provider, interrupt_provider,
                                           std::move(rx_buffer_pool), std::move(tx_buffer_pool),
-                                          &ring_handler)) != ZX_OK) {
+                                          ring_event_handler.get(), &ring_handler)) != ZX_OK) {
     BRCMF_ERR("Failed to create MsgbufRingHandler: %s", zx_status_get_string(status));
     return status;
   }
@@ -128,6 +171,7 @@ zx_status_t MsgbufProto::Create(Device* device, DmaBufferProviderInterface* dma_
 
   msgbuf->device_ = device;
   msgbuf->proto_ = std::move(proto);
+  msgbuf->ring_event_handler_ = std::move(ring_event_handler);
   msgbuf->ring_handler_ = std::move(ring_handler);
   *out_msgbuf = std::move(msgbuf);
   return ZX_OK;

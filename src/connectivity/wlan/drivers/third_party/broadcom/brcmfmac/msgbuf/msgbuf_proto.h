@@ -47,8 +47,12 @@ class MsgbufProto {
   brcmf_proto* GetProto();
 
  private:
+  // Utility class to handle MsgbufRingHandler events.
+  class RingEventHandler;
+
   Device* device_ = nullptr;
   std::unique_ptr<brcmf_proto> proto_;
+  std::unique_ptr<RingEventHandler> ring_event_handler_;
   std::unique_ptr<MsgbufRingHandler> ring_handler_;
 };
 

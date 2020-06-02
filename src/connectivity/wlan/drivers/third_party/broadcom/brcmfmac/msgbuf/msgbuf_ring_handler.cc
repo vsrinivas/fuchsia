@@ -32,6 +32,7 @@ union RxBufferSubmitRingEntry {
 union ControlCompleteRingEntry {
   MsgbufCommonHeader common_header;
   MsgbufIoctlResponse ioctl_response;
+  MsgbufWlEvent wl_event;
 };
 
 union TxCompleteRingEntry {
@@ -52,6 +53,8 @@ struct MsgbufRingHandler::IoctlState {
   zx_status_t status = ZX_OK;
   sync_completion_t completion;
 };
+
+MsgbufRingHandler::EventHandler::~EventHandler() = default;
 
 MsgbufRingHandler::MsgbufRingHandler() = default;
 
@@ -80,6 +83,7 @@ zx_status_t MsgbufRingHandler::Create(DmaRingProviderInterface* dma_ring_provide
                                       InterruptProviderInterface* interrupt_provider,
                                       std::unique_ptr<DmaPool> rx_buffer_pool,
                                       std::unique_ptr<DmaPool> tx_buffer_pool,
+                                      EventHandler* event_handler,
                                       std::unique_ptr<MsgbufRingHandler>* out_handler) {
   zx_status_t status = ZX_OK;
 
@@ -177,6 +181,7 @@ zx_status_t MsgbufRingHandler::Create(DmaRingProviderInterface* dma_ring_provide
       return status;
     }
 
+    handler->event_handler_ = event_handler;
     handler->worker_thread_ = std::thread(&MsgbufRingHandler::WorkerThreadFunction, handler.get());
   }
 
@@ -347,6 +352,43 @@ void MsgbufRingHandler::HandleMsgbufIoctlResponse(const MsgbufIoctlResponse& ioc
   });
 }
 
+void MsgbufRingHandler::HandleMsgbufWlEvent(const MsgbufWlEvent& wl_event, WorkList* work_list) {
+  // Invoke the event handler, defensively.
+  work_list->emplace_back(
+      [this, request_id = wl_event.msg.request_id, event_size = wl_event.event_data_len]() {
+        AssertIsWorkerThread();
+        zx_status_t status = ZX_OK;
+
+        DmaPool::Buffer buffer;
+        if ((status = rx_buffer_pool_->Acquire(request_id, &buffer)) != ZX_OK) {
+          BRCMF_ERR("Failed to acquire rx buffer %d", request_id);
+          return;
+        }
+        // We have consumed one RX buffer for this ioctl response.
+        ++required_event_rx_buffers_;
+
+        if (event_handler_ == nullptr) {
+          // No event handler to invoke.
+          return;
+        }
+
+        const size_t event_size_with_offset = event_size + rx_data_offset_;
+        if (event_size_with_offset > buffer.size()) {
+          BRCMF_ERR("Received bad data length %zu, max %zu", event_size_with_offset, buffer.size());
+          return;
+        }
+        const void* data = nullptr;
+        if ((status = buffer.MapRead(event_size_with_offset, &data)) != ZX_OK) {
+          BRCMF_ERR("Failed to map rx buffer %d", buffer.index());
+          return;
+        }
+
+        const void* const event_data =
+            reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(data) + rx_data_offset_);
+        event_handler_->HandleWlEvent(event_data, event_size);
+      });
+}
+
 void MsgbufRingHandler::ProcessControlCompleteRing(WorkList* work_list) {
   zx_status_t status = ZX_OK;
   const void* buffer = nullptr;
@@ -373,6 +415,11 @@ void MsgbufRingHandler::ProcessControlCompleteRing(WorkList* work_list) {
 
         case MsgbufCommonHeader::MsgType::kIoctlResponse: {
           HandleMsgbufIoctlResponse(entry->ioctl_response, work_list);
+          break;
+        }
+
+        case MsgbufCommonHeader::MsgType::kWlEvent: {
+          HandleMsgbufWlEvent(entry->wl_event, work_list);
           break;
         }
 

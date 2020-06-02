@@ -18,6 +18,7 @@ struct [[gnu::packed]] MsgbufCommonHeader {
     kIoctlBufferPost = 0xB,
     kIoctlResponse = 0x0C,
     kEventBufferPost = 0x0D,
+    kWlEvent = 0x0E,
     kRxBufferPost = 0x11,
   };
 
@@ -75,6 +76,15 @@ struct [[gnu::packed]] MsgbufIoctlResponse {
   uint16_t trans_id;
   uint32_t cmd;
   uint32_t rsvd0;
+};
+
+struct [[gnu::packed]] MsgbufWlEvent {
+  static constexpr MsgbufCommonHeader::MsgType kMsgType = MsgbufCommonHeader::MsgType::kWlEvent;
+  MsgbufCommonHeader msg;
+  MsgbufCompletionHeader compl_hdr;
+  uint16_t event_data_len;
+  uint16_t seqnum;
+  uint16_t rsvd0[4];
 };
 
 }  // namespace brcmfmac
