@@ -1,25 +1,23 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::fidl_processor::process_stream;
-
-use futures::FutureExt;
-
-use futures::future::LocalBoxFuture;
-
-use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings::{
     Error, PrivacyMarker, PrivacyRequest, PrivacyRequestStream, PrivacySetResponder,
-    PrivacySettings, PrivacyWatchResponder,
+    PrivacySettings, PrivacyWatch2Responder, PrivacyWatchResponder,
 };
 use fuchsia_async as fasync;
+use futures::future::LocalBoxFuture;
+use futures::FutureExt;
 
+use crate::fidl_hanging_get_responder;
 use crate::fidl_hanging_get_result_responder;
-use crate::switchboard::base::{
-    FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingType, SwitchboardClient,
-};
+use crate::fidl_processor::process_stream_both_watches;
+use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType, SwitchboardClient};
 use crate::switchboard::hanging_get_handler::Sender;
 
+fidl_hanging_get_responder!(PrivacySettings, PrivacyWatch2Responder, PrivacyMarker::DEBUG_NAME);
+
+// TODO(fxb/52593): Remove when clients are ported to watch2.
 fidl_hanging_get_result_responder!(
     PrivacySettings,
     PrivacyWatchResponder,
@@ -72,10 +70,39 @@ pub fn spawn_privacy_fidl_handler(
     switchboard_client: SwitchboardClient,
     stream: PrivacyRequestStream,
 ) {
-    process_stream::<PrivacyMarker, PrivacySettings, PrivacyWatchResponder>(
+    // TODO(fxb/52593): Convert back to process_stream when clients are ported to watch2.
+    process_stream_both_watches::<
+        PrivacyMarker,
+        PrivacySettings,
+        PrivacyWatchResponder,
+        PrivacyWatch2Responder,
+    >(
         stream,
         switchboard_client,
         SettingType::Privacy,
+        // Separate handlers because there are two separate Responders for Watch and
+        // Watch2. The hanging get handlers can only handle one type of Responder
+        // at a time, so they must be registered separately.
+        Box::new(
+            move |context,
+                  req|
+                  -> LocalBoxFuture<'_, Result<Option<PrivacyRequest>, anyhow::Error>> {
+                async move {
+                    #[allow(unreachable_patterns)]
+                    match req {
+                        PrivacyRequest::Watch { responder } => {
+                            context.watch(responder, false).await;
+                        }
+                        _ => {
+                            return Ok(Some(req));
+                        }
+                    }
+
+                    return Ok(None);
+                }
+                .boxed_local()
+            },
+        ),
         Box::new(
             move |context,
                   req|
@@ -86,8 +113,8 @@ pub fn spawn_privacy_fidl_handler(
                         PrivacyRequest::Set { settings, responder } => {
                             set(&context.switchboard_client, settings, responder).await;
                         }
-                        PrivacyRequest::Watch { responder } => {
-                            context.watch(responder, false).await;
+                        PrivacyRequest::Watch2 { responder } => {
+                            context.watch(responder, true).await;
                         }
                         _ => {
                             return Ok(Some(req));

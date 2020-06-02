@@ -740,10 +740,10 @@ async fn validate_privacy(expected_user_data_sharing_consent: Option<bool>) -> R
                 panic!("Unexpected call to set");
             }
         },
-        PrivacyRequest::Watch { responder } => {
-            responder.send(&mut Ok(PrivacySettings {
+        PrivacyRequest::Watch2 { responder } => {
+            responder.send(PrivacySettings {
                 user_data_sharing_consent: Some(false),
-            }))?;
+            })?;
         }
     );
 
@@ -763,10 +763,10 @@ async fn validate_privacy_set_output(
         Services::Privacy, PrivacyRequest::Set { settings: _, responder, } => {
             responder.send(&mut Ok(()))?;
         },
-        PrivacyRequest::Watch { responder } => {
-            responder.send(&mut Ok(PrivacySettings {
+        PrivacyRequest::Watch2 { responder } => {
+            responder.send(PrivacySettings {
                 user_data_sharing_consent: Some(expected_user_data_sharing_consent),
-            }))?;
+            })?;
         }
     );
 
@@ -795,10 +795,10 @@ async fn validate_privacy_watch_output(
         Services::Privacy, PrivacyRequest::Set { settings: _, responder, } => {
             responder.send(&mut Ok(()))?;
         },
-        PrivacyRequest::Watch { responder } => {
-            responder.send(&mut Ok(PrivacySettings {
+        PrivacyRequest::Watch2 { responder } => {
+            responder.send(PrivacySettings {
                 user_data_sharing_consent: expected_user_data_sharing_consent,
-            }))?;
+            })?;
         }
     );
 
