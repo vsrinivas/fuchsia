@@ -160,8 +160,7 @@ class TwoProvidersOneEngine : public ExtraProvider {
   const char* GetProgramPath() override { return "/pkg/bin/two_providers_one_engine"; }
 };
 
-// TODO(42621): Disabled due to flake.
-TEST_F(TwoProvidersOneEngine, DISABLED_ErrorHandling) {
+TEST_F(TwoProvidersOneEngine, ErrorHandling) {
   ASSERT_TRUE(provider_process().is_valid());
 
   RunAndVerify(kBasicIntegrationTestUrl, "simple", "trace:test", 1, "oneshot");
@@ -172,8 +171,7 @@ TEST_F(TwoProvidersOneEngine, DISABLED_ErrorHandling) {
   RunAndVerify(kBasicIntegrationTestUrl, "simple", "trace:test", 1, "oneshot");
 }
 
-// TODO(8198): Disabled due to flake.
-TEST(TwoProvidersTwoEngines, DISABLED_Test) {
+TEST(TwoProvidersTwoEngines, Test) {
   RunAndVerify(kTwoProvidersTwoEnginesTestUrl, "two-providers-two-engines", "trace:test", 1,
                "oneshot");
 }
