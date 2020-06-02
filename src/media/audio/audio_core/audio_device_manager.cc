@@ -20,17 +20,15 @@
 
 namespace media::audio {
 
-AudioDeviceManager::AudioDeviceManager(ThreadingModel* threading_model,
+AudioDeviceManager::AudioDeviceManager(ThreadingModel& threading_model,
                                        std::unique_ptr<PlugDetector> plug_detector,
-                                       RouteGraph* route_graph, LinkMatrix* link_matrix)
-    : threading_model_(*threading_model),
-      route_graph_(*route_graph),
+                                       RouteGraph& route_graph, LinkMatrix& link_matrix,
+                                       ProcessConfig& process_config)
+    : threading_model_(threading_model),
+      route_graph_(route_graph),
       plug_detector_(std::move(plug_detector)),
-      link_matrix_(*link_matrix) {
-  FX_DCHECK(route_graph);
-  FX_DCHECK(threading_model);
-  FX_DCHECK(link_matrix);
-}
+      link_matrix_(link_matrix),
+      process_config_(process_config) {}
 
 AudioDeviceManager::~AudioDeviceManager() {
   Shutdown();
@@ -348,7 +346,8 @@ void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::str
         AudioInput::Create(std::move(device_channel), &threading_model(), this, &link_matrix_);
   } else {
     new_device =
-        DriverOutput::Create(std::move(device_channel), &threading_model(), this, &link_matrix_);
+        std::make_shared<DriverOutput>(&threading_model(), this, std::move(device_channel),
+                                       &link_matrix_, process_config_.default_volume_curve());
   }
 
   if (new_device == nullptr) {
@@ -373,7 +372,8 @@ void AudioDeviceManager::AddDeviceByChannel2(
         AudioInput::Create(std::move(stream_config), &threading_model(), this, &link_matrix_);
   } else {
     new_device =
-        DriverOutput::Create(std::move(stream_config), &threading_model(), this, &link_matrix_);
+        std::make_shared<DriverOutput>(&threading_model(), this, std::move(stream_config),
+                                       &link_matrix_, process_config_.default_volume_curve());
   }
 
   if (new_device == nullptr) {

@@ -38,30 +38,19 @@ std::atomic<uint32_t> DriverOutput::final_mix_instance_num_(0u);
 constexpr const char* kDefaultWavFilePathName = "/tmp/final_mix_";
 constexpr const char* kWavFileExtension = ".wav";
 
-std::shared_ptr<AudioOutput> DriverOutput::Create(zx::channel stream_channel,
-                                                  ThreadingModel* threading_model,
-                                                  DeviceRegistry* registry,
-                                                  LinkMatrix* link_matrix) {
-  return std::make_shared<DriverOutput>(threading_model, registry, std::move(stream_channel),
-                                        link_matrix);
-}
-
-std::shared_ptr<AudioOutput> DriverOutput::Create(
-    fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
-    ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix) {
-  return std::make_shared<DriverOutput>(threading_model, registry, std::move(channel), link_matrix);
-}
-
 DriverOutput::DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
-                           zx::channel initial_stream_channel, LinkMatrix* link_matrix)
+                           zx::channel initial_stream_channel, LinkMatrix* link_matrix,
+                           VolumeCurve volume_curve)
     : AudioOutput(threading_model, registry, link_matrix, std::make_unique<AudioDriverV1>(this)),
-      initial_stream_channel_(std::move(initial_stream_channel)) {}
+      initial_stream_channel_(std::move(initial_stream_channel)),
+      volume_curve_(std::move(volume_curve)) {}
 
 DriverOutput::DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                            fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
-                           LinkMatrix* link_matrix)
+                           LinkMatrix* link_matrix, VolumeCurve volume_curve)
     : AudioOutput(threading_model, registry, link_matrix, std::make_unique<AudioDriverV2>(this)),
-      initial_stream_channel_(channel.TakeChannel()) {}
+      initial_stream_channel_(channel.TakeChannel()),
+      volume_curve_(std::move(volume_curve)) {}
 
 DriverOutput::~DriverOutput() { wav_writer_.Close(); }
 
@@ -484,7 +473,8 @@ void DriverOutput::OnDriverStartComplete() {
   auto format = driver()->GetFormat();
   FX_CHECK(format);
   FX_DCHECK(pipeline_config_);
-  SetupMixTask(*pipeline_config_, format->channels(), driver_writable_ring_buffer()->frames(),
+  SetupMixTask(*pipeline_config_, volume_curve_, format->channels(),
+               driver_writable_ring_buffer()->frames(),
                driver_ptscts_ref_clock_to_fractional_frames());
 
   // Tell AudioDeviceManager we are ready to be an active audio device.

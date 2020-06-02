@@ -34,8 +34,9 @@ class SystemGainMuteProvider;
 
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public DeviceRegistry {
  public:
-  AudioDeviceManager(ThreadingModel* threading_model, std::unique_ptr<PlugDetector> plug_detector,
-                     RouteGraph* route_graph, LinkMatrix* link_matrix);
+  AudioDeviceManager(ThreadingModel& threading_model, std::unique_ptr<PlugDetector> plug_detector,
+                     RouteGraph& route_graph, LinkMatrix& link_matrix,
+                     ProcessConfig& process_config);
   ~AudioDeviceManager();
 
   fidl::InterfaceRequestHandler<fuchsia::media::AudioDeviceEnumerator> GetFidlRequestHandler() {
@@ -118,8 +119,10 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   void UpdateDefaultDevice(bool input);
 
   ThreadingModel& threading_model_;
-
   RouteGraph& route_graph_;
+  std::unique_ptr<PlugDetector> plug_detector_;
+  LinkMatrix& link_matrix_;
+  ProcessConfig& process_config_;
 
   // The set of AudioDeviceEnumerator clients we are currently tending to.
   fidl::BindingSet<fuchsia::media::AudioDeviceEnumerator> bindings_;
@@ -133,13 +136,8 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   std::unordered_map<uint64_t, std::shared_ptr<AudioDevice>> devices_pending_init_;
   std::unordered_map<uint64_t, std::shared_ptr<AudioDevice>> devices_;
 
-  // A helper class we will use to detect plug/unplug events for audio devices
-  std::unique_ptr<PlugDetector> plug_detector_;
-
   uint64_t default_output_token_ = ZX_KOID_INVALID;
   uint64_t default_input_token_ = ZX_KOID_INVALID;
-
-  LinkMatrix& link_matrix_;
 };
 
 }  // namespace media::audio

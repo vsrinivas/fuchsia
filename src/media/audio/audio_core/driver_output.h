@@ -24,17 +24,12 @@ class DriverOutput : public AudioOutput {
   static constexpr zx::duration kDefaultLowWaterNsec = zx::msec(50);
   static constexpr zx::duration kDefaultHighWaterNsec = zx::msec(60);
 
-  static std::shared_ptr<AudioOutput> Create(zx::channel channel, ThreadingModel* threading_model,
-                                             DeviceRegistry* registry, LinkMatrix* link_matrix);
-  static std::shared_ptr<AudioOutput> Create(
-      fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
-      ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix);
-
   DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
-               zx::channel initial_stream_channel, LinkMatrix* link_matrix);
+               zx::channel initial_stream_channel, LinkMatrix* link_matrix,
+               VolumeCurve volume_curve);
   DriverOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
-               LinkMatrix* link_matrix);
+               LinkMatrix* link_matrix, VolumeCurve volume_curve);
 
   ~DriverOutput();
 
@@ -86,6 +81,7 @@ class DriverOutput : public AudioOutput {
 
   State state_ = State::Uninitialized;
   zx::channel initial_stream_channel_;
+  VolumeCurve volume_curve_;
 
   int64_t frames_sent_ = 0;
   int64_t low_water_frames_ = 0;

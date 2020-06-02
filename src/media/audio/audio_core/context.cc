@@ -34,15 +34,15 @@ class ContextImpl : public Context {
               std::unique_ptr<PlugDetector> plug_detector, ProcessConfig process_config)
       : threading_model_(std::move(threading_model)),
         component_context_(std::move(component_context)),
-        route_graph_(process_config.device_config(), &link_matrix_),
-        device_manager_(threading_model_.get(), std::move(plug_detector), &route_graph_,
-                        &link_matrix_),
+        process_config_(std::move(process_config)),
+        route_graph_(process_config_.device_config(), &link_matrix_),
+        device_manager_(*threading_model_, std::move(plug_detector), route_graph_, link_matrix_,
+                        process_config_),
         stream_volume_manager_(threading_model_->FidlDomain().dispatcher()),
         audio_admin_(&stream_volume_manager_, threading_model_->FidlDomain().dispatcher(),
                      &usage_reporter_, &activity_dispatcher_),
         vmar_manager_(
             fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)),
-        process_config_(std::move(process_config)),
         usage_gain_reporter_(this),
         audio_tuner_() {
     FX_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
@@ -85,7 +85,7 @@ class ContextImpl : public Context {
  private:
   std::unique_ptr<ThreadingModel> threading_model_;
   std::unique_ptr<sys::ComponentContext> component_context_;
-  std::unique_ptr<PlugDetector> plug_detector_;
+  ProcessConfig process_config_;
 
   AudioOutput* throttle_output_;
 
@@ -109,8 +109,6 @@ class ContextImpl : public Context {
   // We allocate a sub-vmar to hold the audio renderer buffers. Keeping these in a sub-vmar allows
   // us to take advantage of ASLR while minimizing page table fragmentation.
   fbl::RefPtr<fzl::VmarManager> vmar_manager_;
-
-  ProcessConfig process_config_;
 
   UsageGainReporterImpl usage_gain_reporter_;
 

@@ -32,23 +32,24 @@ const Format FormatForMixGroup(const PipelineConfig::MixGroup& mix_group, uint32
 
 }  // namespace
 
-OutputPipelineImpl::OutputPipelineImpl(const PipelineConfig& config, uint32_t channels,
+OutputPipelineImpl::OutputPipelineImpl(const PipelineConfig& config,
+                                       const VolumeCurve& volume_curve, uint32_t channels,
                                        uint32_t max_block_size_frames,
                                        TimelineFunction ref_clock_to_fractional_frame,
                                        Mixer::Resampler sampler)
-    : OutputPipelineImpl(
-          State(config, channels, max_block_size_frames, ref_clock_to_fractional_frame, sampler)) {}
+    : OutputPipelineImpl(State(config, volume_curve, channels, max_block_size_frames,
+                               ref_clock_to_fractional_frame, sampler)) {}
 
 OutputPipelineImpl::OutputPipelineImpl(State state)
     : OutputPipeline(state.stream->format()), state_(std::move(state)) {}
 
-OutputPipelineImpl::State::State(const PipelineConfig& config, uint32_t channels,
-                                 uint32_t max_block_size_frames,
+OutputPipelineImpl::State::State(const PipelineConfig& config, const VolumeCurve& volume_curve,
+                                 uint32_t channels, uint32_t max_block_size_frames,
                                  TimelineFunction ref_clock_to_fractional_frame,
                                  Mixer::Resampler sampler) {
   uint32_t usage_mask = 0;
   stream =
-      CreateMixStage(config.root(), channels, max_block_size_frames,
+      CreateMixStage(config.root(), volume_curve, channels, max_block_size_frames,
                      fbl::MakeRefCounted<VersionedTimelineFunction>(ref_clock_to_fractional_frame),
                      &usage_mask, sampler);
 }
@@ -78,7 +79,8 @@ void OutputPipelineImpl::SetEffectConfig(const std::string& instance_name,
 }
 
 std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
-    const PipelineConfig::MixGroup& spec, uint32_t channels, uint32_t max_block_size_frames,
+    const PipelineConfig::MixGroup& spec, const VolumeCurve& volume_curve, uint32_t channels,
+    uint32_t max_block_size_frames,
     fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_frame, uint32_t* usage_mask,
     Mixer::Resampler sampler) {
   auto output_format = FormatForMixGroup(spec, channels);
@@ -123,8 +125,8 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
         // we align frames between intermediate mix stages to integral frame numbers.
         timeline_function.subject_time(), timeline_function.reference_time(),
         TimelineRate(frac_fps, zx::sec(1).to_nsecs())));
-    auto substage =
-        CreateMixStage(input, channels, max_block_size_frames, function, usage_mask, sampler);
+    auto substage = CreateMixStage(input, volume_curve, channels, max_block_size_frames, function,
+                                   usage_mask, sampler);
     stage->AddInput(substage, sampler);
   }
   return root;

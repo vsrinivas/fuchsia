@@ -47,8 +47,9 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
         std::move(c1), threading_model().FidlDomain().dispatcher());
     ASSERT_NE(driver_, nullptr);
 
-    output_ = DriverOutput::Create(std::move(c2), &threading_model(), &context().device_manager(),
-                                   &context().link_matrix());
+    output_ = std::make_shared<DriverOutput>(&threading_model(), &context().device_manager(),
+                                             std::move(c2), &context().link_matrix(),
+                                             context().process_config().default_volume_curve());
     ASSERT_NE(output_, nullptr);
 
     ring_buffer_mapper_ = driver_->CreateRingBuffer(kRingBufferSizeBytes);
@@ -416,8 +417,9 @@ class DriverV2OutputTest : public testing::ThreadingModelFixture {
 
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
     stream_config.set_channel(std::move(c2));
-    output_ = DriverOutput::Create(std::move(stream_config), &threading_model(),
-                                   &context().device_manager(), &context().link_matrix());
+    output_ = std::make_shared<DriverOutput>(&threading_model(), &context().device_manager(),
+                                             std::move(stream_config), &context().link_matrix(),
+                                             context().process_config().default_volume_curve());
     ASSERT_NE(output_, nullptr);
 
     ring_buffer_mapper_ = driver_->CreateRingBuffer(kRingBufferSizeBytes);
