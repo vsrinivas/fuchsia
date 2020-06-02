@@ -7,6 +7,7 @@
 mod constants;
 mod dhcp;
 mod dns;
+mod management;
 #[macro_use]
 mod environments;
 mod fidl;

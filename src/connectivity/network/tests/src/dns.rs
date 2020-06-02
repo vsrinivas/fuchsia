@@ -34,7 +34,7 @@ async fn test_set_default_dns_servers() -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
 
     let client_environment = sandbox
-        .create_environment(name, &[KnownServices::LoopkupAdmin])
+        .create_environment(name, &[KnownServices::LookupAdmin])
         .context("failed to create environment")?;
 
     // Connect to `fuchsia.net.name,LookupAdmin` and attempt to set the default servers. This
@@ -104,7 +104,7 @@ async fn test_discovered_dns<E: Endpoint>() -> Result {
     let client_environment = sandbox
         .create_netstack_environment_with::<Netstack2, _, _>(
             format!("{}_client", name),
-            &[KnownServices::LoopkupAdmin],
+            &[KnownServices::LookupAdmin],
         )
         .context("failed to create client environment")?;
 

@@ -1,0 +1,28 @@
+{
+    "program": {
+        "args": [
+            "--min_severity",
+            "0",
+            "--netemul",
+            "--config_data",
+            "empty.json"
+        ],
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [
+            "class/ethernet"
+        ],
+        "features": [
+            "config-data",
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.filter.Filter",
+            "fuchsia.net.name.LookupAdmin",
+            "fuchsia.net.stack.Stack",
+            "fuchsia.netstack.Netstack"
+        ]
+    }
+}

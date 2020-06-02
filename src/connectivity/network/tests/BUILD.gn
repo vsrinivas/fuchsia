@@ -147,6 +147,10 @@ group("netstack_integration_tests") {
 
     # network_manager integration with netstack is tested.
     "//src/connectivity/management/network-manager",
+
+    # netcfg integration with netstack is tested.
+    "//src/connectivity/network/netcfg",
+    "//src/connectivity/network/netcfg:config_empty",
   ]
 }
 

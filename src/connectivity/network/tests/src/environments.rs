@@ -58,7 +58,7 @@ pub enum KnownServices {
     MockCobalt,
     SecureStash,
     DhcpServer,
-    LoopkupAdmin,
+    LookupAdmin,
 }
 
 impl KnownServices {
@@ -82,7 +82,7 @@ impl KnownServices {
                                            "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx"),
             KnownServices::DhcpServer => (<fidl_fuchsia_net_dhcp::Server_Marker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                           fuchsia_component::fuchsia_single_component_package_url!("dhcpd-testing")),
-            KnownServices::LoopkupAdmin => (<fidl_fuchsia_net_name::LookupAdminMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+            KnownServices::LookupAdmin => (<fidl_fuchsia_net_name::LookupAdminMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                             fuchsia_component::fuchsia_single_component_package_url!("dns-resolver"))
         }
     }
@@ -462,6 +462,23 @@ impl<'a> TestEnvironment<'a> {
         };
         let () = interface.enable_interface().await.context("failed to enable interface")?;
         Ok(interface)
+    }
+
+    /// Adds a device to the environment's virtual device filesystem.
+    pub fn add_virtual_device(&self, e: &TestEndpoint<'_>, path: String) -> Result {
+        let (device, device_server_end) =
+            fidl::endpoints::create_endpoints::<netemul_network::DeviceProxy_Marker>()
+                .context("create endpoints")?;
+        e.get_proxy_(device_server_end).context("get proxy")?;
+
+        self.environment
+            .add_device(&mut netemul_environment::VirtualDevice { path, device })
+            .context("add device")
+    }
+
+    /// Removes a device from the environment's virtual device filesystem.
+    pub fn remove_virtual_device(&self, path: &str) -> Result {
+        self.environment.remove_device(path).context("remove device")
     }
 
     /// Creates a [`socket2::Socket`] backed by the implementation of

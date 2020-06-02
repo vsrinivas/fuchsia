@@ -45,6 +45,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
@@ -62,6 +63,10 @@ package("netcfg") {
       path = rebase_path("meta/netcfg.cmx")
       dest = "netcfg.cmx"
     },
+    {
+      path = rebase_path("meta/netcfg_netemul.cmx")
+      dest = "netcfg_netemul.cmx"
+    },
   ]
 }
 
@@ -69,6 +74,12 @@ config_data("config_default") {
   for_pkg = "netcfg"
   sources = [ rebase_path("config/default.json") ]
   outputs = [ "default.json" ]
+}
+
+config_data("config_empty") {
+  for_pkg = "netcfg"
+  sources = [ rebase_path("config/empty.json") ]
+  outputs = [ "empty.json" ]
 }
 
 config_data("config_no_ssh_over_wlan") {
