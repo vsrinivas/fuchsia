@@ -32,7 +32,7 @@ template("measure_tape") {
 
   out_cc = "${target_gen_dir}/measure_tape/hlcpp/${target_name}.cc"
   out_h = "${target_gen_dir}/measure_tape/hlcpp/${target_name}.h"
-  out_rs_root = "${target_gen_dir}/measure_tape/rust"
+  out_rs_root = "${target_gen_dir}/${target_name}/rust"
   out_rs = "${out_rs_root}/src/lib.rs"
 
   # arguments for code generation tool
