@@ -55,4 +55,17 @@ void main() {
             inspect, 'core/appmgr:root/cpu_stats:task_count'),
         singleValue(greaterThan(0)));
   });
+
+  test('appmgr is not out of inspect space', () async {
+    final inspect = sl4f.Inspect(sl4fDriver);
+
+    var size = await getInspectValues(
+        inspect, 'core/appmgr:root/inspect_stats:current_size');
+    var maxSize = await getInspectValues(
+        inspect, 'core/appmgr:root/inspect_stats:maximum_size');
+
+    expect(size, singleValue(greaterThan(0)));
+    expect(maxSize, singleValue(greaterThan(0)));
+    expect(maxSize, singleValue(greaterThan(size[0])));
+  });
 }

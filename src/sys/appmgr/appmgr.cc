@@ -17,6 +17,8 @@
 #include <fs/service.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
+#include "lib/inspect/cpp/inspector.h"
+
 using fuchsia::sys::TerminationReason;
 
 namespace component {
@@ -25,10 +27,11 @@ constexpr zx::duration kMinSmsmgrBackoff = zx::msec(200);
 constexpr zx::duration kMaxSysmgrBackoff = zx::sec(15);
 constexpr zx::duration kSysmgrAliveReset = zx::sec(5);
 constexpr zx::duration kCpuSamplePeriod = zx::min(1);
+constexpr size_t kMaxInspectSize = 2 * 1024 * 1024 /* 2MB */;
 }  // namespace
 
 Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
-    : inspector_(),
+    : inspector_(inspect::InspectSettings{.maximum_size = kMaxInspectSize}),
       cpu_watcher_(
           std::make_unique<CpuWatcher>(inspector_.GetRoot().CreateChild("cpu_stats"), zx::job())),
       publish_vfs_(dispatcher),
@@ -39,6 +42,18 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       sysmgr_retry_crashes_(args.retry_sysmgr_crash),
       sysmgr_permanently_failed_(false),
       storage_watchdog_(StorageWatchdog("/data", "/data/cache")) {
+  inspector_.GetRoot().CreateLazyNode(
+      "inspect_stats",
+      [this] {
+        inspect::InspectStats stats = inspector_.GetStats();
+        inspect::Inspector insp;
+        insp.GetRoot().CreateUint("current_size", stats.size, &insp);
+        insp.GetRoot().CreateUint("maximum_size", stats.maximum_size, &insp);
+        insp.GetRoot().CreateUint("dynamic_links", stats.dynamic_child_count, &insp);
+        return fit::make_result_promise(fit::ok(std::move(insp)));
+      },
+      &inspector_);
+
   // 0. Start storage watchdog for cache storage
   storage_watchdog_.Run(dispatcher);
 
