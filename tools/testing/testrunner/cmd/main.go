@@ -27,7 +27,6 @@ import (
 	tap "go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
 	testparser "go.fuchsia.dev/fuchsia/tools/testing/testparser/lib"
 	testrunner "go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
-	"go.fuchsia.dev/fuchsia/tools/testing/util"
 )
 
 // Fuchsia-specific environment variables possibly exposed to the testrunner.
@@ -133,9 +132,12 @@ func validateTest(test testsharder.Test) error {
 	if test.Runs <= 0 {
 		return fmt.Errorf("one or more tests with invalid `runs` field")
 	}
-	// UniqueName() ensures that the required Path or PackageURL is set.
-	if util.UniqueName(test.Test) == "" {
-		return fmt.Errorf("one or more tests with invalid path/packageurl")
+	if test.OS == "fuchsia" {
+		if test.Test.PackageURL == "" {
+			return fmt.Errorf("one or more fuchsia tests missing `packageurl` field")
+		}
+	} else if test.Test.Path == "" {
+		return fmt.Errorf("one or more host tests missing `path` field")
 	}
 	return nil
 }
@@ -258,11 +260,9 @@ func runTest(ctx context.Context, test testsharder.Test, runIndex int, t tester)
 
 	endTime := time.Now()
 
-	name := util.UniqueName(test.Test)
-
 	// Record the test details in the summary.
 	return &testrunner.TestResult{
-		Name:      name,
+		Name:      test.Name,
 		GNLabel:   test.Label,
 		Stdio:     stdio.Bytes(),
 		Result:    result,

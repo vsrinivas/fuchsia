@@ -33,7 +33,6 @@ go_library("main") {
     "//tools/testing/runtests",
     "//tools/testing/tap",
     "//tools/testing/testparser",
-    "//tools/testing/util",
   ]
 }
 

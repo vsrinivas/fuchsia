@@ -155,7 +155,7 @@ func TestRunTest(t *testing.T) {
 			},
 			testErr: nil,
 			expectedResult: []*testrunner.TestResult{{
-				Name:   "/foo/bar",
+				Name:   "bar",
 				Result: runtests.TestSuccess,
 			}},
 		},
@@ -169,7 +169,7 @@ func TestRunTest(t *testing.T) {
 			},
 			testErr: nil,
 			expectedResult: []*testrunner.TestResult{{
-				Name:   "fuchsia-pkg://foo/bar",
+				Name:   "bar",
 				Result: runtests.TestSuccess,
 			}},
 		},
@@ -183,7 +183,7 @@ func TestRunTest(t *testing.T) {
 			},
 			testErr: fmt.Errorf("test failed"),
 			expectedResult: []*testrunner.TestResult{{
-				Name:   "fuchsia-pkg://foo/bar",
+				Name:   "bar",
 				Result: runtests.TestFailure,
 			}},
 		},
@@ -210,10 +210,10 @@ func TestRunTest(t *testing.T) {
 			runs:    2,
 			testErr: nil,
 			expectedResult: []*testrunner.TestResult{{
-				Name:   "fuchsia-pkg://foo/bar",
+				Name:   "bar (2)",
 				Result: runtests.TestSuccess,
 			}, {
-				Name:     "fuchsia-pkg://foo/bar",
+				Name:     "bar (2)",
 				Result:   runtests.TestSuccess,
 				RunIndex: 1,
 			}},

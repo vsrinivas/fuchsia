@@ -4,10 +4,7 @@
 
 package testsharder
 
-import (
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
-	"go.fuchsia.dev/fuchsia/tools/testing/util"
-)
+import "go.fuchsia.dev/fuchsia/tools/build/lib"
 
 // Exactly one entry in the durations file will have this as its test_name field. The
 // durations specified by this entry will be applied to any tests that aren't
@@ -29,7 +26,7 @@ func NewTestDurationsMap(durations []build.TestDuration) TestDurationsMap {
 // Get returns the duration data for a given test. If the test is not included
 // in the durations map, the default duration data is returned instead.
 func (m TestDurationsMap) Get(test Test) build.TestDuration {
-	if testData, ok := m[util.UniqueName(test.Test)]; ok {
+	if testData, ok := m[test.Test.Name]; ok {
 		return testData
 	}
 	return m[defaultDurationKey]

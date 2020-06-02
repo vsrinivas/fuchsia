@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
-	"go.fuchsia.dev/fuchsia/tools/testing/util"
 )
 
 func TestMultiplyShards(t *testing.T) {
@@ -38,9 +37,9 @@ func TestMultiplyShards(t *testing.T) {
 			OS:   os,
 		}, 1}
 		if os == "fuchsia" {
-			test.PackageURL = fmt.Sprintf("fuchsia-pkg://fuchsia.com/test%d", id)
+			test.Name = fmt.Sprintf("fuchsia-pkg://fuchsia.com/test%d", id)
 		} else {
-			test.Path = fmt.Sprintf("/path/to/test/%d", id)
+			test.Name = fmt.Sprintf("/path/to/test%d", id)
 		}
 		return test
 	}
@@ -69,7 +68,7 @@ func TestMultiplyShards(t *testing.T) {
 		test := makeTest(id, os)
 		test.Runs = runs
 		return &Shard{
-			Name:  "multiplied:" + environmentName(env) + "-" + test.Name,
+			Name:  "multiplied:" + environmentName(env) + "-" + normalizeTestName(test.Name),
 			Tests: []Test{test},
 			Env:   env,
 		}
@@ -264,7 +263,7 @@ func assertShardsContainTests(t *testing.T, shards []*Shard, expectedShards [][]
 		actualTestNames := []string{}
 		for _, test := range shard.Tests {
 			for i := 0; i < test.Runs; i++ {
-				actualTestNames = append(actualTestNames, util.UniqueName(test.Test))
+				actualTestNames = append(actualTestNames, test.Test.Name)
 			}
 		}
 

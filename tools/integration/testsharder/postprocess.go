@@ -15,8 +15,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	"go.fuchsia.dev/fuchsia/tools/testing/util"
 )
 
 // The maximum number of runs that testsharder will calculate for a multiplied
@@ -132,10 +130,9 @@ func MultiplyShards(
 				}
 
 				match := &multiplierMatch{shard: shard, test: test}
-				uniqueName := util.UniqueName(test.Test)
-				if multiplier.Name == test.Name || multiplier.Name == uniqueName {
+				if multiplier.Name == test.Name {
 					exactMatches = append(exactMatches, match)
-				} else if nameRegex.FindString(test.Name) != "" || nameRegex.FindString(uniqueName) != "" {
+				} else if nameRegex.FindString(test.Name) != "" {
 					regexMatches = append(regexMatches, match)
 				} else {
 					continue
