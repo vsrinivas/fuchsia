@@ -55,8 +55,8 @@ void RunWorkload(StatusLine* status, ProfileManager* profile_manager, Temperatur
 
   // Log final temperature
   status->Set("");
-  status->Log("* Workload %s complete : final temp: %s\n", workload.name.c_str(),
-              TemperatureToString(temperature).c_str());
+  status->Log("* Workload %s complete after %0.2fs: final temp: %s\n", workload.name.c_str(),
+              DurationToSecs(duration), TemperatureToString(temperature).c_str());
 }
 
 }  // namespace
@@ -89,25 +89,49 @@ bool StressCpu(zx::duration duration, TemperatureSensor* temperature_sensor) {
   // Get workloads.
   std::vector<Workload> workloads = GetWorkloads();
 
-  // Determine the time per test, and how many times we should loop through the different workloads.
+  // Get initial time per test.
+  //
+  // Our strategy is to run through the tests multiple times, doubling the
+  // runtime each time. This allows us to catch obvious faults detected by
+  // a particular test quickly, while later on moving to a "burn in" mode. It
+  // also has the added benefit that if our process is terminated at an
+  // arbitrary point, no one test will have run for more than twice as long as
+  // any other test.
+  //
+  // When the user has passed in a fixed test duration, we additionally want all
+  // tests to have an equal run time. We thus choose an initial test time such
+  // that after runtime doubling is applied will cause the test end time to
+  // coincide with the end of a full round of tests.
   zx::duration time_per_test;
-  uint64_t iterations;
-  if (duration == zx::duration::infinite()) {
-    // If we are running forever, just use 5 minutes for each.
-    time_per_test = zx::sec(300);
-    iterations = UINT64_MAX;
+  if (finish_time == zx::time::infinite()) {
+    time_per_test = zx::msec(100);
   } else {
-    time_per_test = duration / workloads.size();
-    iterations = 1;
+    // After running through K tests N times, doubling the test time after
+    // each, and starting with an initial test time of D, we will have run for:
+    //
+    //    D * K * (2**(N + 1) - 1)
+    //
+    // we select the largest such D such that:
+    //
+    //   1. Above equation evenly divides the total desired test duration; and
+    //   2. "D" is no larger than 100 msec.
+    uint64_t n = 1;
+    do {
+      time_per_test = duration / (workloads.size() * ((1ul << n) - 1));
+      n++;
+    } while (time_per_test > zx::msec(100) && n < 63);
   }
 
   // Run the workloads.
-  for (uint64_t iteration = 0; iteration < iterations; iteration++) {
+  uint64_t iteration = 1;
+  do {
+    status.Log("Iteration %ld: %0.2fs per test.", iteration++, DurationToSecs(time_per_test));
     for (const auto& workload : workloads) {
       RunWorkload(&status, profile_manager.get(), temperature_sensor, workload, num_cpus,
                   time_per_test);
     }
-  }
+    time_per_test *= 2;
+  } while (zx::clock::get_monotonic() < finish_time);
 
   status.Log("Complete.\n");
   return true;
