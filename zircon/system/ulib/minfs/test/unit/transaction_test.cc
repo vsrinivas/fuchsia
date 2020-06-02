@@ -100,20 +100,20 @@ class FakeMinfs : public TransactionalFs {
     info_.inode_count = kTotalElements;
   }
 
-  fbl::Mutex* GetLock() const { return &txn_lock_; }
+  fbl::Mutex* GetLock() const override { return &txn_lock_; }
 
   zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
-                               std::unique_ptr<Transaction>* out) {
+                               std::unique_ptr<Transaction>* out) override {
     return ZX_OK;
   }
 
-  void EnqueueCallback(SyncCallback callback) {}
+  void EnqueueCallback(SyncCallback callback) override {}
 
-  void CommitTransaction(std::unique_ptr<Transaction> transaction) {}
+  void CommitTransaction(std::unique_ptr<Transaction> transaction) override {}
 
-  Bcache* GetMutableBcache() { return nullptr; }
+  Bcache* GetMutableBcache() override { return nullptr; }
 
-  Allocator& GetBlockAllocator() {
+  Allocator& GetBlockAllocator() override {
     if (!block_allocator_) {
       std::unique_ptr<FakeStorage> storage(new FakeStorage(kTotalElements));
       ZX_ASSERT(Allocator::Create(&builder_, std::move(storage), &block_allocator_) == ZX_OK);
@@ -121,7 +121,7 @@ class FakeMinfs : public TransactionalFs {
     return *block_allocator_;
   }
 
-  Allocator& GetInodeAllocator() {
+  Allocator& GetInodeAllocator() override {
     return GetInodeManager().inode_allocator();
   }
 
