@@ -1,22 +1,23 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings::{
     Error, IntlMarker, IntlRequest, IntlRequestStream, IntlSetResponder, IntlSettings,
-    IntlWatchResponder,
+    IntlWatch2Responder, IntlWatchResponder,
 };
 use fuchsia_async as fasync;
 use futures::future::LocalBoxFuture;
 use futures::FutureExt;
 
+use crate::fidl_hanging_get_responder;
 use crate::fidl_hanging_get_result_responder;
-use crate::fidl_processor::{process_stream, RequestContext};
-use crate::switchboard::base::{
-    FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingType, SwitchboardClient,
-};
+use crate::fidl_processor::{process_stream_both_watches, RequestContext};
+use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType, SwitchboardClient};
 use crate::switchboard::hanging_get_handler::Sender;
 
+fidl_hanging_get_responder!(IntlSettings, IntlWatch2Responder, IntlMarker::DEBUG_NAME);
+
+// TODO(fxb/52593): Remove when clients are ported to watch2.
 fidl_hanging_get_result_responder!(IntlSettings, IntlWatchResponder, IntlMarker::DEBUG_NAME);
 
 impl From<SettingResponse> for IntlSettings {
@@ -36,7 +37,7 @@ impl From<IntlSettings> for SettingRequest {
 }
 
 async fn set(
-    context: RequestContext<IntlSettings, IntlWatchResponder>,
+    context: RequestContext<IntlSettings, IntlWatch2Responder>,
     settings: IntlSettings,
     responder: IntlSetResponder,
 ) {
@@ -60,10 +61,30 @@ async fn set(
 }
 
 pub fn spawn_intl_fidl_handler(switchboard_client: SwitchboardClient, stream: IntlRequestStream) {
-    process_stream::<IntlMarker, IntlSettings, IntlWatchResponder>(
+    // TODO(fxb/52593): Convert back to process_stream when clients are ported to watch2.
+    process_stream_both_watches::<IntlMarker, IntlSettings, IntlWatchResponder, IntlWatch2Responder>(
         stream,
         switchboard_client,
         SettingType::Intl,
+        // Separate handlers because there are two separate Responders for Watch and
+        // Watch2. The hanging get handlers can only handle one type of Responder
+        // at a time, so they must be registered separately.
+        Box::new(
+            move |context, req| -> LocalBoxFuture<'_, Result<Option<IntlRequest>, anyhow::Error>> {
+                async move {
+                    // Support future expansion of FIDL
+                    #[allow(unreachable_patterns)]
+                    match req {
+                        IntlRequest::Watch { responder } => context.watch(responder, false).await,
+                        _ => {
+                            return Ok(Some(req));
+                        }
+                    }
+                    return Ok(None);
+                }
+                .boxed_local()
+            },
+        ),
         Box::new(
             move |context, req| -> LocalBoxFuture<'_, Result<Option<IntlRequest>, anyhow::Error>> {
                 async move {
@@ -73,7 +94,7 @@ pub fn spawn_intl_fidl_handler(switchboard_client: SwitchboardClient, stream: In
                         IntlRequest::Set { settings, responder } => {
                             set(context.clone(), settings, responder).await;
                         }
-                        IntlRequest::Watch { responder } => context.watch(responder, false).await,
+                        IntlRequest::Watch2 { responder } => context.watch(responder, true).await,
                         _ => {
                             return Ok(Some(req));
                         }

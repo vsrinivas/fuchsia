@@ -55,7 +55,7 @@ async fn main() -> Result<(), Error> {
     validate_accessibility_set().await?;
 
     println!("  client calls watch");
-    validate_accessibility_watch2().await?;
+    validate_accessibility_watch().await?;
 
     println!("audio service tests");
     println!("  client calls audio watch");
@@ -308,13 +308,13 @@ async fn validate_intl_watch() -> Result<(), Error> {
     const TEST_HOUR_CYCLE: fidl_fuchsia_settings::HourCycle = fidl_fuchsia_settings::HourCycle::H12;
 
     let env = create_service!(Services::Intl,
-        IntlRequest::Watch { responder } => {
-            responder.send(&mut Ok(IntlSettings {
+        IntlRequest::Watch2 { responder } => {
+            responder.send(IntlSettings {
                 locales: Some(vec![LocaleId { id: TEST_LOCALE.into() }]),
                 temperature_unit: Some(TEST_TEMPERATURE_UNIT),
                 time_zone_id: Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }),
                 hour_cycle: Some(TEST_HOUR_CYCLE),
-            }))?;
+            })?;
         }
     );
 
@@ -518,7 +518,7 @@ async fn validate_accessibility_set() -> Result<(), Error> {
     Ok(())
 }
 
-async fn validate_accessibility_watch2() -> Result<(), Error> {
+async fn validate_accessibility_watch() -> Result<(), Error> {
     let env = create_service!(
         Services::Accessibility,
         AccessibilityRequest::Watch2 { responder } => {

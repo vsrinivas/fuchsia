@@ -28,10 +28,8 @@ pub async fn command(
 
     if settings == IntlSettings::empty() {
         // No values set, perform a watch instead.
-        match proxy.watch().await? {
-            Ok(setting_value) => Ok(format!("{:#?}", setting_value)),
-            Err(err) => Ok(format!("{:#?}", err)),
-        }
+        let setting_value = proxy.watch2().await?;
+        Ok(format!("{:#?}", setting_value))
     } else {
         match proxy.set(settings).await? {
             Ok(_) => Ok(format!("Successfully set IntlSettings")),

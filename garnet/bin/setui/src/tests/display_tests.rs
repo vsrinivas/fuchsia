@@ -284,7 +284,7 @@ async fn test_display_failure() {
     let _settings_value = display_proxy.watch2().await.expect("watch completed");
 
     let intl_service = env.connect_to_service::<IntlMarker>().unwrap();
-    let _settings = intl_service.watch().await.expect("watch completed").expect("watch successful");
+    let _settings = intl_service.watch2().await.expect("watch completed");
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

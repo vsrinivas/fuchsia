@@ -6,11 +6,14 @@
 use {
     crate::registry::device_storage::testing::*,
     crate::switchboard::base::SettingType,
+    crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
     anyhow::format_err,
     fidl::endpoints::{ServerEnd, ServiceMarker},
+    fidl::Error::ClientChannelClosed,
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_zircon::Status,
     futures::future::BoxFuture,
     futures::lock::Mutex,
     futures::prelude::*,
@@ -73,6 +76,16 @@ async fn create_test_intl_env(storage_factory: Arc<Mutex<InMemoryStorageFactory>
         .unwrap();
 
     env.connect_to_service::<IntlMarker>().unwrap()
+}
+
+/// Creates an environment that will fail on a get request.
+async fn create_intl_test_env_with_failures(
+    storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
+) -> IntlProxy {
+    create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Intl)
+        .await
+        .connect_to_service::<IntlMarker>()
+        .unwrap()
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -223,4 +236,31 @@ async fn test_intl_invalid_timezone() {
         settings.time_zone_id,
         Some(fidl_fuchsia_intl::TimeZoneId { id: INITIAL_TIME_ZONE.to_string() })
     );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_channel_failure_watch() {
+    let intl_service = create_intl_test_env_with_failures(InMemoryStorageFactory::create()).await;
+    let result = intl_service.watch().await.ok();
+    assert_eq!(result, Some(Err(Error::Failed)));
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_channel_failure_watch2() {
+    let intl_service = create_intl_test_env_with_failures(InMemoryStorageFactory::create()).await;
+    let result = intl_service.watch2().await;
+    assert!(result.is_err());
+    assert_eq!(
+        ClientChannelClosed(Status::INTERNAL).to_string(),
+        result.err().unwrap().to_string()
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_simultaneous_watch() {
+    let intl_service = create_test_intl_env(InMemoryStorageFactory::create()).await;
+
+    let settings = intl_service.watch().await.expect("watch completed").expect("watch successful");
+    let settings2 = intl_service.watch2().await.expect("watch completed");
+    assert_eq!(settings, settings2);
 }
