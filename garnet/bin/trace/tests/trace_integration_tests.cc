@@ -29,12 +29,23 @@ namespace test {
 
 namespace {
 
-void RunAndVerify(const std::string& test_name, const std::string& categories,
-                  size_t buffer_size_in_mb, const std::string& buffering_mode,
+// The URL of the basic integration test app (for fill-buffer, fill-buffer-and-alert, and simple).
+const char kBasicIntegrationTestUrl[] =
+    "fuchsia-pkg://fuchsia.com/trace_tests#meta/basic_integration_test_app.cmx";
+// The URL of the nested environment integration test app.
+const char kNestedEnvironmentTestUrl[] =
+    "fuchsia-pkg://fuchsia.com/trace_tests#meta/nested_environment_test.cmx";
+// The URL of the two-providers-two-engines integration test app.
+const char kTwoProvidersTwoEnginesTestUrl[] =
+    "fuchsia-pkg://fuchsia.com/trace_tests#meta/two_providers_two_engines_test_app.cmx";
+
+void RunAndVerify(const std::string& app_path, const std::string& test_name,
+                  const std::string& categories, size_t buffer_size_in_mb,
+                  const std::string& buffering_mode,
                   std::initializer_list<std::string> additional_arguments = {}) {
-  ASSERT_TRUE(RunIntegrationTest(test_name, categories, buffer_size_in_mb, buffering_mode,
+  ASSERT_TRUE(RunIntegrationTest(app_path, test_name, categories, buffer_size_in_mb, buffering_mode,
                                  additional_arguments, kRelativeOutputFilePath, g_log_settings));
-  ASSERT_TRUE(VerifyIntegrationTest(test_name, buffer_size_in_mb, buffering_mode,
+  ASSERT_TRUE(VerifyIntegrationTest(app_path, test_name, buffer_size_in_mb, buffering_mode,
                                     kRelativeOutputFilePath, g_log_settings));
 }
 
@@ -44,20 +55,34 @@ static void RunAndVerifyTspec(const char* relative_tspec_path) {
   ASSERT_TRUE(VerifyTspec(relative_tspec_path, kRelativeOutputFilePath, g_log_settings));
 }
 
-// These two tests should have the same output.
-TEST(Oneshot, FillBuffer) { RunAndVerify("fill-buffer", "trace:test", 1, "oneshot"); }
-TEST(Oneshot, FillBufferTspec) { RunAndVerifyTspec("data/oneshot.tspec"); }
+TEST(Oneshot, FillBuffer) {
+  RunAndVerify(kBasicIntegrationTestUrl, "fill-buffer", "trace:test", 1, "oneshot");
+}
 
-TEST(Circular, FillBuffer) { RunAndVerify("fill-buffer", "trace:test", 1, "circular"); }
+TEST(Circular, FillBuffer) {
+  RunAndVerify(kBasicIntegrationTestUrl, "fill-buffer", "trace:test", 1, "circular");
+}
 
-TEST(CircularWithTrigger, FillBufferAndAlert) { RunAndVerifyTspec("data/circular_trigger.tspec"); }
+TEST(CircularWithTrigger, FillBufferAndAlert) {
+  RunAndVerify(kBasicIntegrationTestUrl, "fill-buffer-and-alert", "trace:test", 1, "circular",
+               {"--trigger=alert:stop"});
+}
 
-TEST(Streaming, FillBuffer) { RunAndVerify("fill-buffer", "trace:test", 1, "streaming"); }
+TEST(Streaming, FillBuffer) {
+  RunAndVerify(kBasicIntegrationTestUrl, "fill-buffer", "trace:test", 1, "streaming");
+}
 
 TEST(NestedTestEnvironment, Test) {
-  ASSERT_TRUE(
-      RunTspec("data/nested_environment_test.tspec", kRelativeOutputFilePath, g_log_settings));
+  RunAndVerify(kNestedEnvironmentTestUrl, "nested-environment-test", "trace:test", 1, "oneshot",
+               {"--environment-name=environment_name"});
 }
+
+// TODO(51793): Remove tspec tests along with trace tool tspec functionality.
+// These are present for now to test tspec functionality in the trace tool, which is still used by
+// some benchmarks.
+TEST(Tspec, Oneshot) { RunAndVerifyTspec("data/oneshot.tspec"); }
+TEST(Tspec, CircularWithTrigger) { RunAndVerifyTspec("data/circular_trigger.tspec"); }
+TEST(Tspec, NestedTestEnvironment) { RunAndVerifyTspec("data/nested_environment_test.tspec"); }
 
 // A class for adding an extra provider to the test.
 
@@ -139,16 +164,18 @@ class TwoProvidersOneEngine : public ExtraProvider {
 TEST_F(TwoProvidersOneEngine, DISABLED_ErrorHandling) {
   ASSERT_TRUE(provider_process().is_valid());
 
-  RunAndVerifyTspec("data/simple.tspec");
+  RunAndVerify(kBasicIntegrationTestUrl, "simple", "trace:test", 1, "oneshot");
 
   // Running this test twice should work.
   // DX-448: Providers didn't properly reset themselves after a previous
   // trace was prematurely aborted.
-  RunAndVerifyTspec("data/simple.tspec");
+  RunAndVerify(kBasicIntegrationTestUrl, "simple", "trace:test", 1, "oneshot");
 }
 
+// TODO(8198): Disabled due to flake.
 TEST(TwoProvidersTwoEngines, DISABLED_Test) {
-  RunAndVerifyTspec("data/two_providers_two_engines.tspec");
+  RunAndVerify(kTwoProvidersTwoEnginesTestUrl, "two-providers-two-engines", "trace:test", 1,
+               "oneshot");
 }
 
 }  // namespace

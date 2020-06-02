@@ -15,14 +15,17 @@
 
 #include "garnet/bin/trace/tests/basic_integration_tests.h"
 
-namespace tracing {
-namespace test {
+namespace tracing::test {
 
-static bool RunSimpleTest(const tracing::Spec& spec) {
+namespace {
+
+const char kSimpleIntegrationTestProviderName[] = "simple";
+
+bool RunSimpleTest(size_t buffer_size_in_mb, const std::string& buffering_mode) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   std::unique_ptr<trace::TraceProvider> provider;
-  if (!CreateProviderSynchronouslyAndWait(loop, "simple", &provider)) {
+  if (!CreateProviderSynchronouslyAndWait(loop, kSimpleIntegrationTestProviderName, &provider)) {
     return false;
   }
 
@@ -32,7 +35,8 @@ static bool RunSimpleTest(const tracing::Spec& spec) {
   return true;
 }
 
-static bool VerifySimpleTest(const tracing::Spec& spec, const std::string& test_output_file) {
+bool VerifySimpleTest(size_t buffer_size_in_mb, const std::string& buffering_mode,
+                      const std::string& test_output_file) {
   size_t num_events;
   if (!VerifyTestEventsFromJson(test_output_file, &num_events)) {
     return false;
@@ -47,27 +51,23 @@ static bool VerifySimpleTest(const tracing::Spec& spec, const std::string& test_
   return true;
 }
 
-static bool RunSimpleTest(size_t buffer_size_in_mb, const std::string& buffering_mode) {
-  // TODO(52043): Implement non-tspec version of simple integration test.
-  FX_LOGS(ERROR) << "Non-tspec simple integration test not yet implemented";
-  return false;
+// TODO(52043): Remove tspec compatibility.
+bool RunSimpleTest(const tracing::Spec& spec) {
+  return RunSimpleTest(*spec.buffer_size_in_mb, *spec.buffering_mode);
 }
 
-static bool VerifySimpleTest(size_t buffer_size_in_mb, const std::string& buffering_mode,
-                             const std::string& test_output_file) {
-  // TODO(52043): Implement non-tspec version of simple integration test.
-  FX_LOGS(ERROR) << "Non-tspec simple integration test not yet implemented";
-  return false;
+bool VerifySimpleTest(const tracing::Spec& spec, const std::string& test_output_file) {
+  return VerifySimpleTest(*spec.buffer_size_in_mb, *spec.buffering_mode, test_output_file);
 }
 
-// TODO(52043): Remove tspec functionality.
+}  // namespace
+
 const IntegrationTest kSimpleIntegrationTest = {
-    "simple",
+    kSimpleIntegrationTestProviderName,
     &RunSimpleTest,     // for run command
     &VerifySimpleTest,  // for verify command
     &RunSimpleTest,     // for run_tspec command; to be removed
     &VerifySimpleTest,  // for verify_tspec command; to be removed
 };
 
-}  // namespace test
-}  // namespace tracing
+}  // namespace tracing::test

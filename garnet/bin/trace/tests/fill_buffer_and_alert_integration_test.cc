@@ -13,12 +13,13 @@
 
 #include "garnet/bin/trace/tests/basic_integration_tests.h"
 
-namespace tracing {
-namespace test {
+namespace tracing::test {
+
+namespace {
 
 const char kFillBufferAndAlertProviderName[] = "fill-buffer-and-alert";
 
-static bool RunFillBufferAndAlertTest(const tracing::Spec& spec) {
+bool RunFillBufferAndAlertTest(size_t buffer_size_in_mb, const std::string& buffering_mode) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   // If we're streaming then we need intermediate buffer saving to be acted on while we're
   // writing the buffer. So run the provider loop in the background.
@@ -54,7 +55,7 @@ static bool RunFillBufferAndAlertTest(const tracing::Spec& spec) {
   // This stress tests streaming mode buffer saving (with buffer size of 1MB).
   constexpr size_t kMinNumBuffersFilled = 4;
 
-  FillBuffer(kMinNumBuffersFilled, *spec.buffer_size_in_mb);
+  FillBuffer(kMinNumBuffersFilled, buffer_size_in_mb);
 
   // Send an alert.
   TRACE_ALERT("trace:test", "alert");
@@ -71,31 +72,28 @@ static bool RunFillBufferAndAlertTest(const tracing::Spec& spec) {
   return true;
 }
 
-static bool VerifyFillBufferAndAlertTest(const tracing::Spec& spec,
-                                         const std::string& test_output_file) {
-  const tracing::BufferingModeSpec* mode_spec = tracing::LookupBufferingMode(*spec.buffering_mode);
+bool VerifyFillBufferAndAlertTest(size_t buffer_size_in_mb, const std::string& buffering_mode,
+                                  const std::string& test_output_file) {
+  const tracing::BufferingModeSpec* mode_spec = tracing::LookupBufferingMode(buffering_mode);
   if (mode_spec == nullptr) {
-    FX_LOGS(ERROR) << "Bad buffering mode: " << *spec.buffering_mode;
+    FX_LOGS(ERROR) << "Bad buffering mode: " << buffering_mode;
     return false;
   }
-  return VerifyFullBuffer(test_output_file, mode_spec->mode, *spec.buffer_size_in_mb);
+  return VerifyFullBuffer(test_output_file, mode_spec->mode, buffer_size_in_mb);
 }
 
-static bool RunFillBufferAndAlertTest(size_t buffer_size_in_mb, const std::string& buffering_mode) {
-  // TODO(52043): Implement non-tspec version of fill-buffer-and-alert test.
-  FX_LOGS(ERROR) << "Non-tspec fill-buffer-and-alert test not yet implemented";
-  return false;
+// TODO(52043): Remove tspec compatibility.
+bool RunFillBufferAndAlertTest(const tracing::Spec& spec) {
+  return RunFillBufferAndAlertTest(*spec.buffer_size_in_mb, *spec.buffering_mode);
 }
 
-static bool VerifyFillBufferAndAlertTest(size_t buffer_size_in_mb,
-                                         const std::string& buffering_mode,
-                                         const std::string& test_output_file) {
-  // TODO(52043): Implement non-tspec version of fill-buffer-and-alert test.
-  FX_LOGS(ERROR) << "Non-tspec fill-buffer-and-alert test not yet implemented";
-  return false;
+bool VerifyFillBufferAndAlertTest(const tracing::Spec& spec, const std::string& test_output_file) {
+  return VerifyFillBufferAndAlertTest(*spec.buffer_size_in_mb, *spec.buffering_mode,
+                                      test_output_file);
 }
 
-// TODO(52043): Remove tspec functionality.
+}  // namespace
+
 const IntegrationTest kFillBufferAndAlertIntegrationTest = {
     kFillBufferAndAlertProviderName,
     &RunFillBufferAndAlertTest,     // for run command
@@ -104,5 +102,4 @@ const IntegrationTest kFillBufferAndAlertIntegrationTest = {
     &VerifyFillBufferAndAlertTest,  // for verify_tspec command; to be removed
 };
 
-}  // namespace test
-}  // namespace tracing
+}  // namespace tracing::test

@@ -39,9 +39,6 @@ namespace test {
 const char kTraceProgramUrl[] = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
 // The path of the trace program as a shell command.
 const char kTraceProgramPath[] = "/bin/trace";
-// The URL of the integration test app.
-const char kIntegrationTestUrl[] =
-    "fuchsia-pkg://fuchsia.com/trace_tests#meta/basic_integration_test_app.cmx";
 
 // TODO(52043): Remove tspec functionality once all tests are converted
 static bool ReadTspec(const std::string& tspec_path, tracing::Spec* spec) {
@@ -244,15 +241,15 @@ static bool RunTraceComponentAndWait(const std::string& app, const std::vector<s
   return RunComponentAndWait(&loop, context, app, args, std::move(flat_namespace));
 }
 
-bool RunIntegrationTest(const std::string& test_name, const std::string& categories,
-                        size_t buffer_size_in_mb, const std::string& buffering_mode,
+bool RunIntegrationTest(const std::string& app_path, const std::string& test_name,
+                        const std::string& categories, size_t buffer_size_in_mb,
+                        const std::string& buffering_mode,
                         std::initializer_list<std::string> additional_arguments,
                         const std::string& relative_output_file_path,
                         const syslog::LogSettings& log_settings) {
   std::vector<std::string> args;
-  BuildTraceProgramArgs(kIntegrationTestUrl, test_name, categories, buffer_size_in_mb,
-                        buffering_mode, additional_arguments, relative_output_file_path,
-                        log_settings, &args);
+  BuildTraceProgramArgs(app_path, test_name, categories, buffer_size_in_mb, buffering_mode,
+                        additional_arguments, relative_output_file_path, log_settings, &args);
 
   FX_LOGS(INFO) << "Running test " << test_name << " with " << buffer_size_in_mb << " MB "
                 << buffering_mode << " buffer, tracing categories " << categories
@@ -275,8 +272,8 @@ bool RunTspec(const std::string& relative_tspec_path, const std::string& relativ
   return RunTraceComponentAndWait(kTraceProgramUrl, args);
 }
 
-bool VerifyIntegrationTest(const std::string& test_name, size_t buffer_size_in_mb,
-                           const std::string& buffering_mode,
+bool VerifyIntegrationTest(const std::string& app_path, const std::string& test_name,
+                           size_t buffer_size_in_mb, const std::string& buffering_mode,
                            const std::string& relative_output_file_path,
                            const syslog::LogSettings& log_settings) {
   std::vector<std::string> args;
@@ -287,7 +284,7 @@ bool VerifyIntegrationTest(const std::string& test_name, size_t buffer_size_in_m
   FX_LOGS(INFO) << "Verifying test " << test_name << " with " << buffer_size_in_mb << " MB "
                 << buffering_mode << " buffer, output file " << relative_output_file_path;
 
-  return RunTraceComponentAndWait(kIntegrationTestUrl, args);
+  return RunTraceComponentAndWait(app_path, args);
 }
 
 bool VerifyTspec(const std::string& relative_tspec_path,

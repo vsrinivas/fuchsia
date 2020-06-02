@@ -14,7 +14,9 @@
 
 #include <task-utils/walker.h>
 
-// Helper program to be executed as a benchmark. Verifies that it is executed
+#include "garnet/bin/trace/tests/integration_test_utils.h"
+
+// Trace integration test that verifies that it is executed
 // under the nested environment created in trace record and returns with
 // EXIT_SUCCESS if it is the case. Otherwise, returns with EXIT_FAILURE.
 //
@@ -22,10 +24,14 @@
 //   j:...       environment_name             # the job for the test environment
 //     j:...                                  # the default job for this package
 
+namespace tracing::test {
+
 namespace {
 
+const char kNestedEnvironmentTestProviderName[] = "nested-environment-test";
+
 // The name of the environment under which this trace benchmark will be
-// executed. It is defined in nested_environment_test.tspec.
+// executed. It is defined in trace_integration_tests.cc.
 const char kEnvironmentName[] = "environment_name";
 
 // A |TaskEnumerator| used to find the trace environment.
@@ -76,9 +82,7 @@ class Walker final : public TaskEnumerator {
   zx_koid_t trace_env_koid_;
 };
 
-}  // namespace
-
-int main(int argc, char* argv[]) {
+bool RunNestedEnvironmentTest(size_t buffer_size_in_mb, const std::string& buffering_mode) {
   zx_info_handle_basic_t info;
   zx_status_t status =
       zx::job::default_job()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
@@ -96,12 +100,47 @@ int main(int argc, char* argv[]) {
   status = walker.WalkRootJobTree();
   if (status == ZX_OK) {
     FX_LOGS(ERROR) << "Failed to find parent job with koid " << trace_env_koid;
-    return EXIT_FAILURE;
+    return false;
   }
 
   if (status == ZX_ERR_BAD_STATE) {
-    return EXIT_FAILURE;
+    return false;
   }
   FX_CHECK(status == ZX_ERR_STOP) << status;
-  return EXIT_SUCCESS;
+  return true;
 }
+
+bool VerifyNestedEnvironmentTest(size_t buffer_size_in_mb, const std::string& buffering_mode,
+                                 const std::string& test_output_file) {
+  // No verification of the generated trace is required for this test.
+  return true;
+}
+
+// TODO(52043): Remove tspec compatibility.
+bool RunNestedEnvironmentTest(const tracing::Spec& spec) {
+  return RunNestedEnvironmentTest(*spec.buffer_size_in_mb, *spec.buffering_mode);
+}
+
+bool VerifyNestedEnvironmentTest(const tracing::Spec& spec, const std::string& test_output_file) {
+  return VerifyNestedEnvironmentTest(*spec.buffer_size_in_mb, *spec.buffering_mode,
+                                     test_output_file);
+}
+
+const IntegrationTest kNestedEnvironmentIntegrationTest = {
+    kNestedEnvironmentTestProviderName,
+    &RunNestedEnvironmentTest,     // for run command
+    &VerifyNestedEnvironmentTest,  // for verify command
+    &RunNestedEnvironmentTest,     // for run_tspec command; to be removed
+    &VerifyNestedEnvironmentTest,  // for verify_tspec command; to be removed
+};
+
+}  // namespace
+
+const IntegrationTest* LookupTest(const std::string& test_name) {
+  if (test_name == kNestedEnvironmentTestProviderName) {
+    return &kNestedEnvironmentIntegrationTest;
+  }
+  return nullptr;
+}
+
+}  // namespace tracing::test

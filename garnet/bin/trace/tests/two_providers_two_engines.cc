@@ -19,12 +19,13 @@
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "garnet/bin/trace/tests/self_contained_provider.h"
 
+namespace tracing::test {
+
+namespace {
+
 const char kTwoProvidersTwoEnginesProviderName[] = "two-providers-two-engines";
 
-namespace tracing {
-namespace test {
-
-static bool RunTwoProvidersTwoEnginesTest(const tracing::Spec& spec) {
+bool RunTwoProvidersTwoEnginesTest(size_t buffer_size_in_mb, const std::string& buffering_mode) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   std::unique_ptr<trace::TraceProvider> provider1;
@@ -45,8 +46,8 @@ static bool RunTwoProvidersTwoEnginesTest(const tracing::Spec& spec) {
   return true;
 }
 
-static bool VerifyTwoProvidersTwoEnginesTest(const tracing::Spec& spec,
-                                             const std::string& test_output_file) {
+bool VerifyTwoProvidersTwoEnginesTest(size_t buffer_size_in_mb, const std::string& buffering_mode,
+                                      const std::string& test_output_file) {
   size_t num_events;
   if (!VerifyTestEventsFromJson(test_output_file, &num_events)) {
     return false;
@@ -63,22 +64,17 @@ static bool VerifyTwoProvidersTwoEnginesTest(const tracing::Spec& spec,
   return true;
 }
 
-static bool RunTwoProvidersTwoEnginesTest(size_t buffer_size_in_mb,
-                                          const std::string& buffering_mode) {
-  // TODO(52043): Implement non-tspec version of two-providers-two-engines test.
-  FX_LOGS(ERROR) << "Non-tspec two-providers-two-engines test not yet implemented";
-  return false;
+// TODO(52043): Remove tspec compatibility.
+bool RunTwoProvidersTwoEnginesTest(const tracing::Spec& spec) {
+  return RunTwoProvidersTwoEnginesTest(*spec.buffer_size_in_mb, *spec.buffering_mode);
 }
 
-static bool VerifyTwoProvidersTwoEnginesTest(size_t buffer_size_in_mb,
-                                             const std::string& buffering_mode,
-                                             const std::string& test_output_file) {
-  // TODO(52043): Implement non-tspec version of two-providers-two-engines test.
-  FX_LOGS(ERROR) << "Non-tspec two-providers-two-engines test not yet implemented";
-  return false;
+bool VerifyTwoProvidersTwoEnginesTest(const tracing::Spec& spec,
+                                      const std::string& test_output_file) {
+  return VerifyTwoProvidersTwoEnginesTest(*spec.buffer_size_in_mb, *spec.buffering_mode,
+                                          test_output_file);
 }
 
-// TODO(52043): Remove tspec functionality.
 const IntegrationTest kTwoProvidersTwoEnginesIntegrationTest = {
     kTwoProvidersTwoEnginesProviderName,
     &RunTwoProvidersTwoEnginesTest,     // for run command
@@ -86,6 +82,7 @@ const IntegrationTest kTwoProvidersTwoEnginesIntegrationTest = {
     &RunTwoProvidersTwoEnginesTest,     // for run_tspec command; to be removed
     &VerifyTwoProvidersTwoEnginesTest,  // for verify_tspec command; to be removed
 };
+}  // namespace
 
 const IntegrationTest* LookupTest(const std::string& test_name) {
   if (test_name == kTwoProvidersTwoEnginesProviderName) {
@@ -94,5 +91,4 @@ const IntegrationTest* LookupTest(const std::string& test_name) {
   return nullptr;
 }
 
-}  // namespace test
-}  // namespace tracing
+}  // namespace tracing::test

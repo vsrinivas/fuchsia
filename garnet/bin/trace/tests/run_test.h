@@ -55,8 +55,9 @@ bool RunTspec(const std::string& relative_tspec_path, const std::string& relativ
 // Runs and traces integration test system app with run command and given parameters. This looks up
 // the test by name and produces a trace file that can be verified using VerifyIntegrationTest.
 // additional_arguments are passed to trace, not to the test app.
-bool RunIntegrationTest(const std::string& test_name, const std::string& categories,
-                        size_t buffer_size_in_mb, const std::string& buffering_mode,
+bool RunIntegrationTest(const std::string& app_path, const std::string& test_name,
+                        const std::string& categories, size_t buffer_size_in_mb,
+                        const std::string& buffering_mode,
                         std::initializer_list<std::string> additional_arguments,
                         const std::string& relative_output_file_path,
                         const syslog::LogSettings& log_settings);
@@ -70,8 +71,8 @@ bool VerifyTspec(const std::string& relative_tspec_path,
 
 // Runs integration test system app with verify command and given parameters. This verifies the
 // trace file resulting from a call to RunIntegrationTest using the test's verification method.
-bool VerifyIntegrationTest(const std::string& test_name, size_t buffer_size_in_mb,
-                           const std::string& buffering_mode,
+bool VerifyIntegrationTest(const std::string& app_path, const std::string& test_name,
+                           size_t buffer_size_in_mb, const std::string& buffering_mode,
                            const std::string& relative_output_file_path,
                            const syslog::LogSettings& log_settings);
 

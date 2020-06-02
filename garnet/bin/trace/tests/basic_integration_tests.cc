@@ -7,7 +7,7 @@
 namespace tracing {
 namespace test {
 
-// Basic tests are all folded into integration_test_app.
+// Basic tests are all folded into basic_integration_test_app.
 
 const IntegrationTest* kIntegrationTests[] = {
     &kFillBufferIntegrationTest,
