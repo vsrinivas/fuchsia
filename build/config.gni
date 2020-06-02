@@ -62,7 +62,7 @@ template("config_data") {
 }
 
 # Produce a configuration package who's content are defined by all config_data
-# targets in it's dependency chain.
+# targets in its dependency chain.
 #
 # Parameters
 #
