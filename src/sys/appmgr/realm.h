@@ -32,6 +32,7 @@
 #include "src/sys/appmgr/component_container.h"
 #include "src/sys/appmgr/component_controller_impl.h"
 #include "src/sys/appmgr/component_event_provider_impl.h"
+#include "src/sys/appmgr/component_id_index.h"
 #include "src/sys/appmgr/cpu_watcher.h"
 #include "src/sys/appmgr/environment_controller_impl.h"
 #include "src/sys/appmgr/hub/hub_info.h"
@@ -57,6 +58,8 @@ struct EventNotificationInfo {
   fuchsia::sys::internal::SourceIdentity component;
 };
 
+enum class StorageType { DATA, CACHE, TEMP };
+
 }  // namespace internal
 
 struct RealmArgs {
@@ -64,13 +67,15 @@ struct RealmArgs {
                         std::string cache_path, std::string temp_path,
                         const std::shared_ptr<sys::ServiceDirectory>& env_services,
                         bool run_virtual_console, fuchsia::sys::EnvironmentOptions options,
-                        fxl::UniqueFD appmgr_config_dir);
+                        fxl::UniqueFD appmgr_config_dir,
+                        fbl::RefPtr<ComponentIdIndex> component_id_index);
 
   static RealmArgs MakeWithAdditionalServices(
       Realm* parent, std::string label, std::string data_path, std::string cache_path,
       std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
       bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
-      fuchsia::sys::EnvironmentOptions options, fxl::UniqueFD appmgr_config_dir);
+      fuchsia::sys::EnvironmentOptions options, fxl::UniqueFD appmgr_config_dir,
+      fbl::RefPtr<ComponentIdIndex> component_id_index);
 
   Realm* parent;
   std::string label;
@@ -83,6 +88,7 @@ struct RealmArgs {
   fuchsia::sys::EnvironmentOptions options;
   fxl::UniqueFD appmgr_config_dir;
   CpuWatcher* cpu_watcher;
+  fbl::RefPtr<ComponentIdIndex> component_id_index;
 };
 
 class Realm : public ComponentContainer<ComponentControllerImpl> {
@@ -199,6 +205,21 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   // `ZX_ERR_*`: Errors which might occur when parsing this realm's job tree.
   zx::status<fuchsia::sys::internal::SourceIdentity> FindComponent(zx_koid_t process_koid);
 
+  // Given a component url |fp|, initializes and returns the component's absolute storage
+  // directory for the given |storage_path|. Returns an empty string on failure.
+  //
+  // A component instance's storage directory is in one of two places:
+  //  (a) A directory keyed using component instance ID, if it has one.
+  //  (b) A directory computed using fn(realm_path, component URL)
+  //
+  // If a component is assigned an instance ID while it already has a storage
+  // directory under (b), its storage directory is moved to (a).
+  //
+  // Note: This method is public only for the purposes for testing storage paths and migration
+  // logic.
+  std::string IsolatedPathForComponentInstance(const FuchsiaPkgUrl& fp,
+                                               internal::StorageType storage_type);
+
  private:
   static uint32_t next_numbered_label_;
 
@@ -232,15 +253,13 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
       fidl::VectorPtr<fuchsia::sys::ProgramMetadata> program_metadata);
 
   // When a component event will be triggered, this finds what provider to notify and with what
-  // identity data. The provider will be either the one attached to this component or some provider
-  // in an ancestor realm.
+  // identity data. The provider will be either the one attached to this component or some
+  // provider in an ancestor realm.
   internal::EventNotificationInfo GetEventNotificationInfo(const std::string& component_url,
                                                            const std::string& component_name,
                                                            const std::string& instance_id);
 
   zx::channel OpenInfoDir();
-
-  std::string IsolatedPathForPackage(std::string path_prefix, const FuchsiaPkgUrl& fp);
 
   // Called by `FindComponent`. This function returns realm path in reverse order.
   zx::status<fuchsia::sys::internal::SourceIdentity> FindComponentInternal(zx_koid_t process_koid);
@@ -292,6 +311,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   // Pointer to a cpu watcher to register and unregister components for sampling.
   // Not owned.
   CpuWatcher* const cpu_watcher_;
+
+  fbl::RefPtr<ComponentIdIndex> component_id_index_;
 
   fxl::WeakPtrFactory<Realm> weak_ptr_factory_;
 

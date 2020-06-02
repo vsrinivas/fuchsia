@@ -6,6 +6,7 @@
 
 #include <lib/trace/event.h>
 
+#include "src/sys/appmgr/constants.h"
 #include "src/sys/appmgr/storage_watchdog.h"
 
 namespace component {
@@ -21,7 +22,7 @@ void CacheControl::Clear(ClearCallback callback) {
   auto cc_trace_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("appmgr", "CacheControl::Clear", cc_trace_id);
 
-  StorageWatchdog storage_watchdog = StorageWatchdog("/data", "/data/cache");
+  StorageWatchdog storage_watchdog = StorageWatchdog(kRootDataDir, kRootCacheDir);
   storage_watchdog.PurgeCache();
 
   callback();

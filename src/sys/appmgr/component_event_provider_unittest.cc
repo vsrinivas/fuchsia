@@ -18,6 +18,7 @@
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/sys/appmgr/component_controller_impl.h"
+#include "src/sys/appmgr/component_id_index.h"
 #include "src/sys/appmgr/realm.h"
 
 namespace component {
@@ -25,6 +26,7 @@ namespace {
 
 // Listener is not discovearble, and needs an explicit name.
 const char kListenerName[] = "fuchsia::sys::internal::ComponentEventListener";
+const char kEmptyComponentIdIndex[] = R"({ "instances": [] })";
 
 class FakeListener : public fuchsia::sys::internal::testing::ComponentEventListener_TestBase {
  public:
@@ -52,7 +54,8 @@ class ComponentEventProviderTest : public ::gtest::TestLoopFixture {
     fuchsia::sys::ServiceListPtr root_realm_services(new fuchsia::sys::ServiceList);
     RealmArgs realm_args = RealmArgs::MakeWithAdditionalServices(
         nullptr, "test", "/data", "/data/cache", "/tmp", std::move(environment_services), false,
-        std::move(root_realm_services), fuchsia::sys::EnvironmentOptions{}, std::move(dirfd));
+        std::move(root_realm_services), fuchsia::sys::EnvironmentOptions{}, std::move(dirfd),
+        ComponentIdIndex::CreateFromIndexContents(kEmptyComponentIdIndex).take_value());
     return Realm::Create(std::move(realm_args));
   }
 

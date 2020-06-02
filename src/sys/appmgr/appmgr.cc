@@ -15,9 +15,10 @@
 #include <fbl/ref_ptr.h>
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
-#include <src/lib/fxl/strings/string_printf.h>
 
 #include "lib/inspect/cpp/inspector.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/sys/appmgr/constants.h"
 
 using fuchsia::sys::TerminationReason;
 
@@ -41,7 +42,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       sysmgr_backoff_(kMinSmsmgrBackoff, kMaxSysmgrBackoff, kSysmgrAliveReset),
       sysmgr_retry_crashes_(args.retry_sysmgr_crash),
       sysmgr_permanently_failed_(false),
-      storage_watchdog_(StorageWatchdog("/data", "/data/cache")) {
+      storage_watchdog_(StorageWatchdog(kRootDataDir, kRootCacheDir)) {
   inspector_.GetRoot().CreateLazyNode(
       "inspect_stats",
       [this] {
@@ -59,11 +60,15 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
 
   // 1. Create root realm.
   fxl::UniqueFD appmgr_config_dir(open("/pkgfs/packages/config-data/0/data/appmgr", O_RDONLY));
+  fit::result<fbl::RefPtr<ComponentIdIndex>, ComponentIdIndex::Error> component_id_index =
+      ComponentIdIndex::CreateFromAppmgrConfigDir(appmgr_config_dir);
+  FX_CHECK(component_id_index) << "Cannot read component ID Index. error = "
+                               << static_cast<int>(component_id_index.error());
   RealmArgs realm_args = RealmArgs::MakeWithAdditionalServices(
-      nullptr, internal::kRootLabel, "/data", "/data/cache", "/tmp",
+      nullptr, internal::kRootLabel, kRootDataDir, kRootCacheDir, kRootTempDir,
       std::move(args.environment_services), args.run_virtual_console,
       std::move(args.root_realm_services), fuchsia::sys::EnvironmentOptions{},
-      std::move(appmgr_config_dir));
+      std::move(appmgr_config_dir), component_id_index.take_value());
   realm_args.cpu_watcher = cpu_watcher_.get();
   root_realm_ = Realm::Create(std::move(realm_args));
   FX_CHECK(root_realm_) << "Cannot create root realm ";

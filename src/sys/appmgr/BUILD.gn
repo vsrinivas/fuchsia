@@ -20,6 +20,7 @@ source_set("lib") {
     "component_event_provider_impl.h",
     "component_id_index.cc",
     "component_id_index.h",
+    "constants.h",
     "cpu_watcher.cc",
     "cpu_watcher.h",
     "debug_info_retriever.cc",
@@ -160,6 +161,7 @@ executable("unittest_bin") {
     "policy_checker_unittest.cc",
     "scheme_map_unittest.cc",
     "service_provider_dir_unittest.cc",
+    "storage_unittest.cc",
     "storage_watchdog_unittest.cc",
     "util_unittest.cc",
   ]

@@ -44,6 +44,7 @@
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/json_parser/json_parser.h"
 #include "src/lib/pkg_url/url_resolver.h"
+#include "src/sys/appmgr/constants.h"
 #include "src/sys/appmgr/dynamic_library_loader.h"
 #include "src/sys/appmgr/hub/realm_hub.h"
 #include "src/sys/appmgr/introspector.h"
@@ -202,8 +203,9 @@ bool IsValidEnvironmentLabel(const std::string& label) {
 
 // Returns a unique ID for the component containing all of the 'stable' pieces
 // of the component URL, i.e. the repo/host name, package name, variant, and
-// resource path but not the package hash/version.
-std::string StableComponentID(const FuchsiaPkgUrl& fp) {
+// resource path but not the package hash/version. This ID is used as a
+// filesystem path component.
+std::string ComponentUrlToPathComponent(const FuchsiaPkgUrl& fp) {
   // If the parsed URL did not include a resource path, the default is used.
   // TODO(CF-156): Remove this default once all component URLs include a
   // resource path.
@@ -215,6 +217,15 @@ std::string StableComponentID(const FuchsiaPkgUrl& fp) {
   return fxl::Substitute("$0:$1:$2#$3", fp.host_name(), fp.package_name(), fp.variant(), resource);
 }
 
+ComponentIdIndex::Moniker ComputeMoniker(Realm* realm, const FuchsiaPkgUrl& fp) {
+  std::vector<std::string> realm_path;
+  for (Realm* leaf = realm; leaf != nullptr; leaf = leaf->parent()) {
+    realm_path.push_back(leaf->label());
+  }
+  std::reverse(realm_path.begin(), realm_path.end());
+  return ComponentIdIndex::Moniker{.url = fp.ToString(), .realm_path = std::move(realm_path)};
+}
+
 }  // namespace
 
 // static
@@ -222,7 +233,8 @@ RealmArgs RealmArgs::Make(Realm* parent, std::string label, std::string data_pat
                           std::string cache_path, std::string temp_path,
                           const std::shared_ptr<sys::ServiceDirectory>& env_services,
                           bool run_virtual_console, fuchsia::sys::EnvironmentOptions options,
-                          fxl::UniqueFD appmgr_config_dir) {
+                          fxl::UniqueFD appmgr_config_dir,
+                          fbl::RefPtr<ComponentIdIndex> component_id_index) {
   return {.parent = parent,
           .label = label,
           .data_path = data_path,
@@ -232,14 +244,16 @@ RealmArgs RealmArgs::Make(Realm* parent, std::string label, std::string data_pat
           .run_virtual_console = run_virtual_console,
           .additional_services = nullptr,
           .options = std::move(options),
-          .appmgr_config_dir = std::move(appmgr_config_dir)};
+          .appmgr_config_dir = std::move(appmgr_config_dir),
+          .component_id_index = std::move(component_id_index)};
 }
 
 RealmArgs RealmArgs::MakeWithAdditionalServices(
     Realm* parent, std::string label, std::string data_path, std::string cache_path,
     std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
     bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
-    fuchsia::sys::EnvironmentOptions options, fxl::UniqueFD appmgr_config_dir) {
+    fuchsia::sys::EnvironmentOptions options, fxl::UniqueFD appmgr_config_dir,
+    fbl::RefPtr<ComponentIdIndex> component_id_index) {
   return {.parent = parent,
           .label = label,
           .data_path = data_path,
@@ -249,7 +263,8 @@ RealmArgs RealmArgs::MakeWithAdditionalServices(
           .run_virtual_console = run_virtual_console,
           .additional_services = std::move(additional_services),
           .options = std::move(options),
-          .appmgr_config_dir = std::move(appmgr_config_dir)};
+          .appmgr_config_dir = std::move(appmgr_config_dir),
+          .component_id_index = std::move(component_id_index)};
 }
 
 std::unique_ptr<Realm> Realm::Create(RealmArgs args) {
@@ -278,6 +293,12 @@ std::unique_ptr<Realm> Realm::Create(RealmArgs args) {
   return std::make_unique<Realm>(std::move(args), std::move(job));
 }
 
+Realm* GetRootRealm(Realm* r) {
+  for (; r->parent() != nullptr; r = r->parent()) {
+  }
+  return r;
+}
+
 Realm::Realm(RealmArgs args, zx::job job)
     : parent_(args.parent),
       data_path_(args.data_path),
@@ -292,6 +313,7 @@ Realm::Realm(RealmArgs args, zx::job job)
       use_parent_runners_(args.options.use_parent_runners),
       delete_storage_on_death_(args.options.delete_storage_on_death),
       cpu_watcher_(args.cpu_watcher),
+      component_id_index_(std::move(args.component_id_index)),
       weak_ptr_factory_(this) {
   // Only need to create this channel for the root realm.
   if (parent_ == nullptr) {
@@ -455,11 +477,12 @@ void Realm::CreateNestedEnvironment(
     args = RealmArgs::MakeWithAdditionalServices(
         this, label, nested_data_path, nested_cache_path, nested_temp_path, environment_services_,
         /*run_virtual_console=*/false, std::move(additional_services), std::move(options),
-        appmgr_config_dir_.duplicate());
+        appmgr_config_dir_.duplicate(), component_id_index_);
   } else {
-    args = RealmArgs::Make(
-        this, label, nested_data_path, nested_cache_path, nested_temp_path, environment_services_,
-        /*run_virtual_console=*/false, std::move(options), appmgr_config_dir_.duplicate());
+    args = RealmArgs::Make(this, label, nested_data_path, nested_cache_path, nested_temp_path,
+                           environment_services_,
+                           /*run_virtual_console=*/false, std::move(options),
+                           appmgr_config_dir_.duplicate(), component_id_index_);
   }
   args.cpu_watcher = cpu_watcher_;
 
@@ -912,9 +935,9 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
         sandbox,
         /*hub_directory_factory=*/[this] { return OpenInfoDir(); },
         /*isolated_data_path_factory=*/
-        [&] { return IsolatedPathForPackage(data_path(), fp); },
-        [&] { return IsolatedPathForPackage(cache_path(), fp); },
-        [&] { return IsolatedPathForPackage(temp_path(), fp); });
+        [&] { return IsolatedPathForComponentInstance(fp, internal::StorageType::DATA); },
+        [&] { return IsolatedPathForComponentInstance(fp, internal::StorageType::CACHE); },
+        [&] { return IsolatedPathForComponentInstance(fp, internal::StorageType::TEMP); });
 
     // It is critical that if nothing is returned the component does not lanuch.
     PolicyChecker policy_checker(appmgr_config_dir_.duplicate());
@@ -1087,16 +1110,74 @@ zx_status_t Realm::BindFirstNestedRealmSvc(zx::channel channel) {
   return fdio_service_clone_to(first_nested_realm_svc_client_.get(), channel.release());
 }
 
-std::string Realm::IsolatedPathForPackage(std::string path_prefix, const FuchsiaPkgUrl& fp) {
-  // Create a unique path for this combination of Realm and Component
-  // identities. The Realm part comes from path_prefix, which should include all
-  // Realm labels from the root Realm to this Realm. The Component part comes
-  // from combining the Component URL.
-  std::string path = files::JoinPath(path_prefix, StableComponentID(fp));
+// A component instance's storage directory is in one of two places:
+//  (a) A directory key'd using component instance ID, if it has one.
+//  (b) A directory computed using fn(realm_path, component URL)
+//
+// If a component is assigned an instance ID while it already has a storage
+// directory under (b), its storage directory is moved to (a).
+std::string Realm::IsolatedPathForComponentInstance(const FuchsiaPkgUrl& fp,
+                                                    internal::StorageType storage_type) {
+  // The subdirectory of the root data directory to use persistent storage
+  // This applies only to components with an instance ID.
+  constexpr char kInstanceIdPersistentSubdir[] = "persistent";
+
+  // Compute directory path based on realm (b).
+  std::string old_path;
+  switch (storage_type) {
+    case internal::StorageType::DATA:
+      old_path = files::JoinPath(data_path(), ComponentUrlToPathComponent(fp));
+      break;
+    case internal::StorageType::CACHE:
+      old_path = files::JoinPath(cache_path(), ComponentUrlToPathComponent(fp));
+      break;
+    case internal::StorageType::TEMP:
+      old_path = files::JoinPath(temp_path(), ComponentUrlToPathComponent(fp));
+      break;
+  };
+
+  std::string path = old_path;
+  // if (a) is possible, use it instead, and move (b) to (a) if needed.
+  std::string instance_id_path;
+  auto instance_id = component_id_index_->LookupMoniker(ComputeMoniker(this, fp));
+  if (instance_id) {
+    auto* root_realm = GetRootRealm(this);
+    switch (storage_type) {
+      case internal::StorageType::DATA:
+        instance_id_path =
+            files::JoinPath(files::JoinPath(root_realm->data_path(), kInstanceIdPersistentSubdir),
+                            instance_id.value());
+        break;
+      case internal::StorageType::CACHE:
+        instance_id_path = files::JoinPath(root_realm->cache_path(), instance_id.value());
+        break;
+      case internal::StorageType::TEMP:
+        instance_id_path = files::JoinPath(root_realm->temp_path(), instance_id.value());
+        break;
+    };
+    path = instance_id_path;
+
+    if (files::IsDirectory(old_path)) {
+      if (!files::CreateDirectory(files::GetDirectoryName(instance_id_path)) ||
+          rename(old_path.c_str(), instance_id_path.c_str()) != 0) {
+        FX_LOGS(ERROR) << "Unable to move component storage directory " << old_path
+                       << " to be the new instance ID directory " << instance_id_path
+                       << ". errno = " << strerror(errno)
+                       << ". Continuing to use moniker based storage directory.";
+        path = old_path;
+      } else {
+        FX_LOGS(INFO) << "Moved component storage directory from " << old_path << " to "
+                      << instance_id_path;
+      }
+    }
+  }
+
+  // Ensure directory path exists.
   if (!files::IsDirectory(path) && !files::CreateDirectory(path)) {
     FX_LOGS(ERROR) << "Failed to create data directory " << path;
     return "";
   }
+
   return path;
 }
 
