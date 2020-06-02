@@ -25,8 +25,29 @@ dart_test("inspect_metrics_test") {
   ]
 }
 
+dart_test("inspect_metrics_emulator_test") {
+  sources = [ "appmgr_cpu_metrics_test.dart" ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  environments = [
+    emu_env,
+    {
+      dimensions = {
+        device_type = "Astro"
+      }
+    },
+  ]
+}
+
 group("test") {
   testonly = true
 
-  deps = [ ":inspect_metrics_test($host_toolchain)" ]
+  deps = [
+    ":inspect_metrics_emulator_test($host_toolchain)",
+    ":inspect_metrics_test($host_toolchain)",
+  ]
 }
