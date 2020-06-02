@@ -21,6 +21,7 @@ executable("bin") {
     "fdio_spawn.cc",
     "fifos.cc",
     "filesystem.cc",
+    "get_info.cc",
     "handle.cc",
     "handle_creation.cc",
     "inspect.cc",
@@ -85,6 +86,17 @@ executable("context_switch_overhead_helper") {
   sources = [ "context_switch_overhead_helper.cc" ]
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+# "Helper" executable used to implement the get_info benchmark.
+executable("get_info_helper") {
+  output_name = "get_info_helper"
+  testonly = true
+  sources = [ "get_info_helper.cc" ]
+  deps = [
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
@@ -162,6 +174,7 @@ package("fuchsia_microbenchmarks_perftestmode") {
     ":bin",
     ":context_switch_overhead_helper",
     ":fdio_spawn_helper",
+    ":get_info_helper",
   ]
 
   binaries = [
@@ -171,6 +184,10 @@ package("fuchsia_microbenchmarks_perftestmode") {
     },
     {
       name = "context_switch_overhead_helper"
+      shell = true
+    },
+    {
+      name = "get_info_helper"
       shell = true
     },
     {
