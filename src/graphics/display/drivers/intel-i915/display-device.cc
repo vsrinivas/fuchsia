@@ -276,4 +276,14 @@ void DisplayDevice::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
+void DisplayDevice::SetNormalizedBrightnessScale(
+    __UNUSED double scale, SetNormalizedBrightnessScaleCompleter::Sync completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
+void DisplayDevice::GetNormalizedBrightnessScale(
+    GetNormalizedBrightnessScaleCompleter::Sync completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
 }  // namespace i915

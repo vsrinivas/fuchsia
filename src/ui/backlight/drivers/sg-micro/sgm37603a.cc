@@ -144,6 +144,16 @@ void Sgm37603a::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
+void Sgm37603a::SetNormalizedBrightnessScale(
+    __UNUSED double scale, SetNormalizedBrightnessScaleCompleter::Sync completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
+void Sgm37603a::GetNormalizedBrightnessScale(
+    GetNormalizedBrightnessScaleCompleter::Sync completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
 zx_status_t Sgm37603a::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   FidlBacklight::Device::Dispatch(this, msg, &transaction);

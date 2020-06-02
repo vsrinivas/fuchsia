@@ -11,7 +11,9 @@ struct State {
     /// 1. The unitless brightness value on a linear scale where 0.0 is the minimum
     ///    brightness and 1.0 is the maximum brightness - represents the current /
     ///    desired brightness as a percentage within the supported range. Used
-    ///    by the `GetStateNormalized` / `SetStateNormalized` calls.
+    ///    by the `GetStateNormalized` / `SetStateNormalized` calls. The maximum
+    ///    brightness that can be set using `SetStateNormalized` is
+    ///    GetBrightnessScale() * GetMaxAbsoluteBrightness().
     /// 2. Absolute brightness in nits. Used by the `GetStateAbsolute` /
     ///    `SetStateAbsolute` calls.
     float64 brightness;
@@ -29,10 +31,22 @@ protocol Device {
     /// Gets the current backlight brightness in nits
     GetStateAbsolute() -> (State state) error zx.status;
 
-    /// Sets the current backlight brightness in nits
+    /// Sets the current backlight brightness in nits. Not affected by the scale
+    /// set by SetNormalizedBrightnessScale.
     SetStateAbsolute(State state) -> () error zx.status;
 
     /// Gets the maximum supported backlight brightness in nits, if known.
     /// Otherwise returns error ZX_ERR_NOT_SUPPORTED.
     GetMaxAbsoluteBrightness() -> (float64 max_brightness) error zx.status;
+
+    /// Scales the maximum normalized brightness by a percentage value in
+    /// [0.0, 1.0], if supported. Otherwise returns error ZX_ERR_NOT_SUPPORTED.
+    /// Values passed to SetStateNormalized will correspond to a maximum
+    /// brightness of scale * GetMaxAbsoluteBrightness(). Calling this may
+    /// change the current absolute brightness.
+    SetNormalizedBrightnessScale(float64 scale) -> () error zx.status;
+
+    /// Gets the current normalized brightness scale as a percentage value in
+    /// [0.0, 1.0].
+    GetNormalizedBrightnessScale() -> (float64 scale) error zx.status;
 };

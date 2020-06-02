@@ -70,6 +70,9 @@ class Sgm37603a : public DeviceType,
   void SetStateAbsolute(FidlBacklight::State state,
                         SetStateAbsoluteCompleter::Sync completer) override;
   void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) override;
+  void SetNormalizedBrightnessScale(double scale,
+                                    SetNormalizedBrightnessScaleCompleter::Sync completer) override;
+  void GetNormalizedBrightnessScale(GetNormalizedBrightnessScaleCompleter::Sync completer) override;
 
  private:
   ddk::I2cChannel i2c_;

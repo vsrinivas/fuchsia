@@ -170,6 +170,16 @@ void Lp8556Device::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::S
   }
 }
 
+void Lp8556Device::SetNormalizedBrightnessScale(
+    __UNUSED double scale, SetNormalizedBrightnessScaleCompleter::Sync completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
+void Lp8556Device::GetNormalizedBrightnessScale(
+    GetNormalizedBrightnessScaleCompleter::Sync completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
 zx_status_t Lp8556Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   FidlBacklight::Device::Dispatch(this, msg, &transaction);

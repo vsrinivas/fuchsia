@@ -87,6 +87,9 @@ class DisplayDevice : public FidlBacklight::Device::Interface {
   void SetStateAbsolute(FidlBacklight::State state,
                         SetStateAbsoluteCompleter::Sync completer) override;
   void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) override;
+  void SetNormalizedBrightnessScale(double scale,
+                                    SetNormalizedBrightnessScaleCompleter::Sync completer) override;
+  void GetNormalizedBrightnessScale(GetNormalizedBrightnessScaleCompleter::Sync completer) override;
 
  protected:
   // Attempts to initialize the ddi.
