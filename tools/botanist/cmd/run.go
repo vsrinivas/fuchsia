@@ -145,7 +145,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 	data, err := ioutil.ReadFile(r.configFile)
 	if err != nil {
-		return fmt.Errorf("could not open config file: %v", err)
+		return fmt.Errorf("%s: %v", constants.ReadConfigFileErrorMsg, err)
 	}
 	var objs []json.RawMessage
 	if err := json.Unmarshal(data, &objs); err != nil {

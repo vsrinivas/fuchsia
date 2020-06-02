@@ -58,5 +58,7 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("/dev/net/tun (qemu): %s", syscall.EBUSY.Error()), Log: SwarmingOutputType})
 	// For fxbug.dev/53101.
 	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToStartTargetMsg), Log: SwarmingOutputType})
+	// For fxbug.dev/51441.
+	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.ReadConfigFileErrorMsg), Log: SwarmingOutputType})
 	return ret
 }
