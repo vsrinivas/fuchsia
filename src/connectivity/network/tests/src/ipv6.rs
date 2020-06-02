@@ -498,70 +498,6 @@ async fn add_address_for_dad<
     Ok(())
 }
 
-/// Makes sure that `ipv6_consts::LINK_LOCAL_ADDR` is not assigned to the interface after the
-/// DAD resolution time.
-///
-/// Used by `duplicate_address_detection`.
-async fn check_address_failed_dad(iface: &TestInterface<'_>) -> Result {
-    let () = fasync::Timer::new(fasync::Time::after(
-        EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS + ASYNC_EVENT_TIMEOUT,
-    ))
-    .fuse()
-    .await;
-
-    let addr = net_stack::InterfaceAddress {
-        ip_address: net::IpAddress::Ipv6(net::Ipv6Address {
-            addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
-        }),
-        prefix_len: 64,
-    };
-    assert!(!iface.get_addrs().await?.iter().any(|a| a == &addr));
-
-    Ok(())
-}
-
-/// Transmits a Neighbor Solicitation message and expects `ipv6_consts::LINK_LOCAL_ADDR` to not
-/// be assigned to the interface after the normal resolution time for DAD.
-///
-/// Used by `duplicate_address_detection`.
-async fn fail_dad_with_ns(iface: &TestInterface<'_>, fake_ep: &TestFakeEndpoint<'_>) -> Result {
-    let snmc = ipv6_consts::LINK_LOCAL_ADDR.to_solicited_node_address();
-    let () = write_ndp_message::<&[u8], _>(
-        eth_consts::MAC_ADDR,
-        Mac::from(&snmc),
-        net_types_ip::Ipv6::UNSPECIFIED_ADDRESS,
-        snmc.get(),
-        NeighborSolicitation::new(ipv6_consts::LINK_LOCAL_ADDR),
-        &[],
-        fake_ep,
-    )?;
-
-    check_address_failed_dad(iface).await
-}
-
-/// Transmits a Neighbor Advertisement message and expects `ipv6_consts::LINK_LOCAL_ADDR` to not
-/// be assigned to the interface after the normal resolution time for DAD.
-///
-/// Used by `duplicate_address_detection`.
-async fn fail_dad_with_na(iface: &TestInterface<'_>, fake_ep: &TestFakeEndpoint<'_>) -> Result {
-    let () = write_ndp_message::<&[u8], _>(
-        eth_consts::MAC_ADDR,
-        Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
-        ipv6_consts::LINK_LOCAL_ADDR,
-        net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
-        NeighborAdvertisement::new(
-            false, /* router_flag */
-            false, /* solicited_flag */
-            false, /* override_flag */
-            ipv6_consts::LINK_LOCAL_ADDR,
-        ),
-        &[NdpOption::TargetLinkLayerAddress(&eth_consts::MAC_ADDR.bytes())],
-        fake_ep,
-    )?;
-
-    check_address_failed_dad(iface).await
-}
-
 /// Tests that if the netstack attempts to assign an address to an interface, and a remote node
 /// is already assigned the address or attempts to assign the address at the same time, DAD
 /// fails on the local interface.
@@ -570,6 +506,65 @@ async fn fail_dad_with_na(iface: &TestInterface<'_>, fake_ep: &TestFakeEndpoint<
 /// an interface, DAD should succeed.
 #[endpoint_variants_test]
 async fn duplicate_address_detection<E: Endpoint>() -> Result {
+    /// Makes sure that `ipv6_consts::LINK_LOCAL_ADDR` is not assigned to the interface after the
+    /// DAD resolution time.
+    async fn check_address_failed_dad(iface: &TestInterface<'_>) -> Result {
+        let () = fasync::Timer::new(fasync::Time::after(
+            EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS
+                + ASYNC_EVENT_TIMEOUT,
+        ))
+        .fuse()
+        .await;
+
+        let addr = net_stack::InterfaceAddress {
+            ip_address: net::IpAddress::Ipv6(net::Ipv6Address {
+                addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
+            }),
+            prefix_len: 64,
+        };
+        assert!(!iface.get_addrs().await?.iter().any(|a| a == &addr));
+
+        Ok(())
+    }
+
+    /// Transmits a Neighbor Solicitation message and expects `ipv6_consts::LINK_LOCAL_ADDR`
+    /// to not be assigned to the interface after the normal resolution time for DAD.
+    async fn fail_dad_with_ns(iface: &TestInterface<'_>, fake_ep: &TestFakeEndpoint<'_>) -> Result {
+        let snmc = ipv6_consts::LINK_LOCAL_ADDR.to_solicited_node_address();
+        let () = write_ndp_message::<&[u8], _>(
+            eth_consts::MAC_ADDR,
+            Mac::from(&snmc),
+            net_types_ip::Ipv6::UNSPECIFIED_ADDRESS,
+            snmc.get(),
+            NeighborSolicitation::new(ipv6_consts::LINK_LOCAL_ADDR),
+            &[],
+            fake_ep,
+        )?;
+
+        check_address_failed_dad(iface).await
+    }
+
+    /// Transmits a Neighbor Advertisement message and expects `ipv6_consts::LINK_LOCAL_ADDR`
+    /// to not be assigned to the interface after the normal resolution time for DAD.
+    async fn fail_dad_with_na(iface: &TestInterface<'_>, fake_ep: &TestFakeEndpoint<'_>) -> Result {
+        let () = write_ndp_message::<&[u8], _>(
+            eth_consts::MAC_ADDR,
+            Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
+            ipv6_consts::LINK_LOCAL_ADDR,
+            net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+            NeighborAdvertisement::new(
+                false, /* router_flag */
+                false, /* solicited_flag */
+                false, /* override_flag */
+                ipv6_consts::LINK_LOCAL_ADDR,
+            ),
+            &[NdpOption::TargetLinkLayerAddress(&eth_consts::MAC_ADDR.bytes())],
+            fake_ep,
+        )?;
+
+        check_address_failed_dad(iface).await
+    }
+
     let name = "duplicate_address_detection";
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let (_network, _environment, netstack, iface, fake_ep) =
