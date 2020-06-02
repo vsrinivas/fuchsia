@@ -19,7 +19,7 @@
 #     [list of labels] The targets to generate a manifest for.
 #     See `gn help` for more details.
 #
-#   testonly (optional)
+#   testonly, visibility (optional)
 #     See `gn help`.
 #
 #   output_dir (optional)
