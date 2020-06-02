@@ -10,6 +10,7 @@ go_library("lib") {
   name = "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/lib"
   deps = [
     "//tools/bootserver:bootserverconstants",
+    "//tools/botanist:constants",
     "//tools/net/netutil:netutilconstants",
     "//tools/testing/testrunner:constants",
   ]

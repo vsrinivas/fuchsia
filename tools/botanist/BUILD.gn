@@ -46,6 +46,7 @@ go_library("main") {
   source_dir = "cmd"
   deps = [
     ":botanist_lib",
+    ":constants",
     ":target",
     "//tools/lib/color",
     "//tools/lib/command",
@@ -68,6 +69,11 @@ go_test("botanist_lib_tests") {
 go_test("botanist_target_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/botanist/target" ]
   deps = [ ":target" ]
+}
+
+go_library("constants") {
+  name = "go.fuchsia.dev/fuchsia/tools/botanist/constants"
+  source_dir = "constants"
 }
 
 group("tests") {

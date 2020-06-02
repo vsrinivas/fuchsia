@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
+	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
@@ -218,7 +219,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}
 	eg.Go(func() error {
 		if err := r.startTargets(ctx, targets); err != nil {
-			return fmt.Errorf("start target error: %w", err)
+			return fmt.Errorf("%s: %w", constants.FailedToStartTargetMsg, err)
 		}
 		// Cancel context and stop targets to finish other goroutines in group so that if err = nil,
 		// we can return a nil error without waiting for other goroutines.
