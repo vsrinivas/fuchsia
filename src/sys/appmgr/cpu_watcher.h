@@ -107,6 +107,8 @@ class CpuWatcher {
     zx::job& job() { return job_; }
     std::map<std::string, std::unique_ptr<Task>>& children() { return children_; }
 
+    void Measure(const zx::time& timestamp);
+
    private:
     // The node that roots this task's output.
     inspect::Node node_;

@@ -34,6 +34,8 @@ void CpuWatcher::AddTask(const InstancePath& instance_path, zx::job job) {
     cur_task = it->second.get();
   }
   cur_task->job() = std::move(job);
+  // Measure tasks on creation.
+  cur_task->Measure(zx::clock::get_monotonic());
 }
 
 void CpuWatcher::RemoveTask(const InstancePath& instance_path) {
@@ -51,6 +53,8 @@ void CpuWatcher::RemoveTask(const InstancePath& instance_path) {
     cur_task = it->second.get();
   }
 
+  // Measure before resetting the job, so we get final runtime stats.
+  cur_task->Measure(zx::clock::get_monotonic());
   cur_task->job().reset();
 }
 
@@ -74,18 +78,8 @@ void CpuWatcher::Measure() {
 
     for (auto cur_iter = to_measure.rbegin(); cur_iter != to_measure.rend(); ++cur_iter) {
       auto* cur = *cur_iter;
-      if (cur->job().is_valid()) {
-        TRACE_DURATION("appmgr", "CpuWatcher::Measure:GetInfo");
-        zx_info_task_runtime_t info;
-        if (ZX_OK ==
-            cur->job().get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr)) {
-          TRACE_DURATION("appmgr", "CpuWatcher::Measure:MeasureAll::GetInfo::AddMeasurement");
-          cur->add_measurement(stamp.get(), info.cpu_time, info.queue_time);
-        }
-      } else {
-        TRACE_DURATION("appmgr", "CpuWatcher::Measure:Rotate");
-        cur->rotate();
-      }
+
+      cur->Measure(stamp);
 
       for (auto it = cur->children().begin(); it != cur->children().end();) {
         if (!it->second->is_alive()) {
@@ -99,6 +93,20 @@ void CpuWatcher::Measure() {
     }
   }
   process_times_.Insert((zx::clock::get_monotonic() - start).get());
+}
+
+void CpuWatcher::Task::Measure(const zx::time& timestamp) {
+  if (job().is_valid()) {
+    TRACE_DURATION("appmgr", "CpuWatcher::Task::Measure");
+    zx_info_task_runtime_t info;
+    if (ZX_OK == job().get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr)) {
+      TRACE_DURATION("appmgr", "CpuWatcher::Task::Measure::AddMeasurement");
+      add_measurement(timestamp.get(), info.cpu_time, info.queue_time);
+    }
+  } else {
+    TRACE_DURATION("appmgr", "CpuWatcher::Task::Measure:Rotate");
+    rotate();
+  }
 }
 
 }  // namespace component

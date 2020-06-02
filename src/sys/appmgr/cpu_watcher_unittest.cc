@@ -102,7 +102,6 @@ TEST(CpuWatcher, SampleSingle) {
   inspect::Inspector inspector;
   CpuWatcher watcher(inspector.GetRoot().CreateChild("test"), zx::job(), 3 /* max_samples */);
   watcher.AddTask({"test_valid"}, std::move(self));
-  watcher.Measure();
 
   // Ensure that we record measurements up to the limit.
   auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
@@ -158,7 +157,6 @@ TEST(CpuWatcher, SampleMultiple) {
   ASSERT_EQ(ZX_OK, zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &self));
   watcher.AddTask({"test_valid", "nested"}, std::move(self));
   ASSERT_EQ(ZX_OK, zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &self));
-  watcher.Measure();
   watcher.RemoveTask({"test_valid"});
   watcher.Measure();
   watcher.AddTask({"separate", "nested"}, std::move(self));
@@ -170,7 +168,7 @@ TEST(CpuWatcher, SampleMultiple) {
   //   test_valid: 0 samples
   //     nested: 3 samples
   //   separate: 0 samples
-  //     nested: 2 samples
+  //     nested: 3 samples
 
   auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
 
@@ -195,7 +193,7 @@ TEST(CpuWatcher, SampleMultiple) {
   EXPECT_EQ(0, GetValidSampleCount(test_valid));
   EXPECT_EQ(3, GetValidSampleCount(test_valid_nested));
   EXPECT_EQ(0, GetValidSampleCount(separate));
-  EXPECT_EQ(2, GetValidSampleCount(separate_nested));
+  EXPECT_EQ(3, GetValidSampleCount(separate_nested));
 }
 
 }  // namespace
