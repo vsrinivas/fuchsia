@@ -12,3 +12,5 @@ toc:
   path: /docs/concepts/filesystems/minfs.md
 - title: "Zxcrypt"
   path: /docs/concepts/filesystems/zxcrypt.md
+- title: "Random Access Compression"
+  path: /docs/concepts/filesystems/random-access-compression.md
