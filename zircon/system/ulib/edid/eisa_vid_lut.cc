@@ -11,6 +11,8 @@
 #include <fbl/algorithm.h>
 #include <zircon/assert.h>
 
+#include <algorithm>
+
 #include "eisa_vid_lut.h"
 
 namespace {
@@ -2464,7 +2466,7 @@ const char* lookup_eisa_vid(uint32_t eisa_vid) {
   const LutEntry* first = EISA_VID_LUT;
   const LutEntry* last = EISA_VID_LUT + fbl::count_of(EISA_VID_LUT);
   const LutEntry* found =
-      fbl::lower_bound(first, last, eisa_vid,
+      std::lower_bound(first, last, eisa_vid,
                        [](const LutEntry& entry, uint32_t id) -> bool { return entry.id < id; });
 
   ZX_DEBUG_ASSERT(found != nullptr);
