@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "dev": [
+            "class/backlight",
             "class/camera",
             "class/i2c",
             "class/input-report",

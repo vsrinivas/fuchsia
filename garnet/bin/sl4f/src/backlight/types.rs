@@ -18,7 +18,7 @@ impl std::str::FromStr for BacklightMethod {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.as_ref() {
             "GetStateNormalized" => BacklightMethod::GetStateNormalized,
-            "SetStateNoramlized" => BacklightMethod::SetStateNormalized,
+            "SetStateNormalized" => BacklightMethod::SetStateNormalized,
             "GetNormalizedBrightnessScale" => BacklightMethod::GetNormalizedBrightnessScale,
             "SetNormalizedBrightnessScale" => BacklightMethod::SetNormalizedBrightnessScale,
             _ => BacklightMethod::UndefinedFunc,
