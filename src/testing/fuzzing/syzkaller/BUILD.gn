@@ -16,7 +16,8 @@ group("syzkaller") {
 
 group("tests") {
   testonly = true
-  deps = [ ":syz-executor-pkg" ]
+  # TODO(53194): Re enable once new version of syzkaller rolls and syz-executor can be built again.
+  #  deps = [ ":syz-executor-pkg" ]
 }
 
 package("syz-executor-pkg") {

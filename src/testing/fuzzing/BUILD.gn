@@ -5,10 +5,9 @@
 group("fuzzing") {
   testonly = true
   deps = [
-    # TODO(53194): Enable syzkaller once a new version is rolled and syz-executor can be built agan.
-    #    ":tests",
+    ":tests",
     "go",
-    #    "syzkaller",
+    "syzkaller",
   ]
 }
 
