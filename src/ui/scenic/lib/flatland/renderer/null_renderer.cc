@@ -42,6 +42,27 @@ GlobalBufferCollectionId NullRenderer::RegisterCollection(
   return identifier;
 }
 
+void NullRenderer::DeregisterCollection(GlobalBufferCollectionId collection_id) {
+  // Multiple threads may be attempting to read/write from the various maps,
+  // lock this function here.
+  // TODO(44335): Convert this to a lock-free structure.
+  std::unique_lock<std::mutex> lock(lock_);
+
+  auto collection_itr = collection_map_.find(collection_id);
+
+  // If the collection is not in the map, then there's nothing to do.
+  if (collection_itr == collection_map_.end()) {
+    return;
+  }
+
+  // Erase the sysmem collection from the map.
+  collection_map_.erase(collection_id);
+
+  // Erase the metadata. There may not actually be any metadata if the collection was
+  // never validated, but there's no need to check as erasing a non-existent key is valid.
+  collection_metadata_map_.erase(collection_id);
+}
+
 std::optional<BufferCollectionMetadata> NullRenderer::Validate(
     GlobalBufferCollectionId collection_id) {
   // TODO(44335): Convert this to a lock-free structure. This is trickier than in the other two
@@ -54,6 +75,13 @@ std::optional<BufferCollectionMetadata> NullRenderer::Validate(
   // If the collection is not in the map, then it can't be validated.
   if (collection_itr == collection_map_.end()) {
     return std::nullopt;
+  }
+
+  // If there is already metadata, we can just return it instead of checking the allocation
+  // status again. Once a buffer is allocated it won't be stop being allocated.
+  auto metadata_itr = collection_metadata_map_.find(collection_id);
+  if (metadata_itr != collection_metadata_map_.end()) {
+    return metadata_itr->second;
   }
 
   // The collection should be allocated (i.e. all constraints set).
@@ -76,7 +104,8 @@ std::optional<BufferCollectionMetadata> NullRenderer::Validate(
 // DCHECK if they have not.
 void NullRenderer::Render(const ImageMetadata& render_target,
                           const std::vector<Rectangle2D>& rectangles,
-                          const std::vector<ImageMetadata>& images) {
+                          const std::vector<ImageMetadata>& images,
+                          const std::vector<zx::event>& release_fences) {
   for (const auto& image : images) {
     auto collection_id = image.collection_id;
     FX_DCHECK(collection_id != kInvalidId);
@@ -92,6 +121,11 @@ void NullRenderer::Render(const ImageMetadata& render_target,
     FX_DCHECK(image.vmo_idx < metadata.vmo_count);
     FX_DCHECK(image.width <= metadata.image_constraints.max_coded_width);
     FX_DCHECK(image.height <= metadata.image_constraints.max_coded_height);
+  }
+
+  // Fire all of the release fences.
+  for (auto& fence : release_fences) {
+    fence.signal(0, ZX_EVENT_SIGNALED);
   }
 }
 

@@ -112,6 +112,12 @@ void Frame::SubmitPartialFrame(const SemaphorePtr& frame_done) {
 }
 
 void Frame::EndFrame(const SemaphorePtr& frame_done, FrameRetiredCallback frame_retired_callback) {
+  std::vector semaphores = {frame_done};
+  EndFrame(semaphores, std::move(frame_retired_callback));
+}
+
+void Frame::EndFrame(const std::vector<SemaphorePtr>& semaphores,
+                     FrameRetiredCallback frame_retired_callback) {
   FX_DCHECK(command_buffer_);
 
   ++submission_count_;
@@ -123,7 +129,9 @@ void Frame::EndFrame(const SemaphorePtr& frame_done, FrameRetiredCallback frame_
 
   AddTimestamp("end of frame");
 
-  command_buffer_->AddSignalSemaphore(frame_done);
+  for (const auto& semaphore : semaphores) {
+    command_buffer_->AddSignalSemaphore(semaphore);
+  }
 
   // Submit the final command buffer and register a callback to perform a
   // variety of bookkeeping and cleanup tasks.

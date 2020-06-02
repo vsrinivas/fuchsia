@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_RENDERER_H_
 
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <lib/zx/event.h>
 
 #include <optional>
 
@@ -102,6 +103,16 @@ class Renderer {
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) = 0;
 
+  // Removes the buffer collection provided from the renderer. All images created using
+  // this buffer collection become invalid afterwards and no new images can be created using
+  // this collection id. Buffer collections can only be safely deregisted after all pending
+  // render work involving the collection has been completed. Deregistering before this point
+  // results in undefined behavior and may crash the process. To avoid this, it is possible
+  // to synchronize with rendering by passing a release fence in the form of a zx::event to
+  // Render() and waiting for it to signal before deregistering. See Render() for more details.
+  // This function is threadsafe.
+  virtual void DeregisterCollection(GlobalBufferCollectionId collection_id) = 0;
+
   // This function validates if the buffer collection referenced by |collection_id| is ready to
   // be used in rendering operations and must be called before that buffer collection is used
   // in |Render|. Specifically, this function checks to make sure that the buffer collection is
@@ -146,9 +157,14 @@ class Renderer {
   //
   // The size of the arrays |rectangles| and |images| must match or else this function will CHECK.
   // Entries in each array with the same index will be used together in rendering.
+  //
+  // The vector of release fences will be signaled once rendering has completed. Clients can use
+  // these fences to coordinate with other work that needs to wait until rendering is completed
+  // to be executed.
   virtual void Render(const ImageMetadata& render_target,
                       const std::vector<Rectangle2D>& rectangles,
-                      const std::vector<ImageMetadata>& images) = 0;
+                      const std::vector<ImageMetadata>& images,
+                      const std::vector<zx::event>& release_fences = {}) = 0;
 
   virtual ~Renderer() = default;
 };

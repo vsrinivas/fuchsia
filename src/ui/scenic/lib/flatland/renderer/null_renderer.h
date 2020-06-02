@@ -30,11 +30,15 @@ class NullRenderer : public Renderer {
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
   // |Renderer|.
+  void DeregisterCollection(GlobalBufferCollectionId collection_id) override;
+
+  // |Renderer|.
   std::optional<BufferCollectionMetadata> Validate(GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
   void Render(const ImageMetadata& render_target, const std::vector<Rectangle2D>& rectangles,
-              const std::vector<ImageMetadata>& images) override;
+              const std::vector<ImageMetadata>& images,
+              const std::vector<zx::event>& release_fences = {}) override;
 
  private:
   GlobalBufferCollectionId RegisterCollection(

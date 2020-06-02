@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/async-testing/test_loop.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 
 #include <thread>
@@ -145,6 +147,34 @@ void ValidationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_
   EXPECT_EQ(result->vmo_count, 1U);
 }
 
+// Simple deregistration test that calls DeregisterCollection() directly without
+// any zx::events just to make sure that the method's functionality itself is
+// working as intented.
+void DeregistrationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
+  auto tokens = CreateSysmemTokens(sysmem_allocator);
+
+  auto bcid = renderer->RegisterTextureCollection(sysmem_allocator, std::move(tokens.dup_token));
+  EXPECT_NE(bcid, Renderer::kInvalidId);
+
+  // The buffer collection should not be valid here.
+  EXPECT_FALSE(renderer->Validate(bcid).has_value());
+
+  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(tokens.local_token));
+
+  // The buffer collection *should* be valid here.
+  auto result = renderer->Validate(bcid);
+  EXPECT_TRUE(result.has_value());
+
+  // There should be 1 vmo.
+  EXPECT_EQ(result->vmo_count, 1U);
+
+  // Now deregister the collection.
+  renderer->DeregisterCollection(bcid);
+
+  // After deregistration, calling validate should return false.
+  EXPECT_FALSE(renderer->Validate(bcid));
+}
+
 // Test to make sure we can call the functions RegisterTextureCollection(),
 // RegisterRenderTargetCollection() and Validate() simultaneously from
 // multiple threads and have it work.
@@ -212,6 +242,80 @@ void MultithreadingTest(Renderer* renderer) {
   EXPECT_FALSE(result.has_value());
 }
 
+// This test checks to make sure that the Render() function properly signals
+// a zx::event which can be used by an async::Wait object to asynchronously
+// call a custom function.
+void AsyncEventSignalTest(Renderer* renderer,
+                          fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+                          bool use_vulkan) {
+  // First create a pairs of sysmem tokens for the render target.
+  auto target_tokens = CreateSysmemTokens(sysmem_allocator);
+
+  // Register the render target with the renderer.
+  GlobalBufferCollectionId target_id;
+  fuchsia::sysmem::BufferCollectionInfo_2 target_info = {};
+  target_id = renderer->RegisterRenderTargetCollection(sysmem_allocator,
+                                                       std::move(target_tokens.dup_token));
+
+  // Create a client-side handle to the buffer collection and set the client constraints.
+  auto client_target_collection =
+      CreateClientPointerWithConstraints(sysmem_allocator, std::move(target_tokens.local_token),
+                                         /*image_count*/ 1,
+                                         /*width*/ 60,
+                                         /*height*/ 40);
+  auto allocation_status = ZX_OK;
+  auto status = client_target_collection->WaitForBuffersAllocated(&allocation_status, &target_info);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(allocation_status, ZX_OK);
+
+  // Now that the renderer and client have set their contraints, we validate.
+  auto target_metadata = renderer->Validate(target_id);
+  EXPECT_TRUE(target_metadata.has_value());
+
+  // Create the render_target image meta_data.
+  ImageMetadata render_target = {
+      .collection_id = target_id,
+      .vmo_idx = 0,
+      .width = 16,
+      .height = 8,
+  };
+
+  // Create the release fence that will be passed along to the Render()
+  // function and be used to signal when we should deregister the collection.
+  zx::event release_fence;
+  status = zx::event::create(0, &release_fence);
+  EXPECT_EQ(status, ZX_OK);
+
+  // Set up the async::Wait object to wait until the release_fence signals
+  // ZX_EVENT_SIGNALED. We make use of a test loop to access an async dispatcher.
+  async::TestLoop loop;
+  bool signaled = false;
+  auto dispatcher = loop.dispatcher();
+  auto wait = std::make_unique<async::Wait>(release_fence.get(), ZX_EVENT_SIGNALED);
+  wait->set_handler([&signaled](async_dispatcher_t*, async::Wait*,
+                                zx_status_t /*status*/,
+                                const zx_packet_signal_t* /*signal*/) mutable {
+    signaled = true;
+  });
+  wait->Begin(dispatcher);
+
+  // The call to Render() will signal the release fence, triggering the wait object to
+  // call DeregisterCollection().
+  std::vector<zx::event> fences;
+  fences.push_back(std::move(release_fence));
+  renderer->Render(render_target, {}, {}, fences);
+
+
+  if (use_vulkan) {
+    auto vk_renderer = static_cast<VkRenderer*>(renderer);
+    vk_renderer->WaitIdle();
+  }
+
+  // Close the test loop and test that our handler was called.
+  loop.RunUntilIdle();
+  EXPECT_TRUE(signaled);
+}
+
 TEST_F(NullRendererTest, RegisterCollectionTest) {
   NullRenderer renderer;
   RegisterCollectionTest(&renderer, sysmem_allocator_.get());
@@ -232,9 +336,19 @@ TEST_F(NullRendererTest, ValidationTest) {
   ValidationTest(&renderer, sysmem_allocator_.get());
 }
 
+TEST_F(NullRendererTest, DeregistrationTest) {
+  NullRenderer renderer;
+  DeregistrationTest(&renderer, sysmem_allocator_.get());
+}
+
 TEST_F(NullRendererTest, MultithreadingTest) {
   NullRenderer renderer;
   MultithreadingTest(&renderer);
+}
+
+TEST_F(NullRendererTest, AsyncEventSignalTest) {
+  NullRenderer renderer;
+  AsyncEventSignalTest(&renderer, sysmem_allocator_.get(), /*use_vulkan*/false);
 }
 
 VK_TEST_F(VulkanRendererTest, RegisterCollectionTest) {
@@ -269,12 +383,28 @@ VK_TEST_F(VulkanRendererTest, ValidationTest) {
   ValidationTest(&renderer, sysmem_allocator_.get());
 }
 
+VK_TEST_F(VulkanRendererTest, DeregistrationTest) {
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher =
+      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  VkRenderer renderer(std::move(unique_escher));
+  DeregistrationTest(&renderer, sysmem_allocator_.get());
+}
+
 VK_TEST_F(VulkanRendererTest, MulithtreadingTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher =
       std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
   VkRenderer renderer(std::move(unique_escher));
   MultithreadingTest(&renderer);
+}
+
+VK_TEST_F(VulkanRendererTest, AsyncEventSignalTest) {
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher =
+      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  VkRenderer renderer(std::move(unique_escher));
+  AsyncEventSignalTest(&renderer, sysmem_allocator_.get(), /*use_vulkan*/true);
 }
 
 // This test actually renders a rectangle using the VKRenderer. We create a single rectangle,
@@ -383,6 +513,7 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
 
   // Render the renderable to the render target.
   renderer.Render(render_target, {renderable}, {renderable_texture});
+  renderer.WaitIdle();
 
   // Get a raw pointer from the client collection's vmo that represents the render target
   // and read its values. This should show that the renderable was rendered to the center
@@ -530,6 +661,7 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   // Render the renderable to the render target.
   renderer.Render(render_target, {renderable, transparent_renderable},
                   {renderable_texture, transparent_texture});
+  renderer.WaitIdle();
 
   // Get a raw pointer from the client collection's vmo that represents the render target
   // and read its values. This should show that the renderable was rendered to the center

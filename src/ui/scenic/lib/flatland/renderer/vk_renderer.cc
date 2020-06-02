@@ -114,6 +114,37 @@ GlobalBufferCollectionId VkRenderer::RegisterCollection(
   return identifier;
 }
 
+void VkRenderer::DeregisterCollection(GlobalBufferCollectionId collection_id) {
+  // Multiple threads may be attempting to read/write from the various maps,
+  // lock this function here.
+  // TODO(44335): Convert this to a lock-free structure.
+  std::unique_lock<std::mutex> lock(lock_);
+
+  auto collection_itr = collection_map_.find(collection_id);
+
+  // If the collection is not in the map, then there's nothing to do.
+  if (collection_itr == collection_map_.end()) {
+    return;
+  }
+
+  // Erase the sysmem collection from the map.
+  collection_map_.erase(collection_id);
+
+  // Grab the vulkan collection and DCHECK since there should always be
+  // a vk collection to correspond with the buffer collection. We then
+  // delete it using the vk device.
+  auto vk_itr = vk_collection_map_.find(collection_id);
+  FX_DCHECK(vk_itr != vk_collection_map_.end());
+  auto vk_device = escher_->vk_device();
+  auto vk_loader = escher_->device()->dispatch_loader();
+  vk_device.destroyBufferCollectionFUCHSIA(vk_itr->second, nullptr, vk_loader);
+  vk_collection_map_.erase(collection_id);
+
+  // Erase the metadata. There may not actually be any metadata if the collection was
+  // never validated, but there's no need to check as erasing a non-existent key is valid.
+  collection_metadata_map_.erase(collection_id);
+}
+
 std::optional<BufferCollectionMetadata> VkRenderer::Validate(
     GlobalBufferCollectionId collection_id) {
   // TODO(44335): Convert this to a lock-free structure. This is trickier than in the other
@@ -208,7 +239,8 @@ escher::ImagePtr VkRenderer::ExtractImage(escher::CommandBuffer* command_buffer,
 
 void VkRenderer::Render(const ImageMetadata& render_target,
                         const std::vector<Rectangle2D>& rectangles,
-                        const std::vector<ImageMetadata>& images) {
+                        const std::vector<ImageMetadata>& images,
+                        const std::vector<zx::event>& release_fences) {
   // Escher's frame class acts as a command buffer manager that we use to create a
   // command buffer and submit it to the device queue once we are done.
   auto frame = escher_->NewFrame("flatland::VkRenderer", ++frame_number_);
@@ -234,9 +266,33 @@ void VkRenderer::Render(const ImageMetadata& render_target,
   compositor_.DrawBatch(command_buffer, rectangles, textures, color_data, output_image,
                         depth_texture);
 
+  // Create vk::semaphores from the zx::events.
+  std::vector<escher::SemaphorePtr> semaphores;
+  for (auto& fence_original : release_fences) {
+    // Since the original fences are passed in by const reference, we
+    // duplicate them here so that the duped fences can be moved into
+    // the create info struct of the semaphore.
+    zx::event fence_copy;
+    auto status = fence_original.duplicate(ZX_RIGHT_SAME_RIGHTS, &fence_copy);
+    FX_DCHECK(status == ZX_OK);
+
+    auto sema = escher::Semaphore::New(escher_->vk_device());
+    vk::ImportSemaphoreZirconHandleInfoFUCHSIA info;
+    info.semaphore = sema->vk_semaphore();
+    info.handle = fence_copy.release();
+    info.handleType = vk::ExternalSemaphoreHandleTypeFlagBits::eTempZirconEventFUCHSIA;
+
+    auto result = escher_->vk_device().importSemaphoreZirconHandleFUCHSIA(
+        info, escher_->device()->dispatch_loader());
+    FX_DCHECK(result == vk::Result::eSuccess);
+
+    semaphores.emplace_back(sema);
+  }
+
   // Submit the commands and wait for them to finish.
-  frame->EndFrame(escher::SemaphorePtr(), nullptr);
-  escher_->vk_device().waitIdle();
+  frame->EndFrame(semaphores, nullptr);
 }
+
+void VkRenderer::WaitIdle() { escher_->vk_device().waitIdle(); }
 
 }  // namespace flatland

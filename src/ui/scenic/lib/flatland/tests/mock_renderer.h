@@ -22,11 +22,13 @@ class MockRenderer : public Renderer {
                GlobalBufferCollectionId(
                    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
                    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token));
+  MOCK_METHOD1(DeregisterCollection, void(GlobalBufferCollectionId collection_id));
   MOCK_METHOD1(Validate,
                std::optional<BufferCollectionMetadata>(GlobalBufferCollectionId collection_id));
-  MOCK_METHOD3(Render,
+  MOCK_METHOD4(Render,
                void(const ImageMetadata& render_target, const std::vector<Rectangle2D>& rectangles,
-                    const std::vector<ImageMetadata>& images));
+                    const std::vector<ImageMetadata>& images,
+                    const std::vector<zx::event>& release_fences));
 };
 
 }  // namespace flatland

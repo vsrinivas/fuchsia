@@ -44,9 +44,16 @@ class Frame : public Resource {
   void SubmitPartialFrame(const SemaphorePtr& partial_frame_done);
 
   // Submit the frame's final CommandBuffer.  When it is finished, |frame_done| will be signaled and
-  // |frame_retired_callback| will be invoked; the latter occurs when the command-buffer in
-  // Escher::Cleanup(), perhaps more than a millisecond later.
+  // |frame_retired_callback| will be invoked; the latter occurs when the command-buffer is cleaned
+  // up in Escher::Cleanup(), perhaps more than a millisecond later.
   void EndFrame(const SemaphorePtr& frame_done, FrameRetiredCallback frame_retired_callback);
+
+  // Submit the frame's final CommandBuffer.  When it is finished, all of the semaphores in the
+  // vector |semaphores| will signaled and |frame_retired_callback| will be invoked; the latter
+  // occurs when the the command-buffer is cleaned up in Escher::Cleanup(), perhaps more than a
+  // millisecond later.
+  void EndFrame(const std::vector<SemaphorePtr>& semaphores,
+                FrameRetiredCallback frame_retired_callback);
 
   // If profiling is enabled, inserts a Vulkan timestamp query into the frame's
   // current CommandBuffer; the result will be inserted into the trace log.
