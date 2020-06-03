@@ -2147,6 +2147,7 @@ zx_status_t iwl_mvm_add_chanctx(struct iwl_mvm* mvm, const wlan_channel_t* chand
 zx_status_t iwl_mvm_remove_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id);
 zx_status_t iwl_mvm_change_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id,
                                    const wlan_channel_t* chandef);
+zx_status_t iwl_mvm_assign_vif_chanctx(struct iwl_mvm_vif* mvmvif, const wlan_channel_t* chandef);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -2158,5 +2159,7 @@ zx_status_t iwl_mvm_change_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id,
 typedef void (*ieee80211_iterate_callback)(void* data, struct iwl_mvm_vif* mvmvif);
 void ieee80211_iterate_active_interfaces_atomic(struct iwl_mvm* mvm,
                                                 ieee80211_iterate_callback func, void* data);
+
+zx_status_t iwl_mvm_assign_vif_chanctx(struct iwl_mvm_vif* mvmvif, const wlan_channel_t* chandef);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_

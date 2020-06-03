@@ -34,6 +34,8 @@
  *
  *****************************************************************************/
 
+#include <zircon/status.h>
+
 #include <ddk/hw/wlan/ieee80211.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/error-dump.h"
@@ -3418,20 +3420,21 @@ zx_status_t iwl_mvm_change_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id,
   return ret;
 }
 
-#if 0  // NEEDS_PORTING
-static int __iwl_mvm_assign_vif_chanctx(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                                        struct ieee80211_chanctx_conf* ctx,
-                                        bool switching_chanctx) {
-    uint16_t* phy_ctxt_id = (uint16_t*)ctx->drv_priv;
-    struct iwl_mvm_phy_ctxt* phy_ctxt = &mvm->phy_ctxts[*phy_ctxt_id];
-    struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-    int ret;
+static zx_status_t __iwl_mvm_assign_vif_chanctx(struct iwl_mvm_vif* mvmvif,
+                                                const wlan_channel_t* chandef,
+                                                bool switching_chanctx) {
+  zx_status_t ret;
 
-    iwl_assert_lock_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvmvif->mvm->mutex);
 
-    mvmvif->phy_ctxt = phy_ctxt;
+  // Assume mvmvif->phy_ctxt had been assigned in mac_start().
+  if (!mvmvif->phy_ctxt) {
+    IWL_ERR(mvmvif, "PHY context is not assigned yet.\n");
+    return ZX_ERR_BAD_STATE;
+  }
 
-    switch (vif->type) {
+  switch (mvmvif->mac_role) {
+#if 0   // NEEDS_PORTING
     case NL80211_IFTYPE_AP:
         /* only needed if we're switching chanctx (i.e. during CSA) */
         if (switching_chanctx) {
@@ -3445,31 +3448,39 @@ static int __iwl_mvm_assign_vif_chanctx(struct iwl_mvm* mvm, struct ieee80211_vi
          */
         ret = 0;
         goto out;
-    case NL80211_IFTYPE_STATION:
-        mvmvif->csa_bcn_pending = false;
-        break;
+#endif  // NEEDS_PORTING
+    case WLAN_INFO_MAC_ROLE_CLIENT:
+      mvmvif->csa_bcn_pending = false;
+      break;
+#if 0   // NEEDS_PORTING
     case NL80211_IFTYPE_MONITOR:
         /* always disable PS when a monitor interface is active */
         mvmvif->ps_disabled = true;
         break;
+#endif  // NEEDS_PORTING
     default:
-        ret = -EINVAL;
-        goto out;
-    }
+      ret = ZX_ERR_NOT_SUPPORTED;
+      IWL_ERR(mvmvif, "%s(): mac_role: %d not supported yet\n", __func__, mvmvif->mac_role);
+      goto out;
+  }
 
-    ret = iwl_mvm_binding_add_vif(mvm, vif);
-    if (ret) { goto out; }
+  ret = iwl_mvm_binding_add_vif(mvmvif);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "Cannot add vif binding: %s\n", zx_status_get_string(ret));
+    goto out;
+  }
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
-    iwl_mvm_update_ctx_tx_power_limit(mvm, vif, mvmvif->phy_ctxt);
+  iwl_mvm_update_ctx_tx_power_limit(mvm, vif, mvmvif->phy_ctxt);
 #endif
 
-    /*
-     * Power state must be updated before quotas,
-     * otherwise fw will complain.
-     */
-    iwl_mvm_power_update_mac(mvm);
+  /*
+   * Power state must be updated before quotas,
+   * otherwise fw will complain.
+   */
+  iwl_mvm_power_update_mac(mvmvif->mvm);
 
+#if 0   // NEEDS_PORTING
     /* Setting the quota at this stage is only required for monitor
      * interfaces. For the other types, the bss_info changed flow
      * will handle quota settings.
@@ -3488,49 +3499,57 @@ static int __iwl_mvm_assign_vif_chanctx(struct iwl_mvm* mvm, struct ieee80211_vi
         iwl_mvm_update_quotas(mvm, false, NULL);
         iwl_mvm_mac_ctxt_changed(mvm, vif, false, NULL);
     }
+#endif  // NEEDS_PORTING
 
-    if (switching_chanctx && vif->type == NL80211_IFTYPE_STATION) {
-        uint32_t duration = 3 * vif->bss_conf.beacon_int;
+  if (switching_chanctx && mvmvif->mac_role == WLAN_INFO_MAC_ROLE_CLIENT) {
+    uint32_t duration = 3 * mvmvif->bss_conf.beacon_int;
 
-        /* iwl_mvm_protect_session() reads directly from the
-         * device (the system time), so make sure it is
-         * available.
-         */
-        ret = iwl_mvm_ref_sync(mvm, IWL_MVM_REF_PROTECT_CSA);
-        if (ret) { goto out_remove_binding; }
-
-        /* Protect the session to make sure we hear the first
-         * beacon on the new channel.
-         */
-        mvmvif->csa_bcn_pending = true;
-        iwl_mvm_protect_session(mvm, vif, duration, duration, vif->bss_conf.beacon_int / 2, true);
-
-        iwl_mvm_unref(mvm, IWL_MVM_REF_PROTECT_CSA);
-
-        iwl_mvm_update_quotas(mvm, false, NULL);
+    /* iwl_mvm_protect_session() reads directly from the
+     * device (the system time), so make sure it is
+     * available.
+     */
+    ret = iwl_mvm_ref_sync(mvmvif->mvm, IWL_MVM_REF_PROTECT_CSA);
+    if (ret) {
+      goto out_remove_binding;
     }
 
-    goto out;
+    /* Protect the session to make sure we hear the first
+     * beacon on the new channel.
+     */
+    mvmvif->csa_bcn_pending = true;
+    iwl_mvm_protect_session(mvmvif->mvm, mvmvif, duration, duration,
+                            mvmvif->bss_conf.beacon_int / 2, true);
+
+    iwl_mvm_unref(mvmvif->mvm, IWL_MVM_REF_PROTECT_CSA);
+
+#if 0   // NEEDS_PORTING
+        iwl_mvm_update_quotas(mvm, false, NULL);
+#endif  // NEEDS_PORTING
+  }
+
+  goto out;
 
 out_remove_binding:
-    iwl_mvm_binding_remove_vif(mvm, vif);
-    iwl_mvm_power_update_mac(mvm);
+  iwl_mvm_binding_remove_vif(mvmvif);
+  iwl_mvm_power_update_mac(mvmvif->mvm);
 out:
-    if (ret) { mvmvif->phy_ctxt = NULL; }
-    return ret;
-}
-static int iwl_mvm_assign_vif_chanctx(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
-                                      struct ieee80211_chanctx_conf* ctx) {
-    struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
-    int ret;
-
-    mutex_lock(&mvm->mutex);
-    ret = __iwl_mvm_assign_vif_chanctx(mvm, vif, ctx, false);
-    mutex_unlock(&mvm->mutex);
-
-    return ret;
+  if (ret) {
+    mvmvif->phy_ctxt = NULL;
+  }
+  return ret;
 }
 
+zx_status_t iwl_mvm_assign_vif_chanctx(struct iwl_mvm_vif* mvmvif, const wlan_channel_t* chandef) {
+  zx_status_t ret;
+
+  mtx_lock(&mvmvif->mvm->mutex);
+  ret = __iwl_mvm_assign_vif_chanctx(mvmvif, chandef, false);
+  mtx_unlock(&mvmvif->mvm->mutex);
+
+  return ret;
+}
+
+#if 0  // NEEDS_PORTING
 static void __iwl_mvm_unassign_vif_chanctx(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                                            struct ieee80211_chanctx_conf* ctx,
                                            bool switching_chanctx) {

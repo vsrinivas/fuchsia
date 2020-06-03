@@ -15,6 +15,8 @@ extern "C" {
 #include <stdio.h>
 #include <zircon/syscalls.h>
 
+#include <list>
+
 #include <zxtest/zxtest.h>
 
 extern "C" {
@@ -462,6 +464,121 @@ TEST_F(WlanDeviceTest, PhyDestroyInvalidZxdev) {
   ASSERT_EQ(mvm->mvmvif[iface_id], nullptr);
   device_mac_ops.release(mvmvif);
 }
+
+// The class for WLAN device MAC testing.
+//
+class MacInterfaceTest : public WlanDeviceTest {
+ public:
+  MacInterfaceTest() : ifc_{ .ops = &proto_ops_, } , proto_ops_{ .recv = recv_wrapper, } {
+    mvmvif_sta_.sme_channel = sme_channel_;
+    zx_handle_t sme_channel;
+    ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc_, &sme_channel), ZX_OK);
+
+    // Add the interface to MVM instance.
+    mvmvif_sta_.mvm->mvmvif[0] = &mvmvif_sta_;
+    mvmvif_sta_.mvm->vif_count++;
+  }
+
+  ~MacInterfaceTest() {
+    VerifyExpectation();  // Ensure all expectations had been met.
+
+    // Restore the original callback for other test cases not using the mock.
+    if (original_send_cmd) {
+      sim_trans_.iwl_trans()->ops->send_cmd = original_send_cmd;
+    }
+  }
+
+  typedef std::list<uint32_t> expected_cmd_id_list;
+  typedef zx_status_t (*fp_send_cmd)(struct iwl_trans* trans, struct iwl_host_cmd* cmd);
+
+  // Public for MockSendCmd().
+  expected_cmd_id_list expected_cmd_ids;
+  fp_send_cmd original_send_cmd;
+
+ protected:
+  zx_status_t SetChannel(const wlan_channel_t* chan) {
+    uint32_t option = 0;
+    return wlanmac_ops.set_channel(&mvmvif_sta_, option, chan);
+  }
+
+  // The following functions are for mocking up the firmware commands.
+  //
+  // The mock function will return the special error ZX_ERR_INTERNAL when the expectation
+  // is not expected.
+
+  // Set the expected commands sending to the firmware.
+  //
+  // Args:
+  //   cmd_ids: array of command IDs. Will be matched in order.
+  //
+  void ExpectSendCmd(const expected_cmd_id_list& cmd_ids) {
+    expected_cmd_ids = cmd_ids;
+
+    // Re-define the 'dev' field in the 'struct iwl_trans' to a test instance of this class.
+    sim_trans_.iwl_trans()->dev = reinterpret_cast<struct device*>(this);
+
+    // Setup the mock function for send command.
+    original_send_cmd = sim_trans_.iwl_trans()->ops->send_cmd;
+    sim_trans_.iwl_trans()->ops->send_cmd = MockSendCmd;
+  }
+
+  static zx_status_t MockSendCmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {
+    MacInterfaceTest* this_ = reinterpret_cast<MacInterfaceTest*>(trans->dev);
+
+    // remove the first one and match
+    expected_cmd_id_list& expected = this_->expected_cmd_ids;
+    ZX_ASSERT_MSG(!expected.empty(),
+                  "A command (0x%04x) is going to send, but no command is expected.\n", cmd->id);
+
+    auto id = expected.front();
+    ZX_ASSERT_MSG(id == cmd->id, "The command doesn't match! Expect: 0x%04x, actual: 0x%04x.\n", id,
+                  cmd->id);
+    expected.pop_front();
+
+    return this_->original_send_cmd(trans, cmd);
+  }
+
+  void VerifyExpectation() {
+    for (expected_cmd_id_list::iterator it = expected_cmd_ids.begin(); it != expected_cmd_ids.end();
+         it++) {
+      printf("  ==> 0x%04x\n", *it);
+    }
+    ASSERT_TRUE(expected_cmd_ids.empty(), "The expected command set is not empty.");
+  }
+
+  wlanmac_ifc_protocol_t ifc_;
+  wlanmac_ifc_protocol_ops_t proto_ops_;
+};
+
+// Test the set_channel().
+//
+TEST_F(MacInterfaceTest, TestSetChannel) {
+  ExpectSendCmd(expected_cmd_id_list({
+      WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD),
+      WIDE_ID(LONG_GROUP, BINDING_CONTEXT_CMD),
+      WIDE_ID(LONG_GROUP, MAC_PM_POWER_TABLE),
+  }));
+
+  mvmvif_sta_.csa_bcn_pending = true;  // Expect to be clear because this is client role.
+  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+  EXPECT_EQ(false, mvmvif_sta_.csa_bcn_pending);
+}
+
+// Test the unsupported MAC role.
+//
+TEST_F(MacInterfaceTest, TestSetChannelWithUnsupportedRole) {
+  ExpectSendCmd(expected_cmd_id_list({
+      WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD),
+  }));
+
+  mvmvif_sta_.mac_role = WLAN_INFO_MAC_ROLE_AP;
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, SetChannel(&kChannel));
+}
+
+// The test is used to test the typical procedure to connect to an open network. Will be updated
+// in the following CLs.
+//
+TEST_F(MacInterfaceTest, AssociateToOpenNetwork) { ASSERT_EQ(ZX_OK, SetChannel(&kChannel)); }
 
 }  // namespace
 }  // namespace wlan::testing

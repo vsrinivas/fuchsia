@@ -228,7 +228,19 @@ static zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_chann
   struct iwl_mvm_vif* mvmvif = ctx;
   mvmvif->phy_ctxt->chandef = *chan;
 
-  return iwl_mvm_change_chanctx(mvmvif->mvm, mvmvif->phy_ctxt->id, chan);
+  zx_status_t ret = iwl_mvm_change_chanctx(mvmvif->mvm, mvmvif->phy_ctxt->id, chan);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "Cannot change chanctx: %s\n", zx_status_get_string(ret));
+    return ret;
+  }
+
+  ret = iwl_mvm_assign_vif_chanctx(mvmvif, chan);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "Cannot assign VIF chanctx: %s\n", zx_status_get_string(ret));
+    return ret;
+  }
+
+  return ret;
 }
 
 static zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss_config_t* config) {
