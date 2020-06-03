@@ -13,14 +13,14 @@
 #include <cmath>
 #include <memory>
 
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/media/audio/lib/format/constants.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/format/traits.h"
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
 #include "src/media/audio/lib/wav/wav_reader.h"
 
 namespace media::audio::test {
-
-// TODO(49807): This file is sufficiently complex that it should be tested
 
 // A buffer of audio data. Each entry in the vector is a single sample.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -75,11 +75,27 @@ struct AudioBufferSlice {
   const Format& format() const { return buf->format; }
   size_t NumFrames() const { return end_frame - start_frame; }
   size_t NumBytes() const { return NumFrames() * buf->format.bytes_per_frame(); }
+  size_t NumSamples() const { return NumFrames() * buf->format.channels(); }
   size_t SampleIndex(size_t frame, size_t chan) const {
     return buf->SampleIndex(start_frame + frame, chan);
   }
   SampleT SampleAt(size_t frame, size_t chan) const {
     return buf->SampleAt(start_frame + frame, chan);
+  }
+
+  // Return a buffer containing the given channel only.
+  AudioBuffer<SampleFormat> GetChannel(size_t chan) {
+    auto new_format = Format::Create({
+                                         .sample_format = SampleFormat,
+                                         .channels = 1,
+                                         .frames_per_second = format().frames_per_second(),
+                                     })
+                          .take_value();
+    AudioBuffer<SampleFormat> out(new_format, NumFrames());
+    for (size_t frame = 0; frame < NumFrames(); frame++) {
+      out.buf[frame] = SampleAt(frame, chan);
+    }
+    return out;
   }
 };
 
@@ -175,107 +191,48 @@ AudioBuffer<SampleFormat> LoadWavFile(const std::string& file_name) {
 }
 
 struct CompareAudioBufferOptions {
+  // See CompareAudioBuffers for a description.
   bool partial = false;
+
+  // If positive, allow the samples to differ from the expected samples by a relative error.
+  // If want_slice is empty or RMS(want_slice) == 0, this has no effect.
+  // Relative error is defined to be:
+  //
+  //   abs(RMS(got_slice - want_slice) - RMS(want_slice)) / RMS(want_slice)
+  //
+  // The term RMS(got_slice - want_slice) is known as RMS error, or RMSE. See:
+  // https://en.wikipedia.org/wiki/Root-mean-square_deviation.
+  double max_relative_error = 0;
 
   // These options control additional debugging output of CompareAudioBuffer in failure cases.
   std::string test_label;
   size_t num_frames_per_packet = 100;
 };
 
-// Compares got_buffer to want_buffer, reporting any differences. If got_buffer is larger than
-// want_buffer, the extra suffix should be silence. If options.partial is true, then got_buffer
-// should contain a prefix of want_buffer, where the suffix should be all zeros.
+// Compares got_slice to want_slice, reporting any differences. If got_slice is larger than
+// want_slice, the extra suffix should contain silence. If options.partial is true, then got_slice
+// should contain a prefix of want_slice, followed by silence.
 //
 // For example, CompareAudioBuffer succeeds on these inputs
-//   got_buffer  = {0,1,2,3,4,0,0,0,0,0}
-//   want_buffer = {0,1,2,3,4}
-//   partial     = false
+//   got_slice  = {0,1,2,3,4,0,0,0,0,0}
+//   want_slice = {0,1,2,3,4}
+//   partial    = false
 //
 // And these inputs:
-//   got_buffer  = {0,1,2,3,0,0,0,0,0,0}
-//   want_buffer = {0,1,2,3,4}
-//   partial     = true
+//   got_slice  = {0,1,2,3,0,0,0,0,0,0}
+//   want_slice = {0,1,2,3,4}
+//   partial    = true
 //
 // But not these inputs:
-//   got_buffer  = {0,1,2,3,0,0,0,0,0,0}
-//   want_buffer = {0,1,2,3,4}
-//   partial     = false
+//   got_slice  = {0,1,2,3,0,0,0,0,0,0}
+//   want_slice = {0,1,2,3,4}
+//   partial    = false
 //
 // Differences are reported to gtest EXPECT macros.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 void CompareAudioBuffers(AudioBufferSlice<SampleFormat> got_slice,
                          AudioBufferSlice<SampleFormat> want_slice,
-                         CompareAudioBufferOptions options) {
-  using SampleT = typename AudioBuffer<SampleFormat>::SampleT;
-  constexpr SampleT kSilentValue = SampleFormatTraits<SampleFormat>::kSilentValue;
-
-  FX_CHECK(got_slice.buf);
-  if (want_slice.buf) {
-    ASSERT_EQ(got_slice.format().channels(), want_slice.format().channels());
-  }
-
-  // Compare sample-by-sample.
-  for (size_t frame = 0; frame < got_slice.NumFrames(); frame++) {
-    for (size_t chan = 0; chan < got_slice.format().channels(); chan++) {
-      SampleT got = got_slice.SampleAt(frame, chan);
-      SampleT want = kSilentValue;
-      if (frame < want_slice.NumFrames()) {
-        want = want_slice.SampleAt(frame, chan);
-        if (options.partial && got == kSilentValue && want != got) {
-          // Expect that audio data is written one complete frame at a time.
-          EXPECT_EQ(0u, chan);
-          // Found the end of the prefix.
-          want_slice = AudioBufferSlice<SampleFormat>();
-          want = kSilentValue;
-        }
-      }
-      if (want != got) {
-        size_t raw_frame = got_slice.start_frame + frame;
-        ADD_FAILURE() << options.test_label << ": unexpected value at frame " << raw_frame
-                      << ", channel " << chan << ":\n   got[" << raw_frame
-                      << "] = " << SampleFormatTraits<SampleFormat>::ToString(got) << "\n  want["
-                      << raw_frame << "] = " << SampleFormatTraits<SampleFormat>::ToString(want);
-
-        // Relative to got_slice.buf.
-        size_t packet = raw_frame / options.num_frames_per_packet;
-        size_t packet_start = packet * options.num_frames_per_packet;
-        size_t packet_end = packet_start + options.num_frames_per_packet;
-
-        // Display got/want side-by-side.
-        printf("\n\n Frames %zu to %zu (packet %zu), got vs want: ", packet_start, packet_end,
-               packet);
-        for (auto frame = packet_start; frame < packet_end; ++frame) {
-          if (frame % 8 == 0) {
-            printf("\n [%6lu] ", frame);
-          } else {
-            printf(" | ");
-          }
-          for (auto chan = 0u; chan < got_slice.format().channels(); ++chan) {
-            printf("%s",
-                   SampleFormatTraits<SampleFormat>::ToString(got_slice.buf->SampleAt(frame, chan))
-                       .c_str());
-          }
-          printf(" vs ");
-          for (auto chan = 0u; chan < got_slice.format().channels(); ++chan) {
-            // Translate to the equivalent offset in want_slice.buf.
-            size_t want_frame = frame + (static_cast<ssize_t>(want_slice.start_frame) -
-                                         static_cast<ssize_t>(got_slice.start_frame));
-            std::string str;
-            if (want_slice.buf && want_frame < want_slice.buf->NumFrames()) {
-              str = SampleFormatTraits<SampleFormat>::ToString(
-                  want_slice.buf->SampleAt(want_frame, chan));
-            } else {
-              str = SampleFormatTraits<SampleFormat>::ToString(kSilentValue);
-            }
-            printf("%s", str.c_str());
-          }
-        }
-        printf("\n");
-        return;
-      }
-    }
-  }
-}
+                         CompareAudioBufferOptions options);
 
 }  // namespace media::audio::test
 

@@ -47,6 +47,7 @@ source_set("hermetic_audio_test") {
   sources = [
     "analysis.cc",
     "analysis.h",
+    "audio_buffer.cc",
     "audio_buffer.h",
     "capturer_shim.h",
     "hermetic_audio_environment.cc",

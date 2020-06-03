@@ -51,6 +51,20 @@ template <fuchsia::media::AudioSampleFormat SampleFormat>
 void MeasureAudioFreq(AudioBufferSlice<SampleFormat> slice, size_t freq, double* magn_signal,
                       double* magn_other = nullptr, double* phase_signal = nullptr);
 
+// Compute the root-mean-square (RMS) energy of a slice. This is a measure of loudness.
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+double MeasureAudioRMS(AudioBufferSlice<SampleFormat> slice) {
+  FX_CHECK(slice.NumFrames() > 0);
+  double sum = 0;
+  for (size_t frame = 0; frame < slice.NumFrames(); frame++) {
+    for (size_t chan = 0; chan < slice.format().channels(); chan++) {
+      double s = SampleFormatTraits<SampleFormat>::ToFloat(slice.SampleAt(frame, chan));
+      sum += s * s;
+    }
+  }
+  return sqrt(sum / slice.NumSamples());
+}
+
 }  // namespace media::audio::test
 
 #endif  // SRC_MEDIA_AUDIO_LIB_TEST_ANALYSIS_H_
