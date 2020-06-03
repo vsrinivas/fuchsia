@@ -3288,7 +3288,7 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
   } else if (type_ctor->handle_subtype_identifier) {
     types::HandleSubtype subtype;
     if (!ResolveHandleSubtypeIdentifier(type_ctor, &subtype)) {
-      return Fail(ErrCouldNotResolveHandleSubtype);
+      return Fail(ErrCouldNotResolveHandleSubtype, type_ctor->handle_subtype_identifier.value());
     }
     handle_subtype = subtype;
   }

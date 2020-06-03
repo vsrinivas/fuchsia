@@ -159,6 +159,40 @@ struct MyStruct {
   END_TEST;
 }
 
+bool invalid_fidl_defined_handle_subtype() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+enum obj_type : uint32 {
+    NONE = 0;
+};
+
+resource handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
+struct MyStruct {
+  handle:ZIPPY a;
+};
+)FIDL",
+                      std::move(experimental_flags));
+
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrCouldNotResolveHandleSubtype);
+  EXPECT_TRUE(errors[0]->msg.find("ZIPPY") != std::string::npos);
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(handle_tests)
@@ -167,4 +201,5 @@ RUN_TEST(no_handle_rights_test)
 RUN_TEST(invalid_handle_rights_test)
 RUN_TEST(plain_handle_test)
 RUN_TEST(handle_fidl_defined_test)
+RUN_TEST(invalid_fidl_defined_handle_subtype)
 END_TEST_CASE(handle_tests)

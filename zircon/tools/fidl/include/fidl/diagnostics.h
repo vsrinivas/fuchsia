@@ -159,7 +159,8 @@ constexpr ErrorDef<SourceSpan> ErrDuplicateUnionMemberName(
 constexpr ErrorDef<uint32_t> ErrNonDenseOrdinal(
     "missing ordinal {} (ordinals must be dense); consider marking it reserved");
 constexpr ErrorDef ErrCouldNotResolveHandleRights("unable to resolve handle rights");
-constexpr ErrorDef ErrCouldNotResolveHandleSubtype("unable to resolve handle subtype");
+constexpr ErrorDef<flat::Name> ErrCouldNotResolveHandleSubtype(
+    "unable to resolve handle subtype {}");
 constexpr ErrorDef ErrCouldNotParseSizeBound("unable to parse size bound");
 constexpr ErrorDef<std::string> ErrCouldNotResolveMember("unable to resolve {} member");
 constexpr ErrorDef<std::string, std::string, flat::Name> ErrDuplicateMemberName(
