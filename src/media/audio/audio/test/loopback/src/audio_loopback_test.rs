@@ -294,6 +294,9 @@ async fn loopback_test(num_renderers: u16) -> Result<()> {
     .await
 }
 
+// TODO(49807): This test should automatically fail if underflows are detected. That functionality
+// should be ported from HermeticAudioTest (C++) to here.
+
 // Test Cases
 //
 // Create one output stream and one loopback capture to verify that the capturer receives

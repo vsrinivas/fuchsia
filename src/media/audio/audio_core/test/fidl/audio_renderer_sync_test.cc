@@ -95,9 +95,6 @@ TEST_F(AudioRendererSyncTest, PlayNoReplyNoFormatCausesDisconnect) {
                                                      fuchsia::media::NO_TIMESTAMP));
 
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
-
-  // Although the connection has disconnected, the proxy should still exist.
-  EXPECT_TRUE(audio_renderer_sync_.is_bound());
 }
 
 // Before setting format, PauseNoReply should cause a Disconnect.
@@ -111,9 +108,6 @@ TEST_F(AudioRendererSyncTest, PauseNoReplyWithoutFormatCausesDisconnect) {
   EXPECT_EQ(ZX_OK, audio_renderer_sync_->PauseNoReply());
 
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
-
-  // Although the connection has disconnected, the proxy should still exist.
-  EXPECT_TRUE(audio_renderer_sync_.is_bound());
 }
 
 }  // namespace media::audio::test

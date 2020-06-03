@@ -13,11 +13,18 @@
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/test/audio_buffer.h"
+#include "src/media/audio/lib/test/inspect.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 #include "src/media/audio/lib/test/vmo_backed_buffer.h"
 
 namespace media::audio::test {
 
+namespace internal {
+// These IDs are scoped to the lifetime of this process.
+extern size_t renderer_shim_next_inspect_id;
+}  // namespace internal
+
+// This class is thread hostile: none of its methods can be called concurrently.
 class RendererShimImpl {
  public:
   static constexpr uint32_t kPacketMs = 10;
@@ -49,10 +56,16 @@ class RendererShimImpl {
   // Wait for packet with the given ID to complete.
   void WaitForPacket(TestFixture* fixture, size_t packet_num);
 
+  // For validating properties exported by inspect.
+  // By default, there are no expectations.
+  size_t inspect_id() const { return inspect_id_; }
+  ExpectedInspectProperties& expected_inspect_properties() { return expected_inspect_properties_; }
+
  protected:
   RendererShimImpl(Format format, size_t payload_frame_count)
       : format_(format),
         payload_frame_count_(payload_frame_count),
+        inspect_id_(internal::renderer_shim_next_inspect_id++),
         payload_buffer_(format, payload_frame_count) {}
 
   void ResetEvents();
@@ -60,12 +73,15 @@ class RendererShimImpl {
 
   const Format format_;
   const size_t payload_frame_count_;
+  const size_t inspect_id_;
 
   VmoBackedBuffer payload_buffer_;
   fuchsia::media::AudioRendererPtr renderer_;
   bool received_min_lead_time_ = false;
   int64_t min_lead_time_ = -1;
   ssize_t received_packet_num_ = -1;
+
+  ExpectedInspectProperties expected_inspect_properties_;
 };
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>

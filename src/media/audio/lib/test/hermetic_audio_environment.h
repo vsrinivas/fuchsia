@@ -8,7 +8,11 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/dispatcher.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/inspect/cpp/hierarchy.h>
+#include <lib/inspect/cpp/reader.h>
+#include <lib/inspect/cpp/vmo/snapshot.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
@@ -17,6 +21,7 @@
 #include <mutex>
 #include <thread>
 
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 
 namespace media::audio::test {
@@ -24,13 +29,11 @@ namespace media::audio::test {
 class HermeticAudioEnvironment {
  public:
   struct Options {
-    const char* audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio_core";
-    const char* audio_core_config_data_path = nullptr;
+    std::string audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio_core";
+    std::string audio_core_config_data_path = "";
   };
   HermeticAudioEnvironment(Options options);
   ~HermeticAudioEnvironment();
-
-  void Start(async::Loop* loop);
 
   template <typename Interface>
   void ConnectToService(fidl::InterfaceRequest<Interface> request,
@@ -46,19 +49,34 @@ class HermeticAudioEnvironment {
     return ptr;
   }
 
+  // Components started by this environment.
+  enum ComponentType {
+    kAudioComponent,
+    kAudioCoreComponent,
+    kVirtualAudioComponent,
+  };
+
+  // Read the exported inspect info for the given component.
+  const inspect::Hierarchy ReadInspect(ComponentType component_type);
+
  private:
+  static void EnvironmentMain(HermeticAudioEnvironment* env);
+  void StartEnvThread(async::Loop* loop);
+
   const Options options_;
 
-  // We use a mutex/condition variable allow the |hermetic_environment_| to be started on a
-  // secondary thread. The majority of the functionality in |EnclosingEnvirionment| is just thin
-  // wrappers around different FIDL calls so we don't guard all interaction with
-  // |hermetic_environment_| with the mutex.
-  std::condition_variable cv_;
-  std::mutex mutex_;
-
-  std::unique_ptr<sys::testing::EnclosingEnvironment> hermetic_environment_;
   std::thread env_thread_;
+  std::mutex mutex_;
+  std::condition_variable cv_;
+
+  // This field must be locked during the constructor and StartEnvThread, but after the constructor
+  // is complete, the field is read only and can be accessed without locking.
+  std::unique_ptr<sys::testing::EnclosingEnvironment> hermetic_environment_;
+
+  // Locking not needed to access these fields: they are initialized during single-threaded
+  // setup code within the constructor.
   async::Loop* loop_ = nullptr;
+  std::unordered_map<ComponentType, std::string> component_urls_;
 };
 
 }  // namespace media::audio::test

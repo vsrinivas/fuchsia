@@ -13,11 +13,18 @@
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/test/audio_buffer.h"
+#include "src/media/audio/lib/test/inspect.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 #include "src/media/audio/lib/test/vmo_backed_buffer.h"
 
 namespace media::audio::test {
 
+namespace internal {
+// These IDs are scoped to the lifetime of this process.
+extern size_t capturer_shim_next_inspect_id;
+}  // namespace internal
+
+// This class is thread hostile: none of its methods can be called concurrently.
 class CapturerShimImpl {
  public:
   static constexpr uint32_t kPacketMs = 10;
@@ -31,19 +38,27 @@ class CapturerShimImpl {
   size_t num_payload_samples() const { return payload_frame_count_ * format_.channels(); }
   size_t num_payload_bytes() const { return payload_frame_count_ * format_.bytes_per_frame(); }
 
+  // For validating properties exported by inspect.
+  // By default, there are no expectations.
+  size_t inspect_id() const { return inspect_id_; }
+  ExpectedInspectProperties& expected_inspect_properties() { return expected_inspect_properties_; }
+
  protected:
   CapturerShimImpl(Format format, size_t payload_frame_count)
       : format_(format),
         payload_frame_count_(payload_frame_count),
+        inspect_id_(internal::capturer_shim_next_inspect_id++),
         payload_buffer_(format, payload_frame_count) {}
 
   void CreatePayloadBuffer();
 
   const Format format_;
   const size_t payload_frame_count_;
+  const size_t inspect_id_;
 
   fuchsia::media::AudioCapturerPtr capturer_;
   VmoBackedBuffer payload_buffer_;
+  ExpectedInspectProperties expected_inspect_properties_;
 };
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>

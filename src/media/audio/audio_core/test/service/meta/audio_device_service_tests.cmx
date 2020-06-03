@@ -13,6 +13,9 @@
         "binary": "test/audio_device_service_tests"
     },
     "sandbox": {
+        "features": [
+            "hub"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.media.AudioTestDevmgr",

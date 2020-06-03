@@ -15,12 +15,20 @@
 #include "src/media/audio/lib/test/capturer_shim.h"
 #include "src/media/audio/lib/test/constants.h"
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
+#include "src/media/audio/lib/test/inspect.h"
 #include "src/media/audio/lib/test/renderer_shim.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 #include "src/media/audio/lib/test/virtual_device.h"
+#include "zircon/system/ulib/inspect/include/lib/inspect/cpp/hierarchy.h"
 
 namespace media::audio::test {
 
+// Restrictions on usage:
+//
+// 1. This class is thread hostile: none of its methods can be called concurrently.
+// 2. It is illegal for two or more instances to be alive at any time. (This restriction
+//    is satisfied by ordinary usage of gtest.)
+//
 class HermeticAudioTest : public TestFixture {
  protected:
   static void SetUpTestSuite();
@@ -38,6 +46,10 @@ class HermeticAudioTest : public TestFixture {
 
   void ExpectCallback() override;
   void ExpectDisconnect() override;
+
+  // Register that the test expects no audio underflows. This expectation will be checked by
+  // TearDown().
+  void FailUponUnderflows() { disallow_underflows_ = true; }
 
   // The returned pointers are owned by this class.
   template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -77,6 +89,8 @@ class HermeticAudioTest : public TestFixture {
   void WatchForDeviceArrivals();
   void WaitForDeviceDepartures();
   void OnDefaultDeviceChanged(uint64_t old_default_token, uint64_t new_default_token);
+  void CheckInspectHierarchy(const inspect::Hierarchy& root, const std::vector<std::string>& path,
+                             const ExpectedInspectProperties& expected);
 
   struct DeviceInfo {
     std::unique_ptr<VirtualDevice<fuchsia::virtualaudio::Output>> output;
@@ -93,6 +107,8 @@ class HermeticAudioTest : public TestFixture {
 
   fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
   fuchsia::ultrasound::FactoryPtr ultrasound_factory_;
+
+  bool disallow_underflows_ = false;
 };
 
 }  // namespace media::audio::test

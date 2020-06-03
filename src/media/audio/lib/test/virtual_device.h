@@ -16,11 +16,19 @@
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/media/audio/lib/test/audio_buffer.h"
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
+#include "src/media/audio/lib/test/inspect.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 #include "src/media/audio/lib/test/vmo_backed_buffer.h"
 
 namespace media::audio::test {
 
+namespace internal {
+// These IDs are scoped to the lifetime of this process.
+extern size_t virtual_output_next_inspect_id;
+extern size_t virtual_input_next_inspect_id;
+}  // namespace internal
+
+// This class is thread hostile: none of its methods can be called concurrently.
 template <class Interface>
 class VirtualDevice {
  public:
@@ -41,15 +49,22 @@ class VirtualDevice {
   // The fixture is used to loop through time to locate the boundaries of the ring buffer.
   int64_t NextSynchronizedTimestamp(TestFixture* fixture) const;
 
+  // For validating properties exported by inspect.
+  // By default, there are no expectations.
+  size_t inspect_id() const { return inspect_id_; }
+  ExpectedInspectProperties& expected_inspect_properties() { return expected_inspect_properties_; }
+
  protected:
   VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment,
-                const audio_stream_unique_id_t& device_id, Format format, size_t frame_count);
+                const audio_stream_unique_id_t& device_id, Format format, size_t frame_count,
+                size_t inspect_id);
 
   void ResetEvents();
   void WatchEvents();
 
   const Format format_;
   const size_t frame_count_;
+  const size_t inspect_id_;
 
   fidl::InterfacePtr<Interface> device_;
   audio_sample_format_t driver_format_;
@@ -63,6 +78,8 @@ class VirtualDevice {
   uint64_t stop_pos_ = 0;
   uint64_t ring_pos_ = 0;
   uint64_t running_ring_pos_ = 0;
+
+  ExpectedInspectProperties expected_inspect_properties_;
 };
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -77,7 +94,8 @@ class VirtualOutput : public VirtualDevice<fuchsia::virtualaudio::Output> {
   // appropriately bound into the test environment.
   VirtualOutput(TestFixture* fixture, HermeticAudioEnvironment* environment,
                 const audio_stream_unique_id_t& device_id, Format format, size_t frame_count)
-      : VirtualDevice(fixture, environment, device_id, format, frame_count) {}
+      : VirtualDevice(fixture, environment, device_id, format, frame_count,
+                      internal::virtual_output_next_inspect_id++) {}
 };
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -94,7 +112,8 @@ class VirtualInput : public VirtualDevice<fuchsia::virtualaudio::Input> {
   // appropriately bound into the test environment.
   VirtualInput(TestFixture* fixture, HermeticAudioEnvironment* environment,
                const audio_stream_unique_id_t& device_id, Format format, size_t frame_count)
-      : VirtualDevice(fixture, environment, device_id, format, frame_count) {}
+      : VirtualDevice(fixture, environment, device_id, format, frame_count,
+                      internal::virtual_input_next_inspect_id++) {}
 };
 
 }  // namespace media::audio::test

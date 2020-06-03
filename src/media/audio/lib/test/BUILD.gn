@@ -49,6 +49,7 @@ source_set("hermetic_audio_test") {
     "analysis.h",
     "audio_buffer.cc",
     "audio_buffer.h",
+    "capturer_shim.cc",
     "capturer_shim.h",
     "hermetic_audio_environment.cc",
     "hermetic_audio_environment.h",
@@ -68,17 +69,20 @@ source_set("hermetic_audio_test") {
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/media/audio/audio_core:audio_core_lib",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/logging",
     "//src/media/audio/lib/wav",
+    "//zircon/system/ulib/inspect",
   ]
 
   deps = [
     "//sdk/fidl/fuchsia.media.tuning",
     "//sdk/fidl/fuchsia.scheduler",
-    "//zircon/public/lib/fbl",
+    "//sdk/fidl/fuchsia.scheduler",
+    "//src/lib/fxl",
   ]
 }
 

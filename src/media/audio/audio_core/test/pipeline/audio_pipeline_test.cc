@@ -36,6 +36,8 @@ class AudioPipelineTest : public HermeticAudioTest {
 
   void SetUp() {
     HermeticAudioTest::SetUp();
+    // None of our tests should underflow.
+    FailUponUnderflows();
     // The output and renderer can both store exactly 1s of audio data.
     output_ = CreateOutput<kSampleFormat>({{0xff, 0x00}}, format_, 48000);
     renderer_ = CreateAudioRenderer<kSampleFormat>(format_, kPayloadFrames);

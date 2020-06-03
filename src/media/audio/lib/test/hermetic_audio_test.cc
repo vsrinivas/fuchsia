@@ -5,10 +5,16 @@
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 #include <sstream>
+#include <vector>
 
+#include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/lib/logging/logging.h"
+#include "src/media/audio/lib/test/capturer_shim.h"
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
+#include "src/media/audio/lib/test/inspect.h"
+#include "src/media/audio/lib/test/renderer_shim.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 #include "src/media/audio/lib/test/virtual_device.h"
 
@@ -25,6 +31,11 @@ void HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Opti
   environment_ = std::make_unique<HermeticAudioEnvironment>(options);
   environment_->ConnectToService(virtual_audio_control_sync_.NewRequest());
   virtual_audio_control_sync_->Enable();
+
+  // Reset inspect ID counters. We start a new audio_core each test suite, but use a global virtual
+  // driver across all test suites, so we don't reset the virtual device IDs here.
+  internal::capturer_shim_next_inspect_id = 1;
+  internal::renderer_shim_next_inspect_id = 1;
 }
 
 void HermeticAudioTest::TearDownTestSuite() {
@@ -49,10 +60,52 @@ void HermeticAudioTest::SetUp() {
 }
 
 void HermeticAudioTest::TearDown() {
+  // These expectations need to be set on all objects. The simplest way to do
+  // that is to set them here, as the final step before expectations are checked.
+  if (disallow_underflows_) {
+    for (auto& [_, device] : devices_) {
+      if (device.output) {
+        device.output->expected_inspect_properties().uint_values["underflows"] = 0;
+      } else {
+        device.input->expected_inspect_properties().uint_values["underflows"] = 0;
+      }
+    }
+    for (auto& r : renderers_) {
+      r->expected_inspect_properties().uint_values["underflows"] = 0;
+    }
+  }
+
+  // Validate inspect metrics.
+  auto audio_core_inspect =
+      environment_->ReadInspect(HermeticAudioEnvironment::kAudioCoreComponent);
+  for (auto& [_, device] : devices_) {
+    if (device.output) {
+      CheckInspectHierarchy(
+          audio_core_inspect,
+          {"output devices", fxl::StringPrintf("%03lu", device.output->inspect_id())},
+          device.output->expected_inspect_properties());
+    } else {
+      CheckInspectHierarchy(
+          audio_core_inspect,
+          {"input devices", fxl::StringPrintf("%03lu", device.input->inspect_id())},
+          device.input->expected_inspect_properties());
+    }
+  }
+  for (auto& r : renderers_) {
+    CheckInspectHierarchy(audio_core_inspect,
+                          {"renderers", fxl::StringPrintf("%lu", r->inspect_id())},
+                          r->expected_inspect_properties());
+  }
+  for (auto& c : capturers_) {
+    CheckInspectHierarchy(audio_core_inspect,
+                          {"capturers", fxl::StringPrintf("%lu", c->inspect_id())},
+                          c->expected_inspect_properties());
+  }
+
   // Remove all components.
-  for (auto& it : devices_) {
-    it.second.output = nullptr;
-    it.second.input = nullptr;
+  for (auto& [_, device] : devices_) {
+    device.output = nullptr;
+    device.input = nullptr;
   }
   capturers_.clear();
   renderers_.clear();
@@ -309,6 +362,18 @@ fuchsia::media::AudioDeviceEnumeratorPtr HermeticAudioTest::TakeOwnershipOfAudio
   audio_dev_enum_.events().OnDefaultDeviceChanged = nullptr;
 
   return std::move(audio_dev_enum_);
+}
+
+void HermeticAudioTest::CheckInspectHierarchy(const inspect::Hierarchy& root,
+                                              const std::vector<std::string>& path,
+                                              const ExpectedInspectProperties& expected) {
+  auto path_string = fxl::JoinStrings(path, "/");
+  auto h = root.GetByPath(path);
+  if (!h) {
+    ADD_FAILURE() << "Missing inspect hierarchy for " << path_string;
+    return;
+  }
+  expected.Check(path_string, h->node());
 }
 
 // Explicitly instantiate all possible implementations.

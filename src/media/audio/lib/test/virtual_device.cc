@@ -11,11 +11,19 @@
 
 namespace media::audio::test {
 
+namespace internal {
+size_t virtual_output_next_inspect_id = 0;  // ids start at 0
+size_t virtual_input_next_inspect_id = 0;   // ids start at 0
+}  // namespace internal
+
 template <class Iface>
 VirtualDevice<Iface>::VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment,
                                     const audio_stream_unique_id_t& device_id, Format format,
-                                    size_t frame_count)
-    : format_(format), frame_count_(frame_count), rb_(format, frame_count) {
+                                    size_t frame_count, size_t inspect_id)
+    : format_(format),
+      frame_count_(frame_count),
+      inspect_id_(inspect_id),
+      rb_(format, frame_count) {
   environment->ConnectToService(device_.NewRequest());
   device_.set_error_handler(fixture->ErrorHandler());
   WatchEvents();
