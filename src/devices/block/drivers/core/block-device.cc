@@ -513,7 +513,7 @@ zx_status_t BlockDevice::FidlVolumeQuerySlices(const uint64_t* start_slices_data
                 "Mismatched range size");
   auto banjo_ranges = reinterpret_cast<slice_region_t*>(ranges);
   zx_status_t status = parent_volume_protocol_.QuerySlices(
-      start_slices_data, start_slices_count, banjo_ranges, fbl::count_of(ranges), &range_count);
+      start_slices_data, start_slices_count, banjo_ranges, std::size(ranges), &range_count);
   return fuchsia_hardware_block_volume_VolumeQuerySlices_reply(txn, status, ranges, range_count);
 }
 

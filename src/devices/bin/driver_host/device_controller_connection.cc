@@ -316,7 +316,7 @@ zx_status_t DeviceControllerConnection::HandleRead() {
   uint8_t msg[8192];
   zx_handle_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t msize = sizeof(msg);
-  uint32_t hcount = fbl::count_of(hin);
+  uint32_t hcount = std::size(hin);
   zx_status_t status = conn->read(0, msg, hin, msize, hcount, &msize, &hcount);
   if (status != ZX_OK) {
     return status;

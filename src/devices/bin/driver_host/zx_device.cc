@@ -93,7 +93,7 @@ zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_sta
   bool visited[::llcpp::fuchsia::device::MAX_DEVICE_POWER_STATES] = {false};
   for (uint8_t i = 0; i < count; i++) {
     const auto& info = power_states[i];
-    if (info.state_id >= fbl::count_of(visited)) {
+    if (info.state_id >= std::size(visited)) {
       return ZX_ERR_INVALID_ARGS;
     }
     if (visited[info.state_id]) {
@@ -127,7 +127,7 @@ zx_status_t zx_device::SetPerformanceStates(
   bool visited[fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES] = {false};
   for (uint8_t i = 0; i < count; i++) {
     const auto& info = performance_states[i];
-    if (info.state_id >= fbl::count_of(visited)) {
+    if (info.state_id >= std::size(visited)) {
       return ZX_ERR_INVALID_ARGS;
     }
     if (visited[info.state_id]) {

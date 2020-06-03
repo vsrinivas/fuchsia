@@ -327,7 +327,7 @@ zx_status_t CadenceHpnfc::PopulateNandInfoJedec() {
     return status;
   }
 
-  for (size_t i = 0; i < fbl::count_of(kJedecIdMap); i++) {
+  for (size_t i = 0; i < std::size(kJedecIdMap); i++) {
     if (kJedecIdMap[i].jedec_id[0] == jedec_id[0] && kJedecIdMap[i].jedec_id[1] == jedec_id[1]) {
       nand_info_.page_size = kJedecIdMap[i].page_size;
       nand_info_.pages_per_block = kJedecIdMap[i].pages_per_block;

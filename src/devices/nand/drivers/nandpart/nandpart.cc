@@ -185,7 +185,7 @@ zx_status_t NandPartDevice::Bind(const char* name, uint32_t copy_count) {
       {BIND_NAND_CLASS, 0, nand_info_.nand_class},
   };
 
-  zx_status_t status = DdkAdd(name, DEVICE_ADD_INVISIBLE, props, fbl::count_of(props));
+  zx_status_t status = DdkAdd(name, DEVICE_ADD_INVISIBLE, props, std::size(props));
   if (status != ZX_OK) {
     return status;
   }

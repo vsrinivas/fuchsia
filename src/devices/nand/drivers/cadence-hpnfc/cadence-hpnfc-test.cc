@@ -16,11 +16,11 @@ namespace rawnand {
 
 TEST(CadenceHpnfcTest, DdkLifecycle) {
   ddk_mock::MockMmioReg mmio_array[as370::kNandSize / sizeof(uint32_t)];
-  ddk_mock::MockMmioRegRegion mmio_regs(mmio_array, sizeof(uint32_t), fbl::count_of(mmio_array));
+  ddk_mock::MockMmioRegRegion mmio_regs(mmio_array, sizeof(uint32_t), std::size(mmio_array));
 
   ddk_mock::MockMmioReg fifo_mmio_array[1];
   ddk_mock::MockMmioRegRegion fifo_mmio_regs(fifo_mmio_array, sizeof(uint32_t),
-                                             fbl::count_of(fifo_mmio_array));
+                                             std::size(fifo_mmio_array));
 
   zx::interrupt interrupt;
   ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &interrupt));

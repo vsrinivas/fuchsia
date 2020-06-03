@@ -74,8 +74,7 @@ zx_status_t Msm8x53Power::ReadPMICReg(uint32_t reg_addr, uint32_t* reg_value) {
   }
   if (status ^ PmicArbCoreChannelCmdStatus::kPmicArbCmdDone) {
     // Cmd completed with an error
-    zxlogf(ERROR, "%s Unable to read Pmic Reg: 0x%x status: 0x%x", __FUNCTION__, reg_addr,
-           status);
+    zxlogf(ERROR, "%s Unable to read Pmic Reg: 0x%x status: 0x%x", __FUNCTION__, reg_addr, status);
     return ZX_ERR_IO;
   }
 
@@ -177,7 +176,7 @@ zx_status_t Msm8x53Power::PowerImplReadPmicCtrlReg(uint32_t index, uint32_t addr
 }
 
 zx_status_t Msm8x53Power::PowerImplDisablePowerDomain(uint32_t index) {
-  if (index >= fbl::count_of(kMsm8x53PowerDomains)) {
+  if (index >= std::size(kMsm8x53PowerDomains)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   const Msm8x53PowerDomainInfo* domain = &kMsm8x53PowerDomains[index];
@@ -190,7 +189,7 @@ zx_status_t Msm8x53Power::PowerImplDisablePowerDomain(uint32_t index) {
 }
 
 zx_status_t Msm8x53Power::PowerImplEnablePowerDomain(uint32_t index) {
-  if (index >= fbl::count_of(kMsm8x53PowerDomains)) {
+  if (index >= std::size(kMsm8x53PowerDomains)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -205,7 +204,7 @@ zx_status_t Msm8x53Power::PowerImplEnablePowerDomain(uint32_t index) {
 
 zx_status_t Msm8x53Power::PowerImplGetPowerDomainStatus(uint32_t index,
                                                         power_domain_status_t* out_status) {
-  if (index >= fbl::count_of(kMsm8x53PowerDomains)) {
+  if (index >= std::size(kMsm8x53PowerDomains)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   return ZX_ERR_NOT_SUPPORTED;
@@ -213,7 +212,7 @@ zx_status_t Msm8x53Power::PowerImplGetPowerDomainStatus(uint32_t index,
 
 zx_status_t Msm8x53Power::PowerImplGetSupportedVoltageRange(uint32_t index, uint32_t* min_voltage,
                                                             uint32_t* max_voltage) {
-  if (index >= fbl::count_of(kMsm8x53PowerDomains)) {
+  if (index >= std::size(kMsm8x53PowerDomains)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   return ZX_ERR_NOT_SUPPORTED;
@@ -221,14 +220,14 @@ zx_status_t Msm8x53Power::PowerImplGetSupportedVoltageRange(uint32_t index, uint
 
 zx_status_t Msm8x53Power::PowerImplRequestVoltage(uint32_t index, uint32_t voltage,
                                                   uint32_t* actual_voltage) {
-  if (index >= fbl::count_of(kMsm8x53PowerDomains)) {
+  if (index >= std::size(kMsm8x53PowerDomains)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Msm8x53Power::PowerImplGetCurrentVoltage(uint32_t index, uint32_t* current_voltage) {
-  if (index >= fbl::count_of(kMsm8x53PowerDomains)) {
+  if (index >= std::size(kMsm8x53PowerDomains)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   return ZX_ERR_NOT_SUPPORTED;

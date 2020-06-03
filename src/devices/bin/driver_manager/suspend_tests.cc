@@ -54,7 +54,7 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
 
   ASSERT_NO_FATAL_FAILURES(DoSuspend(flags));
 
-  size_t num_to_suspend = fbl::count_of(devices);
+  size_t num_to_suspend = std::size(devices);
   while (num_to_suspend > 0) {
     // Check that platform bus is not suspended yet.
     ASSERT_FALSE(DeviceHasPendingMessages(platform_bus_controller_remote()));
@@ -63,7 +63,7 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
     // Since the table of devices above is topologically sorted (i.e.
     // any child is below its parent), this loop should always be able
     // to catch a parent receiving a suspend message before its child.
-    for (size_t i = 0; i < fbl::count_of(devices); ++i) {
+    for (size_t i = 0; i < std::size(devices); ++i) {
       auto& desc = devices[i];
       if (desc.suspended) {
         continue;

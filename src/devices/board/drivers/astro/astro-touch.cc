@@ -124,7 +124,7 @@ zx_status_t Astro::TouchInit() {
         .fragments_count = countof(ft_fragments),
         .coresident_device_index = UINT32_MAX,
         .metadata_list = ft3x27_touch_metadata,
-        .metadata_count = fbl::count_of(ft3x27_touch_metadata),
+        .metadata_count = std::size(ft3x27_touch_metadata),
     };
 
     zx_status_t status = DdkAddComposite("ft3x27-touch", &comp_desc);

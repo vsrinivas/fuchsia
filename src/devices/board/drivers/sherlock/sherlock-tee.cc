@@ -49,11 +49,11 @@ static pbus_dev_t tee_dev = []() {
   tee_dev.pid = PDEV_PID_GENERIC;
   tee_dev.did = PDEV_DID_OPTEE;
   tee_dev.mmio_list = sherlock_tee_mmios;
-  tee_dev.mmio_count = fbl::count_of(sherlock_tee_mmios);
+  tee_dev.mmio_count = std::size(sherlock_tee_mmios);
   tee_dev.bti_list = sherlock_tee_btis;
-  tee_dev.bti_count = fbl::count_of(sherlock_tee_btis);
+  tee_dev.bti_count = std::size(sherlock_tee_btis);
   tee_dev.smc_list = sherlock_tee_smcs;
-  tee_dev.smc_count = fbl::count_of(sherlock_tee_smcs);
+  tee_dev.smc_count = std::size(sherlock_tee_smcs);
   return tee_dev;
 }();
 

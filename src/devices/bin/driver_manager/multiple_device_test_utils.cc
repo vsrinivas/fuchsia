@@ -20,7 +20,7 @@ void MultipleDeviceTestCase::CheckCreateDeviceReceived(const zx::channel& remote
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_bytes;
   uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), std::size(handles),
                                    &actual_bytes, &actual_handles);
   ASSERT_OK(status);
   ASSERT_LT(0, actual_bytes);
@@ -52,7 +52,7 @@ void MultipleDeviceTestCase::CheckSuspendReceived(const zx::channel& remote,
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_bytes;
   uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), std::size(handles),
                                    &actual_bytes, &actual_handles);
   ASSERT_OK(status);
   ASSERT_LT(0, actual_bytes);
@@ -84,7 +84,7 @@ void MultipleDeviceTestCase::SendSuspendReply(const zx::channel& remote, zx_stat
   resp->status = return_status;
   zx_status_t status =
       fidl_encode(&fuchsia_device_manager_DeviceControllerSuspendResponseTable, bytes,
-                  sizeof(*resp), handles, fbl::count_of(handles), &actual_handles, nullptr);
+                  sizeof(*resp), handles, std::size(handles), &actual_handles, nullptr);
   ASSERT_OK(status);
   ASSERT_EQ(0, actual_handles);
   status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
@@ -265,7 +265,7 @@ void MultipleDeviceTestCase::CheckUnbindReceived(const zx::channel& remote, zx_t
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_bytes;
   uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), std::size(handles),
                                    &actual_bytes, &actual_handles);
   ASSERT_OK(status);
   ASSERT_LT(0, actual_bytes);
@@ -320,7 +320,7 @@ void MultipleDeviceTestCase::CheckRemoveReceived(const zx::channel& remote, zx_t
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_bytes;
   uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), std::size(handles),
                                    &actual_bytes, &actual_handles);
   ASSERT_OK(status);
   ASSERT_LT(0, actual_bytes);
@@ -379,7 +379,7 @@ void MultipleDeviceTestCase::CheckResumeReceived(const zx::channel& remote,
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_bytes;
   uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), std::size(handles),
                                    &actual_bytes, &actual_handles);
   ASSERT_OK(status);
   ASSERT_LT(0, actual_bytes);
@@ -411,7 +411,7 @@ void MultipleDeviceTestCase::SendResumeReply(const zx::channel& remote, zx_statu
   resp->status = return_status;
   zx_status_t status =
       fidl_encode(&fuchsia_device_manager_DeviceControllerResumeResponseTable, bytes, sizeof(*resp),
-                  handles, fbl::count_of(handles), &actual_handles, nullptr);
+                  handles, std::size(handles), &actual_handles, nullptr);
   ASSERT_OK(status);
   ASSERT_EQ(0, actual_handles);
   status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
@@ -449,7 +449,7 @@ void MultipleDeviceTestCase::CheckInitReceived(const zx::channel& remote, zx_txi
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_bytes;
   uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), std::size(handles),
                                    &actual_bytes, &actual_handles);
   ASSERT_OK(status);
   ASSERT_LT(0, actual_bytes);
@@ -479,7 +479,7 @@ void MultipleDeviceTestCase::SendInitReply(const zx::channel& remote, zx_txid_t 
   resp->status = return_status;
   zx_status_t status =
       fidl_encode(&fuchsia_device_manager_DeviceControllerInitResponseTable, bytes, sizeof(*resp),
-                  handles, fbl::count_of(handles), &actual_handles, nullptr);
+                  handles, std::size(handles), &actual_handles, nullptr);
   ASSERT_OK(status);
   ASSERT_EQ(0, actual_handles);
   status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);

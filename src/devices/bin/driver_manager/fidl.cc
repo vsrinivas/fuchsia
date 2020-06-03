@@ -81,7 +81,7 @@ zx_status_t dh_send_create_device_stub(Device* dev, const fbl::RefPtr<DriverHost
 
   zx_handle_t handles[] = {coordinator_rpc.release(), device_controller_rpc.release()};
   fidl::Message msg(builder.Finalize(),
-                    fidl::HandlePart(handles, fbl::count_of(handles), fbl::count_of(handles)));
+                    fidl::HandlePart(handles, std::size(handles), std::size(handles)));
   return msg.Write(dh->hrpc().get(), 0);
 }
 

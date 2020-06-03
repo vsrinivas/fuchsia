@@ -64,7 +64,7 @@ zx_status_t AmlCpuFrequency::Create(
   // zeroth fragment is pdev
   zx_device_t* fragments[kMaxFragments];
   size_t actual = 0;
-  composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
+  composite.GetFragments(fragments, std::size(fragments), &actual);
 
   if (actual < (num_clocks + num_pwms + 1)) {
     zxlogf(ERROR, "aml-cpufreq: not enough fragments");

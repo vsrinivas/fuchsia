@@ -44,18 +44,18 @@ zx_status_t Vs680Evk::ThermalInit() {
   };
 
   const device_fragment_part_t cpu_clock_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(cpu_clock_match), cpu_clock_match},
+      {std::size(root_match), root_match},
+      {std::size(cpu_clock_match), cpu_clock_match},
   };
 
   const device_fragment_part_t cpu_power_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(cpu_power_match), cpu_power_match},
+      {std::size(root_match), root_match},
+      {std::size(cpu_power_match), cpu_power_match},
   };
 
   const device_fragment_t thermal_fragments[] = {
-      {fbl::count_of(cpu_clock_fragment), cpu_clock_fragment},
-      {fbl::count_of(cpu_power_fragment), cpu_power_fragment},
+      {std::size(cpu_clock_fragment), cpu_clock_fragment},
+      {std::size(cpu_power_fragment), cpu_power_fragment},
   };
 
   pbus_dev_t thermal_dev = {};
@@ -63,12 +63,12 @@ zx_status_t Vs680Evk::ThermalInit() {
   thermal_dev.vid = PDEV_VID_SYNAPTICS;
   thermal_dev.did = PDEV_DID_VS680_THERMAL;
   thermal_dev.mmio_list = thermal_mmios;
-  thermal_dev.mmio_count = fbl::count_of(thermal_mmios);
+  thermal_dev.mmio_count = std::size(thermal_mmios);
   thermal_dev.irq_list = thermal_irqs;
-  thermal_dev.irq_count = fbl::count_of(thermal_irqs);
+  thermal_dev.irq_count = std::size(thermal_irqs);
 
   zx_status_t status = pbus_.CompositeDeviceAdd(&thermal_dev, thermal_fragments,
-                                                fbl::count_of(thermal_fragments), UINT32_MAX);
+                                                std::size(thermal_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;

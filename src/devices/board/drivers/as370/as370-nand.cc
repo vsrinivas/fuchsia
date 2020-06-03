@@ -72,7 +72,7 @@ zx_status_t As370::NandInit() {
 
   nand_partition_map->block_count = 2048;
   nand_partition_map->block_size = 4096 * 64;
-  nand_partition_map->partition_count = fbl::count_of(kPartitions);
+  nand_partition_map->partition_count = std::size(kPartitions);
   nand_partition_map->reserved = 0;
   memset(nand_partition_map->guid, 0, sizeof(nand_partition_map->guid));
   memcpy(nand_partition_map->partitions, kPartitions, sizeof(kPartitions));

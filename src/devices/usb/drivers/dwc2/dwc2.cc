@@ -455,7 +455,7 @@ void Dwc2::FlushRxFifoRetryIndefinite() {
 }
 
 void Dwc2::StartEndpoints() {
-  for (uint8_t ep_num = 1; ep_num < fbl::count_of(endpoints_); ep_num++) {
+  for (uint8_t ep_num = 1; ep_num < std::size(endpoints_); ep_num++) {
     auto* ep = &endpoints_[ep_num];
     if (ep->enabled) {
       EnableEp(ep_num, true);
@@ -713,7 +713,7 @@ zx_status_t Dwc2::InitController() {
   auto fifo_base = metadata_.rx_fifo_size + metadata_.nptx_fifo_size;
   auto dfifo_end = GHWCFG3::Get().ReadFrom(mmio).dfifo_depth();
 
-  for (uint32_t i = 0; i < fbl::count_of(metadata_.tx_fifo_sizes); i++) {
+  for (uint32_t i = 0; i < std::size(metadata_.tx_fifo_sizes); i++) {
     auto fifo_size = metadata_.tx_fifo_sizes[i];
 
     DTXFSIZ::Get(i + 1).FromValue(0).set_startaddr(fifo_base).set_depth(fifo_size).WriteTo(mmio);
@@ -776,7 +776,7 @@ void Dwc2::SetConnected(bool connected) {
     // Complete any pending requests
     RequestQueue complete_reqs;
 
-    for (uint8_t i = 0; i < fbl::count_of(endpoints_); i++) {
+    for (uint8_t i = 0; i < std::size(endpoints_); i++) {
       auto* ep = &endpoints_[i];
 
       fbl::AutoLock lock(&ep->lock);
@@ -823,8 +823,8 @@ zx_status_t Dwc2::Init() {
   size_t actual;
 
   // Retrieve platform device protocol from our first fragment.
-  composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
-  if (actual < fbl::count_of(fragments)) {
+  composite.GetFragments(fragments, std::size(fragments), &actual);
+  if (actual < std::size(fragments)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -840,7 +840,7 @@ zx_status_t Dwc2::Init() {
     usb_phy_.reset();
   }
 
-  for (uint8_t i = 0; i < fbl::count_of(endpoints_); i++) {
+  for (uint8_t i = 0; i < std::size(endpoints_); i++) {
     auto* ep = &endpoints_[i];
     ep->ep_num = i;
   }
@@ -970,7 +970,7 @@ void Dwc2::DdkSuspend(ddk::SuspendTxn txn) {
 
 void Dwc2::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* cb) {
   uint8_t ep_num = DWC_ADDR_TO_INDEX(req->header.ep_address);
-  if (ep_num == DWC_EP0_IN || ep_num == DWC_EP0_OUT || ep_num >= fbl::count_of(endpoints_)) {
+  if (ep_num == DWC_EP0_IN || ep_num == DWC_EP0_OUT || ep_num >= std::size(endpoints_)) {
     zxlogf(ERROR, "Dwc2::UsbDciRequestQueue: bad ep address 0x%02X", req->header.ep_address);
     usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, cb);
     return;
@@ -1027,7 +1027,7 @@ zx_status_t Dwc2::UsbDciConfigEp(const usb_endpoint_descriptor_t* ep_desc,
   auto* mmio = get_mmio();
 
   uint8_t ep_num = DWC_ADDR_TO_INDEX(ep_desc->bEndpointAddress);
-  if (ep_num == DWC_EP0_IN || ep_num == DWC_EP0_OUT || ep_num >= fbl::count_of(endpoints_)) {
+  if (ep_num == DWC_EP0_IN || ep_num == DWC_EP0_OUT || ep_num >= std::size(endpoints_)) {
     zxlogf(ERROR, "Dwc2::UsbDciConfigEp: bad ep address 0x%02X", ep_desc->bEndpointAddress);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -1070,7 +1070,7 @@ zx_status_t Dwc2::UsbDciDisableEp(uint8_t ep_address) {
   auto* mmio = get_mmio();
 
   unsigned ep_num = DWC_ADDR_TO_INDEX(ep_address);
-  if (ep_num == DWC_EP0_IN || ep_num == DWC_EP0_OUT || ep_num >= fbl::count_of(endpoints_)) {
+  if (ep_num == DWC_EP0_IN || ep_num == DWC_EP0_OUT || ep_num >= std::size(endpoints_)) {
     zxlogf(ERROR, "Dwc2::UsbDciConfigEp: bad ep address 0x%02X", ep_address);
     return ZX_ERR_INVALID_ARGS;
   }

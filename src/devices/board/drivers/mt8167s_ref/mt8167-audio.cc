@@ -70,24 +70,24 @@ static const zx_bind_inst_t cleo_out_codec_match[] = {
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS5805),
 };
 static const device_fragment_part_t in_i2c_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(in_i2c_match), in_i2c_match},
+    {std::size(root_match), root_match},
+    {std::size(in_i2c_match), in_i2c_match},
 };
 static const device_fragment_part_t mt8167s_out_i2c_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(mt8167s_out_i2c_match), mt8167s_out_i2c_match},
+    {std::size(root_match), root_match},
+    {std::size(mt8167s_out_i2c_match), mt8167s_out_i2c_match},
 };
 static const device_fragment_part_t cleo_out_i2c_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(cleo_out_i2c_match), cleo_out_i2c_match},
+    {std::size(root_match), root_match},
+    {std::size(cleo_out_i2c_match), cleo_out_i2c_match},
 };
 static const device_fragment_part_t cleo_out_codec_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(cleo_out_codec_match), cleo_out_codec_match},
+    {std::size(root_match), root_match},
+    {std::size(cleo_out_codec_match), cleo_out_codec_match},
 };
 static const device_fragment_part_t mt8167s_out_codec_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(mt8167s_out_codec_match), mt8167s_out_codec_match},
+    {std::size(root_match), root_match},
+    {std::size(mt8167s_out_codec_match), mt8167s_out_codec_match},
 };
 
 static const zx_bind_inst_t in_gpio_match[] = {
@@ -296,7 +296,7 @@ zx_status_t Mt8167::AudioInit() {
 
     const composite_device_desc_t comp_desc = {
         .props = props,
-        .props_count = fbl::count_of(props),
+        .props_count = std::size(props),
         .fragments = mt8167s_codec_fragments,
         .fragments_count = countof(mt8167s_codec_fragments),
         .coresident_device_index = UINT32_MAX,
@@ -322,7 +322,7 @@ zx_status_t Mt8167::AudioInit() {
 
     const composite_device_desc_t comp_desc = {
         .props = props,
-        .props_count = fbl::count_of(props),
+        .props_count = std::size(props),
         .fragments = cleo_codec_fragments,
         .fragments_count = countof(cleo_codec_fragments),
         .coresident_device_index = UINT32_MAX,

@@ -434,7 +434,7 @@ void MtkSdmmc::TestDelaySettings(DelayCallback&& set_delay, RequestCallback&& do
     }
   }
 
-  results[fbl::count_of(results) - 1] = '\0';
+  results[std::size(results) - 1] = '\0';
   zxlogf(INFO, "%s: Tuning results: %s", __func__, results);
 }
 

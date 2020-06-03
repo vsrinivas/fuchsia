@@ -42,7 +42,7 @@ constexpr uint8_t kExpander3SdSlotPowerOnPin = 1;
 constexpr uint8_t kIODirectionAddress = 0x3;
 constexpr uint8_t kOutputStateAddress = 0x5;
 constexpr uint8_t kOutputHighZAddress = 0x7;
-constexpr uint8_t kPullEnableAddress  = 0xb;
+constexpr uint8_t kPullEnableAddress = 0xb;
 
 zx_status_t I2cModifyBit(ddk::I2cChannel& i2c, uint8_t reg, uint8_t set_mask, uint8_t clear_mask) {
   uint8_t reg_value = 0;
@@ -87,11 +87,11 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
   if (composite.is_valid()) {
     zx_device_t* fragments[FRAGMENT_COUNT];
     size_t fragment_count;
-    composite.GetFragments(fragments, fbl::count_of(fragments), &fragment_count);
+    composite.GetFragments(fragments, std::size(fragments), &fragment_count);
 
-    if (fragment_count != fbl::count_of(fragments)) {
+    if (fragment_count != std::size(fragments)) {
       zxlogf(ERROR, "%s: Could not get fragments: expected %zu, got %zu", __FILE__,
-             fbl::count_of(fragments), fragment_count);
+             std::size(fragments), fragment_count);
       return ZX_ERR_NO_RESOURCES;
     }
 
@@ -177,7 +177,7 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  const char *device_name = "as370-sdhci";
+  const char* device_name = "as370-sdhci";
   if (device_info.did == PDEV_DID_VS680_SDHCI0) {
     device_name = "vs680-sdhci";
   }
@@ -230,15 +230,15 @@ uint64_t As370Sdhci::SdhciGetQuirks(uint64_t* out_dma_boundary_alignment) {
   return quirks;
 }
 
-#define RXSELOFF   0x0
+#define RXSELOFF 0x0
 #define SCHMITT1P8 0x1
 
-#define WPE_DISABLE  0x0
-#define WPE_PULLUP   0x1
+#define WPE_DISABLE 0x0
+#define WPE_PULLUP 0x1
 #define WPE_PULLDOWN 0x2
 
-#define TX_SLEW_P_0    0x0
-#define TX_SLEW_N_3    0x3
+#define TX_SLEW_P_0 0x0
+#define TX_SLEW_N_3 0x3
 
 class PhyConfig : public hwreg::RegisterBase<PhyConfig, uint32_t> {
  public:
@@ -335,9 +335,7 @@ class EmmcControl : public hwreg::RegisterBase<EmmcControl, uint32_t> {
 
 class AtControl : public hwreg::RegisterBase<AtControl, uint32_t> {
  public:
-  static auto Get(uint16_t vendor_ptr) {
-    return hwreg::RegisterAddr<AtControl>(vendor_ptr + 0x40);
-  }
+  static auto Get(uint16_t vendor_ptr) { return hwreg::RegisterAddr<AtControl>(vendor_ptr + 0x40); }
   DEF_FIELD(20, 19, post_change_dly);
   DEF_FIELD(18, 17, pre_change_dly);
   DEF_BIT(16, tune_clk_stop_en);
@@ -348,125 +346,108 @@ class AtControl : public hwreg::RegisterBase<AtControl, uint32_t> {
   DEF_BIT(0, at_en);
 };
 
-
 void As370Sdhci::SdhciHwReset() {
   if (did_ == PDEV_DID_VS680_SDHCI0 || did_ == PDEV_DID_VS680_SDHCI1) {
-    //config PHY_CNFG, general configuration
-    //Dolphin_BG7_PHY_bring_up_sequence.xlsx
-    //step 10
-    PhyConfig::Get()
-      .ReadFrom(&core_mmio_)
-      .set_sp(8)
-      .set_sn(8)
-      .WriteTo(&core_mmio_);
+    // config PHY_CNFG, general configuration
+    // Dolphin_BG7_PHY_bring_up_sequence.xlsx
+    // step 10
+    PhyConfig::Get().ReadFrom(&core_mmio_).set_sp(8).set_sn(8).WriteTo(&core_mmio_);
 
-    //Dolphin_BG7_PHY_bring_up_sequence.xlsx
-    //step 11~15
+    // Dolphin_BG7_PHY_bring_up_sequence.xlsx
+    // step 11~15
     CmdPadConfig::Get()
-      .ReadFrom(&core_mmio_)
-      .set_rxsel(SCHMITT1P8)
-      .set_weakpull_en(WPE_PULLUP)
-      .set_txslew_ctrl_p(TX_SLEW_P_0)
-      .set_txslew_ctrl_n(TX_SLEW_N_3)
-      .WriteTo(&core_mmio_);
+        .ReadFrom(&core_mmio_)
+        .set_rxsel(SCHMITT1P8)
+        .set_weakpull_en(WPE_PULLUP)
+        .set_txslew_ctrl_p(TX_SLEW_P_0)
+        .set_txslew_ctrl_n(TX_SLEW_N_3)
+        .WriteTo(&core_mmio_);
 
     DatPadConfig::Get()
-      .ReadFrom(&core_mmio_)
-      .set_rxsel(SCHMITT1P8)
-      .set_weakpull_en(WPE_PULLUP)
-      .set_txslew_ctrl_p(TX_SLEW_P_0)
-      .set_txslew_ctrl_n(TX_SLEW_N_3)
-      .WriteTo(&core_mmio_);
+        .ReadFrom(&core_mmio_)
+        .set_rxsel(SCHMITT1P8)
+        .set_weakpull_en(WPE_PULLUP)
+        .set_txslew_ctrl_p(TX_SLEW_P_0)
+        .set_txslew_ctrl_n(TX_SLEW_N_3)
+        .WriteTo(&core_mmio_);
 
     ClkPadConfig::Get()
-      .ReadFrom(&core_mmio_)
-      .set_rxsel(RXSELOFF)
-      .set_weakpull_en(WPE_DISABLE)
-      .set_txslew_ctrl_p(TX_SLEW_P_0)
-      .set_txslew_ctrl_n(TX_SLEW_N_3)
-      .WriteTo(&core_mmio_);
+        .ReadFrom(&core_mmio_)
+        .set_rxsel(RXSELOFF)
+        .set_weakpull_en(WPE_DISABLE)
+        .set_txslew_ctrl_p(TX_SLEW_P_0)
+        .set_txslew_ctrl_n(TX_SLEW_N_3)
+        .WriteTo(&core_mmio_);
 
     StbPadConfig::Get()
-      .ReadFrom(&core_mmio_)
-      .set_rxsel(SCHMITT1P8)
-      .set_weakpull_en(WPE_PULLDOWN)
-      .set_txslew_ctrl_p(TX_SLEW_P_0)
-      .set_txslew_ctrl_n(TX_SLEW_N_3)
-      .WriteTo(&core_mmio_);
+        .ReadFrom(&core_mmio_)
+        .set_rxsel(SCHMITT1P8)
+        .set_weakpull_en(WPE_PULLDOWN)
+        .set_txslew_ctrl_p(TX_SLEW_P_0)
+        .set_txslew_ctrl_n(TX_SLEW_N_3)
+        .WriteTo(&core_mmio_);
 
     RstPadConfig::Get()
-      .ReadFrom(&core_mmio_)
-      .set_rxsel(SCHMITT1P8)
-      .set_weakpull_en(WPE_PULLUP)
-      .set_txslew_ctrl_p(TX_SLEW_P_0)
-      .set_txslew_ctrl_n(TX_SLEW_N_3)
-      .WriteTo(&core_mmio_);
+        .ReadFrom(&core_mmio_)
+        .set_rxsel(SCHMITT1P8)
+        .set_weakpull_en(WPE_PULLUP)
+        .set_txslew_ctrl_p(TX_SLEW_P_0)
+        .set_txslew_ctrl_n(TX_SLEW_N_3)
+        .WriteTo(&core_mmio_);
 
     /* phy delay line setup */
     CommDlConfig::Get()
-      .ReadFrom(&core_mmio_)
-      .set_dlstep_sel(0)
-      .set_dlout_en(0)
-      .WriteTo(&core_mmio_);
+        .ReadFrom(&core_mmio_)
+        .set_dlstep_sel(0)
+        .set_dlout_en(0)
+        .WriteTo(&core_mmio_);
 
     SdclkDlConfig::Get()
-      .ReadFrom(&core_mmio_)
-      .set_extdly_en(0)
-      .set_bypass_en(0)
-      .set_inpsel_cnfg(0)
-      .set_update_dc(0)
-      .WriteTo(&core_mmio_);
+        .ReadFrom(&core_mmio_)
+        .set_extdly_en(0)
+        .set_bypass_en(0)
+        .set_inpsel_cnfg(0)
+        .set_update_dc(0)
+        .WriteTo(&core_mmio_);
 
     SmplDlConfig::Get()
-      .ReadFrom(&core_mmio_)
-      .set_sextdly_en(0)
-      .set_sbypass_en(0)
-      .set_sinpsel_override(0)
-      .set_sinpsel_cnfg(3)
-      .WriteTo(&core_mmio_);
+        .ReadFrom(&core_mmio_)
+        .set_sextdly_en(0)
+        .set_sbypass_en(0)
+        .set_sinpsel_override(0)
+        .set_sinpsel_cnfg(3)
+        .WriteTo(&core_mmio_);
 
     AtDlConfig::Get()
-      .ReadFrom(&core_mmio_)
-      .set_aextdly_en(0)
-      .set_abypass_en(0)
-      .set_ainpsel_cnfg(3)
-      .WriteTo(&core_mmio_);
+        .ReadFrom(&core_mmio_)
+        .set_aextdly_en(0)
+        .set_abypass_en(0)
+        .set_ainpsel_cnfg(3)
+        .WriteTo(&core_mmio_);
 
-    SdclkDlConfig::Get()
-      .ReadFrom(&core_mmio_)
-      .set_update_dc(1)
-      .WriteTo(&core_mmio_);
+    SdclkDlConfig::Get().ReadFrom(&core_mmio_).set_update_dc(1).WriteTo(&core_mmio_);
 
-    SdclkDlDc::Get()
-      .ReadFrom(&core_mmio_)
-      .set_cckdl_dc(0x7f)
-      .WriteTo(&core_mmio_);
+    SdclkDlDc::Get().ReadFrom(&core_mmio_).set_cckdl_dc(0x7f).WriteTo(&core_mmio_);
 
-    SdclkDlConfig::Get()
-      .ReadFrom(&core_mmio_)
-      .set_update_dc(0)
-      .WriteTo(&core_mmio_);
+    SdclkDlConfig::Get().ReadFrom(&core_mmio_).set_update_dc(0).WriteTo(&core_mmio_);
 
     auto vptr = VendorPtr::Get().ReadFrom(&core_mmio_).reg_value();
 
     /* phy tuning setup */
     AtControl::Get(vptr)
-      .ReadFrom(&core_mmio_)
-      .set_tune_clk_stop_en(1)
-      .set_post_change_dly(3)
-      .set_pre_change_dly(3)
-      .WriteTo(&core_mmio_);
+        .ReadFrom(&core_mmio_)
+        .set_tune_clk_stop_en(1)
+        .set_post_change_dly(3)
+        .set_pre_change_dly(3)
+        .WriteTo(&core_mmio_);
 
     // de-assert PHY reset
-    PhyConfig::Get()
-      .ReadFrom(&core_mmio_)
-      .set_reset(1)
-      .WriteTo(&core_mmio_);
+    PhyConfig::Get().ReadFrom(&core_mmio_).set_reset(1).WriteTo(&core_mmio_);
 
     EmmcControl::Get(vptr)
-      .ReadFrom(&core_mmio_)
-      .set_card_is_emmc(did_ == PDEV_DID_VS680_SDHCI0 ? 1 : 0)
-      .WriteTo(&core_mmio_);
+        .ReadFrom(&core_mmio_)
+        .set_card_is_emmc(did_ == PDEV_DID_VS680_SDHCI0 ? 1 : 0)
+        .WriteTo(&core_mmio_);
   }
 }
 
@@ -480,15 +461,13 @@ static constexpr zx_driver_ops_t as370_sdhci_driver_ops = []() -> zx_driver_ops_
 }();
 
 ZIRCON_DRIVER_BEGIN(as370_sdhci, as370_sdhci_driver_ops, "zircon", "0.1", 8)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
+BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
 
     BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE, 1),
 
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_SDHCI0),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VS680_SDHCI0),
-    BI_ABORT(),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VS680_SDHCI0), BI_ABORT(),
 
-    BI_LABEL(1),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VS680_SDHCI1),
-ZIRCON_DRIVER_END(as370_sdhci)
+    BI_LABEL(1), BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VS680_SDHCI1),
+    ZIRCON_DRIVER_END(as370_sdhci)

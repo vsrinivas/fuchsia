@@ -30,7 +30,7 @@ using llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo;
 class As370ThermalTest : public zxtest::Test {
  public:
   As370ThermalTest()
-      : reg_region_(reg_array_, sizeof(uint32_t), fbl::count_of(reg_array_)),
+      : reg_region_(reg_array_, sizeof(uint32_t), std::size(reg_array_)),
         dut_(nullptr, ddk::MmioBuffer(reg_region_.GetMmioBuffer()), kThermalDeviceInfo,
              ddk::ClockProtocolClient(clock_.GetProto()),
              ddk::PowerProtocolClient(power_.GetProto())) {}

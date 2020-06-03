@@ -204,8 +204,7 @@ TEST_F(PowerTestCase, AddDevicePowerCaps_MakeVisible_Success) {
   perf_states[2].is_supported = true;
   perf_states[2].restore_latency = 1000;
 
-  AddChildWithPowerArgs(states, fbl::count_of(states), perf_states, fbl::count_of(perf_states),
-                        true);
+  AddChildWithPowerArgs(states, std::size(states), perf_states, std::size(perf_states), true);
 
   const DevicePowerStateInfo *out_dpstates;
   auto response2 = Controller::Call::GetDevicePowerCaps(zx::unowned(child2_device_handle));
@@ -377,7 +376,7 @@ TEST_F(PowerTestCase, GetDevicePowerCaps_Success) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
-  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+  AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   const DevicePowerStateInfo *out_dpstates;
   auto response2 = Controller::Call::GetDevicePowerCaps(zx::unowned(child2_device_handle));
@@ -426,7 +425,7 @@ TEST_F(PowerTestCase, GetDevicePerformanceStates_Success) {
   perf_states[2].is_supported = true;
   perf_states[2].restore_latency = 1000;
 
-  AddChildWithPowerArgs(states, fbl::count_of(states), perf_states, fbl::count_of(perf_states));
+  AddChildWithPowerArgs(states, std::size(states), perf_states, std::size(perf_states));
 
   const DevicePerformanceStateInfo *out_dpstates;
   auto response = Controller::Call::GetDevicePerformanceStates(zx::unowned(child2_device_handle));
@@ -459,7 +458,7 @@ TEST_F(PowerTestCase, SetPerformanceState_Success) {
   perf_states[2].is_supported = true;
   perf_states[2].restore_latency = 1000;
 
-  AddChildWithPowerArgs(states, fbl::count_of(states), perf_states, fbl::count_of(perf_states));
+  AddChildWithPowerArgs(states, std::size(states), perf_states, std::size(perf_states));
 
   auto perf_change_result =
       Controller::Call::SetPerformanceState(zx::unowned(child2_device_handle), 1);
@@ -498,7 +497,7 @@ TEST_F(PowerTestCase, SetPerformanceStateFail_UnsupportedState) {
   perf_states[1].is_supported = true;
   perf_states[1].restore_latency = 100;
 
-  AddChildWithPowerArgs(states, fbl::count_of(states), perf_states, fbl::count_of(perf_states));
+  AddChildWithPowerArgs(states, std::size(states), perf_states, std::size(perf_states));
 
   auto perf_change_result =
       Controller::Call::SetPerformanceState(zx::unowned(child2_device_handle), 2);
@@ -519,7 +518,7 @@ TEST_F(PowerTestCase, Suspend_Success) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
-  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+  AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   auto suspend_result = Controller::Call::Suspend(zx::unowned(child2_device_handle),
                                                   DevicePowerState::DEVICE_POWER_STATE_D3COLD);
@@ -550,7 +549,7 @@ TEST_F(PowerTestCase, AutoSuspend_Enable) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
-  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+  AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   auto suspend_result = Controller::Call::ConfigureAutoSuspend(
       zx::unowned(child2_device_handle), true, DevicePowerState::DEVICE_POWER_STATE_D1);
@@ -583,7 +582,7 @@ TEST_F(PowerTestCase, AutoSuspend_Disable) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
-  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+  AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   auto suspend_result = Controller::Call::ConfigureAutoSuspend(
       zx::unowned(child2_device_handle), true, DevicePowerState::DEVICE_POWER_STATE_D1);
@@ -633,7 +632,7 @@ TEST_F(PowerTestCase, AutoSuspend_DefaultDisabled) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
-  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+  AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   auto response2 =
       TestDevice::Call::GetCurrentDeviceAutoSuspendConfig(zx::unowned(child2_device_handle));
@@ -660,7 +659,7 @@ TEST_F(PowerTestCase, DeviceSuspend_AutoSuspendEnabled) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
-  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+  AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   auto auto_suspend_result = Controller::Call::ConfigureAutoSuspend(
       zx::unowned(child2_device_handle), true, DevicePowerState::DEVICE_POWER_STATE_D1);
@@ -712,7 +711,7 @@ TEST_F(PowerTestCase, SystemSuspend_AutoSuspendEnabled) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
-  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+  AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   ::fidl::Array<SystemPowerStateInfo, MAX_SYSTEM_POWER_STATES> mapping{};
   for (size_t i = 0; i < MAX_SYSTEM_POWER_STATES; i++) {
@@ -788,7 +787,7 @@ TEST_F(PowerTestCase, SelectiveResume_Success) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
-  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+  AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   auto suspend_result = Controller::Call::Suspend(zx::unowned(child2_device_handle),
                                                   DevicePowerState::DEVICE_POWER_STATE_D3COLD);
@@ -836,7 +835,7 @@ TEST_F(PowerTestCase, DefaultSystemPowerStatesMapping) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
-  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+  AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   const SystemPowerStateInfo *states_mapping;
   auto response2 = Controller::Call::GetPowerStateMapping(zx::unowned(child2_device_handle));
@@ -868,7 +867,7 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_UnsupportedDeviceState) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
-  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+  AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   ::fidl::Array<SystemPowerStateInfo, MAX_SYSTEM_POWER_STATES> mapping{};
   for (size_t i = 0; i < MAX_SYSTEM_POWER_STATES; i++) {
@@ -915,7 +914,7 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_UnsupportedWakeConfig) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
-  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+  AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   ::fidl::Array<SystemPowerStateInfo, MAX_SYSTEM_POWER_STATES> mapping{};
   for (size_t i = 0; i < MAX_SYSTEM_POWER_STATES; i++) {
@@ -961,7 +960,7 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_Success) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
-  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+  AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   ::fidl::Array<SystemPowerStateInfo, MAX_SYSTEM_POWER_STATES> mapping{};
   for (size_t i = 0; i < MAX_SYSTEM_POWER_STATES; i++) {
@@ -1007,7 +1006,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonReboot) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
-  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+  AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   ::fidl::Array<SystemPowerStateInfo, MAX_SYSTEM_POWER_STATES> mapping{};
   for (size_t i = 0; i < MAX_SYSTEM_POWER_STATES; i++) {
@@ -1088,7 +1087,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonRebootRecovery) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
-  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+  AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   ::fidl::Array<SystemPowerStateInfo, MAX_SYSTEM_POWER_STATES> mapping{};
   for (size_t i = 0; i < MAX_SYSTEM_POWER_STATES; i++) {
@@ -1176,7 +1175,7 @@ TEST_F(PowerTestCase, SelectiveResume_AfterSetPerformanceState) {
   perf_states[2].is_supported = true;
   perf_states[2].restore_latency = 1000;
 
-  AddChildWithPowerArgs(states, fbl::count_of(states), perf_states, fbl::count_of(perf_states));
+  AddChildWithPowerArgs(states, std::size(states), perf_states, std::size(perf_states));
 
   auto perf_change_result =
       Controller::Call::SetPerformanceState(zx::unowned(child2_device_handle), 1);
@@ -1235,7 +1234,7 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToWorking) {
   perf_states[2].is_supported = true;
   perf_states[2].restore_latency = 1000;
 
-  AddChildWithPowerArgs(states, fbl::count_of(states), perf_states, fbl::count_of(perf_states));
+  AddChildWithPowerArgs(states, std::size(states), perf_states, std::size(perf_states));
 
   auto perf_change_result =
       Controller::Call::SetPerformanceState(zx::unowned(child2_device_handle), 1);
@@ -1305,7 +1304,7 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToPerformanceState) {
   perf_states[2].is_supported = true;
   perf_states[2].restore_latency = 1000;
 
-  AddChildWithPowerArgs(states, fbl::count_of(states), perf_states, fbl::count_of(perf_states));
+  AddChildWithPowerArgs(states, std::size(states), perf_states, std::size(perf_states));
 
   auto perf_change_result =
       Controller::Call::SetPerformanceState(zx::unowned(child2_device_handle), 1);
@@ -1375,7 +1374,7 @@ TEST_F(PowerTestCase, DeviceResume_AutoSuspendEnabled) {
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
   states[2].restore_latency = 1000;
-  AddChildWithPowerArgs(states, fbl::count_of(states), nullptr, 0);
+  AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   auto auto_suspend_result = Controller::Call::ConfigureAutoSuspend(
       zx::unowned(child2_device_handle), true, DevicePowerState::DEVICE_POWER_STATE_D1);

@@ -186,7 +186,7 @@ TEST_F(TaskTestCase, NoDependenciesFailure) {
 
 TEST_F(TaskTestCase, SuccessfulDependencies) {
   zx_status_t statuses[] = {ZX_OK, ZX_OK, ZX_OK};
-  auto task = DepsTask::Create(fbl::count_of(statuses), statuses, true);
+  auto task = DepsTask::Create(std::size(statuses), statuses, true);
   loop().RunUntilIdle();
   ASSERT_TRUE(task->is_completed());
   EXPECT_OK(task->status());
@@ -196,7 +196,7 @@ TEST_F(TaskTestCase, SuccessfulDependencies) {
 
 TEST_F(TaskTestCase, FailedDependenciesIgnored) {
   zx_status_t statuses[] = {ZX_OK, ZX_ERR_NOT_FOUND, ZX_ERR_INVALID_ARGS};
-  auto task = DepsTask::Create(fbl::count_of(statuses), statuses, false);
+  auto task = DepsTask::Create(std::size(statuses), statuses, false);
   loop().RunUntilIdle();
   ASSERT_TRUE(task->is_completed());
   EXPECT_OK(task->status());
@@ -206,7 +206,7 @@ TEST_F(TaskTestCase, FailedDependenciesIgnored) {
 
 TEST_F(TaskTestCase, FailedDependenciesPropagate) {
   zx_status_t statuses[] = {ZX_OK, ZX_ERR_NOT_FOUND, ZX_ERR_INVALID_ARGS};
-  auto task = DepsTask::Create(fbl::count_of(statuses), statuses, true);
+  auto task = DepsTask::Create(std::size(statuses), statuses, true);
   loop().RunUntilIdle();
   ASSERT_TRUE(task->is_completed());
   EXPECT_EQ(task->status(), ZX_ERR_NOT_FOUND);
@@ -219,11 +219,11 @@ TEST_F(TaskTestCase, DependencySequencing) {
       {0, nullptr},
   };
   SequenceTask::TaskDesc root_children[] = {
-      {fbl::count_of(child1_children), child1_children},
+      {std::size(child1_children), child1_children},
       {0, nullptr},
   };
 
-  SequenceTask::TaskDesc root = {fbl::count_of(root_children), root_children};
+  SequenceTask::TaskDesc root = {std::size(root_children), root_children};
   auto task = SequenceTask::Create(&root);
   loop().RunUntilIdle();
   ASSERT_TRUE(task->is_completed());
@@ -239,7 +239,7 @@ TEST_F(TaskTestCase, DependencySequencing) {
 
 TEST_F(TaskTestCase, DependencyTracking) {
   zx_status_t statuses[] = {ZX_OK, ZX_ERR_NOT_FOUND};
-  auto task = DepsTask::Create(fbl::count_of(statuses), statuses, false);
+  auto task = DepsTask::Create(std::size(statuses), statuses, false);
   ASSERT_EQ(task->Dependencies().size(), 2);
   loop().RunUntilIdle();
   ASSERT_TRUE(task->is_completed());

@@ -709,41 +709,49 @@ TEST_F(SdioControllerDeviceTest, DifferentManufacturerProductIds) {
 
   sdmmc_.Write(0x0000'56a0,
                std::vector<uint8_t>{
-                 0x20,
-                 0x04,
-                 0x7b, 0x31,
-                 0x8f, 0xa8,
-                 0xff,
+                   0x20,
+                   0x04,
+                   0x7b,
+                   0x31,
+                   0x8f,
+                   0xa8,
+                   0xff,
                },
                0);
 
   sdmmc_.Write(0x0000'c3e9,
                std::vector<uint8_t>{
-                 0x20,
-                 0x04,
-                 0xbd, 0x6d,
-                 0x0d, 0x24,
-                 0xff,
+                   0x20,
+                   0x04,
+                   0xbd,
+                   0x6d,
+                   0x0d,
+                   0x24,
+                   0xff,
                },
                0);
 
   sdmmc_.Write(0x0001'6eb7,
                std::vector<uint8_t>{
-                 0x20,
-                 0x04,
-                 0xca, 0xb8,
-                 0x52, 0x98,
-                 0xff,
+                   0x20,
+                   0x04,
+                   0xca,
+                   0xb8,
+                   0x52,
+                   0x98,
+                   0xff,
                },
                0);
 
   sdmmc_.Write(0x0000'b786,
                std::vector<uint8_t>{
-                 0x20,
-                 0x04,
-                 0xee, 0xf5,
-                 0xde, 0x30,
-                 0xff,
+                   0x20,
+                   0x04,
+                   0xee,
+                   0xf5,
+                   0xde,
+                   0x30,
+                   0xff,
                },
                0);
 
@@ -789,12 +797,12 @@ TEST_F(SdioControllerDeviceTest, DifferentManufacturerProductIds) {
           },
   };
 
-  EXPECT_EQ(ddk.total_children(), fbl::count_of(kExpectedProps));
+  EXPECT_EQ(ddk.total_children(), std::size(kExpectedProps));
 
-  for (size_t i = 0; i < fbl::count_of(kExpectedProps); i++) {
+  for (size_t i = 0; i < std::size(kExpectedProps); i++) {
     fbl::Span child = ddk.GetChildProps(i);
-    ASSERT_EQ(child.size(), fbl::count_of(kExpectedProps[0]));
-    for (size_t j = 0; j < fbl::count_of(kExpectedProps[0]); j++) {
+    ASSERT_EQ(child.size(), std::size(kExpectedProps[0]));
+    for (size_t j = 0; j < std::size(kExpectedProps[0]); j++) {
       const zx_device_prop_t& prop = child[j];
       EXPECT_EQ(prop.id, kExpectedProps[i][j].id);
       EXPECT_EQ(prop.reserved, kExpectedProps[i][j].reserved);

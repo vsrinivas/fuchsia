@@ -38,7 +38,7 @@ class EventRingHarness : public zxtest::Test {
   void SetUp() override {
     constexpr auto kRuntimeRegisterOffset = 6;
     constexpr auto kErdp = 2062;
-    region_.emplace(regs_, sizeof(uint32_t), fbl::count_of(regs_));
+    region_.emplace(regs_, sizeof(uint32_t), std::size(regs_));
     buffer_.emplace(region_->GetMmioBuffer());
     regs_[kRuntimeRegisterOffset].SetReadCallback([=]() { return 0x2000; });
     regs_[kErdp].SetReadCallback([=]() { return erdp_; });

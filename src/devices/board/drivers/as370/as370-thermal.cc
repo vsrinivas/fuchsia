@@ -79,8 +79,8 @@ zx_status_t As370::ThermalInit() {
       BI_MATCH_IF(EQ, BIND_CLOCK_ID, as370::kClkCpu),
   };
   static const device_fragment_part_t cpu_clock_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(cpu_clock_match), cpu_clock_match},
+      {std::size(root_match), root_match},
+      {std::size(cpu_clock_match), cpu_clock_match},
   };
 
   static constexpr zx_bind_inst_t cpu_power_match[] = {
@@ -88,13 +88,13 @@ zx_status_t As370::ThermalInit() {
       BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, kBuckSoC),
   };
   static const device_fragment_part_t cpu_power_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(cpu_power_match), cpu_power_match},
+      {std::size(root_match), root_match},
+      {std::size(cpu_power_match), cpu_power_match},
   };
 
   static const device_fragment_t fragments[] = {
-      {fbl::count_of(cpu_clock_fragment), cpu_clock_fragment},
-      {fbl::count_of(cpu_power_fragment), cpu_power_fragment},
+      {std::size(cpu_clock_fragment), cpu_clock_fragment},
+      {std::size(cpu_power_fragment), cpu_power_fragment},
   };
 
   pbus_dev_t thermal_dev = {};

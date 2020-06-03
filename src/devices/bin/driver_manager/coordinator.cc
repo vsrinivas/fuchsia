@@ -791,7 +791,7 @@ zx_status_t Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char
   }
 
   int fd, fwfd;
-  for (unsigned n = 0; n < fbl::count_of(fwdirs); n++) {
+  for (unsigned n = 0; n < std::size(fwdirs); n++) {
     if ((fd = open(fwdirs[n].c_str(), O_RDONLY, O_DIRECTORY)) < 0) {
       continue;
     }

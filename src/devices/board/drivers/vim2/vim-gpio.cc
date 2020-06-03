@@ -117,11 +117,11 @@ zx_status_t Vim::GpioInit() {
   gpio_dev.pid = PDEV_PID_AMLOGIC_S912;
   gpio_dev.did = PDEV_DID_AMLOGIC_GPIO;
   gpio_dev.mmio_list = gpio_mmios;
-  gpio_dev.mmio_count = fbl::count_of(gpio_mmios);
+  gpio_dev.mmio_count = std::size(gpio_mmios);
   gpio_dev.irq_list = gpio_irqs;
-  gpio_dev.irq_count = fbl::count_of(gpio_irqs);
+  gpio_dev.irq_count = std::size(gpio_irqs);
   gpio_dev.metadata_list = gpio_metadata;
-  gpio_dev.metadata_count = fbl::count_of(gpio_metadata);
+  gpio_dev.metadata_count = std::size(gpio_metadata);
 
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
   if (status != ZX_OK) {
@@ -154,11 +154,11 @@ zx_status_t Vim::GpioInit() {
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SYS_LED),
   };
   const device_fragment_part_t gpio_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(gpio_match), gpio_match},
+      {std::size(root_match), root_match},
+      {std::size(gpio_match), gpio_match},
   };
   const device_fragment_t fragments[] = {
-      {fbl::count_of(gpio_fragment), gpio_fragment},
+      {std::size(gpio_fragment), gpio_fragment},
   };
 
   pbus_dev_t light_dev = {};
@@ -167,9 +167,9 @@ zx_status_t Vim::GpioInit() {
   light_dev.pid = PDEV_PID_GENERIC;
   light_dev.did = PDEV_DID_GPIO_LIGHT;
   light_dev.metadata_list = light_metadata;
-  light_dev.metadata_count = fbl::count_of(light_metadata);
+  light_dev.metadata_count = std::size(light_metadata);
 
-  status = pbus_.CompositeDeviceAdd(&light_dev, fragments, fbl::count_of(fragments), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&light_dev, fragments, std::size(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "GpioInit could not add gpio_light_dev: %d", status);
     return status;

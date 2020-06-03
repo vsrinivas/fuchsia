@@ -85,24 +85,24 @@ zx_status_t Msm8x53::PilInit() {
       BI_MATCH_IF(EQ, BIND_CLOCK_ID, msm8x53::kCryptoClk),
   };
   const device_fragment_part_t clk_crypto_ahb_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(clk_crypto_ahb_match), clk_crypto_ahb_match},
+      {std::size(root_match), root_match},
+      {std::size(clk_crypto_ahb_match), clk_crypto_ahb_match},
   };
   const device_fragment_part_t clk_crypto_axi_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(clk_crypto_axi_match), clk_crypto_axi_match},
+      {std::size(root_match), root_match},
+      {std::size(clk_crypto_axi_match), clk_crypto_axi_match},
   };
   const device_fragment_part_t clk_crypto_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(clk_crypto_match), clk_crypto_match},
+      {std::size(root_match), root_match},
+      {std::size(clk_crypto_match), clk_crypto_match},
   };
   const device_fragment_t fragments[] = {
-      {fbl::count_of(clk_crypto_ahb_fragment), clk_crypto_ahb_fragment},
-      {fbl::count_of(clk_crypto_axi_fragment), clk_crypto_axi_fragment},
-      {fbl::count_of(clk_crypto_fragment), clk_crypto_fragment},
+      {std::size(clk_crypto_ahb_fragment), clk_crypto_ahb_fragment},
+      {std::size(clk_crypto_axi_fragment), clk_crypto_axi_fragment},
+      {std::size(clk_crypto_fragment), clk_crypto_fragment},
   };
 
-  auto status = pbus_.CompositeDeviceAdd(&dev, fragments, fbl::count_of(fragments), UINT32_MAX);
+  auto status = pbus_.CompositeDeviceAdd(&dev, fragments, std::size(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not add dev %d", __func__, status);
     return status;

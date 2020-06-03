@@ -48,8 +48,8 @@ zx_status_t HikeyUsb::Init() {
 
   zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
-  if (actual != fbl::count_of(fragments)) {
+  composite.GetFragments(fragments, std::size(fragments), &actual);
+  if (actual != std::size(fragments)) {
     zxlogf(ERROR, "HikeyUsb::Could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }

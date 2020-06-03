@@ -279,7 +279,7 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
       {countof(pdev_match), pdev_match},
   };
 
-  fragments[0].parts_count = fbl::count_of(pdev_fragment);
+  fragments[0].parts_count = std::size(pdev_fragment);
   fragments[0].parts = pdev_fragment;
 
   const zx_device_prop_t props[] = {
@@ -290,7 +290,7 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
 
   const composite_device_desc_t comp_desc = {
       .props = props,
-      .props_count = fbl::count_of(props),
+      .props_count = std::size(props),
       .fragments = fragments,
       .fragments_count = fragments_count + 1,
       .coresident_device_index = coresident_device_index,
@@ -603,7 +603,7 @@ zx_status_t PlatformBus::Init() {
       {BIND_PLATFORM_DEV_VID, 0, board_info_.vid},
       {BIND_PLATFORM_DEV_PID, 0, board_info_.pid},
   };
-  status = DdkAdd("platform", DEVICE_ADD_INVISIBLE, props, fbl::count_of(props));
+  status = DdkAdd("platform", DEVICE_ADD_INVISIBLE, props, std::size(props));
   if (status != ZX_OK) {
     return status;
   }

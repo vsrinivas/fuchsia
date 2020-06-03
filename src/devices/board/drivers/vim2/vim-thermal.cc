@@ -180,21 +180,21 @@ static const zx_bind_inst_t fan1_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_THERMAL_FAN_1),
 };
 static const device_fragment_part_t scpi_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(scpi_match), scpi_match},
+    {std::size(root_match), root_match},
+    {std::size(scpi_match), scpi_match},
 };
 static const device_fragment_part_t fan0_gpio_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(fan0_gpio_match), fan0_gpio_match},
+    {std::size(root_match), root_match},
+    {std::size(fan0_gpio_match), fan0_gpio_match},
 };
 static const device_fragment_part_t fan1_gpio_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(fan1_gpio_match), fan1_gpio_match},
+    {std::size(root_match), root_match},
+    {std::size(fan1_gpio_match), fan1_gpio_match},
 };
 static const device_fragment_t fragments[] = {
-    {fbl::count_of(scpi_fragment), scpi_fragment},
-    {fbl::count_of(fan0_gpio_fragment), fan0_gpio_fragment},
-    {fbl::count_of(fan1_gpio_fragment), fan1_gpio_fragment},
+    {std::size(scpi_fragment), scpi_fragment},
+    {std::size(fan0_gpio_fragment), fan0_gpio_fragment},
+    {std::size(fan1_gpio_fragment), fan1_gpio_fragment},
 };
 
 zx_status_t Vim::ThermalInit() {

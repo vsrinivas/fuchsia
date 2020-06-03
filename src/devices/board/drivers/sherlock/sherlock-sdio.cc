@@ -155,21 +155,21 @@ constexpr zx_bind_inst_t oob_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, T931_WIFI_HOST_WAKE),
 };
 constexpr device_fragment_part_t sdio_fn1_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(sdio_fn1_match), sdio_fn1_match},
+    {std::size(root_match), root_match},
+    {std::size(sdio_fn1_match), sdio_fn1_match},
 };
 constexpr device_fragment_part_t sdio_fn2_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(sdio_fn2_match), sdio_fn2_match},
+    {std::size(root_match), root_match},
+    {std::size(sdio_fn2_match), sdio_fn2_match},
 };
 constexpr device_fragment_part_t oob_gpio_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(oob_gpio_match), oob_gpio_match},
+    {std::size(root_match), root_match},
+    {std::size(oob_gpio_match), oob_gpio_match},
 };
 constexpr device_fragment_t wifi_composite[] = {
-    {fbl::count_of(sdio_fn1_fragment), sdio_fn1_fragment},
-    {fbl::count_of(sdio_fn2_fragment), sdio_fn2_fragment},
-    {fbl::count_of(oob_gpio_fragment), oob_gpio_fragment},
+    {std::size(sdio_fn1_fragment), sdio_fn1_fragment},
+    {std::size(sdio_fn2_fragment), sdio_fn2_fragment},
+    {std::size(oob_gpio_fragment), oob_gpio_fragment},
 };
 
 // Composite binding rules for SDIO.
@@ -181,16 +181,16 @@ constexpr zx_bind_inst_t pwm_e_match[] = {
     BI_MATCH_IF(EQ, BIND_INIT_STEP, BIND_INIT_STEP_PWM),
 };
 constexpr device_fragment_part_t wifi_pwren_gpio_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(wifi_pwren_gpio_match), wifi_pwren_gpio_match},
+    {std::size(root_match), root_match},
+    {std::size(wifi_pwren_gpio_match), wifi_pwren_gpio_match},
 };
 constexpr device_fragment_part_t pwm_e_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(pwm_e_match), pwm_e_match},
+    {std::size(root_match), root_match},
+    {std::size(pwm_e_match), pwm_e_match},
 };
 constexpr device_fragment_t sdio_fragments[] = {
-    {fbl::count_of(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
-    {fbl::count_of(pwm_e_fragment), pwm_e_fragment},
+    {std::size(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
+    {std::size(pwm_e_fragment), pwm_e_fragment},
 };
 
 }  // namespace
@@ -238,8 +238,8 @@ zx_status_t Sherlock::SdioInit() {
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&sdio_dev, sdio_fragments, fbl::count_of(sdio_fragments),
-                                    UINT32_MAX);
+  status =
+      pbus_.CompositeDeviceAdd(&sdio_dev, sdio_fragments, std::size(sdio_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd() error: %d", __func__, status);
     return status;

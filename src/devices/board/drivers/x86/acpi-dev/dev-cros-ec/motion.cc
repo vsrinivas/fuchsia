@@ -311,8 +311,7 @@ zx_status_t AcpiCrOsEcMotionDevice::FifoInterruptEnable(bool enable) {
 
 zx_status_t AcpiCrOsEcMotionDevice::SetSensorOutputDataRate(uint8_t sensor_num,
                                                             uint32_t freq_millihertz) {
-  zxlogf(DEBUG, "acpi-cros-ec-motion: SetSensorOutputDataRate %d %u", sensor_num,
-         freq_millihertz);
+  zxlogf(DEBUG, "acpi-cros-ec-motion: SetSensorOutputDataRate %d %u", sensor_num, freq_millihertz);
 
   struct ec_params_motion_sense cmd = {};
   struct ec_response_motion_sense rsp;
@@ -704,7 +703,7 @@ constexpr HidDescSensorBlock kHidDescSensorBlock[] = {
     {nullptr, 0},
     {nullptr, 0},
 };
-static_assert(fbl::count_of(kHidDescSensorBlock) == MOTIONSENSE_TYPE_MAX, "");
+static_assert(std::size(kHidDescSensorBlock) == MOTIONSENSE_TYPE_MAX, "");
 
 }  // namespace
 
@@ -725,7 +724,7 @@ zx_status_t BuildHidDescriptor(fbl::Span<const SensorInfo> sensors, fbl::Array<u
     }
   }
 
-  for (size_t i = 0; i < fbl::count_of(loc_group_present); ++i) {
+  for (size_t i = 0; i < std::size(loc_group_present); ++i) {
     if (loc_group_present[i]) {
       total_size += sizeof(kHidDescriptorGroupPrologue) + sizeof(kHidDescriptorGroupEpilogue);
     }
@@ -740,7 +739,7 @@ zx_status_t BuildHidDescriptor(fbl::Span<const SensorInfo> sensors, fbl::Array<u
   uint8_t* p = desc.get();
   size_t len = total_size;
 
-  for (size_t loc = 0; loc < fbl::count_of(loc_group_present); ++loc) {
+  for (size_t loc = 0; loc < std::size(loc_group_present); ++loc) {
     if (!loc_group_present[loc]) {
       continue;
     }

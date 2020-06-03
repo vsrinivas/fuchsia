@@ -56,7 +56,8 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
   metadata.read(phdrs.data(), ehdr.e_phoff, ehdr.e_phnum * sizeof(Elf32_Phdr));
 
   // Copy metadata to the intended physical address.
-  status = zx_vmo_read(metadata.get(), mmios_[fw_n]->get(), 0, ZX_ROUNDUP(metadata_size, PAGE_SIZE));
+  status =
+      zx_vmo_read(metadata.get(), mmios_[fw_n]->get(), 0, ZX_ROUNDUP(metadata_size, PAGE_SIZE));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s VMO read failed %d", __func__, status);
     return status;
@@ -71,8 +72,7 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
                               fw_[fw_n].pa);  // kBufferReadWrite.
   status = qcom::SmcCall(smc_.get(), &params, &result);
   if (status != ZX_OK || result.arg0 != qcom::kSmcOk) {
-    zxlogf(ERROR, "%s metadata init failed %d/%d", __func__, status,
-           static_cast<int>(result.arg0));
+    zxlogf(ERROR, "%s metadata init failed %d/%d", __func__, status, static_cast<int>(result.arg0));
     return status;
   }
 
@@ -116,8 +116,7 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
       total_size);   // kValue.
   status = qcom::SmcCall(smc_.get(), &params, &result);
   if (status != ZX_OK || result.arg0 != qcom::kSmcOk) {
-    zxlogf(ERROR, "%s memory setup failed %d/%d", __func__, status,
-           static_cast<int>(result.arg0));
+    zxlogf(ERROR, "%s memory setup failed %d/%d", __func__, status, static_cast<int>(result.arg0));
     return status;
   }
 
@@ -181,8 +180,8 @@ zx_status_t PilDevice::Bind() {
 
   zx_device_t* fragments[kClockCount + 1];
   size_t actual;
-  composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
-  if (actual != fbl::count_of(fragments)) {
+  composite.GetFragments(fragments, std::size(fragments), &actual);
+  if (actual != std::size(fragments)) {
     zxlogf(ERROR, "%s could not get fragments", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }

@@ -247,7 +247,7 @@ bool RamdiskStatsTest(void) {
   requests[3].vmo_offset = 0;
   requests[3].dev_offset = 0;
 
-  ASSERT_EQ(client.Transaction(&requests[0], fbl::count_of(requests)), ZX_OK);
+  ASSERT_EQ(client.Transaction(&requests[0], std::size(requests)), ZX_OK);
 
   ASSERT_EQ(fuchsia_hardware_block_BlockGetStats(channel->get(), false, &status, &block_stats),
             ZX_OK);
@@ -730,7 +730,7 @@ bool RamdiskTestFifoBasic(void) {
   requests[1].vmo_offset = 1;
   requests[1].dev_offset = 100;
 
-  ASSERT_EQ(client.Transaction(&requests[0], fbl::count_of(requests)), ZX_OK);
+  ASSERT_EQ(client.Transaction(&requests[0], std::size(requests)), ZX_OK);
 
   // Empty the vmo, then read the info we just wrote to the disk
   std::unique_ptr<uint8_t[]> out(new uint8_t[vmo_size]());
@@ -738,7 +738,7 @@ bool RamdiskTestFifoBasic(void) {
   ASSERT_EQ(vmo.write(out.get(), 0, vmo_size), ZX_OK);
   requests[0].opcode = BLOCKIO_READ;
   requests[1].opcode = BLOCKIO_READ;
-  ASSERT_EQ(client.Transaction(&requests[0], fbl::count_of(requests)), ZX_OK);
+  ASSERT_EQ(client.Transaction(&requests[0], std::size(requests)), ZX_OK);
   ASSERT_EQ(vmo.read(out.get(), 0, vmo_size), ZX_OK);
   ASSERT_EQ(memcmp(buf.get(), out.get(), vmo_size), 0, "Read data not equal to written data");
 
@@ -1188,7 +1188,7 @@ bool RamdiskTestFifoIntermediateOpFailure(void) {
 
   // Test that we can use regular transactions (writing)
   block_fifo_request_t requests[kRequestCount];
-  for (size_t i = 0; i < fbl::count_of(requests); i++) {
+  for (size_t i = 0; i < std::size(requests); i++) {
     requests[i].group = group;
     requests[i].vmoid = obj.vmoid.id;
     requests[i].opcode = BLOCKIO_WRITE;
@@ -1196,12 +1196,12 @@ bool RamdiskTestFifoIntermediateOpFailure(void) {
     requests[i].vmo_offset = i;
     requests[i].dev_offset = i;
   }
-  ASSERT_EQ(client.Transaction(&requests[0], fbl::count_of(requests)), ZX_OK);
+  ASSERT_EQ(client.Transaction(&requests[0], std::size(requests)), ZX_OK);
 
   std::unique_ptr<uint8_t[]> tmpbuf;
   tmpbuf.reset(new uint8_t[kBufferSize]);
 
-  for (size_t bad_arg = 0; bad_arg < fbl::count_of(requests); bad_arg++) {
+  for (size_t bad_arg = 0; bad_arg < std::size(requests); bad_arg++) {
     // Empty out the VMO so we can test reading it
     memset(tmpbuf.get(), 0, kBufferSize);
     ASSERT_EQ(obj.vmo.write(tmpbuf.get(), 0, kBufferSize), ZX_OK);
@@ -1209,7 +1209,7 @@ bool RamdiskTestFifoIntermediateOpFailure(void) {
     // Test that invalid intermediate operations cause:
     // - Previous operations to continue anyway
     // - Later operations to fail
-    for (size_t i = 0; i < fbl::count_of(requests); i++) {
+    for (size_t i = 0; i < std::size(requests); i++) {
       requests[i].group = group;
       requests[i].vmoid = obj.vmoid.id;
       requests[i].opcode = BLOCKIO_READ;
@@ -1219,7 +1219,7 @@ bool RamdiskTestFifoIntermediateOpFailure(void) {
     }
     // Inserting "bad argument".
     requests[bad_arg].length = 0;
-    ASSERT_EQ(client.Transaction(&requests[0], fbl::count_of(requests)), ZX_ERR_INVALID_ARGS);
+    ASSERT_EQ(client.Transaction(&requests[0], std::size(requests)), ZX_ERR_INVALID_ARGS);
 
     // Test that all operations up the bad argument completed, but the later
     // ones did not.
@@ -1495,7 +1495,7 @@ bool RamdiskTestFifoSleepUnavailable(void) {
 
   // Send enough requests for the ramdisk to fall asleep before completing.
   // Other callers (e.g. block_watcher) may also send requests without affecting this test.
-  ASSERT_EQ(client.Transaction(&requests[0], fbl::count_of(requests)), ZX_ERR_UNAVAILABLE);
+  ASSERT_EQ(client.Transaction(&requests[0], std::size(requests)), ZX_ERR_UNAVAILABLE);
 
   ramdisk_block_write_counts_t counts;
   ASSERT_EQ(ramdisk_get_block_counts(ramdisk->ramdisk_client(), &counts), ZX_OK);
@@ -1507,7 +1507,7 @@ bool RamdiskTestFifoSleepUnavailable(void) {
   ASSERT_EQ(ramdisk_wake(ramdisk->ramdisk_client()), ZX_OK);
   requests[0].opcode = BLOCKIO_READ;
   requests[1].opcode = BLOCKIO_READ;
-  ASSERT_EQ(client.Transaction(&requests[0], fbl::count_of(requests)), ZX_OK);
+  ASSERT_EQ(client.Transaction(&requests[0], std::size(requests)), ZX_OK);
 
   // Put the ramdisk to sleep after 1 block (partial transaction).
   ASSERT_EQ(ramdisk_sleep_after(ramdisk->ramdisk_client(), one), ZX_OK);
@@ -1523,7 +1523,7 @@ bool RamdiskTestFifoSleepUnavailable(void) {
 
   // Send enough requests for the ramdisk to fall asleep before completing.
   // Other callers (e.g. block_watcher) may also send requests without affecting this test.
-  ASSERT_EQ(client.Transaction(&requests[0], fbl::count_of(requests)), ZX_ERR_UNAVAILABLE);
+  ASSERT_EQ(client.Transaction(&requests[0], std::size(requests)), ZX_ERR_UNAVAILABLE);
 
   ASSERT_EQ(ramdisk_get_block_counts(ramdisk->ramdisk_client(), &counts), ZX_OK);
   ASSERT_EQ(counts.received, 3);
@@ -1534,7 +1534,7 @@ bool RamdiskTestFifoSleepUnavailable(void) {
   ASSERT_EQ(ramdisk_wake(ramdisk->ramdisk_client()), ZX_OK);
   requests[0].opcode = BLOCKIO_READ;
   requests[1].opcode = BLOCKIO_READ;
-  ASSERT_EQ(client.Transaction(&requests[0], fbl::count_of(requests)), ZX_OK);
+  ASSERT_EQ(client.Transaction(&requests[0], std::size(requests)), ZX_OK);
 
   // Close the current vmo
   requests[0].opcode = BLOCKIO_CLOSE_VMO;
@@ -1548,7 +1548,7 @@ bool RamdiskTestFifoSleepUnavailable(void) {
 //   thrd_create(&thread, fifo_wake_thread, &wake);
 //   ramdisk_sleep_after(wake->fd, &one);
 //   sync_completion_signal(&wake.start);
-//   block_fifo_txn(client, requests, fbl::count_of(requests));
+//   block_fifo_txn(client, requests, std::size(requests));
 //   thrd_join(thread, &res);
 //
 // This order matters!
@@ -1636,7 +1636,7 @@ bool RamdiskTestFifoSleepDeferred(void) {
 
   // Create a bunch of requests, some of which are guaranteed to block.
   block_fifo_request_t requests[16];
-  for (size_t i = 0; i < fbl::count_of(requests); ++i) {
+  for (size_t i = 0; i < std::size(requests); ++i) {
     requests[i].group = group;
     requests[i].vmoid = vmoid.id;
     requests[i].opcode = BLOCKIO_WRITE;
@@ -1650,7 +1650,7 @@ bool RamdiskTestFifoSleepDeferred(void) {
   thrd_t thread;
   wake_args_t wake;
   wake.ramdisk_client = ramdisk->ramdisk_client();
-  wake.after = fbl::count_of(requests);
+  wake.after = std::size(requests);
   sync_completion_reset(&wake.start);
   wake.deadline = zx_deadline_after(ZX_SEC(3));
   uint64_t blks_before_sleep = 1;
@@ -1662,18 +1662,18 @@ bool RamdiskTestFifoSleepDeferred(void) {
   ASSERT_EQ(ramdisk_set_flags(ramdisk->ramdisk_client(), flags), ZX_OK);
   ASSERT_EQ(ramdisk_sleep_after(ramdisk->ramdisk_client(), blks_before_sleep), ZX_OK);
   sync_completion_signal(&wake.start);
-  ASSERT_EQ(client.Transaction(&requests[0], fbl::count_of(requests)), ZX_OK);
+  ASSERT_EQ(client.Transaction(&requests[0], std::size(requests)), ZX_OK);
   ASSERT_EQ(thrd_join(thread, &res), thrd_success);
 
   // Check that the wake thread succeeded.
   ASSERT_EQ(res, 0, "Background thread failed");
 
-  for (size_t i = 0; i < fbl::count_of(requests); ++i) {
+  for (size_t i = 0; i < std::size(requests); ++i) {
     requests[i].opcode = BLOCKIO_READ;
   }
 
   // Read data we wrote to disk back into the VMO.
-  ASSERT_EQ(client.Transaction(&requests[0], fbl::count_of(requests)), ZX_OK);
+  ASSERT_EQ(client.Transaction(&requests[0], std::size(requests)), ZX_OK);
 
   // Verify that the contents of the vmo match the buffer.
   ASSERT_EQ(memcmp(mapping.start(), buf.get(), kVmoSize), 0);

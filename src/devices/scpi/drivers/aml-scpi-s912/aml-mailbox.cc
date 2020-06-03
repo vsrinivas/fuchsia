@@ -96,7 +96,7 @@ zx_status_t AmlMailbox::Bind() {
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_MAILBOX},
   };
 
-  return DdkAdd("aml-mailbox", 0, props, fbl::count_of(props));
+  return DdkAdd("aml-mailbox", 0, props, std::size(props));
 }
 
 zx_status_t AmlMailbox::InitPdev() {

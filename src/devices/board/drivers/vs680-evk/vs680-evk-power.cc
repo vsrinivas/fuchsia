@@ -26,12 +26,12 @@ zx_status_t Vs680Evk::PowerInit() {
   };
 
   const device_fragment_part_t pmic_i2c_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(pmic_i2c_match), pmic_i2c_match},
+      {std::size(root_match), root_match},
+      {std::size(pmic_i2c_match), pmic_i2c_match},
   };
 
   const device_fragment_t power_impl_fragments[] = {
-      {fbl::count_of(pmic_i2c_fragment), pmic_i2c_fragment},
+      {std::size(pmic_i2c_fragment), pmic_i2c_fragment},
   };
 
   constexpr zx_device_prop_t power_impl_props[] = {
@@ -41,9 +41,9 @@ zx_status_t Vs680Evk::PowerInit() {
 
   const composite_device_desc_t power_impl_desc = {
       .props = power_impl_props,
-      .props_count = fbl::count_of(power_impl_props),
+      .props_count = std::size(power_impl_props),
       .fragments = power_impl_fragments,
-      .fragments_count = fbl::count_of(power_impl_fragments),
+      .fragments_count = std::size(power_impl_fragments),
       .coresident_device_index = UINT32_MAX,
   };
 
@@ -56,12 +56,12 @@ zx_status_t Vs680Evk::PowerInit() {
   };
 
   const device_fragment_part_t power_impl_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(power_impl_driver_match), power_impl_driver_match},
+      {std::size(root_match), root_match},
+      {std::size(power_impl_driver_match), power_impl_driver_match},
   };
 
   const device_fragment_t power_domain_vcpu_fragments[] = {
-      {fbl::count_of(power_impl_fragment), power_impl_fragment},
+      {std::size(power_impl_fragment), power_impl_fragment},
   };
 
   constexpr power_domain_t power_domain_vcpu[] = {
@@ -78,12 +78,12 @@ zx_status_t Vs680Evk::PowerInit() {
 
   const composite_device_desc_t power_domain_vcpu_desc = {
       .props = power_domain_vcpu_props,
-      .props_count = fbl::count_of(power_domain_vcpu_props),
+      .props_count = std::size(power_domain_vcpu_props),
       .fragments = power_domain_vcpu_fragments,
-      .fragments_count = fbl::count_of(power_domain_vcpu_fragments),
+      .fragments_count = std::size(power_domain_vcpu_fragments),
       .coresident_device_index = 0,
       .metadata_list = power_domain_vcpu_metadata,
-      .metadata_count = fbl::count_of(power_domain_vcpu_metadata),
+      .metadata_count = std::size(power_domain_vcpu_metadata),
   };
 
   zx_status_t status = DdkAddComposite("power", &power_impl_desc);

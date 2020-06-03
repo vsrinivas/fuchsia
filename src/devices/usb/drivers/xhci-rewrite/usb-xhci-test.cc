@@ -202,7 +202,7 @@ class FakeDevice : public ddk::PDevProtocol<FakeDevice>, public ddk::PciProtocol
       imodi_ = static_cast<uint16_t>(imodi.MODI());
     });
 
-    region_.emplace(regs_, sizeof(uint32_t), fbl::count_of(regs_));
+    region_.emplace(regs_, sizeof(uint32_t), std::size(regs_));
     // Control register
     zx::interrupt::create(zx::resource(ZX_HANDLE_INVALID), 0, ZX_INTERRUPT_VIRTUAL, &irq_);
   }

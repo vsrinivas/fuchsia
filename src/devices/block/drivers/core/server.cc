@@ -256,7 +256,7 @@ zx_status_t Server::Create(ddk::BlockProtocolClient* bp,
     return status;
   }
 
-  for (size_t i = 0; i < fbl::count_of(bs->groups_); i++) {
+  for (size_t i = 0; i < std::size(bs->groups_); i++) {
     bs->groups_[i].Initialize(bs->fifo_.get_handle(), static_cast<groupid_t>(i));
   }
 

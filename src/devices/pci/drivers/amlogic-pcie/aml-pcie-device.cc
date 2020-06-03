@@ -45,8 +45,8 @@ zx_status_t AmlPcieDevice::InitProtocols() {
   // Zeroth fragment is pdev, first is GPIO
   zx_device_t* fragments[kClockCount + 2];
   size_t actual;
-  composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
-  if (actual != fbl::count_of(fragments)) {
+  composite.GetFragments(fragments, std::size(fragments), &actual);
+  if (actual != std::size(fragments)) {
     zxlogf(ERROR, "could not retrieve all our fragments");
     return ZX_ERR_INTERNAL;
   }
@@ -179,7 +179,7 @@ device_add_args_t pci_dev_args = []() {
   result.version = DEVICE_ADD_ARGS_VERSION;
   result.name = "aml-dw-pcie";
   result.ops = &aml_pcie_device_proto, result.props = props;
-  result.prop_count = fbl::count_of(props);
+  result.prop_count = std::size(props);
 
   return result;
 }();

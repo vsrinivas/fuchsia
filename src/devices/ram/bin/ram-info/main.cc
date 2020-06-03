@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
       config.channels[i] = channels->at(i);
     }
   } else {
-    for (size_t i = 0; i < fbl::count_of(device_info.default_channels); i++) {
+    for (size_t i = 0; i < std::size(device_info.default_channels); i++) {
       if (device_info.default_channels[i].name == nullptr) {
         break;
       }

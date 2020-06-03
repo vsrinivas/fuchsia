@@ -40,7 +40,7 @@ void BindDriverTestOutput(const zx::channel& remote, zx::channel test_output) {
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_bytes;
   uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), std::size(handles),
                                    &actual_bytes, &actual_handles);
   ASSERT_OK(status);
   ASSERT_LT(0, actual_bytes);
@@ -64,7 +64,7 @@ void BindDriverTestOutput(const zx::channel& remote, zx::channel test_output) {
   resp->status = ZX_OK;
   resp->test_output = test_output.release();
   status = fidl_encode(&fuchsia_device_manager_DeviceControllerBindDriverResponseTable, bytes,
-                       sizeof(*resp), handles, fbl::count_of(handles), &actual_handles, nullptr);
+                       sizeof(*resp), handles, std::size(handles), &actual_handles, nullptr);
   ASSERT_OK(status);
   ASSERT_EQ(1, actual_handles);
   status = remote.write(0, bytes, sizeof(*resp), handles, actual_handles);
@@ -129,7 +129,7 @@ void CheckBindDriverReceived(const zx::channel& remote, const char* expected_dri
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_bytes;
   uint32_t actual_handles;
-  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), fbl::count_of(handles),
+  zx_status_t status = remote.read(0, bytes, handles, sizeof(bytes), std::size(handles),
                                    &actual_bytes, &actual_handles);
   ASSERT_OK(status);
   ASSERT_LT(0, actual_bytes);
@@ -157,7 +157,7 @@ void CheckBindDriverReceived(const zx::channel& remote, const char* expected_dri
                        fuchsia_device_manager_DeviceControllerBindDriverGenOrdinal);
   resp->status = ZX_OK;
   status = fidl_encode(&fuchsia_device_manager_DeviceControllerBindDriverResponseTable, bytes,
-                       sizeof(*resp), handles, fbl::count_of(handles), &actual_handles, nullptr);
+                       sizeof(*resp), handles, std::size(handles), &actual_handles, nullptr);
   ASSERT_OK(status);
   ASSERT_EQ(0, actual_handles);
   status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
@@ -300,7 +300,7 @@ TEST(MiscTestCase, BindDriversForBuiltins) {
   };
 
   auto make_fake_driver = [](auto&& instructions) -> std::unique_ptr<Driver> {
-    size_t instruction_count = fbl::count_of(instructions);
+    size_t instruction_count = std::size(instructions);
     auto binding = std::make_unique<zx_bind_inst_t[]>(instruction_count);
     memcpy(binding.get(), instructions, instruction_count * sizeof(instructions[0]));
     auto drv = std::make_unique<Driver>();

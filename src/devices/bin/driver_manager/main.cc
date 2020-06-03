@@ -195,7 +195,7 @@ zx_status_t CreateDriverHostJob(const zx::job& root_job, zx::job* driver_host_jo
       {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_ALLOW_EXCEPTION, ZX_POL_OVERRIDE_DENY},
   };
   status = driver_host_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy,
-                                      fbl::count_of(policy));
+                                      std::size(policy));
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to set driver_host job policy: %s", zx_status_get_string(status));
     return status;

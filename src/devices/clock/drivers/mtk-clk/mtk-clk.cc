@@ -264,7 +264,7 @@ zx_status_t MtkClk::Create(zx_device_t* parent) {
 }
 
 zx_status_t MtkClk::ClockImplEnable(uint32_t index) {
-  if (index >= fbl::count_of(kMtkClkGates)) {
+  if (index >= std::size(kMtkClkGates)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -279,7 +279,7 @@ zx_status_t MtkClk::ClockImplEnable(uint32_t index) {
 }
 
 zx_status_t MtkClk::ClockImplDisable(uint32_t index) {
-  if (index >= fbl::count_of(kMtkClkGates)) {
+  if (index >= std::size(kMtkClkGates)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -316,7 +316,7 @@ zx_status_t MtkClk::ClockImplGetNumInputs(uint32_t id, uint32_t* out) {
 zx_status_t MtkClk::ClockImplGetInput(uint32_t id, uint32_t* out) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t MtkClk::ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyInfo* info) {
-  if (clk >= fbl::count_of(clks)) {
+  if (clk >= std::size(clks)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -352,7 +352,7 @@ zx_status_t MtkClk::ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyInf
   return ZX_OK;
 }
 
-uint32_t MtkClk::GetClkCount() { return static_cast<uint32_t>(fbl::count_of(clks)); }
+uint32_t MtkClk::GetClkCount() { return static_cast<uint32_t>(std::size(clks)); }
 
 zx_status_t MtkClk::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_clock_Device_dispatch(this, txn, msg, &fidl_ops_);

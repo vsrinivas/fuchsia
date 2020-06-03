@@ -52,7 +52,7 @@ TEST(Mt8167I2cTest, DummyTransactions) {
   Mt8167I2cTest dut(3);
 
   ddk::MockGpio gpios[6];
-  dut.SetI2cGpios(gpios, fbl::count_of(gpios));
+  dut.SetI2cGpios(gpios, std::size(gpios));
 
   gpios[0].ExpectSetAltFunction(ZX_OK, 0).ExpectSetAltFunction(ZX_OK, 1);
   gpios[1].ExpectSetAltFunction(ZX_OK, 0).ExpectSetAltFunction(ZX_OK, 1);

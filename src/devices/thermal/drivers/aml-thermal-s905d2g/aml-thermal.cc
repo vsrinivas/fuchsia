@@ -311,7 +311,7 @@ zx_status_t AmlThermal::PopulateClusterDvfsTable(
     return status;
   }
 
-  if (smc_result.arg0 >= fbl::count_of(aml_info.opps[0])) {
+  if (smc_result.arg0 >= std::size(aml_info.opps[0])) {
     zxlogf(ERROR, "aml-thermal: DVFS table index out of range: %lu", smc_result.arg0);
     return ZX_ERR_OUT_OF_RANGE;
   }

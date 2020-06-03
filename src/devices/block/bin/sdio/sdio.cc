@@ -135,7 +135,7 @@ int Info(SdioClient client) {
       "    Capabilities: 0x%08x\n",
       dev_info.sdio_vsn, dev_info.cccr_vsn, dev_info.caps);
 
-  for (size_t i = 0; i < fbl::count_of(kCapabilityStrings); i++) {
+  for (size_t i = 0; i < std::size(kCapabilityStrings); i++) {
     if (dev_info.caps & static_cast<uint32_t>(kCapabilityStrings[i].capability)) {
       printf("        %s\n", kCapabilityStrings[i].string);
     }

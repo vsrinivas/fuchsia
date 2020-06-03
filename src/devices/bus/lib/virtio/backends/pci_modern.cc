@@ -218,7 +218,7 @@ void PciModernBackend::WriteDeviceConfig(uint16_t offset, uint64_t value) {
 // mapped and we have stored a valid handle in the structure then just return
 // ZX_OK.
 zx_status_t PciModernBackend::MapBar(uint8_t bar) {
-  if (bar >= fbl::count_of(bar_)) {
+  if (bar >= std::size(bar_)) {
     return ZX_ERR_INVALID_ARGS;
   }
 

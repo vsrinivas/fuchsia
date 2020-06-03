@@ -44,16 +44,16 @@ static const zx_bind_inst_t ref_out_clk0_match[] = {
 };
 
 static const device_fragment_part_t ref_out_i2c_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(ref_out_i2c_match), ref_out_i2c_match},
+    {std::size(root_match), root_match},
+    {std::size(ref_out_i2c_match), ref_out_i2c_match},
 };
 static const device_fragment_part_t ref_out_codec_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(ref_out_codec_match), ref_out_codec_match},
+    {std::size(root_match), root_match},
+    {std::size(ref_out_codec_match), ref_out_codec_match},
 };
 static const device_fragment_part_t dma_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(dma_match), dma_match},
+    {std::size(root_match), root_match},
+    {std::size(dma_match), dma_match},
 };
 
 static const zx_bind_inst_t ref_out_enable_gpio_match[] = {

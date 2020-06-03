@@ -235,7 +235,7 @@ class XoRegs : public ddk::MmioBuffer {
   // TODO(andresoportus): This should be part of a clock driver.
   void ClockEnable(uint32_t id, bool enable) {
     uint32_t bits[] = {3, 4, 16};
-    static_assert(MT8167_I2C_CNT == fbl::count_of(bits));
+    static_assert(MT8167_I2C_CNT == std::size(bits));
     SetBit<uint32_t>(bits[id], enable ? 0x84 : 0x54);
   }
 };

@@ -35,22 +35,22 @@ zx_status_t Vs680Evk::SdioInit() {
   };
 
   const device_fragment_part_t expander2_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(expander2_i2c_match), expander2_i2c_match},
+      {std::size(root_match), root_match},
+      {std::size(expander2_i2c_match), expander2_i2c_match},
   };
   const device_fragment_part_t expander3_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(expander3_i2c_match), expander3_i2c_match},
+      {std::size(root_match), root_match},
+      {std::size(expander3_i2c_match), expander3_i2c_match},
   };
   const device_fragment_part_t sd0_clock_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(sd0_clock_match), sd0_clock_match},
+      {std::size(root_match), root_match},
+      {std::size(sd0_clock_match), sd0_clock_match},
   };
 
   const device_fragment_t sdio_fragments[] = {
-      {fbl::count_of(expander2_fragment), expander2_fragment},
-      {fbl::count_of(expander3_fragment), expander3_fragment},
-      {fbl::count_of(sd0_clock_fragment), sd0_clock_fragment},
+      {std::size(expander2_fragment), expander2_fragment},
+      {std::size(expander3_fragment), expander3_fragment},
+      {std::size(sd0_clock_fragment), sd0_clock_fragment},
   };
 
   constexpr pbus_mmio_t sdio_mmios[] = {
@@ -90,8 +90,8 @@ zx_status_t Vs680Evk::SdioInit() {
   sdio_dev.bti_list = sdio_btis;
   sdio_dev.bti_count = countof(sdio_btis);
 
-  zx_status_t status = pbus_.CompositeDeviceAdd(&sdio_dev, sdio_fragments,
-                                                fbl::count_of(sdio_fragments), UINT32_MAX);
+  zx_status_t status =
+      pbus_.CompositeDeviceAdd(&sdio_dev, sdio_fragments, std::size(sdio_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd() error: %d", __func__, status);
   }

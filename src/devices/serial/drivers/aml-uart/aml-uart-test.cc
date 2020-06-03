@@ -29,7 +29,7 @@ constexpr size_t kDataLen = 32;
 class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
  public:
   FakePDev() : proto_({&pdev_protocol_ops_, this}) {
-    region_.emplace(regs_, sizeof(uint32_t), fbl::count_of(regs_));
+    region_.emplace(regs_, sizeof(uint32_t), std::size(regs_));
     // Control register
     regs_[2].SetWriteCallback([=](uint64_t value) {
       control_reg_ = value;

@@ -843,7 +843,7 @@ zx_status_t AmlSdEmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   set_delay_lines(0);
 
   TuneWindow phase_windows[AmlSdEmmcClock::kMaxClkPhase + 1] = {};
-  for (uint32_t phase = 0; phase < fbl::count_of(phase_windows); phase++) {
+  for (uint32_t phase = 0; phase < std::size(phase_windows); phase++) {
     if (phase != clk.cfg_co_phase()) {
       clk.set_cfg_tx_phase(phase).WriteTo(&mmio_);
       phase_windows[phase] =
@@ -855,7 +855,7 @@ zx_status_t AmlSdEmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   uint32_t best_phase = 0;
 
   // First look for the largest window in which transfers failed at some settings.
-  for (uint32_t phase = 0; phase < fbl::count_of(phase_windows); phase++) {
+  for (uint32_t phase = 0; phase < std::size(phase_windows); phase++) {
     if (phase_windows[phase].size < clk.cfg_div() &&
         phase_windows[phase].size > adj_delay_window.size) {
       adj_delay_window = phase_windows[phase];
@@ -865,7 +865,7 @@ zx_status_t AmlSdEmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
 
   // If no such window is found just use the largest one.
   if (adj_delay_window.size == 0) {
-    for (uint32_t phase = 0; phase < fbl::count_of(phase_windows); phase++) {
+    for (uint32_t phase = 0; phase < std::size(phase_windows); phase++) {
       if (phase_windows[phase].size > adj_delay_window.size) {
         adj_delay_window = phase_windows[phase];
         best_phase = phase;
@@ -958,7 +958,7 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
 
   zx_device_t* fragments[FRAGMENT_COUNT];
   size_t fragment_count;
-  composite.GetFragments(fragments, fbl::count_of(fragments), &fragment_count);
+  composite.GetFragments(fragments, std::size(fragments), &fragment_count);
   // Only pdev fragment is required.
   if (fragment_count < 1) {
     zxlogf(ERROR, "AmlSdEmmc: Could not get fragments");

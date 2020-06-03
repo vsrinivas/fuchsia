@@ -147,7 +147,7 @@ TEST(FtlTest, FormatAndLevel) {
   // Remember what a leveled volume looks like.
   ftl::Volume::Stats stats;
   ASSERT_OK(ftl.volume()->GetStats(&stats));
-  uint32_t last_bucket = stats.wear_histogram[fbl::count_of(stats.wear_histogram) - 1];
+  uint32_t last_bucket = stats.wear_histogram[std::size(stats.wear_histogram) - 1];
 
   for (uint32_t i = 0; i < ftl.num_pages(); i++) {
     ASSERT_OK(WritePage(&ftl, i));
@@ -158,12 +158,12 @@ TEST(FtlTest, FormatAndLevel) {
   }
 
   ASSERT_OK(ftl.volume()->GetStats(&stats));
-  ASSERT_NE(last_bucket, stats.wear_histogram[fbl::count_of(stats.wear_histogram) - 1]);
+  ASSERT_NE(last_bucket, stats.wear_histogram[std::size(stats.wear_histogram) - 1]);
 
   ASSERT_OK(ftl.volume()->FormatAndLevel());
 
   ASSERT_OK(ftl.volume()->GetStats(&stats));
-  ASSERT_EQ(last_bucket, stats.wear_histogram[fbl::count_of(stats.wear_histogram) - 1]);
+  ASSERT_EQ(last_bucket, stats.wear_histogram[std::size(stats.wear_histogram) - 1]);
   ASSERT_TRUE(IsEmptyPage(&ftl, 10));
 }
 
@@ -201,7 +201,7 @@ TEST(FtlTest, Stats) {
   ASSERT_EQ(0, stats.wear_count);
   ASSERT_LT(0, stats.ram_used);
   ASSERT_LT(200, stats.num_blocks);
-  for (size_t i = 0; i < fbl::count_of(stats.wear_histogram) - 1; i++) {
+  for (size_t i = 0; i < std::size(stats.wear_histogram) - 1; i++) {
     ASSERT_EQ(0, stats.wear_histogram[i]);
   }
 }

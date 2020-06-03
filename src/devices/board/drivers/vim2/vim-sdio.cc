@@ -114,26 +114,26 @@ static const zx_bind_inst_t debug_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_WIFI_DEBUG),
 };
 static const device_fragment_part_t sdio_fn1_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(sdio_fn1_match), sdio_fn1_match},
+    {std::size(root_match), root_match},
+    {std::size(sdio_fn1_match), sdio_fn1_match},
 };
 static const device_fragment_part_t sdio_fn2_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(sdio_fn2_match), sdio_fn2_match},
+    {std::size(root_match), root_match},
+    {std::size(sdio_fn2_match), sdio_fn2_match},
 };
 static const device_fragment_part_t oob_gpio_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(oob_gpio_match), oob_gpio_match},
+    {std::size(root_match), root_match},
+    {std::size(oob_gpio_match), oob_gpio_match},
 };
 static const device_fragment_part_t debug_gpio_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(debug_gpio_match), debug_gpio_match},
+    {std::size(root_match), root_match},
+    {std::size(debug_gpio_match), debug_gpio_match},
 };
 static const device_fragment_t wifi_fragments[] = {
-    {fbl::count_of(sdio_fn1_fragment), sdio_fn1_fragment},
-    {fbl::count_of(sdio_fn2_fragment), sdio_fn2_fragment},
-    {fbl::count_of(oob_gpio_fragment), oob_gpio_fragment},
-    {fbl::count_of(debug_gpio_fragment), debug_gpio_fragment},
+    {std::size(sdio_fn1_fragment), sdio_fn1_fragment},
+    {std::size(sdio_fn2_fragment), sdio_fn2_fragment},
+    {std::size(oob_gpio_fragment), oob_gpio_fragment},
+    {std::size(debug_gpio_fragment), debug_gpio_fragment},
 };
 
 // Composite binding rules for SDIO.
@@ -142,11 +142,11 @@ static const zx_bind_inst_t wifi_pwren_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_WIFI_PWREN),
 };
 static const device_fragment_part_t wifi_pwren_gpio_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(wifi_pwren_gpio_match), wifi_pwren_gpio_match},
+    {std::size(root_match), root_match},
+    {std::size(wifi_pwren_gpio_match), wifi_pwren_gpio_match},
 };
 static const device_fragment_t sdio_fragments[] = {
-    {fbl::count_of(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
+    {std::size(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
 };
 
 zx_status_t Vim::SdioInit() {
@@ -160,7 +160,7 @@ zx_status_t Vim::SdioInit() {
   gpio_impl_.SetAltFunction(S912_WIFI_SDIO_CMD, S912_WIFI_SDIO_CMD_FN);
   gpio_impl_.SetAltFunction(S912_WIFI_SDIO_WAKE_HOST, S912_WIFI_SDIO_WAKE_HOST_FN);
 
-  status = pbus_.CompositeDeviceAdd(&aml_sd_emmc_dev, sdio_fragments, fbl::count_of(sdio_fragments),
+  status = pbus_.CompositeDeviceAdd(&aml_sd_emmc_dev, sdio_fragments, std::size(sdio_fragments),
                                     UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "SdioInit could not add aml_sd_emmc_dev: %d", status);

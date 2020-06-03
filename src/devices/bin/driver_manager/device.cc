@@ -548,7 +548,7 @@ void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* w
     uint8_t msg_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t msize = sizeof(msg_bytes);
-    uint32_t hcount = fbl::count_of(handles);
+    uint32_t hcount = std::size(handles);
 
     zx_status_t r = test_output_.read(0, &msg_bytes, handles, msize, hcount, &msize, &hcount);
     if (r == ZX_ERR_PEER_CLOSED) {
@@ -588,7 +588,7 @@ zx_status_t Device::HandleRead() {
   uint8_t msg[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t msize = sizeof(msg);
-  uint32_t hcount = fbl::count_of(hin);
+  uint32_t hcount = std::size(hin);
 
   if (state_ == Device::State::kDead) {
     LOGF(ERROR, "Attempted to RPC dead device %p '%s'", this, name_.data());

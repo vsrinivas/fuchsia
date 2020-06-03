@@ -108,7 +108,7 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
   env.push_back(nullptr);
 
   fbl::Vector<fdio_spawn_action_t> actions;
-  actions.reserve(3 + fbl::count_of(FSTAB) + hcount);
+  actions.reserve(3 + std::size(FSTAB) + hcount);
 
   actions.push_back((fdio_spawn_action_t){
       .action = FDIO_SPAWN_ACTION_SET_NAME,
@@ -125,7 +125,7 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
   }
 
   // create namespace based on FS_* flags
-  for (unsigned n = 0; n < fbl::count_of(FSTAB); n++) {
+  for (unsigned n = 0; n < std::size(FSTAB); n++) {
     if (!(FSTAB[n].flags & flags)) {
       continue;
     }
@@ -227,7 +227,7 @@ ArgumentVector ArgumentVector::FromCmdline(const char* cmdline) {
   size_t argc = 0;
   char* token;
   char* rest = argv.raw_bytes_.get();
-  while (argc < fbl::count_of(argv.argv_) && (token = strtok_r(rest, "+", &rest))) {
+  while (argc < std::size(argv.argv_) && (token = strtok_r(rest, "+", &rest))) {
     argv.argv_[argc++] = token;
   }
   argv.argv_[argc] = nullptr;

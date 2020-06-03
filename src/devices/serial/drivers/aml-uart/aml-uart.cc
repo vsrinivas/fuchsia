@@ -43,7 +43,7 @@ zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
 
   zx_device_t* fragments[1];
   size_t fragment_count;
-  composite.GetFragments(fragments, fbl::count_of(fragments), &fragment_count);
+  composite.GetFragments(fragments, std::size(fragments), &fragment_count);
   // Only pdev fragment is required.
   if (fragment_count < 1) {
     zxlogf(ERROR, "AmlUart: Could not get fragments");
@@ -97,7 +97,7 @@ zx_status_t AmlUart::Init() {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_SERIAL_IMPL_ASYNC},
       {BIND_SERIAL_CLASS, 0, serial_port_info_.serial_class},
   };
-  auto status = DdkAdd("aml-uart", 0, props, fbl::count_of(props));
+  auto status = DdkAdd("aml-uart", 0, props, std::size(props));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DdkDeviceAdd failed", __func__);
     return status;

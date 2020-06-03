@@ -94,11 +94,11 @@ zx_status_t Vs680Evk::I2cInit() {
   i2c_dev.pid = PDEV_PID_GENERIC;
   i2c_dev.did = PDEV_DID_DW_I2C;
   i2c_dev.mmio_list = i2c_mmios;
-  i2c_dev.mmio_count = fbl::count_of(i2c_mmios);
+  i2c_dev.mmio_count = std::size(i2c_mmios);
   i2c_dev.irq_list = i2c_irqs;
-  i2c_dev.irq_count = fbl::count_of(i2c_irqs);
+  i2c_dev.irq_count = std::size(i2c_irqs);
   i2c_dev.metadata_list = i2c_metadata;
-  i2c_dev.metadata_count = fbl::count_of(i2c_metadata);
+  i2c_dev.metadata_count = std::size(i2c_metadata);
 
   if ((status = pbus_.DeviceAdd(&i2c_dev)) != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);

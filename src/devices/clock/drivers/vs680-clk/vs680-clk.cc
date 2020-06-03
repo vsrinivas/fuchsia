@@ -51,7 +51,7 @@ zx_status_t Vs680Clk::Create(void* ctx, zx_device_t* parent) {
 
 zx_status_t Vs680Clk::ClockImplEnable(uint32_t id) {
   fbl::AutoLock lock(&lock_);
-  if (id >= fbl::count_of(clocks_) || !clocks_[id]) {
+  if (id >= std::size(clocks_) || !clocks_[id]) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   return clocks_[id]->Enable();
@@ -59,7 +59,7 @@ zx_status_t Vs680Clk::ClockImplEnable(uint32_t id) {
 
 zx_status_t Vs680Clk::ClockImplDisable(uint32_t id) {
   fbl::AutoLock lock(&lock_);
-  if (id >= fbl::count_of(clocks_) || !clocks_[id]) {
+  if (id >= std::size(clocks_) || !clocks_[id]) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   return clocks_[id]->Disable();
@@ -67,7 +67,7 @@ zx_status_t Vs680Clk::ClockImplDisable(uint32_t id) {
 
 zx_status_t Vs680Clk::ClockImplIsEnabled(uint32_t id, bool* out_enabled) {
   fbl::AutoLock lock(&lock_);
-  if (id >= fbl::count_of(clocks_) || !clocks_[id]) {
+  if (id >= std::size(clocks_) || !clocks_[id]) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   return clocks_[id]->IsEnabled(out_enabled);
@@ -75,7 +75,7 @@ zx_status_t Vs680Clk::ClockImplIsEnabled(uint32_t id, bool* out_enabled) {
 
 zx_status_t Vs680Clk::ClockImplSetRate(uint32_t id, uint64_t hz) {
   fbl::AutoLock lock(&lock_);
-  if (id >= fbl::count_of(clocks_) || !clocks_[id]) {
+  if (id >= std::size(clocks_) || !clocks_[id]) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -89,7 +89,7 @@ zx_status_t Vs680Clk::ClockImplSetRate(uint32_t id, uint64_t hz) {
 
 zx_status_t Vs680Clk::ClockImplQuerySupportedRate(uint32_t id, uint64_t hz, uint64_t* out_hz) {
   fbl::AutoLock lock(&lock_);
-  if (id >= fbl::count_of(clocks_) || !clocks_[id]) {
+  if (id >= std::size(clocks_) || !clocks_[id]) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -103,7 +103,7 @@ zx_status_t Vs680Clk::ClockImplQuerySupportedRate(uint32_t id, uint64_t hz, uint
 
 zx_status_t Vs680Clk::ClockImplGetRate(uint32_t id, uint64_t* out_hz) {
   fbl::AutoLock lock(&lock_);
-  if (id >= fbl::count_of(clocks_) || !clocks_[id]) {
+  if (id >= std::size(clocks_) || !clocks_[id]) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -116,7 +116,7 @@ zx_status_t Vs680Clk::ClockImplGetRate(uint32_t id, uint64_t* out_hz) {
 
 zx_status_t Vs680Clk::ClockImplSetInput(uint32_t id, uint32_t idx) {
   fbl::AutoLock lock(&lock_);
-  if (id >= fbl::count_of(clocks_) || !clocks_[id]) {
+  if (id >= std::size(clocks_) || !clocks_[id]) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   return clocks_[id]->SetInput(idx);
@@ -124,7 +124,7 @@ zx_status_t Vs680Clk::ClockImplSetInput(uint32_t id, uint32_t idx) {
 
 zx_status_t Vs680Clk::ClockImplGetNumInputs(uint32_t id, uint32_t* out_n) {
   fbl::AutoLock lock(&lock_);
-  if (id >= fbl::count_of(clocks_) || !clocks_[id]) {
+  if (id >= std::size(clocks_) || !clocks_[id]) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   return clocks_[id]->GetNumInputs(out_n);
@@ -132,7 +132,7 @@ zx_status_t Vs680Clk::ClockImplGetNumInputs(uint32_t id, uint32_t* out_n) {
 
 zx_status_t Vs680Clk::ClockImplGetInput(uint32_t id, uint32_t* out_index) {
   fbl::AutoLock lock(&lock_);
-  if (id >= fbl::count_of(clocks_) || !clocks_[id]) {
+  if (id >= std::size(clocks_) || !clocks_[id]) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   return clocks_[id]->GetInput(out_index);
@@ -180,4 +180,4 @@ ZIRCON_DRIVER_BEGIN(vs680_clk, vs680_clk_driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VS680_CLOCK),
 ZIRCON_DRIVER_END(vs680_clk)
-// clang-format on
+    // clang-format on

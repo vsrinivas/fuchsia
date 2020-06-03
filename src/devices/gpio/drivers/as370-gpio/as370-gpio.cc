@@ -277,7 +277,7 @@ zx_status_t As370Gpio::GpioImplConfigIn(uint32_t index, uint32_t flags) {
   if ((flags & GPIO_PULL_MASK) != GPIO_NO_PULL) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (index >= fbl::count_of(pinmux_metadata_.pinmux_map)) {
+  if (index >= std::size(pinmux_metadata_.pinmux_map)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (pinmux_metadata_.pinmux_map[index].type != synaptics::PinmuxEntry::kGpio) {
@@ -297,7 +297,7 @@ zx_status_t As370Gpio::GpioImplConfigIn(uint32_t index, uint32_t flags) {
 }
 
 zx_status_t As370Gpio::GpioImplConfigOut(uint32_t index, uint8_t initial_value) {
-  if (index >= fbl::count_of(pinmux_metadata_.pinmux_map)) {
+  if (index >= std::size(pinmux_metadata_.pinmux_map)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (pinmux_metadata_.pinmux_map[index].type != synaptics::PinmuxEntry::kGpio) {
@@ -319,8 +319,7 @@ zx_status_t As370Gpio::GpioImplConfigOut(uint32_t index, uint8_t initial_value) 
 }
 
 zx_status_t As370Gpio::GpioImplSetAltFunction(uint32_t index, uint64_t function) {
-  if (index >= fbl::count_of(pinmux_metadata_.pinmux_map) ||
-      function >= (1 << kPinmuxFunctionWidth)) {
+  if (index >= std::size(pinmux_metadata_.pinmux_map) || function >= (1 << kPinmuxFunctionWidth)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -347,7 +346,7 @@ zx_status_t As370Gpio::GpioImplSetDriveStrength(uint32_t index, uint8_t m_a) {
 }
 
 zx_status_t As370Gpio::GpioImplRead(uint32_t index, uint8_t* out_value) {
-  if (index >= fbl::count_of(pinmux_metadata_.pinmux_map)) {
+  if (index >= std::size(pinmux_metadata_.pinmux_map)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (pinmux_metadata_.pinmux_map[index].type != synaptics::PinmuxEntry::kGpio) {
@@ -367,7 +366,7 @@ zx_status_t As370Gpio::GpioImplRead(uint32_t index, uint8_t* out_value) {
 }
 
 zx_status_t As370Gpio::GpioImplWrite(uint32_t index, uint8_t value) {
-  if (index >= fbl::count_of(pinmux_metadata_.pinmux_map)) {
+  if (index >= std::size(pinmux_metadata_.pinmux_map)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (pinmux_metadata_.pinmux_map[index].type != synaptics::PinmuxEntry::kGpio) {
@@ -388,7 +387,7 @@ zx_status_t As370Gpio::GpioImplWrite(uint32_t index, uint8_t value) {
 
 zx_status_t As370Gpio::GpioImplGetInterrupt(uint32_t index, uint32_t flags,
                                             zx::interrupt* out_irq) {
-  if (index >= fbl::count_of(pinmux_metadata_.pinmux_map)) {
+  if (index >= std::size(pinmux_metadata_.pinmux_map)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (pinmux_metadata_.pinmux_map[index].type != synaptics::PinmuxEntry::kGpio) {
@@ -452,7 +451,7 @@ zx_status_t As370Gpio::GpioImplGetInterrupt(uint32_t index, uint32_t flags,
 }
 
 zx_status_t As370Gpio::GpioImplReleaseInterrupt(uint32_t index) {
-  if (index >= fbl::count_of(pinmux_metadata_.pinmux_map)) {
+  if (index >= std::size(pinmux_metadata_.pinmux_map)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (pinmux_metadata_.pinmux_map[index].type != synaptics::PinmuxEntry::kGpio) {
@@ -481,7 +480,7 @@ zx_status_t As370Gpio::GpioImplReleaseInterrupt(uint32_t index) {
 }
 
 zx_status_t As370Gpio::GpioImplSetPolarity(uint32_t index, gpio_polarity_t polarity) {
-  if (index >= fbl::count_of(pinmux_metadata_.pinmux_map)) {
+  if (index >= std::size(pinmux_metadata_.pinmux_map)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (pinmux_metadata_.pinmux_map[index].type != synaptics::PinmuxEntry::kGpio) {

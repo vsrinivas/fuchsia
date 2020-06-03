@@ -97,10 +97,10 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
   coordinator_loop()->RunUntilIdle();
   ASSERT_EQ(platform_bus()->state(), Device::State::kActive);
 
-  size_t num_to_resume = fbl::count_of(devices);
+  size_t num_to_resume = std::size(devices);
   while (num_to_resume > 0) {
     bool made_progress = false;
-    for (size_t i = 0; i < fbl::count_of(devices); ++i) {
+    for (size_t i = 0; i < std::size(devices); ++i) {
       auto& desc = devices[i];
       if (desc.resumed) {
         continue;

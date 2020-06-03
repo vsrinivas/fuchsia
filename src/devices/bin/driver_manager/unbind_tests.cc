@@ -44,7 +44,7 @@ TEST_F(UnbindTestCase, UnbindLeaf) {
   };
   // Only remove root_child2_1.
   size_t index_to_remove = 5;
-  ASSERT_NO_FATAL_FAILURES(UnbindTest(devices, fbl::count_of(devices), index_to_remove));
+  ASSERT_NO_FATAL_FAILURES(UnbindTest(devices, std::size(devices), index_to_remove));
 }
 
 TEST_F(UnbindTestCase, UnbindMultipleChildren) {
@@ -55,7 +55,7 @@ TEST_F(UnbindTestCase, UnbindMultipleChildren) {
   };
   // Remove root_child1 and all its children.
   size_t index_to_remove = 0;
-  ASSERT_NO_FATAL_FAILURES(UnbindTest(devices, fbl::count_of(devices), index_to_remove));
+  ASSERT_NO_FATAL_FAILURES(UnbindTest(devices, std::size(devices), index_to_remove));
 }
 
 // This tests the removal of a child device in unbind. e.g.
@@ -80,7 +80,7 @@ TEST_F(UnbindTestCase, UnbindWithRemoveOp) {
         coordinator_.ScheduleDriverHostRequestedRemove(device(devices[2].index)->device));
   };
   devices[1].unbind_op = unbind_op;
-  ASSERT_NO_FATAL_FAILURES(UnbindTest(devices, fbl::count_of(devices), index_to_remove));
+  ASSERT_NO_FATAL_FAILURES(UnbindTest(devices, std::size(devices), index_to_remove));
 }
 
 TEST_F(UnbindTestCase, UnbindChildrenOnly) {
@@ -94,7 +94,7 @@ TEST_F(UnbindTestCase, UnbindChildrenOnly) {
   };
   // Remove the children of root_child1.
   size_t target_device_index = 0;
-  ASSERT_NO_FATAL_FAILURES(UnbindTest(devices, fbl::count_of(devices), target_device_index,
+  ASSERT_NO_FATAL_FAILURES(UnbindTest(devices, std::size(devices), target_device_index,
                                       true /* unbind_children_only */));
 }
 
@@ -109,7 +109,7 @@ TEST_F(UnbindTestCase, UnbindSelf) {
   };
   // Unbind root_child1.
   size_t index_to_remove = 0;
-  ASSERT_NO_FATAL_FAILURES(UnbindTest(devices, fbl::count_of(devices), index_to_remove,
+  ASSERT_NO_FATAL_FAILURES(UnbindTest(devices, std::size(devices), index_to_remove,
                                       false /* unbind_children_only */,
                                       true /* unbind_target_device */));
 }

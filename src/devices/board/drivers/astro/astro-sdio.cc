@@ -190,12 +190,12 @@ static const device_fragment_part_t wifi_pwren_gpio_fragment[] = {
     {countof(wifi_pwren_gpio_match), wifi_pwren_gpio_match},
 };
 constexpr device_fragment_part_t pwm_e_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(pwm_e_match), pwm_e_match},
+    {std::size(root_match), root_match},
+    {std::size(pwm_e_match), pwm_e_match},
 };
 static const device_fragment_t sdio_fragments[] = {
     {countof(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
-    {fbl::count_of(pwm_e_fragment), pwm_e_fragment},
+    {std::size(pwm_e_fragment), pwm_e_fragment},
 };
 
 zx_status_t Astro::SdEmmcConfigurePortB() {

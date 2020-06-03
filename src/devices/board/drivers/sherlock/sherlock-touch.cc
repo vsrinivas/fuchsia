@@ -50,21 +50,21 @@ static constexpr zx_bind_inst_t gpio_reset_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_TOUCH_RESET),
 };
 static constexpr device_fragment_part_t ft_i2c_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(ft_i2c_match), ft_i2c_match},
+    {std::size(root_match), root_match},
+    {std::size(ft_i2c_match), ft_i2c_match},
 };
 static constexpr device_fragment_part_t gpio_int_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(gpio_int_match), gpio_int_match},
+    {std::size(root_match), root_match},
+    {std::size(gpio_int_match), gpio_int_match},
 };
 static constexpr device_fragment_part_t gpio_reset_fragment[] = {
-    {fbl::count_of(root_match), root_match},
-    {fbl::count_of(gpio_reset_match), gpio_reset_match},
+    {std::size(root_match), root_match},
+    {std::size(gpio_reset_match), gpio_reset_match},
 };
 static constexpr device_fragment_t ft_fragments[] = {
-    {fbl::count_of(ft_i2c_fragment), ft_i2c_fragment},
-    {fbl::count_of(gpio_int_fragment), gpio_int_fragment},
-    {fbl::count_of(gpio_reset_fragment), gpio_reset_fragment},
+    {std::size(ft_i2c_fragment), ft_i2c_fragment},
+    {std::size(gpio_int_fragment), gpio_int_fragment},
+    {std::size(gpio_reset_fragment), gpio_reset_fragment},
 };
 
 static const composite_device_desc_t ft_comp_desc = {
@@ -74,7 +74,7 @@ static const composite_device_desc_t ft_comp_desc = {
     .fragments_count = countof(ft_fragments),
     .coresident_device_index = UINT32_MAX,
     .metadata_list = ft5726_touch_metadata,
-    .metadata_count = fbl::count_of(ft5726_touch_metadata),
+    .metadata_count = std::size(ft5726_touch_metadata),
 };
 
 zx_status_t Sherlock::TouchInit() {
