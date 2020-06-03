@@ -58,6 +58,18 @@ impl VolumeChangeHandler {
         let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
         monitor_media_buttons(params.service_context.clone(), input_tx).await?;
 
+        // Get initial user media volume level.
+        let mut last_media_user_volume = None;
+        if let Ok(Ok(Some(SettingResponse::Audio(info)))) =
+            client.request(SettingType::Audio, SettingRequest::Get).await?.await
+        {
+            last_media_user_volume = info
+                .streams
+                .iter()
+                .find(|&&x| x.stream_type == AudioStreamType::Media)
+                .map(|stream| stream.user_volume_level);
+        }
+
         // Listen to audio change events.
         let (audio_tx, mut audio_rx) = futures::channel::mpsc::unbounded::<SettingType>();
         let session = client
@@ -85,7 +97,7 @@ impl VolumeChangeHandler {
             let mut handler = Self {
                 _listen_session: session,
                 common_earcons_params: params,
-                last_media_user_volume: Some(MAX_VOLUME),
+                last_media_user_volume,
                 volume_button_event: 0,
                 priority_stream_playing: false,
                 modified_timestamps: create_default_modified_timestamps(),
