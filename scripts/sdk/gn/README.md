@@ -84,6 +84,8 @@ together.
 
 #### Bash scripts test
 
+Make sure the tests are part of your build by adding `--with //scripts/sdk/gn:tests` to your `fx set` command.
+
 To test the bash scripts, run `fx test gn_sdk_script_tests`
 
 
