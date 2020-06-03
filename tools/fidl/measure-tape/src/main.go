@@ -162,6 +162,7 @@ func verifyMeasureTape(expectedH, expectedCc []byte) {
 		fmt.Fprintf(os.Stderr, "\n\n")
 		os.Exit(1)
 	}
+	writeFile(*onlyCheckToFile, []byte{})
 }
 
 func rustGen(m *measurer.Measurer, targetMt *measurer.MeasuringTape,
