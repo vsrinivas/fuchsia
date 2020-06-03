@@ -82,6 +82,7 @@ class InspectSessionTest : public modular_testing::TestHarnessFixture {
 
     return fit::ok(std::move(result.value()[0]));
   }
+
   fuchsia::modular::Intent CreateIntent(std::string handler) {
     fuchsia::modular::Intent intent;
     intent.handler = handler;
@@ -238,12 +239,12 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   RunLoopUntil([&] { return story_deleted; });
 
   // Check that a node is removed from the hierarchy when a story is removed.
-  // TODO(fxb/48109): This test must check that root/my_story is missing, but it is actually
-  // present. Update this test when the underlying bug is fixed.
   data_result = GetInspectDiagnosticsData();
   ASSERT_TRUE(data_result.is_ok());
   data = data_result.take_value();
   EXPECT_NE(rapidjson::Value(), data.GetByPath({"root"}));
+  EXPECT_EQ(rapidjson::Value(),
+            data.GetByPath({"root", kStoryId, modular_config::kInspectIsDeleted}));
 }
 
 TEST_F(InspectSessionTest, CheckNodeHierarchyMods) {
