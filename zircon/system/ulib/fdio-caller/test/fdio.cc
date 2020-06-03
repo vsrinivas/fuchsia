@@ -13,15 +13,13 @@
 #include <lib/fdio/fd.h>
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include <utility>
 
 namespace {
 
-bool TryFilesystemOperations(const fdio_cpp::FdioCaller& caller) {
-  BEGIN_HELPER;
-
+void TryFilesystemOperations(const fdio_cpp::FdioCaller& caller) {
   const char* golden = "foobar";
   zx_status_t status;
   uint64_t actual;
@@ -39,8 +37,6 @@ bool TryFilesystemOperations(const fdio_cpp::FdioCaller& caller) {
   ASSERT_EQ(status, ZX_OK);
   ASSERT_EQ(actual, strlen(golden));
   ASSERT_EQ(memcmp(buf, golden, strlen(golden)), 0);
-
-  END_HELPER;
 }
 
 class Harness {
@@ -55,8 +51,7 @@ class Harness {
     }
   }
 
-  bool Setup() {
-    BEGIN_HELPER;
+  void Setup() {
     ASSERT_EQ(loop_.StartThread(), ZX_OK);
     zx_handle_t root;
     ASSERT_EQ(memfs_create_filesystem(loop_.dispatcher(), &memfs_, &root), ZX_OK);
@@ -66,8 +61,6 @@ class Harness {
     ASSERT_TRUE(dir);
     fd_.reset(openat(dir.get(), "my-file", O_CREAT | O_RDWR));
     ASSERT_TRUE(fd_);
-
-    END_HELPER;
   }
 
   fbl::unique_fd fd() { return std::move(fd_); }
@@ -78,61 +71,43 @@ class Harness {
   fbl::unique_fd fd_;
 };
 
-bool FdioCallerFile() {
-  BEGIN_TEST;
-
+TEST(FdioCallTests, FdioCallerFile) {
   Harness harness;
-  ASSERT_TRUE(harness.Setup());
+  ASSERT_NO_FATAL_FAILURES(harness.Setup());
   auto fd = harness.fd();
 
   // Try some filesystem operations.
   fdio_cpp::FdioCaller caller(std::move(fd));
   ASSERT_TRUE(caller);
-  ASSERT_TRUE(TryFilesystemOperations(caller));
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(caller));
 
   // Re-acquire the underlying fd.
   fd = caller.release();
   ASSERT_EQ(close(fd.release()), 0);
-
-  END_TEST;
 }
 
-bool FdioCallerMoveAssignment() {
-  BEGIN_TEST;
-
+TEST(FdioCallTests, FdioCallerMoveAssignment) {
   Harness harness;
-  ASSERT_TRUE(harness.Setup());
+  ASSERT_NO_FATAL_FAILURES(harness.Setup());
   auto fd = harness.fd();
 
   fdio_cpp::FdioCaller caller(std::move(fd));
   fdio_cpp::FdioCaller move_assignment_caller = std::move(caller);
   ASSERT_TRUE(move_assignment_caller);
   ASSERT_FALSE(caller);
-  ASSERT_TRUE(TryFilesystemOperations(move_assignment_caller));
-
-  END_TEST;
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(move_assignment_caller));
 }
 
-bool FdioCallerMoveConstructor() {
-  BEGIN_TEST;
-
+TEST(FdioCallTests, FdioCallerMoveConstructor) {
   Harness harness;
-  ASSERT_TRUE(harness.Setup());
+  ASSERT_NO_FATAL_FAILURES(harness.Setup());
   auto fd = harness.fd();
 
   fdio_cpp::FdioCaller caller(std::move(fd));
   fdio_cpp::FdioCaller move_ctor_caller(std::move(caller));
   ASSERT_TRUE(move_ctor_caller);
   ASSERT_FALSE(caller);
-  ASSERT_TRUE(TryFilesystemOperations(move_ctor_caller));
-
-  END_TEST;
+  ASSERT_NO_FATAL_FAILURES(TryFilesystemOperations(move_ctor_caller));
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(FdioCallTests)
-RUN_TEST(FdioCallerFile)
-RUN_TEST(FdioCallerMoveAssignment)
-RUN_TEST(FdioCallerMoveConstructor)
-END_TEST_CASE(FdioCallTests)
