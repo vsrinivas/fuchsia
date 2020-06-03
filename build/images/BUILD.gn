@@ -376,20 +376,6 @@ compiled_action("blob.blk") {
 }
 default_image_deps += [ ":blob.blk" ]
 
-action("elf_sizes.json") {
-  testonly = true
-  script = "elfinfo.py"
-  deps = [ ":blob.blk" ]
-  sources = [ blob_size_list ]
-  outputs = [ "$root_build_dir/$target_name" ]
-  args = [
-    "--sizes",
-    rebase_path(outputs[0], root_build_dir),
-    "--blobs",
-    rebase_path(sources[0], root_build_dir),
-  ]
-}
-
 # The prime images are used to have an alternate known-compatible OTA
 # target for integration testing.
 pm_build("system_image_prime.meta") {
@@ -661,6 +647,56 @@ if (!use_vboot && custom_signing_script == "") {
       target = "zbi"
       deps = [ ":fuchsia" ]
     },
+  ]
+}
+
+# ZBI tool JSON output doesn't record paths of input files so there's no easy
+# way to find out where each of the binaries in bootfs entry came from. Rather,
+# we extract the ZBI and then pass this directory as an input to the elfinfo.py
+# script which computes the ELF sizes.
+#
+# TODO(phosek): Try to come up with a more efficient solution that does not
+# require extract the ZBI.
+
+fuchsia_zbi_json = "$root_out_dir/fuchsia.zbi.json"
+fuchsia_zbi_bootfs_dir = "$target_out_dir/fuchsia.zbi/bootfs"
+
+zircon_tool_action("extract_bootfs") {
+  visibility = [ ":elf_sizes.json" ]
+  testonly = true
+  tool = "zbi"
+  inputs = [ "$root_out_dir/fuchsia.zbi" ]
+  outputs = [ fuchsia_zbi_json ]
+  deps = [ ":fuchsia" ]
+  args = [
+    "--extract",
+    "--output-dir=" + rebase_path(fuchsia_zbi_bootfs_dir, root_build_dir),
+    "--json-output=" + rebase_path(fuchsia_zbi_json, root_build_dir),
+    rebase_path(inputs[0], root_out_dir),
+  ]
+}
+
+action("elf_sizes.json") {
+  testonly = true
+  script = "elfinfo.py"
+  deps = [
+    ":blob.blk",
+    ":extract_bootfs",
+  ]
+  sources = [
+    blob_size_list,
+    fuchsia_zbi_json,
+  ]
+  outputs = [ "$root_build_dir/$target_name" ]
+  args = [
+    "--sizes",
+    rebase_path(outputs[0], root_build_dir),
+    "--blobs",
+    rebase_path(blob_size_list, root_build_dir),
+    "--zbi",
+    rebase_path(fuchsia_zbi_json, root_build_dir),
+    "--bootfs-dir",
+    rebase_path(fuchsia_zbi_bootfs_dir, root_build_dir),
   ]
 }
 

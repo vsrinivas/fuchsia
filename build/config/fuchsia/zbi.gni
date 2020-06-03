@@ -53,6 +53,9 @@ declare_args() {
 #   ramdisk_inputs (optional)
 #       [list of files] Input files treated as raw RAM disk images.
 #
+#   json_output (optional)
+#       [file] path to JSON output file describing the ZBI content.
+#
 #   deps (usually required)
 #   visibility (optional)
 #   testonly (optional)
@@ -161,6 +164,12 @@ template("zbi") {
         args += rebase_path(invoker.cmdline_inputs, root_build_dir)
         inputs += invoker.cmdline_inputs
       }
+    }
+
+    if (defined(invoker.json_output)) {
+      args += [ "--json-output=" +
+                rebase_path(invoker.json_output, root_build_dir) ]
+      outputs += [ invoker.json_output ]
     }
   }
 }

@@ -5,6 +5,7 @@
 zx_host_tool("zbi") {
   sources = [ "zbi.cc" ]
   deps = [
+    "$zx/../third_party/rapidjson",
     "$zx/system/ulib/fbl",
     "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/lz4",

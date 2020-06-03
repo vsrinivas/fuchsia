@@ -44,11 +44,18 @@
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
 #include <lz4/lz4frame.h>
+#include <rapidjson/document.h>
+#include <rapidjson/filewritestream.h>
+#include <rapidjson/prettywriter.h>
 #include <zstd/zstd.h>
 
 namespace {
 
 const char* const kCmdlineWS = " \t\r\n";
+
+// The size of the buffer that's used for reading/writing JSON in streaming mode.
+// The optimal size is application specific, we use a reasonable default.
+constexpr size_t kJsonBufferSize = 4096;
 
 bool Aligned(uint32_t length) { return length % ZBI_ALIGNMENT == 0; }
 
@@ -1307,6 +1314,8 @@ class Item final {
 
   static const char* TypeName(uint32_t zbi_type) { return ItemTypeInfo(zbi_type).name; }
 
+  static const char* TypeExtension(uint32_t zbi_type) { return ItemTypeInfo(zbi_type).extension; }
+
   static bool ParseTypeName(const char* name, uint32_t* abi_type) {
     for (const auto& t : kItemTypes_) {
       if (!strcasecmp(t.name, name)) {
@@ -1361,37 +1370,31 @@ Extracted items use the file names shown below:\n\
 
   uint32_t TotalSize() const { return sizeof(header_) + ZBI_ALIGN(PayloadSize()); }
 
+  zbi_header_t CheckHeader() const {
+    Checksummer crc;
+    crc.Write(payload_);
+    zbi_header_t check_header = header_;
+    crc.FinalizeHeader(&check_header);
+    if (!compress_ && check_header.crc32 != header_.crc32) {
+      fprintf(stderr, "error: CRC %08x does not match header\n", check_header.crc32);
+    }
+    return check_header;
+  }
+
   void Describe(uint32_t pos) const {
+    zbi_header_t header = CheckHeader();
     const char* type_name = TypeName(type());
     if (!type_name) {
-      printf("%08x: %08x UNKNOWN (type=%08x)\n", pos, header_.length, header_.type);
+      printf("%08x: %08x UNKNOWN (type=%08x)\n", pos, header.length, header.type);
     } else if (TypeIsStorage(type())) {
-      printf("%08x: %08x %s (size=%08x)\n", pos, header_.length, type_name, header_.extra);
+      printf("%08x: %08x %s (size=%08x)\n", pos, header.length, type_name, header.extra);
     } else {
-      printf("%08x: %08x %s\n", pos, header_.length, type_name);
+      printf("%08x: %08x %s\n", pos, header.length, type_name);
     }
-    if (header_.flags & ZBI_FLAG_CRC32) {
-      auto print_crc = [](const zbi_header_t& header) {
-        printf("        :          MAGIC=%08x CRC=%08x\n", header.magic, header.crc32);
-      };
-
-      Checksummer crc;
-      crc.Write(payload_);
-      zbi_header_t check_header = header_;
-      crc.FinalizeHeader(&check_header);
-
-      if (compress_) {
-        // We won't compute it until StreamCompressed, so
-        // write out the computation we just did to check.
-        print_crc(check_header);
-      } else {
-        print_crc(header_);
-        if (check_header.crc32 != header_.crc32) {
-          fprintf(stderr, "error: CRC %08x does not match header\n", check_header.crc32);
-        }
-      }
+    if (header.flags & ZBI_FLAG_CRC32) {
+      printf("        :          MAGIC=%08x CRC=%08x\n", header.magic, header.crc32);
     } else {
-      printf("        :          MAGIC=%08x NO CRC\n", header_.magic);
+      printf("        :          MAGIC=%08x NO CRC\n", header.magic);
     }
   }
 
@@ -1412,6 +1415,65 @@ Extracted items use the file names shown below:\n\
       }
     }
     return 0;
+  }
+
+  void EmitJsonContents(rapidjson::PrettyWriter<rapidjson::FileWriteStream>& writer) {
+    if (AlreadyCompressed()) {
+      CreateFromCompressed(*this)->EmitJsonContents(writer);
+    } else {
+      if (header_.type == ZBI_TYPE_STORAGE_BOOTFS) {
+        writer.Key("contents");
+        EmitJsonBootFS(writer);
+      } else if (!strcmp(TypeExtension(header_.type), ".txt")) {
+        writer.Key("contents");
+        EmitJsonCmdline(writer);
+      }
+    }
+  }
+
+  void EmitJson(rapidjson::PrettyWriter<rapidjson::FileWriteStream>& writer) {
+    writer.StartObject();
+    zbi_header_t header = CheckHeader();
+    const char* type_name = TypeName(type());
+    writer.Key("type");
+    if (!type_name) {
+      writer.Uint(type());
+    } else {
+      writer.String(type_name);
+    }
+    writer.Key("size");
+    writer.Uint(header.length);
+    if (TypeIsStorage(type()) && AlreadyCompressed()) {
+      writer.Key("uncompressed_size");
+      writer.Uint(header.extra);
+    } else if (header.extra) {
+      writer.Key("extra");
+      writer.Uint(header.extra);
+    }
+    uint32_t expected_flags = ZBI_FLAG_CRC32;
+    if (TypeIsStorage(type())) {
+      expected_flags |= ZBI_FLAG_STORAGE_COMPRESSED;
+    }
+    if (!(header.flags & ZBI_FLAG_VERSION) || (header.flags & ~expected_flags) != 0) {
+      writer.Key("flags");
+      writer.Uint(header.flags);
+    }
+    if (header.reserved0) {
+      writer.Key("reserved0");
+      writer.Uint(header.reserved0);
+    }
+    if (header.reserved1) {
+      writer.Key("reserved1");
+      writer.Uint(header.reserved1);
+    }
+    if (header.flags & ZBI_FLAG_CRC32) {
+      writer.Key("crc32");
+      writer.Uint(header.crc32);
+    }
+    if (header.length > 0) {
+      EmitJsonContents(writer);
+    }
+    writer.EndObject();
   }
 
   // Streaming exhausts the item's payload.  The OutputStream will now
@@ -1802,11 +1864,15 @@ Extracted items use the file names shown below:\n\
     return compressor.Finish(out);
   }
 
-  int ShowCmdline() const {
-    std::string cmdline = std::accumulate(
+  std::string Cmdline() const {
+    return std::accumulate(
         payload_.begin(), payload_.end(), std::string(), [](std::string cmdline, const iovec& iov) {
           return cmdline.append(static_cast<const char*>(iov.iov_base), iov.iov_len);
         });
+  }
+
+  int ShowCmdline() const {
+    std::string cmdline = Cmdline();
     size_t start = 0;
     while (start < cmdline.size()) {
       size_t word_end = cmdline.find_first_of(kCmdlineWS, start);
@@ -1822,6 +1888,11 @@ Extracted items use the file names shown below:\n\
       start = word_end + 1;
     }
     return 0;
+  }
+
+  void EmitJsonCmdline(rapidjson::PrettyWriter<rapidjson::FileWriteStream>& writer) {
+    std::string cmdline = Cmdline();
+    writer.String(cmdline.data(), static_cast<rapidjson::SizeType>(cmdline.size()));
   }
 
   const std::byte* payload_data() {
@@ -1934,6 +2005,29 @@ Extracted items use the file names shown below:\n\
       }
     }
     return status;
+  }
+
+  void EmitJsonBootFS(rapidjson::PrettyWriter<rapidjson::FileWriteStream>& writer) {
+    BootFSDirectoryIterator dir;
+    int status = BootFSDirectoryIterator::Create(this, &dir);
+    if (status) {
+      exit(status);
+    }
+    rapidjson::Value files(rapidjson::kArrayType);
+    writer.StartArray();
+    for (const auto& entry : dir) {
+      writer.StartObject();
+      writer.Key("name");
+      writer.String(entry.name, entry.name_len - 1);
+      writer.Key("offset");
+      writer.Uint(entry.data_off);
+      writer.Key("length");
+      writer.Uint(entry.data_len);
+      writer.Key("size");
+      writer.Uint(ZBI_BOOTFS_PAGE_ALIGN(entry.data_len));
+      writer.EndObject();
+    }
+    writer.EndArray();
   }
 };
 
@@ -2214,7 +2308,7 @@ enum LongOnlyOpt : int {
   kOptRecompress = 0x100,
 };
 
-constexpr const char kOptString[] = "-B:c::C:d:D:e:FixXRhto:p:T:uv";
+constexpr const char kOptString[] = "-B:c::C:d:D:e:Fij:xXRhto:p:T:uv";
 constexpr const option kLongOpts[] = {
     {"complete", required_argument, nullptr, 'B'},
     {"compressed", optional_argument, nullptr, 'c'},
@@ -2227,6 +2321,7 @@ constexpr const option kLongOpts[] = {
     {"files", no_argument, nullptr, 'F'},
     {"help", no_argument, nullptr, 'h'},
     {"ignore-missing-files", no_argument, nullptr, 'i'},
+    {"json-output", required_argument, nullptr, 'j'},
     {"list", no_argument, nullptr, 't'},
     {"output", required_argument, nullptr, 'o'},
     {"output-dir", required_argument, nullptr, 'D'},
@@ -2255,6 +2350,7 @@ Output file switches:\n\
     --output=FILE, -o FILE         output file name\n\
     --depfile=FILE, -d FILE        makefile dependency output file name\n\
     --output-dir=DIR, -D FILE      extracted files go under DIR (default: .)\n\
+    --json-output=FILE, -j FILE    record entries to a JSON file\n\
 \n\
 The `--output` FILE is always removed and created fresh after all input\n\
 files have been opened.  So it is safe to use the same file name as an input\n\
@@ -2361,6 +2457,7 @@ int main(int argc, char** argv) {
   uint32_t complete_arch = kImageArchUndefined;
   bool input_manifest = true;
   uint32_t input_type = ZBI_TYPE_DISCARD;
+  const char* json_output = nullptr;
   Compressor::Config compressed;
   bool extract = false;
   bool extract_items = false;
@@ -2398,6 +2495,10 @@ int main(int argc, char** argv) {
 
       case 'i':
         ignore_missing_files = true;
+        continue;
+
+      case 'j':
+        json_output = optarg;
         continue;
 
       case 'F':
@@ -2636,6 +2737,24 @@ int main(int argc, char** argv) {
   // Now we're ready to start writing output!
   opener.WriteDepfile(outfile, depfile);
   FileWriter writer(outfile, std::move(outdir));
+
+  // TODO(phosek): document the JSON schema used for this output.
+  if (json_output) {
+    auto f = fopen(json_output, "w");
+    if (!f) {
+      perror(json_output);
+      exit(1);
+    }
+    char buffer[kJsonBufferSize];
+    rapidjson::FileWriteStream os(f, buffer, sizeof(buffer));
+    rapidjson::PrettyWriter<rapidjson::FileWriteStream> writer(os);
+    writer.StartArray();
+    for (auto& item : items) {
+      item->EmitJson(writer);
+    }
+    writer.EndArray();
+    fclose(f);
+  }
 
   if (list_contents || verbose || extract) {
     if (list_contents || verbose) {

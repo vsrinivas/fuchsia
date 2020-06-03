@@ -693,12 +693,27 @@ def main():
                         help='Strip each file into FILE.ei-strip')
     parser.add_argument('--build-id', action='store_true',
                         help='Print each build ID')
+    parser.add_argument('--bootfs-dir', help='bootfs content', metavar='DIR')
+    parser.add_argument('--zbi', help='Read zbi.json', metavar='FILE')
     parser.add_argument('--blobs', help='Read blobs.json', metavar='FILE')
     parser.add_argument('--sizes', help='Write elf_sizes.json', metavar='FILE')
     parser.add_argument('file', help='ELF file', metavar='FILE', nargs='*')
     args = parser.parse_args()
 
     files = args.file
+    if args.zbi:
+        if not args.bootfs_dir:
+            parser.exit('--zbi and --bootfs-dir must be specified together')
+        bootfs_map = {}
+        with open(args.zbi) as f:
+            zbi = json.load(f)
+        for entry in zbi:
+            if entry['type'] != 'BOOTFS':
+                continue
+            for item in entry['contents']:
+                filepath = os.path.join(args.bootfs_dir, item['name'])
+                files.append(filepath)
+                bootfs_map[filepath] = item
     if args.blobs:
         with open(args.blobs) as f:
             blobs = json.load(f)
@@ -711,7 +726,13 @@ def main():
             sizes = info.sizes._asdict()
             sizes['path'] = info.filename
             sizes['build_id'] = info.build_id
-            if args.blobs:
+            if args.zbi and info.filename in bootfs_map:
+                item = bootfs_map[info.filename]
+                assert info.sizes.file == item['length'], (
+                    "%r != %r in %r vs %r" % (info.sizes.file, blob['length'],
+                                              info, blob))
+                sizes['zbi'] = item['size']
+            if args.blobs and info.filename in blob_map:
                 blob = blob_map[info.filename]
                 assert info.sizes.file == blob['bytes'], (
                     "%r != %r in %r vs %r" % (info.sizes.file, blob['bytes'],
