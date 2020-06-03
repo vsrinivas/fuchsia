@@ -107,6 +107,10 @@ zx_status_t sys_pager_detach_vmo(zx_handle_t pager, zx_handle_t vmo) {
 // zx_status_t zx_pager_supply_pages
 zx_status_t sys_pager_supply_pages(zx_handle_t pager, zx_handle_t pager_vmo, uint64_t offset,
                                    uint64_t size, zx_handle_t aux_vmo_handle, uint64_t aux_offset) {
+  if (!IS_PAGE_ALIGNED(offset) || !IS_PAGE_ALIGNED(size) || !IS_PAGE_ALIGNED(aux_offset)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<PagerDispatcher> pager_dispatcher;
   zx_status_t status = up->GetDispatcher(pager, &pager_dispatcher);
@@ -131,10 +135,6 @@ zx_status_t sys_pager_supply_pages(zx_handle_t pager, zx_handle_t pager_vmo, uin
     return status;
   }
 
-  if (!IS_PAGE_ALIGNED(offset) || !IS_PAGE_ALIGNED(size) || !IS_PAGE_ALIGNED(aux_offset)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
   VmPageSpliceList pages;
   status = aux_vmo_dispatcher->vmo()->TakePages(aux_offset, size, &pages);
   if (status != ZX_OK) {
@@ -147,5 +147,26 @@ zx_status_t sys_pager_supply_pages(zx_handle_t pager, zx_handle_t pager_vmo, uin
 // zx_status_t zx_pager_op_range
 zx_status_t sys_pager_op_range(zx_handle_t pager, uint32_t op, zx_handle_t pager_vmo,
                                uint64_t offset, uint64_t length, uint64_t data) {
-  return ZX_ERR_NOT_SUPPORTED;
+  if (!IS_PAGE_ALIGNED(offset) || !IS_PAGE_ALIGNED(length)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto up = ProcessDispatcher::GetCurrent();
+  fbl::RefPtr<PagerDispatcher> pager_dispatcher;
+  zx_status_t status = up->GetDispatcher(pager, &pager_dispatcher);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  fbl::RefPtr<VmObjectDispatcher> pager_vmo_dispatcher;
+  status = up->GetDispatcher(pager_vmo, &pager_vmo_dispatcher);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (pager_vmo_dispatcher->pager_koid() != pager_dispatcher->get_koid()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return pager_dispatcher->RangeOp(op, pager_vmo_dispatcher->vmo(), offset, length, data);
 }

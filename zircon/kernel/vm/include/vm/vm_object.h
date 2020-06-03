@@ -151,15 +151,21 @@ class VmObject : public fbl::RefCountedUpgradeable<VmObject>,
 
   // Removes the pages from this vmo in the range [offset, offset + len) and returns
   // them in pages.  This vmo must be a paged vmo with no parent, and it cannot have any
-  // pinned pages in the source range.
+  // pinned pages in the source range. |offset| and |len| must be page aligned.
   virtual zx_status_t TakePages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Supplies this vmo with pages for the range [offset, offset + len). If this vmo
   // already has pages in the target range, the corresponding pages in |pages| will be
-  // freed, instead of being moved into this vmo.
+  // freed, instead of being moved into this vmo. |offset| and |len| must be page aligned.
   virtual zx_status_t SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Indicates that page requests in the range [offset, offset + len) could not be fulfilled.
+  // |error_status| specifies the error encountered. |offset| and |len| must be page aligned.
+  virtual zx_status_t FailPageRequests(uint64_t offset, uint64_t len, zx_status_t error_status) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

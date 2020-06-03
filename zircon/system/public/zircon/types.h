@@ -189,6 +189,9 @@ typedef struct zx_wait_item {
 #define ZX_VMO_OP_CACHE_CLEAN_INVALIDATE ((uint32_t)9u)
 #define ZX_VMO_OP_ZERO                   ((uint32_t)10u)
 
+// Pager opcodes
+#define ZX_PAGER_OP_FAIL                 ((uint32_t)1u)
+
 // VM Object clone flags
 #define ZX_VMO_CHILD_SNAPSHOT             ((uint32_t)1u << 0)
 #define ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE ((uint32_t)1u << 4)

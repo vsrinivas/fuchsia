@@ -113,6 +113,9 @@ class PagerDispatcher final : public SoloDispatcher<PagerDispatcher, ZX_DEFAULT_
   // |src|'s lock to prevent races with dispatcher teardown.
   fbl::RefPtr<PagerSource> ReleaseSource(PagerSource* src) TA_REQ(src->mtx_);
 
+  zx_status_t RangeOp(uint32_t op, fbl::RefPtr<VmObject> vmo, uint64_t offset, uint64_t length,
+                      uint64_t data);
+
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_PAGER; }
 
   void on_zero_handles() final;

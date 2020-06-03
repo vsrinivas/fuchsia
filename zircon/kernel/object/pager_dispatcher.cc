@@ -71,6 +71,21 @@ void PagerDispatcher::on_zero_handles() {
   }
 }
 
+zx_status_t PagerDispatcher::RangeOp(uint32_t op, fbl::RefPtr<VmObject> vmo, uint64_t offset,
+                                     uint64_t length, uint64_t data) {
+  switch (op) {
+    case ZX_PAGER_OP_FAIL: {
+      auto signed_data = static_cast<int64_t>(data);
+      if (signed_data < INT32_MIN || signed_data > INT32_MAX) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return vmo->FailPageRequests(offset, length, static_cast<zx_status_t>(data));
+    }
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+}
+
 PagerSource::PagerSource(PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> port,
                          uint64_t key)
     : PageSource(), pager_(dispatcher), port_(ktl::move(port)), key_(key) {

@@ -3205,9 +3205,12 @@ zx_status_t VmObjectPaged::WriteUser(VmAspace* current_aspace, user_in_ptr<const
 }
 
 zx_status_t VmObjectPaged::TakePages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+
   Guard<Mutex> src_guard{&lock_};
-  uint64_t end;
-  if (add_overflow(offset, len, &end) || size() < end) {
+
+  if (!InRange(offset, len, size_)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -3238,13 +3241,16 @@ zx_status_t VmObjectPaged::TakePages(uint64_t offset, uint64_t len, VmPageSplice
 }
 
 zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+
   Guard<Mutex> guard{&lock_};
   ASSERT(page_source_);
 
-  uint64_t end;
-  if (add_overflow(offset, len, &end) || size() < end) {
+  if (!InRange(offset, len, size_)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
+  uint64_t end = offset + len;
 
   list_node free_list;
   list_initialize(&free_list);
@@ -3301,6 +3307,21 @@ zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpli
   }
 
   return status;
+}
+
+zx_status_t VmObjectPaged::FailPageRequests(uint64_t offset, uint64_t len,
+                                            zx_status_t error_status) {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+
+  Guard<Mutex> guard{&lock_};
+  ASSERT(page_source_);
+
+  if (!InRange(offset, len, size_)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 uint32_t VmObjectPaged::GetMappingCachePolicy() const {

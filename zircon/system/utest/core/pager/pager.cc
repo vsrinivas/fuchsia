@@ -71,7 +71,9 @@ VMO_VMAR_TEST(UncommittedSinglePageTest) {
 
   std::vector<uint8_t> data(PAGE_SIZE, 0);
 
-  TestThread t([vmo, check_vmar, &data]() -> bool { return check_buffer_data(vmo, 0, 1, data.data(), check_vmar); });
+  TestThread t([vmo, check_vmar, &data]() -> bool {
+    return check_buffer_data(vmo, 0, 1, data.data(), check_vmar);
+  });
 
   ASSERT_TRUE(t.Start());
 
@@ -275,15 +277,11 @@ void BulkOddSupplyTestInner(bool check_vmar, bool use_src_offset) {
 }
 
 // Test that exercises supply logic by supplying data in chunks of unusual length.
-VMO_VMAR_TEST(BulkOddLengthSupplyTest) {
-  return BulkOddSupplyTestInner(check_vmar, false);
-}
+VMO_VMAR_TEST(BulkOddLengthSupplyTest) { return BulkOddSupplyTestInner(check_vmar, false); }
 
 // Test that exercises supply logic by supplying data in chunks of
 // unusual lengths and offsets.
-VMO_VMAR_TEST(BulkOddOffsetSupplyTest) {
-  return BulkOddSupplyTestInner(check_vmar, true);
-}
+VMO_VMAR_TEST(BulkOddOffsetSupplyTest) { return BulkOddSupplyTestInner(check_vmar, true); }
 
 // Tests that supply doesn't overwrite existing content.
 VMO_VMAR_TEST(OverlapSupplyTest) {
@@ -633,13 +631,9 @@ void ReadInterruptLateTest(bool check_vmar, bool detach) {
   }
 }
 
-VMO_VMAR_TEST(ReadCloseInterruptLateTest) {
-  ReadInterruptLateTest(check_vmar, false);
-}
+VMO_VMAR_TEST(ReadCloseInterruptLateTest) { ReadInterruptLateTest(check_vmar, false); }
 
-VMO_VMAR_TEST(ReadDetachInterruptLateTest) {
-  ReadInterruptLateTest(check_vmar, true);
-}
+VMO_VMAR_TEST(ReadDetachInterruptLateTest) { ReadInterruptLateTest(check_vmar, true); }
 
 // Tests that interrupt a read before receiving requests doesn't result in hanging threads.
 void ReadInterruptEarlyTest(bool check_vmar, bool detach) {
@@ -672,13 +666,9 @@ void ReadInterruptEarlyTest(bool check_vmar, bool detach) {
   }
 }
 
-VMO_VMAR_TEST(ReadCloseInterruptEarlyTest) {
-  ReadInterruptEarlyTest(check_vmar, false);
-}
+VMO_VMAR_TEST(ReadCloseInterruptEarlyTest) { ReadInterruptEarlyTest(check_vmar, false); }
 
-VMO_VMAR_TEST(ReadDetachInterruptEarlyTest) {
-  ReadInterruptEarlyTest(check_vmar, true);
-}
+VMO_VMAR_TEST(ReadDetachInterruptEarlyTest) { ReadInterruptEarlyTest(check_vmar, true); }
 
 // Tests that closing a pager while a thread is accessing it doesn't cause
 // problems (other than a page fault in the accessing thread).
@@ -1655,6 +1645,72 @@ TEST(Pager, UncommittedSupply) {
   uint32_t val = 42;
   ASSERT_OK(vmo.read(&val, 0, sizeof(val)));
   ASSERT_EQ(val, 0);
+}
+
+// Tests API violations for zx_pager_op_range.
+TEST(Pager, InvalidPagerOpRange) {
+  constexpr uint32_t kNumValidOpCodes = 1;
+  const uint32_t opcodes[kNumValidOpCodes] = {ZX_PAGER_OP_FAIL};
+
+  for (uint32_t i = 0; i < kNumValidOpCodes; i++) {
+    zx::pager pager;
+    ASSERT_EQ(zx::pager::create(0, &pager), ZX_OK);
+
+    zx::port port;
+    ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
+
+    zx::vmo vmo;
+    ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, ZX_PAGE_SIZE,
+                                  vmo.reset_and_get_address()),
+              ZX_OK);
+
+    // bad handles
+    ASSERT_EQ(zx_pager_op_range(ZX_HANDLE_INVALID, opcodes[i], vmo.get(), 0, 0, 0),
+              ZX_ERR_BAD_HANDLE);
+    ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], ZX_HANDLE_INVALID, 0, 0, 0),
+              ZX_ERR_BAD_HANDLE);
+
+    // wrong handle types
+    ASSERT_EQ(zx_pager_op_range(vmo.get(), opcodes[i], vmo.get(), 0, 0, 0), ZX_ERR_WRONG_TYPE);
+    ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], pager.get(), 0, 0, 0), ZX_ERR_WRONG_TYPE);
+
+    // using a non-pager-backed vmo
+    zx::vmo vmo2;
+    ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo2), ZX_OK);
+    ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], vmo2.get(), 0, 0, 0), ZX_ERR_INVALID_ARGS);
+
+    // using a pager vmo from another pager
+    zx::pager pager2;
+    ASSERT_EQ(zx::pager::create(0, &pager2), ZX_OK);
+    ASSERT_EQ(zx_pager_op_range(pager2.get(), opcodes[i], vmo.get(), 0, 0, 0), ZX_ERR_INVALID_ARGS);
+
+    // misaligned offset or length
+    ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], vmo.get(), 1, 0, 0), ZX_ERR_INVALID_ARGS);
+    ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], vmo.get(), 0, 1, 0), ZX_ERR_INVALID_ARGS);
+
+    // out of range
+    ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], vmo.get(), ZX_PAGE_SIZE, ZX_PAGE_SIZE, 0),
+              ZX_ERR_OUT_OF_RANGE);
+
+    // invalid error code
+    if (opcodes[i] == ZX_PAGER_OP_FAIL) {
+      ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], vmo.get(), 0, 0, 0x11ffffffff),
+                ZX_ERR_INVALID_ARGS);
+    }
+  }
+  zx::pager pager;
+  ASSERT_EQ(zx::pager::create(0, &pager), ZX_OK);
+
+  zx::port port;
+  ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
+
+  zx::vmo vmo;
+  ASSERT_EQ(
+      zx_pager_create_vmo(pager.get(), 0, port.get(), 0, ZX_PAGE_SIZE, vmo.reset_and_get_address()),
+      ZX_OK);
+
+  // invalid opcode
+  ASSERT_EQ(zx_pager_op_range(pager.get(), 0, vmo.get(), 0, 0, 0), ZX_ERR_NOT_SUPPORTED);
 }
 
 }  // namespace pager_tests
