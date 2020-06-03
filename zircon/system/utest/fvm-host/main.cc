@@ -13,11 +13,24 @@
 #include <minfs/host.h>
 #include <unittest/unittest.h>
 
-#define DEFAULT_SLICE_SIZE (8lu * (1 << 20))  // 8 mb
-#define PARTITION_SIZE (1lu * (1 << 28))      // 128 mb
-#define CONTAINER_SIZE (2lu * (1 << 30))      // 2 gb
+// NOTES ABOUT DISABLED TESTS
+//
+// This test used to create very large container files (2GB). This combined with so many variants
+// resulted in it taking more than 20 minutes to run (bug 37779) and it was disabled. It bitrotted
+// severely and and most of the tests now fail.
+//
+// To get better coverage, the passing tests are enabled with a much smaller container, partition,
+// slice, and file sizes than originally. But most of the tests still fail and are commented out.
+//
+// TODO(bug 38188) fix the disabled tests.
 
-#define MAX_PARTITIONS 6
+constexpr uint64_t kBytesPerMB = 1ull << 20;
+
+constexpr uint64_t kDefaultSliceSize = kBytesPerMB / 2;
+constexpr uint64_t kPartitionSize = 8 * kBytesPerMB;
+constexpr uint64_t kContainerSize = 128 * kBytesPerMB;
+
+constexpr size_t kMaxPartitions = 6;
 
 static char test_dir[PATH_MAX];
 static char sparse_path[PATH_MAX];
@@ -26,13 +39,9 @@ static char fvm_path[PATH_MAX];
 
 static constexpr char kEmptyString[] = "";
 
-#ifndef __APPLE__
-// TODO(FLK-259): Re-enable tests once the cause of timeout has been determined.
-// Ifdef these out to remove a build warning on mac.
 static constexpr uint32_t kDefaultNumDirs = 10;
 static constexpr uint32_t kDefaultNumFiles = 10;
-static constexpr uint32_t kDefaultMaxSize = (1 << 20);
-#endif
+static constexpr uint32_t kDefaultMaxSize = 16385;
 
 typedef enum {
   MINFS,
@@ -95,7 +104,7 @@ typedef struct {
   void GeneratePath(char* dir) { sprintf(path, "%s%s_%s.bin", dir, FsTypeName(), GuidTypeName()); }
 } partition_t;
 
-static partition_t partitions[MAX_PARTITIONS];
+static partition_t partitions[kMaxPartitions];
 static uint32_t partition_count;
 
 bool CreateFile(const char* path, size_t size) {
@@ -110,7 +119,7 @@ bool CreateFile(const char* path, size_t size) {
 bool CreateMinfs(const char* path) {
   BEGIN_HELPER;
   unittest_printf("Creating Minfs partition: %s\n", path);
-  ASSERT_TRUE(CreateFile(path, PARTITION_SIZE));
+  ASSERT_TRUE(CreateFile(path, kPartitionSize));
   ASSERT_EQ(emu_mkfs(path), 0, "Unable to run mkfs");
   END_HELPER;
 }
@@ -120,7 +129,7 @@ bool CreateBlobfs(const char* path) {
   unittest_printf("Creating Blobfs partition: %s\n", path);
   int r = open(path, O_RDWR | O_CREAT | O_EXCL, 0755);
   ASSERT_GE(r, 0, "Unable to create path");
-  ASSERT_EQ(ftruncate(r, PARTITION_SIZE), 0, "Unable to truncate disk");
+  ASSERT_EQ(ftruncate(r, kPartitionSize), 0, "Unable to truncate disk");
   uint64_t block_count;
   ASSERT_EQ(blobfs::GetBlockCount(r, &block_count), ZX_OK, "Cannot find end of underlying device");
   ASSERT_EQ(blobfs::Mkfs(r, block_count), ZX_OK, "Failed to make blobfs partition");
@@ -278,7 +287,7 @@ bool CreateFvm(bool create_before, off_t offset, size_t slice_size, bool should_
 
   off_t length = 0;
   if (create_before) {
-    ASSERT_TRUE(CreateFile(fvm_path, CONTAINER_SIZE));
+    ASSERT_TRUE(CreateFile(fvm_path, kContainerSize));
     ASSERT_TRUE(StatFile(fvm_path, &length));
   }
 
@@ -596,7 +605,7 @@ bool CreateReportDestroy(container_t type, size_t slice_size, bool test_success 
       ASSERT_TRUE(CreateFvm(true, 0, slice_size, test_success));
       if (test_success) {
         ASSERT_TRUE(ReportFvm());
-        ASSERT_TRUE(ExtendFvm(CONTAINER_SIZE * 2));
+        ASSERT_TRUE(ExtendFvm(kContainerSize * 2));
         ASSERT_TRUE(ReportFvm());
       }
       ASSERT_TRUE(DestroyFvm());
@@ -606,16 +615,16 @@ bool CreateReportDestroy(container_t type, size_t slice_size, bool test_success 
       ASSERT_TRUE(CreateFvm(false, 0, slice_size, test_success));
       if (test_success) {
         ASSERT_TRUE(ReportFvm());
-        ASSERT_TRUE(ExtendFvm(CONTAINER_SIZE * 2));
+        ASSERT_TRUE(ExtendFvm(kContainerSize * 2));
         ASSERT_TRUE(ReportFvm());
       }
       ASSERT_TRUE(DestroyFvm());
       break;
     }
     case FVM_OFFSET: {
-      ASSERT_TRUE(CreateFvm(true, DEFAULT_SLICE_SIZE, slice_size, test_success));
+      ASSERT_TRUE(CreateFvm(true, kDefaultSliceSize, slice_size, test_success));
       if (test_success) {
-        ASSERT_TRUE(ReportFvm(DEFAULT_SLICE_SIZE));
+        ASSERT_TRUE(ReportFvm(kDefaultSliceSize));
       }
       ASSERT_TRUE(DestroyFvm());
       break;
@@ -809,7 +818,7 @@ bool TestPave() {
 // TODO(planders): Once we are able to create zxcrypt'd FVM images on host, remove this test.
 bool TestPaveZxcryptFail() {
   BEGIN_TEST;
-  ASSERT_TRUE(CreateSparseEnsure(0, DEFAULT_SLICE_SIZE));
+  ASSERT_TRUE(CreateSparseEnsure(0, kDefaultSliceSize));
   std::unique_ptr<SparseContainer> sparseContainer;
   ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &sparseContainer), ZX_OK);
 
@@ -824,9 +833,9 @@ bool TestPaveZxcryptFail() {
 constexpr size_t CalculateExtendedContainerSize(const size_t initial_container_size,
                                                 const size_t extended_container_size) {
   const size_t initial_metadata_size =
-      fvm::MetadataSize(initial_container_size, DEFAULT_SLICE_SIZE);
+      fvm::MetadataSize(initial_container_size, kDefaultSliceSize);
   const size_t extended_metadata_size =
-      fvm::MetadataSize(extended_container_size, DEFAULT_SLICE_SIZE);
+      fvm::MetadataSize(extended_container_size, kDefaultSliceSize);
 
   if (extended_metadata_size == initial_metadata_size) {
     return CalculateExtendedContainerSize(initial_container_size, extended_container_size * 2);
@@ -838,10 +847,10 @@ constexpr size_t CalculateExtendedContainerSize(const size_t initial_container_s
 // Test extend with values that ensure the FVM metadata size will increase.
 bool TestExtendChangesMetadataSize() {
   BEGIN_TEST;
-  ASSERT_TRUE(CreateFvm(true, 0, DEFAULT_SLICE_SIZE, true /* should_pass */));
-  size_t extended_container_size = CalculateExtendedContainerSize(CONTAINER_SIZE, CONTAINER_SIZE);
-  ASSERT_GT(fvm::MetadataSize(extended_container_size, DEFAULT_SLICE_SIZE),
-            fvm::MetadataSize(CONTAINER_SIZE, DEFAULT_SLICE_SIZE));
+  ASSERT_TRUE(CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */));
+  size_t extended_container_size = CalculateExtendedContainerSize(kContainerSize, kContainerSize);
+  ASSERT_GT(fvm::MetadataSize(extended_container_size, kDefaultSliceSize),
+            fvm::MetadataSize(kContainerSize, kDefaultSliceSize));
   ASSERT_TRUE(ExtendFvm(extended_container_size));
   ASSERT_TRUE(ReportFvm());
   ASSERT_TRUE(DestroyFvm());
@@ -873,9 +882,9 @@ bool RecreateSparseWithDifferentSliceSize() {
   ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &sparseContainer), ZX_OK);
   ASSERT_EQ(sparseContainer->SliceSize(), 8192);
 
-  ASSERT_TRUE(CreateSparse(0, DEFAULT_SLICE_SIZE, true));
+  ASSERT_TRUE(CreateSparse(0, kDefaultSliceSize, true));
   ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &sparseContainer), ZX_OK);
-  ASSERT_EQ(sparseContainer->SliceSize(), DEFAULT_SLICE_SIZE);
+  ASSERT_EQ(sparseContainer->SliceSize(), kDefaultSliceSize);
 
   ASSERT_TRUE(DestroySparse(0));
   END_TEST;
@@ -890,9 +899,9 @@ bool RecreateFvmWithDifferentSliceSize() {
   // creation of this container will fail if a smaller one already exists.
   // This is not an issue with the sparse test since the container is created from scratch every
   // time.
-  ASSERT_TRUE(CreateFvm(false, 0, DEFAULT_SLICE_SIZE, true));
+  ASSERT_TRUE(CreateFvm(false, 0, kDefaultSliceSize, true));
   ASSERT_EQ(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer), ZX_OK);
-  ASSERT_EQ(fvmContainer->SliceSize(), DEFAULT_SLICE_SIZE);
+  ASSERT_EQ(fvmContainer->SliceSize(), kDefaultSliceSize);
 
   ASSERT_TRUE(CreateFvm(false, 0, 8192, true));
   ASSERT_EQ(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer), ZX_OK);
@@ -905,7 +914,7 @@ bool RecreateFvmWithDifferentSliceSize() {
 bool TestCreatePreallocatedSparseImage() {
   BEGIN_TEST;
   constexpr uint64_t kMaxSize = 35ull << 30;
-  ASSERT_TRUE(CreateSparse(0, DEFAULT_SLICE_SIZE, true, true, kMaxSize));
+  ASSERT_TRUE(CreateSparse(0, kDefaultSliceSize, true, true, kMaxSize));
   std::unique_ptr<SparseContainer> sparse_container;
   ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &sparse_container), ZX_OK);
 
@@ -920,15 +929,15 @@ bool TestCreatePreallocatedSparseImage() {
 bool TestCreatePreallocatedSparseImageExceedMaxSize() {
   BEGIN_TEST;
   constexpr uint64_t kMaxSize = sizeof(fvm::Header);
-  ASSERT_FALSE(CreateSparse(0, DEFAULT_SLICE_SIZE, true, true, kMaxSize));
+  ASSERT_FALSE(CreateSparse(0, kDefaultSliceSize, true, true, kMaxSize));
   ASSERT_TRUE(DestroySparse(0));
   END_TEST;
 }
 
 bool TestPavePreallocatedSparseImage() {
   BEGIN_TEST;
-  constexpr uint64_t kMaxSize = 2ull << 30;
-  ASSERT_TRUE(CreateSparse(0, DEFAULT_SLICE_SIZE, true /* should_pass */, false /* enable_data */,
+  constexpr uint64_t kMaxSize = kContainerSize;
+  ASSERT_TRUE(CreateSparse(0, kDefaultSliceSize, true /* should_pass */, false /* enable_data */,
                            kMaxSize));
   std::unique_ptr<SparseContainer> sparse_container;
   ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &sparse_container), ZX_OK);
@@ -956,7 +965,7 @@ bool TestPavePreallocatedSparseImage() {
 
 bool GeneratePartitionPath(fs_type_t fs_type, guid_type_t guid_type) {
   BEGIN_HELPER;
-  ASSERT_LT(partition_count, MAX_PARTITIONS);
+  ASSERT_LT(partition_count, kMaxPartitions);
 
   // Make sure we have not already created a partition with the same fs/guid type combo.
   for (unsigned i = 0; i < partition_count; i++) {
@@ -991,7 +1000,7 @@ bool Setup(uint32_t num_dirs, uint32_t num_files, uint32_t max_size) {
   ASSERT_TRUE(GeneratePartitionPath(MINFS, DEFAULT));
   ASSERT_TRUE(GeneratePartitionPath(BLOBFS, BLOBSTORE));
   ASSERT_TRUE(GeneratePartitionPath(BLOBFS, DEFAULT));
-  ASSERT_EQ(partition_count, MAX_PARTITIONS);
+  ASSERT_EQ(partition_count, kMaxPartitions);
 
   // Generate container paths
   sprintf(sparse_path, "%ssparse.bin", test_dir);
@@ -1062,13 +1071,18 @@ bool Cleanup() {
 
 // TODO(planders): add tests for FVM on GPT (with offset)
 BEGIN_TEST_CASE(fvm_host_tests)
+#if 0  // TODO(bug 38188)
 RUN_FOR_ALL_TYPES(8192)
-RUN_FOR_ALL_TYPES(DEFAULT_SLICE_SIZE)
+RUN_FOR_ALL_TYPES(kDefaultSliceSize)
 RUN_TEST_MEDIUM(TestCompressorBufferTooSmall)
 RUN_ALL_PAVE(8192)
-RUN_ALL_PAVE(DEFAULT_SLICE_SIZE)
+RUN_ALL_PAVE(kDefaultSliceSize)
+#endif
+
 RUN_TEST_MEDIUM(TestPaveZxcryptFail)
+#if 0  // TODO(bug 38188)
 RUN_TEST_MEDIUM(TestExtendChangesMetadataSize)
+#endif
 RUN_TEST_MEDIUM(CreateExistingSparseFails)
 RUN_TEST_MEDIUM(CreateExistingFvmFails)
 RUN_TEST_MEDIUM(RecreateSparseWithDifferentSliceSize);
@@ -1081,8 +1095,9 @@ RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, false, 1, 0, 10)
 RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, false, 0, 1000, 999)
 
 // Too small limit for data + inodes
-RUN_RESERVATION_TEST_FOR_ALL_TYPES(DEFAULT_SLICE_SIZE, false, 200, 10, 1000)
+RUN_RESERVATION_TEST_FOR_ALL_TYPES(kDefaultSliceSize, false, 200, 10, 1000)
 
+#if 0  // TODO(bug 38188)
 // Limitless capacity for 10 inodes and 100 bytes
 RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, true, 10, 100, 0)
 
@@ -1091,21 +1106,16 @@ RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, true, 10, 100, 0)
 RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, true, 100, 10, 300 * 1024 * 1024)
 
 // Limitless capacity for 10k inodes and 10k bytes of data
-RUN_RESERVATION_TEST_FOR_ALL_TYPES(DEFAULT_SLICE_SIZE, true, 10000, 1024 * 10, 0)
+RUN_RESERVATION_TEST_FOR_ALL_TYPES(kDefaultSliceSize, true, 10000, 1024 * 10, 0)
 
 RUN_TEST_MEDIUM(TestCreatePreallocatedSparseImage)
 RUN_TEST_MEDIUM(TestCreatePreallocatedSparseImageExceedMaxSize)
 RUN_TEST_MEDIUM(TestPavePreallocatedSparseImage)
+#endif
 
 END_TEST_CASE(fvm_host_tests)
 
 int main(int argc, char** argv) {
-#ifdef __APPLE__
-  // TODO(FLK-259): Re-enable tests once the cause of timeout has been determined.
-  printf("Skipping tests\n");
-  return 0;
-#else
-  // TODO(planders): Allow file settings to be passed in via command line.
   if (!Setup(kDefaultNumDirs, kDefaultNumFiles, kDefaultMaxSize)) {
     return -1;
   }
@@ -1114,5 +1124,4 @@ int main(int argc, char** argv) {
     return -1;
   }
   return result;
-#endif
 }

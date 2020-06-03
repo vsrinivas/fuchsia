@@ -33,6 +33,7 @@ test("fvm-host") {
   deps = [
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/fvm",
+    "//zircon/system/ulib/fvm-host",
     "//zircon/system/ulib/unittest:unittest-static",
   ]
 }
