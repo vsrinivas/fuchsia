@@ -33,16 +33,46 @@ class StreamCycler {
 
  private:
   StreamCycler();
+
+  // Notification to camera-gym that the camera device is present.
   void WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevicesEvent> events);
+
+  // Notification to camera-gym that the mute state has changed.
   void WatchMuteStateHandler(bool software_muted, bool hardware_muted);
+
+  // Forcibly select the stream config for the next demo cycle. This has an intended side effect of
+  // disconnecting all current streams, which should trigger the RemoveCollectionHandler's for the
+  // existing streams.
+  void ForceNextStreamConfiguration();
+
+  // Notification to camera-gym that the stream configuration has changed.
+  void WatchCurrentConfigurationCallback(uint32_t config_index);
+
+  // Kick off the sequence to connect all of the streams for this demo cycle.
+  void ConnectToAllStreams();
+
+  // Kick off the sequence to connect a single stream.
   void ConnectToStream(uint32_t config_index, uint32_t stream_index);
+
+  // Next camera frame on given stream is available.
   void OnNextFrame(uint32_t stream_index, fuchsia::camera3::FrameInfo frame_info);
+
+  // Disconnect a single stream.
+  void DisconnectStream(uint32_t stream_index);
+
+  // Utility to return what the next config_index should be.
+  uint32_t NextConfigIndex();
 
   async::Loop loop_;
   fuchsia::camera3::DeviceWatcherPtr watcher_;
   fuchsia::sysmem::AllocatorPtr allocator_;
   fuchsia::camera3::DevicePtr device_;
   std::vector<fuchsia::camera3::Configuration> configurations_;
+
+  // Only set by WatchCurrentConfigurationCallback().
+  // Only used by ConnectToAllStreams() and NextConfigIndex().
+  uint32_t current_config_index_;
+
   AddCollectionHandler add_collection_handler_;
   RemoveCollectionHandler remove_collection_handler_;
   ShowBufferHandler show_buffer_handler_;

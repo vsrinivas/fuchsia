@@ -117,6 +117,9 @@ fidl::InterfaceRequestHandler<fuchsia::ui::app::ViewProvider> BufferCollage::Get
 fit::promise<uint32_t> BufferCollage::AddCollection(
     fuchsia::sysmem::BufferCollectionTokenHandle token, fuchsia::sysmem::ImageFormat_2 image_format,
     std::string description) {
+  ZX_ASSERT(image_format.coded_width > 0);
+  ZX_ASSERT(image_format.coded_height > 0);
+
   fit::bridge<uint32_t> task_bridge;
 
   fit::closure add_collection = [this, token = std::move(token), image_format, description,

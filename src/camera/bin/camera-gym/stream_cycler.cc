@@ -5,10 +5,13 @@
 #include "src/camera/bin/camera-gym/stream_cycler.h"
 
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
 
 namespace camera {
+
+constexpr zx::duration kDemoTime = zx::sec(10);
 
 // Sets the error handler on the provided interface to log an error and abort the process.
 template <class T>
@@ -19,7 +22,8 @@ static void SetAbortOnError(fidl::InterfacePtr<T>& p, std::string message) {
   });
 }
 
-StreamCycler::StreamCycler() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+StreamCycler::StreamCycler()
+    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   SetAbortOnError(watcher_, "fuchsia.camera3.DeviceWatcher disconnected.");
   SetAbortOnError(allocator_, "fuchsia.sysmem.Allocator disconnected.");
   SetAbortOnError(device_, "fuchsia.camera3.Device disconnected.");
@@ -68,9 +72,6 @@ void StreamCycler::SetHandlers(StreamCycler::AddCollectionHandler on_add_collect
   mute_state_handler_ = std::move(on_mute_changed);
 }
 
-// TODO(48506): Hard code stream ID
-constexpr uint32_t kConfigId = 1;
-
 void StreamCycler::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevicesEvent> events) {
   for (auto& event : events) {
     if (event.is_added()) {
@@ -85,21 +86,11 @@ void StreamCycler::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevic
       device_->GetConfigurations(
           [this](std::vector<fuchsia::camera3::Configuration> configurations) {
             configurations_ = std::move(configurations);
-
-            ZX_ASSERT(configurations_.size() > kConfigId);
-            ZX_ASSERT(!configurations_[kConfigId].streams.empty());
-            device_->SetCurrentConfiguration(kConfigId);
-            device_->WatchCurrentConfiguration([this](uint32_t index) {
-              // TODO(42241) - In order to work around fxb/42241, all camera3 clients must connect
-              // to their respective streams in sequence and without possibility of overlap. Since
-              // the camera connection sequence requires a series of asynchronous steps, we must
-              // daisy-chain from one complete stream connection to the next. This is why the
-              // original simple loop does not work reliably at this time.
-
-              // BEGIN: Daisy-chain work around for fxb/42241
-              ConnectToStream(kConfigId, 0 /* stream_index */);
-              // END: Daisy-chain work around for fxb/42241
-            });
+            // Once we have the known camera configurations, default to the first configuration index.
+            // This is automatically chosen in the driver, so we do not need to ask for it. The callback
+            // for WatchCurrentConfiguration() will connect to all streams.
+            device_->WatchCurrentConfiguration(
+                fit::bind_member(this, &StreamCycler::WatchCurrentConfigurationCallback));
           });
     }
   }
@@ -111,6 +102,41 @@ void StreamCycler::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevic
 void StreamCycler::WatchMuteStateHandler(bool software_muted, bool hardware_muted) {
   mute_state_handler_(software_muted | hardware_muted);
   device_->WatchMuteState(fit::bind_member(this, &StreamCycler::WatchMuteStateHandler));
+}
+
+void StreamCycler::ForceNextStreamConfiguration() {
+  uint32_t config_index = NextConfigIndex();
+  ZX_ASSERT(configurations_.size() > config_index);
+  ZX_ASSERT(!configurations_[config_index].streams.empty());
+  device_->SetCurrentConfiguration(config_index);
+}
+
+void StreamCycler::WatchCurrentConfigurationCallback(uint32_t config_index) {
+  // Remember the current device config_index.
+  current_config_index_ = config_index;
+
+  // Start connecting to all streams.
+  ConnectToAllStreams();
+
+  // After a specified demo period, set the next stream configuration, which will end up cutting off
+  // all existing streams.
+  async::PostDelayedTask(loop_.dispatcher(), [this]() { ForceNextStreamConfiguration(); }, kDemoTime);
+
+  // Be ready for configuration changes.
+  device_->WatchCurrentConfiguration(
+      fit::bind_member(this, &StreamCycler::WatchCurrentConfigurationCallback));
+}
+
+void StreamCycler::ConnectToAllStreams() {
+  // Connect all streams.
+  // TODO(42241) - In order to work around fxb/42241, all camera3 clients must connect to their
+  // respective streams in sequence and without possibility of overlap. Since the camera connection
+  // sequence requires a series of asynchronous steps, we must daisy-chain from one complete stream
+  // connection to the next. This is why the original simple loop does not work reliably at this
+  // time. This means that the following single ConnectToStream() will kick off all the connections
+  // for all streams.
+  uint32_t stream_index = 0;
+  ConnectToStream(current_config_index_, stream_index);
 }
 
 void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index) {
@@ -128,8 +154,11 @@ void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index)
   fuchsia::sysmem::BufferCollectionTokenHandle token_orig;
   allocator_->AllocateSharedCollection(token_orig.NewRequest());
   stream->SetBufferCollection(std::move(token_orig));
-  stream->WatchBufferCollection([this, image_format, stream_index,
+  stream->WatchBufferCollection([this, image_format, config_index, stream_index,
                                  &stream](fuchsia::sysmem::BufferCollectionTokenHandle token_back) {
+    ZX_ASSERT(image_format.coded_width > 0);  // image_format must be reasonable.
+    ZX_ASSERT(image_format.coded_height > 0);
+
     if (add_collection_handler_) {
       auto& stream_info = stream_infos_[stream_index];
       stream_info.add_collection_handler_returned_value =
@@ -139,10 +168,10 @@ void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index)
     }
 
     // BEGIN: Daisy-chain work around for fxb/42241
-    const uint32_t stream_count = configurations_[kConfigId].streams.size();
+    const uint32_t stream_count = configurations_[config_index].streams.size();
     uint32_t next_stream_index = stream_index + 1;
     if (next_stream_index < stream_count) {
-      ConnectToStream(kConfigId, next_stream_index);
+      ConnectToStream(config_index, next_stream_index);
     }
     // END: Daisy-chain work around for fxb/42241
 
@@ -153,11 +182,16 @@ void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index)
   });
 
   device_->ConnectToStream(stream_index, std::move(stream_request));
+
+  stream.set_error_handler(
+      [this, stream_index](zx_status_t status) {
+        DisconnectStream(stream_index);
+      });
 }
 
 void StreamCycler::OnNextFrame(uint32_t stream_index, fuchsia::camera3::FrameInfo frame_info) {
+  auto& stream_info = stream_infos_[stream_index];
   if (show_buffer_handler_) {
-    auto& stream_info = stream_infos_[stream_index];
     show_buffer_handler_(stream_info.add_collection_handler_returned_value, frame_info.buffer_index,
                          std::move(frame_info.release_fence));
   } else {
@@ -167,6 +201,21 @@ void StreamCycler::OnNextFrame(uint32_t stream_index, fuchsia::camera3::FrameInf
   stream->GetNextFrame([this, stream_index](fuchsia::camera3::FrameInfo frame_info) {
     OnNextFrame(stream_index, std::move(frame_info));
   });
+}
+
+void StreamCycler::DisconnectStream(uint32_t stream_index) {
+  if (remove_collection_handler_) {
+    auto& stream_info = stream_infos_[stream_index];
+    remove_collection_handler_(stream_info.add_collection_handler_returned_value);
+  }
+
+  stream_infos_.erase(stream_index);
+}
+
+uint32_t StreamCycler::NextConfigIndex() {
+  ZX_ASSERT(configurations_.size() > 0);
+  ZX_ASSERT(current_config_index_ < configurations_.size());
+  return (current_config_index_ + 1) % configurations_.size();
 }
 
 }  // namespace camera
