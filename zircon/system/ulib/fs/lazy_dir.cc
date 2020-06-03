@@ -6,6 +6,7 @@
 
 #include <fuchsia/io/llcpp/fidl.h>
 
+#include <algorithm>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
@@ -77,7 +78,7 @@ zx_status_t LazyDir::Readdir(vdircookie_t* cookie, void* dirents, size_t len, si
     }
   }
 
-  for (auto it = fbl::lower_bound(entries.begin(), entries.end(), cookie->n,
+  for (auto it = std::lower_bound(entries.begin(), entries.end(), cookie->n,
                                   [](const LazyEntry&a, uint64_t b_id) { return a.id < b_id; });
        it < entries.end(); ++it) {
     if (cookie->n >= it->id) {
