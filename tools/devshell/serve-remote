@@ -17,6 +17,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.
 fx-config-read
 
 serve=true
+verbose=false
 host=""
 dir=""
 while [[ $# -ne 0 ]]; do
@@ -27,6 +28,9 @@ while [[ $# -ne 0 ]]; do
       ;;
   --no-serve)
     serve=false
+    ;;
+  -v)
+    verbose=true
     ;;
   -*)
     fx-error "Unknown flag: $1"
@@ -135,9 +139,14 @@ if "${serve}"; then
   # Ctrl-C will exit the ssh remote command and this ssh session. Then script exit will trigger
   # `trap_exit` to close the ssh connection.
   echo -e "Press Ctrl-C to stop remote serving and tunneling.\n"
+  if "${verbose}"; then
+    serve_verbose_arg=" -v"
+  else
+    serve_verbose_arg=""
+  fi
   ssh_serve_args=(
     "-tt" # explicitly force a pty, for HUP'ing on the remote
-    "cd ${dir} && ./.jiri_root/bin/fx set-device '[::1]:8022' && ./.jiri_root/bin/fx serve-updates"
+    "cd ${dir} && ./.jiri_root/bin/fx set-device '[::1]:8022' && ./.jiri_root/bin/fx serve-updates${serve_verbose_arg}"
   )
   ssh ${ssh_base_args[@]} ${ssh_serve_args[@]}
 else
