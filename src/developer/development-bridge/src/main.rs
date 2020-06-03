@@ -6,9 +6,10 @@ use {
     crate::logger::setup_logger,
     crate::target_formatter::TargetFormatter,
     anyhow::{anyhow, format_err, Context, Error},
+    async_trait::async_trait,
     ffx_command::{Ffx, Subcommand},
     ffx_config::command::exec_config,
-    ffx_core::constants::DAEMON,
+    ffx_core::{constants::DAEMON, RemoteControlProxySource},
     ffx_daemon::{find_and_connect, is_daemon_running, start as start_daemon},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::{DaemonProxy, Target as FidlTarget},
@@ -45,7 +46,7 @@ impl Cli {
     }
 
     pub async fn exec_plugins(&self, subcommand: Subcommand) -> Result<(), Error> {
-        ffx_plugins::plugins(self.get_remote_proxy().await?, subcommand).await
+        ffx_plugins::plugins(self, subcommand).await
     }
 
     pub async fn echo(&self, text: Option<String>) -> Result<String, Error> {
@@ -82,18 +83,6 @@ impl Cli {
         }
     }
 
-    pub async fn get_remote_proxy(&self) -> Result<RemoteControlProxy, Error> {
-        let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
-
-        let _result = self
-            .daemon_proxy
-            .get_remote_control(remote_server_end)
-            .await
-            .context("launch_test call failed")
-            .map_err(|e| format_err!("error getting remote: {:?}", e))?;
-        Ok(remote_proxy)
-    }
-
     pub async fn quit(&mut self) -> Result<(), Error> {
         self.daemon_proxy.quit().await?;
         println!("Killed daemon.");
@@ -103,6 +92,21 @@ impl Cli {
     async fn spawn_daemon() -> Result<(), Error> {
         Command::new(env::current_exe().unwrap()).arg(DAEMON).spawn()?;
         Ok(())
+    }
+}
+
+#[async_trait]
+impl RemoteControlProxySource for Cli {
+    async fn get_remote_proxy(&self) -> Result<RemoteControlProxy, Error> {
+        let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
+
+        let _result = self
+            .daemon_proxy
+            .get_remote_control(remote_server_end)
+            .await
+            .context("launch_test call failed")
+            .map_err(|e| format_err!("error getting remote: {:?}", e))?;
+        Ok(remote_proxy)
     }
 }
 

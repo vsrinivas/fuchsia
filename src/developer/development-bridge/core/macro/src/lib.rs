@@ -6,12 +6,16 @@ extern crate proc_macro;
 
 use {
     proc_macro::TokenStream,
+    proc_macro2::Span,
     quote::quote,
     syn::{
         parse_macro_input, punctuated::Punctuated, FnArg, Ident, ItemFn, ItemStruct, Pat, PatType,
-        Token,
+        Token, Type::Path, TypePath,
     },
 };
+
+const EXPECTED_SIGNATURE: &str = "ffx_plugin expects the signature: \
+     `(RemoteControlProxy, <YourArghCommand>) -> Result<(), anyhow::Error>`";
 
 #[proc_macro_attribute]
 pub fn ffx_command(_attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -28,29 +32,50 @@ pub fn ffx_command(_attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn ffx_plugin(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as ItemFn);
-    let method = input.sig.ident.clone();
-    let inputs = input.sig.inputs.clone();
+    // First some error checking.
+    if input.sig.inputs.len() != 2 {
+        panic!("{}", EXPECTED_SIGNATURE);
+    }
+
+    // Error check that the first parameter is RCS
+    let proxy = input.sig.inputs[0].clone();
+    match proxy {
+        FnArg::Typed(PatType { ty, .. }) => match ty.as_ref() {
+            Path(TypePath { path, .. }) => match path.segments.last() {
+                Some(t) => {
+                    if t.ident != Ident::new("RemoteControlProxy", Span::call_site()) {
+                        panic!("{}", EXPECTED_SIGNATURE);
+                    }
+                }
+                _ => panic!("{}", EXPECTED_SIGNATURE),
+            },
+            _ => panic!("{}", EXPECTED_SIGNATURE),
+        },
+        _ => panic!("{}", EXPECTED_SIGNATURE),
+    }
+
     let mut args: Punctuated<Ident, Token!(,)> = Punctuated::new();
-    input.sig.inputs.iter().for_each(|arg| match arg {
-        FnArg::Receiver(_) => panic!("ffx plugin method signature cannot contain self"),
+    let command = input.sig.inputs[1].clone();
+    match command {
         FnArg::Typed(PatType { pat, .. }) => match pat.as_ref() {
             Pat::Ident(pat) => {
                 if pat.subpat.is_some() {
-                    panic!("ffx plugin cannot contain attribute arguments");
+                    panic!("{}", EXPECTED_SIGNATURE);
                 } else {
                     args.push(pat.ident.clone());
                 }
             }
-            _ => {
-                panic!("ffx plugin does not support patterns in function arguments");
-            }
+            _ => panic!("{}", EXPECTED_SIGNATURE),
         },
-    });
+        _ => panic!("{}", EXPECTED_SIGNATURE),
+    }
 
+    let method = input.sig.ident.clone();
+    let cmd = input.sig.inputs[1].clone();
     TokenStream::from(quote! {
         #input
-        pub async fn ffx_plugin_impl(#inputs) -> Result<(), Error> {
-            #method(#args).await
+        pub async fn ffx_plugin_impl<C: ffx_core::RemoteControlProxySource>(cli: &C, #cmd) -> Result<(), Error> {
+            #method(cli.get_remote_proxy().await?, #args).await
         }
     })
 }
