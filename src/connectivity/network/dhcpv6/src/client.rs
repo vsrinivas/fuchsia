@@ -105,7 +105,7 @@ enum Dhcpv6ClientTimerType {
 }
 
 /// Possible actions that need to be taken for a state transition to happen successfully.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Action {
     SendMessage(Vec<u8>),
     ScheduleTimer(Dhcpv6ClientTimerType, Duration),
@@ -162,7 +162,7 @@ impl InformationRequesting {
             &options,
         );
         let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        let () = builder.serialize(&mut buf);
 
         let retrans_timeout = self.retransmission_timeout(rng);
 
@@ -399,39 +399,7 @@ impl<R: Rng> Dhcpv6ClientStateMachine<R> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, packet::ParsablePacket, rand::rngs::mock::StepRng};
-
-    fn validate_send_message(
-        action: &Action,
-        want_msg_type: Dhcpv6MessageType,
-        want_transaction_id: [u8; 3],
-        want_options: Vec<Dhcpv6Option<'_>>,
-    ) {
-        match action {
-            Action::SendMessage(buf) => {
-                let mut buf = &buf[..]; // Implements BufferView.
-                let msg = Dhcpv6Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-                assert_eq!(msg.msg_type, want_msg_type);
-                assert_eq!(msg.transaction_id, &want_transaction_id);
-                assert_eq!(msg.options.iter().collect::<Vec<_>>(), want_options);
-            }
-            action => panic!("unexpected action {:?}, want SendMessage", action),
-        };
-    }
-
-    fn validate_schedule_timer(
-        action: &Action,
-        want_timer_type: Dhcpv6ClientTimerType,
-        want_duration: Duration,
-    ) {
-        match action {
-            Action::ScheduleTimer(timer_type, t) => {
-                assert_eq!(*timer_type, want_timer_type);
-                assert_eq!(*t, want_duration);
-            }
-            action => panic!("unexpected action {:?}, want ScheduleTimer", action),
-        }
-    }
+    use {super::*, matches::assert_matches, packet::ParsablePacket, rand::rngs::mock::StepRng};
 
     #[test]
     fn test_information_request_and_reply() {
@@ -446,29 +414,28 @@ mod tests {
                 StepRng::new(std::u64::MAX / 2, 0),
             );
 
-            match client.state.as_ref().expect("state should not be empty") {
-                Dhcpv6ClientState::InformationRequesting(_) => {}
-                state => panic!("unexpected state {:?}, want InformationRequesting", state),
-            }
+            assert_matches!(client.state, Some(Dhcpv6ClientState::InformationRequesting(_)));
 
             // Start of information requesting should send a information request and schedule a
             // retransmission timer.
-            assert_eq!(actions.len(), 2);
             let want_options = if options.is_empty() {
                 Vec::new()
             } else {
                 vec![Dhcpv6Option::Oro(options.clone())]
             };
-            validate_send_message(
-                &actions[0],
+            let builder = Dhcpv6MessageBuilder::new(
                 Dhcpv6MessageType::InformationRequest,
                 client.transaction_id,
-                want_options,
+                &want_options,
             );
-            validate_schedule_timer(
-                &actions[1],
-                Dhcpv6ClientTimerType::Retransmission,
-                INFO_REQ_TIMEOUT,
+            let mut want_buf = vec![0; builder.bytes_len()];
+            let () = builder.serialize(&mut want_buf);
+            assert_eq!(
+                actions,
+                vec![
+                    Action::SendMessage(want_buf),
+                    Action::ScheduleTimer(Dhcpv6ClientTimerType::Retransmission, INFO_REQ_TIMEOUT)
+                ]
             );
 
             let test_dhcp_refresh_time = 42u32;
@@ -479,32 +446,24 @@ mod tests {
                 &options,
             );
             let mut buf = vec![0; builder.bytes_len()];
-            builder.serialize(&mut buf);
+            let () = builder.serialize(&mut buf);
             let mut buf = &buf[..]; // Implements BufferView.
             let msg = Dhcpv6Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
             let actions = client.handle_message_receive(msg);
 
-            match client.state.as_ref().expect("state should not be empty") {
-                Dhcpv6ClientState::InformationReceived(_) => {}
-                state => panic!("unexpected state {:?}, want InformationReceived", state),
-            };
-
+            assert_matches!(client.state, Some(Dhcpv6ClientState::InformationReceived(_)));
             // Upon receiving a valid reply, client should set up for refresh based on the reply.
-            assert_eq!(actions.len(), 2);
-            match &actions[0] {
-                Action::CancelTimer(timer_type) => {
-                    assert_eq!(*timer_type, Dhcpv6ClientTimerType::Retransmission);
-                }
-                action => panic!("unexpected action {:?}, want CancelTimer", action),
-            };
-            match &actions[1] {
-                Action::ScheduleTimer(timer_type, t) => {
-                    assert_eq!(*timer_type, Dhcpv6ClientTimerType::Refresh);
-                    assert_eq!(t.as_secs(), u64::from(test_dhcp_refresh_time));
-                }
-                action => panic!("unexpected action {:?}, want ScheduleTimer", action),
-            }
+            assert_eq!(
+                actions,
+                vec![
+                    Action::CancelTimer(Dhcpv6ClientTimerType::Retransmission),
+                    Action::ScheduleTimer(
+                        Dhcpv6ClientTimerType::Refresh,
+                        Duration::from_secs(u64::from(test_dhcp_refresh_time)),
+                    ),
+                ]
+            );
         }
     }
 
@@ -523,7 +482,7 @@ mod tests {
             &[],
         );
         let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        let () = builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = Dhcpv6Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
@@ -546,7 +505,7 @@ mod tests {
         ] {
             let builder = Dhcpv6MessageBuilder::new(msg_type, client.transaction_id, &[]);
             let mut buf = vec![0; builder.bytes_len()];
-            builder.serialize(&mut buf);
+            let () = builder.serialize(&mut buf);
             let mut buf = &buf[..]; // Implements BufferView.
             let msg = Dhcpv6Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
@@ -563,40 +522,29 @@ mod tests {
 
         // The client expects either a reply or retransmission timeout in the current state.
         client.handle_timeout(Dhcpv6ClientTimerType::Refresh);
-        match client.state.as_ref().expect("state should not be empty") {
-            Dhcpv6ClientState::InformationRequesting(_) => {}
-            state => panic!("unexpected state {:?}, want InformationRequesting", state),
-        };
+        assert_matches!(client.state, Some(Dhcpv6ClientState::InformationRequesting(_)));
 
         let builder =
             Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Reply, client.transaction_id, &[]);
         let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        let () = builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = Dhcpv6Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         // Transition to InformationReceived state.
         client.handle_message_receive(msg);
-
-        match client.state.as_ref().expect("state should not be empty") {
-            Dhcpv6ClientState::InformationReceived(_) => {}
-            state => panic!("unexpected state {:?}, want InformationReceived", state),
-        };
+        assert_matches!(client.state, Some(Dhcpv6ClientState::InformationReceived(_)));
 
         let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        let () = builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = Dhcpv6Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        // Extra replies received in information received state are ignored.
         client.handle_message_receive(msg);
-        match client.state.as_ref().expect("state should not be empty") {
-            Dhcpv6ClientState::InformationReceived(_) => {}
-            state => panic!("unexpected state {:?}, want InformationReceived", state),
-        };
+        assert_matches!(client.state, Some(Dhcpv6ClientState::InformationReceived(_)));
 
+        // Information received state should only respond to `Refresh` timer.
         client.handle_timeout(Dhcpv6ClientTimerType::Retransmission);
-        match client.state.as_ref().expect("state should not be empty") {
-            Dhcpv6ClientState::InformationReceived(_) => {}
-            state => panic!("unexpected state {:?}, want InformationReceived", state),
-        };
+        assert_matches!(client.state, Some(Dhcpv6ClientState::InformationReceived(_)));
     }
 
     #[test]
@@ -605,20 +553,16 @@ mod tests {
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
         );
-        assert_eq!(actions.len(), 2);
-        validate_schedule_timer(
-            &actions[1],
-            Dhcpv6ClientTimerType::Retransmission,
-            INFO_REQ_TIMEOUT,
+        assert_matches!(
+            actions[..],
+            [_, Action::ScheduleTimer(Dhcpv6ClientTimerType::Retransmission, INFO_REQ_TIMEOUT)]
         );
 
         let actions = client.handle_timeout(Dhcpv6ClientTimerType::Retransmission);
-        assert_eq!(actions.len(), 2);
         // Following exponential backoff defined in https://tools.ietf.org/html/rfc8415#section-15.
-        validate_schedule_timer(
-            &actions[1],
-            Dhcpv6ClientTimerType::Retransmission,
-            2 * INFO_REQ_TIMEOUT,
+        assert_matches!(
+            actions[..],
+            [_, Action::ScheduleTimer(Dhcpv6ClientTimerType::Retransmission, timeout)] if timeout == 2 * INFO_REQ_TIMEOUT
         );
     }
 
@@ -632,7 +576,7 @@ mod tests {
         let builder =
             Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Reply, client.transaction_id, &[]);
         let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        let () = builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = Dhcpv6Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
@@ -641,16 +585,19 @@ mod tests {
 
         // Refresh should start another round of information request.
         let actions = client.handle_timeout(Dhcpv6ClientTimerType::Refresh);
-        validate_send_message(
-            &actions[0],
+        let builder = Dhcpv6MessageBuilder::new(
             Dhcpv6MessageType::InformationRequest,
             client.transaction_id,
-            Vec::new(),
+            &[],
         );
-        validate_schedule_timer(
-            &actions[1],
-            Dhcpv6ClientTimerType::Retransmission,
-            INFO_REQ_TIMEOUT,
+        let mut want_buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut want_buf);
+        assert_eq!(
+            actions,
+            vec![
+                Action::SendMessage(want_buf),
+                Action::ScheduleTimer(Dhcpv6ClientTimerType::Retransmission, INFO_REQ_TIMEOUT)
+            ]
         );
     }
 

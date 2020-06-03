@@ -175,7 +175,7 @@ mod checked {
         }
 
         pub(crate) fn serialize<B: ByteSliceMut, BV: BufferViewMut<B>>(&self, bv: &mut BV) {
-            self.builder.serialize(bv);
+            let () = self.builder.serialize(bv);
         }
     }
 }
@@ -210,6 +210,7 @@ impl Dhcpv6Option<'_> {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct Dhcpv6OptionsImpl;
 
 impl RecordsImplLayout for Dhcpv6OptionsImpl {
@@ -348,11 +349,15 @@ impl<'a> RecordsSerializerImpl<'a> for Dhcpv6OptionsImpl {
     /// fallback to use a default value instead, so it is impossible for future changes to
     /// introduce DoS vulnerabilities even if they accidentally allow such options to be injected.
     ///
+    /// # Panics
+    ///
+    /// If buffer is too small. This means `record_length` is not correctly implemented.
+    ///
     /// [RFC 8415, Section 21.1]: https://tools.ietf.org/html/rfc8415#section-21.1
     fn serialize(mut buf: &mut [u8], opt: &Self::Record) {
         // Implements BufferViewMut, giving us write_obj_front.
         let mut buf = &mut buf;
-        buf.write_obj_front(&U16::new(opt.code().into()));
+        let () = buf.write_obj_front(&U16::new(opt.code().into())).expect("buffer is too small");
 
         match opt {
             Dhcpv6Option::ClientId(duid) | Dhcpv6Option::ServerId(duid) => {
@@ -369,8 +374,8 @@ impl<'a> RecordsSerializerImpl<'a> for Dhcpv6OptionsImpl {
                     },
                     |len| (duid, len),
                 );
-                buf.write_obj_front(&U16::new(len));
-                buf.write_obj_front(duid);
+                let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
+                let () = buf.write_obj_front(duid).expect("buffer is too small");
             }
             Dhcpv6Option::Oro(requested_opts) => {
                 let empty = Vec::new();
@@ -386,29 +391,34 @@ impl<'a> RecordsSerializerImpl<'a> for Dhcpv6OptionsImpl {
                     },
                     |len| (requested_opts, len),
                 );
-                buf.write_obj_front(&U16::new(len));
-                buf.write_obj_front(
-                    requested_opts
-                        .into_iter()
-                        .flat_map(|opt_code| {
-                            let opt_code: [u8; 2] = u16::from(*opt_code).to_be_bytes();
-                            opt_code.to_vec()
-                        })
-                        .collect::<Vec<u8>>()
-                        .as_slice(),
-                );
+                let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
+                let () = buf
+                    .write_obj_front(
+                        requested_opts
+                            .into_iter()
+                            .flat_map(|opt_code| {
+                                let opt_code: [u8; 2] = u16::from(*opt_code).to_be_bytes();
+                                opt_code.to_vec()
+                            })
+                            .collect::<Vec<u8>>()
+                            .as_slice(),
+                    )
+                    .expect("buffer is too small");
             }
             Dhcpv6Option::Preference(pref_val) => {
-                buf.write_obj_front(&U16::new(1));
-                buf.write_obj_front(pref_val);
+                let () = buf.write_obj_front(&U16::new(1)).expect("buffer is too small");
+                let () = buf.write_obj_front(pref_val).expect("buffer is too small");
             }
             Dhcpv6Option::ElapsedTime(elapsed_time) => {
-                buf.write_obj_front(&U16::new(2));
-                buf.write_obj_front(&U16::new(*elapsed_time));
+                let () = buf.write_obj_front(&U16::new(2)).expect("buffer is too small");
+                let () =
+                    buf.write_obj_front(&U16::new(*elapsed_time)).expect("buffer is too small");
             }
             Dhcpv6Option::InformationRefreshTime(information_refresh_time) => {
-                buf.write_obj_front(&U16::new(4));
-                buf.write_obj_front(&U32::new(*information_refresh_time));
+                let () = buf.write_obj_front(&U16::new(4)).expect("buffer is too small");
+                let () = buf
+                    .write_obj_front(&U32::new(*information_refresh_time))
+                    .expect("buffer is too smal");
             }
             Dhcpv6Option::DnsServers(recursive_name_servers) => {
                 let empty = Vec::new();
@@ -425,9 +435,10 @@ impl<'a> RecordsSerializerImpl<'a> for Dhcpv6OptionsImpl {
                         },
                         |len| (recursive_name_servers, len),
                     );
-                buf.write_obj_front(&U16::new(len));
+                let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
                 recursive_name_servers.iter().for_each(|server_addr| {
-                    buf.write_obj_front(&server_addr.octets());
+                    let () =
+                        buf.write_obj_front(&server_addr.octets()).expect("buffer is too small");
                 })
             }
             Dhcpv6Option::DomainList(domains) => {
@@ -446,7 +457,7 @@ impl<'a> RecordsSerializerImpl<'a> for Dhcpv6OptionsImpl {
                             },
                             |len| (domains, len),
                         );
-                buf.write_obj_front(&U16::new(len));
+                let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
                 domains.iter().for_each(|domain| {
                     domain.serialize(&mut buf);
                 })
@@ -463,6 +474,7 @@ type TransactionId = [u8; 3];
 /// A DHCPv6 message as defined in [RFC 8415, Section 8].
 ///
 /// [RFC 8415, Section 8]: https://tools.ietf.org/html/rfc8415#section-8
+#[derive(Debug)]
 pub(crate) struct Dhcpv6Message<'a, B> {
     pub(crate) msg_type: Dhcpv6MessageType,
     pub(crate) transaction_id: &'a TransactionId,
@@ -515,29 +527,40 @@ impl<'a> Dhcpv6MessageBuilder<'a> {
 }
 
 impl InnerPacketBuilder for Dhcpv6MessageBuilder<'_> {
+    /// Calculates the serialized length of the DHCPv6 message based on format defined in
+    /// [RFC 8415, Section 8].
+    ///
+    /// [RFC 8415, Section 8]: https://tools.ietf.org/html/rfc8415#section-8
     fn bytes_len(&self) -> usize {
         let Self { msg_type, transaction_id, options } = self;
         mem::size_of_val(msg_type) + mem::size_of_val(transaction_id) + options.records_bytes_len()
     }
 
+    /// Serializes DHCPv6 message based on format defined in [RFC 8415, Section 8].
+    ///
+    /// # Panics
+    ///
+    /// If buffer is too small. This means `record_length` is not correctly implemented.
+    ///
+    /// [RFC 8415, Section 8]: https://tools.ietf.org/html/rfc8415#section-8
     fn serialize(&self, mut buffer: &mut [u8]) {
         let Self { msg_type, transaction_id, options } = self;
         // Implements BufferViewMut, giving us write_obj_front.
         let mut buffer = &mut buffer;
-        buffer.write_obj_front(msg_type);
-        buffer.write_obj_front(transaction_id);
-        options.serialize_records(buffer);
+        let () = buffer.write_obj_front(msg_type).expect("buffer is too small");
+        let () = buffer.write_obj_front(transaction_id).expect("buffer is too small");
+        let () = options.serialize_records(buffer);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, matches::assert_matches};
 
     fn test_buf_with_no_options() -> Vec<u8> {
         let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Solicit, [1, 2, 3], &[]);
         let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        let () = builder.serialize(&mut buf);
         buf
     }
 
@@ -564,7 +587,7 @@ mod tests {
         let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Solicit, [1, 2, 3], &options);
         let mut buf = vec![0; builder.bytes_len()];
 
-        builder.serialize(&mut buf);
+        let () = builder.serialize(&mut buf);
 
         assert_eq!(buf.len(), 112);
         #[rustfmt::skip]
@@ -610,7 +633,7 @@ mod tests {
         ];
         let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Solicit, [1, 2, 3], &options);
         let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        let () = builder.serialize(&mut buf);
 
         let mut buf = &buf[..];
         let msg = Dhcpv6Message::parse(&mut buf, ()).expect("parse should succeed");
@@ -625,7 +648,7 @@ mod tests {
         let options = [Dhcpv6Option::ClientId(&[0u8; (u16::MAX as usize) + 1])];
         let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Solicit, [1, 2, 3], &options);
         let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        let () = builder.serialize(&mut buf);
 
         assert_eq!(buf.len(), 26);
         assert_eq!(
@@ -648,7 +671,7 @@ mod tests {
             [Dhcpv6Option::Oro(vec![Dhcpv6OptionCode::Preference; (u16::MAX as usize) + 1])];
         let builder = Dhcpv6MessageBuilder::new(Dhcpv6MessageType::Solicit, [1, 2, 3], &options);
         let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
+        let () = builder.serialize(&mut buf);
 
         assert_eq!(
             buf,
@@ -669,7 +692,7 @@ mod tests {
         let mut buf = [0u8; 6];
         let option = Dhcpv6Option::ElapsedTime(42);
 
-        <Dhcpv6OptionsImpl as RecordsSerializerImpl>::serialize(&mut buf, &option);
+        let () = <Dhcpv6OptionsImpl as RecordsSerializerImpl>::serialize(&mut buf, &option);
         assert_eq!(buf, [0, 8, 0, 2, 0, 42]);
 
         let options = Records::<_, Dhcpv6OptionsImpl>::parse_with_context(&buf[..], ()).unwrap();
@@ -681,20 +704,29 @@ mod tests {
     #[test]
     fn test_buffer_too_short() {
         let buf = [];
-        assert!(Dhcpv6Message::parse(&mut &buf[..], ()).is_err());
+        assert_matches!(
+            Dhcpv6Message::parse(&mut &buf[..], ()),
+            Err(ProtocolError::BufferExhausted)
+        );
 
         let buf = [
             1, // valid message type
             0, // transaction id is too short
         ];
-        assert!(Dhcpv6Message::parse(&mut &buf[..], ()).is_err());
+        assert_matches!(
+            Dhcpv6Message::parse(&mut &buf[..], ()),
+            Err(ProtocolError::BufferExhausted)
+        );
 
         let buf = [
             1, // valid message type
             1, 2, 3, // valid transaction id
             0, // option code is too short
         ];
-        assert!(Dhcpv6Message::parse(&mut &buf[..], ()).is_err());
+        assert_matches!(
+            Dhcpv6Message::parse(&mut &buf[..], ()),
+            Err(ProtocolError::BufferExhausted)
+        );
 
         let buf = [
             1, // valid message type
@@ -702,7 +734,10 @@ mod tests {
             0, 1, // valid option code
             0, // option length is too short
         ];
-        assert!(Dhcpv6Message::parse(&mut &buf[..], ()).is_err());
+        assert_matches!(
+            Dhcpv6Message::parse(&mut &buf[..], ()),
+            Err(ProtocolError::BufferExhausted)
+        );
 
         // option value too short
         let buf = [
@@ -712,7 +747,10 @@ mod tests {
             0, 100, // valid option length
             1, 2, // option value is too short
         ];
-        assert!(Dhcpv6Message::parse(&mut &buf[..], ()).is_err());
+        assert_matches!(
+            Dhcpv6Message::parse(&mut &buf[..], ()),
+            Err(ProtocolError::BufferExhausted)
+        );
     }
 
     #[test]
@@ -720,7 +758,10 @@ mod tests {
         let mut buf = test_buf_with_no_options();
         // 0 is an invalid message type.
         buf[0] = 0;
-        assert!(Dhcpv6Message::parse(&mut &buf[..], ()).is_err());
+        assert_matches!(
+            Dhcpv6Message::parse(&mut &buf[..], ()),
+            Err(ProtocolError::InvalidDhcpv6MessageType(0))
+        );
     }
 
     #[test]
@@ -731,7 +772,10 @@ mod tests {
             0, 1, // valid opt length
             0, // valid opt value
         ]);
-        assert!(Dhcpv6Message::parse(&mut &buf[..], ()).is_err());
+        assert_matches!(
+            Dhcpv6Message::parse(&mut &buf[..], ()),
+            Err(ProtocolError::InvalidOpCode(0))
+        );
     }
 
     // Oro must have a even option length, according to [RFC 8415, Section 21.7].
@@ -745,7 +789,10 @@ mod tests {
             0, 1, // invalid opt length, must be even
             0,
         ]);
-        assert!(Dhcpv6Message::parse(&mut &buf[..], ()).is_err());
+        assert_matches!(
+            Dhcpv6Message::parse(&mut &buf[..], ()),
+            Err(ProtocolError::InvalidOpLen(Dhcpv6OptionCode::Oro, 1))
+        );
     }
 
     // Preference must have option length 1, according to [RFC8415, Section 21.8].
@@ -759,7 +806,10 @@ mod tests {
             0, 2, // invalid opt length, must be even
             0, 0,
         ]);
-        assert!(Dhcpv6Message::parse(&mut &buf[..], ()).is_err());
+        assert_matches!(
+            Dhcpv6Message::parse(&mut &buf[..], ()),
+            Err(ProtocolError::InvalidOpLen(Dhcpv6OptionCode::Preference, 2))
+        );
     }
 
     // Elapsed time must have option length 2, according to [RFC 8145, Section 21.9].
@@ -773,7 +823,10 @@ mod tests {
             0, 3, // invalid opt length, must be even
             0, 0, 0,
         ]);
-        assert!(Dhcpv6Message::parse(&mut &buf[..], ()).is_err());
+        assert_matches!(
+            Dhcpv6Message::parse(&mut &buf[..], ()),
+            Err(ProtocolError::InvalidOpLen(Dhcpv6OptionCode::ElapsedTime, 3))
+        );
     }
 
     // Information refresh time must have option length 4, according to [RFC 8145, Section 21.23].
@@ -787,7 +840,10 @@ mod tests {
             0, 3, // invalid opt length, must be 4
             0, 0, 0,
         ]);
-        assert!(Dhcpv6Message::parse(&mut &buf[..], ()).is_err());
+        assert_matches!(
+            Dhcpv6Message::parse(&mut &buf[..], ()),
+            Err(ProtocolError::InvalidOpLen(Dhcpv6OptionCode::InformationRefreshTime, 3))
+        );
     }
 
     // Option length of Dns servers must be multiples of 16, according to [RFC 3646, Section 3].
@@ -801,6 +857,9 @@ mod tests {
             0, 17, // invalid opt length, must be multiple of 16
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
         ]);
-        assert!(Dhcpv6Message::parse(&mut &buf[..], ()).is_err());
+        assert_matches!(
+            Dhcpv6Message::parse(&mut &buf[..], ()),
+            Err(ProtocolError::InvalidOpLen(Dhcpv6OptionCode::DnsServers, 17))
+        );
     }
 }
