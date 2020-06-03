@@ -40,13 +40,8 @@ impl KeyboardService {
 
     /// Dispatches key event to clients.
     pub async fn handle_key_event(&self) -> Result<bool, Error> {
-        // TODO(fxb/47684): implement
+        // TODO(fxb/)47684: implement
         Ok(false)
-    }
-
-    /// Handle focus change.
-    pub async fn handle_focus_change(&self, _view_ref: ui_views::ViewRef) {
-        // TODO(fxb/47684): implement
     }
 
     /// Starts serving fuchsia.ui.input3.Keyboard protocol.

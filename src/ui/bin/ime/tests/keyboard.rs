@@ -11,7 +11,7 @@ use fidl_fuchsia_ui_input2 as ui_input2;
 use fidl_fuchsia_ui_views as ui_views;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
-use fuchsia_scenic as scenic;
+use fuchsia_zircon as zx;
 use futures::lock::Mutex;
 use futures::stream::StreamExt;
 use serde::{Deserialize, Deserializer};
@@ -144,10 +144,9 @@ mod hex_serde {
 }
 
 struct KeyboardService {
-    keyboard: ui_input2::KeyboardProxy,
+    _keyboard: ui_input2::KeyboardProxy,
     ime_service: ui_input::ImeServiceProxy,
     listener: ui_input2::KeyListenerRequestStream,
-    _view_ref: ui_views::ViewRef,
 }
 
 impl KeyboardService {
@@ -167,15 +166,11 @@ impl KeyboardService {
             fidl::endpoints::create_request_stream::<ui_input2::KeyListenerMarker>()?;
 
         // Set listener and view ref.
-        let view_ref = scenic::ViewRefPair::new()?.view_ref;
-        keyboard
-            .set_listener(&mut scenic::duplicate_view_ref(&view_ref)?, listener_client_end)
-            .await
-            .expect("set_listener");
+        let (raw_event_pair, _) = zx::EventPair::create()?;
+        let view_ref = &mut ui_views::ViewRef { reference: raw_event_pair };
+        keyboard.set_listener(view_ref, listener_client_end).await.expect("set_listener");
 
-        ime_service.view_focus_changed(&mut scenic::duplicate_view_ref(&view_ref)?).await?;
-
-        Ok(KeyboardService { ime_service, listener, keyboard, _view_ref: view_ref })
+        Ok(KeyboardService { ime_service, listener, _keyboard: keyboard })
     }
 
     fn press_key_low_level(
@@ -266,17 +261,11 @@ fn test_case_to_variations(test: TestCase) -> Vec<TestCase> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_all() {
-    // Since tests mimic a focused client behavior, they should be executed sequentially.
-    test_goldens().await;
-    test_focus().await;
-}
+async fn test_goldens() -> Result<(), Error> {
+    let data = fs::read_to_string(DEFAULT_GOLDEN_PATH)?;
+    let goldens: GoldenTestSuite = json::from_str(&data)?;
 
-async fn test_goldens() {
-    let data = fs::read_to_string(DEFAULT_GOLDEN_PATH).expect("read golden test set");
-    let goldens: GoldenTestSuite = json::from_str(&data).expect("parse golden test set");
-
-    let service = Arc::new(Mutex::new(KeyboardService::new().await.expect("new test service")));
+    let service = Arc::new(Mutex::new(KeyboardService::new().await?));
 
     let with_variations = goldens.test_cases.into_iter().flat_map(test_case_to_variations);
 
@@ -302,70 +291,6 @@ async fn test_goldens() {
         })
         .collect::<Vec<_>>()
         .await;
-}
 
-async fn test_focus() {
-    // Setup test helper service, which acts as a client.
-    let mut service = KeyboardService::new().await.expect("new test service");
-
-    let key = ui_input2::Key::A;
-    let modifiers = Some(ui_input2::Modifiers::Shift);
-
-    // Create fake keyboard client.
-    let (listener_client_end, mut listener) =
-        fidl::endpoints::create_request_stream::<ui_input2::KeyListenerMarker>()
-            .expect("new KeyListener");
-
-    // Create fake view_ref for it.
-    let other_view_ref = scenic::ViewRefPair::new().expect("new ViewRefPair").view_ref;
-
-    service
-        .keyboard
-        .set_listener(
-            &mut scenic::duplicate_view_ref(&other_view_ref).expect("duplicate view ref"),
-            listener_client_end,
-        )
-        .await
-        .expect("set_other_listener");
-
-    // Press a key.
-    let pressed_event = service.press_key(key, modifiers).await;
-
-    // Expect key press.
-    assert_eq!(pressed_event.modifiers, modifiers);
-    assert_eq!(pressed_event.key, Some(key));
-
-    // Send a key to another focused client.
-    let other_key = ui_input2::Key::B;
-    let other_modifiers = Some(ui_input2::Modifiers::Alt);
-
-    // Focus another client.
-    service
-        .ime_service
-        .view_focus_changed(
-            &mut scenic::duplicate_view_ref(&other_view_ref).expect("duplicate view ref"),
-        )
-        .await
-        .expect("focus another client");
-
-    // Send a key using service. Note that service.press_key will also receive the
-    // key using service.view_ref, while in this case the test expects the key to be
-    // dispatched to another client.
-    let was_handled_fut = service.press_key_low_level(other_key, other_modifiers);
-    let event = match listener.next().await {
-        Some(Ok(ui_input2::KeyListenerRequest::OnKeyEvent { event, responder, .. })) => {
-            responder.send(ui_input2::Status::Handled).expect("responding from key listener");
-            Some(event)
-        }
-        None => None,
-        _ => panic!("Error from listener.next() while pressing {:?}", (other_key, other_modifiers)),
-    };
-
-    let was_handled = was_handled_fut.await.expect("press_key");
-    assert_eq!(true, was_handled);
-    let pressed_event = event.unwrap();
-
-    // Expect another key to be delivered to another client.
-    assert_eq!(pressed_event.modifiers, other_modifiers);
-    assert_eq!(pressed_event.key, Some(other_key));
+    Ok(())
 }

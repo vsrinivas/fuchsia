@@ -6,9 +6,7 @@ use anyhow::{Context as _, Error};
 use fidl_fuchsia_ui_input2 as ui_input2;
 use fidl_fuchsia_ui_views as ui_views;
 use fuchsia_component::client;
-use fuchsia_scenic as scenic;
 use fuchsia_syslog::fx_log_err;
-use fuchsia_zircon::AsHandleRef;
 use futures::lock::Mutex;
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use std::ops::Sub;
@@ -32,7 +30,6 @@ pub struct Service {
 struct Store {
     subscribers: Vec<(usize, Arc<Mutex<Subscriber>>)>,
     last_id: usize,
-    focused: Option<ui_views::ViewRef>,
 }
 
 /// A client of fuchsia.ui.input2.Keyboard.SetListener()
@@ -69,12 +66,6 @@ impl Service {
         let event = self.apply_layout(event, &self.layout).await;
         let was_handled = self.store.lock().await.dispatch_key(event).await?;
         Ok(was_handled)
-    }
-
-    /// Handle focus change.
-    pub async fn handle_focus_change(&self, focused: ui_views::ViewRef) {
-        self.store.lock().await.focused =
-            Some(scenic::duplicate_view_ref(&focused).expect("valid view_ref"));
     }
 
     /// Start serving fuchsia.ui.input2.Keyboard protocol.
@@ -202,12 +193,6 @@ impl Store {
         index.map(|i| self.subscribers.remove(i));
     }
 
-    fn is_focused(&self, view_ref: &ui_views::ViewRef) -> bool {
-        self.focused.is_some()
-            && self.focused.as_ref().unwrap().reference.as_handle_ref().get_koid()
-                == view_ref.reference.as_handle_ref().get_koid()
-    }
-
     async fn dispatch_key(&self, event: ui_input2::KeyEvent) -> Result<bool, Error> {
         let subscribers = self.subscribers.iter().map(|t| t.1.clone()).into_iter();
 
@@ -220,10 +205,6 @@ impl Store {
                     if was_handled {
                         return was_handled;
                     }
-                    let subscriber = subscriber.lock().await;
-                    if !self.is_focused(&subscriber.view_ref) {
-                        return false;
-                    }
                     let event = ui_input2::KeyEvent {
                         key: event.key,
                         modifiers: event.modifiers,
@@ -231,6 +212,7 @@ impl Store {
                         physical_key: event.physical_key,
                         semantic_key: event.semantic_key.as_ref().map(clone_semantic_key),
                     };
+                    let subscriber = subscriber.lock().await;
                     let handled = subscriber
                         .listener
                         .on_key_event(event)

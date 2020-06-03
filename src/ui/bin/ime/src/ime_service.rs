@@ -215,12 +215,14 @@ impl ImeService {
                 self.inject_input(event).await;
             }
             uii::ImeServiceRequest::DispatchKey { .. }
-            | uii::ImeServiceRequest::DispatchKey3 { .. }
-            | uii::ImeServiceRequest::ViewFocusChanged { .. } => {
-                // Transitional: DispatchKey and ViewFocusChanged should be handled by keyboard/Service.
+            | uii::ImeServiceRequest::DispatchKey3 { .. } => {
+                // Transitional: DispatchKey should be handled by keyboard/Service.
                 // See Service.spawn_ime_service() for handing DispatchKey.
                 // In future, Keyboard service will receive keys directly.
                 panic!("Should be handled by keyboard service");
+            }
+            uii::ImeServiceRequest::ViewFocusChanged { .. } => {
+                // TODO: implement
             }
         }
         Ok(())

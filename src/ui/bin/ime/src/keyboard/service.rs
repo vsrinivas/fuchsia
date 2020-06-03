@@ -6,7 +6,6 @@ use anyhow::{Context as _, Error};
 use fidl_fuchsia_ui_input as ui_input;
 use fidl_fuchsia_ui_input2 as ui_input2;
 use fidl_fuchsia_ui_input3 as ui_input3;
-use fuchsia_scenic as scenic;
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use futures::{TryFutureExt, TryStreamExt};
@@ -61,23 +60,6 @@ impl Service {
                             responder
                                 .send(was_handled)
                                 .context("error responding to DispatchKey")?;
-                        }
-                        ui_input::ImeServiceRequest::ViewFocusChanged { view_ref, responder } => {
-                            {
-                                keyboard2
-                                    .lock()
-                                    .await
-                                    .handle_focus_change(scenic::duplicate_view_ref(&view_ref)?)
-                                    .await;
-                            }
-                            {
-                                keyboard3
-                                    .lock()
-                                    .await
-                                    .handle_focus_change(scenic::duplicate_view_ref(&view_ref)?)
-                                    .await;
-                            }
-                            responder.send().context("error responding to ViewFocusChanged")?;
                         }
                         _ => {
                             ime_service
