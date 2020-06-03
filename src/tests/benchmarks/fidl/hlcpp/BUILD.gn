@@ -16,6 +16,8 @@ gidl_cpp("benchmark_suite_hlcpp") {
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/perftest",
   ]
 }
@@ -26,6 +28,7 @@ executable("bin") {
   sources = [ "main.cc" ]
   deps = [
     ":benchmark_suite_hlcpp",
+    "//sdk/lib/fidl/cpp",
     "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
