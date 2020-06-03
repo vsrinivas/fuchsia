@@ -221,7 +221,6 @@ source_set("gfx") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/inspect_deprecated",
     "//src/lib/vulkan",
     "//src/ui/lib/escher",
     "//src/ui/scenic/lib/display",

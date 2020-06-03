@@ -27,6 +27,7 @@ source_set("scenic") {
     "//src/ui/scenic/lib/scenic/util",
     "//src/ui/scenic/lib/scheduling:present2_info",
     "//zircon/public/lib/fit",
+    "//zircon/system/ulib/inspect",
   ]
 
   deps = [
@@ -39,8 +40,6 @@ source_set("scenic") {
     "//src/ui/scenic/lib/gfx:gfx",
     "//src/ui/scenic/lib/gfx:view_focuser_registry",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
-    "//zircon/system/ulib/inspect",
-    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace",
   ]
 }
@@ -70,12 +69,14 @@ source_set("system") {
     "system.cc",
     "system.h",
   ]
-  public_deps = [ ":command_dispatcher" ]
+  public_deps = [
+    ":command_dispatcher",
+    "//zircon/system/ulib/inspect",
+  ]
   deps = [
     ":event_reporter",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//src/lib/fxl",
-    "//src/lib/inspect_deprecated:inspect_deprecated",
     "//src/ui/scenic/lib/scenic/util:util",
     "//src/ui/scenic/lib/scheduling:id",
   ]
