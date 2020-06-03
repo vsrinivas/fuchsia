@@ -4,15 +4,11 @@
 
 #![cfg(test)]
 use {
-    fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_paver::{
         self as paver, BootManagerRequest, BootManagerRequestStream, PaverRequest,
         PaverRequestStream,
     },
-    fidl_fuchsia_pkg::{
-        PackageCacheRequestStream, PackageResolverRequestStream, PackageResolverResolveResponder,
-    },
+    fidl_fuchsia_pkg::{PackageCacheRequestStream, PackageResolverRequestStream},
     fidl_fuchsia_update::{
         CheckNotStartedReason, CheckOptions, CheckingForUpdatesData, ErrorCheckingForUpdateData,
         Initiator, InstallationErrorData, InstallationProgress, InstallingData, ManagerMarker,
@@ -33,11 +29,11 @@ use {
     futures::{channel::mpsc, prelude::*},
     matches::assert_matches,
     mock_omaha_server::{OmahaResponse, OmahaServer},
+    mock_resolver::MockResolverService,
     parking_lot::Mutex,
     std::{
-        collections::HashMap,
         fs::{self, create_dir, File},
-        path::{Path, PathBuf},
+        path::PathBuf,
         sync::Arc,
     },
     tempfile::TempDir,
@@ -49,7 +45,6 @@ const OMAHA_CLIENT_CMX: &str =
 struct Mounts {
     _test_dir: TempDir,
     config_data: PathBuf,
-    packages: PathBuf,
     build_info: PathBuf,
 }
 
@@ -58,12 +53,10 @@ impl Mounts {
         let test_dir = TempDir::new().expect("create test tempdir");
         let config_data = test_dir.path().join("config_data");
         create_dir(&config_data).expect("create config_data dir");
-        let packages = test_dir.path().join("packages");
-        create_dir(&packages).expect("create packages dir");
         let build_info = test_dir.path().join("build_info");
         create_dir(&build_info).expect("create build_info dir");
 
-        Self { _test_dir: test_dir, config_data, packages, build_info }
+        Self { _test_dir: test_dir, config_data, build_info }
     }
 
     fn write_url(&self, url: impl AsRef<[u8]>) {
@@ -84,7 +77,7 @@ impl Mounts {
 struct Proxies {
     _cache: Arc<MockCache>,
     paver: Arc<MockPaver>,
-    resolver: Arc<MockResolver>,
+    resolver: Arc<MockResolverService>,
     update_manager: ManagerProxy,
     channel_control: ChannelControlProxy,
 }
@@ -136,11 +129,15 @@ impl TestEnvBuilder {
             fasync::spawn(paver_clone.run_service(stream));
         });
 
-        let resolver = Arc::new(MockResolver::new());
+        let resolver = Arc::new(MockResolverService::new(None));
         let resolver_clone = resolver.clone();
         fs.add_fidl_service(move |stream: PackageResolverRequestStream| {
             let resolver_clone = resolver_clone.clone();
-            fasync::spawn(resolver_clone.run_resolver_service(stream))
+            fasync::spawn(
+                resolver_clone
+                    .run_resolver_service(stream)
+                    .unwrap_or_else(|e| panic!("error running resolver service {:?}", e)),
+            )
         });
 
         let cache = Arc::new(MockCache::new());
@@ -172,7 +169,7 @@ impl TestEnvBuilder {
 
         TestEnv {
             _env: env,
-            mounts,
+            _mounts: mounts,
             proxies: Proxies {
                 _cache: cache,
                 paver,
@@ -199,28 +196,13 @@ impl TestEnvBuilder {
 
 struct TestEnv {
     _env: NestedEnvironment,
-    mounts: Mounts,
+    _mounts: Mounts,
     proxies: Proxies,
     _omaha_client: App,
     nested_environment_label: String,
 }
 
 impl TestEnv {
-    fn register_package(&mut self, name: impl AsRef<str>, merkle: impl AsRef<str>) -> TestPackage {
-        let name = name.as_ref();
-        let merkle = merkle.as_ref();
-
-        let root = self.mounts.packages.join(merkle);
-        create_dir(&root).expect("package to not yet exist");
-
-        self.proxies.resolver.mock_package_result(
-            format!("fuchsia-pkg://integration.test.fuchsia.com/{}", name),
-            Ok(root.clone()),
-        );
-
-        TestPackage { root }.add_file("meta", merkle)
-    }
-
     async fn check_now(&self) -> MonitorRequestStream {
         for _ in 0..20u8 {
             let options = CheckOptions {
@@ -271,17 +253,6 @@ impl TestEnv {
                 }
             }
         );
-    }
-}
-
-struct TestPackage {
-    root: PathBuf,
-}
-
-impl TestPackage {
-    fn add_file(self, path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> Self {
-        std::fs::write(self.root.join(path), contents).expect("write file");
-        self
     }
 }
 
@@ -356,67 +327,6 @@ impl MockPaver {
     }
 }
 
-struct MockResolver {
-    expectations: Mutex<HashMap<String, Result<PathBuf, Status>>>,
-}
-
-impl MockResolver {
-    fn new() -> Self {
-        Self { expectations: Mutex::new(HashMap::new()) }
-    }
-    async fn run_resolver_service(self: Arc<Self>, mut stream: PackageResolverRequestStream) {
-        while let Some(event) = stream.try_next().await.unwrap() {
-            match event {
-                fidl_fuchsia_pkg::PackageResolverRequest::Resolve {
-                    package_url,
-                    selectors: _,
-                    update_policy: _,
-                    dir,
-                    responder,
-                } => self.handle_resolve(package_url, dir, responder).await,
-                fidl_fuchsia_pkg::PackageResolverRequest::GetHash { .. } => {
-                    panic!("GetHash not implemented")
-                }
-            }
-        }
-    }
-
-    async fn handle_resolve(
-        &self,
-        package_url: String,
-        dir: ServerEnd<DirectoryMarker>,
-        responder: PackageResolverResolveResponder,
-    ) {
-        eprintln!("TEST: Got resolve request for {:?}", package_url);
-
-        let response = self
-            .expectations
-            .lock()
-            .get(&package_url)
-            .map(|entry| entry.clone())
-            .unwrap_or(Err(Status::OK));
-
-        let response_status = match response {
-            Ok(package_dir) => {
-                // Open the package directory using the directory request given by the client
-                // asking to resolve the package.
-                fdio::service_connect(
-                    package_dir.to_str().expect("path to str"),
-                    dir.into_channel(),
-                )
-                .unwrap_or_else(|err| panic!("error connecting to tempdir {:?}", err));
-                Status::OK
-            }
-            Err(status) => status,
-        };
-        responder.send(response_status.into_raw()).unwrap();
-    }
-
-    fn mock_package_result(&self, url: impl Into<String>, response: Result<PathBuf, Status>) {
-        self.expectations.lock().insert(url.into(), response);
-    }
-}
-
 struct MockCache;
 
 impl MockCache {
@@ -479,17 +389,21 @@ fn progress(fraction_completed: Option<f32>) -> Option<InstallationProgress> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_update() {
-    let mut env = TestEnvBuilder::new().response(OmahaResponse::Update).build();
+    let env = TestEnvBuilder::new().response(OmahaResponse::Update).build();
 
-    env.register_package(
-        "update?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-        "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-    )
-    .add_file(
-        "packages",
-        "system_image/0=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead\n",
-    )
-    .add_file("zbi", "fake zbi");
+    env.proxies
+        .resolver
+        .register_custom_package(
+            "update?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            "update",
+            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            "integration.test.fuchsia.com",
+        )
+        .add_file(
+            "packages",
+            "system_image/0=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead\n",
+        )
+        .add_file("zbi", "fake zbi");
 
     let mut stream = env.check_now().await;
     expect_states(

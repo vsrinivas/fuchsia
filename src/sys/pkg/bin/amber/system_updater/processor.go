@@ -87,17 +87,17 @@ func ConnectToPaver(ctx *component.Context) (*paver.DataSinkWithCtxInterface, *p
 func CacheUpdatePackage(updateURL string, resolver *pkg.PackageResolverWithCtxInterface) (*UpdatePackage, error) {
 	dirPxy, err := resolvePackage(updateURL, resolver)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not resolve update package: %s", err)
 	}
 	pkg, err := NewUpdatePackage(dirPxy)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not open update package: %s", err)
 	}
 
 	merkle, err := pkg.Merkleroot()
 	if err != nil {
 		pkg.Close()
-		return nil, err
+		return nil, fmt.Errorf("could not get merkle root for update package: %s", err)
 	}
 	syslog.Infof("resolved %s as %s", updateURL, merkle)
 
@@ -420,6 +420,18 @@ func resolvePackage(pkgURI string, resolver *pkg.PackageResolverWithCtxInterface
 }
 
 func ValidateUpdatePackage(updatePkg *UpdatePackage) error {
+	// Check that the name of the package is actually "update".
+	// If it's not, we won't be able to GC a previous version away, and may run afoul
+	// of our space limits.
+	name, variant, err := updatePkg.NameAndVariant()
+	if err != nil {
+		return err
+	}
+	if name != "update" || variant != "0" {
+		return fmt.Errorf("parser: expected update package named 'update' with variant '0', found %s, %s", name, variant)
+	}
+
+	// Check that the board config matches the hardware we're running on.
 	actual, err := updatePkg.ReadFile("board")
 	if err == nil {
 		expected, err := ioutil.ReadFile("/config/build-info/board")

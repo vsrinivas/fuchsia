@@ -1767,7 +1767,7 @@ action("update_prime.manifest") {
   args += [
     "--rewrite",
     "meta/package={target}=" +
-        rebase_path("update_prime_package.json", root_build_dir),
+        rebase_path("update_package.json", root_build_dir),
     "--rewrite",
     "packages={target}=" +
         rebase_path(update_prime_packages_manifest_outputs[0], root_build_dir),
@@ -1840,6 +1840,9 @@ action("update-to-zedboot.manifest") {
 
   sources = update_manifest_outputs
   args += [
+    "--rewrite",
+    "meta/package={target}=" +
+        rebase_path("update_package.json", root_build_dir),
     "--rewrite",
     "packages={target}=" +
         rebase_path(update_to_zedboot_packages_manifest_outputs[0],

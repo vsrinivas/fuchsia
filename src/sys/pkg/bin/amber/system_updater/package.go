@@ -5,6 +5,7 @@
 package system_updater
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -19,6 +20,11 @@ import (
 // UpdatePackage represents a handle to the update package.
 type UpdatePackage struct {
 	dir *os.File
+}
+
+type metaPackage struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
 }
 
 // NewUpdatePackage creates an UpdatePackage from a fidl interface
@@ -90,6 +96,22 @@ func (p *UpdatePackage) Merkleroot() (string, error) {
 	}
 	merkle := string(b)
 	return merkle, nil
+}
+
+// Name of the update package
+func (p *UpdatePackage) NameAndVariant() (string, string, error) {
+	b, err := p.ReadFile("meta/package")
+	if err != nil {
+		return "", "", err
+	}
+
+	var metaPackage metaPackage
+	err = json.Unmarshal(b, &metaPackage)
+	if err != nil {
+		return "", "", err
+	}
+
+	return metaPackage.Name, metaPackage.Version, nil
 }
 
 // Close the handle to the UpdatePackage.

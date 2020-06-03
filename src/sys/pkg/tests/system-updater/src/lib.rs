@@ -6,11 +6,8 @@
 use {
     self::SystemUpdaterInteraction::{BlobfsSync, Gc, PackageResolve, Paver, Reboot},
     anyhow::Error,
-    cobalt_sw_delivery_registry as metrics,
-    fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_paver as paver,
-    fidl_fuchsia_pkg::{PackageResolverRequestStream, PackageResolverResolveResponder},
+    cobalt_sw_delivery_registry as metrics, fidl_fuchsia_paver as paver,
+    fidl_fuchsia_pkg::PackageResolverRequestStream,
     fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
     fuchsia_async as fasync,
     fuchsia_component::{
@@ -20,14 +17,14 @@ use {
     fuchsia_zircon::Status,
     futures::prelude::*,
     mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
+    mock_resolver::MockResolverService,
     parking_lot::Mutex,
     pretty_assertions::assert_eq,
     serde_json::json,
     std::{
-        collections::HashMap,
         fs::{self, create_dir, File},
         io::Write,
-        path::{Path, PathBuf},
+        path::PathBuf,
         sync::Arc,
     },
     tempfile::TempDir,
@@ -68,6 +65,20 @@ impl TestEnvBuilder {
         // A buffer to store all the interactions the system-updater has with external services.
         let interactions = Arc::new(Mutex::new(vec![]));
 
+        let test_dir = TempDir::new().expect("create test tempdir");
+
+        let blobfs_path = test_dir.path().join("blob");
+        create_dir(&blobfs_path).expect("create blob dir");
+
+        let fake_path = test_dir.path().join("fake");
+        create_dir(&fake_path).expect("create fake stimulus dir");
+
+        let config_path = test_dir.path().join("config");
+        create_dir(&config_path).expect("create config dir");
+
+        let misc_path = test_dir.path().join("misc");
+        create_dir(&misc_path).expect("create misc dir");
+
         // Set up the paver service to push events to our interactions buffer by overriding
         // call_hook and firmware_hook.
         let interactions_paver_clone = Arc::clone(&interactions);
@@ -82,7 +93,11 @@ impl TestEnvBuilder {
         let mut fs = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>();
 
-        let resolver = Arc::new(MockResolverService::new(Arc::clone(&interactions)));
+        let interactions_resolver_clone = Arc::clone(&interactions);
+        let resolver =
+            Arc::new(MockResolverService::new(Some(Box::new(move |resolved_url: &str| {
+                interactions_resolver_clone.lock().push(PackageResolve(resolved_url.to_owned()))
+            }))));
         let resolver_clone = resolver.clone();
         fs.add_fidl_service(move |stream: PackageResolverRequestStream| {
             let resolver_clone = resolver_clone.clone();
@@ -147,23 +162,6 @@ impl TestEnvBuilder {
             .expect("nested environment to create successfully");
         fasync::spawn(fs.collect());
 
-        let test_dir = TempDir::new().expect("create test tempdir");
-
-        let blobfs_path = test_dir.path().join("blob");
-        create_dir(&blobfs_path).expect("create blob dir");
-
-        let packages_path = test_dir.path().join("packages");
-        create_dir(&packages_path).expect("create packages dir");
-
-        let fake_path = test_dir.path().join("fake");
-        create_dir(&fake_path).expect("create fake stimulus dir");
-
-        let config_path = test_dir.path().join("config");
-        create_dir(&config_path).expect("create config dir");
-
-        let misc_path = test_dir.path().join("misc");
-        create_dir(&misc_path).expect("create misc dir");
-
         TestEnv {
             env,
             resolver,
@@ -173,7 +171,6 @@ impl TestEnvBuilder {
             logger_factory,
             _space_service: space_service,
             _test_dir: test_dir,
-            packages_path,
             blobfs_path,
             fake_path,
             config_path,
@@ -182,6 +179,7 @@ impl TestEnvBuilder {
         }
     }
 }
+
 struct TestEnv {
     env: NestedEnvironment,
     resolver: Arc<MockResolverService>,
@@ -191,7 +189,6 @@ struct TestEnv {
     logger_factory: Arc<MockLoggerFactory>,
     _space_service: Arc<MockSpaceService>,
     _test_dir: TempDir,
-    packages_path: PathBuf,
     blobfs_path: PathBuf,
     fake_path: PathBuf,
     config_path: PathBuf,
@@ -240,19 +237,6 @@ impl TestEnv {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => assert_eq!(expected, None),
             Err(e) => panic!(e),
         }
-    }
-
-    fn register_package(&mut self, name: impl AsRef<str>, merkle: impl AsRef<str>) -> TestPackage {
-        let name = name.as_ref();
-        let merkle = merkle.as_ref();
-
-        let root = self.packages_path.join(merkle);
-        create_dir(&root).expect("package to not yet exist");
-
-        self.resolver
-            .mock_package_result(format!("fuchsia-pkg://fuchsia.com/{}", name), Ok(root.clone()));
-
-        TestPackage { root }.add_file("meta", merkle)
     }
 
     async fn run_system_updater<'a>(
@@ -321,94 +305,12 @@ impl TestEnv {
     }
 }
 
-struct TestPackage {
-    root: PathBuf,
-}
-
-impl TestPackage {
-    fn add_file(self, path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> Self {
-        std::fs::write(self.root.join(path), contents).expect("create fake package file");
-        self
-    }
-}
-
 struct SystemUpdaterArgs<'a> {
     initiator: &'a str,
     target: &'a str,
     update: Option<&'a str>,
     reboot: Option<bool>,
     skip_recovery: Option<bool>,
-}
-
-struct MockResolverService {
-    expectations: Mutex<HashMap<String, Result<PathBuf, Status>>>,
-    interactions: SystemUpdaterInteractions,
-}
-
-impl MockResolverService {
-    fn new(interactions: SystemUpdaterInteractions) -> Self {
-        Self { expectations: Mutex::new(HashMap::new()), interactions }
-    }
-    async fn run_resolver_service(
-        self: Arc<Self>,
-        mut stream: PackageResolverRequestStream,
-    ) -> Result<(), Error> {
-        while let Some(event) = stream.try_next().await? {
-            match event {
-                fidl_fuchsia_pkg::PackageResolverRequest::Resolve {
-                    package_url,
-                    selectors: _,
-                    update_policy: _,
-                    dir,
-                    responder,
-                } => self.handle_resolve(package_url, dir, responder).await?,
-                fidl_fuchsia_pkg::PackageResolverRequest::GetHash {
-                    package_url: _,
-                    responder: _,
-                } => panic!("GetHash not implemented"),
-            }
-        }
-        Ok(())
-    }
-    async fn handle_resolve(
-        &self,
-        package_url: String,
-        dir: ServerEnd<DirectoryMarker>,
-        responder: PackageResolverResolveResponder,
-    ) -> Result<(), Error> {
-        eprintln!("TEST: Got resolve request for {:?}", package_url);
-
-        let response = self
-            .expectations
-            .lock()
-            .get(&package_url)
-            .map(|entry| entry.clone())
-            // Successfully resolve unexpected packages without serving a package dir. Log the
-            // transaction so tests can decide if it was expected.
-            .unwrap_or(Err(Status::OK));
-
-        self.interactions.lock().push(PackageResolve(package_url));
-
-        let response_status = match response {
-            Ok(package_dir) => {
-                // Open the package directory using the directory request given by the client
-                // asking to resolve the package.
-                fdio::service_connect(
-                    package_dir.to_str().expect("path to str"),
-                    dir.into_channel(),
-                )
-                .unwrap_or_else(|err| panic!("error connecting to tempdir {:?}", err));
-                Status::OK
-            }
-            Err(status) => status,
-        };
-        responder.send(response_status.into_raw())?;
-        Ok(())
-    }
-
-    fn mock_package_result(&self, url: impl Into<String>, response: Result<PathBuf, Status>) {
-        self.expectations.lock().insert(url.into(), response);
-    }
 }
 
 struct MockCacheService {
@@ -689,9 +591,10 @@ fn resolved_urls(interactions: SystemUpdaterInteractions) -> Vec<String> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_system_update() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -746,10 +649,11 @@ async fn test_system_update() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_system_update_force_recovery() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
     let package_url = SYSTEM_IMAGE_URL;
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file("packages", package_url)
         .add_file("update-mode", &force_recovery_json());
 
@@ -800,9 +704,10 @@ async fn test_system_update_force_recovery() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_packages_json_takes_precedence() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -843,9 +748,10 @@ async fn test_packages_json_takes_precedence() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_metrics_report_untrusted_tuf_repo() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages.json",
             &json!({
@@ -860,9 +766,9 @@ async fn test_metrics_report_untrusted_tuf_repo() {
         )
         .add_file("zbi", "fake zbi");
 
-    env.resolver.mock_package_result(
+    env.resolver.mock_resolve_failure(
         "fuchsia-pkg://non-existent-repo.com/amber/0?hash=abcdef",
-        Err(Status::ADDRESS_UNREACHABLE),
+        Status::ADDRESS_UNREACHABLE,
     );
 
     let result = env
@@ -894,9 +800,10 @@ async fn test_metrics_report_untrusted_tuf_repo() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_system_update_no_reboot() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -950,9 +857,10 @@ async fn test_system_update_no_reboot() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_system_update_force_recovery_reboots_regardless_of_reboot_arg() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file("packages", "")
         .add_file("update-mode", &force_recovery_json());
 
@@ -989,9 +897,10 @@ async fn test_system_update_force_recovery_reboots_regardless_of_reboot_arg() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_broken_logger() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1037,15 +946,15 @@ async fn test_broken_logger() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_failing_package_fetch() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3").add_file(
+    env.resolver.register_package("update", "upd4t3").add_file(
         "packages",
         "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
     );
 
     let system_image_url = SYSTEM_IMAGE_URL;
-    env.resolver.mock_package_result(system_image_url, Err(Status::NOT_FOUND));
+    env.resolver.mock_resolve_failure(system_image_url, Status::NOT_FOUND);
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {
@@ -1085,9 +994,9 @@ async fn test_failing_package_fetch() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_system_update_fails_when_sync_fails() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
     env.cache_service.set_sync_response(Status::INTERNAL.into_raw());
-    env.register_package("update", "upd4t3").add_file(
+    env.resolver.register_package("update", "upd4t3").add_file(
         "packages",
         "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
     );
@@ -1118,9 +1027,10 @@ async fn test_system_update_fails_when_sync_fails() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_normal_requires_zbi() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1152,9 +1062,10 @@ async fn test_normal_requires_zbi() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_force_recovery_rejects_zbi() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1182,11 +1093,12 @@ async fn test_force_recovery_rejects_zbi() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_validate_board() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
     env.set_board_name("x64");
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1213,11 +1125,12 @@ async fn test_validate_board() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_invalid_board() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
     env.set_board_name("x64");
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1256,10 +1169,62 @@ async fn test_invalid_board() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_writes_bootloader() {
-    let mut env = TestEnv::new();
+async fn test_invalid_update_package_name() {
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    // Name the update package something other than "update" and assert that the process fails to
+    // validate the update package.
+    env.resolver
+        .register_custom_package("not_update", "not_update", "upd4t3", "fuchsia.com")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi")
+        .add_file("zedboot", "new recovery");
+
+    let not_update_package_url = "fuchsia-pkg://fuchsia.com/not_update";
+
+    let result = env
+        .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: Some(not_update_package_url),
+            reboot: None,
+            skip_recovery: None,
+        })
+        .await;
+    assert!(result.is_err(), "system_updater succeeded when it should fail");
+
+    // Expect to have failed prior to downloading images.
+    // The overall result should be similar to an invalid board, and we should have used
+    // the not_update package URL, not `fuchsia.com/update`.
+    assert_eq!(
+        env.take_interactions(),
+        vec![Gc, PackageResolve(not_update_package_url.to_string())]
+    );
+
+    let loggers = env.logger_factory.loggers.lock().clone();
+    assert_eq!(loggers.len(), 1);
+    let logger = loggers.into_iter().next().unwrap();
+    assert_eq!(
+        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        OtaMetrics {
+            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+                as u32,
+            phase: 0u32,
+            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
+            target: "m3rk13".into(),
+        }
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_writes_bootloader() {
+    let env = TestEnv::new();
+
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1305,9 +1270,10 @@ async fn test_writes_bootloader() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_writes_recovery() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1355,9 +1321,10 @@ async fn test_writes_recovery() {
 // TODO(52356): drop this duplicate test
 #[fasync::run_singlethreaded(test)]
 async fn test_writes_recovery_named_recovery() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1404,9 +1371,10 @@ async fn test_writes_recovery_named_recovery() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_writes_recovery_vbmeta() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1459,9 +1427,10 @@ async fn test_writes_recovery_vbmeta() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_writes_fuchsia_vbmeta() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1508,9 +1477,10 @@ async fn test_writes_fuchsia_vbmeta() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_skips_recovery_vbmeta() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1555,10 +1525,11 @@ async fn do_test_working_image_write_with_abr(
     active_config: paver::Configuration,
     target_config: paver::Configuration,
 ) {
-    let mut env =
+    let env =
         TestEnv::builder().paver_service(|builder| builder.active_config(active_config)).build();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1623,11 +1594,12 @@ async fn test_working_image_write_with_abr_and_active_config_b() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_working_image_with_unsupported_abr() {
-    let mut env = TestEnv::builder()
+    let env = TestEnv::builder()
         .paver_service(|builder| builder.boot_manager_close_with_epitaph(Status::NOT_SUPPORTED))
         .build();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1684,10 +1656,11 @@ async fn test_working_image_with_unsupported_abr() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_failing_image_write() {
-    let mut env =
+    let env =
         TestEnv::builder().paver_service(|builder| builder.call_hook(|_| Status::INTERNAL)).build();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1734,9 +1707,10 @@ async fn test_failing_image_write() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_uses_custom_update_package() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("another-update/4", "upd4t3r")
+    env.resolver
+        .register_package("another-update/4", "upd4t3r")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1779,7 +1753,7 @@ async fn test_uses_custom_update_package() {
 async fn test_requires_update_package() {
     let env = TestEnv::new();
 
-    env.resolver.mock_package_result(UPDATE_PKG_URL, Err(Status::NOT_FOUND));
+    env.resolver.mock_resolve_failure(UPDATE_PKG_URL, Status::NOT_FOUND);
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {
@@ -1801,7 +1775,7 @@ async fn test_rejects_invalid_update_package_url() {
 
     let bogus_url = "not-fuchsia-pkg://fuchsia.com/not-a-update";
 
-    env.resolver.mock_package_result(bogus_url, Err(Status::INVALID_ARGS));
+    env.resolver.mock_resolve_failure(bogus_url, Status::INVALID_ARGS);
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {
@@ -1819,9 +1793,10 @@ async fn test_rejects_invalid_update_package_url() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_rejects_unknown_flags() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1844,9 +1819,10 @@ async fn test_rejects_unknown_flags() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_rejects_extra_args() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1863,9 +1839,10 @@ async fn test_rejects_extra_args() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_writes_firmware() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1911,9 +1888,10 @@ async fn test_writes_firmware() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_writes_multiple_firmware_types() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -1976,13 +1954,14 @@ async fn test_writes_multiple_firmware_types() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_unsupported_firmware_type() {
-    let mut env = TestEnv::builder()
+    let env = TestEnv::builder()
         .paver_service(|builder| {
             builder.firmware_hook(|_| paver::WriteFirmwareResult::UnsupportedType(true))
         })
         .build();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -2029,14 +2008,15 @@ async fn test_unsupported_firmware_type() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_write_firmware_failure() {
-    let mut env = TestEnv::builder()
+    let env = TestEnv::builder()
         .paver_service(|builder| {
             builder
                 .firmware_hook(|_| paver::WriteFirmwareResult::Status(Status::INTERNAL.into_raw()))
         })
         .build();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -2057,11 +2037,12 @@ async fn test_write_firmware_failure() {
 
 #[fasync::run_singlethreaded(test)]
 async fn promotes_target_channel_as_current_channel() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
     env.set_target_channel("target-channel");
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -2099,9 +2080,10 @@ async fn promotes_target_channel_as_current_channel() {
 
 #[fasync::run_singlethreaded(test)]
 async fn succeeds_even_if_target_channel_does_not_exist() {
-    let mut env = TestEnv::new();
+    let env = TestEnv::new();
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
@@ -2123,12 +2105,13 @@ async fn succeeds_even_if_target_channel_does_not_exist() {
 
 #[fasync::run_singlethreaded(test)]
 async fn does_not_promote_target_channel_on_failure() {
-    let mut env =
+    let env =
         TestEnv::builder().paver_service(|builder| builder.call_hook(|_| Status::INTERNAL)).build();
 
     env.set_target_channel("target-channel");
 
-    env.register_package("update", "upd4t3")
+    env.resolver
+        .register_package("update", "upd4t3")
         .add_file(
             "packages",
             "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",

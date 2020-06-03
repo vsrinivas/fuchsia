@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/mock-resolver-lib-test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
+    }
+}
