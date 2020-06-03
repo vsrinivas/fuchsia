@@ -8,7 +8,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     matches::assert_matches,
-    test_utils_lib::events::{Event, EventMatcher, EventSource, Resolved, Started, StartedError},
+    test_utils_lib::events::{Event, EventError, EventMatcher, EventSource, Resolved, Started},
 };
 
 #[fasync::run_singlethreaded]
@@ -34,16 +34,10 @@ async fn main() -> Result<(), Error> {
     let started_event = event_stream.expect_exact::<Started>(EventMatcher::new()).await?;
 
     if resolved_event.error.is_some() {
-        assert_matches!(
-            &started_event.result.err(),
-            Some(StartedError {
-                component_url,
-                description: _,
-            }) if component_url == "fuchsia-pkg://fuchsia.com/events_integration_test#meta/does_not_exist.cm"
-        );
+        assert_matches!(&started_event.error, Some(EventError { description: _ }));
         let _ = echo.echo_string(Some("ERROR")).await?;
     } else {
-        assert!(started_event.result.err().is_none());
+        assert!(started_event.error.is_none());
         let _ = echo.echo_string(Some("PAYLOAD")).await?;
     }
 

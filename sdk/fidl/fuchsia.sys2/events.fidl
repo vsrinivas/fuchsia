@@ -119,20 +119,14 @@ flexible union EventErrorPayload {
     /// Payload for CapabilityRouted events
     2: CapabilityRoutedError capability_routed;
 
-    /// Payload for Started events
-    3: StartedError started;
-
     /// Payload for Running events
-    4: RunningError running;
+    3: RunningError running;
 };
 
 /// Error payload for CapabilityReady events
 table CapabilityReadyError {
-    /// The url of the component providing the capability.
-    1: fuchsia.url.Url component_url;
-
     /// The path of the capability.
-    2: string:fuchsia.component.MAX_PATH_LENGTH path;
+    1: string:fuchsia.component.MAX_PATH_LENGTH path;
 };
 
 /// Error payload for CapabilityRouted events
@@ -141,12 +135,6 @@ table CapabilityRoutedError {
     /// For a path-based capability, this is the path.
     /// For a runner capability, this is the name.
     1: string:MAX_CAPABILITY_ID_LENGTH capability_id;
-};
-
-/// Error payload for Started events
-table StartedError {
-    /// The url of the component that started.
-    1: fuchsia.url.Url component_url;
 };
 
 /// Error payload for Running events.
@@ -163,23 +151,17 @@ flexible union EventPayload {
     /// Payload for CapabilityRouted events
     2: CapabilityRoutedPayload capability_routed;
 
-    /// Payload for Started events
-    3: StartedPayload started;
-
     /// Payload for Running events
-    4: RunningPayload running;
+    3: RunningPayload running;
 };
 
 /// Payload for CapabilityReady events
 table CapabilityReadyPayload {
-    /// The url of the component providing the capability.
-    1: fuchsia.url.Url component_url;
-
     /// The path of the capability.
-    2: string:fuchsia.component.MAX_PATH_LENGTH path;
+    1: string:fuchsia.component.MAX_PATH_LENGTH path;
 
     /// Channel to the node exposed by the event source at `path`.
-    3: fuchsia.io.Node node;
+    2: fuchsia.io.Node node;
 };
 
 /// Payload for CapabilityRouted events
@@ -198,16 +180,19 @@ table CapabilityRoutedPayload {
     3: CapabilitySource source;
 };
 
-/// Payload for Started events
-table StartedPayload {
-    /// The url of the component that started
-    1: fuchsia.url.Url component_url;
-};
-
 /// Payload for Running events.
 table RunningPayload {
     /// Time when the component started.
     1: zx.time started_timestamp;
+};
+
+/// A descriptor providing metadata about a target component instance.
+table ComponentDescriptor {
+    /// Relative moniker identifying the component instance. Relative to the scope of the event.
+    1: string:fuchsia.component.MAX_MONIKER_LENGTH moniker;
+
+    /// URL used to resolve the component.
+    2: fuchsia.url.Url component_url;
 };
 
 /// Contains all information about a single event
@@ -215,8 +200,8 @@ table Event {
     /// Event type corresponding to the event
     1: EventType event_type;
 
-    /// Moniker of instance corresponding to the event
-    2: string:fuchsia.component.MAX_MONIKER_LENGTH target_moniker;
+    /// Information about the component for which this event was generated.
+    2: ComponentDescriptor descriptor;
 
     /// Handler for resuming from event
     /// This will be absent if this is an async event.

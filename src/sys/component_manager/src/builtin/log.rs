@@ -202,8 +202,9 @@ mod tests {
             capability: InternalCapability::Protocol(READ_ONLY_LOG_CAPABILITY_PATH.clone()),
         };
 
-        let event = Event::new(
+        let event = Event::new_for_test(
             AbsoluteMoniker::root(),
+            "fuchsia-pkg://root",
             Ok(EventPayload::CapabilityRouted { source, capability_provider: provider.clone() }),
         );
         hooks.dispatch(&event).await?;
@@ -264,8 +265,9 @@ mod tests {
             capability: InternalCapability::Protocol(WRITE_ONLY_LOG_CAPABILITY_PATH.clone()),
         };
 
-        let event = Event::new(
+        let event = Event::new_for_test(
             AbsoluteMoniker::root(),
+            "fuchsia-pkg://root",
             Ok(EventPayload::CapabilityRouted { source, capability_provider: provider.clone() }),
         );
         hooks.dispatch(&event).await?;

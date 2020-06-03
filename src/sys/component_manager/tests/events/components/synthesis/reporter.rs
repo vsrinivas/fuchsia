@@ -56,10 +56,12 @@ async fn main() -> Result<(), Error> {
         let event = event_stream.next().await?;
         match event.event_type {
             Some(Running::TYPE) => {
-                running.push(event.target_moniker.unwrap().to_string());
+                let event = Running::from_fidl(event).expect("convert to running");
+                running.push(event.target_moniker().to_string());
             }
             Some(CapabilityReady::TYPE) => {
-                capability_ready.insert(event.target_moniker.unwrap().to_string());
+                let event = CapabilityReady::from_fidl(event).expect("convert to capability ready");
+                capability_ready.insert(event.target_moniker().to_string());
             }
             other => panic!("unexpected event type: {:?}", other),
         }

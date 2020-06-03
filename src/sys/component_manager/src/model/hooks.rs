@@ -8,7 +8,7 @@ use {
         model::{
             error::ModelError,
             moniker::AbsoluteMoniker,
-            realm::{BindReason, Runtime},
+            realm::{BindReason, Realm, Runtime},
         },
     },
     anyhow::format_err,
@@ -187,13 +187,13 @@ impl EventError {
 #[derive(Clone)]
 pub enum EventErrorPayload {
     // Keep the events listed below in alphabetical order!
-    CapabilityReady { component_url: String, path: String },
+    CapabilityReady { path: String },
     CapabilityRouted,
     Destroyed,
     Discovered,
     MarkedForDestruction,
     Resolved,
-    Started { component_url: String },
+    Started,
     Stopped,
     Running { started_timestamp: zx::Time },
 }
@@ -209,18 +209,13 @@ impl fmt::Debug for EventErrorPayload {
         let mut formatter = fmt.debug_struct("EventErrorPayload");
         formatter.field("type", &self.event_type());
         match self {
-            EventErrorPayload::CapabilityReady { path, component_url } => {
-                formatter.field("path", &path);
-                formatter.field("component_url", &component_url).finish()
-            }
-            EventErrorPayload::Started { component_url } => {
-                formatter.field("component_url", &component_url).finish()
-            }
+            EventErrorPayload::CapabilityReady { path } => formatter.field("path", &path).finish(),
             EventErrorPayload::CapabilityRouted
             | EventErrorPayload::Destroyed
             | EventErrorPayload::Discovered
             | EventErrorPayload::MarkedForDestruction
             | EventErrorPayload::Resolved
+            | EventErrorPayload::Started
             | EventErrorPayload::Stopped
             | EventErrorPayload::Running { .. } => formatter.finish(),
         }
@@ -260,7 +255,6 @@ impl HooksRegistration {
 pub enum EventPayload {
     // Keep the events listed below in alphabetical order!
     CapabilityReady {
-        component_url: String,
         path: String,
         node: NodeProxy,
     },
@@ -272,15 +266,12 @@ pub enum EventPayload {
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     },
     Destroyed,
-    Discovered {
-        component_url: String,
-    },
+    Discovered,
     MarkedForDestruction,
     Resolved {
         decl: ComponentDecl,
     },
     Started {
-        component_url: String,
         runtime: RuntimeInfo,
         component_decl: ComponentDecl,
         bind_reason: BindReason,
@@ -326,14 +317,12 @@ impl fmt::Debug for EventPayload {
             EventPayload::CapabilityRouted { source: capability, .. } => {
                 formatter.field("capability", &capability).finish()
             }
-            EventPayload::Discovered { component_url } => {
-                formatter.field("component_url", component_url).finish()
-            }
             EventPayload::Started { component_decl, .. } => {
                 formatter.field("component_decl", &component_decl).finish()
             }
             EventPayload::Resolved { decl } => formatter.field("decl", decl).finish(),
             EventPayload::Destroyed
+            | EventPayload::Discovered
             | EventPayload::MarkedForDestruction
             | EventPayload::Stopped
             | EventPayload::Running { .. } => formatter.finish(),
@@ -351,6 +340,9 @@ pub struct Event {
     /// Moniker of realm that this event applies to
     pub target_moniker: AbsoluteMoniker,
 
+    /// Component url of the realm that this event applies to
+    pub component_url: String,
+
     /// Result of the event
     pub result: EventResult,
 
@@ -359,19 +351,56 @@ pub struct Event {
 }
 
 impl Event {
-    pub fn new(target_moniker: AbsoluteMoniker, result: EventResult) -> Self {
+    pub fn new(realm: &Arc<Realm>, result: EventResult) -> Self {
         let timestamp = zx::Time::get(zx::ClockId::Monotonic);
-        Self::new_with_timestamp(target_moniker, result, timestamp)
+        Self::new_with_timestamp(realm, result, timestamp)
     }
 
     pub fn new_with_timestamp(
-        target_moniker: AbsoluteMoniker,
+        realm: &Arc<Realm>,
         result: EventResult,
         timestamp: zx::Time,
     ) -> Self {
         // Generate a random 64-bit integer to identify this event
+        Self::new_internal(
+            realm.abs_moniker.clone(),
+            realm.component_url.clone(),
+            timestamp,
+            result,
+        )
+    }
+
+    pub fn child_discovered(
+        target_moniker: AbsoluteMoniker,
+        component_url: impl Into<String>,
+    ) -> Self {
+        let timestamp = zx::Time::get(zx::ClockId::Monotonic);
+        Self::new_internal(
+            target_moniker,
+            component_url.into(),
+            timestamp,
+            Ok(EventPayload::Discovered),
+        )
+    }
+
+    #[cfg(test)]
+    pub fn new_for_test(
+        target_moniker: AbsoluteMoniker,
+        component_url: impl Into<String>,
+        result: EventResult,
+    ) -> Self {
+        let timestamp = zx::Time::get(zx::ClockId::Monotonic);
+        Self::new_internal(target_moniker, component_url.into(), timestamp, result)
+    }
+
+    fn new_internal(
+        target_moniker: AbsoluteMoniker,
+        component_url: String,
+        timestamp: zx::Time,
+        result: EventResult,
+    ) -> Self {
         let id = random::<u64>();
-        Self { id, target_moniker, result, timestamp }
+        Self { id, target_moniker, component_url, timestamp, result }
     }
 }
 
@@ -399,11 +428,11 @@ impl fmt::Display for Event {
                     EventPayload::CapabilityRouted { source, .. } => {
                         format!("requested {}", source.to_string())
                     }
-                    EventPayload::Discovered { component_url } => component_url.to_string(),
                     EventPayload::Started { bind_reason, .. } => {
                         format!("because {}", bind_reason.to_string())
                     }
                     EventPayload::Destroyed
+                    | EventPayload::Discovered
                     | EventPayload::MarkedForDestruction
                     | EventPayload::Resolved { .. }
                     | EventPayload::Stopped
@@ -643,10 +672,10 @@ mod tests {
             )])
             .await;
 
-        let root_component_url = "test:///root".to_string();
-        let event = Event::new(
+        let event = Event::new_for_test(
             AbsoluteMoniker::root(),
-            Ok(EventPayload::Discovered { component_url: root_component_url }),
+            "fuchsia-pkg://root",
+            Ok(EventPayload::Discovered),
         );
         hooks.dispatch(&event).await.expect("Unable to call hooks.");
         assert_eq!(1, call_counter.count().await);
@@ -680,10 +709,10 @@ mod tests {
         assert_eq!(1, Arc::strong_count(&parent_call_counter));
         assert_eq!(1, Arc::strong_count(&child_call_counter));
 
-        let root_component_url = "test:///root".to_string();
-        let event = Event::new(
+        let event = Event::new_for_test(
             AbsoluteMoniker::root(),
-            Ok(EventPayload::Discovered { component_url: root_component_url }),
+            "fuchsia-pkg://root",
+            Ok(EventPayload::Discovered),
         );
         child_hooks.dispatch(&event).await.expect("Unable to call hooks.");
         // parent_call_counter gets informed of the event on child_hooks even though it has
@@ -730,8 +759,9 @@ mod tests {
             .await;
 
         let root = AbsoluteMoniker::root();
-        let event = Event::new(
+        let event = Event::new_for_test(
             root.clone(),
+            "fuchsia-pkg://root",
             Err(EventError::new(
                 &ModelError::instance_not_found(root.clone()),
                 EventErrorPayload::Resolved,

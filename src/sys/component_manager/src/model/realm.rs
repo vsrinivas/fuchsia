@@ -280,33 +280,22 @@ impl Realm {
             }
             Ok((true, component)) => {
                 if self.parent.is_none() {
-                    let event = Event::new(
-                        self.abs_moniker.clone(),
-                        Ok(EventPayload::Discovered { component_url: self.component_url.clone() }),
-                    );
+                    let event = Event::new(self, Ok(EventPayload::Discovered));
                     self.hooks.dispatch(&event).await?;
                 }
-                let event = Event::new(
-                    self.abs_moniker.clone(),
-                    Ok(EventPayload::Resolved { decl: component.decl.clone() }),
-                );
+                let event =
+                    Event::new(self, Ok(EventPayload::Resolved { decl: component.decl.clone() }));
                 self.hooks.dispatch(&event).await?;
                 for child in component.decl.children.iter() {
                     let child_moniker = ChildMoniker::new(child.name.clone(), None, 0);
                     let child_abs_moniker = self.abs_moniker.child(child_moniker);
-                    let event = Event::new(
-                        child_abs_moniker,
-                        Ok(EventPayload::Discovered { component_url: child.url.clone() }),
-                    );
+                    let event = Event::child_discovered(child_abs_moniker, child.url.clone());
                     self.hooks.dispatch(&event).await?;
                 }
                 return Ok(component);
             }
             Err(e) => {
-                let event = Event::new(
-                    self.abs_moniker.clone(),
-                    Err(EventError::new(&e, EventErrorPayload::Resolved)),
-                );
+                let event = Event::new(self, Err(EventError::new(&e, EventErrorPayload::Resolved)));
                 self.hooks.dispatch(&event).await?;
                 return Err(e);
             }
@@ -443,10 +432,7 @@ impl Realm {
             }
         };
         // Call hooks outside of lock
-        let event = Event::new(
-            child_realm.abs_moniker.clone(),
-            Ok(EventPayload::Discovered { component_url: child_realm.component_url.clone() }),
-        );
+        let event = Event::new(&child_realm, Ok(EventPayload::Discovered));
         self.hooks.dispatch(&event).await?;
         Ok(())
     }
@@ -517,7 +503,7 @@ impl Realm {
         // destroyed.
         self.destroy_transient_children().await?;
         if was_running {
-            let event = Event::new(self.abs_moniker.clone(), Ok(EventPayload::Stopped));
+            let event = Event::new(self, Ok(EventPayload::Stopped));
             self.hooks.dispatch(&event).await?;
         }
         Ok(())

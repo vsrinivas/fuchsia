@@ -386,6 +386,7 @@ pub trait Event: Handler {
     const NAME: &'static str;
 
     fn target_moniker(&self) -> &str;
+    fn component_url(&self) -> &str;
     fn timestamp(&self) -> zx::Time;
     fn from_fidl(event: fsys::Event) -> Result<Self, Error>;
 }
@@ -664,15 +665,30 @@ impl PartialEq<EventMatcher> for EventMatcher {
     }
 }
 
+#[derive(Debug)]
+struct ComponentDescriptor {
+    component_url: String,
+    moniker: String,
+}
+
+impl TryFrom<fsys::ComponentDescriptor> for ComponentDescriptor {
+    type Error = anyhow::Error;
+
+    fn try_from(descriptor: fsys::ComponentDescriptor) -> Result<Self, Self::Error> {
+        let component_url = descriptor.component_url.ok_or(format_err!("No component url"))?;
+        let moniker = descriptor.moniker.ok_or(format_err!("No moniker"))?;
+        Ok(ComponentDescriptor { component_url, moniker })
+    }
+}
+
 impl TryFrom<&fsys::Event> for EventMatcher {
     type Error = anyhow::Error;
 
     fn try_from(event: &fsys::Event) -> Result<Self, Self::Error> {
         // Construct the EventMatcher from the Event
-        let event_type = Some(event.event_type.ok_or_else(|| format_err!("No event type"))?);
-        let target_moniker = Some(
-            event.target_moniker.as_ref().ok_or_else(|| format_err!("No target moniker"))?.clone(),
-        );
+        let event_type = Some(event.event_type.ok_or(format_err!("No event type"))?);
+        let target_moniker =
+            event.descriptor.as_ref().and_then(|descriptor| descriptor.moniker.clone());
         let payload = match &event.event_result {
             Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRouted(p))) => Some(p),
             _ => None,
@@ -778,9 +794,8 @@ macro_rules! create_event {
             return Err(format_err!("Incorrect event type"));
         }
 
-        let target_moniker = $event.target_moniker.ok_or(
-            format_err!("Missing target_moniker from Event object")
-        )?;
+        let descriptor = $event.descriptor.ok_or(format_err!("Missing descriptor Event object"))
+            .and_then(|descriptor| ComponentDescriptor::try_from(descriptor))?;
 
         let timestamp = zx::Time::from_nanos($event.timestamp.ok_or(
             format_err!("Missing timestamp from the Event object")
@@ -788,7 +803,7 @@ macro_rules! create_event {
 
         let handler = $event.handler.map(|h| h.into_proxy()).transpose()?;
 
-        $event_type { target_moniker, handler,  timestamp, $result }
+        $event_type { descriptor,  handler,  timestamp, $result }
     }};
 
     (@build impl-event-shared $event_type:ident $event_name:ident) => {
@@ -796,7 +811,11 @@ macro_rules! create_event {
         const NAME: &'static str = stringify!($event_name);
 
         fn target_moniker(&self) -> &str {
-            &self.target_moniker
+            &self.descriptor.moniker
+        }
+
+        fn component_url(&self) -> &str {
+            &self.descriptor.component_url
         }
 
         fn timestamp(&self) -> zx::Time {
@@ -875,7 +894,7 @@ macro_rules! create_event {
             }
 
             pub struct $event_type {
-                target_moniker: String,
+                descriptor: ComponentDescriptor,
                 handler: Option<fsys::HandlerProxy>,
                 timestamp: zx::Time,
                 pub result: Result<[<$event_type Payload>], [<$event_type Error>]>,
@@ -944,7 +963,7 @@ macro_rules! create_event {
     };
     ($event_type:ident, $event_name:ident) => {
         pub struct $event_type {
-            target_moniker: String,
+            descriptor: ComponentDescriptor,
             timestamp: zx::Time,
             handler: Option<fsys::HandlerProxy>,
             pub error: Option<EventError>,
@@ -979,25 +998,7 @@ create_event!(Destroyed, destroyed);
 create_event!(Discovered, discovered);
 create_event!(MarkedForDestruction, marked_for_destruction);
 create_event!(Resolved, resolved);
-create_event!(
-    event_type: Started,
-    event_name: started,
-    payload: {
-        data: {
-            {
-                name: component_url,
-                ty: String,
-            }
-        },
-        protocols: {},
-    },
-    error_payload: {
-        {
-            name: component_url,
-            ty: String,
-        }
-    }
-);
+create_event!(Started, started);
 create_event!(Stopped, stopped);
 create_event!(
     event_type: Running,
@@ -1024,10 +1025,6 @@ create_event!(
     payload: {
         data: {
             {
-                name: component_url,
-                ty: String,
-            }
-            {
                 name: path,
                 ty: String,
             }
@@ -1040,10 +1037,6 @@ create_event!(
         },
     },
     error_payload: {
-        {
-            name: component_url,
-            ty: String,
-        }
         {
             name: path,
             ty: String,

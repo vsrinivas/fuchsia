@@ -345,18 +345,19 @@ mod tests {
     };
 
     async fn dispatch_fake_event(registry: &EventRegistry) -> Result<(), ModelError> {
-        let root_component_url = "test:///root".to_string();
-        let event = ComponentEvent::new(
+        let event = ComponentEvent::new_for_test(
             AbsoluteMoniker::root(),
-            Ok(EventPayload::Discovered { component_url: root_component_url }),
+            "fuchsia-pkg://root",
+            Ok(EventPayload::Discovered),
         );
         registry.dispatch(&event).await
     }
 
     async fn dispatch_error_event(registry: &EventRegistry) -> Result<(), ModelError> {
         let root = AbsoluteMoniker::root();
-        let event = ComponentEvent::new(
+        let event = ComponentEvent::new_for_test(
             root.clone(),
+            "fuchsia-pkg://root",
             Err(EventError::new(
                 &ModelError::instance_not_found(root.clone()),
                 EventErrorPayload::Resolved,

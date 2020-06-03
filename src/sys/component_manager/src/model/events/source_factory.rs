@@ -263,8 +263,11 @@ mod tests {
                 filter: None,
             }))
             .build();
-        let event =
-            Event::new(target_moniker.clone(), Ok(EventPayload::Resolved { decl: decl.clone() }));
+        let event = Event::new_for_test(
+            target_moniker.clone(),
+            "fuchsia-pkg://test",
+            Ok(EventPayload::Resolved { decl: decl.clone() }),
+        );
         hooks.dispatch(&event).await
     }
 
@@ -272,7 +275,11 @@ mod tests {
         hooks: &Hooks,
         target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        let event = Event::new(target_moniker.clone(), Ok(EventPayload::Destroyed));
+        let event = Event::new_for_test(
+            target_moniker.clone(),
+            "fuchsia-pkg://test",
+            Ok(EventPayload::Destroyed),
+        );
         hooks.dispatch(&event).await
     }
 
@@ -335,8 +342,9 @@ mod tests {
         let scope: AbsoluteMoniker = vec!["b:0"].into();
         let capability_provider = Arc::new(Mutex::new(None));
         let result = event_source_factory
-            .on(&Event::new(
+            .on(&Event::new_for_test(
                 target.clone(),
+                "fuchsia-pkg://test",
                 Ok(EventPayload::CapabilityRouted {
                     capability_provider: capability_provider.clone(),
                     source: CapabilitySource::Framework {

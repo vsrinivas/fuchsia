@@ -78,9 +78,8 @@ pub(super) async fn do_start(
     let mut start_context = match result {
         Ok(start_context) => {
             let event = Event::new_with_timestamp(
-                realm.abs_moniker.clone(),
+                realm,
                 Ok(EventPayload::Started {
-                    component_url: realm.component_url.clone(),
                     runtime: RuntimeInfo::from_runtime(&start_context.pending_runtime),
                     component_decl: start_context.component_decl.clone(),
                     bind_reason: bind_reason.clone(),
@@ -92,13 +91,7 @@ pub(super) async fn do_start(
             start_context
         }
         Err(e) => {
-            let event = Event::new(
-                realm.abs_moniker.clone(),
-                Err(EventError::new(
-                    &e,
-                    EventErrorPayload::Started { component_url: realm.component_url.clone() },
-                )),
-            );
+            let event = Event::new(realm, Err(EventError::new(&e, EventErrorPayload::Started)));
             realm.hooks.dispatch(&event).await?;
             return Err(e);
         }

@@ -30,7 +30,7 @@ async fn main() -> Result<(), Error> {
 
     for _ in 1..=3 {
         let event = event_stream.expect_type::<Started>().await?;
-        assert_eq!(event.unwrap_payload().component_url, url);
+        assert_eq!(event.component_url(), url);
         let _ = echo.echo_string(Some(&format!("{:?}", Started::TYPE))).await?;
     }
 

@@ -98,18 +98,13 @@ fn maybe_create_event_result(
     event_result: &EventResult,
 ) -> Result<Option<fsys::EventResult>, fidl::Error> {
     match event_result {
-        Ok(EventPayload::CapabilityReady { component_url, path, node, .. }) => {
+        Ok(EventPayload::CapabilityReady { path, node, .. }) => {
             Ok(Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(
-                create_capability_ready_payload(component_url.to_string(), path.to_string(), node)?,
+                create_capability_ready_payload(path.to_string(), node)?,
             ))))
         }
         Ok(EventPayload::CapabilityRouted { source, capability_provider, .. }) => {
             Ok(maybe_create_capability_routed_payload(scope, source, capability_provider.clone()))
-        }
-        Ok(EventPayload::Started { component_url, .. }) => {
-            Ok(Some(fsys::EventResult::Payload(fsys::EventPayload::Started(
-                fsys::StartedPayload { component_url: Some(component_url.to_string()) },
-            ))))
         }
         Ok(EventPayload::Running { started_timestamp }) => {
             Ok(Some(fsys::EventResult::Payload(fsys::EventPayload::Running(
@@ -118,24 +113,11 @@ fn maybe_create_event_result(
         }
         Err(EventError {
             source,
-            event_error_payload: EventErrorPayload::CapabilityReady { component_url, path },
+            event_error_payload: EventErrorPayload::CapabilityReady { path },
         }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
             error_payload: Some(fsys::EventErrorPayload::CapabilityReady(
-                fsys::CapabilityReadyError {
-                    component_url: Some(component_url.to_string()),
-                    path: Some(path.to_string()),
-                },
+                fsys::CapabilityReadyError { path: Some(path.to_string()) },
             )),
-            description: Some(format!("{}", source)),
-            ..fsys::EventError::empty()
-        }))),
-        Err(EventError {
-            source,
-            event_error_payload: EventErrorPayload::Started { component_url },
-        }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
-            error_payload: Some(fsys::EventErrorPayload::Started(fsys::StartedError {
-                component_url: Some(component_url.to_string()),
-            })),
             description: Some(format!("{}", source)),
             ..fsys::EventError::empty()
         }))),
@@ -158,7 +140,6 @@ fn maybe_create_event_result(
 }
 
 fn create_capability_ready_payload(
-    component_url: String,
     path: String,
     node: &NodeProxy,
 ) -> Result<fsys::CapabilityReadyPayload, fidl::Error> {
@@ -173,7 +154,7 @@ fn create_capability_ready_payload(
         Some(node_client_end)
     };
 
-    Ok(fsys::CapabilityReadyPayload { component_url: Some(component_url), path: Some(path), node })
+    Ok(fsys::CapabilityReadyPayload { path: Some(path), node })
 }
 
 fn maybe_create_capability_routed_payload(
@@ -218,10 +199,13 @@ fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Error> {
     let timestamp = Some(event.event.timestamp.into_nanos());
     let target_relative_moniker =
         RelativeMoniker::from_absolute(&event.scope_moniker, &event.event.target_moniker);
-    let target_moniker = Some(target_relative_moniker.to_string());
+    let descriptor = Some(fsys::ComponentDescriptor {
+        moniker: Some(target_relative_moniker.to_string()),
+        component_url: Some(event.event.component_url.clone()),
+    });
     let event_result = maybe_create_event_result(&event.scope_moniker, &event.event.result)?;
     let handler = maybe_serve_handler_async(event);
-    Ok(fsys::Event { event_type, target_moniker, handler, event_result, timestamp })
+    Ok(fsys::Event { event_type, descriptor, handler, event_result, timestamp })
 }
 
 /// Serves the server end of the RoutingProtocol FIDL protocol asynchronously.

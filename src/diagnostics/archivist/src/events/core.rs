@@ -94,7 +94,10 @@ mod tests {
         stream_server
             .on_event(fsys::Event {
                 event_type: Some(fsys::EventType::Started),
-                target_moniker: Some("./foo:0/bar:0".to_string()),
+                descriptor: Some(fsys::ComponentDescriptor {
+                    moniker: Some("./foo:0/bar:0".to_string()),
+                    component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
+                }),
                 ..fsys::Event::empty()
             })
             .expect("send started event ok");
@@ -103,7 +106,10 @@ mod tests {
         stream_server
             .on_event(fsys::Event {
                 event_type: Some(fsys::EventType::Running),
-                target_moniker: Some("./foo:0/bar:0".to_string()),
+                descriptor: Some(fsys::ComponentDescriptor {
+                    moniker: Some("./foo:0/bar:0".to_string()),
+                    component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
+                }),
                 ..fsys::Event::empty()
             })
             .expect("send running event ok");
@@ -113,10 +119,12 @@ mod tests {
         stream_server
             .on_event(fsys::Event {
                 event_type: Some(fsys::EventType::CapabilityReady),
-                target_moniker: Some("./foo:0/bar:0".to_string()),
+                descriptor: Some(fsys::ComponentDescriptor {
+                    moniker: Some("./foo:0/bar:0".to_string()),
+                    component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
+                }),
                 event_result: Some(fsys::EventResult::Payload(
                     fsys::EventPayload::CapabilityReady(fsys::CapabilityReadyPayload {
-                        component_url: Some("http://fuchsia.com/foobar.cmx".to_string()),
                         path: Some("/diagnostics".to_string()),
                         node: Some(node),
                     }),
@@ -129,7 +137,10 @@ mod tests {
         stream_server
             .on_event(fsys::Event {
                 event_type: Some(fsys::EventType::Stopped),
-                target_moniker: Some("./foo:0/bar:0".to_string()),
+                descriptor: Some(fsys::ComponentDescriptor {
+                    moniker: Some("./foo:0/bar:0".to_string()),
+                    component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
+                }),
                 ..fsys::Event::empty()
             })
             .expect("send stopped event ok");

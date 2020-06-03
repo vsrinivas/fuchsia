@@ -107,8 +107,9 @@ mod tests {
             capability: InternalCapability::Protocol(ROOT_RESOURCE_CAPABILITY_PATH.clone()),
         };
 
-        let event = Event::new(
+        let event = Event::new_for_test(
             AbsoluteMoniker::root(),
+            "fuchsia-pkg://root",
             Ok(EventPayload::CapabilityRouted { source, capability_provider: provider.clone() }),
         );
         hooks.dispatch(&event).await?;

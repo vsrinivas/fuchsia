@@ -152,8 +152,9 @@ mod tests {
         hooks.install(builtin_runner.hooks()).await;
         let provider_result = Arc::new(Mutex::new(None));
         hooks
-            .dispatch(&Event::new(
+            .dispatch(&Event::new_for_test(
                 AbsoluteMoniker::root(),
+                "fuchsia-pkg://root",
                 Ok(EventPayload::CapabilityRouted {
                     source: CapabilitySource::AboveRoot {
                         capability: InternalCapability::Runner("elf".into()),

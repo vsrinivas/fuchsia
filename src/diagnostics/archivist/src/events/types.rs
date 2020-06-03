@@ -233,20 +233,21 @@ impl TryFrom<fsys::Event> for ComponentEvent {
     type Error = anyhow::Error;
 
     fn try_from(event: fsys::Event) -> Result<ComponentEvent, Error> {
-        if event.target_moniker.is_none() {
-            return Err(format_err!("No moniker present"));
-        }
+        let target_moniker = event
+            .descriptor
+            .and_then(|descriptor| descriptor.moniker)
+            .ok_or(format_err!("No moniker present"))?;
         match event.event_type {
             Some(fsys::EventType::Started) | Some(fsys::EventType::Running) => {
                 let data = ComponentEventData {
-                    component_id: ComponentIdentifier::Moniker(event.target_moniker.unwrap()),
+                    component_id: ComponentIdentifier::Moniker(target_moniker),
                     component_data_map: None,
                 };
                 Ok(ComponentEvent::Start(data))
             }
             Some(fsys::EventType::Stopped) => {
                 let data = ComponentEventData {
-                    component_id: ComponentIdentifier::Moniker(event.target_moniker.unwrap()),
+                    component_id: ComponentIdentifier::Moniker(target_moniker),
                     component_data_map: None,
                 };
                 Ok(ComponentEvent::Stop(data))
@@ -276,7 +277,7 @@ impl TryFrom<fsys::Event> for ComponentEvent {
                     })
                 {
                     let data = InspectReaderData {
-                        component_id: ComponentIdentifier::Moniker(event.target_moniker.unwrap()),
+                        component_id: ComponentIdentifier::Moniker(target_moniker),
                         data_directory_proxy: io_util::node_to_directory(node_proxy.into_proxy()?)
                             .ok(),
                     };

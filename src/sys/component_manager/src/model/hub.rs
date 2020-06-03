@@ -534,16 +534,17 @@ impl Hook for Hub {
             Ok(EventPayload::Destroyed) => {
                 self.on_destroyed_async(&event.target_moniker).await?;
             }
-            Ok(EventPayload::Discovered { component_url }) => {
-                self.on_discovered_async(&event.target_moniker, component_url.to_string()).await?;
+            Ok(EventPayload::Discovered) => {
+                self.on_discovered_async(&event.target_moniker, event.component_url.to_string())
+                    .await?;
             }
             Ok(EventPayload::MarkedForDestruction) => {
                 self.on_marked_for_destruction_async(&event.target_moniker).await?;
             }
-            Ok(EventPayload::Started { component_url, runtime, component_decl, .. }) => {
+            Ok(EventPayload::Started { runtime, component_decl, .. }) => {
                 self.on_started_async(
                     &event.target_moniker,
-                    component_url.clone(),
+                    event.component_url.clone(),
                     &runtime,
                     &component_decl,
                 )

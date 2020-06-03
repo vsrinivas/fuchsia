@@ -763,8 +763,9 @@ mod connect_tests {
 
         let (client, mut server) = zx::Channel::create()?;
 
-        let event = Event::new(
+        let event = Event::new_for_test(
             AbsoluteMoniker::root(),
+            "fuchsia-pkg://root",
             Ok(EventPayload::CapabilityRouted {
                 source,
                 capability_provider: capability_provider.clone(),
