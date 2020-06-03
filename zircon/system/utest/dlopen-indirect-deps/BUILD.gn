@@ -20,7 +20,7 @@ test("dlopen-indirect-deps") {
   sources = [ "dlopen-indirect-deps.c" ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/system/ulib/unittest",
+    "//zircon/public/lib/zxtest",
   ]
   data_deps = [ ":dlopen-indirect-deps-test-module" ]
 }

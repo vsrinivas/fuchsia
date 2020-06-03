@@ -4,25 +4,18 @@
 
 #include <dlfcn.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-bool dlopen_indirect_deps_test(void) {
-  BEGIN_TEST;
-
+TEST(DlopenIndirectDepsTests, dlopen_indirect_deps_test) {
   void* h = dlopen("libdlopen-indirect-deps-test-module.so", RTLD_LOCAL);
-  ASSERT_NONNULL(h, dlerror());
+  ASSERT_NOT_NULL(h, "%s", dlerror());
 
-  EXPECT_NONNULL(dlsym(h, "module_symbol"), "symbol not found in dlopen'd lib");
+  EXPECT_NOT_NULL(dlsym(h, "module_symbol"), "symbol not found in dlopen'd lib");
 
-  EXPECT_NONNULL(dlsym(h, "liba_symbol"), "symbol not found in dlopen'd lib's direct dependency");
+  EXPECT_NOT_NULL(dlsym(h, "liba_symbol"), "symbol not found in dlopen'd lib's direct dependency");
 
-  EXPECT_NONNULL(dlsym(h, "libb_symbol"), "symbol not found in dlopen'd lib's indirect dependency");
+  EXPECT_NOT_NULL(dlsym(h, "libb_symbol"),
+                  "symbol not found in dlopen'd lib's indirect dependency");
 
   EXPECT_EQ(dlclose(h), 0, "dlclose failed");
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(dlopen_indirect_deps_tests)
-RUN_TEST(dlopen_indirect_deps_test);
-END_TEST_CASE(dlopen_indirect_deps_tests)
