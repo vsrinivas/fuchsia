@@ -34,6 +34,7 @@ executable("install-disk-image") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
+    "//src/storage/lib/paver",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -43,7 +44,6 @@ executable("install-disk-image") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/paver",
   ]
 }
 

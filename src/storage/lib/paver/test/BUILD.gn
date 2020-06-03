@@ -2,16 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxb/36139.                         #
-##########################################
-
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 
@@ -49,7 +39,7 @@ test("paver-test") {
     "validation-test.cc",
   ]
   include_dirs = [
-    "//zircon/system/ulib/paver",
+    "//src/storage/lib/paver",
     "..",
   ]
   deps = [
@@ -79,7 +69,7 @@ test("paver-test") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/libabr",
-    "//zircon/system/ulib/paver",
+    "//src/storage/lib/paver",
     "//zircon/system/ulib/ramdevice-client:ramdevice-client-static",
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
@@ -99,13 +89,13 @@ fuzzer("paver-validation-fuzzer") {
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/gpt",
-    "//zircon/system/ulib/paver",
+    "//src/storage/lib/paver",
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
   ]
 
   include_dirs = [
-    "//zircon/system/ulib/paver",
+    "//src/storage/lib/paver",
     "..",
   ]
 }

@@ -29,7 +29,7 @@ executable("miscsvc") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/kcounter",
-    "//zircon/system/ulib/paver",
+    "//src/storage/lib/paver",
     "//zircon/system/ulib/svc",
   ]
   output_dir = "$root_out_dir/zircon-migrated"
