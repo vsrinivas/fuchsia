@@ -410,6 +410,9 @@ To find the package manifest for a `fuchsia_package()` or
 fx gn outputs out/default <package_target>_manifest
 ```
 
+`<package_target` is a fully-qualified target name, i.e. in the form
+`//path/to/your:target`.
+
 Combine this with another command to print the package manifest:
 
 ```bash
