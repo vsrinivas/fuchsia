@@ -8,6 +8,7 @@
 #include <string.h>
 #include <zircon/device/audio.h>
 
+#include <iterator>
 #include <limits>
 #include <utility>
 
@@ -50,7 +51,7 @@ zx_status_t TdmOutputStream::Create(zx_device_t* parent) {
 
   zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_fragments(&composite, fragments, fbl::count_of(fragments), &actual);
+  composite_get_fragments(&composite, fragments, std::size(fragments), &actual);
   if (actual != countof(fragments)) {
     zxlogf(ERROR, "could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
@@ -247,17 +248,16 @@ void TdmOutputStream::GetChannel(GetChannelCompleter::Sync completer) {
   completer.Close(ZX_ERR_INTERNAL);
 }
 
-#define HREQ(_cmd, _payload, _handler, _allow_noack, ...)                    \
-  case _cmd:                                                                 \
-    if (req_size != sizeof(req._payload)) {                                  \
-      zxlogf(ERROR, "Bad " #_cmd " response length (%u != %zu)", req_size, \
-             sizeof(req._payload));                                          \
-      return ZX_ERR_INVALID_ARGS;                                            \
-    }                                                                        \
-    if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {                \
-      zxlogf(ERROR, "NO_ACK flag not allowed for " #_cmd "");              \
-      return ZX_ERR_INVALID_ARGS;                                            \
-    }                                                                        \
+#define HREQ(_cmd, _payload, _handler, _allow_noack, ...)                                         \
+  case _cmd:                                                                                      \
+    if (req_size != sizeof(req._payload)) {                                                       \
+      zxlogf(ERROR, "Bad " #_cmd " response length (%u != %zu)", req_size, sizeof(req._payload)); \
+      return ZX_ERR_INVALID_ARGS;                                                                 \
+    }                                                                                             \
+    if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {                                     \
+      zxlogf(ERROR, "NO_ACK flag not allowed for " #_cmd "");                                     \
+      return ZX_ERR_INVALID_ARGS;                                                                 \
+    }                                                                                             \
     return _handler(channel, req._payload, ##__VA_ARGS__);
 zx_status_t TdmOutputStream::ProcessStreamChannel(dispatcher::Channel* channel, bool privileged) {
   ZX_DEBUG_ASSERT(channel != nullptr);
@@ -633,8 +633,7 @@ zx_status_t TdmOutputStream::OnGetBufferLocked(dispatcher::Channel* channel,
   resp.result =
       io_buffer_init(&ring_buffer_, bti_.get(), ring_buffer_size_, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (resp.result != ZX_OK) {
-    zxlogf(ERROR, "Failed to create ring buffer (size %u, res %d)", ring_buffer_size_,
-           resp.result);
+    zxlogf(ERROR, "Failed to create ring buffer (size %u, res %d)", ring_buffer_size_, resp.result);
     goto finished;
   }
   ring_buffer_phys_ = (uint32_t)io_buffer_phys(&ring_buffer_);

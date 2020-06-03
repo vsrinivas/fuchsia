@@ -4,6 +4,7 @@
 
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
 
+#include <iterator>
 #include <limits>
 
 #include <fbl/algorithm.h>
@@ -22,7 +23,7 @@ TEST(SampleNormalizerTest, UInt8_Basic) {
   const uint8_t data[] = {0x00, 0x40, 0x80, 0xE0};
   const float expect[] = {-1.0, -0.5, 0, 0.75};
 
-  for (auto i = 0u; i < fbl::count_of(data); ++i) {
+  for (auto i = 0u; i < std::size(data); ++i) {
     EXPECT_EQ(mixer::SampleNormalizer<uint8_t>::Read(data + i), expect[i]);
   }
 
@@ -36,7 +37,7 @@ TEST(SampleNormalizerTest, Int16_Basic) {
   const int16_t data[] = {std::numeric_limits<int16_t>::min(), -0x4000, 0, 0x6000};
   const float expect[] = {-1.0, -0.5, 0, 0.75};
 
-  for (auto i = 0u; i < fbl::count_of(data); ++i) {
+  for (auto i = 0u; i < std::size(data); ++i) {
     EXPECT_EQ(mixer::SampleNormalizer<int16_t>::Read(data + i), expect[i]);
   }
 
@@ -50,7 +51,7 @@ TEST(SampleNormalizerTest, Int24_Basic) {
   const int32_t data[] = {kMinInt24In32, -0x40000000, 0, 0x60000000};
   const float expect[] = {-1.0, -0.5, 0, 0.75};
 
-  for (auto i = 0u; i < fbl::count_of(data); ++i) {
+  for (auto i = 0u; i < std::size(data); ++i) {
     EXPECT_EQ(mixer::SampleNormalizer<int32_t>::Read(data + i), expect[i]);
   }
 
@@ -63,7 +64,7 @@ TEST(SampleNormalizerTest, Int24_Basic) {
 TEST(SampleNormalizerTest, Float_Basic) {
   const float data[] = {-1.0, -0.5, 0, 0.75, 1.0};
 
-  for (auto i = 0u; i < fbl::count_of(data); ++i) {
+  for (auto i = 0u; i < std::size(data); ++i) {
     EXPECT_EQ(mixer::SampleNormalizer<float>::Read(data + i), data[i]);
   }
 }

@@ -3,6 +3,8 @@
 
 #include "src/media/audio/audio_core/mixer/position_manager.h"
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <gtest/gtest.h>
 
@@ -290,14 +292,14 @@ TEST(PositionManagerTest, AdvanceFrame_DestReachesEnd) {
   mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE - 1);
 
   int16_t src[3];
-  const uint32_t frac_src_frames = fbl::count_of(src) * Mixer::FRAC_ONE;
+  const uint32_t frac_src_frames = std::size(src) * Mixer::FRAC_ONE;
   int32_t frac_src_off = Mixer::FRAC_ONE;
   const int32_t expected_frac_src_off = frac_src_off + Mixer::FRAC_ONE;
 
   pos_mgr.SetSourceValues(static_cast<void*>(src), frac_src_frames, &frac_src_off);
 
   float dest[2];
-  const uint32_t dest_frames = fbl::count_of(dest);
+  const uint32_t dest_frames = std::size(dest);
   auto dest_offset = 1u;
   pos_mgr.SetDestValues(dest, dest_frames, &dest_offset);
 
@@ -376,7 +378,7 @@ TEST(PositionManagerTest, AdvanceToEnd_Dest) {
   mixer::PositionManager pos_mgr(1, 1, 0, Mixer::FRAC_ONE - 1);
 
   int16_t src[11];
-  const uint32_t frac_src_frames = fbl::count_of(src) * Mixer::FRAC_ONE;
+  const uint32_t frac_src_frames = std::size(src) * Mixer::FRAC_ONE;
   int32_t frac_src_off = -1;
   pos_mgr.SetSourceValues(static_cast<void*>(src), frac_src_frames, &frac_src_off);
 

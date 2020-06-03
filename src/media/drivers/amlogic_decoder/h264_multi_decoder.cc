@@ -8,6 +8,7 @@
 #include <lib/trace/event.h>
 
 #include <cmath>
+#include <iterator>
 
 #include <fbl/algorithm.h>
 
@@ -592,7 +593,7 @@ struct HardwareRenderParams {
     uint16_t* input_params = reinterpret_cast<uint16_t*>(lmem->virt_base());
 
     // Convert from middle-endian.
-    for (uint32_t i = 0; i < fbl::count_of(data); i += 4) {
+    for (uint32_t i = 0; i < std::size(data); i += 4) {
       for (uint32_t j = 0; j < 4; j++) {
         data[i + j] = input_params[i + (3 - j)];
       }

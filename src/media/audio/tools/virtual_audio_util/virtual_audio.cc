@@ -16,6 +16,8 @@
 #include <unistd.h>
 #include <zircon/device/audio.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 
 #include "src/lib/fsl/tasks/fd_waiter.h"
@@ -618,11 +620,11 @@ bool VirtualAudioUtil::SetUniqueId(const std::string& unique_id_str) {
   bool use_default = (unique_id_str == "");
 
   for (uint8_t index = 0; index < 16; ++index) {
-    unique_id[index] = use_default ? kDefaultUniqueId[index]
-                                   : unique_id_str.size() <= (2 * index + 1)
-                                         ? 0
-                                         : fxl::StringToNumber<uint8_t>(
-                                               unique_id_str.substr(index * 2, 2), fxl::Base::k16);
+    unique_id[index] =
+        use_default ? kDefaultUniqueId[index]
+        : unique_id_str.size() <= (2 * index + 1)
+            ? 0
+            : fxl::StringToNumber<uint8_t>(unique_id_str.substr(index * 2, 2), fxl::Base::k16);
   }
   if (configuring_output_) {
     output_->SetUniqueId(unique_id);
@@ -718,8 +720,8 @@ bool VirtualAudioUtil::AddFormatRange(const std::string& format_range_str) {
 
   uint8_t format_option = (format_range_str == "" ? kDefaultFormatRangeOption
                                                   : fxl::StringToNumber<uint8_t>(format_range_str));
-  if (format_option >= fbl::count_of(kFormatSpecs)) {
-    printf("Format range option must be %lu or less.\n", fbl::count_of(kFormatSpecs) - 1);
+  if (format_option >= std::size(kFormatSpecs)) {
+    printf("Format range option must be %lu or less.\n", std::size(kFormatSpecs) - 1);
     return false;
   }
 
@@ -802,8 +804,8 @@ bool VirtualAudioUtil::SetRingBufferRestrictions(const std::string& rb_restr_str
 
   uint8_t rb_option =
       (rb_restr_str == "" ? kDefaultRingBufferOption : fxl::StringToNumber<uint8_t>(rb_restr_str));
-  if (rb_option >= fbl::count_of(kBufferSpecs)) {
-    printf("Ring buffer option must be %lu or less.\n", fbl::count_of(kBufferSpecs) - 1);
+  if (rb_option >= std::size(kBufferSpecs)) {
+    printf("Ring buffer option must be %lu or less.\n", std::size(kBufferSpecs) - 1);
     return false;
   }
 
@@ -876,8 +878,8 @@ bool VirtualAudioUtil::SetGainProperties(const std::string& gain_props_str) {
 
   uint8_t gain_props_option = (gain_props_str == "" ? kDefaultGainPropsOption
                                                     : fxl::StringToNumber<uint8_t>(gain_props_str));
-  if (gain_props_option >= fbl::count_of(kGainSpecs)) {
-    printf("Gain properties option must be %lu or less.\n", fbl::count_of(kGainSpecs));
+  if (gain_props_option >= std::size(kGainSpecs)) {
+    printf("Gain properties option must be %lu or less.\n", std::size(kGainSpecs));
     return false;
   }
 
@@ -910,7 +912,7 @@ constexpr audio_pd_notify_flags_t kPlugFlags[] = {
 };
 
 constexpr zx_time_t kPlugTime[] = {0, -1, -1, ZX_SEC(1), ZX_SEC(2)};
-static_assert(fbl::count_of(kPlugFlags) == fbl::count_of(kPlugTime));
+static_assert(std::size(kPlugFlags) == std::size(kPlugTime));
 
 bool VirtualAudioUtil::SetPlugProperties(const std::string& plug_props_str) {
   if (!ConnectToDevice()) {
@@ -920,8 +922,8 @@ bool VirtualAudioUtil::SetPlugProperties(const std::string& plug_props_str) {
   uint8_t plug_props_option = (plug_props_str == "" ? kDefaultPlugPropsOption
                                                     : fxl::StringToNumber<uint8_t>(plug_props_str));
 
-  if (plug_props_option >= fbl::count_of(kPlugFlags)) {
-    printf("Plug properties option must be %lu or less.\n", fbl::count_of(kPlugFlags) - 1);
+  if (plug_props_option >= std::size(kPlugFlags)) {
+    printf("Plug properties option must be %lu or less.\n", std::size(kPlugFlags) - 1);
     return false;
   }
 

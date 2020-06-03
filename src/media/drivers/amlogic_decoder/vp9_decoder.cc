@@ -9,6 +9,7 @@
 #include <lib/trace/event.h>
 
 #include <algorithm>
+#include <iterator>
 
 #include <fbl/algorithm.h>
 
@@ -222,9 +223,9 @@ void Vp9Decoder::InitLoopFilter() {
 void Vp9Decoder::UpdateLoopFilter(HardwareRenderParams* param) {
   loop_filter_->mode_ref_delta_enabled = param->mode_ref_delta_enabled;
   loop_filter_->sharpness_level = param->sharpness_level;
-  for (uint32_t i = 0; i < fbl::count_of(param->ref_deltas); i++)
+  for (uint32_t i = 0; i < std::size(param->ref_deltas); i++)
     loop_filter_->ref_deltas[i] = param->ref_deltas[i];
-  for (uint32_t i = 0; i < fbl::count_of(param->mode_deltas); i++)
+  for (uint32_t i = 0; i < std::size(param->mode_deltas); i++)
     loop_filter_->mode_deltas[i] = param->mode_deltas[i];
 
   segmentation_->enabled = param->segmentation_enabled;
@@ -466,7 +467,7 @@ void Vp9Decoder::ProcessCompletedFrames() {
     client_->OnFrameReady(current_frame_->frame);
   }
 
-  for (uint32_t i = 0; i < fbl::count_of(reference_frame_map_); i++) {
+  for (uint32_t i = 0; i < std::size(reference_frame_map_); i++) {
     if (current_frame_data_.refresh_frame_flags & (1 << i)) {
       if (reference_frame_map_[i]) {
         reference_frame_map_[i]->Deref();
@@ -1094,7 +1095,7 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   uint16_t* input_params = reinterpret_cast<uint16_t*>(working_buffers_.rpm.buffer().virt_base());
 
   // Convert from middle-endian.
-  for (uint32_t i = 0; i < fbl::count_of(params.data_words); i += 4) {
+  for (uint32_t i = 0; i < std::size(params.data_words); i += 4) {
     for (uint32_t j = 0; j < 4; j++) {
       params.data_words[i + j] = input_params[i + (3 - j)];
     }
@@ -1172,7 +1173,7 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   current_frame_data_.intra_only = params.intra_only;
   current_frame_data_.refresh_frame_flags = params.refresh_frame_flags;
   if (current_frame_data_.keyframe) {
-    current_frame_data_.refresh_frame_flags = (1 << fbl::count_of(reference_frame_map_)) - 1;
+    current_frame_data_.refresh_frame_flags = (1 << std::size(reference_frame_map_)) - 1;
   }
   current_frame_data_.error_resilient_mode = params.error_resilient_mode;
   current_frame_data_.show_frame = params.show_frame;
@@ -1422,10 +1423,10 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
 }
 
 void Vp9Decoder::SetRefFrames(HardwareRenderParams* params) {
-  uint32_t reference_frame_count = fbl::count_of(current_reference_frames_);
+  uint32_t reference_frame_count = std::size(current_reference_frames_);
   for (uint32_t i = 0; i < reference_frame_count; i++) {
     uint32_t ref = (params->ref_info >> (((reference_frame_count - 1 - i) * 4) + 1)) & 0x7;
-    assert(ref < fbl::count_of(reference_frame_map_));
+    assert(ref < std::size(reference_frame_map_));
     current_reference_frames_[i] = reference_frame_map_[ref];
   }
 }
@@ -1473,7 +1474,7 @@ void Vp9Decoder::ConfigureReferenceFrameHardware() {
   // Do an autoincrementing write to the reference info table.
   Vp9dMppRefinfoTblAccconfig::Get().FromValue(0).set_bit2(1).WriteTo(owner_->dosbus());
   uint32_t scale_mask = 0;
-  for (uint32_t i = 0; i < fbl::count_of(current_reference_frames_); i++) {
+  for (uint32_t i = 0; i < std::size(current_reference_frames_); i++) {
     Frame* frame = current_reference_frames_[i];
     if (!frame)
       continue;

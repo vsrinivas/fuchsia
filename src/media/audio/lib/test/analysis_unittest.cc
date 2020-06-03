@@ -3,6 +3,8 @@
 
 #include "src/media/audio/lib/test/analysis.h"
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -39,10 +41,10 @@ TEST(AnalysisHelpers, GetPhase) {
   double imags[] = {0, 23, 243, 42, 0, -123, -243, -68, 0};
   double expect[] = {0,         M_PI / 4,  M_PI / 2, 3 * M_PI / 4, M_PI, -3 * M_PI / 4,
                      -M_PI / 2, -M_PI / 4, 0};
-  static_assert(fbl::count_of(imags) == fbl::count_of(reals), "buf mismatch");
-  static_assert(fbl::count_of(expect) == fbl::count_of(reals), "buf mismatch");
+  static_assert(std::size(imags) == std::size(reals), "buf mismatch");
+  static_assert(std::size(expect) == std::size(reals), "buf mismatch");
 
-  for (uint32_t idx = 0; idx < fbl::count_of(reals); ++idx) {
+  for (uint32_t idx = 0; idx < std::size(reals); ++idx) {
     EXPECT_DOUBLE_EQ(expect[idx], internal::GetPhase(reals[idx], imags[idx]));
   }
 }
@@ -54,14 +56,14 @@ TEST(AnalysisHelpers, RectToPolar) {
   double phase[10];
   const double epsilon = 0.00000001;
 
-  internal::RectangularToPolar(real, imag, fbl::count_of(real), magn, phase);
+  internal::RectangularToPolar(real, imag, std::size(real), magn, phase);
   double expect_magn[] = {1.0, RT_2, 1.0, RT_2, 1.0, RT_2, 1.0, RT_2, 0.0, 0.0};
 
   double expect_phase[] = {0.0,           M_PI / 4,  M_PI / 2,  3 * M_PI / 4, M_PI,
                            -3 * M_PI / 4, -M_PI / 2, -M_PI / 4, 0.0,          0.0};
 
   // We used double here; below are acceptable and reliable tolerances
-  for (uint32_t idx = 0; idx < fbl::count_of(expect_magn); ++idx) {
+  for (uint32_t idx = 0; idx < std::size(expect_magn); ++idx) {
     EXPECT_LE(magn[idx], expect_magn[idx] + epsilon) << idx;
     EXPECT_GE(magn[idx], expect_magn[idx] - epsilon) << idx;
 
@@ -72,14 +74,14 @@ TEST(AnalysisHelpers, RectToPolar) {
 
 TEST(AnalysisHelpers, RealDFT) {
   double reals[16];
-  const uint32_t buf_size = fbl::count_of(reals);
+  const uint32_t buf_size = std::size(reals);
   const double epsilon = 0.0000001024;
 
   const uint32_t buf_sz_2 = buf_size >> 1;
   double real_freq[9];
   double imag_freq[9];
-  static_assert(fbl::count_of(real_freq) == buf_sz_2 + 1, "buf sizes must match");
-  static_assert(fbl::count_of(imag_freq) == buf_sz_2 + 1, "buf sizes must match");
+  static_assert(std::size(real_freq) == buf_sz_2 + 1, "buf sizes must match");
+  static_assert(std::size(imag_freq) == buf_sz_2 + 1, "buf sizes must match");
 
   // impulse
   OverwriteCosine(reals, buf_size, 0.0, 0.0);
@@ -151,15 +153,15 @@ TEST(AnalysisHelpers, RealDFT) {
 TEST(AnalysisHelpers, IDFT) {
   double reals[16];
   double expects[16];
-  const uint32_t buf_size = fbl::count_of(reals);
+  const uint32_t buf_size = std::size(reals);
   const double epsilon = 0.00000002;
-  static_assert(buf_size == fbl::count_of(expects), "buf size mismatch");
+  static_assert(buf_size == std::size(expects), "buf size mismatch");
 
   double real_freq[9];
   double imag_freq[9];
   const uint32_t buf_sz_2 = buf_size >> 1;
-  static_assert(fbl::count_of(real_freq) == buf_sz_2 + 1, "buf size mismatch");
-  static_assert(fbl::count_of(imag_freq) == buf_sz_2 + 1, "buf size mismatch");
+  static_assert(std::size(real_freq) == buf_sz_2 + 1, "buf size mismatch");
+  static_assert(std::size(imag_freq) == buf_sz_2 + 1, "buf size mismatch");
 
   // impulse
   OverwriteCosine(real_freq, buf_sz_2 + 1, 0.0, 123.0);
@@ -230,8 +232,8 @@ TEST(AnalysisHelpers, FFT) {
   double imags[16];
   const double epsilon = 0.00000015;
 
-  const uint32_t buf_size = fbl::count_of(reals);
-  static_assert(fbl::count_of(imags) == buf_size, "buf sizes must match");
+  const uint32_t buf_size = std::size(reals);
+  static_assert(std::size(imags) == buf_size, "buf sizes must match");
   const uint32_t buf_sz_2 = buf_size >> 1;
 
   // Impulse input produces constant val in all frequency bins
@@ -315,12 +317,12 @@ TEST(AnalysisHelpers, IFFT) {
   double reals[16];
   double imags[16];
   double expects[16];
-  const uint32_t buf_size = fbl::count_of(reals);
+  const uint32_t buf_size = std::size(reals);
   const uint32_t buf_sz_2 = buf_size >> 1;
 
   const double epsilon = 0.00000002;
-  static_assert(buf_size == fbl::count_of(imags), "buf size mismatch");
-  static_assert(buf_size == fbl::count_of(expects), "buf size mismatch");
+  static_assert(buf_size == std::size(imags), "buf size mismatch");
+  static_assert(buf_size == std::size(expects), "buf size mismatch");
 
   // impulse
   OverwriteCosine(reals, buf_size, 0.0, 123.0);

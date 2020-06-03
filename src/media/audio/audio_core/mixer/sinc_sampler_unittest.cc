@@ -3,6 +3,8 @@
 
 #include "src/media/audio/audio_core/mixer/sinc_sampler.h"
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <gtest/gtest.h>
 
@@ -71,9 +73,9 @@ TEST(SincSamplerTest, SamplingPosition_Basic) {
   float source[] = {1.0f,  2.0f,  3.0f,  4.0f,  5.0f,  6.0f,  7.0f,  8.0f,  9.0f,  10.0f,
                     11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f, 17.0f, 18.0f, 19.0f, 20.0f};
   float dest[20];
-  const uint32_t src_frames = fbl::count_of(source);
+  const uint32_t src_frames = std::size(source);
   const uint32_t frac_src_frames = src_frames << kPtsFractionalBits;
-  const uint32_t dest_frames = fbl::count_of(dest);
+  const uint32_t dest_frames = std::size(dest);
 
   int32_t frac_src_offset = (3 << (kPtsFractionalBits - 2));
   uint32_t dest_offset = 0;

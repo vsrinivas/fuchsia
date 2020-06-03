@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <zircon/assert.h>
 
+#include <iterator>
 #include <memory>
 
 #include <ddk/binding.h>
@@ -63,7 +64,7 @@ void Alc5514Device::DumpRegs() {
       DOWNFILTER1_CTRL1, DOWNFILTER1_CTRL2, DOWNFILTER1_CTRL3, ANA_CTRL_LDO10,    ANA_CTRL_ADCFED,
       VERSION_ID,        DEVICE_ID,
   };
-  for (uint i = 0; i < fbl::count_of(REGS); i++) {
+  for (uint i = 0; i < std::size(REGS); i++) {
     zxlogf(INFO, "%04x: %08x", REGS[i], ReadReg(REGS[i]));
   }
 }

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <array>
+#include <iterator>
 
 #include <fbl/algorithm.h>
 
@@ -146,16 +147,16 @@ TEST(PassThru, Source_8) {
 
   float expect[] = {-0x08000000, 0x07F00000, -0x05900000, 0x04D00000,
                     -0x00100000, 0,          0x02600000,  -0x01300000};
-  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
+  NormalizeInt28ToPipelineBitwidth(expect, std::size(expect));
 
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000,
                            Resampler::SampleAndHold);
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
+  DoMix(mixer.get(), source, accum, false, std::size(accum));
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 8, 48000, 8, 48000,
                       Resampler::SampleAndHold);
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 8);
+  DoMix(mixer.get(), source, accum, false, std::size(accum) / 8);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
@@ -167,19 +168,19 @@ TEST(PassThru, Source_16) {
 
   float expect[] = {-0x08000000, 0x07FFF000, -0x067A7000, 0x04D4D000,
                     -0x00123000, 0,          0x02600000,  -0x02DCB000};
-  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
+  NormalizeInt28ToPipelineBitwidth(expect, std::size(expect));
 
   // Try in 2-channel mode
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
                            Resampler::SampleAndHold);
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 2);
+  DoMix(mixer.get(), source, accum, false, std::size(accum) / 2);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   memset(accum, 0, sizeof(accum));
   // Now try in 4-channel mode
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 4, 48000, 4, 48000,
                       Resampler::SampleAndHold);
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 4);
+  DoMix(mixer.get(), source, accum, false, std::size(accum) / 4);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
@@ -192,19 +193,19 @@ TEST(PassThru, Source_24) {
 
   float expect[] = {-0x08000000, 0x07FFFFF0, -0x067A7E70, 0x04D4D4D0,
                     -0x00123450, 0,          0x02600620,  -0x02DCBA90};
-  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
+  NormalizeInt28ToPipelineBitwidth(expect, std::size(expect));
 
   // Try in 1-channel mode
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1, 48000, 1, 48000,
                            Resampler::SampleAndHold);
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
+  DoMix(mixer.get(), source, accum, false, std::size(accum));
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   memset(accum, 0, sizeof(accum));
   // Now try in 8-channel mode
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 8, 48000, 8, 48000,
                       Resampler::SampleAndHold);
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 8);
+  DoMix(mixer.get(), source, accum, false, std::size(accum) / 8);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
@@ -217,19 +218,19 @@ TEST(PassThru, Source_Float) {
 
   float expect[] = {-0x08000000, 0x08000000, -0x067A7000, 0x04D4D000,
                     -0x00123000, 0,          0x02600000,  -0x02DCB000};
-  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
+  NormalizeInt28ToPipelineBitwidth(expect, std::size(expect));
 
   // Try in 1-channel mode
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
                            Resampler::SampleAndHold);
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
+  DoMix(mixer.get(), source, accum, false, std::size(accum));
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   memset(accum, 0, sizeof(accum));
   // Now try in 4-channel mode
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 4, 48000, 4, 48000,
                       Resampler::SampleAndHold);
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 4);
+  DoMix(mixer.get(), source, accum, false, std::size(accum) / 4);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
@@ -246,8 +247,8 @@ TEST(PassThru, NoOp) {
   int32_t frac_src_offset = 0;
 
   bool mix_result =
-      no_op_mixer->Mix(accum, fbl::count_of(accum), &dest_offset, source,
-                       fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false);
+      no_op_mixer->Mix(accum, std::size(accum), &dest_offset, source,
+                       std::size(source) << kPtsFractionalBits, &frac_src_offset, false);
 
   EXPECT_FALSE(mix_result);
   EXPECT_EQ(dest_offset, 0u);
@@ -262,12 +263,12 @@ TEST(PassThru, MonoToStereo) {
 
   float expect[] = {-0x08000000, -0x08000000, -0x03FFF000, -0x03FFF000, -0x0001000, -0x00001000,
                     0,           0,           0x0001000,   0x00001000,  0x07FFF000, 0x07FFF000};
-  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
+  NormalizeInt28ToPipelineBitwidth(expect, std::size(expect));
 
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 2, 48000,
                            Resampler::SampleAndHold);
 
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 2);
+  DoMix(mixer.get(), source, accum, false, std::size(accum) / 2);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
@@ -279,15 +280,15 @@ TEST(PassThru, StereoToMono_Cancel) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 1, 48000,
                            Resampler::SampleAndHold);
 
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
+  DoMix(mixer.get(), source, accum, false, std::size(accum));
   EXPECT_THAT(accum, Each(FloatEq(0.0f)));
 
   // Now try with the other resampler
-  std::memset(accum, 0, fbl::count_of(accum) * sizeof(float));
+  std::memset(accum, 0, std::size(accum) * sizeof(float));
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 1, 48000,
                       Resampler::LinearInterpolation);
 
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
+  DoMix(mixer.get(), source, accum, false, std::size(accum));
   EXPECT_THAT(accum, Each(FloatEq(0.0f)));
 }
 
@@ -300,20 +301,20 @@ TEST(PassThru, StereoToMono_Round) {
   float accum[] = {-0x1234, 0x4321, -0x13579, 0xC0FF, -0xAAAA, 0x555};
 
   float expect[] = {0x01771000, -0x0006F000, 0x00002800, -0x015C9800, 0x07FFF000, -0x08000000};
-  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
+  NormalizeInt28ToPipelineBitwidth(expect, std::size(expect));
 
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 1, 48000,
                            Resampler::SampleAndHold);
 
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
+  DoMix(mixer.get(), source, accum, false, std::size(accum));
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   // Now try with the other resampler
-  std::memset(accum, 0, fbl::count_of(accum) * sizeof(float));
+  std::memset(accum, 0, std::size(accum) * sizeof(float));
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 1, 48000,
                       Resampler::LinearInterpolation);
 
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
+  DoMix(mixer.get(), source, accum, false, std::size(accum));
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
@@ -329,25 +330,25 @@ TEST(PassThru, QuadToMono) {
                                         // clang-format on
   // Will be overwritten
   float accum[] = {-0x1234, 0x4321, -0x13579, 0xC0FF, -0xAAAA};
-  static_assert(fbl::count_of(source) == fbl::count_of(accum) * 4, "buf sizes must match");
+  static_assert(std::size(source) == std::size(accum) * 4, "buf sizes must match");
 
   // Equivalent to 0.25, -0.25, min val (largest neg), max val, 0
   float expect[] = {0x0000004, -0x0000004, (kMinInt24In32 >> 4), (kMaxInt24In32) >> 4, 0};
-  static_assert(fbl::count_of(accum) == fbl::count_of(expect), "buf sizes must match");
-  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
+  static_assert(std::size(accum) == std::size(expect), "buf sizes must match");
+  NormalizeInt28ToPipelineBitwidth(expect, std::size(expect));
 
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 4, 24000, 1, 24000,
                            Resampler::SampleAndHold);
 
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
+  DoMix(mixer.get(), source, accum, false, std::size(accum));
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   // Now try with the other resampler
-  std::memset(accum, 0, fbl::count_of(accum) * sizeof(float));
+  std::memset(accum, 0, std::size(accum) * sizeof(float));
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 4, 8000, 1, 8000,
                       Resampler::LinearInterpolation);
 
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum));
+  DoMix(mixer.get(), source, accum, false, std::size(accum));
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
@@ -365,25 +366,25 @@ TEST(PassThru, QuadToStereo_Round) {
 
   // Will be overwritten
   float accum[] = {-0x1234, 0x4321, -0x13579, 0xC0FF, -0xAAAA, 0x555};
-  static_assert(fbl::count_of(source) == fbl::count_of(accum) * 2, "buf sizes must match");
+  static_assert(std::size(source) == std::size(accum) * 2, "buf sizes must match");
 
   // Equivalent to 0.5, -0.5, min val (largest neg), max val, 0
   float expect[] = {0x0000008, -0x0000008, (kMinInt24In32 >> 4), (kMaxInt24In32) >> 4, 0, 0};
-  static_assert(fbl::count_of(accum) == fbl::count_of(expect), "buf sizes must match");
-  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
+  static_assert(std::size(accum) == std::size(expect), "buf sizes must match");
+  NormalizeInt28ToPipelineBitwidth(expect, std::size(expect));
 
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 4, 22050, 2, 22050,
                            Resampler::SampleAndHold);
 
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 2);  // dest frames have 2 samples
+  DoMix(mixer.get(), source, accum, false, std::size(accum) / 2);  // dest frames have 2 samples
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   // Now try with the other resampler
-  std::memset(accum, 0, fbl::count_of(accum) * sizeof(float));
+  std::memset(accum, 0, std::size(accum) * sizeof(float));
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 4, 44100, 2, 44100,
                       Resampler::LinearInterpolation);
 
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 2);  // dest frames have 2 samples
+  DoMix(mixer.get(), source, accum, false, std::size(accum) / 2);  // dest frames have 2 samples
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
@@ -396,22 +397,22 @@ TEST(PassThru, MonoToQuad) {
                     0,           0,           0,           0,           0x0001000,   0x00001000,
                     0x0001000,   0x00001000,  0x07FFF000,  0x07FFF000,  0x07FFF000,  0x07FFF000};
 
-  static_assert(fbl::count_of(source) * 4 == fbl::count_of(accum), "buf sizes must match");
-  static_assert(fbl::count_of(accum) == fbl::count_of(expect), "buf sizes must match");
-  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
+  static_assert(std::size(source) * 4 == std::size(accum), "buf sizes must match");
+  static_assert(std::size(accum) == std::size(expect), "buf sizes must match");
+  NormalizeInt28ToPipelineBitwidth(expect, std::size(expect));
 
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 4, 48000,
                            Resampler::LinearInterpolation);
 
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 4);
+  DoMix(mixer.get(), source, accum, false, std::size(accum) / 4);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   // Now try with the other resampler
-  std::memset(accum, 0, fbl::count_of(accum) * sizeof(float));
+  std::memset(accum, 0, std::size(accum) * sizeof(float));
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 4, 48000,
                       Resampler::SampleAndHold);
 
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 4);
+  DoMix(mixer.get(), source, accum, false, std::size(accum) / 4);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
@@ -422,22 +423,22 @@ TEST(PassThru, StereoToQuad) {
   float expect[] = {-0x08000000, -0x03FFFFF0, -0x08000000, -0x03FFFFF0, -0x0000010, 0,
                     -0x00000010, 0,           0x0000010,   0x07FFFFF0,  0x00000010, 0x07FFFFF0};
 
-  static_assert((fbl::count_of(source) / 2) * 4 == fbl::count_of(accum), "buf sizes must match");
-  static_assert(fbl::count_of(accum) == fbl::count_of(expect), "buf sizes must match");
-  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
+  static_assert((std::size(source) / 2) * 4 == std::size(accum), "buf sizes must match");
+  static_assert(std::size(accum) == std::size(expect), "buf sizes must match");
+  NormalizeInt28ToPipelineBitwidth(expect, std::size(expect));
 
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2, 48000, 4, 48000,
                            Resampler::SampleAndHold);
 
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 4);
+  DoMix(mixer.get(), source, accum, false, std::size(accum) / 4);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   // Now try with the other resampler
-  std::memset(accum, 0, fbl::count_of(accum) * sizeof(float));
+  std::memset(accum, 0, std::size(accum) * sizeof(float));
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 2, 48000, 4, 48000,
                       Resampler::LinearInterpolation);
 
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 4);
+  DoMix(mixer.get(), source, accum, false, std::size(accum) / 4);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
@@ -447,21 +448,21 @@ TEST(PassThru, Accumulate) {
 
   float accum[] = {0x056CE240, 0x02B67930, -0x015B2000, 0x0259EB00};
   float expect[] = {0x045ED240, 0x03490930, 0x004D3000, 0x00361B00};
-  NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
-  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
+  NormalizeInt28ToPipelineBitwidth(accum, std::size(accum));
+  NormalizeInt28ToPipelineBitwidth(expect, std::size(expect));
 
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
                            Resampler::SampleAndHold);
 
-  DoMix(mixer.get(), source, accum, true, fbl::count_of(accum) / 2);
+  DoMix(mixer.get(), source, accum, true, std::size(accum) / 2);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   float expect2[] = {-0x010E1000, 0x00929000, 0x01A85000, -0x0223D000};  // =source
-  NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
+  NormalizeInt28ToPipelineBitwidth(expect2, std::size(expect2));
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
                       Resampler::SampleAndHold);
 
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum) / 2);
+  DoMix(mixer.get(), source, accum, false, std::size(accum) / 2);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect2));
 }
 
@@ -470,7 +471,7 @@ TEST(PassThru, Output_8) {
   float accum[] = {-0x08989000, -0x08000000, -0x04080000, -0x00001000,
                    //   ^^^^^  clamp to uint8   vvvvv
                    0, 0x04080000, 0x07FFFFF0, 0x08989000};
-  NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
+  NormalizeInt28ToPipelineBitwidth(accum, std::size(accum));
 
   // Dest completely overwritten, except for last value: we only mix(8)
   uint8_t dest[] = {12, 23, 34, 45, 56, 67, 78, 89, 42};
@@ -478,7 +479,7 @@ TEST(PassThru, Output_8) {
 
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1);
 
-  output_producer->ProduceOutput(accum, dest, fbl::count_of(accum));
+  output_producer->ProduceOutput(accum, dest, std::size(accum));
   EXPECT_THAT(dest, Pointwise(FloatEq(), expect));
 }
 
@@ -487,7 +488,7 @@ TEST(PassThru, Output_16) {
   float accum[] = {-0x08989000, -0x08000000, -0x04080000, -0x00001000,
                    //   ^^^^^   clamp to int16   vvvvv
                    0, 0x04080000, 0x07FFFFF0, 0x08989000};
-  NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
+  NormalizeInt28ToPipelineBitwidth(accum, std::size(accum));
 
   // Dest buffer is overwritten, EXCEPT for last value: we only mix(8)
   int16_t dest[] = {0123, 1234, 2345, 3456, 4567, 5678, 6789, 7890, -42};
@@ -495,7 +496,7 @@ TEST(PassThru, Output_16) {
 
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2);
 
-  output_producer->ProduceOutput(accum, dest, fbl::count_of(accum) / 2);
+  output_producer->ProduceOutput(accum, dest, std::size(accum) / 2);
   EXPECT_THAT(dest, Pointwise(FloatEq(), expect));
 }
 
@@ -504,7 +505,7 @@ TEST(PassThru, Output_24) {
   float accum[] = {-0x08989000, -0x08000000, -0x04080000, -0x00000010,
                    //   ^^^^^   clamp to int24   vvvvv
                    0, 0x04080000, 0x07FFFFF0, 0x08989000};
-  NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
+  NormalizeInt28ToPipelineBitwidth(accum, std::size(accum));
 
   // Dest buffer is overwritten, EXCEPT for last value: we only mix(8)
   int32_t dest[] = {0123, 1234, 2345, 3456, 4567, 5678, 6789, 7890, -42};
@@ -514,7 +515,7 @@ TEST(PassThru, Output_24) {
   auto output_producer =
       SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 4);
 
-  output_producer->ProduceOutput(accum, dest, fbl::count_of(accum) / 4);
+  output_producer->ProduceOutput(accum, dest, std::size(accum) / 4);
   EXPECT_THAT(dest, Pointwise(FloatEq(), expect));
 }
 
@@ -523,7 +524,7 @@ TEST(PassThru, Output_Float) {
   float accum[] = {-0x08989000, -0x08000000, -0x04080000, -0x00001000,
                    //   ^^^^ clamp to [-1.0,1.0] vvvv
                    0, 0x04080000, 0x07FFFFF0, 0x08989000};
-  NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
+  NormalizeInt28ToPipelineBitwidth(accum, std::size(accum));
 
   float dest[] = {1.2f, 2.3f, 3.4f, 4.5f, 5.6f, 6.7f, 7.8f, 8.9f, 4.2f};
   // Dest completely overwritten, except for last value: we only mix(8)
@@ -533,7 +534,7 @@ TEST(PassThru, Output_Float) {
 
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1);
 
-  output_producer->ProduceOutput(accum, dest, fbl::count_of(accum));
+  output_producer->ProduceOutput(accum, dest, std::size(accum));
   EXPECT_THAT(dest, Pointwise(FloatEq(), expect));
 }
 

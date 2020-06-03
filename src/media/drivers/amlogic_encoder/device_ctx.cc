@@ -9,6 +9,7 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -92,7 +93,7 @@ std::unique_ptr<DeviceCtx> DeviceCtx::Create(zx_device_t* parent) {
 
   zx_device_t* fragments[kFragmentCount];
   size_t fragment_count = 0;
-  composite.GetFragments(fragments, fbl::count_of(fragments), &fragment_count);
+  composite.GetFragments(fragments, std::size(fragments), &fragment_count);
 
   if (fragment_count != kFragmentCount) {
     ENCODE_ERROR("Could not get fragments");

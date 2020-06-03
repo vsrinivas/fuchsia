@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 
 #include "src/media/audio/audio_core/mixer/test/audio_result.h"
@@ -42,11 +44,11 @@ TEST(MixGain, Scaling_Linearity) {
 
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 44100, 1, 44100,
                            Resampler::SampleAndHold);
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum), stream_gain_db);
+  DoMix(mixer.get(), source, accum, false, std::size(accum), stream_gain_db);
 
   float expect[] = {0x080E8000,  0x07FF8000,  0x015E000,   0x00028000,
                     -0x0008C000, -0x000FA000, -0x07FF8000, -0x0808E000};
-  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
+  NormalizeInt28ToPipelineBitwidth(expect, std::size(expect));
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   //
@@ -56,11 +58,11 @@ TEST(MixGain, Scaling_Linearity) {
 
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 44100, 1, 44100,
                       Resampler::SampleAndHold);
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum), stream_gain_db);
+  DoMix(mixer.get(), source, accum, false, std::size(accum), stream_gain_db);
 
   float expect2[] = {0x00339000,  0x00333000,  0x00008C00,  0x00001000,
                      -0x00003800, -0x00006400, -0x00333000, -0x00336C00};
-  NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
+  NormalizeInt28ToPipelineBitwidth(expect2, std::size(expect2));
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect2));
 }
 
@@ -76,23 +78,22 @@ TEST(MixGain, Scaling_Precision) {
   // At this gain_scale, audio should be unchanged.
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                            Resampler::SampleAndHold);
-  DoMix(mixer.get(), max_source, accum, false, fbl::count_of(accum), AudioResult::kMinGainDbUnity);
+  DoMix(mixer.get(), max_source, accum, false, std::size(accum), AudioResult::kMinGainDbUnity);
 
   //  At this gain_scale, resulting audio should be unchanged.
   float max_expect1[] = {0x07FFF000, -0x08000000};  // left-shift source by 12.
-  NormalizeInt28ToPipelineBitwidth(max_expect1, fbl::count_of(max_expect1));
+  NormalizeInt28ToPipelineBitwidth(max_expect1, std::size(max_expect1));
   EXPECT_THAT(accum, Pointwise(FloatEq(), max_expect1));
 
   // This is the highest (closest-to-Unity) AScale with an observable effect on
   // full-scale (i.e. the largest sub-Unity AScale distinguishable from Unity).
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                       Resampler::SampleAndHold);
-  DoMix(mixer.get(), max_source, accum, false, fbl::count_of(accum),
-        AudioResult::kMaxGainDbNonUnity);
+  DoMix(mixer.get(), max_source, accum, false, std::size(accum), AudioResult::kMaxGainDbNonUnity);
 
   // Float32 has 25-bit precision (not 28), hence our min delta is 8 (not 1).
   float max_expect2[] = {0x07FFEFF8, -0x07FFFFF8};
-  NormalizeInt28ToPipelineBitwidth(max_expect2, fbl::count_of(max_expect2));
+  NormalizeInt28ToPipelineBitwidth(max_expect2, std::size(max_expect2));
   EXPECT_THAT(accum, Pointwise(FloatEq(), max_expect2));
 
   // kMinGainDbNonMute is the lowest (closest-to-zero) at which audio is not
@@ -102,8 +103,7 @@ TEST(MixGain, Scaling_Precision) {
   int16_t min_source[] = {1, -1};
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                       Resampler::SampleAndHold);
-  DoMix(mixer.get(), min_source, accum, false, fbl::count_of(accum),
-        AudioResult::kMinGainDbNonMute);
+  DoMix(mixer.get(), min_source, accum, false, std::size(accum), AudioResult::kMinGainDbNonMute);
 
   // The method used elsewhere in this file for expected result arrays (28-bit
   // fixed-point, normalized into float) cannot precisely express these values.
@@ -122,7 +122,7 @@ TEST(MixGain, Scaling_Precision) {
   // here and expect no change in the accumulator, even with max inputs.
   mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                       Resampler::SampleAndHold);
-  DoMix(mixer.get(), max_source, accum, true, fbl::count_of(accum), AudioResult::kMaxGainDbMute);
+  DoMix(mixer.get(), max_source, accum, true, std::size(accum), AudioResult::kMaxGainDbMute);
 
   EXPECT_THAT(accum, Pointwise(FloatEq(), min_expect));
 }
@@ -140,14 +140,14 @@ TEST(MixGain, Accumulator) {
   float expect2[] = {0x17FFD000, -0x18000000};
 
   // When mixed, these far exceed any int16 range
-  NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
-  NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
-  NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
+  NormalizeInt28ToPipelineBitwidth(accum, std::size(accum));
+  NormalizeInt28ToPipelineBitwidth(expect, std::size(expect));
+  NormalizeInt28ToPipelineBitwidth(expect2, std::size(expect2));
 
   // These values exceed the per-stream range of int16
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                            Resampler::SampleAndHold);
-  DoMix(mixer.get(), source, accum, true, fbl::count_of(accum));
+  DoMix(mixer.get(), source, accum, true, std::size(accum));
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   // these values even exceed uint16
@@ -167,14 +167,14 @@ void TestAccumulatorClear(Resampler sampler_type) {
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000, sampler_type);
   // Use a gain guaranteed to silence any signal -- Gain::kMinGainDb.
-  DoMix(mixer.get(), source, accum, true, fbl::count_of(accum), Gain::kMinGainDb);
+  DoMix(mixer.get(), source, accum, true, std::size(accum), Gain::kMinGainDb);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
   // When accumulate = false but gain is sufficiently low, overwriting previous
   // contents is skipped. This should lead to the same results as above.
   mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000, sampler_type);
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum), Gain::kMinGainDb);
+  DoMix(mixer.get(), source, accum, false, std::size(accum), Gain::kMinGainDb);
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
