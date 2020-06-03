@@ -1,6 +1,9 @@
 {
     "program": {
-        "binary": "bin/unittests"
+        "binary": "test/timekeeper_bin_test",
+        "env_vars": [
+            "RUST_BACKTRACE=full"
+        ]
     },
     "sandbox": {
         "features": [
