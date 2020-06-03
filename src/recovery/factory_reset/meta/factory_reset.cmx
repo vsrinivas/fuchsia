@@ -7,7 +7,7 @@
             "class/block"
         ],
         "services": [
-            "fuchsia.device.manager.Administrator"
+            "fuchsia.hardware.power.statecontrol.Admin"
         ]
     }
 }

@@ -10,8 +10,8 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
-#include <lib/fdio/fdio.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <limits.h>
 #include <stdio.h>
@@ -82,7 +82,7 @@ zx_status_t ShredBlockDevice(fbl::unique_fd fd, int num_blocks) {
 }
 
 FactoryReset::FactoryReset(fbl::unique_fd dev_fd,
-                           fuchsia::device::manager::AdministratorPtr admin) {
+                           fuchsia::hardware::power::statecontrol::AdminPtr admin) {
   dev_fd_ = std::move(dev_fd);
   admin_ = std::move(admin);
 }
@@ -118,7 +118,15 @@ void FactoryReset::Reset(ResetCallback callback) {
   }
 
   // Reboot to initiate the recovery.
-  admin_->Suspend(fuchsia::device::manager::SUSPEND_FLAG_REBOOT, std::move(callback));
+  admin_->Reboot(fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST,
+                 [callback{std::move(callback)}](
+                     fuchsia::hardware::power::statecontrol::Admin_Reboot_Result status) {
+                   if (status.is_err()) {
+                     callback(status.err());
+                   } else {
+                     callback(ZX_OK);
+                   }
+                 });
 }
 
 }  // namespace factory_reset

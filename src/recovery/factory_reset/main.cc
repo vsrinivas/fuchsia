@@ -21,7 +21,7 @@ int main(int argc, const char** argv) {
   std::unique_ptr<sys::ComponentContext> context =
       sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  auto admin = context->svc()->Connect<fuchsia::device::manager::Administrator>();
+  auto admin = context->svc()->Connect<fuchsia::hardware::power::statecontrol::Admin>();
   factory_reset::FactoryReset factory_reset(std::move(dev_fd), std::move(admin));
   fidl::BindingSet<fuchsia::recovery::FactoryReset> bindings;
   context->outgoing()->AddPublicService(bindings.GetHandler(&factory_reset));

@@ -5,10 +5,11 @@
 #ifndef LIB_FACTORY_RESET_FACTORY_RESET_H
 #define LIB_FACTORY_RESET_FACTORY_RESET_H
 
-#include <fbl/unique_fd.h>
-#include <fuchsia/device/manager/cpp/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/recovery/cpp/fidl.h>
 #include <zircon/types.h>
+
+#include <fbl/unique_fd.h>
 
 namespace factory_reset {
 
@@ -16,7 +17,7 @@ namespace factory_reset {
 // reboots.
 class FactoryReset : public fuchsia::recovery::FactoryReset {
  public:
-  FactoryReset(fbl::unique_fd dev_fd, fuchsia::device::manager::AdministratorPtr admin);
+  FactoryReset(fbl::unique_fd dev_fd, fuchsia::hardware::power::statecontrol::AdminPtr admin);
   // Performs the factory reset.
   void Reset(ResetCallback callback) override;
 
@@ -25,7 +26,7 @@ class FactoryReset : public fuchsia::recovery::FactoryReset {
   // data, causing them to be unusable.
   zx_status_t Shred() const;
 
-  fuchsia::device::manager::AdministratorPtr admin_;
+  fuchsia::hardware::power::statecontrol::AdminPtr admin_;
   fbl::unique_fd dev_fd_;
 };
 

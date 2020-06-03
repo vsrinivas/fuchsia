@@ -6,7 +6,8 @@
 
 #include <fcntl.h>
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/device/manager/cpp/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/devmgr-integration-test/fixture.h>
@@ -37,16 +38,23 @@ const char* kDataName = "fdr-data";
 const char* kRamCtlPath = "misc/ramctl";
 const size_t kKeyBytes = 32;  // Generate a 256-bit key for the zxcrypt volume
 
-class MockAdmin : public fuchsia::device::manager::Administrator {
+class MockAdmin : public fuchsia::hardware::power::statecontrol::testing::Admin_TestBase {
  public:
   bool suspend_called() { return suspend_called_; }
 
  private:
-  void Suspend(uint32_t flags, SuspendCallback callback) override {
+  void NotImplemented_(const std::string& name) override {
+    printf("'%s' was called unexpectedly", name.c_str());
+    ASSERT_TRUE(false);
+  }
+
+  void Reboot(fuchsia::hardware::power::statecontrol::RebootReason req,
+              RebootCallback callback) override {
     ASSERT_FALSE(suspend_called_);
     suspend_called_ = true;
-    ASSERT_EQ(fuchsia::device::manager::SUSPEND_FLAG_REBOOT, flags);
-    callback(ZX_OK);
+    ASSERT_EQ(fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST, req);
+    callback(fuchsia::hardware::power::statecontrol::Admin_Reboot_Result::WithResponse(
+        fuchsia::hardware::power::statecontrol::Admin_Reboot_Response(ZX_OK)));
   }
 
   bool suspend_called_ = false;
@@ -196,8 +204,8 @@ TEST_F(FactoryResetTest, CanShredVolume) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   MockAdmin mock_admin;
-  fidl::BindingSet<fuchsia::device::manager::Administrator> binding;
-  fidl::InterfacePtr<fuchsia::device::manager::Administrator> admin =
+  fidl::BindingSet<fuchsia::hardware::power::statecontrol::Admin> binding;
+  fidl::InterfacePtr<fuchsia::hardware::power::statecontrol::Admin> admin =
       binding.AddBinding(&mock_admin).Bind();
 
   factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin));
