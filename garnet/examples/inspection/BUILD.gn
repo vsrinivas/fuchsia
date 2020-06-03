@@ -17,7 +17,7 @@ source_set("lib") {
     "//garnet/examples/fidl/services:echo",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/lib/inspect_deprecated:component",
+    "//sdk/lib/sys/inspect/cpp",
   ]
 }
 
@@ -78,10 +78,10 @@ executable("example_server_cpp_unittests") {
   deps = [
     ":lib",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/inspect_deprecated:reader",
-    "//src/lib/inspect_deprecated/testing",
+    "//third_party/googletest:gmock",
   ]
 }
 

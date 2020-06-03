@@ -7,9 +7,9 @@
 
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/inspect/cpp/component.h>
 
 #include "echo_connection.h"
-#include "src/lib/inspect_deprecated/component.h"
 
 namespace example {
 
@@ -25,8 +25,8 @@ class ExampleServerApp {
   ExampleServerApp& operator=(const ExampleServerApp&) = delete;
 
   std::unique_ptr<sys::ComponentContext> context_;
-  std::shared_ptr<inspect_deprecated::ComponentInspector> inspector_;
-  inspect_deprecated::Node connections_node_;
+  std::unique_ptr<sys::ComponentInspector> inspector_;
+  inspect::Node connections_node_;
   size_t connection_count_ = 0;
   std::shared_ptr<EchoConnectionStats> echo_stats_;
   fidl::BindingSet<EchoConnection::Echo, std::unique_ptr<EchoConnection>> bindings_;

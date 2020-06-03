@@ -20,14 +20,14 @@ ExampleServerApp::ExampleServerApp()
 
 ExampleServerApp::ExampleServerApp(std::unique_ptr<sys::ComponentContext> context)
     : context_(std::move(context)) {
-  inspector_ = inspect_deprecated::ComponentInspector::Initialize(context_.get());
-  connections_node_ = inspector_->root_tree()->GetRoot().CreateChild("connections");
+  inspector_ = std::make_unique<sys::ComponentInspector>(context_.get());
+  connections_node_ = inspector_->root().CreateChild("connections");
 
   echo_stats_ = std::make_shared<EchoConnectionStats>(EchoConnectionStats{
-      inspector_->root_tree()->GetRoot().CreateExponentialUIntHistogramMetric(
+      inspector_->root().CreateExponentialUintHistogram(
           "request_size_histogram", kRequestHistogramFloor, kRequestHistogramInitialStep,
           kRequestHistogramStepMultiplier, kRequestHistogramBuckets),
-      inspector_->root_tree()->GetRoot().CreateUIntMetric("total_requests", 0),
+      inspector_->root().CreateUint("total_requests", 0),
   });
 
   context_->outgoing()->AddPublicService<EchoConnection::Echo>(
