@@ -33,7 +33,7 @@ namespace dsi_mt {
 
 class DsiMt;
 
-using DeviceType = ddk::Device<DsiMt, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<DsiMt, ddk::UnbindableNew>;
 
 class DsiMt : public DeviceType, public ddk::DsiImplProtocol<DsiMt, ddk::base_protocol> {
  public:
@@ -60,7 +60,7 @@ class DsiMt : public DeviceType, public ddk::DsiImplProtocol<DsiMt, ddk::base_pr
   zx_status_t DsiImplReadReg(uint32_t reg, uint32_t* val);
   zx_status_t DsiImplEnableBist(uint32_t pattern);
 
-  void DdkUnbindDeprecated() {}
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() {}
 
  private:
