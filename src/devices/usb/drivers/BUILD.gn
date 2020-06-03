@@ -5,5 +5,8 @@
 group("tests") {
   testonly = true
 
-  deps = [ "xhci-rewrite:tests" ]
+  deps = [
+    "dwc2:tests",
+    "xhci-rewrite:tests",
+  ]
 }

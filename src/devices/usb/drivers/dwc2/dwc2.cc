@@ -892,14 +892,19 @@ zx_status_t Dwc2::Init() {
     return status;
   }
 
+  return ZX_OK;
+}
+
+void Dwc2::DdkInit(ddk::InitTxn txn) {
   int rc = thrd_create_with_name(
       &irq_thread_, [](void* arg) -> int { return reinterpret_cast<Dwc2*>(arg)->IrqThread(); },
       reinterpret_cast<void*>(this), "dwc2-interrupt-thread");
-  if (rc != thrd_success) {
-    return ZX_ERR_INTERNAL;
+  if (rc == thrd_success) {
+    irq_thread_started_ = true;
+    txn.Reply(ZX_OK);
+  } else {
+    txn.Reply(ZX_ERR_INTERNAL);
   }
-
-  return ZX_OK;
 }
 
 int Dwc2::IrqThread() {
@@ -947,9 +952,13 @@ int Dwc2::IrqThread() {
   return 0;
 }
 
-void Dwc2::DdkUnbindDeprecated() {
+void Dwc2::DdkUnbindNew(ddk::UnbindTxn txn) {
   irq_.destroy();
-  thrd_join(irq_thread_, nullptr);
+  if (irq_thread_started_) {
+    irq_thread_started_ = false;
+    thrd_join(irq_thread_, nullptr);
+  }
+  txn.Reply();
 }
 
 void Dwc2::DdkRelease() { delete this; }

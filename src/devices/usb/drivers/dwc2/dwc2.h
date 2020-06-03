@@ -27,7 +27,7 @@
 namespace dwc2 {
 
 class Dwc2;
-using Dwc2Type = ddk::Device<Dwc2, ddk::UnbindableDeprecated, ddk::Suspendable>;
+using Dwc2Type = ddk::Device<Dwc2, ddk::Initializable, ddk::UnbindableNew, ddk::Suspendable>;
 
 class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protocol> {
  public:
@@ -38,7 +38,8 @@ class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protoco
   int IrqThread();
 
   // Device protocol implementation.
-  void DdkUnbindDeprecated();
+  void DdkInit(ddk::InitTxn txn);
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
   void DdkSuspend(ddk::SuspendTxn txn);
 
@@ -52,6 +53,9 @@ class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protoco
   zx_status_t UsbDciEpClearStall(uint8_t ep_address);
   size_t UsbDciGetRequestSize();
   zx_status_t UsbDciCancelAll(uint8_t ep_address);
+
+  // Allows tests to configure a fake interrupt.
+  void SetInterrupt(zx::interrupt irq) { irq_ = std::move(irq); }
 
  private:
   enum class Ep0State {
@@ -145,6 +149,8 @@ class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protoco
 
   zx::interrupt irq_;
   thrd_t irq_thread_;
+  // True if |irq_thread_| can be joined.
+  std::atomic_bool irq_thread_started_ = false;
 
   dwc2_metadata_t metadata_;
   bool connected_ = false;
