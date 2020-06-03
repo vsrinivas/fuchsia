@@ -348,8 +348,8 @@ size_t VmAddressRegion::AllocatedPagesLocked() const {
   }
 
   size_t sum = 0;
-  for (auto child = subregions_.cbegin(); child != subregions_.cend(); child++) {
-    sum += child->AllocatedPagesLocked();
+  for (const auto& child : subregions_) {
+    sum += child.AllocatedPagesLocked();
   }
   return sum;
 }
@@ -515,8 +515,8 @@ void VmAddressRegion::Dump(uint depth, bool verbose) const {
   }
   printf("vmar %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx ref %d '%s'\n", this, base_,
          base_ + (size_ - 1), size_, ref_count_debug(), name_);
-  for (auto child = subregions_.cbegin(); child != subregions_.cend(); child++) {
-    child->Dump(depth + 1, verbose);
+  for (const auto& child : subregions_) {
+    child.Dump(depth + 1, verbose);
   }
 }
 

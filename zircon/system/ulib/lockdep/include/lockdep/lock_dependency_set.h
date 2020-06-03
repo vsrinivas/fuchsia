@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LOCKDEP_LOCK_DEPENDENCY_SET_H_
+#define LOCKDEP_LOCK_DEPENDENCY_SET_H_
 
 #include <atomic>
 #include <cstddef>
@@ -128,8 +129,8 @@ class LockDependencySet {
   // dependency set can be rebuilt; failure to do so could result in missing
   // new lock violations.
   void clear() {
-    for (size_t i = 0; i < kMaxLockDependencies; i++)
-      list_[i].store(kInvalidLockClassId, std::memory_order_relaxed);
+    for (auto& entry : list_)
+      entry.store(kInvalidLockClassId, std::memory_order_relaxed);
   }
 
  private:
@@ -150,3 +151,5 @@ class LockDependencySet {
 };
 
 }  // namespace lockdep
+
+#endif  // LOCKDEP_LOCK_DEPENDENCY_SET_H_

@@ -243,9 +243,13 @@ class RegionList final {
 
   ChildList::iterator begin() { return regions_.begin(); }
 
+  ChildList::const_iterator begin() const { return regions_.begin(); }
+
   ChildList::const_iterator cbegin() const { return regions_.cbegin(); }
 
   ChildList::iterator end() { return regions_.end(); }
+
+  ChildList::const_iterator end() const { return regions_.end(); }
 
   ChildList::const_iterator cend() const { return regions_.cend(); }
 

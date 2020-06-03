@@ -60,21 +60,21 @@ static void deadlock_test(void) {
   Event gate;
 
   Thread* threads[5] = {0};
-  for (uint i = 0; i < ktl::size(threads); ++i) {
-    threads[i] = Thread::Create("sync_ipi_deadlock", deadlock_test_thread, &gate, DEFAULT_PRIORITY);
-    if (!threads[i]) {
+  for (auto& thread : threads) {
+    thread = Thread::Create("sync_ipi_deadlock", deadlock_test_thread, &gate, DEFAULT_PRIORITY);
+    if (!thread) {
       TRACEF("  failed to create thread\n");
       goto cleanup;
     }
-    threads[i]->Resume();
+    thread->Resume();
   }
 
   gate.Signal();
 
 cleanup:
-  for (uint i = 0; i < ktl::size(threads); ++i) {
-    if (threads[i]) {
-      threads[i]->Join(NULL, ZX_TIME_INFINITE);
+  for (Thread* thread : threads) {
+    if (thread) {
+      thread->Join(NULL, ZX_TIME_INFINITE);
     }
   }
 }

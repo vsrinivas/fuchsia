@@ -45,8 +45,8 @@ struct mp_sync_context;
 static void mp_sync_task(void* context);
 
 void mp_init(void) {
-  for (uint i = 0; i < ktl::size(mp.ipi_task_list); ++i) {
-    list_initialize(&mp.ipi_task_list[i]);
+  for (list_node& node : mp.ipi_task_list) {
+    list_initialize(&node);
   }
 }
 

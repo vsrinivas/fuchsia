@@ -116,15 +116,15 @@ static void do_mem_tests(void* ptr, size_t len) {
   /* test 2: write various patterns, read back */
   printf("test 2: write patterns, read back\n");
 
-  static const uint32_t pat[] = {
+  static const uint32_t patterns[] = {
       0x0,
       0xffffffff,
       0xaaaaaaaa,
       0x55555555,
   };
 
-  for (size_t p = 0; p < ktl::size(pat); p++) {
-    if (do_pattern_test(ptr, len, pat[p]) < 0)
+  for (uint32_t pattern : patterns) {
+    if (do_pattern_test(ptr, len, pattern) < 0)
       goto out;
   }
   // shift bits through 32bit word
@@ -140,8 +140,8 @@ static void do_mem_tests(void* ptr, size_t len) {
 
   /* test 3: moving inversion, patterns */
   printf("test 3: moving inversions with patterns\n");
-  for (size_t p = 0; p < ktl::size(pat); p++) {
-    if (do_moving_inversion_test(ptr, len, pat[p]) < 0)
+  for (uint32_t pattern : patterns) {
+    if (do_moving_inversion_test(ptr, len, pattern) < 0)
       goto out;
   }
   // shift bits through 32bit word

@@ -362,11 +362,11 @@ bool set_migrate_ready_threads_test() {
 
   ktl::array<Thread*, 4> workers{nullptr, nullptr, nullptr, nullptr};
 
-  for (size_t i = 0; i < workers.size(); i++) {
-    workers[i] = Thread::Create("set_migrate_ready_threads_test_worker", worker_body, nullptr,
-                                DEFAULT_PRIORITY);
-    ASSERT_NONNULL(workers[i], "thread_create failed.");
-    workers[i]->SetCpuAffinity(cpu_num_to_mask(kStartingCpu));
+  for (auto& worker : workers) {
+    worker = Thread::Create("set_migrate_ready_threads_test_worker", worker_body, nullptr,
+                            DEFAULT_PRIORITY);
+    ASSERT_NONNULL(worker, "thread_create failed.");
+    worker->SetCpuAffinity(cpu_num_to_mask(kStartingCpu));
   }
 
   // Move the test thread to the same CPU that the workers will start on.

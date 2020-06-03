@@ -205,9 +205,9 @@ static bool test_mapping_oom() {
   paddr_t mapping_paddrs[kMappingPageCount] = {};
 
   auto undo = fbl::MakeAutoCall([&]() {
-    for (unsigned i = 0; i < kMappingPageCount; i++) {
-      if (mapping_pages[i]) {
-        pmm_free_page(mapping_pages[i]);
+    for (vm_page_t* mapping_page : mapping_pages) {
+      if (mapping_page) {
+        pmm_free_page(mapping_page);
       }
     }
   });

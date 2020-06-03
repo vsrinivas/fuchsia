@@ -190,8 +190,8 @@ void PinnedMemoryTokenDispatcher::Unpin() {
 void PinnedMemoryTokenDispatcher::InvalidateMappedAddrsLocked() {
   // Fill with a known invalid address to simplify cleanup of errors during
   // mapping
-  for (size_t i = 0; i < mapped_addrs_.size(); ++i) {
-    mapped_addrs_[i] = UINT64_MAX;
+  for (dev_vaddr_t& mapped_addr : mapped_addrs_) {
+    mapped_addr = UINT64_MAX;
   }
 }
 

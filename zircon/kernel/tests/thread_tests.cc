@@ -91,14 +91,14 @@ static int mutex_test() {
 
   Thread* threads[5];
 
-  for (uint i = 0; i < ktl::size(threads); i++) {
-    threads[i] = Thread::Create("mutex tester", &mutex_thread, &m,
-                                Thread::Current::Get()->scheduler_state_.base_priority());
-    threads[i]->Resume();
+  for (auto& thread : threads) {
+    thread = Thread::Create("mutex tester", &mutex_thread, &m,
+                            Thread::Current::Get()->scheduler_state_.base_priority());
+    thread->Resume();
   }
 
-  for (uint i = 0; i < ktl::size(threads); i++) {
-    threads[i]->Join(NULL, ZX_TIME_INFINITE);
+  for (auto& thread : threads) {
+    thread->Join(NULL, ZX_TIME_INFINITE);
   }
 
   Thread::Current::SleepRelative(ZX_MSEC(100));
@@ -235,11 +235,11 @@ static void event_test() {
     threads[3] = Thread::Create("event waiter 2", &event_waiter, &args, DEFAULT_PRIORITY);
     threads[4] = Thread::Create("event waiter 3", &event_waiter, &args, DEFAULT_PRIORITY);
 
-    for (uint i = 0; i < ktl::size(threads); i++)
-      threads[i]->Resume();
+    for (auto& thread : threads)
+      thread->Resume();
 
-    for (uint i = 0; i < ktl::size(threads); i++)
-      threads[i]->Join(NULL, ZX_TIME_INFINITE);
+    for (auto& thread : threads)
+      thread->Join(NULL, ZX_TIME_INFINITE);
 
     Thread::Current::SleepRelative(ZX_SEC(2));
     printf("destroying event by going out of scope\n");
@@ -259,14 +259,14 @@ static void event_test() {
     threads[3] = Thread::Create("event waiter 2", &event_waiter, &args, DEFAULT_PRIORITY);
     threads[4] = Thread::Create("event waiter 3", &event_waiter, &args, DEFAULT_PRIORITY);
 
-    for (uint i = 0; i < ktl::size(threads); i++)
-      threads[i]->Resume();
+    for (auto& thread : threads)
+      thread->Resume();
 
     Thread::Current::SleepRelative(ZX_SEC(2));
 
-    for (uint i = 0; i < ktl::size(threads); i++) {
-      threads[i]->Kill();
-      threads[i]->Join(NULL, ZX_TIME_INFINITE);
+    for (auto& thread : threads) {
+      thread->Kill();
+      thread->Join(NULL, ZX_TIME_INFINITE);
     }
   }
 
@@ -380,12 +380,12 @@ static void atomic_test(void) {
   threads[7] = Thread::Create("atomic tester 2", &atomic_tester, (void*)-1, LOW_PRIORITY);
 
   /* start all the threads */
-  for (uint i = 0; i < ktl::size(threads); i++)
-    threads[i]->Resume();
+  for (auto& thread : threads)
+    thread->Resume();
 
   /* wait for them to all stop */
-  for (uint i = 0; i < ktl::size(threads); i++) {
-    threads[i]->Join(NULL, ZX_TIME_INFINITE);
+  for (auto& thread : threads) {
+    thread->Join(NULL, ZX_TIME_INFINITE);
   }
 
   printf("atomic count == %d (should be zero)\n", atomic);

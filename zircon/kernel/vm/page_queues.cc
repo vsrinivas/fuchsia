@@ -9,8 +9,8 @@
 #include <vm/vm_object_paged.h>
 
 PageQueues::PageQueues() {
-  for (size_t i = 0; i < kNumPagerBacked; i++) {
-    list_initialize(&pager_backed_[i]);
+  for (list_node& pager_backed : pager_backed_) {
+    list_initialize(&pager_backed);
   }
   list_initialize(&unswappable_);
   list_initialize(&wired_);
@@ -18,8 +18,8 @@ PageQueues::PageQueues() {
 }
 
 PageQueues::~PageQueues() {
-  for (size_t i = 0; i < kNumPagerBacked; i++) {
-    DEBUG_ASSERT(list_is_empty(&pager_backed_[i]));
+  for (list_node& pager_backed : pager_backed_) {
+    DEBUG_ASSERT(list_is_empty(&pager_backed));
   }
   DEBUG_ASSERT(list_is_empty(&unswappable_));
   DEBUG_ASSERT(list_is_empty(&wired_));

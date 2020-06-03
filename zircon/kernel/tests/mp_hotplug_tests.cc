@@ -80,9 +80,9 @@ static unsigned get_num_cpus_online() {
     ASSERT_EQ(i, running_core, "Thread not running on hotplugged core");
   }
 
-  for (unsigned i = 0; i < ktl::size(leaked_threads); i++) {
-    if (leaked_threads[i]) {
-      leaked_threads[i]->Forget();
+  for (Thread* leaked_thread : leaked_threads) {
+    if (leaked_thread) {
+      leaked_thread->Forget();
     }
   }
 
