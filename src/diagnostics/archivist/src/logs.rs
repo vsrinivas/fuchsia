@@ -15,9 +15,7 @@ use fuchsia_async as fasync;
 use fuchsia_inspect as inspect;
 use fuchsia_inspect_derive::Inspect;
 use fuchsia_zircon as zx;
-use futures::{
-    channel::mpsc, future, lock::Mutex, sink::SinkExt, FutureExt, StreamExt, TryStreamExt,
-};
+use futures::{channel::mpsc, future::FutureObj, lock::Mutex, FutureExt, StreamExt, TryStreamExt};
 use log::{error, warn};
 use std::sync::Arc;
 
@@ -67,35 +65,31 @@ impl LogManager {
         }
     }
 
-    /// Spawn a task to read from the kernel's debuglog. The returned future completes once existing
-    /// messages have been ingested.
-    pub async fn spawn_debuglog_drainer<K>(&self, klog_reader: K) -> Result<(), Error>
+    /// Drain the kernel's debug log. The returned future completes once existing messages have been
+    /// ingested.
+    pub async fn drain_debuglog<K>(self, klog_reader: K)
     where
         K: debuglog::DebugLog + Send + Sync + 'static,
     {
         let mut kernel_logger = debuglog::DebugLogBridge::create(klog_reader);
-        for log_msg in
-            kernel_logger.existing_logs().await.context("reading from kernel log iterator")?
-        {
-            self.ingest_message(log_msg, LogSource::Kernel).await;
+        let messages = match kernel_logger.existing_logs().await {
+            Ok(messages) => messages,
+            Err(e) => {
+                error!("Failed to read from kernel log, important logs may be missing: {}", e);
+                return;
+            }
+        };
+        for message in messages {
+            self.ingest_message(message, LogSource::Kernel).await;
         }
 
-        let manager = self.clone();
-        fasync::spawn(async move {
-            let drain_result = kernel_logger
-                .listen()
-                .try_for_each(|log_msg| manager.ingest_message(log_msg, LogSource::Kernel).map(Ok));
-
-            if let Err(e) = drain_result.await {
-                error!(
-                    "important logs may be missing from system log.\
-                           failed to drain kernel log: {:?}",
-                    e
-                );
-            }
-        });
-
-        Ok(())
+        let res = kernel_logger
+            .listen()
+            .try_for_each(|message| self.ingest_message(message, LogSource::Kernel).map(Ok))
+            .await;
+        if let Err(e) = res {
+            error!("Failed to drain kernel log, important logs may be missing: {}", e);
+        }
     }
 
     /// Spawn a log sink for messages sent by the archivist itself.
@@ -116,8 +110,11 @@ impl LogManager {
 
     /// Spawn a task which attempts to act as `LogConnectionListener` for its parent realm, eventually
     /// passing `LogSink` connections into the manager.
-    /// TODO(49764): Make this run on main future
-    pub fn spawn_log_consumer(&self, connector: LogConnectorProxy) {
+    pub fn spawn_log_connector(
+        &self,
+        connector: LogConnectorProxy,
+        sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
+    ) {
         let handler = self.clone();
         fasync::spawn(async move {
             match connector.take_log_connection_listener().await {
@@ -130,14 +127,15 @@ impl LogManager {
                                 connection: LogConnection { log_request, source_identity },
                                 control_handle: _,
                             } => {
-                                let fut = handler.clone().process_log_sink(
-                                    log_request
-                                        .into_stream()
-                                        .expect("getting LogSinkRequestStream from serverend"),
-                                    Arc::new(source_identity),
-                                );
-
-                                fasync::spawn(fut);
+                                let stream = log_request
+                                    .into_stream()
+                                    .expect("getting LogSinkRequestStream from serverend");
+                                let source = Arc::new(source_identity);
+                                fasync::spawn(handler.clone().handle_log_sink(
+                                    stream,
+                                    source,
+                                    sender.clone(),
+                                ))
                             }
                         };
                     }
@@ -152,53 +150,44 @@ impl LogManager {
         });
     }
 
-    /// Process LogSink protocol on `stream`. The future returned by this
+    /// Handle LogSink protocol on `stream`. The future returned by this
     /// function will not complete before all messages on this connection are
     /// processed.
-    pub async fn process_log_sink(
+    pub async fn handle_log_sink(
         self,
         mut stream: LogSinkRequestStream,
         source: Arc<SourceIdentity>,
+        sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
     ) {
         if source.component_name.is_none() {
             self.inner.lock().await.stats.record_unattributed();
         }
-        let (mut log_stream_sender, recv) = mpsc::channel(0);
-        let log_sink_fut = async move {
-            while let Some(LogSinkRequest::Connect { socket, control_handle }) =
-                stream.try_next().await?
-            {
-                let log_stream = match LogMessageSocket::new(socket, source.clone())
-                    .context("creating log stream from socket")
-                {
-                    Ok(s) => s,
-                    Err(e) => {
-                        control_handle.shutdown();
-                        return Err(e);
-                    }
-                };
-                log_stream_sender.send(log_stream).await?;
+        while let Some(next) = stream.next().await {
+            match next {
+                Ok(LogSinkRequest::Connect { socket, control_handle }) => {
+                    match LogMessageSocket::new(socket, source.clone())
+                        .context("creating log stream from socket")
+                    {
+                        Ok(log_stream) => {
+                            let fut =
+                                FutureObj::new(Box::new(self.clone().drain_messages(log_stream)));
+                            let res = sender.unbounded_send(fut);
+                            if let Err(e) = res {
+                                warn!("error queuing log message drain: {}", e);
+                            }
+                        }
+                        Err(e) => {
+                            control_handle.shutdown();
+                            warn!("error creating socket from {:?}: {}", source, e)
+                        }
+                    };
+                }
+                Ok(LogSinkRequest::ConnectStructured { .. }) => {
+                    warn!("ignoring structured connect from {:?}", source)
+                }
+                Err(e) => error!("error handling log sink from {:?}: {}", source, e),
             }
-            Ok(())
-        };
-
-        let log_sink_fut = async move {
-            if let Err(e) = log_sink_fut.await {
-                eprintln!("logsink stream errored: {:?}", e);
-            }
-        };
-
-        // move it into async block else two futures are no compatiable to join.
-        let drain_messages_fut = async move {
-            recv.for_each_concurrent(None, |log_stream| async {
-                self.clone().drain_messages(log_stream).await;
-            })
-            .await;
-        };
-
-        // Join future processing LogSink and future processing sockets so as to
-        // drain all the messages.
-        future::join(log_sink_fut, drain_messages_fut).await;
+        }
     }
 
     /// Drain a `LoggerStream` which wraps a socket from a component generating logs.
@@ -215,7 +204,7 @@ impl LogManager {
                 }
                 Err(e) => {
                     self.inner.lock().await.stats.record_closed_stream();
-                    warn!("closing socket from {:?} due to error: {}", log_stream.source(), e);
+                    warn!("closing socket from {:?}: {}", log_stream.source(), e);
                     return;
                 }
             }
@@ -227,7 +216,7 @@ impl LogManager {
         let handler = self.clone();
         fasync::spawn(async move {
             if let Err(e) = handler.handle_log_requests(stream).await {
-                warn!("error handling Log requests: {:?}", e);
+                warn!("error handling Log requests: {}", e);
             }
         });
     }
@@ -805,7 +794,6 @@ mod tests {
 
     impl TestHarness {
         fn new() -> Self {
-            let inspector = inspect::Inspector::new();
             let inner = Arc::new(Mutex::new(ManagerInner {
                 listeners: Pool::default(),
                 log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
@@ -813,12 +801,13 @@ mod tests {
                 inspect_node: inspect::Node::default(),
             }));
 
+            let inspector = inspect::Inspector::new();
             let log_manager =
                 LogManager { inner }.with_inspect(inspector.root(), "log_stats").unwrap();
 
             let (log_proxy, log_stream) =
                 fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
-            log_manager.spawn_log_handler(log_stream);
+            log_manager.clone().spawn_log_handler(log_stream);
 
             Self { inspector, log_manager, log_proxy }
         }
@@ -879,17 +868,17 @@ mod tests {
         fn new(log_manager: LogManager, identity: Arc<SourceIdentity>) -> Self {
             let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
-            let (log_sink_proxy, log_sink_stream) =
+            let (_log_sink_proxy, log_sink_stream) =
                 fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
 
             let manager = log_manager.clone();
-            fasync::spawn(async move {
-                manager.process_log_sink(log_sink_stream, identity).await;
-            });
+            let (log_sender, log_receiver) = mpsc::unbounded();
+            fasync::spawn(manager.handle_log_sink(log_sink_stream, identity, log_sender));
+            fasync::spawn(log_receiver.for_each_concurrent(None, |rx| async move { rx.await }));
 
-            log_sink_proxy.connect(sout).expect("unable to connect out socket to log sink");
+            _log_sink_proxy.connect(sout).expect("unable to connect out socket to log sink");
 
-            Self { _log_sink_proxy: log_sink_proxy, sin }
+            Self { sin, _log_sink_proxy }
         }
 
         fn write_packets(&mut self, packets: Vec<fx_log_packet_t>) {
@@ -919,8 +908,8 @@ mod tests {
         let lm = LogManager { inner }.with_inspect(inspector.root(), "log_stats").unwrap();
         let (log_proxy, log_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
-        lm.spawn_log_handler(log_stream);
-        lm.spawn_debuglog_drainer(debug_log).await.unwrap();
+        lm.clone().spawn_log_handler(log_stream);
+        fasync::spawn(lm.drain_debuglog(debug_log));
 
         validate_log_stream(expected, log_proxy, None).await;
         inspector

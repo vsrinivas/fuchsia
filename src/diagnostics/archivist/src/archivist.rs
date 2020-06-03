@@ -10,9 +10,9 @@ use {
         events::{stream::EventStream, types::EventSource},
         logs,
     },
-    anyhow::{format_err, Error},
+    anyhow::Error,
     fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
-    fidl_fuchsia_sys_internal::{LogConnectorProxy, SourceIdentity},
+    fidl_fuchsia_sys_internal::SourceIdentity,
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_inspect::{component, health::Reporter},
@@ -71,8 +71,15 @@ pub struct Archivist {
     /// ServiceFs object to server outgoing directory.
     fs: ServiceFs<ServiceObj<'static, ()>>,
 
-    /// Stream which will recieve all the futures to process LogSink connections.
-    log_sinks: Option<mpsc::UnboundedReceiver<FutureObj<'static, ()>>>,
+    /// Receiver for stream which will process LogSink connections.
+    log_receiver: mpsc::UnboundedReceiver<FutureObj<'static, ()>>,
+
+    /// Sender which is used to close the stream of LogSink connections.
+    ///
+    /// Clones of the sender keep the receiver end of the channel open. As soon
+    /// as all clones are dropped or disconnected, the receiver will close. The
+    /// receiver must close for `Archivist::run` to return gracefully.
+    log_sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
 
     /// Listes for events coming from v1 and v2.
     event_stream: EventStream,
@@ -96,12 +103,6 @@ impl Archivist {
         archive::run_archivist(state, events).await
     }
 
-    // Sets log connector which is used to server attributed LogSink.
-    pub fn set_log_connector(&mut self, log_connector: LogConnectorProxy) -> &mut Self {
-        self.log_manager.spawn_log_consumer(log_connector);
-        self
-    }
-
     /// Install controller service.
     pub fn install_controller_service(&mut self) -> &mut Self {
         let (stop_sender, stop_recv) = mpsc::channel(0);
@@ -116,23 +117,21 @@ impl Archivist {
     /// # Arguments:
     /// * `log_connector` - If provided, install log connector.
     pub fn install_logger_services(&mut self) -> &mut Self {
-        assert!(self.log_sinks.is_none(), "Cannot install services twice.");
-
-        let log_manager = self.log_manager().clone();
-        let log_manager_clone = self.log_manager().clone();
-        let (sink_sender, sinks) = mpsc::unbounded();
+        let log_manager_1 = self.log_manager.clone();
+        let log_manager_2 = self.log_manager.clone();
+        let log_sender = self.log_sender.clone();
 
         self.fs
             .dir("svc")
-            .add_fidl_service(move |stream| log_manager_clone.spawn_log_handler(stream))
+            .add_fidl_service(move |stream| log_manager_1.clone().spawn_log_handler(stream))
             .add_fidl_service(move |stream| {
-                let fut =
-                    log_manager.clone().process_log_sink(stream, Arc::new(SourceIdentity::empty()));
-                if let Err(e) = sink_sender.unbounded_send(FutureObj::new(Box::new(fut))) {
-                    eprintln!("Can't queue log sink connection, {}", e);
-                }
+                let source = Arc::new(SourceIdentity::empty());
+                fasync::spawn(log_manager_2.clone().handle_log_sink(
+                    stream,
+                    source,
+                    log_sender.clone(),
+                ));
             });
-        self.log_sinks = Some(sinks);
         self
     }
 
@@ -150,6 +149,7 @@ impl Archivist {
     /// Also installs `fuchsia.diagnostics.Archive` service.
     /// Call `install_logger_services`, `add_event_source`.
     pub fn new(archivist_configuration: configs::Config) -> Result<Self, Error> {
+        let (log_sender, log_receiver) = mpsc::unbounded();
         let log_manager = logs::LogManager::new().with_inspect(diagnostics::root(), "log_stats")?;
 
         let mut fs = ServiceFs::new();
@@ -215,7 +215,8 @@ impl Archivist {
         Ok(Self {
             fs,
             state: archivist_state,
-            log_sinks: None,
+            log_receiver,
+            log_sender,
             pipeline_exists,
             _pipeline_nodes: vec![pipelines_node, feedback_pipeline, legacy_pipeline],
             _pipeline_configs: vec![feedback_config, legacy_config],
@@ -230,11 +231,14 @@ impl Archivist {
         &self.log_manager
     }
 
+    pub fn log_sender(&self) -> &mpsc::UnboundedSender<FutureObj<'static, ()>> {
+        &self.log_sender
+    }
+
     /// Run archivist to completion.
     /// # Arguments:
     /// * `outgoing_channel`- channel to serve outgoing directory on.
     pub async fn run(mut self, outgoing_channel: zx::Channel) -> Result<(), Error> {
-        let log_sinks = self.log_sinks.ok_or(format_err!("log services where not installed"))?;
         self.fs.serve_connection(outgoing_channel)?;
         // Start servcing all outgoing services.
         let run_outgoing = self.fs.collect::<()>().map(Ok);
@@ -243,14 +247,10 @@ impl Archivist {
             Self::collect_component_events(self.event_stream, self.state, self.pipeline_exists);
 
         // Process messages from log sink.
-        let all_msg = async move {
-            log_sinks
-                .for_each_concurrent(None, |rx| async move {
-                    rx.await;
-                })
-                .await;
-        }
-        .map(Ok);
+        let log_receiver = self.log_receiver;
+        let all_msg =
+            async { log_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await }
+                .map(Ok);
 
         let (abortable_fut, abort_handle) =
             abortable(future::try_join(run_outgoing, run_event_collection));
@@ -264,9 +264,11 @@ impl Archivist {
             }
         });
 
+        let mut log_sender = self.log_sender;
         let stop_fut = match self.stop_recv {
             Some(stop_recv) => Either::Left(async move {
                 stop_recv.into_future().await;
+                log_sender.disconnect();
                 abort_handle.abort();
                 Ok(())
             }),
@@ -274,7 +276,7 @@ impl Archivist {
         };
 
         // Combine all three futures into a main future.
-        future::try_join3(abortable_fut, stop_fut, all_msg).await?;
+        future::try_join3(abortable_fut, stop_fut, all_msg).map_ok(|_| ()).await?;
         Ok(())
     }
 }

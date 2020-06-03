@@ -70,20 +70,22 @@ fn main() -> Result<(), Error> {
         .install_logger_services()
         .add_event_source("v1", Box::new(legacy_event_provider))
         .add_event_source("v2", Box::new(event_source));
-    archivist.log_manager().spawn_internal_sink(log_server, log_name);
-
-    if !opt.disable_log_connector {
-        archivist.set_log_connector(connect_to_service::<LogConnectorMarker>()?);
-    }
+    archivist.log_manager().clone().spawn_internal_sink(log_server, log_name);
 
     if opt.install_controller {
         archivist.install_controller_service();
     }
 
+    if !opt.disable_log_connector {
+        archivist.log_manager().clone().spawn_log_connector(
+            connect_to_service::<LogConnectorMarker>()?,
+            archivist.log_sender().clone(),
+        );
+    }
+
     if !opt.disable_klog {
-        let log_manager = archivist.log_manager().clone();
-        let debug_log = logs::KernelDebugLog::new().context("Failed to read kernel logs")?;
-        executor.run(async move { log_manager.spawn_debuglog_drainer(debug_log).await }, 1)?;
+        let debuglog = logs::KernelDebugLog::new().context("Failed to read kernel logs")?;
+        fasync::spawn(archivist.log_manager().clone().drain_debuglog(debuglog));
     }
 
     let startup_handle =

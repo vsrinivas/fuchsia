@@ -17,6 +17,7 @@ rustc_test("bin") {
   deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
     "//src/diagnostics/archivist:lib",
     "//src/diagnostics/archivist/fidl:controller-rustc",
     "//src/diagnostics/archivist/tests/logs/rust/fidl:stdio-rustc",

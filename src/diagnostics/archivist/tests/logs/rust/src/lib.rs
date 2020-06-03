@@ -3,10 +3,17 @@
 // found in the LICENSE file.
 
 use archivist_lib::logs::message::fx_log_packet_t;
-use fidl::{Socket, SocketOpts};
+use fidl::{
+    endpoints::{ClientEnd, ServerEnd, ServiceMarker},
+    Socket, SocketOpts,
+};
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
 use fidl_fuchsia_sys::LauncherMarker;
+use fidl_fuchsia_sys_internal::{
+    LogConnection, LogConnectionListenerMarker, LogConnectorMarker, LogConnectorRequest,
+    LogConnectorRequestStream, SourceIdentity,
+};
 use fidl_test_log_stdio::StdioPuppetMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::{
@@ -19,7 +26,7 @@ use fuchsia_syslog::{
 };
 use fuchsia_syslog_listener::{self as syslog_listener, run_log_listener_with_proxy, LogProcessor};
 use fuchsia_zircon as zx;
-use futures::{channel::mpsc, Stream, StreamExt};
+use futures::{channel::mpsc, Stream, StreamExt, TryStreamExt};
 use log::warn;
 
 struct Listener {
@@ -127,8 +134,8 @@ async fn listen_for_klog_routed_stdio() {
     // TODO(49357): add test for multiline log once behavior is defined.
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_observer_stop_api() {
+#[fasync::run_singlethreaded(test)]
+async fn observer_stop_api() {
     let launcher = connect_to_service::<LauncherMarker>().unwrap();
     // launch observer.cmx
     let mut observer = launch_with_options(
@@ -196,8 +203,8 @@ async fn test_observer_stop_api() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_same_log_sink_simultaneously() {
+#[fasync::run_singlethreaded(test)]
+async fn same_log_sink_simultaneously() {
     // launch observer.cmx
     let launcher = connect_to_service::<LauncherMarker>().unwrap();
     let mut observer = launch_with_options(
@@ -225,6 +232,105 @@ async fn test_same_log_sink_simultaneously() {
             message_client.write(&mut packet.as_bytes()).unwrap();
         }
     }
+
+    // run log listener
+    let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
+    let (send_logs, recv_logs) = mpsc::unbounded();
+    fasync::spawn(async move {
+        let listen = Listener { send_logs };
+        let mut options = LogFilterOptions {
+            filter_by_pid: true,
+            pid: 1000,
+            filter_by_tid: true,
+            tid: 2000,
+            verbosity: 0,
+            min_severity: LogLevelFilter::None,
+            tags: Vec::new(),
+        };
+        run_log_listener_with_proxy(&log_proxy, listen, Some(&mut options), false).await.unwrap();
+    });
+
+    // connect to controller and call stop
+    let controller = observer.connect_to_service::<ControllerMarker>().unwrap();
+    controller.stop().unwrap();
+
+    // collect all logs
+    let logs = recv_logs.map(|message| (message.severity, message.msg)).collect::<Vec<_>>().await;
+
+    // recv_logs returned, means observer must be dead. check.
+    assert!(observer.wait().await.unwrap().success());
+    assert_eq!(
+        logs,
+        std::iter::repeat((INFO, "repeated log".to_owned())).take(250).collect::<Vec<_>>()
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn same_log_sink_simultaneously_via_connector() {
+    let (client, server) = zx::Channel::create().unwrap();
+    let mut serverend = Some(ServerEnd::new(server));
+
+    // connect multiple identical log sinks
+    let mut sockets = Vec::new();
+    for _ in 0..50 {
+        let (message_client, message_server) = Socket::create(SocketOpts::DATAGRAM).unwrap();
+        sockets.push(message_server);
+
+        // each with the same message repeated multiple times
+        let mut packet = fx_log_packet_t::default();
+        packet.metadata.pid = 1000;
+        packet.metadata.tid = 2000;
+        packet.metadata.severity = LogLevelFilter::Info.into_primitive().into();
+        packet.data[0] = 0;
+        packet.add_data(1, "repeated log".as_bytes());
+        for _ in 0..5 {
+            message_client.write(&mut packet.as_bytes()).unwrap();
+        }
+    }
+    {
+        let listener = ClientEnd::<LogConnectionListenerMarker>::new(client).into_proxy().unwrap();
+        for socket in sockets {
+            let (client, server) = zx::Channel::create().unwrap();
+            let log_request = ServerEnd::<LogSinkMarker>::new(server);
+            let source_identity = SourceIdentity::empty();
+            listener
+                .on_new_connection(&mut LogConnection { log_request, source_identity })
+                .unwrap();
+            let log_sink = ClientEnd::<LogSinkMarker>::new(client).into_proxy().unwrap();
+            log_sink.connect(socket).unwrap();
+        }
+    }
+
+    let (dir_client, dir_server) = zx::Channel::create().unwrap();
+    let mut fs = ServiceFs::new();
+    fs.add_fidl_service_at(
+        LogConnectorMarker::NAME,
+        move |mut stream: LogConnectorRequestStream| {
+            let mut serverend = serverend.take();
+            fasync::spawn(async move {
+                while let Some(LogConnectorRequest::TakeLogConnectionListener { responder }) =
+                    stream.try_next().await.unwrap()
+                {
+                    responder.send(serverend.take()).unwrap()
+                }
+            })
+        },
+    )
+    .serve_connection(dir_server)
+    .unwrap();
+    fasync::spawn(fs.collect());
+
+    // launch observer.cmx
+    let launcher = connect_to_service::<LauncherMarker>().unwrap();
+    let mut options = LaunchOptions::new();
+    options.set_additional_services(vec![LogConnectorMarker::NAME.to_string()], dir_client);
+    let mut observer = launch_with_options(
+        &launcher,
+        "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx".to_owned(),
+        None,
+        options,
+    )
+    .unwrap();
 
     // run log listener
     let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
