@@ -13,7 +13,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
-	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -66,9 +65,6 @@ func AddPackageRepository(ctx context.Context, client *ssh.Client, config *ssh.C
 			},
 		},
 	}
-
-	// TODO(fxb/52397): Remove after done debugging.
-	logger.Debugf(ctx, "ADD PKG REPO: check conn error before add from config: %v", sshutil.CheckConnection(client))
 
 	return repo.AddFromConfig(client, cfg)
 }
