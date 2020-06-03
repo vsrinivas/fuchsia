@@ -15,7 +15,6 @@ namespace fbl {
 using std::clamp;
 using std::max;
 using std::min;
-using std::lower_bound;
 
 // is_pow2
 //
@@ -50,9 +49,9 @@ template <class T, class U, class L = std::conditional_t<sizeof(T) >= sizeof(U),
 constexpr const L round_up(const T& val_, const U& multiple_) {
   const L val = static_cast<L>(val_);
   const L multiple = static_cast<L>(multiple_);
-  return val == 0 ? 0
-                  : is_pow2<L>(multiple) ? (val + (multiple - 1)) & ~(multiple - 1)
-                                         : ((val + (multiple - 1)) / multiple) * multiple;
+  return val == 0               ? 0
+         : is_pow2<L>(multiple) ? (val + (multiple - 1)) & ~(multiple - 1)
+                                : ((val + (multiple - 1)) / multiple) * multiple;
 }
 
 // round_down rounds down val until it is divisible by multiple.
