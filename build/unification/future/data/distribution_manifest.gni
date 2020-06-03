@@ -1,0 +1,111 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Generates a manifest containing the list of distributable objects in the given
+# dependency tree.
+#
+# Distributable objects are binaries and data files eligible for inclusion in a
+# build product destined to be used at runtime. Objects within the dependency
+# tree defined by the `deps` and `data_deps` parameters of dependents end up
+# included in the resulting manifest file.
+#
+# This template produces a file using the JSON format listing all distributable
+# objects:
+# ```
+# [
+#   {
+#     "destination": "bin/foobar",
+#     "source": "obj/path/to/foobar"
+#     "label": "//path/to/foobar"
+#   }
+# ]
+# ```
+# See the [schema](distribution_schema.json) for more details.
+#
+# !!! IMPORTANTE NOTE: the "label" field is currently not being populated !!!
+#
+# Parameters
+#
+#   deps (optional)
+#     [list of labels] The targets to generate a manifest for.
+#     See `gn help` for more details.
+#
+#   testonly, visibility, metadata (optional)
+#     See `gn help`.
+#
+#   outputs (optional)
+#     Singleton list containing the path to the manifest file.
+#     Defaults to `[ "$target_gen_dir/$target_name.dist" ]`.
+template("distribution_manifest") {
+  main_target = target_name
+  generate_target = "${target_name}_generate"
+
+  # Build the name of the output file.
+  if (defined(invoker.outputs)) {
+    _outputs = invoker.outputs
+    assert(_outputs != [] && _outputs == [ _outputs[0] ],
+           "Outputs list must have exactly one element.")
+    manifest_file = _outputs[0]
+  } else {
+    manifest_file = "$target_gen_dir/$target_name.dist"
+  }
+  intermediate_file = "$manifest_file.partial"
+
+  # Gather metadata about runtime objects.
+  generated_file(generate_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+
+    visibility = [ ":$main_target" ]
+
+    data_keys = [
+      "migrated_manifest_files",
+      "migrated_manifest_lines",
+    ]
+    walk_keys = [ "migrated_manifest_barrier" ]
+
+    outputs = [ intermediate_file ]
+  }
+
+  # Resolve file references in the gathered metadata to produce the final
+  # output.
+  action(main_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    script = "//build/unification/future/data/expand_dist_manifest.py"
+
+    inputs = [ intermediate_file ]
+    outputs = [ manifest_file ]
+
+    args = [
+      "--input",
+      rebase_path(intermediate_file, root_build_dir),
+      "--output",
+      rebase_path(manifest_file, root_build_dir),
+    ]
+
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ ":$generate_target" ]
+
+    metadata = {
+      # Add a barrier here to avoid double of inclusion of elements listed in
+      # the generated manifest.
+      migrated_manifest_barrier = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+    }
+  }
+}

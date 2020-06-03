@@ -118,8 +118,7 @@ aggregate_manifest("legacy-tests") {
 
 fini_manifest("migrated-image") {
   # Use the same naming scheme as `aggregate_manifest`.
-  output_dir = target_out_dir
-  output_extension = "unification.manifest"
+  outputs = [ "$target_out_dir/$target_name.unification.manifest" ]
 
   deps = [
     "//examples/drivers//fifo:demo-fifo",
@@ -499,8 +498,7 @@ fini_manifest("migrated-image") {
 
 fini_manifest("migrated-aux") {
   # Use the same naming scheme as `aggregate_manifest`.
-  output_dir = target_out_dir
-  output_extension = "unification.manifest"
+  outputs = [ "$target_out_dir/$target_name.unification.manifest" ]
 
   deps = [
     "//src/connectivity/ethernet/drivers/usb-cdc-ecm:usb-cdc-ecm-unittest",
@@ -703,8 +701,7 @@ fini_manifest("migrated-aux") {
 
 fini_manifest("migrated-tests") {
   # Use the same naming scheme as `aggregate_manifest`.
-  output_dir = target_out_dir
-  output_extension = "unification.manifest"
+  outputs = [ "$target_out_dir/$target_name.unification.manifest" ]
 
   deps = [
     "//src/connectivity/ethernet/drivers/asix-88179:usb-virtual-bus-asix-88179",

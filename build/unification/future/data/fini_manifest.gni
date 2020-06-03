@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("distribution_manifest.gni")
+
 # Generates a manifest in the FINI (Fuchsia INI) format.
 #
 # This format maps a source file to its destination in a container with the
@@ -19,72 +21,54 @@
 #     [list of labels] The targets to generate a manifest for.
 #     See `gn help` for more details.
 #
-#   testonly, visibility (optional)
+#   testonly, visibility, metadata (optional)
 #     See `gn help`.
 #
-#   output_dir (optional)
-#     See `gn help`.
-#     Defaults to `target_gen_dir`.
-#
-#   output_name (optional)
-#     See `gn help`.
-#     Defaults to `$target_name`.
-#
-#   output_extension (optional)
-#     See `gn help`.
-#     Defaults to `fini`.
+#   outputs (optional)
+#     Singleton list containing the path to the manifest file.
+#     Defaults to `[ "$target_gen_dir/$target_name.fini" ]`.
 template("fini_manifest") {
   main_target = target_name
   generate_target = "${target_name}_generate"
 
-  # Build the name of the final output.
-  manifest_file = target_gen_dir
-  if (defined(invoker.output_dir)) {
-    manifest_file = invoker.output_dir
-  }
-  output_name = target_name
-  if (defined(invoker.output_name)) {
-    output_name = invoker.output_name
-  }
-  manifest_file += "/$output_name"
-  if (defined(invoker.output_extension)) {
-    output_extension = invoker.output_extension
-    if (output_extension != "") {
-      manifest_file += ".$output_extension"
-    }
+  # Build the name of the output files.
+  if (defined(invoker.outputs)) {
+    _outputs = invoker.outputs
+    assert(_outputs == [ _outputs[0] ],
+           "Output list must have exactly one element.")
+    manifest_file = _outputs[0]
   } else {
-    manifest_file += ".fini"
+    manifest_file = "$target_gen_dir/$target_name.fini"
   }
-  intermediate_file = "$manifest_file.intermediate"
+  intermediate_file = "$manifest_file.dist"
 
-  # Gather metadata about runtime objects.
-  generated_file(generate_target) {
+  # Get a JSON manifest of all runtime objects.
+  distribution_manifest(generate_target) {
     forward_variables_from(invoker,
                            [
                              "deps",
+
+                             # Metadata needs to be added on this target so that
+                             # any barrier it defines is properly reflected in
+                             # the target's deps.
+                             "metadata",
                              "testonly",
                            ])
 
-    data_keys = [
-      "migrated_manifest_files",
-      "migrated_manifest_lines",
-    ]
-    walk_keys = [ "migrated_manifest_barrier" ]
+    visibility = [ ":$main_target" ]
 
     outputs = [ intermediate_file ]
   }
 
-  # Resolve file references in the gathered metadata to produce the final
-  # output.
+  # Generate a manifest file with the FINI format.
   action(main_target) {
     forward_variables_from(invoker,
                            [
-                             "deps",
                              "testonly",
                              "visibility",
                            ])
 
-    script = "//build/unification/future/data/expand_fini_manifest.py"
+    script = "//build/unification/future/data/convert_manifest_to_fini.py"
 
     inputs = [ intermediate_file ]
     outputs = [ manifest_file ]
@@ -96,16 +80,6 @@ template("fini_manifest") {
       rebase_path(manifest_file, root_build_dir),
     ]
 
-    if (!defined(deps)) {
-      deps = []
-    }
-    deps += [ ":$generate_target" ]
-
-    metadata = {
-      migrated_manifest_barrier = []
-      if (defined(invoker.metadata)) {
-        forward_variables_from(invoker.metadata, "*")
-      }
-    }
+    deps = [ ":$generate_target" ]
   }
 }

@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://fuchsia.com/schemas/dist.json",
+  "description": "A manifest of distributable objects",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "destination": {
+        "description": "Path of the object on the runtime medium",
+        "$ref": "#/definitions/path"
+      },
+      "source": {
+        "description": "Path to the file relatively to the build's root directory",
+        "$ref": "#/definitions/path"
+      },
+      "label": {
+        "description": "GN label of the target that generated the source file",
+        "$ref": "#/definitions/label"
+      }
+    },
+    "required": [
+      "destination",
+      "label",
+      "source"
+    ],
+    "additionalProperties": false
+  },
+  "definitions": {
+    "path": {
+      "description": "A relative file path",
+      "type": "string"
+    },
+    "label": {
+      "description": "A GN label",
+      "type": "string"
+    }
+  }
+}
