@@ -705,6 +705,63 @@ success("Optionals") {
     },
 }
 
+success("OutOfLinePaddingZeroed7") {
+    value = OutOfLinePaddingZeroed7{
+        a: Uint8Struct{
+            val: 0x01,
+        },
+        b: Uint64Struct{
+            val: 2,
+        },
+    },
+    bytes = {
+        v1 = [
+            repeat(0xff):8, // a*
+            repeat(0xff):8, // b*
+            0x01, padding:7, // a + 7 padding
+            0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00,  // b
+        ]
+    }
+}
+
+success("OutOfLinePaddingZeroed6") {
+    value = OutOfLinePaddingZeroed6{
+        a: Uint16Struct{
+            val: 0x0201,
+        },
+        b: Uint64Struct{
+            val: 3,
+        },
+    },
+    bytes = {
+        v1 = [
+            repeat(0xff):8, // a*
+            repeat(0xff):8, // b*
+            0x01,0x02, padding:6, // a + 6 padding
+            0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00,  // b
+        ]
+    }
+}
+
+success("OutOfLinePaddingZeroed4") {
+    value = OutOfLinePaddingZeroed4{
+        a: Uint32Struct{
+            val: 0x04030201,
+        },
+        b: Uint64Struct{
+            val: 5,
+        },
+    },
+    bytes = {
+        v1 = [
+            repeat(0xff):8, // a*
+            repeat(0xff):8, // b*
+            0x01,0x02,0x03,0x04, padding:4, // a + 4 padding
+            0x05,0x00,0x00,0x00,0x00,0x00,0x00,0x00,  // b
+        ]
+    }
+}
+
 success("Arrays") {
     value = StructWithArrays {
         arr_int: [1, 2,],

@@ -32,3 +32,34 @@ struct StructWithOptionals {
     UnionWithEmptyStruct u;
     UnionWithEmptyStruct? u2;
 };
+
+struct Uint8Struct {
+    uint8 val;
+};
+
+struct Uint16Struct {
+    uint16 val;
+};
+
+struct Uint32Struct {
+    uint32 val;
+};
+
+struct Uint64Struct {
+    uint64 val;
+};
+
+struct OutOfLinePaddingZeroed7 {
+    Uint8Struct? a;
+    Uint64Struct? b;
+};
+
+struct OutOfLinePaddingZeroed6 {
+    Uint16Struct? a;
+    Uint64Struct? b;
+};
+
+struct OutOfLinePaddingZeroed4 {
+    Uint32Struct? a;
+    Uint64Struct? b;
+};

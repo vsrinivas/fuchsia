@@ -26,7 +26,7 @@ struct OwnedLinearizeResult {
   // linearized_buffer (or neither in error conditions).
   fidl::LinearizeResult<FidlType> result;
   // Used for types with no out-of-line parts, which do not need linearization.
-  FIDL_ALIGNDECL char inline_buffer[FidlAlign(sizeof(FidlType))] = {};
+  FIDL_ALIGNDECL char inline_buffer[FidlAlign(sizeof(FidlType))];
   // Used in the general case where linearization is needed.
   std::vector<uint8_t> linearized_buffer;
 };
