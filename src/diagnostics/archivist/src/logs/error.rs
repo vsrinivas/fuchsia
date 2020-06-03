@@ -1,6 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+use diagnostic_streams::parse::ParseError;
 use thiserror::Error;
 
 use super::message::{fx_log_severity_t, MAX_TAGS, MAX_TAG_LEN, MIN_PACKET_SIZE};
@@ -24,6 +25,12 @@ pub enum StreamError {
 
     #[error("invalid or corrupt severity received: {provided}")]
     InvalidSeverity { provided: fx_log_severity_t },
+
+    #[error("unrecognized value type encountered")]
+    UnrecognizedValue,
+
+    #[error("couldn't parse message: {:?}", .parse_error)]
+    ParseError { parse_error: ParseError },
 
     #[error("string with invalid UTF-8 encoding: {source:?}")]
     InvalidString {
@@ -57,5 +64,13 @@ impl PartialEq for StreamError {
             (Io { source }, Io { source: s2 }) => source.kind() == s2.kind(),
             _ => false,
         }
+    }
+}
+
+// This impl is manually provided as deriving it with thiserror
+// requires the source to implement std::error::Error
+impl From<ParseError> for StreamError {
+    fn from(parse_error: ParseError) -> Self {
+        Self::ParseError { parse_error }
     }
 }

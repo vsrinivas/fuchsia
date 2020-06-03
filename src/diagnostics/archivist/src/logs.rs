@@ -30,7 +30,7 @@ mod stats;
 pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
 use listener::{pool::Pool, pretend_scary_listener_is_safe, Listener};
 use message::Message;
-use socket::LogMessageSocket;
+use socket::{Encoding, LogMessageSocket};
 use stats::LogSource;
 
 /// Store 4 MB of log messages and delete on FIFO basis.
@@ -171,8 +171,23 @@ impl LogManager {
                         }
                     };
                 }
-                Ok(LogSinkRequest::ConnectStructured { .. }) => {
-                    warn!("ignoring structured connect from {:?}", source)
+                Ok(LogSinkRequest::ConnectStructured { socket, control_handle }) => {
+                    match LogMessageSocket::new_structured(socket, source.clone())
+                        .context("creating log stream from socket")
+                    {
+                        Ok(log_stream) => {
+                            let fut =
+                                FutureObj::new(Box::new(self.clone().drain_messages(log_stream)));
+                            let res = sender.unbounded_send(fut);
+                            if let Err(e) = res {
+                                warn!("error queuing log message drain: {}", e);
+                            }
+                        }
+                        Err(e) => {
+                            control_handle.shutdown();
+                            warn!("error creating socket from {:?}: {}", source, e)
+                        }
+                    };
                 }
                 Err(e) => error!("error handling log sink from {:?}: {}", source, e),
             }
@@ -181,7 +196,10 @@ impl LogManager {
 
     /// Drain a `LogMessageSocket` which wraps a socket from a component
     /// generating logs.
-    async fn drain_messages(self, mut log_stream: LogMessageSocket) {
+    async fn drain_messages<E>(self, mut log_stream: LogMessageSocket<E>)
+    where
+        E: Encoding + Unpin,
+    {
         let component_log_stats = {
             let inner = self.inner.lock().await;
             inner.stats.get_component_log_stats(log_stream.source()).await
@@ -283,7 +301,10 @@ mod tests {
     use {
         super::*,
         crate::logs::debuglog::tests::{TestDebugEntry, TestDebugLog},
-        crate::logs::message::fx_log_packet_t,
+        crate::logs::message::{fx_log_packet_t, Severity, MAX_DATAGRAM_LEN},
+        diagnostic_streams::{
+            encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
+        },
         fidl_fuchsia_logger::{
             LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogProxy, LogSinkMarker,
             LogSinkProxy,
@@ -291,6 +312,7 @@ mod tests {
         fuchsia_inspect::assert_inspect_tree,
         fuchsia_inspect_derive::WithInspect,
         fuchsia_zircon as zx,
+        std::{io::Cursor, marker::PhantomData},
         validating_log_listener::{validate_log_dump, validate_log_stream},
     };
 
@@ -710,6 +732,95 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_structured_log() {
+        let logs = vec![
+            Record {
+                timestamp: 6,
+                severity: StreamSeverity::Info,
+                arguments: vec![Argument {
+                    name: "__msg".to_string(),
+                    value: Value::Text("hi".to_string()),
+                }],
+            },
+            Record { timestamp: 14, severity: StreamSeverity::Error, arguments: vec![] },
+            Record {
+                timestamp: 19,
+                severity: StreamSeverity::Warn,
+                arguments: vec![
+                    Argument { name: String::from("__pid"), value: Value::UnsignedInt(0x1d1) },
+                    Argument { name: String::from("__tid"), value: Value::UnsignedInt(0x1d2) },
+                    Argument { name: String::from("__dropped"), value: Value::UnsignedInt(23) },
+                    Argument {
+                        name: String::from("__tag"),
+                        value: Value::Text(String::from("tag")),
+                    },
+                    Argument {
+                        name: String::from("__msg"),
+                        value: Value::Text(String::from("message")),
+                    },
+                ],
+            },
+            Record {
+                timestamp: 21,
+                severity: StreamSeverity::Warn,
+                arguments: vec![
+                    Argument {
+                        name: String::from("__tag"),
+                        value: Value::Text(String::from("tag-1")),
+                    },
+                    Argument {
+                        name: String::from("__tag"),
+                        value: Value::Text(String::from("tag-2")),
+                    },
+                ],
+            },
+        ];
+
+        let expected_logs = vec![
+            LogMessage {
+                pid: zx::sys::ZX_KOID_INVALID,
+                tid: zx::sys::ZX_KOID_INVALID,
+                time: 6,
+                severity: Severity::Info.for_listener(),
+                dropped_logs: 0,
+                msg: String::from("hi"),
+                tags: vec![],
+            },
+            LogMessage {
+                pid: zx::sys::ZX_KOID_INVALID,
+                tid: zx::sys::ZX_KOID_INVALID,
+                time: 14,
+                severity: Severity::Error.for_listener(),
+                dropped_logs: 0,
+                msg: String::from(""),
+                tags: vec![],
+            },
+            LogMessage {
+                pid: 0x1d1,
+                tid: 0x1d2,
+                time: 19,
+                severity: Severity::Warn.for_listener(),
+                dropped_logs: 23,
+                msg: String::from("message"),
+                tags: vec![String::from("tag")],
+            },
+            LogMessage {
+                pid: zx::sys::ZX_KOID_INVALID,
+                tid: zx::sys::ZX_KOID_INVALID,
+                time: 21,
+                severity: Severity::Warn.for_listener(),
+                dropped_logs: 0,
+                msg: String::from(""),
+                tags: vec![String::from("tag-1"), String::from("tag-2")],
+            },
+        ];
+        let harness = TestHarness::new();
+        let mut stream = harness.create_structured_stream(Arc::new(SourceIdentity::empty()));
+        stream.write_packets(logs);
+        harness.filter_test(expected_logs, None).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_debuglog_drainer() {
         let log1 = TestDebugEntry::new("log1".as_bytes());
         let log2 = TestDebugEntry::new("log2".as_bytes());
@@ -842,17 +953,72 @@ mod tests {
             }
         }
 
-        fn create_stream(&self, identity: Arc<SourceIdentity>) -> TestStream {
+        fn create_stream(&self, identity: Arc<SourceIdentity>) -> TestStream<LogPacketWriter> {
+            TestStream::new(self.log_manager.clone(), identity)
+        }
+
+        fn create_structured_stream(
+            &self,
+            identity: Arc<SourceIdentity>,
+        ) -> TestStream<StructuredMessageWriter> {
             TestStream::new(self.log_manager.clone(), identity)
         }
     }
 
-    struct TestStream {
-        sin: zx::Socket,
-        _log_sink_proxy: LogSinkProxy,
+    /// A `LogWriter` can connect to and send `Packets` to a LogSink over a socket.
+    trait LogWriter {
+        type Packet;
+        fn connect(log_sink: &LogSinkProxy, sout: zx::Socket);
+
+        fn write(sout: &zx::Socket, packet: &Self::Packet);
     }
 
-    impl TestStream {
+    /// A `LogWriter` that writes `fx_log_packet_t` to a LogSink in the syslog
+    /// format.
+    struct LogPacketWriter;
+
+    /// A `LogWriter` that writes `Record` to a LogSink in the structured
+    /// log format.
+    struct StructuredMessageWriter;
+
+    impl LogWriter for LogPacketWriter {
+        type Packet = fx_log_packet_t;
+
+        fn connect(log_sink: &LogSinkProxy, sout: zx::Socket) {
+            log_sink.connect(sout).expect("unable to connect out socket to log sink");
+        }
+
+        fn write(sin: &zx::Socket, packet: &fx_log_packet_t) {
+            sin.write(to_u8_slice(packet)).unwrap();
+        }
+    }
+
+    impl LogWriter for StructuredMessageWriter {
+        type Packet = Record;
+
+        fn connect(log_sink: &LogSinkProxy, sin: zx::Socket) {
+            log_sink.connect_structured(sin).expect("unable to connect out socket to log sink");
+        }
+
+        fn write(sin: &zx::Socket, record: &Record) {
+            let mut buffer = Cursor::new(vec![0; MAX_DATAGRAM_LEN]);
+            let mut encoder = Encoder::new(&mut buffer);
+            encoder.write_record(record).unwrap();
+            let slice = buffer.get_ref().as_slice();
+            sin.write(slice).unwrap();
+        }
+    }
+
+    struct TestStream<E> {
+        sin: zx::Socket,
+        _log_sink_proxy: LogSinkProxy,
+        _encoder: PhantomData<E>,
+    }
+
+    impl<E, P> TestStream<E>
+    where
+        E: LogWriter<Packet = P>,
+    {
         fn new(log_manager: LogManager, identity: Arc<SourceIdentity>) -> Self {
             let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
@@ -864,19 +1030,19 @@ mod tests {
             fasync::spawn(manager.handle_log_sink(log_sink_stream, identity, log_sender));
             fasync::spawn(log_receiver.for_each_concurrent(None, |rx| async move { rx.await }));
 
-            _log_sink_proxy.connect(sout).expect("unable to connect out socket to log sink");
+            E::connect(&_log_sink_proxy, sout);
 
-            Self { sin, _log_sink_proxy }
+            Self { _log_sink_proxy, sin, _encoder: PhantomData }
         }
 
-        fn write_packets(&mut self, packets: Vec<fx_log_packet_t>) {
-            for mut p in packets {
-                self.write_packet(&mut p);
+        fn write_packets(&mut self, packets: Vec<P>) {
+            for p in packets {
+                self.write_packet(&p);
             }
         }
 
-        fn write_packet(&mut self, packet: &mut fx_log_packet_t) {
-            self.sin.write(to_u8_slice(packet)).unwrap();
+        fn write_packet(&mut self, packet: &P) {
+            E::write(&self.sin, packet);
         }
     }
 

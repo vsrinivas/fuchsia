@@ -118,7 +118,7 @@ impl LogManagerStats {
     /// Returns the stats for a particular component specified by `identity`.
     pub async fn get_component_log_stats(
         &self,
-        identity: &Arc<SourceIdentity>,
+        identity: &SourceIdentity,
     ) -> Arc<Mutex<ComponentLogStats>> {
         self.by_component.get_component_log_stats(identity).await
     }

@@ -14,6 +14,8 @@ use {
 };
 
 pub(crate) type ParseResult<'a, T> = IResult<&'a [u8], T, StreamError>;
+/// Error for parsed records.
+pub type ParseError = Err<StreamError>;
 
 /// Attempt to parse a diagnostic record from the head of this buffer.
 pub fn parse_record(buf: &[u8]) -> ParseResult<'_, Record> {

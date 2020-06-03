@@ -9,9 +9,10 @@
 use {
     bitfield::bitfield,
     std::{array::TryFromSliceError, convert::TryFrom},
+    thiserror::Error,
 };
 
-pub use fidl_fuchsia_diagnostics_stream::{Argument, Record, Value};
+pub use fidl_fuchsia_diagnostics_stream::{Argument, Record, Severity, Value};
 
 pub mod encode;
 pub mod parse;
@@ -120,19 +121,23 @@ impl<'a> ToString for StringRef<'a> {
 }
 
 /// Errors which occur when interacting with streams of diagnostic records.
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum StreamError {
     /// The provided buffer is incorrectly sized, usually due to being too small.
+    #[error("buffer is incorrectly sized")]
     BufferSize,
 
     /// We attempted to parse bytes as a type for which the bytes are not a valid pattern.
+    #[error("value out of range")]
     ValueOutOfValidRange,
 
     /// We attempted to parse or encode values which are not yet supported by this implementation of
     /// the Fuchsia Tracing format.
+    #[error("unsupported value type")]
     Unsupported,
 
     /// We encountered a generic `nom` error while parsing.
+    #[error("nom parsing error: {:?}", .0)]
     Nom(nom::error::ErrorKind),
 }
 

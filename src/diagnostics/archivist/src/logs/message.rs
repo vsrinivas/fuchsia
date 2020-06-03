@@ -4,11 +4,12 @@
 use super::buffer::Accounted;
 use super::error::StreamError;
 use byteorder::{ByteOrder, LittleEndian};
+use diagnostic_streams::{Severity as StreamSeverity, Value};
 use fidl_fuchsia_logger::{LogLevelFilter, LogMessage};
 use fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property};
 use fuchsia_zircon as zx;
 use libc::{c_char, c_int};
-use std::{convert::TryFrom, mem, str};
+use std::{convert::TryFrom, iter::FromIterator, mem, str};
 
 pub const METADATA_SIZE: usize = mem::size_of::<fx_log_metadata_t>();
 pub const MIN_PACKET_SIZE: usize = METADATA_SIZE + 1;
@@ -23,13 +24,13 @@ const DROPPED_LABEL: &str = "__dropped";
 const TAG_LABEL: &str = "__tag";
 const MESSAGE_LABEL: &str = "__msg";
 
-/// An enum containing well known argument names passed through logs.
+/// An enum containing well known argument names passed through logs, as well
+/// as an `Other` variant for any other argument names.
 ///
-/// This currently contains the fields of logs sent as a [`LogMessage`].
-/// Once structured logs are passed to archivist, this will be extended
-/// to contain any custom argument names.
+/// This contains the fields of logs sent as a [`LogMessage`].
 ///
 /// [`LogMessage`]: https://fuchsia.dev/reference/fidl/fuchsia.logger#LogMessage
+// TODO(53222) - rename enum to avoid clashes with MESSAGE_LABEL above.
 #[derive(Debug, PartialEq, Clone)]
 pub enum MessageLabel {
     ProcessId,
@@ -37,6 +38,7 @@ pub enum MessageLabel {
     Dropped,
     Tag,
     Msg,
+    Other(String),
 }
 
 impl AsRef<str> for MessageLabel {
@@ -49,6 +51,20 @@ impl AsRef<str> for MessageLabel {
             Self::Dropped => DROPPED_LABEL,
             Self::Tag => TAG_LABEL,
             Self::Msg => MESSAGE_LABEL,
+            Self::Other(str) => str.as_str(),
+        }
+    }
+}
+
+impl From<String> for MessageLabel {
+    fn from(s: String) -> Self {
+        match s.as_str() {
+            PID_LABEL => Self::ProcessId,
+            TID_LABEL => Self::ThreadId,
+            DROPPED_LABEL => Self::Dropped,
+            TAG_LABEL => Self::Tag,
+            MESSAGE_LABEL => Self::Msg,
+            _ => Self::Other(s),
         }
     }
 }
@@ -163,6 +179,31 @@ impl Message {
         Err(StreamError::OutOfBounds)
     }
 
+    /// Constructs a `Message` from the provided bytes, assuming the bytes
+    /// are in the format specified as in the [log encoding].
+    ///
+    /// [log encoding] https://fuchsia.dev/fuchsia-src/development/logs/encodings
+    pub fn from_structured(bytes: &[u8]) -> Result<Self, StreamError> {
+        let (_, record) = diagnostic_streams::parse::parse_record(bytes)?;
+        let properties = Result::from_iter(record.arguments.into_iter().map(|a| {
+            let label = MessageLabel::from(a.name);
+
+            match a.value {
+                Value::SignedInt(v) => Ok(LogProperty::Int(label, v)),
+                Value::UnsignedInt(v) => Ok(LogProperty::Uint(label, v)),
+                Value::Floating(v) => Ok(LogProperty::Double(label, v)),
+                Value::Text(v) => Ok(LogProperty::string(label, v)),
+                Value::__UnknownVariant { .. } => Err(StreamError::UnrecognizedValue),
+            }
+        }))?;
+        Ok(Self {
+            size: bytes.len(),
+            time: zx::Time::from_nanos(record.timestamp),
+            severity: record.severity.into(),
+            contents: LogHierarchy::new("root", properties, vec![]),
+        })
+    }
+
     /// Returns the pid associated with the message, if one exists.
     pub fn pid(&self) -> Option<u64> {
         self.contents.properties.iter().find_map(|property| match property {
@@ -241,6 +282,19 @@ impl Severity {
             Severity::Error => LogLevelFilter::Error as _,
             Severity::Fatal => LogLevelFilter::Fatal as _,
             Severity::Verbose(v) => (LogLevelFilter::Info as i8 - v) as _,
+        }
+    }
+}
+
+impl From<StreamSeverity> for Severity {
+    fn from(fidl_severity: StreamSeverity) -> Self {
+        match fidl_severity {
+            StreamSeverity::Trace => Self::Trace,
+            StreamSeverity::Debug => Self::Debug,
+            StreamSeverity::Info => Self::Info,
+            StreamSeverity::Warn => Self::Warn,
+            StreamSeverity::Error => Self::Error,
+            StreamSeverity::Fatal => Self::Fatal,
         }
     }
 }
@@ -352,6 +406,8 @@ impl fx_log_packet_t {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use diagnostic_streams::{encode::Encoder, Argument, Record};
+    use std::io::Cursor;
 
     #[repr(C, packed)]
     pub struct fx_log_metadata_t_packed {
@@ -812,5 +868,103 @@ mod tests {
         expected_message.severity = Severity::Warn;
 
         assert_eq!(parsed, expected_message);
+    }
+
+    #[test]
+    fn test_from_structured() {
+        let record = Record {
+            timestamp: 72,
+            severity: StreamSeverity::Error,
+            arguments: vec![
+                Argument { name: "arg1".to_string(), value: Value::SignedInt(-23) },
+                Argument { name: PID_LABEL.to_string(), value: Value::UnsignedInt(43) },
+                Argument { name: TID_LABEL.to_string(), value: Value::UnsignedInt(912) },
+                Argument { name: DROPPED_LABEL.to_string(), value: Value::UnsignedInt(2) },
+                Argument { name: TAG_LABEL.to_string(), value: Value::Text("tag".to_string()) },
+                Argument { name: MESSAGE_LABEL.to_string(), value: Value::Text("msg".to_string()) },
+            ],
+        };
+
+        let mut buffer = Cursor::new(vec![0u8; MAX_DATAGRAM_LEN]);
+        let mut encoder = Encoder::new(&mut buffer);
+        encoder.write_record(&record).unwrap();
+        let encoded = &buffer.get_ref().as_slice()[..buffer.position() as usize];
+        let parsed = Message::from_structured(encoded).unwrap();
+        assert_eq!(
+            parsed,
+            Message {
+                size: encoded.len(),
+                time: zx::Time::from_nanos(72),
+                severity: Severity::Error,
+                contents: LogHierarchy::new(
+                    "root",
+                    vec![
+                        LogProperty::Int(MessageLabel::Other("arg1".to_string()), -23),
+                        LogProperty::Uint(MessageLabel::ProcessId, 43),
+                        LogProperty::Uint(MessageLabel::ThreadId, 912),
+                        LogProperty::Uint(MessageLabel::Dropped, 2),
+                        LogProperty::string(MessageLabel::Tag, "tag"),
+                        LogProperty::string(MessageLabel::Msg, "msg"),
+                    ],
+                    vec![],
+                )
+            }
+        );
+
+        // multiple tags
+        let record = Record {
+            timestamp: 72,
+            severity: StreamSeverity::Error,
+            arguments: vec![
+                Argument { name: TAG_LABEL.to_string(), value: Value::Text("tag1".to_string()) },
+                Argument { name: TAG_LABEL.to_string(), value: Value::Text("tag2".to_string()) },
+                Argument { name: TAG_LABEL.to_string(), value: Value::Text("tag3".to_string()) },
+            ],
+        };
+        let mut buffer = Cursor::new(vec![0u8; MAX_DATAGRAM_LEN]);
+        let mut encoder = Encoder::new(&mut buffer);
+        encoder.write_record(&record).unwrap();
+        let encoded = &buffer.get_ref().as_slice()[..buffer.position() as usize];
+        let parsed = Message::from_structured(encoded).unwrap();
+        assert_eq!(
+            parsed,
+            Message {
+                size: encoded.len(),
+                time: zx::Time::from_nanos(72),
+                severity: Severity::Error,
+                contents: LogHierarchy::new(
+                    "root",
+                    vec![
+                        LogProperty::string(MessageLabel::Tag, "tag1"),
+                        LogProperty::string(MessageLabel::Tag, "tag2"),
+                        LogProperty::string(MessageLabel::Tag, "tag3"),
+                    ],
+                    vec![],
+                )
+            }
+        );
+
+        // empty record
+        let record = Record { timestamp: 72, severity: StreamSeverity::Error, arguments: vec![] };
+        let mut buffer = Cursor::new(vec![0u8; MAX_DATAGRAM_LEN]);
+        let mut encoder = Encoder::new(&mut buffer);
+        encoder.write_record(&record).unwrap();
+        let encoded = &buffer.get_ref().as_slice()[..buffer.position() as usize];
+        let parsed = Message::from_structured(encoded).unwrap();
+        assert_eq!(
+            parsed,
+            Message {
+                size: encoded.len(),
+                time: zx::Time::from_nanos(72),
+                severity: Severity::Error,
+                contents: LogHierarchy::new("root", vec![], vec![],)
+            }
+        );
+
+        // parse error
+        assert!(matches!(
+            Message::from_structured(&vec![]).unwrap_err(),
+            StreamError::ParseError { .. }
+        ));
     }
 }
