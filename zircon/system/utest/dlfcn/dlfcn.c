@@ -16,7 +16,7 @@
 
 #include <ldmsg/ldmsg.h>
 #include <loader-service/loader-service.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #if __has_feature(address_sanitizer)
 #if __has_feature(undefined_behavior_sanitizer)
@@ -64,26 +64,22 @@ zx_status_t load_vmo(const char* filename, zx_handle_t* out) {
   return ZX_OK;
 }
 
-bool dlopen_vmo_test(void) {
-  BEGIN_TEST;
-
+TEST(DlfcnTests, dlopen_vmo_test) {
   zx_handle_t vmo = ZX_HANDLE_INVALID;
   zx_status_t status = load_vmo(LIBPREFIX "libtrace-engine.so", &vmo);
   EXPECT_EQ(status, ZX_OK, "");
   EXPECT_NE(vmo, ZX_HANDLE_INVALID, "load_vmo");
 
   void* obj = dlopen_vmo(vmo, RTLD_LOCAL);
-  EXPECT_NONNULL(obj, "dlopen_vmo");
+  EXPECT_NOT_NULL(obj, "dlopen_vmo");
 
   zx_handle_close(vmo);
 
   void* sym = dlsym(obj, "trace_engine_initialize");
-  EXPECT_NONNULL(sym, "dlsym");
+  EXPECT_NOT_NULL(sym, "dlsym");
 
   int ok = dlclose(obj);
   EXPECT_EQ(ok, 0, "dlclose");
-
-  END_TEST;
 }
 
 // This should be some library that this program links against.
@@ -100,7 +96,7 @@ static zx_status_t my_load_object(void* ctx, const char* name, zx_handle_t* out)
   int cmp = strcmp(name, TEST_NAME);
   EXPECT_EQ(cmp, 0, "called with unexpected name");
   if (cmp != 0) {
-    unittest_printf("        saw \"%s\", expected \"%s\"", name, TEST_NAME);
+    printf("        saw \"%s\", expected \"%s\"", name, TEST_NAME);
     return ZX_HANDLE_INVALID;
   }
 
@@ -132,14 +128,12 @@ static loader_service_ops_t my_loader_ops = {
     .publish_data_sink = my_publish_data_sink,
 };
 
-static void show_dlerror(void) { unittest_printf_critical("dlerror: %s\n", dlerror()); }
+static void show_dlerror(void) { printf("dlerror: %s\n", dlerror()); }
 
-bool loader_service_test(void) {
-  BEGIN_TEST;
-
+TEST(DlfcnTests, loader_service_test) {
   // Get a handle to an existing library with a known SONAME.
   void* by_name = dlopen(TEST_SONAME, RTLD_NOLOAD);
-  EXPECT_NONNULL(by_name, "dlopen failed on " TEST_SONAME);
+  EXPECT_NOT_NULL(by_name, "dlopen failed on " TEST_SONAME);
   if (by_name == NULL)
     show_dlerror();
 
@@ -161,9 +155,9 @@ bool loader_service_test(void) {
   // SONAME matches an existing library, and just return it.
   void* via_service = dlopen(TEST_NAME, RTLD_LOCAL);
 
-  EXPECT_EQ(my_loader_service_calls, 1, "loader-service not called exactly once");
+  EXPECT_EQ((int)my_loader_service_calls, 1, "loader-service not called exactly once");
 
-  EXPECT_NONNULL(via_service, "dlopen via service");
+  EXPECT_NOT_NULL(via_service, "dlopen via service");
   if (via_service == NULL)
     show_dlerror();
 
@@ -190,60 +184,38 @@ bool loader_service_test(void) {
 
   // Clean up.
   EXPECT_EQ(loader_service_release(svc), ZX_OK, "loader_service_release");
-
-  END_TEST;
 }
 
-bool clone_test(void) {
-  BEGIN_TEST;
-
+TEST(DlfcnTests, clone_test) {
   zx_handle_t h = ZX_HANDLE_INVALID;
   zx_status_t s = dl_clone_loader_service(&h);
-  EXPECT_EQ(s, ZX_OK, zx_status_get_string(s));
+  EXPECT_EQ(s, ZX_OK, "%s", zx_status_get_string(s));
   EXPECT_NE(h, ZX_HANDLE_INVALID, "invalid handle from loader service");
 
   zx_handle_close(h);
-
-  END_TEST;
 }
 
 void test_global_function(void) {}
 
-static bool dladdr_unexported_test(void) {
-  BEGIN_TEST;
-
+TEST(DlfcnTests, dladdr_unexported_test) {
   Dl_info info;
   ASSERT_NE(dladdr(&test_global_function, &info), 0, "dladdr failed");
 
   // This symbol is not exported to .dynsym, so it won't be found.
   EXPECT_NULL(info.dli_sname, "unexpected symbol name");
   EXPECT_NULL(info.dli_saddr, "unexpected symbol address");
-
-  END_TEST;
 }
 
 // TODO(dbort): Test that this process uses the system loader service by default
 
-bool dso_no_note_test(void) {
-  BEGIN_TEST;
-
+TEST(DlfcnTests, dso_no_note_test) {
   void* obj = dlopen("test-dso-no-note.so", RTLD_LOCAL);
-  ASSERT_NONNULL(obj, dlerror());
+  ASSERT_NOT_NULL(obj, "%s", dlerror());
 
   void* sym = dlsym(obj, "dummy");
-  EXPECT_NONNULL(sym, dlerror());
+  EXPECT_NOT_NULL(sym, "%s", dlerror());
 
   (*(void(*)(void))(uintptr_t)(sym))();
 
-  EXPECT_EQ(dlclose(obj), 0, dlerror());
-
-  END_TEST;
+  EXPECT_EQ(dlclose(obj), 0, "%s", dlerror());
 }
-
-BEGIN_TEST_CASE(dlfcn_tests)
-RUN_TEST(dlopen_vmo_test);
-RUN_TEST(loader_service_test);
-RUN_TEST(clone_test);
-RUN_TEST(dladdr_unexported_test);
-RUN_TEST(dso_no_note_test);
-END_TEST_CASE(dlfcn_tests)
