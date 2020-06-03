@@ -4,6 +4,8 @@
 
 #include <string.h>
 
+#include <algorithm>
+
 #include <audio-proto-utils/format-utils.h>
 #include <fbl/algorithm.h>
 
@@ -22,12 +24,12 @@ static constexpr auto DISCRETE_FLAGS =
     ASF_RANGE_FLAG_FPS_48000_FAMILY | ASF_RANGE_FLAG_FPS_44100_FAMILY;
 
 bool FrameRateIn48kFamily(uint32_t rate) {
-  const uint32_t* found = fbl::lower_bound(RATES_48000_FAMILY, RATES_48000_FAMILY_LAST, rate);
+  const uint32_t* found = std::lower_bound(RATES_48000_FAMILY, RATES_48000_FAMILY_LAST, rate);
   return ((found < RATES_48000_FAMILY_LAST) && (*found == rate));
 }
 
 bool FrameRateIn441kFamily(uint32_t rate) {
-  const uint32_t* found = fbl::lower_bound(RATES_44100_FAMILY, RATES_44100_FAMILY_LAST, rate);
+  const uint32_t* found = std::lower_bound(RATES_44100_FAMILY, RATES_44100_FAMILY_LAST, rate);
   return ((found < RATES_44100_FAMILY_LAST) && (*found == rate));
 }
 
