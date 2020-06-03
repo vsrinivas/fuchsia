@@ -147,17 +147,18 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
 void Ge2dNode::OnFrameAvailable(const frame_available_info_t* info) {
   ZX_ASSERT(thread_checker_.IsCreationThreadCurrent());
   TRACE_DURATION("camera", "Ge2dNode::OnFrameAvailable", "buffer_index", info->buffer_id);
-  // Once shutdown is requested no calls should be made to the driver.
-  if (!shutdown_requested_) {
-    UpdateFrameCounterForAllChildren();
 
-    if (NeedToDropFrame()) {
-      parent_node_->OnReleaseFrame(info->metadata.input_buffer_index);
-      ge2d_.ReleaseFrame(task_index_, info->buffer_id);
-    } else {
-      ProcessNode::OnFrameAvailable(info);
-    }
+  if (shutdown_requested_ || info->frame_status != FRAME_STATUS_OK) {
+    return;
   }
+  UpdateFrameCounterForAllChildren();
+
+  if (NeedToDropFrame()) {
+    parent_node_->OnReleaseFrame(info->metadata.input_buffer_index);
+    ge2d_.ReleaseFrame(task_index_, info->buffer_id);
+    return;
+  }
+  ProcessNode::OnFrameAvailable(info);
 }
 
 void Ge2dNode::OnReleaseFrame(uint32_t buffer_index) {

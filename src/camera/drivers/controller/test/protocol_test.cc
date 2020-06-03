@@ -327,6 +327,39 @@ TEST_F(ControllerProtocolTest, TestNextNodeInPipeline) {
   EXPECT_EQ(NodeType::kOutputStream, next_node->type);
 }
 
+TEST_F(ControllerProtocolTest, TestFrameErrors) {
+  auto stream_type = kStreamTypeFR | kStreamTypeML;
+  fuchsia::camera2::StreamPtr stream;
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type, stream));
+
+  auto* fr_head_node = pipeline_manager_->full_resolution_stream();
+
+  // Invoke OnFrameAvailable() for the ISP node. Buffer index = 1.
+  frame_available_info_t frame_info = {
+      .frame_status = FRAME_STATUS_ERROR_BUFFER_FULL,
+      .buffer_id = 1,
+      .metadata =
+          {
+              .timestamp = static_cast<uint64_t>(zx_clock_get_monotonic()),
+              .image_format_index = 0,
+              .input_buffer_index = 0,
+          },
+  };
+
+  // Provide a frame to  the ISP node. In this configuration the
+  // first 3 frames will be dropped (released back to the ISP).
+  EXPECT_NO_FATAL_FAILURE(fr_head_node->OnReadyToProcess(&frame_info));
+  RunLoopUntilIdle();
+  // Ensure that the frame is not released.
+  EXPECT_FALSE(fake_isp_.frame_released());
+
+  frame_info.frame_status = FRAME_STATUS_OK;
+  EXPECT_NO_FATAL_FAILURE(fr_head_node->OnReadyToProcess(&frame_info));
+  RunLoopUntilIdle();
+  // Ensure that the frame is released.
+  EXPECT_TRUE(fake_isp_.frame_released());
+}
+
 TEST_F(ControllerProtocolTest, TestMultipleStartStreaming) {
   auto stream_type = kStreamTypeFR | kStreamTypeML;
   fuchsia::camera2::StreamPtr stream;

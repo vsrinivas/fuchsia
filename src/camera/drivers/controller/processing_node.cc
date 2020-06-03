@@ -32,27 +32,21 @@ void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
   ZX_ASSERT_MSG(type_ != NodeType::kOutputStream, "Invalid for OuputNode");
   TRACE_DURATION("camera", "ProcessNode::OnFrameAvailable");
   // Free up parent's frame.
-  if (type_ != kInputStream && !shutdown_requested_) {
+  if (type_ != kInputStream) {
     parent_node_->OnReleaseFrame(info->metadata.input_buffer_index);
   }
-  if (enabled_ && info->frame_status == FRAME_STATUS_OK) {
-    for (auto& node : child_nodes_) {
-      if (node->enabled()) {
-        // Check if this frame needs to be passed on to the next node.
-        if (node->current_frame_count() >= output_fps()) {
-          node->SubtractFromCurrentFrameCount(output_fps());
-          {
-            fbl::AutoLock al(&in_use_buffer_lock_);
-            ZX_ASSERT(info->buffer_id < in_use_buffer_count_.size());
-            in_use_buffer_count_[info->buffer_id]++;
-          }
-          node->OnReadyToProcess(info);
-        }
+  for (auto& node : child_nodes_) {
+    // Check if this frame needs to be passed on to the next node.
+    if (node->enabled() && node->current_frame_count() >= output_fps()) {
+      node->SubtractFromCurrentFrameCount(output_fps());
+      {
+        fbl::AutoLock al(&in_use_buffer_lock_);
+        ZX_ASSERT(info->buffer_id < in_use_buffer_count_.size());
+        in_use_buffer_count_[info->buffer_id]++;
       }
+      node->OnReadyToProcess(info);
     }
-    return;
   }
-  // TODO(braval): Handle all frame_status errors.);
 }
 
 void ProcessNode::OnStartStreaming() {
