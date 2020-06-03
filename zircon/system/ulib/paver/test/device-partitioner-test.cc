@@ -34,6 +34,10 @@
 
 #include "test-utils.h"
 
+namespace paver {
+extern zx_duration_t g_wipe_timeout;
+}
+
 namespace {
 
 constexpr uint64_t kGibibyte = 1024 * 1024 * 1024;
@@ -282,6 +286,7 @@ TEST(PartitionSpec, ToStringWithContentType) {
 class GptDevicePartitionerTests : public zxtest::Test {
  protected:
   GptDevicePartitionerTests(fbl::String board_name, uint32_t block_size) : block_size_(block_size) {
+    paver::g_wipe_timeout = 0;
     IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
@@ -360,7 +365,24 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_InitializeWithoutGptFails) {
   ASSERT_NE(CreatePartitioner(std::nullopt, &partitioner), ZX_OK);
 }
 
-TEST_F(EfiDevicePartitionerTests, DISABLED_InitializeWithoutFvmFails) {
+TEST_F(EfiDevicePartitionerTests, DISABLED_InitializeWithoutFvmSucceeds) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  // 32GiB disk.
+  constexpr uint64_t kBlockCount = (32LU << 30) / kBlockSize;
+  ASSERT_NO_FATAL_FAILURES(
+      BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
+
+  // Set up a valid GPT.
+  std::unique_ptr<gpt::GptDevice> gpt;
+  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt));
+  ASSERT_OK(gpt->Sync());
+
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
+  ASSERT_OK(paver::EfiDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(),
+                                                    paver::Arch::kX64, std::nullopt, &partitioner));
+}
+
+TEST_F(EfiDevicePartitionerTests, DISABLED_InitializeTwoCandidatesWithoutFvmFails) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURES(CreateDisk(&gpt_dev));
 
@@ -368,8 +390,16 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_InitializeWithoutFvmFails) {
   std::unique_ptr<gpt::GptDevice> gpt;
   ASSERT_NO_FATAL_FAILURES(CreateGptDevice(gpt_dev.get(), &gpt));
 
+  std::unique_ptr<BlockDevice> gpt_dev2;
+  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, &gpt_dev2));
+
+  // Set up a valid GPT.
+  std::unique_ptr<gpt::GptDevice> gpt2;
+  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt2));
+  ASSERT_OK(gpt2->Sync());
+
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_NE(CreatePartitioner(std::nullopt, &partitioner), ZX_OK);
+  ASSERT_NOT_OK(CreatePartitioner(std::nullopt, &partitioner));
 }
 
 TEST_F(EfiDevicePartitionerTests, DISABLED_AddPartitionZirconB) {
@@ -965,7 +995,7 @@ TEST_F(SherlockPartitionerTests, DISABLED_InitializeWithoutGptFails) {
   ASSERT_NE(CreatePartitioner(std::nullopt, &partitioner), ZX_OK);
 }
 
-TEST_F(SherlockPartitionerTests, DISABLED_InitializeWithoutFvmFails) {
+TEST_F(SherlockPartitionerTests, DISABLED_InitializeWithoutFvmSucceeds) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURES(CreateDisk(&gpt_dev));
 

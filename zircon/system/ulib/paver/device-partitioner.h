@@ -151,7 +151,8 @@ class GptDevicePartitioner {
   // FVM entries are found, an error is returned.
   static zx_status_t InitializeGpt(fbl::unique_fd devfs_root,
                                    std::optional<fbl::unique_fd> block_device,
-                                   std::unique_ptr<GptDevicePartitioner>* gpt_out);
+                                   std::unique_ptr<GptDevicePartitioner>* gpt_out,
+                                   bool* initialize_partition_tables);
 
   // Returns block info for a specified block device.
   zx_status_t GetBlockInfo(::llcpp::fuchsia::hardware::block::BlockInfo* block_info) const {

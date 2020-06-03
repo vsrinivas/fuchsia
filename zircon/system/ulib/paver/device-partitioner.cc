@@ -46,6 +46,9 @@
 
 namespace paver {
 
+// Not static so test can manipulate it.
+zx_duration_t g_wipe_timeout = ZX_SEC(3);
+
 namespace {
 
 namespace block = ::llcpp::fuchsia::hardware::block;
@@ -276,7 +279,8 @@ bool HasSkipBlockDevice(const fbl::unique_fd& devfs_root) {
 zx_status_t WipeBlockPartition(const fbl::unique_fd& devfs_root, const uint8_t* unique_guid,
                                const uint8_t* type_guid) {
   zx::channel chan;
-  zx_status_t status = OpenBlockPartition(devfs_root, unique_guid, type_guid, ZX_SEC(3), &chan);
+  zx_status_t status =
+      OpenBlockPartition(devfs_root, unique_guid, type_guid, g_wipe_timeout, &chan);
   if (status != ZX_OK) {
     ERROR("Warning: Could not open partition to wipe: %s\n", zx_status_get_string(status));
     return status;
@@ -660,7 +664,9 @@ zx_status_t GptDevicePartitioner::InitializeProvidedGptDevice(
 
 zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
                                                 std::optional<fbl::unique_fd> block_device,
-                                                std::unique_ptr<GptDevicePartitioner>* gpt_out) {
+                                                std::unique_ptr<GptDevicePartitioner>* gpt_out,
+                                                bool* initialize_partition_tables) {
+  *initialize_partition_tables = false;
   if (block_device) {
     return InitializeProvidedGptDevice(std::move(devfs_root), *std::move(block_device), gpt_out);
   }
@@ -670,6 +676,8 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
     ERROR("Failed to find GPT\n");
     return ZX_ERR_NOT_FOUND;
   }
+
+  std::vector<fbl::unique_fd> non_removable_gpt_devices;
 
   std::unique_ptr<GptDevicePartitioner> gpt_partitioner;
   for (auto& [_, gpt_device] : gpt_devices) {
@@ -687,6 +695,10 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
       return response.status;
     }
 
+    if ((response.info->flags & block::FLAG_REMOVABLE) != 0) {
+      continue;
+    }
+
     std::unique_ptr<GptDevice> gpt;
     if (GptDevice::Create(gpt_device.get(), response.info->block_size, response.info->block_count,
                           &gpt) != ZX_OK) {
@@ -697,6 +709,8 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
     if (!gpt->Valid()) {
       continue;
     }
+
+    non_removable_gpt_devices.emplace_back(gpt_device.duplicate());
 
     auto partitioner = WrapUnique(new GptDevicePartitioner(
         devfs_root.duplicate(), std::move(gpt_device), std::move(gpt), *(response.info)));
@@ -715,6 +729,13 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
   if (gpt_partitioner) {
     *gpt_out = std::move(gpt_partitioner);
     return ZX_OK;
+  }
+
+  if (non_removable_gpt_devices.size() == 1) {
+    *initialize_partition_tables = true;
+    // If we only find a single non-removable gpt device, we initialize it's partition table.
+    return InitializeProvidedGptDevice(std::move(devfs_root),
+                                       std::move(non_removable_gpt_devices[0]), gpt_out);
   }
 
   ERROR(
@@ -948,20 +969,29 @@ zx_status_t GptDevicePartitioner::WipePartitionTables() const {
 
 zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch arch,
                                              std::optional<fbl::unique_fd> block_device,
-                                             std::unique_ptr<DevicePartitioner>* partitioner) {
+                                             std::unique_ptr<DevicePartitioner>* out_partitioner) {
   if (arch != Arch::kX64) {
     return ZX_ERR_NOT_FOUND;
   }
 
   std::unique_ptr<GptDevicePartitioner> gpt;
-  zx_status_t status =
-      GptDevicePartitioner::InitializeGpt(std::move(devfs_root), std::move(block_device), &gpt);
+  bool initialize_partition_tables = false;
+  zx_status_t status = GptDevicePartitioner::InitializeGpt(
+      std::move(devfs_root), std::move(block_device), &gpt, &initialize_partition_tables);
   if (status != ZX_OK) {
     return status;
   }
 
+  auto partitioner = WrapUnique(new EfiDevicePartitioner(arch, std::move(gpt)));
+  if (initialize_partition_tables) {
+    status = partitioner->InitPartitionTables();
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  *out_partitioner = std::move(partitioner);
   LOG("Successfully initialized EFI Device Partitioner\n");
-  *partitioner = WrapUnique(new EfiDevicePartitioner(arch, std::move(gpt)));
   return ZX_OK;
 }
 
@@ -1161,7 +1191,7 @@ zx_status_t EfiDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
 
 zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch arch,
                                               std::optional<fbl::unique_fd> block_device,
-                                              std::unique_ptr<DevicePartitioner>* partitioner) {
+                                              std::unique_ptr<DevicePartitioner>* out_partitioner) {
   if (arch != Arch::kX64) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -1172,8 +1202,9 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch ar
   }
 
   std::unique_ptr<GptDevicePartitioner> gpt_partitioner;
+  bool initialize_partition_tables = false;
   status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), std::move(block_device),
-                                               &gpt_partitioner);
+                                               &gpt_partitioner, &initialize_partition_tables);
   if (status != ZX_OK) {
     return status;
   }
@@ -1198,8 +1229,16 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch ar
                                                      fidl::StringView("/boot/driver/gpt.so"));
   }
 
+  auto partitioner =  WrapUnique(new CrosDevicePartitioner(std::move(gpt_partitioner)));
+  if (initialize_partition_tables) {
+    status = partitioner->InitPartitionTables();
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  *out_partitioner = std::move(partitioner);
   LOG("Successfully initialized CrOS Device Partitioner\n");
-  *partitioner = WrapUnique(new CrosDevicePartitioner(std::move(gpt_partitioner)));
   return ZX_OK;
 }
 
@@ -1578,11 +1617,17 @@ zx_status_t SherlockPartitioner::Initialize(fbl::unique_fd devfs_root,
     return status;
   }
 
+  bool initialize_partition_tables;
   std::unique_ptr<GptDevicePartitioner> gpt;
-  status =
-      GptDevicePartitioner::InitializeGpt(std::move(devfs_root), std::move(block_device), &gpt);
+  status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), std::move(block_device), &gpt,
+                                               &initialize_partition_tables);
   if (status != ZX_OK) {
     return status;
+  }
+
+  if (initialize_partition_tables) {
+    ERROR("Partition table not initialized. Avoiding automatic initialization.\n");
+    return ZX_ERR_INTERNAL;
   }
 
   LOG("Successfully initialized SherlockPartitioner Device Partitioner\n");
