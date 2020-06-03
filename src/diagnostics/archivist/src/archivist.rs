@@ -20,7 +20,7 @@ use {
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
-        future::{self, abortable, Either, FutureObj},
+        future::{self, abortable, FutureObj},
         prelude::*,
     },
     io_util,
@@ -93,7 +93,7 @@ impl Archivist {
         event_stream: EventStream,
         state: archive::ArchivistState,
         pipeline_exists: bool,
-    ) -> Result<(), Error> {
+    ) {
         let events = event_stream.listen().await;
         if !pipeline_exists {
             component::health().set_unhealthy("Pipeline config has an error");
@@ -241,7 +241,7 @@ impl Archivist {
     pub async fn run(mut self, outgoing_channel: zx::Channel) -> Result<(), Error> {
         self.fs.serve_connection(outgoing_channel)?;
         // Start servcing all outgoing services.
-        let run_outgoing = self.fs.collect::<()>().map(Ok);
+        let run_outgoing = self.fs.collect::<()>();
         // collect events.
         let run_event_collection =
             Self::collect_component_events(self.event_stream, self.state, self.pipeline_exists);
@@ -249,34 +249,24 @@ impl Archivist {
         // Process messages from log sink.
         let log_receiver = self.log_receiver;
         let all_msg =
-            async { log_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await }
-                .map(Ok);
+            async { log_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await };
 
         let (abortable_fut, abort_handle) =
-            abortable(future::try_join(run_outgoing, run_event_collection));
-
-        let abortable_fut = abortable_fut.map(|o| {
-            if let Ok(r) = o {
-                return r;
-            } else {
-                // discard aborted error
-                return Ok(((), ()));
-            }
-        });
+            abortable(future::join(run_outgoing, run_event_collection));
 
         let mut log_sender = self.log_sender;
         let stop_fut = match self.stop_recv {
-            Some(stop_recv) => Either::Left(async move {
+            Some(stop_recv) => async move {
                 stop_recv.into_future().await;
                 log_sender.disconnect();
-                abort_handle.abort();
-                Ok(())
-            }),
-            None => Either::Right(future::ok(())),
+                abort_handle.abort()
+            }
+            .left_future(),
+            None => future::ready(()).right_future(),
         };
 
         // Combine all three futures into a main future.
-        future::try_join3(abortable_fut, stop_fut, all_msg).map_ok(|_| ()).await
+        future::join3(abortable_fut, stop_fut, all_msg).map(|_| Ok(())).await
     }
 }
 

@@ -744,10 +744,7 @@ async fn archive_event(
     Ok(())
 }
 
-pub async fn run_archivist(
-    archivist_state: ArchivistState,
-    mut events: ComponentEventStream,
-) -> Result<(), Error> {
+pub async fn run_archivist(archivist_state: ArchivistState, mut events: ComponentEventStream) {
     let state = Arc::new(Mutex::new(archivist_state));
 
     while let Some(event) = events.next().await {
@@ -757,8 +754,6 @@ pub async fn run_archivist(
             error!("Failed to log event: {:?}", e);
         });
     }
-
-    Ok(())
 }
 
 #[cfg(test)]
