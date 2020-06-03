@@ -19,12 +19,13 @@ namespace {
 
 constexpr size_t kBlockCount = 10;
 constexpr size_t kPageCount = 4;
+
+// Make sure this is non-zero, so that we don't end up with zero pages. Zero pages can be deduped
+// (decommitted) which will cause this test to fail, since we're querying committed bytes.
 constexpr uint8_t kData = 0xab;
 
 class MockUserPager {
  public:
-  int GetNumPageFaults() const { return num_page_faults_; }
-
   MockUserPager() : page_request_handler_(this) {
     ASSERT_OK(zx::pager::create(0, &pager_));
     ASSERT_OK(loop_.StartThread("data-sink-test-pager-loop"));
@@ -32,7 +33,7 @@ class MockUserPager {
 
   void CreatePayloadPaged(size_t num_pages, ::llcpp::fuchsia::mem::Buffer* out) {
     zx::vmo vmo;
-    size_t vmo_size = num_pages * PAGE_SIZE;
+    size_t vmo_size = num_pages * ZX_PAGE_SIZE;
 
     // Create a vmo backed by |pager_|.
     page_request_handler_.CreateVmo(loop_.dispatcher(), zx::unowned_pager(pager_.get()), 0,
@@ -63,7 +64,6 @@ class MockUserPager {
 
     // Use the vmo created above to supply pages to the destination vmo.
     ASSERT_OK(pager_.supply_pages(pager_vmo_, request->offset, request->length, vmo, 0));
-    num_page_faults_++;
   }
 
   zx::pager pager_;
@@ -71,7 +71,6 @@ class MockUserPager {
 
   zx::vmo pager_vmo_;
   async::PagedVmoMethod<MockUserPager, &MockUserPager::PageRequestHandler> page_request_handler_;
-  std::atomic<int> num_page_faults_ = 0;
 };
 
 class MockPartitionClient : public FakePartitionClient {
@@ -84,16 +83,14 @@ class MockPartitionClient : public FakePartitionClient {
   zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) override {
     EXPECT_NOT_NULL(pager_);
 
-    // The payload vmo was pager-backed. Verify that we saw some page faults to populate it.
-    int page_faults_before = pager_->GetNumPageFaults();
-    EXPECT_GT(page_faults_before, 0);
+    // The payload vmo was pager-backed. Verify that all its pages were committed before
+    // |PartitionClient::Write()| was called.
+    zx_info_vmo_t info;
+    EXPECT_OK(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(info.committed_bytes, kPageCount * ZX_PAGE_SIZE);
 
     // Issue the operation to write out the vmo to the partition.
     EXPECT_OK(FakePartitionClient::Write(vmo, vmo_size));
-
-    // The write partition operation above should not trigger any further page faults.
-    int page_faults_during = pager_->GetNumPageFaults() - page_faults_before;
-    EXPECT_EQ(page_faults_during, 0);
 
     // Verify that we wrote out the partition correctly.
     fzl::VmoMapper mapper;
@@ -137,6 +134,11 @@ TEST(DataSinkTest, WriteAssetPaged) {
 
   ::llcpp::fuchsia::mem::Buffer payload;
   pager.CreatePayloadPaged(kPageCount, &payload);
+
+  // Verify that no pages in the payload VMO are committed initially.
+  zx_info_vmo_t info;
+  ASSERT_OK(payload.vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(info.committed_bytes, 0);
 
   // The Configuration and Asset type passed in here are not relevant. They just need to be valid
   // values.
