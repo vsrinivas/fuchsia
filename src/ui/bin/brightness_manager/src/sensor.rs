@@ -62,8 +62,8 @@ async fn read_sensor(sensor: &SensorProxy) -> Result<AmbientLightInputRpt, Error
         event: report[2],
         illuminance: LittleEndian::read_u16(&report[3..5]),
         red: LittleEndian::read_u16(&report[5..7]),
-        green: LittleEndian::read_u16(&report[7..9]),
-        blue: LittleEndian::read_u16(&report[9..11]),
+        blue: LittleEndian::read_u16(&report[7..9]),
+        green: LittleEndian::read_u16(&report[9..11]),
     })
 }
 
@@ -127,7 +127,6 @@ impl SensorControl for Sensor {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use fuchsia_async as fasync;
