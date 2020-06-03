@@ -194,6 +194,36 @@ impl SbcCodecInfo {
         };
         Ok(hz)
     }
+
+    /// Returns true if `other` is a compatible configuration of `self`
+    pub fn supports(&self, other: &Self) -> bool {
+        let allowed_frequencies =
+            SbcSamplingFrequency::from_bits_truncate(self.0.sampling_frequency());
+        let selected_frequencies =
+            SbcSamplingFrequency::from_bits_truncate(other.0.sampling_frequency());
+        if !(allowed_frequencies.intersects(selected_frequencies)) {
+            return false;
+        }
+        if !(self.allocation_method().intersects(other.allocation_method())) {
+            return false;
+        }
+        if !(self.channel_mode().intersects(other.channel_mode())) {
+            return false;
+        }
+        if !(self.block_count().intersects(other.block_count())) {
+            return false;
+        }
+        if !(self.sub_bands().intersects(other.sub_bands())) {
+            return false;
+        }
+        if self.0.minbitpoolval() > other.0.minbitpoolval() {
+            return false;
+        }
+        if self.0.maxbitpoolval() < other.0.maxbitpoolval() {
+            return false;
+        }
+        return true;
+    }
 }
 
 impl TryFrom<&[u8]> for SbcCodecInfo {
@@ -352,6 +382,10 @@ impl AacCodecInfo {
         Ok(count)
     }
 
+    fn object_type(&self) -> AacObjectType {
+        AacObjectType::from_bits_truncate(self.0.object_type())
+    }
+
     /// Returns the sampling frequeency selected, in hz.
     /// Returns Error::OutOfRange if multiple frequencies are selected.
     pub fn sampling_frequency(&self) -> avdtp::Result<u32> {
@@ -371,6 +405,32 @@ impl AacCodecInfo {
             _ => return Err(avdtp::Error::OutOfRange),
         };
         Ok(hz)
+    }
+
+    /// Returns true if `other` is a compatable configuration of `self`
+    pub fn supports(&self, other: &Self) -> bool {
+        let allowed_frequencies =
+            AacSamplingFrequency::from_bits_truncate(self.0.sampling_frequency());
+        let selected_frequencies =
+            AacSamplingFrequency::from_bits_truncate(other.0.sampling_frequency());
+        if !(allowed_frequencies.intersects(selected_frequencies)) {
+            return false;
+        }
+        if !(self.channels().intersects(other.channels())) {
+            return false;
+        }
+        if !(self.object_type().intersects(other.object_type())) {
+            return false;
+        }
+        if !self.variable_bit_rate() && other.variable_bit_rate() {
+            return false;
+        }
+        // Note: the "capabilities" bitrate field is unclear in the A2DP spec: 4.5.2.4.
+        // Interpreting this as the max bitrate for either constant or vbr.
+        if self.bitrate() < other.bitrate() {
+            return false;
+        }
+        return true;
     }
 }
 
@@ -531,6 +591,159 @@ mod tests {
     }
 
     #[test]
+    fn test_sbc_codec_supports() {
+        let sbc_codec_all = SbcCodecInfo::new(
+            SbcSamplingFrequency::all(),
+            SbcChannelMode::all(),
+            SbcBlockCount::all(),
+            SbcSubBands::all(),
+            SbcAllocation::all(),
+            SbcCodecInfo::BITPOOL_MIN, // Smallest bitpool value.
+            SbcCodecInfo::BITPOOL_MAX, // Largest bitpool value.
+        )
+        .expect("Couldn't create sbc media codec info.");
+        // Should support itself.
+        assert!(sbc_codec_all.supports(&sbc_codec_all));
+
+        let sbc_codec_441 = SbcCodecInfo::new(
+            SbcSamplingFrequency::FREQ44100HZ,
+            SbcChannelMode::all(),
+            SbcBlockCount::all(),
+            SbcSubBands::all(),
+            SbcAllocation::all(),
+            53,                        // Smallest bitpool value.
+            SbcCodecInfo::BITPOOL_MAX, // Largest bitpool value.
+        )
+        .expect("Couldn't create sbc media codec info.");
+
+        let sbc_codec_48 = SbcCodecInfo::new(
+            SbcSamplingFrequency::FREQ48000HZ,
+            SbcChannelMode::all(),
+            SbcBlockCount::all(),
+            SbcSubBands::all(),
+            SbcAllocation::all(),
+            SbcCodecInfo::BITPOOL_MIN, // Smallest bitpool value.
+            53,                        // Largest bitpool value.
+        )
+        .expect("Couldn't create sbc media codec info.");
+
+        assert!(sbc_codec_all.supports(&sbc_codec_441));
+        assert!(sbc_codec_all.supports(&sbc_codec_48));
+
+        // Frequency mismatches
+        assert!(!sbc_codec_48.supports(&sbc_codec_441));
+        assert!(!sbc_codec_441.supports(&sbc_codec_48));
+
+        // Min / Max bitpools
+        assert!(!sbc_codec_48.supports(&sbc_codec_all));
+        assert!(!sbc_codec_441.supports(&sbc_codec_all));
+
+        let sbc_codec_mono = SbcCodecInfo::new(
+            SbcSamplingFrequency::all(),
+            SbcChannelMode::MONO,
+            SbcBlockCount::all(),
+            SbcSubBands::all(),
+            SbcAllocation::all(),
+            SbcCodecInfo::BITPOOL_MIN, // Smallest bitpool value.
+            SbcCodecInfo::BITPOOL_MAX, // Largest bitpool value.
+        )
+        .expect("Couldn't create sbc media codec info.");
+        let sbc_codec_stereo = SbcCodecInfo::new(
+            SbcSamplingFrequency::all(),
+            SbcChannelMode::JOINT_STEREO,
+            SbcBlockCount::all(),
+            SbcSubBands::all(),
+            SbcAllocation::all(),
+            SbcCodecInfo::BITPOOL_MIN, // Smallest bitpool value.
+            SbcCodecInfo::BITPOOL_MAX, // Largest bitpool value.
+        )
+        .expect("Couldn't create sbc media codec info.");
+
+        assert!(sbc_codec_all.supports(&sbc_codec_mono));
+        assert!(sbc_codec_all.supports(&sbc_codec_stereo));
+        assert!(!sbc_codec_mono.supports(&sbc_codec_stereo));
+        assert!(!sbc_codec_stereo.supports(&sbc_codec_mono));
+
+        let sbc_codec_blocks_4 = SbcCodecInfo::new(
+            SbcSamplingFrequency::all(),
+            SbcChannelMode::all(),
+            SbcBlockCount::FOUR,
+            SbcSubBands::all(),
+            SbcAllocation::all(),
+            SbcCodecInfo::BITPOOL_MIN, // Smallest bitpool value.
+            SbcCodecInfo::BITPOOL_MAX, // Largest bitpool value.
+        )
+        .expect("Couldn't create sbc media codec info.");
+        let sbc_codec_blocks_8 = SbcCodecInfo::new(
+            SbcSamplingFrequency::all(),
+            SbcChannelMode::all(),
+            SbcBlockCount::EIGHT,
+            SbcSubBands::all(),
+            SbcAllocation::all(),
+            SbcCodecInfo::BITPOOL_MIN, // Smallest bitpool value.
+            SbcCodecInfo::BITPOOL_MAX, // Largest bitpool value.
+        )
+        .expect("Couldn't create sbc media codec info.");
+
+        assert!(sbc_codec_all.supports(&sbc_codec_blocks_4));
+        assert!(sbc_codec_all.supports(&sbc_codec_blocks_8));
+        assert!(!sbc_codec_blocks_4.supports(&sbc_codec_blocks_8));
+        assert!(!sbc_codec_blocks_8.supports(&sbc_codec_blocks_4));
+
+        let sbc_codec_bands_4 = SbcCodecInfo::new(
+            SbcSamplingFrequency::all(),
+            SbcChannelMode::all(),
+            SbcBlockCount::FOUR,
+            SbcSubBands::FOUR,
+            SbcAllocation::all(),
+            SbcCodecInfo::BITPOOL_MIN, // Smallest bitpool value.
+            SbcCodecInfo::BITPOOL_MAX, // Largest bitpool value.
+        )
+        .expect("Couldn't create sbc media codec info.");
+        let sbc_codec_bands_8 = SbcCodecInfo::new(
+            SbcSamplingFrequency::all(),
+            SbcChannelMode::all(),
+            SbcBlockCount::FOUR,
+            SbcSubBands::EIGHT,
+            SbcAllocation::all(),
+            SbcCodecInfo::BITPOOL_MIN, // Smallest bitpool value.
+            SbcCodecInfo::BITPOOL_MAX, // Largest bitpool value.
+        )
+        .expect("Couldn't create sbc media codec info.");
+
+        assert!(sbc_codec_all.supports(&sbc_codec_bands_4));
+        assert!(sbc_codec_all.supports(&sbc_codec_bands_8));
+        assert!(!sbc_codec_bands_4.supports(&sbc_codec_bands_8));
+        assert!(!sbc_codec_bands_8.supports(&sbc_codec_bands_4));
+
+        let sbc_codec_snr = SbcCodecInfo::new(
+            SbcSamplingFrequency::all(),
+            SbcChannelMode::all(),
+            SbcBlockCount::FOUR,
+            SbcSubBands::FOUR,
+            SbcAllocation::SNR,
+            SbcCodecInfo::BITPOOL_MIN, // Smallest bitpool value.
+            SbcCodecInfo::BITPOOL_MAX, // Largest bitpool value.
+        )
+        .expect("Couldn't create sbc media codec info.");
+        let sbc_codec_loudness = SbcCodecInfo::new(
+            SbcSamplingFrequency::all(),
+            SbcChannelMode::all(),
+            SbcBlockCount::FOUR,
+            SbcSubBands::FOUR,
+            SbcAllocation::LOUDNESS,
+            SbcCodecInfo::BITPOOL_MIN, // Smallest bitpool value.
+            SbcCodecInfo::BITPOOL_MAX, // Largest bitpool value.
+        )
+        .expect("Couldn't create sbc media codec info.");
+
+        assert!(sbc_codec_all.supports(&sbc_codec_snr));
+        assert!(sbc_codec_all.supports(&sbc_codec_loudness));
+        assert!(!sbc_codec_snr.supports(&sbc_codec_loudness));
+        assert!(!sbc_codec_loudness.supports(&sbc_codec_snr));
+    }
+
+    #[test]
     fn test_aac_codec_info() {
         // Empty case.
         let aac_codec_info = AacCodecInfo::new(
@@ -627,5 +840,106 @@ mod tests {
 
         let too_big = vec![0, 0, 0, 0, 0, 0, 0];
         assert_matches!(AacCodecInfo::try_from(&too_big[..]), Err(avdtp::Error::OutOfRange));
+    }
+
+    #[test]
+    fn test_aac_codec_supports() {
+        // All codec info supported case.
+        let aac_codec_all = AacCodecInfo::new(
+            AacObjectType::all(),
+            AacSamplingFrequency::all(),
+            AacChannels::all(),
+            true,
+            8388607, // Largest 23-bit bit rate.
+        )
+        .expect("Error creating aac media codec info.");
+
+        assert!(aac_codec_all.supports(&aac_codec_all));
+
+        let aac_codec_441 = AacCodecInfo::new(
+            AacObjectType::all(),
+            AacSamplingFrequency::FREQ44100HZ,
+            AacChannels::all(),
+            true,
+            50, // Lower than largest.
+        )
+        .expect("Error creating aac media codec info.");
+
+        let aac_codec_48 = AacCodecInfo::new(
+            AacObjectType::all(),
+            AacSamplingFrequency::FREQ48000HZ,
+            AacChannels::all(),
+            true,
+            8388607, // Largest 23-bit bit rate.
+        )
+        .expect("Error creating aac media codec info.");
+
+        assert!(aac_codec_all.supports(&aac_codec_441));
+        assert!(aac_codec_all.supports(&aac_codec_48));
+
+        // Frequencies
+        assert!(!aac_codec_441.supports(&aac_codec_48));
+        assert!(!aac_codec_48.supports(&aac_codec_441));
+
+        // Max bitrate.
+        assert!(!aac_codec_441.supports(&aac_codec_all));
+
+        // Channels
+        let aac_codec_chan_one = AacCodecInfo::new(
+            AacObjectType::all(),
+            AacSamplingFrequency::all(),
+            AacChannels::ONE,
+            true,
+            8388607, // Largest 23-bit bit rate.
+        )
+        .expect("Error creating aac media codec info.");
+
+        let aac_codec_chan_two = AacCodecInfo::new(
+            AacObjectType::all(),
+            AacSamplingFrequency::all(),
+            AacChannels::TWO,
+            true,
+            8388607, // Largest 23-bit bit rate.
+        )
+        .expect("Error creating aac media codec info.");
+
+        assert!(aac_codec_all.supports(&aac_codec_chan_one));
+        assert!(aac_codec_all.supports(&aac_codec_chan_two));
+        assert!(!aac_codec_chan_one.supports(&aac_codec_chan_two));
+        assert!(!aac_codec_chan_two.supports(&aac_codec_chan_one));
+
+        // object type
+        let aac_codec_mpeg2 = AacCodecInfo::new(
+            AacObjectType::MPEG2_AAC_LC,
+            AacSamplingFrequency::all(),
+            AacChannels::ONE,
+            true,
+            8388607, // Largest 23-bit bit rate.
+        )
+        .expect("Error creating aac media codec info.");
+        let aac_codec_mpeg4 = AacCodecInfo::new(
+            AacObjectType::MPEG4_AAC_LC,
+            AacSamplingFrequency::all(),
+            AacChannels::ONE,
+            true,
+            8388607, // Largest 23-bit bit rate.
+        )
+        .expect("Error creating aac media codec info.");
+
+        assert!(aac_codec_all.supports(&aac_codec_mpeg2));
+        assert!(aac_codec_all.supports(&aac_codec_mpeg4));
+        assert!(!aac_codec_mpeg2.supports(&aac_codec_mpeg4));
+        assert!(!aac_codec_mpeg4.supports(&aac_codec_mpeg2));
+
+        let aac_codec_not_vbr = AacCodecInfo::new(
+            AacObjectType::MPEG4_AAC_LC,
+            AacSamplingFrequency::all(),
+            AacChannels::ONE,
+            false,
+            8388607, // Largest 23-bit bit rate.
+        )
+        .expect("Error creating aac media codec info.");
+
+        assert!(!aac_codec_not_vbr.supports(&aac_codec_mpeg4));
     }
 }

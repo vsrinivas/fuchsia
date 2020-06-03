@@ -76,6 +76,29 @@ impl MediaCodecConfig {
         self.codec_extra.as_slice()
     }
 
+    /// Returns true if the given MediaCodecConfig is a compatible subset of this configuration.
+    pub fn supports(&self, other: &MediaCodecConfig) -> bool {
+        if &self.codec_type != other.codec_type() {
+            return false;
+        }
+        match self.codec_type {
+            MediaCodecType::AUDIO_SBC => {
+                let codec_info = SbcCodecInfo::try_from(self.codec_extra()).expect("should parse");
+                let other_info = SbcCodecInfo::try_from(other.codec_extra()).expect("should parse");
+                codec_info.supports(&other_info)
+            }
+            MediaCodecType::AUDIO_AAC => {
+                let codec_info = AacCodecInfo::try_from(self.codec_extra()).expect("should parse");
+                let other_info = AacCodecInfo::try_from(other.codec_extra()).expect("should parse");
+                codec_info.supports(&other_info)
+            }
+            _ => false,
+        }
+    }
+
+    /// Retrieves a set of EncoderSettings that is suitable to configure a StreamProcessor to encode
+    /// to the target configuration for this MediaCodecConfig.
+    /// Returns Err(OutOfRange) if this does not specify a single configuration.
     pub fn encoder_settings(&self) -> avdtp::Result<fidl_fuchsia_media::EncoderSettings> {
         let encoder_settings = match self.codec_type {
             MediaCodecType::AUDIO_SBC => {
@@ -345,5 +368,16 @@ mod tests {
                 .expect("MediaCodecConfig should build");
 
         assert!(multi_freq_config.sampling_frequency().is_err());
+    }
+
+    #[test]
+    fn test_supports() {
+        // Codecs must match.
+        let sbc = build_test_config(MediaCodecType::AUDIO_SBC);
+        let aac = build_test_config(MediaCodecType::AUDIO_AAC);
+
+        assert!(!sbc.supports(&aac));
+        assert!(!aac.supports(&sbc));
+        assert!(sbc.supports(&sbc));
     }
 }

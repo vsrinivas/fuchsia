@@ -65,18 +65,31 @@ impl Stream {
         &mut self.endpoint
     }
 
-    fn codec_config_from_caps(
-        capabilities: &[ServiceCapability],
-    ) -> Result<MediaCodecConfig, (ServiceCategory, ErrorCode)> {
-        // Find the MediaCodec Capability
-        capabilities
-            .iter()
-            .find_map(|cap| match cap {
-                x @ ServiceCapability::MediaCodec { .. } => Some(MediaCodecConfig::try_from(x)),
-                _ => None,
-            })
-            .and_then(Result::ok)
-            .ok_or((ServiceCategory::MediaCodec, ErrorCode::UnsupportedConfiguration))
+    fn requested_config_is_supported(&self, requested: &MediaCodecConfig) -> bool {
+        let supported_cap = match find_codec_capability(&self.endpoint.capabilities()) {
+            None => return false,
+            Some(cap) => cap,
+        };
+        let supported = match MediaCodecConfig::try_from(supported_cap) {
+            Err(_) => return false,
+            Ok(config) => config,
+        };
+        supported.supports(&requested)
+    }
+
+    fn build_media_task(
+        &self,
+        peer_id: &PeerId,
+        requested_cap: &ServiceCapability,
+    ) -> Option<Box<dyn MediaTask>> {
+        let requested = match MediaCodecConfig::try_from(requested_cap) {
+            Err(_) => return None,
+            Ok(config) => config,
+        };
+        if !self.requested_config_is_supported(&requested) {
+            return None;
+        }
+        self.media_task_builder.configure(peer_id, &requested).ok()
     }
 
     pub fn configure(
@@ -85,15 +98,19 @@ impl Stream {
         remote_id: &StreamEndpointId,
         capabilities: Vec<ServiceCapability>,
     ) -> Result<(), (ServiceCategory, ErrorCode)> {
-        let codec_config = Self::codec_config_from_caps(&capabilities)?;
         if self.media_task.is_some() {
             return Err((ServiceCategory::None, ErrorCode::BadState));
         }
-        self.media_task = Some(
-            self.media_task_builder
-                .configure(&peer_id, &codec_config)
-                .or(Err((ServiceCategory::MediaCodec, ErrorCode::UnsupportedConfiguration)))?,
-        );
+        let unsupported = ErrorCode::UnsupportedConfiguration;
+        match find_codec_capability(&capabilities) {
+            None => return Err((ServiceCategory::None, unsupported)),
+            Some(requested) => {
+                self.media_task = match self.build_media_task(peer_id, requested) {
+                    None => return Err((ServiceCategory::MediaCodec, unsupported)),
+                    Some(task) => Some(task),
+                };
+            }
+        };
         self.peer_id = Some(peer_id.clone());
         self.endpoint.configure(remote_id, capabilities)
     }
@@ -103,12 +120,14 @@ impl Stream {
         capabilities: Vec<ServiceCapability>,
     ) -> Result<(), (ServiceCategory, ErrorCode)> {
         let peer_id = self.peer_id.as_ref().ok_or((ServiceCategory::None, ErrorCode::BadState))?;
-        let codec_config = Self::codec_config_from_caps(&capabilities)?;
-        self.media_task = Some(
-            self.media_task_builder
-                .configure(&peer_id, &codec_config)
-                .or(Err((ServiceCategory::MediaCodec, ErrorCode::UnsupportedConfiguration)))?,
-        );
+        if let Some(requested_codec_cap) = find_codec_capability(&capabilities) {
+            self.media_task = match self.build_media_task(peer_id, requested_codec_cap) {
+                None => {
+                    return Err((ServiceCategory::MediaCodec, ErrorCode::UnsupportedConfiguration))
+                }
+                Some(task) => Some(task),
+            };
+        }
         self.endpoint.reconfigure(capabilities)
     }
 
@@ -149,6 +168,10 @@ impl Stream {
         self.peer_id = None;
         self.endpoint.abort(peer).await
     }
+}
+
+fn find_codec_capability(capabilities: &[ServiceCapability]) -> Option<&ServiceCapability> {
+    capabilities.iter().find(|cap| cap.category() == ServiceCategory::MediaCodec)
 }
 
 pub struct Streams(HashMap<StreamEndpointId, Stream>);
@@ -267,6 +290,88 @@ mod tests {
             assert_eq!(expected_info[0], infos[1]);
             assert_eq!(expected_info[1], infos[0]);
         }
+    }
+
+    #[test]
+    fn test_rejects_unsupported_configurations() {
+        let _exec = fasync::Executor::new().expect("failed to create an executor");
+
+        let mut stream = make_stream(1);
+        // the default test stream only supports 48000hz
+        let unsupported_sbc_codec_info = SbcCodecInfo::new(
+            SbcSamplingFrequency::FREQ44100HZ,
+            SbcChannelMode::JOINT_STEREO,
+            SbcBlockCount::SIXTEEN,
+            SbcSubBands::EIGHT,
+            SbcAllocation::LOUDNESS,
+            53,
+            53,
+        )
+        .expect("SBC codec info");
+
+        let unsupported_caps = vec![ServiceCapability::MediaCodec {
+            media_type: avdtp::MediaType::Audio,
+            codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+            codec_extra: unsupported_sbc_codec_info.to_bytes().to_vec(),
+        }];
+
+        let res = stream.configure(&PeerId(1), &(1.try_into().unwrap()), unsupported_caps.clone());
+        assert!(res.is_err());
+        assert_eq!(
+            res.err(),
+            Some((ServiceCategory::MediaCodec, ErrorCode::UnsupportedConfiguration))
+        );
+
+        assert_eq!(
+            stream.reconfigure(unsupported_caps.clone()),
+            Err((ServiceCategory::None, ErrorCode::BadState))
+        );
+
+        let supported_sbc_codec_info = SbcCodecInfo::new(
+            SbcSamplingFrequency::FREQ48000HZ,
+            SbcChannelMode::JOINT_STEREO,
+            SbcBlockCount::SIXTEEN,
+            SbcSubBands::EIGHT,
+            SbcAllocation::LOUDNESS,
+            53,
+            53,
+        )
+        .expect("SBC codec info");
+
+        let supported_caps = vec![
+            ServiceCapability::MediaTransport,
+            ServiceCapability::MediaCodec {
+                media_type: avdtp::MediaType::Audio,
+                codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                codec_extra: supported_sbc_codec_info.to_bytes().to_vec(),
+            },
+        ];
+
+        let res = stream.configure(&PeerId(1), &(1.try_into().unwrap()), supported_caps.clone());
+        assert!(res.is_ok());
+
+        // need to be in the open state for reconfigure
+        assert!(stream.endpoint_mut().establish().is_ok());
+        let (_remote, transport) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        match stream.endpoint_mut().receive_channel(fasync::Socket::from_socket(transport).unwrap())
+        {
+            Ok(false) => {}
+            Ok(true) => panic!("Only should be expecting one channel"),
+            Err(e) => panic!("Expected channel to be accepted, got {:?}", e),
+        };
+
+        assert_eq!(
+            stream.reconfigure(unsupported_caps.clone()),
+            Err((ServiceCategory::MediaCodec, ErrorCode::UnsupportedConfiguration))
+        );
+
+        let new_codec_caps = vec![ServiceCapability::MediaCodec {
+            media_type: avdtp::MediaType::Audio,
+            codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+            codec_extra: supported_sbc_codec_info.to_bytes().to_vec(),
+        }];
+
+        assert!(stream.reconfigure(new_codec_caps.clone()).is_ok());
     }
 
     #[test]

@@ -904,7 +904,7 @@ mod tests {
         let codec_params = ServiceCapability::MediaCodec {
             media_type: avdtp::MediaType::Audio,
             codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-            codec_extra: vec![0x29, 0xF5, 2, 250],
+            codec_extra: vec![0x11, 0x45, 51, 51],
         };
 
         let start_future = peer.start_stream(local_seid, remote_seid, codec_params);
@@ -975,7 +975,7 @@ mod tests {
         let codec_params = ServiceCapability::MediaCodec {
             media_type: avdtp::MediaType::Audio,
             codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-            codec_extra: vec![0x29, 0xF5, 2, 250],
+            codec_extra: vec![0x11, 0x45, 51, 51],
         };
 
         let start_future = peer.start_stream(local_seid, remote_seid, codec_params);
