@@ -11,7 +11,6 @@ use fuchsia_zircon as zx;
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::TryStreamExt;
-use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -20,10 +19,10 @@ const DURATION: i64 = 1000000000;
 /// An implementation of the SoundPlayer for tests.
 pub struct SoundPlayerService {
     // Represents the number of times the sound has been played in total.
-    play_counts: Arc<RwLock<HashMap<u32, u32>>>,
+    play_counts: Arc<Mutex<HashMap<u32, u32>>>,
 
     // Represents the sounds that were played. Stores the id to AudioRenderUsage it was played on.
-    sound_mappings: Arc<RwLock<HashMap<u32, AudioRenderUsage>>>,
+    sound_mappings: Arc<Mutex<HashMap<u32, AudioRenderUsage>>>,
 
     // The listeners to notify that a sound was played.
     sound_played_listeners: Arc<Mutex<Vec<UnboundedSender<Result<(), Error>>>>>,
@@ -32,28 +31,28 @@ pub struct SoundPlayerService {
 impl SoundPlayerService {
     pub fn new() -> Self {
         Self {
-            play_counts: Arc::new(RwLock::new(HashMap::new())),
-            sound_mappings: Arc::new(RwLock::new(HashMap::new())),
+            play_counts: Arc::new(Mutex::new(HashMap::new())),
+            sound_mappings: Arc::new(Mutex::new(HashMap::new())),
             sound_played_listeners: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
     // Retrieve a mapping from sound id to AudioRenderUsage it was played on.
-    pub fn get_usage_by_id(&self, id: u32) -> Option<AudioRenderUsage> {
-        match self.sound_mappings.read().get(&id) {
+    pub async fn get_usage_by_id(&self, id: u32) -> Option<AudioRenderUsage> {
+        match self.sound_mappings.lock().await.get(&id) {
             None => None,
             Some(&val) => Some(val),
         }
     }
 
     // Check whether the sound with the given id was added to the Player.
-    pub fn id_exists(&self, id: u32) -> bool {
-        self.play_counts.read().get(&id).is_some()
+    pub async fn id_exists(&self, id: u32) -> bool {
+        self.play_counts.lock().await.get(&id).is_some()
     }
 
     // Get the number of times the sound with the given id has played.
-    pub fn get_play_count(&self, id: u32) -> Option<u32> {
-        match self.play_counts.read().get(&id) {
+    pub async fn get_play_count(&self, id: u32) -> Option<u32> {
+        match self.play_counts.lock().await.get(&id) {
             None => None,
             Some(&val) => Some(val),
         }
@@ -85,12 +84,12 @@ impl Service for SoundPlayerService {
             while let Some(req) = player_stream.try_next().await.unwrap() {
                 match req {
                     PlayerRequest::AddSoundFromFile { id, file: _file, responder } => {
-                        play_counts_clone.write().insert(id, 0);
+                        play_counts_clone.lock().await.insert(id, 0);
                         responder.send(&mut Ok(DURATION)).unwrap();
                     }
                     PlayerRequest::PlaySound { id, usage, responder } => {
-                        sound_mappings_clone.write().insert(id, usage);
-                        play_counts_clone.write().entry(id).and_modify(|count| *count += 1);
+                        sound_mappings_clone.lock().await.insert(id, usage);
+                        play_counts_clone.lock().await.entry(id).and_modify(|count| *count += 1);
                         for listener in sound_played_listeners.lock().await.iter() {
                             listener.unbounded_send(Ok(())).ok();
                         }

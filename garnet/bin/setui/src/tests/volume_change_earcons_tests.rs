@@ -192,9 +192,9 @@ async fn test_sounds() {
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
     let settings = audio_proxy.watch2().await.expect("watch completed");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
-    assert!(fake_services.sound_player.lock().await.id_exists(1));
+    assert!(fake_services.sound_player.lock().await.id_exists(1).await);
     assert_eq!(
-        fake_services.sound_player.lock().await.get_usage_by_id(1),
+        fake_services.sound_player.lock().await.get_usage_by_id(1).await,
         Some(AudioRenderUsage::Media)
     );
 
@@ -202,9 +202,9 @@ async fn test_sounds() {
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
     let settings = audio_proxy.watch2().await.expect("watch completed");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_MAX);
-    assert!(fake_services.sound_player.lock().await.id_exists(0));
+    assert!(fake_services.sound_player.lock().await.id_exists(0).await);
     assert_eq!(
-        fake_services.sound_player.lock().await.get_usage_by_id(0),
+        fake_services.sound_player.lock().await.get_usage_by_id(0).await,
         Some(AudioRenderUsage::Media)
     );
 }
@@ -225,8 +225,8 @@ async fn test_max_volume_sound_on_press() {
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
     audio_proxy.watch2().await.expect("watch completed");
 
-    assert!(fake_services.sound_player.lock().await.id_exists(0));
-    assert_eq!(fake_services.sound_player.lock().await.get_play_count(0), Some(1));
+    assert!(fake_services.sound_player.lock().await.id_exists(0).await);
+    assert_eq!(fake_services.sound_player.lock().await.get_play_count(0).await, Some(1));
 
     // Try to increase volume. Only serves to set the "last volume button press" event
     // to 1 (volume up).
@@ -243,8 +243,8 @@ async fn test_max_volume_sound_on_press() {
     audio_proxy.watch2().await.expect("watch completed");
 
     // Check that the sound played the correct number of times.
-    assert!(fake_services.sound_player.lock().await.id_exists(0));
-    assert_eq!(fake_services.sound_player.lock().await.get_play_count(0), Some(3));
+    assert!(fake_services.sound_player.lock().await.id_exists(0).await);
+    assert_eq!(fake_services.sound_player.lock().await.get_play_count(0).await, Some(3));
 }
 
 // Test to ensure that when the volume is changed on multiple channels, the sound only plays once.
@@ -277,8 +277,8 @@ async fn test_earcons_on_multiple_channel_change() {
     .await;
 
     audio_proxy.watch2().await.expect("watch completed");
-    assert!(fake_services.sound_player.lock().await.id_exists(0));
-    assert_eq!(fake_services.sound_player.lock().await.get_play_count(0), Some(1));
+    assert!(fake_services.sound_player.lock().await.id_exists(0).await);
+    assert_eq!(fake_services.sound_player.lock().await.get_play_count(0).await, Some(1));
 }
 
 // Test to ensure that when another higher priority stream is playing,
@@ -295,9 +295,9 @@ async fn test_earcons_with_active_stream() {
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
     let settings = audio_proxy.watch2().await.expect("watch completed");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
-    assert!(fake_services.sound_player.lock().await.id_exists(1));
+    assert!(fake_services.sound_player.lock().await.id_exists(1).await);
     assert_eq!(
-        fake_services.sound_player.lock().await.get_usage_by_id(1),
+        fake_services.sound_player.lock().await.get_usage_by_id(1).await,
         Some(AudioRenderUsage::Media)
     );
 
@@ -316,9 +316,9 @@ async fn test_earcons_with_active_stream() {
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_MAX);
 
     // With the background stream muted, the sound should not have played.
-    assert!(!fake_services.sound_player.lock().await.id_exists(0));
+    assert!(!fake_services.sound_player.lock().await.id_exists(0).await);
     assert_ne!(
-        fake_services.sound_player.lock().await.get_usage_by_id(0),
+        fake_services.sound_player.lock().await.get_usage_by_id(0).await,
         Some(AudioRenderUsage::Media)
     );
 
@@ -339,9 +339,9 @@ async fn test_earcons_with_active_stream() {
     audio_proxy.watch2().await.expect("watch completed");
 
     // With the background stream ducked, the sound should not have played.
-    assert!(!fake_services.sound_player.lock().await.id_exists(0));
+    assert!(!fake_services.sound_player.lock().await.id_exists(0).await);
     assert_ne!(
-        fake_services.sound_player.lock().await.get_usage_by_id(0),
+        fake_services.sound_player.lock().await.get_usage_by_id(0).await,
         Some(AudioRenderUsage::Media)
     );
 
@@ -361,9 +361,9 @@ async fn test_earcons_with_active_stream() {
     audio_proxy.watch2().await.expect("watch completed");
 
     // With the background stream unadjusted, the sound should have played.
-    assert!(fake_services.sound_player.lock().await.id_exists(0));
+    assert!(fake_services.sound_player.lock().await.id_exists(0).await);
     assert_eq!(
-        fake_services.sound_player.lock().await.get_usage_by_id(0),
+        fake_services.sound_player.lock().await.get_usage_by_id(0).await,
         Some(AudioRenderUsage::Media)
     );
 }

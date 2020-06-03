@@ -93,9 +93,9 @@ async fn test_sounds() {
     // Add first connection.
     fake_services.bluetooth.lock().await.connect(PEER_ID_1, false).await.ok();
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
-    assert!(fake_services.sound_player.lock().await.id_exists(BLUETOOTH_CONNECTED_SOUND_ID));
+    assert!(fake_services.sound_player.lock().await.id_exists(BLUETOOTH_CONNECTED_SOUND_ID).await);
     assert_eq!(
-        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID),
+        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID).await,
         Some(1)
     );
 
@@ -103,16 +103,23 @@ async fn test_sounds() {
     fake_services.bluetooth.lock().await.connect(PEER_ID_2, false).await.unwrap();
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
     assert_eq!(
-        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID),
+        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID).await,
         Some(2)
     );
 
     // Disconnect the first connection.
     fake_services.bluetooth.lock().await.disconnect(PEER_ID_1, false).await.unwrap();
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
-    assert!(fake_services.sound_player.lock().await.id_exists(BLUETOOTH_DISCONNECTED_SOUND_ID));
+    assert!(
+        fake_services.sound_player.lock().await.id_exists(BLUETOOTH_DISCONNECTED_SOUND_ID).await
+    );
     assert_eq!(
-        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_DISCONNECTED_SOUND_ID),
+        fake_services
+            .sound_player
+            .lock()
+            .await
+            .get_play_count(BLUETOOTH_DISCONNECTED_SOUND_ID)
+            .await,
         Some(1)
     );
 
@@ -120,7 +127,12 @@ async fn test_sounds() {
     fake_services.bluetooth.lock().await.disconnect(PEER_ID_2, false).await.unwrap();
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
     assert_eq!(
-        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_DISCONNECTED_SOUND_ID),
+        fake_services
+            .sound_player
+            .lock()
+            .await
+            .get_play_count(BLUETOOTH_DISCONNECTED_SOUND_ID)
+            .await,
         Some(2)
     );
 }
@@ -142,17 +154,24 @@ async fn test_oobe_connection() {
 
     // Add oobe bluetooth connection.
     fake_services.bluetooth.lock().await.connect(PEER_ID_1, true).await.ok();
-    assert!(!fake_services.sound_player.lock().await.id_exists(BLUETOOTH_CONNECTED_SOUND_ID));
+    assert!(!fake_services.sound_player.lock().await.id_exists(BLUETOOTH_CONNECTED_SOUND_ID).await);
     assert_eq!(
-        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID),
+        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID).await,
         None
     );
 
     // Disconnect the oobe blueooth connection.
     fake_services.bluetooth.lock().await.disconnect(PEER_ID_1, true).await.unwrap();
-    assert!(!fake_services.sound_player.lock().await.id_exists(BLUETOOTH_DISCONNECTED_SOUND_ID));
+    assert!(
+        !fake_services.sound_player.lock().await.id_exists(BLUETOOTH_DISCONNECTED_SOUND_ID).await
+    );
     assert_eq!(
-        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_DISCONNECTED_SOUND_ID),
+        fake_services
+            .sound_player
+            .lock()
+            .await
+            .get_play_count(BLUETOOTH_DISCONNECTED_SOUND_ID)
+            .await,
         None
     );
 
@@ -160,7 +179,7 @@ async fn test_oobe_connection() {
     fake_services.bluetooth.lock().await.connect(PEER_ID_2, false).await.unwrap();
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
     assert_eq!(
-        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID),
+        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID).await,
         Some(1)
     );
 
@@ -168,7 +187,12 @@ async fn test_oobe_connection() {
     fake_services.bluetooth.lock().await.disconnect(PEER_ID_2, false).await.unwrap();
     watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
     assert_eq!(
-        fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_DISCONNECTED_SOUND_ID),
+        fake_services
+            .sound_player
+            .lock()
+            .await
+            .get_play_count(BLUETOOTH_DISCONNECTED_SOUND_ID)
+            .await,
         Some(1)
     );
 }
