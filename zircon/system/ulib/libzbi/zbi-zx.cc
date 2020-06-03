@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <libzbi/zbi-zx.h>
-
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
@@ -11,6 +9,8 @@
 #include <zircon/assert.h>
 
 #include <utility>
+
+#include <libzbi/zbi-zx.h>
 
 namespace zbi {
 
@@ -68,7 +68,7 @@ zbi_result_t ZbiVMO::AppendSection(uint32_t length, uint32_t type, uint32_t extr
 
 zbi_result_t ZbiVMO::CreateSection(uint32_t length, uint32_t type, uint32_t extra, uint32_t flags,
                                    void** payload) {
-  auto result = Zbi::CreateSection(length, type, extra, flags, payload);
+  auto result = CreateEntry(type, extra, flags, length, payload);
   if (result == ZBI_RESULT_TOO_BIG) {
     const size_t new_capacity = PageRound(Length() + sizeof(zbi_header_t) + length);
     ZX_DEBUG_ASSERT(new_capacity > capacity_);
@@ -79,7 +79,7 @@ zbi_result_t ZbiVMO::CreateSection(uint32_t length, uint32_t type, uint32_t extr
       status = Map();
     }
     if (status == ZX_OK) {
-      result = Zbi::CreateSection(length, type, extra, flags, payload);
+      result = CreateEntry(type, extra, flags, length, payload);
     }
   }
   return result;

@@ -185,28 +185,6 @@ zbi_result_t zbi_create_entry_with_payload(void* base, size_t capacity, uint32_t
 //     ZBI_RESULT_TOO_BIG - If dst is too small.
 zbi_result_t zbi_extend(void* dst, size_t capacity, const void* src);
 
-// Creates a new ZBI section and appends it to the end of the ZBI pointed to by
-// `base`. Assumes that the buffer at `base` has a length of `capacity` which
-// is likely longer than the size of the ZBI at `base`.
-//
-// The new section will be aligned to the ZBI alignment boundary. Any padding
-// added to achieve this alignment will be zero-filled.
-//
-// The caller need not set the ZBI_FLAG_VERSION field of the flags field as it
-// will be set unconditionally for the new section.
-//
-// CRC computation is not currently supported and setting the ZBI_FLAG_CRC32
-// flag will yield an error.
-//
-// TODO(fxb/52665): Remove this; use zbi_create_entry_with_payload instead.
-zbi_result_t zbi_append_section(void* base, size_t capacity, uint32_t section_length, uint32_t type,
-                                uint32_t extra, uint32_t flags, const void* payload);
-
-// Create a new ZBI section and returns a pointer to the payload.
-// TODO(fxb/52665): Remove this; use zbi_create_entry instead.
-zbi_result_t zbi_create_section(void* base, size_t capacity, uint32_t section_length, uint32_t type,
-                                uint32_t extra, uint32_t flags, void** payload);
-
 __END_CDECLS
 
 #endif  // LIBZBI_ZBI_H_

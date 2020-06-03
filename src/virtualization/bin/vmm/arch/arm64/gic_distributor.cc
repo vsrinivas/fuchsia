@@ -565,12 +565,12 @@ zx_status_t GicDistributor::ConfigureZbi(void* zbi_base, size_t zbi_max) const {
 
   zbi_result_t res;
   if (type_ == fuchsia::sysinfo::InterruptControllerType::GIC_V2) {
-    res = zbi_append_section(zbi_base, zbi_max, sizeof(gic_v2), ZBI_TYPE_KERNEL_DRIVER,
-                             KDRV_ARM_GIC_V2, 0, &gic_v2);
+    res = zbi_create_entry_with_payload(zbi_base, zbi_max, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2,
+                                        0, &gic_v2, sizeof(gic_v2));
   } else {
     // GICv3 driver.
-    res = zbi_append_section(zbi_base, zbi_max, sizeof(gic_v3), ZBI_TYPE_KERNEL_DRIVER,
-                             KDRV_ARM_GIC_V3, 0, &gic_v3);
+    res = zbi_create_entry_with_payload(zbi_base, zbi_max, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3,
+                                        0, &gic_v3, sizeof(gic_v3));
   }
   return res == ZBI_RESULT_OK ? ZX_OK : ZX_ERR_INTERNAL;
 }

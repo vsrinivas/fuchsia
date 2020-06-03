@@ -456,8 +456,8 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
   const uint32_t kNoZbiExtra = 0;
 
   uint32_t section_length = (uint32_t)(sizeof(e820buf) - ctx.len);
-  result =
-      image.AppendSection(section_length, ZBI_TYPE_E820_TABLE, kNoZbiExtra, kNoZbiFlags, e820buf);
+  result = image.CreateEntryWithPayload(ZBI_TYPE_E820_TABLE, kNoZbiExtra, kNoZbiFlags, e820buf,
+                                        section_length);
 
   if (result != ZBI_RESULT_OK) {
     printf(
@@ -469,8 +469,9 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
 
   // Append platform id
   if (bootloader.platform_id_size) {
-    result = image.AppendSection(sizeof(bootloader.platform_id), ZBI_TYPE_PLATFORM_ID, kNoZbiExtra,
-                                 kNoZbiFlags, reinterpret_cast<uint8_t*>(&bootloader.platform_id));
+    result = image.CreateEntryWithPayload(ZBI_TYPE_PLATFORM_ID, kNoZbiExtra, kNoZbiFlags,
+                                          reinterpret_cast<uint8_t*>(&bootloader.platform_id),
+                                          sizeof(bootloader.platform_id));
     if (result != ZBI_RESULT_OK) {
       printf(
           "mexec: Failed to append platform id to bootdata. "
@@ -481,8 +482,8 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
   }
   // Append information about the framebuffer to the bootdata
   if (bootloader.fb.base) {
-    result = image.AppendSection(sizeof(bootloader.fb), ZBI_TYPE_FRAMEBUFFER, kNoZbiExtra,
-                                 kNoZbiFlags, (uint8_t*)&bootloader.fb);
+    result = image.CreateEntryWithPayload(ZBI_TYPE_FRAMEBUFFER, kNoZbiExtra, kNoZbiFlags,
+                                          (uint8_t*)&bootloader.fb, sizeof(bootloader.fb));
     if (result != ZBI_RESULT_OK) {
       printf(
           "mexec: Failed to append framebuffer data to bootdata. "
@@ -493,8 +494,9 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
   }
 
   if (bootloader.efi_system_table) {
-    result = image.AppendSection(sizeof(bootloader.efi_system_table), ZBI_TYPE_EFI_SYSTEM_TABLE,
-                                 kNoZbiExtra, kNoZbiFlags, (uint8_t*)&bootloader.efi_system_table);
+    result = image.CreateEntryWithPayload(ZBI_TYPE_EFI_SYSTEM_TABLE, kNoZbiExtra, kNoZbiFlags,
+                                          (uint8_t*)&bootloader.efi_system_table,
+                                          sizeof(bootloader.efi_system_table));
     if (result != ZBI_RESULT_OK) {
       printf(
           "mexec: Failed to append efi sys table data to bootdata. "
@@ -505,8 +507,9 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
   }
 
   if (bootloader.acpi_rsdp) {
-    result = image.AppendSection(sizeof(bootloader.acpi_rsdp), ZBI_TYPE_ACPI_RSDP, kNoZbiExtra,
-                                 kNoZbiFlags, (uint8_t*)&bootloader.acpi_rsdp);
+    result =
+        image.CreateEntryWithPayload(ZBI_TYPE_ACPI_RSDP, kNoZbiExtra, kNoZbiFlags,
+                                     (uint8_t*)&bootloader.acpi_rsdp, sizeof(bootloader.acpi_rsdp));
     if (result != ZBI_RESULT_OK) {
       printf(
           "mexec: Failed to append acpi rsdp data to bootdata. "
@@ -517,8 +520,8 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
   }
 
   if (bootloader.smbios) {
-    result = image.AppendSection(sizeof(bootloader.smbios), ZBI_TYPE_SMBIOS, kNoZbiExtra,
-                                 kNoZbiFlags, (uint8_t*)&bootloader.smbios);
+    result = image.CreateEntryWithPayload(ZBI_TYPE_SMBIOS, kNoZbiExtra, kNoZbiFlags,
+                                          (uint8_t*)&bootloader.smbios, sizeof(bootloader.smbios));
     if (result != ZBI_RESULT_OK) {
       printf(
           "mexec: Failed to append smbios data to bootdata. len = %lu,"
@@ -529,8 +532,8 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
   }
 
   auto add_uart = [&image, len](uint32_t extra, auto&& uart) {
-    auto result = image.AppendSection(sizeof(uart), ZBI_TYPE_KERNEL_DRIVER, extra, kNoZbiFlags,
-                                      reinterpret_cast<uint8_t*>(&uart));
+    auto result = image.CreateEntryWithPayload(ZBI_TYPE_KERNEL_DRIVER, extra, kNoZbiFlags,
+                                               reinterpret_cast<uint8_t*>(&uart), sizeof(uart));
     if (result != ZBI_RESULT_OK) {
       printf(
           "mexec: Failed to append uart data to bootdata. len = %zu, "
@@ -554,8 +557,8 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
   }
 
   if (bootloader.nvram.base) {
-    result = image.AppendSection(sizeof(bootloader.nvram), ZBI_TYPE_NVRAM, kNoZbiExtra, kNoZbiFlags,
-                                 (uint8_t*)&bootloader.nvram);
+    result = image.CreateEntryWithPayload(ZBI_TYPE_NVRAM, kNoZbiExtra, kNoZbiFlags,
+                                          (uint8_t*)&bootloader.nvram, sizeof(bootloader.nvram));
 
     if (result != ZBI_RESULT_OK) {
       printf(

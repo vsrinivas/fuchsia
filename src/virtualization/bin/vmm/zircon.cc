@@ -170,8 +170,8 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
 
   // Command line.
   zbi_result_t res;
-  res = zbi_append_section(container_hdr, zbi_max, cfg.cmdline().size() + 1, ZBI_TYPE_CMDLINE, 0, 0,
-                           cfg.cmdline().c_str());
+  res = zbi_create_entry_with_payload(container_hdr, zbi_max, ZBI_TYPE_CMDLINE, 0, 0,
+                                      cfg.cmdline().c_str(), cfg.cmdline().size() + 1);
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
@@ -190,8 +190,8 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
   auto cpu_config = reinterpret_cast<zbi_cpu_config_t*>(cpu_buffer);
   cpu_config->cluster_count = 1;
   cpu_config->clusters[0].cpu_count = cfg.cpus();
-  res = zbi_append_section(container_hdr, zbi_max, sizeof(cpu_buffer), ZBI_TYPE_CPU_CONFIG, 0, 0,
-                           cpu_buffer);
+  res = zbi_create_entry_with_payload(container_hdr, zbi_max, ZBI_TYPE_CPU_CONFIG, 0, 0, cpu_buffer,
+                                      sizeof(cpu_buffer));
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
@@ -232,33 +232,34 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
   if (periph_range.length != 0) {
     mem_config.emplace_back(std::move(periph_range));
   }
-  res = zbi_append_section(container_hdr, zbi_max, sizeof(zbi_mem_range_t) * mem_config.size(),
-                           ZBI_TYPE_MEM_CONFIG, 0, 0, &mem_config[0]);
+  res = zbi_create_entry_with_payload(container_hdr, zbi_max, ZBI_TYPE_MEM_CONFIG, 0, 0,
+                                      &mem_config[0], sizeof(zbi_mem_range_t) * mem_config.size());
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
   // Platform ID.
-  res = zbi_append_section(container_hdr, zbi_max, sizeof(kPlatformId), ZBI_TYPE_PLATFORM_ID, 0, 0,
-                           &kPlatformId);
+  res = zbi_create_entry_with_payload(container_hdr, zbi_max, ZBI_TYPE_PLATFORM_ID, 0, 0,
+                                      &kPlatformId, sizeof(kPlatformId));
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
   // PSCI driver.
-  res = zbi_append_section(container_hdr, zbi_max, sizeof(kPsciDriver), ZBI_TYPE_KERNEL_DRIVER,
-                           KDRV_ARM_PSCI, 0, &kPsciDriver);
+  res = zbi_create_entry_with_payload(container_hdr, zbi_max, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI,
+                                      0, &kPsciDriver, sizeof(kPsciDriver));
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
   // Timer driver.
-  res = zbi_append_section(container_hdr, zbi_max, sizeof(kTimerDriver), ZBI_TYPE_KERNEL_DRIVER,
-                           KDRV_ARM_GENERIC_TIMER, 0, &kTimerDriver);
+  res =
+      zbi_create_entry_with_payload(container_hdr, zbi_max, ZBI_TYPE_KERNEL_DRIVER,
+                                    KDRV_ARM_GENERIC_TIMER, 0, &kTimerDriver, sizeof(kTimerDriver));
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
 #elif __x86_64__
   // ACPI root table pointer.
-  res = zbi_append_section(container_hdr, zbi_max, sizeof(uint64_t), ZBI_TYPE_ACPI_RSDP, 0, 0,
-                           &kAcpiOffset);
+  res = zbi_create_entry_with_payload(container_hdr, zbi_max, ZBI_TYPE_ACPI_RSDP, 0, 0,
+                                      &kAcpiOffset, sizeof(uint64_t));
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
@@ -269,8 +270,7 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
   }
   const size_t e820_size = e820_map.size() * sizeof(e820entry_t);
   void* e820_addr = nullptr;
-  res =
-      zbi_create_section(container_hdr, zbi_max, e820_size, ZBI_TYPE_E820_TABLE, 0, 0, &e820_addr);
+  res = zbi_create_entry(container_hdr, zbi_max, ZBI_TYPE_E820_TABLE, 0, 0, e820_size, &e820_addr);
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }

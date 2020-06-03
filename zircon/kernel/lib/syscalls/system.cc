@@ -292,8 +292,9 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void
     size_t crashlog_len = stashed_crashlog->size();
     uint8_t* bootdata_section;
 
-    zbi_result_t res = image.CreateSection(static_cast<uint32_t>(crashlog_len), ZBI_TYPE_CRASHLOG,
-                                           0, 0, reinterpret_cast<void**>(&bootdata_section));
+    zbi_result_t res =
+        image.CreateEntry(ZBI_TYPE_CRASHLOG, 0, 0, static_cast<uint32_t>(crashlog_len),
+                          reinterpret_cast<void**>(&bootdata_section));
 
     if (res != ZBI_RESULT_OK) {
       printf("mexec: could not append crashlog\n");

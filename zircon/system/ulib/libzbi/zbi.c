@@ -169,39 +169,28 @@ zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t callback, voi
   return ZBI_RESULT_OK;
 }
 
-zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32_t extra,
-                              uint32_t flags, uint32_t payload_length, void** payload) {
-  return zbi_create_section(base, capacity, payload_length, type, extra, flags, payload);
-}
-
 zbi_result_t zbi_create_entry_with_payload(void* base, const size_t capacity, uint32_t type,
                                            uint32_t extra, uint32_t flags, const void* payload,
                                            uint32_t payload_length) {
-  return zbi_append_section(base, capacity, payload_length, type, extra, flags, payload);
-}
-
-zbi_result_t zbi_append_section(void* base, const size_t capacity, uint32_t section_length,
-                                uint32_t type, uint32_t extra, uint32_t flags,
-                                const void* payload) {
   if (!base || !payload) {
     return ZBI_RESULT_ERROR;
   }
 
   uint8_t* new_section;
   zbi_result_t result =
-      zbi_create_section(base, capacity, section_length, type, extra, flags, (void**)&new_section);
+      zbi_create_entry(base, capacity, type, extra, flags, payload_length, (void**)&new_section);
 
   if (result != ZBI_RESULT_OK) {
     return result;
   }
 
   // Copy in the payload.
-  memcpy(new_section, payload, section_length);
+  memcpy(new_section, payload, payload_length);
   return ZBI_RESULT_OK;
 }
 
-zbi_result_t zbi_create_section(void* base, size_t capacity, uint32_t section_length, uint32_t type,
-                                uint32_t extra, uint32_t flags, void** payload) {
+zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32_t extra,
+                              uint32_t flags, uint32_t payload_length, void** payload) {
   if (!base || !payload) {
     return ZBI_RESULT_ERROR;
   }
@@ -223,7 +212,7 @@ zbi_result_t zbi_create_section(void* base, size_t capacity, uint32_t section_le
     return ZBI_RESULT_TOO_BIG;
   }
   const size_t available = capacity - sizeof(*hdr) - hdr->length;
-  if (available < sizeof(*hdr) || available - sizeof(*hdr) < ZBI_ALIGN(section_length)) {
+  if (available < sizeof(*hdr) || available - sizeof(*hdr) < ZBI_ALIGN(payload_length)) {
     return ZBI_RESULT_TOO_BIG;
   }
 
@@ -231,7 +220,7 @@ zbi_result_t zbi_create_section(void* base, size_t capacity, uint32_t section_le
   zbi_header_t* new_header = (void*)((uint8_t*)(hdr + 1) + hdr->length);
   *new_header = (zbi_header_t){
       .type = type,
-      .length = section_length,
+      .length = payload_length,
       .extra = extra,
       .flags = flags | ZBI_FLAG_VERSION,
       .magic = ZBI_ITEM_MAGIC,

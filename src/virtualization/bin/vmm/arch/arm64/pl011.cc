@@ -102,8 +102,8 @@ zx_status_t Pl011::ConfigureZbi(void* zbi_base, size_t zbi_max) const {
       .mmio_phys = kPl011PhysBase,
       .irq = 111,
   };
-  zbi_result_t res = zbi_append_section(zbi_base, zbi_max, sizeof(zbi_uart), ZBI_TYPE_KERNEL_DRIVER,
-                                        KDRV_PL011_UART, 0, &zbi_uart);
+  zbi_result_t res = zbi_create_entry_with_payload(zbi_base, zbi_max, ZBI_TYPE_KERNEL_DRIVER,
+                                                   KDRV_PL011_UART, 0, &zbi_uart, sizeof(zbi_uart));
   return res == ZBI_RESULT_OK ? ZX_OK : ZX_ERR_INTERNAL;
 }
 

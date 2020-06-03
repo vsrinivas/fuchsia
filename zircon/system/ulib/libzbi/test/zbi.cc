@@ -1032,12 +1032,13 @@ static bool ZbiTestAppend(void) {
   const size_t kBufferSize = sizeof(test_zbi_t) + kExtraBytes;
   zbi::Zbi image(test_zbi, kBufferSize);
 
-  zbi_result_t result = image.AppendSection(static_cast<uint32_t>(sizeof(kAppendRD)),  // Length
-                                            ZBI_TYPE_STORAGE_RAMDISK,                  // Type
-                                            0,                                         // Extra
-                                            0,                                         // Flags
-                                            reinterpret_cast<const void*>(kAppendRD)   // Payload.
-  );
+  zbi_result_t result =
+      image.CreateEntryWithPayload(ZBI_TYPE_STORAGE_RAMDISK,                  // Type
+                                   0,                                         // Extra
+                                   0,                                         // Flags
+                                   reinterpret_cast<const void*>(kAppendRD),  // Payload.
+                                   static_cast<uint32_t>(sizeof(kAppendRD))   // Length
+      );
 
   ASSERT_EQ(result, ZBI_RESULT_OK, "Append failed");
 
@@ -1080,16 +1081,18 @@ static bool ZbiTestAppendFull(void) {
 
   // Try to append a buffer that's one byte too big and make sure we reject
   // it.
-  zbi_result_t res = image.AppendSection(
-      kMaxAppendPayloadSize + 1,  // One more than the max length!
-      ZBI_TYPE_STORAGE_RAMDISK, 0, 0, reinterpret_cast<const void*>(dataBuffer));
+  zbi_result_t res = image.CreateEntryWithPayload(
+      ZBI_TYPE_STORAGE_RAMDISK, 0, 0, reinterpret_cast<const void*>(dataBuffer),
+      kMaxAppendPayloadSize + 1  // One more than the max length!
+  );
 
   ASSERT_NE(res, ZBI_RESULT_OK, "zbi appended a section that was too big");
 
   // Now try again with a section that is exactly the right size. Make sure
   // we don't stomp on the sentinel.
-  res = image.AppendSection(kMaxAppendPayloadSize, ZBI_TYPE_STORAGE_RAMDISK, 0, 0,
-                            reinterpret_cast<const void*>(dataBuffer));
+  res = image.CreateEntryWithPayload(ZBI_TYPE_STORAGE_RAMDISK, 0, 0,
+                                     reinterpret_cast<const void*>(dataBuffer),
+                                     kMaxAppendPayloadSize);
 
   ASSERT_EQ(res, ZBI_RESULT_OK,
             "zbi_append rejected a section that should "
@@ -1126,19 +1129,22 @@ static bool ZbiTestAppendMulti(void) {
   zbi_result_t result;
 
 #if defined(__aarch64__)
-  result = image.AppendSection(sizeof(kTestKernel), ZBI_TYPE_KERNEL_ARM64, 0, 0, kTestKernel);
+  result =
+      image.CreateEntryWithPayload(ZBI_TYPE_KERNEL_ARM64, 0, 0, kTestKernel, sizeof(kTestKernel));
 #elif defined(__x86_64__) || defined(__i386__)
-  result = image.AppendSection(sizeof(kTestKernel), ZBI_TYPE_KERNEL_X64, 0, 0, kTestKernel);
+  result =
+      image.CreateEntryWithPayload(ZBI_TYPE_KERNEL_X64, 0, 0, kTestKernel, sizeof(kTestKernel));
 #endif
   ASSERT_EQ(result, ZBI_RESULT_OK);
 
-  result = image.AppendSection(sizeof(kTestCmdline), ZBI_TYPE_CMDLINE, 0, 0, kTestCmdline);
+  result = image.CreateEntryWithPayload(ZBI_TYPE_CMDLINE, 0, 0, kTestCmdline, sizeof(kTestCmdline));
   ASSERT_EQ(result, ZBI_RESULT_OK);
 
-  result = image.AppendSection(sizeof(kTestRD), ZBI_TYPE_STORAGE_RAMDISK, 0, 0, kTestRD);
+  result = image.CreateEntryWithPayload(ZBI_TYPE_STORAGE_RAMDISK, 0, 0, kTestRD, sizeof(kTestRD));
   ASSERT_EQ(result, ZBI_RESULT_OK);
 
-  result = image.AppendSection(sizeof(kTestBootfs), ZBI_TYPE_STORAGE_BOOTFS, 0, 0, kTestBootfs);
+  result =
+      image.CreateEntryWithPayload(ZBI_TYPE_STORAGE_BOOTFS, 0, 0, kTestBootfs, sizeof(kTestBootfs));
   ASSERT_EQ(result, ZBI_RESULT_OK);
 
   ASSERT_EQ(memcmp(reference_zbi, test_zbi, image.Length()), 0);
@@ -1161,7 +1167,7 @@ static bool ZbiTestCppInit(void) {
   // Make sure that we've initialized a valid image.
   ASSERT_EQ(image.Check(nullptr), ZBI_RESULT_OK);
 
-  result = image.AppendSection(sizeof(kTestCmdline), ZBI_TYPE_CMDLINE, 0, 0, kTestCmdline);
+  result = image.CreateEntryWithPayload(ZBI_TYPE_CMDLINE, 0, 0, kTestCmdline, sizeof(kTestCmdline));
   ASSERT_EQ(result, ZBI_RESULT_OK);
 
   END_TEST;
@@ -1258,14 +1264,14 @@ static bool ZbiTestNoOverflow(void) {
   ASSERT_EQ(zbi_init(dst_buffer, kUsableBufferSize), ZBI_RESULT_OK);
   ASSERT_EQ(zbi_init(src_buffer, kUsableBufferSize), ZBI_RESULT_OK);
 
-  ASSERT_EQ(zbi_append_section(
-                src_buffer, kUsableBufferSize,
-                kUsableBufferSize -
-                    (sizeof(zbi_header_t) * 2),  // Leave room for ZBI header _and_ section header
-                ZBI_TYPE_CMDLINE,
+  ASSERT_EQ(zbi_create_entry_with_payload(
+                src_buffer, kUsableBufferSize, ZBI_TYPE_CMDLINE,
                 0,  // Extra
                 0,  // Flags
-                test_data),
+                test_data,
+                kUsableBufferSize -
+                    (sizeof(zbi_header_t) * 2)  // Leave room for ZBI header _and_ section header
+                ),
             ZBI_RESULT_OK);
 
   ASSERT_EQ(zbi_extend(dst_buffer, kUsableBufferSize, src_buffer), ZBI_RESULT_OK);
@@ -1279,13 +1285,13 @@ static bool ZbiTestNoOverflow(void) {
 
   ASSERT_EQ(zbi_init(src_buffer, kUsableBufferSize + 1), ZBI_RESULT_OK);
 
-  ASSERT_EQ(zbi_append_section(
-                src_buffer, ZBI_ALIGN(kUsableBufferSize + 1),
-                (kUsableBufferSize + 1) - (sizeof(zbi_header_t) * 2),  // This payload is too big.
-                ZBI_TYPE_CMDLINE,
+  ASSERT_EQ(zbi_create_entry_with_payload(
+                src_buffer, ZBI_ALIGN(kUsableBufferSize + 1), ZBI_TYPE_CMDLINE,
                 0,  // Extra
                 0,  // Flags
-                test_data),
+                test_data,
+                (kUsableBufferSize + 1) - (sizeof(zbi_header_t) * 2)  // This payload is too big.
+                ),
             ZBI_RESULT_OK);
 
   ASSERT_NE(zbi_extend(dst_buffer, kUsableBufferSize, src_buffer), ZBI_RESULT_OK);
@@ -1310,21 +1316,22 @@ static bool ZbiZxTestOverflowAtPageBoundary() {
 
   uint8_t kernel_data[4096 - sizeof(zbi_header_t) * 3];
   memset(kernel_data, 'k', sizeof(kernel_data));
-  ASSERT_EQ(zbi_append_section(ptr, kInitialAlloc, sizeof(kernel_data),
+  ASSERT_EQ(
+      zbi_create_entry_with_payload(ptr, kInitialAlloc,
 #ifdef __aarch64__
-                               ZBI_TYPE_KERNEL_ARM64,
+                                    ZBI_TYPE_KERNEL_ARM64,
 #elif defined(__x86_64__) || defined(__i386__)
-                               ZBI_TYPE_KERNEL_X64,
+                                    ZBI_TYPE_KERNEL_X64,
 #endif
-                               /*extra=*/0, /*flags=*/0, kernel_data),
-            ZBI_RESULT_OK);
+                                    /*extra=*/0, /*flags=*/0, kernel_data, sizeof(kernel_data)),
+      ZBI_RESULT_OK);
 
   // This is just under the size that would push SplitComplete to allocate the
   // next page for the data vmo.
   uint8_t boot_data[4096 - sizeof(zbi_header_t) * 3];
   memset(boot_data, 'd', sizeof(boot_data));
-  ASSERT_EQ(zbi_append_section(ptr, kInitialAlloc, sizeof(boot_data), ZBI_TYPE_STORAGE_BOOTFS,
-                               /*extra=*/0, /*flags=*/0, boot_data),
+  ASSERT_EQ(zbi_create_entry_with_payload(ptr, kInitialAlloc, ZBI_TYPE_STORAGE_BOOTFS,
+                                          /*extra=*/0, /*flags=*/0, boot_data, sizeof(boot_data)),
             ZBI_RESULT_OK);
 
   // Turn the vmo into a ZbiVMO.

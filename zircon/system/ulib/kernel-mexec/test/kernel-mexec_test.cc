@@ -1,16 +1,16 @@
-#include <zxtest/zxtest.h>
-
-#include <vector>
-
-#include <lib/kernel-mexec/kernel-mexec.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <zircon/assert.h>
 #include <lib/fidl-async/bind.h>
+#include <lib/kernel-mexec/kernel-mexec.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zx/vmar.h>
+#include <zircon/assert.h>
+
+#include <vector>
+
 #include <libzbi/zbi-cpp.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -134,7 +134,7 @@ struct CheckConditions {
 
 TEST_F(MexecTest, Success) {
   void* data = nullptr;
-  ASSERT_EQ(ZBI_RESULT_OK, sys_calls_.zbi.CreateSection(50, ZBI_TYPE_CRASHLOG, 0, 0, &data));
+  ASSERT_EQ(ZBI_RESULT_OK, sys_calls_.zbi.CreateEntry(ZBI_TYPE_CRASHLOG, 0, 0, 50, &data));
 
   ASSERT_OK(kernel_.write(kKernelText.c_str(), 0, kKernelText.length()));
 

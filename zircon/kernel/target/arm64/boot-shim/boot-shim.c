@@ -22,7 +22,8 @@
 // used in boot-shim-config.h and in this file below
 static void append_boot_item(zbi_header_t* container, uint32_t type, uint32_t extra,
                              const void* payload, uint32_t length) {
-  zbi_result_t result = zbi_append_section(container, SIZE_MAX, length, type, extra, 0, payload);
+  zbi_result_t result =
+      zbi_create_entry_with_payload(container, SIZE_MAX, type, extra, 0, payload, length);
   if (result != ZBI_RESULT_OK) {
     fail("zbi_append_section failed\n");
   }
@@ -231,8 +232,7 @@ static void append_from_device_tree(zbi_header_t* zbi, device_tree_context_t* ct
 
 #endif  // HAS_DEVICE_TREE
 
-__attribute__((unused))
-static void dump_words(const char* what, const void* data) {
+__attribute__((unused)) static void dump_words(const char* what, const void* data) {
   uart_puts(what);
   const uint64_t* words = data;
   for (int i = 0; i < 8; ++i) {

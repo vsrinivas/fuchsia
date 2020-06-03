@@ -38,16 +38,6 @@ class Zbi {
     return zbi_for_each(base_, cb, cookie);
   }
 
-  zbi_result_t AppendSection(uint32_t length, uint32_t type, uint32_t extra, uint32_t flags,
-                             const void* payload) {
-    return zbi_append_section(base_, capacity_, length, type, extra, flags, payload);
-  }
-
-  zbi_result_t CreateSection(uint32_t length, uint32_t type, uint32_t extra, uint32_t flags,
-                             void** payload) {
-    return zbi_create_section(base_, capacity_, length, type, extra, flags, payload);
-  }
-
   zbi_result_t CreateEntry(uint32_t type, uint32_t extra, uint32_t flags, uint32_t length,
                            void** payload) {
     return zbi_create_entry(base_, capacity_, type, extra, flags, length, payload);

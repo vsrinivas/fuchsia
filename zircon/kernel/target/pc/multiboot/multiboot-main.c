@@ -28,8 +28,8 @@ static void add_memory_info(void* zbi, size_t capacity, const multiboot_info_t* 
     }
     e820entry_t* ranges;
     void* payload;
-    zbi_result_t result = zbi_create_section(zbi, capacity, nranges * sizeof(ranges[0]),
-                                             ZBI_TYPE_E820_TABLE, 0, 0, &payload);
+    zbi_result_t result = zbi_create_entry(zbi, capacity, ZBI_TYPE_E820_TABLE, 0, 0,
+                                           nranges * sizeof(ranges[0]), &payload);
     if (result != ZBI_RESULT_OK) {
       panic("zbi_create_section(%p, %#" PRIxPTR ", %#zx) failed: %d", zbi, capacity,
             nranges * sizeof(ranges[0]), (int)result);
@@ -58,8 +58,8 @@ static void add_memory_info(void* zbi, size_t capacity, const multiboot_info_t* 
             .type = E820_RAM,
         },
     };
-    zbi_result_t result =
-        zbi_append_section(zbi, capacity, sizeof(ranges), ZBI_TYPE_E820_TABLE, 0, 0, ranges);
+    zbi_result_t result = zbi_create_entry_with_payload(zbi, capacity, ZBI_TYPE_E820_TABLE, 0, 0,
+                                                        ranges, sizeof(ranges));
     if (result != ZBI_RESULT_OK) {
       panic("zbi_append_section(%p, %#" PRIxPTR ", %#zx) failed: %d", zbi, capacity, sizeof(ranges),
             (int)result);
@@ -72,7 +72,8 @@ static void add_cmdline(void* zbi, size_t capacity, const multiboot_info_t* info
   if (info->flags & MB_INFO_CMD_LINE) {
     const char* cmdline = (void*)info->cmdline;
     size_t len = strlen(cmdline) + 1;
-    zbi_result_t result = zbi_append_section(zbi, capacity, len, ZBI_TYPE_CMDLINE, 0, 0, cmdline);
+    zbi_result_t result =
+        zbi_create_entry_with_payload(zbi, capacity, ZBI_TYPE_CMDLINE, 0, 0, cmdline, len);
     if (result != ZBI_RESULT_OK) {
       panic("zbi_append_section(%p, %#" PRIxPTR ", %zu) failed: %d", zbi, capacity, len,
             (int)result);
@@ -84,8 +85,8 @@ static void add_cmdline(void* zbi, size_t capacity, const multiboot_info_t* info
     const char* name = (void*)info->boot_loader_name;
     size_t len = strlen(name) + 1;
     void* payload;
-    zbi_result_t result = zbi_create_section(zbi, capacity, sizeof(BOOT_LOADER_NAME_ENV) - 1 + len,
-                                             ZBI_TYPE_CMDLINE, 0, 0, &payload);
+    zbi_result_t result = zbi_create_entry(zbi, capacity, ZBI_TYPE_CMDLINE, 0, 0,
+                                           sizeof(BOOT_LOADER_NAME_ENV) - 1 + len, &payload);
     if (result != ZBI_RESULT_OK) {
       panic("zbi_create_section(%p, %#" PRIxPTR ", %zu) failed: %d", zbi, capacity,
             sizeof(BOOT_LOADER_NAME_ENV) - 1 + len, (int)result);
@@ -225,8 +226,8 @@ noreturn void multiboot_main(uint32_t magic, multiboot_info_t* info) {
 
   // Use discarded ZBI space to hold the trampoline.
   void* trampoline;
-  result = zbi_create_section(zbi, capacity, sizeof(struct trampoline), ZBI_TYPE_DISCARD, 0, 0,
-                              &trampoline);
+  result = zbi_create_entry(zbi, capacity, ZBI_TYPE_DISCARD, 0, 0, sizeof(struct trampoline),
+                            &trampoline);
   if (result != ZBI_RESULT_OK) {
     panic("zbi_create_section(%p, %#" PRIxPTR ", %#zx) failed: %d", zbi, capacity,
           sizeof(struct trampoline), (int)result);
