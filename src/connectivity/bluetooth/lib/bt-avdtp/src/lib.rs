@@ -38,7 +38,7 @@ pub use crate::{
     stream_endpoint::{MediaStream, StreamEndpoint, StreamEndpointUpdateCallback, StreamState},
     types::{
         ContentProtectionType, EndpointType, Error, ErrorCode, MediaCodecType, MediaType, Result,
-        ServiceCapability, StreamEndpointId, StreamInformation,
+        ServiceCapability, ServiceCategory, StreamEndpointId, StreamInformation,
     },
 };
 
@@ -458,7 +458,7 @@ impl Request {
                     Some(x) => {
                         return Err(Error::RequestInvalidExtra(
                             ErrorCode::InvalidCapabilities,
-                            x.to_category_byte(),
+                            (&x.category()).into(),
                         ));
                     }
                     None => (),
@@ -709,16 +709,12 @@ impl ConfigureResponder {
         self.peer.send_response(self.id, self.signal, &[])
     }
 
-    pub fn reject(
-        self,
-        capability: Option<&ServiceCapability>,
-        error_code: ErrorCode,
-    ) -> Result<()> {
-        let service_byte: u8 = match capability {
-            None => 0x0, // If no service category applies, see notes in Sec 8.11.3 or 8.9.3
-            Some(cap) => cap.to_category_byte(),
-        };
-        self.peer.send_reject_params(self.id, self.signal, &[service_byte, u8::from(&error_code)])
+    pub fn reject(self, category: ServiceCategory, error_code: ErrorCode) -> Result<()> {
+        self.peer.send_reject_params(
+            self.id,
+            self.signal,
+            &[u8::from(&category), u8::from(&error_code)],
+        )
     }
 }
 

@@ -105,12 +105,10 @@ impl Stream {
     }
 
     /// Get the currently configured extra codec data
-    fn configuration(&self) -> Result<MediaCodecConfig, avdtp::Error> {
+    fn configuration(&self) -> Option<MediaCodecConfig> {
         self.endpoint
-            .get_configuration()?
-            .iter()
-            .find_map(|cap| MediaCodecConfig::try_from(cap).ok())
-            .ok_or(avdtp::Error::InvalidState)
+            .get_configuration()
+            .and_then(|caps| caps.iter().find_map(|cap| MediaCodecConfig::try_from(cap).ok()))
     }
 
     /// Attempt to start the media decoding task.
@@ -127,10 +125,11 @@ impl Stream {
         let (send, receive) = mpsc::channel(1);
         self.suspend_sender = Some(send);
 
-        let codec_config = self.configuration()?;
+        let codec_config = self.configuration().ok_or(avdtp::Error::InvalidState)?;
+        let transport = self.endpoint.take_transport().ok_or(avdtp::Error::InvalidState)?;
 
         fuchsia_async::spawn_local(decode_media_stream(
-            self.endpoint.take_transport()?,
+            transport,
             codec_config,
             // TODO(42976) get real media session id
             DEFAULT_SESSION_ID,
@@ -144,14 +143,13 @@ impl Stream {
     /// The encoding that media sent to this endpoint should be encoded with.
     /// This should be an encoding constant from fuchsia.media like AUDIO_ENCODING_SBC.
     /// See //sdk/fidl/fuchsia.media/stream_type.fidl for valid encodings.
-    fn encoding(&self) -> avdtp::Result<&str> {
-        let config = self.configuration()?;
-        Ok(config.stream_encoding().clone())
+    fn encoding(&self) -> Option<&str> {
+        self.configuration().map(|c| c.stream_encoding().clone())
     }
 
     /// Signals to the media decoding task to end.
     fn stop(&mut self) -> avdtp::Result<()> {
-        self.endpoint.suspend()?;
+        self.endpoint.suspend().or(Err(avdtp::Error::InvalidState))?;
         let mut sender = self.suspend_sender.take().ok_or(avdtp::Error::InvalidState)?;
         sender.try_send(()).or(Err(avdtp::Error::InvalidState))
     }

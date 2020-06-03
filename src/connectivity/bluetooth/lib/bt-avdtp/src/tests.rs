@@ -1475,7 +1475,7 @@ fn set_config_event_responder_reject_works() {
             assert_eq!(StreamEndpointId(1), local_stream_id);
             assert_eq!(StreamEndpointId(2), remote_stream_id);
             assert_eq!(ServiceCapability::MediaTransport, capabilities[0]);
-            responder.reject(Some(&capabilities[0]), ErrorCode::UnsupportedConfiguration)
+            responder.reject(capabilities[0].category(), ErrorCode::UnsupportedConfiguration)
         }
         _ => panic!("should have received a SetConfiguration"),
     };
@@ -1880,7 +1880,7 @@ fn reconfig_event_responder_reject_works() {
                 },
                 capabilities[0]
             );
-            responder.reject(Some(&capabilities[0]), ErrorCode::UnsupportedConfiguration)
+            responder.reject(capabilities[0].category(), ErrorCode::UnsupportedConfiguration)
         }
         _ => panic!("should have received a Reconfigure"),
     };

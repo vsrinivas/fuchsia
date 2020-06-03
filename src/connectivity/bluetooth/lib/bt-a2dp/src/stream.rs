@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    bt_avdtp::{self as avdtp, ServiceCapability, StreamEndpoint, StreamEndpointId},
+    bt_avdtp::{
+        self as avdtp, ErrorCode, ServiceCapability, ServiceCategory, StreamEndpoint,
+        StreamEndpointId,
+    },
     fuchsia_bluetooth::types::PeerId,
     std::{collections::HashMap, convert::TryFrom, fmt, sync::Arc},
 };
@@ -12,7 +15,7 @@ use crate::codec::MediaCodecConfig;
 use crate::media_task::{MediaTask, MediaTaskBuilder};
 
 pub struct Stream {
-    endpoint: avdtp::StreamEndpoint,
+    endpoint: StreamEndpoint,
     /// The builder for media tasks associated with this endpoint.
     media_task_builder: Arc<Box<dyn MediaTaskBuilder>>,
     /// The MediaTask which is currently active for this endpoint, if it is configured.
@@ -34,7 +37,7 @@ impl fmt::Debug for Stream {
 
 impl Stream {
     pub fn build(
-        endpoint: avdtp::StreamEndpoint,
+        endpoint: StreamEndpoint,
         media_task_builder: impl MediaTaskBuilder + 'static,
     ) -> Self {
         Self {
@@ -64,7 +67,7 @@ impl Stream {
 
     fn codec_config_from_caps(
         capabilities: &[ServiceCapability],
-    ) -> avdtp::Result<MediaCodecConfig> {
+    ) -> Result<MediaCodecConfig, (ServiceCategory, ErrorCode)> {
         // Find the MediaCodec Capability
         capabilities
             .iter()
@@ -72,7 +75,8 @@ impl Stream {
                 x @ ServiceCapability::MediaCodec { .. } => Some(MediaCodecConfig::try_from(x)),
                 _ => None,
             })
-            .ok_or(avdtp::Error::OutOfRange)?
+            .and_then(Result::ok)
+            .ok_or((ServiceCategory::MediaCodec, ErrorCode::UnsupportedConfiguration))
     }
 
     pub fn configure(
@@ -80,42 +84,53 @@ impl Stream {
         peer_id: &PeerId,
         remote_id: &StreamEndpointId,
         capabilities: Vec<ServiceCapability>,
-    ) -> avdtp::Result<()> {
+    ) -> Result<(), (ServiceCategory, ErrorCode)> {
         let codec_config = Self::codec_config_from_caps(&capabilities)?;
         if self.media_task.is_some() {
-            return Err(avdtp::Error::InvalidState);
+            return Err((ServiceCategory::None, ErrorCode::BadState));
         }
-        self.media_task = Some(self.media_task_builder.configure(&peer_id, &codec_config)?);
+        self.media_task = Some(
+            self.media_task_builder
+                .configure(&peer_id, &codec_config)
+                .or(Err((ServiceCategory::MediaCodec, ErrorCode::UnsupportedConfiguration)))?,
+        );
         self.peer_id = Some(peer_id.clone());
         self.endpoint.configure(remote_id, capabilities)
     }
 
-    pub fn reconfigure(&mut self, capabilities: Vec<ServiceCapability>) -> avdtp::Result<()> {
+    pub fn reconfigure(
+        &mut self,
+        capabilities: Vec<ServiceCapability>,
+    ) -> Result<(), (ServiceCategory, ErrorCode)> {
+        let peer_id = self.peer_id.as_ref().ok_or((ServiceCategory::None, ErrorCode::BadState))?;
         let codec_config = Self::codec_config_from_caps(&capabilities)?;
-        let peer_id = self.peer_id.as_ref().ok_or(avdtp::Error::InvalidState)?;
-        self.media_task = Some(self.media_task_builder.configure(&peer_id, &codec_config)?);
+        self.media_task = Some(
+            self.media_task_builder
+                .configure(&peer_id, &codec_config)
+                .or(Err((ServiceCategory::MediaCodec, ErrorCode::UnsupportedConfiguration)))?,
+        );
         self.endpoint.reconfigure(capabilities)
     }
 
-    fn media_task_ref(&mut self) -> avdtp::Result<&mut Box<dyn MediaTask>> {
-        self.media_task.as_mut().ok_or(avdtp::Error::InvalidState)
+    fn media_task_ref(&mut self) -> Result<&mut Box<dyn MediaTask>, ErrorCode> {
+        self.media_task.as_mut().ok_or(ErrorCode::BadState)
     }
 
     /// Attempt to start the endpoint.  If the endpoint is successfully started, the media task is
     /// started.
-    pub fn start(&mut self) -> avdtp::Result<()> {
+    pub fn start(&mut self) -> Result<(), ErrorCode> {
         if self.media_task.is_none() {
-            return Err(avdtp::Error::InvalidState);
+            return Err(ErrorCode::BadState);
         }
-        let transport = self.endpoint.take_transport()?;
+        let transport = self.endpoint.take_transport().ok_or(ErrorCode::BadState)?;
         let _ = self.endpoint.start()?;
-        self.media_task_ref()?.start(transport).map_err(Into::into)
+        self.media_task_ref()?.start(transport).or(Err(ErrorCode::BadState))
     }
 
     /// Suspends the media processor and endpoint.
-    pub fn suspend(&mut self) -> avdtp::Result<()> {
+    pub fn suspend(&mut self) -> Result<(), ErrorCode> {
         self.endpoint.suspend()?;
-        self.media_task_ref()?.stop().map_err(Into::into)
+        self.media_task_ref()?.stop().or(Err(ErrorCode::BadState))
     }
 
     /// Releases the endpoint and stops the processing of audio.
@@ -129,7 +144,7 @@ impl Stream {
         self.endpoint.release(responder, peer).await
     }
 
-    pub async fn abort(&mut self, peer: Option<&avdtp::Peer>) -> avdtp::Result<()> {
+    pub async fn abort(&mut self, peer: Option<&avdtp::Peer>) {
         self.media_task.take().map(|mut x| x.stop());
         self.peer_id = None;
         self.endpoint.abort(peer).await

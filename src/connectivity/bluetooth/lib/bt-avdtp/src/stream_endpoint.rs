@@ -20,8 +20,8 @@ use {
 
 use crate::{
     types::{
-        EndpointType, Error, ErrorCode, MediaCodecType, MediaType, Result, ServiceCapability,
-        StreamEndpointId, StreamInformation,
+        EndpointType, Error, ErrorCode, MediaCodecType, MediaType, Result as AvdtpResult,
+        ServiceCapability, ServiceCategory, StreamEndpointId, StreamInformation,
     },
     Peer, SimpleResponder,
 };
@@ -104,7 +104,7 @@ impl StreamEndpoint {
         media_type: MediaType,
         endpoint_type: EndpointType,
         capabilities: Vec<ServiceCapability>,
-    ) -> Result<StreamEndpoint> {
+    ) -> AvdtpResult<StreamEndpoint> {
         let seid = StreamEndpointId::try_from(id)?;
         Ok(StreamEndpoint {
             id: seid,
@@ -174,9 +174,9 @@ impl StreamEndpoint {
         &mut self,
         remote_id: &StreamEndpointId,
         capabilities: Vec<ServiceCapability>,
-    ) -> Result<()> {
+    ) -> Result<(), (ServiceCategory, ErrorCode)> {
         if self.state != StreamState::Idle {
-            return Err(Error::InvalidState);
+            return Err((ServiceCategory::None, ErrorCode::BadState));
         }
         self.remote_id = Some(remote_id.clone());
         for cap in &capabilities {
@@ -185,7 +185,7 @@ impl StreamEndpoint {
                 .iter()
                 .any(|y| std::mem::discriminant(cap) == std::mem::discriminant(y))
             {
-                return Err(Error::OutOfRange);
+                return Err((cap.category(), ErrorCode::UnsupportedConfiguration));
             }
         }
         self.configuration = capabilities;
@@ -193,19 +193,22 @@ impl StreamEndpoint {
         Ok(())
     }
 
-    /// Attempt to reconfigure this stream with the capabilities given.
-    /// If the capabilities are not valid to set, fails with Err(OutOfRange)
-    /// If the stream is not in the Open state, fails with Err(InvalidState)
-    /// Used for the Stream Reconfiguration procedure, see Section 6.15.
-    pub fn reconfigure(&mut self, mut capabilities: Vec<ServiceCapability>) -> Result<()> {
+    /// Attempt to reconfigure this stream with the capabilities given.  If any capability is not
+    /// valid to set, fails with the first such category and InvalidCapabilities If the stream is
+    /// not in the Open state, fails with Err((None, BadState)) Used for the Stream Reconfiguration
+    /// procedure, see Section 6.15.
+    pub fn reconfigure(
+        &mut self,
+        mut capabilities: Vec<ServiceCapability>,
+    ) -> Result<(), (ServiceCategory, ErrorCode)> {
         if self.state != StreamState::Open {
-            return Err(Error::InvalidState);
+            return Err((ServiceCategory::None, ErrorCode::BadState));
         }
         // Only application capabilities are allowed to be reconfigured. See Section 8.11.1
-        if capabilities.iter().any(|x| !x.is_application()) {
-            return Err(Error::OutOfRange);
+        if let Some(cap) = capabilities.iter().find(|x| !x.is_application()) {
+            return Err((cap.category(), ErrorCode::InvalidCapabilities));
         }
-        // Should only replace the capabilities that have been reconfigured. See Section 8.11.2
+        // Should only replace the capabilities that have been configured. See Section 8.11.2
         let to_replace: std::vec::Vec<_> =
             capabilities.iter().map(|x| std::mem::discriminant(x)).collect();
         self.configuration.retain(|x| {
@@ -218,15 +221,13 @@ impl StreamEndpoint {
     }
 
     /// Get the current configuration of this stream.
-    /// If the stream is in the Idle, Closing, or Aborting state, this shall
-    /// fail.
+    /// If the stream is not configured, returns None.
     /// Used for the Steam Get Configuration Procedure, see Section 6.10
-    pub fn get_configuration(&self) -> Result<Vec<ServiceCapability>> {
-        if self.state.configured() {
-            Ok(self.configuration.clone())
-        } else {
-            Err(Error::InvalidState)
+    pub fn get_configuration(&self) -> Option<&Vec<ServiceCapability>> {
+        if !self.state.configured() {
+            return None;
         }
+        Some(&self.configuration)
     }
 
     /// When a L2CAP channel is received after an Open command is accepted, it should be
@@ -235,7 +236,7 @@ impl StreamEndpoint {
     /// streaming is started.
     /// Returns Err(InvalidState) if this Endpoint is not expecting a channel to be established,
     /// closing |c|.
-    pub fn receive_channel(&mut self, c: fasync::Socket) -> Result<bool> {
+    pub fn receive_channel(&mut self, c: fasync::Socket) -> AvdtpResult<bool> {
         if self.state != StreamState::Opening || self.transport.is_some() {
             return Err(Error::InvalidState);
         }
@@ -248,9 +249,9 @@ impl StreamEndpoint {
 
     /// Begin opening this stream.  The stream must be in a Configured state.
     /// See Stream Establishment, Section 6.11
-    pub fn establish(&mut self) -> Result<()> {
+    pub fn establish(&mut self) -> Result<(), ErrorCode> {
         if self.state != StreamState::Configured || self.transport.is_some() {
-            return Err(Error::InvalidState);
+            return Err(ErrorCode::BadState);
         }
         self.set_state(StreamState::Opening);
         Ok(())
@@ -258,12 +259,12 @@ impl StreamEndpoint {
 
     /// Close this stream.  This procedure checks that the media channels are closed.
     /// If the channels are not closed in 3 seconds, it initiates an abort procedure with the
-    /// remote |peer| and returns the result of that.
+    /// remote |peer| and completes when that finishes.
     pub async fn release<'a>(
         &'a mut self,
         responder: SimpleResponder,
         peer: &'a Peer,
-    ) -> Result<()> {
+    ) -> AvdtpResult<()> {
         if self.state != StreamState::Open && self.state != StreamState::Streaming {
             return responder.reject(ErrorCode::BadState);
         }
@@ -275,10 +276,11 @@ impl StreamEndpoint {
             let close_signals = Signals::SOCKET_PEER_CLOSED;
             let close_wait = fasync::OnSignals::new(sock.as_ref(), close_signals);
 
-            match close_wait.on_timeout(timeout, || Err(Status::TIMED_OUT)).await {
-                Err(Status::TIMED_OUT) => return self.abort(Some(peer)).await,
-                _ => (),
-            };
+            if let Err(Status::TIMED_OUT) =
+                close_wait.on_timeout(timeout, || Err(Status::TIMED_OUT)).await
+            {
+                return Ok(self.abort(Some(peer)).await);
+            }
         }
         // Closing returns this endpoint to the Idle state.
         self.configuration.clear();
@@ -289,9 +291,9 @@ impl StreamEndpoint {
 
     /// Start this stream.  This can be done only from the Open State.
     /// Used for the Stream Start procedure, See Section 6.12
-    pub fn start(&mut self) -> Result<()> {
+    pub fn start(&mut self) -> Result<(), ErrorCode> {
         if self.state != StreamState::Open {
-            return Err(Error::InvalidState);
+            return Err(ErrorCode::BadState);
         }
         self.set_state(StreamState::Streaming);
         Ok(())
@@ -299,9 +301,9 @@ impl StreamEndpoint {
 
     /// Suspend this stream.  This can be done only from the Streaming state.
     /// Used for the Stream Suspend procedure, See Section 6.14
-    pub fn suspend(&mut self) -> Result<()> {
+    pub fn suspend(&mut self) -> Result<(), ErrorCode> {
         if self.state != StreamState::Streaming {
-            return Err(Error::InvalidState);
+            return Err(ErrorCode::BadState);
         }
         self.set_state(StreamState::Open);
         Ok(())
@@ -310,7 +312,7 @@ impl StreamEndpoint {
     /// Abort this stream.  This can be done from any state, and will always return the state
     /// to Idle.  If peer is not None, we are initiating this procedure and all our channels will
     /// be closed.
-    pub async fn abort<'a>(&'a mut self, peer: Option<&'a Peer>) -> Result<()> {
+    pub async fn abort<'a>(&'a mut self, peer: Option<&'a Peer>) {
         if let Some(peer) = peer {
             if let Some(seid) = &self.remote_id {
                 let _ = peer.abort(&seid).await;
@@ -321,7 +323,6 @@ impl StreamEndpoint {
         self.remote_id = None;
         self.transport = None;
         self.set_state(StreamState::Idle);
-        Ok(())
     }
 
     /// Capabilities of this StreamEndpoint.
@@ -357,17 +358,17 @@ impl StreamEndpoint {
     }
 
     /// Take the media stream, which transmits (or receives) any media for this StreamEndpoint.
-    /// Returns a InvalidState error if the transport stream has already been taken, or if this
-    /// stream has not been successfully opened.
-    pub fn take_transport(&mut self) -> Result<MediaStream> {
+    /// Returns None if the transport stream has already been taken, or if this stream has not been
+    /// successfully opened.
+    pub fn take_transport(&mut self) -> Option<MediaStream> {
         let mut stream_held = self.stream_held.lock();
         if *stream_held || self.transport.is_none() {
-            return Err(Error::InvalidState);
+            return None;
         }
 
         *stream_held = true;
 
-        Ok(MediaStream {
+        Some(MediaStream {
             in_use: self.stream_held.clone(),
             stream: Arc::downgrade(self.transport.as_ref().unwrap()),
         })
@@ -390,7 +391,7 @@ impl Drop for MediaStream {
 }
 
 impl Stream for MediaStream {
-    type Item = Result<Vec<u8>>;
+    type Item = AvdtpResult<Vec<u8>>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let s = match self.stream.upgrade() {
@@ -407,7 +408,7 @@ impl Stream for MediaStream {
 }
 
 impl MediaStream {
-    fn try_upgrade(&self) -> std::result::Result<Arc<fasync::Socket>, io::Error> {
+    fn try_upgrade(&self) -> Result<Arc<fasync::Socket>, io::Error> {
         self.stream
             .upgrade()
             .ok_or(io::Error::new(io::ErrorKind::ConnectionAborted, "lost connection"))
@@ -419,27 +420,21 @@ impl io::AsyncWrite for MediaStream {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &[u8],
-    ) -> Poll<std::result::Result<usize, io::Error>> {
+    ) -> Poll<Result<usize, io::Error>> {
         match self.try_upgrade() {
             Err(e) => return Poll::Ready(Err(e)),
             Ok(s) => Pin::new(&mut s.deref()).as_mut().poll_write(cx, buf),
         }
     }
 
-    fn poll_flush(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<std::result::Result<(), io::Error>> {
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
         match self.try_upgrade() {
             Err(e) => return Poll::Ready(Err(e)),
             Ok(s) => Pin::new(&mut s.deref()).as_mut().poll_flush(cx),
         }
     }
 
-    fn poll_close(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<std::result::Result<(), io::Error>> {
+    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
         match self.try_upgrade() {
             Err(e) => return Poll::Ready(Err(e)),
             Ok(s) => Pin::new(&mut s.deref()).as_mut().poll_close(cx),
@@ -563,7 +558,7 @@ mod tests {
         // Can't configure items that aren't in range.
         assert_matches!(
             s.configure(&REMOTE_ID, vec![ServiceCapability::Reporting]),
-            Err(Error::OutOfRange)
+            Err((ServiceCategory::Reporting, ErrorCode::UnsupportedConfiguration))
         );
 
         assert_matches!(
@@ -590,7 +585,7 @@ mod tests {
 
         assert_matches!(
             s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]),
-            Err(Error::InvalidState)
+            Err((_, ErrorCode::BadState))
         );
 
         let reconfiguration = vec![ServiceCapability::MediaCodec {
@@ -607,15 +602,12 @@ mod tests {
         // Reconfiguring while open is fine though.
         assert_matches!(s.reconfigure(reconfiguration.clone()), Ok(()));
 
-        match s.get_configuration() {
-            Ok(config) => assert_eq!(new_configuration, config),
-            x => panic!("Expected get_configuration to be Ok but got {:?}", x),
-        };
+        assert_eq!(Some(&new_configuration), s.get_configuration());
 
         // Can't reconfigure non-application types
         assert_matches!(
             s.reconfigure(vec![ServiceCapability::MediaTransport]),
-            Err(Error::OutOfRange)
+            Err((ServiceCategory::MediaTransport, ErrorCode::InvalidCapabilities))
         );
 
         // Can't configure or reconfigure while streaming
@@ -623,10 +615,10 @@ mod tests {
 
         assert_matches!(
             s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]),
-            Err(Error::InvalidState)
+            Err((_, ErrorCode::BadState))
         );
 
-        assert_matches!(s.reconfigure(reconfiguration.clone()), Err(Error::InvalidState));
+        assert_matches!(s.reconfigure(reconfiguration.clone()), Err((_, ErrorCode::BadState)));
 
         assert_matches!(s.suspend(), Ok(()));
 
@@ -636,7 +628,7 @@ mod tests {
         // Configure is still not allowed.
         assert_matches!(
             s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]),
-            Err(Error::InvalidState)
+            Err((_, ErrorCode::BadState))
         );
     }
 
@@ -654,7 +646,7 @@ mod tests {
         let (remote, transport) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
         // Can't establish before configuring
-        assert_matches!(s.establish(), Err(Error::InvalidState));
+        assert_matches!(s.establish(), Err(ErrorCode::BadState));
 
         // Trying to receive a channel in the wrong state closes the channel
         assert_matches!(
@@ -739,22 +731,22 @@ mod tests {
         assert_matches!(s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]), Ok(()));
 
         // Before the stream is opened, we shouldn't be able to take the transport.
-        assert!(s.take_transport().is_err());
+        assert!(s.take_transport().is_none());
 
         let remote_transport = establish_stream(&mut s);
 
         // Should be able to get the transport from the stream now.
         let temp_stream = s.take_transport();
-        assert!(temp_stream.is_ok());
+        assert!(temp_stream.is_some());
 
         // But only once
-        assert!(s.take_transport().is_err());
+        assert!(s.take_transport().is_none());
 
         // Until you drop the stream
         drop(temp_stream);
 
         let media_stream = s.take_transport();
-        assert!(media_stream.is_ok());
+        assert!(media_stream.is_some());
         let mut media_stream = media_stream.unwrap();
 
         // Writing to the media stream should send it through the transport channel.
@@ -837,18 +829,18 @@ mod tests {
         .unwrap();
 
         // Can't start or suspend until configured and open.
-        assert_matches!(s.start(), Err(Error::InvalidState));
-        assert_matches!(s.suspend(), Err(Error::InvalidState));
+        assert_matches!(s.start(), Err(ErrorCode::BadState));
+        assert_matches!(s.suspend(), Err(ErrorCode::BadState));
 
         assert_matches!(s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]), Ok(()));
 
-        assert_matches!(s.start(), Err(Error::InvalidState));
-        assert_matches!(s.suspend(), Err(Error::InvalidState));
+        assert_matches!(s.start(), Err(ErrorCode::BadState));
+        assert_matches!(s.suspend(), Err(ErrorCode::BadState));
 
         assert_matches!(s.establish(), Ok(()));
 
-        assert_matches!(s.start(), Err(Error::InvalidState));
-        assert_matches!(s.suspend(), Err(Error::InvalidState));
+        assert_matches!(s.start(), Err(ErrorCode::BadState));
+        assert_matches!(s.suspend(), Err(ErrorCode::BadState));
 
         let (remote, transport) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         assert_matches!(
@@ -857,11 +849,11 @@ mod tests {
         );
 
         // Should be able to start but not suspend now.
-        assert_matches!(s.suspend(), Err(Error::InvalidState));
+        assert_matches!(s.suspend(), Err(ErrorCode::BadState));
         assert_matches!(s.start(), Ok(()));
 
         // Are started, so we should be able to suspend but not start again here.
-        assert_matches!(s.start(), Err(Error::InvalidState));
+        assert_matches!(s.start(), Err(ErrorCode::BadState));
         assert_matches!(s.suspend(), Ok(()));
 
         // Now we're suspended, so we can start it again.
@@ -889,8 +881,8 @@ mod tests {
         }
 
         // Shouldn't be able to start or suspend again.
-        assert_matches!(s.start(), Err(Error::InvalidState));
-        assert_matches!(s.suspend(), Err(Error::InvalidState));
+        assert_matches!(s.start(), Err(ErrorCode::BadState));
+        assert_matches!(s.suspend(), Err(ErrorCode::BadState));
     }
 
     #[test]
@@ -914,7 +906,7 @@ mod tests {
         .unwrap();
 
         // Can't get configuration if we aren't configured.
-        assert_matches!(s.get_configuration(), Err(Error::InvalidState));
+        assert!(s.get_configuration().is_none());
 
         let config = vec![
             ServiceCapability::MediaTransport,
@@ -929,7 +921,7 @@ mod tests {
         assert_matches!(s.configure(&REMOTE_ID, config.clone()), Ok(()));
 
         match s.get_configuration() {
-            Ok(c) => assert_eq!(config, c),
+            Some(c) => assert_eq!(&config, c),
             x => panic!("Expected Ok from get_configuration but got {:?}", x),
         };
 
@@ -937,10 +929,10 @@ mod tests {
             // Abort this stream, putting it back to the idle state.
             let mut abort_fut = Box::pin(s.abort(None));
             let complete = exec.run_until_stalled(&mut abort_fut);
-            assert_matches!(complete, Poll::Ready(Ok(())));
+            assert_matches!(complete, Poll::Ready(()));
         }
 
-        assert_matches!(s.get_configuration(), Err(Error::InvalidState));
+        assert!(s.get_configuration().is_none());
     }
 
     use std::sync::{

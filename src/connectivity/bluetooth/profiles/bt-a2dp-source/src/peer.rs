@@ -5,7 +5,7 @@
 use {
     anyhow::Context,
     bt_a2dp::stream,
-    bt_avdtp::{self as avdtp, ServiceCapability, StreamEndpointId},
+    bt_avdtp::{self as avdtp, ServiceCapability, ServiceCategory, StreamEndpointId},
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::{ChannelParameters, ProfileDescriptor, ProfileProxy, PSM_AVDTP},
     fuchsia_async as fasync,
@@ -281,8 +281,10 @@ impl PeerInner {
         }
         let peer_id = self.peer_id;
         let stream = self.get_mut(&local_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
-        stream.configure(&peer_id, &remote_id, capabilities)?;
-        stream.endpoint_mut().establish()?;
+        stream
+            .configure(&peer_id, &remote_id, capabilities)
+            .map_err(|(_, c)| avdtp::Error::RequestInvalid(c))?;
+        stream.endpoint_mut().establish().or(Err(avdtp::Error::InvalidState))?;
         self.opening = Some(local_id.clone());
         Ok(())
     }
@@ -290,7 +292,7 @@ impl PeerInner {
     fn start_local_stream(&mut self, local_id: &StreamEndpointId) -> avdtp::Result<()> {
         let stream = self.get_mut(&local_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
         fx_log_info!("Starting stream: {:?}", stream);
-        stream.start()
+        stream.start().map_err(|c| avdtp::Error::RequestInvalid(c))
     }
 
     /// Provide a new established L2CAP channel to this remote peer.
@@ -347,21 +349,17 @@ impl PeerInner {
                 capabilities,
             } => {
                 if self.opening.is_some() {
-                    return responder.reject(None, avdtp::ErrorCode::BadState);
+                    return responder.reject(ServiceCategory::None, avdtp::ErrorCode::BadState);
                 }
                 self.opening = Some(local_stream_id.clone());
                 let peer_id = self.peer_id;
                 let stream = match self.get_mut(&local_stream_id) {
-                    Err(e) => return responder.reject(None, e),
+                    Err(e) => return responder.reject(ServiceCategory::None, e),
                     Ok(stream) => stream,
                 };
                 match stream.configure(&peer_id, &remote_stream_id, capabilities) {
                     Ok(_) => responder.send(),
-                    Err(e) => {
-                        // Only happens when this is already configured.
-                        responder.reject(None, avdtp::ErrorCode::SepInUse)?;
-                        Err(e)
-                    }
+                    Err((category, code)) => responder.reject(category, code),
                 }
             }
             avdtp::Request::GetConfiguration { stream_id, responder } => {
@@ -370,25 +368,19 @@ impl PeerInner {
                     Some(stream) => stream.endpoint(),
                 };
                 match endpoint.get_configuration() {
-                    Ok(c) => responder.send(&c),
-                    Err(e) => {
-                        // Only happens when the stream is in the wrong state
-                        responder.reject(avdtp::ErrorCode::BadState)?;
-                        Err(e)
-                    }
+                    Some(c) => responder.send(&c),
+                    // Only happens when the stream is in the wrong state
+                    None => responder.reject(avdtp::ErrorCode::BadState),
                 }
             }
             avdtp::Request::Reconfigure { responder, local_stream_id, capabilities } => {
                 let stream = match self.get_mut(&local_stream_id) {
-                    Err(e) => return responder.reject(None, e),
+                    Err(e) => return responder.reject(ServiceCategory::None, e),
                     Ok(stream) => stream,
                 };
                 match stream.reconfigure(capabilities) {
                     Ok(_) => responder.send(),
-                    Err(e) => {
-                        responder.reject(None, avdtp::ErrorCode::BadState)?;
-                        Err(e)
-                    }
+                    Err((cat, code)) => responder.reject(cat, code),
                 }
             }
             avdtp::Request::Start { responder, stream_ids } => {
@@ -420,7 +412,7 @@ impl PeerInner {
                     Err(_) => return Ok(()),
                     Ok(stream) => stream,
                 };
-                stream.abort(None).await?;
+                stream.abort(None).await;
                 self.opening = self.opening.take().filter(|id| id != &stream_id);
                 responder.send()
             }

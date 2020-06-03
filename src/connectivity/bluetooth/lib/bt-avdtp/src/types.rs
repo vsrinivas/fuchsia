@@ -585,18 +585,17 @@ pub enum ServiceCapability {
 }
 
 impl ServiceCapability {
-    pub(crate) fn to_category_byte(&self) -> u8 {
+    pub fn category(&self) -> ServiceCategory {
         match self {
-            ServiceCapability::MediaTransport => &ServiceCategory::MediaTransport,
-            ServiceCapability::Reporting => &ServiceCategory::Reporting,
-            ServiceCapability::Recovery { .. } => &ServiceCategory::Recovery,
-            ServiceCapability::ContentProtection { .. } => &ServiceCategory::ContentProtection,
-            ServiceCapability::MediaCodec { .. } => &ServiceCategory::MediaCodec,
-            ServiceCapability::DelayReporting => &ServiceCategory::DelayReporting,
-            ServiceCapability::HeaderCompression { .. } => &ServiceCategory::HeaderCompression,
-            ServiceCapability::Multiplexing { .. } => &ServiceCategory::Multiplexing,
+            ServiceCapability::MediaTransport => ServiceCategory::MediaTransport,
+            ServiceCapability::Reporting => ServiceCategory::Reporting,
+            ServiceCapability::Recovery { .. } => ServiceCategory::Recovery,
+            ServiceCapability::ContentProtection { .. } => ServiceCategory::ContentProtection,
+            ServiceCapability::MediaCodec { .. } => ServiceCategory::MediaCodec,
+            ServiceCapability::DelayReporting => ServiceCategory::DelayReporting,
+            ServiceCapability::HeaderCompression { .. } => ServiceCategory::HeaderCompression,
+            ServiceCapability::Multiplexing { .. } => ServiceCategory::Multiplexing,
         }
-        .into()
     }
 
     pub(crate) fn length_of_service_capabilities(&self) -> u8 {
@@ -753,7 +752,7 @@ impl Encodable for ServiceCapability {
         }
         let mut cursor = Cursor::new(buf);
         cursor
-            .write(&[self.to_category_byte(), self.length_of_service_capabilities()])
+            .write(&[u8::from(&self.category()), self.length_of_service_capabilities()])
             .map_err(|_| Error::Encoding)?;
         match self {
             ServiceCapability::Recovery {

@@ -5,7 +5,8 @@
 use {
     bt_a2dp_sink_metrics as metrics,
     bt_avdtp::{
-        self as avdtp, MediaCodecType, ServiceCapability, StreamEndpoint, StreamEndpointId,
+        self as avdtp, MediaCodecType, ServiceCapability, ServiceCategory, StreamEndpoint,
+        StreamEndpointId,
     },
     fidl::encoding::Decodable as FidlDecodable,
     fidl_fuchsia_bluetooth_bredr::{ChannelParameters, ProfileDescriptor, ProfileProxy, PSM_AVDTP},
@@ -324,8 +325,10 @@ impl PeerInner {
         capabilities: Vec<ServiceCapability>,
     ) -> avdtp::Result<()> {
         let stream = self.get_mut(&local_id)?;
-        stream.configure(&remote_id, capabilities)?;
-        stream.establish()?;
+        stream
+            .configure(&remote_id, capabilities)
+            .map_err(|(_, c)| avdtp::Error::RequestInvalid(c))?;
+        stream.establish().or(Err(avdtp::Error::InvalidState))?;
         self.opening = Some(local_id.clone());
         Ok(())
     }
@@ -417,17 +420,15 @@ impl PeerInner {
                 capabilities,
             } => {
                 let stream = match self.local.get_endpoint(&local_stream_id) {
-                    None => return responder.reject(None, avdtp::ErrorCode::BadAcpSeid),
+                    None => {
+                        return responder
+                            .reject(ServiceCategory::None, avdtp::ErrorCode::BadAcpSeid)
+                    }
                     Some(stream) => stream,
                 };
-                // TODO(BT-695): Confirm the MediaCodec parameters are OK
                 match stream.configure(&remote_stream_id, capabilities.clone()) {
                     Ok(_) => responder.send(),
-                    Err(e) => {
-                        // Only happens when this is already configured.
-                        responder.reject(None, avdtp::ErrorCode::SepInUse)?;
-                        Err(e)
-                    }
+                    Err((cat, code)) => responder.reject(cat, code),
                 }
             }
             avdtp::Request::GetConfiguration { stream_id, responder } => {
@@ -436,26 +437,22 @@ impl PeerInner {
                     Some(stream) => stream,
                 };
                 match stream.get_configuration() {
-                    Ok(c) => responder.send(&c),
-                    Err(e) => {
-                        // Only happens when the stream is in the wrong state
-                        responder.reject(avdtp::ErrorCode::BadState)?;
-                        Err(e)
-                    }
+                    Some(c) => responder.send(&c),
+                    None => responder.reject(avdtp::ErrorCode::BadState),
                 }
             }
             avdtp::Request::Reconfigure { responder, local_stream_id, capabilities } => {
                 let stream = match self.local.get_endpoint(&local_stream_id) {
-                    None => return responder.reject(None, avdtp::ErrorCode::BadAcpSeid),
+                    None => {
+                        return responder
+                            .reject(ServiceCategory::None, avdtp::ErrorCode::BadAcpSeid)
+                    }
                     Some(stream) => stream,
                 };
                 // TODO(40768): Actually tweak the codec parameters.
                 match stream.reconfigure(capabilities) {
                     Ok(_) => responder.send(),
-                    Err(e) => {
-                        responder.reject(None, avdtp::ErrorCode::BadState)?;
-                        Err(e)
-                    }
+                    Err(_) => responder.reject(ServiceCategory::None, avdtp::ErrorCode::BadState),
                 }
             }
             avdtp::Request::Start { responder, stream_ids } => {
@@ -485,7 +482,7 @@ impl PeerInner {
                     None => return Ok(()),
                     Some(stream) => stream,
                 };
-                stream.abort(None).await?;
+                stream.abort(None).await;
                 self.opening = self.opening.take().filter(|id| id != &stream_id);
                 let _ = self
                     .local
