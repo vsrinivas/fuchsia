@@ -51,7 +51,7 @@ may be separate people. Some categories are:
 - Component development (mods/agents)
 - Driver development (DDK)
 - Fuchsia development (SDK)
-- Build integration (Blaze, Bazel, etc.)
+- Build integration (GN, Bazel, etc.)
 - Quality assurance (QA)
 - System integrators (e.g., on-device network tools)
 - Publishing (from dev host to server)
