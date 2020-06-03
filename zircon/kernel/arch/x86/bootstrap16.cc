@@ -23,6 +23,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <kernel/mutex.h>
+#include <ktl/iterator.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
 
@@ -92,7 +93,7 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace>* te
       // 4) The kernel's version of the bootstrap code page (matched mapping)
       // 5) The page containing the aps_still_booting counter (matched mapping)
   };
-  for (unsigned int i = 0; i < fbl::count_of(page_mappings); ++i) {
+  for (unsigned int i = 0; i < ktl::size(page_mappings); ++i) {
     void* vaddr = (void*)page_mappings[i].start_vaddr;
     zx_status_t status = bootstrap_aspace->AllocPhysical(
         "bootstrap_mapping", page_mappings[i].size, &vaddr, PAGE_SIZE_SHIFT,

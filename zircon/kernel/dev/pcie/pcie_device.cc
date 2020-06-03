@@ -24,6 +24,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <kernel/spinlock.h>
+#include <ktl/iterator.h>
 #include <ktl/limits.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/vm.h>
@@ -383,7 +384,7 @@ zx_status_t PcieDevice::ProbeBarsLocked() {
 
   DEBUG_ASSERT((header_type == PCI_HEADER_TYPE_STANDARD) ||
                (header_type == PCI_HEADER_TYPE_PCI_BRIDGE));
-  DEBUG_ASSERT(bar_count_ <= fbl::count_of(bars_));
+  DEBUG_ASSERT(bar_count_ <= ktl::size(bars_));
 
   for (uint i = 0; i < bar_count_; ++i) {
     /* If this is a re-scan of the bus, We should not be re-enumerating BARs. */
@@ -415,7 +416,7 @@ zx_status_t PcieDevice::ProbeBarsLocked() {
 zx_status_t PcieDevice::ProbeBarLocked(uint bar_id) {
   DEBUG_ASSERT(cfg_);
   DEBUG_ASSERT(bar_id < bar_count_);
-  DEBUG_ASSERT(bar_id < fbl::count_of(bars_));
+  DEBUG_ASSERT(bar_id < ktl::size(bars_));
 
   /* Determine the type of BAR this is.  Make sure that it is one of the types we understand */
   pcie_bar_info_t& bar_info = bars_[bar_id];
@@ -514,7 +515,7 @@ zx_status_t PcieDevice::AllocateBarsLocked() {
     return ZX_ERR_UNAVAILABLE;
 
   /* Allocate BARs for the device */
-  DEBUG_ASSERT(bar_count_ <= fbl::count_of(bars_));
+  DEBUG_ASSERT(bar_count_ <= ktl::size(bars_));
   for (size_t i = 0; i < bar_count_; ++i) {
     if (bars_[i].size) {
       zx_status_t ret = AllocateBarLocked(bars_[i]);

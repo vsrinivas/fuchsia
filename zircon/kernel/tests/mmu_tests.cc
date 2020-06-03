@@ -12,6 +12,7 @@
 #include <arch/aspace.h>
 #include <arch/mmu.h>
 #include <fbl/auto_call.h>
+#include <ktl/iterator.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/pmm.h>
 
@@ -141,7 +142,7 @@ static bool test_large_region_protect() {
       alloc_end - PAGE_SIZE,
   };
 
-  for (unsigned i = 0; i < fbl::count_of(target_vaddrs); i++) {
+  for (unsigned i = 0; i < ktl::size(target_vaddrs); i++) {
     ArchVmAspace aspace;
     vaddr_t base = 1UL << 20;
     size_t size = (1UL << 47) - base - (1UL << 20);
@@ -158,7 +159,7 @@ static bool test_large_region_protect() {
     err = aspace.Protect(target_vaddrs[i], 1, ARCH_MMU_FLAG_PERM_READ);
     EXPECT_EQ(err, ZX_OK, "protect single page");
 
-    for (unsigned j = 0; j < fbl::count_of(target_vaddrs); j++) {
+    for (unsigned j = 0; j < ktl::size(target_vaddrs); j++) {
       uint retrieved_flags = 0;
       paddr_t pa;
       EXPECT_EQ(ZX_OK, aspace.Query(target_vaddrs[j], &pa, &retrieved_flags));

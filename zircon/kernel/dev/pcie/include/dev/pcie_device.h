@@ -25,6 +25,7 @@
 #include <fbl/ref_ptr.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
+#include <ktl/iterator.h>
 #include <ktl/unique_ptr.h>
 
 /* Fwd decls */
@@ -144,7 +145,7 @@ class PcieDevice {
     if (bar_ndx >= bar_count_)
       return nullptr;
 
-    DEBUG_ASSERT(bar_ndx < fbl::count_of(bars_));
+    DEBUG_ASSERT(bar_ndx < ktl::size(bars_));
 
     const pcie_bar_info_t* ret = &bars_[bar_ndx];
     return (!disabled_ && (ret->allocation != nullptr)) ? ret : nullptr;

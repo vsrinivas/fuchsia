@@ -31,6 +31,7 @@
 #include <kernel/spinlock.h>
 #include <kernel/stats.h>
 #include <kernel/timer.h>
+#include <ktl/iterator.h>
 #include <lk/init.h>
 #include <platform/timer.h>
 
@@ -44,7 +45,7 @@ struct mp_sync_context;
 static void mp_sync_task(void* context);
 
 void mp_init(void) {
-  for (uint i = 0; i < fbl::count_of(mp.ipi_task_list); ++i) {
+  for (uint i = 0; i < ktl::size(mp.ipi_task_list); ++i) {
     list_initialize(&mp.ipi_task_list[i]);
   }
 }

@@ -53,6 +53,7 @@
 #include <kernel/mutex.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
+#include <ktl/iterator.h>
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
 #include <lk/init.h>
@@ -378,7 +379,7 @@ static void x86_perfmon_init_mchbar() {
     // TODO(dje): The lower four bits contain useful data, but punt for now.
     // See PCI spec 6.2.5.1.
     perfmon_mchbar_bar = bar & ~15u;
-    perfmon_num_misc_events = static_cast<uint16_t>(fbl::count_of(ArchPmuConfig{}.misc_events));
+    perfmon_num_misc_events = static_cast<uint16_t>(ktl::size(ArchPmuConfig{}.misc_events));
   } else {
     TRACEF("perfmon: error %d reading mchbar\n", status);
   }
@@ -775,7 +776,7 @@ static zx_status_t x86_perfmon_verify_programmable_config(const ArchPmuConfig* c
 static zx_status_t x86_perfmon_verify_misc_config(const ArchPmuConfig* config,
                                                   unsigned* out_num_used) {
   bool seen_last = false;
-  size_t max_num_used = fbl::count_of(config->misc_events);
+  size_t max_num_used = ktl::size(config->misc_events);
   size_t num_used = max_num_used;
   for (size_t i = 0; i < max_num_used; ++i) {
     PmuEventId id = config->misc_events[i];
@@ -894,7 +895,7 @@ static void x86_perfmon_stage_fixed_config(const ArchPmuConfig* config, PerfmonS
   static_assert(sizeof(state->fixed_flags) == sizeof(config->fixed_flags), "");
   memcpy(state->fixed_flags, config->fixed_flags, sizeof(state->fixed_flags));
 
-  for (unsigned i = 0; i < fbl::count_of(state->fixed_hw_map); ++i) {
+  for (unsigned i = 0; i < ktl::size(state->fixed_hw_map); ++i) {
     state->fixed_hw_map[i] = x86_perfmon_lookup_fixed_counter(config->fixed_events[i]);
   }
 }
@@ -1667,9 +1668,9 @@ static perfmon::RecordHeader* x86_perfmon_write_last_branches(PerfmonState* stat
                                                               PmuEventId id) {
   auto rec = reinterpret_cast<perfmon::LastBranchRecord*>(hdr);
   auto num_entries = perfmon_lbr_stack_size;
-  static_assert(perfmon::LastBranchRecord::kMaxNumLastBranch ==
-                    countof(perfmon::LastBranchRecord::branches),
-                "");
+  static_assert(
+      perfmon::LastBranchRecord::kMaxNumLastBranch == countof(perfmon::LastBranchRecord::branches),
+      "");
   DEBUG_ASSERT(num_entries > 0 && num_entries <= perfmon::LastBranchRecord::kMaxNumLastBranch);
   arch_perfmon_write_header(&rec->header, perfmon::kRecordTypeLastBranch, id);
   rec->num_branches = num_entries;

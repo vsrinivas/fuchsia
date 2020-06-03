@@ -29,6 +29,7 @@
 #include <fbl/algorithm.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
+#include <ktl/iterator.h>
 #include <ktl/limits.h>
 #include <lk/init.h>
 #include <platform/console.h>
@@ -80,7 +81,7 @@ const char* clock_name[] = {
     [CLOCK_HPET] = "HPET",
     [CLOCK_TSC] = "TSC",
 };
-static_assert(fbl::count_of(clock_name) == CLOCK_COUNT, "");
+static_assert(ktl::size(clock_name) == CLOCK_COUNT, "");
 
 // PIT time accounting info
 static struct fp_32_64 us_per_pit;

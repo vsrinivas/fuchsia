@@ -23,6 +23,7 @@
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 #include <ktl/atomic.h>
+#include <ktl/iterator.h>
 #include <ktl/unique_ptr.h>
 
 #include "tests.h"
@@ -119,10 +120,10 @@ static void timer_diag_coalescing_center(void) {
       when - (3u * off),  // non-coalesced, same as [3], adjustment = 0
   };
 
-  const zx_duration_t expected_adj[fbl::count_of(deadline)] = {
+  const zx_duration_t expected_adj[ktl::size(deadline)] = {
       0, 0, ZX_USEC(10), 0, -ZX_USEC(10), 0, ZX_USEC(10), 0};
 
-  timer_diag_coalescing(slack, deadline, expected_adj, fbl::count_of(deadline));
+  timer_diag_coalescing(slack, deadline, expected_adj, ktl::size(deadline));
 }
 
 static void timer_diag_coalescing_late(void) {
@@ -140,10 +141,9 @@ static void timer_diag_coalescing_late(void) {
       when - (4u * off),  // coalesced with [3], adjustment = 10u
   };
 
-  const zx_duration_t expected_adj[fbl::count_of(deadline)] = {0, 0, ZX_USEC(20), 0,
-                                                               0, 0, ZX_USEC(10)};
+  const zx_duration_t expected_adj[ktl::size(deadline)] = {0, 0, ZX_USEC(20), 0, 0, 0, ZX_USEC(10)};
 
-  timer_diag_coalescing(slack, deadline, expected_adj, fbl::count_of(deadline));
+  timer_diag_coalescing(slack, deadline, expected_adj, ktl::size(deadline));
 }
 
 static void timer_diag_coalescing_early(void) {
@@ -161,10 +161,10 @@ static void timer_diag_coalescing_early(void) {
       when - (2u * off),  // coalesced with [3], adjustment = -10u
   };
 
-  const zx_duration_t expected_adj[fbl::count_of(deadline)] = {0, -ZX_USEC(20), 0,           0,
-                                                               0, -ZX_USEC(10), -ZX_USEC(10)};
+  const zx_duration_t expected_adj[ktl::size(deadline)] = {0, -ZX_USEC(20), 0,           0,
+                                                           0, -ZX_USEC(10), -ZX_USEC(10)};
 
-  timer_diag_coalescing(slack, deadline, expected_adj, fbl::count_of(deadline));
+  timer_diag_coalescing(slack, deadline, expected_adj, ktl::size(deadline));
 }
 
 static void timer_far_deadline(void) {

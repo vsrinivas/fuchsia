@@ -21,6 +21,7 @@
 #include <arch/x86/pv.h>
 #include <fbl/algorithm.h>
 #include <ktl/atomic.h>
+#include <ktl/iterator.h>
 #include <platform/pc/bootbyte.h>
 
 #define LOCAL_TRACE 0
@@ -493,7 +494,7 @@ void x86_feature_debug(void) {
 
   printf("Features: ");
   uint col = 0;
-  for (uint i = 0; i < fbl::count_of(features); ++i) {
+  for (uint i = 0; i < ktl::size(features); ++i) {
     if (x86_feature_test(features[i].bit))
       col += printf("%s ", features[i].name);
     if (col >= 80) {

@@ -21,6 +21,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <ktl/algorithm.h>
+#include <ktl/iterator.h>
 #include <ktl/limits.h>
 #include <ktl/unique_ptr.h>
 #include <object/handle.h>
@@ -71,8 +72,8 @@ class PcieRootLUTSwizzle : public PcieRoot {
   }
 
   zx_status_t Swizzle(uint dev_id, uint func_id, uint pin, uint* irq) override {
-    if ((irq == nullptr) || (dev_id >= fbl::count_of(lut_)) ||
-        (func_id >= fbl::count_of(lut_[dev_id])) || (pin >= fbl::count_of(lut_[dev_id][func_id])))
+    if ((irq == nullptr) || (dev_id >= ktl::size(lut_)) || (func_id >= ktl::size(lut_[dev_id])) ||
+        (pin >= ktl::size(lut_[dev_id][func_id])))
       return ZX_ERR_INVALID_ARGS;
 
     *irq = lut_[dev_id][func_id][pin];
@@ -92,9 +93,9 @@ class PcieRootLUTSwizzle : public PcieRoot {
 // Scan |lut| for entries mapping to |irq|, and replace them with
 // ZX_PCI_NO_IRQ_MAPPING.
 static void pci_irq_swizzle_lut_remove_irq(zx_pci_irq_swizzle_lut_t* lut, uint32_t irq) {
-  for (size_t dev = 0; dev < fbl::count_of(*lut); ++dev) {
-    for (size_t func = 0; func < fbl::count_of((*lut)[dev]); ++func) {
-      for (size_t pin = 0; pin < fbl::count_of((*lut)[dev][func]); ++pin) {
+  for (size_t dev = 0; dev < ktl::size(*lut); ++dev) {
+    for (size_t func = 0; func < ktl::size((*lut)[dev]); ++func) {
+      for (size_t pin = 0; pin < ktl::size((*lut)[dev][func]); ++pin) {
         uint32_t* assigned_irq = &(*lut)[dev][func][pin];
         if (*assigned_irq == irq) {
           *assigned_irq = ZX_PCI_NO_IRQ_MAPPING;
@@ -203,7 +204,7 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
     }
   }
 
-  if (arg->num_irqs > fbl::count_of(arg->irqs)) {
+  if (arg->num_irqs > ktl::size(arg->irqs)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -214,7 +215,7 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
            (arg->addr_window_count == 1) ? "" : "s");
     for (uint32_t i = 0; i < arg->addr_window_count; i++) {
       const size_t window_type_idx =
-          ktl::min(fbl::count_of(kAddrWindowTypes) - 1,
+          ktl::min(ktl::size(kAddrWindowTypes) - 1,
                    static_cast<size_t>(arg->addr_windows[i].cfg_space_type));
       const char* window_type_name = kAddrWindowTypes[window_type_idx];
 
@@ -759,7 +760,7 @@ zx_status_t sys_pci_set_irq_mode(zx_handle_t dev_handle, uint32_t mode,
 
   return pci_device->SetIrqMode((zx_pci_irq_mode_t)mode, requested_irq_count);
 }
-#else   // WITH_KERNEL_PCIE
+#else  // WITH_KERNEL_PCIE
 // zx_status_t zx_pci_init
 zx_status_t sys_pci_init(zx_handle_t, user_in_ptr<const zx_pci_init_arg_t>, uint32_t) {
   shutdown_early_init_console();

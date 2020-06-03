@@ -16,6 +16,7 @@
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
 #include <fbl/algorithm.h>
+#include <ktl/iterator.h>
 
 #include "dev/pcie_irqs.h"
 
@@ -281,7 +282,7 @@ static const char* pci_device_type(const PcieDevice& dev) {
       break;
   }
 
-  for (size_t i = 0; i < fbl::count_of(PCI_DEV_TYPE_LUT); ++i) {
+  for (size_t i = 0; i < ktl::size(PCI_DEV_TYPE_LUT); ++i) {
     const pci_dev_type_lut_entry_t* entry = PCI_DEV_TYPE_LUT + i;
 
     if ((dev.class_id() == entry->class_code) && (dev.subclass() == entry->subclass) &&

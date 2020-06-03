@@ -13,6 +13,7 @@
 
 #include <arch/arm64.h>
 #include <fbl/algorithm.h>
+#include <ktl/iterator.h>
 
 #if ARCH_ARM64
 #include <lib/console.h>
@@ -69,7 +70,7 @@ static const char* sysregs_list[] = {
     "cntv_cval_el0", "cntv_tval_el0"};
 
 static void print_sysregs_list() {
-  int size = fbl::count_of(sysregs_list);
+  int size = ktl::size(sysregs_list);
   printf(" system register name: \n");
   for (int i = 0; i < size; i++) {
     printf("      %s \n", sysregs_list[i]);

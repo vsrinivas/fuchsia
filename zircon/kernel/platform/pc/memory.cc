@@ -20,6 +20,7 @@
 #include <dev/interrupt.h>
 #include <efi/boot-services.h>
 #include <fbl/algorithm.h>
+#include <ktl/iterator.h>
 #include <lk/init.h>
 #include <object/handle.h>
 #include <object/resource_dispatcher.h>
@@ -373,7 +374,7 @@ zx_status_t enumerate_e820(enumerate_e820_callback callback, void* ctx) {
   if (!cached_e820_entry_count)
     return ZX_ERR_BAD_STATE;
 
-  DEBUG_ASSERT(cached_e820_entry_count <= fbl::count_of(cached_e820_entries));
+  DEBUG_ASSERT(cached_e820_entry_count <= ktl::size(cached_e820_entries));
   for (size_t i = 0; i < cached_e820_entry_count; ++i)
     callback(cached_e820_entries[i].base, cached_e820_entries[i].size,
              cached_e820_entries[i].is_mem, ctx);
@@ -403,7 +404,7 @@ void pc_mem_init(void) {
   if ((efi_range_init(&range, &efi_seq) == ZX_OK) ||
       (e820_range_init(&range, &e820_seq) == ZX_OK)) {
     for (range.reset(&range), range.advance(&range); !range.is_reset; range.advance(&range)) {
-      if (cached_e820_entry_count >= fbl::count_of(cached_e820_entries)) {
+      if (cached_e820_entry_count >= ktl::size(cached_e820_entries)) {
         TRACEF("ERROR - Too many e820 entries to hold in the cache!\n");
         cached_e820_entry_count = 0;
         break;

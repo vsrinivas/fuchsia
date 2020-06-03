@@ -7,6 +7,7 @@
 #include <lib/unittest/unittest.h>
 
 #include <fbl/algorithm.h>
+#include <ktl/iterator.h>
 
 #include "object/job_policy.h"
 
@@ -177,7 +178,7 @@ static bool add_basic_policy_unmodified_on_error(uint32_t flags) {
   zx_policy_basic_v2_t policy[2]{{ZX_POL_NEW_VMO, ZX_POL_ACTION_ALLOW_EXCEPTION, flags},
                                  {ZX_POL_NEW_CHANNEL, ZX_POL_ACTION_KILL, flags}};
 
-  ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, policy, fbl::count_of(policy)));
+  ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, policy, ktl::size(policy)));
   ASSERT_EQ(ZX_POL_ACTION_ALLOW_EXCEPTION, p.QueryBasicPolicy(ZX_POL_NEW_VMO));
   ASSERT_EQ(ZX_POL_ACTION_KILL, p.QueryBasicPolicy(ZX_POL_NEW_CHANNEL));
 

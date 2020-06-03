@@ -23,6 +23,7 @@
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
+#include <ktl/iterator.h>
 #include <pretty/hexdump.h>
 
 #include "tests.h"
@@ -90,13 +91,13 @@ static int mutex_test() {
 
   Thread* threads[5];
 
-  for (uint i = 0; i < fbl::count_of(threads); i++) {
+  for (uint i = 0; i < ktl::size(threads); i++) {
     threads[i] = Thread::Create("mutex tester", &mutex_thread, &m,
                                 Thread::Current::Get()->scheduler_state_.base_priority());
     threads[i]->Resume();
   }
 
-  for (uint i = 0; i < fbl::count_of(threads); i++) {
+  for (uint i = 0; i < ktl::size(threads); i++) {
     threads[i]->Join(NULL, ZX_TIME_INFINITE);
   }
 
@@ -234,10 +235,10 @@ static void event_test() {
     threads[3] = Thread::Create("event waiter 2", &event_waiter, &args, DEFAULT_PRIORITY);
     threads[4] = Thread::Create("event waiter 3", &event_waiter, &args, DEFAULT_PRIORITY);
 
-    for (uint i = 0; i < fbl::count_of(threads); i++)
+    for (uint i = 0; i < ktl::size(threads); i++)
       threads[i]->Resume();
 
-    for (uint i = 0; i < fbl::count_of(threads); i++)
+    for (uint i = 0; i < ktl::size(threads); i++)
       threads[i]->Join(NULL, ZX_TIME_INFINITE);
 
     Thread::Current::SleepRelative(ZX_SEC(2));
@@ -258,12 +259,12 @@ static void event_test() {
     threads[3] = Thread::Create("event waiter 2", &event_waiter, &args, DEFAULT_PRIORITY);
     threads[4] = Thread::Create("event waiter 3", &event_waiter, &args, DEFAULT_PRIORITY);
 
-    for (uint i = 0; i < fbl::count_of(threads); i++)
+    for (uint i = 0; i < ktl::size(threads); i++)
       threads[i]->Resume();
 
     Thread::Current::SleepRelative(ZX_SEC(2));
 
-    for (uint i = 0; i < fbl::count_of(threads); i++) {
+    for (uint i = 0; i < ktl::size(threads); i++) {
       threads[i]->Kill();
       threads[i]->Join(NULL, ZX_TIME_INFINITE);
     }
@@ -379,11 +380,11 @@ static void atomic_test(void) {
   threads[7] = Thread::Create("atomic tester 2", &atomic_tester, (void*)-1, LOW_PRIORITY);
 
   /* start all the threads */
-  for (uint i = 0; i < fbl::count_of(threads); i++)
+  for (uint i = 0; i < ktl::size(threads); i++)
     threads[i]->Resume();
 
   /* wait for them to all stop */
-  for (uint i = 0; i < fbl::count_of(threads); i++) {
+  for (uint i = 0; i < ktl::size(threads); i++) {
     threads[i]->Join(NULL, ZX_TIME_INFINITE);
   }
 
@@ -685,7 +686,7 @@ static int affinity_test_thread(void* arg) {
   printf("top of affinity tester %p\n", t);
 
   while (!state->shutdown) {
-    int which = rand() % static_cast<int>(fbl::count_of(state->threads));
+    int which = rand() % static_cast<int>(ktl::size(state->threads));
     switch (rand() % 5) {
       case 0:  // set affinity
         // printf("%p set aff %p\n", t, state->threads[which]);

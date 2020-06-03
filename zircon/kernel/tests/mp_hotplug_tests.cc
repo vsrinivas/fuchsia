@@ -12,6 +12,7 @@
 
 #include <kernel/mp.h>
 #include <kernel/thread.h>
+#include <ktl/iterator.h>
 
 #include "tests.h"
 
@@ -44,8 +45,7 @@ static unsigned get_num_cpus_online() {
 // Unplug all cores (except for Boot core), then hotplug
 // the cores one by one and make sure that we can schedule
 // tasks on that core.
-[[maybe_unused]]
-static bool mp_hotplug_test() {
+[[maybe_unused]] static bool mp_hotplug_test() {
   BEGIN_TEST;
 
 // Hotplug is only implemented for x64.
@@ -80,7 +80,7 @@ static bool mp_hotplug_test() {
     ASSERT_EQ(i, running_core, "Thread not running on hotplugged core");
   }
 
-  for (unsigned i = 0; i < fbl::count_of(leaked_threads); i++) {
+  for (unsigned i = 0; i < ktl::size(leaked_threads); i++) {
     if (leaked_threads[i]) {
       leaked_threads[i]->Forget();
     }

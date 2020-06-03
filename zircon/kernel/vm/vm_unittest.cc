@@ -19,6 +19,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <kernel/semaphore.h>
+#include <ktl/iterator.h>
 #include <ktl/move.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>
@@ -2031,7 +2032,7 @@ static bool arch_noncontiguous_map() {
   // Get some phys pages to test on
   paddr_t phys[3];
   struct list_node phys_list = LIST_INITIAL_VALUE(phys_list);
-  zx_status_t status = pmm_alloc_pages(fbl::count_of(phys), 0, &phys_list);
+  zx_status_t status = pmm_alloc_pages(ktl::size(phys), 0, &phys_list);
   ASSERT_EQ(ZX_OK, status, "non contig map alloc");
   {
     size_t i = 0;
@@ -2050,10 +2051,10 @@ static bool arch_noncontiguous_map() {
     // Attempt to map a set of vm_page_t
     size_t mapped;
     vaddr_t base = USER_ASPACE_BASE + 10 * PAGE_SIZE;
-    status = aspace.Map(base, phys, fbl::count_of(phys), ARCH_MMU_FLAG_PERM_READ, &mapped);
+    status = aspace.Map(base, phys, ktl::size(phys), ARCH_MMU_FLAG_PERM_READ, &mapped);
     ASSERT_EQ(ZX_OK, status, "failed first map\n");
-    EXPECT_EQ(fbl::count_of(phys), mapped, "weird first map\n");
-    for (size_t i = 0; i < fbl::count_of(phys); ++i) {
+    EXPECT_EQ(ktl::size(phys), mapped, "weird first map\n");
+    for (size_t i = 0; i < ktl::size(phys); ++i) {
       paddr_t paddr;
       uint mmu_flags;
       status = aspace.Query(base + i * PAGE_SIZE, &paddr, &mmu_flags);
@@ -2063,15 +2064,15 @@ static bool arch_noncontiguous_map() {
     }
 
     // Attempt to map again, should fail
-    status = aspace.Map(base, phys, fbl::count_of(phys), ARCH_MMU_FLAG_PERM_READ, &mapped);
+    status = aspace.Map(base, phys, ktl::size(phys), ARCH_MMU_FLAG_PERM_READ, &mapped);
     MMU_EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, status, "double map\n");
 
     // Attempt to map partially ovelapping, should fail
-    status = aspace.Map(base + 2 * PAGE_SIZE, phys, fbl::count_of(phys), ARCH_MMU_FLAG_PERM_READ,
-                        &mapped);
+    status =
+        aspace.Map(base + 2 * PAGE_SIZE, phys, ktl::size(phys), ARCH_MMU_FLAG_PERM_READ, &mapped);
     MMU_EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, status, "double map\n");
-    status = aspace.Map(base - 2 * PAGE_SIZE, phys, fbl::count_of(phys), ARCH_MMU_FLAG_PERM_READ,
-                        &mapped);
+    status =
+        aspace.Map(base - 2 * PAGE_SIZE, phys, ktl::size(phys), ARCH_MMU_FLAG_PERM_READ, &mapped);
     MMU_EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, status, "double map\n");
 
     // No entries should have been created by the partial failures
@@ -2084,9 +2085,9 @@ static bool arch_noncontiguous_map() {
     status = aspace.Query(base + 4 * PAGE_SIZE, nullptr, nullptr);
     EXPECT_EQ(ZX_ERR_NOT_FOUND, status, "bad first map\n");
 
-    status = aspace.Unmap(base, fbl::count_of(phys), &mapped);
+    status = aspace.Unmap(base, ktl::size(phys), &mapped);
     ASSERT_EQ(ZX_OK, status, "failed unmap\n");
-    EXPECT_EQ(fbl::count_of(phys), mapped, "weird unmap\n");
+    EXPECT_EQ(ktl::size(phys), mapped, "weird unmap\n");
     status = aspace.Destroy();
     EXPECT_EQ(ZX_OK, status, "failed to destroy aspace\n");
   }
@@ -2674,7 +2675,7 @@ static bool vmpl_for_every_page_test() {
   list.InitializeSkew(0, PAGE_SIZE);
   vm_page_t test_pages[5] = {};
 
-  uint64_t offsets[fbl::count_of(test_pages)] = {
+  uint64_t offsets[ktl::size(test_pages)] = {
       0,
       PAGE_SIZE,
       VmPageListNode::kPageFanOut * PAGE_SIZE - PAGE_SIZE,
@@ -2682,7 +2683,7 @@ static bool vmpl_for_every_page_test() {
       VmPageListNode::kPageFanOut * PAGE_SIZE + PAGE_SIZE,
   };
 
-  for (unsigned i = 0; i < fbl::count_of(test_pages); i++) {
+  for (unsigned i = 0; i < ktl::size(test_pages); i++) {
     if (i % 2) {
       EXPECT_TRUE(AddPage(&list, test_pages + i, offsets[i]));
     } else {
@@ -2707,11 +2708,11 @@ static bool vmpl_for_every_page_test() {
   };
 
   list.ForEveryPage(iter_fn);
-  ASSERT_EQ(idx, fbl::count_of(offsets));
+  ASSERT_EQ(idx, ktl::size(offsets));
 
   idx = 1;
-  list.ForEveryPageInRange(iter_fn, offsets[1], offsets[fbl::count_of(test_pages) - 1]);
-  ASSERT_EQ(idx, fbl::count_of(offsets) - 1);
+  list.ForEveryPageInRange(iter_fn, offsets[1], offsets[ktl::size(test_pages) - 1]);
+  ASSERT_EQ(idx, ktl::size(offsets) - 1);
 
   list_node_t free_list;
   list_initialize(&free_list);
@@ -3142,7 +3143,7 @@ static bool physmap_for_each_gap_test() {
     pmm_arena_info_t arenas[] = {
         {"test-arena", 0, PHYSMAP_BASE_PHYS, PHYSMAP_SIZE},
     };
-    physmap_for_each_gap(PushBack, arenas, fbl::count_of(arenas));
+    physmap_for_each_gap(PushBack, arenas, ktl::size(arenas));
     // No gaps.
     ASSERT_EQ(actual_gaps.size(), 0u);
   }
@@ -3155,7 +3156,7 @@ static bool physmap_for_each_gap_test() {
     pmm_arena_info_t arenas[] = {
         {"test-arena", 0, PHYSMAP_BASE_PHYS + gap_size, arena_size},
     };
-    physmap_for_each_gap(PushBack, arenas, fbl::count_of(arenas));
+    physmap_for_each_gap(PushBack, arenas, ktl::size(arenas));
     // One gap.
     ASSERT_EQ(actual_gaps.size(), 1u);
     ASSERT_EQ(actual_gaps[0].base, PHYSMAP_BASE);
@@ -3170,7 +3171,7 @@ static bool physmap_for_each_gap_test() {
     pmm_arena_info_t arenas[] = {
         {"test-arena", 0, PHYSMAP_BASE_PHYS, arena_size},
     };
-    physmap_for_each_gap(PushBack, arenas, fbl::count_of(arenas));
+    physmap_for_each_gap(PushBack, arenas, ktl::size(arenas));
     // One gap.
     ASSERT_EQ(actual_gaps.size(), 1u);
     ASSERT_EQ(actual_gaps[0].base, PHYSMAP_BASE + arena_size);
@@ -3185,7 +3186,7 @@ static bool physmap_for_each_gap_test() {
         {"test-arena", 0, PHYSMAP_BASE_PHYS, size},
         {"test-arena", 0, PHYSMAP_BASE_PHYS + size, size},
     };
-    physmap_for_each_gap(PushBack, arenas, fbl::count_of(arenas));
+    physmap_for_each_gap(PushBack, arenas, ktl::size(arenas));
     // No gaps.
     ASSERT_EQ(actual_gaps.size(), 0u);
   }
@@ -3203,7 +3204,7 @@ static bool physmap_for_each_gap_test() {
         {"test-arena", 0, PHYSMAP_BASE_PHYS + arena1_offset, arena1_size},
         {"test-arena", 0, PHYSMAP_BASE_PHYS + arena2_offset, arena2_size},
     };
-    physmap_for_each_gap(PushBack, arenas, fbl::count_of(arenas));
+    physmap_for_each_gap(PushBack, arenas, ktl::size(arenas));
     // Three gaps.
     ASSERT_EQ(actual_gaps.size(), 3u);
     ASSERT_EQ(actual_gaps[0].base, PHYSMAP_BASE);

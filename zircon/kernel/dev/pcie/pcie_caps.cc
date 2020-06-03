@@ -15,6 +15,7 @@
 #include <dev/pcie_device.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <ktl/iterator.h>
 
 #define LOCAL_TRACE 0
 
@@ -32,7 +33,7 @@ static bool quirk_should_force_pcie(const PcieDevice& dev) {
       {.vendor_id = 0x8086, .device_id = 0x1616},  // Wildcat Point GPU
   };
 
-  for (size_t i = 0; i < fbl::count_of(QUIRK_LIST); ++i) {
+  for (size_t i = 0; i < ktl::size(QUIRK_LIST); ++i) {
     if ((QUIRK_LIST[i].vendor_id == dev.vendor_id()) &&
         (QUIRK_LIST[i].device_id == dev.device_id()))
       return true;

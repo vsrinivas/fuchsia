@@ -14,6 +14,7 @@
 #include <arch/x86/page_tables/page_tables.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
+#include <ktl/iterator.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
@@ -95,7 +96,7 @@ void PendingTlbInvalidation::enqueue(vaddr_t v, PageTableLevel level, bool is_gl
 
   // We mark PML4_L entries as full shootdowns, since it's going to be
   // expensive one way or another.
-  if (count >= fbl::count_of(item) || level == PML4_L) {
+  if (count >= ktl::size(item) || level == PML4_L) {
     full_shootdown = true;
     return;
   }

@@ -18,6 +18,7 @@
 #include <kernel/stats.h>
 #include <kernel/thread_lock.h>
 #include <ktl/algorithm.h>
+#include <ktl/iterator.h>
 #include <object/bus_transaction_initiator_dispatcher.h>
 #include <object/diagnostics.h>
 #include <object/exception_dispatcher.h>
@@ -666,7 +667,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
         return status;
 
       zx_info_process_handle_stats_t info = {};
-      static_assert(fbl::count_of(info.handle_count) >= ZX_OBJ_TYPE_UPPER_BOUND,
+      static_assert(ktl::size(info.handle_count) >= ZX_OBJ_TYPE_UPPER_BOUND,
                     "Need room for each handle type.");
 
       process->ForEachHandle(

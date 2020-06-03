@@ -14,6 +14,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/bitfield.h>
 #include <kernel/deadline.h>
+#include <ktl/iterator.h>
 
 namespace {
 // It is critical that this array contain all "new object" policies because it's used to implement
@@ -24,7 +25,7 @@ constexpr uint32_t kNewObjectPolicies[]{
     ZX_POL_NEW_PROCESS, ZX_POL_NEW_PROFILE,
 };
 static_assert(
-    fbl::count_of(kNewObjectPolicies) + 5 == ZX_POL_MAX,
+    ktl::size(kNewObjectPolicies) + 5 == ZX_POL_MAX,
     "please update JobPolicy::AddPartial, JobPolicy::QueryBasicPolicy, kNewObjectPolicies,"
     "and the add_basic_policy_deny_any_new() test");
 
@@ -345,7 +346,7 @@ bool JobPolicy::operator!=(const JobPolicy& rhs) const { return !operator==(rhs)
       [ZX_POL_NEW_PROFILE] = &COUNTER(action, new_profile),                     \
       [ZX_POL_AMBIENT_MARK_VMO_EXEC] = &COUNTER(action, ambient_mark_vmo_exec), \
   };                                                                            \
-  static_assert(fbl::count_of(COUNTER_ARRAY(action)) == ZX_POL_MAX);
+  static_assert(ktl::size(COUNTER_ARRAY(action)) == ZX_POL_MAX);
 
 // Counts policy violations resulting in ZX_POL_ACTION_DENY or ZX_POL_ACTION_DENY_EXCEPTION.
 DEFINE_COUNTER_ARRAY(deny)

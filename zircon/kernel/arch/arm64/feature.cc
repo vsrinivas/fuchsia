@@ -11,6 +11,7 @@
 
 #include <arch/arm64.h>
 #include <fbl/algorithm.h>
+#include <ktl/iterator.h>
 
 // saved feature bitmap
 uint32_t arm64_features;
@@ -336,7 +337,7 @@ static void print_feature() {
 
   printf("ARM Features: ");
   uint col = 0;
-  for (uint i = 0; i < fbl::count_of(features); ++i) {
+  for (uint i = 0; i < ktl::size(features); ++i) {
     if (arm64_feature_test(features[i].bit)) {
       col += printf("%s ", features[i].name);
     }

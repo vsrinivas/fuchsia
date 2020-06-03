@@ -18,6 +18,7 @@
 
 #include <arch/ops.h>
 #include <fbl/algorithm.h>
+#include <ktl/iterator.h>
 #include <pretty/hexdump.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
@@ -122,7 +123,7 @@ static void do_mem_tests(void* ptr, size_t len) {
       0x55555555,
   };
 
-  for (size_t p = 0; p < fbl::count_of(pat); p++) {
+  for (size_t p = 0; p < ktl::size(pat); p++) {
     if (do_pattern_test(ptr, len, pat[p]) < 0)
       goto out;
   }
@@ -139,7 +140,7 @@ static void do_mem_tests(void* ptr, size_t len) {
 
   /* test 3: moving inversion, patterns */
   printf("test 3: moving inversions with patterns\n");
-  for (size_t p = 0; p < fbl::count_of(pat); p++) {
+  for (size_t p = 0; p < ktl::size(pat); p++) {
     if (do_moving_inversion_test(ptr, len, pat[p]) < 0)
       goto out;
   }

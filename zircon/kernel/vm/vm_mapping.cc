@@ -13,6 +13,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include <ktl/iterator.h>
 #include <ktl/move.h>
 #include <vm/fault.h>
 #include <vm/vm.h>
@@ -440,7 +441,7 @@ class VmMappingCoalescer {
   zx_status_t Append(vaddr_t vaddr, paddr_t paddr) {
     DEBUG_ASSERT(!aborted_);
     // If this isn't the expected vaddr, flush the run we have first.
-    if (count_ >= fbl::count_of(phys_) || vaddr != base_ + count_ * PAGE_SIZE) {
+    if (count_ >= ktl::size(phys_) || vaddr != base_ + count_ * PAGE_SIZE) {
       zx_status_t status = Flush();
       if (status != ZX_OK) {
         return status;

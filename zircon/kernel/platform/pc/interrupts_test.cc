@@ -6,6 +6,7 @@
 
 #include <lib/unittest/unittest.h>
 
+#include <ktl/iterator.h>
 #include <ktl/unique_ptr.h>
 
 #include "interrupt_manager.h"
@@ -171,7 +172,7 @@ bool TestRegisterInterruptHandlerTooMany() {
   uint8_t handler_arg = 0;
   uintptr_t handler = 2;
 
-  static_assert(fbl::count_of(FakeIoApic::entries) > InterruptManager<FakeIoApic>::kNumCpuVectors);
+  static_assert(ktl::size(FakeIoApic::entries) > InterruptManager<FakeIoApic>::kNumCpuVectors);
 
   // Register every interrupt, and store different pointers for them so we
   // can validate it.  All of these should succeed, but will exhaust the

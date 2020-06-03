@@ -16,6 +16,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <kernel/mutex.h>
+#include <ktl/iterator.h>
 #include <ktl/limits.h>
 #include <ktl/move.h>
 #include <vm/vm_aspace.h>
@@ -244,7 +245,7 @@ void PcieBusDriver::LinkDeviceToUpstream(PcieDevice& dev, PcieUpstreamNode& upst
 
   // Have the bridge hold a reference to the device
   uint ndx = (dev.dev_id() * PCIE_MAX_FUNCTIONS_PER_DEVICE) + dev.func_id();
-  DEBUG_ASSERT(ndx < fbl::count_of(upstream.downstream_));
+  DEBUG_ASSERT(ndx < ktl::size(upstream.downstream_));
   DEBUG_ASSERT(upstream.downstream_[ndx] == nullptr);
   upstream.downstream_[ndx] = fbl::RefPtr(&dev);
 }
@@ -254,7 +255,7 @@ void PcieBusDriver::UnlinkDeviceFromUpstream(PcieDevice& dev) {
 
   if (dev.upstream_ != nullptr) {
     uint ndx = (dev.dev_id() * PCIE_MAX_FUNCTIONS_PER_DEVICE) + dev.func_id();
-    DEBUG_ASSERT(ndx < fbl::count_of(dev.upstream_->downstream_));
+    DEBUG_ASSERT(ndx < ktl::size(dev.upstream_->downstream_));
     DEBUG_ASSERT(&dev == dev.upstream_->downstream_[ndx].get());
 
     // Let go of the upstream's reference to the device
@@ -272,7 +273,7 @@ fbl::RefPtr<PcieUpstreamNode> PcieBusDriver::GetUpstream(PcieDevice& dev) {
 }
 
 fbl::RefPtr<PcieDevice> PcieBusDriver::GetDownstream(PcieUpstreamNode& upstream, uint ndx) {
-  DEBUG_ASSERT(ndx <= fbl::count_of(upstream.downstream_));
+  DEBUG_ASSERT(ndx <= ktl::size(upstream.downstream_));
   Guard<Mutex> guard{&bus_topology_lock_};
   auto ret = upstream.downstream_[ndx];
   return ret;
@@ -385,7 +386,7 @@ bool PcieBusDriver::ForeachDownstreamDevice(const fbl::RefPtr<PcieUpstreamNode>&
   DEBUG_ASSERT(upstream && cbk);
   bool keep_going = true;
 
-  for (uint i = 0; keep_going && (i < fbl::count_of(upstream->downstream_)); ++i) {
+  for (uint i = 0; keep_going && (i < ktl::size(upstream->downstream_)); ++i) {
     auto dev = upstream->GetDownstream(i);
 
     if (!dev)

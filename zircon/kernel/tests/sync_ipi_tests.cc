@@ -17,6 +17,7 @@
 #include <kernel/event.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
+#include <ktl/iterator.h>
 
 #include "tests.h"
 
@@ -59,7 +60,7 @@ static void deadlock_test(void) {
   Event gate;
 
   Thread* threads[5] = {0};
-  for (uint i = 0; i < fbl::count_of(threads); ++i) {
+  for (uint i = 0; i < ktl::size(threads); ++i) {
     threads[i] = Thread::Create("sync_ipi_deadlock", deadlock_test_thread, &gate, DEFAULT_PRIORITY);
     if (!threads[i]) {
       TRACEF("  failed to create thread\n");
@@ -71,7 +72,7 @@ static void deadlock_test(void) {
   gate.Signal();
 
 cleanup:
-  for (uint i = 0; i < fbl::count_of(threads); ++i) {
+  for (uint i = 0; i < ktl::size(threads); ++i) {
     if (threads[i]) {
       threads[i]->Join(NULL, ZX_TIME_INFINITE);
     }
