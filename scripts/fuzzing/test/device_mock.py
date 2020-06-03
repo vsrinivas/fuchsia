@@ -25,17 +25,17 @@ class MockDevice(Device):
         p = super(MockDevice, self).ssh(cmdline)
         if cmdline[0] == 'cs' and self.toggle:
             p.response = r"""
-  http.cmx[20963]: fuchsia-pkg://fuchsia.com/http#m
-  mock-target1.cmx[7412221]: fuchsia-pkg://fuchsia.com/mock-p
-  mock-target2.cmx[7412222]: fuchsia-pkg://fuchsia.com/mock-p
-  an-extremely-verbose-target-name[7412223]: fuchsia-pkg://fuchsia.com/mock-p
+  http.cmx[20963]: fuchsia-pkg://fuchsia.com/http#meta/http.cmx
+  mock-target1.cmx[7412221]: fuchsia-pkg://fuchsia.com/mock-package1#meta/mock-target1.cmx
+  mock-target2.cmx[7412222]: fuchsia-pkg://fuchsia.com/mock-package1#meta/mock-target2.cmx
+  an-extremely-verbose-target-name.cmx[7412223]: fuchsia-pkg://fuchsia.com/mock-package2#meta/an-extremely-verbose-target-name.cmx
 """
             self.toggle = False
         elif cmdline[0] == 'cs':
             p.response = r"""
-  http.cmx[20963]: fuchsia-pkg://fuchsia.com/http#m
-  mock-target1.cmx[7412221]: fuchsia-pkg://fuchsia.com/mock-p
-  an-extremely-verbose-target-name[7412223]: fuchsia-pkg://fuchsia.com/mock-p
+  http.cmx[20963]: fuchsia-pkg://fuchsia.com/http#meta/http.cmx
+  mock-target1.cmx[7412221]: fuchsia-pkg://fuchsia.com/mock-package1#meta/mock-target1.cmx
+  an-extremely-verbose-target-name.cmx[7412223]: fuchsia-pkg://fuchsia.com/mock-package2#meta/an-extremely-verbose-target-name.cmx
 """
             self.toggle = True
         elif cmdline[0] == 'ls' and cmdline[-1].endswith('corpus'):

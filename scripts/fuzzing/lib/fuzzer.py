@@ -29,8 +29,8 @@ class Fuzzer(object):
     Attributes:
       device: A Device where this fuzzer can be run
       host: The build host that built the fuzzer
-      pkg: The GN fuzzers_package name
-      tgt: The GN fuzzers name
+      package: The GN fuzzers_package name (or package_name).
+      executable: The GN fuzzers name (or output_name).
   """
 
     # Matches the prefixes in libFuzzer passed to |Fuzzer::DumpCurrentUnit| or
@@ -51,11 +51,11 @@ class Fuzzer(object):
     def filter(cls, fuzzers, name):
         """Filters a list of fuzzer names.
 
-      Takes a list of fuzzer names in the form `pkg`/`tgt` and a name to filter
+      Takes a list of fuzzer names in the form `package`/`executable` and a name to filter
       on.  If the name is of the form 'x/y', the filtered list will include all
-      the fuzzer names where 'x' is a substring of `pkg` and y is a substring
-      of `tgt`; otherwise it includes all the fuzzer names where `name` is a
-      substring of either `pkg` or `tgt`.
+      the fuzzer names where 'x' is a substring of `package` and y is a substring
+      of `executable`; otherwise it includes all the fuzzer names where `name` is a
+      substring of either `package` or `executable`.
 
       Returns:
         A list of fuzzer names matching the given name.
@@ -75,9 +75,9 @@ class Fuzzer(object):
         elif len(names) != 2:
             raise Fuzzer.NameError('Malformed fuzzer name: ' + name)
         filtered = []
-        for pkg, tgt in fuzzers:
-            if names[0] in pkg and names[1] in tgt:
-                filtered.append((pkg, tgt))
+        for package, executable in fuzzers:
+            if names[0] in package and names[1] in executable:
+                filtered.append((package, executable))
         return filtered
 
     @classmethod
@@ -102,11 +102,17 @@ class Fuzzer(object):
             args.foreground, args.debug)
 
     def __init__(
-            self, device, pkg, tgt, output=None, foreground=False, debug=False):
+            self,
+            device,
+            package,
+            executable,
+            output=None,
+            foreground=False,
+            debug=False):
         self.device = device
         self.host = device.host
-        self.pkg = pkg
-        self.tgt = tgt
+        self.package = package
+        self.executable = executable
         self._options = {'artifact_prefix': 'data/'}
         self._libfuzzer_args = []
         self._subprocess_args = []
@@ -114,7 +120,7 @@ class Fuzzer(object):
             self._output = output
         else:
             self._output = self.host.join(
-                'test_data', 'fuzzing', self.pkg, self.tgt)
+                'test_data', 'fuzzing', self.package, self.executable)
         self._foreground = foreground
         self._debug = debug
 
@@ -134,12 +140,12 @@ class Fuzzer(object):
         self._subprocess_args += subprocess_args
 
     def __str__(self):
-        return self.pkg + '/' + self.tgt
+        return self.package + '/' + self.executable
 
     def data_path(self, relpath=''):
         """Canonicalizes the location of mutable data for this fuzzer."""
         return '/data/r/sys/fuchsia.com:%s:0#meta:%s.cmx/%s' % (
-            self.pkg, self.tgt, relpath)
+            self.package, self.executable, relpath)
 
     def measure_corpus(self):
         """Returns the number of corpus elements and corpus size as a pair."""
@@ -164,7 +170,7 @@ class Fuzzer(object):
 
     def is_running(self):
         """Checks the device and returns whether the fuzzer is running."""
-        return self.tgt in self.device.getpids()
+        return str(self) in self.device.getpids()
 
     def require_stopped(self):
         """Raise an exception if the fuzzer is running."""
@@ -180,7 +186,8 @@ class Fuzzer(object):
             return os.path.join(self._output, 'latest')
 
     def url(self):
-        return 'fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx' % (self.pkg, self.tgt)
+        return 'fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx' % (
+            self.package, self.executable)
 
     def _set_libfuzzer_args(self):
         """ Adds the corpus directory and argument."""
@@ -234,8 +241,10 @@ class Fuzzer(object):
       Fuzzer.monitor().
 
       The command will be like:
-      run fuchsia-pkg://fuchsia.com/<pkg>#meta/<tgt>.cmx \
-        -artifact_prefix=data/ -dict=pkg/data/<tgt>/dictionary -jobs=1 data/corpus/
+      run fuchsia-pkg://fuchsia.com/<pkg>#meta/<executable>.cmx \
+        -artifact_prefix=data/ \
+        -dict=pkg/data/<executable>/dictionary \
+        data/corpus/
 
       See also: https://llvm.org/docs/LibFuzzer.html#running
 
@@ -260,7 +269,7 @@ class Fuzzer(object):
         os.symlink(results, self.results())
 
         self.set_default_option(
-            'dict', 'pkg/data/{}/dictionary'.format(self.tgt))
+            'dict', 'pkg/data/{}/dictionary'.format(self.executable))
 
         # Fuzzer logs are saved to fuzz-*.log when running in the background.
         # We tee the output to fuzz-0.log when running in the foreground to
@@ -339,14 +348,14 @@ class Fuzzer(object):
     def stop(self):
         """Stops any processes with a matching component manifest on the device."""
         pids = self.device.getpids()
-        if self.tgt in pids:
-            self.device.ssh(['kill', str(pids[self.tgt])]).check_call()
+        if str(self) in pids:
+            self.device.ssh(['kill', str(pids[str(self)])]).check_call()
 
     def repro(self):
         """Runs the fuzzer with test input artifacts.
 
       Executes a command like:
-      run fuchsia-pkg://fuchsia.com/<pkg>#meta/<tgt>.cmx \
+      run fuchsia-pkg://fuchsia.com/<package>#meta/<executable>.cmx \
         -artifact_prefix=data -jobs=1 data/<artifact>...
 
       If host artifact paths are specified, they will be copied to the device
@@ -380,7 +389,7 @@ class Fuzzer(object):
         """Attempts to minimizes the fuzzer's corpus.
 
       Executes a command like:
-      run fuchsia-pkg://fuchsia.com/<pkg>#meta/<tgt>.cmx \
+      run fuchsia-pkg://fuchsia.com/<package>#meta/<executable>.cmx \
         -artifact_prefix=data -jobs=1 \
         -merge=1 -merge_control_file=data/.mergefile \
         data/corpus/ data/corpus.prev/'

@@ -96,9 +96,9 @@ class Host(object):
         with open(json_file) as f:
             fuzz_specs = json.load(f)
         for fuzz_spec in fuzz_specs:
-            pkg = fuzz_spec['fuzzers_package']
-            for tgt in fuzz_spec['fuzzers']:
-                self.fuzzers.append((pkg, tgt))
+            package = fuzz_spec['fuzzers_package']
+            for executable in fuzz_spec['fuzzers']:
+                self.fuzzers.append((package, executable))
         self.fuzzers.sort()
 
     def set_build_dir(self, build_dir):

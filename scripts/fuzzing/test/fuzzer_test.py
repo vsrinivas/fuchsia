@@ -275,7 +275,7 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
                         'ssh',
                         '::1',
                         'kill',
-                        str(pids[fuzzer1.tgt]),
+                        str(pids[str(fuzzer1)]),
                     ])), mock_device.host.history)
         fuzzer3 = Fuzzer(mock_device, u'mock-package1', u'mock-target3')
         fuzzer3.stop()

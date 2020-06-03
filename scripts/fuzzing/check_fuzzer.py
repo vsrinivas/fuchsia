@@ -26,12 +26,12 @@ def main():
 
     pids = device.getpids()
     silent = True
-    for pkg, tgt in fuzzers:
-        fuzzer = Fuzzer(device, pkg, tgt)
-        if not args.name and tgt not in pids:
+    for package, executable in fuzzers:
+        fuzzer = Fuzzer(device, package, executable)
+        if not args.name and str(fuzzer) not in pids:
             continue
         silent = False
-        if tgt in pids:
+        if str(fuzzer) in pids:
             print(str(fuzzer) + ': RUNNING')
         else:
             print(str(fuzzer) + ': STOPPED')

@@ -96,9 +96,10 @@ class TestDevice(unittest.TestCase):
     def test_getpids(self):
         mock = MockDevice()
         pids = mock.getpids()
-        self.assertTrue('mock-target1' in pids)
-        self.assertEqual(pids['mock-target1'], 7412221)
-        self.assertEqual(pids['an-extremely-verbose-target-name'], 7412223)
+        self.assertTrue('mock-package1/mock-target1' in pids)
+        self.assertEqual(pids['mock-package1/mock-target1'], 7412221)
+        self.assertEqual(
+            pids['mock-package2/an-extremely-verbose-target-name'], 7412223)
 
     def test_ls(self):
         mock = MockDevice()

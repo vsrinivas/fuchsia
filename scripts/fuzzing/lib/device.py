@@ -131,18 +131,18 @@ class Device(object):
     in //zircon/system/public/zircon/types.h.
 
     Returns:
-      A dict mapping fuzz target names to process IDs. May be empty if no
+      A dict mapping fuzzer names to process IDs. May be empty if no
       fuzzers are running.
     """
         out = self.ssh(['cs']).check_output()
         pids = {}
-        for fuzzer in self.host.fuzzers:
-            tgt = (fuzzer[1] + '.cmx')[:32]
-            url = ('fuchsia-pkg://fuchsia.com/%s#meta' % fuzzer[0])[:32]
+        for package, executable in self.host.fuzzers:
+            pat = r'  %s.cmx\[(\d+)\]: fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx' % (
+                executable, package, executable)
             for line in str(out).split('\n'):
-                match = re.search(tgt + r'\[(\d+)\]: ' + url, line)
+                match = re.match(pat, line)
                 if match:
-                    pids[fuzzer[1]] = int(match.group(1))
+                    pids['/'.join([package, executable])] = int(match.group(1))
         return pids
 
     def ls(self, path):
