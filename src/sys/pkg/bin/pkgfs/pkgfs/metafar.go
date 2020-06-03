@@ -123,10 +123,6 @@ func (d *metaFarDir) Dup() (fs.Directory, error) {
 	return d, nil
 }
 
-func (d *metaFarDir) Reopen(flags fs.OpenFlags) (fs.Directory, error) {
-	return d, nil
-}
-
 func (d *metaFarDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
 	name = clean(name)
 
@@ -268,11 +264,6 @@ func (f *metaFarFile) Dup() (fs.File, error) {
 		0,
 		f.path,
 	}, nil
-}
-
-func (f *metaFarFile) Reopen(flags fs.OpenFlags) (fs.File, error) {
-	f.off = 0
-	return f, nil
 }
 
 func (f *metaFarFile) Read(p []byte, off int64, whence int) (int, error) {

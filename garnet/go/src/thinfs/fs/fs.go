@@ -254,12 +254,6 @@ type Directory interface {
 	// permissions and file seek position.
 	Dup() (Directory, error)
 
-	// Reopen returns a directory which has a copy of all the information contained in 'this'
-	// directory, except
-	// 1) The flags may be downgraded with the "flags" provided.
-	// 2) The file position is set to either zero or EOF depending on "flags".
-	Reopen(flags OpenFlags) (Directory, error)
-
 	// Read returns the contents of the directory and an error, if any.
 	Read() ([]Dirent, error)
 
@@ -302,12 +296,6 @@ type File interface {
 	// Dup returns a file which shares all the information as 'this' file, including the
 	// permissions and file seek position.
 	Dup() (File, error)
-
-	// Reopen returns a file which has a copy of all the information contained in 'this' file,
-	// except
-	// 1) The flags may be downgraded with the "flags" provided.
-	// 2) The file position is set to either zero or EOF depending on "flags".
-	Reopen(flags OpenFlags) (File, error)
 
 	// GetOpenFlags returns the open flags used to open the file
 	GetOpenFlags() OpenFlags

@@ -149,10 +149,6 @@ func (d *packageDir) Dup() (fs.Directory, error) {
 	return d, nil
 }
 
-func (d *packageDir) Reopen(flags fs.OpenFlags) (fs.Directory, error) {
-	return d, nil
-}
-
 func (d *packageDir) getBlobFor(path string) (string, bool) {
 	root, ok := d.contents[path]
 	return root.blobId, ok

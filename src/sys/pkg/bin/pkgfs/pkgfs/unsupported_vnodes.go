@@ -40,11 +40,6 @@ func (f unsupportedFile) Read(p []byte, off int64, whence int) (int, error) {
 	return 0, fs.ErrNotSupported
 }
 
-func (f unsupportedFile) Reopen(flags fs.OpenFlags) (fs.File, error) {
-	logUnsupportedOperation(string(f), fileType, "reopen")
-	return f, fs.ErrNotSupported
-}
-
 func (f unsupportedFile) Seek(offset int64, whence int) (int64, error) {
 	logUnsupportedOperation(string(f), fileType, "seek")
 	return 0, fs.ErrNotSupported
@@ -114,11 +109,6 @@ func (d unsupportedDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs
 
 func (d unsupportedDirectory) Read() ([]fs.Dirent, error) {
 	logUnsupportedOperation(string(d), dirType, "read")
-	return nil, fs.ErrNotSupported
-}
-
-func (d unsupportedDirectory) Reopen(flags fs.OpenFlags) (fs.Directory, error) {
-	logUnsupportedOperation(string(d), dirType, "reopen")
 	return nil, fs.ErrNotSupported
 }
 
