@@ -7,6 +7,6 @@ import("//boards/arm64.gni")
 board_name = "vim3"
 
 # partitions for fx flash to flash
-zircon_a_partition = "boot"
-zircon_r_partition = "recovery"
+zircon_a_partition = "zircon-a"
+zircon_r_partition = "zircon-r"
 fastboot_product = "galilei"
