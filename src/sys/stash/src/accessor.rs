@@ -150,19 +150,19 @@ impl Accessor {
                 while let Some(ListIteratorRequest::GetNext { responder }) =
                     stream.try_next().await?
                 {
-                    // 16 byte overhead for vectors
-                    // 16 byte overhead per string
+                    // 16 byte overhead for response header
+                    // 16 byte overhead for vector header
                     let mut bytes_used: usize = 32;
 
-                    let mut item_count = 0;
+                    let mut item_index = 0;
                     for result in iter.clone() {
                         bytes_used += list_item_measure(&result).num_bytes;
                         if bytes_used > ZX_CHANNEL_MAX_MSG_BYTES as usize {
                             break;
                         }
-                        item_count += 1;
+                        item_index += 1;
                     }
-                    let mut chunk: Vec<_> = iter.by_ref().take(item_count).collect();
+                    let mut chunk: Vec<_> = iter.by_ref().take(item_index).collect();
                     responder.send(&mut chunk.iter_mut())?;
                 }
                 Ok(())
