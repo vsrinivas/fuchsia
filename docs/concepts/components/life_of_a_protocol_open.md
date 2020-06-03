@@ -127,7 +127,7 @@ A
 A.cml:
 {
     // ...
-    "expose: [
+    "expose": [
         {
             "protocol": "/svc/fuchsia.example.Foo",
             "from": "self",
@@ -138,7 +138,7 @@ A.cml:
 B.cml:
 {
     // ...
-    "expose: [
+    "expose": [
         {
             "protocol": "/svc/fuchsia.example.Foo",
             "from": "#A",

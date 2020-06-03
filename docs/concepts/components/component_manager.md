@@ -2,7 +2,7 @@
 
 The component manager is the heart of the component framework. It maintains the
 [component topology][doc-topology], manages
-[component lifecycle][doc-lifecycle], provides components with with the
+[component lifecycle][doc-lifecycle], provides components with the
 [capabilities][doc-capabilities] they require at runtime, and keeps them
 isolated from one another.
 
