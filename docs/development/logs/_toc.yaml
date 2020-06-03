@@ -10,8 +10,6 @@ toc:
   path: /docs/development/logs/viewing.md
 - title: "Encodings"
   path: /docs/development/logs/encodings.md
-- title: "Enable verbose logging"
-  path: /docs/development/logs/verbose.md
 - title: "Languages"
   section:
   - title: "C++"

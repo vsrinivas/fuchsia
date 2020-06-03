@@ -10,3 +10,5 @@ toc:
   path: /docs/development/components/component_id_index.md
 - title: "Troubleshooting components"
   path: /docs/development/components/troubleshooting.md
+- title: "Enable verbose logging for input events"
+  path: /docs/development/components/verbose_logging.md
