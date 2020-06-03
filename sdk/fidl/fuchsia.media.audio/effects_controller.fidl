@@ -11,6 +11,7 @@ enum UpdateEffectError {
 
 const uint32 MAX_EFFECT_NAME_LENGTH = 128;
 
+[Discoverable]
 protocol EffectsController {
     /// Sends the `config` message to an audio effect named `effect_name`. If the
     /// server closes the `EffectsController` connection for any reason, that
