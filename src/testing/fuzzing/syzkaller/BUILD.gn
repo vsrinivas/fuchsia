@@ -60,7 +60,6 @@ executable("syz-executor") {
     "${src}/executor/common_test.h",
     "${src}/executor/common_usb.h",
     "${src}/executor/common_windows.h",
-    "${src}/executor/defs.h",
     "${src}/executor/executor.cc",
     "${src}/executor/executor_akaros.h",
     "${src}/executor/executor_bsd.h",
@@ -71,7 +70,6 @@ executable("syz-executor") {
     "${src}/executor/kvm.S.h",
     "${src}/executor/kvm.h",
     "${src}/executor/nocover.h",
-    "${src}/executor/syscalls.h",
     "${src}/executor/test.h",
     "${src}/executor/test_linux.h",
   ]
