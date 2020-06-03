@@ -152,28 +152,26 @@ DecodeResult<FidlType> Decode(EncodedMessage<FidlType> msg) {
 template <typename FidlType>
 EncodeResult<FidlType> Encode(DecodedMessage<FidlType> msg) {
   EncodeResult<FidlType> result;
-  result.status =
-      result.message.Initialize([&msg, &result](BytePart* out_msg_bytes, HandlePart* msg_handles) {
-        *out_msg_bytes = std::move(msg.bytes_);
-        if (NeedsEncodeDecode<FidlType>::value) {
-          uint32_t actual_handles = 0;
-          zx_status_t status = fidl_encode(FidlType::Type, out_msg_bytes->data(),
-                                           out_msg_bytes->actual(), msg_handles->data(),
-                                           msg_handles->capacity(), &actual_handles, &result.error);
-          msg_handles->set_actual(actual_handles);
-          return status;
-        } else {
-          if (out_msg_bytes->actual() != FidlAlign(FidlType::PrimarySize)) {
-            result.error = "invalid size encoding";
-            return ZX_ERR_INVALID_ARGS;
-          }
-          memset(out_msg_bytes->data() + FidlType::PrimarySize, 0,
-                 out_msg_bytes->actual() - FidlType::PrimarySize);
-          // Boring type does not need encoding
-          msg_handles->set_actual(0);
-          return ZX_OK;
-        }
-      });
+  result.message.bytes() = std::move(msg.bytes_);
+  if (NeedsEncodeDecode<FidlType>::value) {
+    uint32_t actual_handles = 0;
+    result.status =
+        fidl_encode(FidlType::Type, result.message.bytes().data(), result.message.bytes().actual(),
+                    result.message.handles().data(), result.message.handles().capacity(),
+                    &actual_handles, &result.error);
+    result.message.handles().set_actual(actual_handles);
+  } else {
+    if (result.message.bytes().actual() != FidlAlign(FidlType::PrimarySize)) {
+      result.error = "invalid size encoding";
+      result.status = ZX_ERR_INVALID_ARGS;
+    } else {
+      memset(result.message.bytes().data() + FidlType::PrimarySize, 0,
+             result.message.bytes().actual() - FidlType::PrimarySize);
+      // Boring type does not need encoding
+      result.message.handles().set_actual(0);
+      result.status = ZX_OK;
+    }
+  }
   return result;
 }
 
@@ -283,30 +281,25 @@ EncodeResult<ResponseType> Call(zx::unowned_channel chan, EncodedMessage<Request
                 "RequestType and ResponseType are incompatible");
 
   EncodeResult<ResponseType> result;
+  result.message.bytes() = std::move(response_buffer);
+  uint32_t actual_num_bytes = 0u;
+  uint32_t actual_num_handles = 0u;
 
-  result.message.Initialize([&response_buffer, &request, &chan, &result, deadline](
-                                BytePart* out_bytes, HandlePart* handles) {
-    *out_bytes = std::move(response_buffer);
-    uint32_t actual_num_bytes = 0u;
-    uint32_t actual_num_handles = 0u;
+  zx_channel_call_args_t args = {.wr_bytes = request.bytes().data(),
+                                 .wr_handles = request.handles().data(),
+                                 .rd_bytes = result.message.bytes().data(),
+                                 .rd_handles = result.message.handles().data(),
+                                 .wr_num_bytes = request.bytes().actual(),
+                                 .wr_num_handles = request.handles().actual(),
+                                 .rd_num_bytes = result.message.bytes().capacity(),
+                                 .rd_num_handles = result.message.handles().capacity()};
 
-    zx_channel_call_args_t args = {.wr_bytes = request.bytes().data(),
-                                   .wr_handles = request.handles().data(),
-                                   .rd_bytes = out_bytes->data(),
-                                   .rd_handles = handles->data(),
-                                   .wr_num_bytes = request.bytes().actual(),
-                                   .wr_num_handles = request.handles().actual(),
-                                   .rd_num_bytes = out_bytes->capacity(),
-                                   .rd_num_handles = handles->capacity()};
-
-    result.status = chan->call(0u, deadline, &args, &actual_num_bytes, &actual_num_handles);
-    request.ReleaseBytesAndHandles();
-    if (result.status != ZX_OK) {
-      return;
-    }
-    handles->set_actual(actual_num_handles);
-    out_bytes->set_actual(actual_num_bytes);
-  });
+  result.status = chan->call(0u, deadline, &args, &actual_num_bytes, &actual_num_handles);
+  request.ReleaseBytesAndHandles();
+  if (result.status == ZX_OK) {
+    result.message.handles().set_actual(actual_num_handles);
+    result.message.bytes().set_actual(actual_num_bytes);
+  }
   return result;
 }
 

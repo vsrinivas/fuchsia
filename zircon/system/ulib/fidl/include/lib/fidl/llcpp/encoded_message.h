@@ -137,27 +137,13 @@ class EncodedMessage final
   }
 
   const BytePart& bytes() const { return bytes_; }
+  BytePart& bytes() { return bytes_; }
 
   const HandlePart& handles() const { return handles_; }
+  HandlePart& handles() { return handles_; }
 
   // Take ownership of bytes and handles and assemble into a |fidl::Message|.
   Message ToAnyMessage() { return Message(std::move(bytes_), std::move(handles_)); }
-
-  // Clears the contents of the EncodedMessage then invokes Callback
-  // to initialize the EncodedMessage in-place then returns the callback's result.
-  //
-  // |callback| is a callable object whose arguments are (BytePart*, HandlePart*).
-  template <typename Callback>
-  decltype(auto) Initialize(Callback callback) {
-    struct GoldenCallback {
-      void operator()(BytePart*, HandlePart*) {}
-    };
-    static_assert(internal::SameArguments<Callback, GoldenCallback>,
-                  "Callback signature must be: T(BytePart*, HandlePart*).");
-    bytes_ = BytePart();
-    CloseHandles();
-    return callback(&bytes_, &handles_);
-  }
 
  private:
   void CloseHandles() {

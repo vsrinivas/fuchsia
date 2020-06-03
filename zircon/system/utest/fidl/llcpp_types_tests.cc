@@ -250,21 +250,18 @@ bool EncodedMessageTest() {
 
   {
     fidl::EncodedMessage<NonnullableChannelMessage> encoded_message;
-    encoded_message.Initialize(
-        [&buf, &channel_1](fidl::BytePart* out_msg_bytes, fidl::HandlePart* msg_handles) {
-          *out_msg_bytes = fidl::BytePart(buf, sizeof(buf), sizeof(buf));
-          zx_handle_t* handle = msg_handles->data();
+    encoded_message.bytes() = fidl::BytePart(buf, sizeof(buf), sizeof(buf));
+    zx_handle_t* handle = encoded_message.handles().data();
 
-          // Unsafely open a channel, which should be closed automatically by encoded_message
-          {
-            zx::channel out0, out1;
-            EXPECT_EQ(zx::channel::create(0, &out0, &out1), ZX_OK);
-            *handle = out0.release();
-            channel_1 = std::move(out1);
-          }
+    // Unsafely open a channel, which should be closed automatically by encoded_message
+    {
+      zx::channel out0, out1;
+      EXPECT_EQ(zx::channel::create(0, &out0, &out1), ZX_OK);
+      *handle = out0.release();
+      channel_1 = std::move(out1);
+    }
 
-          msg_handles->set_actual(1);
-        });
+    encoded_message.handles().set_actual(1);
 
     EXPECT_TRUE(HelperExpectPeerValid(channel_1));
   }
@@ -319,24 +316,21 @@ bool RoundTripTest() {
 
   fidl::EncodedMessage<NonnullableChannelMessage>* encoded_message =
       new fidl::EncodedMessage<NonnullableChannelMessage>();
+
+  encoded_message->bytes() = fidl::BytePart(buf, sizeof(buf), sizeof(buf));
+  zx_handle_t* handle = encoded_message->handles().data();
+
   zx_handle_t unsafe_handle_backup;
+  // Unsafely open a channel, which should be closed automatically by encoded_message
+  {
+    zx::channel out0, out1;
+    EXPECT_EQ(zx::channel::create(0, &out0, &out1), ZX_OK);
+    *handle = out0.release();
+    unsafe_handle_backup = *handle;
+    channel_1 = std::move(out1);
+  }
 
-  encoded_message->Initialize([&buf, &channel_1, &unsafe_handle_backup](
-                                  fidl::BytePart* out_msg_bytes, fidl::HandlePart* msg_handles) {
-    *out_msg_bytes = fidl::BytePart(buf, sizeof(buf), sizeof(buf));
-    zx_handle_t* handle = msg_handles->data();
-
-    // Unsafely open a channel, which should be closed automatically by encoded_message
-    {
-      zx::channel out0, out1;
-      EXPECT_EQ(zx::channel::create(0, &out0, &out1), ZX_OK);
-      *handle = out0.release();
-      unsafe_handle_backup = *handle;
-      channel_1 = std::move(out1);
-    }
-
-    msg_handles->set_actual(1);
-  });
+  encoded_message->handles().set_actual(1);
 
   uint8_t golden_encoded[] = {10,  0,   0,   0,    // txid
                               0,   0,   0,   0,    // reserved
