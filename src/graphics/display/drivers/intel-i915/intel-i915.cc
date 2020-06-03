@@ -18,6 +18,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <iterator>
 #include <memory>
 #include <utility>
 
@@ -772,9 +773,9 @@ void Controller::CallOnDisplaysChanged(DisplayDevice** added, size_t added_count
     added_args[i].edid_present = true;
     added_args[i].panel.i2c_bus_id = added[i]->i2c_bus_id();
     added_args[i].pixel_format_list = supported_formats;
-    added_args[i].pixel_format_count = static_cast<uint32_t>(fbl::count_of(supported_formats));
+    added_args[i].pixel_format_count = static_cast<uint32_t>(std::size(supported_formats));
     added_args[i].cursor_info_list = cursor_infos;
-    added_args[i].cursor_info_count = static_cast<uint32_t>(fbl::count_of(cursor_infos));
+    added_args[i].cursor_info_count = static_cast<uint32_t>(std::size(cursor_infos));
   }
   dc_intf_.OnDisplaysChanged(added_args, added_count, removed, removed_count, added_info,
                              added_count, &added_actual);
@@ -1507,7 +1508,7 @@ uint32_t Controller::DisplayControllerImplCheckConfiguration(
             layer_cfg_result[i][j] |= CLIENT_USE_PRIMARY;
           }
           bool found = false;
-          for (unsigned x = 0; x < fbl::count_of(cursor_infos) && !found; x++) {
+          for (unsigned x = 0; x < std::size(cursor_infos) && !found; x++) {
             found = image->width == cursor_infos[x].width &&
                     image->height == cursor_infos[x].height &&
                     image->pixel_format == cursor_infos[x].format;

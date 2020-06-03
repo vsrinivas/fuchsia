@@ -9,6 +9,8 @@
 #include <string.h>
 #include <zircon/assert.h>
 
+#include <iterator>
+
 #include <ddk/driver.h>
 
 #include "intel-i915.h"
@@ -96,30 +98,30 @@ void get_dp_ddi_buf_trans_entries(uint16_t device_id, const ddi_buf_trans_entry*
     if (is_skl_u(device_id)) {
       *entries = dp_ddi_buf_trans_skl_u;
       *i_boost = 0x1;
-      *count = static_cast<unsigned>(fbl::count_of(dp_ddi_buf_trans_skl_u));
+      *count = static_cast<unsigned>(std::size(dp_ddi_buf_trans_skl_u));
     } else if (is_skl_y(device_id)) {
       *entries = dp_ddi_buf_trans_skl_y;
       *i_boost = 0x3;
-      *count = static_cast<unsigned>(fbl::count_of(dp_ddi_buf_trans_skl_y));
+      *count = static_cast<unsigned>(std::size(dp_ddi_buf_trans_skl_y));
     } else {
       *entries = dp_ddi_buf_trans_skl_hs;
       *i_boost = 0x1;
-      *count = static_cast<unsigned>(fbl::count_of(dp_ddi_buf_trans_skl_hs));
+      *count = static_cast<unsigned>(std::size(dp_ddi_buf_trans_skl_hs));
     }
   } else {
     ZX_DEBUG_ASSERT_MSG(is_kbl(device_id), "Expected kbl device");
     if (is_kbl_u(device_id)) {
       *entries = dp_ddi_buf_trans_kbl_u;
       *i_boost = 0x1;
-      *count = static_cast<unsigned>(fbl::count_of(dp_ddi_buf_trans_kbl_u));
+      *count = static_cast<unsigned>(std::size(dp_ddi_buf_trans_kbl_u));
     } else if (is_kbl_y(device_id)) {
       *entries = dp_ddi_buf_trans_kbl_y;
       *i_boost = 0x3;
-      *count = static_cast<unsigned>(fbl::count_of(dp_ddi_buf_trans_kbl_y));
+      *count = static_cast<unsigned>(std::size(dp_ddi_buf_trans_kbl_y));
     } else {
       *entries = dp_ddi_buf_trans_kbl_hs;
       *i_boost = 0x3;
-      *count = static_cast<unsigned>(fbl::count_of(dp_ddi_buf_trans_kbl_hs));
+      *count = static_cast<unsigned>(std::size(dp_ddi_buf_trans_kbl_hs));
     }
   }
 }
@@ -128,13 +130,13 @@ void get_edp_ddi_buf_trans_entries(uint16_t device_id, const ddi_buf_trans_entry
                                    unsigned* count) {
   if (is_skl_u(device_id) || is_kbl_u(device_id)) {
     *entries = edp_ddi_buf_trans_skl_u;
-    *count = static_cast<int>(fbl::count_of(edp_ddi_buf_trans_skl_u));
+    *count = static_cast<int>(std::size(edp_ddi_buf_trans_skl_u));
   } else if (is_skl_y(device_id) || is_kbl_y(device_id)) {
     *entries = edp_ddi_buf_trans_skl_y;
-    *count = static_cast<int>(fbl::count_of(edp_ddi_buf_trans_skl_y));
+    *count = static_cast<int>(std::size(edp_ddi_buf_trans_skl_y));
   } else {
     *entries = edp_ddi_buf_trans_skl_hs;
-    *count = static_cast<int>(fbl::count_of(edp_ddi_buf_trans_skl_hs));
+    *count = static_cast<int>(std::size(edp_ddi_buf_trans_skl_hs));
   }
 }
 
@@ -821,7 +823,7 @@ bool DpDisplay::Query() {
   // general DP displays, the default power state is D0, so we don't have to
   // worry about AUX failures because of power saving mode.
 
-  if (!DpcdRead(dpcd::DPCD_CAP_START, dpcd_capabilities_, fbl::count_of(dpcd_capabilities_))) {
+  if (!DpcdRead(dpcd::DPCD_CAP_START, dpcd_capabilities_, std::size(dpcd_capabilities_))) {
     LOG_TRACE("Failed to read dpcd capabilities\n");
     return false;
   }
@@ -851,7 +853,7 @@ bool DpDisplay::Query() {
 
     if (edp_caps.dpcd_display_ctrl_capable() &&
         !DpcdRead(dpcd::DPCD_EDP_CAP_START, dpcd_edp_capabilities_,
-                  fbl::count_of(dpcd_edp_capabilities_))) {
+                  std::size(dpcd_edp_capabilities_))) {
       LOG_ERROR("Failed to read edp capabilities\n");
       return false;
     }

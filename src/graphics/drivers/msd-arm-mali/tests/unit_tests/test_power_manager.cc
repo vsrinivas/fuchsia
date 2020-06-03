@@ -4,6 +4,8 @@
 
 #include <zircon/compiler.h>
 
+#include <iterator>
+
 #include <gtest/gtest.h>
 
 #include "fbl/algorithm.h"
@@ -32,7 +34,7 @@ class TestPowerManager {
     registers::CoreReadyState::CoreType actions[] = {registers::CoreReadyState::CoreType::kShader,
                                                      registers::CoreReadyState::CoreType::kL2,
                                                      registers::CoreReadyState::CoreType::kTiler};
-    for (size_t i = 0; i < fbl::count_of(actions); i++) {
+    for (size_t i = 0; i < std::size(actions); i++) {
       uint32_t offset =
           static_cast<uint32_t>(actions[i]) +
           static_cast<uint32_t>(registers::CoreReadyState::ActionType::kActionPowerOn);
@@ -59,7 +61,7 @@ class TestPowerManager {
     registers::CoreReadyState::CoreType actions[] = {registers::CoreReadyState::CoreType::kShader,
                                                      registers::CoreReadyState::CoreType::kL2,
                                                      registers::CoreReadyState::CoreType::kTiler};
-    for (size_t i = 0; i < fbl::count_of(actions); i++) {
+    for (size_t i = 0; i < std::size(actions); i++) {
       uint32_t offset =
           static_cast<uint32_t>(actions[i]) +
           static_cast<uint32_t>(registers::CoreReadyState::ActionType::kActionPowerOff);
@@ -70,7 +72,7 @@ class TestPowerManager {
         EXPECT_EQ(0u, reg_io->Read32(offset));
     }
     power_manager->DisableL2(reg_io.get());
-    for (size_t i = 0; i < fbl::count_of(actions); i++) {
+    for (size_t i = 0; i < std::size(actions); i++) {
       uint32_t offset =
           static_cast<uint32_t>(actions[i]) +
           static_cast<uint32_t>(registers::CoreReadyState::ActionType::kActionPowerOff);

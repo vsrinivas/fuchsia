@@ -16,6 +16,7 @@
 #include <zircon/types.h>
 
 #include <cstddef>
+#include <iterator>
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
@@ -736,8 +737,8 @@ zx_status_t AmlogicDisplay::Bind() {
   width_ = display_info.width;
   height_ = display_info.height;
 
-  composite_get_fragments(&composite, fragments_, fbl::count_of(fragments_), &actual);
-  if (actual != fbl::count_of(fragments_)) {
+  composite_get_fragments(&composite, fragments_, std::size(fragments_), &actual);
+  if (actual != std::size(fragments_)) {
     DISP_ERROR("could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }

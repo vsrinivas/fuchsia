@@ -6,6 +6,8 @@
 
 #include <lib/edid/edid.h>
 
+#include <iterator>
+
 #include <ddk/driver.h>
 
 #include "intel-i915.h"
@@ -664,13 +666,13 @@ bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode, registers::Pipe
   uint8_t default_iboost;
   if (is_skl_y(controller()->device_id()) || is_kbl_y(controller()->device_id())) {
     entries = hdmi_ddi_buf_trans_skl_y;
-    if (idx >= fbl::count_of(hdmi_ddi_buf_trans_skl_y)) {
+    if (idx >= std::size(hdmi_ddi_buf_trans_skl_y)) {
       idx = 8;  // Default index
     }
     default_iboost = 3;
   } else {
     entries = hdmi_ddi_buf_trans_skl_uhs;
-    if (idx >= fbl::count_of(hdmi_ddi_buf_trans_skl_uhs)) {
+    if (idx >= std::size(hdmi_ddi_buf_trans_skl_uhs)) {
       idx = 8;  // Default index
     }
     default_iboost = 1;

@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <zircon/pixelformat.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 
 #include "utils.h"
@@ -30,7 +32,7 @@ static uint32_t get_fg_color() {
       0xff00ff00,
       0xff0000ff,
   };
-  return colors[layer_count++ % fbl::count_of(colors)];
+  return colors[layer_count++ % std::size(colors)];
 }
 
 // Checks if two rectangles intersect, and if so, returns their intersection.

@@ -15,6 +15,7 @@
 #include <zircon/limits.h>
 
 #include <algorithm>
+#include <iterator>
 #include <memory>
 
 #include <ddk/binding.h>
@@ -476,8 +477,8 @@ zx_status_t FakeDisplay::Bind(bool start_vsync) {
     return status;
   }
   size_t actual;
-  composite_get_fragments(&composite, fragments_, fbl::count_of(fragments_), &actual);
-  if (actual != fbl::count_of(fragments_)) {
+  composite_get_fragments(&composite, fragments_, std::size(fragments_), &actual);
+  if (actual != std::size(fragments_)) {
     DISP_ERROR("could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }

@@ -11,6 +11,7 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
+#include <iterator>
 #include <memory>
 #include <utility>
 
@@ -182,7 +183,7 @@ void Controller::PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info) {
         {edid::ShortAudioDescriptor::kHz192, 192000},
     };
 
-    for (uint32_t i = 0; i < fbl::count_of(kRateLut); ++i) {
+    for (uint32_t i = 0; i < std::size(kRateLut); ++i) {
       if (!(it->sampling_frequencies & kRateLut[i].flag)) {
         continue;
       }
@@ -198,7 +199,7 @@ void Controller::PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info) {
       // to add at least one new entry into the set of format ranges.
       // Find the end of this range.
       uint32_t j;
-      for (j = i + 1; j < fbl::count_of(kRateLut); ++j) {
+      for (j = i + 1; j < std::size(kRateLut); ++j) {
         if (!(it->bitrate & kRateLut[j].flag)) {
           break;
         }

@@ -10,6 +10,7 @@
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/clock.h>
 
+#include <iterator>
 #include <memory>
 #include <mutex>
 
@@ -336,8 +337,8 @@ zx_status_t Mt8167sGpu::Bind() {
   // Zeroth fragment is pdev
   zx_device_t* fragments[kClockCount + 1];
   size_t actual;
-  composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
-  if (actual != fbl::count_of(fragments)) {
+  composite.GetFragments(fragments, std::size(fragments), &actual);
+  if (actual != std::size(fragments)) {
     GPU_ERROR("could not retrieve all our fragments\n");
     return ZX_ERR_INTERNAL;
   }

@@ -4,6 +4,7 @@
 
 #include "vim-spdif-audio-stream.h"
 
+#include <iterator>
 #include <limits>
 #include <numeric>
 #include <utility>
@@ -445,7 +446,7 @@ void Vim2SpdifAudioStream::SetMode(uint32_t frame_rate, audio_sample_format_t fm
   };
 
   uint32_t rate_ndx;
-  for (rate_ndx = 0; rate_ndx < fbl::count_of(RATE_LUT); ++rate_ndx) {
+  for (rate_ndx = 0; rate_ndx < std::size(RATE_LUT); ++rate_ndx) {
     if (RATE_LUT[rate_ndx].frame_rate == frame_rate) {
       break;
     }
@@ -454,11 +455,11 @@ void Vim2SpdifAudioStream::SetMode(uint32_t frame_rate, audio_sample_format_t fm
   // The requested frame rate should already have been validated by the code
   // before us.  If something has gone terribly wrong, log a warning and
   // default to 48K.
-  if (rate_ndx >= fbl::count_of(RATE_LUT)) {
+  if (rate_ndx >= std::size(RATE_LUT)) {
     constexpr uint32_t DEFAULT_RATE_NDX = 1;
     zxlogf(WARN, "Failed to find requested frame rate (%u) in LUT!  Defaulting to 48000",
            frame_rate);
-    static_assert(DEFAULT_RATE_NDX < fbl::count_of(RATE_LUT), "Invalid default rate index!");
+    static_assert(DEFAULT_RATE_NDX < std::size(RATE_LUT), "Invalid default rate index!");
     rate_ndx = DEFAULT_RATE_NDX;
   }
 
