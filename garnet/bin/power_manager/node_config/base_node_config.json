@@ -1,2 +1,7 @@
 [
+    {
+        "type": "DriverManagerHandler",
+        "name": "driver_manager_handler",
+        "config": {}
+    }
 ]

@@ -26,31 +26,11 @@ template("node_config") {
   }
 }
 
-template("node_config_bootfs_manifest") {
-  validate_json("${target_name}_validate_json") {
-    data = "${invoker.source}"
-    schema = "node_config.schema.json"
-  }
-  bootfs_manifest(target_name) {
-    deps = [ ":${target_name}_validate_json" ]
-    config = [
-      {
-        path = "${invoker.source}"
-        dest = "power_manager/node_config.json"
-      },
-    ]
-  }
-}
-
 node_config("astro") {
   source = "astro_node_config.json"
 }
 
-node_config_bootfs_manifest("astro.manifest") {
-  source = "astro_node_config.json"
-}
-
-node_config_bootfs_manifest("base.manifest") {
+node_config("base") {
   source = "base_node_config.json"
 }
 

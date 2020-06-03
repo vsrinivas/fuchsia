@@ -108,3 +108,10 @@ group("astro_config") {
     "node_config:astro",
   ]
 }
+
+group("base_config") {
+  deps = [
+    ":sysmgr_config",
+    "node_config:base",
+  ]
+}
