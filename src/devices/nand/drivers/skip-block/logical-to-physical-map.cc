@@ -4,6 +4,7 @@
 
 #include "logical-to-physical-map.h"
 
+#include <algorithm>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -39,7 +40,7 @@ zx_status_t LogicalToPhysicalMap::GetPhysical(uint32_t copy, uint32_t block,
   block += first;
   uint32_t skipped_blocks = 0;
   for (const auto& bad_block : bad_blocks_) {
-    if (bad_block != fbl::clamp(bad_block, first, last)) {
+    if (bad_block != std::clamp(bad_block, first, last)) {
       continue;
     }
 
@@ -65,7 +66,7 @@ uint32_t LogicalToPhysicalMap::AvailableBlockCount(uint32_t copy) const {
 
   uint32_t bad_block_count = 0;
   for (const auto& bad_block : bad_blocks_) {
-    if (bad_block == fbl::clamp(bad_block, first, last)) {
+    if (bad_block == std::clamp(bad_block, first, last)) {
       bad_block_count++;
     }
   }

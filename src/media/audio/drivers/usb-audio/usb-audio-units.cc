@@ -6,6 +6,7 @@
 
 #include <math.h>
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <utility>
@@ -487,7 +488,7 @@ float FeatureUnit::SetVol(const usb_protocol_t& proto, float db) {
   ticks_float = roundf(ticks_float / vol_res_) * vol_res_;
 
   // Now clamp to the acceptable min/max range and convert to integer ticks.
-  vol_cur_ = static_cast<int16_t>(fbl::clamp<float>(ticks_float, vol_min_, vol_max_));
+  vol_cur_ = static_cast<int16_t>(std::clamp<float>(ticks_float, vol_min_, vol_max_));
 
   // Finally apply the setting.  If we have no explicit mute control, and we
   // are currently supposed to be muted, skip this step.  We are using the

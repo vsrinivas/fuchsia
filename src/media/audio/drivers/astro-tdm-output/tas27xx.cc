@@ -4,6 +4,7 @@
 
 #include "tas27xx.h"
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -139,7 +140,7 @@ zx_status_t Tas27xx::GetGain(float* gain) {
 }
 
 zx_status_t Tas27xx::SetGain(float gain) {
-  gain = fbl::clamp(gain, GetMinGain(), GetMaxGain());
+  gain = std::clamp(gain, GetMinGain(), GetMaxGain());
   uint8_t gain_reg = static_cast<uint8_t>(-gain / kGainStep);
 
   return WriteReg(PB_CFG2, gain_reg);

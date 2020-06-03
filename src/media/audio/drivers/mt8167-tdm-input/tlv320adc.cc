@@ -7,6 +7,8 @@
 #include <lib/device-protocol/i2c.h>
 #include <string.h>
 
+#include <algorithm>
+
 #include <ddk/protocol/i2c.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
@@ -29,7 +31,7 @@ std::unique_ptr<Tlv320adc> Tlv320adc::Create(const ddk::I2cChannel& i2c, uint32_
 zx_status_t Tlv320adc::Reset() { return WriteReg(0, 1, 0x01); }
 
 zx_status_t Tlv320adc::SetGain(float gain) {
-  gain = fbl::clamp(gain, kMinGain, kMaxGain);
+  gain = std::clamp(gain, kMinGain, kMaxGain);
 
   // TODO(andresoportus): Add fine vol control at reg 82.
   uint8_t gain_reg = static_cast<uint8_t>(gain * 2.f) & 0x7F;

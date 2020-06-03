@@ -4,6 +4,8 @@
 
 #include "layer.h"
 
+#include <algorithm>
+
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 
@@ -119,10 +121,10 @@ void Layer::ApplyChanges(const display_mode_t& mode) {
     current_cursor_y_ = pending_cursor_y_;
 
     current_layer_.cfg.cursor.x_pos =
-        fbl::clamp(current_cursor_x_, -static_cast<int32_t>(new_image_config->width) + 1,
+        std::clamp(current_cursor_x_, -static_cast<int32_t>(new_image_config->width) + 1,
                    static_cast<int32_t>(mode.h_addressable) - 1);
     current_layer_.cfg.cursor.y_pos =
-        fbl::clamp(current_cursor_y_, -static_cast<int32_t>(new_image_config->height) + 1,
+        std::clamp(current_cursor_y_, -static_cast<int32_t>(new_image_config->height) + 1,
                    static_cast<int32_t>(mode.v_addressable) - 1);
   } else if (current_layer_.type == LAYER_TYPE_COLOR) {
     memcpy(current_color_bytes_, pending_color_bytes_, sizeof(current_color_bytes_));

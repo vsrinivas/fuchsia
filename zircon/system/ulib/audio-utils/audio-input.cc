@@ -75,7 +75,7 @@ zx_status_t AudioInput::Record(AudioSink& sink, Duration duration) {
   if (loop) {
     printf("Recording until a key is pressed\n");
   } else {
-    std::get<float>(duration) = fbl::clamp(std::get<float>(duration), MIN_DURATION, MAX_DURATION);
+    std::get<float>(duration) = std::clamp(std::get<float>(duration), MIN_DURATION, MAX_DURATION);
     printf("Recording for %.1f seconds\n", std::get<float>(duration));
     frames_expected = std::lround(frame_rate_ * std::get<float>(duration));
     bytes_expected = frame_sz_ * frames_expected;

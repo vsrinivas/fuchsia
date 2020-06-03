@@ -7,6 +7,7 @@
 #include <lib/device-protocol/i2c.h>
 #include <string.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <fbl/algorithm.h>
@@ -48,7 +49,7 @@ zx_status_t Tas5720::Mute(bool mute) {
 }
 
 zx_status_t Tas5720::SetGain(float gain) {
-  gain = fbl::clamp(gain, kMinGain, kMaxGain);
+  gain = std::clamp(gain, kMinGain, kMaxGain);
   // Datasheet: "DVC [Hex Value] = 0xCF + (DVC [dB] / 0.5 [dB] )".
   uint8_t gain_reg = static_cast<uint8_t>(0xCF + gain / .5f);
   zx_status_t status;

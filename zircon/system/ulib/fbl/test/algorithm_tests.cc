@@ -28,18 +28,6 @@ TEST(AlgorithmTest, Max) {
   EXPECT_EQ(val(fbl::max(1u, 1u)), 1u);
 }
 
-TEST(AlgorithmTest, Clamp) {
-  EXPECT_EQ(val(fbl::clamp(1, 2, 6)), 2);
-  EXPECT_EQ(val(fbl::clamp(2.1, 2.1, 6.1)), 2.1);
-  EXPECT_EQ(val(fbl::clamp(3u, 2u, 6u)), 3u);
-  EXPECT_EQ(val(fbl::clamp(6, 2, 6)), 6);
-  EXPECT_EQ(val(fbl::clamp(7, 2, 6)), 6);
-
-  EXPECT_EQ(val(fbl::clamp(1, 2, 2)), 2);
-  EXPECT_EQ(val(fbl::clamp(2, 2, 2)), 2);
-  EXPECT_EQ(val(fbl::clamp(3, 2, 2)), 2);
-}
-
 TEST(AlgorithmTest, RoundUp) {
   EXPECT_EQ(fbl::round_up(0u, 1u), 0u);
   EXPECT_EQ(fbl::round_up(0u, 5u), 0u);

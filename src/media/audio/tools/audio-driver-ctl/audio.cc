@@ -10,6 +10,7 @@
 #include <string.h>
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <limits>
 #include <optional>
 
@@ -461,7 +462,7 @@ int main(int argc, const char** argv) {
             return -1;
           }
           arg++;
-          tone_freq = fbl::clamp(tone_freq, 15.0f, 20000.0f);
+          tone_freq = std::clamp(tone_freq, 15.0f, 20000.0f);
         }
         if (arg < argc) {
           if (sscanf(argv[arg], "%f", &duration) != 1) {

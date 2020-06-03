@@ -7,6 +7,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/clock.h>
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 
@@ -162,12 +163,12 @@ void MediaApp::ParameterRangeChecks() {
     }
   }
 
-  stream_gain_db_ = fbl::clamp<float>(stream_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB,
+  stream_gain_db_ = std::clamp<float>(stream_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB,
                                       fuchsia::media::audio::MAX_GAIN_DB);
 
   usage_gain_db_ =
-      fbl::clamp<float>(usage_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB, kUnityGainDb);
-  usage_volume_ = fbl::clamp<float>(usage_volume_, fuchsia::media::audio::MIN_VOLUME,
+      std::clamp<float>(usage_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB, kUnityGainDb);
+  usage_volume_ = std::clamp<float>(usage_volume_, fuchsia::media::audio::MIN_VOLUME,
                                     fuchsia::media::audio::MAX_VOLUME);
 
   CLI_CHECK(success, "Exiting.");

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/io.h>
 #include <stdio.h>
 #include <threads.h>
 #include <unistd.h>
@@ -9,8 +10,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
-#include <lib/fdio/io.h>
 
+#include <algorithm>
 #include <limits>
 #include <utility>
 
@@ -105,7 +106,7 @@ int LoadGeneratorThread::Run() {
       accumulator_ /= MakeRandomDouble(kMinNum, kMaxNum);
 
       double tmp = accumulator_;
-      accumulator_ = fbl::clamp<double>(tmp, 0.0, kMaxNum);
+      accumulator_ = std::clamp<double>(tmp, 0.0, kMaxNum);
     }
 
     if (quit_)

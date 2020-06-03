@@ -43,7 +43,7 @@ void RK4SpringSimulation::SetTargetValue(float target_value) {
 }
 
 float RK4SpringSimulation::GetValue() {
-  return fbl::clamp(start_value_ + spring_value_ * (target_value_ - start_value_),
+  return std::clamp(start_value_ + spring_value_ * (target_value_ - start_value_),
                     std::min(start_value_, target_value_), std::max(start_value_, target_value_));
 }
 

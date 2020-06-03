@@ -6,6 +6,7 @@
 
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <limits>
 
 #include <fbl/algorithm.h>
@@ -32,7 +33,7 @@ zx_status_t GeneratedSource::Init(float freq, float amp, Duration duration, uint
         static_cast<uint64_t>(std::get<float>(duration) * static_cast<float>(frame_rate_));
   }
   frames_produced_ = 0;
-  amp_ = fbl::clamp<double>(amp, 0.0, 1.0);
+  amp_ = std::clamp<double>(amp, 0.0, 1.0);
 
   switch (static_cast<audio_sample_format_t>(sample_format & ~AUDIO_SAMPLE_FORMAT_FLAG_MASK)) {
     case AUDIO_SAMPLE_FORMAT_8BIT:

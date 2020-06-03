@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ENERGY_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ENERGY_H_
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 
@@ -169,7 +170,7 @@ dBmh operator-(const dBmh& lhs, const dBh& rhs);
 // The output will be always less than 2^56. This allows the user to safely sum
 // up to 256 values without overflowing.
 constexpr FemtoWatt to_femtoWatt_approx(dBm dbm) {
-  dbm = fbl::clamp(dbm, dBm(-120), dBm(48));
+  dbm = std::clamp(dbm, dBm(-120), dBm(48));
 
   // femtowatts = 10^12 * milliwatts = 10^12 * 10^(0.1 * dbm)
   //            = 10^(0.1 * (dbm + 120))

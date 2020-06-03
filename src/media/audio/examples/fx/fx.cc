@@ -27,6 +27,7 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <utility>
@@ -604,7 +605,7 @@ void FxProcessor::PreampInputEffect(int16_t* src, int16_t* dst, uint32_t frames)
     int32_t tmp = src[i];
     tmp *= preamp_gain_fixed_;
     tmp >>= PREAMP_GAIN_FRAC_BITS;
-    tmp = fbl::clamp<int32_t>(tmp, std::numeric_limits<int16_t>::min(),
+    tmp = std::clamp<int32_t>(tmp, std::numeric_limits<int16_t>::min(),
                               std::numeric_limits<int16_t>::max());
     dst[i] = static_cast<int16_t>(tmp);
   }
@@ -620,7 +621,7 @@ void FxProcessor::ReverbMixEffect(int16_t* src, int16_t* dst, uint32_t frames) {
     tmp *= reverb_feedback_gain_fixed_;
     tmp >>= 16;
     tmp += dst[i];
-    tmp = fbl::clamp<int32_t>(tmp, std::numeric_limits<int16_t>::min(),
+    tmp = std::clamp<int32_t>(tmp, std::numeric_limits<int16_t>::min(),
                               std::numeric_limits<int16_t>::max());
     dst[i] = static_cast<int16_t>(tmp);
   }
@@ -647,10 +648,10 @@ void FxProcessor::MixedFuzzEffect(int16_t* src, int16_t* dst, uint32_t frames) {
 void FxProcessor::UpdateReverb(bool enabled, int32_t depth_delta, float gain_delta) {
   reverb_enabled_ = enabled;
 
-  reverb_depth_msec_ = fbl::clamp<uint32_t>(reverb_depth_msec_ + depth_delta, MIN_REVERB_DEPTH_MSEC,
+  reverb_depth_msec_ = std::clamp<uint32_t>(reverb_depth_msec_ + depth_delta, MIN_REVERB_DEPTH_MSEC,
                                             MAX_REVERB_DEPTH_MSEC);
 
-  reverb_feedback_gain_ = fbl::clamp(reverb_feedback_gain_ + gain_delta, MIN_REVERB_FEEDBACK_GAIN,
+  reverb_feedback_gain_ = std::clamp(reverb_feedback_gain_ + gain_delta, MIN_REVERB_FEEDBACK_GAIN,
                                      MAX_REVERB_FEEDBACK_GAIN);
 
   if (enabled) {
@@ -667,8 +668,8 @@ void FxProcessor::UpdateReverb(bool enabled, int32_t depth_delta, float gain_del
 
 void FxProcessor::UpdateFuzz(bool enabled, float gain_delta, float mix_delta) {
   fuzz_enabled_ = enabled;
-  fuzz_gain_ = fbl::clamp(fuzz_gain_ + gain_delta, MIN_FUZZ_GAIN, MAX_FUZZ_GAIN);
-  fuzz_mix_ = fbl::clamp(fuzz_mix_ + mix_delta, MIN_FUZZ_MIX, MAX_FUZZ_MIX);
+  fuzz_gain_ = std::clamp(fuzz_gain_ + gain_delta, MIN_FUZZ_GAIN, MAX_FUZZ_GAIN);
+  fuzz_mix_ = std::clamp(fuzz_mix_ + mix_delta, MIN_FUZZ_MIX, MAX_FUZZ_MIX);
   fuzz_mix_inv_ = 1.0f - fuzz_mix_;
 
   if (enabled) {
@@ -679,7 +680,7 @@ void FxProcessor::UpdateFuzz(bool enabled, float gain_delta, float mix_delta) {
 }
 
 void FxProcessor::UpdatePreampGain(float delta) {
-  preamp_gain_ = fbl::clamp(preamp_gain_ + delta, MIN_PREAMP_GAIN, MAX_PREAMP_GAIN);
+  preamp_gain_ = std::clamp(preamp_gain_ + delta, MIN_PREAMP_GAIN, MAX_PREAMP_GAIN);
 
   double gain_scale = pow(10.0, preamp_gain_ / 20.0);
   preamp_gain_fixed_ = static_cast<uint16_t>(gain_scale * (0x1 << PREAMP_GAIN_FRAC_BITS));

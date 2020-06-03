@@ -47,7 +47,7 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
       .sample_format = sample_format_,
   };
 
-  duration_seconds = fbl::clamp(duration_seconds, MIN_DURATION, MAX_DURATION);
+  duration_seconds = std::clamp(duration_seconds, MIN_DURATION, MAX_DURATION);
 
   zx_status_t res = sink.SetFormat(fmt);
   if (res != ZX_OK) {

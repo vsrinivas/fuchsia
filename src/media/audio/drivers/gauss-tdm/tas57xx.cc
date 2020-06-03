@@ -7,6 +7,7 @@
 #include <lib/device-protocol/i2c.h>
 #include <string.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <ddk/protocol/i2c.h>
@@ -39,7 +40,7 @@ Tas57xx::Tas57xx() {}
 zx_status_t Tas57xx::Reset() { return WriteReg(0x01, 0x01); }
 
 zx_status_t Tas57xx::SetGain(float gain) {
-  gain = fbl::clamp(gain, kMinGain, kMaxGain);
+  gain = std::clamp(gain, kMinGain, kMaxGain);
 
   uint8_t gain_reg = static_cast<uint8_t>(48 - gain * 2);
 

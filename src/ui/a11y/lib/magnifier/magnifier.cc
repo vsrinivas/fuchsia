@@ -7,6 +7,8 @@
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <algorithm>
+
 #include <fbl/algorithm.h>
 
 #include "src/lib/ui/input/gesture.h"
@@ -149,7 +151,7 @@ class Magnifier::Interaction : public input::GestureDetector::Interaction {
       float& scale = affected_state_->magnified_scale;
       const float old_scale = scale;
       scale *= delta.scale;
-      scale = fbl::clamp(scale, kMinScale, kMaxScale);
+      scale = std::clamp(scale, kMinScale, kMaxScale);
       // account for clamping for accurate anchor calculation
       const float actual_delta_scale = scale / old_scale;
 
@@ -172,8 +174,8 @@ class Magnifier::Interaction : public input::GestureDetector::Interaction {
       }
 
       const float freedom = scale - 1;
-      translation.x = fbl::clamp(translation.x, -freedom, freedom);
-      translation.y = fbl::clamp(translation.y, -freedom, freedom);
+      translation.x = std::clamp(translation.x, -freedom, freedom);
+      translation.y = std::clamp(translation.y, -freedom, freedom);
 
       view_->UpdateIfActive(affected_state_);
 
@@ -335,7 +337,7 @@ void Magnifier::UpdateTransform() {
     update_in_progress_ = true;
 
     if (transition_rate != 0) {
-      transition_progress_ = fbl::clamp(transition_progress_ + transition_rate, 0.f, 1.f);
+      transition_progress_ = std::clamp(transition_progress_ + transition_rate, 0.f, 1.f);
 
       if ((transition_rate > 0 && transition_progress_ < 1) ||
           (transition_rate < 0 && transition_progress_ > 0)) {

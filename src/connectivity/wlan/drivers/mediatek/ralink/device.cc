@@ -107,7 +107,7 @@ int8_t extract_tx_power(int byte_offset, bool is_5ghz, uint16_t eeprom_word) {
   int8_t power = *reinterpret_cast<int8_t*>(&val);
   int8_t min_power = is_5ghz ? ralink::kMinTxPower_A : ralink::kMinTxPower_BG;
   int8_t max_power = is_5ghz ? ralink::kMaxTxPower_A : ralink::kMaxTxPower_BG;
-  return fbl::clamp(power, min_power, max_power);
+  return std::clamp(power, min_power, max_power);
 }
 }  // namespace
 
@@ -3027,7 +3027,7 @@ uint8_t Device::GetPerChainTxPower(const wlan_channel_t& chan, uint8_t eirp_targ
 
   uint8_t result = eirp_target - antenna_gain - tx_chain_cnt_contribution;
   result = std::min(result, eirp_reg_upperbound);
-  result = fbl::clamp(result, kHwTxPowerPerChainMin, kHwTxPowerPerChainMax);
+  result = std::clamp(result, kHwTxPowerPerChainMin, kHwTxPowerPerChainMax);
 
 #if RALINK_DUMP_TXPOWER
   debugf(
