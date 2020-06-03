@@ -193,9 +193,10 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
 
 zx_status_t ParseBootArgs(std::string_view str, fbl::Vector<char>* buf) {
   buf->reserve(buf->size() + str.size());
-  for (auto it = str.begin(); it != str.end(); it++) {
+  for (auto it = str.begin(); it != str.end();) {
     // Skip any leading whitespace.
     if (isspace(*it)) {
+      it++;
       continue;
     }
     // Is the line a comment or a zero-length name?
@@ -204,6 +205,7 @@ zx_status_t ParseBootArgs(std::string_view str, fbl::Vector<char>* buf) {
     for (; it != str.end(); it++) {
       if (*it == '\n') {
         // We've reached the end of the line.
+        it++;
         break;
       } else if (is_comment) {
         // Skip this character, as it is part of a comment.
@@ -222,8 +224,8 @@ zx_status_t ParseBootArgs(std::string_view str, fbl::Vector<char>* buf) {
   return ZX_OK;
 }
 
-zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
-                                  fs::Rights rights, zx::channel* out) {
+zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, fs::Rights rights,
+                                  zx::channel* out) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {

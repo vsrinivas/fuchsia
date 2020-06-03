@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/types.h>
+
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
-#include <zircon/types.h>
 
 #include "../util.h"
 
@@ -64,9 +65,14 @@ key=value
   auto actual = reinterpret_cast<const uint8_t*>(buf.data());
   ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected), actual, buf.size(), "");
 
-  // Parse an invalid config.
-  const char config2[] = "k ey=value";
+  // Parse a config that doesn't ends with newline.
+  const char config2[] = "key=value";
   status = bootsvc::ParseBootArgs(config2, &buf);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Parse an invalid config.
+  const char config3[] = "k ey=value";
+  status = bootsvc::ParseBootArgs(config3, &buf);
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, status);
 }
 
