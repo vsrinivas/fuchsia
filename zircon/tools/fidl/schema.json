@@ -57,7 +57,7 @@
             "description": "List of resources",
             "type": "array",
             "items": {
-                "$ref": "#/definitions/resoures"
+                "$ref": "#/definitions/resource"
             }
         },
         "interface_declarations": {
@@ -445,7 +445,7 @@
                 },
                 "type": {
                     "description": "Type of the resource",
-                    "$ref": "#/definitions/integer-type"
+                    "$ref": "#/definitions/primitive-type"
                 },
                 "properties": {
                     "description": "List of properties",
