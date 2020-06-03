@@ -88,4 +88,9 @@ intl_strings("l10n") {
     "es",
   ]
   library = "fuchsia.intl.test"
+
+  # Allow keeping files like strings_fr.xml in the same directory as
+  # strings.xml.  This is for testing only, we recommend not using this
+  # option and using a separate directory per locale instead.
+  same_dir_locales = true
 }

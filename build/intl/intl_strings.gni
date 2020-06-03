@@ -8,7 +8,7 @@ import("//build/fidl/fidl_library.gni")
 
 # Generates localized assets from source localized strings.
 #
-# Please see `//src/intl/example/BUILD.gn` for example use of the target.
+# Please check out `//src/intl/example/BUILD.gn` for example use of the target.
 #
 # Example instantiation:
 #
@@ -27,10 +27,10 @@ import("//build/fidl/fidl_library.gni")
 # - Needs an input XML file (by convention named `strings.xml`), in the Android
 # strings resource format to represent the source externalized strings.
 #
-# - Needs, for each supported language `foo`, an input XML file (by convention
-# named `strings_foo.xml`) which contains equivalent messages to those in
-# `strings.xml`.  The source language is not special, so for example if your
-# `strings.xml` contains English strings, you still need `strings_en.xml`.
+# - Needs, for each supported language `lang`, an input XML file which contains
+# translations of the messages contained in `strings.xml`.  The source language
+# is not special, so for example if your `strings.xml` contains English
+# strings, you still need `strings_en.xml` or 'en/strings.xml'.
 #
 # Outputs:
 #
@@ -38,7 +38,7 @@ import("//build/fidl/fidl_library.gni")
 # that refer to all messages in the `strings.xml` file.
 #
 # - A set of files named "$target_gen_dir/lang/foo.json" for every `lang`,
-# which maps the string IDs to messages in the appropriate language.  See
+# which maps the string IDs to messages in the appropriate language.  Check out
 # `//src/intl/example/BUILD.gn` for an example of how to bundle these files into
 # a Fuchsia package.
 #
@@ -61,6 +61,11 @@ import("//build/fidl/fidl_library.gni")
 #     `strings.xml`, then a localized asset for language `foo` needs a source
 #     file named `strings_foo.xml`.
 #
+#   same_dir_locales: (optional bool, defaults to false), if set to `true`, the
+#     locale files for the language `lang` are expected in the same directory as
+#     `strings.xml`, and named `strings_lang.xml`.  If set to `false`
+#     (or left unset), the file names expected are `lang/strings.xml`.
+#
 template("intl_strings") {
   # Best practices forward.
   forward_variables_from(invoker,
@@ -81,6 +86,11 @@ template("intl_strings") {
     source_locale = invoker.source_locale
   }
 
+  same_dir_locales = false
+  if (defined(invoker.same_dir_locales)) {
+    same_dir_locales = invoker.same_dir_locales
+  }
+
   assert(defined(output_locales), "Parameter output_locales=[...] is required")
 
   base_name = invoker.target_name
@@ -95,7 +105,10 @@ template("intl_strings") {
   manifest_resources = []
   locale_resources = []
   foreach(locale, output_locales) {
-    target_strings_file = "${base_source}_${locale}.xml"
+    target_strings_file = "${locale}/${base_source}.xml"
+    if (same_dir_locales) {
+      target_strings_file = "${base_source}_${locale}.xml"
+    }
     output_file_name = "${target_gen_dir}/${locale}/${base_name}.json"
     locale_resources += [
       {
