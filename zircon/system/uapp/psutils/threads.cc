@@ -3,7 +3,14 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/unsafe.h>
+#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/process.h>
+#include <lib/zx/status.h>
+#include <lib/zx/time.h>
+#include <lib/zx/clock.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -18,8 +25,12 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
+#include <atomic>
+#include <thread>
 #include <vector>
 
+#include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
 #include <inspector/inspector.h>
 #include <pretty/hexdump.h>
 #include <task-utils/get.h>
@@ -62,21 +73,21 @@ zx_koid_t get_koid(zx_handle_t handle) {
 // Space for this is allocated on the stack, so this can't be too large.
 constexpr size_t kMemoryDumpSize = 256;
 
-void dump_memory(zx_handle_t proc, uintptr_t start, size_t len) {
+void dump_memory(zx_handle_t proc, uintptr_t start, size_t len, FILE* out) {
   // Make sure we're not allocating an excessive amount of stack.
   ZX_DEBUG_ASSERT(len <= kMemoryDumpSize);
 
   uint8_t buf[len];
   auto res = zx_process_read_memory(proc, start, buf, len, &len);
   if (res < 0) {
-    printf("failed reading %p memory; error : %d\n", (void*)start, res);
+    fprintf(out, "failed reading %p memory; error : %d\n", (void*)start, res);
   } else if (len != 0) {
-    hexdump_ex(buf, len, start);
+    hexdump_very_ex(buf, len, start, hexdump_stdio_printf, out);
   }
 }
 
 void dump_thread(zx_handle_t process, inspector_dsoinfo_t* dso_list, uint64_t tid,
-                 zx_handle_t thread) {
+                 zx_handle_t thread, FILE* out) {
   zx_thread_state_general_regs_t regs;
   zx_vaddr_t pc = 0, sp = 0, fp = 0;
 
@@ -106,20 +117,21 @@ void dump_thread(zx_handle_t process, inspector_dsoinfo_t* dso_list, uint64_t ti
     strlcpy(thread_name, "unknown", sizeof(thread_name));
   }
 
-  printf("<== Thread %s[%" PRIu64 "] ==>\n", thread_name, tid);
+  fprintf(out, "<== Thread %s[%" PRIu64 "] ==>\n", thread_name, tid);
 
-  inspector_print_general_regs(stdout, &regs, nullptr);
+  inspector_print_general_regs(out, &regs, nullptr);
 
-  printf("bottom of user stack:\n");
-  dump_memory(process, sp, kMemoryDumpSize);
+  fprintf(out, "bottom of user stack:\n");
+  dump_memory(process, sp, kMemoryDumpSize, out);
 
-  inspector_print_backtrace_markup(stdout, process, thread, dso_list, pc, sp, fp, true);
+  inspector_print_backtrace_markup(out, process, thread, dso_list, pc, sp, fp, true);
 
   if (verbosity_level >= 1)
-    printf("Done handling thread %" PRIu64 ".%" PRIu64 ".\n", get_koid(process), get_koid(thread));
+    fprintf(out, "Done handling thread %" PRIu64 ".%" PRIu64 ".\n", get_koid(process),
+            get_koid(thread));
 }
 
-void dump_all_threads(uint64_t pid, zx_handle_t process) {
+void dump_all_threads(uint64_t pid, zx_handle_t process, FILE* out) {
   // First get the thread count so that we can allocate an appropriately
   // sized buffer. This is racy but it's the nature of the beast.
   size_t num_threads;
@@ -140,10 +152,10 @@ void dump_all_threads(uint64_t pid, zx_handle_t process) {
   }
   ZX_DEBUG_ASSERT(records_read == num_threads);
 
-  printf("%zu thread(s)\n", num_threads);
+  fprintf(out, "%zu thread(s)\n", num_threads);
 
   inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(process);
-  inspector_print_markup_context(stdout, process);
+  inspector_print_markup_context(out, process);
 
   // TODO(dje): Move inspector's DebugInfoCache here, so that we can use it
   // across all threads.
@@ -155,8 +167,8 @@ void dump_all_threads(uint64_t pid, zx_handle_t process) {
     // but an explicit list this early has a higher risk of bitrot.
     status = zx_object_get_child(process, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
     if (status < 0) {
-      printf("WARNING: failed to get a handle to [%" PRIu64 ".%" PRIu64 "] : error %d\n", pid, tid,
-             status);
+      fprintf(out, "WARNING: failed to get a handle to [%" PRIu64 ".%" PRIu64 "] : error %d\n", pid,
+              tid, status);
       continue;
     }
 
@@ -180,10 +192,10 @@ void dump_all_threads(uint64_t pid, zx_handle_t process) {
     status = zx_object_wait_one(thread, signals, deadline, &observed);
     if (status == ZX_OK) {
       if (observed & ZX_THREAD_TERMINATED) {
-        printf("Unable to print backtrace of thread %" PRIu64 ".%" PRIu64 ": terminated\n", pid,
-               tid);
+        fprintf(out, "Unable to print backtrace of thread %" PRIu64 ".%" PRIu64 ": terminated\n",
+                pid, tid);
       } else {
-        dump_thread(process, dso_list, tid, thread);
+        dump_thread(process, dso_list, tid, thread, out);
       }
     } else {
       print_zx_error(status,
@@ -198,7 +210,7 @@ void dump_all_threads(uint64_t pid, zx_handle_t process) {
   inspector_dso_free_list(dso_list);
 }
 
-void dump_process(zx_koid_t pid, zx::unowned_process process) {
+void dump_process(zx_koid_t pid, zx::unowned_process process, FILE* out) {
   char process_name[ZX_MAX_NAME_LEN];
   auto status = process->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
   if (status != ZX_OK) {
@@ -207,13 +219,13 @@ void dump_process(zx_koid_t pid, zx::unowned_process process) {
 
   // We skip printing serial console's stack as this will cause a hang.
   if (strcmp(process_name, "console.cm") == 0) {
-    printf("Skipping backtrace of thread in process %" PRIu64 ": %s\n", pid, process_name);
+    fprintf(out, "Skipping backtrace of thread in process %" PRIu64 ": %s\n", pid, process_name);
     return;
   }
 
-  printf("Backtrace of threads of process %" PRIu64 ": %s\n", pid, process_name);
+  fprintf(out, "Backtrace of threads of process %" PRIu64 ": %s\n", pid, process_name);
 
-  dump_all_threads(pid, process->get());
+  dump_all_threads(pid, process->get(), out);
 }
 
 int dump_process(zx_koid_t pid) {
@@ -230,22 +242,193 @@ int dump_process(zx_koid_t pid) {
     return 1;
   }
 
-  dump_process(pid, zx::unowned(process));
+  dump_process(pid, zx::unowned(process), stdout);
   return 0;
 }
 
+// Writer that writes to stdout at a throttled rate.
+class Writer {
+ public:
+  static zx::status<std::unique_ptr<Writer>> Create();
+
+  ~Writer() {
+    Join();
+    fclose(fp_);
+  }
+
+  // Signal thread that there is new data to write.
+  void Signal();
+
+  // After fp is done being used, |Signal| should be called to notify worker thread of new work.
+  FILE* fp() { return fp_; }
+
+  // Joins thread.
+  void Join();
+
+  Writer(const Writer&) = delete;
+  Writer& operator=(const Writer&) = delete;
+  Writer(Writer&&) = delete;
+  Writer&& operator=(Writer&) = delete;
+
+ private:
+  Writer(FILE* fp, fbl::unique_fd fd, fzl::OwnedVmoMapper mapper, size_t baud = 115200)
+      : fp_(fp), fd_(std::move(fd)), mapper_(std::move(mapper)), baud_(baud) {
+    thread_ = std::thread([this]() { ThrottledWriteThread(); });
+  }
+
+  void ThrottledWriteThread();
+
+  zx::duration BytesToDuration(size_t bytes) {
+    constexpr int kBitsPerCharacter = 10;
+    return (zx::sec(1) / (baud_ / kBitsPerCharacter)) * bytes;
+  }
+
+  FILE* fp_;
+  fbl::unique_fd fd_;
+  fzl::OwnedVmoMapper mapper_;
+  std::thread thread_;
+  std::atomic<size_t> offset_ = 0;
+  std::atomic<bool> done_ = false;
+  sync_completion_t event_;
+
+  const size_t baud_;
+};
+
+zx::status<std::unique_ptr<Writer>> Writer::Create() {
+  // We create an 1GiB VMO relying on overcommit to prevent any issues. We will decommit pages as
+  // they are written out to stdout to prevent buffer from growing too much.
+  constexpr size_t kVmoSize = 1024 * 1024 * 1024;
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(kVmoSize, 0, &vmo);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  // Duplicate vmo.
+  zx::vmo dup;
+  status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  // Map vmo.
+  fzl::OwnedVmoMapper mapper;
+  status = mapper.Map(std::move(dup), 0, ZX_VM_PERM_READ);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  // Insert VMO into fd table.
+  fdio_t* io;
+  status = fdio_create(vmo.release(), &io);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  fbl::unique_fd fd(fdio_bind_to_fd(io, -1, 0));
+  if (!fd) {
+    fdio_unsafe_release(io);
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+
+  FILE* fp = fdopen(fd.get(), "w");
+  if (fp == nullptr) {
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+
+  return zx::ok(new Writer(fp, std::move(fd), std::move(mapper)));
+}
+
+void Writer::ThrottledWriteThread() {
+  size_t decommit_offset = 0;
+  size_t local_offset = 0;
+  auto* current = static_cast<const uint8_t*>(mapper_.start());
+  zx::time last_deadline = zx::clock::get_monotonic();
+  for (;;) {
+    sync_completion_wait(&event_, ZX_TIME_INFINITE);
+    sync_completion_reset(&event_);
+    // Write 1 line at a time, sleeping inbetween lines to achieve throttling.
+    while (local_offset < offset_.load()) {
+      const size_t file_offset = offset_.load();
+      // Find newline.
+      size_t newline_offset = 0;
+      while (current[newline_offset] != '\n' && local_offset + newline_offset < file_offset) {
+        newline_offset++;
+      }
+      if (current[newline_offset] != '\n') {
+        // No newline found. Wait for more data to be found.
+        break;
+      }
+      newline_offset++;
+      auto written = fwrite(current, sizeof(uint8_t), newline_offset, stdout);
+      if (written != newline_offset) {
+        fprintf(stderr, "Write failed\n");
+        return;
+      }
+
+      current += written;
+      local_offset += written;
+
+      // Try to decommit pages we no longer need to lower memory usage.
+      if (decommit_offset < fbl::round_down(local_offset, ZX_PAGE_SIZE)) {
+        ZX_DEBUG_ASSERT(decommit_offset % ZX_PAGE_SIZE == 0);
+        const size_t size = fbl::round_down(local_offset - decommit_offset, ZX_PAGE_SIZE);
+        // This is best effort so we don't care if it fails.
+        mapper_.vmo().op_range(0, decommit_offset, size, nullptr, 0);
+        decommit_offset += size;
+      }
+
+      last_deadline += BytesToDuration(newline_offset);
+      while (zx::clock::get_monotonic() < last_deadline) {
+        zx::nanosleep(last_deadline);
+      }
+    }
+    if (done_.load()) {
+      return;
+    }
+  }
+  return;
+}
+
+void Writer::Join() {
+  done_.store(true);
+  sync_completion_signal(&event_);
+  thread_.join();
+}
+
+void Writer::Signal() {
+  fflush(fp_);
+  off_t new_offset = ftello(fp_);
+  ZX_ASSERT(new_offset >= 0);
+  if (static_cast<size_t>(new_offset) > offset_.load()) {
+    offset_.store(static_cast<size_t>(new_offset));
+    sync_completion_signal(&event_);
+  }
+}
+
 int dump_all_processes() {
+  zx::status<std::unique_ptr<Writer>> status_or_writer = Writer::Create();
+  if (status_or_writer.is_error()) {
+    fprintf(stderr, "ERROR: unable to create Writer: %s", status_or_writer.status_string());
+    return 1;
+  }
+  auto writer = std::move(status_or_writer.value());
+
   auto process_callback = [](void* ctx, int depth, zx_handle_t process, zx_koid_t koid,
                              zx_koid_t parent_koid) {
     // Attempting to dump our own process will result in a hang, so we skip it.
-    if (process != *zx::process::self()) {
-      dump_process(koid, zx::unowned_process(process));
+    if (process == *zx::process::self()) {
+      return ZX_OK;
     }
+
+    auto* writer = static_cast<Writer*>(ctx);
+    dump_process(koid, zx::unowned_process(process), writer->fp());
+    writer->Signal();
     return ZX_OK;
   };
 
   auto status = walk_root_job_tree(/*job_callback=*/nullptr, process_callback,
-                                   /*thread_callback=*/nullptr, /*ctx=*/nullptr);
+                                   /*thread_callback=*/nullptr, /*ctx=*/writer.get());
+
   if (status != ZX_OK) {
     fprintf(stderr, "ERROR: unable to walk root job tree: %s", zx_status_get_string(status));
     return 1;
@@ -258,7 +441,8 @@ void usage(FILE* f) {
   fprintf(f, "Usage: threads [options] [pid]\n");
   fprintf(f, "Options:\n");
   fprintf(f, "  -v[n]           = set verbosity level to N\n");
-  fprintf(f, "  --all-processes = dump stacks for all processes currently running."
+  fprintf(f,
+          "  --all-processes = dump stacks for all processes currently running."
           "This will hang if not invoked via serial console.\n");
 }
 
