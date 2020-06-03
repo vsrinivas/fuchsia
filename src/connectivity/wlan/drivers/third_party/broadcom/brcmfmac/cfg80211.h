@@ -482,6 +482,8 @@ zx_status_t brcmf_set_iface_macaddr(bool is_ap, net_device* ndev,
 
 void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size);
 
+uint8_t brcmf_cfg80211_classify8021d(const uint8_t* data, size_t size);
+
 // TODO: Move to core.h
 zx_status_t brcmf_netdev_open(struct net_device* ndev);
 

@@ -29,7 +29,7 @@ const common::MacAddr kApBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 const common::MacAddr kClientMacAddress({0xde, 0xad, 0xbe, 0xef, 0x00, 0x01});
 // Sample IPv4 + TCP body
 const std::vector<uint8_t> kSampleEthBody = {
-    0x00, 0x45, 0x00, 0x00, 0xE3, 0xDC, 0x78, 0x00, 0x00, 0x40, 0x06, 0xEF, 0x37, 0xC0, 0xA8, 0x01,
+    0x00, 0xB0, 0x00, 0x00, 0xE3, 0xDC, 0x78, 0x00, 0x00, 0x40, 0x06, 0xEF, 0x37, 0xC0, 0xA8, 0x01,
     0x03, 0xAC, 0xFD, 0x3F, 0xBC, 0xF2, 0x9C, 0x14, 0x6C, 0x66, 0x6C, 0x0D, 0x31, 0xAF, 0xEC, 0x4E,
     0xD5, 0x80, 0x18, 0x80, 0x00, 0xBB, 0xB4, 0x00, 0x00, 0x01, 0x01, 0x08, 0x0A, 0x82, 0xD7, 0xEC,
     0x54, 0x48, 0x03, 0x6B, 0x32, 0x17, 0x03, 0x03, 0x00, 0xAA, 0x12, 0x2E, 0xDE, 0x85, 0xF7, 0xC4,
@@ -419,7 +419,7 @@ void DataFrameTest::ClientAssoc() {
 
 void DataFrameTest::ClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr,
                              std::vector<uint8_t>& ethFrame) {
-  simulation::SimQosDataFrame dataFrame(true, false, kApBssid, srcAddr, dstAddr, ethFrame);
+  simulation::SimQosDataFrame dataFrame(true, false, kApBssid, srcAddr, dstAddr, 0, ethFrame);
   env_->Tx(&dataFrame, kDefaultTxInfo, this);
 }
 
@@ -432,7 +432,8 @@ void DataFrameTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo
         if (data_frame->addr1_ == recv_addr_capture_filter) {
           env_data_frame_capture_.emplace_back(qos_data_frame->toDS_, qos_data_frame->fromDS_,
                                                qos_data_frame->addr1_, qos_data_frame->addr2_,
-                                               qos_data_frame->addr3_, qos_data_frame->payload_);
+                                               qos_data_frame->addr3_, qos_data_frame->qosControl_,
+                                               qos_data_frame->payload_);
         }
       }
       break;
@@ -476,6 +477,8 @@ TEST_F(DataFrameTest, TxDataFrame) {
   EXPECT_EQ(env_data_frame_capture_.front().addr2_, ifc_mac_);
   EXPECT_EQ(env_data_frame_capture_.front().addr3_, kClientMacAddress);
   EXPECT_EQ(env_data_frame_capture_.front().payload_, kSampleEthBody);
+  EXPECT_TRUE(env_data_frame_capture_.front().qosControl_.has_value());
+  EXPECT_EQ(env_data_frame_capture_.front().qosControl_.value(), 6);
 }
 
 // Verify that malformed ethernet header frames are detected by the driver

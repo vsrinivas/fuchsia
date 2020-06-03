@@ -472,7 +472,7 @@ void FakeAp::HandleAuthRespNotification(uint16_t seq_num, common::MacAddr dst,
 void FakeAp::HandleQosDataNotification(bool toDS, bool fromDS, const common::MacAddr& addr1,
                                        const common::MacAddr& addr2, const common::MacAddr& addr3,
                                        const std::vector<uint8_t>& payload) {
-  SimQosDataFrame data_frame(toDS, fromDS, addr1, addr2, addr3, payload);
+  SimQosDataFrame data_frame(toDS, fromDS, addr1, addr2, addr3, 0, payload);
   environment_->Tx(&data_frame, tx_info_, this);
 }
 

@@ -30,6 +30,10 @@ const void* Netbuf::data() const { return data_; };
 
 size_t Netbuf::size() const { return size_; }
 
+int Netbuf::priority() const { return priority_; }
+
+void Netbuf::SetPriority(int priority) { priority_ = priority; }
+
 void Netbuf::Return(zx_status_t status) {
   data_ = nullptr;
   size_ = 0;

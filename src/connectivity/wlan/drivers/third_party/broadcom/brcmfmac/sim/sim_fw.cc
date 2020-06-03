@@ -375,6 +375,9 @@ zx_status_t SimFirmware::BusTxData(struct brcmf_netbuf* netbuf) {
       dataFrame.addr1_ = assoc_state_.opts->bssid;
       dataFrame.addr2_ = common::MacAddr(ethFrame->h_source);
       dataFrame.addr3_ = common::MacAddr(ethFrame->h_dest);
+      // Sim FW currently doesn't distinguish QoS from non-QoS association. If it does, this should
+      // only be set for a QoS association.
+      dataFrame.qosControl_ = netbuf->priority;
       break;
     default:
       // TODO: support other bss types such as Mesh

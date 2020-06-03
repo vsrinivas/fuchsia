@@ -238,12 +238,14 @@ class SimDataFrame : public SimFrame {
 
   SimDataFrame() = default;
   explicit SimDataFrame(bool toDS, bool fromDS, common::MacAddr addr1, common::MacAddr addr2,
-                        common::MacAddr addr3, std::vector<uint8_t> payload)
+                        common::MacAddr addr3, std::optional<uint16_t> qosControl,
+                        std::vector<uint8_t> payload)
       : toDS_(toDS),
         fromDS_(fromDS),
         addr1_(addr1),
         addr2_(addr2),
         addr3_(addr3),
+        qosControl_(qosControl),
         payload_(payload) {}
   ~SimDataFrame() override;
 
@@ -265,7 +267,6 @@ class SimDataFrame : public SimFrame {
 
   std::optional<common::MacAddr> addr4_;
 
-  // This field is not currently used
   std::optional<uint16_t> qosControl_;
 
   // MAC Payload
@@ -275,10 +276,10 @@ class SimDataFrame : public SimFrame {
 class SimQosDataFrame : public SimDataFrame {
  public:
   SimQosDataFrame() = default;
-  explicit SimQosDataFrame(bool toDS, bool fromDS, common::MacAddr addr1,
-                           common::MacAddr addr2, common::MacAddr addr3,
+  explicit SimQosDataFrame(bool toDS, bool fromDS, common::MacAddr addr1, common::MacAddr addr2,
+                           common::MacAddr addr3, std::optional<uint16_t> qosControl,
                            std::vector<uint8_t> payload)
-      : SimDataFrame(toDS, fromDS, addr1, addr2, addr3, payload) {}
+      : SimDataFrame(toDS, fromDS, addr1, addr2, addr3, qosControl, payload) {}
   ~SimQosDataFrame() override;
 
   SimDataFrameType DataFrameType() const override;

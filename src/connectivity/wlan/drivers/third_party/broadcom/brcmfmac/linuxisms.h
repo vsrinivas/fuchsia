@@ -156,7 +156,6 @@ LINUX_FUNCII(disable_irq_wake) // SDIO only
 LINUX_FUNCVI(device_release_driver)
 
 LINUX_FUNCVI(netif_stop_queue)
-LINUX_FUNCVI(cfg80211_classify8021d)
 LINUX_FUNCVI(cfg80211_crit_proto_stopped)
 LINUX_FUNCVI(cfg80211_check_combinations)
 LINUX_FUNCVI(cfg80211_connect_done)

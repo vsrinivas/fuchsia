@@ -1855,6 +1855,67 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size) {
   }
 }
 
+uint8_t brcmf_cfg80211_classify8021d(const uint8_t* data, size_t size) {
+  // Make sure packet is sufficiently large to contain the DS field
+  const size_t kDsFieldLength = 2;
+  if (size < sizeof(ethhdr) + kDsFieldLength) {
+    return 0;
+  }
+
+  auto* eh = (struct ethhdr*)data;
+  uint8_t ds_field = 0;
+  const uint8_t* eth_body = data + sizeof(ethhdr);
+  if (eh->h_proto == htobe16(ETH_P_IP)) {
+    ds_field = eth_body[1];
+  } else if (eh->h_proto == htobe16(ETH_P_IPV6)) {
+    ds_field = ((eth_body[0] & 0x0f) << 4) | ((eth_body[1] & 0xf0) >> 4);
+  }
+
+  // DSCP is the 6 most significant bits of the DS field
+  uint8_t dscp = ds_field >> 2;
+  // Given the 6-bit DSCP from IPv4 or IPv6 header, convert it to UP
+  // This follows RFC 8325 - https://tools.ietf.org/html/rfc8325#section-4.3
+  // For list of DSCP, see https://www.iana.org/assignments/dscp-registry/dscp-registry.xhtml
+  switch (dscp) {
+    // Network Control - CS6, CS7
+    case 0b110000:
+    case 0b111000:
+      return 7;
+    // Telephony - EF
+    case 0b101110:
+    // VOICE-ADMIT - VA
+    case 0b101100:
+      return 6;
+    // Signaling - CS5
+    case 0b101000:
+      return 5;
+    // Multimedia Conferencing - AF41, AF42, AF43
+    case 0b100010:
+    case 0b100100:
+    case 0b100110:
+    // Real-Time Interactive - CS4
+    case 0b100000:
+    // Multimedia Streaming - AF31, AF32, AF33
+    case 0b011010:
+    case 0b011100:
+    case 0b011110:
+    // Broadcast Video - CS3
+    case 0b011000:
+      return 4;
+    // Low-Latency Data - AF21, AF22, AF23
+    case 0b010010:
+    case 0b010100:
+    case 0b010110:
+      return 3;
+    // Low-Priority Data - CS1
+    case 0b001000:
+      return 1;
+    // OAM, High-Throughput Data, Standard, and unused code points
+    default:
+      return 0;
+  }
+}
+
 void brcmf_extract_ies(const uint8_t* ie, size_t ie_len, wlanif_bss_description_t* bss) {
   bss->vendor_ie_len = 0;
   size_t offset = 0;

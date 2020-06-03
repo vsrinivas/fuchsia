@@ -302,6 +302,7 @@ static zx_status_t brcmf_proto_bcdc_tx_queue_data(struct brcmf_pub* drvr, int if
   brcmf_netbuf_grow_tail(b_netbuf, netbuf->size() + drvr->hdrlen);
   brcmf_netbuf_shrink_head(b_netbuf, drvr->hdrlen);
   memcpy(b_netbuf->data, netbuf->data(), netbuf->size());
+  b_netbuf->priority = netbuf->priority();
 
   if (!brcmf_fws_queue_netbufs(bcdc->fws)) {
     ret = brcmf_proto_txdata(drvr, ifidx, 0, b_netbuf);

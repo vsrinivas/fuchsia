@@ -50,6 +50,10 @@ class Netbuf {
   // State accessors.
   const void* data() const;
   size_t size() const;
+  int priority() const;
+
+  // State setters
+  void SetPriority(int priority);
 
   // Return ownership of the underlying buffer, calling a completion callback with the given status
   // as a parameter.  After this call, the Netbuf is in the empty state; if Return() is called
@@ -59,6 +63,7 @@ class Netbuf {
  protected:
   const void* data_ = nullptr;
   size_t size_ = 0;
+  int priority_ = 0;
 };
 
 // This class implements Netbuf for use with an ethernet_netbuf_t instance obtained through the DDK

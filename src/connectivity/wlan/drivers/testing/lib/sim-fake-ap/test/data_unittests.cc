@@ -76,9 +76,9 @@ void DataTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& inf
       } else if (data_frame->toDS_ == 0 && data_frame->fromDS_ == 1) {
         if (data_frame->addr1_ == kDstClientMacAddr) {
           // Save these frames
-          sent_data_contents.emplace_back(data_frame->toDS_, data_frame->fromDS_,
-                                          data_frame->addr1_, data_frame->addr2_,
-                                          data_frame->addr3_, data_frame->payload_);
+          sent_data_contents.emplace_back(
+              data_frame->toDS_, data_frame->fromDS_, data_frame->addr1_, data_frame->addr2_,
+              data_frame->addr3_, data_frame->qosControl_, data_frame->payload_);
           return;
         }
       }
@@ -113,7 +113,7 @@ void DataTest::ScheduleTx(common::MacAddr apAddr, common::MacAddr srcAddr, commo
 
 void DataTest::Tx(common::MacAddr apAddr, common::MacAddr srcAddr, common::MacAddr dstAddr,
                   std::vector<uint8_t>& ethFrame) {
-  simulation::SimQosDataFrame dataFrame(true, false, apAddr, srcAddr, dstAddr, ethFrame);
+  simulation::SimQosDataFrame dataFrame(true, false, apAddr, srcAddr, dstAddr, 0, ethFrame);
   env_.Tx(&dataFrame, kDefaultTxInfo, this);
 }
 

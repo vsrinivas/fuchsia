@@ -238,6 +238,8 @@ void brcmf_netdev_start_xmit(struct net_device* ndev,
     ifp->pend_8021x_cnt.fetch_add(1);
   }
 
+  netbuf->SetPriority(brcmf_cfg80211_classify8021d((uint8_t*)netbuf->data(), netbuf->size()));
+
   ret = brcmf_proto_tx_queue_data(drvr, ifp->ifidx, std::move(netbuf));
   if (ret != ZX_OK) {
     brcmf_txfinalize(ifp, &eh, false);
