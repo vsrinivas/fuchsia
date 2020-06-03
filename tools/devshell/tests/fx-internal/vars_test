@@ -184,4 +184,28 @@ TEST_fx-export-device-address() {
   BT_EXPECT_EQ "${FX_SSH_PORT}" "1234"
 }
 
+# Ensure that fx-zbi uses FUCHSIA_ZBI_COMPRESSION
+TEST_fx-zbi() {
+  export FUCHSIA_ZBI_COMPRESSION="zstd.max"
+  export ZIRCON_TOOLS_DIR="${BT_TEMP_DIR}/out/default.zircon/tools"
+  local zbi="${ZIRCON_TOOLS_DIR}/zbi"
+  btf::make_mock "${zbi}"
+  BT_EXPECT fx-zbi
+  source "${zbi}.mock_state"
+  BT_EXPECT_EQ "${BT_MOCK_ARGS[1]}" "--compressed=${FUCHSIA_ZBI_COMPRESSION}" \
+    "Expected a --compressed=${FUCHSIA_ZBI_COMPRESSION} argument to zbi binary, got '${BT_MOCK_ARGS[@]:1}'"
+}
+
+# Ensure that fx-zbi-default-compression doesn't use FUCHSIA_ZBI_COMPRESSION.
+TEST_fx-zbi-default-compression() {
+  export FUCHSIA_ZBI_COMPRESSION="zstd.max"
+  export ZIRCON_TOOLS_DIR="${BT_TEMP_DIR}/out/default.zircon/tools"
+  local zbi="${ZIRCON_TOOLS_DIR}/zbi"
+  btf::make_mock "${zbi}"
+  BT_EXPECT fx-zbi-default-compression
+  source "${zbi}.mock_state"
+  BT_EXPECT_EQ "${#BT_MOCK_ARGS[@]}" "1" \
+    "Expected no args to zbi binary, got '${BT_MOCK_ARGS[@]:1}'"
+}
+
 BT_RUN_TESTS "$@"

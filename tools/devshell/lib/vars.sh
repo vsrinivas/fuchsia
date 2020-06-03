@@ -543,3 +543,7 @@ function fx-run-ninja {
 function fx-zbi {
   "${ZIRCON_TOOLS_DIR}/zbi" --compressed="$FUCHSIA_ZBI_COMPRESSION" "$@"
 }
+
+function fx-zbi-default-compression {
+  "${ZIRCON_TOOLS_DIR}/zbi" "$@"
+}
