@@ -286,7 +286,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   std::unique_ptr<BlockDevice> block_device_;
   fuchsia_hardware_block_BlockInfo block_info_ = {};
   Writability writability_;
-  CompressionSettings write_compression_settings_;
+  const CompressionSettings write_compression_settings_;
   zx::resource vmex_resource_;
 
   std::unique_ptr<Allocator> allocator_;
