@@ -34,8 +34,7 @@ This document uses the following terminology:
 
 General guidelines:
 
-*   Use hyphens in [package names][package_url#package_identity], and
-    underscores in everything else.
+*   Use hyphens in [package names][package_names], and underscores in everything else.
 *   End names with the plural `_tests` rather than the singular `_test`.
 *   Use full, descriptive, unique names for packages, components, and binaries.
 
@@ -392,5 +391,6 @@ tests. Using `fx test`, we can already
 [running_tests_as_components]: /docs/development/testing/running_tests_as_components.md
 [component_manifest]: /docs/concepts/storage/component_manifest.md
 [package_url]: /docs/concepts/packages/package_url.md
+[package_names]: /docs/concepts/packages/package_url.md#package_identity
 [source_code_layout]: /docs/concepts/source_code/layout.md
 [building_components]: /docs/development/components/build.md
