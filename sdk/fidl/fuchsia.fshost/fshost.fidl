@@ -25,6 +25,20 @@ protocol Filesystems {
     compose fuchsia.io.Directory;
 };
 
+/// Manages the block watcher.
+[Discoverable]
+protocol BlockWatcher {
+    /// Pauses the block watcher. This causes the block watcher to drop all
+    /// new block device events.
+    /// Returns ZX_ERR_UNAVAILABLE if the watcher has been paused too many times.
+    Pause() -> (zx.status status);
+
+    /// Resumes the block watcher. The block watcher won't resume until every
+    /// Pause() call has had a corresponding Resume().
+    /// Returns ZX_ERR_BAD_STATE if the watcher isn't paused.
+    Resume() -> (zx.status status);
+};
+
 /// Manages fshost lifecycle
 [Discoverable]
 protocol Admin {

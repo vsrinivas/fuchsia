@@ -34,6 +34,7 @@
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 
+#include "block-watcher.h"
 #include "fshost-boot-args.h"
 #include "lib/async/cpp/task.h"
 #include "metrics.h"
@@ -124,6 +125,9 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
                     }));
   svc_dir->AddEntry(llcpp::fuchsia::fshost::Admin::Name,
                     AdminServer::Create(this, global_loop_->dispatcher()));
+
+  svc_dir->AddEntry(llcpp::fuchsia::fshost::BlockWatcher::Name,
+                    BlockWatcherServer::Create(this, global_loop_->dispatcher()));
 
   outgoing_dir->AddEntry("svc", std::move(svc_dir));
 

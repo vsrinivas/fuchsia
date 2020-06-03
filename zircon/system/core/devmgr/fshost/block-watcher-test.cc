@@ -2,16 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/device/llcpp/fidl.h>
+#include <fuchsia/fshost/llcpp/fidl.h>
+#include <lib/devmgr-integration-test/fixture.h>
+#include <lib/driver-integration-test/fixture.h>
+#include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/watcher.h>
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
 #include <zircon/hw/gpt.h>
 
+#include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
 #include "block-device-interface.h"
+#include "block-watcher-test-data.h"
 #include "encrypted-volume-interface.h"
 
 namespace {
+using devmgr_integration_test::RecursiveWaitForFile;
+using driver_integration_test::IsolatedDevmgr;
 
 class MockBlockDevice : public devmgr::BlockDeviceInterface {
  public:
@@ -492,6 +503,190 @@ TEST(AddDeviceTestCase, AddFailingZxcryptVolumeShouldNotFormat) {
   ZxcryptVolume volume;
   EXPECT_EQ(ZX_ERR_INTERNAL, volume.EnsureUnsealedAndFormatIfNeeded());
   EXPECT_FALSE(volume.formatted);
+}
+
+class BlockWatcherTest : public zxtest::Test {
+ protected:
+  BlockWatcherTest() {
+    // Launch the isolated devmgr.
+    IsolatedDevmgr::Args args;
+    args.driver_search_paths.push_back("/boot/driver");
+    args.disable_block_watcher = false;
+    ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
+
+    fbl::unique_fd fd;
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
+
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &watcher_chan_, &remote));
+    ASSERT_OK(fdio_service_connect_at(devmgr_.fshost_outgoing_dir().get(),
+                                      "/svc/fuchsia.fshost.BlockWatcher", remote.release()));
+  }
+
+  void CreateGptRamdisk(ramdisk_client** client) {
+    zx::vmo ramdisk_vmo;
+    ASSERT_OK(zx::vmo::create(kTestDiskSectors * kBlockSize, 0, &ramdisk_vmo));
+    // Write the GPT into the VMO.
+    ASSERT_OK(ramdisk_vmo.write(kTestGptProtectiveMbr, 0, sizeof(kTestGptProtectiveMbr)));
+    ASSERT_OK(ramdisk_vmo.write(kTestGptBlock1, kBlockSize, sizeof(kTestGptBlock1)));
+    ASSERT_OK(ramdisk_vmo.write(kTestGptBlock2, 2 * kBlockSize, sizeof(kTestGptBlock2)));
+
+    ASSERT_OK(
+        ramdisk_create_at_from_vmo(devmgr_.devfs_root().get(), ramdisk_vmo.release(), client));
+  }
+
+  void PauseWatcher() {
+    auto result = llcpp::fuchsia::fshost::BlockWatcher::Call::Pause(watcher_chan_.borrow());
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
+
+  void ResumeWatcher() {
+    auto result = llcpp::fuchsia::fshost::BlockWatcher::Call::Resume(watcher_chan_.borrow());
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
+
+  void WaitForBlockDevice(int number) {
+    auto path = fbl::StringPrintf("class/block/%03d", number);
+    fbl::unique_fd fd;
+    ASSERT_NO_FATAL_FAILURES(RecursiveWaitForFile(devmgr_.devfs_root(), path.data(), &fd));
+  }
+
+  // Check that the number of block devices bound by the block watcher
+  // matches what we expect. Can only be called while the block watcher is running.
+  //
+  // This works by adding a new block device with a valid GPT.
+  // We then wait for that block device to appear at class/block/|next_device_number|.
+  // The block watcher should then bind the GPT driver to that block device, causing
+  // another entry in class/block to appear representing the only partition on the GPT.
+  //
+  // We make sure that this entry's toplogical path corresponds to it being the first partition
+  // of the block device we added.
+  void CheckEventsDropped(int* next_device_number, ramdisk_client** client) {
+    ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(client));
+
+    // Wait for the basic block driver to be bound
+    auto path = fbl::StringPrintf("class/block/%03d", *next_device_number);
+    *next_device_number += 1;
+    fbl::unique_fd fd;
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), path.data(), &fd));
+
+    // And now, wait for the GPT driver to be bound, and the first
+    // partition to appear.
+    path = fbl::StringPrintf("class/block/%03d", *next_device_number);
+    *next_device_number += 1;
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), path.data(), &fd));
+
+    // Figure out the expected topological path of the last block device.
+    std::string expected_path(ramdisk_get_path(*client));
+    expected_path = "/dev/" + expected_path + "/part-000/block";
+
+    zx_handle_t handle;
+    ASSERT_OK(fdio_get_service_handle(fd.release(), &handle));
+    zx::channel channel(handle);
+    // Get the actual topological path of the block device.
+    auto result = llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(channel.borrow());
+    ASSERT_OK(result.status());
+    ASSERT_FALSE(result->result.is_err());
+
+    auto actual_path =
+        std::string(result->result.response().path.begin(), result->result.response().path.size());
+    // Make sure expected path matches the actual path.
+    ASSERT_EQ(expected_path, actual_path);
+  }
+
+  IsolatedDevmgr devmgr_;
+  zx::channel watcher_chan_;
+};
+
+TEST_F(BlockWatcherTest, TestBlockWatcherDisable) {
+  ASSERT_NO_FATAL_FAILURES(PauseWatcher());
+  int next_device_number = 0;
+  // Add a block device.
+  ramdisk_client* client;
+  ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(&client));
+  ASSERT_NO_FATAL_FAILURES(WaitForBlockDevice(next_device_number));
+  next_device_number++;
+
+  ASSERT_NO_FATAL_FAILURES(ResumeWatcher());
+
+  ramdisk_client* client2;
+  ASSERT_NO_FATAL_FAILURES(CheckEventsDropped(&next_device_number, &client2));
+
+  ASSERT_OK(ramdisk_destroy(client));
+  ASSERT_OK(ramdisk_destroy(client2));
+}
+
+TEST_F(BlockWatcherTest, TestBlockWatcherAdd) {
+  int next_device_number = 0;
+  // Add a block device.
+  ramdisk_client* client;
+  ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(&client));
+  ASSERT_NO_FATAL_FAILURES(WaitForBlockDevice(next_device_number));
+  next_device_number++;
+
+  ASSERT_NO_FATAL_FAILURES(PauseWatcher());
+  fbl::unique_fd fd;
+  // Look for the first partition of the device we just added.
+  ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "class/block/001", &fd));
+  ASSERT_NO_FATAL_FAILURES(ResumeWatcher());
+
+  ASSERT_OK(ramdisk_destroy(client));
+}
+
+TEST_F(BlockWatcherTest, TestBlockWatcherUnmatchedResume) {
+  auto result = llcpp::fuchsia::fshost::BlockWatcher::Call::Resume(watcher_chan_.borrow());
+  ASSERT_OK(result.status());
+  ASSERT_STATUS(result->status, ZX_ERR_BAD_STATE);
+}
+
+TEST_F(BlockWatcherTest, TestMultiplePause) {
+  ASSERT_NO_FATAL_FAILURES(PauseWatcher());
+  ASSERT_NO_FATAL_FAILURES(PauseWatcher());
+  int next_device_number = 0;
+
+  // Add a block device.
+  ramdisk_client* client;
+  ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(&client));
+  ASSERT_NO_FATAL_FAILURES(WaitForBlockDevice(next_device_number));
+  next_device_number++;
+
+  // Resume once.
+  ASSERT_NO_FATAL_FAILURES(ResumeWatcher());
+
+  ramdisk_client* client2;
+  ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(&client2));
+  ASSERT_NO_FATAL_FAILURES(WaitForBlockDevice(next_device_number));
+  next_device_number++;
+
+  fbl::unique_fd fd;
+  RecursiveWaitForFile(devmgr_.devfs_root(), ramdisk_get_path(client2), &fd);
+  // Resume again. The block watcher should be running again.
+  ASSERT_NO_FATAL_FAILURES(ResumeWatcher());
+
+  // Make sure neither device was seen by the watcher.
+  ramdisk_client* client3;
+  ASSERT_NO_FATAL_FAILURES(CheckEventsDropped(&next_device_number, &client3));
+
+  // Pause again.
+  ASSERT_NO_FATAL_FAILURES(PauseWatcher());
+  ramdisk_client* client4;
+  ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(&client4));
+  ASSERT_NO_FATAL_FAILURES(WaitForBlockDevice(next_device_number));
+  next_device_number++;
+  // Resume again.
+  ASSERT_NO_FATAL_FAILURES(ResumeWatcher());
+
+  // Make sure the last device wasn't added.
+  ramdisk_client* client5;
+  ASSERT_NO_FATAL_FAILURES(CheckEventsDropped(&next_device_number, &client5));
+
+  ASSERT_OK(ramdisk_destroy(client));
+  ASSERT_OK(ramdisk_destroy(client2));
+  ASSERT_OK(ramdisk_destroy(client3));
+  ASSERT_OK(ramdisk_destroy(client4));
+  ASSERT_OK(ramdisk_destroy(client5));
 }
 
 }  // namespace

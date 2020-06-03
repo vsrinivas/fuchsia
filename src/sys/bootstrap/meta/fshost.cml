@@ -2,9 +2,7 @@
     program: {
         binary: "bin/fshost",
         args: [ "--log-to-debuglog" ],
-        "lifecycle": {
-            "stop_event": "notify",
-        },
+        lifecycle: { stop_event: "notify" },
     },
     use: [
         { runner: "elf" },
@@ -128,6 +126,10 @@
         },
         {
             protocol: "/svc/fuchsia.fshost.Admin",
+            from: "self",
+        },
+        {
+            protocol: "/svc/fuchsia.fshost.BlockWatcher",
             from: "self",
         },
 
