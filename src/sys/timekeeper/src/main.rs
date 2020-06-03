@@ -211,7 +211,7 @@ mod tests {
 
     #[test]
     fn fixed_backstop_check() {
-        let y2k_backstop = "/pkg/data/y2k";
+        let y2k_backstop = "/pkg/y2k";
         let test_backstop = backstop_time(y2k_backstop.as_ref()).unwrap();
         let test_source = initial_utc_source(y2k_backstop.as_ref()).unwrap();
         let before_test_backstop =
@@ -226,7 +226,7 @@ mod tests {
 
     #[test]
     fn fallible_backstop_check() {
-        assert_eq!(initial_utc_source("/pkg/data/end-of-unix-time".as_ref()).unwrap(), None);
+        assert_eq!(initial_utc_source("/pkg/end-of-unix-time".as_ref()).unwrap(), None);
     }
 
     #[fasync::run_singlethreaded(test)]

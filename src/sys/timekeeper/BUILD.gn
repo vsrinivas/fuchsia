@@ -4,35 +4,23 @@
 
 import("//build/config.gni")
 import("//build/fidl/fidl.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 fidl("fuchsia.time") {
   sources = [ "utc.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }
 
-package("timekeeper") {
-  meta = [
-    {
-      path = "meta/service.cmx"
-      dest = "timekeeper.cmx"
-    },
-  ]
+fuchsia_package("timekeeper") {
+  components = [ ":service" ]
+}
 
-  deps = [
-    ":bin",
-    ":timekeeper_config",
-  ]
-
-  binaries = [
-    {
-      name = "timekeeper"
-    },
-  ]
+fuchsia_component("service") {
+  component_name = "timekeeper"
+  manifest = "meta/service.cmx"
+  deps = [ ":bin" ]
 }
 
 config_data("timekeeper_config") {
@@ -66,29 +54,30 @@ rustc_binary("bin") {
   ]
 }
 
-test_package("timekeeper_bin_test") {
+fuchsia_component("unittests") {
+  component_name = "timekeeper-unittests"
+  manifest = "meta/unittests.cmx"
+  testonly = true
   deps = [ ":bin_test" ]
-
-  tests = [
-    {
-      name = "timekeeper_bin_test"
-      environments = basic_envs
-    },
-  ]
-
   resources = [
     {
-      path = "test/y2k"
-      dest = "y2k"
+      source = "$root_out_dir/timekeeper_bin_test"
+      destination = "bin/unittests"
     },
     {
-      path = "test/end-of-unix-time"
-      dest = "end-of-unix-time"
+      source = "test/y2k"
+    },
+    {
+      source = "test/end-of-unix-time"
     },
   ]
 }
 
+fuchsia_test_package("timekeeper-tests") {
+  test_components = [ ":unittests" ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":timekeeper_bin_test" ]
+  deps = [ ":timekeeper-tests" ]
 }
