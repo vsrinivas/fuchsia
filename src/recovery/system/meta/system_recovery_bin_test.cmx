@@ -1,6 +1,9 @@
 {
     "facets": {
         "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ramdisk-isolated-devmgr#meta/ramdisk-isolated-devmgr.cmx"
+            },
             "system-services": [
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.sysmem.Allocator"
@@ -19,7 +22,9 @@
             "fuchsia.logger.LogSink",
             "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Environment",
-            "fuchsia.sysmem.Allocator"
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.test.IsolatedDevmgr"
         ]
     }
 }

@@ -30,6 +30,7 @@ group("tests") {
   deps = [
     ":system_recovery",
     ":system_recovery_tests",
+    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
   ]
 }
 
@@ -55,6 +56,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:rouille",
     "//third_party/rust_crates:thiserror",
   ]
+
+  test_deps = [ "//src/lib/storage/ramdevice_client" ]
 
   features = [ "http_setup_server" ]
 }
@@ -95,15 +98,18 @@ config_data("config_fdr") {
   outputs = [ "recovery_fdr.config" ]
 }
 
-generate_manifest("blobfs.manifest") {
+generate_manifest("fs.manifest") {
   visibility = [ ":*" ]
-  args = [ "--binary=bin/blobfs" ]
+  args = [
+    "--binary=bin/blobfs",
+    "--binary=bin/minfs",
+  ]
 }
-blobfs_manifest_outputs = get_target_outputs(":blobfs.manifest")
-blobfs_manifest_file = blobfs_manifest_outputs[0]
+fs_manifest_outputs = get_target_outputs(":fs.manifest")
+fs_manifest_file = fs_manifest_outputs[0]
 
 package("system_recovery") {
-  extra = [ blobfs_manifest_file ]
+  extra = [ fs_manifest_file ]
 
   meta = [
     {
@@ -114,7 +120,7 @@ package("system_recovery") {
 
   deps = [
     ":bin",
-    ":blobfs.manifest",
+    ":fs.manifest",
   ]
 
   binaries = [
@@ -126,7 +132,7 @@ package("system_recovery") {
 }
 
 package("system-recovery-fdr") {
-  extra = [ blobfs_manifest_file ]
+  extra = [ fs_manifest_file ]
 
   meta = [
     {
@@ -137,7 +143,7 @@ package("system-recovery-fdr") {
 
   deps = [
     ":bin_fdr",
-    ":blobfs.manifest",
+    ":fs.manifest",
   ]
 
   binaries = [
@@ -149,7 +155,11 @@ package("system-recovery-fdr") {
 }
 
 test_package("system_recovery_tests") {
-  deps = [ ":bin_test" ]
+  extra = [ fs_manifest_file ]
+  deps = [
+    ":bin_test",
+    ":fs.manifest",
+  ]
 
   tests = [
     {

@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 use fdio::{create_fd, device_get_topo_path};
 use fidl_fuchsia_paver::{PaverMarker, PaverProxy};
 use fs_management as fs;
 use fuchsia_component::client::connect_to_service;
+use fuchsia_zircon as zx;
 
 /// Calls the paver service to format the system volume, and returns the path
-/// to the newly created blobfs partition.
-async fn format_disk(paver: PaverProxy) -> Result<String, Error> {
+/// to the newly created blobfs and minfs partitions.
+async fn format_disk(paver: PaverProxy) -> Result<(String, String), Error> {
     let (data_sink, data_sink_server_end) = fidl::endpoints::create_proxy()?;
     paver.find_data_sink(data_sink_server_end)?;
 
@@ -21,9 +22,8 @@ async fn format_disk(paver: PaverProxy) -> Result<String, Error> {
 
     let file = create_fd(server_end.into_channel().into())?;
 
-    let mut path = device_get_topo_path(&file)?;
-    path.push_str("/blobfs-p-1/block");
-    Ok(path)
+    let base_path = device_get_topo_path(&file)?;
+    Ok((format!("{}/blobfs-p-1/block", base_path), format!("{}/minfs-p-2/block", base_path)))
 }
 
 /// Required functionality from an fs::Filesystem.
@@ -57,9 +57,10 @@ impl Storage {
     pub async fn new() -> Result<Storage, Error> {
         println!("About to Initialize storage");
         let paver = connect_to_service::<PaverMarker>()?;
-        let path = format_disk(paver.clone()).await?;
+        let (blobfs_path, minfs_path) = format_disk(paver.clone()).await?;
 
-        let blobfs = create_blobfs(path)?;
+        let blobfs = create_blobfs(blobfs_path)?;
+        create_minfs(minfs_path)?;
 
         println!("Storage initialized");
         Ok(Storage { _blobfs: blobfs })
@@ -81,9 +82,25 @@ fn create_blobfs(block_device_path: String) -> Result<fs::Filesystem<fs::Blobfs>
     Ok(blobfs)
 }
 
+/// Uses the provide block device path to format a new minfs partition.
+/// Does not mount the partition, but leaves it blank.
+fn create_minfs(block_device_path: String) -> Result<fs::Filesystem<fs::Minfs>, Error> {
+    let (block_device_channel, server) = zx::Channel::create()?;
+    fdio::service_connect(&block_device_path, server).context("Connecting to block device")?;
+    create_minfs_from_channel(block_device_channel)
+}
+
+fn create_minfs_from_channel(
+    block_device_channel: zx::Channel,
+) -> Result<fs::Filesystem<fs::Minfs>, Error> {
+    let mut minfs = fs::Minfs::from_channel(block_device_channel)?;
+    minfs.format()?;
+    Ok(minfs)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{format_disk, mount_filesystem, Filesystem};
+    use super::{create_minfs_from_channel, format_disk, mount_filesystem, Filesystem};
     use anyhow::Error;
     use fidl::endpoints::ServerEnd;
     use fidl_fuchsia_hardware_block_volume::VolumeManagerMarker;
@@ -94,6 +111,7 @@ mod tests {
     use fuchsia_zircon as zx;
     use fuchsia_zircon::Status;
     use futures::prelude::*;
+    use ramdevice_client::RamdiskClientBuilder;
     use std::sync::Arc;
 
     // Mock for a Flesystem.
@@ -230,12 +248,12 @@ mod tests {
 
         let path = format_disk(paver.clone()).await;
         assert_eq!(
-            "",
+            (String::new(), String::new()),
             match path {
                 Ok(path) => path,
                 Err(err) => {
                     println!("{:?}", err);
-                    "".to_string()
+                    (String::new(), String::new())
                 }
             }
         );
@@ -248,14 +266,31 @@ mod tests {
         let env = TestEnv::new(MockPaver::new(Status::OK));
         let paver = env.env.connect_to_service::<PaverMarker>().unwrap();
 
-        let path = format_disk(paver.clone()).await;
-        let path = match path {
-            Ok(path) => path,
+        let result = format_disk(paver.clone()).await;
+        let (blobfs_path, minfs_path) = match result {
+            Ok(paths) => paths,
             Err(err) => {
                 println!("{:?}", err);
-                "".to_string()
+                (String::new(), String::new())
             }
         };
-        assert!(path.ends_with("/blobfs-p-1/block"));
+        assert!(blobfs_path.ends_with("/blobfs-p-1/block"));
+        assert!(minfs_path.ends_with("/minfs-p-2/block"));
+    }
+
+    /// Tests that creating minfs works.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_minfs_create_works() {
+        const BLOCK_SIZE: u64 = 512;
+        const BLOCK_COUNT: u64 = 262144; // 128 MB
+        let block_device = RamdiskClientBuilder::new(BLOCK_SIZE, BLOCK_COUNT)
+            .isolated_dev_root()
+            .build()
+            .expect("Ramdisk creation succeeds");
+
+        let ramdisk = block_device.open().expect("Open ramdisk");
+        let mut minfs = create_minfs_from_channel(ramdisk).expect("creating minfs to succeed");
+        minfs.fsck().expect("Fsck to succeed on the new minfs");
+        minfs.mount("/minfs").expect("minfs mount to succeed");
     }
 }
