@@ -4,6 +4,7 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_BUS_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_BUS_H_
 
+#include <zircon/compiler.h>
 #include <zircon/hw/pci.h>
 
 #include <ddk/mmio-buffer.h>
@@ -11,11 +12,14 @@
 #include <hwreg/bitfields.h>
 
 #include "../../bus.h"
+#include "fake_pciroot.h"
 
 namespace pci {
 
 class FakeBus : public BusLinkInterface {
  public:
+  explicit FakeBus(uint8_t bus_start = 0, uint8_t bus_end = 0) : pciroot_(bus_start, bus_end) {}
+
   void LinkDevice(fbl::RefPtr<pci::Device> device) final {
     fbl::AutoLock devices_lock(&devices_lock_);
     devices_.insert(device);
@@ -32,10 +36,12 @@ class FakeBus : public BusLinkInterface {
   BusLinkInterface* bli() { return static_cast<BusLinkInterface*>(this); }
 
   const pci::DeviceTree& devices() { return devices_; }
+  FakePciroot& pciroot() { return pciroot_; }
 
  private:
   fbl::Mutex devices_lock_;
   pci::DeviceTree devices_;
+  FakePciroot pciroot_;
 };
 
 }  // namespace pci

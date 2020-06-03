@@ -15,16 +15,11 @@
 class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
  public:
   // By default, pciroot won't populate an ecam unless it's called with Create().
-  static zx_status_t Create(uint8_t bus_start, uint8_t bus_end, std::unique_ptr<FakePciroot>* out) {
-    std::optional<FakeEcam> ecam;
-    zx_status_t st = FakeEcam::Create(bus_start, bus_end, &ecam);
-    if (st != ZX_OK) {
-      return st;
-    }
-
-    *out = std::unique_ptr<FakePciroot>(new FakePciroot(bus_start, bus_end, std::move(*ecam)));
-    return ZX_OK;
-  }
+  FakePciroot(uint8_t bus_start = 0, uint8_t bus_end = 0)
+      : bus_start_(bus_start),
+        bus_end_(bus_end),
+        proto_({&pciroot_protocol_ops_, this}),
+        ecam_(bus_start, bus_end) {}
 
   // Allow move.
   FakePciroot(FakePciroot&&) = default;
@@ -113,11 +108,6 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
   }
 
  private:
-  FakePciroot(uint8_t bus_start, uint8_t bus_end, FakeEcam&& ecam)
-      : bus_start_(bus_start),
-        bus_end_(bus_end),
-        proto_({&pciroot_protocol_ops_, this}),
-        ecam_(std::move(ecam)) {}
   uint8_t bus_start_ = 0;
   uint8_t bus_end_ = 0;
   pciroot_protocol_t proto_;

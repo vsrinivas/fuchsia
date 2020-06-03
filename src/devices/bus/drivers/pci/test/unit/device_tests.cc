@@ -41,7 +41,7 @@ class PciDeviceTests : public zxtest::Test {
  protected:
   PciDeviceTests() : upstream_(UpstreamNode::Type::ROOT, 0) {}
   void SetUp() {
-    ASSERT_OK(FakePciroot::Create(0, 1, &pciroot_));
+    pciroot_.reset(new FakePciroot(0, 1));
     client_ = std::make_unique<ddk::PcirootProtocolClient>(pciroot_->proto());
   }
   void TearDown() {

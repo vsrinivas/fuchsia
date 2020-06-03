@@ -226,23 +226,20 @@ class FakeEcam {
   FakeEcam(const FakeEcam&) = delete;
   FakeEcam& operator=(const FakeEcam&) = delete;
 
-  static zx_status_t Create(uint8_t bus_start, uint8_t bus_end, std::optional<FakeEcam>* out_ecam) {
-    const size_t cnt = (bus_end - bus_start + 1) * PCI_MAX_FUNCTIONS_PER_BUS;
-    const size_t bytes = sizeof(FakeDeviceConfig) * cnt;
+  FakeEcam(uint8_t bus_start = 0, uint8_t bus_end = 0)
+      : bus_start_(bus_start),
+        bus_end_(bus_end),
+        config_cnt_((bus_end - bus_start + 1) * PCI_MAX_FUNCTIONS_PER_BUS) {
+    const size_t bytes = sizeof(FakeDeviceConfig) * config_cnt_;
 
     zx::vmo vmo;
-    zx_status_t st = zx::vmo::create(bytes, 0, &vmo);
-    if (st != ZX_OK) {
-      return st;
-    }
     std::optional<ddk::MmioBuffer> mmio;
-    st = ddk::MmioBuffer::Create(0, bytes, std::move(vmo), ZX_CACHE_POLICY_UNCACHED, &mmio);
-    if (st != ZX_OK) {
-      return st;
-    }
-
-    *out_ecam = FakeEcam(std::move(*mmio), bus_start, bus_end, cnt);
-    return ZX_OK;
+    ZX_ASSERT(zx::vmo::create(bytes, 0, &vmo) == ZX_OK);
+    ZX_ASSERT(ddk::MmioBuffer::Create(0, bytes, std::move(vmo), ZX_CACHE_POLICY_UNCACHED, &mmio) ==
+              ZX_OK);
+    mmio_ = std::move(*mmio);
+    configs_ = static_cast<FakeDeviceConfig*>(mmio_->get());
+    reset();
   }
 
   // Provide ways to access individual devices in the ecam by BDF address.
@@ -261,15 +258,15 @@ class FakeEcam {
 
   uint8_t bus_start() const { return bus_start_; }
   uint8_t bus_end() const { return bus_end_; }
-  ddk::MmioBuffer& mmio() { return mmio_; }
+  ddk::MmioBuffer& mmio() { return *mmio_; }
   void reset() {
     // Memset optimizations cause faults on uncached memory, so zero out
     // the memory by hand.
-    assert(mmio_.get_size() % ZX_PAGE_SIZE == 0);
-    assert(mmio_.get_size() % sizeof(uint64_t) == 0);
-    assert(reinterpret_cast<uintptr_t>(mmio_.get()) % sizeof(uint64_t) == 0);
-    for (size_t i = 0; i < mmio_.get_size(); i += sizeof(uint64_t)) {
-      mmio_.Write<uint64_t>(0, i);
+    assert(mmio_->get_size() % ZX_PAGE_SIZE == 0);
+    assert(mmio_->get_size() % sizeof(uint64_t) == 0);
+    assert(reinterpret_cast<uintptr_t>(mmio_->get()) % sizeof(uint64_t) == 0);
+    for (size_t i = 0; i < mmio_->get_size(); i += sizeof(uint64_t)) {
+      mmio_->Write<uint64_t>(0, i);
     }
 
     // Mark all vendor & device ids as invalid so that only the devices
@@ -280,20 +277,11 @@ class FakeEcam {
   }
 
  private:
-  FakeEcam(ddk::MmioBuffer&& mmio, uint8_t bus_start, uint8_t bus_end, size_t cnt)
-      : bus_start_(bus_start),
-        bus_end_(bus_end),
-        mmio_(std::move(mmio)),
-        configs_(static_cast<FakeDeviceConfig*>(mmio_.get())),
-        config_cnt_(cnt) {
-    reset();
-  }
-
   uint8_t bus_start_;
   uint8_t bus_end_;
-  ddk::MmioBuffer mmio_;
-  FakeDeviceConfig* configs_;
   size_t config_cnt_;
+  std::optional<ddk::MmioBuffer> mmio_;
+  FakeDeviceConfig* configs_;
 };
 
 #endif  // SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_ECAM_H_

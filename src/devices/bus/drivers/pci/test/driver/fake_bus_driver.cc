@@ -14,41 +14,38 @@
 
 namespace pci {
 
-zx_status_t FakeBusDriver::Create(zx_device_t* parent, const char* name) {
-  std::unique_ptr<FakePciroot> root;
-  zx_status_t st = FakePciroot::Create(0, 0, &root);
-  if (st != ZX_OK) {
-    return st;
-  }
-  auto bus = std::unique_ptr<FakeBusDriver>(new FakeBusDriver(parent, std::move(root)));
-  st = bus->DdkAdd(name);
+zx_status_t FakeBusDriver::Create(zx_device_t* parent, const char* name, uint8_t start_bus,
+                                  uint8_t end_bus) {
+  auto bus_driver = std::unique_ptr<FakeBusDriver>(new FakeBusDriver(parent, start_bus, end_bus));
+  zx_status_t st = bus_driver->DdkAdd(name);
   if (st != ZX_OK) {
     return st;
   }
 
-  auto cleanup = fbl::MakeAutoCall([&bus] { bus->DdkAsyncRemove(); });
-  st = bus->CreateDevice(bus->test_bdf(), kFakeQuadroDeviceConfig.data(),
-                         kFakeQuadroDeviceConfig.max_size());
+  auto cleanup = fbl::MakeAutoCall([&bus_driver] { bus_driver->DdkAsyncRemove(); });
+  st = bus_driver->CreateDevice(bus_driver->test_bdf(), kFakeQuadroDeviceConfig.data(),
+                                kFakeQuadroDeviceConfig.max_size());
   if (st != ZX_OK) {
     return st;
   }
 
-  bus->upstream().ConfigureDownstreamDevices();
+  bus_driver->upstream().ConfigureDownstreamDevices();
   cleanup.cancel();
-  bus.release();
+  bus_driver.release();
   return ZX_OK;
 }
 
 // Creates a device, seeding the configuration space with a given buffer if provided.
-zx_status_t FakeBusDriver::CreateDevice(pci_bdf_t bdf, uint8_t* base_cfg, size_t base_cfg_size) {
-  ddk::MmioView view = pciroot().ecam().mmio().View(bdf_to_ecam_offset(bdf, 0), ZX_PAGE_SIZE);
+zx_status_t FakeBusDriver::CreateDevice(pci_bdf_t bdf, uint8_t* base_cfg, size_t base_cfg_size,
+                                        uint16_t vid, uint16_t did) {
+  ddk::MmioView view = bus_.pciroot().ecam().mmio().View(bdf_to_ecam_offset(bdf, 0), ZX_PAGE_SIZE);
   for (uint32_t off = 0; off < base_cfg_size; off++) {
     view.Write(base_cfg[off], off);
   }
 
   std::unique_ptr<Config> cfg = std::make_unique<FakeMmioConfig>(bdf, std::move(view));
-  cfg->Write(Config::kVendorId, PCI_TEST_DRIVER_VID);
-  cfg->Write(Config::kDeviceId, PCI_TEST_DRIVER_DID);
+  cfg->Write(Config::kVendorId, vid);
+  cfg->Write(Config::kDeviceId, did);
   cfg->DumpConfig(4096);
   return pci::Device::Create(this->zxdev(), std::move(cfg), &upstream(), bus().bli());
 }

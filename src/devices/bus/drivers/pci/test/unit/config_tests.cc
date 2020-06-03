@@ -23,7 +23,7 @@ class PciConfigTests : public zxtest::Test {
 
  protected:
   void SetUp() final {
-    ASSERT_OK(FakePciroot::Create(0, 1, &pciroot_));
+    pciroot_.reset(new FakePciroot(0, 1));
     client_ = std::make_unique<ddk::PcirootProtocolClient>(pciroot_->proto());
   }
   void TearDown() final { pciroot_->ecam().reset(); }

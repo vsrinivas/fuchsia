@@ -22,9 +22,8 @@ FakePciroot* RetrieveFakeFromClient(const ddk::PcirootProtocolClient& client) {
 // allocations using PcirootProtocol are created and freed through
 // PciRootAllocation and PciRegionAllocation dtors.
 TEST(PciAllocationTest, BalancedAllocation) {
-  std::unique_ptr<FakePciroot> pciroot;
-  ASSERT_OK(FakePciroot::Create(0, 0, &pciroot));
-  ddk::PcirootProtocolClient client(pciroot->proto());
+  FakePciroot pciroot;
+  ddk::PcirootProtocolClient client(pciroot.proto());
   FakePciroot* fake_impl = RetrieveFakeFromClient(client);
   PciRootAllocator root_alloc(client, PCI_ADDRESS_SPACE_MMIO, false);
   {
@@ -41,9 +40,8 @@ TEST(PciAllocationTest, BalancedAllocation) {
 // Since text allocations lack a valid resource they should fail when
 // CreateVMObject is called
 TEST(PciAllocationTest, VmoCreationFailure) {
-  std::unique_ptr<FakePciroot> pciroot;
-  ASSERT_OK(FakePciroot::Create(0, 0, &pciroot));
-  ddk::PcirootProtocolClient client(pciroot->proto());
+  FakePciroot pciroot;
+  ddk::PcirootProtocolClient client(pciroot.proto());
 
   zx::vmo vmo;
   PciRootAllocator root(client, PCI_ADDRESS_SPACE_MMIO, false);
