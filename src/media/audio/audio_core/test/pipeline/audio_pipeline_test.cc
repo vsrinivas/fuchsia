@@ -81,7 +81,10 @@ TEST_F(AudioPipelineTest, RenderWithPts) {
 TEST_F(AudioPipelineTest, DiscardDuringPlayback) {
   auto min_lead_time = renderer_->GetMinLeadTime();
   ASSERT_GT(min_lead_time, 0);
-  const auto packet_offset_delay = (min_lead_time / ZX_MSEC(RendererShimImpl::kPacketMs)) + 1;
+  // Add 2 extra packets to allow for scheduling delay to reduce flakes. See fxb/52410.
+  constexpr auto kSchedulingDelayInPackets = 2;
+  const auto packet_offset_delay =
+      (min_lead_time / ZX_MSEC(RendererShimImpl::kPacketMs)) + kSchedulingDelayInPackets;
   const auto pts_offset_delay = packet_offset_delay * kPacketFrames;
 
   auto num_packets = kNumPacketsInPayload - 1;
