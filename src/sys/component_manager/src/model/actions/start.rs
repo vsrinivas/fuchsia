@@ -52,7 +52,7 @@ pub(super) async fn do_start(
 
         // Find the runner to use.
         let runner = realm.resolve_runner().await.map_err(|e| {
-            error!("failed to resolve runner for {}: {:?}", realm.abs_moniker, e);
+            error!("Failed to resolve runner for `{}`: {}", realm.abs_moniker, e);
             e
         })?;
 

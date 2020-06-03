@@ -20,6 +20,7 @@ use {
         fuchsia_base_pkg_resolver, fuchsia_boot_resolver, fuchsia_pkg_resolver,
         model::{
             binding::Binder,
+            environment::{Environment, RunnerRegistry},
             error::ModelError,
             event_logger::EventLogger,
             events::{
@@ -148,7 +149,7 @@ impl BuiltinEnvironmentBuilder {
         let args = self.args.unwrap_or_default();
         let params = ModelParams {
             root_component_url: args.root_component_url.clone(),
-            root_resolver_registry: self.resolvers,
+            root_environment: Environment::new_root(RunnerRegistry::default(), self.resolvers),
         };
         let model = Arc::new(Model::new(params));
 

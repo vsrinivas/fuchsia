@@ -526,7 +526,7 @@ mod tests {
             ComponentDeclBuilder::new()
                 .add_eager_child("b")
                 .runner(RunnerDecl {
-                    name: "foo".to_string(),
+                    name: "foo".into(),
                     source: RunnerSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
                 })

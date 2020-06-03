@@ -5,7 +5,6 @@
 use {
     crate::model::{
         environment::Environment, error::ModelError, moniker::AbsoluteMoniker, realm::Realm,
-        resolver::ResolverRegistry,
     },
     std::sync::Arc,
 };
@@ -28,9 +27,8 @@ impl Default for ComponentManagerConfig {
 pub struct ModelParams {
     /// The URL of the root component.
     pub root_component_url: String,
-    /// The component resolver registry used in the root realm.
-    /// In particular, it will be used to resolve the root component itself.
-    pub root_resolver_registry: ResolverRegistry,
+    /// The environment provided to the root realm.
+    pub root_environment: Environment,
 }
 
 /// The component model holds authoritative state about a tree of component instances, including
@@ -46,7 +44,7 @@ impl Model {
     pub fn new(params: ModelParams) -> Model {
         Model {
             root_realm: Arc::new(Realm::new_root_realm(
-                Environment::new_root(params.root_resolver_registry),
+                params.root_environment,
                 params.root_component_url,
             )),
         }

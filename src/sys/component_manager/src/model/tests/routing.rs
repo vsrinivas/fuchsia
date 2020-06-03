@@ -1861,7 +1861,7 @@ async fn use_runner_from_grandparent() {
                 }))
                 .add_lazy_child("b")
                 .runner(RunnerDecl {
-                    name: "elf".to_string(),
+                    name: "elf".into(),
                     source: RunnerSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
                 })
@@ -1942,7 +1942,7 @@ async fn use_runner_from_sibling() {
                     target_name: CapabilityName("dwarf".to_string()),
                 }))
                 .runner(RunnerDecl {
-                    name: "elf".to_string(),
+                    name: "elf".into(),
                     source: RunnerSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
                 })

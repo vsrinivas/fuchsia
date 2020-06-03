@@ -388,7 +388,10 @@ impl ComponentDecl {
     }
 
     /// Returns the `RunnerDecl` corresponding to `runner_name`.
-    pub fn find_runner_source<'a>(&'a self, runner_name: &str) -> Option<&'a RunnerDecl> {
+    pub fn find_runner_source<'a>(
+        &'a self,
+        runner_name: &CapabilityName,
+    ) -> Option<&'a RunnerDecl> {
         self.runners.iter().find(|s| &s.name == runner_name)
     }
 
@@ -615,12 +618,12 @@ fidl_into_struct!(CollectionDecl, CollectionDecl, fsys::CollectionDecl, fsys::Co
 });
 fidl_into_struct!(ResolverDecl, ResolverDecl, fsys::ResolverDecl, fsys::ResolverDecl,
 {
-    name: String,
+    name: CapabilityName,
     source_path: CapabilityPath,
 });
 fidl_into_struct!(RunnerDecl, RunnerDecl, fsys::RunnerDecl, fsys::RunnerDecl,
 {
-    name: String,
+    name: CapabilityName,
     source: RunnerSource,
     source_path: CapabilityPath,
 });
@@ -635,14 +638,14 @@ fidl_into_struct!(EnvironmentDecl, EnvironmentDecl, fsys::EnvironmentDecl, fsys:
 fidl_into_struct!(RunnerRegistration, RunnerRegistration, fsys::RunnerRegistration,
 fsys::RunnerRegistration,
 {
-    source_name: String,
+    source_name: CapabilityName,
     source: RegistrationSource,
-    target_name: String,
+    target_name: CapabilityName,
 });
 fidl_into_struct!(ResolverRegistration, ResolverRegistration, fsys::ResolverRegistration,
 fsys::ResolverRegistration,
 {
-    resolver: String,
+    resolver: CapabilityName,
     source: RegistrationSource,
     scheme: String,
 });
@@ -1351,7 +1354,7 @@ impl NativeIntoFidl<Option<fsys::Ref>> for ResolverSource {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RegistrationSource {
     Realm,
     Self_,
@@ -2216,31 +2219,31 @@ mod tests {
                     ],
                     runners: vec![
                         RunnerDecl {
-                            name: "elf".to_string(),
+                            name: "elf".into(),
                             source: RunnerSource::Self_,
                             source_path: "/elf".try_into().unwrap(),
                         }
                     ],
                     resolvers: vec![
                         ResolverDecl {
-                            name: "pkg".to_string(),
+                            name: "pkg".into(),
                             source_path: "/pkg_resolver".try_into().unwrap(),
                         }
                     ],
                     environments: vec![
                         EnvironmentDecl {
-                            name: "test_env".to_string(),
+                            name: "test_env".into(),
                             extends: fsys::EnvironmentExtends::Realm,
                             runners: vec![
                                 RunnerRegistration {
-                                    source_name: "runner".to_string(),
+                                    source_name: "runner".into(),
                                     source: RegistrationSource::Child("gtest".to_string()),
-                                    target_name: "gtest-runner".to_string(),
+                                    target_name: "gtest-runner".into(),
                                 }
                             ],
                             resolvers: vec![
                                 ResolverRegistration {
-                                    resolver: "pkg_resolver".to_string(),
+                                    resolver: "pkg_resolver".into(),
                                     source: RegistrationSource::Realm,
                                     scheme: "fuchsia-pkg".to_string(),
                                 }

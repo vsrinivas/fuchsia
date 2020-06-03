@@ -207,12 +207,7 @@ impl ComponentDeclBuilder {
 
     /// Add a lazily instantiated child with a default test URL derived from the name.
     pub fn add_lazy_child(self, name: &str) -> Self {
-        self.add_child(
-            ChildDeclBuilder::new()
-                .name(name)
-                .url(&format!("test:///{}", name))
-                .startup(fsys::StartupMode::Lazy),
-        )
+        self.add_child(ChildDeclBuilder::new_lazy_child(name))
     }
 
     /// Add an eagerly instantiated child with a default test URL derived from the name.
@@ -305,6 +300,11 @@ impl ChildDeclBuilder {
         })
     }
 
+    /// Creates a new builder initialized with a lazy child.
+    pub fn new_lazy_child(name: &str) -> Self {
+        Self::new().name(name).url(&format!("test:///{}", name)).startup(fsys::StartupMode::Lazy)
+    }
+
     /// Sets the ChildDecl's name.
     pub fn name(mut self, name: &str) -> Self {
         self.0.name = name.to_string();
@@ -366,6 +366,12 @@ impl EnvironmentDeclBuilder {
     /// Sets whether the environment extends from its realm.
     pub fn extends(mut self, extends: fsys::EnvironmentExtends) -> Self {
         self.0.extends = extends;
+        self
+    }
+
+    /// Registers a runner with the environment.
+    pub fn add_runner(mut self, runner: cm_rust::RunnerRegistration) -> Self {
+        self.0.runners.push(runner);
         self
     }
 

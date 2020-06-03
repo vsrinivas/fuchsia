@@ -236,6 +236,7 @@ mod tests {
     use {
         super::*,
         crate::model::{
+            environment::{Environment, RunnerRegistry},
             hooks::Hooks,
             model::ModelParams,
             resolver::ResolverRegistry,
@@ -290,14 +291,17 @@ mod tests {
                     }))
                     .build(),
             );
-            let registry = {
+            let resolver_registry = {
                 let mut registry = ResolverRegistry::new();
                 registry.register("test".to_string(), Box::new(resolver));
                 registry
             };
             Arc::new(Model::new(ModelParams {
                 root_component_url: "test:///root".to_string(),
-                root_resolver_registry: registry,
+                root_environment: Environment::new_root(
+                    RunnerRegistry::default(),
+                    resolver_registry,
+                ),
             }))
         };
         let event_source_factory = Arc::new(EventSourceFactory::new(Arc::downgrade(&model)));
@@ -319,10 +323,10 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn passes_on_capability_routed_from_framework_not_on_root() {
         let model = {
-            let registry = ResolverRegistry::new();
+            let resolver = ResolverRegistry::new();
             Arc::new(Model::new(ModelParams {
                 root_component_url: "test:///root".to_string(),
-                root_resolver_registry: registry,
+                root_environment: Environment::new_root(RunnerRegistry::default(), resolver),
             }))
         };
         let event_source_factory = Arc::new(EventSourceFactory::new(Arc::downgrade(&model)));

@@ -597,7 +597,7 @@ impl ComponentCapability {
     /// Given a offer/expose of a Runner from `Self`, return the associated RunnerDecl,
     /// if it exists.
     pub fn find_runner_source<'a>(&self, decl: &'a ComponentDecl) -> Option<&'a RunnerDecl> {
-        decl.find_runner_source(self.source_name()?.str())
+        decl.find_runner_source(self.source_name()?)
     }
 
     fn is_offer_service_match(

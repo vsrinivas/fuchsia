@@ -114,6 +114,12 @@ pub struct WeakRealm {
     pub moniker: AbsoluteMoniker,
 }
 
+impl From<&Arc<Realm>> for WeakRealm {
+    fn from(realm: &Arc<Realm>) -> Self {
+        Self { inner: Arc::downgrade(realm), moniker: realm.abs_moniker.clone() }
+    }
+}
+
 impl WeakRealm {
     /// Attempts to upgrade this `WeakRealm` into an `Arc<Realm>`, if the original realm has not
     /// been destroyed.
