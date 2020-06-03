@@ -21,16 +21,18 @@ using GlobalMatrixVector = std::vector<glm::mat3>;
 // matrices in the |uber_structs|. If a transform doesn't have a local matrix present in the
 // appropriate UberStruct, this function assumes that transform's local matrix is the identity
 // matrix.
-GlobalMatrixVector ComputeGlobalMatrixData(
+GlobalMatrixVector ComputeGlobalMatrices(
     const GlobalTopologyData::TopologyVector& global_topology,
     const GlobalTopologyData::ParentIndexVector& parent_indices,
     const UberStruct::InstanceMap& uber_structs);
 
-// Generates a 2D axis-aligned rectangle given the provided matrix and a set of clockwise uv
-// coordinates, which are reordered dependening on the final orientation of the returned
-// rectangle, so that textures are properly applied.
-const escher::Rectangle2D CreateRectangle2D(const glm::mat3& matrix,
-                                            const std::array<glm::vec2, 4>& uvs);
+// The list of global rectangles for a particular global topology. Each entry is the global
+// rectangle (i.e. relative to the root TransformHandle) of the transform in the corresponding
+// position of the |matrices| supplied to ComputeGlobalRectangles().
+using GlobalRectangleVector = std::vector<escher::Rectangle2D>;
+
+// Computes the global rectangle for each matrix in |matrices|.
+GlobalRectangleVector ComputeGlobalRectangles(const GlobalMatrixVector& matrices);
 
 }  // namespace flatland
 

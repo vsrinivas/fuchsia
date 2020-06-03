@@ -34,6 +34,7 @@ using flatland::BufferCollectionMetadata;
 using flatland::Flatland;
 using flatland::GlobalImageVector;
 using flatland::GlobalMatrixVector;
+using flatland::GlobalRectangleVector;
 using flatland::GlobalTopologyData;
 using flatland::ImageMetadata;
 using flatland::LinkSystem;
@@ -54,9 +55,9 @@ using fuchsia::ui::scenic::internal::LinkProperties;
 using fuchsia::ui::scenic::internal::Orientation;
 using fuchsia::ui::scenic::internal::Vec2;
 
-// These macros are so that, if the various test macros fail, we get a line number associated with a
-// particular Present() call in a unit test.
-//
+// These macros works like functions that check a variety of conditions, but if those conditions
+// fail, the line number for the failure will appear in-line rather than in a function.
+
 // |flatland| is a Flatland object. |expect_success| should be false if the call to Present() is
 // expected to trigger an error.
 #define PRESENT(flatland, expect_success)                                             \
@@ -168,9 +169,12 @@ class FlatlandTest : public gtest::TestLoopFixture {
     return false;
   }
 
+  // The render loop computes this data to hand off to the Renderer, so we return it here for test
+  // validation purposes.
   struct GlobalFlatlandData {
     GlobalTopologyData topology_data;
     GlobalMatrixVector matrix_vector;
+    GlobalRectangleVector rectangle_vector;
     GlobalImageVector image_vector;
   };
 
@@ -181,12 +185,14 @@ class FlatlandTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
 
     // This is a replica of the core render loop.
-    auto snapshot = uber_struct_system_->Snapshot();
-    auto links = link_system_->GetResolvedTopologyLinks();
-    auto data = GlobalTopologyData::ComputeGlobalTopologyData(
+    const auto snapshot = uber_struct_system_->Snapshot();
+    const auto links = link_system_->GetResolvedTopologyLinks();
+    const auto data = GlobalTopologyData::ComputeGlobalTopologyData(
         snapshot, links, link_system_->GetInstanceId(), root_transform);
-    auto matrices = ComputeGlobalMatrixData(data.topology_vector, data.parent_indices, snapshot);
-    auto images = ComputeGlobalImageData(data.topology_vector, snapshot);
+    const auto matrices =
+        flatland::ComputeGlobalMatrices(data.topology_vector, data.parent_indices, snapshot);
+    const auto rectangles = flatland::ComputeGlobalRectangles(matrices);
+    const auto images = flatland::ComputeGlobalImageData(data.topology_vector, snapshot);
 
     link_system_->UpdateLinks(data.topology_vector, data.child_counts, data.live_handles, matrices,
                               display_pixel_scale_, snapshot);
@@ -196,6 +202,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
 
     return {.topology_data = std::move(data),
             .matrix_vector = std::move(matrices),
+            .rectangle_vector = std::move(rectangles),
             .image_vector = std::move(images)};
   }
 

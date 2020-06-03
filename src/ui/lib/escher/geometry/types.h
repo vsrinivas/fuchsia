@@ -9,6 +9,7 @@
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 // clang-format on
 
+#include <glm/gtc/epsilon.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/transform.hpp>
@@ -47,9 +48,25 @@ struct Rectangle2D {
     FX_CHECK(glm::all(glm::greaterThanEqual(extent, vec2(0.f))));
   }
   const glm::vec2 origin = vec2(0, 0);
-  const glm::vec2 extent = vec2(0, 0);
+  const glm::vec2 extent = vec2(1, 1);
   const std::array<vec2, 4> clockwise_uvs = {vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1)};
+
+  bool operator==(const Rectangle2D& other) const {
+    // TODO(ES-137): this epislon needs to be less strict than the general one below.
+    static const float kRectangleEpislon = 0.00001f;
+    return glm::all(glm::epsilonEqual(origin, other.origin, kRectangleEpislon)) &&
+           glm::all(glm::epsilonEqual(extent, other.extent, kRectangleEpislon)) &&
+           glm::all(
+               glm::epsilonEqual(clockwise_uvs[0], other.clockwise_uvs[0], kRectangleEpislon)) &&
+           glm::all(
+               glm::epsilonEqual(clockwise_uvs[1], other.clockwise_uvs[1], kRectangleEpislon)) &&
+           glm::all(
+               glm::epsilonEqual(clockwise_uvs[2], other.clockwise_uvs[2], kRectangleEpislon)) &&
+           glm::all(glm::epsilonEqual(clockwise_uvs[3], other.clockwise_uvs[3], kRectangleEpislon));
+  }
 };
+
+ESCHER_DEBUG_PRINTABLE(Rectangle2D);
 
 // A ray with an origin and a direction of travel.
 struct ray4 {

@@ -74,6 +74,12 @@ std::ostream& operator<<(std::ostream& str, const plane3& p) {
   return str << "plane3[dir:" << p.dir() << " dist:" << p.dist() << "]";
 }
 
+std::ostream& operator<<(std::ostream& str, const Rectangle2D& r) {
+  return str << "Rectangle2D[origin:" << r.origin << " extent:" << r.extent << " clockwise_uvs:["
+             << r.clockwise_uvs[0] << "," << r.clockwise_uvs[1] << "," << r.clockwise_uvs[2] << ","
+             << r.clockwise_uvs[3] << "]]";
+}
+
 std::ostream& operator<<(std::ostream& str, const MeshAttribute& attr) {
   switch (attr) {
     case MeshAttribute::kPosition2D:
