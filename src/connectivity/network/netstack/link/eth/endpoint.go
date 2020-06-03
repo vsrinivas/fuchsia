@@ -63,7 +63,7 @@ func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 	e.LinkEndpoint.Attach(e)
 }
 
-func (e *endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
+func (e *endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
 	ethBytes, ok := pkt.Data.PullUp(header.EthernetMinimumSize)
 	if !ok {
 		// TODO(42949): record this in statistics.
@@ -81,7 +81,7 @@ func (e *endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, 
 	if protocol == 0 {
 		protocol = eth.Type()
 	}
-	e.dispatcher.DeliverNetworkPacket(linkEP, dstLinkAddr, srcLinkAddr, protocol, pkt)
+	e.dispatcher.DeliverNetworkPacket(dstLinkAddr, srcLinkAddr, protocol, pkt)
 }
 
 func (e *endpoint) GSOMaxSize() uint32 {

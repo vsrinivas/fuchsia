@@ -15,6 +15,7 @@ import (
 	"unsafe"
 
 	"gen/netstack/link/netdevice"
+
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
@@ -264,7 +265,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				protocolNumber = header.IPv6ProtocolNumber
 			}
 
-			dispatcher.DeliverNetworkPacket(c, emptyLinkAddress, emptyLinkAddress, protocolNumber, stack.PacketBuffer{
+			dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, protocolNumber, stack.PacketBuffer{
 				Data: view.ToVectorisedView(),
 			})
 

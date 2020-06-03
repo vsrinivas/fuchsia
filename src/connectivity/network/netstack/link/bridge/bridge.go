@@ -18,7 +18,6 @@ import (
 )
 
 var _ stack.LinkEndpoint = (*Endpoint)(nil)
-var _ stack.NetworkDispatcher = (*Endpoint)(nil)
 var _ link.Controller = (*Endpoint)(nil)
 
 type Endpoint struct {
@@ -226,7 +225,11 @@ func (ep *Endpoint) IsAttached() bool {
 	return ep.dispatcher != nil
 }
 
-func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
+// DeliverNetworkPacketToBridge delivers a network packet to the bridged network.
+//
+// Endpoint does not implement stack.NetworkEndpoint.DeliverNetworkPacket because we need
+// to know which BridgeableEndpoint the packet was delivered from to prevent packet loops.
+func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
 	// Is the destination link address a multicast/broadcast?
 	//
 	// If the least significant bit of the first octet is 1, then the address is a
@@ -243,11 +246,11 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 	if !flood {
 		switch dstLinkAddr {
 		case ep.linkAddress:
-			ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, protocol, pkt)
+			ep.dispatcher.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt)
 			return
 		default:
 			if l, ok := ep.links[dstLinkAddr]; ok {
-				l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, protocol, pkt)
+				l.Dispatcher().DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt)
 				return
 			}
 		}
@@ -257,7 +260,7 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 	// out of rxEP, otherwise the rest of this function would just be
 	// "ep.WritePacket and if flood, also deliver to ep.links."
 	if flood {
-		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
+		ep.dispatcher.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
 	}
 
 	// NB: This isn't really a valid Route; Route is a public type but cannot
@@ -276,14 +279,13 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 	outPkt.Header = buffer.NewPrependable(int(ep.MaxHeaderLength()))
 
 	// TODO(NET-690): Learn which destinations are on which links and restrict transmission, like a bridge.
-	rxaddr := rxEP.LinkAddress()
-	for linkaddr, l := range ep.links {
+	for _, l := range ep.links {
 		if flood {
-			l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
+			l.Dispatcher().DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
 		}
 		// Don't write back out interface from which the frame arrived
 		// because that causes interoperability issues with a router.
-		if linkaddr != rxaddr {
+		if l != rxEP {
 			l.WritePacket(&r, nil, protocol, outPkt)
 		}
 	}

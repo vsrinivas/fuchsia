@@ -132,7 +132,7 @@ type testNetworkDispatcher struct {
 	count int
 }
 
-func (t *testNetworkDispatcher) DeliverNetworkPacket(_ stack.LinkEndpoint, _, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
+func (t *testNetworkDispatcher) DeliverNetworkPacket(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
 	t.count++
 	t.pkt = pkt
 }
@@ -262,6 +262,13 @@ func TestBridgeWritePackets(t *testing.T) {
 // TestBridgeRouting makes sure that frames are directed to the right unicast
 // endpoint or floods all endpoints for multicast and broadcast frames.
 func TestBridgeRouting(t *testing.T) {
+	type rxEPKind int
+	const (
+		rxEPNil rxEPKind = iota
+		rxEP1
+		rxEP2
+	)
+
 	data := []byte{1, 2, 3, 4}
 	pkt := stack.PacketBuffer{
 		Data: buffer.View(data).ToVectorisedView(),
@@ -314,75 +321,117 @@ func TestBridgeRouting(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ep1 := makeChannelEndpoint(linkAddr1, 1)
-			ep2 := makeChannelEndpoint(linkAddr2, 1)
 
-			bep1 := bridge.NewEndpoint(&ep1)
-			bep2 := bridge.NewEndpoint(&ep2)
-
-			var nd1, nd2, ndb testNetworkDispatcher
-
-			bridgeEP := bridge.New([]*bridge.BridgeableEndpoint{bep1, bep2})
-
-			bep1.Attach(&nd1)
-			bep2.Attach(&nd2)
-			bridgeEP.Attach(&ndb)
-
-			bridgeEP.DeliverNetworkPacket(bridgeEP, linkAddr3, test.dstAddr, 0, pkt)
-
-			pkt, hasPkt := ep1.getPacket()
-			if test.ep1ShouldGetPacket {
-				if !hasPkt {
-					t.Error("expected a packet on ep1")
-				} else if got := pkt.Data.ToView(); !bytes.Equal(got, data) {
-					t.Errorf("got ep1 data = %x, want = %x", got, data)
-				}
-			} else if hasPkt {
-				t.Errorf("ep1 unexpectedly got a packet = %+v", pkt)
+			subtests := []struct {
+				name               string
+				rxEP               rxEPKind
+				ep1ShouldGetPacket bool
+				ep2ShouldGetPacket bool
+			}{
+				{
+					name:               "Delivered from nil EP",
+					rxEP:               rxEPNil,
+					ep1ShouldGetPacket: test.ep1ShouldGetPacket,
+					ep2ShouldGetPacket: test.ep2ShouldGetPacket,
+				},
+				{
+					name:               "Delivered from EP1",
+					rxEP:               rxEP1,
+					ep1ShouldGetPacket: false,
+					ep2ShouldGetPacket: test.ep2ShouldGetPacket,
+				},
+				{
+					name:               "Delivered from EP2",
+					rxEP:               rxEP2,
+					ep1ShouldGetPacket: test.ep1ShouldGetPacket,
+					ep2ShouldGetPacket: false,
+				},
 			}
 
-			if test.nd1ShouldGetPacket {
-				if nd1.count != 1 {
-					t.Errorf("got nd1.count = %d, want = 1", nd1.count)
-				}
-				if got := nd1.pkt.Data.ToView(); !bytes.Equal(got, data) {
-					t.Errorf("got nd1 data = %x, want = %x", got, data)
-				}
-			} else if nd1.count != 0 {
-				t.Errorf("got nd1.count = %d, want = 0", nd1.count)
-			}
+			for _, subtest := range subtests {
+				t.Run(test.name, func(t *testing.T) {
+					ep1 := makeChannelEndpoint(linkAddr1, 1)
+					ep2 := makeChannelEndpoint(linkAddr2, 1)
 
-			pkt, hasPkt = ep2.getPacket()
-			if test.ep2ShouldGetPacket {
-				if !hasPkt {
-					t.Error("expected a packet on ep2")
-				} else if got := pkt.Data.ToView(); !bytes.Equal(got, data) {
-					t.Errorf("got ep2 data = %x, want = %x", got, data)
-				}
-			} else if hasPkt {
-				t.Errorf("ep2 unexpectedly got a packet = %+v", pkt)
-			}
+					bep1 := bridge.NewEndpoint(&ep1)
+					bep2 := bridge.NewEndpoint(&ep2)
 
-			if test.nd2ShouldGetPacket {
-				if nd2.count != 1 {
-					t.Errorf("got nd2.count = %d, want = 1", nd2.count)
-				}
-				if got := nd2.pkt.Data.ToView(); !bytes.Equal(got, data) {
-					t.Errorf("got nd2 data = %x, want = %x", got, data)
-				}
-			} else if nd2.count != 0 {
-				t.Errorf("got nd2.count = %d, want = 0", nd2.count)
-			}
+					var nd1, nd2, ndb testNetworkDispatcher
 
-			if test.ndbShouldGetPacket {
-				if ndb.count != 1 {
-					t.Errorf("got ndb.count = %d, want = 1", ndb.count)
-				}
-				if got := ndb.pkt.Data.ToView(); !bytes.Equal(got, data) {
-					t.Errorf("got ndb data = %x, want = %x", got, data)
-				}
-			} else if ndb.count != 0 {
-				t.Errorf("got ndb.count = %d, want = 0", ndb.count)
+					bridgeEP := bridge.New([]*bridge.BridgeableEndpoint{bep1, bep2})
+
+					bep1.Attach(&nd1)
+					bep2.Attach(&nd2)
+					bridgeEP.Attach(&ndb)
+
+					var rxEP *bridge.BridgeableEndpoint
+					switch subtest.rxEP {
+					case rxEPNil:
+					case rxEP1:
+						rxEP = bep1
+					case rxEP2:
+						rxEP = bep2
+					default:
+						t.Fatalf("unrecognized rxEPKind = %d", subtest.rxEP)
+					}
+
+					bridgeEP.DeliverNetworkPacketToBridge(rxEP, linkAddr3, test.dstAddr, 0, pkt)
+
+					pkt, hasPkt := ep1.getPacket()
+					if subtest.ep1ShouldGetPacket {
+						if !hasPkt {
+							t.Error("expected a packet on ep1")
+						} else if got := pkt.Data.ToView(); !bytes.Equal(got, data) {
+							t.Errorf("got ep1 data = %x, want = %x", got, data)
+						}
+					} else if hasPkt {
+						t.Errorf("ep1 unexpectedly got a packet = %+v", pkt)
+					}
+
+					if test.nd1ShouldGetPacket {
+						if nd1.count != 1 {
+							t.Errorf("got nd1.count = %d, want = 1", nd1.count)
+						}
+						if got := nd1.pkt.Data.ToView(); !bytes.Equal(got, data) {
+							t.Errorf("got nd1 data = %x, want = %x", got, data)
+						}
+					} else if nd1.count != 0 {
+						t.Errorf("got nd1.count = %d, want = 0", nd1.count)
+					}
+
+					pkt, hasPkt = ep2.getPacket()
+					if subtest.ep2ShouldGetPacket {
+						if !hasPkt {
+							t.Error("expected a packet on ep2")
+						} else if got := pkt.Data.ToView(); !bytes.Equal(got, data) {
+							t.Errorf("got ep2 data = %x, want = %x", got, data)
+						}
+					} else if hasPkt {
+						t.Errorf("ep2 unexpectedly got a packet = %+v", pkt)
+					}
+
+					if test.nd2ShouldGetPacket {
+						if nd2.count != 1 {
+							t.Errorf("got nd2.count = %d, want = 1", nd2.count)
+						}
+						if got := nd2.pkt.Data.ToView(); !bytes.Equal(got, data) {
+							t.Errorf("got nd2 data = %x, want = %x", got, data)
+						}
+					} else if nd2.count != 0 {
+						t.Errorf("got nd2.count = %d, want = 0", nd2.count)
+					}
+
+					if test.ndbShouldGetPacket {
+						if ndb.count != 1 {
+							t.Errorf("got ndb.count = %d, want = 1", ndb.count)
+						}
+						if got := ndb.pkt.Data.ToView(); !bytes.Equal(got, data) {
+							t.Errorf("got ndb data = %x, want = %x", got, data)
+						}
+					} else if ndb.count != 0 {
+						t.Errorf("got ndb.count = %d, want = 0", ndb.count)
+					}
+				})
 			}
 		})
 	}
@@ -656,7 +705,7 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.Netw
 		fn(pkt)
 	}
 	// the "remote" address for `other` is our local address and vice versa.
-	e.linked.dispatcher.DeliverNetworkPacket(e.linked, r.LocalLinkAddress, r.RemoteLinkAddress, protocol, packetbuffer.OutboundToInbound(pkt))
+	e.linked.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress, protocol, packetbuffer.OutboundToInbound(pkt))
 	return nil
 }
 

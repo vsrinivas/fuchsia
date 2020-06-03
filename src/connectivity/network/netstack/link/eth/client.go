@@ -14,6 +14,7 @@ import (
 	"unsafe"
 
 	"gen/netstack/link/eth"
+
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
@@ -261,7 +262,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 		if err := c.handler.RxLoop(func(entry *FifoEntry) {
 			// Process inbound packet.
 			var emptyLinkAddress tcpip.LinkAddress
-			dispatcher.DeliverNetworkPacket(c, emptyLinkAddress, emptyLinkAddress, 0, stack.PacketBuffer{
+			dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, 0, stack.PacketBuffer{
 				Data: append(buffer.View(nil), c.iob.BufferFromEntry(*entry)...).ToVectorisedView(),
 			})
 

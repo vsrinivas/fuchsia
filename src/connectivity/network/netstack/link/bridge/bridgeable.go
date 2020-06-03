@@ -45,7 +45,7 @@ func (e *BridgeableEndpoint) Dispatcher() stack.NetworkDispatcher {
 	return e.dispatcher
 }
 
-func (e *BridgeableEndpoint) DeliverNetworkPacket(ep stack.LinkEndpoint, src, dst tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
+func (e *BridgeableEndpoint) DeliverNetworkPacket(src, dst tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
 	d := e.dispatcher
 
 	e.mu.RLock()
@@ -53,10 +53,11 @@ func (e *BridgeableEndpoint) DeliverNetworkPacket(ep stack.LinkEndpoint, src, ds
 	e.mu.RUnlock()
 
 	if b != nil {
-		d = b
+		b.DeliverNetworkPacketToBridge(e, src, dst, protocol, pkt)
+		return
 	}
 
-	d.DeliverNetworkPacket(ep, src, dst, protocol, pkt)
+	d.DeliverNetworkPacket(src, dst, protocol, pkt)
 }
 
 func (e *BridgeableEndpoint) GSOMaxSize() uint32 {

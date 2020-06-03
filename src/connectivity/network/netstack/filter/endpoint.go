@@ -49,9 +49,9 @@ func (e *Endpoint) IsEnabled() bool {
 }
 
 // DeliverNetworkPacket implements stack.NetworkDispatcher.
-func (e *Endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
+func (e *Endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
 	if atomic.LoadUint32(&e.enabled) == 0 {
-		e.dispatcher.DeliverNetworkPacket(e, dstLinkAddr, srcLinkAddr, protocol, pkt)
+		e.dispatcher.DeliverNetworkPacket(dstLinkAddr, srcLinkAddr, protocol, pkt)
 		return
 	}
 
@@ -67,7 +67,7 @@ func (e *Endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, 
 		return
 	}
 
-	e.dispatcher.DeliverNetworkPacket(e, dstLinkAddr, srcLinkAddr, protocol, packetbuffer.OutboundToInbound(pkt))
+	e.dispatcher.DeliverNetworkPacket(dstLinkAddr, srcLinkAddr, protocol, packetbuffer.OutboundToInbound(pkt))
 }
 
 // Attach implements stack.LinkEndpoint.
