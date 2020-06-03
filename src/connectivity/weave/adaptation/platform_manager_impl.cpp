@@ -7,6 +7,9 @@
 #include <Weave/DeviceLayer/PlatformManager.h>
 
 #include "generic_platform_manager_impl_fuchsia.ipp"
+#include <lib/async/default.h>
+#include <lib/async/cpp/task.h>
+
 // clang-format on
 
 namespace nl {
@@ -28,6 +31,18 @@ sys::ComponentContext* PlatformManagerImpl::GetComponentContextForProcess(void) 
 
 void PlatformManagerImpl::SetComponentContextForProcess(std::unique_ptr<sys::ComponentContext> context) {
   context_ = std::move(context);
+}
+
+void PlatformManagerImpl::SetDispatcher(async_dispatcher_t *dispatcher) {
+  ZX_ASSERT(dispatcher != NULL);
+  dispatcher_ = dispatcher;
+}
+
+void PlatformManagerImpl::_PostEvent(const WeaveDeviceEvent *event) {
+  ZX_ASSERT(dispatcher_ != NULL);
+  async::PostTask(dispatcher_, [ev = *event] {
+    PlatformMgr().DispatchEvent(&ev);
+  });
 }
 
 void PlatformManagerImpl::ShutdownWeaveStack(void) {

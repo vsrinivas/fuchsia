@@ -25,6 +25,9 @@ test_package("adaptation_tests") {
     {
       name = "weave_config_manager_unittests"
     },
+    {
+      name = "weave_platform_manager_unittests"
+    },
   ]
   deps = [
     ":config",
@@ -32,6 +35,7 @@ test_package("adaptation_tests") {
     ":group_key_store_unittests",
     ":platform_case_auth_delegate_unittests",
     ":weave_config_manager_unittests",
+    ":weave_platform_manager_unittests",
   ]
   resources = [
     {
@@ -88,6 +92,19 @@ executable("platform_case_auth_delegate_unittests") {
   testonly = true
   output_name = "platform_case_auth_delegate_unittests"
   sources = [ "platform_case_auth_delegate_unittests.cpp" ]
+  deps = [
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/connectivity/weave/adaptation",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("weave_platform_manager_unittests") {
+  testonly = true
+  output_name = "weave_platform_manager_unittests"
+  sources = [ "platform_manager_unittests.cpp" ]
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/connectivity/weave/adaptation",

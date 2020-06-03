@@ -51,6 +51,8 @@ zx_status_t App::Init() {
     return ZX_ERR_BAD_STATE;
   }
 
+  PlatformMgrImpl().SetDispatcher(loop_.dispatcher());
+
   WEAVE_ERROR err = PlatformMgr().InitWeaveStack();
   if (err != WEAVE_NO_ERROR) {
     FX_LOGS(ERROR) << "InitWeaveStack() failed: " << nl::ErrorStr(err);

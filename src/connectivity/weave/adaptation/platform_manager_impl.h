@@ -33,10 +33,21 @@ class PlatformManagerImpl final
  sys::ComponentContext* GetComponentContextForProcess(void);
  void SetComponentContextForProcess(std::unique_ptr<sys::ComponentContext> context);
 
+ // Sets the dispatcher to which tasks will be posted.
+ //
+ // This method will panic if |dispatcher| is NULL.
+ void SetDispatcher(async_dispatcher_t *dispatcher);
+
  private:
   // ===== Methods that implement the PlatformManager abstract interface.
 
   WEAVE_ERROR _InitWeaveStack(void);
+
+  // Posts an event to the dispatcher. The event will be handled asynchronously
+  // by the main async loop.
+  //
+  // This method will panic if the dispatcher is not set.
+  void _PostEvent(const WeaveDeviceEvent * event);
 
   // ===== Members for internal use by the following friends.
 
@@ -45,6 +56,7 @@ class PlatformManagerImpl final
 
   static PlatformManagerImpl sInstance;
   std::unique_ptr<sys::ComponentContext> context_;
+  async_dispatcher_t* dispatcher_;
 };
 
 /**
