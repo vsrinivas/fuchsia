@@ -46,7 +46,7 @@ struct SensorAxis {
     SensorType type;
 };
 
-/// Describes the format of the input report that will be sent from the keyboard
+/// Describes the format of the input report that will be sent from the sensor
 /// to the device.
 table SensorInputDescriptor {
     /// Each `SensorAxis` in `values` describes what a sensor is measuring and its range.
@@ -54,9 +54,20 @@ table SensorInputDescriptor {
     1: vector<SensorAxis>:SENSOR_MAX_VALUES values;
 };
 
+/// Describes the format of the sensor's feature report. Feature reports can be
+/// requested from the sensor, or sent to the sensor.
+table SensorFeatureDescriptor {
+    /// Describes the minimum and maximum reporting interval this sensor
+    /// supports.
+    1: Axis report_interval;
+    /// Sets the sensitivity for the given `SensorType`.
+    2: vector<SensorAxis>:SENSOR_MAX_VALUES sensitivity;
+};
+
 /// The capabilities of a sensor device.
 table SensorDescriptor {
     1: SensorInputDescriptor input;
+    2: SensorFeatureDescriptor feature;
 };
 
 /// `SensorReport` gives the values measured by a sensor at a given point in time.
@@ -64,4 +75,16 @@ table SensorInputReport {
     /// The ordering of `values` will always directly correspond to the ordering of
     /// the values in `SensorDescriptor`.
     1: vector<int64>:SENSOR_MAX_VALUES values;
+};
+
+/// A SensorFeatureReport describes the features of a given sensor. If a
+/// FeatureReport is sent to the Input Device it sets the configuration of the device.
+/// If a FeatureReport is requested from the Input Device it shows the device's
+/// current configuration.
+table SensorFeatureReport {
+    /// The time between reports sent by the sensor.
+    1: int64 report_interval;
+    /// The sensitivity for various `SensorType`. This vector must be given in
+    /// the order of the descriptor's `sensitivity` vector.
+    2: vector<int64>:SENSOR_MAX_VALUES sensitivity;
 };

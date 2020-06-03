@@ -30,4 +30,12 @@ protocol InputDevice {
     /// Send a single output report to the device. This will throw an error
     /// if the output report does not follow the OutputDescriptor.
     SendOutputReport(OutputReport report) -> () error zx.status;
+
+    /// Get the feature report for a given device. This requests the state of
+    /// the device's features.
+    GetFeatureReport() -> (FeatureReport report) error zx.status;
+
+    /// Set the feature report for a given device. This sets the state of
+    /// the device's features.
+    SetFeatureReport(FeatureReport report) -> () error zx.status;
 };

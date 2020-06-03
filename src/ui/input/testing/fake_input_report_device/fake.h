@@ -40,6 +40,15 @@ class FakeInputDevice final : public fuchsia::input::report::InputDevice {
   void GetDescriptor(GetDescriptorCallback callback) override;
   void SendOutputReport(fuchsia::input::report::OutputReport report,
                         SendOutputReportCallback callback) override;
+  void GetFeatureReport(GetFeatureReportCallback callback) override {
+    callback(
+        fuchsia::input::report::InputDevice_GetFeatureReport_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  }
+  void SetFeatureReport(::fuchsia::input::report::FeatureReport report,
+                        SetFeatureReportCallback callback) override {
+    callback(
+        fuchsia::input::report::InputDevice_SetFeatureReport_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  }
 
  private:
   // This lock makes the class thread-safe, which is important because setting the

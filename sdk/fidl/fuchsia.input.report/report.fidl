@@ -32,3 +32,11 @@ table InputReport {
 table OutputReport {
     1: KeyboardOutputReport keyboard;
 };
+
+/// A single report containing the feature information for an input device.
+/// Feature reports obtained from the device show the current state of the
+/// device. Sending a feature report to the device sets the device in that
+/// state.
+table FeatureReport {
+    1: SensorFeatureReport sensor;
+};

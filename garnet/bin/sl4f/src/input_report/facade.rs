@@ -211,6 +211,7 @@ mod tests {
                             },
                         ]),
                     }),
+                    feature: None,
                 }),
                 touch: Some(TouchDescriptor {
                     input: Some(TouchInputDescriptor {

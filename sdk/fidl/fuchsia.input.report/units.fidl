@@ -44,6 +44,9 @@ enum Unit : uint32 {
 
     // A measurement of lux is 10^-6 Candela/(m^2)
     LUX = 11;
+
+    // A measurement of time is 1 nanosecond (10^-9 seconds).
+    TIME = 12;
 };
 
 /// Describe a `Range` of values.

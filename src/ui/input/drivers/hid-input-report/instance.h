@@ -54,11 +54,18 @@ class InputReportInstance : public InstanceDeviceType,
                      hid_input_report::Device* device);
 
   // FIDL functions.
-  void GetReportsEvent(GetReportsEventCompleter::Sync completer);
-  void GetReports(GetReportsCompleter::Sync completer);
-  void GetDescriptor(GetDescriptorCompleter::Sync completer);
+  void GetReportsEvent(GetReportsEventCompleter::Sync completer) override;
+  void GetReports(GetReportsCompleter::Sync completer) override;
+  void GetDescriptor(GetDescriptorCompleter::Sync completer) override;
   void SendOutputReport(::llcpp::fuchsia::input::report::OutputReport report,
-                        SendOutputReportCompleter::Sync completer);
+                        SendOutputReportCompleter::Sync completer) override;
+  void GetFeatureReport(GetFeatureReportCompleter::Sync completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+  void SetFeatureReport(::llcpp::fuchsia::input::report::FeatureReport report,
+                        SetFeatureReportCompleter::Sync completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
 
  private:
   // This is the static size that is used to allocate this instance's InputReports that
