@@ -28,7 +28,7 @@ use futures::stream::{FusedStream, TryStream, TryStreamExt};
 type Result<T = ()> = std::result::Result<T, anyhow::Error>;
 
 /// Default timeout to use when waiting for an interface to come up.
-const DEFAULT_INTERFACE_UP_EVENT_TIMEOUT: zx::Duration = zx::Duration::from_seconds(10);
+const DEFAULT_INTERFACE_UP_EVENT_TIMEOUT: zx::Duration = zx::Duration::from_seconds(120);
 
 /// Returns when an interface is up or when `timeout` elapses.
 async fn wait_for_interface_up<

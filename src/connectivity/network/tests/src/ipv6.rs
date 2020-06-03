@@ -60,7 +60,16 @@ const EXPECTED_DUP_ADDR_DETECT_TRANSMITS: u8 = 1;
 const EXPECTED_DAD_RETRANSMIT_TIMER: zx::Duration = zx::Duration::from_seconds(1);
 
 /// Extra time to use when waiting for an async event to occur.
-const ASYNC_EVENT_TIMEOUT: zx::Duration = zx::Duration::from_seconds(5);
+///
+/// A large timeout to help prevent flakes.
+const ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_seconds(120);
+
+/// Extra time to use when waiting for an async event to not occur.
+///
+/// Since a negative check is used to make sure an event did not happen, its okay to use a
+/// smaller timeout compared to the positive case since execution stall in regards to the
+/// monotonic clock will not affect the expected outcome.
+const ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_seconds(5);
 
 /// Sets up an environment with a network used for tests requiring manual packet
 /// inspection and transmission.
@@ -239,6 +248,14 @@ async fn sends_router_solicitations<E: Endpoint>() -> Result {
     // by the netstack.
     let mut observed_rs = 0;
     loop {
+        // When we have already observed the expected number of RS messages, do a
+        // negative check to make sure that we don't send anymore.
+        let extra_timeout = if observed_rs == EXPECTED_ROUTER_SOLICIATIONS {
+            ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT
+        } else {
+            ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT
+        };
+
         let ret = fake_ep
             .take_event_stream()
             .try_filter_map(|netemul_network::FakeEndpointEvent::OnData { data }| {
@@ -272,18 +289,15 @@ async fn sends_router_solicitations<E: Endpoint>() -> Result {
             })
             .try_next()
             .map_err(|e| anyhow::anyhow!("error getting OnData event: {}", e))
-            .on_timeout(
-                (EXPECTED_ROUTER_SOLICITATION_INTERVAL + ASYNC_EVENT_TIMEOUT).after_now(),
-                || {
-                    // If we already observed `EXPECTED_ROUTER_SOLICIATIONS` RS, then we shouldn't
-                    // have gotten any more; the timeout is expected.
-                    if observed_rs == EXPECTED_ROUTER_SOLICIATIONS {
-                        return Ok(None);
-                    }
+            .on_timeout((EXPECTED_ROUTER_SOLICITATION_INTERVAL + extra_timeout).after_now(), || {
+                // If we already observed `EXPECTED_ROUTER_SOLICIATIONS` RS, then we shouldn't
+                // have gotten any more; the timeout is expected.
+                if observed_rs == EXPECTED_ROUTER_SOLICIATIONS {
+                    return Ok(None);
+                }
 
-                    return Err(anyhow::anyhow!("timed out waiting for the {}-th RS", observed_rs));
-                },
-            )
+                return Err(anyhow::anyhow!("timed out waiting for the {}-th RS", observed_rs));
+            })
             .await?;
 
         let (dst_mac, src_ip, dst_ip, ttl, observed_slls) = match ret {
@@ -355,7 +369,7 @@ async fn slaac_with_privacy_extensions<E: Endpoint>() -> Result {
         })
         .try_next()
         .map_err(|e| anyhow::anyhow!("error getting OnData event: {}", e))
-        .on_timeout(ASYNC_EVENT_TIMEOUT.after_now(), || {
+        .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
             Err(anyhow::anyhow!("timed out waiting for RS packet"))
         })
         .await?
@@ -421,7 +435,7 @@ async fn slaac_with_privacy_extensions<E: Endpoint>() -> Result {
         .map_err(|e| anyhow::anyhow!("error getting OnInterfaceChanged event: {}", e))
         .on_timeout(
             (EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS * expected_addrs
-                + ASYNC_EVENT_TIMEOUT)
+                + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
                 .after_now(),
             || Err(anyhow::anyhow!("timed out waiting for SLAAC addresses")),
         )
@@ -477,7 +491,7 @@ async fn add_address_for_dad<
         })
         .try_next()
         .map_err(|e| anyhow::anyhow!("error getting OnData event: {}", e))
-        .on_timeout(ASYNC_EVENT_TIMEOUT.after_now(), || {
+        .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
             Err(anyhow::anyhow!(
                 "timed out waiting for a neighbor solicitation targetting {}",
                 ipv6_consts::LINK_LOCAL_ADDR
@@ -511,7 +525,7 @@ async fn duplicate_address_detection<E: Endpoint>() -> Result {
     async fn check_address_failed_dad(iface: &TestInterface<'_>) -> Result {
         let () = fasync::Timer::new(fasync::Time::after(
             EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS
-                + ASYNC_EVENT_TIMEOUT,
+                + ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
         ))
         .fuse()
         .await;
@@ -601,7 +615,7 @@ async fn duplicate_address_detection<E: Endpoint>() -> Result {
         .map_err(|e| anyhow::anyhow!("error getting OnInterfaceChanged event: {}", e))
         .on_timeout(
             (EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS
-                + ASYNC_EVENT_TIMEOUT)
+                + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
                 .after_now(),
             || {
                 Err(anyhow::anyhow!(
