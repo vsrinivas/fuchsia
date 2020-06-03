@@ -119,7 +119,7 @@ impl fmt::Display for PowerYak {
 
 #[derive(Inspect)]
 struct AutoYak {
-    name: IValue<String>,
+    name: IValue<Option<String>>,
     #[inspect(skip)]
     _credit_card_no: String,
     #[inspect(rename = "horse_type")]
@@ -131,7 +131,7 @@ struct AutoYak {
 impl AutoYak {
     fn new(name: String) -> Self {
         Self {
-            name: name.into(),
+            name: Some(name).into(),
             _credit_card_no: "<secret>".into(),
             ty: Horse::Icelandic.into(),
             child: sync::Arc::new(lock::Mutex::new(inner::AutoYakling::default())),
@@ -342,6 +342,52 @@ fn unit_generic() {
     });
     std::mem::drop(inspect_data);
     assert_inspect_tree!(inspector, root: {});
+}
+
+#[test]
+fn unit_option() -> Result<(), AttachError> {
+    let inspector = Inspector::new();
+    let mut option_yakling: Option<Yakling> = None;
+    let mut option_yakling_data = option_yakling.inspect_create(inspector.root(), "option_yakling");
+    assert_inspect_tree!(inspector, root: {});
+
+    option_yakling = Some(Yakling { name: "Sebastian".to_string(), age: 3 });
+    option_yakling.inspect_update(&mut option_yakling_data);
+    assert_inspect_tree!(inspector, root: {
+        option_yakling: {
+            name: "Sebastian",
+            years_old: 3u64
+        },
+    });
+
+    option_yakling.as_mut().unwrap().age = 4;
+    option_yakling.inspect_update(&mut option_yakling_data);
+    assert_inspect_tree!(inspector, root: {
+        option_yakling: {
+            name: "Sebastian",
+            years_old: 4u64
+        },
+    });
+
+    option_yakling = None;
+    option_yakling.inspect_update(&mut option_yakling_data);
+    assert_inspect_tree!(inspector, root: {});
+
+    std::mem::drop(option_yakling_data);
+    assert_inspect_tree!(inspector, root: {});
+
+    // Cover `inspect_create(..)` from `Some(..)`
+    let option_yakling = Some(Yakling { name: "Sebastian".to_string(), age: 3 });
+    let option_yakling_data = option_yakling.inspect_create(inspector.root(), "option_yakling");
+    assert_inspect_tree!(inspector, root: {
+        option_yakling: {
+            name: "Sebastian",
+            years_old: 3u64
+        },
+    });
+    std::mem::drop(option_yakling_data);
+    assert_inspect_tree!(inspector, root: {});
+    Ok(())
 }
 
 #[test]

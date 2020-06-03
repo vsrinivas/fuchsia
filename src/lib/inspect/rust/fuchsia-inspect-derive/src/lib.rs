@@ -111,6 +111,56 @@ impl_unit_primitive!({ i8, i16, i32, i64, isize }, i64, int, Int);
 impl_unit_primitive!({ f32, f64 }, f64, double, Double);
 impl_unit_primitive!({ bool }, bool, bool, Bool);
 
+/// The inspect data of an Option<T> gets the same inspect representation as T,
+/// but can also be absent.
+pub struct OptionData<T: Unit> {
+    // Keep a copy of the owned name, so that the inner node or property can be
+    // reinitialized after initial attachment.
+    name: String,
+
+    // Keep a reference to the parent, so that the inner node or property can be
+    // reinitialized after initial attachment.
+    inspect_parent: Node,
+
+    // Inner inspect data.
+    inspect_data: Option<T::Data>,
+}
+
+impl<T: Unit> Default for OptionData<T> {
+    fn default() -> Self {
+        Self { name: String::default(), inspect_parent: Node::default(), inspect_data: None }
+    }
+}
+
+impl<T: Unit> Unit for Option<T> {
+    type Data = OptionData<T>;
+
+    fn inspect_create(&self, parent: &Node, name: impl AsRef<str>) -> Self::Data {
+        Self::Data {
+            name: String::from(name.as_ref()),
+            inspect_parent: parent.clone_weak(),
+            inspect_data: self.as_ref().map(|inner| inner.inspect_create(&parent, name)),
+        }
+    }
+
+    fn inspect_update(&self, data: &mut Self::Data) {
+        match (self.as_ref(), &mut data.inspect_data) {
+            // None, always unset inspect data
+            (None, ref mut inspect_data) => **inspect_data = None,
+
+            // Missing inspect data, initialize it
+            (Some(inner), None) => {
+                data.inspect_data = Some(inner.inspect_create(&data.inspect_parent, &data.name));
+            }
+
+            // Update existing inspect data, for performance
+            (Some(inner), Some(ref mut inner_inspect_data)) => {
+                inner.inspect_update(inner_inspect_data);
+            }
+        }
+    }
+}
+
 /// Renders inspect state. This trait should be implemented with
 /// a relevant constraint on the base type.
 pub trait Render {
