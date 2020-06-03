@@ -75,7 +75,7 @@ bool GestureHandler::BindOneFingerNTapAction(OnGestureCallback callback, int num
   }
 
   if (gesture_recognizers_.find(gesture_type) != gesture_recognizers_.end()) {
-    FX_LOGS(ERROR) << "Action already exists for GestureType: " << gesture_type;
+    FX_LOGS(INFO) << "Action already exists for GestureType: " << gesture_type;
     return false;
   }
   gesture_handlers_[gesture_type].on_complete = std::move(callback);
@@ -95,7 +95,7 @@ bool GestureHandler::BindOneFingerDragAction(OnGestureCallback on_start,
                                              OnGestureCallback on_update,
                                              OnGestureCallback on_complete) {
   if (gesture_recognizers_.find(kOneFingerDrag) != gesture_recognizers_.end()) {
-    FX_LOGS(ERROR) << "Action already exists for one-finger drag gesture.";
+    FX_LOGS(INFO) << "Action already exists for one-finger drag gesture.";
     return false;
   }
   gesture_handlers_[kOneFingerDrag] = {std::move(on_start), std::move(on_update),
@@ -160,8 +160,8 @@ bool GestureHandler::BindUpSwipeAction(OnGestureCallback callback, GestureType g
   }
 
   if (gesture_recognizers_.find(gesture_type) != gesture_recognizers_.end()) {
-    FX_LOGS(ERROR) << "Action already exists for Up Swipe gesture with " << number_of_fingers
-                   << " finger.";
+    FX_LOGS(INFO) << "Action already exists for Up Swipe gesture with " << number_of_fingers
+                  << " finger.";
     return false;
   }
 
@@ -191,8 +191,8 @@ bool GestureHandler::BindDownSwipeAction(OnGestureCallback callback, GestureType
   }
 
   if (gesture_recognizers_.find(gesture_type) != gesture_recognizers_.end()) {
-    FX_LOGS(ERROR) << "Action already exists for Down Swipe gesture with " << number_of_fingers
-                   << " finger.";
+    FX_LOGS(INFO) << "Action already exists for Down Swipe gesture with " << number_of_fingers
+                  << " finger.";
     return false;
   }
 
@@ -221,8 +221,8 @@ bool GestureHandler::BindLeftSwipeAction(OnGestureCallback callback, GestureType
       return false;
   }
   if (gesture_recognizers_.find(gesture_type) != gesture_recognizers_.end()) {
-    FX_LOGS(ERROR) << "Action already exists for Left Swipe gesture with " << number_of_fingers
-                   << " finger.";
+    FX_LOGS(INFO) << "Action already exists for Left Swipe gesture with " << number_of_fingers
+                  << " finger.";
     return false;
   }
 
@@ -252,8 +252,8 @@ bool GestureHandler::BindRightSwipeAction(OnGestureCallback callback, GestureTyp
   }
 
   if (gesture_recognizers_.find(gesture_type) != gesture_recognizers_.end()) {
-    FX_LOGS(ERROR) << "Action already exists for Right Swipe gesture with " << number_of_fingers
-                   << " finger.";
+    FX_LOGS(INFO) << "Action already exists for Right Swipe gesture with " << number_of_fingers
+                  << " finger.";
     return false;
   }
 

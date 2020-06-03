@@ -80,14 +80,14 @@ bool ValidatePointerEvent(const GestureInfo gesture_start_info,
   // Check if pointer_event has all the required fields.
   if (!pointer_event.has_event_time() || !pointer_event.has_pointer_id() ||
       !pointer_event.has_device_id() || !pointer_event.has_ndc_point()) {
-    FX_LOGS(ERROR) << "Pointer Event is missing required information.";
+    FX_LOGS(INFO) << "Pointer Event is missing required information.";
     return false;
   }
 
   // Check if pointer event information matches the gesture start information.
   if ((gesture_start_info.device_id != pointer_event.device_id()) ||
       (gesture_start_info.pointer_id != pointer_event.pointer_id())) {
-    FX_LOGS(ERROR) << "Pointer event is not valid for current gesture.";
+    FX_LOGS(INFO) << "Pointer event is not valid for current gesture.";
     return false;
   }
   return true;

@@ -37,7 +37,7 @@ void SwipeRecognizerBase::HandleEvent(
   FX_DCHECK(contest_);
 
   if (!pointer_event.has_phase()) {
-    FX_LOGS(ERROR) << "Pointer event is missing phase information.";
+    FX_LOGS(INFO) << "Pointer event is missing phase information.";
     return;
   }
 
@@ -47,13 +47,13 @@ void SwipeRecognizerBase::HandleEvent(
     case fuchsia::ui::input::PointerEventPhase::DOWN:
       // Check that Up event is not detected before any Down event.
       if (number_of_up_event_detected_) {
-        FX_LOGS(ERROR) << "Down Event detected after 'Up' event. Dropping current event.";
+        FX_LOGS(INFO) << "Down Event detected after 'Up' event. Dropping current event.";
         contest_->member->Reject();
         break;
       }
 
       if (!InitGestureInfo(pointer_event, &gesture_info, &gesture_context_)) {
-        FX_LOGS(ERROR) << "Pointer Event is missing required fields. Dropping current event.";
+        FX_LOGS(INFO) << "Pointer Event is missing required fields. Dropping current event.";
         contest_->member->Reject();
         break;
       }
@@ -73,7 +73,7 @@ void SwipeRecognizerBase::HandleEvent(
       gesture_info_map_[pointer_id] = std::move(gesture_info);
 
       if (gesture_info_map_.size() > number_of_fingers_) {
-        FX_LOGS(ERROR) << "More fingers detected than expected. Dropping current event.";
+        FX_LOGS(INFO) << "More fingers detected than expected. Dropping current event.";
         contest_->member->Reject();
       } else if (gesture_info_map_.size() == 1) {
         // Schedule a task to declare defeat with a timeout equal to swipe_gesture_timeout_.
@@ -197,7 +197,7 @@ void SwipeRecognizerBase::UpdateLastPointerPosition(
   GestureInfo gesture_info;
   GestureContext dummy_context;
   if (!InitGestureInfo(pointer_event, &gesture_info, &dummy_context)) {
-    FX_LOGS(ERROR) << "Pointer Event is missing required fields. Dropping current event.";
+    FX_LOGS(INFO) << "Pointer Event is missing required fields. Dropping current event.";
     contest_->member->Reject();
     return;
   }

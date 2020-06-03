@@ -45,7 +45,7 @@ void OneFingerNTapRecognizer::HandleEvent(
       // gesture_start_info and gesture_context.
       if (!contest_->number_of_taps_detected &&
           !InitGestureInfo(pointer_event, &gesture_start_info_, &gesture_context_)) {
-        FX_LOGS(ERROR) << "Pointer Event is missing required fields. Dropping current event.";
+        FX_LOGS(INFO) << "Pointer Event is missing required fields. Dropping current event.";
         contest_.reset();
         break;
       }
@@ -54,8 +54,8 @@ void OneFingerNTapRecognizer::HandleEvent(
       // represents the start of the gesture.
       // Also, validate pointer event for one finger tap.
       if (contest_->tap_in_progress || !ValidateEvent(pointer_event)) {
-        FX_LOGS(ERROR) << "Pointer Event is not valid for current gesture."
-                          "Dropping current event.";
+        FX_LOGS(INFO) << "Pointer Event is not valid for current gesture."
+                         "Dropping current event.";
         contest_.reset();
         break;
       }
