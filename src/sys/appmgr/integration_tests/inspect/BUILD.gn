@@ -8,40 +8,7 @@ import("//build/testing/environments.gni")
 
 group("inspect") {
   testonly = true
-  deps = [
-    ":inspect_integration_tests",
-    ":inspect_vmo_integration_tests",
-  ]
-}
-
-executable("bin") {
-  output_name = "inspect_test_app"
-
-  sources = [ "program.cc" ]
-
-  deps = [
-    "//src/lib/inspect_deprecated:component",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-executable("test") {
-  testonly = true
-  output_name = "inspect_integration_tests"
-
-  sources = [ "test.cc" ]
-
-  deps = [
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/inspect_deprecated",
-    "//third_party/googletest:gmock",
-  ]
-
-  # TODO(46733): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+  deps = [ ":inspect_vmo_integration_tests" ]
 }
 
 executable("bin-vmo") {
@@ -110,33 +77,6 @@ executable("test-health") {
 
   # TODO(46733): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-}
-
-test_package("inspect_integration_tests") {
-  deps = [
-    ":bin",
-    ":test",
-  ]
-
-  binaries = [
-    {
-      name = "inspect_test_app"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/inspect_test_app.cmx")
-      dest = "inspect_test_app.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "inspect_integration_tests"
-      environments = basic_envs
-    },
-  ]
 }
 
 test_package("inspect_vmo_integration_tests") {
