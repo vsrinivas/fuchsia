@@ -57,11 +57,16 @@ source_set("iommu") {
   ]
 }
 
+config("private_config") {
+  cflags = [ "-Wno-unused-function" ]
+}
+
 driver_module("platform-bus-x86") {
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ ":private_config" ]
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -132,7 +137,6 @@ driver_module("platform-bus-x86") {
     "//zircon/system/ulib/hid",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
-  public_configs = [ "$zx_build/public/gn/config:default_warnings" ]
 }
 
 test("x86-battery-test") {

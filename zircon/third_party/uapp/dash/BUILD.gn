@@ -61,7 +61,7 @@ executable("dash") {
   ]
   configs += [
     ":config",
-    "$zx_build/public/gn/config:static-libc++",
+    "//build/config/fuchsia:static_cpp_standard_library",
   ]
   deps = [
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",

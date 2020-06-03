@@ -27,5 +27,5 @@ zx_library("pci") {
     "//zircon/public/lib/region-alloc",
   ]
 
-  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
