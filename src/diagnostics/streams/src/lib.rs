@@ -44,7 +44,7 @@ bitfield! {
     u16, value_ref, set_value_ref: 47, 32;
 
     /// Severity of the record, if any.
-    i8, severity, set_severity: 63, 56;
+    u8, severity, set_severity: 63, 56;
 }
 
 impl Header {

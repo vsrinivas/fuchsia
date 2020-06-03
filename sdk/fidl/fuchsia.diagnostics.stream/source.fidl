@@ -41,42 +41,4 @@ protocol Source {
     /// wishes it should zero the buffer's contents and recycle it for future records. Buffers must
     /// be re-sent via `OnBufferInit` after they're zeroed.
     RetireBuffer(zx.koid buffer);
-
-    /// Notifies the component of interest in a subset of diagnostic records.
-    ///
-    /// Before the component receives this request it should filter according to a default interest
-    /// specifier.
-    ///
-    /// After receiving this message components begin writing records according to the new
-    /// specifier. `Source` components must be prepared to handle multiple client connections,
-    /// and may filter records according to the union of all interest specifiers. Clients may
-    /// receive records outside the scope of their interest.
-    RegisterInterest(Interest desired);
-};
-
-/// The system's current interest in records.
-///
-/// Without having received an interest specifier or receiving one with empty fields, components
-/// should assume a default interest specifier, as documented for each field in this table.
-table Interest {
-    /// Minimum desired severity. The default is `INFO`.
-    1: Severity min_severity;
-};
-
-/// The severity of a given record.
-enum Severity : int8 {
-    /// Components should include all records.
-    ALL = -0x7F;
-    /// Components should include trace records as well as more severe records.
-    TRACE = 0x10;
-    /// Components should include developer-facing debug records as well as more severe records.
-    DEBUG = 0x20;
-    /// Components should include informative records as well as more severe records. (default)
-    INFO = 0x30;
-    /// Components should include warning records as well as more severe records.
-    WARN = 0x40;
-    /// Components should include error records as well as more severe records.
-    ERROR = 0x50;
-    /// Components should include fatal records as well as more severe records.
-    FATAL = 0x60;
 };

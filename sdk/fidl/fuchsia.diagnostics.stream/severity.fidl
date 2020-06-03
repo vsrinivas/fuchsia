@@ -1,0 +1,21 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.diagnostics.stream;
+
+/// The severity of a given record.
+enum Severity : uint8 {
+    /// Trace records include detailed information about program execution.
+    TRACE = 0x10;
+    /// Debug records include development-facing information about program execution.
+    DEBUG = 0x20;
+    /// Info records include general information about program execution. (default)
+    INFO = 0x30;
+    /// Warning records include information about potentially problematic operations.
+    WARN = 0x40;
+    /// Error records include information about failed operations.
+    ERROR = 0x50;
+    /// Fatal records convey information about operations which cause a program's termination.
+    FATAL = 0x60;
+};
