@@ -54,6 +54,23 @@ class EncodedMessageHandleHolder<MaxNumHandles, std::enable_if_t<(MaxNumHandles 
 
 }  // namespace internal
 
+class RawMessage {
+ public:
+  RawMessage(BytePart bytes, HandlePart handles)
+      : bytes_(std::move(bytes)), handles_(std::move(handles)) {}
+  explicit RawMessage(HandlePart handles) : handles_(std::move(handles)) {}
+
+  BytePart& bytes() { return bytes_; }
+  const BytePart& bytes() const { return bytes_; }
+
+  HandlePart& handles() { return handles_; }
+  const HandlePart& handles() const { return handles_; }
+
+ private:
+  BytePart bytes_;
+  HandlePart handles_;
+};
+
 // Holds an encoded FIDL message, that is, a byte array plus a handle table.
 //
 // The bytes part points to an external caller-managed buffer, while the handles part
@@ -84,25 +101,27 @@ class EncodedMessage final
   constexpr static uint32_t kResolvedMaxHandles = Super::kResolvedMaxHandles;
 
   // Instantiates an empty buffer with no bytes or handles.
-  EncodedMessage() = default;
+  EncodedMessage() : message_(HandlePart(Super::handle_storage(), kResolvedMaxHandles)) {}
 
   // Construct an |EncodedMessage| borrowing the bytes and taking ownership of handles in |msg|.
   // The number of handles in |msg| must not exceed |kResolvedMaxHandles|.
-  explicit EncodedMessage(fidl_msg_t* msg) {
-    bytes_ = fidl::BytePart(static_cast<uint8_t*>(msg->bytes), msg->num_bytes, msg->num_bytes);
+  explicit EncodedMessage(fidl_msg_t* msg)
+      : message_(BytePart(static_cast<uint8_t*>(msg->bytes), msg->num_bytes, msg->num_bytes),
+                 HandlePart(Super::handle_storage(), kResolvedMaxHandles)) {
     ZX_ASSERT(msg->num_handles <= kResolvedMaxHandles);
     if (kResolvedMaxHandles > 0) {
-      memcpy(handles_.data(), msg->handles, sizeof(zx_handle_t) * msg->num_handles);
+      memcpy(handles().data(), msg->handles, sizeof(zx_handle_t) * msg->num_handles);
       for (uint32_t i = 0; i < msg->num_handles; i++) {
         msg->handles[i] = ZX_HANDLE_INVALID;
       }
-      handles_.set_actual(msg->num_handles);
+      handles().set_actual(msg->num_handles);
     } else {
-      handles_.set_actual(0);
+      handles().set_actual(0);
     }
   }
 
-  EncodedMessage(EncodedMessage&& other) noexcept {
+  EncodedMessage(EncodedMessage&& other) noexcept
+      : message_(HandlePart(Super::handle_storage(), kResolvedMaxHandles)) {
     if (this != &other) {
       MoveImpl(std::move(other));
     }
@@ -122,7 +141,8 @@ class EncodedMessage final
   // Instantiates an EncodedMessage which points to a buffer region with caller-managed memory.
   // It does not take ownership of that buffer region.
   // Also initializes an empty handles part.
-  explicit EncodedMessage(BytePart bytes) : bytes_(std::move(bytes)) {}
+  explicit EncodedMessage(BytePart bytes)
+      : message_(std::move(bytes), HandlePart(Super::handle_storage(), kResolvedMaxHandles)) {}
 
   ~EncodedMessage() { CloseHandles(); }
 
@@ -131,55 +151,53 @@ class EncodedMessage final
   // The caller is responsible for having transferred the handles elsewhere
   // before calling this method.
   BytePart ReleaseBytesAndHandles() {
-    handles_.set_actual(0);
-    BytePart return_bytes = std::move(bytes_);
-    return return_bytes;
+    handles().set_actual(0);
+    return std::move(bytes());
   }
 
-  const BytePart& bytes() const { return bytes_; }
-  BytePart& bytes() { return bytes_; }
+  const BytePart& bytes() const { return message_.bytes(); }
+  BytePart& bytes() { return message_.bytes(); }
 
-  const HandlePart& handles() const { return handles_; }
-  HandlePart& handles() { return handles_; }
+  const HandlePart& handles() const { return message_.handles(); }
+  HandlePart& handles() { return message_.handles(); }
 
   // Take ownership of bytes and handles and assemble into a |fidl::Message|.
-  Message ToAnyMessage() { return Message(std::move(bytes_), std::move(handles_)); }
+  Message ToAnyMessage() { return Message(std::move(bytes()), std::move(handles())); }
 
  private:
   void CloseHandles() {
     if (kResolvedMaxHandles == 0) {
       return;
     }
-    if (handles_.actual() > 0) {
+    if (handles().actual() > 0) {
 #ifdef __Fuchsia__
-      ZX_DEBUG_ASSERT(handles_.actual() <= kResolvedMaxHandles);
-      zx_handle_close_many(handles_.data(), handles_.actual());
+      ZX_DEBUG_ASSERT(handles().actual() <= kResolvedMaxHandles);
+      zx_handle_close_many(handles().data(), handles().actual());
 #else
       // How did we have handles if not on Fuchsia? Something bad happened...
       assert(false);
 #endif
-      handles_.set_actual(0);
+      handles().set_actual(0);
     }
   }
 
   void MoveImpl(EncodedMessage&& other) noexcept {
     CloseHandles();
-    bytes_ = std::move(other.bytes_);
+    bytes() = std::move(other.bytes());
 #ifdef __Fuchsia__
-    ZX_DEBUG_ASSERT(other.handles_.actual() <= kResolvedMaxHandles);
+    ZX_DEBUG_ASSERT(other.handles().actual() <= kResolvedMaxHandles);
 #endif
     if (kResolvedMaxHandles > 0) {
       // copy handles from |other|
       memcpy(Super::handle_storage(), other.Super::handle_storage(),
-             other.handles_.actual() * sizeof(zx_handle_t));
+             other.handles().actual() * sizeof(zx_handle_t));
     }
     // release handles in |other|
-    handles_.set_actual(other.handles().actual());
-    other.handles_.set_actual(0);
+    handles().set_actual(other.handles().actual());
+    other.handles().set_actual(0);
   }
 
-  BytePart bytes_;
-  HandlePart handles_{Super::handle_storage(), kResolvedMaxHandles};
+  RawMessage message_;
 };
 
 }  // namespace fidl
