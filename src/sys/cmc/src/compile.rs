@@ -32,7 +32,7 @@ pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<
         match path.extension().and_then(|e| e.to_str()) {
             Some("cm") => Ok(()),
             _ => Err(Error::invalid_args(format!(
-                "Output file {:?} does not have the component manifest language extension (.cml)",
+                "Output file {:?} does not have the component manifest extension (.cm)",
                 path
             ))),
         }?;
