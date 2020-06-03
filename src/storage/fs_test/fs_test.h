@@ -36,6 +36,7 @@ class FileSystemInstance {
  public:
   virtual ~FileSystemInstance() = default;
   virtual zx::status<> Mount(const std::string& mount_path) = 0;
+  virtual zx::status<> Fsck() = 0;
 
  protected:
   // A wrapper around fs-management that can be used by subclasses if they so wish.
@@ -82,7 +83,7 @@ class MemfsFileSystem : public FileSystemImpl<MemfsFileSystem> {
 // Helper that creates a test file system with the given options and will clean-up upon destruction.
 class TestFileSystem {
  public:
-  // Creates and returns a test file system.
+  // Creates and returns a mounted test file system.
   static zx::status<TestFileSystem> Create(const TestFileSystemOptions& options);
 
   TestFileSystem(TestFileSystem&&) = default;
@@ -91,6 +92,17 @@ class TestFileSystem {
   ~TestFileSystem();
 
   const std::string& mount_path() const { return mount_path_; }
+  bool is_mounted() const { return mounted_; }
+
+  // Mounts the file system (only necessary after calling Unmount).
+  zx::status<> Mount();
+
+  // Unmounts a mounted file system.
+  zx::status<> Unmount();
+
+  // Runs fsck on the file system. Does not automatically unmount, so Unmount should be
+  // called first if that is required.
+  zx::status<> Fsck();
 
  private:
   TestFileSystem(const TestFileSystemOptions& options,
@@ -100,6 +112,7 @@ class TestFileSystem {
   TestFileSystemOptions options_;
   std::unique_ptr<FileSystemInstance> file_system_;
   std::string mount_path_;
+  bool mounted_ = false;
 };
 
 }  // namespace fs_test

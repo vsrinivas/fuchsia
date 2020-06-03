@@ -5,10 +5,15 @@
 #include "fs_test_fixture.h"
 
 namespace fs_test {
-namespace {
+
+FileSystemTest::~FileSystemTest() {
+  if (fs_.is_mounted()) {
+    EXPECT_EQ(fs_.Unmount().status_value(), ZX_OK);
+  }
+  EXPECT_EQ(fs_.Fsck().status_value(), ZX_OK);
+}
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, FileSystemTest, testing::ValuesIn(AllTestFileSystems()),
                          testing::PrintToStringParamName());
 
-}  // namespace
 }  // namespace fs_test

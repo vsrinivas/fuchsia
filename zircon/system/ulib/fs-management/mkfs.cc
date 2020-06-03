@@ -64,7 +64,8 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
 }
 
 zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const mkfs_options_t* options) {
-  const char* argv[] = {"/boot/bin/mkfs-msdosfs", device_path, nullptr};
+  const std::string tool_path = fs_management::GetBinaryPath("mkfs-msdosfs");
+  const char* argv[] = {tool_path.c_str(), device_path, nullptr};
   return cb(fbl::count_of(argv) - 1, argv, NULL, NULL, 0);
 }
 

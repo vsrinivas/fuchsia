@@ -118,6 +118,18 @@ class MinfsInstance : public FileSystemInstance {
     return FileSystemInstance::Mount(device_path_, mount_path, DISK_FORMAT_MINFS);
   }
 
+  zx::status<> Fsck() override {
+    fsck_options_t options{
+        .verbose = false,
+        .never_modify = true,
+        .always_modify = false,
+        .force = true,
+        .apply_journal = false,
+    };
+    return zx::make_status(
+        fsck(device_path_.c_str(), DISK_FORMAT_MINFS, &options, launch_stdio_sync));
+  }
+
  private:
   isolated_devmgr::RamDisk ram_disk_;
   std::string device_path_;
@@ -161,6 +173,8 @@ class MemfsInstance : public FileSystemInstance {
     return status;
   }
 
+  zx::status<> Fsck() override { return zx::ok(); }
+
  private:
   async::Loop loop_;
   memfs_filesystem_t* fs_ = nullptr;
@@ -190,22 +204,42 @@ zx::status<TestFileSystem> TestFileSystem::Create(const TestFileSystemOptions& o
     FX_LOGS(ERROR) << "Unable to create mount point: " << errno;
     return zx::error(ZX_ERR_BAD_STATE);
   }
-  std::string mount_path(mount_path_c_str);
-  auto status = instance_or.value()->Mount(mount_path);
+  TestFileSystem file_system(options, std::move(instance_or).value(), mount_path_c_str);
+  auto status = file_system.Mount();
   if (status.is_error()) {
     return status.take_error();
   }
-  return zx::ok(TestFileSystem(options, std::move(instance_or).value(), mount_path));
+  return zx::ok(std::move(file_system));
 }
 
 TestFileSystem::~TestFileSystem() {
   if (file_system_) {
-    zx::status<> status = zx::make_status(umount(mount_path_.c_str()));
-    if (status.is_error()) {
-      FX_LOGS(WARNING) << "Failed to unmount: " << status.status_string();
+    if (mounted_) {
+      auto status = Unmount();
+      if (status.is_error()) {
+        FX_LOGS(WARNING) << "Failed to unmount: " << status.status_string();
+      }
     }
     rmdir(mount_path_.c_str());
   }
 }
+
+zx::status<> TestFileSystem::Mount() {
+  auto status = file_system_->Mount(mount_path_);
+  if (status.is_ok()) {
+    mounted_ = true;
+  }
+  return status;
+}
+
+zx::status<> TestFileSystem::Unmount() {
+  zx::status<> status = zx::make_status(umount(mount_path_.c_str()));
+  if (status.is_ok()) {
+    mounted_ = false;
+  }
+  return status;
+}
+
+zx::status<> TestFileSystem::Fsck() { return file_system_->Fsck(); }
 
 }  // namespace fs_test

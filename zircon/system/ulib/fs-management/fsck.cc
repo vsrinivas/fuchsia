@@ -22,6 +22,8 @@
 #include <fbl/vector.h>
 #include <fs-management/mount.h>
 
+#include "path.h"
+
 namespace {
 
 zx_status_t FsckNativeFs(const char* device_path, const fsck_options_t* options, LaunchCallback cb,
@@ -61,7 +63,8 @@ zx_status_t FsckNativeFs(const char* device_path, const fsck_options_t* options,
 
 zx_status_t FsckFat(const char* device_path, const fsck_options_t* options, LaunchCallback cb) {
   fbl::Vector<const char*> argv;
-  argv.push_back("/boot/bin/fsck-msdosfs");
+  const std::string tool_path = fs_management::GetBinaryPath("fsck-msdosfs");
+  argv.push_back(tool_path.c_str());
   if (options->never_modify) {
     argv.push_back("-n");
   } else if (options->always_modify) {
@@ -84,11 +87,11 @@ zx_status_t fsck(const char* device_path, disk_format_t df, const fsck_options_t
                  LaunchCallback cb) {
   switch (df) {
     case DISK_FORMAT_MINFS:
-      return FsckNativeFs(device_path, options, cb, "/boot/bin/minfs");
+      return FsckNativeFs(device_path, options, cb, fs_management::GetBinaryPath("minfs").c_str());
     case DISK_FORMAT_FAT:
       return FsckFat(device_path, options, cb);
     case DISK_FORMAT_BLOBFS:
-      return FsckNativeFs(device_path, options, cb, "/boot/bin/blobfs");
+      return FsckNativeFs(device_path, options, cb, fs_management::GetBinaryPath("blobfs").c_str());
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }

@@ -27,6 +27,7 @@ class FileSystemTest : public testing::Test,
                        public testing::WithParamInterface<TestFileSystemOptions> {
  public:
   FileSystemTest() : fs_(TestFileSystem::Create(GetParam()).value()) {}
+  ~FileSystemTest();
 
   std::string GetPath(std::string_view relative_path) const {
     std::string path = fs_.mount_path() + "/";

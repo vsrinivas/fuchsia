@@ -20,6 +20,7 @@ executable("fs_tests") {
   deps = [
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/isolated_devmgr/v2_component",
     "//zircon/public/lib/fdio",
