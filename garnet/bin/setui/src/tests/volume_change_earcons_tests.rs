@@ -4,6 +4,8 @@ use {
     crate::agent::restore_agent,
     crate::audio::default_audio_info,
     crate::fidl_clone::FIDLClone,
+    crate::internal::event,
+    crate::message::base::{MessageEvent, MessengerType},
     crate::registry::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
     crate::registry::device_storage::DeviceStorage,
     crate::switchboard::base::{AudioInfo, SettingType},
@@ -12,6 +14,7 @@ use {
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::fakes::sound_player_service::{SoundEventReceiver, SoundPlayerService},
     crate::tests::fakes::usage_reporter_service::UsageReporterService,
+    crate::tests::scaffold,
     crate::EnvironmentBuilder,
     fidl_fuchsia_media::{
         AudioRenderUsage, Usage,
@@ -24,6 +27,7 @@ use {
     },
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_component::server::NestedEnvironment,
+    futures::future::BoxFuture,
     futures::lock::Mutex,
     futures::StreamExt,
     std::sync::Arc,
@@ -38,6 +42,9 @@ const CHANGED_VOLUME_MUTED: bool = true;
 const CHANGED_VOLUME_UNMUTED: bool = false;
 
 const VOLUME_EARCON_ID: u32 = 1;
+
+const SUPPRESSED_VOLUME_EARCON_EVENT: event::Event =
+    event::Event::Earcon(event::earcon::Event::Suppressed(event::earcon::EarconType::Volume));
 
 const INITIAL_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
@@ -104,19 +111,39 @@ struct FakeServices {
 
 async fn create_environment(
     service_registry: Arc<Mutex<ServiceRegistry>>,
-) -> (NestedEnvironment, Arc<Mutex<DeviceStorage<AudioInfo>>>) {
+) -> (NestedEnvironment, Arc<Mutex<DeviceStorage<AudioInfo>>>, event::message::Receptor) {
     let storage_factory = InMemoryStorageFactory::create();
     let store = create_storage(storage_factory.clone()).await;
 
+    let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<event::message::Factory>();
+
+    // Upon instantiation, the subscriber will capture the event message
+    // factory.
+    let create_subscriber =
+        Arc::new(move |factory: event::message::Factory| -> BoxFuture<'static, ()> {
+            let event_tx = event_tx.clone();
+            Box::pin(async move {
+                event_tx.unbounded_send(factory).ok();
+            })
+        });
+
     let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry))
+        .event_subscribers(&[scaffold::event::subscriber::Blueprint::create(create_subscriber)])
         .settings(&[SettingType::Audio])
         .agents(&[restore_agent::blueprint::create(), earcons::agent::blueprint::create()])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
 
-    (env, store)
+    let event_factory = event_rx.next().await.expect("should return a factory");
+
+    let (_, receptor) = event_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("Should be able to retrieve messenger for publisher");
+
+    (env, store, receptor)
 }
 
 // Gets the store from |factory| and populate it with default values.
@@ -184,12 +211,20 @@ async fn verify_earcon(receiver: &mut SoundEventReceiver, id: u32) {
     assert_eq!(receiver.next().await.unwrap(), (id, AudioRenderUsage::Media));
 }
 
+async fn verify_event(receptor: &mut event::message::Receptor, event: event::Event) {
+    if let Ok(MessageEvent::Message(event::Payload::Event(received_event), ..)) =
+        receptor.watch().await
+    {
+        assert_eq!(received_event, event);
+    }
+}
+
 // Test to ensure that when the volume changes, the SoundPlayer receives requests to play the sounds
 // with the correct ids.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_sounds() {
     let (service_registry, fake_services) = create_services().await;
-    let (env, _) = create_environment(service_registry).await;
+    let (env, ..) = create_environment(service_registry).await;
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     // Simulate initial restoration of media volume.
@@ -229,7 +264,7 @@ async fn test_sounds() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_max_volume_sound_on_press() {
     let (service_registry, fake_services) = create_services().await;
-    let (env, _) = create_environment(service_registry).await;
+    let (env, ..) = create_environment(service_registry).await;
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     // Simulate initial restoration of media volume.
@@ -266,7 +301,7 @@ async fn test_max_volume_sound_on_press() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_earcons_on_multiple_channel_change() {
     let (service_registry, fake_services) = create_services().await;
-    let (env, _) = create_environment(service_registry).await;
+    let (env, ..) = create_environment(service_registry).await;
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     // Simulate initial restoration of stream volumes.
@@ -301,7 +336,7 @@ async fn test_earcons_on_multiple_channel_change() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_earcons_with_active_stream() {
     let (service_registry, fake_services) = create_services().await;
-    let (env, _) = create_environment(service_registry).await;
+    let (env, _, mut receptor) = create_environment(service_registry).await;
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     // Simulate initial restoration of media volume.
@@ -330,12 +365,7 @@ async fn test_earcons_with_active_stream() {
     let settings = audio_proxy.watch2().await.expect("watch completed");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_MAX);
 
-    // With the background stream muted, the sound should not have played.
-    assert!(!fake_services.sound_player.lock().await.id_exists(0).await);
-    assert_ne!(
-        fake_services.sound_player.lock().await.get_usage_by_id(0).await,
-        Some(AudioRenderUsage::Media)
-    );
+    verify_event(&mut receptor, SUPPRESSED_VOLUME_EARCON_EVENT).await;
 
     fake_services
         .usage_reporter

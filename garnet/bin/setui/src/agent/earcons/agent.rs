@@ -9,6 +9,7 @@ use crate::agent::earcons::bluetooth_handler::watch_bluetooth_connections;
 use crate::agent::earcons::volume_change_handler::VolumeChangeHandler;
 use crate::blueprint_definition;
 use crate::internal::agent::Payload;
+use crate::internal::event;
 use crate::service_context::ServiceContextHandle;
 
 use fidl_fuchsia_media_sounds::PlayerProxy;
@@ -22,9 +23,9 @@ blueprint_definition!(Descriptor::Component("earcons_agent"), Agent::create);
 
 /// The Earcons Agent is responsible for watching updates to relevant sources that need to play
 /// sounds.
-#[derive(Debug)]
 pub struct Agent {
     sound_player_connection: Arc<Mutex<Option<PlayerProxy>>>,
+    event_publisher: event::Publisher,
 }
 
 /// Params that are common to handlers of the earcons agent.
@@ -37,7 +38,10 @@ pub struct CommonEarconsParams {
 
 impl Agent {
     async fn create(mut context: AgentContext) {
-        let mut agent = Agent { sound_player_connection: Arc::new(Mutex::new(None)) };
+        let mut agent = Agent {
+            sound_player_connection: Arc::new(Mutex::new(None)),
+            event_publisher: context.get_publisher(),
+        };
 
         fasync::spawn(async move {
             while let Ok((payload, client)) = context.receptor.next_payload().await {
@@ -60,6 +64,7 @@ impl Agent {
             if VolumeChangeHandler::create(
                 common_earcons_params.clone(),
                 context.switchboard_client,
+                self.event_publisher.clone(),
             )
             .await
             .is_err()

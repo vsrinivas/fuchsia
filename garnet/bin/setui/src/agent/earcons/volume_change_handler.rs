@@ -7,6 +7,7 @@ use crate::agent::earcons::sound_ids::{VOLUME_CHANGED_SOUND_ID, VOLUME_MAX_SOUND
 use crate::agent::earcons::utils::{connect_to_sound_player, play_sound};
 use crate::audio::{create_default_modified_timestamps, ModifiedTimestamps};
 use crate::input::monitor_media_buttons;
+use crate::internal::event::{earcon, Event, Publisher};
 use crate::switchboard::base::{
     AudioInfo, AudioStream, AudioStreamType, ListenSession, SettingRequest, SettingResponse,
     SettingType, SwitchboardClient,
@@ -31,6 +32,9 @@ use std::sync::Arc;
 
 /// The `VolumeChangeHandler` takes care of the earcons functionality on volume change.
 pub struct VolumeChangeHandler {
+    // An event MessageHub publisher to notify the rest of the system of events,
+    // such as suppressed earcons.
+    event_publisher: Publisher,
     _listen_session: Box<dyn ListenSession + Send + Sync + 'static>,
     priority_stream_playing: bool,
     common_earcons_params: CommonEarconsParams,
@@ -53,6 +57,7 @@ impl VolumeChangeHandler {
     pub async fn create(
         params: CommonEarconsParams,
         client: SwitchboardClient,
+        event_publisher: Publisher,
     ) -> Result<(), Error> {
         // Listen to button presses.
         let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
@@ -95,6 +100,7 @@ impl VolumeChangeHandler {
 
         fasync::spawn(async move {
             let mut handler = Self {
+                event_publisher,
                 _listen_session: session,
                 common_earcons_params: params,
                 last_media_user_volume,
@@ -259,6 +265,7 @@ impl VolumeChangeHandler {
     fn play_media_volume_sound(&self, volume: Option<f32>) {
         let common_earcons_params = self.common_earcons_params.clone();
         let priority_stream_playing = self.priority_stream_playing;
+        let publisher = self.event_publisher.clone();
 
         fasync::spawn(async move {
             // Connect to the SoundPlayer if not already connected.
@@ -278,6 +285,9 @@ impl VolumeChangeHandler {
             {
                 if priority_stream_playing {
                     fx_log_debug!("Detected a stream already playing, not playing earcons sound");
+                    publisher.send_event(Event::Earcon(earcon::Event::Suppressed(
+                        earcon::EarconType::Volume,
+                    )));
                     return;
                 }
 
@@ -308,8 +318,10 @@ impl VolumeChangeHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::agent::base::Descriptor;
     use crate::audio::default_audio_info;
     use crate::internal::common::default_time;
+    use crate::internal::event;
     use crate::service_context::ServiceContext;
     use crate::switchboard::base::{
         ListenCallback, SettingResponseResult, Switchboard, SwitchboardHandle,
@@ -375,6 +387,11 @@ mod tests {
         let switchboard_handle = Arc::new(Mutex::new(FakeSwitchboard {}));
         let session = Box::new(FakeListenSession {});
         let mut handler = VolumeChangeHandler {
+            event_publisher: Publisher::create(
+                &event::message::create_hub(),
+                event::Address::Agent(Descriptor::Component("Test")),
+            )
+            .await,
             _listen_session: session,
             common_earcons_params: CommonEarconsParams {
                 service_context: ServiceContext::create(None),

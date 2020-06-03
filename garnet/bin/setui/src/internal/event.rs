@@ -17,11 +17,26 @@ pub enum Payload {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Event {
     Custom(&'static str),
+    Earcon(earcon::Event),
 }
 
 #[derive(PartialEq, Clone, Debug, Eq, Hash)]
 pub enum Address {
     Agent(agent::base::Descriptor),
+}
+
+pub mod earcon {
+    #[derive(PartialEq, Clone, Debug, Eq, Hash)]
+    pub enum Event {
+        // Indicates the specified earcon type was not played when it normally
+        // would.
+        Suppressed(EarconType),
+    }
+
+    #[derive(PartialEq, Clone, Debug, Eq, Hash)]
+    pub enum EarconType {
+        Volume,
+    }
 }
 
 // The Event message hub should be used to capture events not normally exposed
