@@ -210,6 +210,17 @@ pub struct AudioInfo {
     pub modified_timestamps: Option<ModifiedTimestamps>,
 }
 
+impl AudioInfo {
+    /// Selectively replaces an existing stream of the same type with the one
+    /// provided. The `AudioInfo` is left intact if that stream type does not
+    /// exist.
+    pub fn replace_stream(&mut self, stream: AudioStream) {
+        if let Some(s) = self.streams.iter_mut().find(|s| s.stream_type == stream.stream_type) {
+            *s = stream;
+        }
+    }
+}
+
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct DisplayInfo {
     /// The last brightness value that was manually set.

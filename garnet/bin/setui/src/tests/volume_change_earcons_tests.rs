@@ -8,7 +8,9 @@ use {
     crate::message::base::{MessageEvent, MessengerType},
     crate::registry::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
     crate::registry::device_storage::DeviceStorage,
-    crate::switchboard::base::{AudioInfo, SettingType},
+    crate::switchboard::base::{
+        AudioInfo, AudioSettingSource, AudioStream, AudioStreamType, SettingType,
+    },
     crate::tests::fakes::audio_core_service::AudioCoreService,
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
@@ -100,6 +102,17 @@ const CHANGED_SYSTEM_AGENT_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStrea
     }),
 };
 
+impl From<AudioStreamSettings> for AudioStream {
+    fn from(stream: AudioStreamSettings) -> Self {
+        AudioStream {
+            stream_type: AudioStreamType::from(stream.stream.unwrap()),
+            source: AudioSettingSource::from(stream.source.unwrap()),
+            user_volume_level: stream.user_volume.as_ref().unwrap().level.unwrap(),
+            user_volume_muted: stream.user_volume.as_ref().unwrap().muted.unwrap(),
+        }
+    }
+}
+
 // Used to store fake services for mocking dependencies and checking input/outputs.
 // To add a new fake to these tests, add here, in create_services, and then use
 // in your test.
@@ -111,9 +124,16 @@ struct FakeServices {
 
 async fn create_environment(
     service_registry: Arc<Mutex<ServiceRegistry>>,
+    overridden_initial_streams: Vec<AudioStreamSettings>,
 ) -> (NestedEnvironment, Arc<Mutex<DeviceStorage<AudioInfo>>>, event::message::Receptor) {
     let storage_factory = InMemoryStorageFactory::create();
-    let store = create_storage(storage_factory.clone()).await;
+    let mut initial_audio_info = default_audio_info();
+
+    for stream in overridden_initial_streams {
+        initial_audio_info.replace_stream(AudioStream::from(stream));
+    }
+
+    let store = create_storage(storage_factory.clone(), initial_audio_info).await;
 
     let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded::<event::message::Factory>();
 
@@ -149,6 +169,7 @@ async fn create_environment(
 // Gets the store from |factory| and populate it with default values.
 async fn create_storage(
     factory: Arc<Mutex<InMemoryStorageFactory>>,
+    audio_info: AudioInfo,
 ) -> Arc<Mutex<DeviceStorage<AudioInfo>>> {
     let store = factory
         .lock()
@@ -156,7 +177,6 @@ async fn create_storage(
         .get_device_storage::<AudioInfo>(StorageAccessContext::Test, CONTEXT_ID);
     {
         let mut store_lock = store.lock().await;
-        let audio_info = default_audio_info();
         store_lock.write(&audio_info, false).await.unwrap();
     }
     store
@@ -224,11 +244,8 @@ async fn verify_event(receptor: &mut event::message::Receptor, event: event::Eve
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_sounds() {
     let (service_registry, fake_services) = create_services().await;
-    let (env, ..) = create_environment(service_registry).await;
+    let (env, ..) = create_environment(service_registry, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
-
-    // Simulate initial restoration of media volume.
-    set_volume(&audio_proxy, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
@@ -264,12 +281,9 @@ async fn test_sounds() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_max_volume_sound_on_press() {
     let (service_registry, fake_services) = create_services().await;
-    let (env, ..) = create_environment(service_registry).await;
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let (env, ..) = create_environment(service_registry, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
 
-    // Simulate initial restoration of media volume.
-    set_volume(&audio_proxy, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
-    audio_proxy.watch2().await.expect("watch completed");
+    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     // Set volume to max.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
@@ -301,12 +315,8 @@ async fn test_max_volume_sound_on_press() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_earcons_on_multiple_channel_change() {
     let (service_registry, fake_services) = create_services().await;
-    let (env, ..) = create_environment(service_registry).await;
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
-
-    // Simulate initial restoration of stream volumes.
-    set_volume(
-        &audio_proxy,
+    let (env, ..) = create_environment(
+        service_registry,
         vec![
             INITIAL_MEDIA_STREAM_SETTINGS,
             INITIAL_COMMUNICATION_STREAM_SETTINGS,
@@ -314,6 +324,8 @@ async fn test_earcons_on_multiple_channel_change() {
         ],
     )
     .await;
+
+    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     // Set volume to max on multiple channels.
     set_volume(
@@ -336,11 +348,10 @@ async fn test_earcons_on_multiple_channel_change() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_earcons_with_active_stream() {
     let (service_registry, fake_services) = create_services().await;
-    let (env, _, mut receptor) = create_environment(service_registry).await;
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let (env, _, mut receptor) =
+        create_environment(service_registry, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
 
-    // Simulate initial restoration of media volume.
-    set_volume(&audio_proxy, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
+    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
     let settings = audio_proxy.watch2().await.expect("watch completed");
