@@ -40,6 +40,54 @@ void main(List<String> args) {
 
     expect(Modular(sl4f).restartSession(), completion(equals('Success')));
   });
+  test('call startBasemgr facade with params', () {
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      expect(body['method'], 'basemgr_facade.StartBasemgr');
+      expect(body['params'], isNotNull);
+      expect(
+          body['params'],
+          containsPair(
+              'config',
+              allOf(containsPair('basemgr', contains('base_shell')),
+                  containsPair('sessionmgr', contains('session_agents')))));
+      req.response.write(
+          jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
+      await req.response.close();
+    }
+
+    fakeServer.listen(handler);
+
+    expect(Modular(sl4f).startBasemgr('''{
+      "basemgr": {
+        "base_shell": {
+          "url": "foo",
+          "args": ["--bar"]
+        }
+      },
+      "sessionmgr": {
+        "session_agents": ["baz"]
+      }
+    }'''), completion(equals('Success')));
+  });
+
+  test('call startBasemgr facade with no params', () {
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      expect(body['method'], 'basemgr_facade.StartBasemgr');
+      expect(body['params'], isNotNull);
+      expect(body['params'], isEmpty);
+      req.response.write(
+          jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
+      await req.response.close();
+    }
+
+    fakeServer.listen(handler);
+
+    expect(Modular(sl4f).startBasemgr(), completion(equals('Success')));
+  });
 
   test('call LaunchMod facade with optional params', () {
     void handler(HttpRequest req) async {

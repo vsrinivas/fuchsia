@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:convert';
+
 import 'package:logging/logging.dart';
 
 import 'inspect.dart';
@@ -41,11 +43,12 @@ class Modular {
 
   /// Launches Basemgr.
   ///
-  /// Take custom config (in json) if there's one,
-  /// or launch basemgr with defualt config.
+  /// Takes a custom [config] as JSON serialized string, or launches basemgr
+  /// with system default config if not provided.
   Future<String> startBasemgr([String config]) async {
     if (config != null && config.isNotEmpty) {
-      return await _request('basemgr_facade.StartBasemgr', {'config': config});
+      return await _request(
+          'basemgr_facade.StartBasemgr', {'config': json.decode(config)});
     } else {
       return await _request('basemgr_facade.StartBasemgr', {});
     }
@@ -53,7 +56,7 @@ class Modular {
 
   /// Launches Mod.
   ///
-  /// Take custom parameters or launch mod with defualt value.
+  /// Take custom parameters or launch mod with default value.
   Future<String> launchMod(String modUrl,
       {String modName,
       String storyName,
