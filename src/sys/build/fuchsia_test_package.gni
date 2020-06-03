@@ -69,7 +69,7 @@ template("fuchsia_test_package") {
       defined(invoker.test_components) && invoker.test_components != [],
       "`test_components` must be specified when calling fuchsia_test_package($target_name)")
 
-  package_target = "${target_name}_package"
+  package_target = target_name
   package_name = target_name
   if (defined(invoker.package_name)) {
     package_name = invoker.package_name
@@ -93,7 +93,7 @@ template("fuchsia_test_package") {
     test_deps += [ ":$test_target" ]
   }
 
-  fuchsia_package(package_target) {
+  fuchsia_package(target_name) {
     forward_variables_from(invoker,
                            [
                              "data_deps",
@@ -106,12 +106,10 @@ template("fuchsia_test_package") {
     if (defined(invoker.components)) {
       components += invoker.components
     }
-    testonly = true
-  }
-
-  group(target_name) {
-    forward_variables_from(invoker, [ "visibility" ])
-    deps = test_deps + [ ":$package_target" ]
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += test_deps
     testonly = true
   }
 }

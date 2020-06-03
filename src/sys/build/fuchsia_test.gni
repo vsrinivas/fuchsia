@@ -55,9 +55,5 @@ template("fuchsia_test") {
     forward_variables_from(invoker, "*")
     target = invoker.package
     package_url = "fuchsia-pkg://fuchsia.com/$package_name#meta/$manifest_name"
-    deps = [
-      component,
-      package,
-    ]
   }
 }
