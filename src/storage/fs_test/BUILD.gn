@@ -14,6 +14,7 @@ executable("fs_tests") {
     "access.cc",
     "fs_test.cc",
     "fs_test_fixture.cc",
+    "overflow.cc",
     "read_write.cc",
   ]
   deps = [

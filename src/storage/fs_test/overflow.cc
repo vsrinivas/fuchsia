@@ -14,85 +14,68 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "filesystems.h"
-#include "misc.h"
+#include "fs_test_fixture.h"
 
-// Given a buffer of size PATH_MAX, make a 'len' byte long filename (not including null) consisting
-// of the character 'c'.
-static void make_name(char* buf, size_t len, char c) {
-  memset(buf, ':', 2);
-  buf += 2;
-  memset(buf, c, len);
-  buf[len] = '\0';
+namespace fs_test {
+namespace {
+
+// Make a 'len' byte long filename (not including null) consisting of the character 'c'.
+std::string MakeName(std::string_view mount_path, size_t len, char c) {
+  std::string path = std::string(mount_path) + "/";
+  path.append(len, c);
+  return path;
 }
 
 // Extends 'name' with a string 'len' bytes long, of the character 'c'.
-// Assumes 'name' is large enough to hold 'len' additional bytes (and a new null character).
-static void extend_name(char* name, size_t len, char c) {
-  char buf[PATH_MAX];
-  assert(len < PATH_MAX);
-  memset(buf, c, len);
-  buf[len] = '\0';
-  strcat(name, "/");
-  strcat(name, buf);
+void ExtendName(std::string* name, size_t len, char c) {
+  *name += "/";
+  name->append(len, c);
 }
 
-bool test_overflow_name(void) {
-  BEGIN_TEST;
-
-  char name_largest[PATH_MAX];
-  char name_largest_alt[PATH_MAX];
-  char name_too_large[PATH_MAX];
-  make_name(name_largest, NAME_MAX, 'a');
-  make_name(name_largest_alt, NAME_MAX, 'b');
-  make_name(name_too_large, NAME_MAX + 1, 'a');
+TEST_P(FileSystemTest, NameTooLong) {
+  const std::string name_largest = MakeName(fs().mount_path(), NAME_MAX, 'a');
+  const std::string name_largest_alt = MakeName(fs().mount_path(), NAME_MAX, 'b');
+  const std::string name_too_large = MakeName(fs().mount_path(), NAME_MAX + 1, 'a');
 
   // Try opening, closing, renaming, and unlinking the largest acceptable name
-  int fd = open(name_largest, O_RDWR | O_CREAT | O_EXCL, 0644);
-  ASSERT_GT(fd, 0, "");
-  ASSERT_EQ(close(fd), 0, "");
-  ASSERT_EQ(rename(name_largest, name_largest_alt), 0, "");
-  ASSERT_EQ(rename(name_largest_alt, name_largest), 0, "");
+  int fd = open(name_largest.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644);
+  ASSERT_GT(fd, 0);
+  ASSERT_EQ(close(fd), 0);
+  ASSERT_EQ(rename(name_largest.c_str(), name_largest_alt.c_str()), 0);
+  ASSERT_EQ(rename(name_largest_alt.c_str(), name_largest.c_str()), 0);
 
-  ASSERT_EQ(rename(name_largest, name_too_large), -1, "");
-  ASSERT_EQ(rename(name_too_large, name_largest), -1, "");
-  ASSERT_EQ(unlink(name_largest), 0, "");
+  ASSERT_EQ(rename(name_largest.c_str(), name_too_large.c_str()), -1);
+  ASSERT_EQ(rename(name_too_large.c_str(), name_largest.c_str()), -1);
+  ASSERT_EQ(unlink(name_largest.c_str()), 0);
 
   // Try it with a directory too
-  ASSERT_EQ(mkdir(name_largest, 0755), 0, "");
-  ASSERT_EQ(rename(name_largest, name_largest_alt), 0, "");
-  ASSERT_EQ(rename(name_largest_alt, name_largest), 0, "");
+  ASSERT_EQ(mkdir(name_largest.c_str(), 0755), 0);
+  ASSERT_EQ(rename(name_largest.c_str(), name_largest_alt.c_str()), 0);
+  ASSERT_EQ(rename(name_largest_alt.c_str(), name_largest.c_str()), 0);
 
-  ASSERT_EQ(rename(name_largest, name_too_large), -1, "");
-  ASSERT_EQ(rename(name_too_large, name_largest), -1, "");
-  ASSERT_EQ(unlink(name_largest), 0, "");
+  ASSERT_EQ(rename(name_largest.c_str(), name_too_large.c_str()), -1);
+  ASSERT_EQ(rename(name_too_large.c_str(), name_largest.c_str()), -1);
+  ASSERT_EQ(unlink(name_largest.c_str()), 0);
 
   // Try opening an unacceptably large name
-  ASSERT_EQ(open(name_too_large, O_RDWR | O_CREAT | O_EXCL, 0644), -1, "");
+  ASSERT_EQ(open(name_too_large.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644), -1);
   // Try it with a directory too
-  ASSERT_EQ(mkdir(name_too_large, 0755), -1, "");
-
-  END_TEST;
+  ASSERT_EQ(mkdir(name_too_large.c_str(), 0755), -1);
 }
 
-bool test_overflow_path(void) {
-  BEGIN_TEST;
-
-  // Make the name buffer larger than PATH_MAX so we don't overflow
-  char name[2 * PATH_MAX];
-
+TEST_P(FileSystemTest, PathTooLong) {
   int depth = 0;
 
   // Create an initial directory
-  make_name(name, NAME_MAX, 'a');
-  ASSERT_EQ(mkdir(name, 0755), 0, "");
+  std::string name = MakeName(fs().mount_path(), NAME_MAX, 'a');
+  ASSERT_EQ(mkdir(name.c_str(), 0755), 0);
   depth++;
   // Create child directories until we hit PATH_MAX
   while (true) {
-    extend_name(name, NAME_MAX, 'a');
-    int r = mkdir(name, 0755);
+    ExtendName(&name, NAME_MAX, 'a');
+    int r = mkdir(name.c_str(), 0755);
     if (r < 0) {
-      assert(errno == ENAMETOOLONG);
+      ASSERT_EQ(errno, ENAMETOOLONG);
       break;
     }
     depth++;
@@ -100,49 +83,42 @@ bool test_overflow_path(void) {
 
   // Remove all child directories
   while (depth != 0) {
-    char* last_slash = strrchr(name, '/');
-    assert(last_slash != NULL);
-    assert(*last_slash == '/');
-    *last_slash = '\0';
-    ASSERT_EQ(unlink(name), 0, "");
+    size_t last_slash = name.rfind('/');
+    assert(last_slash != std::string::npos);
+    name.resize(last_slash);
+    ASSERT_EQ(unlink(name.c_str()), 0);
     depth--;
   }
-
-  END_TEST;
 }
 
-bool test_overflow_integer(void) {
-  BEGIN_TEST;
-
-  int fd = open("::file", O_CREAT | O_RDWR | O_EXCL, 0644);
-  ASSERT_GT(fd, 0, "");
+TEST_P(FileSystemTest, OutOfRangeTruncateAndSeekFails) {
+  const std::string filename = GetPath("file");
+  int fd = open(filename.c_str(), O_CREAT | O_RDWR | O_EXCL, 0644);
+  ASSERT_GT(fd, 0);
 
   // TODO(smklein): Test extremely large reads/writes when remoteio can handle them without
   // crashing
   /*
   char buf[4096];
-  ASSERT_EQ(write(fd, buf, SIZE_MAX - 1), -1, "");
-  ASSERT_EQ(write(fd, buf, SIZE_MAX), -1, "");
+  ASSERT_EQ(write(fd, buf, SIZE_MAX - 1), -1);
+  ASSERT_EQ(write(fd, buf, SIZE_MAX), -1);
 
-  ASSERT_EQ(read(fd, buf, SIZE_MAX - 1), -1, "");
-  ASSERT_EQ(read(fd, buf, SIZE_MAX), -1, "");
+  ASSERT_EQ(read(fd, buf, SIZE_MAX - 1), -1);
+  ASSERT_EQ(read(fd, buf, SIZE_MAX), -1);
   */
 
-  ASSERT_EQ(ftruncate(fd, INT_MIN), -1, "");
-  ASSERT_EQ(ftruncate(fd, -1), -1, "");
-  ASSERT_EQ(ftruncate(fd, SIZE_MAX - 1), -1, "");
-  ASSERT_EQ(ftruncate(fd, SIZE_MAX), -1, "");
+  ASSERT_EQ(ftruncate(fd, INT_MIN), -1);
+  ASSERT_EQ(ftruncate(fd, -1), -1);
+  ASSERT_EQ(ftruncate(fd, SIZE_MAX - 1), -1);
+  ASSERT_EQ(ftruncate(fd, SIZE_MAX), -1);
 
-  ASSERT_EQ(lseek(fd, INT_MIN, SEEK_SET), -1, "");
-  ASSERT_EQ(lseek(fd, -1, SEEK_SET), -1, "");
-  ASSERT_EQ(lseek(fd, SIZE_MAX - 1, SEEK_SET), -1, "");
-  ASSERT_EQ(lseek(fd, SIZE_MAX, SEEK_SET), -1, "");
-  ASSERT_EQ(close(fd), 0, "");
-  ASSERT_EQ(unlink("::file"), 0, "");
-
-  END_TEST;
+  ASSERT_EQ(lseek(fd, INT_MIN, SEEK_SET), -1);
+  ASSERT_EQ(lseek(fd, -1, SEEK_SET), -1);
+  ASSERT_EQ(lseek(fd, SIZE_MAX - 1, SEEK_SET), -1);
+  ASSERT_EQ(lseek(fd, SIZE_MAX, SEEK_SET), -1);
+  ASSERT_EQ(close(fd), 0);
+  ASSERT_EQ(unlink(filename.c_str()), 0);
 }
 
-RUN_FOR_ALL_FILESYSTEMS(overflow_tests,
-                        RUN_TEST_MEDIUM(test_overflow_name) RUN_TEST_MEDIUM(test_overflow_path)
-                            RUN_TEST_MEDIUM(test_overflow_integer))
+}  // namespace
+}  // namespace fs_test

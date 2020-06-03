@@ -34,6 +34,8 @@ class FileSystemTest : public testing::Test,
     return path;
   }
 
+  TestFileSystem& fs() { return fs_; }
+
  protected:
   TestFileSystem fs_;
 };
