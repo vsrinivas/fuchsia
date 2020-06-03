@@ -36,7 +36,7 @@ class TestFuzzer(unittest.TestCase):
 
     def test_from_args(self):
         mock_device = MockDevice()
-        parser = ArgParser('description')
+        parser = ArgParser('test_from_args')
         with self.assertRaises(SystemExit):
             args = parser.parse_args(['target4'])
             fuzzer = Fuzzer.from_args(mock_device, args)
@@ -78,86 +78,139 @@ class TestFuzzer(unittest.TestCase):
         fuzzer2.require_stopped()
         fuzzer3.require_stopped()
 
+    # Helper to test Fuzzer.start with different options and arguments. The expected options and
+    # arguments to be passed to libFuzzer are given by lf_args. If the helper is expected to raise
+    # an exception, leave `expected` empty and have the caller handle the exception.
+    def start_helper(self, args, expected):
+        mock_device = MockDevice()
+        base_dir = tempfile.mkdtemp()
+        try:
+            parser = ArgParser('start_helper')
+            args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse(
+                ['package1/target2'] + args)
+            fuzzer = Fuzzer.from_args(mock_device, args)
+            fuzzer.add_libfuzzer_opts(libfuzzer_opts)
+            fuzzer.add_libfuzzer_args(libfuzzer_args)
+            fuzzer.add_subprocess_args(subprocess_args)
+            fuzzer.start()
+
+        finally:
+            shutil.rmtree(base_dir)
+        if expected:
+            self.assertIn(
+                ' '.join(
+                    mock_device.get_ssh_cmd(
+                        [
+                            'ssh',
+                            '::1',
+                            'run',
+                            fuzzer.url(),
+                        ] + expected)), mock_device.host.history)
+
     def test_start(self):
+        self.start_helper(
+            [], [
+                '-artifact_prefix=data/',
+                '-dict=pkg/data/mock-target2/dictionary',
+                '-jobs=1',
+                'data/corpus/',
+            ])
+
+    def test_start_foreground(self):
+        self.start_helper(
+            ['--foreground'], [
+                '-artifact_prefix=data/',
+                '-dict=pkg/data/mock-target2/dictionary',
+                '-jobs=0',
+                'data/corpus/',
+            ])
+
+    def test_start_debug(self):
+        self.start_helper(
+            ['--debug'], [
+                '-artifact_prefix=data/',
+                '-dict=pkg/data/mock-target2/dictionary',
+                '-handle_abrt=0',
+                '-handle_bus=0',
+                '-handle_fpe=0',
+                '-handle_ill=0',
+                '-handle_segv=0',
+                '-jobs=1',
+                'data/corpus/',
+            ])
+
+    def test_start_with_options(self):
+        self.start_helper(
+            ['-option2=foo', '-option1=\'bar baz\''], [
+                '-artifact_prefix=data/',
+                '-dict=pkg/data/mock-target2/dictionary',
+                '-jobs=1',
+                '-option1=\'bar baz\'',
+                '-option2=foo',
+                'data/corpus/',
+            ])
+
+    def test_start_with_bad_option(self):
+        with self.assertRaises(ValueError):
+            self.start_helper(['-option2=foo', '-option1'], None)
+
+    def test_start_with_bad_corpus(self):
+        with self.assertRaises(ValueError):
+            self.start_helper(['custom-corpus'], None)
+
+    def test_start_with_passthrough(self):
+        self.start_helper(
+            ['-option2=foo', '--', '-option1=bar'], [
+                '-artifact_prefix=data/',
+                '-dict=pkg/data/mock-target2/dictionary',
+                '-jobs=1',
+                '-option2=foo',
+                'data/corpus/',
+                '--',
+                '-option1=bar',
+            ])
+
+    # Helper to test Fuzzer.symbolize with different logs.
+    def symbolize_helper(self, log_in, log_out):
         mock_device = MockDevice()
         base_dir = tempfile.mkdtemp()
         try:
             fuzzer = Fuzzer(
                 mock_device, u'mock-package1', u'mock-target2', output=base_dir)
-            fuzzer.start(['-some-lf-arg=value'])
+            os.mkdir(fuzzer.results())
+            with tempfile.TemporaryFile() as tmp_out:
+                with tempfile.TemporaryFile() as tmp_in:
+                    tmp_in.write(log_in)
+                    tmp_in.flush()
+                    tmp_in.seek(0)
+                    fuzzer.symbolize_log(tmp_in, tmp_out)
+                tmp_out.flush()
+                tmp_out.seek(0)
+                self.assertEqual(tmp_out.read(), log_out)
         finally:
             shutil.rmtree(base_dir)
 
-        self.assertIn(
-            ' '.join(
-                mock_device.get_ssh_cmd(
-                    [
-                        'ssh',
-                        '::1',
-                        'run',
-                        fuzzer.url(),
-                        '-artifact_prefix=data/',
-                        '-some-lf-arg=value',
-                        '-jobs=1',
-                        '-dict=pkg/data/mock-target2/dictionary',
-                        'data/corpus/',
-                    ])), mock_device.host.history)
-
     def test_symbolize_log_no_mutation_sequence(self):
-        mock_device = MockDevice()
-        base_dir = tempfile.mkdtemp()
-        fuzzer = Fuzzer(
-            mock_device, u'mock-package1', u'mock-target2', output=base_dir)
-        os.mkdir(fuzzer.results())
-        with tempfile.TemporaryFile() as tmp_out:
-            with tempfile.TemporaryFile() as tmp_in:
-                tmp_in.write("""
+        self.symbolize_helper(
+            """
 A line
 Another line
 Yet another line
-""")
-                tmp_in.flush()
-                tmp_in.seek(0)
-                fuzzer.symbolize_log(tmp_in, tmp_out)
-            tmp_out.flush()
-            tmp_out.seek(0)
-            self.assertEqual(
-                tmp_out.read(), """
+""", """
 A line
 Another line
 Yet another line
 """)
 
     def test_symbolize_log_no_process_id(self):
-        mock_device = MockDevice()
-        base_dir = tempfile.mkdtemp()
-        fuzzer = Fuzzer(
-            mock_device, u'mock-package1', u'mock-target2', output=base_dir)
-        os.mkdir(fuzzer.results())
-        with tempfile.TemporaryFile() as tmp_out:
-            with tempfile.TemporaryFile() as tmp_in:
-                tmp_in.write(
-                    """
+        self.symbolize_helper(
+            """
 A line
 Another line
 MS: 1 SomeMutation; base unit: foo
 Yet another line
 artifact_prefix='data/'; Test unit written to data/crash-aaaa
-""")
-                tmp_in.flush()
-                tmp_in.seek(0)
-                fuzzer.symbolize_log(tmp_in, tmp_out)
-            tmp_out.flush()
-            tmp_out.seek(0)
-            self.assertIn(
-                ' '.join(
-                    mock_device.get_ssh_cmd(
-                        [
-                            'scp', '[::1]:' + fuzzer.data_path('crash-aaaa'),
-                            fuzzer.results()
-                        ])), mock_device.host.history)
-            self.assertEqual(
-                tmp_out.read(), """
+""", """
 A line
 Another line
 Symbolized line 1
@@ -169,36 +222,15 @@ artifact_prefix='data/'; Test unit written to data/crash-aaaa
 """)
 
     def test_symbolize_log_pid_from_stacktrace(self):
-        mock_device = MockDevice()
-        base_dir = tempfile.mkdtemp()
-        fuzzer = Fuzzer(
-            mock_device, u'mock-package1', u'mock-target2', output=base_dir)
-        os.mkdir(fuzzer.results())
-        with tempfile.TemporaryFile() as tmp_out:
-            with tempfile.TemporaryFile() as tmp_in:
-                tmp_in.write(
-                    """
+        self.symbolize_helper(
+            """
 A line
 Another line
 ==12345== INFO: libfuzzer stack trace:
 MS: 1 SomeMutation; base unit: foo
 Yet another line
 artifact_prefix='data/'; Test unit written to data/crash-bbbb
-""")
-                tmp_in.flush()
-                tmp_in.seek(0)
-                fuzzer.symbolize_log(tmp_in, tmp_out)
-            tmp_out.flush()
-            tmp_out.seek(0)
-            self.assertIn(
-                ' '.join(
-                    mock_device.get_ssh_cmd(
-                        [
-                            'scp', '[::1]:' + fuzzer.data_path('crash-bbbb'),
-                            fuzzer.results()
-                        ])), mock_device.host.history)
-            self.assertEqual(
-                tmp_out.read(), """
+""", """
 A line
 Another line
 ==12345== INFO: libfuzzer stack trace:
@@ -211,36 +243,15 @@ artifact_prefix='data/'; Test unit written to data/crash-bbbb
 """)
 
     def test_symbolize_log_pid_from_deadly_signal(self):
-        mock_device = MockDevice()
-        base_dir = tempfile.mkdtemp()
-        fuzzer = Fuzzer(
-            mock_device, u'mock-package1', u'mock-target2', output=base_dir)
-        os.mkdir(fuzzer.results())
-        with tempfile.TemporaryFile() as tmp_out:
-            with tempfile.TemporaryFile() as tmp_in:
-                tmp_in.write(
-                    """
+        self.symbolize_helper(
+            """
 A line
 Another line
 ==67890== ERROR: libFuzzer: deadly signal
 MS: 1 SomeMutation; base unit: foo
 Yet another line
 artifact_prefix='data/'; Test unit written to data/crash-cccc
-""")
-                tmp_in.flush()
-                tmp_in.seek(0)
-                fuzzer.symbolize_log(tmp_in, tmp_out)
-            tmp_out.flush()
-            tmp_out.seek(0)
-            self.assertIn(
-                ' '.join(
-                    mock_device.get_ssh_cmd(
-                        [
-                            'scp', '[::1]:' + fuzzer.data_path('crash-cccc'),
-                            fuzzer.results()
-                        ])), mock_device.host.history)
-            self.assertEqual(
-                tmp_out.read(), """
+""", """
 A line
 Another line
 ==67890== ERROR: libFuzzer: deadly signal
@@ -260,53 +271,29 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
         self.assertIn(
             ' '.join(
                 mock_device.get_ssh_cmd(
-                    ['ssh', '::1', 'kill',
-                     str(pids[fuzzer1.tgt])])), mock_device.host.history)
+                    [
+                        'ssh',
+                        '::1',
+                        'kill',
+                        str(pids[fuzzer1.tgt]),
+                    ])), mock_device.host.history)
         fuzzer3 = Fuzzer(mock_device, u'mock-package1', u'mock-target3')
         fuzzer3.stop()
 
     def test_repro(self):
         mock_device = MockDevice()
-        fuzzer = Fuzzer(mock_device, u'mock-package1', u'mock-target2')
+        parser = ArgParser('test_repro')
+        args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse(
+            [
+                'package1/target2',
+                '-some-lf-arg=value',
+            ])
+        fuzzer = Fuzzer.from_args(mock_device, args)
+        fuzzer.add_libfuzzer_opts(libfuzzer_opts)
+        fuzzer.add_libfuzzer_args(libfuzzer_args)
+        fuzzer.add_subprocess_args(subprocess_args)
         artifacts = ['data/' + artifact for artifact in fuzzer.list_artifacts()]
-        fuzzer.repro(['-some-lf-arg=value'])
-        self.assertIn(
-            ' '.join(
-                mock_device.get_ssh_cmd(
-                    [
-                        'ssh', '::1', 'run',
-                        fuzzer.url(), '-artifact_prefix=data/',
-                        '-some-lf-arg=value'
-                    ] + artifacts)), mock_device.host.history)
-
-    def test_merge(self):
-        mock_device = MockDevice()
-        fuzzer = Fuzzer(mock_device, u'mock-package1', u'mock-target2')
-        fuzzer.merge(['-some-lf-arg=value'])
-        self.assertIn(
-            ' '.join(
-                mock_device.get_ssh_cmd(
-                    [
-                        'ssh', '::1', 'run',
-                        fuzzer.url(), '-artifact_prefix=data/', '-merge=1',
-                        '-merge_control_file=data/.mergefile',
-                        '-some-lf-arg=value data/corpus/', 'data/corpus.prev/'
-                    ])), mock_device.host.history)
-
-    def test_debug(self):
-        mock_device = MockDevice()
-        base_dir = tempfile.mkdtemp()
-        try:
-            fuzzer = Fuzzer(
-                mock_device,
-                u'mock-package1',
-                u'mock-target2',
-                output=base_dir,
-                debug=True)
-            fuzzer.start(['-some-lf-arg=value'])
-        finally:
-            shutil.rmtree(base_dir)
-
+        fuzzer.repro()
         self.assertIn(
             ' '.join(
                 mock_device.get_ssh_cmd(
@@ -316,15 +303,38 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
                         'run',
                         fuzzer.url(),
                         '-artifact_prefix=data/',
+                        '-jobs=0',
                         '-some-lf-arg=value',
-                        '-jobs=1',
-                        '-dict=pkg/data/mock-target2/dictionary',
+                    ] + artifacts)), mock_device.host.history)
+
+    def test_merge(self):
+        mock_device = MockDevice()
+        parser = ArgParser('test_merge')
+        args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse(
+            [
+                'package1/target2',
+                '-some-lf-arg=value',
+            ])
+        fuzzer = Fuzzer.from_args(mock_device, args)
+        fuzzer.add_libfuzzer_opts(libfuzzer_opts)
+        fuzzer.add_libfuzzer_args(libfuzzer_args)
+        fuzzer.add_subprocess_args(subprocess_args)
+        fuzzer.merge()
+        self.assertIn(
+            ' '.join(
+                mock_device.get_ssh_cmd(
+                    [
+                        'ssh',
+                        '::1',
+                        'run',
+                        fuzzer.url(),
+                        '-artifact_prefix=data/',
+                        '-jobs=0',
+                        '-merge=1',
+                        '-merge_control_file=data/.mergefile',
+                        '-some-lf-arg=value',
                         'data/corpus/',
-                        '-handle_segv=0',
-                        '-handle_bus=0',
-                        '-handle_ill=0',
-                        '-handle_fpe=0',
-                        '-handle_abrt=0',
+                        'data/corpus.prev/',
                     ])), mock_device.host.history)
 
 

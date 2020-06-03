@@ -102,11 +102,14 @@ class Fuzzer(object):
             args.foreground, args.debug)
 
     def __init__(
-        self, device, pkg, tgt, output=None, foreground=False, debug=False):
+            self, device, pkg, tgt, output=None, foreground=False, debug=False):
         self.device = device
         self.host = device.host
         self.pkg = pkg
         self.tgt = tgt
+        self._options = {'artifact_prefix': 'data/'}
+        self._libfuzzer_args = []
+        self._subprocess_args = []
         if output:
             self._output = output
         else:
@@ -114,6 +117,21 @@ class Fuzzer(object):
                 'test_data', 'fuzzing', self.pkg, self.tgt)
         self._foreground = foreground
         self._debug = debug
+
+    def set_default_option(self, key, value):
+        if key not in self._options:
+            self._options[key] = value
+
+    def add_libfuzzer_opts(self, libfuzzer_opts):
+        if 'artifact_prefix' in libfuzzer_opts:
+            raise ValueError('Changing artifact_prefix is unsupported.')
+        self._options.update(libfuzzer_opts)
+
+    def add_libfuzzer_args(self, libfuzzer_args):
+        self._libfuzzer_args += libfuzzer_args
+
+    def add_subprocess_args(self, subprocess_args):
+        self._subprocess_args += subprocess_args
 
     def __str__(self):
         return self.pkg + '/' + self.tgt
@@ -164,18 +182,49 @@ class Fuzzer(object):
     def url(self):
         return 'fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx' % (self.pkg, self.tgt)
 
-    def _create(self, fuzzer_args, logfile=None):
-        # Disable exception handling in debug mode
+    def _set_libfuzzer_args(self):
+        """ Adds the corpus directory and argument."""
+        if self._libfuzzer_args:
+            arg = self._libfuzzer_args[0]
+            if arg.startswith('-'):
+                raise ValueError(
+                    'Unrecognized flag \'{}\'; use -help=1 to list all flags'.
+                    format(arg))
+            else:
+                raise ValueError(
+                    'Unexpected argument: \'{}\'. Passing corpus arguments to libFuzzer '
+                    +
+                    'is unsupported due to namespacing; use `fx fuzz fetch` instead.'
+                    .format(arg))
+        self.device.ssh(['mkdir', '-p', self.data_path('corpus')]).check_call()
+        self._libfuzzer_args = ['data/corpus/']
+
+    def _create(self):
         if self._debug:
-            for signal in ['segv', 'bus', 'ill', 'fpe', 'abrt']:
-                fuzzer_args.append("-handle_{}=0".format(signal))
+            for key in [
+                    'handle_segv',
+                    'handle_bus',
+                    'handle_ill',
+                    'handle_fpe',
+                    'handle_abrt',
+            ]:
+                self.set_default_option(key, '0')
+        if self._foreground:
+            self.set_default_option('jobs', '0')
+        else:
+            self.set_default_option('jobs', '1')
 
-        fuzz_cmd = ['run', self.url(), '-artifact_prefix=data/'] + fuzzer_args
-
+        fuzz_cmd = ['run', self.url()]
+        for key, value in sorted(self._options.items()):
+            fuzz_cmd.append('-{}={}'.format(key, value))
+        fuzz_cmd += self._libfuzzer_args
+        if self._subprocess_args:
+            fuzz_cmd += ['--']
+            fuzz_cmd += self._subprocess_args
         print('+ ' + ' '.join(fuzz_cmd))
         return self.device.ssh(fuzz_cmd)
 
-    def start(self, fuzzer_args):
+    def start(self):
         """Runs the fuzzer.
 
       Executes a fuzzer in the "normal" fuzzing mode. If the fuzzer is being
@@ -189,9 +238,6 @@ class Fuzzer(object):
         -artifact_prefix=data/ -dict=pkg/data/<tgt>/dictionary -jobs=1 data/corpus/
 
       See also: https://llvm.org/docs/LibFuzzer.html#running
-
-      Args:
-        fuzzer_args: Command line arguments to pass to libFuzzer
 
       Returns:
         The fuzzer's process ID. May be 0 if the fuzzer stops immediately.
@@ -213,24 +259,18 @@ class Fuzzer(object):
                 raise
         os.symlink(results, self.results())
 
-        if len(filter(lambda x: x.startswith('-jobs='), fuzzer_args)) == 0:
-            if self._foreground:
-                fuzzer_args.append('-jobs=0')
-            else:
-                fuzzer_args.append('-jobs=1')
-        fuzzer_args.append('-dict=pkg/data/{}/dictionary'.format(self.tgt))
-        self.device.ssh(['mkdir', '-p', self.data_path('corpus')]).check_call()
-        if len(filter(lambda x: not x.startswith('-'), fuzzer_args)) == 0:
-            fuzzer_args.append('data/corpus/')
+        self.set_default_option(
+            'dict', 'pkg/data/{}/dictionary'.format(self.tgt))
 
         # Fuzzer logs are saved to fuzz-*.log when running in the background.
         # We tee the output to fuzz-0.log when running in the foreground to
         # make the rest of the plumbing look the same.
-        cmd = self._create(fuzzer_args)
-        if self._foreground:
+        self._set_libfuzzer_args()
+        cmd = self._create()
+        if self._options['jobs'] == '0':
             cmd.stderr = subprocess.PIPE
         proc = cmd.popen()
-        if self._foreground:
+        if self._options['jobs'] == '0':
             logfile = self.results('fuzz-0.log')
             with open(logfile, 'w') as fd_out:
                 self.symbolize_log(proc.stderr, fd_out, echo=True)
@@ -302,7 +342,7 @@ class Fuzzer(object):
         if self.tgt in pids:
             self.device.ssh(['kill', str(pids[self.tgt])]).check_call()
 
-    def repro(self, fuzzer_args):
+    def repro(self):
         """Runs the fuzzer with test input artifacts.
 
       Executes a command like:
@@ -317,25 +357,26 @@ class Fuzzer(object):
 
       Returns: Number of test input artifacts found.
     """
-        options = []
-        artifacts = []
-        for arg in fuzzer_args:
-            if arg.startswith('-'):
-                options.append(arg)
-            elif os.path.exists(arg):
-                artifact = os.path.basename(arg)
+        # If no files provided, use artifacts on device.
+        if not self._libfuzzer_args:
+            self._libfuzzer_args = self.list_artifacts()
+        else:
+            for arg in self._libfuzzer_args:
                 self.device.store(arg, self.data_path())
-                artifacts.append(artifact)
-            else:
-                print('File not found, skipping: ' + arg)
-        if not artifacts:
-            artifacts = self.list_artifacts()
-        if not artifacts:
+        if not self._libfuzzer_args:
             return 0
-        self._create(options + ['data/' + a for a in artifacts]).call()
-        return len(artifacts)
 
-    def merge(self, fuzzer_args):
+        namespaced = []
+        for arg in self._libfuzzer_args:
+            namespaced.append(os.path.join('data', os.path.basename(arg)))
+        self._libfuzzer_args = namespaced
+
+        # Default to repro-ing in the foreground
+        self.set_default_option('jobs', '0')
+        self._create().call()
+        return len(self._libfuzzer_args)
+
+    def merge(self):
         """Attempts to minimizes the fuzzer's corpus.
 
       Executes a command like:
@@ -351,20 +392,24 @@ class Fuzzer(object):
         self.require_stopped()
         if self.measure_corpus() == (0, 0):
             return (0, 0)
-        self.device.ssh(['mkdir', '-p', self.data_path('corpus')]).check_call()
+
+        # Default to merging in the foreground
+        self.set_default_option('jobs', '0')
+
+        # Save mergefile in case we are interrupted
+        self.set_default_option('merge', '1')
+        self.set_default_option('merge_control_file', 'data/.mergefile')
+        self._set_libfuzzer_args()
         self.device.ssh(['mkdir', '-p',
                          self.data_path('corpus.prev')]).check_call()
         self.device.ssh(
             ['mv',
              self.data_path('corpus/*'),
              self.data_path('corpus.prev')]).check_call()
-        # Save mergefile in case we are interrupted
-        fuzzer_args = [
-            '-merge=1', '-merge_control_file=data/.mergefile'
-        ] + fuzzer_args
-        fuzzer_args.append('data/corpus/')
-        fuzzer_args.append('data/corpus.prev/')
-        self._create(fuzzer_args).check_call()
+
+        self._libfuzzer_args.append('data/corpus.prev/')
+        self._create().check_call()
+
         # Cleanup
         self.device.rm(self.data_path('.mergefile'))
         self.device.rm(self.data_path('corpus.prev'), recursive=True)

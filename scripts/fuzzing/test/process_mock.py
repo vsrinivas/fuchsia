@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import test_env
 from lib.process import Process
 
 
@@ -44,6 +45,7 @@ class MockPopen(object):
     def __init__(self, host, response):
         self.host = host
         self.returncode = 0
+        self.stderr = MockPipe()
         if response:
             self.response = response
         else:
@@ -54,3 +56,12 @@ class MockPopen(object):
             for line in str(inputs).split('\n'):
                 self.host.history.append(' < %s' % line)
         return (self.response, '')
+
+    def wait(self, timeout=None):
+        return 0
+
+
+class MockPipe(object):
+
+    def readline(self):
+        return ''

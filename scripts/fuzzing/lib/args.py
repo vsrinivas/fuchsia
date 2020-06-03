@@ -88,12 +88,8 @@ class ArgParser:
         """ Parses arguments, all of which must be recognized. """
         return self._parser.parse_args(args)
 
-    def parse_known_args(self, args=None):
-        """ Transitional method; to be removed. """
-        return self._parser.parse_known_args(args)
-
     def parse(self, args=None):
-        """ Parses known and unknown arguments.
+        """ Parses arguments for fx fuzz, libFuzzer, and the fuzzer.
 
         This will distribute arguments into four categories:
         1. Arguments and flags described above are for this process.

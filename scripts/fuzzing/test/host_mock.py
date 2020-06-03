@@ -41,4 +41,6 @@ class MockHost(Host):
 [000001.234568][123][456][klog] INFO: Symbolized line 2
 [000001.234569][123][456][klog] INFO: Symbolized line 3
 """
+        elif 'device-finder' in args[0]:
+            p.response = '::1'
         return p

@@ -19,11 +19,14 @@ from lib.host import Host
 def main():
     parser = ArgParser(
         'Starts the named fuzzer.  Additional arguments are passed through.')
-    args, fuzzer_args = parser.parse_known_args()
+    args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse()
 
     host = Host.from_build()
     device = Device.from_args(host, args)
     fuzzer = Fuzzer.from_args(device, args)
+    fuzzer.add_libfuzzer_opts(libfuzzer_opts)
+    fuzzer.add_libfuzzer_args(libfuzzer_args)
+    fuzzer.add_subprocess_args(subprocess_args)
 
     if not args.monitor:
         with Corpus.from_args(fuzzer, args) as corpus:
@@ -48,7 +51,7 @@ def main():
         print(
             '****************************************************************\n'
         )
-        fuzzer.start(fuzzer_args)
+        fuzzer.start()
         if not args.foreground:
             subprocess.Popen(['python', sys.argv[0], '--monitor', str(fuzzer)])
     else:

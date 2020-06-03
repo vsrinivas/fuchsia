@@ -20,18 +20,21 @@ def main():
         'Minimizes the current corpus for the named fuzzer. This should be ' +
         'used after running the fuzzer for a while, or after incorporating a ' +
         'third-party corpus using \'fetch-corpus\'')
-    args, fuzzer_args = parser.parse_known_args()
+    args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse()
 
     host = Host.from_build()
     device = Device.from_args(host, args)
     fuzzer = Fuzzer.from_args(device, args)
+    fuzzer.add_libfuzzer_opts(libfuzzer_opts)
+    fuzzer.add_libfuzzer_args(libfuzzer_args)
+    fuzzer.add_subprocess_args(subprocess_args)
 
     with Corpus.from_args(fuzzer, args) as corpus:
         cipd = Cipd(corpus)
         if not args.no_cipd:
             cipd.install('latest')
         corpus.push()
-        if fuzzer.merge(fuzzer_args) == (0, 0):
+        if fuzzer.merge() == (0, 0):
             print('Corpus for ' + str(fuzzer) + ' is empty.')
             return 1
         corpus.pull()

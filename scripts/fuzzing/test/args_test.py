@@ -14,17 +14,17 @@ class TestArgParser(unittest.TestCase):
 
     # Helper method to check all possible arguments
     def assertArgsEqual(
-        self,
-        args,
-        debug=False,
-        device=None,
-        foreground=False,
-        label=None,
-        monitor=False,
-        name=None,
-        no_cipd=False,
-        output=None,
-        staging=None):
+            self,
+            args,
+            debug=False,
+            device=None,
+            foreground=False,
+            label=None,
+            monitor=False,
+            name=None,
+            no_cipd=False,
+            output=None,
+            staging=None):
         self.assertEqual(args.debug, debug)
         self.assertEqual(args.device, device)
         self.assertEqual(args.foreground, foreground)

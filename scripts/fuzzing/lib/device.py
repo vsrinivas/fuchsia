@@ -40,7 +40,9 @@ class Device(object):
         try:
             netaddr = host.fx_command(device_finder_cmd)
             if len(netaddr.split('\n')) > 1:
-                raise RuntimeError('Multiple devices found; set a device with `fx set-device`.')
+                raise RuntimeError(
+                    'Multiple devices found; set a device with `fx set-device`.'
+                )
         except subprocess.CalledProcessError:
             raise RuntimeError('Unable to find device; try `fx set-device`.')
         device = cls(host, netaddr)

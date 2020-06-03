@@ -159,7 +159,7 @@ class TestHost(unittest.TestCase):
 
     def test_fx_command(self):
         mock = MockHost()
-        mock.fx_command(['device-finder',  'list'])
+        mock.fx_command(['device-finder', 'list'])
         fx_bin = Host.join('.jiri_root', 'bin', 'fx')
         self.assertIn('{} device-finder list'.format(fx_bin), mock.history)
 
