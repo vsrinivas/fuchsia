@@ -936,7 +936,7 @@ zx_status_t LoadSuperblock(Bcache* bc, Superblock* out_info) {
     FS_TRACE_ERROR("minfs: could not read info block.\n");
     return status;
   }
-  DumpInfo(out_info);
+  DumpInfo(*out_info);
 #ifdef __Fuchsia__
   status = CheckSuperblock(out_info, bc->device(), bc->Maxblk());
 #else

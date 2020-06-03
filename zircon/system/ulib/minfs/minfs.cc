@@ -344,24 +344,31 @@ zx_time_t GetTimeUTC() {
   return time;
 }
 
-void DumpInfo(const Superblock* info) {
-  FS_TRACE_DEBUG("minfs: magic0:  %10lu\n", info->magic0);
-  FS_TRACE_DEBUG("minfs: magic1:  %10lu\n", info->magic1);
-  FS_TRACE_DEBUG("minfs: major version:  %10u\n", info->version_major);
-  FS_TRACE_DEBUG("minfs: minor version:  %10u\n", info->version_minor);
-  FS_TRACE_DEBUG("minfs: data blocks:  %10u (size %u)\n", info->block_count, info->block_size);
-  FS_TRACE_DEBUG("minfs: inodes:  %10u (size %u)\n", info->inode_count, info->inode_size);
-  FS_TRACE_DEBUG("minfs: allocated blocks  @ %10u\n", info->alloc_block_count);
-  FS_TRACE_DEBUG("minfs: allocated inodes  @ %10u\n", info->alloc_inode_count);
-  FS_TRACE_DEBUG("minfs: inode bitmap @ %10u\n", info->ibm_block);
-  FS_TRACE_DEBUG("minfs: alloc bitmap @ %10u\n", info->abm_block);
-  FS_TRACE_DEBUG("minfs: inode table  @ %10u\n", info->ino_block);
-  FS_TRACE_DEBUG("minfs: integrity start block  @ %10u\n", info->integrity_start_block);
-  FS_TRACE_DEBUG("minfs: data blocks  @ %10u\n", info->dat_block);
-  FS_TRACE_DEBUG("minfs: FVM-aware: %s\n", (info->flags & kMinfsFlagFVM) ? "YES" : "NO");
-  FS_TRACE_DEBUG("minfs: checksum:  %10u\n", info->checksum);
-  FS_TRACE_DEBUG("minfs: generation count:  %10u\n", info->generation_count);
-  FS_TRACE_DEBUG("minfs: oldest_revision:  %10u\n", info->oldest_revision);
+void DumpInfo(const Superblock& info) {
+  FS_TRACE_DEBUG("minfs: magic0:  %10lu\n", info.magic0);
+  FS_TRACE_DEBUG("minfs: magic1:  %10lu\n", info.magic1);
+  FS_TRACE_DEBUG("minfs: major version:  %10u\n", info.version_major);
+  FS_TRACE_DEBUG("minfs: minor version:  %10u\n", info.version_minor);
+  FS_TRACE_DEBUG("minfs: data blocks:  %10u (size %u)\n", info.block_count, info.block_size);
+  FS_TRACE_DEBUG("minfs: inodes:  %10u (size %u)\n", info.inode_count, info.inode_size);
+  FS_TRACE_DEBUG("minfs: allocated blocks  @ %10u\n", info.alloc_block_count);
+  FS_TRACE_DEBUG("minfs: allocated inodes  @ %10u\n", info.alloc_inode_count);
+  FS_TRACE_DEBUG("minfs: inode bitmap @ %10u\n", info.ibm_block);
+  FS_TRACE_DEBUG("minfs: alloc bitmap @ %10u\n", info.abm_block);
+  FS_TRACE_DEBUG("minfs: inode table  @ %10u\n", info.ino_block);
+  FS_TRACE_DEBUG("minfs: integrity start block  @ %10u\n", info.integrity_start_block);
+  FS_TRACE_DEBUG("minfs: data blocks  @ %10u\n", info.dat_block);
+  FS_TRACE_DEBUG("minfs: FVM-aware: %s\n", (info.flags & kMinfsFlagFVM) ? "YES" : "NO");
+  FS_TRACE_DEBUG("minfs: checksum:  %10u\n", info.checksum);
+  FS_TRACE_DEBUG("minfs: generation count:  %10u\n", info.generation_count);
+  FS_TRACE_DEBUG("minfs: oldest_revision:  %10u\n", info.oldest_revision);
+  FS_TRACE_DEBUG("minfs: slice_size: %u\n", info.slice_size);
+  FS_TRACE_DEBUG("minfs: vslice_count: %u\n", info.vslice_count);
+  FS_TRACE_DEBUG("minfs: ibm_slices: %u\n", info.ibm_slices);
+  FS_TRACE_DEBUG("minfs: abm_slices: %u\n", info.abm_slices);
+  FS_TRACE_DEBUG("minfs: ino_slices: %u\n", info.ino_slices);
+  FS_TRACE_DEBUG("minfs: integrity_slices: %u\n", info.integrity_slices);
+  FS_TRACE_DEBUG("minfs: dat_slices: %u\n", info.integrity_slices);
 }
 
 void DumpInode(const Inode* inode, ino_t ino) {
@@ -384,7 +391,7 @@ zx_status_t CheckSuperblock(const Superblock* info, block_client::BlockDevice* d
 #else
 zx_status_t CheckSuperblock(const Superblock* info, uint32_t max_blocks) {
 #endif
-  DumpInfo(info);
+  DumpInfo(*info);
   if ((info->magic0 != kMinfsMagic0) || (info->magic1 != kMinfsMagic1)) {
     FS_TRACE_ERROR("minfs: bad magic: %08" PRIi64 ". Minfs magic: %08" PRIu64 "\n", info->magic0,
                    kMinfsMagic0);
@@ -1489,7 +1496,7 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
     info.dat_block = kFVMBlockDataStart;
   }
   info.oldest_revision = kMinfsRevision;
-  DumpInfo(&info);
+  DumpInfo(info);
 
   RawBitmap abm;
   RawBitmap ibm;

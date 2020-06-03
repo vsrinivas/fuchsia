@@ -461,7 +461,7 @@ zx_status_t ReplayJournal(Bcache* bc, const Superblock& info, fs::JournalSuperbl
 
 // write the inode data of this vnode to disk (default does not update time values)
 void SyncVnode(fbl::RefPtr<VnodeMinfs> vn, uint32_t flags);
-void DumpInfo(const Superblock* info);
+void DumpInfo(const Superblock& info);
 void DumpInode(const Inode* inode, ino_t ino);
 zx_time_t GetTimeUTC();
 void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent);
