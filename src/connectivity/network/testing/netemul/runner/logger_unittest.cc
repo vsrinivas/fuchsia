@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/diagnostics/test/cpp/fidl.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/syslog/wire_format.h>
 
@@ -22,6 +23,7 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
   fuchsia::sys::LaunchInfo MakeLoggerLaunchInfo() {
     fuchsia::sys::LaunchInfo ret;
     ret.url = kLoggerUrl;
+    ret.arguments = std::vector{std::string{"--disable-log-connector"}};
     return ret;
   }
 
@@ -29,6 +31,11 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
     auto services = CreateServices();
     services->AddServiceWithLaunchInfo(MakeLoggerLaunchInfo(), fuchsia::logger::LogSink::Name_);
     services->AddServiceWithLaunchInfo(MakeLoggerLaunchInfo(), fuchsia::logger::Log::Name_);
+    services->AddServiceWithLaunchInfo(MakeLoggerLaunchInfo(),
+                                       fuchsia::diagnostics::test::Controller::Name_);
+    services->SetServiceTerminatedCallback([this](auto, auto, auto) { done_ = true; });
+    done_ = false;
+
     env = CreateNewEnclosingEnvironment(
         "some_logger", std::move(services),
         fuchsia::sys::EnvironmentOptions{.inherit_parent_services = false,
@@ -92,8 +99,19 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
     FAIL() << "Could not find message " << message << " with tags:" << tag_str;
   }
 
-  std::vector<fuchsia::logger::LogMessage> WaitForMessages() {
-    RunLoopUntil([this]() { return !test_listener->messages().empty(); });
+  // Stop the observer, and wait until it terminates. This is required to ensure
+  // that we wait for all logs to be processed, and not just the first.
+  void StopObserver() {
+    fuchsia::diagnostics::test::ControllerPtr controller;
+    env->ConnectToService(controller.NewRequest());
+    controller->Stop();
+    log_listener.reset();
+    RunLoopUntil([this] { return done_; });
+  }
+
+  std::vector<fuchsia::logger::LogMessage> WaitForMessages(fit::callback<void()> stop) {
+    RunLoopUntil([this] { return !test_listener->messages().empty(); });
+    stop();
     auto ret = std::move(test_listener->messages());
     test_listener->messages().clear();
     return ret;
@@ -103,6 +121,7 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
   std::unique_ptr<internal::LogListenerImpl> log_listener;
   std::unique_ptr<TestListener> test_listener;
   fuchsia::logger::LogListenerSafePtr proxy;
+  bool done_;
 };
 
 TEST_F(LoggerTest, SyslogRedirect) {
@@ -110,8 +129,8 @@ TEST_F(LoggerTest, SyslogRedirect) {
   std::string env_name = "@netemul";
 
   bool called = false;
-  proxy->Log(CreateLogMessage({"tag"}, "Hello"), [&called]() { called = true; });
-  auto msgs = WaitForMessages();
+  proxy->Log(CreateLogMessage({"tag"}, "Hello"), [&called] { called = true; });
+  auto msgs = WaitForMessages([this] { StopObserver(); });
   EXPECT_TRUE(called);
   ValidateMessage(msgs, {"tag", env_name}, "Hello");
 }
@@ -127,8 +146,8 @@ TEST_F(LoggerTest, TooManyTags) {
   }
 
   bool called = false;
-  proxy->Log(CreateLogMessage(tags, "Hello"), [&called]() { called = true; });
-  auto msgs = WaitForMessages();
+  proxy->Log(CreateLogMessage(tags, "Hello"), [&called] { called = true; });
+  auto msgs = WaitForMessages([this] { StopObserver(); });
   EXPECT_TRUE(called);
   ValidateMessage(msgs, tags, "[@netemul] Hello");
 }
@@ -143,8 +162,8 @@ TEST_F(LoggerTest, LongEnvironmentName) {
   std::string expect_tag = "@" + env_name.substr(0, FX_LOG_MAX_TAG_LEN - 2);
 
   bool called = false;
-  proxy->Log(CreateLogMessage({"tag"}, "Hello"), [&called]() { called = true; });
-  auto msgs = WaitForMessages();
+  proxy->Log(CreateLogMessage({"tag"}, "Hello"), [&called] { called = true; });
+  auto msgs = WaitForMessages([this] { StopObserver(); });
   EXPECT_TRUE(called);
   ValidateMessage(msgs, {"tag", expect_tag}, "Hello");
 }
@@ -166,8 +185,8 @@ TEST_F(LoggerTest, VeryLongEnvironmentName) {
   // we'll just not add it.
 
   bool called = false;
-  proxy->Log(CreateLogMessage(tags, "Hello"), [&called]() { called = true; });
-  auto msgs = WaitForMessages();
+  proxy->Log(CreateLogMessage(tags, "Hello"), [&called] { called = true; });
+  auto msgs = WaitForMessages([this] { StopObserver(); });
   EXPECT_TRUE(called);
   ValidateMessage(msgs, tags, "Hello");
 }
@@ -193,9 +212,9 @@ TEST_F(LoggerTest, LongMessageLongTags) {
   // take some of the space when tags are full
 
   bool called = false;
-  proxy->Log(CreateLogMessage(tags, msg), [&called]() { called = true; });
+  proxy->Log(CreateLogMessage(tags, msg), [&called] { called = true; });
 
-  auto msgs = WaitForMessages();
+  auto msgs = WaitForMessages([this] { StopObserver(); });
   EXPECT_TRUE(called);
   ValidateMessage(
       msgs, tags,
@@ -216,12 +235,12 @@ TEST_F(LoggerTest, LongMessage) {
   size_t tags_len = 1 + (1 + tag.length()) + (1 + env_name.length());
 
   bool called = false;
-  proxy->Log(CreateLogMessage({tag}, msg), [&called]() { called = true; });
+  proxy->Log(CreateLogMessage({tag}, msg), [&called] { called = true; });
 
   // Since we're adding more tags with environment name,
   // long messages neeed to be trimmed.
 
-  auto msgs = WaitForMessages();
+  auto msgs = WaitForMessages([this] { StopObserver(); });
   EXPECT_TRUE(called);
   ValidateMessage(msgs, {tag, env_name},
                   msg.substr(0, sizeof(fx_log_packet_t::data) - tags_len - 1));
@@ -235,15 +254,16 @@ TEST_F(LoggerTest, MultipleMessages) {
   size_t called = 0;
   for (size_t i = 0; i < messages; i++) {
     proxy->Log(CreateLogMessage({"tag"}, fxl::StringPrintf("Hello%zu", i)),
-               [&called]() { called++; });
+               [&called] { called++; });
   }
 
   std::vector<fuchsia::logger::LogMessage> consumed;
   while (consumed.size() < messages) {
-    auto msgs = WaitForMessages();
+    auto msgs = WaitForMessages([] {});
     consumed.insert(consumed.end(), msgs.begin(), msgs.end());
   }
   EXPECT_EQ(called, messages);
+  StopObserver();
 
   // sort the received messages by their contents to account for out-of-order delivery by logger
   std::sort(consumed.begin(), consumed.end(), [](auto a, auto b) { return a.msg < b.msg; });

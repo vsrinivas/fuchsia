@@ -22,10 +22,7 @@ class TestListener : public fuchsia::logger::LogListenerSafe {
  public:
   using ObserverCallback = fit::function<void(const fuchsia::logger::LogMessage&)>;
   explicit TestListener(fidl::InterfaceRequest<fuchsia::logger::LogListenerSafe> req)
-      : binding_(this, std::move(req)) {
-    binding_.set_error_handler(
-        [](zx_status_t s) { FAIL() << "Connection to test listener closed"; });
-  }
+      : binding_(this, std::move(req)) {}
 
   TestListener() : binding_(this) {}
 
