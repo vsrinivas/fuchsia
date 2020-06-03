@@ -70,17 +70,16 @@ fn main() -> Result<(), Error> {
         .install_logger_services()
         .add_event_source("v1", Box::new(legacy_event_provider))
         .add_event_source("v2", Box::new(event_source));
-    archivist.log_manager().clone().spawn_internal_sink(log_server, log_name);
+    fasync::spawn(archivist.log_manager().clone().drain_internal_log_sink(log_server, log_name));
 
     if opt.install_controller {
         archivist.install_controller_service();
     }
 
     if !opt.disable_log_connector {
-        archivist.log_manager().clone().spawn_log_connector(
-            connect_to_service::<LogConnectorMarker>()?,
-            archivist.log_sender().clone(),
-        );
+        let connector = connect_to_service::<LogConnectorMarker>()?;
+        let sender = archivist.log_sender().clone();
+        fasync::spawn(archivist.log_manager().clone().handle_log_connector(connector, sender));
     }
 
     if !opt.disable_klog {
@@ -92,6 +91,5 @@ fn main() -> Result<(), Error> {
         fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleType::DirectoryRequest.into())
             .ok_or(MissingStartupHandle)?;
 
-    executor.run(archivist.run(zx::Channel::from(startup_handle)), num_threads)?;
-    Ok(())
+    executor.run(archivist.run(zx::Channel::from(startup_handle)), num_threads)
 }

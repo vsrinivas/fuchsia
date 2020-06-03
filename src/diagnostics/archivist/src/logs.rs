@@ -65,8 +65,8 @@ impl LogManager {
         }
     }
 
-    /// Drain the kernel's debug log. The returned future completes once existing messages have been
-    /// ingested.
+    /// Drain the kernel's debug log. The returned future completes once
+    /// existing messages have been ingested.
     pub async fn drain_debuglog<K>(self, klog_reader: K)
     where
         K: debuglog::DebugLog + Send + Sync + 'static,
@@ -75,7 +75,7 @@ impl LogManager {
         let messages = match kernel_logger.existing_logs().await {
             Ok(messages) => messages,
             Err(e) => {
-                error!("Failed to read from kernel log, important logs may be missing: {}", e);
+                error!("failed to read from kernel log, important logs may be missing: {}", e);
                 return;
             }
         };
@@ -88,69 +88,58 @@ impl LogManager {
             .try_for_each(|message| self.ingest_message(message, LogSource::Kernel).map(Ok))
             .await;
         if let Err(e) = res {
-            error!("Failed to drain kernel log, important logs may be missing: {}", e);
+            error!("failed to drain kernel log, important logs may be missing: {}", e);
         }
     }
 
-    /// Spawn a log sink for messages sent by the archivist itself.
-    pub fn spawn_internal_sink(&self, socket: zx::Socket, name: &str) {
-        let manager = self.clone();
-        let name = name.to_owned();
-        fasync::spawn(async move {
-            // TODO(50105): Figure out how to properly populate SourceIdentity
-            let mut source = SourceIdentity::empty();
-            source.component_name = Some(name);
-            let source = Arc::new(source);
-            let log_stream = LogMessageSocket::new(socket, source)
-                .expect("Unable to create internal LogMessageSocket");
-            manager.drain_messages(log_stream).await;
-            unreachable!();
-        });
+    /// Drain log sink for messages sent by the archivist itself.
+    pub async fn drain_internal_log_sink(self, socket: zx::Socket, name: &str) {
+        // TODO(50105): Figure out how to properly populate SourceIdentity
+        let mut source = SourceIdentity::empty();
+        source.component_name = Some(name.to_owned());
+        let source = Arc::new(source);
+        let log_stream = LogMessageSocket::new(socket, source)
+            .expect("failed to create internal LogMessageSocket");
+        self.drain_messages(log_stream).await;
+        unreachable!();
     }
 
-    /// Spawn a task which attempts to act as `LogConnectionListener` for its parent realm, eventually
-    /// passing `LogSink` connections into the manager.
-    pub fn spawn_log_connector(
-        &self,
+    /// Handle `LogConnectionListener` for the parent realm, eventually passing
+    /// `LogSink` connections into the manager.
+    pub async fn handle_log_connector(
+        self,
         connector: LogConnectorProxy,
         sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
     ) {
-        let handler = self.clone();
-        fasync::spawn(async move {
-            match connector.take_log_connection_listener().await {
-                Ok(Some(listener)) => {
-                    let mut connections =
-                        listener.into_stream().expect("getting request stream from server end");
-                    while let Ok(Some(connection)) = connections.try_next().await {
-                        match connection {
-                            LogConnectionListenerRequest::OnNewConnection {
-                                connection: LogConnection { log_request, source_identity },
-                                control_handle: _,
-                            } => {
-                                let stream = log_request
-                                    .into_stream()
-                                    .expect("getting LogSinkRequestStream from serverend");
-                                let source = Arc::new(source_identity);
-                                fasync::spawn(handler.clone().handle_log_sink(
-                                    stream,
-                                    source,
-                                    sender.clone(),
-                                ))
-                            }
-                        };
-                    }
-                }
-                Ok(None) => {
-                    warn!("local realm already gave out LogConnectionListener, skipping logs")
-                }
-                Err(why) => {
-                    error!("error retrieving LogConnectionListener from LogConnector: {:?}", why)
+        match connector.take_log_connection_listener().await {
+            Ok(Some(listener)) => {
+                let mut connections =
+                    listener.into_stream().expect("getting request stream from server end");
+                while let Ok(Some(connection)) = connections.try_next().await {
+                    match connection {
+                        LogConnectionListenerRequest::OnNewConnection {
+                            connection: LogConnection { log_request, source_identity },
+                            control_handle: _,
+                        } => {
+                            let stream = log_request
+                                .into_stream()
+                                .expect("getting LogSinkRequestStream from serverend");
+                            let source = Arc::new(source_identity);
+                            fasync::spawn(self.clone().handle_log_sink(
+                                stream,
+                                source,
+                                sender.clone(),
+                            ))
+                        }
+                    };
                 }
             }
-        });
+            Ok(None) => warn!("local realm already gave out LogConnectionListener, skipping logs"),
+            Err(e) => error!("error retrieving LogConnectionListener from LogConnector: {}", e),
+        }
     }
 
-    /// Handle LogSink protocol on `stream`. The future returned by this
+    /// Handle `LogSink` protocol on `stream`. The future returned by this
     /// function will not complete before all messages on this connection are
     /// processed.
     pub async fn handle_log_sink(
@@ -190,7 +179,8 @@ impl LogManager {
         }
     }
 
-    /// Drain a `LoggerStream` which wraps a socket from a component generating logs.
+    /// Drain a `LogMessageSocket` which wraps a socket from a component
+    /// generating logs.
     async fn drain_messages(self, mut log_stream: LogMessageSocket) {
         let component_log_stats = {
             let inner = self.inner.lock().await;
@@ -212,17 +202,14 @@ impl LogManager {
     }
 
     /// Spawn a task to handle requests from components reading the shared log.
-    pub fn spawn_log_handler(&self, stream: LogRequestStream) {
-        let handler = self.clone();
-        fasync::spawn(async move {
-            if let Err(e) = handler.handle_log_requests(stream).await {
-                warn!("error handling Log requests: {}", e);
-            }
-        });
+    pub async fn handle_log(self, stream: LogRequestStream) {
+        if let Err(e) = self.handle_log_requests(stream).await {
+            warn!("error handling Log requests: {}", e);
+        }
     }
 
-    /// Handle requests to `fuchsia.logger.Log`. All request types read the whole backlog from
-    /// memory, `DumpLogs(Safe)` stops listening after that though.
+    /// Handle requests to `fuchsia.logger.Log`. All request types read the
+    /// whole backlog from memory, `DumpLogs(Safe)` stops listening after that.
     async fn handle_log_requests(self, mut stream: LogRequestStream) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await? {
             let (listener, options, dump_logs) = match request {
@@ -246,14 +233,15 @@ impl LogManager {
                 }
             };
 
-            self.handle_listener(listener, options, dump_logs).await?;
+            self.handle_log_listener(listener, options, dump_logs).await?;
         }
         Ok(())
     }
 
-    /// Handle a new listener, sending it all cached messages and either calling `Done` if
-    /// `dump_logs` is true or adding it to the pool of ongoing listeners if not.
-    async fn handle_listener(
+    /// Handle a new listener, sending it all cached messages and either calling
+    /// `Done` if `dump_logs` is true or adding it to the pool of ongoing
+    /// listeners if not.
+    async fn handle_log_listener(
         &self,
         log_listener: ClientEnd<LogListenerSafeMarker>,
         options: Option<Box<LogFilterOptions>>,
@@ -807,7 +795,7 @@ mod tests {
 
             let (log_proxy, log_stream) =
                 fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
-            log_manager.clone().spawn_log_handler(log_stream);
+            fasync::spawn(log_manager.clone().handle_log(log_stream));
 
             Self { inspector, log_manager, log_proxy }
         }
@@ -908,7 +896,7 @@ mod tests {
         let lm = LogManager { inner }.with_inspect(inspector.root(), "log_stats").unwrap();
         let (log_proxy, log_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
-        lm.clone().spawn_log_handler(log_stream);
+        fasync::spawn(lm.clone().handle_log(log_stream));
         fasync::spawn(lm.drain_debuglog(debug_log));
 
         validate_log_stream(expected, log_proxy, None).await;

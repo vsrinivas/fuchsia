@@ -24,6 +24,7 @@ use {
         prelude::*,
     },
     io_util,
+    log::error,
     parking_lot::RwLock,
     std::{path::Path, sync::Arc},
 };
@@ -40,9 +41,8 @@ fn spawn_controller(mut stream: ControllerRequestStream, mut stop_sender: mpsc::
         }
         .map(|o: Result<(), fidl::Error>| {
             if let Err(e) = o {
-                eprintln!("error serving controller: {}", e);
+                error!("error serving controller: {}", e);
             }
-            ()
         }),
     );
 }
@@ -123,7 +123,7 @@ impl Archivist {
 
         self.fs
             .dir("svc")
-            .add_fidl_service(move |stream| log_manager_1.clone().spawn_log_handler(stream))
+            .add_fidl_service(move |stream| fasync::spawn(log_manager_1.clone().handle_log(stream)))
             .add_fidl_service(move |stream| {
                 let source = Arc::new(SourceIdentity::empty());
                 fasync::spawn(log_manager_2.clone().handle_log_sink(
@@ -276,8 +276,7 @@ impl Archivist {
         };
 
         // Combine all three futures into a main future.
-        future::try_join3(abortable_fut, stop_fut, all_msg).map_ok(|_| ()).await?;
-        Ok(())
+        future::try_join3(abortable_fut, stop_fut, all_msg).map_ok(|_| ()).await
     }
 }
 
