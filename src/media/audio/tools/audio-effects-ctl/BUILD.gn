@@ -1,0 +1,26 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("audio-effects-ctl") {
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "audio-effects-ctl"
+      shell = true
+    },
+  ]
+}
+
+executable("bin") {
+  output_name = "audio-effects-ctl"
+  sources = [ "main.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.media.audio",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+  ]
+}
