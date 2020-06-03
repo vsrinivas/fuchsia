@@ -10,11 +10,12 @@
 //!
 //! # Model
 //!
-//! The core component of `packet` is the [`Buffer`] trait. A `Buffer` is a byte
-//! buffer with a prefix, a body, and a suffix. The size of the buffer is
-//! referred to as its "capacity", and the size of the body is referred to as
-//! its "length". The body of the buffer can shrink or grow as allowed by the
-//! capacity as packets are parsed or serialized.
+//! The core components of `packet` are the various buffer traits (`XxxBuffer`
+//! and `XxxBufferMut`). A buffer is a byte buffer with a prefix, a body, and a
+//! suffix. The size of the buffer is referred to as its "capacity", and the
+//! size of the body is referred to as its "length". Depending on which traits
+//! are implemented, the body of the buffer may be able to shrink or grow as
+//! allowed by the capacity as packets are parsed or serialized.
 //!
 //! ## Parsing
 //!
@@ -26,9 +27,8 @@
 //! the next encapsulated packet.
 //!
 //! Packet objects - the Rust objects which are the result of a successful
-//! parsing - are advised to simply keep references into the buffer for the
-//! header, footer, and body. This avoids any unnecessary copying. `Buffer`'s
-//! parsing methods make this easy.
+//! parsing operation - are advised to simply keep references into the buffer
+//! for the header, footer, and body. This avoids any unnecessary copying.
 //!
 //! For example, consider the following packet structure, in which a TCP segment
 //! is encapsulated in an IPv4 packet, which is encapsulated in an Ethernet
@@ -87,7 +87,7 @@
 //!                   EthernetFrame { header, body }
 //!
 //! |-----------------|----------------------------------------------|
-//!    Buffer prefix                   Buffer body
+//!    buffer prefix                   buffer body
 //! ```
 //!
 //! The `EthernetFrame` object mutably borrows the buffer. So long as it exists,
@@ -121,14 +121,14 @@
 //!                          Ipv4Packet { header, body }
 //!
 //! |-------------------------------------|--------------------|-----|
-//!              Buffer prefix                 Buffer body       Buffer suffix
+//!              buffer prefix                 buffer body       buffer suffix
 //! ```
 //!
 //! We can continue this process as long as we like, repeatedly parsing
 //! subsequent packet bodies until there are no more packets to parse.
 //!
 //! \[1\] It is also possible to treat the `EthernetFrame`'s `body` field as a
-//! `Buffer` and parse from it directly. However, this has the disadvantage that
+//! buffer and parse from it directly. However, this has the disadvantage that
 //! if parsing is spread across multiple functions, the functions which parse
 //! the inner packets only see part of the buffer, and so if they wish to later
 //! re-use the buffer for serializing new packets (see the "Serialization"
@@ -154,7 +154,7 @@
 //!
 //! ### Serializing into a buffer
 //!
-//! The `PacketBuilder` trait is implemented by types which are capable of
+//! The [`PacketBuilder`] trait is implemented by types which are capable of
 //! serializing a new layer of a packet into an existing buffer. For example, we
 //! might define an `Ipv4PacketBuilder` type, which describes the source IP
 //! address, destination IP address, and any other metadata required to generate
@@ -164,18 +164,16 @@
 //! TCP segment.
 //!
 //! A `PacketBuilder` exposes the number of bytes it requires for headers,
-//! footers, and minimum body lengths via the `header_len`, `footer_len`, and
-//! `min_body_len` methods. It serializes via the `serialize` method.
+//! footers, and minimum and maximum body lengths via the `constraints` method.
+//! It serializes via the `serialize` method.
 //!
-//! In order to serialize a `PacketBuilder`, a `SerializeBuffer` must first be
-//! constructed. A `SerializeBuffer` is a view into a `Buffer` used for
+//! In order to serialize a `PacketBuilder`, a [`SerializeBuffer`] must first be
+//! constructed. A `SerializeBuffer` is a view into a buffer used for
 //! serialization, and it is initialized with the proper number of bytes for the
 //! header, footer, and body. The number of bytes required for these is
-//! discovered through calls to the `PacketBuilder`'s `header_len`,
-//! `footer_len`, and `min_body_len` methods.
+//! discovered through calls to the `PacketBuilder`'s `constraints` method.
 //!
-//! The `PacketBuilder`'s `serialize` method consumes the `PacketBuilder` itself
-//! and the `SerializeBuffer` by value, and serializes the headers and footers
+//! The `PacketBuilder`'s `serialize` method serializes the headers and footers
 //! of the packet into the buffer. It expects that the `SerializeBuffer` is
 //! initialized with a body equal to the body which will be encapsulated. For
 //! example, imagine that we are trying to serialize a TCP segment in an IPv4
@@ -191,7 +189,7 @@
 //!                                             TCP segment
 //!
 //! |-------------------------------------|--------------------|-----|
-//!              Buffer prefix                 Buffer body       Buffer suffix
+//!              buffer prefix                 buffer body       buffer suffix
 //! ```
 //!
 //! Note that the buffer's body is currently equal to the TCP segment, and the
@@ -216,7 +214,7 @@
 //!                      SerializeBuffer { header, body }
 //!
 //! |-----------------|----------------------------------------|-----|
-//!    Buffer prefix                 Buffer body                 Buffer suffix
+//!    buffer prefix                 buffer body                 buffer suffix
 //! ```
 //!
 //! We then pass the `SerializeBuffer` to a call to the `Ipv4PacketBuilder`'s
@@ -234,10 +232,10 @@
 //!                                  IPv4 packet
 //!
 //! |-----------------|----------------------------------------|-----|
-//!    Buffer prefix                 Buffer body                 Buffer suffix
+//!    buffer prefix                 buffer body                 buffer suffix
 //! ```
 //!
-//! Now, we area ready to repeat the same process with the Ethernet layer of the
+//! Now, we are ready to repeat the same process with the Ethernet layer of the
 //! packet.
 //!
 //! ### Constructing a buffer for serialization
@@ -258,7 +256,7 @@
 //! buffer large enough for a TCP segment in an IPv4 packet in a GRE packet in
 //! an IP packet in an Ethernet segment.
 //!
-//! We accomplish this commit-before-serializing via the `Serializer` trait. A
+//! We accomplish this commit-before-serializing via the [`Serializer`] trait. A
 //! `Serializer` describes a packet which can be serialized in the future, but
 //! which has not yet been serialized. Unlike a `PacketBuilder`, a `Serializer`
 //! describes all layers of a packet up to a certain point. For example, a
@@ -292,21 +290,20 @@
 //! packet layer and working inwards.
 //!
 //! In order to construct a buffer, the [`Serializer::serialize`] method is
-//! provided. It takes a `Bar`, which describes the constraints built up by any
-//! encapsulating layers. For example, when serializing a TCP segment in an IP
-//! packet in an Ethernet frame, the `serialize` call on the IP packet
-//! `Serializer` would be given a `Bar` describing the Ethernet frame's
-//! requirement of 18 prefix bytes for its header. This call would then compute
-//! a new `Bar` describing the combined requirement of 38 prefix bytes for the
-//! IP and Ethernet headers combined, and would pass this to a call to
+//! provided. It takes a [`NestedPacketBuilder`], which describes one or more
+//! encapsulating packet layers. For example, when serializing a TCP segment in
+//! an IP packet in an Ethernet frame, the `serialize` call on the IP packet
+//! `Serializer` would be given a `NestedPacketBuilder` describing the Ethernet
+//! frame. This call would then compute a new `NestedPacketBuilder` describing
+//! the combined IP packet and Ethernet frame, and would pass this to a call to
 //! `serialize` on the TCP segment `Serializer`.
 //!
 //! When the innermost call to `serialize` is reached, it is that call's
 //! responsibility to produce a buffer which satisfies the constraints passed to
-//! it, and to initialize that buffer's body with the contents of its packet. For
-//! example, the TCP segment `Serializer` from the preceding example would need
-//! to produce a buffer with 38 bytes of prefix, and whose body was initialized
-//! to the bytes of the TCP segment.
+//! it, and to initialize that buffer's body with the contents of its packet.
+//! For example, the TCP segment `Serializer` from the preceding example would
+//! need to produce a buffer with 38 bytes of prefix for the IP and Ethernet
+//! headers, and whose body was initialized to the bytes of the TCP segment.
 //!
 //! We can now see how `Serializer`s and `PacketBuilder`s compose - the buffer
 //! returned from a call to `serialize` satisfies the requirements of the
@@ -325,7 +322,7 @@
 //! Note in particular that, throughout this entire process of constructing
 //! `Serializer`s and `PacketBuilder`s and then consuming them, a buffer is only
 //! allocated once, and each byte of the packet is only serialized once. No
-//! temporary buffers or copying between buffers is required.
+//! temporary buffers or copying between buffers are required.
 //!
 //! #### Reusing buffers
 //!
@@ -336,78 +333,13 @@
 //! valid `Serializer`. When `serialize` is called, so long as it already
 //! satisfies the constraints requested, it can simply return itself by value.
 //! If the constraints are not satisfied, it may need to produce a different
-//! buffer through some user-defined mechanism. The [`BufferSerializer`] type
-//! wraps an existing buffer and implements the `Serializer` trait as described
-//! here.
+//! buffer through some user-defined mechanism (see the [`BufferProvider`] trait
+//! for details).
 //!
 //! This allows existing buffers to be reused in many cases. For example,
 //! consider receiving a packet in a buffer, and then responding to that packet
 //! with a new packet. The buffer that the original packet was stored in can be
 //! used to serialize the new packet, avoiding any unnecessary allocation.
-//!
-//! # Monomorphization Overflow
-//!
-//! Because this crate's APIs make heavy use of static type parameters,
-//! recursive functions can sometimes run into a compiler issue known as
-//! "monomorphization overflow". This section describes the problem, and
-//! explains how to work around it.
-//!
-//! Monomorphization overflow happens when the program type checks, but the
-//! compiler overflows its stack while trying to figure out what concrete type
-//! to use for particular objects. It is guaranteed to happen whenever the
-//! compiler tries to figure out what a type, `T`, is, where it knows that `T =
-//! U<T>` for some `U`. Substituting `U`, we find that `T = U<U<T>>`, and thus
-//! that `T = U<U<U<T>>>`, and so on. Eventually, the compiler simply gives up
-//! (which is good, since there's no solution).
-//!
-//! In order to explain how this problem can arise by using this crate, consider
-//! the following code:
-//!
-//! ```rust
-//! # use packet::{ParseBuffer, Either};
-//! fn foo<B: ParseBuffer>(buffer: B, n: usize) {
-//!     if n == 0 {
-//!         return;
-//!     }
-//!     foo::<Either<B, &[u8]>>(Either::A(buffer), n - 1);
-//! }
-//! ```
-//!
-//! If there were a call to `foo(&[][..], 10)`, that call would have `B =
-//! &[u8]`. But it would contain a call to `foo` with `B' = Either<&[u8],
-//! &[u8]>`, which would contain a call to `foo` with `B'' =
-//! Either<Either<&[u8], &[u8]>, &[u8]>`, and so on. The compiler will
-//! eventually give up on trying to figure out the concrete types of all of the
-//! recursive calls to `foo`.
-//!
-//! ## Solution
-//!
-//! The solution is to break the cycle by introducing a concrete
-//! (non-parametric) type. For this, we provide the [`ParseBuffer::as_buf`] and
-//! [`ParseBufferMut::as_buf_mut`] methods. These methods return `Buf<&[u8]>`
-//! and `Buf<&mut [u8]>` respectively. Since `Buf` is a concrete type, these
-//! methods can be used to break the cycle. We can amend the example above:
-//!
-//! ```rust
-//! # use packet::{Buf, ParseBuffer, Either};
-//! fn foo<B: ParseBuffer>(buffer: B, n: usize) {
-//!     if n == 0 {
-//!         return;
-//!     }
-//!     foo::<Either<Buf<&[u8]>, &[u8]>>(Either::A(buffer.as_buf()), n - 1);
-//! }
-//! ```
-//!
-//! Now, the first call to `foo(&[][..], 10)` has `B = &[u8]`, and all
-//! subsequent calls have `B' = Either<Buf<&[u8]>, &[u8]>`, and the program will
-//! compile successfully.
-//!
-//! **WARNING**: Calling methods on the `Buf` from `as_buf` or `as_buf_mut` has
-//! a small performance penalty when compared to calls on the original
-//! `ParseBuffer`. They should only be used when necessary to avoid compilation
-//! failure. If there are multiple options for where to put the `as_buf` or
-//! `as_buf_mut` call in order to break the cycle, pick the option which is the
-//! least in the hot path.
 
 mod fragmented;
 pub mod records;
@@ -524,12 +456,12 @@ pub trait FragmentedBufferMut: FragmentedBuffer {
 /// A marker trait for a buffer that is contiguous in memory.
 ///
 /// If the type in question is a buffer which exposes a prefix and a suffix, the
-/// `AsRef` implementation provides access only to the body.
+/// [`AsRef`] implementation provides access only to the body.
 pub trait ContiguousBuffer: AsRef<[u8]> {}
 /// A marker trait for a mutable buffer that is contiguous in memory.
 ///
 /// If the type in question is a buffer which exposes a prefix and a suffix, the
-/// `AsMut` implementation provides access only to the body.
+/// [`AsMut`] implementation provides access only to the body.
 pub trait ContiguousBufferMut: ContiguousBuffer + AsMut<[u8]> {}
 
 /// A helper trait to implement [`FragmentedBuffer`] and [`ContiguousBuffer`]
@@ -776,13 +708,19 @@ pub trait ParseBufferMut: ParseBuffer + FragmentedBufferMut + ContiguousBufferMu
 /// suffix to be modified, it only provides immutable access to their contents.
 /// For mutable access, see [`GrowBufferMut`].
 ///
-/// The [`FragmentedBuffer::with_bytes`] implementation of a [`GrowBuffer`] only
-/// gives access to the buffer's body contents.
+/// If a type implements `GrowBuffer`, then its implementations of the methods
+/// on [`FragmentedBuffer`] provide access only to the buffer's body. In
+/// particular, [`len`] returns the body's length, [`with_bytes`] provides
+/// access to the body, and [`to_flattened_vec`] returns a copy of the body.
 ///
 /// \[1\] If `GrowBuffer`s could shrink their prefix or suffix, then it would
 /// not be possible to guarantee that a call to `undo_parse` wouldn't panic.
 /// `undo_parse` is used when retaining previously-parsed packets for
 /// serialization, which is useful in scenarios such as packet forwarding.
+///
+/// [`len`]: crate::FragmentedBuffer::len
+/// [`with_bytes`]: crate::FragmentedBuffer::with_bytes
+/// [`to_flattened_vec`]: crate::FragmentedBuffer::to_flattened_vec
 pub trait GrowBuffer: FragmentedBuffer {
     /// The capacity of the buffer.
     ///
@@ -857,8 +795,8 @@ pub trait GrowBuffer: FragmentedBuffer {
     ///
     /// # Panics
     ///
-    /// `undo_parse` may panic if called in the wrong order. See the previous
-    /// paragraph.
+    /// `undo_parse` may panic if called in the wrong order. See the first
+    /// section of this documentation comment for details.
     fn undo_parse(&mut self, meta: ParseMetadata) {
         if self.len() < meta.body_len {
             // There were padding bytes which were stripped when parsing the
@@ -882,7 +820,7 @@ pub trait GrowBufferMut: GrowBuffer + FragmentedBufferMut {
     /// Extends the front of the body towards the beginning of the buffer,
     /// zeroing the new bytes.
     ///
-    /// `grow_front_zero` calls [`Buffer::grow_front`] and sets the
+    /// `grow_front_zero` calls [`GrowBuffer::grow_front`] and sets the
     /// newly-added bytes to 0. This can be useful when serializing to ensure
     /// that the contents of packets previously stored in the buffer are not
     /// leaked.
@@ -894,7 +832,7 @@ pub trait GrowBufferMut: GrowBuffer + FragmentedBufferMut {
     /// Extends the back of the body towards the end of the buffer, zeroing the
     /// new bytes.
     ///
-    /// `grow_back_zero` calls [`Buffer::grow_back`] and sets the
+    /// `grow_back_zero` calls [`GrowBuffer::grow_back`] and sets the
     /// newly-added bytes to 0. This can be useful when serializing to ensure
     /// that the contents of packets previously stored in the buffer are not
     /// leaked.
@@ -906,7 +844,7 @@ pub trait GrowBufferMut: GrowBuffer + FragmentedBufferMut {
 
     /// Resets the body to be equal to the entire buffer, zeroing the new bytes.
     ///
-    /// Like [`Buffer::reset`], `reset_zero` consumes the entire prefix and
+    /// Like [`GrowBuffer::reset`], `reset_zero` consumes the entire prefix and
     /// suffix, adding them to the body. It sets these bytes to 0. This can be
     /// useful when serializing to ensure that the contents of packets
     /// previously stored in the buffer are not leaked.
@@ -916,6 +854,8 @@ pub trait GrowBufferMut: GrowBuffer + FragmentedBufferMut {
     }
 }
 
+impl<B: GrowBuffer + FragmentedBufferMut> GrowBufferMut for B {}
+
 /// A buffer that can be serialized into.
 ///
 /// `TargetBuffer` is a [`GrowBufferMut`] that can be serialized into. A
@@ -924,14 +864,21 @@ pub trait GrowBufferMut: GrowBuffer + FragmentedBufferMut {
 /// [`SerializeBuffer`], creating a contiguous header and footer from the
 /// `TargetBuffer`'s contiguous prefix and suffix, respectively.
 ///
-/// That guarantee allows for complex buffer setups that reuse a body from
+/// This guarantee allows for complex buffer setups that reuse a body from
 /// incoming data, but need serialize a new header or footer around that body,
 /// i.e., a scatter-gather buffer that has dedicated space for serializing new
 /// headers and footers and reuses the body from another buffer.
 ///
-/// Because `TargetBuffer` is [`GrowBufferMut`] but NOT [`ShrinkBuffer`],
-/// implementers may guarantee a correct implementation that always provides a
-/// contiguous prefix and suffix without resorting to runtime panics.
+/// Because `TargetBuffer` is a sub-trait of [`GrowBufferMut`] but NOT of
+/// [`ShrinkBuffer`], implementers may guarantee a correct implementation that
+/// always provides a contiguous prefix and suffix without resorting to runtime
+/// panics. \[1\]
+///
+/// \[1\] If `TargetBuffer` were also a sub-trait of `ShrinkBuffer`, then it
+/// would be possible to start off with a buffer with a fragmented body, and
+/// then shrink the buffer such that the prefix or suffix would become
+/// fragmented, which would be a violation of `TargetBuffer`'s invariants. The
+/// only option, in this case, would be to panic.
 pub trait TargetBuffer: GrowBufferMut {
     /// Gets a view into the parts of this `TargetBuffer`.
     fn with_parts<O, F>(&mut self, f: F) -> O
@@ -1017,7 +964,7 @@ pub trait TargetBuffer: GrowBufferMut {
 /// A byte buffer that can be reused.
 ///
 /// A `ReusableBuffer` is any buffer that can be serialized into (via
-/// [`TargetBuffer`]) and shrunk (via [`ShrunkBuffer`]). Shrinking is a
+/// [`TargetBuffer`]) and shrunk (via [`ShrinkBuffer`]). Shrinking is a
 /// requirement of `ReusableBuffer`s so that their capacity can be reclaimed for
 /// a new serialization pass. All types that provide both those implementations
 /// will receive a blanket implementation of `ReusableBuffer`.
@@ -1043,10 +990,9 @@ impl<B> BufferMut for B where B: TargetBuffer + ParseBufferMut {}
 
 /// An empty buffer.
 ///
-/// `EmptyBuf` is a buffer with 0 bytes of length or capacity. It implements
-/// all of the buffer traits ([`ParseBuffer`], [`Buffer`], [`ParseBufferMut`],
-/// and [`BufferMut`]) and the buffer view traits ([`BufferView`],
-/// [`BufferViewMut`]).
+/// `EmptyBuf` is a buffer with 0 bytes of length or capacity. It implements all
+/// of the buffer traits (`XxxBuffer` and `XxxBufferMut`) and both buffer view
+/// traits ([`BufferView`] and [`BufferViewMut`]).
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct EmptyBuf;
 
@@ -1110,7 +1056,6 @@ impl GrowBuffer for EmptyBuf {
         assert_eq!(n, 0);
     }
 }
-impl GrowBufferMut for EmptyBuf {}
 impl TargetBuffer for EmptyBuf {
     fn with_parts<O, F>(&mut self, f: F) -> O
     where
@@ -1200,7 +1145,6 @@ impl GrowBuffer for Never {
     fn grow_front(&mut self, _n: usize) {}
     fn grow_back(&mut self, _n: usize) {}
 }
-impl GrowBufferMut for Never {}
 impl TargetBuffer for Never {
     fn with_parts<O, F>(&mut self, _f: F) -> O
     where
@@ -1210,11 +1154,12 @@ impl TargetBuffer for Never {
     }
 }
 
-/// A view into a `Buffer`.
+/// A view into a [`ShrinkBuffer`].
 ///
-/// A `BufferView` borrows a `Buffer`, and provides methods to consume bytes
-/// from the buffer's body. It is primarily intended to be used for parsing,
-/// although it provides methods which are useful for serialization as well.
+/// A `BufferView` borrows a `ShrinkBuffer`, and provides methods to consume
+/// bytes from the buffer's body. It is primarily intended to be used for
+/// parsing, although it provides methods which are useful for serialization as
+/// well.
 ///
 /// `BufferView` only provides immutable access to the contents of the buffer.
 /// For mutable access, see [`BufferViewMut`].
@@ -1237,24 +1182,26 @@ pub trait BufferView<B: ByteSlice>: Sized + AsRef<[u8]> {
     /// Takes `n` bytes from the front of the buffer's body.
     ///
     /// `take_front` consumes `n` bytes from the front of the buffer's body.
-    /// After a successful call to `take_front(n)`, the prefix is `n` bytes
-    /// longer and the body is `n` bytes shorter. If the body is not at least
-    /// `n` bytes in length, `take_front` returns `None`.
+    /// After a successful call to `take_front(n)`, the body is `n` bytes
+    /// shorter and, if `Self: GrowBuffer`, the prefix is `n` bytes longer. If
+    /// the body is not at least `n` bytes in length, `take_front` returns
+    /// `None`.
     fn take_front(&mut self, n: usize) -> Option<B>;
 
     /// Takes `n` bytes from the back of the buffer's body.
     ///
     /// `take_back` consumes `n` bytes from the back of the buffer's body. After
-    /// a successful call to `take_back(n)`, the suffix is `n` bytes longer and
-    /// the body is `n` bytes shorter. If the body is not at least `n` bytes in
-    /// length, `take_back` returns `None`.
+    /// a successful call to `take_back(n)`, the body is `n` bytes shorter and,
+    /// if `Self: GrowBuffer`, the suffix is `n` bytes longer. If the body is
+    /// not at least `n` bytes in length, `take_back` returns `None`.
     fn take_back(&mut self, n: usize) -> Option<B>;
 
     /// Takes the rest of the buffer's body from the front.
     ///
     /// `take_rest_front` consumes the rest of the bytes from the buffer's body.
-    /// After a call to `take_rest_front`, the body is empty, and the bytes
-    /// which were previously in the body are now in the prefix.
+    /// After a call to `take_rest_front`, the body is empty and, if `Self:
+    /// GrowBuffer`, the bytes which were previously in the body are now in the
+    /// prefix.
     fn take_rest_front(&mut self) -> B {
         let len = self.len();
         self.take_front(len).unwrap()
@@ -1263,8 +1210,9 @@ pub trait BufferView<B: ByteSlice>: Sized + AsRef<[u8]> {
     /// Takes the rest of the buffer's body from the back.
     ///
     /// `take_rest_back` consumes the rest of the bytes from the buffer's body.
-    /// After a call to `take_rest_back`, the body is empty, and the bytes which
-    /// were previously in the body are now in the suffix.
+    /// After a call to `take_rest_back`, the body is empty and, if `Self:
+    /// GrowBuffer`, the bytes which were previously in the body are now in the
+    /// suffix.
     fn take_rest_back(&mut self) -> B {
         let len = self.len();
         self.take_back(len).unwrap()
@@ -1312,9 +1260,10 @@ pub trait BufferView<B: ByteSlice>: Sized + AsRef<[u8]> {
     ///
     /// `take_obj_front` consumes `size_of::<T>()` bytes from the front of the
     /// buffer's body, and interprets them as a `T`. After a successful call to
-    /// `take_obj_front::<T>()`, the prefix is `size_of::<T>()` bytes longer and
-    /// the body is `size_of::<T>()` bytes shorter. If the body is not at least
-    /// `size_of::<T>()` bytes in length, `take_obj_front` returns `None`.
+    /// `take_obj_front::<T>()`, the body is `size_of::<T>()` bytes shorter and,
+    /// if `Self: GrowBuffer`, the prefix is `size_of::<T>()` bytes longer. If
+    /// the body is not at least `size_of::<T>()` bytes in length,
+    /// `take_obj_front` returns `None`.
     fn take_obj_front<T>(&mut self) -> Option<LayoutVerified<B, T>>
     where
         T: Unaligned,
@@ -1328,10 +1277,10 @@ pub trait BufferView<B: ByteSlice>: Sized + AsRef<[u8]> {
     ///
     /// `take_slice_front` consumes `n * size_of::<T>()` bytes from the front of
     /// the buffer's body, and interprets them as a `[T]` with `n` elements.
-    /// After a successful call to `take_slice_front::<T>()`, the prefix is
-    /// `n * size_of::<T>()` bytes longer and the body is `n * size_of::<T>()`
-    /// bytes shorter. If the body is not at least `n * size_of::<T>()` bytes in
-    /// length, `take_slice_front` returns `None`.
+    /// After a successful call to `take_slice_front::<T>()`, the body is `n *
+    /// size_of::<T>()` bytes shorter and, if `Self: GrowBuffer`, the prefix is
+    /// `n * size_of::<T>()` bytes longer. If the body is not at least `n *
+    /// size_of::<T>()` bytes in length, `take_slice_front` returns `None`.
     ///
     /// # Panics
     ///
@@ -1363,9 +1312,10 @@ pub trait BufferView<B: ByteSlice>: Sized + AsRef<[u8]> {
     ///
     /// `take_obj_back` consumes `size_of::<T>()` bytes from the back of the
     /// buffer's body, and interprets them as a `T`. After a successful call to
-    /// `take_obj_back::<T>()`, the suffix is `size_of::<T>()` bytes longer and
-    /// the body is `size_of::<T>()` bytes shorter. If the body is not at least
-    /// `size_of::<T>()` bytes in length, `take_obj_back` returns `None`.
+    /// `take_obj_back::<T>()`, the body is `size_of::<T>()` bytes shorter and,
+    /// if `Self: GrowBuffer`, the suffix is `size_of::<T>()` bytes longer. If
+    /// the body is not at least `size_of::<T>()` bytes in length,
+    /// `take_obj_back` returns `None`.
     fn take_obj_back<T>(&mut self) -> Option<LayoutVerified<B, T>>
     where
         T: Unaligned,
@@ -1379,10 +1329,10 @@ pub trait BufferView<B: ByteSlice>: Sized + AsRef<[u8]> {
     ///
     /// `take_slice_back` consumes `n * size_of::<T>()` bytes from the back of
     /// the buffer's body, and interprets them as a `[T]` with `n` elements.
-    /// After a successful call to `take_slice_back::<T>()`, the suffix is
-    /// `n * size_of::<T>()` bytes longer and the body is `n * size_of::<T>()`
-    /// bytes shorter. If the body is not at least `n * size_of::<T>()` bytes in
-    /// length, `take_slice_back` returns `None`.
+    /// After a successful call to `take_slice_back::<T>()`, the body is `n *
+    /// size_of::<T>()` bytes shorter and, if `Self: GrowBuffer`, the suffix is
+    /// `n * size_of::<T>()` bytes longer. If the body is not at least `n *
+    /// size_of::<T>()` bytes in length, `take_slice_back` returns `None`.
     ///
     /// # Panics
     ///
@@ -1501,10 +1451,10 @@ pub trait BufferViewMut<B: ByteSliceMut>: BufferView<B> + AsMut<[u8]> {
     ///
     /// `write_obj_front` consumes `size_of_val(obj)` bytes from the front of
     /// the buffer's body, and overwrites them with `obj`. After a successful
-    /// call to `write_obj_front(obj)`, the prefix is `size_of_val(obj)` bytes
-    /// longer and the body is `size_of_val(obj)` bytes shorter. If the body is
-    /// not at least `size_of_val(obj)` bytes in length, `write_obj_front`
-    /// returns `None`.
+    /// call to `write_obj_front(obj)`, the body is `size_of_val(obj)` bytes
+    /// shorter and, if `Self: GrowBuffer`, the prefix is `size_of_val(obj)`
+    /// bytes longer. If the body is not at least `size_of_val(obj)` bytes in
+    /// length, `write_obj_front` returns `None`.
     fn write_obj_front<T>(&mut self, obj: &T) -> Option<()>
     where
         T: ?Sized + AsBytes,
@@ -1516,12 +1466,12 @@ pub trait BufferViewMut<B: ByteSliceMut>: BufferView<B> + AsMut<[u8]> {
 
     /// Writes an object to the back of the buffer's body, consuming the bytes.
     ///
-    /// `write_obj_back` consumes `size_of_val(obj)` bytes from the back of
-    /// the buffer's body, and overwrites them with `obj`. After a successful
-    /// call to `write_obj_back(obj)`, the suffix is `size_of_val(obj)` bytes
-    /// longer and the body is `size_of_val(obj)` bytes shorter. If the body is
-    /// not at least `size_of_val(obj)` bytes in length, `write_obj_back`
-    /// returns `None`.
+    /// `write_obj_back` consumes `size_of_val(obj)` bytes from the back of the
+    /// buffer's body, and overwrites them with `obj`. After a successful call
+    /// to `write_obj_back(obj)`, the body is `size_of_val(obj)` bytes shorter
+    /// and, if `Self: GrowBuffer`, the suffix is `size_of_val(obj)` bytes
+    /// longer. If the body is not at least `size_of_val(obj)` bytes in length,
+    /// `write_obj_back` returns `None`.
     fn write_obj_back<T>(&mut self, obj: &T) -> Option<()>
     where
         T: ?Sized + AsBytes,
@@ -1555,7 +1505,7 @@ pub trait BufferViewMut<B: ByteSliceMut>: BufferView<B> + AsMut<[u8]> {
 
 /// Metadata about a previously-parsed packet used to undo its parsing.
 ///
-/// See [`Buffer::undo_parse`] for more details.
+/// See [`GrowBuffer::undo_parse`] for more details.
 #[derive(Copy, Clone)]
 pub struct ParseMetadata {
     header_len: usize,
@@ -1564,10 +1514,18 @@ pub struct ParseMetadata {
 }
 
 impl ParseMetadata {
+    /// Constructs a new `ParseMetadata` from information about a packet.
     pub fn from_packet(header_len: usize, body_len: usize, footer_len: usize) -> ParseMetadata {
         ParseMetadata { header_len, body_len, footer_len }
     }
 
+    /// Constructs a new `ParseMetadata` from information about an inner packet.
+    ///
+    /// Since inner packets do not have a header/body/footer distinction (at
+    /// least from the perspective of the utilities in this crate), we
+    /// arbitrarily produce a `ParseMetadata` with a header length and no body
+    /// or footer lengths. Thus, `from_inner_packet(len)` is equivalent to
+    /// `from_packet(len, 0, 0)`.
     pub fn from_inner_packet(len: usize) -> ParseMetadata {
         ParseMetadata { header_len: len, body_len: 0, footer_len: 0 }
     }
@@ -1597,28 +1555,28 @@ impl ParseMetadata {
     }
 }
 
-/// A packet which can be parsed from a `Buffer`.
+/// A packet which can be parsed from a buffer.
 ///
 /// A `ParsablePacket` is a packet which can be parsed from the body of a
-/// buffer. It is recommended that as much of the packet object as possible be
-/// references into the buffer in order to avoid copying for performance
-/// reasons.
+/// buffer. For performance reasons, it is recommended that as much of the
+/// packet object as possible be stored as references into the body in order to
+/// avoid copying.
 pub trait ParsablePacket<B: ByteSlice, ParseArgs>: Sized {
     /// The type of errors returned from `parse` and `parse_mut`.
     type Error;
 
-    /// Parse a packet from a `Buffer`.
+    /// Parse a packet from a buffer.
     ///
-    /// Given a view into a `Buffer`, `parse` parses a packet by consuming bytes
+    /// Given a view into a buffer, `parse` parses a packet by consuming bytes
     /// from the buffer's body. This works slightly differently for normal
-    /// packets and inner packets (which do not contain other packets).
+    /// packets and inner packets (those which do not contain other packets).
     ///
     /// ## Packets
     ///
-    /// When parsing packets which contain other packets, the packet's headers
-    /// and footers should be consumed from the beginning and end of the
-    /// buffer's body respectively. The packet's body should be constructed from
-    /// a reference to the buffer's body (i.e., `BufferView::into_body`), but
+    /// When parsing a packet which contains another packet, the packet's header
+    /// and footer should be consumed from the beginning and end of the buffer's
+    /// body respectively. The packet's body should be constructed from a
+    /// reference to the buffer's body (i.e., [`BufferView::into_rest`]), but
     /// the buffer's body should not be consumed. This allows the next
     /// encapsulated packet to be parsed from the remaining buffer body. See the
     /// crate documentation for more details.
@@ -1633,12 +1591,12 @@ pub trait ParsablePacket<B: ByteSlice, ParseArgs>: Sized {
     ///
     /// There may be post-packet padding (coming after the entire packet,
     /// including any footer) which was added in order to satisfy the minimum
-    /// body length requirement of an encapsulating packet. If this packet
-    /// describes its own length (and thus, it's possible to determine whether
-    /// there's any padding), `parse` is required to consume any post-packet
-    /// padding from the buffer's suffix. If this invariant is not upheld,
-    /// future calls to `Buffer::parse` or `Buffer::undo_parse` may behave
-    /// incorrectly.
+    /// body length requirement of an encapsulating packet. If the packet
+    /// currently being parsed describes its own length (and thus, it's possible
+    /// to determine whether there's any padding), `parse` is required to
+    /// consume any post-packet padding from the buffer's suffix. If this
+    /// invariant is not upheld, future calls to [`ParseBuffer::parse`] or
+    /// [`GrowBuffer::undo_parse`] may behave incorrectly.
     ///
     /// Pre-packet padding is not supported; if a protocol supports such
     /// padding, it must be handled in a way that is transparent to this API. In
@@ -1646,10 +1604,10 @@ pub trait ParsablePacket<B: ByteSlice, ParseArgs>: Sized {
     /// padding as part of the packet.
     fn parse<BV: BufferView<B>>(buffer: BV, args: ParseArgs) -> Result<Self, Self::Error>;
 
-    /// Parse a packet from a `BufferMut`.
+    /// Parse a packet from a mutable buffer.
     ///
-    /// `parse_mut` is like `parse`, except that it operates on a view into a
-    /// `BufferMut` rather than a `Buffer`.
+    /// `parse_mut` is like `parse`, except that it operates on a mutable buffer
+    /// view.
     fn parse_mut<BV: BufferViewMut<B>>(buffer: BV, args: ParseArgs) -> Result<Self, Self::Error>
     where
         B: ByteSliceMut,
@@ -1657,13 +1615,15 @@ pub trait ParsablePacket<B: ByteSlice, ParseArgs>: Sized {
         Self::parse(buffer, args)
     }
 
-    /// Metadata about this packet required by [`Buffer::undo_parse`].
+    /// Metadata about this packet required by [`GrowBuffer::undo_parse`].
     ///
     /// The returned `ParseMetadata` records the number of header and footer
     /// bytes consumed by this packet during parsing, and the number of bytes
-    /// left in the body (not consumed from the buffer). The header length must
-    /// be equal to the number of bytes consumed from the prefix, and the footer
-    /// length must be equal to the number of bytes consumed from the suffix.
+    /// left in the body (not consumed from the buffer). For packets which
+    /// encapsulate other packets, the header length must be equal to the number
+    /// of bytes consumed from the prefix, and the footer length must be equal
+    /// to the number of bytes consumed from the suffix. For inner packets, use
+    /// [`ParseMetadata::from_inner_packet`].
     ///
     /// There is one exception: if any post-packet padding was consumed from the
     /// suffix, this should not be included, as it is not considered part of the
@@ -1730,8 +1690,8 @@ impl<'a> SerializeBuffer<'a> {
         (self.header.as_mut(), &mut self.body, self.footer.as_mut())
     }
 
-    /// Gets the total length of this `SerializeBuffer`, it's equal to the sum
-    /// of the lengths of header, body, and footer.
+    /// Gets the total length of this `SerializeBuffer`, equal to the sum of the
+    /// lengths of header, body, and footer.
     pub fn len(&self) -> usize {
         self.header.len() + self.body.len() + self.footer.len()
     }

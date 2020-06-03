@@ -32,11 +32,11 @@ pub enum Either<A, B> {
 }
 
 impl<A, B> Either<A, B> {
-    /// Map the `A` variant of an `Either`.
+    /// Maps the `A` variant of an `Either`.
     ///
-    /// Given an `Either<A, B>` and a function from `A` to `AA`, produce an
-    /// `Either<AA, B>` by applying the function to the `A` variant or passing
-    /// on the `B` variant unmodified.
+    /// Given an `Either<A, B>` and a function from `A` to `AA`, `map_a`
+    /// produces an `Either<AA, B>` by applying the function to the `A` variant
+    /// or passing on the `B` variant unmodified.
     pub fn map_a<AA, F: FnOnce(A) -> AA>(self, f: F) -> Either<AA, B> {
         match self {
             Either::A(a) => Either::A(f(a)),
@@ -44,11 +44,11 @@ impl<A, B> Either<A, B> {
         }
     }
 
-    /// Map the `B` variant of an `Either`.
+    /// Maps the `B` variant of an `Either`.
     ///
-    /// Given an `Either<A, B>` and a function from `B` to `BB`, produce an
-    /// `Either<A, BB>` by applying the function to the `B` variant or passing
-    /// on the `A` variant unmodified.
+    /// Given an `Either<A, B>` and a function from `B` to `BB`, `map_b`
+    /// produces an `Either<A, BB>` by applying the function to the `B` variant
+    /// or passing on the `A` variant unmodified.
     pub fn map_b<BB, F: FnOnce(B) -> BB>(self, f: F) -> Either<A, BB> {
         match self {
             Either::A(a) => Either::A(a),
@@ -56,7 +56,7 @@ impl<A, B> Either<A, B> {
         }
     }
 
-    /// Return the `A` variant in an `Either<A, B>`.
+    /// Returns the `A` variant in an `Either<A, B>`.
     ///
     /// # Panics
     ///
@@ -68,7 +68,7 @@ impl<A, B> Either<A, B> {
         }
     }
 
-    /// Return the `B` variant in an `Either<A, B>`.
+    /// Returns the `B` variant in an `Either<A, B>`.
     ///
     /// # Panics
     ///
@@ -82,9 +82,8 @@ impl<A, B> Either<A, B> {
 }
 
 impl<A> Either<A, A> {
-    /// Return the inner value held by this `Either` when both
-    /// possible values `Either::A` and `Either::B` have the
-    /// same inner types.
+    /// Returns the inner value held by this `Either` when both possible values
+    /// `Either::A` and `Either::B` contain the same inner types.
     pub fn into_inner(self) -> A {
         match self {
             Either::A(x) => x,
@@ -94,7 +93,7 @@ impl<A> Either<A, A> {
 }
 
 impl<A> Either<A, Never> {
-    /// Return the `A` value in an `Either<A, Never>`.
+    /// Returns the `A` value in an `Either<A, Never>`.
     #[inline]
     pub fn into_a(self) -> A {
         match self {
@@ -105,7 +104,7 @@ impl<A> Either<A, Never> {
 }
 
 impl<B> Either<Never, B> {
-    /// Return the `B` value in an `Either<Never, B>`.
+    /// Returns the `B` value in an `Either<Never, B>`.
     #[inline]
     pub fn into_b(self) -> B {
         match self {
@@ -250,16 +249,6 @@ where
     }
 }
 
-impl<A, B> GrowBufferMut for Either<A, B>
-where
-    A: GrowBufferMut,
-    B: GrowBufferMut,
-{
-    fn reset_zero(&mut self) {
-        call_method_on_either!(self, reset_zero)
-    }
-}
-
 impl<A, B> TargetBuffer for Either<A, B>
 where
     A: TargetBuffer,
@@ -289,10 +278,10 @@ impl<A: AsMut<[u8]>, B: AsMut<[u8]>> AsMut<[u8]> for Either<A, B> {
     }
 }
 
-/// A byte slice wrapper providing [`Buffer`] functionality.
+/// A byte slice wrapper providing buffer functionality.
 ///
 /// A `Buf` wraps a byte slice (a type which implements `AsRef<[u8]>` or
-/// `AsMut<[u8]>`) and implements `Buffer` and `BufferMut` by keeping track of
+/// `AsMut<[u8]>`) and implements various buffer traits by keeping track of
 /// prefix, body, and suffix offsets within the byte slice.
 #[derive(Clone, Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
@@ -387,7 +376,6 @@ impl<B: AsRef<[u8]>> GrowBuffer for Buf<B> {
     }
 }
 impl<B: AsRef<[u8]> + AsMut<[u8]>> ContiguousBufferMutImpl for Buf<B> {}
-impl<B: AsRef<[u8]> + AsMut<[u8]>> GrowBufferMut for Buf<B> {}
 impl<B: AsRef<[u8]> + AsMut<[u8]>> TargetBuffer for Buf<B> {
     fn with_parts<O, F>(&mut self, f: F) -> O
     where
@@ -517,7 +505,7 @@ pub struct PacketConstraints {
 }
 
 impl PacketConstraints {
-    /// Construct a new `PacketConstraints`.
+    /// Constructs a new `PacketConstraints`.
     ///
     /// # Panics
     ///
@@ -536,7 +524,7 @@ impl PacketConstraints {
         )
     }
 
-    /// Try to construct a new `PacketConstraints`.
+    /// Tries to construct a new `PacketConstraints`.
     ///
     /// `new` returns `None` if the provided values violate the validity
     /// properties of `PacketConstraints` - if `max_body_len < min_body_len`, or
@@ -573,17 +561,17 @@ impl PacketConstraints {
         self.footer_len
     }
 
-    /// The minimum length (in bytes) of body required by this packet in order
-    /// to avoid adding padding.
+    /// The minimum body length (in bytes) required by this packet in order to
+    /// avoid adding padding.
     ///
     /// `min_body_len` returns the minimum number of body bytes required in
     /// order to avoid adding padding. Note that, if padding bytes are required,
-    /// they may not necessarily belong immediately following the body depending
-    /// on which packet layer imposes the minimum. In particular, in a nested
-    /// packet, padding goes after the body of the layer which imposes the
-    /// minimum. This means that, if the layer that imposes the minimum is not
-    /// the innermost one, then padding must be added not after the innermost
-    /// body, but instead in between footers.
+    /// they may not necessarily belong immediately following the body,
+    /// depending on which packet layer imposes the minimum. In particular, in a
+    /// nested packet, padding goes after the body of the layer which imposes
+    /// the minimum. This means that, if the layer that imposes the minimum is
+    /// not the innermost one, then padding must be added not after the
+    /// innermost body, but instead in between footers.
     /// [`NestedPacketBuilder::serialize_into`] is responsible for inserting
     /// padding when serializing nested packets.
     ///
@@ -617,9 +605,9 @@ impl PacketConstraints {
 /// documentation for more details.
 ///
 /// `()` may be used as an "empty" `PacketBuilder` with no header, footer,
-/// minimum body length requirement or maximum body length requirement.
+/// minimum body length requirement, or maximum body length requirement.
 pub trait PacketBuilder {
-    /// Get the constraints for this `PacketBuilder`.
+    /// Gets the constraints for this `PacketBuilder`.
     fn constraints(&self) -> PacketConstraints;
 
     /// Serializes this packet into an existing buffer.
@@ -653,7 +641,7 @@ pub trait PacketBuilder {
 /// One or more nested [`PacketBuilder`]s.
 ///
 /// A `NestedPacketBuilder` represents one or more `PacketBuilder`s nested
-/// inside of each other. Two `NestedPacketBuilders`, `a` and `b`, can be
+/// inside of each other. Two `NestedPacketBuilder`s, `a` and `b`, can be
 /// composed by calling `a.encapsulate(b)`. The resulting `NestedPacketBuilder`
 /// has a header comprising `b`'s header followed by `a`'s header, and has a
 /// footer comprising `a`'s footer followed by `b`'s footer. It also has minimum
@@ -662,7 +650,7 @@ pub trait PacketBuilder {
 ///
 /// [`encapsulate`]: crate::serialize::NestedPacketBuilder::encapsulate
 pub trait NestedPacketBuilder {
-    /// Get the constraints for this `NestedPacketBuilder`.
+    /// Gets the constraints for this `NestedPacketBuilder`.
     ///
     /// If `constraints` returns `None`, it means that a valid
     /// [`PacketConstraints`] cannot be constructed. Since
@@ -686,7 +674,7 @@ pub trait NestedPacketBuilder {
     /// [`serialize_into`]: crate::serialize::NestedPacketBuilder::serialize_into
     fn try_constraints(&self) -> Option<PacketConstraints>;
 
-    /// Serialize this `NestedPacketBuilder` into a buffer.
+    /// Serializes this `NestedPacketBuilder` into a buffer.
     ///
     /// `serialize_into` takes a buffer containing a body, and serializes this
     /// `NestedPacketBuilder`'s headers and footers before and after that body.
@@ -736,7 +724,7 @@ pub trait NestedPacketBuilder {
     /// `serialize_into` if it returns `Some`.
     fn serialize_into<B: TargetBuffer>(&self, buffer: &mut B);
 
-    /// Encapsulate this `NestedPacketBuilder` inside of another one.
+    /// Encapsulates this `NestedPacketBuilder` inside of another one.
     ///
     /// If `a` and `b` are `NestedPacketBuilder`s with [`PacketConstraints`]
     /// `ac` and `bc`, then `a.encapsulate(b)` produces a `NestedPacketBuilder`
@@ -775,7 +763,8 @@ pub trait NestedPacketBuilder {
     // TODO(joshlf): Clarify that the MTU created by with_mtu apply outside of
     // the NestedPacketBuilder.
 
-    /// Construct a new `NestedPacketBuilder` with an additional MTU constraint.
+    /// Constructs a new `NestedPacketBuilder` with an additional MTU
+    /// constraint.
     ///
     /// The returned `NestedPacketBuilder` will have a maximum body length
     /// constraint equal to the minimum of its original maximum body length
@@ -846,14 +835,14 @@ pub struct Nested<I, O> {
 }
 
 impl<I, O> Nested<I, O> {
-    /// Consume this `Nested` and return the inner object, discarding the outer
+    /// Consumes this `Nested` and return the inner object, discarding the outer
     /// one.
     #[inline]
     pub fn into_inner(self) -> I {
         self.inner
     }
 
-    /// Consume this `Nested` and return the outer object, discarding the inner
+    /// Consumes this `Nested` and return the outer object, discarding the inner
     /// one.
     #[inline]
     pub fn into_outer(self) -> O {
@@ -900,7 +889,7 @@ impl<I: NestedPacketBuilder, O: NestedPacketBuilder> NestedPacketBuilder for Nes
         // the packet which imposes the minimum body length requirement. This
         // happens naturally as a consequence of the fact that the
         // implementation of `NestedPacketBuilder` for `PB: PacketBuilder` adds
-        // its own padding. Inner `PacketBuilders` which do not have a minimum
+        // its own padding. Inner `PacketBuilder`s which do not have a minimum
         // body length requirement will not add padding and, when the
         // `PacketBuilder` with the minimum body length requirement is reached,
         // padding will still be required (assuming the minimum isn't already
@@ -942,7 +931,7 @@ pub struct MtuPacketBuilder<B> {
 }
 
 impl<B> MtuPacketBuilder<B> {
-    /// Consume this `MtuPacketBuilder` and return the inner `PacketBuilder`.
+    /// Consumes this `MtuPacketBuilder` and return the inner `PacketBuilder`.
     #[inline]
     pub fn into_inner(self) -> B {
         self.inner
@@ -966,8 +955,8 @@ impl<PB: NestedPacketBuilder> NestedPacketBuilder for MtuPacketBuilder<PB> {
     }
 }
 
-/// A builder capable of serializing packets into an existing buffer, and which
-/// do not encapsulate other packets.
+/// A builder capable of serializing packets - which do not encapsulate other
+/// packets - into an existing buffer.
 ///
 /// An `InnerPacketBuilder` describes a packet, and is capable of serializing
 /// that packet into an existing buffer via the `serialize` method. Unlike the
@@ -995,10 +984,12 @@ pub trait InnerPacketBuilder {
     /// stored in the same buffer.
     fn serialize(&self, buffer: &mut [u8]);
 
-    /// Convert this `InnerPacketBuilder` into a `Serializer`.
+    /// Converts this `InnerPacketBuilder` into a [`Serializer`].
     ///
     /// `into_serializer` is like [`into_serializer_with`], except that no
     /// buffer is provided for reuse in serialization.
+    ///
+    /// [`into_serializer_with`]: crate::serialize::InnerPacketBuilder::into_serializer_with
     #[inline]
     fn into_serializer(self) -> InnerSerializer<Self, EmptyBuf>
     where
@@ -1007,8 +998,8 @@ pub trait InnerPacketBuilder {
         self.into_serializer_with(EmptyBuf)
     }
 
-    /// Convert this `InnerPacketBuilder` into a `Serializer` with a buffer that
-    /// can be used for serialization.
+    /// Converts this `InnerPacketBuilder` into a [`Serializer`] with a buffer
+    /// that can be used for serialization.
     ///
     /// `into_serializer_with` consumes a buffer and converts this
     /// `InnerPacketBuilder` into a type which implements `Serialize` by
@@ -1087,7 +1078,9 @@ impl<'a> InnerPacketBuilder for Vec<u8> {
 /// was exceeded.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum SerializeError<A> {
+    /// A new buffer could not be allocated.
     Alloc(A),
+    /// An MTU constraint was exceeded.
     Mtu,
 }
 
@@ -1150,9 +1143,9 @@ pub trait BufferProvider<Input, Output> {
     /// [`reuse_or_realloc`]: crate::serialize::BufferProvider::reuse_or_realloc
     type Error;
 
-    /// Consume an input buffer and attempt to produce an output buffer with the
-    /// given constraints, either by reusing the input buffer or by allocating a
-    /// new one and copying the body into it.
+    /// Consumes an input buffer and attempts to produce an output buffer with
+    /// the given constraints, either by reusing the input buffer or by
+    /// allocating a new one and copying the body into it.
     ///
     /// `reuse_or_realloc` consumes a buffer by value, and produces a new buffer
     /// with the following invariants:
@@ -1193,6 +1186,7 @@ pub trait BufferProvider<Input, Output> {
 pub trait BufferAlloc<Output> {
     type Error;
 
+    /// Attempts to allocate a new buffer of size `len`.
     fn alloc(self, len: usize) -> Result<Output, Self::Error>;
 }
 
@@ -1214,7 +1208,7 @@ impl BufferAlloc<Never> for () {
     }
 }
 
-/// Allocate a new `Buf<Vec<u8>>`.
+/// Allocates a new `Buf<Vec<u8>>`.
 ///
 /// `new_buf_vec(len)` is shorthand for `Ok(Buf::new(vec![0; len], ..))`. It
 /// implements [`BufferAlloc<Buf<Vec<u8>>, Error = Never>`], and, thanks to a
@@ -1228,7 +1222,7 @@ pub fn new_buf_vec(len: usize) -> Result<Buf<Vec<u8>>, Never> {
     Ok(Buf::new(vec![0; len], ..))
 }
 
-/// Attempt to reuse a buffer for the purposes of implementing
+/// Attempts to reuse a buffer for the purposes of implementing
 /// [`BufferProvider::reuse_or_realloc`].
 ///
 /// `try_reuse_buffer` attempts to reuse an existing buffer to satisfy the given
@@ -1362,15 +1356,10 @@ impl<B: ReusableBuffer, A: BufferAlloc<B>> BufferProvider<B, B> for A {
 }
 
 pub trait Serializer: Sized {
-    // TODO(joshlf): Remove this bound once implied bounds (#44491) are
-    // implemented, so that a downstream crate can do something like:
-    //   trait Serializer: packet::Serializer where Self::Buffer: BufferMut {}
-    //   impl<S: packet::Serializer> Serializer for S where Self::Buffer: BufferMut {}
-
     /// The type of buffers returned from serialization methods on this trait.
     type Buffer;
 
-    /// Serialize this `Serializer`, producing a buffer.
+    /// Serializes this `Serializer`, producing a buffer.
     ///
     /// `serialize` accepts a [`PacketBuilder`] and a [`BufferProvider`], and
     /// produces a buffer which contains the contents of this `Serializer`
@@ -1392,7 +1381,7 @@ pub trait Serializer: Sized {
         provider: P,
     ) -> Result<B, (SerializeError<P::Error>, Self)>;
 
-    /// Serialize this `Serializer`, allocating a [`Buf<Vec<u8>>`] if the
+    /// Serializes this `Serializer`, allocating a [`Buf<Vec<u8>>`] if the
     /// contained buffer isn't large enough.
     ///
     /// `serialize_vec` is like [`serialize`], except that, if the contained
@@ -1418,8 +1407,8 @@ pub trait Serializer: Sized {
         self.serialize(outer, new_buf_vec)
     }
 
-    /// Serialize this `Serializer`, failing if the existing buffer is not large
-    /// enough.
+    /// Serializes this `Serializer`, failing if the existing buffer is not
+    /// large enough.
     ///
     /// `serialize_no_alloc` is like [`serialize`], except that it will fail if
     /// the existing buffer isn't large enough. If the buffer is large enough,
@@ -1450,7 +1439,7 @@ pub trait Serializer: Sized {
         })
     }
 
-    /// Serialize this `Serializer` as the outermost packet.
+    /// Serializes this `Serializer` as the outermost packet.
     ///
     /// `serialize_outer` is like [`serialize`], except that it is called when
     /// this `Serializer` describes the outermost packet, not encapsulated in
@@ -1466,7 +1455,7 @@ pub trait Serializer: Sized {
         self.serialize((), provider)
     }
 
-    /// Serialize this `Serializer` as the outermost packet, allocating a
+    /// Serializes this `Serializer` as the outermost packet, allocating a
     /// [`Buf<Vec<u8>>`] if the contained buffer isn't large enough.
     ///
     /// `serialize_vec_outer` is like [`serialize_vec`], except that it is
@@ -1486,7 +1475,7 @@ pub trait Serializer: Sized {
         self.serialize_vec(())
     }
 
-    /// Serialize this `Serializer` as the outermost packet, failing if the
+    /// Serializes this `Serializer` as the outermost packet, failing if the
     /// existing buffer is not large enough.
     ///
     /// `serialize_no_alloc_outer` is like [`serialize_no_alloc`], except that
@@ -1505,7 +1494,7 @@ pub trait Serializer: Sized {
         self.serialize_no_alloc(())
     }
 
-    /// Encapsulate this `Serializer` in another packet, producing a new
+    /// Encapsulates this `Serializer` in another packet, producing a new
     /// `Serializer`.
     ///
     /// `encapsulate` consumes this `Serializer` and a [`PacketBuilder`], and
@@ -1533,7 +1522,7 @@ pub trait Serializer: Sized {
 
 /// A [`Serializer`] constructed from an [`InnerPacketBuilder`].
 ///
-/// An `InnerSerializer` wraps an `InnerPacketBuilder` and a `BufferMut`, and
+/// An `InnerSerializer` wraps an `InnerPacketBuilder` and a buffer, and
 /// implements the `Serializer` trait. When a serialization is requested, it
 /// either reuses the stored buffer or allocates a new one large enough to hold
 /// itself and all outer `PacketBuilder`s.
@@ -1547,7 +1536,7 @@ pub struct InnerSerializer<I, B> {
     buffer: B,
 }
 
-impl<I: InnerPacketBuilder, B: BufferMut> Serializer for InnerSerializer<I, B> {
+impl<I: InnerPacketBuilder, B: GrowBuffer + ShrinkBuffer> Serializer for InnerSerializer<I, B> {
     type Buffer = B;
 
     #[inline]
@@ -1591,7 +1580,7 @@ impl<I: InnerPacketBuilder, B: BufferMut> Serializer for InnerSerializer<I, B> {
     }
 }
 
-impl<B: BufferMut> Serializer for B {
+impl<B: GrowBuffer + ShrinkBuffer> Serializer for B {
     type Buffer = B;
 
     #[inline]
@@ -1623,10 +1612,10 @@ pub enum TruncateDirection {
 /// A [`Serializer`] that truncates its body if it would exceed an MTU
 /// constraint.
 ///
-/// `TruncatingSerializer` wraps a [`BufferMut`], and implements `Serializer`.
-/// Unlike the blanket impl of `Serializer` for `B: BufferMut`, if the buffer's
-/// body exceeds the MTU constraint passed to `Serializer::serialize`, the body
-/// is truncated to fit.
+/// `TruncatingSerializer` wraps a buffer, and implements `Serializer`. Unlike
+/// the blanket impl of `Serializer` for `B: GrowBuffer + ShrinkBuffer`, if the
+/// buffer's body exceeds the MTU constraint passed to `Serializer::serialize`,
+/// the body is truncated to fit.
 ///
 /// Note that this does not guarantee that MTU errors will not occur. The MTU
 /// may be small enough that the encapsulating headers alone exceed the MTU.
@@ -1646,7 +1635,7 @@ impl<B> TruncatingSerializer<B> {
     }
 }
 
-impl<B: BufferMut> Serializer for TruncatingSerializer<B> {
+impl<B: GrowBuffer + ShrinkBuffer> Serializer for TruncatingSerializer<B> {
     type Buffer = B;
 
     fn serialize<BB: TargetBuffer, PB: NestedPacketBuilder, P: BufferProvider<B, BB>>(
@@ -2558,8 +2547,6 @@ mod tests {
             assert!(self.range.end <= self.data.len());
         }
     }
-
-    impl<B: BufferMut> GrowBufferMut for ScatterGatherBuf<B> {}
 
     impl<B: BufferMut> TargetBuffer for ScatterGatherBuf<B> {
         fn with_parts<O, F>(&mut self, f: F) -> O
