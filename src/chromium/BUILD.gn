@@ -24,6 +24,7 @@ group("chromium") {
 
 group("web_engine") {
   deps = [
+    ":tzdata_for_web_engine",
     ":web_engine_config",
     ":web_engine_pkg",
   ]
@@ -55,7 +56,6 @@ prebuilt_package("web_engine_pkg") {
 
 group("web_runner") {
   deps = [
-    ":tzdata_for_web_runner",
     ":web_runner_config",
     ":web_runner_pkg",
   ]
@@ -78,9 +78,8 @@ prebuilt_package("web_runner_pkg") {
   debug_archive = debug_archive_base_path + "/web_runner.symbols.tar.bz2"
 }
 
-icu_tzdata_config_data("tzdata_for_web_runner") {
-  for_pkg = "web_runner"
-  data_version = "44"
+icu_tzdata_config_data("tzdata_for_web_engine") {
+  for_pkg = "web_engine"
 }
 
 # Prebuilt FAR tests
@@ -132,13 +131,11 @@ prebuilt_test_manifest("chromium_tests") {
 
 icu_tzdata_config_data("tzdata_for_chromium_tests_base_unittests") {
   for_pkg = "chromium_tests_base_unittests"
-  data_version = "44"
   testonly = true
 }
 
 icu_tzdata_config_data("tzdata_for_base_unittests") {
   for_pkg = "base_unittests"
-  data_version = "44"
   testonly = true
 }
 
