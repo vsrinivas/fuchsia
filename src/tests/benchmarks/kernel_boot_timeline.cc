@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/kernel/cpp/fidl.h>
+#include <lib/inspect/cpp/reader.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/status.h>
 
@@ -10,8 +11,6 @@
 #include <utility>
 
 #include <perftest/results.h>
-
-#include "src/lib/inspect_deprecated/reader.h"
 
 namespace {
 
@@ -35,29 +34,30 @@ perftest::ResultsSet BootTimeline() {
   ZX_ASSERT_MSG(status == ZX_OK, "GetInspectVmo yields status %s",
                 zx_status_get_string(get_status));
 
-  auto result = inspect_deprecated::ReadFromVmo(buffer.vmo);
+  auto result = inspect::ReadFromVmo(buffer.vmo);
   ZX_ASSERT_MSG(result.is_ok(), "ReadFromVmo failed");
   auto root = result.take_value();
   auto timeline = root.GetByPath({"boot", "timeline"});
   ZX_ASSERT_MSG(timeline, "boot.timeline not found");
 
-  const auto& metrics = timeline->node().metrics();
+  const auto& properties = timeline->node().properties();
 
-  ZX_ASSERT(metrics.size() == std::size(kSteps));
+  ZX_ASSERT(properties.size() == std::size(kSteps));
 
   double ms_per_tick = 1000.0 / static_cast<double>(zx_ticks_per_second());
 
   perftest::ResultsSet results;
   int64_t last_step_ticks = 0;
   for (auto [name, result_name] : kSteps) {
-    auto it = std::find_if(metrics.begin(), metrics.end(),
+    auto it = std::find_if(properties.begin(), properties.end(),
                            [name = name](const auto& m) { return m.name() == name; });
-    ZX_ASSERT_MSG(it != metrics.end(), "%s not found", name);
-    ZX_ASSERT_MSG(it->Contains<inspect_deprecated::hierarchy::IntMetric>(),
-                  "All metrics in kSteps are expected to be IntMetric: name: %s actual format: %d",
-                  name, it->format());
+    ZX_ASSERT_MSG(it != properties.end(), "%s not found", name);
+    ZX_ASSERT_MSG(
+        it->Contains<inspect::IntPropertyValue>(),
+        "All properties in kSteps are expected to be IntMetric: name: %s actual format: %d", name,
+        static_cast<int>(it->format()));
 
-    int64_t step_ticks = it->Get<inspect_deprecated::hierarchy::IntMetric>().value();
+    int64_t step_ticks = it->Get<inspect::IntPropertyValue>().value();
     int64_t elapsed = step_ticks - last_step_ticks;
     double elapsed_ms = static_cast<double>(elapsed) * ms_per_tick;
     last_step_ticks = step_ticks;
