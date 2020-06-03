@@ -154,7 +154,7 @@ impl RoutingTestBuilder {
     /// under the given name.
     pub fn add_builtin_runner(
         mut self,
-        name: impl Into<CapabilityName>,
+        name: &str,
         runner: Arc<dyn Runner>,
     ) -> Self {
         self.builtin_runners.insert(name.into(), runner);
@@ -589,7 +589,7 @@ impl RoutingTest {
     /// default reason of BindReason::Eager.
     ///
     /// On success, returns the short name of the component.
-    pub async fn bind_instance(&self, moniker: &AbsoluteMoniker) -> Result<String, anyhow::Error> {
+    pub async fn bind_instance(&self, moniker: &AbsoluteMoniker) -> Result<String, ModelError> {
         self.bind_instance_with_reason(moniker, BindReason::Eager).await
     }
 
@@ -601,7 +601,7 @@ impl RoutingTest {
         &self,
         moniker: &AbsoluteMoniker,
         reason: BindReason,
-    ) -> Result<String, anyhow::Error> {
+    ) -> Result<String, ModelError> {
         self.model.bind(moniker, &reason).await?;
         Ok(match moniker.path().last() {
             Some(part) => part.name().to_string(),

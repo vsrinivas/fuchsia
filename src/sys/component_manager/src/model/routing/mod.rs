@@ -8,7 +8,8 @@ pub use error::RoutingError;
 use {
     crate::{
         capability::{
-            CapabilityProvider, CapabilitySource, ComponentCapability, InternalCapability,
+            CapabilityProvider, CapabilitySource, ComponentCapability, EnvironmentCapability,
+            InternalCapability,
         },
         channel,
         model::{
@@ -538,7 +539,121 @@ async fn find_used_capability_source<'a>(
         let cap_state = CapabilityState::new(&capability);
         return Ok((framework_capability, cap_state));
     }
+    if let Some((cap_source, cap_state)) =
+        find_environment_capability_source(use_decl, target_realm).await?
+    {
+        return Ok((cap_source, cap_state));
+    }
     find_capability_source(capability, target_realm).await
+}
+
+/// Attempts to perform capability routing starting from a `use` of a capability that could be
+/// provided by an environment.  Returns `None` if `use_decl` is not the type of capability
+/// provided by an environment.
+async fn find_environment_capability_source<'a>(
+    use_decl: &'a UseDecl,
+    target_realm: &'a Arc<Realm>,
+) -> Result<Option<(CapabilitySource, CapabilityState)>, ModelError> {
+    let cap_state = CapabilityState::new(&ComponentCapability::Use(use_decl.clone()));
+    match use_decl {
+        UseDecl::Runner(cm_rust::UseRunnerDecl { source_name }) => {
+            match target_realm.environment.get_registered_runner(source_name)? {
+                Some((Some(env_realm), reg)) => {
+                    let capability =
+                        ComponentCapability::Environment(EnvironmentCapability::Runner {
+                            source_name: reg.source_name,
+                            source: reg.source.clone(),
+                        });
+                    Ok(Some(
+                        find_environment_component_capability_source(
+                            &env_realm,
+                            capability,
+                            cap_state,
+                            &reg.source,
+                        )
+                        .await?,
+                    ))
+                }
+                Some((None, reg)) => {
+                    // Root environment.
+                    let cap_source = CapabilitySource::AboveRoot {
+                        capability: InternalCapability::Runner(reg.source_name.clone()),
+                    };
+                    Ok(Some((cap_source, cap_state)))
+                }
+                None => {
+                    // If no matching runner was found in the environment, fall back to regular
+                    // capability routing instead.
+                    // TODO: Once all clients are migrated, return an error instead.
+                    Ok(None)
+                }
+            }
+        }
+        _ => Ok(None),
+    }
+}
+
+async fn find_environment_component_capability_source<'a>(
+    env_realm: &Arc<Realm>,
+    capability: ComponentCapability,
+    cap_state: CapabilityState,
+    source: &cm_rust::RegistrationSource,
+) -> Result<(CapabilitySource, CapabilityState), ModelError> {
+    let env_realm_state = env_realm.lock_resolved_state().await?;
+    let decl = env_realm_state.decl();
+    match &source {
+        cm_rust::RegistrationSource::Self_ => {
+            let cap_source = find_capability_source_from_self(&env_realm, &capability, decl);
+            Ok((cap_source, cap_state))
+        }
+        cm_rust::RegistrationSource::Realm => {
+            let starting_realm = env_realm.try_get_parent()?;
+            let mut pos = WalkPosition {
+                capability,
+                cap_state,
+                last_child_moniker: env_realm.abs_moniker.leaf().cloned(),
+                realm: starting_realm,
+            };
+            if let Some(cap_source) = walk_offer_chain(&mut pos).await? {
+                return Ok((cap_source, pos.cap_state));
+            }
+            let cap_source = walk_expose_chain(&mut pos).await?;
+            Ok((cap_source, pos.cap_state))
+        }
+        cm_rust::RegistrationSource::Child(child_name) => {
+            let partial = PartialMoniker::new(child_name.into(), None);
+            let realm = Some(env_realm_state.get_live_child_realm(&partial).ok_or_else(|| {
+                ModelError::from(RoutingError::environment_from_child_expose_not_found(
+                    &partial,
+                    &env_realm.abs_moniker,
+                    capability.type_name(),
+                    capability.source_id(),
+                ))
+            })?);
+            let mut pos = WalkPosition { capability, cap_state, last_child_moniker: None, realm };
+            let cap_source = walk_expose_chain(&mut pos).await?;
+            Ok((cap_source, pos.cap_state))
+        }
+    }
+}
+
+fn find_capability_source_from_self(
+    env_realm: &Arc<Realm>,
+    capability: &ComponentCapability,
+    decl: &cm_rust::ComponentDecl,
+) -> CapabilitySource {
+    match capability {
+        ComponentCapability::Environment(EnvironmentCapability::Runner { .. }) => {
+            let runner_decl = capability.find_runner_source(decl).expect("missing runner").clone();
+            CapabilitySource::Component {
+                capability: ComponentCapability::Runner(runner_decl),
+                realm: env_realm.as_weak(),
+            }
+        }
+        _ => {
+            panic!("Capability has invalid type: {:?}", capability);
+        }
+    }
 }
 
 /// Finds the providing realm and path of a directory exposed by the root realm to component
@@ -628,7 +743,7 @@ async fn find_capability_source<'a>(
     let mut pos = WalkPosition {
         capability,
         cap_state,
-        last_child_moniker: target_realm.abs_moniker.path().last().map(|c| c.clone()),
+        last_child_moniker: target_realm.abs_moniker.leaf().cloned(),
         realm: starting_realm,
     };
     if let Some(source) = walk_offer_chain(&mut pos).await? {
@@ -691,6 +806,13 @@ async fn walk_offer_chain<'a>(
                 ComponentCapability::Use(_) => {
                     ModelError::from(RoutingError::use_from_realm_not_found(
                         &pos.abs_last_child_moniker(),
+                        pos.capability.source_id(),
+                    ))
+                }
+                ComponentCapability::Environment(_) => {
+                    ModelError::from(RoutingError::environment_from_realm_not_found(
+                        &pos.abs_last_child_moniker(),
+                        pos.capability.type_name(),
                         pos.capability.source_id(),
                     ))
                 }
@@ -882,6 +1004,19 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                     ComponentCapability::UsedExpose(_) => {
                         ModelError::from(RoutingError::used_expose_not_found(
                             pos.moniker(),
+                            pos.capability.source_id(),
+                        ))
+                    }
+                    ComponentCapability::Environment(_) => {
+                        let partial = pos
+                            .moniker()
+                            .leaf()
+                            .expect("impossible source above root")
+                            .to_partial();
+                        ModelError::from(RoutingError::environment_from_child_expose_not_found(
+                            &partial,
+                            pos.moniker().parent().as_ref().expect("impossible source above root"),
+                            pos.capability.type_name(),
                             pos.capability.source_id(),
                         ))
                     }

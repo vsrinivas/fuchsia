@@ -41,6 +41,10 @@ impl BuiltinRunner {
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
+
+    pub fn name(&self) -> &CapabilityName {
+        &self.name
+    }
 }
 
 #[async_trait]
@@ -286,6 +290,59 @@ mod tests {
                 ComponentDecl {
                     uses: vec![UseDecl::Runner(UseRunnerDecl {
                         source_name: CapabilityName("dwarf".to_string()),
+                    })],
+                    ..default_component_decl()
+                },
+            ),
+        ];
+
+        // Set up the system.
+        let universe = RoutingTestBuilder::new("a", components)
+            .add_builtin_runner("elf", mock_runner.clone())
+            .build()
+            .await;
+
+        // Bind the root component.
+        universe.bind_instance(&vec!["b:0"].into()).await.expect("bind failed");
+
+        // Ensure the instances started up.
+        mock_runner.wait_for_url("test:///a_resolved").await;
+        mock_runner.wait_for_url("test:///b_resolved").await;
+    }
+
+    //   (cm)
+    //    |
+    //    a
+    //    |
+    //    b
+    //
+    // (cm): registers runner "elf".
+    // b: uses runner "elf".
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn use_runner_from_component_manager_environment() {
+        let mock_runner = Arc::new(MockRunner::new());
+
+        let components = vec![
+            (
+                "a",
+                ComponentDecl {
+                    uses: vec![UseDecl::Runner(UseRunnerDecl {
+                        source_name: CapabilityName("elf".to_string()),
+                    })],
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                        environment: None,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    uses: vec![UseDecl::Runner(UseRunnerDecl {
+                        source_name: CapabilityName("elf".to_string()),
                     })],
                     ..default_component_decl()
                 },

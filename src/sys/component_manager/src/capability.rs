@@ -265,6 +265,8 @@ pub trait CapabilityProvider: Send + Sync {
 #[derive(Clone, Debug)]
 pub enum ComponentCapability {
     Use(UseDecl),
+    /// Models a capability used from the environment.
+    Environment(EnvironmentCapability),
     Expose(ExposeDecl),
     /// Models a capability hosted from the exposed dir which is used at runtime.
     UsedExpose(ExposeDecl),
@@ -285,6 +287,9 @@ impl ComponentCapability {
                 UseDecl::Runner(_) => "runner",
                 UseDecl::Event(_) => "event",
                 UseDecl::EventStream(_) => "event_stream",
+            },
+            ComponentCapability::Environment(env) => match env {
+                EnvironmentCapability::Runner { .. } => "runner",
             },
             ComponentCapability::Expose(expose) | ComponentCapability::UsedExpose(expose) => {
                 match expose {
@@ -316,6 +321,9 @@ impl ComponentCapability {
                 UseDecl::Protocol(UseProtocolDecl { source_path, .. }) => Some(source_path),
                 UseDecl::Directory(UseDirectoryDecl { source_path, .. }) => Some(source_path),
                 _ => None,
+            },
+            ComponentCapability::Environment(env_cap) => match env_cap {
+                EnvironmentCapability::Runner { .. } => None,
             },
             ComponentCapability::Expose(expose) => match expose {
                 ExposeDecl::Protocol(ExposeProtocolDecl { source_path, .. }) => Some(source_path),
@@ -350,21 +358,25 @@ impl ComponentCapability {
     /// Return the source name of the capability, if one exists.
     pub fn source_name<'a>(&self) -> Option<&CapabilityName> {
         match self {
-            ComponentCapability::Expose(ExposeDecl::Runner(ExposeRunnerDecl {
-                source_name,
-                ..
-            })) => Some(source_name),
-            ComponentCapability::Offer(OfferDecl::Runner(OfferRunnerDecl {
-                source_name, ..
-            })) => Some(source_name),
-            ComponentCapability::Use(UseDecl::Event(UseEventDecl { source_name, .. })) => {
-                Some(source_name)
-            }
-            ComponentCapability::Offer(OfferDecl::Event(OfferEventDecl {
-                source_name, ..
-            })) => Some(source_name),
-            ComponentCapability::Use(UseDecl::Storage(d)) => Some(d.type_name()),
-            ComponentCapability::Offer(OfferDecl::Storage(d)) => Some(d.type_name()),
+            ComponentCapability::Use(use_) => match use_ {
+                UseDecl::Runner(UseRunnerDecl { source_name, .. }) => Some(source_name),
+                UseDecl::Event(UseEventDecl { source_name, .. }) => Some(source_name),
+                UseDecl::Storage(d) => Some(d.type_name()),
+                _ => None,
+            },
+            ComponentCapability::Environment(env_cap) => match env_cap {
+                EnvironmentCapability::Runner { source_name, .. } => Some(source_name),
+            },
+            ComponentCapability::Expose(expose) => match expose {
+                ExposeDecl::Runner(ExposeRunnerDecl { source_name, .. }) => Some(source_name),
+                _ => None,
+            },
+            ComponentCapability::Offer(offer) => match offer {
+                OfferDecl::Runner(OfferRunnerDecl { source_name, .. }) => Some(source_name),
+                OfferDecl::Event(OfferEventDecl { source_name, .. }) => Some(source_name),
+                OfferDecl::Storage(d) => Some(d.type_name()),
+                _ => None,
+            },
             _ => None,
         }
     }
@@ -415,6 +427,12 @@ impl ComponentCapability {
                 ComponentCapability::Expose(ExposeDecl::Runner(parent_expose)),
                 ExposeDecl::Runner(expose),
             ) => parent_expose.source_name == expose.target_name,
+            (
+                ComponentCapability::Environment(EnvironmentCapability::Runner {
+                    source_name, ..
+                }),
+                ExposeDecl::Runner(expose),
+            ) => source_name == &expose.target_name,
             // Directory exposed to me that matches a `storage` declaration which consumes it.
             (ComponentCapability::Storage(parent_storage), ExposeDecl::Directory(expose)) => {
                 parent_storage.source_path == expose.target_path
@@ -454,109 +472,125 @@ impl ComponentCapability {
         decl: &'a ComponentDecl,
         child_moniker: &ChildMoniker,
     ) -> Option<&'a OfferDecl> {
-        decl.offers.iter().find(|&offer| match (self, offer) {
-            // Protocol offered to me that matches a service `use` or `offer` declaration.
-            (
-                ComponentCapability::Use(UseDecl::Protocol(child_use)),
-                OfferDecl::Protocol(offer),
-            ) => Self::is_offer_protocol_or_directory_match(
-                child_moniker,
-                &child_use.source_path,
-                &offer.target,
-                &offer.target_path,
-            ),
-            (
-                ComponentCapability::Offer(OfferDecl::Protocol(child_offer)),
-                OfferDecl::Protocol(offer),
-            ) => Self::is_offer_protocol_or_directory_match(
-                child_moniker,
-                &child_offer.source_path,
-                &offer.target,
-                &offer.target_path,
-            ),
-            // Directory offered to me that matches a directory `use` or `offer` declaration.
-            (
-                ComponentCapability::Use(UseDecl::Directory(child_use)),
-                OfferDecl::Directory(offer),
-            ) => Self::is_offer_protocol_or_directory_match(
-                child_moniker,
-                &child_use.source_path,
-                &offer.target,
-                &offer.target_path,
-            ),
-            (
-                ComponentCapability::Offer(OfferDecl::Directory(child_offer)),
-                OfferDecl::Directory(offer),
-            ) => Self::is_offer_protocol_or_directory_match(
-                child_moniker,
-                &child_offer.source_path,
-                &offer.target,
-                &offer.target_path,
-            ),
-            // Directory offered to me that matches a `storage` declaration which consumes it.
-            (ComponentCapability::Storage(child_storage), OfferDecl::Directory(offer)) => {
-                Self::is_offer_protocol_or_directory_match(
+        decl.offers.iter().find(|&offer| {
+            match (self, offer) {
+                // Protocol offered to me that matches a service `use` or `offer` declaration.
+                (
+                    ComponentCapability::Use(UseDecl::Protocol(child_use)),
+                    OfferDecl::Protocol(offer),
+                ) => Self::is_offer_protocol_or_directory_match(
                     child_moniker,
-                    &child_storage.source_path,
+                    &child_use.source_path,
                     &offer.target,
                     &offer.target_path,
-                )
-            }
-            // Storage offered to me.
-            (ComponentCapability::Use(UseDecl::Storage(child_use)), OfferDecl::Storage(offer)) => {
-                Self::is_offer_storage_match(
+                ),
+                (
+                    ComponentCapability::Offer(OfferDecl::Protocol(child_offer)),
+                    OfferDecl::Protocol(offer),
+                ) => Self::is_offer_protocol_or_directory_match(
+                    child_moniker,
+                    &child_offer.source_path,
+                    &offer.target,
+                    &offer.target_path,
+                ),
+                // Directory offered to me that matches a directory `use` or `offer` declaration.
+                (
+                    ComponentCapability::Use(UseDecl::Directory(child_use)),
+                    OfferDecl::Directory(offer),
+                ) => Self::is_offer_protocol_or_directory_match(
+                    child_moniker,
+                    &child_use.source_path,
+                    &offer.target,
+                    &offer.target_path,
+                ),
+                (
+                    ComponentCapability::Offer(OfferDecl::Directory(child_offer)),
+                    OfferDecl::Directory(offer),
+                ) => Self::is_offer_protocol_or_directory_match(
+                    child_moniker,
+                    &child_offer.source_path,
+                    &offer.target,
+                    &offer.target_path,
+                ),
+                // Directory offered to me that matches a `storage` declaration which consumes it.
+                (ComponentCapability::Storage(child_storage), OfferDecl::Directory(offer)) => {
+                    Self::is_offer_protocol_or_directory_match(
+                        child_moniker,
+                        &child_storage.source_path,
+                        &offer.target,
+                        &offer.target_path,
+                    )
+                }
+                // Storage offered to me.
+                (
+                    ComponentCapability::Use(UseDecl::Storage(child_use)),
+                    OfferDecl::Storage(offer),
+                ) => Self::is_offer_storage_match(
                     child_moniker,
                     child_use.type_(),
                     offer.target(),
                     offer.type_(),
-                )
-            }
-            (
-                ComponentCapability::Offer(OfferDecl::Storage(child_offer)),
-                OfferDecl::Storage(offer),
-            ) => Self::is_offer_storage_match(
-                child_moniker,
-                child_offer.type_(),
-                offer.target(),
-                offer.type_(),
-            ),
-            // Runners offered from parent.
-            (ComponentCapability::Use(UseDecl::Runner(child_use)), OfferDecl::Runner(offer)) => {
-                Self::is_offer_runner_or_event_match(
+                ),
+                (
+                    ComponentCapability::Offer(OfferDecl::Storage(child_offer)),
+                    OfferDecl::Storage(offer),
+                ) => Self::is_offer_storage_match(
+                    child_moniker,
+                    child_offer.type_(),
+                    offer.target(),
+                    offer.type_(),
+                ),
+                // Runners offered from parent.
+                (
+                    ComponentCapability::Use(UseDecl::Runner(child_use)),
+                    OfferDecl::Runner(offer),
+                ) => Self::is_offer_runner_or_event_match(
                     child_moniker,
                     &child_use.source_name,
                     &offer.target,
                     &offer.target_name,
-                )
-            }
-            (
-                ComponentCapability::Offer(OfferDecl::Runner(child_offer)),
-                OfferDecl::Runner(parent_offer),
-            ) => Self::is_offer_runner_or_event_match(
-                child_moniker,
-                &child_offer.source_name,
-                &parent_offer.target,
-                &parent_offer.target_name,
-            ),
-            // Events offered from parent.
-            (ComponentCapability::Use(UseDecl::Event(child_use)), OfferDecl::Event(offer)) => {
-                Self::is_offer_runner_or_event_match(
+                ),
+                (
+                    ComponentCapability::Offer(OfferDecl::Runner(child_offer)),
+                    OfferDecl::Runner(offer),
+                ) => Self::is_offer_runner_or_event_match(
                     child_moniker,
-                    &child_use.source_name,
+                    &child_offer.source_name,
                     &offer.target,
                     &offer.target_name,
-                )
+                ),
+                (
+                    ComponentCapability::Environment(EnvironmentCapability::Runner {
+                        source_name,
+                        ..
+                    }),
+                    OfferDecl::Runner(offer),
+                ) => Self::is_offer_runner_or_event_match(
+                    child_moniker,
+                    &source_name,
+                    &offer.target,
+                    &offer.target_name,
+                ),
+                // Events offered from parent.
+                (ComponentCapability::Use(UseDecl::Event(child_use)), OfferDecl::Event(offer)) => {
+                    Self::is_offer_runner_or_event_match(
+                        child_moniker,
+                        &child_use.source_name,
+                        &offer.target,
+                        &offer.target_name,
+                    )
+                }
+                (
+                    ComponentCapability::Offer(OfferDecl::Event(child_offer)),
+                    OfferDecl::Event(parent_offer),
+                ) => Self::is_offer_runner_or_event_match(
+                    child_moniker,
+                    &child_offer.source_name,
+                    &parent_offer.target,
+                    &parent_offer.target_name,
+                ),
+                _ => false,
             }
-            (
-                ComponentCapability::Offer(OfferDecl::Event(child_offer)),
-                OfferDecl::Event(parent_offer),
-            ) => Self::is_offer_runner_or_event_match(
-                child_moniker,
-                &child_offer.source_name,
-                &parent_offer.target,
-                &parent_offer.target_name,
-            ),
-            _ => false,
         })
     }
 
@@ -655,6 +689,11 @@ fn target_matches_moniker(parent_target: &OfferTarget, child_moniker: &ChildMoni
         }
         _ => false,
     }
+}
+
+#[derive(Clone, Debug)]
+pub enum EnvironmentCapability {
+    Runner { source_name: CapabilityName, source: RegistrationSource },
 }
 
 #[cfg(test)]

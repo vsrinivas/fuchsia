@@ -105,11 +105,39 @@ pub enum RoutingError {
 
     #[error(
         "A `use from realm` declaration was found at `{}` for `{}`, but no matching \
-        `use` declaration was found in the parent",
+        `offer` declaration was found in the parent",
         moniker,
         capability_id
     )]
     UseFromRealmNotFound { moniker: AbsoluteMoniker, capability_id: String },
+
+    #[error(
+        "An `environment` {} registration from `realm` was found at `{}` for `{}`, but no \
+        matching `offer` declaration was found in the parent",
+        capability_type,
+        moniker,
+        capability_id
+    )]
+    EnvironmentFromRealmNotFound {
+        moniker: AbsoluteMoniker,
+        capability_type: String,
+        capability_id: String,
+    },
+
+    #[error(
+        "An `environment` {} registration from `#{}` was found at `{}` for `{}`, but no matching \
+        `expose` declaration was found in the child",
+        capability_type,
+        child_moniker,
+        moniker,
+        capability_id
+    )]
+    EnvironmentFromChildExposeNotFound {
+        child_moniker: PartialMoniker,
+        moniker: AbsoluteMoniker,
+        capability_type: String,
+        capability_id: String,
+    },
 
     #[error(
         "An `offer from realm` declaration was found at `{}` for `{}`, but no matching \
@@ -121,7 +149,7 @@ pub enum RoutingError {
 
     #[error(
         "A `storage` declaration with a backing directory from `realm` was found at `{}` for `{}`,
-        but no matching `storage` declaration was found in the parent",
+        but no matching `offer` declaration was found in the parent",
         moniker,
         capability_id
     )]
@@ -318,6 +346,32 @@ impl RoutingError {
         capability_id: impl Into<String>,
     ) -> Self {
         Self::UseFromRealmNotFound { moniker: moniker.clone(), capability_id: capability_id.into() }
+    }
+
+    pub fn environment_from_realm_not_found(
+        moniker: &AbsoluteMoniker,
+        capability_type: impl Into<String>,
+        capability_id: impl Into<String>,
+    ) -> Self {
+        Self::EnvironmentFromRealmNotFound {
+            moniker: moniker.clone(),
+            capability_type: capability_type.into(),
+            capability_id: capability_id.into(),
+        }
+    }
+
+    pub fn environment_from_child_expose_not_found(
+        child_moniker: &PartialMoniker,
+        moniker: &AbsoluteMoniker,
+        capability_type: impl Into<String>,
+        capability_id: impl Into<String>,
+    ) -> Self {
+        Self::EnvironmentFromChildExposeNotFound {
+            child_moniker: child_moniker.clone(),
+            moniker: moniker.clone(),
+            capability_type: capability_type.into(),
+            capability_id: capability_id.into(),
+        }
     }
 
     pub fn offer_from_realm_not_found(

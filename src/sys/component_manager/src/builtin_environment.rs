@@ -20,7 +20,7 @@ use {
         fuchsia_base_pkg_resolver, fuchsia_boot_resolver, fuchsia_pkg_resolver,
         model::{
             binding::Binder,
-            environment::{Environment, RunnerRegistry},
+            environment::{Environment, RunnerRegistration, RunnerRegistry},
             error::ModelError,
             event_logger::EventLogger,
             events::{
@@ -147,9 +147,25 @@ impl BuiltinEnvironmentBuilder {
 
     pub async fn build(self) -> Result<BuiltinEnvironment, Error> {
         let args = self.args.unwrap_or_default();
+        let runner_map = self
+            .runners
+            .iter()
+            .map(|r| {
+                (
+                    r.name().clone(),
+                    RunnerRegistration {
+                        source_name: r.name().clone(),
+                        source: cm_rust::RegistrationSource::Self_,
+                    },
+                )
+            })
+            .collect();
         let params = ModelParams {
             root_component_url: args.root_component_url.clone(),
-            root_environment: Environment::new_root(RunnerRegistry::default(), self.resolvers),
+            root_environment: Environment::new_root(
+                RunnerRegistry::new(runner_map),
+                self.resolvers,
+            ),
         };
         let model = Arc::new(Model::new(params));
 

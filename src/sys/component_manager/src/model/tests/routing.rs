@@ -12,7 +12,8 @@ use {
             events::source_factory::EVENT_SOURCE_SYNC_SERVICE_PATH,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             moniker::AbsoluteMoniker,
-            rights, routing,
+            rights,
+            routing::{self, RoutingError},
             testing::{routing_test_helpers::*, test_helpers::*},
         },
     },
@@ -27,6 +28,7 @@ use {
     futures::{join, lock::Mutex, TryStreamExt},
     log::*,
     maplit::hashmap,
+    matches::assert_matches,
     std::{
         convert::{TryFrom, TryInto},
         path::{Path, PathBuf},
@@ -1975,6 +1977,348 @@ async fn use_runner_from_sibling() {
         }
     );
 }
+
+///  a
+///   \
+///    b
+///
+/// a: declares runner "elf" with service "/svc/runner" from "self".
+/// a: registers runner "elf" from self in environment as "hobbit".
+/// b: uses runner "hobbit".
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_runner_from_parent_environment() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .add_child(ChildDeclBuilder::new_lazy_child("b").environment("env").build())
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .add_runner(RunnerRegistration {
+                            source_name: "elf".into(),
+                            source: RegistrationSource::Self_,
+                            target_name: "hobbit".into(),
+                        })
+                        .build(),
+                )
+                .runner(RunnerDecl {
+                    name: "elf".into(),
+                    source: RunnerSource::Self_,
+                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                })
+                .build(),
+        ),
+        ("b", ComponentDeclBuilder::new_empty_component().use_runner("hobbit").build()),
+    ];
+
+    // Set up the system.
+    let (runner_service, mut receiver) =
+        create_service_directory_entry::<fcrunner::ComponentRunnerMarker>();
+    let universe = RoutingTestBuilder::new("a", components)
+        // Component "b" exposes a runner service.
+        .add_outgoing_path("a", CapabilityPath::try_from("/svc/runner").unwrap(), runner_service)
+        .build()
+        .await;
+
+    join!(
+        // Bind "b:0". We expect to see a call to our runner service for the new component.
+        async move {
+            universe.bind_instance(&vec!["b:0"].into()).await.unwrap();
+        },
+        // Wait for a request, and ensure it has the correct URL.
+        async move {
+            assert_eq!(
+                wait_for_runner_request(&mut receiver).await.resolved_url,
+                Some("test:///b_resolved".to_string())
+            );
+        }
+    );
+}
+
+///   a
+///    \
+///     b
+///      \
+///       c
+///
+/// a: declares runner "elf" as service "/svc/runner" from self.
+/// a: offers runner "elf" from self to "b" as "dwarf".
+/// b: registers runner "dwarf" from realm in environment as "hobbit".
+/// c: uses runner "hobbit".
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_runner_from_grandparent_environment() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .add_lazy_child("b")
+                .offer(OfferDecl::Runner(OfferRunnerDecl {
+                    source: OfferRunnerSource::Self_,
+                    source_name: CapabilityName("elf".to_string()),
+                    target: OfferTarget::Child("b".to_string()),
+                    target_name: CapabilityName("dwarf".to_string()),
+                }))
+                .runner(RunnerDecl {
+                    name: "elf".into(),
+                    source: RunnerSource::Self_,
+                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                })
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .add_child(ChildDeclBuilder::new_lazy_child("c").environment("env").build())
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .add_runner(RunnerRegistration {
+                            source_name: "dwarf".into(),
+                            source: RegistrationSource::Realm,
+                            target_name: "hobbit".into(),
+                        })
+                        .build(),
+                )
+                .build(),
+        ),
+        ("c", ComponentDeclBuilder::new_empty_component().use_runner("hobbit").build()),
+    ];
+
+    // Set up the system.
+    let (runner_service, mut receiver) =
+        create_service_directory_entry::<fcrunner::ComponentRunnerMarker>();
+    let universe = RoutingTestBuilder::new("a", components)
+        // Component "a" exposes a runner service.
+        .add_outgoing_path("a", CapabilityPath::try_from("/svc/runner").unwrap(), runner_service)
+        .build()
+        .await;
+
+    join!(
+        // Bind "c:0". We expect to see a call to our runner service for the new component.
+        async move {
+            universe.bind_instance(&vec!["b:0", "c:0"].into()).await.unwrap();
+        },
+        // Wait for a request, and ensure it has the correct URL.
+        async move {
+            assert_eq!(
+                wait_for_runner_request(&mut receiver).await.resolved_url,
+                Some("test:///c_resolved".to_string())
+            );
+        }
+    );
+}
+
+///   a
+///  / \
+/// b   c
+///
+/// a: registers runner "dwarf" from "b" in environment as "hobbit".
+/// b: exposes runner "elf" as service "/svc/runner" from self as "dwarf".
+/// c: uses runner "hobbit".
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_runner_from_sibling_environment() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .add_lazy_child("b")
+                .add_child(ChildDeclBuilder::new_lazy_child("c").environment("env").build())
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .add_runner(RunnerRegistration {
+                            source_name: "dwarf".into(),
+                            source: RegistrationSource::Child("b".into()),
+                            target_name: "hobbit".into(),
+                        })
+                        .build(),
+                )
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::Runner(ExposeRunnerDecl {
+                    source: ExposeSource::Self_,
+                    source_name: CapabilityName("elf".to_string()),
+                    target: ExposeTarget::Realm,
+                    target_name: CapabilityName("dwarf".to_string()),
+                }))
+                .runner(RunnerDecl {
+                    name: "elf".into(),
+                    source: RunnerSource::Self_,
+                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                })
+                .build(),
+        ),
+        ("c", ComponentDeclBuilder::new_empty_component().use_runner("hobbit").build()),
+    ];
+
+    // Set up the system.
+    let (runner_service, mut receiver) =
+        create_service_directory_entry::<fcrunner::ComponentRunnerMarker>();
+    let universe = RoutingTestBuilder::new("a", components)
+        // Component "a" exposes a runner service.
+        .add_outgoing_path("b", CapabilityPath::try_from("/svc/runner").unwrap(), runner_service)
+        .build()
+        .await;
+
+    join!(
+        // Bind "c:0". We expect to see a call to our runner service for the new component.
+        async move {
+            universe.bind_instance(&vec!["c:0"].into()).await.unwrap();
+        },
+        // Wait for a request, and ensure it has the correct URL.
+        async move {
+            assert_eq!(
+                wait_for_runner_request(&mut receiver).await.resolved_url,
+                Some("test:///c_resolved".to_string())
+            );
+        }
+    );
+}
+
+///   a
+///    \
+///     b
+///      \
+///       c
+///
+/// a: declares runner "elf" as service "/svc/runner" from self.
+/// a: registers runner "elf" from realm in environment as "hobbit".
+/// b: creates environment extending from realm.
+/// c: uses runner "hobbit".
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_runner_from_inherited_environment() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .add_child(ChildDeclBuilder::new_lazy_child("b").environment("env").build())
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .add_runner(RunnerRegistration {
+                            source_name: "elf".into(),
+                            source: RegistrationSource::Self_,
+                            target_name: "hobbit".into(),
+                        })
+                        .build(),
+                )
+                .runner(RunnerDecl {
+                    name: "elf".into(),
+                    source: RunnerSource::Self_,
+                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                })
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .add_child(ChildDeclBuilder::new_lazy_child("c").environment("env").build())
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .build(),
+                )
+                .build(),
+        ),
+        ("c", ComponentDeclBuilder::new_empty_component().use_runner("hobbit").build()),
+    ];
+
+    // Set up the system.
+    let (runner_service, mut receiver) =
+        create_service_directory_entry::<fcrunner::ComponentRunnerMarker>();
+    let universe = RoutingTestBuilder::new("a", components)
+        // Component "a" exposes a runner service.
+        .add_outgoing_path("a", CapabilityPath::try_from("/svc/runner").unwrap(), runner_service)
+        .build()
+        .await;
+
+    join!(
+        // Bind "c:0". We expect to see a call to our runner service for the new component.
+        async move {
+            universe.bind_instance(&vec!["b:0", "c:0"].into()).await.unwrap();
+        },
+        // Wait for a request, and ensure it has the correct URL.
+        async move {
+            assert_eq!(
+                wait_for_runner_request(&mut receiver).await.resolved_url,
+                Some("test:///c_resolved".to_string())
+            );
+        }
+    );
+}
+
+///  a
+///   \
+///    b
+///
+/// a: declares runner "elf" with service "/svc/runner" from "self".
+/// a: registers runner "elf" from self in environment as "hobbit".
+/// b: uses runner "hobbit". Fails because "hobbit" was not in environment.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_runner_from_environment_not_found() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .add_child(ChildDeclBuilder::new_lazy_child("b").environment("env").build())
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .add_runner(RunnerRegistration {
+                            source_name: "elf".into(),
+                            source: RegistrationSource::Self_,
+                            target_name: "dwarf".into(),
+                        })
+                        .build(),
+                )
+                .runner(RunnerDecl {
+                    name: "elf".into(),
+                    source: RunnerSource::Self_,
+                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                })
+                .build(),
+        ),
+        ("b", ComponentDeclBuilder::new_empty_component().use_runner("hobbit").build()),
+    ];
+
+    // Set up the system.
+    let (runner_service, _receiver) =
+        create_service_directory_entry::<fcrunner::ComponentRunnerMarker>();
+    let universe = RoutingTestBuilder::new("a", components)
+        // Component "a" exposes a runner service.
+        .add_outgoing_path("a", CapabilityPath::try_from("/svc/runner").unwrap(), runner_service)
+        .build()
+        .await;
+
+    // Bind "b:0". We expect it to fail because routing failed.
+    //
+    // The error we get is UseFromRealmNotFound we fall back to searching for an `offer`
+    // declaration in the parent. Once we remove the fallback, this could be a UseFromEnvironment
+    // error.
+    assert_matches!(
+        universe.bind_instance(&vec!["b:0"].into()).await,
+        Err(ModelError::RoutingError {
+            err: RoutingError::UseFromRealmNotFound { moniker, capability_id }
+        })
+        if moniker == AbsoluteMoniker::from(vec!["b:0"]) && capability_id == "hobbit".to_string());
+}
+
+// TODO: Write a test for environment that extends from None. Currently, this is not
+// straightforward because resolver routing is not implemented yet, which makes it impossible to
+// register a new resolver and have it be usable.
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn expose_from_self_and_child() {
