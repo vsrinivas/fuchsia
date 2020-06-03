@@ -8,6 +8,7 @@ use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_media_sounds::{PlayerMarker, PlayerRequest};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
+use futures::channel::mpsc::UnboundedReceiver;
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::TryStreamExt;
@@ -15,6 +16,12 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 const DURATION: i64 = 1000000000;
+
+/// Send tuple of id and usage.
+pub type SoundEventSender = UnboundedSender<(u32, AudioRenderUsage)>;
+
+/// Receives tuple id and usage for earcon played.
+pub type SoundEventReceiver = UnboundedReceiver<(u32, AudioRenderUsage)>;
 
 /// An implementation of the SoundPlayer for tests.
 pub struct SoundPlayerService {
@@ -25,7 +32,7 @@ pub struct SoundPlayerService {
     sound_mappings: Arc<Mutex<HashMap<u32, AudioRenderUsage>>>,
 
     // The listeners to notify that a sound was played.
-    sound_played_listeners: Arc<Mutex<Vec<UnboundedSender<Result<(), Error>>>>>,
+    sound_played_listeners: Arc<Mutex<Vec<SoundEventSender>>>,
 }
 
 impl SoundPlayerService {
@@ -58,9 +65,13 @@ impl SoundPlayerService {
         }
     }
 
-    // Add a listener to notify when a sound is played.
-    pub async fn add_sound_played_listener(&self, responder: UnboundedSender<Result<(), Error>>) {
-        self.sound_played_listeners.lock().await.push(responder);
+    // Creates a listener to notify when a sound is played.
+    pub async fn create_sound_played_listener(&self) -> SoundEventReceiver {
+        let (sound_played_sender, sound_played_receiver) =
+            futures::channel::mpsc::unbounded::<(u32, AudioRenderUsage)>();
+        self.sound_played_listeners.lock().await.push(sound_played_sender);
+
+        sound_played_receiver
     }
 }
 
@@ -91,7 +102,7 @@ impl Service for SoundPlayerService {
                         sound_mappings_clone.lock().await.insert(id, usage);
                         play_counts_clone.lock().await.entry(id).and_modify(|count| *count += 1);
                         for listener in sound_played_listeners.lock().await.iter() {
-                            listener.unbounded_send(Ok(())).ok();
+                            listener.unbounded_send((id, usage)).ok();
                         }
                         responder.send(&mut Ok(())).unwrap();
                     }

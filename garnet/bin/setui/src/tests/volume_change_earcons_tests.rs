@@ -10,7 +10,7 @@ use {
     crate::tests::fakes::audio_core_service::AudioCoreService,
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
-    crate::tests::fakes::sound_player_service::SoundPlayerService,
+    crate::tests::fakes::sound_player_service::{SoundEventReceiver, SoundPlayerService},
     crate::tests::fakes::usage_reporter_service::UsageReporterService,
     crate::EnvironmentBuilder,
     fidl_fuchsia_media::{
@@ -25,6 +25,7 @@ use {
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_component::server::NestedEnvironment,
     futures::lock::Mutex,
+    futures::StreamExt,
     std::sync::Arc,
 };
 
@@ -35,6 +36,8 @@ const CHANGED_VOLUME_LEVEL_2: f32 = 0.8;
 const MAX_VOLUME_LEVEL: f32 = 1.0;
 const CHANGED_VOLUME_MUTED: bool = true;
 const CHANGED_VOLUME_UNMUTED: bool = false;
+
+const VOLUME_EARCON_ID: u32 = 1;
 
 const INITIAL_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
@@ -177,6 +180,10 @@ fn verify_audio_stream(settings: AudioSettings, stream: AudioStreamSettings) {
         .expect("contains stream");
 }
 
+async fn verify_earcon(receiver: &mut SoundEventReceiver, id: u32) {
+    assert_eq!(receiver.next().await.unwrap(), (id, AudioRenderUsage::Media));
+}
+
 // Test to ensure that when the volume changes, the SoundPlayer receives requests to play the sounds
 // with the correct ids.
 #[fuchsia_async::run_singlethreaded(test)]
@@ -188,8 +195,16 @@ async fn test_sounds() {
     // Simulate initial restoration of media volume.
     set_volume(&audio_proxy, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
 
+    // Create channel to receive notifications for when sounds are played. Used to know when to
+    // check the sound player fake that the sound has been played.
+    let mut sound_played_receiver =
+        fake_services.sound_player.lock().await.create_sound_played_listener().await;
+
     // Test that the volume-changed sound gets played on the soundplayer.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
+
+    verify_earcon(&mut sound_played_receiver, VOLUME_EARCON_ID).await;
+
     let settings = audio_proxy.watch2().await.expect("watch completed");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
     assert!(fake_services.sound_player.lock().await.id_exists(1).await);

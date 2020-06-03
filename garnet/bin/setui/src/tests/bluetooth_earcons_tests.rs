@@ -10,13 +10,13 @@ use {
     crate::tests::fakes::fake_hanging_get_handler::HangingGetHandler,
     crate::tests::fakes::fake_hanging_get_types::ChangedPeers,
     crate::tests::fakes::service_registry::ServiceRegistry,
-    crate::tests::fakes::sound_player_service::SoundPlayerService,
+    crate::tests::fakes::sound_player_service::{SoundEventReceiver, SoundPlayerService},
     crate::EnvironmentBuilder,
     anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth::PeerId,
     fidl_fuchsia_bluetooth_sys::AccessWatchPeersResponder,
+    fidl_fuchsia_media::AudioRenderUsage,
     fuchsia_component::server::NestedEnvironment,
-    futures::channel::mpsc::UnboundedReceiver,
     futures::lock::Mutex,
     futures::StreamExt,
     std::sync::Arc,
@@ -86,9 +86,8 @@ async fn test_sounds() {
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
-    let (sound_played_sender, mut sound_played_receiver) =
-        futures::channel::mpsc::unbounded::<Result<(), Error>>();
-    fake_services.sound_player.lock().await.add_sound_played_listener(sound_played_sender).await;
+    let mut sound_played_receiver =
+        fake_services.sound_player.lock().await.create_sound_played_listener().await;
 
     // Add first connection.
     fake_services.bluetooth.lock().await.connect(PEER_ID_1, false).await.ok();
@@ -148,9 +147,8 @@ async fn test_oobe_connection() {
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
-    let (sound_played_sender, mut sound_played_receiver) =
-        futures::channel::mpsc::unbounded::<Result<(), Error>>();
-    fake_services.sound_player.lock().await.add_sound_played_listener(sound_played_sender).await;
+    let mut sound_played_receiver =
+        fake_services.sound_player.lock().await.create_sound_played_listener().await;
 
     // Add oobe bluetooth connection.
     fake_services.bluetooth.lock().await.connect(PEER_ID_1, true).await.ok();
@@ -199,11 +197,7 @@ async fn test_oobe_connection() {
 
 /// Perform a watch on the sound player fake to wait until a sound has been played.
 async fn watch_for_next_sound_played(
-    sound_played_receiver: &mut UnboundedReceiver<Result<(), Error>>,
-) -> Result<(), Error> {
-    if let Some(response) = sound_played_receiver.next().await {
-        response
-    } else {
-        Err(format_err!("No next event found in stream"))
-    }
+    sound_played_receiver: &mut SoundEventReceiver,
+) -> Result<(u32, AudioRenderUsage), Error> {
+    sound_played_receiver.next().await.ok_or_else(|| format_err!("No next event found in stream"))
 }
