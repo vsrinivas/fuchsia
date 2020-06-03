@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    cobalt_sw_delivery_registry as metrics,
-    tuf::error::Error as TufError,
-};
+use {cobalt_sw_delivery_registry as metrics, tuf::error::Error as TufError};
 
-pub fn tuf_error_as_update_tuf_client_event_code(e: &TufError) -> metrics::UpdateTufClientMetricDimensionResult {
+pub fn tuf_error_as_update_tuf_client_event_code(
+    e: &TufError,
+) -> metrics::UpdateTufClientMetricDimensionResult {
     match e {
         TufError::BadSignature => metrics::UpdateTufClientMetricDimensionResult::BadSignature,
         TufError::Encoding(_) => metrics::UpdateTufClientMetricDimensionResult::Encoding,
@@ -29,19 +28,19 @@ pub fn tuf_error_as_update_tuf_client_event_code(e: &TufError) -> metrics::Updat
         TufError::TargetUnavailable => {
             metrics::UpdateTufClientMetricDimensionResult::TargetUnavailable
         }
-        TufError::UnkonwnHashAlgorithm(_) => {
-            metrics::UpdateTufClientMetricDimensionResult::UnknownHashAlgorithm
-        }
         TufError::UnknownKeyType(_) => {
             metrics::UpdateTufClientMetricDimensionResult::UnknownKeyType
         }
         TufError::VerificationFailure(_) => {
             metrics::UpdateTufClientMetricDimensionResult::VerificationFailure
         }
+        _ => metrics::CreateTufClientMetricDimensionResult::UnexpectedTufErrorVariant,
     }
 }
 
-pub fn tuf_error_as_create_tuf_client_event_code(e: &TufError) -> metrics::CreateTufClientMetricDimensionResult {
+pub fn tuf_error_as_create_tuf_client_event_code(
+    e: &TufError,
+) -> metrics::CreateTufClientMetricDimensionResult {
     match e {
         TufError::BadSignature => metrics::CreateTufClientMetricDimensionResult::BadSignature,
         TufError::Encoding(_) => metrics::CreateTufClientMetricDimensionResult::Encoding,
@@ -63,14 +62,12 @@ pub fn tuf_error_as_create_tuf_client_event_code(e: &TufError) -> metrics::Creat
         TufError::TargetUnavailable => {
             metrics::CreateTufClientMetricDimensionResult::TargetUnavailable
         }
-        TufError::UnkonwnHashAlgorithm(_) => {
-            metrics::CreateTufClientMetricDimensionResult::UnknownHashAlgorithm
-        }
         TufError::UnknownKeyType(_) => {
             metrics::CreateTufClientMetricDimensionResult::UnknownKeyType
         }
         TufError::VerificationFailure(_) => {
             metrics::CreateTufClientMetricDimensionResult::VerificationFailure
         }
+        _ => metrics::CreateTufClientMetricDimensionResult::UnexpectedTufErrorVariant,
     }
 }
