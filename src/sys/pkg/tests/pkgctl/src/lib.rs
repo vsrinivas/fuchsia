@@ -197,19 +197,6 @@ impl TestEnv {
         assert_eq!(*self.space_manager.call_count.lock(), 0);
     }
 
-    fn assert_only_update_manager_called_with(
-        &self,
-        expected_args: Vec<CapturedUpdateManagerRequest>,
-    ) {
-        assert_eq!(self.package_cache.captured_args.lock().len(), 0);
-        assert_eq!(self.package_resolver.captured_args.lock().len(), 0);
-        assert_eq!(self.package_resolver_admin.take_event(), None);
-        assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
-        assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
-        assert_eq!(*self.update_manager.captured_args.lock(), expected_args);
-        assert_eq!(*self.space_manager.call_count.lock(), 0);
-    }
-
     fn assert_only_space_manager_called(&self) {
         assert_eq!(self.package_cache.captured_args.lock().len(), 0);
         assert_eq!(self.package_resolver.captured_args.lock().len(), 0);
@@ -646,38 +633,6 @@ macro_rules! repo_add_tests {
 repo_add_tests! {
     test_repo_add_short: "-f",
     test_repo_add_long: "--file",
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_update_success_started() {
-    let env = TestEnv::new();
-
-    let output = env.run_pkgctl(vec!["update"]).await;
-
-    assert_stdout(&output, "");
-    env.assert_only_update_manager_called_with(vec![CapturedUpdateManagerRequest::CheckNow {
-        options: fidl_update::CheckOptions {
-            initiator: Some(fidl_update::Initiator::User),
-            allow_attaching_to_existing_update_check: Some(true),
-        },
-    }]);
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_update_throttled_is_error() {
-    let env = TestEnv::new();
-    *env.update_manager.check_now_result.lock() =
-        Err(fidl_update::CheckNotStartedReason::Throttled);
-
-    let output = env.run_pkgctl(vec!["update"]).await;
-
-    assert_stderr(&output, "Error: Update check failed to start: Throttled.\n");
-    env.assert_only_update_manager_called_with(vec![CapturedUpdateManagerRequest::CheckNow {
-        options: fidl_update::CheckOptions {
-            initiator: Some(fidl_update::Initiator::User),
-            allow_attaching_to_existing_update_check: Some(true),
-        },
-    }]);
 }
 
 #[fasync::run_singlethreaded(test)]

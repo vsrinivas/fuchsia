@@ -8,7 +8,7 @@ use {
         ExperimentSubCommand, GcCommand, GetHashCommand, OpenCommand, PkgStatusCommand,
         RepoAddCommand, RepoCommand, RepoRemoveCommand, RepoSubCommand, ResolveCommand,
         RuleClearCommand, RuleCommand, RuleListCommand, RuleReplaceCommand, RuleReplaceFileCommand,
-        RuleReplaceJsonCommand, RuleReplaceSubCommand, RuleSubCommand, UpdateCommand,
+        RuleReplaceJsonCommand, RuleReplaceSubCommand, RuleSubCommand,
     },
     anyhow::{bail, format_err, Context as _},
     fidl_fuchsia_pkg::{
@@ -19,7 +19,7 @@ use {
     fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy},
     fidl_fuchsia_pkg_rewrite_ext::{Rule as RewriteRule, RuleConfig},
     fidl_fuchsia_space::ManagerMarker as SpaceManagerMarker,
-    fidl_fuchsia_update as fidl_update, files_async, fuchsia_async as fasync,
+    files_async, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon as zx,
     futures::stream::TryStreamExt,
@@ -275,23 +275,6 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
             }
 
             Ok(0)
-        }
-        Command::Update(UpdateCommand {}) => {
-            let update = connect_to_service::<fidl_update::ManagerMarker>()
-                .context("Failed to connect to update manager service")?;
-            match update
-                .check_now(
-                    fidl_update::CheckOptions {
-                        initiator: Some(fidl_update::Initiator::User),
-                        allow_attaching_to_existing_update_check: Some(true),
-                    },
-                    None,
-                )
-                .await?
-            {
-                Ok(()) => Ok(0),
-                Err(e) => Err(format_err!("Update check failed to start: {:?}.", e).into()),
-            }
         }
         Command::Gc(GcCommand {}) => {
             let space_manager = connect_to_service::<SpaceManagerMarker>()

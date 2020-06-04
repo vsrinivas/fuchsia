@@ -23,7 +23,6 @@ pub enum Command {
     Repo(RepoCommand),
     Rule(RuleCommand),
     Experiment(ExperimentCommand),
-    Update(UpdateCommand),
     Gc(GcCommand),
     GetHash(GetHashCommand),
     PkgStatus(PkgStatusCommand),
@@ -188,15 +187,6 @@ pub struct ExperimentDisableCommand {
     #[argh(positional, from_str_fn(parse_experiment_id))]
     pub experiment: Experiment,
 }
-
-#[derive(FromArgs, Debug, PartialEq)]
-#[argh(
-    subcommand,
-    name = "update",
-    note = "This command is non-blocking. View the syslog for more detailed progress information."
-)]
-/// Perform a system update check and trigger an OTA if available.
-pub struct UpdateCommand {}
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(
@@ -432,14 +422,6 @@ mod tests {
             Args::from_args(CMD_NAME, &["experiment", "disable", "unknown"]),
             Err(argh::EarlyExit { output, status: Err(()) }) if output.contains("unknown")
         );
-    }
-
-    #[test]
-    fn update() {
-        match Args::from_args(CMD_NAME, &["update"]).unwrap() {
-            Args { command: Command::Update(UpdateCommand {}) } => {}
-            result => panic!("unexpected result {:?}", result),
-        }
     }
 
     #[test]
