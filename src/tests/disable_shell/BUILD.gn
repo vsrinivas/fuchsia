@@ -12,15 +12,20 @@ group("tests") {
   deps = []
 
   if (host_os == "linux") {
-    deps += [ ":disable_shell_tests($host_toolchain)" ]
+    deps += [
+      ":shell_default_test($host_toolchain)",
+      ":shell_disabled_test($host_toolchain)",
+      ":shell_enabled_test($host_toolchain)",
+    ]
   }
 }
 
 if (is_linux) {
-  go_library("lib") {
+  go_library("disable_shell_support_lib") {
     testonly = true
 
-    name = "go.fuchsia.dev/fuchsia/src/tests/disable_shell"
+    name = "go.fuchsia.dev/fuchsia/src/tests/disable_shell/support"
+    source_dir = "//src/tests/disable_shell/support"
 
     deps = [ "//src/testing/qemu" ]
   }
@@ -29,9 +34,33 @@ if (is_linux) {
     sources = [ "$root_build_dir/fuchsia.zbi" ]
   }
 
-  go_test("disable_shell_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/disable_shell" ]
-    deps = [ ":lib" ]
-    non_go_deps = [ ":main_zbi" ]
+  # These take >5m (the infra timeout) if they're all in one binary, so they
+  # need to be split into multiple binaries.
+
+  template("split_go_test") {
+    split_name = invoker.target_name
+    go_library(target_name) {
+      testonly = true
+      name = "go.fuchsia.dev/fuchsia/src/tests/disable_shell/$split_name"
+      source_dir = "//src/tests/disable_shell/$split_name"
+      deps = [
+        ":disable_shell_support_lib",
+        "//src/testing/qemu",
+      ]
+    }
+
+    go_test("${split_name}_test") {
+      gopackages =
+          [ "go.fuchsia.dev/fuchsia/src/tests/disable_shell/$split_name" ]
+      deps = [ ":$split_name" ]
+      non_go_deps = [ ":main_zbi" ]
+    }
+  }
+
+  split_go_test("shell_disabled") {
+  }
+  split_go_test("shell_enabled") {
+  }
+  split_go_test("shell_default") {
   }
 }
