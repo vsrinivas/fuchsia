@@ -48,6 +48,19 @@
 struct iwl_mvm;
 struct iwl_mvm_vif;
 
+// Indicates the peer state.
+//
+// For example, when the vif is station, the state is the actual AP's state.
+// When the vif is AP, the state is the state of the station (each station has its own state).
+//
+enum iwl_sta_state {
+  IWL_STA_NOTEXIST,
+  IWL_STA_NONE,
+  IWL_STA_AUTH,
+  IWL_STA_ASSOC,
+  IWL_STA_AUTHORIZED,
+};
+
 /**
  * DOC: DQA - Dynamic Queue Allocation -introduction
  *
@@ -119,11 +132,11 @@ struct iwl_mvm_vif;
  * created and deleted by the %sta_state callback from %ieee80211_ops.
  *
  * The driver holds a map: %fw_id_to_mac_id that allows to fetch a
- * %ieee80211_sta (and the %iwl_mvm_sta embedded into it) based on a fw
- * station index. That way, the driver is able to get the tid related data in
- * O(1) in time sensitive paths (Tx / Tx response / BA notification). These
- * paths are triggered by the fw, and the driver needs to get a pointer to the
- * %ieee80211 structure. This map helps to get that pointer quickly.
+ * %iwl_mvm_st based on a fw station index. That way, the driver is able to get
+ * the tid related data in O(1) in time sensitive paths (Tx / Tx response /
+ * BA notification). These paths are triggered by the fw, and the driver needs
+ * to get a pointer to the %ieee80211 structure. This map helps to get that
+ * pointer quickly.
  */
 
 /**
@@ -331,7 +344,19 @@ struct iwl_mvm_rxq_dup_data {
 } ____cacheline_aligned_in_smp;
 
 /**
+ * struct iwl_mvm_txq - Tx queue structure
+ */
+struct iwl_mvm_txq {
+  list_node_t list;
+  uint16_t txq_id;
+  /* Protects TX path invocation from two places */
+  mtx_t tx_path_lock;
+  bool stopped;
+};
+
+/**
  * struct iwl_mvm_sta - representation of a station in the driver
+ * @addr: ethernet address of the peer.
  * @sta_id: the index of the station in the fw (will be replaced by id_n_color)
  * @tfd_queue_msk: the tfd queues used by the station
  * @mac_id_n_color: the MAC context this station is linked to
@@ -377,13 +402,14 @@ struct iwl_mvm_rxq_dup_data {
  *
  */
 struct iwl_mvm_sta {
+  uint8_t addr[ETH_ALEN];
   uint32_t sta_id;
   uint32_t tfd_queue_msk;
   uint32_t mac_id_n_color;
   uint16_t tid_disable_agg;
   uint16_t max_agg_bufsize;
   enum iwl_sta_type sta_type;
-  enum ieee80211_sta_state sta_state;
+  enum iwl_sta_state sta_state;
   bool bt_reduced_txpower;
   bool next_status_eosp;
   mtx_t lock;
@@ -397,6 +423,12 @@ struct iwl_mvm_sta {
   struct iwl_mvm_key_pn __rcu* ptk_pn[4];
   struct iwl_mvm_rxq_dup_data* dup_data;
 
+  // The TxQ used by this STA.
+  //
+  // Note that the last entry, which the index is IEEE80211_TIDS_MAX, is reserved for
+  // tid=IWL_MAX_TID_COUNT (used for management frames).
+  //
+  struct iwl_mvm_txq* txq[IEEE80211_TIDS_MAX + 1];
   uint8_t reserved_queue;
 
   /* Temporary, until the new TLC will control the Tx protection */
@@ -411,6 +443,8 @@ struct iwl_mvm_sta {
   uint8_t sleep_tx_count;
   uint8_t avg_energy;
   uint8_t tx_ant;
+
+  bool tdls;  // not really used, but add here to make code compile
 };
 
 uint16_t iwl_mvm_tid_queued(struct iwl_mvm* mvm, struct iwl_mvm_tid_data* tid_data);
@@ -442,13 +476,12 @@ struct iwl_mvm_int_sta {
  * @flags: if update==true, this marks what is being changed via ORs of values
  *  from enum iwl_sta_modify_flag. Otherwise, this is ignored.
  */
-int iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct ieee80211_sta* sta, bool update,
-                           unsigned int flags);
-int iwl_mvm_add_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80211_sta* sta);
+zx_status_t iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_sta, bool update,
+                                   unsigned int flags);
+int iwl_mvm_add_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* sta);
 
-static inline int iwl_mvm_update_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                                     struct ieee80211_sta* sta) {
-  return iwl_mvm_sta_send_to_fw(mvm, sta, true, 0);
+static inline int iwl_mvm_update_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_sta) {
+  return iwl_mvm_sta_send_to_fw(mvm, mvm_sta, true, 0);
 }
 
 int iwl_mvm_wait_sta_queues_empty(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_sta);

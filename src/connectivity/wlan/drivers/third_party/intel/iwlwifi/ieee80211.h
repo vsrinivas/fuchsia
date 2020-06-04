@@ -72,14 +72,6 @@ enum ieee80211_smps_mode {
   IEEE80211_SMPS_NUM_MODES,
 };
 
-enum ieee80211_sta_state {
-  IEEE80211_STA_NOTEXIST,
-  IEEE80211_STA_NONE,
-  IEEE80211_STA_AUTH,
-  IEEE80211_STA_ASSOC,
-  IEEE80211_STA_AUTHORIZED,
-};
-
 // NEEDS_PORTING: Below structures are only referenced in function prototype.
 //                Doesn't need a dummy byte.
 struct cfg80211_gtk_rekey_data;

@@ -33,21 +33,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include "sta.h"
-
-#include <net/mac80211.h>
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
 
 #include <ddk/hw/wlan/ieee80211.h>
 
-#include "mvm.h"
-#include "rs.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/rs.h"
 
+#if 0   // NEEDS_PORTING
 static int iwl_mvm_set_fw_key_idx(struct iwl_mvm* mvm);
 
 static int iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
                                 struct ieee80211_key_conf* key, bool mcast, uint32_t tkip_iv32,
                                 uint16_t* tkip_p1k, uint32_t cmd_flags, uint8_t key_offset,
                                 bool mfp);
+#endif  // NEEDS_PORTING
 
 /*
  * New version of ADD_STA_sta command added new fields at the end of the
@@ -62,8 +62,12 @@ static inline int iwl_mvm_add_sta_cmd_size(struct iwl_mvm* mvm) {
   }
 }
 
-static int iwl_mvm_find_free_sta_id(struct iwl_mvm* mvm, enum nl80211_iftype iftype) {
-  int sta_id;
+// Return an index that is not used yet.
+//
+// Note that in order to avoid race condition, the mvm->mutex must be hold before calling this
+// function, and cannot be released before adding new STA to mvm->fw_id_to_mac_id[].
+//
+static int iwl_mvm_find_free_sta_id(struct iwl_mvm* mvm, wlan_info_mac_role_t mac_role) {
   uint32_t reserved_ids = 0;
 
   BUILD_BUG_ON(IWL_MVM_STATION_COUNT > 32);
@@ -72,17 +76,17 @@ static int iwl_mvm_find_free_sta_id(struct iwl_mvm* mvm, enum nl80211_iftype ift
   iwl_assert_lock_held(&mvm->mutex);
 
   /* d0i3/d3 assumes the AP's sta_id (of sta vif) is 0. reserve it. */
-  if (iftype != NL80211_IFTYPE_STATION) {
+  if (mac_role != WLAN_INFO_MAC_ROLE_CLIENT) {
     reserved_ids = BIT(0);
   }
 
-  /* Don't take rcu_read_lock() since we are protected by mvm->mutex */
-  for (sta_id = 0; sta_id < ARRAY_SIZE(mvm->fw_id_to_mac_id); sta_id++) {
+  // find an empty slot in mvm->fw_id_to_mac_id array.
+  for (size_t sta_id = 0; sta_id < ARRAY_SIZE(mvm->fw_id_to_mac_id); sta_id++) {
     if (BIT(sta_id) & reserved_ids) {
       continue;
     }
 
-    if (!rcu_dereference_protected(mvm->fw_id_to_mac_id[sta_id], lockdep_is_held(&mvm->mutex))) {
+    if (!mvm->fw_id_to_mac_id[sta_id]) {
       return sta_id;
     }
   }
@@ -90,9 +94,8 @@ static int iwl_mvm_find_free_sta_id(struct iwl_mvm* mvm, enum nl80211_iftype ift
 }
 
 /* send station add/update command to firmware */
-int iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct ieee80211_sta* sta, bool update,
-                           unsigned int flags) {
-  struct iwl_mvm_sta* mvm_sta = iwl_mvm_sta_from_mac80211(sta);
+zx_status_t iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_sta, bool update,
+                                   unsigned int flags) {
   struct iwl_mvm_add_sta_cmd add_sta_cmd = {
       .sta_id = mvm_sta->sta_id,
       .mac_id_n_color = cpu_to_le32(mvm_sta->mac_id_n_color),
@@ -101,16 +104,15 @@ int iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct ieee80211_sta* sta, bool 
           cpu_to_le32(STA_FLG_FAT_EN_MSK | STA_FLG_MIMO_EN_MSK | STA_FLG_RTS_MIMO_PROT),
       .tid_disable_tx = cpu_to_le16(mvm_sta->tid_disable_agg),
   };
-  int ret;
+  zx_status_t ret;
   uint32_t status;
-  uint32_t agg_size = 0, mpdu_dens = 0;
 
   if (fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_STA_TYPE)) {
     add_sta_cmd.station_type = mvm_sta->sta_type;
   }
 
   if (!update || (flags & STA_MODIFY_QUEUES)) {
-    memcpy(&add_sta_cmd.addr, sta->addr, ETH_ALEN);
+    memcpy(&add_sta_cmd.addr, mvm_sta->addr, ETH_ALEN);
 
     if (!iwl_mvm_has_new_tx_api(mvm)) {
       add_sta_cmd.tfd_queue_msk = cpu_to_le32(mvm_sta->tfd_queue_msk);
@@ -123,6 +125,11 @@ int iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct ieee80211_sta* sta, bool 
     }
   }
 
+#if 1  // NEEDS_PORTING
+  add_sta_cmd.station_flags |=
+      cpu_to_le32(STA_FLG_MIMO_EN_SISO) | cpu_to_le32(STA_FLG_FAT_EN_20MHZ);
+#else
+  uint32_t agg_size = 0, mpdu_dens = 0;
   switch (sta->bandwidth) {
     case IEEE80211_STA_RX_BW_160:
       add_sta_cmd.station_flags |= cpu_to_le32(STA_FLG_FAT_EN_160MHZ);
@@ -208,6 +215,7 @@ int iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct ieee80211_sta* sta, bool 
     add_sta_cmd.uapsd_acs |= add_sta_cmd.uapsd_acs << 4;
     add_sta_cmd.sp_length = sta->max_sp ? sta->max_sp * 2 : 128;
   }
+#endif  // NEEDS_PORTING
 
   status = ADD_STA_SUCCESS;
   ret = iwl_mvm_send_cmd_pdu_status(mvm, ADD_STA, iwl_mvm_add_sta_cmd_size(mvm), &add_sta_cmd,
@@ -221,7 +229,7 @@ int iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct ieee80211_sta* sta, bool 
       IWL_DEBUG_ASSOC(mvm, "ADD_STA PASSED\n");
       break;
     default:
-      ret = -EIO;
+      ret = ZX_ERR_IO;
       IWL_ERR(mvm, "ADD_STA failed\n");
       break;
   }
@@ -229,6 +237,7 @@ int iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct ieee80211_sta* sta, bool 
   return ret;
 }
 
+#if 0  // NEEDS_PORTING
 static void iwl_mvm_rx_agg_session_expired(struct timer_list* t) {
   struct iwl_mvm_baid_data* data = from_timer(data, t, session_timer);
   struct iwl_mvm_baid_data __rcu** rcu_ptr = data->rcu_ptr;
@@ -1482,29 +1491,28 @@ static int iwl_mvm_add_int_sta_common(struct iwl_mvm* mvm, struct iwl_mvm_int_st
   }
   return ret;
 }
+#endif  // NEEDS_PORTING
 
-int iwl_mvm_add_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80211_sta* sta) {
-  struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-  struct iwl_mvm_sta* mvm_sta = iwl_mvm_sta_from_mac80211(sta);
-  struct iwl_mvm_rxq_dup_data* dup_data;
-  int i, ret, sta_id;
+zx_status_t iwl_mvm_add_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta) {
+  int ret, sta_id;
   bool sta_update = false;
   unsigned int sta_flags = 0;
 
-  iwl_assert_lock_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvmvif->mvm->mutex);
 
-  if (!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
-    sta_id = iwl_mvm_find_free_sta_id(mvm, ieee80211_vif_type_p2p(vif));
+  if (!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvmvif->mvm->status)) {
+    sta_id = iwl_mvm_find_free_sta_id(mvmvif->mvm, mvmvif->mac_role);
   } else {
     sta_id = mvm_sta->sta_id;
   }
 
   if (sta_id == IWL_MVM_INVALID_STA) {
-    return -ENOSPC;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  spin_lock_init(&mvm_sta->lock);
+  mtx_init(&mvm_sta->lock, mtx_plain);
 
+#if 0  // NEEDS_PORTING
   /* if this is a HW restart re-alloc existing queues */
   if (test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
     struct iwl_mvm_int_sta tmp_sta = {
@@ -1526,25 +1534,30 @@ int iwl_mvm_add_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee8
     sta_flags = iwl_mvm_has_new_tx_api(mvm) ? 0 : STA_MODIFY_QUEUES;
     goto update_fw;
   }
+#endif  // NEEDS_PORTING
 
   mvm_sta->sta_id = sta_id;
   mvm_sta->mac_id_n_color = FW_CMD_ID_AND_COLOR(mvmvif->id, mvmvif->color);
-  mvm_sta->vif = vif;
-  if (!mvm->trans->cfg->gen2) {
+  mvm_sta->mvmvif = mvmvif;
+  if (!mvmvif->mvm->trans->cfg->gen2) {
     mvm_sta->max_agg_bufsize = LINK_QUAL_AGG_FRAME_LIMIT_DEF;
   } else {
     mvm_sta->max_agg_bufsize = LINK_QUAL_AGG_FRAME_LIMIT_GEN2_DEF;
   }
   mvm_sta->tx_protection = 0;
   mvm_sta->tt_tx_protection = false;
+#if 1  // NEEDS_PORTING
+  mvm_sta->sta_type = IWL_STA_LINK;
+#else  // NEEDS_PORTING
   mvm_sta->sta_type = sta->tdls ? IWL_STA_TDLS_LINK : IWL_STA_LINK;
+#endif  // NEEDS_PORTING
 
   /* HW restart, don't assume the memory has been zeroed */
   mvm_sta->tid_disable_agg = 0xffff; /* No aggs at first */
   mvm_sta->tfd_queue_msk = 0;
 
   /* for HW restart - reset everything but the sequence number */
-  for (i = 0; i <= IWL_MAX_TID_COUNT; i++) {
+  for (size_t i = 0; i <= IWL_MAX_TID_COUNT; i++) {
     uint16_t seq = mvm_sta->tid_data[i].seq_number;
     memset(&mvm_sta->tid_data[i], 0, sizeof(mvm_sta->tid_data[i]));
     mvm_sta->tid_data[i].seq_number = seq;
@@ -1556,20 +1569,22 @@ int iwl_mvm_add_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee8
     mvm_sta->tid_data[i].txq_id = IWL_MVM_INVALID_QUEUE;
   }
 
-  for (i = 0; i < ARRAY_SIZE(sta->txq); i++) {
-    struct iwl_mvm_txq* mvmtxq = iwl_mvm_txq_from_mac80211(sta->txq[i]);
+  for (size_t i = 0; i < ARRAY_SIZE(mvm_sta->txq); i++) {
+    struct iwl_mvm_txq* mvmtxq = mvm_sta->txq[i];
 
     mvmtxq->txq_id = IWL_MVM_INVALID_QUEUE;
-    INIT_LIST_HEAD(&mvmtxq->list);
-    spin_lock_init(&mvmtxq->tx_path_lock);
+    list_initialize(&mvmtxq->list);
+    mtx_init(&mvmtxq->tx_path_lock, mtx_plain);
   }
 
   mvm_sta->agg_tids = 0;
 
+#if 0  // NEEDS_PORTING
   if (iwl_mvm_has_new_rx_api(mvm) && !test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
     int q;
 
-    dup_data = kcalloc(mvm->trans->num_rx_queues, sizeof(*dup_data), GFP_KERNEL);
+    struct iwl_mvm_rxq_dup_data* dup_data =
+      kcalloc(mvm->trans->num_rx_queues, sizeof(*dup_data), GFP_KERNEL);
     if (!dup_data) {
       return -ENOMEM;
     }
@@ -1602,32 +1617,40 @@ int iwl_mvm_add_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee8
   if (iwl_mvm_has_tlc_offload(mvm)) {
     iwl_mvm_rs_add_sta(mvm, mvm_sta);
   }
+#endif  // NEEDS_PORTING
 
-  iwl_mvm_toggle_tx_ant(mvm, &mvm_sta->tx_ant);
+  iwl_mvm_toggle_tx_ant(mvmvif->mvm, &mvm_sta->tx_ant);
 
+#if 0  // NEEDS_PORTING
 update_fw:
-  ret = iwl_mvm_sta_send_to_fw(mvm, sta, sta_update, sta_flags);
+#endif  // NEEDS_PORTING
+
+  ret = iwl_mvm_sta_send_to_fw(mvmvif->mvm, mvm_sta, sta_update, sta_flags);
   if (ret) {
     goto err;
   }
 
-  if (vif->type == NL80211_IFTYPE_STATION) {
-    if (!sta->tdls) {
-      WARN_ON(mvmvif->ap_sta_id != IWL_MVM_INVALID_STA);
+  if (mvmvif->mac_role == WLAN_INFO_MAC_ROLE_CLIENT) {
+    if (!mvm_sta->tdls) {
+      if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
+        IWL_WARN(mvmvif, "mvmvif->ap_sta_id is invalid\n");
+      }
       mvmvif->ap_sta_id = sta_id;
     } else {
-      WARN_ON(mvmvif->ap_sta_id == IWL_MVM_INVALID_STA);
+      if (mvmvif->ap_sta_id == IWL_MVM_INVALID_STA) {
+        IWL_WARN(mvmvif, "TDLS mvmvif->ap_sta_id is invalid\n");
+      }
     }
   }
 
-  rcu_assign_pointer(mvm->fw_id_to_mac_id[sta_id], sta);
-
-  return 0;
+  mvmvif->mvm->fw_id_to_mac_id[sta_id] = mvm_sta;
+  ret = ZX_OK;
 
 err:
   return ret;
 }
 
+#if 0  // NEEDS_PORTING
 int iwl_mvm_drain_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool drain) {
   struct iwl_mvm_add_sta_cmd cmd = {};
   int ret;
@@ -3669,3 +3692,4 @@ uint16_t iwl_mvm_tid_queued(struct iwl_mvm* mvm, struct iwl_mvm_tid_data* tid_da
 
   return ieee80211_sn_sub(sn, tid_data->next_reclaimed);
 }
+#endif  // NEEDS_PORTING

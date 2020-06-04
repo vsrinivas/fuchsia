@@ -10,6 +10,7 @@ extern "C" {
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/datapath.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/sta.h"
 
 namespace wlan {
 namespace testing {
@@ -73,12 +74,17 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
           ret = ZX_OK;
           break;
 
+        case ADD_STA:
+          build_response_with_status(&resp, ADD_STA_SUCCESS);
+          ret = ZX_OK;
+          break;
+
         case NVM_ACCESS_CMD:
           ret = nvm_.HandleCommand(cmd, &resp);
           break;
 
         default:
-          printf("unsupported long command ID : %#x\n", cmd->id);
+          IWL_ERR(nullptr, "unsupported long command ID : %#x\n", cmd->id);
           IWL_INSPECT_HOST_CMD(cmd);
           return ZX_ERR_NOT_SUPPORTED;
       }
@@ -91,14 +97,14 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
           break;
 
         default:
-          printf("unsupported data path command ID : %#x\n", cmd->id);
+          IWL_ERR(nullptr, "unsupported data path command ID : %#x\n", cmd->id);
           IWL_INSPECT_HOST_CMD(cmd);
           return ZX_ERR_NOT_SUPPORTED;
       }
       break;
 
     default:
-      printf("unsupported command ID : %#x\n", cmd->id);
+      IWL_ERR(nullptr, "unsupported command ID : %#x\n", cmd->id);
       IWL_INSPECT_HOST_CMD(cmd);
       return ZX_ERR_NOT_SUPPORTED;
   }

@@ -821,14 +821,6 @@ struct iwl_mvm_geo_profile {
   uint8_t values[ACPI_GEO_TABLE_SIZE];
 };
 
-struct iwl_mvm_txq {
-  list_node_t list;
-  uint16_t txq_id;
-  /* Protects TX path invocation from two places */
-  mtx_t tx_path_lock;
-  bool stopped;
-};
-
 static inline struct iwl_mvm_txq* iwl_mvm_txq_from_mac80211(struct ieee80211_txq* txq) {
   return (struct iwl_mvm_txq*)txq->drv_priv;
 }
@@ -943,7 +935,7 @@ struct iwl_mvm {
 
   /* data related to data path */
   struct iwl_rx_phy_info last_phy_info;
-  struct ieee80211_sta __rcu* fw_id_to_mac_id[IWL_MVM_STATION_COUNT];
+  struct iwl_mvm_sta* fw_id_to_mac_id[IWL_MVM_STATION_COUNT];
   uint8_t rx_ba_sessions;
 
   /* configured by mac80211 */
@@ -1336,6 +1328,7 @@ static inline bool iwl_mvm_firmware_running(struct iwl_mvm* mvm) {
   return test_bit(IWL_MVM_STATUS_FIRMWARE_RUNNING, &mvm->status);
 }
 
+#if 0  // NEEDS_PORTING
 /* Must be called with rcu_read_lock() held and it can only be
  * released when mvmsta is not needed anymore.
  */
@@ -1373,6 +1366,7 @@ static inline struct iwl_mvm_sta* iwl_mvm_sta_from_staid_protected(struct iwl_mv
 
   return iwl_mvm_sta_from_mac80211(sta);
 }
+#endif  // NEEDS_PORTING
 
 static inline bool iwl_mvm_is_d0i3_supported(struct iwl_mvm* mvm) {
   return !iwlwifi_mod_params.d0i3_disable &&
@@ -1523,7 +1517,7 @@ static inline bool iwl_mvm_is_tt_in_fw(struct iwl_mvm* mvm) {
    */
   return fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_CT_KILL_BY_FW) &&
          fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TEMP_THS_REPORT_SUPPORT);
-#else  /* CONFIG_THERMAL */
+#else /* CONFIG_THERMAL */
   return false;
 #endif /* CONFIG_THERMAL */
 }
@@ -1605,7 +1599,7 @@ void iwl_mvm_async_handlers_purge(struct iwl_mvm* mvm);
 
 static inline void iwl_mvm_set_tx_cmd_ccmp(struct ieee80211_tx_info* info,
                                            struct iwl_tx_cmd* tx_cmd) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct ieee80211_key_conf* keyconf = info->control.hw_key;
 
     tx_cmd->sec_ctl = TX_CMD_SEC_CCM;
@@ -1614,7 +1608,7 @@ static inline void iwl_mvm_set_tx_cmd_ccmp(struct ieee80211_tx_info* info,
 }
 
 static inline void iwl_mvm_wait_for_async_handlers(struct iwl_mvm* mvm) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     flush_work(&mvm->async_handlers_wk);
 #endif  // NEEDS_PORTING
 }
@@ -1959,11 +1953,11 @@ static inline void iwl_mvm_stop_device(struct iwl_mvm* mvm) {
   /* calling this function without using dump_start/end since at this
    * point we already hold the op mode mutex
    */
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
   iwl_fw_dbg_collect_sync(&mvm->fwrt);
 #endif  // NEEDS_PORTING
   iwl_fw_cancel_timestamp(&mvm->fwrt);
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
   iwl_free_fw_paging(&mvm->fwrt);
 #endif  // NEEDS_PORTING
   clear_bit(IWL_MVM_STATUS_FIRMWARE_RUNNING, &mvm->status);
@@ -2142,6 +2136,9 @@ zx_status_t iwl_mvm_mac_remove_interface(struct iwl_mvm_vif* mvmvif);
 zx_status_t iwl_mvm_mac_hw_scan(struct iwl_mvm_vif* mvmvif,
                                 const wlan_hw_scan_config_t* scan_config);
 
+zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta,
+                                  enum iwl_sta_state old_state, enum iwl_sta_state new_state);
+
 zx_status_t iwl_mvm_add_chanctx(struct iwl_mvm* mvm, const wlan_channel_t* chandef,
                                 uint16_t* phy_ctxt_id);
 zx_status_t iwl_mvm_remove_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id);
@@ -2160,6 +2157,12 @@ typedef void (*ieee80211_iterate_callback)(void* data, struct iwl_mvm_vif* mvmvi
 void ieee80211_iterate_active_interfaces_atomic(struct iwl_mvm* mvm,
                                                 ieee80211_iterate_callback func, void* data);
 
-zx_status_t iwl_mvm_assign_vif_chanctx(struct iwl_mvm_vif* mvmvif, const wlan_channel_t* chandef);
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// For sta.c
+//
+zx_status_t iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, uint8_t ac,
+                                    int tid);
+bool iwl_mvm_enable_txq(struct iwl_mvm* mvm, struct iwl_mvm_sta* sta, int queue, uint16_t ssn,
+                        const struct iwl_trans_txq_scd_cfg* cfg);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_

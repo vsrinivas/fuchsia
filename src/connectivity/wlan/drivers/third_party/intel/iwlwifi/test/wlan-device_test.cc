@@ -45,6 +45,10 @@ class WlanDeviceTest : public SingleApTest {
       : mvmvif_sta_{
             .mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans()),
             .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
+            .bss_conf =
+                {
+                    .beacon_int = 100,
+                },
         } {
     struct iwl_mvm* mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
     mtx_lock(&mvm->mutex);
@@ -488,7 +492,36 @@ class MacInterfaceTest : public WlanDeviceTest {
     }
   }
 
-  typedef std::list<uint32_t> expected_cmd_id_list;
+  // Used in MockCommand constructor to indicate if the command needs to be either
+  //
+  //   - returned immediately (with a status code), or
+  //   - passed to the sim_mvm.c.
+  //
+  enum SimMvmBehavior {
+    kSimMvmReturnWithStatus,
+    kSimMvmBypassToSimMvm,
+  };
+
+  // A flexible mock-up of firmware command for testing code. Testing code can decide to either call
+  // the simulated firmware or return the status code immediately.
+  //
+  //   cmd_id: the command ID. Sometimes composed with WIDE_ID() macro.
+  //   behavior: determine what this mockup command is to do.
+  //   status: the status code to return when behavior is 'kSimMvmReturnWithStatus'.
+  //
+  class MockCommand {
+   public:
+    MockCommand(uint32_t cmd_id, SimMvmBehavior behavior, zx_status_t status)
+        : cmd_id_(cmd_id), behavior_(behavior), status_(status) {}
+    MockCommand(uint32_t cmd_id) : MockCommand(cmd_id, kSimMvmBypassToSimMvm, ZX_OK) {}
+
+    ~MockCommand() {}
+
+    uint32_t cmd_id_;
+    SimMvmBehavior behavior_;
+    zx_status_t status_;
+  };
+  typedef std::list<MockCommand> expected_cmd_id_list;
   typedef zx_status_t (*fp_send_cmd)(struct iwl_trans* trans, struct iwl_host_cmd* cmd);
 
   // Public for MockSendCmd().
@@ -501,6 +534,11 @@ class MacInterfaceTest : public WlanDeviceTest {
     return wlanmac_ops.set_channel(&mvmvif_sta_, option, chan);
   }
 
+  zx_status_t ConfigureBss(const wlan_bss_config_t* config) {
+    uint32_t option = 0;
+    return wlanmac_ops.configure_bss(&mvmvif_sta_, option, config);
+  }
+
   // The following functions are for mocking up the firmware commands.
   //
   // The mock function will return the special error ZX_ERR_INTERNAL when the expectation
@@ -509,7 +547,7 @@ class MacInterfaceTest : public WlanDeviceTest {
   // Set the expected commands sending to the firmware.
   //
   // Args:
-  //   cmd_ids: array of command IDs. Will be matched in order.
+  //   cmd_ids: list of expected commands. Will be matched in order.
   //
   void ExpectSendCmd(const expected_cmd_id_list& cmd_ids) {
     expected_cmd_ids = cmd_ids;
@@ -525,38 +563,49 @@ class MacInterfaceTest : public WlanDeviceTest {
   static zx_status_t MockSendCmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {
     MacInterfaceTest* this_ = reinterpret_cast<MacInterfaceTest*>(trans->dev);
 
-    // remove the first one and match
+    // remove the first one and match.
     expected_cmd_id_list& expected = this_->expected_cmd_ids;
     ZX_ASSERT_MSG(!expected.empty(),
                   "A command (0x%04x) is going to send, but no command is expected.\n", cmd->id);
 
-    auto id = expected.front();
-    ZX_ASSERT_MSG(id == cmd->id, "The command doesn't match! Expect: 0x%04x, actual: 0x%04x.\n", id,
+    // check the command ID.
+    auto exp = expected.front();
+    ZX_ASSERT_MSG(exp.cmd_id_ == cmd->id,
+                  "The command doesn't match! Expect: 0x%04x, actual: 0x%04x.\n", exp.cmd_id_,
                   cmd->id);
     expected.pop_front();
 
-    return this_->original_send_cmd(trans, cmd);
+    if (exp.behavior_ == kSimMvmBypassToSimMvm) {
+      return this_->original_send_cmd(trans, cmd);
+    } else {
+      return exp.status_;
+    }
   }
 
   void VerifyExpectation() {
     for (expected_cmd_id_list::iterator it = expected_cmd_ids.begin(); it != expected_cmd_ids.end();
          it++) {
-      printf("  ==> 0x%04x\n", *it);
+      printf("  ==> 0x%04x\n", it->cmd_id_);
     }
     ASSERT_TRUE(expected_cmd_ids.empty(), "The expected command set is not empty.");
   }
 
   wlanmac_ifc_protocol_t ifc_;
   wlanmac_ifc_protocol_ops_t proto_ops_;
+  static constexpr wlan_bss_config_t kBssConfig = {
+      .bssid = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
+      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+      .remote = true,
+  };
 };
 
 // Test the set_channel().
 //
 TEST_F(MacInterfaceTest, TestSetChannel) {
   ExpectSendCmd(expected_cmd_id_list({
-      WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD),
-      WIDE_ID(LONG_GROUP, BINDING_CONTEXT_CMD),
-      WIDE_ID(LONG_GROUP, MAC_PM_POWER_TABLE),
+      MockCommand(WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, BINDING_CONTEXT_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, MAC_PM_POWER_TABLE)),
   }));
 
   mvmvif_sta_.csa_bcn_pending = true;  // Expect to be clear because this is client role.
@@ -568,17 +617,88 @@ TEST_F(MacInterfaceTest, TestSetChannel) {
 //
 TEST_F(MacInterfaceTest, TestSetChannelWithUnsupportedRole) {
   ExpectSendCmd(expected_cmd_id_list({
-      WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD),
+      MockCommand(WIDE_ID(LONG_GROUP, PHY_CONTEXT_CMD)),
   }));
 
   mvmvif_sta_.mac_role = WLAN_INFO_MAC_ROLE_AP;
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, SetChannel(&kChannel));
 }
 
+// Test ConfigureBss()
+//
+TEST_F(MacInterfaceTest, TestConfigureBss) {
+  ExpectSendCmd(expected_cmd_id_list({
+      MockCommand(WIDE_ID(LONG_GROUP, ADD_STA)),
+  }));
+
+  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+}
+
+// Test duplicate BSS config.
+//
+TEST_F(MacInterfaceTest, DuplicateConfigureBss) {
+  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, ConfigureBss(&kBssConfig));
+}
+
+// Test unsupported bss_type.
+//
+TEST_F(MacInterfaceTest, UnsupportedBssType) {
+  static constexpr wlan_bss_config_t kUnsupportedBssConfig = {
+      .bssid = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
+      .bss_type = WLAN_BSS_TYPE_IBSS,
+      .remote = true,
+  };
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, ConfigureBss(&kUnsupportedBssConfig));
+}
+
+// Test failed ADD_STA command.
+//
+TEST_F(MacInterfaceTest, TestFailedAddSta) {
+  ExpectSendCmd(expected_cmd_id_list({
+      MockCommand(WIDE_ID(LONG_GROUP, ADD_STA), kSimMvmReturnWithStatus,
+                  ZX_ERR_BUFFER_TOO_SMALL /* an arbitrary error */),
+  }));
+
+  ASSERT_EQ(ZX_ERR_BUFFER_TOO_SMALL, ConfigureBss(&kBssConfig));
+}
+
+// Test exception handling in driver.
+//
+TEST_F(MacInterfaceTest, TestExceptionHandling) {
+  // Test the beacon interval checking.
+  mvmvif_sta_.bss_conf.beacon_int = 0;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, ConfigureBss(&kBssConfig));
+  mvmvif_sta_.bss_conf.beacon_int = 16;  // which just passes the check.
+
+  // Test the phy_ctxt checking.
+  auto backup_phy_ctxt = mvmvif_sta_.phy_ctxt;
+  mvmvif_sta_.phy_ctxt = nullptr;
+  EXPECT_EQ(ZX_ERR_BAD_STATE, ConfigureBss(&kBssConfig));
+  mvmvif_sta_.phy_ctxt = backup_phy_ctxt;
+
+  // Test the case we run out of slots for STA.
+  //
+  // In the constructor of the test, mvmvif_sta_ had been added once. So we would expect the
+  // following (IWL_MVM_STATION_COUNT - 1) adding would be successful as well.
+  //
+  for (size_t i = 0; i < IWL_MVM_STATION_COUNT - 1; i++) {
+    // Pretent the STA is not assigned so that we can add it again.
+    mvmvif_sta_.ap_sta_id = IWL_MVM_INVALID_STA;
+    ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  }
+  // However, the last one should fail because we run out of all slots in fw_id_to_mac_id[].
+  mvmvif_sta_.ap_sta_id = IWL_MVM_INVALID_STA;
+  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+}
+
 // The test is used to test the typical procedure to connect to an open network. Will be updated
 // in the following CLs.
 //
-TEST_F(MacInterfaceTest, AssociateToOpenNetwork) { ASSERT_EQ(ZX_OK, SetChannel(&kChannel)); }
+TEST_F(MacInterfaceTest, AssociateToOpenNetwork) {
+  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+}
 
 }  // namespace
 }  // namespace wlan::testing

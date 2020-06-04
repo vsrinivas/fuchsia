@@ -243,9 +243,45 @@ static zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_chann
   return ret;
 }
 
+static struct iwl_mvm_sta* alloc_ap_mvm_sta(const uint8_t bssid[]) {
+  struct iwl_mvm_sta* mvm_sta = calloc(1, sizeof(struct iwl_mvm_sta));
+  if (!mvm_sta) {
+    return NULL;
+  }
+
+  for (size_t i = 0; i < ARRAY_SIZE(mvm_sta->txq); i++) {
+    mvm_sta->txq[i] = calloc(1, sizeof(struct iwl_mvm_txq));
+  }
+  memcpy(mvm_sta->addr, bssid, ETH_ALEN);
+
+  return mvm_sta;
+}
+
 static zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss_config_t* config) {
-  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
-  return ZX_ERR_NOT_SUPPORTED;
+  struct iwl_mvm_vif* mvmvif = ctx;
+
+  IWL_INFO(mvmvif, "mac_configure_bss(bssid=%02x:%02x:%02x:%02x:%02x:%02x, type=%d, remote=%d)\n",
+           config->bssid[0], config->bssid[1], config->bssid[2], config->bssid[3], config->bssid[4],
+           config->bssid[5], config->bss_type, config->remote);
+
+  if (config->bss_type != WLAN_BSS_TYPE_INFRASTRUCTURE) {
+    IWL_ERR(mvmvif, "invalid bss_type requested: %d\n", config->bss_type);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
+    IWL_ERR(mvmvif, "The AP sta ID has been set already. ap_sta_id=%d\n", mvmvif->ap_sta_id);
+    return ZX_ERR_ALREADY_EXISTS;
+  }
+  // Note that 'ap_sta_id' is unset and later will be set in iwl_mvm_add_sta().
+
+  struct iwl_mvm_sta* mvm_sta = alloc_ap_mvm_sta(config->bssid);
+  if (!mvm_sta) {
+    IWL_ERR(mvmvif, "cannot allocate MVM STA for AP.\n");
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  return iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NOTEXIST, IWL_STA_NONE);
 }
 
 static zx_status_t mac_enable_beaconing(void* ctx, uint32_t options,

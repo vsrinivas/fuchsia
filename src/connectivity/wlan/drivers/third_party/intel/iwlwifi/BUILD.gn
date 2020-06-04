@@ -51,6 +51,7 @@ source_set("core") {
     "mvm/rx.c",
     "mvm/rxmq.c",
     "mvm/scan.c",
+    "mvm/sta.c",
     "mvm/time-event.c",
     "mvm/tof.c",
     "mvm/tt.c",
