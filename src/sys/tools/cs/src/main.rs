@@ -75,20 +75,39 @@ struct Component {
     name: String,
     path: PathBuf,
     url: String,
+    merkleroot: Option<String>,
     child_components: Vec<Component>,
 }
+
+const UNKNOWN_VERSION: &str = "unknown version";
 
 impl Component {
     fn create(path: PathBuf) -> Result<Component, Error> {
         let job_id = fs::read_to_string(&path.join("job-id"))?;
         let url = fs::read_to_string(&path.join("url"))?;
         let name = fs::read_to_string(&path.join("name"))?;
+        let merkleroot = fs::read_to_string(&path.join("in/pkg/meta")).ok();
         let child_components = visit_child_components(&path)?;
-        Ok(Component { job_id: job_id.parse::<u32>()?, name, path, url, child_components })
+        Ok(Component {
+            job_id: job_id.parse::<u32>()?,
+            name,
+            path,
+            url,
+            merkleroot,
+            child_components,
+        })
     }
 
     fn write_indented(&self, f: &mut fmt::Formatter<'_>, indent: usize) -> fmt::Result {
-        writeln!(f, "{}{}[{}]: {}", " ".repeat(indent), self.name, self.job_id, self.url)?;
+        writeln!(
+            f,
+            "{}{}[{}]: {} ({})",
+            " ".repeat(indent),
+            self.name,
+            self.job_id,
+            self.url,
+            self.merkleroot.as_ref().unwrap_or(&UNKNOWN_VERSION.to_string())
+        )?;
 
         for child in &self.child_components {
             child.write_indented(f, indent + 2)?;
