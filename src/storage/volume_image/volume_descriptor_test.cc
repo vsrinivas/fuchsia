@@ -113,7 +113,7 @@ TEST(VolumeDescriptorTest, DeserializeFromValidDataReturnsVolumeDescriptor) {
 
   EXPECT_EQ(expected_type_guid.value(), descriptor.type);
   EXPECT_EQ(expected_instance_guid.value(), descriptor.instance);
-  EXPECT_EQ(kName, std::string(reinterpret_cast<const char*>(descriptor.name.data())));
+  EXPECT_EQ(kName, descriptor.name);
   EXPECT_EQ(512u, descriptor.block_size);
   EXPECT_EQ(EncryptionType::kZxcrypt, descriptor.encryption);
   EXPECT_THAT(descriptor.options, ::testing::UnorderedElementsAre(Option::kNone, Option::kEmpty));
@@ -131,13 +131,11 @@ TEST(VolumeDescriptorTest, DeserializeWithBadInstanceGuidIsError) {
               })).is_error());
 }
 
-TEST(VolumeDescriptorTest, DeserializeWithLongNameIsTruncated) {
+TEST(VolumeDescriptorTest, DeserializeWithLongNameIsError) {
   constexpr std::string_view kName = "01234567890123456789012345678901234567891";
   auto descriptor_result = VolumeDescriptor::Deserialize(GetSerializedJson(
       [kName](auto* document) { (*document)["name"] = rapidjson::StringRef(kName.data()); }));
-  ASSERT_TRUE(descriptor_result.is_ok());
-  ASSERT_EQ(kName.substr(0, kNameLength),
-            std::string(reinterpret_cast<const char*>(descriptor_result.value().name.data())));
+  ASSERT_FALSE(descriptor_result.is_ok());
 }
 
 TEST(VolumeDescriptorTest, DeserializeWithBadMagicIsError) {

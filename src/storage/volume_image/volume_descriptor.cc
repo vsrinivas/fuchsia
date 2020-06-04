@@ -64,7 +64,10 @@ fit::result<VolumeDescriptor, std::string> VolumeDescriptor::Deserialize(
   descriptor.type = type_bytes.take_value();
 
   const std::string& name = document["name"].GetString();
-  memcpy(descriptor.name.data(), name.c_str(), name.length());
+  if (name.length() > kNameLength) {
+    return fit::error("name exceeds maximum length.\n");
+  }
+  descriptor.name = name;
 
   descriptor.block_size = document["block_size"].GetUint64();
 
@@ -104,8 +107,7 @@ fit::result<std::vector<uint8_t>, std::string> VolumeDescriptor::Serialize() con
     return type_str.take_error_result();
   }
   document.AddMember("type_guid", type_str.take_value(), document.GetAllocator());
-  document.AddMember("name", std::string(reinterpret_cast<const char*>(name.data())),
-                     document.GetAllocator());
+  document.AddMember("name", name, document.GetAllocator());
   document.AddMember("block_size", block_size, document.GetAllocator());
   document.AddMember("encryption_type", EnumAsString(encryption), document.GetAllocator());
 

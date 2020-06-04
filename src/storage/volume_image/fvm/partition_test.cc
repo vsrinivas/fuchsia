@@ -18,11 +18,10 @@
 namespace storage::volume_image {
 namespace {
 
-Partition MakePartitionWithNameAndInstanceGuid(std::string name,
-                                               std::array<uint8_t, kGuidLength> instance_guid) {
+Partition MakePartitionWithNameAndInstanceGuid(
+    std::string_view name, const std::array<uint8_t, kGuidLength>& instance_guid) {
   VolumeDescriptor volume = {};
-  memcpy(volume.name.data(), name.c_str(),
-         std::min(kNameLength, static_cast<uint64_t>(name.length())));
+  volume.name = name;
   volume.instance = instance_guid;
   AddressDescriptor address = {};
   return Partition(volume, address, nullptr);
@@ -41,9 +40,8 @@ TEST(PartitionLessThanTest, WithDifferentNameOrdersLexicographicallyByName) {
   Partition first = MakePartitionWithNameAndInstanceGuid("partition-name", guid_1.value());
   Partition second = MakePartitionWithNameAndInstanceGuid("partition-name-a", guid_2.value());
   ASSERT_NE(first.volume().name, second.volume().name);
-  ASSERT_TRUE(std::lexicographical_compare(first.volume().name.cbegin(), first.volume().name.cend(),
-                                           second.volume().name.cbegin(),
-                                           second.volume().name.cend()));
+  ASSERT_TRUE(first.volume().name < second.volume().name);
+
   Partition::LessThan is_before;
   EXPECT_TRUE(is_before(first, second));
   EXPECT_FALSE(is_before(first, first));

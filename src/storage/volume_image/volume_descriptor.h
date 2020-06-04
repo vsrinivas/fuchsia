@@ -44,7 +44,7 @@ struct VolumeDescriptor {
   std::array<uint8_t, kGuidLength> type;
 
   // Name expected for the partition.
-  std::array<char, kNameLength> name;
+  std::string name;
 
   // Number of bytes used to chunk the image.
   uint64_t block_size;
