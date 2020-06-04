@@ -4,6 +4,7 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_BUS_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_BUS_H_
 
+#include <lib/zx/msi.h>
 #include <zircon/compiler.h>
 
 #include <list>
@@ -17,22 +18,12 @@
 #include <fbl/vector.h>
 
 #include "bridge.h"
+#include "bus_device_interface.h"
 #include "config.h"
 #include "device.h"
 #include "root.h"
 
 namespace pci {
-
-// This interface allows for bridges/devices to add and remove themselves from the
-// device list of their particular bus instance without exposing the rest of the
-// bus's interface to them or using static methods. This becomes more important
-// as multiple bus instances with differing segment groups become a reality.
-class BusLinkInterface {
- public:
-  virtual ~BusLinkInterface() {}
-  virtual void LinkDevice(fbl::RefPtr<pci::Device> device) = 0;
-  virtual void UnlinkDevice(pci::Device* device) = 0;
-};
 
 // An entry corresponding to a place in the topology to scan. Use to allow for
 // DFS traversal of the bus topology while keeping track of nodes upstream.
@@ -46,12 +37,12 @@ using DeviceTree =
 
 class Bus;
 using PciBusType = ddk::Device<Bus>;
-class Bus : public PciBusType, public BusLinkInterface {
+class Bus : public PciBusType, public BusDeviceInterface {
  public:
   static zx_status_t Create(zx_device_t* parent);
   void DdkRelease();
 
-  // Accessors for the device list, used by BusLinkInterface
+  // Accessors for the device list, used by BusDeviceInterface
   void LinkDevice(fbl::RefPtr<pci::Device> device) __TA_EXCLUDES(devices_lock_) final {
     fbl::AutoLock devices_lock(&devices_lock_);
     devices_.insert(device);
@@ -60,6 +51,11 @@ class Bus : public PciBusType, public BusLinkInterface {
   void UnlinkDevice(pci::Device* device) __TA_EXCLUDES(devices_lock_) final {
     fbl::AutoLock devices_lock(&devices_lock_);
     devices_.erase(*device);
+  }
+
+  zx_status_t AllocateMsi(uint32_t count, zx::msi* msi) __TA_EXCLUDES(devices_lock_) final {
+    fbl::AutoLock devices_lock(&devices_lock_);
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
  private:

@@ -23,7 +23,7 @@
 #include <fbl/string_buffer.h>
 #include <pretty/sizes.h>
 
-#include "bus.h"
+#include "bus_device_interface.h"
 #include "common.h"
 #include "ref_counted.h"
 #include "upstream_node.h"
@@ -35,7 +35,7 @@ namespace {  // anon namespace.  Externals do not need to know about DeviceImpl
 class DeviceImpl : public Device {
  public:
   static zx_status_t Create(zx_device_t* parent, std::unique_ptr<Config>&& cfg,
-                            UpstreamNode* upstream, BusLinkInterface* bli);
+                            UpstreamNode* upstream, BusDeviceInterface* bdi);
 
   // Implement ref counting, do not let derived classes override.
   PCI_IMPLEMENT_REFCOUNTED;
@@ -45,14 +45,14 @@ class DeviceImpl : public Device {
 
  protected:
   DeviceImpl(zx_device_t* parent, std::unique_ptr<Config>&& cfg, UpstreamNode* upstream,
-             BusLinkInterface* bli)
-      : Device(parent, std::move(cfg), upstream, bli, false) {}
+             BusDeviceInterface* bdi)
+      : Device(parent, std::move(cfg), upstream, bdi, false) {}
 };
 
 zx_status_t DeviceImpl::Create(zx_device_t* parent, std::unique_ptr<Config>&& cfg,
-                               UpstreamNode* upstream, BusLinkInterface* bli) {
+                               UpstreamNode* upstream, BusDeviceInterface* bdi) {
   fbl::AllocChecker ac;
-  auto raw_dev = new (&ac) DeviceImpl(parent, std::move(cfg), upstream, bli);
+  auto raw_dev = new (&ac) DeviceImpl(parent, std::move(cfg), upstream, bdi);
   if (!ac.check()) {
     zxlogf(ERROR, "Out of memory attemping to create PCIe device %s.", cfg->addr());
     return ZX_ERR_NO_MEMORY;
@@ -65,7 +65,7 @@ zx_status_t DeviceImpl::Create(zx_device_t* parent, std::unique_ptr<Config>&& cf
     return status;
   }
 
-  bli->LinkDevice(dev);
+  bdi->LinkDevice(dev);
   return ZX_OK;
 }
 
@@ -110,8 +110,8 @@ zx_status_t Device::CreateProxy() {
 }
 
 zx_status_t Device::Create(zx_device_t* parent, std::unique_ptr<Config>&& config,
-                           UpstreamNode* upstream, BusLinkInterface* bli) {
-  return DeviceImpl::Create(parent, std::move(config), upstream, bli);
+                           UpstreamNode* upstream, BusDeviceInterface* bdi) {
+  return DeviceImpl::Create(parent, std::move(config), upstream, bdi);
 }
 
 zx_status_t Device::Init() {
@@ -438,7 +438,7 @@ void Device::Unplug() {
   // everything in the command register
   ZX_DEBUG_ASSERT(disabled_);
   upstream_->UnlinkDevice(this);
-  bli_->UnlinkDevice(this);
+  bdi_->UnlinkDevice(this);
   plugged_in_ = false;
   zxlogf(TRACE, "device [%s] unplugged", cfg_->addr());
 }

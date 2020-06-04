@@ -47,7 +47,7 @@ zx_status_t FakeBusDriver::CreateDevice(pci_bdf_t bdf, uint8_t* base_cfg, size_t
   cfg->Write(Config::kVendorId, vid);
   cfg->Write(Config::kDeviceId, did);
   cfg->DumpConfig(4096);
-  return pci::Device::Create(this->zxdev(), std::move(cfg), &upstream(), bus().bli());
+  return pci::Device::Create(this->zxdev(), std::move(cfg), &upstream(), bus().bdi());
 }
 
 }  // namespace pci

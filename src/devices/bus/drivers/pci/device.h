@@ -26,6 +26,7 @@
 
 #include "allocation.h"
 #include "bar_info.h"
+#include "bus_device_interface.h"
 #include "capabilities.h"
 #include "capabilities/msi.h"
 #include "capabilities/msix.h"
@@ -38,7 +39,7 @@ namespace pci {
 
 // UpstreamNode includes device.h, so only forward declare it here.
 class UpstreamNode;
-class BusLinkInterface;
+class BusDeviceInterface;
 
 // A pci::Device represents a given PCI(e) device on a bus. It can be used
 // standalone for a regular PCI(e) device on the bus, or as the base class for a
@@ -99,7 +100,7 @@ class Device : public PciDeviceType,
 
   // Create, but do not initialize, a device.
   static zx_status_t Create(zx_device_t* parent, std::unique_ptr<Config>&& config,
-                            UpstreamNode* upstream, BusLinkInterface* bli);
+                            UpstreamNode* upstream, BusDeviceInterface* bdi);
   zx_status_t CreateProxy();
   virtual ~Device();
 
@@ -177,11 +178,11 @@ class Device : public PciDeviceType,
   // traits facilitate that for us.
  protected:
   Device(zx_device_t* parent, std::unique_ptr<Config>&& config, UpstreamNode* upstream,
-         BusLinkInterface* bli, bool is_bridge)
+         BusDeviceInterface* bdi, bool is_bridge)
       : PciDeviceType(parent),
         cfg_(std::move(config)),
         upstream_(upstream),
-        bli_(bli),
+        bdi_(bdi),
         bar_count_(is_bridge ? PCI_BAR_REGS_PER_BRIDGE : PCI_BAR_REGS_PER_DEVICE),
         is_bridge_(is_bridge) {}
 
@@ -213,7 +214,7 @@ class Device : public PciDeviceType,
   // indexed by starting BAR register index.
   std::array<BarInfo, PCI_MAX_BAR_REGS>& bars() __TA_REQUIRES(dev_lock_) { return bars_; }
   UpstreamNode* upstream() __TA_REQUIRES(dev_lock_) { return upstream_; }
-  BusLinkInterface* bli() __TA_REQUIRES(dev_lock_) { return bli_; }
+  BusDeviceInterface* bdi() __TA_REQUIRES(dev_lock_) { return bdi_; }
   // An upstream node will outlive its downstream devices
 
  private:
@@ -248,7 +249,7 @@ class Device : public PciDeviceType,
   mutable fbl::Mutex cmd_reg_lock_;    // Protection for access to the command register.
   const std::unique_ptr<Config> cfg_;  // Pointer to the device's config interface.
   UpstreamNode* upstream_ __TA_GUARDED(dev_lock_);  // The upstream node in the device graph.
-  BusLinkInterface* const bli_ __TA_GUARDED(dev_lock_);
+  BusDeviceInterface* bdi_ __TA_GUARDED(dev_lock_);
   std::array<BarInfo, PCI_MAX_BAR_REGS> bars_ __TA_GUARDED(dev_lock_) = {};
   const uint32_t bar_count_;
 
