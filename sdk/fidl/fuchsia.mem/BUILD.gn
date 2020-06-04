@@ -11,4 +11,5 @@ fidl("fuchsia.mem") {
     "buffer.fidl",
     "range.fidl",
   ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

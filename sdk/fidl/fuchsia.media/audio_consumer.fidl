@@ -33,7 +33,7 @@ protocol AudioConsumer {
     /// `stream_sink_request` request will be closed with an epitaph value of
     /// `ZX_ERR_INVALID_ARGS`
     CreateStreamSink(
-        vector<handle<vmo>>:16 buffers,
+        vector<zx.handle:VMO>:16 buffers,
         AudioStreamType stream_type,
         Compression? compression,
         request<StreamSink> stream_sink_request);

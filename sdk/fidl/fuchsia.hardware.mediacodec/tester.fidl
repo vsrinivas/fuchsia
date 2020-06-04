@@ -10,7 +10,7 @@ using zx;
 [ForDeprecatedCBindings]
 protocol Tester {
     /// Takes a directory handle from the client and installs that as /tmp in the driver so that debugging files can be written there.
-    SetOutputDirectoryHandle(handle<channel> handle);
+    SetOutputDirectoryHandle(zx.handle:CHANNEL handle);
 
     /// Runs the full suite of tests. Test output will go to klog.
     RunTests() -> (zx.status result);

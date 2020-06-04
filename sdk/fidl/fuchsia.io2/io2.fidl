@@ -6,6 +6,8 @@
 ///
 library fuchsia.io2;
 
+using zx;
+
 /// The type for the name of a node, i.e. a single path component.
 /// E.g. `foo`
 ///
@@ -47,7 +49,7 @@ const uint64 MAX_PATH_LENGTH = 4095;
 
 /// The type to identify a connection to a node.
 /// It represents a capability: a reference to a node with associated rights.
-using Token = handle<event>;
+using Token = zx.handle:EVENT;
 
 /// The type to identify a node, if the implementation supports some notion of
 /// unique node ID.

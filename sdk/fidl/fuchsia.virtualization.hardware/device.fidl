@@ -38,17 +38,17 @@ struct StartInfo {
 
     /// The guest associated with a device. This handle should be used to setup
     /// device traps, and then be released before device operation begins.
-    handle<guest>? guest;
+    zx.handle:GUEST? guest;
 
     /// The event associated with a device interrupt. This is how the device will
     /// notify the guest of events it should process.
     ///
     /// The meaning of the different signals that can be raised on the event are
     /// documented by the EVENT_* constants above.
-    handle<event> event;
+    zx.handle:EVENT event;
 
     /// The VMO used to represent guest physical memory.
-    handle<vmo> vmo;
+    zx.handle:VMO vmo;
 };
 
 protocol VirtioDevice {
@@ -93,7 +93,7 @@ protocol VirtioConsole {
     compose VirtioDevice;
 
     /// Start the console device. This uses `socket` to handle input and output.
-    Start(StartInfo start_info, handle<socket> socket) -> ();
+    Start(StartInfo start_info, zx.handle:SOCKET socket) -> ();
 };
 
 /// Provides a way for VirtioInput to listen to view events.
@@ -131,7 +131,7 @@ protocol VirtioMagma {
 
     /// Start the magma device.
     Start(StartInfo start_info,
-          handle<vmar> vmar,
+          zx.handle:VMAR vmar,
           VirtioWaylandImporter? wayland_importer) -> (zx.status status);
 };
 
@@ -156,7 +156,7 @@ const uint32 kVirtioWaylandInvalidVfdId = 0;
 // Provides an interface to import VMOs into the wayland device.
 protocol VirtioWaylandImporter {
     // Import a VMO into Wayland for use as a VFD.
-    Import(handle<vmo> vmo) -> (uint32 vfd_id);
+    Import(zx.handle:VMO vmo) -> (uint32 vfd_id);
 };
 
 [Discoverable]
@@ -165,7 +165,7 @@ protocol VirtioWayland {
 
     /// Start the wayland device.
     Start(StartInfo start_info,
-          handle<vmar> vmar,
+          zx.handle:VMAR vmar,
           fuchsia.virtualization.WaylandDispatcher dispatcher) -> ();
 
     // Get the VMO importer for this wayland device.

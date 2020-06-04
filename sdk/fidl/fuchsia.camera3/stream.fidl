@@ -82,7 +82,7 @@ struct FrameInfo {
     zx.time timestamp;
 
     /// The client must close this when it has completed reading from the buffer.
-    handle<eventpair> release_fence;
+    zx.handle:EVENTPAIR release_fence;
 };
 
 /// The frequency at which a Stream produces frames. The value is `numerator` / `denominator`, with

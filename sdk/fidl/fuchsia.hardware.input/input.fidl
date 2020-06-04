@@ -93,7 +93,7 @@ protocol Device {
     /// Device's report FIFO. This signal will be de-asserted when there are no
     /// reports in the Device's report FIFO. This event can be re-used each time
     /// the client wishes to know if there are reports in the FIFO.
-    GetReportsEvent() -> (zx.status status, handle<event> event);
+    GetReportsEvent() -> (zx.status status, zx.handle:EVENT event);
 
     /// Send a request to the hardware for a given report described by type and id.
     /// Returns the hardware's response. This interface is not intended

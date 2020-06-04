@@ -8,6 +8,7 @@ using fuchsia.images;
 using fuchsia.mem;
 using fuchsia.ui.gfx;
 using fuchsia.ui.views;
+using zx;
 
 /// Scenic.TakeScreenshot() returns a raw BGRA formatted image in
 /// sRGB color space and with a non-linear transfer function in this
@@ -38,7 +39,7 @@ protocol Scenic {
     GetDisplayInfo() -> (fuchsia.ui.gfx.DisplayInfo info);
     /// Gets an event signaled with displayOwnedSignal or displayNotOwnedSignal
     /// when display ownership changes.
-    GetDisplayOwnershipEvent() -> (handle<event> ownership_event);
+    GetDisplayOwnershipEvent() -> (zx.handle:EVENT ownership_event);
 
     /// Take a screenshot and return the data in `img_data`. `img_data` will
     /// not contain BGRA data if `success` is false.

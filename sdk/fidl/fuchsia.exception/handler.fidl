@@ -20,7 +20,7 @@ protocol Handler {
     ///
     /// `info` represents basic exception information as provided by the
     /// exception channel.
-    OnException(handle<exception> exception, ExceptionInfo info) -> ();
+    OnException(zx.handle:EXCEPTION exception, ExceptionInfo info) -> ();
 };
 
 /// Basic exception information associated with a particular exception.
@@ -43,15 +43,15 @@ struct ExceptionInfo {
 /// Both |process| and |thread| will be valid if present.
 table ProcessException {
     /// `exception` is guaranteed to be valid.
-    1: handle<exception> exception;
+    1: zx.handle:EXCEPTION exception;
     2: ExceptionInfo info;
 
     /// Both `process` and `thread` will be valid if present.
-    3: handle<process> process;
+    3: zx.handle:PROCESS process;
 
     /// The thread that generated the exception.
     /// The process may have other threads that are not reflected here.
-    4: handle<thread> thread;
+    4: zx.handle:THREAD thread;
 };
 
 /// What type of exception was triggered.

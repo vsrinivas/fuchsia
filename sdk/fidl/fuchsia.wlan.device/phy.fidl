@@ -6,6 +6,7 @@ library fuchsia.wlan.device;
 
 using fuchsia.wlan.common;
 using fuchsia.wlan.mlme;
+using zx;
 
 enum SupportedPhy {
     DSSS = 1;
@@ -88,7 +89,7 @@ struct QueryResponse {
 struct CreateIfaceRequest {
     MacRole role;
     // TODO(WLAN-927): Make `sme_channel` mandatory once all drivers support the channel.
-    handle<channel>? sme_channel;
+    zx.handle:CHANNEL? sme_channel;
     bytes:6? init_mac_addr;
 };
 

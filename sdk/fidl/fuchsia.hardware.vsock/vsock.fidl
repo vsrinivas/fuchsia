@@ -55,7 +55,7 @@ protocol Device {
     // the handle. The `status` returned indicates whether the request was sent
     // successfully. Callbacks.Response or Callbacks.Rst will be called to indicate
     // if the connection was successfully established or not.
-    SendRequest(Addr addr, handle<socket> data) -> (zx.status status);
+    SendRequest(Addr addr, zx.handle:SOCKET data) -> (zx.status status);
     // Request a shutdown to begin for the connection indicated by the given `addr`.
     // This immediately stops any data from being sent on the connection, although
     // data may still be received up until Callbacks.Rst is called to indicate the
@@ -68,7 +68,7 @@ protocol Device {
     // Causes a 'response' to get sent to the host, gives the driver a `data` socket
     // to use for sending and receiving data on the established connection. It is
     // only correct to use this in response to a Callbacks.Request.
-    SendResponse(Addr addr, handle<socket> data) -> (zx.status status);
+    SendResponse(Addr addr, zx.handle:SOCKET data) -> (zx.status status);
     // Query the current context id of the driver. The local CID is never needed
     // in interactions with the same device, and retrieving it is only useful for
     // debugging or if you have some other communication channel to a different host
@@ -80,5 +80,5 @@ protocol Device {
     // is pending data to transmit in the `data` socket of a connection and there
     // is a vmo pending then it is undefined which one will be sent. Once the vmo
     // contents have finished sending Callbacks.SendVmoComplete will be called.
-    SendVmo(Addr addr, handle<vmo> vmo, uint64 off, uint64 len) -> (zx.status status);
+    SendVmo(Addr addr, zx.handle:VMO vmo, uint64 off, uint64 len) -> (zx.status status);
 };

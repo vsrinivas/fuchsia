@@ -4,6 +4,8 @@
 
 library fuchsia.hardware.intel.hda;
 
+using zx;
+
 [ForDeprecatedCBindings]
 protocol ControllerDevice {
     // Note: this method obtains a channel to the controller device which
@@ -11,5 +13,5 @@ protocol ControllerDevice {
     // system has been updated to use FIDL as its serialization format instead
     // of the legacy custom format, this method can be updated to use an
     // interface request instead of returning a channel.
-    GetChannel() -> (handle<channel> ch);
+    GetChannel() -> (zx.handle:CHANNEL ch);
 };

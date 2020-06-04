@@ -9,5 +9,8 @@ fidl("fuchsia.ultrasound") {
 
   sources = [ "factory.fidl" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.media" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//zircon/vdso/zx",
+  ]
 }

@@ -74,7 +74,7 @@ struct AddressSpaceChildDriverPingMessage {
 [ForDeprecatedCBindings]
 protocol AddressSpaceChildDriver {
     // Allocates goldfish address space of given size.
-    AllocateBlock(uint64 size) -> (zx.status res, uint64 paddr, handle<vmo>? vmo);
+    AllocateBlock(uint64 size) -> (zx.status res, uint64 paddr, zx.handle:VMO? vmo);
     // Free goldfish address space associated with given ID.
     DeallocateBlock(uint64 paddr) -> (zx.status res);
 
@@ -83,7 +83,7 @@ protocol AddressSpaceChildDriver {
     // regions across different connections, but within a connection, we
     // require the claimed regions to be disjoint. Otherwise, ZX_ERROR_INVALID_ARGS
     // is returned.
-    ClaimSharedBlock(uint64 offset, uint64 size) -> (zx.status res, handle<vmo>? vmo);
+    ClaimSharedBlock(uint64 offset, uint64 size) -> (zx.status res, zx.handle:VMO? vmo);
 
     // Unclaim a hardware-shared region. This must correspond to an existing claimed
     // region in the current connection. Otherwise, ZX_ERROR_INVALID_ARGS is returned.

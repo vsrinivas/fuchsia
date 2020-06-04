@@ -4,6 +4,8 @@
 
 library fuchsia.boot;
 
+using zx;
+
 /// Protocol for retrieving boot item payloads.
 [Discoverable, ForDeprecatedCBindings]
 protocol Items {
@@ -12,5 +14,5 @@ protocol Items {
     ///
     /// For a list of `type`s, refer to <zircon/boot/image.h>.
     /// For a list of `extra`s, refer to <zircon/boot/driver-config.h>.
-    Get(uint32 type, uint32 extra) -> (handle<vmo>? payload, uint32 length);
+    Get(uint32 type, uint32 extra) -> (zx.handle:VMO? payload, uint32 length);
 };

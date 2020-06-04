@@ -19,5 +19,8 @@ fidl("fuchsia.images") {
     "presentation_info.fidl",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.sysmem" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.sysmem",
+    "//zircon/vdso/zx",
+  ]
 }

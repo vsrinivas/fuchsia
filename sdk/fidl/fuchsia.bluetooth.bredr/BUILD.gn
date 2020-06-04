@@ -12,5 +12,6 @@ fidl("fuchsia.bluetooth.bredr") {
   public_deps = [
     "//sdk/fidl/fuchsia.bluetooth",
     "//sdk/fidl/fuchsia.url",
+    "//zircon/vdso/zx",
   ]
 }

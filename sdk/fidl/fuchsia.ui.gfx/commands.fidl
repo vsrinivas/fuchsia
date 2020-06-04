@@ -5,6 +5,7 @@
 library fuchsia.ui.gfx;
 
 using fuchsia.mem;
+using zx;
 
 /// Commands that are used to modify the state of a `Session`.
 union Command {
@@ -128,7 +129,7 @@ struct ReleaseResourceCmd {
 /// so.
 struct ExportResourceCmdDeprecated {
     uint32 id;
-    handle<eventpair> token;
+    zx.handle:EVENTPAIR token;
 };
 
 /// Import a resource that was exported via ExportResourceCmd().  `token` is
@@ -155,7 +156,7 @@ struct ExportResourceCmdDeprecated {
 // act as a plain white texture).
 struct ImportResourceCmdDeprecated {
     uint32 id;
-    handle<eventpair> token;
+    zx.handle:EVENTPAIR token;
     ImportSpec spec;
 };
 

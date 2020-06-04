@@ -51,8 +51,8 @@ protocol GuestInteraction {
     /// error, and return code.
     ExecuteCommand(string:GUEST_INTERACTION_MAX_LENGTH command,
                    vector<EnvironmentVariable>:GUEST_INTERACTION_MAX_LENGTH env,
-                   handle<socket>? stdin,
-                   handle<socket>? stdout,
-                   handle<socket>? stderr,
+                   zx.handle:SOCKET? stdin,
+                   zx.handle:SOCKET? stdout,
+                   zx.handle:SOCKET? stderr,
                    request<CommandListener> command_listener);
 };

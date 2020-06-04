@@ -4,9 +4,11 @@
 
 library fuchsia.boot;
 
+using zx;
+
 /// Protocol for providing the root resource.
 [Discoverable, ForDeprecatedCBindings]
 protocol RootResource {
     /// Get the root `resource`.
-    Get() -> (handle<resource> resource);
+    Get() -> (zx.handle:RESOURCE resource);
 };

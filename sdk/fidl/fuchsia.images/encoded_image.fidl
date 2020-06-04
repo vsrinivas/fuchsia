@@ -4,9 +4,11 @@
 
 library fuchsia.images;
 
+using zx;
+
 struct EncodedImage {
   /// The vmo.
-  handle<vmo> vmo;
+  zx.handle:VMO vmo;
   /// The size of the image in the vmo in bytes.
   uint64 size;
 };

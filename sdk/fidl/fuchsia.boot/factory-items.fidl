@@ -4,6 +4,8 @@
 
 library fuchsia.boot;
 
+using zx;
+
 /// Protocol for retrieving factory boot item payloads.
 [Discoverable, ForDeprecatedCBindings]
 protocol FactoryItems {
@@ -11,5 +13,5 @@ protocol FactoryItems {
     /// extra field set to `extra`.
     ///
     /// NOTE: We return the `length` of the item, as VMOs must be page-aligned.
-    Get(uint32 extra) -> (handle<vmo>? payload, uint32 length);
+    Get(uint32 extra) -> (zx.handle:VMO? payload, uint32 length);
 };

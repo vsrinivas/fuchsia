@@ -15,4 +15,6 @@ fidl("fuchsia.boot") {
     "root-job.fidl",
     "root-resource.fidl",
   ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }

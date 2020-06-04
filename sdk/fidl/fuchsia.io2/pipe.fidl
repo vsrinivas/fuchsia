@@ -4,6 +4,8 @@
 
 library fuchsia.io2;
 
+using zx;
+
 /// A node for streaming unstructured data.
 /// No pipe-specific methods are provided by this protocol. The client should
 /// access the pipe via the socket object returned from the `PipeInfo` member
@@ -21,5 +23,5 @@ table PipeInfo {
     /// The backing socket transport for the pipe.
     /// The rights on this socket should correspond to the rights on the
     /// node connection.
-    1: handle<socket> socket;
+    1: zx.handle:SOCKET socket;
 };

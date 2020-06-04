@@ -33,14 +33,14 @@ table Present2Args {
 
     /// Scenic will wait until all of a session's `acquire_fences` are ready
     /// before it will execute the presented commands.
-    2: vector<handle<event>> acquire_fences;
+    2: vector<zx.handle:EVENT> acquire_fences;
 
     /// `release_fences` is the list of events that will be signalled by Scenic when
     /// the following Present2 call's `acquire_fences` has been signalled, and
     /// the updated session state has been fully committed: future frames will be
     /// rendered using this state, and all frames generated using previous session
     /// states have been fully-rendered and presented to the display.
-    3: vector<handle<event>> release_fences;
+    3: vector<zx.handle:EVENT> release_fences;
 
     /// `requested_prediction_span` is the amount of time into the future Scenic
     /// will provide predictions for. A span of 0 is guaranteed to provide at
@@ -163,7 +163,7 @@ protocol Session {
     /// access to memory (and other external resources).  Any modification to
     /// resources made via the Session API are automatically synchronized.
     [Transitional]Present(uint64 presentation_time,
-              vector<handle<event>> acquire_fences, vector<handle<event>> release_fences)
+              vector<zx.handle:EVENT> acquire_fences, vector<zx.handle:EVENT> release_fences)
           -> (fuchsia.images.PresentationInfo presentation_info);
 
     /// Present all previously enqueued operations. In order to pipeline the

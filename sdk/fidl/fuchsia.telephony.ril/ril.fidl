@@ -4,6 +4,8 @@
 
 library fuchsia.telephony.ril;
 
+using zx;
+
 /// Power State of the radio
 enum RadioPowerState : uint8 {
     OFF = 0x00;
@@ -51,7 +53,7 @@ protocol Setup {
     ///
     /// Implementation Detail: current services speak QMI but others will most likely speak other
     /// binary formats.
-    ConnectTransport(handle<channel> channel) -> () error RilError;
+    ConnectTransport(zx.handle:CHANNEL channel) -> () error RilError;
 };
 
 /// The Standard Fuchsia RIL (FRIL)

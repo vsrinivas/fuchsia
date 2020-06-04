@@ -56,7 +56,7 @@ struct CobaltProjectConfig {
 
 struct InspectSource {
     // Inspection data served over a VMO.
-    handle<vmo> vmo;
+    zx.handle:VMO vmo;
 };
 
 // The configuration that actually describes where to find data in the InspectSource and turn it

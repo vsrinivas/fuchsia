@@ -14,12 +14,12 @@ using zx;
 [Discoverable, ForDeprecatedCBindings]
 protocol DebugDumper {
     /// Print device tree into `output`, returns bytes `written` and bytes `available` to write.
-    DumpTree(handle<vmo> output) -> (zx.status status, uint64 written, uint64 available);
+    DumpTree(zx.handle:VMO output) -> (zx.status status, uint64 written, uint64 available);
 
     /// Print information about all drivers into `output`, returns bytes `written` and bytes `available` to write.
-    DumpDrivers(handle<vmo> output) -> (zx.status status, uint64 written, uint64 available);
+    DumpDrivers(zx.handle:VMO output) -> (zx.status status, uint64 written, uint64 available);
 
     /// Print all devices and their binding properties into `output`, returns bytes `written`
     /// and bytes `available` to write.
-    DumpBindingProperties(handle<vmo> output) -> (zx.status status, uint64 written, uint64 available);
+    DumpBindingProperties(zx.handle:VMO output) -> (zx.status status, uint64 written, uint64 available);
 };

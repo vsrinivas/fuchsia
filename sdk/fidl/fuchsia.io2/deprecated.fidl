@@ -4,6 +4,8 @@
 
 library fuchsia.io2;
 
+using zx;
+
 [Deprecated = "devices will be services in the future"]
 bits DeviceSignal : uint32 {
     /// Indicates the device is ready for reading.
@@ -24,7 +26,7 @@ table DeviceInfo {
     /// An optional event which transmits information about a device's state.
     ///
     /// The [`DeviceSignal`] values may be observed on this event.
-    1: handle<eventpair> event;
+    1: zx.handle:EVENTPAIR event;
 };
 
 /// The object may be cast to a Tty interface.
@@ -33,5 +35,5 @@ table TtyInfo {
     /// An optional event which transmits information about a device's state.
     ///
     /// The [`DeviceSignal`] values may be observed on this event.
-    1: handle<eventpair> event;
+    1: zx.handle:EVENTPAIR event;
 };

@@ -19,7 +19,7 @@ protocol ControlDevice {
     /// all references to `vmo` have been closed. Fails if VMO is not
     /// associated with goldfish heap memory.
     /// Returns ZX_ERR_ALREADY_EXISTS if color buffer has already been created.
-    CreateColorBuffer(handle<vmo> vmo,
+    CreateColorBuffer(zx.handle:VMO vmo,
                       uint32 width,
                       uint32 height,
                       ColorBufferFormatType format)
@@ -27,5 +27,5 @@ protocol ControlDevice {
 
     /// Get color buffer for VMO. Fails if VMO is not associated with a color
     /// buffer.
-    GetColorBuffer(handle<vmo> vmo) -> (zx.status res, uint32 id);
+    GetColorBuffer(zx.handle:VMO vmo) -> (zx.status res, uint32 id);
 };

@@ -46,10 +46,10 @@ struct NameInfo {
 /// The information needed to launch a process.
 struct LaunchInfo {
     /// The executable to run in the process.
-    handle<vmo> executable;
+    zx.handle:VMO executable;
 
     /// The job in which to create the process.
-    handle<job> job;
+    zx.handle:JOB job;
 
     /// The name to assign to the created process.
     string:zx.MAX_NAME_LEN name;
@@ -60,17 +60,17 @@ struct LaunchInfo {
 /// To start the process, call `zx_process_start` with the arguments provided.
 struct ProcessStartData {
     /// The process that was created.
-    handle<process> process;
+    zx.handle:PROCESS process;
 
     /// The vmar object that was created when the process was created.
     ///
     /// See <https://fuchsia.dev/fuchsia-src/reference/syscalls/process_create.md>.
-    handle<vmar> root_vmar;
+    zx.handle:VMAR root_vmar;
 
     /// The initial thread for the process.
     ///
     /// Should be passed to `zx_process_start` when starting the process.
-    handle<thread> thread;
+    zx.handle:THREAD thread;
 
     /// The address of the initial entry point in the process.
     ///
@@ -85,7 +85,7 @@ struct ProcessStartData {
     /// The bootstrap channel to pass to the process on startup.
     ///
     /// Should be passed to `zx_process_start` when starting the process.
-    handle<channel> bootstrap;
+    zx.handle:CHANNEL bootstrap;
 
     /// The base address of the vDSO to pass to the process on startup.
     ///
@@ -122,7 +122,7 @@ protocol Launcher {
     /// state and is ready to launch another process.
     ///
     /// `process` is present if, and only if, `status` is `ZX_OK`.
-    Launch(LaunchInfo info) -> (zx.status status, handle<process>? process);
+    Launch(LaunchInfo info) -> (zx.status status, zx.handle:PROCESS? process);
 
     /// Creates the process described by `info` but does not start it.
     ///

@@ -8,6 +8,7 @@ using fuchsia.mem;
 using fuchsia.modular;
 using fuchsia.modular.session;
 using fuchsia.sys;
+using zx;
 
 /// The `TestHarness` service is used to run the modular runtime under a
 /// hermetic environment and drive integration tests under it. Tests may use
@@ -62,7 +63,7 @@ protocol TestHarness {
 
     /// Connects to environment services injected into the TestHarness
     /// environment.
-    ConnectToEnvironmentService(string service_name, handle<channel> request);
+    ConnectToEnvironmentService(string service_name, zx.handle:CHANNEL request);
 
     /// Parses a JSON modular configuration string into BasemgrConfig and
     /// SessionmgrConfig. This method may be called before `Run()` is called.
@@ -165,7 +166,7 @@ table EnvironmentServicesSpec {
     /// A directory of services to be provided to the test harness environment.
     ///
     /// Optional.
-    1: handle<channel> service_dir;
+    1: zx.handle:CHANNEL service_dir;
 
     /// A list of services provided by components to inject into the test
     /// harness environment. Multiple services may be provided by the same

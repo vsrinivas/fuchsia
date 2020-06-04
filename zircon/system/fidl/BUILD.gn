@@ -9,6 +9,7 @@ import("$zx/public/gn/fidl_c_header.gni")
 
 fidl_c_header("fuchsia-debugdata") {
   sources = [ "../../../sdk/fidl/fuchsia.debugdata/debugdata.fidl" ]
+  deps = [ ":zx" ]
 }
 
 fidl_c_header("fuchsia-io") {
@@ -25,6 +26,7 @@ fidl_c_header("fuchsia-mem") {
     "../../../sdk/fidl/fuchsia.mem/buffer.fidl",
     "../../../sdk/fidl/fuchsia.mem/range.fidl",
   ]
+  deps = [ ":zx" ]
 }
 
 fidl_c_header("zx") {

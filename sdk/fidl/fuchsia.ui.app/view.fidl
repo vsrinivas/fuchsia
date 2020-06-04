@@ -4,6 +4,8 @@
 
 library fuchsia.ui.app;
 
+using zx;
+
 /// A View is an interface that a component implements to offer a Scenic
 /// view to its clients.  A Scenic view is container of Scenic graph nodes,
 /// which, when rendered, might display a graphical user interface, such
@@ -57,5 +59,5 @@ protocol View {
     ///
     /// The View's implementation should pass the `view_token` to Scenic
     /// using a `fuchsia.ui.view.CreateViewCmd`.
-    Attach(handle<eventpair> view_token);
+    Attach(zx.handle:EVENTPAIR view_token);
 };

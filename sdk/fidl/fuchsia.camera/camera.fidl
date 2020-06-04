@@ -95,7 +95,7 @@ protocol Control {
     ///        the stream.
     ///     2) If the Stream interface is closed, the driver will close the eventpair.
     CreateStream(fuchsia.sysmem.BufferCollectionInfo buffer_collection,
-                 FrameRate rate, request<Stream> stream, handle<eventpair> stream_token);
+                 FrameRate rate, request<Stream> stream, zx.handle:EVENTPAIR stream_token);
 
     GetDeviceInfo() -> (DeviceInfo device_info);
 };

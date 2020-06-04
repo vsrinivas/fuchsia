@@ -120,14 +120,14 @@ protocol LogSink {
     ///
     /// See //zircon/system/ulib/syslog/include/syslog/wire_format.h for what is expected to be
     /// received over the socket.
-    Connect(handle<socket> socket);
+    Connect(zx.handle:SOCKET socket);
 
     /// Send this socket to be drained, using the structured logs format.
     ///
     /// See //docs/development/logs/encodings.md for what is expected to be recieved over the
     /// socket.
     [Transitional]
-    ConnectStructured(handle<socket> socket);
+    ConnectStructured(zx.handle:SOCKET socket);
 };
 
 /// Max log bytes per call to a listener.

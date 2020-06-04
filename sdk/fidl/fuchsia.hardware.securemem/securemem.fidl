@@ -17,5 +17,5 @@ protocol Device {
     ///    entity. The protocol implementation should not be expected to keep the VMO pinned.
     ///  * The server implementation must not use an IOMMU-backed BTI handle, as the physical
     ///    address of the VMO being pinned must be stable.
-    GetSecureMemoryPhysicalAddress(handle<vmo> secure_mem) -> (zx.status s, zx.paddr paddr);
+    GetSecureMemoryPhysicalAddress(zx.handle:VMO secure_mem) -> (zx.status s, zx.paddr paddr);
 };

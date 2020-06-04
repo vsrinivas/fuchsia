@@ -14,12 +14,12 @@ struct CpuSet {
 [Discoverable, ForDeprecatedCBindings]
 protocol ProfileProvider {
     /// Obtain a profile handle.
-    GetProfile(uint32 priority, string:64 name) -> (zx.status status, handle<profile>? profile);
+    GetProfile(uint32 priority, string:64 name) -> (zx.status status, zx.handle:PROFILE? profile);
 
     /// Obtain a deadline profile handle.
     GetDeadlineProfile(uint64 capacity, uint64 deadline, uint64 period, string:64 name)
-        -> (zx.status status, handle<profile>? profile);
+        -> (zx.status status, zx.handle:PROFILE? profile);
 
     // Obtain a handle for a profile that sets CPU affinity.
-    GetCpuAffinityProfile(CpuSet cpu_mask) -> (zx.status status, handle<profile>? profile);
+    GetCpuAffinityProfile(CpuSet cpu_mask) -> (zx.status status, zx.handle:PROFILE? profile);
 };

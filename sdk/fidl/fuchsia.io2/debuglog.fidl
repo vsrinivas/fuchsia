@@ -4,6 +4,8 @@
 
 library fuchsia.io2;
 
+using zx;
+
 /// A node for interacting with the kernel debug log.
 /// It may be manipulated via the debuglog object returned from
 /// the `DebuglogInfo` member in [`fuchsia.io2/Representation`].
@@ -16,5 +18,5 @@ protocol Debuglog {
 /// connection speaks the [`fuchsia.io2/Debuglog`] protocol.
 table DebuglogInfo {
     /// The backing debuglog kernel object.
-    1: handle<debuglog> debuglog;
+    1: zx.handle:LOG debuglog;
 };

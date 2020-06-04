@@ -10,7 +10,7 @@ using zx;
 protocol InspectVmoProvider {
     /// Requests the inspect vmo from the entity.
     ///  - |vmo| has |ZX_RIGHTS_DUPLICATE|, |ZX_RIGHTS_TRANSFER|, |ZX_RIGHTS_READ|
-    GetVmo() -> (handle<vmo> vmo) error zx.status;
+    GetVmo() -> (zx.handle:VMO vmo) error zx.status;
 };
 
 protocol Ftl {

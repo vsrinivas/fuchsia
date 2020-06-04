@@ -66,7 +66,7 @@ protocol Controller {
     /// The trace controller emits trace data to `output` as a sequence of
     /// binary formatted trace records.  Traces obtained from different providers
     /// are delimited by metadata records within the stream.
-    InitializeTracing(TraceConfig config, handle<socket> output);
+    InitializeTracing(TraceConfig config, zx.handle:SOCKET output);
 
     /// Requests to terminate tracing.
     ///

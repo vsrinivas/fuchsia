@@ -25,7 +25,7 @@ protocol Heap {
     ///
     /// The caller guarantees that CreateResource() will be called prior
     /// to the returned VMO or any associated child VMO being used.
-    AllocateVmo(uint64 size) -> (zx.status s, handle<vmo>? vmo);
+    AllocateVmo(uint64 size) -> (zx.status s, zx.handle:VMO? vmo);
 
     /// Create resources and associate heap-specific resources with the
     /// passed-in VMO. Resources can be hardware specific and their
@@ -47,7 +47,7 @@ protocol Heap {
     /// VMO, or any VMAR mapping to VMO, as any of those would keep VMO
     /// alive beyond all sysmem participant usages of the vmo; instead
     /// the heap can get the vmo's koid for the heap's mapping.
-    CreateResource(handle<vmo> vmo) -> (zx.status s, uint64 id);
+    CreateResource(zx.handle:VMO vmo) -> (zx.status s, uint64 id);
 
     /// Destroy previously created resources.
     DestroyResource(uint64 id) -> ();

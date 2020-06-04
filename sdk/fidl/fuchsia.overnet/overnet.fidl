@@ -8,6 +8,7 @@ library fuchsia.overnet;
 // said devices.
 
 using fuchsia.overnet.protocol;
+using zx;
 
 /// Interfaces applicable to consuming services from other devices
 [Discoverable]
@@ -20,7 +21,7 @@ protocol ServiceConsumer {
     /// Connect `chan` to some external service on `node` with name `service_name`.
     ConnectToService(fuchsia.overnet.protocol.NodeId node,
                      string:fuchsia.overnet.protocol.MAX_SERVICE_NAME_LENGTH service_name,
-                     handle<channel> chan);
+                     zx.handle:CHANNEL chan);
 };
 
 /// Interfaces applicable to sharing services with ServiceConsumer's
@@ -36,14 +37,14 @@ protocol ServicePublisher {
 [Discoverable]
 protocol MeshController {
     /// Attach a socket as a new link. Bad socket options will result in the channel being closed.
-    AttachSocketLink(handle<socket> socket, SocketLinkOptions options);
+    AttachSocketLink(zx.handle:SOCKET socket, SocketLinkOptions options);
 };
 
 /// A ServiceProvider is a factory for one service.
 protocol ServiceProvider {
     /// Connect `chan` to the service (called in response to Overnet.ConnectToService).
     /// `info` provides additional data about the connection request.
-    ConnectToService(handle<channel> chan, ConnectionInfo info);
+    ConnectToService(zx.handle:CHANNEL chan, ConnectionInfo info);
 };
 
 /// A `Peer` describes one device on the Overnet mesh.

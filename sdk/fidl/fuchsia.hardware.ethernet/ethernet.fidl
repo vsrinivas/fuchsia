@@ -23,8 +23,8 @@ struct Info {
 
 struct Fifos {
     // handles for the rx and tx fifo
-    handle<fifo> rx;
-    handle<fifo> tx;
+    zx.handle:FIFO rx;
+    zx.handle:FIFO tx;
 
     // maximum number of items in rx and tx fifo
     uint32 rx_depth;
@@ -78,7 +78,7 @@ protocol Device {
     GetFifos() -> (zx.status status, Fifos? info);
 
     /// Set the IO Buffer that will provide the data buffers for tx and rx operations
-    SetIOBuffer(handle<vmo> h) -> (zx.status status);
+    SetIOBuffer(zx.handle:VMO h) -> (zx.status status);
 
     /// Start transferring packets
     /// Start will not succeed (ZX_ERR_BAD_STATE) until the fifos have been

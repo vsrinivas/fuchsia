@@ -58,7 +58,7 @@ struct SdioRwTxn {
     bool write;
     bool use_dma;
     /// Used if use_dma is true
-    handle<vmo>? dma_vmo;
+    zx.handle:VMO? dma_vmo;
     /// Used if use_dma is false
     vector<uint8>:MAX_TRANSFER_SIZE? virt;
     /// offset into dma_vmo or virt
@@ -75,7 +75,7 @@ protocol Device {
     GetBlockSize() -> (uint16 cur_blk_size) error zx.status;
     DoRwTxn(SdioRwTxn txn) -> (SdioRwTxn txn) error zx.status;
     DoRwByte(bool write, uint32 addr, uint8 write_byte) -> (uint8 read_byte) error zx.status;
-    GetInBandIntr() -> (handle<interrupt> irq) error zx.status;
+    GetInBandIntr() -> (zx.handle:INTERRUPT irq) error zx.status;
     /// The following functions access the card common control registers (CCCR) on function 0.
     /// Aborts an I/O operation occurring on the specified function.
     IoAbort() -> () error zx.status;

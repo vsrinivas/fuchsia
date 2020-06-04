@@ -4,11 +4,13 @@
 
 library fuchsia.sys;
 
+using zx;
+
 /// An interface for providing a job handle. Instances of this interface are
 /// created in the context of an already-identified realm, so there is no need
 /// to explicitly identify the realm below.
 [Discoverable]
 protocol JobProvider {
     /// Gets the root job associated with the realm.
-    GetJob() -> (handle<job> job);
+    GetJob() -> (zx.handle:JOB job);
 };

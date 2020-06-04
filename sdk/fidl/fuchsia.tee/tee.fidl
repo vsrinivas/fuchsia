@@ -4,6 +4,8 @@
 
 library fuchsia.tee;
 
+using zx;
+
 // Trusted Execution Environment (TEE) Interface
 
 /// UUID identifiers are used to identify the TEE Operating System and individual Trusted
@@ -52,7 +54,7 @@ table Buffer {
     /// calculate how large that output buffer should be, they can attempt the operation without
     /// a vmo and the Trusted Application will populate the size field so that the operation can
     /// be performed again with an appropriately sized buffer.
-    2: handle<vmo> vmo;
+    2: zx.handle:VMO vmo;
     3: uint64 offset;
     4: uint64 size;
 };

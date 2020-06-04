@@ -5,13 +5,14 @@
 library fuchsia.ui.display;
 
 using fuchsia.hardware.display;
+using zx;
 
 /// Unique identifier for a display.
 /// Also serves as a capability, enabling the owner to perform certain
 /// operations on displays in the DisplayManager protocol and other protocols
 /// (like Scenic).
 struct DisplayRef {
-    handle<event> reference;
+    zx.handle:EVENT reference;
 };
 
 // === Mode flags ===

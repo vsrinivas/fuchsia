@@ -54,13 +54,13 @@ protocol Bootstrap {
 
 struct RuntimeInfo {
     /// The process being bootstrapped.
-    handle<process> process;
+    zx.handle:PROCESS process;
 
     /// The initial thread of the process being bootstrapped.
-    handle<thread> initial_thread;
+    zx.handle:THREAD initial_thread;
 
     /// REVIEW: What VMAR(s) does the program runtime receive?
-    handle<vmar> vmars;
+    zx.handle:VMAR vmars;
 };
 
 /// Flags to modulate the behavior of the interpreter for a process.
@@ -76,13 +76,13 @@ struct InterpreterInfo {
     InterpreterFlags flags;
 
     /// The VMAR into which the interpreter should load code.
-    handle<vmar> target_vmar;
+    zx.handle:VMAR target_vmar;
 
     /// The VMAR into which the interpreter was loaded.
-    handle<vmar> interpreter_vmar;
+    zx.handle:VMAR interpreter_vmar;
 
     /// The executable to load.
-    handle<vmo> executable;
+    zx.handle:VMO executable;
 
     /// The shared library loader to use for the process.
     fuchsia.ldsvc.Loader loader;

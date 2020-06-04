@@ -194,7 +194,7 @@ table FileInfo {
     /// - The filesystem supports signalling readability/writability events.
     ///
     /// The [`FileSignal`] values may be observed on this event.
-    1: handle<event> observer;
+    1: zx.handle:EVENT observer;
 
     /// Returns if the file is opened in append mode.
     /// In append mode, the seek offset is moved to the end before every
@@ -207,7 +207,7 @@ table FileInfo {
     /// Reading and writing the file using the stream object can be up to 20x
     /// faster than reading and writing the file using the Read and Write
     /// operations in the [`fuchsia.io2/File`] protocol.
-    3: handle<stream> stream;
+    3: zx.handle:STREAM stream;
 };
 
 bits FileSignal : uint32 {

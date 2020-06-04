@@ -4,6 +4,8 @@
 
 library fuchsia.sys;
 
+using zx;
+
 /// Maximum length for an environment label.
 const uint32 kLabelMaxLength = 32;
 
@@ -73,5 +75,5 @@ protocol Environment {
 
     /// Gets a superset of services provided by this environment's
     /// `host_directory`.
-    GetDirectory(handle<channel> directory_request);
+    GetDirectory(zx.handle:CHANNEL directory_request);
 };

@@ -4,6 +4,8 @@
 
 library fuchsia.ui.views;
 
+using zx;
+
 /// A ViewRef is a handle to a kernel object which identifies a unique View
 /// across the system. Two ViewRefs to the same View have the same KOID.
 ///
@@ -26,7 +28,7 @@ library fuchsia.ui.views;
 /// considered as "in-focus" down the View hierarchy. When a View is destroyed,
 /// Scenic signals to all FocusChain holders that the ViewRef is now invalid.
 struct ViewRef {
-    handle<eventpair> reference;
+    zx.handle:EVENTPAIR reference;
 };
 
 /// A ViewRefControl is the peer to a ViewRef. Their `reference`s are linked.
@@ -44,5 +46,5 @@ struct ViewRef {
 /// not remove or modify the ViewRefControl's capabilities; otherwise the View
 /// is not created.
 struct ViewRefControl {
-    handle<eventpair> reference;
+    zx.handle:EVENTPAIR reference;
 };

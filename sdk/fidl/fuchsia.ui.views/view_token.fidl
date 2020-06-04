@@ -4,6 +4,8 @@
 
 library fuchsia.ui.views;
 
+using zx;
+
 /// Token that uniquely identifies an attachment point for a `View` in the
 /// global scene graph.  Each `ViewHolderToken` has exactly one corresponding
 /// `ViewToken`.
@@ -12,7 +14,7 @@ library fuchsia.ui.views;
 /// `ViewHolder` resource using this token.  The other client must also create
 /// a `View` resource using the corresponding `ViewToken`.
 struct ViewHolderToken {
-    handle<eventpair> value;
+    zx.handle:EVENTPAIR value;
 };
 
 /// Token that uniquely identifies a `View`, which is the root point for a
@@ -23,5 +25,5 @@ struct ViewHolderToken {
 /// creating a `View` resource using this token.  The other client must also
 /// create a `ViewHolder` resource using the corresponding `ViewHolderToken`.
 struct ViewToken {
-    handle<eventpair> value;
+    zx.handle:EVENTPAIR value;
 };

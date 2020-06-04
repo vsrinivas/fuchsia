@@ -4,6 +4,8 @@
 
 library fuchsia.setui;
 
+using zx;
+
 /// operations supported by string settings.
 enum StringOperation {
     UPDATE = 1;
@@ -73,7 +75,7 @@ union Mutation {
 };
 
 struct AccountMutationHandles {
-    handle<eventpair> view_holder_token;
+    zx.handle:EVENTPAIR view_holder_token;
 };
 
 union MutationHandles {

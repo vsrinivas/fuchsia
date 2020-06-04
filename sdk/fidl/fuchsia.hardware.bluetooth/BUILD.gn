@@ -10,4 +10,6 @@ fidl("fuchsia.hardware.bluetooth") {
     "hci.fidl",
     "host.fidl",
   ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }

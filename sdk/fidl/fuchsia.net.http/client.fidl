@@ -44,7 +44,7 @@ union Body {
     1: fuchsia.mem.Buffer buffer;
 
     /// A socket that will contain the streaming request or response body.
-    2: handle<socket> stream;
+    2: zx.handle:SOCKET stream;
 };
 
 /// An HTTP request.
@@ -95,7 +95,7 @@ table Response {
     1: Error error;
 
     /// The response body.
-    2: handle<socket> body;
+    2: zx.handle:SOCKET body;
 
     /// The final URL of the response, after redirects have been followed.
     3: fuchsia.url.Url final_url;

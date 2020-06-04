@@ -17,7 +17,7 @@ protocol SeekingReader {
     // Reads the content. If there’s a problem performing the read, this is
     // expressed using result. If the read succeeded, the reply must contain a
     // valid socket from which the content can be read.
-    ReadAt(uint64 position) -> (zx.status status, handle<socket>? socket);
+    ReadAt(uint64 position) -> (zx.status status, zx.handle:SOCKET? socket);
 };
 
 /// Distinguished value for the `size` value returned by `SeekingReader.Describe`

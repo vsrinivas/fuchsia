@@ -4,6 +4,8 @@
 
 library fuchsia.hardware.hidctl;
 
+using zx;
+
 const uint32 MAX_RPT_DESC_LEN = 8196;
 
 struct HidCtlConfig {
@@ -26,5 +28,5 @@ struct HidCtlConfig {
 protocol Device {
     /// Create a fake HID device with a given report descriptor. Returns a
     /// socket that can Read/Write HID reports.
-    MakeHidDevice(HidCtlConfig config, vector<uint8>:MAX_RPT_DESC_LEN rpt_desc) -> (handle<socket> report_socket);
+    MakeHidDevice(HidCtlConfig config, vector<uint8>:MAX_RPT_DESC_LEN rpt_desc) -> (zx.handle:SOCKET report_socket);
 };

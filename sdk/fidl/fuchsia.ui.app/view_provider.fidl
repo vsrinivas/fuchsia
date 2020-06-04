@@ -6,6 +6,7 @@ library fuchsia.ui.app;
 
 using fuchsia.sys;
 using fuchsia.ui.views;
+using zx;
 
 /// ViewProvider is the standard mechanism for two modules to each obtain half
 /// of a shared eventpair token.  The shared token is a capability allowing the
@@ -37,7 +38,7 @@ protocol ViewProvider {
     ///
     /// Modules can use these mechanisms to establish a distributed,
     /// inter-process scene graph.
-    CreateView(handle<eventpair> token,
+    CreateView(zx.handle:EVENTPAIR token,
                request<fuchsia.sys.ServiceProvider>? incoming_services,
                fuchsia.sys.ServiceProvider? outgoing_services);
 
@@ -55,7 +56,7 @@ protocol ViewProvider {
     /// `view_ref_control` must not have the ZX_RIGHT_DUPLICATE set, or view creation
     /// will fail.
     [Transitional]
-    CreateViewWithViewRef(handle<eventpair> token,
+    CreateViewWithViewRef(zx.handle:EVENTPAIR token,
                           fuchsia.ui.views.ViewRefControl view_ref_control,
                           fuchsia.ui.views.ViewRef view_ref);
 };

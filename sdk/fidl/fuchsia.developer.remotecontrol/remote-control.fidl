@@ -8,6 +8,7 @@ using fuchsia.diagnostics as diagnostics;
 using fuchsia.url;
 using fuchsia.test as test;
 using fuchsia.test.manager as test_manager;
+using zx;
 
 // This is copied from `fuchsia.sys.types`.
 // Unfortunately we can't depend on it directly,
@@ -34,10 +35,10 @@ protocol RemoteControl {
         vector<string:MAX>:MAX args,
         // stdout from the component.
         // This would be called just 'stdout', except for fxb/42108.
-        handle<socket> component_stdout,
+        zx.handle:SOCKET component_stdout,
         // stderr from the component.
         // This would be called just 'stderr', except for fxb/42108.
-        handle<socket> component_stderr,
+        zx.handle:SOCKET component_stderr,
         request<ComponentController> controller
         ) -> () error ComponentControlError;
 
@@ -52,7 +53,7 @@ protocol RemoteControl {
 
     Connect(
         diagnostics.Selector selector,
-        handle<channel> service_chan) -> ()
+        zx.handle:CHANNEL service_chan) -> ()
         error ConnectError;
 
     Select(diagnostics.Selector selector)

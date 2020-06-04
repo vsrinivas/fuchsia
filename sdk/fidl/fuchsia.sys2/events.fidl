@@ -270,12 +270,12 @@ protocol RoutingProtocol {
     ///
     /// Opening the existing provider sets up Interposer <---> Server
     /// Replacing the existing provider sets up Client <---> Interposer
-    ReplaceAndOpen(CapabilityProvider client_end, handle<channel> server_end) -> ();
+    ReplaceAndOpen(CapabilityProvider client_end, zx.handle:CHANNEL server_end) -> ();
 };
 
 /// A FIDL-based version of a CapabilityProvider
 protocol CapabilityProvider {
     /// Called to bind a server end of a channel to the provided framework capability.
     /// TODO(xbhatnag): provide all arguments (flags, mode, path) to this method.
-    Open(handle<channel> server_end) -> ();
+    Open(zx.handle:CHANNEL server_end) -> ();
 };

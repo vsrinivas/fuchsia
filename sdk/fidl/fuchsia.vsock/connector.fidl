@@ -11,7 +11,7 @@ using fuchsia.hardware.vsock;
 struct ConnectionTransport {
     /// `data` socket that is ultimately given to the underlying vsock driver and
     /// is where all incoming data can be received from.
-    handle<socket> data;
+    zx.handle:SOCKET data;
     /// `Connection` interface that is retained by a vsock service that can be
     /// used to manipulate the state of a connection or perform more complex
     /// operations than just sending and receiving on a socket.
@@ -26,7 +26,7 @@ protocol Connection {
     Shutdown();
     /// Send a VMO. The reply indicates that the VMO send has finished and that
     /// data may be queued on the socket again without causing races.
-    SendVmo(handle<vmo> vmo, uint64 off, uint64 len) -> (zx.status status);
+    SendVmo(zx.handle:VMO vmo, uint64 off, uint64 len) -> (zx.status status);
 };
 
 /// Interface presented by a listener to accept or reject connections

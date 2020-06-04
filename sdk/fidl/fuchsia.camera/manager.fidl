@@ -5,6 +5,7 @@
 library fuchsia.camera;
 
 using fuchsia.sysmem;
+using zx;
 
 /// A stream that the camera manager can provide.  Video streams reference a
 /// a camera, but may have additional hardware and bandwidth restrictions
@@ -59,7 +60,7 @@ protocol Manager {
     /// This is being deprecated - please use CreateStreamV2.
     CreateStream(VideoStream request,
                  fuchsia.sysmem.BufferCollectionInfo buffer_info,
-                 request<Stream> stream, handle<eventpair> client_token);
+                 request<Stream> stream, zx.handle:EVENTPAIR client_token);
 
     /// Create a Stream with the specified access rights.  This may not succeed.
     /// If it does succeed, the Stream will have the rights indicated.
@@ -68,6 +69,6 @@ protocol Manager {
     CreateStreamV2(VideoStreamV2 request,
                    fuchsia.sysmem.BufferCollectionInfo buffer_info,
                    request<Stream> stream,
-                   handle<eventpair> client_token);
+                   zx.handle:EVENTPAIR client_token);
 
 };

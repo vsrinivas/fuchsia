@@ -12,10 +12,10 @@ protocol Device {
     Query(uint64 query_id) -> (uint64 result);
 
     /// Get a parameter and store it in a new vmo.
-    QueryReturnsBuffer(uint64 query_id) -> (handle<vmo> result);
+    QueryReturnsBuffer(uint64 query_id) -> (zx.handle:VMO result);
 
     /// Get the magma ipc channels.
-    Connect(uint64 client_id) -> (handle<channel> primary_channel, handle<channel> notification_channel);
+    Connect(uint64 client_id) -> (zx.handle:CHANNEL primary_channel, zx.handle:CHANNEL notification_channel);
 
     /// Dumps driver and hardware state.
     DumpState(uint32 dump_type);
@@ -40,7 +40,7 @@ struct CommandBuffer {
 
 protocol Primary {
     /// Imports a buffer for use in the system driver.
-    ImportBuffer(handle<vmo> buffer);
+    ImportBuffer(zx.handle:VMO buffer);
 
     /// Destroys the buffer with `buffer_id` within this connection.
     ReleaseBuffer(zx.koid buffer_id);

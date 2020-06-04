@@ -9,6 +9,7 @@ fidl("fuchsia.test") {
   sdk_category = "internal"
 
   sources = [ "suite.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 measure_tape("hlcpp_measure_tape_for_case") {

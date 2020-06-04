@@ -31,7 +31,7 @@ protocol Source {
     /// buffer is (re)initialized.
     ///
     /// `latest` should be read-only.
-    -> OnBufferInit(handle<vmo> latest);
+    -> OnBufferInit(zx.handle:VMO latest);
 
     /// Asks the connected retriever to finish working with `buffer`, usually because the `Source`
     /// does not intend to write further records.

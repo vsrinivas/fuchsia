@@ -19,5 +19,5 @@ fidl("fuchsia.setui") {
     "types.fidl",
   ]
 
-  public_deps = []
+  public_deps = [ "//zircon/vdso/zx" ]
 }

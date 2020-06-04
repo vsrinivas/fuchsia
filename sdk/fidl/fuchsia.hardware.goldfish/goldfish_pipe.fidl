@@ -37,11 +37,11 @@ protocol Pipe {
 
     /// Set event used to signal device state. Discards existing event
     /// after having transferred device state to the new event.
-    SetEvent(handle<event> event);
+    SetEvent(zx.handle:EVENT event);
 
     /// Acquire VMO for IO buffer. Can be called multiple times. Each call
     /// returns a new handle to the VMO.
-    GetBuffer() -> (zx.status res, handle<vmo>? vmo);
+    GetBuffer() -> (zx.status res, zx.handle:VMO? vmo);
 
     /// Attempt to read up to count bytes into IO buffer at specified offset.
     /// Returns `ZX_ERR_SHOULD_WAIT` if pipe device is not readable.

@@ -74,7 +74,7 @@ enum Error : int32 {
 
 // No need to be a discoverable protocol since this is used for driver only.
 protocol DeviceSetup {
-    SetChannel(handle<channel> channel) -> () error zx.status;
+    SetChannel(zx.handle:CHANNEL channel) -> () error zx.status;
 };
 
 [Discoverable]

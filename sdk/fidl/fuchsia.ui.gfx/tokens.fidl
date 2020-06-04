@@ -4,6 +4,8 @@
 
 library fuchsia.ui.gfx;
 
+using zx;
+
 /// Token that uniquely identifies an attachment point for a subgraph in the
 /// global scene graph.  Each `ImportToken` has exactly one corresponding
 /// `ExportToken`.
@@ -16,7 +18,7 @@ library fuchsia.ui.gfx;
 /// resources created from the tokens.  For example, creating a `ViewHolder`
 /// resource from this token allows a client to embed another client's `View`.
 struct ImportToken {
-    handle<eventpair> value;
+    zx.handle:EVENTPAIR value;
 };
 
 /// Token that uniquely identifies a root point for a subgraph in the global
@@ -32,5 +34,5 @@ struct ImportToken {
 /// resource from this token allows everything attached to the `View` to be
 /// embedded in another clients `ViewHolder`.
 struct ExportToken {
-    handle<eventpair> value;
+    zx.handle:EVENTPAIR value;
 };

@@ -29,5 +29,6 @@ fidl("fuchsia.ui.scenic") {
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.views",
+    "//zircon/vdso/zx",
   ]
 }

@@ -20,5 +20,6 @@ fidl("fuchsia.modular.testing") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.sys",
+    "//zircon/vdso/zx",
   ]
 }

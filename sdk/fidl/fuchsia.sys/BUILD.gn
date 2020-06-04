@@ -28,5 +28,8 @@ fidl("fuchsia.sys") {
     "types.fidl",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.mem" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.mem",
+    "//zircon/vdso/zx",
+  ]
 }

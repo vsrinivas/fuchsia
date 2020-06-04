@@ -16,4 +16,6 @@ fidl("fuchsia.ui.views") {
     "view_ref_installed.fidl",
     "view_token.fidl",
   ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }

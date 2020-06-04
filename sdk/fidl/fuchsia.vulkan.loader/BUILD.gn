@@ -8,4 +8,5 @@ fidl("fuchsia.vulkan.loader") {
   sdk_category = "internal"
 
   sources = [ "loader.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

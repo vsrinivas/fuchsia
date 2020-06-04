@@ -10,7 +10,7 @@ using zx;
 /// Manages sources on behalf of a Player.
 protocol SourceManager {
     /// Creates a source that reads from a file.
-    CreateFileSource(handle<channel> file_channel,
+    CreateFileSource(zx.handle:CHANNEL file_channel,
                      request<Source> source_request);
 
     /// Creates a source that reads from a `SeekingReader`.

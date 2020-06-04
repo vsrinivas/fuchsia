@@ -4,6 +4,8 @@
 
 library fuchsia.images;
 
+using zx;
+
 /// ImagePipe is a mechanism for streaming shared images between a producer
 /// and a consumer which may be running in different processes.
 ///
@@ -80,7 +82,7 @@ protocol ImagePipe {
     /// - the image data expected at `offset_bytes` according to the `image_info`
     ///   exceeds the memory object's bounds
     AddImage(uint32 image_id, ImageInfo image_info,
-             handle<vmo> memory, uint64 offset_bytes, uint64 size_bytes, MemoryType memory_type);
+             zx.handle:VMO memory, uint64 offset_bytes, uint64 size_bytes, MemoryType memory_type);
 
     /// Removes an image resource from the pipe.
     ///
@@ -116,6 +118,6 @@ protocol ImagePipe {
     /// The following errors will cause the connection to be closed:
     /// - `image_id` does not reference a currently registered image resource
     PresentImage(uint32 image_id, uint64 presentation_time,
-                 vector<handle<event>> acquire_fences, vector<handle<event>> release_fences)
+                 vector<zx.handle:EVENT> acquire_fences, vector<zx.handle:EVENT> release_fences)
         -> (PresentationInfo presentation_info);
 };

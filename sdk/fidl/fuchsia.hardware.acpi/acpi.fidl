@@ -35,6 +35,6 @@ protocol Acpi {
     /// |instance| should be 0.
     ///
     /// On success, returns the number of bytes written into result.
-    ReadNamedTable(AcpiTableSignature name, uint32 instance, handle<vmo> result)
+    ReadNamedTable(AcpiTableSignature name, uint32 instance, zx.handle:VMO result)
         -> (uint32 size) error zx.status;
 };

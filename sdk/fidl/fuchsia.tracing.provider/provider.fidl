@@ -115,13 +115,13 @@ struct ProviderConfig {
     BufferingMode buffering_mode;
 
     /// The buffer to write trace records into.
-    handle<vmo> buffer;
+    zx.handle:VMO buffer;
 
     /// When the trace provider observes `ZX_FIFO_PEER_CLOSED` on `fifo`, it
     /// must assume the trace manager has terminated abnormally (since `Stop`
     /// was not received as usual) and stop tracing automatically, discarding
     /// any in-flight trace data.
-    handle<fifo> fifo;
+    zx.handle:FIFO fifo;
 
     /// What trace categories to collect data for.
     vector<string:MAX_CATEGORY_NAME_LENGTH>:MAX_NUM_CATEGORIES categories;

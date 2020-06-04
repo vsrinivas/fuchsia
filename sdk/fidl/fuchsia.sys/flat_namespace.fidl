@@ -4,6 +4,8 @@
 
 library fuchsia.sys;
 
+using zx;
+
 struct FlatNamespace {
   /// The mount point for each of the directories below.
   ///
@@ -11,5 +13,5 @@ struct FlatNamespace {
   vector<string> paths;
 
   /// The directories mounted at each path in the namespace.
-  vector<handle<channel>> directories;
+  vector<zx.handle:CHANNEL> directories;
 };

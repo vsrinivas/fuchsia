@@ -8,4 +8,5 @@ fidl("fuchsia.hardware.camera") {
   sdk_category = "partner"
   api = "fuchsia.hardware.camera.api"
   sources = [ "camera.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

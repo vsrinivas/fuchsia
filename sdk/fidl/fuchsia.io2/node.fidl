@@ -21,7 +21,7 @@ protocol Node {
     /// For files, the cloned connection and the original connection have
     /// independent seek offsets.
     Reopen(ConnectionOptions options,
-           handle<channel> object_request);
+           zx.handle:CHANNEL object_request);
 
     /// Terminates the connection to the node.
     ///

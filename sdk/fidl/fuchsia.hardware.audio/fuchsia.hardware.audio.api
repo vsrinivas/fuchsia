@@ -1,5 +1,5 @@
 {
   "fidl/fuchsia.hardware.audio/audio.fidl": "c77c08f07395f558c811c3c4cc6652ae",
-  "fidl/fuchsia.hardware.audio/ring_buffer.fidl": "c8a337f218cde11cad858ea57a4f3d4c",
+  "fidl/fuchsia.hardware.audio/ring_buffer.fidl": "a9c45fa63306b513dbf5b5a8fa0cd96d",
   "fidl/fuchsia.hardware.audio/stream.fidl": "135d91ba8ef9e2a368eac725dbf9e13d"
 }

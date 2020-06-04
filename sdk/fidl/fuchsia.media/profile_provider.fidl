@@ -17,6 +17,6 @@ protocol ProfileProvider {
     ///
     /// Returns the period and capacity that was applied, if a deadline profile
     /// was selected. Returns 0 if no deadline profile was selected.
-    RegisterHandler(handle<thread> thread_handle, string:64 name, zx.duration period)
+    RegisterHandler(zx.handle:THREAD thread_handle, string:64 name, zx.duration period)
         -> (zx.duration period, zx.duration capacity);
 };

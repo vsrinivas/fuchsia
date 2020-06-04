@@ -60,7 +60,7 @@ protocol Minfs {
     ToggleMetrics(bool enable) -> (zx.status status);
 
     /// Retrieve information about allocated regions on the filesystem.
-    GetAllocatedRegions() -> (zx.status status, handle<vmo>? regions, uint64 count);
+    GetAllocatedRegions() -> (zx.status status, zx.handle:VMO? regions, uint64 count);
 
     /// Get mount state.
     GetMountState() -> (zx.status status, MountState? mount_state);

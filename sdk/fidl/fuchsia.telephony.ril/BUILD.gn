@@ -9,4 +9,6 @@ fidl("fuchsia.telephony.ril") {
   excluded_checks = [ "string-bounds-not-specified" ]
 
   sources = [ "ril.fidl" ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }

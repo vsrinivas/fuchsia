@@ -9,4 +9,5 @@ import("//build/fidl/fidl.gni")
 # we can keep it here in //zircon/system/fidl.
 fidl("fuchsia.security.resource") {
   sources = [ "vmex.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

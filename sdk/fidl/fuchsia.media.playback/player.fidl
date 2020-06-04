@@ -16,7 +16,7 @@ protocol Player {
     compose SourceManager;
 
     /// Sets a file channel to read from.
-    SetFileSource(handle<channel> file_channel);
+    SetFileSource(zx.handle:CHANNEL file_channel);
 
     /// Starts playback.
     Play();

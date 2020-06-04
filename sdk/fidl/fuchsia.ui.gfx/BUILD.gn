@@ -33,5 +33,6 @@ fidl("fuchsia.ui.gfx") {
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.ui.views",
+    "//zircon/vdso/zx",
   ]
 }

@@ -6,6 +6,7 @@ library fuchsia.io.test;
 
 using fuchsia.mem;
 using fuchsia.io;
+using zx;
 
 // TODO(fxb/33880): Implement full testing framework. For now, we are
 // hard-coding the desired directory layout manually in separate "Get"
@@ -165,5 +166,5 @@ protocol Io2Harness {
     ///     * [`fuchsia.io2/Rights.GET_ATTRIBUTES`].
     ///     * [`fuchsia.io2/Rights.UPDATE_ATTRIBUTES`].
     ///
-    GetEmptyDirectory(handle<channel> directory_request);
+    GetEmptyDirectory(zx.handle:CHANNEL directory_request);
 };

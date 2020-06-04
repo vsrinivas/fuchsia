@@ -190,7 +190,7 @@ protocol Provider {
     /// will return `ZX_ERR_ALREADY_BOUND`.
     // TODO(ZX-3889): Once llcpp is supported in Zircon, unify `device` and
     // `controller`.
-    OpenVirtconController(handle<channel> device, request<Controller> controller) -> (zx.status s);
+    OpenVirtconController(zx.handle:CHANNEL device, request<Controller> controller) -> (zx.status s);
 
     /// Open a primary client. `device` should be a handle to one endpoint of a
     /// channel that (on success) will become an open connection to a new
@@ -201,7 +201,7 @@ protocol Provider {
     /// will return `ZX_ERR_ALREADY_BOUND`.
     // TODO(ZX-3889): Once llcpp is supported in Zircon, unify `device` and
     // `controller`.
-    OpenController(handle<channel> device, request<Controller> controller) -> (zx.status s);
+    OpenController(zx.handle:CHANNEL device, request<Controller> controller) -> (zx.status s);
 };
 
 /// Interface for accessing the display hardware.
@@ -233,7 +233,7 @@ protocol Controller {
     //
     // DEPRECATED: This should not be used with buffer collections - ImportImage
     // should be used instead.
-    ImportVmoImage(ImageConfig image_config, handle<vmo> vmo, int32 offset) -> (zx.status res, uint64 image_id);
+    ImportVmoImage(ImageConfig image_config, zx.handle:VMO vmo, int32 offset) -> (zx.status res, uint64 image_id);
 
     // Imports a Buffer-Collection backed image. If tiling is not TYPE_SIMPLE,
     // it is up to the driver and client to agree on its meaning through some
@@ -260,7 +260,7 @@ protocol Controller {
     ///
     /// If a client is reusing events, they must clear the signal
     /// before referencing the id again.
-    ImportEvent(handle<event> event, uint64 id);
+    ImportEvent(zx.handle:EVENT event, uint64 id);
 
     /// Releases the event imported with the given id.
     ///
@@ -496,7 +496,7 @@ protocol Controller {
 
     // If the system only supports single-buffered mode with a single framebuffer, then this returns
     // that buffer and its stride. Otherwise it can return ZX_ERR_NOT_SUPPORTED.
-    GetSingleBufferFramebuffer() -> (zx.status res, handle<vmo>? vmo, uint32 stride);
+    GetSingleBufferFramebuffer() -> (zx.status res, zx.handle:VMO? vmo, uint32 stride);
 
     /// Returns true if Capture is supported on the platform.
     IsCaptureSupported() -> (bool supported) error zx.status;

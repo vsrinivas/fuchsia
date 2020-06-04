@@ -6,6 +6,7 @@ library fuchsia.ui.gfx;
 
 using fuchsia.images;
 using fuchsia.ui.views;
+using zx;
 
 /// These are all of the types of resources that can be created within a
 /// `Session`. Add new fields only to the bottom of the list.
@@ -78,7 +79,7 @@ struct ImagePipe2Args {
 // TODO: specify resizing behavior.  Who can resize?  Client/Scenic/both/none?
 struct MemoryArgs {
     // The VMO which backs this memory.
-    handle<vmo> vmo;
+    zx.handle:VMO vmo;
 
     // The amount of memory from `vmo` that should be utilized.
     uint64 allocation_size;

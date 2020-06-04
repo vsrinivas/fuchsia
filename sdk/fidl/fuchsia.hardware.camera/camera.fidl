@@ -4,6 +4,8 @@
 
 library fuchsia.hardware.camera;
 
+using zx;
+
 [ForDeprecatedCBindings]
 protocol Device {
     /// Note: this method obtains a channel to the capture device which
@@ -13,6 +15,6 @@ protocol Device {
     /// Additionally, while the camera stack is migrating from camera to
     /// camera2, two methods are available, corresponding to the two
     /// versions of the protocol.
-    GetChannel(handle<channel> ch);
-    GetChannel2(handle<channel> ch);
+    GetChannel(zx.handle:CHANNEL ch);
+    GetChannel2(zx.handle:CHANNEL ch);
 };

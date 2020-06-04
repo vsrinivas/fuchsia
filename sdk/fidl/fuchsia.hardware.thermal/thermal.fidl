@@ -111,10 +111,10 @@ protocol Device {
 
     /// Get an event to get trip point notifications on. `ZX_USER_SIGNAL_`0 is changed when either
     /// trip point is reached. It is deasserted when the state is read via GetInfo.
-    GetStateChangeEvent() -> (zx.status status, handle<event>? handle);
+    GetStateChangeEvent() -> (zx.status status, zx.handle:EVENT? handle);
 
     /// Get a port to get trip point notification packets.
-    GetStateChangePort() -> (zx.status status, handle<port>? handle);
+    GetStateChangePort() -> (zx.status status, zx.handle:PORT? handle);
 
     /// Sets a trip point in degrees Celsius. When the sensor reaches the trip point temperature the
     /// device will notify on an event.

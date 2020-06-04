@@ -92,7 +92,7 @@ protocol RingBuffer {
     /// for clock recovery.
     ///
     GetVmo(uint32 min_frames, uint32 clock_recovery_notifications_per_ring)
-        -> (uint32 num_frames, handle<vmo> ring_buffer)
+        -> (uint32 num_frames, zx.handle:VMO ring_buffer)
         error GetVmoError;
 
     /// Start the ring buffer.

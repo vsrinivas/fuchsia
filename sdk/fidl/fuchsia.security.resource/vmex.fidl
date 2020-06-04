@@ -4,10 +4,12 @@
 
 library fuchsia.security.resource;
 
+using zx;
+
 /// Protocol for providing a `ZX_RSRC_KIND_VMEX` to programs that should be
 /// able to mark VMOs as executable.
 [Discoverable, ForDeprecatedCBindings]
 protocol Vmex {
     /// Get a VMEX resource handle as `resource`.
-    Get() -> (handle<resource> vmex);
+    Get() -> (zx.handle:RESOURCE vmex);
 };

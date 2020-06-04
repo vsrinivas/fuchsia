@@ -118,11 +118,11 @@ protocol DeviceController {
     /// and optionally a channel to the driver's test output. `test_output` will be
     /// not present unless the driver is configured to run its run_unit_tests hook, in
     /// which case the other end of the channel will have been passed to the driver.
-    BindDriver(string:DEVICE_PATH_MAX driver_path, handle<vmo> driver)
-        -> (zx.status status, handle<channel>? test_output);
+    BindDriver(string:DEVICE_PATH_MAX driver_path, zx.handle:VMO driver)
+        -> (zx.status status, zx.handle:CHANNEL? test_output);
 
     /// Give this device a channel to its shadow in another process.
-    ConnectProxy(handle<channel> shadow);
+    ConnectProxy(zx.handle:CHANNEL shadow);
 
     /// Ask devhost to call the device init hook.
     Init() -> (zx.status status);
@@ -173,7 +173,7 @@ protocol DevhostController {
     ///
     /// `local_device_id` will be a unique value within the device's devhost
     CreateDevice(Coordinator coordinator_rpc, request<DeviceController> device_controller_rpc, string:DEVICE_PATH_MAX driver_path,
-                 handle<vmo> driver, handle? parent_proxy,
+                 zx.handle:VMO driver, handle? parent_proxy,
                  string:DEVICE_ARGS_MAX? proxy_args, LocalDeviceId local_device_id);
 
     /// Introduce a composite device that has the given name and properties.
@@ -204,7 +204,7 @@ protocol Coordinator {
               string:DEVICE_NAME_MAX name, uint32 protocol_id,
               string:DEVICE_PATH_MAX? driver_path, string:DEVICE_ARGS_MAX? args,
               AddDeviceConfig device_add_config, bool has_init,
-              handle<channel>? client_remote)
+              zx.handle:CHANNEL? client_remote)
         -> (LocalDeviceId local_device_id) error zx.status;
 
     /// Behaves as AddDevice, but marks the device as initially invisible.  This means
@@ -215,7 +215,7 @@ protocol Coordinator {
                        string:DEVICE_NAME_MAX name, uint32 protocol_id,
                        string:DEVICE_PATH_MAX? driver_path,
                        string:DEVICE_ARGS_MAX? args, bool has_init,
-                       handle<channel>? client_remote)
+                       zx.handle:CHANNEL? client_remote)
         -> (LocalDeviceId local_device_id) error zx.status;
 
     /// Requests the devcoordinator schedule the removal of this device,
@@ -240,7 +240,7 @@ protocol Coordinator {
 
     /// Requests that the firmware at the given path be loaded and returned.
     LoadFirmware(string:DEVICE_PATH_MAX fw_path)
-        -> (handle<vmo> vmo, uint64 size) error zx.status;
+        -> (zx.handle:VMO vmo, uint64 size) error zx.status;
 
     /// Retrieve the metadata blob associated with this device and the given key.
     GetMetadata(uint32 key)
@@ -274,7 +274,7 @@ protocol Coordinator {
     /// Watches a directory, receiving events of added messages on the
     /// watcher request channel.
     /// See fuchsia.io.Directory for more information.
-    DirectoryWatch(uint32 mask, uint32 options, handle<channel> watcher)
+    DirectoryWatch(uint32 mask, uint32 options, zx.handle:CHANNEL watcher)
         -> () error zx.status;
 
     /// Run Compatibility tests for the driver that binds to this device.

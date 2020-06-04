@@ -4,6 +4,8 @@
 
 library fuchsia.media;
 
+using zx;
+
 // fuchsia.media contains definitions shared by the various fuchsia.media.*
 // libraries. Definitions in this file concern the transport of elementary
 // streams between clients and services.
@@ -18,7 +20,7 @@ protocol StreamBufferSet {
     ///
     /// A buffer with ID `id` must not be in the current set when this method is
     /// invoked, otherwise the service will close the connection.
-    AddPayloadBuffer(uint32 id, handle<vmo> payload_buffer);
+    AddPayloadBuffer(uint32 id, zx.handle:VMO payload_buffer);
 
     /// Removes a payload buffer from the current buffer set associated with the
     /// connection.

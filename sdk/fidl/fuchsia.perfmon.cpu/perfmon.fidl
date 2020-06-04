@@ -163,7 +163,7 @@ protocol Controller {
     /// Return a handle of a trace buffer, if it exists, and if `descriptor`
     /// is valid.
     /// `descriptor` is (0, 1, 2, ..., `num_buffers`-1)
-    GetBufferHandle(uint32 descriptor) -> (handle<vmo>? vmo);
+    GetBufferHandle(uint32 descriptor) -> (zx.handle:VMO? vmo);
 
     /// Turn on data collection.
     /// Must be called after `Initialize()` + `StageConfig()` and with data

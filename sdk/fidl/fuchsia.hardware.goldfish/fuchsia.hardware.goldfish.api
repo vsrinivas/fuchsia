@@ -1,5 +1,5 @@
 {
-  "fidl/fuchsia.hardware.goldfish/goldfish_address_space.fidl": "b90fc1b93ac1e23126f7bd68c066c632",
-  "fidl/fuchsia.hardware.goldfish/goldfish_control.fidl": "d921819c354e638531ec59c95ac9a425",
-  "fidl/fuchsia.hardware.goldfish/goldfish_pipe.fidl": "30afe2b06c06044c73fd0085e39a24a5"
+  "fidl/fuchsia.hardware.goldfish/goldfish_address_space.fidl": "159a1b51db364d9f63b520f9e8fe42a4",
+  "fidl/fuchsia.hardware.goldfish/goldfish_control.fidl": "aa4db339093ca6204fbed8260d635f37",
+  "fidl/fuchsia.hardware.goldfish/goldfish_pipe.fidl": "75e8b8760761850abc100b58479ba43c"
 }

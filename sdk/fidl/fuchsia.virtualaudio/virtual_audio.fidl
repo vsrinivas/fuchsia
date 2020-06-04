@@ -134,11 +134,11 @@ protocol Device {
     /// Return details about the ring buffer that was established in response
     /// to a client `AUDIO_RB_CMD_GET_BUFFER` command. This will only occur
     /// after the client sets the format and retrieves other driver information.
-    GetBuffer() -> (handle<vmo> ring_buffer, uint32 num_ring_buffer_frames,
+    GetBuffer() -> (zx.handle:VMO ring_buffer, uint32 num_ring_buffer_frames,
                     uint32 notifications_per_ring);
 
     /// Notify all subscribed listeners when the above buffer has been created.
-    -> OnBufferCreated(handle<vmo> ring_buffer, uint32 num_ring_buffer_frames,
+    -> OnBufferCreated(zx.handle:VMO ring_buffer, uint32 num_ring_buffer_frames,
                        uint32 notifications_per_ring);
 
     /// Override the position notification frequency set by AudioCore for this

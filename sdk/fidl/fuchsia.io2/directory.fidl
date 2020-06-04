@@ -40,7 +40,7 @@ protocol Directory {
     Open(Path path,
          OpenMode mode,
          ConnectionOptions options,
-         handle<channel> object_request);
+         zx.handle:CHANNEL object_request);
 
     /// Removes a child node from the this directory's list of entries.
     ///

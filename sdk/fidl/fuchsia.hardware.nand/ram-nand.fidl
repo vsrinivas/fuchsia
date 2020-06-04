@@ -47,7 +47,7 @@ struct RamNandInfo {
     /// VMO to use as backing store for nand device. Size should match size of `nand_info`.
     /// If a vmo is not provided, the device will create its own buffer and initialize it to be
     /// empty (all 1s).
-    handle<vmo>? vmo;
+    zx.handle:VMO? vmo;
 
     /// The desired "chip" configuration.
     Info nand_info;

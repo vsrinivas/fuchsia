@@ -4,16 +4,18 @@
 
 library fuchsia.boot;
 
+using zx;
+
 /// Protocol for providing the kernel log, readable.
 [Discoverable, ForDeprecatedCBindings]
 protocol ReadOnlyLog {
     /// Get read-only handle to the kernel `log`.
-    Get() -> (handle<debuglog> log);
+    Get() -> (zx.handle:LOG log);
 };
 
 /// Protocol for providing the kernel log, writable.
 [Discoverable, ForDeprecatedCBindings]
 protocol WriteOnlyLog {
     /// Get write-only handle to the kernel `log`.
-    Get() -> (handle<debuglog> log);
+    Get() -> (zx.handle:LOG log);
 };

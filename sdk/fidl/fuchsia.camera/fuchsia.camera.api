@@ -1,4 +1,4 @@
 {
-  "fidl/fuchsia.camera/camera.fidl": "88191aec3ab0cd9c6f2bc2df47204ad3",
-  "fidl/fuchsia.camera/manager.fidl": "7cd0050005be88a3e698a2d25587ccc3"
+  "fidl/fuchsia.camera/camera.fidl": "9d8f79fb52762ecbd41fd0c318ea96af",
+  "fidl/fuchsia.camera/manager.fidl": "6932fd58cdfc01dd5ce99b0611cb778f"
 }

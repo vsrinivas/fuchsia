@@ -20,7 +20,7 @@ struct PartitionInfo {
 
 struct ReadWriteOperation {
     /// Memory object describing buffer to read into or write from.
-    handle<vmo> vmo;
+    zx.handle:VMO vmo;
     /// VMO offset in bytes.
     uint64 vmo_offset;
     /// Block # to begin operation from.
@@ -31,7 +31,7 @@ struct ReadWriteOperation {
 
 struct WriteBytesOperation {
     /// Memory object describing buffer to write from.
-    handle<vmo> vmo;
+    zx.handle:VMO vmo;
     /// VMO offset in bytes.
     uint64 vmo_offset;
     /// Device offset in bytes to begin operation from.

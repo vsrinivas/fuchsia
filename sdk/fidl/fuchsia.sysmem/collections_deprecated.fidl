@@ -4,6 +4,8 @@
 
 library fuchsia.sysmem;
 
+using zx;
+
 /// Information about a buffer collection and its buffers.
 // TODO(fxb/32119): change struct to table
 struct BufferCollectionInfo {
@@ -23,7 +25,7 @@ struct BufferCollectionInfo {
     /// client specified when allocating the buffer collection.  For example,
     /// a client which expressed a read-only usage will receive VMOs without
     /// write rights.
-    array<handle<vmo>?>:64 vmos;
+    array<zx.handle:VMO?>:64 vmos;
 
     /// The size of each VMO provided.
     /// This property is only present when the buffers are backed by VMOs.

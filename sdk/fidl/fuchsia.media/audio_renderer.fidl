@@ -5,6 +5,7 @@
 library fuchsia.media;
 
 using fuchsia.media.audio;
+using zx;
 
 ///
 /// AudioRenderers can be in one of two states at any time: _configurable_ or _operational_. A
@@ -102,7 +103,7 @@ protocol AudioRenderer {
     /// Retrieves the stream's reference clock. The returned handle will have READ, DUPLICATE
     /// and TRANSFER rights, and will refer to a zx::clock that is MONOTONIC and CONTINUOUS.
     ///
-    GetReferenceClock() -> (handle<clock> reference_clock);
+    GetReferenceClock() -> (zx.handle:CLOCK reference_clock);
 
     /// Sets the reference clock that controls this renderer's playback rate. If the input
     /// parameter is valid, it must have READ, DUPLICATE, TRANSFER rights and refer to a clock
@@ -115,7 +116,7 @@ protocol AudioRenderer {
     /// Cases that PRESERVE continuity would include setting as reference either the 'optimal'
     /// clock provided by AudioCore, or the clone of a client-controlled reference clock.
     ///
-    SetReferenceClock(handle<clock>? reference_clock);
+    SetReferenceClock(zx.handle:CLOCK? reference_clock);
 
     /// Sets the usage of the render stream. This method may not be called after
     /// `SetPcmStreamType` is called. The default usage is `MEDIA`.

@@ -104,10 +104,10 @@ protocol Controller {
     AllocateBuffer(BufferConfig config) -> (BufferDescriptor descriptor) error zx.status;
 
     /// Assign a buffer to a thread.
-    AssignThreadBuffer(BufferDescriptor descriptor, handle<thread> thread) -> () error zx.status;
+    AssignThreadBuffer(BufferDescriptor descriptor, zx.handle:THREAD thread) -> () error zx.status;
 
     /// Release a previously assigned buffer from a thread.
-    ReleaseThreadBuffer(BufferDescriptor descriptor, handle<thread> thread) -> () error zx.status;
+    ReleaseThreadBuffer(BufferDescriptor descriptor, zx.handle:THREAD thread) -> () error zx.status;
 
     /// Fetch a buffer's configuration.
     GetBufferConfig(BufferDescriptor descriptor) -> (BufferConfig? config);
@@ -116,7 +116,7 @@ protocol Controller {
     GetBufferState(BufferDescriptor descriptor) -> (BufferState? state);
 
     /// Fetch the handle of a chunk of a trace buffer.
-    GetChunkHandle(BufferDescriptor descriptor, uint32 chunk_num) -> (handle<vmo>? buffer);
+    GetChunkHandle(BufferDescriptor descriptor, uint32 chunk_num) -> (zx.handle:VMO? buffer);
 
     /// Free a previously allocated trace buffer.
     FreeBuffer(BufferDescriptor descriptor) -> ();

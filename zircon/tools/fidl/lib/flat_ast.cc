@@ -3288,7 +3288,8 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
   } else if (type_ctor->handle_subtype_identifier) {
     types::HandleSubtype subtype;
     if (!ResolveHandleSubtypeIdentifier(type_ctor, &subtype)) {
-      return Fail(ErrCouldNotResolveHandleSubtype, type_ctor->handle_subtype_identifier.value());
+      return Fail(ErrCouldNotResolveHandleSubtype, type_ctor->name.span(),
+                  type_ctor->handle_subtype_identifier.value());
     }
     handle_subtype = subtype;
   }
@@ -3318,20 +3319,20 @@ bool Library::ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor,
 
   Decl* handle_decl = LookupDeclByName(type_ctor->name);
   if (!handle_decl || handle_decl->kind != Decl::Kind::kResource) {
-    return Fail(ErrHandleSubtypeNotResource, type_ctor->name);
+    return Fail(ErrHandleSubtypeNotResource, type_ctor->name.span(), type_ctor->name);
   }
 
   auto* resource = static_cast<Resource*>(handle_decl);
   if (!resource->subtype_ctor || resource->subtype_ctor->name.full_name() != "uint32") {
-    return Fail(ErrResourceMustBeUint32Derived, resource->name);
+    return Fail(ErrResourceMustBeUint32Derived, type_ctor->name.span(), resource->name);
   }
   if (resource->properties.size() != 1 || resource->properties[0].name.data() != "subtype") {
-    return Fail(ErrResourceCanOnlyHaveSubtypeProperty, resource->name);
+    return Fail(ErrResourceCanOnlyHaveSubtypeProperty, type_ctor->name.span(), resource->name);
   }
 
   Decl* subtype_decl = LookupDeclByName(resource->properties[0].type_ctor->name);
   if (!subtype_decl || subtype_decl->kind != Decl::Kind::kEnum) {
-    return Fail(ErrResourceSubtypePropertyMustReferToEnum, resource->name);
+    return Fail(ErrResourceSubtypePropertyMustReferToEnum, type_ctor->name.span(), resource->name);
   }
 
   auto* subtype_enum = static_cast<Enum*>(subtype_decl);

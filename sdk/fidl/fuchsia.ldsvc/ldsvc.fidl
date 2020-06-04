@@ -21,7 +21,7 @@ protocol Loader {
 
     /// The dynamic linker sends `object_name` and gets back a VMO
     /// handle containing the file.
-    LoadObject(string:1024 object_name) -> (zx.status rv, handle<vmo>? object);
+    LoadObject(string:1024 object_name) -> (zx.status rv, zx.handle:VMO? object);
 
     /// The dynamic linker sends a `config` identifying its load
     /// configuration.  This is intended to affect how later

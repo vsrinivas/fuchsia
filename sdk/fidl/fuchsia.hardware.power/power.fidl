@@ -63,7 +63,7 @@ protocol Source {
     /// Get an event to receive state change notifications on. ZX_USER_SIGNAL_0 is
     /// asserted when power_info_t.state is changed. It is deasserted when the
     /// state is read via `GetPowerInfo`.
-    GetStateChangeEvent() -> (zx.status status, handle<event> handle);
+    GetStateChangeEvent() -> (zx.status status, zx.handle:EVENT handle);
 
     /// Get battery info. Only supported if type == PowerType::BATTERY.
     GetBatteryInfo() -> (zx.status status, BatteryInfo info);

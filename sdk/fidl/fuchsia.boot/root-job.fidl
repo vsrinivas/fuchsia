@@ -4,13 +4,15 @@
 
 library fuchsia.boot;
 
+using zx;
+
 /// Protocol for providing the root job.
 ///
 /// TODO(ZX-4072): Do not use this without first consulting the Zircon team.
 [Discoverable, ForDeprecatedCBindings]
 protocol RootJob {
     /// Get the root `job`.
-    Get() -> (handle<job> job);
+    Get() -> (zx.handle:JOB job);
 };
 
 /// Protocol for providing the root job with restricted rights, specifically:

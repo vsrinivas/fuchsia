@@ -4,6 +4,8 @@
 
 library fuchsia.sysmem;
 
+using zx;
+
 const uint32 MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS = 32;
 const uint32 MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED = 32;
 const uint32 MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES = 32;
@@ -145,7 +147,7 @@ struct VmoBuffer {
     ///
     /// The vmo field can be 0 if this is a VmoBuffer in BufferCollectionInfo_2
     /// that's at or beyond BufferCollectionInfo_2.buffer_count.
-    handle<vmo>? vmo;
+    zx.handle:VMO? vmo;
 
     /// Offset within the VMO of the first usable byte.  Must be < the VMO's
     /// size in bytes, and leave sufficient room for

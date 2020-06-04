@@ -4,10 +4,12 @@
 
 library fuchsia.hardware.mediacodec;
 
+using zx;
+
 [ForDeprecatedCBindings]
 protocol Device {
     /// This method connects the caller with a fuchsia.mediacodec.CodecFactory.
     /// Ideally, we wouldn't have the intermediary, but it is necessary with the current
     /// DDK APIs.
-    GetCodecFactory(handle<channel> request);
+    GetCodecFactory(zx.handle:CHANNEL request);
 };

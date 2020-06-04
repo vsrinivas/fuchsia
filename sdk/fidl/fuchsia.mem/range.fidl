@@ -4,10 +4,12 @@
 
 library fuchsia.mem;
 
+using zx;
+
 /// A range of bytes within a VMO.
 struct Range {
     /// The vmo that contains the bytes.
-    handle<vmo> vmo;
+    zx.handle:VMO vmo;
 
     /// The offset of the first byte within the range relative to the start of
     /// the VMO.

@@ -52,7 +52,7 @@ protocol Device {
     /// current device is not a controlling client, `ZX_ERR_ACCESS_DENIED` will be
     /// returned. If `id` is not unique, `ZX_ERR_INVALID_ARGS` will be returned.
     /// Otherwise the status code from `device_add` is passed on.
-    OpenClient(uint32 id, handle<channel> client) -> (zx.status s);
+    OpenClient(uint32 id, zx.handle:CHANNEL client) -> (zx.status s);
 
     /// allowed on Client PTYs
     /// -----------------------------

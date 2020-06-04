@@ -21,7 +21,7 @@ protocol Query {
 
     /// Checks if a node is associated with this filesystem, given some token
     /// representing a connection to that node.
-    IsNodeInFilesystem(handle<event> token) -> (bool is_in_filesystem);
+    IsNodeInFilesystem(zx.handle:EVENT token) -> (bool is_in_filesystem);
 };
 
 /// Information about a filesystem.
@@ -48,7 +48,7 @@ table FilesystemInfo {
     5: uint64 free_shared_pool_bytes;
 
     /// A globally unique identifier for this filesystem instance.
-    6: handle<event> fs_id;
+    6: zx.handle:EVENT fs_id;
 
     /// The size of a single filesystem block.
     7: uint32 block_size;

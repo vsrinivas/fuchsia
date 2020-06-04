@@ -9,4 +9,5 @@ fidl("fuchsia.hardware.intel.hda") {
     "codec.fidl",
     "controller.fidl",
   ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

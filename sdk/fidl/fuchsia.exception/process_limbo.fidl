@@ -114,10 +114,10 @@ table ProcessExceptionMetadata {
     1: ExceptionInfo info;
 
     /// Only has ZX_RIGHT_READ and ZX_RIGHT_GET_PROPERTY rights.
-    2: handle<process> process;
+    2: zx.handle:PROCESS process;
 
     /// The thread that generated the exception.
     /// The process may have other threads that are not reflected here.
     /// Only has ZX_RIGHT_READ and ZX_RIGHT_GET_PROPERTY rights.
-    3: handle<thread> thread;
+    3: zx.handle:THREAD thread;
 };
