@@ -212,7 +212,6 @@ Example::~Example() = default;
 const fidl_type_t* Example_RequestDecoder::GetType(uint64_t ordinal,
                                                    bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kExample_foo_Ordinal:
     case internal::kExample_foo_GenOrdinal:
       *out_needs_response = true;
       return &fidl_test_json_ExamplefooRequestTable;
@@ -224,7 +223,6 @@ const fidl_type_t* Example_RequestDecoder::GetType(uint64_t ordinal,
 
 const fidl_type_t* Example_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
-    case internal::kExample_foo_Ordinal:
     case internal::kExample_foo_GenOrdinal:
       return &fidl_test_json_ExamplefooResponseTable;
     default:
@@ -333,7 +331,6 @@ zx_status_t Example_Stub::Dispatch_(
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kExample_foo_Ordinal:
     case internal::kExample_foo_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->foo(::fidl::DecodeAs<::std::string>(&decoder, 16),

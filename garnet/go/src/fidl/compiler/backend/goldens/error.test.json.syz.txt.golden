@@ -26,7 +26,7 @@ fidl_test_json_Example_foo_ResultHandles [
 
 
 fidl_test_json_ExamplefooRequest {
-       hdr fidl_message_header[5882788358547046400]
+       hdr fidl_message_header[841977834905137819]
        sInLine fidl_string
        sOutOfLine fidl_aligned[stringnoz]
 } [packed]
@@ -34,7 +34,7 @@ fidl_test_json_ExamplefooRequestHandles {
        void void
 } [packed]
 fidl_test_json_ExamplefooResponse {
-       hdr fidl_message_header[5882788358547046400]
+       hdr fidl_message_header[841977834905137819]
        resultInLine fidl_test_json_Example_foo_ResultInLine
        resultOutOfLine fidl_test_json_Example_foo_ResultOutOfLine
 } [packed]

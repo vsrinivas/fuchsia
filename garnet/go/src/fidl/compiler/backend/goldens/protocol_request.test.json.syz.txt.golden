@@ -15,40 +15,40 @@ fdio_service_connect$test_name_Child(path ptr[in, string["/svc/"]], handle zx_ch
 
 
 test_name_ParentGetChildRequest {
-       hdr fidl_message_header[3932412583805452288]
+       hdr fidl_message_header[6332745893922832518]
 } [packed]
 test_name_ParentGetChildRequestHandles {
        void void
 } [packed]
 test_name_ParentGetChildResponse {
-       hdr fidl_message_header[3932412583805452288]
+       hdr fidl_message_header[6332745893922832518]
        c flags[fidl_handle_presence, int32]
 } [packed]
 test_name_ParentGetChildResponseHandles {
        c zx_chan_test_name_Child_client
 } [packed]
 test_name_ParentGetChildRequestRequest {
-       hdr fidl_message_header[4587704011968217088]
+       hdr fidl_message_header[26635226975931008]
 } [packed]
 test_name_ParentGetChildRequestRequestHandles {
        void void
 } [packed]
 test_name_ParentGetChildRequestResponse {
-       hdr fidl_message_header[4587704011968217088]
+       hdr fidl_message_header[26635226975931008]
        r flags[fidl_handle_presence, int32]
 } [packed]
 test_name_ParentGetChildRequestResponseHandles {
        r zx_chan_test_name_Child_server
 } [packed]
 test_name_ParentTakeChildRequest {
-       hdr fidl_message_header[5478139633957076992]
+       hdr fidl_message_header[7680932945371199613]
        c flags[fidl_handle_presence, int32]
 } [packed]
 test_name_ParentTakeChildRequestHandles {
        c zx_chan_test_name_Child_client
 } [packed]
 test_name_ParentTakeChildRequestRequest {
-       hdr fidl_message_header[6828449318567936000]
+       hdr fidl_message_header[7803173423056840247]
        r flags[fidl_handle_presence, int32]
 } [packed]
 test_name_ParentTakeChildRequestRequestHandles {

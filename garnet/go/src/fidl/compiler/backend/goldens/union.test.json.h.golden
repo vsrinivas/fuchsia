@@ -35,14 +35,8 @@ class TestProtocol_SyncProxy;
 using TestProtocolHandle = ::fidl::InterfaceHandle<TestProtocol>;
 namespace internal {
 constexpr uint64_t
-    kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal =
-        0x68bfe80f00000000lu;
-constexpr uint64_t
     kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal =
         0x728fedeed6ef99dalu;
-constexpr uint64_t
-    kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal =
-        0x176e085800000000lu;
 constexpr uint64_t
     kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal =
         0xfd2ba0109faffe3lu;
@@ -1195,14 +1189,10 @@ class TestProtocol_RequestDecoder {
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
       case internal::
-          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
-      case internal::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal: {
         StrictXUnionHenceResponseMayBeStackAllocated();
         break;
       }
-      case internal::
-          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
       case internal::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal: {
         FlexibleXUnionHenceResponseMustBeHeapAllocated();
@@ -1254,15 +1244,11 @@ class TestProtocol_ResponseDecoder {
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
       case internal::
-          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
-      case internal::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal: {
         StrictXUnionHenceResponseMayBeStackAllocated(
             ::fidl::DecodeAs<StrictBoundedXUnion>(&response_decoder, 16));
         break;
       }
-      case internal::
-          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
       case internal::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal: {
         FlexibleXUnionHenceResponseMustBeHeapAllocated(

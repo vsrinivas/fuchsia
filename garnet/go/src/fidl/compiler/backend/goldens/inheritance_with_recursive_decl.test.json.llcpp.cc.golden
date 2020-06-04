@@ -12,8 +12,6 @@ namespace json {
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kParent_First_Ordinal =
-    0x66a95ddc00000000lu;
 [[maybe_unused]] constexpr uint64_t kParent_First_GenOrdinal =
     0x239f8fdea8de880clu;
 extern "C" const fidl_type_t fidl_test_json_ParentFirstRequestTable;
@@ -138,7 +136,6 @@ bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kParent_First_Ordinal:
     case kParent_First_GenOrdinal: {
       auto result = ::fidl::DecodeAs<FirstRequest>(msg);
       if (result.status != ZX_OK) {
@@ -174,12 +171,10 @@ void Parent::SetTransactionHeaderFor::FirstRequest(
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kChild_First_Ordinal = 0x66a95ddc00000000lu;
 [[maybe_unused]] constexpr uint64_t kChild_First_GenOrdinal =
     0x239f8fdea8de880clu;
 extern "C" const fidl_type_t fidl_test_json_ChildFirstRequestTable;
 extern "C" const fidl_type_t fidl_test_json_ChildFirstResponseTable;
-[[maybe_unused]] constexpr uint64_t kChild_Second_Ordinal = 0x1240cb600000000lu;
 [[maybe_unused]] constexpr uint64_t kChild_Second_GenOrdinal =
     0x24799ea8916d88aflu;
 extern "C" const fidl_type_t fidl_test_json_ChildSecondRequestTable;
@@ -402,7 +397,6 @@ bool Child::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kChild_First_Ordinal:
     case kChild_First_GenOrdinal: {
       auto result = ::fidl::DecodeAs<FirstRequest>(msg);
       if (result.status != ZX_OK) {
@@ -414,7 +408,6 @@ bool Child::TryDispatch(Interface* impl, fidl_msg_t* msg,
                   Interface::FirstCompleter::Sync(txn));
       return true;
     }
-    case kChild_Second_Ordinal:
     case kChild_Second_GenOrdinal: {
       auto result = ::fidl::DecodeAs<SecondRequest>(msg);
       if (result.status != ZX_OK) {

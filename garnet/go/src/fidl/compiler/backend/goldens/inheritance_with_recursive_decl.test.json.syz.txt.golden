@@ -7,7 +7,7 @@ include <fidl/test/json/c/fidl.h>
 
 
 fidl_test_json_ParentFirstRequest {
-       hdr fidl_message_header[7397547062406938624]
+       hdr fidl_message_header[2566928499103139852]
        request flags[fidl_handle_presence, int32]
 } [packed]
 fidl_test_json_ParentFirstRequestHandles {
@@ -23,14 +23,14 @@ zx_channel_write$fidl_test_json_ParentFirst(handle zx_chan_fidl_test_json_Parent
 
 
 fidl_test_json_ChildFirstRequest {
-       hdr fidl_message_header[7397547062406938624]
+       hdr fidl_message_header[2566928499103139852]
        request flags[fidl_handle_presence, int32]
 } [packed]
 fidl_test_json_ChildFirstRequestHandles {
        request zx_chan_fidl_test_json_Parent_server
 } [packed]
 fidl_test_json_ChildSecondRequest {
-       hdr fidl_message_header[82204669023092736]
+       hdr fidl_message_header[2628306304378964143]
        request flags[fidl_handle_presence, int32]
 } [packed]
 fidl_test_json_ChildSecondRequestHandles {

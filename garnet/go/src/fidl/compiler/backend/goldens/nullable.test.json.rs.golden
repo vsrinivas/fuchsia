@@ -407,7 +407,7 @@ impl futures::Stream for SimpleProtocolRequestStream {
 
             #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0x11fe4d2400000000 | 0x113010d7832f175d => {
+                0x113010d7832f175d => {
                     let mut req: (i32, i32) = fidl::encoding::Decodable::new_empty();
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     let control_handle = SimpleProtocolControlHandle { inner: this.inner.clone() };
@@ -451,7 +451,7 @@ impl SimpleProtocolRequestMessage {
 
         #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
         match header.ordinal() {
-            0x11fe4d2400000000 | 0x113010d7832f175d => {
+            0x113010d7832f175d => {
                 let mut out_tuple: (i32, i32) = fidl::encoding::Decodable::new_empty();
                 fidl::encoding::Decoder::decode_into(
                     &header,

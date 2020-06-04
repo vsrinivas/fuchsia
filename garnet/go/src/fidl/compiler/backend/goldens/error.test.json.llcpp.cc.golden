@@ -21,7 +21,6 @@ void ::llcpp::fidl::test::json::Example_foo_Result::
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kExample_foo_Ordinal = 0x51a3dcd800000000lu;
 [[maybe_unused]] constexpr uint64_t kExample_foo_GenOrdinal =
     0xbaf4e613e45f29blu;
 extern "C" const fidl_type_t fidl_test_json_ExamplefooRequestTable;
@@ -214,7 +213,6 @@ zx_status_t Example::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kExample_foo_Ordinal:
     case kExample_foo_GenOrdinal: {
       auto result = ::fidl::DecodeAs<fooResponse>(msg);
       if (result.status != ZX_OK) {
@@ -253,7 +251,6 @@ bool Example::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kExample_foo_Ordinal:
     case kExample_foo_GenOrdinal: {
       auto result = ::fidl::DecodeAs<fooRequest>(msg);
       if (result.status != ZX_OK) {

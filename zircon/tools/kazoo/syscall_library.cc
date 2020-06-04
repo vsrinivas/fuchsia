@@ -436,7 +436,7 @@ bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* 
   // and general sanity, so probably only in a diagnostic mode.
 
   if (!document.IsObject()) {
-    fprintf(stderr, "Root of json wasn't object.\n");
+    fprintf(stderr, "Incorrect fidlc JSON IR, wasn't json object.\n");
     return false;
   }
 

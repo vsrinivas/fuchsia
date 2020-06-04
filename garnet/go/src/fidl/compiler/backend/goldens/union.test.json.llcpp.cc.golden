@@ -126,18 +126,12 @@ void ::llcpp::fidl::test::json::OlderSimpleUnion::
 namespace {
 
 [[maybe_unused]] constexpr uint64_t
-    kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal =
-        0x68bfe80f00000000lu;
-[[maybe_unused]] constexpr uint64_t
     kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal =
         0x728fedeed6ef99dalu;
 extern "C" const fidl_type_t
     fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
 extern "C" const fidl_type_t
     fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
-[[maybe_unused]] constexpr uint64_t
-    kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal =
-        0x176e085800000000lu;
 [[maybe_unused]] constexpr uint64_t
     kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal =
         0xfd2ba0109faffe3lu;
@@ -546,7 +540,6 @@ zx_status_t TestProtocol::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
     case kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal: {
       auto result = ::fidl::DecodeAs<
           StrictXUnionHenceResponseMayBeStackAllocatedResponse>(msg);
@@ -559,7 +552,6 @@ zx_status_t TestProtocol::ClientImpl::Dispatch(
           ->OnReply(std::move(result.message));
       break;
     }
-    case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
     case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal: {
       auto result = ::fidl::DecodeAs<
           FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(msg);
@@ -601,7 +593,6 @@ bool TestProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
     case kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal: {
       auto result =
           ::fidl::DecodeAs<StrictXUnionHenceResponseMayBeStackAllocatedRequest>(
@@ -615,7 +606,6 @@ bool TestProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
               Sync(txn));
       return true;
     }
-    case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
     case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal: {
       auto result = ::fidl::DecodeAs<
           FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>(msg);

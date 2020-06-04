@@ -27,13 +27,13 @@ test_name_UnionHandles [
 
 
 test_name_InterfaceMethodRequest {
-       hdr fidl_message_header[4558601923455877120]
+       hdr fidl_message_header[6982550709377523448]
 } [packed]
 test_name_InterfaceMethodRequestHandles {
        void void
 } [packed]
 test_name_InterfaceOnEventEvent {
-       hdr fidl_message_header[1399810299388755968]
+       hdr fidl_message_header[654361314665317613]
 } [packed]
 test_name_InterfaceOnEventEventHandles {
        void void

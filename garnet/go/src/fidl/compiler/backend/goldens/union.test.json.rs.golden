@@ -686,7 +686,7 @@ impl futures::Stream for TestProtocolRequestStream {
 
             #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0x68bfe80f00000000 | 0x728fedeed6ef99da => {
+                0x728fedeed6ef99da => {
                     let mut req: () = fidl::encoding::Decodable::new_empty();
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     let control_handle = TestProtocolControlHandle { inner: this.inner.clone() };
@@ -700,7 +700,7 @@ impl futures::Stream for TestProtocolRequestStream {
                             },
                     })
                 }
-                0x176e085800000000 | 0xfd2ba0109faffe3 => {
+                0xfd2ba0109faffe3 => {
                     let mut req: () = fidl::encoding::Decodable::new_empty();
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     let control_handle = TestProtocolControlHandle { inner: this.inner.clone() };
@@ -744,7 +744,7 @@ impl TestProtocolRequestMessage {
 
         #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
         match header.ordinal() {
-            0x68bfe80f00000000 | 0x728fedeed6ef99da => {
+            0x728fedeed6ef99da => {
                 let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
                 fidl::encoding::Decoder::decode_into(
                     &header,
@@ -757,7 +757,7 @@ impl TestProtocolRequestMessage {
                     tx_id: header.tx_id().into(),
                 })
             }
-            0x176e085800000000 | 0xfd2ba0109faffe3 => {
+            0xfd2ba0109faffe3 => {
                 let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
                 fidl::encoding::Decoder::decode_into(
                     &header,

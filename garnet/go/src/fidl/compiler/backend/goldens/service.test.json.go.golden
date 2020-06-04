@@ -7,7 +7,6 @@ import (
 )
 
 const (
-	FirstProtocolMethodOnFirstOrdinal    uint64 = 0x2838a83100000000
 	FirstProtocolMethodOnFirstGenOrdinal uint64 = 0x580cbd0d43ccbe3b
 )
 
@@ -38,8 +37,6 @@ type FirstProtocolWithCtxStub struct {
 
 func (s_ *FirstProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case FirstProtocolMethodOnFirstOrdinal:
-		fallthrough
 	case FirstProtocolMethodOnFirstGenOrdinal:
 		err_ := s_.Impl.MethodOnFirst(args_.Ctx)
 		return nil, false, err_
@@ -50,7 +47,6 @@ func (s_ *FirstProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bin
 type FirstProtocolEventProxy _bindings.ChannelProxy
 
 const (
-	SecondProtocolMethodOnSecondOrdinal    uint64 = 0xd09c00f00000000
 	SecondProtocolMethodOnSecondGenOrdinal uint64 = 0x5785f9c1f2aece21
 )
 
@@ -81,8 +77,6 @@ type SecondProtocolWithCtxStub struct {
 
 func (s_ *SecondProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case SecondProtocolMethodOnSecondOrdinal:
-		fallthrough
 	case SecondProtocolMethodOnSecondGenOrdinal:
 		err_ := s_.Impl.MethodOnSecond(args_.Ctx)
 		return nil, false, err_

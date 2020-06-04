@@ -143,9 +143,7 @@ func (u *Table) ClearField() {
 }
 
 const (
-	InterfaceMethodOrdinal     uint64 = 0x3f43684c00000000
 	InterfaceMethodGenOrdinal  uint64 = 0x60e700e002995ef8
-	InterfaceOnEventOrdinal    uint64 = 0x136d200d00000000
 	InterfaceOnEventGenOrdinal uint64 = 0x914c226136244ed
 )
 
@@ -165,7 +163,7 @@ func (p *InterfaceWithCtxInterface) Method(ctx_ _bindings.Context) error {
 // event comment #3
 func (p *InterfaceWithCtxInterface) ExpectOnEvent(ctx_ _bindings.Context) error {
 	var resp_ _bindings.Message
-	err_ := ((*_bindings.ChannelProxy)(p)).Recv(InterfaceOnEventOrdinal, resp_, InterfaceOnEventGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Recv(InterfaceOnEventGenOrdinal, resp_)
 	return err_
 }
 
@@ -197,8 +195,6 @@ type InterfaceWithCtxStub struct {
 
 func (s_ *InterfaceWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case InterfaceMethodOrdinal:
-		fallthrough
 	case InterfaceMethodGenOrdinal:
 		err_ := s_.Impl.Method(args_.Ctx)
 		return nil, false, err_

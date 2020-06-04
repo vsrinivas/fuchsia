@@ -12,7 +12,6 @@ namespace json {
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t ksuper_foo_Ordinal = 0x2f16c1bc00000000lu;
 [[maybe_unused]] constexpr uint64_t ksuper_foo_GenOrdinal =
     0x4f6c089228ba7c92lu;
 extern "C" const fidl_type_t fidl_test_json_superfooRequestTable;
@@ -199,7 +198,6 @@ zx_status_t super::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case ksuper_foo_Ordinal:
     case ksuper_foo_GenOrdinal: {
       auto result = ::fidl::DecodeAs<fooResponse>(msg);
       if (result.status != ZX_OK) {
@@ -238,7 +236,6 @@ bool super::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case ksuper_foo_Ordinal:
     case ksuper_foo_GenOrdinal: {
       auto result = ::fidl::DecodeAs<fooRequest>(msg);
       if (result.status != ZX_OK) {
@@ -320,7 +317,6 @@ void super::SetTransactionHeaderFor::fooResponse(
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t ksub_foo_Ordinal = 0x2f16c1bc00000000lu;
 [[maybe_unused]] constexpr uint64_t ksub_foo_GenOrdinal = 0x4f6c089228ba7c92lu;
 extern "C" const fidl_type_t fidl_test_json_subfooRequestTable;
 extern "C" const fidl_type_t fidl_test_json_subfooResponseTable;
@@ -507,7 +503,6 @@ zx_status_t sub::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case ksub_foo_Ordinal:
     case ksub_foo_GenOrdinal: {
       auto result = ::fidl::DecodeAs<fooResponse>(msg);
       if (result.status != ZX_OK) {
@@ -546,7 +541,6 @@ bool sub::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case ksub_foo_Ordinal:
     case ksub_foo_GenOrdinal: {
       auto result = ::fidl::DecodeAs<fooRequest>(msg);
       if (result.status != ZX_OK) {

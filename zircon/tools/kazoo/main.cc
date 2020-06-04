@@ -164,6 +164,7 @@ int main(int argc, const char* argv[]) {
 
   SyscallLibrary library;
   if (!SyscallLibraryLoader::FromJson(contents, &library)) {
+    fprintf(stderr, "Unable to read fidlc JSON IR %s.\n", params[0].c_str());
     return 1;
   }
 

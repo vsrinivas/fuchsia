@@ -167,7 +167,6 @@ SimpleProtocol::~SimpleProtocol() = default;
 const fidl_type_t* SimpleProtocol_RequestDecoder::GetType(
     uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kSimpleProtocol_Add_Ordinal:
     case internal::kSimpleProtocol_Add_GenOrdinal:
       *out_needs_response = true;
       return &fidl_test_nullable_SimpleProtocolAddRequestTable;
@@ -179,7 +178,6 @@ const fidl_type_t* SimpleProtocol_RequestDecoder::GetType(
 
 const fidl_type_t* SimpleProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
-    case internal::kSimpleProtocol_Add_Ordinal:
     case internal::kSimpleProtocol_Add_GenOrdinal:
       return &fidl_test_nullable_SimpleProtocolAddResponseTable;
     default:
@@ -293,7 +291,6 @@ zx_status_t SimpleProtocol_Stub::Dispatch_(
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kSimpleProtocol_Add_Ordinal:
     case internal::kSimpleProtocol_Add_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->Add(::fidl::DecodeAs<int32_t>(&decoder, 16),

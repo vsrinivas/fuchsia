@@ -42,11 +42,9 @@ EmptyProtocol::~EmptyProtocol() = default;
 const fidl_type_t* EmptyProtocol_RequestDecoder::GetType(
     uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kEmptyProtocol_Send_Ordinal:
     case internal::kEmptyProtocol_Send_GenOrdinal:
       *out_needs_response = false;
       return &fidl_test_json_EmptyProtocolSendRequestTable;
-    case internal::kEmptyProtocol_SendAndReceive_Ordinal:
     case internal::kEmptyProtocol_SendAndReceive_GenOrdinal:
       *out_needs_response = true;
       return &fidl_test_json_EmptyProtocolSendAndReceiveRequestTable;
@@ -58,10 +56,8 @@ const fidl_type_t* EmptyProtocol_RequestDecoder::GetType(
 
 const fidl_type_t* EmptyProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
-    case internal::kEmptyProtocol_Receive_Ordinal:
     case internal::kEmptyProtocol_Receive_GenOrdinal:
       return &fidl_test_json_EmptyProtocolReceiveEventTable;
-    case internal::kEmptyProtocol_SendAndReceive_Ordinal:
     case internal::kEmptyProtocol_SendAndReceive_GenOrdinal:
       return &fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
     default:
@@ -84,7 +80,6 @@ EmptyProtocol_Proxy::~EmptyProtocol_Proxy() = default;
 zx_status_t EmptyProtocol_Proxy::Dispatch_(::fidl::Message message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
-    case internal::kEmptyProtocol_Receive_Ordinal:
     case internal::kEmptyProtocol_Receive_GenOrdinal: {
       if (!Receive) {
         status = ZX_OK;
@@ -206,13 +201,11 @@ zx_status_t EmptyProtocol_Stub::Dispatch_(
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kEmptyProtocol_Send_Ordinal:
     case internal::kEmptyProtocol_Send_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->Send(::fidl::DecodeAs<Empty>(&decoder, 16));
       break;
     }
-    case internal::kEmptyProtocol_SendAndReceive_Ordinal:
     case internal::kEmptyProtocol_SendAndReceive_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->SendAndReceive(

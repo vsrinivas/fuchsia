@@ -7,13 +7,13 @@ include <top/c/fidl.h>
 
 
 top_TopGetFooRequest {
-       hdr fidl_message_header[807135680470712320]
+       hdr fidl_message_header[7703637629648977298]
 } [packed]
 top_TopGetFooRequestHandles {
        void void
 } [packed]
 top_TopGetFooResponse {
-       hdr fidl_message_header[807135680470712320]
+       hdr fidl_message_header[7703637629648977298]
        fooInLine bottom_FooInLine
        fooOutOfLine bottom_FooOutOfLine
 } [packed]

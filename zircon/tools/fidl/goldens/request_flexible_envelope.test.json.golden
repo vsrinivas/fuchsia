@@ -16,7 +16,7 @@
       },
       "methods": [
         {
-          "ordinal": 1244088344447549440,
+          "ordinal": 8264567585134801538,
           "generated_ordinal": 8264567585134801538,
           "name": "RequestStrictResponseFlexible",
           "location": {
@@ -87,7 +87,7 @@
           "is_composed": false
         },
         {
-          "ordinal": 3546214166840737792,
+          "ordinal": 4801763909694511442,
           "generated_ordinal": 4801763909694511442,
           "name": "RequestFlexibleResponseStrict",
           "location": {

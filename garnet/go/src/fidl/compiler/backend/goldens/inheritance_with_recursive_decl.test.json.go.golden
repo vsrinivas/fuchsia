@@ -40,7 +40,6 @@ func (msg *childWithCtxSecondRequest) Marshaler() _bindings.Marshaler {
 }
 
 const (
-	ParentFirstOrdinal    uint64 = 0x66a95ddc00000000
 	ParentFirstGenOrdinal uint64 = 0x239f8fdea8de880c
 )
 
@@ -73,8 +72,6 @@ type ParentWithCtxStub struct {
 
 func (s_ *ParentWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case ParentFirstOrdinal:
-		fallthrough
 	case ParentFirstGenOrdinal:
 		in_ := parentWithCtxFirstRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
@@ -93,9 +90,7 @@ func (s_ *ParentWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.M
 type ParentEventProxy _bindings.ChannelProxy
 
 const (
-	ChildFirstOrdinal     uint64 = 0x66a95ddc00000000
 	ChildFirstGenOrdinal  uint64 = 0x239f8fdea8de880c
-	ChildSecondOrdinal    uint64 = 0x1240cb600000000
 	ChildSecondGenOrdinal uint64 = 0x24799ea8916d88af
 )
 
@@ -137,8 +132,6 @@ type ChildWithCtxStub struct {
 
 func (s_ *ChildWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case ChildFirstOrdinal:
-		fallthrough
 	case ChildFirstGenOrdinal:
 		in_ := childWithCtxFirstRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
@@ -150,8 +143,6 @@ func (s_ *ChildWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Me
 		}
 		err_ := s_.Impl.First(args_.Ctx, in_.Request)
 		return nil, false, err_
-	case ChildSecondOrdinal:
-		fallthrough
 	case ChildSecondGenOrdinal:
 		in_ := childWithCtxSecondRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)

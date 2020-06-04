@@ -26,19 +26,15 @@ Parent::~Parent() = default;
 const fidl_type_t* Parent_RequestDecoder::GetType(uint64_t ordinal,
                                                   bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kParent_GetChild_Ordinal:
     case internal::kParent_GetChild_GenOrdinal:
       *out_needs_response = true;
       return &test_name_ParentGetChildRequestTable;
-    case internal::kParent_GetChildRequest_Ordinal:
     case internal::kParent_GetChildRequest_GenOrdinal:
       *out_needs_response = true;
       return &test_name_ParentGetChildRequestRequestTable;
-    case internal::kParent_TakeChild_Ordinal:
     case internal::kParent_TakeChild_GenOrdinal:
       *out_needs_response = false;
       return &test_name_ParentTakeChildRequestTable;
-    case internal::kParent_TakeChildRequest_Ordinal:
     case internal::kParent_TakeChildRequest_GenOrdinal:
       *out_needs_response = false;
       return &test_name_ParentTakeChildRequestRequestTable;
@@ -50,10 +46,8 @@ const fidl_type_t* Parent_RequestDecoder::GetType(uint64_t ordinal,
 
 const fidl_type_t* Parent_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
-    case internal::kParent_GetChild_Ordinal:
     case internal::kParent_GetChild_GenOrdinal:
       return &test_name_ParentGetChildResponseTable;
-    case internal::kParent_GetChildRequest_Ordinal:
     case internal::kParent_GetChildRequest_GenOrdinal:
       return &test_name_ParentGetChildRequestResponseTable;
     default:
@@ -222,25 +216,21 @@ zx_status_t Parent_Stub::Dispatch_(::fidl::Message message,
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kParent_GetChild_Ordinal:
     case internal::kParent_GetChild_GenOrdinal: {
       impl_->GetChild(Parent_GetChild_Responder(std::move(response)));
       break;
     }
-    case internal::kParent_GetChildRequest_Ordinal:
     case internal::kParent_GetChildRequest_GenOrdinal: {
       impl_->GetChildRequest(
           Parent_GetChildRequest_Responder(std::move(response)));
       break;
     }
-    case internal::kParent_TakeChild_Ordinal:
     case internal::kParent_TakeChild_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->TakeChild(
           ::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(&decoder, 16));
       break;
     }
-    case internal::kParent_TakeChildRequest_Ordinal:
     case internal::kParent_TakeChildRequest_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->TakeChildRequest(

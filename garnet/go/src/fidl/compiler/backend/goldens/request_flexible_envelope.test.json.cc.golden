@@ -383,11 +383,9 @@ Protocol::~Protocol() = default;
 const fidl_type_t* Protocol_RequestDecoder::GetType(uint64_t ordinal,
                                                     bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
     case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal:
       *out_needs_response = true;
       return &fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
-    case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
     case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal:
       *out_needs_response = true;
       return &fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
@@ -399,10 +397,8 @@ const fidl_type_t* Protocol_RequestDecoder::GetType(uint64_t ordinal,
 
 const fidl_type_t* Protocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
-    case internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
     case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal:
       return &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
-    case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
     case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal:
       return &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
     default:
@@ -585,7 +581,6 @@ zx_status_t Protocol_Stub::Dispatch_(
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
     case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->RequestStrictResponseFlexible(
@@ -594,7 +589,6 @@ zx_status_t Protocol_Stub::Dispatch_(
               std::move(response)));
       break;
     }
-    case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
     case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->RequestFlexibleResponseStrict(

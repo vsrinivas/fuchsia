@@ -252,7 +252,7 @@ impl futures::Stream for TopRequestStream {
 
             #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0xb3385a000000000 | 0x6ae8d19bc98f3d92 => {
+                0x6ae8d19bc98f3d92 => {
                     let mut req: () = fidl::encoding::Decodable::new_empty();
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     let control_handle = TopControlHandle { inner: this.inner.clone() };
@@ -293,7 +293,7 @@ impl TopRequestMessage {
 
         #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
         match header.ordinal() {
-            0xb3385a000000000 | 0x6ae8d19bc98f3d92 => {
+            0x6ae8d19bc98f3d92 => {
                 let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
                 fidl::encoding::Decoder::decode_into(
                     &header,

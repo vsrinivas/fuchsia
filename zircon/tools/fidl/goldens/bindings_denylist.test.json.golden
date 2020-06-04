@@ -129,7 +129,7 @@
       ],
       "methods": [
         {
-          "ordinal": 7993866300378054656,
+          "ordinal": 6908179439377953782,
           "generated_ordinal": 6908179439377953782,
           "name": "LibfuzzerNeedsNonemptyProtocol",
           "location": {

@@ -273,13 +273,13 @@ fidl_test_json_ExplicitXUnionHandles [
 
 
 fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest {
-       hdr fidl_message_header[7548006651618394112]
+       hdr fidl_message_header[8255078252057434586]
 } [packed]
 fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestHandles {
        void void
 } [packed]
 fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse {
-       hdr fidl_message_header[7548006651618394112]
+       hdr fidl_message_header[8255078252057434586]
        xuInLine fidl_test_json_StrictBoundedXUnionInLine
        xuOutOfLine fidl_test_json_StrictBoundedXUnionOutOfLine
 } [packed]
@@ -287,13 +287,13 @@ fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseH
        void void
 } [packed]
 fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest {
-       hdr fidl_message_header[1688296084360658944]
+       hdr fidl_message_header[1140178169303334883]
 } [packed]
 fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestHandles {
        void void
 } [packed]
 fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse {
-       hdr fidl_message_header[1688296084360658944]
+       hdr fidl_message_header[1140178169303334883]
        xuInLine fidl_test_json_OlderSimpleUnionInLine
 } [packed]
 fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseHandles {

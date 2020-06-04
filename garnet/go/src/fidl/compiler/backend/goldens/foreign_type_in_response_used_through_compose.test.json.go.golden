@@ -20,7 +20,6 @@ func (msg *topWithCtxGetFooResponse) Marshaler() _bindings.Marshaler {
 }
 
 const (
-	TopGetFooOrdinal    uint64 = 0xb3385a000000000
 	TopGetFooGenOrdinal uint64 = 0x6ae8d19bc98f3d92
 )
 
@@ -29,7 +28,7 @@ type TopWithCtxInterface _bindings.ChannelProxy
 func (p *TopWithCtxInterface) GetFoo(ctx_ _bindings.Context) (bottom.Foo, error) {
 	var req_ _bindings.Message
 	resp_ := &topWithCtxGetFooResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(TopGetFooGenOrdinal, req_, resp_, TopGetFooOrdinal, TopGetFooGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(TopGetFooGenOrdinal, req_, resp_, TopGetFooGenOrdinal)
 	return resp_.Foo, err_
 }
 
@@ -52,8 +51,6 @@ type TopWithCtxStub struct {
 
 func (s_ *TopWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case TopGetFooOrdinal:
-		fallthrough
 	case TopGetFooGenOrdinal:
 		foo, err_ := s_.Impl.GetFoo(args_.Ctx)
 		out_ := topWithCtxGetFooResponse{}

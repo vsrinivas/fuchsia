@@ -61,11 +61,8 @@ func (msg *emptyProtocolWithCtxSendAndReceiveResponse) Marshaler() _bindings.Mar
 }
 
 const (
-	EmptyProtocolSendOrdinal              uint64 = 0x1109a64200000000
 	EmptyProtocolSendGenOrdinal           uint64 = 0x7a2963cbd88da03
-	EmptyProtocolReceiveOrdinal           uint64 = 0x172c2b6f00000000
 	EmptyProtocolReceiveGenOrdinal        uint64 = 0x63ba2e5c5fdb4895
-	EmptyProtocolSendAndReceiveOrdinal    uint64 = 0x7b7cca3c00000000
 	EmptyProtocolSendAndReceiveGenOrdinal uint64 = 0x1e59efe8b1bbd615
 )
 
@@ -81,7 +78,7 @@ func (p *EmptyProtocolWithCtxInterface) Send(ctx_ _bindings.Context, e Empty) er
 
 func (p *EmptyProtocolWithCtxInterface) ExpectReceive(ctx_ _bindings.Context) (Empty, error) {
 	resp_ := &emptyProtocolWithCtxReceiveResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Recv(EmptyProtocolReceiveOrdinal, resp_, EmptyProtocolReceiveGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Recv(EmptyProtocolReceiveGenOrdinal, resp_)
 	return resp_.E, err_
 }
 
@@ -90,7 +87,7 @@ func (p *EmptyProtocolWithCtxInterface) SendAndReceive(ctx_ _bindings.Context, e
 		E: e,
 	}
 	resp_ := &emptyProtocolWithCtxSendAndReceiveResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(EmptyProtocolSendAndReceiveGenOrdinal, req_, resp_, EmptyProtocolSendAndReceiveOrdinal, EmptyProtocolSendAndReceiveGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(EmptyProtocolSendAndReceiveGenOrdinal, req_, resp_, EmptyProtocolSendAndReceiveGenOrdinal)
 	return resp_.E, err_
 }
 
@@ -114,8 +111,6 @@ type EmptyProtocolWithCtxStub struct {
 
 func (s_ *EmptyProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case EmptyProtocolSendOrdinal:
-		fallthrough
 	case EmptyProtocolSendGenOrdinal:
 		in_ := emptyProtocolWithCtxSendRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
@@ -127,8 +122,6 @@ func (s_ *EmptyProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bin
 		}
 		err_ := s_.Impl.Send(args_.Ctx, in_.E)
 		return nil, false, err_
-	case EmptyProtocolSendAndReceiveOrdinal:
-		fallthrough
 	case EmptyProtocolSendAndReceiveGenOrdinal:
 		in_ := emptyProtocolWithCtxSendAndReceiveRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)

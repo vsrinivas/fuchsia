@@ -10,8 +10,6 @@ namespace example {
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kExampleProtocol_Method_Ordinal =
-    0x42fd6a1b00000000lu;
 [[maybe_unused]] constexpr uint64_t kExampleProtocol_Method_GenOrdinal =
     0x1b489f95492fd90elu;
 extern "C" const fidl_type_t example_ExampleProtocolMethodRequestTable;
@@ -138,7 +136,6 @@ bool ExampleProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kExampleProtocol_Method_Ordinal:
     case kExampleProtocol_Method_GenOrdinal: {
       auto result = ::fidl::DecodeAs<MethodRequest>(msg);
       if (result.status != ZX_OK) {

@@ -16,7 +16,7 @@
       },
       "methods": [
         {
-          "ordinal": 7548006651618394112,
+          "ordinal": 8255078252057434586,
           "generated_ordinal": 8255078252057434586,
           "name": "StrictXUnionHenceResponseMayBeStackAllocated",
           "location": {
@@ -68,7 +68,7 @@
           "is_composed": false
         },
         {
-          "ordinal": 1688296084360658944,
+          "ordinal": 1140178169303334883,
           "generated_ordinal": 1140178169303334883,
           "name": "FlexibleXUnionHenceResponseMustBeHeapAllocated",
           "location": {

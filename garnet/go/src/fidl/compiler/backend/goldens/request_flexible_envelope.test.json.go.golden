@@ -146,9 +146,7 @@ func StrictFooWithI(i int32) StrictFoo {
 }
 
 const (
-	ProtocolRequestStrictResponseFlexibleOrdinal    uint64 = 0x1143e3c200000000
 	ProtocolRequestStrictResponseFlexibleGenOrdinal uint64 = 0x72b1a46e5e2af282
-	ProtocolRequestFlexibleResponseStrictOrdinal    uint64 = 0x3136aeff00000000
 	ProtocolRequestFlexibleResponseStrictGenOrdinal uint64 = 0x42a34ad5c4a1d952
 )
 
@@ -159,7 +157,7 @@ func (p *ProtocolWithCtxInterface) RequestStrictResponseFlexible(ctx_ _bindings.
 		S: s,
 	}
 	resp_ := &protocolWithCtxRequestStrictResponseFlexibleResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(ProtocolRequestStrictResponseFlexibleGenOrdinal, req_, resp_, ProtocolRequestStrictResponseFlexibleOrdinal, ProtocolRequestStrictResponseFlexibleGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(ProtocolRequestStrictResponseFlexibleGenOrdinal, req_, resp_, ProtocolRequestStrictResponseFlexibleGenOrdinal)
 	return resp_.F, err_
 }
 
@@ -168,7 +166,7 @@ func (p *ProtocolWithCtxInterface) RequestFlexibleResponseStrict(ctx_ _bindings.
 		S: s,
 	}
 	resp_ := &protocolWithCtxRequestFlexibleResponseStrictResponse{}
-	err_ := ((*_bindings.ChannelProxy)(p)).Call(ProtocolRequestFlexibleResponseStrictGenOrdinal, req_, resp_, ProtocolRequestFlexibleResponseStrictOrdinal, ProtocolRequestFlexibleResponseStrictGenOrdinal)
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(ProtocolRequestFlexibleResponseStrictGenOrdinal, req_, resp_, ProtocolRequestFlexibleResponseStrictGenOrdinal)
 	return resp_.F, err_
 }
 
@@ -192,8 +190,6 @@ type ProtocolWithCtxStub struct {
 
 func (s_ *ProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case ProtocolRequestStrictResponseFlexibleOrdinal:
-		fallthrough
 	case ProtocolRequestStrictResponseFlexibleGenOrdinal:
 		in_ := protocolWithCtxRequestStrictResponseFlexibleRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
@@ -207,8 +203,6 @@ func (s_ *ProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings
 		out_ := protocolWithCtxRequestStrictResponseFlexibleResponse{}
 		out_.F = f
 		return &out_, true, err_
-	case ProtocolRequestFlexibleResponseStrictOrdinal:
-		fallthrough
 	case ProtocolRequestFlexibleResponseStrictGenOrdinal:
 		in_ := protocolWithCtxRequestFlexibleResponseStrictRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)

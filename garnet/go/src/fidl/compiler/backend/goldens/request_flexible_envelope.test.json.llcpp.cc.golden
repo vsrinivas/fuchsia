@@ -38,15 +38,11 @@ void ::llcpp::fidl::test::json::FlexibleFoo::SizeAndOffsetAssertionHelper() {
 namespace {
 
 [[maybe_unused]] constexpr uint64_t
-    kProtocol_RequestStrictResponseFlexible_Ordinal = 0x1143e3c200000000lu;
-[[maybe_unused]] constexpr uint64_t
     kProtocol_RequestStrictResponseFlexible_GenOrdinal = 0x72b1a46e5e2af282lu;
 extern "C" const fidl_type_t
     fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
 extern "C" const fidl_type_t
     fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
-[[maybe_unused]] constexpr uint64_t
-    kProtocol_RequestFlexibleResponseStrict_Ordinal = 0x3136aeff00000000lu;
 [[maybe_unused]] constexpr uint64_t
     kProtocol_RequestFlexibleResponseStrict_GenOrdinal = 0x42a34ad5c4a1d952lu;
 extern "C" const fidl_type_t
@@ -479,7 +475,6 @@ zx_status_t Protocol::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kProtocol_RequestStrictResponseFlexible_Ordinal:
     case kProtocol_RequestStrictResponseFlexible_GenOrdinal: {
       auto result =
           ::fidl::DecodeAs<RequestStrictResponseFlexibleResponse>(msg);
@@ -491,7 +486,6 @@ zx_status_t Protocol::ClientImpl::Dispatch(
           ->OnReply(std::move(result.message));
       break;
     }
-    case kProtocol_RequestFlexibleResponseStrict_Ordinal:
     case kProtocol_RequestFlexibleResponseStrict_GenOrdinal: {
       auto result =
           ::fidl::DecodeAs<RequestFlexibleResponseStrictResponse>(msg);
@@ -531,7 +525,6 @@ bool Protocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kProtocol_RequestStrictResponseFlexible_Ordinal:
     case kProtocol_RequestStrictResponseFlexible_GenOrdinal: {
       auto result = ::fidl::DecodeAs<RequestStrictResponseFlexibleRequest>(msg);
       if (result.status != ZX_OK) {
@@ -544,7 +537,6 @@ bool Protocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
           Interface::RequestStrictResponseFlexibleCompleter::Sync(txn));
       return true;
     }
-    case kProtocol_RequestFlexibleResponseStrict_Ordinal:
     case kProtocol_RequestFlexibleResponseStrict_GenOrdinal: {
       auto result = ::fidl::DecodeAs<RequestFlexibleResponseStrictRequest>(msg);
       if (result.status != ZX_OK) {

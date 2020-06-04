@@ -20,7 +20,6 @@ super::~super() = default;
 const fidl_type_t* super_RequestDecoder::GetType(uint64_t ordinal,
                                                  bool* out_needs_response) {
   switch (ordinal) {
-    case internal::ksuper_foo_Ordinal:
     case internal::ksuper_foo_GenOrdinal:
       *out_needs_response = true;
       return &fidl_test_json_superfooRequestTable;
@@ -32,7 +31,6 @@ const fidl_type_t* super_RequestDecoder::GetType(uint64_t ordinal,
 
 const fidl_type_t* super_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
-    case internal::ksuper_foo_Ordinal:
     case internal::ksuper_foo_GenOrdinal:
       return &fidl_test_json_superfooResponseTable;
     default:
@@ -140,7 +138,6 @@ zx_status_t super_Stub::Dispatch_(::fidl::Message message,
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::ksuper_foo_Ordinal:
     case internal::ksuper_foo_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->foo(::fidl::DecodeAs<::std::string>(&decoder, 16),
@@ -189,7 +186,6 @@ sub::~sub() = default;
 const fidl_type_t* sub_RequestDecoder::GetType(uint64_t ordinal,
                                                bool* out_needs_response) {
   switch (ordinal) {
-    case internal::ksub_foo_Ordinal:
     case internal::ksub_foo_GenOrdinal:
       *out_needs_response = true;
       return &fidl_test_json_subfooRequestTable;
@@ -201,7 +197,6 @@ const fidl_type_t* sub_RequestDecoder::GetType(uint64_t ordinal,
 
 const fidl_type_t* sub_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
-    case internal::ksub_foo_Ordinal:
     case internal::ksub_foo_GenOrdinal:
       return &fidl_test_json_subfooResponseTable;
     default:
@@ -309,7 +304,6 @@ zx_status_t sub_Stub::Dispatch_(::fidl::Message message,
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::ksub_foo_Ordinal:
     case internal::ksub_foo_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->foo(::fidl::DecodeAs<::std::string>(&decoder, 16),

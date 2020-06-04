@@ -18,7 +18,6 @@ Top::~Top() = default;
 const fidl_type_t* Top_RequestDecoder::GetType(uint64_t ordinal,
                                                bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kTop_GetFoo_Ordinal:
     case internal::kTop_GetFoo_GenOrdinal:
       *out_needs_response = true;
       return &top_TopGetFooRequestTable;
@@ -30,7 +29,6 @@ const fidl_type_t* Top_RequestDecoder::GetType(uint64_t ordinal,
 
 const fidl_type_t* Top_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
-    case internal::kTop_GetFoo_Ordinal:
     case internal::kTop_GetFoo_GenOrdinal:
       return &top_TopGetFooResponseTable;
     default:
@@ -138,7 +136,6 @@ zx_status_t Top_Stub::Dispatch_(::fidl::Message message,
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kTop_GetFoo_Ordinal:
     case internal::kTop_GetFoo_GenOrdinal: {
       impl_->GetFoo(Top_GetFoo_Responder(std::move(response)));
       break;

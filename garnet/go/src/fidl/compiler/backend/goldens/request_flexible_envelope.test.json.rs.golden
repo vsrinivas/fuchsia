@@ -343,7 +343,7 @@ impl futures::Stream for ProtocolRequestStream {
 
             #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0x1143e3c200000000 | 0x72b1a46e5e2af282 => {
+                0x72b1a46e5e2af282 => {
                     let mut req: (StrictFoo) = fidl::encoding::Decodable::new_empty();
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     let control_handle = ProtocolControlHandle { inner: this.inner.clone() };
@@ -357,7 +357,7 @@ impl futures::Stream for ProtocolRequestStream {
                         },
                     })
                 }
-                0x3136aeff00000000 | 0x42a34ad5c4a1d952 => {
+                0x42a34ad5c4a1d952 => {
                     let mut req: (FlexibleFoo) = fidl::encoding::Decodable::new_empty();
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     let control_handle = ProtocolControlHandle { inner: this.inner.clone() };
@@ -400,7 +400,7 @@ impl ProtocolRequestMessage {
 
         #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
         match header.ordinal() {
-            0x1143e3c200000000 | 0x72b1a46e5e2af282 => {
+            0x72b1a46e5e2af282 => {
                 let mut out_tuple: (StrictFoo) = fidl::encoding::Decodable::new_empty();
                 fidl::encoding::Decoder::decode_into(
                     &header,
@@ -414,7 +414,7 @@ impl ProtocolRequestMessage {
                     tx_id: header.tx_id().into(),
                 })
             }
-            0x3136aeff00000000 | 0x42a34ad5c4a1d952 => {
+            0x42a34ad5c4a1d952 => {
                 let mut out_tuple: (FlexibleFoo) = fidl::encoding::Decodable::new_empty();
                 fidl::encoding::Decoder::decode_into(
                     &header,

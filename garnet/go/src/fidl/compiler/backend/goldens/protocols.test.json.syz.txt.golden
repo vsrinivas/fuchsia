@@ -67,31 +67,31 @@ test_name_WithErrorSyntax_ErrorAsEnum_ResultHandles [
 
 
 test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequest {
-       hdr fidl_message_header[2162845427462832128]
+       hdr fidl_message_header[257584335957785512]
 } [packed]
 test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestHandles {
        void void
 } [packed]
 test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequest {
-       hdr fidl_message_header[5617919293065789440]
+       hdr fidl_message_header[8101632395109729785]
 } [packed]
 test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestHandles {
        void void
 } [packed]
 test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponse {
-       hdr fidl_message_header[5617919293065789440]
+       hdr fidl_message_header[8101632395109729785]
 } [packed]
 test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseHandles {
        void void
 } [packed]
 test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequest {
-       hdr fidl_message_header[461856421957337088]
+       hdr fidl_message_header[5054636755429784136]
 } [packed]
 test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestHandles {
        void void
 } [packed]
 test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponse {
-       hdr fidl_message_header[461856421957337088]
+       hdr fidl_message_header[5054636755429784136]
        retInLine fidl_string
        retOutOfLine fidl_aligned[stringnoz]
 } [packed]
@@ -99,7 +99,7 @@ test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseHandles {
        void void
 } [packed]
 test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequest {
-       hdr fidl_message_header[1856067372482297856]
+       hdr fidl_message_header[5108499630221504549]
        argInLine fidl_string
        argOutOfLine fidl_aligned[stringnoz]
 } [packed]
@@ -107,7 +107,7 @@ test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestHandles {
        void void
 } [packed]
 test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequest {
-       hdr fidl_message_header[8570976206923497472]
+       hdr fidl_message_header[108302452954061159]
        argInLine fidl_string
        argOutOfLine fidl_aligned[stringnoz]
 } [packed]
@@ -115,13 +115,13 @@ test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestHandles {
        void void
 } [packed]
 test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponse {
-       hdr fidl_message_header[8570976206923497472]
+       hdr fidl_message_header[108302452954061159]
 } [packed]
 test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseHandles {
        void void
 } [packed]
 test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequest {
-       hdr fidl_message_header[1833854690685616128]
+       hdr fidl_message_header[383797738148261568]
        argInLine fidl_string
        argOutOfLine fidl_aligned[stringnoz]
 } [packed]
@@ -129,7 +129,7 @@ test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestHandles {
        void void
 } [packed]
 test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponse {
-       hdr fidl_message_header[1833854690685616128]
+       hdr fidl_message_header[383797738148261568]
        retInLine fidl_string
        retOutOfLine fidl_aligned[stringnoz]
 } [packed]
@@ -137,13 +137,13 @@ test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseHandles {
        void void
 } [packed]
 test_name_WithAndWithoutRequestResponseOnEmptyResponseEvent {
-       hdr fidl_message_header[7602031305773023232]
+       hdr fidl_message_header[301337558307652787]
 } [packed]
 test_name_WithAndWithoutRequestResponseOnEmptyResponseEventHandles {
        void void
 } [packed]
 test_name_WithAndWithoutRequestResponseOnWithResponseEvent {
-       hdr fidl_message_header[8811031017247735808]
+       hdr fidl_message_header[3069035692499413769]
        retInLine fidl_string
        retOutOfLine fidl_aligned[stringnoz]
 } [packed]
@@ -167,13 +167,13 @@ zx_channel_read$test_name_WithAndWithoutRequestResponseOnWithResponse(handle zx_
 
 
 test_name_WithErrorSyntaxResponseAsStructRequest {
-       hdr fidl_message_header[5709494219224121344]
+       hdr fidl_message_header[6422511116044938191]
 } [packed]
 test_name_WithErrorSyntaxResponseAsStructRequestHandles {
        void void
 } [packed]
 test_name_WithErrorSyntaxResponseAsStructResponse {
-       hdr fidl_message_header[5709494219224121344]
+       hdr fidl_message_header[6422511116044938191]
        resultInLine test_name_WithErrorSyntax_ResponseAsStruct_ResultInLine
        resultOutOfLine test_name_WithErrorSyntax_ResponseAsStruct_ResultOutOfLine
 } [packed]
@@ -181,13 +181,13 @@ test_name_WithErrorSyntaxResponseAsStructResponseHandles {
        result test_name_WithErrorSyntax_ResponseAsStruct_ResultHandles
 } [packed]
 test_name_WithErrorSyntaxErrorAsPrimitiveRequest {
-       hdr fidl_message_header[8887872801126481920]
+       hdr fidl_message_header[2364249812017832126]
 } [packed]
 test_name_WithErrorSyntaxErrorAsPrimitiveRequestHandles {
        void void
 } [packed]
 test_name_WithErrorSyntaxErrorAsPrimitiveResponse {
-       hdr fidl_message_header[8887872801126481920]
+       hdr fidl_message_header[2364249812017832126]
        resultInLine test_name_WithErrorSyntax_ErrorAsPrimitive_ResultInLine
        resultOutOfLine test_name_WithErrorSyntax_ErrorAsPrimitive_ResultOutOfLine
 } [packed]
@@ -195,13 +195,13 @@ test_name_WithErrorSyntaxErrorAsPrimitiveResponseHandles {
        result test_name_WithErrorSyntax_ErrorAsPrimitive_ResultHandles
 } [packed]
 test_name_WithErrorSyntaxErrorAsEnumRequest {
-       hdr fidl_message_header[5518561143137763328]
+       hdr fidl_message_header[4597390537870356095]
 } [packed]
 test_name_WithErrorSyntaxErrorAsEnumRequestHandles {
        void void
 } [packed]
 test_name_WithErrorSyntaxErrorAsEnumResponse {
-       hdr fidl_message_header[5518561143137763328]
+       hdr fidl_message_header[4597390537870356095]
        resultInLine test_name_WithErrorSyntax_ErrorAsEnum_ResultInLine
        resultOutOfLine test_name_WithErrorSyntax_ErrorAsEnum_ResultOutOfLine
 } [packed]
@@ -220,7 +220,7 @@ zx_channel_call$test_name_WithErrorSyntaxErrorAsEnum(handle zx_chan_test_name_Wi
 
 
 test_name_ChannelProtocolMethodARequest {
-       hdr fidl_message_header[6153768471000776704]
+       hdr fidl_message_header[1954005452660588540]
        a int64
        b int64
 } [packed]
@@ -228,7 +228,7 @@ test_name_ChannelProtocolMethodARequestHandles {
        void void
 } [packed]
 test_name_ChannelProtocolEventAEvent {
-       hdr fidl_message_header[2051602944112984064]
+       hdr fidl_message_header[2691096518916888736]
        a int64
        b int64
 } [packed]
@@ -236,7 +236,7 @@ test_name_ChannelProtocolEventAEventHandles {
        void void
 } [packed]
 test_name_ChannelProtocolMethodBRequest {
-       hdr fidl_message_header[776401560220467200]
+       hdr fidl_message_header[6751311874614576291]
        a int64
        b int64
 } [packed]
@@ -244,21 +244,21 @@ test_name_ChannelProtocolMethodBRequestHandles {
        void void
 } [packed]
 test_name_ChannelProtocolMethodBResponse {
-       hdr fidl_message_header[776401560220467200]
+       hdr fidl_message_header[6751311874614576291]
        result int64
 } [packed]
 test_name_ChannelProtocolMethodBResponseHandles {
        void void
 } [packed]
 test_name_ChannelProtocolMutateSocketRequest {
-       hdr fidl_message_header[5405131567951511552]
+       hdr fidl_message_header[3948151641640179063]
        a flags[fidl_handle_presence, int32]
 } [packed]
 test_name_ChannelProtocolMutateSocketRequestHandles {
        a zx_socket
 } [packed]
 test_name_ChannelProtocolMutateSocketResponse {
-       hdr fidl_message_header[5405131567951511552]
+       hdr fidl_message_header[3948151641640179063]
        b flags[fidl_handle_presence, int32]
 } [packed]
 test_name_ChannelProtocolMutateSocketResponseHandles {
@@ -277,28 +277,28 @@ zx_channel_call$test_name_ChannelProtocolMutateSocket(handle zx_chan_test_name_C
 
 
 test_name_TransitionalRequestRequest {
-       hdr fidl_message_header[7255010712899026944]
+       hdr fidl_message_header[8417059970765918690]
        x int64
 } [packed]
 test_name_TransitionalRequestRequestHandles {
        void void
 } [packed]
 test_name_TransitionalRequestResponse {
-       hdr fidl_message_header[7255010712899026944]
+       hdr fidl_message_header[8417059970765918690]
        y int64
 } [packed]
 test_name_TransitionalRequestResponseHandles {
        void void
 } [packed]
 test_name_TransitionalOneWayRequest {
-       hdr fidl_message_header[3114844320398573568]
+       hdr fidl_message_header[4736529736500432226]
        x int64
 } [packed]
 test_name_TransitionalOneWayRequestHandles {
        void void
 } [packed]
 test_name_TransitionalEventEvent {
-       hdr fidl_message_header[3884666536182415360]
+       hdr fidl_message_header[1744293851714922796]
        x int64
 } [packed]
 test_name_TransitionalEventEventHandles {

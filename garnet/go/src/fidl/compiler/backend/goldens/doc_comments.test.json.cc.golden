@@ -270,7 +270,6 @@ Interface::~Interface() = default;
 const fidl_type_t* Interface_RequestDecoder::GetType(uint64_t ordinal,
                                                      bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kInterface_Method_Ordinal:
     case internal::kInterface_Method_GenOrdinal:
       *out_needs_response = false;
       return &test_name_InterfaceMethodRequestTable;
@@ -282,7 +281,6 @@ const fidl_type_t* Interface_RequestDecoder::GetType(uint64_t ordinal,
 
 const fidl_type_t* Interface_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
-    case internal::kInterface_OnEvent_Ordinal:
     case internal::kInterface_OnEvent_GenOrdinal:
       return &test_name_InterfaceOnEventEventTable;
     default:
@@ -304,7 +302,6 @@ Interface_Proxy::~Interface_Proxy() = default;
 zx_status_t Interface_Proxy::Dispatch_(::fidl::Message message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
-    case internal::kInterface_OnEvent_Ordinal:
     case internal::kInterface_OnEvent_GenOrdinal: {
       if (!OnEvent) {
         status = ZX_OK;
@@ -369,7 +366,6 @@ zx_status_t Interface_Stub::Dispatch_(
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kInterface_Method_Ordinal:
     case internal::kInterface_Method_GenOrdinal: {
       impl_->Method();
       break;

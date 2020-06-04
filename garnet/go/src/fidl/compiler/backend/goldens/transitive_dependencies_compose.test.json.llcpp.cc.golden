@@ -10,7 +10,6 @@ namespace top {
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kTop_GetFoo_Ordinal = 0x3949df2c00000000lu;
 [[maybe_unused]] constexpr uint64_t kTop_GetFoo_GenOrdinal =
     0x2c8ccb022c3c571flu;
 extern "C" const fidl_type_t top_TopGetFooRequestTable;
@@ -170,7 +169,6 @@ zx_status_t Top::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kTop_GetFoo_Ordinal:
     case kTop_GetFoo_GenOrdinal: {
       auto result = ::fidl::DecodeAs<GetFooResponse>(msg);
       if (result.status != ZX_OK) {
@@ -209,7 +207,6 @@ bool Top::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kTop_GetFoo_Ordinal:
     case kTop_GetFoo_GenOrdinal: {
       auto result = ::fidl::DecodeAs<GetFooRequest>(msg);
       if (result.status != ZX_OK) {

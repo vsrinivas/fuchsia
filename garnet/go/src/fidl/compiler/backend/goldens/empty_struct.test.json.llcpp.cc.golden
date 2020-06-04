@@ -12,20 +12,14 @@ namespace json {
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kEmptyProtocol_Send_Ordinal =
-    0x1109a64200000000lu;
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_Send_GenOrdinal =
     0x7a2963cbd88da03lu;
 extern "C" const fidl_type_t fidl_test_json_EmptyProtocolSendRequestTable;
 extern "C" const fidl_type_t fidl_test_json_EmptyProtocolSendResponseTable;
-[[maybe_unused]] constexpr uint64_t kEmptyProtocol_Receive_Ordinal =
-    0x172c2b6f00000000lu;
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_Receive_GenOrdinal =
     0x63ba2e5c5fdb4895lu;
 extern "C" const fidl_type_t fidl_test_json_EmptyProtocolReceiveRequestTable;
 extern "C" const fidl_type_t fidl_test_json_EmptyProtocolReceiveEventTable;
-[[maybe_unused]] constexpr uint64_t kEmptyProtocol_SendAndReceive_Ordinal =
-    0x7b7cca3c00000000lu;
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_SendAndReceive_GenOrdinal =
     0x1e59efe8b1bbd615lu;
 extern "C" const fidl_type_t
@@ -330,7 +324,6 @@ zx_status_t EmptyProtocol::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kEmptyProtocol_Receive_Ordinal:
     case kEmptyProtocol_Receive_GenOrdinal: {
       auto result = ::fidl::DecodeAs<ReceiveResponse>(msg);
       if (result.status != ZX_OK) {
@@ -345,7 +338,6 @@ zx_status_t EmptyProtocol::ClientImpl::Dispatch(
       }
       break;
     }
-    case kEmptyProtocol_SendAndReceive_Ordinal:
     case kEmptyProtocol_SendAndReceive_GenOrdinal: {
       auto result = ::fidl::DecodeAs<SendAndReceiveResponse>(msg);
       if (result.status != ZX_OK) {
@@ -435,7 +427,6 @@ zx_status_t EmptyProtocol::Call::HandleEvents(
     return status;
   }
   switch (hdr->ordinal) {
-    case kEmptyProtocol_Receive_Ordinal:
     case kEmptyProtocol_Receive_GenOrdinal: {
       auto result = ::fidl::DecodeAs<ReceiveResponse>(&msg);
       if (result.status != ZX_OK) {
@@ -465,7 +456,6 @@ bool EmptyProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kEmptyProtocol_Send_Ordinal:
     case kEmptyProtocol_Send_GenOrdinal: {
       auto result = ::fidl::DecodeAs<SendRequest>(msg);
       if (result.status != ZX_OK) {
@@ -476,7 +466,6 @@ bool EmptyProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
       impl->Send(std::move(message->e), Interface::SendCompleter::Sync(txn));
       return true;
     }
-    case kEmptyProtocol_SendAndReceive_Ordinal:
     case kEmptyProtocol_SendAndReceive_GenOrdinal: {
       auto result = ::fidl::DecodeAs<SendAndReceiveRequest>(msg);
       if (result.status != ZX_OK) {

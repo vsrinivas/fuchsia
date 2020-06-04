@@ -11,8 +11,6 @@ namespace name {
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal =
-    0xd09c00f00000000lu;
 [[maybe_unused]] constexpr uint64_t kSecondProtocol_MethodOnSecond_GenOrdinal =
     0x5785f9c1f2aece21lu;
 extern "C" const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable;
@@ -102,7 +100,6 @@ bool SecondProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kSecondProtocol_MethodOnSecond_Ordinal:
     case kSecondProtocol_MethodOnSecond_GenOrdinal: {
       auto result = ::fidl::DecodeAs<MethodOnSecondRequest>(msg);
       if (result.status != ZX_OK) {
@@ -138,8 +135,6 @@ void SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal =
-    0x2838a83100000000lu;
 [[maybe_unused]] constexpr uint64_t kFirstProtocol_MethodOnFirst_GenOrdinal =
     0x580cbd0d43ccbe3blu;
 extern "C" const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable;
@@ -228,7 +223,6 @@ bool FirstProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kFirstProtocol_MethodOnFirst_Ordinal:
     case kFirstProtocol_MethodOnFirst_GenOrdinal: {
       auto result = ::fidl::DecodeAs<MethodOnFirstRequest>(msg);
       if (result.status != ZX_OK) {

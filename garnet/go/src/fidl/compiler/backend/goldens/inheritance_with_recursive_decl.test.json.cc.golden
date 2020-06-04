@@ -19,7 +19,6 @@ Parent::~Parent() = default;
 const fidl_type_t* Parent_RequestDecoder::GetType(uint64_t ordinal,
                                                   bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kParent_First_Ordinal:
     case internal::kParent_First_GenOrdinal:
       *out_needs_response = false;
       return &fidl_test_json_ParentFirstRequestTable;
@@ -96,7 +95,6 @@ zx_status_t Parent_Stub::Dispatch_(::fidl::Message message,
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kParent_First_Ordinal:
     case internal::kParent_First_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->First(
@@ -138,11 +136,9 @@ Child::~Child() = default;
 const fidl_type_t* Child_RequestDecoder::GetType(uint64_t ordinal,
                                                  bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kChild_First_Ordinal:
     case internal::kChild_First_GenOrdinal:
       *out_needs_response = false;
       return &fidl_test_json_ChildFirstRequestTable;
-    case internal::kChild_Second_Ordinal:
     case internal::kChild_Second_GenOrdinal:
       *out_needs_response = false;
       return &fidl_test_json_ChildSecondRequestTable;
@@ -224,14 +220,12 @@ zx_status_t Child_Stub::Dispatch_(::fidl::Message message,
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kChild_First_Ordinal:
     case internal::kChild_First_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->First(
           ::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(&decoder, 16));
       break;
     }
-    case internal::kChild_Second_Ordinal:
     case internal::kChild_Second_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->Second(

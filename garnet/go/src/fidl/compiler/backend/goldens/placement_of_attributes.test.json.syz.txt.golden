@@ -36,7 +36,7 @@ example_ExampleXUnionHandles [
 
 
 example_ExampleProtocolMethodRequest {
-       hdr fidl_message_header[4827131039807700992]
+       hdr fidl_message_header[1965996700874037518]
        argInLine exampleusing_EmptyInLine
        argOutOfLine exampleusing_EmptyOutOfLine
 } [packed]

@@ -25,7 +25,7 @@
       },
       "methods": [
         {
-          "ordinal": 3932412583805452288,
+          "ordinal": 6332745893922832518,
           "generated_ordinal": 6332745893922832518,
           "name": "GetChild",
           "location": {
@@ -77,7 +77,7 @@
           "is_composed": false
         },
         {
-          "ordinal": 4587704011968217088,
+          "ordinal": 26635226975931008,
           "generated_ordinal": 26635226975931008,
           "name": "GetChildRequest",
           "location": {
@@ -129,7 +129,7 @@
           "is_composed": false
         },
         {
-          "ordinal": 5478139633957076992,
+          "ordinal": 7680932945371199613,
           "generated_ordinal": 7680932945371199613,
           "name": "TakeChild",
           "location": {
@@ -171,7 +171,7 @@
           "is_composed": false
         },
         {
-          "ordinal": 6828449318567936000,
+          "ordinal": 7803173423056840247,
           "generated_ordinal": 7803173423056840247,
           "name": "TakeChildRequest",
           "location": {

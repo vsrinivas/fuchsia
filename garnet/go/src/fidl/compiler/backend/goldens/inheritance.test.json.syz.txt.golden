@@ -7,7 +7,7 @@ include <fidl/test/json/c/fidl.h>
 
 
 fidl_test_json_superfooRequest {
-       hdr fidl_message_header[3393112382468259840]
+       hdr fidl_message_header[5722958650322615442]
        sInLine fidl_string
        sOutOfLine fidl_aligned[stringnoz]
 } [packed]
@@ -15,7 +15,7 @@ fidl_test_json_superfooRequestHandles {
        void void
 } [packed]
 fidl_test_json_superfooResponse {
-       hdr fidl_message_header[3393112382468259840]
+       hdr fidl_message_header[5722958650322615442]
        y int64
 } [packed]
 fidl_test_json_superfooResponseHandles {
@@ -31,7 +31,7 @@ zx_channel_call$fidl_test_json_superfoo(handle zx_chan_fidl_test_json_super_clie
 
 
 fidl_test_json_subfooRequest {
-       hdr fidl_message_header[3393112382468259840]
+       hdr fidl_message_header[5722958650322615442]
        sInLine fidl_string
        sOutOfLine fidl_aligned[stringnoz]
 } [packed]
@@ -39,7 +39,7 @@ fidl_test_json_subfooRequestHandles {
        void void
 } [packed]
 fidl_test_json_subfooResponse {
-       hdr fidl_message_header[3393112382468259840]
+       hdr fidl_message_header[5722958650322615442]
        y int64
 } [packed]
 fidl_test_json_subfooResponseHandles {

@@ -12,8 +12,6 @@ namespace nullable {
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kSimpleProtocol_Add_Ordinal =
-    0x11fe4d2400000000lu;
 [[maybe_unused]] constexpr uint64_t kSimpleProtocol_Add_GenOrdinal =
     0x113010d7832f175dlu;
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
@@ -204,7 +202,6 @@ zx_status_t SimpleProtocol::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kSimpleProtocol_Add_Ordinal:
     case kSimpleProtocol_Add_GenOrdinal: {
       auto result = ::fidl::DecodeAs<AddResponse>(msg);
       if (result.status != ZX_OK) {
@@ -243,7 +240,6 @@ bool SimpleProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kSimpleProtocol_Add_Ordinal:
     case kSimpleProtocol_Add_GenOrdinal: {
       auto result = ::fidl::DecodeAs<AddRequest>(msg);
       if (result.status != ZX_OK) {

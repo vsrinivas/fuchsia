@@ -159,7 +159,6 @@ func (u *ExampleTable) ClearMember() {
 }
 
 const (
-	ExampleProtocolMethodOrdinal    uint64 = 0x42fd6a1b00000000
 	ExampleProtocolMethodGenOrdinal uint64 = 0x1b489f95492fd90e
 )
 
@@ -192,8 +191,6 @@ type ExampleProtocolWithCtxStub struct {
 
 func (s_ *ExampleProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
-	case ExampleProtocolMethodOrdinal:
-		fallthrough
 	case ExampleProtocolMethodGenOrdinal:
 		in_ := exampleProtocolWithCtxMethodRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)

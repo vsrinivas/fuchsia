@@ -89,7 +89,7 @@ fidl_test_nullable_SimpleUnionHandles [
 
 
 fidl_test_nullable_SimpleProtocolAddRequest {
-       hdr fidl_message_header[1296558559743442944]
+       hdr fidl_message_header[1238508415331800925]
        a int32
        b int32
 } [packed]
@@ -97,7 +97,7 @@ fidl_test_nullable_SimpleProtocolAddRequestHandles {
        void void
 } [packed]
 fidl_test_nullable_SimpleProtocolAddResponse {
-       hdr fidl_message_header[1296558559743442944]
+       hdr fidl_message_header[1238508415331800925]
        sum int32
 } [packed]
 fidl_test_nullable_SimpleProtocolAddResponseHandles {

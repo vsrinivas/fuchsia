@@ -16,7 +16,7 @@ fidl_test_json_EmptyHandles {
 
 
 fidl_test_json_EmptyProtocolSendRequest {
-       hdr fidl_message_header[1227695175833223168]
+       hdr fidl_message_header[550167292114688515]
        eInLine fidl_test_json_EmptyInLine
        eOutOfLine fidl_test_json_EmptyOutOfLine
 } [packed]
@@ -24,7 +24,7 @@ fidl_test_json_EmptyProtocolSendRequestHandles {
        e fidl_test_json_EmptyHandles
 } [packed]
 fidl_test_json_EmptyProtocolReceiveEvent {
-       hdr fidl_message_header[1669757317588975616]
+       hdr fidl_message_header[7186107129703123093]
        eInLine fidl_test_json_EmptyInLine
        eOutOfLine fidl_test_json_EmptyOutOfLine
 } [packed]
@@ -32,7 +32,7 @@ fidl_test_json_EmptyProtocolReceiveEventHandles {
        e fidl_test_json_EmptyHandles
 } [packed]
 fidl_test_json_EmptyProtocolSendAndReceiveRequest {
-       hdr fidl_message_header[8898209322824105984]
+       hdr fidl_message_header[2187042876758414869]
        eInLine fidl_test_json_EmptyInLine
        eOutOfLine fidl_test_json_EmptyOutOfLine
 } [packed]
@@ -40,7 +40,7 @@ fidl_test_json_EmptyProtocolSendAndReceiveRequestHandles {
        e fidl_test_json_EmptyHandles
 } [packed]
 fidl_test_json_EmptyProtocolSendAndReceiveResponse {
-       hdr fidl_message_header[8898209322824105984]
+       hdr fidl_message_header[2187042876758414869]
        eInLine fidl_test_json_EmptyInLine
        eOutOfLine fidl_test_json_EmptyOutOfLine
 } [packed]

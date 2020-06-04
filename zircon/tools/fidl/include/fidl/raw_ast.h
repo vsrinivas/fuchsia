@@ -145,6 +145,8 @@ class NumericLiteral final : public Literal {
   void Accept(TreeVisitor* visitor) const;
 };
 
+// TODO(fxb/7848): Remove. This is also used for table and union ordinals, which
+// should move to Ordinal64 given FTP-048: Explicit Union Ordinals.
 class Ordinal32 final : public SourceElement {
  public:
   Ordinal32(SourceElement const& element, uint32_t value) : SourceElement(element), value(value) {}

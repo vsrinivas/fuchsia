@@ -18,7 +18,6 @@ SecondProtocol::~SecondProtocol() = default;
 const fidl_type_t* SecondProtocol_RequestDecoder::GetType(
     uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kSecondProtocol_MethodOnSecond_Ordinal:
     case internal::kSecondProtocol_MethodOnSecond_GenOrdinal:
       *out_needs_response = false;
       return &test_name_SecondProtocolMethodOnSecondRequestTable;
@@ -100,7 +99,6 @@ zx_status_t SecondProtocol_Stub::Dispatch_(
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kSecondProtocol_MethodOnSecond_Ordinal:
     case internal::kSecondProtocol_MethodOnSecond_GenOrdinal: {
       impl_->MethodOnSecond();
       break;
@@ -138,7 +136,6 @@ FirstProtocol::~FirstProtocol() = default;
 const fidl_type_t* FirstProtocol_RequestDecoder::GetType(
     uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kFirstProtocol_MethodOnFirst_Ordinal:
     case internal::kFirstProtocol_MethodOnFirst_GenOrdinal:
       *out_needs_response = false;
       return &test_name_FirstProtocolMethodOnFirstRequestTable;
@@ -220,7 +217,6 @@ zx_status_t FirstProtocol_Stub::Dispatch_(
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kFirstProtocol_MethodOnFirst_Ordinal:
     case internal::kFirstProtocol_MethodOnFirst_GenOrdinal: {
       impl_->MethodOnFirst();
       break;

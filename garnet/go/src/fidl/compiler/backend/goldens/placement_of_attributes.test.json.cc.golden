@@ -17,7 +17,6 @@ ExampleProtocol::~ExampleProtocol() = default;
 const fidl_type_t* ExampleProtocol_RequestDecoder::GetType(
     uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kExampleProtocol_Method_Ordinal:
     case internal::kExampleProtocol_Method_GenOrdinal:
       *out_needs_response = false;
       return &example_ExampleProtocolMethodRequestTable;
@@ -99,7 +98,6 @@ zx_status_t ExampleProtocol_Stub::Dispatch_(
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kExampleProtocol_Method_Ordinal:
     case internal::kExampleProtocol_Method_GenOrdinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->Method(::fidl::DecodeAs<::exampleusing::Empty>(&decoder, 16));

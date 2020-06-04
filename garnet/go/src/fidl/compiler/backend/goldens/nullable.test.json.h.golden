@@ -27,7 +27,6 @@ using SimpleProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SimpleProtocol>;
 class SimpleProtocol_SyncProxy;
 using SimpleProtocolHandle = ::fidl::InterfaceHandle<SimpleProtocol>;
 namespace internal {
-constexpr uint64_t kSimpleProtocol_Add_Ordinal = 0x11fe4d2400000000lu;
 constexpr uint64_t kSimpleProtocol_Add_GenOrdinal = 0x113010d7832f175dlu;
 
 }  // namespace internal
@@ -249,7 +248,6 @@ class SimpleProtocol_RequestDecoder {
     }
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
-      case internal::kSimpleProtocol_Add_Ordinal:
       case internal::kSimpleProtocol_Add_GenOrdinal: {
         Add(::fidl::DecodeAs<int32_t>(&request_decoder, 16),
             ::fidl::DecodeAs<int32_t>(&request_decoder, 20));
@@ -292,7 +290,6 @@ class SimpleProtocol_ResponseDecoder {
     }
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
-      case internal::kSimpleProtocol_Add_Ordinal:
       case internal::kSimpleProtocol_Add_GenOrdinal: {
         Add(::fidl::DecodeAs<int32_t>(&response_decoder, 16));
         break;

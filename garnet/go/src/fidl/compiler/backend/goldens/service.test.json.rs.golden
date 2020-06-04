@@ -238,7 +238,7 @@ impl futures::Stream for FirstProtocolRequestStream {
 
             #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0x2838a83100000000 | 0x580cbd0d43ccbe3b => {
+                0x580cbd0d43ccbe3b => {
                     let mut req: () = fidl::encoding::Decodable::new_empty();
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     let control_handle = FirstProtocolControlHandle { inner: this.inner.clone() };
@@ -274,7 +274,7 @@ impl FirstProtocolRequestMessage {
 
         #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
         match header.ordinal() {
-            0x2838a83100000000 | 0x580cbd0d43ccbe3b => {
+            0x580cbd0d43ccbe3b => {
                 let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
                 fidl::encoding::Decoder::decode_into(
                     &header,
@@ -578,7 +578,7 @@ impl futures::Stream for SecondProtocolRequestStream {
 
             #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0xd09c00f00000000 | 0x5785f9c1f2aece21 => {
+                0x5785f9c1f2aece21 => {
                     let mut req: () = fidl::encoding::Decodable::new_empty();
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     let control_handle = SecondProtocolControlHandle { inner: this.inner.clone() };
@@ -614,7 +614,7 @@ impl SecondProtocolRequestMessage {
 
         #[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
         match header.ordinal() {
-            0xd09c00f00000000 | 0x5785f9c1f2aece21 => {
+            0x5785f9c1f2aece21 => {
                 let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
                 fidl::encoding::Decoder::decode_into(
                     &header,
