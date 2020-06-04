@@ -28,7 +28,9 @@ class VkLoopTest {
   explicit VkLoopTest(bool hang_on_event) : hang_on_event_(hang_on_event) {}
 
   bool Initialize();
-  bool Exec(bool kill_driver);
+  bool Exec(bool kill_driver, zx_handle_t magma_device_channel = ZX_HANDLE_INVALID);
+
+  uint32_t get_vendor_id() { return ctx_->physical_device().getProperties().vendorID; }
 
  private:
   bool InitBuffer();
@@ -310,7 +312,7 @@ bool VkLoopTest::InitCommandBuffer() {
   return true;
 }
 
-bool VkLoopTest::Exec(bool kill_driver) {
+bool VkLoopTest::Exec(bool kill_driver, zx_handle_t magma_device_channel) {
   auto rv_wait = ctx_->queue().waitIdle();
   if (vk::Result::eSuccess != rv_wait) {
     RTN_MSG(false, "VK Error: 0x%x - Queue wait idle.\n", rv_wait);
@@ -328,17 +330,8 @@ bool VkLoopTest::Exec(bool kill_driver) {
   }
 
   if (kill_driver) {
-    magma::TestDeviceBase test_device(ctx_->physical_device().getProperties().vendorID);
-    uint64_t is_supported = 0;
-    magma_status_t status =
-        magma_query2(test_device.device(), MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, &is_supported);
-    if (status != MAGMA_STATUS_OK || !is_supported) {
-      RTN_MSG(true, "Test restart not supported: status %d is_supported %lu\n", status,
-              is_supported);
-    }
-
     // TODO: Unbind and rebind driver once that supports forcibly tearing down client connections.
-    EXPECT_EQ(ZX_OK, fuchsia_gpu_magma_DeviceTestRestart(test_device.channel()->get()));
+    EXPECT_EQ(ZX_OK, fuchsia_gpu_magma_DeviceTestRestart(magma_device_channel));
   }
 
   constexpr int kReps = 5;
@@ -355,7 +348,7 @@ bool VkLoopTest::Exec(bool kill_driver) {
   return true;
 }
 
-TEST(Vulkan, InfiniteLoop) {
+TEST(VkLoop, InfiniteLoop) {
   for (int i = 0; i < 2; i++) {
     VkLoopTest test(false);
     ASSERT_TRUE(test.Initialize());
@@ -363,16 +356,26 @@ TEST(Vulkan, InfiniteLoop) {
   }
 }
 
-TEST(Vulkan, EventHang) {
+TEST(VkLoop, EventHang) {
   VkLoopTest test(true);
   ASSERT_TRUE(test.Initialize());
   ASSERT_TRUE(test.Exec(false));
 }
 
-TEST(Vulkan, DriverDeath) {
+TEST(VkLoop, DriverDeath) {
   VkLoopTest test(true);
   ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(true));
+
+  magma::TestDeviceBase test_device(test.get_vendor_id());
+  uint64_t is_supported = 0;
+  magma_status_t status =
+      magma_query2(test_device.device(), MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, &is_supported);
+  if (status != MAGMA_STATUS_OK || !is_supported) {
+    fprintf(stderr, "Test restart not supported: status %d is_supported %lu\n", status,
+            is_supported);
+    GTEST_SKIP();
+  }
+  ASSERT_TRUE(test.Exec(true, test_device.channel()->get()));
 }
 
 }  // namespace
