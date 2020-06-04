@@ -36,6 +36,7 @@ openweave_adaptation_layer("adaptation") {
   deps = [ "//sdk/lib/syslog/cpp" ]
   public_configs = [ ":adaptation_config" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.bluetooth.le",
     "//sdk/fidl/fuchsia.factory",
     "//sdk/fidl/fuchsia.hwinfo",
     "//sdk/fidl/fuchsia.weave",

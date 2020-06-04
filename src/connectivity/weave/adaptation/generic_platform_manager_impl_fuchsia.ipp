@@ -64,6 +64,12 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
     initContext.fabricState = &FabricState;
     initContext.listenTCP = true;
     initContext.listenUDP = true;
+#if WEAVE_DEVICE_CONFIG_ENABLE_WOBLE
+    if(ConfigurationMgrImpl().IsWOBLEEnabled()) {
+      initContext.ble = BLEMgr().GetBleLayer();
+      initContext.listenBLE = true;
+    }
+#endif
 
     // Initialize the Weave message layer.
     new (&MessageLayer) WeaveMessageLayer();
@@ -121,6 +127,17 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       FX_LOGS(ERROR) << "FabricProvisioningServer init failed: " << ErrorStr(err);
       return err;
     }
+
+#if WEAVE_DEVICE_CONFIG_ENABLE_WOBLE
+    if(ConfigurationMgrImpl().IsWOBLEEnabled()) {
+      err = BLEMgr().Init();
+      if (err != WEAVE_NO_ERROR)
+      {
+          FX_LOGS(ERROR) << "BLEManager initialization failed: " << ErrorStr(err);
+          return err;
+      }
+    }
+#endif
 
     err = ServiceProvisioningSvr().Init();
     if (err != WEAVE_NO_ERROR) {

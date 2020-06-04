@@ -91,6 +91,18 @@ class ConfigurationManagerImpl final
   // |buf_size| bytes. If not null, the total number of bytes read in is stored
   // in *|out_len|.
   zx_status_t ReadFactoryFile(const char* path, char* buf, size_t buf_size, size_t* out_len);
+
+  // Reads the BLE device name prefix from the configuration data into |device_name_prefix|.
+  //
+  // |device_name_prefix_size| holds the size of |device_name_prefix| in bytes. If
+  // |device_name_prefix| is too small to hold the BLE device name prefix, this method will
+  // return |WEAVE_ERROR_BUFFER_TOO_SMALL|.
+  //
+  // When this method returns successfully, |out_len| will hold the number of bytes used in
+  // |device_name_prefix| to store the BLE device name.
+  WEAVE_ERROR GetBleDeviceNamePrefix(char* device_name_prefix, size_t device_name_prefix_size,
+                                     size_t* out_len);
+  bool IsWOBLEEnabled();
 };
 
 /**

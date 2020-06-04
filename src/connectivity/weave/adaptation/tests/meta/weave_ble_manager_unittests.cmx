@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/weave_ble_manager_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "config-data"
+        ],
+        "services": [
+            "fuchsia.bluetooth.gatt.Server",
+            "fuchsia.bluetooth.le.Peripheral",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

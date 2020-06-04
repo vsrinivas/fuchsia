@@ -8,6 +8,8 @@
             "isolated-persistent-storage"
         ],
         "services": [
+            "fuchsia.bluetooth.gatt.Server",
+            "fuchsia.bluetooth.le.Peripheral",
             "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.hwinfo.Device",
             "fuchsia.logger.LogSink",

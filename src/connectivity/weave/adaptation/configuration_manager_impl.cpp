@@ -46,8 +46,10 @@ GroupKeyStoreImpl gGroupKeyStore;
 
 // Store path and keys for static device information.
 constexpr char kDeviceInfoStorePath[] = "/config/data/device_info.json";
+constexpr char kDeviceInfoConfigKey_BleDeviceNamePrefix[] = "ble-device-name-prefix";
 constexpr char kDeviceInfoConfigKey_DeviceId[] = "device-id";
 constexpr char kDeviceInfoConfigKey_DeviceIdPath[] = "device-id-path";
+constexpr char kDeviceInfoConfigKey_EnableWOBLE[] = "enable-woble";
 constexpr char kDeviceInfoConfigKey_FirmwareRevision[] = "firmware-revision";
 constexpr char kDeviceInfoConfigKey_MfrDeviceCertPath[] = "mfr-device-cert-path";
 constexpr char kDeviceInfoConfigKey_ProductId[] = "product-id";
@@ -62,18 +64,19 @@ constexpr int kWeaveCertificateMaxLength = UINT16_MAX;
 ConfigurationManagerImpl ConfigurationManagerImpl::sInstance;
 
 ConfigurationManagerImpl::ConfigurationManagerImpl()
-   : device_info_(WeaveConfigManager::CreateReadOnlyInstance(kDeviceInfoStorePath)) {}
+    : device_info_(WeaveConfigManager::CreateReadOnlyInstance(kDeviceInfoStorePath)) {}
 
 WEAVE_ERROR ConfigurationManagerImpl::_Init() {
   WEAVE_ERROR err = WEAVE_NO_ERROR;
+  auto svc = PlatformMgrImpl().GetComponentContextForProcess()->svc();
 
-  FX_CHECK(PlatformMgrImpl().GetComponentContextForProcess()->svc()->Connect(wlan_device_service_.NewRequest()) == ZX_OK)
+  FX_CHECK(svc->Connect(wlan_device_service_.NewRequest()) == ZX_OK)
       << "Failed to connect to wlan service.";
-  FX_CHECK(PlatformMgrImpl().GetComponentContextForProcess()->svc()->Connect(hwinfo_device_.NewRequest()) == ZX_OK)
+  FX_CHECK(svc->Connect(hwinfo_device_.NewRequest()) == ZX_OK)
       << "Failed to connect to hwinfo device service.";
-  FX_CHECK(PlatformMgrImpl().GetComponentContextForProcess()->svc()->Connect(weave_factory_data_manager_.NewRequest()) == ZX_OK)
+  FX_CHECK(svc->Connect(weave_factory_data_manager_.NewRequest()) == ZX_OK)
       << "Failed to connect to weave factory data manager service.";
-  FX_CHECK(PlatformMgrImpl().GetComponentContextForProcess()->svc()->Connect(factory_store_provider_.NewRequest()) == ZX_OK)
+  FX_CHECK(svc->Connect(factory_store_provider_.NewRequest()) == ZX_OK)
       << "Failed to connect to factory store";
 
   err = EnvironmentConfig::Init();
@@ -363,6 +366,19 @@ WEAVE_ERROR ConfigurationManagerImpl::_WritePersistedStorageValue(
     ::nl::Weave::Platform::PersistedStorage::Key key, uint32_t value) {
   WEAVE_ERROR err = WriteConfigValue(key, value);
   return (err != WEAVE_NO_ERROR) ? WEAVE_ERROR_PERSISTED_STORAGE_FAIL : err;
+}
+
+WEAVE_ERROR ConfigurationManagerImpl::GetBleDeviceNamePrefix(char* device_name_prefix,
+                                                             size_t device_name_prefix_size,
+                                                             size_t* out_len) {
+  return device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_BleDeviceNamePrefix,
+                                          device_name_prefix, device_name_prefix_size, out_len);
+}
+
+bool ConfigurationManagerImpl::IsWOBLEEnabled() {
+  bool is_enabled = false;
+  device_info_->ReadConfigValue(kDeviceInfoConfigKey_EnableWOBLE, &is_enabled);
+  return is_enabled;
 }
 
 }  // namespace DeviceLayer

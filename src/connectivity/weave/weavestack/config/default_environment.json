@@ -1,4 +1,6 @@
 {
   "mfr-device-id": 65535,
-  "pairing-code": "12345678"
+  "pairing-code": "12345678",
+  "enable-woble" : false,
+  "ble-device-name-prefix" : "Fuchsia"
 }

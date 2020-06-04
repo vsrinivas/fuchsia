@@ -6,10 +6,34 @@
 
 #if WEAVE_DEVICE_CONFIG_ENABLE_WOBLE
 
+#include <fuchsia/bluetooth/gatt/cpp/fidl.h>
+#include <fuchsia/bluetooth/le/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
+
 namespace nl {
 namespace Weave {
 namespace DeviceLayer {
 namespace Internal {
+
+namespace testing {
+class BLEManagerTest;
+}  // namespace testing
+
+namespace {
+// Maximum length of device name - To avoid advertisement failure due to large advertise data.
+constexpr int kMaxDeviceNameLength = 23;
+
+// The application has enabled WoBLE advertising.
+constexpr int kFlag_AdvertisingEnabled = 0x0001;
+// The application has enabled fast advertising.
+constexpr int kFlag_FastAdvertisingEnabled = 0x0002;
+// The system is currently WoBLE advertising.
+constexpr int kFlag_Advertising = 0x0004;
+// The application has configured a custom BLE device name.
+constexpr int kFlag_UseCustomDeviceName = 0x0008;
+// The application has published Weave GATT service
+constexpr int kFlag_GATTServicePublished = 0x0010;
+}  // namespace
 
 /**
  * Concrete implementation of the NetworkProvisioningServer singleton object for the Fuchsia
@@ -18,23 +42,25 @@ namespace Internal {
 class BLEManagerImpl final : public BLEManager,
                              private ::nl::Ble::BleLayer,
                              private BlePlatformDelegate,
-                             private BleApplicationDelegate {
+                             private BleApplicationDelegate,
+                             private fuchsia::bluetooth::gatt::LocalServiceDelegate {
   // Allow the BLEManager interface class to delegate method calls to
   // the implementation methods provided by this class.
   friend BLEManager;
+  friend class testing::BLEManagerTest;
 
   // ===== Members that implement the BLEManager internal interface.
 
   WEAVE_ERROR _Init(void);
   WoBLEServiceMode _GetWoBLEServiceMode(void);
-  WEAVE_ERROR _SetWoBLEServiceMode(WoBLEServiceMode val);
+  WEAVE_ERROR _SetWoBLEServiceMode(WoBLEServiceMode service_mode);
   bool _IsAdvertisingEnabled(void);
-  WEAVE_ERROR _SetAdvertisingEnabled(bool val);
+  WEAVE_ERROR _SetAdvertisingEnabled(bool advertising_enable);
   bool _IsFastAdvertisingEnabled(void);
-  WEAVE_ERROR _SetFastAdvertisingEnabled(bool val);
+  WEAVE_ERROR _SetFastAdvertisingEnabled(bool fast_advertising_enable);
   bool _IsAdvertising(void);
-  WEAVE_ERROR _GetDeviceName(char *buf, size_t bufSize);
-  WEAVE_ERROR _SetDeviceName(const char *deviceName);
+  WEAVE_ERROR _GetDeviceName(char *device_name, size_t device_name_size);
+  WEAVE_ERROR _SetDeviceName(const char *device_name);
   uint16_t _NumConnections(void);
   void _OnPlatformEvent(const WeaveDeviceEvent *event);
   ::nl::Ble::BleLayer *_GetBleLayer(void) const;
@@ -60,6 +86,24 @@ class BLEManagerImpl final : public BLEManager,
 
   void NotifyWeaveConnectionClosed(BLE_CONNECTION_OBJECT conId) override;
 
+  // ===== Members that implement virtual methods on LocalServiceDelegate
+
+  void OnCharacteristicConfiguration(uint64_t characteristic_id, std::string peer_id, bool notify,
+                                     bool indicate) override;
+  void OnReadValue(uint64_t id, int32_t offset, OnReadValueCallback callback) override;
+  void OnWriteValue(uint64_t id, uint16_t offset, std::vector<uint8_t> value,
+                    OnWriteValueCallback callback) override;
+  void OnWriteWithoutResponse(uint64_t id, uint16_t offset, std::vector<uint8_t> value) override;
+
+  // Drives the global |BLEManagerImpl| instance's BLE state.
+  // This method will be scheduled on and called from platform manager's event loop.
+  // |arg| holds pointer to BLEManagerImpl instance for which this method is scheduled.
+  static void DriveBLEState(intptr_t arg);
+
+  // Drives the weave BLE service.
+  // This method publishes and advertises weave service if configured to do so.
+  void DriveBLEState(void);
+
   // ===== Members for internal use by the following friends.
 
   friend BLEManager &BLEMgr(void);
@@ -68,8 +112,6 @@ class BLEManagerImpl final : public BLEManager,
   static BLEManagerImpl sInstance;
 
   // ===== Private members reserved for use by this class only.
-
-  enum { kMaxConnections = BLE_LAYER_NUM_BLE_ENDPOINTS, kMaxDeviceNameLength = 16 };
 
   struct WoBLEConState {
     PacketBuffer *PendingIndBuf;
@@ -80,7 +122,23 @@ class BLEManagerImpl final : public BLEManager,
     uint16_t Unused : 4;
   };
 
-  WoBLEServiceMode mServiceMode;
+  char device_name_[kMaxDeviceNameLength + 1];
+  uint16_t flags_;
+  WoBLEServiceMode service_mode_;
+
+  // Proxy to the gatt.Server service.
+  fuchsia::bluetooth::gatt::ServerSyncPtr gatt_server_;
+  fidl::Binding<fuchsia::bluetooth::gatt::LocalServiceDelegate> gatt_binding_;
+  fuchsia::bluetooth::gatt::LocalServiceSyncPtr service_;
+  // Proxy to the le.Peripheral service which we use for advertising to solicit connections.
+  fuchsia::bluetooth::le::PeripheralSyncPtr peripheral_;
+  fidl::InterfacePtr<fuchsia::bluetooth::le::AdvertisingHandle> adv_handle_;
+
+  // Connection from a peer that connected to our advertisement.
+  fidl::InterfacePtr<fuchsia::bluetooth::le::Connection> connection_;
+
+ public:
+  BLEManagerImpl();
 };
 
 /**
@@ -102,14 +160,16 @@ inline BLEManagerImpl &BLEMgrImpl(void) { return BLEManagerImpl::sInstance; }
 inline ::nl::Ble::BleLayer *BLEManagerImpl::_GetBleLayer() const { return (BleLayer *)(this); }
 
 inline BLEManager::WoBLEServiceMode BLEManagerImpl::_GetWoBLEServiceMode(void) {
-  return mServiceMode;
+  return service_mode_;
 }
 
-inline bool BLEManagerImpl::_IsAdvertisingEnabled(void) { return false; }
+inline bool BLEManagerImpl::_IsAdvertisingEnabled(void) {
+  return GetFlag(flags_, kFlag_AdvertisingEnabled);
+}
 
 inline bool BLEManagerImpl::_IsFastAdvertisingEnabled(void) { return false; }
 
-inline bool BLEManagerImpl::_IsAdvertising(void) { return false; }
+inline bool BLEManagerImpl::_IsAdvertising(void) { return GetFlag(flags_, kFlag_Advertising); }
 
 }  // namespace Internal
 }  // namespace DeviceLayer
