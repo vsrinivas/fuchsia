@@ -319,6 +319,44 @@ protocol BufferCollection {
 
     /// See BufferCollectionToken.SetClientDebugInfo.
     SetDebugClientInfo(string:64 name, uint64 id);
+
+    /// Optionally sent before SetConstraints() to set constraints related to
+    /// clear (not encrypted, not in protected/secure memory) aux buffers.  This
+    /// is only valid when sent before SetConstraints().  Invalid settings may
+    /// not result in channel closure until SetConstraints() is received by
+    /// sysmem.
+    SetConstraintsAuxBuffers(
+        BufferCollectionConstraintsAuxBuffers constraints);
+
+    /// Allows getting any aux buffers allocated after using
+    /// SetConstraintsAuxBuffers().
+    ///
+    /// Sending this message is not permitted until at least one of the
+    /// following has occurred:
+    ///   * WaitForBuffersAllocated() completing
+    ///   * OnBuffersAllocated() being received
+    ///
+    /// On failure, status will be a failing status and
+    /// buffer_collection_info_aux_buffers won't be filled out, and won't have
+    /// any handles.
+    ///
+    /// On success, status will be ZX_OK, and buffer_count will be the same as
+    /// the main buffer_count from WaitForBuffersAllocated() or
+    /// OnBuffersAllocated().
+    ///
+    /// If a participant specified "allow_clear_aux_buffers_for_secure" true but
+    /// "need_clear_aux_buffers_for_secure" false (or not set), the participant
+    /// can determine if aux buffers were allocated by looking at buffer[0].vmo.
+    /// If buffer 0 has no vmo, aux VMOs were not allocated.  The resulting
+    /// status will still be ZX_OK in this case, and buffer_count will still be
+    /// filled out to match the main buffer_count.
+    ///
+    /// It's legal for a participant that set
+    /// "allow_clear_aux_buffers_for_secure" false to call GetAuxBuffers(), in
+    /// which case buffer[0].vmo will not be set.
+    GetAuxBuffers()
+        -> (zx.status status,
+            BufferCollectionInfo_2 buffer_collection_info_aux_buffers);
 };
 
 /// This interface intentionally doesn't include any event for

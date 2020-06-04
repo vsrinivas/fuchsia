@@ -85,6 +85,17 @@ void FakeBufferCollection::SetName(uint32_t priority, std::string name) {
   EXPECT_TRUE(false);
 }
 
+void FakeBufferCollection::SetConstraintsAuxBuffers(
+    fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers constraints) {
+  // Not used.
+  EXPECT_TRUE(false);
+}
+
+void FakeBufferCollection::GetAuxBuffers(GetAuxBuffersCallback callback) {
+  // Not used.
+  EXPECT_TRUE(false);
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////
 // FakeBufferCollectionToken implementation.
 

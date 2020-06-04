@@ -272,6 +272,13 @@ void FakeBufferCollection::SetName(uint32_t priority, std::string name) {}
 
 void FakeBufferCollection::SetDebugClientInfo(std::string name, uint64_t id) {}
 
+void FakeBufferCollection::SetConstraintsAuxBuffers(
+    fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers constraints) {
+  FX_NOTIMPLEMENTED();
+}
+
+void FakeBufferCollection::GetAuxBuffers(GetAuxBuffersCallback callback) { FX_NOTIMPLEMENTED(); }
+
 void FakeBufferCollection::MaybeCompleteAllocation() {
   if (!all_participants_bound_ || waiter_callbacks_.size() != bindings_.size()) {
     return;

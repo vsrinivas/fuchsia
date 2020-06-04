@@ -77,9 +77,9 @@ struct BufferCollectionConstraints {
     /// accounted for in min_buffer_count_for_camping.
     uint32 min_buffer_count_for_shared_slack;
 
-    /// A particularly-picky participant may unfortunately need to demand a tight
-    /// range of buffer_count, or even a specific buffer_count.  This field
-    /// should remain 0 unless a participant really must set this field to
+    /// A particularly-picky participant may unfortunately need to demand a
+    /// tight range of buffer_count, or even a specific buffer_count.  This
+    /// field should remain 0 unless a participant really must set this field to
     /// constrain the overall BufferCollectionInfo_2.buffer_count.  Any such
     /// participant should still fill out the min_buffer_count_for_* fields
     /// above.
@@ -108,26 +108,52 @@ struct BufferCollectionConstraints {
     array<ImageFormatConstraints>:32 image_format_constraints;
 };
 
+struct BufferCollectionConstraintsAuxBuffers {
+    /// If true, a secure heap may only be selected if all participants with
+    /// BufferMemoryConstraints specify allow_clear_aux_buffers_for_secure.  If
+    /// "need" is true, "allow" must also be true.
+    ///
+    /// If false, the participant can still work, potentially even with secure
+    /// memory (depending on supported heaps), without clear aux buffers.
+    bool need_clear_aux_buffers_for_secure;
+
+    /// If true, the participant will use clear aux buffers, if they are
+    /// allocated, as appropriate to the participant's role.  If the participant
+    /// is a producer, then the participant producer will populate the clear aux
+    /// buffers with the clear (not-encrypted, not-DRM-protected) bytes, and
+    /// fill protected bytes with data that does not emulate start codes, such
+    /// as 0xFF.
+    ///
+    /// If BufferCollectionConstraintsAuxBuffers is never sent by a
+    /// participant, then "allow" is true iff the participant specifies usage
+    /// which is read only.
+    ///
+    /// If unspecified by a participant with write usage, or false, the
+    /// buffer collection won't be able to allocate if any participant specifies
+    /// need_clear_aux_buffers_for_secure true.
+    bool allow_clear_aux_buffers_for_secure;
+};
+
 struct VmoBuffer {
     /// The same VMO can be used by more than one CodecBuffer (only of the same
-    /// buffer_lifetime_ordinal), but each vmo_handle must be a separate handle.
+    /// buffer_lifetime_ordinal), but each vmo handle must be a separate handle.
     ///
     /// The vmo field can be 0 if this is a VmoBuffer in BufferCollectionInfo_2
     /// that's at or beyond BufferCollectionInfo_2.buffer_count.
     handle<vmo>? vmo;
 
-    /// Offset within the VMO of the first usable byte.  Must be < the VMO's size
-    /// in bytes, and leave sufficient room for BufferMemorySettings.size_bytes
-    /// before the end of the VMO.
+    /// Offset within the VMO of the first usable byte.  Must be < the VMO's
+    /// size in bytes, and leave sufficient room for
+    /// BufferMemorySettings.size_bytes before the end of the VMO.
     uint64 vmo_usable_start;
 };
 
+const uint32 MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS = 64;
+
 /// Information about a buffer collection and its buffers.
-// TODO(ZX-2260): change struct to table
+// TODO(fxb/32119): change struct to table
 struct BufferCollectionInfo_2 {
-    /// If this is the initial buffer collection allocation, this is the total
-    /// number of buffers.  If this is a single buffer allocation, this is zero,
-    /// and the rest of the fields only apply to the single buffer.
+    /// The total number of buffers.
     uint32 buffer_count;
 
     /// These settings apply to all the buffers in the inital buffer allocation.
@@ -136,8 +162,8 @@ struct BufferCollectionInfo_2 {
     /// VMO handles (and vmo_usable_start offset) for each buffer in the
     /// collection.
     ///
-    /// If present, all the VMOs at or after index `buffer_count` are invalid (0)
-    /// handles.
+    /// If present, all the VMOs at or after index `buffer_count` are invalid
+    /// (0) handles.
     ///
     /// All buffer VMO handles have identical size and access rights.  The size
     /// is in settings.buffer_settings.size_bytes.
@@ -145,9 +171,9 @@ struct BufferCollectionInfo_2 {
     /// The VMO access rights are determined based on the usages which the
     /// client specified when allocating the buffer collection.  For example,
     /// a client which expressed a read-only usage will receive VMOs without
-    /// write rights.  In addition, the rights can be attenuated by the parameter
-    /// to BufferCollectionToken.Duplicate() calls.
-    array<VmoBuffer>:64 buffers;
+    /// write rights.  In addition, the rights can be attenuated by the
+    /// parameter to BufferCollectionToken.Duplicate() calls.
+    array<VmoBuffer>:MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS buffers;
 };
 
 struct SingleBufferInfo {
@@ -156,9 +182,10 @@ struct SingleBufferInfo {
 };
 
 /// After the initial buffer allocation, it's allowed to close old buffers and
-/// allocate new buffers.  When a new buffer is allocated its settings can differ
-/// from the rest of the buffers in the collection, and the single buffer's
-/// settings are delivered via OnSingleBufferAllocated() using this struct:
+/// allocate new buffers.  When a new buffer is allocated its settings can
+/// differ from the rest of the buffers in the collection, and the single
+/// buffer's settings are delivered via OnSingleBufferAllocated() using this
+/// struct:
 struct SingleBufferSettings {
     BufferMemorySettings buffer_settings;
 
@@ -240,8 +267,10 @@ struct BufferMemorySettings {
     HeapType heap;
 };
 
+const uint32 MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES = 32;
+
 /// Describes constraints on layout of image data in buffers.
-// TODO(ZX-2260): change struct to table
+// TODO(fxb/32119): change struct to table
 struct ImageFormatConstraints {
     /// The PixelFormat for which the following constraints apply.  A
     /// participant may have more than one PixelFormat that's supported, in
@@ -254,7 +283,7 @@ struct ImageFormatConstraints {
     /// Empty is an error.  Redundant entries are an error.  Arbitrary ordering
     /// is not an error.
     uint32 color_spaces_count;
-    array<ColorSpace>:32 color_space;
+    array<ColorSpace>:MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES color_space;
 
     /// Minimum permitted width in pixels.
     ///
@@ -368,7 +397,7 @@ struct ImageFormatConstraints {
 };
 
 /// Describes how an image is represented.
-// TODO(ZX-2260): change struct to table
+// TODO(fxb/32119): change struct to table
 struct ImageFormat_2 {
     /// Pixel format.
     PixelFormat pixel_format;

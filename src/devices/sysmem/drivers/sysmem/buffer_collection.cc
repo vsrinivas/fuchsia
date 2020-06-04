@@ -58,6 +58,8 @@ const fuchsia_sysmem_BufferCollection_ops_t BufferCollection::kOps = {
     fidl::Binder<BufferCollection>::BindMember<&BufferCollection::Close>,
     fidl::Binder<BufferCollection>::BindMember<&BufferCollection::SetName>,
     fidl::Binder<BufferCollection>::BindMember<&BufferCollection::SetDebugClientInfo>,
+    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::SetConstraintsAuxBuffers>,
+    fidl::Binder<BufferCollection>::BindMember<&BufferCollection::GetAuxBuffers>,
 };
 
 BufferCollection::~BufferCollection() {
@@ -265,6 +267,28 @@ zx_status_t BufferCollection::SetDebugClientInfo(const char* name_data, size_t n
                                                  uint64_t id) {
   debug_name_ = std::string(name_data, name_size);
   debug_id_ = id;
+  return ZX_OK;
+}
+
+zx_status_t BufferCollection::SetConstraintsAuxBuffers(
+    const fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers* constraints_aux_buffers) {
+  // Regardless of has_constraints or not, we need to unconditionally take
+  // ownership of any handles in constraints_aux_buffers_param.
+  ConstraintsAuxBuffers local_constraints_aux_buffers(*constraints_aux_buffers);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t BufferCollection::GetAuxBuffers(fidl_txn_t* txn_param) {
+  BindingType::Txn::RecognizeTxn(txn_param);
+  BufferCollectionInfo to_send(BufferCollectionInfo::Default);
+  zx_status_t reply_status = fuchsia_sysmem_BufferCollectionGetAuxBuffers_reply(
+      txn_param, ZX_ERR_NOT_SUPPORTED, to_send.release());
+  if (reply_status != ZX_OK) {
+    FailAsync(reply_status,
+              "fuchsia_sysmem_BufferCollectionGetAuxBuffers_reply failed - status: %d",
+              reply_status);
+    return ZX_OK;
+  }
   return ZX_OK;
 }
 

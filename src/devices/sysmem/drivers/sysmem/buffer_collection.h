@@ -27,6 +27,9 @@ class BufferCollection
  public:
   using Constraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
                                  llcpp::fuchsia::sysmem::BufferCollectionConstraints>;
+  using ConstraintsAuxBuffers =
+      FidlStruct<fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers,
+                 llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>;
 
   ~BufferCollection();
 
@@ -47,6 +50,9 @@ class BufferCollection
   zx_status_t Close();
   zx_status_t SetName(uint32_t priority, const char* name_data, size_t name_size);
   zx_status_t SetDebugClientInfo(const char* name_data, size_t name_size, uint64_t id);
+  zx_status_t SetConstraintsAuxBuffers(
+      const fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers* constraints_aux_buffers);
+  zx_status_t GetAuxBuffers(fidl_txn_t* txn_param);
 
   //
   // LogicalBufferCollection uses these:

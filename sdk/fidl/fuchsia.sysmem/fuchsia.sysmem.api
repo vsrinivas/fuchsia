@@ -1,14 +1,14 @@
 {
-  "fidl/fuchsia.sysmem/allocator.fidl": "785d6f827a4d7c31e262b87eb7b1b2cf",
-  "fidl/fuchsia.sysmem/collection.fidl": "2b883f9a8542994249ed7e7d3839def2",
-  "fidl/fuchsia.sysmem/collections_deprecated.fidl": "185a8df4a5ede47f15aba7cf30276d3b",
-  "fidl/fuchsia.sysmem/constraints.fidl": "6132de8586d34bccfbf9db9ac369edbd",
+  "fidl/fuchsia.sysmem/allocator.fidl": "face932e8b35d2873792c8eb6096600e",
+  "fidl/fuchsia.sysmem/collection.fidl": "63641f7fb433eb434e9d73c5d826a2bd",
+  "fidl/fuchsia.sysmem/collections_deprecated.fidl": "fd0e8504e5dde4c2a3aed3618732d93f",
+  "fidl/fuchsia.sysmem/constraints.fidl": "8f8bb550d0c6e6bc28a8a9345b50f27d",
   "fidl/fuchsia.sysmem/driver_connector.fidl": "693ac2de1a21b33d00e79dc474279f36",
   "fidl/fuchsia.sysmem/format_modifier.fidl": "c5d435a33e3db0c7433f0698dcc21108",
   "fidl/fuchsia.sysmem/formats_deprecated.fidl": "a5bdfe8267467e4a9603ead594d2b327",
   "fidl/fuchsia.sysmem/heap.fidl": "7c578a8c878dcb710859b14fa680c048",
-  "fidl/fuchsia.sysmem/image_formats.fidl": "032572945bc51d683913457bf4b7d644",
-  "fidl/fuchsia.sysmem/image_formats_deprecated.fidl": "87c5d0c8a3357b38f106fe3225c81d78",
+  "fidl/fuchsia.sysmem/image_formats.fidl": "9df39ba4b5a0591a1789e57ed9ba85ef",
+  "fidl/fuchsia.sysmem/image_formats_deprecated.fidl": "06cc3b6963d08ab0df368964c623b1c0",
   "fidl/fuchsia.sysmem/secure_mem.fidl": "3c55b8b8f67924064c89277b97e9ce3e",
-  "fidl/fuchsia.sysmem/usages.fidl": "c40f5fade516996a96c334fae56fb9cc"
+  "fidl/fuchsia.sysmem/usages.fidl": "d8442970c0a59a1d46a7a73538a5fc98"
 }

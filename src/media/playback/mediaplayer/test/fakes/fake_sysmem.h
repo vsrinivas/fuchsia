@@ -187,6 +187,10 @@ class FakeBufferCollection : public fuchsia::sysmem::BufferCollection {
 
   void SetDebugClientInfo(std::string name, uint64_t id) override;
 
+  void SetConstraintsAuxBuffers(
+      fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers constraints) override;
+  void GetAuxBuffers(GetAuxBuffersCallback callback) override;
+
  private:
   void MaybeCompleteAllocation();
 

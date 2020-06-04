@@ -59,6 +59,11 @@ class FakeBufferCollection : public fuchsia::sysmem::BufferCollection {
   void SetName(uint32_t priority, std::string name) override;
   void SetDebugClientInfo(std::string name, uint64_t id) override {}
 
+  void SetConstraintsAuxBuffers(
+      fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers constraints) override;
+
+  void GetAuxBuffers(GetAuxBuffersCallback callback) override;
+
   FakeServiceProvider* owner_;
   fidl::BindingSet<fuchsia::sysmem::BufferCollection> bindings_;
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints_;
