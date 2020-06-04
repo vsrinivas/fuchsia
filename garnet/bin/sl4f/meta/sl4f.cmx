@@ -41,6 +41,7 @@
             "fuchsia.hwinfo.Product",
             "fuchsia.input.report.InputDevice",
             "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+            "fuchsia.location.position.EmergencyProvider",
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",

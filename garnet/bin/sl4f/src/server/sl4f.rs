@@ -87,6 +87,7 @@ use crate::launch::facade::LaunchFacade;
 use crate::light::facade::LightFacade;
 
 // Location related includes
+use crate::location::emergency_provider_facade::EmergencyProviderFacade;
 use crate::location::regulatory_region_facade::RegulatoryRegionFacade;
 
 // Logging related includes
@@ -193,6 +194,7 @@ impl Sl4f {
                 "input_report_facade" => InputReportFacade::new(),
                 "launch_facade" => LaunchFacade::new(),
                 "light_facade" => LightFacade::new(),
+                "location_emergency_provider_facade" => EmergencyProviderFacade::new()?,
                 "location_regulatory_region_facade" => RegulatoryRegionFacade::new()?,
                 "logging_facade" => LoggingFacade::new(),
                 "netstack_facade" => NetstackFacade::new(),
