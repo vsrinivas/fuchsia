@@ -196,19 +196,7 @@ From //build/images/fvm.gni:41
 ### board_bootfs_labels
 A list of bootfs manifest labels to include in the ZBI.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/bin/power_manager/node_config:base.manifest"]`
-
-From //boards/arm64.gni:18
-
-**Overridden from the default:** `[]`
-
-From //build/board.gni:14
-
-**Current value for `target_cpu = "x64"`:** `["//garnet/bin/power_manager/node_config:base.manifest"]`
-
-From //boards/x64.gni:19
-
-**Overridden from the default:** `[]`
+**Current value (from the default):** `[]`
 
 From //build/board.gni:14
 
@@ -259,7 +247,7 @@ From //build/board.gni:7
 A list of package labels to include in the 'base' package set. Used by the
 board definition rather than the product definition.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers", "//src/media/audio/bundles:virtual_audio_driver"]`
+**Current value for `target_cpu = "arm64"`:** `["//garnet/bin/power_manager", "//garnet/bin/power_manager:base_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers", "//src/media/audio/bundles:virtual_audio_driver"]`
 
 From //boards/arm64.gni:9
 
@@ -267,7 +255,7 @@ From //boards/arm64.gni:9
 
 From //build/board.gni:11
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers", "//src/hwinfo:default_board_config", "//src/media/audio/bundles:virtual_audio_driver"]`
+**Current value for `target_cpu = "x64"`:** `["//garnet/bin/power_manager", "//garnet/bin/power_manager:base_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers", "//src/hwinfo:default_board_config", "//src/media/audio/bundles:virtual_audio_driver"]`
 
 From //boards/x64.gni:9
 
@@ -642,7 +630,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/dbe50442429239246d9e51486f9d732bc31b29e6/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/28bc816cbc004aed371739fa49822bde43d6ccab/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -657,7 +645,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/dbe50442429239246d9e51486f9d732bc31b29e6/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/28bc816cbc004aed371739fa49822bde43d6ccab/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -701,7 +689,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/dbe50442429239246d9e51486f9d732bc31b29e6/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/28bc816cbc004aed371739fa49822bde43d6ccab/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -1029,7 +1017,7 @@ From //build/images/args.gni:68
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/dbe50442429239246d9e51486f9d732bc31b29e6/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/28bc816cbc004aed371739fa49822bde43d6ccab/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -1044,14 +1032,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/dbe50442429239246d9e51486f9d732bc31b29e6/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/28bc816cbc004aed371739fa49822bde43d6ccab/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/dbe50442429239246d9e51486f9d732bc31b29e6/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/28bc816cbc004aed371739fa49822bde43d6ccab/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
