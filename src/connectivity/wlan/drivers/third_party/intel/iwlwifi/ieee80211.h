@@ -31,6 +31,15 @@
 #define IEEE80211_MAX_CHAINS 4
 #define IEEE80211_MAX_RTS_THRESHOLD 2353
 
+// Used as the default value in the data structure to indicate the queue is not set yet.
+#define IEEE80211_INVAL_HW_QUEUE 0xff
+
+// Convert the TID sequence number into the SSN (start sequence number) in the BAR (Block Ack
+// Request).
+#define IEEE80211_SCTL_SEQ_MASK 0xfff
+#define IEEE80211_SCTL_SEQ_OFFSET 4
+#define IEEE80211_SEQ_TO_SN(seq) (((seq) >> IEEE80211_SCTL_SEQ_OFFSET) & IEEE80211_SCTL_SEQ_MASK)
+
 // The order of access categories is not clearly specified in 802.11-2016 Std.
 // Therefore it cannot be moved into ieee80211 banjo file.
 enum ieee80211_ac_numbers {

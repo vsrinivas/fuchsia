@@ -275,13 +275,33 @@ static zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss
   }
   // Note that 'ap_sta_id' is unset and later will be set in iwl_mvm_add_sta().
 
+  // Add AP into the STA table in firmware.
   struct iwl_mvm_sta* mvm_sta = alloc_ap_mvm_sta(config->bssid);
   if (!mvm_sta) {
     IWL_ERR(mvmvif, "cannot allocate MVM STA for AP.\n");
     return ZX_ERR_NO_RESOURCES;
   }
 
-  return iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NOTEXIST, IWL_STA_NONE);
+  zx_status_t ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NOTEXIST, IWL_STA_NONE);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot set MVM STA state: %s\n", zx_status_get_string(ret));
+    goto exit;
+  }
+
+  mtx_lock(&mvmvif->mvm->mutex);
+
+  ret = iwl_mvm_sta_alloc_queue(mvmvif->mvm, mvm_sta, IEEE80211_AC_BE, IWL_MAX_TID_COUNT);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot allocate queue for STA: %s\n", zx_status_get_string(ret));
+    goto unlock;
+  }
+
+unlock:
+  mtx_unlock(&mvmvif->mvm->mutex);
+
+exit:
+
+  return ret;
 }
 
 static zx_status_t mac_enable_beaconing(void* ctx, uint32_t options,

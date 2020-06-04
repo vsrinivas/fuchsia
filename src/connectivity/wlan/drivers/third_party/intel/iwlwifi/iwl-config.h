@@ -104,9 +104,9 @@ enum iwl_nvm_type {
 
 /* TX queue watchdog timeouts in mSecs */
 #define IWL_WATCHDOG_DISABLED 0
-#define IWL_DEF_WD_TIMEOUT (2500 * CPTCFG_IWL_TIMEOUT_FACTOR)
-#define IWL_LONG_WD_TIMEOUT (10000 * CPTCFG_IWL_TIMEOUT_FACTOR)
-#define IWL_MAX_WD_TIMEOUT (120000 * CPTCFG_IWL_TIMEOUT_FACTOR)
+#define IWL_DEF_WD_TIMEOUT ZX_MSEC(2500)
+#define IWL_LONG_WD_TIMEOUT ZX_MSEC(10000)
+#define IWL_MAX_WD_TIMEOUT ZX_MSEC(120000)
 
 #define IWL_DEFAULT_MAX_TX_POWER 22
 #define IWL_TX_CSUM_NETIF_FLAGS (NETIF_F_IPV6_CSUM | NETIF_F_IP_CSUM | NETIF_F_TSO | NETIF_F_TSO6)
@@ -142,7 +142,7 @@ static inline uint8_t num_of_ant(uint8_t mask) {
  * @max_tfd_queue_size: max number of entries in tfd queue.
  */
 struct iwl_base_params {
-  unsigned int wd_timeout;
+  zx_duration_t wd_timeout;
 
   uint16_t eeprom_size;
   uint16_t max_event_log_size;
@@ -224,7 +224,7 @@ struct iwl_tt_params {
 #define EEPROM_REGULATORY_BAND_NO_HT40 0
 
 /* lower blocks contain EEPROM image and calibration data */
-#define OTP_LOW_IMAGE_SIZE_2K (2 * 512 * sizeof(uint16_t))   /*  2 KB */
+#define OTP_LOW_IMAGE_SIZE_2K (2 * 512 * sizeof(uint16_t)) /*  2 KB */
 #define OTP_LOW_IMAGE_SIZE_16K (16 * 512 * sizeof(uint16_t)) /* 16 KB */
 #define OTP_LOW_IMAGE_SIZE_32K (32 * 512 * sizeof(uint16_t)) /* 32 KB */
 
@@ -393,33 +393,33 @@ struct iwl_cfg {
 };
 
 static const struct iwl_csr_params iwl_csr_v1 = {
-  .flag_sw_reset = 7,
-  .flag_mac_clock_ready = 0,
-  .flag_init_done = 2,
-  .flag_mac_access_req = 3,
-  .flag_val_mac_access_en = 0,
-  .flag_master_dis = 8,
-  .flag_stop_master = 9,
-  .addr_sw_reset = (CSR_BASE + 0x020),
-  .mac_addr0_otp = 0x380,
-  .mac_addr1_otp = 0x384,
-  .mac_addr0_strap = 0x388,
-  .mac_addr1_strap = 0x38C,
+    .flag_sw_reset = 7,
+    .flag_mac_clock_ready = 0,
+    .flag_init_done = 2,
+    .flag_mac_access_req = 3,
+    .flag_val_mac_access_en = 0,
+    .flag_master_dis = 8,
+    .flag_stop_master = 9,
+    .addr_sw_reset = (CSR_BASE + 0x020),
+    .mac_addr0_otp = 0x380,
+    .mac_addr1_otp = 0x384,
+    .mac_addr0_strap = 0x388,
+    .mac_addr1_strap = 0x38C,
 };
 
 static const struct iwl_csr_params iwl_csr_v2 = {
-  .flag_sw_reset = 31,
-  .flag_mac_clock_ready = 20,
-  .flag_init_done = 6,
-  .flag_mac_access_req = 21,
-  .flag_val_mac_access_en = 20,
-  .flag_master_dis = 28,
-  .flag_stop_master = 29,
-  .addr_sw_reset = (CSR_BASE + 0x024),
-  .mac_addr0_otp = 0x30,
-  .mac_addr1_otp = 0x34,
-  .mac_addr0_strap = 0x38,
-  .mac_addr1_strap = 0x3C,
+    .flag_sw_reset = 31,
+    .flag_mac_clock_ready = 20,
+    .flag_init_done = 6,
+    .flag_mac_access_req = 21,
+    .flag_val_mac_access_en = 20,
+    .flag_master_dis = 28,
+    .flag_stop_master = 29,
+    .addr_sw_reset = (CSR_BASE + 0x024),
+    .mac_addr0_otp = 0x30,
+    .mac_addr1_otp = 0x34,
+    .mac_addr0_strap = 0x38,
+    .mac_addr1_strap = 0x3C,
 };
 
 /*

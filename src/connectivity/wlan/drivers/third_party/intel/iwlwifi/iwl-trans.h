@@ -238,7 +238,7 @@ struct iwl_host_cmd {
 
 static inline void iwl_free_resp(struct iwl_host_cmd* cmd) {
   IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     free_pages(cmd->_rx_page_addr, cmd->_rx_page_order);
 #endif  // NEEDS_PORTING
 }
@@ -257,13 +257,13 @@ static inline void* rxb_addr(struct iwl_rx_cmd_buffer* r) {
 static inline int rxb_offset(struct iwl_rx_cmd_buffer* r) { return r->_offset; }
 
 static inline struct page* rxb_steal_page(struct iwl_rx_cmd_buffer* r) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     get_page(r->_page);
 #endif  // NEEDS_PORTING
   return r->_page;
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static inline void iwl_free_rxb(struct iwl_rx_cmd_buffer* r) {
     __free_pages(r->_page, r->_rx_page_order);
 }
@@ -885,7 +885,7 @@ static inline struct iwl_trans_dump_data* iwl_trans_dump_data(struct iwl_trans* 
   return trans->ops->dump_data(trans, dump_mask);
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static inline struct iwl_device_cmd*
 iwl_trans_alloc_tx_cmd(struct iwl_trans* trans) {
     // TODO(alexlegg): dev_cmd_pool is a cache-line aligned slab allocator in the Linux driver.
@@ -897,7 +897,7 @@ iwl_trans_alloc_tx_cmd(struct iwl_trans* trans) {
 // It is called ERFKILL originally. We remap it to ZX_ERR_BAD_STATE in Fuchsia.
 zx_status_t iwl_trans_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd);
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static inline void iwl_trans_free_tx_cmd(struct iwl_trans* trans,
         struct iwl_device_cmd* dev_cmd) {
     kmem_cache_free(trans->dev_cmd_pool, dev_cmd);
@@ -935,7 +935,7 @@ static inline void iwl_trans_txq_disable(struct iwl_trans* trans, int queue,
 
 static inline bool iwl_trans_txq_enable_cfg(struct iwl_trans* trans, int queue, uint16_t ssn,
                                             const struct iwl_trans_txq_scd_cfg* cfg,
-                                            unsigned int queue_wdg_timeout) {
+                                            zx_duration_t queue_wdg_timeout) {
   if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
     IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
     return false;
@@ -944,7 +944,7 @@ static inline bool iwl_trans_txq_enable_cfg(struct iwl_trans* trans, int queue, 
   return trans->ops->txq_enable(trans, queue, ssn, cfg, queue_wdg_timeout);
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static inline int
 iwl_trans_get_rxq_dma_data(struct iwl_trans* trans, int queue,
                            struct iwl_trans_rxq_dma_data* data) {
@@ -1006,7 +1006,7 @@ static inline void iwl_trans_txq_enable(struct iwl_trans* trans, int queue,
 #endif  // NEEDS_PORTING
 
 static inline void iwl_trans_ac_txq_enable(struct iwl_trans* trans, int queue, uint8_t fifo,
-                                           unsigned int queue_wdg_timeout) {
+                                           zx_duration_t queue_wdg_timeout) {
   struct iwl_trans_txq_scd_cfg cfg = {
       .fifo = fifo,
       .sta_id = UINT8_MAX,
@@ -1018,7 +1018,7 @@ static inline void iwl_trans_ac_txq_enable(struct iwl_trans* trans, int queue, u
   iwl_trans_txq_enable_cfg(trans, queue, 0, &cfg, queue_wdg_timeout);
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static inline void iwl_trans_freeze_txq_timer(struct iwl_trans* trans,
         unsigned long txqs,
         bool freeze) {

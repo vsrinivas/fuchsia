@@ -41,6 +41,7 @@
 #include <lib/async/time.h>
 #include <threads.h>
 #include <zircon/listnode.h>
+#include <zircon/time.h>
 
 #include <ddk/driver.h>
 #include <ddk/hw/wlan/ieee80211.h>
@@ -2077,8 +2078,8 @@ void iwl_mvm_send_lte_commands(struct iwl_mvm* mvm);
 #endif
 
 void iwl_mvm_nic_restart(struct iwl_mvm* mvm, bool fw_error);
-unsigned int iwl_mvm_get_wd_timeout(struct iwl_mvm* mvm, struct ieee80211_vif* vif, bool tdls,
-                                    bool cmd_q);
+zx_duration_t iwl_mvm_get_wd_timeout(struct iwl_mvm* mvm, struct ieee80211_vif* vif, bool tdls,
+                                     bool cmd_q);
 void iwl_mvm_connection_loss(struct iwl_mvm* mvm, struct ieee80211_vif* vif, const char* errmsg);
 void iwl_mvm_event_frame_timeout_callback(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                                           const struct ieee80211_sta* sta, uint16_t tid);
@@ -2163,6 +2164,6 @@ void ieee80211_iterate_active_interfaces_atomic(struct iwl_mvm* mvm,
 zx_status_t iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, uint8_t ac,
                                     int tid);
 bool iwl_mvm_enable_txq(struct iwl_mvm* mvm, struct iwl_mvm_sta* sta, int queue, uint16_t ssn,
-                        const struct iwl_trans_txq_scd_cfg* cfg);
+                        const struct iwl_trans_txq_scd_cfg* cfg, zx_duration_t wdg_timeout);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_

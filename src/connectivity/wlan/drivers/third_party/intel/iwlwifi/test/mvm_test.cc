@@ -497,6 +497,78 @@ TEST_F(PowerTest, PmHasNoEffect) {
   EXPECT_EQ(false, mvm_->ps_disabled);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//                               Txq Test
+//
+class TxqTest : public MvmTest {
+ public:
+  TxqTest()
+      : sta_{
+            .addr = {0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
+            .sta_id = 0,
+            .mvmvif = mvmvif_,
+        } {
+    for (size_t i = 0; i < ARRAY_SIZE(sta_.txq); ++i) {
+      sta_.txq[i] = reinterpret_cast<struct iwl_mvm_txq*>(calloc(1, sizeof(struct iwl_mvm_txq)));
+      ASSERT_NE(nullptr, sta_.txq[i]);
+    }
+  }
+
+  ~TxqTest() {
+    for (size_t i = 0; i < ARRAY_SIZE(sta_.txq); ++i) {
+      free(sta_.txq[i]);
+    }
+  }
+
+  struct iwl_mvm_sta sta_;
+};
+
+TEST_F(TxqTest, TestAllocManagement) {
+  // Ensure the internal state is cleared.
+  ASSERT_EQ(0, sta_.tid_data[IWL_MAX_TID_COUNT].txq_id);
+  ASSERT_EQ(0, sta_.tfd_queue_msk);
+
+  // Keep asking for queue for management packet (TID=MAX).
+  // Expect txq_id IWL_MVM_DQA_MIN_MGMT_QUEUE is allocated.
+  auto expected_mask = sta_.tfd_queue_msk;
+  for (size_t i = 0; i < (IWL_MVM_DQA_MAX_MGMT_QUEUE - IWL_MVM_DQA_MIN_MGMT_QUEUE + 1); ++i) {
+    int tid = IWL_MAX_TID_COUNT;
+    ASSERT_EQ(ZX_OK, iwl_mvm_sta_alloc_queue(mvm_, &sta_, IEEE80211_AC_BE, tid));
+
+    EXPECT_EQ(i + IWL_MVM_DQA_MIN_MGMT_QUEUE, sta_.tid_data[tid].txq_id);
+    expected_mask |= BIT(i + IWL_MVM_DQA_MIN_MGMT_QUEUE);
+    EXPECT_EQ(expected_mask, sta_.tfd_queue_msk);
+  }
+
+  // Request once more. Since there is no queue for management packet, expect data queue.
+  ASSERT_EQ(ZX_OK, iwl_mvm_sta_alloc_queue(mvm_, &sta_, IEEE80211_AC_BE, IWL_MAX_TID_COUNT));
+  EXPECT_EQ(IWL_MVM_DQA_MIN_DATA_QUEUE, sta_.tid_data[IWL_MAX_TID_COUNT].txq_id);
+  expected_mask |= BIT(IWL_MVM_DQA_MIN_DATA_QUEUE);
+  EXPECT_EQ(expected_mask, sta_.tfd_queue_msk);
+}
+
+TEST_F(TxqTest, TestAllocData) {
+  // Ensure the internal state is cleared.
+  ASSERT_EQ(0, sta_.tid_data[IWL_MAX_TID_COUNT].txq_id);
+  ASSERT_EQ(0, sta_.tfd_queue_msk);
+
+  // Keep asking for queue for data packet (TID!=MAX).
+  // Expect txq_id IWL_MVM_DQA_MIN_DATA_QUEUE is allocated.
+  auto expected_mask = sta_.tfd_queue_msk;
+  for (size_t i = 0; i < (IWL_MVM_DQA_MAX_DATA_QUEUE - IWL_MVM_DQA_MIN_DATA_QUEUE + 1); ++i) {
+    int tid = IWL_TID_NON_QOS;
+    ASSERT_EQ(ZX_OK, iwl_mvm_sta_alloc_queue(mvm_, &sta_, IEEE80211_AC_BE, tid));
+
+    EXPECT_EQ(i + IWL_MVM_DQA_MIN_DATA_QUEUE, sta_.tid_data[tid].txq_id);
+    expected_mask |= BIT(i + IWL_MVM_DQA_MIN_DATA_QUEUE);
+    EXPECT_EQ(expected_mask, sta_.tfd_queue_msk);
+  }
+
+  // Request once more. Since there is no queue for data packet, expect failure.
+  // TODO(49530): this should be re-written once shared queue is supported.
+  ASSERT_EQ(ZX_ERR_NO_RESOURCES, iwl_mvm_sta_alloc_queue(mvm_, &sta_, IEEE80211_AC_BE, 0));
+}
+
 }  // namespace
 }  // namespace testing
 }  // namespace wlan

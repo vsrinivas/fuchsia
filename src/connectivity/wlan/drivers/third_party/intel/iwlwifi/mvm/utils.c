@@ -277,7 +277,7 @@ zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, wlan_info
   if (!ptr_chan_idx) {
     return ZX_ERR_INVALID_ARGS;
   }
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
   if (band == NL80211_BAND_60GHZ) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -706,7 +706,7 @@ zx_status_t iwl_mvm_reconfig_scd(struct iwl_mvm* mvm, int queue, int fifo, int s
  */
 zx_status_t iwl_mvm_send_lq_cmd(struct iwl_mvm* mvm, struct iwl_lq_cmd* lq, bool sync) {
   return ZX_ERR_NOT_SUPPORTED;
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct iwl_host_cmd cmd = {
         .id = LQ_CMD,
         .len =
@@ -739,7 +739,7 @@ zx_status_t iwl_mvm_send_lq_cmd(struct iwl_mvm* mvm, struct iwl_lq_cmd* lq, bool
 void iwl_mvm_update_smps(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                          enum iwl_mvm_smps_type_request req_type,
                          enum ieee80211_smps_mode smps_request) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct iwl_mvm_vif* mvmvif;
     enum ieee80211_smps_mode smps_mode;
     int i;
@@ -773,7 +773,7 @@ void iwl_mvm_update_smps(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
 
 zx_status_t iwl_mvm_request_statistics(struct iwl_mvm* mvm, bool clear) {
   return ZX_ERR_NOT_SUPPORTED;
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct iwl_statistics_cmd scmd = {
         .flags = clear ? cpu_to_le32(IWL_STATISTICS_FLG_CLEAR) : 0,
     };
@@ -970,55 +970,69 @@ bool iwl_mvm_is_vif_assoc(struct iwl_mvm* mvm) {
                                                iwl_mvm_sta_iface_iterator, &data);
     return data.assoc;
 }
+#endif  // NEEDS_PORTING
 
-unsigned int iwl_mvm_get_wd_timeout(struct iwl_mvm* mvm, struct ieee80211_vif* vif, bool tdls,
-                                    bool cmd_q) {
-    struct iwl_fw_dbg_trigger_tlv* trigger;
-    struct iwl_fw_dbg_trigger_txq_timer* txq_timer;
-    unsigned int default_timeout = cmd_q ? IWL_DEF_WD_TIMEOUT : mvm->cfg->base_params->wd_timeout;
+zx_duration_t iwl_mvm_get_wd_timeout(struct iwl_mvm* mvm, struct ieee80211_vif* vif, bool tdls,
+                                     bool cmd_q) {
+#if 1  // NEEDS_PORTING
+  unsigned int default_timeout = cmd_q ? IWL_DEF_WD_TIMEOUT : mvm->cfg->base_params->wd_timeout;
 
-    if (!iwl_fw_dbg_trigger_enabled(mvm->fw, FW_DBG_TRIGGER_TXQ_TIMERS)) {
-        /*
-         * We can't know when the station is asleep or awake, so we
-         * must disable the queue hang detection.
-         */
-        if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_STA_PM_NOTIF) && vif &&
-            vif->type == NL80211_IFTYPE_AP) {
-            return IWL_WATCHDOG_DISABLED;
-        }
-        return iwlmvm_mod_params.tfd_q_hang_detect ? default_timeout : IWL_WATCHDOG_DISABLED;
+  return default_timeout;
+#else
+  struct iwl_fw_dbg_trigger_tlv* trigger;
+  struct iwl_fw_dbg_trigger_txq_timer* txq_timer;
+  unsigned int default_timeout = cmd_q ? IWL_DEF_WD_TIMEOUT : mvm->cfg->base_params->wd_timeout;
+
+  if (!iwl_fw_dbg_trigger_enabled(mvm->fw, FW_DBG_TRIGGER_TXQ_TIMERS)) {
+    /*
+     * We can't know when the station is asleep or awake, so we
+     * must disable the queue hang detection.
+     */
+    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_STA_PM_NOTIF) && vif &&
+        vif->type == NL80211_IFTYPE_AP) {
+      return IWL_WATCHDOG_DISABLED;
     }
+    return iwlmvm_mod_params.tfd_q_hang_detect ? default_timeout : IWL_WATCHDOG_DISABLED;
+  }
 
-    trigger = iwl_fw_dbg_get_trigger(mvm->fw, FW_DBG_TRIGGER_TXQ_TIMERS);
-    txq_timer = (void*)trigger->data;
+  trigger = iwl_fw_dbg_get_trigger(mvm->fw, FW_DBG_TRIGGER_TXQ_TIMERS);
+  txq_timer = (void*)trigger->data;
 
-    if (tdls) { return le32_to_cpu(txq_timer->tdls); }
+  if (tdls) {
+    return le32_to_cpu(txq_timer->tdls);
+  }
 
-    if (cmd_q) { return le32_to_cpu(txq_timer->command_queue); }
+  if (cmd_q) {
+    return le32_to_cpu(txq_timer->command_queue);
+  }
 
-    if (WARN_ON(!vif)) { return default_timeout; }
+  if (WARN_ON(!vif)) {
+    return default_timeout;
+  }
 
-    switch (ieee80211_vif_type_p2p(vif)) {
+  switch (ieee80211_vif_type_p2p(vif)) {
     case NL80211_IFTYPE_ADHOC:
-        return le32_to_cpu(txq_timer->ibss);
+      return le32_to_cpu(txq_timer->ibss);
     case NL80211_IFTYPE_STATION:
-        return le32_to_cpu(txq_timer->bss);
+      return le32_to_cpu(txq_timer->bss);
     case NL80211_IFTYPE_AP:
-        return le32_to_cpu(txq_timer->softap);
+      return le32_to_cpu(txq_timer->softap);
     case NL80211_IFTYPE_P2P_CLIENT:
-        return le32_to_cpu(txq_timer->p2p_client);
+      return le32_to_cpu(txq_timer->p2p_client);
     case NL80211_IFTYPE_P2P_GO:
-        return le32_to_cpu(txq_timer->p2p_go);
+      return le32_to_cpu(txq_timer->p2p_go);
     case NL80211_IFTYPE_P2P_DEVICE:
-        return le32_to_cpu(txq_timer->p2p_device);
+      return le32_to_cpu(txq_timer->p2p_device);
     case NL80211_IFTYPE_MONITOR:
-        return default_timeout;
+      return default_timeout;
     default:
-        WARN_ON(1);
-        return mvm->cfg->base_params->wd_timeout;
-    }
+      WARN_ON(1);
+      return mvm->cfg->base_params->wd_timeout;
+  }
+#endif  // NEEDS_PORTING
 }
 
+#if 0  // NEEDS_PORTING
 void iwl_mvm_connection_loss(struct iwl_mvm* mvm, struct ieee80211_vif* vif, const char* errmsg) {
     struct iwl_fw_dbg_trigger_tlv* trig;
     struct iwl_fw_dbg_trigger_mlme* trig_mlme;

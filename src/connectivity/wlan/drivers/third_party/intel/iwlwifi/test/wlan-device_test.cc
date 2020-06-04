@@ -629,6 +629,8 @@ TEST_F(MacInterfaceTest, TestSetChannelWithUnsupportedRole) {
 TEST_F(MacInterfaceTest, TestConfigureBss) {
   ExpectSendCmd(expected_cmd_id_list({
       MockCommand(WIDE_ID(LONG_GROUP, ADD_STA)),
+      MockCommand(WIDE_ID(LONG_GROUP, SCD_QUEUE_CFG)),
+      MockCommand(WIDE_ID(LONG_GROUP, ADD_STA)),
   }));
 
   ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
