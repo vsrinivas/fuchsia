@@ -38,6 +38,7 @@ executable("root_presenter_unittests") {
     "display_configuration_unittest.cc",
     "factory_reset_manager_test.cc",
     "media_buttons_handler_unittest.cc",
+    "root_presenter_unittest.cc",
   ]
 
   deps = [

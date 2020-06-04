@@ -18,7 +18,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-  root_presenter::App app(command_line, &loop);
+  root_presenter::App app(command_line, loop.dispatcher());
 
   loop.Run();
   return 0;

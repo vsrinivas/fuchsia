@@ -51,8 +51,7 @@ Presentation::Presentation(
     fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session, scenic::ResourceId compositor_id,
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-    ActivityNotifier* activity_notifier, int32_t display_startup_rotation_adjustment,
-    YieldCallback yield_callback, MediaButtonsHandler* media_buttons_handler)
+    ActivityNotifier* activity_notifier, int32_t display_startup_rotation_adjustment)
     : scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
@@ -68,13 +67,10 @@ Presentation::Presentation(
                     kCursorRadius),
       cursor_material_(session_),
       display_startup_rotation_adjustment_(display_startup_rotation_adjustment),
-      yield_callback_(std::move(yield_callback)),
       presentation_binding_(this),
       a11y_binding_(this),
-      media_buttons_handler_(media_buttons_handler),
       weak_factory_(this) {
   FX_DCHECK(compositor_id != 0);
-  FX_DCHECK(media_buttons_handler_);
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
   scene_.AddChild(root_node_);
@@ -118,17 +114,13 @@ Presentation::Presentation(
 
   // Link ourselves to the presentation interface once screen dimensions are
   // available for us to present into.
+  FX_CHECK(!presentation_binding_.is_bound());
+  presentation_binding_.Bind(std::move(presentation_request));
   scenic_->GetDisplayInfo(
-      [weak = weak_factory_.GetWeakPtr(), presentation_request = std::move(presentation_request)](
-          fuchsia::ui::gfx::DisplayInfo display_info) mutable {
+      [weak = weak_factory_.GetWeakPtr()](fuchsia::ui::gfx::DisplayInfo display_info) mutable {
         if (weak) {
-          if (presentation_request) {
-            weak->presentation_binding_.Bind(std::move(presentation_request));
-          }
-
           // Get display parameters and propagate values appropriately.
           weak->InitializeDisplayModel(std::move(display_info));
-
           weak->PresentScene();
         }
       });
@@ -389,7 +381,7 @@ glm::vec2 Presentation::ApplyInverseClipSpaceTransform(const glm::vec2& coordina
 }
 
 bool Presentation::GlobalHooksHandleEvent(const fuchsia::ui::input::InputEvent& event) {
-  return perspective_demo_mode_.OnEvent(event, this) || presentation_switcher_.OnEvent(event, this);
+  return perspective_demo_mode_.OnEvent(event, this);
 }
 
 void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {

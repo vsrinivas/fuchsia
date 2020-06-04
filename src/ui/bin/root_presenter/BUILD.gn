@@ -70,9 +70,6 @@ source_set("lib") {
     "perspective_demo_mode.h",
     "presentation.cc",
     "presentation.h",
-    "presentation.h",
-    "presentation_switcher.cc",
-    "presentation_switcher.h",
   ]
 
   public_deps = [
