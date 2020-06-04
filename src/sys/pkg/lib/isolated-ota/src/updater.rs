@@ -192,6 +192,11 @@ pub mod tests {
             self
         }
 
+        pub fn repo_url(mut self, url: &str) -> Self {
+            self.repo_url = url.to_owned();
+            self
+        }
+
         fn generate_packages(&self) -> String {
             let package_urls: Vec<String> = self
                 .packages

@@ -167,8 +167,7 @@ mod tests {
         serde_json::json,
     };
 
-    // TODO(51061): switch to a different URL once new update package format is used
-    const TEST_REPO_URL: &str = "fuchsia-pkg://fuchsia.com/";
+    const TEST_REPO_URL: &str = "fuchsia-pkg://example.com";
 
     const TEST_VERSION: &str = "20200101.0.0";
     const TEST_CHANNEL: &str = "test-channel";
@@ -265,6 +264,7 @@ mod tests {
         let updater = UpdaterBuilder::new()
             .await
             .paver(|p| p.call_hook(hook))
+            .repo_url(TEST_REPO_URL)
             .add_package(test_package)
             .add_image("zbi.signed", &data)
             .add_image("fuchsia.vbmeta", &data)
@@ -289,7 +289,7 @@ mod tests {
                 "status": "ok",
                 "updatecheck": {
                     "status": "ok",
-                    "urls": { "url": [{ "codebase": TEST_REPO_URL }] },
+                    "urls": { "url": [{ "codebase": format!("{}/", TEST_REPO_URL) }] },
                     "manifest": {
                         "version": "20200101.1.0.0",
                         "actions": {
