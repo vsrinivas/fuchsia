@@ -358,7 +358,7 @@ static inline size_t find_first_bit(unsigned* bits, const size_t num_bits) {
 
 // Hex dump function
 //
-// This unction will dump the specified memory range with hex values and ASCII chars.
+// This function will dump the specified memory range with hex values and ASCII chars.
 //
 // - hex_dump(): the actual function printing the output.
 //
