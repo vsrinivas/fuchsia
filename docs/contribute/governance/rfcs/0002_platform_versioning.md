@@ -11,7 +11,7 @@ Reviewed  | 2020-04-23
 
 [TOC]
 
-# Summary
+## Summary
 
 This document proposes the notion of an *API level* and an *ABI revision* to
 the Fuchsia platform. End-developers build against a *target API level*, which
@@ -22,7 +22,7 @@ from the platform. A given release of the Fuchsia platform typically supports
 multiple ABI revisions, which lets the platform run older applications while
 still providing a path for evolving the platform.
 
-# Motivation
+## Motivation
 
 Currently, the Fuchsia platform evolves through a series of *soft transitions*.
 To change part of the [Fuchsia System Interface], the platform first introduces
@@ -42,7 +42,7 @@ This RFC addresses the following problem statement:
 > How can the Fuchsia platform continue to evolve while being able to run a
 growing number of older applications over a longer period of time?
 
-# Why now?
+## Why now?
 
 Several of our customers are requesting more stability from the platform. If we
 offer that stability now, we will slow down our ability to evolve the platform.
@@ -55,7 +55,7 @@ provide binary compatibility with those applications for a long period of time.
 Windows missed that opportunity and now tries to guess the target ABI revision
 for binaries using heuristics, which creates significant developer pain.
 
-# Terminology
+## Terminology
 
 A *release* of Fuchsia is a build of the Fuchsia operating system and associated
 packages that is deployed to a user population. A release has a version number
@@ -72,7 +72,7 @@ A *soft transition* is a technique for breaking down a backwards-incompatible
 change into a sequence of smaller changes to the platform and a set of known
 binaries such that compatibility is maintained locally at each step.
 
-# Design
+## Design
 
 The design described in this document is to version the [Fuchsia System
 Interface], which lets the platform and the applications agree about the
@@ -84,7 +84,7 @@ intentionally drops support for the application. This design does not address
 the converse problem of creating a new application that works on older releases
 of Fuchsia.
 
-## Versioning
+### Versioning
 
 The Fuchsia platform uses two version identifiers, an *API level* and an
 *ABI revision*. Both these versions identify the *interface* provided by the
@@ -95,7 +95,7 @@ in that release.
 A given API level implicates a specific ABI revision, but multiple API levels
 might implicate the same ABI revision.
 
-### API level
+#### API level
 
 A Fuchsia *API level* denotes a set of APIs available when building an
 application. A given release of the [Fuchsia SDK] typically supports multiple
@@ -113,7 +113,7 @@ platform evolves (see *Evolution* below), API levels are assigned in increasing
 order and are intended to be understood by human beings, including
 end-developers.
 
-### ABI revision
+#### ABI revision
 
 A Fuchsia *ABI revision* denotes the semantics of the [Fuchsia System Interface]
 that an application expects the platform to provide. A given release of Fuchsia
@@ -139,7 +139,7 @@ the semantics of a future version of the [Fuchsia System Interface]. As a
 result, ABI revisions are intended to be understood by machines and only rarely
 interpreted by human beings.
 
-### Evolution
+#### Evolution
 
 The platform increases the API level whenever the platform adds or removes an
 API from the [Fuchsia SDK] or when the ABI revision changes. In practice, the
@@ -163,7 +163,7 @@ will likely need to refine that document over time as the project gains
 implementation experience about what changes commonly do and do not break
 applications in practice.
 
-## Applications
+### Applications
 
 End-developers select a single *target API level* when building a component.
 The target API level controls which declarations in the [Fuchsia SDK]
@@ -179,7 +179,7 @@ developer expected the platform to provide when they built their component. A
 given package can contain many components, each of which can select whichever
 target ABI revision they prefer.
 
-## Platform
+### Platform
 
 The platform maintains a list of *supported ABI revisions*. The platform
 provides binary compatibility for components that target a supported ABI
@@ -221,7 +221,7 @@ The platform cannot run components that neither target a supported ABI revision
 nor are listed as legacy components because the platform does not know what
 semantics those components expect.
 
-## Lifecycle
+### Lifecycle
 
 Every element of the [Fuchsia System Interface] (e.g., a system call or a FIDL
 message) goes through the following lifecycle:
@@ -250,7 +250,7 @@ message) goes through the following lifecycle:
  5. Once none of the legacy components use the element, the element can be
     *removed* from the platform entirely.
 
-## Dynamics
+### Dynamics
 
 This approach incentivizes developers to migrate away from deprecated interfaces
 by coupling access to new APIs to performing those migrations. Specifically, to
@@ -258,13 +258,13 @@ gain access to a newly introduced API, the developer must change their target
 API level, which requires them to migrate off any interfaces that were
 deprecated in that API level.
 
-# Implementation
+## Implementation
 
 Implementing this design involves many layers of the Fuchsia system. This
 document provides a sketch of the changes needed at each implicated layer, but
 the detailed designs for those layers are left to subsequent documents.
 
-## FIDL
+### FIDL
 
 FIDL should offer a way to annotate the range of API levels in which each
 protocol element is available. The FIDL toolchain should be aware of the
@@ -276,7 +276,7 @@ that API level to be able to receive messages containing that protocol element
 but would like to prevent those components from sending messages that contain
 that protocol element.
 
-## System headers
+### System headers
 
 The system headers should let the end-developer specify a target API level and
 then adjust the set of APIs that are visible using those headers according to
@@ -284,7 +284,7 @@ the target API level. In addition, the system headers should define macros that
 can be used to limit the visibility of declarations in other libraries to
 certain API levels.
 
-## vDSO
+### vDSO
 
 The system should offer multiple vDSOs, each of which supports a list of ABI
 revisions. When possible, the system should evolve by extending the vDSO in a
@@ -302,7 +302,7 @@ ABI revision, but the vDSO should not directly expose the list of supported ABI
 revisions because exposing that list to applications would let applications break
 when the list is extended.
 
-## Process framework
+### Process framework
 
 When launching a process, the client should inform the process launcher which
 ABI revision the process expects. The process launcher should use that
@@ -316,7 +316,7 @@ manifest. Another possibility is to add the ABI revision to the
 `fuchsia.ldsvc.Loader` protocol, which is typically routed to the source of the
 executable.
 
-## Component framework
+### Component framework
 
 The tools that build component manifests should take the target API level as a
 command-line parameter and embed the corresponding ABI revision in the component
@@ -334,7 +334,7 @@ components to specialized destinations that provide compatibility shims. For
 example, we could define a routing *quirk* that gets applied for specific legacy
 components that have that quirk in the quirk table.
 
-## SDK
+### SDK
 
 The SDK should specify the API levels supported by the SDK and the mapping
 between those API levels and their ABI revision in some machine-readable format
@@ -342,7 +342,7 @@ between those API levels and their ABI revision in some machine-readable format
 end-developers specify a target API level and to supply the target API level as
 a command line argument to all the tools that require that value.
 
-# Performance
+## Performance
 
 This proposal attempts to minimize the performance impact of platform versioning
 by intervening primary during build and discovery. The compatibility shims used
@@ -350,7 +350,7 @@ to run legacy components could have a significant performance impact, but the
 project can evaluate those performance implications on a case-by-case basis
 when adding a component to the list of legacy components.
 
-# Security considerations
+## Security considerations
 
 This proposal should have a positive impact on security because the proposal
 will make it easier to migrate the Fuchsia software ecosystem to newer APIs,
@@ -368,13 +368,13 @@ to target an older ABI revision. As the platform evolves, the project will need
 to treat code that supports older ABI revisions with the same security diligence
 that the project treats code that supports newer ABI revisions.
 
-# Privacy considerations
+## Privacy considerations
 
 This proposal should have a positive impact on privacy because the proposal
 will make it easier to migrate the Fuchsia software ecosystem to newer APIs,
 which presumably have better privacy properties than older APIs.
 
-# Testing
+## Testing
 
 This proposal somewhat increases the testing matrix because the platform behaves
 different depending on the ABI revision of the running component. We will need
@@ -383,7 +383,7 @@ Compatibility Test Suite (CTS). For example, the project might want to version
 CTS according to the ABI revision to ensure that the platform does not regress
 its support for older ABI revisions as it evolves.
 
-# Documentation
+## Documentation
 
 The documentation for the platform should be updated to annotate every API with
 its current stage in the lifecycle as well as its lifecycle history (e.g., when
@@ -402,9 +402,9 @@ In addition, the project should have some conceptual documentation that explains
 why the platform has API levels and how to upgrade from one API level to
 another.
 
-# Drawbacks, Alternatives, and Unknowns
+## Drawbacks, Alternatives, and Unknowns
 
-## What are the costs of implementing this proposal?
+### What are the costs of implementing this proposal?
 
 The main cost of implementing this proposal is increased operational complexity
 when evolving the platform. Adding a new API now requires coordination across
@@ -414,7 +414,7 @@ ABI is more involved because deprecation happens in several steps.
 The system itself will also become more complicated because the behavior of the
 system will be partially dependent on the ABI revision of each component.
 
-## What other strategies might solve the same problem?
+### What other strategies might solve the same problem?
 
 Another strategy, which is used by some other platforms, is to never remove
 functionality. For example, the web platform evolves almost entirely additively.
@@ -430,12 +430,12 @@ system. Using a single API level for the entire system implies a degree of
 coordination about the evolution of contract between the platform and
 applications.
 
-# Prior Art and References
+## Prior Art and References
 
 There is a vast amount of prior art on this subject. The proposal in this
 document builds directly on the experience of Android, Windows, and macOS/iOS.
 
-## Android
+### Android
 
 Android has the concept of an API level. Every platform interface on Android is
 annotated with the API level at which the interface was introduced. Android
@@ -443,7 +443,7 @@ applications also specify their target API level in their manifest using the
 [`uses-sdk`] element. In principle, Android could use this API level mechanism
 to deprecate and remove older interfaces.
 
-## Windows
+### Windows
 
 Windows makes heavy use of a concept similar to ABI revision, which appears as
 the [`SupportedOS`] entry in application manifests. Windows uses a GUID to
@@ -457,7 +457,7 @@ Vista. However, later versions of Windows (e.g., Windows 7) understand the
 Windows Vista ABI. The proposal in this document decouples the ABI revision from
 platform releases, which is more flexible.
 
-## macOS, iOS
+### macOS, iOS
 
 Both macOS and iOS use the [`API_AVAILABLE`] and `@available` annotations to
 control whether a declaration is available when building an application.

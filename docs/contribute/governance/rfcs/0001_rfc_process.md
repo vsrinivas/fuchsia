@@ -11,13 +11,13 @@ Reviewed  | 2020-02-27
 
 [TOC]
 
-# Summary
+## Summary
 
 The Fuchsia RFC process is intended to provide a consistent and transparent path
 for making project-wide, technical decisions. For example, the RFC process can
 be used to evolve the project roadmap and the system architecture.
 
-# Motivation
+## Motivation
 
 Currently, the Fuchsia project does not have a formal process for making
 project-wide, technical decisions. At our current scale, this informality
@@ -27,11 +27,11 @@ establishing a consistent and transparent path for making project-wide,
 technical decisions, all the stakeholders can be confident about the technical
 direction of the project.
 
-# Design
+## Design
 
 This section describes the design of the RFC process.
 
-## When to use the process
+### When to use the process
 
 The vast majority of changes to Fuchsia do not require an RFC. Instead, these
 changes can be made using the [code review
@@ -78,7 +78,7 @@ The RFC process may also be used for other kinds of changes that would benefit
 from its structured approach to decision making and its durable record of the
 decision.
 
-## Roles and responsibilities
+### Roles and responsibilities
 
 People interact with the RFC process in several roles:
 
@@ -99,11 +99,11 @@ People interact with the RFC process in several roles:
    decision as to whether the project accepts an RFC. The RFC Editors are listed
    in [`//docs/project/rfcs/OWNERS`](OWNERS).
 
-## How the process works
+### How the process works
 
 This section describes each step involved in the RFC process.
 
-### Step 1: Socialize
+#### Step 1: Socialize
 
 The first step in the RFC process is to socialize your idea with the project.
 For example, you might have noticed a problem that you think is important to
@@ -130,7 +130,7 @@ able to point you in a good direction.
 > FTP and CTP process, who have good background and context about these
 > processes.
 
-### Step 2: Draft
+#### Step 2: Draft
 
 Once you have gathered all the background and context you can through
 socialization, you are ready to start the formal part of the RFC process. The
@@ -150,7 +150,7 @@ Do not worry about assigning a number to your RFC at this stage. Instead, use
 > *Suggestion.* Consider marking the CL containing your RFC as a
 > "work-in-progress" until you are ready for feedback.
 
-### Step 3: Iterate
+#### Step 3: Iterate
 
 Once you have created a CL containing the first draft of your RFC, you are ready
 to iterate on your idea with the appropriate stakeholders. Hopefully you will
@@ -188,7 +188,7 @@ names associated with the new incarnation of the RFC.
 > Code Review tool to [send you an email > notification](https://gerrit-review.googlesource.com/Documentation/user-notify.html)
 > when a CL modifies the `//docs/project/rfcs` directory.
 
-### Step 4: Approve
+#### Step 4: Approve
 
 Once the iterations on the RFC are converging, you are ready to move to the
 approval stage, in which the stakeholders sign-off on the RFC by setting the
@@ -214,7 +214,7 @@ After all the stakeholders have weighed in with their Code-Review flags, send an
 email to rfc-editors@fuchsia.com to prompt the RFC Editors to decide whether to
 accept your RFC.
 
-### Step 5: Submit
+#### Step 5: Submit
 
 If the project decides to accept your RFC, an RFC Editor will comment on your CL
 stating that the RFC is accepted and will assign the RFC a number, typically the
@@ -238,7 +238,7 @@ The RFC Editor will then mark your CL Code-Review +2 and you can land your RFC!
 *Congratulations! You have contributed a valuable engineering artifact to the
 project!*
 
-## How decisions are made
+### How decisions are made
 
 The decision whether to accept an RFC is made by the RFC Editors, acting in
 [rough consensus](https://en.wikipedia.org/wiki/Rough_consensus) with each
@@ -255,11 +255,11 @@ following factors:
 Decisions made by the RFC Editors can be escalated to the governing authority
 for the project.
 
-# Documentation
+## Documentation
 
 This RFC serves as documentation for the RFC process.
 
-# Drawbacks, Alternatives, and Unknowns
+## Drawbacks, Alternatives, and Unknowns
 
 The primary cost of implementing this proposal is that introducing a formal
 decision-making process might slow down the pace of decision-making. The process
@@ -281,7 +281,7 @@ scaling to a global open-source project. We could also have selected a different
 decision-making mechanism that balanced more towards consensus or more towards
 authority.
 
-# Prior Art and References
+## Prior art and references
 
 There is a good deal of prior art about decision-making processes for
 open-source projects. This proposal is strongly influenced by the following
