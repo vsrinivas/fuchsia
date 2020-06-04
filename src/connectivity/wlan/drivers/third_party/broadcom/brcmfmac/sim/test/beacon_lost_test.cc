@@ -77,7 +77,8 @@ class BeaconLostTest : public SimTest {
 
  private:
   // StationIfc overrides
-  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
+  void Rx(std::shared_ptr<const simulation::SimFrame> frame,
+          std::shared_ptr<const simulation::WlanRxInfo> info) override;
 
   // SME callbacks
   static wlanif_impl_ifc_protocol_ops_t sme_ops_;
@@ -126,10 +127,11 @@ wlanif_impl_ifc_protocol_ops_t BeaconLostTest::sme_ops_ = {
         },
 };
 
-void BeaconLostTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
+void BeaconLostTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
+                        std::shared_ptr<const simulation::WlanRxInfo> info) {
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
 
-  auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
+  auto mgmt_frame = std::static_pointer_cast<const simulation::SimManagementFrame>(frame);
   // If a handler has been installed, call it
   if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_ASSOC_REQ) {
     if (context_.on_assoc_req_callback) {

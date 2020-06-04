@@ -75,7 +75,7 @@ class Environment {
   void Run();
 
   // Send a frame into the simulated environment.
-  void Tx(const SimFrame* frame, const WlanTxInfo& tx_info, StationIfc* sender);
+  void Tx(const SimFrame& frame, const WlanTxInfo& tx_info, StationIfc* sender);
 
   // Ask for a future notification, time is relative to current time. If 'id' is non-null, it will
   // be given a unique identifier for reference in future notification-related operations.
@@ -88,7 +88,13 @@ class Environment {
   // Get simulation absolute time
   zx::time GetTime() { return time_; }
 
+  // Calculate frame transmission time.
+  zx::duration CalcTransTime(StationIfc* staTx, StationIfc* staRx);
+
  private:
+  void HandleTxNotification(StationIfc* sta, std::shared_ptr<const SimFrame> frame,
+                            std::shared_ptr<const WlanRxInfo> tx_info);
+
   static uint64_t event_count_;
 
   struct EnvironmentEvent {
@@ -108,6 +114,9 @@ class Environment {
 
   // Signal strength loss model
   std::unique_ptr<SignalLossModel> signal_loss_model_;
+
+  // Velocity of radio wave in meter/nanosecond
+  static constexpr double kRadioWaveVelocity = 0.3;
 };
 
 }  // namespace wlan::simulation

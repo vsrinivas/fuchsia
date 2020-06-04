@@ -97,7 +97,7 @@ class FakeAp : public StationIfc {
 
   // StationIfc operations - these are the functions that allow the simulated AP to be used
   // inside of a sim-env environment.
-  void Rx(const SimFrame* frame, WlanRxInfo& info) override;
+  void Rx(std::shared_ptr<const SimFrame> frame, std::shared_ptr<const WlanRxInfo> info) override;
 
  private:
   void CancelNotification(uint64_t id);
@@ -105,8 +105,8 @@ class FakeAp : public StationIfc {
   std::shared_ptr<Client> FindClient(common::MacAddr mac_addr);
   void RemoveClient(common::MacAddr mac_addr);
 
-  void RxMgmtFrame(const SimManagementFrame* mgmt_frame);
-  void RxDataFrame(const SimDataFrame* data_frame);
+  void RxMgmtFrame(std::shared_ptr<const SimManagementFrame> mgmt_frame);
+  void RxDataFrame(std::shared_ptr<const SimDataFrame> data_frame);
 
   void ScheduleNextBeacon();
   void ScheduleAssocResp(uint16_t status, const common::MacAddr& dst);

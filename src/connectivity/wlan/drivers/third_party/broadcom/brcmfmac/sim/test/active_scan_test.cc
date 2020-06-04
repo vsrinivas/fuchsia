@@ -51,7 +51,8 @@ class ActiveScanTest : public SimTest {
 
  private:
   // StationIfc methods
-  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
+  void Rx(std::shared_ptr<const simulation::SimFrame> frame,
+          std::shared_ptr<const simulation::WlanRxInfo> info) override;
 
   // This is the interface we will use for our single client interface
   std::unique_ptr<SimInterface> client_ifc_;
@@ -120,22 +121,23 @@ void ActiveScanTest::GetFirwarePfnMac() {
     sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "pfn_macaddr", sim_fw_pfn_mac_->byte, ETH_ALEN);
 }
 
-void ActiveScanTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
+void ActiveScanTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
+                        std::shared_ptr<const simulation::WlanRxInfo> info) {
   GetFirwarePfnMac();
 
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
 
-  auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
+  auto mgmt_frame = std::static_pointer_cast<const simulation::SimManagementFrame>(frame);
 
   if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_PROBE_REQ) {
     // When a probe request is sent out, the src mac address should not be real mac address.
-    auto probe_req = static_cast<const simulation::SimProbeReqFrame*>(mgmt_frame);
+    auto probe_req = std::static_pointer_cast<const simulation::SimProbeReqFrame>(mgmt_frame);
     EXPECT_NE(probe_req->src_addr_, sim_fw_mac_);
     EXPECT_EQ(probe_req->src_addr_, *sim_fw_pfn_mac_);
   }
 
   if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_PROBE_RESP) {
-    auto probe_resp = static_cast<const simulation::SimProbeRespFrame*>(mgmt_frame);
+    auto probe_resp = std::static_pointer_cast<const simulation::SimProbeRespFrame>(mgmt_frame);
     EXPECT_NE(probe_resp->dst_addr_, sim_fw_mac_);
     EXPECT_EQ(probe_resp->dst_addr_, *sim_fw_pfn_mac_);
   }

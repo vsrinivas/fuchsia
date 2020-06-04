@@ -100,7 +100,8 @@ class DynamicIfTest : public SimTest {
   uint16_t new_channel_;
   bool chan_ind_recv_ = false;
   // StationIfc overrides
-  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
+  void Rx(std::shared_ptr<const simulation::SimFrame> frame,
+          std::shared_ptr<const simulation::WlanRxInfo> info) override;
 
   // SME callbacks
   static wlanif_impl_ifc_protocol_ops_t sme_ops_;
@@ -210,13 +211,14 @@ void DynamicIfTest::ChannelCheck() {
   EXPECT_EQ(chan.primary, new_channel_);
 }
 
-void DynamicIfTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
+void DynamicIfTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
+                       std::shared_ptr<const simulation::WlanRxInfo> info) {
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
 
-  auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
+  auto mgmt_frame = std::static_pointer_cast<const simulation::SimManagementFrame>(frame);
   if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_ASSOC_RESP) {
-    auto assoc_resp = static_cast<const simulation::SimAssocRespFrame*>(mgmt_frame);
-    AssocRespInfo resp_info = {.channel = info.channel,
+    auto assoc_resp = std::static_pointer_cast<const simulation::SimAssocRespFrame>(mgmt_frame);
+    AssocRespInfo resp_info = {.channel = info->channel,
                                .src = assoc_resp->src_addr_,
                                .dst = assoc_resp->dst_addr_,
                                .status = assoc_resp->status_};
@@ -290,7 +292,7 @@ void DynamicIfTest::TxAssocReq() {
   const common::MacAddr mac(kFakeMac);
   wlan_ssid_t ssid = {.len = 6, .ssid = "Sim_AP"};
   simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac, ssid);
-  env_->Tx(&assoc_req_frame, kDefaultTxInfo, this);
+  env_->Tx(assoc_req_frame, kDefaultTxInfo, this);
 }
 
 void DynamicIfTest::OnAssocInd(const wlanif_assoc_ind_t* ind) {

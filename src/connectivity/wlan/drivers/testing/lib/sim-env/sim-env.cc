@@ -25,16 +25,22 @@ void Environment::Run() {
   }
 }
 
-void Environment::Tx(const SimFrame* frame, const WlanTxInfo& tx_info, StationIfc* sender) {
+void Environment::Tx(const SimFrame& frame, const WlanTxInfo& tx_info, StationIfc* sender) {
+  std::shared_ptr<const SimFrame> tx_frame(frame.CopyFrame());
   for (auto& staLocPair : stations_) {
     StationIfc* sta = staLocPair.first;
     if (sta != sender) {
       double signal_strength =
           signal_loss_model_->CalcSignalStrength(&stations_.at(sender), &stations_.at(sta));
-      WlanRxInfo rx_info = {.channel = tx_info.channel, .signal_strength = signal_strength};
+      auto rx_info = std::make_shared<WlanRxInfo>();
+      rx_info->channel = tx_info.channel;
+      rx_info->signal_strength = signal_strength;
       // Only deliver frame if the station is sensitive enough to pick it up
       if (signal_strength >= sta->rx_sensitivity_) {
-        sta->Rx(frame, rx_info);
+        zx::duration trans_delay = CalcTransTime(sender, sta);
+        auto tx_handler = std::make_unique<std::function<void()>>();
+        *tx_handler = std::bind(&Environment::HandleTxNotification, this, sta, tx_frame, rx_info);
+        ScheduleNotification(std::move(tx_handler), trans_delay);
       }
     }
   }
@@ -78,6 +84,21 @@ zx_status_t Environment::CancelNotification(uint64_t id) {
     }
   }
   return ZX_ERR_NOT_FOUND;
+}
+
+void Environment::HandleTxNotification(StationIfc* sta, std::shared_ptr<const SimFrame> frame,
+                                       std::shared_ptr<const WlanRxInfo> rx_info) {
+  sta->Rx(frame, rx_info);
+}
+
+zx::duration Environment::CalcTransTime(StationIfc* staTx, StationIfc* staRx) {
+  Location location_tx = stations_.at(staTx);
+  Location location_rx = stations_.at(staRx);
+  double distance = location_tx.distanceFrom(&location_rx);
+
+  // Calcualte how many nanoseconds are needed to do transmission.
+  int64_t trans_time = distance / kRadioWaveVelocity;
+  return zx::nsec(1) * trans_time;
 }
 
 }  // namespace wlan::simulation

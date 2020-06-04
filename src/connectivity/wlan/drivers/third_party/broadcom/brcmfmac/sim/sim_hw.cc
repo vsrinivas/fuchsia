@@ -31,8 +31,9 @@ static bool ChannelsMatch(const wlan_channel_t& c1, const wlan_channel_t& c2) {
   return (c1.primary == c2.primary) && (c1.cbw == c2.cbw) && (c1.secondary80 == c2.secondary80);
 }
 
-void SimHardware::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
-  if (!rx_enabled_ || !ChannelsMatch(info.channel, channel_))
+void SimHardware::Rx(std::shared_ptr<const simulation::SimFrame> frame,
+                     std::shared_ptr<const simulation::WlanRxInfo> info) {
+  if (!rx_enabled_ || !ChannelsMatch(info->channel, channel_))
     return;
   // Simply transfer frame to firmware.
   event_handlers_.rx_handler(frame, info);
@@ -66,7 +67,7 @@ void SimHardware::RequestCallback(std::unique_ptr<std::function<void()>> callbac
 
 void SimHardware::CancelCallback(uint64_t id) { env_->CancelNotification(id); }
 
-void SimHardware::Tx(const simulation::SimFrame* frame) {
+void SimHardware::Tx(const simulation::SimFrame& frame) {
   simulation::WlanTxInfo info = {.channel = channel_};
   env_->Tx(frame, info, this);
 }

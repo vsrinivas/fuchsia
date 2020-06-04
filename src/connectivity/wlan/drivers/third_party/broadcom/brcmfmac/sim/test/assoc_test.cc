@@ -130,7 +130,8 @@ class AssocTest : public SimTest {
 
  private:
   // StationIfc overrides
-  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
+  void Rx(std::shared_ptr<const simulation::SimFrame> frame,
+          std::shared_ptr<const simulation::WlanRxInfo> info) override;
 
   // SME callbacks
   static wlanif_impl_ifc_protocol_ops_t sme_ops_;
@@ -186,10 +187,11 @@ wlanif_impl_ifc_protocol_ops_t AssocTest::sme_ops_ = {
         },
 };
 
-void AssocTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
+void AssocTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
+                   std::shared_ptr<const simulation::WlanRxInfo> info) {
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
 
-  auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
+  auto mgmt_frame = std::static_pointer_cast<const simulation::SimManagementFrame>(frame);
   // If a handler has been installed, call it
   if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_ASSOC_REQ) {
     if (context_.on_assoc_req_callback) {
@@ -200,8 +202,8 @@ void AssocTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& in
   }
 
   if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_ASSOC_RESP) {
-    auto assoc_resp = static_cast<const simulation::SimAssocRespFrame*>(mgmt_frame);
-    AssocRespInfo resp_info = {.channel = info.channel,
+    auto assoc_resp = std::static_pointer_cast<const simulation::SimAssocRespFrame>(mgmt_frame);
+    AssocRespInfo resp_info = {.channel = info->channel,
                                .src = assoc_resp->src_addr_,
                                .dst = assoc_resp->dst_addr_,
                                .status = assoc_resp->status_};
@@ -209,7 +211,7 @@ void AssocTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& in
   }
 
   if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_AUTH) {
-    auto auth_frame = static_cast<const simulation::SimAuthFrame*>(mgmt_frame);
+    auto auth_frame = std::static_pointer_cast<const simulation::SimAuthFrame>(mgmt_frame);
     // When we receive a authentication request, try to call the callback.
     if (auth_frame->seq_num_ == 1) {
       if (context_.on_auth_req_callback) {
@@ -296,9 +298,7 @@ void AssocTest::OnDisassocConf(const wlanif_disassoc_confirm_t* resp) {
 
 void AssocTest::OnDeauthConf(const wlanif_deauth_confirm_t* resp) { context_.deauth_conf_count++; }
 
-void AssocTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
-  context_.deauth_ind_count++;
-}
+void AssocTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) { context_.deauth_ind_count++; }
 
 void AssocTest::OnSignalReport(const wlanif_signal_report_indication* ind) {
   context_.signal_ind_count++;
@@ -389,7 +389,7 @@ void AssocTest::DeauthFromAp() {
 
   // Send a Deauth to our STA
   simulation::SimDeauthFrame deauth_frame(context_.bssid, my_mac, kDefaultApDeauthReason);
-  env_->Tx(&deauth_frame, context_.tx_info, this);
+  env_->Tx(deauth_frame, context_.tx_info, this);
 }
 
 void AssocTest::TxFakeDisassocReq() {
@@ -402,20 +402,20 @@ void AssocTest::TxFakeDisassocReq() {
   // Send a Disassoc Req to our STA (which is not associated)
   simulation::SimDisassocReqFrame not_associated_frame(context_.bssid, my_mac,
                                                        kDefaultApDisassocReason);
-  env_->Tx(&not_associated_frame, context_.tx_info, this);
+  env_->Tx(not_associated_frame, context_.tx_info, this);
 
   // Send a Disassoc Req from the wrong bss
   common::MacAddr wrong_src(context_.bssid);
   wrong_src.byte[ETH_ALEN - 1]++;
   simulation::SimDisassocReqFrame wrong_bss_frame(wrong_src, my_mac, kDefaultApDisassocReason);
-  env_->Tx(&wrong_bss_frame, context_.tx_info, this);
+  env_->Tx(wrong_bss_frame, context_.tx_info, this);
 
   // Send a Disassoc Req to a different STA
   common::MacAddr wrong_dst(my_mac);
   wrong_dst.byte[ETH_ALEN - 1]++;
   simulation::SimDisassocReqFrame wrong_sta_frame(context_.bssid, wrong_dst,
                                                   kDefaultApDisassocReason);
-  env_->Tx(&wrong_sta_frame, context_.tx_info, this);
+  env_->Tx(wrong_sta_frame, context_.tx_info, this);
 }
 
 // For this test, we want the pre-assoc scan test to fail because no APs are found.
@@ -596,14 +596,14 @@ void AssocTest::SendBadResp() {
   common::MacAddr wrong_src(context_.bssid);
   wrong_src.byte[ETH_ALEN - 1]++;
   simulation::SimAssocRespFrame wrong_bss_frame(wrong_src, my_mac, WLAN_ASSOC_RESULT_SUCCESS);
-  env_->Tx(&wrong_bss_frame, context_.tx_info, this);
+  env_->Tx(wrong_bss_frame, context_.tx_info, this);
 
   // Send a response to a different STA
   common::MacAddr wrong_dst(my_mac);
   wrong_dst.byte[ETH_ALEN - 1]++;
   simulation::SimAssocRespFrame wrong_dst_frame(context_.bssid, wrong_dst,
                                                 WLAN_ASSOC_RESULT_SUCCESS);
-  env_->Tx(&wrong_dst_frame, context_.tx_info, this);
+  env_->Tx(wrong_dst_frame, context_.tx_info, this);
 }
 
 // Verify that any non-applicable association responses (i.e., sent to or from the wrong MAC)
@@ -643,7 +643,7 @@ void AssocTest::SendMultipleResp() {
   simulation::SimAssocRespFrame multiple_resp_frame(context_.bssid, my_mac,
                                                     WLAN_ASSOC_RESULT_SUCCESS);
   for (unsigned i = 0; i < kRespCount; i++) {
-    env_->Tx(&multiple_resp_frame, context_.tx_info, this);
+    env_->Tx(multiple_resp_frame, context_.tx_info, this);
   }
 }
 
@@ -654,7 +654,7 @@ void AssocTest::SendOpenAuthResp() {
   common::MacAddr my_mac(mac_buf);
   simulation::SimAuthFrame auth_resp(context_.bssid, my_mac, 2, simulation::AUTH_TYPE_OPEN,
                                      WLAN_AUTH_RESULT_SUCCESS);
-  env_->Tx(&auth_resp, context_.tx_info, this);
+  env_->Tx(auth_resp, context_.tx_info, this);
 }
 
 // Verify that responses after association are ignored

@@ -74,7 +74,8 @@ class AuthTest : public SimTest {
 
  private:
   // Stationifc overrides
-  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
+  void Rx(std::shared_ptr<const simulation::SimFrame> frame,
+          std::shared_ptr<const simulation::WlanRxInfo> info) override;
 
   // SME callbacks
   static wlanif_impl_ifc_protocol_ops_t sme_ops_;
@@ -89,14 +90,15 @@ class AuthTest : public SimTest {
   void OnAssocConf(const wlanif_assoc_confirm_t* resp);
 };
 
-void AuthTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
+void AuthTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
+                  std::shared_ptr<const simulation::WlanRxInfo> info) {
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
-  auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
+  auto mgmt_frame = std::static_pointer_cast<const simulation::SimManagementFrame>(frame);
 
   if (mgmt_frame->MgmtFrameType() != simulation::SimManagementFrame::FRAME_TYPE_AUTH) {
     return;
   }
-  auto auth_frame = static_cast<const simulation::SimAuthFrame*>(mgmt_frame);
+  auto auth_frame = std::static_pointer_cast<const simulation::SimAuthFrame>(mgmt_frame);
   auth_frame_count_++;
   rx_auth_frames_.emplace_back(auth_frame->seq_num_, auth_frame->auth_type_, auth_frame->status_);
 }

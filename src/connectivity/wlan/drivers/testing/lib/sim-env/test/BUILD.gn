@@ -58,12 +58,26 @@ executable("location_tests") {
   ]
 }
 
+executable("trans_time_tests") {
+  output_name = "trans_time_tests"
+
+  testonly = true
+
+  sources = [ "trans_time_tests.cc" ]
+
+  deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//src/lib/fxl/test/:gtest_main",
+  ]
+}
+
 unittest_package("wlan-sim-env-test") {
   deps = [
     ":event_unittests",
     ":frame_ie_tests",
     ":location_tests",
     ":rx_tests",
+    ":trans_time_tests",
   ]
 
   tests = [
@@ -81,6 +95,10 @@ unittest_package("wlan-sim-env-test") {
     },
     {
       name = "location_tests"
+      environments = basic_envs
+    },
+    {
+      name = "trans_time_tests"
       environments = basic_envs
     },
   ]

@@ -35,11 +35,12 @@ class SimStation : public wlan::simulation::StationIfc {
   }
 
   // StationIfc methods
-  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override {
-    checkChannel(info.channel);
+  void Rx(std::shared_ptr<const simulation::SimFrame> frame,
+          std::shared_ptr<const simulation::WlanRxInfo> info) override {
+    checkChannel(info->channel);
     switch (frame->FrameType()) {
       case simulation::SimFrame::FRAME_TYPE_MGMT: {
-        auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
+        auto mgmt_frame = std::static_pointer_cast<const simulation::SimManagementFrame>(frame);
         RxMgmtFrame(mgmt_frame, info);
         break;
       }
@@ -49,14 +50,15 @@ class SimStation : public wlan::simulation::StationIfc {
     }
   }
 
-  void RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame, simulation::WlanRxInfo& info) {
+  void RxMgmtFrame(std::shared_ptr<const simulation::SimManagementFrame> mgmt_frame,
+                   std::shared_ptr<const simulation::WlanRxInfo> info) {
     switch (mgmt_frame->MgmtFrameType()) {
       case simulation::SimManagementFrame::FRAME_TYPE_BEACON: {
-        auto beacon_frame = static_cast<const simulation::SimBeaconFrame*>(mgmt_frame);
+        auto beacon_frame = std::static_pointer_cast<const simulation::SimBeaconFrame>(mgmt_frame);
         checkSsid(beacon_frame->ssid_);
         EXPECT_EQ(beacon_frame->bssid_, kDefaultBssid);
         signal_received = true;
-        signal_strength = info.signal_strength;
+        signal_strength = info->signal_strength;
         break;
       }
       default:
@@ -101,14 +103,16 @@ TEST_F(LocationTest, BasicSignalStrengthTest) {
   env_.MoveStation(&stations_[2], 20, 0);
 
   simulation::SimBeaconFrame beacon_frame(kDefaultSsid, kDefaultBssid);
-  env_.Tx(&beacon_frame, kDefaultTxInfo, &stations_[0]);
+  env_.Tx(beacon_frame, kDefaultTxInfo, &stations_[0]);
+  env_.Run();
   EXPECT_LT(stations_[1].signal_strength, 0);
   EXPECT_LT(stations_[2].signal_strength, 0);
   EXPECT_LT(stations_[2].signal_strength, stations_[1].signal_strength);
 
   env_.MoveStation(&stations_[0], 15, 0);
 
-  env_.Tx(&beacon_frame, kDefaultTxInfo, &stations_[0]);
+  env_.Tx(beacon_frame, kDefaultTxInfo, &stations_[0]);
+  env_.Run();
   EXPECT_LT(stations_[1].signal_strength, 0);
   EXPECT_LT(stations_[2].signal_strength, 0);
   EXPECT_LT(stations_[1].signal_strength, stations_[2].signal_strength);

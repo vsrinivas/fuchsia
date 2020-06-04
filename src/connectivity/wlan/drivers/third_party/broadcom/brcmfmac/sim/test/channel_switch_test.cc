@@ -112,7 +112,7 @@ void ChannelSwitchTest::SendFakeCSABeacon(wlan_channel_t& dst_channel) {
   simulation::SimBeaconFrame fake_csa_beacon(kDefaultSsid, kDefaultBssid);
   fake_csa_beacon.AddCSAIE(dst_channel, kDefaultCSACount);
 
-  env_->Tx(&fake_csa_beacon, kDefaultTxInfo, this);
+  env_->Tx(fake_csa_beacon, kDefaultTxInfo, this);
 }
 
 void ChannelSwitchTest::StartScan() {

@@ -39,7 +39,8 @@ class DataTest : public ::testing::Test, public simulation::StationIfc {
 
  private:
   // StationIfc methods
-  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
+  void Rx(std::shared_ptr<const simulation::SimFrame> frame,
+          std::shared_ptr<const simulation::WlanRxInfo> info) override;
 };
 
 std::vector<uint8_t> DataTest::CreateEthernetFrame(common::MacAddr dstAddr, common::MacAddr srcAddr,
@@ -55,10 +56,11 @@ std::vector<uint8_t> DataTest::CreateEthernetFrame(common::MacAddr dstAddr, comm
   return ethFrame;
 }
 
-void DataTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
+void DataTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
+                  std::shared_ptr<const simulation::WlanRxInfo> info) {
   switch (frame->FrameType()) {
     case simulation::SimFrame::FRAME_TYPE_MGMT: {
-      auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
+      auto mgmt_frame = std::static_pointer_cast<const simulation::SimManagementFrame>(frame);
       // Ignore the authentication and assoc responses.
       if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_AUTH ||
           mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_ASSOC_RESP ||
@@ -69,7 +71,7 @@ void DataTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& inf
       break;
     }
     case simulation::SimFrame::FRAME_TYPE_DATA: {
-      auto data_frame = static_cast<const simulation::SimDataFrame*>(frame);
+      auto data_frame = std::static_pointer_cast<const simulation::SimDataFrame>(frame);
       if (data_frame->toDS_ == 1 && data_frame->fromDS_ == 0) {
         // ignore the frames we send to the AP
         return;
@@ -96,12 +98,12 @@ void DataTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& inf
 void DataTest::FinishAuth(common::MacAddr addr) {
   simulation::SimAuthFrame auth_req_frame(addr, kApBssid, 1, simulation::AUTH_TYPE_OPEN,
                                           WLAN_STATUS_CODE_SUCCESS);
-  env_.Tx(&auth_req_frame, kDefaultTxInfo, this);
+  env_.Tx(auth_req_frame, kDefaultTxInfo, this);
 }
 
 void DataTest::FinishAssoc(common::MacAddr addr) {
   simulation::SimAssocReqFrame assoc_req_frame(addr, kApBssid, kApSsid);
-  env_.Tx(&assoc_req_frame, kDefaultTxInfo, this);
+  env_.Tx(assoc_req_frame, kDefaultTxInfo, this);
 }
 
 void DataTest::ScheduleTx(common::MacAddr apAddr, common::MacAddr srcAddr, common::MacAddr dstAddr,
@@ -114,7 +116,7 @@ void DataTest::ScheduleTx(common::MacAddr apAddr, common::MacAddr srcAddr, commo
 void DataTest::Tx(common::MacAddr apAddr, common::MacAddr srcAddr, common::MacAddr dstAddr,
                   std::vector<uint8_t>& ethFrame) {
   simulation::SimQosDataFrame dataFrame(true, false, apAddr, srcAddr, dstAddr, 0, ethFrame);
-  env_.Tx(&dataFrame, kDefaultTxInfo, this);
+  env_.Tx(dataFrame, kDefaultTxInfo, this);
 }
 
 TEST_F(DataTest, IgnoreWrongBssid) {

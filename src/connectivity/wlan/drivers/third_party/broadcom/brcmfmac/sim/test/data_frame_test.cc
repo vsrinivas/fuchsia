@@ -159,7 +159,8 @@ class DataFrameTest : public SimTest {
 
  private:
   // StationIfc overrides
-  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
+  void Rx(std::shared_ptr<const simulation::SimFrame> frame,
+          std::shared_ptr<const simulation::WlanRxInfo> info) override;
 
   // SME callbacks
   static wlanif_impl_ifc_protocol_ops_t sme_ops_;
@@ -409,26 +410,28 @@ void DataFrameTest::ScheduleClientTx(common::MacAddr dstAddr, common::MacAddr sr
 void DataFrameTest::ClientAuth() {
   simulation::SimAuthFrame auth_req_frame(kClientMacAddress, kApBssid, 1,
                                           simulation::AUTH_TYPE_OPEN, WLAN_STATUS_CODE_SUCCESS);
-  env_->Tx(&auth_req_frame, kDefaultTxInfo, this);
+  env_->Tx(auth_req_frame, kDefaultTxInfo, this);
 }
 
 void DataFrameTest::ClientAssoc() {
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddress, kApBssid, kApSsid);
-  env_->Tx(&assoc_req_frame, kDefaultTxInfo, this);
+  env_->Tx(assoc_req_frame, kDefaultTxInfo, this);
 }
 
 void DataFrameTest::ClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr,
                              std::vector<uint8_t>& ethFrame) {
   simulation::SimQosDataFrame dataFrame(true, false, kApBssid, srcAddr, dstAddr, 0, ethFrame);
-  env_->Tx(&dataFrame, kDefaultTxInfo, this);
+  env_->Tx(dataFrame, kDefaultTxInfo, this);
 }
 
-void DataFrameTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
+void DataFrameTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
+                       std::shared_ptr<const simulation::WlanRxInfo> info) {
   switch (frame->FrameType()) {
     case simulation::SimFrame::FRAME_TYPE_DATA: {
-      auto data_frame = static_cast<const simulation::SimDataFrame*>(frame);
+      auto data_frame = std::static_pointer_cast<const simulation::SimDataFrame>(frame);
       if (data_frame->DataFrameType() == simulation::SimDataFrame::FRAME_TYPE_QOS_DATA) {
-        auto qos_data_frame = static_cast<const simulation::SimQosDataFrame*>(data_frame);
+        auto qos_data_frame =
+            std::static_pointer_cast<const simulation::SimQosDataFrame>(data_frame);
         if (data_frame->addr1_ == recv_addr_capture_filter) {
           env_data_frame_capture_.emplace_back(qos_data_frame->toDS_, qos_data_frame->fromDS_,
                                                qos_data_frame->addr1_, qos_data_frame->addr2_,

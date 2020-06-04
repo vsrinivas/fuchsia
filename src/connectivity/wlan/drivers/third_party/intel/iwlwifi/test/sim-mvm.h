@@ -36,7 +36,8 @@ class SimMvm : public ::wlan::simulation::StationIfc {
   zx_status_t SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait);
 
   // StationIfc operations
-  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override {}
+  void Rx(std::shared_ptr<const simulation::SimFrame> frame,
+          std::shared_ptr<const simulation::WlanRxInfo> info) override {}
 
  private:
   // The buffer size should be determined by the max response size.

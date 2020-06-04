@@ -281,8 +281,9 @@ class SimFirmware {
   zx_status_t HandleIfaceTblReq(const bool add_entry, const void* data, uint8_t* iface_id);
   zx_status_t HandleIfaceRequest(const bool add_iface, const void* data, const size_t len);
   zx_status_t HandleJoinRequest(const void* value, size_t value_len, const uint16_t ifidx);
-  zx_status_t HandleAssocReq(uint16_t ifidx, const simulation::SimAssocReqFrame* frame);
-  void HandleDisconnectForClientIF(const simulation::SimManagementFrame* frame,
+  zx_status_t HandleAssocReq(uint16_t ifidx,
+                             std::shared_ptr<const simulation::SimAssocReqFrame> frame);
+  void HandleDisconnectForClientIF(std::shared_ptr<const simulation::SimManagementFrame> frame,
                                    const uint16_t ifidx, const common::MacAddr& bssid,
                                    const uint16_t reason);
 
@@ -314,21 +315,26 @@ class SimFirmware {
   void DisableBeaconWatchdog();
   void HandleBeaconTimeout();
   // Handlers for events from hardware
-  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info);
+  void Rx(std::shared_ptr<const simulation::SimFrame> frame,
+          std::shared_ptr<const simulation::WlanRxInfo> info);
 
-  void RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame, simulation::WlanRxInfo& info);
-  void RxDataFrame(const simulation::SimDataFrame* data_frame, simulation::WlanRxInfo& info);
+  void RxMgmtFrame(std::shared_ptr<const simulation::SimManagementFrame> mgmt_frame,
+                   std::shared_ptr<const simulation::WlanRxInfo> info);
+  void RxDataFrame(std::shared_ptr<const simulation::SimDataFrame> data_frame,
+                   std::shared_ptr<const simulation::WlanRxInfo> info);
 
-  void RxBeacon(const wlan_channel_t& channel, const simulation::SimBeaconFrame* frame);
-  void RxAssocResp(const simulation::SimAssocRespFrame* frame);
-  void RxDisassocReq(const simulation::SimDisassocReqFrame* frame);
-  void RxAssocReq(const simulation::SimAssocReqFrame* frame);
-  void RxProbeResp(const wlan_channel_t& channel, const simulation::SimProbeRespFrame* frame,
+  void RxBeacon(const wlan_channel_t& channel,
+                std::shared_ptr<const simulation::SimBeaconFrame> frame);
+  void RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFrame> frame);
+  void RxDisassocReq(std::shared_ptr<const simulation::SimDisassocReqFrame> frame);
+  void RxAssocReq(std::shared_ptr<const simulation::SimAssocReqFrame> frame);
+  void RxProbeResp(const wlan_channel_t& channel,
+                   std::shared_ptr<const simulation::SimProbeRespFrame> frame,
                    double signal_strength);
-  void RxAuthResp(const simulation::SimAuthFrame* frame);
+  void RxAuthResp(std::shared_ptr<const simulation::SimAuthFrame> frame);
   // Handler for channel switch.
-  void ConductChannelSwitch(wlan_channel_t& dst_channel, uint8_t mode);
-  void RxDeauthReq(const simulation::SimDeauthFrame* frame);
+  void ConductChannelSwitch(const wlan_channel_t& dst_channel, uint8_t mode);
+  void RxDeauthReq(std::shared_ptr<const simulation::SimDeauthFrame> frame);
 
   void StopSoftAP(uint16_t ifidx);
   // Allocate a buffer for an event (brcmf_event)
@@ -344,7 +350,7 @@ class SimFirmware {
 
   // Send received frame over the bus to the driver
   void SendFrameToDriver(uint16_t ifidx, size_t payload_size, const std::vector<uint8_t>& buffer_in,
-                         simulation::WlanRxInfo& info);
+                         std::shared_ptr<const simulation::WlanRxInfo> info);
 
   // Get the idx of the SoftAP IF based on Mac address
   int16_t GetIfidxByMac(const common::MacAddr& addr);

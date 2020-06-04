@@ -66,22 +66,24 @@ class BeaconTest : public ::testing::Test, public simulation::StationIfc {
 
  private:
   // StationIfc methods
-  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
+  void Rx(std::shared_ptr<const simulation::SimFrame> frame,
+          std::shared_ptr<const simulation::WlanRxInfo> info) override;
 };
 
 // When we receive a beacon, just add it to our list of received beacons for later validation
-void BeaconTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
+void BeaconTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
+                    std::shared_ptr<const simulation::WlanRxInfo> info) {
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
 
-  auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
+  auto mgmt_frame = std::static_pointer_cast<const simulation::SimManagementFrame>(frame);
   if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_ASSOC_RESP ||
       mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_AUTH) {
     return;
   }
   ASSERT_EQ(mgmt_frame->MgmtFrameType(), simulation::SimManagementFrame::FRAME_TYPE_BEACON);
 
-  auto beacon_frame = static_cast<const simulation::SimBeaconFrame*>(mgmt_frame);
-  beacons_received_.emplace_back(env_.GetTime(), info.channel, beacon_frame->ssid_,
+  auto beacon_frame = std::static_pointer_cast<const simulation::SimBeaconFrame>(mgmt_frame);
+  beacons_received_.emplace_back(env_.GetTime(), info->channel, beacon_frame->ssid_,
                                  beacon_frame->bssid_);
   beacons_received_.back().privacy = beacon_frame->capability_info_.privacy() ? true : false;
   auto ie = beacon_frame->FindIE(simulation::InformationElement::IE_TYPE_CSA);
@@ -263,9 +265,9 @@ constexpr zx::duration kVeryShortEndTime = zx::msec(100);
 void BeaconTest::AssocCallback() {
   simulation::SimAuthFrame auth_req_frame(kClientMacAddr, kDefaultBssid, 1,
                                           simulation::AUTH_TYPE_OPEN, WLAN_STATUS_CODE_SUCCESS);
-  env_.Tx(&auth_req_frame, kDefaultTxInfo, this);
+  env_.Tx(auth_req_frame, kDefaultTxInfo, this);
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kDefaultBssid, kDefaultSsid);
-  env_.Tx(&assoc_req_frame, kDefaultTxInfo, this);
+  env_.Tx(assoc_req_frame, kDefaultTxInfo, this);
 }
 
 void BeaconTest::ChannelSwitchCallback(wlan_channel_t& channel, zx::duration& interval) {

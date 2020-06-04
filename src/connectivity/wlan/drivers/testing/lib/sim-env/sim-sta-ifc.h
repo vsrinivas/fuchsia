@@ -21,7 +21,8 @@ struct WlanRxInfo;
 class StationIfc {
  public:
   // Handler for different frames.
-  virtual void Rx(const SimFrame* frame, WlanRxInfo& info) = 0;
+  virtual void Rx(std::shared_ptr<const SimFrame> frame,
+                  std::shared_ptr<const WlanRxInfo> info) = 0;
 
   // Change station's receiver sensitivity
   void setRxSensitivity(double rxSensitivity) { rx_sensitivity_ = rxSensitivity; }

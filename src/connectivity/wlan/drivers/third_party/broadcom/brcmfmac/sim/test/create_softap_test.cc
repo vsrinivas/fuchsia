@@ -234,7 +234,7 @@ void CreateSoftAPTest::TxAssocReq() {
   common::MacAddr soft_ap_mac(mac_buf);
   const common::MacAddr mac(kFakeMac);
   simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac, kDefaultSsid);
-  env_->Tx(&assoc_req_frame, tx_info_, this);
+  env_->Tx(assoc_req_frame, tx_info_, this);
 }
 
 void CreateSoftAPTest::TxDisassocReq() {
@@ -246,10 +246,10 @@ void CreateSoftAPTest::TxDisassocReq() {
   const common::MacAddr mac(kFakeMac);
   // Associate with the SoftAP
   simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac, kDefaultSsid);
-  env_->Tx(&assoc_req_frame, tx_info_, this);
+  env_->Tx(assoc_req_frame, tx_info_, this);
   // Disassociate with the SoftAP
   simulation::SimDisassocReqFrame disassoc_req_frame(mac, soft_ap_mac, 0);
-  env_->Tx(&disassoc_req_frame, tx_info_, this);
+  env_->Tx(disassoc_req_frame, tx_info_, this);
 }
 
 void CreateSoftAPTest::ScheduleStartSoftAP(zx::duration when) {

@@ -63,4 +63,66 @@ TEST_F(FrameIETest, IEOps) {
   EXPECT_EQ(beacon_frame_.FindIE(simulation::InformationElement::IE_TYPE_CSA), nullptr);
 }
 
+TEST_F(FrameIETest, DeepCopyBeaconFrame) {
+  constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
+  const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
+  const common::MacAddr kDefaultSrcAddr({0x11, 0x22, 0x33, 0x44, 0x55, 0x66});
+  const common::MacAddr kDefaultDstAddr({0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc});
+  zx::duration kDefaultInterval = zx::msec(50);
+
+  simulation::SimBeaconFrame origin_beacon(kDefaultSsid, kDefaultBssid);
+  origin_beacon.interval_ = kDefaultInterval;
+  origin_beacon.capability_info_.set_privacy(1);
+  // Set values inherited from SimManagementFrame.
+  origin_beacon.src_addr_ = kDefaultSrcAddr;
+  origin_beacon.dst_addr_ = kDefaultDstAddr;
+  origin_beacon.AddCSAIE(kDefaultChannel, 0);
+
+  // Call copy constructor
+  simulation::SimBeaconFrame copied_beacon(origin_beacon);
+
+  // Make sure everything is copied.
+  EXPECT_EQ(copied_beacon.bssid_, kDefaultBssid);
+  EXPECT_EQ(copied_beacon.src_addr_, kDefaultSrcAddr);
+  EXPECT_EQ(copied_beacon.dst_addr_, kDefaultDstAddr);
+  EXPECT_EQ(copied_beacon.ssid_.len, kDefaultSsid.len);
+  EXPECT_EQ(memcmp(copied_beacon.ssid_.ssid, kDefaultSsid.ssid, kDefaultSsid.len), 0);
+  EXPECT_EQ(copied_beacon.interval_, kDefaultInterval);
+  EXPECT_EQ(copied_beacon.capability_info_.val(), origin_beacon.capability_info_.val());
+
+  EXPECT_EQ(copied_beacon.IEs_.size(), origin_beacon.IEs_.size());
+  EXPECT_EQ(copied_beacon.IEs_.size(), (size_t)1);
+
+  auto origin_ie = *origin_beacon.IEs_.begin();
+  EXPECT_EQ(origin_ie->IEType(), simulation::InformationElement::IE_TYPE_CSA);
+  auto origin_csa_ie = std::static_pointer_cast<simulation::CSAInformationElement>(origin_ie);
+  auto copied_ie = *copied_beacon.IEs_.begin();
+  EXPECT_EQ(copied_ie->IEType(), simulation::InformationElement::IE_TYPE_CSA);
+  auto copied_csa_ie = std::static_pointer_cast<simulation::CSAInformationElement>(copied_ie);
+
+  EXPECT_EQ(origin_csa_ie->channel_switch_mode_, copied_csa_ie->channel_switch_mode_);
+  EXPECT_EQ(origin_csa_ie->new_channel_number_, copied_csa_ie->new_channel_number_);
+  EXPECT_EQ(origin_csa_ie->channel_switch_count_, copied_csa_ie->channel_switch_count_);
+  // Make sure two pointers are pointing to different places
+  EXPECT_NE(origin_csa_ie.get(), copied_csa_ie.get());
+}
+
+TEST_F(FrameIETest, DeepCopyQosDataFrame) {
+  const common::MacAddr kDefaultAddr1({0x11, 0x11, 0x11, 0x11, 0x11, 0x11});
+  const common::MacAddr kDefaultAddr2({0x22, 0x22, 0x22, 0x22, 0x22, 0x22});
+  const common::MacAddr kDefaultAddr3({0x33, 0x33, 0x33, 0x33, 0x33, 0x33});
+  const std::vector<uint8_t> kDefaultPayload = {0xaa, 0xbb};
+
+  simulation::SimQosDataFrame qos_data_frame(false, false, kDefaultAddr1, kDefaultAddr2,
+                                             kDefaultAddr3, 0, kDefaultPayload);
+  simulation::SimQosDataFrame copied_qos_data_frame(qos_data_frame);
+
+  EXPECT_EQ(copied_qos_data_frame.toDS_, false);
+  EXPECT_EQ(copied_qos_data_frame.fromDS_, false);
+  EXPECT_EQ(copied_qos_data_frame.addr1_, kDefaultAddr1);
+  EXPECT_EQ(copied_qos_data_frame.addr2_, kDefaultAddr2);
+  EXPECT_EQ(copied_qos_data_frame.addr3_, kDefaultAddr3);
+  EXPECT_EQ(copied_qos_data_frame.payload_, kDefaultPayload);
+}
+
 };  // namespace wlan::testing

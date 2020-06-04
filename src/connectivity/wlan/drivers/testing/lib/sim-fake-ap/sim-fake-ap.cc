@@ -104,7 +104,8 @@ void FakeAp::EnableBeacon(zx::duration beacon_period) {
   }
 
   // First beacon is sent out immediately
-  environment_->Tx(&beacon_state_.beacon_frame_, tx_info_, this);
+  SimBeaconFrame tmp_beacon_frame(beacon_state_.beacon_frame_);
+  environment_->Tx(tmp_beacon_frame, tx_info_, this);
 
   beacon_state_.is_beaconing = true;
   beacon_state_.beacon_frame_.interval_ = beacon_period;
@@ -199,21 +200,19 @@ void FakeAp::ScheduleQosData(bool toDS, bool fromDS, const common::MacAddr& addr
   environment_->ScheduleNotification(std::move(handler), data_forward_interval_);
 }
 
-void FakeAp::Rx(const SimFrame* frame, WlanRxInfo& info) {
+void FakeAp::Rx(std::shared_ptr<const SimFrame> frame, std::shared_ptr<const WlanRxInfo> info) {
   // Make sure we heard it
-  if (!CanReceiveChannel(info.channel)) {
+  if (!CanReceiveChannel(info->channel)) {
     return;
   }
 
   switch (frame->FrameType()) {
     case SimFrame::FRAME_TYPE_MGMT: {
-      auto mgmt_frame = static_cast<const SimManagementFrame*>(frame);
-      RxMgmtFrame(mgmt_frame);
+      RxMgmtFrame(std::static_pointer_cast<const SimManagementFrame>(frame));
       break;
     }
     case SimFrame::FRAME_TYPE_DATA: {
-      auto data_frame = static_cast<const SimDataFrame*>(frame);
-      RxDataFrame(data_frame);
+      RxDataFrame(std::static_pointer_cast<const SimDataFrame>(frame));
       break;
     }
     default:
@@ -221,16 +220,16 @@ void FakeAp::Rx(const SimFrame* frame, WlanRxInfo& info) {
   }
 }
 
-void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
+void FakeAp::RxMgmtFrame(std::shared_ptr<const SimManagementFrame> mgmt_frame) {
   switch (mgmt_frame->MgmtFrameType()) {
     case SimManagementFrame::FRAME_TYPE_PROBE_REQ: {
-      auto probe_req_frame = static_cast<const SimProbeReqFrame*>(mgmt_frame);
+      auto probe_req_frame = std::static_pointer_cast<const SimProbeReqFrame>(mgmt_frame);
       ScheduleProbeResp(probe_req_frame->src_addr_);
       break;
     }
 
     case SimManagementFrame::FRAME_TYPE_ASSOC_REQ: {
-      auto assoc_req_frame = static_cast<const SimAssocReqFrame*>(mgmt_frame);
+      auto assoc_req_frame = std::static_pointer_cast<const SimAssocReqFrame>(mgmt_frame);
       // Ignore requests that are not for us
       if (assoc_req_frame->bssid_ != bssid_) {
         return;
@@ -277,7 +276,7 @@ void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
     }
 
     case SimManagementFrame::FRAME_TYPE_DISASSOC_REQ: {
-      auto disassoc_req_frame = static_cast<const SimDisassocReqFrame*>(mgmt_frame);
+      auto disassoc_req_frame = std::static_pointer_cast<const SimDisassocReqFrame>(mgmt_frame);
       // Ignore requests that are not for us
       if (disassoc_req_frame->dst_addr_ != bssid_) {
         return;
@@ -296,7 +295,7 @@ void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
     }
 
     case SimManagementFrame::FRAME_TYPE_AUTH: {
-      auto auth_req_frame = static_cast<const SimAuthFrame*>(mgmt_frame);
+      auto auth_req_frame = std::static_pointer_cast<const SimAuthFrame>(mgmt_frame);
       if (auth_req_frame->dst_addr_ != bssid_) {
         return;
       }
@@ -385,7 +384,7 @@ void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
   }
 }
 
-void FakeAp::RxDataFrame(const SimDataFrame* data_frame) {
+void FakeAp::RxDataFrame(std::shared_ptr<const SimDataFrame> data_frame) {
   switch (data_frame->DataFrameType()) {
     case SimDataFrame::FRAME_TYPE_QOS_DATA:
       // If we are not the intended receiver, ignore it
@@ -424,7 +423,7 @@ zx_status_t FakeAp::DisassocSta(const common::MacAddr& sta_mac, uint16_t reason)
   for (auto client : clients_) {
     if (client->mac_addr_ == sta_mac && client->status_ == Client::ASSOCIATED) {
       // Client is already associated
-      environment_->Tx(&disassoc_req_frame, tx_info_, this);
+      environment_->Tx(disassoc_req_frame, tx_info_, this);
       RemoveClient(sta_mac);
       return ZX_OK;
     }
@@ -435,7 +434,8 @@ zx_status_t FakeAp::DisassocSta(const common::MacAddr& sta_mac, uint16_t reason)
 
 void FakeAp::HandleBeaconNotification() {
   ZX_ASSERT(beacon_state_.is_beaconing);
-  environment_->Tx(&beacon_state_.beacon_frame_, tx_info_, this);
+  SimBeaconFrame tmp_beacon_frame(beacon_state_.beacon_frame_);
+  environment_->Tx(tmp_beacon_frame, tx_info_, this);
   // Channel switch count decrease by 1 each time after sending a CSA beacon.
   if (beacon_state_.is_switching_channel) {
     auto CSA_ie = beacon_state_.beacon_frame_.FindIE(InformationElement::IE_TYPE_CSA);
@@ -454,26 +454,27 @@ void FakeAp::HandleStopCSABeaconNotification() {
 void FakeAp::HandleAssocRespNotification(uint16_t status, common::MacAddr dst) {
   SimAssocRespFrame assoc_resp_frame(bssid_, dst, status);
   assoc_resp_frame.capability_info_.set_val(beacon_state_.beacon_frame_.capability_info_.val());
-  environment_->Tx(&assoc_resp_frame, tx_info_, this);
+  environment_->Tx(assoc_resp_frame, tx_info_, this);
 }
 
 void FakeAp::HandleProbeRespNotification(common::MacAddr dst) {
   SimProbeRespFrame probe_resp_frame(bssid_, dst, ssid_);
   probe_resp_frame.capability_info_.set_val(beacon_state_.beacon_frame_.capability_info_.val());
-  environment_->Tx(&probe_resp_frame, tx_info_, this);
+
+  environment_->Tx(probe_resp_frame, tx_info_, this);
 }
 
 void FakeAp::HandleAuthRespNotification(uint16_t seq_num, common::MacAddr dst,
                                         SimAuthType auth_type, uint16_t status) {
   SimAuthFrame auth_resp_frame(bssid_, dst, seq_num, auth_type, status);
-  environment_->Tx(&auth_resp_frame, tx_info_, this);
+  environment_->Tx(auth_resp_frame, tx_info_, this);
 }
 
 void FakeAp::HandleQosDataNotification(bool toDS, bool fromDS, const common::MacAddr& addr1,
                                        const common::MacAddr& addr2, const common::MacAddr& addr3,
                                        const std::vector<uint8_t>& payload) {
   SimQosDataFrame data_frame(toDS, fromDS, addr1, addr2, addr3, 0, payload);
-  environment_->Tx(&data_frame, tx_info_, this);
+  environment_->Tx(data_frame, tx_info_, this);
 }
 
 void FakeAp::SetAssocHandling(enum AssocHandling mode) { assoc_handling_mode_ = mode; }

@@ -34,7 +34,8 @@ class AssocTest : public ::testing::Test, public simulation::StationIfc {
 
  private:
   // StationIfc methods
-  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
+  void Rx(std::shared_ptr<const simulation::SimFrame> frame,
+          std::shared_ptr<const simulation::WlanRxInfo> info) override;
 };
 
 void validateChannel(const wlan_channel_t& channel) {
@@ -48,16 +49,18 @@ void AssocTest::DisassocFromAp(const common::MacAddr& sta, uint16_t reason) {
   ap_.DisassocSta(sta, reason);
 }
 
-void AssocTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
+void AssocTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
+                   std::shared_ptr<const simulation::WlanRxInfo> info) {
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
-  validateChannel(info.channel);
-  auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
+  validateChannel(info->channel);
+  auto mgmt_frame = std::static_pointer_cast<const simulation::SimManagementFrame>(frame);
 
   // Ignore the authentication responses.
   if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_AUTH) {
     return;
   } else if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_ASSOC_RESP) {
-    auto assoc_resp_frame = static_cast<const simulation::SimAssocRespFrame*>(mgmt_frame);
+    auto assoc_resp_frame =
+        std::static_pointer_cast<const simulation::SimAssocRespFrame>(mgmt_frame);
 
     EXPECT_EQ(assoc_resp_frame->src_addr_, kApBssid);
     EXPECT_EQ(assoc_resp_frame->dst_addr_, kClientMacAddr);
@@ -66,7 +69,8 @@ void AssocTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& in
     assoc_status_list_.push_back(assoc_resp_frame->status_);
   } else if (mgmt_frame->MgmtFrameType() ==
              simulation::SimManagementFrame::FRAME_TYPE_DISASSOC_REQ) {
-    auto disassoc_req_frame = static_cast<const simulation::SimDisassocReqFrame*>(mgmt_frame);
+    auto disassoc_req_frame =
+        std::static_pointer_cast<const simulation::SimDisassocReqFrame>(mgmt_frame);
     EXPECT_EQ(disassoc_req_frame->src_addr_, kApBssid);
     EXPECT_EQ(disassoc_req_frame->dst_addr_, kClientMacAddr);
 
@@ -82,7 +86,7 @@ void AssocTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& in
 void AssocTest::FinishAuth() {
   simulation::SimAuthFrame auth_req_frame(kClientMacAddr, kApBssid, 1, simulation::AUTH_TYPE_OPEN,
                                           WLAN_STATUS_CODE_SUCCESS);
-  env_.Tx(&auth_req_frame, kDefaultTxInfo, this);
+  env_.Tx(auth_req_frame, kDefaultTxInfo, this);
 }
 
 /* Verify that association requests that are not properly addressed are ignored.
@@ -95,7 +99,7 @@ void AssocTest::FinishAuth() {
 TEST_F(AssocTest, RefuseIfNotAuthenticated) {
   auto handler = std::make_unique<std::function<void()>>();
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
-  *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(std::move(handler), zx::usec(50));
 
   env_.Run();
@@ -116,12 +120,11 @@ TEST_F(AssocTest, RefusedWrongSsid) {
   simulation::SimAssocReqFrame wrong_ssid_frame(kClientMacAddr, kApBssid, kWrongSsid);
 
   *handler =
-      std::bind(&simulation::Environment::Tx, &env_, &wrong_ssid_len_frame, kDefaultTxInfo, this);
+      std::bind(&simulation::Environment::Tx, &env_, wrong_ssid_len_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(std::move(handler), zx::sec(1));
 
   handler = std::make_unique<std::function<void()>>();
-  *handler =
-      std::bind(&simulation::Environment::Tx, &env_, &wrong_ssid_frame, kDefaultTxInfo, this);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, wrong_ssid_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(std::move(handler), zx::sec(2));
 
   env_.Run();
@@ -144,14 +147,14 @@ TEST_F(AssocTest, IgnoredRequests) {
   auto handler = std::make_unique<std::function<void()>>();
   simulation::SimAssocReqFrame wrong_chan_frame(kClientMacAddr, kApBssid, kApSsid);
   *handler =
-      std::bind(&simulation::Environment::Tx, &env_, &wrong_chan_frame, kWrongChannelTxInfo, this);
+      std::bind(&simulation::Environment::Tx, &env_, wrong_chan_frame, kWrongChannelTxInfo, this);
   env_.ScheduleNotification(std::move(handler), zx::sec(1));
 
   // Schedule assoc req to different bssid
   handler = std::make_unique<std::function<void()>>();
   simulation::SimAssocReqFrame wrong_bssid_frame(kClientMacAddr, kWrongBssid, kApSsid);
   *handler =
-      std::bind(&simulation::Environment::Tx, &env_, &wrong_bssid_frame, kDefaultTxInfo, this);
+      std::bind(&simulation::Environment::Tx, &env_, wrong_bssid_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(std::move(handler), zx::sec(2));
 
   env_.Run();
@@ -173,17 +176,17 @@ TEST_F(AssocTest, BasicUse) {
   // Schedule first request
   auto handler = std::make_unique<std::function<void()>>();
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
-  *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(std::move(handler), zx::usec(50));
 
   // Schedule second request
   handler = std::make_unique<std::function<void()>>();
-  *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(std::move(handler), zx::usec(100));
 
   // Schedule third request
   handler = std::make_unique<std::function<void()>>();
-  *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(std::move(handler), zx::usec(150));
 
   env_.Run();
@@ -209,7 +212,7 @@ TEST_F(AssocTest, IgnoreAssociations) {
   // Schedule assoc req
   auto handler = std::make_unique<std::function<void()>>();
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
-  *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(std::move(handler), zx::sec(1));
 
   ap_.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
@@ -230,7 +233,7 @@ TEST_F(AssocTest, RejectAssociations) {
   // Schedule first request
   auto handler = std::make_unique<std::function<void()>>();
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
-  *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(std::move(handler), zx::sec(1));
 
   ap_.SetAssocHandling(simulation::FakeAp::ASSOC_REJECTED);
@@ -255,7 +258,7 @@ TEST_F(AssocTest, DisassocFromSta) {
   // Schedule assoc req
   auto handler = std::make_unique<std::function<void()>>();
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
-  *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(std::move(handler), zx::sec(1));
 
   // Schedule Disassoc request from STA
@@ -263,7 +266,7 @@ TEST_F(AssocTest, DisassocFromSta) {
   simulation::SimDisassocReqFrame disassoc_req_frame(kClientMacAddr, kApBssid,
                                                      kClientDisassocReason);
   *handler =
-      std::bind(&simulation::Environment::Tx, &env_, &disassoc_req_frame, kDefaultTxInfo, this);
+      std::bind(&simulation::Environment::Tx, &env_, disassoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(std::move(handler), zx::sec(2));
 
   env_.Run();
@@ -288,7 +291,7 @@ TEST_F(AssocTest, DisassocFromAp) {
   // Schedule assoc req
   auto handler = std::make_unique<std::function<void()>>();
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid, kApSsid);
-  *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, assoc_req_frame, kDefaultTxInfo, this);
   env_.ScheduleNotification(std::move(handler), zx::sec(1));
 
   // Schedule Disassoc request from AP

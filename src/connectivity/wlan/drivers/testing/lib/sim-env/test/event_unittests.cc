@@ -20,7 +20,8 @@ class EventTest : public ::testing::Test, public simulation::StationIfc {
   ~EventTest() { env_.RemoveStation(this); }
 
   // StationIfc methods
-  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override {}
+  void Rx(std::shared_ptr<const simulation::SimFrame> frame,
+          std::shared_ptr<const simulation::WlanRxInfo> info) override {}
 
   // Testing callbacks
   void SingleEventCallback();
