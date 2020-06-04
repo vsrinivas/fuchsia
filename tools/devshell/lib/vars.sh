@@ -515,6 +515,33 @@ function fx-run-ninja {
     args=("-j" "${concurrency}" "${args[@]}")
   fi
 
+  # Check for a bad element in $PATH.
+  # We build tools in the build, such as touch(1), targeting Fuchsia. Those
+  # tools end up in the root of the build directory, which is also $PWD for
+  # tool invocations. As we don't have hermetic locations for all of these
+  # tools, when a user has an empty/pwd path component in their $PATH,
+  # the Fuchsia target tool will be invoked, and will fail.
+  # Implementation detail: Normally you would split path with IFS or a similar
+  # strategy, but catching the case where the first or last components are
+  # empty can be tricky in that case, so the pattern match strategy here covers
+  # the cases more easily. We check for three cases: empty prefix, empty suffix
+  # and empty inner.
+  case "${PATH}" in
+  :*|*:|*::*)
+    fx-error "Your \$PATH contains an empty element that will result in build failure."
+    fx-error "Remove the empty element from \$PATH and try again."
+    echo "${PATH}" | grep --color -E '^:|::|:$' >&2
+    exit 1
+  ;;
+  .:*|*:.|*:.:*)
+    fx-error "Your \$PATH contains the working directory ('.') that will result in build failure."
+    fx-error "Remove the '.' element from \$PATH and try again."
+    echo "${PATH}" | grep --color -E '^.:|:.:|:.$' >&2
+    exit 1
+  ;;
+  esac
+
+
   # TERM is passed for the pretty ninja UI
   # PATH is passed as some tools are referenced via $PATH due to platform differences.
   # TMPDIR is passed for Goma on macOS.
