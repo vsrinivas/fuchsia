@@ -18,26 +18,24 @@ zx_library("image-format") {
   sdk = "source"
   sdk_headers = [ "lib/image-format/image_format.h" ]
   sources = [ "image_format.cc" ]
-  public_deps = [ "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c" ]
-  deps = [
+  public_deps = [
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
+  ]
+  deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/sysmem-make-tracking",
+    "//zircon/system/ulib/sysmem-version",
   ]
 }
 
+# TODO(dustingreen): Migrate / move anything that's still needed into
+# image-format.
 zx_library("image-format-llcpp") {
   sdk = "source"
   sdk_headers = [ "lib/image-format-llcpp/image-format-llcpp.h" ]
   sources = [ "image-format-llcpp.cc" ]
-  public_deps = [
-    ":image-format",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
-  ]
-  deps = [
-    ":image-format",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
-  ]
+  public_deps = [ ":image-format" ]
 }

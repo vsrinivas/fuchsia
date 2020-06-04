@@ -28,6 +28,8 @@ test("image-format-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/image-format:image-format-llcpp",
+    "//zircon/system/ulib/sysmem-make-tracking",
+    "//zircon/system/ulib/sysmem-version",
   ]
 }
 

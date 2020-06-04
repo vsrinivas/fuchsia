@@ -11,6 +11,8 @@
 
 #include <optional>
 
+// TODO(fxb/53304): We can merge this file and image-format.h, since there's no need to have a
+// separate lib for C vs. LLCPP overloads of these functions.
 namespace image_format {
 
 fuchsia_sysmem_ImageFormatConstraints GetCConstraints(
