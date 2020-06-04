@@ -3,6 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+from __future__ import print_function
+
 from contextlib import contextmanager
 from collections import namedtuple
 import argparse
@@ -14,7 +16,7 @@ import sys
 import uuid
 
 # Standard ELF constants.
-ELFMAG = '\x7fELF'
+ELFMAG = b'\x7fELF'
 EI_CLASS = 4
 ELFCLASS32 = 1
 ELFCLASS64 = 2
@@ -46,6 +48,7 @@ NT_GNU_BUILD_ID = 3
 SHT_SYMTAB = 2
 SHF_ALLOC = 2
 
+IS_PYTHON3 = sys.version_info > (3,)
 
 class elf_note(namedtuple('elf_note', [
         'name',
@@ -58,11 +61,11 @@ class elf_note(namedtuple('elf_note', [
         return (self.name, self.type)
 
     def is_build_id(self):
-        return self.ident() == ('GNU\0', NT_GNU_BUILD_ID)
+        return self.ident() == (b'GNU\0', NT_GNU_BUILD_ID)
 
     def build_id_hex(self):
         if self.is_build_id():
-            return ''.join(('%02x' % ord(byte)) for byte in self.desc)
+            return ''.join(('%02x' % byte) for byte in self.desc)
         return None
 
     def __repr__(self):
@@ -213,7 +216,7 @@ def gen_elf():
                     buffer, offset, *x),
                 pack=lambda x: decoder.pack(*x))
 
-        for name, fields in elf_types.iteritems():
+        for name, fields in elf_types.items():
             if isinstance(fields, tuple):
                 fields = fields[1 if is64 else 0]
             type = namedtuple(name, [field_name for field_name, fmt in fields])
@@ -224,7 +227,7 @@ def gen_elf():
     for elfclass, is64 in [(ELFCLASS32, False), (ELFCLASS64, True)]:
         for elf_bo, struct_bo in [(ELFDATA2LSB, '<'), (ELFDATA2MSB, '>')]:
             yield (
-                (chr(elfclass), chr(elf_bo)),
+                (elfclass, elf_bo),
                 elf(*gen_accessors(is64, struct_bo)))
 
 
@@ -235,17 +238,17 @@ ELF = dict(gen_elf())
 def get_elf_accessor(file):
     # If it looks like an ELF file, whip out the decoder ring.
     if file[:len(ELFMAG)] == ELFMAG:
-        return ELF[file[EI_CLASS], file[EI_DATA]]
+        return ELF[ord(file[EI_CLASS:EI_CLASS+1]), ord(file[EI_DATA:EI_DATA+1])]
     return None
 
 
 def gen_phdrs(file, elf, ehdr):
-    for pos in xrange(0, ehdr.e_phnum * elf.Phdr.size, elf.Phdr.size):
+    for pos in range(0, ehdr.e_phnum * elf.Phdr.size, elf.Phdr.size):
         yield elf.Phdr.read(file, ehdr.e_phoff + pos)
 
 
 def gen_shdrs(file, elf, ehdr):
-    for pos in xrange(0, ehdr.e_shnum * elf.Shdr.size, elf.Shdr.size):
+    for pos in range(0, ehdr.e_shnum * elf.Shdr.size, elf.Shdr.size):
         yield elf.Shdr.read(file, ehdr.e_shoff + pos)
 
 
@@ -382,7 +385,7 @@ with identical contents.  Returns True iff the file was changed."""
             # Create the new file with the same mode as the original.
             with os.fdopen(os.open(stripped_filename,
                                    os.O_WRONLY | os.O_CREAT | os.O_EXCL,
-                                   os.fstat(fd).st_mode & 0777),
+                                   os.fstat(fd).st_mode & 0o777),
                            'wb') as stripped_file:
                 stripped_file.write(self.elf.Ehdr.pack(stripped_ehdr))
                 stripped_file.write(file[self.elf.Ehdr.size:stripped_size])
@@ -399,7 +402,7 @@ def get_elf_info(filename, match_notes=False):
     def gen_notes():
 
         def round_up_to(size):
-            return ((size + 3) / 4) * 4
+            return ((size + 3) // 4) * 4
 
         for phdr in phdrs:
             if phdr.p_type == PT_NOTE:
@@ -409,7 +412,11 @@ def get_elf_info(filename, match_notes=False):
                     pos += elf.Nhdr.size
                     name = file[pos:pos + nhdr.n_namesz]
                     pos += round_up_to(nhdr.n_namesz)
-                    desc = file[pos:pos + nhdr.n_descsz]
+                    # PT_DESC is not always string-ish, just copy the bytes.
+                    if IS_PYTHON3:
+                      desc = file[pos:pos + nhdr.n_descsz]
+                    else:
+                      desc = [ord(b) for b in file[pos:pos + nhdr.n_descsz]]
                     pos += round_up_to(nhdr.n_descsz)
                     yield elf_note(name, nhdr.n_type, desc)
 
@@ -418,7 +425,7 @@ def get_elf_info(filename, match_notes=False):
         if not shdrs:
             return
         strtab_shdr = shdrs[ehdr.e_shstrndx]
-        for shdr, i in zip(shdrs, xrange(len(shdrs))):
+        for shdr, i in zip(shdrs, range(len(shdrs))):
             if i == 0:
                 continue
             assert shdr.sh_name < strtab_shdr.sh_size, (
@@ -429,7 +436,7 @@ def get_elf_info(filename, match_notes=False):
     # until an empty string.
     def gen_strings(start):
         while True:
-            end = file.find('\0', start)
+            end = file.find(b'\0', start)
             assert end >= start, (
                 "%s: Unterminated string at %#x" % (filename, start))
             if start == end:
@@ -477,7 +484,7 @@ def get_elf_info(filename, match_notes=False):
         for dynamic in (phdr for phdr in phdrs if phdr.p_type == PT_DYNAMIC):
             return [
                 elf.Dyn.read(file, dynamic.p_offset + dyn_offset)
-                for dyn_offset in xrange(0, dynamic.p_filesz, elf.Dyn.size)
+                for dyn_offset in range(0, dynamic.p_filesz, elf.Dyn.size)
             ]
         return None
 
@@ -520,7 +527,7 @@ def get_elf_info(filename, match_notes=False):
     def get_stripped():
         return all(
             (shdr.sh_flags & SHF_ALLOC) != 0 or
-            (shdr.sh_type != SHT_SYMTAB and not name.startswith('.debug_'))
+            (shdr.sh_type != SHT_SYMTAB and not name.startswith(b'.debug_'))
             for shdr, name in gen_sections())
 
     def get_memory_size():
@@ -603,19 +610,21 @@ def get_elf_info(filename, match_notes=False):
         # Decode file_paths portion of DWARF .debug_line format.
         def gen_file_paths(start, limit):
             while start < limit:
-                end = file.find('\0', start, limit)
+                end = file.find(b'\0', start, limit)
                 assert end >= start, (
                     "%s: Unterminated string at %#x" % (filename, start))
                 if start == end:
                     break
-                name = file[start:end]
+                name = file[start:end].decode()
                 start = end + 1
                 # Decode 3 ULEB128s to advance start, but only use the first.
                 for i in range(3):
                     value = 0
                     bits = 0
                     while start < limit:
-                        byte = ord(file[start])
+                        # TODO(48946): Remove this single-element slice hack
+                        # once Python2 is no longer used in-tree.
+                        byte = ord(file[start:start+1])
                         start += 1
                         value |= (byte & 0x7f) << bits
                         if (byte & 0x80) == 0:
@@ -743,7 +752,7 @@ def main():
                  for info in (get_elf_info(file) for file in files) if info]
         totals = {}
         for file in sizes:
-            for key, val in file.iteritems():
+            for key, val in file.items():
                 if isinstance(val, int):
                     totals[key] = totals.get(key, 0) + val
         with open(args.sizes, 'w') as outf:
@@ -756,13 +765,13 @@ def main():
           if args.strip:
               stripped_filename = info.filename + '.ei-strip'
               info.strip(stripped_filename)
-              print stripped_filename
+              print(stripped_filename)
           elif args.build_id:
-              print info.build_id
+              print(info.build_id)
           else:
-              print info
+              print(info)
               for source in info.get_sources():
-                  print '\t' + source
+                  print('\t' + source)
 
     return 0
 
