@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/paver-test"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ],
+        "services": [
+            "fuchsia.exception.Handler",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}
+

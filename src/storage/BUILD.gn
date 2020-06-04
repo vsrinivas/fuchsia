@@ -15,6 +15,7 @@ group("tests") {
     "ext4:tests",
     "fs-management-tests:tests",
     "fs_test:tests",
+    "lib:tests",
     "volume_image:tests",
   ]
 }

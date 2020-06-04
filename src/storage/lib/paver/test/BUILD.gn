@@ -4,18 +4,10 @@
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
 
-group("test") {
-  testonly = true
-  deps = [ ":paver-test" ]
-}
-
-test("paver-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
+test("test") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -76,6 +68,25 @@ test("paver-test") {
   ]
 }
 
+devmgr_manifest("devmgr-manifest") {
+}
+
+test_package("paver-test") {
+  deps = [
+    ":devmgr-manifest",
+    ":test",
+  ]
+
+  extra = [ "$target_gen_dir/devmgr.manifest" ]
+
+  tests = [
+    {
+      name = "paver-test"
+      environments = basic_envs
+    },
+  ]
+}
+
 fuzzer("paver-validation-fuzzer") {
   sources = [ "validation-fuzzer.cc" ]
 
@@ -98,4 +109,8 @@ fuzzer("paver-validation-fuzzer") {
     "//src/storage/lib/paver",
     "..",
   ]
+}
+
+fuzzers_package("paver-fuzzers") {
+  fuzzers = [ ":paver-validation-fuzzer" ]
 }

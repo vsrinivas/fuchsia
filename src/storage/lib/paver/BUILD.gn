@@ -4,6 +4,14 @@
 
 import("//build/unification/zx_library.gni")
 
+group("tests") {
+  testonly = true
+  deps = [
+    "test:paver-test",
+    "test:paver-fuzzers"
+  ]
+}
+
 zx_library("paver") {
   sdk = "source"
   sdk_headers = [ "lib/paver/provider.h" ]
