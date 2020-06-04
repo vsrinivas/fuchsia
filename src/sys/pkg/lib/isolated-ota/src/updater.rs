@@ -147,7 +147,6 @@ pub mod tests {
             Package, PackageBuilder, Repository, RepositoryBuilder, SystemImageBuilder,
         },
         fuchsia_zircon as zx,
-        itertools::Itertools,
         mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
         pkgfs,
         std::collections::HashMap,
@@ -162,6 +161,7 @@ pub mod tests {
         paver_builder: MockPaverServiceBuilder,
         packages: Vec<Package>,
         images: HashMap<String, Vec<u8>>,
+        repo_url: String,
     }
 
     impl UpdaterBuilder {
@@ -170,6 +170,7 @@ pub mod tests {
                 paver_builder: MockPaverServiceBuilder::new(),
                 packages: vec![SystemImageBuilder::new().build().await],
                 images: HashMap::new(),
+                repo_url: TEST_REPO_URL.to_owned(),
             }
         }
 
@@ -192,20 +193,24 @@ pub mod tests {
         }
 
         fn generate_packages(&self) -> String {
-            // FIXME(51061): switch to new update package format.
-            format!(
-                "{}",
-                self.packages.iter().format_with("\n", |p, f| f(&format_args!(
-                    "{}/0={}",
-                    p.name(),
-                    p.meta_far_merkle_root()
-                )))
-            )
+            let package_urls: Vec<String> = self
+                .packages
+                .iter()
+                .map(|p| {
+                    format!("{}/{}/0?hash={}", self.repo_url, p.name(), p.meta_far_merkle_root())
+                })
+                .collect();
+
+            let packages_json = serde_json::json!({
+                "version": "1",
+                "content": package_urls
+            });
+            serde_json::to_string(&packages_json).unwrap()
         }
 
         pub async fn build(self) -> UpdaterForTest {
             let mut update = PackageBuilder::new("update")
-                .add_resource_at("packages", self.generate_packages().as_bytes());
+                .add_resource_at("packages.json", self.generate_packages().as_bytes());
             for (name, data) in self.images.iter() {
                 update = update.add_resource_at(name, data.as_slice());
             }
@@ -230,6 +235,7 @@ pub mod tests {
                 paver,
                 packages: self.packages,
                 update_merkle_root: *update.meta_far_merkle_root(),
+                repo_url: self.repo_url,
             }
         }
 
@@ -243,6 +249,7 @@ pub mod tests {
         pub paver: Arc<MockPaverService>,
         pub packages: Vec<Package>,
         pub update_merkle_root: Hash,
+        pub repo_url: String,
     }
 
     impl UpdaterForTest {
@@ -258,7 +265,7 @@ pub mod tests {
             });
 
             let resolver =
-                ResolverForTest::new(self.repo, TEST_REPO_URL, Some(TEST_CHANNEL.to_owned()))
+                ResolverForTest::new(self.repo, &self.repo_url, Some(TEST_CHANNEL.to_owned()))
                     .await
                     .expect("Creating resolver");
             let (client, server) = zx::Channel::create().expect("creating channel");

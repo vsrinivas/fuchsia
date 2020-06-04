@@ -139,7 +139,7 @@ pub mod tests {
     impl ResolverForTest {
         pub async fn new(
             repo: Arc<Repository>,
-            repo_path: &'static str,
+            repo_path: &str,
             channel: Option<String>,
         ) -> Result<Self, Error> {
             let cache = CacheForTest::new().context("launching cache")?;
