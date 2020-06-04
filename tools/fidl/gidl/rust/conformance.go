@@ -277,6 +277,7 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictUnionUnknownField:    "UnknownUnionTag",
 	gidlir.StrictBitsUnknownBit:       "Invalid",
 	gidlir.StrictEnumUnknownValue:     "Invalid",
+	gidlir.ExceededMaxOutOfLineDepth:  "MaxRecursionDepth",
 }
 
 func rustErrorCode(code gidlir.ErrorCode) (string, error) {

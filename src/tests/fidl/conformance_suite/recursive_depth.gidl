@@ -1,0 +1,167 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+
+success("RecusiveOptionalStructUnderLimit") {
+    bindings_allowlist = [llcpp, rust],
+    value = RecursiveOptionalStruct { // 0
+    inner: RecursiveOptionalStruct { // 1
+    inner: RecursiveOptionalStruct { // 2
+    inner: RecursiveOptionalStruct { // 3
+    inner: RecursiveOptionalStruct { // 4
+    inner: RecursiveOptionalStruct { // 5
+    inner: RecursiveOptionalStruct { // 6
+    inner: RecursiveOptionalStruct { // 7
+    inner: RecursiveOptionalStruct { // 8
+    inner: RecursiveOptionalStruct { // 9
+    inner: RecursiveOptionalStruct { // 10
+    inner: RecursiveOptionalStruct { // 11
+    inner: RecursiveOptionalStruct { // 12
+    inner: RecursiveOptionalStruct { // 13
+    inner: RecursiveOptionalStruct { // 14
+    inner: RecursiveOptionalStruct { // 15
+    inner: RecursiveOptionalStruct { // 16
+    inner: RecursiveOptionalStruct { // 17
+    inner: RecursiveOptionalStruct { // 18
+    inner: RecursiveOptionalStruct { // 19
+    inner: RecursiveOptionalStruct { // 20
+    inner: RecursiveOptionalStruct { // 21
+    inner: RecursiveOptionalStruct { // 22
+    inner: RecursiveOptionalStruct { // 23
+    inner: RecursiveOptionalStruct { // 24
+    inner: RecursiveOptionalStruct { // 25
+    inner: RecursiveOptionalStruct { // 26
+    inner: RecursiveOptionalStruct { // 27
+    inner: RecursiveOptionalStruct { // 28
+    inner: RecursiveOptionalStruct { // 29
+    inner: RecursiveOptionalStruct { // 30
+    inner: RecursiveOptionalStruct { // 31
+    inner: RecursiveOptionalStruct { // 32
+        inner: null,
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    },
+    bytes = {
+        v1 = [
+            repeat(0xff):256, // 0 - 31
+            repeat(0x00):8, // 32
+        ]
+    }
+}
+
+encode_failure("RecusiveOptionalStructExceedLimit") {
+    bindings_allowlist = [llcpp, rust],
+    value = RecursiveOptionalStruct { // 0
+    inner: RecursiveOptionalStruct { // 1
+    inner: RecursiveOptionalStruct { // 2
+    inner: RecursiveOptionalStruct { // 3
+    inner: RecursiveOptionalStruct { // 4
+    inner: RecursiveOptionalStruct { // 5
+    inner: RecursiveOptionalStruct { // 6
+    inner: RecursiveOptionalStruct { // 7
+    inner: RecursiveOptionalStruct { // 8
+    inner: RecursiveOptionalStruct { // 9
+    inner: RecursiveOptionalStruct { // 10
+    inner: RecursiveOptionalStruct { // 11
+    inner: RecursiveOptionalStruct { // 12
+    inner: RecursiveOptionalStruct { // 13
+    inner: RecursiveOptionalStruct { // 14
+    inner: RecursiveOptionalStruct { // 15
+    inner: RecursiveOptionalStruct { // 16
+    inner: RecursiveOptionalStruct { // 17
+    inner: RecursiveOptionalStruct { // 18
+    inner: RecursiveOptionalStruct { // 19
+    inner: RecursiveOptionalStruct { // 20
+    inner: RecursiveOptionalStruct { // 21
+    inner: RecursiveOptionalStruct { // 22
+    inner: RecursiveOptionalStruct { // 23
+    inner: RecursiveOptionalStruct { // 24
+    inner: RecursiveOptionalStruct { // 25
+    inner: RecursiveOptionalStruct { // 26
+    inner: RecursiveOptionalStruct { // 27
+    inner: RecursiveOptionalStruct { // 28
+    inner: RecursiveOptionalStruct { // 29
+    inner: RecursiveOptionalStruct { // 30
+    inner: RecursiveOptionalStruct { // 31
+    inner: RecursiveOptionalStruct { // 32
+    inner: RecursiveOptionalStruct { // 33
+        inner: null,
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    },
+    err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
+}
+
+decode_failure("RecusiveOptionalStructExceedLimitDecode") {
+    bindings_allowlist = [llcpp, rust],
+    type = RecursiveOptionalStruct,
+    bytes = {
+        v1 = [
+            repeat(0xff):264, // 0 - 32
+            repeat(0x00):8, // 32
+        ]
+    },
+    err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
+}

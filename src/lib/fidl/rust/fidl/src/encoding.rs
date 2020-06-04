@@ -236,22 +236,6 @@ impl<'a> Encoder<'a> {
         x.encode(&mut encoder)
     }
 
-    /// Runs the provided closure at at the next recursion depth level,
-    /// erroring if the maximum recursion limit has been reached.
-    pub fn recurse<F, R>(&mut self, f: F) -> Result<R>
-    where
-        F: FnOnce(&mut Encoder<'_>) -> Result<R>,
-    {
-        if self.remaining_depth == 0 {
-            return Err(Error::MaxRecursionDepth);
-        }
-
-        self.remaining_depth -= 1;
-        let res = f(self)?;
-        self.remaining_depth += 1;
-        Ok(res)
-    }
-
     /// Returns a slice of the next `len` bytes after `offset` and increases `offset` by `len`.
     pub fn next_slice(&mut self, len: usize) -> Result<&mut [u8]> {
         let ret = self.buf.get_mut(self.offset..(self.offset + len)).ok_or(Error::OutOfRange)?;
@@ -305,7 +289,12 @@ impl<'a> Encoder<'a> {
         self.offset = self.buf.len();
         // Create space for the new data
         self.reserve_out_of_line(len);
+        if self.remaining_depth == 0 {
+            return Err(Error::MaxRecursionDepth);
+        }
+        self.remaining_depth -= 1;
         f(self)?;
+        self.remaining_depth += 1;
         self.offset = old_offset;
         Ok(())
     }
@@ -442,22 +431,6 @@ impl<'a> Decoder<'a> {
         Ok(())
     }
 
-    /// Runs the provided closure at at the next recursion depth level,
-    /// erroring if the maximum recursion limit has been reached.
-    pub fn recurse<F, R>(&mut self, f: F) -> Result<R>
-    where
-        F: FnOnce(&mut Decoder<'_>) -> Result<R>,
-    {
-        if self.remaining_depth == 0 {
-            return Err(Error::MaxRecursionDepth);
-        }
-
-        self.remaining_depth -= 1;
-        let res = f(self)?;
-        self.remaining_depth += 1;
-        Ok(res)
-    }
-
     /// Runs the provided closure inside an decoder modified
     /// to read out-of-line data.
     ///
@@ -468,7 +441,13 @@ impl<'a> Decoder<'a> {
         F: FnOnce(&mut Decoder<'_>) -> Result<R>,
     {
         let (old_buf, old_initial_buf_len) = self.before_read_out_of_line(len)?;
+        if self.remaining_depth == 0 {
+            return Err(Error::MaxRecursionDepth);
+        }
+
+        self.remaining_depth -= 1;
         let res = f(self);
+        self.remaining_depth += 1;
 
         // Set the current `buf` back to its original position.
         //
@@ -869,21 +848,17 @@ impl Decodable for i8 {
 }
 
 fn encode_array<T: Encodable>(encoder: &mut Encoder<'_>, slice: &mut [T]) -> Result<()> {
-    encoder.recurse(|encoder| {
-        for item in slice {
-            item.encode(encoder)?;
-        }
-        Ok(())
-    })
+    for item in slice {
+        item.encode(encoder)?;
+    }
+    Ok(())
 }
 
 fn decode_array<T: Decodable>(decoder: &mut Decoder<'_>, slice: &mut [T]) -> Result<()> {
-    decoder.recurse(|decoder| {
-        for item in slice {
-            item.decode(decoder)?;
-        }
-        Ok(())
-    })
+    for item in slice {
+        item.decode(decoder)?;
+    }
+    Ok(())
 }
 
 macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
@@ -970,12 +945,10 @@ where
             }
             let bytes_len = iter.len() * encoder.inline_size_of::<T>();
             encoder.write_out_of_line(bytes_len, |encoder| {
-                encoder.recurse(|encoder| {
-                    for mut item in iter {
-                        item.encode(encoder)?;
-                    }
-                    Ok(())
-                })
+                for mut item in iter {
+                    item.encode(encoder)?;
+                }
+                Ok(())
             })
         }
     }
@@ -1025,15 +998,13 @@ fn decode_vec<T: Decodable>(decoder: &mut Decoder<'_>, vec: &mut Vec<T>) -> Resu
     let len = len as usize;
     let bytes_len = len * decoder.inline_size_of::<T>();
     decoder.read_out_of_line(bytes_len, |decoder| {
-        decoder.recurse(|decoder| {
-            vec.truncate(0);
-            for _ in 0..len {
-                vec.push(T::new_empty());
-                // We just pushed an element on, so the `unwrap` will succeed.
-                vec.last_mut().unwrap().decode(decoder)?;
-            }
-            Ok(true)
-        })
+        vec.truncate(0);
+        for _ in 0..len {
+            vec.push(T::new_empty());
+            // We just pushed an element on, so the `unwrap` will succeed.
+            vec.last_mut().unwrap().decode(decoder)?;
+        }
+        Ok(true)
     })
 }
 
@@ -1685,20 +1656,18 @@ macro_rules! fidl_struct {
 
         impl $crate::encoding::Encodable for $name {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
-                encoder.recurse(|encoder| {
-                    let mut cur_offset = 0;
-                    $(
-                        // Skip to the start of the next field
-                        let member_offset = $member_offset_v1;
-                        encoder.padding(member_offset - cur_offset)?;
-                        cur_offset = member_offset;
-                        $crate::fidl_encode!(&mut self.$member_name, encoder)?;
-                        cur_offset += encoder.inline_size_of::<$member_ty>();
-                    )*
-                    // Skip to the end of the struct's size
-                    encoder.padding(encoder.inline_size_of::<Self>() - cur_offset)?;
-                    Ok(())
-                })
+                let mut cur_offset = 0;
+                $(
+                    // Skip to the start of the next field
+                    let member_offset = $member_offset_v1;
+                    encoder.padding(member_offset - cur_offset)?;
+                    cur_offset = member_offset;
+                    $crate::fidl_encode!(&mut self.$member_name, encoder)?;
+                    cur_offset += encoder.inline_size_of::<$member_ty>();
+                )*
+                // Skip to the end of the struct's size
+                encoder.padding(encoder.inline_size_of::<Self>() - cur_offset)?;
+                Ok(())
             }
         }
 
@@ -1712,20 +1681,18 @@ macro_rules! fidl_struct {
             }
 
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>) -> $crate::Result<()> {
-                decoder.recurse(|decoder| {
-                    let mut cur_offset = 0;
-                    $(
-                        // Skip to the start of the next field
-                        let member_offset = $member_offset_v1;
-                        decoder.skip_padding(member_offset - cur_offset)?;
-                        cur_offset = member_offset;
-                        $crate::fidl_decode!(&mut self.$member_name, decoder)?;
-                        cur_offset += decoder.inline_size_of::<$member_ty>();
-                    )*
-                    // Skip to the end of the struct's size
-                    decoder.skip_padding(decoder.inline_size_of::<Self>() - cur_offset)?;
-                    Ok(())
-                })
+                let mut cur_offset = 0;
+                $(
+                    // Skip to the start of the next field
+                    let member_offset = $member_offset_v1;
+                    decoder.skip_padding(member_offset - cur_offset)?;
+                    cur_offset = member_offset;
+                    $crate::fidl_decode!(&mut self.$member_name, decoder)?;
+                    cur_offset += decoder.inline_size_of::<$member_ty>();
+                )*
+                // Skip to the end of the struct's size
+                decoder.skip_padding(decoder.inline_size_of::<Self>() - cur_offset)?;
+                Ok(())
             }
         }
 
@@ -1826,13 +1793,11 @@ pub fn decode_unknown_table_field(decoder: &mut Decoder<'_>) -> Result<()> {
 
     match present {
         ALLOC_PRESENT_U64 => decoder.read_out_of_line(num_bytes as usize, |decoder| {
-            decoder.recurse(|decoder| {
-                decoder.next_slice(num_bytes as usize)?;
-                for _ in 0..num_handles {
-                    decoder.take_handle()?;
-                }
-                Ok(())
-            })
+            decoder.next_slice(num_bytes as usize)?;
+            for _ in 0..num_handles {
+                decoder.take_handle()?;
+            }
+            Ok(())
         }),
         ALLOC_ABSENT_U64 => {
             if num_bytes != 0 {
@@ -1895,7 +1860,6 @@ macro_rules! fidl_table {
                 $crate::encoding::ALLOC_PRESENT_U64.encode(encoder)?;
                 let bytes_len = (max_ordinal as usize) * 16; // 16 = ENVELOPE_INLINE_SIZE
                 encoder.write_out_of_line(bytes_len, |encoder| {
-                    encoder.recurse(|encoder| {
                         let mut next_ordinal_to_write = 1;
                         for (ordinal, encodable) in members.iter_mut() {
                             let ordinal = *ordinal;
@@ -1911,7 +1875,6 @@ macro_rules! fidl_table {
                             next_ordinal_to_write += 1;
                         }
                         Ok(())
-                    })
                 })
             }
         }
@@ -2044,21 +2007,19 @@ where
             Ok(val) => {
                 // Encode success ordinal
                 1u64.encode(encoder)?;
-                encoder.recurse(|encoder|
-                    // If the inline size is 0, meaning the type is (),
-                    // encode a zero byte instead because () in this context
-                    // means an empty struct, not an absent payload.
-                    if encoder.inline_size_of::<O>() == 0 {
-                        encode_in_envelope(&mut Some(&mut 0u8), encoder)
-                    } else {
-                        encode_in_envelope(&mut Some(val), encoder)
-                    }
-                )
+                // If the inline size is 0, meaning the type is (),
+                // encode a zero byte instead because () in this context
+                // means an empty struct, not an absent payload.
+                if encoder.inline_size_of::<O>() == 0 {
+                    encode_in_envelope(&mut Some(&mut 0u8), encoder)
+                } else {
+                    encode_in_envelope(&mut Some(val), encoder)
+                }
             }
             Err(val) => {
                 // Encode error ordinal
                 2u64.encode(encoder)?;
-                encoder.recurse(|encoder| encode_in_envelope(&mut Some(val), encoder))
+                encode_in_envelope(&mut Some(val), encoder)
             }
         }
     }
@@ -2086,38 +2047,36 @@ where
             _ => return Err(Error::UnknownUnionTag),
         };
         decoder.read_out_of_line(member_inline_size, |decoder| {
-            decoder.recurse(|decoder| {
-                match ordinal {
-                    1 => {
-                        if let Ok(_) = self {
-                            // Do nothing, read the value into the object
-                        } else {
-                            // Initialize `self` to the right variant
-                            *self = Ok(fidl_new_empty!(O));
-                        }
-                        if let Ok(val) = self {
-                            val.decode(decoder)
-                        } else {
-                            unreachable!()
-                        }
+            match ordinal {
+                1 => {
+                    if let Ok(_) = self {
+                        // Do nothing, read the value into the object
+                    } else {
+                        // Initialize `self` to the right variant
+                        *self = Ok(fidl_new_empty!(O));
                     }
-                    2 => {
-                        if let Err(_) = self {
-                            // Do nothing, read the value into the object
-                        } else {
-                            // Initialize `self` to the right variant
-                            *self = Err(fidl_new_empty!(E));
-                        }
-                        if let Err(val) = self {
-                            val.decode(decoder)
-                        } else {
-                            unreachable!()
-                        }
+                    if let Ok(val) = self {
+                        val.decode(decoder)
+                    } else {
+                        unreachable!()
                     }
-                    // Should be unreachable, since we already checked above.
-                    ordinal => panic!("unexpected ordinal {:?}", ordinal),
                 }
-            })
+                2 => {
+                    if let Err(_) = self {
+                        // Do nothing, read the value into the object
+                    } else {
+                        // Initialize `self` to the right variant
+                        *self = Err(fidl_new_empty!(E));
+                    }
+                    if let Err(val) = self {
+                        val.decode(decoder)
+                    } else {
+                        unreachable!()
+                    }
+                }
+                // Should be unreachable, since we already checked above.
+                ordinal => panic!("unexpected ordinal {:?}", ordinal),
+            }
         })
     }
 }
@@ -2178,7 +2137,6 @@ macro_rules! fidl_xunion {
                 let mut ordinal = self.ordinal();
                 // Encode ordinal
                 $crate::fidl_encode!(&mut ordinal, encoder)?;
-                encoder.recurse(|encoder| {
                     match self {
                         $(
                             $name::$member_name ( val ) => $crate::encoding::encode_in_envelope(&mut Some(val), encoder),
@@ -2199,7 +2157,6 @@ macro_rules! fidl_xunion {
                             },
                         )?
                     }
-                })
             }
         }
 
@@ -2236,7 +2193,6 @@ macro_rules! fidl_xunion {
                 };
 
                 decoder.read_out_of_line(member_inline_size, |decoder| {
-                    decoder.recurse(|decoder| {
                         match ordinal {
                             $(
                                 $member_ordinal => {
@@ -2271,7 +2227,6 @@ macro_rules! fidl_xunion {
                             ordinal => panic!("unexpected ordinal {:?}", ordinal)
                         }
                         Ok(())
-                    })
                 })
             }
         }
@@ -2496,23 +2451,21 @@ macro_rules! tuple_impls {
                   $( $ntyp: Encodable,)*
         {
             fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-                encoder.recurse(|encoder| {
-                    let mut cur_offset = 0;
-                    self.$idx.encode(encoder)?;
-                    cur_offset += encoder.inline_size_of::<$typ>();
-                    $(
-                        // Skip to the start of the next field
-                        let member_offset =
-                            round_up_to_align(cur_offset, encoder.inline_align_of::<$ntyp>());
-                        encoder.padding(member_offset - cur_offset)?;
-                        cur_offset = member_offset;
-                        self.$nidx.encode(encoder)?;
-                        cur_offset += encoder.inline_size_of::<$ntyp>();
-                    )*
-                    // Skip to the end of the struct's size
-                    encoder.padding(encoder.inline_size_of::<Self>() - cur_offset)?;
-                    Ok(())
-                })
+                let mut cur_offset = 0;
+                self.$idx.encode(encoder)?;
+                cur_offset += encoder.inline_size_of::<$typ>();
+                $(
+                    // Skip to the start of the next field
+                    let member_offset =
+                        round_up_to_align(cur_offset, encoder.inline_align_of::<$ntyp>());
+                    encoder.padding(member_offset - cur_offset)?;
+                    cur_offset = member_offset;
+                    self.$nidx.encode(encoder)?;
+                    cur_offset += encoder.inline_size_of::<$ntyp>();
+                )*
+                // Skip to the end of the struct's size
+                encoder.padding(encoder.inline_size_of::<Self>() - cur_offset)?;
+                Ok(())
             }
         }
 
@@ -2530,23 +2483,21 @@ macro_rules! tuple_impls {
             }
 
             fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
-                decoder.recurse(|decoder| {
-                    let mut cur_offset = 0;
-                    self.$idx.decode(decoder)?;
-                    cur_offset += decoder.inline_size_of::<$typ>();
-                    $(
-                        // Skip to the start of the next field
-                        let member_offset =
-                            round_up_to_align(cur_offset, decoder.inline_align_of::<$ntyp>());
-                        decoder.skip_padding(member_offset - cur_offset)?;
-                        cur_offset = member_offset;
-                        self.$nidx.decode(decoder)?;
-                        cur_offset += decoder.inline_size_of::<$ntyp>();
-                    )*
-                    // Skip to the end of the struct's size
-                    decoder.skip_padding(decoder.inline_size_of::<Self>() - cur_offset)?;
-                    Ok(())
-                })
+                let mut cur_offset = 0;
+                self.$idx.decode(decoder)?;
+                cur_offset += decoder.inline_size_of::<$typ>();
+                $(
+                    // Skip to the start of the next field
+                    let member_offset =
+                        round_up_to_align(cur_offset, decoder.inline_align_of::<$ntyp>());
+                    decoder.skip_padding(member_offset - cur_offset)?;
+                    cur_offset = member_offset;
+                    self.$nidx.decode(decoder)?;
+                    cur_offset += decoder.inline_size_of::<$ntyp>();
+                )*
+                // Skip to the end of the struct's size
+                decoder.skip_padding(decoder.inline_size_of::<Self>() - cur_offset)?;
+                Ok(())
             }
         }
     }

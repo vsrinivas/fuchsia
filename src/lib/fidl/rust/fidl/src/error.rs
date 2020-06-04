@@ -62,8 +62,8 @@ pub enum Error {
         non_zero_pos: usize,
     },
 
-    /// The FIDL object had too many layers of structural recursion.
-    #[error("The FIDL object had too many layers of structural recursion.")]
+    /// The FIDL object had too many layers of out-of-line recursion.
+    #[error("The FIDL object had too many layers of out-of-line recursion.")]
     MaxRecursionDepth,
 
     /// There was an attempt read or write a null-valued object as a non-nullable type.

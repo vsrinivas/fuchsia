@@ -19,6 +19,7 @@ fidl("conformance_fidl") {
     "//src/tests/fidl/conformance_suite/mix_and_match.test.fidl",
     "//src/tests/fidl/conformance_suite/optionals.test.fidl",
     "//src/tests/fidl/conformance_suite/primitives.test.fidl",
+    "//src/tests/fidl/conformance_suite/recursive_depth.test.fidl",
     "//src/tests/fidl/conformance_suite/strings.test.fidl",
     "//src/tests/fidl/conformance_suite/structs.test.fidl",
     "//src/tests/fidl/conformance_suite/tables.test.fidl",

@@ -17,6 +17,7 @@ const (
 	StrictUnionUnknownField              = "STRICT_UNION_UNKNOWN_FIELD"
 	StrictBitsUnknownBit                 = "STRICT_BITS_UNKNOWN_BIT"
 	StrictEnumUnknownValue               = "STRICT_ENUM_UNKOWN_VALUE"
+	ExceededMaxOutOfLineDepth            = "EXCEEDED_MAX_OUT_OF_LINE_DEPTH"
 )
 
 var AllErrorCodes = map[ErrorCode]struct{}{
@@ -27,4 +28,5 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	StrictUnionUnknownField:    {},
 	StrictBitsUnknownBit:       {},
 	StrictEnumUnknownValue:     {},
+	ExceededMaxOutOfLineDepth:  {},
 }
