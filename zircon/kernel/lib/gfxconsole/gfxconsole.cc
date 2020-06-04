@@ -138,7 +138,7 @@ static bool gfxconsole_putc(char c) {
   return inval;
 }
 
-static void gfxconsole_print_callback(print_callback_t* cb, const char* str, size_t len) {
+static void gfxconsole_print_callback(PrintCallback* cb, const char* str, size_t len) {
   int refresh_full_screen = 0;
   for (size_t i = 0; i < len; i++) {
     if (str[i] == '\n')
@@ -164,7 +164,7 @@ static void gfxconsole_print_callback(print_callback_t* cb, const char* str, siz
   }
 }
 
-static print_callback_t cb = {.entry = {}, .print = gfxconsole_print_callback, .context = NULL};
+static PrintCallback cb{gfxconsole_print_callback};
 
 static void gfxconsole_setup(gfx_surface* surface, gfx_surface* hw_surface) {
   const char* fname = gCmdline.GetString("gfxconsole.font");

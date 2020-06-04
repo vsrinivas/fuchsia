@@ -13,7 +13,6 @@
 #include <lib/io.h>
 #include <platform.h>
 #include <string.h>
-#include <zircon/listnode.h>
 
 #include <arch/ops.h>
 #include <kernel/auto_lock.h>
@@ -33,18 +32,15 @@ void __kernel_serial_write(const char* str, size_t len) {
 }
 
 static SpinLock print_spin_lock;
-static struct list_node print_callbacks = LIST_INITIAL_VALUE(print_callbacks);
+static fbl::DoublyLinkedList<PrintCallback*> print_callbacks;
 
 void __kernel_console_write(const char* str, size_t len) {
-  print_callback_t* cb;
-
-  /* print to any registered loggers */
-  if (!list_is_empty(&print_callbacks)) {
+  // Print to any registered loggers.
+  if (!print_callbacks.is_empty()) {
     AutoSpinLock guard(&print_spin_lock);
 
-    list_for_every_entry (&print_callbacks, cb, print_callback_t, entry) {
-      if (cb->print)
-        cb->print(cb, str, len);
+    for (PrintCallback& print_callback : print_callbacks) {
+      print_callback.Print(str, len);
     }
   }
 }
@@ -103,16 +99,16 @@ static constexpr auto kStdoutWrite = __kernel_stdout_write;
 
 #endif  // WITH_DEBUG_LINEBUFFER
 
-void register_print_callback(print_callback_t* cb) {
+void register_print_callback(PrintCallback* cb) {
   AutoSpinLock guard(&print_spin_lock);
 
-  list_add_head(&print_callbacks, &cb->entry);
+  print_callbacks.push_front(cb);
 }
 
-void unregister_print_callback(print_callback_t* cb) {
+void unregister_print_callback(PrintCallback* cb) {
   AutoSpinLock guard(&print_spin_lock);
 
-  list_delete(&cb->entry);
+  print_callbacks.erase(*cb);
 }
 
 // This is what printf calls.  Really this could and should be const.

@@ -10,27 +10,37 @@
 
 #include <sys/types.h>
 #include <zircon/compiler.h>
-#include <zircon/listnode.h>
+
+#include <fbl/intrusive_double_list.h>
 
 /* LK specific calls to register to get input/output of the main console */
 
-__BEGIN_CDECLS
+class PrintCallback : public fbl::DoublyLinkedListable<PrintCallback*> {
+ public:
+  PrintCallback(const PrintCallback&) = delete;
+  PrintCallback(PrintCallback&&) = delete;
+  PrintCallback& operator=(const PrintCallback&) = delete;
+  PrintCallback& operator=(PrintCallback&&) = delete;
 
-typedef struct __print_callback print_callback_t;
-struct __print_callback {
-  struct list_node entry;
-  void (*print)(print_callback_t* cb, const char* str, size_t len);
-  void* context;
+  using Callback = void(PrintCallback* cb, const char* str, size_t len);
+
+  constexpr explicit PrintCallback(Callback* callback) : callback_(callback) {}
+
+  void Print(const char* str, size_t len) {
+    if (callback_)
+      callback_(this, str, len);
+  }
+
+ private:
+  Callback* callback_;
 };
 
 /* register callback to receive debug prints */
-void register_print_callback(print_callback_t* cb);
-void unregister_print_callback(print_callback_t* cb);
+void register_print_callback(PrintCallback* cb);
+void unregister_print_callback(PrintCallback* cb);
 
 /* back doors to directly write to the kernel serial and console */
 void __kernel_serial_write(const char* str, size_t len);
 void __kernel_console_write(const char* str, size_t len);
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_IO_INCLUDE_LIB_IO_H_
