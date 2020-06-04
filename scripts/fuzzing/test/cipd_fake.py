@@ -10,19 +10,19 @@ from lib.cipd import Cipd
 from lib.corpus import Corpus
 from lib.fuzzer import Fuzzer
 
-from device_mock import MockDevice
+from device_fake import FakeDevice
 
 
-class MockCipd(Cipd):
+class FakeCipd(Cipd):
 
     def __init__(self):
-        fuzzer = Fuzzer(MockDevice(), u'mock-package1', u'mock-target3')
+        fuzzer = Fuzzer(FakeDevice(), u'fake-package1', u'fake-target3')
         self.versions = []
-        super(MockCipd, self).__init__(Corpus(fuzzer))
+        super(FakeCipd, self).__init__(Corpus(fuzzer))
 
     def _cipd(self, cmd, cwd=None, quiet=False):
         """Overrides Cipd._cipd for testing."""
-        super(MockCipd, self)._cipd(cmd, cwd, quiet)
+        super(FakeCipd, self)._cipd(cmd, cwd, quiet)
         if cmd[0] == 'install' or cmd[0] == 'create':
             return 'ok'
         elif cmd[0] == 'instances':

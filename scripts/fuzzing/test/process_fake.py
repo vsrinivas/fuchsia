@@ -7,17 +7,17 @@ import test_env
 from lib.process import Process
 
 
-class MockProcess(Process):
-    """A mock for process creation and execution.
+class FakeProcess(Process):
+    """A fake for process creation and execution.
 
        Instead of actually running subprocesses, this class just records
-       commands. Other mocks can additionally add canned responses.
+       commands. Other fakes can additionally add canned responses.
     """
 
     def __init__(self, host, args, **kwargs):
         self.host = host
         self.response = ''
-        super(MockProcess, self).__init__(args, **kwargs)
+        super(FakeProcess, self).__init__(args, **kwargs)
 
     def popen(self):
         line = ''
@@ -25,7 +25,7 @@ class MockProcess(Process):
             line += 'CWD=%s ' % self.cwd
         line += ' '.join(self.args)
         self.host.history.append(line)
-        return MockPopen(self.host, self.response)
+        return FakePopen(self.host, self.response)
 
     def call(self):
         p = self.popen()
@@ -39,13 +39,13 @@ class MockProcess(Process):
         return self.response
 
 
-class MockPopen(object):
-    """Mocks subprocess.Popen for MockProcess."""
+class FakePopen(object):
+    """Fakes subprocess.Popen for FakeProcess."""
 
     def __init__(self, host, response):
         self.host = host
         self.returncode = 0
-        self.stderr = MockPipe()
+        self.stderr = FakePipe()
         if response:
             self.response = response
         else:
@@ -61,7 +61,7 @@ class MockPopen(object):
         return 0
 
 
-class MockPipe(object):
+class FakePipe(object):
 
     def readline(self):
         return ''

@@ -12,43 +12,43 @@ import test_env
 from lib.args import ArgParser
 from lib.fuzzer import Fuzzer
 
-from device_mock import MockDevice
-from host_mock import MockHost
+from device_fake import FakeDevice
+from host_fake import FakeHost
 
 
 class TestFuzzer(unittest.TestCase):
 
     def test_filter(self):
-        host = MockHost()
+        host = FakeHost()
         fuzzers = host.fuzzers
         self.assertEqual(len(Fuzzer.filter(fuzzers, '')), 6)
         self.assertEqual(len(Fuzzer.filter(fuzzers, '/')), 6)
-        self.assertEqual(len(Fuzzer.filter(fuzzers, 'mock')), 6)
+        self.assertEqual(len(Fuzzer.filter(fuzzers, 'fake')), 6)
         self.assertEqual(len(Fuzzer.filter(fuzzers, 'package1')), 3)
         self.assertEqual(len(Fuzzer.filter(fuzzers, 'target1')), 3)
         self.assertEqual(len(Fuzzer.filter(fuzzers, 'package2/target1')), 2)
         self.assertEqual(
-            len(Fuzzer.filter(fuzzers, 'mock-package2/mock-target1')), 1)
+            len(Fuzzer.filter(fuzzers, 'fake-package2/fake-target1')), 1)
         self.assertEqual(len(Fuzzer.filter(fuzzers, '1/2')), 1)
         self.assertEqual(len(Fuzzer.filter(fuzzers, 'target4')), 0)
         with self.assertRaises(Fuzzer.NameError):
             Fuzzer.filter(fuzzers, 'a/b/c')
 
     def test_from_args(self):
-        mock_device = MockDevice()
+        device = FakeDevice()
         parser = ArgParser('test_from_args')
         with self.assertRaises(SystemExit):
             args = parser.parse_args(['target4'])
-            fuzzer = Fuzzer.from_args(mock_device, args)
+            fuzzer = Fuzzer.from_args(device, args)
 
     def test_measure_corpus(self):
-        fuzzer = Fuzzer(MockDevice(), u'mock-package1', u'mock-target1')
+        fuzzer = Fuzzer(FakeDevice(), u'fake-package1', u'fake-target1')
         sizes = fuzzer.measure_corpus()
         self.assertEqual(sizes[0], 2)
         self.assertEqual(sizes[1], 1796 + 124)
 
     def test_list_artifacts(self):
-        fuzzer = Fuzzer(MockDevice(), u'mock-package1', u'mock-target1')
+        fuzzer = Fuzzer(FakeDevice(), u'fake-package1', u'fake-target1')
         artifacts = fuzzer.list_artifacts()
         self.assertEqual(len(artifacts), 3)
         self.assertTrue('crash-deadbeef' in artifacts)
@@ -57,20 +57,20 @@ class TestFuzzer(unittest.TestCase):
         self.assertFalse('fuzz-0.log' in artifacts)
 
     def test_is_running(self):
-        mock_device = MockDevice()
-        fuzzer1 = Fuzzer(mock_device, u'mock-package1', u'mock-target1')
-        fuzzer2 = Fuzzer(mock_device, u'mock-package1', u'mock-target2')
-        fuzzer3 = Fuzzer(mock_device, u'mock-package1', u'mock-target3')
+        device = FakeDevice()
+        fuzzer1 = Fuzzer(device, u'fake-package1', u'fake-target1')
+        fuzzer2 = Fuzzer(device, u'fake-package1', u'fake-target2')
+        fuzzer3 = Fuzzer(device, u'fake-package1', u'fake-target3')
         self.assertTrue(fuzzer1.is_running())
         self.assertTrue(fuzzer2.is_running())
         self.assertFalse(fuzzer2.is_running())
         self.assertFalse(fuzzer3.is_running())
 
     def test_require_stopped(self):
-        mock_device = MockDevice()
-        fuzzer1 = Fuzzer(mock_device, u'mock-package1', u'mock-target1')
-        fuzzer2 = Fuzzer(mock_device, u'mock-package1', u'mock-target2')
-        fuzzer3 = Fuzzer(mock_device, u'mock-package1', u'mock-target3')
+        device = FakeDevice()
+        fuzzer1 = Fuzzer(device, u'fake-package1', u'fake-target1')
+        fuzzer2 = Fuzzer(device, u'fake-package1', u'fake-target2')
+        fuzzer3 = Fuzzer(device, u'fake-package1', u'fake-target3')
         with self.assertRaises(Fuzzer.StateError):
             fuzzer1.require_stopped()
         with self.assertRaises(Fuzzer.StateError):
@@ -82,13 +82,13 @@ class TestFuzzer(unittest.TestCase):
     # arguments to be passed to libFuzzer are given by lf_args. If the helper is expected to raise
     # an exception, leave `expected` empty and have the caller handle the exception.
     def start_helper(self, args, expected):
-        mock_device = MockDevice()
+        device = FakeDevice()
         base_dir = tempfile.mkdtemp()
         try:
             parser = ArgParser('start_helper')
             args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse(
                 ['package1/target2'] + args)
-            fuzzer = Fuzzer.from_args(mock_device, args)
+            fuzzer = Fuzzer.from_args(device, args)
             fuzzer.add_libfuzzer_opts(libfuzzer_opts)
             fuzzer.add_libfuzzer_args(libfuzzer_args)
             fuzzer.add_subprocess_args(subprocess_args)
@@ -99,19 +99,19 @@ class TestFuzzer(unittest.TestCase):
         if expected:
             self.assertIn(
                 ' '.join(
-                    mock_device.get_ssh_cmd(
+                    device.get_ssh_cmd(
                         [
                             'ssh',
                             '::1',
                             'run',
                             fuzzer.url(),
-                        ] + expected)), mock_device.host.history)
+                        ] + expected)), device.host.history)
 
     def test_start(self):
         self.start_helper(
             [], [
                 '-artifact_prefix=data/',
-                '-dict=pkg/data/mock-target2/dictionary',
+                '-dict=pkg/data/fake-target2/dictionary',
                 '-jobs=1',
                 'data/corpus/',
             ])
@@ -120,7 +120,7 @@ class TestFuzzer(unittest.TestCase):
         self.start_helper(
             ['--foreground'], [
                 '-artifact_prefix=data/',
-                '-dict=pkg/data/mock-target2/dictionary',
+                '-dict=pkg/data/fake-target2/dictionary',
                 '-jobs=0',
                 'data/corpus/',
             ])
@@ -129,7 +129,7 @@ class TestFuzzer(unittest.TestCase):
         self.start_helper(
             ['--debug'], [
                 '-artifact_prefix=data/',
-                '-dict=pkg/data/mock-target2/dictionary',
+                '-dict=pkg/data/fake-target2/dictionary',
                 '-handle_abrt=0',
                 '-handle_bus=0',
                 '-handle_fpe=0',
@@ -143,7 +143,7 @@ class TestFuzzer(unittest.TestCase):
         self.start_helper(
             ['-option2=foo', '-option1=\'bar baz\''], [
                 '-artifact_prefix=data/',
-                '-dict=pkg/data/mock-target2/dictionary',
+                '-dict=pkg/data/fake-target2/dictionary',
                 '-jobs=1',
                 '-option1=\'bar baz\'',
                 '-option2=foo',
@@ -162,7 +162,7 @@ class TestFuzzer(unittest.TestCase):
         self.start_helper(
             ['-option2=foo', '--', '-option1=bar'], [
                 '-artifact_prefix=data/',
-                '-dict=pkg/data/mock-target2/dictionary',
+                '-dict=pkg/data/fake-target2/dictionary',
                 '-jobs=1',
                 '-option2=foo',
                 'data/corpus/',
@@ -172,11 +172,11 @@ class TestFuzzer(unittest.TestCase):
 
     # Helper to test Fuzzer.symbolize with different logs.
     def symbolize_helper(self, log_in, log_out):
-        mock_device = MockDevice()
+        device = FakeDevice()
         base_dir = tempfile.mkdtemp()
         try:
             fuzzer = Fuzzer(
-                mock_device, u'mock-package1', u'mock-target2', output=base_dir)
+                device, u'fake-package1', u'fake-target2', output=base_dir)
             os.mkdir(fuzzer.results())
             with tempfile.TemporaryFile() as tmp_out:
                 with tempfile.TemporaryFile() as tmp_in:
@@ -264,31 +264,31 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
 """)
 
     def test_stop(self):
-        mock_device = MockDevice()
-        pids = mock_device.getpids()
-        fuzzer1 = Fuzzer(mock_device, u'mock-package1', u'mock-target1')
+        device = FakeDevice()
+        pids = device.getpids()
+        fuzzer1 = Fuzzer(device, u'fake-package1', u'fake-target1')
         fuzzer1.stop()
         self.assertIn(
             ' '.join(
-                mock_device.get_ssh_cmd(
+                device.get_ssh_cmd(
                     [
                         'ssh',
                         '::1',
                         'kill',
                         str(pids[str(fuzzer1)]),
-                    ])), mock_device.host.history)
-        fuzzer3 = Fuzzer(mock_device, u'mock-package1', u'mock-target3')
+                    ])), device.host.history)
+        fuzzer3 = Fuzzer(device, u'fake-package1', u'fake-target3')
         fuzzer3.stop()
 
     def test_repro(self):
-        mock_device = MockDevice()
+        device = FakeDevice()
         parser = ArgParser('test_repro')
         args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse(
             [
                 'package1/target2',
                 '-some-lf-arg=value',
             ])
-        fuzzer = Fuzzer.from_args(mock_device, args)
+        fuzzer = Fuzzer.from_args(device, args)
         fuzzer.add_libfuzzer_opts(libfuzzer_opts)
         fuzzer.add_libfuzzer_args(libfuzzer_args)
         fuzzer.add_subprocess_args(subprocess_args)
@@ -296,7 +296,7 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
         fuzzer.repro()
         self.assertIn(
             ' '.join(
-                mock_device.get_ssh_cmd(
+                device.get_ssh_cmd(
                     [
                         'ssh',
                         '::1',
@@ -305,24 +305,24 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
                         '-artifact_prefix=data/',
                         '-jobs=0',
                         '-some-lf-arg=value',
-                    ] + artifacts)), mock_device.host.history)
+                    ] + artifacts)), device.host.history)
 
     def test_merge(self):
-        mock_device = MockDevice()
+        device = FakeDevice()
         parser = ArgParser('test_merge')
         args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse(
             [
                 'package1/target2',
                 '-some-lf-arg=value',
             ])
-        fuzzer = Fuzzer.from_args(mock_device, args)
+        fuzzer = Fuzzer.from_args(device, args)
         fuzzer.add_libfuzzer_opts(libfuzzer_opts)
         fuzzer.add_libfuzzer_args(libfuzzer_args)
         fuzzer.add_subprocess_args(subprocess_args)
         fuzzer.merge()
         self.assertIn(
             ' '.join(
-                mock_device.get_ssh_cmd(
+                device.get_ssh_cmd(
                     [
                         'ssh',
                         '::1',
@@ -335,7 +335,7 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
                         '-some-lf-arg=value',
                         'data/corpus/',
                         'data/corpus.prev/',
-                    ])), mock_device.host.history)
+                    ])), device.host.history)
 
 
 if __name__ == '__main__':

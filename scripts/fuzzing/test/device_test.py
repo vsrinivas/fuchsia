@@ -13,15 +13,15 @@ from lib.args import ArgParser
 from lib.device import Device
 from lib.host import Host
 
-from device_mock import MockDevice
-from host_mock import MockHost
+from device_fake import FakeDevice
+from host_fake import FakeHost
 
 
 class TestDevice(unittest.TestCase):
-    """ Tests lib.Device. See MockDevice for additional details."""
+    """ Tests lib.Device. See FakeDevice for additional details."""
 
     def test_from_args(self):
-        host = MockHost()
+        host = FakeHost()
         parser = ArgParser('description')
         parser.require_name(False)
         # netaddr should get called with 'just-four-random-words', and fail
@@ -30,150 +30,150 @@ class TestDevice(unittest.TestCase):
             device = Device.from_args(host, args)
 
     def test_set_ssh_config(self):
-        mock = MockDevice()
+        device = FakeDevice()
         with self.assertRaises(Host.ConfigError):
-            mock.set_ssh_config('no_such_config')
+            device.set_ssh_config('no_such_config')
         if not os.getenv('FUCHSIA_DIR'):
             return
-        build_dir = mock.host.find_build_dir()
+        build_dir = device.host.find_build_dir()
         ssh_config = Host.join(build_dir, 'ssh-keys', 'ssh_config')
         if not os.path.exists(ssh_config):
             return
-        mock.set_ssh_config(ssh_config)
-        cmd = ' '.join(mock.get_ssh_cmd(['ssh']))
+        device.set_ssh_config(ssh_config)
+        cmd = ' '.join(device.get_ssh_cmd(['ssh']))
         self.assertIn('ssh', cmd)
         self.assertIn(' -F ' + ssh_config, cmd)
 
     def test_set_ssh_identity(self):
-        mock = MockDevice()
+        device = FakeDevice()
         with self.assertRaises(Host.ConfigError):
-            mock.set_ssh_identity('no_such_identity')
+            device.set_ssh_identity('no_such_identity')
         if not os.getenv('FUCHSIA_DIR'):
             return
         identity_file = Host.join('.ssh', 'pkey')
         if not os.path.exists(identity_file):
             return
-        mock.set_ssh_identity(identity_file)
-        cmd = ' '.join(mock.get_ssh_cmd(['scp']))
+        device.set_ssh_identity(identity_file)
+        cmd = ' '.join(device.get_ssh_cmd(['scp']))
         self.assertIn('scp', cmd)
         self.assertIn(' -i ' + identity_file, cmd)
 
     def test_set_ssh_option(self):
-        mock = MockDevice()
-        mock.set_ssh_option('StrictHostKeyChecking no')
-        mock.set_ssh_option('UserKnownHostsFile=/dev/null')
-        cmd = ' '.join(mock.get_ssh_cmd(['ssh']))
+        device = FakeDevice()
+        device.set_ssh_option('StrictHostKeyChecking no')
+        device.set_ssh_option('UserKnownHostsFile=/dev/null')
+        cmd = ' '.join(device.get_ssh_cmd(['ssh']))
         self.assertIn(' -o StrictHostKeyChecking no', cmd)
         self.assertIn(' -o UserKnownHostsFile=/dev/null', cmd)
 
     def test_init(self):
-        mock = MockDevice(port=51823)
-        cmd = ' '.join(mock.get_ssh_cmd(['ssh', '::1', 'some-command']))
+        device = FakeDevice(port=51823)
+        cmd = ' '.join(device.get_ssh_cmd(['ssh', '::1', 'some-command']))
         self.assertIn(' -p 51823 ', cmd)
 
     def test_set_ssh_verbosity(self):
-        mock = MockDevice()
-        mock.set_ssh_verbosity(3)
-        cmd = ' '.join(mock.get_ssh_cmd(['ssh', '::1', 'some-command']))
+        device = FakeDevice()
+        device.set_ssh_verbosity(3)
+        cmd = ' '.join(device.get_ssh_cmd(['ssh', '::1', 'some-command']))
         self.assertIn(' -vvv ', cmd)
-        mock.set_ssh_verbosity(1)
-        cmd = ' '.join(mock.get_ssh_cmd(['ssh', '::1', 'some-command']))
+        device.set_ssh_verbosity(1)
+        cmd = ' '.join(device.get_ssh_cmd(['ssh', '::1', 'some-command']))
         self.assertIn(' -v ', cmd)
         self.assertNotIn(' -vvv ', cmd)
-        mock.set_ssh_verbosity(0)
-        cmd = ' '.join(mock.get_ssh_cmd(['ssh', '::1', 'some-command']))
+        device.set_ssh_verbosity(0)
+        cmd = ' '.join(device.get_ssh_cmd(['ssh', '::1', 'some-command']))
         self.assertNotIn(' -v ', cmd)
 
     def test_ssh(self):
-        mock = MockDevice()
-        mock.ssh(['some-command', '--with', 'some-argument']).check_call()
+        device = FakeDevice()
+        device.ssh(['some-command', '--with', 'some-argument']).check_call()
         self.assertIn(
             ' '.join(
-                mock.get_ssh_cmd(
+                device.get_ssh_cmd(
                     ['ssh', '::1', 'some-command', '--with some-argument'])),
-            mock.host.history)
+            device.host.history)
 
     def test_getpids(self):
-        mock = MockDevice()
-        pids = mock.getpids()
-        self.assertTrue('mock-package1/mock-target1' in pids)
-        self.assertEqual(pids['mock-package1/mock-target1'], 7412221)
+        device = FakeDevice()
+        pids = device.getpids()
+        self.assertTrue('fake-package1/fake-target1' in pids)
+        self.assertEqual(pids['fake-package1/fake-target1'], 7412221)
         self.assertEqual(
-            pids['mock-package2/an-extremely-verbose-target-name'], 7412223)
+            pids['fake-package2/an-extremely-verbose-target-name'], 7412223)
 
     def test_ls(self):
-        mock = MockDevice()
-        files = mock.ls('path-to-some-corpus')
+        device = FakeDevice()
+        files = device.ls('path-to-some-corpus')
         self.assertIn(
             ' '.join(
-                mock.get_ssh_cmd(
+                device.get_ssh_cmd(
                     ['ssh', '::1', 'ls', '-l', 'path-to-some-corpus'])),
-            mock.host.history)
+            device.host.history)
         self.assertTrue('feac37187e77ff60222325cf2829e2273e04f2ea' in files)
         self.assertEqual(
             files['feac37187e77ff60222325cf2829e2273e04f2ea'], 1796)
 
     def test_rm(self):
-        mock = MockDevice()
-        mock.rm('path-to-some-file')
-        mock.rm('path-to-some-directory', recursive=True)
+        device = FakeDevice()
+        device.rm('path-to-some-file')
+        device.rm('path-to-some-directory', recursive=True)
         self.assertIn(
             ' '.join(
-                mock.get_ssh_cmd(
+                device.get_ssh_cmd(
                     ['ssh', '::1', 'rm', '-f', 'path-to-some-file'])),
-            mock.host.history)
+            device.host.history)
         self.assertIn(
             ' '.join(
-                mock.get_ssh_cmd(
+                device.get_ssh_cmd(
                     ['ssh', '::1', 'rm', '-rf', 'path-to-some-directory'])),
-            mock.host.history)
+            device.host.history)
 
     def test_fetch(self):
-        mock = MockDevice()
+        device = FakeDevice()
         with self.assertRaises(ValueError):
-            mock.fetch('foo', 'not-likely-to-be-a-directory')
-        mock.fetch('remote-path', '/tmp')
+            device.fetch('foo', 'not-likely-to-be-a-directory')
+        device.fetch('remote-path', '/tmp')
         self.assertIn(
-            ' '.join(mock.get_ssh_cmd(['scp', '[::1]:remote-path', '/tmp'])),
-            mock.host.history)
-        mock.fetch('corpus/*', '/tmp')
+            ' '.join(device.get_ssh_cmd(['scp', '[::1]:remote-path', '/tmp'])),
+            device.host.history)
+        device.fetch('corpus/*', '/tmp')
         self.assertIn(
-            ' '.join(mock.get_ssh_cmd(['scp', '[::1]:corpus/*', '/tmp'])),
-            mock.host.history)
-        mock.delay = 2
+            ' '.join(device.get_ssh_cmd(['scp', '[::1]:corpus/*', '/tmp'])),
+            device.host.history)
+        device.delay = 2
         with self.assertRaises(subprocess.CalledProcessError):
-            mock.fetch('delayed', '/tmp')
-        mock.delay = 2
+            device.fetch('delayed', '/tmp')
+        device.delay = 2
         with self.assertRaises(subprocess.CalledProcessError):
-            mock.fetch('delayed', '/tmp', retries=1)
-        mock.delay = 2
-        mock.fetch('delayed', '/tmp', retries=2)
+            device.fetch('delayed', '/tmp', retries=1)
+        device.delay = 2
+        device.fetch('delayed', '/tmp', retries=2)
         self.assertIn(
-            ' '.join(mock.get_ssh_cmd(['scp', '[::1]:delayed', '/tmp'])),
-            mock.host.history)
+            ' '.join(device.get_ssh_cmd(['scp', '[::1]:delayed', '/tmp'])),
+            device.host.history)
 
     def test_store(self):
-        mock = MockDevice()
-        mock.store(tempfile.gettempdir(), 'remote-path')
+        device = FakeDevice()
+        device.store(tempfile.gettempdir(), 'remote-path')
         self.assertIn(
             ' '.join(
-                mock.get_ssh_cmd(
+                device.get_ssh_cmd(
                     ['scp', tempfile.gettempdir(), '[::1]:remote-path'])),
-            mock.host.history)
+            device.host.history)
         # Ensure globbing works
-        mock.host.history = []
+        device.host.history = []
         with tempfile.NamedTemporaryFile() as f:
-            mock.store('{}/*'.format(tempfile.gettempdir()), 'remote-path')
-            for cmd in mock.host.history:
+            device.store('{}/*'.format(tempfile.gettempdir()), 'remote-path')
+            for cmd in device.host.history:
                 if cmd.startswith('scp'):
                     self.assertIn(f.name, cmd)
         # No copy if glob comes up empty
-        mock.store(os.path.join(tempfile.gettempdir(), '*'), 'remote-path')
+        device.store(os.path.join(tempfile.gettempdir(), '*'), 'remote-path')
         self.assertNotIn(
             ' '.join(
-                mock.get_ssh_cmd(
+                device.get_ssh_cmd(
                     ['scp', tempfile.gettempdir(), '[::1]:remote-path'])),
-            mock.host.history)
+            device.host.history)
 
 
 if __name__ == '__main__':

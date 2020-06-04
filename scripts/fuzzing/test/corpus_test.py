@@ -13,13 +13,13 @@ from lib.args import ArgParser
 from lib.corpus import Corpus
 from lib.fuzzer import Fuzzer
 
-from device_mock import MockDevice
+from device_fake import FakeDevice
 
 
 class TestCorpus(unittest.TestCase):
 
     def test_from_args(self):
-        fuzzer = Fuzzer(MockDevice(), u'mock-package1', u'mock-target3')
+        fuzzer = Fuzzer(FakeDevice(), u'fake-package1', u'fake-target3')
         parser = ArgParser('description')
 
         args = parser.parse_args(['1/3'])
@@ -35,8 +35,8 @@ class TestCorpus(unittest.TestCase):
             shutil.rmtree(tmp_dir)
 
     def test_push(self):
-        mock = MockDevice()
-        fuzzer = Fuzzer(mock, u'mock-package1', u'mock-target3')
+        fake = FakeDevice()
+        fuzzer = Fuzzer(fake, u'fake-package1', u'fake-target3')
         parser = ArgParser('description')
 
         args = parser.parse_args(['1/3'])
@@ -45,14 +45,14 @@ class TestCorpus(unittest.TestCase):
             corpus.push()
             self.assertIn(
                 ' '.join(
-                    mock.get_ssh_cmd(
+                    fake.get_ssh_cmd(
                         ['scp', f.name,
                          '[::1]:' + fuzzer.data_path('corpus')])),
-                mock.host.history)
+                fake.host.history)
 
     def test_pull(self):
-        mock = MockDevice()
-        fuzzer = Fuzzer(mock, u'mock-package1', u'mock-target3')
+        fake = FakeDevice()
+        fuzzer = Fuzzer(fake, u'fake-package1', u'fake-target3')
         parser = ArgParser('description')
 
         args = parser.parse_args(['1/3'])
@@ -60,11 +60,11 @@ class TestCorpus(unittest.TestCase):
         corpus.pull()
         self.assertIn(
             ' '.join(
-                mock.get_ssh_cmd(
+                fake.get_ssh_cmd(
                     [
                         'scp', '[::1]:' + fuzzer.data_path('corpus/*'),
                         corpus.root
-                    ])), mock.host.history)
+                    ])), fake.host.history)
 
 
 if __name__ == '__main__':

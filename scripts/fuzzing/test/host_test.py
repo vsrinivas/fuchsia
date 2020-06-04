@@ -11,7 +11,7 @@ import unittest
 import test_env
 from lib.host import Host
 
-from host_mock import MockHost
+from host_fake import FakeHost
 
 
 class TestHost(unittest.TestCase):
@@ -158,35 +158,35 @@ class TestHost(unittest.TestCase):
         self.assertRegexpMatches(line, r'[0-9a-f]* - ' + path)
 
     def test_fx_command(self):
-        mock = MockHost()
-        mock.fx_command(['device-finder', 'list'])
+        host = FakeHost()
+        host.fx_command(['device-finder', 'list'])
         fx_bin = Host.join('.jiri_root', 'bin', 'fx')
-        self.assertIn('{} device-finder list'.format(fx_bin), mock.history)
+        self.assertIn('{} device-finder list'.format(fx_bin), host.history)
 
     def test_killall(self):
-        mock = MockHost()
-        mock.killall('mock_tool')
-        self.assertIn('killall mock_tool', mock.history)
+        host = FakeHost()
+        host.killall('fake_tool')
+        self.assertIn('killall fake_tool', host.history)
 
     def test_symbolize(self):
-        mock = MockHost()
+        host = FakeHost()
         stacktrace = [
             'a line',
             'another line',
             'yet another line',
         ]
-        mock.symbolize('\n'.join(stacktrace))
+        host.symbolize('\n'.join(stacktrace))
         self.assertIn(
             ' '.join(
                 [
-                    'mock/symbolize',
+                    'fake/symbolize',
                     '-llvm-symbolizer',
-                    'mock/llvm_symbolizer',
+                    'fake/llvm_symbolizer',
                     '-build-id-dir',
-                    'mock/.build-id',
-                ]), mock.history)
+                    'fake/.build-id',
+                ]), host.history)
         for line in stacktrace:
-            self.assertIn(' < ' + line, mock.history)
+            self.assertIn(' < ' + line, host.history)
 
     def test_notify_user(self):
         host = Host()

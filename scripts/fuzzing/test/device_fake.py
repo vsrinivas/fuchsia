@@ -10,32 +10,32 @@ import test_env
 from lib.device import Device
 from lib.process import Process
 
-from host_mock import MockHost
+from host_fake import FakeHost
 
 
-class MockDevice(Device):
+class FakeDevice(Device):
 
     def __init__(self, port=22):
-        super(MockDevice, self).__init__(MockHost(), '::1', port)
+        super(FakeDevice, self).__init__(FakeHost(), '::1', port)
         self.toggle = False
         self.delay = 0
 
     def ssh(self, cmdline):
         """ Overrides Device.ssh to provide canned responses."""
-        p = super(MockDevice, self).ssh(cmdline)
+        p = super(FakeDevice, self).ssh(cmdline)
         if cmdline[0] == 'cs' and self.toggle:
             p.response = r"""
   http.cmx[20963]: fuchsia-pkg://fuchsia.com/http#meta/http.cmx
-  mock-target1.cmx[7412221]: fuchsia-pkg://fuchsia.com/mock-package1#meta/mock-target1.cmx
-  mock-target2.cmx[7412222]: fuchsia-pkg://fuchsia.com/mock-package1#meta/mock-target2.cmx
-  an-extremely-verbose-target-name.cmx[7412223]: fuchsia-pkg://fuchsia.com/mock-package2#meta/an-extremely-verbose-target-name.cmx
+  fake-target1.cmx[7412221]: fuchsia-pkg://fuchsia.com/fake-package1#meta/fake-target1.cmx
+  fake-target2.cmx[7412222]: fuchsia-pkg://fuchsia.com/fake-package1#meta/fake-target2.cmx
+  an-extremely-verbose-target-name.cmx[7412223]: fuchsia-pkg://fuchsia.com/fake-package2#meta/an-extremely-verbose-target-name.cmx
 """
             self.toggle = False
         elif cmdline[0] == 'cs':
             p.response = r"""
   http.cmx[20963]: fuchsia-pkg://fuchsia.com/http#meta/http.cmx
-  mock-target1.cmx[7412221]: fuchsia-pkg://fuchsia.com/mock-package1#meta/mock-target1.cmx
-  an-extremely-verbose-target-name.cmx[7412223]: fuchsia-pkg://fuchsia.com/mock-package2#meta/an-extremely-verbose-target-name.cmx
+  fake-target1.cmx[7412221]: fuchsia-pkg://fuchsia.com/fake-package1#meta/fake-target1.cmx
+  an-extremely-verbose-target-name.cmx[7412223]: fuchsia-pkg://fuchsia.com/fake-package2#meta/an-extremely-verbose-target-name.cmx
 """
             self.toggle = True
         elif cmdline[0] == 'ls' and cmdline[-1].endswith('corpus'):
@@ -64,6 +64,6 @@ drw-r--r--    2 0        0             13552 Mar 20 01:40 corpus
         """ Overrides Device._scp to simulate delayed file creation."""
         if len(srcs) == 1 and srcs[0].endswith('delayed') and self.delay != 0:
             self.delay -= 1
-            raise subprocess.CalledProcessError(1, 'scp', 'mock failure')
+            raise subprocess.CalledProcessError(1, 'scp', 'fake failure')
         else:
-            super(MockDevice, self)._scp(srcs, dst)
+            super(FakeDevice, self)._scp(srcs, dst)
