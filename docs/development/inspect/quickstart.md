@@ -311,6 +311,14 @@ See below for the quick start guide in your language of choice.
   To test your inspect code, you can use `assert_inspect_tree`:
 
   ```rust
+
+  let inspector = component::inspector();
+  let root = inspector.root();
+  let child = root.create_child("child1");
+  child.record_double("some_property_name", 1.0);
+  child.record_string("another_property", "example");
+  let children = inspector.create_child("children");
+
   assert_inspect_tree!(inspector, root: {
     child1: {
       some_property_name: 1.0,
@@ -334,10 +342,10 @@ See below for the quick start guide in your language of choice.
   Refer to [C++ Library Concepts](#c_library-concepts), as similar concepts
   apply in Rust.
 
-  The Rust library provides two ways of creating nodes and properties:
+  The Rust library provides two ways of managing nodes and properties: creation and recording.
 
-  - `create_*`: This gives ownership of the property or node object to the caller.
-    When the returned object is dropped, it is removed. For example:
+  With the `create_*` methods, the ownership of the property or node object to the caller.
+  When the returned object is dropped, it is removed. For example:
 
     ```rust
     {
@@ -348,9 +356,9 @@ See below for the quick start guide in your language of choice.
   In this example, the property went out of scope so a drop on the property is
   called. Readers won't see this property.
 
-  - `record_*`: This entangles the lifetime of the object where the method is
-    called with the resulting object. When the object where the method was called
-    is deleted, the resulting property is deleted.
+  With the `record_*` methods, the lifetime of the node the method is
+  called on is entangled with the resulting property. When the node the method was called
+  is deleted, the recorded property is deleted.
 
     ```rust
     {
@@ -362,7 +370,8 @@ See below for the quick start guide in your language of choice.
     }
     ```
 
-  In this example, neither the node nor the property is now visible to readers.
+  In this example, neither the `name` node nor the uint property is visible to readers 
+  after `node` is dropped.
 
   #### Dynamic Value Support
 
