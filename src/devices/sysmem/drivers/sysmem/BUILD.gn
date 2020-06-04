@@ -4,6 +4,12 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":sysmem-unittest" ]
+}
 
 source_set("sysmem_common_srcs") {
   sources = [
@@ -71,12 +77,7 @@ driver_module("sysmem") {
   ]
 }
 
-test("sysmem-unittest") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
+test("sysmem-unittest-executable") {
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {
@@ -114,5 +115,14 @@ test("sysmem-unittest") {
     "//zircon/system/ulib/fidl-async-2",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
+  ]
+}
+
+unittest_package("sysmem-unittest") {
+  deps = [ ":sysmem-unittest-executable" ]
+  tests = [
+    {
+      name = "sysmem-unittest"
+    },
   ]
 }
