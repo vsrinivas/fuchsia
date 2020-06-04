@@ -1,0 +1,115 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+rustc_test("driver") {
+  name = "isolated-ota-integration-test"
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-url",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/fidl-fuchsia-pkg-ext",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
+    "//src/sys/pkg/lib/isolated-ota",
+    "//src/sys/pkg/testing/blobfs-ramdisk",
+    "//src/sys/pkg/testing/mock-paver",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:http",
+    "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tempfile",
+  ]
+}
+
+# Include blobfs in the build, which comes from Zircon
+generate_manifest("blobfs.manifest") {
+  visibility = [ ":*" ]
+  args = []
+  foreach(pattern, [ "bin/blobfs" ]) {
+    args += [ "--binary=" + pattern ]
+  }
+}
+blobfs_manifest_outputs = get_target_outputs(":blobfs.manifest")
+blobfs_manifest = blobfs_manifest_outputs[0]
+
+generate_manifest("empty-repo.manifest") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = []
+  args = []
+
+  foreach(path,
+          [
+            "keys/root.json",
+            "keys/snapshot.json",
+            "keys/targets.json",
+            "keys/timestamp.json",
+            "repository/1.root.json",
+            "repository/1.snapshot.json",
+            "repository/1.targets.json",
+            "repository/root.json",
+            "repository/snapshot.json",
+            "repository/targets.json",
+            "repository/timestamp.json",
+          ]) {
+    source = "//src/sys/pkg/tests/pkg-resolver/template/${path}"
+    sources += [ source ]
+    args += [ "--entry=empty-repo/${path}=" + rebase_path(source) ]
+  }
+}
+
+empty_repo_manifest_outputs = get_target_outputs(":empty-repo.manifest")
+empty_repo_manifest = empty_repo_manifest_outputs[0]
+
+test_package("isolated-ota-integration-tests") {
+  extra = [
+    blobfs_manifest,
+    empty_repo_manifest,
+  ]
+  deps = [
+    ":blobfs.manifest",
+    ":driver",
+    ":empty-repo.manifest",
+    "//garnet/go/src/grand_unified_binary",
+  ]
+
+  binaries = [
+    {
+      name = "pkgsvr"
+      source = "grand_unified_binary"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("//src/sys/pkg/lib/fuchsia-pkg-testing/certs/ca.cert")
+      dest = "ssl/cert.pem"
+    },
+  ]
+
+  tests = [
+    {
+      name = "isolated_ota_integration_test"
+      dest = "isolated-ota-integration-test"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":isolated-ota-integration-tests",
+    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
+    "//src/sys/pkg/lib/isolated-ota:isolated-swd",
+  ]
+}
