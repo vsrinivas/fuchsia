@@ -7,17 +7,20 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/media/audio/lib/format/frames.h"
+#include "src/media/audio/lib/format/traits.h"
 
 namespace media::audio {
 
-fit::result<Format> Format::Create(fuchsia::media::AudioStreamType stream_type) {
+namespace {
+
+bool Validate(fuchsia::media::AudioStreamType stream_type) {
   // Sanity check the details of the mode request.
   if ((stream_type.channels < fuchsia::media::MIN_PCM_CHANNEL_COUNT) ||
       (stream_type.channels > fuchsia::media::MAX_PCM_CHANNEL_COUNT)) {
     FX_LOGS(ERROR) << "Bad channel count, " << stream_type.channels << " is not in the range ["
                    << fuchsia::media::MIN_PCM_CHANNEL_COUNT << ", "
                    << fuchsia::media::MAX_PCM_CHANNEL_COUNT << "]";
-    return fit::error();
+    return false;
   }
 
   if ((stream_type.frames_per_second < fuchsia::media::MIN_PCM_FRAMES_PER_SECOND) ||
@@ -25,64 +28,90 @@ fit::result<Format> Format::Create(fuchsia::media::AudioStreamType stream_type) 
     FX_LOGS(ERROR) << "Bad frame rate, " << stream_type.frames_per_second
                    << " is not in the range [" << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND << ", "
                    << fuchsia::media::MAX_PCM_FRAMES_PER_SECOND << "]";
-    return fit::error();
+    return false;
+  }
+  switch (stream_type.sample_format) {
+    case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
+    case fuchsia::media::AudioSampleFormat::SIGNED_16:
+    case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
+    case fuchsia::media::AudioSampleFormat::FLOAT:
+      break;
+    default:
+      FX_LOGS(ERROR) << "Bad sample format " << fidl::ToUnderlying(stream_type.sample_format);
+      return false;
   }
 
+  return true;
+}
+
+}  // namespace
+
+fit::result<Format> Format::Create(fuchsia::media::AudioStreamType stream_type) {
+  if (!Validate(stream_type)) {
+    return fit::error();
+  }
+  return fit::ok(Format(stream_type));
+}
+
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+fit::result<TypedFormat<SampleFormat>> Format::Create(uint32_t channels,
+                                                      uint32_t frames_per_second) {
+  fuchsia::media::AudioStreamType stream_type = {
+      .sample_format = SampleFormat,
+      .channels = channels,
+      .frames_per_second = frames_per_second,
+  };
+  if (!Validate(stream_type)) {
+    return fit::error();
+  }
+  return fit::ok(TypedFormat<SampleFormat>(stream_type));
+}
+
+Format::Format(fuchsia::media::AudioStreamType stream_type) : stream_type_(stream_type) {
   // Precompute some useful timing/format stuff.
   //
   // Start with the ratio between frames and nanoseconds.
-  auto frames_per_ns = TimelineRate(stream_type.frames_per_second, ZX_SEC(1));
+  frames_per_ns_ = TimelineRate(stream_type.frames_per_second, ZX_SEC(1));
 
   // Figure out the rate we need to scale by in order to produce our fixed point timestamps.
-  auto frame_to_media_ratio = TimelineRate(FractionalFrames<int32_t>(1).raw_value(), 1);
+  frame_to_media_ratio_ = TimelineRate(FractionalFrames<int32_t>(1).raw_value(), 1);
 
-  uint32_t bytes_per_frame = 0;
-  uint32_t valid_bits_per_channel = 0;
   switch (stream_type.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-      bytes_per_frame = 1;
-      valid_bits_per_channel = 8;
+      bytes_per_frame_ = 1;
+      valid_bits_per_channel_ = 8;
       break;
 
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      bytes_per_frame = 2;
-      valid_bits_per_channel = 16;
+      bytes_per_frame_ = 2;
+      valid_bits_per_channel_ = 16;
       break;
 
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      bytes_per_frame = 4;
-      valid_bits_per_channel = 24;
+      bytes_per_frame_ = 4;
+      valid_bits_per_channel_ = 24;
       break;
 
     case fuchsia::media::AudioSampleFormat::FLOAT:
-      bytes_per_frame = 4;
-      valid_bits_per_channel = 32;
+      bytes_per_frame_ = 4;
+      valid_bits_per_channel_ = 32;
       break;
-
-    default:
-      FX_LOGS(ERROR) << "Bad sample format " << fidl::ToUnderlying(stream_type.sample_format);
-      return fit::error();
   }
 
-  bytes_per_frame *= stream_type.channels;
-
-  return fit::ok(Format(stream_type, frames_per_ns, frame_to_media_ratio, bytes_per_frame,
-                        valid_bits_per_channel));
+  bytes_per_frame_ *= stream_type.channels;
 }
-
-Format::Format(fuchsia::media::AudioStreamType stream_type, TimelineRate frames_per_ns,
-               TimelineRate frame_to_media_ratio, uint32_t bytes_per_frame,
-               uint32_t valid_bits_per_channel)
-    : stream_type_(stream_type),
-      frames_per_ns_(frames_per_ns),
-      frame_to_media_ratio_(frame_to_media_ratio),
-      bytes_per_frame_(bytes_per_frame),
-      valid_bits_per_channel_(valid_bits_per_channel) {}
 
 bool Format::operator==(const Format& other) const {
   // All the other class members are derived from our stream_type, so we don't need to include them
   // here.
   return fidl::Equals(stream_type_, other.stream_type_);
 }
+
+// Explicitly instantiate all possible implementations.
+#define INSTANTIATE(T)                                                      \
+  template fit::result<TypedFormat<T>> Format::Create<T>(uint32_t channels, \
+                                                         uint32_t frames_per_seconds);
+
+INSTANTIATE_FOR_ALL_FORMATS(INSTANTIATE)
 
 }  // namespace media::audio

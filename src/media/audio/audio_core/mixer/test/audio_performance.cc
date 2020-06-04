@@ -326,19 +326,13 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
     return;
   }
 
-  Format source_format = Format::Create(fuchsia::media::AudioStreamType{
-                                            .sample_format = SampleFormat,
-                                            .channels = num_input_chans,
-                                            .frames_per_second = source_rate,
-                                        })
-                             .take_value();
-
+  auto source_format = Format::Create<SampleFormat>(num_input_chans, source_rate).take_value();
   uint32_t source_buffer_size = kFreqTestBufSize * dest_rate / source_rate;
   uint32_t source_frames = source_buffer_size;
 
-  auto source = GenerateCosineAudio<SampleFormat>(
-      source_format, source_frames, FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx],
-      amplitude);
+  auto source =
+      GenerateCosineAudio(source_format, source_frames,
+                          FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx], amplitude);
 
   auto accum = std::make_unique<float[]>(kFreqTestBufSize * num_output_chans);
   uint32_t frac_src_frames = source_frames * Mixer::FRAC_ONE;
@@ -515,30 +509,25 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
   uint32_t num_samples = kFreqTestBufSize * num_chans;
   auto dest = std::make_unique<SampleT[]>(num_samples);
 
-  Format accum_format = Format::Create(fuchsia::media::AudioStreamType{
-                                           .sample_format = SampleFormat,
-                                           .channels = num_chans,
-                                           .frames_per_second = 48000 /* unused */,
-                                       })
-                            .take_value();
-  AudioBuffer<ASF::FLOAT> accum(accum_format, 0);
+  auto accum_format = Format::Create<ASF::FLOAT>(num_chans, 48000 /* unused */).take_value();
+  AudioBuffer accum(accum_format, 0);
 
   switch (data_range) {
     case OutputDataRange::Silence:
       range = 'S';
-      accum = GenerateSilentAudio<ASF::FLOAT>(accum_format, kFreqTestBufSize);
+      accum = GenerateSilentAudio(accum_format, kFreqTestBufSize);
       break;
     case OutputDataRange::OutOfRange:
       range = 'O';
-      accum = AudioBuffer<ASF::FLOAT>(accum_format, kFreqTestBufSize);
+      accum = AudioBuffer(accum_format, kFreqTestBufSize);
       for (size_t idx = 0; idx < num_samples; ++idx) {
         accum.samples()[idx] = (idx % 2 ? -1.5f : 1.5f);
       }
       break;
     case OutputDataRange::Normal:
       range = 'N';
-      accum = GenerateCosineAudio<ASF::FLOAT>(
-          accum_format, kFreqTestBufSize, FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx]);
+      accum = GenerateCosineAudio(accum_format, kFreqTestBufSize,
+                                  FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx]);
       break;
     default:
       ASSERT_TRUE(false) << "Unknown output sample format for testing";

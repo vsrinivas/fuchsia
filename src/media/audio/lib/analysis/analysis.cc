@@ -306,9 +306,6 @@ void MeasureAudioFreq(AudioBufferSlice<SampleFormat> slice, size_t freq, double*
   template void MeasureAudioFreq<T>(AudioBufferSlice<T> slice, size_t freq, double* magn_signal, \
                                     double* magn_other, double* phase_signal);
 
-INSTANTIATE(fuchsia::media::AudioSampleFormat::UNSIGNED_8)
-INSTANTIATE(fuchsia::media::AudioSampleFormat::SIGNED_16)
-INSTANTIATE(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32)
-INSTANTIATE(fuchsia::media::AudioSampleFormat::FLOAT)
+INSTANTIATE_FOR_ALL_FORMATS(INSTANTIATE)
 
 }  // namespace media::audio

@@ -21,13 +21,7 @@ namespace media::audio::test {
 constexpr auto kSampleFormat = fuchsia::media::AudioSampleFormat::SIGNED_16;
 constexpr int32_t kSampleRate = 8000;
 constexpr int kChannelCount = 1;
-
-static const auto kFormat = Format::Create({
-                                               .sample_format = kSampleFormat,
-                                               .channels = kChannelCount,
-                                               .frames_per_second = kSampleRate,
-                                           })
-                                .value();
+static const auto kFormat = Format::Create<kSampleFormat>(kChannelCount, kSampleRate).value();
 
 constexpr int kRingBufferFrames = kSampleRate;  // 1s
 static const int kRingBufferSamples = kRingBufferFrames * kFormat.channels();
@@ -93,16 +87,16 @@ void AudioAdminTest::SetUpVirtualAudioOutput() {
   const audio_stream_unique_id_t kUniqueId{{0x4a, 0x41, 0x49, 0x4a, 0x4a, 0x41, 0x49, 0x4a, 0x4a,
                                             0x41, 0x49, 0x4a, 0x4a, 0x41, 0x49, 0x4a}};
 
-  CreateOutput<kSampleFormat>(kUniqueId, kFormat, kRingBufferFrames);
+  CreateOutput(kUniqueId, kFormat, kRingBufferFrames);
 }
 
 void AudioAdminTest::SetUpVirtualAudioInput() {
   const audio_stream_unique_id_t kUniqueId{{0x4a, 0x41, 0x49, 0x4a, 0x4a, 0x41, 0x49, 0x4a, 0x4a,
                                             0x41, 0x49, 0x4a, 0x4a, 0x41, 0x49, 0x4b}};
 
-  auto input = CreateInput<kSampleFormat>(kUniqueId, kFormat, kRingBufferFrames);
+  auto input = CreateInput(kUniqueId, kFormat, kRingBufferFrames);
 
-  AudioBuffer<kSampleFormat> buf(kFormat, kRingBufferFrames);
+  AudioBuffer buf(kFormat, kRingBufferFrames);
   for (size_t k = 0; k < buf.samples().size(); k++) {
     buf.samples()[k] = kVirtualInputSampleValue;
   }
@@ -114,9 +108,9 @@ void AudioAdminTest::SetUpVirtualAudioInput() {
 // For loopback tests, setup the first audio_renderer interface.
 AudioRendererShim<kSampleFormat>* AudioAdminTest::SetUpRenderer(
     fuchsia::media::AudioRenderUsage usage, int16_t data) {
-  auto r = CreateAudioRenderer<kSampleFormat>(kFormat, kRingBufferFrames, usage);
+  auto r = CreateAudioRenderer(kFormat, kRingBufferFrames, usage);
 
-  AudioBuffer<kSampleFormat> buf(kFormat, kRingBufferFrames);
+  AudioBuffer buf(kFormat, kRingBufferFrames);
   for (size_t k = 0; k < buf.samples().size(); k++) {
     buf.samples()[k] = data;
   }
@@ -129,7 +123,7 @@ AudioRendererShim<kSampleFormat>* AudioAdminTest::SetUpRenderer(
 // For loopback tests, setup an audio_capturer interface
 AudioCapturerShim<kSampleFormat>* AudioAdminTest::SetUpCapturer(
     fuchsia::media::AudioCapturerConfiguration configuration) {
-  auto c = CreateAudioCapturer<kSampleFormat>(kFormat, kRingBufferFrames, std::move(configuration));
+  auto c = CreateAudioCapturer(kFormat, kRingBufferFrames, std::move(configuration));
   c->payload().Memset<kSampleFormat>(kInitialCaptureData);
   return c;
 }

@@ -28,24 +28,18 @@ constexpr fuchsia::media::AudioSampleFormat kSampleFormat =
 
 class AudioPipelineTest : public HermeticAudioTest {
  protected:
-  AudioPipelineTest()
-      : format_(Format::Create({
-                                   .sample_format = kSampleFormat,
-                                   .channels = 2,
-                                   .frames_per_second = kFrameRate,
-                               })
-                    .value()) {}
+  AudioPipelineTest() : format_(Format::Create<kSampleFormat>(2, kFrameRate).value()) {}
 
   void SetUp() {
     HermeticAudioTest::SetUp();
     // None of our tests should underflow.
     FailUponUnderflows();
     // The output and renderer can both store exactly 1s of audio data.
-    output_ = CreateOutput<kSampleFormat>({{0xff, 0x00}}, format_, 48000);
-    renderer_ = CreateAudioRenderer<kSampleFormat>(format_, kPayloadFrames);
+    output_ = CreateOutput({{0xff, 0x00}}, format_, 48000);
+    renderer_ = CreateAudioRenderer(format_, kPayloadFrames);
   }
 
-  const Format format_;
+  const TypedFormat<kSampleFormat> format_;
   VirtualOutput<kSampleFormat>* output_ = nullptr;
   AudioRendererShim<kSampleFormat>* renderer_ = nullptr;
 };

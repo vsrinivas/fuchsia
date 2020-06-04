@@ -152,13 +152,8 @@ TEST_F(UsageGainReporterTest, ConnectToUsageGainReporter) {
   // The specific choice of format doesn't matter here, any output device will do.
   constexpr auto kSampleFormat = fuchsia::media::AudioSampleFormat::SIGNED_16;
   constexpr auto kSampleRate = 48000;
-  auto format = Format::Create({
-                                   .sample_format = kSampleFormat,
-                                   .channels = 2,
-                                   .frames_per_second = kSampleRate,
-                               })
-                    .value();
-  CreateOutput<kSampleFormat>(device_id_array_, format, kSampleRate /* 1s buffer */);
+  auto format = Format::Create<kSampleFormat>(2, kSampleRate).value();
+  CreateOutput(device_id_array_, format, kSampleRate /* 1s buffer */);
 
   fuchsia::media::Usage usage;
   usage.set_render_usage(fuchsia::media::AudioRenderUsage::MEDIA);

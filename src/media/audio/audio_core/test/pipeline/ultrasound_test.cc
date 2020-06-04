@@ -24,12 +24,8 @@ constexpr uint32_t kBufferSize = kUltrasoundSampleRate;  // 1s buffers
 constexpr fuchsia::media::AudioSampleFormat kSampleFormat =
     fuchsia::media::AudioSampleFormat::FLOAT;
 
-static const Format kUltrasoundFormat(Format::Create({
-                                                         .sample_format = kSampleFormat,
-                                                         .channels = kUltrasoundChannels,
-                                                         .frames_per_second = kUltrasoundSampleRate,
-                                                     })
-                                          .value());
+static const auto kUltrasoundFormat =
+    Format::Create<kSampleFormat>(kUltrasoundChannels, kUltrasoundSampleRate).value();
 
 // This matches the configuration in ultrasound_audio_core_config.json
 static const audio_stream_unique_id_t kUltrasoundOutputDeviceId = {{
@@ -78,23 +74,20 @@ class UltrasoundTest : public HermeticAudioTest {
   }
 
   VirtualOutput<kSampleFormat>* CreateOutput() {
-    return HermeticAudioTest::CreateOutput<kSampleFormat>(kUltrasoundOutputDeviceId,
-                                                          kUltrasoundFormat, kBufferSize);
+    return HermeticAudioTest::CreateOutput(kUltrasoundOutputDeviceId, kUltrasoundFormat,
+                                           kBufferSize);
   }
 
   VirtualInput<kSampleFormat>* CreateInput() {
-    return HermeticAudioTest::CreateInput<kSampleFormat>(kUltrasoundInputDeviceId,
-                                                         kUltrasoundFormat, kBufferSize);
+    return HermeticAudioTest::CreateInput(kUltrasoundInputDeviceId, kUltrasoundFormat, kBufferSize);
   }
 
   UltrasoundRendererShim<kSampleFormat>* CreateRenderer() {
-    return HermeticAudioTest::CreateUltrasoundRenderer<kSampleFormat>(kUltrasoundFormat,
-                                                                      kBufferSize);
+    return HermeticAudioTest::CreateUltrasoundRenderer(kUltrasoundFormat, kBufferSize);
   }
 
   UltrasoundCapturerShim<kSampleFormat>* CreateCapturer() {
-    return HermeticAudioTest::CreateUltrasoundCapturer<kSampleFormat>(kUltrasoundFormat,
-                                                                      kBufferSize);
+    return HermeticAudioTest::CreateUltrasoundCapturer(kUltrasoundFormat, kBufferSize);
   }
 };
 

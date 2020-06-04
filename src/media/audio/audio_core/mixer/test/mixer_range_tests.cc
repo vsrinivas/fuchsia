@@ -17,18 +17,11 @@ using ASF = fuchsia::media::AudioSampleFormat;
 // Ideal accompanying noise is ideal noise floor, minus the reduction in gain.
 void MeasureSummaryDynamicRange(float gain_db, double* level_db, double* sinad_db) {
   auto mixer = SelectMixer(ASF::FLOAT, 1, 48000, 1, 48000, Resampler::SampleAndHold);
-
-  Format format = Format::Create(fuchsia::media::AudioStreamType{
-                                     .sample_format = ASF::FLOAT,
-                                     .channels = 1,
-                                     .frames_per_second = 48000,
-                                 })
-                      .take_value();
+  auto format = Format::Create<ASF::FLOAT>(1, 48000).take_value();
 
   // Populate source buffer; mix it (pass-thru) to accumulation buffer
-  auto source =
-      GenerateCosineAudio<ASF::FLOAT>(format, kFreqTestBufSize, FrequencySet::kReferenceFreq);
-  AudioBuffer<ASF::FLOAT> accum(format, kFreqTestBufSize);
+  auto source = GenerateCosineAudio(format, kFreqTestBufSize, FrequencySet::kReferenceFreq);
+  AudioBuffer accum(format, kFreqTestBufSize);
 
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
@@ -125,27 +118,14 @@ TEST(DynamicRange, 90Down) {
 // Test our mix level and noise floor, when rechannelizing mono into stereo.
 TEST(DynamicRange, MonoToStereo) {
   auto mixer = SelectMixer(ASF::FLOAT, 1, 48000, 2, 48000, Resampler::SampleAndHold);
-
-  Format mono_format = Format::Create(fuchsia::media::AudioStreamType{
-                                          .sample_format = ASF::FLOAT,
-                                          .channels = 1,
-                                          .frames_per_second = 48000,
-                                      })
-                           .take_value();
-
-  Format stereo_format = Format::Create(fuchsia::media::AudioStreamType{
-                                            .sample_format = ASF::FLOAT,
-                                            .channels = 2,
-                                            .frames_per_second = 48000,
-                                        })
-                             .take_value();
+  auto mono_format = Format::Create<ASF::FLOAT>(1, 48000).take_value();
+  auto stereo_format = Format::Create<ASF::FLOAT>(2, 48000).take_value();
 
   // Populate mono source buffer; mix it (no SRC/gain) to stereo accumulator
-  auto source =
-      GenerateCosineAudio<ASF::FLOAT>(mono_format, kFreqTestBufSize, FrequencySet::kReferenceFreq);
+  auto source = GenerateCosineAudio(mono_format, kFreqTestBufSize, FrequencySet::kReferenceFreq);
 
-  AudioBuffer<ASF::FLOAT> accum(stereo_format, kFreqTestBufSize);
-  AudioBuffer<ASF::FLOAT> left(mono_format, kFreqTestBufSize);
+  AudioBuffer accum(stereo_format, kFreqTestBufSize);
+  AudioBuffer left(mono_format, kFreqTestBufSize);
 
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
@@ -179,27 +159,14 @@ TEST(DynamicRange, MonoToStereo) {
 // Test our mix level and noise floor, when rechannelizing stereo into mono.
 TEST(DynamicRange, StereoToMono) {
   auto mixer = SelectMixer(ASF::FLOAT, 2, 48000, 1, 48000, Resampler::SampleAndHold);
-
-  Format mono_format = Format::Create(fuchsia::media::AudioStreamType{
-                                          .sample_format = ASF::FLOAT,
-                                          .channels = 1,
-                                          .frames_per_second = 48000,
-                                      })
-                           .take_value();
-
-  Format stereo_format = Format::Create(fuchsia::media::AudioStreamType{
-                                            .sample_format = ASF::FLOAT,
-                                            .channels = 2,
-                                            .frames_per_second = 48000,
-                                        })
-                             .take_value();
+  auto mono_format = Format::Create<ASF::FLOAT>(1, 48000).take_value();
+  auto stereo_format = Format::Create<ASF::FLOAT>(2, 48000).take_value();
 
   // Populate a mono source buffer; copy it into left side of stereo buffer.
-  auto mono =
-      GenerateCosineAudio<ASF::FLOAT>(mono_format, kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                                      kFullScaleFloatInputAmplitude, 0.0);
-  AudioBuffer<ASF::FLOAT> source(stereo_format, kFreqTestBufSize);
-  AudioBuffer<ASF::FLOAT> accum(mono_format, kFreqTestBufSize);
+  auto mono = GenerateCosineAudio(mono_format, kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                                  kFullScaleFloatInputAmplitude, 0.0);
+  AudioBuffer source(stereo_format, kFreqTestBufSize);
+  AudioBuffer accum(mono_format, kFreqTestBufSize);
 
   for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
     source.samples()[idx * 2] = mono.samples()[idx];
@@ -207,9 +174,8 @@ TEST(DynamicRange, StereoToMono) {
 
   // Populate a mono source buffer with same frequency and amplitude, phase-
   // shifted by PI/2 (1/4 of a cycle); copy it into right side of stereo buffer.
-  mono =
-      GenerateCosineAudio<ASF::FLOAT>(mono_format, kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                                      kFullScaleFloatInputAmplitude, M_PI / 2);
+  mono = GenerateCosineAudio(mono_format, kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                             kFullScaleFloatInputAmplitude, M_PI / 2);
   for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
     source.samples()[(idx * 2) + 1] = mono.samples()[idx];
   }
@@ -265,22 +231,12 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   auto mixer = SelectMixer(SampleFormat, 1, 48000, 1, 48000, Resampler::SampleAndHold);
   auto [amplitude, expected_amplitude] = SampleFormatToAmplitudes(SampleFormat);
 
-  Format format = Format::Create(fuchsia::media::AudioStreamType{
-                                     .sample_format = SampleFormat,
-                                     .channels = 1,
-                                     .frames_per_second = 48000,
-                                 })
-                      .take_value();
-  Format float_format = Format::Create(fuchsia::media::AudioStreamType{
-                                           .sample_format = ASF::FLOAT,
-                                           .channels = 1,
-                                           .frames_per_second = 48000,
-                                       })
-                            .take_value();
+  auto format = Format::Create<SampleFormat>(1, 48000).take_value();
+  auto float_format = Format::Create<ASF::FLOAT>(1, 48000).take_value();
 
-  auto source = GenerateCosineAudio<SampleFormat>(format, kFreqTestBufSize,
-                                                  FrequencySet::kReferenceFreq, amplitude);
-  AudioBuffer<ASF::FLOAT> accum(float_format, kFreqTestBufSize);
+  auto source =
+      GenerateCosineAudio(format, kFreqTestBufSize, FrequencySet::kReferenceFreq, amplitude);
+  AudioBuffer accum(float_format, kFreqTestBufSize);
 
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;

@@ -10,6 +10,7 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/audio_core/audio_device.h"
+#include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/logging/logging.h"
 #include "src/media/audio/lib/test/capturer_shim.h"
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
@@ -131,7 +132,8 @@ void HermeticAudioTest::ExpectDisconnect() {
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 VirtualOutput<SampleFormat>* HermeticAudioTest::CreateOutput(
-    const audio_stream_unique_id_t& device_id, Format format, size_t frame_count) {
+    const audio_stream_unique_id_t& device_id, TypedFormat<SampleFormat> format,
+    size_t frame_count) {
   FX_CHECK(SampleFormat != fuchsia::media::AudioSampleFormat::UNSIGNED_8)
       << "hardware is not expected to support UNSIGNED_8";
   FX_CHECK(audio_dev_enum_.is_bound());
@@ -167,7 +169,8 @@ VirtualOutput<SampleFormat>* HermeticAudioTest::CreateOutput(
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 VirtualInput<SampleFormat>* HermeticAudioTest::CreateInput(
-    const audio_stream_unique_id_t& device_id, Format format, size_t frame_count) {
+    const audio_stream_unique_id_t& device_id, TypedFormat<SampleFormat> format,
+    size_t frame_count) {
   FX_CHECK(SampleFormat != fuchsia::media::AudioSampleFormat::UNSIGNED_8)
       << "hardware is not expected to support UNSIGNED_8";
   FX_CHECK(audio_dev_enum_.is_bound());
@@ -185,7 +188,7 @@ VirtualInput<SampleFormat>* HermeticAudioTest::CreateInput(
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 AudioRendererShim<SampleFormat>* HermeticAudioTest::CreateAudioRenderer(
-    Format format, size_t frame_count, fuchsia::media::AudioRenderUsage usage) {
+    TypedFormat<SampleFormat> format, size_t frame_count, fuchsia::media::AudioRenderUsage usage) {
   auto ptr = std::make_unique<AudioRendererShim<SampleFormat>>(
       static_cast<TestFixture*>(this), audio_core_, format, frame_count, usage);
   auto out = ptr.get();
@@ -198,7 +201,8 @@ AudioRendererShim<SampleFormat>* HermeticAudioTest::CreateAudioRenderer(
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 AudioCapturerShim<SampleFormat>* HermeticAudioTest::CreateAudioCapturer(
-    Format format, size_t frame_count, fuchsia::media::AudioCapturerConfiguration config) {
+    TypedFormat<SampleFormat> format, size_t frame_count,
+    fuchsia::media::AudioCapturerConfiguration config) {
   auto ptr = std::make_unique<AudioCapturerShim<SampleFormat>>(
       static_cast<TestFixture*>(this), audio_core_, format, frame_count, std::move(config));
   auto out = ptr.get();
@@ -208,7 +212,7 @@ AudioCapturerShim<SampleFormat>* HermeticAudioTest::CreateAudioCapturer(
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 UltrasoundRendererShim<SampleFormat>* HermeticAudioTest::CreateUltrasoundRenderer(
-    Format format, size_t frame_count) {
+    TypedFormat<SampleFormat> format, size_t frame_count) {
   auto ptr = std::make_unique<UltrasoundRendererShim<SampleFormat>>(
       static_cast<TestFixture*>(this), ultrasound_factory_, format, frame_count);
   auto out = ptr.get();
@@ -221,7 +225,7 @@ UltrasoundRendererShim<SampleFormat>* HermeticAudioTest::CreateUltrasoundRendere
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 UltrasoundCapturerShim<SampleFormat>* HermeticAudioTest::CreateUltrasoundCapturer(
-    Format format, size_t frame_count) {
+    TypedFormat<SampleFormat> format, size_t frame_count) {
   auto ptr = std::make_unique<UltrasoundCapturerShim<SampleFormat>>(
       static_cast<TestFixture*>(this), ultrasound_factory_, format, frame_count);
   auto out = ptr.get();
@@ -379,21 +383,18 @@ void HermeticAudioTest::CheckInspectHierarchy(const inspect::Hierarchy& root,
 // Explicitly instantiate all possible implementations.
 #define INSTANTIATE(T)                                                                           \
   template VirtualOutput<T>* HermeticAudioTest::CreateOutput<T>(const audio_stream_unique_id_t&, \
-                                                                Format, size_t);                 \
+                                                                TypedFormat<T>, size_t);         \
   template VirtualInput<T>* HermeticAudioTest::CreateInput<T>(const audio_stream_unique_id_t&,   \
-                                                              Format, size_t);                   \
+                                                              TypedFormat<T>, size_t);           \
   template AudioRendererShim<T>* HermeticAudioTest::CreateAudioRenderer<T>(                      \
-      Format, size_t, fuchsia::media::AudioRenderUsage);                                         \
+      TypedFormat<T>, size_t, fuchsia::media::AudioRenderUsage);                                 \
   template AudioCapturerShim<T>* HermeticAudioTest::CreateAudioCapturer<T>(                      \
-      Format, size_t, fuchsia::media::AudioCapturerConfiguration);                               \
-  template UltrasoundRendererShim<T>* HermeticAudioTest::CreateUltrasoundRenderer<T>(Format,     \
-                                                                                     size_t);    \
-  template UltrasoundCapturerShim<T>* HermeticAudioTest::CreateUltrasoundCapturer<T>(Format,     \
-                                                                                     size_t);
+      TypedFormat<T>, size_t, fuchsia::media::AudioCapturerConfiguration);                       \
+  template UltrasoundRendererShim<T>* HermeticAudioTest::CreateUltrasoundRenderer<T>(            \
+      TypedFormat<T>, size_t);                                                                   \
+  template UltrasoundCapturerShim<T>* HermeticAudioTest::CreateUltrasoundCapturer<T>(            \
+      TypedFormat<T>, size_t);
 
-INSTANTIATE(fuchsia::media::AudioSampleFormat::UNSIGNED_8)
-INSTANTIATE(fuchsia::media::AudioSampleFormat::SIGNED_16)
-INSTANTIATE(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32)
-INSTANTIATE(fuchsia::media::AudioSampleFormat::FLOAT)
+INSTANTIATE_FOR_ALL_FORMATS(INSTANTIATE)
 
 }  // namespace media::audio::test

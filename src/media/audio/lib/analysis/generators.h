@@ -15,8 +15,8 @@ namespace media::audio {
 
 // Construct a stream of silent audio data.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
-AudioBuffer<SampleFormat> GenerateSilentAudio(Format format, size_t num_frames) {
-  AudioBuffer<SampleFormat> buf(format, num_frames);
+AudioBuffer<SampleFormat> GenerateSilentAudio(TypedFormat<SampleFormat> format, size_t num_frames) {
+  AudioBuffer buf(format, num_frames);
   std::fill(buf.samples().begin(), buf.samples().end(),
             SampleFormatTraits<SampleFormat>::kSilentValue);
   return buf;
@@ -29,12 +29,13 @@ AudioBuffer<SampleFormat> GenerateSilentAudio(Format format, size_t num_frames) 
 // perform bit-for-bit comparisons on the output of an audio pipeline.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 AudioBuffer<SampleFormat> GenerateSequentialAudio(
-    Format format, size_t num_frames, typename AudioBuffer<SampleFormat>::SampleT first_val = 0) {
+    TypedFormat<SampleFormat> format, size_t num_frames,
+    typename AudioBuffer<SampleFormat>::SampleT first_val = 0) {
   typename AudioBuffer<SampleFormat>::SampleT increment = 1;
   if (SampleFormat == fuchsia::media::AudioSampleFormat::FLOAT) {
     increment = pow(2.0, -16);
   }
-  AudioBuffer<SampleFormat> out(format, num_frames);
+  AudioBuffer out(format, num_frames);
   for (size_t sample = 0; sample < out.samples().size(); ++sample) {
     out.samples()[sample] = first_val;
     first_val += increment;
@@ -54,8 +55,8 @@ AudioBuffer<SampleFormat> GenerateSequentialAudio(
 // offset (default value 0.0) which shifts the signal along the x-axis (value expressed in radians,
 // so runs from -M_PI to +M_PI).
 template <fuchsia::media::AudioSampleFormat SampleFormat>
-AudioBuffer<SampleFormat> GenerateCosineAudio(Format format, size_t num_frames, double freq,
-                                              double magn = 1.0, double phase = 0.0) {
+AudioBuffer<SampleFormat> GenerateCosineAudio(TypedFormat<SampleFormat> format, size_t num_frames,
+                                              double freq, double magn = 1.0, double phase = 0.0) {
   // If frequency is 0 (constant val), phase offset causes reduced amplitude
   FX_CHECK(freq > 0.0 || (freq == 0.0 && phase == 0.0));
 
@@ -65,7 +66,7 @@ AudioBuffer<SampleFormat> GenerateCosineAudio(Format format, size_t num_frames, 
   // freq is defined as: cosine recurs exactly 'freq' times within buf_size.
   const double mult = 2.0 * M_PI / num_frames * freq;
 
-  AudioBuffer<SampleFormat> out(format, num_frames);
+  AudioBuffer out(format, num_frames);
   for (size_t frame = 0; frame < num_frames; ++frame) {
     auto val = magn * std::cos(mult * frame + phase);
     switch (SampleFormat) {
@@ -90,18 +91,19 @@ AudioBuffer<SampleFormat> GenerateCosineAudio(Format format, size_t num_frames, 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 AudioBuffer<SampleFormat> LoadWavFile(const std::string& file_name) {
   auto r = WavReader::Open(file_name).take_value();
-  auto format = Format::Create({
-      .sample_format = r->sample_format(),
-      .channels = r->channel_count(),
-      .frames_per_second = r->frame_rate(),
-  });
+  FX_CHECK(r->sample_format() == SampleFormat)
+      << "Read(" << file_name << ") failed, expected format " << static_cast<int>(SampleFormat)
+      << ", got " << static_cast<int>(r->sample_format());
 
-  AudioBuffer<SampleFormat> out(format.value(), r->length_in_frames());
+  auto format = Format::Create<SampleFormat>(r->channel_count(), r->frame_rate()).take_value();
+  AudioBuffer out(format, r->length_in_frames());
   auto size = r->length_in_bytes();
   auto result = r->Read(&out.samples()[0], size);
+
   FX_CHECK(result.is_ok()) << "Read(" << file_name << ") failed, error: " << result.error();
   FX_CHECK(size == result.value())
       << "Read(" << file_name << ") failed, expected " << size << " bytes, got " << result.value();
+
   return out;
 }
 

@@ -11,9 +11,18 @@
 
 namespace media::audio {
 
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+class TypedFormat;
+
+// Format represents the format of audio data, and primarily includes a SampleFormat,
+// a channel count, and a sample rate measured in frames/second.
 class Format {
  public:
   static fit::result<Format> Create(fuchsia::media::AudioStreamType stream_type);
+
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
+  static fit::result<TypedFormat<SampleFormat>> Create(uint32_t channels,
+                                                       uint32_t frames_per_second);
 
   Format(const Format&) = default;
   Format& operator=(const Format&) = default;
@@ -32,10 +41,8 @@ class Format {
   uint32_t bytes_per_sample() const { return bytes_per_frame_ / channels(); }
   uint32_t valid_bits_per_channel() const { return valid_bits_per_channel_; }
 
- private:
-  Format(fuchsia::media::AudioStreamType stream_type, TimelineRate frames_per_ns,
-         TimelineRate frame_to_media_ratio, uint32_t bytes_per_frame,
-         uint32_t valid_bits_per_channel);
+ protected:
+  Format(fuchsia::media::AudioStreamType stream_type);
 
   fuchsia::media::AudioStreamType stream_type_;
   TimelineRate frames_per_ns_;
@@ -43,6 +50,22 @@ class Format {
   uint32_t bytes_per_frame_;
   uint32_t valid_bits_per_channel_;
 };
+
+// TypedFormat is a wrapper around Format that carries the underlying SampleFormat in its type,
+// making it more convenient to use with AudioBuffer and other typed functions.
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+class TypedFormat : public Format {
+ private:
+  friend class Format;
+  TypedFormat(fuchsia::media::AudioStreamType stream_type) : Format(stream_type) {}
+};
+
+// Macro that expands to M(F) for all possible SampleFormats F.
+#define INSTANTIATE_FOR_ALL_FORMATS(M)                  \
+  M(fuchsia::media::AudioSampleFormat::UNSIGNED_8)      \
+  M(fuchsia::media::AudioSampleFormat::SIGNED_16)       \
+  M(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32) \
+  M(fuchsia::media::AudioSampleFormat::FLOAT)
 
 }  // namespace media::audio
 

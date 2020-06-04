@@ -29,7 +29,12 @@ class AudioBuffer {
 
   AudioBuffer(const Format& f, size_t num_frames)
       : format_(f), samples_(num_frames * f.channels()) {
-    FX_CHECK(sizeof(SampleT) == f.bytes_per_frame() / f.channels());
+    FX_CHECK(SampleFormat == f.sample_format());
+  }
+
+  AudioBuffer(const TypedFormat<SampleFormat>& f, size_t num_frames)
+      : format_(f), samples_(num_frames * f.channels()) {
+    FX_CHECK(SampleFormat == f.sample_format());
   }
 
   const Format& format() const { return format_; }

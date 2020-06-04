@@ -29,26 +29,16 @@ using ASF = fuchsia::media::AudioSampleFormat;
 // tone, assuming an eventual 48kHz output sample rate.
 template <ASF SampleFormat>
 double MeasureSourceNoiseFloor(double* sinad_db) {
-  Format format = Format::Create(fuchsia::media::AudioStreamType{
-                                     .sample_format = SampleFormat,
-                                     .channels = 1,
-                                     .frames_per_second = 48000,
-                                 })
-                      .take_value();
-  Format accum_format = Format::Create(fuchsia::media::AudioStreamType{
-                                           .sample_format = ASF::FLOAT,
-                                           .channels = 1,
-                                           .frames_per_second = 48000,
-                                       })
-                            .take_value();
+  auto format = Format::Create<SampleFormat>(1, 48000).take_value();
+  auto accum_format = Format::Create<ASF::FLOAT>(1, 48000).take_value();
 
   auto mixer = SelectMixer(SampleFormat, 1, 48000, 1, 48000, Resampler::SampleAndHold);
   auto [amplitude, expected_amplitude] = SampleFormatToAmplitudes(SampleFormat);
 
   // Populate source buffer; mix it (pass-thru) to accumulation buffer
-  auto source = GenerateCosineAudio<SampleFormat>(format, kFreqTestBufSize,
-                                                  FrequencySet::kReferenceFreq, amplitude);
-  AudioBuffer<ASF::FLOAT> accum(accum_format, kFreqTestBufSize);
+  auto source =
+      GenerateCosineAudio(format, kFreqTestBufSize, FrequencySet::kReferenceFreq, amplitude);
+  AudioBuffer accum(accum_format, kFreqTestBufSize);
 
   uint32_t dest_offset = 0;
   uint32_t frac_src_frames = kFreqTestBufSize << kPtsFractionalBits;
@@ -141,27 +131,17 @@ TEST(NoiseFloor, Source_Float) {
 // 128). For float, we populate the accumulator with full-range vals that translate to [-1.0, +1.0].
 template <ASF SampleFormat>
 double MeasureOutputNoiseFloor(double* sinad_db) {
-  Format accum_format = Format::Create(fuchsia::media::AudioStreamType{
-                                           .sample_format = ASF::FLOAT,
-                                           .channels = 1,
-                                           .frames_per_second = 48000 /* unused */,
-                                       })
-                            .take_value();
-  Format dest_format = Format::Create(fuchsia::media::AudioStreamType{
-                                          .sample_format = SampleFormat,
-                                          .channels = 1,
-                                          .frames_per_second = 48000 /* unused */,
-                                      })
-                           .take_value();
+  auto accum_format = Format::Create<ASF::FLOAT>(1, 48000 /* unused */).take_value();
+  auto dest_format = Format::Create<SampleFormat>(1, 48000 /* unused */).take_value();
 
   auto output_producer = OutputProducer::Select(dest_format.stream_type());
   auto [expected_amplitude, amplitude] = SampleFormatToAmplitudes(SampleFormat);
 
   // Populate accum buffer and output to destination buffer
-  auto accum = GenerateCosineAudio<ASF::FLOAT>(accum_format, kFreqTestBufSize,
-                                               FrequencySet::kReferenceFreq, amplitude);
+  auto accum =
+      GenerateCosineAudio(accum_format, kFreqTestBufSize, FrequencySet::kReferenceFreq, amplitude);
 
-  AudioBuffer<SampleFormat> dest(dest_format, kFreqTestBufSize);
+  AudioBuffer dest(dest_format, kFreqTestBufSize);
   output_producer->ProduceOutput(&accum.samples()[0], &dest.samples()[0], kFreqTestBufSize);
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
@@ -246,20 +226,15 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
   // rerun this combination of sampler and resample ratio.
   level_db[0] = -INFINITY;
 
-  Format format = Format::Create(fuchsia::media::AudioStreamType{
-                                     .sample_format = ASF::FLOAT,
-                                     .channels = 1,
-                                     .frames_per_second = 48000 /* unused */,
-                                 })
-                      .take_value();
+  auto format = Format::Create<ASF::FLOAT>(1, 48000 /* unused */).take_value();
 
   auto num_dest_frames = kFreqTestBufSize;
   // Some resamplers need additional data in order to produce the final values, and the amount of
   // data can change depending on resampling ratio. However, all FFT inputs are considered periodic,
   // so to generate a periodic output from the resampler, we can provide extra source elements to
   // resamplers by simply wrapping around to source[0], etc.
-  AudioBuffer<ASF::FLOAT> source(format, num_src_frames);
-  AudioBuffer<ASF::FLOAT> accum(format, num_dest_frames);
+  AudioBuffer source(format, num_src_frames);
+  AudioBuffer accum(format, num_dest_frames);
 
   // We use this to keep ongoing src_pos_modulo across multiple Mix() calls.
   auto& info = mixer->bookkeeping();
@@ -297,7 +272,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
     }
 
     // Populate the source buffer with a sinusoid at each reference frequency.
-    source = GenerateCosineAudio<ASF::FLOAT>(format, num_src_frames, frequency_to_measure);
+    source = GenerateCosineAudio(format, num_src_frames, frequency_to_measure);
 
     // Use this to keep ongoing src_pos_modulo across multiple Mix() calls, but then reset it each
     // time we start testing a new input signal frequency.
@@ -1277,13 +1252,8 @@ TEST(Phase, Sinc_UpSamp3) {
 // into one of the channels of the N-channel source.
 AudioBuffer<ASF::FLOAT> PopulateNxNSourceBuffer(size_t num_frames, uint32_t num_chans,
                                                 uint32_t rate) {
-  Format format = Format::Create(fuchsia::media::AudioStreamType{
-                                     .sample_format = ASF::FLOAT,
-                                     .channels = num_chans,
-                                     .frames_per_second = rate,
-                                 })
-                      .take_value();
-  AudioBuffer<ASF::FLOAT> source(format, num_frames);
+  auto format = Format::Create<ASF::FLOAT>(num_chans, rate).take_value();
+  auto source = AudioBuffer(format, num_frames);
 
   // For each summary frequency, populate a sinusoid into mono, and copy-interleave mono into one of
   // the channels of the N-channel source.
@@ -1296,14 +1266,8 @@ AudioBuffer<ASF::FLOAT> PopulateNxNSourceBuffer(size_t num_frames, uint32_t num_
     }
 
     // Populate mono[] with a sinusoid at this reference-frequency.
-    Format format = Format::Create(fuchsia::media::AudioStreamType{
-                                       .sample_format = ASF::FLOAT,
-                                       .channels = 1,
-                                       .frames_per_second = 48000 /* unused */,
-                                   })
-                        .take_value();
-    auto mono = GenerateCosineAudio<ASF::FLOAT>(format, num_frames,
-                                                FrequencySet::kReferenceFreqs[freq_idx]);
+    auto format = Format::Create<ASF::FLOAT>(1, 48000 /* unused */).take_value();
+    auto mono = GenerateCosineAudio(format, num_frames, FrequencySet::kReferenceFreqs[freq_idx]);
 
     // Copy-interleave mono into the N-channel source[].
     for (uint32_t frame_num = 0; frame_num < num_frames; ++frame_num) {
@@ -1343,19 +1307,14 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   auto mixer = SelectMixer(ASF::FLOAT, num_chans, source_rate, num_chans, dest_rate, sampler_type);
 
   auto num_dest_frames = kFreqTestBufSize;
-  Format dest_format = Format::Create(fuchsia::media::AudioStreamType{
-                                          .sample_format = ASF::FLOAT,
-                                          .channels = num_chans,
-                                          .frames_per_second = dest_rate,
-                                      })
-                           .take_value();
+  auto dest_format = Format::Create<ASF::FLOAT>(num_chans, dest_rate).take_value();
 
   // Some resamplers need additional data in order to produce the final values, and the amount of
   // data can change depending on resampling ratio. However, all FFT inputs are considered periodic,
   // so to generate a periodic output from the resampler, we can provide extra source elements to
   // resamplers by simply wrapping around to source[0], etc.
   auto source = PopulateNxNSourceBuffer(num_src_frames, num_chans, source_rate);
-  auto accum = AudioBuffer<ASF::FLOAT>(dest_format, num_dest_frames);
+  auto accum = AudioBuffer(dest_format, num_dest_frames);
 
   // We use this to keep ongoing src_pos_modulo across multiple Mix() calls.
   auto& info = mixer->bookkeeping();
@@ -1415,13 +1374,8 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   // positive filter widths (they exposed the bug; thus addressing it now).
   mixer->Reset();
 
-  Format mono_format = Format::Create(fuchsia::media::AudioStreamType{
-                                          .sample_format = ASF::FLOAT,
-                                          .channels = 1,
-                                          .frames_per_second = dest_rate,
-                                      })
-                           .take_value();
-  AudioBuffer<ASF::FLOAT> mono(mono_format, num_dest_frames);
+  auto mono_format = Format::Create<ASF::FLOAT>(1, dest_rate).take_value();
+  auto mono = AudioBuffer(mono_format, num_dest_frames);
 
   // Copy-deinterleave each accum[] channel into mono[] and frequency-analyze.
   for (uint32_t idx = 0; idx < num_chans; ++idx) {

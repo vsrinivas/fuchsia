@@ -54,26 +54,29 @@ class HermeticAudioTest : public TestFixture {
   // The returned pointers are owned by this class.
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   VirtualOutput<SampleFormat>* CreateOutput(const audio_stream_unique_id_t& device_id,
-                                            Format format, size_t frame_count);
+                                            TypedFormat<SampleFormat> format, size_t frame_count);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
-  VirtualInput<SampleFormat>* CreateInput(const audio_stream_unique_id_t& device_id, Format format,
-                                          size_t frame_count);
+  VirtualInput<SampleFormat>* CreateInput(const audio_stream_unique_id_t& device_id,
+                                          TypedFormat<SampleFormat> format, size_t frame_count);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   AudioRendererShim<SampleFormat>* CreateAudioRenderer(
-      Format format, size_t frame_count,
+      TypedFormat<SampleFormat> format, size_t frame_count,
       fuchsia::media::AudioRenderUsage usage = fuchsia::media::AudioRenderUsage::MEDIA);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   AudioCapturerShim<SampleFormat>* CreateAudioCapturer(
-      Format format, size_t frame_count, fuchsia::media::AudioCapturerConfiguration config);
+      TypedFormat<SampleFormat> format, size_t frame_count,
+      fuchsia::media::AudioCapturerConfiguration config);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
-  UltrasoundRendererShim<SampleFormat>* CreateUltrasoundRenderer(Format format, size_t frame_count);
+  UltrasoundRendererShim<SampleFormat>* CreateUltrasoundRenderer(TypedFormat<SampleFormat> format,
+                                                                 size_t frame_count);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
-  UltrasoundCapturerShim<SampleFormat>* CreateUltrasoundCapturer(Format format, size_t frame_count);
+  UltrasoundCapturerShim<SampleFormat>* CreateUltrasoundCapturer(TypedFormat<SampleFormat> format,
+                                                                 size_t frame_count);
 
   // Takes ownership of the AudioDeviceEnumerator. This is useful when tests need to watch for
   // low-level device enumeration events. This is incompatible with CreateInput and CreateOutput.
