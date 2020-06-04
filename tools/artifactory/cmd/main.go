@@ -8,8 +8,11 @@ import (
 	"context"
 	"flag"
 	"os"
+	"runtime/pprof"
+	"syscall"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/command"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 
 	"github.com/google/subcommands"
@@ -36,5 +39,12 @@ func main() {
 	flag.Parse()
 	log := logger.NewLogger(level, color.NewColor(colors), os.Stdout, os.Stderr, "artifactory ")
 	ctx := logger.WithLogger(context.Background(), log)
+	ctx = command.CancelOnSignals(ctx, syscall.SIGTERM)
+
+	go func() {
+		<-ctx.Done()
+		pprof.Lookup("goroutine").WriteTo(os.Stderr, 1)
+	}()
+
 	os.Exit(int(subcommands.Execute(ctx)))
 }
