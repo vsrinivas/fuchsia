@@ -175,6 +175,10 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	// TODO (fxb/10480): Move this back to being invoked in the if clause.
 	r.zirconArgs = append(r.zirconArgs, "kernel.serial=legacy")
 
+	// Disable usb mass storage to determine if it affects NUC stability.
+	// TODO(rudymathu): Remove this once stability is achieved.
+	r.zirconArgs = append(r.zirconArgs, "driver.usb_mass_storage.disable")
+
 	eg, ctx := errgroup.WithContext(ctx)
 	var socketPath string
 	if t0.Serial() != nil {
