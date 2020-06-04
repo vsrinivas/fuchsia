@@ -4,7 +4,11 @@
 use {
     anyhow::{Context, Error},
     blobfs_ramdisk::BlobfsRamdisk,
-    fidl::endpoints::ClientEnd,
+    fidl::endpoints::{ClientEnd, RequestStream, ServerEnd},
+    fidl_fuchsia_io::{
+        self as fio, DirectoryAdminRequest, DirectoryAdminRequestStream, DirectoryMarker,
+        DirectoryObject, NodeAttributes, NodeInfo, NodeMarker,
+    },
     fidl_fuchsia_paver::{Asset, Configuration, PaverRequestStream},
     fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryConfigs},
     fuchsia_async as fasync,
@@ -30,6 +34,7 @@ const TEST_CERTS_PATH: &str = "/pkg/data/ssl";
 const TEST_REPO_URL: &str = "fuchsia-pkg://x64.test.fuchsia.com";
 
 struct TestEnvBuilder {
+    blobfs: Option<ClientEnd<DirectoryMarker>>,
     board: String,
     channel: String,
     images: HashMap<String, Vec<u8>>,
@@ -43,6 +48,7 @@ struct TestEnvBuilder {
 impl TestEnvBuilder {
     pub fn new() -> Self {
         TestEnvBuilder {
+            blobfs: None,
             board: "test-board".to_owned(),
             channel: "test".to_owned(),
             images: HashMap::new(),
@@ -65,6 +71,11 @@ impl TestEnvBuilder {
     /// so that it will be downloaded as part of the OTA.
     pub fn add_package(mut self, pkg: Package) -> Self {
         self.packages.push(pkg);
+        self
+    }
+
+    pub fn blobfs(mut self, client: ClientEnd<DirectoryMarker>) -> Self {
+        self.blobfs = Some(client);
         self
     }
 
@@ -158,6 +169,7 @@ impl TestEnvBuilder {
         .unwrap();
 
         Ok(TestEnv {
+            blobfs: self.blobfs,
             board: self.board,
             channel: self.channel,
             omaha_appid: self.omaha_appid,
@@ -172,6 +184,7 @@ impl TestEnvBuilder {
 }
 
 struct TestEnv {
+    blobfs: Option<ClientEnd<DirectoryMarker>>,
     board: String,
     channel: String,
     omaha_appid: Option<String>, // TODO: test omaha support.
@@ -186,7 +199,14 @@ struct TestEnv {
 impl TestEnv {
     /// Run the update, consuming this |TestEnv| and returning a |TestResult|.
     pub async fn run(self) -> TestResult {
-        let blobfs = BlobfsRamdisk::start().expect("launching blobfs");
+        let (blobfs, blobfs_handle) = if let Some(client) = self.blobfs {
+            (None, client)
+        } else {
+            let blobfs = BlobfsRamdisk::start().expect("launching blobfs");
+            let client = blobfs.root_dir_handle().expect("getting blobfs root handle");
+            (Some(blobfs), client)
+        };
+
         let mut service_fs = ServiceFs::new();
         let paver_clone = Arc::clone(&self.paver);
         service_fs.add_fidl_service(move |stream: PaverRequestStream| {
@@ -201,7 +221,7 @@ impl TestEnv {
         fasync::spawn(service_fs.collect());
 
         let result = download_and_apply_update(
-            blobfs.root_dir_handle().expect("getting blobfs root handle"),
+            blobfs_handle,
             ClientEnd::from(client),
             std::fs::File::open(self.repo_config_dir.into_path()).expect("Opening repo config dir"),
             self.ssl_certs,
@@ -222,7 +242,7 @@ impl TestEnv {
 }
 
 struct TestResult {
-    blobfs: BlobfsRamdisk,
+    blobfs: Option<BlobfsRamdisk>,
     packages: Vec<Package>,
     pub paver_events: Vec<PaverEvent>,
     pub result: Result<(), UpdateError>,
@@ -232,7 +252,12 @@ impl TestResult {
     /// Assert that all blobs in all the packages that were part of the Update
     /// have been installed into the blobfs, and that the blobfs contains no extra blobs.
     pub fn check_packages(&self) {
-        let written_blobs = self.blobfs.list_blobs().expect("Listing blobfs blobs");
+        let written_blobs = self
+            .blobfs
+            .as_ref()
+            .unwrap_or_else(|| panic!("Test had no blobfs"))
+            .list_blobs()
+            .expect("Listing blobfs blobs");
         let mut all_package_blobs = BTreeSet::new();
         for package in self.packages.iter() {
             all_package_blobs.append(&mut package.list_blobs().expect("Listing package blobs"));
@@ -240,6 +265,14 @@ impl TestResult {
 
         assert_eq!(written_blobs, all_package_blobs);
     }
+}
+
+async fn build_test_package() -> Result<Package, Error> {
+    PackageBuilder::new("test-package")
+        .add_resource_at("/data/test", "hello, world!".as_bytes())
+        .build()
+        .await
+        .context("Building test package")
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -272,12 +305,7 @@ pub async fn test_no_network() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 pub async fn test_pave_fails() -> Result<(), Error> {
     // Test what happens if the paver fails while paving.
-    let test_package = PackageBuilder::new("test-package")
-        .add_resource_at("/data/test", "hello, world!".as_bytes())
-        .build()
-        .await
-        .context("Building test package")?;
-
+    let test_package = build_test_package().await?;
     let paver_hook = |p: &PaverEvent| {
         if let PaverEvent::WriteAsset { payload, .. } = p {
             if payload.as_slice() == "FAIL".as_bytes() {
@@ -372,5 +400,152 @@ pub async fn test_updater_succeeds() -> Result<(), Error> {
             PaverEvent::QueryActiveConfiguration,
         ]
     );
+    Ok(())
+}
+
+fn launch_cloned_blobfs(end: ServerEnd<NodeMarker>, flags: u32, parent_flags: u32) {
+    let flags = if (flags & fio::CLONE_FLAG_SAME_RIGHTS) == fio::CLONE_FLAG_SAME_RIGHTS {
+        parent_flags
+    } else {
+        flags
+    };
+    let chan = fidl::AsyncChannel::from_channel(end.into_channel()).expect("cloning blobfs dir");
+    let stream = DirectoryAdminRequestStream::from_channel(chan);
+    fasync::spawn(async move {
+        serve_failing_blobfs(stream, flags)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to serve cloned blobfs handle: {:?}", e));
+    });
+}
+
+async fn serve_failing_blobfs(
+    mut stream: DirectoryAdminRequestStream,
+    open_flags: u32,
+) -> Result<(), Error> {
+    if (open_flags & fio::OPEN_FLAG_DESCRIBE) == fio::OPEN_FLAG_DESCRIBE {
+        stream
+            .control_handle()
+            .send_on_open_(
+                zx::Status::OK.into_raw(),
+                Some(&mut NodeInfo::Directory(DirectoryObject)),
+            )
+            .context("sending on open")?;
+    }
+    while let Some(req) = stream.try_next().await? {
+        match req {
+            DirectoryAdminRequest::Clone { object, flags, .. } => {
+                launch_cloned_blobfs(object, flags, open_flags)
+            }
+            DirectoryAdminRequest::Close { responder } => {
+                responder.send(zx::Status::IO.into_raw()).context("failing close")?
+            }
+            DirectoryAdminRequest::Describe { responder } => {
+                responder.send(&mut NodeInfo::Directory(DirectoryObject)).context("describing")?
+            }
+            DirectoryAdminRequest::Sync { responder } => {
+                responder.send(zx::Status::IO.into_raw()).context("failing sync")?
+            }
+            DirectoryAdminRequest::GetAttr { responder } => responder
+                .send(
+                    zx::Status::IO.into_raw(),
+                    &mut NodeAttributes {
+                        mode: 0,
+                        id: 0,
+                        content_size: 0,
+                        storage_size: 0,
+                        link_count: 0,
+                        creation_time: 0,
+                        modification_time: 0,
+                    },
+                )
+                .context("failing getattr")?,
+            DirectoryAdminRequest::SetAttr { responder, .. } => {
+                responder.send(zx::Status::IO.into_raw()).context("failing setattr")?
+            }
+            DirectoryAdminRequest::NodeGetFlags { responder } => {
+                responder.send(zx::Status::IO.into_raw(), 0).context("failing getflags")?
+            }
+            DirectoryAdminRequest::NodeSetFlags { responder, .. } => {
+                responder.send(zx::Status::IO.into_raw()).context("failing setflags")?
+            }
+            DirectoryAdminRequest::Open { object, flags, path, .. } => {
+                if &path == "." {
+                    launch_cloned_blobfs(object, flags, open_flags);
+                } else {
+                    object.close_with_epitaph(zx::Status::IO).context("failing open")?;
+                }
+            }
+            DirectoryAdminRequest::Unlink { responder, .. } => {
+                responder.send(zx::Status::IO.into_raw()).context("failing unlink")?
+            }
+            DirectoryAdminRequest::ReadDirents { responder, .. } => {
+                responder.send(zx::Status::IO.into_raw(), &[]).context("failing readdirents")?
+            }
+            DirectoryAdminRequest::Rewind { responder } => {
+                responder.send(zx::Status::IO.into_raw()).context("failing rewind")?
+            }
+            DirectoryAdminRequest::GetToken { responder } => {
+                responder.send(zx::Status::IO.into_raw(), None).context("failing gettoken")?
+            }
+            DirectoryAdminRequest::Rename { responder, .. } => {
+                responder.send(zx::Status::IO.into_raw()).context("failing rename")?
+            }
+            DirectoryAdminRequest::Link { responder, .. } => {
+                responder.send(zx::Status::IO.into_raw()).context("failing link")?
+            }
+            DirectoryAdminRequest::Watch { responder, .. } => {
+                responder.send(zx::Status::IO.into_raw()).context("failing watch")?
+            }
+            DirectoryAdminRequest::Mount { responder, .. } => {
+                responder.send(zx::Status::IO.into_raw()).context("failing mount")?
+            }
+            DirectoryAdminRequest::MountAndCreate { responder, .. } => {
+                responder.send(zx::Status::IO.into_raw()).context("failing mountandcreate")?
+            }
+            DirectoryAdminRequest::Unmount { responder, .. } => {
+                responder.send(zx::Status::IO.into_raw()).context("failing umount")?
+            }
+            DirectoryAdminRequest::UnmountNode { responder, .. } => {
+                responder.send(zx::Status::IO.into_raw(), None).context("failing unmountnode")?
+            }
+            DirectoryAdminRequest::QueryFilesystem { responder, .. } => responder
+                .send(zx::Status::IO.into_raw(), None)
+                .context("failing queryfilesystem")?,
+            DirectoryAdminRequest::GetDevicePath { responder } => {
+                responder.send(zx::Status::IO.into_raw(), None).context("failing getdevicepath")?
+            }
+        };
+    }
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+pub async fn test_blobfs_broken() -> Result<(), Error> {
+    let (client, server) = zx::Channel::create().context("creating blobfs channel")?;
+    let package = build_test_package().await?;
+    let paver_hook = |_: &PaverEvent| zx::Status::IO;
+    let env = TestEnvBuilder::new()
+        .add_package(package)
+        .add_image("zbi.signed", "ZBI".as_bytes())
+        .blobfs(ClientEnd::from(client))
+        .paver(|p| p.call_hook(paver_hook))
+        .build()
+        .await
+        .context("Building TestEnv")?;
+
+    let stream =
+        DirectoryAdminRequestStream::from_channel(fidl::AsyncChannel::from_channel(server)?);
+
+    fasync::spawn(async move {
+        serve_failing_blobfs(stream, 0)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to serve blobfs: {:?}", e));
+    });
+
+    let result = env.run().await;
+
+    assert_matches!(result.result, Err(UpdateError::InstallError(_)));
+
     Ok(())
 }
