@@ -246,7 +246,8 @@ impl Repository {
         builder.add_mirror(mirror.build()).build()
     }
 
-    fn root_keys(&self) -> BTreeSet<RepositoryKey> {
+    /// Get the root keys used by this repository.
+    pub fn root_keys(&self) -> BTreeSet<RepositoryKey> {
         // TODO when metadata is compatible, use rust-tuf instead.
         #[derive(Debug, Deserialize)]
         struct RootJson {
