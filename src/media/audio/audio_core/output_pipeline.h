@@ -43,7 +43,8 @@ class OutputPipeline : public ReadableStream {
   virtual void RemoveInput(const ReadableStream& stream) = 0;
 
   // Sets the configuration of all effects with the given instance name.
-  virtual void SetEffectConfig(const std::string& instance_name, const std::string& config) = 0;
+  virtual fit::result<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+      const std::string& instance_name, const std::string& config) = 0;
 };
 
 class OutputPipelineImpl : public OutputPipeline {
@@ -74,7 +75,8 @@ class OutputPipelineImpl : public OutputPipeline {
       std::shared_ptr<ReadableStream> stream, const StreamUsage& usage,
       Mixer::Resampler sampler_hint = Mixer::Resampler::Default) override;
   void RemoveInput(const ReadableStream& stream) override;
-  void SetEffectConfig(const std::string& instance_name, const std::string& config) override;
+  fit::result<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+      const std::string& instance_name, const std::string& config) override;
 
   // |media::audio::ReadableStream|
   std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,

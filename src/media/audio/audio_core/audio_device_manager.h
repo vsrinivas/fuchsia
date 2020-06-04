@@ -62,8 +62,14 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   void AddDeviceEnumeratorClient(
       fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request);
 
-  // Sets the configuration of all effects in output pipelines with the given instance name.
-  void SetEffectConfig(const std::string& instance_name, const std::string& config);
+  // Sends an update message to each effect with the name 'instance_name' across all devices.
+  //
+  // Returns UpdateEffectError::INVALID_CONFIG if any effect matching 'instance_name' is found, but
+  // rejects 'message'. Returns UpdateEffectError::NOT_FOUND if no effect is found across any
+  // device. Returns success if at least one effect named 'instance_name' has accepted 'message'
+  // without any other effects matching 'effect_name' rejecting the 'message'.
+  fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+      const std::string& instance_name, const std::string& message);
 
   // |media::audio::DeviceRegistry|
   void AddDevice(const std::shared_ptr<AudioDevice>& device) override;

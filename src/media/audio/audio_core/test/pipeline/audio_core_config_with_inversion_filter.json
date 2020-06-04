@@ -36,9 +36,7 @@
           {
             "lib": "inversion_filter.so",
             "effect": "inversion_filter",
-            "config": {
-              "max_value": 0.5
-            }
+            "name": "inverter"
           }
         ]
       }

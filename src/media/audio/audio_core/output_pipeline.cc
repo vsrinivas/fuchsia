@@ -71,11 +71,17 @@ void OutputPipelineImpl::RemoveInput(const ReadableStream& stream) {
   state_.streams.erase(it);
 }
 
-void OutputPipelineImpl::SetEffectConfig(const std::string& instance_name,
-                                         const std::string& config) {
+fit::result<void, fuchsia::media::audio::UpdateEffectError> OutputPipelineImpl::UpdateEffect(
+    const std::string& instance_name, const std::string& config) {
   for (auto& effects_stage : state_.effects_stages) {
-    effects_stage->SetEffectConfig(instance_name, config);
+    auto result = effects_stage->UpdateEffect(instance_name, config);
+    if (result.is_error() &&
+        result.error() == fuchsia::media::audio::UpdateEffectError::NOT_FOUND) {
+      continue;
+    }
+    return result;
   }
+  return fit::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
 }
 
 std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(

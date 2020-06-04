@@ -298,7 +298,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
 static const std::string kInstanceName = "instance name";
 static const std::string kConfig = "config";
 
-TEST_F(OutputPipelineTest, SetEffectConfig) {
+TEST_F(OutputPipelineTest, UpdateEffect) {
   auto test_effects = testing::TestEffectsModule::Open();
   test_effects.AddEffect("assign_config_size")
       .WithAction(TEST_EFFECTS_ACTION_ASSIGN_CONFIG_SIZE, 0.0);
@@ -336,7 +336,7 @@ TEST_F(OutputPipelineTest, SetEffectConfig) {
   auto pipeline = std::make_shared<OutputPipelineImpl>(
       pipeline_config, volume_curve, kDefaultFormat.channels(), 128, kDefaultTransform);
 
-  pipeline->SetEffectConfig(kInstanceName, kConfig);
+  pipeline->UpdateEffect(kInstanceName, kConfig);
 
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a single effect that sets all samples to the size of the new config).

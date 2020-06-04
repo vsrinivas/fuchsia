@@ -59,7 +59,20 @@ std::unique_ptr<ThermalAgent> ThermalAgent::CreateAndServe(Context* context) {
       context->component_context().svc()->Connect<fuchsia::thermal::Controller>(), thermal_config,
       context->process_config().device_config(),
       [context](const std::string& target_name, const std::string& config) {
-        context->device_manager().SetEffectConfig(target_name, config);
+        auto promise = context->device_manager().UpdateEffect(target_name, config);
+        context->threading_model().FidlDomain().executor()->schedule_task(
+            promise.then([target_name, config](
+                             fit::result<void, fuchsia::media::audio::UpdateEffectError>& result) {
+              if (result.is_error()) {
+                std::ostringstream err;
+                if (result.error() == fuchsia::media::audio::UpdateEffectError::NOT_FOUND) {
+                  err << "effect with name " << target_name << " was not found";
+                } else {
+                  err << "message " << config << " was rejected";
+                }
+                FX_LOGS_FIRST_N(ERROR, 10) << "Unable to apply thermal policy: " << err.str();
+              }
+            }));
       });
 }
 

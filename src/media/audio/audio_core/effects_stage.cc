@@ -198,12 +198,18 @@ void EffectsStage::SetMinLeadTime(zx::duration external_lead_time) {
   source_->SetMinLeadTime(total_lead_time);
 }
 
-void EffectsStage::SetEffectConfig(const std::string& instance_name, const std::string& config) {
+fit::result<void, fuchsia::media::audio::UpdateEffectError> EffectsStage::UpdateEffect(
+    const std::string& instance_name, const std::string& config) {
   for (auto& effect : *effects_processor_) {
     if (effect.instance_name() == instance_name) {
-      effect.UpdateConfiguration(config);
+      if (effect.UpdateConfiguration(config) == ZX_OK) {
+        return fit::ok();
+      } else {
+        return fit::error(fuchsia::media::audio::UpdateEffectError::INVALID_CONFIG);
+      }
     }
   }
+  return fit::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
 }
 
 zx::duration EffectsStage::ComputeIntrinsicMinLeadTime() const {

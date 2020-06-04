@@ -8,6 +8,7 @@
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_tuner_impl.h"
+#include "src/media/audio/audio_core/effects_controller_impl.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/plug_detector.h"
 #include "src/media/audio/audio_core/route_graph.h"
@@ -44,6 +45,7 @@ class ContextImpl : public Context {
         vmar_manager_(
             fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)),
         usage_gain_reporter_(this),
+        effects_controller_(*this),
         audio_tuner_() {
     FX_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
 
@@ -70,6 +72,7 @@ class ContextImpl : public Context {
     component_context_->outgoing()->AddPublicService(activity_dispatcher_.GetFidlRequestHandler());
     component_context_->outgoing()->AddPublicService(usage_gain_reporter_.GetFidlRequestHandler());
     component_context_->outgoing()->AddPublicService(audio_tuner_.GetFidlRequestHandler());
+    component_context_->outgoing()->AddPublicService(effects_controller_.GetFidlRequestHandler());
   }
   ThreadingModel& threading_model() override { return *threading_model_; }
   AudioDeviceManager& device_manager() override { return device_manager_; }
@@ -112,6 +115,7 @@ class ContextImpl : public Context {
 
   UsageGainReporterImpl usage_gain_reporter_;
 
+  EffectsControllerImpl effects_controller_;
   AudioTunerImpl audio_tuner_;
 };
 

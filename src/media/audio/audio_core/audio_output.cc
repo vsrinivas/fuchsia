@@ -140,13 +140,19 @@ void AudioOutput::Cleanup() {
   mix_timer_.Cancel();
 }
 
-void AudioOutput::SetEffectConfig(const std::string& instance_name, const std::string& config) {
-  mix_domain().PostTask([this, self = shared_from_this(), instance_name, config]() {
+fit::promise<void, fuchsia::media::audio::UpdateEffectError> AudioOutput::UpdateEffect(
+    const std::string& instance_name, const std::string& config) {
+  fit::bridge<void, fuchsia::media::audio::UpdateEffectError> bridge;
+  mix_domain().PostTask([this, self = shared_from_this(), instance_name, config,
+                         completer = std::move(bridge.completer)]() mutable {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
     if (pipeline_ && !is_shutting_down()) {
-      pipeline_->SetEffectConfig(instance_name, config);
+      completer.complete_or_abandon(pipeline_->UpdateEffect(instance_name, config));
+      return;
     }
+    completer.complete_error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
   });
+  return bridge.consumer.promise();
 }
 
 }  // namespace media::audio

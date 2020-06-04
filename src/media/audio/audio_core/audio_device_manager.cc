@@ -74,11 +74,33 @@ void AudioDeviceManager::AddDeviceEnumeratorClient(
   bindings_.AddBinding(this, std::move(request));
 }
 
-void AudioDeviceManager::SetEffectConfig(const std::string& instance_name,
-                                         const std::string& config) {
+fit::promise<void, fuchsia::media::audio::UpdateEffectError> AudioDeviceManager::UpdateEffect(
+    const std::string& instance_name, const std::string& config) {
+  std::vector<fit::promise<void, fuchsia::media::audio::UpdateEffectError>> promises;
   for (auto& [_, device] : devices_) {
-    device->SetEffectConfig(instance_name, config);
+    promises.push_back(device->UpdateEffect(instance_name, config));
   }
+  return fit::join_promise_vector(std::move(promises))
+      .then(
+          [](fit::result<std::vector<fit::result<void, fuchsia::media::audio::UpdateEffectError>>>&
+                 results) -> fit::result<void, fuchsia::media::audio::UpdateEffectError> {
+            FX_DCHECK(results.is_ok()) << "fit::join_promise_vector returns an error";
+            bool found = false;
+            for (const auto& result : results.value()) {
+              if (result.is_error() &&
+                  result.error() == fuchsia::media::audio::UpdateEffectError::INVALID_CONFIG) {
+                return result;
+              }
+              if (result.is_ok()) {
+                found = true;
+              }
+            }
+            if (found) {
+              return fit::ok();
+            } else {
+              return fit::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
+            }
+          });
 }
 
 void AudioDeviceManager::AddDevice(const std::shared_ptr<AudioDevice>& device) {

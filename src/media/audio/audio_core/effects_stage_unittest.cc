@@ -247,7 +247,7 @@ static const std::string kInstanceName = "instance_name";
 static const std::string kInitialConfig = "different size than kConfig";
 static const std::string kConfig = "config";
 
-TEST_F(EffectsStageTest, SetEffectConfig) {
+TEST_F(EffectsStageTest, UpdateEffect) {
   testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
 
   // Create a packet queue to use as our source stream.
@@ -270,7 +270,7 @@ TEST_F(EffectsStageTest, SetEffectConfig) {
   });
   auto effects_stage = EffectsStage::Create(effects, stream);
 
-  effects_stage->SetEffectConfig(kInstanceName, kConfig);
+  effects_stage->UpdateEffect(kInstanceName, kConfig);
 
   // Enqueue 10ms of frames in the packet queue.
   stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10)));

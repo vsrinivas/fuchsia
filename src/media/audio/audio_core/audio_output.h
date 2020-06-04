@@ -25,7 +25,8 @@ class AudioOutput : public AudioDevice {
   // Minimum clock lead time for this output
   zx::duration min_lead_time() const override { return min_lead_time_; }
 
-  void SetEffectConfig(const std::string& instance_name, const std::string& config) override;
+  fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+      const std::string& instance_name, const std::string& config) override;
 
  protected:
   friend class AudioOutputTest;

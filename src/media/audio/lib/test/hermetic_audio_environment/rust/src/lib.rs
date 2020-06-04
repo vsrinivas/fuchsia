@@ -10,6 +10,7 @@ pub mod prelude {
     pub type Result<T> = std::result::Result<T, anyhow::Error>;
     pub use crate::Environment;
     pub use fidl_fuchsia_media::*;
+    pub use fidl_fuchsia_media_audio::*;
     pub use fuchsia_component::client;
     pub use fuchsia_zircon as zx;
     pub use futures::{self, future, FutureExt, SinkExt, StreamExt, TryStreamExt};
@@ -40,7 +41,8 @@ lazy_static! {
             services: vec![
                 AudioCoreMarker::SERVICE_NAME,
                 UsageReporterMarker::SERVICE_NAME,
-                AudioDeviceEnumeratorMarker::SERVICE_NAME
+                AudioDeviceEnumeratorMarker::SERVICE_NAME,
+                EffectsControllerMarker::SERVICE_NAME
             ],
             arguments: None
         },

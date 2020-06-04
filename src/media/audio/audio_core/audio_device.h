@@ -71,7 +71,10 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   }
 
   // Sets the configuration of all effects with the given instance name.
-  virtual void SetEffectConfig(const std::string& instance_name, const std::string& config) {}
+  virtual fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+      const std::string& instance_name, const std::string& config) {
+    return fit::make_error_promise(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
+  }
 
   // Accessor set gain. Limits the gain command to what the hardware allows, and
   // wakes up the device in the event of a meaningful change in gain settings.

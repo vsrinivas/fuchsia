@@ -95,6 +95,8 @@ source_set("audio_core_lib") {
     "device_registry.h",
     "driver_output.cc",
     "driver_output.h",
+    "effects_controller_impl.cc",
+    "effects_controller_impl.h",
     "effects_stage.cc",
     "effects_stage.h",
     "intermediate_buffer.cc",

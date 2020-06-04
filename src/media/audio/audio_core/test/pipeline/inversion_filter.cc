@@ -9,6 +9,7 @@
 
 #include <cstring>
 #include <string>
+#include <string_view>
 
 #include <rapidjson/document.h>
 
@@ -18,7 +19,36 @@ namespace {
 struct Inverter {
   uint32_t frame_rate;
   uint16_t channels;
+  // If disabled, process_inplace will no-op instead of inverting.
+  bool enabled;
 };
+
+// Support a very primitive config string to allow testing runtime changes of effect configurations.
+//
+// We support the following configs:
+//   > null/empty string -> enabled (default to enabled when no configuration is provided).
+//   > "enable" -> enabled
+//   > "disable" -> disabled
+//
+// Other configuration strings are rejected.
+zx_status_t ParseEnabledFromConfig(const char* config_cstr, size_t config_len, bool* enabled) {
+  // Default to enabled with no configuration.
+  if (config_cstr == nullptr || !config_cstr[0]) {
+    *enabled = true;
+    return ZX_OK;
+  }
+
+  std::string_view config(config_cstr, config_len);
+  if (config == "enable") {
+    *enabled = true;
+    return ZX_OK;
+  }
+  if (config == "disable") {
+    *enabled = false;
+    return ZX_OK;
+  }
+  return ZX_ERR_INVALID_ARGS;
+}
 
 bool inverter_get_info(uint32_t effect_id, fuchsia_audio_effects_description* desc) {
   if (effect_id != 0 || desc == nullptr) {
@@ -36,16 +66,31 @@ fuchsia_audio_effects_handle_t inverter_create(uint32_t effect_id, uint32_t fram
   if (effect_id != 0 || channels_in != channels_out) {
     return FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE;
   }
+  bool enabled;
+  zx_status_t status = ParseEnabledFromConfig(config, config_length, &enabled);
+  if (status != ZX_OK) {
+    return FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE;
+  }
   auto i = new Inverter{
       .frame_rate = frame_rate,
       .channels = channels_in,
+      .enabled = enabled,
   };
   return reinterpret_cast<fuchsia_audio_effects_handle_t>(i);
 }
 
 bool inverter_update_configuration(fuchsia_audio_effects_handle_t handle, const char* config,
                                    size_t config_length) {
-  return handle != FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE;
+  if (handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
+    return false;
+  }
+  bool enabled;
+  zx_status_t status = ParseEnabledFromConfig(config, config_length, &enabled);
+  if (status != ZX_OK) {
+    return false;
+  }
+  reinterpret_cast<Inverter*>(handle)->enabled = enabled;
+  return true;
 }
 
 bool inverter_delete(fuchsia_audio_effects_handle_t handle) {
@@ -80,8 +125,10 @@ bool inverter_process_inplace(fuchsia_audio_effects_handle_t handle, uint32_t nu
   }
 
   auto i = reinterpret_cast<Inverter*>(handle);
-  for (uint32_t k = 0; k < num_frames * i->channels; k++) {
-    audio_buff_in_out[k] = -audio_buff_in_out[k];
+  if (i->enabled) {
+    for (uint32_t k = 0; k < num_frames * i->channels; k++) {
+      audio_buff_in_out[k] = -audio_buff_in_out[k];
+    }
   }
   return true;
 }

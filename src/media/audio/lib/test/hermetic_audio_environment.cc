@@ -5,6 +5,7 @@
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
 
 #include <fuchsia/inspect/cpp/fidl.h>
+#include <fuchsia/media/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/media/tuning/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
@@ -161,6 +162,7 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
                   fuchsia::media::tuning::AudioTuner::Name_,
                   fuchsia::media::UsageGainReporter::Name_,
                   fuchsia::media::UsageReporter::Name_,
+                  fuchsia::media::audio::EffectsController::Name_,
                   fuchsia::ultrasound::Factory::Name_,
               },
       },

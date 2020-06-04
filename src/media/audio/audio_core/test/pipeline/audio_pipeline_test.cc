@@ -169,11 +169,19 @@ TEST_F(AudioPipelineTest, DiscardDuringPlayback) {
 
 class AudioPipelineEffectsTest : public AudioPipelineTest {
  protected:
+  // Matches the value in audio_core_config_with_inversion_filter.json
+  static constexpr const char* kInverterEffectName = "inverter";
+
   static void SetUpTestSuite() {
     HermeticAudioTest::SetUpTestSuiteWithOptions(HermeticAudioEnvironment::Options{
         .audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-for-pipeline-tests",
         .audio_core_config_data_path = "/pkg/data/audio_core_config_with_inversion_filter",
     });
+  }
+
+  void SetUp() override {
+    AudioPipelineTest::SetUp();
+    environment()->ConnectToService(effects_controller_.NewRequest());
   }
 
   void RunInversionFilter(AudioBuffer<kSampleFormat>* audio_buffer_ptr) {
@@ -182,6 +190,8 @@ class AudioPipelineEffectsTest : public AudioPipelineTest {
       samples[sample] = -samples[sample];
     }
   }
+
+  fuchsia::media::audio::EffectsControllerSyncPtr effects_controller_;
 };
 
 // Validate that the effects package is loaded and that it processes the input.
@@ -208,6 +218,61 @@ TEST_F(AudioPipelineEffectsTest, RenderWithEffects) {
 
   // The ring buffer should match the transformed input buffer for the first num_packets.
   // The remaining bytes should be zeros.
+  CompareAudioBufferOptions opts;
+  opts.num_frames_per_packet = kPacketFrames;
+  opts.test_label = "check data";
+  CompareAudioBuffers(AudioBufferSlice(&ring_buffer, 0, num_frames),
+                      AudioBufferSlice(&input_buffer, 0, num_frames), opts);
+  opts.test_label = "check silence";
+  CompareAudioBuffers(AudioBufferSlice(&ring_buffer, num_frames, output_->frame_count()),
+                      AudioBufferSlice<kSampleFormat>(), opts);
+}
+
+TEST_F(AudioPipelineEffectsTest, EffectsControllerEffectDoesNotExist) {
+  fuchsia::media::audio::EffectsController_UpdateEffect_Result result;
+  zx_status_t status = effects_controller_->UpdateEffect("invalid_effect_name", "disable", &result);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_TRUE(result.is_err());
+  EXPECT_EQ(result.err(), fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
+}
+
+TEST_F(AudioPipelineEffectsTest, EffectsControllerInvalidConfig) {
+  fuchsia::media::audio::EffectsController_UpdateEffect_Result result;
+  zx_status_t status =
+      effects_controller_->UpdateEffect(kInverterEffectName, "invalid config string", &result);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_TRUE(result.is_err());
+  EXPECT_EQ(result.err(), fuchsia::media::audio::UpdateEffectError::INVALID_CONFIG);
+}
+
+// Similar to RenderWithEffects, except we send a message to the effect to ask it to disable
+// processing.
+TEST_F(AudioPipelineEffectsTest, EffectsControllerUpdateEffect) {
+  // Disable the inverter; frames should be unmodified.
+  fuchsia::media::audio::EffectsController_UpdateEffect_Result result;
+  zx_status_t status = effects_controller_->UpdateEffect(kInverterEffectName, "disable", &result);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_TRUE(result.is_response());
+
+  auto min_lead_time = renderer_->GetMinLeadTime();
+  ASSERT_GT(min_lead_time, 0);
+  auto num_packets = zx::duration(min_lead_time) / zx::msec(RendererShimImpl::kPacketMs);
+  auto num_frames = num_packets * kPacketFrames;
+
+  auto input_buffer = GenerateSequentialAudio<kSampleFormat>(format_, num_frames);
+  renderer_->AppendPayload(&input_buffer);
+  // TODO(49981): Don't send an extra packet, once 49980 is fixed
+  auto silent_packet = GenerateSilentAudio<kSampleFormat>(format_, kPacketFrames);
+  renderer_->AppendPayload(&silent_packet);
+  renderer_->SendPackets(num_packets + 1);
+  renderer_->Play(this, output_->NextSynchronizedTimestamp(this), 0);
+
+  // Let all packets play through the system (including an extra silent packet).
+  renderer_->WaitForPacket(this, num_packets);
+  auto ring_buffer = output_->SnapshotRingBuffer();
+
+  // The ring buffer should match the input buffer for the first num_packets. The remaining bytes
+  // should be zeros.
   CompareAudioBufferOptions opts;
   opts.num_frames_per_packet = kPacketFrames;
   opts.test_label = "check data";

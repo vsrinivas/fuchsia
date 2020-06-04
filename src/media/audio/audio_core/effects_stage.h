@@ -25,7 +25,8 @@ class EffectsStage : public ReadableStream {
 
   uint32_t block_size() const { return effects_processor_->block_size(); }
 
-  void SetEffectConfig(const std::string& instance_name, const std::string& config);
+  fit::result<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+      const std::string& instance_name, const std::string& config);
 
   // |media::audio::ReadableStream|
   std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
