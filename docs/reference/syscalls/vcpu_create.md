@@ -33,6 +33,9 @@ memory execution of the VCPU should start.
 it must be called from the same thread, with the exception of
 [`zx_vcpu_interrupt()`].
 
+Only one VCPU may exist on a thread at a time. A thread can create another VCPU
+after it has closed the existing one.
+
 N.B. VCPU is an abbreviation of virtual CPU.
 
 The following rights will be set on the handle *out* by default:
@@ -67,10 +70,13 @@ right.
 
 **ZX_ERR_BAD_HANDLE** *guest* is an invalid handle.
 
+**ZX_ERR_BAD_STATE** The thread currently has a VCPU. Only one VCPU can be
+active on a thread at a time.
+
 **ZX_ERR_INVALID_ARGS** *args* contains an invalid argument, or *out* is an
 invalid pointer, or *options* is nonzero.
 
-**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+**ZX_ERR_NO_MEMORY** Failure due to lack of memory.
 There is no good way for userspace to handle this (unlikely) error.
 In a future build this error will no longer occur.
 

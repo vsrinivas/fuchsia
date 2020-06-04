@@ -682,13 +682,16 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   auto auto_call = fbl::MakeAutoCall([guest, vpid]() { guest->FreeVpid(vpid); });
 
   Thread* thread = Thread::Current::Get();
-  thread->flags_ |= THREAD_FLAG_VCPU;
+  if ((thread->flags_ & THREAD_FLAG_VCPU) != 0) {
+    return ZX_ERR_BAD_STATE;
+  }
 
   fbl::AllocChecker ac;
   ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+  auto_call.cancel();
 
   status = vcpu->local_apic_state_.interrupt_tracker.Init();
   if (status != ZX_OK) {
@@ -714,7 +717,6 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   if (status != ZX_OK) {
     return status;
   }
-  auto_call.cancel();
 
   // Initialize a 64-byte aligned XSAVE area. The guest may enable any non-supervisor state so we
   // allocate the maximum possible size. It is then initialized with the minimum possible XSTATE
@@ -737,30 +739,36 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
     return status;
   }
 
-  thread->SetMigrateFn([vcpu = vcpu.get()](auto stage) { vcpu->MigrateCpu(stage); });
   *out = ktl::move(vcpu);
   return ZX_OK;
 }
 
 Vcpu::Vcpu(Guest* guest, uint16_t vpid, Thread* thread)
-    : guest_(guest), vpid_(vpid), thread_(thread), vmx_state_(/* zero-init */) {}
+    : guest_(guest), vpid_(vpid), thread_(thread), vmx_state_(/* zero-init */) {
+  thread_->flags_ |= THREAD_FLAG_VCPU;
+  thread_->SetMigrateFn([this](auto stage) { MigrateCpu(stage); });
+}
 
 Vcpu::~Vcpu() {
-  if (!vmcs_page_.IsAllocated()) {
-    return;
-  }
   local_apic_state_.timer.Cancel();
 
   // Clear the migration function, so that |thread_| does not reference |this|
   // after destruction of the VCPU.
   thread_->SetMigrateFn(nullptr);
+  {
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+    thread_->flags_ &= ~THREAD_FLAG_VCPU;
+  }
 
-  // The destructor may be called from a different thread, therefore we must
-  // pin the current thread to the same CPU as the VCPU thread.
-  AutoPin pin(vpid_);
-  __UNUSED zx_status_t status = vmclear(vmcs_page_.PhysicalAddress());
-  DEBUG_ASSERT(status == ZX_OK);
-  status = guest_->FreeVpid(vpid_);
+  if (vmcs_page_.IsAllocated()) {
+    // The destructor may be called from a different thread, therefore we must
+    // pin the current thread to the same CPU as the VCPU thread.
+    AutoPin pin(vpid_);
+    __UNUSED zx_status_t status = vmclear(vmcs_page_.PhysicalAddress());
+    DEBUG_ASSERT(status == ZX_OK);
+  }
+
+  __UNUSED zx_status_t status = guest_->FreeVpid(vpid_);
   DEBUG_ASSERT(status == ZX_OK);
 }
 

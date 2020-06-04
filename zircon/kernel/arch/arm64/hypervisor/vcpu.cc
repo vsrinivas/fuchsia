@@ -199,7 +199,9 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   auto auto_call = fbl::MakeAutoCall([guest, vpid]() { guest->FreeVpid(vpid); });
 
   Thread* thread = Thread::Current::Get();
-  thread->flags_ |= THREAD_FLAG_VCPU;
+  if ((thread->flags_ & THREAD_FLAG_VCPU) != 0) {
+    return ZX_ERR_BAD_STATE;
+  }
 
   fbl::AllocChecker ac;
   ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
@@ -234,10 +236,16 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   return ZX_OK;
 }
 
-Vcpu::Vcpu(Guest* guest, uint8_t vpid, const Thread* thread)
-    : guest_(guest), vpid_(vpid), thread_(thread) {}
+Vcpu::Vcpu(Guest* guest, uint8_t vpid, Thread* thread)
+    : guest_(guest), vpid_(vpid), thread_(thread) {
+  thread->flags_ |= THREAD_FLAG_VCPU;
+}
 
 Vcpu::~Vcpu() {
+  {
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+    thread_->flags_ &= ~THREAD_FLAG_VCPU;
+  }
   __UNUSED zx_status_t status = guest_->FreeVpid(vpid_);
   DEBUG_ASSERT(status == ZX_OK);
 }
