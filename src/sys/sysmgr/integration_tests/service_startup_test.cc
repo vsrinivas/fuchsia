@@ -22,6 +22,8 @@ namespace sysmgr {
 namespace test {
 namespace {
 
+constexpr char kGlob[] = "/hub/r/sys/*/svc";
+
 class SimpleLogCollector : public fuchsia::logger::LogListenerSafe {
  public:
   explicit SimpleLogCollector(fidl::InterfaceRequest<fuchsia::logger::LogListenerSafe> request,
@@ -84,6 +86,12 @@ class TestSysmgr : public ::gtest::RealLoopFixture {
 };
 
 TEST_F(TestSysmgr, ServiceStartup) {
+  // wait for sysmgr to destroy existing environments.
+  RunLoopUntil([] {
+    files::Glob glob(kGlob);
+    return glob.size() == 0;
+  });
+
   auto environment_services = sys::ComponentContext::CreateAndServeOutgoingDirectory()->svc();
   fuchsia::sys::LaunchInfo launch_info{
       .url = "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests#meta/sysmgr.cmx"};
@@ -94,10 +102,8 @@ TEST_F(TestSysmgr, ServiceStartup) {
   fuchsia::sys::ComponentControllerPtr contoller;
   launcher->CreateComponent(std::move(launch_info), contoller.NewRequest());
 
-  const std::string kGlob = "/hub/r/sys/*/svc";
-  std::string path;
-
   // wait for sysmgr to create environment.
+  std::string path;
   RunLoopUntil([&] {
     files::Glob glob(kGlob);
     if (glob.size() == 1u) {
@@ -106,6 +112,7 @@ TEST_F(TestSysmgr, ServiceStartup) {
     }
     return false;
   });
+
   // connect to nested environment's svc.
   zx::channel directory;
   auto sysmgr_svc = sys::ServiceDirectory::CreateWithRequest(&directory);
