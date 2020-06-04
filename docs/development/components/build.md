@@ -35,9 +35,9 @@ another component, such as in an integration test, it can be beneficial to
 package both components together.
 
 Components are instantiated in a few ways, all of which somehow specify their
-URL. Typically components are launched by specifying their package names and
-path to their component manifest in the package, using the
-**[`fuchsia-pkg://` scheme][glossary-fuchsia-pkg-url]**.
+[URL][glossary-component-url]. Typically components are launched by specifying
+their package names and path to their component manifest in the package, using
+the **[`fuchsia-pkg://` scheme][glossary-fuchsia-pkg-url]**.
 
 ## GN templates
 
@@ -440,6 +440,22 @@ target that builds the executable is in a package's `deps`, then follow the
 above guide for [listing the contents of a
 package](#listing-the-contents-of-a-package).
 
+### Finding a [component's launch URL][glossary-component-url]
+
+Component URLs follow this pattern:
+
+```
+fuchsia-pkg://fuchsia.com/<package-name>#meta/<component-name>.<extension>
+```
+
+*   `<package-name>`: specified as `package_name` on the package target, which
+    defaults to the target name.
+*   `<component-name>`: specified as `component_name` on the component target,
+    which defaults to the target name.
+*   `<extension>`: based on the [component
+    manifest][glossary-component-manifest] - `cmx` for cmx files, `cm` for cml
+    files.
+
 ## Migrating from legacy `package()`
 
 The example below demonstrates a migration from the legacy
@@ -599,6 +615,7 @@ templates. These unsupported features include:
 [glossary-component]: /docs/glossary.md#component
 [glossary-component-instance]: /docs/glossary.md#component-instance
 [glossary-component-manifest]: /docs/glossary.md#component-manifest
+[glossary-component-url]: /docs/glossary.md#component-url
 [glossary-fuchsia-pkg-url]: /docs/glossary.md#fuchsia-pkg-url
 [glossary-gn]: /docs/glossary.md#gn
 [glossary-package]: /docs/glossary.md#fuchsia-package
