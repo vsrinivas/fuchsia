@@ -52,6 +52,7 @@ var (
 	saveTemps         string
 	basePath          string
 	diffMappingFile   string
+	pathRemapping     flagmisc.StringsValue
 )
 
 func init() {
@@ -75,6 +76,7 @@ func init() {
 	flag.StringVar(&reportDir, "report-dir", "", "the directory to save the report to")
 	flag.StringVar(&basePath, "base", "", "base path for source tree")
 	flag.StringVar(&diffMappingFile, "diff-mapping", "", "path to diff mapping file")
+	flag.Var(&pathRemapping, "path-equivalence", "<from>,<to> remapping of source file paths passed through to llvm-cov")
 }
 
 const llvmProfileSinkType = "llvm-profile"
@@ -298,13 +300,17 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		}
 
 		// Produce HTML report
-		showCmd := Action{Path: llvmCov, Args: []string{
+		args := []string{
 			"show",
 			"-format", outputFormat,
 			"-instr-profile", mergedFile,
 			"-output-dir", outputDir,
-			"@" + covFile.Name(),
-		}}
+		}
+		for _, remapping := range pathRemapping {
+			args = append(args, "-path-equivalence", remapping)
+		}
+		args = append(args, "@"+covFile.Name())
+		showCmd := Action{Path: llvmCov, Args: args}
 		data, err := showCmd.Run(ctx)
 		if err != nil {
 			return fmt.Errorf("%v:\n%s", err, string(data))
@@ -327,13 +333,17 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 
 		// Export data in machine readable format.
 		var b bytes.Buffer
-		cmd := exec.Command(llvmCov, []string{
+		args := []string{
 			"export",
 			"-instr-profile", mergedFile,
 			"-skip-expansions",
 			"-skip-functions",
-			"@" + covFile.Name(),
-		}...)
+		}
+		for _, remapping := range pathRemapping {
+			args = append(args, "-path-equivalence", remapping)
+		}
+		args = append(args, "@"+covFile.Name())
+		cmd := exec.Command(llvmCov, args...)
 		cmd.Stdout = &b
 		cmd.Stderr = stderrFile
 		if err := cmd.Run(); err != nil {
