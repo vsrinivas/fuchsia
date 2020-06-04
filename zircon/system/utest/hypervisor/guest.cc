@@ -107,7 +107,10 @@ static zx_status_t get_hypervisor_resource(zx::resource* resource) {
 
   zx_status_t fidl_status;
   zx_status_t status = sysinfo->GetHypervisorResource(&fidl_status, resource);
-  return status != ZX_OK ? status : fidl_status;
+  if (status != ZX_OK) {
+    return status;
+  }
+  return fidl_status;
 }
 
 #ifdef __aarch64__
@@ -118,7 +121,10 @@ static zx_status_t get_interrupt_controller_info(
 
   zx_status_t fidl_status;
   zx_status_t status = sysinfo->GetInterruptControllerInfo(&fidl_status, info);
-  return status != ZX_OK ? status : fidl_status;
+  if (status != ZX_OK) {
+    return status;
+  }
+  return fidl_status;
 }
 
 #endif  // __aarch64__
@@ -258,28 +264,6 @@ static bool vcpu_resume() {
   }
 
   ASSERT_TRUE(resume_and_clean_exit(&test));
-
-  END_TEST;
-}
-
-static bool vcpu_invalid_thread_reuse() {
-  BEGIN_TEST;
-
-  {
-    test_t test;
-    ASSERT_TRUE(setup(&test, vcpu_resume_start, vcpu_resume_end));
-    if (!test.supported) {
-      // The hypervisor isn't supported, so don't run the test.
-      return true;
-    }
-
-    zx::vcpu vcpu;
-    zx_status_t status = zx::vcpu::create(test.guest, 0, 0, &vcpu);
-    ASSERT_EQ(status, ZX_ERR_BAD_STATE);
-  }
-
-  test_t test;
-  ASSERT_TRUE(setup(&test, vcpu_resume_start, vcpu_resume_end));
 
   END_TEST;
 }
@@ -1110,7 +1094,6 @@ static bool guest_set_trap_with_io() {
 
 BEGIN_TEST_CASE(guest)
 RUN_TEST(vcpu_resume)
-RUN_TEST(vcpu_invalid_thread_reuse)
 RUN_TEST(vcpu_read_write_state)
 RUN_TEST(vcpu_interrupt)
 RUN_TEST(guest_set_trap_with_mem)
