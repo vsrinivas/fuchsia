@@ -78,7 +78,7 @@ typedef char* acpi_string;
 #define __force
 #define __must_check __attribute__((warn_unused_result))
 #define __packed __PACKED
-#define __rcu                         // NEEDS_PORTING
+#define __rcu  // NEEDS_PORTING
 #define ____cacheline_aligned_in_smp  // NEEDS_PORTING
 
 // NEEDS_PORTING: Need to check if 'x' is static array.
@@ -355,5 +355,32 @@ static inline size_t find_first_bit(unsigned* bits, const size_t num_bits) {
 
   return MIN(num_bits, ret);
 }
+
+// Hex dump function
+//
+// This unction will dump the specified memory range with hex values and ASCII chars.
+//
+// - hex_dump(): the actual function printing the output.
+//
+//   Args:
+//     prefix: a string outputting before each line.
+//     ptr: the starting memory address to dump.
+//     len: the length to dump (in bytes).
+//
+// - hex_dump_str(): for testing, returns one line only.
+//
+//   Args:
+//     output: a output buffer larger than or equal to HEX_DUMP_BUF_SIZE bytes.
+//     ptr: the starting memory address to dump.
+//     len: the length to dump (in bytes).
+//
+//   Returns:
+//     The output buffer given in the input argument. This is helpful in printf("%s").
+//     NULL if the output buffer is too small.
+//
+void hex_dump(const char* prefix, const void* ptr, size_t len);
+// for testing
+#define HEX_DUMP_BUF_SIZE 70
+char* hex_dump_str(char* output, size_t output_size, const void* ptr, size_t len);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_

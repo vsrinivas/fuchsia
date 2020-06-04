@@ -19,6 +19,7 @@ source_set("core") {
   sources = [
     "cfg/7000.c",
     "cpp-wrapper.cc",
+    "fuchsia_porting.c",
     "fuchsia_porting.h",
     "fw/init.c",
     "fw/notif-wait.c",

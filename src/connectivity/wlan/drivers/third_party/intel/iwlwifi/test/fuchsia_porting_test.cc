@@ -132,4 +132,77 @@ TEST_F(FuchsiaPortingTest, find_first_bit) {
   EXPECT_EQ(32, find_first_bit(test2, 64));
 }
 
+TEST_F(FuchsiaPortingTest, HexDumpErrorHandling) {
+  char buf[HEX_DUMP_BUF_SIZE - 1];
+  uint8_t data[] = {};
+
+  // buffer underrun case
+  ASSERT_EQ(nullptr, hex_dump_str(buf, sizeof(buf), data, sizeof(data)));
+
+  // attempt to dump too many bytes
+  ASSERT_EQ(nullptr, hex_dump_str(buf, sizeof(buf), data, 17));
+}
+
+TEST_F(FuchsiaPortingTest, HexDumpExactly16Bytes) {
+  char buf[HEX_DUMP_BUF_SIZE];
+  uint8_t data[] = {
+      0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+      0xde, 0xad, 0xbe, 0xef, 0x55, 0x66, 0x01, 0x83,
+  };
+
+  ASSERT_EQ(buf, hex_dump_str(buf, sizeof(buf), data, sizeof(data)));
+
+  // Hex value part
+  EXPECT_EQ('0', buf[0]);  // the first byte: 0x01
+  EXPECT_EQ('1', buf[1]);
+  EXPECT_EQ(':', buf[2]);
+  EXPECT_EQ('8', buf[15 * 3 + 0]);  // the last byte: 0x83
+  EXPECT_EQ('3', buf[15 * 3 + 1]);
+  EXPECT_EQ(':', buf[15 * 3 + 2]);
+
+  // ASCII part
+  EXPECT_EQ('?', buf[50]);                      // non-printable
+  EXPECT_EQ('E', buf[52]);                      // printable
+  EXPECT_EQ('?', buf[54]);                      // non-printable
+  EXPECT_EQ('?', buf[55]);                      // the last byte: non-printable
+  EXPECT_EQ('\0', buf[HEX_DUMP_BUF_SIZE - 1]);  // null-terminator
+}
+
+TEST_F(FuchsiaPortingTest, HexDumpLessThan16Bytes) {
+  char buf[HEX_DUMP_BUF_SIZE];
+  uint8_t data[] = {
+      0x61,
+  };
+
+  ASSERT_EQ(buf, hex_dump_str(buf, sizeof(buf), data, sizeof(data)));
+
+  // Hex value part
+  EXPECT_EQ('6', buf[0]);  // the first byte: 0x61
+  EXPECT_EQ('1', buf[1]);
+  EXPECT_EQ(':', buf[2]);
+  EXPECT_EQ(' ', buf[3]);  // the second byte: not dumped.
+  EXPECT_EQ(' ', buf[4]);
+  EXPECT_EQ(' ', buf[5]);
+
+  // ASCII part
+  EXPECT_EQ('a', buf[50]);                      // printable
+  EXPECT_EQ(' ', buf[52]);                      // the second byte: not dumped.
+  EXPECT_EQ('\0', buf[HEX_DUMP_BUF_SIZE - 1]);  // null-terminator
+}
+
+TEST_F(FuchsiaPortingTest, HexDumpZeroByte) {
+  char buf[HEX_DUMP_BUF_SIZE];
+  uint8_t data[] = {};
+
+  ASSERT_EQ(buf, hex_dump_str(buf, sizeof(buf), data, sizeof(data)));
+
+  // Hex value part
+  EXPECT_EQ(' ', buf[0]);  // nothing dumped
+  EXPECT_EQ(' ', buf[1]);
+  EXPECT_EQ(' ', buf[2]);
+
+  // ASCII part
+  EXPECT_EQ(' ', buf[50]);                      // nothing dumped
+  EXPECT_EQ('\0', buf[HEX_DUMP_BUF_SIZE - 1]);  // null-terminator
+}
 }  // namespace
