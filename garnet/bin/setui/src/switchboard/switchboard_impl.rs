@@ -1,13 +1,14 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+use crate::clock;
 use crate::internal::core;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::switchboard::base::{
     ListenCallback, ListenSession, SettingAction, SettingActionData, SettingEvent, SettingRequest,
     SettingRequestResponder, SettingType, Switchboard, SwitchboardClient, SwitchboardHandle,
 };
-use crate::switchboard::clock;
 
 use anyhow::{format_err, Error};
 use fuchsia_async as fasync;

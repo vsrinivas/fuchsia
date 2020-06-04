@@ -7,9 +7,6 @@
 /// with the Switchboard.
 pub mod base;
 
-/// This mod wraps SystemTime and allows it to be replaced for tests.
-pub mod clock;
-
 /// This mod provides a concrete implementation of the Switchboard.
 pub mod switchboard_impl;
 

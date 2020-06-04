@@ -20,7 +20,7 @@ pub type GenerateHandler<T> =
 
 /// An command represents messaging from the registry to take a
 /// particular action.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Command {
     HandleRequest(SettingRequest),
     ChangeState(State),

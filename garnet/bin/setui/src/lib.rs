@@ -20,6 +20,7 @@ use {
     crate::display::spawn_display_fidl_handler,
     crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController,
     crate::do_not_disturb::spawn_do_not_disturb_fidl_handler,
+    crate::inspect::inspect_broker::InspectBroker,
     crate::internal::agent as internal_agent,
     crate::internal::core as internal_core,
     crate::internal::event as internal_event,
@@ -71,12 +72,14 @@ use {
 mod accessibility;
 mod account;
 mod audio;
+mod clock;
 mod device;
 mod display;
 mod do_not_disturb;
 mod fidl_clone;
 mod fidl_processor;
 mod input;
+mod inspect;
 mod internal;
 mod intl;
 mod night_mode;
@@ -378,6 +381,13 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     for blueprint in event_subscriber_blueprints {
         blueprint.create(event_messenger_factory.clone()).await;
     }
+
+    // Attach inspect broker, which watches messages between registry and setting handlers to
+    // record settings values to inspect.
+    let inspect_broker_node = component::inspector().root().create_child("setting_values");
+    InspectBroker::create(setting_handler_messenger_factory.clone(), inspect_broker_node)
+        .await
+        .expect("could not create inspect");
 
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.

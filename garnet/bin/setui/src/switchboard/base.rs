@@ -32,7 +32,7 @@ pub trait Merge {
     fn merge(&self, other: Self) -> Self;
 }
 
-#[derive(Error, Debug, Clone)]
+#[derive(Error, Debug, Clone, PartialEq)]
 pub enum SwitchboardError {
     #[error("Unimplemented Request:{request:?} for setting type: {setting_type:?}")]
     UnimplementedRequest { setting_type: SettingType, request: SettingRequest },
@@ -335,6 +335,27 @@ pub enum SettingResponse {
     Privacy(PrivacyInfo),
     Setup(SetupInfo),
     System(SystemInfo),
+}
+
+impl SettingResponse {
+    /// Returns the name of the enum and its value, debug-formatted, for writing to inspect.
+    /// TODO(fxb/51123): simplify this with a macro or fuchsia-inspect-derive.
+    pub fn for_inspect(self) -> (&'static str, String) {
+        match self {
+            SettingResponse::Unknown => ("Unknown", "".to_string()),
+            SettingResponse::Accessibility(info) => ("Accessibility", format!("{:?}", info)),
+            SettingResponse::Audio(info) => ("Audio", format!("{:?}", info)),
+            SettingResponse::Brightness(info) => ("Brightness", format!("{:?}", info)),
+            SettingResponse::Device(info) => ("Device", format!("{:?}", info)),
+            SettingResponse::LightSensor(info) => ("LightSensor", format!("{:?}", info)),
+            SettingResponse::DoNotDisturb(info) => ("DoNotDisturb", format!("{:?}", info)),
+            SettingResponse::Intl(info) => ("Intl", format!("{:?}", info)),
+            SettingResponse::NightMode(info) => ("NightMode", format!("{:?}", info)),
+            SettingResponse::Privacy(info) => ("Privacy", format!("{:?}", info)),
+            SettingResponse::Setup(info) => ("Setup", format!("{:?}", info)),
+            SettingResponse::System(info) => ("System", format!("{:?}", info)),
+        }
+    }
 }
 
 /// Description of an action request on a setting. This wraps a

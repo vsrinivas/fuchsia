@@ -15,7 +15,7 @@ pub enum Address {
 }
 
 // The types of data that can be sent.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Payload {
     Command(Command),
     Changed(SettingType),
