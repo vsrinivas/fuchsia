@@ -15,7 +15,8 @@ namespace feedback {
 namespace {
 
 TEST(RebootResonTest, NotParseable) {
-  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kNotParseable), cobalt::LegacyRebootReason::kKernelPanic);
+  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kNotParseable),
+            cobalt::LegacyRebootReason::kKernelPanic);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kNotParseable),
             cobalt::LastRebootReason::kUnknown);
   EXPECT_EQ(ToCrashSignature(RebootReason::kNotParseable), "fuchsia-kernel-panic");
@@ -24,11 +25,11 @@ TEST(RebootResonTest, NotParseable) {
 }
 
 TEST(RebootResonTest, Clean) {
-  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kGenericGraceful), cobalt::LegacyRebootReason::kClean);
+  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kGenericGraceful),
+            cobalt::LegacyRebootReason::kClean);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kGenericGraceful),
             cobalt::LastRebootReason::kGenericGraceful);
-  EXPECT_EQ(ToFidlRebootReason(RebootReason::kGenericGraceful),
-            fuchsia::feedback::RebootReason::GENERIC_GRACEFUL);
+  EXPECT_EQ(ToFidlRebootReason(RebootReason::kGenericGraceful), std::nullopt);
 }
 
 TEST(RebootResonTest, Cold) {
@@ -38,7 +39,8 @@ TEST(RebootResonTest, Cold) {
 }
 
 TEST(RebootResonTest, Spontaneous) {
-  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kSpontaneous), cobalt::LegacyRebootReason::kUnknown);
+  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kSpontaneous),
+            cobalt::LegacyRebootReason::kUnknown);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kSpontaneous),
             cobalt::LastRebootReason::kBriefPowerLoss);
   EXPECT_EQ(ToCrashSignature(RebootReason::kSpontaneous), "fuchsia-reboot-unknown");
@@ -48,7 +50,8 @@ TEST(RebootResonTest, Spontaneous) {
 }
 
 TEST(RebootResonTest, KernelPanic) {
-  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kKernelPanic), cobalt::LegacyRebootReason::kKernelPanic);
+  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kKernelPanic),
+            cobalt::LegacyRebootReason::kKernelPanic);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kKernelPanic),
             cobalt::LastRebootReason::kKernelPanic);
   EXPECT_EQ(ToCrashSignature(RebootReason::kKernelPanic), "fuchsia-kernel-panic");
@@ -92,7 +95,8 @@ TEST(RebootResonTest, SoftwareWatchdogTimeout) {
 }
 
 TEST(RebootResonTest, Brownout) {
-  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kBrownout), cobalt::LegacyRebootReason::kBrownout);
+  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kBrownout),
+            cobalt::LegacyRebootReason::kBrownout);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kBrownout), cobalt::LastRebootReason::kBrownout);
   EXPECT_EQ(ToCrashSignature(RebootReason::kBrownout), "fuchsia-brownout");
   EXPECT_EQ(ToCrashProgramName(RebootReason::kBrownout), "device");

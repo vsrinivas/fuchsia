@@ -149,7 +149,7 @@ std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(
     const RebootReason reboot_reason) {
   switch (reboot_reason) {
     case RebootReason::kGenericGraceful:
-      return fuchsia::feedback::RebootReason::GENERIC_GRACEFUL;
+      return std::nullopt;
     case RebootReason::kCold:
       return fuchsia::feedback::RebootReason::COLD;
     case RebootReason::kSpontaneous:

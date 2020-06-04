@@ -290,8 +290,7 @@ TEST_F(DatastoreTest, GetAnnotations_LastRebootInfo) {
   ASSERT_TRUE(uptime_str.has_value());
 
   fuchsia::feedback::LastReboot last_reboot;
-  last_reboot.set_reason(fuchsia::feedback::RebootReason::GENERIC_GRACEFUL)
-      .set_uptime(uptime.get());
+  last_reboot.set_graceful(true).set_uptime(uptime.get());
   SetUpLastRebootInfoProviderServer(
       std::make_unique<stubs::LastRebootInfoProvider>(std::move(last_reboot)));
   SetUpDatastore(

@@ -14,9 +14,7 @@ using namespace fuchsia::feedback;
 void LastRebootInfoProvider::Get(GetCallback callback) {
   LastReboot last_reboot;
 
-  last_reboot.set_graceful(true)
-      .set_reason(RebootReason::GENERIC_GRACEFUL)
-      .set_uptime(zx::hour(1).get());
+  last_reboot.set_graceful(true).set_uptime(zx::hour(1).get());
 
   callback(std::move(last_reboot));
 }

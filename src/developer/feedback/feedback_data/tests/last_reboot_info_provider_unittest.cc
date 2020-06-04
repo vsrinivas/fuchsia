@@ -32,7 +32,7 @@ using fuchsia::feedback::RebootReason;
 using testing::ElementsAreArray;
 using testing::Pair;
 
-constexpr RebootReason kRebootReason = RebootReason::GENERIC_GRACEFUL;
+constexpr RebootReason kRebootReason = RebootReason::KERNEL_PANIC;
 constexpr zx::duration kUptime = zx::msec(100);
 
 class LastRebootInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
@@ -89,7 +89,7 @@ TEST_F(LastRebootInfoProviderTest, Success_ReasonAndUptimeReturned) {
       kAnnotationSystemLastRebootUptime,
   });
   EXPECT_THAT(result, ElementsAreArray({
-                          Pair(kAnnotationSystemLastRebootReason, AnnotationOr("graceful")),
+                          Pair(kAnnotationSystemLastRebootReason, AnnotationOr("kernel panic")),
                           Pair(kAnnotationSystemLastRebootUptime, AnnotationOr(uptime_str.value())),
                       }));
 }
@@ -107,7 +107,7 @@ TEST_F(LastRebootInfoProviderTest, Succeed_NoUptimeReturned) {
   });
   EXPECT_THAT(result,
               ElementsAreArray({
-                  Pair(kAnnotationSystemLastRebootReason, AnnotationOr("graceful")),
+                  Pair(kAnnotationSystemLastRebootReason, AnnotationOr("kernel panic")),
                   Pair(kAnnotationSystemLastRebootUptime, AnnotationOr(Error::kMissingValue)),
               }));
 }

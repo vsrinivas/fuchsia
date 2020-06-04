@@ -35,15 +35,6 @@ table LastReboot {
 
 /// Reasons why a device last rebooted.
 enum RebootReason : uint16 {
-    /// The device rebooted gracefully, e.g. because the user rebooted the device or the system
-    /// software was updated.
-    ///
-    /// In the future, additional, more granular reasons for graceful reboots may be added when the
-    /// platform can distinguish between them.
-    [Deprecated = "In the event of a generic graceful reboot |graceful| will be set, but no reason
-    provided"]
-    GENERIC_GRACEFUL = 1;
-
     /// The device booted from a cold state.
     ///
     /// This is most likely the result of an extended period of time without power or a device

@@ -76,8 +76,6 @@ namespace {
 std::string GetReason(const LastReboot& last_reboot) {
   if (last_reboot.has_reason()) {
     switch (last_reboot.reason()) {
-      case RebootReason::GENERIC_GRACEFUL:
-        return "graceful";
       case RebootReason::COLD:
         return "cold";
       case RebootReason::BRIEF_POWER_LOSS:

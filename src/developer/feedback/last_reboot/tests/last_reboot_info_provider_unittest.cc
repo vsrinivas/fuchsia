@@ -37,8 +37,7 @@ TEST(LastRebootInfoProviderTest, Succeed_Graceful) {
   ASSERT_TRUE(last_reboot.has_graceful());
   EXPECT_TRUE(last_reboot.graceful());
 
-  ASSERT_TRUE(last_reboot.has_reason());
-  EXPECT_EQ(last_reboot.reason(), ToFidlRebootReason(reboot_reason));
+  EXPECT_FALSE(last_reboot.has_reason());
 }
 
 TEST(LastRebootInfoProviderTest, Succeed_NotGraceful) {
