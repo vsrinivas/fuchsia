@@ -2394,6 +2394,156 @@ pub fn decode_transaction_header(bytes: &[u8]) -> Result<(TransactionHeader, &[u
     Ok((header, body_bytes))
 }
 
+/// Header for persistently stored FIDL messages
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct PersistentHeader {
+    /// Flags set for this message. MUST NOT be validated by bindings
+    flags: [u8; 3],
+    /// Magic number indicating the message's wire format. Two sides with
+    /// different magic numbers are incompatible with each other.
+    magic_number: u8,
+}
+
+fidl_struct! {
+    name: PersistentHeader,
+    members: [
+        flags {
+            ty: [u8; 3],
+            offset_v1: 4,
+        },
+        magic_number {
+            ty: u8,
+            offset_v1: 7,
+        },
+    ],
+    size_v1: 16,
+    align_v1: 8,
+}
+
+impl PersistentHeader {
+    /// Creates a new `PersistentHeader` with the default encode context and magic number.
+    pub fn new() -> Self {
+        PersistentHeader::new_full(&default_encode_context(), MAGIC_NUMBER_INITIAL)
+    }
+    /// Creates a new `PersistentHeader` with a specific context and magic number.
+    pub fn new_full(context: &Context, magic_number: u8) -> Self {
+        PersistentHeader { flags: context.header_flags().into(), magic_number }
+    }
+    /// Returns the magic number.
+    pub fn magic_number(&self) -> u8 {
+        self.magic_number
+    }
+    /// Returns the header's flags as a `HeaderFlags` value.
+    pub fn flags(&self) -> HeaderFlags {
+        let bytes = [self.flags[0], self.flags[1], self.flags[2], 0];
+        HeaderFlags::from_bits_truncate(u32::from_le_bytes(bytes))
+    }
+    /// Returns the context to use for decoding the message body associated with
+    /// this header. During migrations, this is dependent on `self.flags()` and
+    /// controls dynamic behavior in the read path.
+    pub fn decoding_context(&self) -> Context {
+        Context {}
+    }
+    /// Returns whether the message containing this `PersistentHeader` is in a
+    /// compatible wire format.
+    pub fn is_compatible(&self) -> bool {
+        self.magic_number == MAGIC_NUMBER_INITIAL
+    }
+}
+
+/// Persistently stored FIDL message
+pub struct PersistentMessage<'a, T> {
+    /// Header of the message
+    pub header: PersistentHeader,
+    /// Body of the message
+    pub body: &'a mut T,
+}
+
+impl<T: Layout> Layout for PersistentMessage<'_, T> {
+    fn inline_align(context: &Context) -> usize {
+        cmp::max(<PersistentHeader as Layout>::inline_align(context), T::inline_align(context))
+    }
+    fn inline_size(context: &Context) -> usize {
+        <PersistentHeader as Layout>::inline_size(context) + T::inline_size(context)
+    }
+}
+
+impl<T: Encodable> Encodable for PersistentMessage<'_, T> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
+        self.header.encode(encoder)?;
+        (*self.body).encode(encoder)?;
+        Ok(())
+    }
+}
+
+/// Encode the referred parameter into persistent binary form.
+/// Generates and adds message header to the returned bytes.
+pub fn encode_persistent<T: Encodable>(body: &mut T) -> Result<Vec<u8>> {
+    let msg = &mut PersistentMessage { header: PersistentHeader::new(), body };
+    let mut combined_bytes = Vec::<u8>::new();
+    let mut handles = Vec::<Handle>::new();
+    Encoder::encode(&mut combined_bytes, &mut handles, msg)?;
+    debug_assert!(handles.is_empty(), "Persistent message contains handles");
+    Ok(combined_bytes)
+}
+
+/// Creates persistent header to encode it and the message body separately.
+pub fn create_persistent_header() -> PersistentHeader {
+    PersistentHeader::new()
+}
+
+/// Encode PersistentHeader to persistent binary form.
+pub fn encode_persistent_header(header: &mut PersistentHeader) -> Result<Vec<u8>> {
+    let mut header_bytes = Vec::<u8>::new();
+    Encoder::encode(&mut header_bytes, &mut Vec::new(), header)?;
+    Ok(header_bytes)
+}
+
+/// Encode the message body to to persistent binary form.
+pub fn encode_persistent_body<T: Encodable>(
+    body: &mut T,
+    header: &PersistentHeader,
+) -> Result<Vec<u8>> {
+    let mut combined_bytes = Vec::<u8>::new();
+    let mut handles = Vec::<Handle>::new();
+    Encoder::encode_with_context(
+        &header.decoding_context(),
+        &mut combined_bytes,
+        &mut handles,
+        body,
+    )?;
+    debug_assert!(handles.is_empty(), "Persistent message contains handles");
+    Ok(combined_bytes)
+}
+
+/// Decode the type expected from the persistent binary form.
+pub fn decode_persistent<T: Decodable>(bytes: &[u8]) -> Result<T> {
+    let context = Context {};
+    let header_len = <PersistentHeader as Layout>::inline_size(&context);
+    if bytes.len() < header_len {
+        return Err(Error::OutOfRange);
+    }
+    let (header_bytes, body_bytes) = bytes.split_at(header_len);
+    let header = decode_persistent_header(header_bytes)?;
+    decode_persistent_body(body_bytes, &header)
+}
+
+/// Decodes the persistently stored header from a message.
+/// Returns the header and a reference to the tail of the message.
+pub fn decode_persistent_header(bytes: &[u8]) -> Result<PersistentHeader> {
+    let mut header = PersistentHeader::new_empty();
+    Decoder::decode_with_context(&header.decoding_context(), bytes, &mut [], &mut header)?;
+    Ok(header)
+}
+
+/// Decodes the persistently stored header from a message.
+/// Returns the header and a reference to the tail of the message.
+pub fn decode_persistent_body<T: Decodable>(bytes: &[u8], header: &PersistentHeader) -> Result<T> {
+    let mut output = T::new_empty();
+    Decoder::decode_with_context(&header.decoding_context(), bytes, &mut [], &mut output)?;
+    Ok(output)
+}
+
 // Implementations of Encodable for (&mut Head, ...Tail) and Decodable for (Head, ...Tail)
 macro_rules! tuple_impls {
     () => {};
@@ -3502,6 +3652,37 @@ mod test {
                 .expect("Decoding body failed");
             assert_eq!(body, body_out);
         }
+    }
+
+    #[test]
+    fn encode_decode_persistent_combined() {
+        let mut body = "hello".to_string();
+
+        let buf = encode_persistent(&mut body).expect("Encoding failed");
+        let body_out = decode_persistent::<String>(&buf).expect("Decoding failed");
+
+        assert_eq!(body, body_out);
+    }
+
+    #[test]
+    fn encode_decode_persistent_separate() {
+        let mut body = "hello".to_string();
+        let mut another_body = "world".to_string();
+
+        let mut header = create_persistent_header();
+        let buf_header = encode_persistent_header(&mut header).expect("Header encoding failed");
+        let buf_body = encode_persistent_body(&mut body, &header).expect("Body encoding failed");
+        let buf_another_body =
+            encode_persistent_body(&mut another_body, &header).expect("Body encoding failed");
+
+        let header_out = decode_persistent_header(&buf_header).expect("Header decoding failed");
+        assert_eq!(header, header_out);
+        let body_out =
+            decode_persistent_body::<String>(&buf_body, &header).expect("Body decoding failed");
+        assert_eq!(body, body_out);
+        let another_body_out = decode_persistent_body::<String>(&buf_another_body, &header)
+            .expect("Another body decoding failed");
+        assert_eq!(another_body, another_body_out);
     }
 
     #[test]
