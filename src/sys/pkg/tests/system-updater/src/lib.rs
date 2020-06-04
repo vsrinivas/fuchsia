@@ -73,8 +73,8 @@ impl TestEnvBuilder {
         let fake_path = test_dir.path().join("fake");
         create_dir(&fake_path).expect("create fake stimulus dir");
 
-        let config_path = test_dir.path().join("config");
-        create_dir(&config_path).expect("create config dir");
+        let build_info_path = test_dir.path().join("build-info");
+        create_dir(&build_info_path).expect("create build-info dir");
 
         let misc_path = test_dir.path().join("misc");
         create_dir(&misc_path).expect("create misc dir");
@@ -173,7 +173,7 @@ impl TestEnvBuilder {
             _test_dir: test_dir,
             blobfs_path,
             fake_path,
-            config_path,
+            build_info_path,
             misc_path,
             interactions,
         }
@@ -191,7 +191,7 @@ struct TestEnv {
     _test_dir: TempDir,
     blobfs_path: PathBuf,
     fake_path: PathBuf,
-    config_path: PathBuf,
+    build_info_path: PathBuf,
     misc_path: PathBuf,
     interactions: SystemUpdaterInteractions,
 }
@@ -215,12 +215,8 @@ impl TestEnv {
 
     /// Set the name of the board that system_updater is running on.
     fn set_board_name(&self, board: impl AsRef<str>) {
-        // Create the /config/board-info directory.
-        let build_info_dir = self.config_path.join("build-info");
-        create_dir(&build_info_dir).expect("create build-info dir");
-
-        // Write the "board" file into the directory.
-        let mut file = File::create(build_info_dir.join("board")).expect("create board file");
+        // Write the "board" file into the build-info directory.
+        let mut file = File::create(self.build_info_path.join("board")).expect("create board file");
         file.write_all(board.as_ref().as_bytes()).expect("write board file");
     }
 
@@ -270,7 +266,7 @@ impl TestEnv {
         let launcher = self.launcher();
         let blobfs_dir = File::open(&self.blobfs_path).expect("open blob dir");
         let fake_dir = File::open(&self.fake_path).expect("open fake stimulus dir");
-        let config_dir = File::open(&self.config_path).expect("open config dir");
+        let build_info_dir = File::open(&self.build_info_path).expect("open config dir");
         let misc_dir = File::open(&self.misc_path).expect("open misc dir");
 
         let system_updater = AppBuilder::new(
@@ -280,8 +276,8 @@ impl TestEnv {
         .expect("/blob to mount")
         .add_dir_to_namespace("/fake".to_string(), fake_dir)
         .expect("/fake to mount")
-        .add_dir_to_namespace("/config".to_string(), config_dir)
-        .expect("/config to mount")
+        .add_dir_to_namespace("/config/build-info".to_string(), build_info_dir)
+        .expect("/config/build-info to mount")
         .add_dir_to_namespace("/misc".to_string(), misc_dir)
         .expect("/misc to mount")
         .args(args);
@@ -718,8 +714,8 @@ async fn test_packages_json_takes_precedence() {
               // TODO: Change to "1" once we remove support for versions as ints.
               "version": 1,
               "content": [
-                "fuchsia-pkg://fuchsia.com/amber/0?hash=abcdef",
-                "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789",
+                "fuchsia-pkg://fuchsia.com/amber/0?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100",
+                "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=ffeeddccbbaa9988776655443322110000112233445566778899aabbccddeeff",
               ]
             })
             .to_string(),
@@ -740,8 +736,8 @@ async fn test_packages_json_takes_precedence() {
         resolved_urls(Arc::clone(&env.interactions)),
         vec![
             UPDATE_PKG_URL,
-            "fuchsia-pkg://fuchsia.com/amber/0?hash=abcdef",
-            "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789"
+            "fuchsia-pkg://fuchsia.com/amber/0?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100",
+            "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=ffeeddccbbaa9988776655443322110000112233445566778899aabbccddeeff"
         ]
     );
 }
@@ -758,8 +754,8 @@ async fn test_metrics_report_untrusted_tuf_repo() {
               // TODO: Change to "1" once we remove support for versions as ints.
               "version": 1,
               "content": [
-                "fuchsia-pkg://non-existent-repo.com/amber/0?hash=abcdef",
-                "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789",
+                "fuchsia-pkg://non-existent-repo.com/amber/0?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100",
+                "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=ffeeddccbbaa9988776655443322110000112233445566778899aabbccddeeff",
               ]
             })
             .to_string(),
@@ -767,7 +763,7 @@ async fn test_metrics_report_untrusted_tuf_repo() {
         .add_file("zbi", "fake zbi");
 
     env.resolver.mock_resolve_failure(
-        "fuchsia-pkg://non-existent-repo.com/amber/0?hash=abcdef",
+        "fuchsia-pkg://non-existent-repo.com/amber/0?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100",
         Status::ADDRESS_UNREACHABLE,
     );
 
@@ -1156,12 +1152,18 @@ async fn test_invalid_board() {
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 1);
     let logger = loggers.into_iter().next().unwrap();
+    let mut events = OtaMetrics::from_events(logger.cobalt_events.lock().clone());
+    // TODO(49915) 0 is an invalid index, but the go system updater uses it here.  Remove this
+    // conversion when these tests no longer cover the go system updater.
+    if events.phase == 0 {
+        events.phase = metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32;
+    }
     assert_eq!(
-        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        events,
         OtaMetrics {
             initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
                 as u32,
-            phase: 0u32,
+            phase: metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
             target: "m3rk13".into(),
         }
@@ -1207,12 +1209,18 @@ async fn test_invalid_update_package_name() {
     let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 1);
     let logger = loggers.into_iter().next().unwrap();
+    let mut events = OtaMetrics::from_events(logger.cobalt_events.lock().clone());
+    // TODO(49915) 0 is an invalid index, but the go system updater uses it here.  Remove this
+    // conversion when these tests no longer cover the go system updater.
+    if events.phase == 0 {
+        events.phase = metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32;
+    }
     assert_eq!(
-        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        events,
         OtaMetrics {
             initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
                 as u32,
-            phase: 0u32,
+            phase: metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
             target: "m3rk13".into(),
         }
@@ -1788,7 +1796,15 @@ async fn test_rejects_invalid_update_package_url() {
         .await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
-    assert_eq!(env.take_interactions(), vec![Gc, PackageResolve(bogus_url.to_string()),]);
+    // TODO(49915) the go system updater does not verify package urls, so it doesn't know the url
+    // is invalid until it tries to resolve it.  Remove the non-empty assertion when these tests no
+    // longer cover the go system updater.
+    let interactions = env.take_interactions();
+    assert!(
+        interactions == vec![] || interactions == vec![Gc, PackageResolve(bogus_url.to_string())],
+        "{:?}",
+        interactions
+    )
 }
 
 #[fasync::run_singlethreaded(test)]
