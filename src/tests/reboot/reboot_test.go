@@ -19,6 +19,11 @@ func zbiPath(t *testing.T) string {
 }
 
 func TestReboot(t *testing.T) {
+	// TODO(52271): This test boots and reboots a qemu instance several times. The test can take
+	// a long time to complete and sometimes timeouts given the default 5 minute
+	// timeout. Disabling for now. See fxbug.dev/52271.
+	t.Skip("skipping test (fxbug.dev/52271)")
+
 	distro, err := qemu.Unpack()
 	if err != nil {
 		t.Fatal(err)
