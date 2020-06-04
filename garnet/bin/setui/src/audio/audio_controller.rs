@@ -162,9 +162,9 @@ impl VolumeController {
             self.modified_timestamps.insert(stream.stream_type, now().to_string());
         }
 
-        self.update_volume_streams(&volume, true).await;
-
-        self.client.notify().await;
+        if !self.update_volume_streams(&volume, true).await {
+            self.client.notify().await;
+        }
 
         Ok(None)
     }
