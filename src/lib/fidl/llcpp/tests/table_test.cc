@@ -7,7 +7,11 @@
 #include <fidl/llcpp/types/test/llcpp/fidl.h>
 #include <gtest/gtest.h>
 
+namespace {
+
 fidl::HeapAllocator allocator;
+
+}  // namespace
 
 TEST(Table, UnownedBuilderBuildTablePrimitive) {
   namespace test = llcpp::fidl::llcpp::types::test;

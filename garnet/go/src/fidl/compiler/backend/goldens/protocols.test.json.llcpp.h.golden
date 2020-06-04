@@ -2867,6 +2867,9 @@ static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::
                        ret) == 16);
 
 template <>
+struct IsFidlType<::llcpp::test::name::ErrorEnun> : public std::true_type {};
+
+template <>
 struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<

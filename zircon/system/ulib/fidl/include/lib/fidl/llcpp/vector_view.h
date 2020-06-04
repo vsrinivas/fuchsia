@@ -45,6 +45,8 @@ class VectorView {
   static constexpr uint64_t kMaxCount = uint64_t(kOwnershipMask) - 1ULL;
 
  public:
+  using value_type = T;
+
   VectorView() {}
 
   VectorView(tracking_ptr<T[]>&& data, uint64_t count) {

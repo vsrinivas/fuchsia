@@ -90,6 +90,7 @@ namespace fidl {
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionTraits" . }}{{- end }}
+{{- if Eq .Kind Kinds.Enum }}{{ template "EnumTraits" . }}{{- end }}
 {{- end }}
 
 }  // namespace fidl

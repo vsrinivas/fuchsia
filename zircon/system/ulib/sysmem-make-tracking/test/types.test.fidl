@@ -1,8 +1,8 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fidl.llcpp.types.test;
+library fidl.types.test;
 
 struct CopyableStruct {
     int32 x;

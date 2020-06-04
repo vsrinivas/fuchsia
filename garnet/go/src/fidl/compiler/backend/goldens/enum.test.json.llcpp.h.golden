@@ -41,7 +41,12 @@ enum class MyStrictEnum : uint32_t {
 }  // namespace test
 }  // namespace llcpp
 
-namespace fidl {}  // namespace fidl
+namespace fidl {
+
+template <>
+struct IsFidlType<::llcpp::test::name::MyStrictEnum> : public std::true_type {};
+
+}  // namespace fidl
 
 namespace llcpp {
 

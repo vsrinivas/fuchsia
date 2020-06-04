@@ -682,6 +682,9 @@ static_assert(sizeof(::llcpp::test::name::Struct) ==
               ::llcpp::test::name::Struct::PrimarySize);
 
 template <>
+struct IsFidlType<::llcpp::test::name::MyEnum> : public std::true_type {};
+
+template <>
 struct IsFidlType<::llcpp::test::name::MyBits> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::MyBits>);
 static_assert(sizeof(::llcpp::test::name::MyBits) == sizeof(uint32_t));

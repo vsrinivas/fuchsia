@@ -14,4 +14,10 @@ enum class {{ .Name }} : {{ .Type }} {
 
 {{ end }}
 
+{{- define "EnumTraits" }}
+
+template <>
+struct IsFidlType<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
+
+{{- end }}
 `

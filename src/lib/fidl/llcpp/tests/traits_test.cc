@@ -68,3 +68,14 @@ TEST(Traits, Const) {
   static_assert(!fidl::IsVectorView<const uint32_t>::value);
   static_assert(fidl::IsVectorView<const fidl::VectorView<uint32_t>>::value);
 }
+
+TEST(Traits, IsFidlType) {
+  struct NotAFidlType {};
+  static_assert(fidl::IsFidlType<uint32_t>::value);
+  static_assert(fidl::IsFidlType<test::CopyableStruct>::value);
+  static_assert(fidl::IsFidlType<test::MoveOnlyStruct>::value);
+  static_assert(fidl::IsFidlType<test::EmptyStruct>::value);
+  static_assert(fidl::IsFidlType<test::SampleTable>::value);
+  static_assert(fidl::IsFidlType<test::Enum>::value);
+  static_assert(!fidl::IsFidlType<NotAFidlType>::value);
+}

@@ -133,7 +133,6 @@ if (is_fuchsia) {
     }
     sources = [
       "abi_tests.cc",
-      "cpp_types_tests.cc",
       "fidl_align_tests.cc",
       "validate_string_tests.cc",
     ]

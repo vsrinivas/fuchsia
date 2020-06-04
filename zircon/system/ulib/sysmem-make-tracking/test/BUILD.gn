@@ -1,0 +1,49 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+group("test") {
+  testonly = true
+  deps = [ ":sysmem-make-tracking-test-package" ]
+}
+
+test("sysmem-make-tracking-test") {
+  sources = [ "make_tracking_test.cc" ]
+  public_deps = [
+    ":fidl.types.test_c",
+    ":fidl.types.test_llcpp",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/sysmem-make-tracking",
+  ]
+}
+
+unittest_package("sysmem-make-tracking-test-package") {
+  package_name = "sysmem-make-tracking-test"
+  deps = [ ":sysmem-make-tracking-test" ]
+
+  tests = [
+    {
+      name = "sysmem-make-tracking-test"
+      dest = "sysmem-make-tracking-test"
+    },
+  ]
+}
+
+fidl("fidl.types.test") {
+  sources = [ "types.test.fidl" ]
+}

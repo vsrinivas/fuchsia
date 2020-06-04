@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_ALLOCATOR_H_
 #define LIB_FIDL_LLCPP_ALLOCATOR_H_
 
+#include <lib/fidl/llcpp/traits.h>
 #include <zircon/assert.h>
 
 #include <functional>
@@ -80,6 +81,44 @@ class Allocator {
     ZX_DEBUG_ASSERT(!result.heap_allocate);
     ArraylessT* ptr = new (result.data) ArraylessT[count]();
     return fidl::unowned_ptr_t<ArraylessT>(ptr);
+  }
+
+  template <typename Table, typename std::enable_if<::fidl::IsTable<Table>::value, int>::type = 0>
+  typename Table::Builder make_table_builder() {
+    return typename Table::Builder(make<typename Table::Frame>());
+  }
+
+  template <typename T,
+            typename std::enable_if<!std::is_array<T>::value && !fidl::IsVectorView<T>::value,
+                                    int>::type = 0>
+  typename fidl::VectorView<T> make_vec(size_t count) {
+    return fidl::VectorView<T>(make<T[]>(count), count);
+  }
+
+  template <typename T,
+            typename std::enable_if<!std::is_array<T>::value && !fidl::IsVectorView<T>::value,
+                                    int>::type = 0>
+  typename fidl::VectorView<T> make_vec(size_t count, size_t capacity) {
+    ZX_DEBUG_ASSERT(capacity >= count);
+    return fidl::VectorView<T>(make<T[]>(capacity), count);
+  }
+
+  template <typename T,
+            typename std::enable_if<!std::is_array<T>::value && !::fidl::IsVectorView<T>::value &&
+                                        !::fidl::IsStringView<T>::value,
+                                    int>::type = 0>
+  tracking_ptr<fidl::VectorView<T>> make_vec_ptr(size_t count) {
+    return fidl::tracking_ptr<fidl::VectorView<T>>(
+        make<fidl::VectorView<T>>(make<T[]>(count), count));
+  }
+
+  template <typename T,
+            typename std::enable_if<!std::is_array<T>::value && !::fidl::IsVectorView<T>::value &&
+                                        !::fidl::IsStringView<T>::value,
+                                    int>::type = 0>
+  tracking_ptr<fidl::VectorView<T>> make_vec_ptr(size_t count, size_t capacity) {
+    return fidl::tracking_ptr<fidl::VectorView<T>>(
+        make<fidl::VectorView<T>>(make<T[]>(capacity), count));
   }
 
   template <typename, typename...>
