@@ -63,6 +63,9 @@ if (current_toolchain == default_toolchain) {
 
         # <dev/iommu.h> has #include <fbl/name.h>
         "lib/fbl:headers.config",
+
+        # Everywhere has #include <zx/status.h>
+        "$zx/system/ulib/zxc:headers.config",
       ]
 
       # The rest of kernel-specific config goes after the defaults

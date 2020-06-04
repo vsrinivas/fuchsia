@@ -7,8 +7,11 @@
 
 #include <lib/fitx/result.h>
 #include <zircon/errors.h>
-#include <zircon/status.h>
 #include <zircon/types.h>
+
+#if !defined(_KERNEL)
+#include <zircon/status.h>
+#endif  // !defined(_KERNEL)
 
 namespace zx {
 
@@ -71,8 +74,10 @@ class status<T> : public ::fitx::result<zx_status_t, T> {
     return this->is_error() ? base::error_value() : ZX_OK;
   }
 
+#if !defined(_KERNEL)
   // Returns the string representation of the status value.
   const char* status_string() const { return zx_status_get_string(status_value()); }
+#endif  // !defined(_KERNEL)
 };
 
 // Specialization of status for empty value type.
@@ -99,8 +104,10 @@ class status<> : public ::fitx::result<zx_status_t> {
     return this->is_error() ? base::error_value() : ZX_OK;
   }
 
+#if !defined(_KERNEL)
   // Returns the string representation of the status value.
   const char* status_string() const { return zx_status_get_string(status_value()); }
+#endif  // !defined(_KERNEL)
 };
 
 // Simplified alias of zx::error<zx_status_t>.

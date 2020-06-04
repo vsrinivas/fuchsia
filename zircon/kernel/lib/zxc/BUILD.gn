@@ -1,0 +1,21 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_library("zxc") {
+  kernel = true
+  sources = []
+  deps = [ ":tests" ]
+  public_deps = [ "$zx/system/ulib/zxc" ]
+}
+
+source_set("tests") {
+  #TODO: testonly = true
+  visibility = [ ":*" ]
+  sources = [ "result_tests.cc" ]
+  deps = [
+    ":headers",
+    "$zx/kernel/lib/libc",
+    "$zx/kernel/lib/unittest",
+  ]
+}

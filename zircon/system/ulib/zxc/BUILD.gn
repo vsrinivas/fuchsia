@@ -29,6 +29,6 @@ zx_library("zxc") {
     ":zx",
   ]
   host = true
-  kernel = false
+  kernel = true
   static = true
 }

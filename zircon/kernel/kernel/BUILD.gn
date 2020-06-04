@@ -48,6 +48,7 @@ source_set("kernel") {
     "$zx/system/ulib/explicit-memory",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zxc",
   ]
 
   public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
