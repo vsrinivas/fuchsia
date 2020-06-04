@@ -247,7 +247,7 @@ If this happens, you'll see an error like the following from `fx test`:
 ```
 Test suite encountered error trying to run tests: Error getting test cases: The test protocol was
 closed. This may mean `/svc/fuchsia.test.Suite` was not configured properly. Refer to
-//docs/development/components/debugging.md#troubleshoot-test.
+//docs/development/components/troubleshooting.md#troubleshoot-test.
 ```
 
 Misconfigurations can happen in a few ways:

@@ -395,7 +395,8 @@ fn suite_error(err: fidl::Error) -> anyhow::Error {
         fidl::Error::ClientWrite(zx_status::Status::PEER_CLOSED)
         | fidl::Error::ClientChannelClosed(_) => format_err!(
             "The test protocol was closed. This may mean `fuchsia.test.Suite` was not \
-            configured correctly. Refer to //docs/development/components/debugging.md#debug-test"
+            configured correctly. Refer to \
+            //docs/development/components/troubleshooting.md#troubleshoot-test"
         ),
         _ => format_err!("{}", err),
     }
