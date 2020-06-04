@@ -4,6 +4,7 @@
 
 use {
     argh::FromArgs,
+    fuchsia_url::pkg_url::PkgUrl,
     std::time::{Duration, SystemTime},
 };
 
@@ -23,12 +24,16 @@ pub struct Args {
     pub target: String,
 
     /// update package url
-    #[argh(option, default = "String::from(\"fuchsia-pkg://fuchsia.com/update\")")]
-    pub update: String,
+    #[argh(option, default = "\"fuchsia-pkg://fuchsia.com/update\".parse().unwrap()")]
+    pub update: PkgUrl,
 
     /// if true, reboot the system after successful OTA
     #[argh(option, default = "true")]
     pub reboot: bool,
+
+    /// if true, don't write the recovery image
+    #[argh(option, default = "false")]
+    pub skip_recovery: bool,
 
     /// start time of update attempt, as unix nanosecond timestamp
     #[argh(option, from_str_fn(parse_wall_time))]
@@ -118,7 +123,7 @@ mod tests {
             Ok(Args {
                 update: update_pkg_url,
                 ..
-            }) if update_pkg_url=="fuchsia-pkg://fuchsia.com/foo"
+            }) if update_pkg_url.to_string() == "fuchsia-pkg://fuchsia.com/foo"
         );
     }
 
@@ -127,6 +132,14 @@ mod tests {
         assert_matches!(
             Args::from_args(&["system-updater"], &["--reboot", "false"]),
             Ok(Args { reboot: false, .. })
+        );
+    }
+
+    #[test]
+    fn test_skip_recovery() {
+        assert_matches!(
+            Args::from_args(&["system-updater"], &["--skip-recovery", "true"]),
+            Ok(Args { skip_recovery: true, .. })
         );
     }
 
@@ -140,10 +153,11 @@ mod tests {
                 target: target_version,
                 update: update_pkg_url,
                 reboot: true,
+                skip_recovery: false,
                 ..
-            }) if source_version=="" &&
-                  target_version=="" &&
-                  update_pkg_url=="fuchsia-pkg://fuchsia.com/update"
+            }) if source_version == "" &&
+                  target_version == "" &&
+                  update_pkg_url.to_string() == "fuchsia-pkg://fuchsia.com/update"
         );
     }
 }

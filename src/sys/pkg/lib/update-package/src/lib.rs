@@ -10,6 +10,7 @@ mod board;
 mod hash;
 mod image;
 mod images;
+mod name;
 mod packages;
 mod update_mode;
 mod util;
@@ -17,8 +18,9 @@ mod util;
 pub use crate::{
     board::VerifyBoardError,
     hash::HashError,
-    image::{Image, OpenImageError},
+    image::{Image, ImageClass, OpenImageError},
     images::{ImageList, ResolveImagesError, UnverifiedImageList},
+    name::VerifyNameError,
     packages::ParsePackageError,
     update_mode::{ParseUpdateModeError, UpdateMode},
 };
@@ -35,6 +37,11 @@ impl UpdatePackage {
     /// Creates a new [`UpdatePackage`] with the given proxy.
     pub fn new(proxy: DirectoryProxy) -> Self {
         Self { proxy }
+    }
+
+    /// Verifies that the package's name/variant is "update/0".
+    pub async fn verify_name(&self) -> Result<(), VerifyNameError> {
+        name::verify(&self.proxy).await
     }
 
     /// Searches for the requested images in the update package, returning the resolved sequence of
@@ -101,6 +108,12 @@ impl TestUpdatePackage {
     }
 
     async fn add_file(self, path: impl AsRef<std::path::Path>, contents: impl AsRef<[u8]>) -> Self {
+        let path = path.as_ref();
+        match path.parent() {
+            Some(empty) if empty == std::path::Path::new("") => {}
+            None => {}
+            Some(parent) => std::fs::create_dir_all(self.temp_dir.path().join(parent)).unwrap(),
+        }
         io_util::file::write_in_namespace(
             self.temp_dir.path().join(path).to_str().unwrap(),
             contents,

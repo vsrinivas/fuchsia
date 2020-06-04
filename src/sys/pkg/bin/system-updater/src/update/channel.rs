@@ -9,8 +9,6 @@ use {
 };
 
 /// Persists the current channel after a successful update.
-// TODO(49911) use this
-#[allow(dead_code)]
 pub async fn update_current_channel() {
     const TARGET_PATH: &str = "/misc/ota/target_channel.json";
     const CURRENT_TEMP_PATH: &str = "/misc/ota/current_channel.json.part";

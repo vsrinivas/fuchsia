@@ -99,6 +99,22 @@ impl Image {
         }
     }
 
+    /// The name of this image as understood by the system updater.
+    pub fn classify(&self) -> Option<ImageClass> {
+        match self.name() {
+            "zbi" | "zbi.signed" => Some(ImageClass::Zbi),
+            "fuchsia.vbmeta" => Some(ImageClass::ZbiVbmeta),
+            "zedboot" | "zedboot.signed" | "recovery" => Some(ImageClass::Recovery),
+            "recovery.vbmeta" => Some(ImageClass::RecoveryVbmeta),
+            "bootloader" | "firmware" => {
+                // Keep support for update packages still using the older "bootloader" file, which
+                // is handled identically to "firmware" but without subtype support.
+                Some(ImageClass::Firmware)
+            }
+            _ => None,
+        }
+    }
+
     /// The particular type of this image as understood by the paver service, if present.
     pub fn subtype(&self) -> Option<&str> {
         self.type_separator.map(|n| &self.filename[(n + 1)..])
@@ -111,7 +127,37 @@ impl fmt::Debug for Image {
             .field("filename", &self.filename())
             .field("name", &self.name())
             .field("subtype", &self.subtype())
+            .field("class", &self.classify())
             .finish()
+    }
+}
+
+/// A classification for the type of an image.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImageClass {
+    /// Kernel image
+    Zbi,
+
+    /// Metadata for [`ImageClass::Zbi`]
+    ZbiVbmeta,
+
+    /// Recovery image
+    Recovery,
+
+    /// Metadata for [`ImageClass::Recovery`]
+    RecoveryVbmeta,
+
+    /// Bootloader firmware
+    Firmware,
+}
+
+impl ImageClass {
+    /// Determines if this image class would target a recovery partition.
+    pub fn targets_recovery(self) -> bool {
+        match self {
+            ImageClass::Recovery | ImageClass::RecoveryVbmeta => true,
+            ImageClass::Zbi | ImageClass::ZbiVbmeta | ImageClass::Firmware => false,
+        }
     }
 }
 
@@ -202,6 +248,26 @@ mod tests {
         assert_eq!(empty_subtype.subtype(), None);
     }
 
+    #[test]
+    fn recovery_images_target_recovery() {
+        for name in &["zedboot", "zedboot.signed", "recovery", "recovery.vbmeta"] {
+            assert!(
+                Image::new(*name).classify().unwrap().targets_recovery(),
+                "image {} should target recovery",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn non_recovery_images_do_not_target_recovery() {
+        for name in &["zbi", "zbi.signed", "fuchsia.vbmeta", "firmware", "unknown"] {
+            if let Some(image) = Image::new(*name).classify() {
+                assert!(!image.targets_recovery(), "image {} should not target recovery", name);
+            }
+        }
+    }
+
     fn open_this_package_as_update_package() -> UpdatePackage {
         let pkg = io_util::directory::open_in_namespace(
             "/pkg",
@@ -244,6 +310,7 @@ mod tests {
             image.filename();
             image.name();
             image.subtype();
+            image.classify();
             format!("{:?}", image);
         }
 

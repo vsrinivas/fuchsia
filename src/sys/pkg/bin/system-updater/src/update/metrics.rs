@@ -25,6 +25,30 @@ pub fn connect_to_cobalt() -> (Client, impl Future<Output = ()>) {
     (Client(cobalt), cobalt_fut)
 }
 
+pub fn result_to_status_code(res: Result<(), &anyhow::Error>) -> StatusCode {
+    use fuchsia_zircon::Status;
+
+    match res {
+        Ok(()) => StatusCode::Success,
+
+        Err(e) => {
+            if let Some(crate::update::ResolveError::Status(status)) = e.downcast_ref() {
+                match *status {
+                    Status::IO => StatusCode::ErrorStorage,
+                    Status::NO_SPACE => StatusCode::ErrorStorageOutOfSpace,
+                    Status::ADDRESS_UNREACHABLE => StatusCode::ErrorUntrustedTufRepo,
+                    Status::UNAVAILABLE => StatusCode::ErrorNetworking,
+                    _ => StatusCode::Error,
+                }
+            } else {
+                // Fallback to a generic catch-all error status code when the error didn't contain
+                // context indicating more clearly what type of error happened.
+                StatusCode::Error
+            }
+        }
+    }
+}
+
 impl AsEventCode for Initiator {
     fn as_event_code(&self) -> u32 {
         match self {
@@ -111,7 +135,7 @@ impl Client {
         );
     }
 
-    // TODO Remove unused metric after switching system_updater implementations
+    // TODO(53133) Remove unused metric after switching system_updater implementations
     pub fn log_ota_result_free_space_delta(
         &mut self,
         target_version: &str,

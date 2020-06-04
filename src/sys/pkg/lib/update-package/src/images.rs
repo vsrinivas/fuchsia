@@ -33,6 +33,24 @@ pub enum VerifyError {
 #[derive(Debug, PartialEq, Eq)]
 pub struct ImageList(Vec<Image>);
 
+impl ImageList {
+    /// Filters the image list using the provided callback to the images for which the callback
+    /// returns true.
+    pub fn filter<F>(self, f: F) -> Self
+    where
+        F: Fn(&Image) -> bool,
+    {
+        Self(self.0.into_iter().filter(f).collect())
+    }
+}
+
+impl std::ops::Deref for ImageList {
+    type Target = [Image];
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 /// A resolved sequence of images that may or may not contain the required entries for a particular
 /// update mode.
 #[derive(Debug, PartialEq, Eq)]
@@ -161,6 +179,15 @@ mod tests {
             UnverifiedImageList(vec![Image::new("foo"), Image::new("zbi.signed")])
                 .verify(UpdateMode::ForceRecovery),
             Err(VerifyError::UnexpectedZbi)
+        );
+    }
+
+    #[test]
+    fn image_list_filter_filters_preserving_order() {
+        assert_eq!(
+            ImageList(vec![Image::new("foo"), Image::new("bar"), Image::new("bootloader")])
+                .filter(|image| image.name() != "bar"),
+            ImageList(vec![Image::new("foo"), Image::new("bootloader")]),
         );
     }
 

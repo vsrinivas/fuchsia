@@ -16,7 +16,8 @@ use {
 };
 
 mod configuration;
-use configuration::{ActiveConfiguration, InactiveConfiguration, TargetConfiguration};
+pub use configuration::InactiveConfiguration;
+use configuration::{ActiveConfiguration, TargetConfiguration};
 
 #[derive(Debug, Error)]
 enum WriteAssetError {
@@ -28,11 +29,11 @@ enum WriteAssetError {
 }
 
 async fn paver_write_firmware(
-    paver: &DataSinkProxy,
+    data_sink: &DataSinkProxy,
     subtype: &str,
     mut buffer: Buffer,
 ) -> Result<(), Error> {
-    let res = paver
+    let res = data_sink
         .write_firmware(subtype, &mut buffer)
         .await
         .context("while performing write_firmware call")?;
@@ -50,12 +51,12 @@ async fn paver_write_firmware(
 }
 
 async fn paver_write_asset(
-    paver: &DataSinkProxy,
+    data_sink: &DataSinkProxy,
     configuration: Configuration,
     asset: Asset,
     mut buffer: Buffer,
 ) -> Result<(), WriteAssetError> {
-    let status = paver.write_asset(configuration, asset, &mut buffer).await?;
+    let status = data_sink.write_asset(configuration, asset, &mut buffer).await?;
     Status::ok(status)?;
     Ok(())
 }
@@ -123,7 +124,7 @@ impl Payload<'_> {
 /// Writes the given image to the configuration/asset location. If configuration is not given, the
 /// image is written to both A and B (if the B partition exists).
 async fn write_asset_to_configurations(
-    paver: &DataSinkProxy,
+    data_sink: &DataSinkProxy,
     configuration: TargetConfiguration,
     asset: Asset,
     payload: Payload<'_>,
@@ -131,7 +132,7 @@ async fn write_asset_to_configurations(
     match configuration {
         TargetConfiguration::Single(configuration) => {
             // Devices supports ABR and/or a specific configuration (ex. Recovery) was requested.
-            paver_write_asset(paver, configuration, asset, payload.buffer).await?;
+            paver_write_asset(data_sink, configuration, asset, payload.buffer).await?;
         }
         TargetConfiguration::AB => {
             // Device does not support ABR, so write the image to the A partition.
@@ -140,9 +141,9 @@ async fn write_asset_to_configurations(
             // that will eventually support ABR. If the device does not have a B partition yet, log the
             // error and continue.
 
-            paver_write_asset(paver, Configuration::A, asset, payload.clone_buffer()?).await?;
+            paver_write_asset(data_sink, Configuration::A, asset, payload.clone_buffer()?).await?;
 
-            let res = paver_write_asset(paver, Configuration::B, asset, payload.buffer).await;
+            let res = paver_write_asset(data_sink, Configuration::B, asset, payload.buffer).await;
             if let Err(WriteAssetError::Status(Status::NOT_SUPPORTED)) = res {
                 fx_log_warn!("skipping writing {} to B", payload.display_name);
             } else {
@@ -155,7 +156,7 @@ async fn write_asset_to_configurations(
 }
 
 async fn write_image_buffer(
-    paver: &DataSinkProxy,
+    data_sink: &DataSinkProxy,
     buffer: Buffer,
     image: &Image,
     inactive_config: InactiveConfiguration,
@@ -165,17 +166,16 @@ async fn write_image_buffer(
 
     match target {
         ImageTarget::Firmware { subtype } => {
-            paver_write_firmware(paver, subtype, payload.buffer).await?;
+            paver_write_firmware(data_sink, subtype, payload.buffer).await?;
         }
         ImageTarget::Asset { asset, configuration } => {
-            write_asset_to_configurations(paver, configuration, asset, payload).await?;
+            write_asset_to_configurations(data_sink, configuration, asset, payload).await?;
         }
     }
 
     Ok(())
 }
 
-// TODO(49911) use this. Note: this behavior will be tested with the integration tests.
 pub fn connect_in_namespace() -> Result<(DataSinkProxy, BootManagerProxy), Error> {
     let paver = fuchsia_component::client::connect_to_service::<PaverMarker>()
         .context("connect to fuchsia.paver.Paver")?;
@@ -193,9 +193,9 @@ pub fn connect_in_namespace() -> Result<(DataSinkProxy, BootManagerProxy), Error
 /// cold boot, which may or may not be the currently running configuration, or none if no
 /// configurations are currently bootable.
 async fn paver_query_active_configuration(
-    paver: &BootManagerProxy,
+    boot_manager: &BootManagerProxy,
 ) -> Result<ActiveConfiguration, Error> {
-    match paver.query_active_configuration().await {
+    match boot_manager.query_active_configuration().await {
         Ok(Ok(Configuration::A)) => Ok(ActiveConfiguration::A),
         Ok(Ok(Configuration::B)) => Ok(ActiveConfiguration::B),
         Ok(Ok(Configuration::Recovery)) => {
@@ -219,25 +219,22 @@ async fn paver_query_active_configuration(
 }
 
 /// Determines the current inactive configuration to which new kernel images should be written.
-// TODO(49911) use this. Note: this behavior will be tested with the integration tests.
 pub async fn query_inactive_configuration(
-    paver: &BootManagerProxy,
+    boot_manager: &BootManagerProxy,
 ) -> Result<InactiveConfiguration, Error> {
-    let active_config = paver_query_active_configuration(paver).await?;
+    let active_config = paver_query_active_configuration(boot_manager).await?;
 
     Ok(active_config.to_inactive_configuration())
 }
 
 /// Sets the given inactive `configuration` as active for subsequent boot attempts. If ABR is not
 /// supported, do nothing.
-// TODO(49911) use this. Note: this behavior will be tested with the integration tests.
-#[allow(dead_code)]
 pub async fn set_configuration_active(
-    paver: &BootManagerProxy,
+    boot_manager: &BootManagerProxy,
     configuration: InactiveConfiguration,
 ) -> Result<(), Error> {
     if let Some(configuration) = configuration.to_configuration() {
-        let status = paver
+        let status = boot_manager
             .set_configuration_active(configuration)
             .await
             .context("while performing set_configuration_active call")?;
@@ -246,31 +243,82 @@ pub async fn set_configuration_active(
     Ok(())
 }
 
+async fn set_configuration_unbootable(
+    boot_manager: &BootManagerProxy,
+    configuration: Configuration,
+) -> Result<(), Error> {
+    let status = boot_manager
+        .set_configuration_unbootable(configuration)
+        .await
+        .context("while performing set_configuration_unbootable call")?;
+    Status::ok(status).context("set_configuration_unbootable responded with")?;
+    Ok(())
+}
+
+/// Sets the recovery configuration as the only valid boot option by marking the A and B
+/// configurations unbootable.
+pub async fn set_recovery_configuration_active(
+    boot_manager: &BootManagerProxy,
+) -> Result<(), Error> {
+    let () = set_configuration_unbootable(boot_manager, Configuration::A)
+        .await
+        .context("while marking Configuration::A unbootable")?;
+    let () = set_configuration_unbootable(boot_manager, Configuration::B)
+        .await
+        .context("while marking Configuration::B unbootable")?;
+    Ok(())
+}
+
 /// Write the given `image` from the update package through the paver to the appropriate
 /// partitions.
-// TODO(49911) use this. Note: this behavior will be tested with the integration tests.
-// TODO(49911) ensure the error isn't logged twice when this is wired up in main.
-#[allow(dead_code)]
 pub async fn write_image(
-    paver: &DataSinkProxy,
-    update_pkg: UpdatePackage,
-    image: Image,
+    data_sink: &DataSinkProxy,
+    update_pkg: &UpdatePackage,
+    image: &Image,
     inactive_config: InactiveConfiguration,
 ) -> Result<(), Error> {
     let buffer = update_pkg
         .open_image(&image)
         .await
-        .with_context(|| format!("while opening {}", image.filename()))?;
+        .with_context(|| format!("error opening {}", image.filename()))?;
 
     fx_log_info!("writing {} from update package", image.filename());
 
-    let res = write_image_buffer(paver, buffer, &image, inactive_config).await;
+    let res = write_image_buffer(data_sink, buffer, image, inactive_config)
+        .await
+        .with_context(|| format!("error writing {}", image.filename()));
 
-    match &res {
-        Ok(()) => fx_log_info!("wrote {} successfully", image.filename()),
-        Err(e) => fx_log_err!("error writing {}: {:#}", image.filename(), e),
+    if let Ok(()) = &res {
+        fx_log_info!("wrote {} successfully", image.filename());
     }
     res
+}
+
+/// Flush pending disk writes and boot configuration, if supported.
+pub async fn flush(
+    data_sink: &DataSinkProxy,
+    boot_manager: &BootManagerProxy,
+    inactive_config: InactiveConfiguration,
+) -> Result<(), Error> {
+    let () = Status::ok(
+        data_sink.flush().await.context("while performing fuchsia.paver.DataSink/Flush call")?,
+    )
+    .context("fuchsia.paver.DataSink/Flush responded with")?;
+
+    match inactive_config {
+        InactiveConfiguration::A | InactiveConfiguration::B => {
+            let () = Status::ok(
+                boot_manager
+                    .flush()
+                    .await
+                    .context("while performing fuchsia.paver.BootManager/Flush call")?,
+            )
+            .context("fuchsia.paver.BootManager/Flush responded with")?;
+        }
+        InactiveConfiguration::NotSupported => {}
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -350,6 +398,22 @@ mod tests {
         assert_eq!(
             paver.take_events(),
             vec![PaverEvent::SetConfigurationActive { configuration: Configuration::B }]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn set_recovery_configuration_active_makes_calls() {
+        let paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        set_recovery_configuration_active(&boot_manager).await.unwrap();
+
+        assert_eq!(
+            paver.take_events(),
+            vec![
+                PaverEvent::SetConfigurationUnbootable { configuration: Configuration::A },
+                PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
+            ]
         );
     }
 
@@ -643,6 +707,25 @@ mod tests {
             ]
         );
     }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn flush_makes_calls() {
+        let paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let data_sink = paver.spawn_data_sink_service();
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        flush(&data_sink, &boot_manager, InactiveConfiguration::A).await.unwrap();
+        assert_eq!(
+            paver.take_events(),
+            vec![PaverEvent::DataSinkFlush, PaverEvent::BootManagerFlush,]
+        );
+
+        flush(&data_sink, &boot_manager, InactiveConfiguration::B).await.unwrap();
+        assert_eq!(
+            paver.take_events(),
+            vec![PaverEvent::DataSinkFlush, PaverEvent::BootManagerFlush,]
+        );
+    }
 }
 
 #[cfg(test)]
@@ -852,5 +935,19 @@ mod abr_not_supported_tests {
                 },
             ]
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn flush_makes_calls() {
+        let paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .boot_manager_close_with_epitaph(Status::NOT_SUPPORTED)
+                .build(),
+        );
+        let data_sink = paver.spawn_data_sink_service();
+        let boot_manager = paver.spawn_boot_manager_service();
+
+        flush(&data_sink, &boot_manager, InactiveConfiguration::NotSupported).await.unwrap();
+        assert_eq!(paver.take_events(), vec![PaverEvent::DataSinkFlush,]);
     }
 }

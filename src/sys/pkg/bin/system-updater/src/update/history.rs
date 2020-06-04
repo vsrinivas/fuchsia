@@ -96,8 +96,6 @@ impl UpdateHistory {
     }
 
     /// Write the update history struct to disk, silently ignoring errors.
-    // TODO(49911) use this
-    #[allow(dead_code)]
     pub async fn save(&self) {
         let writer = |bytes| async move {
             let _ = io_util::file::write_in_namespace(UPDATE_HISTORY_PATH, &bytes).await;

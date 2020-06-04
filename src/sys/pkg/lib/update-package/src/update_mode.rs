@@ -38,14 +38,14 @@ enum UpdateModeFile {
         // We make this a String and not an UpdateMode so that we can seperate
         // the unsupported mode errors from other json deserialization errors.
         // For example,this would be considered valid json with an unsupported mode:
-        // { version: "1", content: { "update-mode" : "banana" } }
-        #[serde(rename = "update-mode")]
+        // { version: "1", content: { "mode" : "banana" } }
+        #[serde(rename = "mode")]
         update_mode: String,
     },
 }
 
 /// Enum to describe the supported update modes.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum UpdateMode {
     /// Follow the normal system update flow.
     Normal,
@@ -102,7 +102,7 @@ mod tests {
         json!({
             "version": "1",
             "content": {
-                "update-mode": mode,
+                "mode": mode,
             },
         })
     }

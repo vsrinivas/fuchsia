@@ -269,9 +269,18 @@ impl TestEnv {
         let build_info_dir = File::open(&self.build_info_path).expect("open config dir");
         let misc_dir = File::open(&self.misc_path).expect("open misc dir");
 
-        let system_updater = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system_updater_isolated.cmx",
+        // TODO(49915) remove package name lookup when this test binary only needs to test a single
+        // system updater implementation.
+
+        let meta_package = fuchsia_pkg::MetaPackage::deserialize(
+            std::fs::read("/pkg/meta/package").unwrap().as_slice(),
         )
+        .unwrap();
+
+        let system_updater = AppBuilder::new(format!(
+            "fuchsia-pkg://fuchsia.com/{}#meta/system_updater_isolated.cmx",
+            meta_package.name()
+        ))
         .add_dir_to_namespace("/blob".to_string(), blobfs_dir)
         .expect("/blob to mount")
         .add_dir_to_namespace("/fake".to_string(), fake_dir)
@@ -651,7 +660,9 @@ async fn test_system_update_force_recovery() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages", package_url)
-        .add_file("update-mode", &force_recovery_json());
+        .add_file("update-mode", &force_recovery_json())
+        .add_file("recovery", "the recovery image")
+        .add_file("recovery.vbmeta", "the recovery vbmeta");
 
     env.run_system_updater(SystemUpdaterArgs {
         initiator: "manual",
@@ -685,6 +696,16 @@ async fn test_system_update_force_recovery() {
             Gc,
             BlobfsSync,
             Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::WriteAsset {
+                configuration: paver::Configuration::Recovery,
+                asset: paver::Asset::Kernel,
+                payload: b"the recovery image".to_vec(),
+            }),
+            Paver(PaverEvent::WriteAsset {
+                configuration: paver::Configuration::Recovery,
+                asset: paver::Asset::VerifiedBootMetadata,
+                payload: b"the recovery vbmeta".to_vec(),
+            }),
             Paver(PaverEvent::SetConfigurationUnbootable {
                 configuration: paver::Configuration::A
             }),
@@ -1085,6 +1106,27 @@ async fn test_force_recovery_rejects_zbi() {
         env.take_interactions(),
         vec![Gc, PackageResolve(UPDATE_PKG_URL.to_string()), Gc, BlobfsSync,]
     );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_force_recovery_rejects_skip_recovery_flag() {
+    let env = TestEnv::new();
+
+    env.resolver
+        .register_package("update", "upd4t3")
+        .add_file("packages", "")
+        .add_file("update-mode", &force_recovery_json());
+
+    let result = env
+        .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+            reboot: None,
+            skip_recovery: Some(true),
+        })
+        .await;
+    assert!(result.is_err(), "system_updater succeeded when it should fail");
 }
 
 #[fasync::run_singlethreaded(test)]
