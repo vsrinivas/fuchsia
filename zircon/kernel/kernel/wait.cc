@@ -124,7 +124,11 @@ void wait_queue_dequeue_thread_internal(WaitQueue* wait, Thread* t, zx_status_t 
 
 }  // namespace internal
 
-Thread* WaitQueueCollection::Peek() const {
+Thread* WaitQueueCollection::Peek() {
+  return list_peek_head_type(&private_heads_, Thread, wait_queue_state_.wait_queue_heads_node_);
+}
+
+const Thread* WaitQueueCollection::Peek() const {
   return list_peek_head_type(&private_heads_, Thread, wait_queue_state_.wait_queue_heads_node_);
 }
 
@@ -237,7 +241,7 @@ void WaitQueue::ValidateQueue() TA_REQ(thread_lock) {
 
 // return the numeric priority of the highest priority thread queued
 int WaitQueue::BlockedPriority() const {
-  Thread* t = Peek();
+  const Thread* t = Peek();
   if (!t) {
     return -1;
   }
@@ -246,7 +250,9 @@ int WaitQueue::BlockedPriority() const {
 }
 
 // returns a reference to the highest priority thread queued
-Thread* WaitQueue::Peek() const { return collection_.Peek(); }
+Thread* WaitQueue::Peek() { return collection_.Peek(); }
+
+const Thread* WaitQueue::Peek() const { return collection_.Peek(); }
 
 /**
  * @brief  Block until a wait queue is notified, ignoring existing signals

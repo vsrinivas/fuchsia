@@ -62,7 +62,8 @@ struct WaitQueueCollection {
   uint32_t Count() const TA_REQ(thread_lock) { return private_count_; }
 
   // Peek at the first Thread in the collection.
-  Thread* Peek() const TA_REQ(thread_lock);
+  Thread* Peek() TA_REQ(thread_lock);
+  const Thread* Peek() const TA_REQ(thread_lock);
 
   // Add the Thread into its sorted location in the collection.
   void Insert(Thread* thread) TA_REQ(thread_lock);
@@ -139,7 +140,8 @@ class WaitQueue {
 
   // Returns the current highest priority blocked thread on this wait queue, or
   // nullptr if no threads are blocked.
-  Thread* Peek() const TA_REQ(thread_lock);
+  Thread* Peek() TA_REQ(thread_lock);
+  const Thread* Peek() const TA_REQ(thread_lock);
 
   // Release one or more threads from the wait queue.
   // reschedule = should the system reschedule if any is released.
