@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "bin/cs"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.diagnostics.ArchiveAccessor"
+        ]
     }
 }

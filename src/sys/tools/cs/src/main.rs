@@ -9,11 +9,12 @@
 use {
     anyhow::{format_err, Error},
     cs::inspect::{generate_inspect_object_tree, InspectObject},
-    fdio,
-    fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::{InspectMarker, MetricValue, PropertyValue},
     fuchsia_async as fasync,
-    fuchsia_inspect::reader::{self, NodeHierarchy, Property},
+    fuchsia_inspect::{
+        reader::{NodeHierarchy, Property},
+        testing::InspectDataFetcher,
+    },
     fuchsia_zircon as zx,
     std::{
         cmp::Reverse,
@@ -336,7 +337,7 @@ impl From<&NodeHierarchy> for ComponentLogStats {
             .properties
             .iter()
             .map(|x| match x {
-                Property::Uint(name, value) => (name.as_str(), *value),
+                Property::Int(name, value) => (name.as_str(), *value as u64),
                 _ => ("", 0),
             })
             .collect::<HashMap<_, _>>();
@@ -401,20 +402,17 @@ fn get_component_start_times(inspect_root: &NodeHierarchy) -> Result<HashMap<&st
 }
 
 async fn print_log_stats(opt: Opt) -> Result<(), Error> {
-    let mut entries = fs::read_dir("/hub/c/archivist.cmx")?.collect::<Vec<_>>();
-    if entries.len() == 0 {
-        return Err(format_err!("No instance of archivist present in /hub/c/archivist.cmx"));
-    } else if entries.len() > 1 {
-        return Err(format_err!("Multiple instances of archivist present in /hub/c/archivist.cmx"));
+    let mut response = InspectDataFetcher::new()
+        .add_selector("archivist.cmx:root/log_stats/by_component/*:*")
+        .add_selector("archivist.cmx:root/event_stats/recent_events/*:*")
+        .get()
+        .await?;
+
+    if response.len() != 1 {
+        return Err(format_err!("Expected one inspect tree, received {}", response.len()));
     }
 
-    let mut path = entries.remove(0)?.path();
-    path.push("out/diagnostics/fuchsia.inspect.Tree");
-    let path_str = path.to_str().ok_or(format_err!("Failed to convert path to string"))?;
-
-    let (tree, server) = fidl::endpoints::create_proxy::<TreeMarker>()?;
-    fdio::service_connect(&path_str, server.into_channel())?;
-    let hierarchy = reader::read_from_tree(&tree).await?;
+    let hierarchy = response.pop().unwrap();
 
     let stats_node = hierarchy.get_child("log_stats")?.get_child("by_component")?;
     let mut stats_list =
