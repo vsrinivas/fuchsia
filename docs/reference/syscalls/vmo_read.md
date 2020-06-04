@@ -56,7 +56,15 @@ bytes written to *buffer* is undefined.
 **ZX_ERR_OUT_OF_RANGE**  *offset* + *buffer_size* is greater than the size of
                          the VMO.
 
-**ZX_ERR_BAD_STATE**  VMO has been marked uncached and is not directly readable.
+**ZX_ERR_BAD_STATE**  VMO has been marked uncached and is not directly readable, or the VMO is
+backed by a pager and the pager or the VMO is in a bad state preventing requested pages from being
+populated.
+
+**ZX_ERR_IO** The VMO is backed by a pager and the pager encountered an I/O error while reading in
+the requested pages.
+
+**ZX_ERR_IO_DATA_INTEGRITY** The VMO is backed by a pager and the contents that were read in by the
+pager are corrupted.
 
 ## SEE ALSO
 

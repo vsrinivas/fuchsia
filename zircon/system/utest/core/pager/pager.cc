@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <zxtest/zxtest.h>
 
@@ -1689,12 +1690,19 @@ TEST(Pager, InvalidPagerOpRange) {
     ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], vmo.get(), 0, 1, 0), ZX_ERR_INVALID_ARGS);
 
     // out of range
-    ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], vmo.get(), ZX_PAGE_SIZE, ZX_PAGE_SIZE, 0),
+    ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], vmo.get(), ZX_PAGE_SIZE, ZX_PAGE_SIZE,
+                                ZX_ERR_BAD_STATE),
               ZX_ERR_OUT_OF_RANGE);
 
     // invalid error code
     if (opcodes[i] == ZX_PAGER_OP_FAIL) {
       ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], vmo.get(), 0, 0, 0x11ffffffff),
+                ZX_ERR_INVALID_ARGS);
+
+      ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], vmo.get(), 0, 0, ZX_ERR_INTERNAL),
+                ZX_ERR_INVALID_ARGS);
+
+      ASSERT_EQ(zx_pager_op_range(pager.get(), opcodes[i], vmo.get(), 0, 0, 10),
                 ZX_ERR_INVALID_ARGS);
     }
   }
@@ -1995,32 +2003,67 @@ TEST(Pager, SupplyAfterFail) {
 
 // Tests that the error code passed in when failing is correctly propagated.
 TEST(Pager, FailErrorCode) {
-  UserPager pager;
-  ASSERT_TRUE(pager.Init());
+  constexpr uint32_t kNumValidErrors = 3;
+  zx_status_t valid_errors[kNumValidErrors] = {ZX_ERR_IO, ZX_ERR_IO_DATA_INTEGRITY,
+                                               ZX_ERR_BAD_STATE};
+  for (uint32_t i = 0; i < kNumValidErrors; i++) {
+    UserPager pager;
+    ASSERT_TRUE(pager.Init());
 
-  constexpr uint64_t kNumPages = 11;
-  Vmo* vmo;
-  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+    constexpr uint64_t kNumPages = 11;
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
 
-  zx_status_t status;
-  TestThread t([vmo, &status]() -> bool {
-    // |status| should get set to the error code passed in via FailPages.
-    status = vmo->vmo().op_range(ZX_VMO_OP_COMMIT, 0, kNumPages * ZX_PAGE_SIZE, nullptr, 0);
-    return (status == ZX_OK);
-  });
+    zx_status_t status_commit;
+    TestThread t_commit([vmo, &status_commit]() -> bool {
+      // |status_commit| should get set to the error code passed in via FailPages.
+      status_commit =
+          vmo->vmo().op_range(ZX_VMO_OP_COMMIT, 0, kNumPages * ZX_PAGE_SIZE, nullptr, 0);
+      return (status_commit == ZX_OK);
+    });
 
-  ASSERT_TRUE(t.Start());
-  ASSERT_TRUE(t.WaitForBlocked());
-  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+    zx_status_t status_read;
+    TestThread t_read([vmo, &status_read]() -> bool {
+      zx::vmo tmp_vmo;
+      zx_vaddr_t buf = 0;
+      constexpr uint64_t len = kNumPages * ZX_PAGE_SIZE;
 
-  // Fail with a specific error code. ZX_ERR_IO is arbitrarily picked here.
-  ASSERT_TRUE(pager.FailPages(vmo, 0, kNumPages, ZX_ERR_IO));
+      if (zx::vmo::create(len, ZX_VMO_RESIZABLE, &tmp_vmo) != ZX_OK) {
+        return false;
+      }
 
-  ASSERT_TRUE(t.WaitForFailure());
-  ASSERT_EQ(status, ZX_ERR_IO);
+      if (zx::vmar::root_self()->map(0, tmp_vmo, 0, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                     &buf) != ZX_OK) {
+        return false;
+      }
 
-  uint64_t offset, length;
-  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+      auto unmap = fbl::MakeAutoCall([&]() { zx_vmar_unmap(zx_vmar_root_self(), buf, len); });
+
+      // |status_read| should get set to the error code passed in via FailPages.
+      status_read = vmo->vmo().read(reinterpret_cast<void*>(buf), 0, len);
+      return (status_read == ZX_OK);
+    });
+
+    ASSERT_TRUE(t_commit.Start());
+    ASSERT_TRUE(t_commit.WaitForBlocked());
+    ASSERT_TRUE(t_read.Start());
+    ASSERT_TRUE(t_read.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+
+    // Fail with a specific valid error code.
+    ASSERT_TRUE(pager.FailPages(vmo, 0, kNumPages, valid_errors[i]));
+
+    ASSERT_TRUE(t_commit.WaitForFailure());
+    // Verify that op_range(ZX_VMO_OP_COMMIT) returned the provided error code.
+    ASSERT_EQ(status_commit, valid_errors[i]);
+
+    ASSERT_TRUE(t_read.WaitForFailure());
+    // Verify that vmo_read() returned the provided error code.
+    ASSERT_EQ(status_read, valid_errors[i]);
+
+    uint64_t offset, length;
+    ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+  }
 }
 
 }  // namespace pager_tests

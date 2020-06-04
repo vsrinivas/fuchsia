@@ -103,7 +103,7 @@ class UserPager {
 
   // Signals failure to populate pages in the specified range.
   bool FailPages(Vmo* vmo, uint64_t page_offset, uint64_t page_count,
-                 zx_status_t error_status = ZX_ERR_UNAVAILABLE);
+                 zx_status_t error_status = ZX_ERR_BAD_STATE);
 
   // Checks if there is a request for the range [page_offset, length). Will
   // wait until |deadline|.

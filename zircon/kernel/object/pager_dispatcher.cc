@@ -79,7 +79,11 @@ zx_status_t PagerDispatcher::RangeOp(uint32_t op, fbl::RefPtr<VmObject> vmo, uin
       if (signed_data < INT32_MIN || signed_data > INT32_MAX) {
         return ZX_ERR_INVALID_ARGS;
       }
-      return vmo->FailPageRequests(offset, length, static_cast<zx_status_t>(data));
+      auto error_status = static_cast<zx_status_t>(data);
+      if (!PageSource::IsValidFailureCode(error_status)) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return vmo->FailPageRequests(offset, length, error_status);
     }
     default:
       return ZX_ERR_NOT_SUPPORTED;

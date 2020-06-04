@@ -31,12 +31,13 @@ parameter, if the specified *op* supports one.
 Operations that can be performed, i.e. values *op* can take:
 
 **ZX_PAGER_OP_FAIL** - The userspace pager failed to fulfill page requests for *pager_vmo* in the
-range [*offset*, *offset* + *length*). *data* contains the error encountered - a `zx_status_t`
-error status. This will signal threads that might be waiting on page requests in that range,
-unblocking them. If the blocked thread was requesting pages via a [`zx_vmo_read()`] or a
-[`zx_vmo_op_range()`] with `ZX_VMO_OP_COMMIT`, the call will fail and the error status (*data*)
-will be returned. If the blocked thread was requesting pages via a VMAR mapping, the thread will
-take a fatal page fault exception.
+range [*offset*, *offset* + *length*). *data* contains the error encountered (a `zx_status_t`
+error code) - permitted values are **ZX_ERR_IO**, **ZX_ERR_IO_DATA_INTEGRITY** and
+**ZX_ERR_BAD_STATE**.  This will signal threads that might be waiting on page requests in that
+range, unblocking them. If the blocked thread was requesting pages through a [`zx_vmo_read()`] or a
+[`zx_vmo_op_range()`] with **ZX_VMO_OP_COMMIT**, the call will fail and the error status (*data*)
+will be returned. If the blocked thread was requesting pages through a VMAR mapping, the thread
+will take a fatal page fault exception.
 
 ## RIGHTS
 
@@ -57,7 +58,8 @@ take a fatal page fault exception.
 **ZX_ERR_WRONG_TYPE** *pager* is not a pager handle, or *pager_vmo* is not a vmo handle.
 
 **ZX_ERR_INVALID_ARGS**  *pager_vmo* is not a vmo created from *pager*, or *offset* or *length* is
-not page aligned.
+not page aligned, or *op* is **ZX_PAGER_OP_FAIL** and *data* is not one of **ZX_ERR_IO**,
+**ZX_ERR_IO_DATA_INTEGRITY** or **ZX_ERR_BAD_STATE**.
 
 **ZX_ERR_OUT_OF_RANGE** The specified range in *pager_vmo* is invalid.
 

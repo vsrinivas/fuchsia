@@ -77,6 +77,10 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
     status = ZX_OK;
   }
 
+  if (status != ZX_OK) {
+    printf("PageFault: error %d\n", status);
+  }
+
   ktrace(TAG_PAGE_FAULT_EXIT, (uint32_t)(addr >> 32), (uint32_t)addr, flags, arch_curr_cpu_num());
 
   return status;

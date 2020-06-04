@@ -105,6 +105,15 @@ range was not page aligned.
 **ZX_ERR_NOT_SUPPORTED**  *op* was **ZX_VMO_OP_LOCK** or **ZX_VMO_OP_UNLOCK**, or
 *op* was **ZX_VMO_OP_DECOMMIT** and the underlying VMO does not allow decommiting.
 
+**ZX_ERR_BAD_STATE**  *op* was **ZX_VMO_OP_COMMIT**, the VMO is backed by a pager and the pager or
+the VMO is in a bad state preventing requested pages from being populated.
+
+**ZX_ERR_IO** *op* was **ZX_VMO_OP_COMMIT**, the VMO is backed by a pager and the pager encountered
+an I/O error while committing the requested pages.
+
+**ZX_ERR_IO_DATA_INTEGRITY** *op* was **ZX_VMO_OP_COMMIT**, the VMO is backed by a pager and the
+contents that were read in by the pager for the pages being committed are corrupted.
+
 ## SEE ALSO
 
  - [`zx_vmo_create()`]

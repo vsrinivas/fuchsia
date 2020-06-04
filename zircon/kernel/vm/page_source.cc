@@ -122,6 +122,9 @@ void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
 void PageSource::OnPagesFailed(uint64_t offset, uint64_t len, zx_status_t error_status) {
   canary_.Assert();
   LTRACEF_LEVEL(2, "%p offset %lx, len %lx\n", this, offset, len);
+
+  DEBUG_ASSERT(IsValidFailureCode(error_status));
+
   uint64_t end;
   bool overflow = add_overflow(offset, len, &end);
   DEBUG_ASSERT(!overflow);  // vmobject should have already validated overflow
@@ -143,6 +146,18 @@ void PageSource::OnPagesFailed(uint64_t offset, uint64_t len, zx_status_t error_
 
     // Notify anything waiting on this page.
     CompleteRequestLocked(outstanding_requests_.erase(cur), error_status);
+  }
+}
+
+// static
+bool PageSource::IsValidFailureCode(zx_status_t error_status) {
+  switch (error_status) {
+    case ZX_ERR_IO:
+    case ZX_ERR_IO_DATA_INTEGRITY:
+    case ZX_ERR_BAD_STATE:
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -345,7 +360,7 @@ void PageRequest::Init(fbl::RefPtr<PageSource> src, uint64_t offset) {
 
 zx_status_t PageRequest::Wait() {
   zx_status_t status = src_->WaitOnEvent(&event_);
-  if (status != ZX_OK) {
+  if (status != ZX_OK && !PageSource::IsValidFailureCode(status)) {
     src_->CancelRequest(this);
   }
   return status;

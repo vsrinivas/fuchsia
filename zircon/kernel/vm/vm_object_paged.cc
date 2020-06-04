@@ -3324,6 +3324,9 @@ zx_status_t VmObjectPaged::FailPageRequests(uint64_t offset, uint64_t len,
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
   DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
 
+  // |error_status| must have already been validated by the PagerDispatcher.
+  DEBUG_ASSERT(PageSource::IsValidFailureCode(error_status));
+
   Guard<Mutex> guard{&lock_};
   ASSERT(page_source_);
 

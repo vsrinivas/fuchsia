@@ -76,6 +76,14 @@ class PageSource : public fbl::RefCounted<PageSource> {
   // unblocked.
   void OnPagesFailed(uint64_t offset, uint64_t len, zx_status_t error_status);
 
+  // Returns true if |error_status| is a valid pager failure error code, which can be used with
+  // |OnPagesFailed|.
+  //
+  // Not every error code is supported, since these errors can get returned via a zx_vmo_read() or a
+  // zx_vmo_op_range(), if those calls resulted in a page fault. So the |error_status| should be a
+  // supported return error code for those syscalls.
+  static bool IsValidFailureCode(zx_status_t error_status);
+
   // Detaches the source. All future calls into the page source will fail. All
   // pending read transactions are aborted. Pending flush transactions will still
   // be serviced.
