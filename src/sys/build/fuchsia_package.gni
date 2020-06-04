@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/images/manifest.gni")
+import("//build/unification/future/data/fini_manifest.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
 # Defines a Fuchsia package.
@@ -61,9 +61,7 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #     at all, typically a package contains at least one component.
 #     Type: list(labels)
 #
-#   data_deps
 #   deps
-#   public_deps
 #   testonly
 #   visibility
 template("fuchsia_package") {
@@ -83,79 +81,41 @@ template("fuchsia_package") {
 
   # Generate the "meta/package" file
   meta_package_target = "${target_name}_meta_package"
-  meta_package_file = "$target_out_dir/$meta_package_target.json"
+  meta_package_file = "$target_gen_dir/$meta_package_target.json"
   generated_file(meta_package_target) {
     contents = "{\"name\":\"$package_name\",\"version\":\"0\"}"
     outputs = [ meta_package_file ]
     output_conversion = "string"
     visibility = [ ":*" ]
-  }
-
-  metadata_target = "${target_name}_package_metadata"
-  group(metadata_target) {
-    forward_variables_from(invoker,
-                           [
-                             "data_deps",
-                             "deps",
-                             "public_deps",
-                             "testonly",
-                           ])
-    visibility = [ ":*" ]
     metadata = {
-      package_manifest_args = [
-        "--entry=meta/package=" + rebase_path(meta_package_file, root_out_dir),
-        "--entry-manifest=" +
-            get_label_info(":${invoker.target_name}", "label_no_toolchain"),
-      ]
+      migrated_manifest_lines =
+          [ "meta/package=" + rebase_path(meta_package_file, root_build_dir) ]
     }
-  }
-
-  # Generate package manifest args
-  args_target = "${target_name}_manifest_args"
-  args_file = "$target_out_dir/$args_target"
-  generated_file(args_target) {
-    forward_variables_from(invoker,
-                           [
-                             "data_deps",
-                             "deps",
-                             "public_deps",
-                             "testonly",
-                           ])
-    visibility = [ ":*" ]
-    deps += [ ":$metadata_target" ]
-    outputs = [ args_file ]
-    data_keys = [ "package_manifest_args" ]
-    output_conversion = "list lines"
   }
 
   # Generate package manifest
-  generate_manifest("${target_name}_manifest") {
+  manifest_target = "${target_name}_manifest"
+  fini_manifest(manifest_target) {
     forward_variables_from(invoker,
                            [
-                             "data_deps",
                              "deps",
-                             "public_deps",
                              "testonly",
                            ])
-    visibility = [ ":*" ]
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ ":$meta_package_target" ] + invoker.components
-    sources = [ meta_package_file ]
-    args = [ "@" + rebase_path(args_file, root_build_dir) ]
+    deps += [ ":$meta_package_target" ]
+    visibility = [ ":*" ]
+    outputs = [ "$target_gen_dir/${target_name}_manifest" ]
   }
 
   # Build package
   pm_build(target_name) {
     forward_variables_from(invoker,
                            [
-                             "data_deps",
-                             "deps",
-                             "public_deps",
                              "testonly",
                              "visibility",
                            ])
-    manifest = ":${target_name}_manifest"
+    manifest = ":$manifest_target"
   }
 }

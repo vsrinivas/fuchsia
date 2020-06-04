@@ -49,7 +49,7 @@ packages, components, and their tests.
 ### Defining components, packages, and tests using GN templates {#defining}
 
 Below is a hypothetical package containing one component that runs a C++
-program. The example uses the following templates:
+program and a data file. The example uses the following templates:
 
 *   [`fuchsia_component.gni`](/src/sys/build/fuchsia_component.gni)
 *   [`fuchsia_package.gni`](/src/sys/build/fuchsia_package.gni)
@@ -65,8 +65,8 @@ fuchsia_component("my-component") {
   manifest = "meta/my_program.cmx"
   resources = [
     {
-      source = "$root_out_dir/my_program"
-      destination = "bin/my_program"
+      source = "my_data_file"
+      destination = "data/my_data_file"
     }
   ]
   deps = [ ":my_program" ]
@@ -99,31 +99,16 @@ Note the following details:
     sorts of programs.
 *   This example defines a `fuchsia_component()` which depends on the
     `executable()`. The component definition attaches a manifest, which
-    references the executable to be launched under the given path
-    `bin/my_program`. We also define a resource, the executable built above to
-    be included in the said path. \
-    The source path `"$root_out_dir/my_program"` is where
-    `executable("my_program")` will deposit its output, which is by convention
-    in Fuchsia's build. Note that it's possible to specify
-    `executable.output_name` - this overrides the default output name for
-    `executable()`, which is derived from its target name. In this case the
-    `source` parameter needs to change accordingly. \
-    It is possible of course to include multiple resource files in a component
-    target. Any and all resources defined will be included in any package that
-    depends on them. It is also possible to have multiple packages depend on the
-    same component target. \
-    The manifest must be either a `.cmx` file in [cmx format][cmx-format] or a
-    `.cml` file in [cml format][cml-format]. \
-    Finally, the destination path for the manifest is not specified, but rather
+    references the executable to be launched under the given package path
+    `bin/my_program`.
+    See:
+    [finding paths for built executables](#finding-paths-for-built-executables).
+*   The manifest must be either a `.cmx` file in [cmx format][cmx-format] or a
+    `.cml` file in [cml format][cml-format].
+*   The destination path for the manifest is not specified, but rather
     inferred from the component's name. In this example, the manifest path will
     be `meta/my-component.cmx`.
-*   This example defines a `fuchsia_package()` which depends on the component.
-    Note that packages can depend on any number of components. It is also
-    possible, though rare, to define packages with no components in them, just
-    data files. These packages will have `deps` on targets that provide these
-    definitions, of the template defined in
-    [`fuchsia_resources.gni`](/src/sys/build/fuchsia_resources.gni). \
-    [By convention][package-name] package names contain dashes (`-`) but not
+*   [By convention][package-name] package names contain dashes (`-`) but not
     underscores (`_`), and the component name above follows suit. \
     Both the component and package names are derived from their target names.
     They both take an optional `component_name` and `package_name` parameter
@@ -131,6 +116,84 @@ Note the following details:
     In the example above, these names come together to form the URL for
     launching the component:
     `fuchsia-pkg://fuchsia.com/my-package#meta/my-component.cmx`.
+
+### Language-specific component examples {#language-specific-component-examples}
+
+Below you'll find basic examples for defining a package with a single component
+that launches a program in a variety of commonly used languages. The referenced
+source files and component manifest are assumed to be present in the specified
+paths.
+
+   * {C++}
+
+   ```gn
+   import("//src/sys/build/components.gni")
+
+   executable("bin") {
+     output_name = "my_program"
+     sources = [ "main.cc" ]
+   }
+
+   fuchsia_component("my-component") {
+     manifest = "meta/my-component.cmx"
+     deps = [ ":bin" ]
+   }
+
+   fuchsia_package("my-package") {
+     components = [ ":my-component" ]
+   }
+   ```
+
+   * {Rust}
+
+   ```gn
+   import("//build/rust/rustc_binary.gni")
+   import("//src/sys/build/components.gni")
+
+   rustc_binary("bin") {
+     name = "my_program"
+   }
+
+   fuchsia_component("my-component") {
+     manifest = "meta/my-component.cmx"
+     deps = [ ":bin" ]
+   }
+
+   fuchsia_package("my-package") {
+     components = [ ":my-component" ]
+   }
+   ```
+
+   * {Go}
+
+   ```gn
+   import("//build/go/go_binary.gni")
+   import("//src/sys/build/components.gni")
+
+   go_binary("bin") {
+     output_name = "my_program"
+   }
+
+   fuchsia_component("my-component") {
+     manifest = "meta/my-component.cmx"
+     deps = [ ":bin" ]
+   }
+
+   fuchsia_package("my-package") {
+     components = [ ":my-component" ]
+   }
+   ```
+
+In all of the examples above, it's assumed that the file `meta/my-component.cmx`
+contains at least the following:
+
+```json
+{
+    "program": {
+        "binary": "bin/my_program"
+    }
+}
+```
 
 ### Test packages {#test-packages}
 
@@ -148,17 +211,15 @@ import("//src/sys/build/components.gni")
 executable("my_test") {
   sources = [ "my_test.cc" ]
   testonly = true
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
 }
 
 fuchsia_component("my-test-component") {
   testonly = true
   manifest = "meta/my_test.cmx"
-  resources = [
-    {
-      source = "$root_out_dir/my_test"
-      destination = "bin/my_test"
-    }
-  ]
   deps = [ ":my_test" ]
 }
 
@@ -168,12 +229,6 @@ executable("my_program_under_test") {
 
 fuchsia_component("my-other-component-under-test") {
   manifest = "meta/my_component_under_test.cmx"
-  resources = [
-    {
-      source = "$root_out_dir/my_program_under_test"
-      destination = "bin/my_program_under_test"
-    }
-  ]
   deps = [ ":my_program_under_test" ]
 }
 
@@ -215,118 +270,70 @@ Note the following details:
     have exactly one of). This is a [recommended practice][source-code-layout]
     for organizing targets across the source tree.
 
-### Language-specific component templates {#language-specific-component-templates}
-
-To simplify defining components in commonly used languages, simplified templates
-are provided.
-
-   * {C++}
-
-   ```gn
-   import("//src/sys/build/components.gni")
-
-   fuchsia_cpp_component("my-component") {
-     sources = [ "main.cc" ]
-     deps = [ ... ]
-   }
-   ```
-
-   See also: [`fuchsia_cpp_component.gni`](/src/sys/build/fuchsia_cpp_component.gni)
-
-   Additional [`executable()`][executable] parameters may be provided.
-
-   * {Rust}
-
-   ```gn
-   import("//src/sys/build/components.gni")
-
-   fuchsia_rust_component("my-component") {
-     deps = [ ... ]
-   }
-
-   # Alternatively, wrap an existing rustc_binary
-   rustc_binary("my_rust_binary") { ... }
-
-   fuchsia_rust_component("my-component") {
-     rustc_binary = ":my_rust_binary"
-   }
-   ```
-
-   See also: [`fuchsia_rust_component.gni`](/src/sys/build/fuchsia_rust_component.gni)
-
-   Additional [`rustc_binary()`][rustc-binary] parameters may be provided.
-
-Support for additional languages may be added upon request.
-
-Note the following details:
-
-*   These templates fuse the roles of the target that defines the executable
-    program with that of `fuchsia_component()`. A `fuchsia_package()` or
-    `fuchsia_test_package()` target is still required.
-*   The executable will be packaged under the path `bin/`, and named after the
-    target or `output_name` if it is defined.
-
 ### Unit tests {#unit-tests}
 
-Since unit tests are very common, simplified templates are provided to define
-them.
+Since unit tests are very common, a simplified template
+[`fuchsia_unittest_package.gni`](/src/sys/build/fuchsia_unittest_package.gni)
+is provided to define a package with a single component to be run as a test.
 
    * {C++}
 
    ```gn
    import("//src/sys/build/components.gni")
 
-   fuchsia_cpp_unittest("my-unittest") {
-     sources = [ "my_unittest.cc" ]
-     deps = [ ... ]
+   executable("test") {
+     output_name = "my_test"
+     sources = [ "test.cc" ]
+     deps = [
+       "//src/lib/fxl/test:gtest_main",
+       "//third_party/googletest:gtest",
+     ]
+     testonly = true
+   }
+
+   fuchsia_unittest_package("my-test-component") {
+     executable_name = "my_test"
+     deps = [ ":test" ]
    }
    ```
-
-   See also: [`fuchsia_cpp_unittest.gni`](/src/sys/build/fuchsia_cpp_unittest.gni)
-
-   Additional [`executable()`][executable] parameters may be provided.
 
    * {Rust}
 
    ```gn
+   import("//build/rust/rustc_test.gni")
    import("//src/sys/build/components.gni")
 
-   fuchsia_rust_unittest("my-unittest") {
-     deps = [ ... ]
-   }
-
-   # Alternatively, wrap an existing rustc_test
-   rustc_library("my_rust_lib") {
-     ...
-     with_unit_tests = true
-   }
-
-   fuchsia_rust_unittest("my-unittest") {
-     # rustc_binary and rustc_library generate an "_test" test target
-     rustc_test = ":my_rust_lib_test"
-     output_name = "my_rust_lib_lib_test"
+   rustc_test("test") {
+     name = "my_test"
    }
    ```
 
-   See also: [`fuchsia_rust_unittest.gni`](/src/sys/build/fuchsia_rust_unittest.gni)
+   * {Go}
 
-   Additional [`rustc_test()`][rustc-test] parameters may be provided.
+   ```gn
+   import("//build/go/go_test.gni")
+   import("//src/sys/build/components.gni")
 
-Support for additional languages may be added upon request.
+   go_test("test") {
+     output_name = "my_test"
+   }
+
+   fuchsia_unittest_package("my-test-component") {
+     executable_name = "my_test"
+     deps = [ ":test" ]
+   }
+   ```
 
 Note the following details:
 
-*   These templates fuse the roles of the target that defines the executable
-    program with that of `fuchsia_component()` and `fuchsia_test_package()`.
-*   The executable will be packaged under the path `test/`, and named after the
-    target or `output_name` if it is defined.
-*   In the examples above, the targets don't specify a component manifest. One
-    is then generated for them. The generated manifest requests very trivial
-    capabilities for the component that are typically sufficient to run a
-    "pure" unit test that exercises algorithms or business logic.
-*   In order to provide a component manifest, specify a `manifest` parameter
-    with a path to the manifest file.
-*   One way to find the generated component manifest file is as follows:
+*   The examples above don't specify a manifest. In this case, a trivial
+    manifest is generated for them. Such a manifest is often sufficient for
+    "pure" unit tests that test business logic and don't require any particular
+    capabilities. \
+    For more sophisticated tests, such as integration tests, see
+    [test packages](#test-packages).
+*   To generate the manifest, we must specify `executable_name` as seen above.
+*   The generated component manifest file can be found as follows:
     ```bash
     fx gn outputs out/default <unittest_target>_generated_manifest
     ```
@@ -334,11 +341,15 @@ Note the following details:
     ```bash
     cat out/default/`fx gn outputs out/default <unittest_target>_generated_manifest`
     ```
-    This command will not work if `manifest` is provided (i.e. there is no
-    generated manifest). Instead an error will be printed stating that the
-    target was not found.
+*   In order to provide a manifest rather than use a generated manifest, specify
+    `manifest` on `fuchsia_unittest_package()`. Note that if you do then the
+    command above to view the generated manifest will fail with an error stating
+    that the target was not found.
+*   Your provided manifest must specify the test executable's path, which will
+    be under the path `bin/`. See
+    [finding paths for built executables](#finding-paths-for-built-executables).
 
-### Additional packaged resources
+### Additional packaged resources {#additional-packaged-resources}
 
 In the [example above](#defining) you saw the use of `resources` in a component
 definition. The same syntax applies to all component templates. Resources
@@ -349,7 +360,7 @@ target definition.
 Sometimes it's useful to define resources outside of a component definition. For
 instance, you may want to define resources and allow multiple components to
 depend on them. For this, use
-[`fuchsia_resources.gni`](/src/sys/build/fuchsia_resources.gni). For instance:
+[`resource.gni`](/build/unification/zbi/resource.gni). For instance:
 
 {# Disable variable substition to avoid {{ being interpreted by the template engine #}
 {% verbatim %}
@@ -357,7 +368,7 @@ depend on them. For this, use
 ```gn
 import("//src/sys/build/components.gni")
 
-fuchsia_resources("roboto_family") {
+resource("roboto_family") {
   sources = [
     "Roboto-Black.ttf",
     "Roboto-Bold.ttf",
@@ -366,7 +377,7 @@ fuchsia_resources("roboto_family") {
     "Roboto-Regular.ttf",
     "Roboto-Thin.ttf",
   ]
-  destination = "data/fonts/{{source_file_part}}"
+  outputs = [ "data/fonts/{{source_file_part}}" ]
 }
 ```
 
@@ -378,9 +389,9 @@ producing the paths `data/fonts/Roboto-Black.ttf`,
 `data/fonts/Roboto-Bold.ttf`, etc'. The format for `destination` accepts [GN
 source expansion placeholders][source-expansion-placeholders].
 
-## Troubleshooting
+## Troubleshooting {#troubleshooting}
 
-### Listing the contents of a package
+### Listing the contents of a package {#listing-the-contents-of-a-package}
 
 Packages are described by a package manifest, which is a text file where every
 line follows this structure:
@@ -409,6 +420,25 @@ See also:
 
 *   [Working with packages][working-with-packages]
 *   [pm]
+
+### Finding paths for built executables {#finding-paths-for-built-executables}
+
+Executable programs can be built with various language-specific templates such
+as `executable()`, `rustc_binary()`, `go_binary()` etc'. These templates are
+responsible for specifying where in a package their output binaries should be
+included. The details vary by runtime and toolchain configuration.
+
+*   Typically the path is `bin/` followed by the target's name.
+*   Typically if an `output_name` or `name` is specified, it overrides the
+    target name.
+
+In order to reference an executable in a component manifest, the author will
+need to know its packaged path.
+
+One way to find the packaged path for an executable is to make sure that the
+target that builds the executable is in a package's `deps`, then follow the
+above guide for [listing the contents of a
+package](#listing-the-contents-of-a-package).
 
 ## Migrating from legacy `package()`
 

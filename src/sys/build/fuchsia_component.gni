@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/unification/zbi/resource.gni")
 import("//src/sys/cmc/build/cml.gni")
 import("//src/sys/cmc/build/cmx.gni")
 
@@ -11,8 +12,8 @@ import("//src/sys/cmc/build/cmx.gni")
 # A component is defined by a component manifest.
 # Component manifests typically reference files in the package that they are
 # distributed in. Therefore a component can also have dependencies on
-# `fuchsia_resources()`, such that any package that depends on the component
-# will also include these resources.
+# `resource()`, such that any package that depends on the component # will
+# also include that resource.
 #
 # A component is launched by a URL.
 # See: https://fuchsia.dev/fuchsia-src/glossary#component_url
@@ -21,29 +22,18 @@ import("//src/sys/cmc/build/cmx.gni")
 # and the path within that package to the component's manifest. For instance if
 # you defined the following:
 # ```
-# executable("my-program") {
+# executable("my_program") {
 #   ...
 # }
 #
 # fuchsia_component("my-component") {
 #   manifest = "manifest.cml"
-#   resources = [
-#     {
-#       source = "$root_out_dir/my-program"
-#       destination = "bin/my-program"
-#     }
-#     ...
-#   ]
-#   deps = [
-#     ":my-program",
-#     ...
-#   ]
-#   ...
+#   executable_name = "my_program"
+#   deps = [ ":my-program" ]
 # }
 #
 # fuchsia_package("my-package") {
-#   deps = [ ":my-component" ]
-#   ...
+#   components = [ ":my-component" ]
 # }
 # ```
 # The component above will have the following launch URL:
@@ -57,13 +47,13 @@ import("//src/sys/cmc/build/cmx.gni")
 # The following target:
 # ```
 # fuchsia_component("my-component") {
-#   ...
 #   resources = [
 #     {
 #       source = "my_file.txt"
 #       destination = "data/my_file.txt"
 #     }
 #   ]
+#   ...
 # }
 # ```
 # Is equivalent to:
@@ -125,6 +115,25 @@ template("fuchsia_component") {
         "Unknown manifest format for \"$manifest\" passed to fuchsia_component($target_name)")
   }
 
+  # Add resources
+  manifest_resource_target = "${target_name}_manifest_resource"
+  resources_deps = [ ":$manifest_resource_target" ]
+  if (defined(invoker.resources)) {
+    foreach(resource, invoker.resources) {
+      destination = get_path_info(resource.source, "file")
+      if (defined(resource.destination)) {
+        destination = resource.destination
+      }
+      resource_target = "${target_name}_resource_${destination}"
+      resource(resource_target) {
+        sources = [ resource.source ]
+        outputs = [ destination ]
+        visibility = [ ":*" ]
+      }
+      resources_deps += [ ":$resource_target" ]
+    }
+  }
+
   # Process the manifest
   target(manifest_processor, target_name) {
     output_name = manifest_name
@@ -140,27 +149,13 @@ template("fuchsia_component") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ ":${target_name}_metadata" ]
+    deps += resources_deps
   }
-  manifest_source = get_target_outputs(":$target_name")
-  manifest_source = rebase_path(manifest_source[0], root_out_dir)
 
-  # Package the manifest
-  group("${target_name}_metadata") {
-    metadata = {
-      package_manifest_args = [ "--entry=meta/$manifest_name=$manifest_source" ]
-    }
+  # Add the manifest
+  resource(manifest_resource_target) {
+    sources = get_target_outputs(":${invoker.target_name}")
+    outputs = [ "meta/$manifest_name" ]
     visibility = [ ":*" ]
-
-    if (defined(invoker.resources)) {
-      foreach(resource, invoker.resources) {
-        source = rebase_path(resource.source, root_out_dir)
-        destination = get_path_info(resource.source, "file")
-        if (defined(resource.destination)) {
-          destination = resource.destination
-        }
-        metadata.package_manifest_args += [ "--entry=$destination=$source" ]
-      }
-    }
   }
 }

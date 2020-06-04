@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
 import("//src/sys/build/components.gni")
 
 # Run all tests with:
@@ -18,12 +19,15 @@ group("tests") {
   testonly = true
 }
 
-fuchsia_cpp_component("return_zero_component") {
+executable("return_zero") {
   sources = [ "return_zero.cc" ]
-  output_name = "return_zero"
-  manifest = "return_zero.cmx"
-  component_name = "return-zero"
   testonly = true
+}
+
+fuchsia_component("return_zero_component") {
+  manifest = "return_zero.cmx"
+  testonly = true
+  deps = [ ":return_zero" ]
 }
 
 fuchsia_test_package("return_zero_package") {
@@ -31,48 +35,51 @@ fuchsia_test_package("return_zero_package") {
   test_components = [ ":return_zero_component" ]
 }
 
-fuchsia_cpp_unittest("twoplustwo-cpp-unittest") {
+executable("twoplustwo_cpp") {
   sources = [ "two_plus_two.cc" ]
+  testonly = true
   deps = [
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
 }
 
-rustc_library("twoplustwo_rust") {
+fuchsia_unittest_package("twoplustwo-cpp-unittest") {
+  executable_name = "twoplustwo_cpp"
+  deps = [ ":twoplustwo_cpp" ]
+}
+
+rustc_test("twoplustwo_rust") {
   source_root = "two_plus_two.rs"
-  with_unit_tests = true
 }
 
-fuchsia_rust_unittest("twoplustwo-rust-unittest") {
-  rustc_test = ":twoplustwo_rust_test"
-  output_name = "twoplustwo_rust_lib_test"
+fuchsia_unittest_package("twoplustwo-rust-unittest") {
+  executable_name = "twoplustwo_rust"
+  deps = [ ":twoplustwo_rust" ]
 }
 
-fuchsia_rust_unittest("readfile-unittest") {
+rustc_test("read_file_test") {
   source_root = "read_file.rs"
+}
+
+fuchsia_unittest_package("readfile-unittest") {
+  executable_name = "read_file_test"
   resources = [
     {
       source = "hello_world.txt"
       destination = "data/hello_world.txt"
     },
   ]
+  deps = [ ":read_file_test" ]
 }
 
 fuchsia_component("echo-server") {
-  manifest = "//garnet/examples/fidl/meta/echo_server.cmx"
-  resources = [
-    {
-      source = "$root_out_dir/echo_server_go"
-      destination = "bin/echo_server"
-    },
-  ]
+  manifest = "echo_server_go.cmx"
   deps = [ "//garnet/examples/fidl/echo_server_go:echo_server_go_bin" ]
 }
 
-fuchsia_rust_component("echo-client-test") {
+rustc_test("echo_client_test") {
   source_root = "echo_client.rs"
-  manifest = "echo_client_test.cmx"
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -80,6 +87,12 @@ fuchsia_rust_component("echo-client-test") {
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
   ]
+}
+
+fuchsia_component("echo-client-test") {
+  manifest = "echo_client_test.cmx"
+  deps = [ ":echo_client_test" ]
+  testonly = true
 }
 
 fuchsia_test_package("echo-integration-test") {

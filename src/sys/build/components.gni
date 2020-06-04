@@ -2,15 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/unification/zbi/resource.gni")
+
 # Entry point for all general purpose GN templates for building and testing
 # Fuchsia components.
 # See: https://fuchsia.dev/fuchsia-src/development/components/build
 import("fuchsia_component.gni")
-import("fuchsia_cpp_component.gni")
-import("fuchsia_cpp_unittest.gni")
 import("fuchsia_package.gni")
-import("fuchsia_resources.gni")
-import("fuchsia_rust_component.gni")
-import("fuchsia_rust_unittest.gni")
 import("fuchsia_test.gni")
 import("fuchsia_test_package.gni")
+import("fuchsia_unittest_package.gni")
