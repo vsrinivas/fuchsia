@@ -5,14 +5,13 @@
 use {
   argh::FromArgs,
   ffx_config_args::ConfigCommand,
-  ffx_core::args::{DaemonCommand, EchoCommand, ListCommand, QuitCommand},
+  ffx_core::args::{DaemonCommand, ListCommand, QuitCommand},
 };
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
 pub enum Subcommand {
     Daemon(DaemonCommand),
-    Echo(EchoCommand),
     List(ListCommand),
     Config(ConfigCommand),
     Quit(QuitCommand),

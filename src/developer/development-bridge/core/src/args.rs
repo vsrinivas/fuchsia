@@ -9,14 +9,6 @@ use argh::FromArgs;
 pub struct DaemonCommand {}
 
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "echo", description = "run echo test")]
-pub struct EchoCommand {
-    #[argh(positional)]
-    /// text string to echo back and forth
-    pub text: Option<String>,
-}
-
-#[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "list", description = "list connected devices")]
 pub struct ListCommand {
     #[argh(positional)]
@@ -30,19 +22,6 @@ pub struct QuitCommand {}
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_echo() {
-        fn check(args: &[&str], expected_echo: &str) {
-            assert_eq!(
-                EchoCommand::from_args(&["echo"], args),
-                Ok(EchoCommand { text: Some(expected_echo.to_string()) })
-            )
-        }
-
-        let echo = "test-echo";
-        check(&[echo], echo);
-    }
 
     #[test]
     fn test_daemon() {

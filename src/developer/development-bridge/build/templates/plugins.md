@@ -1,4 +1,4 @@
-pub async fn plugins<C: ffx_core::RemoteControlProxySource>(
+pub async fn plugins<C: ffx_core::RemoteControlProxySource + ffx_core::DaemonProxySource>(
   cli: &C,
   subcommand: ffx_command::Subcommand,
 ) -> Result<(), anyhow::Error> {

@@ -9,7 +9,7 @@ use {
     async_trait::async_trait,
     ffx_command::{Ffx, Subcommand},
     ffx_config::command::exec_config,
-    ffx_core::{constants::DAEMON, RemoteControlProxySource},
+    ffx_core::{constants::DAEMON, DaemonProxySource, RemoteControlProxySource},
     ffx_daemon::{find_and_connect, is_daemon_running, start as start_daemon},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::{DaemonProxy, Target as FidlTarget},
@@ -47,23 +47,6 @@ impl Cli {
 
     pub async fn exec_plugins(&self, subcommand: Subcommand) -> Result<(), Error> {
         ffx_plugins::plugins(self, subcommand).await
-    }
-
-    pub async fn echo(&self, text: Option<String>) -> Result<String, Error> {
-        match self
-            .daemon_proxy
-            .echo_string(match text {
-                Some(ref t) => t,
-                None => "Ffx",
-            })
-            .await
-        {
-            Ok(r) => {
-                log::info!("SUCCESS: received {:?}", r);
-                return Ok(r);
-            }
-            Err(e) => panic!("ERROR: {:?}", e),
-        }
     }
 
     pub async fn list_targets(&self, text: Option<String>) -> Result<Vec<FidlTarget>, Error> {
@@ -110,6 +93,12 @@ impl RemoteControlProxySource for Cli {
     }
 }
 
+impl DaemonProxySource for Cli {
+    fn get_daemon_proxy(&self) -> &DaemonProxy {
+        &self.daemon_proxy
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // main
 fn get_log_name(subcommand: &Subcommand) -> &'static str {
@@ -125,17 +114,6 @@ async fn async_main() -> Result<(), Error> {
     setup_logger(get_log_name(&app.subcommand)).await;
     let writer = Box::new(std::io::stdout());
     match app.subcommand {
-        Subcommand::Echo(c) => {
-            match Cli::new().await?.echo(c.text).await {
-                Ok(r) => {
-                    eprintln!("SUCCESS: received {:?}", r);
-                }
-                Err(e) => {
-                    eprintln!("ERROR: {:?}", e);
-                }
-            }
-            Ok(())
-        }
         Subcommand::List(c) => {
             match Cli::new().await?.list_targets(c.nodename).await {
                 Ok(r) => match r.len() {
@@ -189,39 +167,7 @@ mod test {
         super::*,
         ffx_config::{ffx_cmd, ffx_env},
         ffx_core::args::DaemonCommand,
-        fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonRequest},
-        futures::TryStreamExt,
     };
-
-    fn setup_fake_daemon_service() -> DaemonProxy {
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-
-        hoist::spawn(async move {
-            while let Ok(req) = stream.try_next().await {
-                match req {
-                    Some(DaemonRequest::EchoString { value, responder }) => {
-                        let _ = responder.send(value.as_ref());
-                    }
-                    _ => assert!(false),
-                }
-            }
-        });
-
-        proxy
-    }
-
-    #[test]
-    fn test_echo() {
-        let echo = "test-echo";
-        hoist::run(async move {
-            let echoed = Cli::new_with_proxy(setup_fake_daemon_service())
-                .echo(Some(echo.to_string()))
-                .await
-                .unwrap();
-            assert_eq!(echoed, echo);
-        });
-    }
 
     #[test]
     fn test_config_macros() {

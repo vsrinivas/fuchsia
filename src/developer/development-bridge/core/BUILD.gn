@@ -12,6 +12,7 @@ if (host_toolchain == current_toolchain) {
 
     deps = [
       "macro:lib",
+      "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",

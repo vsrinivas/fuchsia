@@ -9,13 +9,18 @@ use {
     proc_macro2::Span,
     quote::quote,
     syn::{
-        parse_macro_input, punctuated::Punctuated, FnArg, Ident, ItemFn, ItemStruct, Pat, PatType,
-        Token, Type::Path, TypePath,
+        parse_macro_input,
+        punctuated::Punctuated,
+        FnArg, Ident, ItemFn, ItemStruct, Pat, PatType, Token,
+        Type::{Path, Reference},
+        TypePath, TypeReference,
     },
 };
 
-const EXPECTED_SIGNATURE: &str = "ffx_plugin expects the signature: \
-     `(RemoteControlProxy, <YourArghCommand>) -> Result<(), anyhow::Error>`";
+const EXPECTED_SIGNATURE: &str = "ffx_plugin expects one of the following signatures: \
+     `(RemoteControlProxy, <YourArghCommand>) -> Result<(), anyhow::Error>` \
+     OR \
+     `(&DaemonProxy, <YourArghCommand>) -> Result<(), anyhow::Error>`";
 
 #[proc_macro_attribute]
 pub fn ffx_command(_attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -37,16 +42,30 @@ pub fn ffx_plugin(_attr: TokenStream, item: TokenStream) -> TokenStream {
         panic!("{}", EXPECTED_SIGNATURE);
     }
 
-    // Error check that the first parameter is RCS
+    // Error check that the first parameter is RCS or DaemonProxy
+    let mut is_remote = false;
     let proxy = input.sig.inputs[0].clone();
     match proxy {
         FnArg::Typed(PatType { ty, .. }) => match ty.as_ref() {
             Path(TypePath { path, .. }) => match path.segments.last() {
                 Some(t) => {
-                    if t.ident != Ident::new("RemoteControlProxy", Span::call_site()) {
-                        panic!("{}", EXPECTED_SIGNATURE);
+                    if t.ident == Ident::new("RemoteControlProxy", Span::call_site()) {
+                        is_remote = true;
+                    } else {
+                        panic!("{}", EXPECTED_SIGNATURE)
                     }
                 }
+                _ => panic!("{}", EXPECTED_SIGNATURE),
+            },
+            Reference(TypeReference { elem, .. }) => match elem.as_ref() {
+                Path(TypePath { path, .. }) => match path.segments.last() {
+                    Some(t) => {
+                        if t.ident != Ident::new("DaemonProxy", Span::call_site()) {
+                            panic!("{}", EXPECTED_SIGNATURE)
+                        }
+                    }
+                    _ => panic!("{}", EXPECTED_SIGNATURE),
+                },
                 _ => panic!("{}", EXPECTED_SIGNATURE),
             },
             _ => panic!("{}", EXPECTED_SIGNATURE),
@@ -72,10 +91,19 @@ pub fn ffx_plugin(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let method = input.sig.ident.clone();
     let cmd = input.sig.inputs[1].clone();
-    TokenStream::from(quote! {
-        #input
-        pub async fn ffx_plugin_impl<C: ffx_core::RemoteControlProxySource>(cli: &C, #cmd) -> Result<(), Error> {
-            #method(cli.get_remote_proxy().await?, #args).await
-        }
-    })
+    if is_remote {
+        TokenStream::from(quote! {
+            #input
+            pub async fn ffx_plugin_impl<C: ffx_core::RemoteControlProxySource>(cli: &C, #cmd) -> Result<(), Error> {
+                #method(cli.get_remote_proxy().await?, #args).await
+            }
+        })
+    } else {
+        TokenStream::from(quote! {
+            #input
+            pub async fn ffx_plugin_impl<C: ffx_core::DaemonProxySource>(cli: &C, #cmd) -> Result<(), Error> {
+                #method(cli.get_daemon_proxy(), #args).await
+            }
+        })
+    }
 }

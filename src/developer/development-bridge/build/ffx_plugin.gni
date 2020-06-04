@@ -98,6 +98,7 @@ template("ffx_plugin") {
 
     lib_deps = [
       ":" + args,
+      "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//src/connectivity/overnet/lib/hoist",
       "//src/developer/development-bridge/core:lib",
