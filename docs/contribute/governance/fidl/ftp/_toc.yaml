@@ -56,7 +56,7 @@ toc:
   path: /docs/contribute/governance/fidl/ftp/ftp-030.md
 - title: "FTP-032: Efficient Envelopes: Turning Envelopes into Postcards"
   path: /docs/contribute/governance/fidl/ftp/ftp-032.md
-- title: "FTP-033: Handling of Unknown Fields &amp; Strictness"
+- title: "FTP-033: Handling of Unknown Fields and Strictness"
   path: /docs/contribute/governance/fidl/ftp/ftp-033.md
 - title: "FTP-035: Automatic Flow Tracing"
   path: /docs/contribute/governance/fidl/ftp/ftp-035.md
