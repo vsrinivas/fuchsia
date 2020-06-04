@@ -49,6 +49,12 @@ class FidlStruct {
     // nothing else to do here
   }
 
+  explicit FidlStruct(FidlLlcppStruct&& to_move_and_own_handles) {
+    ZX_DEBUG_ASSERT(!FidlLlcppStruct::HasPointer);
+    *reinterpret_cast<FidlLlcppStruct*>(&storage_) = std::move(to_move_and_own_handles);
+    ptr_ = &storage_;
+  }
+
   // There is intentionally not a zero-arg constructor, to force selection
   // between starting with default-initialized storage with handles owned by
   // ptr_ (any handles set to non-zero value after construction), vs. starting

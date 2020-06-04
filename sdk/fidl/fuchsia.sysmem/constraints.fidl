@@ -4,6 +4,11 @@
 
 library fuchsia.sysmem;
 
+const uint32 MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS = 32;
+const uint32 MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED = 32;
+const uint32 MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES = 32;
+const uint32 MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS = 64;
+
 // TODO(dustingreen): FIDL C generated code doesn't implement field defaults, so
 // either move to FIDL C++ generated code (for this reason among several others;
 // preferred), or make 0 values be aliases for the intended default value.  For
@@ -105,7 +110,7 @@ struct BufferCollectionConstraints {
     /// particpants with non-zero image_format_constraints_count (and non-Null)
     /// BufferCollectionConstraints) are retained.
     uint32 image_format_constraints_count;
-    array<ImageFormatConstraints>:32 image_format_constraints;
+    array<ImageFormatConstraints>:MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS image_format_constraints;
 };
 
 struct BufferCollectionConstraintsAuxBuffers {
@@ -147,8 +152,6 @@ struct VmoBuffer {
     /// BufferMemorySettings.size_bytes before the end of the VMO.
     uint64 vmo_usable_start;
 };
-
-const uint32 MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS = 64;
 
 /// Information about a buffer collection and its buffers.
 // TODO(fxb/32119): change struct to table
@@ -241,7 +244,7 @@ struct BufferMemoryConstraints {
     /// Optional heap constraints. Participants that don't care which heap
     /// memory is allocated on should leave this field 0.
     uint32 heap_permitted_count;
-    array<HeapType>:32 heap_permitted;
+    array<HeapType>:MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED heap_permitted;
 };
 
 /// Inaccessible is only for cases where there is no CPU-based access to the
@@ -266,8 +269,6 @@ struct BufferMemorySettings {
     /// See above in this file for heap identifier values.
     HeapType heap;
 };
-
-const uint32 MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES = 32;
 
 /// Describes constraints on layout of image data in buffers.
 // TODO(fxb/32119): change struct to table

@@ -83,6 +83,7 @@ group("tests") {
     "//zircon/system/ulib/syslog/test:syslog-package",
     "//zircon/system/ulib/syslog/test:syslog-static-package",
     "//zircon/system/ulib/sysmem-make-tracking/test:sysmem-make-tracking-test",
+    "//zircon/system/ulib/sysmem-version/test:sysmem-version-test-package",
     "//zircon/system/ulib/test-exceptions/test:test-exceptions-package",
     "//zircon/system/ulib/test-utils/test:test-utils-package",
     "//zircon/system/ulib/trace-reader/test:trace-reader-test-package",

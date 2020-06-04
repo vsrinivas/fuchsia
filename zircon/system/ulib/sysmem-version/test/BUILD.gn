@@ -1,0 +1,44 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+group("test") {
+  testonly = true
+  deps = [ ":sysmem-version-test-package" ]
+}
+
+test("sysmem-version-test") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "sysmem-version-test.cc" ]
+  deps = [
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/sysmem-make-tracking",
+    "//zircon/system/ulib/sysmem-version",
+  ]
+}
+
+unittest_package("sysmem-version-test-package") {
+  package_name = "sysmem-version-test"
+  deps = [ ":sysmem-version-test" ]
+
+  tests = [
+    {
+      name = "sysmem-version-test"
+      dest = "sysmem-version-test"
+    },
+  ]
+}
