@@ -49,9 +49,6 @@ import("//build/testing/platforms.gni")
 template("test_spec") {
   testonly = true
 
-  if (is_host) {
-    assert(defined(invoker.path), "path is required for host-side tests")
-  }
   forward_variables_from(invoker, [ "environments" ])
 
   # Set default environments: Emu for a fuchsia test, and VMs for linux and mac
