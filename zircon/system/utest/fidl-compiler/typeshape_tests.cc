@@ -21,6 +21,7 @@ struct Expected {
   uint32_t depth = 0;
   bool has_padding = false;
   bool has_flexible_envelope = false;
+  bool is_resource = false;
 };
 
 bool CheckTypeShape(const fidl::TypeShape& actual, Expected expected) {
@@ -32,6 +33,7 @@ bool CheckTypeShape(const fidl::TypeShape& actual, Expected expected) {
   EXPECT_EQ(actual.Depth(), expected.depth);
   EXPECT_EQ(actual.HasPadding(), expected.has_padding);
   EXPECT_EQ(actual.HasFlexibleEnvelope(), expected.has_flexible_envelope);
+  EXPECT_EQ(actual.is_resource, expected.is_resource);
   END_HELPER;
 }
 
@@ -304,6 +306,7 @@ struct ThreeHandlesOneOptional {
                                              .inline_size = 4,
                                              .alignment = 4,
                                              .max_handles = 1,
+                                             .is_resource = true,
                                          }));
   ASSERT_EQ(one_handle->members.size(), 1);
   EXPECT_TRUE(CheckFieldShape(one_handle->members[0], ExpectedField{}));
@@ -314,6 +317,7 @@ struct ThreeHandlesOneOptional {
                                               .inline_size = 8,
                                               .alignment = 4,
                                               .max_handles = 2,
+                                              .is_resource = true,
                                           }));
   ASSERT_EQ(two_handles->members.size(), 2);
   EXPECT_TRUE(CheckFieldShape(two_handles->members[0], ExpectedField{}));
@@ -327,6 +331,7 @@ struct ThreeHandlesOneOptional {
                                                              .inline_size = 12,
                                                              .alignment = 4,
                                                              .max_handles = 3,
+                                                             .is_resource = true,
                                                          }));
   ASSERT_EQ(three_handles_one_optional->members.size(), 3);
   EXPECT_TRUE(CheckFieldShape(three_handles_one_optional->members[0], ExpectedField{}));
@@ -580,6 +585,7 @@ table TableWithOneHandle {
                                              .depth = 2,
                                              .has_padding = true,
                                              .has_flexible_envelope = true,
+                                             .is_resource = true,
                                          }));
 
   END_TEST;
@@ -1006,6 +1012,7 @@ union ManyHandleUnion {
                                  .alignment = 4,
                                  .max_handles = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              },
                              Expected{
                                  .inline_size = 24,
@@ -1014,6 +1021,7 @@ union ManyHandleUnion {
                                  .max_handles = 1,
                                  .depth = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              }));
   ASSERT_EQ(one_handle_union->members.size(), 3);
   ASSERT_NONNULL(one_handle_union->members[0].maybe_used);
@@ -1057,6 +1065,7 @@ union ManyHandleUnion {
                                  .max_handles = 8,
                                  .depth = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              },
                              Expected{
                                  .inline_size = 24,
@@ -1065,6 +1074,7 @@ union ManyHandleUnion {
                                  .max_handles = 8,
                                  .depth = 2,
                                  .has_padding = true,
+                                 .is_resource = true,
                              }));
   ASSERT_EQ(many_handle_union->members.size(), 3);
   ASSERT_NONNULL(many_handle_union->members[1].maybe_used);
@@ -1274,6 +1284,7 @@ table TableWithHandleStructVector {
                                                 .max_handles = 8,
                                                 .depth = 1,
                                                 .has_padding = true,
+                                                .is_resource = true,
                                             }));
 
   auto handle_nullable_vector = test_library.LookupStruct("HandleNullableVector");
@@ -1285,6 +1296,7 @@ table TableWithHandleStructVector {
                                                          .max_handles = 8,
                                                          .depth = 1,
                                                          .has_padding = true,
+                                                         .is_resource = true,
                                                      }));
 
   auto unbounded_handle_vector = test_library.LookupStruct("UnboundedHandleVector");
@@ -1297,6 +1309,7 @@ table TableWithHandleStructVector {
                                  .max_handles = std::numeric_limits<uint32_t>::max(),
                                  .depth = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              }));
 
   auto table_with_unbounded_handle_vector =
@@ -1311,6 +1324,7 @@ table TableWithHandleStructVector {
                                  .depth = 3,
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
+                                 .is_resource = true,
                              }));
 
   auto handle_struct_vector = test_library.LookupStruct("HandleStructVector");
@@ -1322,6 +1336,7 @@ table TableWithHandleStructVector {
                                                        .max_handles = 8,
                                                        .depth = 1,
                                                        .has_padding = true,
+                                                       .is_resource = true,
                                                    }));
 
   auto handle_table_vector = test_library.LookupStruct("HandleTableVector");
@@ -1334,6 +1349,7 @@ table TableWithHandleStructVector {
                                                       .depth = 3,
                                                       .has_padding = true,
                                                       .has_flexible_envelope = true,
+                                                      .is_resource = true,
                                                   }));
 
   auto table_with_handle_struct_vector = test_library.LookupTable("TableWithHandleStructVector");
@@ -1346,6 +1362,7 @@ table TableWithHandleStructVector {
                                                                   .depth = 3,
                                                                   .has_padding = true,
                                                                   .has_flexible_envelope = true,
+                                                                  .is_resource = true,
                                                               }));
 
   END_TEST;
@@ -1528,6 +1545,7 @@ table TableWithNullableHandleArray {
                                                .inline_size = 32,
                                                .alignment = 4,
                                                .max_handles = 8,
+                                               .is_resource = true,
                                            }));
 
   auto table_with_handle_array = test_library.LookupTable("TableWithHandleArray");
@@ -1540,6 +1558,7 @@ table TableWithNullableHandleArray {
                                                           .depth = 2,
                                                           .has_padding = false,
                                                           .has_flexible_envelope = true,
+                                                          .is_resource = true,
                                                       }));
 
   auto nullable_handle_array = test_library.LookupStruct("NullableHandleArray");
@@ -1548,6 +1567,7 @@ table TableWithNullableHandleArray {
                                                         .inline_size = 32,
                                                         .alignment = 4,
                                                         .max_handles = 8,
+                                                        .is_resource = true,
                                                     }));
 
   auto table_with_nullable_handle_array = test_library.LookupTable("TableWithNullableHandleArray");
@@ -1560,6 +1580,7 @@ table TableWithNullableHandleArray {
                                                                    .depth = 2,
                                                                    .has_padding = false,
                                                                    .has_flexible_envelope = true,
+                                                                   .is_resource = true,
                                                                }));
 
   END_TEST;
@@ -1964,6 +1985,7 @@ struct UsingOptRequestSomeProtocol {
                                                       .inline_size = 4,
                                                       .alignment = 4,
                                                       .max_handles = 1,
+                                                      .is_resource = true,
                                                   }));
 
   auto using_opt_some_protocol = test_library.LookupStruct("UsingOptSomeProtocol");
@@ -1972,6 +1994,7 @@ struct UsingOptRequestSomeProtocol {
                                                           .inline_size = 4,
                                                           .alignment = 4,
                                                           .max_handles = 1,
+                                                          .is_resource = true,
                                                       }));
 
   auto using_request_some_protocol = test_library.LookupStruct("UsingRequestSomeProtocol");
@@ -1980,6 +2003,7 @@ struct UsingOptRequestSomeProtocol {
                                                               .inline_size = 4,
                                                               .alignment = 4,
                                                               .max_handles = 1,
+                                                              .is_resource = true,
                                                           }));
 
   auto using_opt_request_some_protocol = test_library.LookupStruct("UsingOptRequestSomeProtocol");
@@ -1988,6 +2012,7 @@ struct UsingOptRequestSomeProtocol {
                                                                   .inline_size = 4,
                                                                   .alignment = 4,
                                                                   .max_handles = 1,
+                                                                  .is_resource = true,
                                                               }));
 
   END_TEST;
@@ -2059,6 +2084,7 @@ struct ExternalSimpleStruct {
                                                  .max_handles = 32,
                                                  .depth = 1,
                                                  .has_padding = true,
+                                                 .is_resource = true,
                                              }));
 
   END_TEST;
@@ -2086,6 +2112,7 @@ protocol MessagePort {
                                               .inline_size = 4,
                                               .alignment = 4,
                                               .max_handles = 1,
+                                              .is_resource = true,
                                           }));
   ASSERT_EQ(web_message->members.size(), 1);
   EXPECT_TRUE(CheckFieldShape(web_message->members[0], ExpectedField{}));
@@ -2102,18 +2129,21 @@ protocol MessagePort {
                                  .alignment = 8,
                                  .max_handles = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              },
                              Expected{
                                  .inline_size = 24,
                                  .alignment = 8,
                                  .max_handles = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              },
                              Expected{
                                  .inline_size = 8,
                                  .alignment = 8,
                                  .max_handles = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              }));
   ASSERT_EQ(post_message_request->members.size(), 1);
   EXPECT_TRUE(
@@ -2144,6 +2174,7 @@ protocol MessagePort {
                                               .inline_size = 4,
                                               .alignment = 4,
                                               .max_handles = 1,
+                                              .is_resource = true,
                                           }));
 
   auto message_port = library.LookupProtocol("MessagePort");
@@ -2158,18 +2189,21 @@ protocol MessagePort {
                                  .alignment = 8,
                                  .max_handles = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              },
                              Expected{
                                  .inline_size = 24,
                                  .alignment = 8,
                                  .max_handles = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              },
                              Expected{
                                  .inline_size = 8,
                                  .alignment = 8,
                                  .max_handles = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              }));
 
   END_TEST;
@@ -2197,6 +2231,7 @@ protocol MessagePort {
                                               .inline_size = 4,
                                               .alignment = 4,
                                               .max_handles = 1,
+                                              .is_resource = true,
                                           }));
 
   auto message_port = library.LookupProtocol("MessagePort");
@@ -2211,18 +2246,21 @@ protocol MessagePort {
                                  .alignment = 8,
                                  .max_handles = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              },
                              Expected{
                                  .inline_size = 24,
                                  .alignment = 8,
                                  .max_handles = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              },
                              Expected{
                                  .inline_size = 8,
                                  .alignment = 8,
                                  .max_handles = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              }));
 
   END_TEST;
@@ -2250,6 +2288,7 @@ protocol MessagePort {
                                               .inline_size = 4,
                                               .alignment = 4,
                                               .max_handles = 1,
+                                              .is_resource = true,
                                           }));
 
   auto message_port = library.LookupProtocol("MessagePort");
@@ -2264,18 +2303,21 @@ protocol MessagePort {
                                  .alignment = 8,
                                  .max_handles = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              },
                              Expected{
                                  .inline_size = 24,
                                  .alignment = 8,
                                  .max_handles = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              },
                              Expected{
                                  .inline_size = 8,
                                  .alignment = 8,
                                  .max_handles = 1,
                                  .has_padding = true,
+                                 .is_resource = true,
                              }));
 
   END_TEST;
@@ -2325,12 +2367,15 @@ struct TheStruct {
   auto the_struct = library.LookupStruct("TheStruct");
   ASSERT_NONNULL(the_struct);
   EXPECT_TRUE(
-      CheckTypeShape(the_struct, Expected{.inline_size = 16,
-                                          .alignment = 8,
-                                          .max_out_of_line = std::numeric_limits<uint32_t>::max(),
-                                          .max_handles = std::numeric_limits<uint32_t>::max(),
-                                          .depth = std::numeric_limits<uint32_t>::max(),
-                                          .has_padding = true}));
+      CheckTypeShape(the_struct, Expected{
+                                     .inline_size = 16,
+                                     .alignment = 8,
+                                     .max_out_of_line = std::numeric_limits<uint32_t>::max(),
+                                     .max_handles = std::numeric_limits<uint32_t>::max(),
+                                     .depth = std::numeric_limits<uint32_t>::max(),
+                                     .has_padding = true,
+                                     .is_resource = true,
+                                 }));
   ASSERT_EQ(the_struct->members.size(), 2);
   EXPECT_TRUE(CheckFieldShape(the_struct->members[0], ExpectedField{
                                                           .padding = 4,
@@ -2408,6 +2453,7 @@ struct B {
                                            .max_handles = std::numeric_limits<uint32_t>::max(),
                                            .depth = std::numeric_limits<uint32_t>::max(),
                                            .has_padding = true,
+                                           .is_resource = true,
                                        }));
 
   auto struct_b = library.LookupStruct("B");
@@ -2419,6 +2465,7 @@ struct B {
                                            .max_handles = std::numeric_limits<uint32_t>::max(),
                                            .depth = std::numeric_limits<uint32_t>::max(),
                                            .has_padding = true,
+                                           .is_resource = true,
                                        }));
 
   END_TEST;
@@ -2503,6 +2550,7 @@ enum Priority {
                                          .alignment = 8,
                                          .max_handles = 1,
                                          .has_padding = true,
+                                         .is_resource = true,
                                      }));
 
   auto value = library.LookupStruct("Value");
@@ -2515,6 +2563,7 @@ enum Priority {
                  .max_handles = 1,
                  .depth = 1,
                  .has_padding = true,  // because the size of |Priority| defaults to uint32
+                 .is_resource = true,
              }));
 
   auto diff_entry = library.LookupStruct("DiffEntry");
@@ -2525,7 +2574,8 @@ enum Priority {
                                              .max_out_of_line = 352,
                                              .max_handles = 3,
                                              .depth = 2,
-                                             .has_padding = true  // because |Value| has padding
+                                             .has_padding = true,  // because |Value| has padding
+                                             .is_resource = true,
                                          }));
 
   END_TEST;
@@ -2857,6 +2907,34 @@ struct Sandwich {
   END_TEST;
 }
 
+bool zero_size_vector() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct A {
+    vector<handle>:0 zero_size;
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto struct_a = library.LookupStruct("A");
+  ASSERT_NONNULL(struct_a);
+  EXPECT_TRUE(CheckTypeShape(struct_a, Expected{
+                                           .inline_size = 16,
+                                           .alignment = 8,
+                                           .max_out_of_line = 0,
+                                           .max_handles = 0,
+                                           .depth = 1,
+                                           .has_padding = true,
+                                           .is_resource = true,
+                                       }));
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(typeshape_tests)
@@ -2897,4 +2975,5 @@ RUN_TEST(union_size8alignment4_sandwich)
 RUN_TEST(union_size12alignment4_sandwich)
 RUN_TEST(union_size24alignment8_sandwich)
 RUN_TEST(union_size36alignment4_sandwich)
+RUN_TEST(zero_size_vector)
 END_TEST_CASE(typeshape_tests)

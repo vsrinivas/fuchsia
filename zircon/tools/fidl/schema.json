@@ -711,7 +711,8 @@
                 "max_handles",
                 "max_out_of_line",
                 "has_padding",
-                "has_flexible_envelope"
+                "has_flexible_envelope",
+                "is_resource"
             ],
             "properties": {
                 "inline_size": {
@@ -742,8 +743,8 @@
                     "description": "Flag indicating if this declaration contains flexible envelopes (in unions or tables)",
                     "type": "boolean"
                 },
-                "contains_union": {
-                    "description": "Flag indicating if this type transitively contains a static union",
+                "is_resource": {
+                    "description": "Flag indicating if this declaration is a resource type. See FTP-057: Default No Handles.",
                     "type": "boolean"
                 }
             }

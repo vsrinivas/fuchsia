@@ -52,7 +52,8 @@
             "max_handles": 1,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "is_resource": true
           },
           "has_response": false,
           "is_composed": false
@@ -104,7 +105,8 @@
             "max_handles": 1,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "is_resource": true
           },
           "has_response": false,
           "is_composed": true
@@ -146,7 +148,8 @@
             "max_handles": 1,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false
+            "has_flexible_envelope": false,
+            "is_resource": true
           },
           "has_response": false,
           "is_composed": false
@@ -190,7 +193,8 @@
         "max_handles": 1,
         "max_out_of_line": 0,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "is_resource": true
       }
     },
     {
@@ -227,7 +231,8 @@
         "max_handles": 1,
         "max_out_of_line": 0,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "is_resource": true
       }
     },
     {
@@ -264,7 +269,8 @@
         "max_handles": 1,
         "max_out_of_line": 0,
         "has_padding": true,
-        "has_flexible_envelope": false
+        "has_flexible_envelope": false,
+        "is_resource": true
       }
     }
   ],
