@@ -21,6 +21,8 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
+#include <cmath>
+
 namespace camera {
 
 // Returns an event such that when the event is signaled and the dispatcher executed, the provided
@@ -78,6 +80,7 @@ fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
     fuchsia::ui::scenic::ScenicHandle scenic, fuchsia::sysmem::AllocatorHandle allocator,
     fit::closure stop_callback) {
   auto collage = std::unique_ptr<BufferCollage>(new BufferCollage);
+  collage->start_time_ = zx::clock::get_monotonic();
 
   // Bind interface handles and save the stop callback.
   zx_status_t status = collage->scenic_.Bind(std::move(scenic), collage->loop_.dispatcher());
@@ -378,7 +381,9 @@ void BufferCollage::UpdateLayout() {
       view_->AddChild(*view.node);
     }
   }
-  session_->Present(zx::clock::get_monotonic(), [](fuchsia::images::PresentationInfo info) {});
+  if (heartbeat_indicator_.node) {
+    heartbeat_indicator_.node->SetTranslation(view_width * 0.5f, view_height, -1.0f);
+  }
 }
 
 void BufferCollage::OnScenicError(zx_status_t status) {
@@ -405,15 +410,38 @@ void BufferCollage::CreateView(
     zx::eventpair view_token,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) {
-  if (view_) {
-    FX_LOGS(ERROR) << "Clients may only call this method once per view provider lifetime.";
-    view_provider_binding_.Close(ZX_ERR_BAD_STATE);
-    Stop();
-    return;
-  }
-  view_ = std::make_unique<scenic::View>(session_.get(), scenic::ToViewToken(std::move(view_token)),
-                                         "Camera Gym");
-  UpdateLayout();
+  async::PostTask(loop_.dispatcher(), [this, view_token = std::move(view_token)]() mutable {
+    if (view_) {
+      FX_LOGS(ERROR) << "Clients may only call this method once per view provider lifetime.";
+      view_provider_binding_.Close(ZX_ERR_BAD_STATE);
+      Stop();
+      return;
+    }
+    view_ = std::make_unique<scenic::View>(
+        session_.get(), scenic::ToViewToken(std::move(view_token)), "Camera Gym");
+    heartbeat_indicator_.material = std::make_unique<scenic::Material>(session_.get());
+    constexpr float kIndicatorRadius = 12.0f;
+    heartbeat_indicator_.shape = std::make_unique<scenic::Circle>(session_.get(), kIndicatorRadius);
+    heartbeat_indicator_.node = std::make_unique<scenic::ShapeNode>(session_.get());
+    heartbeat_indicator_.node->SetShape(*heartbeat_indicator_.shape);
+    heartbeat_indicator_.node->SetMaterial(*heartbeat_indicator_.material);
+    view_->AddChild(*heartbeat_indicator_.node);
+    session_->set_on_frame_presented_handler(
+        [this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
+          constexpr std::array kHeartbeatColor = {0xFF, 0x00, 0xFF};
+          constexpr auto kHeartbeatPeriod = zx::sec(1);
+          zx::duration t = (zx::clock::get_monotonic() - start_time_) % kHeartbeatPeriod.get();
+          float phase = static_cast<float>(t.to_msecs()) / kHeartbeatPeriod.to_msecs();
+          float amplitude = pow(1 - abs(1 - 2 * phase), 5.0f);
+          heartbeat_indicator_.material->SetColor(kHeartbeatColor[0] * amplitude,
+                                                  kHeartbeatColor[1] * amplitude,
+                                                  kHeartbeatColor[2] * amplitude, 0xFF);
+          session_->Present2(0, 0,
+                             [](fuchsia::scenic::scheduling::FuturePresentationTimes times) {});
+        });
+    session_->Present2(0, 0, [](fuchsia::scenic::scheduling::FuturePresentationTimes times) {});
+    UpdateLayout();
+  });
 }
 
 }  // namespace camera

@@ -109,6 +109,12 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   std::optional<fuchsia::ui::gfx::BoundingBox> view_extents_;
   std::map<uint32_t, CollectionView> collection_views_;
   uint32_t next_collection_id_ = 1;
+  struct {
+    std::unique_ptr<scenic::Material> material;
+    std::unique_ptr<scenic::Circle> shape;
+    std::unique_ptr<scenic::ShapeNode> node;
+  } heartbeat_indicator_;
+  zx::time start_time_;
 };
 
 }  // namespace camera
