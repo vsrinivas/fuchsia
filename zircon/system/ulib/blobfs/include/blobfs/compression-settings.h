@@ -31,6 +31,9 @@ CompressionAlgorithm AlgorithmForInode(const Inode& inode);
 // set, and all other flags are unset.
 uint16_t CompressionInodeHeaderFlags(const CompressionAlgorithm& algorithm);
 
+// Clear any existing compression flags and apply the new one.
+void SetCompressionAlgorithm(Inode* inode, const CompressionAlgorithm algorithm);
+
 // Settings to configure compression behavior.
 struct CompressionSettings {
   // Compression algorithm to use when storing blobs.

@@ -61,6 +61,12 @@ uint16_t CompressionInodeHeaderFlags(const CompressionAlgorithm& algorithm) {
   }
 }
 
+void SetCompressionAlgorithm(Inode* inode, const CompressionAlgorithm algorithm) {
+  uint16_t* flags = &(inode->header.flags);
+  *flags &= ~kBlobFlagMaskAnyCompression;
+  *flags |= CompressionInodeHeaderFlags(algorithm);
+}
+
 bool CompressionSettings::IsValid() const {
   if (compression_level == std::nullopt) {
     return true;

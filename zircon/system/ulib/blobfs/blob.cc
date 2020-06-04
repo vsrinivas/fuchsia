@@ -285,6 +285,12 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
 
     // Ensure all non-allocation flags are propagated to the inode.
     const uint16_t non_allocation_flags = kBlobFlagMaskAnyCompression;
+    {
+      const uint16_t compression_flags = inode_.header.flags & kBlobFlagMaskAnyCompression;
+      // Kernighan's algorithm for bit counting, returns 0 when zero or one bits are set.
+      ZX_DEBUG_ASSERT((compression_flags & (compression_flags - 1)) == 0);
+    }
+    mapped_inode->header.flags &= ~non_allocation_flags;  // Clear any existing flags first.
     mapped_inode->header.flags |= (inode_.header.flags & non_allocation_flags);
   } else {
     // Special case: Empty node.
@@ -463,9 +469,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     // Verify that the block reserved matches blocks needed.
     ZX_DEBUG_ASSERT(inode_.block_count == blocks);
 
-    uint16_t compression_inode_header_flags =
-        CompressionInodeHeaderFlags(blobfs_->write_compression_settings().compression_algorithm);
-    inode_.header.flags |= compression_inode_header_flags;
+    SetCompressionAlgorithm(&inode_, blobfs_->write_compression_settings().compression_algorithm);
   } else {
     // This shouldn't be necessary because it should already be zeroed, but just in case:
     status = ZeroTail(data_mapping_.vmo().get(), inode_.blob_size);

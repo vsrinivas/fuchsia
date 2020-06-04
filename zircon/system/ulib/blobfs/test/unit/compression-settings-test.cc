@@ -47,6 +47,17 @@ TEST(CompressionSettingsTest, CompressionInodeHeaderFlagsConvertUndefinedEnum) {
                "Enum value 9999 did not fail conversion.");
 }
 
+// Apply a couple of CompressionAlgorithms, verify that they come back right
+// despite multiple calls.
+TEST(CompressionSettingsTest, SetCompressionAlgorithmCalledTwice) {
+  Inode inode;
+  inode.header.flags = kBlobFlagAllocated;  // Ensure that this stays set.
+  SetCompressionAlgorithm(&inode, CompressionAlgorithm::LZ4);
+  ASSERT_EQ(inode.header.flags, kBlobFlagLZ4Compressed | kBlobFlagAllocated);
+  SetCompressionAlgorithm(&inode, CompressionAlgorithm::ZSTD);
+  ASSERT_EQ(inode.header.flags, kBlobFlagZSTDCompressed | kBlobFlagAllocated);
+}
+
 // Anything is valid with no compression level setings.
 TEST(CompressionSettingsTest, IsValidWithNoSettings) {
   CompressionSettings settings = {CompressionAlgorithm::UNCOMPRESSED, std::nullopt};
