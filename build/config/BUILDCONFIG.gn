@@ -730,6 +730,15 @@ declare_args() {
           ]
         },
         {
+          variant = false
+          host = true
+          dir = [
+            # TODO(53356): Blobfs host tool performs poorly when built with
+            # asan.
+            "//zircon/tools/blobfs",
+          ]
+        },
+        {
           variant = "asan"
           host = true
         },
