@@ -66,12 +66,12 @@ import("//build/rust/rustc_library.gni")
 #     '--cfg feature=XXX'
 #
 template("ffx_plugin") {
-  if (host_toolchain == current_toolchain) {
-    output_name = target_name
-    if (defined(invoker.name)) {
-      output_name = invoker.name
-    }
+  output_name = target_name
+  if (defined(invoker.name)) {
+    output_name = invoker.name
+  }
 
+  if (host_toolchain == current_toolchain) {
     args = output_name + "_args"
     args_source_root = "src/args.rs"
     if (defined(invoker.args_source_root)) {
@@ -128,7 +128,7 @@ template("ffx_plugin") {
     }
   }
 
-  group("tests") {
+  group(output_name + "_tests") {
     testonly = true
     deps = [
       ":" + args + "_test($host_toolchain)",
