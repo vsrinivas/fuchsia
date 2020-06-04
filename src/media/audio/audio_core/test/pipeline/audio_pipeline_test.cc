@@ -11,7 +11,9 @@
 #include <set>
 #include <vector>
 
+#include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/logging/logging.h"
+#include "src/media/audio/lib/test/comparators.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 namespace media::audio::test {
@@ -185,7 +187,7 @@ class AudioPipelineEffectsTest : public AudioPipelineTest {
   }
 
   void RunInversionFilter(AudioBuffer<kSampleFormat>* audio_buffer_ptr) {
-    auto& samples = audio_buffer_ptr->samples;
+    auto& samples = audio_buffer_ptr->samples();
     for (size_t sample = 0; sample < samples.size(); sample++) {
       samples[sample] = -samples[sample];
     }

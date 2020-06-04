@@ -45,12 +45,10 @@ source_set("hermetic_audio_test") {
   testonly = true
 
   sources = [
-    "analysis.cc",
-    "analysis.h",
-    "audio_buffer.cc",
-    "audio_buffer.h",
     "capturer_shim.cc",
     "capturer_shim.h",
+    "comparators.cc",
+    "comparators.h",
     "hermetic_audio_environment.cc",
     "hermetic_audio_environment.h",
     "hermetic_audio_test.cc",
@@ -73,6 +71,7 @@ source_set("hermetic_audio_test") {
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/media/audio/audio_core:audio_core_lib",
+    "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/logging",
     "//src/media/audio/lib/wav",
@@ -108,39 +107,4 @@ source_set("null_renderer_capturer") {
   ]
 
   deps = [ "//sdk/fidl/fuchsia.media" ]
-}
-
-executable("unittest-bin") {
-  visibility = [ ":*" ]
-  testonly = true
-  output_name = "audio-libtest-unittests"
-
-  sources = [
-    "analysis_unittest.cc",
-    "audio_buffer_unittest.cc",
-  ]
-
-  deps = [
-    ":test",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-  ]
-
-  libs = [ "zircon" ]
-}
-
-test_package("audio-libtest-unittests") {
-  deps = [ ":unittest-bin" ]
-
-  tests = [
-    {
-      name = "audio-libtest-unittests"
-      environments = basic_envs
-    },
-  ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":audio-libtest-unittests" ]
 }

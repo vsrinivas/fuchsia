@@ -2,59 +2,61 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/lib/test/audio_buffer.h"
+#include "src/media/audio/lib/test/comparators.h"
 
 #include <optional>
+#include <sstream>
 
-#include "src/media/audio/lib/test/analysis.h"
+#include <gtest/gtest.h>
+
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/media/audio/lib/analysis/analysis.h"
 
 namespace media::audio::test {
 
 namespace {
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
-void CompareAudioBuffersShowContext(AudioBufferSlice<SampleFormat> got_slice,
-                                    AudioBufferSlice<SampleFormat> want_slice,
-                                    CompareAudioBufferOptions options, size_t frame) {
-  size_t raw_frame = got_slice.start_frame + frame;
+std::string CompareAudioBuffersShowContext(AudioBufferSlice<SampleFormat> got_slice,
+                                           AudioBufferSlice<SampleFormat> want_slice,
+                                           CompareAudioBufferOptions options, size_t frame) {
+  size_t raw_frame = got_slice.start_frame() + frame;
 
   // Relative to got_slice.buf.
   size_t packet = raw_frame / options.num_frames_per_packet;
   size_t packet_start = packet * options.num_frames_per_packet;
   size_t packet_end =
-      std::min(packet_start + options.num_frames_per_packet, got_slice.buf->NumFrames());
+      std::min(packet_start + options.num_frames_per_packet, got_slice.buf()->NumFrames());
 
   // Display got/want side-by-side.
-  printf("\n\n Frames %zu to %zu (packet %zu), got vs want: ", packet_start, packet_end, packet);
+  std::ostringstream out;
+  out << fxl::StringPrintf("\n\n Frames %zu to %zu (packet %zu), got vs want: ", packet_start,
+                           packet_end, packet);
   for (auto frame = packet_start; frame < packet_end; ++frame) {
     if (frame % 8 == 0) {
-      printf("\n [%6lu] ", frame);
+      out << fxl::StringPrintf("\n [%6lu] ", frame);
     } else {
-      printf(" | ");
+      out << " | ";
     }
     for (auto chan = 0u; chan < got_slice.format().channels(); ++chan) {
-      printf(
-          "%s",
-          SampleFormatTraits<SampleFormat>::ToString(got_slice.buf->SampleAt(frame, chan)).c_str());
+      out << SampleFormatTraits<SampleFormat>::ToString(got_slice.buf()->SampleAt(frame, chan));
     }
-    printf(" vs ");
+    out << " vs ";
     for (auto chan = 0u; chan < got_slice.format().channels(); ++chan) {
       // Translate to the equivalent offset in want_slice.buf.
-      size_t want_frame = frame + (static_cast<ssize_t>(want_slice.start_frame) -
-                                   static_cast<ssize_t>(got_slice.start_frame));
-      std::string str;
-      if (want_slice.buf && want_frame < want_slice.buf->NumFrames()) {
-        str =
-            SampleFormatTraits<SampleFormat>::ToString(want_slice.buf->SampleAt(want_frame, chan));
+      size_t want_frame = frame + (static_cast<ssize_t>(want_slice.start_frame()) -
+                                   static_cast<ssize_t>(got_slice.start_frame()));
+      if (!want_slice.empty() && want_frame < want_slice.buf()->NumFrames()) {
+        out << SampleFormatTraits<SampleFormat>::ToString(
+            want_slice.buf()->SampleAt(want_frame, chan));
       } else {
-        str = SampleFormatTraits<SampleFormat>::ToString(
+        out << SampleFormatTraits<SampleFormat>::ToString(
             SampleFormatTraits<SampleFormat>::kSilentValue);
       }
-      printf("%s", str.c_str());
     }
   }
-  printf("\n");
-  return;
+  out << "\n";
+  return out.str();
 }
 
 // Compare with bit-for-bit equality.
@@ -81,7 +83,7 @@ void CompareAudioBuffersExact(AudioBufferSlice<SampleFormat> got_slice,
         }
       }
       if (want != got) {
-        size_t raw_frame = got_slice.start_frame + frame;
+        size_t raw_frame = got_slice.start_frame() + frame;
         ADD_FAILURE() << options.test_label << ": unexpected value at frame " << raw_frame
                       << ", channel " << chan << ":\n   got[" << raw_frame
                       << "] = " << SampleFormatTraits<SampleFormat>::ToString(got) << "\n  want["
@@ -146,7 +148,7 @@ void CompareAudioBuffersApprox(AudioBufferSlice<SampleFormat> got_slice,
     return;  // approximately equal
   }
 
-  size_t raw_frame = got_slice.start_frame + first_difference->frame;
+  size_t raw_frame = got_slice.start_frame() + first_difference->frame;
   ADD_FAILURE() << options.test_label << ": relative error " << relative_error << " > "
                 << options.max_relative_error << "; differences start at frame " << raw_frame
                 << ":\n   got[" << raw_frame
@@ -162,8 +164,8 @@ template <fuchsia::media::AudioSampleFormat SampleFormat>
 void CompareAudioBuffers(AudioBufferSlice<SampleFormat> got_slice,
                          AudioBufferSlice<SampleFormat> want_slice,
                          CompareAudioBufferOptions options) {
-  FX_CHECK(got_slice.buf);
-  if (want_slice.buf) {
+  FX_CHECK(!got_slice.empty());
+  if (!want_slice.empty()) {
     ASSERT_EQ(got_slice.format().channels(), want_slice.format().channels());
   }
 

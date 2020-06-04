@@ -4,58 +4,52 @@
 
 import("//build/test/test_package.gni")
 
-source_set("format") {
+source_set("analysis") {
   sources = [
-    "audio_buffer.h",
-    "constants.h",
-    "driver_format.cc",
-    "driver_format.h",
-    "format.cc",
-    "format.h",
-    "frames.h",
-    "traits.h",
+    "analysis.cc",
+    "analysis.h",
+    "generators.h",
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
-    "//sdk/lib/media/cpp:no_converters",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/ffl",
-    "//zircon/system/ulib/trace",
   ]
 
   deps = [
     "//src/lib/fxl",
-    "//zircon/system/ulib/audio-proto-utils",
+    "//src/media/audio/lib/format",
+    "//src/media/audio/lib/wav",
+    "//zircon/public/lib/fbl",
   ]
 }
 
 executable("unittest-bin") {
   visibility = [ ":*" ]
   testonly = true
-  output_name = "audio-libformat-unittests"
+  output_name = "audio-libanalysis-unittests"
 
   sources = [
-    "audio_buffer_unittest.cc",
-    "format_unittest.cc",
+    "analysis_unittest.cc",
+    "generators_unittest.cc",
   ]
 
   deps = [
-    ":format",
+    ":analysis",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
+    "//zircon/public/lib/fbl",
   ]
 
   libs = [ "zircon" ]
 }
 
-test_package("audio-libformat-unittests") {
+test_package("audio-libanalysis-unittests") {
   deps = [ ":unittest-bin" ]
 
   tests = [
     {
-      name = "audio-libformat-unittests"
+      name = "audio-libanalysis-unittests"
       environments = basic_envs
     },
   ]
@@ -63,5 +57,5 @@ test_package("audio-libformat-unittests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":audio-libformat-unittests" ]
+  deps = [ ":audio-libanalysis-unittests" ]
 }

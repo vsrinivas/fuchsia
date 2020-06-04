@@ -37,7 +37,8 @@ executable("test_bin") {
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:test_settings",
     "//src/media/audio/audio_core/mixer",
-    "//src/media/audio/lib/test:hermetic_audio_test",
+    "//src/media/audio/lib/analysis",
+    "//src/media/audio/lib/format",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/fbl",
   ]

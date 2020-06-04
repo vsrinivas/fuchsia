@@ -103,8 +103,8 @@ void AudioAdminTest::SetUpVirtualAudioInput() {
   auto input = CreateInput<kSampleFormat>(kUniqueId, kFormat, kRingBufferFrames);
 
   AudioBuffer<kSampleFormat> buf(kFormat, kRingBufferFrames);
-  for (size_t k = 0; k < buf.samples.size(); k++) {
-    buf.samples[k] = kVirtualInputSampleValue;
+  for (size_t k = 0; k < buf.samples().size(); k++) {
+    buf.samples()[k] = kVirtualInputSampleValue;
   }
   input->WriteRingBufferAt(0, &buf);
 }
@@ -117,8 +117,8 @@ AudioRendererShim<kSampleFormat>* AudioAdminTest::SetUpRenderer(
   auto r = CreateAudioRenderer<kSampleFormat>(kFormat, kRingBufferFrames, usage);
 
   AudioBuffer<kSampleFormat> buf(kFormat, kRingBufferFrames);
-  for (size_t k = 0; k < buf.samples.size(); k++) {
-    buf.samples[k] = data;
+  for (size_t k = 0; k < buf.samples().size(); k++) {
+    buf.samples()[k] = data;
   }
   r->AppendPayload(&buf);
   return r;
@@ -160,7 +160,7 @@ void AudioAdminTest::ExpectPacketContains(std::string label,
           (packet.payload_offset + f * kFormat.bytes_per_frame() + c * kFormat.bytes_per_sample()) %
           kRingBufferBytes;
       size_t sample = offset / kFormat.bytes_per_sample();
-      ASSERT_EQ(fxl::StringPrintf("0x%x", payload.samples[sample]),
+      ASSERT_EQ(fxl::StringPrintf("0x%x", payload.samples()[sample]),
                 fxl::StringPrintf("0x%x", expected_data))
           << "unexpected value at sample[" << sample << "] for packet " << label;
     }

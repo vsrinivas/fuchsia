@@ -4,7 +4,8 @@
 
 #include "src/media/audio/audio_core/mixer/test/audio_result.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
-#include "src/media/audio/lib/test/audio_buffer.h"
+#include "src/media/audio/lib/analysis/generators.h"
+#include "src/media/audio/lib/format/audio_buffer.h"
 
 namespace media::audio::test {
 
@@ -35,7 +36,7 @@ void MeasureSummaryDynamicRange(float gain_db, double* level_db, double* sinad_d
   auto& info = mixer->bookkeeping();
   info.gain.SetSourceGain(gain_db);
 
-  mixer->Mix(&accum.samples[0], kFreqTestBufSize, &dest_offset, &source.samples[0],
+  mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
   EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
@@ -149,15 +150,15 @@ TEST(DynamicRange, MonoToStereo) {
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
 
-  mixer->Mix(&accum.samples[0], kFreqTestBufSize, &dest_offset, &source.samples[0],
+  mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
   EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
 
   // Copy left result to double-float buffer, FFT (freq-analyze) it at high-res
   for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
-    EXPECT_FLOAT_EQ(accum.samples[idx * 2], accum.samples[(idx * 2) + 1]);
-    left.samples[idx] = accum.samples[idx * 2];
+    EXPECT_FLOAT_EQ(accum.samples()[idx * 2], accum.samples()[(idx * 2) + 1]);
+    left.samples()[idx] = accum.samples()[idx * 2];
   }
 
   // Only need to analyze left side, since we verified that right is identical.
@@ -201,7 +202,7 @@ TEST(DynamicRange, StereoToMono) {
   AudioBuffer<ASF::FLOAT> accum(mono_format, kFreqTestBufSize);
 
   for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
-    source.samples[idx * 2] = mono.samples[idx];
+    source.samples()[idx * 2] = mono.samples()[idx];
   }
 
   // Populate a mono source buffer with same frequency and amplitude, phase-
@@ -210,13 +211,13 @@ TEST(DynamicRange, StereoToMono) {
       GenerateCosineAudio<ASF::FLOAT>(mono_format, kFreqTestBufSize, FrequencySet::kReferenceFreq,
                                       kFullScaleFloatInputAmplitude, M_PI / 2);
   for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
-    source.samples[(idx * 2) + 1] = mono.samples[idx];
+    source.samples()[(idx * 2) + 1] = mono.samples()[idx];
   }
 
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
 
-  mixer->Mix(&accum.samples[0], kFreqTestBufSize, &dest_offset, &source.samples[0],
+  mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
   EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
@@ -288,14 +289,14 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   auto& info = mixer->bookkeeping();
   info.gain.SetSourceGain(-6.0205999f);
 
-  EXPECT_TRUE(mixer->Mix(&accum.samples[0], kFreqTestBufSize, &dest_offset, &source.samples[0],
+  EXPECT_TRUE(mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
                          kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false));
 
   // Accumulate the same (reference-frequency) wave.
   dest_offset = 0;
   frac_src_offset = 0;
 
-  EXPECT_TRUE(mixer->Mix(&accum.samples[0], kFreqTestBufSize, &dest_offset, &source.samples[0],
+  EXPECT_TRUE(mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
                          kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, true));
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
   EXPECT_EQ(frac_src_offset, static_cast<int32_t>(dest_offset << kPtsFractionalBits));

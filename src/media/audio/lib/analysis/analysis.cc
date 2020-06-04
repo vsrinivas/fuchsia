@@ -1,7 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/media/audio/lib/test/analysis.h"
+#include "src/media/audio/lib/analysis/analysis.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -12,7 +12,7 @@
 
 #include "src/media/audio/lib/format/traits.h"
 
-namespace media::audio::test {
+namespace media::audio {
 
 namespace internal {
 
@@ -311,4 +311,4 @@ INSTANTIATE(fuchsia::media::AudioSampleFormat::SIGNED_16)
 INSTANTIATE(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32)
 INSTANTIATE(fuchsia::media::AudioSampleFormat::FLOAT)
 
-}  // namespace media::audio::test
+}  // namespace media::audio

@@ -11,8 +11,8 @@
 #include <memory>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/format/format.h"
-#include "src/media/audio/lib/test/audio_buffer.h"
 #include "src/media/audio/lib/test/inspect.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 #include "src/media/audio/lib/test/vmo_backed_buffer.h"

@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "src/media/audio/lib/test/audio_buffer.h"
+#include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/test/capturer_shim.h"
 #include "src/media/audio/lib/test/constants.h"
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"

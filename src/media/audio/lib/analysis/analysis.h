@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_LIB_TEST_ANALYSIS_H_
-#define SRC_MEDIA_AUDIO_LIB_TEST_ANALYSIS_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_ANALYSIS_ANALYSIS_H_
+#define SRC_MEDIA_AUDIO_LIB_ANALYSIS_ANALYSIS_H_
 
 #include <zircon/types.h>
 
-#include "src/media/audio/lib/test/audio_buffer.h"
+#include "src/media/audio/lib/format/audio_buffer.h"
 
-namespace media::audio::test {
+namespace media::audio {
 
 namespace internal {
 
@@ -65,6 +65,6 @@ double MeasureAudioRMS(AudioBufferSlice<SampleFormat> slice) {
   return sqrt(sum / slice.NumSamples());
 }
 
-}  // namespace media::audio::test
+}  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_LIB_TEST_ANALYSIS_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_ANALYSIS_ANALYSIS_H_

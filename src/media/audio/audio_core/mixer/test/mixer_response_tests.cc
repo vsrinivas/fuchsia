@@ -6,6 +6,7 @@
 #include "src/media/audio/audio_core/mixer/test/audio_result.h"
 #include "src/media/audio/audio_core/mixer/test/frequency_set.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
+#include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio::test {
@@ -58,7 +59,7 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   // This enables resamplers with significant side width to perform as they would in steady-state.
   int32_t frac_src_offset = frac_src_frames;
   auto source_is_consumed =
-      mixer->Mix(&accum.samples[0], kFreqTestBufSize, &dest_offset, &source.samples[0],
+      mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
                  frac_src_frames, &frac_src_offset, false);
   FX_DCHECK(source_is_consumed);
   FX_DCHECK(dest_offset == 0u);
@@ -66,8 +67,8 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
 
   // We now have a full cache of previous frames (for resamplers that require this), so do the mix.
   frac_src_offset = 0;
-  mixer->Mix(&accum.samples[0], kFreqTestBufSize, &dest_offset, &source.samples[0], frac_src_frames,
-             &frac_src_offset, false);
+  mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
+             frac_src_frames, &frac_src_offset, false);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
   EXPECT_EQ(frac_src_offset, static_cast<int32_t>(frac_src_frames));
 
@@ -161,7 +162,7 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
                                                FrequencySet::kReferenceFreq, amplitude);
 
   AudioBuffer<SampleFormat> dest(dest_format, kFreqTestBufSize);
-  output_producer->ProduceOutput(&accum.samples[0], &dest.samples[0], kFreqTestBufSize);
+  output_producer->ProduceOutput(&accum.samples()[0], &dest.samples()[0], kFreqTestBufSize);
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   double magn_signal, magn_other;
@@ -311,7 +312,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
     // This enables resamplers with significant side width to perform as they would in steady-state.
     int32_t frac_src_offset = static_cast<int32_t>(frac_src_frames);
     auto source_is_consumed =
-        mixer->Mix(&accum.samples[0], num_dest_frames, &dest_offset, &source.samples[0],
+        mixer->Mix(&accum.samples()[0], num_dest_frames, &dest_offset, &source.samples()[0],
                    frac_src_frames, &frac_src_offset, false);
     FX_CHECK(source_is_consumed);
     FX_CHECK(dest_offset == 0u);
@@ -321,8 +322,8 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
     frac_src_offset = 0;
     for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
       dest_frames = num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
-      mixer->Mix(&accum.samples[0], dest_frames, &dest_offset, &source.samples[0], frac_src_frames,
-                 &frac_src_offset, false);
+      mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset, &source.samples()[0],
+                 frac_src_frames, &frac_src_offset, false);
     }
 
     int32_t expected_frac_src_offset = frac_src_frames;
@@ -339,8 +340,8 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
       // Wrap around in the source buffer -- making the offset slightly negative. We can do
       // this, within the positive filter width of this sampler.
       frac_src_offset -= frac_src_frames;
-      mixer->Mix(&accum.samples[0], dest_frames, &dest_offset, &source.samples[0], frac_src_frames,
-                 &frac_src_offset, false);
+      mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset, &source.samples()[0],
+                 frac_src_frames, &frac_src_offset, false);
       expected_frac_src_offset = 0;
     }
     EXPECT_EQ(dest_offset, dest_frames);
@@ -1306,7 +1307,7 @@ AudioBuffer<ASF::FLOAT> PopulateNxNSourceBuffer(size_t num_frames, uint32_t num_
 
     // Copy-interleave mono into the N-channel source[].
     for (uint32_t frame_num = 0; frame_num < num_frames; ++frame_num) {
-      source.samples[frame_num * num_chans + idx] = mono.samples[frame_num];
+      source.samples()[frame_num * num_chans + idx] = mono.samples()[frame_num];
     }
   }
 
@@ -1372,7 +1373,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   // This enables resamplers with significant side width to perform as they would in steady-state.
   int32_t frac_src_offset = static_cast<int32_t>(frac_src_frames);
   auto source_is_consumed =
-      mixer->Mix(&accum.samples[0], num_dest_frames, &dest_offset, &source.samples[0],
+      mixer->Mix(&accum.samples()[0], num_dest_frames, &dest_offset, &source.samples()[0],
                  frac_src_frames, &frac_src_offset, false);
   FX_CHECK(source_is_consumed);
   FX_CHECK(dest_offset == 0u);
@@ -1382,8 +1383,8 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   frac_src_offset = 0;
   for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
     dest_frames = num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
-    mixer->Mix(&accum.samples[0], dest_frames, &dest_offset, &source.samples[0], frac_src_frames,
-               &frac_src_offset, false);
+    mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset, &source.samples()[0],
+               frac_src_frames, &frac_src_offset, false);
   }
   int32_t expected_frac_src_offset = frac_src_frames;
   if (dest_offset < dest_frames) {
@@ -1399,8 +1400,8 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
     // Wrap around in the source buffer -- making the offset slightly negative. We can do
     // this, within the positive filter width of this sampler.
     frac_src_offset -= frac_src_frames;
-    mixer->Mix(&accum.samples[0], dest_frames, &dest_offset, &source.samples[0], frac_src_frames,
-               &frac_src_offset, false);
+    mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset, &source.samples()[0],
+               frac_src_frames, &frac_src_offset, false);
     expected_frac_src_offset = 0;
   }
   EXPECT_EQ(dest_offset, dest_frames);
@@ -1438,7 +1439,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
     }
 
     for (uint32_t i = 0; i < num_dest_frames; ++i) {
-      mono.samples[i] = accum.samples[i * num_chans + idx];
+      mono.samples()[i] = accum.samples()[i * num_chans + idx];
     }
 
     // Copy results to double[], for high-resolution frequency analysis (FFT).

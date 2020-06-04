@@ -12,8 +12,8 @@
 
 #include <memory>
 
+#include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/format/format.h"
-#include "src/media/audio/lib/test/audio_buffer.h"
 
 namespace media::audio::test {
 
@@ -64,7 +64,7 @@ class VmoBackedBuffer {
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   AudioBuffer<SampleFormat> Snapshot() {
     AudioBuffer<SampleFormat> out(format_, frame_count_);
-    memmove(&out.samples[0], BufferStart(), SizeBytes());
+    memmove(&out.samples()[0], BufferStart(), SizeBytes());
     return out;
   }
 
@@ -87,7 +87,7 @@ class VmoBackedBuffer {
     FX_CHECK(pos_in_frames + slice.NumFrames() <= frame_count_);
 
     auto dst = BufferStart() + pos_in_frames * format_.bytes_per_frame();
-    auto src = &slice.buf->samples[slice.SampleIndex(0, 0)];
+    auto src = &slice.buf()->samples()[slice.SampleIndex(0, 0)];
     memmove(dst, src, slice.NumBytes());
   }
 

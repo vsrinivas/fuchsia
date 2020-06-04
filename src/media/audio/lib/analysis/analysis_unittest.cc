@@ -1,7 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/media/audio/lib/test/analysis.h"
+#include "src/media/audio/lib/analysis/analysis.h"
 
 #include <iterator>
 
@@ -11,7 +11,7 @@
 
 using ASF = fuchsia::media::AudioSampleFormat;
 
-namespace media::audio::test {
+namespace media::audio {
 
 namespace {
 
@@ -400,9 +400,9 @@ TEST(AnalysisHelpers, MeasureAudioFreq_32) {
                     .take_value();
 
   AudioBuffer<ASF::SIGNED_24_IN_32> reals(format, 4);
-  reals.samples = {5, -3, 13, -3};  // cos freq 0,1,2; mag 3,4,6; phase 0,pi,0
-  double magn_signal = -54.32;      // will be overwritten
-  double magn_other = 42.0;         // will be overwritten
+  reals.samples() = {5, -3, 13, -3};  // cos freq 0,1,2; mag 3,4,6; phase 0,pi,0
+  double magn_signal = -54.32;        // will be overwritten
+  double magn_other = 42.0;           // will be overwritten
 
   MeasureAudioFreq(AudioBufferSlice(&reals), 0, &magn_signal);
   EXPECT_DOUBLE_EQ(3.0, magn_signal);
@@ -426,7 +426,7 @@ TEST(AnalysisHelpers, MeasureAudioFreq_Float) {
                     .take_value();
 
   AudioBuffer<ASF::FLOAT> reals(format, 4);
-  reals.samples = {-7.0f, 9.0f, 1.0f, 9.0f};
+  reals.samples() = {-7.0f, 9.0f, 1.0f, 9.0f};
   double magn_signal = -54.32;
   double magn_other = 42.0;
 
@@ -441,4 +441,4 @@ TEST(AnalysisHelpers, MeasureAudioFreq_Float) {
   EXPECT_DOUBLE_EQ(5.0, magn_other);
 }
 
-}  // namespace media::audio::test
+}  // namespace media::audio

@@ -11,7 +11,7 @@
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
-#include "src/media/audio/lib/test/analysis.h"
+#include "src/media/audio/lib/analysis/analysis.h"
 
 namespace media::audio::test {
 

@@ -9,8 +9,9 @@
 
 #include "src/media/audio/audio_core/mixer/test/frequency_set.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
+#include "src/media/audio/lib/analysis/generators.h"
+#include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/format/traits.h"
-#include "src/media/audio/lib/test/audio_buffer.h"
 
 namespace media::audio::test {
 
@@ -399,7 +400,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
 
     while (dest_offset < kFreqTestBufSize) {
       previous_dest_offset = dest_offset;
-      mixer->Mix(accum.get(), kFreqTestBufSize, &dest_offset, &source.samples[0], frac_src_frames,
+      mixer->Mix(accum.get(), kFreqTestBufSize, &dest_offset, &source.samples()[0], frac_src_frames,
                  &frac_src_offset, accumulate);
 
       // Mix() might process less than all of accum, so Advance() after each.
@@ -531,7 +532,7 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
       range = 'O';
       accum = AudioBuffer<ASF::FLOAT>(accum_format, kFreqTestBufSize);
       for (size_t idx = 0; idx < num_samples; ++idx) {
-        accum.samples[idx] = (idx % 2 ? -1.5f : 1.5f);
+        accum.samples()[idx] = (idx % 2 ? -1.5f : 1.5f);
       }
       break;
     case OutputDataRange::Normal:
@@ -567,7 +568,7 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans, OutputDataRange dat
     for (uint32_t i = 0; i < kNumOutputProfilerRuns; ++i) {
       auto start_time = zx::clock::get_monotonic();
 
-      output_producer->ProduceOutput(&accum.samples[0], dest.get(), kFreqTestBufSize);
+      output_producer->ProduceOutput(&accum.samples()[0], dest.get(), kFreqTestBufSize);
       auto elapsed = zx::clock::get_monotonic() - start_time;
 
       if (i > 0) {

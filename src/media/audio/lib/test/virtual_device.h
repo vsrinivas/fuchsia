@@ -14,7 +14,7 @@
 #include <memory>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
-#include "src/media/audio/lib/test/audio_buffer.h"
+#include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/test/hermetic_audio_environment.h"
 #include "src/media/audio/lib/test/inspect.h"
 #include "src/media/audio/lib/test/test_fixture.h"
