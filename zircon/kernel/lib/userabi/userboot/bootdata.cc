@@ -50,6 +50,7 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handl
                                   off + sizeof(bootdata), bootdata.length, bootfs_vmo, 0,
                                   bootdata.extra);
           check(log, status, "failed to decompress BOOTFS");
+          printl(log, "decompressed BOOTFS to VMO!\n");
         } else {
           off += sizeof(bootdata);
           if (off % ZX_PAGE_SIZE == 0) {
@@ -71,6 +72,7 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handl
             status = vmar->unmap(bootfs_payload, bootdata.length);
             check(log, status, "cannot unmap BOOTFS VMO (%u bytes)", bootdata.length);
           }
+          printl(log, "copied uncompressed BOOTFS to VMO!\n");
         }
 
         // Signal that we've already processed this one.
@@ -80,13 +82,6 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handl
                            sizeof(bootdata.type)),
               "zx_vmo_write failed on bootdata VMO\n");
 
-        printl(log,
-#ifdef ZBI_COMPRESSION_MAGIC
-               "decompressed"
-#else
-               "copied uncompressed"
-#endif
-               " BOOTFS to VMO!\n");
         return bootfs_vmo.release();
       }
     }
