@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   testonly = true
@@ -46,25 +45,22 @@ rustc_binary("bin") {
   test_deps = [ "//src/sys/test_runners:test_lib" ]
 }
 
-package("rust-test-runner") {
+fuchsia_component("rust_test_runner") {
   testonly = true
-  deps = [
-    ":bin",
-    ":bin_test",
-  ]
-
-  binaries = [
+  manifest = "meta/rust-test-runner.cml"
+  component_name = "rust-test-runner"
+  resources = [
     {
-      name = "rust_test_runner"
+      source = "$root_out_dir/rust_test_runner"
+      destination = "bin/rust_test_runner"
     },
   ]
+  deps = [ ":bin" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/rust-test-runner.cml")
-      dest = "rust-test-runner.cm"
-    },
-  ]
+fuchsia_package("rust-test-runner") {
+  testonly = true
+  components = [ ":rust_test_runner" ]
 }
 
 group("rust") {
@@ -72,31 +68,36 @@ group("rust") {
   deps = [ ":rust-test-runner" ]
 }
 
-test_package("rust-test-runner-unit-tests") {
+fuchsia_component("rust_test_runner_unit_test") {
+  testonly = true
+  component_name = "rust-test-runner-unit-tests"
+  manifest = "meta/rust-test-runner-unit-tests.cmx"
+  resources = [
+    {
+      source = "$root_out_dir/rust_test_runner_bin_test"
+      destination = "test/rust-test-runner-unit-tests"
+    },
+    {
+      source = "$root_out_dir/sample_rust_tests"
+      destination = "bin/sample_rust_tests"
+    },
+    {
+      source = "$root_out_dir/no_rust_tests"
+      destination = "bin/no_rust_tests"
+    },
+    {
+      source = "$root_out_dir/huge_rust_tests"
+      destination = "bin/huge_rust_tests"
+    },
+  ]
   deps = [
     ":bin_test",
     "test_data",
   ]
+}
 
-  binaries = [
-    {
-      name = "sample_rust_tests"
-    },
-    {
-      name = "no_rust_tests"
-    },
-    {
-      name = "huge_rust_tests"
-    },
-  ]
-
-  tests = [
-    {
-      name = "rust_test_runner_bin_test"
-      dest = "rust-test-runner-unit-tests"
-      environments = basic_envs
-    },
-  ]
+fuchsia_test_package("rust-test-runner-unit-tests") {
+  test_components = [ ":rust_test_runner_unit_test" ]
 }
 
 group("tests") {
