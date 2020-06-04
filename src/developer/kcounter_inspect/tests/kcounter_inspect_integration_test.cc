@@ -8,6 +8,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/spawn.h>
+#include <lib/inspect/cpp/reader.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/vfs/cpp/vmo_file.h>
@@ -18,7 +19,6 @@
 #include "src/lib/files/glob.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/substitute.h"
-#include "src/lib/inspect_deprecated/reader.h"
 
 namespace {
 
@@ -35,12 +35,11 @@ TEST(KcounterInspectIntegrationTest, FidlConnection) {
   ASSERT_TRUE(status == ZX_OK);
 }
 
-std::vector<std::string> ToString(const inspect_deprecated::ObjectHierarchy& root,
-                                  const std::string& indent = "") {
+std::vector<std::string> ToString(const inspect::Hierarchy& root, const std::string& indent = "") {
   std::vector<std::string> result;
   result.push_back(indent + root.name());
-  for (const auto& metric : root.node().metrics()) {
-    result.push_back(indent + "  " + metric.name());
+  for (const auto& prop : root.node().properties()) {
+    result.push_back(indent + "  " + prop.name());
   }
   for (const auto& child : root.children()) {
     auto child_result = ToString(child, indent + "  ");
@@ -68,7 +67,7 @@ TEST(KcounterInspectIntegrationTest, InspectReading) {
   ASSERT_TRUE(kcounter->GetInspectVmo(&status, &buffer) == ZX_OK);
   ASSERT_TRUE(status == ZX_OK);
 
-  auto result = inspect_deprecated::ReadFromVmo(buffer.vmo);
+  auto result = inspect::ReadFromVmo(buffer.vmo);
   ASSERT_TRUE(result.is_ok());
   auto object_hierarchy = result.take_value();
   auto as_vector = ToString(object_hierarchy);
@@ -83,7 +82,7 @@ TEST(KcounterInspectIntegrationTest, InspectReading) {
   ASSERT_TRUE(kcounter->UpdateInspectVmo(&status) == ZX_OK);
   ASSERT_TRUE(status == ZX_OK);
 
-  result = inspect_deprecated::ReadFromVmo(buffer.vmo);
+  result = inspect::ReadFromVmo(buffer.vmo);
   ASSERT_TRUE(result.is_ok());
   object_hierarchy = result.take_value();
   as_vector = ToString(object_hierarchy);

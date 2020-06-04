@@ -42,10 +42,9 @@ executable("main") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/inspect_deprecated",
-    "//garnet/public/lib/inspect_deprecated:component",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
