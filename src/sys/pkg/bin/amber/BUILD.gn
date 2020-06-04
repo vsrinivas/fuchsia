@@ -60,11 +60,11 @@ package("pkgfs") {
 }
 
 package("amber") {
-  deps = [ "//garnet/go/src/grand_unified_binary" ]
+  deps = [ "//src/sys/pkg/bin/system-updater:bin" ]
 
   binaries = [
     {
-      name = "grand_unified_binary"
+      name = "system_updater"
       dest = "system_updater"
     },
   ]
