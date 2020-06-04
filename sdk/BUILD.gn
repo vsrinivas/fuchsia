@@ -66,8 +66,6 @@ sdk_molecule("license") {
 sdk("zircon_sysroot") {
   category = "internal"
 
-  export = true
-
   deps = [ "//zircon/public/sysroot:sysroot_sdk" ]
 }
 

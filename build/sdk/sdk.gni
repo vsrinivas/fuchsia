@@ -311,28 +311,26 @@ template("sdk") {
     data_keys = [ "fidl_json" ]
   }
 
-  if (defined(invoker.export) && invoker.export) {
-    stamp_file = "$target_gen_dir/$target_name.exported"
+  stamp_file = "$target_gen_dir/$target_name.exported"
 
-    action("${target_name}_export") {
-      forward_variables_from(invoker, [ "testonly" ])
+  action("${target_name}_export") {
+    forward_variables_from(invoker, [ "testonly" ])
 
-      script = "//build/sdk/export_sdk.py"
+    script = "//build/sdk/export_sdk.py"
 
-      inputs = [ archive_manifest_file ]
+    inputs = [ archive_manifest_file ]
 
-      outputs = [ stamp_file ]
+    outputs = [ stamp_file ]
 
-      args = [
-        "--out-dir",
-        rebase_path("$root_out_dir/sdk/exported/$sdk_name"),
-        "--stamp-file",
-        rebase_path(stamp_file),
-        "--manifest",
-        rebase_path(archive_manifest_file),
-      ]
+    args = [
+      "--out-dir",
+      rebase_path("$root_out_dir/sdk/exported/$sdk_name"),
+      "--stamp-file",
+      rebase_path(stamp_file),
+      "--manifest",
+      rebase_path(archive_manifest_file),
+    ]
 
-      deps = [ ":$archive_manifest_target_name" ]
-    }
+    deps = [ ":$archive_manifest_target_name" ]
   }
 }
