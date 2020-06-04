@@ -12,3 +12,5 @@ toc:
   path: /docs/concepts/booting/program_loading.md
 - title: "Userspace bootstrapping"
   path: /docs/concepts/booting/userboot.md
+- title: "Why Fuchsia devices reboot"
+  path: /docs/concepts/booting/why_fuchsia_devices_reboot.md
