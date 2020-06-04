@@ -9,7 +9,12 @@ declare_args() {
   # Should be set to false in the infra builders that have board == "x64" and
   # "asan" in variants.
   include_tests_that_fail_on_nuc_asan = true
+
+  # The list of environment names to include in "basic_envs".
+  basic_env_names = []
 }
+
+_all_named_envs = []
 
 ### Individual test environments ###
 
@@ -19,36 +24,72 @@ emu_env = {
     device_type = "QEMU"
   }
 }
+_all_named_envs += [
+  {
+    name = "emu"
+    env = emu_env
+  },
+]
 
 astro_env = {
   dimensions = {
     device_type = "Astro"
   }
 }
+_all_named_envs += [
+  {
+    name = "astro"
+    env = astro_env
+  },
+]
 
 sherlock_env = {
   dimensions = {
     device_type = "Sherlock"
   }
 }
+_all_named_envs += [
+  {
+    name = "sherlock"
+    env = sherlock_env
+  },
+]
 
 nelson_env = {
   dimensions = {
     device_type = "Nelson"
   }
 }
+_all_named_envs += [
+  {
+    name = "nelson"
+    env = nelson_env
+  },
+]
 
 nuc_env = {
   dimensions = {
     device_type = "Intel NUC Kit NUC7i5DNHE"
   }
 }
+_all_named_envs += [
+  {
+    name = "nuc"
+    env = nuc_env
+  },
+]
 
 vim2_env = {
   dimensions = {
     device_type = "Khadas Vim2 Max"
   }
 }
+_all_named_envs += [
+  {
+    name = "vim2"
+    env = vim2_env
+  },
+]
 
 linux_env = {
   dimensions = {
@@ -56,6 +97,12 @@ linux_env = {
     cpu = current_cpu
   }
 }
+_all_named_envs += [
+  {
+    name = "linux"
+    env = vim2_env
+  },
+]
 
 mac_env = {
   dimensions = {
@@ -67,6 +114,12 @@ mac_env = {
   # the "mac" tag in that case to filter out other tests.
   tags = [ "mac" ]
 }
+_all_named_envs += [
+  {
+    name = "mac"
+    env = mac_env
+  },
+]
 
 if (host_os == "linux") {
   host_env = linux_env
@@ -84,11 +137,24 @@ if (include_tests_that_fail_on_nuc_asan) {
 }
 
 basic_envs = []
-if (board_name == "x64") {
-  basic_envs += [
-    emu_env,
-    nuc_env,
-  ]
-} else if (board_name == "qemu-arm64" || board_name == "qemu-x64") {
-  basic_envs += [ emu_env ]
+
+# TODO(49414): Change default value of basic_env_names to "emu"
+# and get rid of this if statement.
+if (basic_env_names == []) {
+  if (board_name == "x64") {
+    basic_envs = [
+      emu_env,
+      nuc_env,
+    ]
+  } else if (board_name == "qemu-arm64" || board_name == "qemu-x64") {
+    basic_envs = [ emu_env ]
+  }
+} else {
+  foreach(name, basic_env_names) {
+    foreach(named_env, _all_named_envs) {
+      if (name == named_env.name) {
+        basic_envs += [ named_env.env ]
+      }
+    }
+  }
 }
