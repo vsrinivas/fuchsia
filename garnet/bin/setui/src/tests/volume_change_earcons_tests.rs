@@ -43,6 +43,7 @@ const MAX_VOLUME_LEVEL: f32 = 1.0;
 const CHANGED_VOLUME_MUTED: bool = true;
 const CHANGED_VOLUME_UNMUTED: bool = false;
 
+const MAX_VOLUME_EARCON_ID: u32 = 0;
 const VOLUME_EARCON_ID: u32 = 1;
 
 const SUPPRESSED_VOLUME_EARCON_EVENT: event::Event =
@@ -249,31 +250,16 @@ async fn test_sounds() {
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
-    let mut sound_played_receiver =
+    let mut sound_event_receiver =
         fake_services.sound_player.lock().await.create_sound_played_listener().await;
 
     // Test that the volume-changed sound gets played on the soundplayer.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
-
-    verify_earcon(&mut sound_played_receiver, VOLUME_EARCON_ID).await;
-
-    let settings = audio_proxy.watch2().await.expect("watch completed");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
-    assert!(fake_services.sound_player.lock().await.id_exists(1).await);
-    assert_eq!(
-        fake_services.sound_player.lock().await.get_usage_by_id(1).await,
-        Some(AudioRenderUsage::Media)
-    );
+    verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID).await;
 
     // Test that the volume-max sound gets played on the soundplayer.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    let settings = audio_proxy.watch2().await.expect("watch completed");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_MAX);
-    assert!(fake_services.sound_player.lock().await.id_exists(0).await);
-    assert_eq!(
-        fake_services.sound_player.lock().await.get_usage_by_id(0).await,
-        Some(AudioRenderUsage::Media)
-    );
+    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID).await;
 }
 
 // Test to ensure that when the volume is increased while already at max volume, the earcon for
@@ -282,15 +268,14 @@ async fn test_sounds() {
 async fn test_max_volume_sound_on_press() {
     let (service_registry, fake_services) = create_services().await;
     let (env, ..) = create_environment(service_registry, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
+    let mut sound_event_receiver =
+        fake_services.sound_player.lock().await.create_sound_played_listener().await;
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     // Set volume to max.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    audio_proxy.watch2().await.expect("watch completed");
-
-    assert!(fake_services.sound_player.lock().await.id_exists(0).await);
-    assert_eq!(fake_services.sound_player.lock().await.get_play_count(0).await, Some(1));
+    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID).await;
 
     // Try to increase volume. Only serves to set the "last volume button press" event
     // to 1 (volume up).
@@ -300,14 +285,13 @@ async fn test_max_volume_sound_on_press() {
 
     // Sets volume max again.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    audio_proxy.watch2().await.expect("watch completed");
+    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID).await;
 
     // Set volume to max again, to simulate holding button.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    audio_proxy.watch2().await.expect("watch completed");
+    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID).await;
 
     // Check that the sound played the correct number of times.
-    assert!(fake_services.sound_player.lock().await.id_exists(0).await);
     assert_eq!(fake_services.sound_player.lock().await.get_play_count(0).await, Some(3));
 }
 
@@ -327,6 +311,8 @@ async fn test_earcons_on_multiple_channel_change() {
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
+    let mut sound_event_receiver =
+        fake_services.sound_player.lock().await.create_sound_played_listener().await;
     // Set volume to max on multiple channels.
     set_volume(
         &audio_proxy,
@@ -338,9 +324,12 @@ async fn test_earcons_on_multiple_channel_change() {
     )
     .await;
 
-    audio_proxy.watch2().await.expect("watch completed");
-    assert!(fake_services.sound_player.lock().await.id_exists(0).await);
-    assert_eq!(fake_services.sound_player.lock().await.get_play_count(0).await, Some(1));
+    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID).await;
+
+    // Playing sound right after ensures that only 1 max sound was in the
+    // pipeline.
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
+    verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID).await;
 }
 
 // Test to ensure that when another higher priority stream is playing,
@@ -350,17 +339,15 @@ async fn test_earcons_with_active_stream() {
     let (service_registry, fake_services) = create_services().await;
     let (env, _, mut receptor) =
         create_environment(service_registry, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
+    let mut sound_event_receiver =
+        fake_services.sound_player.lock().await.create_sound_played_listener().await;
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
     let settings = audio_proxy.watch2().await.expect("watch completed");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
-    assert!(fake_services.sound_player.lock().await.id_exists(1).await);
-    assert_eq!(
-        fake_services.sound_player.lock().await.get_usage_by_id(1).await,
-        Some(AudioRenderUsage::Media)
-    );
+    verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID).await;
 
     fake_services
         .usage_reporter
@@ -389,17 +376,10 @@ async fn test_earcons_with_active_stream() {
         .await;
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
-    audio_proxy.watch2().await.expect("watch completed");
+    verify_event(&mut receptor, SUPPRESSED_VOLUME_EARCON_EVENT).await;
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-    audio_proxy.watch2().await.expect("watch completed");
-
-    // With the background stream ducked, the sound should not have played.
-    assert!(!fake_services.sound_player.lock().await.id_exists(0).await);
-    assert_ne!(
-        fake_services.sound_player.lock().await.get_usage_by_id(0).await,
-        Some(AudioRenderUsage::Media)
-    );
+    verify_event(&mut receptor, SUPPRESSED_VOLUME_EARCON_EVENT).await;
 
     fake_services
         .usage_reporter
@@ -412,14 +392,8 @@ async fn test_earcons_with_active_stream() {
         .await;
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
+    verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID).await;
+
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
-
-    audio_proxy.watch2().await.expect("watch completed");
-
-    // With the background stream unadjusted, the sound should have played.
-    assert!(fake_services.sound_player.lock().await.id_exists(0).await);
-    assert_eq!(
-        fake_services.sound_player.lock().await.get_usage_by_id(0).await,
-        Some(AudioRenderUsage::Media)
-    );
+    verify_earcon(&mut sound_event_receiver, MAX_VOLUME_EARCON_ID).await;
 }

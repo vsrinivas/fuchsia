@@ -28,9 +28,6 @@ pub struct SoundPlayerService {
     // Represents the number of times the sound has been played in total.
     play_counts: Arc<Mutex<HashMap<u32, u32>>>,
 
-    // Represents the sounds that were played. Stores the id to AudioRenderUsage it was played on.
-    sound_mappings: Arc<Mutex<HashMap<u32, AudioRenderUsage>>>,
-
     // The listeners to notify that a sound was played.
     sound_played_listeners: Arc<Mutex<Vec<SoundEventSender>>>,
 }
@@ -39,16 +36,7 @@ impl SoundPlayerService {
     pub fn new() -> Self {
         Self {
             play_counts: Arc::new(Mutex::new(HashMap::new())),
-            sound_mappings: Arc::new(Mutex::new(HashMap::new())),
             sound_played_listeners: Arc::new(Mutex::new(Vec::new())),
-        }
-    }
-
-    // Retrieve a mapping from sound id to AudioRenderUsage it was played on.
-    pub async fn get_usage_by_id(&self, id: u32) -> Option<AudioRenderUsage> {
-        match self.sound_mappings.lock().await.get(&id) {
-            None => None,
-            Some(&val) => Some(val),
         }
     }
 
@@ -87,7 +75,6 @@ impl Service for SoundPlayerService {
 
         let mut player_stream = ServerEnd::<PlayerMarker>::new(channel).into_stream()?;
 
-        let sound_mappings_clone = self.sound_mappings.clone();
         let play_counts_clone = self.play_counts.clone();
         let sound_played_listeners = self.sound_played_listeners.clone();
 
@@ -99,7 +86,6 @@ impl Service for SoundPlayerService {
                         responder.send(&mut Ok(DURATION)).unwrap();
                     }
                     PlayerRequest::PlaySound { id, usage, responder } => {
-                        sound_mappings_clone.lock().await.insert(id, usage);
                         play_counts_clone.lock().await.entry(id).and_modify(|count| *count += 1);
                         for listener in sound_played_listeners.lock().await.iter() {
                             listener.unbounded_send((id, usage)).ok();
