@@ -122,21 +122,45 @@ The two primary ways to read Inspect data are:
 
 [iquery][iquery] (Inspect Query) is the CLI for interacting with Inspect data.
 
-`iquery`'s primary mode of operation takes a list of locations for Inspect
-data and prints out the contains information. A location consists either
-of the path to a `.inspect` file, or the path to a directory containing
-`fuchsia.inspect.Tree`.
+`iquery`'s primary mode of operation takes a list of selectors for Inspect data
+and prints out the contained information. A selector consists of three parts
+which are separated by a `:`:
 
-Note: If a directory contains both `Tree` and the deprecated `Inspect`
-protocol, `Tree` is preferred by readers, and only its content will
-be shown.
+1. The component selector: This is the moniker in v2 or the realm path plus the
+   component name in v1.
+2. The node path: The path to a node in the inspect hierarchy.
+3. The property path: The name of the property.
 
-iquery's secondary mode of operation (triggered by `--find`) recursively
+For `iquery` only (1) is required. If only (1) is provided (for example
+`realm/component.cmx` then iquery will use a selector `realm/component.cmx:*` to
+fetch all the inspect data.
+
+`iquery` includes two utility commands to know what components are available and
+what selectors can be used:
+- `list`: iquery will print all component selectors that are available, this is
+  all v2 monikers and all v1 realm paths with component names.
+- `selectors`: iquery will print all selectors available under the provided
+  selector locations.
+
+These modes could be used together as follows:
+
+```
+$ iquery show `iquery list | grep component_name`
+```
+
+Alternatively `iquery` also allows to print the inspect data at a location. A
+location consists either of the path to a `.inspect` file, or the path to a
+directory containing `fuchsia.inspect.Tree`. `iquery` includes a utility command
+to list all files that contain inspect data (`list-files`). Note that these will be only data
+from v1 components given that v2 are not accessible through the filesystem at
+the moment.
+
+iquery's secondary mode of operation (triggered by `list-files`) recursively
 identifies locations for Inspect data from the given directorry path. The
 two modes may be used together as follows:
 
 ```
-iquery --recursive `iquery --find /hub | grep -v system_objects | grep component_name`
+iquery show-file `iquery list-files /hub | grep -v system_objects | grep component_name`
 ```
 
 In the example above, `iquery` is run to find a list of Inspect

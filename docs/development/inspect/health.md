@@ -24,48 +24,47 @@ the component health status.
 Examples:
 
 ```
-$ iquery --recursive `iquery --find` .
-a/root.inspect:
-  fuchsia.inspect.Health:
-    start_timestamp_nanos = ...
-    status = OK
-  connections:
-    0:
+$ iquery show `iquery list`
+a.cmx:
+  root:
+    fuchsia.inspect.Health:
+      start_timestamp_nanos = ...
+      status = OK
+    connections:
+      0:
+        fuchsia.inspect.Health:
+          start_timestamp_nanos = ...
+          status = STARTING_UP
+    optional_database:
       fuchsia.inspect.Health:
         start_timestamp_nanos = ...
-        status = STARTING_UP
-  optional_database:
+        status = UNHEALTHY
+        message = "Cannot open local.file"
+b.cmx:
+  root:
+    fuchsia.inspect.Health:
+      start_timestamp_nanos = ...
+      status = OK
+c.cmx:
+  root:
     fuchsia.inspect.Health:
       start_timestamp_nanos = ...
       status = UNHEALTHY
-      message = "Cannot open local.file"
-b/root.inspect:
-  fuchsia.inspect.Health:
-    start_timestamp_nanos = ...
-    status = OK
-c/root.inspect:
-  fuchsia.inspect.Health:
-    start_timestamp_nanos = ...
-    status = UNHEALTHY
-    message = "Failed to connect to fuchsia.example.RequiredService"
+      message = "Failed to connect to fuchsia.example.RequiredService"
 
-$ iquery --health a/root.inspect b/root.inspect c/root.inspect
-a/root.inspect = OK
-b/root.inspect = OK
-c/root.inspect = UNHEALTHY (Failed to connect to fuchsia.example.RequiredService)
-
-$ iquery --health --summary a/root.inspect b/root.inspect c/root.inspect
-c/root.inspect = UNHEALTHY (Failed to connect to fuchsia.example.RequiredService)
-
-$ iquery --health --summary a/root.inspect b/root.inspect not_found/root.inspect
-not_found/root.inspect = NOT_FOUND
-
-$ iquery --health --recursive a/root.inspect b/root.inspect c/root.inspect
-a/root.inspect = HEALTHY
-a/root.inspect#connections/0 = STARTING_UP
-a/root.inspect#optional_database = UNHEALTHY (Cannot open local.file)
-b/root.inspect = OK
-c/root.inspect = UNHEALTHY (Failed to connect to fuchsia.example.RequiredService)
+$ iquery show a.cmx:root/fuchsia.inspect.Health:status b.cmx:root/fuchsia.inspect.Healh:status c.cmx:root/fuchsia.inspect.Health:status
+a:
+  root:
+    fuchsia.inspectHealth:
+      status = Ok
+b:
+  root:
+    fuchsia.inspectHealth:
+      status = Ok
+c:
+  root:
+    fuchsia.inspectHealth:
+      status = Ok
 ```
 
 # Using health checks in components

@@ -1,192 +1,159 @@
-iquery(3)
-=====
-
-# NAME
+# iquery
 
 `iquery` - the Fuchsia Inspect API Query Toolkit
 
-# SYNOPSIS
+## Synopsis
 
 ```
-iquery [MODE] [--recursive] [--format=<FORMAT>]
-       [--sort]
-       [(--full_paths|--absolute_paths|--display_paths)]
-       PATH [...PATH]
+iquery [--format <format>] <command> [<args>]
 ```
 
-# DESCRIPTION
+## Description
 
 `iquery` is a utility program for inspecting component nodes exposed over the
-[Inspect API](gsw-inspect.md).
-It accepts a list of paths to process, and how
-they are processed depends on the `MODE` setting and options.
+[Inspect API](gsw-inspect.md). It accepts a set of options and a command with
+its respective options.
 
-# MODES
+## Options
 
-`MODE=(--cat|--ls|--find|--report)`
+### `--format`
 
-## `--cat`
+The format in which the output will be displayed.
 
-DEFAULT. Treat each `PATH` as a node directory to open, and print
-the properties and metrics for those nodes.
+Accepted formats:
 
-## `--ls`
+- `text`: default, good for human reading
+- `json`: good for machine reading
 
-Treat each `PATH` as a node directory, and list the children for those nodes.
+### `--help`
 
-## `--find`
+Prints usage information.
 
-Recursively find all node directories under the filesystem paths
-passed in, and output the relative path one per line.
+## Commands
 
-## `--report`
+### `list`
 
-Outputs a default system-wide report. Ignores all options other than
-`--format`.
+Lists all components (relative to the scope where the archivist receives events
+from) of components that expose inspect.
 
-# OPTIONS
+For v1: this is the realm path plus the realm name.
 
-## `--recursive`
+For v2: this is the moniker without the instances ids.
 
-Continue to step down the hierarchy of elements. Mode dependent.
-
-
-### For `--cat`
-
-If false, will print the top level node only. True will output the complete node hierarchy.
-
-Example:
+Example usage:
 
 ```
-$ find .
-a/
-a/fuchsia.inspect.Inspect
-b/c
-
-$ iquery --ls a
-a_key
-a_key2
-
-$ iquery --cat a_key
-a_key:
-  a_value
-
-$ iquery --cat --recursive a
-a:
-  a_key = a_value
-  a_key2 = 3.4
+$ iquery list
+archivist.cmx
+bootstrap/device_manager
+...
 ```
 
-### For `--find`
+#### `--help`
 
-If false, it will descend into each branch until it finds a valid node.
-True will output the complete tree, including nested nodes.
+Prints usage information about `list`.
 
-Example:
+### `list-files [<paths...>]`
 
-```
-$ find .
-a/
-a/fuchsia.inspect.Inspect
-b/c
-b/c/fuchsia.inspect.Inspect
+Lists all files which contain inspect data under the given `paths`. This will
+only list files for v1 components given that v2 components are not mapped to the
+filesystem at the moment.
 
-$ iquery --find .
-a/
-b/c
+The files that this command looks for are:
 
-$ iquery --find --recursive .
-a
-a#a_key
-a#a_key2
-b/c
-b/c#c_val
-b/c#c_val2
+- `fuchsia.inspect.Tree`: A service file. The standard way inspect libraries
+  export inspect data.
+- `*.inspect`: VMO files with inspect data. The standard way the Dart inspect
+  library exports inspect data.
+- `fuchsia.inspect.deprecated.Inspect`: A service file. The standard way the Go
+  library exports inspect data.
+
+Example usage:
 
 ```
-
-## `--format=<FORMAT>`
-
-What format the output should be in.
-
-```
-Current supported formatters:
-- text: Meant for human inspection. This is the default option.
-- json: Meant for machine consumption.
-```
-
-## `--sort`
-
-When specified, sort the values for each Node before printing.
-
-```
-$ iquery root.inspect
-root:
-  c:
-  a:
-  b:
-
-$ iquery --sort root.inspect
-root:
-  a:
-  b:
-  c:
-
-$ iquery numeric.inspect
-root:
-  11:
-  2:
-  1:
-
-# When all children are numeric, iquery sorts numerically.
-$ iquery --sort numeric.inspect
-root:
-  1:
-  2:
-  11:
+$ iquery list-files /hub /dev
+/dev/diagnostics/driver_manager/dm.inspect
+/hub/c/archivist.cmx/21352/out/diagnostics/fuchsia.inspect.Tree
+/hub/c/archivist.cmx/21352/system_diagnostics/fuchsia.inspect.Tree
+/hub/c/bt-gap.cmx/35231/out/diagnostics/bt-gap.inspect
+/hub/c/bt-gap.cmx/35231/system_diagnostics/fuchsia.inspect.Tree
+/hub/c/netstack.cmx/26786/out/diagnostics/counters/fuchsia.inspect.deprecated.Inspect
+...
 ```
 
-## `--full_paths`
+#### `--help`
 
-Rename each node to have its own relative path.
+Prints usage information about `list-files`.
 
-```
-$ iquery a a/b
-a:
-b:
-$ iquery --full_paths a a/b
-a:
-a/b:
-```
+### `selectors [<selectors...>]`
 
-## `--absolute_paths`
+Lists all available full selectors (component selector + tree selector).
 
-Rename each node to have its own absolute path from the root.
+If a component selector is provided, it’ll only print selectors for that component.
+
+If a full selector (component + tree) is provided, it lists all selectors under the given node.
+
+Example usage:
 
 ```
-$ cd /hub/c/
-$ iquery a a/b
-a:
-b:
-$ iquery --absolute_paths a a/b
-/hub/c/a:
-/hub/c/a/b:
+$ iquery selectors archivist.cmx:root/fuchsia.inspect.Health timekeeper.cmx
+archivist.cmx:root/fuchsia.inspect.Health:start_timestamp_nanos
+archivist.cmx:root/fuchsia.inspect.Health:status
+timekeeper.cmx:root/current:system_uptime_monotonic_nanos
+timekeeper.cmx:root/current:utc_nanos
+timekeeper.cmx:root:start_time_monotonic_nanos
 ```
 
-## `--display_paths`
+#### `--help`
 
-Rename only the top-level node to have its own relative path.
-This mode is suitable for interactive display.
+Prints usage information about `selectors`
+
+
+### `show [<selectors...>]`
+
+Prints the inspect hierarchies that match the given selectors.
+
+Example usage:
 
 ```
-$ iquery --recrusive --display_paths a/b
-b:
-  c:
-    c_val
-    c_val2
-$ iquery --display_paths a/b
-a/b:
-  c:
-    c_val
-    c_val2
+$ iquery show archivist.cmx:root/fuchsia.inspect.Health timekeeper.cmx
+archivist.cmx:
+  root:
+    fuchsia.inspect.Health:
+      start_timestamp_nanos = 30305104656
+      status = OK
+timekeeper.cmx:
+  root:
+    start_time_monotonic_nanos = 30347000053
+    current:
+      system_uptime_monotonic_nanos = 61617527688648
+      utc_nanos = 1591119246552989779
 ```
+
+#### `--help
+
+Prints usage information about `show`.
+
+### `show-file [<paths...>]`
+
+Given a path, prints the inspect data contained in files at the given paths. At the moment this
+command only works for v1 components as we only have a v1 hub.
+
+Example usage:
+
+```
+$ fx shell iquery show-file /dev/diagnostics/driver_manager/dm.inspect /hub/c/archivist.cmx/21352/out/diagnostics/fuchsia.inspect.Tree
+/dev/diagnostics/driver_manager/dm.inspect:
+  root:
+    device_count = 126
+    ...
+/hub/c/archivist.cmx/21352/out/diagnostics/fuchsia.inspect.Tree:
+  root:
+    all_archive_accessor_node:
+      archive_accessor_connections_closed = 15
+  ...
+```
+
+#### `--help`
+
+Prints usage information about `show-file`.

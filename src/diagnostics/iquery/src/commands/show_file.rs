@@ -18,7 +18,7 @@ use {
     std::str::FromStr,
 };
 
-/// Given a path in the hub, prints the inspect contained in it. At the moment this command only
+/// Given a path, prints the inspect contained in it. At the moment this command only
 /// works for v1 components as we only have a v1 hub.
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "show-file")]

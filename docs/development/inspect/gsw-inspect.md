@@ -455,15 +455,24 @@ The [`iquery`][iquery] tool allows you to look at the Inspect database.
 You first need to find your program &mdash; that is, you need to see where it
 got registered after startup.
 
+
 ```
-$ iquery --find /hub
-/hub/c/sysmgr.cmx/4248/out/diagnostics
-/hub/c/sysmgr.cmx/4248/system_objects
-/hub/r/sys/4566/c/http.cmx/19226/out/diagnostics
-/hub/r/sys/4566/c/http.cmx/19226/system_objects
+$ iquery list
+archivist.cmx
+bootstrap/driver_manager
+http.cmx
+libsinspect_example_component.cmx
+```
+
+Or if you wanna see v1 files:
+
+```
+$ iquery list-files /hub
+/hub/c/archivist.cmx/4248/out/diagnostics
+/hub/c/archivist.cmx/4248/system_objects
 ...
-/hub/r/sys/4566/c/libinspect_example_component.cmx/8123/out/diagnostics
-/hub/r/sys/4566/c/libinspect_example_component.cmx/8123/system_objects
+/hub/c/libinspect_example_component.cmx/8123/out/diagnostics
+/hub/c/libinspect_example_component.cmx/8123/system_objects
 ...
 ```
 
@@ -489,11 +498,10 @@ The `out/diagnostics` directory contains the files that map to the information
 exposed by the component itself for diagnostics purposes, like an inspect VMO file (which is the
 tree from our example above).
 
-To view the employee database's exposed nodes, you can run `iquery` with the
-`--recursive` command line option:
+To view the employee database's exposed nodes, you can run `iquery`:
 
 ```
-$ iquery --recursive /hub/r/sys/4566/c/libinspect_example_component.cmx/8123/out/diagnostics
+$ iquery show libinspect_example_component.cmx
 root:
   task_count = 16
   employee_count = 12
@@ -506,21 +514,26 @@ root:
 ...
 ```
 
+The same output could be fetched by using `show-file` with the file printed
+above on `list-files`:
+
+```
+$ iquery show-file /hub/r/sys/4566/c/libinspect_example_component.cmx/8123/out/diagnostics
+...
+```
+
 This dumps the two public global metrics (`task_count` and `employee_count` that we
 created in "[Global metrics](#global-metrics)" above) as well as the `reporting_tree`
 hierarchy.
-
-Because we specified `--recursive`, `iquery` descends into each branch and dumps
-the information on that branch recursively.
 
 If you wanted to dump the data in JSON (perhaps for some post processing), you
 can specify the `--format=json` parameter to `iquery`:
 
 ```
-$ iquery --recursive --format=json /hub/r/sys/4566/c/libinspect_example_component.cmx/8123/out/diagnostics
+$ iquery --format json show libinspect_example_component.cmx
 [
   {
-    "path": "diagnostics",
+    "moniker": "libinspect_example_component.cmx",
     "contents": {
       "root": {
         "task_count": "16",
@@ -595,12 +608,15 @@ From Chris:
     specifies which component inside the package to run. run -d starts the
     component in the background.
 
-    We can use the iquery tool to find all inspectable components on the system
-    from the hub:
+    We can use the iquery tool to find all inspectable components on the system:
 
-    $ iquery --find /hub
+    $ iquery list
 
-    This gives the path to every inspect tree available. Now the output will
+    Or all v1 files:
+
+    $ iquery list-files /hub
+
+    This gives the moniker of every inspect tree available. Now the output will
     differ depending on whether this was run through `fx shell` or directly on
     the target. `fx shell` logs the user into the "sys" realm. If you use fx
     shell you will see:
@@ -622,8 +638,7 @@ From Chris:
     A comprehensive command to automatically find your component and output its
     nodes is:
 
-    $ iquery --recursive `iquery --find /hub | grep libinspect_example_component.cmx
-    | grep out/diagnostics
+    $ iquery show `iquery list | grep libinspect_example_component.cmx`
 
     This will find the component wherever it is and output its information.
 

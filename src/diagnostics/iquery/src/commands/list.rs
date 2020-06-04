@@ -56,14 +56,15 @@ impl ToText for Vec<ListResponseItem> {
 #[derive(Default, FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "list")]
 pub struct ListCommand {
-    #[argh(option)]
-    /// the name of the manifest file that we are interested in. If this is provided, the output
-    /// will only contain monikers for components whose url contains the provided name.
-    pub manifest_name: Option<String>,
+    // TODO(fxbug.dev/45458): uncomment when implemented.
+// #[argh(option)]
+// /// the name of the manifest file that we are interested in. If this is provided, the output
+// /// will only contain monikers for components whose url contains the provided name.
+// pub manifest_name: Option<String>,
 
-    #[argh(switch)]
-    /// also print the URL of the component.
-    pub with_url: bool,
+// #[argh(switch)]
+// /// also print the URL of the component.
+// pub with_url: bool,
 }
 
 #[async_trait]

@@ -16,8 +16,7 @@ use {
     std::cmp::Ordering,
 };
 
-/// Prints the inspect hierarchies that match the given selectors. If none are given, it prints
-/// everything.
+/// Prints the inspect hierarchies that match the given selectors.
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "show")]
 pub struct ShowCommand {

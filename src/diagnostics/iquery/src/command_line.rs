@@ -13,10 +13,10 @@ use {
 #[argh(subcommand)]
 pub enum SubCommand {
     List(ListCommand),
+    ListFiles(ListFilesCommand),
     Selectors(SelectorsCommand),
     Show(ShowCommand),
     ShowFile(ShowFileCommand),
-    ListFiles(ListFilesCommand),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]

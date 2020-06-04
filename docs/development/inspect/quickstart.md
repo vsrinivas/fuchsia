@@ -498,11 +498,15 @@ See below for the quick start guide in your language of choice.
   Try the following:
 
   ```sh
-  # This prints all Inspect endpoints on the system.
-  $ iquery --find /hub
+  # This prints all component selectors (monikers in v2 or realm paths in v1) available.
+  $ iquery list
+
+  # This prints all files containing inspect under /hub (this won't show v2 components)
+  $ iquery list-files /hub
 
   # This filters the above list to only print your component.
-  $ iquery --find /hub | grep my_component.cmx
+  $ iquery list-files /hub | grep my_component.cmx
+  $ iquery list | grep my_component.cmx  # TODO(fxbug.dev/45458): allow to pass a manifest filter
   ```
 
   Under the listed directories you will see some paths including
@@ -516,14 +520,29 @@ See below for the quick start guide in your language of choice.
 
 ### Read your Inspect data
 
+  Use the moniker that `list` printed above, and run:
+
+  ```sh
+  $ iquery show realm/my_component.cmx
+  ```
+
+  You can also spcify a node/property using selectors:
+
+  ```sh
+  $ iquery show realm/my_component.cmx:root/path/to/some:property
+  ```
+
   Navigate to the `out/` directory that was printed above, and run:
 
   ```sh
-  $ iquery --recursive root.inspect
-
-  # OR, if you used Dynamic Values:
-  $ iquery --recursive .
+  $ iquery --recursive fuchsia.inspect.Tree
+  # Or root.inspect if you are exposing a vmo file directly
+  # (this is not the case if using inspect libs directly)
   ```
+
+  Or `root.inspect` instead of `fuchsia.inspect.Tree`. Note that this is not the
+  case in general (except on Dart). If you are using the standard inspect libs it'll be the Tree
+  protocol.
 
   This will print out the following if you followed the suggested steps above:
 

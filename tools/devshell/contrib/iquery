@@ -22,7 +22,7 @@
 ##                              register and stack traces for all threads.
 ##                              False by default.
 ##    -d|--display              Whether to trigger display mode.
-##                              When display mode is set for text output, node 
+##                              When display mode is set for text output, node
 ##                              names only include the full path for the root
 ##                              of the hierarchy.
 ##
@@ -35,7 +35,6 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/va
 # Defaults.
 system_diagnostics=false
 formatter=""
-display=0
 
 # Flag parsing.
 while [[ "$1" =~ ^- ]]; do
@@ -50,9 +49,6 @@ while [[ "$1" =~ ^- ]]; do
       ;;
     -s|--system-objects|--system-diagnostics)
       system_diagnostics=true
-      ;;
-    -d|--display)
-      display=1
       ;;
     --)
       break
@@ -72,13 +68,13 @@ regexps="$@"
 find_target="/hub"
 
 # Find all the available services.
-find="$(fx-command-exec shell iquery --find "${find_target}")"
+find="$(fx-command-exec shell iquery list-files "${find_target}")"
 
 # Find all targets in devfs
 devfs_target="/dev/diagnostics"
-find+=$'\n'"$(fx-command-exec shell iquery --find "${devfs_target}")"
+find+=$'\n'"$(fx-command-exec shell iquery list-files "${devfs_target}")"
 
-# Check if we want the system diagnostics 
+# Check if we want the system diagnostics
 if [[ "${system_diagnostics}" = "false" ]]; then
   find="$(echo "${find}" | grep -v "system_diagnostics$")"
 fi
@@ -92,12 +88,7 @@ if [[ ! -z ${regexps} ]]; then
   find="$(echo "${find}" | grep ${filters})"
 fi
 
-paths="--absolute_paths"
-if [[ ${display} -ne 0 ]]; then
-  paths="--display_paths"
-fi
-
 # Flatten to the format iquery expects.
 flatten="$(echo "${find}" | tr '\n' ' ')"
 
-fx-command-exec shell iquery "${paths}" --cat "${format}" --sort --recursive "${flatten}"
+fx-command-exec shell iquery --format "${format}" show-file "${flatten}"
