@@ -191,6 +191,18 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // The blob is not expected to be accessed again after this is called.
   zx_status_t Purge();
 
+  // PrepareWrite should be called after allocating a vnode and before writing any data to the blob.
+  // The function sets blob size, allocates vmo needed for data and merkle tree, initiates
+  // structures needed for compression and reserves an inode for the blob.
+  // It is not meant to be called multiple times on a given vnode.
+  zx_status_t PrepareWrite(uint64_t size_data);
+
+  // Schedules journal transaction prepared by PrepareWrite for the null blob.
+  // Null blob doesn't have any data to write. They don't go through regular
+  // Write()/WriteInternal path so we explicitly issue journaled write that
+  // commits inode allocation and creation.
+  zx_status_t WriteNullBlob();
+
   // If successful, allocates Blob Node and Blocks (in-memory)
   // kBlobStateEmpty --> kBlobStateDataWrite
   zx_status_t SpaceAllocate(uint64_t size_data);

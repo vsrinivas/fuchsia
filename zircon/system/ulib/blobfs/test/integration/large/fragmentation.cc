@@ -55,12 +55,11 @@ void RunFragmentationTest(FilesystemTest* test) {
         GenerateRandomBlob(kMountPath, do_small_blob ? kSmallSize : kLargeSize, &info));
     fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd, "Failed to create blob");
-    if (ftruncate(fd.get(), info->size_data) < 0) {
+    ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
+    if (StreamAll(write, fd.get(), info->data.get(), info->size_data) < 0) {
       ASSERT_EQ(ENOSPC, errno, "Blobfs expected to run out of space");
       break;
     }
-    ASSERT_EQ(0, StreamAll(write, fd.get(), info->data.get(), info->size_data),
-              "Failed to write Data");
     if (do_small_blob) {
       small_blobs.push_back(fbl::String(info->path));
     }
@@ -91,8 +90,10 @@ void RunFragmentationTest(FilesystemTest* test) {
   // ... and we don't have space (as we try allocating).
   fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(fd);
-  ASSERT_EQ(-1, ftruncate(fd.get(), info->size_data));
+  ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
+  ASSERT_NE(0, StreamAll(write, fd.get(), info->data.get(), info->size_data));
   ASSERT_EQ(ENOSPC, errno, "Blobfs expected to be out of space");
+  fd.reset();
 
   // Unlink all small blobs -- except for the last one, since we may have free
   // trailing space at the end.
@@ -108,6 +109,7 @@ void RunFragmentationTest(FilesystemTest* test) {
   ASSERT_NO_FAILURES(test->GetFsInfo(&usage));
   ASSERT_GE(usage.total_bytes - usage.used_bytes, kLargeBlocks * blobfs::kBlobfsBlockSize);
 
+  fd.reset(open(info->path, O_CREAT | O_RDWR));
   // Now that blobfs supports extents, verify that we can still allocate a large
   // blob, even if it is fragmented.
   ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));

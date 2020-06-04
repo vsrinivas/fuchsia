@@ -114,41 +114,68 @@ Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
       clone_watcher_(this),
       inode_(inode) {}
 
-zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
-  TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "size_data", size_data);
-  fs::Ticker ticker(blobfs_->Metrics()->Collecting());
+zx_status_t Blob::WriteNullBlob() {
+  ZX_DEBUG_ASSERT(inode_.blob_size == 0);
+  ZX_DEBUG_ASSERT(inode_.block_count == 0);
 
+  zx_status_t status = Verify();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  blobfs_->journal()->schedule_task(
+      WriteMetadata().and_then([blob = fbl::RefPtr(this)]() { blob->CompleteSync(); }));
+  return ZX_OK;
+}
+
+zx_status_t Blob::PrepareWrite(uint64_t size_data) {
   if (GetState() != kBlobStateEmpty) {
     return ZX_ERR_BAD_STATE;
   }
 
-  auto write_info = std::make_unique<WritebackInfo>();
-
-  // Initialize the inode with known fields.
   memset(inode_.merkle_root_hash, 0, sizeof(inode_.merkle_root_hash));
   inode_.blob_size = size_data;
-  inode_.block_count =
-      ComputeNumMerkleTreeBlocks(inode_) + static_cast<uint32_t>(BlobDataBlocks(inode_));
 
-  // Special case for the null blob: We skip the write phase.
-  if (inode_.blob_size == 0) {
-    zx_status_t status = blobfs_->GetAllocator()->ReserveNodes(1, &write_info->node_indices);
-    if (status != ZX_OK) {
-      return status;
-    }
-    map_index_ = write_info->node_indices[0].index();
-    write_info_ = std::move(write_info);
+  auto write_info = std::make_unique<WritebackInfo>();
 
-    if ((status = Verify()) != ZX_OK) {
-      return status;
-    }
-
-    SetState(kBlobStateDataWrite);
-
-    blobfs_->journal()->schedule_task(
-        WriteMetadata().and_then([blob = fbl::RefPtr(this)]() { blob->CompleteSync(); }));
-    return ZX_OK;
+  // Reserve a node for blob's inode. We might need more nodes for extents later.
+  zx_status_t status = blobfs_->GetAllocator()->ReserveNodes(1, &write_info->node_indices);
+  if (status != ZX_OK) {
+    return status;
   }
+
+  // For non-null blobs, initialize the merkle/data VMOs so that we can write into them.
+  if (inode_.blob_size != 0) {
+    if ((status = PrepareVmosForWriting(write_info->node_indices[0].index(), inode_.blob_size)) !=
+        ZX_OK) {
+      return status;
+    }
+  }
+  if (blobfs_->ShouldCompress() && inode_.blob_size >= kCompressionSizeThresholdBytes) {
+    write_info->compressor =
+        BlobCompressor::Create(blobfs_->write_compression_settings(), inode_.blob_size);
+    if (!write_info->compressor) {
+      FS_TRACE_ERROR("blobfs: Failed to initialize compressor: %d\n", status);
+      return status;
+    }
+  }
+
+  map_index_ = write_info->node_indices[0].index();
+  write_info_ = std::move(write_info);
+  SetState(kBlobStateDataWrite);
+
+  return ZX_OK;
+}
+
+zx_status_t Blob::SpaceAllocate(uint64_t block_count) {
+  TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "block_count", block_count);
+  ZX_ASSERT(block_count != 0);
+
+  fs::Ticker ticker(blobfs_->Metrics()->Collecting());
+
+  // Initialize the inode with known fields. The block count may change if the
+  // blob is compressible.
+  inode_.block_count = ComputeNumMerkleTreeBlocks(inode_) + static_cast<uint32_t>(block_count);
 
   fbl::Vector<ReservedExtent> extents;
   fbl::Vector<ReservedNode> nodes;
@@ -172,28 +199,11 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
     return status;
   }
 
-  // Initialize the merkle/data VMOs so that we can write into them.
-  if ((status = PrepareVmosForWriting(nodes[0].index(), inode_.blob_size)) != ZX_OK) {
-    return status;
+  write_info_->extents = std::move(extents);
+  while (!nodes.is_empty()) {
+    write_info_->node_indices.push_back(nodes.erase(0));
   }
-
-  if (blobfs_->ShouldCompress() && inode_.blob_size >= kCompressionSizeThresholdBytes) {
-    write_info->compressor =
-        BlobCompressor::Create(blobfs_->write_compression_settings(), inode_.blob_size);
-    if (!write_info->compressor) {
-      FS_TRACE_ERROR("blobfs: Failed to initialize compressor: %d\n", status);
-      return status;
-    }
-  }
-
-  map_index_ = nodes[0].index();
-
-  write_info->extents = std::move(extents);
-  write_info->node_indices = std::move(nodes);
-  write_info_ = std::move(write_info);
-
-  SetState(kBlobStateDataWrite);
-  blobfs_->Metrics()->UpdateAllocation(size_data, ticker.End());
+  blobfs_->Metrics()->UpdateAllocation(inode_.blob_size, ticker.End());
   return ZX_OK;
 }
 
@@ -314,7 +324,6 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     return ZX_ERR_BAD_STATE;
   }
 
-  const uint64_t data_start = DataStartBlock(blobfs_->Info());
   size_t to_write = fbl::min(len, inode_.blob_size - write_info_->bytes_written);
   size_t offset = write_info_->bytes_written;
 
@@ -358,12 +367,21 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
   std::vector<fit::promise<void, zx_status_t>> promises;
   fs::DataStreamer streamer(blobfs_->journal(), blobfs_->WritebackCapacity());
 
+  const uint64_t data_start = DataStartBlock(blobfs_->Info());
   MerkleTreeCreator mtc;
   if ((status = mtc.SetDataLength(inode_.blob_size)) != ZX_OK) {
     return status;
   }
   const uint32_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode_);
   const size_t merkle_size = mtc.GetTreeLength();
+  uint64_t data_block_count =
+      fbl::round_up(write_info_->compressor ? write_info_->compressor->Size() : inode_.blob_size,
+                    kBlobfsBlockSize) /
+      kBlobfsBlockSize;
+  status = SpaceAllocate(data_block_count);
+  if (status != ZX_OK) {
+    return status;
+  }
   if (merkle_size > 0) {
     // Tracking generation time.
     fs::Ticker ticker(blobfs_->Metrics()->Collecting());
@@ -437,11 +455,14 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     if (status != ZX_OK) {
       return status;
     }
-    blocks += ComputeNumMerkleTreeBlocks(inode_);
     // By compressing, we used less blocks than we originally reserved.
-    ZX_DEBUG_ASSERT(inode_.block_count > blocks);
+    ZX_DEBUG_ASSERT(blocks < fbl::round_up(inode_.blob_size, kBlobfsBlockSize) / kBlobfsBlockSize);
 
-    inode_.block_count = blocks;
+    blocks += ComputeNumMerkleTreeBlocks(inode_);
+
+    // Verify that the block reserved matches blocks needed.
+    ZX_DEBUG_ASSERT(inode_.block_count == blocks);
+
     uint16_t compression_inode_header_flags =
         CompressionInodeHeaderFlags(blobfs_->write_compression_settings().compression_algorithm);
     inode_.header.flags |= compression_inode_header_flags;
@@ -781,7 +802,16 @@ zx_status_t Blob::Truncate(size_t len) {
     // Fail early if |len| would overflow when rounded up to block size.
     return ZX_ERR_OUT_OF_RANGE;
   }
-  return SpaceAllocate(len);
+  zx_status_t status = PrepareWrite(len);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Special case for the null blob: We skip the write phase.
+  if (len == 0) {
+    return WriteNullBlob();
+  }
+  return status;
 }
 
 #ifdef __Fuchsia__

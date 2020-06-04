@@ -36,8 +36,8 @@ using blobfs::GenerateBlob;
 using blobfs::GenerateRandomBlob;
 using blobfs::StreamAll;
 using blobfs::VerifyContents;
-using fs::GetTopologicalPath;
 using fs::FilesystemTest;
+using fs::GetTopologicalPath;
 using fs::RamDisk;
 
 namespace fio = ::llcpp::fuchsia::io;
@@ -569,12 +569,10 @@ void RunWriteAfterUnlinkTest() {
   fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(fd, "Failed to create blob");
   ASSERT_EQ(0, ftruncate(fd.get(), size));
-  ASSERT_EQ(0, StreamAll(write, fd.get(), info->data.get(), size / 2),
-            "Failed to write Data");
+  ASSERT_EQ(0, StreamAll(write, fd.get(), info->data.get(), size / 2), "Failed to write Data");
   ASSERT_EQ(0, unlink(info->path));
-  ASSERT_EQ(
-      0, StreamAll(write, fd.get(), info->data.get() + size / 2, size - (size / 2)),
-      "Failed to write Data");
+  ASSERT_EQ(0, StreamAll(write, fd.get(), info->data.get() + size / 2, size - (size / 2)),
+            "Failed to write Data");
   fd.reset();
   ASSERT_LT(open(info->path, O_RDONLY), 0);
 }
@@ -616,7 +614,7 @@ TEST_F(BlobfsTest, ReadTooLarge) { RunReadTooLargeTest(); }
 
 TEST_F(BlobfsTestWithFvm, ReadTooLarge) { RunReadTooLargeTest(); }
 
-void RunBadAllocationTest(uint64_t disk_size) {
+void RunBadCreationTest(uint64_t disk_size) {
   std::string name(kMountPath);
   name.append("/00112233445566778899AABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVV");
   fbl::unique_fd fd(open(name.c_str(), O_CREAT | O_RDWR));
@@ -634,11 +632,11 @@ void RunBadAllocationTest(uint64_t disk_size) {
   ASSERT_TRUE(fd, "Failed to create blob");
   ASSERT_EQ(-1, ftruncate(fd.get(), 0), "Blob without data doesn't match null blob");
 
-  // This is the size of the entire disk; we won't have room.
-  ASSERT_EQ(-1, ftruncate(fd.get(), disk_size), "Huge blob");
-
-  // Okay, finally, a valid blob!
-  ASSERT_EQ(0, ftruncate(fd.get(), info->size_data), "Failed to allocate blob");
+  // This is the size of the entire disk; we shouldn't fail here as setting blob size
+  // has nothing to do with how much space blob will occupy.
+  fd.reset();
+  fd.reset(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_EQ(0, ftruncate(fd.get(), disk_size), "Huge blob");
 
   // Write nothing, but close the blob. Since the write was incomplete,
   // it will be inaccessible.
@@ -657,9 +655,13 @@ void RunBadAllocationTest(uint64_t disk_size) {
   ASSERT_FALSE(fd, "Cannot access partial blob");
 }
 
-TEST_F(BlobfsTest, BadAllocation) { RunBadAllocationTest(environment_->disk_size()); }
+TEST_F(BlobfsTest, BadCreation) {
+  RunBadCreationTest(environment_->config().ramdisk_block_count * blobfs::kBlobfsBlockSize);
+}
 
-TEST_F(BlobfsTestWithFvm, BadAllocation) { RunBadAllocationTest(environment_->disk_size()); }
+TEST_F(BlobfsTestWithFvm, BadCreation) {
+  RunBadCreationTest(environment_->config().ramdisk_block_count * blobfs::kBlobfsBlockSize);
+}
 
 // Attempts to read the contents of the Blob.
 void VerifyCompromised(int fd, const char* data, size_t size_data) {
@@ -1074,8 +1076,7 @@ void RunPartialWriteTest() {
   fbl::unique_fd fd_partial(open(info_partial->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(fd_partial, "Failed to create blob");
   ASSERT_EQ(0, ftruncate(fd_partial.get(), size));
-  ASSERT_EQ(0,
-            StreamAll(write, fd_partial.get(), info_partial->data.get(), size / 2),
+  ASSERT_EQ(0, StreamAll(write, fd_partial.get(), info_partial->data.get(), size / 2),
             "Failed to write Data");
 
   // Completely write out second blob.
@@ -1102,8 +1103,7 @@ void RunPartialWriteSleepyDiskTest(const RamDisk* disk) {
   fbl::unique_fd fd_partial(open(info_partial->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(fd_partial, "Failed to create blob");
   ASSERT_EQ(0, ftruncate(fd_partial.get(), size));
-  ASSERT_EQ(0,
-            StreamAll(write, fd_partial.get(), info_partial->data.get(), size / 2),
+  ASSERT_EQ(0, StreamAll(write, fd_partial.get(), info_partial->data.get(), size / 2),
             "Failed to write Data");
 
   // Completely write out second blob.
@@ -1261,6 +1261,41 @@ void GetSliceRange(const BlobfsTestWithFvm& test, const std::vector<uint64_t>& s
   for (size_t i = 0; i < ranges_count; i++) {
     ranges->push_back(range_array[i]);
   }
+}
+
+// The helper creates a blob with data of size disk_size. The data is
+// compressible so needs less space on disk. This will test if we can persist
+// a blob whose uncompressed data is larger than available free space.
+// The test is expected to fail when compression is turned off.
+void RunUncompressedBlobDataLargerThanAvailableSpaceTest(FilesystemTest* test, uint64_t disk_size) {
+  std::unique_ptr<BlobInfo> info;
+  ASSERT_NO_FAILURES(GenerateBlob([](char* data, size_t length) { memset(data, '\0', length); },
+                                  kMountPath, disk_size + 1, &info));
+
+  fbl::unique_fd fd;
+  ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd),
+                     "Test is expected to fail when compression is turned off");
+
+  // We can re-open and verify the Blob as read-only.
+  fd.reset(open(info->path, O_RDONLY));
+  ASSERT_TRUE(fd, "Failed to-reopen blob");
+  ASSERT_NO_FAILURES(VerifyContents(fd.get(), info->data.get(), info->size_data));
+
+  // Force decompression by remounting, re-accessing blob.
+  ASSERT_NO_FAILURES(test->Remount());
+  fd.reset(open(info->path, O_RDONLY));
+  ASSERT_TRUE(fd, "Failed to-reopen blob");
+  ASSERT_NO_FAILURES(VerifyContents(fd.get(), info->data.get(), info->size_data));
+
+  ASSERT_EQ(0, unlink(info->path));
+}
+
+TEST_F(BlobfsTest, BlobLargerThanAvailableSpaceTest) {
+  RunUncompressedBlobDataLargerThanAvailableSpaceTest(this, environment_->disk_size());
+}
+
+TEST_F(BlobfsTestWithFvm, BlobLargerThanAvailableSpaceTest) {
+  RunUncompressedBlobDataLargerThanAvailableSpaceTest(this, environment_->disk_size());
 }
 
 // This tests growing both additional inodes and data blocks.
