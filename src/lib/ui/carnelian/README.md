@@ -10,6 +10,9 @@ instructions for more details.
 
         fx set core.x64 \
         --with //src/lib/ui/carnelian:examples \
+        --with //src/lib/ui/carnelian:carnelian-integration-test \
+        --with //src/lib/ui/carnelian:carnelian-fb-integration-test \
+        --with //src/lib/ui/carnelian:carnelian-tests \
         --with //garnet/bin/terminal:tiles_config \
         --with //src/ui \
         --with //src/ui/bin/root_presenter \

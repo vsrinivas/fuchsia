@@ -2,15 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::{
+    app::FrameBufferPtr,
+    geometry::{IntSize, Size},
     input,
     message::Message,
     view::{ViewAssistantPtr, ViewDetails},
 };
 use async_trait::async_trait;
+use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
+use fuchsia_framebuffer::PixelFormat;
 use fuchsia_zircon::{Duration, Time};
 
 #[async_trait(?Send)]
 pub(crate) trait ViewStrategy {
+    fn initial_metrics(&self) -> Size {
+        Size::zero()
+    }
+
+    fn initial_physical_size(&self) -> Size {
+        Size::zero()
+    }
+
+    fn initial_logical_size(&self) -> Size {
+        Size::zero()
+    }
+
     fn setup(&mut self, _view_details: &ViewDetails, _view_assistant: &mut ViewAssistantPtr);
     async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr);
     fn present(&mut self, view_details: &ViewDetails);
@@ -45,3 +61,20 @@ pub(crate) trait ViewStrategy {
 }
 
 pub(crate) type ViewStrategyPtr = Box<dyn ViewStrategy>;
+
+pub(crate) struct FrameBufferParams {
+    pub size: IntSize,
+    pub frame_buffer: FrameBufferPtr,
+    pub pixel_format: PixelFormat,
+}
+
+pub(crate) struct ScenicParams {
+    pub view_token: ViewToken,
+    pub control_ref: ViewRefControl,
+    pub view_ref: ViewRef,
+}
+
+pub(crate) enum ViewStrategyParams {
+    Scenic(ScenicParams),
+    FrameBuffer(FrameBufferParams),
+}

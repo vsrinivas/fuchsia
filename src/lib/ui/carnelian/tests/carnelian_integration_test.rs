@@ -68,7 +68,7 @@ mod test {
     use carnelian::{make_app_assistant, App};
 
     #[test]
-    fn carnelain_integration_test() -> std::result::Result<(), anyhow::Error> {
+    fn carnelian_integration_test() -> std::result::Result<(), anyhow::Error> {
         println!("carnelian_integration_test");
         App::test(make_app_assistant::<IntegrationTestAppAssistant>())
     }

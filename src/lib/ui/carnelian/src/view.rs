@@ -3,26 +3,21 @@
 // found in the LICENSE file.
 
 use crate::{
-    app::{FrameBufferPtr, MessageInternal, RenderOptions},
-    geometry::{IntSize, Size},
+    app::MessageInternal,
+    geometry::Size,
     input::{self},
     message::Message,
     render::Context,
-    view::strategies::{
-        base::ViewStrategyPtr, framebuffer::FrameBufferViewStrategy, scenic::ScenicViewStrategy,
-    },
+    view::strategies::base::ViewStrategyPtr,
 };
 use anyhow::Error;
-use fidl_fuchsia_ui_gfx::{self as gfx, Metrics, ViewProperties};
-use fidl_fuchsia_ui_input::SetHardKeyboardDeliveryCmd;
-use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
 use fuchsia_async::{self as fasync, Interval};
 use fuchsia_framebuffer::ImageId;
-use fuchsia_scenic::{EntityNode, SessionPtr, View};
+use fuchsia_scenic::View;
 use fuchsia_zircon::{Duration, Event, Time};
 use futures::{channel::mpsc::UnboundedSender, StreamExt};
 
-mod strategies;
+pub(crate) mod strategies;
 
 /// enum that defines all messages sent with `App::send_message` that
 /// the view struct will understand and process.
@@ -336,93 +331,6 @@ pub type ViewAssistantPtr = Box<dyn ViewAssistant>;
 /// Key identifying a view.
 pub type ViewKey = u64;
 
-pub struct ScenicResources {
-    #[allow(unused)]
-    view: View,
-    root_node: EntityNode,
-    session: SessionPtr,
-    pending_present_count: usize,
-    presentation_interval: u64,
-    next_presentation_time: u64,
-    last_presentation_time: u64,
-    app_sender: UnboundedSender<MessageInternal>,
-}
-
-impl ScenicResources {
-    fn new(
-        session: &SessionPtr,
-        view_token: ViewToken,
-        control_ref: ViewRefControl,
-        view_ref: ViewRef,
-        app_sender: UnboundedSender<MessageInternal>,
-    ) -> ScenicResources {
-        let view = View::new3(
-            session.clone(),
-            view_token,
-            control_ref,
-            view_ref,
-            Some(String::from("Carnelian View")),
-        );
-        let root_node = EntityNode::new(session.clone());
-        root_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
-        view.add_child(&root_node);
-
-        session.lock().enqueue(fidl_fuchsia_ui_scenic::Command::Input(
-            fidl_fuchsia_ui_input::Command::SetHardKeyboardDelivery(SetHardKeyboardDeliveryCmd {
-                delivery_request: true,
-            }),
-        ));
-        ScenicResources {
-            view,
-            root_node,
-            session: session.clone(),
-            pending_present_count: 0,
-            presentation_interval: 0,
-            next_presentation_time: 0,
-            last_presentation_time: 0,
-            app_sender,
-        }
-    }
-}
-
-fn scenic_present(scenic_resources: &mut ScenicResources, key: ViewKey) {
-    if scenic_resources.pending_present_count < 3 {
-        let app_sender = scenic_resources.app_sender.clone();
-        let presentation_time = scenic_resources.next_presentation_time;
-        let present_event = scenic_resources.session.lock().present(presentation_time);
-        fasync::spawn_local(async move {
-            let info = present_event.await.expect("to present");
-            app_sender
-                .unbounded_send(MessageInternal::ScenicPresentDone(key, info))
-                .expect("unbounded_send");
-        });
-        // Advance presentation time.
-        scenic_resources.pending_present_count += 1;
-        scenic_resources.last_presentation_time = presentation_time;
-        scenic_resources.next_presentation_time += scenic_resources.presentation_interval;
-    }
-}
-
-fn scenic_present_done(
-    scenic_resources: &mut ScenicResources,
-    info: fidl_fuchsia_images::PresentationInfo,
-) {
-    assert_ne!(scenic_resources.pending_present_count, 0);
-    scenic_resources.pending_present_count -= 1;
-    scenic_resources.presentation_interval = info.presentation_interval;
-    // Determine next presentation time relative to presentation that
-    // is no longer pending. Add one to ensure that presentation is past
-    // previous.
-    let next_presentation_time = info.presentation_time + 1;
-    // Re-calculate next presentation time based on number of
-    // presentations pending and make sure it is never before the
-    // last presentation time.
-    scenic_resources.next_presentation_time = scenic_resources.last_presentation_time.max(
-        next_presentation_time
-            + info.presentation_interval * scenic_resources.pending_present_count as u64,
-    );
-}
-
 #[derive(Debug)]
 pub(crate) struct ViewDetails {
     key: ViewKey,
@@ -448,75 +356,26 @@ pub struct ViewController {
 }
 
 impl ViewController {
-    pub(crate) async fn new(
+    pub(crate) async fn new_with_strategy(
         key: ViewKey,
-        view_token: ViewToken,
-        control_ref: ViewRefControl,
-        view_ref: ViewRef,
-        render_options: RenderOptions,
-        session: SessionPtr,
         mut view_assistant: ViewAssistantPtr,
+        strategy: ViewStrategyPtr,
         app_sender: UnboundedSender<MessageInternal>,
     ) -> Result<ViewController, Error> {
-        let strategy = ScenicViewStrategy::new(
-            &session,
-            render_options,
-            view_token,
-            control_ref,
-            view_ref,
-            app_sender.clone(),
-        )
-        .await?;
-
         let initial_animation_mode = view_assistant.initial_animation_mode();
+        let metrics = strategy.initial_metrics();
+        let physical_size = strategy.initial_physical_size();
+        let logical_size = strategy.initial_logical_size();
 
         let mut view_controller = ViewController {
             key,
-            metrics: Size::zero(),
-            physical_size: Size::zero(),
-            logical_size: Size::zero(),
+            metrics,
+            physical_size,
+            logical_size,
             animation_mode: initial_animation_mode,
             assistant: view_assistant,
             strategy,
             app_sender,
-        };
-
-        view_controller
-            .strategy
-            .setup(&view_controller.make_view_details(), &mut view_controller.assistant);
-
-        Ok(view_controller)
-    }
-
-    /// new_with_frame_buffer
-    pub(crate) async fn new_with_frame_buffer(
-        key: ViewKey,
-        render_options: RenderOptions,
-        size: IntSize,
-        pixel_format: fuchsia_framebuffer::PixelFormat,
-        mut view_assistant: ViewAssistantPtr,
-        app_sender: UnboundedSender<MessageInternal>,
-        frame_buffer: FrameBufferPtr,
-    ) -> Result<ViewController, Error> {
-        let strategy = FrameBufferViewStrategy::new(
-            key,
-            render_options,
-            &size,
-            pixel_format,
-            app_sender.clone(),
-            frame_buffer,
-        )
-        .await?;
-        let initial_animation_mode = view_assistant.initial_animation_mode();
-        let mut view_controller = ViewController {
-            key,
-            metrics: Size::new(1.0, 1.0),
-            physical_size: size.to_f32(),
-            logical_size: Size::zero(),
-            animation_mode: initial_animation_mode,
-            assistant: view_assistant,
-            strategy,
-            app_sender: app_sender.clone(),
         };
 
         view_controller
@@ -560,16 +419,13 @@ impl ViewController {
         self.strategy.present_done(&self.make_view_details(), &mut self.assistant, info);
     }
 
-    fn handle_metrics_changed(&mut self, metrics: &Metrics) {
-        self.metrics = Size::new(metrics.scale_x, metrics.scale_y);
+    pub(crate) fn handle_metrics_changed(&mut self, metrics: Size) {
+        self.metrics = metrics;
         self.update();
     }
 
-    fn handle_view_properties_changed(&mut self, properties: &ViewProperties) {
-        self.physical_size = Size::new(
-            properties.bounding_box.max.x - properties.bounding_box.min.x,
-            properties.bounding_box.max.y - properties.bounding_box.min.y,
-        );
+    pub(crate) fn handle_size_changed(&mut self, new_size: Size) {
+        self.physical_size = new_size;
         self.update();
     }
 
@@ -603,34 +459,22 @@ impl ViewController {
     }
 
     /// Handler for Events on this ViewController's Session.
-    pub fn handle_session_events(&mut self, events: Vec<fidl_fuchsia_ui_scenic::Event>) {
-        events.iter().for_each(|event| match event {
-            fidl_fuchsia_ui_scenic::Event::Gfx(event) => match event {
-                fidl_fuchsia_ui_gfx::Event::Metrics(event) => {
-                    self.handle_metrics_changed(&event.metrics);
+    pub fn handle_scenic_input_event(&mut self, event: fidl_fuchsia_ui_input::InputEvent) {
+        match event {
+            fidl_fuchsia_ui_input::InputEvent::Focus(focus_event) => {
+                self.focus(focus_event.focused);
+            }
+            _ => {
+                let messages = self.strategy.handle_scenic_input_event(
+                    &self.make_view_details(),
+                    &mut self.assistant,
+                    &event,
+                );
+                for msg in messages {
+                    self.send_message(msg);
                 }
-                fidl_fuchsia_ui_gfx::Event::ViewPropertiesChanged(event) => {
-                    self.handle_view_properties_changed(&event.properties);
-                }
-                _ => (),
-            },
-            fidl_fuchsia_ui_scenic::Event::Input(event) => match event {
-                fidl_fuchsia_ui_input::InputEvent::Focus(focus_event) => {
-                    self.focus(focus_event.focused);
-                }
-                _ => {
-                    let messages = self.strategy.handle_scenic_input_event(
-                        &self.make_view_details(),
-                        &mut self.assistant,
-                        &event,
-                    );
-                    for msg in messages {
-                        self.send_message(msg);
-                    }
-                }
-            },
-            _ => (),
-        });
+            }
+        }
     }
 
     /// Handler for Events on this ViewController's Session.

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::{
-    app::{FrameBufferPtr, MessageInternal, RenderOptions, FRAME_COUNT},
-    geometry::{IntSize, UintSize},
+    app::{FrameBufferPtr, MessageInternal, RenderOptions},
+    geometry::{IntSize, Size, UintSize},
     input,
     message::Message,
     render::{
@@ -40,7 +40,7 @@ pub(crate) struct FrameBufferViewStrategy {
     vsync_interval: Duration,
 }
 
-const RENDER_FRAME_COUNT: usize = FRAME_COUNT;
+const RENDER_FRAME_COUNT: usize = 2;
 
 impl FrameBufferViewStrategy {
     pub(crate) async fn new(
@@ -156,6 +156,19 @@ impl FrameBufferViewStrategy {
 
 #[async_trait(?Send)]
 impl ViewStrategy for FrameBufferViewStrategy {
+    fn initial_metrics(&self) -> Size {
+        Size::new(1.0, 1.0)
+    }
+
+    fn initial_physical_size(&self) -> Size {
+        let config = self.frame_buffer.borrow().get_config();
+        Size::new(config.width as f32, config.height as f32)
+    }
+
+    fn initial_logical_size(&self) -> Size {
+        self.initial_physical_size()
+    }
+
     fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         if let Some(available) = self.frame_set.get_available_image() {
             let (framebuffer_context, ..) = self.make_context(view_details, Some(available));

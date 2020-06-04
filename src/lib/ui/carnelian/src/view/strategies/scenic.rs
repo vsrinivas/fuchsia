@@ -12,9 +12,8 @@ use crate::{
         ContextInner,
     },
     view::{
-        scenic_present, scenic_present_done,
         strategies::base::{ViewStrategy, ViewStrategyPtr},
-        ScenicResources, ViewAssistantContext, ViewAssistantPtr, ViewDetails,
+        View, ViewAssistantContext, ViewAssistantPtr, ViewDetails,
     },
 };
 use anyhow::{Context, Error, Result};
@@ -22,10 +21,12 @@ use async_trait::async_trait;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_images::{ImagePipe2Marker, ImagePipe2Proxy};
 use fidl_fuchsia_sysmem::ImageFormat2;
+use fidl_fuchsia_ui_gfx::{self as gfx};
+use fidl_fuchsia_ui_input::SetHardKeyboardDeliveryCmd;
 use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
 use fuchsia_async::{self as fasync, OnSignals};
 use fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameSet, FrameUsage, ImageId};
-use fuchsia_scenic::{ImagePipe2, Material, Rectangle, SessionPtr, ShapeNode};
+use fuchsia_scenic::{EntityNode, ImagePipe2, Material, Rectangle, SessionPtr, ShapeNode};
 use fuchsia_zircon::{self as zx, ClockId, Event, HandleBased, Signals, Time};
 use futures::channel::mpsc::UnboundedSender;
 use std::{
@@ -144,7 +145,16 @@ const RENDER_BUFFER_COUNT: usize = 3;
 pub(crate) struct ScenicViewStrategy {
     #[allow(unused)]
     render_options: RenderOptions,
-    scenic_resources: ScenicResources,
+    #[allow(unused)]
+    view: View,
+    #[allow(unused)]
+    root_node: EntityNode,
+    session: SessionPtr,
+    pending_present_count: usize,
+    presentation_interval: u64,
+    next_presentation_time: u64,
+    last_presentation_time: u64,
+    app_sender: UnboundedSender<MessageInternal>,
     content_node: ShapeNode,
     content_material: Material,
     next_buffer_collection: u32,
@@ -165,19 +175,40 @@ impl ScenicViewStrategy {
         view_ref: ViewRef,
         app_sender: UnboundedSender<MessageInternal>,
     ) -> Result<ViewStrategyPtr, Error> {
-        let scenic_resources =
-            ScenicResources::new(session, view_token, control_ref, view_ref, app_sender);
         let (image_pipe_client, server_end) = create_endpoints::<ImagePipe2Marker>()?;
         let image_pipe = ImagePipe2::new(session.clone(), server_end);
         let content_material = Material::new(session.clone());
         let content_node = ShapeNode::new(session.clone());
         content_node.set_material(&content_material);
-        scenic_resources.root_node.add_child(&content_node);
         let image_pipe_client = image_pipe_client.into_proxy()?;
         session.lock().flush();
+        let view = View::new3(
+            session.clone(),
+            view_token,
+            control_ref,
+            view_ref,
+            Some(String::from("Carnelian View")),
+        );
+        let root_node = EntityNode::new(session.clone());
+        root_node.add_child(&content_node);
+        root_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
+        view.add_child(&root_node);
+
+        session.lock().enqueue(fidl_fuchsia_ui_scenic::Command::Input(
+            fidl_fuchsia_ui_input::Command::SetHardKeyboardDelivery(SetHardKeyboardDeliveryCmd {
+                delivery_request: true,
+            }),
+        ));
         let strat = ScenicViewStrategy {
+            view,
+            session: session.clone(),
+            app_sender: app_sender.clone(),
+            pending_present_count: 0,
+            presentation_interval: 0,
+            next_presentation_time: 0,
+            last_presentation_time: 0,
+            root_node,
             render_options,
-            scenic_resources,
             image_pipe_client,
             image_pipe,
             content_node,
@@ -283,7 +314,7 @@ impl ViewStrategy for ScenicViewStrategy {
             let center_y = view_details.physical_size.height * 0.5;
             self.content_node.set_translation(center_x, center_y, -0.1);
             let rectangle = Rectangle::new(
-                self.scenic_resources.session.clone(),
+                self.session.clone(),
                 view_details.physical_size.width as f32,
                 view_details.physical_size.height as f32,
             );
@@ -308,7 +339,7 @@ impl ViewStrategy for ScenicViewStrategy {
                 let local_event = image_freed_event
                     .duplicate_handle(zx::Rights::SAME_RIGHTS)
                     .expect("duplicate_handle");
-                let app_sender = self.scenic_resources.app_sender.clone();
+                let app_sender = self.app_sender.clone();
                 let key = view_details.key;
                 let collection_id = plumber.collection_id;
                 fasync::spawn_local(async move {
@@ -335,7 +366,22 @@ impl ViewStrategy for ScenicViewStrategy {
     }
 
     fn present(&mut self, view_details: &ViewDetails) {
-        scenic_present(&mut self.scenic_resources, view_details.key);
+        if self.pending_present_count < 3 {
+            let app_sender = self.app_sender.clone();
+            let presentation_time = self.next_presentation_time;
+            let present_event = self.session.lock().present(presentation_time);
+            let key = view_details.key;
+            fasync::spawn_local(async move {
+                let info = present_event.await.expect("to present");
+                app_sender
+                    .unbounded_send(MessageInternal::ScenicPresentDone(key, info))
+                    .expect("unbounded_send");
+            });
+            // Advance presentation time.
+            self.pending_present_count += 1;
+            self.last_presentation_time = presentation_time;
+            self.next_presentation_time += self.presentation_interval;
+        }
     }
 
     fn present_done(
@@ -344,7 +390,19 @@ impl ViewStrategy for ScenicViewStrategy {
         _view_assistant: &mut ViewAssistantPtr,
         info: fidl_fuchsia_images::PresentationInfo,
     ) {
-        scenic_present_done(&mut self.scenic_resources, info);
+        assert_ne!(self.pending_present_count, 0);
+        self.pending_present_count -= 1;
+        self.presentation_interval = info.presentation_interval;
+        // Determine next presentation time relative to presentation that
+        // is no longer pending. Add one to ensure that presentation is past
+        // previous.
+        let next_presentation_time = info.presentation_time + 1;
+        // Re-calculate next presentation time based on number of
+        // presentations pending and make sure it is never before the
+        // last presentation time.
+        self.next_presentation_time = self.last_presentation_time.max(
+            next_presentation_time + info.presentation_interval * self.pending_present_count as u64,
+        );
     }
 
     fn handle_scenic_input_event(
