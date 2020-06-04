@@ -84,6 +84,17 @@ int usage(void) {
   fprintf(stderr, " --system [path] - Add path as system type (must be minfs)\n");
   fprintf(stderr, " --default [path] - Add generic path\n");
   fprintf(stderr, " --sparse [path] - Path to compressed sparse file\n");
+  fprintf(stderr,
+          " --resize-image-file-to-fit - When used with create/extend command, the output image "
+          "file will "
+          "be resized to just fit the metadata header and added partitions. Disk size specified in "
+          "the header remains the same. It's useful for reducing the size of the image file for "
+          "flashing\n");
+  fprintf(
+      stderr,
+      " --length-is-lowerbound - When used with extend command, if current disk size is already "
+      "no smaller than the specified size, the command will be no-op. If the option is not "
+      "specified, it will error out in this case.\n");
   fprintf(stderr, "reserve options:\n");
   fprintf(stderr,
           " These options, on success, reserve additional fvm slices for data/inodes.\n"
@@ -255,6 +266,8 @@ int main(int argc, char** argv) {
   DiskType disk_type = DiskType::File;
 
   bool should_unlink = true;
+  bool resize_image_file_to_fit = false;
+  bool length_is_lower_bound = false;
   uint32_t flags = 0;
 
   while (i < argc) {
@@ -299,6 +312,10 @@ int main(int argc, char** argv) {
       if (parse_size(argv[++i], &max_disk_size) < 0) {
         return -1;
       }
+    } else if (!strcmp(argv[i], "--resize-image-file-to-fit")) {
+      resize_image_file_to_fit = true;
+    } else if (!strcmp(argv[i], "--length-is-lowerbound")) {
+      length_is_lower_bound = true;
     } else {
       break;
     }
@@ -349,6 +366,10 @@ int main(int argc, char** argv) {
       return -1;
     }
 
+    if (resize_image_file_to_fit) {
+      fvmContainer->SetResizeImageFileToFit(FvmContainer::ResizeImageFileToFitOption::YES);
+    }
+
     if (fvmContainer->Commit() != ZX_OK) {
       return -1;
     }
@@ -381,6 +402,10 @@ int main(int argc, char** argv) {
     std::unique_ptr<FvmContainer> fvmContainer;
     if (FvmContainer::CreateExisting(path, offset, &fvmContainer) != ZX_OK) {
       return -1;
+    }
+
+    if (length_is_lower_bound) {
+      fvmContainer->SetExtendLengthType(FvmContainer::ExtendLengthType::LOWER_BOUND);
     }
 
     if (fvmContainer->Extend(length) != ZX_OK) {

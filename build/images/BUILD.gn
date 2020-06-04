@@ -1010,6 +1010,22 @@ default_image_deps += [ ":data.blk" ]
 max_fvm_size_file = "$root_build_dir/max_fvm_size.txt"
 write_file(max_fvm_size_file, max_fvm_size)
 
+fvm_blob_partition = {
+  type = "blob"
+  dep = ":blob.blk"
+  minimum_inodes = blobfs_minimum_inodes
+  minimum_data_bytes = blobfs_minimum_data_bytes
+  maximum_bytes = blobfs_maximum_bytes
+}
+
+fvm_data_partition = {
+  type = "data"
+  dep = ":data.blk"
+  minimum_inodes = minfs_minimum_inodes
+  minimum_data_bytes = minfs_minimum_data_bytes
+  maximum_bytes = minfs_maximum_bytes
+}
+
 # fvm.blk creates an FVM partition image containing the blob partition produced
 # by blob.blk and the data partition produced by data.blk. fvm.blk is primarily
 # invoked and used by the qemu run, via `fx emu` / `fx qemu`.
@@ -1024,23 +1040,12 @@ generate_fvm("fvm.blk") {
     args += [
       "--length",
       fvm_image_size,
+      "--resize-image-file-to-fit",
     ]
   }
   partitions = [
-    {
-      type = "blob"
-      dep = ":blob.blk"
-      minimum_inodes = blobfs_minimum_inodes
-      minimum_data_bytes = blobfs_minimum_data_bytes
-      maximum_bytes = blobfs_maximum_bytes
-    },
-    {
-      type = "data"
-      dep = ":data.blk"
-      minimum_inodes = minfs_minimum_inodes
-      minimum_data_bytes = minfs_minimum_data_bytes
-      maximum_bytes = minfs_maximum_bytes
-    },
+    fvm_blob_partition,
+    fvm_data_partition,
   ]
   metadata = {
     images = [
@@ -1074,20 +1079,8 @@ generate_fvm("fvm.sparse.blk") {
   ]
   args = fvm_sparse_args
   partitions = [
-    {
-      type = "blob"
-      dep = ":blob.blk"
-      minimum_inodes = blobfs_minimum_inodes
-      minimum_data_bytes = blobfs_minimum_data_bytes
-      maximum_bytes = blobfs_maximum_bytes
-    },
-    {
-      type = "data"
-      dep = ":data.blk"
-      minimum_inodes = minfs_minimum_inodes
-      minimum_data_bytes = minfs_minimum_data_bytes
-      maximum_bytes = minfs_maximum_bytes
-    },
+    fvm_blob_partition,
+    fvm_data_partition,
   ]
 
   metadata = {

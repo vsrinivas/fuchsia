@@ -32,7 +32,7 @@ function fx-fvm-extend-image {
     # need to modify it in order to extend it.
     echo -n "Creating disk image..."
     cp "${fvmraw}" "${fvmimg}"
-    "${HOST_OUT_DIR}/fvm" "${fvmimg}" extend --length "${newsize}"
+    "${HOST_OUT_DIR}/fvm" "${fvmimg}" extend --length "${newsize}" --length-is-lowerbound
     echo "done"
   else
     fx-error "Could not extend fvm, unable to stat fvm image"

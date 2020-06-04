@@ -77,7 +77,7 @@ TEST_femu_osx_networking() {
   # Verify that fvm resized the disk file by 2x from the input 1024 to 2048.
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/fvm.mock_state"
-  gn-test-check-mock-args _ANY_ _ANY_ extend --length 2048
+  gn-test-check-mock-args _ANY_ _ANY_ extend --length 2048 --length-is-lowerbound
 
   # Check that fpave.sh was called to download the needed system images
   # shellcheck disable=SC1090

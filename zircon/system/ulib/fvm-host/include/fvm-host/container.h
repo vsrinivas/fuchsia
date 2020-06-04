@@ -87,6 +87,10 @@ class FvmContainer final : public Container {
   };
 
  public:
+  enum class ResizeImageFileToFitOption { YES, NO };
+
+  enum class ExtendLengthType { EXACT, LOWER_BOUND };
+
   // Creates a new FvmContainer at the given |path|, regardless of whether one already exists.
   // Uses the provided |slice_size| to create the container starting at |offset| bytes within the
   // file with a total length of |length| bytes, and returns the result in |out|.
@@ -105,6 +109,7 @@ class FvmContainer final : public Container {
   // an existing FvmContainer.
   zx_status_t Init();
   zx_status_t Verify() const final;
+
   zx_status_t Commit() final;
 
   // Extends the FVM container to the specified length
@@ -117,11 +122,17 @@ class FvmContainer final : public Container {
   // Returns the actual disk size.
   uint64_t GetDiskSize() const;
 
+  void SetResizeImageFileToFit(ResizeImageFileToFitOption opt) { resize_image_file_to_fit_ = opt; }
+
+  void SetExtendLengthType(ExtendLengthType opt) { extend_length_type_ = opt; }
+
  private:
   uint64_t disk_offset_;
   uint64_t disk_size_;
   fbl::Vector<FvmPartitionInfo> partitions_;
   FvmInfo info_;
+  ResizeImageFileToFitOption resize_image_file_to_fit_ = ResizeImageFileToFitOption::NO;
+  ExtendLengthType extend_length_type_ = ExtendLengthType::EXACT;
 
   FvmContainer(const char* path, size_t slice_size, off_t offset, off_t length);
 
@@ -142,6 +153,10 @@ class FvmContainer final : public Container {
   zx_status_t WriteExtent(unsigned extent_index, Format* format, uint32_t* pslice);
   // Write one data block of size |block_size| to disk at |block_offset| within pslice |pslice|
   zx_status_t WriteData(uint32_t pslice, uint32_t block_offset, size_t block_size, void* data);
+  // Calculate total slices in added partitions.
+  size_t CountAddedSlices() const;
+  // Minimize the image file that only keep header and added partitions.
+  zx_status_t ResizeImageFileToFit();
 };
 
 class CompressionContext {

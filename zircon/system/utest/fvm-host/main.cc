@@ -281,7 +281,9 @@ bool ReportSparse(uint32_t flags) {
 // Creates a fvm container and adds partitions to it. When should succeed is false,
 // the function surfaces the error in adding partition to caller without asserting.
 bool CreateFvm(bool create_before, off_t offset, size_t slice_size, bool should_pass,
-               bool enable_data = true) {
+               bool enable_data = true,
+               FvmContainer::ResizeImageFileToFitOption resize_image_file_to_fit =
+                   FvmContainer::ResizeImageFileToFitOption::NO) {
   BEGIN_HELPER;
   unittest_printf("Creating fvm container: %s\n", fvm_path);
 
@@ -296,6 +298,7 @@ bool CreateFvm(bool create_before, off_t offset, size_t slice_size, bool should_
             ZX_OK, "Failed to initialize fvm container");
   ASSERT_TRUE(AddPartitions(fvmContainer.get(), enable_data, should_pass));
   if (should_pass) {
+    fvmContainer->SetResizeImageFileToFit(resize_image_file_to_fit);
     ASSERT_EQ(fvmContainer->Commit(), ZX_OK, "Failed to write to fvm file");
   }
   END_HELPER;
@@ -830,10 +833,65 @@ bool TestPaveZxcryptFail() {
   END_TEST;
 }
 
+size_t ComputeRequiredDataSize(const std::unique_ptr<FvmContainer>& container) {
+  // Make use of the CalculateDiskSize() method to compute the required data size.
+  // The required data size is one that does not include the header size and extended part.
+  size_t minimal_disk_size = container->CalculateDiskSize();
+  size_t minimal_metadata_size = fvm::MetadataSize(minimal_disk_size, kDefaultSliceSize);
+  return minimal_disk_size - 2 * minimal_metadata_size;
+}
+
+bool TestCreateWithResizeImageFileToFit() {
+  BEGIN_TEST;
+  size_t offset = 4096;
+  ASSERT_TRUE(CreateFvm(true, offset, kDefaultSliceSize, true /* should_pass */, true,
+                        FvmContainer::ResizeImageFileToFitOption::YES));
+  std::unique_ptr<FvmContainer> container;
+  ASSERT_EQ(ZX_OK, FvmContainer::CreateExisting(fvm_path, offset, &container),
+            "Failed to initialize fvm container");
+  auto required_data_size = ComputeRequiredDataSize(container);
+  size_t expected_size =
+      offset + required_data_size + 2 * fvm::MetadataSize(kContainerSize, kDefaultSliceSize);
+  off_t current_size;
+  ASSERT_TRUE(StatFile(fvm_path, &current_size));
+  ASSERT_EQ(static_cast<size_t>(current_size), expected_size);
+  DestroyFvm();
+  END_TEST;
+}
+
+bool TestExtendWithResizeImageFileToFit() {
+  BEGIN_TEST;
+  ASSERT_TRUE(CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true));
+  std::unique_ptr<FvmContainer> container;
+  ASSERT_EQ(ZX_OK, FvmContainer::CreateExisting(fvm_path, 0, &container),
+            "Failed to initialize fvm container");
+  container->SetResizeImageFileToFit(FvmContainer::ResizeImageFileToFitOption::YES);
+  ASSERT_EQ(container->Extend(kContainerSize * 2), ZX_OK);
+  auto required_data_size = ComputeRequiredDataSize(container);
+  size_t expected_size =
+      required_data_size + 2 * fvm::MetadataSize(2 * kContainerSize, kDefaultSliceSize);
+  off_t current_size;
+  ASSERT_TRUE(StatFile(fvm_path, &current_size));
+  ASSERT_EQ(static_cast<size_t>(current_size), expected_size);
+  DestroyFvm();
+  END_TEST;
+}
+
+bool ExtendToSmallerThanCurrentSizeSucceedWithLowerBoundLength() {
+  BEGIN_TEST;
+  ASSERT_TRUE(CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true));
+  std::unique_ptr<FvmContainer> container;
+  ASSERT_EQ(ZX_OK, FvmContainer::CreateExisting(fvm_path, 0, &container),
+            "Failed to initialize fvm container");
+  container->SetExtendLengthType(FvmContainer::ExtendLengthType::LOWER_BOUND);
+  ASSERT_EQ(container->Extend(kContainerSize - 1), ZX_OK);
+  DestroyFvm();
+  END_TEST;
+}
+
 constexpr size_t CalculateExtendedContainerSize(const size_t initial_container_size,
                                                 const size_t extended_container_size) {
-  const size_t initial_metadata_size =
-      fvm::MetadataSize(initial_container_size, kDefaultSliceSize);
+  const size_t initial_metadata_size = fvm::MetadataSize(initial_container_size, kDefaultSliceSize);
   const size_t extended_metadata_size =
       fvm::MetadataSize(extended_container_size, kDefaultSliceSize);
 
@@ -1080,6 +1138,9 @@ RUN_ALL_PAVE(kDefaultSliceSize)
 #endif
 
 RUN_TEST_MEDIUM(TestPaveZxcryptFail)
+RUN_TEST_MEDIUM(TestCreateWithResizeImageFileToFit)
+RUN_TEST_MEDIUM(TestExtendWithResizeImageFileToFit)
+RUN_TEST_MEDIUM(ExtendToSmallerThanCurrentSizeSucceedWithLowerBoundLength)
 #if 0  // TODO(bug 38188)
 RUN_TEST_MEDIUM(TestExtendChangesMetadataSize)
 #endif

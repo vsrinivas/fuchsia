@@ -261,9 +261,17 @@ zx_status_t FvmContainer::Verify() const {
 
 zx_status_t FvmContainer::Extend(size_t disk_size) {
   if (disk_size <= disk_size_) {
-    fprintf(stderr, "Cannot extend to disk size %zu smaller than current size %" PRIu64 "\n",
-            disk_size, disk_size_);
-    return ZX_ERR_INVALID_ARGS;
+    if (extend_length_type_ == ExtendLengthType::LOWER_BOUND) {
+      fprintf(stderr,
+              "Current size %" PRIu64
+              " is already greater than or equal to target disk size %zu.\n",
+              disk_size_, disk_size);
+      return ZX_OK;
+    } else {
+      fprintf(stderr, "Cannot extend to disk size %zu smaller than current size %" PRIu64 "\n",
+              disk_size, disk_size_);
+      return ZX_ERR_INVALID_ARGS;
+    }
   } else if (disk_offset_) {
     fprintf(stderr, "Cannot extend FVM within another container\n");
     return ZX_ERR_BAD_STATE;
@@ -364,6 +372,10 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
     return ZX_ERR_IO;
   }
 
+  if (resize_image_file_to_fit_ == ResizeImageFileToFitOption::YES) {
+    return ResizeImageFileToFit();
+  }
+
   cleanup.cancel();
   return ZX_OK;
 }
@@ -418,7 +430,24 @@ zx_status_t FvmContainer::Commit() {
     }
   }
 
+  if (resize_image_file_to_fit_ == ResizeImageFileToFitOption::YES) {
+    return ResizeImageFileToFit();
+  }
+
   xprintf("Successfully wrote FVM data to disk\n");
+  return ZX_OK;
+}
+
+zx_status_t FvmContainer::ResizeImageFileToFit() {
+  // Resize the image file to just fit the header and added partitions. Disk size specified in
+  // the metadata header remains the same. Metadatasize and slice offset stay consistent with the
+  // the specified disk size.
+  size_t required_data_size = CountAddedSlices() * slice_size_;
+  size_t minimal_size = disk_offset_ + required_data_size + 2 * info_.MetadataSize();
+  if (ftruncate(fd_.get(), minimal_size) != 0) {
+    fprintf(stderr, "Failed to truncate fvm container");
+    return ZX_ERR_IO;
+  }
   return ZX_OK;
 }
 
@@ -515,9 +544,7 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name,
   return ZX_OK;
 }
 
-uint64_t FvmContainer::CalculateDiskSize() const {
-  info_.CheckValid();
-
+size_t FvmContainer::CountAddedSlices() const {
   size_t required_slices = 0;
 
   for (size_t index = 1; index < fvm::kMaxVPartitions; index++) {
@@ -530,8 +557,12 @@ uint64_t FvmContainer::CalculateDiskSize() const {
 
     required_slices += vpart->slices;
   }
+  return required_slices;
+}
 
-  return CalculateDiskSizeForSlices(required_slices);
+uint64_t FvmContainer::CalculateDiskSize() const {
+  info_.CheckValid();
+  return CalculateDiskSizeForSlices(CountAddedSlices());
 }
 
 uint64_t FvmContainer::GetDiskSize() const { return disk_size_; }
