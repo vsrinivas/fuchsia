@@ -94,11 +94,9 @@ Note the following details:
     [`fuchsia_component.gni`](/src/sys/build/fuchsia_component.gni),
     [`fuchsia_package.gni`](/src/sys/build/fuchsia_package.gni), and
     [`fuchsia_test.gni`](/src/sys/build/fuchsia_test.gni).
-
 *   This example defines an `executable()`, which is used to build a C++
     program. This is for illustrative purposes - a component can launch all
     sorts of programs.
-
 *   This example defines a `fuchsia_component()` which depends on the
     `executable()`. The component definition attaches a manifest, which
     references the executable to be launched under the given path
@@ -119,7 +117,6 @@ Note the following details:
     Finally, the destination path for the manifest is not specified, but rather
     inferred from the component's name. In this example, the manifest path will
     be `meta/my-component.cmx`.
-
 *   This example defines a `fuchsia_package()` which depends on the component.
     Note that packages can depend on any number of components. It is also
     possible, though rare, to define packages with no components in them, just
@@ -197,9 +194,7 @@ Note the following details:
 *   This example defines `"my-test-component"` which is assumed to implement a
     test. Commonly this is done using some testing framework such as C++
     Googletest, Rust Cargo test, etc'.
-
 *   To launch this test, you can use [`fx test`][fx-test].
-
 *   The test is packaged with another component,
     `"my-other-component-under-test"`. Presumably this component participates in
     the test. For instance, the component under test might implement a protocol,
@@ -212,12 +207,10 @@ Note the following details:
     test was present in another package that's already installed on the target
     device, then the test would be exposed to side effects and version skew.
     Packaging the test with its dependencies makes it more hermetic.
-
 *   Note the `environments` parameter. `fuchsia_test_package()` can optionally
     take [`test_spec.gni`](/build/testing/test_spec.gni) parameters to override
     the default testing behavior. In this example, this test is configured to
     run on VIM2 devices.
-
 *   Finally, this example defines a `group()` to contain all the tests (which we
     have exactly one of). This is a [recommended practice][source-code-layout]
     for organizing targets across the source tree.
@@ -270,7 +263,6 @@ Note the following details:
 *   These templates fuse the roles of the target that defines the executable
     program with that of `fuchsia_component()`. A `fuchsia_package()` or
     `fuchsia_test_package()` target is still required.
-
 *   The executable will be packaged under the path `bin/`, and named after the
     target or `output_name` if it is defined.
 
@@ -326,28 +318,22 @@ Note the following details:
 
 *   These templates fuse the roles of the target that defines the executable
     program with that of `fuchsia_component()` and `fuchsia_test_package()`.
-
 *   The executable will be packaged under the path `test/`, and named after the
     target or `output_name` if it is defined.
-
 *   In the examples above, the targets don't specify a component manifest. One
     is then generated for them. The generated manifest requests very trivial
     capabilities for the component that are typically sufficient to run a
     "pure" unit test that exercises algorithms or business logic.
-
 *   In order to provide a component manifest, specify a `manifest` parameter
     with a path to the manifest file.
-
 *   One way to find the generated component manifest file is as follows:
     ```bash
     fx gn outputs out/default <unittest_target>_generated_manifest
     ```
-
     To print it directly:
     ```bash
     cat out/default/`fx gn outputs out/default <unittest_target>_generated_manifest`
     ```
-
     This command will not work if `manifest` is provided (i.e. there is no
     generated manifest). Instead an error will be printed stating that the
     target was not found.
@@ -423,6 +409,158 @@ See also:
 
 *   [Working with packages][working-with-packages]
 *   [pm]
+
+## Migrating from legacy `package()`
+
+The example below demonstrates a migration from the legacy
+[`package()`](/build/package.gni) template to the new
+[`fuchsia_package()`](/src/sys/build/fuchsia_package.gni) & friends.
+The example is adapted from
+[`//src/sys/timekeeper/BUILD.gn`](/src/sys/timekeeper/BUILD.gn).
+
+### Pre-migration {#pre-migration}
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "timekeeper"
+  edition = "2018"
+  with_unit_tests = true
+  deps = [ ... ]
+}
+
+config_data("timekeeper_config") {
+  for_pkg = "sysmgr"
+  outputs = [ "timekeeper.config" ]
+  sources = [ "service.config" ]
+}
+
+package("timekeeper") {
+  meta = [
+    {
+      path = "meta/service.cmx"
+      dest = "timekeeper.cmx"
+    },
+  ]
+  deps = [
+    ":bin",
+    ":timekeeper_config",
+  ]
+  binaries = [
+    {
+      name = "timekeeper"
+    },
+  ]
+}
+
+test_package("timekeeper_bin_test") {
+  deps = [ ":bin_test" ]
+  tests = [
+    {
+      name = "timekeeper_bin_test"
+      environments = basic_envs
+    },
+  ]
+  resources = [
+    {
+      path = "test/y2k"
+      dest = "y2k"
+    },
+    {
+      path = "test/end-of-unix-time"
+      dest = "end-of-unix-time"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":timekeeper_bin_test" ]
+}
+
+### Post-migration {#post-migration}
+
+import("//build/config.gni")
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
+
+rustc_binary("bin") {
+  name = "timekeeper"
+  edition = "2018"
+  with_unit_tests = true
+  deps = [ ... ]
+}
+
+config_data("timekeeper_config") {
+  for_pkg = "sysmgr"
+  outputs = [ "timekeeper.config" ]
+  sources = [ "service.config" ]
+}
+
+fuchsia_component("service") {
+  component_name = "timekeeper"
+  manifest = "meta/service.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("timekeeper") {
+  components = [ ":service" ]
+}
+
+fuchsia_unittest_package("timekeeper-unittests") {
+  executable_name = "timekeeper"
+  manifest = "meta/unittests.cmx"
+  deps = [ ":bin_test" ]
+  resources = [
+    {
+      source = "test/y2k"
+      destination = "data/y2k"
+    },
+    {
+      source = "test/end-of-unix-time"
+      destination = "data/end-of-unix-time"
+    },
+  ]
+}
+
+### Migration considerations
+
+*   Targets that generate executables or data files are not expected to change
+    in a migration.
+*   Names for packages are expected to have dashes ("-") instead of underscores
+    ("_"). The same is not required for components, though it's recommended for
+    consistency.
+*   Previously, `meta/service.cmx` was given the destination `"timekeeper.cmx"`
+    which placed it in `meta/timekeeper.cmx`. With `fuchsia_component()`, the
+    given manifest is automatically renamed per the component name
+    (`"timekeeper"`) and `meta/` is prepended. As a result, the launch URL for
+    the timekeeper component remains the same:
+    `fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx`
+*   Additional resources (in this case, the data asset files used in the test
+    such as the `test/y2k` file) are included in a similar fashion. However
+    their destination path is a full packaged path, whereas before it would have
+    `"data/"` automatically prepended to it. In both cases, the data file can
+    be read by the test at runtime from the paths `"/pkg/data/y2k"` and
+    `"/pkg/data/end-of-unix-time"`.
+*   Optionally `destination` can be omitted, in which case it defaults to the
+    short name of the source file. In the example above the full paths would
+    then be `"/pkg/y2k"` and `"/pkg/end-of-unix-time"`.
+
+### Unsupported features
+
+Note that some features of `package()` are unsupported moving forward. If your
+package depends on them then at this time it cannot be migrated to the new
+templates. These unsupported features include:
+
+*   Legacy `shell` binaries (deprecated global `/bin` directory)
+*   Marking a test as disabled. This should instead be done for instance by
+    changing the test source code to disable specific test cases or the entire
+    test suite.
+*   Legacy `drivers` (deprecated global `/driver` directory)
+*   Legacy `loadable_modules` and `libraries` (deprecated global `/lib`
+    directory)
 
 [cml-format]: /docs/concepts/components/component_manifests.md
 [cmx-format]: /docs/concepts/storage/component_manifest.md
