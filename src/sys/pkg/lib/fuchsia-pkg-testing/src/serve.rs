@@ -287,19 +287,22 @@ impl ServedRepository {
         } else {
             let fs_path = repo.join(uri_path.strip_prefix("/").unwrap_or(uri_path));
             // FIXME synchronous IO in an async context.
-            let data = match std::fs::read(fs_path) {
-                Ok(data) => data,
+            let (status, data) = match std::fs::read(fs_path) {
+                Ok(data) => (StatusCode::OK, data),
                 Err(ref err) if err.kind() == std::io::ErrorKind::NotFound => {
-                    return fail(StatusCode::NOT_FOUND);
+                    (StatusCode::NOT_FOUND, "File did not exist".to_owned().into_bytes())
                 }
                 Err(err) => {
                     eprintln!("error reading repo file: {}", err);
-                    return fail(StatusCode::INTERNAL_SERVER_ERROR);
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "Failed to read repo file".to_owned().into_bytes(),
+                    )
                 }
             };
 
             Response::builder()
-                .status(StatusCode::OK)
+                .status(status)
                 .header(header::CONTENT_LENGTH, data.len())
                 .body(Body::from(data))
                 .unwrap()
