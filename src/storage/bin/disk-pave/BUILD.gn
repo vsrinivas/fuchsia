@@ -3,6 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":install-disk-image-test-package" ]
+}
 
 group("disk-pave") {
   deps = [ ":install-disk-image" ]
@@ -38,11 +44,6 @@ executable("install-disk-image") {
 }
 
 test("install-disk-image-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -71,5 +72,17 @@ test("install-disk-image-test") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fzl",
+  ]
+}
+
+test_package("install-disk-image-test-package") {
+  deps = [ ":install-disk-image-test" ]
+
+  tests = [
+    {
+      name = "install-disk-image-test"
+      dest = "install-disk-image-test"
+      environments = basic_envs
+    },
   ]
 }
