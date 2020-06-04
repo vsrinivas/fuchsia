@@ -346,6 +346,21 @@ class result<E, T> {
     __builtin_abort();
   }
 
+  // Augments the error value of the result with the given error value. The
+  // operator E::operator+=(F) must be defined. Additionally, E may not be a
+  // pointer, primitive, or enum type.
+  //
+  // May only be called when the result contains an error.
+  template <typename F, ::fitx::internal::requires_conditions<
+                            std::is_class<E>, ::fitx::internal::has_plus_equals<E, F>> = true>
+  constexpr result& operator+=(error<F> error) {
+    if (is_error()) {
+      storage_.error_or_value.error += std::move(error.value_);
+      return *this;
+    }
+    __builtin_abort();
+  }
+
  protected:
   // Default constructs a result in empty state.
   constexpr result() = default;
@@ -425,6 +440,21 @@ class result<E> {
   constexpr error<E> take_error() {
     if (is_error()) {
       return error<E>(std::move(storage_.error_or_value.error));
+    }
+    __builtin_abort();
+  }
+
+  // Augments the error value of the result with the given value. The
+  // operator E::operator+=(F) must be defined. Additionally, E may not be a
+  // pointer, primitive, or enum type.
+  //
+  // May only be called when the result contains an error.
+  template <typename F, ::fitx::internal::requires_conditions<
+                            std::is_class<E>, ::fitx::internal::has_plus_equals<E, F>> = true>
+  constexpr result& operator+=(error<F> error) {
+    if (is_error()) {
+      storage_.error_or_value.error += std::move(error.value_);
+      return *this;
     }
     __builtin_abort();
   }

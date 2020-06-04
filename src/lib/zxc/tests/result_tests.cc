@@ -9,8 +9,10 @@
 #include <cstddef>
 #include <cstring>
 #include <optional>
+#include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include <zxtest/zxtest.h>
 
@@ -80,6 +82,33 @@ static_assert(fitx::result<int, int>{fitx::error(10)}.is_ok() == false);
 static_assert(fitx::result<int, int>{fitx::error(10)}.is_error() == true);
 static_assert(fitx::result<int, int>{fitx::error(10)}.error_value() == 10);
 static_assert(fitx::result<int, int>{fitx::error(10)}.value_or(20) == 20);
+
+// Agumenting errors.
+struct augmented_error {
+  struct yes {};
+  struct no {};
+
+  // Error can be augmented by type yes but not type no.
+  constexpr void operator+=(yes) {}
+};
+
+template <typename T>
+constexpr bool agument_compiles() {
+  {
+    fitx::result<augmented_error> result = fitx::error<augmented_error>();
+    result += fitx::error<T>();
+  }
+  {
+    fitx::result<augmented_error, int> result = fitx::error<augmented_error>();
+    result += fitx::error<T>();
+  }
+  return true;
+}
+
+static_assert(agument_compiles<augmented_error::yes>());
+#if 0 || TEST_DOES_NOT_COMPILE
+static_assert(agument_compiles<augmented_error::no>());
+#endif
 
 // Arrow operator and arrow operator forwarding.
 struct test_members {
@@ -921,6 +950,45 @@ TEST(LibZxCommon, StatusString) {
   {
     zx::status<int> status = zx::error(ZX_ERR_NO_MEMORY);
     EXPECT_STR_EQ(status.status_string(), zx_status_get_string(ZX_ERR_NO_MEMORY));
+  }
+}
+
+struct ErrorMsg {
+  zx_status_t status;
+  std::vector<std::string> details{};
+
+  void operator+=(std::string value) { details.push_back(std::move(value)); }
+};
+
+TEST(LibZxCommon, AugmentError) {
+  {
+    fitx::result<std::string> result = fitx::error("Bad outcome!");
+    result += fitx::error("More details!");
+    EXPECT_STR_EQ(result.error_value(), "Bad outcome!More details!");
+  }
+
+  {
+    fitx::result<std::string, int> result = fitx::error("Bad outcome!");
+    result += fitx::error("More details!");
+    EXPECT_STR_EQ(result.error_value(), "Bad outcome!More details!");
+  }
+
+  {
+    fitx::result<ErrorMsg> result = fitx::error(ErrorMsg{ZX_ERR_NOT_FOUND});
+    EXPECT_EQ(0, result.error_value().details.size());
+
+    result += fitx::error("More details!");
+    ASSERT_EQ(1, result.error_value().details.size());
+    EXPECT_STR_EQ(result.error_value().details[0], "More details!");
+  }
+
+  {
+    fitx::result<ErrorMsg, int> result = fitx::error(ErrorMsg{ZX_ERR_NOT_FOUND});
+    EXPECT_EQ(0, result.error_value().details.size());
+
+    result += fitx::error("More details!");
+    ASSERT_EQ(1, result.error_value().details.size());
+    EXPECT_STR_EQ(result.error_value().details[0], "More details!");
   }
 }
 

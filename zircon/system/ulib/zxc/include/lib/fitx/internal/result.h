@@ -32,21 +32,13 @@ namespace internal {
 // otherwise.
 template <typename T, typename = void>
 struct arrow_operator {
-  static constexpr T* forward(T& value) {
-    return &value;
-  }
-  static constexpr const T* forward(const T& value) {
-    return &value;
-  }
+  static constexpr T* forward(T& value) { return &value; }
+  static constexpr const T* forward(const T& value) { return &value; }
 };
 template <typename T>
 struct arrow_operator<T, void_t<decltype(std::declval<T>().operator->())>> {
-  static constexpr T& forward(T& value) {
-    return value;
-  }
-  static constexpr const T& forward(const T& value) {
-    return value;
-  }
+  static constexpr T& forward(T& value) { return value; }
+  static constexpr const T& forward(const T& value) { return value; }
 };
 
 // Detects whether the given expression evaluates to a fitx::result.
@@ -79,6 +71,13 @@ std::false_type match_success(...);
 // Predicate indicating whether type T is an instantiation of fitx::ok.
 template <typename T>
 static constexpr bool is_success = decltype(match_success(std::declval<T>()))::value;
+
+// Determines whether T += U is well defined.
+template <typename T, typename U, typename = void>
+struct has_plus_equals : std::false_type {};
+template <typename T, typename U>
+struct has_plus_equals<T, U, void_t<decltype(std::declval<T>() += std::declval<U>())>>
+    : std::true_type {};
 
 // Predicate indicating whether type T is not an instantiation of fitx::error.
 template <typename T>

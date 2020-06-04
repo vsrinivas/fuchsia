@@ -339,6 +339,51 @@ fitx::result<const char*> Example() {
 }
 ```
 
+##### Augmenting Errors
+
+`fitx::result` supports agumented error types, where details about the error
+are accumulated as the error propagates back through the call chain. The result
+type conditionally overloads `operator+=` to append details to contained error.
+
+The error type `E` must be a class: pointers, primitives, and enums are not
+enabled. `E` must also overload `operator+=` to receive the value to append
+to the error.
+
+```C++
+// Define an error type with augmentable details, similar to absl::Status.
+class ErrorMsg {
+ public:
+  explicit ErrorMsg(Error error) : error_(error) {}
+  ErrorMsg(Error error, std::string detail) : error_{error}, details_{{std::move(detail)}} {}
+  
+  Error error() const { return error_; }
+  const auto& details() const { return details_; }
+
+  std::string ToString() const;
+
+  // fitx::result detects this operator and enables augmentation of the error.
+  ErrorMsg& operator+=(std::string detail) {
+    details_.push_back(std::move(detail));
+    return *this;
+  }
+
+ private:
+  Error error_;
+  std::vector<std::string> details_;
+};
+
+fitx::result<Error> FillBuffer(uint8_t* data, size_t size);
+
+fitx::result<ErrorMsg> FillBufferFromVector(const std::vector<uint8_t>& vector) {
+  // ErrorMsg is constructible from Error.
+  fitx::result<ErrorMsg> result = FillBuffer(vector.data(), vector.size());
+  if (result.is_error()) {
+    result += fitx::error("Error while filling from vector.");
+  }
+  return result;
+}
+```
+
 #### Relational Operators
 
 `fitx::result` supports a variety of relational operator variants.
