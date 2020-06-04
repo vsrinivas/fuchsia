@@ -90,9 +90,19 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
     return status;
   }
 
+  pdev_device_info_t info;
+  status = pdev.GetDeviceInfo(&info);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "aml-ram: Failed to get device info, st = %d", status);
+    return status;
+  }
+
+  // TODO(fxb/53325): ALL_GRANT counter is broken on S905D2.
+  bool all_grant_broken = info.pid == PDEV_PID_AMLOGIC_S905D2;
+
   fbl::AllocChecker ac;
   auto device = fbl::make_unique_checked<AmlRam>(&ac, parent, *std::move(mmio), std::move(irq),
-                                                 std::move(port));
+                                                 std::move(port), all_grant_broken);
   if (!ac.check()) {
     zxlogf(ERROR, "aml-ram: Failed to allocate device memory");
     return ZX_ERR_NO_MEMORY;
@@ -108,8 +118,13 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
   return ZX_OK;
 }
 
-AmlRam::AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio, zx::interrupt irq, zx::port port)
-    : DeviceType(parent), mmio_(std::move(mmio)), irq_(std::move(irq)), port_(std::move(port)) {}
+AmlRam::AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio, zx::interrupt irq, zx::port port,
+               bool all_grant_broken)
+    : DeviceType(parent),
+      mmio_(std::move(mmio)),
+      irq_(std::move(irq)),
+      port_(std::move(port)),
+      all_grant_broken_(all_grant_broken) {}
 
 AmlRam::~AmlRam() {
   // Verify we drained all requests.
@@ -196,6 +211,8 @@ void AmlRam::FinishReadBandwithCounters(ram_metrics::BandwidthInfo* bpi, zx_time
   bpi->channels[2].readwrite_cycles = mmio_.Read32(MEMBW_C2_GRANT_CNT) * 16ul;
   bpi->channels[3].readwrite_cycles = mmio_.Read32(MEMBW_C3_GRANT_CNT) * 16ul;
 
+  bpi->total.readwrite_cycles = all_grant_broken_ ? 0 : mmio_.Read32(MEMBW_ALL_GRANT_CNT) * 16ul;
+
   mmio_.Write32(0x0f | DMC_QOS_CLEAR_CTRL, MEMBW_PORTS_CTRL);
 }
 
@@ -258,7 +275,8 @@ void AmlRam::ReadLoop() {
 // first job in |request_|.
 void AmlRam::RevertJobs(std::deque<AmlRam::Job>* source) {
   fbl::AutoLock lock(&lock_);
-  requests_.insert(requests_.begin(), std::make_move_iterator(source->begin()), std::make_move_iterator(source->end()));
+  requests_.insert(requests_.begin(), std::make_move_iterator(source->begin()),
+                   std::make_move_iterator(source->end()));
   source->clear();
 }
 
@@ -266,7 +284,8 @@ void AmlRam::RevertJobs(std::deque<AmlRam::Job>* source) {
 // of arrival.
 void AmlRam::AcceptJobs(std::deque<AmlRam::Job>* dest) {
   fbl::AutoLock lock(&lock_);
-  dest->insert(dest->end(), std::make_move_iterator(requests_.begin()), std::make_move_iterator(requests_.end()));
+  dest->insert(dest->end(), std::make_move_iterator(requests_.begin()),
+               std::make_move_iterator(requests_.end()));
   requests_.clear();
 }
 

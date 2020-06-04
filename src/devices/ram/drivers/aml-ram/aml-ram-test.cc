@@ -12,6 +12,7 @@
 #include <atomic>
 #include <memory>
 
+#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform/bus.h>
 #include <ddktl/protocol/platform/device.h>
@@ -48,7 +49,10 @@ class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info) {
+    out_info->pid = PDEV_PID_AMLOGIC_T931;
+    return ZX_OK;
+  }
 
   zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
 
@@ -172,8 +176,8 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
               EXPECT_EQ(value, start, "1: got write of 0x%lx", value);
               pdev->InjectInterrupt();
               ++step;
-            } else if (step == 3) {
-              EXPECT_EQ(value, stop, "3: got write of 0x%lx", value);
+            } else if (step == 4) {
+              EXPECT_EQ(value, stop, "4: got write of 0x%lx", value);
               ++step;
             } else {
               EXPECT_TRUE(false, "unexpected: 0x%lx", value);
@@ -210,13 +214,22 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
     return value;
   });
 
+  pdev_.reg(MEMBW_ALL_GRANT_CNT)
+      .SetReadCallback(
+          [&step, value = kReadCycles[0] + kReadCycles[1] + kReadCycles[2] + kReadCycles[3]]() {
+            EXPECT_EQ(step, 3);
+            ++step;
+            // Value of all cycles granted.
+            return value;
+          });
+
   ram_metrics::Device::SyncClient client{std::move(ddk_.FidlClient())};
   auto info = client.MeasureBandwidth(config);
   ASSERT_TRUE(info.ok());
   ASSERT_FALSE(info->result.is_err());
 
   // Check All mmio reads and writes happened.
-  EXPECT_EQ(step, 4);
+  EXPECT_EQ(step, 5);
 
   EXPECT_GT(info->result.response().info.timestamp, 0u);
   EXPECT_EQ(info->result.response().info.frequency, 24000000u);
@@ -233,6 +246,8 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
     EXPECT_EQ(c.read_cycles, 0u);
     ++ix;
   }
+  EXPECT_EQ(info->result.response().info.total.readwrite_cycles,
+            (kReadCycles[0] + kReadCycles[1] + kReadCycles[2] + kReadCycles[3]) * 16ul);
 }
 
 }  // namespace amlogic_ram

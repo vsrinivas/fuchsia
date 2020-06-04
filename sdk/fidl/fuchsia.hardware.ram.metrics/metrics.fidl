@@ -31,6 +31,7 @@ struct BandwidthInfo {
     // Bus frequency in hertz (Hz) when the measurement started.
     uint64 frequency;
     array<GrantedCyclesResult>:MAX_COUNT_CHANNELS channels;
+    GrantedCyclesResult total;
 };
 
 /// Interface to obtain memory bandwidth usage measurements from hardware
@@ -44,9 +45,7 @@ struct BandwidthInfo {
 /// channel[3] <- image_isp + h264_encoder
 ///
 /// The number of channels and which bit patterns to use for each port
-/// are hardware specific. Proper estimation of actual bandwidth and
-/// bandwidth percentage utilization also requires knowledge of the memory
-/// configuration and possibly clock rates.
+/// are hardware specific.
 ///
 protocol Device {
     /// Trigger one measurement. This can be called again before the reply

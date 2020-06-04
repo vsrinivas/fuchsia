@@ -70,6 +70,11 @@ void DefaultPrinter::Print(const ram_metrics::BandwidthInfo& info) const {
     fprintf(file_, "%s (rw) \t\t %g\n", row.c_str(), bandwidth_rw);
     ++ix;
   }
+  // Use total read-write cycles if supported.
+  if (info.total.readwrite_cycles) {
+    total_bandwidth_rw = CounterToBandwidthMBs(info.total.readwrite_cycles, info.frequency,
+                                               device_info_.default_cycles_to_measure);
+  }
   fprintf(file_, "total (rw) \t\t %g\n", total_bandwidth_rw);
 }
 

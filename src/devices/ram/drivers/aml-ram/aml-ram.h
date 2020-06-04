@@ -35,6 +35,9 @@ constexpr uint32_t MEMBW_PORTS_CTRL = (0x0020 << 2);
 constexpr uint32_t DMC_QOS_ENABLE_CTRL = (0x01 << 31);
 constexpr uint32_t DMC_QOS_CLEAR_CTRL = (0x01 << 30);
 
+// Returns all granted cycles.
+constexpr uint32_t MEMBW_ALL_GRANT_CNT = (0x2a << 2);
+
 // Returns the granted cycles per channel.
 constexpr uint32_t MEMBW_C0_GRANT_CNT = (0x2b << 2);
 constexpr uint32_t MEMBW_C1_GRANT_CNT = (0x2c << 2);
@@ -68,7 +71,8 @@ class AmlRam : public DeviceType, private ram_metrics::Device::Interface {
 
   static zx_status_t Create(void* context, zx_device_t* parent);
 
-  explicit AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio, zx::interrupt irq, zx::port port);
+  AmlRam(zx_device_t* parent, ddk::MmioBuffer mmio, zx::interrupt irq, zx::port port,
+         bool all_grant_broken);
   ~AmlRam();
   void DdkRelease();
   void DdkSuspend(ddk::SuspendTxn txn);
@@ -108,6 +112,7 @@ class AmlRam : public DeviceType, private ram_metrics::Device::Interface {
   fbl::Mutex lock_;
   std::deque<Job> requests_ TA_GUARDED(lock_);
   bool shutdown_ TA_GUARDED(lock_) = false;
+  const bool all_grant_broken_;
 };
 
 }  // namespace amlogic_ram
