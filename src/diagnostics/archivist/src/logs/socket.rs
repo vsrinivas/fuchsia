@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use super::error::StreamError;
-use super::message::Message;
+use super::message::{Message, MAX_DATAGRAM_LEN};
 use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{
-    io, ready,
+    io::{self, AsyncRead},
+    ready,
     task::{Context, Poll},
     Stream,
 };
@@ -46,7 +47,7 @@ impl Encoding for StructuredEncoding {
 pub struct LogMessageSocket<E> {
     source: Arc<SourceIdentity>,
     socket: fasync::Socket,
-    buffer: Vec<u8>,
+    buffer: [u8; MAX_DATAGRAM_LEN],
     _encoder: PhantomData<E>,
 }
 
@@ -62,7 +63,7 @@ impl LogMessageSocket<LegacyEncoding> {
     pub fn new(socket: zx::Socket, source: Arc<SourceIdentity>) -> Result<Self, io::Error> {
         Ok(Self {
             socket: fasync::Socket::from_socket(socket)?,
-            buffer: Vec::new(),
+            buffer: [0; MAX_DATAGRAM_LEN],
             source,
             _encoder: PhantomData,
         })
@@ -78,7 +79,7 @@ impl LogMessageSocket<StructuredEncoding> {
     ) -> Result<Self, io::Error> {
         Ok(Self {
             socket: fasync::Socket::from_socket(socket)?,
-            buffer: Vec::new(),
+            buffer: [0; MAX_DATAGRAM_LEN],
             source,
             _encoder: PhantomData,
         })
@@ -93,15 +94,8 @@ where
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let &mut Self { ref mut socket, ref mut buffer, .. } = &mut *self;
-        Poll::Ready(match ready!(socket.poll_datagram(cx, buffer)) {
-            Ok(_) => {
-                let res = E::parse_message(buffer.as_slice());
-                buffer.clear();
-                Some(res)
-            }
-            Err(zx::Status::PEER_CLOSED) => None,
-            Err(e) => Some(Err(StreamError::Io { source: e.into_io_error() })),
-        })
+        let len = ready!(Pin::new(socket).poll_read(cx, buffer)?);
+        Poll::Ready(if len > 0 { Some(E::parse_message(&buffer[..len])) } else { None })
     }
 }
 
