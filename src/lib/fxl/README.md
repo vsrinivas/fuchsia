@@ -5,7 +5,8 @@ reference counting.
 
 This library builds for both host (this includes Linux, Windows, and
 macOS) as well as target (i.e., Fuchsia) platforms and is not source
-or binary stable. On both host and target, we build with C++14.
+or binary stable. On both host and target, we require C++17, and thus
+this library may use C++17 language and library features.
 
 ## Should I put my thing in FXL?
 
