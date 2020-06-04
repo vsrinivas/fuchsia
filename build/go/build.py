@@ -27,9 +27,7 @@ def main():
     parser.add_argument(
         '--cxx', help='The C++ compiler to use', required=False, default='c++')
     parser.add_argument(
-        '--dump-syms',
-        help='The dump_syms tool to use',
-        required=False)
+        '--dump-syms', help='The dump_syms tool to use', required=False)
     parser.add_argument(
         '--objcopy',
         help='The objcopy tool to use',
@@ -98,6 +96,8 @@ def main():
     parser.add_argument('--vet', help='Run go vet', action='store_true')
     parser.add_argument(
         '--tag', help='Add a go build tag', default=[], action='append')
+    parser.add_argument(
+        '--cgo', help='Whether to enable CGo', action='store_true')
     args = parser.parse_args()
 
     try:
@@ -187,9 +187,10 @@ def main():
         'CGO_CPPFLAGS': cflags_joined,
         'CGO_CXXFLAGS': cflags_joined,
         'CGO_LDFLAGS': ldflags_joined,
-        'CGO_ENABLED': '1',
     }
 
+    if args.cgo:
+        env['CGO_ENABLED'] = '1'
     if args.target:
         env['CC_FOR_TARGET'] = env['CC']
         env['CXX_FOR_TARGET'] = env['CXX']
@@ -249,8 +250,7 @@ def main():
             with open(dist + ".sym", "w") as f:
                 retcode = subprocess.call(
                     [args.dump_syms, '-r', '-o', 'Fuchsia', args.output_path],
-                    stdout = f
-                )
+                    stdout=f)
 
     if retcode == 0 and args.buildidtool and supports_build_id:
         if not args.build_id_dir:

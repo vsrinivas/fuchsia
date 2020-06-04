@@ -60,6 +60,9 @@ declare_args() {
 #   tags (optional)
 #     List of go build tags to include in the build.
 #
+#   cgo (optional, default: true)
+#     If true, will support linking against C code. Set to false for
+#     pure Go code to support cross-compilation.
 template("go_build") {
   assert(defined(invoker.gopackages),
          "gopackages must be defined for $target_name")
@@ -199,6 +202,10 @@ template("go_build") {
         "--target",
         clang_target,
       ]
+
+      if (!(defined(invoker.cgo) && !invoker.cgo)) {
+        args += [ "--cgo" ]
+      }
 
       if (use_strip) {
         args += [
@@ -357,9 +364,8 @@ template("go_build") {
       metadata = {
         tool_paths = []
 
-        # Record metadata for the //:tool_paths build API for all non-test,
-        # host binaries.
-        if (is_host && !is_test) {
+        # Record metadata for the //:tool_paths build API for all non-tests.
+        if (!is_test) {
           tool_paths = [
             {
               cpu = current_cpu
