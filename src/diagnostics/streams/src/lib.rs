@@ -103,6 +103,13 @@ impl<'a> StringRef<'a> {
             StringRef::Inline(s) => (s.len() as u16) | (1 << 15),
         }
     }
+
+    fn for_str(string: &'a str) -> Self {
+        match string.len() {
+            0 => StringRef::Empty,
+            _ => StringRef::Inline(string),
+        }
+    }
 }
 
 impl<'a> Into<String> for StringRef<'a> {

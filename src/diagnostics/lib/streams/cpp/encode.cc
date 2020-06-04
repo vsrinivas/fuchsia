@@ -86,7 +86,7 @@ size_t log_argument(const std::string& name, const fuchsia::diagnostics::stream:
     case fuchsia::diagnostics::stream::Value::Tag::kText:
       type = 6;
       arg_size += write_string(value.text(), out);
-      value_ref = (1 << 15) | value.text().length();
+      value_ref = value.text().length() > 0 ? (1 << 15) | value.text().length() : 0;
       break;
 
     case fuchsia::diagnostics::stream::Value::Tag::kUnknown:

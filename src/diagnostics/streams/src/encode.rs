@@ -60,7 +60,7 @@ where
         // TODO(adamperry) we can also switch to a null arg in the tracing format for true values
 
         self.write_string(&argument.name)?;
-        header.set_name_ref(StringRef::Inline(&argument.name).mask());
+        header.set_name_ref(StringRef::for_str(&argument.name).mask());
 
         match &argument.value {
             Value::SignedInt(s) => {
@@ -77,7 +77,7 @@ where
             }
             Value::Text(t) => {
                 header.set_type(ArgType::String as u8);
-                header.set_value_ref(StringRef::Inline(t).mask());
+                header.set_value_ref(StringRef::for_str(t).mask());
                 self.write_string(t)
             }
             _ => Err(StreamError::Unsupported),

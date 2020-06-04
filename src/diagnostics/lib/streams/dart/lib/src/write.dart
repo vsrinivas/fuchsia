@@ -62,7 +62,7 @@ int writeArgument(ByteData buffer, int offset, Argument argument) {
 
   final argNameWriteResult =
       writeString(buffer, startOffset + 8, argument.name);
-  header.setNameRef(argNameWriteResult.inlineStrRef);
+  header.setNameRef(argNameWriteResult.strRef);
 
   var curOffset = argNameWriteResult.nextOffset;
   switch (argument.value.$tag) {
@@ -84,7 +84,7 @@ int writeArgument(ByteData buffer, int offset, Argument argument) {
     case ValueTag.text:
       header.setType(tracingFormatStringType);
       final textWriteRes = writeString(buffer, curOffset, argument.value.text);
-      header.setValue(textWriteRes.inlineStrRef);
+      header.setValue(textWriteRes.strRef);
       curOffset = textWriteRes.nextOffset;
       break;
     default:
@@ -98,19 +98,19 @@ int writeArgument(ByteData buffer, int offset, Argument argument) {
 
 class _WriteStringResult {
   /// Reference to the written string.
-  final int inlineStrRef;
+  final int strRef;
 
   /// Index the next entry should be written to.
   final int nextOffset;
 
-  _WriteStringResult({this.inlineStrRef, this.nextOffset});
+  _WriteStringResult({this.strRef, this.nextOffset});
 }
 
 /// Writes the given string to the buffer and pads to 8 bytes.  Returns an
-/// [inline string reference] for the written string and offset for
+/// [string reference] for the written string and offset for
 /// the next entry in the buffer (including any padding).
 ///
-/// [inline string reference]: https://fuchsia.dev/fuchsia-src/reference/tracing/trace-format#string-references
+/// [string reference]: https://fuchsia.dev/fuchsia-src/development/logs/encodings#primitives
 _WriteStringResult writeString(ByteData buffer, int offset, String str) {
   const align = 8;
   if (offset % align != 0) {
@@ -123,6 +123,7 @@ _WriteStringResult writeString(ByteData buffer, int offset, String str) {
     curOffset++;
   }
   final strLen = curOffset - offset;
+  final strRef = strLen > 0 ? strLen | _inlineStrRef : 0;
 
   // zero out padding
   while (curOffset % align != 0) {
@@ -130,6 +131,5 @@ _WriteStringResult writeString(ByteData buffer, int offset, String str) {
     curOffset++;
   }
 
-  return _WriteStringResult(
-      inlineStrRef: strLen | _inlineStrRef, nextOffset: curOffset);
+  return _WriteStringResult(strRef: strRef, nextOffset: curOffset);
 }
