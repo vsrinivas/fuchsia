@@ -20,7 +20,6 @@
 #include "gather_processes_and_memory.h"
 #include "gather_tasks.h"
 #include "gather_threads_and_cpu.h"
-#include "src/lib/inspect_deprecated/query/discover.h"
 
 namespace harvester {
 

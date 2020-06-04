@@ -8,26 +8,12 @@
 #include <zircon/status.h>
 
 #include "harvester.h"
-#include "src/lib/inspect_deprecated/query/discover.h"
 
 namespace harvester {
 
 // Gather a list of inspectable components.
 void GatherInspectable::Gather() {
-  // Gather a list of components that contain inspect data.
-  const std::string path = "/hub";
-  StringSampleList string_sample_list;
-  for (auto& location : inspect_deprecated::SyncFindPaths(path)) {
-    std::ostringstream label;
-    label << "inspectable:" << location.AbsoluteFilePath();
-    string_sample_list.emplace_back(label.str(), location.file_name);
-  }
-  DockyardProxyStatus status =
-      Dockyard().SendStringSampleList(string_sample_list);
-  if (status != DockyardProxyStatus::OK) {
-    FX_LOGS(ERROR) << DockyardErrorString("SendStringSampleList", status)
-                   << " The list of inspectable components will be missing";
-  }
+  // TODO(53154): Implement this functionality.
 }
 
 }  // namespace harvester

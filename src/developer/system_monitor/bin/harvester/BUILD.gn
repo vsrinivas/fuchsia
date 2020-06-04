@@ -57,7 +57,6 @@ source_set("lib") {
     "//src/developer/system_monitor/lib/dockyard:proto",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/inspect_deprecated/query",
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
