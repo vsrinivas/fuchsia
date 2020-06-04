@@ -1163,7 +1163,7 @@ fail_stop_device:
 fail_destroy_loop:
   async_loop_destroy(iwl_trans->loop);
 fail_remove_device:
-  device_remove_deprecated(iwl_trans->zxdev);
+  device_async_remove(iwl_trans->zxdev);
   return status;
 }
 
