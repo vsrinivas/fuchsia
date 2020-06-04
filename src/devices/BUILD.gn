@@ -46,7 +46,6 @@ group("tests") {
 bootfs_manifest("devices.manifest") {
   deps = [
     "bin",
-    "lib/driver",
     "//src/bringup/virtcon:virtual-console",
     "//src/ui/input/drivers/hid-input-report",
   ]
