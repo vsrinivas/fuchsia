@@ -145,6 +145,7 @@ source_set("core") {
     "wlan_interface.h",
   ]
   public = [
+    "bits.h",
     "brcm_hw_ids.h",
     "brcmu_d11.h",
     "brcmu_utils.h",

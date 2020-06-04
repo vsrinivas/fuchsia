@@ -50,6 +50,7 @@
 
 #define BRCMF_DISCONNECT_TIMER_DUR_MS     ZX_MSEC(50) /* disconnect timer dur */
 #define BRCMF_SIGNAL_REPORT_TIMER_DUR_MS  ZX_MSEC(1000) /* Signal report dur */
+#define BRCMF_AP_START_TIMER_DUR_MS       ZX_MSEC(1000) /* AP start timer dur */
 
 #define WL_ESCAN_ACTION_START      1
 #define WL_ESCAN_ACTION_CONTINUE   2
@@ -208,6 +209,7 @@ struct brcmf_cfg80211_profile {
  * @BRCMF_VIF_STATUS_CONNECTING: connect/join in progress.
  * @BRCMF_VIF_STATUS_CONNECTED: connected/joined successfully.
  * @BRCMF_VIF_STATUS_DISCONNECTING: disconnect/disable in progress.
+ * @BRCMF_VIF_STATUS_AP_START_PENDING: AP start pending.
  * @BRCMF_VIF_STATUS_AP_CREATED: AP operation started.
  * @BRCMF_VIF_STATUS_EAP_SUCCUSS: EAPOL handshake successful.
  * @BRCMF_VIF_STATUS_ASSOC_SUCCESS: successful SET_SSID received.
@@ -217,6 +219,7 @@ enum brcmf_vif_status {
   BRCMF_VIF_STATUS_CONNECTING,
   BRCMF_VIF_STATUS_CONNECTED,
   BRCMF_VIF_STATUS_DISCONNECTING,
+  BRCMF_VIF_STATUS_AP_START_PENDING,
   BRCMF_VIF_STATUS_AP_CREATED,
   BRCMF_VIF_STATUS_EAP_SUCCESS,
   BRCMF_VIF_STATUS_ASSOC_SUCCESS,
@@ -365,6 +368,8 @@ enum brcmf_disconnect_mode { BRCMF_DISCONNECT_DEAUTH, BRCMF_DISCONNECT_DISASSOC 
  * @ap_started: Boolean indicating if SoftAP has been started.
  * @signal_report_timer: Timer to periodically update signal report to SME.
  * @signal_report_work: Work structure for signal report timer.
+ * @ap_start_timer: Timer used to wait for ap start confirmation.
+ * @ap_start_timeout_work: Work structure for ap start timer
  */
 struct brcmf_cfg80211_info {
   struct brcmf_cfg80211_conf* conf;
@@ -402,6 +407,8 @@ struct brcmf_cfg80211_info {
   bool ap_started;
   Timer* signal_report_timer;
   WorkItem signal_report_work;
+  Timer* ap_start_timer;
+  WorkItem ap_start_timeout_work;
 };
 
 /**

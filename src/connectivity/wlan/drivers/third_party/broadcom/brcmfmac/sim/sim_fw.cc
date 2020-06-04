@@ -22,6 +22,7 @@
 #include <memory>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
@@ -286,9 +287,14 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
           if (join_params->ssid_le.SSID_len) {
             // non-zero SSID - assume AP start
             ZX_ASSERT(iface_tbl_[ifidx].ap_config.ap_started == false);
-            // Indicate success to driver
-            SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr,
-                              BRCMF_EVENT_MSG_LINK);
+            if (brcmf_test_bit_in_array(SIM_FW_AP_START_FAIL, &error_inject_bits_)) {
+              // For now, fail the request as timer handling in SIM is not working yet.
+              status = ZX_ERR_NOT_SUPPORTED;
+              break;
+            }
+            // Schedule a Link Event to be sent to driver (simulating behviour
+            // in real HW).
+            ScheduleLinkEvent(kStartAPConfDelay, ifidx);
             iface_tbl_[ifidx].ap_config.ap_started = true;
 
             // Set the channel to the value specified in "chanspec" iovar
@@ -310,6 +316,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
           wlan_channel_t channel;
 
           chanspec_to_channel(&d11_inf_, join_params->params_le.chanspec_list[0], &channel);
+          iface_tbl_[ifidx].chanspec = join_params->params_le.chanspec_list[0];
           memcpy(assoc_opts->bssid.byte, join_params->params_le.bssid, ETH_ALEN);
           assoc_opts->ssid.len = join_params->ssid_le.SSID_len;
           memcpy(assoc_opts->ssid.ssid, join_params->ssid_le.SSID, IEEE80211_MAX_SSID_LEN);
@@ -407,6 +414,17 @@ void SimFirmware::StopSoftAP(uint16_t ifidx) {
   SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx);
   iface_tbl_[ifidx].ap_config.ap_started = false;
   iface_tbl_[ifidx].chanspec = 0;
+}
+
+void SimFirmware::SendAPStartLinkEvent(uint16_t ifidx) {
+  SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, ifidx, nullptr,
+                    BRCMF_EVENT_MSG_LINK);
+}
+
+void SimFirmware::ScheduleLinkEvent(zx::duration when, uint16_t ifidx) {
+  auto callback = std::make_unique<std::function<void()>>();
+  *callback = std::bind(&SimFirmware::SendAPStartLinkEvent, this, ifidx);
+  hw_.RequestCallback(std::move(callback), when);
 }
 
 uint16_t SimFirmware::GetNumClients(uint16_t ifidx) {
@@ -1156,15 +1174,10 @@ zx_status_t SimFirmware::SetIFChanspec(uint16_t ifidx, uint16_t chanspec) {
       return ZX_OK;
     }
 
-    if (iface_tbl_[ifidx].chanspec == 0) {
-      // When a new softAP iface is created, set the chanspec to client iface chanspec, ignore
-      // the input.
-      iface_tbl_[ifidx].chanspec = iface_tbl_[client].chanspec;
-      return ZX_OK;
-    } else {
-      // If the softAP iface already have a chanspec, refuse the operation.
-      return ZX_ERR_BAD_STATE;
-    }
+    // When a new softAP iface is created, set the chanspec to client iface chanspec, ignore
+    // the input.
+    iface_tbl_[ifidx].chanspec = iface_tbl_[client].chanspec;
+    return ZX_OK;
   } else {
     // If it's set for clients, change all chanspecs of existing ifaces into the same one(the one we
     // want to set).
@@ -1982,5 +1995,18 @@ void SimFirmware::SendFrameToDriver(uint16_t ifidx, size_t payload_size,
 
   brmcf_sim_rx_frame(simdev_, std::move(buf));
 }
+void SimFirmware::ErrorInjectSetBit(size_t inject_bit) {
+  brcmf_set_bit_in_array(inject_bit, &error_inject_bits_);
+}
+void SimFirmware::ErrorInjectClearBit(size_t inject_bit) {
+  brcmf_clear_bit_in_array(inject_bit, &error_inject_bits_);
+}
+void SimFirmware::ErrorInjectAllClear() { error_inject_bits_ = 0; }
 
+void SimFirmware::convert_chanspec_to_channel(uint16_t chanspec, wlan_channel_t* channel) {
+  chanspec_to_channel(&d11_inf_, chanspec, channel);
+}
+uint16_t SimFirmware::convert_channel_to_chanspec(wlan_channel_t* channel) {
+  return channel_to_chanspec(&d11_inf_, channel);
+}
 }  // namespace wlan::brcmfmac

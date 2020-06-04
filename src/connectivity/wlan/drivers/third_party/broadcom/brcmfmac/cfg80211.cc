@@ -518,14 +518,11 @@ static void brcmf_signal_scan_end(struct net_device* ndev, uint64_t txn_id,
               ", result: %s"
               ", APs seen: %" PRIu32 "",
               args.txn_id,
-              args.code == WLAN_SCAN_RESULT_SUCCESS
-                  ? "success"
-                  : args.code == WLAN_SCAN_RESULT_NOT_SUPPORTED
-                        ? "not supported"
-                        : args.code == WLAN_SCAN_RESULT_INVALID_ARGS
-                              ? "invalid args"
-                              : args.code == WLAN_SCAN_RESULT_INTERNAL_ERROR ? "internal error"
-                                                                             : "unknown",
+              args.code == WLAN_SCAN_RESULT_SUCCESS          ? "success"
+              : args.code == WLAN_SCAN_RESULT_NOT_SUPPORTED  ? "not supported"
+              : args.code == WLAN_SCAN_RESULT_INVALID_ARGS   ? "invalid args"
+              : args.code == WLAN_SCAN_RESULT_INTERNAL_ERROR ? "internal error"
+                                                             : "unknown",
               ndev->scan_num_results);
     wlanif_impl_ifc_on_scan_end(&ndev->if_proto, &args);
   }
@@ -1624,7 +1621,6 @@ static void brcmf_disconnect_timeout(struct brcmf_cfg80211_info* cfg) {
   cfg->pub->irq_callback_lock.lock();
   BRCMF_DBG(TRACE, "Enter");
   WorkQueue::ScheduleDefault(&cfg->disconnect_timeout_work);
-
   cfg->pub->irq_callback_lock.unlock();
 }
 
@@ -2597,22 +2593,30 @@ zx_status_t brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif) {
   return ZX_OK;
 }
 
-// Returns an MLME result code (WLAN_START_RESULT_*)
+// Returns an MLME result code (WLAN_START_RESULT_*) if an error is encountered.
+// If all iovars succeed, MLME is notified when E_LINK event is received.
 static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_start_req_t* req) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+
+  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state) ||
+      brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state)) {
+    BRCMF_ERR("AP already started or start pending");
+    return WLAN_START_RESULT_BSS_ALREADY_STARTED_OR_JOINED;
+  }
+
   if (req->bss_type != WLAN_BSS_TYPE_INFRASTRUCTURE) {
     BRCMF_ERR("Attempt to start AP in unsupported mode (%d)", req->bss_type);
     return WLAN_START_RESULT_NOT_SUPPORTED;
   }
-  BRCMF_DBG(TRACE, "ssid: %*s  beacon period: %d  dtim_period: %d  channel: %d  rsne_len: %zd",
-            req->ssid.len, req->ssid.data, req->beacon_period, req->dtim_period, req->channel,
-            req->rsne_len);
-
-  struct brcmf_if* ifp = ndev_to_if(ndev);
 
   if (ifp->vif->mbss) {
     BRCMF_ERR("Mesh role not yet supported");
     return WLAN_START_RESULT_NOT_SUPPORTED;
   }
+
+  BRCMF_DBG(TRACE, "ssid: %*s  beacon period: %d  dtim_period: %d  channel: %d  rsne_len: %zd",
+            req->ssid.len, req->ssid.data, req->beacon_period, req->dtim_period, req->channel,
+            req->rsne_len);
 
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   wlan_channel_t channel = {};
@@ -2700,7 +2704,7 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
 
   BRCMF_DBG(TRACE, "AP mode configuration complete");
 
-  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
+  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state);
   brcmf_net_setcarrier(ifp, true);
 
   cfg->ap_started = true;
@@ -2721,7 +2725,8 @@ static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev, const wlanif_stop
   struct brcmf_join_params join_params;
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
 
-  if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state)) {
+  if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state) &&
+      !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state)) {
     BRCMF_ERR("attempt to stop already stopped AP\n");
     return WLAN_STOP_RESULT_BSS_ALREADY_STOPPED;
   }
@@ -2750,6 +2755,7 @@ static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev, const wlanif_stop
 
   brcmf_vif_clear_mgmt_ies(ifp->vif);
   brcmf_configure_arp_nd_offload(ifp, true);
+  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state);
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
   brcmf_net_setcarrier(ifp, false);
   cfg->ap_started = false;
@@ -2827,9 +2833,9 @@ void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req) {
   zx_status_t result;
 
   BRCMF_DBG(WLANIF, "Scan request from SME. txn_id: %" PRIu64 ", type: %s", req->txn_id,
-            req->scan_type == WLAN_SCAN_TYPE_PASSIVE
-                ? "passive"
-                : req->scan_type == WLAN_SCAN_TYPE_ACTIVE ? "active" : "invalid");
+            req->scan_type == WLAN_SCAN_TYPE_PASSIVE  ? "passive"
+            : req->scan_type == WLAN_SCAN_TYPE_ACTIVE ? "active"
+                                                      : "invalid");
 
   if (ndev->scan_busy) {
     BRCMF_ERR("scan already in progress id: %lu", ndev->scan_txn_id);
@@ -2867,9 +2873,9 @@ void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
 
   brcmf_configure_opensecurity(ifp);
   BRCMF_DBG(WLANIF, "Sending join confirm to SME. result: %s",
-            result.result_code == WLAN_JOIN_RESULT_SUCCESS
-                ? "success"
-                : result.result_code == WLAN_JOIN_RESULT_FAILURE_TIMEOUT ? "timeout" : "unknown");
+            result.result_code == WLAN_JOIN_RESULT_SUCCESS           ? "success"
+            : result.result_code == WLAN_JOIN_RESULT_FAILURE_TIMEOUT ? "timeout"
+                                                                     : "unknown");
   wlanif_impl_ifc_join_conf(&ndev->if_proto, &result);
 }
 
@@ -2878,13 +2884,11 @@ void brcmf_if_auth_req(net_device* ndev, const wlanif_auth_req_t* req) {
   wlanif_auth_confirm_t response;
 
   BRCMF_DBG(WLANIF, "Auth request from SME. type: %s, address: " MAC_FMT_STR "",
-            req->auth_type == WLAN_AUTH_TYPE_OPEN_SYSTEM
-                ? "open"
-                : req->auth_type == WLAN_AUTH_TYPE_SHARED_KEY
-                      ? "shared"
-                      : req->auth_type == WLAN_AUTH_TYPE_FAST_BSS_TRANSITION
-                            ? "fast BSS"
-                            : req->auth_type == WLAN_AUTH_TYPE_SAE ? "SAE" : "invalid",
+            req->auth_type == WLAN_AUTH_TYPE_OPEN_SYSTEM           ? "open"
+            : req->auth_type == WLAN_AUTH_TYPE_SHARED_KEY          ? "shared"
+            : req->auth_type == WLAN_AUTH_TYPE_FAST_BSS_TRANSITION ? "fast BSS"
+            : req->auth_type == WLAN_AUTH_TYPE_SAE                 ? "SAE"
+                                                                   : "invalid",
             MAC_FMT_ARGS(req->peer_sta_address));
 
   // Ensure that join bssid matches auth bssid
@@ -2911,21 +2915,16 @@ void brcmf_if_auth_req(net_device* ndev, const wlanif_auth_req_t* req) {
   response.auth_type = req->auth_type;
   memcpy(&response.peer_sta_address, ifp->bss.bssid, ETH_ALEN);
 
-  BRCMF_DBG(
-      WLANIF, "Sending auth confirm to SME. result: %s",
-      response.result_code == WLAN_AUTH_RESULT_SUCCESS
-          ? "success"
-          : response.result_code == WLAN_AUTH_RESULT_REFUSED
-                ? "refused"
-                : response.result_code == WLAN_AUTH_RESULT_ANTI_CLOGGING_TOKEN_REQUIRED
-                      ? "anti-clogging token required"
-                      : response.result_code == WLAN_AUTH_RESULT_FINITE_CYCLIC_GROUP_NOT_SUPPORTED
-                            ? "finite cyclic group not supported"
-                            : response.result_code == WLAN_AUTH_RESULT_REJECTED
-                                  ? "rejected"
-                                  : response.result_code == WLAN_AUTH_RESULT_FAILURE_TIMEOUT
-                                        ? "timeout"
-                                        : "unknown");
+  BRCMF_DBG(WLANIF, "Sending auth confirm to SME. result: %s",
+            response.result_code == WLAN_AUTH_RESULT_SUCCESS   ? "success"
+            : response.result_code == WLAN_AUTH_RESULT_REFUSED ? "refused"
+            : response.result_code == WLAN_AUTH_RESULT_ANTI_CLOGGING_TOKEN_REQUIRED
+                ? "anti-clogging token required"
+            : response.result_code == WLAN_AUTH_RESULT_FINITE_CYCLIC_GROUP_NOT_SUPPORTED
+                ? "finite cyclic group not supported"
+            : response.result_code == WLAN_AUTH_RESULT_REJECTED        ? "rejected"
+            : response.result_code == WLAN_AUTH_RESULT_FAILURE_TIMEOUT ? "timeout"
+                                                                       : "unknown");
 
   wlanif_impl_ifc_auth_conf(&ndev->if_proto, &response);
 }
@@ -2936,19 +2935,15 @@ void brcmf_if_auth_resp(net_device* ndev, const wlanif_auth_resp_t* ind) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
   BRCMF_DBG(WLANIF, "Auth response from SME. result: %s, address: " MAC_FMT_STR "\n",
-            ind->result_code == WLAN_AUTH_RESULT_SUCCESS
-                ? "success"
-                : ind->result_code == WLAN_AUTH_RESULT_REFUSED
-                      ? "refused"
-                      : ind->result_code == WLAN_AUTH_RESULT_ANTI_CLOGGING_TOKEN_REQUIRED
-                            ? "anti-clogging token required"
-                            : ind->result_code == WLAN_AUTH_RESULT_FINITE_CYCLIC_GROUP_NOT_SUPPORTED
-                                  ? "finite cyclic group not supported"
-                                  : ind->result_code == WLAN_AUTH_RESULT_REJECTED
-                                        ? "rejected"
-                                        : ind->result_code == WLAN_AUTH_RESULT_FAILURE_TIMEOUT
-                                              ? "timeout"
-                                              : "invalid",
+            ind->result_code == WLAN_AUTH_RESULT_SUCCESS   ? "success"
+            : ind->result_code == WLAN_AUTH_RESULT_REFUSED ? "refused"
+            : ind->result_code == WLAN_AUTH_RESULT_ANTI_CLOGGING_TOKEN_REQUIRED
+                ? "anti-clogging token required"
+            : ind->result_code == WLAN_AUTH_RESULT_FINITE_CYCLIC_GROUP_NOT_SUPPORTED
+                ? "finite cyclic group not supported"
+            : ind->result_code == WLAN_AUTH_RESULT_REJECTED        ? "rejected"
+            : ind->result_code == WLAN_AUTH_RESULT_FAILURE_TIMEOUT ? "timeout"
+                                                                   : "invalid",
             MAC_FMT_ARGS(ind->peer_sta_address));
 
   if (!brcmf_is_apmode(ifp->vif)) {
@@ -3078,24 +3073,56 @@ void brcmf_if_reset_req(net_device* ndev, const wlanif_reset_req_t* req) {
   BRCMF_ERR("Unimplemented");
 }
 
+void brcmf_if_start_conf(net_device* ndev, uint8_t result) {
+  wlanif_start_confirm_t start_conf = {.result_code = result};
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
+
+  cfg->ap_start_timer->Stop();
+  BRCMF_DBG(WLANIF, "Sending AP start confirm to SME. result_code: %s",
+            result == WLAN_START_RESULT_SUCCESS                         ? "success"
+            : result == WLAN_START_RESULT_BSS_ALREADY_STARTED_OR_JOINED ? "already started"
+            : result == WLAN_START_RESULT_RESET_REQUIRED_BEFORE_START   ? "reset required"
+            : result == WLAN_START_RESULT_NOT_SUPPORTED                 ? "not supported"
+                                                                        : "unknown");
+
+  wlanif_impl_ifc_start_conf(&ndev->if_proto, &start_conf);
+}
+
+// AP start timeout worker
+static void brcmf_ap_start_timeout_worker(WorkItem* work) {
+  struct brcmf_cfg80211_info* cfg =
+      containerof(work, struct brcmf_cfg80211_info, ap_start_timeout_work);
+  struct net_device* ndev = cfg_to_ndev(cfg);
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+
+  // Indicate status only if AP start pending is set
+  if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state)) {
+    // Indicate AP start failed
+    brcmf_if_start_conf(ndev, WLAN_START_RESULT_NOT_SUPPORTED);
+  }
+}
+
+// AP start timeout handler
+static void brcmf_ap_start_timeout(struct brcmf_cfg80211_info* cfg) {
+  cfg->pub->irq_callback_lock.lock();
+  BRCMF_DBG(TRACE, "Enter");
+  WorkQueue::ScheduleDefault(&cfg->ap_start_timeout_work);
+  cfg->pub->irq_callback_lock.unlock();
+}
+
 /* Start AP mode */
 void brcmf_if_start_req(net_device* ndev, const wlanif_start_req_t* req) {
   BRCMF_DBG(WLANIF, "Start AP request from SME. ssid: %.*s, channel: %u, rsne_len: %zu",
             req->ssid.len, req->ssid.data, req->channel, req->rsne_len);
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
+
+  cfg->ap_start_timer->Start(BRCMF_AP_START_TIMER_DUR_MS);
   uint8_t result_code = brcmf_cfg80211_start_ap(ndev, req);
-  wlanif_start_confirm_t result = {.result_code = result_code};
-
-  BRCMF_DBG(WLANIF, "Sending AP start confirm to SME. result_code: %s",
-            result_code == WLAN_START_RESULT_SUCCESS
-                ? "success"
-                : result_code == WLAN_START_RESULT_BSS_ALREADY_STARTED_OR_JOINED
-                      ? "already started"
-                      : result_code == WLAN_START_RESULT_RESET_REQUIRED_BEFORE_START
-                            ? "reset required"
-                            : result_code == WLAN_START_RESULT_NOT_SUPPORTED ? "not supported"
-                                                                             : "unknown");
-
-  wlanif_impl_ifc_start_conf(&ndev->if_proto, &result);
+  if (result_code != WLAN_START_RESULT_SUCCESS) {
+    brcmf_if_start_conf(ndev, result_code);
+  }
 }
 
 /* Stop AP mode */
@@ -3106,13 +3133,11 @@ void brcmf_if_stop_req(net_device* ndev, const wlanif_stop_req_t* req) {
 
   wlanif_stop_confirm_t result = {.result_code = result_code};
 
-  BRCMF_DBG(
-      WLANIF, "Sending AP stop confirm to SME. result_code: %s",
-      result_code == WLAN_STOP_RESULT_SUCCESS
-          ? "success"
-          : result_code == WLAN_STOP_RESULT_BSS_ALREADY_STOPPED
-                ? "already stopped"
-                : result_code == WLAN_STOP_RESULT_INTERNAL_ERROR ? "internal error" : "unknown");
+  BRCMF_DBG(WLANIF, "Sending AP stop confirm to SME. result_code: %s",
+            result_code == WLAN_STOP_RESULT_SUCCESS               ? "success"
+            : result_code == WLAN_STOP_RESULT_BSS_ALREADY_STOPPED ? "already stopped"
+            : result_code == WLAN_STOP_RESULT_INTERNAL_ERROR      ? "internal error"
+                                                                  : "unknown");
 
   wlanif_impl_ifc_stop_conf(&ndev->if_proto, &result);
 }
@@ -3156,11 +3181,10 @@ void brcmf_if_eapol_req(net_device* ndev, const wlanif_eapol_req_t* req) {
   confirm.result_code = WLAN_EAPOL_RESULT_SUCCESS;
   zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
 
-  BRCMF_DBG(
-      WLANIF, "Sending EAPOL xmit confirm to SME. result: %s",
-      confirm.result_code == WLAN_EAPOL_RESULT_SUCCESS
-          ? "success"
-          : confirm.result_code == WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE ? "failure" : "unknown");
+  BRCMF_DBG(WLANIF, "Sending EAPOL xmit confirm to SME. result: %s",
+            confirm.result_code == WLAN_EAPOL_RESULT_SUCCESS                ? "success"
+            : confirm.result_code == WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE ? "failure"
+                                                                            : "unknown");
 
   wlanif_impl_ifc_eapol_conf(&ndev->if_proto, &confirm);
 }
@@ -3965,6 +3989,53 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
   return err;
 }
 
+// Notify SME of channel switch
+static zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp,
+                                               const struct brcmf_event_msg* e, void* data) {
+  uint16_t chanspec = 0;
+  wlan_channel_t chan;
+  wlanif_channel_switch_info_t info;
+  zx_status_t err = ZX_OK;
+  struct brcmf_cfg80211_info* cfg = nullptr;
+  struct net_device* ndev = nullptr;
+  struct wireless_dev* wdev = nullptr;
+
+  ZX_ASSERT(ifp);
+  cfg = ifp->drvr->config;
+  ndev = ifp->ndev;
+  wdev = ndev_to_wdev(ndev);
+
+  // For client IF, ensure it is connected.
+  if (wdev->iftype == WLAN_INFO_MAC_ROLE_CLIENT) {
+    // Status should be connected.
+    if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+      BRCMF_ERR("CSA on %s. Not associated.\n", ndev->name);
+      return ZX_ERR_BAD_STATE;
+    }
+  }
+
+  // Get channel information from firmware.
+  err = brcmf_fil_iovar_data_get(ifp, "chanspec", &chanspec, sizeof(uint16_t), nullptr);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Fail to get chanspec from firmware, reason: %s\n", zx_status_get_string(err));
+    return err;
+  }
+
+  chanspec_to_channel(&cfg->d11inf, chanspec, &chan);
+  BRCMF_DBG(CONN, "IF: %d chanspec: 0x%x channel: %d", ifp->ifidx, chanspec, chan.primary);
+  info.new_channel = chan.primary;
+
+  // Inform channel switch in wlanif.
+  wlanif_impl_ifc_on_channel_switch(&ndev->if_proto, &info);
+
+  return ZX_OK;
+}
+static zx_status_t brcmf_notify_ap_started(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
+                                           void* data) {
+  BRCMF_INFO("AP Started Event");
+  return brcmf_notify_channel_switch(ifp, e, data);
+}
+
 static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struct net_device* ndev,
                                           const struct brcmf_event_msg* e, bool completed) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
@@ -3979,6 +4050,19 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
       cfg->signal_report_timer->Start(BRCMF_SIGNAL_REPORT_TIMER_DUR_MS);
       // Indicate the rssi soon after connection
       cfg80211_signal_ind(ndev);
+      // Workaround to update SoftAP channel once client has associated.
+      // TODO(karthikrish): This check can be removed once the issue is fixed in FW.
+      if (cfg->ap_started) {
+        for (auto ifidx = 0; ifidx < BRCMF_MAX_IFS; ifidx++) {
+          brcmf_if* tmp_ifp = cfg->pub->iflist[ifidx];
+          if (!tmp_ifp ||
+              !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &tmp_ifp->vif->sme_state)) {
+            continue;
+          } else {
+            brcmf_notify_channel_switch(tmp_ifp, nullptr, nullptr);
+          }
+        }
+      }
     }
     // Connected bssid is in profile->bssid.
     // connection IEs are in conn_info->req_ie, req_ie_len, resp_ie, resp_ie_len.
@@ -4064,13 +4148,30 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
   uint32_t event = e->event_code;
   uint32_t reason = e->reason;
 
-  BRCMF_DBG(CONN, "event %s (%u), reason %d\n",
-            brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(event)), event, reason);
-  if (event == BRCMF_E_LINK && reason == BRCMF_E_REASON_LINK_BSSCFG_DIS &&
-      ndev != cfg_to_ndev(cfg)) {
-    BRCMF_DBG(CONN, "AP mode link down\n");
-    sync_completion_signal(&cfg->vif_disabled);
-    return ZX_OK;
+  BRCMF_DBG(CONN, "event %s (%u), reason %d flags 0x%x\n",
+            brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(event)), event, reason,
+            e->flags);
+  if (event == BRCMF_E_LINK) {
+    if (!(e->flags & BRCMF_EVENT_MSG_LINK)) {
+      BRCMF_DBG(CONN, "AP mode link down\n");
+      sync_completion_signal(&cfg->vif_disabled);
+      return ZX_OK;
+    } else {
+      BRCMF_DBG(CONN, "AP mode link up\n");
+      struct brcmf_if* ifp = ndev_to_if(ndev);
+
+      // Indicate status only if AP is in start pending state (could have been cleared if
+      // a stop request comes in before this event is received).
+      if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING,
+                                            &ifp->vif->sme_state)) {
+        // confirm AP Start
+        brcmf_if_start_conf(ndev, WLAN_START_RESULT_SUCCESS);
+        // Set AP_CREATED
+        brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
+        // Update channel (in case it changed because of client IF).
+        brcmf_notify_channel_switch(ifp, e, data);
+      }
+    }
   } else if (event == BRCMF_E_DISASSOC_IND) {
     // Client has disassociated
     wlanif_disassoc_indication_t disassoc_ind_params;
@@ -4154,7 +4255,7 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
   BRCMF_DBG(CONN, "IF: %d Event code %d, status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
             e->event_code, e->status, e->reason, e->auth_type, e->flags);
   if ((e->event_code == BRCMF_E_DEAUTH) || (e->event_code == BRCMF_E_DEAUTH_IND) ||
-      (e->event_code == BRCMF_E_DISASSOC_IND) || ((e->event_code == BRCMF_E_LINK) && (!e->flags))) {
+      (e->event_code == BRCMF_E_DISASSOC_IND)) {
     brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);
   }
 
@@ -4273,49 +4374,6 @@ static zx_status_t brcmf_notify_vif_event(struct brcmf_if* ifp, const struct brc
   return ZX_ERR_INVALID_ARGS;
 }
 
-static zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp,
-                                               const struct brcmf_event_msg* e, void* data) {
-  uint16_t chanspec;
-  wlan_channel_t chan;
-  wlanif_channel_switch_info_t info;
-  zx_status_t err = ZX_OK;
-  struct brcmf_cfg80211_info* cfg = nullptr;
-  struct net_device* ndev = nullptr;
-  struct wireless_dev* wdev = nullptr;
-
-  ZX_ASSERT(ifp);
-  cfg = ifp->drvr->config;
-  ndev = ifp->ndev;
-  wdev = ndev_to_wdev(ndev);
-
-  // Check whether it's AP iface.
-  if (wdev->iftype == WLAN_INFO_MAC_ROLE_AP) {
-    BRCMF_ERR("Shouldn't receive CSA event in AP role.\n");
-    return ZX_ERR_BAD_STATE;
-  }
-
-  // Status should be connected.
-  if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
-    BRCMF_ERR("CSA on %s. Not associated.\n", ndev->name);
-    return ZX_ERR_BAD_STATE;
-  }
-
-  // Get channel information from firmware.
-  err = brcmf_fil_iovar_data_get(ifp, "chanspec", &chanspec, sizeof(uint16_t), nullptr);
-  if (err != ZX_OK) {
-    BRCMF_ERR("Fail to get chanspec from firmware, reason: %s\n", zx_status_get_string(err));
-    return err;
-  }
-
-  chanspec_to_channel(&cfg->d11inf, chanspec, &chan);
-  info.new_channel = chan.primary;
-
-  // Trigger channel switch in wlanif.
-  wlanif_impl_ifc_on_channel_switch(&ndev->if_proto, &info);
-
-  return ZX_OK;
-}
-
 static void brcmf_init_conf(struct brcmf_cfg80211_conf* conf) {
   conf->frag_threshold = (uint32_t)-1;
   conf->rts_threshold = (uint32_t)-1;
@@ -4338,6 +4396,7 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_IF, brcmf_notify_vif_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_PSK_SUP, brcmf_notify_connect_status);
   brcmf_fweh_register(cfg->pub, BRCMF_E_CSA_COMPLETE_IND, brcmf_notify_channel_switch);
+  brcmf_fweh_register(cfg->pub, BRCMF_E_AP_STARTED, brcmf_notify_ap_started);
 }
 
 static void brcmf_deinit_priv_mem(struct brcmf_cfg80211_info* cfg) {
@@ -4403,6 +4462,10 @@ static zx_status_t wl_init_priv(struct brcmf_cfg80211_info* cfg) {
   cfg->signal_report_timer =
       new Timer(cfg->pub->dispatcher, std::bind(brcmf_signal_report_timeout, cfg), true);
   cfg->signal_report_work = WorkItem(brcmf_signal_report_worker);
+  // Initialize the ap start timer
+  cfg->ap_start_timer =
+      new Timer(cfg->pub->dispatcher, std::bind(brcmf_ap_start_timeout, cfg), false);
+  cfg->ap_start_timeout_work = WorkItem(brcmf_ap_start_timeout_worker);
   cfg->vif_disabled = {};
   return err;
 }

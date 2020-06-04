@@ -24,24 +24,29 @@ class CreateSoftAPTest : public SimTest {
   void Init();
   void CreateInterface();
   void DeleteInterface();
-  zx_status_t StartSoftAP(bool sec_enabled = false);
+  zx_status_t StartSoftAP();
   zx_status_t StopSoftAP();
   uint32_t DeviceCount();
   void TxAssocReq();
   void TxDisassocReq();
+  void ScheduleStartSoftAP(zx::duration when);
+  void ScheduleVerifyStartAPConf(zx::duration when, uint8_t status);
+  void ScheduleStopSoftAP(zx::duration when);
   void ScheduleAssocReq(zx::duration when);
   void ScheduleAssocDisassocReq(zx::duration when);
-  void ScheduleCleanup(zx::duration when);
   void ScheduleVerifyAssoc(zx::duration when);
   void ScheduleVerifyDisassoc(zx::duration when);
   void ScheduleClearAssocInd(zx::duration when);
   void CleanupInterface();
   void VerifyAssoc();
   void VerifyDisassoc();
+  void VerifyStartAPConf(uint8_t status);
   void ClearAssocInd();
+  void InjectStartAPError();
 
  protected:
   simulation::WlanTxInfo tx_info_ = {.channel = kDefaultChannel};
+  bool sec_enabled_ = false;
 
  private:
   // SME callbacks
@@ -52,10 +57,14 @@ class CreateSoftAPTest : public SimTest {
   bool assoc_ind_recv_ = false;
   bool deauth_ind_recv_ = false;
   bool disassoc_ind_recv_ = false;
+  bool start_conf_received_ = false;
+  uint8_t start_conf_status_;
   void OnAuthInd(const wlanif_auth_ind_t* ind);
   void OnDeauthInd(const wlanif_deauth_indication_t* ind);
   void OnAssocInd(const wlanif_assoc_ind_t* ind);
   void OnDisassocInd(const wlanif_disassoc_indication_t* ind);
+  void OnStartConf(const wlanif_start_confirm_t* resp);
+  void OnChannelSwitch(const wlanif_channel_switch_info_t* info);
   uint16_t CreateRsneIe(uint8_t* buffer);
 };
 
@@ -79,11 +88,15 @@ wlanif_impl_ifc_protocol_ops_t CreateSoftAPTest::sme_ops_ = {
         },
     .start_conf =
         [](void* cookie, const wlanif_start_confirm_t* resp) {
-          ASSERT_EQ(resp->result_code, WLAN_START_RESULT_SUCCESS);
+          static_cast<CreateSoftAPTest*>(cookie)->OnStartConf(resp);
         },
     .stop_conf =
         [](void* cookie, const wlanif_stop_confirm_t* resp) {
           ASSERT_EQ(resp->result_code, WLAN_STOP_RESULT_SUCCESS);
+        },
+    .on_channel_switch =
+        [](void* cookie, const wlanif_channel_switch_info_t* info) {
+          static_cast<CreateSoftAPTest*>(cookie)->OnChannelSwitch(info);
         },
 };
 
@@ -150,7 +163,7 @@ uint16_t CreateSoftAPTest::CreateRsneIe(uint8_t* buffer) {
   return offset;
 }
 
-zx_status_t CreateSoftAPTest::StartSoftAP(bool sec_enabled) {
+zx_status_t CreateSoftAPTest::StartSoftAP() {
   wlanif_start_req_t start_req = {
       .ssid = {.len = 6, .data = "Sim_AP"},
       .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
@@ -161,7 +174,7 @@ zx_status_t CreateSoftAPTest::StartSoftAP(bool sec_enabled) {
   };
   // If sec mode is requested, create a dummy RSNE IE (our SoftAP only
   // supports WPA2)
-  if (sec_enabled == true) {
+  if (sec_enabled_ == true) {
     start_req.rsne_len = CreateRsneIe(start_req.rsne);
   }
   softap_ifc_->if_impl_ops_->start_req(softap_ifc_->if_impl_ctx_, &start_req);
@@ -170,11 +183,16 @@ zx_status_t CreateSoftAPTest::StartSoftAP(bool sec_enabled) {
   brcmf_simdev* sim = device_->GetSim();
   int32_t wsec;
   sim->sim_fw->IovarsGet(softap_ifc_->iface_id_, "wsec", &wsec, sizeof(wsec));
-  if (sec_enabled == true)
+  if (sec_enabled_ == true)
     EXPECT_NE(wsec, 0);
   else
     EXPECT_EQ(wsec, 0);
   return ZX_OK;
+}
+
+void CreateSoftAPTest::InjectStartAPError() {
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->ErrorInjectSetBit(SIM_FW_AP_START_FAIL);
 }
 
 zx_status_t CreateSoftAPTest::StopSoftAP() {
@@ -201,6 +219,12 @@ void CreateSoftAPTest::OnDisassocInd(const wlanif_disassoc_indication_t* ind) {
   ASSERT_EQ(std::memcmp(ind->peer_sta_address, kFakeMac.byte, ETH_ALEN), 0);
   disassoc_ind_recv_ = true;
 }
+void CreateSoftAPTest::OnStartConf(const wlanif_start_confirm_t* resp) {
+  start_conf_received_ = true;
+  start_conf_status_ = resp->result_code;
+}
+
+void CreateSoftAPTest::OnChannelSwitch(const wlanif_channel_switch_info_t* info) {}
 
 void CreateSoftAPTest::TxAssocReq() {
   // Get the mac address of the SoftAP
@@ -226,6 +250,24 @@ void CreateSoftAPTest::TxDisassocReq() {
   // Disassociate with the SoftAP
   simulation::SimDisassocReqFrame disassoc_req_frame(mac, soft_ap_mac, 0);
   env_->Tx(&disassoc_req_frame, tx_info_, this);
+}
+
+void CreateSoftAPTest::ScheduleStartSoftAP(zx::duration when) {
+  auto start_softap_fn = std::make_unique<std::function<void()>>();
+  *start_softap_fn = std::bind(&CreateSoftAPTest::StartSoftAP, this);
+  env_->ScheduleNotification(std::move(start_softap_fn), when);
+}
+
+void CreateSoftAPTest::ScheduleVerifyStartAPConf(zx::duration when, uint8_t status) {
+  auto fn = std::make_unique<std::function<void()>>();
+  *fn = std::bind(&CreateSoftAPTest::VerifyStartAPConf, this, status);
+  env_->ScheduleNotification(std::move(fn), when);
+}
+
+void CreateSoftAPTest::ScheduleStopSoftAP(zx::duration when) {
+  auto stop_softap_fn = std::make_unique<std::function<void()>>();
+  *stop_softap_fn = std::bind(&CreateSoftAPTest::StopSoftAP, this);
+  env_->ScheduleNotification(std::move(stop_softap_fn), when);
 }
 
 void CreateSoftAPTest::ScheduleAssocReq(zx::duration when) {
@@ -281,16 +323,13 @@ void CreateSoftAPTest::VerifyDisassoc() {
   uint16_t num_clients = sim->sim_fw->GetNumClients(softap_ifc_->iface_id_);
   ASSERT_EQ(num_clients, 0);
 }
-void CreateSoftAPTest::ScheduleCleanup(zx::duration when) {
-  auto cleanup_fn = std::make_unique<std::function<void()>>();
-  *cleanup_fn = std::bind(&CreateSoftAPTest::CleanupInterface, this);
-  env_->ScheduleNotification(std::move(cleanup_fn), when);
+
+void CreateSoftAPTest::VerifyStartAPConf(uint8_t status) {
+  ASSERT_EQ(start_conf_received_, true);
+  ASSERT_EQ(start_conf_status_, status);
 }
 
-void CreateSoftAPTest::CleanupInterface() {
-  StopSoftAP();
-  DeleteInterface();
-}
+void CreateSoftAPTest::CleanupInterface() { DeleteInterface(); }
 
 TEST_F(CreateSoftAPTest, SetDefault) {
   Init();
@@ -303,9 +342,25 @@ TEST_F(CreateSoftAPTest, CreateSoftAP) {
   Init();
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
-  StartSoftAP();
-  StopSoftAP();
-  DeleteInterface();
+  zx::duration delay = zx::msec(10);
+  ScheduleStartSoftAP(delay);
+  delay += kStartAPConfDelay + zx::msec(10);
+  ScheduleStopSoftAP(delay);
+  // Wait until SoftAP start conf is received
+  // ScheduleVerifyStartAPConf(delay, WLAN_START_RESULT_SUCCESS);
+  env_->Run();
+  VerifyStartAPConf(WLAN_START_RESULT_SUCCESS);
+  CleanupInterface();
+}
+
+TEST_F(CreateSoftAPTest, CreateSoftAPFail) {
+  Init();
+  CreateInterface();
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  InjectStartAPError();
+  ScheduleStartSoftAP(zx::msec(50));
+  env_->Run();
+  VerifyStartAPConf(WLAN_START_RESULT_NOT_SUPPORTED);
 }
 
 // Start SoftAP in secure mode and then restart in open mode.
@@ -316,10 +371,11 @@ TEST_F(CreateSoftAPTest, CreateSecureSoftAP) {
   CreateInterface();
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   // Start SoftAP in secure mode
-  StartSoftAP(true);
+  sec_enabled_ = true;
+  StartSoftAP();
   StopSoftAP();
   // Restart SoftAP in open mode
-  StartSoftAP(true);
+  StartSoftAP();
   StopSoftAP();
   DeleteInterface();
 }
@@ -331,8 +387,8 @@ TEST_F(CreateSoftAPTest, AssociateWithSoftAP) {
   StartSoftAP();
   ScheduleAssocReq(zx::msec(10));
   ScheduleVerifyAssoc(zx::msec(50));
-  ScheduleCleanup(zx::msec(100));
   env_->Run();
+  CleanupInterface();
 }
 
 TEST_F(CreateSoftAPTest, ReassociateWithSoftAP) {
@@ -346,8 +402,8 @@ TEST_F(CreateSoftAPTest, ReassociateWithSoftAP) {
   // Reassoc
   ScheduleAssocReq(zx::msec(100));
   ScheduleVerifyAssoc(zx::msec(150));
-  ScheduleCleanup(zx::msec(200));
   env_->Run();
+  CleanupInterface();
 }
 
 TEST_F(CreateSoftAPTest, DisassociateFromSoftAP) {
@@ -357,8 +413,8 @@ TEST_F(CreateSoftAPTest, DisassociateFromSoftAP) {
   StartSoftAP();
   ScheduleAssocDisassocReq(zx::msec(50));
   ScheduleVerifyDisassoc(zx::msec(75));
-  ScheduleCleanup(zx::msec(100));
   env_->Run();
+  CleanupInterface();
 }
 
 }  // namespace wlan::brcmfmac

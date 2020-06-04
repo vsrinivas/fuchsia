@@ -16,7 +16,9 @@ constexpr uint16_t kDefaultCh = 149;
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = kDefaultCh, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
 // Chanspec value corresponding to kDefaultChannel with current d11 encoder.
-constexpr uint16_t kDefaultChanpsec = 53397;
+constexpr uint16_t kDefaultChanspec = 53397;
+constexpr uint16_t kTestChanspec = 0xd0a5;
+constexpr uint16_t kTest1Chanspec = 0xd095;
 constexpr simulation::WlanTxInfo kDefaultTxInfo = {.channel = kDefaultChannel};
 constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
@@ -35,13 +37,14 @@ class DynamicIfTest : public SimTest {
                               std::optional<common::MacAddr> mac_addr = std::nullopt);
   void DeleteInterface(wlan_info_mac_role_t role);
   uint32_t DeviceCount();
-  zx_status_t StartSoftAP();
+  void StartSoftAP();
 
   // Run through the join => auth => assoc flow
   void StartAssoc();
 
   // Schedule a future callback
   void ScheduleCall(void (DynamicIfTest::*fn)(), zx::duration when);
+  void ChannelCheck();
   // Schedule an event to stop the test. This is needed to stop any beaconing APs, since the test
   // won't end until all events are processed.
   void ScheduleTestEnd(zx::duration when);
@@ -94,6 +97,8 @@ class DynamicIfTest : public SimTest {
  private:
   bool auth_ind_recv_ = false;
   bool assoc_ind_recv_ = false;
+  uint16_t new_channel_;
+  bool chan_ind_recv_ = false;
   // StationIfc overrides
   void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
 
@@ -111,6 +116,7 @@ class DynamicIfTest : public SimTest {
   void OnDeauthInd(const wlanif_deauth_indication_t* ind);
   void OnAssocInd(const wlanif_assoc_ind_t* ind);
   void OnDisassocInd(const wlanif_disassoc_indication_t* ind){};
+  void OnChannelSwitch(const wlanif_channel_switch_info_t* info);
 };
 
 // Since we're acting as wlanif, we need handlers for any protocol calls we may receive
@@ -147,6 +153,10 @@ wlanif_impl_ifc_protocol_ops_t DynamicIfTest::sme_ops_ = {
         [](void* cookie, const wlanif_stop_confirm_t* resp) {
           ASSERT_EQ(resp->result_code, WLAN_STOP_RESULT_SUCCESS);
         },
+    .on_channel_switch =
+        [](void* cookie, const wlanif_channel_switch_info_t* info) {
+          static_cast<DynamicIfTest*>(cookie)->OnChannelSwitch(info);
+        },
     .signal_report = [](void* cookie, const wlanif_signal_report_indication* ind) {},
 };
 
@@ -179,7 +189,7 @@ void DynamicIfTest::Query(wlanphy_impl_info_t* out_info) {
 
 uint32_t DynamicIfTest::DeviceCount() { return (dev_mgr_->DevicesCount()); }
 
-zx_status_t DynamicIfTest::StartSoftAP() {
+void DynamicIfTest::StartSoftAP() {
   wlanif_start_req_t start_req = {
       .ssid = {.len = 6, .data = "Sim_AP"},
       .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
@@ -188,7 +198,16 @@ zx_status_t DynamicIfTest::StartSoftAP() {
       .channel = kDefaultCh,
   };
   softap_ifc_->if_impl_ops_->start_req(softap_ifc_->if_impl_ctx_, &start_req);
-  return ZX_OK;
+}
+
+void DynamicIfTest::ChannelCheck() {
+  uint16_t softap_chanspec = GetChanspec(true, ZX_OK);
+  uint16_t client_chanspec = GetChanspec(false, ZX_OK);
+  EXPECT_EQ(softap_chanspec, client_chanspec);
+  brcmf_simdev* sim = device_->GetSim();
+  wlan_channel_t chan;
+  sim->sim_fw->convert_chanspec_to_channel(softap_chanspec, &chan);
+  EXPECT_EQ(chan.primary, new_channel_);
 }
 
 void DynamicIfTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
@@ -277,6 +296,11 @@ void DynamicIfTest::TxAssocReq() {
 void DynamicIfTest::OnAssocInd(const wlanif_assoc_ind_t* ind) {
   ASSERT_EQ(std::memcmp(ind->peer_sta_address, kFakeMac.byte, ETH_ALEN), 0);
   assoc_ind_recv_ = true;
+}
+
+void DynamicIfTest::OnChannelSwitch(const wlanif_channel_switch_info_t* info) {
+  new_channel_ = info->new_channel;
+  chan_ind_recv_ = true;
 }
 
 void DynamicIfTest::OnAuthInd(const wlanif_auth_ind_t* ind) {
@@ -454,7 +478,8 @@ TEST_F(DynamicIfTest, StopAPDisassocsClientIF) {
   // Check if the client's assoc with FakeAP succeeded
   EXPECT_EQ(context_.assoc_resp_count, 1U);
   EXPECT_EQ(deauth_ind_recv_, true);
-  // TODO(karthikrish) Will add disassoc once support in SIM FW is available
+  VerifyAssocWithSoftAP();
+  // Disassoc and other assoc scenarios are covered in assoc_test.cc
 }
 
 TEST_F(DynamicIfTest, SetClientChanspecAfterAPStarted) {
@@ -468,15 +493,17 @@ TEST_F(DynamicIfTest, SetClientChanspecAfterAPStarted) {
 
   // The chanspec of softAP iface should be set to default one.
   chanspec = GetChanspec(true, ZX_OK);
-  EXPECT_EQ(chanspec, kDefaultChanpsec);
+  EXPECT_EQ(chanspec, kDefaultChanspec);
 
   // After creating client iface and setting a different chanspec to it, chanspec of softAP will
   // change as a result of this operation.
   CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT);
-  chanspec = 1;
+  chanspec = kTestChanspec;
   SetChanspec(false, &chanspec, ZX_OK);
+
+  // Confirm chanspec of AP is same as client
   chanspec = GetChanspec(true, ZX_OK);
-  EXPECT_EQ(chanspec, (uint16_t)1);
+  EXPECT_EQ(chanspec, kTestChanspec);
 }
 
 TEST_F(DynamicIfTest, SetAPChanspecAfterClientCreated) {
@@ -484,7 +511,7 @@ TEST_F(DynamicIfTest, SetAPChanspecAfterClientCreated) {
   Init();
 
   // Create client iface and set chanspec
-  uint16_t chanspec = 1;
+  uint16_t chanspec = kTestChanspec;
   CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT);
   SetChanspec(false, &chanspec, ZX_OK);
 
@@ -493,14 +520,44 @@ TEST_F(DynamicIfTest, SetAPChanspecAfterClientCreated) {
   StartSoftAP();
   // When we call StartSoftAP, the kDefaultCh will be transformed into chanspec(in this case the
   // value is 53397) and set to soffAP iface, but since there is already a client iface activated,
-  // that input chanspec will be ignored and set to 1, which is the same as client's chanspec.
+  // that input chanspec will be ignored and set to client's chanspec.
   chanspec = GetChanspec(true, ZX_OK);
-  EXPECT_EQ(chanspec, (uint16_t)1);
+  EXPECT_EQ(chanspec, kTestChanspec);
 
-  // Now if we set chanspec again to softAP when it already have a chanspec, this the operation will
-  // be rejected.
-  chanspec = 2;
-  SetChanspec(true, &chanspec, ZX_ERR_BAD_STATE);
+  // Now if we set chanspec again to softAP when it already have a chanspec, this operation is
+  // silently rejected
+  chanspec = kTest1Chanspec;
+  SetChanspec(true, &chanspec, ZX_OK);
 }
 
+// Start SoftAP after client assoc. SoftAP's channel should get set to
+// client's channel
+TEST_F(DynamicIfTest, CheckSoftAPChannel) {
+  // Create our device instances
+  Init();
+  CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT);
+  CreateInterface(WLAN_INFO_MAC_ROLE_AP);
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+
+  zx::duration delay = zx::msec(10);
+  // Associate to FakeAp
+  ScheduleCall(&DynamicIfTest::StartAssoc, delay);
+  // Start our SoftAP
+  delay += zx::msec(10);
+  ScheduleCall(&DynamicIfTest::StartSoftAP, delay);
+
+  // Wait until SIM FW sends AP Start confirmation. This is set as a
+  // scheduled event to ensure test runs until AP Start confirmation is
+  // received.
+  delay += kStartAPConfDelay + zx::msec(10);
+  ScheduleCall(&DynamicIfTest::ChannelCheck, delay);
+  env_->Run();
+  // ChannelCheck();
+}
 }  // namespace wlan::brcmfmac

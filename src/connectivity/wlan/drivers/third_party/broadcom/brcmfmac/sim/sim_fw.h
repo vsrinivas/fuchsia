@@ -36,6 +36,11 @@
 
 namespace wlan::brcmfmac {
 
+// bit definitions to inject specific errors in SIM FW to check corresponding
+// error handling in the driver
+enum sim_fw_error_inject {
+  SIM_FW_AP_START_FAIL,
+};
 // The amount of time we will wait for an association response after an association request
 constexpr zx::duration kAssocTimeout = zx::sec(1);
 // The amount of time we will wait for an authentication response after an authentication request
@@ -43,6 +48,8 @@ constexpr zx::duration kAuthTimeout = zx::sec(1);
 // The amount of time we will wait for a beacon from an associated device before disassociating
 // Timing based off broadcom firmware black box testing
 constexpr zx::duration kBeaconTimeout = zx::sec(5);
+// Delay between receiving start AP request and sending E_LINK event
+constexpr zx::duration kStartAPConfDelay = zx::msec(10);
 
 class SimFirmware {
   class BcdcResponse {
@@ -184,6 +191,15 @@ class SimFirmware {
   zx_status_t IovarsGet(uint16_t ifidx, const char* name, void* value_out, size_t value_len);
   zx_status_t HandleBssCfgSet(const uint16_t ifidx, const char* name, const void* data,
                               size_t value_len);
+
+  // Firmware error injection related methods
+  void ErrorInjectSetBit(size_t inject_bit);
+  void ErrorInjectClearBit(size_t inject_bit);
+  void ErrorInjectAllClear();
+
+  // channel-chanspec helper functions
+  void convert_chanspec_to_channel(uint16_t chanspec, wlan_channel_t* ch);
+  uint16_t convert_channel_to_chanspec(wlan_channel_t* channel);
 
   // Bus operations: calls from driver
   zx_status_t BusPreinit();
@@ -344,6 +360,8 @@ class SimFirmware {
   zx_status_t SetIFChanspec(uint16_t ifidx, uint16_t chanspec);
   bool FindAndRemoveClient(const uint16_t ifidx, const common::MacAddr client_mac, uint16_t reason);
   bool FindClient(const uint16_t ifidx, const common::MacAddr client_mac);
+  void ScheduleLinkEvent(zx::duration when, uint16_t ifidx);
+  void SendAPStartLinkEvent(uint16_t ifidx);
   // This is the simulator object that represents the interface between the driver and the
   // firmware. We will use it to send back events.
   brcmf_simdev* simdev_;
@@ -378,6 +396,7 @@ class SimFirmware {
   bool dev_is_up_ = false;
   uint32_t mpc_ = 1;  // Read FW appears to be setting this to 1 by default.
   zx::duration beacon_timeout_ = kBeaconTimeout;
+  std::atomic<unsigned long> error_inject_bits_ = 0;
 };
 
 }  // namespace wlan::brcmfmac

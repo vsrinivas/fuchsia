@@ -332,6 +332,7 @@ impl super::Station for ApSme {
             },
             State::Started { ref mut bss } => {
                 match event {
+                    MlmeEvent::OnChannelSwitched { info } => bss.handle_channel_switch(info),
                     MlmeEvent::AuthenticateInd { ind } => bss.handle_auth_ind(ind),
                     MlmeEvent::DeauthenticateInd { ind } => {
                         bss.handle_deauth(&ind.peer_sta_address)
@@ -481,6 +482,11 @@ impl InfraBss {
         } else {
             false
         }
+    }
+
+    fn handle_channel_switch(&mut self, info: fidl_mlme::ChannelSwitchInfo) {
+        info!("Channel switch for AP {:?}", info);
+        self.op_radio_cfg.chan.primary = info.new_channel;
     }
 
     fn handle_auth_ind(&mut self, ind: fidl_mlme::AuthenticateIndication) {
@@ -707,6 +713,10 @@ mod tests {
         }
     }
 
+    fn create_channel_switch_ind(channel: u8) -> MlmeEvent {
+        MlmeEvent::OnChannelSwitched { info: fidl_mlme::ChannelSwitchInfo { new_channel: channel } }
+    }
+
     #[test]
     fn test_validate_config() {
         assert_eq!(
@@ -784,6 +794,27 @@ mod tests {
                 channel: unprotected_config().radio_cfg.primary_chan.unwrap(),
                 num_clients: 0,
             }),
+            sme.get_running_ap()
+        );
+    }
+
+    // Check status after channel change
+    #[test]
+    fn ap_check_status_after_channel_change() {
+        let (mut sme, _, _) = start_unprotected_ap();
+        // Check status
+        assert_eq!(
+            Some(fidl_sme::Ap {
+                ssid: SSID.to_vec(),
+                channel: unprotected_config().radio_cfg.primary_chan.unwrap(),
+                num_clients: 0,
+            }),
+            sme.get_running_ap()
+        );
+        sme.on_mlme_event(create_channel_switch_ind(6));
+        // Check status
+        assert_eq!(
+            Some(fidl_sme::Ap { ssid: SSID.to_vec(), channel: 6, num_clients: 0 }),
             sme.get_running_ap()
         );
     }
