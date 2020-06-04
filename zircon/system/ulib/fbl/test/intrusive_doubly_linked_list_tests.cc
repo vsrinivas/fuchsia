@@ -291,6 +291,11 @@ RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  Splice)
 RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  Splice)
 RUN_ZXTEST(DoublyLinkedListTest, RPTE,    Splice)
 
+RUN_ZXTEST(DoublyLinkedListTest, UMTE,    SplitAfter)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  SplitAfter)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  SplitAfter)
+RUN_ZXTEST(DoublyLinkedListTest, RPTE,    SplitAfter)
+
 RUN_ZXTEST(DoublyLinkedListTest, UMTE,    ReplaceIfCopy)
 #if TEST_WILL_NOT_COMPILE || 0
 RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  ReplaceIfCopy)

@@ -32,6 +32,8 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
   using RefAction = typename TestEnvironment<TestEnvTraits>::RefAction;
   using TestEnvironment<TestEnvTraits>::TakePtr;
 
+  enum class SplitAfterFlavor { Iterator, ObjectReference };
+
   // Utility method for checking the size of the container via either size()
   // or size_slow(), depending on whether or not the container supports a
   // constant order size operation.
@@ -642,6 +644,65 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
 
     // By now, we should have created LIST_COUNT * 4 objects.  They should all be gone now.
     TestEnvTraits::CheckCustomDeleteInvocations(LIST_COUNT * 4);
+  }
+
+  template <SplitAfterFlavor kFlavor>
+  void SplitAfterHelper() {
+    // Test splitting the list at all possible points.
+    for (size_t i = 0; i < OBJ_COUNT; ++i) {
+      // Make sure we are starting with an empty container.
+      EXPECT_EQ(0u, ObjType::live_obj_count());
+      EXPECT_EQ(0U, Size(container()));
+
+      // Make sure we are starting with an populate the container.
+      ASSERT_NO_FAILURES(Populate(container()));
+      EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count());
+      ASSERT_EQ(OBJ_COUNT, Size(container()));
+
+      // Find our split point
+      auto split_iter = container().begin();
+      for (size_t j = 0; j < i; ++j) {
+        ++split_iter;
+      }
+
+      // Now split the list at the specified point, using either the iterator or
+      // the object reference depending on the test flavor.
+      ContainerType split_list;
+      if constexpr (kFlavor == SplitAfterFlavor::Iterator) {
+        split_list = container().split_after(split_iter);
+      } else {
+        split_list = container().split_after(*split_iter);
+      }
+
+      // Basic sanity checks
+      ContainerChecker::SanityCheck(container());
+      ContainerChecker::SanityCheck(split_list);
+
+      // Check sizes
+      EXPECT_EQ(i + 1, Size(container()));
+      EXPECT_EQ(OBJ_COUNT - (i + 1), Size(split_list));
+      EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count());
+
+      // The order of the objects in the lists should remain unchanged.
+      size_t expected = 0;
+      for (const auto& item : container()) {
+        EXPECT_EQ(expected, item.value());
+        ++expected;
+      }
+      for (const auto& item : split_list) {
+        EXPECT_EQ(expected, item.value());
+        ++expected;
+      }
+
+      // Reset the environment for the next pass
+      split_list.clear();
+      this->Reset();
+    }
+  }
+
+  void SplitAfter() {
+    ASSERT_NO_FATAL_FAILURES(SplitAfterHelper<SplitAfterFlavor::Iterator>());
+    ASSERT_NO_FATAL_FAILURES(SplitAfterHelper<SplitAfterFlavor::ObjectReference>());
   }
 
   template <typename IterType>

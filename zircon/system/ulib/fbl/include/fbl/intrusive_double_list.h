@@ -404,10 +404,9 @@ class __POINTER(PtrType_) DoublyLinkedList : public internal::DoublyLinkedListBa
     // If we are being inserted before the head, then we need to update the
     // head pointer.  Otherwise, we need to update the next pointer of the
     // node which is about to come before us.
-    auto& tgt_next = (head_ == before) ? head_
-                                       : internal::is_sentinel_ptr(before)
-                                             ? NodeTraits::node_state(*tail()).next_
-                                             : NodeTraits::node_state(*tgt_prev).next_;
+    auto& tgt_next = (head_ == before)                   ? head_
+                     : internal::is_sentinel_ptr(before) ? NodeTraits::node_state(*tail()).next_
+                                                         : NodeTraits::node_state(*tgt_prev).next_;
 
     auto& other_head_ns = NodeTraits::node_state(*other_list.head_);
     auto other_tail = other_list.tail();
@@ -432,6 +431,68 @@ class __POINTER(PtrType_) DoublyLinkedList : public internal::DoublyLinkedListBa
       this->IncSizeTracker(other_list.SizeTrackerCount());
       other_list.ResetSizeTracker();
     }
+  }
+
+  // Split the list immediately after |iter|, returning the remainder of the
+  // list in a new list instance.
+  //
+  // |iter| *must* refer to a member of the list being split.  Attempt to split
+  // list A with an iterator to an element which is a member of list B will
+  // result in undefined behavior which may not be detectable at runtime.
+  ContainerType split_after(const iterator& iter) {
+    if (!iter.IsValid()) {
+      // iter must refer to a member of this list, therefore it must be valid.
+      // DEBUG_ASSERT if it is not, or return an empty list in a release build.
+      ZX_DEBUG_ASSERT(false);
+      return {};
+    }
+    return split_after(*iter.node_);
+  }
+
+  // Alternate form of split_after which uses an object reference instead of an
+  // iterator to determine the split point.  Just like the iterator form of
+  // split_after, |obj| *must* be a member of the list being split.
+  ContainerType split_after(ValueType& obj) {
+    static_assert(ListSizeOrder == SizeOrder::N,
+                  "split_after is not allowed for SizedDoublyLinkedLists");
+    auto& A_ns = NodeTraits::node_state(obj);
+
+    // If this is element is already the tail of the list, or if it is an
+    // illegal split in a release build, simply return an empty list.
+    if (!A_ns.InContainer()) {
+      ZX_DEBUG_ASSERT(false);
+      return {};
+    }
+
+    if (internal::is_sentinel_ptr(A_ns.next_)) {
+      // Since this node is at the end of the list, we can sanity check to make
+      // sure that obj was actually a member of this list.
+      ZX_DEBUG_ASSERT(A_ns.next_ == sentinel());
+      return {};
+    }
+
+    // At this point in time, we know that we have at least 2 nodes in the list
+    // we are splitting.  Let A be |obj|, and B be the node immediately after A.
+    //
+    // We have 5 pointers we need to update in total.
+    //
+    // ret.head       : needs to point to B, which is the new head of ret
+    // A.next         : A is the new tail.  Next becomes this.sentinel();
+    // B.prev         : B is the new head of ret.  Its prev points to ret.tail
+    // this.head.prev : A is the new tail of this.  this.head.prev needs to point to it.
+    // this.tail.next : this.tail is now ret.tail, so this.tail.next = ret.sentinel()
+    ContainerType ret;
+    auto& B_ns = NodeTraits::node_state(*A_ns.next_);
+    auto& head_ns = NodeTraits::node_state(*head_);
+    auto& tail_ns = NodeTraits::node_state(*head_ns.prev_);
+
+    ret.head_ = A_ns.next_;
+    A_ns.next_ = this->sentinel();
+    B_ns.prev_ = head_ns.prev_;
+    head_ns.prev_ = &obj;
+    tail_ns.next_ = ret.sentinel();
+
+    return ret;
   }
 
   // insert_after : Insert an element after iter in the list.
@@ -782,10 +843,9 @@ class __POINTER(PtrType_) DoublyLinkedList : public internal::DoublyLinkedListBa
     // If we are being inserted before the head, then we need to update the
     // managed head pointer.  Otherwise, we need to update the next pointer
     // of the node which is about to come before us.
-    auto& tgt_next = (head_ == before) ? head_
-                                       : internal::is_sentinel_ptr(before)
-                                             ? NodeTraits::node_state(*tail()).next_
-                                             : NodeTraits::node_state(*tgt_prev).next_;
+    auto& tgt_next = (head_ == before)                   ? head_
+                     : internal::is_sentinel_ptr(before) ? NodeTraits::node_state(*tail()).next_
+                                                         : NodeTraits::node_state(*tgt_prev).next_;
 
     // Update the pointers in the inserted node.
     ptr_ns.next_ = tgt_next;

@@ -261,6 +261,14 @@ RUN_ZXTEST(SizedSinglyLinkedListTest, UPCDTE,  Splice)
 RUN_ZXTEST(SizedSinglyLinkedListTest, RPTE,    Splice)
 #endif
 
+// SizedSinglyLinkedLists cannot perform split_after operations.
+#if TEST_WILL_NOT_COMPILE || 0
+RUN_ZXTEST(DoublyLinkedListTest, UMTE,    SplitAfter)
+RUN_ZXTEST(DoublyLinkedListTest, UPDDTE,  SplitAfter)
+RUN_ZXTEST(DoublyLinkedListTest, UPCDTE,  SplitAfter)
+RUN_ZXTEST(DoublyLinkedListTest, RPTE,    SplitAfter)
+#endif
+
 RUN_ZXTEST(SizedSinglyLinkedListTest, UMTE,    ReplaceIfCopy)
 #if TEST_WILL_NOT_COMPILE || 0
 RUN_ZXTEST(SizedSinglyLinkedListTest, UPDDTE,  ReplaceIfCopy)

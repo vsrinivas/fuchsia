@@ -273,6 +273,11 @@ RUN_ZXTEST(SinglyLinkedListTest, UPCDTE,  Splice)
 RUN_ZXTEST(SinglyLinkedListTest, RPTE,    Splice)
 #endif
 
+RUN_ZXTEST(SinglyLinkedListTest, UMTE,    SplitAfter)
+RUN_ZXTEST(SinglyLinkedListTest, UPDDTE,  SplitAfter)
+RUN_ZXTEST(SinglyLinkedListTest, UPCDTE,  SplitAfter)
+RUN_ZXTEST(SinglyLinkedListTest, RPTE,    SplitAfter)
+
 RUN_ZXTEST(SinglyLinkedListTest, UMTE,    ReplaceIfCopy)
 #if TEST_WILL_NOT_COMPILE || 0
 RUN_ZXTEST(SinglyLinkedListTest, UPDDTE,  ReplaceIfCopy)

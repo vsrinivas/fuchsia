@@ -671,6 +671,64 @@ class __POINTER(PtrType_) SinglyLinkedList : private internal::SizeTracker<ListS
     return std::move(ptr);
   }
 
+  // Split the list immediately after |iter|, returning the remainder of the
+  // list in a new list instance.
+  //
+  // |iter| *must* refer to a member of the list being split.  Attempt to split
+  // list A with an iterator to an element which is a member of list B will
+  // result in undefined behavior which may not be detectable at runtime.
+  ContainerType split_after(const iterator& iter) {
+    if (!iter.IsValid()) {
+      // iter must refer to a member of this list, therefore it must be valid.
+      // DEBUG_ASSERT if it is not, or return an empty list in a release build.
+      ZX_DEBUG_ASSERT(false);
+      return {};
+    }
+    return split_after(*iter.node_);
+  }
+
+  // Alternate form of split_after which uses an object reference instead of an
+  // iterator to determine the split point.  Just like the iterator form of
+  // split_after, |obj| *must* be a member of the list being split.
+  ContainerType split_after(ValueType& obj) {
+    static_assert(ListSizeOrder == SizeOrder::N,
+                  "split_after is not allowed for SizedSinglyLinkedLists");
+    auto& A_ns = NodeTraits::node_state(obj);
+
+    // If this is element is already the tail of the list, or if it is an
+    // illegal split in a release build, simply return an empty list.
+    if (!A_ns.InContainer()) {
+      ZX_DEBUG_ASSERT(false);
+      return {};
+    }
+
+    if (internal::is_sentinel_ptr(A_ns.next_)) {
+      // Since this node is at the end of the list, we can sanity check to make
+      // sure that obj was actually a member of this list.
+      ZX_DEBUG_ASSERT(A_ns.next_ == sentinel());
+      return {};
+    }
+
+    // At this point in time, we know that we have at least 2 nodes in the list
+    // we are splitting.  Let A be |obj|, and B be the node immediately after A.
+    //
+    // We have 2 pointers we need to update in total.
+    //
+    // ret.head : needs to point to B, which is the new head of ret
+    // A.next   : A is the new tail.  Next becomes this.sentinel();
+    //
+    // Thankfully, singly linked lists do not support reverse iteration, which
+    // means that their sentinels are all the same.  This means that we don't
+    // actually have to go and fixup ret.tail.next (which would force an O(n)
+    // operation to find the tail).
+    ContainerType ret;
+
+    ret.head_ = A_ns.next_;
+    A_ns.next_ = this->sentinel();
+
+    return ret;
+  }
+
  private:
   // The traits of a non-const iterator
   struct iterator_traits {

@@ -56,6 +56,7 @@ struct TestThunks {
   MAKE_TEST_THUNK(Insert)
   MAKE_TEST_THUNK(DirectInsert)
   MAKE_TEST_THUNK(Splice)
+  MAKE_TEST_THUNK(SplitAfter)
   MAKE_TEST_THUNK(ReplaceIfCopy)
   MAKE_TEST_THUNK(ReplaceIfMove)
   MAKE_TEST_THUNK(ReplaceCopy)
