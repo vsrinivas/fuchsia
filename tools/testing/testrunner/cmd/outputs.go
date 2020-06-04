@@ -60,13 +60,16 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 	o.tap.Ok(result.Result == runtests.TestSuccess, desc)
 
 	if o.outDir != "" {
+		stdout := bytes.NewReader(result.Stdout)
+		stderr := bytes.NewReader(result.Stderr)
+		stdio := io.MultiReader(stdout, stderr)
 		outputRelPath = filepath.Join(o.outDir, outputRelPath)
 		pathWriter, err := osmisc.CreateFile(outputRelPath)
 		if err != nil {
 			return fmt.Errorf("failed to create file: %v", err)
 		}
 		defer pathWriter.Close()
-		if _, err := pathWriter.Write(result.Stdio); err != nil {
+		if _, err := io.Copy(pathWriter, stdio); err != nil {
 			return fmt.Errorf("failed to write stdio file for test %q: %v", result.Name, err)
 		}
 	}
