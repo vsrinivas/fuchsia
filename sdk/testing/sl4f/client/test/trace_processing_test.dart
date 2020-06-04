@@ -576,6 +576,15 @@ void main(List<String> args) {
     expect(results[7].label, equals('VPU Memory Bandwidth Usage'));
     expect(results[7].values[0], _closeTo(140000000));
     expect(results[7].values[1], _closeTo(140000000));
+    expect(results[8].label, equals('Other Memory Bandwidth Usage'));
+    expect(results[8].values[0], _closeTo(0));
+    expect(results[8].values[1], _closeTo(190000000));
+    expect(results[9].label, equals('Total Memory Bandwidth Usage'));
+    expect(results[9].values[0], _closeTo(420000000));
+    expect(results[9].values[1], _closeTo(630000000));
+    expect(results[10].label, equals('Memory Bandwidth Usage Percent'));
+    expect(results[10].values[0], _closeTo(50.00));
+    expect(results[10].values[1], _closeTo(75.00));
   });
 
   test('Custom registry', () async {

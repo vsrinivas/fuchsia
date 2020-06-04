@@ -100,7 +100,7 @@ const String testMemoryMetricJsonString = '''
       "pid": 7009,
       "tid": 7022,
       "ph": "C",
-      "args":{"cpu":40000000, "gpu":240000000, "vdec":0, "vpu":140000000}
+      "args":{"cpu":40000000, "gpu":240000000, "vdec":0, "vpu":140000000, "other":0}
     },
     {
       "cat": "memory_monitor",
@@ -109,7 +109,25 @@ const String testMemoryMetricJsonString = '''
       "pid": 7009,
       "tid": 7022,
       "ph": "C",
-      "args":{"cpu":50000000, "gpu":250000000, "vdec":0, "vpu":140000000}
+      "args":{"cpu":50000000, "gpu":250000000, "vdec":0, "vpu":140000000, "other":190000000}
+    },
+    {
+      "cat": "memory_monitor",
+      "name": "bandwidth_free",
+      "ts": 4100000000,
+      "pid": 7009,
+      "tid": 7022,
+      "ph": "C",
+      "args":{"value":420000000}
+    },
+    {
+      "cat": "memory_monitor",
+      "name": "bandwidth_free",
+      "ts": 4100000000,
+      "pid": 7009,
+      "tid": 7022,
+      "ph": "C",
+      "args":{"value":210000000}
     }
   ],
   "systemTraceEvents": {

@@ -69,6 +69,29 @@ List<TestCaseResults> memoryMetricsProcessor(
   final vpuBandwidthValues =
       getArgValuesFromEvents<num>(bandwidthUsageEvents, 'vpu')
           .map((v) => v.toDouble());
+  final otherBandwidthValues =
+      getArgValuesFromEvents<num>(bandwidthUsageEvents, 'other')
+          .map((v) => v.toDouble());
+  final totalBandwidthValues = bandwidthUsageEvents.map((e) {
+    final num v = e.args['cpu'] +
+        e.args['gpu'] +
+        e.args['vdec'] +
+        e.args['vpu'] +
+        e.args['other'];
+    return v.toDouble();
+  });
+  final bandwidthFreeEvents = filterEventsTyped<CounterEvent>(
+      memoryMonitorEvents,
+      name: 'bandwidth_free');
+  final freeBandwidthValues =
+      getArgValuesFromEvents<num>(bandwidthFreeEvents, 'value')
+          .map((v) => v.toDouble());
+  final bandwidthUsagePercentValues = Zip2Iterable<double, double, double>(
+      totalBandwidthValues,
+      freeBandwidthValues,
+      (totalBandwidthValue, freeBandwidthValue) =>
+          (100.0 * totalBandwidthValue) /
+          (totalBandwidthValue + freeBandwidthValue));
   final List<TestCaseResults> results = [];
   <String, Iterable<double>>{
     'Total System Memory': usedMemoryValues,
@@ -79,6 +102,9 @@ List<TestCaseResults> memoryMetricsProcessor(
     'GPU Memory Bandwidth Usage': gpuBandwidthValues,
     'VDEC Memory Bandwidth Usage': vdecBandwidthValues,
     'VPU Memory Bandwidth Usage': vpuBandwidthValues,
+    'Other Memory Bandwidth Usage': otherBandwidthValues,
+    'Total Memory Bandwidth Usage': totalBandwidthValues,
+    'Memory Bandwidth Usage Percent': bandwidthUsagePercentValues,
   }.forEach((name, values) {
     _log.info('Average $name in bytes: ${computeMean(values)}');
     results.add(TestCaseResults(name, Unit.bytes, values.toList()));
