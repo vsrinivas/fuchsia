@@ -294,4 +294,13 @@ bool UserPager::SupplyPages(Vmo* paged_vmo, uint64_t dest_offset, uint64_t lengt
   return true;
 }
 
+bool UserPager::FailPages(Vmo* paged_vmo, uint64_t page_offset, uint64_t page_count,
+                          zx_status_t error_status) {
+  if (pager_.op_range(ZX_PAGER_OP_FAIL, paged_vmo->vmo_, page_offset * ZX_PAGE_SIZE,
+                      page_count * ZX_PAGE_SIZE, error_status) != ZX_OK) {
+    return false;
+  }
+  return true;
+}
+
 }  // namespace pager_tests

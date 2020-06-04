@@ -1713,4 +1713,314 @@ TEST(Pager, InvalidPagerOpRange) {
   ASSERT_EQ(zx_pager_op_range(pager.get(), 0, vmo.get(), 0, 0, 0), ZX_ERR_NOT_SUPPORTED);
 }
 
+// Simple test for a ZX_PAGER_OP_FAIL on a single page, accessed from a single thread.
+// Tests both cases, where the client accesses the vmo directly, and where the client has the vmo
+// mapped in a vmar.
+VMO_VMAR_TEST(FailSinglePage) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(1, &vmo));
+
+  TestThread t([vmo, check_vmar]() -> bool { return check_buffer(vmo, 0, 1, check_vmar); });
+  ASSERT_TRUE(t.Start());
+
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  ASSERT_TRUE(pager.FailPages(vmo, 0, 1));
+
+  if (check_vmar) {
+    // Verify that the thread crashes if the page was accessed via a vmar.
+    ASSERT_TRUE(t.WaitForCrash(vmo->GetBaseAddr()));
+  } else {
+    // Verify that the vmo read fails if the thread directly accessed the vmo.
+    ASSERT_TRUE(t.WaitForFailure());
+  }
+  // Make sure there are no extra requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
+// Tests failing the exact range requested.
+TEST(Pager, FailExactRange) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 11;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  TestThread t([vmo]() -> bool { return vmo->Commit(0, kNumPages); });
+  ASSERT_TRUE(t.Start());
+
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+
+  ASSERT_TRUE(pager.FailPages(vmo, 0, kNumPages));
+
+  // Failing the pages will cause the COMMIT to fail.
+  ASSERT_TRUE(t.WaitForFailure());
+
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
+// Tests that multiple page requests can be failed at once.
+TEST(Pager, FailMultipleCommits) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 11;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  // Multiple threads requesting disjoint ranges.
+  std::unique_ptr<TestThread> threads[kNumPages];
+  for (uint64_t i = 0; i < kNumPages; i++) {
+    threads[i] = std::make_unique<TestThread>([vmo, i]() -> bool { return vmo->Commit(i, 1); });
+    ASSERT_TRUE(threads[i]->Start());
+  }
+
+  for (uint64_t i = 0; i < kNumPages; i++) {
+    ASSERT_TRUE(threads[i]->WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, i, 1, ZX_TIME_INFINITE));
+  }
+
+  // Fail the entire range.
+  ASSERT_TRUE(pager.FailPages(vmo, 0, kNumPages));
+
+  for (uint64_t i = 0; i < kNumPages; i++) {
+    ASSERT_TRUE(threads[i]->WaitForFailure());
+  }
+
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
+  // Multiple threads requesting the same range.
+  for (uint64_t i = 0; i < kNumPages; i++) {
+    threads[i] =
+        std::make_unique<TestThread>([vmo]() -> bool { return vmo->Commit(0, kNumPages); });
+    ASSERT_TRUE(threads[i]->Start());
+  }
+
+  for (uint64_t i = 0; i < kNumPages; i++) {
+    ASSERT_TRUE(threads[i]->WaitForBlocked());
+  }
+
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+
+  // Fail the entire range.
+  ASSERT_TRUE(pager.FailPages(vmo, 0, kNumPages));
+
+  for (uint64_t i = 0; i < kNumPages; i++) {
+    ASSERT_TRUE(threads[i]->WaitForFailure());
+  }
+
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
+// Tests failing multiple vmos.
+TEST(Pager, FailMultipleVmos) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo1;
+  ASSERT_TRUE(pager.CreateVmo(1, &vmo1));
+  TestThread t1([vmo1]() -> bool { return vmo1->Commit(0, 1); });
+
+  Vmo* vmo2;
+  ASSERT_TRUE(pager.CreateVmo(1, &vmo2));
+  TestThread t2([vmo2]() -> bool { return vmo2->Commit(0, 1); });
+
+  ASSERT_TRUE(t1.Start());
+  ASSERT_TRUE(t1.WaitForBlocked());
+
+  ASSERT_TRUE(pager.WaitForPageRead(vmo1, 0, 1, ZX_TIME_INFINITE));
+
+  uint64_t offset, length;
+  // No page requests for vmo2 yet.
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo2, 0, &offset, &length));
+
+  ASSERT_TRUE(t2.Start());
+  ASSERT_TRUE(t2.WaitForBlocked());
+
+  ASSERT_TRUE(pager.WaitForPageRead(vmo2, 0, 1, ZX_TIME_INFINITE));
+
+  // Fail vmo1.
+  ASSERT_TRUE(pager.FailPages(vmo1, 0, 1));
+  ASSERT_TRUE(t1.WaitForFailure());
+
+  // No more requests for vmo1.
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo1, 0, &offset, &length));
+
+  // Fail vmo2.
+  ASSERT_TRUE(pager.FailPages(vmo2, 0, 1));
+  ASSERT_TRUE(t2.WaitForFailure());
+
+  // No more requests for either vmo1 or vmo2.
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo1, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo2, 0, &offset, &length));
+}
+
+// Tests failing a range overlapping with a page request.
+TEST(Pager, FailOverlappingRange) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 11;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  // End of the request range overlaps with the failed range.
+  TestThread t1([vmo]() -> bool { return vmo->Commit(0, 2); });
+  // The entire request range overlaps with the failed range.
+  TestThread t2([vmo]() -> bool { return vmo->Commit(9, 2); });
+  // The start of the request range overlaps with the failed range.
+  TestThread t3([vmo]() -> bool { return vmo->Commit(5, 2); });
+
+  ASSERT_TRUE(t1.Start());
+  ASSERT_TRUE(t1.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 2, ZX_TIME_INFINITE));
+
+  ASSERT_TRUE(t2.Start());
+  ASSERT_TRUE(t2.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 9, 2, ZX_TIME_INFINITE));
+
+  ASSERT_TRUE(t3.Start());
+  ASSERT_TRUE(t3.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 5, 2, ZX_TIME_INFINITE));
+
+  ASSERT_TRUE(pager.FailPages(vmo, 1, 9));
+
+  ASSERT_TRUE(t1.WaitForFailure());
+  ASSERT_TRUE(t2.WaitForFailure());
+  ASSERT_TRUE(t3.WaitForFailure());
+
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
+// Tests failing the requested range via multiple pager_op_range calls - after the first one, the
+// rest are redundant.
+TEST(Pager, FailRedundant) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 11;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  TestThread t([vmo]() -> bool { return vmo->Commit(0, kNumPages); });
+  ASSERT_TRUE(t.Start());
+
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+
+  for (uint64_t i = 0; i < kNumPages; i++) {
+    // The first call with i = 0 should cause the thread to cause.
+    // The following calls are no-ops.
+    ASSERT_TRUE(pager.FailPages(vmo, i, 1));
+  }
+
+  ASSERT_TRUE(t.WaitForFailure());
+
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
+// Tests that failing a range after the vmo is detached is a no-op.
+TEST(Pager, FailAfterDetach) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 11;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  TestThread t([vmo]() -> bool { return vmo->Commit(0, kNumPages); });
+  ASSERT_TRUE(t.Start());
+
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+
+  ASSERT_TRUE(pager.DetachVmo(vmo));
+  // Detaching the vmo should cause the COMMIT to fail.
+  ASSERT_TRUE(t.WaitForFailure());
+
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
+  // This is a no-op.
+  ASSERT_TRUE(pager.FailPages(vmo, 0, kNumPages));
+
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
+// Tests that a supply_pages succeeds after failing i.e. a fail is not fatal.
+TEST(Pager, SupplyAfterFail) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 11;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  TestThread t1([vmo]() -> bool { return vmo->Commit(0, kNumPages); });
+  ASSERT_TRUE(t1.Start());
+
+  ASSERT_TRUE(t1.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+
+  ASSERT_TRUE(pager.FailPages(vmo, 0, kNumPages));
+  ASSERT_TRUE(t1.WaitForFailure());
+
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
+  // Try to COMMIT the failed range again.
+  TestThread t2([vmo]() -> bool { return vmo->Commit(0, kNumPages); });
+  ASSERT_TRUE(t2.Start());
+
+  ASSERT_TRUE(t2.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+
+  // This should supply the pages as expected.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, kNumPages));
+  ASSERT_TRUE(t2.Wait());
+
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
+// Tests that the error code passed in when failing is correctly propagated.
+TEST(Pager, FailErrorCode) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 11;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  zx_status_t status;
+  TestThread t([vmo, &status]() -> bool {
+    // |status| should get set to the error code passed in via FailPages.
+    status = vmo->vmo().op_range(ZX_VMO_OP_COMMIT, 0, kNumPages * ZX_PAGE_SIZE, nullptr, 0);
+    return (status == ZX_OK);
+  });
+
+  ASSERT_TRUE(t.Start());
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+
+  // Fail with a specific error code. ZX_ERR_IO is arbitrarily picked here.
+  ASSERT_TRUE(pager.FailPages(vmo, 0, kNumPages, ZX_ERR_IO));
+
+  ASSERT_TRUE(t.WaitForFailure());
+  ASSERT_EQ(status, ZX_ERR_IO);
+
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
 }  // namespace pager_tests

@@ -67,9 +67,14 @@ class PageSource : public fbl::RefCounted<PageSource> {
   // Returns ZX_ERR_NOT_FOUND if the request will never be resolved.
   zx_status_t FinalizeRequest(PageRequest* node);
 
-  // Updates the request tracking metadata to account for pages [offset, len) having
+  // Updates the request tracking metadata to account for pages [offset, offset + len) having
   // been supplied to the owning vmo.
   void OnPagesSupplied(uint64_t offset, uint64_t len);
+
+  // Fails outstanding page requests in the range [offset, offset + len). Events associated with the
+  // failed page requests are signaled with the |error_status|, and any waiting threads are
+  // unblocked.
+  void OnPagesFailed(uint64_t offset, uint64_t len, zx_status_t error_status);
 
   // Detaches the source. All future calls into the page source will fail. All
   // pending read transactions are aborted. Pending flush transactions will still
@@ -123,8 +128,9 @@ class PageSource : public fbl::RefCounted<PageSource> {
   // region has already been requested from the source.
   void RaiseReadRequestLocked(PageRequest* request) TA_REQ(page_source_mtx_);
 
-  // Wakes up the given PageRequest and all overlapping requests.
-  void CompleteRequestLocked(PageRequest* head) TA_REQ(page_source_mtx_);
+  // Wakes up the given PageRequest and all overlapping requests, with an optional |status|.
+  void CompleteRequestLocked(PageRequest* head, zx_status_t status = ZX_OK)
+      TA_REQ(page_source_mtx_);
 
   // Removes |request| from any internal tracking. Called by a PageRequest if
   // it needs to abort itself.
@@ -142,7 +148,8 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   explicit PageRequest(bool allow_batching = false) : allow_batching_(allow_batching) {}
   ~PageRequest();
 
-  // Returns ZX_OK on success or ZX_ERR_INTERNAL_INTR_KILLED if the thread was killed.
+  // Returns ZX_OK on success, or a permitted error code if the pager explicitly failed this page
+  // request. Returns ZX_ERR_INTERNAL_INTR_KILLED if the thread was killed.
   zx_status_t Wait();
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(PageRequest);

@@ -58,13 +58,13 @@ class Vmo : public fbl::DoublyLinkedListable<std::unique_ptr<Vmo>> {
         vmo_(std::move(vmo)),
         base_val_(base_val) {}
 
+  bool OpRange(uint32_t op, uint64_t page_offset, uint64_t page_count);
+
   const uint64_t size_;
   uint64_t* const base_;
   const uintptr_t base_addr_;
 
   // These are set in the ctor, but can be changed by UserPager::ReplaceVmo
-  bool OpRange(uint32_t op, uint64_t page_offset, uint64_t page_count);
-
   zx::vmo vmo_;
   uint64_t base_val_;  // == packet key
 
@@ -101,7 +101,11 @@ class UserPager {
   bool SupplyPages(Vmo* vmo, uint64_t page_offset, uint64_t page_count, zx::vmo src,
                    uint64_t src_page_offset = 0);
 
-  // Checks if there is a requets for the range [page_offset, length). Will
+  // Signals failure to populate pages in the specified range.
+  bool FailPages(Vmo* vmo, uint64_t page_offset, uint64_t page_count,
+                 zx_status_t error_status = ZX_ERR_UNAVAILABLE);
+
+  // Checks if there is a request for the range [page_offset, length). Will
   // wait until |deadline|.
   bool WaitForPageRead(Vmo* vmo, uint64_t page_offset, uint64_t page_count, zx_time_t deadline);
   bool WaitForPageComplete(uint64_t key, zx_time_t deadline);
@@ -113,6 +117,10 @@ class UserPager {
   const zx::pager& pager() const { return pager_; }
 
  private:
+  bool WaitForRequest(uint64_t key, const zx_packet_page_request_t& request, zx_time_t deadline);
+  bool WaitForRequest(fbl::Function<bool(const zx_port_packet_t& packet)> cmp_fn,
+                      zx_time_t deadline);
+
   zx::pager pager_;
   zx::port port_;
   uint64_t next_base_ = 0;
@@ -124,10 +132,6 @@ class UserPager {
   } request_t;
 
   fbl::DoublyLinkedList<std::unique_ptr<request_t>> requests_;
-
-  bool WaitForRequest(uint64_t key, const zx_packet_page_request_t& request, zx_time_t deadline);
-  bool WaitForRequest(fbl::Function<bool(const zx_port_packet_t& packet)> cmp_fn,
-                      zx_time_t deadline);
 };
 
 }  // namespace pager_tests

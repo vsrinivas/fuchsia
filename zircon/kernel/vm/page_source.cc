@@ -119,6 +119,33 @@ void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
   }
 }
 
+void PageSource::OnPagesFailed(uint64_t offset, uint64_t len, zx_status_t error_status) {
+  canary_.Assert();
+  LTRACEF_LEVEL(2, "%p offset %lx, len %lx\n", this, offset, len);
+  uint64_t end;
+  bool overflow = add_overflow(offset, len, &end);
+  DEBUG_ASSERT(!overflow);  // vmobject should have already validated overflow
+
+  Guard<Mutex> guard{&page_source_mtx_};
+  if (detached_) {
+    return;
+  }
+
+  // The first possible request we could fail is the one with the smallest
+  // end address that is greater than offset. Then keep looking as long as the
+  // target request's start offset is less than the supply end.
+  auto start = outstanding_requests_.upper_bound(offset);
+  while (start.IsValid() && start->offset_ < end) {
+    auto cur = start;
+    ++start;
+
+    LTRACEF_LEVEL(2, "%p, signaling failure %d %lx\n", this, error_status, cur->offset_);
+
+    // Notify anything waiting on this page.
+    CompleteRequestLocked(outstanding_requests_.erase(cur), error_status);
+  }
+}
+
 zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, vm_page_t** const page_out,
                                 paddr_t* const pa_out) {
   canary_.Assert();
@@ -234,7 +261,7 @@ void PageSource::RaiseReadRequestLocked(PageRequest* request) {
 #endif  // DEBUG_ASSERT_IMPLEMENTED
 }
 
-void PageSource::CompleteRequestLocked(PageRequest* req) {
+void PageSource::CompleteRequestLocked(PageRequest* req, zx_status_t status) {
   // Take the request back from the callback before waking
   // up the corresponding thread.
   ClearAsyncRequest(&req->read_request_);
@@ -242,10 +269,10 @@ void PageSource::CompleteRequestLocked(PageRequest* req) {
   while (!req->overlap_.is_empty()) {
     auto waiter = req->overlap_.pop_front();
     waiter->offset_ = UINT64_MAX;
-    waiter->event_.Signal();
+    waiter->event_.Signal(status);
   }
   req->offset_ = UINT64_MAX;
-  req->event_.Signal();
+  req->event_.Signal(status);
 }
 
 void PageSource::CancelRequest(PageRequest* request) {

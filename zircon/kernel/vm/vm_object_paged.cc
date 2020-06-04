@@ -3309,6 +3309,16 @@ zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpli
   return status;
 }
 
+// This is a transient operation used only to fail currently outstanding page requests. It does not
+// alter the state of the VMO, or any pages that might have already been populated within the
+// specified range.
+//
+// If certain pages in this range are populated, we must have done so via a previous SupplyPages()
+// call that succeeded. So it might be fine for clients to continue accessing them, despite the
+// larger range having failed.
+//
+// TODO(rashaeqbal): If we support a more permanent failure mode in the future, we will need to free
+// populated pages in the specified range, and possibly detach the VMO from the page source.
 zx_status_t VmObjectPaged::FailPageRequests(uint64_t offset, uint64_t len,
                                             zx_status_t error_status) {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
@@ -3321,7 +3331,8 @@ zx_status_t VmObjectPaged::FailPageRequests(uint64_t offset, uint64_t len,
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  return ZX_ERR_NOT_SUPPORTED;
+  page_source_->OnPagesFailed(offset, len, error_status);
+  return ZX_OK;
 }
 
 uint32_t VmObjectPaged::GetMappingCachePolicy() const {
