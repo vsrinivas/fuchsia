@@ -8,7 +8,7 @@ use {
 };
 
 #[ffx_plugin()]
-pub async fn echo(daemon_proxy: &DaemonProxy, cmd: EchoCommand) -> Result<(), Error> {
+pub async fn echo(daemon_proxy: DaemonProxy, cmd: EchoCommand) -> Result<(), Error> {
     match daemon_proxy
         .echo_string(match cmd.text {
             Some(ref t) => t,

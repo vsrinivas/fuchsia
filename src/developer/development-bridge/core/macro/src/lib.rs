@@ -9,11 +9,8 @@ use {
     proc_macro2::Span,
     quote::quote,
     syn::{
-        parse_macro_input,
-        punctuated::Punctuated,
-        FnArg, Ident, ItemFn, ItemStruct, Pat, PatType, Token,
-        Type::{Path, Reference},
-        TypePath, TypeReference,
+        parse_macro_input, punctuated::Punctuated, FnArg, Ident, ItemFn, ItemStruct, Pat, PatType,
+        Token, Type::Path, TypePath,
     },
 };
 
@@ -51,21 +48,10 @@ pub fn ffx_plugin(_attr: TokenStream, item: TokenStream) -> TokenStream {
                 Some(t) => {
                     if t.ident == Ident::new("RemoteControlProxy", Span::call_site()) {
                         is_remote = true;
-                    } else {
+                    } else if t.ident != Ident::new("DaemonProxy", Span::call_site()) {
                         panic!("{}", EXPECTED_SIGNATURE)
                     }
                 }
-                _ => panic!("{}", EXPECTED_SIGNATURE),
-            },
-            Reference(TypeReference { elem, .. }) => match elem.as_ref() {
-                Path(TypePath { path, .. }) => match path.segments.last() {
-                    Some(t) => {
-                        if t.ident != Ident::new("DaemonProxy", Span::call_site()) {
-                            panic!("{}", EXPECTED_SIGNATURE)
-                        }
-                    }
-                    _ => panic!("{}", EXPECTED_SIGNATURE),
-                },
                 _ => panic!("{}", EXPECTED_SIGNATURE),
             },
             _ => panic!("{}", EXPECTED_SIGNATURE),
@@ -94,15 +80,27 @@ pub fn ffx_plugin(_attr: TokenStream, item: TokenStream) -> TokenStream {
     if is_remote {
         TokenStream::from(quote! {
             #input
-            pub async fn ffx_plugin_impl<C: ffx_core::RemoteControlProxySource>(cli: &C, #cmd) -> Result<(), Error> {
-                #method(cli.get_remote_proxy().await?, #args).await
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut>(_daemon_factory: D, remote_factory: R, #cmd) -> Result<(), Error>
+                where
+                    D: FnOnce() -> DFut,
+                    DFut: std::future::Future<Output = std::result::Result<fidl_fuchsia_developer_bridge::DaemonProxy, anyhow::Error>>,
+                    R: FnOnce() -> RFut,
+                    RFut: std::future::Future<Output = std::result::Result<fidl_fuchsia_developer_remotecontrol::RemoteControlProxy, anyhow::Error>>
+            {
+                #method(remote_factory().await?, #args).await
             }
         })
     } else {
         TokenStream::from(quote! {
             #input
-            pub async fn ffx_plugin_impl<C: ffx_core::DaemonProxySource>(cli: &C, #cmd) -> Result<(), Error> {
-                #method(cli.get_daemon_proxy(), #args).await
+            pub async fn ffx_plugin_impl<D, DFut, R, RFut>(daemon_factory: D, _remote_factory: R, #cmd) -> Result<(), Error>
+                where
+                    D: FnOnce() -> DFut,
+                    DFut: std::future::Future<Output = std::result::Result<fidl_fuchsia_developer_bridge::DaemonProxy, anyhow::Error>>,
+                    R: FnOnce() -> RFut,
+                    RFut: std::future::Future<Output = std::result::Result<fidl_fuchsia_developer_remotecontrol::RemoteControlProxy, anyhow::Error>>
+            {
+                #method(daemon_factory().await?, #args).await
             }
         })
     }
