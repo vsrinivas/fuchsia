@@ -108,11 +108,6 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptComponent(InterceptOptions opti
   return *this;
 }
 
-TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(InterceptOptions options) {
-  ZX_ASSERT_MSG(false, "BaseShells no longer exist, please intercept SessionShell instead");
-  return *this;
-}
-
 TestHarnessBuilder& TestHarnessBuilder::InterceptSessionShell(InterceptOptions options) {
   fuchsia::modular::session::SessionShellMapEntry entry;
   entry.mutable_config()->mutable_app_config()->set_url(options.url);
