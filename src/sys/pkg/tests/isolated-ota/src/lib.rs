@@ -13,17 +13,20 @@ use {
     fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryConfigs},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_merkle::Hash,
     fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder, RepositoryBuilder},
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon as zx,
     futures::prelude::*,
     http::uri::Uri,
-    isolated_ota::{download_and_apply_update, UpdateError},
+    isolated_ota::{download_and_apply_update, OmahaConfig, UpdateError},
     itertools::Itertools,
     matches::assert_matches,
+    mock_omaha_server::{OmahaResponse, OmahaServer},
     mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
     std::{
         collections::{BTreeSet, HashMap},
+        str::FromStr,
         sync::Arc,
     },
     tempfile::TempDir,
@@ -33,12 +36,21 @@ const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
 const TEST_CERTS_PATH: &str = "/pkg/data/ssl";
 const TEST_REPO_URL: &str = "fuchsia-pkg://x64.test.fuchsia.com";
 
+enum OmahaState {
+    /// Don't use Omaha for this update.
+    Disabled,
+    /// Set up an Omaha server automatically.
+    Auto(OmahaResponse),
+    /// Pass the given OmahaConfig to Omaha.
+    Manual(OmahaConfig),
+}
+
 struct TestEnvBuilder {
     blobfs: Option<ClientEnd<DirectoryMarker>>,
     board: String,
     channel: String,
     images: HashMap<String, Vec<u8>>,
-    omaha_appid: Option<String>, // TODO: test omaha support.
+    omaha: OmahaState,
     packages: Vec<Package>,
     paver: MockPaverServiceBuilder,
     repo_config: Option<RepositoryConfigs>,
@@ -52,11 +64,11 @@ impl TestEnvBuilder {
             board: "test-board".to_owned(),
             channel: "test".to_owned(),
             images: HashMap::new(),
-            omaha_appid: None,
+            omaha: OmahaState::Disabled,
             packages: vec![],
             paver: MockPaverServiceBuilder::new(),
             repo_config: None,
-            version: "20200101.1.1".to_owned(),
+            version: "0.1.2.3".to_owned(),
         }
     }
 
@@ -86,6 +98,13 @@ impl TestEnvBuilder {
         self
     }
 
+    /// Enable/disable Omaha. OmahaState::Auto will automatically set up an Omaha server and tell
+    /// the updater to use it.
+    pub fn omaha_state(mut self, state: OmahaState) -> Self {
+        self.omaha = state;
+        self
+    }
+
     /// Mutate the MockPaverServiecBuilder used by this TestEnvBuilder.
     pub fn paver<F>(mut self, func: F) -> Self
     where
@@ -112,7 +131,7 @@ impl TestEnvBuilder {
         let mut update = PackageBuilder::new("update")
             .add_resource_at("packages", self.generate_packages().as_bytes());
 
-        let (repo_config, served_repo, cert_dir, packages) = if self.repo_config.is_none() {
+        let (repo_config, served_repo, cert_dir, packages, merkle) = if self.repo_config.is_none() {
             // If no repo config was specified, host a repo containing the provided packages,
             // and an update package containing given images + all packages in the repo.
             for (name, data) in self.images.iter() {
@@ -137,6 +156,7 @@ impl TestEnvBuilder {
                 served_repo.make_repo_config(TEST_REPO_URL.parse()?)
             ]);
 
+            let update_merkle = update.meta_far_merkle_root().clone();
             // Add the update package to the list of packages, so that TestResult::check_packages
             // will expect to see the update package's blobs in blobfs.
             let mut packages = vec![update];
@@ -146,6 +166,7 @@ impl TestEnvBuilder {
                 Some(served_repo),
                 std::fs::File::open(TEST_CERTS_PATH).context("opening test certificates")?,
                 packages,
+                update_merkle,
             )
         } else {
             // Use the provided repo config. Assume that this means we'll actually want to use
@@ -155,6 +176,8 @@ impl TestEnvBuilder {
                 None,
                 std::fs::File::open("/config/ssl").context("opening system ssl certificates")?,
                 vec![],
+                Hash::from_str("deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+                    .context("Making merkle")?,
             )
         };
 
@@ -172,12 +195,13 @@ impl TestEnvBuilder {
             blobfs: self.blobfs,
             board: self.board,
             channel: self.channel,
-            omaha_appid: self.omaha_appid,
+            omaha: self.omaha,
             packages,
             paver: Arc::new(self.paver.build()),
             _repo: served_repo,
             repo_config_dir: dir,
             ssl_certs: cert_dir,
+            update_merkle: merkle,
             version: self.version,
         })
     }
@@ -187,25 +211,44 @@ struct TestEnv {
     blobfs: Option<ClientEnd<DirectoryMarker>>,
     board: String,
     channel: String,
-    omaha_appid: Option<String>, // TODO: test omaha support.
+    omaha: OmahaState,
     packages: Vec<Package>,
     paver: Arc<MockPaverService>,
     _repo: Option<ServedRepository>,
     repo_config_dir: TempDir,
     ssl_certs: std::fs::File,
+    update_merkle: Hash,
     version: String,
 }
 
 impl TestEnv {
+    fn start_omaha(omaha: OmahaState, merkle: Hash) -> Result<Option<OmahaConfig>, Error> {
+        match omaha {
+            OmahaState::Disabled => Ok(None),
+            OmahaState::Manual(cfg) => Ok(Some(cfg)),
+            OmahaState::Auto(response) => {
+                let server = OmahaServer::new_with_hash(response, merkle);
+                let addr = server.start().context("Starting omaha server")?;
+                let config =
+                    OmahaConfig { app_id: "integration-test-appid".to_owned(), server_url: addr };
+
+                Ok(Some(config))
+            }
+        }
+    }
+
     /// Run the update, consuming this |TestEnv| and returning a |TestResult|.
-    pub async fn run(self) -> TestResult {
-        let (blobfs, blobfs_handle) = if let Some(client) = self.blobfs {
+    pub async fn run(mut self) -> TestResult {
+        let (blobfs, blobfs_handle) = if let Some(client) = self.blobfs.take() {
             (None, client)
         } else {
             let blobfs = BlobfsRamdisk::start().expect("launching blobfs");
             let client = blobfs.root_dir_handle().expect("getting blobfs root handle");
             (Some(blobfs), client)
         };
+
+        let omaha_config =
+            TestEnv::start_omaha(self.omaha, self.update_merkle).expect("Starting Omaha server");
 
         let mut service_fs = ServiceFs::new();
         let paver_clone = Arc::clone(&self.paver);
@@ -228,7 +271,7 @@ impl TestEnv {
             &self.channel,
             &self.board,
             &self.version,
-            self.omaha_appid,
+            omaha_config,
         )
         .await;
 
@@ -546,6 +589,93 @@ pub async fn test_blobfs_broken() -> Result<(), Error> {
     let result = env.run().await;
 
     assert_matches!(result.result, Err(UpdateError::InstallError(_)));
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+pub async fn test_omaha_broken() -> Result<(), Error> {
+    let bad_omaha_config = OmahaConfig {
+        app_id: "broken-omaha-test".to_owned(),
+        server_url: "http://does-not-exist.fuchsia.com".to_owned(),
+    };
+    let package = build_test_package().await?;
+    let env = TestEnvBuilder::new()
+        .add_package(package)
+        .add_image("zbi.signed", "ZBI".as_bytes())
+        .omaha_state(OmahaState::Manual(bad_omaha_config))
+        .build()
+        .await
+        .context("Building TestEnv")?;
+
+    let result = env.run().await;
+    assert_matches!(result.result, Err(UpdateError::InstallError(_)));
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+pub async fn test_omaha_works() -> Result<(), Error> {
+    let mut builder = TestEnvBuilder::new()
+        .add_image("zbi.signed", "This is a zbi".as_bytes())
+        .add_image("fuchsia.vbmeta", "This is a vbmeta".as_bytes())
+        .add_image("zedboot.signed", "This is zedboot".as_bytes())
+        .add_image("recovery.vbmeta", "This is another vbmeta".as_bytes())
+        .add_image("bootloader", "This is a bootloader upgrade".as_bytes())
+        .add_image("firmware_test", "This is the test firmware".as_bytes());
+    for i in 0i64..3 {
+        let name = format!("test-package{}", i);
+        let package = PackageBuilder::new(name)
+            .add_resource_at(
+                format!("/data/my-package-data-{}", i),
+                format!("This is some test data for test package {}", i).as_bytes(),
+            )
+            .add_resource_at("/bin/binary", "#!/boot/bin/sh\necho Hello".as_bytes())
+            .build()
+            .await
+            .context("Building test package")?;
+        builder = builder.add_package(package);
+    }
+
+    let env = builder
+        .omaha_state(OmahaState::Auto(OmahaResponse::Update))
+        .build()
+        .await
+        .context("Building TestEnv")?;
+
+    let result = env.run().await;
+    result.check_packages();
+    assert!(result.result.is_ok());
+    assert_eq!(
+        result.paver_events,
+        vec![
+            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::WriteFirmware {
+                firmware_type: "".to_owned(),
+                payload: "This is a bootloader upgrade".as_bytes().to_vec(),
+            },
+            PaverEvent::WriteFirmware {
+                firmware_type: "test".to_owned(),
+                payload: "This is the test firmware".as_bytes().to_vec(),
+            },
+            PaverEvent::WriteAsset {
+                configuration: Configuration::B,
+                asset: Asset::Kernel,
+                payload: "This is a zbi".as_bytes().to_vec(),
+            },
+            PaverEvent::WriteAsset {
+                configuration: Configuration::B,
+                asset: Asset::VerifiedBootMetadata,
+                payload: "This is a vbmeta".as_bytes().to_vec(),
+            },
+            // Note that zedboot/recovery isn't written, as isolated-ota skips them.
+            PaverEvent::SetConfigurationActive { configuration: Configuration::B },
+            PaverEvent::DataSinkFlush,
+            PaverEvent::BootManagerFlush,
+            // This is the isolated-ota library checking to see if the paver configured ABR properly.
+            PaverEvent::QueryActiveConfiguration,
+        ]
+    );
 
     Ok(())
 }
