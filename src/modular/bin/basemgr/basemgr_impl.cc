@@ -112,13 +112,13 @@ void BasemgrImpl::Start() {
     WaitForMinfs();
   }
 
-  // Use the default of an ephemeral account unless the configuration requested persistence.
+  // Use the default of a random session ID unless the configuration requested persistence.
   // TODO(fxb/51752): Change base manager config to use a more direct declaration of persistence
   // and remove the base shell configuration entirely.
   if (config_.basemgr_config().base_shell().app_config().has_args()) {
     for (const auto& arg : config_.basemgr_config().base_shell().app_config().args()) {
       if (arg == "--persist_user") {
-        is_ephemeral_account_ = false;
+        use_random_session_id_ = false;
         break;
       }
     }
@@ -141,12 +141,12 @@ void BasemgrImpl::Start() {
         if (state_ == State::SHUTTING_DOWN) {
           return;
         }
-        FX_DLOGS(INFO) << "Re-starting due to logout";
-        ShowSetupOrLogin();
+        FX_DLOGS(INFO) << "Re-starting due to session closure";
+        HandleResetOrStartSession();
       }));
 
   ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToBaseMgr);
-  ShowSetupOrLogin();
+  HandleResetOrStartSession();
 }
 
 void BasemgrImpl::Shutdown() {
@@ -171,22 +171,20 @@ void BasemgrImpl::Shutdown() {
 
 void BasemgrImpl::Terminate() { Shutdown(); }
 
-void BasemgrImpl::Login(bool is_ephemeral_account) {
+void BasemgrImpl::StartSession(bool use_random_id) {
   if (state_ == State::SHUTTING_DOWN) {
     return;
   }
-  if (is_ephemeral_account) {
+  if (use_random_id) {
     FX_LOGS(INFO) << "Starting session with random session ID.";
   } else {
     FX_LOGS(INFO) << "Starting session with stable session ID.";
   }
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-  auto did_start_session =
-      session_provider_->StartSession(std::move(view_token), is_ephemeral_account);
+  auto did_start_session = session_provider_->StartSession(std::move(view_token), use_random_id);
   if (!did_start_session) {
-    FX_LOGS(WARNING) << "Session was already started and the logged in user "
-                        "could not join the session.";
+    FX_LOGS(WARNING) << "New session could not be started.";
     return;
   }
 
@@ -212,23 +210,17 @@ void BasemgrImpl::UpdateSessionShellConfig() {
                                                             .app_config()));
 }
 
-void BasemgrImpl::ShowSetupOrLogin() {
-  auto show_setup_or_login = [this] {
-    // We no longer maintain a set of accounts within the account system,
-    // and so automatically login in all circumstances.
-    Login(is_ephemeral_account_);
-  };
+void BasemgrImpl::HandleResetOrStartSession() {
+  auto start_session = [this] { StartSession(use_random_session_id_); };
 
   // TODO(MF-347): Handle scenario where device settings manager channel is
   // dropped before error handler is set.
   // TODO(MF-134): Modular should not be handling factory reset.
-  // If the device needs factory reset, remove all the users before proceeding
-  // with setup.
   device_settings_manager_.set_error_handler(
-      [show_setup_or_login](zx_status_t status) { show_setup_or_login(); });
+      [start_session](zx_status_t status) { start_session(); });
   device_settings_manager_->GetInteger(
       kFactoryResetKey,
-      [this, show_setup_or_login](int factory_reset_value, fuchsia::devicesettings::Status status) {
+      [this, start_session](int factory_reset_value, fuchsia::devicesettings::Status status) {
         if (status == fuchsia::devicesettings::Status::ok && factory_reset_value > 0) {
           FX_LOGS(INFO) << "Factory reset initiated";
           // Unset the factory reset flag.
@@ -238,9 +230,9 @@ void BasemgrImpl::ShowSetupOrLogin() {
             }
           });
 
-          wlan_->ClearSavedNetworks(show_setup_or_login);
+          wlan_->ClearSavedNetworks(start_session);
         } else {
-          show_setup_or_login();
+          start_session();
         }
       });
 }
@@ -252,7 +244,7 @@ void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
   session_provider_->RestartSession(std::move(on_restart_complete));
 }
 
-void BasemgrImpl::LoginAsGuest() { Login(/* is_ephemeral_account */ true); }
+void BasemgrImpl::StartSessionWithRandomId() { StartSession(/* use_random_id */ true); }
 
 void BasemgrImpl::GetPresentation(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {

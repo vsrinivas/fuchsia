@@ -52,8 +52,7 @@ SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launche
       std::make_unique<vfs::Service>(intl_property_provider_->GetHandler()));
 }
 
-bool SessionProvider::StartSession(fuchsia::ui::views::ViewToken view_token,
-                                   bool is_ephemeral_account) {
+bool SessionProvider::StartSession(fuchsia::ui::views::ViewToken view_token, bool use_random_id) {
   if (session_context_) {
     FX_LOGS(WARNING) << "StartSession() called when session context already "
                         "exists. Try calling SessionProvider::Teardown()";
@@ -88,7 +87,7 @@ bool SessionProvider::StartSession(fuchsia::ui::views::ViewToken view_token,
 
   // Session context initializes and holds the sessionmgr process.
   session_context_ = std::make_unique<SessionContextImpl>(
-      launcher_, is_ephemeral_account, CloneStruct(sessionmgr_), CloneStruct(session_shell_),
+      launcher_, use_random_id, CloneStruct(sessionmgr_), CloneStruct(session_shell_),
       CloneStruct(story_shell_), use_session_shell_for_story_shell_factory_, std::move(view_token),
       std::move(services), std::move(client),
       /* get_presentation= */
@@ -124,8 +123,7 @@ void SessionProvider::RestartSession(fit::function<void()> on_restart_complete) 
     return;
   }
 
-  // Shutting down a session and preserving the users effectively restarts the
-  // session.
+  // Shutting down a session effectively restarts the session.
   session_context_->Shutdown(ShutDownReason::CRASHED, std::move(on_restart_complete));
 }
 

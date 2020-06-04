@@ -33,7 +33,7 @@ TEST_F(SessionContextImplTest, StartSessionmgr) {
       });
 
   modular::SessionContextImpl impl(
-      &launcher, false /* ephemeral_account */,
+      &launcher, false /* use_random_id */,
       modular::CloneStruct(app_config) /* sessionmgr_config */,
       modular::CloneStruct(app_config) /* session_shell_config */,
       modular::CloneStruct(app_config) /* story_shell_config */,
@@ -61,7 +61,7 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
   bool done_callback_called = false;
   modular::SessionContextImpl impl(
       &launcher,
-      /* ephemeral_account */ false,
+      /* use_random_id */ false,
       /* sessionmgr_config= */ modular::CloneStruct(app_config),
       /* session_shell_config= */ modular::CloneStruct(app_config),
       /* story_shell_config= */ modular::CloneStruct(app_config),

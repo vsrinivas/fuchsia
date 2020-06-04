@@ -60,7 +60,7 @@ sessionctl --story_name=story1 remove_mod slider_mod
 --json_out
     If flag is set output json for consuming instead of text.
 --wait_for_session
-    Blocks progress on completing a command until a guest user is logged in.
+    Blocks progress on completing a command until a session has started.
 
 <command>
 add_mod
@@ -106,7 +106,7 @@ list_stories
   List all the stories in the current session.
 
 login_guest
-  Logs in a guest user.
+  Starts a new session with a randomly generated session ID.
 
 restart_session
   Restarts the current session.
@@ -180,28 +180,29 @@ fuchsia::modular::internal::BasemgrDebugPtr ConnectToBasemgr() {
   return basemgr;
 }
 
-// Returns true if a guest user was logged in.
-bool LoginAsGuest(bool has_running_sessions, fuchsia::modular::internal::BasemgrDebugPtr basemgr,
-                  modular::Logger logger) {
+// Returns true if successful in starting a new session with a random ID.
+bool StartSessionWithRandomId(bool has_running_sessions,
+                              fuchsia::modular::internal::BasemgrDebugPtr basemgr,
+                              modular::Logger logger) {
   if (has_running_sessions) {
     logger.LogError(modular::kLoginGuestCommandString,
-                    "A user is already logged in. You may log a guest user out "
+                    "A session is already running. You may restart this session "
                     "by running 'sessionctl restart_session' or you may issue "
                     "any other sessionctl command.");
     return false;
   }
 
-  basemgr->LoginAsGuest();
+  basemgr->StartSessionWithRandomId();
   logger.Log(modular::kLoginGuestCommandString, std::vector<std::string>());
   return true;
 }
 
-// Returns true if a guest user was logged in.
-bool LoginDefaultGuestUser(fuchsia::modular::internal::BasemgrDebugPtr basemgr,
-                           modular::Logger logger, std::vector<DebugService>* sessions,
-                           std::string cmd, bool wait_for_session) {
-  std::cout << "Logging in as a guest user in the absence of running sessions." << std::endl;
-  LoginAsGuest(/*has_running_sessions=*/false, std::move(basemgr), logger);
+// Returns true after successfully verifying the initialization of a new session.
+bool StartDefaultSession(fuchsia::modular::internal::BasemgrDebugPtr basemgr,
+                         modular::Logger logger, std::vector<DebugService>* sessions,
+                         std::string cmd, bool wait_for_session) {
+  std::cout << "Starting a new session in the absence of running sessions." << std::endl;
+  StartSessionWithRandomId(/*has_running_sessions=*/false, std::move(basemgr), logger);
 
   do {
     // Wait 2 seconds to allow sessionmgr to initialize
@@ -245,16 +246,17 @@ int main(int argc, const char** argv) {
 
   auto sessions = FindAllSessions();
 
-  // Continue with log in flow if user issued a login_guest command
+  // Start a new session with a random ID if user issued a 'login_guest' command.
   if (cmd == modular::kLoginGuestCommandString) {
-    if (LoginAsGuest(/*has_running_sessions=*/!sessions.empty(), std::move(basemgr), logger)) {
+    if (StartSessionWithRandomId(/*has_running_sessions=*/!sessions.empty(), std::move(basemgr),
+                                 logger)) {
       return 0;
     }
     return 1;
   }
 
-  // Log in a guest user if no session is found before continuing to execute
-  // the requested command
+  // Start a new session with a random ID if no session is found before continuing to execute
+  // the requested command.
   if (sessions.empty()) {
     if (cmd == modular::kRestartSessionCommandString) {
       logger.LogError(cmd, "No session to be restarted.");
@@ -263,8 +265,8 @@ int main(int argc, const char** argv) {
 
     bool wait_for_session = command_line.HasOption(modular::kWaitForSessionFlagString);
 
-    // Exit here if no sessions were found after logging in a guest user
-    if (!LoginDefaultGuestUser(std::move(basemgr), logger, &sessions, cmd, wait_for_session)) {
+    // Exit here if no sessions were found after requesting a start.
+    if (!StartDefaultSession(std::move(basemgr), logger, &sessions, cmd, wait_for_session)) {
       return 1;
     }
   }

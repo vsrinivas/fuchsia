@@ -35,8 +35,7 @@ class SessionProvider {
   // Target constructor.
   //
   // |on_zero_sessions| is invoked when all sessions have been deleted. This is
-  // meant to be a callback for BasemgrImpl to either display a base shell or
-  // start a new session.
+  // meant to be a callback for BasemgrImpl to start a new session.
   SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
                   fuchsia::hardware::power::statecontrol::AdminPtr administrator,
                   fuchsia::modular::AppConfig sessionmgr, fuchsia::modular::AppConfig session_shell,
@@ -49,7 +48,7 @@ class SessionProvider {
   // Starts a new sessionmgr process if there isn't one already. Returns false
   // if there is an existing sessionmgr process, and does not start a new
   // session. Returns true if a new session was started successfully.
-  bool StartSession(fuchsia::ui::views::ViewToken view_token, bool is_ephemeral_account);
+  bool StartSession(fuchsia::ui::views::ViewToken view_token, bool use_random_id);
 
   // Asynchronously tears down the sessionmgr process. |callback| is invoked
   // once teardown is complete or has timed out.
@@ -64,8 +63,7 @@ class SessionProvider {
   // effect, and will return an immediately-completed future.
   FuturePtr<> SwapSessionShell(fuchsia::modular::AppConfig session_shell_config);
 
-  // Shuts down the running session without logging any users out, which will
-  // effectively restart a new session with the same users.
+  // Shuts down the running session, causing a new session to be created.
   void RestartSession(fit::function<void()> on_restart_complete);
 
  private:

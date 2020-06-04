@@ -47,7 +47,7 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   // |additional_services| are services that will be installed into the
   // Sessionmgr's namespace, including an implementation of
   // `fuchsia.intl.PropertyProvider`.
-  SessionContextImpl(fuchsia::sys::Launcher* const launcher, bool is_ephemeral_account,
+  SessionContextImpl(fuchsia::sys::Launcher* const launcher, bool use_random_id,
                      fuchsia::modular::AppConfig sessionmgr_config,
                      fuchsia::modular::AppConfig session_shell_config,
                      fuchsia::modular::AppConfig story_shell_config,

@@ -10,7 +10,8 @@ import("//src/modular/build/tests_package.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 declare_args() {
-  # Whether basemgr should set a stable session ID.
+  # Whether basemgr should use a random identifier for sessions, leading to
+  # a different persistent data location for every session.
   auto_login_to_guest = false
 }
 

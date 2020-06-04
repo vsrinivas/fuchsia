@@ -31,8 +31,7 @@ namespace modular {
 //
 // It has several high-level responsibilities:
 // 1) Initializes and owns the system's root view and presentation.
-// 2) Sets up the interactive flow for user authentication and login.
-// 3) Manages the lifecycle of sessions, represented as |sessionmgr| processes.
+// 2) Manages the lifecycle of sessions, represented as |sessionmgr| processes.
 class BasemgrImpl : public fuchsia::modular::Lifecycle,
                     fuchsia::modular::internal::BasemgrDebug,
                     modular::SessionProvider::Delegate {
@@ -69,21 +68,16 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   // Starts the basemgr functionalities in the following order:
   // 1. Initialize session provider.
-  // 2. Initialize user provider.
-  // 3. Show setup or launch a session.
+  // 2. Launch a session.
   void Start();
-
-  // Initializesthe |session_user_provider_impl_|. This class provides modular
-  // framework the ability to add/remove/list users and control their
-  // participation in sessions.
-  void InitializeUserProvider();
 
   void Shutdown() override;
 
-  void ShowSetupOrLogin();
+  // Handles factory reset if one is pending and starts a new session if not.
+  void HandleResetOrStartSession();
 
-  // Invoked when a user has been logged in. Starts a new session.
-  void Login(bool is_ephemeral_account);
+  // Starts a new session.
+  void StartSession(bool use_random_id);
 
   // Returns the session shell config of the active session shell, or returns
   // the a default config if there is no active one.
@@ -97,7 +91,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   void RestartSession(RestartSessionCallback on_restart_complete) override;
 
   // |BasemgrDebug|
-  void LoginAsGuest() override;
+  void StartSessionWithRandomId() override;
 
   // |SessionProvider::Delegate|
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
@@ -108,7 +102,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   fuchsia::modular::AppConfig session_shell_config_;
 
   // |active_session_shell_configs_index_| indicates which settings
-  // in |config_.session_shell_map()| is currently active.
+  // in |config_.session_shell_map()| are currently active.
   std::vector<fuchsia::modular::session::SessionShellConfig>::size_type
       active_session_shell_configs_index_{};
 
@@ -137,7 +131,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   fuchsia::ui::lifecycle::LifecycleControllerPtr scenic_lifecycle_controller_;
 
-  bool is_ephemeral_account_{true};
+  bool use_random_session_id_{true};
 
   AsyncHolder<SessionProvider> session_provider_;
 

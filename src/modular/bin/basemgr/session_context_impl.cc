@@ -28,13 +28,11 @@ constexpr char kSessionDirectoryLocation[] = "/data/modular";
 
 // A standard prefix used on every session directory.
 // Note: This is named "USER_" for legacy reasons. SESSION_ may have been more
-// appropriate but a change would require a data migration and there is no
-// plan to support more than a single session per user.
+// appropriate but a change would require a data migration.
 constexpr char kSessionDirectoryPrefix[] = "USER_";
 
 // A fixed session ID that is used for new persistent sessions. This is possible
-// as basemanager never creates more than a single persistent session (or user)
-// per device.
+// as basemanager never creates more than a single persistent session per device.
 constexpr char kStandardSessionId[] = "0";
 
 // Returns a fully qualified session directory path for |session_id|.
@@ -60,20 +58,19 @@ std::vector<std::string> GetExistingSessionIds() {
   return output;
 }
 
-// Returns an appropriate ID for the session, using the following logic and
-// reporting the selected case to cobalt:
-// * Ephemeral sessions receive a random ID
-// * Persistent sessions receive an ID extracted from the first session
-//   directory on disk if possible, and a fixed ID if not.
-std::string GetSessionId(bool is_ephemeral_account) {
-  if (is_ephemeral_account) {
-    FX_LOGS(INFO) << "Creating session using random ephemeral account.";
-    ReportEvent(ModularLifetimeEventsMetricDimensionEventType::CreateSessionNewEphemeralAccount);
-    uint32_t random_number = 0;
-    zx_cprng_draw(&random_number, sizeof random_number);
-    return std::to_string(random_number);
-  }
+// Returns a randomly generated session ID and reports the case to cobalt.
+std::string GetRandomSessionId() {
+  FX_LOGS(INFO) << "Creating session using random ID.";
+  ReportEvent(ModularLifetimeEventsMetricDimensionEventType::CreateSessionNewEphemeralAccount);
+  uint32_t random_number = 0;
+  zx_cprng_draw(&random_number, sizeof random_number);
+  return std::to_string(random_number);
+}
 
+// Returns a stable session ID, using an ID extracted from the first session
+// directory on disk if possible, and a fixed ID if not. The selected case is
+// reported to cobalt.
+std::string GetStableSessionId() {
   // TODO(50300): Once a sufficiently small number of devices are using legacy
   // non-zero session IDs, remove support for sniffing an existing directory and
   // just always use zero.
@@ -120,7 +117,7 @@ std::string GetSessionId(bool is_ephemeral_account) {
 }  // namespace
 
 SessionContextImpl::SessionContextImpl(
-    fuchsia::sys::Launcher* const launcher, bool is_ephemeral_account,
+    fuchsia::sys::Launcher* const launcher, bool use_random_id,
     fuchsia::modular::AppConfig sessionmgr_config, fuchsia::modular::AppConfig session_shell_config,
     fuchsia::modular::AppConfig story_shell_config, bool use_session_shell_for_story_shell_factory,
     fuchsia::ui::views::ViewToken view_token, fuchsia::sys::ServiceListPtr additional_services,
@@ -134,7 +131,7 @@ SessionContextImpl::SessionContextImpl(
   FX_CHECK(on_session_shutdown_);
 
   // 0. Generate the path to map '/data' for the sessionmgr we are starting
-  std::string session_id = GetSessionId(is_ephemeral_account);
+  std::string session_id = use_random_id ? GetRandomSessionId() : GetStableSessionId();
   auto data_origin = GetSessionDirectory(session_id);
 
   // 1. Create a PseudoDir containing startup.config. This directory will be
