@@ -247,7 +247,7 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
             data.GetByPath({"root", kStoryId, modular_config::kInspectIsDeleted}));
 }
 
-TEST_F(InspectSessionTest, CheckNodeHierarchyMods) {
+TEST_F(InspectSessionTest, DISABLED_CheckNodeHierarchyMods) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and launch a new story shell.
