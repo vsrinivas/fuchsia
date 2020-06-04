@@ -40,12 +40,31 @@ architecture.
 See [Configure a build](/docs/development/build/fx.md#configure-a-build) for
 more options.
 
-#### Accelerate the build with ccache
+### Speed up the build {#speed-up-the-build}
+
+To reduce the time it takes to build Fuchsia, you can do any of the following:
+
+*   [Speed up the build with Goma](#speed-up-the-build-with-goma)
+*   [Speed up the build with ccache](#speed-up-the-build-with-ccache)
+
+#### Speed up the build with Goma {#speed-up-the-build-with-goma}
+
+[Goma](https://chromium.googlesource.com/infra/goma/server/){:.external} is a
+distributed compiler service for open source projects such as Chrome, Android
+and Fuchsia. If you have access to Goma, run the following command to enable a
+Goma client on your machine:
+
+```posix-terminal
+fx goma
+```
+
+#### Speed up the build with ccache {#speed-up-the-build-with-ccache}
 
 Note: This step is optional.
 
-To accelerate Fuchsia builds, use [`ccache`](https://ccache.dev/){:.external} to
-cache artifacts from previous builds.
+If you do not have access to Goma, but want to accelerate the Fuchsia build
+locally, use <code>[ccache](https://ccache.dev/){:.external}</code> to cache
+artifacts from previous builds.
 
 To use `ccache` on Linux, install the following package:
 
@@ -259,3 +278,4 @@ To submit your contribution to Fuchsia, see
 *   [Configure editors](/docs/development/editors/)
 *   [Source code layout](/docs/concepts/source_code/layout.md)
 *   [Build system](/docs/concepts/build_system/index.md)
+
