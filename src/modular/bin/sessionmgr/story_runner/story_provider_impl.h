@@ -49,7 +49,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
                     const ComponentContextInfo& component_context_info,
                     fuchsia::modular::FocusProviderPtr focus_provider,
                     AgentServicesFactory* agent_services_factory,
-                    PresentationProvider* presentation_provider, bool enable_story_shell_preload,
+                    PresentationProvider* presentation_provider,
                     inspect::Node* root_node);
 
   ~StoryProviderImpl() override;
@@ -156,8 +156,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
   void MaybeLoadStoryShell();
 
-  void MaybeLoadStoryShellDelayed();
-
   Environment* const session_environment_;
 
   SessionStorage* session_storage_;  // Not owned.
@@ -181,11 +179,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   // Used to manufacture new StoryShells if not launching a new component for
   // every requested StoryShell instance.
   fuchsia::modular::StoryShellFactoryPtr story_shell_factory_;
-
-  // When running in a test, we don't want to enable preloading of story shells,
-  // because then the preloaded next instance of the story doesn't pass its test
-  // points.
-  const bool enable_story_shell_preload_;
 
   fidl::InterfacePtrSet<fuchsia::modular::StoryProviderWatcher> watchers_;
 

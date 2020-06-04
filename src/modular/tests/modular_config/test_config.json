@@ -20,7 +20,6 @@
     "use_memfs_for_ledger": true,
     "cloud_provider": "FROM_ENVIRONMENT",
     "enable_cobalt": false,
-    "enable_story_shell_preload": false,
     "startup_agents": [
       "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx"
     ],

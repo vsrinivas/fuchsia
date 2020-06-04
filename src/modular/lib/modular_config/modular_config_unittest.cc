@@ -210,7 +210,6 @@ TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
   fuchsia::modular::session::SessionmgrConfig sessionmgr_config;
   sessionmgr_config.set_cloud_provider(fuchsia::modular::session::CloudProvider::NONE);
   sessionmgr_config.set_enable_cobalt(false);
-  sessionmgr_config.set_enable_story_shell_preload(false);
   sessionmgr_config.set_use_memfs_for_ledger(true);
   sessionmgr_config.mutable_startup_agents()->push_back(startup_agent);
   sessionmgr_config.mutable_session_agents()->push_back(session_agent);
@@ -248,7 +247,6 @@ TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
 
   EXPECT_EQ(fuchsia::modular::session::CloudProvider::NONE, sessionmgr_config.cloud_provider());
   EXPECT_FALSE(sessionmgr_config.enable_cobalt());
-  EXPECT_FALSE(sessionmgr_config.enable_story_shell_preload());
   EXPECT_TRUE(sessionmgr_config.use_memfs_for_ledger());
   EXPECT_EQ(startup_agent, sessionmgr_config.startup_agents().at(0));
   EXPECT_EQ(session_agent, sessionmgr_config.session_agents().at(0));

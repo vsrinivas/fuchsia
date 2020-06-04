@@ -123,10 +123,6 @@ The file may contain (non-standard JSON) C-style comments
   - When set to false, Cobalt statistics are disabled. This is used for
     testing.
   - **default**: `true`
-- `enable_story_shell_preload`: **boolean** _(optional)_
-  - When set to false, StoryShell instances are not warmed up as a startup
-    latency optimization. This is used for testing.
-  - **default**: `true`
 - `use_memfs_for_ledger`: **boolean** _(optional)_
   - Tells the sessionmgr whether it should host+pass a memfs-backed directory
     to the ledger for the user's repository, or to use /data/LEDGER.

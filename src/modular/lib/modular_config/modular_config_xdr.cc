@@ -241,11 +241,6 @@ void XdrSessionmgrConfig_v1(XdrContext* const xdr,
   xdr->FieldWithDefault(modular_config::kEnableCobalt, data->mutable_enable_cobalt(),
                         has_enable_cobalt, true);
 
-  bool has_enable_story_shell_preload = data->has_enable_story_shell_preload();
-  xdr->FieldWithDefault(modular_config::kEnableStoryShellPreload,
-                        data->mutable_enable_story_shell_preload(), has_enable_story_shell_preload,
-                        true);
-
   bool has_use_memfs_for_ledger = data->has_use_memfs_for_ledger();
   xdr->FieldWithDefault(modular_config::kUseMemfsForLedger, data->mutable_use_memfs_for_ledger(),
                         has_use_memfs_for_ledger, false);

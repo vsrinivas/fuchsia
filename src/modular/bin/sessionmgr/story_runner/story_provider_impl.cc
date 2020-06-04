@@ -218,13 +218,11 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment,
                                      fuchsia::modular::FocusProviderPtr focus_provider,
                                      AgentServicesFactory* const agent_services_factory,
                                      PresentationProvider* const presentation_provider,
-                                     const bool enable_story_shell_preload,
                                      inspect::Node* root_node)
     : session_environment_(session_environment),
       session_storage_(session_storage),
       story_shell_config_(std::move(story_shell_config)),
       story_shell_factory_(std::move(story_shell_factory)),
-      enable_story_shell_preload_(enable_story_shell_preload),
       component_context_info_(component_context_info),
       agent_services_factory_(agent_services_factory),
       presentation_provider_(presentation_provider),
@@ -247,10 +245,6 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment,
       });
 
   focus_provider_->Watch(focus_watcher_binding_.NewBinding());
-  // As an optimization, since app startup time is long, we optimistically
-  // load a story shell instance even if there are no stories that need it
-  // yet. This can reduce the time to first frame.
-  MaybeLoadStoryShellDelayed();
 }
 
 StoryProviderImpl::~StoryProviderImpl() = default;
@@ -341,38 +335,7 @@ std::unique_ptr<AsyncHolderBase> StoryProviderImpl::StartStoryShell(
 
   auto story_shell_holder = std::move(preloaded_story_shell_app_);
 
-  // Kickoff another fuchsia::modular::StoryShell, to make it faster for next
-  // story. We optimize even further by delaying the loading of the next story
-  // shell instance by waiting a few seconds.
-  MaybeLoadStoryShellDelayed();
-
   return story_shell_holder;
-}
-
-void StoryProviderImpl::MaybeLoadStoryShellDelayed() {
-#if PREFETCH_MONDRIAN
-  // In tests, we don't care about story shell launch latency as much, and
-  // don't want the test to wait for the delayed task to finish.
-  //
-  // When using a StoryShellFactory, the |preloaded_story_shell_app_| is never
-  // used, so it should not be loaded.
-  if (!enable_story_shell_preload_ || story_shell_factory_) {
-    return;
-  }
-
-  async::PostDelayedTask(
-      async_get_default_dispatcher(),
-      [weak_this = weak_factory_.GetWeakPtr()] {
-        if (weak_this) {
-          weak_this->operation_queue_.Add(std::make_unique<SyncCall>([weak_this] {
-            if (weak_this) {
-              weak_this->MaybeLoadStoryShell();
-            }
-          }));
-        }
-      },
-      zx::sec(5));
-#endif
 }
 
 void StoryProviderImpl::MaybeLoadStoryShell() {

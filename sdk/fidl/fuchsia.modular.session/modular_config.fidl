@@ -91,10 +91,7 @@ table SessionmgrConfig {
     /// Default: true
     2: bool enable_cobalt;
 
-    /// When set to false, StoryShell instances are not warmed up as a startup
-    /// latency optimization. This is used for testing.
-    /// Default: true
-    3: bool enable_story_shell_preload;
+    3: bool reserved;
 
     /// Tells the sessionmgr whether it should host+pass a memfs-backed
     /// directory to the ledger for the user's repository, or to use

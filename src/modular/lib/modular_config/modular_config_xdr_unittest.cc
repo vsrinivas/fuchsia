@@ -93,7 +93,6 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
   static constexpr auto kExpectedJson = R"({
       "cloud_provider": "LET_LEDGER_DECIDE",
       "enable_cobalt": true,
-      "enable_story_shell_preload": true,
       "use_memfs_for_ledger": false,
       "startup_agents": null,
       "session_agents": null,
@@ -120,7 +119,6 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
   EXPECT_EQ(fuchsia::modular::session::CloudProvider::LET_LEDGER_DECIDE,
             read_config.cloud_provider());
   EXPECT_TRUE(read_config.enable_cobalt());
-  EXPECT_TRUE(read_config.enable_story_shell_preload());
   EXPECT_FALSE(read_config.use_memfs_for_ledger());
 
   EXPECT_EQ(0u, read_config.startup_agents().size());
@@ -144,7 +142,6 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
     {
       "cloud_provider": "NONE",
       "enable_cobalt": false,
-      "enable_story_shell_preload": false,
       "use_memfs_for_ledger": true,
       "startup_agents": [
         "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx"
@@ -175,7 +172,6 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
   fuchsia::modular::session::SessionmgrConfig write_config;
   write_config.set_cloud_provider(fuchsia::modular::session::CloudProvider::NONE);
   write_config.set_enable_cobalt(false);
-  write_config.set_enable_story_shell_preload(false);
   write_config.set_use_memfs_for_ledger(true);
   write_config.mutable_startup_agents()->push_back(kStartupAgentUrl);
   write_config.mutable_session_agents()->push_back(kSessionAgentUrl);
@@ -201,7 +197,6 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
 
   EXPECT_EQ(fuchsia::modular::session::CloudProvider::NONE, read_config.cloud_provider());
   EXPECT_FALSE(read_config.enable_cobalt());
-  EXPECT_FALSE(read_config.enable_story_shell_preload());
   EXPECT_TRUE(read_config.use_memfs_for_ledger());
 
   EXPECT_EQ(1u, read_config.startup_agents().size());

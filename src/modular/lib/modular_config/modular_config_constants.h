@@ -53,7 +53,6 @@ constexpr char kAgentServiceIndex[] = "agent_service_index";
 constexpr char kServiceName[] = "service_name";
 constexpr char kAgentUrl[] = "agent_url";
 constexpr char kUri[] = "uri";
-constexpr char kEnableStoryShellPreload[] = "enable_story_shell_preload";
 constexpr char kStartupAgents[] = "startup_agents";
 constexpr char kSessionAgents[] = "session_agents";
 constexpr char kUseMemfsForLedger[] = "use_memfs_for_ledger";

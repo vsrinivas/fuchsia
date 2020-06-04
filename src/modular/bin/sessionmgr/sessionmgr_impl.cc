@@ -306,7 +306,7 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
                             std::move(story_shell_config), std::move(story_shell_factory_ptr),
                             component_context_info, std::move(focus_provider_story_provider),
                             startup_agent_launcher_.get(), presentation_provider_impl_.get(),
-                            (config_.enable_story_shell_preload()), &inspect_root_node_));
+                            &inspect_root_node_));
   OnTerminate(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 
   fuchsia::modular::FocusProviderPtr focus_provider_puppet_master;
