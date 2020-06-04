@@ -211,7 +211,7 @@ TEST_F(LoggerIntegrationTest, NoKlogs) {
   StubLogListener log_listener;
   ASSERT_TRUE(log_listener.Listen(env->ConnectToService<fuchsia::logger::Log>()));
 
-  RunLoopUntil([&log_listener]() { return !log_listener.GetLogs().empty(); });
+  RunLoopUntil([&log_listener]() { return log_listener.GetLogs().size() >= 2; });
   auto& logs = log_listener.GetLogs();
   auto& msg = logs[1];
   ASSERT_EQ(msg.tags.size(), 1u);
