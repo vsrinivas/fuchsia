@@ -1,0 +1,17 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.sysmem2") {
+  sdk_category = "partner"
+  api = "fuchsia.sysmem2.api"
+  sources = [
+    "constraints.fidl",
+    "format_modifier.fidl",
+    "image_formats.fidl",
+    "results.fidl",
+    "usages.fidl",
+  ]
+}

@@ -1,0 +1,158 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sysmem2;
+
+// TODO(fxb/32119): The definitions in this file are not yet ready for use, but
+// should be fairly soon.
+
+/// Describes how the pixels within an image are represented.
+/// Simple formats need only a type.
+/// Parametric pixel formats may require additional properties - any such
+/// properties are encoded within the format_modifier_value (for compatibility
+/// reasons).
+table PixelFormat {
+    1: PixelFormatType type;
+
+    /// The upper 8 bits are a vendor code.  The lower 56 bits are
+    /// vendor-defined.  See format_modifier.fidl for potentially-valid values.
+    ///
+    /// These values can be valid values for the |format_modifier_value| field.
+    ///
+    /// The values are defined this way for compatibility reasons.
+    ///
+    /// un-set and 0 both mean there is no format modifier.
+    2: uint64 format_modifier_value;
+};
+
+/// The ordering of the channels in the format name reflects the actual layout
+/// of the channel.
+///
+/// Each of these values is opinionated re. the color spaces that should be
+/// contained within (in contrast with Vulkan).
+///
+/// This should be kept in sync with fuchsia.sysmem.PixelFormatType.
+//
+// TODO(ZX-2270): add more formats.
+//
+// TODO(dustingreen): Add more comment text re. pixel data layout for each of
+// these.
+enum PixelFormatType {
+    INVALID = 0;
+
+    /// RGB only, 8 bits per each of R/G/B/A sample
+    /// Compatible with VK_FORMAT_R8G8B8A8_UNORM.
+    /// Compatible with ZX_PIXEL_FORMAT_ABGR_8888 and ZX_PIXEL_FORMAT_BGR_x8888.
+    R8G8B8A8 = 1;
+
+    /// 32bpp BGRA, 1 plane.  RGB only, 8 bits per each of B/G/R/A sample.
+    /// Compatible with VK_FORMAT_B8G8R8A8_UNORM.
+    /// Compatible with ZX_PIXEL_FORMAT_RGB_x888 and ZX_PIXEL_FORMAT_ARGB_8888.
+    BGRA32 = 101; // For UVC compliance.
+
+    /// YUV only, 8 bits per Y sample
+    /// Compatible with VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM.
+    I420 = 102; // For UVC compliance.
+
+    /// YUV only, 8 bits per Y sample
+    /// Not compatible with any vulkan format.
+    M420 = 103; // For UVC compliance.
+
+    /// YUV only, 8 bits per Y sample
+    /// Compatible with VK_FORMAT_G8_B8R8_2PLANE_420_UNORM.
+    /// Compatible with ZX_PIXEL_FORMAT_NV12.
+    NV12 = 104; // For UVC compliance.
+
+    /// YUV only, 8 bits per Y sample
+    /// Compatible with VK_FORMAT_G8B8G8R8_422_UNORM.
+    YUY2 = 105; // For UVC compliance.
+
+    // TODO(garratt): Please elaborate in a comment here re. what/where the spec
+    // for this is (including any variants that are specified / permitted /
+    // indicated in-band / prohibited).
+    MJPEG = 106; // For UVC compliance.
+
+    /// YUV only, 8 bits per Y sample
+    /// Compatible with VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM with B and R swizzled.
+    YV12 = 107;
+
+    /// 24bpp BGR, 1 plane. RGB only, 8 bits per each of B/G/R sample
+    /// Compatible with VK_FORMAT_B8G8R8_UNORM.
+    /// Compatible with ZX_PIXEL_FORMAT_RGB_888.
+    BGR24 = 108;
+
+    /// 16bpp RGB, 1 plane. 5 bits R, 6 bits G, 5 bits B
+    /// Compatible with VK_FORMAT_R5G6B5_UNORM_PACK16.
+    /// Compatible with ZX_PIXEL_FORMAT_RGB_565.
+    RGB565 = 109;
+
+    /// 8bpp RGB, 1 plane. 3 bits R, 3 bits G, 2 bits B
+    /// Not compatible with any vulkan format.
+    /// Compatible with ZX_PIXEL_FORMAT_RGB_332.
+    RGB332 = 110;
+
+    /// 8bpp RGB, 1 plane. 2 bits R, 2 bits G, 2 bits B
+    /// Not compatible with any vulkan format.
+    /// Compatible with ZX_PIXEL_FORMAT_RGB_2220.
+    RGB2220 = 111;
+
+    /// 8bpp, Luminance-only.
+    /// Compatible with VK_FORMAT_R8_UNORM.
+    /// Compatible with ZX_PIXEL_FORMAT_GRAY_8 and ZX_PIXEL_FORMAT_MONO_8.
+    L8 = 112;
+};
+
+/// Describes how the pixels within an image are meant to be presented.
+/// Simple color spaces need only a type.
+/// Parametric color spaces may require additional properties.
+table ColorSpace {
+    1: ColorSpaceType type;
+};
+
+/// This list has a separate entry for each variant of a color space standard.
+///
+/// For this reason, should we ever add support for the RGB variant of 709, for
+/// example, we'd add a separate entry to this list for that variant.  Similarly
+/// for the RGB variants of 2020 or 2100.  Similarly for the YcCbcCrc variant of
+/// 2020.  Similarly for the ICtCp variant of 2100.
+///
+/// A given ColorSpaceType may permit usage with a PixelFormatType(s) that
+/// provides a bits-per-sample that's compatible with the ColorSpaceType's
+/// official spec.  Not all spec-valid combinations are necessarily supported.
+/// See ImageFormatIsSupportedColorSpaceForPixelFormat() for the best-case degree
+/// of support, but a "true" from that function doesn't guarantee that any given
+/// combination of participants will all support the desired combination of
+/// ColorSpaceType and PixelFormatType.
+///
+/// The sysmem service helps find a mutually supported combination and allocate
+/// suitable buffers.
+///
+/// A ColorSpaceType's spec is not implicitly extended to support
+/// outside-the-standard bits-per-sample (R, G, B, or Y sample).  For example,
+/// for 2020 and 2100, 8 bits-per-Y-sample is not supported (by sysmem), because
+/// 8 bits-per-Y-sample is not in the spec for 2020 or 2100.  A sysmem
+/// participant that attempts to advertise support for a PixelFormat + ColorSpace
+/// that's non-standard will cause sysmem to reject the combo and fail to
+/// allocate (intentionally, to strongly discourage specifying
+/// insufficiently-defined combos).
+enum ColorSpaceType {
+    /// Not a valid color space type.
+    INVALID = 0;
+    /// sRGB
+    SRGB = 1;
+    /// 601 NTSC ("525 line") YCbCr primaries, narrow
+    REC601_NTSC = 2;
+    /// 601 NTSC ("525 line") YCbCr primaries, wide
+    REC601_NTSC_FULL_RANGE = 3;
+    /// 601 PAL ("625 line") YCbCr primaries, narrow
+    REC601_PAL = 4;
+    /// 601 PAL ("625 line") YCbCr primaries, wide
+    REC601_PAL_FULL_RANGE = 5;
+    /// 709 YCbCr (not RGB)
+    REC709 = 6;
+    /// 2020 YCbCr (not RGB, not YcCbcCrc)
+    REC2020 = 7;
+    /// 2100 YCbCr (not RGB, not ICtCp)
+    REC2100 = 8;
+};
