@@ -125,7 +125,7 @@ JSValue EncodeRequest(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   auto txn_id = static_cast<uint32_t>(txn_id_signed);
 
   int64_t ordinal_signed;
-  if (JS_ToInt64(ctx, &ordinal_signed, argv[1]) == -1) {
+  if (JS_ToBigInt64(ctx, &ordinal_signed, argv[1]) == -1) {
     return JS_EXCEPTION;
   }
   auto ordinal = static_cast<fidl_codec::Ordinal64>(ordinal_signed);

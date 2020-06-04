@@ -255,7 +255,7 @@ class MessageHeader {
     this.buf = bytes;
     this.view = new DataView(this.buf);
     this.txid = this.view.getUint32(0, true);
-    this.ordinal = this.view.getBigUint64(8, true);
+    this.ordinal = this.view.getBigInt64(8, true);
   }
 };
 
