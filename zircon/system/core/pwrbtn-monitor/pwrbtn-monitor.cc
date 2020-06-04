@@ -95,13 +95,27 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
   }
 
   // Open the fd and get a FIDL client.
-  int fd;
-  if ((fd = openat(dirfd, name, O_RDWR)) < 0) {
+  // Note: the rust vfs used in an integration test for this does not support
+  // using the DESCRIBE flag with a service node, which all of the functions
+  // that use file descriptors send as they are trying to emulate posix
+  // semantics. To work around this, clone the fd into a new handle and then use
+  // fdio_service_connect_at, which does not use the DESCRIBE flag.
+  zx::channel dir_chan;
+  zx_status_t status = fdio_fd_clone(dirfd, dir_chan.reset_and_get_address());
+  if (status != ZX_OK) {
+    printf("pwrbtn-monitor: clone failed: %s\n", zx_status_get_string(status));
     return ZX_OK;
   }
-  zx::channel chan;
-  zx_status_t status = fdio_get_service_handle(fd, chan.reset_and_get_address());
+
+  zx::channel chan, remote_chan;
+  status = zx::channel::create(0, &chan, &remote_chan);
   if (status != ZX_OK) {
+    printf("pwrbtn-monitor: failed to create channel: %d\n", status);
+    return status;
+  }
+  status = fdio_service_connect_at(dir_chan.get(), name, remote_chan.release());
+  if (status != ZX_OK) {
+    printf("pwrbtn-monitor: service handle conversion failed: %d\n", status);
     return status;
   }
   auto client = llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(chan));
@@ -138,14 +152,14 @@ zx_status_t send_poweroff() {
   zx::channel channel_local, channel_remote;
   zx_status_t status = zx::channel::create(0, &channel_local, &channel_remote);
   if (status != ZX_OK) {
-    printf("failed to create channel: %d\n", status);
+    printf("pwrbtn-monitor: failed to create channel: %d\n", status);
     return ZX_ERR_INTERNAL;
   }
 
   auto service = fbl::StringPrintf("/svc/%s", power_fidl::statecontrol::Admin::Name);
   status = fdio_service_connect(service.c_str(), channel_remote.release());
   if (status != ZX_OK) {
-    fprintf(stderr, "failed to connect to service %s: %d\n", service.c_str(), status);
+    printf("pwrbtn-monitor: failed to connect to service %s: %d\n", service.c_str(), status);
     return ZX_ERR_INTERNAL;
   }
 
@@ -153,8 +167,8 @@ zx_status_t send_poweroff() {
   auto resp = admin_client.Suspend(power_fidl::statecontrol::SystemPowerState::POWEROFF);
 
   if (resp.status() != ZX_OK) {
-    fprintf(stderr, "Call to %s failed: ret: %s, %s\n", service.c_str(),
-            zx_status_get_string(resp.status()), resp.error());
+    printf("pwrbtn-monitor: Call to %s failed: ret: %s, %s\n", service.c_str(),
+           zx_status_get_string(resp.status()), resp.error());
     return resp.status();
   }
 
@@ -166,13 +180,11 @@ zx_status_t send_poweroff() {
 int main(int argc, char** argv) {
   zx_status_t status = StdoutToDebuglog::Init();
   if (status != ZX_OK) {
-    return status;
+    return 1;
   }
-  printf("pwrbtn-monitor: started\n");
-
   fbl::unique_fd dirfd;
   {
-    int fd = open(INPUT_PATH, O_DIRECTORY | O_RDONLY);
+    int fd = open(INPUT_PATH, O_DIRECTORY);
     if (fd < 0) {
       printf("pwrbtn-monitor: Failed to open " INPUT_PATH ": %d\n", errno);
       return 1;

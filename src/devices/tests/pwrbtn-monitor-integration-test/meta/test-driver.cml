@@ -1,0 +1,20 @@
+{
+    program: {
+        binary: "test/pwrbtn_monitor_integration_test",
+    },
+    use: [
+        { runner: "rust_test_runner" },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.test.pwrbtn.Tests",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

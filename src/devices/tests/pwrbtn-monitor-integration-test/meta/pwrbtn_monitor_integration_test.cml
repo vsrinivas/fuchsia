@@ -1,0 +1,64 @@
+{
+    program: {
+        binary: "bin/pwrbtn_monitor_mock_services",
+    },
+    children: [
+        {
+            name: "pwrbtn-monitor",
+            url: "fuchsia-pkg://fuchsia.com/pwrbtn-monitor-integration-test#meta/pwrbtn-monitor.cm",
+            startup: "eager",
+        },
+        {
+            name: "test-driver",
+            url: "fuchsia-pkg://fuchsia.com/pwrbtn-monitor-integration-test#meta/test-driver.cm",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
+    ],
+    offer: [
+        {
+            runner: "elf",
+            from: "realm",
+            to: [ "#pwrbtn-monitor" ],
+        },
+        {
+            runner: "rust_test_runner",
+            from: "realm",
+            to: [ "#test-driver" ],
+        },
+        {
+            directory: "/input",
+            from: "self",
+            to: [ "#pwrbtn-monitor" ],
+            rights: [ "rw*" ],
+        },
+        {
+            protocol: "/svc/fuchsia.hardware.power.statecontrol.Admin",
+            from: "self",
+            to: [ "#pwrbtn-monitor" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.test.pwrbtn.Tests" ],
+            from: "self",
+            to: [ "#test-driver" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            from: "realm",
+            to: [ "#test-driver" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.boot.WriteOnlyLog" ],
+            from: "realm",
+            to: [ "#pwrbtn-monitor" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "#test-driver",
+        },
+    ],
+}

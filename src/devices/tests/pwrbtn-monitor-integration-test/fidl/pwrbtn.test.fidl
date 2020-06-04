@@ -1,0 +1,12 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.test.pwrbtn;
+
+[Discoverable]
+protocol Tests {
+    /// Run the tests. This function returns when the tests have successfully
+    /// passed, and is closed without a response when the tests fail.
+    Run() -> ();
+};

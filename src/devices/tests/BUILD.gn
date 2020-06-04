@@ -10,5 +10,6 @@ group("tests") {
     "ddk-instance-lifecycle-test",
     "ddk-metadata-test",
     "libdriver-integration-test",
+    "pwrbtn-monitor-integration-test",
   ]
 }

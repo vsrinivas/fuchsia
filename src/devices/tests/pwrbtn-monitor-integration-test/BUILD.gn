@@ -1,0 +1,75 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+rustc_binary("mock_services") {
+  name = "pwrbtn_monitor_mock_services"
+  edition = "2018"
+  source_root = "src/mock_services.rs"
+
+  deps = [
+    "fidl:fuchsia.test.pwrbtn-rustc",
+    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input-rustc",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+rustc_test("test_driver") {
+  name = "pwrbtn_monitor_integration_test"
+  edition = "2018"
+  source_root = "src/test.rs"
+
+  deps = [
+    "fidl:fuchsia.test.pwrbtn-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:anyhow",
+  ]
+}
+
+test_package("pwrbtn-monitor-integration-test") {
+  deps = [
+    ":mock_services",
+    ":test_driver",
+    "//zircon/system/core/pwrbtn-monitor",
+  ]
+  v2_tests = [
+    {
+      name = "pwrbtn_monitor_integration_test"
+      environments = basic_envs
+    },
+  ]
+  binaries = [
+    {
+      name = "pwrbtn-monitor"
+    },
+    {
+      name = "pwrbtn_monitor_mock_services"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("//src/sys/bootstrap/meta/pwrbtn-monitor.cml")
+      dest = "pwrbtn-monitor.cm"
+    },
+    {
+      path = rebase_path("meta/test-driver.cml")
+      dest = "test-driver.cm"
+    },
+  ]
+}
