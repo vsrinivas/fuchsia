@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 
 	"go.fuchsia.dev/fuchsia/scripts/check-licenses/templates"
@@ -13,23 +12,6 @@ import (
 type Metrics struct {
 	num_licensed   uint
 	num_unlicensed uint
-}
-
-func (license_file_tree *LicenseFileTree) getProjectLicense(path string) *LicenseFileTree {
-	curr := license_file_tree
-	var gold *LicenseFileTree
-	pieces := strings.Split(path, "/")
-	pieces = pieces[:len(pieces)-1]
-	for _, piece := range pieces {
-		if len(curr.files) > 0 {
-			gold = curr
-		}
-		if _, found := curr.children[piece]; !found {
-			break
-		}
-		curr = curr.children[piece]
-	}
-	return gold
 }
 
 func Walk(config *Config) error {
@@ -55,6 +37,21 @@ func Walk(config *Config) error {
 					return filepath.SkipDir
 				}
 			}
+			var matchingFiles []string
+			for _, licenseFileInTree := range config.LicenseFilesInTree {
+				folder_licenses, folder_licenses_err := filepath.Glob(path + "/" + licenseFileInTree + "*")
+				if folder_licenses_err != nil {
+					fmt.Println("Error")
+				}
+				if folder_licenses != nil {
+					fmt.Println(" + folder_licenses:")
+					fmt.Println(folder_licenses)
+					matchingFiles = append(matchingFiles, folder_licenses...)
+				}
+			}
+			license_file_tree.upsert(path, matchingFiles)
+			// TODO add license files to licenses (*Licenses) object, deriving type
+			return nil
 		} else {
 			for _, skipFile := range config.SkipFilesRegex {
 				if info.Name() == skipFile {
@@ -62,20 +59,6 @@ func Walk(config *Config) error {
 					return nil
 				}
 			}
-		}
-
-		if info.IsDir() {
-			folder_licenses, folder_licenses_err := filepath.Glob(path + "/LICENSE*")
-			if folder_licenses_err != nil {
-				fmt.Println("Error")
-			}
-			if folder_licenses != nil {
-				fmt.Println(" + folder_licenses:")
-				fmt.Println(folder_licenses)
-				license_file_tree.upsert(path, folder_licenses)
-				// TODO add license files to licenses (*Licenses) object, deriving type
-			}
-			return nil
 		}
 
 		extension := filepath.Ext(path)
@@ -105,9 +88,6 @@ func Walk(config *Config) error {
 			if matched != nil {
 				is_matched = true
 				metrics.num_licensed++
-				// TODO capture the full license
-				// TODO track more than one match per pattern
-				// TODO surface these matches later
 				// TODO licenses.licenses[i] could probably be a pointer instead
 				if len(licenses.licenses[i].matches) == 0 {
 					licenses.licenses[i].matches = append(licenses.licenses[i].matches, Match{})
@@ -124,6 +104,7 @@ func Walk(config *Config) error {
 		if !is_matched {
 			if project == nil {
 				metrics.num_unlicensed++
+				fmt.Printf("Unmatched file: %s\n", path)
 			} else {
 				// TODO derive one of the project licenses
 			}

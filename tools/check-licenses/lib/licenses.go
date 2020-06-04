@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 )
 
 type License struct {
@@ -30,9 +29,7 @@ func LicenseWorker(path string) *[]byte {
 }
 
 func (licenses *Licenses) Init(root string) {
-	// TODO consider async although may not be needed due to sequential file access
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		// TODO maybe don't search root recursively
 		if info.IsDir() {
 			return nil
 		}
@@ -61,40 +58,4 @@ func (licenses *Licenses) add(license License) {
 type Match struct {
 	value []byte
 	files []string
-}
-
-type LicenseFileTree struct {
-	name     string
-	parent   *LicenseFileTree
-	children map[string]*LicenseFileTree
-	files    []string
-}
-
-func (license_file_tree *LicenseFileTree) Init() {
-	license_file_tree.children = make(map[string]*LicenseFileTree)
-}
-
-func (license_file_tree *LicenseFileTree) upsert(path string, files []string) {
-	pieces := strings.Split(path, "/")
-	curr := license_file_tree
-	// TODO parent isn't currently being used, so it can be removed
-	var parent *LicenseFileTree
-	for _, piece := range pieces {
-		if _, found := curr.children[piece]; !found {
-			// TODO default constructor on single line
-			curr.children[piece] = new(LicenseFileTree)
-			curr.children[piece].Init()
-			curr.children[piece].name = piece
-			curr.children[piece].parent = parent
-		}
-		parent = curr
-		curr = curr.children[piece]
-	}
-	curr.files = files
-}
-
-func NewLicenses(root string) *Licenses {
-	licenses := Licenses{}
-	licenses.Init(root)
-	return &licenses
 }
