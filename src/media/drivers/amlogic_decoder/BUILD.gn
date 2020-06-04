@@ -189,7 +189,11 @@ if (target_cpu == "arm64") {
       "//third_party/googletest:gtest",
     ]
     sources = [
+      "tests/integration/bear_h264_hashes.h",
+      "tests/integration/test_25fps_h264_hashes.h",
+      "tests/integration/test_25fps_vp9_hashes.h",
       "tests/integration/test_amlogic_video.cc",
+      "tests/integration/test_frame_allocator.h",
       "tests/integration/test_h264.cc",
       "tests/integration/test_h264_multi.cc",
       "tests/integration/test_mpeg2.cc",
@@ -197,7 +201,9 @@ if (target_cpu == "arm64") {
       "tests/integration/test_vp9.cc",
       "tests/integration/video_frame_helpers.cc",
       "tests/integration/video_frame_helpers.h",
+      "tests/test_basic_client.h",
       "tests/test_support.cc",
+      "tests/test_support.h",
       "tests/unit_tests/test_binding.cc",
       "tests/unit_tests/test_pts_manager.cc",
       "tests/unit_tests/test_vdec1.cc",
