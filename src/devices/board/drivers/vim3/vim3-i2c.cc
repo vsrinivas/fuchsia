@@ -103,8 +103,8 @@ zx_status_t Vim3::I2cInit() {
 
   // EE - M3
   // Used on J13(pins 3,4), M.2 socket(pins 40,42), and J4(pins 22,23)
-  gpio_impl_.SetAltFunction(A311D_GPIOAO(15), A311D_GPIOA_14_I2C_EE_M3_SDA_FN);
-  gpio_impl_.SetAltFunction(A311D_GPIOAO(14), A311D_GPIOA_14_I2C_EE_M3_SDA_FN);
+  gpio_impl_.SetAltFunction(A311D_GPIOA(15), A311D_GPIOA_15_I2C_EE_M3_SCL_FN);
+  gpio_impl_.SetAltFunction(A311D_GPIOA(14), A311D_GPIOA_14_I2C_EE_M3_SDA_FN);
 
   zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
   if (status != ZX_OK) {
