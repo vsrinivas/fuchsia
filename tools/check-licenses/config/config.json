@@ -1,0 +1,48 @@
+{
+  "filesRegex": [],
+  "skipFilesRegex": [
+    ".gitignore"
+  ],
+  "skipDirsRegex": [
+    ".git"
+  ],
+  "textExtensions": {
+    "ac": true,
+    "am": true,
+    "asm": true,
+    "bat": true,
+    "c": true,
+    "cc": true,
+    "cpp": true,
+    "dart": true,
+    "gn": true,
+    "gni": true,
+    "go": true,
+    "gyp": true,
+    "gypi": true,
+    "h": true,
+    "html": true,
+    "in": true,
+    "inc": true,
+    "java": true,
+    "m": true,
+    "md": true,
+    "py": true,
+    "rs": true,
+    "sh": true,
+    "txt": true
+  },
+  "maxReadSize": 6144,
+  "separatorWidth": 80,
+  "outputFilePrefix": "NOTICE",
+  "outputFileExtension": "txt",
+  "product": "astro",
+  "licenseFilesInTree": [
+    "LICENSE*",
+    "README*",
+    "NOTICE*"
+  ],
+  "goldenLicenses": "golden",
+  "licensePatternDir": "tools/check-licenses/golden/",
+  "baseDir": "."
+}

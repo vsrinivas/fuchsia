@@ -8,7 +8,10 @@ import("//build/go/go_test.gni")
 
 go_binary("check-licenses") {
   gopackage = "go.fuchsia.dev/fuchsia/scripts/check-licenses/cmd"
-  deps = [ ":main" ]
+  deps = [
+    ":main",
+    ":templates",
+  ]
 }
 
 go_library("main") {
@@ -22,9 +25,15 @@ go_library("main") {
   ]
 }
 
+go_library("templates") {
+  name = "go.fuchsia.dev/fuchsia/scripts/check-licenses/templates"
+  source_dir = "templates"
+}
+
 go_library("lib") {
   name = "go.fuchsia.dev/fuchsia/scripts/check-licenses/lib"
   deps = [ "//tools/lib/logger" ]
+  source_dir = "lib"
 }
 
 install_host_tools("host") {
