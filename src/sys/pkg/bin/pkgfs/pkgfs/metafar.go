@@ -6,9 +6,14 @@ import (
 	"strings"
 	"time"
 
-	"thinfs/fs"
+	"fidl/fuchsia/mem"
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/far"
+
+	"syscall/zx"
+	zxio "syscall/zx/io"
+
+	"thinfs/fs"
 )
 
 func newMetaFar(blob string, fs *Filesystem) *metaFar {
@@ -91,6 +96,8 @@ func (f *metaFile) Read(p []byte, off int64, whence int) (int, error) {
 	f.off += off + int64(n)
 	return n, nil
 }
+
+var _ fs.Directory = (*metaFarDir)(nil)
 
 type metaFarDir struct {
 	unsupportedDirectory
@@ -207,6 +214,9 @@ func (d *metaFarDir) Stat() (int64, time.Time, time.Time, error) {
 	return int64(len(contents)), d.fs.mountTime, d.fs.mountTime, nil
 }
 
+var _ fs.File = (*metaFarFile)(nil)
+var _ fs.FileWithGetBuffer = (*metaFarFile)(nil)
+
 type metaFarFile struct {
 	unsupportedFile
 
@@ -216,6 +226,7 @@ type metaFarFile struct {
 
 	off  int64
 	path string
+	vmo  *zx.VMO
 }
 
 func newMetaFarFile(blob string, fs *Filesystem, path string) (*metaFarFile, error) {
@@ -237,10 +248,14 @@ func newMetaFarFile(blob string, fs *Filesystem, path string) (*metaFarFile, err
 		er,
 		0,
 		path,
+		nil,
 	}, nil
 }
 
 func (f *metaFarFile) Close() error {
+	if f.vmo != nil {
+		f.vmo.Close()
+	}
 	f.fr.Close()
 	return nil
 }
@@ -263,6 +278,7 @@ func (f *metaFarFile) Dup() (fs.File, error) {
 		er,
 		0,
 		f.path,
+		nil,
 	}, nil
 }
 
@@ -302,4 +318,73 @@ func (f *metaFarFile) Seek(offset int64, whence int) (int64, error) {
 
 func (f *metaFarFile) Stat() (int64, time.Time, time.Time, error) {
 	return int64(f.fr.GetSize(f.path)), time.Time{}, time.Time{}, nil
+}
+
+func (f *metaFarFile) GetBuffer(flags uint32) (*mem.Buffer, error) {
+	size := f.fr.GetSize(f.path)
+	if f.vmo == nil {
+		// TODO(52938): This could be implemented more efficiently by creating a
+		// child VMO of the blob's VMO with the VM_SLICE_CHILD_NO_WRITE option.
+		// The FAR format ensures each file will be at a 4KB offset into the
+		// containing blob.
+		vmo, err := zx.NewVMO(size, zx.VMOOption(0))
+		if err != nil {
+			return nil, fs.ErrNoSpace
+		}
+		buf := make([]byte, size)
+		n, err := f.er.ReadAt(buf, 0)
+		if n != int(size) {
+			return nil, fs.ErrIO
+		}
+		err = vmo.Write(buf, 0)
+		if err != nil {
+			return nil, fs.ErrIO
+		}
+		f.vmo = &vmo
+	}
+
+	rights := zx.RightsBasic | zx.RightMap | zx.RightsProperty
+
+	if flags&zxio.VmoFlagRead != 0 {
+		rights |= zx.RightRead
+	}
+	if flags&zxio.VmoFlagWrite != 0 {
+		// Contents of a meta directory are never writable.
+		return nil, fs.ErrReadOnly
+	}
+	if flags&zxio.VmoFlagExec != 0 {
+		// Contents of a meta directory are never executable.
+		return nil, fs.ErrPermission
+	}
+
+	if flags&zxio.VmoFlagExact != 0 {
+		return nil, fs.ErrNotSupported
+	}
+
+	buffer := &mem.Buffer{}
+	buffer.Size = size
+
+	if flags&zxio.VmoFlagPrivate != 0 {
+		// Create a separate VMO for the caller if they specified that they want a private copy.
+
+		options := zx.VMOChildOption(zx.VMOChildOptionSnapshotAtLeastOnWrite)
+		options |= zx.VMOChildOptionNoWrite
+		offset := uint64(0)
+		child, err := f.vmo.CreateChild(options, offset, size)
+		if err != nil {
+			return nil, fs.ErrIO
+		}
+		buffer.Vmo = child
+	} else {
+		// Otherwise, just duplicate our VMO.
+
+		handle := zx.Handle(*f.vmo)
+		d, err := handle.Duplicate(rights)
+		if err != nil {
+			return nil, fs.ErrPermission
+		}
+		buffer.Vmo = zx.VMO(d)
+	}
+
+	return buffer, nil
 }

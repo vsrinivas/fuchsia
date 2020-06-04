@@ -6,7 +6,10 @@
 
 package fs
 
-import "syscall/zx"
+import (
+	"fidl/fuchsia/mem"
+	"syscall/zx"
+)
 
 // Remote can be returned by Open in order to hand off the open transaction to another filesystem.
 type Remote struct {
@@ -16,4 +19,12 @@ type Remote struct {
 	Path string
 	// Flags are the open flags to be sent to the remote.
 	Flags OpenFlags
+}
+
+type FileWithGetBuffer interface {
+	// Acquires a buffer representing this file, if there is one, with the
+	// requested access rights.
+	//
+	// flags must be one of VmoFlag*
+	GetBuffer(flags uint32) (*mem.Buffer, error)
 }

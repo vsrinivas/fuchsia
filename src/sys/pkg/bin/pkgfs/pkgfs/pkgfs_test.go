@@ -346,6 +346,181 @@ func TestSync(t *testing.T) {
 	d.Close()
 }
 
+func TestMapFileForRead(t *testing.T) {
+	path := "packages/static-package/0/meta/contents"
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	fdioFile, ok := f.(*fdio.File)
+	if !ok {
+		t.Fatal("File is not an fdio.File")
+	}
+	defer fdioFile.Close()
+
+	flags := zxio.VmoFlagRead
+	status, buffer, err := fdioFile.GetBuffer(flags)
+	if err != nil || status != int32(zx.ErrOk) {
+		t.Fatal("Could not get buffer:", err, status)
+	}
+	if buffer.Size == 0 {
+		t.Fatal("Buffer has zero size")
+	}
+
+	size := buffer.Size
+	buf := make([]byte, size)
+	offset := uint64(0)
+	err = buffer.Vmo.Read(buf, offset)
+	if err != nil {
+		t.Fatal("Error reading data from VMO")
+	}
+	buffer.Vmo.Close()
+}
+
+func getKoid(h *zx.Handle) (uint64, error) {
+	info, err := h.GetInfoHandleBasic()
+	if err != nil {
+		return 0, err
+	}
+	return info.Koid, nil
+}
+
+func TestMapFileForReadPrivate(t *testing.T) {
+	path := "packages/static-package/0/meta/contents"
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	fdioFile, ok := f.(*fdio.File)
+	if !ok {
+		t.Fatal("File is not an fdio.File")
+	}
+	defer fdioFile.Close()
+
+	flags := zxio.VmoFlagRead | zxio.VmoFlagPrivate
+
+	// We want to test that we're receiving our own clone each time we invoke
+	// GetBuffer() with the VmoFlagPrivate field set
+	status, buffer, err := fdioFile.GetBuffer(flags)
+	if err != nil || status != int32(zx.ErrOk) {
+		t.Fatal("Could not get buffer:", err, status)
+	}
+
+	firstVmo := buffer.Vmo
+	defer firstVmo.Close()
+
+	status, buffer, err = fdioFile.GetBuffer(flags)
+
+	if err != nil || status != int32(zx.ErrOk) {
+		t.Fatal("Could not get buffer:", err, status)
+	}
+
+	secondVmo := buffer.Vmo
+	defer secondVmo.Close()
+
+	firstKoid, err := getKoid(firstVmo.Handle())
+	if err != nil {
+		t.Fatal("Could not retrieve koid of handle: ", err)
+	}
+	secondKoid, err := getKoid(secondVmo.Handle())
+	if err != nil {
+		t.Fatal("Could not retrieve koid of handle: ", err)
+	}
+	if firstKoid == secondKoid {
+		t.Fatal("Two GetBuffer calls with VmoFlagPrivate produced handles to the same object")
+	}
+}
+
+func TestMapFileForReadExact(t *testing.T) {
+	path := "packages/static-package/0/meta/contents"
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	fdioFile, ok := f.(*fdio.File)
+	if !ok {
+		t.Fatal("File is not an fdio.File")
+	}
+
+	// Exact flag is not supported in pkgfs
+	flags := zxio.VmoFlagExact
+
+	_, _, err = fdioFile.GetBuffer(flags)
+	if err == nil {
+		t.Fatal("Attempt to map with VmoFlagExact should fail")
+	}
+}
+
+func TestMapFilePrivateAndExact(t *testing.T) {
+	path := "packages/static-package/0/meta/contents"
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	fdioFile, ok := f.(*fdio.File)
+	if !ok {
+		t.Fatal("File is not an fdio.File")
+	}
+
+	// This combination is invalid according to the fuchsia.io protocol definition.
+	flags := zxio.VmoFlagPrivate | zxio.VmoFlagExact
+
+	_, _, err = fdioFile.GetBuffer(flags)
+	if err == nil {
+		t.Fatal("Attempt to specify VmoFlagPrivate and VmoFlagExact should fail")
+	}
+}
+
+func TestMapFileForWrite(t *testing.T) {
+	path := "packages/static-package/0/meta/contents"
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	fdioFile, ok := f.(*fdio.File)
+	if !ok {
+		t.Fatal("File is not an fdio.File")
+	}
+
+	// Files in a meta directory are read-only, creating a writable mapping
+	// should fail.
+	flags := zxio.VmoFlagWrite
+	_, _, err = fdioFile.GetBuffer(flags)
+	if err == nil {
+		t.Fatal("Attempt to get a writable buffer should fail")
+	}
+}
+
+func TestMapFileForExec(t *testing.T) {
+	path := "packages/static-package/0/meta/contents"
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	fdioFile, ok := f.(*fdio.File)
+	if !ok {
+		t.Fatal("File is not an fdio.File")
+	}
+
+	flags := zxio.VmoFlagExec
+	_, _, err = fdioFile.GetBuffer(flags)
+	if err == nil {
+		t.Fatal("Attempt to get executable buffer should fail")
+	}
+}
+
 func TestTriggerGC(t *testing.T) {
 	// always perform the operation on a dedicated channel, so that pkgfsDir is not
 	// closed.

@@ -11,6 +11,7 @@ group("tests") {
     "pkg-cache:tests",
     "pkg-resolver:tests",
     "pkgctl:tests",
+    "pkgfs:tests",
     "system-update-checker:tests",
     "system-updater:tests",
     "update:tests",
