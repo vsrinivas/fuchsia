@@ -47,6 +47,13 @@ pub struct OmahaConfig {
 
 /// Installs all packages and writes the Fuchsia ZBI from the latest build on the given channel.
 ///
+/// The following conditions are expected to be met:
+/// * The `isolated-swd` package (//src/sys/pkg/lib/isolated-ota:isolated-swd) must be available
+///     for use - it contains all of the SWD binaries and their manifests.
+/// * Network services (fuchsia.net.NameLookup and fuchsia.posix.socket.Provider) are available in
+///     the /svc/ directory.
+/// * The pkgsvr binary should be in the current namespace at /pkg/bin/pkgsvr.
+///
 /// If successful, a reboot should be the only thing necessary to boot Fuchsia.
 ///
 /// # Arguments
@@ -58,7 +65,7 @@ pub struct OmahaConfig {
 /// * `ssl_cert_dir` - A folder containg the root SSL certificates for use by the package resolver.
 /// * `channel_name` - The channel to update from.
 /// * `board_name` - Board name to pass to the system updater.
-/// * `version` - Current version installed
+/// * `version` - Version to report as the current installed version.
 /// * `omaha_cfg` - The |OmahaConfig| to use for Omaha. If None, the update will not use Omaha to
 ///     determine the updater URL.
 pub async fn download_and_apply_update(

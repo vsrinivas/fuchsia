@@ -17,6 +17,7 @@ use {
 
 const CACHE_URL: &str = "fuchsia-pkg://fuchsia.com/isolated-swd#meta/pkg-cache-isolated.cmx";
 
+/// Represents the sandboxed package cache.
 pub struct Cache {
     _pkg_cache: App,
     pkg_cache_directory: Arc<zx::Channel>,
@@ -24,10 +25,13 @@ pub struct Cache {
 }
 
 impl Cache {
+    /// Launch the package cache using the given pkgfs.
     pub fn launch(pkgfs: &Pkgfs) -> Result<Self, Error> {
         Self::launch_with_components(pkgfs, CACHE_URL)
     }
 
+    /// Launch the package cache. This is the same as `launch`, but the URL for the cache's
+    /// manifest must be provided.
     fn launch_with_components(pkgfs: &Pkgfs, cache_url: &str) -> Result<Self, Error> {
         let mut pkg_cache = AppBuilder::new(cache_url)
             .add_handle_to_namespace("/pkgfs".to_owned(), pkgfs.root_handle()?.into_handle());
@@ -57,12 +61,14 @@ impl Cache {
 pub mod tests {
     use {super::*, crate::pkgfs::tests::PkgfsForTest};
 
+    /// This wraps the `Cache` to reduce test boilerplate.
     pub struct CacheForTest {
         pub pkgfs: PkgfsForTest,
         pub cache: Arc<Cache>,
     }
 
     impl CacheForTest {
+        /// Create a new `Cache` and backing `pkgfs`.
         pub fn new() -> Result<Self, Error> {
             let pkgfs = PkgfsForTest::new().context("Launching pkgfs")?;
             let cache = Cache::launch_with_components(

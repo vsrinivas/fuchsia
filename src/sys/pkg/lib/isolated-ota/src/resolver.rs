@@ -21,6 +21,8 @@ use {
 const RESOLVER_URL: &str = "fuchsia-pkg://fuchsia.com/isolated-swd#meta/pkg-resolver-isolated.cmx";
 const SSL_CERTS_PATH: &str = "/config/ssl";
 
+/// A simple implementation of the fuchsia.boot.Arguments protocol,
+/// which reports the selected TUF channel to its caller.
 struct IsolatedBootArgs {
     channel: Option<String>,
 }
@@ -46,6 +48,7 @@ impl IsolatedBootArgs {
     }
 }
 
+/// Represents the sandboxed package resolver.
 pub struct Resolver {
     _pkg_resolver: App,
     pkg_resolver_directory: Arc<zx::Channel>,
@@ -53,6 +56,8 @@ pub struct Resolver {
 }
 
 impl Resolver {
+    /// Launch the package resolver using the given components, TUF repo/channel config,
+    /// and SSL certificate folder.
     pub fn launch(
         pkgfs: &Pkgfs,
         cache: Arc<Cache>,
@@ -70,6 +75,8 @@ impl Resolver {
         )
     }
 
+    /// Launch the package resolver. This is the same as `launch`, but the URL for the
+    /// resolver's manifest must be provided.
     fn launch_with_components(
         pkgfs: &Pkgfs,
         cache: Arc<Cache>,
@@ -126,6 +133,7 @@ pub mod tests {
         },
     };
 
+    /// This wraps the `Resolver` in order to reduce test boilerplate.
     pub struct ResolverForTest {
         pub cache: CacheForTest,
         pub resolver: Arc<Resolver>,
@@ -137,9 +145,18 @@ pub mod tests {
     pub const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
 
     impl ResolverForTest {
+        /// Create a resolver, which will resolve packages using the given Repository.
+        /// This will also create the components used by the resolver.
+        ///
+        /// Arguments:
+        /// * `repo`: `Repository` object, which will be used as the repo to fetch packages from.
+        /// * `repo_url`: Base URL of the repository, e.g. `fuchsia-pkg://my-package-repository.com`
+        ///     if you want your packages to be resolved with URLs like
+        ///     `fuchsia-pkg://my-package-repository.com/package-name`.
+        /// * `channel`: Update channel that the resolver should use.
         pub async fn new(
             repo: Arc<Repository>,
-            repo_path: &str,
+            repo_url: &str,
             channel: Option<String>,
         ) -> Result<Self, Error> {
             let cache = CacheForTest::new().context("launching cache")?;
@@ -147,7 +164,7 @@ pub mod tests {
             // Set up the repository config for pkg-resolver.
             let served_repo = Arc::clone(&repo).server().start()?;
 
-            let repo_url = repo_path.parse()?;
+            let repo_url = repo_url.parse()?;
             let repo_config =
                 RepositoryConfigs::Version1(vec![served_repo.make_repo_config(repo_url)]);
             let tempdir = tempfile::tempdir()?;
@@ -178,6 +195,7 @@ pub mod tests {
             Ok(ResolverForTest { cache, resolver: Arc::new(resolver), _served_repo: served_repo })
         }
 
+        /// Resolve a package using the resolver, returning the root directory of the package.
         pub async fn resolve_package(&self, url: &str) -> Result<DirectoryProxy, Error> {
             let resolver = self
                 .resolver

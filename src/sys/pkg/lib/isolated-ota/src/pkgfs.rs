@@ -15,6 +15,7 @@ use {
 
 const PKGSVR_PATH: &str = "/pkg/bin/pkgsvr";
 
+/// Represents the sandboxed pkgfs.
 pub struct Pkgfs {
     _process: Scoped,
     root: DirectoryProxy,
@@ -26,6 +27,9 @@ impl Pkgfs {
         Pkgfs::launch_with_args(blobfs, true)
     }
 
+    /// Launch pkgfs using the given blobfs as the backing blob store.
+    /// If enforce_non_static_allowlist is false, will disable the non-static package allowlist
+    /// (for use in tests).
     fn launch_with_args(
         blobfs: ClientEnd<DirectoryMarker>,
         enforce_non_static_allowlist: bool,
@@ -85,6 +89,7 @@ pub mod tests {
         std::io::Read,
     };
 
+    /// This wraps `Pkgfs` in order to reduce test boilerplate.
     pub struct PkgfsForTest {
         pub blobfs: BlobfsRamdisk,
         pub pkgfs: Pkgfs,
@@ -106,6 +111,7 @@ pub mod tests {
         }
     }
 
+    /// Install the given package to pkgfs.
     async fn install_package(root: &DirectoryProxy, pkg: &Package) -> Result<(), Error> {
         let installer =
             pkgfs::install::Client::open_from_pkgfs_root(root).context("Opening pkgfs")?;

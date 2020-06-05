@@ -173,6 +173,14 @@ mod tests {
     const TEST_CHANNEL: &str = "test-channel";
     const TEST_APP_ID: &str = "qnzHyt4n";
 
+    /// Use the Omaha state machine to perform an update.
+    ///
+    /// Arguments:
+    /// * `updater`: UpdaterForTest environment to use with Omaha.
+    /// * `app_set`: AppSet for use by Omaha.
+    /// * `config`: Omaha client configuration.
+    /// * `mock_responses`: In-order list of responses Omaha should get for each HTTP request it
+    ///     makes.
     async fn run_omaha(
         updater: UpdaterForTest,
         app_set: AppSet,
@@ -246,6 +254,7 @@ mod tests {
         }
     }
 
+    /// Construct an UpdaterForTest for use in the Omaha tests.
     async fn build_updater() -> Result<UpdaterForTest, Error> {
         let data = "hello world!".as_bytes();
         let hook = |p: &PaverEvent| {

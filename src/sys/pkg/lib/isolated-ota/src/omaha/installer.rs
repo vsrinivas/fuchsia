@@ -16,6 +16,10 @@ use {
     thiserror::Error,
 };
 
+/// An Omaha Installer implementation that uses the `isolated-ota` Updater to perform the OTA
+/// installation.
+/// This Installer implementation does not reboot when `perform_reboot` is called, as the caller of
+/// `isolated-ota` is expected to do that.
 pub struct IsolatedInstaller {
     blobfs: Option<ClientEnd<DirectoryMarker>>,
     paver_connector: Option<ClientEnd<DirectoryMarker>>,

@@ -25,6 +25,10 @@ pub const UPDATER_URL: &str =
 pub struct Updater {}
 
 impl Updater {
+    /// Perform an update using the given components, using the provided board name.
+    /// If `update_package` is Some, use the given package URL as the URL for the update package.
+    /// Otherwise, `system-updater` uses the default URL.
+    /// This will not install any images to the recovery partitions.
     pub async fn launch(
         blobfs: ClientEnd<DirectoryMarker>,
         paver: ClientEnd<DirectoryMarker>,
@@ -47,6 +51,8 @@ impl Updater {
         Ok(())
     }
 
+    /// Perform an update. This is the same as `launch`,
+    /// except that it expects the path to the `system-updater` manifest to be provided.
     pub async fn launch_with_components(
         blobfs: ClientEnd<DirectoryMarker>,
         paver: ClientEnd<DirectoryMarker>,
@@ -165,6 +171,8 @@ pub mod tests {
     }
 
     impl UpdaterBuilder {
+        /// Construct a new UpdateBuilder. Initially, this contains no images and an empty system
+        /// image package.
         pub async fn new() -> UpdaterBuilder {
             UpdaterBuilder {
                 paver_builder: MockPaverServiceBuilder::new(),
@@ -174,16 +182,19 @@ pub mod tests {
             }
         }
 
+        /// Add a package to the update package this builder will generate.
         pub fn add_package(mut self, package: Package) -> Self {
             self.packages.push(package);
             self
         }
 
+        /// Add an image to the update package this builder will generate.
         pub fn add_image(mut self, name: &str, contents: &[u8]) -> Self {
             self.images.insert(name.to_owned(), contents.to_owned());
             self
         }
 
+        /// Mutate the `MockPaverServiceBuilder` contained in this UpdaterBuilder.
         pub fn paver<F>(mut self, f: F) -> Self
         where
             F: FnOnce(MockPaverServiceBuilder) -> MockPaverServiceBuilder,
@@ -213,6 +224,9 @@ pub mod tests {
             serde_json::to_string(&packages_json).unwrap()
         }
 
+        /// Create an UpdateForTest from this UpdaterBuilder.
+        /// This will construct an update package containing all packages and images added to the
+        /// builder, create a repository containing the packages, and create a MockPaver.
         pub async fn build(self) -> UpdaterForTest {
             let mut update = PackageBuilder::new("update")
                 .add_resource_at("packages.json", self.generate_packages().as_bytes());
@@ -249,6 +263,8 @@ pub mod tests {
         }
     }
 
+    /// This wraps the `Updater` in order to reduce test boilerplate.
+    /// Should be constructed using `UpdaterBuilder`.
     pub struct UpdaterForTest {
         pub repo: Arc<Repository>,
         pub paver: Arc<MockPaverService>,
@@ -258,6 +274,8 @@ pub mod tests {
     }
 
     impl UpdaterForTest {
+        /// Run the system update, returning an `UpdaterResult` containing information about the
+        /// result of the update.
         pub async fn run(self) -> UpdaterResult {
             let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
             let paver_clone = Arc::clone(&self.paver);
@@ -298,14 +316,21 @@ pub mod tests {
         }
     }
 
+    /// Contains information about the state of the system after the updater was run.
     pub struct UpdaterResult {
+        /// All paver events received by the MockPaver during the update.
         pub paver_events: Vec<PaverEvent>,
+        /// The resolver used by the updater.
         pub resolver: ResolverForTest,
+        /// The stdout/stderr output of the system updater.
         pub output: Option<Output>,
+        /// All the packages that should have been resolved by the update.
         pub packages: Vec<Package>,
     }
 
     impl UpdaterResult {
+        /// Verify that all packages that should have been resolved by the update
+        /// were resolved.
         pub async fn verify_packages(&self) -> Result<(), Error> {
             for package in self.packages.iter() {
                 // we deliberately avoid the package resolver here,
