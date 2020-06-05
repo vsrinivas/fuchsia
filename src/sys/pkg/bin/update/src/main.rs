@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context as _, Error};
-use fidl_fuchsia_update::{
-    CheckOptions, Initiator, ManagerMarker, ManagerProxy, MonitorMarker, MonitorRequest,
-    MonitorRequestStream,
+use {
+    anyhow::{Context as _, Error},
+    fidl_fuchsia_update::{
+        CheckOptions, Initiator, ManagerMarker, ManagerProxy, MonitorMarker, MonitorRequest,
+        MonitorRequestStream,
+    },
+    fidl_fuchsia_update_channelcontrol::{ChannelControlMarker, ChannelControlProxy},
+    fidl_fuchsia_update_ext::State,
+    fuchsia_async as fasync,
+    fuchsia_component::client::{connect_to_service, AppBuilder},
+    futures::prelude::*,
 };
-use fidl_fuchsia_update_channelcontrol::{ChannelControlMarker, ChannelControlProxy};
-use fidl_fuchsia_update_ext::State;
-use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
-use futures::prelude::*;
 
 mod args;
 
@@ -96,6 +98,21 @@ async fn handle_check_now_cmd(
     Ok(())
 }
 
+async fn force_install(update_pkg_url: String, reboot: bool) -> Result<(), Error> {
+    AppBuilder::new("fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx")
+        .arg("--update")
+        .arg(update_pkg_url)
+        .arg("--reboot")
+        .arg(reboot.to_string())
+        .spawn(&fuchsia_component::client::launcher()?)
+        .context("spawning the system updater")?
+        .wait()
+        .await
+        .context("waiting for the system updater")?
+        .ok()
+        .context("system updater exited with error")
+}
+
 async fn handle_cmd(cmd: args::Command) -> Result<(), Error> {
     match cmd {
         args::Command::Channel(args::Channel { cmd }) => {
@@ -108,6 +125,9 @@ async fn handle_cmd(cmd: args::Command) -> Result<(), Error> {
             let update_manager = connect_to_service::<ManagerMarker>()
                 .context("Failed to connect to update manager")?;
             handle_check_now_cmd(check_now, update_manager).await?;
+        }
+        args::Command::ForceInstall(args) => {
+            force_install(args.update_pkg_url, args.reboot).await?;
         }
     }
     Ok(())

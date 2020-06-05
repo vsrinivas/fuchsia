@@ -16,6 +16,7 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     futures::prelude::*,
+    matches::assert_matches,
     parking_lot::Mutex,
     pretty_assertions::assert_eq,
     std::sync::Arc,
@@ -143,6 +144,18 @@ fn assert_output(output: &Output, expected_stdout: &str, expected_stderr: &str, 
     let actual_stderr = std::str::from_utf8(&output.stderr).unwrap();
     assert_eq!(actual_stderr, expected_stderr);
     assert_eq!(output.exit_status.code(), exit_code, "stdout: {}", actual_stdout);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn force_install_fails_on_invalid_pkg_url() {
+    let env = TestEnv::new();
+    let output =
+        env.run_update(vec!["force-install", "not-fuchsia-pkg://fuchsia.com/update"]).await;
+
+    assert_matches!(output.exit_status.ok(), Err(_));
+
+    let stderr = std::str::from_utf8(&output.stderr).unwrap();
+    assert!(stderr.contains("system updater exited with error"), "stderr: {}", stderr);
 }
 
 #[fasync::run_singlethreaded(test)]

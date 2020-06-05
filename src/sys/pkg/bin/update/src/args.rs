@@ -19,6 +19,9 @@ pub enum Command {
 
     // fuchsia.update Manager protocol:
     CheckNow(CheckNow),
+
+    // fuchsia.update.installer protocol:
+    ForceInstall(ForceInstall),
 }
 
 #[derive(Debug, Eq, FromArgs, PartialEq)]
@@ -78,18 +81,32 @@ pub struct CheckNow {
     pub monitor: bool,
 }
 
+#[derive(Debug, Eq, FromArgs, PartialEq)]
+#[argh(subcommand, name = "force-install")]
+/// Directly invoke the system updater to install the provided update, bypassing any update checks.
+pub struct ForceInstall {
+    /// whether or not the system updater should reboot into the new system.
+    #[argh(option, default = "true")]
+    pub reboot: bool,
+
+    /// the url of the update package describing the update to install. Ex:
+    /// fuchsia-pkg://fuchsia.com/update.
+    #[argh(positional)]
+    pub update_pkg_url: String,
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, matches::assert_matches};
 
     #[test]
     fn test_unknown_option() {
-        assert!(Update::from_args(&["update"], &["--unkown"]).is_err());
+        assert_matches!(Update::from_args(&["update"], &["--unkown"]), Err(_));
     }
 
     #[test]
     fn test_unknown_subcommand() {
-        assert!(Update::from_args(&["update"], &["unkown"]).is_err());
+        assert_matches!(Update::from_args(&["update"], &["unkown"]), Err(_));
     }
 
     #[test]
@@ -150,6 +167,7 @@ mod tests {
             }
         );
     }
+
     #[test]
     fn test_check_now_monitor() {
         let update = Update::from_args(&["update"], &["check-now", "--monitor"]).unwrap();
@@ -158,12 +176,47 @@ mod tests {
             Update { cmd: Command::CheckNow(CheckNow { service_initiated: false, monitor: true }) }
         );
     }
+
     #[test]
     fn test_check_now_service_initiated() {
         let update = Update::from_args(&["update"], &["check-now", "--service-initiated"]).unwrap();
         assert_eq!(
             update,
             Update { cmd: Command::CheckNow(CheckNow { service_initiated: true, monitor: false }) }
+        );
+    }
+
+    #[test]
+    fn test_force_install_requires_positional_arg() {
+        assert_matches!(Update::from_args(&["update"], &["force-install"]), Err(_));
+    }
+
+    #[test]
+    fn test_force_install() {
+        let update = Update::from_args(&["update"], &["force-install", "url"]).unwrap();
+        assert_eq!(
+            update,
+            Update {
+                cmd: Command::ForceInstall(ForceInstall {
+                    update_pkg_url: "url".to_owned(),
+                    reboot: true,
+                })
+            }
+        );
+    }
+
+    #[test]
+    fn test_force_install_no_reboot() {
+        let update =
+            Update::from_args(&["update"], &["force-install", "--reboot", "false", "url"]).unwrap();
+        assert_eq!(
+            update,
+            Update {
+                cmd: Command::ForceInstall(ForceInstall {
+                    update_pkg_url: "url".to_owned(),
+                    reboot: false,
+                })
+            }
         );
     }
 }
