@@ -11,10 +11,21 @@ const String archivistPath =
 
 void main() {
   sl4f.Sl4f sl4fDriver;
+  sl4f.Inspect inspect;
 
   setUp(() async {
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
     await sl4fDriver.startServer();
+    inspect = sl4f.Inspect(sl4fDriver);
+
+    // Wait until some data shows up for archivist.
+    // In E2E tests sometimes the system just started up, and appmgr did not have a chance to expose data on Archivist yet.
+    // Appmgr will expose the needed information once it processes the start event for Archvist.
+    var values = [];
+    while (values.isEmpty) {
+      values = await getInspectValues(
+          inspect, '$archivistPath/*/@samples/*:cpu_time');
+    }
   });
 
   tearDown(() async {
@@ -23,8 +34,6 @@ void main() {
   });
 
   test('appmgr exposes cpu metrics for archivist', () async {
-    final inspect = sl4f.Inspect(sl4fDriver);
-
     expect(
         await getInspectValues(inspect, '$archivistPath/*/@samples/*:cpu_time'),
         multiValue(greaterThan(0), length: greaterThan(0)));
@@ -39,8 +48,6 @@ void main() {
   });
 
   test('appmgr exposes stats on measurement time', () async {
-    final inspect = sl4f.Inspect(sl4fDriver);
-
     expect(
         await getInspectValues(
             inspect, 'core/appmgr:root/cpu_stats:process_time_ns'),
@@ -48,8 +55,6 @@ void main() {
   });
 
   test('appmgr exposes the number of tracked tasks', () async {
-    final inspect = sl4f.Inspect(sl4fDriver);
-
     expect(
         await getInspectValues(
             inspect, 'core/appmgr:root/cpu_stats:task_count'),
@@ -57,8 +62,6 @@ void main() {
   });
 
   test('appmgr is not out of inspect space', () async {
-    final inspect = sl4f.Inspect(sl4fDriver);
-
     var size = await getInspectValues(
         inspect, 'core/appmgr:root/inspect_stats:current_size');
     var maxSize = await getInspectValues(
