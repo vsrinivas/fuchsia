@@ -303,4 +303,10 @@ protocol Wlanmac {
     /// Unless an error is returned immediately, the driver will eventually
     /// call wlanmac_ifc->hw_scan_complete()
     StartHwScan(WlanHwScanConfig scan_config) -> (zx.status st);
+
+    /// Notifies change of WMM parameters for specified AC
+    UpdateWmmParams(
+        ddk.protocol.wlan.info.WlanAc ac,
+        ddk.protocol.wlan.info.WlanWmmParams params
+    ) -> (zx.status st);
 };

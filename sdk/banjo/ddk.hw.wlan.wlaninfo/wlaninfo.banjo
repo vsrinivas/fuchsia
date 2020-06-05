@@ -83,6 +83,9 @@ enum WlanInfoHardwareCapability {
 
     // Supports simutaneous client-ap use
     simultaneous_client_ap = 0x10;
+
+    // QoS capable.
+    qos_capable = 0x20;
 };
 
 /// This is a simplified expression of channel starting frequencies. Expand this

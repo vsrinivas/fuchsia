@@ -59,7 +59,13 @@ pub fn build_ddk_assoc_ctx(
         chan: ddk_channel_from_fidl(cap.channel),
         // TODO(29325): QoS works with Aruba/Ubiquiti for BlockAck session but it may need to be
         // dynamically determined for each outgoing data frame.
+        // TODO(43938): Derive QoS flag and WMM parameters from device info
         qos: has_ht_cap,
+        ac_be_params: blank_wmm_params(),
+        ac_bk_params: blank_wmm_params(),
+        ac_vi_params: blank_wmm_params(),
+        ac_vo_params: blank_wmm_params(),
+
         rates_cnt: cap.rates.len() as u16, // will not overflow as MAX_RATES_LEN is u8
         rates,
         cap_info: cap.cap_info,
@@ -82,6 +88,10 @@ pub fn get_rssi_dbm(rx_info: banjo_wlan_mac::WlanRxInfo) -> Option<i8> {
         true => Some(rx_info.rssi_dbm),
         false => None,
     }
+}
+
+pub fn blank_wmm_params() -> banjo_wlan_info::WlanWmmParams {
+    banjo_wlan_info::WlanWmmParams { ecw_min: 0, ecw_max: 0, aifsn: 0, txop_limit: 0, acm: false }
 }
 
 #[cfg(test)]

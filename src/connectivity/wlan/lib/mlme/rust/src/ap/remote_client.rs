@@ -6,6 +6,7 @@ use {
     crate::{
         ap::{frame_writer, BufferedFrame, Context, TimedEvent},
         buffer::{InBuf, OutBuf},
+        ddk_converter,
         device::TxFlags,
         error::Error,
         timer::EventId,
@@ -430,7 +431,13 @@ impl RemoteClient {
                         cbw: WlanChannelBandwidth::_20,
                         secondary80: 0,
                     },
+
                     qos: false,
+                    ac_be_params: ddk_converter::blank_wmm_params(),
+                    ac_bk_params: ddk_converter::blank_wmm_params(),
+                    ac_vi_params: ddk_converter::blank_wmm_params(),
+                    ac_vo_params: ddk_converter::blank_wmm_params(),
+
                     rates_cnt: rates.len() as u16,
                     rates: rates_arr,
                     cap_info: capabilities.raw(),

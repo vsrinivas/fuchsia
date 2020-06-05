@@ -157,6 +157,33 @@ struct WlanBssConfig {
     bool remote;
 };
 
+/// Access category
+/// WFA WMM v1.2, 2.2.2 Table 6
+enum WlanAc {
+    BACKGROUND = 1;
+    BEST_EFFORT = 2;
+    VIDEO = 3;
+    VOICE = 4;
+};
+
+/// WFA WMM v1.2, 2.2.2
+struct WlanWmmParams {
+    /// Lower bound of contention window in exponential form
+    /// `cw_min = 2^(ecw_min) - 1`. The unit for contention window is "slot time", which
+    /// is different for each standard (e.g. 9 microseconds, 13 microseconds, etc.)
+    uint8 ecw_min;
+    /// Upper bound of contention window in exponential form
+    /// `cw_max = 2^(ecw_max) - 1`. The unit for contention window is "slot time", which
+    /// is different for each standard (e.g. 9 microseconds, 13 microseconds, etc.)
+    uint8 ecw_max;
+    /// Arbitration Interframe Spacing Number (control wait time between sending each frame)
+    uint8 aifsn;
+    /// TXOP limit in unit of 32 microseconds
+    uint16 txop_limit;
+    /// Whether admission control is mandatory
+    bool acm;
+};
+
 /// Information defined only within a context of association
 /// Beware the subtle interpretation of each field: they are designed to
 /// reflect the parameters safe to use within an association
@@ -173,7 +200,14 @@ struct WlanAssocCtx {
     uint16 listen_interval;
     WlanPhyType phy;
     WlanChannel chan;
+
+    /// QoS capable and parameters
     bool qos;
+    /// WFA WMM v1.2, 2.2.2
+    WlanWmmParams ac_be_params;
+    WlanWmmParams ac_bk_params;
+    WlanWmmParams ac_vi_params;
+    WlanWmmParams ac_vo_params;
 
     /// Coincatenation of SupportedRates and ExtendedSupportedRates
     /// IEEE Std 802.11-2016, 9.4.2.3 & 9.4.2.13

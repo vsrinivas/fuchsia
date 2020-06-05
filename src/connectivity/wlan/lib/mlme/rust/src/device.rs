@@ -547,8 +547,9 @@ mod test_utils {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, banjo_ddk_hw_wlan_ieee80211::*, banjo_ddk_hw_wlan_wlaninfo::*,
-        banjo_ddk_protocol_wlan_mac::WlanHwScanType, wlan_common::assert_variant,
+        super::*, crate::ddk_converter, banjo_ddk_hw_wlan_ieee80211::*,
+        banjo_ddk_hw_wlan_wlaninfo::*, banjo_ddk_protocol_wlan_mac::WlanHwScanType,
+        wlan_common::assert_variant,
     };
 
     fn make_auth_confirm_msg() -> fidl_mlme::AuthenticateConfirm {
@@ -771,6 +772,11 @@ mod tests {
             phy: WlanPhyType::ERP,
             chan: WlanChannel { primary: 3, cbw: WlanChannelBandwidth::_20, secondary80: 0 },
             qos: false,
+            ac_be_params: ddk_converter::blank_wmm_params(),
+            ac_bk_params: ddk_converter::blank_wmm_params(),
+            ac_vi_params: ddk_converter::blank_wmm_params(),
+            ac_vo_params: ddk_converter::blank_wmm_params(),
+
             rates_cnt: 4,
             rates: [0; WLAN_MAC_MAX_RATES as usize],
             cap_info: 0x0102,
