@@ -13,6 +13,27 @@ declare_args() {
 # We have a separate package for each example to clarify the dependencies of
 # each example.
 
+# Test video encode of camera stream
+package("encode-camera") {
+  testonly = true
+
+  deps = [ "//src/media/codec/examples/encode_camera" ]
+
+  binaries = [
+    {
+      name = "encode_camera"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("encode_camera/meta/encode_camera.cmx")
+      dest = "encode_camera.cmx"
+    },
+  ]
+}
+
 package("use_media_decoder") {
   testonly = true
 

@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "bin/encode_camera"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.camera3.DeviceWatcher",
+            "fuchsia.logger.LogSink",
+            "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}

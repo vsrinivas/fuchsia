@@ -1,0 +1,29 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("encode_camera") {
+  testonly = true
+
+  output_name = "encode_camera"
+
+  sources = [
+    "camera_client.cc",
+    "camera_client.h",
+    "encoder_client.cc",
+    "encoder_client.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.camera3",
+    "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/media/lib/test:codec_buffer",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}

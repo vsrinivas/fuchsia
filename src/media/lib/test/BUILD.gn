@@ -45,11 +45,26 @@ source_set("frame_sink") {
   ]
 }
 
+source_set("codec_buffer") {
+  testonly = true
+
+  sources = [ "codec_buffer.cc" ]
+
+  include_dirs = [ "include" ]
+  public_configs = [ ":media_test_include_config" ]
+
+  public = [ "include/lib/media/test/codec_buffer.h" ]
+  deps = [
+    "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 source_set("codec_client") {
   testonly = true
 
   sources = [
-    "codec_buffer.cc",
     "codec_client.cc",
     "codec_output.cc",
   ]
@@ -59,7 +74,6 @@ source_set("codec_client") {
   public_configs = [ ":media_test_include_config" ]
 
   public = [
-    "include/lib/media/test/codec_buffer.h",
     "include/lib/media/test/codec_client.h",
     "include/lib/media/test/codec_output.h",
   ]
@@ -68,6 +82,7 @@ source_set("codec_client") {
     "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
+    "//src/media/lib/test:codec_buffer",
     "//src/media/lib/test:one_shot_event",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
