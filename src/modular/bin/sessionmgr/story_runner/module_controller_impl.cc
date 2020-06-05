@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fidl/cpp/interface_request.h>
 
+#include "src/modular/bin/sessionmgr/storage/encode_module_path.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/clone.h"
@@ -25,7 +26,7 @@ ModuleControllerImpl::ModuleControllerImpl(StoryControllerImpl* const story_cont
                                            fuchsia::ui::views::ViewToken view_token)
     : story_controller_impl_(story_controller_impl),
       app_client_(launcher, CloneStruct(module_config),
-        /*data_origin=*/"", std::move(service_list)),
+                  /*data_origin=*/"", std::move(service_list)),
       module_data_(module_data) {
   app_client_.SetAppErrorHandler([this] { OnAppConnectionError(); });
 
@@ -47,6 +48,8 @@ void ModuleControllerImpl::Connect(
 // If the ComponentController connection closes, it means the module cannot be
 // started. We indicate this by the ERROR state.
 void ModuleControllerImpl::OnAppConnectionError() {
+  FX_LOGS(ERROR) << "Module " << EncodeModulePath(module_data_->module_path()) << " (URL "
+                 << module_data_->module_url() << ") terminated unexpectedly.";
   SetState(fuchsia::modular::ModuleState::ERROR);
 }
 
