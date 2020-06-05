@@ -26,6 +26,8 @@ namespace ti {
 constexpr uint8_t kBacklightBrightnessLsbReg = 0x10;
 constexpr uint8_t kBacklightBrightnessMsbReg = 0x11;
 constexpr uint8_t kDeviceControlReg = 0x1;
+constexpr uint8_t kCurrentLsbReg = 0xA0;
+constexpr uint8_t kCurrentMsbReg = 0xA1;
 constexpr uint8_t kCfg2Reg = 0xA2;
 constexpr uint32_t kAOBrightnessStickyReg = (0x04e << 2);
 
@@ -87,7 +89,13 @@ class Lp8556Device : public DeviceType,
   void GetStateNormalized(GetStateNormalizedCompleter::Sync completer) override;
   void SetStateNormalized(FidlBacklight::State state,
                           SetStateNormalizedCompleter::Sync completer) override;
+  // Note: the device is calibrated at the factory to find a normalized brightness scale value that
+  // corresponds to a set maximum brightness in nits. GetStateAbsolute() will return an error if
+  // the normalized brightness scale is not set to the calibrated value, as there is no universal
+  // way to map other scale values to absolute brightness.
   void GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) override;
+  // Note: this changes the normalized brightness scale back to the calibrated value in order to set
+  // the absolute brightness.
   void SetStateAbsolute(FidlBacklight::State state,
                         SetStateAbsoluteCompleter::Sync completer) override;
   void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) override;
@@ -96,6 +104,8 @@ class Lp8556Device : public DeviceType,
   void GetNormalizedBrightnessScale(GetNormalizedBrightnessScaleCompleter::Sync completer) override;
 
  private:
+  zx_status_t SetCurrentScale(uint16_t scale);
+
   // TODO(rashaeqbal): Switch from I2C to PWM in order to support a larger brightness range.
   // Needs a PWM driver.
   ddk::I2cChannel i2c_;
@@ -104,6 +114,8 @@ class Lp8556Device : public DeviceType,
   // brightness is set to maximum from bootloader if the persistent brightness sticky register is
   // not set.
   double brightness_ = 1.0;
+  uint16_t scale_ = 1.0;
+  uint16_t calibrated_scale_ = UINT16_MAX;
   bool power_ = true;
   uint8_t cfg2_;
   std::optional<double> max_absolute_brightness_nits_;

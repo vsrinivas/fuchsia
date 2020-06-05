@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 
 driver_module("ti-lp8556") {
   defines = [ "_ALL_SOURCE" ]
@@ -60,5 +61,24 @@ test("ti-lp8556-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+unittest_package("ti-lp8556-test-package") {
+  package_name = "ti-lp8556-test"
+  deps = [ ":ti-lp8556-test" ]
+
+  tests = [
+    {
+      name = "ti-lp8556-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":ti-lp8556-test-package" ]
 }

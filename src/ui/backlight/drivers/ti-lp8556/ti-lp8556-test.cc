@@ -4,6 +4,9 @@
 
 #include "ti-lp8556.h"
 
+#include <fuchsia/hardware/backlight/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
@@ -13,6 +16,12 @@
 #include <fbl/span.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
+
+namespace {
+
+bool FloatNear(double a, double b) { return std::abs(a - b) < 0.001; }
+
+}  // namespace
 
 namespace ti {
 
@@ -44,7 +53,8 @@ class Bind : fake_ddk::Bind {
 class Lp8556DeviceTest : public zxtest::Test {
  public:
   Lp8556DeviceTest()
-      : mock_regs_(ddk_mock::MockMmioRegRegion(mock_reg_array_, kMmioRegSize, kMmioRegCount)) {}
+      : mock_regs_(ddk_mock::MockMmioRegRegion(mock_reg_array_, kMmioRegSize, kMmioRegCount)),
+        loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
   void SetUp() {
     ddk::MmioBuffer mmio(mock_regs_.GetMmioBuffer());
@@ -53,6 +63,12 @@ class Lp8556DeviceTest : public zxtest::Test {
     dev_ = fbl::make_unique_checked<Lp8556Device>(
         &ac, fake_ddk::kFakeParent, ddk::I2cChannel(mock_i2c_.GetProto()), std::move(mmio));
     ASSERT_TRUE(ac.check());
+
+    const auto message_op = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+      return static_cast<Lp8556Device*>(ctx)->DdkMessage(msg, txn);
+    };
+    ASSERT_OK(messenger_.SetMessageOp(dev_.get(), message_op));
+    ASSERT_OK(loop_.StartThread("lp8556-client-thread"));
   }
 
   void TestLifecycle() {
@@ -105,12 +121,18 @@ class Lp8556DeviceTest : public zxtest::Test {
   }
 
  protected:
+  ::llcpp::fuchsia::hardware::backlight::Device::SyncClient client() {
+    return ::llcpp::fuchsia::hardware::backlight::Device::SyncClient(std::move(messenger_.local()));
+  }
+
   mock_i2c::MockI2c mock_i2c_;
   std::unique_ptr<Lp8556Device> dev_;
   ddk_mock::MockMmioRegRegion mock_regs_;
 
  private:
   ddk_mock::MockMmioReg mock_reg_array_[kMmioRegCount];
+  fake_ddk::FidlMessenger messenger_;
+  async::Loop loop_;
 };
 
 TEST_F(Lp8556DeviceTest, DdkLifecycle) { TestLifecycle(); }
@@ -145,7 +167,9 @@ TEST_F(Lp8556DeviceTest, InitRegisters) {
       .ExpectWriteStop({0xa9, 0x60})
       .ExpectWriteStop({0xae, 0x09})
       .ExpectWrite({kCfg2Reg})
-      .ExpectReadStop({kCfg2Default});
+      .ExpectReadStop({kCfg2Default})
+      .ExpectWrite({kCurrentLsbReg})
+      .ExpectReadStop({0x05, 0x4e});
   mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
 
   EXPECT_OK(dev_->Init());
@@ -157,7 +181,10 @@ TEST_F(Lp8556DeviceTest, InitRegisters) {
 TEST_F(Lp8556DeviceTest, InitNoRegisters) {
   Bind ddk;
 
-  mock_i2c_.ExpectWrite({kCfg2Reg}).ExpectReadStop({kCfg2Default});
+  mock_i2c_.ExpectWrite({kCfg2Reg})
+      .ExpectReadStop({kCfg2Default})
+      .ExpectWrite({kCurrentLsbReg})
+      .ExpectReadStop({0x05, 0x4e});
   mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
 
   EXPECT_OK(dev_->Init());
@@ -210,13 +237,117 @@ TEST_F(Lp8556DeviceTest, InitOverwriteBrightnessRegisters) {
       .ExpectReadStop({0xcd})
       .ExpectWriteStop({kBacklightBrightnessMsbReg, 0xc4})
       .ExpectWrite({kCfg2Reg})
-      .ExpectReadStop({kCfg2Default});
+      .ExpectReadStop({kCfg2Default})
+      .ExpectWrite({kCurrentLsbReg})
+      .ExpectReadStop({0x05, 0x4e});
 
   const uint32_t kStickyRegValue =
       BrightnessStickyReg::Get().FromValue(0).set_is_valid(1).set_brightness(0x400).reg_value();
   mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead(kStickyRegValue);
 
   EXPECT_OK(dev_->Init());
+
+  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+}
+
+TEST_F(Lp8556DeviceTest, ReadDefaultCurrentScale) {
+  mock_i2c_.ExpectWrite({kCfg2Reg})
+      .ExpectReadStop({kCfg2Default})
+      .ExpectWrite({kCurrentLsbReg})
+      .ExpectReadStop({0x05, 0x4e});
+  mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
+
+  EXPECT_OK(dev_->Init());
+
+  ::llcpp::fuchsia::hardware::backlight::Device::SyncClient backlight_client(client());
+  auto result = backlight_client.GetNormalizedBrightnessScale();
+  EXPECT_TRUE(result.ok());
+  EXPECT_FALSE(result.value().result.is_err());
+  EXPECT_TRUE(
+      FloatNear(result.value().result.response().scale, static_cast<double>(0xe05) / 0xfff));
+
+  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+}
+
+TEST_F(Lp8556DeviceTest, SetCurrentScale) {
+  mock_i2c_.ExpectWrite({kCfg2Reg})
+      .ExpectReadStop({kCfg2Default})
+      .ExpectWrite({kCurrentLsbReg})
+      .ExpectReadStop({0x05, 0x4e});
+  mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
+
+  EXPECT_OK(dev_->Init());
+
+  ::llcpp::fuchsia::hardware::backlight::Device::SyncClient backlight_client(client());
+
+  mock_i2c_.ExpectWrite({kCurrentMsbReg})
+      .ExpectReadStop({0x7e})
+      .ExpectWriteStop({kCurrentLsbReg, 0xab, 0x72});
+
+  auto set_result =
+      backlight_client.SetNormalizedBrightnessScale(static_cast<double>(0x2ab) / 0xfff);
+  EXPECT_TRUE(set_result.ok());
+  EXPECT_FALSE(set_result.value().result.is_err());
+
+  auto get_result = backlight_client.GetNormalizedBrightnessScale();
+  EXPECT_TRUE(get_result.ok());
+  EXPECT_FALSE(get_result.value().result.is_err());
+  EXPECT_TRUE(
+      FloatNear(get_result.value().result.response().scale, static_cast<double>(0x2ab) / 0xfff));
+
+  ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+}
+
+TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
+  Bind ddk;
+
+  constexpr double kMaxBrightnessInNits = 350.0;
+  ddk.SetMetadata(DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS, &kMaxBrightnessInNits,
+                  sizeof(kMaxBrightnessInNits));
+
+  mock_i2c_.ExpectWrite({kCfg2Reg})
+      .ExpectReadStop({kCfg2Default})
+      .ExpectWrite({kCurrentLsbReg})
+      .ExpectReadStop({0x05, 0x4e});
+  mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
+
+  EXPECT_OK(dev_->Init());
+
+  ::llcpp::fuchsia::hardware::backlight::Device::SyncClient backlight_client(client());
+
+  mock_i2c_.ExpectWrite({kCurrentMsbReg})
+      .ExpectReadStop({0x7e})
+      .ExpectWriteStop({kCurrentLsbReg, 0xab, 0x72});
+
+  auto set_result =
+      backlight_client.SetNormalizedBrightnessScale(static_cast<double>(0x2ab) / 0xfff);
+  EXPECT_TRUE(set_result.ok());
+  EXPECT_FALSE(set_result.value().result.is_err());
+
+  mock_i2c_.ExpectWrite({kCurrentMsbReg})
+      .ExpectReadStop({0x6e})
+      .ExpectWriteStop({kCurrentLsbReg, 0x05, 0x6e})
+      .ExpectWriteStop({kBacklightBrightnessLsbReg, 0xff})
+      .ExpectWrite({kBacklightBrightnessMsbReg})
+      .ExpectReadStop({0xab})
+      .ExpectWriteStop({kBacklightBrightnessMsbReg, 0xa7});
+
+  auto absolute_result_1 = backlight_client.SetStateAbsolute({true, 175.0});
+  EXPECT_TRUE(absolute_result_1.ok());
+  EXPECT_FALSE(absolute_result_1.value().result.is_err());
+
+  // The scale is already set to the default, so the register should not be written again.
+  mock_i2c_.ExpectWriteStop({kBacklightBrightnessLsbReg, 0xff})
+      .ExpectWrite({kBacklightBrightnessMsbReg})
+      .ExpectReadStop({0x1b})
+      .ExpectWriteStop({kBacklightBrightnessMsbReg, 0x13});
+
+  auto absolute_result_2 = backlight_client.SetStateAbsolute({true, 87.5});
+  EXPECT_TRUE(absolute_result_1.ok());
+  EXPECT_FALSE(absolute_result_1.value().result.is_err());
 
   ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
   ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());

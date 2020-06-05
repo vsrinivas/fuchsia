@@ -135,6 +135,11 @@ void Lp8556Device::GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
     return;
   }
+  if (scale_ != calibrated_scale_) {
+    LOG_ERROR("Can't get absolute state with non-calibrated current scale\n");
+    completer.ReplyError(ZX_ERR_BAD_STATE);
+    return;
+  }
 
   FidlBacklight::State state = {};
   auto status = GetBacklightState(&state.backlight_on, &state.brightness);
@@ -153,8 +158,16 @@ void Lp8556Device::SetStateAbsolute(FidlBacklight::State state,
     return;
   }
 
-  auto status = SetBacklightState(state.backlight_on,
-                                  state.brightness / max_absolute_brightness_nits_.value());
+  // Restore the calibrated current scale that the bootloader set. This and the maximum brightness
+  // are the only values we have that can be used to set the absolute brightness in nits.
+  auto status = SetCurrentScale(calibrated_scale_);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+
+  status = SetBacklightState(state.backlight_on,
+                             state.brightness / max_absolute_brightness_nits_.value());
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
@@ -171,13 +184,20 @@ void Lp8556Device::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::S
 }
 
 void Lp8556Device::SetNormalizedBrightnessScale(
-    __UNUSED double scale, SetNormalizedBrightnessScaleCompleter::Sync completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+    double scale, SetNormalizedBrightnessScaleCompleter::Sync completer) {
+  scale = fbl::clamp(scale, 0.0, 1.0);
+
+  zx_status_t status = SetCurrentScale(static_cast<uint16_t>(scale * kBrightnessRegMaxValue));
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+  } else {
+    completer.ReplySuccess();
+  }
 }
 
 void Lp8556Device::GetNormalizedBrightnessScale(
     GetNormalizedBrightnessScaleCompleter::Sync completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  completer.ReplySuccess(static_cast<double>(scale_) / kBrightnessRegMaxValue);
 }
 
 zx_status_t Lp8556Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -234,6 +254,43 @@ zx_status_t Lp8556Device::Init() {
     cfg2_ = kCfg2Default;
   }
 
+  uint8_t buf[2];
+  if ((i2c_.ReadSync(kCurrentLsbReg, buf, sizeof(buf))) != ZX_OK) {
+    LOG_ERROR("Could not read current scale value: %d\n", status);
+    return status;
+  }
+  scale_ = static_cast<uint16_t>(buf[0] | (buf[1] << kBrightnessMsbShift)) & kBrightnessRegMask;
+  calibrated_scale_ = scale_;
+
+  return ZX_OK;
+}
+
+zx_status_t Lp8556Device::SetCurrentScale(uint16_t scale) {
+  scale &= kBrightnessRegMask;
+
+  if (scale == scale_) {
+    return ZX_OK;
+  }
+
+  uint8_t msb_reg_value;
+  zx_status_t status = i2c_.ReadSync(kCurrentMsbReg, &msb_reg_value, sizeof(msb_reg_value));
+  if (status != ZX_OK) {
+    LOG_ERROR("Failed to get current scale register: %d", status);
+    return status;
+  }
+  msb_reg_value &= ~kBrightnessMsbByteMask;
+
+  const uint8_t buf[] = {
+      kCurrentLsbReg,
+      static_cast<uint8_t>(scale & kBrightnessLsbMask),
+      static_cast<uint8_t>(msb_reg_value | (scale >> kBrightnessMsbShift)),
+  };
+  if ((status = i2c_.WriteSync(buf, sizeof(buf))) != ZX_OK) {
+    LOG_ERROR("Failed to set current scale register: %d", status);
+    return status;
+  }
+
+  scale_ = scale;
   return ZX_OK;
 }
 
