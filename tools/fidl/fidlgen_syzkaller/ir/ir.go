@@ -532,6 +532,10 @@ func (c *compiler) compileUnion(p types.Union) ([]StructMember, []StructMember, 
 	var i, o, h []StructMember
 
 	for _, m := range p.Members {
+		if m.Reserved {
+			continue
+		}
+
 		inLine, outOfLine, handles := c.compileStructMember(types.StructMember{
 			Type: m.Type,
 			Name: m.Name,

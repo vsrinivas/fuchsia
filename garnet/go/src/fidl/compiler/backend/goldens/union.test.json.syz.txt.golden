@@ -62,8 +62,6 @@ fidl_test_json_PizzaOrPastaHandles [
        pasta fidl_test_json_PastaHandles
 ][varlen]
 fidl_test_json_ExplicitPizzaOrPastaInLine [
-        fidl_union_member[fidl_test_json_ExplicitPizzaOrPastaTag_, ]
-        fidl_union_member[fidl_test_json_ExplicitPizzaOrPastaTag_, ]
        pizzaInLine fidl_union_member[fidl_test_json_ExplicitPizzaOrPastaTag_pizza, fidl_test_json_PizzaInLine]
        pastaInLine fidl_union_member[fidl_test_json_ExplicitPizzaOrPastaTag_pasta, fidl_test_json_PastaInLine]
 ]
@@ -145,7 +143,6 @@ fidl_test_json_FieldCollisionHandles [
        void void
 ][varlen]
 fidl_test_json_ExplicitUnionInLine [
-        fidl_union_member[fidl_test_json_ExplicitUnionTag_, ]
        primitive fidl_union_member[fidl_test_json_ExplicitUnionTag_Primitive, int32]
        string_needs_constructorInLine fidl_union_member[fidl_test_json_ExplicitUnionTag_StringNeedsConstructor, fidl_string]
 ]
@@ -188,7 +185,6 @@ fidl_test_json_StrictFooHandles [
 fidl_test_json_ExplicitFooInLine [
        sInLine fidl_union_member[fidl_test_json_ExplicitFooTag_s, fidl_string]
        i fidl_union_member[fidl_test_json_ExplicitFooTag_i, int32]
-        fidl_union_member[fidl_test_json_ExplicitFooTag_, ]
 ]
 fidl_test_json_ExplicitFooOutOfLine [
        sOutOfLine fidl_aligned[stringnoz]
@@ -197,7 +193,6 @@ fidl_test_json_ExplicitFooHandles [
        void void
 ][varlen]
 fidl_test_json_ExplicitStrictFooInLine [
-        fidl_union_member[fidl_test_json_ExplicitStrictFooTag_, ]
        sInLine fidl_union_member[fidl_test_json_ExplicitStrictFooTag_s, fidl_string]
        i fidl_union_member[fidl_test_json_ExplicitStrictFooTag_i, int32]
 ]
@@ -259,8 +254,6 @@ fidl_test_json_StrictBoundedXUnionHandles [
        void void
 ][varlen]
 fidl_test_json_ExplicitXUnionInLine [
-        fidl_union_member[fidl_test_json_ExplicitXUnionTag_, ]
-        fidl_union_member[fidl_test_json_ExplicitXUnionTag_, ]
        i fidl_union_member[fidl_test_json_ExplicitXUnionTag_i, int64]
        f fidl_union_member[fidl_test_json_ExplicitXUnionTag_f, int32]
 ]
