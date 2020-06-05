@@ -105,20 +105,20 @@ class UsageGainReporterTest : public HermeticAudioTest {
 
     bool muted() const { return last_muted_; }
 
-    float gain_dbfs() const { return last_gain_dbfs_; }
+    float gain_db() const { return last_gain_db_; }
 
    private:
     // |fuchsia::media::UsageGainListener|
-    void OnGainMuteChanged(bool muted, float gain_dbfs, OnGainMuteChangedCallback callback) final {
+    void OnGainMuteChanged(bool muted, float gain_db, OnGainMuteChangedCallback callback) final {
       last_muted_ = muted;
-      last_gain_dbfs_ = gain_dbfs;
+      last_gain_db_ = gain_db;
       completer_();
     }
 
     fit::closure completer_;
     fidl::Binding<fuchsia::media::UsageGainListener> binding_;
     bool last_muted_ = false;
-    float last_gain_dbfs_ = 0.0;
+    float last_gain_db_ = 0.0;
   };
 
   // This matches the configuration in test_output_audio_core_config.json
@@ -172,7 +172,7 @@ TEST_F(UsageGainReporterTest, ConnectToUsageGainReporter) {
   volume_control->SetVolume(1.0);
   ExpectCallback();
   EXPECT_FALSE(fake_listener->muted());
-  EXPECT_FLOAT_EQ(fake_listener->gain_dbfs(), 0.0);
+  EXPECT_FLOAT_EQ(fake_listener->gain_db(), 0.0);
 }
 
 //

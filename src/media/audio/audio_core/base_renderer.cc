@@ -76,6 +76,9 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Initiali
   queue->SetUnderflowReporter([this](zx::duration underflow_duration) {
     REPORT(RendererUnderflow(*this, underflow_duration));
   });
+  auto stream_usage = usage();
+  FX_DCHECK(stream_usage) << "A renderer cannot be linked without a usage";
+  queue->set_usage(*stream_usage);
   packet_queues_.insert({&dest, queue});
   return fit::ok(std::move(queue));
 }

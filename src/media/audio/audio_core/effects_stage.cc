@@ -12,6 +12,26 @@
 namespace media::audio {
 namespace {
 
+// We expect our render flags to be the same between StreamUsageMask and the effects bitmask. Both
+// are defined as 1u << static_cast<uint32_t>(RenderUsage).
+static_assert(StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::BACKGROUND)}).mask() ==
+              FUCHSIA_AUDIO_EFFECTS_USAGE_BACKGROUND);
+static_assert(StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA)}).mask() ==
+              FUCHSIA_AUDIO_EFFECTS_USAGE_MEDIA);
+static_assert(StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION)}).mask() ==
+              FUCHSIA_AUDIO_EFFECTS_USAGE_INTERRUPTION);
+static_assert(StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::SYSTEM_AGENT)}).mask() ==
+              FUCHSIA_AUDIO_EFFECTS_USAGE_SYSTEM_AGENT);
+static_assert(StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}).mask() ==
+              FUCHSIA_AUDIO_EFFECTS_USAGE_COMMUNICATION);
+static constexpr uint32_t kSupportedUsageMask =
+    StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::BACKGROUND),
+                     StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
+                     StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION),
+                     StreamUsage::WithRenderUsage(RenderUsage::SYSTEM_AGENT),
+                     StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)})
+        .mask();
+
 class MultiLibEffectsLoader {
  public:
   Effect CreateEffectByName(std::string_view lib_name, std::string_view effect_name,
@@ -54,7 +74,8 @@ std::pair<int64_t, uint32_t> AlignBufferRequest(int64_t frame, uint32_t length,
 
 // static
 std::shared_ptr<EffectsStage> EffectsStage::Create(
-    const std::vector<PipelineConfig::Effect>& effects, std::shared_ptr<ReadableStream> source) {
+    const std::vector<PipelineConfig::Effect>& effects, std::shared_ptr<ReadableStream> source,
+    VolumeCurve volume_curve) {
   TRACE_DURATION("audio", "EffectsStage::Create");
   if (source->format().sample_format() != fuchsia::media::AudioSampleFormat::FLOAT) {
     FX_LOGS(ERROR) << "EffectsStage can only be added to streams with FLOAT samples";
@@ -85,7 +106,8 @@ std::shared_ptr<EffectsStage> EffectsStage::Create(
     channels_in = channels_out;
   }
 
-  return std::make_shared<EffectsStage>(std::move(source), std::move(processor));
+  return std::make_shared<EffectsStage>(std::move(source), std::move(processor),
+                                        std::move(volume_curve));
 }
 
 Format ComputeFormat(const Format& source_format, const EffectsProcessor& processor) {
@@ -98,10 +120,12 @@ Format ComputeFormat(const Format& source_format, const EffectsProcessor& proces
 }
 
 EffectsStage::EffectsStage(std::shared_ptr<ReadableStream> source,
-                           std::unique_ptr<EffectsProcessor> effects_processor)
+                           std::unique_ptr<EffectsProcessor> effects_processor,
+                           VolumeCurve volume_curve)
     : ReadableStream(ComputeFormat(source->format(), *effects_processor)),
       source_(std::move(source)),
-      effects_processor_(std::move(effects_processor)) {
+      effects_processor_(std::move(effects_processor)),
+      volume_curve_(std::move(volume_curve)) {
   // Initialize our lead time. Setting 0 here will resolve our lead time to effect delay in our
   // |SetMinLeadTime| override.
   SetMinLeadTime(zx::duration(0));
@@ -112,7 +136,8 @@ std::optional<ReadableStream::Buffer> EffectsStage::DupCurrentBlock() {
   // We can discard this buffer once the caller tells us that the buffer has been fully consumed.
   return std::make_optional<ReadableStream::Buffer>(
       current_block_->start(), current_block_->length(), current_block_->payload(),
-      current_block_->is_continuous(), [this](bool fully_consumed) {
+      current_block_->is_continuous(), current_block_->usage_mask(), current_block_->gain_db(),
+      [this](bool fully_consumed) {
         if (fully_consumed) {
           current_block_ = std::nullopt;
         }
@@ -150,6 +175,12 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time ref_time, 
     FX_DCHECK(source_buffer->start().Floor() == aligned_first_frame);
     FX_DCHECK(source_buffer->length().Floor() == aligned_frame_count);
 
+    fuchsia_audio_effects_stream_info stream_info;
+    stream_info.usage_mask = source_buffer->usage_mask().mask() & kSupportedUsageMask;
+    stream_info.gain_dbfs = source_buffer->gain_db();
+    stream_info.volume = volume_curve_.DbToVolume(source_buffer->gain_db());
+    effects_processor_->SetStreamInfo(stream_info);
+
     float* buf_out = nullptr;
     auto payload = static_cast<float*>(source_buffer->payload());
     effects_processor_->Process(aligned_frame_count, payload, &buf_out);
@@ -162,8 +193,9 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time ref_time, 
     if (buf_out == payload) {
       current_block_ = std::move(source_buffer);
     } else {
-      current_block_ = ReadableStream::Buffer(aligned_first_frame, aligned_frame_count, buf_out,
-                                              source_buffer->is_continuous());
+      current_block_ = ReadableStream::Buffer(
+          aligned_first_frame, aligned_frame_count, buf_out, source_buffer->is_continuous(),
+          source_buffer->usage_mask(), source_buffer->gain_db());
     }
     return DupCurrentBlock();
   }

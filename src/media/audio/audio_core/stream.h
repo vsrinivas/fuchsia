@@ -13,6 +13,7 @@
 #include <optional>
 
 #include "src/media/audio/audio_core/packet.h"
+#include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/lib/format/format.h"
 
 namespace media::audio {
@@ -52,20 +53,25 @@ class ReadableStream : public BaseStream {
     using DestructorT = fit::callback<void(bool fully_consumed)>;
 
     Buffer(int64_t start, uint32_t length, void* payload, bool is_continuous,
+           StreamUsageMask usage_mask, float gain_db, DestructorT dtor = nullptr)
+        : dtor_(std::move(dtor)),
+          payload_(payload),
+          start_(start),
+          length_(length),
+          is_continuous_(is_continuous),
+          usage_mask_(usage_mask),
+          gain_db_(gain_db) {}
+
+    Buffer(FractionalFrames<int64_t> start, FractionalFrames<uint32_t> length, void* payload,
+           bool is_continuous, StreamUsageMask usage_mask, float gain_db,
            DestructorT dtor = nullptr)
         : dtor_(std::move(dtor)),
           payload_(payload),
           start_(start),
           length_(length),
-          is_continuous_(is_continuous) {}
-
-    Buffer(FractionalFrames<int64_t> start, FractionalFrames<uint32_t> length, void* payload,
-           bool is_continuous, DestructorT dtor = nullptr)
-        : dtor_(std::move(dtor)),
-          payload_(payload),
-          start_(start),
-          length_(length),
-          is_continuous_(is_continuous) {}
+          is_continuous_(is_continuous),
+          usage_mask_(usage_mask),
+          gain_db_(gain_db) {}
 
     ~Buffer() {
       if (dtor_) {
@@ -98,6 +104,9 @@ class ReadableStream : public BaseStream {
     // By default, we assume this is true.
     void set_is_fully_consumed(bool fully_consumed) { is_fully_consumed_ = fully_consumed; }
 
+    StreamUsageMask usage_mask() const { return usage_mask_; }
+    float gain_db() const { return gain_db_; }
+
    private:
     DestructorT dtor_;
     void* payload_;
@@ -105,6 +114,8 @@ class ReadableStream : public BaseStream {
     FractionalFrames<uint32_t> length_;
     bool is_continuous_;
     bool is_fully_consumed_ = true;
+    StreamUsageMask usage_mask_;
+    float gain_db_;
   };
 
   // ReadLock acquires a read lock on the stream and returns a buffer representing the requested

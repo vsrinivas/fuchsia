@@ -53,6 +53,8 @@ class MixStage : public ReadableStream {
     uint32_t reference_clock_to_fractional_destination_frame_gen;
     bool accumulate;
     TimelineFunction reference_clock_to_fractional_destination_frame;
+    StreamUsageMask usages_mixed;
+    float applied_gain_db;
 
     // Per-stream job state, set up for each renderer during SetupMix.
     uint32_t frames_produced;

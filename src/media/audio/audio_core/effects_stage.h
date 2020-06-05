@@ -9,6 +9,7 @@
 
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/stream.h"
+#include "src/media/audio/audio_core/volume_curve.h"
 #include "src/media/audio/lib/effects_loader/effects_processor.h"
 
 namespace media::audio {
@@ -18,15 +19,18 @@ namespace media::audio {
 class EffectsStage : public ReadableStream {
  public:
   static std::shared_ptr<EffectsStage> Create(const std::vector<PipelineConfig::Effect>& effects,
-                                              std::shared_ptr<ReadableStream> source);
+                                              std::shared_ptr<ReadableStream> source,
+                                              VolumeCurve volume_curve);
 
   EffectsStage(std::shared_ptr<ReadableStream> source,
-               std::unique_ptr<EffectsProcessor> effects_processor);
+               std::unique_ptr<EffectsProcessor> effects_processor, VolumeCurve volume_curve);
 
   uint32_t block_size() const { return effects_processor_->block_size(); }
 
   fit::result<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& config);
+
+  const EffectsProcessor& effects_processor() const { return *effects_processor_; }
 
   // |media::audio::ReadableStream|
   std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
@@ -51,6 +55,7 @@ class EffectsStage : public ReadableStream {
   std::shared_ptr<ReadableStream> source_;
   std::unique_ptr<EffectsProcessor> effects_processor_;
   std::optional<ReadableStream::Buffer> current_block_;
+  VolumeCurve volume_curve_;
 };
 
 }  // namespace media::audio

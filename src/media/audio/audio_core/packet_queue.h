@@ -33,6 +33,11 @@ class PacketQueue : public ReadableStream {
     return pending_packet_queue_.empty();
   }
 
+  void set_usage(const StreamUsage& usage) {
+    usage_mask_.clear();
+    usage_mask_.insert(usage);
+  }
+
   void PushPacket(const fbl::RefPtr<Packet>& packet);
   void Flush(const fbl::RefPtr<PendingFlushToken>& flush_token = nullptr);
   /// Report duration of underflow that occured
@@ -53,6 +58,8 @@ class PacketQueue : public ReadableStream {
 
  private:
   void ReadUnlock(bool fully_consumed);
+
+  StreamUsageMask usage_mask_;
 
   std::mutex flush_mutex_;
   mutable std::mutex pending_mutex_;

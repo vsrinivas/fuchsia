@@ -97,6 +97,7 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time now, int64_t f
   cur_mix_job_.start_pts_of = frame;
   cur_mix_job_.reference_clock_to_fractional_destination_frame = snapshot.timeline_function;
   cur_mix_job_.reference_clock_to_fractional_destination_frame_gen = snapshot.generation;
+  cur_mix_job_.applied_gain_db = fuchsia::media::audio::MUTED_GAIN_DB;
 
   // Fill the output buffer with silence.
   size_t bytes_to_zero = cur_mix_job_.buf_frames * format().bytes_per_frame();
@@ -108,6 +109,7 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time now, int64_t f
   // the next call to ReadLock, rather than mixing new data.
   return std::make_optional<ReadableStream::Buffer>(
       output_buffer->start(), output_buffer->length(), output_buffer->payload(), true,
+      cur_mix_job_.usages_mixed, cur_mix_job_.applied_gain_db,
       [output_buffer = std::move(output_buffer)](bool) mutable { output_buffer = std::nullopt; });
 }
 
@@ -407,6 +409,12 @@ bool MixStage::ProcessMix(ReadableStream* stream, Mixer* mixer,
                                    source_buffer.length().raw_value(), &raw_source_offset,
                                    cur_mix_job_.accumulate);
       frac_source_offset = FractionalFrames<int32_t>::FromRaw(raw_source_offset);
+      cur_mix_job_.usages_mixed.insert_all(source_buffer.usage_mask());
+      // The gain for the stream will be any previously applied gain combined with any additional
+      // gain that will be applied at this stage. In terms of the applied gain of the mixed stream,
+      // we consider that to be the max gain of any single input stream.
+      float stream_gain_db = Gain::CombineGains(source_buffer.gain_db(), info.gain.GetGainDb());
+      cur_mix_job_.applied_gain_db = std::max(cur_mix_job_.applied_gain_db, stream_gain_db);
     }
     FX_DCHECK(dest_offset <= dest_frames_left);
     AUD_VLOG_OBJ(SPEW, this) << " consumed from " << std::hex << std::setw(8)

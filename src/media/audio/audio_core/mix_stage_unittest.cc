@@ -6,8 +6,10 @@
 
 #include <gmock/gmock.h>
 
+#include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
+#include "src/media/audio/audio_core/testing/fake_stream.h"
 #include "src/media/audio/audio_core/testing/packet_factory.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 
@@ -55,12 +57,12 @@ TEST_F(MixStageTest, Trim) {
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
   auto packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
   mix_stage_->AddInput(packet_queue);
 
   bool packet1_released = false;
   bool packet2_released = false;
-  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
   packet_queue->PushPacket(packet_factory.CreatePacket(
       1.0, zx::msec(5), [&packet1_released] { packet1_released = true; }));
   packet_queue->PushPacket(packet_factory.CreatePacket(
@@ -210,6 +212,77 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
 
     auto& arr = as_array<float, 2 * kRequestedFrames>(buf->payload(), 0);
     EXPECT_THAT(arr, Each(FloatEq(kRingBufferSampleValue2)));
+  }
+}
+
+TEST_F(MixStageTest, MixNoInputs) {
+  // Set timeline rate to match our format.
+  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+                   zx::sec(1).to_nsecs())));
+
+  constexpr uint32_t kRequestedFrames = 48;
+  auto buf = mix_stage_->ReadLock(zx::time(0), 0, kRequestedFrames);
+
+  // With no inputs, we should have a muted buffer with no usages.
+  ASSERT_TRUE(buf);
+  EXPECT_TRUE(buf->usage_mask().is_empty());
+  EXPECT_FLOAT_EQ(buf->gain_db(), fuchsia::media::audio::MUTED_GAIN_DB);
+}
+
+TEST_F(MixStageTest, MixSingleInput) {
+  // Set timeline rate to match our format.
+  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+                   zx::sec(1).to_nsecs())));
+
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+
+  static constexpr auto kInputStreamUsage = StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION);
+  auto packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
+  packet_queue->set_usage(kInputStreamUsage);
+  mix_stage_->AddInput(packet_queue);
+
+  packet_queue->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(5)));
+
+  constexpr uint32_t kRequestedFrames = 48;
+  auto buf = mix_stage_->ReadLock(zx::time(0), 0, kRequestedFrames);
+  ASSERT_TRUE(buf);
+  EXPECT_TRUE(buf->usage_mask().contains(kInputStreamUsage));
+  EXPECT_FLOAT_EQ(buf->gain_db(), Gain::kUnityGainDb);
+
+  mix_stage_->RemoveInput(*packet_queue);
+}
+
+TEST_F(MixStageTest, MixMultipleInputs) {
+  // Set timeline rate to match our format.
+  auto timeline_function = TimelineFunction(
+      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+                   zx::sec(1).to_nsecs()));
+
+  auto input1 = std::make_shared<testing::FakeStream>(kDefaultFormat, PAGE_SIZE);
+  input1->timeline_function()->Update(timeline_function);
+  auto input2 = std::make_shared<testing::FakeStream>(kDefaultFormat, PAGE_SIZE);
+  input2->timeline_function()->Update(timeline_function);
+  mix_stage_->AddInput(input1);
+  mix_stage_->AddInput(input2);
+
+  constexpr uint32_t kRequestedFrames = 48;
+
+  // The buffer should return the union of the usage mask, and the largest of the input gains.
+  input1->set_usage_mask(StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA)}));
+  input1->set_gain_db(-20);
+  input2->set_usage_mask(
+      StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}));
+  input2->set_gain_db(-15);
+  {
+    auto buf = mix_stage_->ReadLock(zx::time(0), 0, kRequestedFrames);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->usage_mask(), StreamUsageMask({
+                                     StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
+                                     StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION),
+                                 }));
+    EXPECT_FLOAT_EQ(buf->gain_db(), -15);
   }
 }
 

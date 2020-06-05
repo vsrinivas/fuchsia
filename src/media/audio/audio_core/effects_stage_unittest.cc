@@ -40,6 +40,7 @@ class EffectsStageTest : public testing::ThreadingModelFixture {
   }
 
   testing::TestEffectsModule test_effects_ = testing::TestEffectsModule::Open();
+  VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
 };
 
 TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
@@ -61,7 +62,7 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
       .effect_name = "add_1.0",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream);
+  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
 
   // Enqueue 10ms of frames in the packet queue.
   stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10)));
@@ -102,7 +103,7 @@ TEST_F(EffectsStageTest, BlockAlignRequests) {
       .effect_name = "add_1.0",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream);
+  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
 
   EXPECT_EQ(effects_stage->block_size(), kBlockSize);
 
@@ -152,7 +153,7 @@ TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
       .effect_name = "test_effect",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream);
+  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
 
   EXPECT_EQ(effects_stage->block_size(), kBlockSize);
 
@@ -188,7 +189,7 @@ TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
       .effect_name = "effect_with_delay_3",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream);
+  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
 
   // Since our effect introduces 13 frames of latency, the incoming source frame at time 0 can only
   // emerge from the effect in output frame 13.
@@ -231,7 +232,7 @@ TEST_F(EffectsStageTest, AddDelayFramesIntoMinLeadTime) {
       .effect_name = "effect_with_delay_3",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream);
+  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
 
   // Check our initial lead time is only the effect delay.
   auto effect_lead_time = zx::duration(zx::sec(13).to_nsecs() / kDefaultFormat.frames_per_second());
@@ -268,7 +269,7 @@ TEST_F(EffectsStageTest, UpdateEffect) {
       .instance_name = kInstanceName,
       .effect_config = kInitialConfig,
   });
-  auto effects_stage = EffectsStage::Create(effects, stream);
+  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
 
   effects_stage->UpdateEffect(kInstanceName, kConfig);
 
@@ -320,7 +321,7 @@ TEST_F(EffectsStageTest, CreateStageWithRechannelization) {
       .instance_name = "incremement_without_upchannel",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream);
+  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
   stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10)));
@@ -367,7 +368,7 @@ TEST_F(EffectsStageTest, ReleasePacketWhenFullyConsumed) {
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream);
+  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
   bool packet_released = false;
@@ -407,7 +408,7 @@ TEST_F(EffectsStageTest, ReleasePacketWhenNoLongerReferenced) {
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStage::Create(effects, stream);
+  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
   bool packet_released = false;
@@ -434,6 +435,83 @@ TEST_F(EffectsStageTest, ReleasePacketWhenNoLongerReferenced) {
   RunLoopUntilIdle();
   EXPECT_FALSE(buf);
   EXPECT_TRUE(packet_released);
+}
+
+TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
+  test_effects_.AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
+
+  // Set timeline rate to match our format.
+  auto timeline_function = TimelineFunction(
+      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+                   zx::sec(1).to_nsecs()));
+
+  auto input = std::make_shared<testing::FakeStream>(kDefaultFormat, PAGE_SIZE);
+  input->timeline_function()->Update(timeline_function);
+
+  // Create a simple effects stage.
+  std::vector<PipelineConfig::Effect> effects;
+  effects.push_back(PipelineConfig::Effect{
+      .lib_name = testing::kTestEffectsModuleName,
+      .effect_name = "increment",
+      .instance_name = "",
+      .effect_config = "",
+  });
+  auto effects_stage = EffectsStage::Create(effects, input, volume_curve_);
+
+  constexpr uint32_t kRequestedFrames = 48;
+
+  // Read a buffer with no usages, unity gain.
+  int64_t first_frame = 0;
+  {
+    auto buf = effects_stage->ReadLock(zx::time(0), first_frame, kRequestedFrames);
+    ASSERT_TRUE(buf);
+    EXPECT_TRUE(buf->usage_mask().is_empty());
+    EXPECT_FLOAT_EQ(buf->gain_db(), Gain::kUnityGainDb);
+    test_effects_inspect_state effect_state;
+    EXPECT_EQ(ZX_OK, test_effects_.InspectInstance(
+                         effects_stage->effects_processor().GetEffectAt(0).get(), &effect_state));
+    EXPECT_EQ(0u, effect_state.stream_info.usage_mask);
+    EXPECT_FLOAT_EQ(0.0, effect_state.stream_info.gain_dbfs);
+    first_frame = buf->end().Floor();
+  }
+
+  // Update our input with some usages and gain.
+  input->set_gain_db(-20.0);
+  input->set_usage_mask(
+      StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}));
+  {
+    auto buf = effects_stage->ReadLock(zx::time(0), first_frame, kRequestedFrames);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->usage_mask(),
+              StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}));
+    EXPECT_FLOAT_EQ(buf->gain_db(), -20.0);
+    test_effects_inspect_state effect_state;
+    EXPECT_EQ(ZX_OK, test_effects_.InspectInstance(
+                         effects_stage->effects_processor().GetEffectAt(0).get(), &effect_state));
+    EXPECT_EQ(FUCHSIA_AUDIO_EFFECTS_USAGE_COMMUNICATION, effect_state.stream_info.usage_mask);
+    EXPECT_FLOAT_EQ(-20.0, effect_state.stream_info.gain_dbfs);
+    first_frame = buf->end().Floor();
+  }
+
+  // Multiple usages in the mask.
+  input->set_gain_db(-4.0);
+  input->set_usage_mask(StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
+                                         StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION)}));
+  {
+    auto buf = effects_stage->ReadLock(zx::time(0), first_frame, kRequestedFrames);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->usage_mask(),
+              StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
+                               StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION)}));
+    EXPECT_FLOAT_EQ(buf->gain_db(), -4.0);
+    test_effects_inspect_state effect_state;
+    EXPECT_EQ(ZX_OK, test_effects_.InspectInstance(
+                         effects_stage->effects_processor().GetEffectAt(0).get(), &effect_state));
+    EXPECT_EQ(FUCHSIA_AUDIO_EFFECTS_USAGE_MEDIA | FUCHSIA_AUDIO_EFFECTS_USAGE_INTERRUPTION,
+              effect_state.stream_info.usage_mask);
+    EXPECT_FLOAT_EQ(-4.0, effect_state.stream_info.gain_dbfs);
+    first_frame = buf->end().Floor();
+  }
 }
 
 }  // namespace

@@ -10,6 +10,7 @@
 #include <iomanip>
 
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/logging/logging.h"
 
@@ -106,8 +107,8 @@ std::optional<ReadableStream::Buffer> PacketQueue::ReadLock(zx::time now, int64_
   bool is_continuous = !flushed_;
   flushed_ = false;
   return std::make_optional<ReadableStream::Buffer>(
-      packet->start(), packet->length(), packet->payload(), is_continuous,
-      [this](bool fully_consumed) { this->ReadUnlock(fully_consumed); });
+      packet->start(), packet->length(), packet->payload(), is_continuous, usage_mask_,
+      Gain::kUnityGainDb, [this](bool fully_consumed) { this->ReadUnlock(fully_consumed); });
 }
 
 void PacketQueue::ReadUnlock(bool fully_consumed) {

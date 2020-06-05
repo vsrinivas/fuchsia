@@ -102,7 +102,7 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
   // If we have effects, we should add that stage in now.
   std::shared_ptr<ReadableStream> root = stage;
   if (!spec.effects.empty()) {
-    auto effects_stage = EffectsStage::Create(spec.effects, root);
+    auto effects_stage = EffectsStage::Create(spec.effects, root, volume_curve);
     if (effects_stage) {
       effects_stages.push_back(effects_stage);
       root = std::move(effects_stage);

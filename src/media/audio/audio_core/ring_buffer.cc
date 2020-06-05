@@ -9,6 +9,8 @@
 
 #include <memory>
 
+#include "src/media/audio/audio_core/mixer/gain.h"
+
 namespace media::audio {
 namespace {
 
@@ -22,7 +24,8 @@ template <>
 struct BufferTraits<ReadableRingBuffer> {
   static std::optional<ReadableStream::Buffer> MakeBuffer(int64_t start, uint32_t length,
                                                           void* payload) {
-    return std::make_optional<ReadableStream::Buffer>(start, length, payload, true);
+    return std::make_optional<ReadableStream::Buffer>(start, length, payload, true,
+                                                      StreamUsageMask(), Gain::kUnityGainDb);
   }
 };
 
