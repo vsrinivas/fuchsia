@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
 import("//build/package.gni")
 
 declare_args() {
@@ -16,8 +18,7 @@ group("syzkaller") {
 
 group("tests") {
   testonly = true
-  # TODO(53194): Re enable once new version of syzkaller rolls and syz-executor can be built again.
-  #  deps = [ ":syz-executor-pkg" ]
+  deps = [ ":syz-executor-pkg" ]
 }
 
 package("syz-executor-pkg") {
@@ -78,10 +79,14 @@ executable("syz-executor") {
     "-DGOARCH_${GOARCH}=1",
     "-DHOSTGOOS_${HOSTGOOS}=1",
     "-DGIT_REVISION=\"${GIT_REVISION}\"",
+
+    # TODO(mdempsky): How do we avoid hard-coding this path?
+    "-Ihost_x64/gen/src/testing/fuzzing/syzkaller/sysgen/executor",
   ]
   configs -= [ "//build/config:default_warnings" ]
   configs += [ ":warnings" ]
   deps = [
+    ":run-sysgen($host_toolchain)",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//zircon/public/lib/fdio",
@@ -99,4 +104,40 @@ config("warnings") {
     "-Wunused-const-variable",
     "-Wno-deprecated",
   ]
+}
+
+if (is_host) {
+  go_library("syzkaller-go") {
+    name = "github.com/google/syzkaller"
+    source_dir = syzkaller_dir
+  }
+
+  syz_ldflags = [
+    "-s",
+    "-w",
+    "-X github.com/google/syzkaller/sys.GitRevision=${GIT_REVISION}",
+    "-X 'github.com/google/syzkaller/sys.gitRevisionDate=Sun Jan 10 11:00:00 1970 -0700'",
+  ]
+
+  go_binary("syz-sysgen") {
+    gopackage = "github.com/google/syzkaller/sys/syz-sysgen"
+    ldflags = syz_ldflags
+    deps = [ ":syzkaller-go" ]
+  }
+
+  action("run-sysgen") {
+    script = "run-sysgen.sh"
+    args = [
+      rebase_path("$root_out_dir/syz-sysgen", root_build_dir),
+      "--src",
+      src,
+      "--out",
+      rebase_path("$target_gen_dir/sysgen", root_build_dir),
+    ]
+    outputs = [
+      "$target_gen_dir/sysgen/executor/defs.h",
+      "$target_gen_dir/sysgen/executor/syscalls.h",
+    ]
+    deps = [ ":syz-sysgen" ]
+  }
 }
