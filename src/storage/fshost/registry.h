@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_REGISTRY_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_REGISTRY_H_
+#ifndef SRC_STORAGE_FSHOST_REGISTRY_H_
+#define SRC_STORAGE_FSHOST_REGISTRY_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -44,4 +44,4 @@ class Registry {
 }  // namespace fshost
 }  // namespace devmgr
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_REGISTRY_H_
+#endif  // SRC_STORAGE_FSHOST_REGISTRY_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_FDIO_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_FDIO_H_
+#ifndef SRC_STORAGE_FSHOST_FDIO_H_
+#define SRC_STORAGE_FSHOST_FDIO_H_
 
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
@@ -104,4 +104,4 @@ class ArgumentVector {
 
 }  // namespace devmgr
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_FDIO_H_
+#endif  // SRC_STORAGE_FSHOST_FDIO_H_

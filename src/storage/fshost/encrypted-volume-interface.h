@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_FSHOST_ENCRYPTED_VOLUME_INTERFACE_H_
+#define SRC_STORAGE_FSHOST_ENCRYPTED_VOLUME_INTERFACE_H_
 
 namespace devmgr {
 
@@ -27,3 +28,5 @@ class EncryptedVolumeInterface {
 };
 
 }  // namespace devmgr
+
+#endif  // SRC_STORAGE_FSHOST_ENCRYPTED_VOLUME_INTERFACE_H_

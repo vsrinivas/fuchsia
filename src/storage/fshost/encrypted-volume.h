@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_FSHOST_ENCRYPTED_VOLUME_H_
+#define SRC_STORAGE_FSHOST_ENCRYPTED_VOLUME_H_
+
+#include <zircon/types.h>
 
 #include <fbl/unique_fd.h>
-#include <zircon/types.h>
 
 #include "encrypted-volume-interface.h"
 
@@ -24,3 +26,5 @@ class EncryptedVolume final : public EncryptedVolumeInterface {
 };
 
 }  // namespace devmgr
+
+#endif  // SRC_STORAGE_FSHOST_ENCRYPTED_VOLUME_H_

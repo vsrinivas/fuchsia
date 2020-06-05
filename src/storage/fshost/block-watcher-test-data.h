@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_BLOCK_WATCHER_TEST_DATA_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_BLOCK_WATCHER_TEST_DATA_H_
+#ifndef SRC_STORAGE_FSHOST_BLOCK_WATCHER_TEST_DATA_H_
+#define SRC_STORAGE_FSHOST_BLOCK_WATCHER_TEST_DATA_H_
 
 #include <cstdint>
 
@@ -71,4 +71,4 @@ static constexpr uint8_t kTestGptBlock2[] = {
     0x73, 0x00, 0x74, 0x00, 0x65, 0x00, 0x6d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_BLOCK_WATCHER_TEST_DATA_H_
+#endif  // SRC_STORAGE_FSHOST_BLOCK_WATCHER_TEST_DATA_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_ADMIN_SERVER_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_ADMIN_SERVER_H_
+#ifndef SRC_STORAGE_FSHOST_ADMIN_SERVER_H_
+#define SRC_STORAGE_FSHOST_ADMIN_SERVER_H_
 
 #include <fuchsia/fshost/llcpp/fidl.h>
 #include <lib/async-loop/default.h>
@@ -36,4 +36,4 @@ class AdminServer final : public llcpp::fuchsia::fshost::Admin::Interface {
 
 }  // namespace devmgr
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_ADMIN_SERVER_H_
+#endif  // SRC_STORAGE_FSHOST_ADMIN_SERVER_H_
