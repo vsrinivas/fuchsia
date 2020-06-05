@@ -103,7 +103,7 @@ void PageWatcher::PopulateAndVerifyPagesInRange(uint64_t offset, uint64_t length
     FS_TRACE_ERROR("blobfs: Pager failed page request because blob is corrupt, error: %s\n",
                    zx_status_get_string(static_cast<zx_status_t>(pager_error_status)));
   } else {
-    pager_error_status = user_pager_->TransferPagesToVmo(offset, length, *vmo_, &userpager_info_);
+    pager_error_status = user_pager_->TransferPagesToVmo(offset, length, *vmo_, userpager_info_);
     if (pager_error_status != PagerErrorStatus::kOK) {
       FS_TRACE_ERROR("blobfs: Pager failed to transfer pages to the blob, error: %s\n",
                      zx_status_get_string(static_cast<zx_status_t>(pager_error_status)));

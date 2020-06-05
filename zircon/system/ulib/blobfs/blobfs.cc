@@ -152,9 +152,9 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
 
   // Construct the Blobfs object, without intensive validation, since it
   // may require upgrades / journal replays to become valid.
-  auto fs = std::unique_ptr<Blobfs>(
-      new Blobfs(dispatcher, std::move(device), superblock, options->writability,
-                 options->compression_settings, std::move(vmex_resource)));
+  auto fs = std::unique_ptr<Blobfs>(new Blobfs(dispatcher, std::move(device), superblock,
+                                               options->writability, options->compression_settings,
+                                               std::move(vmex_resource)));
   fs->block_info_ = std::move(block_info);
 
   if (options->pager) {
@@ -228,8 +228,9 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   }
 
   // Validate the FVM after replaying the journal.
-  status = CheckFvmConsistency(&fs->info_, fs->Device(),
-                               /*repair=*/options->writability != blobfs::Writability::ReadOnlyDisk);
+  status =
+      CheckFvmConsistency(&fs->info_, fs->Device(),
+                          /*repair=*/options->writability != blobfs::Writability::ReadOnlyDisk);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: FVM info check failed\n");
     return status;
@@ -845,12 +846,13 @@ zx_status_t Blobfs::AttachTransferVmo(const zx::vmo& transfer_vmo) {
   return BlockAttachVmo(transfer_vmo, &transfer_vmoid_);
 }
 
-zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPagerInfo* info) {
+zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length,
+                                        const UserPagerInfo& info) {
   fs::Ticker ticker(metrics_.Collecting());
   fs::ReadTxn txn(this);
-  BlockIterator block_iter = BlockIteratorByNodeIndex(info->identifier);
+  BlockIterator block_iter = BlockIteratorByNodeIndex(info.identifier);
 
-  auto start_block = static_cast<uint32_t>((offset + info->data_start_bytes) / kBlobfsBlockSize);
+  auto start_block = static_cast<uint32_t>((offset + info.data_start_bytes) / kBlobfsBlockSize);
   auto block_count =
       static_cast<uint32_t>(fbl::round_up(length, kBlobfsBlockSize) / kBlobfsBlockSize);
 
@@ -887,7 +889,7 @@ zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPa
 }
 
 zx_status_t Blobfs::VerifyTransferVmo(uint64_t offset, uint64_t length, uint64_t buffer_size,
-                                      const zx::vmo& transfer_vmo, UserPagerInfo* info) {
+                                      const zx::vmo& transfer_vmo, const UserPagerInfo& info) {
   fzl::VmoMapper mapping;
   // We need to unmap the transfer VMO before its pages can be transferred to the destination VMO,
   // via |zx_pager_supply_pages|.
@@ -900,7 +902,7 @@ zx_status_t Blobfs::VerifyTransferVmo(uint64_t offset, uint64_t length, uint64_t
     return status;
   }
 
-  status = info->verifier->VerifyPartial(mapping.start(), length, offset, buffer_size);
+  status = info.verifier->VerifyPartial(mapping.start(), length, offset, buffer_size);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Verification failure: %s\n", zx_status_get_string(status));
   }

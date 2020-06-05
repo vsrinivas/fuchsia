@@ -230,11 +230,12 @@ class MockPager : public UserPager {
     return ZX_OK;
   }
 
-  zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length, UserPagerInfo* info) override {
+  zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length,
+                                  const UserPagerInfo& info) override {
     if (failure_mode_ == PagerErrorStatus::kErrIO) {
       return ZX_ERR_IO_REFUSED;
     }
-    char identifier = static_cast<char>(info->identifier);
+    char identifier = static_cast<char>(info.identifier);
     EXPECT_NE(blob_registry_.find(identifier), blob_registry_.end());
     const MockBlob& blob = *blob_registry_[identifier];
     EXPECT_EQ(offset % kBlobfsBlockSize, 0);
@@ -251,7 +252,7 @@ class MockPager : public UserPager {
   }
 
   zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length, size_t buffer_size,
-                                const zx::vmo& transfer_vmo, UserPagerInfo* info) override {
+                                const zx::vmo& transfer_vmo, const UserPagerInfo& info) override {
     // buffer_size should always be rounded up to a page.
     EXPECT_EQ(fbl::round_up(length, unsigned{PAGE_SIZE}), buffer_size);
     fzl::VmoMapper mapping;
@@ -262,7 +263,7 @@ class MockPager : public UserPager {
     if (status != ZX_OK) {
       return status;
     }
-    return info->verifier->VerifyPartial(mapping.start(), length, offset, buffer_size);
+    return info.verifier->VerifyPartial(mapping.start(), length, offset, buffer_size);
   }
 
   std::map<char, std::unique_ptr<MockBlob>> blob_registry_;

@@ -75,7 +75,8 @@ class FakeUserPager : public UserPager {
     return ZX_OK;
   }
 
-  zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length, UserPagerInfo* info) override {
+  zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length,
+                                  const UserPagerInfo& info) override {
     if (offset + length > data_.size()) {
       AbortMainThread();
       return ZX_ERR_OUT_OF_RANGE;
@@ -92,7 +93,7 @@ class FakeUserPager : public UserPager {
   }
 
   zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length, uint64_t buffer_size,
-                                const zx::vmo& transfer_vmo, UserPagerInfo* info) override {
+                                const zx::vmo& transfer_vmo, const UserPagerInfo& info) override {
     if (offset + length > data_.size()) {
       AbortMainThread();
       return ZX_ERR_OUT_OF_RANGE;
@@ -106,7 +107,7 @@ class FakeUserPager : public UserPager {
       AbortMainThread();
       return status;
     }
-    if ((status = info->verifier->VerifyPartial(mapping.start(), length, offset, buffer_size)) !=
+    if ((status = info.verifier->VerifyPartial(mapping.start(), length, offset, buffer_size)) !=
         ZX_OK) {
       AbortMainThread();
       return status;
@@ -134,9 +135,9 @@ class BlobLoaderTest : public zxtest::Test {
     ASSERT_OK(FormatFilesystem(device.get()));
     loop_.StartThread();
 
-    MountOptions options = {
-        .compression_settings = { .compression_algorithm = algorithm, }
-    };
+    MountOptions options = {.compression_settings = {
+                                .compression_algorithm = algorithm,
+                            }};
     ASSERT_OK(
         Blobfs::Create(loop_.dispatcher(), std::move(device), &options, zx::resource(), &fs_));
 

@@ -213,10 +213,10 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   // from the block device.
   [[nodiscard]] zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) final;
   [[nodiscard]] zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length,
-                                                UserPagerInfo* info) final;
+                                                const UserPagerInfo& info) final;
   [[nodiscard]] zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length,
                                               uint64_t buffer_length, const zx::vmo& transfer_vmo,
-                                              UserPagerInfo* info) final;
+                                              const UserPagerInfo& info) final;
 
   Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
          const Superblock* info, Writability writable,

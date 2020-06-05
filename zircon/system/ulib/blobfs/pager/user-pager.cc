@@ -66,27 +66,27 @@ zx_status_t UserPager::InitPager() {
   return ZX_OK;
 }
 
-UserPager::ReadRange UserPager::GetBlockAlignedReadRange(UserPagerInfo* info, uint64_t offset,
+UserPager::ReadRange UserPager::GetBlockAlignedReadRange(const UserPagerInfo& info, uint64_t offset,
                                                          uint64_t length) {
-  ZX_DEBUG_ASSERT(offset < info->data_length_bytes);
+  ZX_DEBUG_ASSERT(offset < info.data_length_bytes);
   // Clamp the range to the size of the blob.
-  length = fbl::min(length, info->data_length_bytes - offset);
+  length = fbl::min(length, info.data_length_bytes - offset);
 
   // Align to the block size for verification. (In practice this means alignment to 8k).
-  zx_status_t status = info->verifier->Align(&offset, &length);
-  // This only happens if the info->verifier thinks that [offset,length) is out of range, which
+  zx_status_t status = info.verifier->Align(&offset, &length);
+  // This only happens if the info.verifier thinks that [offset,length) is out of range, which
   // will only happen if |verifier| was initialized with a different length than the rest of |info|
   // (which is a programming error).
   ZX_DEBUG_ASSERT(status == ZX_OK);
 
   ZX_DEBUG_ASSERT(offset % kBlobfsBlockSize == 0);
-  ZX_DEBUG_ASSERT(length % kBlobfsBlockSize == 0 || offset + length == info->data_length_bytes);
+  ZX_DEBUG_ASSERT(length % kBlobfsBlockSize == 0 || offset + length == info.data_length_bytes);
 
   return {.offset = offset, .length = length};
 }
 
-UserPager::ReadRange UserPager::GetBlockAlignedExtendedRange(UserPagerInfo* info, uint64_t offset,
-                                                             uint64_t length) {
+UserPager::ReadRange UserPager::GetBlockAlignedExtendedRange(const UserPagerInfo& info,
+                                                             uint64_t offset, uint64_t length) {
   // TODO(rashaeqbal): Consider making the cluster size dynamic once we have prefetch read
   // efficiency metrics from the kernel - i.e. what percentage of prefetched pages are actually
   // used. Note that dynamic prefetch sizing might not play well with compression, since we
@@ -102,16 +102,14 @@ UserPager::ReadRange UserPager::GetBlockAlignedExtendedRange(UserPagerInfo* info
 
   size_t read_ahead_offset = offset;
   size_t read_ahead_length = fbl::max(kReadAheadClusterSize, length);
-  read_ahead_length = fbl::min(read_ahead_length, info->data_length_bytes - read_ahead_offset);
+  read_ahead_length = fbl::min(read_ahead_length, info.data_length_bytes - read_ahead_offset);
 
   // Align to the block size for verification. (In practice this means alignment to 8k).
   return GetBlockAlignedReadRange(info, read_ahead_offset, read_ahead_length);
 }
 
 PagerErrorStatus UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
-                                               UserPagerInfo* info) {
-  ZX_DEBUG_ASSERT(info);
-
+                                               const UserPagerInfo& info) {
   size_t end;
   if (add_overflow(offset, length, &end)) {
     FS_TRACE_ERROR("blobfs: pager transfer range would overflow (off=%lu, len=%lu)\n", offset,
@@ -119,9 +117,9 @@ PagerErrorStatus UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length,
     return PagerErrorStatus::kErrBadState;
   }
 
-  if (info->decompressor != nullptr) {
+  if (info.decompressor != nullptr) {
     return TransferChunkedPagesToVmo(offset, length, vmo, info);
-  } else if (info->zstd_seekable_blob_collection != nullptr) {
+  } else if (info.zstd_seekable_blob_collection != nullptr) {
     return TransferZSTDSeekablePagesToVmo(offset, length, vmo, info);
   } else {
     return TransferUncompressedPagesToVmo(offset, length, vmo, info);
@@ -131,8 +129,8 @@ PagerErrorStatus UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length,
 PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_offset,
                                                            uint64_t requested_length,
                                                            const zx::vmo& vmo,
-                                                           UserPagerInfo* info) {
-  ZX_DEBUG_ASSERT(!info->decompressor);
+                                                           const UserPagerInfo& info) {
+  ZX_DEBUG_ASSERT(!info.decompressor);
 
   const auto [offset, length] =
       GetBlockAlignedExtendedRange(info, requested_offset, requested_length);
@@ -178,13 +176,13 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
 
 PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
                                                       uint64_t requested_length, const zx::vmo& vmo,
-                                                      UserPagerInfo* info) {
-  ZX_DEBUG_ASSERT(info->decompressor);
+                                                      const UserPagerInfo& info) {
+  ZX_DEBUG_ASSERT(info.decompressor);
 
   const auto [offset, length] = GetBlockAlignedReadRange(info, requested_offset, requested_length);
 
   zx::status<CompressionMapping> mapping_status =
-      info->decompressor->MappingForDecompressedRange(offset, length);
+      info.decompressor->MappingForDecompressedRange(offset, length);
   if (!mapping_status.is_ok()) {
     FS_TRACE_ERROR("blobfs: TransferChunked: Failed to find range for [%lu, %lu): %s\n", offset,
                    offset + length, mapping_status.status_string());
@@ -247,8 +245,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   size_t decompressed_size = mapping.decompressed_length;
   uint8_t* src = static_cast<uint8_t*>(compressed_mapper.start()) + offset_of_compressed_data;
   status =
-      info->decompressor->DecompressRange(decompressed_mapper.start(), &decompressed_size, src,
-                                          mapping.compressed_length, mapping.decompressed_offset);
+      info.decompressor->DecompressRange(decompressed_mapper.start(), &decompressed_size, src,
+                                         mapping.compressed_length, mapping.decompressed_offset);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferChunked: Failed to decompress: %s\n",
                    zx_status_get_string(status));
@@ -258,8 +256,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   // Verify the decompressed pages.
   const uint64_t rounded_length =
       fbl::round_up<uint64_t, uint64_t>(mapping.decompressed_length, PAGE_SIZE);
-  status = info->verifier->VerifyPartial(decompressed_mapper.start(), mapping.decompressed_length,
-                                         mapping.decompressed_offset, rounded_length);
+  status = info.verifier->VerifyPartial(decompressed_mapper.start(), mapping.decompressed_length,
+                                        mapping.decompressed_offset, rounded_length);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferChunked: Failed to verify data: %s\n",
                    zx_status_get_string(status));
@@ -282,15 +280,15 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
 PagerErrorStatus UserPager::TransferZSTDSeekablePagesToVmo(uint64_t requested_offset,
                                                            uint64_t requested_length,
                                                            const zx::vmo& vmo,
-                                                           UserPagerInfo* info) {
+                                                           const UserPagerInfo& info) {
   // This code path assumes a ZSTD Seekable blob.
-  ZX_DEBUG_ASSERT(info && info->zstd_seekable_blob_collection);
+  ZX_DEBUG_ASSERT(info.zstd_seekable_blob_collection);
 
   // Extend read range to align with ZSTD Seekable frame size.
   const auto offset = fbl::round_down(requested_offset, kZSTDSeekableMaxFrameSize);
   const auto frame_aligned_length =
       fbl::round_up(requested_offset + requested_length, kZSTDSeekableMaxFrameSize);
-  const auto read_length = std::min(info->data_length_bytes - offset, frame_aligned_length);
+  const auto read_length = std::min(info.data_length_bytes - offset, frame_aligned_length);
 
   // Use page-aligned length for mapping decompression buffer and supplying pages.
   const auto page_aligned_length = fbl::round_up(read_length, static_cast<size_t>(PAGE_SIZE));
@@ -298,7 +296,7 @@ PagerErrorStatus UserPager::TransferZSTDSeekablePagesToVmo(uint64_t requested_of
   // Sanity check: Merkle alignment on ZSTD Seekable frame-aligned offset+length should be a no-op.
   [[maybe_unused]] auto aligned_offset = offset;
   [[maybe_unused]] auto aligned_length = read_length;
-  ZX_ASSERT(info->verifier->Align(&aligned_offset, &aligned_length) == ZX_OK &&
+  ZX_ASSERT(info.verifier->Align(&aligned_offset, &aligned_length) == ZX_OK &&
             offset == aligned_offset && read_length == aligned_length);
 
   auto decommit = fbl::MakeAutoCall([this, length = page_aligned_length]() {
@@ -318,8 +316,8 @@ PagerErrorStatus UserPager::TransferZSTDSeekablePagesToVmo(uint64_t requested_of
   }
   auto unmap = fbl::MakeAutoCall([&]() { decompression_mapping.Unmap(); });
 
-  status = info->zstd_seekable_blob_collection->Read(
-      info->identifier, static_cast<uint8_t*>(decompression_mapping.start()), offset, read_length);
+  status = info.zstd_seekable_blob_collection->Read(
+      info.identifier, static_cast<uint8_t*>(decompression_mapping.start()), offset, read_length);
   if (status != ZX_OK) {
     FS_TRACE_ERROR(
         "blobfs: TransferSeekable: Failed to read from ZSTD Seekable archive to service page "
@@ -329,8 +327,8 @@ PagerErrorStatus UserPager::TransferZSTDSeekablePagesToVmo(uint64_t requested_of
   }
 
   // Verify the decompressed pages.
-  status = info->verifier->VerifyPartial(decompression_mapping.start(), read_length, offset,
-                                         read_length);
+  status =
+      info.verifier->VerifyPartial(decompression_mapping.start(), read_length, offset, read_length);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferSeekable: Failed to verify transfer vmo: %s\n",
                    zx_status_get_string(status));

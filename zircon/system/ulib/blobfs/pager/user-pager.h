@@ -136,7 +136,7 @@ class UserPager {
   // the page request, e.g. failure while decompressing, or while transferring pages from the
   // transfer buffer etc.
   [[nodiscard]] PagerErrorStatus TransferPagesToVmo(uint64_t offset, uint64_t length,
-                                                    const zx::vmo& vmo, UserPagerInfo* info);
+                                                    const zx::vmo& vmo, const UserPagerInfo& info);
 
  protected:
   // Sets up the transfer buffer, creates the pager and starts the pager thread.
@@ -166,27 +166,28 @@ class UserPager {
   //                  |...input_range...|
   // |..data_block..|..data_block..|..data_block..|
   //                |........output_range.........|
-  ReadRange GetBlockAlignedReadRange(UserPagerInfo* info, uint64_t offset, uint64_t length);
+  ReadRange GetBlockAlignedReadRange(const UserPagerInfo& info, uint64_t offset, uint64_t length);
   // Returns a range at least as big as GetBlockAlignedReadRange(), extended by an implementation
   // defined read-ahead algorithm.
   //
   // The same alignment guarantees for GetBlockAlignedReadRange() apply.
-  ReadRange GetBlockAlignedExtendedRange(UserPagerInfo* info, uint64_t offset, uint64_t length);
+  ReadRange GetBlockAlignedExtendedRange(const UserPagerInfo& info, uint64_t offset,
+                                         uint64_t length);
 
   PagerErrorStatus TransferChunkedPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
-                                             UserPagerInfo* info);
+                                             const UserPagerInfo& info);
   PagerErrorStatus TransferZSTDSeekablePagesToVmo(uint64_t offset, uint64_t length,
-                                                  const zx::vmo& vmo, UserPagerInfo* info);
+                                                  const zx::vmo& vmo, const UserPagerInfo& info);
   PagerErrorStatus TransferUncompressedPagesToVmo(uint64_t offset, uint64_t length,
-                                                  const zx::vmo& vmo, UserPagerInfo* info);
+                                                  const zx::vmo& vmo, const UserPagerInfo& info);
   // Attaches the transfer buffer to the underlying block device, so that blocks can be read into it
   // from storage.
   [[nodiscard]] virtual zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) = 0;
 
-  // Reads data for the inode corresponding to |info->identifier| into the transfer buffer for the
+  // Reads data for the inode corresponding to |info.identifier| into the transfer buffer for the
   // byte range specified by [|offset|, |offset| + |length|).
   [[nodiscard]] virtual zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length,
-                                                        UserPagerInfo* info) = 0;
+                                                        const UserPagerInfo& info) = 0;
 
   // Verifies the data read in to |transfer_vmo| (i.e. the transfer buffer) via
   // |PopulateTransferVmo|. Data in the range [|offset|, |offset| + |length|) is verified using the
@@ -196,7 +197,7 @@ class UserPager {
   [[nodiscard]] virtual zx_status_t VerifyTransferVmo(uint64_t offset, uint64_t length,
                                                       uint64_t buffer_length,
                                                       const zx::vmo& transfer_vmo,
-                                                      UserPagerInfo* info) = 0;
+                                                      const UserPagerInfo& info) = 0;
 
   // Scratch buffer for pager transfers.
   // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, this needs to be unmapped before
