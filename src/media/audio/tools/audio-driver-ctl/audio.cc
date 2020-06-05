@@ -37,7 +37,7 @@ static constexpr float DEFAULT_PLAY_AMPLITUDE = MAX_PLAY_AMPLITUDE;
 static constexpr float MIN_PLAY_DURATION = 0.001f;
 static constexpr float DEFAULT_TONE_FREQ = 440.0f;
 static constexpr float MIN_TONE_FREQ = 15.0f;
-static constexpr float MAX_TONE_FREQ = 20000.0f;
+static constexpr float MAX_TONE_FREQ = 96'000.0f;
 static constexpr float DEFAULT_RECORD_DURATION = std::numeric_limits<float>::max();
 static constexpr uint32_t DEFAULT_FRAME_RATE = 48000;
 static constexpr uint32_t DEFAULT_BITS_PER_SAMPLE = 16;
@@ -462,7 +462,7 @@ int main(int argc, const char** argv) {
             return -1;
           }
           arg++;
-          tone_freq = std::clamp(tone_freq, 15.0f, 20000.0f);
+          tone_freq = std::clamp(tone_freq, MIN_TONE_FREQ, MAX_TONE_FREQ);
         }
         if (arg < argc) {
           if (sscanf(argv[arg], "%f", &duration) != 1) {
