@@ -100,5 +100,8 @@ if (is_host) {
 group("tests") {
   testonly = true
 
-  deps = [ ":fidlcat_test($host_toolchain)" ]
+  deps = [
+    # TODO(fxb/53492): re-enable
+    # ":fidlcat_test($host_toolchain)"
+  ]
 }
