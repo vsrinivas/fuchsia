@@ -1371,14 +1371,18 @@ Extracted items use the file names shown below:\n\
   uint32_t TotalSize() const { return sizeof(header_) + ZBI_ALIGN(PayloadSize()); }
 
   zbi_header_t CheckHeader() const {
-    Checksummer crc;
-    crc.Write(payload_);
-    zbi_header_t check_header = header_;
-    crc.FinalizeHeader(&check_header);
-    if (!compress_ && check_header.crc32 != header_.crc32) {
-      fprintf(stderr, "error: CRC %08x does not match header\n", check_header.crc32);
+    if (header_.flags & ZBI_FLAG_CRC32) {
+      Checksummer crc;
+      crc.Write(payload_);
+      zbi_header_t check_header = header_;
+      crc.FinalizeHeader(&check_header);
+      if (!compress_ && check_header.crc32 != header_.crc32) {
+        fprintf(stderr, "error: CRC %08x does not match header\n", check_header.crc32);
+      }
+      return check_header;
+    } else {
+      return header_;
     }
-    return check_header;
   }
 
   void Describe(uint32_t pos) const {
