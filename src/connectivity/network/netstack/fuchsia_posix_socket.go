@@ -882,7 +882,7 @@ func (s *datagramSocketImpl) Close(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (s *datagramSocketImpl) Clone(_ fidl.Context, flags uint32, object io.NodeWithCtxInterfaceRequest) error {
+func (s *datagramSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtxInterfaceRequest) int64 {
 	clones := atomic.AddInt64(&s.clones, 1)
 	{
 		sCopy := *s
@@ -901,11 +901,16 @@ func (s *datagramSocketImpl) Clone(_ fidl.Context, flags uint32, object io.NodeW
 				_ = syslog.WarnTf(tag, "%s", err)
 			})
 		}()
-
-		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b", s.endpointWithEvent, clones, flags)
-
-		return nil
 	}
+	return clones
+}
+
+func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object io.NodeWithCtxInterfaceRequest) error {
+	clones := s.addConnection(ctx, object)
+
+	syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b", s.endpointWithEvent, clones, flags)
+
+	return nil
 }
 
 func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, addrLen, dataLen, controlLen uint32, flags int16) (socket.DatagramSocketRecvMsgResult, error) {
@@ -1024,10 +1029,8 @@ func newStreamSocket(eps *endpointWithSocket) (socket.StreamSocketWithCtxInterfa
 	s := &streamSocketImpl{
 		endpointWithSocket: eps,
 	}
-	if err := s.Clone(nil, 0, io.NodeWithCtxInterfaceRequest{Channel: localC}); err != nil {
-		s.close()
-		return socket.StreamSocketWithCtxInterface{}, err
-	}
+	clones := s.addConnection(context.Background(), io.NodeWithCtxInterfaceRequest{Channel: localC})
+	syslog.VLogTf(syslog.DebugVerbosity, "NewStream", "%p: clones=%d", s.endpointWithSocket, clones)
 	return socket.StreamSocketWithCtxInterface{Channel: peerC}, nil
 }
 
@@ -1044,7 +1047,7 @@ func (s *streamSocketImpl) Close(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (s *streamSocketImpl) Clone(_ fidl.Context, flags uint32, object io.NodeWithCtxInterfaceRequest) error {
+func (s *streamSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtxInterfaceRequest) int64 {
 	clones := atomic.AddInt64(&s.clones, 1)
 	{
 		sCopy := *s
@@ -1063,11 +1066,16 @@ func (s *streamSocketImpl) Clone(_ fidl.Context, flags uint32, object io.NodeWit
 				_ = syslog.WarnTf(tag, "%s", err)
 			})
 		}()
-
-		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b", s.endpointWithSocket, clones, flags)
-
-		return nil
 	}
+	return clones
+}
+
+func (s *streamSocketImpl) Clone(ctx fidl.Context, flags uint32, object io.NodeWithCtxInterfaceRequest) error {
+	clones := s.addConnection(ctx, object)
+
+	syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b", s.endpointWithSocket, clones, flags)
+
+	return nil
 }
 
 func (s *streamSocketImpl) Describe(fidl.Context) (io.NodeInfo, error) {
@@ -1229,10 +1237,8 @@ func (sp *providerImpl) Socket2(ctx fidl.Context, domain, typ, protocol int16) (
 
 		s.wq.EventRegister(&s.entry, waiter.EventIn)
 
-		if err := s.Clone(ctx, 0, io.NodeWithCtxInterfaceRequest{Channel: localC}); err != nil {
-			s.close()
-			return socket.ProviderSocket2Result{}, err
-		}
+		clones := s.addConnection(ctx, io.NodeWithCtxInterfaceRequest{Channel: localC})
+		syslog.VLogTf(syslog.DebugVerbosity, "NewDatagram", "%p: clones=%d", s.endpointWithEvent, clones)
 		datagramSocketInterface := socket.DatagramSocketWithCtxInterface{Channel: peerC}
 
 		sp.ns.onAddEndpoint(localE, ep)
