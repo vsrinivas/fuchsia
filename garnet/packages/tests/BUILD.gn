@@ -124,7 +124,7 @@ group("all") {
     "//src/developer/memory/monitor/tests",
     "//src/developer/system_monitor/bin/dockyard_host/tests:dockyard_host_test($host_toolchain)",
     "//src/developer/system_monitor/bin/harvester:system_monitor_harvester_tests",
-    "//src/developer/system_monitor/lib:system_monitor_tests($host_toolchain)",
+    "//src/developer/system_monitor/lib:tests($host_toolchain)",
     "//src/fonts:tests",
     "//src/graphics:tests",
     "//src/graphics/tests:vulkan-tests",
