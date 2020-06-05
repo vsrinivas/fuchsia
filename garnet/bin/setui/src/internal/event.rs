@@ -43,7 +43,7 @@ pub mod earcon {
 // through other communication. For example, actions that happen within agents
 // are generally not reported back. Events that are useful for diagnostics and
 // verification in tests should be defined here.
-message_hub_definition!(crate::internal::event::Payload, crate::internal::event::Address);
+message_hub_definition!(Payload, Address);
 
 /// Publisher is a helper for producing logs. It simplifies message creation for
 /// each event and associates an address with these messages at construction.

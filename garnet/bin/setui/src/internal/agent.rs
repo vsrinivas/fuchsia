@@ -10,4 +10,4 @@ pub enum Payload {
     Complete(InvocationResult),
 }
 
-anonymous_message_hub_definition!(crate::internal::agent::Payload);
+anonymous_message_hub_definition!(Payload);

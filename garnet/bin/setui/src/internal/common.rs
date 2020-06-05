@@ -20,6 +20,7 @@ macro_rules! anonymous_message_hub_definition {
 macro_rules! message_hub_definition {
     ($payload:ty, $address:ty) => {
         pub mod message {
+            use super::*;
             use crate::message::base::Signature as BaseSignature;
             use crate::message::message_client::MessageClient as BaseMessageClient;
             use crate::message::message_hub::MessageHub;

@@ -18,4 +18,4 @@ pub enum Payload {
     Event(SettingEvent),
 }
 
-message_hub_definition!(crate::internal::core::Payload, crate::internal::core::Address);
+message_hub_definition!(Payload, Address);

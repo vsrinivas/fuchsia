@@ -26,4 +26,4 @@ pub fn reply(client: message::Client, result: SettingResponseResult) {
     client.reply(Payload::Result(result)).send().ack();
 }
 
-message_hub_definition!(crate::internal::handler::Payload, crate::internal::handler::Address);
+message_hub_definition!(Payload, Address);
