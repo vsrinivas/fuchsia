@@ -51,7 +51,6 @@ const char kTraceNameHighPrecisionBandwidth[] = "memory_monitor:high_precision_b
 constexpr uint64_t kMaxPendingBandwidthMeasurements = 4;
 constexpr uint64_t kMemCyclesToMeasure = 792000000 / 20;                 // 50 ms on sherlock
 constexpr uint64_t kMemCyclesToMeasureHighPrecision = 792000000 / 1000;  // 1 ms
-constexpr uint64_t kBytesPerMemCycle = 16;
 // TODO(48254): Get default channel information through the FIDL API.
 const struct {
   const char* name;
@@ -346,24 +345,29 @@ void Monitor::MeasureBandwidthAndPost() {
                 kTraceName, "bandwidth_usage", "membw" /*vthread_literal*/, 1 /*vthread_id*/,
                 0 /*counter_id*/, TimestampToTicks(info.timestamp), kRamDefaultChannels[0].name,
                 CounterToBandwidth(info.channels[0].readwrite_cycles, info.frequency,
-                                   cycles_to_measure),
+                                   cycles_to_measure) *
+                    info.bytes_per_cycle,
                 kRamDefaultChannels[1].name,
                 CounterToBandwidth(info.channels[1].readwrite_cycles, info.frequency,
-                                   cycles_to_measure),
+                                   cycles_to_measure) *
+                    info.bytes_per_cycle,
                 kRamDefaultChannels[2].name,
                 CounterToBandwidth(info.channels[2].readwrite_cycles, info.frequency,
-                                   cycles_to_measure),
+                                   cycles_to_measure) *
+                    info.bytes_per_cycle,
                 kRamDefaultChannels[3].name,
                 CounterToBandwidth(info.channels[3].readwrite_cycles, info.frequency,
-                                   cycles_to_measure),
+                                   cycles_to_measure) *
+                    info.bytes_per_cycle,
                 "other",
-                CounterToBandwidth(other_readwrite_cycles, info.frequency, cycles_to_measure));
-            TRACE_VTHREAD_COUNTER(
-                kTraceName, "bandwidth_free", "membw" /*vthread_literal*/, 1 /*vthread_id*/,
-                0 /*counter_id*/, TimestampToTicks(info.timestamp), "value",
-                CounterToBandwidth(cycles_to_measure * kBytesPerMemCycle - total_readwrite_cycles -
-                                       other_readwrite_cycles,
-                                   info.frequency, cycles_to_measure));
+                CounterToBandwidth(other_readwrite_cycles, info.frequency, cycles_to_measure) *
+                    info.bytes_per_cycle);
+            TRACE_VTHREAD_COUNTER(kTraceName, "bandwidth_free", "membw" /*vthread_literal*/,
+                                  1 /*vthread_id*/, 0 /*counter_id*/,
+                                  TimestampToTicks(info.timestamp), "value",
+                                  CounterToBandwidth(cycles_to_measure - total_readwrite_cycles -
+                                                         other_readwrite_cycles,
+                                                     info.frequency, cycles_to_measure));
           }
           async::PostTask(dispatcher_, [this] { MeasureBandwidthAndPost(); });
         });
