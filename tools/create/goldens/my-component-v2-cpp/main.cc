@@ -5,7 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
-#include "tools/create/goldens/my-component-v2-cpp/my-component-v2-cpp.h"
+#include "tools/create/goldens/my-component-v2-cpp/my_component_v2_cpp.h"
 
 int main(int argc, const char** argv) {
   // Create the main async event loop.

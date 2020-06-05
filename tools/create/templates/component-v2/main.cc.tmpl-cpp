@@ -3,7 +3,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
-#include "{{PROJECT_PATH}}/{{PROJECT_NAME}}.h"
+#include "{{PROJECT_PATH}}/{{snake_case PROJECT_NAME}}.h"
 
 int main(int argc, const char** argv) {
   // Create the main async event loop.

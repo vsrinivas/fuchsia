@@ -7,7 +7,7 @@
 // see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
 {
     program: {
-        binary: "test/{{PROJECT_NAME}}_unittests",
+        binary: "bin/{{PROJECT_NAME}}_test",
     },
     use: [
         { runner: "gtest_runner" },

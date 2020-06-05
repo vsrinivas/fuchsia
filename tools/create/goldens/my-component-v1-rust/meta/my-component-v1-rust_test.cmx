@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/my-component-v1-rust_test"
-    }
-}

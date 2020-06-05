@@ -7,7 +7,7 @@
 // see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
 {
     program: {
-        binary: "test/{{PROJECT_NAME}}_test",
+        binary: "bin/{{snake_case PROJECT_NAME}}_bin_test",
     },
     use: [
         // Use test runner which will expose `fuchsia.test.Suite` on test's behalf.

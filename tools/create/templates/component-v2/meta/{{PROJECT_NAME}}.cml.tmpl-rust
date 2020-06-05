@@ -1,0 +1,22 @@
+{{>copyright comment="//"}}
+
+{{>generated comment="//"}}
+
+// {{PROJECT_NAME}} component manifest.
+// For information on manifest format and features,
+// see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
+{
+    // The binary to run for this component.
+    program: {
+        binary: "bin/{{snake_case PROJECT_NAME}}",
+    },
+
+    // Capabilities used by this component.
+    use: [
+        // Use the built-in ELF runner to run native binaries.
+        { runner: "elf" },
+
+        // List your component's dependencies here, ex:
+        // { protocol: "/svc/fuchsia.logger.Log" }
+    ],
+}

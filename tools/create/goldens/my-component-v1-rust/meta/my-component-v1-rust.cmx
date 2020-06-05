@@ -1,5 +1,5 @@
 {
     "program": {
-        "binary": "bin/my-component-v1-rust"
+        "binary": "bin/my_component_v1_rust"
     }
 }
