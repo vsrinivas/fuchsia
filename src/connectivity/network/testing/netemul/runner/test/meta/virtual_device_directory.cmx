@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/virtual_device_directory"
+    },
+    "sandbox": {
+        "dev": [
+            "class/ethernet"
+        ],
+        "services": [
+            "fuchsia.netemul.environment.ManagedEnvironment",
+            "fuchsia.netemul.network.NetworkContext"
+        ]
+    }
+}

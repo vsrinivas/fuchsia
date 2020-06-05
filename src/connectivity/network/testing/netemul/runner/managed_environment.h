@@ -52,7 +52,12 @@ class ManagedEnvironment : public fuchsia::netemul::environment::ManagedEnvironm
 
   sys::testing::EnclosingEnvironment& environment();
   ManagedLoggerCollection& loggers();
-  zx::channel OpenVdevDirectory();
+
+  // Returns a channel serving the fuchsia.io.Directory protocol for a directory
+  // at the relative path |path| from the virtual devices directory.
+  //
+  // If the directory does not yet exist, it will be created.
+  zx::channel OpenVdevDirectory(std::string path);
 
  private:
   ManagedEnvironment(const SandboxEnv::Ptr& sandbox_env);

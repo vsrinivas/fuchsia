@@ -21,6 +21,7 @@ group("test") {
     "netstack_socks",
     "sandbox_service",
     "svc_list",
+    "virtual_device_directory",
   ]
 }
 
@@ -40,6 +41,7 @@ group("netemul_empty_binaries") {
   write_file("$root_out_dir/easy_netstack_cfg_test", "")
   write_file("$root_out_dir/inheritance_test", "")
   write_file("$root_out_dir/dynamic_devices_test", "")
+  write_file("$root_out_dir/virtual_device_directory_test", "")
   write_file("$root_out_dir/netstack_intermediary_multi_interface_test", "")
   write_file("$root_out_dir/netstack_intermediary_test", "")
   write_file("$root_out_dir/guest_test", "")
@@ -59,6 +61,7 @@ test_package("netemul_sandbox_test") {
     "netstack_socks",
     "sandbox_service:sandbox_service_test",
     "svc_list",
+    "virtual_device_directory",
     "//src/connectivity/network/testing/netemul/runner:sandbox_unittest",
     "//src/connectivity/network/testing/netemul/runner/helpers/mock_device_settings:mock_device_settings_test",
     "//src/connectivity/network/testing/netemul/runner/model:model_unittest",
@@ -101,6 +104,10 @@ test_package("netemul_sandbox_test") {
       path = rebase_path("meta/netstack_intermediary.cmx")
       dest = "netstack_intermediary.cmx"
     },
+    {
+      path = rebase_path("meta/virtual_device_directory.cmx")
+      dest = "virtual_device_directory.cmx"
+    },
   ]
 
   binaries = [
@@ -127,6 +134,9 @@ test_package("netemul_sandbox_test") {
     },
     {
       name = "netstack_intermediary"
+    },
+    {
+      name = "virtual_device_directory"
     },
   ]
 
@@ -177,6 +187,10 @@ test_package("netemul_sandbox_test") {
     },
     {
       name = "netstack_intermediary_test"
+      environments = [ emu_env ]
+    },
+    {
+      name = "virtual_device_directory_test"
       environments = [ emu_env ]
     },
   ]

@@ -25,9 +25,18 @@ class VirtualDevices {
   void AddEntry(std::string path, fidl::InterfacePtr<DevProxy> dev);
   void RemoveEntry(std::string path);
 
-  zx::channel OpenAsDirectory();
+  // Returns a channel serving the fuchsia.io.Directory protocol for a directory
+  // at the relative path |path|.
+  //
+  // If the directory does not exist, it will be created.
+  zx::channel OpenAsDirectory(std::string path);
 
  private:
+  // Get the directory at the relative path specified by |parts|.
+  //
+  // If the directory does not exist, it will be created.
+  fbl::RefPtr<fs::PseudoDir> GetDirectory(std::vector<std::string_view> parts);
+
   fs::SynchronousVfs vdev_vfs_;
   fbl::RefPtr<fs::PseudoDir> dir_;
 };

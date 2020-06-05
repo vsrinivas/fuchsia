@@ -1,0 +1,16 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "environment": {
+                "test": [
+                    "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/virtual_device_directory.cmx"
+                ]
+            },
+            "timeout": 120
+        }
+    },
+    "program": {
+        "binary": "test/virtual_device_directory_test"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}

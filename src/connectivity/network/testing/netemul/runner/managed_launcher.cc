@@ -15,6 +15,7 @@
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/join_strings.h"
 
 namespace netemul {
 
@@ -43,12 +44,6 @@ void EmitComponentFailure(fidl::InterfaceRequest<fuchsia::sys::ComponentControll
   };
 
   ErrorComponentController err(std::move(req), reason);
-}
-
-static void CreateFlatNamespace(fuchsia::sys::LaunchInfo* linfo) {
-  if (!linfo->flat_namespace) {
-    linfo->flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
-  }
 }
 
 struct LaunchArgs {
@@ -134,16 +129,16 @@ bool ManagedLauncher::UpdateLaunchInfo(fuchsia::sys::PackagePtr package,
     return false;
   }
 
-  // we have devices in sandbox meta, here
-  // we just add our own /vdev to the flat namespace
-  // this could be improved by filtering /vdev to requested classes only
-  // like appmgr does,
-  // but seems overkill for testing environments
-  if (!cmx.sandbox_meta().dev().empty()) {
-    CreateFlatNamespace(launch_info);
-    // add all devices to flat namespace:
-    launch_info->flat_namespace->paths.emplace_back(kVdevRoot);
-    launch_info->flat_namespace->directories.push_back(env_->OpenVdevDirectory());
+  if (!launch_info->flat_namespace) {
+    launch_info->flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
+  }
+
+  // Provide the component with the requested device class directories.
+  for (auto path : cmx.sandbox_meta().dev()) {
+    std::vector<std::string> parts = {kVdevRoot, path};
+    std::string full_path = fxl::JoinStrings(parts, "/");
+    launch_info->flat_namespace->paths.emplace_back(full_path);
+    launch_info->flat_namespace->directories.push_back(env_->OpenVdevDirectory(path));
   }
 
   if (!launch_info->out) {

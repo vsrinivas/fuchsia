@@ -234,7 +234,9 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   }
 }
 
-zx::channel ManagedEnvironment::OpenVdevDirectory() { return virtual_devices_.OpenAsDirectory(); }
+zx::channel ManagedEnvironment::OpenVdevDirectory(std::string path) {
+  return virtual_devices_.OpenAsDirectory(std::move(path));
+}
 
 void ManagedEnvironment::Bind(fidl::InterfaceRequest<ManagedEnvironment::FManagedEnvironment> req) {
   if (ready_) {

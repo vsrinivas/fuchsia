@@ -25,22 +25,9 @@ void VirtualDevices::AddEntry(std::string path, fidl::InterfacePtr<DevProxy> dev
     return;
   }
 
-  fbl::RefPtr<fs::PseudoDir> dir = dir_;
-  auto last = components.end() - 1;
-  for (auto i = components.begin(); i != last; i++) {
-    fbl::RefPtr<fs::Vnode> node;
-    if (dir->Lookup(&node, *i) == ZX_OK) {
-      dir.reset(reinterpret_cast<fs::PseudoDir*>(node.get()));
-    } else {
-      auto ndir = fbl::AdoptRef(new fs::PseudoDir());
-      auto status = dir->AddEntry(*i, ndir);
-      if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Error creating mount path: " << path << ": "
-                       << zx_status_get_string(status);
-      }
-      dir = ndir;
-    }
-  }
+  auto filename = *(components.end() - 1);
+  components.pop_back();
+  fbl::RefPtr<fs::PseudoDir> dir = GetDirectory(std::move(components));
 
   dev.set_error_handler([this, path](zx_status_t status) mutable {
     // when we get an error to the device server channel, we
@@ -55,7 +42,7 @@ void VirtualDevices::AddEntry(std::string path, fidl::InterfacePtr<DevProxy> dev
   });
 
   auto status = dir->AddEntry(
-      *last, fbl::AdoptRef(new fs::Service([dev = std::move(dev), path](zx::channel chann) {
+      filename, fbl::AdoptRef(new fs::Service([dev = std::move(dev), path](zx::channel chann) {
         if (!dev.is_bound()) {
           return ZX_ERR_PEER_CLOSED;
         }
@@ -75,30 +62,51 @@ void VirtualDevices::RemoveEntry(std::string path) {
     return;
   }
 
-  fbl::RefPtr<fs::PseudoDir> dir = dir_;
-  auto last = components.end() - 1;
-  for (auto i = components.begin(); i != last; i++) {
-    fbl::RefPtr<fs::Vnode> node;
-    if (dir->Lookup(&node, *i) == ZX_OK) {
-      dir.reset(reinterpret_cast<fs::PseudoDir*>(node.get()));
-    } else {
-      FX_LOGS(INFO) << "Can't find device path " << path;
-      return;
-    }
-  }
+  auto filename = *(components.end() - 1);
+  components.pop_back();
+  fbl::RefPtr<fs::PseudoDir> dir = GetDirectory(std::move(components));
 
-  auto status = dir->RemoveEntry(*last);
+  auto status = dir->RemoveEntry(filename);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Can't remove device entry " << path << ": " << zx_status_get_string(status);
   }
 }
 
-zx::channel VirtualDevices::OpenAsDirectory() {
+fbl::RefPtr<fs::PseudoDir> VirtualDevices::GetDirectory(std::vector<std::string_view> parts) {
+  fbl::RefPtr<fs::PseudoDir> dir = dir_;
+
+  if (parts.empty()) {
+    // The root directory already exists.
+    return dir;
+  }
+
+  for (auto i = parts.begin(); i != parts.end(); i++) {
+    fbl::RefPtr<fs::Vnode> node;
+    if (dir->Lookup(&node, *i) == ZX_OK) {
+      dir.reset(reinterpret_cast<fs::PseudoDir*>(node.get()));
+    } else {
+      auto ndir = fbl::AdoptRef(new fs::PseudoDir());
+      auto status = dir->AddEntry(*i, ndir);
+      FX_CHECK(status == ZX_OK) << "Error creating mount path: " << *i << ": "
+                                << zx_status_get_string(status);
+      dir = ndir;
+    }
+  }
+
+  return dir;
+}
+
+zx::channel VirtualDevices::OpenAsDirectory(std::string path) {
   zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) != ZX_OK)
+  if (zx::channel::create(0, &h1, &h2) != ZX_OK) {
     return zx::channel();
-  if (vdev_vfs_.ServeDirectory(dir_, std::move(h1)) != ZX_OK)
+  }
+
+  auto parts = fxl::SplitString(path, "/", fxl::WhiteSpaceHandling::kKeepWhitespace,
+                                fxl::SplitResult::kSplitWantNonEmpty);
+  if (vdev_vfs_.ServeDirectory(GetDirectory(std::move(parts)), std::move(h1)) != ZX_OK) {
     return zx::channel();
+  }
   return h2;
 }
 
