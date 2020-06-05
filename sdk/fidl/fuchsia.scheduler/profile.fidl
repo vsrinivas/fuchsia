@@ -20,6 +20,6 @@ protocol ProfileProvider {
     GetDeadlineProfile(uint64 capacity, uint64 deadline, uint64 period, string:64 name)
         -> (zx.status status, zx.handle:PROFILE? profile);
 
-    // Obtain a handle for a profile that sets CPU affinity.
+    /// Obtain a handle for a profile that sets CPU affinity.
     GetCpuAffinityProfile(CpuSet cpu_mask) -> (zx.status status, zx.handle:PROFILE? profile);
 };
