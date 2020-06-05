@@ -23,7 +23,6 @@ namespace input {
 
 using FocusChangeStatus = scenic_impl::gfx::ViewTree::FocusChangeStatus;
 using InputCommand = fuchsia::ui::input::Command;
-using Phase = fuchsia::ui::input::PointerEventPhase;
 using ScenicCommand = fuchsia::ui::scenic::Command;
 using fuchsia::ui::input::InputEvent;
 using fuchsia::ui::input::PointerEvent;

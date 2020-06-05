@@ -6,13 +6,13 @@
 #define SRC_UI_SCENIC_LIB_INPUT_POINTER_EVENT_BUFFER_H_
 
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
-#include <fuchsia/ui/input/cpp/fidl.h>
 
 #include <deque>
 #include <unordered_map>
 #include <vector>
 
 #include "src/ui/lib/escher/geometry/types.h"
+#include "src/ui/scenic/lib/input/internal_pointer_event.h"
 
 namespace scenic_impl {
 namespace input {
@@ -28,7 +28,7 @@ class PointerEventBuffer {
  public:
   // Captures the deferred parallel dispatch of a pointer event.
   struct DeferredPointerEvent {
-    fuchsia::ui::input::PointerEvent event;
+    InternalPointerEvent event;
 
     // Position 0 of the vector holds the top-most view. The vector may be empty.
     std::vector</*view_ref_koid*/ zx_koid_t> parallel_event_receivers;

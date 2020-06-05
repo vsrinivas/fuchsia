@@ -131,7 +131,8 @@ scenic_impl::input::InjectorSettings InjectorSettingsTemplate() {
 scenic_impl::input::Viewport ViewportTemplate() {
   return {
       .extents = std::array<std::array<float, 2>, 2>{{{0, 0}, {1000, 1000}}},
-      .viewport_to_context_transform = scenic_impl::input::ColumnMajorVectorToMat3(kIdentityMatrix),
+      .context_from_viewport_transform =
+          scenic_impl::input::ColumnMajorMat3VectorToMat4(kIdentityMatrix),
   };
 }
 
@@ -666,8 +667,8 @@ TEST(InjectorTest, ClientClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
       /*inject=*/
-      [&cancelled_streams](zx_koid_t, zx_koid_t, const fuchsia::ui::input::PointerEvent& event) {
-        if (event.phase == fuchsia::ui::input::PointerEventPhase::CANCEL)
+      [&cancelled_streams](const scenic_impl::input::InternalPointerEvent& event) {
+        if (event.phase == scenic_impl::input::Phase::CANCEL)
           cancelled_streams.push_back(event.pointer_id);
       });
 
@@ -732,8 +733,8 @@ TEST(InjectorTest, ServerClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
       /*inject=*/
-      [&cancelled_streams](zx_koid_t, zx_koid_t, const fuchsia::ui::input::PointerEvent& event) {
-        if (event.phase == fuchsia::ui::input::PointerEventPhase::CANCEL)
+      [&cancelled_streams](const scenic_impl::input::InternalPointerEvent& event) {
+        if (event.phase == scenic_impl::input::Phase::CANCEL)
           cancelled_streams.push_back(event.pointer_id);
       });
 
@@ -838,8 +839,8 @@ TEST(InjectorTest, InjectionWithBadConnectivity_ShouldCloseChannel) {
       /*is_descendant_and_connected=*/
       [&connectivity_is_good](zx_koid_t, zx_koid_t) { return connectivity_is_good; },
       /*inject=*/
-      [&num_cancel_events](zx_koid_t, zx_koid_t, const fuchsia::ui::input::PointerEvent& event) {
-        num_cancel_events += event.phase == fuchsia::ui::input::PointerEventPhase::CANCEL ? 1 : 0;
+      [&num_cancel_events](const scenic_impl::input::InternalPointerEvent& event) {
+        num_cancel_events += event.phase == scenic_impl::input::Phase::CANCEL ? 1 : 0;
       });
 
   // Start event stream while connectivity is good.

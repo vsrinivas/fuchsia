@@ -16,11 +16,14 @@ using fuchsia::ui::pointerinjector::EventPhase;
 
 namespace {
 
-fuchsia::ui::input::PointerEvent CreateCancelEvent(uint32_t device_id, uint32_t pointer_id) {
-  fuchsia::ui::input::PointerEvent cancel_event;
-  cancel_event.phase = fuchsia::ui::input::PointerEventPhase::CANCEL;
+InternalPointerEvent CreateCancelEvent(uint32_t device_id, uint32_t pointer_id, zx_koid_t context,
+                                       zx_koid_t target) {
+  InternalPointerEvent cancel_event;
+  cancel_event.phase = Phase::CANCEL;
   cancel_event.device_id = device_id;
   cancel_event.pointer_id = pointer_id;
+  cancel_event.context = context;
+  cancel_event.target = target;
   return cancel_event;
 }
 
@@ -58,17 +61,17 @@ zx_status_t IsValidViewport(const fuchsia::ui::pointerinjector::Viewport& viewpo
     return ZX_ERR_INVALID_ARGS;
   }
 
-  for (float f : viewport.viewport_to_context_transform()) {
-    if (!std::isfinite(f)) {
-      FX_LOGS(ERROR) << "Provided fuchsia::ui::pointerinjector::Viewport "
-                        "viewport_to_context_transform contained a NaN or infinity";
-      return ZX_ERR_INVALID_ARGS;
-    }
+  if (std::any_of(viewport.viewport_to_context_transform().begin(),
+                  viewport.viewport_to_context_transform().end(),
+                  [](float f) { return !std::isfinite(f); })) {
+    FX_LOGS(ERROR) << "Provided fuchsia::ui::pointerinjector::Viewport "
+                      "viewport_to_context_transform contained a NaN or infinity";
+    return ZX_ERR_INVALID_ARGS;
   }
 
   // Must be invertible, i.e. determinant must be non-zero.
-  const glm::mat3 viewport_to_context_transform =
-      ColumnMajorVectorToMat3(viewport.viewport_to_context_transform());
+  const glm::mat4 viewport_to_context_transform =
+      ColumnMajorMat3VectorToMat4(viewport.viewport_to_context_transform());
   if (fabs(glm::determinant(viewport_to_context_transform)) <=
       std::numeric_limits<float>::epsilon()) {
     FX_LOGS(ERROR) << "Provided fuchsia::ui::pointerinjector::Viewport had a non-invertible matrix";
@@ -112,14 +115,11 @@ bool Injector::IsValidConfig(const fuchsia::ui::pointerinjector::Config& config)
   return true;
 }
 
-Injector::Injector(
-    InjectorSettings settings, Viewport viewport,
-    fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> device,
-    fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
-        is_descendant_and_connected,
-    fit::function<void(/*context*/ zx_koid_t, /*target*/ zx_koid_t,
-                       /*context_local_event*/ const fuchsia::ui::input::PointerEvent&)>
-        inject)
+Injector::Injector(InjectorSettings settings, Viewport viewport,
+                   fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> device,
+                   fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
+                       is_descendant_and_connected,
+                   fit::function<void(const InternalPointerEvent&)> inject)
     : binding_(this, std::move(device)),
       settings_(std::move(settings)),
       viewport_(std::move(viewport)),
@@ -182,8 +182,9 @@ void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
         }
       }
       viewport_ = {.extents = {new_viewport.extents()},
-                   .viewport_to_context_transform =
-                       ColumnMajorVectorToMat3(new_viewport.viewport_to_context_transform())};
+                   .context_from_viewport_transform =
+                       ColumnMajorMat3VectorToMat4(new_viewport.viewport_to_context_transform())};
+      continue;
     } else if (event.data().is_pointer_sample()) {
       const auto& pointer_sample = event.data().pointer_sample();
 
@@ -195,13 +196,14 @@ void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
         }
       }
 
-      // Translate events to the legacy input1 protocol and inject them.
-      // TODO(52970): Propagate the viewport concept through the system, and don't allow ADD events
-      // outside the viewport.
-      for (const auto& translated_event : PointerInjectorEventToGfxPointerEvent(
-               event, settings_.device_id, viewport_.viewport_to_context_transform)) {
-        inject_(settings_.context_koid, settings_.target_koid, translated_event);
+      // Translate events to internal representation and inject.
+      std::vector<InternalPointerEvent> internal_events =
+          PointerInjectorEventToInternalPointerEvent(event, settings_.device_id, viewport_,
+                                                     settings_.context_koid, settings_.target_koid);
+      for (auto& internal_event : internal_events) {
+        inject_(internal_event);
       }
+
       continue;
     } else {
       // Should be unreachable.
@@ -256,8 +258,8 @@ bool Injector::ValidateEventStream(uint32_t pointer_id, EventPhase phase) {
 void Injector::CancelOngoingStreams() {
   // Inject CANCEL event for each ongoing stream.
   for (auto pointer_id : ongoing_streams_) {
-    inject_(settings_.context_koid, settings_.target_koid,
-            CreateCancelEvent(settings_.device_id, pointer_id));
+    inject_(CreateCancelEvent(settings_.device_id, pointer_id, settings_.context_koid,
+                              settings_.target_koid));
   }
   ongoing_streams_.clear();
 }

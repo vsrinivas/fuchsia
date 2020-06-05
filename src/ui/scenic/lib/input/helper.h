@@ -10,6 +10,7 @@
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
+#include "src/ui/scenic/lib/input/internal_pointer_event.h"
 
 namespace scenic_impl {
 namespace input {
@@ -24,9 +25,6 @@ glm::vec2 PointerCoords(const fuchsia::ui::input::PointerEvent& event);
 // Applies |transform| to |pointer|.
 glm::vec2 TransformPointerCoords(const glm::vec2& pointer, const glm::mat4 transform);
 
-// Finds (Vulkan) normalized device coordinates with respect to the (single) layer.
-glm::vec2 NormalizePointerCoords(const glm::vec2& pointer, const gfx::LayerStackPtr& layer_stack);
-
 // TODO(SCN-1278): Remove this.
 // Turn two floats (high bits, low bits) into a 64-bit uint.
 trace_flow_id_t PointerTraceHACK(float fa, float fb);
@@ -35,30 +33,38 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb);
 // Turn a 64-bit uint to two floats (high bits, low bits).
 std::pair<float, float> ReversePointerTraceHACK(trace_flow_id_t n);
 
-// Turns a pointerinjector::Event into the corresponding GFX pointer events.
+// For converting between phase enum types.
+// No support for HOVER phase.
+fuchsia::ui::input::PointerEventPhase InternalPhaseToGfxPhase(Phase phase);
+Phase GfxPhaseToInternalPhase(fuchsia::ui::input::PointerEventPhase phase);
+
+// Turns a pointerinjector::Event into the corresponding InternalPointerEvents.
 // Expects |event| to be a valid TOUCH pointer event.
 // The mapping is directly translated, except for if the phase is ADD or REMOVE, in which case
 // the event is duplicated and an extra phase is inserted.
-// Mapping:
-// event_time = timestamp
-// pointer_id = pointer_id
-// device_id = device_id
-// x = viewport_to_context_transform * viewport_position[0]
-// y = viewport_to_context_transform * viewport_position[1]
-// type = fuchsia::ui::input::PointerEventType::TOUCH
-//
-// radius_minor and radius_major are set to the lower and upper bits of trace_flow_id if available
 //
 // Phase mapping:
 // ADD -> ADD + DOWN
-// CHANGE -> MOVE
+// CHANGE -> CHANGE
 // REMOVE -> UP + REMOVE
 // CANCEL -> CANCEL
-std::vector<fuchsia::ui::input::PointerEvent> PointerInjectorEventToGfxPointerEvent(
-    const fuchsia::ui::pointerinjector::Event& event, uint32_t device_id,
-    const glm::mat3& viewport_to_context_transform);
+std::vector<InternalPointerEvent> PointerInjectorEventToInternalPointerEvent(
+    const fuchsia::ui::pointerinjector::Event& event, uint32_t device_id, const Viewport& viewport,
+    zx_koid_t context, zx_koid_t target);
 
-glm::mat3 ColumnMajorVectorToMat3(const std::array<float, 9>& matrix_array);
+// Turns a gfx pointer event into an InternalPointerEvent.
+InternalPointerEvent GfxPointerEventToInternalEvent(const fuchsia::ui::input::PointerEvent& event,
+                                                    zx_koid_t scene_koid, float screen_width,
+                                                    float screen_height,
+                                                    const glm::mat4& context_from_screen_transform);
+
+// Turns an InternalPointerEvent into a gfx pointer event.
+// Does not support HOVER events.
+fuchsia::ui::input::PointerEvent InternalPointerEventToGfxPointerEvent(
+    const InternalPointerEvent& event, const glm::mat4& view_from_context_transform,
+    fuchsia::ui::input::PointerEventType type);
+
+glm::mat4 ColumnMajorMat3VectorToMat4(const std::array<float, 9>& matrix_array);
 
 }  // namespace input
 }  // namespace scenic_impl

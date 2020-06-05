@@ -37,27 +37,6 @@ glm::vec2 TransformPointerCoords(const glm::vec2& pointer, const glm::mat4 trans
   return homogenized_transformed_pointer;
 }
 
-// Finds (Vulkan) normalized device coordinates with respect to the (single) layer. This is intended
-// for magnification gestures.
-glm::vec2 NormalizePointerCoords(const glm::vec2& pointer, const gfx::LayerStackPtr& layer_stack) {
-  if (layer_stack->layers().empty()) {
-    return {0, 0};
-  }
-
-  // RootPresenter only owns one layer per presentation/layer stack. To support multiple layers,
-  // we'd need to partition the input space. So, for now to simplify things we'll treat the layer
-  // size as display dimensions, and if we ever find more than one layer in a stack, we should
-  // worry.
-  FX_DCHECK(layer_stack->layers().size() == 1)
-      << "Multiple GFX layers; multi-layer input dispatch not implemented.";
-  const gfx::Layer& layer = **layer_stack->layers().begin();
-
-  return {
-      layer.width() > 0 ? 2.f * pointer.x / layer.width() - 1 : 0,
-      layer.height() > 0 ? 2.f * pointer.y / layer.height() - 1 : 0,
-  };
-}
-
 trace_flow_id_t PointerTraceHACK(float fa, float fb) {
   uint32_t ia, ib;
   memcpy(&ia, &fa, sizeof(uint32_t));
@@ -74,74 +53,156 @@ std::pair<float, float> ReversePointerTraceHACK(trace_flow_id_t trace_id) {
   return {fhigh, flow};
 }
 
-std::vector<GfxPointerEvent> PointerInjectorEventToGfxPointerEvent(
-    const fuchsia::ui::pointerinjector::Event& event, uint32_t device_id,
-    const glm::mat3& viewport_to_context_transform) {
-  const fuchsia::ui::pointerinjector::PointerSample& pointer_sample = event.data().pointer_sample();
-  GfxPointerEvent pointer_event;
-  pointer_event.type = fuchsia::ui::input::PointerEventType::TOUCH;
-  pointer_event.device_id = device_id;
-
-  pointer_event.event_time = event.timestamp();
-  pointer_event.pointer_id = pointer_sample.pointer_id();
-
-  // Convert to context-local coordinates.
-  const glm::vec3 viewport_position = {pointer_sample.position_in_viewport()[0],
-                                       pointer_sample.position_in_viewport()[1],
-                                       1};  // homogeneous coordinates
-  const glm::vec3 context_position = viewport_to_context_transform * viewport_position;
-  pointer_event.x = context_position.x;
-  pointer_event.y = context_position.y;
-
-  if (event.has_trace_flow_id()) {
-    const auto [high, low] = ReversePointerTraceHACK(event.trace_flow_id());
-    pointer_event.radius_minor = low;   // Lower 32 bits.
-    pointer_event.radius_major = high;  // Upper 32 bits.
+Phase GfxPhaseToInternalPhase(PointerEventPhase phase) {
+  switch (phase) {
+    case PointerEventPhase::ADD:
+      return Phase::ADD;
+    case PointerEventPhase::UP:
+      return Phase::UP;
+    case PointerEventPhase::MOVE:
+      return Phase::CHANGE;
+    case PointerEventPhase::DOWN:
+      return Phase::DOWN;
+    case PointerEventPhase::REMOVE:
+      return Phase::REMOVE;
+    case PointerEventPhase::CANCEL:
+      return Phase::CANCEL;
+    default:
+      FX_CHECK(false) << "Should never be reached";
+      return Phase::INVALID;
   }
+}
 
-  std::vector<GfxPointerEvent> events;
+PointerEventPhase InternalPhaseToGfxPhase(Phase phase) {
+  switch (phase) {
+    case Phase::ADD:
+      return PointerEventPhase::ADD;
+    case Phase::UP:
+      return PointerEventPhase::UP;
+    case Phase::CHANGE:
+      return PointerEventPhase::MOVE;
+    case Phase::DOWN:
+      return PointerEventPhase::DOWN;
+    case Phase::REMOVE:
+      return PointerEventPhase::REMOVE;
+    case Phase::CANCEL:
+      return PointerEventPhase::CANCEL;
+    case Phase::INVALID:
+      FX_CHECK(false) << "Should never be reached.";
+      return static_cast<PointerEventPhase>(0);
+  };
+}
+
+std::vector<InternalPointerEvent> PointerInjectorEventToInternalPointerEvent(
+    const fuchsia::ui::pointerinjector::Event& event, uint32_t device_id, const Viewport& viewport,
+    zx_koid_t context, zx_koid_t target) {
+  InternalPointerEvent internal_event;
+  internal_event.timestamp = event.timestamp();
+  internal_event.device_id = device_id;
+
+  const fuchsia::ui::pointerinjector::PointerSample& pointer_sample = event.data().pointer_sample();
+  internal_event.pointer_id = pointer_sample.pointer_id();
+  internal_event.viewport = viewport;
+  internal_event.position_in_viewport = {pointer_sample.position_in_viewport()[0],
+                                         pointer_sample.position_in_viewport()[1]};
+  internal_event.context = context;
+  internal_event.target = target;
+  if (event.has_trace_flow_id())
+    internal_event.trace_id = event.trace_flow_id();
+
+  std::vector<InternalPointerEvent> events;
   switch (pointer_sample.phase()) {
     case InjectorEventPhase::ADD: {
-      GfxPointerEvent down;
-      fidl::Clone(pointer_event, &down);
-      pointer_event.phase = PointerEventPhase::ADD;
-      down.phase = PointerEventPhase::DOWN;
-      events.emplace_back(std::move(pointer_event));
-      events.emplace_back(std::move(down));
+      // Insert extra event.
+      InternalPointerEvent add_clone = internal_event;
+      add_clone.phase = Phase::ADD;
+      events.emplace_back(std::move(add_clone));
+      internal_event.phase = Phase::DOWN;
+      events.emplace_back(std::move(internal_event));
       break;
     }
     case InjectorEventPhase::CHANGE: {
-      pointer_event.phase = PointerEventPhase::MOVE;
-      events.emplace_back(std::move(pointer_event));
+      internal_event.phase = Phase::CHANGE;
+      events.emplace_back(std::move(internal_event));
       break;
     }
     case InjectorEventPhase::REMOVE: {
-      GfxPointerEvent up;
-      fidl::Clone(pointer_event, &up);
-      up.phase = PointerEventPhase::UP;
-      pointer_event.phase = PointerEventPhase::REMOVE;
-      events.emplace_back(std::move(up));
-      events.emplace_back(std::move(pointer_event));
+      // Insert extra event.
+      InternalPointerEvent up_clone = internal_event;
+      up_clone.phase = Phase::UP;
+      events.emplace_back(std::move(up_clone));
+      internal_event.phase = Phase::REMOVE;
+      events.emplace_back(std::move(internal_event));
       break;
     }
     case InjectorEventPhase::CANCEL: {
-      pointer_event.phase = PointerEventPhase::CANCEL;
-      events.emplace_back(std::move(pointer_event));
+      internal_event.phase = Phase::CANCEL;
+      events.emplace_back(std::move(internal_event));
       break;
     }
-    default:
-      FX_CHECK(false) << "unknown phase";
+    default: {
+      FX_CHECK(false) << "unsupported phase: " << static_cast<uint32_t>(pointer_sample.phase());
       break;
+    }
   }
 
   return events;
 }
 
-glm::mat3 ColumnMajorVectorToMat3(const std::array<float, 9>& matrix_array) {
+InternalPointerEvent GfxPointerEventToInternalEvent(
+    const fuchsia::ui::input::PointerEvent& event, zx_koid_t scene_koid, float screen_width,
+    float screen_height, const glm::mat4& context_from_screen_transform) {
+  InternalPointerEvent internal_event;
+  internal_event.timestamp = event.event_time;
+  internal_event.device_id = event.device_id;
+  internal_event.pointer_id = event.pointer_id;
+  // Define the viewport to match screen dimensions and location.
+  internal_event.viewport.extents =
+      Extents({{/*min*/ {0.f, 0.f}, /*max*/ {screen_width, screen_height}}});
+  internal_event.viewport.context_from_viewport_transform = context_from_screen_transform;
+  internal_event.position_in_viewport = {event.x, event.y};
+  // Using scene_koid as both context and target, since it's guaranteed to be the root and thus
+  // to deliver events to any client in the scene graph.
+  internal_event.context = scene_koid;
+  internal_event.target = scene_koid;
+  internal_event.trace_id = PointerTraceHACK(event.radius_major, event.radius_minor);
+  internal_event.phase = GfxPhaseToInternalPhase(event.phase);
+
+  return internal_event;
+}
+
+GfxPointerEvent InternalPointerEventToGfxPointerEvent(const InternalPointerEvent& internal_event,
+                                                      const glm::mat4& view_from_context_transform,
+                                                      fuchsia::ui::input::PointerEventType type) {
+  GfxPointerEvent event;
+  event.event_time = internal_event.timestamp;
+  event.device_id = internal_event.device_id;
+  event.pointer_id = internal_event.pointer_id;
+  event.type = type;
+
+  // Convert to view-local coordinates.
+  const glm::mat4 view_from_viewport_transform =
+      view_from_context_transform * internal_event.viewport.context_from_viewport_transform;
+  const glm::vec2 local_position =
+      TransformPointerCoords(internal_event.position_in_viewport, view_from_viewport_transform);
+  event.x = local_position.x;
+  event.y = local_position.y;
+
+  const auto [high, low] = ReversePointerTraceHACK(internal_event.trace_id);
+  event.radius_minor = low;   // Lower 32 bits.
+  event.radius_major = high;  // Upper 32 bits.
+
+  event.phase = InternalPhaseToGfxPhase(internal_event.phase);
+
+  return event;
+}
+
+glm::mat4 ColumnMajorMat3VectorToMat4(const std::array<float, 9>& matrix_array) {
   // clang-format off
-  return glm::mat3(matrix_array[0], matrix_array[1], matrix_array[2], // first column
-                   matrix_array[3], matrix_array[4], matrix_array[5], // second column
-                   matrix_array[6], matrix_array[7], matrix_array[8]); // third column
+  return glm::mat4(matrix_array[0], matrix_array[1], 0.f, matrix_array[2],  // first column
+                   matrix_array[3], matrix_array[4], 0.f, matrix_array[5],  // second column
+                               0.f,             0.f, 1.f,             0.f,  // third column
+                   matrix_array[6], matrix_array[7], 0.f,             1.f); // fourth column
   // clang-format on
 }
 

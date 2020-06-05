@@ -294,10 +294,15 @@ InputCommand KeyboardCommandGenerator::MakeInputCommand(KeyboardEvent event) {
 }
 
 bool PointerMatches(const PointerEvent& event, uint32_t pointer_id, PointerEventPhase phase,
-                    float x, float y) {
+                    float x, float y, fuchsia::ui::input::PointerEventType type) {
   using fuchsia::ui::input::operator<<;
 
   bool result = true;
+  if (event.type != type) {
+    FX_LOGS(ERROR) << "  Actual type: " << event.type;
+    FX_LOGS(ERROR) << "Expected type: " << type;
+    result = false;
+  }
   if (event.pointer_id != pointer_id) {
     FX_LOGS(ERROR) << "  Actual id: " << event.pointer_id;
     FX_LOGS(ERROR) << "Expected id: " << pointer_id;

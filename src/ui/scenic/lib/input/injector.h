@@ -5,32 +5,16 @@
 #ifndef SRC_UI_SCENIC_LIB_INPUT_INJECTOR_H_
 #define SRC_UI_SCENIC_LIB_INPUT_INJECTOR_H_
 
-#include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding.h>
 
 #include <set>
 
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
+#include "src/ui/scenic/lib/input/internal_pointer_event.h"
 
 namespace scenic_impl {
 namespace input {
-
-struct Extents {
-  glm::vec2 min = glm::vec2(0);
-  glm::vec2 max = glm::vec2(0);
-  Extents() = default;
-  Extents(std::array<std::array<float, 2>, 2> extents) {
-    min = {extents[0][0], extents[0][1]};
-    max = {extents[1][0], extents[1][1]};
-  }
-};
-
-struct Viewport {
-  Extents extents;
-  glm::mat3 viewport_to_context_transform = glm::mat3(1.f);
-};
 
 // Non-FIDL-type struct for keeping client defined settings.
 struct InjectorSettings {
@@ -50,9 +34,7 @@ class Injector : public fuchsia::ui::pointerinjector::Device {
            fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> injector,
            fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
                is_descendant_and_connected,
-           fit::function<void(/*context*/ zx_koid_t, /*target*/ zx_koid_t,
-                              /*context_local_event*/ const fuchsia::ui::input::PointerEvent&)>
-               inject);
+           fit::function<void(const InternalPointerEvent&)> inject);
 
   static bool IsValidConfig(const fuchsia::ui::pointerinjector::Config& config);
 
@@ -98,9 +80,7 @@ class Injector : public fuchsia::ui::pointerinjector::Device {
   fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
       is_descendant_and_connected_;
 
-  fit::function<void(/*context*/ zx_koid_t, /*target*/ zx_koid_t,
-                     /*context_local_event*/ const fuchsia::ui::input::PointerEvent&)>
-      inject_;
+  fit::function<void(const InternalPointerEvent&)> inject_;
 };
 
 }  // namespace input

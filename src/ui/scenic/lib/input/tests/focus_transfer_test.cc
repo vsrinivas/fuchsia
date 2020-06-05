@@ -459,7 +459,8 @@ TEST_F(FocusTransferTest, MouseFocusWithValidTarget) {
 
     // MOVE
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
 
     // FOCUS
     EXPECT_TRUE(events[1].is_focus());
@@ -467,7 +468,8 @@ TEST_F(FocusTransferTest, MouseFocusWithValidTarget) {
 
     // DOWN
     EXPECT_TRUE(events[2].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 4.5, 0.5));
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 4.5, 0.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
   }
 
   // Verify root session receives nothing.

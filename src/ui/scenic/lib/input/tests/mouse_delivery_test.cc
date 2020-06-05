@@ -137,25 +137,31 @@ TEST_F(MouseDeliveryTest, StandardTest) {
     EXPECT_EQ(events.size(), 7u);
 
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0.5, 4.5));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0.5, 4.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
 
     EXPECT_TRUE(events[1].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1.5, 3.5));
+    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1.5, 3.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
 
     EXPECT_TRUE(events[2].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2.5, 2.5));
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2.5, 2.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
 
     EXPECT_TRUE(events[3].is_focus());
     EXPECT_TRUE(events[3].focus().focused);
 
     EXPECT_TRUE(events[4].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::DOWN, 3.5, 1.5));
+    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::DOWN, 3.5, 1.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
 
     EXPECT_TRUE(events[5].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5));
+    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
 
     EXPECT_TRUE(events[6].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[6].pointer(), 1u, PointerEventPhase::UP, 5.5, -0.5));
+    EXPECT_TRUE(PointerMatches(events[6].pointer(), 1u, PointerEventPhase::UP, 5.5, -0.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
   }
 
   // Verify client 2's input has one mouse event.
@@ -165,7 +171,8 @@ TEST_F(MouseDeliveryTest, StandardTest) {
     EXPECT_EQ(events.size(), 1u);
 
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
   }
 }
 
@@ -260,7 +267,6 @@ TEST_F(MouseDeliveryTest, OffViewClickTriggersUnfocusEvent) {
 
     EXPECT_TRUE(events[0].is_focus());
     EXPECT_TRUE(events[0].focus().focused);
-
   }
 }
 
@@ -333,22 +339,28 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
     EXPECT_EQ(events.size(), 6u);
 
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0.5, 4.5));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0.5, 4.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
 
     EXPECT_TRUE(events[1].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1.5, 3.5));
+    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1.5, 3.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
 
     EXPECT_TRUE(events[2].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2.5, 2.5));
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2.5, 2.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
 
     EXPECT_TRUE(events[3].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::DOWN, 3.5, 1.5));
+    EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::DOWN, 3.5, 1.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
 
     EXPECT_TRUE(events[4].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5));
+    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
 
     EXPECT_TRUE(events[5].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::UP, 5.5, -0.5));
+    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::UP, 5.5, -0.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
   }
 
   // Verify client 2's input has one mouse event.
@@ -358,7 +370,8 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
     EXPECT_EQ(events.size(), 1u);
 
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5,
+                               fuchsia::ui::input::PointerEventType::MOUSE));
   }
 }
 

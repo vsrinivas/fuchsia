@@ -123,14 +123,11 @@ class InputSystem : public System,
   void DispatchDeferredPointerEvent(PointerEventBuffer::DeferredPointerEvent views_and_event);
 
   // Injects a touch event directly to the View with koid |target|.
-  void InjectTouchEventExclusive(const fuchsia::ui::input::PointerEvent& context_space_event,
-                                 zx_koid_t context, zx_koid_t target);
+  void InjectTouchEventExclusive(const InternalPointerEvent& event);
 
   // Injects a touch event by hit testing for appropriate targets.
-  void InjectTouchEventHitTested(const fuchsia::ui::input::PointerEvent& context_space_event,
-                                 zx_koid_t context, zx_koid_t target, bool parallel_dispatch);
-  void InjectMouseEventHitTested(const fuchsia::ui::input::PointerEvent& context_space_event,
-                                 zx_koid_t context, zx_koid_t target);
+  void InjectTouchEventHitTested(const InternalPointerEvent& event, bool parallel_dispatch);
+  void InjectMouseEventHitTested(const InternalPointerEvent& event);
 
   // Retrieve KOID of focus chain's root view.
   // Return ZX_KOID_INVALID if scene does not exist, or if the focus chain is empty.
@@ -145,12 +142,11 @@ class InputSystem : public System,
 
   // Send a copy of the event to the singleton listener of the pointer capture API if there is one.
   // TODO(48150): Delete when we delete the PointerCapture functionality.
-  void ReportPointerEventToPointerCaptureListener(
-      const fuchsia::ui::input::PointerEvent& world_space_pointer) const;
+  void ReportPointerEventToPointerCaptureListener(const InternalPointerEvent& event) const;
 
   // Enqueue the pointer event into the EventReporter of a View.
-  void ReportPointerEventToView(const fuchsia::ui::input::PointerEvent& world_space_pointer,
-                                zx_koid_t view_ref_koid) const;
+  void ReportPointerEventToView(const InternalPointerEvent& event, zx_koid_t view_ref_koid,
+                                fuchsia::ui::input::PointerEventType type) const;
 
   // Gets the transform matrix from the Local Space of the |view_ref|'s View to World Space.
   // Return std::nullopt for exceptional cases (e.g., invalid, unknown or disconnected view ref).
@@ -162,10 +158,16 @@ class InputSystem : public System,
   // Precondition: scene_graph_ must be set.
   std::optional<glm::mat4> GetWorldToViewTransform(zx_koid_t view_ref_koid) const;
 
-  // Takes a world space point and returns it in
-  // screen space (Vulkan) Normalized Device Coordinates.
+  // Gets the transform from the Local Space of |source|'s View to the Local Space of the
+  // |destination|'s View.
+  std::optional<glm::mat4> GetViewToViewTransform(zx_koid_t source, zx_koid_t destination) const;
+
+  std::optional<escher::ray4> CreateWorldSpaceRay(const InternalPointerEvent& event) const;
+
+  // Takes an InternalPointerEvent and returns a point in (Vulkan) Normalized Device Coordinates,
+  // in relation to the viewport.
   // TODO(50549): Only here to allow the legacy a11y flow. Remove along with the legacy a11y code.
-  glm::vec2 GetScreenSpaceNDCPoint(glm::vec2 world_space_point) const;
+  glm::vec2 GetViewportNDCPoint(const InternalPointerEvent& event) const;
 
   using InjectorId = uint64_t;
   InjectorId last_injector_id_ = 0;
