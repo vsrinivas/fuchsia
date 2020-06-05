@@ -230,6 +230,14 @@
             to: [ "#driver_manager" ],
             dependency: "weak_for_migration",
         },
+        {
+            protocol: "/svc/fuchsia.hardware.power.statecontrol.Admin",
+            from: "#shutdown_shim",
+            to: [
+                "#driver_manager",
+                "#pwrbtn-monitor",
+            ],
+        },
 
         // Things shutdown_shim and power_manager need
         {
@@ -244,6 +252,7 @@
             protocol: [ "/svc/fuchsia.device.manager.SystemStateTransition" ],
             from: "#driver_manager",
             to: [ "#shutdown_shim" ],
+            dependency: "weak_for_migration",
         },
         {
             protocol: [ "/svc/fuchsia.hardware.power.statecontrol.Admin" ],
@@ -284,9 +293,7 @@
             to: [ "#driver_manager" ],
         },
         {
-            protocol: [
-                "/svc/fuchsia.logger.LogSink",
-            ],
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
             from: "realm",
             to: [
                 "#driver_manager",
@@ -303,11 +310,6 @@
             from: "#fshost",
             to: [ "#driver_manager" ],
             dependency: "weak_for_migration",
-        },
-        {
-            protocol: [ "/svc/fuchsia.hardware.power.statecontrol.Admin" ],
-            from: "#driver_manager",
-            to: [ "#pwrbtn-monitor" ],
         },
         {
             directory: "/dev",
@@ -362,8 +364,6 @@
                 "/svc/fuchsia.device.manager.BindDebugger",
                 "/svc/fuchsia.device.manager.DebugDumper",
                 "/svc/fuchsia.device.NameProvider",
-                "/svc/fuchsia.hardware.power.statecontrol.Admin",
-                "/svc/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
                 "/svc/fuchsia.kernel.Counter",
                 "/svc/fuchsia.kernel.DebugBroker",
                 "/svc/fuchsia.paver.Paver",
@@ -371,6 +371,10 @@
                 "/svc/fuchsia.virtualconsole.SessionManager",
             ],
             from: "#driver_manager",
+        },
+        {
+            protocol: "/svc/fuchsia.hardware.power.statecontrol.Admin",
+            from: "#shutdown_shim",
         },
         {
             protocol: "/svc/fuchsia.hardware.pty.Device",
@@ -381,7 +385,10 @@
             from: "#sysinfo",
         },
         {
-            protocol: [ "/svc/fuchsia.thermal.Controller" ],
+            protocol: [
+                "/svc/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+                "/svc/fuchsia.thermal.Controller",
+            ],
             from: "#power_manager",
         },
     ],
