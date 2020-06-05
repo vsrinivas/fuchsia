@@ -59,7 +59,7 @@ test_fidl_unionsandwich_SandwichUnionSize36Alignment4Handles {
        void void
 } [packed]
 test_fidl_unionsandwich_UnionSize8Alignment4InLine [
-       variant fidl_union_member[test_fidl_unionsandwich_UnionSize8Alignment4Tag_variant, int32]
+       variant fidl_union_member[1, int32]
 ]
 test_fidl_unionsandwich_UnionSize8Alignment4OutOfLine [
        void void
@@ -68,7 +68,7 @@ test_fidl_unionsandwich_UnionSize8Alignment4Handles [
        void void
 ][varlen]
 test_fidl_unionsandwich_UnionSize12Alignment4InLine [
-       variantInLine fidl_union_member[test_fidl_unionsandwich_UnionSize12Alignment4Tag_variant, array[int8, 6]]
+       variantInLine fidl_union_member[1, array[int8, 6]]
 ]
 test_fidl_unionsandwich_UnionSize12Alignment4OutOfLine [
        void void
@@ -77,7 +77,7 @@ test_fidl_unionsandwich_UnionSize12Alignment4Handles [
        void void
 ][varlen]
 test_fidl_unionsandwich_UnionSize24Alignment8InLine [
-       variantInLine fidl_union_member[test_fidl_unionsandwich_UnionSize24Alignment8Tag_variant, test_fidl_unionsandwich_StructSize16Alignment8InLine]
+       variantInLine fidl_union_member[1, test_fidl_unionsandwich_StructSize16Alignment8InLine]
 ]
 test_fidl_unionsandwich_UnionSize24Alignment8OutOfLine [
        variantOutOfLine test_fidl_unionsandwich_StructSize16Alignment8OutOfLine
@@ -86,7 +86,7 @@ test_fidl_unionsandwich_UnionSize24Alignment8Handles [
        variant test_fidl_unionsandwich_StructSize16Alignment8Handles
 ][varlen]
 test_fidl_unionsandwich_UnionSize36Alignment4InLine [
-       variantInLine fidl_union_member[test_fidl_unionsandwich_UnionSize36Alignment4Tag_variant, array[int8, 32]]
+       variantInLine fidl_union_member[1, array[int8, 32]]
 ]
 test_fidl_unionsandwich_UnionSize36Alignment4OutOfLine [
        void void

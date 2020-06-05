@@ -16,7 +16,7 @@ test_name_StructHandles {
        void void
 } [packed]
 test_name_UnionInLine [
-       field fidl_union_member[test_name_UnionTag_Field, int32]
+       field fidl_union_member[1, int32]
 ]
 test_name_UnionOutOfLine [
        void void

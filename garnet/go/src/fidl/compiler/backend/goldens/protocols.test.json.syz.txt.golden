@@ -35,8 +35,8 @@ test_name_WithErrorSyntax_ErrorAsEnum_ResponseHandles {
        void void
 } [packed]
 test_name_WithErrorSyntax_ResponseAsStruct_ResultInLine [
-       responseInLine fidl_union_member[test_name_WithErrorSyntax_ResponseAsStruct_ResultTag_response, test_name_WithErrorSyntax_ResponseAsStruct_ResponseInLine]
-       err fidl_union_member[test_name_WithErrorSyntax_ResponseAsStruct_ResultTag_err, int32]
+       responseInLine fidl_union_member[1, test_name_WithErrorSyntax_ResponseAsStruct_ResponseInLine]
+       err fidl_union_member[2, int32]
 ]
 test_name_WithErrorSyntax_ResponseAsStruct_ResultOutOfLine [
        responseOutOfLine test_name_WithErrorSyntax_ResponseAsStruct_ResponseOutOfLine
@@ -45,8 +45,8 @@ test_name_WithErrorSyntax_ResponseAsStruct_ResultHandles [
        response test_name_WithErrorSyntax_ResponseAsStruct_ResponseHandles
 ][varlen]
 test_name_WithErrorSyntax_ErrorAsPrimitive_ResultInLine [
-       responseInLine fidl_union_member[test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTag_response, test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseInLine]
-       err fidl_union_member[test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTag_err, int32]
+       responseInLine fidl_union_member[1, test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseInLine]
+       err fidl_union_member[2, int32]
 ]
 test_name_WithErrorSyntax_ErrorAsPrimitive_ResultOutOfLine [
        responseOutOfLine test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseOutOfLine
@@ -55,8 +55,8 @@ test_name_WithErrorSyntax_ErrorAsPrimitive_ResultHandles [
        response test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseHandles
 ][varlen]
 test_name_WithErrorSyntax_ErrorAsEnum_ResultInLine [
-       responseInLine fidl_union_member[test_name_WithErrorSyntax_ErrorAsEnum_ResultTag_response, test_name_WithErrorSyntax_ErrorAsEnum_ResponseInLine]
-       err fidl_union_member[test_name_WithErrorSyntax_ErrorAsEnum_ResultTag_err, flags[test_name_ErrorEnun, int32]]
+       responseInLine fidl_union_member[1, test_name_WithErrorSyntax_ErrorAsEnum_ResponseInLine]
+       err fidl_union_member[2, flags[test_name_ErrorEnun, int32]]
 ]
 test_name_WithErrorSyntax_ErrorAsEnum_ResultOutOfLine [
        responseOutOfLine test_name_WithErrorSyntax_ErrorAsEnum_ResponseOutOfLine

@@ -14,8 +14,8 @@ fidl_test_json_Example_foo_ResponseHandles {
        void void
 } [packed]
 fidl_test_json_Example_foo_ResultInLine [
-       responseInLine fidl_union_member[fidl_test_json_Example_foo_ResultTag_response, fidl_test_json_Example_foo_ResponseInLine]
-       err fidl_union_member[fidl_test_json_Example_foo_ResultTag_err, int32]
+       responseInLine fidl_union_member[1, fidl_test_json_Example_foo_ResponseInLine]
+       err fidl_union_member[2, int32]
 ]
 fidl_test_json_Example_foo_ResultOutOfLine [
        responseOutOfLine fidl_test_json_Example_foo_ResponseOutOfLine

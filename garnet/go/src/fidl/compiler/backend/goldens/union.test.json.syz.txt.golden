@@ -50,8 +50,8 @@ fidl_test_json_StructWithNullableXUnionHandles {
        void void
 } [packed]
 fidl_test_json_PizzaOrPastaInLine [
-       pizzaInLine fidl_union_member[fidl_test_json_PizzaOrPastaTag_pizza, fidl_test_json_PizzaInLine]
-       pastaInLine fidl_union_member[fidl_test_json_PizzaOrPastaTag_pasta, fidl_test_json_PastaInLine]
+       pizzaInLine fidl_union_member[1, fidl_test_json_PizzaInLine]
+       pastaInLine fidl_union_member[2, fidl_test_json_PastaInLine]
 ]
 fidl_test_json_PizzaOrPastaOutOfLine [
        pizzaOutOfLine fidl_test_json_PizzaOutOfLine
@@ -62,8 +62,8 @@ fidl_test_json_PizzaOrPastaHandles [
        pasta fidl_test_json_PastaHandles
 ][varlen]
 fidl_test_json_ExplicitPizzaOrPastaInLine [
-       pizzaInLine fidl_union_member[fidl_test_json_ExplicitPizzaOrPastaTag_pizza, fidl_test_json_PizzaInLine]
-       pastaInLine fidl_union_member[fidl_test_json_ExplicitPizzaOrPastaTag_pasta, fidl_test_json_PastaInLine]
+       pizzaInLine fidl_union_member[1, fidl_test_json_PizzaInLine]
+       pastaInLine fidl_union_member[4, fidl_test_json_PastaInLine]
 ]
 fidl_test_json_ExplicitPizzaOrPastaOutOfLine [
        pizzaOutOfLine fidl_test_json_PizzaOutOfLine
@@ -74,8 +74,8 @@ fidl_test_json_ExplicitPizzaOrPastaHandles [
        pasta fidl_test_json_PastaHandles
 ][varlen]
 fidl_test_json_FlexiblePizzaOrPastaInLine [
-       pizzaInLine fidl_union_member[fidl_test_json_FlexiblePizzaOrPastaTag_pizza, fidl_test_json_PizzaInLine]
-       pastaInLine fidl_union_member[fidl_test_json_FlexiblePizzaOrPastaTag_pasta, fidl_test_json_PastaInLine]
+       pizzaInLine fidl_union_member[1, fidl_test_json_PizzaInLine]
+       pastaInLine fidl_union_member[2, fidl_test_json_PastaInLine]
 ]
 fidl_test_json_FlexiblePizzaOrPastaOutOfLine [
        pizzaOutOfLine fidl_test_json_PizzaOutOfLine
@@ -86,8 +86,8 @@ fidl_test_json_FlexiblePizzaOrPastaHandles [
        pasta fidl_test_json_PastaHandles
 ][varlen]
 fidl_test_json_StrictPizzaOrPastaInLine [
-       pizzaInLine fidl_union_member[fidl_test_json_StrictPizzaOrPastaTag_pizza, fidl_test_json_PizzaInLine]
-       pastaInLine fidl_union_member[fidl_test_json_StrictPizzaOrPastaTag_pasta, fidl_test_json_PastaInLine]
+       pizzaInLine fidl_union_member[1, fidl_test_json_PizzaInLine]
+       pastaInLine fidl_union_member[2, fidl_test_json_PastaInLine]
 ]
 fidl_test_json_StrictPizzaOrPastaOutOfLine [
        pizzaOutOfLine fidl_test_json_PizzaOutOfLine
@@ -98,9 +98,9 @@ fidl_test_json_StrictPizzaOrPastaHandles [
        pasta fidl_test_json_PastaHandles
 ][varlen]
 fidl_test_json_UnionInLine [
-       primitive fidl_union_member[fidl_test_json_UnionTag_Primitive, int32]
-       string_needs_constructorInLine fidl_union_member[fidl_test_json_UnionTag_StringNeedsConstructor, fidl_string]
-       vector_string_also_needs_constructorInLine fidl_union_member[fidl_test_json_UnionTag_VectorStringAlsoNeedsConstructor, fidl_vector]
+       primitive fidl_union_member[1, int32]
+       string_needs_constructorInLine fidl_union_member[2, fidl_string]
+       vector_string_also_needs_constructorInLine fidl_union_member[3, fidl_vector]
 ]
 fidl_test_json_UnionOutOfLine [
        string_needs_constructorOutOfLine fidl_aligned[stringnoz]
@@ -110,9 +110,9 @@ fidl_test_json_UnionHandles [
        void void
 ][varlen]
 fidl_test_json_FlexibleUnionInLine [
-       primitive fidl_union_member[fidl_test_json_FlexibleUnionTag_Primitive, int32]
-       string_needs_constructorInLine fidl_union_member[fidl_test_json_FlexibleUnionTag_StringNeedsConstructor, fidl_string]
-       vector_string_also_needs_constructorInLine fidl_union_member[fidl_test_json_FlexibleUnionTag_VectorStringAlsoNeedsConstructor, fidl_vector]
+       primitive fidl_union_member[1, int32]
+       string_needs_constructorInLine fidl_union_member[2, fidl_string]
+       vector_string_also_needs_constructorInLine fidl_union_member[3, fidl_vector]
 ]
 fidl_test_json_FlexibleUnionOutOfLine [
        string_needs_constructorOutOfLine fidl_aligned[stringnoz]
@@ -122,9 +122,9 @@ fidl_test_json_FlexibleUnionHandles [
        void void
 ][varlen]
 fidl_test_json_StrictUnionInLine [
-       primitive fidl_union_member[fidl_test_json_StrictUnionTag_Primitive, int32]
-       string_needs_constructorInLine fidl_union_member[fidl_test_json_StrictUnionTag_StringNeedsConstructor, fidl_string]
-       vector_string_also_needs_constructorInLine fidl_union_member[fidl_test_json_StrictUnionTag_VectorStringAlsoNeedsConstructor, fidl_vector]
+       primitive fidl_union_member[1, int32]
+       string_needs_constructorInLine fidl_union_member[2, fidl_string]
+       vector_string_also_needs_constructorInLine fidl_union_member[3, fidl_vector]
 ]
 fidl_test_json_StrictUnionOutOfLine [
        string_needs_constructorOutOfLine fidl_aligned[stringnoz]
@@ -134,7 +134,7 @@ fidl_test_json_StrictUnionHandles [
        void void
 ][varlen]
 fidl_test_json_FieldCollisionInLine [
-       field_collision_tag fidl_union_member[fidl_test_json_FieldCollisionTag_field_collision_tag, int32]
+       field_collision_tag fidl_union_member[1, int32]
 ]
 fidl_test_json_FieldCollisionOutOfLine [
        void void
@@ -143,8 +143,8 @@ fidl_test_json_FieldCollisionHandles [
        void void
 ][varlen]
 fidl_test_json_ExplicitUnionInLine [
-       primitive fidl_union_member[fidl_test_json_ExplicitUnionTag_Primitive, int32]
-       string_needs_constructorInLine fidl_union_member[fidl_test_json_ExplicitUnionTag_StringNeedsConstructor, fidl_string]
+       primitive fidl_union_member[1, int32]
+       string_needs_constructorInLine fidl_union_member[3, fidl_string]
 ]
 fidl_test_json_ExplicitUnionOutOfLine [
        string_needs_constructorOutOfLine fidl_aligned[stringnoz]
@@ -153,8 +153,8 @@ fidl_test_json_ExplicitUnionHandles [
        void void
 ][varlen]
 fidl_test_json_ReverseOrdinalUnionInLine [
-       second fidl_union_member[fidl_test_json_ReverseOrdinalUnionTag_second, int32]
-       first fidl_union_member[fidl_test_json_ReverseOrdinalUnionTag_first, int32]
+       second fidl_union_member[2, int32]
+       first fidl_union_member[1, int32]
 ]
 fidl_test_json_ReverseOrdinalUnionOutOfLine [
        void void
@@ -163,8 +163,8 @@ fidl_test_json_ReverseOrdinalUnionHandles [
        void void
 ][varlen]
 fidl_test_json_FlexibleFooInLine [
-       sInLine fidl_union_member[fidl_test_json_FlexibleFooTag_s, fidl_string]
-       i fidl_union_member[fidl_test_json_FlexibleFooTag_i, int32]
+       sInLine fidl_union_member[1, fidl_string]
+       i fidl_union_member[2, int32]
 ]
 fidl_test_json_FlexibleFooOutOfLine [
        sOutOfLine fidl_aligned[stringnoz]
@@ -173,8 +173,8 @@ fidl_test_json_FlexibleFooHandles [
        void void
 ][varlen]
 fidl_test_json_StrictFooInLine [
-       sInLine fidl_union_member[fidl_test_json_StrictFooTag_s, fidl_string]
-       i fidl_union_member[fidl_test_json_StrictFooTag_i, int32]
+       sInLine fidl_union_member[1, fidl_string]
+       i fidl_union_member[2, int32]
 ]
 fidl_test_json_StrictFooOutOfLine [
        sOutOfLine fidl_aligned[stringnoz]
@@ -183,8 +183,8 @@ fidl_test_json_StrictFooHandles [
        void void
 ][varlen]
 fidl_test_json_ExplicitFooInLine [
-       sInLine fidl_union_member[fidl_test_json_ExplicitFooTag_s, fidl_string]
-       i fidl_union_member[fidl_test_json_ExplicitFooTag_i, int32]
+       sInLine fidl_union_member[2, fidl_string]
+       i fidl_union_member[1, int32]
 ]
 fidl_test_json_ExplicitFooOutOfLine [
        sOutOfLine fidl_aligned[stringnoz]
@@ -193,8 +193,8 @@ fidl_test_json_ExplicitFooHandles [
        void void
 ][varlen]
 fidl_test_json_ExplicitStrictFooInLine [
-       sInLine fidl_union_member[fidl_test_json_ExplicitStrictFooTag_s, fidl_string]
-       i fidl_union_member[fidl_test_json_ExplicitStrictFooTag_i, int32]
+       sInLine fidl_union_member[3, fidl_string]
+       i fidl_union_member[2, int32]
 ]
 fidl_test_json_ExplicitStrictFooOutOfLine [
        sOutOfLine fidl_aligned[stringnoz]
@@ -203,8 +203,8 @@ fidl_test_json_ExplicitStrictFooHandles [
        void void
 ][varlen]
 fidl_test_json_OlderSimpleUnionInLine [
-       i fidl_union_member[fidl_test_json_OlderSimpleUnionTag_i, int64]
-       f fidl_union_member[fidl_test_json_OlderSimpleUnionTag_f, int32]
+       i fidl_union_member[1, int64]
+       f fidl_union_member[2, int32]
 ]
 fidl_test_json_OlderSimpleUnionOutOfLine [
        void void
@@ -213,9 +213,9 @@ fidl_test_json_OlderSimpleUnionHandles [
        void void
 ][varlen]
 fidl_test_json_NewerSimpleUnionInLine [
-       i fidl_union_member[fidl_test_json_NewerSimpleUnionTag_i, int64]
-       sInLine fidl_union_member[fidl_test_json_NewerSimpleUnionTag_s, fidl_string]
-       vInLine fidl_union_member[fidl_test_json_NewerSimpleUnionTag_v, fidl_vector]
+       i fidl_union_member[1, int64]
+       sInLine fidl_union_member[2, fidl_string]
+       vInLine fidl_union_member[3, fidl_vector]
 ]
 fidl_test_json_NewerSimpleUnionOutOfLine [
        sOutOfLine fidl_aligned[stringnoz]
@@ -225,9 +225,9 @@ fidl_test_json_NewerSimpleUnionHandles [
        void void
 ][varlen]
 fidl_test_json_StrictSimpleXUnionInLine [
-       i fidl_union_member[fidl_test_json_StrictSimpleXUnionTag_i, int32]
-       f fidl_union_member[fidl_test_json_StrictSimpleXUnionTag_f, int32]
-       sInLine fidl_union_member[fidl_test_json_StrictSimpleXUnionTag_s, fidl_string]
+       i fidl_union_member[1, int32]
+       f fidl_union_member[2, int32]
+       sInLine fidl_union_member[3, fidl_string]
 ]
 fidl_test_json_StrictSimpleXUnionOutOfLine [
        sOutOfLine fidl_aligned[stringnoz]
@@ -236,7 +236,7 @@ fidl_test_json_StrictSimpleXUnionHandles [
        void void
 ][varlen]
 fidl_test_json_XUnionContainingEmptyStructInLine [
-       emptyInLine fidl_union_member[fidl_test_json_XUnionContainingEmptyStructTag_empty, fidl_test_json_EmptyInLine]
+       emptyInLine fidl_union_member[1, fidl_test_json_EmptyInLine]
 ]
 fidl_test_json_XUnionContainingEmptyStructOutOfLine [
        emptyOutOfLine fidl_test_json_EmptyOutOfLine
@@ -245,7 +245,7 @@ fidl_test_json_XUnionContainingEmptyStructHandles [
        empty fidl_test_json_EmptyHandles
 ][varlen]
 fidl_test_json_StrictBoundedXUnionInLine [
-       vInLine fidl_union_member[fidl_test_json_StrictBoundedXUnionTag_v, fidl_vector]
+       vInLine fidl_union_member[1, fidl_vector]
 ]
 fidl_test_json_StrictBoundedXUnionOutOfLine [
        vOutOfLine array[int8]
@@ -254,8 +254,8 @@ fidl_test_json_StrictBoundedXUnionHandles [
        void void
 ][varlen]
 fidl_test_json_ExplicitXUnionInLine [
-       i fidl_union_member[fidl_test_json_ExplicitXUnionTag_i, int64]
-       f fidl_union_member[fidl_test_json_ExplicitXUnionTag_f, int32]
+       i fidl_union_member[1, int64]
+       f fidl_union_member[4, int32]
 ]
 fidl_test_json_ExplicitXUnionOutOfLine [
        void void

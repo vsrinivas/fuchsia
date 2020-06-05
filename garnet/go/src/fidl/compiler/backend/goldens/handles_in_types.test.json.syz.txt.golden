@@ -23,7 +23,7 @@ test_name_HandlesInTypesHandles {
        handle_in_mixed_vec_array array[array[zx_vmo, 5]]
 } [packed]
 test_name_UnionWithHandleInLine [
-       h fidl_union_member[test_name_UnionWithHandleTag_h, flags[fidl_handle_presence, int32]]
+       h fidl_union_member[1, flags[fidl_handle_presence, int32]]
 ]
 test_name_UnionWithHandleOutOfLine [
        void void

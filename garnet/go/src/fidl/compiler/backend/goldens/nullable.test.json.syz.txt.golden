@@ -77,8 +77,8 @@ fidl_test_nullable_StructWithNullableUnionHandles {
        void void
 } [packed]
 fidl_test_nullable_SimpleUnionInLine [
-       a fidl_union_member[fidl_test_nullable_SimpleUnionTag_a, int32]
-       b fidl_union_member[fidl_test_nullable_SimpleUnionTag_b, int32]
+       a fidl_union_member[1, int32]
+       b fidl_union_member[2, int32]
 ]
 fidl_test_nullable_SimpleUnionOutOfLine [
        void void

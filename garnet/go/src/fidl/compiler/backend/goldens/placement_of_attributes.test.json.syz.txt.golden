@@ -16,7 +16,7 @@ example_ExampleStructHandles {
        void void
 } [packed]
 example_ExampleUnionInLine [
-       variant fidl_union_member[example_ExampleUnionTag_variant, int32]
+       variant fidl_union_member[1, int32]
 ]
 example_ExampleUnionOutOfLine [
        void void
@@ -25,7 +25,7 @@ example_ExampleUnionHandles [
        void void
 ][varlen]
 example_ExampleXUnionInLine [
-       variant fidl_union_member[example_ExampleXUnionTag_variant, int32]
+       variant fidl_union_member[1, int32]
 ]
 example_ExampleXUnionOutOfLine [
        void void

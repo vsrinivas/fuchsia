@@ -5,8 +5,8 @@
 
 include <fidl/test/json/c/fidl.h>
 fidl_test_json_FlexibleFooInLine [
-       sInLine fidl_union_member[fidl_test_json_FlexibleFooTag_s, fidl_string]
-       i fidl_union_member[fidl_test_json_FlexibleFooTag_i, int32]
+       sInLine fidl_union_member[1, fidl_string]
+       i fidl_union_member[2, int32]
 ]
 fidl_test_json_FlexibleFooOutOfLine [
        sOutOfLine fidl_aligned[stringnoz]
@@ -15,8 +15,8 @@ fidl_test_json_FlexibleFooHandles [
        void void
 ][varlen]
 fidl_test_json_StrictFooInLine [
-       sInLine fidl_union_member[fidl_test_json_StrictFooTag_s, fidl_string]
-       i fidl_union_member[fidl_test_json_StrictFooTag_i, int32]
+       sInLine fidl_union_member[1, fidl_string]
+       i fidl_union_member[2, int32]
 ]
 fidl_test_json_StrictFooOutOfLine [
        sOutOfLine fidl_aligned[stringnoz]
