@@ -4,7 +4,6 @@ sdk://fidl/fuchsia.input
 sdk://fidl/fuchsia.io
 sdk://fidl/fuchsia.mem
 sdk://fidl/fuchsia.modular
-sdk://fidl/fuchsia.modular.auth
 sdk://fidl/fuchsia.modular.session
 sdk://fidl/fuchsia.modular.testing
 sdk://fidl/fuchsia.sys

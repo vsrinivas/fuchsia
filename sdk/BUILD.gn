@@ -147,7 +147,6 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.mem:fuchsia.mem_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.migration:fuchsia.migration_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.modular.auth:fuchsia.modular.auth_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.net.http:fuchsia.net.http_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.net.oldhttp:fuchsia.net.oldhttp_sdk($fidl_toolchain)",
@@ -319,7 +318,6 @@ sdk("modular_testing") {
 
   deps = [
     "//sdk/fidl/fuchsia.modular:fuchsia.modular_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.modular.auth:fuchsia.modular.auth_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.modular.testing:fuchsia.modular.testing_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.lifecycle:fuchsia.ui.lifecycle_sdk($fidl_toolchain)",
     "//sdk/lib/modular/testing/cpp:cpp_sdk",

@@ -69,7 +69,6 @@ sdk://fidl/fuchsia.mem
 sdk://fidl/fuchsia.memorypressure
 sdk://fidl/fuchsia.migration
 sdk://fidl/fuchsia.modular
-sdk://fidl/fuchsia.modular.auth
 sdk://fidl/fuchsia.net
 sdk://fidl/fuchsia.net.dhcp
 sdk://fidl/fuchsia.net.http
