@@ -6,6 +6,7 @@
 
 #include <gmock/gmock.h>
 
+#include "lib/syslog/cpp/macros.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
@@ -40,7 +41,6 @@ class ModuleContextTest : public modular_testing::TestHarnessFixture {
     RunLoopUntil([&] { return restarted; });
   }
 
- private:
   std::unique_ptr<modular_testing::FakeSessionShell> session_shell_;
 };
 
@@ -124,10 +124,73 @@ TEST_F(ModuleContextTest, AddModuleToStory) {
   EXPECT_FALSE(child_module1.is_running());
 }
 
-// Test that ModuleContext.RemoveSelfFromStory() has the affect of shutting
-// down the module and removing it permanently from the story (if the story is
-// restarted, it is not relaunched).
+class TestStoryWatcher : fuchsia::modular::StoryWatcher {
+ public:
+  TestStoryWatcher(fit::function<void(fuchsia::modular::StoryState)> on_state_change) : binding_(this), on_state_change_(std::move(on_state_change))
+   {}
+  ~TestStoryWatcher() override = default;
+
+  // Registers itself as a watcher on the given story. Only one story at a time
+  // can be watched.
+  void Watch(fuchsia::modular::StoryController* const story_controller) {
+    story_controller->Watch(binding_.NewBinding());
+  }
+
+ private:
+  // |fuchsia::modular::StoryWatcher|
+  void OnStateChange(fuchsia::modular::StoryState state) override {
+    on_state_change_(state);
+  }
+  void OnModuleAdded(fuchsia::modular::ModuleData /*module_data*/) override {}
+  void OnModuleFocused(std::vector<std::string> /*module_path*/) override {}
+
+  fidl::Binding<fuchsia::modular::StoryWatcher> binding_;
+  fit::function<void(fuchsia::modular::StoryState)> on_state_change_;
+};
+
+// Test that ModuleContext.RemoveSelfFromStory() on the only mod in a story has
+// the affect of shutting down the module and removing it permanently from the
+// story (if the story is restarted, it is not relaunched).
 TEST_F(ModuleContextTest, RemoveSelfFromStory) {
+  TestModule module1("module1");
+  
+  modular_testing::TestHarnessBuilder builder;
+  builder.InterceptComponent(module1.BuildInterceptOptions());
+
+  StartSession(std::move(builder));
+  modular_testing::AddModToStory(test_harness(), "storyname", "modname1",
+                                 {.action = "action", .handler = module1.url()});
+  RunLoopUntil([&] { return module1.is_running(); });
+
+  // Instruct module1 to remove itself from the story. Expect to see that
+  // module1 is terminated.
+  module1.module_context()->RemoveSelfFromStory();
+  RunLoopUntil([&] { return !module1.is_running(); });
+
+  // Additionally, restarting the story should not result in module1 being
+  // restarted.
+  fuchsia::modular::StoryControllerPtr story_controller;
+  session_shell_->story_provider()->GetController("storyname", story_controller.NewRequest());
+  bool story_stopped = false;
+  bool story_restarted = false;
+  TestStoryWatcher story_watcher([&](fuchsia::modular::StoryState state) {
+    if (state == fuchsia::modular::StoryState::STOPPED) {
+      story_stopped = true;
+    } else if (state == fuchsia::modular::StoryState::RUNNING) {
+      story_restarted = true;
+    }
+  });
+  story_watcher.Watch(story_controller.get());
+  RestartStory("storyname");
+  RunLoopUntil([&] { return story_stopped && story_restarted; });
+  EXPECT_FALSE(module1.is_running());
+}
+
+// Test that when ModuleContext.RemoveSelfFromStory() is called on one of two
+// modules in a story, it has the affect of shutting down the module and
+// removing it permanently from the story (if the story is restarted, it is not
+// relaunched).
+TEST_F(ModuleContextTest, RemoveSelfFromStory_2mods) {
   modular_testing::TestHarnessBuilder builder;
 
   TestModule module1("module1");

@@ -613,16 +613,13 @@ class StoryControllerImpl::DeleteModuleAndTeardownStoryIfEmptyCall : public Oper
  private:
   void Run() override {
     FlowToken flow{this};
-    // If this is the last module in the story, tear down the whole story instead
-    // (which will cause this mod to be torn down).
+    operation_queue_.Add(std::make_unique<DeleteModuleCall>(story_controller_impl_->story_storage_,
+                                                            module_path_, [flow] {}));
+    // If this is the last module in the story, tear down the story as well.
     auto* const running_mod_info = story_controller_impl_->FindRunningModInfo(module_path_);
     if (running_mod_info && story_controller_impl_->running_mod_infos_.size() == 1) {
       operation_queue_.Add(
           std::make_unique<TeardownStoryCall>(story_controller_impl_, false /* bulk */, [flow] {}));
-    } else {
-      // Otherwise, delete this one module.
-      operation_queue_.Add(std::make_unique<DeleteModuleCall>(
-          story_controller_impl_->story_storage_, module_path_, [flow] {}));
     }
   }
 
