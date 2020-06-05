@@ -16,17 +16,17 @@ import("fuchsia_test_package.gni")
 # Example:
 # ```
 # executable("rot13_encoder_decoder_test") {
-#   output_name = "rot13-test"
 #   sources = [ "rot13_encoder_decoder_test.cc" ]
 #   testonly = true
 # }
 #
 # fuchsia_unittest_package("rot13-test") {
+#   executable_name = "rot13_encoder_decoder_test"
 #   deps = [ ":rot13_encoder_decoder_test" ]
 # }
 # ```
 #
-# The above will create a test with the launch URL:
+# The above will generate a manifest and create a test with the launch URL:
 # fuchsia-pkg://fuchsia.com/rot13-test#meta/rot13-test.cmx
 #
 # Parameters
