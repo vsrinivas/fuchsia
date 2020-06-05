@@ -515,13 +515,13 @@ build_api_module("platforms") {
 #     Required: The name of the collection of prebuilt binaries.
 #     Type: string
 #
-#   ,manifest
+#   manifest
 #     Required: The path to the manifest of prebuilt binaires. See note above
 #     for its schema.
 #     Type: string
 #
 #   debug_archive
-#     Optional: The path the the archive of debug binaries from which
+#     Optional: The path of the archive of debug binaries from which
 #     `path` was generated.
 #     Type: string
 #
