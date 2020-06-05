@@ -1,0 +1,5 @@
+{{>copyright comment="//"}}
+
+// TODO: Add bind rules here and delete this comment.
+// For more info see: https://fuchsia.dev/fuchsia-src/concepts/drivers/driver-binding
+abort;

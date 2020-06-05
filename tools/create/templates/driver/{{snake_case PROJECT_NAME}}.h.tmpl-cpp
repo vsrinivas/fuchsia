@@ -1,0 +1,25 @@
+{{>copyright comment="//"}}
+
+#ifndef {{screaming_snake_case PROJECT_PATH}}_{{screaming_snake_case PROJECT_NAME}}_H_
+#define {{screaming_snake_case PROJECT_PATH}}_{{screaming_snake_case PROJECT_NAME}}_H_
+
+#include <ddktl/device.h>
+
+namespace {{snake_case PROJECT_NAME}} {
+
+class {{pascal_case PROJECT_NAME}};
+using DeviceType = ddk::Device<{{pascal_case PROJECT_NAME}}, ddk::UnbindableNew>;
+class {{pascal_case PROJECT_NAME}} : public DeviceType {
+ public:
+  explicit {{pascal_case PROJECT_NAME}}(zx_device_t* parent) : DeviceType(parent) {}
+  virtual ~{{pascal_case PROJECT_NAME}}() = default;
+
+  static zx_status_t Bind(void* ctx, zx_device_t* dev);
+  zx_status_t Bind();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkRelease();
+};
+
+}  // namespace {{snake_case PROJECT_NAME}}
+
+#endif  // {{screaming_snake_case PROJECT_PATH}}_{{screaming_snake_case PROJECT_NAME}}_H_

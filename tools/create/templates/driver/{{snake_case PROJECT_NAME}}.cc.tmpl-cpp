@@ -1,0 +1,26 @@
+{{>copyright comment="//"}}
+
+#include "{{PROJECT_PATH}}/{{snake_case PROJECT_NAME}}.h"
+
+#include "{{PROJECT_PATH}}/{{snake_case PROJECT_NAME}}-bind.h"
+
+namespace {{snake_case PROJECT_NAME}} {
+
+zx_status_t {{pascal_case PROJECT_NAME}}::Bind(void* ctx, zx_device_t* dev) { return ZX_ERR_NOT_SUPPORTED; }
+
+zx_status_t {{pascal_case PROJECT_NAME}}::Bind() { return DdkAdd("{{snake_case PROJECT_NAME}}"); }
+
+void {{pascal_case PROJECT_NAME}}::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+
+void {{pascal_case PROJECT_NAME}}::DdkRelease() { delete this; }
+
+static zx_driver_ops_t {{snake_case PROJECT_NAME}}_driver_ops = []() -> zx_driver_ops_t {
+  zx_driver_ops_t ops = {};
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = {{pascal_case PROJECT_NAME}}::Bind;
+  return ops;
+}();
+
+}  // namespace {{snake_case PROJECT_NAME}}
+
+ZIRCON_DRIVER({{pascal_case PROJECT_NAME}}, {{snake_case PROJECT_NAME}}::{{snake_case PROJECT_NAME}}_driver_ops, "zircon", "0.1")

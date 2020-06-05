@@ -94,6 +94,7 @@ struct CreateArgs {
     ///
     /// - component-v1: A V1 component launched with appmgr,
     /// - component-v2: A V2 component launched with Component Manager,
+    /// - driver: A driver launched in a devhost,
     project_type: String,
 
     /// The name of the new project.

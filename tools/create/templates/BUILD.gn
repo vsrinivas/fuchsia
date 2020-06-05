@@ -33,6 +33,12 @@ if (host_toolchain == current_toolchain) {
       "component-v2/{{PROJECT_NAME}}.cc.tmpl-cpp",
       "component-v2/{{PROJECT_NAME}}.h.tmpl-cpp",
       "component-v2/{{PROJECT_NAME}}_test.cc.tmpl-cpp",
+      "driver/BUILD.gn.tmpl-cpp",
+      "driver/README.md.tmpl",
+      "driver/unit-tests.cc.tmpl-cpp",
+      "driver/{{snake_case PROJECT_NAME}}.bind.tmpl-cpp",
+      "driver/{{snake_case PROJECT_NAME}}.cc.tmpl-cpp",
+      "driver/{{snake_case PROJECT_NAME}}.h.tmpl-cpp",
     ]
     outputs =
         [ "${host_tools_dir}/create_templates/{{source_target_relative}}" ]

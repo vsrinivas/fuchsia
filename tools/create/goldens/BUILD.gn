@@ -13,6 +13,7 @@ group("goldens") {
     "my-component-v1-rust",
     "my-component-v2-cpp",
     "my-component-v2-rust",
+    "my-driver-cpp",
   ]
 }
 
@@ -23,6 +24,7 @@ group("tests") {
     ":my-component-v1-rust($host_toolchain)",
     ":my-component-v2-cpp($host_toolchain)",
     ":my-component-v2-rust($host_toolchain)",
+    ":my-driver-cpp($host_toolchain)",
     "my-component-v1-cpp:tests",
     "my-component-v1-rust:tests",
     "my-component-v2-cpp:tests",
@@ -90,6 +92,21 @@ if (is_host) {
       "my-component-v2-rust/meta/my-component-v2-rust_test.cml",
       "my-component-v2-rust/README.md",
       "my-component-v2-rust/src/main.rs",
+    ]
+  }
+
+  # Create a C++ driver project named `my-driver-cpp` and
+  # compare its file contents to the golden project of the same name.
+  golden_test("my-driver-cpp") {
+    project_type = "driver"
+    language = "cpp"
+    golden_files = [
+      "my-driver-cpp/BUILD.gn",
+      "my-driver-cpp/README.md",
+      "my-driver-cpp/my_driver_cpp.h",
+      "my-driver-cpp/my_driver_cpp.bind",
+      "my-driver-cpp/my_driver_cpp.cc",
+      "my-driver-cpp/unit-tests.cc",
     ]
   }
 }

@@ -1,0 +1,28 @@
+{{>copyright comment="//"}}
+
+#include <lib/fake_ddk/fake_ddk.h>
+
+#include <zxtest/zxtest.h>
+
+#include "{{PROJECT_PATH}}/{{snake_case PROJECT_NAME}}.h"
+
+namespace {{snake_case PROJECT_NAME}} {
+
+class {{pascal_case PROJECT_NAME}}Test : public zxtest::Test {
+  void SetUp() override {}
+
+  void TearDown() override {}
+
+ protected:
+  fake_ddk::Bind ddk_;
+};
+
+TEST_F({{pascal_case PROJECT_NAME}}Test, LifetimeTest) {
+  auto device = new {{pascal_case PROJECT_NAME}}(fake_ddk::kFakeParent);
+  ASSERT_OK(device->Bind());
+  device->DdkAsyncRemove();
+  EXPECT_TRUE(ddk_.Ok());
+  device->DdkRelease();
+}
+
+}  // namespace {{snake_case PROJECT_NAME}}
