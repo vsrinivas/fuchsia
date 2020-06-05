@@ -49,12 +49,6 @@ fuchsia_component("rust_test_runner") {
   testonly = true
   manifest = "meta/rust-test-runner.cml"
   component_name = "rust-test-runner"
-  resources = [
-    {
-      source = "$root_out_dir/rust_test_runner"
-      destination = "bin/rust_test_runner"
-    },
-  ]
   deps = [ ":bin" ]
 }
 
@@ -68,42 +62,18 @@ group("rust") {
   deps = [ ":rust-test-runner" ]
 }
 
-fuchsia_component("rust_test_runner_unit_test") {
-  testonly = true
-  component_name = "rust-test-runner-unit-tests"
-  manifest = "meta/rust-test-runner-unit-tests.cmx"
-  resources = [
-    {
-      source = "$root_out_dir/rust_test_runner_bin_test"
-      destination = "test/rust-test-runner-unit-tests"
-    },
-    {
-      source = "$root_out_dir/sample_rust_tests"
-      destination = "bin/sample_rust_tests"
-    },
-    {
-      source = "$root_out_dir/no_rust_tests"
-      destination = "bin/no_rust_tests"
-    },
-    {
-      source = "$root_out_dir/huge_rust_tests"
-      destination = "bin/huge_rust_tests"
-    },
-  ]
+fuchsia_unittest_package("rust-test-runner-unit-test") {
   deps = [
     ":bin_test",
     "test_data",
   ]
-}
-
-fuchsia_test_package("rust-test-runner-unit-tests") {
-  test_components = [ ":rust_test_runner_unit_test" ]
+  executable_name = "rust_test_runner_bin_test"
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":rust-test-runner-unit-tests",
+    ":rust-test-runner-unit-test",
     "tests",
   ]
 }

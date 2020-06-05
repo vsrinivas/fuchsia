@@ -59,21 +59,9 @@ rustc_library("test_lib") {
   ]
 }
 
-fuchsia_component("test_runners_lib_lib_test") {
-  testonly = true
-  component_name = "test-runner-unit-tests"
-  manifest = "meta/test-runner-unit-tests.cmx"
-  resources = [
-    {
-      source = "$root_out_dir/test_runners_lib_lib_test"
-      destination = "test/test-runner-unit-tests"
-    },
-  ]
+fuchsia_unittest_package("test-runner-unit-tests") {
   deps = [ ":lib_test" ]
-}
-
-fuchsia_test_package("test-runner-unit-tests") {
-  test_components = [ ":test_runners_lib_lib_test" ]
+  executable_name = "test_runners_lib_lib_test"
 }
 
 group("test_runners") {
