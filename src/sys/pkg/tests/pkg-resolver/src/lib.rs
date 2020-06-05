@@ -659,6 +659,18 @@ impl<P: PkgFs> TestEnv<P> {
         async move { fut.await.unwrap().map(|blob_id| blob_id.into()).map_err(|i| Status::from_raw(i)) }
     }
 
+    pub async fn open_cached_package(&self, hash: BlobId) -> Result<DirectoryProxy, zx::Status> {
+        let cache_service = self.apps.pkg_cache.connect_to_service::<PackageCacheMarker>().unwrap();
+        let (proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+        zx::Status::ok(
+            cache_service
+                .open(&mut hash.into(), &mut std::iter::empty(), server_end)
+                .await
+                .unwrap(),
+        )?;
+        Ok(proxy)
+    }
+
     pub async fn pkg_resolver_inspect_hierarchy(&self) -> NodeHierarchy {
         let pattern = format!(
             "/hub/r/{}/*/c/pkg-resolver.cmx/*/out/diagnostics/{}",

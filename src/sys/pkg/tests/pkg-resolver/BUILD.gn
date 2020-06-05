@@ -442,6 +442,32 @@ rustc_test("system_cache_fallback") {
   ]
 }
 
+rustc_test("base_pinning") {
+  name = "base-pinning"
+  edition = "2018"
+
+  source_root = "src/base_pinning.rs"
+
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
+    "//src/sys/pkg/lib/fuchsia-merkle",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
+    "//src/sys/pkg/testing/blobfs-ramdisk",
+    "//src/sys/pkg/testing/pkgfs-ramdisk",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:openat",
+    "//third_party/rust_crates:serde_json",
+  ]
+}
+
 rustc_test("metrics") {
   name = "metrics"
   edition = "2018"
@@ -504,6 +530,7 @@ blobfs_manifest_file = blobfs_manifest_outputs[0]
 
 test_package("pkg-resolver-integration-tests") {
   deps = [
+    ":base_pinning",
     ":blobfs.manifest",
     ":dynamic_repositories_disabled",
     ":dynamic_rewrite_disabled",
@@ -606,6 +633,11 @@ test_package("pkg-resolver-integration-tests") {
     {
       name = "system_cache_fallback"
       dest = "system-cache-fallback"
+      environments = basic_envs
+    },
+    {
+      name = "base_pinning"
+      dest = "base-pinning"
       environments = basic_envs
     },
     {

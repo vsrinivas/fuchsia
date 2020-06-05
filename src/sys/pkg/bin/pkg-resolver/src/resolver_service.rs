@@ -80,7 +80,7 @@ pub fn make_package_fetch_queue(
             let blob_fetcher = blob_fetcher.clone();
             let inspect = Arc::clone(&inspect);
             async move {
-                Ok(package_from_repo_or_cache_with_base_pin_logging(
+                Ok(package_from_base_or_repo_or_cache(
                     &repo_manager,
                     &rewriter,
                     &base_package_index,
@@ -211,8 +211,16 @@ enum HashSource<TufError> {
     Tuf(BlobId),
     SystemImageCachePackages(BlobId, TufError),
 }
+impl<T> HashSource<T> {
+    fn inner(&self) -> &BlobId {
+        match self {
+            HashSource::Tuf(id) => id,
+            HashSource::SystemImageCachePackages(id, _) => id,
+        }
+    }
+}
 
-async fn hash_from_repo_or_cache_with_base_pin_logging(
+async fn hash_from_base_or_repo_or_cache(
     repo_manager: &RwLock<RepositoryManager>,
     rewriter: &RwLock<RewriteManager>,
     base_package_index: &BasePackageIndex,
@@ -220,13 +228,90 @@ async fn hash_from_repo_or_cache_with_base_pin_logging(
     pkg_url: &PkgUrl,
     inspect_state: &ResolverServiceInspectState,
 ) -> Result<BlobId, Status> {
-    let base_hash = unpinned_base_package(pkg_url, base_package_index);
-    let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
+    match unpinned_base_package(pkg_url, base_package_index) {
+        Some(blob) => {
+            // TODO(52809): delete this warning logic 2 weeks after submission.
+            if let Ok(rewritten_url) = rewrite_url(rewriter, &pkg_url) {
+                let tuf_or_cache_hash = hash_from_repo_or_cache(
+                    repo_manager,
+                    system_cache_list,
+                    pkg_url,
+                    &rewritten_url,
+                    inspect_state,
+                )
+                .await;
+                if let Ok(tuf_or_cache) = tuf_or_cache_hash {
+                    if blob != *tuf_or_cache.inner() {
+                        fx_log_warn!(
+                            "GetHash was called on an unpinned base package, and the base package manifest and \
+                            TUF repository disagree on what the package hash should be. The hash from the base \
+                            package manifest will be used from now on. This behavior changed recently. Contact \
+                            SWD for help if you were relying on ephemeral base packages. \
+                            base hash {}, TUF hash {}", blob, tuf_or_cache.inner()
+                        );
+                    }
+                }
+            }
+
+            fx_log_info!("get_hash for {} to {} with base pin", pkg_url, blob);
+            Ok(blob)
+        }
+        None => {
+            let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
+            hash_from_repo_or_cache(
+                repo_manager,
+                system_cache_list,
+                pkg_url,
+                &rewritten_url,
+                inspect_state,
+            )
+            .await
+            .map_err(|e| {
+                let status = e.to_resolve_status();
+                fx_log_err!(
+                    "error getting hash {} as {}: {:#}",
+                    pkg_url,
+                    rewritten_url,
+                    anyhow!(e)
+                );
+                status
+            })
+            .map(|hash| match hash {
+                HashSource::Tuf(blob) => {
+                    fx_log_info!(
+                        "get_hash for {} as {} to {} with TUF",
+                        pkg_url,
+                        rewritten_url,
+                        blob
+                    );
+                    blob
+                }
+                HashSource::SystemImageCachePackages(blob, tuf_err) => {
+                    fx_log_info!(
+                        "get_hash for {} as {} to {} with cache_packages due to {:#}",
+                        pkg_url,
+                        rewritten_url,
+                        blob,
+                        tuf_err
+                    );
+                    blob
+                }
+            })
+        }
+    }
+}
+async fn hash_from_repo_or_cache(
+    repo_manager: &RwLock<RepositoryManager>,
+    system_cache_list: &CachePackages,
+    pkg_url: &PkgUrl,
+    rewritten_url: &PkgUrl,
+    inspect_state: &ResolverServiceInspectState,
+) -> Result<HashSource<GetPackageHashError>, GetPackageHashError> {
     // The RwLock created by `.read()` must not exist across the `.await` (to e.g. prevent
     // deadlock). Rust temporaries are kept alive for the duration of the innermost enclosing
     // statement, so the following two lines should not be combined.
     let fut = repo_manager.read().get_package_hash(&rewritten_url);
-    let tuf_or_cache_hash = match fut.await {
+    match fut.await {
         Ok(b) => Ok(HashSource::Tuf(b)),
         Err(e @ GetPackageHashError::MerkleFor(MerkleForError::NotFound)) => {
             // If we can get metadata but the repo doesn't know about the package,
@@ -252,42 +337,9 @@ async fn hash_from_repo_or_cache_with_base_pin_logging(
             }
         }
     }
-    .map_err(|e| {
-        let status = e.to_resolve_status();
-        fx_log_err!("error getting hash {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
-        status
-    })
-    .map(|hash| match hash {
-        HashSource::Tuf(blob) => {
-            fx_log_info!("get_hash for {} as {} to {} with TUF", pkg_url, rewritten_url, blob);
-            blob
-        }
-        HashSource::SystemImageCachePackages(blob, tuf_err) => {
-            fx_log_info!(
-                "get_hash for {} as {} to {} with cache_packages due to {:#}",
-                pkg_url,
-                rewritten_url,
-                blob,
-                tuf_err
-            );
-            blob
-        }
-    });
-    if let (Some(base), Ok(tuf_or_cache)) = &(base_hash, tuf_or_cache_hash) {
-        if base != tuf_or_cache {
-            fx_log_warn!(
-                "GetHash was called on an unpinned base package, and the base package manifest and \
-                 TUF repository disagree on what the package hash should be. The hash from the TUF \
-                 repository will be used for now, but soon the hash from the base package manifest \
-                 will be used. Contact SWD immediately if you are relying on ephemeral base \
-                 packages. base hash {}, TUF hash {}", base, tuf_or_cache
-            );
-        }
-    }
-    tuf_or_cache_hash
 }
 
-async fn package_from_repo_or_cache_with_base_pin_logging(
+async fn package_from_base_or_repo_or_cache(
     repo_manager: &RwLock<RepositoryManager>,
     rewriter: &RwLock<RewriteManager>,
     base_package_index: &BasePackageIndex,
@@ -297,13 +349,84 @@ async fn package_from_repo_or_cache_with_base_pin_logging(
     blob_fetcher: BlobFetcher,
     inspect_state: &ResolverServiceInspectState,
 ) -> Result<BlobId, Status> {
-    let base_hash = unpinned_base_package(pkg_url, base_package_index);
-    let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
+    match unpinned_base_package(pkg_url, base_package_index) {
+        Some(blob) => {
+            // TODO(52809): delete this warning logic 2 weeks after submission.
+            if let Ok(rewritten_url) = rewrite_url(rewriter, &pkg_url) {
+                let tuf_or_cache_hash = hash_from_repo_or_cache(
+                    repo_manager,
+                    system_cache_list,
+                    pkg_url,
+                    &rewritten_url,
+                    inspect_state,
+                )
+                .await;
+                if let Ok(tuf_or_cache) = tuf_or_cache_hash {
+                    if blob != *tuf_or_cache.inner() {
+                        fx_log_warn!(
+                            "Resolve was called on an unpinned base package, and the base package manifest and \
+                            TUF repository disagree on what the package hash should be. The hash from the base \
+                            package manifest will be used from now on. This behavior changed recently. Contact \
+                            SWD for help if you were relying on ephemeral base packages. \
+                            base hash {}, TUF hash {}", blob, tuf_or_cache.inner()
+                        );
+                    }
+                }
+            }
+            fx_log_info!("resolved {} to {} with base pin", pkg_url, blob);
+            Ok(blob)
+        }
+        None => {
+            let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
+            package_from_repo_or_cache(
+                repo_manager,
+                system_cache_list,
+                pkg_url,
+                &rewritten_url,
+                cache,
+                blob_fetcher,
+                inspect_state,
+            )
+            .await
+            .map_err(|e| {
+                let status = e.to_resolve_status();
+                fx_log_err!("error resolving {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
+                status
+            })
+            .map(|hash| match hash {
+                HashSource::Tuf(blob) => {
+                    fx_log_info!("resolved {} as {} to {} with TUF", pkg_url, rewritten_url, blob);
+                    blob
+                }
+                HashSource::SystemImageCachePackages(blob, tuf_err) => {
+                    fx_log_info!(
+                        "resolved {} as {} to {} with cache_packages due to {:#}",
+                        pkg_url,
+                        rewritten_url,
+                        blob,
+                        tuf_err
+                    );
+                    blob
+                }
+            })
+        }
+    }
+}
+
+async fn package_from_repo_or_cache(
+    repo_manager: &RwLock<RepositoryManager>,
+    system_cache_list: &CachePackages,
+    pkg_url: &PkgUrl,
+    rewritten_url: &PkgUrl,
+    cache: PackageCache,
+    blob_fetcher: BlobFetcher,
+    inspect_state: &ResolverServiceInspectState,
+) -> Result<HashSource<GetPackageError>, GetPackageError> {
     // The RwLock created by `.read()` must not exist across the `.await` (to e.g. prevent
     // deadlock). Rust temporaries are kept alive for the duration of the innermost enclosing
     // statement, so the following two lines should not be combined.
     let fut = repo_manager.read().get_package(&rewritten_url, &cache, &blob_fetcher);
-    let tuf_or_cache_hash = match fut.await {
+    match fut.await {
         Ok(b) => Ok(HashSource::Tuf(b)),
         Err(e @ GetPackageError::Cache(CacheError::MerkleFor(MerkleForError::NotFound))) => {
             // If we can get metadata but the repo doesn't know about the package,
@@ -329,39 +452,6 @@ async fn package_from_repo_or_cache_with_base_pin_logging(
             }
         }
     }
-    .map_err(|e| {
-        let status = e.to_resolve_status();
-        fx_log_err!("error resolving {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
-        status
-    })
-    .map(|hash| match hash {
-        HashSource::Tuf(blob) => {
-            fx_log_info!("resolved {} as {} to {} with TUF", pkg_url, rewritten_url, blob);
-            blob
-        }
-        HashSource::SystemImageCachePackages(blob, tuf_err) => {
-            fx_log_info!(
-                "resolved {} as {} to {} with cache_packages due to {:#}",
-                pkg_url,
-                rewritten_url,
-                blob,
-                tuf_err
-            );
-            blob
-        }
-    });
-    if let (Some(base), Ok(tuf_or_cache)) = &(base_hash, tuf_or_cache_hash) {
-        if base != tuf_or_cache {
-            fx_log_warn!(
-                "Resolve was called on an unpinned base package, and the base package manifest and \
-                 TUF repository disagree on what the package hash should be. The hash from the TUF \
-                 repository will be used for now, but soon the hash from the base package manifest \
-                 will be used. Contact SWD immediately if you are relying on ephemeral base \
-                 packages. base hash {}, TUF hash {}", base, tuf_or_cache
-            );
-        }
-    }
-    tuf_or_cache_hash
 }
 
 fn unpinned_base_package(
@@ -431,7 +521,7 @@ async fn get_hash(
         }
     };
     trace::duration_begin!("app", "get-hash", "url" => pkg_url.to_string().as_str());
-    let hash_or_status = hash_from_repo_or_cache_with_base_pin_logging(
+    let hash_or_status = hash_from_base_or_repo_or_cache(
         &repo_manager,
         &rewriter,
         &base_package_index,
