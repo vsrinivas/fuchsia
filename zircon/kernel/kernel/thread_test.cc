@@ -432,10 +432,15 @@ bool runtime_test() {
   EXPECT_EQ(thread_state::THREAD_INITIAL, stats.state);
   EXPECT_EQ(0, stats.state_time);
 
-  // Update the stats, it ran for kCpuTime on CPU and is now ready.
+  // Test that runtime is calculated as a function of the stats and the current time spent queued.
+  // When the state is set to THREAD_READY, TotalRuntime calculates queue_time as:
+  //   runtime.queue_time + (current_time() - state_time)
+  //
+  // We subtract 1 from current time to ensure that the difference between the actual current_time
+  // and state_time is nonzero.
   stats.Update(Thread::RuntimeStats{.runtime = {.cpu_time = kCpuTime},
                                     .state = thread_state::THREAD_READY,
-                                    .state_time = current_time()});
+                                    .state_time = current_time() - 1});
   EXPECT_EQ(kCpuTime, stats.runtime.cpu_time);
   EXPECT_EQ(0, stats.runtime.queue_time);
   EXPECT_EQ(thread_state::THREAD_READY, stats.state);
@@ -445,10 +450,15 @@ bool runtime_test() {
   EXPECT_NE(0, runtime.queue_time);
   EXPECT_EQ(kCpuTime, runtime.cpu_time);
 
-  // Update stats to now be running, with additional queue time.
+  // Test that runtime is calculated as a function of the stats and the current time spent running.
+  // When the state is set to THREAD_RUNNING, TotalRuntime calculates cpu_time as:
+  //   runtime.cpu_time + (current_time() - state_time)
+  //
+  // We subtract 1 from current time to ensure that the difference between the actual current_time
+  // and state_time is nonzero.
   stats.Update(Thread::RuntimeStats{.runtime = {.queue_time = kQueueTime},
                                     .state = thread_state::THREAD_RUNNING,
-                                    .state_time = current_time()});
+                                    .state_time = current_time() - 1});
   EXPECT_EQ(kCpuTime, stats.runtime.cpu_time);
   EXPECT_EQ(kQueueTime, stats.runtime.queue_time);
   EXPECT_EQ(thread_state::THREAD_RUNNING, stats.state);
