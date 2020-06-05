@@ -279,6 +279,15 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 			c.detachWithError(fmt.Errorf("RX loop error: %w", err))
 		}
 	}()
+
+	// Spawn a goroutine to clean up the mapped memory once all the handler
+	// loops are done.
+	go func() {
+		c.wg.Wait()
+		if err := c.iob.Close(); err != nil {
+			_ = syslog.WarnTf(tag, "failed to close IO buffer: %s", err)
+		}
+	}()
 }
 
 func (c *Client) IsAttached() bool {
@@ -383,9 +392,9 @@ func (c *Client) Close() error {
 		if err := c.handler.RxFifo.Close(); err != nil {
 			_ = syslog.WarnTf(tag, "failed to close rx fifo: %s", err)
 		}
-		if err := c.iob.Close(); err != nil {
-			_ = syslog.WarnTf(tag, "failed to close IO buffer: %s", err)
-		}
+
+		// Additional cleanup is performed by the watcher goroutine spawned in
+		// Attach once all the io loops are done.
 
 		return link.StateClosed, nil
 	})

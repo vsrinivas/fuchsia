@@ -166,6 +166,7 @@ pub struct TestSandbox {
 /// Abstraction for different endpoint backing types.
 pub trait Endpoint: Copy + Clone {
     const NETEMUL_BACKING: netemul_network::EndpointBacking;
+    const NAME: &'static str;
 }
 
 #[derive(Copy, Clone)]
@@ -174,6 +175,7 @@ pub enum Ethernet {}
 impl Endpoint for Ethernet {
     const NETEMUL_BACKING: netemul_network::EndpointBacking =
         netemul_network::EndpointBacking::Ethertap;
+    const NAME: &'static str = "eth";
 }
 
 #[derive(Copy, Clone)]
@@ -182,6 +184,7 @@ pub enum NetworkDevice {}
 impl Endpoint for NetworkDevice {
     const NETEMUL_BACKING: netemul_network::EndpointBacking =
         netemul_network::EndpointBacking::NetworkDevice;
+    const NAME: &'static str = "netdev";
 }
 
 impl TestSandbox {

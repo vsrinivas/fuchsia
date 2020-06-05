@@ -4,8 +4,8 @@
 
 use anyhow::Context as _;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn};
-use futures::TryStreamExt as _;
-use net_declare::fidl_ip;
+use futures::{FutureExt as _, TryStreamExt as _};
+use net_declare::{fidl_ip, std_ip};
 use netstack_testing_macros::*;
 
 use crate::environments::*;
@@ -500,6 +500,152 @@ async fn test_down_close_race<E: Endpoint>() -> Result {
             .ok_or_else(|| {
                 anyhow::anyhow!(
                     "netstack stream ended unexpectedly while waiting for interface disappear"
+                )
+            })?;
+    }
+    Ok(())
+}
+
+/// Tests races between data traffic and closing a device.
+#[endpoint_variants_test]
+async fn test_close_data_race<E: Endpoint>() -> Result {
+    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
+    let net = sandbox.create_network("net").await.context("failed to create network")?;
+    let fake_ep = net.create_fake_endpoint().context("failed to create fake endpoint")?;
+    let env = sandbox
+        .create_netstack_environment::<Netstack2, _>(format!("test_close_data_race_{}", E::NAME))
+        .context("failed to create netstack environment")?;
+
+    let netstack = env
+        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+        .context("failed to connect to netstack")?;
+
+    // NOTE: We only run this test with IPv4 sockets since we only care about
+    // exciting the tx path, the domain is irrelevant.
+    const DEVICE_ADDRESS: fidl_fuchsia_net_stack::InterfaceAddress =
+        fidl_fuchsia_net_stack::InterfaceAddress {
+            ip_address: fidl_ip!(192.168.0.2),
+            prefix_len: 24,
+        };
+    // We're going to send data over a UDP socket to a multicast address so we
+    // skip ARP resolution.
+    const MCAST_ADDR: std::net::IpAddr = std_ip!(224.0.0.1);
+
+    for _ in 0..100u64 {
+        let dev = net
+            .create_endpoint::<E, _>("ep")
+            .await
+            .context("failed to create endpoint")?
+            .into_interface_in_environment(&env)
+            .await
+            .context("failed to add endpoint to Netstack")?;
+
+        let () = dev.enable_interface().await.context("failed to enable interface")?;
+        let () = dev.set_link_up(true).await.context("failed to bring device up")?;
+        let () = dev.add_ip_addr(DEVICE_ADDRESS).await.context("failed to add address")?;
+
+        let id = dev.id();
+        // Wait until the interface is installed and the link state is up.
+        let _ifaces = netstack
+            .take_event_stream()
+            .try_filter(
+                |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+                    futures::future::ready(interfaces.into_iter().any(|iface| {
+                        iface.id == id as u32
+                            && iface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP != 0
+                    }))
+                },
+            )
+            .try_next()
+            .await
+            .context("failed to observe event stream")?
+            .ok_or_else(|| {
+                anyhow::anyhow!("netstack stream ended unexpectedly while waiting for interface up")
+            })?;
+        // Create a socket and start sending data on it nonstop.
+        let fidl_fuchsia_net_ext::IpAddress(bind_addr) = DEVICE_ADDRESS.ip_address.into();
+        let sock = fuchsia_async::net::UdpSocket::bind_in_env(
+            &env,
+            std::net::SocketAddr::new(bind_addr, 0),
+        )
+        .await
+        .context("failed to create socket")?;
+
+        // Keep sending data until writing to the socket fails.
+        let data_fut = async {
+            loop {
+                match sock
+                    .send_to(&[1u8, 2, 3, 4], std::net::SocketAddr::new(MCAST_ADDR, 1234))
+                    .await
+                {
+                    Ok(_sent) => {}
+                    // We expect only "os errors" to happen, ideally we'd look
+                    // only at specific errors (EPIPE, ENETUNREACH), but that
+                    // made this test very flaky due to the branching error
+                    // paths in gVisor when removing an interface.
+                    Err(e) if e.raw_os_error().is_some() => break Result::Ok(()),
+                    Err(e) => break Err(e).context("send_to error"),
+                }
+
+                // Enqueue some data on the rx path.
+                let () = fake_ep
+                    // We don't care that it's a valid frame, only that it excites
+                    // the rx path.
+                    .write(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
+                    .context("failed to send frame on fake_ep")?;
+
+                // Wait on a short timer to avoid too much log noise when
+                // running the test.
+                let () = fuchsia_async::Timer::new(fuchsia_async::Time::after(
+                    fuchsia_zircon::Duration::from_micros(10),
+                ))
+                .await;
+            }
+        }
+        .fuse();
+        pin_utils::pin_mut!(data_fut);
+
+        let mut ep_event_stream = fake_ep.take_event_stream();
+
+        // We need to constantly observe the fake endpoint's event stream to
+        // consume messages from netemul, otherwise all the packets sent by
+        // Netstack will accumulate on the fake endpoint. We run a separate
+        // select from data_fut so we run independently from send_to and the
+        // cooldown timer.
+        let io_fut = async {
+            loop {
+                futures::select! {
+                  r = data_fut => break r,
+                  e = ep_event_stream.try_next() => {
+                      // Just sanitize for errors, we don't care about the frames.
+                      let _event = e.context("fake ep event stream failure")?
+                         .ok_or_else(|| anyhow::anyhow!("fake ep event stream ended unexpectedly"))?;
+                  }
+                }
+            }
+        };
+
+        let drop_fut = async move {
+            let () = fuchsia_async::Timer::new(fuchsia_async::Time::after(
+                fuchsia_zircon::Duration::from_millis(3),
+            ))
+            .await;
+            std::mem::drop(dev);
+        };
+
+        let mut iface_dropped = netstack.take_event_stream().try_filter(
+            |fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+                futures::future::ready(!interfaces.into_iter().any(|iface| iface.id == id as u32))
+            },
+        );
+
+        let (io_result, iface_dropped, ()) =
+            futures::future::join3(io_fut, iface_dropped.try_next(), drop_fut).await;
+        let () = io_result.context("unexpected error on io future")?;
+        let _ifaces =
+            iface_dropped.context("failed to observe event stream")?.ok_or_else(|| {
+                anyhow::anyhow!(
+                    "netstack stream ended unexpectedly while waiting for interface to disappear"
                 )
             })?;
     }

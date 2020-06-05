@@ -276,6 +276,15 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 		}
 		_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "Rx loop finished")
 	}()
+
+	// Spawn a goroutine to clean up the mapped memory once all the handler
+	// loops are done.
+	go func() {
+		c.dispatcherWg.Wait()
+		if err := multierr.Combine(c.data.Close(), c.descriptors.Close()); err != nil {
+			_ = syslog.WarnTf(tag, "failed to close mapped VMOs: %s", err)
+		}
+	}()
 }
 
 func (c *Client) IsAttached() bool {
@@ -407,10 +416,10 @@ func (c *Client) Close() error {
 		// Session also has a Close method, make sure we're calling the ChannelProxy
 		// one.
 		((*fidl.ChannelProxy)(c.session)).Close(),
-		c.data.Close(),
-		c.descriptors.Close(),
 		c.handler.RxFifo.Close(),
 		c.handler.TxFifo.Close(),
+		// Additional cleanup is performed by the watcher goroutine spawned in
+		// Attach once all the io loops are done.
 	)
 	if c.admin.mu.watcher != nil {
 		err = multierr.Append(err, c.admin.mu.watcher.Close())
