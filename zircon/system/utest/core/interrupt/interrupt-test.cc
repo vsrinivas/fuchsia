@@ -286,8 +286,7 @@ TEST_F(InterruptTest, MAYBE_BindVcpuTest) {
   zx::interrupt interrupt;
   zx::guest guest;
   zx::vmar vmar;
-  zx::vcpu vcpu1;
-  zx::vcpu vcpu2;
+  zx::vcpu vcpu;
 
   zx_status_t status = zx::guest::create(*root_resource_, 0, &guest, &vmar);
   if (status == ZX_ERR_NOT_SUPPORTED) {
@@ -297,14 +296,11 @@ TEST_F(InterruptTest, MAYBE_BindVcpuTest) {
   ASSERT_OK(status);
 
   ASSERT_OK(zx::interrupt::create(*root_resource_, kUnboundInterruptNumber, 0, &interrupt));
-  ASSERT_OK(zx::vcpu::create(guest, 0, 0, &vcpu1));
-  ASSERT_OK(zx::vcpu::create(guest, 0, 0, &vcpu2));
+  ASSERT_OK(zx::vcpu::create(guest, 0, 0, &vcpu));
 
-  ASSERT_OK(interrupt.bind_vcpu(vcpu1, 0));
+  ASSERT_OK(interrupt.bind_vcpu(vcpu, 0));
   // Binding again to the same VCPU is okay.
-  ASSERT_OK(interrupt.bind_vcpu(vcpu1, 0));
-  // Binding again to a different VCPU is not.
-  ASSERT_EQ(interrupt.bind_vcpu(vcpu2, 0), ZX_ERR_ALREADY_BOUND);
+  ASSERT_OK(interrupt.bind_vcpu(vcpu, 0));
 }
 
 // Tests binding a virtual interrupt to a VCPU
