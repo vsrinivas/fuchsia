@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:logging/logging.dart';
+import 'package:meta/meta.dart';
 
 import 'sl4f_client.dart';
 
@@ -30,6 +31,43 @@ class SetUiSl4fException implements Exception {
 
   @override
   String toString() => 'SetUiSl4fException: $message';
+}
+
+/// Converts data from json to dart data type.
+/// IntlInfo models the IntlInfo struct defined in
+/// /garnet/bin/sl4f/src/setui/types.rs
+class IntlInfo {
+  final String temperatureUnit;
+  final String timeZoneId;
+  final String hourCycle;
+  final List<String> locales;
+
+  IntlInfo(
+      {@required this.temperatureUnit,
+      @required this.timeZoneId,
+      @required this.hourCycle,
+      @required this.locales});
+
+  factory IntlInfo.fromJson(Map<String, dynamic> json) {
+    if (json == null ||
+        json['locales'] == null ||
+        json['temperature_unit'] == null ||
+        json['time_zone_id'] == null ||
+        json['hour_cycle'] == null) {
+      throw SetUiSl4fException(
+          'Invalid json while parsing IntlInfo, received $json');
+    }
+
+    List<String> locales = <String>[];
+    for (final locale in json['locales']) {
+      locales.add(locale['id']);
+    }
+    return IntlInfo(
+        temperatureUnit: json['temperature_unit'],
+        timeZoneId: json['time_zone_id'],
+        hourCycle: json['hour_cycle'],
+        locales: locales);
+  }
 }
 
 class SetUi {
@@ -64,5 +102,23 @@ class SetUi {
       default:
         return NetworkOption.unknown;
     }
+  }
+
+  /// [locale] accepts Unicode BCP-47 Locale Identifier.
+  ///
+  /// Reference LocaleId definition in
+  /// https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.intl/intl.fidl
+  Future<void> setLocale(String locale) async {
+    _log.info('Setting Locale to $locale}');
+    await _sl4f.request('setui_facade.SetIntl', {
+      'locales': [
+        {'id': locale}
+      ]
+    });
+  }
+
+  Future<IntlInfo> getLocale() async {
+    final result = await _sl4f.request('setui_facade.GetIntl');
+    return IntlInfo.fromJson(result);
   }
 }

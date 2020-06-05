@@ -53,6 +53,7 @@
             "fuchsia.power.BatteryManager",
             "fuchsia.power.test.BatterySimulator",
             "fuchsia.process.Launcher",
+            "fuchsia.settings.Intl",
             "fuchsia.settings.Setup",
             "fuchsia.setui.SetUiService",
             "fuchsia.sys.Launcher",

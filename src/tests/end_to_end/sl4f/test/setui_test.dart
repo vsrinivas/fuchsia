@@ -36,5 +36,20 @@ void main() {
       // If anything throws an exception then we've failed.
       await setUi.setDevNetworkOption(sl4f.NetworkOption.ethernet);
     });
+
+    test('get intl', () async {
+      final intlInfo = await setUi.getLocale();
+      expect(intlInfo, isNotNull);
+    });
+
+    test('set Locale', () async {
+      await setUi.setLocale('he-FR');
+      var intlInfo = await setUi.getLocale();
+      expect(intlInfo.locales.contains('he-FR'), true);
+
+      await setUi.setLocale('zh-TW');
+      intlInfo = await setUi.getLocale();
+      expect(intlInfo.locales.contains('zh-TW'), true);
+    });
   }, timeout: _timeout);
 }

@@ -17,6 +17,8 @@ impl Facade for SetUiFacade {
             SetUiMethod::Mutate => self.mutate(args).await,
             SetUiMethod::SetNetwork => self.set_network(args).await,
             SetUiMethod::GetNetwork => self.get_network_setting().await,
+            SetUiMethod::SetIntl => self.set_intl_setting(args).await,
+            SetUiMethod::GetIntl => self.get_intl_setting().await,
         }
     }
 }
