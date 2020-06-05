@@ -1,0 +1,70 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/rust/rustc_wasm_library.gni")
+import("//build/test/test_package.gni")
+import("//src/diagnostics/wasm/wasm_bindings.gni")
+
+group("wasm") {
+  deps = [ ":lib($unknown_wasm32_toolchain)" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":wasm-triage-unittests" ]
+}
+
+# We need to specify configs
+config("env") {
+  rustenv = [
+    "CARGO_PKG_NAME=\"triage_lib\"",
+    "CARGO_PKG_VERSION=\"0.1\"",
+    "CARGO_MANIFEST_DIR=\"/\"",
+  ]
+}
+
+lib_deps = [
+  "//src/diagnostics/lib/triage",
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:json5",
+  "//third_party/rust_crates:wasm-bindgen",
+]
+
+if (current_toolchain == unknown_wasm32_toolchain) {
+  rustc_wasm_library("lib") {
+    name = "triage_lib"
+    edition = "2018"
+
+    configs += [
+      ":env",
+      "//build/config/lto:thinlto",
+      "//build/config:rust_opt_level_z",
+    ]
+
+    deps = lib_deps
+  }
+}
+
+wasm_bindings("lib_wasm") {
+  target = ":lib"
+  target_output_name = "triage_lib"
+}
+
+rustc_test("triage_lib_tests") {
+  edition = "2018"
+  deps = lib_deps
+}
+
+unittest_package("wasm-triage-unittests") {
+  deps = [ ":triage_lib_tests" ]
+  tests = [
+    {
+      name = "triage_lib_tests"
+      environments = basic_envs
+    },
+  ]
+}
