@@ -23,7 +23,6 @@ namespace modular {
 TEST(ModularConfigXdr, BasemgrDefaultValues) {
   static constexpr auto kExpectedJson = R"({
       "enable_cobalt": true,
-      "use_minfs": true,
       "use_session_shell_for_story_shell_factory": false,
       "base_shell": {
         "url": "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/auto_login_base_shell.cmx",
@@ -59,7 +58,6 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
   EXPECT_TRUE(XdrRead(&read_json_doc, &read_config, XdrBasemgrConfig));
 
   EXPECT_TRUE(read_config.enable_cobalt());
-  EXPECT_TRUE(read_config.use_minfs());
   EXPECT_FALSE(read_config.use_session_shell_for_story_shell_factory());
 
   EXPECT_EQ(

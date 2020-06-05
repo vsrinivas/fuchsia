@@ -12,7 +12,6 @@
 
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
-#include "src/modular/bin/basemgr/wait_for_minfs.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/app_client.h"
@@ -107,11 +106,6 @@ FuturePtr<> BasemgrImpl::StopScenic() {
 }
 
 void BasemgrImpl::Start() {
-  // Wait for persistent data to come up.
-  if (config_.basemgr_config().use_minfs()) {
-    WaitForMinfs();
-  }
-
   // Use the default of a random session ID unless the configuration requested persistence.
   // TODO(fxb/51752): Change base manager config to use a more direct declaration of persistence
   // and remove the base shell configuration entirely.

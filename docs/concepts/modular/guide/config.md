@@ -98,9 +98,6 @@ The file may contain (non-standard JSON) C-style comments
 - `enable_cobalt`: **boolean** _(optional)_
   - When set to false, Cobalt statistics are disabled.
   - **default**: `true`
-- `use_minfs`: **boolean** _(optional)_
-  - When set to true, wait for persistent data to initialize.
-  - **default**: `true`
 - `use_session_shell_for_story_shell_factory`: **boolean** _(optional)_
   - Create story shells through StoryShellFactory exposed by the session shell
     instead of creating separate story shell components. When set,

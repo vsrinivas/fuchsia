@@ -36,7 +36,6 @@ constexpr char kScreenWidth[] = "screen_width";
 
 // Basemgr constants
 constexpr char kEnableCobalt[] = "enable_cobalt";
-constexpr char kUseMinfs[] = "use_minfs";
 constexpr char kUseSessionShellForStoryShellFactory[] = "use_session_shell_for_story_shell_factory";
 
 // Sessionmgr constants

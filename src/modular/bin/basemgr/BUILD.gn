@@ -31,7 +31,6 @@ executable_package("basemgr") {
 
   deps = [
     ":lib",
-    ":wait_for_minfs",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.devicesettings",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
@@ -75,20 +74,6 @@ executable_package("basemgr") {
 hermetic_tests_package("basemgr_unittests") {
   deps = [ ":session_context_impl_unittest" ]
   environments = basic_envs
-}
-
-source_set("wait_for_minfs") {
-  sources = [
-    "wait_for_minfs.cc",
-    "wait_for_minfs.h",
-  ]
-
-  public_deps = [ "//src/lib/fsl" ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//zircon/system/ulib/fdio-caller",
-  ]
 }
 
 source_set("lib") {

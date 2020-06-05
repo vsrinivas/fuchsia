@@ -152,9 +152,6 @@ void XdrBasemgrConfig_v1(XdrContext* const xdr,
   xdr->FieldWithDefault(modular_config::kEnableCobalt, data->mutable_enable_cobalt(),
                         has_enable_cobalt, true);
 
-  bool has_use_minfs = data->has_use_minfs();
-  xdr->FieldWithDefault(modular_config::kUseMinfs, data->mutable_use_minfs(), has_use_minfs, true);
-
   bool has_use_session_shell_for_story_shell_factory =
       data->has_use_session_shell_for_story_shell_factory();
   xdr->FieldWithDefault(modular_config::kUseSessionShellForStoryShellFactory,

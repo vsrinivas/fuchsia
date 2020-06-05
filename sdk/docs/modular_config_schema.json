@@ -6,7 +6,6 @@
       "type": "object",
       "properties": {
         "enable_cobalt": { "type": "boolean", "default": true },
-        "use_minfs": { "type": "boolean", "default": true },
         "use_session_shell_for_story_shell_factory": {
           "type": "boolean",
           "default": false

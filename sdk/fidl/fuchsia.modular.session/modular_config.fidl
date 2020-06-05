@@ -15,9 +15,7 @@ table BasemgrConfig {
     /// Default: true
     1: bool enable_cobalt;
 
-    /// When set to true, wait for persistent data to initialize.
-    /// Default: true
-    2: bool use_minfs;
+    2: reserved;
 
     /// Create story shells through StoryShellFactory exposed by the session
     /// shell instead of creating separate story shell components. When set,
