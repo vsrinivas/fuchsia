@@ -66,14 +66,6 @@
             to: [ "#modular" ],
         },
         {
-            runner: "elf",
-            from: "realm",
-            to: [
-                "#logger",
-                "#modular",
-            ],
-        },
-        {
             event: "stopped",
             from: "realm",
             as: "stopped-logger",

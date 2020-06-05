@@ -23,14 +23,6 @@
     ],
     offer: [
         {
-            runner: "elf",
-            from: "realm",
-            to: [
-                "#custom-timeout-child",
-                "#inherited-timeout-child",
-            ],
-        },
-        {
             protocol: [ "/svc/fuchsia.logger.LogSink" ],
             from: "realm",
             to: [

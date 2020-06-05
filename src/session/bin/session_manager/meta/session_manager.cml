@@ -31,12 +31,6 @@
         },
     ],
     offer: [
-        // Offer the ELF runner to children.
-        {
-            runner: "elf",
-            from: "realm",
-            to: [ "#session" ],
-        },
         {
             protocol: [
                 "/svc/fuchsia.accessibility.SettingsManager",

@@ -34,11 +34,6 @@
             from: "realm",
             to: [ "#session" ],
         },
-        {
-            runner: "elf",
-            from: "realm",
-            to: [ "#session" ],
-        },
     ],
     expose: [
         {

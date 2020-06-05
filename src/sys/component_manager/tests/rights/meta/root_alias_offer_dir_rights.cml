@@ -11,15 +11,6 @@
         },
     ],
     offer: [
-        // Offer the ELF runner to children.
-        {
-            runner: "elf",
-            from: "realm",
-            to: [
-                "#expose_dir_rights",
-                "#use_dir_rights",
-            ],
-        },
         {
             directory: "/read_only",
             from: "#expose_dir_rights",

@@ -191,20 +191,6 @@
             dependency: "weak_for_migration",
         },
 
-        // Offer the ELF runner to children.
-        {
-            runner: "elf",
-            from: "realm",
-            to: [
-                "#console",
-                "#driver_manager",
-                "#fshost",
-                "#ptysvc",
-                "#pwrbtn-monitor",
-                "#sysinfo",
-            ],
-        },
-
         // Non-zircon services for svchost
         {
             protocol: [

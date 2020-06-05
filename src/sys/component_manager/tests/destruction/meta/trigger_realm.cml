@@ -21,18 +21,6 @@
         { runner: "elf" },
     ],
 
-    // Offer the ELF runner to children.
-    offer: [
-        {
-            runner: "elf",
-            from: "realm",
-            to: [
-                "#trigger_a",
-                "#trigger_b",
-            ],
-        },
-    ],
-
     // Expose my Trigger service so the integration test can invoke it.
     expose: [
         {

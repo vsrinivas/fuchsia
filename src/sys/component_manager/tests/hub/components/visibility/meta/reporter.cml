@@ -20,12 +20,4 @@
             rights: [ "r*" ],
         },
     ],
-    offer: [
-        // Offer the ELF runner to children.
-        {
-            runner: "elf",
-            from: "realm",
-            to: [ "#child" ],
-        },
-    ],
 }

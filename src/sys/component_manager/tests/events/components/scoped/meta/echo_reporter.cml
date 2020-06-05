@@ -27,14 +27,6 @@
             from: "framework",
         },
     ],
-    offer: [
-        // Offer the ELF runner to children.
-        {
-            runner: "elf",
-            from: "realm",
-            to: [ "#echo_server" ],
-        },
-    ],
     expose: [
         {
             protocol: "/svc/fidl.test.components.Trigger",

@@ -12,14 +12,6 @@
     ],
     offer: [
         {
-            runner: "elf",
-            from: "realm",
-            to: [
-                "#archivist",
-                "#driver",
-            ],
-        },
-        {
             runner: "rust_test_runner",
             from: "realm",
             to: [ "#driver" ],

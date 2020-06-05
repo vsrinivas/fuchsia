@@ -19,12 +19,6 @@
         },
     ],
     offer: [
-        {
-            runner: "elf",
-            from: "realm",
-            to: [ "#coll" ],
-        },
-
         // Some components run under test get fonts from /config/data.
         {
             directory: "/config/data",

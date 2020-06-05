@@ -158,16 +158,6 @@
             to: [ "#core" ],
         },
 
-        // Offer the ELF runner to children.
-        {
-            runner: "elf",
-            from: "realm",
-            to: [
-                "#bootstrap",
-                "#core",
-            ],
-        },
-
         // Offer events to `core` for diagnostics usage.
         {
             event: [

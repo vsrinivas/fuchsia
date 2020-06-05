@@ -6,12 +6,4 @@
             startup: "eager",
         },
     ],
-    offer: [
-        // Offer the ELF runner to children.
-        {
-            runner: "elf",
-            from: "realm",
-            to: [ "#grandchild" ],
-        },
-    ],
 }

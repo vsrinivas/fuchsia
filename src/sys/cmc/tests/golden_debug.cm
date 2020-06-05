@@ -162,34 +162,6 @@
             }
         },
         {
-            "runner": {
-                "source": {
-                    "realm": {}
-                },
-                "source_name": "elf",
-                "target": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "target_name": "elf"
-            }
-        },
-        {
-            "runner": {
-                "source": {
-                    "realm": {}
-                },
-                "source_name": "elf",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_name": "elf"
-            }
-        },
-        {
             "event": {
                 "source": {
                     "realm": {}

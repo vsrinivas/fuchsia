@@ -18,11 +18,6 @@
     ],
     offer: [
         {
-            runner: "elf",
-            from: "realm",
-            to: [ "#hello_world" ],
-        },
-        {
             protocol: "/svc/fuchsia.logger.LogSink",
             from: "realm",
             to: [ "#hello_world" ],

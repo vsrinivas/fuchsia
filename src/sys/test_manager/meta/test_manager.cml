@@ -35,18 +35,6 @@
         },
     ],
     offer: [
-        // Offer the ELF runner to children.
-        {
-            runner: "elf",
-            from: "realm",
-            to: [
-                "#gtest_runner",
-                "#runner_memfs",
-                "#rust_test_runner",
-                "#test_tmpfs",
-                "#tests",
-            ],
-        },
         {
             protocol: "/svc/fuchsia.logger.LogSink",
             from: "realm",

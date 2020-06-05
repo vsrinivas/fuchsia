@@ -36,16 +36,6 @@
     ],
     offer: [
         {
-            runner: "elf",
-            from: "realm",
-            to: [
-                "#child_a",
-                "#child_b",
-                "#child_c",
-                "#reporter",
-            ],
-        },
-        {
             protocol: "/svc/fuchsia.sys2.BlockingEventSource",
             from: "realm",
             to: [ "#reporter" ],

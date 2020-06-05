@@ -32,11 +32,6 @@
     ],
     offer: [
         {
-            runner: "elf",
-            from: "realm",
-            to: [ "#test-collection" ],
-        },
-        {
             protocol: [
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.process.Launcher",

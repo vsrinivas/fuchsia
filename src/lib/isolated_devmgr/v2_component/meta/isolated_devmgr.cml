@@ -13,11 +13,6 @@
     ],
     offer: [
         {
-            runner: "elf",
-            from: "realm",
-            to: [ "#driver_manager_test" ],
-        },
-        {
             protocol: [
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.process.Launcher",

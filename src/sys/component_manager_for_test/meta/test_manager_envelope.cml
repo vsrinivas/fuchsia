@@ -11,11 +11,6 @@
     offer: [
         // Offer the ELF runner to test_manager.
         {
-            runner: "elf",
-            from: "realm",
-            to: [ "#test_manager" ],
-        },
-        {
             protocol: [
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.process.Launcher",

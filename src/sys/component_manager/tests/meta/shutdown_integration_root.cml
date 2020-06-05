@@ -12,12 +12,6 @@
         },
     ],
     offer: [
-        // Offer the ELF runner to children.
-        {
-            runner: "elf",
-            from: "realm",
-            to: [ "#power_switch" ],
-        },
         {
             protocol: [
                 "/svc/fuchsia.logger.LogSink",

@@ -24,15 +24,6 @@
         { protocol: "/svc/fuchsia.logger.LogSink" },
     ],
     offer: [
-        // Offer the ELF runner to children.
-        {
-            runner: "elf",
-            from: "realm",
-            to: [
-                "#element_proposer",
-                "#elements",
-            ],
-        },
         {
             protocol: "/svc/fuchsia.session.examples.ElementPing",
             from: "self",

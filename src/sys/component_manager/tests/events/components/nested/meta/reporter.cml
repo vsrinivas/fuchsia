@@ -34,16 +34,4 @@
             from: "framework",
         },
     ],
-    offer: [
-        // Offer the ELF runner to children.
-        {
-            runner: "elf",
-            from: "realm",
-            to: [
-                "#child_a",
-                "#child_b",
-                "#child_c",
-            ],
-        },
-    ],
 }

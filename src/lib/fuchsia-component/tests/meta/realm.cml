@@ -22,11 +22,4 @@
             from: "framework",
         },
     ],
-    offer: [
-        {
-            runner: "elf",
-            from: "realm",
-            to: [ "#coll" ],
-        },
-    ],
 }

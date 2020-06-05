@@ -16,15 +16,6 @@
 
     // Route Echo service from server to client.
     offer: [
-        // Offer the ELF runner to children.
-        {
-            runner: "elf",
-            from: "realm",
-            to: [
-                "#echo_looper",
-                "#echo_server",
-            ],
-        },
         {
             protocol: "/svc/fidl.examples.routing.echo.Echo",
             from: "#echo_server",

@@ -10,9 +10,8 @@ use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, DependencyType, Durability,
     Entry, EnvironmentDecl, EnvironmentExtends, ExposeDecl, ExposeDirectoryDecl,
     ExposeProtocolDecl, ExposeServiceDecl, FrameworkRef, Object, OfferDecl, OfferEventDecl,
-    OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl, RealmRef, Ref, RunnerDecl, SelfRef,
-    StartupMode, UseDecl, UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseRunnerDecl,
-    UseServiceDecl, Value,
+    OfferProtocolDecl, OfferServiceDecl, RealmRef, Ref, RunnerDecl, SelfRef, StartupMode, UseDecl,
+    UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl, Value,
 };
 use std::fs::File;
 use std::io::Read;
@@ -138,18 +137,6 @@ fn main() {
                 target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
                 target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
                 dependency_type: Some(DependencyType::Strong),
-            }),
-            OfferDecl::Runner(OfferRunnerDecl {
-                source: Some(Ref::Realm(RealmRef {})),
-                source_name: Some("elf".to_string()),
-                target: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
-                target_name: Some("elf".to_string()),
-            }),
-            OfferDecl::Runner(OfferRunnerDecl {
-                source: Some(Ref::Realm(RealmRef {})),
-                source_name: Some("elf".to_string()),
-                target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
-                target_name: Some("elf".to_string()),
             }),
             OfferDecl::Event(OfferEventDecl {
                 source: Some(Ref::Realm(RealmRef {})),

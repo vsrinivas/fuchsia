@@ -25,16 +25,6 @@
 
     // Route Echo service from server to client.
     offer: [
-        // Offer the ELF runner to children.
-        {
-            runner: "elf",
-            from: "realm",
-            to: [
-                "#echo_client",
-                "#echo_server",
-                "#echo_server_bad",
-            ],
-        },
         {
             protocol: "/svc/fuchsia.logger.LogSink",
             from: "realm",

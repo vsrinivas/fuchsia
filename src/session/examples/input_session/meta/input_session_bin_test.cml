@@ -46,11 +46,6 @@
             to: [ "#session" ],
             rights: [ "r*" ],
         },
-        {
-            runner: "elf",
-            from: "realm",
-            to: [ "#session" ],
-        },
     ],
     expose: [
         {
