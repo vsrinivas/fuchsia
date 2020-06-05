@@ -70,4 +70,33 @@ TEST_fx-error() {
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "${result}" "some error"
 }
 
+TEST_fx-path() {
+  local cases=(
+    a1:b:c a1:b:c
+    a2::b:c a2:b:c
+    :a3:b:c a3:b:c
+    a4:b:c: a4:b:c
+    .:a5:b:c a5:b:c
+    a6:.:b:c a6:b:c
+    a7:b:c:. a7:b:c
+    "a a8:b:c" "a a8:b:c"
+  )
+
+  # XXX: case not covered:
+  # Portable sed is a little tricky to cover this case, and it's
+  # relatively uncommon, so not covered at this time.
+  # :.::a9::b:.:.:c a9:b:c
+
+  set -- "${cases[@]}"
+
+  while (($#)); do
+    local input="$1" expect="${PREBUILT_PYTHON3_DIR}/bin:$2"
+    shift
+    shift
+
+    PATH="${input}"
+    BT_EXPECT_EQ "$(fx-path)" "${expect}"
+  done
+}
+
 BT_RUN_TESTS "$@"

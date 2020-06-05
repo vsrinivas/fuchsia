@@ -42,8 +42,24 @@ function fx-error {
   fi
 }
 
+function fx-path {
+  # Remove working directory elements from $PATH.
+  # We build tools in the build, such as touch(1), targeting Fuchsia. Those
+  # tools end up in the root of the build directory, which is also $PWD for
+  # tool invocations. As we don't have hermetic locations for all of these
+  # tools, when a user has an empty/pwd path component in their $PATH,
+  # the Fuchsia target tool will be invoked, and will fail.
+  local cleanpath=$(echo "${PATH}" | /usr/bin/sed '
+    s/:\.:/:/g; s/::/:/g;
+    s/^\.://g; s/^://g;
+    s/:\.$//g; s/:$//g;
+  ')
+  # Add the python3 prebuilt path
+  echo "${PREBUILT_PYTHON3_DIR}/bin:${cleanpath}"
+}
+
 function fx-gn {
-  PATH="${PREBUILT_PYTHON3_DIR}/bin:${PATH}" "${PREBUILT_GN}" "$@"
+  PATH="$(fx-path)" "${PREBUILT_GN}" "$@"
 }
 
 function fx-gen {
@@ -515,32 +531,6 @@ function fx-run-ninja {
     args=("-j" "${concurrency}" "${args[@]}")
   fi
 
-  # Check for a bad element in $PATH.
-  # We build tools in the build, such as touch(1), targeting Fuchsia. Those
-  # tools end up in the root of the build directory, which is also $PWD for
-  # tool invocations. As we don't have hermetic locations for all of these
-  # tools, when a user has an empty/pwd path component in their $PATH,
-  # the Fuchsia target tool will be invoked, and will fail.
-  # Implementation detail: Normally you would split path with IFS or a similar
-  # strategy, but catching the case where the first or last components are
-  # empty can be tricky in that case, so the pattern match strategy here covers
-  # the cases more easily. We check for three cases: empty prefix, empty suffix
-  # and empty inner.
-  case "${PATH}" in
-  :*|*:|*::*)
-    fx-error "Your \$PATH contains an empty element that will result in build failure."
-    fx-error "Remove the empty element from \$PATH and try again."
-    echo "${PATH}" | grep --color -E '^:|::|:$' >&2
-    exit 1
-  ;;
-  .:*|*:.|*:.:*)
-    fx-error "Your \$PATH contains the working directory ('.') that will result in build failure."
-    fx-error "Remove the '.' element from \$PATH and try again."
-    echo "${PATH}" | grep --color -E '^.:|:.:|:.$' >&2
-    exit 1
-  ;;
-  esac
-
 
   # TERM is passed for the pretty ninja UI
   # PATH is passed as some tools are referenced via $PATH due to platform differences.
@@ -553,8 +543,7 @@ function fx-run-ninja {
   # when TMPDIR="" - it is deliberately unquoted and using the ${+} expansion
   # expression). GOMA_DISABLED will forcefully disable Goma even if it's set to
   # empty.
-  local newpath="${PREBUILT_PYTHON3_DIR}/bin:${PATH}"
-  full_cmdline=(env -i "TERM=${TERM}" "PATH=${newpath}" \
+  full_cmdline=(env -i "TERM=${TERM}" "PATH=$(fx-path)" \
     ${NINJA_STATUS+"NINJA_STATUS=${NINJA_STATUS}"} \
     ${GOMA_DISABLED+"GOMA_DISABLED=$GOMA_DISABLED"} \
     ${TMPDIR+"TMPDIR=$TMPDIR"} \
