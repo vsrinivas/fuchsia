@@ -98,6 +98,7 @@ class MockAnnotationRegistry : public fuchsia::ui::annotation::Registry {
 class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
  public:
   MockSession() : binding_(this) {}
+  ~MockSession() override = default;
 
   void NotImplemented_(const std::string& name) override {}
 
@@ -302,6 +303,7 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
 class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
  public:
   explicit FakeScenic(MockSession* mock_session) : mock_session_(mock_session) {}
+  ~FakeScenic() override = default;
 
   void NotImplemented_(const std::string& name) override {}
 
@@ -330,6 +332,7 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
 class AnnotationViewTest : public gtest::TestLoopFixture {
  public:
   AnnotationViewTest() = default;
+  ~AnnotationViewTest() override = default;
 
   void SetUp() override {
     gtest::TestLoopFixture::SetUp();
