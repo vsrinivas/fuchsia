@@ -217,7 +217,6 @@ template("intl_strings") {
   # all generated targets as its deps, so that all the deps are executed when
   # the template is expanded.
   group_deps += [
-    ":${library}",
     ":${strings_to_fidl_name}($fidl_toolchain)",
   ]
   group(target_name) {
