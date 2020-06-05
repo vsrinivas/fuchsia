@@ -34,6 +34,8 @@ pub fn tuf_error_as_update_tuf_client_event_code(
         TufError::VerificationFailure(_) => {
             metrics::UpdateTufClientMetricDimensionResult::VerificationFailure
         }
+        TufError::Http(_) => metrics::CreateTufClientMetricDimensionResult::Http,
+        TufError::Hyper(_) => metrics::CreateTufClientMetricDimensionResult::Hyper,
         _ => metrics::CreateTufClientMetricDimensionResult::UnexpectedTufErrorVariant,
     }
 }
@@ -68,6 +70,8 @@ pub fn tuf_error_as_create_tuf_client_event_code(
         TufError::VerificationFailure(_) => {
             metrics::CreateTufClientMetricDimensionResult::VerificationFailure
         }
+        TufError::Http(_) => metrics::CreateTufClientMetricDimensionResult::Http,
+        TufError::Hyper(_) => metrics::CreateTufClientMetricDimensionResult::Hyper,
         _ => metrics::CreateTufClientMetricDimensionResult::UnexpectedTufErrorVariant,
     }
 }
