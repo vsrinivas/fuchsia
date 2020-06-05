@@ -109,15 +109,17 @@ zx_status_t BlockDeviceCallback(int dirfd, int event, const char* name, void* co
   if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;
   }
-  fbl::unique_fd device_fd(openat(dirfd, name, O_RDWR));
-  if (!device_fd) {
-    return ZX_OK;
-  }
 
   // Lock the block watcher, so any pause operations wait until after we're done.
   auto watcher = BlockWatcherStatus::Get();
   watcher->Lock();
   if (watcher->Paused()) {
+    watcher->Unlock();
+    return ZX_OK;
+  }
+
+  fbl::unique_fd device_fd(openat(dirfd, name, O_RDWR));
+  if (!device_fd) {
     watcher->Unlock();
     return ZX_OK;
   }
