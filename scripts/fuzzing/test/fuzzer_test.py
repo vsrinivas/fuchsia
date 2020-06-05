@@ -14,6 +14,7 @@ from lib.fuzzer import Fuzzer
 
 from device_fake import FakeDevice
 from host_fake import FakeHost
+from fuzzer_fake import FakeFuzzer
 
 
 class TestFuzzer(unittest.TestCase):
@@ -88,7 +89,8 @@ class TestFuzzer(unittest.TestCase):
             parser = ArgParser('start_helper')
             args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse(
                 ['package1/target2'] + args)
-            fuzzer = Fuzzer.from_args(device, args)
+            args.output = base_dir
+            fuzzer = FakeFuzzer.from_args(device, args)
             fuzzer.add_libfuzzer_opts(libfuzzer_opts)
             fuzzer.add_libfuzzer_args(libfuzzer_args)
             fuzzer.add_subprocess_args(subprocess_args)
@@ -173,22 +175,19 @@ class TestFuzzer(unittest.TestCase):
     # Helper to test Fuzzer.symbolize with different logs.
     def symbolize_helper(self, log_in, log_out):
         device = FakeDevice()
-        base_dir = tempfile.mkdtemp()
-        try:
-            fuzzer = Fuzzer(
-                device, u'fake-package1', u'fake-target2', output=base_dir)
-            os.mkdir(fuzzer.results())
-            with tempfile.TemporaryFile() as tmp_out:
-                with tempfile.TemporaryFile() as tmp_in:
-                    tmp_in.write(log_in)
-                    tmp_in.flush()
-                    tmp_in.seek(0)
-                    fuzzer.symbolize_log(tmp_in, tmp_out)
-                tmp_out.flush()
-                tmp_out.seek(0)
-                self.assertEqual(tmp_out.read(), log_out)
-        finally:
-            shutil.rmtree(base_dir)
+        host = device.host
+        cmd = ' '.join(host._symbolizer_cmd())
+        host.responses[cmd] = [
+            "[000001.234567][123][456][klog] INFO: Symbolized line 1",
+            "[000001.234568][123][456][klog] INFO: Symbolized line 2",
+            "[000001.234569][123][456][klog] INFO: Symbolized line 3",
+        ]
+        fuzzer = FakeFuzzer(device, u'fake-package1', u'fake-target2')
+        device.host.mkdir(os.path.join(fuzzer._output, 'latest'))
+        fuzzer.unsymbolized.write(log_in)
+        if fuzzer.symbolize_log():
+            self.assertIn(cmd, host.history)
+        self.assertEqual(fuzzer.symbolized.read(), log_out)
 
     def test_symbolize_log_no_mutation_sequence(self):
         self.symbolize_helper(

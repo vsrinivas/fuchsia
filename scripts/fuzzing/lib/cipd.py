@@ -31,7 +31,7 @@ class Cipd(object):
         fuzzer = corpus.fuzzer
         host = fuzzer.device.host
         self.corpus = corpus
-        self._bin = host.join('.jiri_root', 'bin', 'cipd')
+        self._bin = host.fxpath('.jiri_root', 'bin', 'cipd')
         self._pkg = 'fuchsia/test_data/fuzzing/' + str(fuzzer)
         self._rev = host.snapshot()
 

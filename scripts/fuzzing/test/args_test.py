@@ -17,7 +17,6 @@ class TestArgParser(unittest.TestCase):
             self,
             args,
             debug=False,
-            device=None,
             foreground=False,
             label=None,
             monitor=False,
@@ -26,7 +25,6 @@ class TestArgParser(unittest.TestCase):
             output=None,
             staging=None):
         self.assertEqual(args.debug, debug)
-        self.assertEqual(args.device, device)
         self.assertEqual(args.foreground, foreground)
         if hasattr(args, 'label'):
             self.assertEqual(args.label, label)
@@ -78,9 +76,6 @@ class TestArgParser(unittest.TestCase):
         args = parser.parse_args(['--debug', 'name'])
         self.assertArgsEqual(args, debug=True, name='name')
 
-        args = parser.parse_args(['--device', 'device', 'name'])
-        self.assertArgsEqual(args, device='device', name='name')
-
         args = parser.parse_args(['--foreground', 'name'])
         self.assertArgsEqual(args, foreground=True, name='name')
 
@@ -99,9 +94,6 @@ class TestArgParser(unittest.TestCase):
     def test_parse_args_missing_value(self):
         parser = ArgParser('test_parse_args_missing_value')
         parser.require_name(False)
-
-        with self.assertRaises(SystemExit):
-            parser.parse_args(['--device'])
 
         with self.assertRaises(SystemExit):
             parser.parse_args(['--output'])
@@ -130,8 +122,6 @@ class TestArgParser(unittest.TestCase):
         args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse(
             [
                 '--debug',
-                '--device',
-                'device',
                 '--foreground',
                 '--monitor',
                 '--no-cipd',
@@ -145,7 +135,6 @@ class TestArgParser(unittest.TestCase):
         self.assertArgsEqual(
             args,
             debug=True,
-            device='device',
             foreground=True,
             monitor=True,
             no_cipd=True,
@@ -163,8 +152,6 @@ class TestArgParser(unittest.TestCase):
             [
                 '--debug',
                 '-foo=twas',
-                '--device',
-                'device',
                 '-bar=bryllyg',
                 'name',
                 '-device="and the"',
@@ -174,7 +161,7 @@ class TestArgParser(unittest.TestCase):
                 'toves',
                 '--debug',
             ])
-        self.assertArgsEqual(args, debug=True, device='device', name='name')
+        self.assertArgsEqual(args, debug=True, name='name')
         self.assertEqual(
             libfuzzer_opts, {
                 'foo': 'twas',

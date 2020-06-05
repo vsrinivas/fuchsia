@@ -35,8 +35,8 @@ class TestCorpus(unittest.TestCase):
             shutil.rmtree(tmp_dir)
 
     def test_push(self):
-        fake = FakeDevice()
-        fuzzer = Fuzzer(fake, u'fake-package1', u'fake-target3')
+        device = FakeDevice()
+        fuzzer = Fuzzer(device, u'fake-package1', u'fake-target3')
         parser = ArgParser('description')
 
         args = parser.parse_args(['1/3'])
@@ -45,14 +45,14 @@ class TestCorpus(unittest.TestCase):
             corpus.push()
             self.assertIn(
                 ' '.join(
-                    fake.get_ssh_cmd(
+                    device.get_ssh_cmd(
                         ['scp', f.name,
                          '[::1]:' + fuzzer.data_path('corpus')])),
-                fake.host.history)
+                device.host.history)
 
     def test_pull(self):
-        fake = FakeDevice()
-        fuzzer = Fuzzer(fake, u'fake-package1', u'fake-target3')
+        device = FakeDevice()
+        fuzzer = Fuzzer(device, u'fake-package1', u'fake-target3')
         parser = ArgParser('description')
 
         args = parser.parse_args(['1/3'])
@@ -60,11 +60,11 @@ class TestCorpus(unittest.TestCase):
         corpus.pull()
         self.assertIn(
             ' '.join(
-                fake.get_ssh_cmd(
+                device.get_ssh_cmd(
                     [
                         'scp', '[::1]:' + fuzzer.data_path('corpus/*'),
                         corpus.root
-                    ])), fake.host.history)
+                    ])), device.host.history)
 
 
 if __name__ == '__main__':

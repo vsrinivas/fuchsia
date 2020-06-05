@@ -10,8 +10,6 @@
 ## Usage: fx fuzz [options] [command] [command-arguments]
 ##
 ## Options:
-##   -d, --device   <name>   Connect to device using Fuchsia link-local name.
-##                           Must be specified if multiple devices are present.
 ##   -f, --foreground        Run in the foreground (default is background).
 ##   -g, --debug             Disable libFuzzer exception handling.
 ##   -n, --no-cipd           Skip steps involving CIPD.

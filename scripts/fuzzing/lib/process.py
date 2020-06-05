@@ -12,7 +12,7 @@ class Process(object):
        This class is intentionally similar to subprocess, except that it allows
        various fields to be set before executing the process. Additionally, it
        allows tests to overload process creation and execution in one place;
-       see MockProcess.
+       see FakeProcess.
     """
 
     def __init__(self, args, **kwargs):

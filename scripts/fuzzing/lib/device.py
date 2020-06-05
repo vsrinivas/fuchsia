@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
+import errno
 import glob
 import os
 import re
@@ -26,30 +27,20 @@ class Device(object):
   """
 
     @classmethod
-    def from_args(cls, host, args):
-        """Constructs a Device from command line arguments."""
-        device_finder_cmd = ['device-finder', 'list']
-        default_device = '{}.device'.format(host.build_dir)
-        if args.device or os.path.exists(default_device):
-            device_finder_cmd = ['device-finder', 'resolve']
-            if args.device:
-                device_finder_cmd.append(args.device)
-            else:
-                with open(default_device) as f:
-                    device_finder_cmd.append(f.read().strip())
+    def from_host(cls, host):
+        """Constructs a Device from a Host object."""
+        addr = None
         try:
-            netaddr = host.fx_command(device_finder_cmd)
-            if len(netaddr.split('\n')) > 1:
-                raise RuntimeError(
-                    'Multiple devices found; set a device with `fx set-device`.'
-                )
-        except subprocess.CalledProcessError:
-            raise RuntimeError('Unable to find device; try `fx set-device`.')
-        device = cls(host, netaddr)
-        if not host.build_dir:
-            raise Host.ConfigError('Unable to find SSH configuration.')
+            with open('{}.device'.format(host.build_dir)) as opened:
+                addr = host.find_device(device_file=opened)
+        except IOError as e:
+            if e.errno != errno.ENOENT:
+                raise
+        if not addr:
+            addr = host.find_device()
+        device = cls(host, addr)
         device.set_ssh_config(
-            Host.join(host.build_dir, 'ssh-keys', 'ssh_config'))
+            host.fxpath(host.build_dir, 'ssh-keys', 'ssh_config'))
         return device
 
     def __init__(self, host, addr, port=22):
@@ -61,13 +52,13 @@ class Device(object):
 
     def set_ssh_config(self, config_file):
         """Sets the SSH arguments to use a config file."""
-        if not os.path.exists(config_file):
-            raise Host.ConfigError('Unable to find SSH configuration.')
+        if not self.host.isfile(config_file):
+            raise RuntimeError('Unable to find SSH configuration.')
         self._ssh_opts['F'] = [config_file]
 
     def set_ssh_identity(self, identity_file):
-        if not os.path.exists(identity_file):
-            raise Host.ConfigError('Unable to find SSH identity.')
+        if not self.host.isfile(identity_file):
+            raise RuntimeError('Unable to find SSH identity.')
         self._ssh_opts['i'] = [identity_file]
 
     def set_ssh_option(self, option):
@@ -221,7 +212,7 @@ class Device(object):
 
     def fetch(self, data_src, host_dst, retries=0):
         """Copies `data_src` on the target to `host_dst` on the host."""
-        if not os.path.isdir(host_dst):
+        if not self.host.isdir(host_dst):
             raise ValueError(host_dst + ' is not a directory')
         while retries != 0:
             try:

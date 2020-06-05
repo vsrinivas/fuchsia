@@ -16,7 +16,8 @@ from host_fake import FakeHost
 class FakeDevice(Device):
 
     def __init__(self, port=22):
-        super(FakeDevice, self).__init__(FakeHost(), '::1', port)
+        host = FakeHost()
+        super(FakeDevice, self).__init__(host, '::1', port)
         self.toggle = False
         self.delay = 0
 

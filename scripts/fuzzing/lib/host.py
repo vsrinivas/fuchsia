@@ -4,9 +4,11 @@
 # found in the LICENSE file.
 
 import errno
+import glob
 import json
 import os
 import re
+import shutil
 import subprocess
 
 from process import Process
@@ -26,136 +28,203 @@ class Host(object):
     # Convenience file descriptor for silencing subprocess output
     DEVNULL = open(os.devnull, 'w')
 
-    class ConfigError(RuntimeError):
-        """Indicates the host is not configured for building Fuchsia."""
-        pass
-
     @classmethod
     def from_build(cls):
         """Uses a local build directory to configure a Host object from it."""
-        host = Host()
-        host.set_build_dir(host.find_build_dir())
+        fuchsia_dir = os.getenv('FUCHSIA_DIR')
+        if not _fuchsia_dir:
+            raise RuntimeError('FUCHSIA_DIR not set: have you `fx set`?')
+        host = cls(fuchsia_dir)
+        try:
+            with open(host.fxpath('.fx-build-dir')) as opened:
+                build_dir = opened.read().strip()
+            with open(host.fxpath(build_dir, 'fuzzers.json')) as opened:
+                host.configure(build_dir, opened)
+        except IOError as e:
+            if e.errno == errno.ENOENT:
+                raise RuntimeError(
+                    'Initialization failure; have you run ' +
+                    '`fx set ... --fuzz-with <sanitizer>`?')
+            else:
+                raise
         return host
 
-    @classmethod
-    def join(cls, *segments):
-        """Creates a source tree path."""
-        fuchsia = os.getenv('FUCHSIA_DIR')
-        if not fuchsia:
-            raise Host.ConfigError(
-                'Unable to find FUCHSIA_DIR; have you `fx set`?')
-        return os.path.join(fuchsia, *segments)
-
-    def __init__(self):
-        self._ids = []
-        self._llvm_symbolizer = None
+    def __init__(self, fuchsia_dir):
         self._platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
+        self._fuchsia_dir = fuchsia_dir
+        self._build_dir = None
         self._symbolizer_exec = None
-        self._zxtools = None
-        self.fuzzers = []
-        self.build_dir = None
+        self._llvm_symbolizer = None
+        self._build_id_dirs = None
+        self._fuzzers = []
 
-    @classmethod
-    def find_build_dir(self):
-        """Examines the source tree to locate a build directory."""
-        build_dir = Host.join('.fx-build-dir')
-        if not os.path.exists(build_dir):
-            raise Host.ConfigError(
-                'Unable to find .fx-build-dir; have you `fx set`?')
-        with open(build_dir, 'r') as f:
-            return Host.join(f.read().strip())
+    @property
+    def fuchsia_dir(self):
+        if not self._fuchsia_dir:
+            raise RuntimeError('Fuchsia source tree location not set.')
+        return self._fuchsia_dir
 
-    def get_host_out_dir(self):
-        return Host.join(Host.find_build_dir(), 'host_x64')
+    @fuchsia_dir.setter
+    def fuchsia_dir(self, fuchsia_dir):
+        if not self.isdir(fuchsia_dir):
+            raise ValueError('Invalid FUCHSIA_DIR: {}'.format(fuchsia_dir))
+        self._fuchsia_dir = fuchsia_dir
 
-    def add_build_ids(self, build_ids):
-        """Sets the build IDs used to symbolize logs."""
-        if os.path.exists(build_ids):
-            self._ids.append(build_ids)
+    @property
+    def build_dir(self):
+        if not self._build_dir:
+            raise RuntimeError('Build directory not set')
+        return self._build_dir
 
-    def set_zxtools(self, zxtools):
-        """Sets the location of the Zircon host tools directory."""
-        if not os.path.isdir(zxtools):
-            raise Host.ConfigError('Unable to find Zircon host tools.')
-        self._zxtools = zxtools
+    @property
+    def build_id_dirs(self):
+        if not self._build_id_dirs:
+            raise RuntimeError('Build ID directories not set.')
+        return self._build_id_dirs
 
-    def set_symbolizer(self, executable, symbolizer):
-        """Sets the paths to both the wrapper and LLVM symbolizers."""
-        if not os.path.exists(executable) or not os.access(executable, os.X_OK):
-            raise Host.ConfigError('Invalid symbolize binary: ' + executable)
-        if not os.path.exists(symbolizer) or not os.access(symbolizer, os.X_OK):
-            raise Host.ConfigError('Invalid LLVM symbolizer: ' + symbolizer)
-        self._symbolizer_exec = executable
-        self._llvm_symbolizer = symbolizer
+    @build_id_dirs.setter
+    def build_id_dirs(self, build_id_dirs):
+        for build_id_dir in build_id_dirs:
+            if not self.isdir(build_id_dir):
+                raise ValueError(
+                    'Invalid build ID directory: {}'.format(build_id_dir))
+        self._build_id_dirs = build_id_dirs
 
-    def set_fuzzers_json(self, json_file):
-        """Sets the path to the build file with fuzzer metadata."""
-        if not os.path.exists(json_file):
-            raise Host.ConfigError('Unable to find list of fuzzers.')
-        self.fuzzers = []
-        with open(json_file) as f:
-            fuzz_specs = json.load(f)
+    @property
+    def symbolizer_exec(self):
+        if not self._symbolizer_exec:
+            raise RuntimeError('Symbolizer executable not set.')
+        return self._symbolizer_exec
+
+    @symbolizer_exec.setter
+    def symbolizer_exec(self, symbolizer_exec):
+        if not self.isfile(symbolizer_exec):
+            raise ValueError(
+                'Invalid symbolizer executable: {}'.format(symbolizer_exec))
+        self._symbolizer_exec = symbolizer_exec
+
+    @property
+    def llvm_symbolizer(self):
+        if not self._llvm_symbolizer:
+            raise RuntimeError('LLVM symbolizer not set.')
+        return self._llvm_symbolizer
+
+    @llvm_symbolizer.setter
+    def llvm_symbolizer(self, llvm_symbolizer):
+        if not self.isfile(llvm_symbolizer):
+            raise ValueError(
+                'Invalid LLVM symbolizer: {}'.format(llvm_symbolizer))
+        self._llvm_symbolizer = llvm_symbolizer
+
+    @property
+    def fuzzers(self):
+        return self._fuzzers
+
+    # Initialization routines
+
+    def configure(self, build_dir, opened_fuzzers_json=None):
+        """Sets multiple properties based on the given build directory."""
+        self._build_dir = self.fxpath(build_dir)
+        clang_dir = os.path.join(
+            'prebuilt', 'third_party', 'clang', self._platform)
+        self.symbolizer_exec = self.fxpath(build_dir, 'host_x64', 'symbolize')
+        self.llvm_symbolizer = self.fxpath(clang_dir, 'bin', 'llvm-symbolizer')
+        self.build_id_dirs = [
+            self.fxpath(clang_dir, 'lib', 'debug', '.build-id'),
+            self.fxpath(build_dir, '.build-id'),
+            self.fxpath(build_dir + '.zircon', '.build-id'),
+        ]
+        if opened_fuzzers_json:
+            self.read_fuzzers(opened_fuzzers_json)
+
+    def read_fuzzers(self, open_file_obj):
+        """Parses the available fuzzers from an open file object."""
+        fuzz_specs = json.load(open_file_obj)
         for fuzz_spec in fuzz_specs:
             package = fuzz_spec['fuzzers_package']
             for executable in fuzz_spec['fuzzers']:
                 self.fuzzers.append((package, executable))
         self.fuzzers.sort()
 
-    def set_build_dir(self, build_dir):
-        """Configure the host using data from a build directory."""
-        self.set_zxtools(Host.join(build_dir + '.zircon', 'tools'))
-        clang_dir = os.path.join(
-            'prebuilt', 'third_party', 'clang', self._platform)
-        self.set_symbolizer(
-            Host.join(self.get_host_out_dir(), 'symbolize'),
-            Host.join(clang_dir, 'bin', 'llvm-symbolizer'))
-        self.add_build_ids(Host.join('prebuilt_build_ids'))
-        self.add_build_ids(Host.join(clang_dir, 'lib', 'debug', '.build-id'))
-        self.add_build_ids(Host.join(build_dir, '.build-id'))
-        self.add_build_ids(Host.join(build_dir + '.zircon', '.build-id'))
-        json_file = Host.join(build_dir, 'fuzzers.json')
-        # fuzzers.json isn't emitted in release builds
-        if os.path.exists(json_file):
-            self.set_fuzzers_json(json_file)
-        self.build_dir = build_dir
+    # Filesystem routines.
+    # These can be overriden during testing to remove dependencies on real files
+    # and directories.
+
+    def isdir(self, pathname):
+        return os.path.isdir(pathname)
+
+    def isfile(self, pathname):
+        return os.path.isfile(pathname)
+
+    def mkdir(self, pathname):
+        try:
+            os.makedirs(pathname)
+        except OSError:
+            if e.errno != errno.EEXIST:
+                raise
+
+    def rmdir(self, pathname):
+        shutil.rmtree(pathname)
+
+    def link(self, pathname, linkname):
+        try:
+            os.unlink(linkname)
+        except OSError as e:
+            if e.errno != errno.ENOENT:
+                raise
+        os.symlink(pathname, linkname)
+
+    def glob(self, pattern):
+        return glob.glob(pattern)
+
+    # Subprocess routines.
+    # These can be overriden during testing to remove dependencies on real files
+    # and directories.
 
     def create_process(self, args, **kwargs):
         return Process(args, **kwargs)
-
-    def fx_command(self, cmd, logfile=None):
-        """Executes an `fx` command."""
-        fx_bin = Host.join('.jiri_root', 'bin', 'fx')
-        p = self.create_process([fx_bin] + cmd)
-        if logfile:
-            p.stdout = logfile
-            p.stderr = subprocess.STDOUT
-            p.popen()
-        else:
-            p.stderr = Host.DEVNULL
-            return p.check_output().strip()
-
-    def zircon_tool(self, cmd, logfile=None):
-        """Executes a tool found in the ZIRCON_BUILD_DIR."""
-        if not self._zxtools:
-            raise Host.ConfigError('Zircon host tools unavailable.')
-        if not os.path.isabs(cmd[0]):
-            cmd[0] = os.path.join(self._zxtools, cmd[0])
-        if not os.path.exists(cmd[0]):
-            raise Host.ConfigError('Unable to find Zircon host tool: ' + cmd[0])
-        p = self.create_process(cmd)
-        if logfile:
-            p.stdout = logfile
-            p.stderr = subprocess.STDOUT
-            p.popen()
-        else:
-            p.stderr = Host.DEVNULL
-            return p.check_output().strip()
 
     def killall(self, process):
         """ Invokes killall on the process name."""
         p = self.create_process(
             ['killall', process], stdout=Host.DEVNULL, stderr=Host.DEVNULL)
         p.call()
+
+    # Other routines
+
+    def fxpath(self, *segments):
+        joined = os.path.join(*segments)
+        if not joined.startswith(self.fuchsia_dir):
+            joined = os.path.join(self.fuchsia_dir, joined)
+        return joined
+
+    def _find_device_cmd(self, device_name=None):
+        cmd = [self.fxpath('.jiri_root', 'bin', 'fx'), 'device-finder']
+        if device_name:
+            cmd += ['resolve', '-device-limit', '1', device_name]
+        else:
+            cmd += ['list']
+        return cmd
+
+    def find_device(self, device_name=None, device_file=None):
+        """Returns the IPv6 address for a device."""
+        assert (not device_name or not device_file)
+        if not device_name and device_file:
+            device_name = device_file.read().strip()
+        cmd = self._find_device_cmd(device_name)
+        addrs = self.create_process(cmd).check_output().strip()
+        if not addrs:
+            raise RuntimeError('Unable to find device; try `fx set-device`.')
+        addrs = addrs.split('\n')
+        if len(addrs) != 1:
+            raise RuntimeError('Multiple devices found; try `fx set-device`.')
+        return addrs[0]
+
+    def _symbolizer_cmd(self):
+        cmd = [self.symbolizer_exec, '-llvm-symbolizer', self.llvm_symbolizer]
+        for build_id_dir in self.build_id_dirs:
+            cmd += ['-build-id-dir', build_id_dir]
+        return cmd
 
     def symbolize(self, raw):
         """Symbolizes backtraces in a log file using the current build.
@@ -166,20 +235,7 @@ class Host(object):
         Returns:
             Bytes representing symbolized lines.
         """
-        if not self._symbolizer_exec:
-            raise Host.ConfigError('Symbolizer executable not set.')
-        if len(self._ids) == 0:
-            raise Host.ConfigError('Build IDs not set.')
-        if not self._llvm_symbolizer:
-            raise Host.ConfigError('LLVM symbolizer not set.')
-
-        # Symbolize
-        args = [
-            self._symbolizer_exec, '-llvm-symbolizer', self._llvm_symbolizer
-        ]
-        for build_id_dir in self._ids:
-            args += ['-build-id-dir', build_id_dir]
-        p = self.create_process(args)
+        p = self.create_process(self._symbolizer_cmd())
         p.stdin = subprocess.PIPE
         p.stdout = subprocess.PIPE
         proc = p.popen()
@@ -188,27 +244,8 @@ class Host(object):
             out = ''
         return re.sub(r'[0-9\[\]\.]*\[klog\] INFO: ', '', out)
 
-    def notify_user(self, title, body):
-        """Displays a message to the user in a platform-specific way"""
-        args = ['which', 'notify-send']
-        p = self.create_process(args, stdout=Host.DEVNULL, stderr=Host.DEVNULL)
-
-        if self._platform == 'mac-x64':
-            args = [
-                'osascript', '-e',
-                'display notification "' + body + '" with title "' + title + '"'
-            ]
-        elif p.call() == 0:
-            args = ['notify-send', title, body]
-        else:
-            args = ['wall', title + '; ' + body]
-        return self.create_process(
-            args, stdout=Host.DEVNULL, stderr=Host.DEVNULL).call()
-
     def snapshot(self):
-        integration = Host.join('integration')
-        if not os.path.isdir(integration):
-            raise Host.ConfigError('Missing integration repo.')
+        integration = self.fxpath('integration')
         p = self.create_process(
             ['git', 'rev-parse', 'HEAD'], stderr=Host.DEVNULL, cwd=integration)
         return p.check_output().strip()

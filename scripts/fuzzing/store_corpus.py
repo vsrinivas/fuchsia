@@ -21,7 +21,7 @@ def main():
     args = parser.parse_args()
 
     host = Host.from_build()
-    device = Device.from_args(host, args)
+    device = Device.from_host(host)
     fuzzer = Fuzzer.from_args(device, args)
 
     if fuzzer.measure_corpus()[0] == 0:

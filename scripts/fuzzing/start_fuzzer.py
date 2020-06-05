@@ -22,7 +22,7 @@ def main():
     args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse()
 
     host = Host.from_build()
-    device = Device.from_args(host, args)
+    device = Device.from_host(host)
     fuzzer = Fuzzer.from_args(device, args)
     fuzzer.add_libfuzzer_opts(libfuzzer_opts)
     fuzzer.add_libfuzzer_args(libfuzzer_args)
@@ -60,7 +60,6 @@ def main():
         body = 'Output written to ' + fuzzer.results() + '.'
         print(title)
         print(body)
-        host.notify_user(title, body)
     return 0
 
 

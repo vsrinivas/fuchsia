@@ -21,7 +21,7 @@ def main():
     args = parser.parse_args()
 
     host = Host.from_build()
-    device = Device.from_args(host, args)
+    device = Device.from_host(host)
     fuzzers = Fuzzer.filter(host.fuzzers, args.name)
 
     pids = device.getpids()

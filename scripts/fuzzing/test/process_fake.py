@@ -20,10 +20,9 @@ class FakeProcess(Process):
         super(FakeProcess, self).__init__(args, **kwargs)
 
     def popen(self):
-        line = ''
+        line = ' '.join(self.args)
         if self.cwd:
-            line += 'CWD=%s ' % self.cwd
-        line += ' '.join(self.args)
+            line = self.host.with_cwd(line, self.cwd)
         self.host.history.append(line)
         return FakePopen(self.host, self.response)
 
@@ -54,7 +53,7 @@ class FakePopen(object):
     def communicate(self, inputs=None):
         if inputs:
             for line in str(inputs).split('\n'):
-                self.host.history.append(' < %s' % line)
+                self.host.history.append(self.host.as_input(line))
         return (self.response, '')
 
     def wait(self, timeout=None):

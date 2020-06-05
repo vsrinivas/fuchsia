@@ -16,7 +16,8 @@ from device_fake import FakeDevice
 class FakeCipd(Cipd):
 
     def __init__(self):
-        fuzzer = Fuzzer(FakeDevice(), u'fake-package1', u'fake-target3')
+        device = FakeDevice()
+        fuzzer = Fuzzer(device, u'fake-package1', u'fake-target3')
         self.versions = []
         super(FakeCipd, self).__init__(Corpus(fuzzer))
 

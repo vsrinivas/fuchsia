@@ -92,7 +92,7 @@ class Fuzzer(object):
 
         if len(matches) > 1:
             print('More than one match found, please pick one from the list:')
-            choices = ["/".join(m) for m in matches]
+            choices = ['/'.join(m) for m in matches]
             fuzzer_name = show_menu(choices).split('/')
         else:
             fuzzer_name = matches[0]
@@ -119,7 +119,7 @@ class Fuzzer(object):
         if output:
             self._output = output
         else:
-            self._output = self.host.join(
+            self._output = self.host.fxpath(
                 'test_data', 'fuzzing', self.package, self.executable)
         self._foreground = foreground
         self._debug = debug
@@ -261,12 +261,9 @@ class Fuzzer(object):
         except OSError as e:
             if e.errno != errno.ENOENT:
                 raise
-        try:
-            os.makedirs(results)
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise
-        os.symlink(results, self.results())
+
+        self.host.mkdir(results)
+        self.host.link(results, self.results())
 
         self.set_default_option(
             'dict', 'pkg/data/{}/dictionary'.format(self.executable))
@@ -281,21 +278,46 @@ class Fuzzer(object):
         proc = cmd.popen()
         if self._options['jobs'] == '0':
             logfile = self.results('fuzz-0.log')
-            with open(logfile, 'w') as fd_out:
-                self.symbolize_log(proc.stderr, fd_out, echo=True)
+            self.symbolize_log(
+                fd_in=proc.stderr, filename_out=logfile, echo=True)
             proc.wait()
 
-    def symbolize_log(self, fd_in, fd_out, echo=False):
+    def symbolize_log(
+            self,
+            fd_in=None,
+            filename_in=None,
+            fd_out=None,
+            filename_out=None,
+            echo=False):
         """Constructs a symbolized fuzzer log from a device.
 
         Merges the provided fuzzer log with the symbolized system log for the
-        fuzzer process.
+        fuzzer process. One each of fd_in/filename_in and fd_out/filename_out is
+        required.
+
+        This method is overridden when testing.
 
         Args:
           fd_in: An object supporting readline(), such as a file or pipe.
+          filename_in: A path to a file to read.
           fd_out: An object supporting write(), such as a file.
+          filename_in: A path to a file to write.
           echo: If true, display text being written to fd_out.
         """
+        try:
+            if filename_in:
+                fd_in = open(filename_in, 'r')
+            if filename_out:
+                fd_out = open(filename_out, 'w')
+            return self._symbolize_log_impl(fd_in, fd_out, echo)
+        finally:
+            if filename_in and fd_in:
+                fd_in.close()
+            if filename_out and fd_out:
+                fd_out.close()
+
+    def _symbolize_log_impl(self, fd_in, fd_out, echo):
+        """Implementation of symbolize_log that takes file-like objects."""
         pid = -1
         sym = None
         artifacts = []
@@ -324,6 +346,7 @@ class Fuzzer(object):
                 print(line.strip())
         for artifact in artifacts:
             self.device.fetch(self.data_path(artifact), self.results())
+        return sym != None
 
     def monitor(self):
         """Waits for a fuzzer to complete and symbolizes its logs.
@@ -340,9 +363,7 @@ class Fuzzer(object):
         artifacts = []
         for log in logs:
             tmp = log + '.tmp'
-            with open(log, 'r') as fd_in:
-                with open(tmp, 'w') as fd_out:
-                    self.symbolize_log(fd_in, fd_out, echo=False)
+            self.symbolize_log(filename_in=log, filename_out=tmp, echo=False)
             os.rename(tmp, log)
 
     def stop(self):

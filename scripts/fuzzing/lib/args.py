@@ -59,10 +59,6 @@ class ArgParser:
 
         # Flags
         self._parser.add_argument(
-            '--device',
-            help='Name of device, only needed when multiple devices are present.'
-        )
-        self._parser.add_argument(
             '--foreground',
             action='store_true',
             help='Displays fuzzer output. Implied for \'repro\' and \'merge\'.')

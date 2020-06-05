@@ -20,23 +20,29 @@ from host_fake import FakeHost
 class TestDevice(unittest.TestCase):
     """ Tests lib.Device. See FakeDevice for additional details."""
 
-    def test_from_args(self):
+    def test_from_host(self):
         host = FakeHost()
-        parser = ArgParser('description')
-        parser.require_name(False)
-        # netaddr should get called with 'just-four-random-words', and fail
+        cmd = ' '.join(host._find_device_cmd())
         with self.assertRaises(RuntimeError):
-            args = parser.parse_args(['--device', 'just-four-random-words'])
-            device = Device.from_args(host, args)
+            device = Device.from_host(host)
+        host.responses[cmd] = ['::1', '::2']
+        with self.assertRaises(RuntimeError):
+            device = Device.from_host(host)
+        host.responses[cmd] = ['::1']
+        with self.assertRaises(RuntimeError):
+            device = Device.from_host(host)
+        host.pathnames.append(
+            host.fxpath(host.build_dir, 'ssh-keys', 'ssh_config'))
+        device = Device.from_host(host)
 
     def test_set_ssh_config(self):
         device = FakeDevice()
-        with self.assertRaises(Host.ConfigError):
+        with self.assertRaises(RuntimeError):
             device.set_ssh_config('no_such_config')
         if not os.getenv('FUCHSIA_DIR'):
             return
-        build_dir = device.host.find_build_dir()
-        ssh_config = Host.join(build_dir, 'ssh-keys', 'ssh_config')
+        ssh_config = device.host.fxpath(
+            device.host.build_dir, 'ssh-keys', 'ssh_config')
         if not os.path.exists(ssh_config):
             return
         device.set_ssh_config(ssh_config)
@@ -46,11 +52,11 @@ class TestDevice(unittest.TestCase):
 
     def test_set_ssh_identity(self):
         device = FakeDevice()
-        with self.assertRaises(Host.ConfigError):
+        with self.assertRaises(RuntimeError):
             device.set_ssh_identity('no_such_identity')
         if not os.getenv('FUCHSIA_DIR'):
             return
-        identity_file = Host.join('.ssh', 'pkey')
+        identity_file = device.host.fxpath('.ssh', 'pkey')
         if not os.path.exists(identity_file):
             return
         device.set_ssh_identity(identity_file)
