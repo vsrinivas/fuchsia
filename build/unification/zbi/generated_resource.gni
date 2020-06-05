@@ -1,0 +1,59 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Looks just like a generated_file() target but $outputs is like resource().
+#
+# A generated_resource() target is like a resource() target whose $sources
+# matches the $outputs of a generated_file() target, but rolled into one.
+# Using $data_deps to this generated_resource() target in each target whose
+# code uses $outputs at runtime ensures that the files will be present on
+# the system.  The files can have fixed contents given directly in the
+# target or be generated from metadata collection, as in generated_file().
+#
+# Parameters
+#
+#   outputs
+#     Required: See resource().
+#
+# See generated_file() for other parameters.
+#
+template("generated_resource") {
+  generated_file(target_name) {
+    forward_variables_from(invoker, "*", [ "metadata" ])
+    assert(outputs != [] && outputs == [ outputs[0] ],
+           "generated_resource() requires a single element in `outputs")
+
+    # Select a place to generate the contents at `gn gen` time.
+    file = "$target_gen_dir/$target_name"
+    if (defined(output_conversion) && output_conversion == "json") {
+      file += ".json"
+    } else {
+      file += ".txt"
+    }
+
+    # Add metadata to add that file to a filesystem image.
+    metadata = {
+      migrated_manifest_barrier = []
+      migrated_manifest_lines = []
+      migrated_zbi_barrier = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      if (defined(data_deps)) {
+        migrated_manifest_barrier += data_deps
+        migrated_zbi_barrier += data_deps
+      }
+
+      migrated_manifest_lines += [ "${outputs[0]}=" + rebase_path(file, root_build_dir) ]
+    }
+
+    # That static file is the actual output of this target.
+    outputs = []
+    outputs = [
+      file,
+    ]
+  }
+}

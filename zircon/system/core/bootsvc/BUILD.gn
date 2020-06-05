@@ -16,7 +16,7 @@ import("//build/unification/zbi/zbi_input.gni")
 
 group("bootsvc") {
   deps = [
-    ":bin-manifest",
+    ":bin-input",
     ":cmdline",
   ]
 }
@@ -87,12 +87,10 @@ source_set("util") {
   ]
 }
 
-# Using a zbi_input here allows us to provide two things:
-# - the addition of a prefix for inclusion in ZBI's, which mirrors the ZN state
-#   of things;
-# - an underlying migrated_manifest used to participate in
-#   //build/unification/images.
-zbi_input("bin-manifest") {
+zbi_input("bin-input") {
+  # Using a prefix to install bootsvc in the same spot on zbi's
+  # as back when it was built by the ZN build.
+  # Note that this may be removed post-unification.
   prefix = "pkg/bootsvc"
   deps = [ ":bin" ]
 }

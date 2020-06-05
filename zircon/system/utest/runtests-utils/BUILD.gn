@@ -13,6 +13,8 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//build/unification/zbi/generated_resource.gni")
+import("//build/unification/zbi/resource.gni")
 
 test("runtests-utils") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -82,57 +84,34 @@ executable("profile-helper") {
   ]
 }
 
-template("resource") {
-  if (defined(invoker.source)) {
-    source = invoker.source
-  } else if (defined(invoker.contents)) {
-    source = "$target_gen_dir/$target_name"
-    write_file(source, invoker.contents)
-  } else {
-    assert(false, "Need to specify 'source' or 'contents'")
-  }
-  source = rebase_path(source)
-  group(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
-    metadata = {
-      migrated_manifest_lines = [ "${invoker.dest}=$source" ]
-      migrated_manifest_barrier = []
-    }
-  }
-}
-
 resource("packaged-publish-data-helper") {
   # TODO(44278): restore to true when properly convert to GN idioms.
   testonly = false
   deps = [ ":publish-data-helper" ]
-  dest = "test/sys/runtests-utils-testdata/publish-data/publish-data-helper"
-  source = "$root_out_dir/publish-data-helper"
+  outputs = [ "test/sys/runtests-utils-testdata/publish-data/publish-data-helper" ]
+  sources = [ "$root_out_dir/publish-data-helper" ]
 }
 
 resource("packaged-profile-helper") {
   # TODO(44278): restore to true when properly convert to GN idioms.
   testonly = false
   deps = [ ":profile-helper" ]
-  dest = "test/sys/runtests-utils-testdata/profile/profile-helper"
-  source = "$root_out_dir/profile-helper"
+  outputs = [ "test/sys/runtests-utils-testdata/profile/profile-helper" ]
+  sources = [ "$root_out_dir/profile-helper" ]
 }
 
 resource("packaged-raw-profile") {
   # TODO(44278): restore to true when properly convert to GN idioms.
   testonly = false
-  dest = "test/sys/runtests-utils-testdata/profile/15822697145192797690.profraw"
-  source = "helper/15822697145192797690.profraw"
+  outputs = [ "test/sys/runtests-utils-testdata/profile/15822697145192797690.profraw" ]
+  sources = [ "helper/15822697145192797690.profraw" ]
 }
 
-resource("test-data") {
+generated_resource("test-data") {
   # TODO(44278): restore to true when properly convert to GN idioms.
   testonly = false
   contents = [ "Hello world!" ]
-  dest = "test/sys/runtests-utils-testdata/test-data"
+  outputs = [ "test/sys/runtests-utils-testdata/test-data" ]
 }
 
 # Generates a build script with a sensible #! depending on what our target is.
@@ -171,17 +150,19 @@ template("runtests_test_script") {
     # TODO(44278): restore to true when properly convert to GN idioms.
     testonly = false
     deps = [ ":${target_name}.txt" ]
-    dest = "test/sys/runtests-utils-testdata/${subdirectory}${target_name}"
-    source = genfile
+    outputs = [ "test/sys/runtests-utils-testdata/${subdirectory}${target_name}" ]
+    sources = [ genfile ]
   }
 }
 
 runtests_test_script("succeed.sh") {
   contents = "exit 0"
 }
+
 runtests_test_script("expect-this-success.sh") {
   contents = "echo Expect this!"
 }
+
 runtests_test_script("expect-this-failure.sh") {
   contents = "echo Expect this! 1>&2\nexit 77"
 }
