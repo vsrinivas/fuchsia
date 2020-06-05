@@ -118,11 +118,11 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      expect(body['method'], 'diagnostics_facade.SnapshotInspect');
-      expect(body['params']['selectors'], ['basemgr.cmx:root']);
+      expect(body['method'], 'component_search_facade.Search');
+      expect(body['params']['name'], 'basemgr.cmx');
       req.response.write(jsonEncode({
         'id': body['id'],
-        'result': [],
+        'result': 'NotFound',
         'error': null,
       }));
       await req.response.close();
@@ -137,17 +137,11 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      expect(body['method'], 'diagnostics_facade.SnapshotInspect');
-      expect(body['params']['selectors'], ['basemgr.cmx:root']);
+      expect(body['method'], 'component_search_facade.Search');
+      expect(body['params']['name'], 'basemgr.cmx');
       req.response.write(jsonEncode({
         'id': body['id'],
-        'result': [
-          {
-            'payload': {
-              'root': {'some_prop': 1}
-            }
-          }
-        ],
+        'result': 'Success',
         'error': null,
       }));
       await req.response.close();
