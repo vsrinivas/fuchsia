@@ -33,7 +33,6 @@
 #include "src/ui/bin/root_presenter/activity_notifier.h"
 #include "src/ui/bin/root_presenter/displays/display_metrics.h"
 #include "src/ui/bin/root_presenter/displays/display_model.h"
-#include "src/ui/bin/root_presenter/perspective_demo_mode.h"
 #include "src/ui/bin/root_presenter/presentation.h"
 
 namespace root_presenter {
@@ -102,9 +101,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
 
   void InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info);
 
-  // Returns true if the event was consumed and the scene is to be invalidated.
-  bool GlobalHooksHandleEvent(const fuchsia::ui::input::InputEvent& event);
-
   void OnEvent(fuchsia::ui::input::InputEvent event);
   void OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event);
 
@@ -161,8 +157,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
 
   fidl::Binding<fuchsia::ui::policy::Presentation> presentation_binding_;
   fidl::Binding<fuchsia::accessibility::MagnificationHandler> a11y_binding_;
-
-  PerspectiveDemoMode perspective_demo_mode_;
 
   struct CursorState {
     bool created;

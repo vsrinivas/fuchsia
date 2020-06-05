@@ -66,8 +66,6 @@ source_set("lib") {
   sources = [
     "app.cc",
     "app.h",
-    "perspective_demo_mode.cc",
-    "perspective_demo_mode.h",
     "presentation.cc",
     "presentation.h",
   ]

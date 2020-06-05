@@ -380,10 +380,6 @@ glm::vec2 Presentation::ApplyInverseClipSpaceTransform(const glm::vec2& coordina
   };
 }
 
-bool Presentation::GlobalHooksHandleEvent(const fuchsia::ui::input::InputEvent& event) {
-  return perspective_demo_mode_.OnEvent(event, this);
-}
-
 void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
   TRACE_DURATION("input", "presentation_on_event");
   trace_flow_id_t trace_id = 0;
@@ -396,11 +392,6 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
 
   bool invalidate = false;
   bool dispatch_event = true;
-
-  if (GlobalHooksHandleEvent(event)) {
-    invalidate = true;
-    dispatch_event = false;
-  }
 
   // Process the event.
   if (dispatch_event) {
@@ -519,9 +510,6 @@ void Presentation::PresentScene() {
   // There is no present pending, so we will kick one off.
   session_present_state_ = kPresentPending;
 
-  bool use_clipping = perspective_demo_mode_.WantsClipping();
-  renderer_.SetDisableClipping(!use_clipping);
-
   // TODO(SCN-631): Individual Presentations shouldn't directly manage cursor
   // state.
   for (auto it = cursors_.begin(); it != cursors_.end(); ++it) {
@@ -547,14 +535,11 @@ void Presentation::PresentScene() {
 
   session_->Present(0, [weak = weak_factory_.GetWeakPtr()](fuchsia::images::PresentationInfo info) {
     if (auto self = weak.get()) {
-      uint64_t next_presentation_time = info.presentation_time + info.presentation_interval;
-
       bool scene_dirty = self->session_present_state_ == kPresentPendingAndSceneDirty;
 
       // Clear the present state.
       self->session_present_state_ = kNoPresentPending;
 
-      scene_dirty |= self->perspective_demo_mode_.UpdateAnimation(self, next_presentation_time);
       if (scene_dirty) {
         self->PresentScene();
       }
