@@ -145,10 +145,19 @@ func TestReaderOpen(t *testing.T) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 
-	for _, f := range []string{"a", "b", "dir/c"} {
+	expectedOffsets := []uint64{4096, 8192, 12288}
+	expectedLengths := []uint64{2, 2, 6}
+
+	for i, f := range []string{"a", "b", "dir/c"} {
 		ra, err := r.Open(f)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if ra.Offset != expectedOffsets[i] {
+			t.Errorf("Expected offset %v, got %v for entry %v", expectedOffsets[i], ra.Offset, f)
+		}
+		if ra.Length != expectedLengths[i] {
+			t.Errorf("Expected length %v, got %v for entry %v", expectedLengths[i], ra.Length, f)
 		}
 		// buffer past the far content padding to check clamping of the readat range
 		want := make([]byte, 10*1024)

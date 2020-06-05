@@ -84,6 +84,16 @@ const DirectoryEntryLen = 4 + 2 + 2 + 8 + 8 + 8
 // portion of a dirnames chunk.
 type PathData []byte
 
+// EntryReader allows reading the contents of an archive entry, file or directory.
+type EntryReader struct {
+	// Offset of this entry from the start of the archive
+	Offset uint64
+	// Length of this entry in the archive
+	Length uint64
+
+	Source io.ReaderAt
+}
+
 // Write writes a list of files to the given io. The inputs map provides a list
 // of target archive paths mapped to on-disk file paths from which the content
 // should be fetched.
@@ -292,12 +302,12 @@ func (r *Reader) List() []string {
 	return names
 }
 
-func (r *Reader) openEntry(de *DirectoryEntry) io.ReaderAt {
-	return &entryReader{de.DataOffset, de.DataLength, r.source}
+func (r *Reader) openEntry(de *DirectoryEntry) *EntryReader {
+	return &EntryReader{de.DataOffset, de.DataLength, r.source}
 }
 
-// Open finds the file in the archive and returns an io.ReaderAt that can read the contents
-func (r *Reader) Open(path string) (io.ReaderAt, error) {
+// Open finds the file in the archive and returns an EntryReader that can read the contents
+func (r *Reader) Open(path string) (*EntryReader, error) {
 	bpath := []byte(path)
 	for i := range r.dirEntries {
 		de := &r.dirEntries[i]
@@ -343,25 +353,18 @@ func IsFAR(r io.Reader) bool {
 	return bytes.Equal(m, []byte(Magic))
 }
 
-// TODO(raggi): implement a VMO clone fdio approach on fuchsia
-type entryReader struct {
-	offset uint64
-	length uint64
-	source io.ReaderAt
-}
-
-func (e *entryReader) ReadAt(buf []byte, offset int64) (int, error) {
-	if offset >= int64(e.length) || offset < 0 {
+func (e *EntryReader) ReadAt(buf []byte, offset int64) (int, error) {
+	if offset >= int64(e.Length) || offset < 0 {
 		return 0, io.EOF
 	}
 
 	// clamp the read request to the top of the range
-	max := int(e.length - uint64(offset))
+	max := int(e.Length - uint64(offset))
 	if max > len(buf) {
 		max = len(buf)
 	}
 
-	return e.source.ReadAt(buf[:max], int64(e.offset+uint64(offset)))
+	return e.Source.ReadAt(buf[:max], int64(e.Offset+uint64(offset)))
 }
 
 // align rounds i up to a multiple of n

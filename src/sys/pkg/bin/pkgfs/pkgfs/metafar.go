@@ -1,7 +1,6 @@
 package pkgfs
 
 import (
-	"io"
 	"path/filepath"
 	"strings"
 	"time"
@@ -222,7 +221,7 @@ type metaFarFile struct {
 
 	*metaFar
 	fr *far.Reader
-	er io.ReaderAt
+	er *far.EntryReader
 
 	off  int64
 	path string
@@ -317,11 +316,11 @@ func (f *metaFarFile) Seek(offset int64, whence int) (int64, error) {
 }
 
 func (f *metaFarFile) Stat() (int64, time.Time, time.Time, error) {
-	return int64(f.fr.GetSize(f.path)), time.Time{}, time.Time{}, nil
+	return int64(f.er.Length), time.Time{}, time.Time{}, nil
 }
 
 func (f *metaFarFile) GetBuffer(flags uint32) (*mem.Buffer, error) {
-	size := f.fr.GetSize(f.path)
+	size := f.er.Length
 	if f.vmo == nil {
 		// TODO(52938): This could be implemented more efficiently by creating a
 		// child VMO of the blob's VMO with the VM_SLICE_CHILD_NO_WRITE option.
