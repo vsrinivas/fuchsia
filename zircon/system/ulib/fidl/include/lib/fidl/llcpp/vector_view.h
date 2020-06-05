@@ -45,7 +45,7 @@ class VectorView {
   static constexpr uint64_t kMaxCount = uint64_t(kOwnershipMask) - 1ULL;
 
  public:
-  using value_type = T;
+  using elem_type = T;
 
   VectorView() {}
 
