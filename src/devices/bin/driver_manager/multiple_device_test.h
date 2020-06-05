@@ -14,6 +14,7 @@
 #include <zxtest/zxtest.h>
 
 #include "coordinator_test_utils.h"
+#include "reboot_watcher_manager_test_utils.h"
 #include "src/devices/lib/log/log.h"
 
 class MockFshostAdminServer final : public llcpp::fuchsia::fshost::Admin::Interface {

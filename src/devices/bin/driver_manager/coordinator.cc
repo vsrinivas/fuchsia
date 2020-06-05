@@ -121,7 +121,9 @@ void suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
 namespace power_fidl = llcpp::fuchsia::hardware::power;
 
 Coordinator::Coordinator(CoordinatorConfig config)
-    : config_(std::move(config)), inspect_manager_(config_.dispatcher) {
+    : config_(std::move(config)),
+      inspect_manager_(config_.dispatcher),
+      reboot_watcher_manager_(config_.dispatcher) {
   if (config_.oom_event) {
     wait_on_oom_event_.set_object(config_.oom_event.get());
     wait_on_oom_event_.set_trigger(ZX_EVENT_SIGNALED);
@@ -1242,75 +1244,87 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
     return;
   }
 
-  if ((ctx.sflags() & DEVICE_SUSPEND_REASON_MASK) != DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
-    log_to_debuglog();
-    LOGF(INFO, "Shutting down filesystems to prepare for system-suspend");
-    ShutdownFilesystems();
-  }
-  LOGF(INFO, "Filesystem shutdown complete, creating a suspend timeout-watchdog");
-
   suspend_context() = std::move(ctx);
-  auto callback_info = fbl::MakeRefCounted<SuspendCallbackInfo>(std::move(callback));
-  auto status = async::PostDelayedTask(
-      dispatcher(),
-      [this, callback_info] {
-        if (!InSuspend()) {
-          return;  // Suspend failed to complete.
-        }
-        auto& ctx = suspend_context();
-        LOGF(ERROR, "Device suspend timed out, suspend flags: %#08x", ctx.sflags());
-        if (ctx.task() != nullptr) {
-          dump_suspend_task_dependencies(ctx.task());
-        }
-        if (suspend_fallback()) {
-          ::suspend_fallback(root_resource(), ctx.sflags());
-          // Unless in test env, we should not reach here.
-          if (callback_info->callback) {
-            callback_info->callback(ZX_ERR_TIMED_OUT);
-            callback_info->callback = nullptr;
-          }
-        }
-      },
-      config_.suspend_timeout);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to create timeout watchdog for suspend: %s\n",
-         zx_status_get_string(status));
-  }
+  auto perform_suspend = [this, callback = std::move(callback)]() mutable {
+    if ((suspend_context().sflags() & DEVICE_SUSPEND_REASON_MASK) !=
+        DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
+      log_to_debuglog();
+      LOGF(INFO, "Shutting down filesystems to prepare for system-suspend");
+      ShutdownFilesystems();
+    }
+    LOGF(INFO, "Filesystem shutdown complete, creating a suspend timeout-watchdog");
 
-  auto completion = [this, callback_info = std::move(callback_info)](zx_status_t status) {
-    auto& ctx = suspend_context();
+    auto callback_info = fbl::MakeRefCounted<SuspendCallbackInfo>(std::move(callback));
+
+    auto status = async::PostDelayedTask(
+        dispatcher(),
+        [this, callback_info] {
+          if (!InSuspend()) {
+            return;  // Suspend failed to complete.
+          }
+          auto& ctx = suspend_context();
+          LOGF(ERROR, "Device suspend timed out, suspend flags: %#08x", ctx.sflags());
+          if (ctx.task() != nullptr) {
+            dump_suspend_task_dependencies(ctx.task());
+          }
+          if (suspend_fallback()) {
+            ::suspend_fallback(root_resource(), ctx.sflags());
+            // Unless in test env, we should not reach here.
+            if (callback_info->callback) {
+              callback_info->callback(ZX_ERR_TIMED_OUT);
+              callback_info->callback = nullptr;
+            }
+          }
+        },
+        config_.suspend_timeout);
     if (status != ZX_OK) {
-      // TODO: unroll suspend
-      // do not continue to suspend as this indicates a driver suspend
-      // problem and should show as a bug
-      LOGF(ERROR, "Failed to suspend: %s", zx_status_get_string(status));
-      ctx.set_flags(SuspendContext::Flags::kRunning);
+      LOGF(ERROR, "Failed to create timeout watchdog for suspend: %s\n",
+           zx_status_get_string(status));
+    }
+    auto completion = [this, callback_info = std::move(callback_info)](zx_status_t status) {
+      auto& ctx = suspend_context();
+      if (status != ZX_OK) {
+        // TODO: unroll suspend
+        // do not continue to suspend as this indicates a driver suspend
+        // problem and should show as a bug
+        LOGF(ERROR, "Failed to suspend: %s", zx_status_get_string(status));
+        ctx.set_flags(SuspendContext::Flags::kRunning);
+        if (callback_info->callback) {
+          callback_info->callback(status);
+          callback_info->callback = nullptr;
+        }
+        return;
+      }
+      if (ctx.sflags() != DEVICE_SUSPEND_FLAG_MEXEC) {
+        // should never get here on x86
+        // on arm, if the platform driver does not implement
+        // suspend go to the kernel fallback
+        ::suspend_fallback(root_resource(), ctx.sflags());
+        // if we get here the system did not suspend successfully
+        ctx.set_flags(SuspendContext::Flags::kRunning);
+      }
+
       if (callback_info->callback) {
-        callback_info->callback(status);
+        callback_info->callback(ZX_OK);
         callback_info->callback = nullptr;
       }
-      return;
-    }
-    if (ctx.sflags() != DEVICE_SUSPEND_FLAG_MEXEC) {
-      // should never get here on x86
-      // on arm, if the platform driver does not implement
-      // suspend go to the kernel fallback
-      ::suspend_fallback(root_resource(), ctx.sflags());
-      // if we get here the system did not suspend successfully
-      ctx.set_flags(SuspendContext::Flags::kRunning);
-    }
+    };
+    // We don't need to suspend anything except sys_device and it's children,
+    // since we do not run suspend hooks for children of test or misc
 
-    if (callback_info->callback) {
-      callback_info->callback(ZX_OK);
-      callback_info->callback = nullptr;
-    }
+    auto task =
+        SuspendTask::Create(sys_device(), suspend_context().sflags(), std::move(completion));
+    suspend_context().set_task(std::move(task));
+    LOGF(INFO, "Successfully created suspend task on device 'sys'");
   };
-  // We don't need to suspend anything except sys_device and it's children,
-  // since we do not run suspend hooks for children of test or misc
 
-  auto task = SuspendTask::Create(sys_device(), ctx.sflags(), std::move(completion));
-  suspend_context().set_task(std::move(task));
-  LOGF(INFO, "Successfully created suspend task on device 'sys'");
+  if (!reboot_watcher_manager_.ShouldNotifyWatchers()) {
+    perform_suspend();
+  } else {
+    reboot_watcher_manager_.NotifyAll(
+        /*watchdog=*/std::move(perform_suspend),
+        /*on_last_reply=*/[this] { reboot_watcher_manager_.ExecuteWatchdog(); });
+  }
 }
 
 void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> callback) {
@@ -1737,6 +1751,12 @@ void Coordinator::Reboot(
     completer.Reply(std::move(result));
   };
 
+  if (InSuspend()) {
+    // Reboot already in progress.
+    return;
+  }
+
+  reboot_watcher_manager_.SetRebootReason(reason);
   Suspend(SuspendContext(SuspendContext::Flags::kSuspend,
                          GetSuspendFlagsFromSystemPowerState(
                              power_fidl::statecontrol::SystemPowerState::REBOOT)),
@@ -1953,6 +1973,27 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   status = svc_dir->AddEntry(power_fidl::statecontrol::Admin::Name,
                              fbl::MakeRefCounted<fs::Service>(admin2));
   if (status != ZX_OK) {
+    return status;
+  }
+
+  const auto reboot_methods_watcher_register = [this](zx::channel request) {
+    auto status = fidl::Bind<
+        llcpp::fuchsia::hardware::power::statecontrol::RebootMethodsWatcherRegister::Interface>(
+        this->config_.dispatcher, std::move(request), &(this->reboot_watcher_manager_));
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
+           power_fidl::statecontrol::RebootMethodsWatcherRegister::Name,
+           zx_status_get_string(status));
+    }
+
+    return status;
+  };
+  status = svc_dir->AddEntry(power_fidl::statecontrol::RebootMethodsWatcherRegister::Name,
+                             fbl::MakeRefCounted<fs::Service>(reboot_methods_watcher_register));
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to add entry in service directory for '%s': %s",
+         power_fidl::statecontrol::RebootMethodsWatcherRegister::Name,
+         zx_status_get_string(status));
     return status;
   }
 

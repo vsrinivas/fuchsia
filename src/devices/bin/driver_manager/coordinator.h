@@ -35,6 +35,7 @@
 #include "init_task.h"
 #include "inspect.h"
 #include "metadata.h"
+#include "reboot_watcher_manager.h"
 #include "resume_task.h"
 #include "suspend_task.h"
 #include "unbind_task.h"
@@ -357,6 +358,7 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
   const Driver* fragment_driver() const { return fragment_driver_; }
 
   InspectManager& inspect_manager() { return inspect_manager_; }
+  RebootWatcherManager& reboot_watcher_manager() { return reboot_watcher_manager_; }
 
   // This method is public only for the test suite.
   zx_status_t BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind);
@@ -431,6 +433,7 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
   ResumeContext resume_context_;
 
   InspectManager inspect_manager_;
+  RebootWatcherManager reboot_watcher_manager_;
 
   // Bind debugger interface
   void GetBindProgram(::fidl::StringView driver_path,

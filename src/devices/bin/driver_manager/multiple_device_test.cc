@@ -10,6 +10,7 @@
 
 #include "component_lifecycle.h"
 #include "src/devices/lib/log/log.h"
+
 TEST_F(MultipleDeviceTestCase, UnbindThenSuspend) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(
@@ -143,7 +144,7 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
 
   async::Wait suspend_task_pbus(
       platform_bus_controller_remote().get(), ZX_CHANNEL_READABLE, 0,
-      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
         CheckSuspendReceivedAndReply(platform_bus_controller_remote(), DEVICE_SUSPEND_FLAG_MEXEC,
                                      ZX_OK);
       });
@@ -151,7 +152,7 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
 
   async::Wait suspend_task_sys(
       sys_proxy_controller_remote_.get(), ZX_CHANNEL_READABLE, 0,
-      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
         CheckSuspendReceivedAndReply(sys_proxy_controller_remote_, DEVICE_SUSPEND_FLAG_MEXEC,
                                      ZX_OK);
       });
@@ -189,6 +190,63 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
   ASSERT_FALSE(suspend_task_sys.is_pending());
 }
 
+TEST_F(MultipleDeviceTestCase, RebootReasonSet) {
+  ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
+  set_coordinator_loop_thread_running(true);
+
+  async::Loop driver_host_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  ASSERT_OK(driver_host_loop.StartThread("DriverHostLoop"));
+
+  async::Wait suspend_task_pbus(
+      platform_bus_controller_remote().get(), ZX_CHANNEL_READABLE, 0,
+      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
+        CheckSuspendReceivedAndReply(platform_bus_controller_remote(), DEVICE_SUSPEND_FLAG_REBOOT,
+                                     ZX_OK);
+      });
+  ASSERT_OK(suspend_task_pbus.Begin(driver_host_loop.dispatcher()));
+
+  async::Wait suspend_task_sys(
+      sys_proxy_controller_remote_.get(), ZX_CHANNEL_READABLE, 0,
+      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
+        CheckSuspendReceivedAndReply(sys_proxy_controller_remote_, DEVICE_SUSPEND_FLAG_REBOOT,
+                                     ZX_OK);
+      });
+  ASSERT_OK(suspend_task_sys.Begin(driver_host_loop.dispatcher()));
+
+  zx::channel services, services_remote;
+  ASSERT_OK(zx::channel::create(0, &services, &services_remote));
+
+  svc::Outgoing outgoing{coordinator_loop()->dispatcher()};
+  ASSERT_OK(coordinator()->InitOutgoingServices(outgoing.svc_dir()));
+  ASSERT_OK(outgoing.Serve(std::move(services_remote)));
+
+  zx::channel channel, channel_remote;
+  ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));
+  std::string svc_dir = "/svc/";
+  std::string service = svc_dir + llcpp::fuchsia::hardware::power::statecontrol::Admin::Name;
+  ASSERT_OK(fdio_service_connect_at(services.get(), service.c_str(), channel_remote.release()));
+
+  bool callback_executed = false;
+  DoSuspend(DEVICE_SUSPEND_FLAG_REBOOT, [&](uint32_t flags) {
+    auto response = llcpp::fuchsia::hardware::power::statecontrol::Admin::Call::Reboot(
+        zx::unowned_channel(channel.get()),
+        llcpp::fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST);
+    ASSERT_OK(response.status());
+    zx_status_t call_status = ZX_OK;
+    if (response->result.is_err()) {
+      call_status = response->result.err();
+    }
+    ASSERT_OK(call_status);
+    callback_executed = true;
+  });
+
+  ASSERT_EQ(coordinator()->suspend_context().sflags(), DEVICE_SUSPEND_FLAG_REBOOT);
+  ASSERT_TRUE(coordinator()->reboot_watcher_manager().HasRebootReason());
+  ASSERT_TRUE(callback_executed);
+  ASSERT_FALSE(suspend_task_pbus.is_pending());
+  ASSERT_FALSE(suspend_task_sys.is_pending());
+}
+
 TEST_F(MultipleDeviceTestCase, SuspendFidlMexecFail) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
@@ -198,7 +256,7 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexecFail) {
 
   async::Wait suspend_task_pbus(
       platform_bus_controller_remote().get(), ZX_CHANNEL_READABLE, 0,
-      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
         zx_txid_t txid;
         CheckSuspendReceived(platform_bus_controller_remote(), DEVICE_SUSPEND_FLAG_MEXEC, &txid);
       });
@@ -206,7 +264,7 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexecFail) {
 
   async::Wait suspend_task_sys(
       sys_proxy_controller_remote_.get(), ZX_CHANNEL_READABLE, 0,
-      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
         CheckSuspendReceived(sys_proxy_controller_remote_, DEVICE_SUSPEND_FLAG_MEXEC, ZX_OK);
       });
   ASSERT_OK(suspend_task_sys.Begin(driver_host_loop.dispatcher()));
@@ -253,7 +311,7 @@ TEST_F(MultipleDeviceTestCase, FidlMexec) {
 
   async::Wait suspend_task_pbus(
       platform_bus_controller_remote().get(), ZX_CHANNEL_READABLE, 0,
-      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
         CheckSuspendReceivedAndReply(platform_bus_controller_remote(), DEVICE_SUSPEND_FLAG_MEXEC,
                                      ZX_OK);
       });
@@ -261,7 +319,7 @@ TEST_F(MultipleDeviceTestCase, FidlMexec) {
 
   async::Wait suspend_task_sys(
       sys_proxy_controller_remote_.get(), ZX_CHANNEL_READABLE, 0,
-      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
         CheckSuspendReceivedAndReply(sys_proxy_controller_remote_, DEVICE_SUSPEND_FLAG_MEXEC,
                                      ZX_OK);
       });
@@ -307,7 +365,7 @@ TEST_F(MultipleDeviceTestCase, FidlMexecFail) {
 
   async::Wait suspend_task_pbus(
       platform_bus_controller_remote().get(), ZX_CHANNEL_READABLE, 0,
-      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
         zx_txid_t txid;
         CheckSuspendReceived(platform_bus_controller_remote(), DEVICE_SUSPEND_FLAG_MEXEC, &txid);
       });
@@ -315,7 +373,7 @@ TEST_F(MultipleDeviceTestCase, FidlMexecFail) {
 
   async::Wait suspend_task_sys(
       sys_proxy_controller_remote_.get(), ZX_CHANNEL_READABLE, 0,
-      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
         CheckSuspendReceived(sys_proxy_controller_remote_, DEVICE_SUSPEND_FLAG_MEXEC, ZX_OK);
       });
   ASSERT_OK(suspend_task_sys.Begin(driver_host_loop.dispatcher()));
@@ -589,7 +647,7 @@ TEST_F(MultipleDeviceTestCase, ComponentLifecycleStop) {
 
   async::Wait suspend_task_pbus(
       platform_bus_controller_remote().get(), ZX_CHANNEL_READABLE, 0,
-      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
         CheckSuspendReceivedAndReply(platform_bus_controller_remote(), DEVICE_SUSPEND_FLAG_MEXEC,
                                      ZX_OK);
       });
@@ -597,7 +655,7 @@ TEST_F(MultipleDeviceTestCase, ComponentLifecycleStop) {
 
   async::Wait suspend_task_sys(
       sys_proxy_controller_remote_.get(), ZX_CHANNEL_READABLE, 0,
-      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
         CheckSuspendReceivedAndReply(sys_proxy_controller_remote_, DEVICE_SUSPEND_FLAG_MEXEC,
                                      ZX_OK);
       });
