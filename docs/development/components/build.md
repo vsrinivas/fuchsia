@@ -339,8 +339,10 @@ Note the following details:
     ```
     To print it directly:
     ```bash
-    cat out/default/`fx gn outputs out/default <unittest_target>_generated_manifest`
+    fx build && cat out/default/`fx gn outputs out/default <unittest_target>_generated_manifest`
     ```
+    Note that `fx gn outputs` prints an output path, but the file at the path
+    may not exist or may be stale if you haven't built.
 *   In order to provide a manifest rather than use a generated manifest, specify
     `manifest` on `fuchsia_unittest_package()`. Note that if you do then the
     command above to view the generated manifest will fail with an error stating
