@@ -76,16 +76,20 @@ class Modular {
 
   /// Starts basemgr if it isn't running yet.
   ///
+  /// Takes a custom [config] as JSON serialized string, or launches basemgr
+  /// with system default config if not provided.
+  ///
   /// If [assumeControl] is true and basemgr wasn't running, then this object
   /// will stop basemgr when [shutdown] is called with no arguments.
-  Future<void> boot({bool assumeControl = false}) async {
+  Future<void> boot({String config, bool assumeControl = false}) async {
     if (await isRunning) {
       _log.info('Not taking control of basemgr, it was already running.');
       return;
     }
 
-    _log.info('Booting basemgr with default configuration.');
-    await startBasemgr();
+    _log.info('Booting basemgr with ${(config != null) ? 'custom' : 'default'} '
+        'configuration.');
+    await startBasemgr(config);
     await Future.delayed(Duration(seconds: 10));
     if (assumeControl) {
       _controlsBasemgr = true;

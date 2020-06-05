@@ -4,6 +4,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:quiver/testing/async.dart';
 import 'package:mockito/mockito.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
@@ -40,6 +41,7 @@ void main(List<String> args) {
 
     expect(Modular(sl4f).restartSession(), completion(equals('Success')));
   });
+
   test('call startBasemgr facade with params', () {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
@@ -112,6 +114,81 @@ void main(List<String> args) {
         Modular(sl4f)
             .launchMod('fake_url', modName: 'fake_name', focusMod: true),
         completion(equals('Success')));
+  });
+
+  test('call boot with no config', () {
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      if (body['method'] == 'component_search_facade.Search') {
+        req.response.write(jsonEncode({
+          'id': body['id'],
+          'result': 'NotFound',
+          'error': null,
+        }));
+      } else {
+        expect(body['method'], 'basemgr_facade.StartBasemgr');
+        expect(body['params'], isNotNull);
+        expect(body['params'], isEmpty);
+        req.response.write(
+            jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
+      }
+      await req.response.close();
+    }
+
+    fakeServer.listen(handler);
+
+    FakeAsync().run((async) {
+      expect(() {
+        Modular(sl4f).boot();
+        async.elapse(Duration(seconds: 10));
+      }, returnsNormally);
+    });
+  });
+
+  test('call boot with custom config', () {
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      if (body['method'] == 'component_search_facade.Search') {
+        req.response.write(jsonEncode({
+          'id': body['id'],
+          'result': 'NotFound',
+          'error': null,
+        }));
+      } else {
+        expect(body['method'], 'basemgr_facade.StartBasemgr');
+        expect(body['params'], isNotNull);
+        expect(
+            body['params'],
+            containsPair(
+                'config',
+                allOf(containsPair('basemgr', contains('base_shell')),
+                    containsPair('sessionmgr', contains('session_agents')))));
+        req.response.write(
+            jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
+      }
+      await req.response.close();
+    }
+
+    fakeServer.listen(handler);
+
+    FakeAsync().run((async) {
+      expect(() {
+        Modular(sl4f).boot(config: '''{
+          "basemgr": {
+            "base_shell": {
+              "url": "foo",
+              "args": ["--bar"]
+            }
+          },
+          "sessionmgr": {
+            "session_agents": ["baz"]
+          }
+        }''');
+        async.elapse(Duration(seconds: 10));
+      }, returnsNormally);
+    });
   });
 
   test('isRunning: no', () {
