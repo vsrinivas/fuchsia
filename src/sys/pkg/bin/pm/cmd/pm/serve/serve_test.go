@@ -250,6 +250,8 @@ func TestServer(t *testing.T) {
 
 		// after building, we need to wait for publication to complete, so start a client for that
 		cli := newTestAutoClient(t, baseURL)
+		defer cli.close()
+
 		cli.verifyNoPendingEvents()
 
 		cfg.PkgVersion = "1"
@@ -341,6 +343,7 @@ func TestServeAuto(t *testing.T) {
 
 	t.Run("sends events on timestamp version updates", func(t *testing.T) {
 		cli := newTestAutoClient(t, baseURL)
+		defer cli.close()
 
 		// No initial events expected.
 		cli.verifyNoPendingEvents()
@@ -366,6 +369,7 @@ func TestServeAuto(t *testing.T) {
 
 	t.Run("recovers from deleted timestamp", func(t *testing.T) {
 		cli := newTestAutoClient(t, baseURL)
+		defer cli.close()
 
 		// No initial events expected.
 		cli.verifyNoPendingEvents()
@@ -400,6 +404,7 @@ func TestServeAuto(t *testing.T) {
 
 	t.Run("recovers from moved timestamp", func(t *testing.T) {
 		cli := newTestAutoClient(t, baseURL)
+		defer cli.close()
 
 		// No initial events expected.
 		cli.verifyNoPendingEvents()
@@ -447,6 +452,8 @@ type eventResult struct {
 
 type testAutoClient struct {
 	events chan eventResult
+	done   chan struct{}
+	resp   *http.Response
 	t      *testing.T
 }
 
@@ -467,15 +474,17 @@ func newTestAutoClient(t *testing.T, baseURL string) testAutoClient {
 	}
 
 	events := make(chan eventResult)
+	done := make(chan struct{})
 	go func() {
-		defer resp.Body.Close()
 		for {
 			event, err := cli.ReadEvent()
-			events <- eventResult{
-				event: event,
-				err:   err,
-			}
-			if err != nil {
+			select {
+			case events <- eventResult{event: event, err: err}:
+				if err != nil {
+					close(events)
+					return
+				}
+			case <-done:
 				close(events)
 				return
 			}
@@ -483,9 +492,15 @@ func newTestAutoClient(t *testing.T, baseURL string) testAutoClient {
 	}()
 	return testAutoClient{
 		events: events,
+		done:   done,
+		resp:   resp,
 		t:      t,
 	}
+}
 
+func (c *testAutoClient) close() {
+	c.resp.Body.Close()
+	close(c.done)
 }
 
 func (c *testAutoClient) verifyNoPendingEvents() {
