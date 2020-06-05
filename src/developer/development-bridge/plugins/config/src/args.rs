@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ConfigLevel};
+use {
+    argh::FromArgs,
+    ffx_core::{ffx_command, ConfigLevel},
+};
 
+#[ffx_command]
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "config", description = "configuration management")]
 pub struct ConfigCommand {

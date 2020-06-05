@@ -14,13 +14,11 @@ use {
     std::{env, fs::File, io::Write, path::PathBuf},
 };
 
-pub mod command;
-
 mod api;
 mod cache;
 mod config;
 mod env_var_config;
-mod environment;
+pub mod environment;
 mod file_backed_config;
 mod heuristic_config;
 mod heuristic_fns;
@@ -83,20 +81,20 @@ pub async fn get_config_bool(
 
 // TODO: remove dead code allowance when used (if ever)
 pub async fn set_config(
-    level: ConfigLevel,
+    level: &ConfigLevel,
     name: &str,
     value: Value,
     ffx: Ffx,
     env: Result<String, Error>,
 ) -> Result<(), Error> {
-    set_config_with_build_dir(level, name, value, None, ffx, env).await
+    set_config_with_build_dir(level, name, value, &None, ffx, env).await
 }
 
 pub async fn set_config_with_build_dir(
-    level: ConfigLevel,
+    level: &ConfigLevel,
     name: &str,
     value: Value,
-    build_dir: Option<String>,
+    build_dir: &Option<String>,
     ffx: Ffx,
     env: Result<String, Error>,
 ) -> Result<(), Error> {
@@ -109,18 +107,18 @@ pub async fn set_config_with_build_dir(
 // TODO: remove dead code allowance when used (if ever)
 #[allow(dead_code)]
 pub async fn remove_config(
-    level: ConfigLevel,
+    level: &ConfigLevel,
     name: &str,
     ffx: Ffx,
     env: Result<String, Error>,
 ) -> Result<(), Error> {
-    remove_config_with_build_dir(level, name, None, ffx, env).await
+    remove_config_with_build_dir(level, name, &None, ffx, env).await
 }
 
 pub async fn remove_config_with_build_dir(
-    level: ConfigLevel,
+    level: &ConfigLevel,
     name: &str,
-    build_dir: Option<String>,
+    build_dir: &Option<String>,
     ffx: Ffx,
     env: Result<String, Error>,
 ) -> Result<(), Error> {
@@ -162,13 +160,13 @@ pub fn find_env_file() -> Result<String, Error> {
 
 pub fn save_config(
     config: &mut Config<'_>,
-    build_dir: Option<String>,
+    build_dir: &Option<String>,
     env_file: Result<String, Error>,
 ) -> Result<(), Error> {
     let env = Environment::load(&env_file?)?;
 
     match build_dir {
-        Some(b) => config.save(&env.global, &env.build.as_ref().and_then(|c| c.get(&b)), &env.user),
+        Some(b) => config.save(&env.global, &env.build.as_ref().and_then(|c| c.get(b)), &env.user),
         None => config.save(&env.global, &None, &env.user),
     }
 }

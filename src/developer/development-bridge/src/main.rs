@@ -7,7 +7,6 @@ use {
     crate::target_formatter::TargetFormatter,
     anyhow::{anyhow, format_err, Context, Error},
     ffx_command::{Ffx, Subcommand},
-    ffx_config::command::exec_config,
     ffx_core::constants::DAEMON,
     ffx_daemon::{find_and_connect, is_daemon_running, start as start_daemon},
     fidl::endpoints::create_proxy,
@@ -104,7 +103,6 @@ fn get_log_name(subcommand: &Subcommand) -> &'static str {
 async fn async_main() -> Result<(), Error> {
     let app: Ffx = argh::from_env();
     setup_logger(get_log_name(&app.subcommand)).await;
-    let writer = Box::new(std::io::stdout());
     match app.subcommand {
         Subcommand::List(c) => {
             match list_targets(get_daemon_proxy().await?, c.nodename).await {
@@ -132,7 +130,6 @@ async fn async_main() -> Result<(), Error> {
             Ok(())
         }
         Subcommand::Daemon(_) => start_daemon().await,
-        Subcommand::Config(c) => exec_config(c, writer).await,
         _ => exec_plugins(get_daemon_proxy, get_remote_proxy, app.subcommand).await,
     }
 }

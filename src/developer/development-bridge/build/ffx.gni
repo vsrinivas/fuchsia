@@ -43,7 +43,6 @@ template("ffx") {
     deps = args_deps + [
              ":ffx_sub_command",
              "core:lib",
-             "config:args_lib",
              "//third_party/rust_crates:argh",
            ]
   }
