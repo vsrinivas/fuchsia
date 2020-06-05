@@ -320,17 +320,6 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
     return;
   }
 
-  // Ledger configuration for tests by default:
-  // * use a memory-backed FS for ledger.
-  // * doesn't sync with a cloudprovider.
-  auto* sessionmgr_config = spec_.mutable_sessionmgr_config();  // auto initialize.
-  if (!sessionmgr_config->has_use_memfs_for_ledger()) {
-    sessionmgr_config->set_use_memfs_for_ledger(true);
-  }
-  if (!sessionmgr_config->has_cloud_provider()) {
-    sessionmgr_config->set_cloud_provider(fuchsia::modular::session::CloudProvider::NONE);
-  }
-
   fuchsia::sys::EnvironmentOptions env_options;
   env_options.delete_storage_on_death = true;
 

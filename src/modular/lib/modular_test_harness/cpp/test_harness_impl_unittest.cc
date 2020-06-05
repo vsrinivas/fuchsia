@@ -315,7 +315,6 @@ TEST_F(TestHarnessImplTest, ParseConfigFromString) {
     ]
   },
   "sessionmgr": {
-    "use_memfs_for_ledger": true,
     "startup_agents": [
       "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx"
     ]
@@ -339,7 +338,6 @@ TEST_F(TestHarnessImplTest, ParseConfigFromString) {
   ASSERT_EQ(1u, basemgr_config.session_shell_map().size());
   EXPECT_EQ("fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
             basemgr_config.session_shell_map().at(0).config().app_config().url());
-  EXPECT_TRUE(sessionmgr_config.use_memfs_for_ledger());
 }
 
 }  // namespace

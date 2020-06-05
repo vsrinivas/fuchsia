@@ -123,15 +123,12 @@ TEST_F(ModularConfigReaderTest, GetConfigAsString) {
   std::string config_contents = fxl::Substitute(
       R"({
         "basemgr": {
-          "test": true,
           "base_shell": {
             "url": "$0",
             "keep_alive_after_login": true
           }
         },
         "sessionmgr": {
-          "cloud_provider": "NONE",
-          "use_memfs_for_ledger": true,
           "startup_agents": [
             "$1"
           ],
@@ -172,8 +169,6 @@ TEST_F(ModularConfigReaderTest, GetConfigAsString) {
   EXPECT_EQ(startup_agent, sessionmgr_config.startup_agents().at(0));
   EXPECT_EQ(agent_service_name, sessionmgr_config.agent_service_index().at(0).service_name());
   EXPECT_EQ(agent_url, sessionmgr_config.agent_service_index().at(0).agent_url());
-  EXPECT_TRUE(sessionmgr_config.use_memfs_for_ledger());
-  EXPECT_EQ(fuchsia::modular::session::CloudProvider::NONE, sessionmgr_config.cloud_provider());
 }
 
 TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
@@ -208,9 +203,7 @@ TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
   basemgr_config.set_story_shell(std::move(story_shell_config));
 
   fuchsia::modular::session::SessionmgrConfig sessionmgr_config;
-  sessionmgr_config.set_cloud_provider(fuchsia::modular::session::CloudProvider::NONE);
   sessionmgr_config.set_enable_cobalt(false);
-  sessionmgr_config.set_use_memfs_for_ledger(true);
   sessionmgr_config.mutable_startup_agents()->push_back(startup_agent);
   sessionmgr_config.mutable_session_agents()->push_back(session_agent);
   sessionmgr_config.set_story_shell_url(story_shell_url);
@@ -245,9 +238,7 @@ TEST_F(ModularConfigReaderTest, GetConfigAsStringDoesntChangeValues) {
   ASSERT_EQ(1u, basemgr_config.story_shell().app_config().args().size());
   EXPECT_EQ("arg1", basemgr_config.story_shell().app_config().args().at(0));
 
-  EXPECT_EQ(fuchsia::modular::session::CloudProvider::NONE, sessionmgr_config.cloud_provider());
   EXPECT_FALSE(sessionmgr_config.enable_cobalt());
-  EXPECT_TRUE(sessionmgr_config.use_memfs_for_ledger());
   EXPECT_EQ(startup_agent, sessionmgr_config.startup_agents().at(0));
   EXPECT_EQ(session_agent, sessionmgr_config.session_agents().at(0));
   EXPECT_EQ(story_shell_url, sessionmgr_config.story_shell_url());

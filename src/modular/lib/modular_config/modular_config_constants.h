@@ -34,16 +34,8 @@ constexpr char kUnknown[] = "unknown";
 constexpr char kScreenHeight[] = "screen_height";
 constexpr char kScreenWidth[] = "screen_width";
 
-// Cloud provider constants
-constexpr char kCloudProvider[] = "cloud_provider";
-constexpr char kLetLedgerDecide[] = "LET_LEDGER_DECIDE";
-constexpr char kFromEnvironment[] = "FROM_ENVIRONMENT";
-constexpr char kNone[] = "NONE";
-
 // Basemgr constants
 constexpr char kEnableCobalt[] = "enable_cobalt";
-constexpr char kEnablePresenter[] = "enable_presenter";
-constexpr char kTest[] = "test";
 constexpr char kUseMinfs[] = "use_minfs";
 constexpr char kUseSessionShellForStoryShellFactory[] = "use_session_shell_for_story_shell_factory";
 
@@ -55,7 +47,6 @@ constexpr char kAgentUrl[] = "agent_url";
 constexpr char kUri[] = "uri";
 constexpr char kStartupAgents[] = "startup_agents";
 constexpr char kSessionAgents[] = "session_agents";
-constexpr char kUseMemfsForLedger[] = "use_memfs_for_ledger";
 constexpr char kRestartSessionOnAgentCrash[] = "restart_session_on_agent_crash";
 
 // Inspect property constants
@@ -82,19 +73,6 @@ constexpr char kName[] = "name";
 constexpr char kUrl[] = "url";
 constexpr char kSessionShells[] = "session_shells";
 constexpr char kStoryShellUrl[] = "story_shell_url";
-
-// Various config constants that will be deprecated in favor for the new names.
-constexpr char kBaseShellArgs[] = "base_shell_args";
-constexpr char kStoryShell[] = "story_shell";
-constexpr char kStoryShellArgs[] = "story_shell_args";
-constexpr char kSessionShell[] = "session_shell";
-constexpr char kSessionShellArgs[] = "session_shell_args";
-constexpr char kSessionmgrArgs[] = "sessionmgr_args";
-constexpr char kDisableStatistics[] = "disable_statistics";
-constexpr char kNoCloudProviderForLedger[] = "no_cloud_provider_for_ledger";
-constexpr char kNoMinfs[] = "no_minfs";
-constexpr char kRunBaseShellWithTestRunner[] = "run_base_shell_with_test_runner";
-constexpr char kUseCloudProviderFromEnvironment[] = "use_cloud_provider_from_environment";
 
 }  // namespace modular_config
 

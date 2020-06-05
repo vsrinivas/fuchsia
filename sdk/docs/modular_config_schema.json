@@ -6,8 +6,6 @@
       "type": "object",
       "properties": {
         "enable_cobalt": { "type": "boolean", "default": true },
-        "enable_presenter": { "type": "boolean", "default": false },
-        "test": { "type": "boolean", "default": false },
         "use_minfs": { "type": "boolean", "default": true },
         "use_session_shell_for_story_shell_factory": {
           "type": "boolean",
@@ -65,13 +63,7 @@
     "sessionmgr": {
       "type": "object",
       "properties": {
-        "cloud_provider": {
-          "type": "string",
-          "enum": ["LET_LEDGER_DECIDE", "FROM_ENVIRONMENT", "NONE"],
-          "default": "LET_LEDGER_DECIDE"
-        },
         "enable_cobalt": { "type": "boolean", "default": true },
-        "use_memfs_for_ledger": { "type": "boolean", "default": false },
         "startup_agents": {
           "type": "array",
           "items": {

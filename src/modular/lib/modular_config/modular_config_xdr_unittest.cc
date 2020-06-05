@@ -91,9 +91,7 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
 // contains no values.
 TEST(ModularConfigXdr, SessionmgrDefaultValues) {
   static constexpr auto kExpectedJson = R"({
-      "cloud_provider": "LET_LEDGER_DECIDE",
       "enable_cobalt": true,
-      "use_memfs_for_ledger": false,
       "startup_agents": null,
       "session_agents": null,
       "component_args": null,
@@ -116,11 +114,7 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
   fuchsia::modular::session::SessionmgrConfig read_config;
   EXPECT_TRUE(XdrRead(&read_json_doc, &read_config, XdrSessionmgrConfig));
 
-  EXPECT_EQ(fuchsia::modular::session::CloudProvider::LET_LEDGER_DECIDE,
-            read_config.cloud_provider());
   EXPECT_TRUE(read_config.enable_cobalt());
-  EXPECT_FALSE(read_config.use_memfs_for_ledger());
-
   EXPECT_EQ(0u, read_config.startup_agents().size());
   EXPECT_EQ(0u, read_config.session_agents().size());
   EXPECT_EQ(0u, read_config.restart_session_on_agent_crash().size());
@@ -140,9 +134,7 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
 
   static constexpr auto kExpectedJson = R"(
     {
-      "cloud_provider": "NONE",
       "enable_cobalt": false,
-      "use_memfs_for_ledger": true,
       "startup_agents": [
         "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx"
       ],
@@ -170,9 +162,7 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
 
   // Create a SessionmgrConfig with non-default values.
   fuchsia::modular::session::SessionmgrConfig write_config;
-  write_config.set_cloud_provider(fuchsia::modular::session::CloudProvider::NONE);
   write_config.set_enable_cobalt(false);
-  write_config.set_use_memfs_for_ledger(true);
   write_config.mutable_startup_agents()->push_back(kStartupAgentUrl);
   write_config.mutable_session_agents()->push_back(kSessionAgentUrl);
   fuchsia::modular::session::AppConfig component_arg;
@@ -195,10 +185,7 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
   fuchsia::modular::session::SessionmgrConfig read_config;
   EXPECT_TRUE(XdrRead(&expected_json_doc, &read_config, XdrSessionmgrConfig));
 
-  EXPECT_EQ(fuchsia::modular::session::CloudProvider::NONE, read_config.cloud_provider());
   EXPECT_FALSE(read_config.enable_cobalt());
-  EXPECT_TRUE(read_config.use_memfs_for_ledger());
-
   EXPECT_EQ(1u, read_config.startup_agents().size());
   EXPECT_EQ(1u, read_config.session_agents().size());
   EXPECT_EQ(kStartupAgentUrl, read_config.startup_agents().at(0));
@@ -209,30 +196,6 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
   EXPECT_EQ(kAgentServiceName, read_config.agent_service_index().at(0).service_name());
   EXPECT_EQ(kAgentUrl, read_config.agent_service_index().at(0).agent_url());
   EXPECT_EQ(kSessionAgentUrl, read_config.restart_session_on_agent_crash().at(0));
-}
-
-// Tests that the cloud provider field is read and written correctly when it's not set to the
-// default field.
-TEST(ModularConfigXdr, CloudProvider) {
-  static constexpr auto kConfigJson = R"({"cloud_provider": "NONE"})";
-  rapidjson::Document config_json_doc;
-  config_json_doc.Parse(kConfigJson);
-
-  // Deserialize the config from JSON.
-  fuchsia::modular::session::SessionmgrConfig read_config;
-  EXPECT_TRUE(XdrRead(&config_json_doc, &read_config, XdrSessionmgrConfig));
-
-  EXPECT_EQ(fuchsia::modular::session::CloudProvider::NONE, read_config.cloud_provider());
-
-  // Serialize the config back to JSON.
-  rapidjson::Document write_config_json_doc;
-  XdrWrite(&write_config_json_doc, &read_config, XdrSessionmgrConfig);
-
-  // Deserialize again from the JSON document that contains the XdrWrite-serialized config.
-  fuchsia::modular::session::SessionmgrConfig read_config_again;
-  EXPECT_TRUE(XdrRead(&write_config_json_doc, &read_config_again, XdrSessionmgrConfig));
-
-  EXPECT_EQ(fuchsia::modular::session::CloudProvider::NONE, read_config_again.cloud_provider());
 }
 
 }  // namespace modular

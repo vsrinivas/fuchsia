@@ -144,27 +144,6 @@ fuchsia::modular::session::BaseShellConfig GetDefaultBaseShellConfig() {
   return base_shell_config;
 }
 
-fuchsia::modular::session::CloudProvider GetCloudProviderFromString(std::string provider) {
-  if (provider == modular_config::kFromEnvironment) {
-    return fuchsia::modular::session::CloudProvider::FROM_ENVIRONMENT;
-  } else if (provider == modular_config::kNone) {
-    return fuchsia::modular::session::CloudProvider::NONE;
-  }
-
-  return fuchsia::modular::session::CloudProvider::LET_LEDGER_DECIDE;
-}
-
-std::string GetCloudProviderAsString(fuchsia::modular::session::CloudProvider provider) {
-  switch (provider) {
-    case fuchsia::modular::session::CloudProvider::LET_LEDGER_DECIDE:
-      return modular_config::kLetLedgerDecide;
-    case fuchsia::modular::session::CloudProvider::FROM_ENVIRONMENT:
-      return modular_config::kFromEnvironment;
-    case fuchsia::modular::session::CloudProvider::NONE:
-      return modular_config::kNone;
-  }
-}
-
 }  // namespace
 
 void XdrBasemgrConfig_v1(XdrContext* const xdr,
@@ -216,34 +195,9 @@ void XdrBasemgrConfig_v1(XdrContext* const xdr,
 
 void XdrSessionmgrConfig_v1(XdrContext* const xdr,
                             fuchsia::modular::session::SessionmgrConfig* const data) {
-  std::string cloud_provider_str = modular_config::kLetLedgerDecide;
-  if (data->has_cloud_provider()) {
-    cloud_provider_str = GetCloudProviderAsString(data->cloud_provider());
-  }
-
-  // We need to manually parse any field in JSON that is a represented as a
-  // fidl enum because XDR expects a number, rather than a string, for enums.
-  // If writing, this will set the value of "cloud_provider" in JSON as the
-  // value of |cloud_provider|. If reading, this will read the value of
-  // "cloud_provider" into |cloud_provider|.
-  std::string cloud_provider;
-  xdr->FieldWithDefault(modular_config::kCloudProvider, &cloud_provider, /* use_data= */ false,
-                        cloud_provider_str);
-
-  // This is only used when reading. We set the value read into the string
-  // |cloud_provider| into |data->cloud_provider()|.
-  if (xdr->op() == XdrOp::FROM_JSON) {
-    auto cloud_provider_fidl = GetCloudProviderFromString(cloud_provider);
-    data->set_cloud_provider(cloud_provider_fidl);
-  }
-
   bool has_enable_cobalt = data->has_enable_cobalt();
   xdr->FieldWithDefault(modular_config::kEnableCobalt, data->mutable_enable_cobalt(),
                         has_enable_cobalt, true);
-
-  bool has_use_memfs_for_ledger = data->has_use_memfs_for_ledger();
-  xdr->FieldWithDefault(modular_config::kUseMemfsForLedger, data->mutable_use_memfs_for_ledger(),
-                        has_use_memfs_for_ledger, false);
 
   std::vector<std::string> default_agents;
   bool has_startup_agents = data->has_startup_agents();

@@ -37,8 +37,6 @@ The file may contain (non-standard JSON) C-style comments
     ]
   },
   "sessionmgr": {
-    "use_memfs_for_ledger": true,
-    "cloud_provider": "NONE",
     "startup_agents": [
       "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx"
     ],
@@ -111,22 +109,10 @@ The file may contain (non-standard JSON) C-style comments
 
 ## Sessionmgr fields
 
-- `cloud_provider`: **string** _(optional)_
-  - Options:
-    - `LET_LEDGER_DECIDE`: Use a cloud provider configured by ledger.
-    - `FROM_ENVIRONMENT`: Use a cloud provider available in the incoming
-      namespace, rather than initializing and instance within sessionmgr.
-      This can be used to inject a custom cloud provider.
-    - `NONE`: Do not use a cloud provider.
-  - **default**: `LET_LEDGER_DECIDE`
 - `enable_cobalt`: **boolean** _(optional)_
   - When set to false, Cobalt statistics are disabled. This is used for
     testing.
   - **default**: `true`
-- `use_memfs_for_ledger`: **boolean** _(optional)_
-  - Tells the sessionmgr whether it should host+pass a memfs-backed directory
-    to the ledger for the user's repository, or to use /data/LEDGER.
-  - **default**: `false`
 - `startup_agents`: **string[]** _(optional)_
   - A list of fuchsia component urls that specify which agents to launch at
     startup.
