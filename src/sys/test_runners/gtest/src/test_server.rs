@@ -620,7 +620,7 @@ mod tests {
         Ok(Arc::new(Component {
             url: "fuchsia-pkg://fuchsia.com/sample_test#test.cm".to_owned(),
             name: "test.cm".to_owned(),
-            binary: "bin/sample_tests".to_owned(),
+            binary: "bin/gtest_runner_sample_tests".to_owned(),
             args: vec![],
             ns: ns,
             job: current_job!(),
@@ -667,7 +667,7 @@ mod tests {
         let component = Arc::new(Component {
             url: "fuchsia-pkg://fuchsia.com/sample_test#test.cm".to_owned(),
             name: "test.cm".to_owned(),
-            binary: "bin/no_tests".to_owned(),
+            binary: "bin/gtest_runner_no_tests".to_owned(),
             args: vec![],
             ns: ns,
             job: current_job!(),
@@ -689,7 +689,7 @@ mod tests {
         let component = Arc::new(Component {
             url: "fuchsia-pkg://fuchsia.com/huge_test#test.cm".to_owned(),
             name: "test.cm".to_owned(),
-            binary: "bin/huge_test".to_owned(),
+            binary: "bin/huge_gtest_runner_example".to_owned(),
             args: vec![],
             ns: ns,
             job: current_job!(),
