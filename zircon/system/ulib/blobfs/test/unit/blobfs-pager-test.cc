@@ -101,7 +101,15 @@ class MockBlobFactory {
     size_t tree_len;
     Digest root;
     std::unique_ptr<uint8_t[]> merkle_tree;
-    EXPECT_OK(digest::MerkleTreeCreator::Create(data.get(), sz, &merkle_tree, &tree_len, &root));
+
+    if (data_corruption_) {
+      fbl::Array<uint8_t> corrupt(new uint8_t[sz], sz);
+      memset(corrupt.get(), identifier + 1, sz);
+      EXPECT_OK(
+          digest::MerkleTreeCreator::Create(corrupt.get(), sz, &merkle_tree, &tree_len, &root));
+    } else {
+      EXPECT_OK(digest::MerkleTreeCreator::Create(data.get(), sz, &merkle_tree, &tree_len, &root));
+    }
 
     std::unique_ptr<BlobVerifier> verifier;
     EXPECT_OK(BlobVerifier::Create(std::move(root), &metrics_, merkle_tree.get(), tree_len, sz,
@@ -136,6 +144,8 @@ class MockBlobFactory {
     return std::make_unique<MockBlob>(identifier, std::move(vmo), std::move(raw_data), sz,
                                       std::move(page_watcher), std::move(merkle_tree));
   }
+
+  void SetDataCorruption(bool val) { data_corruption_ = val; }
 
  private:
   fbl::Array<uint8_t> GenerateData(const uint8_t* input, size_t len,
@@ -174,6 +184,7 @@ class MockBlobFactory {
 
   BlobfsMetrics metrics_;
   UserPager* pager_;
+  bool data_corruption_ = false;
 };
 
 // Mock user pager. Defines the UserPager interface such that the result of reads on distinct
@@ -182,13 +193,34 @@ class MockPager : public UserPager {
  public:
   MockPager() : factory_(this) { ASSERT_OK(InitPager()); }
 
+  void SetFailureMode(PagerErrorStatus mode) {
+    switch (mode) {
+      case PagerErrorStatus::kOK:
+        // Clear possible side effects from a previous failure mode.
+        mapping_.Unmap();
+        factory_.SetDataCorruption(false);
+        break;
+      case PagerErrorStatus::kErrDataIntegrity:
+        factory_.SetDataCorruption(true);
+        mapping_.Unmap();
+        break;
+      case PagerErrorStatus::kErrBadState:
+        mapping_.Map(*vmo_, 0, ZX_PAGE_SIZE, ZX_VM_PERM_READ);
+        factory_.SetDataCorruption(false);
+        break;
+      default:
+        break;
+    }
+    failure_mode_ = mode;
+  }
+
   MockBlob* CreateBlob(char identifier, CompressionAlgorithm algorithm, size_t sz) {
     EXPECT_EQ(blob_registry_.find(identifier), blob_registry_.end());
     blob_registry_[identifier] = factory_.CreateBlob(identifier, algorithm, sz);
     return blob_registry_[identifier].get();
   }
 
-  void SetDoPartialTransfer(bool do_partial_transfer=true) {
+  void SetDoPartialTransfer(bool do_partial_transfer = true) {
     do_partial_transfer_ = do_partial_transfer;
   }
 
@@ -199,6 +231,9 @@ class MockPager : public UserPager {
   }
 
   zx_status_t PopulateTransferVmo(uint64_t offset, uint64_t length, UserPagerInfo* info) override {
+    if (failure_mode_ == PagerErrorStatus::kErrIO) {
+      return ZX_ERR_IO_REFUSED;
+    }
     char identifier = static_cast<char>(info->identifier);
     EXPECT_NE(blob_registry_.find(identifier), blob_registry_.end());
     const MockBlob& blob = *blob_registry_[identifier];
@@ -234,6 +269,8 @@ class MockPager : public UserPager {
   MockBlobFactory factory_;
   zx::unowned_vmo vmo_;
   bool do_partial_transfer_ = false;
+  fzl::VmoMapper mapping_;
+  PagerErrorStatus failure_mode_ = PagerErrorStatus::kOK;
 };
 
 class BlobfsPagerTest : public zxtest::Test {
@@ -249,6 +286,8 @@ class BlobfsPagerTest : public zxtest::Test {
   void ResetPager() { pager_.reset(); }
 
   MockPager& pager() { return *pager_; }
+
+  void SetFailureMode(PagerErrorStatus mode) { pager_->SetFailureMode(mode); }
 
  private:
   std::unique_ptr<MockPager> pager_;
@@ -450,7 +489,7 @@ TEST_F(BlobfsPagerTest, NoDataLeaked_Uncompressed) {
   }
 }
 
-TEST_F(BlobfsPagerTest, NoDataLeaked_Chunked) {
+TEST_F(BlobfsPagerTest, NoDataLeaked_ZstdChunked) {
   // For each other algorithm supported, induce a fault in |first_blob| so the internal transfer
   // buffers contain its contents, and then fault in a second VMO. Verify no data from the first
   // blob is leaked in the padding.
@@ -478,6 +517,105 @@ TEST_F(BlobfsPagerTest, PartiallyCommittedBuffer) {
   MockBlob* blob = CreateBlob('\0', CompressionAlgorithm::UNCOMPRESSED);
   pager().SetDoPartialTransfer();
   blob->CommitRange(0, kDefaultPagedVmoSize);
+}
+
+TEST_F(BlobfsPagerTest, PagerErrorCode_Uncompressed) {
+  fbl::Array<uint8_t> buf(new uint8_t[ZX_PAGE_SIZE], ZX_PAGE_SIZE);
+
+  // No failure by default.
+  MockBlob* blob = CreateBlob('a');
+  ASSERT_OK(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE));
+
+  // Failure while populating pages.
+  SetFailureMode(PagerErrorStatus::kErrIO);
+  blob = CreateBlob('b');
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_ERR_IO);
+  SetFailureMode(PagerErrorStatus::kOK);
+
+  // Failure while verifying pages.
+  SetFailureMode(PagerErrorStatus::kErrDataIntegrity);
+  blob = CreateBlob('c');
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_ERR_IO_DATA_INTEGRITY);
+  SetFailureMode(PagerErrorStatus::kOK);
+
+  // No failure while populating or verifying. Applies to any other type of failure - simulated here
+  // by leaving the transfer buffer mapped before the call to supply_pages() is made.
+  SetFailureMode(PagerErrorStatus::kErrBadState);
+  blob = CreateBlob('d');
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_ERR_BAD_STATE);
+  SetFailureMode(PagerErrorStatus::kOK);
+
+  // Failure mode has been cleared. No further failures expected.
+  blob = CreateBlob('e');
+  ASSERT_OK(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE));
+}
+
+TEST_F(BlobfsPagerTest, PagerErrorCode_ZstdChunked) {
+  fbl::Array<uint8_t> buf(new uint8_t[ZX_PAGE_SIZE], ZX_PAGE_SIZE);
+
+  // No failure by default.
+  MockBlob* blob = CreateBlob('a', CompressionAlgorithm::CHUNKED);
+  ASSERT_OK(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE));
+
+  // Failure while populating pages.
+  SetFailureMode(PagerErrorStatus::kErrIO);
+  blob = CreateBlob('b', CompressionAlgorithm::CHUNKED);
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_ERR_IO);
+  SetFailureMode(PagerErrorStatus::kOK);
+
+  // Failure while verifying pages.
+  SetFailureMode(PagerErrorStatus::kErrDataIntegrity);
+  blob = CreateBlob('c', CompressionAlgorithm::CHUNKED);
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_ERR_IO_DATA_INTEGRITY);
+  SetFailureMode(PagerErrorStatus::kOK);
+
+  // Failure mode has been cleared. No further failures expected.
+  blob = CreateBlob('e', CompressionAlgorithm::CHUNKED);
+  ASSERT_OK(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE));
+}
+
+TEST_F(BlobfsPagerTest, FailAfterPagerError_Uncompressed) {
+  fbl::Array<uint8_t> buf(new uint8_t[ZX_PAGE_SIZE], ZX_PAGE_SIZE);
+
+  // Failure while populating pages.
+  SetFailureMode(PagerErrorStatus::kErrIO);
+  MockBlob* blob = CreateBlob('a');
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_ERR_IO);
+  SetFailureMode(PagerErrorStatus::kOK);
+
+  // This should succeed now as the failure mode has been cleared. An IO error is not fatal.
+  ASSERT_OK(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE));
+
+  // Failure while verifying pages.
+  SetFailureMode(PagerErrorStatus::kErrDataIntegrity);
+  blob = CreateBlob('b');
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_ERR_IO_DATA_INTEGRITY);
+  SetFailureMode(PagerErrorStatus::kOK);
+
+  // A verification error is fatal. Further requests should fail as well.
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_ERR_BAD_STATE);
+}
+
+TEST_F(BlobfsPagerTest, FailAfterPagerError_ZstdChunked) {
+  fbl::Array<uint8_t> buf(new uint8_t[ZX_PAGE_SIZE], ZX_PAGE_SIZE);
+
+  // Failure while populating pages.
+  SetFailureMode(PagerErrorStatus::kErrIO);
+  MockBlob* blob = CreateBlob('a', CompressionAlgorithm::CHUNKED);
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_ERR_IO);
+  SetFailureMode(PagerErrorStatus::kOK);
+
+  // This should succeed now as the failure mode has been cleared. An IO error is not fatal.
+  ASSERT_OK(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE));
+
+  // Failure while verifying pages.
+  SetFailureMode(PagerErrorStatus::kErrDataIntegrity);
+  blob = CreateBlob('b', CompressionAlgorithm::CHUNKED);
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_ERR_IO_DATA_INTEGRITY);
+  SetFailureMode(PagerErrorStatus::kOK);
+
+  // A verification error is fatal. Further requests should fail as well.
+  ASSERT_EQ(blob->vmo().read(buf.get(), 0, ZX_PAGE_SIZE), ZX_ERR_BAD_STATE);
 }
 
 }  // namespace

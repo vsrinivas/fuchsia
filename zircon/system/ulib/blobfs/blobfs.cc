@@ -888,10 +888,6 @@ zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPa
 
 zx_status_t Blobfs::VerifyTransferVmo(uint64_t offset, uint64_t length, uint64_t buffer_size,
                                       const zx::vmo& transfer_vmo, UserPagerInfo* info) {
-  if (!info) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
   fzl::VmoMapper mapping;
   // We need to unmap the transfer VMO before its pages can be transferred to the destination VMO,
   // via |zx_pager_supply_pages|.

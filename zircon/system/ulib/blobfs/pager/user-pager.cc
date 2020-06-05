@@ -30,19 +30,22 @@ zx_status_t UserPager::InitPager() {
   // Set up the pager transfer buffer.
   zx_status_t status = zx::vmo::create(kTransferBufferSize, 0, &transfer_buffer_);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Cannot create transfer buffer: %s\n", zx_status_get_string(status));
+    FS_TRACE_ERROR("blobfs: Cannot create pager transfer buffer: %s\n",
+                   zx_status_get_string(status));
     return status;
   }
   status = AttachTransferVmo(transfer_buffer_);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to attach transfer vmo: %s\n", zx_status_get_string(status));
+    FS_TRACE_ERROR("blobfs: Failed to attach pager transfer vmo: %s\n",
+                   zx_status_get_string(status));
     return status;
   }
 
   // Set up the decompress buffer.
   status = zx::vmo::create(kDecompressionBufferSize, 0, &decompression_buffer_);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Cannot create decompress buffer: %s\n", zx_status_get_string(status));
+    FS_TRACE_ERROR("blobfs: Cannot create pager decompress buffer: %s\n",
+                   zx_status_get_string(status));
     return status;
   }
 
@@ -105,14 +108,15 @@ UserPager::ReadRange UserPager::GetBlockAlignedExtendedRange(UserPagerInfo* info
   return GetBlockAlignedReadRange(info, read_ahead_offset, read_ahead_length);
 }
 
-zx_status_t UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
-                                          UserPagerInfo* info) {
+PagerErrorStatus UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
+                                               UserPagerInfo* info) {
   ZX_DEBUG_ASSERT(info);
 
   size_t end;
   if (add_overflow(offset, length, &end)) {
-    FS_TRACE_ERROR("blobfs: Transfer range would overflow (off=%lu, len=%lu)\n", offset, length);
-    return ZX_ERR_OUT_OF_RANGE;
+    FS_TRACE_ERROR("blobfs: pager transfer range would overflow (off=%lu, len=%lu)\n", offset,
+                   length);
+    return PagerErrorStatus::kErrBadState;
   }
 
   if (info->decompressor != nullptr) {
@@ -124,9 +128,10 @@ zx_status_t UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length, cons
   }
 }
 
-zx_status_t UserPager::TransferUncompressedPagesToVmo(uint64_t requested_offset,
-                                                      uint64_t requested_length, const zx::vmo& vmo,
-                                                      UserPagerInfo* info) {
+PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_offset,
+                                                           uint64_t requested_length,
+                                                           const zx::vmo& vmo,
+                                                           UserPagerInfo* info) {
   ZX_DEBUG_ASSERT(!info->decompressor);
 
   const auto [offset, length] =
@@ -147,7 +152,7 @@ zx_status_t UserPager::TransferUncompressedPagesToVmo(uint64_t requested_offset,
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferUncompressed: Failed to populate transfer vmo: %s\n",
                    zx_status_get_string(status));
-    return status;
+    return ToPagerErrorStatus(status);
   }
 
   // Verify the pages read in.
@@ -156,7 +161,7 @@ zx_status_t UserPager::TransferUncompressedPagesToVmo(uint64_t requested_offset,
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferUncompressed: Failed to verify transfer vmo: %s\n",
                    zx_status_get_string(status));
-    return status;
+    return ToPagerErrorStatus(status);
   }
 
   ZX_DEBUG_ASSERT(offset % PAGE_SIZE == 0);
@@ -165,15 +170,15 @@ zx_status_t UserPager::TransferUncompressedPagesToVmo(uint64_t requested_offset,
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferUncompressed: Failed to supply pages to paged VMO: %s\n",
                    zx_status_get_string(status));
-    return status;
+    return ToPagerErrorStatus(status);
   }
 
-  return ZX_OK;
+  return PagerErrorStatus::kOK;
 }
 
-zx_status_t UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
-                                                 uint64_t requested_length, const zx::vmo& vmo,
-                                                 UserPagerInfo* info) {
+PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
+                                                      uint64_t requested_length, const zx::vmo& vmo,
+                                                      UserPagerInfo* info) {
   ZX_DEBUG_ASSERT(info->decompressor);
 
   const auto [offset, length] = GetBlockAlignedReadRange(info, requested_offset, requested_length);
@@ -183,7 +188,7 @@ zx_status_t UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   if (!mapping_status.is_ok()) {
     FS_TRACE_ERROR("blobfs: TransferChunked: Failed to find range for [%lu, %lu): %s\n", offset,
                    offset + length, mapping_status.status_string());
-    return mapping_status.status_value();
+    return ToPagerErrorStatus(mapping_status.status_value());
   }
   CompressionMapping mapping = mapping_status.value();
 
@@ -202,7 +207,7 @@ zx_status_t UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferChunked: Failed to populate transfer vmo: %s\n",
                    zx_status_get_string(status));
-    return status;
+    return ToPagerErrorStatus(status);
   }
 
   auto decommit_compressed = fbl::MakeAutoCall([this, length = read_len]() {
@@ -218,7 +223,7 @@ zx_status_t UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferChunked: Failed to map transfer buffer: %s\n",
                    zx_status_get_string(status));
-    return status;
+    return ToPagerErrorStatus(status);
   }
   auto unmap_compression = fbl::MakeAutoCall([&]() { compressed_mapper.Unmap(); });
 
@@ -233,9 +238,9 @@ zx_status_t UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   fzl::VmoMapper decompressed_mapper;
   if ((status = decompressed_mapper.Map(decompression_buffer_, 0, mapping.decompressed_length,
                                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE)) != ZX_OK) {
-    FS_TRACE_ERROR("TransferChunked: Failed to map decompress buffer: %s\n",
+    FS_TRACE_ERROR("blobfs: TransferChunked: Failed to map decompress buffer: %s\n",
                    zx_status_get_string(status));
-    return status;
+    return ToPagerErrorStatus(status);
   }
   auto unmap_decompression = fbl::MakeAutoCall([&]() { decompressed_mapper.Unmap(); });
 
@@ -247,7 +252,7 @@ zx_status_t UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferChunked: Failed to decompress: %s\n",
                    zx_status_get_string(status));
-    return status;
+    return ToPagerErrorStatus(status);
   }
 
   // Verify the decompressed pages.
@@ -258,7 +263,7 @@ zx_status_t UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferChunked: Failed to verify data: %s\n",
                    zx_status_get_string(status));
-    return status;
+    return ToPagerErrorStatus(status);
   }
 
   decompressed_mapper.Unmap();
@@ -269,14 +274,15 @@ zx_status_t UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferChunked: Failed to supply pages to paged VMO: %s\n",
                    zx_status_get_string(status));
-    return status;
+    return ToPagerErrorStatus(status);
   }
-  return ZX_OK;
+  return PagerErrorStatus::kOK;
 }
 
-zx_status_t UserPager::TransferZSTDSeekablePagesToVmo(uint64_t requested_offset,
-                                                      uint64_t requested_length, const zx::vmo& vmo,
-                                                      UserPagerInfo* info) {
+PagerErrorStatus UserPager::TransferZSTDSeekablePagesToVmo(uint64_t requested_offset,
+                                                           uint64_t requested_length,
+                                                           const zx::vmo& vmo,
+                                                           UserPagerInfo* info) {
   // This code path assumes a ZSTD Seekable blob.
   ZX_DEBUG_ASSERT(info && info->zstd_seekable_blob_collection);
 
@@ -308,7 +314,7 @@ zx_status_t UserPager::TransferZSTDSeekablePagesToVmo(uint64_t requested_offset,
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferSeekable: Failed to map transfer buffer: %s\n",
                    zx_status_get_string(status));
-    return status;
+    return ToPagerErrorStatus(status);
   }
   auto unmap = fbl::MakeAutoCall([&]() { decompression_mapping.Unmap(); });
 
@@ -319,7 +325,7 @@ zx_status_t UserPager::TransferZSTDSeekablePagesToVmo(uint64_t requested_offset,
         "blobfs: TransferSeekable: Failed to read from ZSTD Seekable archive to service page "
         "fault: %s\n",
         zx_status_get_string(status));
-    return status;
+    return ToPagerErrorStatus(status);
   }
 
   // Verify the decompressed pages.
@@ -328,7 +334,7 @@ zx_status_t UserPager::TransferZSTDSeekablePagesToVmo(uint64_t requested_offset,
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferSeekable: Failed to verify transfer vmo: %s\n",
                    zx_status_get_string(status));
-    return status;
+    return ToPagerErrorStatus(status);
   }
 
   // We need to unmap the decompression VMO before its pages can be transferred to the destination
@@ -340,10 +346,10 @@ zx_status_t UserPager::TransferZSTDSeekablePagesToVmo(uint64_t requested_offset,
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferSeekable: Failed to supply pages to paged VMO: %s\n",
                    zx_status_get_string(status));
-    return status;
+    return ToPagerErrorStatus(status);
   }
 
-  return ZX_OK;
+  return PagerErrorStatus::kOK;
 }
 
 }  // namespace blobfs

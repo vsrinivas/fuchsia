@@ -84,30 +84,54 @@ void PageWatcher::HandlePageRequest(async_dispatcher_t* dispatcher, async::Paged
   }
 }
 
-// TODO(rashaeqbal): fxb/40207
-// Propagate errors better. Right now we simply return after an FS_TRACE_ERROR.
-// Ideally we want to signal the waiting event associated with the corresponding page request, but
-// we don't have access to that here. We probably need a syscall to signal failure so the thread
-// waiting on the page request can handle it. With the current design, a failure will cause it to
-// block indefinitely waiting on the page request event. The only two spots this event is signaled
-// are:
-//   1. when the |supply_pages| syscall succeeds (look at PageSource::OnPagesSupplied()).
-//   2. when the page source is detached from the VMO.
-//
 // Called from the singleton userpager thread.
 void PageWatcher::PopulateAndVerifyPagesInRange(uint64_t offset, uint64_t length) {
   TRACE_DURATION("blobfs", "PageWatcher::PopulateAndVerifyPagesInRange", "offset", offset, "length",
                  length);
 
   if (!vmo_->is_valid()) {
-    FS_TRACE_ERROR("blobfs pager: VMO is not valid.\n");
+    FS_TRACE_ERROR("blobfs: pager VMO is not valid.\n");
+    // Return without calling op_range(ZX_PAGER_OP_FAIL), since that requires a valid pager VMO
+    // handle. This could potentially cause the faulting thread to hang, but there's no way for us
+    // to recover gracefully from this state.
     return;
   }
 
-  zx_status_t status = user_pager_->TransferPagesToVmo(offset, length, *vmo_, &userpager_info_);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs pager: Failed to transfer pages to the blob, error: %s\n",
-                   zx_status_get_string(status));
+  PagerErrorStatus pager_error_status;
+  if (is_corrupt_) {
+    pager_error_status = PagerErrorStatus::kErrBadState;
+    FS_TRACE_ERROR("blobfs: Pager failed page request because blob is corrupt, error: %s\n",
+                   zx_status_get_string(static_cast<zx_status_t>(pager_error_status)));
+  } else {
+    pager_error_status = user_pager_->TransferPagesToVmo(offset, length, *vmo_, &userpager_info_);
+    if (pager_error_status != PagerErrorStatus::kOK) {
+      FS_TRACE_ERROR("blobfs: Pager failed to transfer pages to the blob, error: %s\n",
+                     zx_status_get_string(static_cast<zx_status_t>(pager_error_status)));
+    }
+  }
+
+  if (pager_error_status != PagerErrorStatus::kOK) {
+    zx_status_t status = user_pager_->Pager().op_range(
+        ZX_PAGER_OP_FAIL, *vmo_, offset, length, static_cast<zx_status_t>(pager_error_status));
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: op_range ZX_PAGER_OP_FAIL failed with %s\n",
+                     zx_status_get_string(status));
+      return;
+    }
+
+    // We've signaled a failure and unblocked outstanding page requests for this range. If the pager
+    // error was a verification error, fail future requests as well - we should not service further
+    // page requests on a corrupt blob.
+    //
+    // Note that we cannot simply detach the VMO from the pager here. There might be outstanding
+    // page requests which have been queued but are yet to be serviced. These need to be handled
+    // correctly - if the VMO is detached, there will be no way for us to communicate failure to
+    // the kernel, since zx_pager_op_range() requires a valid pager VMO handle. Without being able
+    // to make a call to zx_pager_op_range() to indicate a failed page request, the faulting thread
+    // would hang indefinitely.
+    if (pager_error_status == PagerErrorStatus::kErrDataIntegrity) {
+      is_corrupt_ = true;
+    }
     return;
   }
 }

@@ -98,6 +98,10 @@ class PageWatcher {
   // Various bits of information passed on to the user pager, not used directly by the page watcher.
   // Set at time of creation.
   UserPagerInfo userpager_info_;
+
+  // Indicates whether the data is corrupt. Once a corruption is discovered on any portion of the
+  // blob, all further page requests on the entire blob must fail.
+  bool is_corrupt_ = false;
 };
 
 }  // namespace blobfs
