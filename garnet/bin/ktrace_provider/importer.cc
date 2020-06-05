@@ -5,6 +5,7 @@
 #include "garnet/bin/ktrace_provider/importer.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/clock.h>
 #include <zircon/syscalls.h>
 
@@ -175,7 +176,8 @@ bool Importer::ImportRecord(const ktrace_header_t* record, size_t record_size) {
   const bool is_flow = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_FLOW;
   const bool is_begin = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_BEGIN;
   const bool is_end = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_END;
-  const bool is_duration = !is_flow && (is_begin | is_end);
+  const bool is_duration = !is_flow && (is_begin ^ is_end);
+  const bool is_counter = !is_flow && is_begin && is_end;
 
   if (is_probe_group)
     return ImportProbeRecord(record, record_size);
@@ -183,6 +185,8 @@ bool Importer::ImportRecord(const ktrace_header_t* record, size_t record_size) {
     return ImportDurationRecord(record, record_size);
   else if (is_flow)
     return ImportFlowRecord(record, record_size);
+  else if (is_counter)
+    return ImportCounterRecord(record, record_size);
 
   return ImportUnknownRecord(record, record_size);
 }
@@ -461,6 +465,27 @@ bool Importer::ImportFlowRecord(const ktrace_header_t* record, size_t record_siz
     } else {
       return ImportUnknownRecord(record, record_size);
     }
+  }
+
+  return false;
+}
+
+bool Importer::ImportCounterRecord(const ktrace_header_t* record, size_t record_size) {
+  FX_DCHECK((KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_COUNTER) == KTRACE_FLAGS_COUNTER);
+
+  if (!(KTRACE_EVENT(record->tag) & KTRACE_NAMED_EVENT_BIT)) {
+    return ImportUnknownRecord(record, record_size);
+  }
+
+  const uint32_t event_name_id = KTRACE_EVENT_NAME_ID(record->tag);
+  const uint32_t group = KTRACE_GROUP(record->tag);
+  const bool cpu_trace = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_CPU;
+
+  if (record_size == 32) {
+    const auto counter_id = reinterpret_cast<const uint64_t*>(record + 1)[0];
+    const auto value = reinterpret_cast<const int64_t*>(record + 1)[1];
+    return HandleCounter(record->ts, record->tid, event_name_id, group, cpu_trace, counter_id,
+                         value);
   }
 
   return false;
@@ -1050,6 +1075,19 @@ bool Importer::HandleFlowEnd(trace_ticks_t event_time, zx_koid_t thread, uint32_
   trace_string_ref_t category_ref = GetCategoryForGroup(group);
   trace_context_write_flow_end_event_record(context_, event_time, &thread_ref, &category_ref,
                                             &name_ref, flow_id, nullptr, 0u);
+
+  return true;
+}
+
+bool Importer::HandleCounter(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
+                             uint32_t group, bool cpu_trace, trace_counter_id_t counter_id,
+                             int64_t value) {
+  trace_thread_ref_t thread_ref = cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_arg_t args[] = {trace_make_arg(arg0_name_ref_, trace_make_int64_arg_value(value))};
+  trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
+  trace_string_ref_t category_ref = GetCategoryForGroup(group);
+  trace_context_write_counter_event_record(context_, event_time, &thread_ref, &category_ref,
+                                           &name_ref, counter_id, args, fbl::count_of(args));
 
   return true;
 }

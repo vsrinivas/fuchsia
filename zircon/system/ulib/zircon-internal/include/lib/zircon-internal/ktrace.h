@@ -66,6 +66,7 @@ __BEGIN_CDECLS
 #define KTRACE_FLAGS_BEGIN        (0x2)
 #define KTRACE_FLAGS_END          (0x4)
 #define KTRACE_FLAGS_FLOW         (0x8)
+#define KTRACE_FLAGS_COUNTER      (KTRACE_FLAGS_BEGIN | KTRACE_FLAGS_END)
 
 typedef struct ktrace_header {
     uint32_t tag;
@@ -115,6 +116,9 @@ enum {
                                                 group,32,KTRACE_FLAGS_FLOW | KTRACE_FLAGS_BEGIN)
 #define TAG_FLOW_END(id, group)   KTRACE_TAG_EX(KTRACE_NAMED_EVENT(id), \
                                                 group,32,KTRACE_FLAGS_FLOW | KTRACE_FLAGS_END)
+
+#define TAG_COUNTER(id, group)   KTRACE_TAG_EX(KTRACE_NAMED_EVENT(id), \
+                                                group,32,KTRACE_FLAGS_COUNTER)
 
 // Actions for ktrace control
 #define KTRACE_ACTION_START     1 // options = grpmask, 0 = all

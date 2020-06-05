@@ -111,6 +111,19 @@ class TestImporter : public ::testing::Test {
     EmitKtraceRecord(&record, sizeof(record));
   }
 
+  void EmitKtrace32Record(uint32_t tag, uint32_t tid, uint64_t ts, uint64_t a, uint64_t b) {
+    const ktrace_rec_32b record{
+        .tag = tag,
+        .tid = tid,
+        .ts = ts,
+        .a = static_cast<uint32_t>(a),
+        .b = static_cast<uint32_t>(a >> 32),
+        .c = static_cast<uint32_t>(b),
+        .d = static_cast<uint32_t>(b >> 32),
+    };
+    EmitKtraceRecord(&record, sizeof(record));
+  }
+
   void EmitContextSwitchRecord(uint64_t ts, uint32_t old_thread_tid, uint32_t new_thread_tid,
                                uint8_t cpu, KernelThreadState old_thread_state,
                                uint8_t old_thread_prio, uint8_t new_thread_prio,
@@ -172,6 +185,12 @@ class TestImporter : public ::testing::Test {
     uint32_t flags = cpu_id | (user_mode_tid ? KTRACE_FLAGS_KERNEL_MUTEX_USER_MODE_TID : 0);
 
     EmitKtrace32Record(tag, 0, ts, mutex_addr, tid, threads_blocked, flags);
+  }
+
+  void EmitKernelCounterRecord(uint64_t ts, uint8_t cpu_id, uint8_t group, int string_ref,
+                               int64_t value, uint64_t counter_id) {
+    const uint32_t tag = KTRACE_TAG_FLAGS(TAG_COUNTER(string_ref, group), KTRACE_FLAGS_CPU);
+    EmitKtrace32Record(tag, cpu_id, ts, counter_id, value);
   }
 
   bool StopTracingAndImportRecords(fbl::Vector<trace::Record>* out_records) {
@@ -525,5 +544,55 @@ TEST_F(TestImporter, KernelMutexRecords) {
     CompareRecord(records[i], expected[i]);
   }
 }
+
+TEST_F(TestImporter, Counter) {
+  EmitKernelCounterRecord(99,              // ts
+                          0,               // cpu_id
+                          KTRACE_GRP_IPC,  // group
+                          0,               // string_ref
+                          10,              // value
+                          0                // counter_id
+  );
+  EmitKernelCounterRecord(100,               // ts
+                          1,                 // cpu_id
+                          KTRACE_GRP_TASKS,  // group
+                          1,                 // string_ref
+                          20,                // value
+                          1                  // counter_id
+  );
+  EmitKernelCounterRecord(101,             // ts
+                          3,               // cpu_id
+                          KTRACE_GRP_IRQ,  // group
+                          2,               // string_ref
+                          30,              // value
+                          2                // counter_id
+  );
+  static const char* const expected[] = {
+      "String(index: 50, \"process\")",
+      "KernelObject(koid: 1895825408, type: thread, name: \"cpu-0\", {process: koid(0)})",
+      "Thread(index: 1, 0/1895825408)",
+      "String(index: 51, \"probe 0\")",
+      "Event(ts: 99, pt: 0/1895825408, category: \"kernel:ipc\", name: \"probe 0\", Counter(id: "
+      "0), {arg0: int64(10)})",
+      "KernelObject(koid: 1895825409, type: thread, name: \"cpu-1\", {process: koid(0)})",
+      "Thread(index: 2, 0/1895825409)",
+      "String(index: 52, \"probe 0x1\")",
+      "Event(ts: 100, pt: 0/1895825409, category: \"kernel:tasks\", name: \"probe 0x1\", "
+      "Counter(id: 1), {arg0: int64(20)})",
+      "KernelObject(koid: 1895825411, type: thread, name: \"cpu-3\", {process: koid(0)})",
+      "Thread(index: 3, 0/1895825411)",
+      "String(index: 53, \"probe 0x2\")",
+      "Event(ts: 101, pt: 0/1895825411, category: \"kernel:irq\", name: \"probe 0x2\", Counter(id: "
+      "2), {arg0: int64(30)})",
+  };
+
+  fbl::Vector<trace::Record> records;
+  ASSERT_TRUE(StopTracingAndImportRecords(&records));
+  ASSERT_EQ(records.size(), fbl::count_of(expected));
+  for (size_t i = 0; i < records.size(); ++i) {
+    CompareRecord(records[i], expected[i]);
+  }
+}
+
 }  // namespace
 }  // namespace ktrace_provider

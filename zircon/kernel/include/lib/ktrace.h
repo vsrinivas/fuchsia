@@ -300,6 +300,25 @@ inline void ktrace_flow_end(TraceEnabled<enabled>, TraceContext context, uint32_
   }
 }
 
+template <bool enabled>
+inline void ktrace_counter(TraceEnabled<enabled>, uint32_t group, StringRef* string_ref,
+                           int64_t value, uint64_t counter_id = 0) {
+  if constexpr (enabled) {
+    const uint32_t tag =
+        KTRACE_TAG_FLAGS(TAG_COUNTER(string_ref->GetId(), group), KTRACE_FLAGS_CPU);
+    void* const payload = ktrace_open(tag);
+    if (payload) {
+      static_cast<uint64_t*>(payload)[0] = counter_id;
+      static_cast<int64_t*>(payload)[1] = value;
+    }
+  } else {
+    (void)group;
+    (void)string_ref;
+    (void)counter_id;
+    (void)value;
+  }
+}
+
 void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always);
 
 static inline void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* name) {
