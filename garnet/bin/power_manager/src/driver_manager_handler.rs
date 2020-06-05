@@ -8,7 +8,7 @@ use crate::node::Node;
 use crate::system_shutdown_handler;
 use crate::types::Seconds;
 use crate::utils::get_current_timestamp;
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_device_manager as fdevicemgr;
 use fidl_fuchsia_io as fio;
@@ -176,15 +176,17 @@ impl<'a, 'b> DriverManagerHandlerBuilder<'a, 'b> {
             self.termination_channel_closed_handler,
         );
 
+        // Bind the received Directory channel to the namespace. This lets the received drivers be
+        // accessed in the usual way (using `fdio::service_connect` and a /dev path).
+        // TODO(fxbug.dev/52890): This is expected to fail until the power manager removes /dev from
+        // its sandbox (because /dev will already exist in the namespace). For now, ignore the
+        // error.
+        let _ = bind_driver_directory(registration.dir).context("Failed to bind driver directory");
+
         let node = Rc::new(DriverManagerHandler {
             termination_state_proxy: registration.termination_state_proxy,
-            devfs_proxy: registration.dir,
             inspect,
         });
-
-        // Make the global node reference available so that the `connect_proxy` function can access
-        // drivers provided by this node.
-        set_driver_manager_handler(node.clone());
 
         Ok(node)
     }
@@ -399,13 +401,22 @@ fn enable_proxy_close_handler(
     });
 }
 
+/// Creates a "/dev" directory within the namespace that is bound to the provided DirectoryProxy.
+fn bind_driver_directory(dir: fio::DirectoryProxy) -> Result<(), Error> {
+    fdio::Namespace::installed()?
+        .bind(
+            "/dev",
+            dir.into_channel()
+                .map_err(|_| format_err!("Failed to convert DirectoryProxy into channel"))?
+                .into_zx_channel(),
+        )
+        .map_err(|e| e.into())
+}
+
 pub struct DriverManagerHandler {
     /// Protocol instance that the Power Manager uses to set the Driver Manager's termination system
     /// state.
     termination_state_proxy: fdevicemgr::SystemStateTransitionProxy,
-
-    /// Directory instance that represents the devfs (/dev).
-    devfs_proxy: fio::DirectoryProxy,
 
     /// Struct for managing Component Inspection data
     inspect: InspectData,
@@ -461,80 +472,6 @@ impl DriverManagerHandler {
 
         result
     }
-
-    /// Wraps the associated `connect_proxy` function while adding tracing and error logging.
-    pub fn connect_proxy_with_logging<T: fidl::endpoints::ServiceMarker>(
-        &self,
-        path: &String,
-    ) -> Result<T::Proxy, anyhow::Error> {
-        fuchsia_trace::duration!(
-            "power_manager",
-            "DriverManagerHandler::connect_proxy",
-            "path" => path.as_str()
-        );
-
-        let result = self.connect_proxy::<T>(path);
-
-        fuchsia_trace::instant!(
-            "power_manager",
-            "DriverManagerHandler::connect_proxy_result",
-            fuchsia_trace::Scope::Thread,
-            "result" => format!("{:?}", result.as_ref().map(|_| "proxy")).as_str()
-        );
-
-        if let Err(e) = &result {
-            self.inspect.log_driver_connect_error(&path, format!("{}", e))
-        }
-
-        result
-    }
-
-    /// Create and connect a FIDL proxy to the service at `path` using `devfs_proxy`.
-    fn connect_proxy<T: fidl::endpoints::ServiceMarker>(
-        &self,
-        path: &String,
-    ) -> Result<T::Proxy, anyhow::Error> {
-        let (proxy, server) = fidl::endpoints::create_proxy::<T>()
-            .map_err(|e| anyhow::format_err!("Failed to create proxy: {}", e))?;
-
-        fdio::service_connect_at(self.devfs_proxy.as_ref(), &path, server.into_channel())
-            .map_err(|s| anyhow::format_err!("Failed to connect to driver at {}: {}", path, s))?;
-
-        Ok(proxy)
-    }
-}
-
-// A global DriverManagerHandler reference that is used by the `connect_proxy` function to connect
-// to drivers that are made available through any channels managed by the DriverManagerHandler. The
-// `connect_proxy` function is publicly available to other nodes within PowerManager for connecting
-// to drivers accessible via the DriverManagerHandler node.
-thread_local!(
-    static DRIVER_MANAGER_HANDLER: RefCell<Option<Rc<DriverManagerHandler>>> = RefCell::new(None)
-);
-
-/// Set the global DriverManagerHandler reference.
-fn set_driver_manager_handler(driver_manager_handler: Rc<DriverManagerHandler>) {
-    DRIVER_MANAGER_HANDLER.with(|rc| {
-        rc.replace(Some(driver_manager_handler));
-    });
-}
-
-/// Create and connect a FIDL proxy to the service at `path` by using the global
-/// DriverManagerHandler reference, if it exists. This function is a simple wrapper around the
-/// DriverManagerHandler associated function `connect_proxy_with_logging`.
-pub fn connect_proxy<T: fidl::endpoints::ServiceMarker>(
-    path: &String,
-) -> Result<T::Proxy, anyhow::Error> {
-    if path.starts_with("/dev") {
-        DRIVER_MANAGER_HANDLER.with(|rc| {
-            rc.borrow()
-                .as_ref()
-                .ok_or(format_err!("Missing DriverManagerHandler"))?
-                .connect_proxy_with_logging::<T>(path)
-        })
-    } else {
-        Err(format_err!("Invalid path {} (DriverManagerHandler only serves /dev paths)", path))
-    }
 }
 
 #[async_trait(?Send)]
@@ -561,12 +498,10 @@ struct InspectData {
     registration_timeout_config: inspect::UintProperty,
     registration_time: inspect::IntProperty,
     termination_state: inspect::StringProperty,
-    driver_connect_errors: RefCell<BoundedListNode>,
     set_termination_errors: RefCell<BoundedListNode>,
 }
 
 impl InspectData {
-    const NUM_DRIVER_CONNECT_ERRORS: usize = 10;
     const NUM_SET_TERMINATION_ERRORS: usize = 10;
 
     fn new(parent: &inspect::Node, name: String) -> Self {
@@ -577,20 +512,12 @@ impl InspectData {
                 .create_uint("registration_timeout_config (s)", 0),
             registration_time: root_node.create_int("registration_time", 0),
             termination_state: root_node.create_string("termination_state", "None"),
-            driver_connect_errors: RefCell::new(BoundedListNode::new(
-                root_node.create_child("driver_connect_errors"),
-                Self::NUM_DRIVER_CONNECT_ERRORS,
-            )),
             set_termination_errors: RefCell::new(BoundedListNode::new(
                 root_node.create_child("set_termination_errors"),
                 Self::NUM_SET_TERMINATION_ERRORS,
             )),
             _root_node: root_node,
         }
-    }
-
-    fn log_driver_connect_error(&self, path: &String, error: String) {
-        inspect_log!(self.driver_connect_errors.borrow_mut(), driver_path: path, error: error)
     }
 
     fn log_set_termination_error(&self, state: String, error: String) {
@@ -601,6 +528,7 @@ impl InspectData {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::connect_proxy;
     use inspect::assert_inspect_tree;
     use matches::assert_matches;
     use std::cell::Cell;
@@ -676,17 +604,12 @@ mod tests {
             _ => Err(zx::Status::INVALID_ARGS),
         });
 
-        // Use a closed Directory channel so that we can verify connect_proxy errors
-        let (dir, dir_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
-        drop(dir_stream);
-
         let node = DriverManagerHandlerBuilder::new()
             .with_inspect_root(inspector.root())
             .with_registration_timeout(Seconds(60.0))
             .with_driver_manager_registration(DriverManagerRegistration {
                 termination_state_proxy,
-                dir,
+                dir: fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap().0,
             })
             .build()
             .await
@@ -706,11 +629,6 @@ mod tests {
             )
             .await;
 
-        // Should fail so `driver_connect_errors` will be populated
-        assert!(node
-            .connect_proxy_with_logging::<fio::DirectoryMarker>(&"/dev/class/fake".to_string())
-            .is_err());
-
         assert_inspect_tree!(
             inspector,
             root: {
@@ -718,13 +636,6 @@ mod tests {
                     "registration_timeout_config (s)": 60u64,
                     "registration_time": inspect::testing::AnyProperty,
                     "termination_state": "SystemPowerStateReboot",
-                    "driver_connect_errors": {
-                        "0": {
-                            "driver_path": "/dev/class/fake",
-                            "error": "Failed to connect to driver at /dev/class/fake: PEER_CLOSED",
-                            "@time": inspect::testing::AnyProperty
-                        }
-                    },
                     "set_termination_errors": {
                         "0": {
                             "state": "SystemPowerStateFullyOn",
@@ -856,9 +767,11 @@ mod tests {
         assert_eq!(channel_closed.get(), true);
     }
 
-    /// Tests the DriverManagerHandler connect_proxy function by connecting a proxy to a fake
-    /// driver. The returned DirectoryProxy is tested to be valid by verifying a message is able to
-    /// successfully be passed from the client end to the fake driver that it was connected to.
+    /// Tests the driver directory binding functionality by setting up the DriverManagerHandler node
+    /// with a Directory channel that the node will then bind to the namespace. The test connects to
+    /// a driver in the namespace at "/dev", which will be routed to the provided Directory channel.
+    /// The connection is tested to be valid by verifying a message is able to successfully be
+    /// passed through the channel.
     #[fasync::run_singlethreaded(test)]
     async fn test_connect_proxy() {
         let (dir_proxy, mut dir_stream) =

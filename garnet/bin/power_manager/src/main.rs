@@ -73,7 +73,5 @@ async fn main() -> Result<(), Error> {
     let mut pm = PowerManager::new();
 
     // This future should never complete
-    log_if_err!(pm.run().await, "Failed to run PowerManager");
-
-    Ok(())
+    pm.run().await
 }

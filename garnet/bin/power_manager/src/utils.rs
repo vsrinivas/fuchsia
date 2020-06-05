@@ -12,22 +12,16 @@ macro_rules! log_if_err {
     };
 }
 
-/// Create and connect a FIDL proxy to the service at `path`. Because driver connections are routed
-/// to the Power Manager through a Directory channel coming from the Driver Manager, this function
-/// will first attempt to connect to the specified path using that route. If this is unsuccessful,
-/// then the more general connection method using the component namespace will be used.
+/// Create and connect a FIDL proxy to the service at `path`
 pub fn connect_proxy<T: fidl::endpoints::ServiceMarker>(
     path: &String,
 ) -> Result<T::Proxy, anyhow::Error> {
-    if let Ok(proxy) = crate::driver_manager_handler::connect_proxy::<T>(path) {
-        Ok(proxy)
-    } else {
-        let (proxy, server) = fidl::endpoints::create_proxy::<T>()
-            .map_err(|e| anyhow::format_err!("Failed to create proxy: {}", e))?;
-        fdio::service_connect(path, server.into_channel())
-            .map_err(|s| anyhow::format_err!("Failed to connect to service at {}: {}", path, s))?;
-        Ok(proxy)
-    }
+    let (proxy, server) = fidl::endpoints::create_proxy::<T>()
+        .map_err(|e| anyhow::format_err!("Failed to create proxy: {}", e))?;
+
+    fdio::service_connect(path, server.into_channel())
+        .map_err(|s| anyhow::format_err!("Failed to connect to service at {}: {}", path, s))?;
+    Ok(proxy)
 }
 
 /// Returns the current timestamp in Nanoseconds.

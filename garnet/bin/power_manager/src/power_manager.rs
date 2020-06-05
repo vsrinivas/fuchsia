@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::node::Node;
-use anyhow::Error;
+use anyhow::{Context, Error};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::component;
 use futures::stream::StreamExt;
@@ -73,7 +73,10 @@ impl PowerManager {
         // Iterate through each object in the top-level array, which represents configuration for a
         // single node
         for node_config in json_data.as_array().unwrap().iter() {
-            let node = self.create_node(node_config.clone(), service_fs).await?;
+            let node = self
+                .create_node(node_config.clone(), service_fs)
+                .await
+                .with_context(|| format!("Failed creating node {}", node_config["name"]))?;
             self.nodes.insert(node_config["name"].as_str().unwrap().to_string(), node);
         }
         Ok(())
