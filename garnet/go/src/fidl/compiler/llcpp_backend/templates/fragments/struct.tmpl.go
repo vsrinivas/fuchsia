@@ -22,6 +22,7 @@ struct {{ .Name }} {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
   static constexpr bool HasPointer = {{ .HasPointer }};
+  static constexpr bool IsResource = {{ .IsResource }};
 
   {{- range .Members }}
 {{ "" }}

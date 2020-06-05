@@ -42,6 +42,7 @@ struct Baz {
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
+  static constexpr bool IsResource = false;
 
   ::llcpp::middle::Bar g = {};
 };

@@ -41,6 +41,7 @@ struct ByteAndBytes {
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
   uint8_t single_byte = {};
 

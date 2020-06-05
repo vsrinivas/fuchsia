@@ -92,10 +92,8 @@ class DecodedMessage final {
   // Use the FIDL encoding tables for |FidlType| to walk the message and
   // destroy the handles it contains.
   void CloseHandles() {
-    // Using the coding table to single out boring types instead of checking
-    // |FidlType::MaxNumHandle|, to avoid the pathological case where a FIDL message has a
-    // vector of handles with max count limited at 0, but the user attaches some handles anyway.
-    if (!NeedsEncodeDecode<FidlType>::value) {
+    // Non-resource types do not contain handles, hence need no handle closing.
+    if constexpr (!FidlType::IsResource) {
       return;
     }
 #ifdef __Fuchsia__

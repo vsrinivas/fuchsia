@@ -118,6 +118,7 @@ class SimpleUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -160,6 +161,7 @@ struct StructWithNullableVector {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
   ::fidl::VectorView<int32_t> val = {};
 };
@@ -173,6 +175,7 @@ struct StructWithNullableUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
   ::llcpp::fidl::test::nullable::SimpleUnion val = {};
 };
@@ -186,6 +189,7 @@ struct StructWithNullableStruct {
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
   ::fidl::tracking_ptr<::llcpp::fidl::test::nullable::Int32Wrapper> val = {};
 };
@@ -199,6 +203,7 @@ struct StructWithNullableString {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
   ::fidl::StringView val = {};
 };
@@ -212,6 +217,7 @@ struct StructWithNullableRequest {
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
+  static constexpr bool IsResource = true;
 
   ::zx::channel val = {};
 };
@@ -225,6 +231,7 @@ struct StructWithNullableProtocol {
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
+  static constexpr bool IsResource = true;
 
   ::zx::channel val = {};
 };
@@ -238,6 +245,7 @@ struct StructWithNullableHandle {
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
+  static constexpr bool IsResource = true;
 
   ::zx::vmo val = {};
 };
@@ -261,6 +269,7 @@ class SimpleProtocol final {
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -279,6 +288,7 @@ class SimpleProtocol final {
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = AddResponse;
@@ -479,6 +489,7 @@ struct Int32Wrapper {
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
+  static constexpr bool IsResource = false;
 
   int32_t val = {};
 };

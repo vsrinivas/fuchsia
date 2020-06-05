@@ -80,6 +80,7 @@ class SimpleTable final {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 96;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
   class Builder;
   class UnownedBuilder;
@@ -299,6 +300,7 @@ class ReverseOrdinalTable final {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 72;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
   class Builder;
   class UnownedBuilder;
@@ -532,6 +534,7 @@ class OlderSimpleTable final {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
   class Builder;
   class UnownedBuilder;
@@ -709,6 +712,7 @@ class NewerSimpleTable final {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 120;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
   class Builder;
   class UnownedBuilder;
@@ -932,6 +936,7 @@ class EmptyTable final {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
   class Builder;
   class UnownedBuilder;

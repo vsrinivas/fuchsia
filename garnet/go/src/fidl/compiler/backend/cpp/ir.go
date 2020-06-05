@@ -134,6 +134,7 @@ type Union struct {
 	MaxOutOfLine int
 	Result       *Result
 	HasPointer   bool
+	IsResource   bool
 	Kind         unionKind
 	types.Strictness
 }
@@ -168,6 +169,7 @@ type Table struct {
 	MaxHandles     int
 	MaxOutOfLine   int
 	HasPointer     bool
+	IsResource     bool
 	Kind           tableKind
 	// Types of the members in ordinal order, "void" for reserved.
 	FrameItems []TableFrameItem
@@ -198,6 +200,7 @@ type Struct struct {
 	HasPadding    bool
 	IsResultValue bool
 	HasPointer    bool
+	IsResource    bool
 	Result        *Result
 	Kind          structKind
 }
@@ -261,6 +264,7 @@ type Method struct {
 	RequestPadding       bool
 	RequestFlexible      bool
 	RequestHasPointer    bool
+	RequestIsResource    bool
 	HasResponse          bool
 	Response             []Parameter
 	ResponseSize         int
@@ -270,6 +274,7 @@ type Method struct {
 	ResponsePadding      bool
 	ResponseFlexible     bool
 	ResponseHasPointer   bool
+	ResponseIsResource   bool
 	CallbackType         string
 	ResponseHandlerType  string
 	ResponderType        string
@@ -899,6 +904,7 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 			RequestPadding:       v.RequestTypeShapeV1.HasPadding,
 			RequestFlexible:      v.RequestTypeShapeV1.HasFlexibleEnvelope,
 			RequestHasPointer:    v.RequestTypeShapeV1.Depth > 0,
+			RequestIsResource:    v.RequestTypeShapeV1.IsResource,
 			HasResponse:          v.HasResponse,
 			Response:             c.compileParameterArray(v.Response),
 			ResponseSize:         v.ResponseTypeShapeV1.InlineSize,
@@ -908,6 +914,7 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 			ResponsePadding:      v.ResponseTypeShapeV1.HasPadding,
 			ResponseFlexible:     v.ResponseTypeShapeV1.HasFlexibleEnvelope,
 			ResponseHasPointer:   v.ResponseTypeShapeV1.Depth > 0,
+			ResponseIsResource:   v.ResponseTypeShapeV1.IsResource,
 			CallbackType:         callbackType,
 			ResponseHandlerType:  fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
 			ResponderType:        fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
@@ -977,6 +984,7 @@ func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struc
 		MaxOutOfLine: val.TypeShapeV1.MaxOutOfLine,
 		HasPadding:   val.TypeShapeV1.HasPadding,
 		HasPointer:   val.TypeShapeV1.Depth > 0,
+		IsResource:   val.TypeShapeV1.IsResource,
 	}
 
 	for _, v := range val.Members {
@@ -1050,6 +1058,7 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 		MaxHandles:     val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine:   val.TypeShapeV1.MaxOutOfLine,
 		HasPointer:     val.TypeShapeV1.Depth > 0,
+		IsResource:     val.TypeShapeV1.IsResource,
 	}
 
 	for _, v := range val.SortedMembersNoReserved() {
@@ -1103,6 +1112,7 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		MaxOutOfLine: val.TypeShapeV1.MaxOutOfLine,
 		Strictness:   val.Strictness,
 		HasPointer:   val.TypeShapeV1.Depth > 0,
+		IsResource:   val.TypeShapeV1.IsResource,
 	}
 
 	for _, v := range val.Members {

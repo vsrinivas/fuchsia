@@ -93,6 +93,7 @@ class UnionSize8Alignment4 {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -170,6 +171,7 @@ class UnionSize36Alignment4 {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 32;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -247,6 +249,7 @@ class UnionSize12Alignment4 {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -333,6 +336,7 @@ class UnionSize24Alignment8 {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -372,6 +376,7 @@ struct SandwichUnionSize8Alignment4 {
   static constexpr uint32_t PrimarySize = 40;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
   uint32_t before = {};
 
@@ -390,6 +395,7 @@ struct SandwichUnionSize36Alignment4 {
   static constexpr uint32_t PrimarySize = 40;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 32;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
   uint32_t before = {};
 
@@ -408,6 +414,7 @@ struct SandwichUnionSize12Alignment4 {
   static constexpr uint32_t PrimarySize = 40;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
   uint32_t before = {};
 
@@ -426,6 +433,7 @@ struct StructSize16Alignment8 {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
+  static constexpr bool IsResource = false;
 
   uint64_t f1 = {};
 
@@ -442,6 +450,7 @@ struct SandwichUnionSize24Alignment8 {
   static constexpr uint32_t PrimarySize = 40;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
   static constexpr bool HasPointer = true;
+  static constexpr bool IsResource = false;
 
   uint32_t before = {};
 
