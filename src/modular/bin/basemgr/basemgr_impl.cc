@@ -189,19 +189,19 @@ void BasemgrImpl::StartSession(bool use_random_id) {
 }
 
 fuchsia::modular::session::SessionShellConfig BasemgrImpl::GetActiveSessionShellConfig() {
-  return CloneStruct(config_.basemgr_config()
-                         .session_shell_map()
-                         .at(active_session_shell_configs_index_)
-                         .config());
+  return CloneStruct(config_.basemgr_config().session_shell_map().at(0).config());
 }
 
 void BasemgrImpl::UpdateSessionShellConfig() {
-  session_shell_config_ =
-      CloneStruct(fidl::To<fuchsia::modular::AppConfig>(config_.basemgr_config()
-                                                            .session_shell_map()
-                                                            .at(active_session_shell_configs_index_)
-                                                            .config()
-                                                            .app_config()));
+  auto shell_count = config_.basemgr_config().session_shell_map().size();
+  FX_DCHECK(shell_count > 0);
+
+  session_shell_config_ = CloneStruct(fidl::To<fuchsia::modular::AppConfig>(
+      config_.basemgr_config().session_shell_map().at(0).config().app_config()));
+  if (shell_count > 1) {
+    FX_LOGS(WARNING) << "More than one session shell config defined, using first in list: "
+                     << session_shell_config_.url;
+  }
 }
 
 void BasemgrImpl::HandleResetOrStartSession() {

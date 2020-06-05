@@ -171,9 +171,9 @@ void XdrBasemgrConfig_v1(XdrContext* const xdr,
   // |XdrSessionShellMapEntry| will fill in individual fields of each session
   // shell.
   auto session_shell_config = GetDefaultSessionShellMap();
-  bool has_session_shell_map = data->has_session_shell_map();
+  bool has_nonempty_session_shell_map = data->has_session_shell_map() && data->session_shell_map().size() > 0;
   xdr->FieldWithDefault(modular_config::kSessionShells, data->mutable_session_shell_map(),
-                        XdrSessionShellMapEntry, has_session_shell_map,
+                        XdrSessionShellMapEntry, has_nonempty_session_shell_map,
                         std::move(session_shell_config));
 
   bool has_story_shell_url = false;

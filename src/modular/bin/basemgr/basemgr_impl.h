@@ -101,11 +101,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // Used to configure which session shell component to launch.
   fuchsia::modular::AppConfig session_shell_config_;
 
-  // |active_session_shell_configs_index_| indicates which settings
-  // in |config_.session_shell_map()| are currently active.
-  std::vector<fuchsia::modular::session::SessionShellConfig>::size_type
-      active_session_shell_configs_index_{};
-
   // Retained to be used in creating a `SessionProvider`.
   const std::shared_ptr<sys::ServiceDirectory> component_context_services_;
 
