@@ -139,6 +139,13 @@ From //root_build_dir/args.gn:3
 
 From //BUILD.gn:25
 
+### basic_env_names
+The list of environment names to include in "basic_envs".
+
+**Current value (from the default):** `[]`
+
+From //build/testing/environments.gni:14
+
 ### blob_blobfs_maximum_bytes
 For build/images:fvm.blob.sparse.blk, use this argument.
 
@@ -543,13 +550,13 @@ From //build/config/BUILD.gn:13
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/86c28287d23a4298eb65dfcacd8ce423e6d90a57/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/294d233ca09e33e55e6d2419f58199d3a4ab6c32/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/86c28287d23a4298eb65dfcacd8ce423e6d90a57/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/294d233ca09e33e55e6d2419f58199d3a4ab6c32/util/net/tls.gni#22)
 
 ### create_kernel_service_snapshot
 
@@ -631,7 +638,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/7fcb3493662bf818f4aba7f21ef9adb3a9ec1a72/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/8964891834348c800b300e99bce722a49ac11b65/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -646,7 +653,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/7fcb3493662bf818f4aba7f21ef9adb3a9ec1a72/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/8964891834348c800b300e99bce722a49ac11b65/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -690,7 +697,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/7fcb3493662bf818f4aba7f21ef9adb3a9ec1a72/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/8964891834348c800b300e99bce722a49ac11b65/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -1018,7 +1025,7 @@ From //build/images/args.gni:68
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/7fcb3493662bf818f4aba7f21ef9adb3a9ec1a72/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/8964891834348c800b300e99bce722a49ac11b65/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -1033,14 +1040,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/7fcb3493662bf818f4aba7f21ef9adb3a9ec1a72/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/8964891834348c800b300e99bce722a49ac11b65/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/7fcb3493662bf818f4aba7f21ef9adb3a9ec1a72/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/8964891834348c800b300e99bce722a49ac11b65/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -2073,7 +2080,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:879
+From //build/config/BUILDCONFIG.gn:888
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2082,7 +2089,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:884
+From //build/config/BUILDCONFIG.gn:893
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2099,6 +2106,10 @@ a list that can be spliced into [`select_variant`](#select_variant).
   dir = ["//third_party/yasm", "//third_party/vboot_reference", "//tools/vboot_reference", "//src/fonts/font_info"]
   host = true
   variant = "asan_no_detect_leaks"
+}, {
+  dir = ["//zircon/tools/blobfs"]
+  host = true
+  variant = false
 }, {
   host = true
   variant = "asan"
