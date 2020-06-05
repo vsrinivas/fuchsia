@@ -19,13 +19,19 @@ namespace modular {
 class StoryProviderMock : public fuchsia::modular::StoryProvider {
  public:
   // Allows notification of watchers.
-  void NotifyStoryChanged(fuchsia::modular::StoryInfo2 story_info,
+  void NotifyStoryChanged(fuchsia::modular::StoryInfo story_info,
                           fuchsia::modular::StoryState story_state,
                           fuchsia::modular::StoryVisibilityState story_visibility_state) {
     for (const auto& watcher : watchers_.ptrs()) {
       fuchsia::modular::StoryInfo2 story_info_clone;
       fidl::Clone(story_info, &story_info_clone);
-      (*watcher)->OnChange2(std::move(story_info_clone), story_state, story_visibility_state);
+      (*watcher)->OnChange(std::move(story_info_clone), story_state, story_visibility_state);
+
+      fuchsia::modular::StoryInfo2 story_info_2;
+      story_info_2.set_id(story_info.id());
+      story_info_2.set_last_focus_time(story_info.last_focus_time());
+
+      (*watcher)->OnChange2(std::move(story_info_2), story_state, story_visibility_state);
     }
   }
 
@@ -37,6 +43,13 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
 
  private:
   // |fuchsia::modular::StoryProvider|
+  void GetStories(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
+                  GetStoriesCallback callback) override {
+    std::vector<fuchsia::modular::StoryInfo> stories;
+    callback(std::move(stories));
+  }
+
+  // |fuchsia::modular::StoryProvider|
   void GetStories2(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher,
                    GetStories2Callback callback) override {
     std::vector<fuchsia::modular::StoryInfo2> stories;
@@ -46,6 +59,11 @@ class StoryProviderMock : public fuchsia::modular::StoryProvider {
   // |fuchsia::modular::StoryProvider|
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher) override {
     watchers_.AddInterfacePtr(watcher.Bind());
+  }
+
+  // |fuchsia::modular::StoryProvider|
+  void GetStoryInfo(std::string story_id, GetStoryInfoCallback callback) override {
+    callback(fuchsia::modular::StoryInfo{});
   }
 
   // |fuchsia::modular::StoryProvider|

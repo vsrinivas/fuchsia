@@ -14,16 +14,18 @@ protocol StoryProvider {
     /// Returns a list of existing stories. If `watcher` is provided, the client will
     /// be notified of story changes (new stories, deleted stories, runtime
     /// state changes).
-    [Transitional = "Use GetStories2 instead"]
+    [Transitional]
     GetStories(StoryProviderWatcher? watcher) -> (vector<StoryInfo> story_infos);
+
     /// For transition purposes only.
     [Transitional = "Only use while GetStories is transitional"]
     GetStories2(StoryProviderWatcher? watcher) -> (vector<StoryInfo2> story_infos);
 
     /// Requests detailed information about the given story. If the story doesn't
     /// exist, returns null.
-    [Transitional = "Use GetStoryInfo2 instead"]
-    GetStoryInfo(string story_id) -> (StoryInfo? story_info);
+    [Transitional]
+    GetStoryInfo(string:MAX story_id) -> (StoryInfo story_info);
+
     /// For transition purposes only.
     [Transitional = "Use only while GetStoryInfo is transitional"]
     GetStoryInfo2(string story_id) -> (StoryInfo2 story_info);
@@ -69,9 +71,10 @@ protocol StoryProviderWatcher {
     ///
     /// `story_visibility_state` is DEFAULT until a mod on the current device
     /// requests for the visibility state to be changed.
-    [Transitional = "Implement OnChange2 instead"]
+    [Transitional]
     OnChange(StoryInfo story_info, StoryState story_state,
              StoryVisibilityState story_visibility_state);
+
     /// For transition purposes only.
     [Transitional = "Implement only while OnChange is transitional"]
     OnChange2(StoryInfo2 story_info, StoryState story_state,

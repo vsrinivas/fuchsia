@@ -10,10 +10,10 @@ using fuchsia.modular;
 /// data necessary to run a story: see story_model.fidl for that.
 table StoryData {
     /// Metadata available to the SessionShell.
-    1: fuchsia.modular.StoryInfo2 story_info;
+    1: fuchsia.modular.StoryInfo story_info;
 
     /// A client-supplied name for this story.
-    2: string story_name;
+    2: string:MAX story_name;
 
     /// Story metadata and configuration.
     3: fuchsia.modular.StoryOptions story_options;

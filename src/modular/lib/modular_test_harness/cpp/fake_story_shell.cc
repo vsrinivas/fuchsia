@@ -41,38 +41,19 @@ void FakeStoryShell::Initialize(
 
 void FakeStoryShell::AddSurface(fuchsia::modular::ViewConnection view_connection,
                                 fuchsia::modular::SurfaceInfo surface_info) {
-  fuchsia::modular::SurfaceInfo2 surface_info2;
-  surface_info2.set_parent_id(surface_info.parent_id);
-  if (surface_info.surface_relation) {
-    surface_info2.set_surface_relation(*surface_info.surface_relation);
+  if (on_add_surface_) {
+    on_add_surface_(std::move(view_connection), std::move(surface_info));
   }
-  if (surface_info.module_manifest) {
-    surface_info2.set_module_manifest(std::move(*surface_info.module_manifest));
-  }
-  surface_info2.set_module_source(surface_info.module_source);
-  AddSurface3(std::move(view_connection), std::move(surface_info2));
-}
-
-void FakeStoryShell::AddSurface2(fuchsia::modular::ViewConnection2 view_connection,
-                                 fuchsia::modular::SurfaceInfo surface_info) {
-  AddSurface(
-      fuchsia::modular::ViewConnection{
-          .surface_id = view_connection.surface_id,
-          .view_holder_token = std::move(view_connection.view_holder_token),
-      },
-      std::move(surface_info));
 }
 
 void FakeStoryShell::AddSurface3(fuchsia::modular::ViewConnection view_connection,
                                  fuchsia::modular::SurfaceInfo2 surface_info2) {
   if (on_add_surface_) {
     fuchsia::modular::SurfaceInfo surface_info;
-    surface_info.parent_id = surface_info2.parent_id();
-    surface_info.surface_relation = std::make_unique<fuchsia::modular::SurfaceRelation>(
-        *surface_info2.mutable_surface_relation());
-    surface_info.module_manifest = std::make_unique<fuchsia::modular::ModuleManifest>(
-        std::move(*surface_info2.mutable_module_manifest()));
-    surface_info.module_source = surface_info2.module_source();
+    surface_info.set_parent_id(surface_info2.parent_id());
+    surface_info.set_surface_relation(*surface_info2.mutable_surface_relation());
+    surface_info.set_module_manifest(std::move(*surface_info2.mutable_module_manifest()));
+    surface_info.set_module_source(surface_info2.module_source());
     on_add_surface_(std::move(view_connection), std::move(surface_info));
   }
 }

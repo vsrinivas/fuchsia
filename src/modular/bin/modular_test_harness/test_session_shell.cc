@@ -31,8 +31,8 @@ class TestSessionShellApp : public modular::ViewApp,
 
     component_context->svc()->Connect(session_shell_context_.NewRequest());
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-    story_provider_->GetStories2(story_provider_watcher_.NewBinding(),
-                                 [](std::vector<fuchsia::modular::StoryInfo2>) {});
+    story_provider_->GetStories(story_provider_watcher_.NewBinding(),
+                                [](std::vector<fuchsia::modular::StoryInfo>) {});
 
     component_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   }
@@ -60,6 +60,10 @@ class TestSessionShellApp : public modular::ViewApp,
     };
     view_ = std::make_unique<modular::ViewHost>(std::move(context));
   }
+
+  // |fuchsia::modular::StoryProviderWatcher|
+  void OnChange(fuchsia::modular::StoryInfo story_info, fuchsia::modular::StoryState story_state,
+                fuchsia::modular::StoryVisibilityState story_visibility_state) override {}
 
   // |fuchsia::modular::StoryProviderWatcher|
   void OnChange2(fuchsia::modular::StoryInfo2 story_info, fuchsia::modular::StoryState story_state,

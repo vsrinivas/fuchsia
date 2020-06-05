@@ -54,28 +54,12 @@ class DevStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::Stor
 
   // |fuchsia::modular::StoryShell|
   void AddSurface(fuchsia::modular::ViewConnection view_connection,
-                  fuchsia::modular::SurfaceInfo surface_info) override {
-    fuchsia::modular::SurfaceInfo2 surface_info2;
-    surface_info2.set_parent_id(surface_info.parent_id);
-    if (surface_info.surface_relation) {
-      surface_info2.set_surface_relation(*surface_info.surface_relation);
+                  fuchsia::modular::SurfaceInfo /*surface_info*/) override {
+    if (view_) {
+      view_->ConnectView(std::move(view_connection.view_holder_token));
+    } else {
+      child_view_holder_tokens_.push_back(std::move(view_connection.view_holder_token));
     }
-    if (surface_info.module_manifest) {
-      surface_info2.set_module_manifest(std::move(*surface_info.module_manifest));
-    }
-    surface_info2.set_module_source(surface_info.module_source);
-    AddSurface3(std::move(view_connection), std::move(surface_info2));
-  }
-
-  // |fuchsia::modular::StoryShell|
-  void AddSurface2(fuchsia::modular::ViewConnection2 view_connection,
-                   fuchsia::modular::SurfaceInfo surface_info) override {
-    AddSurface(
-        fuchsia::modular::ViewConnection{
-            .surface_id = view_connection.surface_id,
-            .view_holder_token = std::move(view_connection.view_holder_token),
-        },
-        std::move(surface_info));
   }
 
   // |fuchsia::modular::StoryShell|
@@ -100,8 +84,8 @@ class DevStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::Stor
   void RemoveSurface(std::string /*surface_id*/) override {}
 
   // |fuchsia::modular::StoryShell|
-  void UpdateSurface(fuchsia::modular::ViewConnection view_connection,
-                     fuchsia::modular::SurfaceInfo /*surface_info*/) override{};
+  void UpdateSurface3(fuchsia::modular::ViewConnection view_connection,
+                      fuchsia::modular::SurfaceInfo2 /*surface_info*/) override{};
 
   void Connect() {
     if (story_shell_context_.is_bound() && view_token_.value) {
