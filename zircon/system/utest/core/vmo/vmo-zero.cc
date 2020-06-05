@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/vmar.h>
@@ -103,6 +104,7 @@ TEST(VmoZeroTestCase, Contiguous) {
   zx::unowned_resource root_res(get_root_resource());
   zx::iommu iommu;
   zx::bti bti;
+  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
   zx_iommu_desc_dummy_t desc;
   EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));

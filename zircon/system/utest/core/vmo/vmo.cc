@@ -27,8 +27,9 @@
 #include <thread>
 
 #include <fbl/algorithm.h>
-#include <fbl/function.h>
 #include <zxtest/zxtest.h>
+
+#include "helpers.h"
 
 extern "C" __WEAK zx_handle_t get_root_resource(void);
 
@@ -485,6 +486,7 @@ TEST(VmoTestCase, Info) {
   if (get_root_resource) {
     zx::iommu iommu;
     zx::bti bti;
+    auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
     // Please do not use get_root_resource() in new code. See ZX-1467.
     zx::unowned_resource root_res(get_root_resource());
@@ -1056,6 +1058,10 @@ TEST(VmoTestCase, PhysicalSlice) {
   // with the physical_vmo.
   zx::vmo contig_vmo;
   zx::pmt pmt;
+  zx::iommu iommu;
+  zx::bti bti;
+
+  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
   auto unpin_pmt = fit::defer([&pmt] {
     if (pmt) {
       EXPECT_OK(pmt.unpin());
@@ -1063,9 +1069,6 @@ TEST(VmoTestCase, PhysicalSlice) {
   });
 
   zx::unowned_resource root_res(get_root_resource());
-
-  zx::iommu iommu;
-  zx::bti bti;
 
   zx_iommu_desc_dummy_t desc;
   EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
@@ -1127,7 +1130,10 @@ TEST(VmoTestCase, CacheOp) {
     // contiguous vmo.  This needs to last until after we're done testing
     // with the physical_vmo.
     zx::vmo contig_vmo;
+    zx::bti bti;
     zx::pmt pmt;
+
+    auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
     auto unpin_pmt = fit::defer([&pmt] {
       if (pmt) {
         EXPECT_OK(pmt.unpin());
@@ -1142,7 +1148,6 @@ TEST(VmoTestCase, CacheOp) {
       zx::unowned_resource root_res(get_root_resource());
 
       zx::iommu iommu;
-      zx::bti bti;
 
       zx_iommu_desc_dummy_t desc;
       EXPECT_EQ(zx_iommu_create((*root_res).get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
@@ -1327,10 +1332,10 @@ TEST(VmoTestCase, CompressedContiguous) {
 
   zx::iommu iommu;
   zx::bti bti;
-
   zx_iommu_desc_dummy_t desc;
-  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
+  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
 
   zx_info_bti_t bti_info;
@@ -1371,10 +1376,10 @@ TEST(VmoTestCase, UncachedContiguous) {
 
   zx::iommu iommu;
   zx::bti bti;
-
   zx_iommu_desc_dummy_t desc;
-  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
+  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
 
   constexpr uint64_t kSize = PAGE_SIZE * 4;

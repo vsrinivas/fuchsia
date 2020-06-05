@@ -120,9 +120,9 @@ void SystemLockValidationError(AcquiredLockEntry* bad_entry, AcquiredLockEntry* 
   const uint64_t user_pid = current_thread->user_pid_;
   const uint64_t user_tid = current_thread->user_tid_;
 
-  printf("\nZIRCON KERNEL OOPS\n");
-  printf("Lock validation failed for thread %p pid %" PRIu64 " tid %" PRIu64 " (%s:%s):\n",
-         current_thread, user_pid, user_tid, owner_name, current_thread->name_);
+  DLOG_KERNEL_OPPS("Lock validation failed for thread %p pid %" PRIu64 " tid %" PRIu64
+                   " (%s:%s):\n",
+                   current_thread, user_pid, user_tid, owner_name, current_thread->name_);
   printf("Reason: %s\n", ToString(result));
   printf("Bad lock: name=%s order=%" PRIu64 "\n", LockClassState::GetName(bad_entry->id()),
          bad_entry->order());
@@ -143,8 +143,7 @@ void SystemLockValidationFatal(AcquiredLockEntry* lock_entry, ThreadLockState* s
 
 // Prints a kernel oops when a circular lock dependency is detected.
 void SystemCircularLockDependencyDetected(LockClassState* connected_set_root) {
-  printf("\nZIRCON KERNEL OOPS\n");
-  printf("Circular lock dependency detected:\n");
+  DLOG_KERNEL_OOPS("Circular lock dependency detected:\n");
 
   for (auto& node : lockdep::LockClassState::Iter()) {
     if (node.connected_set() == connected_set_root)

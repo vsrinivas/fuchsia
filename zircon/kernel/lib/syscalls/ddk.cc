@@ -481,6 +481,15 @@ zx_status_t sys_bti_pin(zx_handle_t handle, uint32_t options, zx_handle_t vmo, u
     return status;
   }
 
+  // If anything goes wrong from here on out, we _must_ remember to unpin the
+  // PMT we are holding.  Failure to do this means that the PMT will hit
+  // on-zero-handles while it still has pages pinned and end up in the BTI's
+  // quarantine list.  This is definitely not correct as the user never got
+  // access to the PMT handle in order to unpin the data.
+  auto cleanup = fbl::MakeAutoCall([&new_pmt_handle]() {
+    new_pmt_handle.dispatcher()->Unpin();
+  });
+
   status = new_pmt_handle.dispatcher()->EncodeAddrs(compress_results, contiguous,
                                                     mapped_addrs.get(), addrs_count);
   if (status != ZX_OK) {
@@ -492,7 +501,12 @@ zx_status_t sys_bti_pin(zx_handle_t handle, uint32_t options, zx_handle_t vmo, u
     return status;
   }
 
-  return pmt->make(ktl::move(new_pmt_handle), new_pmt_rights);
+  zx_status_t res = pmt->make(ktl::move(new_pmt_handle), new_pmt_rights);
+  if (res == ZX_OK) {
+    cleanup.cancel();
+  }
+
+  return res;
 }
 
 // zx_status_t zx_bti_release_quarantine

@@ -5,6 +5,8 @@
 #ifndef ZIRCON_SYSTEM_UTEST_CORE_VMO_HELPERS_H_
 #define ZIRCON_SYSTEM_UTEST_CORE_VMO_HELPERS_H_
 
+#include <lib/fit/defer.h>
+#include <lib/zx/bti.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 
@@ -48,6 +50,20 @@ static inline size_t VmoCommittedBytes(const zx::vmo& vmo) {
     return UINT64_MAX;
   }
   return info.committed_bytes;
+}
+
+// Create a fit::defer which will check a BTI to make certain that it has no
+// pinned or quarantined pages when it goes out of scope, and fail the test if
+// it does.
+static inline auto CreateDeferredBtiCheck(const zx::bti& bti) {
+  return fit::defer([&bti]() {
+    if (bti.is_valid()) {
+      zx_info_bti_t info;
+      ASSERT_OK(bti.get_info(ZX_INFO_BTI, &info, sizeof(info), nullptr, nullptr));
+      EXPECT_EQ(0, info.pmo_count);
+      EXPECT_EQ(0, info.quarantine_count);
+    }
+  });
 }
 
 // Simple class for managing vmo mappings w/o any external dependencies.

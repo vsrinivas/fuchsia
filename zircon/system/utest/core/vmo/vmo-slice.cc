@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/vmo.h>
@@ -10,6 +11,8 @@
 #include <zircon/syscalls/iommu.h>
 
 #include <zxtest/zxtest.h>
+
+#include "helpers.h"
 
 extern "C" __WEAK zx_handle_t get_root_resource(void);
 
@@ -217,12 +220,11 @@ TEST(VmoSliceTestCase, ChildSliceOfContiguousParentIsContiguous) {
 
   zx::iommu iommu;
   zx::bti bti;
+  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
   zx_iommu_desc_dummy_t desc;
   EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-
   EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
-
   EXPECT_OK(zx::vmo::create_contiguous(bti, size, 0, &parent_contig_vmo));
 
   // Create child slice.
@@ -357,12 +359,11 @@ TEST(VmoSliceTestCase, RoundUpSizePhysical) {
 
   zx::iommu iommu;
   zx::bti bti;
-
   zx_iommu_desc_dummy_t desc;
+  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
+
   EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-
   EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
-
   EXPECT_OK(zx::vmo::create_contiguous(bti, size, 0, &parent_contig_vmo));
 
   // Create child slice with size < PAGE_SIZE, should round up and succeed.
@@ -414,10 +415,10 @@ TEST(VmoSliceTestCase, Pin) {
 
   zx::iommu iommu;
   zx::bti bti;
-
   zx_iommu_desc_dummy_t desc;
-  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
 
+  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
 
   // Pin the slice, this should block decommits in the parent.

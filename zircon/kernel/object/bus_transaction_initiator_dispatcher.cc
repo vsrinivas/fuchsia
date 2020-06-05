@@ -9,6 +9,7 @@
 #include <align.h>
 #include <err.h>
 #include <lib/counters.h>
+#include <lib/debuglog.h>
 #include <zircon/rights.h>
 
 #include <new>
@@ -146,6 +147,7 @@ void BusTransactionInitiatorDispatcher::PrintQuarantineWarningLocked() {
     leaked_pages += pmt.size() / PAGE_SIZE;
     num_entries++;
   }
-  printf("Bus Transaction Initiator 0x%lx has leaked %" PRIu64 " pages in %zu VMOs\n", bti_id_,
-         leaked_pages, num_entries);
+
+  DLOG_KERNEL_OOPS("Bus Transaction Initiator 0x%lx has leaked %" PRIu64 " pages in %zu VMOs\n",
+                   bti_id_, leaked_pages, num_entries);
 }

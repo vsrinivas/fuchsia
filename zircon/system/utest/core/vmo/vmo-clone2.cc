@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <elf.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/pager.h>
@@ -830,6 +831,8 @@ class VmoCloneResizeTests : public VmoClone2TestCase {
     zx::iommu iommu;
     zx::bti bti;
     zx::vmo vmo;
+    auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
+
     if (contiguous) {
       zx_iommu_desc_dummy_t desc;
       ASSERT_OK(
@@ -1288,6 +1291,8 @@ TEST_F(VmoClone2TestCase, ContiguousVmo) {
   zx::iommu iommu;
   zx::bti bti;
   zx_iommu_desc_dummy_t desc;
+  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
+
   ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
 
@@ -1329,6 +1334,8 @@ TEST_F(VmoClone2TestCase, ContiguousVmoCloseChild) {
   zx::iommu iommu;
   zx::bti bti;
   zx_iommu_desc_dummy_t desc;
+  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
+
   ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
 
@@ -1363,6 +1370,8 @@ TEST_F(VmoClone2TestCase, ContiguousVmoCloseOriginal) {
   zx::iommu iommu;
   zx::bti bti;
   zx_iommu_desc_dummy_t desc;
+  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
+
   ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
 
@@ -1403,6 +1412,8 @@ TEST_F(VmoClone2TestCase, ContiguousVmoPartialClone) {
   zx::iommu iommu;
   zx::bti bti;
   zx_iommu_desc_dummy_t desc;
+  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
+
   ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
 
@@ -1447,6 +1458,8 @@ TEST_F(VmoClone2TestCase, PinBeforeCreateFailure) {
   zx::iommu iommu;
   zx::bti bti;
   zx_iommu_desc_dummy_t desc;
+  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
+
   ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
   ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
 
