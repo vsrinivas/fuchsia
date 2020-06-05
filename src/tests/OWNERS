@@ -1,0 +1,5 @@
+# Additional people who can approve changes made to
+# src/tests/BUILD.gn
+
+per-file BUILD.gn=yuanzhi@google.com
+per-file BUILD.gn=isma@google.com
