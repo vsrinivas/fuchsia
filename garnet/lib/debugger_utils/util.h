@@ -5,50 +5,13 @@
 #ifndef GARNET_LIB_DEBUGGER_UTILS_UTIL_H_
 #define GARNET_LIB_DEBUGGER_UTILS_UTIL_H_
 
-#include <cstdint>
-#include <cstdio>
-#include <deque>
 #include <string>
-#include <vector>
 
 #ifdef __Fuchsia__
-#include <lib/zx/object.h>
-#include <zircon/syscalls/exception.h>
-#include <zircon/types.h>
+#include <zircon/status.h>
 #endif  // __Fuchsia__
 
 namespace debugger_utils {
-
-class ByteBlock;
-
-// Decodes the 2 character ASCII string |hex| and returns the result in
-// |out_byte|. Returns false if |hex| contains invalid characters.
-bool DecodeByteString(const char hex[2], uint8_t* out_byte);
-
-// Encodes |byte| into a 2 character ASCII string and returns the result in
-// |out_hex|.
-void EncodeByteString(const uint8_t byte, char out_hex[2]);
-
-// Encodes the array of bytes into hexadecimal ASCII digits and returns the
-// result in a string.
-std::string EncodeByteArrayString(const uint8_t* bytes, size_t num_bytes);
-
-// Encodes the string into hexadecimal ASCII digits and returns the
-// result in a string.
-std::string EncodeString(std::string_view string);
-
-// Decodes the given ASCII string describing a series of bytes and returns the
-// bytes. |string| must contain and even number of characters, since each byte
-// is represented by two ASCII characters.
-std::vector<uint8_t> DecodeByteArrayString(std::string_view string);
-
-// Same as DecodeByteArrayString but return a string.
-std::string DecodeString(std::string_view string);
-
-// Escapes binary non-printable (based on the current locale) characters in a
-// printable format to enable pretty-printing of binary data. For example, '0'
-// becomes "\x00".
-std::string EscapeNonPrintableString(std::string_view data);
 
 // Return a string representation of errno value |err|.
 std::string ErrnoString(int err);
@@ -57,64 +20,6 @@ std::string ErrnoString(int err);
 // Return a string representation of |status|.
 // This includes both the numeric and text values.
 std::string ZxErrorString(zx_status_t status);
-#endif  // __Fuchsia__
-
-// Joins multiple strings using the given delimiter. This aims to avoid
-// repeated dynamic allocations and simply writes the strings into the given
-// pre-allocated buffer.
-//
-// If the resulting string doesn't fit inside the given buffer this will cause
-// an assertion failure.
-//
-// Returns the size of the resulting string.
-size_t JoinStrings(const std::deque<std::string>& strings, const char delimiter, char* buffer,
-                   size_t buffer_size);
-
-// Same as strdup but exit if malloc fails.
-char* xstrdup(const char* s);
-
-// Same as basename, except will not modify |path|.
-// Returns "" if |path| has a trailing /.
-const char* basename(const char* path);
-
-void hexdump_ex(FILE* out, const void* ptr, size_t len, uint64_t disp_addr);
-
-#ifdef __Fuchsia__
-
-// Return the koid of |handle|.
-zx_koid_t GetKoid(zx_handle_t handle);
-// Convenience wrapper that takes an object.
-zx_koid_t GetKoid(const zx::object_base& object);
-
-// Return the "related" koid of |handle|.
-// What the "related" koid is for each object is dependent on the object type.
-// Not all objects have related koids. This function is just a simple wrapper
-// on the zx_object_get_info(ZX_INFO_HANDLE_BASIC) syscall and returns whatever
-// the syscalls provides.
-zx_koid_t GetRelatedKoid(zx_handle_t handle);
-// Convenience wrapper that takes an object.
-zx_koid_t GetRelatedKoid(const zx::object_base& object);
-
-// Return the ZX_PROP_NAME property of |handle|.
-// Returns "" if the object doesn't have a name (not all objects have names).
-std::string GetObjectName(zx_handle_t handle);
-// Convenience wrapper that takes an object.
-std::string GetObjectName(const zx::object_base& object);
-
-// Return the name of exception |type| as a C string.
-// Returns nullptr if |type| is invalid.
-// This does not take a |zx_excp_type_t| value because it also handles
-// invalid values.
-const char* ExceptionName(uint32_t type);
-
-// Return the string form of the exception's name.
-// Returns "UNKNOWN(value)" for bad |type|.
-// This does not take a |zx_excp_type_t| value because it also handles
-// invalid values.
-std::string ExceptionNameAsString(uint32_t type);
-
-bool ReadString(const ByteBlock& m, zx_vaddr_t vaddr, char* ptr, size_t max);
-
 #endif  // __Fuchsia__
 
 }  // namespace debugger_utils

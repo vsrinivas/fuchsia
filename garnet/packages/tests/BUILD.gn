@@ -72,7 +72,6 @@ group("all") {
     "//garnet/go/src/merkle:go_merkle_tests",
     "//garnet/go/src/sse:sse_test($host_toolchain)",
     "//garnet/go/src/thinfs:go_thinfs_tests",
-    "//garnet/lib/debugger_utils:tests",
     "//garnet/lib/perfmon:tests",
     "//garnet/lib/process:process_unittests",
     "//garnet/lib/profiler/tests:profiler_tests",

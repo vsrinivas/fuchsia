@@ -11,7 +11,6 @@
 #include <cstdint>
 #include <string>
 
-#include "garnet/lib/debugger_utils/argv.h"
 #include "src/lib/fxl/macros.h"
 
 namespace insntrace {
