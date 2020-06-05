@@ -5,13 +5,15 @@
 use {
     crate::{reader::ReadableTree, Inspector},
     anyhow::{Context as _, Error},
+    fidl,
     fidl_fuchsia_inspect::{
         TreeContent, TreeNameIteratorRequest, TreeNameIteratorRequestStream, TreeRequest,
-        TreeRequestStream, MAX_TREE_NAME_LIST_SIZE,
+        TreeRequestStream,
     },
     fidl_fuchsia_mem::Buffer,
     fuchsia_async as fasync,
     fuchsia_syslog::macros::*,
+    fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES,
     futures::{TryFutureExt, TryStreamExt},
 };
 
@@ -61,16 +63,27 @@ pub fn spawn_tree_server(inspector: Inspector, stream: TreeRequestStream) {
 fn spawn_tree_name_iterator_server(values: Vec<String>, mut stream: TreeNameIteratorRequestStream) {
     fasync::spawn(
         async move {
-            let mut values_iter = values.into_iter();
+            let mut values_iter = values.into_iter().peekable();
             while let Some(request) =
                 stream.try_next().await.context("Error running tree iterator server")?
             {
                 match request {
                     TreeNameIteratorRequest::GetNext { responder } => {
-                        let result = values_iter
-                            .by_ref()
-                            .take(MAX_TREE_NAME_LIST_SIZE as usize)
-                            .collect::<Vec<String>>();
+                        let mut bytes_used: usize = 32; // Page overhead of message header + vector
+                        let mut result = vec![];
+                        loop {
+                            match values_iter.peek() {
+                                None => break,
+                                Some(value) => {
+                                    bytes_used += 16; // String overhead
+                                    bytes_used += fidl::encoding::round_up_to_align(value.len(), 8);
+                                    if bytes_used > ZX_CHANNEL_MAX_MSG_BYTES as usize {
+                                        break;
+                                    }
+                                    result.push(values_iter.next().unwrap());
+                                }
+                            }
+                        }
                         if result.is_empty() {
                             responder.send(&mut vec![].into_iter())?;
                             return Ok(());

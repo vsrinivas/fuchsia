@@ -23,17 +23,21 @@ class InspectTreeNameListService final : public fuchsia::inspect::TreeNameIterat
 
   void GetNext(GetNextCallback callback) override {
     std::vector<std::string> ret;
-    size_t i = 0;
-    for (; i < fuchsia::inspect::MAX_TREE_NAME_LIST_SIZE && name_offset_ < names_.size(); i++) {
+    size_t bytes_used = sizeof(fidl_message_header_t) + sizeof(fidl_vector_t);
+    for (; name_offset_ < names_.size(); name_offset_++) {
+      bytes_used += sizeof(fidl_string_t);  // string overhead
+      bytes_used += FIDL_ALIGN(names_[name_offset_].length());
+      if (bytes_used > ZX_CHANNEL_MAX_MSG_BYTES) {
+        break;
+      }
       ret.emplace_back(std::move(names_[name_offset_]));
-      name_offset_++;
     }
 
     callback(std::move(ret));
 
     // Close the connection only if the response was empty. We respond with an empty vector to let
     // the client know we will be disconnecting.
-    if (i == 0) {
+    if (ret.empty() == 0) {
       done_callback_(this);
     }
   }
