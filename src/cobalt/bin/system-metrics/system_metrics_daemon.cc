@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher_impl.h"
+#include "src/cobalt/bin/system-metrics/log_stats_fetcher_impl.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/system-metrics/temperature_fetcher_impl.h"
 #include "src/cobalt/bin/utils/clock.h"
@@ -63,6 +64,8 @@ SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
           std::unique_ptr<cobalt::SteadyClock>(new cobalt::RealSteadyClock()),
           std::unique_ptr<cobalt::CpuStatsFetcher>(new cobalt::CpuStatsFetcherImpl()),
           std::unique_ptr<cobalt::TemperatureFetcher>(new cobalt::TemperatureFetcherImpl()),
+          std::unique_ptr<cobalt::LogStatsFetcher>(
+              new cobalt::LogStatsFetcherImpl(dispatcher, context)),
           std::make_unique<cobalt::ActivityListener>(
               fit::bind_member(this, &SystemMetricsDaemon::UpdateState))) {
   InitializeLogger();
@@ -76,6 +79,7 @@ SystemMetricsDaemon::SystemMetricsDaemon(
     fuchsia::cobalt::Logger_Sync* logger, std::unique_ptr<cobalt::SteadyClock> clock,
     std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher,
     std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher,
+    std::unique_ptr<cobalt::LogStatsFetcher> log_stats_fetcher,
     std::unique_ptr<cobalt::ActivityListener> activity_listener)
     : dispatcher_(dispatcher),
       context_(context),
@@ -84,6 +88,7 @@ SystemMetricsDaemon::SystemMetricsDaemon(
       clock_(std::move(clock)),
       cpu_stats_fetcher_(std::move(cpu_stats_fetcher)),
       temperature_fetcher_(std::move(temperature_fetcher)),
+      log_stats_fetcher_(std::move(log_stats_fetcher)),
       activity_listener_(std::move(activity_listener)),
       inspector_(context),
       platform_metric_node_(inspector_.root().CreateChild(kInspecPlatformtNodeName)),
@@ -108,6 +113,7 @@ void SystemMetricsDaemon::StartLogging() {
   RepeatedlyLogUpPingAndLifeTimeEvents();
   RepeatedlyLogUptime();
   RepeatedlyLogCpuUsage();
+  RepeatedlyLogLogStats();
   LogTemperatureIfSupported(1 /*remaining_attempts*/);
 }
 
@@ -135,6 +141,12 @@ void SystemMetricsDaemon::RepeatedlyLogCpuUsage() {
   async::PostDelayedTask(
       dispatcher_, [this]() { RepeatedlyLogCpuUsage(); }, zx::sec(seconds_to_sleep.count()));
   return;
+}
+
+void SystemMetricsDaemon::RepeatedlyLogLogStats() {
+  std::chrono::seconds seconds_to_sleep = LogLogStats();
+  async::PostDelayedTask(
+      dispatcher_, [this]() { RepeatedlyLogLogStats(); }, zx::sec(seconds_to_sleep.count()));
 }
 
 void SystemMetricsDaemon::LogTemperatureIfSupported(int remaining_attempts) {
@@ -392,6 +404,28 @@ std::chrono::seconds SystemMetricsDaemon::LogCpuUsage() {
   }
   StoreCpuData(cpu_percentage);
   return std::chrono::seconds(1);
+}
+
+std::chrono::seconds SystemMetricsDaemon::LogLogStats() {
+  TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogLogStats");
+  if (!logger_) {
+    FX_LOGS(ERROR) << "No logger present. Reconnecting...";
+    InitializeLogger();
+    return std::chrono::minutes(5);
+  }
+  log_stats_fetcher_->FetchMetrics([this](cobalt::LogStatsFetcher::Metrics metrics) {
+    fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+    ReinitializeIfPeerClosed(logger_->LogEventCount(fuchsia_system_metrics::kErrorLogCountMetricId,
+                                                    0, "", 0, metrics.error_count, &status));
+    if (status != fuchsia::cobalt::Status::OK) {
+      FX_LOGS(ERROR) << "LogEventCount() for error log stats returned status="
+                     << StatusToString(status);
+      return false;
+    } else {
+      return true;
+    }
+  });
+  return std::chrono::minutes(15);
 }
 
 void SystemMetricsDaemon::StoreCpuData(double cpu_percentage) {

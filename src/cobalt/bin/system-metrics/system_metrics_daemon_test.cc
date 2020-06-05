@@ -20,6 +20,7 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_cpu_stats_fetcher.h"
+#include "src/cobalt/bin/system-metrics/testing/fake_log_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_temperature_fetcher.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_temperature_fetcher_not_supported.h"
 #include "src/cobalt/bin/testing/fake_clock.h"
@@ -57,11 +58,13 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
       : executor_(dispatcher()),
         context_provider_(),
         fake_clock_(new FakeSteadyClock()),
+        fake_log_stats_fetcher_(new cobalt::FakeLogStatsFetcher(dispatcher())),
         daemon_(new SystemMetricsDaemon(
             dispatcher(), context_provider_.context(), &fake_logger_,
             std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
             std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()),
-            std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()), nullptr)) {
+            std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()),
+            std::unique_ptr<cobalt::LogStatsFetcher>(fake_log_stats_fetcher_), nullptr)) {
     daemon_->cpu_bucket_config_ = daemon_->InitializeLinearBucketConfig(
         fuchsia_system_metrics::kCpuPercentageIntBucketsFloor,
         fuchsia_system_metrics::kCpuPercentageIntBucketsNumBuckets,
@@ -119,6 +122,8 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
   }
 
   seconds LogCpuUsage() { return daemon_->LogCpuUsage(); }
+
+  seconds LogLogStats() { return daemon_->LogLogStats(); }
 
   void PrepareForLogCpuUsage() {
     daemon_->cpu_data_stored_ = 599;
@@ -230,6 +235,7 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider context_provider_;
   FakeSteadyClock* fake_clock_;
   FakeLogger_Sync fake_logger_;
+  cobalt::FakeLogStatsFetcher* const fake_log_stats_fetcher_;
   std::unique_ptr<SystemMetricsDaemon> daemon_;
   const size_t kLastItemInTemperatureBuffer = SystemMetricsDaemon::kTempArraySize - 1;
 };
@@ -703,6 +709,18 @@ TEST_F(SystemMetricsDaemonTest, LogTemperatureIfSupportedSucceed2) {
                       cobalt::kLogIntHistogram);
 }
 
+// Check that component log stats are sent to cobalt's logger.
+TEST_F(SystemMetricsDaemonTest, LogLogStats) {
+  fake_log_stats_fetcher_->AddErrorCount(5);
+  LogLogStats();
+  RunLoopUntilIdle();
+  CheckValues(cobalt::kLogEventCount, 1, fuchsia_system_metrics::kErrorLogCountMetricId, 0, -1, 5);
+  fake_log_stats_fetcher_->AddErrorCount(4);
+  LogLogStats();
+  RunLoopUntilIdle();
+  CheckValues(cobalt::kLogEventCount, 2, fuchsia_system_metrics::kErrorLogCountMetricId, 0, -1, 4);
+}
+
 class MockLogger : public ::fuchsia::cobalt::testing::Logger_TestBase {
  public:
   void LogCobaltEvents(std::vector<fuchsia::cobalt::CobaltEvent> events,
@@ -784,7 +802,8 @@ class SystemMetricsDaemonInitializationTest : public gtest::TestLoopFixture {
         dispatcher(), context_provider_.context(), nullptr,
         std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
         std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()),
-        std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()), nullptr));
+        std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()), nullptr,
+        nullptr));
   }
 
   // Note that we first save an unprotected pointer in fake_clock_ and then

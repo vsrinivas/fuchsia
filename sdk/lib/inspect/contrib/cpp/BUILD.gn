@@ -31,7 +31,6 @@ source_set("read_visitor") {
 }
 
 source_set("archive_reader") {
-  testonly = true
   sources = [
     "archive_reader.cc",
     "archive_reader.h",

@@ -28,6 +28,7 @@ zx_status_t FakeLogger_Sync::LogEventCount(uint32_t metric_id, uint32_t event_co
   last_log_method_invoked_ = kLogEventCount;
   last_metric_id_ = metric_id;
   last_event_code_ = event_code;
+  event_count_ = count;
   *out_status = Status::OK;
   return ZX_OK;
 }

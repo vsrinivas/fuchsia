@@ -9,6 +9,7 @@
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.diagnostics.ArchiveAccessor",
             "fuchsia.kernel.Stats",
             "fuchsia.logger.LogSink",
             "fuchsia.sysinfo.SysInfo",

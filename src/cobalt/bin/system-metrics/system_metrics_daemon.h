@@ -22,6 +22,7 @@
 
 #include "src/cobalt/bin/system-metrics/activity_listener.h"
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher.h"
+#include "src/cobalt/bin/system-metrics/log_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/system-metrics/temperature_fetcher.h"
 #include "src/cobalt/bin/utils/clock.h"
@@ -76,6 +77,7 @@ class SystemMetricsDaemon {
                       std::unique_ptr<cobalt::SteadyClock> clock,
                       std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher,
                       std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher,
+                      std::unique_ptr<cobalt::LogStatsFetcher> log_stats_fetcher,
                       std::unique_ptr<cobalt::ActivityListener> activity_listener);
 
   void InitializeLogger();
@@ -98,6 +100,10 @@ class SystemMetricsDaemon {
   // then uses the |dispatcher| passed to the constructor to schedule
   // the next round.
   void RepeatedlyLogCpuUsage();
+
+  // Calls LogLogStats and then uses the |dispatcher| passed to the
+  // constructor to schedule the next round.
+  void RepeatedlyLogLogStats();
 
   // Check if fetching device temperature is supported, and if successful
   // start logging temperature.
@@ -157,6 +163,11 @@ class SystemMetricsDaemon {
   // Returns the amount of time before this method needs to be invoked again.
   std::chrono::seconds LogCpuUsage();
 
+  // Fetches and logs the number of error log messages across all components.
+  //
+  // Returns the amount of time before this method needs to be invoked again.
+  std::chrono::seconds LogLogStats();
+
   // Helper function to store the fetched CPU data and store until flush.
   void StoreCpuData(double cpu_percentage);  // histogram, flush every 10 min
 
@@ -186,6 +197,7 @@ class SystemMetricsDaemon {
   std::unique_ptr<cobalt::SteadyClock> clock_;
   std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher_;
   std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher_;
+  std::unique_ptr<cobalt::LogStatsFetcher> log_stats_fetcher_;
   std::unique_ptr<cobalt::ActivityListener> activity_listener_;
   fuchsia::ui::activity::State current_state_ = fuchsia::ui::activity::State::UNKNOWN;
   fidl::InterfacePtr<fuchsia::ui::activity::Provider> activity_provider_;
