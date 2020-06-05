@@ -132,19 +132,19 @@ mod tests {
     use super::*;
     use {
         crate::{
-            builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
+            builtin_environment::BuiltinEnvironment,
             model::{
                 actions::{Action, ActionSet},
                 events::event::SyncMode,
                 hooks::{EventPayload, EventType, HooksRegistration},
+                model::ComponentManagerConfig,
                 moniker::PartialMoniker,
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::TestHook},
             },
-            startup::Arguments,
         },
         cm_rust::{
-            CapabilityName, CapabilityPath, OfferDecl, OfferRunnerDecl, OfferRunnerSource,
-            OfferTarget, RunnerDecl, RunnerSource,
+            CapabilityName, CapabilityPath, ComponentDecl, OfferDecl, OfferRunnerDecl,
+            OfferRunnerSource, OfferTarget, RunnerDecl, RunnerSource,
         },
         fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
         futures::prelude::*,
@@ -153,38 +153,25 @@ mod tests {
     };
 
     async fn new_model(
-        mock_resolver: MockResolver,
-        mock_runner: Arc<MockRunner>,
-    ) -> (Arc<Model>, BuiltinEnvironment) {
-        new_model_with(mock_resolver, mock_runner.clone(), vec![]).await
+        components: Vec<(&'static str, ComponentDecl)>,
+    ) -> (Arc<Model>, Arc<BuiltinEnvironment>, Arc<MockRunner>) {
+        new_model_with(components, vec![]).await
     }
 
     async fn new_model_with(
-        mock_resolver: MockResolver,
-        mock_runner: Arc<MockRunner>,
+        components: Vec<(&'static str, ComponentDecl)>,
         additional_hooks: Vec<HooksRegistration>,
-    ) -> (Arc<Model>, BuiltinEnvironment) {
-        let builtin_environment = BuiltinEnvironmentBuilder::new()
-            .set_args(Arguments {
-                root_component_url: "test:///root".to_string(),
-                ..Default::default()
-            })
-            .add_resolver("test".to_string(), Box::new(mock_resolver))
-            .add_runner(TEST_RUNNER_NAME.into(), mock_runner)
-            .build()
-            .await
-            .expect("builtin environment setup failed");
-        let model = builtin_environment.model.clone();
+    ) -> (Arc<Model>, Arc<BuiltinEnvironment>, Arc<MockRunner>) {
+        let TestModelResult { model, builtin_environment, mock_runner, .. } =
+            new_test_model("root", components, ComponentManagerConfig::default()).await;
         model.root_realm.hooks.install(additional_hooks).await;
-        (model, builtin_environment)
+        (model, builtin_environment, mock_runner)
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_root() {
-        let mock_runner = Arc::new(MockRunner::new());
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component("root", component_decl_with_test_runner());
-        let (model, _builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
+        let (model, _builtin_environment, mock_runner) =
+            new_model(vec![("root", component_decl_with_test_runner())]).await;
         let m: AbsoluteMoniker = AbsoluteMoniker::root();
         let res = model.bind(&m, &BindReason::Root).await;
         assert!(res.is_ok());
@@ -197,10 +184,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_root_non_existent() {
-        let mock_runner = Arc::new(MockRunner::new());
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component("root", component_decl_with_test_runner());
-        let (model, _builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
+        let (model, _builtin_environment, mock_runner) =
+            new_model(vec![("root", component_decl_with_test_runner())]).await;
         let m: AbsoluteMoniker = vec!["no-such-instance:0"].into();
         let res = model.bind(&m, &BindReason::Root).await;
         let expected_res: Result<Arc<Realm>, ModelError> =
@@ -216,18 +201,11 @@ mod tests {
         // Test binding twice concurrently to the same component. The component should only be
         // started once.
 
-        let mock_runner = Arc::new(MockRunner::new());
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("system")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component("system", component_decl_with_test_runner());
-
-        let (model, builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
+        let (model, builtin_environment, mock_runner) = new_model(vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
+            ("system", component_decl_with_test_runner()),
+        ])
+        .await;
 
         let events = vec![EventType::Started.into()];
         let mut event_source = builtin_environment
@@ -281,21 +259,22 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_parent_then_child() {
-        let mock_runner = Arc::new(MockRunner::new());
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("system")
-                .add_lazy_child("echo")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component("system", component_decl_with_test_runner());
-        mock_resolver.add_component("echo", component_decl_with_test_runner());
         let hook = Arc::new(TestHook::new());
-        let (model, _builtin_environment) =
-            new_model_with(mock_resolver, mock_runner.clone(), hook.hooks()).await;
+        let (model, _builtin_environment, mock_runner) = new_model_with(
+            vec![
+                (
+                    "root",
+                    ComponentDeclBuilder::new()
+                        .add_lazy_child("system")
+                        .add_lazy_child("echo")
+                        .build(),
+                ),
+                ("system", component_decl_with_test_runner()),
+                ("echo", component_decl_with_test_runner()),
+            ],
+            hook.hooks(),
+        )
+        .await;
         // bind to system
         let m: AbsoluteMoniker = vec!["system:0"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
@@ -336,28 +315,23 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_child_binds_parent() {
-        let mock_runner = Arc::new(MockRunner::new());
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("system")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component(
-            "system",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("logger")
-                .add_lazy_child("netstack")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component("logger", component_decl_with_test_runner());
-        mock_resolver.add_component("netstack", component_decl_with_test_runner());
         let hook = Arc::new(TestHook::new());
-        let (model, _builtin_environment) =
-            new_model_with(mock_resolver, mock_runner.clone(), hook.hooks()).await;
+        let (model, _builtin_environment, mock_runner) = new_model_with(
+            vec![
+                ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
+                (
+                    "system",
+                    ComponentDeclBuilder::new()
+                        .add_lazy_child("logger")
+                        .add_lazy_child("netstack")
+                        .build(),
+                ),
+                ("logger", component_decl_with_test_runner()),
+                ("netstack", component_decl_with_test_runner()),
+            ],
+            hook.hooks(),
+        )
+        .await;
 
         // Bind to logger (before ever binding to system). Ancestors are bound first.
         let m: AbsoluteMoniker = vec!["system:0", "logger:0"].into();
@@ -397,17 +371,11 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_child_non_existent() {
-        let mock_runner = Arc::new(MockRunner::new());
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("system")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component("system", component_decl_with_test_runner());
-        let (model, _builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
+        let (model, _builtin_environment, mock_runner) = new_model(vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
+            ("system", component_decl_with_test_runner()),
+        ])
+        .await;
         // bind to system
         let m: AbsoluteMoniker = vec!["system:0"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
@@ -439,42 +407,22 @@ mod tests {
     /// `b`, `c`, and `d` are started eagerly. `a` and `e` are lazy.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_eager_children() {
-        let mock_runner = Arc::new(MockRunner::new());
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("a")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component(
-            "a",
-            ComponentDeclBuilder::new()
-                .add_eager_child("b")
-                .add_eager_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component("b", component_decl_with_test_runner());
-        mock_resolver.add_component(
-            "c",
-            ComponentDeclBuilder::new()
-                .add_eager_child("d")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component(
-            "d",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("e")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component("e", component_decl_with_test_runner());
         let hook = Arc::new(TestHook::new());
-        let (model, _builtin_environment) =
-            new_model_with(mock_resolver, mock_runner.clone(), hook.hooks()).await;
+        let (model, _builtin_environment, mock_runner) = new_model_with(
+            vec![
+                ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+                (
+                    "a",
+                    ComponentDeclBuilder::new().add_eager_child("b").add_eager_child("c").build(),
+                ),
+                ("b", component_decl_with_test_runner()),
+                ("c", ComponentDeclBuilder::new().add_eager_child("d").build()),
+                ("d", ComponentDeclBuilder::new().add_lazy_child("e").build()),
+                ("e", component_decl_with_test_runner()),
+            ],
+            hook.hooks(),
+        )
+        .await;
 
         // Bind to the top component, and check that it and the eager components were started.
         {
@@ -512,36 +460,32 @@ mod tests {
     /// without causing reentrance issues.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_eager_children_reentrant() {
-        let mock_runner = Arc::new(MockRunner::new());
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("a")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component(
-            "a",
-            ComponentDeclBuilder::new()
-                .add_eager_child("b")
-                .runner(RunnerDecl {
-                    name: "foo".into(),
-                    source: RunnerSource::Self_,
-                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
-                })
-                .offer(OfferDecl::Runner(OfferRunnerDecl {
-                    source: OfferRunnerSource::Self_,
-                    source_name: CapabilityName("foo".to_string()),
-                    target: OfferTarget::Child("b".to_string()),
-                    target_name: CapabilityName("foo".to_string()),
-                }))
-                .build(),
-        );
-        mock_resolver.add_component(
-            "b",
-            ComponentDeclBuilder::new_empty_component().use_runner("foo").build(),
-        );
+        let hook = Arc::new(TestHook::new());
+        let (model, _builtin_environment, mock_runner) = new_model_with(
+            vec![
+                ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+                (
+                    "a",
+                    ComponentDeclBuilder::new()
+                        .add_eager_child("b")
+                        .runner(RunnerDecl {
+                            name: "foo".into(),
+                            source: RunnerSource::Self_,
+                            source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                        })
+                        .offer(OfferDecl::Runner(OfferRunnerDecl {
+                            source: OfferRunnerSource::Self_,
+                            source_name: CapabilityName("foo".to_string()),
+                            target: OfferTarget::Child("b".to_string()),
+                            target_name: CapabilityName("foo".to_string()),
+                        }))
+                        .build(),
+                ),
+                ("b", ComponentDeclBuilder::new_empty_component().use_runner("foo").build()),
+            ],
+            hook.hooks(),
+        )
+        .await;
 
         // Set up the runner.
         let (runner_service, mut receiver) =
@@ -549,10 +493,6 @@ mod tests {
         let mut out_dir = OutDir::new();
         out_dir.add_entry(CapabilityPath::try_from("/svc/runner").unwrap(), runner_service);
         mock_runner.add_host_fn("test:///a_resolved", out_dir.host_fn());
-
-        let hook = Arc::new(TestHook::new());
-        let (model, _builtin_environment) =
-            new_model_with(mock_resolver, mock_runner.clone(), hook.hooks()).await;
 
         // Bind to the top component, and check that it and the eager components were started.
         {
@@ -581,24 +521,12 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_no_execute() {
         // Create a non-executable component with an eagerly-started child.
-        let mock_runner = Arc::new(MockRunner::new());
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("a")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component(
-            "a",
-            ComponentDeclBuilder::new_empty_component()
-                .add_eager_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component("b", component_decl_with_test_runner());
-        let (model, _builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
+        let (model, _builtin_environment, mock_runner) = new_model(vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new_empty_component().add_eager_child("b").build()),
+            ("b", component_decl_with_test_runner()),
+        ])
+        .await;
 
         // Bind to the parent component. The child should be started. However, the parent component
         // is non-executable so it is not run.

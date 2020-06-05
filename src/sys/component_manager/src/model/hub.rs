@@ -564,13 +564,12 @@ mod tests {
     use {
         super::*,
         crate::{
-            builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
+            builtin_environment::{BuiltinEnvironment, },
             model::{
                 binding::Binder,
-                model::Model,
+                model::{ComponentManagerConfig, Model},
                 realm::BindReason,
                 rights,
-                testing::mocks,
                 testing::{
                     test_helpers::*,
                     test_helpers::{
@@ -579,7 +578,6 @@ mod tests {
                     test_hook::HubInjectionTestHook,
                 },
             },
-            startup::Arguments,
         },
         cm_rust::{
             self, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
@@ -640,7 +638,7 @@ mod tests {
     type DirectoryCallback = Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync>;
 
     struct ComponentDescriptor {
-        pub name: String,
+        pub name: &'static str,
         pub decl: ComponentDecl,
         pub host_fn: Option<DirectoryCallback>,
         pub runtime_host_fn: Option<DirectoryCallback>,
@@ -649,7 +647,7 @@ mod tests {
     async fn start_component_manager_with_hub(
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
-    ) -> (Arc<Model>, BuiltinEnvironment, DirectoryProxy) {
+    ) -> (Arc<Model>, Arc<BuiltinEnvironment>, DirectoryProxy) {
         start_component_manager_with_hub_and_hooks(root_component_url, components, vec![]).await
     }
 
@@ -657,32 +655,24 @@ mod tests {
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
         additional_hooks: Vec<HooksRegistration>,
-    ) -> (Arc<Model>, BuiltinEnvironment, DirectoryProxy) {
+    ) -> (Arc<Model>, Arc<BuiltinEnvironment>, DirectoryProxy) {
         let resolved_root_component_url = format!("{}_resolved", root_component_url);
-        let runner = Arc::new(mocks::MockRunner::new());
-        let mut mock_resolver = mocks::MockResolver::new();
+        let decls = components.iter().map(|c| (c.name, c.decl.clone())).collect();
+        let TestModelResult { model, builtin_environment, mock_runner, .. } =
+            new_test_model("root", decls, ComponentManagerConfig::default()).await;
         for component in components.into_iter() {
-            mock_resolver.add_component(&component.name, component.decl);
             if let Some(host_fn) = component.host_fn {
-                runner.add_host_fn(&resolved_root_component_url, host_fn);
+                mock_runner.add_host_fn(&resolved_root_component_url, host_fn);
             }
 
             if let Some(runtime_host_fn) = component.runtime_host_fn {
-                runner.add_runtime_host_fn(&resolved_root_component_url, runtime_host_fn);
+                mock_runner.add_runtime_host_fn(&resolved_root_component_url, runtime_host_fn);
             }
         }
 
-        let builtin_environment = BuiltinEnvironmentBuilder::new()
-            .set_args(Arguments { root_component_url, ..Default::default() })
-            .add_resolver("test".to_string(), Box::new(mock_resolver))
-            .add_runner(TEST_RUNNER_NAME.into(), runner)
-            .build()
-            .await
-            .expect("failed to set up builtin environment");
         let hub_proxy =
             builtin_environment.bind_service_fs_for_hub().await.expect("unable to bind service_fs");
 
-        let model = builtin_environment.model.clone();
         model.root_realm.hooks.install(additional_hooks).await;
 
         let root_moniker = AbsoluteMoniker::root();
@@ -699,16 +689,13 @@ mod tests {
             root_component_url.clone(),
             vec![
                 ComponentDescriptor {
-                    name: "root".to_string(),
-                    decl: ComponentDeclBuilder::new()
-                        .add_lazy_child("a")
-                        .offer_runner_to_children(TEST_RUNNER_NAME)
-                        .build(),
+                    name: "root",
+                    decl: ComponentDeclBuilder::new().add_lazy_child("a").build(),
                     host_fn: None,
                     runtime_host_fn: None,
                 },
                 ComponentDescriptor {
-                    name: "a".to_string(),
+                    name: "a",
                     decl: component_decl_with_test_runner(),
                     host_fn: None,
                     runtime_host_fn: None,
@@ -740,11 +727,8 @@ mod tests {
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
             vec![ComponentDescriptor {
-                name: "root".to_string(),
-                decl: ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
+                name: "root",
+                decl: ComponentDeclBuilder::new().add_lazy_child("a").build(),
                 host_fn: Some(foo_out_dir_fn()),
                 runtime_host_fn: None,
             }],
@@ -764,11 +748,8 @@ mod tests {
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
             vec![ComponentDescriptor {
-                name: "root".to_string(),
-                decl: ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
+                name: "root",
+                decl: ComponentDeclBuilder::new().add_lazy_child("a").build(),
                 host_fn: None,
                 runtime_host_fn: Some(bleep_runtime_dir_fn()),
             }],
@@ -785,7 +766,7 @@ mod tests {
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub_and_hooks(
             root_component_url.clone(),
             vec![ComponentDescriptor {
-                name: "root".to_string(),
+                name: "root",
                 decl: ComponentDeclBuilder::new()
                     .add_lazy_child("a")
                     .use_(UseDecl::Directory(UseDirectoryDecl {
@@ -795,7 +776,6 @@ mod tests {
                         rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                         subdir: None,
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
                 host_fn: None,
                 runtime_host_fn: None,
@@ -839,7 +819,7 @@ mod tests {
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
             vec![ComponentDescriptor {
-                name: "root".to_string(),
+                name: "root",
                 decl: ComponentDeclBuilder::new()
                     .add_lazy_child("a")
                     .use_(UseDecl::Directory(UseDirectoryDecl {
@@ -861,7 +841,6 @@ mod tests {
                         rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                         subdir: None,
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
                 host_fn: None,
                 runtime_host_fn: None,
@@ -895,7 +874,7 @@ mod tests {
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
             vec![ComponentDescriptor {
-                name: "root".to_string(),
+                name: "root",
                 decl: ComponentDeclBuilder::new()
                     .add_lazy_child("a")
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
@@ -912,7 +891,6 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
                 host_fn: None,
                 runtime_host_fn: None,

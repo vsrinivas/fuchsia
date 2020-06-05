@@ -162,13 +162,7 @@ async fn use_framework_service() {
     }
 
     let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        ),
+        ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
         (
             "b",
             ComponentDeclBuilder::new()
@@ -177,7 +171,6 @@ async fn use_framework_service() {
                     source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -242,7 +235,6 @@ async fn use_from_parent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -265,7 +257,6 @@ async fn use_from_parent() {
                     source_path: CapabilityPath::try_from("/svc/device").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/device").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -314,7 +305,6 @@ async fn use_from_grandparent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -337,7 +327,6 @@ async fn use_from_grandparent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -355,7 +344,6 @@ async fn use_from_grandparent() {
                     source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -392,7 +380,6 @@ async fn use_builtin_from_grandparent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -406,7 +393,6 @@ async fn use_builtin_from_grandparent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -417,7 +403,6 @@ async fn use_builtin_from_grandparent() {
                     source_path: CapabilityPath::try_from("/svc/builtin.Echo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -441,13 +426,7 @@ async fn use_builtin_from_grandparent() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_from_sibling_no_root() {
     let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        ),
+        ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
         (
             "b",
             ComponentDeclBuilder::new()
@@ -469,7 +448,6 @@ async fn use_from_sibling_no_root() {
                 }))
                 .add_lazy_child("c")
                 .add_lazy_child("d")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -487,7 +465,6 @@ async fn use_from_sibling_no_root() {
                     source_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -507,7 +484,6 @@ async fn use_from_sibling_no_root() {
                     target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target: ExposeTarget::Realm,
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -552,7 +528,6 @@ async fn use_from_sibling_root() {
                 }))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -572,7 +547,6 @@ async fn use_from_sibling_root() {
                     target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target: ExposeTarget::Realm,
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -590,7 +564,6 @@ async fn use_from_sibling_root() {
                     source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -637,7 +610,6 @@ async fn use_from_niece() {
                 }))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -658,7 +630,6 @@ async fn use_from_niece() {
                     target: ExposeTarget::Realm,
                 }))
                 .add_lazy_child("d")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -676,7 +647,6 @@ async fn use_from_niece() {
                     source_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -696,7 +666,6 @@ async fn use_from_niece() {
                     target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target: ExposeTarget::Realm,
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -745,7 +714,6 @@ async fn use_kitchen_sink() {
                 }))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -777,7 +745,6 @@ async fn use_kitchen_sink() {
                 }))
                 .add_lazy_child("d")
                 .add_lazy_child("e")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -801,7 +768,6 @@ async fn use_kitchen_sink() {
                 }))
                 .add_lazy_child("f")
                 .add_lazy_child("g")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -815,7 +781,6 @@ async fn use_kitchen_sink() {
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -833,7 +798,6 @@ async fn use_kitchen_sink() {
                     source_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -851,7 +815,6 @@ async fn use_kitchen_sink() {
                     source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -864,7 +827,6 @@ async fn use_kitchen_sink() {
                     target: ExposeTarget::Realm,
                 }))
                 .add_lazy_child("h")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -876,7 +838,6 @@ async fn use_kitchen_sink() {
                     target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                     target: ExposeTarget::Realm,
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -920,7 +881,6 @@ async fn use_from_component_manager_namespace() {
                 source_path: CapabilityPath::try_from("/use_from_cm_namespace/svc/foo").unwrap(),
                 target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
             }))
-            .offer_runner_to_children(TEST_RUNNER_NAME)
             .build(),
     )];
     let test = RoutingTest::new("a", components).await;
@@ -968,7 +928,6 @@ async fn offer_from_component_manager_namespace() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -986,7 +945,6 @@ async fn offer_from_component_manager_namespace() {
                     source_path: CapabilityPath::try_from("/echo/echo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -1009,13 +967,7 @@ async fn offer_from_component_manager_namespace() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_not_offered() {
     let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new_empty_component()
-                .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        ),
+        ("a", ComponentDeclBuilder::new_empty_component().add_lazy_child("b").build()),
         (
             "b",
             ComponentDeclBuilder::new()
@@ -1031,7 +983,6 @@ async fn use_not_offered() {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -1079,7 +1030,6 @@ async fn use_offer_source_not_exposed() {
                 }))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         ("b", component_decl_with_test_runner()),
@@ -1098,7 +1048,6 @@ async fn use_offer_source_not_exposed() {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -1127,13 +1076,7 @@ async fn use_offer_source_not_exposed() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_offer_source_not_offered() {
     let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        ),
+        ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
         (
             "b",
             ComponentDeclBuilder::new_empty_component()
@@ -1154,7 +1097,6 @@ async fn use_offer_source_not_offered() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1172,7 +1114,6 @@ async fn use_offer_source_not_offered() {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -1202,13 +1143,7 @@ async fn use_offer_source_not_offered() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_from_expose() {
     let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new_empty_component()
-                .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        ),
+        ("a", ComponentDeclBuilder::new_empty_component().add_lazy_child("b").build()),
         (
             "b",
             ComponentDeclBuilder::new()
@@ -1225,7 +1160,6 @@ async fn use_from_expose() {
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1245,7 +1179,6 @@ async fn use_from_expose() {
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target: ExposeTarget::Realm,
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -1292,7 +1225,6 @@ async fn use_from_expose_to_framework() {
                 }))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1312,7 +1244,6 @@ async fn use_from_expose_to_framework() {
                     target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target: ExposeTarget::Framework,
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1330,7 +1261,6 @@ async fn use_from_expose_to_framework() {
                     source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -1377,7 +1307,6 @@ async fn offer_from_non_executable() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1395,7 +1324,6 @@ async fn offer_from_non_executable() {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -1443,7 +1371,6 @@ async fn use_in_collection() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1471,7 +1398,6 @@ async fn use_in_collection() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_collection("coll", fsys::Durability::Transient)
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1484,7 +1410,6 @@ async fn use_in_collection() {
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1495,7 +1420,6 @@ async fn use_in_collection() {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -1563,7 +1487,6 @@ async fn use_in_collection_not_offered() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1575,7 +1498,6 @@ async fn use_in_collection_not_offered() {
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                 }))
                 .add_collection("coll", fsys::Durability::Transient)
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1593,7 +1515,6 @@ async fn use_in_collection_not_offered() {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -1650,7 +1571,6 @@ async fn use_directory_with_subdir_from_grandparent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1666,7 +1586,6 @@ async fn use_directory_with_subdir_from_grandparent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1679,7 +1598,6 @@ async fn use_directory_with_subdir_from_grandparent() {
                     rights: *rights::READ_RIGHTS,
                     subdir: Some(PathBuf::from("s4")),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -1723,7 +1641,6 @@ async fn use_directory_with_subdir_from_sibling() {
                 }))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1792,7 +1709,6 @@ async fn expose_directory_with_subdir() {
                     subdir: Some(PathBuf::from("s3")),
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1807,7 +1723,6 @@ async fn expose_directory_with_subdir() {
                     subdir: Some(PathBuf::from("s1/s2")),
                 }))
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1867,7 +1782,6 @@ async fn use_runner_from_grandparent() {
                     source: RunnerSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
                 })
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1931,7 +1845,6 @@ async fn use_runner_from_sibling() {
                 }))
                 .add_lazy_child("b")
                 .add_lazy_child("r")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1948,7 +1861,6 @@ async fn use_runner_from_sibling() {
                     source: RunnerSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
                 })
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         ("b", ComponentDeclBuilder::new_empty_component().use_runner("hobbit").build()),
@@ -2065,7 +1977,6 @@ async fn use_runner_from_grandparent_environment() {
                     source: RunnerSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
                 })
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -2138,7 +2049,6 @@ async fn use_runner_from_sibling_environment() {
                         })
                         .build(),
                 )
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -2217,7 +2127,6 @@ async fn use_runner_from_inherited_environment() {
                     source: RunnerSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
                 })
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -2323,13 +2232,7 @@ async fn use_runner_from_environment_not_found() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn expose_from_self_and_child() {
     let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        ),
+        ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
         (
             "b",
             ComponentDeclBuilder::new()
@@ -2348,7 +2251,6 @@ async fn expose_from_self_and_child() {
                     target: ExposeTarget::Realm,
                 }))
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -2368,7 +2270,6 @@ async fn expose_from_self_and_child() {
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target: ExposeTarget::Realm,
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -2405,20 +2306,8 @@ async fn expose_from_self_and_child() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_not_exposed() {
     let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        ),
+        ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+        ("b", ComponentDeclBuilder::new().add_lazy_child("c").build()),
         (
             "c",
             ComponentDeclBuilder::new()
@@ -2436,7 +2325,6 @@ async fn use_not_exposed() {
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target: ExposeTarget::Realm,
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -2504,7 +2392,6 @@ async fn use_with_destroyed_parent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_collection("coll", fsys::Durability::Transient)
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -2518,16 +2405,9 @@ async fn use_with_destroyed_parent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
-        (
-            "c",
-            ComponentDeclBuilder::new()
-                .use_(use_decl.clone())
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        ),
+        ("c", ComponentDeclBuilder::new().use_(use_decl.clone()).build()),
     ];
     let test = RoutingTest::new("a", components).await;
     test.create_dynamic_child(
@@ -2588,7 +2468,6 @@ async fn invalid_use_from_component_manager() {
                 source_path: CapabilityPath::try_from("/invalid").unwrap(),
                 target_path: CapabilityPath::try_from("/svc/valid").unwrap(),
             }))
-            .offer_runner_to_children(TEST_RUNNER_NAME)
             .build(),
     )];
 
@@ -2627,7 +2506,6 @@ async fn invalid_offer_from_component_manager() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -2638,7 +2516,6 @@ async fn invalid_offer_from_component_manager() {
                     source_path: CapabilityPath::try_from("/svc/valid").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/valid").unwrap(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -2675,7 +2552,6 @@ async fn use_event_from_framework() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -2736,7 +2612,6 @@ async fn use_event_from_parent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -2811,7 +2686,6 @@ async fn use_event_from_grandparent() {
                     filter: None,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -2839,7 +2713,6 @@ async fn use_event_from_grandparent() {
                     filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/diagnostics".to_string())}),
                 }))
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -2929,7 +2802,6 @@ async fn event_filter_routing() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -2992,7 +2864,6 @@ async fn event_filter_routing() {
                 }))
                 .add_lazy_child("c")
                 .add_lazy_child("d")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (

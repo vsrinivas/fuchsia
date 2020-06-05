@@ -1123,7 +1123,7 @@ pub mod tests {
                 routing_test_helpers::RoutingTest,
                 test_helpers::{
                     self, component_decl_with_test_runner, ActionsTest, ComponentDeclBuilder,
-                    ComponentInfo, TEST_RUNNER_NAME,
+                    ComponentInfo,
                 },
             },
         },
@@ -1698,20 +1698,8 @@ pub mod tests {
     /// the component is stopped.
     async fn test_early_component_exit() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_eager_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
             ("b", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;

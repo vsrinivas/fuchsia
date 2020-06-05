@@ -8,7 +8,7 @@ use {
         klog,
         model::{
             hooks::HooksRegistration,
-            model::Model,
+            model::{ComponentManagerConfig, Model},
             moniker::{AbsoluteMoniker, PartialMoniker},
             realm::Realm,
             testing::{
@@ -225,21 +225,6 @@ impl ComponentDeclBuilder {
         self.result
             .uses
             .push(cm_rust::UseDecl::Runner(cm_rust::UseRunnerDecl { source_name: name.into() }));
-        self
-    }
-
-    /// Route the named runner cap to every currently declared child.
-    pub fn offer_runner_to_children(mut self, name: &str) -> Self {
-        // For each child, offer the runner cap from our realm to the child.
-        for child in self.result.children.iter() {
-            self.result.offers.push(offer_runner_cap_to_child(name, &child.name));
-        }
-
-        // Similarly, for each collection, offer the runner cap.
-        for collection in self.result.collections.iter() {
-            self.result.offers.push(offer_runner_cap_to_collection(name, &collection.name));
-        }
-
         self
     }
 
@@ -523,11 +508,22 @@ pub async fn wait_for_runner_request(
     start_info
 }
 
+/// Contains test model and ancillary objects.
+pub struct TestModelResult {
+    pub model: Arc<Model>,
+    pub builtin_environment: Arc<BuiltinEnvironment>,
+    pub mock_runner: Arc<MockRunner>,
+}
+
+/// Returns a `Model` and `BuiltinEnvironment` suitable for most tests.
+// TODO: Consider turning this into a builder.
 pub async fn new_test_model(
-    root_component: &'static str,
-    components: Vec<(&'static str, ComponentDecl)>,
-) -> (Arc<Model>, Arc<BuiltinEnvironment>, Arc<MockRunner>) {
+    root_component: &str,
+    components: Vec<(&str, ComponentDecl)>,
+    config: ComponentManagerConfig,
+) -> TestModelResult {
     let mock_runner = Arc::new(MockRunner::new());
+
     let mut mock_resolver = MockResolver::new();
     for (name, decl) in &components {
         mock_resolver.add_component(name, decl.clone());
@@ -542,11 +538,12 @@ pub async fn new_test_model(
             .set_args(args)
             .add_resolver("test".to_string(), Box::new(mock_resolver))
             .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone())
+            .set_config(config)
             .build()
             .await
             .expect("builtin environment setup failed"),
     );
-    (builtin_environment.model.clone(), builtin_environment, mock_runner)
+    TestModelResult { model: builtin_environment.model.clone(), builtin_environment, mock_runner }
 }
 
 /// A test harness for tests that wish to register or verify actions.
@@ -576,7 +573,12 @@ impl ActionsTest {
         // Ensure that kernel logging has been set up
         let _ = klog::KernelLogger::init();
 
-        let (model, builtin_environment, runner) = new_test_model(root_component, components).await;
+        let TestModelResult { model, builtin_environment, mock_runner } =
+            new_test_model(root_component, components, ComponentManagerConfig::default()).await;
+
+        // TODO(fsamuel): Don't install the Hub's hooks because the Hub expects components
+        // to start and stop in a certain lifecycle ordering. In particular, some unit
+        // tests will destroy component instances before binding to their parents.
         let test_hook = Arc::new(TestHook::new());
         model.root_realm.hooks.install(test_hook.hooks()).await;
         model.root_realm.hooks.install(extra_hooks).await;
@@ -598,7 +600,7 @@ impl ActionsTest {
             None
         };
 
-        Self { model, builtin_environment, test_hook, realm_proxy, runner }
+        Self { model, builtin_environment, test_hook, realm_proxy, runner: mock_runner }
     }
 
     pub async fn look_up(&self, moniker: AbsoluteMoniker) -> Arc<Realm> {

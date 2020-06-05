@@ -333,7 +333,7 @@ pub mod tests {
             testing::{
                 test_helpers::{
                     component_decl_with_test_runner, execution_is_shut_down, has_child,
-                    ActionsTest, ComponentDeclBuilder, ComponentInfo, TEST_RUNNER_NAME,
+                    ActionsTest, ComponentDeclBuilder, ComponentInfo,
                 },
                 test_hook::Lifecycle,
             },
@@ -448,13 +448,7 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn shutdown_one_component() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
             ("a", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
@@ -484,19 +478,12 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn shutdown_collection() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("container")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("container").build()),
             (
                 "container",
                 ComponentDeclBuilder::new()
                     .add_collection("coll", fsys::Durability::Transient)
                     .add_lazy_child("c")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             ("a", component_decl_with_test_runner()),
@@ -590,20 +577,8 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn shutdown_not_started() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
             ("b", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
@@ -639,27 +614,9 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn shutdown_not_resolved() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("c")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_lazy_child("c").build()),
             ("c", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
@@ -707,28 +664,9 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn shutdown_hierarchy() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("c")
-                    .add_eager_child("d")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_eager_child("c").add_eager_child("d").build()),
             ("c", component_decl_with_test_runner()),
             ("d", component_decl_with_test_runner()),
         ];
@@ -799,20 +737,8 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn shutdown_with_multiple_deps() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
             (
                 "b",
                 ComponentDeclBuilder::new()
@@ -833,7 +759,6 @@ pub mod tests {
                         target: OfferTarget::Child("e".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             (
@@ -844,7 +769,6 @@ pub mod tests {
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             (
@@ -856,7 +780,6 @@ pub mod tests {
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: ExposeTarget::Realm,
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             (
@@ -867,7 +790,6 @@ pub mod tests {
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
         ];
@@ -952,20 +874,8 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn shutdown_with_multiple_out_and_longer_chain() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
             (
                 "b",
                 ComponentDeclBuilder::new()
@@ -994,7 +904,6 @@ pub mod tests {
                         target: OfferTarget::Child("f".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             (
@@ -1005,7 +914,6 @@ pub mod tests {
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             (
@@ -1017,7 +925,6 @@ pub mod tests {
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: ExposeTarget::Realm,
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             (
@@ -1034,7 +941,6 @@ pub mod tests {
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target: ExposeTarget::Realm,
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             (
@@ -1045,7 +951,6 @@ pub mod tests {
                         source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
         ];
@@ -1159,20 +1064,8 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn shutdown_with_multiple_out_multiple_in() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
             (
                 "b",
                 ComponentDeclBuilder::new()
@@ -1208,7 +1101,6 @@ pub mod tests {
                         target: OfferTarget::Child("f".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             (
@@ -1219,7 +1111,6 @@ pub mod tests {
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             (
@@ -1231,7 +1122,6 @@ pub mod tests {
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: ExposeTarget::Realm,
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             (
@@ -1248,7 +1138,6 @@ pub mod tests {
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target: ExposeTarget::Realm,
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             (
@@ -1264,7 +1153,6 @@ pub mod tests {
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
         ];
@@ -1371,20 +1259,8 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn shutdown_with_dependency() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
             (
                 "b",
                 ComponentDeclBuilder::new()
@@ -1397,7 +1273,6 @@ pub mod tests {
                         target: OfferTarget::Child("d".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             (
@@ -1409,7 +1284,6 @@ pub mod tests {
                         target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                         target: ExposeTarget::Realm,
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             (
@@ -1420,7 +1294,6 @@ pub mod tests {
                         source_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
         ];
@@ -1484,27 +1357,9 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn shutdown_self_referential() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_lazy_child("b").build()),
         ];
         let test = ActionsTest::new("root", components, None).await;
         let realm_a = test.look_up(vec!["a:0"].into()).await;
@@ -1610,28 +1465,9 @@ pub mod tests {
         }
 
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("c")
-                    .add_eager_child("d")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_eager_child("c").add_eager_child("d").build()),
             ("c", component_decl_with_test_runner()),
             ("d", component_decl_with_test_runner()),
         ];
@@ -1727,13 +1563,7 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn mark_deleting() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
             ("a", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
@@ -1783,7 +1613,6 @@ pub mod tests {
                 "root",
                 ComponentDeclBuilder::new()
                     .add_collection("coll", fsys::Durability::Transient)
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             ("a", component_decl_with_test_runner()),
@@ -1832,13 +1661,7 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn destroy_one_component() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
             ("a", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
@@ -1889,18 +1712,11 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn destroy_collection() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("container")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("container").build()),
             (
                 "container",
                 ComponentDeclBuilder::new()
                     .add_collection("coll", fsys::Durability::Transient)
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             ("a", component_decl_with_test_runner()),
@@ -1947,20 +1763,8 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn destroy_already_shut_down() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
             ("b", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
@@ -2005,27 +1809,9 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn destroy_not_resolved() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("c")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_lazy_child("c").build()),
             ("c", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
@@ -2083,29 +1869,9 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn destroy_hierarchy() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .add_lazy_child("x")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("c")
-                    .add_eager_child("d")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").add_lazy_child("x").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_eager_child("c").add_eager_child("d").build()),
             ("c", component_decl_with_test_runner()),
             ("d", component_decl_with_test_runner()),
             ("x", component_decl_with_test_runner()),
@@ -2214,27 +1980,9 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn destroy_self_referential() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_lazy_child("b").build()),
         ];
         let test = ActionsTest::new("root", components, None).await;
         let realm_root = test.look_up(vec![].into()).await;
@@ -2350,28 +2098,9 @@ pub mod tests {
         }
 
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("c")
-                    .add_eager_child("d")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_eager_child("c").add_eager_child("d").build()),
             ("c", component_decl_with_test_runner()),
             ("d", component_decl_with_test_runner()),
         ];

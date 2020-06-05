@@ -336,7 +336,7 @@ mod tests {
     use super::*;
     use {
         crate::{
-            builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
+            builtin_environment::{BuiltinEnvironment,},
             model::{
                 binding::Binder,
                 events::{event::SyncMode, source::EventSource, stream::EventStream},
@@ -344,11 +344,10 @@ mod tests {
                 realm::BindReason,
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::*},
             },
-            startup::Arguments,
         },
         cm_rust::{
-            self, CapabilityName, CapabilityPath, ChildDecl, ExposeDecl, ExposeProtocolDecl,
-            ExposeSource, ExposeTarget, NativeIntoFidl,
+            self, CapabilityName, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl,
+            ExposeProtocolDecl, ExposeSource, ExposeTarget, NativeIntoFidl,
         },
         fidl::endpoints,
         fidl_fidl_examples_echo as echo,
@@ -363,6 +362,7 @@ mod tests {
     struct RealmCapabilityTest {
         pub model: Arc<Model>,
         pub builtin_environment: Arc<BuiltinEnvironment>,
+        mock_runner: Arc<MockRunner>,
         realm: Arc<Realm>,
         realm_proxy: fsys::RealmProxy,
         hook: Arc<TestHook>,
@@ -376,32 +376,20 @@ mod tests {
 
     impl RealmCapabilityTest {
         async fn new(
-            mock_resolver: MockResolver,
-            mock_runner: Arc<MockRunner>,
+            components: Vec<(&'static str, ComponentDecl)>,
             realm_moniker: AbsoluteMoniker,
             events: Vec<CapabilityName>,
         ) -> Self {
             // Init model.
-            let builtin_environment = Arc::new(
-                BuiltinEnvironmentBuilder::new()
-                    .set_config(ComponentManagerConfig {
-                        list_children_batch_size: 2,
-                        ..Default::default()
-                    })
-                    .set_args(Arguments {
-                        root_component_url: "test:///root".to_string(),
-                        ..Default::default()
-                    })
-                    .add_resolver("test".to_string(), Box::new(mock_resolver))
-                    .add_runner(TEST_RUNNER_NAME.into(), mock_runner)
-                    .build()
-                    .await
-                    .expect("failed to set up builtin environment"),
-            );
+            let mut config = ComponentManagerConfig::default();
+            config.list_children_batch_size = 2;
+            let TestModelResult { model, builtin_environment, mock_runner, .. } =
+                new_test_model("root", components, config).await;
             let builtin_environment_inner = builtin_environment.clone();
 
             let hook = Arc::new(TestHook::new());
             let hooks = hook.hooks();
+            model.root_realm.hooks.install(hooks).await;
 
             let events_data = if events.is_empty() {
                 None
@@ -416,9 +404,6 @@ mod tests {
                 event_source.start_component_tree().await;
                 Some(EventsData { _event_source: event_source, event_stream })
             };
-
-            let model = builtin_environment.model.clone();
-            model.root_realm.hooks.install(hooks).await;
 
             // Look up and bind to realm.
             let realm = model
@@ -441,6 +426,7 @@ mod tests {
             RealmCapabilityTest {
                 model,
                 builtin_environment,
+                mock_runner,
                 realm,
                 realm_proxy,
                 hook,
@@ -456,25 +442,16 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn create_dynamic_child() {
         // Set up model and realm service.
-        let mut mock_resolver = MockResolver::new();
-        let mock_runner = Arc::new(MockRunner::new());
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("system")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component(
-            "system",
-            ComponentDeclBuilder::new()
-                .add_collection("coll", fsys::Durability::Transient)
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
         let test = RealmCapabilityTest::new(
-            mock_resolver,
-            mock_runner.clone(),
+            vec![
+                ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
+                (
+                    "system",
+                    ComponentDeclBuilder::new()
+                        .add_collection("coll", fsys::Durability::Transient)
+                        .build(),
+                ),
+            ],
             vec!["system:0"].into(),
             vec![],
         )
@@ -500,25 +477,17 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn create_dynamic_child_errors() {
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("system")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component(
-            "system",
-            ComponentDeclBuilder::new()
-                .add_collection("coll", fsys::Durability::Transient)
-                .add_collection("pcoll", fsys::Durability::Persistent)
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
         let test = RealmCapabilityTest::new(
-            mock_resolver,
-            Arc::new(MockRunner::new()),
+            vec![
+                ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
+                (
+                    "system",
+                    ComponentDeclBuilder::new()
+                        .add_collection("coll", fsys::Durability::Transient)
+                        .add_collection("pcoll", fsys::Durability::Persistent)
+                        .build(),
+                ),
+            ],
             vec!["system:0"].into(),
             vec![],
         )
@@ -601,28 +570,19 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn destroy_dynamic_child() {
         // Set up model and realm service.
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("system")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component(
-            "system",
-            ComponentDeclBuilder::new()
-                .add_collection("coll", fsys::Durability::Transient)
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component("a", component_decl_with_test_runner());
-        mock_resolver.add_component("b", component_decl_with_test_runner());
-
         let events = vec![EventType::MarkedForDestruction.into(), EventType::Destroyed.into()];
         let mut test = RealmCapabilityTest::new(
-            mock_resolver,
-            Arc::new(MockRunner::new()),
+            vec![
+                ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
+                (
+                    "system",
+                    ComponentDeclBuilder::new()
+                        .add_collection("coll", fsys::Durability::Transient)
+                        .build(),
+                ),
+                ("a", component_decl_with_test_runner()),
+                ("b", component_decl_with_test_runner()),
+            ],
             vec!["system:0"].into(),
             events,
         )
@@ -723,24 +683,16 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn destroy_dynamic_child_errors() {
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("system")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component(
-            "system",
-            ComponentDeclBuilder::new()
-                .add_collection("coll", fsys::Durability::Transient)
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
         let test = RealmCapabilityTest::new(
-            mock_resolver,
-            Arc::new(MockRunner::new()),
+            vec![
+                ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
+                (
+                    "system",
+                    ComponentDeclBuilder::new()
+                        .add_collection("coll", fsys::Durability::Transient)
+                        .build(),
+                ),
+            ],
             vec!["system:0"].into(),
             vec![],
         )
@@ -781,35 +733,30 @@ mod tests {
     async fn bind_static_child() {
         // Create a hierarchy of three components, the last with eager startup. The middle
         // component hosts and exposes the "/svc/hippo" service.
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("system")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component(
-            "system",
-            ComponentDeclBuilder::new()
-                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
-                    source: ExposeSource::Self_,
-                    source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                    target: ExposeTarget::Realm,
-                }))
-                .add_eager_child("eager")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component("eager", component_decl_with_test_runner());
-        let mock_runner = Arc::new(MockRunner::new());
+        let test = RealmCapabilityTest::new(
+            vec![
+                ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
+                (
+                    "system",
+                    ComponentDeclBuilder::new()
+                        .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                            source: ExposeSource::Self_,
+                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            target: ExposeTarget::Realm,
+                        }))
+                        .add_eager_child("eager")
+                        .build(),
+                ),
+                ("eager", component_decl_with_test_runner()),
+            ],
+            vec![].into(),
+            vec![],
+        )
+        .await;
         let mut out_dir = OutDir::new();
         out_dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
-        mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
-        let test =
-            RealmCapabilityTest::new(mock_resolver, mock_runner.clone(), vec![].into(), vec![])
-                .await;
+        test.mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
 
         // Bind to child and use exposed service.
         let mut child_ref = fsys::ChildRef { name: "system".to_string(), collection: None };
@@ -834,39 +781,40 @@ mod tests {
             "test:///system_resolved".to_string(),
             "test:///eager_resolved".to_string(),
         ];
-        assert_eq!(mock_runner.urls_run(), expected_urls);
+        assert_eq!(test.mock_runner.urls_run(), expected_urls);
         assert_eq!("(system(eager))", test.hook.print());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_dynamic_child() {
         // Create a root component with a collection and define a component that exposes a service.
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_collection("coll", fsys::Durability::Transient)
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component(
-            "system",
-            ComponentDeclBuilder::new()
-                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
-                    source: ExposeSource::Self_,
-                    source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                    target: ExposeTarget::Realm,
-                }))
-                .build(),
-        );
-        let mock_runner = Arc::new(MockRunner::new());
         let mut out_dir = OutDir::new();
         out_dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
-        mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
-        let test =
-            RealmCapabilityTest::new(mock_resolver, mock_runner.clone(), vec![].into(), vec![])
-                .await;
+        let test = RealmCapabilityTest::new(
+            vec![
+                (
+                    "root",
+                    ComponentDeclBuilder::new()
+                        .add_collection("coll", fsys::Durability::Transient)
+                        .build(),
+                ),
+                (
+                    "system",
+                    ComponentDeclBuilder::new()
+                        .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                            source: ExposeSource::Self_,
+                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            target: ExposeTarget::Realm,
+                        }))
+                        .build(),
+                ),
+            ],
+            vec![].into(),
+            vec![],
+        )
+        .await;
+        test.mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
 
         // Add "system" to collection.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
@@ -893,29 +841,30 @@ mod tests {
         // Verify that the binding happened and the component topology matches expectations.
         let expected_urls =
             vec!["test:///root_resolved".to_string(), "test:///system_resolved".to_string()];
-        assert_eq!(mock_runner.urls_run(), expected_urls);
+        assert_eq!(test.mock_runner.urls_run(), expected_urls);
         assert_eq!("(coll:system)", test.hook.print());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_child_errors() {
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("system")
-                .add_lazy_child("unresolvable")
-                .add_lazy_child("unrunnable")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component("system", component_decl_with_test_runner());
-        mock_resolver.add_component("unrunnable", component_decl_with_test_runner());
-        let mock_runner = Arc::new(MockRunner::new());
-        mock_runner.cause_failure("unrunnable");
-        let test =
-            RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), vec![]).await;
-
+        let test = RealmCapabilityTest::new(
+            vec![
+                (
+                    "root",
+                    ComponentDeclBuilder::new()
+                        .add_lazy_child("system")
+                        .add_lazy_child("unresolvable")
+                        .add_lazy_child("unrunnable")
+                        .build(),
+                ),
+                ("system", component_decl_with_test_runner()),
+                ("unrunnable", component_decl_with_test_runner()),
+            ],
+            vec![].into(),
+            vec![],
+        )
+        .await;
+        test.mock_runner.cause_failure("unrunnable");
         // Instance not found.
         {
             let mut child_ref = fsys::ChildRef { name: "missing".to_string(), collection: None };
@@ -947,19 +896,16 @@ mod tests {
     // If a runner fails to launch a child, the error should not occur at `bind_child`.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn bind_child_runner_failure() {
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("unrunnable")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component("unrunnable", component_decl_with_test_runner());
-        let mock_runner = Arc::new(MockRunner::new());
-        mock_runner.cause_failure("unrunnable");
-        let test =
-            RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), vec![]).await;
+        let test = RealmCapabilityTest::new(
+            vec![
+                ("root", ComponentDeclBuilder::new().add_lazy_child("unrunnable").build()),
+                ("unrunnable", component_decl_with_test_runner()),
+            ],
+            vec![].into(),
+            vec![],
+        )
+        .await;
+        test.mock_runner.cause_failure("unrunnable");
 
         let mut child_ref = fsys::ChildRef { name: "unrunnable".to_string(), collection: None };
         let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
@@ -984,20 +930,22 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn list_children() {
         // Create a root component with collections and a static child.
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("static")
-                .add_collection("coll", fsys::Durability::Transient)
-                .add_collection("coll2", fsys::Durability::Transient)
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        mock_resolver.add_component("static", component_decl_with_test_runner());
-        let mock_runner = Arc::new(MockRunner::new());
-        let test =
-            RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), vec![]).await;
+        let test = RealmCapabilityTest::new(
+            vec![
+                (
+                    "root",
+                    ComponentDeclBuilder::new()
+                        .add_lazy_child("static")
+                        .add_collection("coll", fsys::Durability::Transient)
+                        .add_collection("coll2", fsys::Durability::Transient)
+                        .build(),
+                ),
+                ("static", component_decl_with_test_runner()),
+            ],
+            vec![].into(),
+            vec![],
+        )
+        .await;
 
         // Create children "a" and "b" in collection 1, "c" in collection 2.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
@@ -1047,17 +995,17 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn list_children_errors() {
         // Create a root component with a collection.
-        let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component(
-            "root",
-            ComponentDeclBuilder::new()
-                .add_collection("coll", fsys::Durability::Transient)
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        );
-        let mock_runner = Arc::new(MockRunner::new());
-        let test =
-            RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), vec![]).await;
+        let test = RealmCapabilityTest::new(
+            vec![(
+                "root",
+                ComponentDeclBuilder::new()
+                    .add_collection("coll", fsys::Durability::Transient)
+                    .build(),
+            )],
+            vec![].into(),
+            vec![],
+        )
+        .await;
 
         // Collection not found.
         {

@@ -459,7 +459,6 @@ mod tests {
                     .expose(expose_diagnostics_decl())
                     .add_lazy_child("b")
                     .add_lazy_child("c")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
             (
@@ -467,17 +466,9 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .expose(expose_diagnostics_decl())
                     .add_lazy_child("d")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
-            (
-                "c",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("e")
-                    .add_lazy_child("f")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("c", ComponentDeclBuilder::new().add_lazy_child("e").add_lazy_child("f").build()),
             ("d", ComponentDeclBuilder::new().expose(expose_diagnostics_decl()).build()),
             (
                 "e",
@@ -485,16 +476,9 @@ mod tests {
                     .expose(expose_diagnostics_decl())
                     .add_lazy_child("g")
                     .add_lazy_child("h")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
-            (
-                "f",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("i")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("f", ComponentDeclBuilder::new().add_lazy_child("i").build()),
             ("g", ComponentDeclBuilder::new().expose(expose_diagnostics_decl()).build()),
             ("h", ComponentDeclBuilder::new().build()),
             ("i", ComponentDeclBuilder::new().expose(expose_diagnostics_decl()).build()),

@@ -35,14 +35,12 @@ async fn storage_dir_from_cm_namespace() {
                     source_path: "/tmp".try_into().unwrap(),
                     source: StorageDirectorySource::Realm,
                 })
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap())))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -82,14 +80,12 @@ async fn storage_and_dir_from_parent() {
                     source_path: "/data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                 })
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap())))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -129,16 +125,9 @@ async fn meta_storage_and_dir_from_parent() {
                     source_path: "/data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                 })
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .use_(UseDecl::Storage(UseStorageDecl::Meta))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        ),
+        ("b", ComponentDeclBuilder::new().use_(UseDecl::Storage(UseStorageDecl::Meta)).build()),
     ];
     let test = RoutingTest::new("a", components).await;
     test.check_use(
@@ -179,7 +168,6 @@ async fn storage_from_parent_dir_from_grandparent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -195,14 +183,12 @@ async fn storage_from_parent_dir_from_grandparent() {
                     source_path: "/minfs".try_into().unwrap(),
                     source: StorageDirectorySource::Realm,
                 })
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
             "c",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -245,7 +231,6 @@ async fn storage_and_dir_from_grandparent() {
                     source_path: "/data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                 })
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -256,14 +241,12 @@ async fn storage_and_dir_from_grandparent() {
                     target: OfferTarget::Child("c".to_string()),
                 })))
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
             "c",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -306,7 +289,6 @@ async fn meta_storage_and_dir_from_grandparent() {
                     source_path: "/data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                 })
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -317,16 +299,9 @@ async fn meta_storage_and_dir_from_grandparent() {
                     target: OfferTarget::Child("c".to_string()),
                 })))
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
-        (
-            "c",
-            ComponentDeclBuilder::new()
-                .use_(UseDecl::Storage(UseStorageDecl::Meta))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        ),
+        ("c", ComponentDeclBuilder::new().use_(UseDecl::Storage(UseStorageDecl::Meta)).build()),
     ];
     let test = RoutingTest::new("a", components).await;
     test.check_use(
@@ -366,7 +341,6 @@ async fn storage_from_parent_dir_from_sibling() {
                 })))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -380,14 +354,12 @@ async fn storage_from_parent_dir_from_sibling() {
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
             "c",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap())))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -432,7 +404,6 @@ async fn use_in_collection_from_parent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -461,7 +432,6 @@ async fn use_in_collection_from_parent() {
                     source: StorageDirectorySource::Realm,
                 })
                 .add_collection("coll", fsys::Durability::Transient)
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -470,7 +440,6 @@ async fn use_in_collection_from_parent() {
                 .use_(UseDecl::Storage(UseStorageDecl::Data("/data".try_into().unwrap())))
                 .use_(UseDecl::Storage(UseStorageDecl::Cache("/cache".try_into().unwrap())))
                 .use_(UseDecl::Storage(UseStorageDecl::Meta))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -567,7 +536,6 @@ async fn use_in_collection_from_grandparent() {
                     source_path: "/data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                 })
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -591,7 +559,6 @@ async fn use_in_collection_from_grandparent() {
                     target: OfferTarget::Collection("coll".to_string()),
                 })))
                 .add_collection("coll", fsys::Durability::Transient)
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -600,7 +567,6 @@ async fn use_in_collection_from_grandparent() {
                 .use_(UseDecl::Storage(UseStorageDecl::Data("/data".try_into().unwrap())))
                 .use_(UseDecl::Storage(UseStorageDecl::Cache("/cache".try_into().unwrap())))
                 .use_(UseDecl::Storage(UseStorageDecl::Meta))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -715,7 +681,6 @@ async fn storage_multiple_types() {
                 })))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -729,7 +694,6 @@ async fn storage_multiple_types() {
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -746,7 +710,6 @@ async fn storage_multiple_types() {
                 .use_(UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap())))
                 .use_(UseDecl::Storage(UseStorageDecl::Meta))
                 .add_lazy_child("d")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -754,7 +717,6 @@ async fn storage_multiple_types() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())))
                 .use_(UseDecl::Storage(UseStorageDecl::Meta))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -825,7 +787,6 @@ async fn use_the_wrong_type_of_storage() {
                     source_path: "/data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                 })
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -833,7 +794,6 @@ async fn use_the_wrong_type_of_storage() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())))
                 .use_(UseDecl::Storage(UseStorageDecl::Meta))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -882,14 +842,12 @@ async fn directories_are_not_storage() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -925,7 +883,6 @@ async fn use_storage_when_not_offered() {
                     source_path: "/data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                 })
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -933,7 +890,6 @@ async fn use_storage_when_not_offered() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())))
                 .use_(UseDecl::Storage(UseStorageDecl::Meta))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -986,7 +942,6 @@ async fn dir_offered_from_nonexecutable() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1006,7 +961,6 @@ async fn dir_offered_from_nonexecutable() {
                     source_path: "/minfs".try_into().unwrap(),
                     source: StorageDirectorySource::Realm,
                 })
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -1014,7 +968,6 @@ async fn dir_offered_from_nonexecutable() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())))
                 .use_(UseDecl::Storage(UseStorageDecl::Meta))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];

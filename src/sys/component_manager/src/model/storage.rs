@@ -267,9 +267,7 @@ mod tests {
             realm::BindReason,
             routing::RoutingError,
             testing::routing_test_helpers::{RoutingTest, RoutingTestBuilder},
-            testing::test_helpers::{
-                self, component_decl_with_test_runner, ComponentDeclBuilder, TEST_RUNNER_NAME,
-            },
+            testing::test_helpers::{self, component_decl_with_test_runner, ComponentDeclBuilder},
         },
         cm_rust::*,
         fidl_fuchsia_io2 as fio2,
@@ -280,14 +278,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_isolated_storage_test() {
         let components = vec![
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("b")
-                    .add_lazy_child("c")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").add_lazy_child("c").build()),
             (
                 "b",
                 ComponentDeclBuilder::new()
@@ -299,7 +290,6 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
         ];
@@ -407,14 +397,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn delete_isolated_storage_test() {
         let components = vec![
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("b")
-                    .add_lazy_child("c")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").add_lazy_child("c").build()),
             (
                 "b",
                 ComponentDeclBuilder::new()
@@ -426,7 +409,6 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                     }))
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
             ),
         ];

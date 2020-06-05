@@ -166,7 +166,6 @@ mod tests {
             realm::BindReason,
             testing::test_helpers::{
                 component_decl_with_test_runner, ActionsTest, ComponentDeclBuilder, ComponentInfo,
-                TEST_RUNNER_NAME,
             },
         },
         fidl::endpoints,
@@ -184,28 +183,9 @@ mod tests {
     async fn test_system_controller() {
         // Configure and start realm
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_lazy_child("a")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("b")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .add_eager_child("c")
-                    .add_eager_child("d")
-                    .offer_runner_to_children(TEST_RUNNER_NAME)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_eager_child("c").add_eager_child("d").build()),
             ("c", component_decl_with_test_runner()),
             ("d", component_decl_with_test_runner()),
         ];

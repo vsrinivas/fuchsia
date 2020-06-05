@@ -135,13 +135,7 @@ async fn check_use_work_scheduler_control(
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_work_scheduler_with_expose_to_framework() {
     let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        ),
+        ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
         (
             "b",
             ComponentDeclBuilder::new()
@@ -156,7 +150,6 @@ async fn use_work_scheduler_with_expose_to_framework() {
                     source_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
                     target_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -175,13 +168,7 @@ async fn use_work_scheduler_with_expose_to_framework() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_work_scheduler_without_expose() {
     let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        ),
+        ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
         (
             "b",
             ComponentDeclBuilder::new()
@@ -190,7 +177,6 @@ async fn use_work_scheduler_without_expose() {
                     source_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
                     target_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -209,13 +195,7 @@ async fn use_work_scheduler_without_expose() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_work_scheduler_with_expose_to_realm() {
     let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
-                .build(),
-        ),
+        ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
         (
             "b",
             ComponentDeclBuilder::new()
@@ -230,7 +210,6 @@ async fn use_work_scheduler_with_expose_to_realm() {
                     source_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
                     target_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -260,7 +239,6 @@ async fn use_work_scheduler_control_routed() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -271,7 +249,6 @@ async fn use_work_scheduler_control_routed() {
                     source_path: offer_use_path.clone(),
                     target_path: offer_use_path.clone(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
@@ -303,7 +280,6 @@ async fn use_work_scheduler_control_error() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
         (
@@ -314,7 +290,6 @@ async fn use_work_scheduler_control_error() {
                     source_path: offer_use_path.clone(),
                     target_path: offer_use_path.clone(),
                 }))
-                .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         ),
     ];
