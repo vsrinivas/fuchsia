@@ -16,6 +16,21 @@ executable("renamed_exe") {
   output_name = "hello"
 }
 
+# Merge 2 cmx files
+cmc_merge("merge_cmx") {
+  sources = [
+    "meta/part1.cmx",
+    "meta/part2.cmx",
+  ]
+  output_name = "combined.cmx"
+}
+
+cmc_validate("validate_merged") {
+  merged_output = get_target_outputs(":merge_cmx")
+  manifest = merged_output[0]
+  deps = [ ":merge_cmx" ]
+}
+
 # Invalid cmx, building this label will fail
 fuchsia_component("invalid_cmx_test") {
   manifest = "meta/invalid.cmx"
@@ -220,6 +235,7 @@ group("tests") {
   deps = [
     ":manifest_check_test",
     ":resource_check_test",
+    ":validate_merged",
     ":vk_check_test",
   ]
   foreach(pkg, _packages) {
