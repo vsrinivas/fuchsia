@@ -14,7 +14,10 @@ const uint32 MAX_PARTITION_NAME_LENGTH = 128;
 
 /// A Globally Unique Identifier (GUID) used to distinguish partitions.
 struct GUID {
-    array<uint8>:GUID_LENGTH value;
+    uint32 data1;
+    uint16 data2;
+    uint16 data3;
+    array<uint8>:8 data4;
 };
 
 enum GUIDType : uint8 {

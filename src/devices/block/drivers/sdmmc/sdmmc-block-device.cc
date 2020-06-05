@@ -96,9 +96,9 @@ zx_status_t PartitionDevice::BlockPartitionGetGuid(guidtype_t guid_type, guid_t*
   switch (guid_type) {
     case GUIDTYPE_TYPE:
       if (partition_ == BOOT_PARTITION_1) {
-        memcpy(out_guid->value, kGuidEmmcBoot1Value, GUID_LENGTH);
+        memcpy(&out_guid->data1, kGuidEmmcBoot1Value, GUID_LENGTH);
       } else {
-        memcpy(out_guid->value, kGuidEmmcBoot2Value, GUID_LENGTH);
+        memcpy(&out_guid->data1, kGuidEmmcBoot2Value, GUID_LENGTH);
       }
       return ZX_OK;
     case GUIDTYPE_INSTANCE:
