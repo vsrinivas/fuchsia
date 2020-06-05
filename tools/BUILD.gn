@@ -37,16 +37,24 @@ group("infratools") {
   # Building with the following toolchains ensures that, for the associated
   # tools, there will be at most one tool for every (name, cpu, os) tuple.
   toolchains = []
+  public_deps = []
   if (host_os == "linux") {
     toolchains += [
       host_arm64_toolchain,
       host_x64_toolchain,
     ]
+    public_deps += [
+      # Run by fuchsia/fuchsia recipe which only runs on linux_x64.
+      "//tools/testing/tefmocheck:tefmocheck($host_x64_toolchain)",
+    ]
   } else if (host_os == "mac") {
     toolchains += [ host_toolchain ]
+    public_deps += [
+      # Run by fuchsia/fuchsia recipe which only runs on linux_x64.
+      "//tools/testing/tefmocheck:tefmocheck($linux_x64_toolchain)",
+    ]
   }
 
-  public_deps = []
   foreach(toolchain, toolchains) {
     public_deps += [
       "//tools/artifactory($toolchain)",
