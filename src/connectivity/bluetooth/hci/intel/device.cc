@@ -85,9 +85,9 @@ zx_handle_t Device::MapFirmware(const char* name, uintptr_t* fw_addr, size_t* fw
   return vmo;
 }
 
-void Device::DdkUnbindDeprecated() {
+void Device::DdkUnbindNew(ddk::UnbindTxn txn) {
   tracef("unbind\n");
-  device_remove_deprecated(zxdev());
+  txn.Reply();
 }
 
 void Device::DdkRelease() { delete this; }
