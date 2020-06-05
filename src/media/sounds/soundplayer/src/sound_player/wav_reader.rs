@@ -43,6 +43,10 @@ impl WavReader<'_> {
         let mut vmo: Option<zx::Vmo> = None;
 
         while !self.slice.is_empty() {
+            if self.slice.len() < 4 {
+                // Tolerate up to 3 extra bytes at the end.
+                break;
+            }
             match self.parse_any_fourcc()?.as_ref() {
                 "fmt " => {
                     let (st, conv) = self.parse_fmt()?;
@@ -251,6 +255,111 @@ mod test {
             }
         );
         verify_vmo(&wav.vmo, &t0[(t0.len() - wav.size as usize)..])?;
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    async fn successful_1_extra_byte() -> Result<()> {
+        let t0 = [
+            0x52, 0x49, 0x46, 0x46, // 'RIFF'
+            0x00, 0x00, 0x00, 0x00, // RIFF chunk size (ignored)
+            0x57, 0x41, 0x56, 0x45, // 'WAVE'
+            0x66, 0x6d, 0x74, 0x20, // 'fmt '
+            0x10, 0x00, 0x00, 0x00, // fmt chunk size (16 bytes)
+            0x01, 0x00, // encoding (1 = pcm)
+            0x02, 0x00, // channel count (2)
+            0x44, 0xac, 0x00, 0x00, // frames/second (44100)
+            0x10, 0xb1, 0x02, 0x00, // byte rate (44100 * 4)
+            0x04, 0x00, // block alignment (4)
+            0x10, 0x00, // bits/sample (16)
+            0x64, 0x61, 0x74, 0x61, // 'data'
+            0x04, 0x00, 0x00, 0x00, // data chunk size (4)
+            0x01, 0x02, 0x03, 0x04, // frames
+            0x00,                   // extra
+        ];
+        let wav = WavReader::read(&t0[..])?;
+        assert_matches!(wav.size, 4);
+        assert_matches!(
+            wav.stream_type,
+            AudioStreamType {
+                sample_format: AudioSampleFormat::Signed16,
+                channels: 2,
+                frames_per_second: 44100,
+            }
+        );
+        verify_vmo(&wav.vmo, &t0[(t0.len() - wav.size as usize - 1)..(t0.len() - 1)])?;
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    async fn successful_2_extra_bytes() -> Result<()> {
+        let t0 = [
+            0x52, 0x49, 0x46, 0x46, // 'RIFF'
+            0x00, 0x00, 0x00, 0x00, // RIFF chunk size (ignored)
+            0x57, 0x41, 0x56, 0x45, // 'WAVE'
+            0x66, 0x6d, 0x74, 0x20, // 'fmt '
+            0x10, 0x00, 0x00, 0x00, // fmt chunk size (16 bytes)
+            0x01, 0x00, // encoding (1 = pcm)
+            0x02, 0x00, // channel count (2)
+            0x44, 0xac, 0x00, 0x00, // frames/second (44100)
+            0x10, 0xb1, 0x02, 0x00, // byte rate (44100 * 4)
+            0x04, 0x00, // block alignment (4)
+            0x10, 0x00, // bits/sample (16)
+            0x64, 0x61, 0x74, 0x61, // 'data'
+            0x04, 0x00, 0x00, 0x00, // data chunk size (4)
+            0x01, 0x02, 0x03, 0x04, // frames
+            0x00, 0x01,             // extra
+        ];
+        let wav = WavReader::read(&t0[..])?;
+        assert_matches!(wav.size, 4);
+        assert_matches!(
+            wav.stream_type,
+            AudioStreamType {
+                sample_format: AudioSampleFormat::Signed16,
+                channels: 2,
+                frames_per_second: 44100,
+            }
+        );
+        verify_vmo(&wav.vmo, &t0[(t0.len() - wav.size as usize - 2)..(t0.len() - 2)])?;
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    async fn successful_3_extra_bytes() -> Result<()> {
+        let t0 = [
+            0x52, 0x49, 0x46, 0x46, // 'RIFF'
+            0x00, 0x00, 0x00, 0x00, // RIFF chunk size (ignored)
+            0x57, 0x41, 0x56, 0x45, // 'WAVE'
+            0x66, 0x6d, 0x74, 0x20, // 'fmt '
+            0x10, 0x00, 0x00, 0x00, // fmt chunk size (16 bytes)
+            0x01, 0x00, // encoding (1 = pcm)
+            0x02, 0x00, // channel count (2)
+            0x44, 0xac, 0x00, 0x00, // frames/second (44100)
+            0x10, 0xb1, 0x02, 0x00, // byte rate (44100 * 4)
+            0x04, 0x00, // block alignment (4)
+            0x10, 0x00, // bits/sample (16)
+            0x64, 0x61, 0x74, 0x61, // 'data'
+            0x04, 0x00, 0x00, 0x00, // data chunk size (4)
+            0x01, 0x02, 0x03, 0x04, // frames
+            0x00, 0x01, 0x02,       // extra
+        ];
+        let wav = WavReader::read(&t0[..])?;
+        assert_matches!(wav.size, 4);
+        assert_matches!(
+            wav.stream_type,
+            AudioStreamType {
+                sample_format: AudioSampleFormat::Signed16,
+                channels: 2,
+                frames_per_second: 44100,
+            }
+        );
+        verify_vmo(&wav.vmo, &t0[(t0.len() - wav.size as usize - 3)..(t0.len() - 3)])?;
 
         Ok(())
     }
