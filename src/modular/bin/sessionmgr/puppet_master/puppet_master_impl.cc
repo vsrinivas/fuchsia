@@ -32,30 +32,34 @@ void PuppetMasterImpl::ControlStory(
 }
 
 void PuppetMasterImpl::DeleteStory(std::string story_name, DeleteStoryCallback done) {
-  // Remove StoryPuppetMasters to stop pending commands executing after delete.
-  std::vector<StoryPuppetMasterImpl*> to_remove;
-  for (auto& binding : story_puppet_masters_.bindings()) {
-    if (binding->impl()->story_name() == story_name)
-      to_remove.emplace_back(binding->impl().get());
-  }
-  for (auto* impl : to_remove) {
-    story_puppet_masters_.RemoveBinding(impl);
-  }
+  operations_.Add(std::make_unique<SyncCall>([this, story_name, done = std::move(done)] {
+    // Remove StoryPuppetMasters to stop pending commands executing after delete.
+    std::vector<StoryPuppetMasterImpl*> to_remove;
+    for (auto& binding : story_puppet_masters_.bindings()) {
+      if (binding->impl()->story_name() == story_name)
+        to_remove.emplace_back(binding->impl().get());
+    }
+    for (auto* impl : to_remove) {
+      story_puppet_masters_.RemoveBinding(impl);
+    }
 
-  // Delete the Story storage.
-  session_storage_->DeleteStory(story_name);
-  done();
+    // Delete the Story storage.
+    session_storage_->DeleteStory(story_name);
+    done();
+  }));
 }
 
 void PuppetMasterImpl::GetStories(GetStoriesCallback done) {
-  auto all_story_data = session_storage_->GetAllStoryData();
-  std::vector<std::string> result;
-  result.reserve(all_story_data.size());
+  operations_.Add(std::make_unique<SyncCall>([this, done = std::move(done)] {
+    auto all_story_data = session_storage_->GetAllStoryData();
+    std::vector<std::string> result;
+    result.reserve(all_story_data.size());
 
-  for (auto& story : all_story_data) {
-    result.push_back(story.story_info().id());
-  }
-  done(std::move(result));
+    for (auto& story : all_story_data) {
+      result.push_back(story.story_info().id());
+    }
+    done(std::move(result));
+  }));
 }
 
 }  // namespace modular

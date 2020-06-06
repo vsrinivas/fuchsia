@@ -800,7 +800,7 @@ TEST_F(PuppetMasterTest, AnnotateInModuleDataWithoutWaiting) {
 
 // Verifies that annotations are saved to ModuleData, even if the Module is added after the
 // annotations are posted.
-TEST_F(PuppetMasterTest, AnnotateInModuleDataBeforeAddMod) {
+TEST_F(PuppetMasterTest, DISABLED_AnnotateInModuleDataBeforeAddMod) {
   const auto story_name = TEST_NAME(story);
   const auto module_name = TEST_NAME(module);
 

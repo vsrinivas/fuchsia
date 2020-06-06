@@ -45,7 +45,7 @@ class PuppetMasterImpl : public fuchsia::modular::PuppetMaster {
   fidl::BindingSet<fuchsia::modular::StoryPuppetMaster, std::unique_ptr<StoryPuppetMasterImpl>>
       story_puppet_masters_;
 
-  OperationCollection operations_;
+  OperationQueue operations_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PuppetMasterImpl);
 };
