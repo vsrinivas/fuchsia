@@ -80,18 +80,6 @@ List<TestCaseResults> memoryMetricsProcessor(
         e.args['other'];
     return v.toDouble();
   });
-  final bandwidthFreeEvents = filterEventsTyped<CounterEvent>(
-      memoryMonitorEvents,
-      name: 'bandwidth_free');
-  final freeBandwidthValues =
-      getArgValuesFromEvents<num>(bandwidthFreeEvents, 'value')
-          .map((v) => v.toDouble());
-  final bandwidthUsagePercentValues = Zip2Iterable<double, double, double>(
-      totalBandwidthValues,
-      freeBandwidthValues,
-      (totalBandwidthValue, freeBandwidthValue) =>
-          (100.0 * totalBandwidthValue) /
-          (totalBandwidthValue + freeBandwidthValue));
   final List<TestCaseResults> results = [];
   <String, Iterable<double>>{
     'Total System Memory': usedMemoryValues,
@@ -104,10 +92,33 @@ List<TestCaseResults> memoryMetricsProcessor(
     'VPU Memory Bandwidth Usage': vpuBandwidthValues,
     'Other Memory Bandwidth Usage': otherBandwidthValues,
     'Total Memory Bandwidth Usage': totalBandwidthValues,
-    'Memory Bandwidth Usage Percent': bandwidthUsagePercentValues,
   }.forEach((name, values) {
     _log.info('Average $name in bytes: ${computeMean(values)}');
     results.add(TestCaseResults(name, Unit.bytes, values.toList()));
   });
+  final bandwidthFreeEvents = filterEventsTyped<CounterEvent>(
+      memoryMonitorEvents,
+      name: 'bandwidth_free');
+  final freeBandwidthValues =
+      getArgValuesFromEvents<num>(bandwidthFreeEvents, 'value')
+          .map((v) => v.toDouble());
+  final bandwidthUsagePercentValues = Zip2Iterable<double, double, double>(
+      totalBandwidthValues,
+      freeBandwidthValues,
+      (totalBandwidthValue, freeBandwidthValue) =>
+          (100.0 * totalBandwidthValue) /
+          (totalBandwidthValue + freeBandwidthValue));
+  _log.info(
+      'Average Memory Bandwidth Usage in percent: ${computeMean(bandwidthUsagePercentValues)}');
+  results.add(TestCaseResults('Memory Bandwidth Usage', Unit.percent,
+      bandwidthUsagePercentValues.toList()));
+  _log.info(
+      'Total bandwidth: ${(computeMean(totalBandwidthValues) / 1024).round()} KB/s, '
+      'usage: ${computeMean(bandwidthUsagePercentValues).toStringAsFixed(2)}%, '
+      'cpu: ${(computeMean(cpuBandwidthValues) / 1024).round()} KB/s, '
+      'gpu: ${(computeMean(gpuBandwidthValues) / 1024).round()} KB/s, '
+      'vdec: ${(computeMean(vdecBandwidthValues) / 1024).round()} KB/s, '
+      'vpu: ${(computeMean(vpuBandwidthValues) / 1024).round()} KB/s, '
+      'other: ${(computeMean(otherBandwidthValues) / 1024).round()} KB/s');
   return results;
 }
