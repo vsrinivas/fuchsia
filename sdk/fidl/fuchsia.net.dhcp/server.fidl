@@ -112,6 +112,9 @@ protocol Server {
     /// If the server is not currently serving, `StopServing` is a no-op.
     StopServing() -> ();
 
+    /// Returns whether or not the server is serving DHCP leases.
+    IsServing() -> (bool enabled);
+
     /// Returns the requested Option if it is supported.
     ///
     /// + request `code` the code of an Option whose value has been requested.

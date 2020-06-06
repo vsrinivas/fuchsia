@@ -242,6 +242,11 @@ impl<S: SocketServerDispatcher> ServerDispatcherRuntime<S> {
         Ok(Some(ServerSocketCollection { sockets, abort_registration }))
     }
 
+    /// Returns `true` if the server is enabled.
+    fn enabled(&self) -> bool {
+        self.abort_handle.is_some()
+    }
+
     /// Runs the closure `f` only if the server is currently disabled.
     ///
     /// Returns `BAD_STATE` error otherwise.
@@ -295,7 +300,7 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
     /// receive more messages.
     ///
     /// Returns `Err` if an unrecoverable error occurs and the server must stop
-    /// serving.  
+    /// serving.
     fn handle_from_sender(
         &mut self,
         buf: &[u8],
@@ -452,6 +457,9 @@ where
                 fidl_fuchsia_net_dhcp::Server_Request::StopServing { responder } => {
                     let () = server.borrow_mut().disable();
                     responder.send()
+                }
+                fidl_fuchsia_net_dhcp::Server_Request::IsServing { responder } => {
+                    responder.send(server.borrow().enabled())
                 }
                 fidl_fuchsia_net_dhcp::Server_Request::GetOption { code: c, responder: r } => {
                     r.send(&mut server.borrow().dispatch_get_option(c).map_err(|e| e.into_raw()))
@@ -781,6 +789,11 @@ mod tests {
 
         let test_fut = async {
             for _ in 0..3 {
+                assert!(
+                    !proxy.is_serving().await.context("query server status request")?,
+                    "server should not be serving"
+                );
+
                 let () = proxy
                     .start_serving()
                     .await
@@ -806,12 +819,22 @@ mod tests {
                     socket_collection.abort_registration,
                 );
 
+                assert!(
+                    proxy.is_serving().await.context("query server status request")?,
+                    "server should be serving"
+                );
+
                 let () = proxy.stop_serving().await.context("stop_serving failed")?;
 
                 // Dummy future was aborted.
                 assert_eq!(dummy_fut.await, Err(futures::future::Aborted {}));
                 // Leases were not cleared.
                 assert_eq!(server.borrow().mock_leases, 1);
+
+                assert!(
+                    !proxy.is_serving().await.context("query server status request")?,
+                    "server should no longer be serving"
+                );
             }
 
             Ok::<(), Error>(())
