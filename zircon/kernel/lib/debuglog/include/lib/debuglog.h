@@ -15,8 +15,7 @@
 #include <kernel/event.h>
 #include <kernel/mutex.h>
 
-struct dlog;
-typedef struct dlog dlog_t;
+struct DLog;
 typedef struct dlog_header dlog_header_t;
 typedef struct dlog_record dlog_record_t;
 
@@ -34,6 +33,8 @@ class DlogReader : public fbl::DoublyLinkedListable<DlogReader*> {
   // DlogReader and the containing object.
   void Initialize(NotifyCallback* notify, void* cookie);
 
+  void InitializeForTest(DLog* log);
+
   zx_status_t Read(uint32_t flags, void* ptr, size_t len, size_t* actual);
 
   void Notify();
@@ -45,7 +46,7 @@ class DlogReader : public fbl::DoublyLinkedListable<DlogReader*> {
   void Disconnect();
 
  private:
-  dlog_t* log_ = nullptr;
+  DLog* log_ = nullptr;
   size_t tail_ = 0;
 
   NotifyCallback* notify_ = nullptr;
@@ -61,14 +62,25 @@ class DlogReader : public fbl::DoublyLinkedListable<DlogReader*> {
 #define DLOG_MAX_DATA (224u)
 #define DLOG_MAX_RECORD (DLOG_MIN_RECORD + DLOG_MAX_DATA)
 
+// This structure is designed to be copied into a zx_log_record_t from zircon/syscalls/log.h . Only
+// the header field is repurposed, and the rest is then transferred to userspace as-is.
 struct dlog_header {
   uint32_t header;
   uint16_t datalen;
-  uint16_t flags;
+  uint8_t severity;
+  uint8_t flags;
   uint64_t timestamp;
   uint64_t pid;
   uint64_t tid;
 };
+
+// Severity Levels
+#define DEBUGLOG_TRACE (0x10)
+#define DEBUGLOG_DEBUG (0x20)
+#define DEBUGLOG_INFO (0x30)
+#define DEBUGLOG_WARNING (0x40)
+#define DEBUGLOG_ERROR (0x50)
+#define DEBUGLOG_FATAL (0x60)
 
 struct dlog_record {
   dlog_header_t hdr;
@@ -78,7 +90,7 @@ struct dlog_record {
 static_assert(sizeof(dlog_header_t) == DLOG_MIN_RECORD, "");
 static_assert(sizeof(dlog_record_t) == DLOG_MAX_RECORD, "");
 
-zx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len);
+zx_status_t dlog_write(uint32_t severity, uint32_t flags, const void* ptr, size_t len);
 
 // used by sys_debug_write()
 void dlog_serial_write(const char* data, size_t len);

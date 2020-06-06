@@ -26,8 +26,7 @@
 #include <lk/init.h>
 #include <vm/vm.h>
 
-#define DLOG_SIZE (128u * 1024u)
-#define DLOG_MASK (DLOG_SIZE - 1u)
+#include "debuglog_internal.h"
 
 static_assert((DLOG_SIZE & DLOG_MASK) == 0u, "must be power of two");
 static_assert(DLOG_MAX_RECORD <= DLOG_SIZE, "wat");
@@ -36,27 +35,7 @@ static_assert((DLOG_MAX_RECORD & 3) == 0, "E_DONT_DO_THAT");
 static constexpr char kDlogNotifierThreadName[] = "debuglog-notifier";
 static constexpr char kDlogDumperThreadName[] = "debuglog-dumper";
 
-static uint8_t DLOG_DATA[DLOG_SIZE];
-
-struct dlog {
-  constexpr dlog(uint8_t* data_ptr) : data(data_ptr) {}
-
-  SpinLock lock;
-
-  size_t head TA_GUARDED(lock) = 0;
-  size_t tail TA_GUARDED(lock) = 0;
-
-  uint8_t* const data;
-
-  bool panic = false;
-
-  AutounsignalEvent event;
-
-  DECLARE_LOCK(dlog, Mutex) readers_lock;
-  fbl::DoublyLinkedList<DlogReader*> readers;
-};
-
-static dlog_t DLOG(DLOG_DATA);
+static DLog DLOG = DLog();
 
 static Thread* notifier_thread;
 static Thread* dumper_thread;
@@ -115,15 +94,16 @@ bool dlog_bypass(void) { return dlog_bypass_; }
 //  [....XXXX....]  [XX........XX]
 //           H         H
 
-#define ALIGN4(n) (((n) + 3) & (~3))
+zx_status_t dlog_write(uint32_t severity, uint32_t flags, const void* data_ptr, size_t len) {
+  return DLOG.write(severity, flags, data_ptr, len);
+}
 
-zx_status_t dlog_write(uint32_t flags, const void* data_ptr, size_t len) {
+zx_status_t DLog::write(uint32_t severity, uint32_t flags, const void* data_ptr, size_t len) {
   const uint8_t* ptr = static_cast<const uint8_t*>(data_ptr);
-  dlog_t* log = &DLOG;
 
   len = len > DLOG_MAX_DATA ? DLOG_MAX_DATA : len;
 
-  if (log->panic) {
+  if (this->panic) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -136,7 +116,8 @@ zx_status_t dlog_write(uint32_t flags, const void* data_ptr, size_t len) {
   dlog_header_t hdr;
   hdr.header = static_cast<uint32_t>(DLOG_HDR_SET(wiresize, DLOG_MIN_RECORD + len));
   hdr.datalen = static_cast<uint16_t>(len);
-  hdr.flags = static_cast<uint16_t>(flags);
+  hdr.severity = static_cast<uint8_t>(severity);
+  hdr.flags = static_cast<uint8_t>(flags);
   hdr.timestamp = current_time();
   Thread* t = Thread::Current::Get();
   if (t) {
@@ -149,37 +130,37 @@ zx_status_t dlog_write(uint32_t flags, const void* data_ptr, size_t len) {
 
   bool holding_thread_lock;
   {
-    AutoSpinLock lock{&log->lock};
+    AutoSpinLock lock{&this->lock};
 
     // Discard records at tail until there is enough
     // space for the new record.
-    while ((log->head - log->tail) > (DLOG_SIZE - wiresize)) {
-      uint32_t header = *reinterpret_cast<uint32_t*>(log->data + (log->tail & DLOG_MASK));
-      log->tail += DLOG_HDR_GET_FIFOLEN(header);
+    while ((this->head - this->tail) > (DLOG_SIZE - wiresize)) {
+      uint32_t header = *reinterpret_cast<uint32_t*>(this->data + (this->tail & DLOG_MASK));
+      this->tail += DLOG_HDR_GET_FIFOLEN(header);
     }
 
-    size_t offset = (log->head & DLOG_MASK);
+    size_t offset = (this->head & DLOG_MASK);
 
     size_t fifospace = DLOG_SIZE - offset;
 
     if (fifospace >= wiresize) {
       // everything fits in one write, simple case!
-      memcpy(log->data + offset, &hdr, sizeof(hdr));
-      memcpy(log->data + offset + sizeof(hdr), ptr, len);
+      memcpy(this->data + offset, &hdr, sizeof(hdr));
+      memcpy(this->data + offset + sizeof(hdr), ptr, len);
     } else if (fifospace < sizeof(hdr)) {
       // the wrap happens in the header
-      memcpy(log->data + offset, &hdr, fifospace);
-      memcpy(log->data, reinterpret_cast<uint8_t*>(&hdr) + fifospace, sizeof(hdr) - fifospace);
-      memcpy(log->data + (sizeof(hdr) - fifospace), ptr, len);
+      memcpy(this->data + offset, &hdr, fifospace);
+      memcpy(this->data, reinterpret_cast<uint8_t*>(&hdr) + fifospace, sizeof(hdr) - fifospace);
+      memcpy(this->data + (sizeof(hdr) - fifospace), ptr, len);
     } else {
       // the wrap happens in the data
-      memcpy(log->data + offset, &hdr, sizeof(hdr));
+      memcpy(this->data + offset, &hdr, sizeof(hdr));
       offset += sizeof(hdr);
       fifospace -= sizeof(hdr);
-      memcpy(log->data + offset, ptr, fifospace);
-      memcpy(log->data, ptr + fifospace, len - fifospace);
+      memcpy(this->data + offset, ptr, fifospace);
+      memcpy(this->data, ptr + fifospace, len - fifospace);
     }
-    log->head += wiresize;
+    this->head += wiresize;
 
     // Need to check this before re-releasing the log lock, since we may
     // re-enable interrupts while doing that.  If interrupts are enabled when we
@@ -194,13 +175,13 @@ zx_status_t dlog_write(uint32_t flags, const void* data_ptr, size_t len) {
     holding_thread_lock = thread_lock.HolderCpu() == arch_curr_cpu_num();
   }
 
-  [log, holding_thread_lock]() TA_NO_THREAD_SAFETY_ANALYSIS {
+  [this, holding_thread_lock]() TA_NO_THREAD_SAFETY_ANALYSIS {
     // if we happen to be called from within the global thread lock, use a
     // special version of event signal
     if (holding_thread_lock) {
-      log->event.SignalThreadLocked();
+      this->event.SignalThreadLocked();
     } else {
-      log->event.SignalNoResched();
+      this->event.SignalNoResched();
     }
   }();
 
@@ -216,19 +197,21 @@ zx_status_t DlogReader::Read(uint32_t flags, void* data_ptr, size_t len, size_t*
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  dlog_t* log = log_;
+  DLog* log = log_;
   zx_status_t status = ZX_ERR_SHOULD_WAIT;
 
   {
     AutoSpinLock lock{&log->lock};
 
     size_t rtail = tail_;
+    uint32_t rolled_out = 0;
 
     // If the read-tail is not within the range of log-tail..log-head
     // this reader has been lapped by a writer and we reset our read-tail
     // to the current log-tail.
     //
     if ((log->head - log->tail) < (log->head - rtail)) {
+      rolled_out = static_cast<uint32_t>(log->tail - rtail);
       rtail = log->tail;
     }
 
@@ -245,6 +228,10 @@ zx_status_t DlogReader::Read(uint32_t flags, void* data_ptr, size_t len, size_t*
         memcpy(ptr, log->data + offset, fifospace);
         memcpy(ptr + fifospace, log->data, actual - fifospace);
       }
+
+      // The underlying structure at ptr is zx_log_record_t as defined in zircon/syscalls/log.h .
+      // We're setting the "rollout" field here.
+      *reinterpret_cast<uint32_t*>(ptr) = rolled_out;
 
       *_actual = actual;
       status = ZX_OK;
@@ -267,7 +254,7 @@ void DlogReader::Initialize(NotifyCallback* notify, void* cookie) {
   // A DlogReader can only be initialized once.
   DEBUG_ASSERT(log_ == nullptr);
 
-  dlog_t* log = &DLOG;
+  DLog* log = &DLOG;
 
   log_ = log;
   notify_ = notify;
@@ -291,6 +278,21 @@ void DlogReader::Initialize(NotifyCallback* notify, void* cookie) {
   }
 }
 
+void DlogReader::InitializeForTest(DLog* log) {
+  // A DlogReader can only be initialized once.
+  DEBUG_ASSERT(log_ == nullptr);
+
+  log_ = log;
+
+  Guard<Mutex> guard(&log->readers_lock);
+  log->readers.push_back(this);
+
+  {
+    AutoSpinLock lock{&log->lock};
+    tail_ = log->tail;
+  }
+}
+
 void DlogReader::Disconnect() {
   if (log_) {
     Guard<Mutex> guard(&log_->readers_lock);
@@ -308,7 +310,7 @@ void DlogReader::Notify() {
 // written and calls the notify callback on any readers that
 // have one so they can process new log messages.
 static int debuglog_notifier(void* arg) {
-  dlog_t* log = &DLOG;
+  DLog* log = &DLOG;
 
   for (;;) {
     if (notifier_shutdown_requested.load()) {

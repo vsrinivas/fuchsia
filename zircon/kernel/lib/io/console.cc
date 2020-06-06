@@ -47,7 +47,7 @@ void __kernel_console_write(const char* str, size_t len) {
 
 static void __kernel_stdout_write(const char* str, size_t len) {
   if (dlog_bypass() == false) {
-    if (dlog_write(0, str, len) == ZX_OK)
+    if (dlog_write(DEBUGLOG_INFO, 0, str, len) == ZX_OK)
       return;
   }
   __kernel_console_write(str, len);
