@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/component_cpp_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
     }
 }

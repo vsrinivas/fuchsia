@@ -78,9 +78,47 @@ class ComponentContext final {
   ComponentContext(const ComponentContext&) = delete;
   ComponentContext& operator=(const ComponentContext&) = delete;
 
-  // Creates a component context from the process startup info and immediately
-  // binds the startup handle PA_DIRECTORY_REQUEST to the local outgoing directory
-  // implementation.
+  // Creates a component context from the process startup info without binding a channel
+  // handle to the outgoing directory. Clients wishing to serve the outgoing directory MUST
+  // call either |outgoing()->ServeFromStartupInfo()| to serve to the PA_DIRECTORY_REQUEST
+  // handle.
+  //
+  // Callers SHOULD make all modifications to |outgoing()| before calling one of the above
+  // Serve methods. Exceptions to this guideline are rare.
+  //
+  // Call this function once during process initialization to retrieve the
+  // handles supplied to the component by the component manager. This function
+  // consumes some of those handles, which means subsequent calls to this
+  // function will not return a functional component context.
+  //
+  // Prefer creating the |ComponentContext| in the |main| function for a
+  // component and passing the context to a class named "App" which encapsulates
+  // the main logic of the program. This pattern makes testing easier because
+  // tests can pass a fake |ComponentContext| from |ComponentContextProvider| to
+  // the |App| class to inject dependencies.
+  //
+  // The returned unique_ptr is never null.
+  //
+  // # Example
+  //
+  // ```
+  // int main(int argc, const char** argv) {
+  //   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  //   auto context = sys::ComponentContext::Create();
+  //   my::App app(context.get())
+  //   app.PerformAsyncInitialization(/*when_init_done=*/[context = context.get()] {
+  //     // Delaying serving of the out/ directory to here ensures no race condition
+  //     // exists between clients looking for entries in out/ before app
+  //     // initialization has had a chance to create them.
+  //     context->outgoing()->ServeFromStartupInfo();
+  //   });
+  //   loop.Run();
+  //   return 0;
+  // }
+  // ```
+  static std::unique_ptr<ComponentContext> Create();
+
+  // Equivalent to |Create()| followed immediately by |outgoing()->ServeFromStartupInfo()|.
   //
   // Callers SHOULD make all modifications to |outgoing()| before the thread default
   // async_dispatcher_t starts processing incoming requests. Exceptions to this guideline are rare.
