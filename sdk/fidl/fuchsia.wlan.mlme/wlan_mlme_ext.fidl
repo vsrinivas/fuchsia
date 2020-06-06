@@ -51,6 +51,7 @@ struct DeviceInfo {
     MacRole role;
     vector<BandCapabilities> bands;
     vector<fuchsia.wlan.common.DriverFeature>:32 driver_features;
+    bool qos_capable;
 };
 
 // STATS_QUERY.response
@@ -135,6 +136,7 @@ struct NegotiatedCapabilities {
     fuchsia.wlan.common.WlanChan channel;
     CapabilityInfo cap_info;
     bytes:RATES_MAX_LEN rates;
+    WmmParameter? wmm_param;
     HtCapabilities? ht_cap;
     VhtCapabilities? vht_cap;
 };

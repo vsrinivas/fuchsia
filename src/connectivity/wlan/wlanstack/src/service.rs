@@ -1367,6 +1367,7 @@ mod tests {
             bands: vec![],
             mac_addr: [0xAC; 6],
             driver_features: vec![],
+            qos_capable: false,
         }
     }
 

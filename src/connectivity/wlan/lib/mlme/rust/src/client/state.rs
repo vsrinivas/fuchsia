@@ -1252,6 +1252,7 @@ mod tests {
             result_code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
             cap_info: 0,
             rates: vec![],
+            wmm_param: None,
             ht_cap: None,
             vht_cap: None,
         }
@@ -1288,6 +1289,7 @@ mod tests {
                 },
                 cap_info: 0,
                 rates: vec![],
+                wmm_param: None,
                 ht_cap: None,
                 vht_cap: None,
             },
@@ -1320,6 +1322,8 @@ mod tests {
             peer_sta_address: [1, 2, 3, 4, 5, 6],
             cap_info: 0,
             rates: vec![1, 2, 3],
+            qos_capable: false,
+            qos_info: 0,
             ht_cap: None,
             vht_cap: None,
             rsne: None,
@@ -2695,6 +2699,7 @@ mod tests {
             },
             cap_info: 0x1234,
             rates: vec![125, 126, 127, 128, 129, 130],
+            wmm_param: None,
             ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
                 bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap(),
             })),

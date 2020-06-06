@@ -247,6 +247,7 @@ mod tests {
             bands: vec![],
             mac_addr: [0xAC; 6],
             driver_features: vec![DriverFeature::TempDirectSmeChannel],
+            qos_capable: false,
         }
     }
 

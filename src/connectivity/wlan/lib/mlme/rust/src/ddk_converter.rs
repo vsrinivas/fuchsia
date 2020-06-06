@@ -114,6 +114,7 @@ mod tests {
                 },
                 cap_info: 0x1234,
                 rates: vec![111, 112, 113, 114, 115, 116, 117, 118, 119, 120],
+                wmm_param: None,
                 ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
                     bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap(),
                 })),
