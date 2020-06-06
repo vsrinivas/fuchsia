@@ -431,13 +431,12 @@ if (toolchain_variant.with_shared) {
           output_dir = root_out_dir
         }
         if (!defined(output_name)) {
-          # Remove any "lib" prefix.
-          _prefixless = string_replace("###$target_name", "###lib", "")
-          if (_prefixless == "###$target_name") {
-            output_name = target_name
-          } else {
-            output_name = _prefixless
-          }
+          output_name = target_name
+        }
+        # Remove any "lib" prefix - this matches GN's behavior.
+        _prefixless = string_replace("###$output_name", "###lib", "")
+        if (_prefixless != "###$output_name") {
+          output_name = _prefixless
         }
         if (!defined(output_extension)) {
           if (current_os == "mac") {
