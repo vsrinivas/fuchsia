@@ -80,12 +80,12 @@ void AnnotationView::InitializeView(fuchsia::ui::views::ViewRef client_view_ref)
 
 void AnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box) {
   if (!state_.tree_initialized) {
-    FX_LOGS(ERROR) << "Annotation view tree is not initialized.";
+    FX_LOGS(INFO) << "Annotation view tree is not initialized.";
     return;
   }
 
   if (!state_.annotation_view_registered) {
-    FX_LOGS(ERROR) << "Annotation view not registered.";
+    FX_LOGS(INFO) << "Annotation view not registered.";
     return;
   }
 
