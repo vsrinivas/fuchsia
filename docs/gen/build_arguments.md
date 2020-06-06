@@ -91,21 +91,21 @@ AVB algorithm type.Supported options:
 
 **Current value (from the default):** `"SHA512_RSA4096"`
 
-From //build/images/vbmeta.gni:29
+From //build/images/vbmeta.gni:33
 
 ### avb_atx_metadata
 AVB metadata which will be used to validate public key
 
 **Current value (from the default):** `""`
 
-From //build/images/vbmeta.gni:20
+From //build/images/vbmeta.gni:24
 
 ### avb_key
 a key which will be used to sign VBMETA and images for AVB
 
 **Current value (from the default):** `""`
 
-From //build/images/vbmeta.gni:17
+From //build/images/vbmeta.gni:21
 
 ### base_cache_packages_allow_testonly
 Whether to allow testonly=true targets in base/cache pacakges. Default to
@@ -214,7 +214,7 @@ struct.
 
 **Current value (from the default):** `[]`
 
-From //build/images/vbmeta.gni:36
+From //build/images/vbmeta.gni:40
 
 ### board_has_libvulkan_arm_mali
 Board files can set this to true if they have a package with a mali libvulkan VCD.
@@ -558,12 +558,6 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium
 
 From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/294d233ca09e33e55e6d2419f58199d3a4ab6c32/util/net/tls.gni#22)
 
-### create_kernel_service_snapshot
-
-**Current value (from the default):** `false`
-
-From //third_party/dart/runtime/runtime_args.gni:104
-
 ### current_cpu
 
 **Current value (from the default):** `""`
@@ -582,55 +576,6 @@ starts with //).
 
 From //build/images/custom_signing.gni:12
 
-### dart_component_kind
-
-**Current value (from the default):** `"static_library"`
-
-From //third_party/dart/runtime/runtime_args.gni:80
-
-### dart_core_snapshot_kind
-Controls the kind of core snapshot linked into the standalone VM. Using a
-core-jit snapshot breaks the ability to change various flags that affect
-code generation.
-
-**Current value (from the default):** `"core"`
-
-From //third_party/dart/runtime/runtime_args.gni:56
-
-### dart_custom_version_for_pub
-When this argument is a non-empty string, the version repoted by the
-Dart VM will be one that is compatible with pub's interpretation of
-semantic version strings. The version string will also include the values
-of the argument. In particular the version string will read:
-
-    "M.m.p-dev.x.x-$(dart_custom_version_for_pub)-$(short_git_hash)"
-
-Where 'M', 'm', and 'p' are the major, minor and patch version numbers,
-and 'dev.x.x' is the dev version tag most recently preceeding the current
-revision. The short git hash can be omitted by setting
-dart_version_git_info=false
-
-**Current value (from the default):** `""`
-
-From //third_party/dart/runtime/runtime_args.gni:73
-
-### dart_debug
-Instead of using is_debug, we introduce a different flag for specifying a
-Debug build of Dart so that clients can still use a Release build of Dart
-while themselves doing a Debug build.
-
-**Current value (from the default):** `false`
-
-From //third_party/dart/runtime/runtime_args.gni:9
-
-### dart_debug_optimization_level
-The optimization level to use for debug builds. Defaults to 0 for builds with
-code coverage enabled.
-
-**Current value (from the default):** `"2"`
-
-From //third_party/dart/runtime/runtime_args.gni:36
-
 ### dart_default_app
 Controls whether dart_app() targets generate JIT or AOT Dart snapshots.
 This defaults to JIT, use `fx set <ARCH> --args
@@ -638,14 +583,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/8964891834348c800b300e99bce722a49ac11b65/runtime/dart/dart_component.gni#19)
-
-### dart_enable_wasm
-Whether dart:wasm should be enabled.
-
-**Current value (from the default):** `false`
-
-From //third_party/dart/runtime/runtime_args.gni:94
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/922d6dbea6a813d327d42f8d64d7eec9db13faf9/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -653,98 +591,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/8964891834348c800b300e99bce722a49ac11b65/runtime/dart/config.gni#10)
-
-### dart_lib_export_symbols
-Whether libdart should export the symbols of the Dart API.
-
-**Current value (from the default):** `true`
-
-From //third_party/dart/runtime/runtime_args.gni:91
-
-### dart_platform_bytecode
-Controls whether the VM uses bytecode.
-
-**Current value (from the default):** `false`
-
-From //third_party/dart/runtime/runtime_args.gni:84
-
-### dart_runtime_mode
-Set the runtime mode. This affects how the runtime is built and what
-features it has. Valid values are:
-'develop' (the default) - VM is built to run as a JIT with all development
-features enabled.
-'profile' - The VM is built to run with AOT compiled code with only the
-CPU profiling features enabled.
-'release' - The VM is built to run with AOT compiled code with no developer
-features enabled.
-
-These settings are only used for Flutter, at the moment. A standalone build
-of the Dart VM should leave this set to "develop", and should set
-'is_debug', 'is_release', or 'is_product'.
-
-TODO(rmacnak): dart_runtime_mode no longer selects whether libdart is build
-for JIT or AOT, since libdart waw split into libdart_jit and
-libdart_precompiled_runtime. We should remove this flag and just set
-dart_debug/dart_product.
-
-**Current value (from the default):** `"develop"`
-
-From //third_party/dart/runtime/runtime_args.gni:28
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/922d6dbea6a813d327d42f8d64d7eec9db13faf9/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/8964891834348c800b300e99bce722a49ac11b65/runtime/dart/dart_component.gni#35)
-
-### dart_target_arch
-Explicitly set the target architecture to use a simulator.
-Available options are: arm, arm64, x64, ia32.
-
-**Current value (from the default):** `"arm64"`
-
-From //third_party/dart/runtime/runtime_args.gni:32
-
-### dart_use_crashpad
-Whether to link Crashpad library for crash handling. Only supported on
-Windows for now.
-
-**Current value (from the default):** `false`
-
-From //third_party/dart/runtime/runtime_args.gni:51
-
-### dart_use_fallback_root_certificates
-Whether to fall back to built-in root certificates when they cannot be
-verified at the operating system level.
-
-**Current value (from the default):** `false`
-
-From //third_party/dart/runtime/runtime_args.gni:43
-
-### dart_use_tcmalloc
-Whether to link the standalone VM against tcmalloc. The standalone build of
-the VM enables this only for Linux builds.
-
-**Current value (from the default):** `false`
-
-From //third_party/dart/runtime/runtime_args.gni:47
-
-### dart_version_git_info
-Whether the Dart binary version string should include the git hash and
-git commit time.
-
-**Current value (from the default):** `true`
-
-From //third_party/dart/runtime/runtime_args.gni:60
-
-### dart_vm_code_coverage
-Whether to enable code coverage for the standalone VM.
-
-**Current value (from the default):** `false`
-
-From //third_party/dart/runtime/runtime_args.gni:39
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/922d6dbea6a813d327d42f8d64d7eec9db13faf9/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -777,25 +631,6 @@ less debugging information available.
 
 From //build/unification/config/BUILD.gn:10
 
-### default_git_folder
-Absolute path to the .git folder.
-
-This is used in rules that need to refer to `.git/logs/HEAD` to include
-a hash in the version string. By default the folder is `.git`, but we define
-it as an argument so it can be overriden by users of `git-worktree` (See
-Issue #33619).
-
-When using git-worktree, you can add
-
-   default_git_folder = "/path/to/main/git/repo/.git/worktrees/name/"
-
-to out/ReleaseX64/args.gn. The path above can be extracted from the `.git`
-file under the git worktree folder.
-
-**Current value (from the default):** `"//third_party/dart//.git"`
-
-From //third_party/dart/sdk_args.gni:27
-
 ### devmgr_config
 List of arguments to add to /boot/config/devmgr.
 These come after synthesized arguments to configure blobfs and pkgfs.
@@ -803,16 +638,6 @@ These come after synthesized arguments to configure blobfs and pkgfs.
 **Current value (from the default):** `[]`
 
 From //build/images/args.gni:18
-
-### dont_use_nnbd
-Whether to build a Legacy SDK using Legacy core libraries.
-TODO(38701): Remove dont_use_nnbd once the NNBD SDK is stable/performant
-and there is no need to build a legacy version of the SDK for comparison
-purposes.
-
-**Current value (from the default):** `false`
-
-From //third_party/dart/sdk_args.gni:12
 
 ### enable_api_diff
 Detect dart API changes
@@ -905,14 +730,6 @@ runtime. Precompiled spirv code will be loaded into memory from disk instead.
 
 From //src/ui/lib/escher/build_args.gni:18
 
-### exclude_kernel_service
-Whether the VM includes the kernel service in all modes (debug, release,
-product).
-
-**Current value (from the default):** `false`
-
-From //third_party/dart/runtime/runtime_args.gni:88
-
 ### exclude_testonly_syscalls
 If true, excludes syscalls with the [testonly] attribute.
 
@@ -955,7 +772,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:666
+From //build/config/BUILDCONFIG.gn:671
 
 ### fastboot_product
 
@@ -996,7 +813,7 @@ TODO(45680): remove this hack.
 
 **Current value (from the default):** `false`
 
-From //build/unification/images/BUILD.gn:14
+From //build/unification/images/common_image_contents.gni:14
 
 ### firmware_prebuilts
 List of prebuilt firmware blobs to include in update packages.
@@ -1025,7 +842,7 @@ From //build/images/args.gni:68
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/8964891834348c800b300e99bce722a49ac11b65/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/922d6dbea6a813d327d42f8d64d7eec9db13faf9/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -1040,14 +857,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/8964891834348c800b300e99bce722a49ac11b65/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/922d6dbea6a813d327d42f8d64d7eec9db13faf9/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/8964891834348c800b300e99bce722a49ac11b65/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/922d6dbea6a813d327d42f8d64d7eec9db13faf9/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1096,7 +913,7 @@ UUID of TAs to include in the Fuchsia build.
 
 **Current value (from the default):** `[]`
 
-From //build/images/ta.gni:10
+From //build/images/ta.gni:13
 
 ### fvm_image_size
 The size in bytes of the FVM partition image to create. Normally this is
@@ -1263,7 +1080,7 @@ instead of bootfs.
 
 **Current value (from the default):** `false`
 
-From //build/images/vbmeta.gni:14
+From //build/images/vbmeta.gni:18
 
 ### include_fvm_blob_sparse
 Include fvm.blob.sparse.blk image into the build if set to true
@@ -1506,7 +1323,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:591
+From //build/config/BUILDCONFIG.gn:596
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1808,7 +1625,7 @@ From //products/core.gni:9
 
 **Overridden from the default:** `false`
 
-From //build/unification/images/BUILD.gn:20
+From //build/unification/images/common_image_contents.gni:20
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -1816,7 +1633,7 @@ From //products/core.gni:9
 
 **Overridden from the default:** `false`
 
-From //build/unification/images/BUILD.gn:20
+From //build/unification/images/common_image_contents.gni:20
 
 ### optimize
 * `none`: really unoptimized, usually only build-tested and not run
@@ -1904,7 +1721,7 @@ UUID of TAs to include in the Recovery build.
 
 **Current value (from the default):** `[]`
 
-From //build/images/ta.gni:16
+From //build/images/ta.gni:19
 
 ### rust_cap_lints
 Sets the maximum lint level.
@@ -2080,7 +1897,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:888
+From //build/config/BUILDCONFIG.gn:893
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2089,7 +1906,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:893
+From //build/config/BUILDCONFIG.gn:898
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2120,7 +1937,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:712
+From //build/config/BUILDCONFIG.gn:717
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2219,7 +2036,7 @@ Used by syz-ci to build with own syz-executor source.
 
 **Current value (from the default):** `"//third_party/syzkaller"`
 
-From //src/testing/fuzzing/syzkaller/BUILD.gn:9
+From //src/testing/fuzzing/syzkaller/BUILD.gn:11
 
 ### ta_dest_suffix
 File name suffix of TA images deployed on bootfs. Usually it is ".ta".
@@ -2227,14 +2044,14 @@ The TA image file names are "$ta_uuid$ta_dest_suffix".
 
 **Current value (from the default):** `""`
 
-From //build/images/ta.gni:24
+From //build/images/ta.gni:27
 
 ### ta_path
 Source absolute path to the prebuilt TA images.
 
 **Current value (from the default):** `""`
 
-From //build/images/ta.gni:7
+From //build/images/ta.gni:10
 
 ### ta_src_suffix
 File name suffix of prebuilt TA images. ".ta.prod" and ".ta.dev" are
@@ -2242,7 +2059,7 @@ usually used. The TA image file names are "$ta_uuid$ta_src_suffix".
 
 **Current value (from the default):** `""`
 
-From //build/images/ta.gni:20
+From //build/images/ta.gni:23
 
 ### target_cpu
 
@@ -2375,7 +2192,7 @@ From //build/config/sanitizers/BUILD.gn:35
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:686
+From //build/config/BUILDCONFIG.gn:691
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2519,7 +2336,7 @@ and the paving script will pave vbmeta images to the target device.
 
 **Current value (from the default):** `false`
 
-From //build/images/vbmeta.gni:10
+From //build/images/vbmeta.gni:14
 
 ### use_vboot
 Use vboot images
@@ -2889,7 +2706,7 @@ UUID of TAs to include in the Zedboot build.
 
 **Current value (from the default):** `[]`
 
-From //build/images/ta.gni:13
+From //build/images/ta.gni:16
 
 ### zircon_a_partition
 arguments to fx flash script
@@ -2992,7 +2809,7 @@ Partition name from where image will be verified
 
 **Current value (from the default):** `"zircon"`
 
-From //build/images/vbmeta.gni:32
+From //build/images/vbmeta.gni:36
 
 ### zxcrypt_key_source
 This argument specifies from where the system should obtain the zxcrypt
