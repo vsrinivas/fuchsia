@@ -44,6 +44,8 @@ group("tests") {
     "//tools/fidl/gidl:gidl_parser_test($host_toolchain)",
     "//tools/fidl/measure-tape:tests",
     "//zircon/system/ulib/fidl-async-2/test",
+    "//zircon/system/utest/fidl",
+    "//zircon/system/utest/fidl($host_toolchain)",
     "//zircon/system/utest/fidl-compiler($host_toolchain)",
   ]
 }
