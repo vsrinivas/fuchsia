@@ -42,26 +42,11 @@ import("//src/sys/cmc/build/cmx.gni")
 # the executable will be packaged with the manifest. Therefore the manifest
 # author can reference the path `bin/my_program`.
 #
-# Components may depend on any number of `resources()` to ensure that any
-# `fuchsia_package()` that includes them will include the same resources.
-# It's also possible to specify resources within the component definition as a
-# shorter form, as demonstrated above.
+# Components may depend on any number of `resource()` targets to ensure that
+# any `fuchsia_package()` that includes them will include the same resources.
 #
-# The following target:
 # ```
-# fuchsia_component("my-component") {
-#   resources = [
-#     {
-#       source = "my_file.txt"
-#       destination = "data/my_file.txt"
-#     }
-#   ]
-#   ...
-# }
-# ```
-# Is equivalent to:
-# ```
-# resources("my_file") {
+# resource("my_file") {
 #   sources = [ "my_file.txt" ]
 #   destination = "data/{{source_file_part}}"
 # }
@@ -71,6 +56,9 @@ import("//src/sys/cmc/build/cmx.gni")
 #   ...
 # }
 # ```
+#
+# The component defined above will be able to read my_file.txt under the path
+# "/pkg/data/my_file.txt" in its sandbox.
 #
 # Parameters
 #
@@ -83,16 +71,7 @@ import("//src/sys/cmc/build/cmx.gni")
 #     Type: string
 #     Default: target_name
 #
-#   resources (optional)
-#     Resources to include.
-#     This is a short form for adding `deps` on `resources` targets.
-#     Type: list(scopes)
-#     Scopes contain a required `source` and an optional `destination`.
-#     If a `destination` is not specified, the file name of `source` is used.
-#
-#   data_deps
 #   deps
-#   public_deps
 #   testonly
 #   visibility
 template("fuchsia_component") {
@@ -118,33 +97,14 @@ template("fuchsia_component") {
         "Unknown manifest format for \"$manifest\" passed to fuchsia_component($target_name)")
   }
 
-  # Add resources
   manifest_resource_target = "${target_name}_manifest_resource"
-  resources_deps = [ ":$manifest_resource_target" ]
-  if (defined(invoker.resources)) {
-    foreach(resource, invoker.resources) {
-      destination = get_path_info(resource.source, "file")
-      if (defined(resource.destination)) {
-        destination = resource.destination
-      }
-      resource_target = "${target_name}_resource_${destination}"
-      resource(resource_target) {
-        sources = [ resource.source ]
-        outputs = [ destination ]
-        visibility = [ ":*" ]
-      }
-      resources_deps += [ ":$resource_target" ]
-    }
-  }
 
   # Process the manifest
   target(manifest_processor, target_name) {
     output_name = manifest_name
     forward_variables_from(invoker,
                            [
-                             "data_deps",
                              "deps",
-                             "public_deps",
                              "manifest",
                              "testonly",
                              "visibility",
@@ -152,7 +112,7 @@ template("fuchsia_component") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += resources_deps
+    deps += [ ":$manifest_resource_target" ]
   }
 
   # Add the manifest

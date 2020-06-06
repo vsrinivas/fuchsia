@@ -12,17 +12,17 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 # Fuchsia packages are a collection of any number of files (or resources), each
 # with a unique path that is relative to the package's root.
 # Package targets collect resources via their dependencies. These dependencies
-# are typically components, which provide their component manifest as a
-# resource as well as forward their own dependencies on resources. Packages
-# can also depend directly on resources.
+# are typically fuchsia_component() targets, which provide their component
+# manifest and other files that the component needs (such as an executable).
 #
 # Packages can be defined as a collection of pairs each representing a file in
 # the package. Each pair consists of the path in the package that is assigned
 # to the file, and a path relative to the build system's output directory where
 # the contents of the file will be sourced from.
-#
 # This mapping is generated at build time, and is known as the package
-# manifest. To view the package manifest, For instance assume you have defined
+# manifest.
+#
+# To view the package manifest, For instance assume you have defined
 # a package at `path/to/project:my_package` and built it:
 # ```
 # $ fx build path/to/project:my_package
@@ -42,7 +42,7 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 # Example:
 # ```
 # fuchsia_package("my-package") {
-#   components = [
+#   deps = [
 #     ":first_component",
 #     ":second_component",
 #   ]
@@ -56,12 +56,6 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #     Type: string
 #     Default: target_name
 #
-#   components (optional)
-#     `fuchsia_component()` targets to include in the package.
-#     While it's possible for a package to just contain data files, or nothing
-#     at all, typically a package contains at least one component.
-#     Type: list(labels)
-#
 #   deps
 #   testonly
 #   visibility
@@ -70,15 +64,9 @@ template("fuchsia_package") {
   if (defined(invoker.package_name)) {
     package_name = invoker.package_name
   }
-
-  if (!defined(invoker.deps)) {
-    invoker.deps = []
-  }
-  if (defined(invoker.components)) {
-    invoker.deps += invoker.components
-  } else {
-    invoker.components = []
-  }
+  assert(string_replace(package_name, "_", "-") == package_name,
+         "fuchsia_package($target_name): must not have underscores in " +
+             "`package_name`")
 
   # Generate the "meta/package" file
   meta_package_target = "${target_name}_meta_package"

@@ -63,12 +63,6 @@ executable("my_program") {
 
 fuchsia_component("my-component") {
   manifest = "meta/my_program.cmx"
-  resources = [
-    {
-      source = "my_data_file"
-      destination = "data/my_data_file"
-    }
-  ]
   deps = [ ":my_program" ]
 }
 
@@ -425,18 +419,16 @@ The launch URL for the test will be
 `fuchsia-pkg://fuchsia.com/rot13-test#meta/rot13-test.cmx`. It can be launched
 using `fx test` followed by the launch URL, or followed by the GN target name.
 
-### Additional packaged resources {#additional-packaged-resources}
+## Additional packaged resources {#additional-packaged-resources}
 
-In the [example above](#defining) you saw the use of `resources` in a component
-definition. The same syntax applies to all component templates. Resources
-included in a component definition will be included in any package that depends
-on that component. Any number of resources can be specified in a component
-target definition.
+In the examples above we've demonstrated that a `deps` path from a package to a
+target that produces an executable ensures that the executable is included in
+the package.
 
-Sometimes it's useful to define resources outside of a component definition. For
-instance, you may want to define resources and allow multiple components to
-depend on them. For this, use
-[`resource.gni`](/build/unification/zbi/resource.gni). For instance:
+Sometimes there is the need to include additional files. Below we demonstrate
+the use of the [`resource.gni`](/build/unification/zbi/resource.gni) template.
+
+### Example: fonts
 
 {# Disable variable substition to avoid {{ being interpreted by the template engine #}
 {% verbatim %}
@@ -455,6 +447,14 @@ resource("roboto_family") {
   ]
   outputs = [ "data/fonts/{{source_file_part}}" ]
 }
+
+fuchsia_component("text-viewer") {
+  ...
+  deps = [
+    ":roboto_family",
+    ...
+  ]
+}
 ```
 
 {# Re-enable variable substition #}
@@ -464,6 +464,66 @@ In the example above, six files are provided to be packaged under `data/fonts/`,
 producing the paths `data/fonts/Roboto-Black.ttf`,
 `data/fonts/Roboto-Bold.ttf`, etc'. The format for `destination` accepts [GN
 source expansion placeholders][source-expansion-placeholders].
+
+Then, a text viewer component is defined to depend on the fonts. In this
+example, the text viewer implementation renders text with Roboto fonts. The
+component can read the given fonts in its sandbox under the path
+`/pkg/data/fonts/...`.
+
+### Example: integration test with golden data
+
+In this example we define a hypothetical service that minifies JSON files. The
+service is said to receive a buffer containing JSON text, and returns a buffer
+containing the same JSON data but with less whitespace. We present an
+integration test where a test component acts as the client of the minifier
+component, and compares the result for a given JSON file to be minified against
+a known good result (or a "golden file").
+
+{# Disable variable substition to avoid {{ being interpreted by the template engine #}
+{% verbatim %}
+
+```
+fuchsia_component("minifier-component") {
+  ...
+}
+
+fuchsia_package("minifier-package") {
+  ...
+}
+
+resource("testdata") {
+  sources = [
+    "testdata/input.json",
+    "testdata/input_minified.json",
+  ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_component("minifier-test-client") {
+  testonly = true
+  deps = [
+    ":testdata",
+    ...
+  ]
+  ...
+}
+
+fuchsia_test_package("minifier-integration-test") {
+  test_components = [ ":minifier-test-client" ]
+  deps = [ ":minifier-component" ]
+}
+```
+
+{# Re-enable variable substition #}
+{% endverbatim %}
+
+Note that we place the `resource()` dependency on the test component. From the
+build system's perspective the resource dependency could have been placed on
+the test package and the same outcome would have been produced by the build.
+However, it is a better practice to put dependencies on the targets that need
+them. This way we could reuse the same test component target in a different
+test package, for instance to test against a different minifier component, and
+the test component would work the same.
 
 ## Troubleshooting {#troubleshooting}
 
@@ -520,7 +580,7 @@ package](#listing-the-contents-of-a-package).
 
 Component URLs follow this pattern:
 
-```
+```none
 fuchsia-pkg://fuchsia.com/<package-name>#meta/<component-name>.<extension>
 ```
 
@@ -542,6 +602,7 @@ The example is adapted from
 
 ### Pre-migration {#pre-migration}
 
+```
 import("//build/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
@@ -601,9 +662,14 @@ group("tests") {
   testonly = true
   deps = [ ":timekeeper_bin_test" ]
 }
+```
 
 ### Post-migration {#post-migration}
 
+{# Disable variable substition to avoid {{ being interpreted by the template engine #}
+{% verbatim %}
+
+```
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
@@ -631,21 +697,26 @@ fuchsia_package("timekeeper") {
   components = [ ":service" ]
 }
 
+resource("testdata") {
+  sources = [
+    "test/y2k",
+    "test/end-of-unix-time",
+  ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
 fuchsia_unittest_package("timekeeper-unittests") {
   executable_name = "timekeeper"
   manifest = "meta/unittests.cmx"
-  deps = [ ":bin_test" ]
-  resources = [
-    {
-      source = "test/y2k"
-      destination = "data/y2k"
-    },
-    {
-      source = "test/end-of-unix-time"
-      destination = "data/end-of-unix-time"
-    },
+  deps = [
+    ":bin_test",
+    ":testdata",
   ]
 }
+```
+
+{# Re-enable variable substition #}
+{% endverbatim %}
 
 ### Migration considerations
 
@@ -661,14 +732,11 @@ fuchsia_unittest_package("timekeeper-unittests") {
     the timekeeper component remains the same:
     `fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx`
 *   Additional resources (in this case, the data asset files used in the test
-    such as the `test/y2k` file) are included in a similar fashion. However
-    their destination path is a full packaged path, whereas before it would have
-    `"data/"` automatically prepended to it. In both cases, the data file can
-    be read by the test at runtime from the paths `"/pkg/data/y2k"` and
-    `"/pkg/data/end-of-unix-time"`.
-*   Optionally `destination` can be omitted, in which case it defaults to the
-    short name of the source file. In the example above the full paths would
-    then be `"/pkg/y2k"` and `"/pkg/end-of-unix-time"`.
+    such as the `test/y2k` file) are included in the unit test. Their
+    destination path is a full packaged path, whereas before it would have had
+    `data/` automatically prepended to it. In both cases, the data file can
+    be read by the test at runtime from the paths `/pkg/data/y2k` and
+    `/pkg/data/end-of-unix-time`.
 
 ### Unsupported features
 

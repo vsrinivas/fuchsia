@@ -5,7 +5,7 @@
     children: [
         {
             name: "gtest_runner",
-            url: "fuchsia-pkg://fuchsia.com/gtest_runner#meta/gtest_runner.cm",
+            url: "fuchsia-pkg://fuchsia.com/gtest-runner#meta/gtest-runner.cm",
         },
         {
             name: "rust_test_runner",

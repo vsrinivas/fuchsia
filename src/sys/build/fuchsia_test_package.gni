@@ -1,7 +1,6 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 import("//src/sys/build/fuchsia_package.gni")
 import("//src/sys/build/fuchsia_test.gni")
 
@@ -12,19 +11,25 @@ import("//src/sys/build/fuchsia_test.gni")
 # Example:
 # ```
 # fuchsia_component("fonts-service") { ... }
-# fuchsia_component("fonts-service-test") { ... }
+# fuchsia_component("fonts-service-test") {
+#   testonly = true
+#   ...
+# }
 #
 # fuchsia_test_package("fonts-service-test-package") {
-#   tests = [ ":fonts-service-test" ]
-#   components = [ ":fonts-service" ],
+#   test_components = [ ":fonts-service-test" ]
+#   deps = [ ":fonts-service" ],
 # }
 #
 # fuchsia_component("fonts-ui") { ... }
-# fuchsia_component("fonts-ui-test") { ... }
+# fuchsia_component("fonts-ui-test") {
+#   testonly = true
+#   ...
+# }
 #
 # fuchsia_test_package("fonts-ui-test-package") {
 #   test_components = [ ":fonts-ui-test" ]
-#   components = [ ":fonts-ui" ],
+#   deps = [ ":fonts-ui" ],
 #   test_specs = {
 #     environments = [
 #       astro_env,
@@ -42,12 +47,7 @@ import("//src/sys/build/fuchsia_test.gni")
 #   test_components (required)
 #     `fuchsia_component()` targets to include in the package and also register
 #     as entry points for tests.
-#     Type: list(labels)
-#
-#   components (optional)
-#     Additional `fuchsia_component()` targets to include in the package.
-#     This is often useful for integration tests, where the test component
-#     exercises one or more non-test components as part of the test.
+#     Additional non-test components can be included via `deps`.
 #     Type: list(labels)
 #
 #   test_specs (optional)
@@ -60,22 +60,18 @@ import("//src/sys/build/fuchsia_test.gni")
 #     Type: string
 #     Default: target_name
 #
-#   data_deps
 #   deps
-#   public_deps
 #   visibility
 template("fuchsia_test_package") {
   assert(
       defined(invoker.test_components) && invoker.test_components != [],
       "`test_components` must be specified when calling fuchsia_test_package($target_name)")
-
   package_target = target_name
   package_name = target_name
   if (defined(invoker.package_name)) {
     package_name = invoker.package_name
   }
   test_deps = []
-
   test_specs = {
   }
   if (defined(invoker.test_specs)) {
@@ -92,24 +88,17 @@ template("fuchsia_test_package") {
     }
     test_deps += [ ":$test_target" ]
   }
-
   fuchsia_package(target_name) {
     forward_variables_from(invoker,
                            [
-                             "data_deps",
                              "deps",
-                             "public_deps",
                              "visibility",
                            ])
     package_name = package_name
-    components = invoker.test_components
-    if (defined(invoker.components)) {
-      components += invoker.components
-    }
     if (!defined(deps)) {
       deps = []
     }
-    deps += test_deps
+    deps += invoker.test_components
     testonly = true
   }
 }

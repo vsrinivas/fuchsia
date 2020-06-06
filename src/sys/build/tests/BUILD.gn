@@ -62,15 +62,17 @@ rustc_test("read_file_test") {
   source_root = "read_file.rs"
 }
 
+resource("hello_world.txt") {
+  sources = [ "hello_world.txt" ]
+  outputs = [ "data/hello_world.txt" ]
+}
+
 fuchsia_unittest_package("readfile-unittest") {
   executable_name = "read_file_test"
-  resources = [
-    {
-      source = "hello_world.txt"
-      destination = "data/hello_world.txt"
-    },
+  deps = [
+    ":hello_world.txt",
+    ":read_file_test",
   ]
-  deps = [ ":read_file_test" ]
 }
 
 fuchsia_component("echo-server") {
@@ -102,7 +104,7 @@ fuchsia_test_package("echo-integration-test") {
     # Demonstrate that you can include multiple tests in the same package
     ":return_zero_component",
   ]
-  components = [ ":echo-server" ]
+  deps = [ ":echo-server" ]
   test_specs = {
     environments = [ emu_env ]
   }

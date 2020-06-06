@@ -46,20 +46,12 @@ import("fuchsia_test_package.gni")
 #     This is used in generating the manifest.
 #     Type: string
 #
-#   resources (optional)
-#     Additional resources needed by your test.
-#     For instance, read-only data assets such as golden files.
-#     See `fuchsia_component.gni` for details.
-#     Type: list(scopes)
-#
 #   test_specs (optional)
 #     Additional test specifications to apply to the test defined above.
 #     See `test_spec.gni`.
 #     Type: scope
 #
-#   data_deps
 #   deps
-#   public_deps
 #   visibility
 template("fuchsia_unittest_package") {
   assert(
@@ -96,7 +88,6 @@ template("fuchsia_unittest_package") {
                            [
                              "deps",
                              "manifest",
-                             "resources",
                            ])
     component_name = invoker.target_name
     testonly = true
@@ -107,13 +98,6 @@ template("fuchsia_unittest_package") {
         deps = []
       }
       deps += [ ":$generated_target" ]
-    }
-
-    if (defined(invoker.additional_resources)) {
-      if (!defined(resources)) {
-        resources = []
-      }
-      resources += invoker.additional_resources
     }
   }
 

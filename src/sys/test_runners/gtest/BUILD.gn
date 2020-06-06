@@ -44,21 +44,21 @@ rustc_binary("bin") {
   test_deps = [ "//src/sys/test_runners:test_lib" ]
 }
 
-fuchsia_component("gtest_runner_component") {
+fuchsia_component("gtest-runner-component") {
   testonly = true
   manifest = "meta/gtest_runner.cml"
-  component_name = "gtest_runner"
+  component_name = "gtest-runner"
   deps = [ ":bin" ]
 }
 
-fuchsia_package("gtest_runner") {
+fuchsia_package("gtest-runner") {
   testonly = true
-  components = [ ":gtest_runner_component" ]
+  deps = [ ":gtest-runner-component" ]
 }
 
 group("gtest") {
   testonly = true
-  deps = [ ":gtest_runner" ]
+  deps = [ ":gtest-runner" ]
 }
 
 fuchsia_unittest_package("gtest-runner-tests") {

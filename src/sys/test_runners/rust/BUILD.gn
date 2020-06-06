@@ -54,7 +54,7 @@ fuchsia_component("rust_test_runner") {
 
 fuchsia_package("rust-test-runner") {
   testonly = true
-  components = [ ":rust_test_runner" ]
+  deps = [ ":rust_test_runner" ]
 }
 
 group("rust") {
