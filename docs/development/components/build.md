@@ -276,13 +276,17 @@ Since unit tests are very common, a simplified template
 [`fuchsia_unittest_package.gni`](/src/sys/build/fuchsia_unittest_package.gni)
 is provided to define a package with a single component to be run as a test.
 
+#### Unit tests with manifests
+
+The examples below demonstrate building a test executable and defining a
+package and component for the test.
+
    * {C++}
 
    ```gn
    import("//src/sys/build/components.gni")
 
-   executable("test") {
-     output_name = "my_test"
+   executable("my_test") {
      sources = [ "test.cc" ]
      deps = [
        "//src/lib/fxl/test:gtest_main",
@@ -291,9 +295,9 @@ is provided to define a package with a single component to be run as a test.
      testonly = true
    }
 
-   fuchsia_unittest_package("my-test-component") {
-     executable_name = "my_test"
-     deps = [ ":test" ]
+   fuchsia_unittest_package("my-test") {
+     manifest = "meta/my_test.cmx"
+     deps = [ ":my_test" ]
    }
    ```
 
@@ -303,8 +307,11 @@ is provided to define a package with a single component to be run as a test.
    import("//build/rust/rustc_test.gni")
    import("//src/sys/build/components.gni")
 
-   rustc_test("test") {
-     name = "my_test"
+   rustc_test("my_test") {}
+
+   fuchsia_unittest_package("my-test") {
+     manifest = "meta/my_test.cmx"
+     deps = [ ":my_test" ]
    }
    ```
 
@@ -314,42 +321,109 @@ is provided to define a package with a single component to be run as a test.
    import("//build/go/go_test.gni")
    import("//src/sys/build/components.gni")
 
-   go_test("test") {
-     output_name = "my_test"
-   }
+   go_test("my_test") {}
 
-   fuchsia_unittest_package("my-test-component") {
-     executable_name = "my_test"
-     deps = [ ":test" ]
+   fuchsia_unittest_package("my-test") {
+     manifest = "meta/my_test.cmx"
+     deps = [ ":my_test" ]
    }
    ```
 
-Note the following details:
+The manifest file `meta/my_test.cmx` may look like this:
 
-*   The examples above don't specify a manifest. In this case, a trivial
-    manifest is generated for them. Such a manifest is often sufficient for
-    "pure" unit tests that test business logic and don't require any particular
-    capabilities. \
-    For more sophisticated tests, such as integration tests, see
-    [test packages](#test-packages).
-*   To generate the manifest, we must specify `executable_name` as seen above.
-*   The generated component manifest file can be found as follows:
-    ```bash
-    fx gn outputs out/default <unittest_target>_generated_manifest
-    ```
-    To print it directly:
-    ```bash
-    fx build && cat out/default/`fx gn outputs out/default <unittest_target>_generated_manifest`
-    ```
-    Note that `fx gn outputs` prints an output path, but the file at the path
-    may not exist or may be stale if you haven't built.
-*   In order to provide a manifest rather than use a generated manifest, specify
-    `manifest` on `fuchsia_unittest_package()`. Note that if you do then the
-    command above to view the generated manifest will fail with an error stating
-    that the target was not found.
-*   Your provided manifest must specify the test executable's path, which will
-    be under the path `bin/`. See
-    [finding paths for built executables](#finding-paths-for-built-executables).
+```json
+{
+    "program": {
+        "binary": "bin/my_test"
+    }
+}
+```
+
+The above is a minimal valid manifest file for this test. In practice a test
+might require additional capabilities, to be specified in its manifest.
+
+The launch URL for the test will be
+`fuchsia-pkg://fuchsia.com/my-test#meta/my-test.cmx`. It can be launched using
+`fx test` followed by the launch URL, or followed by the GN target name.
+
+#### Unit tests with _generated_ manifests
+
+The examples above specify a manifest for the test. However, it's possible for
+unit tests to not require any particular capabilities.
+
+Below s an example for a test that performs ROT13 encryption and decryption.
+The algorithm under test is pure logic that can be tested in complete
+isolation. If we were to write a manifest for these tests, it would only
+contain the test binary to be executed. In such cases, we can simply specify
+the test executable, and the template will generate the trivial manifest for
+us.
+
+   * {C++}
+
+   ```gn
+   import("//src/sys/build/components.gni")
+
+   executable("rot13_test") {
+     sources = [ "rot13_test.cc" ]
+     deps = [
+       "//src/lib/fxl/test:gtest_main",
+       "//third_party/googletest:gtest",
+     ]
+     testonly = true
+   }
+
+   fuchsia_unittest_package("rot13-test") {
+     executable_name = "rot13_test"
+     deps = [ ":rot13_test" ]
+   }
+   ```
+
+   * {Rust}
+
+   ```gn
+   import("//build/rust/rustc_test.gni")
+   import("//src/sys/build/components.gni")
+
+   rustc_test("rot13_test") {}
+
+   fuchsia_unittest_package("rot13-test") {
+     executable_name = "rot13_test"
+     deps = [ ":rot13_test" ]
+   }
+   ```
+
+   * {Go}
+
+   ```gn
+   import("//build/go/go_test.gni")
+   import("//src/sys/build/components.gni")
+
+   go_test("rot13_test") {}
+
+   fuchsia_unittest_package("rot13-test") {
+     executable_name = "rot13_test"
+     deps = [ ":rot13_test" ]
+   }
+   ```
+
+The generated component manifest file can be found as follows:
+
+```bash
+fx gn outputs out/default <unittest_target>_generated_manifest
+```
+
+To print it directly:
+
+```bash
+fx build && cat out/default/`fx gn outputs out/default <unittest_target>_generated_manifest`
+```
+
+Note that `fx gn outputs` prints an output path, but the file at the path
+may not exist or may be stale if you haven't built.
+
+The launch URL for the test will be
+`fuchsia-pkg://fuchsia.com/rot13-test#meta/rot13-test.cmx`. It can be launched
+using `fx test` followed by the launch URL, or followed by the GN target name.
 
 ### Additional packaged resources {#additional-packaged-resources}
 
