@@ -83,12 +83,12 @@ pub struct ClientImpl {
 }
 
 impl ClientImpl {
-    fn new<S: StorageFactory + 'static>(context: Context<S>) -> Self {
+    fn new<S: StorageFactory + 'static>(context: &Context<S>) -> Self {
         Self {
             messenger: context.messenger.clone(),
             setting_type: context.setting_type,
             notify: false,
-            service_context: context.environment.service_context_handle,
+            service_context: context.environment.service_context_handle.clone(),
         }
     }
 
@@ -108,10 +108,10 @@ impl ClientImpl {
     }
 
     pub async fn create<S: StorageFactory + 'static>(
-        context: Context<S>,
+        mut context: Context<S>,
         generate_controller: GenerateController,
     ) -> SettingHandlerResult {
-        let client = Arc::new(Mutex::new(Self::new(context.clone())));
+        let client = Arc::new(Mutex::new(Self::new(&context)));
         let controller_result = generate_controller(ClientProxy::new(client.clone())).await;
 
         if let Err(error) = controller_result {
@@ -120,63 +120,60 @@ impl ClientImpl {
 
         let mut controller = controller_result.unwrap();
 
-        {
-            let mut receptor = context.receptor.clone();
-            // Process MessageHub requests
-            fasync::spawn(async move {
-                while let Ok(event) = receptor.watch().await {
-                    let setting_type = client.lock().await.setting_type;
-                    match event {
-                        MessageEvent::Message(
-                            Payload::Command(Command::HandleRequest(request)),
-                            client,
-                        ) => reply(
-                            client,
-                            Self::process_request(setting_type, &controller, request.clone()).await,
-                        ),
-                        MessageEvent::Message(
-                            Payload::Command(Command::ChangeState(state)),
-                            receptor_client,
-                        ) => {
-                            match state {
-                                State::Startup => {
-                                    match controller.change_state(state).await {
-                                        Some(Err(e)) => fx_log_err!(
-                                            "Failed startup phase for SettingType {:?} {}",
-                                            setting_type,
-                                            e
-                                        ),
-                                        _ => {}
-                                    };
-                                    reply(receptor_client, Ok(None));
-                                    continue;
-                                }
-                                State::Listen => {
-                                    client.lock().await.notify = true;
-                                }
-                                State::EndListen => {
-                                    client.lock().await.notify = false;
-                                }
-                                State::Teardown => {
-                                    match controller.change_state(state).await {
-                                        Some(Err(e)) => fx_log_err!(
-                                            "Failed teardown phase for SettingType {:?} {}",
-                                            setting_type,
-                                            e
-                                        ),
-                                        _ => {}
-                                    };
-                                    reply(receptor_client, Ok(None));
-                                    continue;
-                                }
+        // Process MessageHub requests
+        fasync::spawn(async move {
+            while let Ok(event) = context.receptor.watch().await {
+                let setting_type = client.lock().await.setting_type;
+                match event {
+                    MessageEvent::Message(
+                        Payload::Command(Command::HandleRequest(request)),
+                        client,
+                    ) => reply(
+                        client,
+                        Self::process_request(setting_type, &controller, request.clone()).await,
+                    ),
+                    MessageEvent::Message(
+                        Payload::Command(Command::ChangeState(state)),
+                        receptor_client,
+                    ) => {
+                        match state {
+                            State::Startup => {
+                                match controller.change_state(state).await {
+                                    Some(Err(e)) => fx_log_err!(
+                                        "Failed startup phase for SettingType {:?} {}",
+                                        setting_type,
+                                        e
+                                    ),
+                                    _ => {}
+                                };
+                                reply(receptor_client, Ok(None));
+                                continue;
                             }
-                            controller.change_state(state).await;
+                            State::Listen => {
+                                client.lock().await.notify = true;
+                            }
+                            State::EndListen => {
+                                client.lock().await.notify = false;
+                            }
+                            State::Teardown => {
+                                match controller.change_state(state).await {
+                                    Some(Err(e)) => fx_log_err!(
+                                        "Failed teardown phase for SettingType {:?} {}",
+                                        setting_type,
+                                        e
+                                    ),
+                                    _ => {}
+                                };
+                                reply(receptor_client, Ok(None));
+                                continue;
+                            }
                         }
-                        _ => {}
+                        controller.change_state(state).await;
                     }
+                    _ => {}
                 }
-            });
-        }
+            }
+        });
 
         Ok(())
     }
@@ -255,13 +252,12 @@ pub mod persist {
     }
 
     impl<S: Storage + 'static> ClientProxy<S> {
-        pub async fn new<F: StorageFactory + 'static>(
+        pub async fn new(
             base_proxy: BaseProxy,
-            context: Context<F>,
+            storage: Arc<Mutex<DeviceStorage<S>>>,
+            setting_type: SettingType,
         ) -> Self {
-            let storage =
-                context.environment.storage_factory_handle.lock().await.get_store::<S>(context.id);
-            Self { base: base_proxy, storage: storage, setting_type: context.setting_type }
+            Self { base: base_proxy, storage, setting_type }
         }
 
         pub async fn get_service_context(&self) -> ServiceContextHandle {
@@ -351,13 +347,20 @@ pub mod persist {
             context: Context<F>,
         ) -> BoxFuture<'static, SettingHandlerResult> {
             Box::pin(async move {
-                let context_clone = context.clone();
+                let storage = context
+                    .environment
+                    .storage_factory_handle
+                    .lock()
+                    .await
+                    .get_store::<S>(context.id);
+                let setting_type = context.setting_type.clone();
+
                 ClientImpl::create(
                     context,
                     Box::new(move |proxy| {
-                        let context = context_clone.clone();
+                        let storage = storage.clone();
                         Box::pin(async move {
-                            let proxy = ClientProxy::<S>::new(proxy, context.clone()).await;
+                            let proxy = ClientProxy::<S>::new(proxy, storage, setting_type).await;
                             let controller_result = C::create(proxy).await;
 
                             match controller_result {

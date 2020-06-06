@@ -50,7 +50,7 @@ impl InspectBroker {
         inspect_node: inspect::Node,
     ) -> Result<(), Error> {
         // Create broker to listen in on all messages between Registry and setting handlers.
-        let (messenger_client, receptor) =
+        let (messenger_client, mut receptor) =
             messenger_factory.create(MessengerType::Broker).await.unwrap();
 
         let broker = Arc::new(Mutex::new(Self {
@@ -60,7 +60,7 @@ impl InspectBroker {
         }));
 
         fasync::spawn(async move {
-            while let Ok(message_event) = receptor.clone().watch().await {
+            while let Ok(message_event) = receptor.watch().await {
                 if let MessageEvent::Message(payload, client) = message_event {
                     match payload {
                         // When we see a Restore message, we know a given setting is starting up, so

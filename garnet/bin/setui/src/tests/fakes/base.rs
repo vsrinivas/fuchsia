@@ -32,11 +32,10 @@ pub fn create_setting_handler<T: DeviceStorageFactory + Send + Sync + 'static>(
     >,
 ) -> GenerateHandler<T> {
     let shared_handler = Arc::new(Mutex::new(request_handler));
-    return Box::new(move |context| {
-        let mut receptor = context.receptor.clone();
+    return Box::new(move |mut context| {
         let handler = shared_handler.clone();
         fasync::spawn(async move {
-            while let Ok(event) = receptor.watch().await {
+            while let Ok(event) = context.receptor.watch().await {
                 match event {
                     MessageEvent::Message(
                         Payload::Command(Command::HandleRequest(request)),

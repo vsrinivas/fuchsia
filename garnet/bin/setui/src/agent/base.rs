@@ -36,7 +36,6 @@ pub enum Descriptor {
 }
 
 /// TODO(b/52428): Move lifecycle stage context contents here.
-#[derive(Clone)]
 pub struct Context {
     pub receptor: Receptor,
     publisher: event::Publisher,
@@ -49,7 +48,7 @@ impl Context {
         event_factory: event::message::Factory,
     ) -> Self {
         Self {
-            receptor: receptor,
+            receptor,
             publisher: event::Publisher::create(&event_factory, event::Address::Agent(descriptor))
                 .await,
         }

@@ -20,12 +20,12 @@ const ENV_NAME: &str = "settings_service_event_test_environment";
 /// Exercises the event publishing path from agents.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_agent_event_propagation() {
-    let agent_context: Arc<Mutex<Option<Context>>> = Arc::new(Mutex::new(None));
+    let agent_publisher: Arc<Mutex<Option<event::Publisher>>> = Arc::new(Mutex::new(None));
     let event_factory: Arc<Mutex<Option<event::message::Factory>>> = Arc::new(Mutex::new(None));
 
     // Capturing the context allows retrieving the publisher meant for the
     // agent.
-    let context_capture = agent_context.clone();
+    let publisher_capture = agent_publisher.clone();
 
     // Capturing the factory allows registering a listener to published events.
     let event_factory_capture = event_factory.clone();
@@ -43,10 +43,10 @@ async fn test_agent_event_propagation() {
     // This agent simply captures the context and returns unhandled for all
     // subsequent invocations (allowing the authority to progress).
     let create_agent = Arc::new(move |mut context: Context| -> BoxFuture<'static, ()> {
-        let context_capture = context_capture.clone();
+        let publisher_capture = publisher_capture.clone();
 
         Box::pin(async move {
-            *context_capture.lock().await = Some(context.clone());
+            *publisher_capture.lock().await = Some(context.get_publisher());
 
             fasync::spawn(async move {
                 while let Ok((payload, client)) = context.receptor.next_payload().await {
@@ -81,8 +81,7 @@ async fn test_agent_event_propagation() {
 
     let sent_event = event::Event::Custom("test");
 
-    let context = agent_context.clone().lock().await.take().expect("Should have captured context");
-    let publisher = context.get_publisher();
+    let publisher = agent_publisher.lock().await.take().expect("Should have captured publisher");
     publisher.send_event(sent_event.clone());
 
     let received_event =

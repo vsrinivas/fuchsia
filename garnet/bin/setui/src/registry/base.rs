@@ -106,23 +106,7 @@ impl<T: DeviceStorageFactory> Context<T> {
         environment: Environment<T>,
         id: u64,
     ) -> Context<T> {
-        return Context {
-            setting_type: setting_type,
-            messenger: messenger,
-            receptor: receptor,
-            environment: environment.clone(),
-            id,
-        };
-    }
-
-    pub fn clone(&self) -> Self {
-        Self::new(
-            self.setting_type.clone(),
-            self.messenger.clone(),
-            self.receptor.clone(),
-            self.environment.clone(),
-            self.id.clone(),
-        )
+        return Context { setting_type, messenger, receptor, environment: environment.clone(), id };
     }
 }
 

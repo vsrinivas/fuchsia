@@ -7,6 +7,7 @@ use {
     crate::internal::handler::{message, Address, Payload},
     crate::message::base::{Audience, MessageEvent, MessengerType},
     crate::registry::base::{Command, ContextBuilder, State},
+    crate::registry::device_storage::DeviceStorageFactory,
     crate::registry::device_storage::{testing::*, DeviceStorageCompatible},
     crate::registry::setting_handler::persist::WriteResult,
     crate::registry::setting_handler::{
@@ -146,15 +147,28 @@ async fn test_write_notify() {
     let (client_tx, mut client_rx) =
         futures::channel::mpsc::unbounded::<persist::ClientProxy<AccessibilityInfo>>();
 
+    let storage = context
+        .environment
+        .storage_factory_handle
+        .lock()
+        .await
+        .get_store::<AccessibilityInfo>(context.id);
+    let setting_type = context.setting_type;
+
     ClientImpl::create(
-        context.clone(),
+        context,
         Box::new(move |proxy| {
             let client_tx = client_tx.clone();
-            let context = context.clone();
+            let storage = storage.clone();
             Box::pin(async move {
                 client_tx
                     .unbounded_send(
-                        persist::ClientProxy::<AccessibilityInfo>::new(proxy, context).await,
+                        persist::ClientProxy::<AccessibilityInfo>::new(
+                            proxy,
+                            storage,
+                            setting_type,
+                        )
+                        .await,
                     )
                     .ok();
                 Ok(Box::new(BlankController {}) as BoxedController)

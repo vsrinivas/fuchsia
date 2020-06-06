@@ -21,16 +21,15 @@ type EventReceiver<P, A> = UnboundedReceiver<MessageEvent<P, A>>;
 ///
 /// Clients interact with the Receptor similar to a Receiver, waiting on a new
 /// MessageEvent via the watch method.
-#[derive(Clone)]
 pub struct Receptor<P: Payload + 'static, A: Address + 'static> {
     event_rx: Arc<Mutex<EventReceiver<P, A>>>,
     // Fuse to be triggered when all receptors go out of scope.
-    fuse: ActionFuseHandle,
+    _fuse: ActionFuseHandle,
 }
 
 impl<P: Payload + 'static, A: Address + 'static> Receptor<P, A> {
     pub(super) fn new(event_rx: EventReceiver<P, A>, fuse: ActionFuseHandle) -> Receptor<P, A> {
-        Receptor { event_rx: Arc::new(Mutex::new(event_rx)), fuse: fuse }
+        Receptor { event_rx: Arc::new(Mutex::new(event_rx)), _fuse: fuse }
     }
 
     pub async fn watch(&mut self) -> Result<MessageEvent<P, A>, Error> {
