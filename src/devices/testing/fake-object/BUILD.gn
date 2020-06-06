@@ -18,7 +18,10 @@ zx_library("fake-object") {
     "fake-handle.cc",
     "fake-object.cc",
   ]
-  public_deps = [ "//zircon/public/lib/zircon-internal" ]
+  public_deps = [
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zxc",
+  ]
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",

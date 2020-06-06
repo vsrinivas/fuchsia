@@ -21,6 +21,7 @@ zx_library("fake-resource") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

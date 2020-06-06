@@ -3,65 +3,64 @@
 // found in the LICENSE file
 
 #include <lib/fake-object/object.h>
+#include <lib/zx/status.h>
 #include <zircon/types.h>
 
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 
-__EXPORT
-zx_status_t HandleTable::Get(zx_handle_t handle, fbl::RefPtr<Object>* out) {
-  fbl::AutoLock guard(&lock_);
-
-  size_t idx = HandleToIndex(handle);
-  if (idx >= handles_.size()) {
-    return ZX_ERR_NOT_FOUND;
+zx::status<fbl::RefPtr<Object>> HandleTable::GetLocked(zx_handle_t handle) {
+  zx::status status = HandleToIndex(handle);
+  if (!status.is_ok() || status.value() >= handles_.size() || !handles_[status.value()]) {
+    ftracef("handle = 0x%x, not found\n", handle);
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
-  const fbl::RefPtr<Object>& h = handles_[idx];
-  if (!h) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  *out = h;
-  return ZX_OK;
+  auto& obj = handles_[status.value()];
+  ftracef("handle = 0x%x, obj = %p, type = %u, index = %zu\n", handle, obj.get(), obj->type(),
+          status.value());
+  return zx::success(obj);
 }
 
 __EXPORT
-zx_status_t HandleTable::Add(fbl::RefPtr<Object>&& obj, zx_handle_t* out) {
+zx::status<zx_handle_t> HandleTable::Add(fbl::RefPtr<Object> obj) {
   fbl::AutoLock guard(&lock_);
+  __UNUSED auto* obj_ptr = obj.get();
+  zx_handle_t handle = ZX_HANDLE_INVALID;
   bool found_slot = false;
+  size_t idx = 0;
 
   for (size_t i = 0; i < handles_.size(); ++i) {
     if (!handles_[i]) {
-      handles_[i] = std::move(obj);
-      *out = IndexToHandle(i);
+      idx = i;
+      handles_[idx] = std::move(obj);
       found_slot = true;
       break;
     }
   }
 
   if (!found_slot) {
+    idx = handles_.size();
     handles_.push_back(std::move(obj));
-    *out = IndexToHandle(handles_.size() - 1);
   }
-  ftracef("handle = %#x, type = %u, obj = %p, index = %zu\n", *out,
-          static_cast<uint32_t>(handles_[handles_.size() - 1]->type()),
-          handles_[handles_.size() - 1].get(), handles_.size() - 1);
-  return ZX_OK;
+  handle = IndexToHandle(idx);
+  ftracef("handle = 0x%x, obj = %p, type = %u, index = %zu\n", handle, obj_ptr, obj_ptr->type(),
+          idx);
+  return zx::success(handle);
 }
 
 __EXPORT
-zx_status_t HandleTable::Remove(zx_handle_t handle) {
+zx::status<> HandleTable::Remove(zx_handle_t handle) {
   fbl::AutoLock guard(&lock_);
+  zx::status status = HandleToIndex(handle);
+  if (!status.is_ok()) {
+    return status.take_error();
+  }
 
-  size_t idx = HandleToIndex(handle);
-  if (idx >= handles_.size()) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  fbl::RefPtr<Object>* h = &handles_[idx];
-  if (!*h) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  h->reset();
-  return ZX_OK;
+  size_t idx = status.value();
+  auto& obj = handles_[idx];
+  ftracef("handle = 0x%x, obj = %p, type = %u, index = %zu\n", handle, obj.get(), obj->type(), idx);
+  obj.reset();
+  return zx::ok();
 }
 
 __EXPORT

@@ -4,20 +4,20 @@
 
 #include <lib/fake-object/object.h>
 #include <lib/zx/event.h>
+#include <lib/zx/status.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
+#include <zircon/limits.h>
 #include <zircon/rights.h>
+#include <zircon/types.h>
 
 #include <array>
 #include <climits>  // PAGE_SIZE
 #include <utility>
 
+#include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
 #include <zxtest/zxtest.h>
-
-#include "fbl/algorithm.h"
-#include "lib/zx/time.h"
-#include "zircon/limits.h"
-#include "zircon/types.h"
 
 namespace {
 
@@ -26,20 +26,76 @@ class FakeObject : public zxtest::Test {
   void TearDown() final { FakeHandleTable().Clear(); }
 };
 
+// By default a base |Object| should return ZX_ERR_NOT_SUPPORTED for
+// all intercepted object syscalls. This tests that the dispatch for
+// the fake syscall routing works for syscalls other tests don't exercise.
+// They are organized into individual tests to make it easier to tell if a
+// specific syscall is broken.
+TEST_F(FakeObject, ShimGetInfo) {
+  zx::status res = fake_object_create();
+  ASSERT_OK(res.status_value());
+  ASSERT_STATUS(zx_object_get_info(res.value(), 0, nullptr, 0, nullptr, nullptr),
+                ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST_F(FakeObject, ShimGetProperty) {
+  zx::status res = fake_object_create();
+  ASSERT_OK(res.status_value());
+  ASSERT_STATUS(zx_object_get_property(res.value(), 0, nullptr, 0), ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST_F(FakeObject, ShimSetProfile) {
+  zx::status res = fake_object_create();
+  ASSERT_OK(res.status_value());
+  ASSERT_STATUS(zx_object_set_profile(res.value(), 0, 0), ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST_F(FakeObject, ShimSetProperty) {
+  zx::status res = fake_object_create();
+  ASSERT_OK(res.status_value());
+  ASSERT_STATUS(zx_object_set_property(res.value(), 0, nullptr, 0), ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST_F(FakeObject, ShimSignal) {
+  zx::status res = fake_object_create();
+  ASSERT_OK(res.status_value());
+  ASSERT_STATUS(zx_object_signal(res.value(), 0, 0), ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST_F(FakeObject, ShimSignalPeer) {
+  zx::status res = fake_object_create();
+  ASSERT_OK(res.status_value());
+  ASSERT_STATUS(zx_object_signal_peer(res.value(), 0, 0), ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST_F(FakeObject, ShimWaitOne) {
+  zx::status res = fake_object_create();
+  ASSERT_OK(res.status_value());
+  ASSERT_STATUS(zx_object_wait_one(res.value(), 0, 0, nullptr), ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST_F(FakeObject, ShimWaitAsync) {
+  zx::status res = fake_object_create();
+  ASSERT_OK(res.status_value());
+  ASSERT_STATUS(zx_object_wait_one(res.value(), 0, 0, nullptr), ZX_ERR_NOT_SUPPORTED);
+}
+
 TEST_F(FakeObject, DuplicateHandle) {
   // Setup, create a fake bti, make sure it is valid:
-  zx_handle_t obj = ZX_HANDLE_INVALID;
-  zx_handle_t obj_dup = ZX_HANDLE_INVALID;
-
-  EXPECT_OK(fake_object_create(&obj));
-  EXPECT_NE(obj, ZX_HANDLE_INVALID);
+  zx::status<zx_handle_t> obj = fake_object_create();
+  EXPECT_OK(obj.status_value());
 
   // Duplicate the handle, make sure it is valid and the same object:
-  EXPECT_OK(zx_handle_duplicate(obj, 0, &obj_dup));
+  zx_handle_t obj_dup = ZX_HANDLE_INVALID;
+  EXPECT_OK(zx_handle_duplicate(obj.value(), 0, &obj_dup));
   EXPECT_EQ(2, FakeHandleTable().size());
-  EXPECT_EQ(fake_object_get_koid(obj), fake_object_get_koid(obj_dup));
+  zx::status obj_koid = fake_object_get_koid(obj.value());
+  zx::status obj_dup_koid = fake_object_get_koid(obj_dup);
+  EXPECT_OK(obj_koid.status_value());
+  EXPECT_OK(obj_dup_koid.status_value());
+  EXPECT_EQ(obj_koid.value(), obj_dup_koid.value());
 
-  EXPECT_OK(zx_handle_close(obj));
+  EXPECT_OK(zx_handle_close(obj.value()));
   EXPECT_OK(zx_handle_close(obj_dup));
   EXPECT_EQ(0u, FakeHandleTable().size());
 }
@@ -60,17 +116,17 @@ TEST_F(FakeObject, DuplicateRealHandle) {
 }
 
 TEST_F(FakeObject, ReplaceHandle) {
-  zx_handle_t obj_hnd = ZX_HANDLE_INVALID;
-  zx_handle_t obj_hnd_repl = ZX_HANDLE_INVALID;
-  fbl::RefPtr<Object> obj;
+  zx::status<zx_handle_t> obj = fake_object_create();
+  zx_handle_t obj_repl_hnd = ZX_HANDLE_INVALID;
 
-  EXPECT_OK(fake_object_create(&obj_hnd));
-  zx_koid_t original_koid = fake_object_get_koid(obj_hnd);
-  EXPECT_OK(zx_handle_replace(obj_hnd, 0, &obj_hnd_repl));
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, FakeHandleTable().Get(obj_hnd, &obj));
-  EXPECT_EQ(original_koid, fake_object_get_koid(obj_hnd_repl));
+  EXPECT_OK(obj.status_value());
+  zx::status<zx_koid_t> original_koid = fake_object_get_koid(obj.value());
+  EXPECT_OK(original_koid.status_value());
+  EXPECT_OK(zx_handle_replace(obj.value(), 0, &obj_repl_hnd));
+  EXPECT_STATUS(FakeHandleTable().Get(obj.value()).status_value(), ZX_ERR_NOT_FOUND);
+  EXPECT_EQ(original_koid, fake_object_get_koid(obj_repl_hnd));
 
-  EXPECT_OK(zx_handle_close(obj_hnd_repl));
+  EXPECT_OK(zx_handle_close(obj_repl_hnd));
   EXPECT_EQ(0u, FakeHandleTable().size());
 }
 
@@ -85,12 +141,12 @@ TEST_F(FakeObject, ReplaceRealHandle) {
 }
 
 TEST_F(FakeObject, HandleClose) {
-  zx_handle_t obj = ZX_HANDLE_INVALID;
-  EXPECT_OK(fake_object_create(&obj));
-  EXPECT_NE(obj, ZX_HANDLE_INVALID);
+  zx::status<zx_handle_t> obj = fake_object_create();
+  EXPECT_OK(obj.status_value());
+  EXPECT_NE(obj.value(), ZX_HANDLE_INVALID);
   EXPECT_EQ(1u, FakeHandleTable().size());
 
-  EXPECT_OK(zx_handle_close(obj));
+  EXPECT_OK(zx_handle_close(obj.value()));
   EXPECT_EQ(0u, FakeHandleTable().size());
 }
 
@@ -99,7 +155,9 @@ TEST(FakeObject, HandleCloseMany) {
   ASSERT_EQ(0, FakeHandleTable().size());
   std::array<zx_handle_t, 4> handles = {ZX_HANDLE_INVALID};
 
-  EXPECT_OK(fake_object_create(&handles[0]));
+  zx::status<zx_handle_t> obj_res = fake_object_create();
+  EXPECT_OK(obj_res.status_value());
+  handles[0] = obj_res.value();
   EXPECT_OK(zx_event_create(0, &handles[1]));
   // [2] will be ZX_HANDLE_INVALID
   EXPECT_OK(zx_event_create(0, &handles[3]));
@@ -111,7 +169,9 @@ TEST_F(FakeObject, WaitMany) {
   std::array<zx_wait_item_t, 3> items;
   EXPECT_OK(zx_event_create(0, &items[0].handle));
   EXPECT_OK(zx_event_create(0, &items[1].handle));
-  EXPECT_OK(fake_object_create(&items[2].handle));
+  zx::status<zx_handle_t> obj_res = fake_object_create();
+  EXPECT_OK(obj_res.status_value());
+  items[2].handle = obj_res.value();
 
   // This should assert due to a fake handle being in the list of wait items.
   ASSERT_DEATH(
@@ -149,9 +209,11 @@ struct fake_object_data_t {
 TEST_F(FakeObject, ForEach) {
   std::array<fake_object_data_t, 16> fake_objects = {};
   for (auto& fake_obj : fake_objects) {
-    zx_handle_t handle = ZX_HANDLE_INVALID;
-    ASSERT_OK(fake_object_create(&handle));
-    fake_obj.koid = fake_object_get_koid(handle);
+    zx::status<zx_handle_t> obj_res = fake_object_create();
+    ASSERT_OK(obj_res.status_value());
+    zx::status<zx_koid_t> koid_res = fake_object_get_koid(obj_res.value());
+    ASSERT_OK(koid_res.status_value());
+    fake_obj.koid = koid_res.value();
   }
 
   // Walk the objects ensuring the koids match the objects created earlier.

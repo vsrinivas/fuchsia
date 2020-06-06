@@ -4,6 +4,7 @@
 
 #include <lib/fake-object/object.h>
 #include <lib/fake-resource/resource.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
@@ -71,15 +72,6 @@ bool is_valid_range(zx_paddr_t r1_base, size_t r1_size, zx_paddr_t r2_base, size
   return (r2_base >= r1_base && r2_base + r2_size <= r1_base + r1_size);
 }
 
-zx_status_t get_resource_from_handle(const char* caller, zx_handle_t handle,
-                                     fbl::RefPtr<Object>* obj) {
-  zx_status_t st = FakeHandleTable().Get(handle, obj);
-  ZX_ASSERT_MSG(st == ZX_OK, "fake_%s: failed to find handle\n", caller);
-  ZX_ASSERT_MSG((*obj)->type() == HandleType::RESOURCE, "fake_%s: wrong object type: %u\n", caller,
-                static_cast<uint32_t>((*obj)->type()));
-  return st;
-}
-
 bool exclusive_region_overlaps(zx_rsrc_kind_t kind, zx_paddr_t new_rsrc_base,
                                size_t new_rsrc_size) {
   bool overlaps = false;
@@ -113,9 +105,6 @@ zx_status_t Resource::get_info(zx_handle_t handle, uint32_t topic, void* buffer,
                 "fake_resource_get_info: info buffer is too small (actual: %zu, needed: %zu)\n",
                 buffer_size, sizeof(zx_info_resource_t));
 
-  fbl::RefPtr<Object> obj;
-  ZX_ASSERT(get_resource_from_handle(__func__, handle, &obj) == ZX_OK);
-
   auto* info = static_cast<zx_info_resource_t*>(buffer);
   info->base = base_;
   info->size = size_;
@@ -140,13 +129,14 @@ __EXPORT
 zx_status_t zx_resource_create(zx_handle_t parent_rsrc, uint32_t options, uint64_t base,
                                size_t size, const char* name, size_t name_size,
                                zx_handle_t* resource_out) {
-  fbl::RefPtr<Object> parent_base;
-  ZX_ASSERT(get_resource_from_handle(__func__, parent_rsrc, &parent_base) == ZX_OK);
-  fbl::RefPtr<Resource> parent(static_cast<Resource*>(parent_base.get()));
-  zx_rsrc_kind_t kind = ZX_RSRC_EXTRACT_KIND(options);
-  zx_rsrc_flags_t flags = ZX_RSRC_EXTRACT_FLAGS(options);
+  zx::status get_res = FakeHandleTable().Get(parent_rsrc);
+  if (!get_res.is_ok()) {
+    return get_res.status_value();
+  }
+  fbl::RefPtr<Resource> parent = fbl::RefPtr<Resource>::Downcast(std::move(get_res.value()));
 
   // Fake root resources have no range or kind verification necessary.
+  zx_rsrc_kind_t kind = ZX_RSRC_EXTRACT_KIND(options);
   if (parent->kind() != ZX_RSRC_KIND_ROOT) {
     if (kind != parent->kind()) {
       return ZX_ERR_WRONG_TYPE;
@@ -158,26 +148,33 @@ zx_status_t zx_resource_create(zx_handle_t parent_rsrc, uint32_t options, uint64
   }
 
   // Ensure that if this region is exclusive it does not overlap with an exclusive region.
+  zx_rsrc_flags_t flags = ZX_RSRC_EXTRACT_FLAGS(options);
   if ((flags & ZX_RSRC_FLAG_EXCLUSIVE) && exclusive_region_overlaps(kind, base, size)) {
     return ZX_ERR_ACCESS_DENIED;
   }
 
   fbl::RefPtr<Object> new_res;
   ZX_ASSERT(Resource::Create(base, size, kind, flags, name, name_size, &new_res) == ZX_OK);
-  return FakeHandleTable().Add(std::move(new_res), resource_out);
+  zx::status add_res = FakeHandleTable().Add(std::move(new_res));
+  if (add_res.is_ok()) {
+    *resource_out = add_res.value();
+  }
+  return add_res.status_value();
 }
 
 // Create a paged VMO to stand in for a physical one for tests. The real
 // zx_vmo_set_cache_policy can still be called on a paged VMO so there's no need
 // to replace that syscall with a fake.
 __EXPORT
-zx_status_t zx_vmo_create_physical(zx_handle_t resource, zx_paddr_t paddr, size_t size,
+zx_status_t zx_vmo_create_physical(zx_handle_t handle, zx_paddr_t paddr, size_t size,
                                    zx_handle_t* out) {
-  fbl::RefPtr<Object> rsrc_base;
-  ZX_ASSERT(get_resource_from_handle(__func__, resource, &rsrc_base) == ZX_OK);
-  fbl::RefPtr<Resource> rsrc(static_cast<Resource*>(rsrc_base.get()));
+  zx::status get_res = FakeHandleTable().Get(handle);
+  if (!get_res.is_ok()) {
+    return get_res.status_value();
+  }
+  fbl::RefPtr<Resource> resource = fbl::RefPtr<Resource>::Downcast(std::move(get_res.value()));
 
-  if (!is_valid_range(rsrc->base(), rsrc->size(), paddr, size)) {
+  if (!is_valid_range(resource->base(), resource->size(), paddr, size)) {
     return ZX_ERR_ACCESS_DENIED;
   }
 
@@ -187,19 +184,18 @@ zx_status_t zx_vmo_create_physical(zx_handle_t resource, zx_paddr_t paddr, size_
 // Validate the syscall but otherwise don't take action. If a test actually
 // needs IO permissions then more work will need to be done getting them real
 // resources to allwow it.
-zx_status_t ioport_syscall_common(zx_handle_t resource, uint16_t io_addr, uint32_t len) {
-  fbl::RefPtr<Object> rsrc_base;
-  zx_status_t st = get_resource_from_handle(__func__, resource, &rsrc_base);
-  if (st != ZX_OK) {
-    return ZX_OK;
+zx_status_t ioport_syscall_common(zx_handle_t handle, uint16_t io_addr, uint32_t len) {
+  zx::status get_res = FakeHandleTable().Get(handle);
+  if (!get_res.is_ok()) {
+    return get_res.status_value();
   }
-  fbl::RefPtr<Resource> rsrc(static_cast<Resource*>(rsrc_base.get()));
+  fbl::RefPtr<Resource> resource = fbl::RefPtr<Resource>::Downcast(std::move(get_res.value()));
 
-  if (rsrc->kind() != ZX_RSRC_KIND_IOPORT) {
+  if (resource->kind() != ZX_RSRC_KIND_IOPORT) {
     return ZX_ERR_WRONG_TYPE;
   }
 
-  if (!is_valid_range(rsrc->base(), rsrc->size(), io_addr, len)) {
+  if (!is_valid_range(resource->base(), resource->size(), io_addr, len)) {
     return ZX_ERR_ACCESS_DENIED;
   }
 
@@ -226,7 +222,11 @@ zx_status_t fake_root_resource_create(zx_handle_t* out) {
   fbl::RefPtr<Object> new_res;
   ZX_ASSERT(Resource::Create(0, 0, ZX_RSRC_KIND_ROOT, 0, name.data(), name.size(), &new_res) ==
             ZX_OK);
-  return FakeHandleTable().Add(std::move(new_res), out);
+  zx::status add_res = FakeHandleTable().Add(std::move(new_res));
+  if (add_res.is_ok()) {
+    *out = add_res.value();
+  }
+  return add_res.status_value();
 }
 
 __END_CDECLS

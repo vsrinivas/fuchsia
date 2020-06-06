@@ -5,9 +5,11 @@
 #ifndef SRC_DEVICES_TESTING_FAKE_OBJECT_INCLUDE_LIB_FAKE_OBJECT_OBJECT_H_
 #define SRC_DEVICES_TESTING_FAKE_OBJECT_INCLUDE_LIB_FAKE_OBJECT_OBJECT_H_
 
+#include <lib/zx/status.h>
 #include <limits.h>
 #include <stdio.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <vector>
@@ -18,9 +20,11 @@
 
 #define FAKE_OBJECT_TRACE 0
 #if FAKE_OBJECT_TRACE
-#define ftracef(...)                    \
-  printf("fake-object %s: ", __func__); \
-  printf(__VA_ARGS__);
+#define ftracef(...)                           \
+  {                                            \
+    printf("fake-object %16.16s: ", __func__); \
+    printf(__VA_ARGS__);                       \
+  }
 #else
 #define ftracef(...) ;
 #endif
@@ -28,6 +32,8 @@
 enum class HandleType : uint32_t {
   BASE,  // A non-derived object, used for tests and assertions.
   BTI,
+  MSI_ALLOCATION,
+  MSI_INTERRUPT,
   PMT,
   RESOURCE,
 };
@@ -112,9 +118,14 @@ class HandleTable {
     return ((handle & ZX_HANDLE_FIXED_BITS_MASK) == 0) && (handle & ~ZX_HANDLE_FIXED_BITS_MASK);
   }
 
-  zx_status_t Get(zx_handle_t handle, fbl::RefPtr<Object>* out);
-  zx_status_t Remove(zx_handle_t handle);
-  zx_status_t Add(fbl::RefPtr<Object>&& obj, zx_handle_t* out);
+  __EXPORT
+  zx::status<fbl::RefPtr<Object>> Get(zx_handle_t handle) __TA_EXCLUDES(lock_) {
+    fbl::AutoLock guard(&lock_);
+    return GetLocked(handle);
+  }
+
+  zx::status<> Remove(zx_handle_t handle) __TA_EXCLUDES(lock_);
+  zx::status<zx_handle_t> Add(fbl::RefPtr<Object> obj) __TA_EXCLUDES(lock_);
   void Clear();
 
   // Walks the handle table and calls |cb| on each handle that matches the
@@ -143,6 +154,9 @@ class HandleTable {
   }
 
  private:
+  __EXPORT
+  zx::status<fbl::RefPtr<Object>> GetLocked(zx_handle_t handle) __TA_REQUIRES(lock_);
+
   size_t size_locked() __TA_REQUIRES(lock_) {
     size_t s = 0;
     for (auto& h : handles_) {
@@ -167,9 +181,11 @@ class HandleTable {
   }
 
   // Fake handle values start at (1 << 2) which maps to 0 in the handle table.
-  static size_t HandleToIndex(zx_handle_t handle) {
-    ZX_ASSERT(IsValidFakeHandle(handle));
-    return (handle >> FakeHandleShiftBitsCount()) - 1;
+  static zx::status<size_t> HandleToIndex(zx_handle_t handle) {
+    if (!IsValidFakeHandle(handle)) {
+      return zx::error(ZX_ERR_BAD_HANDLE);
+    }
+    return zx::ok((handle >> FakeHandleShiftBitsCount()) - 1);
   }
 
   static zx_handle_t IndexToHandle(size_t idx) {
@@ -183,8 +199,8 @@ class HandleTable {
 HandleTable& FakeHandleTable();
 
 // Creates a base object for testing handle methods.
-zx_status_t fake_object_create(zx_handle_t* out);
-zx_koid_t fake_object_get_koid(zx_handle_t handle);
+zx::status<zx_handle_t> fake_object_create();
+zx::status<zx_koid_t> fake_object_get_koid(zx_handle_t);
 
 void* FindRealSyscall(const char* name);
 #define REAL_SYSCALL(name)                                             \
