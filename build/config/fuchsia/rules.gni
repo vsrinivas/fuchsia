@@ -64,8 +64,14 @@ template("driver_module") {
     }
 
     metadata = {
-      migrated_manifest_lines =
-          [ "$_dest_dir/$_output_file_name=$_rebased_output_file" ]
+      # Used by the distribution_manifest template.
+      distribution_entries = [
+        {
+          source = _rebased_output_file
+          destination = "$_dest_dir/$_output_file_name"
+          label = get_label_info(":$_target_name", "label_with_toolchain")
+        },
+      ]
     }
   }
 }

@@ -45,6 +45,7 @@ template("test") {
   executable(target_name) {
     # TODO(3367): remove `test_group` once all ZN tests are using test packages
     # instead.
+    original_target_name = target_name
     forward_variables_from(invoker, "*", [ "test_group" ])
 
     # TODO(44278): always force `testonly` once all ZN tests are moved to
@@ -82,8 +83,15 @@ template("test") {
     }
 
     metadata = {
-      migrated_manifest_lines =
-          [ "test/$_test_group/$_manifest_output_name=$_output_file" ]
+      # Used by the distribution_manifest template.
+      distribution_entries = [
+        {
+          source = _output_file
+          destination = "test/$_test_group/$_manifest_output_name"
+          label =
+              get_label_info(":$original_target_name", "label_with_toolchain")
+        },
+      ]
     }
   }
 }

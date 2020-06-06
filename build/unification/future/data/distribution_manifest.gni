@@ -63,16 +63,22 @@ template("distribution_manifest") {
     visibility = [ ":$main_target" ]
 
     data_keys = [
-      "migrated_manifest_files",
-      "migrated_manifest_lines",
+      # A list of scopes describing files that may be added to runtime
+      # containers.
+      # Each scope must contain three values:
+      #   - `source`: path to the original file relatively to the build root;
+      #   - `destination`: path of the file within a container;
+      #   - `label`: GN label of the target which produced the entry.
+      "distribution_entries",
     ]
-    walk_keys = [ "migrated_manifest_barrier" ]
+    walk_keys = [ "distribution_entries_barrier" ]
 
     outputs = [ intermediate_file ]
+
+    output_conversion = "json"
   }
 
-  # Resolve file references in the gathered metadata to produce the final
-  # output.
+  # Detect collisions in metadata entries.
   action(main_target) {
     forward_variables_from(invoker,
                            [
@@ -81,7 +87,7 @@ template("distribution_manifest") {
                              "visibility",
                            ])
 
-    script = "//build/unification/future/data/expand_dist_manifest.py"
+    script = "//build/unification/future/data/find_conflicting_dist_entries.py"
 
     inputs = [ intermediate_file ]
     outputs = [ manifest_file ]
@@ -101,7 +107,7 @@ template("distribution_manifest") {
     metadata = {
       # Add a barrier here to avoid double of inclusion of elements listed in
       # the generated manifest.
-      migrated_manifest_barrier = []
+      distribution_entries_barrier = []
 
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")

@@ -20,6 +20,7 @@
 #
 template("generated_resource") {
   generated_file(target_name) {
+    original_target_name = target_name
     forward_variables_from(invoker, "*", [ "metadata" ])
     assert(outputs != [] && outputs == [ outputs[0] ],
            "generated_resource() requires a single element in `outputs")
@@ -34,8 +35,10 @@ template("generated_resource") {
 
     # Add metadata to add that file to a filesystem image.
     metadata = {
-      migrated_manifest_barrier = []
-      migrated_manifest_lines = []
+      # Used by the distribution_manifest template.
+      distribution_entries_barrier = []
+      distribution_entries = []
+
       migrated_zbi_barrier = []
 
       if (defined(invoker.metadata)) {
@@ -43,17 +46,22 @@ template("generated_resource") {
       }
 
       if (defined(data_deps)) {
-        migrated_manifest_barrier += data_deps
+        distribution_entries_barrier += data_deps
         migrated_zbi_barrier += data_deps
       }
 
-      migrated_manifest_lines += [ "${outputs[0]}=" + rebase_path(file, root_build_dir) ]
+      distribution_entries += [
+        {
+          source = rebase_path(file, root_build_dir)
+          destination = outputs[0]
+          label =
+              get_label_info(":$original_target_name", "label_with_toolchain")
+        },
+      ]
     }
 
     # That static file is the actual output of this target.
     outputs = []
-    outputs = [
-      file,
-    ]
+    outputs = [ file ]
   }
 }

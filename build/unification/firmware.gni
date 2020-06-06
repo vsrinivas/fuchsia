@@ -21,14 +21,20 @@ template("firmware") {
   mappings = []
   foreach(source, invoker.sources) {
     name = get_path_info(source, "file")
-    mappings += [ "lib/firmware/$name=" +
-                  rebase_path("$firmware_dir/$source", root_build_dir) ]
+    mappings += [
+      {
+        source = rebase_path("$firmware_dir/$source", root_build_dir)
+        destination = "lib/firmware/$name"
+        label = get_label_info(":$target_name", "label_with_toolchain")
+      },
+    ]
   }
 
   group(target_name) {
     metadata = {
       if (have_firmware) {
-        migrated_manifest_lines = mappings
+        # Used by the distribution_manifest template.
+        distribution_entries = mappings
       }
     }
   }

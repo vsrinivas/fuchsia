@@ -4,6 +4,9 @@
 
 assert(is_fuchsia, "Zircon libraries only available for Fuchsia targets")
 
+import("//build/config/fuchsia/zircon.gni")
+import("//build/unification/images/artifacts.gni")
+
 # Exposes a library provided by the ZN build to the manifest metadata collection
 # scheme.
 #
@@ -17,22 +20,51 @@ assert(is_fuchsia, "Zircon libraries only available for Fuchsia targets")
 template("zircon_runtime_library") {
   assert(defined(invoker.library), "Must provide a library")
 
-  label = "//build/unification/images:lib.${invoker.library}"
+  name = "lib.${invoker.library}"
   if (toolchain_variant.instrumented && toolchain_variant.name != "") {
     # Fuzzers just use the base variant.
-    label += "." + string_replace(toolchain_variant.name, "-fuzzer", "")
+    name += "." + string_replace(toolchain_variant.name, "-fuzzer", "")
   }
 
-  out_dir = get_label_info(label, "target_out_dir")
-  name = get_label_info(label, "name")
-  manifest = "$out_dir/$name.unification.manifest"
+  artifact = false
+  foreach(entry, zircon_artifacts) {
+    if (entry.name == name) {
+      assert(artifact == false, "Duplicate Zircon library: $name")
+      artifact = entry
+    }
+  }
+  assert(artifact != false, "Could not find Zircon library: $name")
+  assert(artifact.deps == [],
+         "Cannot handle Zircon library $name, deps not supported")
+
+  format_args = [
+    "--zircon-build-dir",
+    zircon_root_build_dir,
+    "--build-dir",
+    root_build_dir,
+
+    # NOTE: not including the toolchain here as this target can be reached from
+    # different paths due to its hacky nature, and label stability is key to
+    # ensure the build does not fail due to a bogus duplicate.
+    # This will go away naturally when these libraries are handled directly in
+    # the GN build.
+    "--label",
+    get_label_info(":$target_name", "label_no_toolchain"),
+  ]
+  foreach(line, artifact.lines) {
+    format_args += [
+      "--entry",
+      line,
+    ]
+  }
+
+  metadata_entries = exec_script("format_metadata.py", format_args, "json")
 
   group(target_name) {
-    deps = [ label ]
-
     metadata = {
-      migrated_manifest_barrier = []
-      migrated_manifest_files = [ rebase_path(manifest, root_build_dir) ]
+      # Used by the distribution_manifest template.
+      distribution_entries_barrier = []
+      distribution_entries = metadata_entries
     }
   }
 }

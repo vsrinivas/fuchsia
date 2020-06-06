@@ -49,6 +49,7 @@
 #
 template("resource") {
   group(target_name) {
+    original_target_name = target_name
     forward_variables_from(invoker,
                            "*",
                            [
@@ -57,8 +58,10 @@ template("resource") {
                              "sources",
                            ])
     metadata = {
-      migrated_manifest_barrier = []
-      migrated_manifest_lines = []
+      # Used by the distribution_manifest template.
+      distribution_entries_barrier = []
+      distribution_entries = []
+
       migrated_zbi_barrier = []
 
       if (defined(invoker.metadata)) {
@@ -68,7 +71,7 @@ template("resource") {
       # Stop *_manifest() and zbi_test() from picking up files or
       # zbi_input() items from the deps, but let them reach the data_deps.
       if (defined(data_deps)) {
-        migrated_manifest_barrier += data_deps
+        distribution_entries_barrier += data_deps
         migrated_zbi_barrier += data_deps
       }
 
@@ -76,8 +79,14 @@ template("resource") {
         foreach(target, process_file_template([ source ], invoker.outputs)) {
           assert(rebase_path(target, "foo") != target,
                  "`outputs` in resource() cannot start with /")
-          migrated_manifest_lines +=
-              [ target + "=" + rebase_path(source, root_build_dir) ]
+          distribution_entries += [
+            {
+              source = rebase_path(source, root_build_dir)
+              destination = target
+              label = get_label_info(":$original_target_name",
+                                     "label_with_toolchain")
+            },
+          ]
         }
       }
     }

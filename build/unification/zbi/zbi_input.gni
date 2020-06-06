@@ -116,9 +116,8 @@ template("zbi_input") {
       }
 
       # Always include the manifest generated from the deps here.  The
-      # `migrated_manifest_barrier` in fini_manifest() will prevent zbi()
-      # from collecting `migrated_manifest_lines` that are redundant with this
-      # manifest.
+      # presence of the fini_manifest() target will prevent zbi()
+      # from collecting entries that are redundant with this manifest.
       migrated_zbi_input_args += [
         "--prefix=$prefix",
         "--files",

@@ -468,8 +468,14 @@ if (toolchain_variant.with_shared) {
           link_output_path = [ rebase_path(link_output_file, root_build_dir) ]
           link_output_barrier = []
 
-          migrated_manifest_lines =
-              [ "lib/${variant_dir}$output_file_name=$rebased_output_file" ]
+          # Used by the distribution_manifest template.
+          distribution_entries = [
+            {
+              source = rebased_output_file
+              destination = "lib/${variant_dir}$output_file_name"
+              label = get_label_info(":$target_name", "label_with_toolchain")
+            },
+          ]
         }
       }
     }
@@ -1252,10 +1258,10 @@ template("executable") {
       deps += [ "//zircon/public/lib/zx-panic-libc" ]
     }
 
-    add_migration_metadata = is_fuchsia
-    if (add_migration_metadata && defined(invoker.metadata)) {
+    add_distribution_metadata = is_fuchsia
+    if (add_distribution_metadata && defined(invoker.metadata)) {
       meta = invoker.metadata
-      add_migration_metadata = !defined(meta.migrated_manifest_lines)
+      add_distribution_metadata = !defined(meta.distribution_entries)
       not_needed([ "meta" ])
     }
 
@@ -1299,8 +1305,15 @@ template("executable") {
         ]
       }
 
-      if (add_migration_metadata) {
-        migrated_manifest_lines = [ "bin/$output_name=$rebased_output_file" ]
+      if (add_distribution_metadata) {
+        # Used by the distribution_manifest template.
+        distribution_entries = [
+          {
+            source = rebased_output_file
+            destination = "bin/$output_name"
+            label = get_label_info(":$_executable_name", "label_with_toolchain")
+          },
+        ]
       }
 
       # Used by link_output_rspfile(), see its documentation for details.
@@ -1351,10 +1364,10 @@ template("loadable_module") {
     output_file = "$output_dir/$output_file_name"
     link_output_file = "$output_dir/lib.unstripped/$output_file_name"
 
-    add_migration_metadata = true
+    add_distribution_metadata = true
     if (defined(invoker.metadata)) {
       meta = invoker.metadata
-      add_migration_metadata = !defined(meta.migrated_manifest_lines)
+      add_distribution_metadata = !defined(meta.distribution_entries)
       not_needed([ "meta" ])
     }
     rebased_output_file = rebase_path(output_file, root_build_dir)
@@ -1385,9 +1398,15 @@ template("loadable_module") {
         },
       ]
 
-      if (add_migration_metadata) {
-        migrated_manifest_lines =
-            [ "lib/$output_file_name=$rebased_output_file" ]
+      if (add_distribution_metadata) {
+        # Used by the distribution_manifest template.
+        distribution_entries = [
+          {
+            source = rebased_output_file
+            destination = "lib/$output_file_name"
+            label = get_label_info(":$_module_name", "label_with_toolchain")
+          },
+        ]
       }
 
       # Used by link_output_rspfile()
