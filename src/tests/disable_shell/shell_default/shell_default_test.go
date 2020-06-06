@@ -26,8 +26,6 @@ func TestShellDefault(t *testing.T) {
 	i := distro.Create(qemu.Params{
 		Arch: arch,
 		ZBI:  support.ZbiPath(t),
-		// This test uses additional memory on ASAN builds than normal.
-		Memory: 3072,
 	})
 
 	i.Start()

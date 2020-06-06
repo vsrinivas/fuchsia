@@ -30,8 +30,6 @@ func TestInvalidSerialSetting(t *testing.T) {
 			Arch:          arch,
 			ZBI:           support.ZbiPath(t),
 			AppendCmdline: "kernel.enable-serial-syscalls=badvalue",
-			// This test uses additional memory on ASAN builds than normal.
-			Memory: 3072,
 		})
 	if err != nil {
 		t.Fatal(err)

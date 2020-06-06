@@ -55,8 +55,6 @@ func TestBoot(t *testing.T) {
 	i := distro.Create(qemu.Params{
 		Arch: arch,
 		ZBI:  zbiPath(t),
-		// This test uses additional memory on ASAN builds than normal.
-		Memory: 4096,
 	})
 
 	i.Start()
@@ -85,8 +83,6 @@ func TestSerialShellEnabled(t *testing.T) {
 		Arch:          arch,
 		ZBI:           zbiPath(t),
 		AppendCmdline: "devmgr.log-to-debuglog",
-		// This test uses additional memory on ASAN builds than normal.
-		Memory: 4096,
 	})
 
 	i.Start()

@@ -38,8 +38,6 @@ func TestReboot(t *testing.T) {
 		Arch:          arch,
 		ZBI:           zbiPath(t),
 		AppendCmdline: "devmgr.log-to-debuglog",
-		// This test uses additional memory on ASAN builds than normal.
-		Memory: 3072,
 	})
 
 	i.Start()

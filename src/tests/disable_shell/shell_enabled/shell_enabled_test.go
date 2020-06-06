@@ -26,8 +26,6 @@ func TestShellEnabled(t *testing.T) {
 		Arch:          arch,
 		ZBI:           support.ZbiPath(t),
 		AppendCmdline: "devmgr.log-to-debuglog console.shell=true",
-		// This test uses additional memory on ASAN builds than normal.
-		Memory: 3072,
 	})
 
 	i.Start()

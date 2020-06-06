@@ -14,7 +14,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -88,7 +87,6 @@ type Params struct {
 	ZBI           string
 	AppendCmdline string
 	Networking    bool
-	Memory        int // megabytes
 }
 
 type Instance struct {
@@ -183,11 +181,7 @@ func (d *Distribution) appendCommonQemuArgs(params Params, args []string) []stri
 		panic("unsupported architecture")
 	}
 
-	if params.Memory == 0 {
-		args = append(args, "-m", "2048")
-	} else {
-		args = append(args, "-m", strconv.Itoa(params.Memory))
-	}
+	args = append(args, "-m", "8192")
 
 	if params.Networking {
 		args = append(args, "-nic", "tap,ifname=qemu,script=no,downscript=no")

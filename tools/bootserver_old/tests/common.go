@@ -178,8 +178,6 @@ func StartQemu(t *testing.T, appendCmdline string, modeString string) (*qemu.Ins
 		ZBI:           zbi,
 		AppendCmdline: appendCmdline,
 		Networking:    true,
-		// This test uses more memory on ASAN builds than normal.
-		Memory: 3072,
 	})
 
 	instance.Start()
