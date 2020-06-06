@@ -130,8 +130,6 @@ impl StaCapabilities {
             channel: channel.to_fidl(),
             cap_info: self.cap_info.raw(),
             rates: self.rates.as_bytes().to_vec(),
-            // TODO(43938): populate WMM param with actual value
-            wmm_param: None,
             ht_cap: ht_cap.map(Box::new),
             vht_cap: vht_cap.map(Box::new),
         }
@@ -210,7 +208,6 @@ mod tests {
             association_id: 123,
             cap_info: 0x1234,
             rates: vec![125, 126, 127, 128, 129],
-            wmm_param: None,
             ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
                 bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap(),
             })),
@@ -252,7 +249,6 @@ mod tests {
                 },
                 cap_info: 0x1234,
                 rates: vec![125, 126, 127, 128, 129],
-                wmm_param: None,
                 ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
                     bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap()
                 })),

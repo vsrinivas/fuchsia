@@ -822,7 +822,6 @@ impl<'a> BoundClient<'a> {
             cap_info: 0,
             result_code,
             rates: vec![],
-            wmm_param: None,
             ht_cap: None,
             vht_cap: None,
         };
@@ -848,7 +847,6 @@ impl<'a> BoundClient<'a> {
             cap_info: cap_info.raw(),
             result_code: fidl_mlme::AssociateResultCodes::Success,
             rates: vec![],
-            wmm_param: None,
             ht_cap: None,
             vht_cap: None,
         };
@@ -879,7 +877,6 @@ impl<'a> BoundClient<'a> {
                         assoc_conf.vht_cap = Some(Box::new(fidl_mlme::VhtCapabilities { bytes }))
                     }
                 },
-                // TODO(43938): parse vendor ID and include WMM param if exists
                 _ => {}
             }
         }
@@ -2134,7 +2131,6 @@ mod tests {
                 cap_info: 0x1234,
                 result_code: fidl_mlme::AssociateResultCodes::Success,
                 rates: vec![9, 10, 1, 2, 3, 4, 5, 6, 7, 8],
-                wmm_param: None,
                 ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
                     bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap()
                 })),
@@ -2163,7 +2159,6 @@ mod tests {
                 cap_info: 0,
                 result_code: fidl_mlme::AssociateResultCodes::RefusedExternalReason,
                 rates: vec![],
-                wmm_param: None,
                 ht_cap: None,
                 vht_cap: None,
             }

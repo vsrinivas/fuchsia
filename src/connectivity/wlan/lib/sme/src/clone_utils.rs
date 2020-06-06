@@ -11,7 +11,6 @@ pub fn clone_device_info(d: &fidl_mlme::DeviceInfo) -> fidl_mlme::DeviceInfo {
         role: d.role,
         bands: clone_bands(&d.bands),
         driver_features: d.driver_features.clone(),
-        qos_capable: d.qos_capable,
     }
 }
 

@@ -70,18 +70,6 @@ const uint8 VHT_OP_LEN = 5;
 // maximum is set to 8 + 14 = 22.
 const uint8 RATES_MAX_LEN = 22;
 
-// LINT.IfChange
-
-/// WFA WMM v1.2, 2.2.2 Table 5
-/// Length of the WMM Parameter Element body. This does not include IE and vendor IE headers,
-/// and only includes the QoS Info, reserved, and AC parameters fields.
-const uint8 WMM_PARAM_LEN = 18;
-
-// LINT.ThenChange(//sdk/banjo/ddk.protocol.wlanif/wlanif.banjo)
-
-/// WFA WMM v1.2, 2.2.1
-using QosInfo = uint8;
-
 // IEEE Std 802.11-2016 9.4.2.56
 struct HtCapabilities {
     array<uint8>:HT_CAP_LEN bytes;
@@ -100,10 +88,6 @@ struct VhtCapabilities {
 // IEEE Std 802.11-2016 9.5.2.159
 struct VhtOperation {
     array<uint8>:VHT_OP_LEN bytes;
-};
-
-struct WmmParameter {
-    array<uint8>:WMM_PARAM_LEN bytes;
 };
 
 // IEEE Std 802.11-2016 6.3.3.3.2
@@ -360,8 +344,6 @@ struct AssociateRequest {
     array<uint8>:6 peer_sta_address;
     CapabilityInfo cap_info;
     bytes:RATES_MAX_LEN rates;
-    bool qos_capable;
-    QosInfo qos_info;
     HtCapabilities? ht_cap;
     VhtCapabilities? vht_cap;
     bytes? rsne;
@@ -394,7 +376,6 @@ struct AssociateConfirm {
     // remove these fields.
     CapabilityInfo cap_info;
     bytes:RATES_MAX_LEN rates;
-    WmmParameter? wmm_param;
     HtCapabilities? ht_cap;
     VhtCapabilities? vht_cap;
 

@@ -28,7 +28,6 @@ enum Capability {
     SHORT_SLOT_TIME = 3;
     RADIO_MSMT = 4;
     SIMULTANEOUS_CLIENT_AP = 5;
-    QOS_CAPABLE = 6;
 };
 
 struct HtCapabilities {
