@@ -1,6 +1,6 @@
 {
   "fidl/fuchsia.web/constants.fidl": "cc1479d2014f55ce7f536c4ee4987345",
-  "fidl/fuchsia.web/context.fidl": "7edc3870ae417072abff732f790ab585",
+  "fidl/fuchsia.web/context.fidl": "0fdf5020002ff37a5996d340c29c59fa",
   "fidl/fuchsia.web/cookie.fidl": "35fcef3f5e2f5cffe35b50c68f928e46",
   "fidl/fuchsia.web/debug.fidl": "a5f00329a4c99475aec80f11927fa777",
   "fidl/fuchsia.web/frame.fidl": "326ca2a8caac7e08fc1c6404b3638510",

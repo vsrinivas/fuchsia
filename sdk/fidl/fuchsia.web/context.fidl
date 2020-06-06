@@ -155,6 +155,23 @@ table CreateContextParams {
     /// Specifies a set of header names for which [Cross-Origin Resource Sharing
     /// (CORS)](https://www.w3.org/TR/cors/) checks should not be enforced.
     10: vector<bytes:MAX>:MAX cors_exempt_headers;
+
+    /// Specifies the storage to use to persistent content licensing related
+    /// data (e.g. provisioning data, persistent session data). By default these
+    /// data will be placed under the |data_directory|, if specified.
+    ///
+    /// If neither |data_directory| nor |cdm_data_directory| are specified, then
+    /// content licensing features requiring persistent storage (e.g. persistent
+    /// licensing sessions) will not be available to the Context.
+    ///
+    /// Note that not all content licensing systems support persistent sessions,
+    /// regardless of whether persistent storage is provided.
+    11: fuchsia.io.Directory cdm_data_directory;
+
+    /// Specifies a target maximum size for |cdm_data_directory| contents, in
+    /// bytes. If the amount of persisted CDM data exceeds this threshold, then
+    /// the Context will attempt to purge some data to meet the specified quota.
+    12: uint64 cdm_data_quota_bytes;
 };
 
 /// Manages browsing state (e.g. LocalStorage, cookies, etc) associated with a set of
