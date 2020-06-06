@@ -37,7 +37,6 @@ class FakeRamDevice : public ::llcpp::fuchsia::hardware::ram::metrics::Device::I
     ram_metrics::BandwidthInfo info = {};
     info.timestamp = zx::msec(1234).to_nsecs();
     info.frequency = 256 * 1024 * 1024;
-    info.bytes_per_cycle = 1;
     info.channels[0].readwrite_cycles = 10;
     info.channels[1].readwrite_cycles = 20;
     info.channels[2].readwrite_cycles = 30;
