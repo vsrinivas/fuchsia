@@ -202,8 +202,21 @@ template("clang_toolchain") {
         unstripped_outfile = "$unstripped_outfile.wasm"
       }
 
+      if (invoker.toolchain_os != "mac") {
+        if (invoker.toolchain_os == "fuchsia") {
+          # On Fuchsia, lld is directly used to perform linking
+          link_map_args = "-C link-args=--Map=\"$unstripped_outfile.map\""
+        } else {
+          # On host, clang seems to be used to perform linking
+          link_map_args = "-C link-args=-Wl,--Map=\"$unstripped_outfile.map\""
+        }
+      } else {
+        # MacOS does not support `--Map` in linker flags
+        link_map_args = ""
+      }
+
       # TODO(47565): Replacement for rustenv
-      command += "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
+      command += "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
 
       description = "RUST {{output}}"
       default_output_dir = "{{root_out_dir}}"
@@ -283,8 +296,21 @@ template("clang_toolchain") {
       pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
 
+      if (invoker.toolchain_os != "mac") {
+        if (invoker.toolchain_os == "fuchsia") {
+          # On Fuchsia, lld is directly used to perform linking
+          link_map_args = "-C link-args=--Map=\"{{output}}.map\""
+        } else {
+          # On host, clang seems to be used to perform linking
+          link_map_args = "-C link-args=-Wl,--Map=\"{{output}}.map\""
+        }
+      } else {
+        # MacOS does not support `--Map` in linker flags
+        link_map_args = ""
+      }
+
       # TODO(47565): Replacement for rustenv
-      command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
       outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
       default_output_dir = "{{target_out_dir}}"
@@ -313,7 +339,21 @@ template("clang_toolchain") {
       } else {
         unstripped_outfile = outfile
       }
-      command += "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
+
+      if (invoker.toolchain_os != "mac") {
+        if (invoker.toolchain_os == "fuchsia") {
+          # On Fuchsia, lld is directly used to perform linking
+          link_map_args = "-C link-args=--Map=\"$unstripped_outfile.map\""
+        } else {
+          # On host, clang seems to be used to perform linking
+          link_map_args = "-C link-args=-Wl,--Map=\"$unstripped_outfile.map\""
+        }
+      } else {
+        # MacOS does not support `--Map` in linker flags
+        link_map_args = ""
+      }
+
+      command += "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
       default_output_dir = "{{root_out_dir}}"
       if (invoker.toolchain_os == "mac") {
