@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Build arguments used to configure the inclusion of Trusted Applications (TA)
+# in images.
+
 declare_args() {
   # Source absolute path to the prebuilt TA images.
   ta_path = ""
