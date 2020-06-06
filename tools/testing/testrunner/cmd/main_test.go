@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"testing"
 
@@ -173,7 +172,7 @@ func TestRunTest(t *testing.T) {
 				OS:         "fuchsia",
 				PackageURL: "fuchsia-pkg://foo/bar",
 			},
-			testErr: fmt.Errorf("test failed"),
+			testErr: errTestFailure{"test failed"},
 			expectedResult: []*testrunner.TestResult{{
 				Name:   "bar",
 				Result: runtests.TestFailure,
@@ -189,6 +188,19 @@ func TestRunTest(t *testing.T) {
 			},
 			testErr:        sshutil.ConnectionError,
 			expectedErr:    sshutil.ConnectionError,
+			expectedResult: nil,
+		},
+		{
+			// Motivated by http://fxbug.dev/53349.
+			name: "fuchsia test short write",
+			test: build.Test{
+				Name:       "bar",
+				Path:       "/foo/bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
+			},
+			testErr:        io.ErrShortWrite,
+			expectedErr:    io.ErrShortWrite,
 			expectedResult: nil,
 		},
 		{
