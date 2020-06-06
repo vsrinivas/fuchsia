@@ -287,11 +287,7 @@ TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
   int n = poll(&pfd, 1, kTimeout);
   ASSERT_GE(n, 0) << strerror(errno);
   ASSERT_EQ(n, 1);
-  // TODO(crbug.com/1005300): we should check that revents is exactly
-  // OUT|ERR|HUP. Currently, this is a bit racey, and we might see OUT and HUP
-  // but not ERR due to the hack in socket_server.go which references this same
-  // bug.
-  ASSERT_TRUE(pfd.revents & (POLLOUT | POLLHUP)) << pfd.revents;
+  ASSERT_EQ(pfd.revents, POLLOUT | POLLERR | POLLHUP);
 
   // Now that the socket's endpoint has been closed, clone the socket (twice
   // to increase the endpoint's reference count to at least 1), then close all
