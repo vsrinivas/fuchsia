@@ -257,19 +257,17 @@ TEST_F(LoggerTest, MultipleMessages) {
                [&called] { called++; });
   }
 
-  std::vector<fuchsia::logger::LogMessage> consumed;
-  while (consumed.size() < messages) {
-    auto msgs = WaitForMessages([] {});
-    consumed.insert(consumed.end(), msgs.begin(), msgs.end());
-  }
+  auto msgs = WaitForMessages([this] {
+    RunLoopUntil([this] { return test_listener->messages().size() >= messages; });
+    StopObserver();
+  });
   EXPECT_EQ(called, messages);
-  StopObserver();
 
   // sort the received messages by their contents to account for out-of-order delivery by logger
-  std::sort(consumed.begin(), consumed.end(), [](auto a, auto b) { return a.msg < b.msg; });
+  std::sort(msgs.begin(), msgs.end(), [](auto a, auto b) { return a.msg < b.msg; });
 
   for (size_t i = 0; i < messages; i++) {
-    ValidateMessage(consumed, {"tag", env_name}, fxl::StringPrintf("Hello%zu", i));
+    ValidateMessage(msgs, {"tag", env_name}, fxl::StringPrintf("Hello%zu", i));
   }
 }
 
