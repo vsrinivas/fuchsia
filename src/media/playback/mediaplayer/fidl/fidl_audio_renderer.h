@@ -88,6 +88,11 @@ class FidlAudioRenderer : public AudioRenderer {
   int64_t target_lead_time_ns_;
   async::TaskClosure demand_task_;
 
+  size_t packet_bytes_outstanding_ = 0;
+  size_t payload_buffer_size_ = 0;
+  size_t expected_packet_size_ = 0;
+  bool stall_logged_ = false;
+
   PacketTimingTracker arrivals_;
   PacketTimingTracker departures_;
 

@@ -22,7 +22,7 @@ namespace {
 constexpr int64_t kDefaultMinLeadTime = ZX_MSEC(100);
 constexpr int64_t kTargetLeadTimeDeltaNs = ZX_MSEC(10);
 constexpr int64_t kNoPtsSlipOnStarveNs = ZX_MSEC(500);
-constexpr uint32_t kPayloadVmoSizeInSeconds = 2;
+constexpr uint32_t kPayloadVmoSizeInSeconds = 1;
 
 }  // namespace
 
@@ -112,6 +112,7 @@ void FidlAudioRenderer::Dump(std::ostream& os) const {
        << "supplied - departed:   " << AsNs(last_supplied_pts_ns_ - last_departed_pts_ns_);
   }
 
+  os << fostr::NewLine << "packet bytes out:      " << packet_bytes_outstanding_;
   os << fostr::NewLine << "minimum lead time:     " << AsNs(min_lead_time_ns_);
 
   if (arrivals_.count() != 0) {
@@ -133,6 +134,8 @@ void FidlAudioRenderer::OnInputConnectionReady(size_t input_index) {
   audio_renderer_->AddPayloadBuffer(
       0, vmos.front()->Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP));
 
+  payload_buffer_size_ = vmos.front()->size();
+
   input_connection_ready_ = true;
 
   if (when_input_connection_ready_) {
@@ -150,6 +153,11 @@ void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
   flushed_ = true;
   SetEndOfStreamPts(Packet::kNoPts);
   input_packet_request_outstanding_ = false;
+
+  // Doing this here just to be safe. In theory, we should be tracking this value correctly
+  // regardless of flush. See |PushPacket| below.
+  packet_bytes_outstanding_ = 0;
+  expected_packet_size_ = 0;
 
   audio_renderer_->DiscardAllPackets([this, callback = std::move(callback)]() {
     FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
@@ -250,6 +258,12 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
     audioPacket.flags =
         packet->discontinuity() ? fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY : 0;
 
+    packet_bytes_outstanding_ += packet->size();
+
+    // Expect the next packet to be the same size as the current one. This is just a guess, of
+    // course, but likely to be the case for most decoders/demuxes.
+    expected_packet_size_ = packet->size();
+
     audio_renderer_->SendPacket(audioPacket, [this, packet]() {
       FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
       int64_t now = zx::clock::get_monotonic().get();
@@ -261,6 +275,15 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
       UpdateLastRenderedPts(end_pts_ns);
 
       last_departed_pts_ns_ = std::max(end_pts_ns, last_departed_pts_ns_);
+
+      // We do this check, because |packet_bytes_outstanding_| is cleared in |FlushInput|. This
+      // approach probably isn't needed, but makes it less likely that |packet_bytes_outstanding_|
+      // will wander off into bogus territory.
+      if (packet_bytes_outstanding_ < packet->size()) {
+        packet_bytes_outstanding_ = 0;
+      } else {
+        packet_bytes_outstanding_ -= packet->size();
+      }
 
       departures_.AddSample(now, current_timeline_function()(now), start_pts_ns, Progressing());
 
@@ -378,6 +401,21 @@ bool FidlAudioRenderer::NeedMorePackets() {
     // packets.
     return false;
   }
+
+  if (packet_bytes_outstanding_ + expected_packet_size_ >= payload_buffer_size_) {
+    // Packets aren't getting retired quickly enough, and the next packet is likely to exceed
+    // the capacity of the payload VMO. We'll refrain from requesting another packet at the
+    // risk of failing to meet lead time commitments. This is unlikely to happen on a target
+    // with real hardware, but happens from time to time in automated test on emulators.
+    if (! stall_logged_) {
+      FX_LOGS(WARNING) << "Audio stalled, because the renderer is not retiring packets";
+      stall_logged_ = true;
+    }
+
+    return false;
+  }
+
+  stall_logged_ = false;
 
   int64_t presentation_time_ns = current_timeline_function()(zx::clock::get_monotonic().get());
 

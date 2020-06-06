@@ -67,6 +67,9 @@ class CommandQueue {
   void Seek(zx::duration position) { AddCommand(new SeekCommand(position)); }
   void Seek(int64_t position) { Seek(zx::duration(position)); }
 
+  // Determines if we are at end-of-stream according to the last reported status.
+  bool at_end_of_stream() const { return status_ && status_->end_of_stream; }
+
   // Queues a command that invokes |action|.
   void Invoke(fit::closure action) { AddCommand(new InvokeCommand(std::move(action))); }
 

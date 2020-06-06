@@ -66,7 +66,7 @@ void FakeAudioRenderer::SendPacket(fuchsia::media::StreamPacket packet,
 
   if (!packet_expecters_.empty()) {
     bool expecter_ok = false;
-    
+
     for (auto& expecter : packet_expecters_) {
       if (expecter.IsExpected(packet, vmo_mapper_.start())) {
         expecter_ok = true;
@@ -74,7 +74,16 @@ void FakeAudioRenderer::SendPacket(fuchsia::media::StreamPacket packet,
     }
 
     if (!expecter_ok) {
-      FX_LOGS(ERROR) << "supplied packet doesn't match expected packet info";
+      FX_LOGS(ERROR) << "supplied packet info { " << packet.pts << ", " << packet.payload_size
+                     << ", 0x" << std::hex << std::setw(16) << std::setfill('0')
+                     << PacketInfo::Hash(
+                            reinterpret_cast<uint8_t*>(vmo_mapper_.start()) + packet.payload_offset,
+                            packet.payload_size)
+                     << std::dec << " } doesn't match expected packet(s)";
+      for (auto& expecter : packet_expecters_) {
+        expecter.LogExpectation();
+      }
+
       expected_ = false;
     }
   }
@@ -219,10 +228,21 @@ bool FakeAudioRenderer::PacketExpecter::IsExpected(const fuchsia::media::StreamP
       iter_->hash() !=
           PacketInfo::Hash(reinterpret_cast<const uint8_t*>(start) + packet.payload_offset,
                            packet.payload_size)) {
+    return false;
   }
 
   ++iter_;
   return true;
+}
+
+void FakeAudioRenderer::PacketExpecter::LogExpectation() const {
+  if (iter_ == info_.end()) {
+    FX_LOGS(ERROR) << "    expected no packet";
+    return;
+  }
+
+  FX_LOGS(ERROR) << "    expected { " << iter_->pts() << ", " << iter_->size() << ", 0x" << std::hex
+                 << std::setw(16) << std::setfill('0') << iter_->hash() << std::dec << " }";
 }
 
 }  // namespace test
