@@ -96,16 +96,14 @@ import("//src/sys/cmc/build/cmx.gni")
 #   testonly
 #   visibility
 template("fuchsia_component") {
-  assert(defined(invoker.manifest),
-         "fuchsia_component($target_name): missing `manifest` parameter")
+  assert(
+      defined(invoker.manifest),
+      "A `manifest` argument was missing when calling fuchsia_component($target_name)")
 
   component_name = target_name
   if (defined(invoker.component_name)) {
     component_name = invoker.component_name
   }
-  assert(string_replace(component_name, "_", "-") == component_name,
-         "fuchsia_component($target_name): must not have underscores in " +
-             "`component_name`")
 
   # Handle different manifest versions
   if (get_path_info(invoker.manifest, "extension") == "cml") {
@@ -115,9 +113,9 @@ template("fuchsia_component") {
     manifest_processor = "cmx"
     manifest_name = "$component_name.cmx"
   } else {
-    assert(false,
-           "fuchsia_component($target_name): unknown manifest format for " +
-               "\"$manifest\"")
+    assert(
+        false,
+        "Unknown manifest format for \"$manifest\" passed to fuchsia_component($target_name)")
   }
 
   # Add resources

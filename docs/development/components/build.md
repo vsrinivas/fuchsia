@@ -468,7 +468,6 @@ The example is adapted from
 
 ### Pre-migration {#pre-migration}
 
-```
 import("//build/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
@@ -528,11 +527,9 @@ group("tests") {
   testonly = true
   deps = [ ":timekeeper_bin_test" ]
 }
-```
 
 ### Post-migration {#post-migration}
 
-```
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
@@ -575,15 +572,14 @@ fuchsia_unittest_package("timekeeper-unittests") {
     },
   ]
 }
-```
 
 ### Migration considerations
 
 *   Targets that generate executables or data files are not expected to change
     in a migration.
-*   Names for packages and components must not have underscores (`"_"`). Use
-    dashes (`"-"`) instead. Note that changing package and component names
-    affects [component URLs][glossary-component-url].
+*   Names for packages are expected to have dashes ("-") instead of underscores
+    ("_"). The same is not required for components, though it's recommended for
+    consistency.
 *   Previously, `meta/service.cmx` was given the destination `"timekeeper.cmx"`
     which placed it in `meta/timekeeper.cmx`. With `fuchsia_component()`, the
     given manifest is automatically renamed per the component name

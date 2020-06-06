@@ -25,7 +25,6 @@ executable("return_zero") {
 }
 
 fuchsia_component("return_zero_component") {
-  component_name = "return-zero-component"
   manifest = "return_zero.cmx"
   testonly = true
   deps = [ ":return_zero" ]
