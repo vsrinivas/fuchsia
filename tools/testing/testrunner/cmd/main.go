@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"time"
 
 	testsharder "go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
@@ -238,13 +239,31 @@ func runTests(ctx context.Context, tests []testsharder.Test, t tester, outputs *
 	return t.CopySinks(ctx, sinks)
 }
 
+// stdioBuffer is a simple thread-safe wrapper around bytes.Buffer. It
+// implements the io.Writer interface.
+type stdioBuffer struct {
+	// Used to protect access to `buf`.
+	mu sync.Mutex
+
+	// The underlying buffer.
+	buf bytes.Buffer
+}
+
+func (b *stdioBuffer) Write(p []byte) (n int, err error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
 func runTest(ctx context.Context, test testsharder.Test, runIndex int, t tester) (*testrunner.TestResult, error) {
 	result := runtests.TestSuccess
-	stdout := new(bytes.Buffer)
-	stderr := new(bytes.Buffer)
+	// The test case parser specifically uses stdout, so we need to have a
+	// dedicated stdout buffer.
+	stdout := bytes.Buffer{}
+	stdio := stdioBuffer{}
 
-	multistdout := io.MultiWriter(stdout, os.Stdout)
-	multistderr := io.MultiWriter(stderr, os.Stderr)
+	multistdout := io.MultiWriter(os.Stdout, &stdio, &stdout)
+	multistderr := io.MultiWriter(os.Stderr, &stdio)
 
 	startTime := time.Now()
 	dataSinks, err := t.Test(ctx, test, multistdout, multistderr)
@@ -263,8 +282,7 @@ func runTest(ctx context.Context, test testsharder.Test, runIndex int, t tester)
 	return &testrunner.TestResult{
 		Name:      test.Name,
 		GNLabel:   test.Label,
-		Stdout:    stdout.Bytes(),
-		Stderr:    stderr.Bytes(),
+		Stdio:     stdio.buf.Bytes(),
 		Result:    result,
 		Cases:     testparser.Parse(stdout.Bytes()),
 		StartTime: startTime,

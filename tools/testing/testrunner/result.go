@@ -31,8 +31,9 @@ type TestResult struct {
 	// RunIndex is the index of this test run among all the runs of the same test.
 	RunIndex int
 
-	Stdout    []byte
-	Stderr    []byte
+	// The combined stdout and stderr from this test.
+	Stdio []byte
+
 	StartTime time.Time
 	EndTime   time.Time
 }

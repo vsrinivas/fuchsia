@@ -18,9 +18,13 @@ import (
 
 type fakeTester struct {
 	testErr error
+	runTest func(testsharder.Test, io.Writer, io.Writer)
 }
 
-func (t *fakeTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer) (runtests.DataSinkReference, error) {
+func (t *fakeTester) Test(_ context.Context, test testsharder.Test, stdout, stderr io.Writer) (runtests.DataSinkReference, error) {
+	if t.runTest != nil {
+		t.runTest(test, stdout, stderr)
+	}
 	return nil, t.testErr
 }
 
@@ -28,12 +32,15 @@ func (t *fakeTester) Close() error {
 	return nil
 }
 
-func (t *fakeTester) CopySinks(ctx context.Context, sinks []runtests.DataSinkReference) error {
+func (t *fakeTester) CopySinks(_ context.Context, _ []runtests.DataSinkReference) error {
 	return nil
 }
 
 func assertEqual(t1, t2 *testrunner.TestResult) bool {
-	return t1.Name == t2.Name && t1.Result == t2.Result && t1.RunIndex == t2.RunIndex
+	return (t1.Name == t2.Name &&
+		t1.Result == t2.Result &&
+		t1.RunIndex == t2.RunIndex &&
+		string(t1.Stdio) == string(t2.Stdio))
 }
 
 func TestValidateTest(t *testing.T) {
@@ -134,6 +141,7 @@ func TestRunTest(t *testing.T) {
 		test           build.Test
 		runs           int
 		testErr        error
+		runTestFunc    func(testsharder.Test, io.Writer, io.Writer)
 		expectedErr    error
 		expectedResult []*testrunner.TestResult
 	}{
@@ -221,12 +229,30 @@ func TestRunTest(t *testing.T) {
 				Result:   runtests.TestSuccess,
 				RunIndex: 1,
 			}},
+		}, {
+			name: "combines stdio and stdout in chronological order",
+			test: build.Test{
+				Name:       "fuchsia-pkg://foo/bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
+			},
+			expectedResult: []*testrunner.TestResult{{
+				Name:   "fuchsia-pkg://foo/bar",
+				Result: runtests.TestSuccess,
+				Stdio:  []byte("stdout stderr stdout"),
+			}},
+			runTestFunc: func(t testsharder.Test, stdout, stderr io.Writer) {
+				stdout.Write([]byte("stdout "))
+				stderr.Write([]byte("stderr "))
+				stdout.Write([]byte("stdout"))
+			},
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			tester := &fakeTester{
 				testErr: c.testErr,
+				runTest: c.runTestFunc,
 			}
 			if c.runs == 0 {
 				c.runs = 1
