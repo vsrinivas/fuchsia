@@ -21,9 +21,11 @@ source_set("codec_impl") {
     "codec_adapter_events.cc",
     "codec_admission_control.cc",
     "codec_buffer.cc",
+    "codec_frame.cc",
     "codec_impl.cc",
     "codec_input_item.cc",
     "codec_packet.cc",
+    "codec_vmo_range.cc",
     "decryptor_adapter.cc",
     "fake_map_range.cc",
   ]
@@ -36,6 +38,7 @@ source_set("codec_impl") {
     "include/lib/media/codec_impl/codec_impl.h",
     "include/lib/media/codec_impl/codec_input_item.h",
     "include/lib/media/codec_impl/codec_packet.h",
+    "include/lib/media/codec_impl/codec_vmo_range.h",
     "include/lib/media/codec_impl/decryptor_adapter.h",
   ]
   public_deps = [

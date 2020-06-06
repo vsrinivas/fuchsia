@@ -15,7 +15,6 @@
 
 #include "src/media/codec/codecs/output_sink.h"
 
-struct CodecFrame;
 class DeviceCtx;
 struct VideoFrame;
 

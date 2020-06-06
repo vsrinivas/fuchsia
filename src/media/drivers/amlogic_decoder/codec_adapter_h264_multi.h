@@ -17,7 +17,6 @@
 #include "video_decoder.h"
 
 class AmlogicVideo;
-struct CodecFrame;
 class DeviceCtx;
 struct VideoFrame;
 class CodecAdapterH264Multi : public CodecAdapter,

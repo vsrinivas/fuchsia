@@ -5,16 +5,46 @@
 #ifndef SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_FRAME_H_
 #define SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_FRAME_H_
 
-#include <fuchsia/media/cpp/fidl.h>
+#include <lib/media/codec_impl/codec_vmo_range.h>
+
+#include <cstdint>
 
 class CodecBuffer;
-// Move-only struct
-struct CodecFrame {
+
+// CodecFrame is used by some core codecs, regardless of whether there's a CodecBuffer or just a
+// VMO.
+// Move-only class
+class CodecFrame {
+ public:
+  struct BufferSpec {
+    uint64_t buffer_lifetime_ordinal = 0;
+    uint32_t buffer_index = 0;
+    CodecVmoRange vmo_range;
+  };
+
+  // Construct CodecFrame from an existing CodecBuffer.
+  //
+  // When using this constructor, the ownership
+  // of the underlying VMO will remain with the CodecBuffer and the CodecBuffer must outlive the
+  // CodecFrame.
+  CodecFrame(const CodecBuffer& codec_buffer);
+
+  // Construct CodecFrame from a BufferSpec.
+  CodecFrame(BufferSpec buffer_spec);
+
   CodecFrame(CodecFrame&& from) = default;
   CodecFrame& operator=(CodecFrame&& from) = default;
 
-  fuchsia::media::StreamBuffer codec_buffer_spec;
-  const CodecBuffer* codec_buffer_ptr;
+  CodecFrame(const CodecFrame&) = delete;
+  CodecFrame& operator=(const CodecFrame&) = delete;
+
+  BufferSpec& buffer_spec() { return buffer_spec_; }
+  const CodecBuffer* buffer_ptr() { return buffer_ptr_; }
+
+ private:
+  // When CodecBuffer is present, the BufferSpec does not own the VMO
+  BufferSpec buffer_spec_;
+  const CodecBuffer* buffer_ptr_ = nullptr;
 };
 
 #endif  // SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_FRAME_H_

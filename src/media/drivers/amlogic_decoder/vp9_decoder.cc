@@ -509,18 +509,15 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t code
     video_frame->uv_plane_offset = video_frame->stride * video_frame->coded_height;
     video_frame->index = i;
 
-    video_frame->codec_buffer = frames[i].codec_buffer_ptr;
-    if (frames[i].codec_buffer_ptr) {
-      frames[i].codec_buffer_ptr->SetVideoFrame(video_frame);
+    video_frame->codec_buffer = frames[i].buffer_ptr();
+    if (frames[i].buffer_ptr()) {
+      frames[i].buffer_ptr()->SetVideoFrame(video_frame);
     }
 
     ZX_DEBUG_ASSERT(video_frame->coded_height % 2 == 0);
-    ZX_DEBUG_ASSERT(frames[i].codec_buffer_spec.has_data());
-    ZX_DEBUG_ASSERT(frames[i].codec_buffer_spec.data().is_vmo());
-    ZX_DEBUG_ASSERT(frames[i].codec_buffer_spec.data().vmo().has_vmo_handle());
-    zx_status_t status = io_buffer_init_vmo(
-        &video_frame->buffer, owner_->bti()->get(),
-        frames[i].codec_buffer_spec.data().vmo().vmo_handle().get(), 0, IO_BUFFER_RW);
+    zx_status_t status =
+        io_buffer_init_vmo(&video_frame->buffer, owner_->bti()->get(),
+                           frames[i].buffer_spec().vmo_range.vmo().get(), 0, IO_BUFFER_RW);
     if (status != ZX_OK) {
       DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d", status);
       return;

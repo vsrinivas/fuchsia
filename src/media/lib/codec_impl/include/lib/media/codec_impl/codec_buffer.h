@@ -6,12 +6,12 @@
 #define SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_BUFFER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/media/codec_impl/codec_port.h>
+#include <lib/media/codec_impl/codec_vmo_range.h>
 
 #include <memory>
 
 #include <fbl/macros.h>
-
-#include "codec_port.h"
 
 class CodecImpl;
 class CodecBufferForTest;
@@ -37,12 +37,15 @@ struct VideoFrame;
 class CodecBuffer {
  public:
   // This is the same value as buffer_lifetime_ordinal in StreamProcessor FIDL.
-  uint64_t lifetime_ordinal() const;
+  uint64_t lifetime_ordinal() const { return buffer_info_.lifetime_ordinal; }
 
   // This matches the buffer_index field of fuchsia::media::Packet when the packet refers to this
   // buffer.
-  uint32_t index() const;
+  uint32_t index() const { return buffer_info_.index; }
 
+  CodecPort port() const { return buffer_info_.port; }
+
+  bool is_secure() const { return buffer_info_.is_secure; }
   // The vaddr of the start of the mapped VMO for this buffer.
   //
   // This will return nullptr if there's no VMO mapping because CPU access isn't
@@ -61,8 +64,6 @@ class CodecBuffer {
 
   uint64_t offset() const;
 
-  const fuchsia::media::StreamBuffer& codec_buffer() const;
-
   // The use of weak_ptr<> here is to emphasize that we don't need shared_ptr<>
   // to keep the VideoFrame(s) alive.  We'd use a raw pointer here if it weren't
   // for needing to convert to a shared_ptr<> to call certain methods that
@@ -78,8 +79,7 @@ class CodecBuffer {
   zx_status_t Pin();
   bool is_pinned() const;
 
-  [[nodiscard]]
-  zx_status_t CacheFlush(uint32_t offset, uint32_t length) const;
+  [[nodiscard]] zx_status_t CacheFlush(uint32_t flush_offset, uint32_t length) const;
 
  private:
   friend class CodecImpl;
@@ -87,8 +87,15 @@ class CodecBuffer {
   friend struct std::default_delete<CodecBuffer>;
   friend class CodecBufferForTest;
 
-  CodecBuffer(CodecImpl* parent, CodecPort port, fuchsia::media::StreamBuffer buffer,
-              bool is_secure);
+  // Helper struct for encapsulating the properties of a Buffer
+  struct Info {
+    CodecPort port = kFirstPort;
+    uint64_t lifetime_ordinal;
+    uint32_t index;
+    bool is_secure;
+  };
+
+  CodecBuffer(CodecImpl* parent, Info buffer_info, CodecVmoRange vmo_range);
   ~CodecBuffer();
 
   // Maps a page-aligned portion of the VMO including vmo_usable_start to vmo_usable_start +
@@ -120,13 +127,10 @@ class CodecBuffer {
   // The parent_ CodecImpl out-lives the CodecImpl::Buffer.
   CodecImpl* parent_;
 
-  CodecPort port_ = kFirstPort;
+  Info buffer_info_;
 
   // This msg still has the live vmo_handle.
-  fuchsia::media::StreamBuffer buffer_;
-
-  // If true, we never ask the kernel to flush the VMO.
-  bool is_secure_ = false;
+  CodecVmoRange vmo_range_;
 
   // Mutable only in the sense that it's set later than the constructor.  The
   // association does not switch to a different VideoFrame once set.

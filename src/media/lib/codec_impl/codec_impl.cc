@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/defer.h>
 #include <lib/media/codec_impl/codec_impl.h>
+#include <lib/media/codec_impl/codec_vmo_range.h>
 #include <lib/media/codec_impl/log.h>
 #include <lib/syslog/cpp/macros.h>
 #include <threads.h>
@@ -327,19 +328,54 @@ void CodecImpl::SetInputBufferSettings_StreamControl(
 
 void CodecImpl::AddInputBuffer(fuchsia::media::StreamBuffer buffer) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+  if (!ValidateStreamBuffer(buffer)) {
+    // If invalid, the channel will already be closed by ValidateStreamBuffer() and there is no more
+    // to do.
+    return;
+  }
   PostToStreamControl([this, buffer = std::move(buffer)]() mutable {
-    AddInputBuffer_StreamControl(true, std::move(buffer));
+    AddInputBuffer_StreamControl(std::move(buffer));
   });
 }
 
-void CodecImpl::AddInputBuffer_StreamControl(bool is_client, fuchsia::media::StreamBuffer buffer) {
+void CodecImpl::AddInputBuffer_StreamControl(fuchsia::media::StreamBuffer buffer) {
+  ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
+  ZX_DEBUG_ASSERT(buffer.has_buffer_lifetime_ordinal());
+  ZX_DEBUG_ASSERT(buffer.has_buffer_index());
+  ZX_DEBUG_ASSERT(buffer.has_data());
+  ZX_DEBUG_ASSERT(buffer.data().is_vmo());
+  ZX_DEBUG_ASSERT(buffer.data().vmo().has_vmo_handle());
+  ZX_DEBUG_ASSERT(buffer.data().vmo().has_vmo_usable_start());
+  ZX_DEBUG_ASSERT(buffer.data().vmo().has_vmo_usable_size());
+
+  {
+    std::unique_lock<std::mutex> lock(lock_);
+    if (port_settings_[kInputPort]->is_partial_settings()) {
+      Fail("AddOutputBuffer() not permitted when using sysmem");
+      return;
+    }
+  }
+
+  auto& vmo = buffer.mutable_data()->vmo();
+
+  AddInputBuffer_StreamControl(
+      CodecBuffer::Info{.port = kInputPort,
+                        .lifetime_ordinal = buffer.buffer_lifetime_ordinal(),
+                        .index = buffer.buffer_index(),
+                        .is_secure = false},
+      CodecVmoRange(std::move(*vmo.mutable_vmo_handle()), vmo.vmo_usable_start(),
+                    vmo.vmo_usable_size()));
+}
+
+void CodecImpl::AddInputBuffer_StreamControl(CodecBuffer::Info buffer_info,
+                                             CodecVmoRange vmo_range) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   if (IsStopping()) {
     return;
   }
   // We must check, because __WARN_UNUSED_RESULT, and it's worth it for the
   // enforcement and consistency.
-  if (!AddBufferCommon(is_client, kInputPort, std::move(buffer))) {
+  if (!AddBufferCommon(std::move(buffer_info), std::move(vmo_range))) {
     return;
   }
 }
@@ -432,12 +468,47 @@ void CodecImpl::SetOutputBufferSettingsCommon(
 
 void CodecImpl::AddOutputBuffer(fuchsia::media::StreamBuffer buffer) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
-  AddOutputBufferInternal(true, std::move(buffer));
+  if (!ValidateStreamBuffer(buffer)) {
+    // If invalid, the channel will already be closed by ValidateStreamBuffer() and there is no more
+    // to do.
+    return;
+  }
+  AddOutputBufferInternal(std::move(buffer));
 }
 
-void CodecImpl::AddOutputBufferInternal(bool is_client, fuchsia::media::StreamBuffer buffer) {
+void CodecImpl::AddOutputBufferInternal(fuchsia::media::StreamBuffer buffer) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
-  bool output_buffers_done_configuring = AddBufferCommon(is_client, kOutputPort, std::move(buffer));
+  ZX_DEBUG_ASSERT(buffer.has_buffer_lifetime_ordinal());
+  ZX_DEBUG_ASSERT(buffer.has_buffer_index());
+  ZX_DEBUG_ASSERT(buffer.has_data());
+  ZX_DEBUG_ASSERT(buffer.data().is_vmo());
+  ZX_DEBUG_ASSERT(buffer.data().vmo().has_vmo_handle());
+  ZX_DEBUG_ASSERT(buffer.data().vmo().has_vmo_usable_start());
+  ZX_DEBUG_ASSERT(buffer.data().vmo().has_vmo_usable_size());
+
+  {
+    std::unique_lock<std::mutex> lock(lock_);
+    if (port_settings_[kOutputPort]->is_partial_settings()) {
+      Fail("AddOutputBuffer() not permitted when using sysmem");
+      return;
+    }
+  }
+
+  auto& vmo = buffer.mutable_data()->vmo();
+
+  AddOutputBufferInternal(CodecBuffer::Info{.port = kOutputPort,
+                                            .lifetime_ordinal = buffer.buffer_lifetime_ordinal(),
+                                            .index = buffer.buffer_index(),
+                                            .is_secure = false},
+                          CodecVmoRange(std::move(*vmo.mutable_vmo_handle()),
+                                        vmo.vmo_usable_start(), vmo.vmo_usable_size()));
+}
+
+void CodecImpl::AddOutputBufferInternal(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range) {
+  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+
+  bool output_buffers_done_configuring =
+      AddBufferCommon(std::move(buffer_info), std::move(vmo_range));
   if (output_buffers_done_configuring) {
     // The StreamControl domain _might_ be waiting for output to be configured.
     wake_stream_control_condition_.notify_all();
@@ -1882,29 +1953,31 @@ void CodecImpl::OnBufferCollectionInfoInternal(
   // the buffers itself (but without the check that the client isn't adding
   // buffers itself while using sysmem).
   for (uint32_t i = 0; i < buffer_count; i++) {
-    // While under the lock we'll move out the stuff we need into codec_buffer.
-    fuchsia::media::StreamBuffer stream_buffer;
+    // While under the lock we'll move out the stuff we need into locals
+    uint64_t vmo_usable_start = 0;
+    uint64_t vmo_usable_size = 0;
+    bool is_secure = false;
     {  // scope lock
       std::lock_guard<std::mutex> lock(lock_);
 
       ZX_DEBUG_ASSERT(buffer_lifetime_ordinal == buffer_lifetime_ordinal_[port]);
       ZX_DEBUG_ASSERT(port_settings_[port]);
 
-      stream_buffer.set_buffer_lifetime_ordinal(buffer_lifetime_ordinal);
-      stream_buffer.set_buffer_index(i);
-      fuchsia::media::StreamBufferDataVmo data_vmo;
-      data_vmo.set_vmo_handle(std::move(vmos[i]));
-      data_vmo.set_vmo_usable_start(port_settings_[port]->vmo_usable_start(i));
-      data_vmo.set_vmo_usable_size(port_settings_[port]->vmo_usable_size());
-      fuchsia::media::StreamBufferData data;
-      data.set_vmo(std::move(data_vmo));
-      stream_buffer.set_data(std::move(data));
+      vmo_usable_start = port_settings_[port]->vmo_usable_start(i);
+      vmo_usable_size = port_settings_[port]->vmo_usable_size();
+      is_secure = port_settings_[port]->is_secure();
     }  // ~lock
+
+    CodecBuffer::Info buffer_info{.port = port,
+                                  .lifetime_ordinal = buffer_lifetime_ordinal,
+                                  .index = i,
+                                  .is_secure = is_secure};
+    CodecVmoRange vmo_range(std::move(vmos[i]), vmo_usable_start, vmo_usable_size);
     if (port == kInputPort) {
-      AddInputBuffer_StreamControl(false, std::move(stream_buffer));
+      AddInputBuffer_StreamControl(std::move(buffer_info), std::move(vmo_range));
     } else {
       ZX_DEBUG_ASSERT(port == kOutputPort);
-      AddOutputBufferInternal(false, std::move(stream_buffer));
+      AddOutputBufferInternal(std::move(buffer_info), std::move(vmo_range));
     }
   }
 }
@@ -2073,182 +2146,203 @@ bool CodecImpl::ValidatePartialBufferSettingsVsConstraintsLocked(
   return true;
 }
 
-bool CodecImpl::AddBufferCommon(bool is_client, CodecPort port,
-                                fuchsia::media::StreamBuffer buffer) {
+bool CodecImpl::ValidateStreamBuffer(const fuchsia::media::StreamBuffer& buffer) {
+  // Validate that all required fields are present.
+  if (!buffer.has_buffer_lifetime_ordinal()) {
+    Fail("Client sent a StreamBuffer without a buffer_lifetime_ordinal field");
+    return false;
+  }
+  if (!buffer.has_buffer_index()) {
+    Fail("Client sent StreamBuffer without a buffer_index field");
+    return false;
+  }
+  if (!buffer.has_data()) {
+    Fail("Client sent a StreamBuffer without a data field");
+    return false;
+  }
+  if (!buffer.data().is_vmo()) {
+    Fail("Client sent a StreamBufferData without a vmo field");
+    return false;
+  }
+  if (!buffer.data().vmo().has_vmo_handle()) {
+    Fail("Client sent a StreamBufferDataVmo without a vmo_handle field");
+    return false;
+  }
+  if (!buffer.data().vmo().has_vmo_usable_start()) {
+    Fail("Client sent a StreamBufferDataVmo without a vmo_usable_start field");
+    return false;
+  }
+  if (!buffer.data().vmo().has_vmo_usable_size()) {
+    Fail("Client sent a StreamBufferDataVmo without a vmo_usable_size field");
+    return false;
+  }
+  if (!buffer.data().vmo().vmo_handle().is_valid()) {
+    Fail("Client sent a StreamBuffer with an invalid VMO");
+    return false;
+  }
+  return true;
+}
+
+bool CodecImpl::AddBufferCommon(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range) {
+  const CodecPort port = buffer_info.port;
   ZX_DEBUG_ASSERT(port == kInputPort && (thrd_current() == stream_control_thread_) ||
                   port == kOutputPort && (thrd_current() == fidl_thread()));
   bool buffers_done_configuring = false;
-  {  // scope lock
-    std::unique_lock<std::mutex> lock(lock_);
 
-    if (!buffer.has_buffer_lifetime_ordinal()) {
-      FailLocked("Client send a buffer without a buffer_lifetime_ordinal");
-      return false;
-    }
+  std::unique_lock<std::mutex> lock(lock_);
 
-    if (buffer.buffer_lifetime_ordinal() % 2 == 0) {
-      FailLocked(
-          "Client sent even buffer_lifetime_ordinal, but must be odd - exiting "
-          "- port: %u\n",
-          port);
-      return false;
-    }
+  if (buffer_info.lifetime_ordinal % 2 == 0) {
+    FailLocked("Client sent even buffer_lifetime_ordinal, but must be odd - exiting - port: %u\n",
+               port);
+    return false;
+  }
 
-    if (buffer.buffer_lifetime_ordinal() != protocol_buffer_lifetime_ordinal_[port]) {
-      FailLocked(
-          "Incoherent SetOutputBufferSettings()/SetInputBufferSettings() + "
-          "AddOutputBuffer()/AddInputBuffer()s - exiting - port: %d\n",
-          port);
-      return false;
-    }
+  if (buffer_info.lifetime_ordinal != protocol_buffer_lifetime_ordinal_[port]) {
+    FailLocked(
+        "Incoherent SetOutputBufferSettings()/SetInputBufferSettings() + "
+        "AddOutputBuffer()/AddInputBuffer()s - exiting - port: %d\n",
+        port);
+    return false;
+  }
 
-    // If the server is not interested in the client's buffer_lifetime_ordinal,
-    // the client's buffer_lifetime_ordinal won't match the server's
-    // buffer_lifetime_ordinal_.  The client will probably later catch up.
-    if (buffer.buffer_lifetime_ordinal() != buffer_lifetime_ordinal_[port]) {
-      // The case that ends up here is when a client's output configuration
-      // (whole or last part) is being ignored because it's not yet caught up
-      // with last_required_buffer_constraints_version_ordinal_.
+  // If the server is not interested in the client's buffer_lifetime_ordinal,
+  // the client's buffer_lifetime_ordinal won't match the server's
+  // buffer_lifetime_ordinal_.  The client will probably later catch up.
+  if (buffer_info.lifetime_ordinal != buffer_lifetime_ordinal_[port]) {
+    // The case that ends up here is when a client's output configuration
+    // (whole or last part) is being ignored because it's not yet caught up
+    // with last_required_buffer_constraints_version_ordinal_.
 
-      // This case won't happen for input, at least for now.  This is an assert
-      // rather than a client behavior check, because previous client protocol
-      // checks have already peeled off any invalid client behavior that might
-      // otherwise cause this assert to trigger.
-      ZX_DEBUG_ASSERT(port == kOutputPort);
+    // This case won't happen for input, at least for now.  This is an assert
+    // rather than a client behavior check, because previous client protocol
+    // checks have already peeled off any invalid client behavior that might
+    // otherwise cause this assert to trigger.
+    ZX_DEBUG_ASSERT(port == kOutputPort);
 
-      // Ignore the client's message.  The client will probably catch up later.
-      return false;
-    }
+    // Ignore the client's message.  The client will probably catch up later.
+    return false;
+  }
 
-    if (is_client && port_settings_[port]->is_partial_settings()) {
-      FailLocked("AddInputBuffer()/AddOutputBuffer() not permitted when using sysmem");
-      return false;
-    }
-    if (!buffer.has_buffer_index()) {
-      FailLocked("client sent buffer without index");
-      return false;
-    }
-    if (buffer.buffer_index() != all_buffers_[port].size()) {
-      FailLocked(
-          "AddOutputBuffer()/AddInputBuffer() had buffer_index out of sequence "
-          "- port: %d buffer_index: %u all_buffers_[port].size(): %lu",
-          port, buffer.buffer_index(), all_buffers_[port].size());
-      return false;
-    }
+  if (buffer_info.index != all_buffers_[port].size()) {
+    FailLocked(
+        "AddOutputBuffer()/AddInputBuffer() had buffer_index out of sequence "
+        "- port: %d buffer_index: %u all_buffers_[port].size(): %lu",
+        port, buffer_info.index, all_buffers_[port].size());
+    return false;
+  }
 
-    uint32_t required_buffer_count = port_settings_[port]->buffer_count();
-    if (buffer.buffer_index() >= required_buffer_count) {
-      FailLocked("AddOutputBuffer()/AddInputBuffer() extra buffer - port: %d", port);
-      return false;
-    }
+  uint32_t required_buffer_count = port_settings_[port]->buffer_count();
+  if (buffer_info.index >= required_buffer_count) {
+    FailLocked("AddOutputBuffer()/AddInputBuffer() extra buffer - port: %d", port);
+    return false;
+  }
 
-    std::unique_ptr<CodecBuffer> local_buffer = std::unique_ptr<CodecBuffer>(
-        new CodecBuffer(this, port, std::move(buffer), port_settings_[port]->is_secure()));
-    if (IsCoreCodecMappedBufferUseful(port)) {
-      if (fake_map_range_[port]) {
-        // The fake_map_range_[port]->base() is % ZX_PAGE_SIZE == 0, which is the same as a mapping
-        // would be.  There are sufficient virtual pages starting at FakeMapRange::base() to permit
-        // CodecBuffer to include the low-order vmo_usable_start % ZX_PAGE_SIZE bits in
-        // CodecBuffer::base(), for any vmo_usable_start() value (even the worst case of
-        // ZX_PAGE_SIZE - 1, and buffer size % ZX_PAGE_SIZE == 2).  By including those low-order
-        // intra-page-offset bits, we can treat non-secure and secure cases similarly.
-        local_buffer->FakeMap(fake_map_range_[port]->base());
-      } else {
-        // So far, there's little reason to avoid doing the Map() part under the
-        // lock, even if it can be a bit more time consuming, since there's no data
-        // processing happening at this point anyway, and there wouldn't be any
-        // happening in any other code location where we could potentially move the
-        // Map() either.
-        if (!local_buffer->Map()) {
-          FailLocked("AddOutputBuffer()/AddInputBuffer() couldn't Map() new buffer - port: %d",
-                     port);
-          return false;
-        }
-      }
-    }
+  std::unique_ptr<CodecBuffer> local_buffer = std::unique_ptr<CodecBuffer>(
+      new CodecBuffer(this, std::move(buffer_info), std::move(vmo_range)));
 
-    // We keep the buffers pinned for DMA continuously, since there's not much benefit to un-pinning
-    // and re-pinning them (so far).  By pinning, we prevent sysmem from recycling the
-    // BufferCollection VMOs until the driver has re-started and un-quarantined pinned pages (via
-    // its BTI), after ensuring the HW is no longer doing DMA from/to the pages.
-    //
-    // TODO(38650): All CodecAdapter(s) that start memory access that can continue beyond VMO
-    // handle closure during process death/termination should have a BTI.  Resolving this TODO will
-    // require updating at least the amlogic-video VP9 decoder to provide a BTI.
-    //
-    // TODO(38651): Currently OEMCrypto's indirect (via FIDL) SMC calls that take physical addresses
-    // are not guaranteed to be fully over/done before VMO handles are auto-closed by OEMCrypto
-    // assuming OEMCryto's process dies/terminates.
-    if (IsCoreCodecHwBased(port) && *core_codec_bti_) {
-      zx_status_t status = local_buffer->Pin();
-      if (status != ZX_OK) {
-        FailLocked("buffer->Pin() failed - status: %d port: %d", status, port);
+  if (IsCoreCodecMappedBufferUseful(port)) {
+    if (fake_map_range_[port]) {
+      // The fake_map_range_[port]->base() is % ZX_PAGE_SIZE == 0, which is the same as a mapping
+      // would be.  There are sufficient virtual pages starting at FakeMapRange::base() to permit
+      // CodecBuffer to include the low-order vmo_usable_start % ZX_PAGE_SIZE bits in
+      // CodecBuffer::base(), for any vmo_usable_start() value (even the worst case of
+      // ZX_PAGE_SIZE - 1, and buffer size % ZX_PAGE_SIZE == 2).  By including those low-order
+      // intra-page-offset bits, we can treat non-secure and secure cases similarly.
+      local_buffer->FakeMap(fake_map_range_[port]->base());
+    } else {
+      // So far, there's little reason to avoid doing the Map() part under the
+      // lock, even if it can be a bit more time consuming, since there's no data
+      // processing happening at this point anyway, and there wouldn't be any
+      // happening in any other code location where we could potentially move the
+      // Map() either.
+      if (!local_buffer->Map()) {
+        FailLocked("AddOutputBuffer()/AddInputBuffer() couldn't Map() new buffer - port: %d", port);
         return false;
       }
     }
+  }
 
-    {
+  // We keep the buffers pinned for DMA continuously, since there's not much benefit to un-pinning
+  // and re-pinning them (so far).  By pinning, we prevent sysmem from recycling the
+  // BufferCollection VMOs until the driver has re-started and un-quarantined pinned pages (via
+  // its BTI), after ensuring the HW is no longer doing DMA from/to the pages.
+  //
+  // TODO(38650): All CodecAdapter(s) that start memory access that can continue beyond VMO
+  // handle closure during process death/termination should have a BTI.  Resolving this TODO will
+  // require updating at least the amlogic-video VP9 decoder to provide a BTI.
+  //
+  // TODO(38651): Currently OEMCrypto's indirect (via FIDL) SMC calls that take physical addresses
+  // are not guaranteed to be fully over/done before VMO handles are auto-closed by OEMCrypto
+  // assuming OEMCryto's process dies/terminates.
+  if (IsCoreCodecHwBased(port) && *core_codec_bti_) {
+    zx_status_t status = local_buffer->Pin();
+    if (status != ZX_OK) {
+      FailLocked("buffer->Pin() failed - status: %d port: %d", status, port);
+      return false;
+    }
+  }
+
+  {
+    ScopedUnlock unlock(lock);
+    // Inform the core codec up-front about each buffer.
+    CoreCodecAddBuffer(port, local_buffer.get());
+  }
+  all_buffers_[port].push_back(std::move(local_buffer));
+  if (all_buffers_[port].size() == required_buffer_count) {
+    ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[port] ==
+                    port_settings_[port]->buffer_lifetime_ordinal());
+    // Stash this while we can, before the client de-configures.
+    last_provided_buffer_constraints_version_ordinal_[port] =
+        port_settings_[port]->buffer_constraints_version_ordinal();
+    // Now we allocate all_packets_[port].
+    ZX_DEBUG_ASSERT(all_packets_[port].empty());
+    uint32_t packet_count = port_settings_[port]->packet_count();
+    for (uint32_t i = 0; i < packet_count; i++) {
+      // Private constructor to prevent core codec maybe creating its own
+      // Packet instances (which isn't the intent) seems worth the hassle of
+      // not using make_unique<>() here.
+      all_packets_[port].push_back(std::unique_ptr<CodecPacket>(
+          new CodecPacket(port_settings_[port]->buffer_lifetime_ordinal(), i)));
+    }
+
+    {  // scope unlock
       ScopedUnlock unlock(lock);
-      // Inform the core codec up-front about each buffer.
-      CoreCodecAddBuffer(port, local_buffer.get());
-    }
-    all_buffers_[port].push_back(std::move(local_buffer));
-    if (all_buffers_[port].size() == required_buffer_count) {
-      ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[port] ==
-                      port_settings_[port]->buffer_lifetime_ordinal());
-      // Stash this while we can, before the client de-configures.
-      last_provided_buffer_constraints_version_ordinal_[port] =
-          port_settings_[port]->buffer_constraints_version_ordinal();
-      // Now we allocate all_packets_[port].
-      ZX_DEBUG_ASSERT(all_packets_[port].empty());
-      uint32_t packet_count = port_settings_[port]->packet_count();
-      for (uint32_t i = 0; i < packet_count; i++) {
-        // Private constructor to prevent core codec maybe creating its own
-        // Packet instances (which isn't the intent) seems worth the hassle of
-        // not using make_unique<>() here.
-        all_packets_[port].push_back(std::unique_ptr<CodecPacket>(
-            new CodecPacket(port_settings_[port]->buffer_lifetime_ordinal(), i)));
-      }
 
-      {  // scope unlock
-        ScopedUnlock unlock(lock);
+      // A core codec can take action here to finish configuring buffers if
+      // it's able, or can delay configuring buffers until
+      // CoreCodecStartStream() or
+      // CoreCodecMidStreamOutputBufferReConfigFinish() if that works better
+      // for the core codec.
+      //
+      // In any case, during a mid-stream output constraints change, the core
+      // codec must not call any onCoreCodecOutput* methods until the core
+      // codec sees CoreCodecStopStream() (after stopping the stream, in
+      // preparation for the next stream), or
+      // CoreCodecMidStreamOutputBufferReConfigFinish().
+      //
+      // In other words, this call does /not/ imply un-pausing output.
+      CoreCodecConfigureBuffers(port, all_packets_[port]);
 
-        // A core codec can take action here to finish configuring buffers if
-        // it's able, or can delay configuring buffers until
-        // CoreCodecStartStream() or
-        // CoreCodecMidStreamOutputBufferReConfigFinish() if that works better
-        // for the core codec.
-        //
-        // In any case, during a mid-stream output constraints change, the core
-        // codec must not call any onCoreCodecOutput* methods until the core
-        // codec sees CoreCodecStopStream() (after stopping the stream, in
-        // preparation for the next stream), or
-        // CoreCodecMidStreamOutputBufferReConfigFinish().
-        //
-        // In other words, this call does /not/ imply un-pausing output.
-        CoreCodecConfigureBuffers(port, all_packets_[port]);
-
-        // All output packets need to start with the core codec.  This is
-        // implicit for the Codec interface (implied by adding the last output
-        // buffer) but explicit in the CodecAdapter interface.
-        if (port == kOutputPort) {
-          for (uint32_t i = 0; i < packet_count; i++) {
-            CoreCodecRecycleOutputPacket(all_packets_[kOutputPort][i].get());
-          }
+      // All output packets need to start with the core codec.  This is
+      // implicit for the Codec interface (implied by adding the last output
+      // buffer) but explicit in the CodecAdapter interface.
+      if (port == kOutputPort) {
+        for (uint32_t i = 0; i < packet_count; i++) {
+          CoreCodecRecycleOutputPacket(all_packets_[kOutputPort][i].get());
         }
-      }  // ~unlock
+      }
+    }  // ~unlock
 
-      is_port_buffers_configured_[port] = true;
-      buffers_done_configuring = true;
+    is_port_buffers_configured_[port] = true;
+    buffers_done_configuring = true;
 
-      // For client-called AddOutputBuffer(), the last buffer being added is
-      // analogous to CompleteOutputBufferPartialSettings(); we handle that
-      // analogous-ness in IsOutputConfiguredLocked() (not by pretending we got
-      // a CompleteOutputBufferPartialSettings() here), so
-      // is_port_buffers_configured_[port] = true above is enough to make
-      // IsOutputConfiguredLocked() return true if this is a client-driven
-      // AddOutputBuffer().
-    }
+    // For client-called AddOutputBuffer(), the last buffer being added is
+    // analogous to CompleteOutputBufferPartialSettings(); we handle that
+    // analogous-ness in IsOutputConfiguredLocked() (not by pretending we got
+    // a CompleteOutputBufferPartialSettings() here), so
+    // is_port_buffers_configured_[port] = true above is enough to make
+    // IsOutputConfiguredLocked() return true if this is a client-driven
+    // AddOutputBuffer().
   }
   return buffers_done_configuring;
 }

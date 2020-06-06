@@ -419,12 +419,9 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t cod
     // if it's a non-contiguous VMO, then validate that the VMO is actually
     // contiguous later in aml_canvas_config() called by
     // owner_->ConfigureCanvas() below.
-    assert(frames[i].codec_buffer_spec.has_data());
-    assert(frames[i].codec_buffer_spec.data().is_vmo());
-    assert(frames[i].codec_buffer_spec.data().vmo().has_vmo_handle());
-    zx_status_t status = io_buffer_init_vmo(
-        &frame->buffer, owner_->bti()->get(),
-        frames[i].codec_buffer_spec.data().vmo().vmo_handle().get(), 0, IO_BUFFER_RW);
+    zx_status_t status =
+        io_buffer_init_vmo(&frame->buffer, owner_->bti()->get(),
+                           frames[i].buffer_spec().vmo_range.vmo().get(), 0, IO_BUFFER_RW);
     if (status != ZX_OK) {
       LOG(ERROR, "Failed to io_buffer_init_vmo() for frame - status: %d", status);
       OnFatalError();
@@ -445,9 +442,9 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t cod
     frame->index = i;
 
     // can be nullptr
-    frame->codec_buffer = frames[i].codec_buffer_ptr;
-    if (frames[i].codec_buffer_ptr) {
-      frames[i].codec_buffer_ptr->SetVideoFrame(frame);
+    frame->codec_buffer = frames[i].buffer_ptr();
+    if (frames[i].buffer_ptr()) {
+      frames[i].buffer_ptr()->SetVideoFrame(frame);
     }
 
     // The ConfigureCanvas() calls validate that the VMO is physically

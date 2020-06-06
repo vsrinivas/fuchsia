@@ -18,7 +18,6 @@
 #include "vp9_decoder.h"
 
 class AmlogicVideo;
-struct CodecFrame;
 class DeviceCtx;
 struct VideoFrame;
 

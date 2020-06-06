@@ -21,33 +21,25 @@ class CodecPacketForTest : public CodecPacket {
   CodecPacketForTest(uint32_t index) : CodecPacket(kBufferLifetimeOrdinal, index) {}
 };
 
-fuchsia::media::StreamBuffer StreamBufferOfSize(size_t size, uint32_t index) {
+CodecVmoRange VmoRangeOfSize(size_t size) {
   zx::vmo vmo_handle;
   fzl::VmoMapper mapper;
   zx_status_t err =
       mapper.CreateAndMap(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo_handle);
   FX_CHECK(err == ZX_OK) << "Failed to create and map vmo: " << err;
 
-  fuchsia::media::StreamBufferDataVmo vmo;
-  vmo.set_vmo_handle(std::move(vmo_handle));
-  vmo.set_vmo_usable_start(0);
-  vmo.set_vmo_usable_size(size);
-
-  fuchsia::media::StreamBufferData data;
-  data.set_vmo(std::move(vmo));
-
-  fuchsia::media::StreamBuffer buffer;
-  buffer.set_data(std::move(data));
-  buffer.set_buffer_index(index);
-  buffer.set_buffer_lifetime_ordinal(kBufferLifetimeOrdinal);
-
-  return buffer;
+  return CodecVmoRange(std::move(vmo_handle), 0, size);
 }
 
 class CodecBufferForTest : public CodecBuffer {
  public:
   CodecBufferForTest(size_t size, uint32_t index, bool is_secure)
-      : CodecBuffer(/*parent=*/nullptr, kOutputPort, StreamBufferOfSize(size, index), is_secure) {
+      : CodecBuffer(/*parent=*/nullptr,
+                    Info{.port = kOutputPort,
+                         .lifetime_ordinal = kBufferLifetimeOrdinal,
+                         .index = index,
+                         .is_secure = is_secure},
+                    VmoRangeOfSize(size)) {
     if (!Map()) {
       ZX_PANIC("CodecBufferForTest() failed to Map()\n");
     }

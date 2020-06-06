@@ -59,20 +59,11 @@ class TestFrameAllocator : public TestBasicClient {
           return;
         }
         frame_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, frame_vmo_bytes, nullptr, 0);
-        fuchsia::media::StreamBufferData codec_buffer_data;
-        fuchsia::media::StreamBufferDataVmo data_vmo;
-        data_vmo.set_vmo_handle(std::move(frame_vmo));
-        data_vmo.set_vmo_usable_start(0);
-        data_vmo.set_vmo_usable_size(frame_vmo_bytes);
-        codec_buffer_data.set_vmo(std::move(data_vmo));
-        fuchsia::media::StreamBuffer buffer;
-        buffer.set_buffer_lifetime_ordinal(next_non_codec_buffer_lifetime_ordinal_);
-        buffer.set_buffer_index(0);
-        buffer.set_data(std::move(codec_buffer_data));
-        frames.emplace_back(CodecFrame{
-            .codec_buffer_spec = std::move(buffer),
-            .codec_buffer_ptr = nullptr,
-        });
+
+        frames.emplace_back(CodecFrame::BufferSpec{
+            .buffer_lifetime_ordinal = next_non_codec_buffer_lifetime_ordinal_,
+            .buffer_index = 0,
+            .vmo_range = CodecVmoRange(std::move(frame_vmo), 0, frame_vmo_bytes)});
       }
       next_non_codec_buffer_lifetime_ordinal_++;
       {

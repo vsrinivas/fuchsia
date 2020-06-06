@@ -852,11 +852,7 @@ void CodecAdapterVp9::CoreCodecMidStreamOutputBufferReConfigFinish() {
     // Now we need to populate the frames_out vector.
     for (uint32_t i = 0; i < all_output_buffers_.size(); i++) {
       ZX_DEBUG_ASSERT(all_output_buffers_[i]->index() == i);
-      ZX_DEBUG_ASSERT(all_output_buffers_[i]->codec_buffer().buffer_index() == i);
-      frames.emplace_back(CodecFrame{
-          .codec_buffer_spec = fidl::Clone(all_output_buffers_[i]->codec_buffer()),
-          .codec_buffer_ptr = all_output_buffers_[i],
-      });
+      frames.emplace_back(*all_output_buffers_[i]);
     }
     coded_width = coded_width_;
     coded_height = coded_height_;

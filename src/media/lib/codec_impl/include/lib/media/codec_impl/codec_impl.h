@@ -545,7 +545,9 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // Some of the FIDL messages get handled or partly handled on the
   // StreamControl thread.
   void SetInputBufferSettings_StreamControl(fuchsia::media::StreamBufferSettings input_settings);
-  void AddInputBuffer_StreamControl(bool is_client, fuchsia::media::StreamBuffer buffer);
+  // Temporary until StreamProcessor.AddInputBuffer is removed.
+  void AddInputBuffer_StreamControl(fuchsia::media::StreamBuffer buffer);
+  void AddInputBuffer_StreamControl(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range);
   void SetInputBufferPartialSettings_StreamControl(
       fuchsia::media::StreamBufferPartialSettings input_partial_settings);
   void FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lifetime_ordinal);
@@ -591,16 +593,17 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
       CodecPort port, const fuchsia::media::StreamBufferPartialSettings& partial_settings,
       const fuchsia::media::StreamBufferConstraints& constraints);
 
-  void AddInputBufferInternal(bool is_client, fuchsia::media::StreamBuffer buffer);
+  __WARN_UNUSED_RESULT bool ValidateStreamBuffer(const fuchsia::media::StreamBuffer& buffer);
 
-  void AddOutputBufferInternal(bool is_client, fuchsia::media::StreamBuffer buffer);
+  // Temporary until StreamProcessor.AddOutputBuffer is removed.
+  void AddOutputBufferInternal(fuchsia::media::StreamBuffer buffer);
+  void AddOutputBufferInternal(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range);
 
   // Returns true if the port is done configuring (last buffer was added).
   // Returns false if the port is not done configuring or if Fail() was called;
   // currently the caller doesn't need to tell the difference between these two
   // very different cases.
-  __WARN_UNUSED_RESULT bool AddBufferCommon(bool is_client, CodecPort port,
-                                            fuchsia::media::StreamBuffer buffer);
+  __WARN_UNUSED_RESULT bool AddBufferCommon(CodecBuffer::Info buffer_info, CodecVmoRange vmo_range);
 
   // Return value of false means FailLocked() has already been called.
   __WARN_UNUSED_RESULT bool CheckOldBufferLifetimeOrdinalLocked(CodecPort port,
