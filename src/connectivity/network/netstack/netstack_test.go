@@ -7,7 +7,10 @@ package netstack
 import (
 	"context"
 	"errors"
+	"flag"
+	"fmt"
 	"net"
+	"os"
 	"sort"
 	"syscall/zx"
 	"testing"
@@ -26,6 +29,8 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo/testutil"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
+	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"github.com/google/go-cmp/cmp"
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -42,12 +47,35 @@ import (
 const (
 	testDeviceName       string        = "testdevice"
 	testTopoPath         string        = "/fake/ethernet/device"
-	testV4Address        tcpip.Address = tcpip.Address("\xc0\xa8\x2a\x10")
-	testV6Address        tcpip.Address = tcpip.Address("\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10")
+	testV4Address        tcpip.Address = "\xc0\xa8\x2a\x10"
+	testV6Address        tcpip.Address = "\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10"
 	testLinkLocalV6Addr1 tcpip.Address = "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
 	testLinkLocalV6Addr2 tcpip.Address = "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02"
 	dadResolutionTimeout               = dadRetransmitTimer*dadTransmits + time.Second
 )
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	if testing.Verbose() {
+		appCtx := component.NewContextFromStartupInfo()
+		s, err := syslog.ConnectToLogger(appCtx.Connector())
+		if err != nil {
+			panic(fmt.Sprintf("syslog.ConnectToLogger() = %s", err))
+		}
+		options := syslog.LogInitOptions{
+			LogLevel:                      syslog.AllLevel,
+			MinSeverityForFileAndLineInfo: syslog.AllLevel,
+			Socket:                        s,
+		}
+		l, err := syslog.NewLogger(options)
+		if err != nil {
+			panic(fmt.Sprintf("syslog.NewLogger(%#v) = %s", options, err))
+		}
+		syslog.SetDefaultLogger(l)
+	}
+
+	os.Exit(m.Run())
+}
 
 func TestDelRouteErrors(t *testing.T) {
 	ns := newNetstack(t)

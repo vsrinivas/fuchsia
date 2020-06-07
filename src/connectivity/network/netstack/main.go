@@ -182,7 +182,7 @@ func Main() {
 
 	l, err := syslog.NewLogger(syslog.LogInitOptions{
 		LogLevel:                      logLevel,
-		MinSeverityForFileAndLineInfo: syslog.InfoLevel,
+		MinSeverityForFileAndLineInfo: logLevel,
 		Socket:                        logSocket,
 		Tags:                          []string{"netstack"},
 	})

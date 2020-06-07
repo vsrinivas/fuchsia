@@ -327,8 +327,6 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 		eps.loopWrite()
 	}()
 
-	syslog.VLogTf(syslog.DebugVerbosity, "socket", "%p", eps)
-
 	// Wait for initial state checking to complete.
 	<-initCh
 
