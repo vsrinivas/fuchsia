@@ -23,6 +23,7 @@ protocol ModuleContext {
     /// instance, but with different arguments, the existing Module instance is
     /// restarted with the changed arguments. If the other arguments don't
     /// change, just an additional ModuleController connection is made.
+    [Transitional]
     AddModuleToStory(string name, Intent intent,
                      request<ModuleController> module_controller,
                      SurfaceRelation? surface_relation)
