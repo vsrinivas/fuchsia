@@ -119,6 +119,5 @@ if (have_prebuilt_libvulkan) {
     public_configs = [ ":libvulkan_config" ]
     sources = [ prebuilt_libvulkan_goldfish_path ]
     outputs = [ "$libvulkan_gen_path/libvulkan_goldfish.so" ]
-    deps = [ "//third_party/zlib" ]
   }
 }
