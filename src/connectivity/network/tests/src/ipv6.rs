@@ -506,7 +506,9 @@ async fn add_address_for_dad<
 ///
 /// If no remote node has any interest in an address the netstack is attempting to assign to
 /// an interface, DAD should succeed.
-#[endpoint_variants_test]
+// TODO(53644): Reenable when we figure out how to handle timing issues in CQ when the address
+// may resolve before the netstack processes the NA/NS messagee.
+#[allow(unused)]
 async fn duplicate_address_detection<E: Endpoint>() -> Result {
     /// Makes sure that `ipv6_consts::LINK_LOCAL_ADDR` is not assigned to the interface after the
     /// DAD resolution time.
