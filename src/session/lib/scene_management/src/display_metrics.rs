@@ -4,27 +4,6 @@
 
 use {fuchsia_scenic::DisplayRotation, input::Size, std::f32::consts as f32};
 
-// TODO(fxb/45535): Replace native C calls in display_metrics.rs with rust-lang/libm.
-// Wrap native implementations of libm functions until rust-lang/libm is adopted into Fuchsia's
-// third_party/rust_crates.
-extern "C" {
-    fn frexpf(x: f32, exp: *mut i32) -> f32;
-
-    fn ldexpf(x: f32, n: i32) -> f32;
-}
-
-#[inline]
-fn libm_frexpf(x: f32) -> (f32, i32) {
-    let mut exp: i32 = 0;
-    let v = unsafe { frexpf(x, &mut exp) };
-    (v, exp)
-}
-
-#[inline]
-fn libm_ldexpf(x: f32, n: i32) -> f32 {
-    unsafe { ldexpf(x, n) }
-}
-
 /// Predefined viewing distances with values in millimeters.
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum ViewingDistance {
@@ -78,17 +57,9 @@ pub struct DisplayMetrics {
 /// between -65793 and 65793 without any loss of precision.  The scaled integers
 /// can likewise be added or subtracted without any loss of precision.
 fn quantize(f: f32) -> f32 {
-    let (frac, exp) = libm_frexpf(f);
-    libm_ldexpf((frac as f64 * 256.0).round() as f32, exp - 8)
+    let (frac, exp) = libm::frexpf(f);
+    libm::ldexpf((frac as f64 * 256.0).round() as f32, exp - 8)
 }
-
-// TODO(fxb/45535): Replace native C calls in display_metrics.rs with rust-lang/libm.
-// If rust-lang/libm is added to third_party/rust_crates, remove the unsafe extern C
-// implementations and change "libm_" to "libm::". (Also, if needed, "use libm".)
-// fn quantize(f: f32) -> f32 {
-//     let (frac, exp) = libm::frexpf(f);
-//     libm::ldexpf((frac as f64 * 256.0).round() as f32, exp - 8)
-// }
 
 impl DisplayMetrics {
     /// The ideal visual angle of a pip unit in degrees, assuming default settings.
