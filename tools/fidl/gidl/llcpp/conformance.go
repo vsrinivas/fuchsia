@@ -28,13 +28,21 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 #include "src/lib/fidl/llcpp/tests/test_utils.h"
 
 {{ range .EncodeSuccessCases }}
-TEST(Conformance, {{ .Name }}_Encode) {
+TEST(Conformance, {{ .Name }}_LinearizeThenEncode) {
 	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
 	{{ .ValueBuild }}
 	const auto expected = {{ .Bytes }};
 	auto obj = {{ .ValueVar }};
-	EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&obj, expected));
+	EXPECT_TRUE(llcpp_conformance_utils::LinearizeThenEncodeSuccess(&obj, expected));
+}
+TEST(Conformance, {{ .Name }}_CombinedLinearizeAndEncode) {
+	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
+	{{ .ValueBuild }}
+	const auto expected = {{ .Bytes }};
+	auto obj = {{ .ValueVar }};
+	EXPECT_TRUE(llcpp_conformance_utils::CombinedLinearizeAndEncodeSuccess(&obj, expected));
 }
 {{ end }}
 
@@ -50,12 +58,19 @@ TEST(Conformance, {{ .Name }}_Decode) {
 {{ end }}
 
 {{ range .EncodeFailureCases }}
-TEST(Conformance, {{ .Name }}_Encode_Failure) {
+TEST(Conformance, {{ .Name }}_LinearizeThenEncode_Failure) {
 	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
 	{{ .ValueBuild }}
 	auto obj = {{ .ValueVar }};
-	EXPECT_TRUE(llcpp_conformance_utils::EncodeFailure(&obj, {{ .ErrorCode }}));
+	EXPECT_TRUE(llcpp_conformance_utils::LinearizeThenEncodeFailure(&obj, {{ .ErrorCode }}));
+}
+TEST(Conformance, {{ .Name }}_CombinedLinearizeAndEncode_Failure) {
+	fidl::UnsafeBufferAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	fidl::Allocator* allocator_ptr __attribute__((unused)) = &allocator;
+	{{ .ValueBuild }}
+	auto obj = {{ .ValueVar }};
+	EXPECT_TRUE(llcpp_conformance_utils::CombinedLinearizeAndEncodeFailure(&obj, {{ .ErrorCode }}));
 }
 {{ end }}
 
