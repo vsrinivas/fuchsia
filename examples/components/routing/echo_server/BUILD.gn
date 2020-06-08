@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("echo_server") {
   edition = "2018"
@@ -14,4 +15,10 @@ rustc_binary("echo_server") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+}
+
+fuchsia_component("echo_server_component") {
+  manifest = "meta/echo_server.cml"
+  component_name = "echo_server"
+  deps = [ ":echo_server" ]
 }

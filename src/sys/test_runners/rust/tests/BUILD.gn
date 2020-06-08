@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("tests_bin") {
   edition = "2018"
@@ -26,14 +25,14 @@ rustc_test("tests_bin") {
   ]
 }
 
-test_package("rust-runner-integration-test") {
+fuchsia_component("rust_runner_integration_test") {
+  testonly = true
+  manifest = "meta/rust_runner_integration_test.cml"
   deps = [ ":tests_bin" ]
+}
 
-  v2_tests = [
-    {
-      name = "rust_runner_integration_test"
-    },
-  ]
+fuchsia_test_package("rust-runner-integration-test") {
+  test_components = [ ":rust_runner_integration_test" ]
 }
 
 group("tests") {

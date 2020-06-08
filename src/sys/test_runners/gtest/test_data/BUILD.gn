@@ -108,7 +108,8 @@ package("gtest-runner-example-tests") {
       dest = "echo_gtest_client.cm"
     },
     {
-      path = rebase_path("//examples/components/routing/meta/echo_server.cml")
+      path = rebase_path(
+              "//examples/components/routing/echo_server/meta/echo_server.cml")
       dest = "echo_server.cm"
     },
     {

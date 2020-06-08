@@ -67,7 +67,8 @@ test_package("run_test_suite_integration_tests") {
       dest = "passing-test-example_v2.cm"
     },
     {
-      path = rebase_path("//examples/components/routing/meta/echo_server.cml")
+      path = rebase_path(
+              "//examples/components/routing/echo_server/meta/echo_server.cml")
       dest = "echo_server.cm"
     },
     {
