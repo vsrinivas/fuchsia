@@ -236,11 +236,11 @@ impl<'a> Encoder<'a> {
         x.encode(&mut encoder)
     }
 
-    /// Returns a slice of the next `len` bytes after `offset` and increases `offset` by `len`.
-    pub fn next_slice(&mut self, len: usize) -> Result<&mut [u8]> {
-        let ret = self.buf.get_mut(self.offset..(self.offset + len)).ok_or(Error::OutOfRange)?;
+    /// Returns the next offset for writing and increases `offset` by `len`.
+    pub fn next_offset(&mut self, len: usize) -> usize {
+        let cur_offset = self.offset;
         self.offset += len;
-        Ok(ret)
+        return cur_offset;
     }
 
     /// Adds specified number of zero bytes as padding.  Effectively, just increases `offset` by
@@ -764,8 +764,9 @@ macro_rules! impl_codable_num { ($($prim_ty:ty,)*) => { $(
 
     impl Encodable for $prim_ty {
         fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-            let slot = encoder.next_slice(mem::size_of::<Self>())?;
-            slot.copy_from_slice(&self.to_le_bytes());
+            let size = mem::size_of::<Self>();
+            let offset = encoder.next_offset(size);
+            encoder.buf[offset..(offset+size)].copy_from_slice(&self.to_le_bytes());
             Ok(())
         }
     }
@@ -794,8 +795,8 @@ impl_layout!(bool, align: 1, size: 1);
 
 impl Encodable for bool {
     fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        let slot = encoder.next_slice(1)?;
-        slot[0] = if *self { 1 } else { 0 };
+        let offset = encoder.next_offset(1);
+        encoder.buf[offset] = if *self { 1 } else { 0 };
         Ok(())
     }
 }
@@ -820,8 +821,8 @@ impl_slice_encoding_by_copy!(u8);
 
 impl Encodable for u8 {
     fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        let slot = encoder.next_slice(1)?;
-        slot[0] = *self;
+        let offset = encoder.next_offset(1);
+        encoder.buf[offset] = *self;
         Ok(())
     }
 }
@@ -841,8 +842,8 @@ impl_slice_encoding_by_copy!(i8);
 
 impl Encodable for i8 {
     fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        let slot = encoder.next_slice(1)?;
-        slot[0] = *self as u8;
+        let offset = encoder.next_offset(1);
+        encoder.buf[offset] = *self as u8;
         Ok(())
     }
 }
@@ -1464,8 +1465,9 @@ impl Layout for zx_status::Status {
 impl Encodable for zx_status::Status {
     fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         type Raw = zx_status::zx_status_t;
-        let slot = encoder.next_slice(mem::size_of::<Raw>())?;
-        slot.copy_from_slice(&self.into_raw().to_le_bytes());
+        let size = mem::size_of::<Raw>();
+        let offset = encoder.next_offset(size);
+        encoder.buf[offset..(offset + size)].copy_from_slice(&self.into_raw().to_le_bytes());
         Ok(())
     }
 }
@@ -1565,8 +1567,10 @@ impl<T: Autonull> Encodable for Option<&mut T> {
             match self {
                 Some(x) => x.encode(encoder),
                 None => {
-                    for byte in encoder.next_slice(encoder.inline_size_of::<T>())? {
-                        *byte = 0;
+                    let size = encoder.inline_size_of::<T>();
+                    let offset = encoder.next_offset(size);
+                    for i in offset..(offset + size) {
+                        encoder.buf[i] = 0;
                     }
                     Ok(())
                 }
