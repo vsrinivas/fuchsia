@@ -1,0 +1,104 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Run, inspect and debug
+### runs tests affected by modified files
+
+## Usage: fx smoke-test
+##           [--regenerate] [--dry-run] [--verbose] [--no-feedback]
+##
+##   --regenerate Regenerates Ninja first.
+##                If your change affects test definitions or modifies
+##                the build graph then regenerating will ensure that
+##                this command will operate on a fresh graph.
+##   --dry-run Finds affected tests but doesn't run them
+##   --verbose Prints modified files and affected tests
+##   --no-feedback Don't print feedback link
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+
+function usage() {
+  fx-command-help
+}
+
+function get-diff-base() {
+  local upstream=$(git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null)
+  if [[ -z "${upstream}" ]]; then
+    upstream="origin/master"
+  fi
+  local local_commit=$(git rev-list HEAD ^${upstream} --  2>/dev/null | tail -1)
+  if [[ -z "${local_commit}" ]]; then
+    printf "HEAD"
+  else
+    git rev-parse "${local_commit}"^
+  fi
+}
+
+REGENERATE=
+DRY_RUN=
+VERBOSE=
+NO_FEEDBACK=
+
+fx-config-read
+
+while [ $# -gt 0 ]; do
+  ARG="$1"
+  case "$1" in
+    --regenerate) REGENERATE="1" ;;
+    --verbose) VERBOSE="1" ;;
+    --dry-run) DRY_RUN="1" ;;
+    --no-feedback) NO_FEEDBACK="1" ;;
+    --) break ;;
+    *) usage && printf "Unknown flag %s\n" "${ARG}" && exit 1 ;;
+  esac
+  shift
+done
+
+if [[ -n "$REGENERATE" ]]; then
+  fx-gen
+fi
+
+# Generate Ninja graph
+trap 'rm -f "$GRAPH"' EXIT
+readonly GRAPH=$(mktemp -u)
+mkfifo $GRAPH
+"$PREBUILT_NINJA" -C "$FUCHSIA_BUILD_DIR" -t graph > ${GRAPH} &
+
+# Get modified sources
+readonly MODIFIED=$(git diff --name-only $(get-diff-base) "${GIT_FILTER[@]}")
+if [[ -n "$VERBOSE" ]]; then
+  printf "Modified files:\n%s\n\n" "${MODIFIED}"
+fi
+
+readonly TESTS_JSON="${FUCHSIA_BUILD_DIR}/tests.json"
+
+# Build `affectedtests` if needed
+readonly TOOL="${HOST_OUT_DIR}/affectedtests"
+if [[ ! -f $TOOL ]]; then
+  fx-command-run build `realpath --relative-to="${FUCHSIA_BUILD_DIR}" "${TOOL}"`
+fi
+
+# Find affected tests
+AFFECTED=$("${TOOL}" --srcs "${MODIFIED}" --tests_json "${TESTS_JSON}" --graph "${GRAPH}")
+if [[ -n "$VERBOSE" ]]; then
+  if [[ -z "$AFFECTED" ]]; then
+    printf "No affected tests.\n"
+  else
+    printf "Affected tests:\n%s\n\n" "${AFFECTED}"
+  fi
+fi
+
+# Run affected tests
+if [[ -z "$DRY_RUN" && -n "$AFFECTED" ]]; then
+  fx-command-run test "${AFFECTED}"
+fi
+
+if [[ -z "$NO_FEEDBACK" ]]; then
+  echo "Feedback? https://forms.gle/32Rhsrzo5K6ndXpg6"
+fi
+
+exit 0

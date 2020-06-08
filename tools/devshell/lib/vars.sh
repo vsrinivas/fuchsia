@@ -48,7 +48,6 @@ function fx-gn {
 
 function fx-gen {
     (
-      set -ex
       cd "${FUCHSIA_DIR}"
       fx-gn gen --check --export-rust-project --export-compile-commands=default "${FUCHSIA_BUILD_DIR}"
       # symlink rust-project.json to root of project

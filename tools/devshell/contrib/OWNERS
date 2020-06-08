@@ -34,6 +34,7 @@ per-file rustfmt=tmandry@google.com
 per-file set-petal=abarth@google.com
 per-file set-relay=tamird@google.com
 per-file setup-usb-ethernet=cjn@google.com
+per-file smoke-test=shayba@google.com
 per-file sniff=porce@google.com
 per-file triage=cphoenix@google.com
 per-file triage=crjohns@google.com

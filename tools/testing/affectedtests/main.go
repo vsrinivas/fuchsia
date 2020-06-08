@@ -19,19 +19,19 @@ func main() {
 
 	testsJSONContents, err := ioutil.ReadFile(*testsJSON)
 	if err != nil {
-		log.Fatal("Failed to read", *testsJSON, err)
+		log.Fatal("Failed to read ", *testsJSON, ": ", err)
 	}
 	var testSpecs []build.TestSpec
 	if err = json.Unmarshal(testsJSONContents, &testSpecs); err != nil {
-		log.Fatal("Failed to parse", *testsJSON, err)
+		log.Fatal("Failed to parse ", *testsJSON, ": ", err)
 	}
 
 	dotFileContents, err := ioutil.ReadFile(*dotFile)
 	if err != nil {
-		log.Fatal("Failed to read", *dotFile, err)
+		log.Fatal("Failed to read ", *dotFile, ": ", err)
 	}
 
-	affected := affectedtests.AffectedTests(strings.Split(*srcs, " "), testSpecs, dotFileContents)
+	affected := affectedtests.AffectedTests(strings.Fields(*srcs), testSpecs, dotFileContents)
 
 	for _, test := range affected {
 		fmt.Println(test)
