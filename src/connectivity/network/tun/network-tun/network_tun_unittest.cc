@@ -268,6 +268,9 @@ class TunTest : public gtest::RealLoopFixture {
     sync_completion_t completion;
     tun_ctl_.SetSafeShutdownCallback([&completion]() { sync_completion_signal(&completion); });
     ASSERT_OK(sync_completion_wait(&completion, kTimeout.get()));
+    // Loop must be shutdown before TunCtl. Shutdown the loop here so it's explicit and not reliant
+    // on the order of the fields in the class.
+    loop_.Shutdown();
   }
 
   fuchsia::net::tun::ControlSyncPtr Connect() {
