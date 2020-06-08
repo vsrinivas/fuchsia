@@ -550,6 +550,10 @@ impl<'a> Decoder<'a> {
     /// A convenience method to skip over the specified number of zero bytes used for padding, also
     /// checking that all those bytes are in fact zeroes.
     pub fn skip_padding(&mut self, len: usize) -> Result<()> {
+        if len == 0 {
+            // Skip body (so it can be optimized out).
+            return Ok(());
+        }
         let padding_start = self.inline_pos();
         let padding = self.next_slice(len)?;
         for i in 0..padding.len() {
