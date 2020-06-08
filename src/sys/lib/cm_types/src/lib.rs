@@ -8,8 +8,8 @@
 
 use {
     serde::de,
-    serde::Serialize,
-    std::{borrow::Cow, fmt, str::FromStr},
+    serde::{Deserialize, Serialize},
+    std::{borrow::Cow, default::Default, fmt, str::FromStr},
     thiserror::Error,
     url,
 };
@@ -120,7 +120,7 @@ impl<'de> de::Deserialize<'de> for Name {
 }
 
 /// A filesystem path.
-#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Path(String);
 
 /// The error representing a failed validation of a `Path` string.
@@ -483,6 +483,75 @@ impl<'de> de::Deserialize<'de> for UrlScheme {
             }
         }
         deserializer.deserialize_string(Visitor)
+    }
+}
+
+/// The duration of child components in a collection. See [`Durability`].
+///
+/// [`Durability`]: ../../fidl_fuchsia_sys2/enum.Durability.html
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum Durability {
+    /// The instance exists until it is explicitly destroyed.
+    Persistent,
+    /// The instance exists until its containing realm is stopped or it is
+    /// explicitly destroyed.
+    Transient,
+}
+
+/// A component instance's startup mode. See [`StartupMode`].
+///
+/// [`StartupMode`]: ../../fidl_fuchsia_sys2/enum.StartupMode.html
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum StartupMode {
+    /// Start the component instance only if another component instance binds to
+    /// it.
+    Lazy,
+    /// Start the component instance as soon as its parent starts.
+    Eager,
+}
+
+impl Default for StartupMode {
+    fn default() -> Self {
+        Self::Lazy
+    }
+}
+
+/// Offered dependency type. See [`DependencyType`].
+///
+/// [`DependencyType`]: ../../fidl_fuchsia_sys2/enum.DependencyType.html
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DependencyType {
+    Strong,
+    WeakForMigration,
+}
+
+impl Default for DependencyType {
+    fn default() -> Self {
+        Self::Strong
+    }
+}
+
+/// The type of storage capability. See [`StorageType`].
+///
+/// [`StorageType`]: ../../fidl_fuchsia_sys2/enum.StorageType.html
+#[derive(Serialize, Deserialize, PartialEq, Eq, Hash, Debug, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum StorageType {
+    Data,
+    Cache,
+    Meta,
+}
+
+impl StorageType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Data => "data",
+            Self::Cache => "cache",
+            Self::Meta => "meta",
+        }
     }
 }
 

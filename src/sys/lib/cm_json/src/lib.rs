@@ -61,27 +61,27 @@ impl error::Error for Error {}
 
 impl Error {
     pub fn invalid_args(err: impl Into<String>) -> Self {
-        Error::InvalidArgs(err.into())
+        Self::InvalidArgs(err.into())
     }
 
     pub fn parse(err: impl fmt::Display) -> Self {
-        Error::Parse(err.to_string())
+        Self::Parse(err.to_string())
     }
 
     pub fn validate(err: impl fmt::Display) -> Self {
-        Error::Validate { schema_name: None, err: err.to_string() }
+        Self::Validate { schema_name: None, err: err.to_string() }
     }
 
     pub fn validate_schema(schema: &JsonSchema<'_>, err: impl Into<String>) -> Self {
-        Error::Validate { schema_name: Some(schema.name.to_string()), err: err.into() }
+        Self::Validate { schema_name: Some(schema.name.to_string()), err: err.into() }
     }
 
     pub fn validate_fidl(err: impl Into<anyhow::Error>) -> Self {
-        Error::ValidateFidl(err.into())
+        Self::ValidateFidl(err.into())
     }
 
     pub fn internal(err: impl Into<String>) -> Self {
-        Error::Internal(err.into())
+        Self::Internal(err.into())
     }
 }
 

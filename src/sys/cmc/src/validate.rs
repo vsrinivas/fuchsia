@@ -6,6 +6,7 @@ use {
     crate::{cml, one_or_many::OneOrMany},
     cm_json::{self, Error, JsonSchema, CML_SCHEMA, CMX_SCHEMA},
     directed_graph::{self, DirectedGraph},
+    lazy_static::lazy_static,
     serde_json::Value,
     std::{
         collections::{HashMap, HashSet},
@@ -19,7 +20,10 @@ use {
     valico::json_schema,
 };
 
-const DEFAULT_EVENT_STREAM_PATH: &'static str = "/svc/fuchsia.sys2.EventStream";
+lazy_static! {
+    static ref DEFAULT_EVENT_STREAM_PATH: cml::Path =
+        "/svc/fuchsia.sys2.EventStream".parse().unwrap();
+}
 
 /// Read in and parse one or more manifest files. Returns an Err() if any file is not valid
 /// or Ok(()) if all files are valid.
@@ -161,28 +165,28 @@ struct ValidationContext<'a> {
 /// namespace they are in.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 enum CapabilityId<'a> {
-    Service(&'a str),
-    Protocol(&'a str),
-    Directory(&'a str),
-    Runner(&'a str),
-    Resolver(&'a str),
-    StorageType(&'a str),
-    Event(&'a str),
-    EventStream(&'a str),
+    Service(&'a cml::Path),
+    Protocol(&'a cml::Path),
+    Directory(&'a cml::Path),
+    Runner(&'a cml::Name),
+    Resolver(&'a cml::Name),
+    StorageType(&'a cml::StorageType),
+    Event(&'a cml::Name),
+    EventStream(&'a cml::Path),
 }
 
 impl<'a> CapabilityId<'a> {
     /// Return the string ID of this clause.
     pub fn as_str(&self) -> &'a str {
         match self {
+            CapabilityId::Runner(n) | CapabilityId::Resolver(n) | CapabilityId::Event(n) => {
+                n.as_str()
+            }
             CapabilityId::Service(p)
             | CapabilityId::Protocol(p)
             | CapabilityId::Directory(p)
-            | CapabilityId::Runner(p)
-            | CapabilityId::Resolver(p)
-            | CapabilityId::StorageType(p)
-            | CapabilityId::Event(p) => p,
-            CapabilityId::EventStream(p) => p,
+            | CapabilityId::EventStream(p) => p.as_str(),
+            CapabilityId::StorageType(s) => s.as_str(),
         }
     }
 
@@ -203,8 +207,8 @@ impl<'a> CapabilityId<'a> {
     /// Return the directory containing the capability.
     pub fn get_dir_path(&self) -> Option<&Path> {
         match self {
-            CapabilityId::Directory(p) => Some(Path::new(p)),
-            CapabilityId::Service(p) | CapabilityId::Protocol(p) => Path::new(p).parent(),
+            CapabilityId::Directory(p) => Some(Path::new(p.as_str())),
+            CapabilityId::Service(p) | CapabilityId::Protocol(p) => Path::new(p.as_str()).parent(),
             _ => None,
         }
     }
@@ -212,8 +216,8 @@ impl<'a> CapabilityId<'a> {
     /// Given a CapabilityClause (Use, Offer or Expose), return the set of target identifiers.
     ///
     /// When only one capability identifier is specified, the target identifier name is derived
-    /// using the "as" clause. If an "as" clause is not specified, the target identifier is the same
-    /// name as the source.
+    /// using the "as" clause. If an "as" clause is not specified, the target identifier is the
+    /// same name as the source.
     ///
     /// When multiple capability identifiers are specified, the target names are the same as the
     /// source names.
@@ -225,37 +229,38 @@ impl<'a> CapabilityId<'a> {
         // using the "as" clause to rename if neccessary.
         let alias = clause.r#as();
         if let Some(svc) = clause.service().as_ref() {
-            return Ok(vec![CapabilityId::Service(alias.unwrap_or(svc))]);
+            return Ok(vec![CapabilityId::Service(cml::alias_or_path(alias, svc)?)]);
         } else if let Some(OneOrMany::One(protocol)) = clause.protocol().as_ref() {
-            return Ok(vec![CapabilityId::Protocol(alias.unwrap_or(protocol))]);
+            return Ok(vec![CapabilityId::Protocol(cml::alias_or_path(alias, protocol)?)]);
         } else if let Some(OneOrMany::Many(protocols)) = clause.protocol().as_ref() {
             return match (alias, protocols.len()) {
-                (Some(valid_alias), 1) => Ok(vec![CapabilityId::Protocol(valid_alias)]),
+                (Some(valid_alias), 1) => {
+                    Ok(vec![CapabilityId::Protocol(valid_alias.extract_path_borrowed()?)])
+                }
 
                 (Some(_), _) => Err(Error::validate(
                     "\"as\" field can only be specified when one `protocol` is supplied.",
                 )),
 
-                (None, _) => {
-                    Ok(protocols.iter().map(|svc: &String| CapabilityId::Protocol(svc)).collect())
-                }
+                (None, _) => Ok(protocols
+                    .iter()
+                    .map(|svc: &cml::Path| CapabilityId::Protocol(svc))
+                    .collect()),
             };
         } else if let Some(p) = clause.directory().as_ref() {
-            return Ok(vec![CapabilityId::Directory(alias.unwrap_or(p))]);
-        } else if let Some(p) = clause.runner().as_ref() {
-            return Ok(vec![CapabilityId::Runner(alias.unwrap_or(p))]);
-        } else if let Some(p) = clause.resolver().as_ref() {
-            return Ok(vec![CapabilityId::Resolver(
-                alias.map(|s| s.as_str()).unwrap_or(p.as_str()),
-            )]);
-        } else if let Some(OneOrMany::One(event)) = clause.event().as_ref() {
-            return Ok(vec![CapabilityId::Event(
-                alias.map(|a| a.as_str()).unwrap_or(event.as_str()),
-            )]);
+            return Ok(vec![CapabilityId::Directory(cml::alias_or_path(alias, p)?)]);
+        } else if let Some(n) = clause.runner().as_ref() {
+            return Ok(vec![CapabilityId::Runner(cml::alias_or_name(alias, n)?)]);
+        } else if let Some(n) = clause.resolver().as_ref() {
+            return Ok(vec![CapabilityId::Resolver(cml::alias_or_name(alias, n)?)]);
+        } else if let Some(OneOrMany::One(n)) = clause.event().as_ref() {
+            return Ok(vec![CapabilityId::Event(cml::alias_or_name(alias, n)?)]);
         } else if let Some(OneOrMany::Many(events)) = clause.event().as_ref() {
             return match (alias, clause.filter(), events.len()) {
-                (Some(valid_alias), _, 1) => Ok(vec![CapabilityId::Event(valid_alias)]),
-                (None, Some(_), 1) => Ok(vec![CapabilityId::Event(events[0].as_str())]),
+                (Some(valid_alias), _, 1) => {
+                    Ok(vec![CapabilityId::Event(valid_alias.extract_name_borrowed()?)])
+                }
+                (None, Some(_), 1) => Ok(vec![CapabilityId::Event(&events[0])]),
                 (Some(_), None, _) => Err(Error::validate(
                     "\"as\" field can only be specified when one `event` is supplied",
                 )),
@@ -266,13 +271,14 @@ impl<'a> CapabilityId<'a> {
                     "\"as\",\"filter\" fields can only be specified when one `event` is supplied",
                 )),
                 (None, None, _) => {
-                    Ok(events.iter().map(|event| CapabilityId::Event(event.as_str())).collect())
+                    Ok(events.iter().map(|event: &cml::Name| CapabilityId::Event(event)).collect())
                 }
             };
-        } else if let Some(_event_stream) = clause.event_stream().as_ref() {
-            return Ok(vec![CapabilityId::EventStream(
-                alias.map(|a| a.as_str()).unwrap_or(DEFAULT_EVENT_STREAM_PATH),
-            )]);
+        } else if let Some(_) = clause.event_stream().as_ref() {
+            return Ok(vec![CapabilityId::EventStream(cml::alias_or_path(
+                alias,
+                &DEFAULT_EVENT_STREAM_PATH,
+            )?)]);
         }
 
         // Offers rules prohibit using the "as" clause for storage; this is validated outside the
@@ -324,7 +330,7 @@ impl<'a> ValidationContext<'a> {
         self.all_runners = self.document.all_runner_names().into_iter().collect();
         self.all_resolvers = self.document.all_resolver_names().into_iter().collect();
         self.all_environment_names = self.document.all_environment_names().into_iter().collect();
-        self.all_event_names = self.document.all_event_names().into_iter().collect();
+        self.all_event_names = self.document.all_event_names()?.into_iter().collect();
 
         // Validate "children".
         let mut strong_dependencies = DirectedGraph::new();
@@ -727,8 +733,8 @@ impl<'a> ValidationContext<'a> {
             // declarations are validated.
             for from in offer.from.iter() {
                 let is_strong = if offer.directory.is_some() || offer.protocol.is_some() {
-                    offer.dependency.as_ref().map(|n| n.as_str()).unwrap_or(cml::STRONG)
-                        == cml::STRONG
+                    offer.dependency.as_ref().unwrap_or(&cml::DependencyType::Strong)
+                        == &cml::DependencyType::Strong
                 } else {
                     true
                 };
@@ -838,29 +844,16 @@ impl<'a> ValidationContext<'a> {
     }
 
     /// Validates that directory rights for all route types are valid, i.e that it does not
-    /// contain duplicate rights and exists if the from clause originates at "self".
-    /// - `keyword` is the keyword for the clause ("offer", "expose", or "use").
-    /// - `source_obj` is the object containing the directory.
-    fn validate_directory_rights(&self, rights_clause: &Vec<String>) -> Result<(), Error> {
-        // Verify all right tokens are valid.
+    /// contain duplicate rights.
+    fn validate_directory_rights(&self, rights_clause: &Vec<cml::Right>) -> Result<(), Error> {
         let mut rights = HashSet::new();
         for right_token in rights_clause.iter() {
-            match cml::parse_right_token(right_token) {
-                Some(rights_expanded) => {
-                    for right in rights_expanded.into_iter() {
-                        if !rights.insert(right) {
-                            return Err(Error::validate(format!(
-                                "\"{}\" is duplicated in the rights clause.",
-                                right_token
-                            )));
-                        }
-                    }
-                }
-                None => {
+            for right in right_token.expand() {
+                if !rights.insert(right) {
                     return Err(Error::validate(format!(
-                        "\"{}\" is not a valid right token.",
+                        "\"{}\" is duplicated in the rights clause.",
                         right_token
-                    )))
+                    )));
                 }
             }
         }
@@ -3696,48 +3689,53 @@ mod tests {
         // Simple tests.
         assert_eq!(
             CapabilityId::from_clause(&cml::Offer {
-                service: Some("/a".to_string()),
+                service: Some("/a".parse().unwrap()),
                 ..empty_offer()
             })?,
-            vec![CapabilityId::Service("/a")]
+            vec![CapabilityId::Service(&"/a".parse().unwrap())]
         );
         assert_eq!(
             CapabilityId::from_clause(&cml::Offer {
-                protocol: Some(OneOrMany::One("/a".to_string())),
+                protocol: Some(OneOrMany::One("/a".parse().unwrap())),
                 ..empty_offer()
             })?,
-            vec![CapabilityId::Protocol("/a")]
+            vec![CapabilityId::Protocol(&"/a".parse().unwrap())]
         );
         assert_eq!(
             CapabilityId::from_clause(&cml::Offer {
-                protocol: Some(OneOrMany::Many(vec!["/a".to_string(), "/b".to_string()])),
+                protocol: Some(
+                    OneOrMany::Many(vec!["/a".parse().unwrap(), "/b".parse().unwrap()],)
+                ),
                 ..empty_offer()
             })?,
-            vec![CapabilityId::Protocol("/a"), CapabilityId::Protocol("/b")]
+            vec![
+                CapabilityId::Protocol(&"/a".parse().unwrap()),
+                CapabilityId::Protocol(&"/b".parse().unwrap())
+            ]
         );
         assert_eq!(
             CapabilityId::from_clause(&cml::Offer {
-                directory: Some("/a".to_string()),
+                directory: Some("/a".parse().unwrap()),
                 ..empty_offer()
             })?,
-            vec![CapabilityId::Directory("/a")]
+            vec![CapabilityId::Directory(&"/a".parse().unwrap())]
         );
         assert_eq!(
             CapabilityId::from_clause(&cml::Offer {
-                storage: Some("a".to_string()),
+                storage: Some(cml::StorageType::Cache),
                 ..empty_offer()
             })?,
-            vec![CapabilityId::StorageType("a")]
+            vec![CapabilityId::StorageType(&cml::StorageType::Cache)],
         );
 
         // "as" aliasing.
         assert_eq!(
             CapabilityId::from_clause(&cml::Offer {
-                service: Some("/a".to_string()),
-                r#as: Some("/b".to_string()),
+                service: Some("/a".parse().unwrap()),
+                r#as: Some("/b".parse().unwrap()),
                 ..empty_offer()
             })?,
-            vec![CapabilityId::Service("/b")]
+            vec![CapabilityId::Service(&"/b".parse().unwrap())]
         );
 
         // Error case.

@@ -25,7 +25,7 @@ use {
 ///
 /// Attributes (all required):
 /// - `expected`: The `expected` string attached to the serde deserializer.
-/// - `parse_error`: The error variant to return when `FromStr` fails.
+/// - `parse_error`: The `RefValidationError` variant to return when `FromStr` fails.
 ///
 /// This macro implements the following traits:
 /// - `std::str::FromStr`
@@ -113,7 +113,7 @@ fn impl_derive_ref(ast: syn::DeriveInput) -> TokenStream {
                 let mut tokens = quote!();
                 tokens.append_all(quote! {
                     if value.len() > 101 {
-                        return Err(ValidationError::RefTooLong);
+                        return Err(ValidationError::RefInvalid(RefValidationError::RefTooLong));
                     }
                 });
                 if self.variants.contains("Named") {
@@ -122,7 +122,8 @@ fn impl_derive_ref(ast: syn::DeriveInput) -> TokenStream {
                             return value[1..]
                                 .parse::<Name>()
                                 .map(Self::Named)
-                                .map_err(ValidationError::NamedRefInvalid);
+                                .map_err(|_| ValidationError::NameInvalid(
+                                    NameValidationError::MalformedName));
                         }
                     });
                 }
@@ -143,7 +144,8 @@ fn impl_derive_ref(ast: syn::DeriveInput) -> TokenStream {
                             "self" => Ok(Self::Self_),
                         });
                     }
-                    tokens.append_all(quote! {_ => Err(#parse_error),});
+                    tokens
+                        .append_all(quote! {_ => Err(ValidationError::RefInvalid(#parse_error)),});
                     tokens
                 };
                 tokens.append_all(quote! {

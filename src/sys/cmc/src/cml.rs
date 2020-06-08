@@ -4,27 +4,141 @@
 
 use {
     crate::one_or_many::OneOrMany,
-    cm_json::cm,
+    cm_json::{cm, Error},
     cmc_macro::Ref,
-    serde::Deserialize,
+    serde::{de, Deserialize},
     serde_json::{Map, Value},
-    std::{collections::HashMap, fmt},
+    std::{collections::HashMap, fmt, str::FromStr},
     thiserror::Error,
 };
 
-pub use cm_types::Name;
-
-pub const LAZY: &str = "lazy";
-pub const EAGER: &str = "eager";
-pub const PERSISTENT: &str = "persistent";
-pub const TRANSIENT: &str = "transient";
-pub const STRONG: &str = "strong";
+pub use cm_types::{
+    DependencyType, Durability, Name, NameValidationError, Path, PathValidationError, RelativePath,
+    StartupMode, StorageType, Url,
+};
 
 /// An error that occurs during validation.
 #[derive(Debug, Error)]
 pub enum ValidationError {
-    #[error("Named reference is not valid")]
-    NamedRefInvalid(cm_types::NameValidationError),
+    #[error("Name is not valid")]
+    NameInvalid(cm_types::NameValidationError),
+    #[error("Reference is not valid")]
+    RefInvalid(RefValidationError),
+}
+
+/// A string that could be a name or filesystem path.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum NameOrPath {
+    Name(Name),
+    Path(Path),
+}
+
+impl NameOrPath {
+    /// Get the name if this is a name, or return an error if not.
+    pub fn extract_name(self) -> Result<Name, Error> {
+        match self {
+            Self::Name(n) => Ok(n),
+            Self::Path(_) => Err(Error::internal("not a name")),
+        }
+    }
+
+    /// Get the name if this is a name, or return an error if not.
+    pub fn extract_name_borrowed(&self) -> Result<&Name, Error> {
+        match self {
+            Self::Name(ref n) => Ok(n),
+            Self::Path(_) => Err(Error::internal("not a name")),
+        }
+    }
+
+    /// Get the path if this is a path, or return an error if not.
+    pub fn extract_path(self) -> Result<Path, Error> {
+        match self {
+            Self::Path(p) => Ok(p),
+            Self::Name(_) => Err(Error::internal("not a path")),
+        }
+    }
+
+    /// Get the path if this is a path, or return an error if not.
+    pub fn extract_path_borrowed(&self) -> Result<&Path, Error> {
+        match self {
+            Self::Path(ref p) => Ok(p),
+            Self::Name(_) => Err(Error::internal("not a path")),
+        }
+    }
+}
+
+/// The error representing a failed validation of a `NameOrPath`.
+#[derive(Debug, Error)]
+pub enum NameOrPathValidationError {
+    #[error("Name is not valid")]
+    NameInvalid(NameValidationError),
+    #[error("Path is not valid")]
+    PathInvalid(PathValidationError),
+}
+
+impl FromStr for NameOrPath {
+    type Err = NameOrPathValidationError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(if s.starts_with("/") {
+            NameOrPath::Path(s.parse().map_err(|e| NameOrPathValidationError::PathInvalid(e))?)
+        } else {
+            NameOrPath::Name(s.parse().map_err(|e| NameOrPathValidationError::NameInvalid(e))?)
+        })
+    }
+}
+
+impl<'de> de::Deserialize<'de> for NameOrPath {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = NameOrPath;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str(
+                    "a non-empty path no more than 1024 characters \
+                     in length, with a leading `/`, and containing no \
+                     empty path segments, or \
+                     a non-empty string no more than 100 characters in \
+                     length, containing only alpha-numeric characters",
+                )
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                s.parse().map_err(|err| match err {
+                    NameOrPathValidationError::NameInvalid(NameValidationError::InvalidLength)
+                    | NameOrPathValidationError::PathInvalid(PathValidationError::InvalidLength) => {
+                        E::invalid_length(
+                            s.len(),
+                            &"a non-empty path no more than 1024 characters in length, or \
+                              a non-empty name no more than 100 characters in length",
+                        )
+                    }
+                    NameOrPathValidationError::NameInvalid(NameValidationError::MalformedName)
+                    | NameOrPathValidationError::PathInvalid(PathValidationError::MalformedPath) => {
+                        E::invalid_value(
+                            de::Unexpected::Str(s),
+                            &"a path with leading `/` and non-empty segments, or \
+                              a name containing only alpha-numeric characters or [_-.]",
+                        )
+                    }
+                })
+            }
+        }
+        deserializer.deserialize_string(Visitor)
+    }
+}
+
+/// An error representing failed validation of a reference.
+#[derive(Debug, Error)]
+pub enum RefValidationError {
     #[error("Reference is more than 100 characters")]
     RefTooLong,
     #[error("`use from` reference is not valid")]
@@ -82,7 +196,7 @@ impl fmt::Display for AnyRef<'_> {
 /// A reference in a `use from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
 #[expected = "a `use from` reference"]
-#[parse_error(ValidationError::UseFromRefInvalid)]
+#[parse_error(RefValidationError::UseFromRefInvalid)]
 pub enum UseFromRef {
     /// A reference to the containing realm.
     Realm,
@@ -93,7 +207,7 @@ pub enum UseFromRef {
 /// A reference in an `expose from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
 #[expected = "an `expose from` reference"]
-#[parse_error(ValidationError::ExposeFromRefInvalid)]
+#[parse_error(RefValidationError::ExposeFromRefInvalid)]
 pub enum ExposeFromRef {
     /// A reference to a child or collection.
     Named(Name),
@@ -106,7 +220,7 @@ pub enum ExposeFromRef {
 /// A reference in an `expose to`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
 #[expected = "an `expose to` reference"]
-#[parse_error(ValidationError::ExposeToRefInvalid)]
+#[parse_error(RefValidationError::ExposeToRefInvalid)]
 pub enum ExposeToRef {
     /// A reference to the realm.
     Realm,
@@ -117,7 +231,7 @@ pub enum ExposeToRef {
 /// A reference in an `offer from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
 #[expected = "an `offer from` reference"]
-#[parse_error(ValidationError::OfferFromRefInvalid)]
+#[parse_error(RefValidationError::OfferFromRefInvalid)]
 pub enum OfferFromRef {
     /// A reference to a child or collection.
     Named(Name),
@@ -132,7 +246,7 @@ pub enum OfferFromRef {
 /// A reference in an `offer to`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
 #[expected = "an `offer to` reference"]
-#[parse_error(ValidationError::OfferToRefInvalid)]
+#[parse_error(RefValidationError::OfferToRefInvalid)]
 pub enum OfferToRef {
     /// A reference to a child or collection.
     Named(Name),
@@ -141,7 +255,7 @@ pub enum OfferToRef {
 /// A reference in an environment.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
 #[expected = "an environment reference"]
-#[parse_error(ValidationError::EnvironmentRefInvalid)]
+#[parse_error(RefValidationError::EnvironmentRefInvalid)]
 pub enum EnvironmentRef {
     /// A reference to an environment defined in this component.
     Named(Name),
@@ -150,7 +264,7 @@ pub enum EnvironmentRef {
 /// A reference in a `storage from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
 #[expected = "a `storage from` reference"]
-#[parse_error(ValidationError::StorageFromRefInvalid)]
+#[parse_error(RefValidationError::StorageFromRefInvalid)]
 pub enum StorageFromRef {
     /// A reference to a child.
     Named(Name),
@@ -163,7 +277,7 @@ pub enum StorageFromRef {
 /// A reference in a `runner from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
 #[expected = "a `runner from` reference"]
-#[parse_error(ValidationError::RunnerFromRefInvalid)]
+#[parse_error(RefValidationError::RunnerFromRefInvalid)]
 pub enum RunnerFromRef {
     /// A reference to a child.
     Named(Name),
@@ -176,7 +290,7 @@ pub enum RunnerFromRef {
 /// A reference in an environment registration.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Ref)]
 #[expected = "a registration reference"]
-#[parse_error(ValidationError::RegistrationRefInvalid)]
+#[parse_error(RefValidationError::RegistrationRefInvalid)]
 pub enum RegistrationRef {
     /// A reference to a child.
     Named(Name),
@@ -186,69 +300,121 @@ pub enum RegistrationRef {
     Self_,
 }
 
-/// Converts a valid cml right (including aliases) into a Vec<cm::Right> expansion. This function
-/// will expand all valid right aliases and pass through non-aliased rights through to
-/// Rights::map_token. None will be returned for invalid rights.
-pub fn parse_right_token(token: &str) -> Option<Vec<cm::Right>> {
-    match token {
-        "r*" => Some(vec![
-            cm::Right::Connect,
-            cm::Right::Enumerate,
-            cm::Right::Traverse,
-            cm::Right::ReadBytes,
-            cm::Right::GetAttributes,
-        ]),
-        "w*" => Some(vec![
-            cm::Right::Connect,
-            cm::Right::Enumerate,
-            cm::Right::Traverse,
-            cm::Right::WriteBytes,
-            cm::Right::ModifyDirectory,
-            cm::Right::UpdateAttributes,
-        ]),
-        "x*" => Some(vec![
-            cm::Right::Connect,
-            cm::Right::Enumerate,
-            cm::Right::Traverse,
-            cm::Right::Execute,
-        ]),
-        "rw*" => Some(vec![
-            cm::Right::Connect,
-            cm::Right::Enumerate,
-            cm::Right::Traverse,
-            cm::Right::ReadBytes,
-            cm::Right::WriteBytes,
-            cm::Right::ModifyDirectory,
-            cm::Right::GetAttributes,
-            cm::Right::UpdateAttributes,
-        ]),
-        "rx*" => Some(vec![
-            cm::Right::Connect,
-            cm::Right::Enumerate,
-            cm::Right::Traverse,
-            cm::Right::ReadBytes,
-            cm::Right::GetAttributes,
-            cm::Right::Execute,
-        ]),
-        _ => {
-            if let Some(right) = cm::Rights::map_token(token) {
-                return Some(vec![right]);
-            }
-            None
+/// A right or bundle of rights to apply to a directory.
+#[derive(Deserialize, Clone, Debug, Eq, PartialEq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum Right {
+    // Individual
+    Connect,
+    Enumerate,
+    Execute,
+    GetAttributes,
+    ModifyDirectory,
+    ReadBytes,
+    Traverse,
+    UpdateAttributes,
+    WriteBytes,
+    Admin,
+
+    // Aliass
+    #[serde(rename = "r*")]
+    ReadAlias,
+    #[serde(rename = "w*")]
+    WriteAlias,
+    #[serde(rename = "x*")]
+    ExecuteAlias,
+    #[serde(rename = "rw*")]
+    ReadWriteAlias,
+    #[serde(rename = "rx*")]
+    ReadExecuteAlias,
+}
+
+impl fmt::Display for Right {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Self::Connect => "connect",
+            Self::Enumerate => "enumerate",
+            Self::Execute => "execute",
+            Self::GetAttributes => "get_attributes",
+            Self::ModifyDirectory => "modify_directory",
+            Self::ReadBytes => "read_bytes",
+            Self::Traverse => "traverse",
+            Self::UpdateAttributes => "update_attributes",
+            Self::WriteBytes => "write_bytes",
+            Self::Admin => "admin",
+            Self::ReadAlias => "r*",
+            Self::WriteAlias => "w*",
+            Self::ExecuteAlias => "x*",
+            Self::ReadWriteAlias => "rw*",
+            Self::ReadExecuteAlias => "rx*",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl Right {
+    /// Expands this right or bundle or rights into a list of `cm::Right`.
+    pub fn expand(&self) -> Vec<cm::Right> {
+        match self {
+            Self::Connect => vec![cm::Right::Connect],
+            Self::Enumerate => vec![cm::Right::Enumerate],
+            Self::Execute => vec![cm::Right::Execute],
+            Self::GetAttributes => vec![cm::Right::GetAttributes],
+            Self::ModifyDirectory => vec![cm::Right::ModifyDirectory],
+            Self::ReadBytes => vec![cm::Right::ReadBytes],
+            Self::Traverse => vec![cm::Right::Traverse],
+            Self::UpdateAttributes => vec![cm::Right::UpdateAttributes],
+            Self::WriteBytes => vec![cm::Right::WriteBytes],
+            Self::Admin => vec![cm::Right::Admin],
+            Self::ReadAlias => vec![
+                cm::Right::Connect,
+                cm::Right::Enumerate,
+                cm::Right::Traverse,
+                cm::Right::ReadBytes,
+                cm::Right::GetAttributes,
+            ],
+            Self::WriteAlias => vec![
+                cm::Right::Connect,
+                cm::Right::Enumerate,
+                cm::Right::Traverse,
+                cm::Right::WriteBytes,
+                cm::Right::ModifyDirectory,
+                cm::Right::UpdateAttributes,
+            ],
+            Self::ExecuteAlias => vec![
+                cm::Right::Connect,
+                cm::Right::Enumerate,
+                cm::Right::Traverse,
+                cm::Right::Execute,
+            ],
+            Self::ReadWriteAlias => vec![
+                cm::Right::Connect,
+                cm::Right::Enumerate,
+                cm::Right::Traverse,
+                cm::Right::ReadBytes,
+                cm::Right::WriteBytes,
+                cm::Right::ModifyDirectory,
+                cm::Right::GetAttributes,
+                cm::Right::UpdateAttributes,
+            ],
+            Self::ReadExecuteAlias => vec![
+                cm::Right::Connect,
+                cm::Right::Enumerate,
+                cm::Right::Traverse,
+                cm::Right::ReadBytes,
+                cm::Right::GetAttributes,
+                cm::Right::Execute,
+            ],
         }
     }
 }
 
 /// Converts a set of cml right tokens (including aliases) into a well formed cm::Rights expansion.
-/// This function will expand all valid right aliases and pass through non-aliased rights through
-/// to Rights::map_token. A cm::RightsValidationError will be returned on invalid rights.
-pub fn parse_rights(right_tokens: &Vec<String>) -> Result<cm::Rights, cm::RightsValidationError> {
+/// A `cm::RightsValidationError` is returned on invalid rights.
+pub fn parse_rights(right_tokens: &Vec<Right>) -> Result<cm::Rights, cm::RightsValidationError> {
     let mut rights = Vec::<cm::Right>::new();
     for right_token in right_tokens.iter() {
-        match parse_right_token(right_token) {
-            Some(mut expanded_rights) => rights.append(&mut expanded_rights),
-            None => return Err(cm::RightsValidationError::UnknownRight),
-        }
+        rights.append(&mut right_token.expand());
     }
     cm::Rights::new(rights)
 }
@@ -269,7 +435,7 @@ pub struct Document {
 }
 
 impl Document {
-    pub fn all_event_names(&self) -> Vec<Name> {
+    pub fn all_event_names(&self) -> Result<Vec<Name>, Error> {
         let mut all_events: Vec<Name> = vec![];
         if let Some(uses) = self.r#use.as_ref() {
             for use_ in uses.iter() {
@@ -279,17 +445,15 @@ impl Document {
                         event.to_vec().iter().map(|e| e.clone()).collect::<Vec<Name>>();
 
                     if events.len() == 1 {
-                        let event_name = alias.unwrap_or(&events[0].to_string()).to_string();
-                        if let Ok(event_name) = Name::new(event_name) {
-                            all_events.push(event_name);
-                        }
+                        let event_name = alias_or_name(alias, &events[0])?.clone();
+                        all_events.push(event_name);
                     } else {
                         all_events.append(&mut events);
                     }
                 }
             }
         }
-        all_events
+        Ok(all_events)
     }
 
     pub fn all_children_names(&self) -> Vec<&Name> {
@@ -387,15 +551,15 @@ pub struct ResolverRegistration {
 
 #[derive(Deserialize, Debug)]
 pub struct Use {
-    pub service: Option<String>,
-    pub protocol: Option<OneOrMany<String>>,
-    pub directory: Option<String>,
-    pub storage: Option<String>,
-    pub runner: Option<String>,
+    pub service: Option<Path>,
+    pub protocol: Option<OneOrMany<Path>>,
+    pub directory: Option<Path>,
+    pub storage: Option<StorageType>,
+    pub runner: Option<Name>,
     pub from: Option<UseFromRef>,
-    pub r#as: Option<String>,
-    pub rights: Option<Vec<String>>,
-    pub subdir: Option<String>,
+    pub r#as: Option<NameOrPath>,
+    pub rights: Option<Vec<Right>>,
+    pub subdir: Option<RelativePath>,
     pub event: Option<OneOrMany<Name>>,
     pub event_stream: Option<OneOrMany<Name>>,
     pub filter: Option<Map<String, Value>>,
@@ -403,68 +567,69 @@ pub struct Use {
 
 #[derive(Deserialize, Debug)]
 pub struct Expose {
-    pub service: Option<String>,
-    pub protocol: Option<OneOrMany<String>>,
-    pub directory: Option<String>,
-    pub runner: Option<String>,
+    pub service: Option<Path>,
+    pub protocol: Option<OneOrMany<Path>>,
+    pub directory: Option<Path>,
+    pub runner: Option<Name>,
     pub resolver: Option<Name>,
     pub from: OneOrMany<ExposeFromRef>,
-    pub r#as: Option<String>,
+    pub r#as: Option<NameOrPath>,
     pub to: Option<ExposeToRef>,
-    pub rights: Option<Vec<String>>,
-    pub subdir: Option<String>,
+    pub rights: Option<Vec<Right>>,
+    pub subdir: Option<RelativePath>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Offer {
-    pub service: Option<String>,
-    pub protocol: Option<OneOrMany<String>>,
-    pub directory: Option<String>,
-    pub storage: Option<String>,
-    pub runner: Option<String>,
+    pub service: Option<Path>,
+    pub protocol: Option<OneOrMany<Path>>,
+    pub directory: Option<Path>,
+    pub storage: Option<StorageType>,
+    pub runner: Option<Name>,
     pub resolver: Option<Name>,
     pub event: Option<OneOrMany<Name>>,
     pub from: OneOrMany<OfferFromRef>,
     pub to: Vec<OfferToRef>,
-    pub r#as: Option<String>,
-    pub rights: Option<Vec<String>>,
-    pub subdir: Option<String>,
-    pub dependency: Option<String>,
+    pub r#as: Option<NameOrPath>,
+    pub rights: Option<Vec<Right>>,
+    pub subdir: Option<RelativePath>,
+    pub dependency: Option<DependencyType>,
     pub filter: Option<Map<String, Value>>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Child {
     pub name: Name,
-    pub url: String,
-    pub startup: Option<String>,
+    pub url: Url,
+    #[serde(default)]
+    pub startup: StartupMode,
     pub environment: Option<EnvironmentRef>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Collection {
     pub name: Name,
-    pub durability: String,
+    pub durability: Durability,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Storage {
     pub name: Name,
     pub from: StorageFromRef,
-    pub path: String,
+    pub path: Path,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Runner {
     pub name: Name,
     pub from: RunnerFromRef,
-    pub path: String,
+    pub path: Path,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Resolver {
     pub name: Name,
-    pub path: String,
+    pub path: Path,
 }
 
 pub trait FromClause {
@@ -472,11 +637,11 @@ pub trait FromClause {
 }
 
 pub trait CapabilityClause {
-    fn service(&self) -> &Option<String>;
-    fn protocol(&self) -> &Option<OneOrMany<String>>;
-    fn directory(&self) -> &Option<String>;
-    fn storage(&self) -> &Option<String>;
-    fn runner(&self) -> &Option<String>;
+    fn service(&self) -> &Option<Path>;
+    fn protocol(&self) -> &Option<OneOrMany<Path>>;
+    fn directory(&self) -> &Option<Path>;
+    fn storage(&self) -> &Option<StorageType>;
+    fn runner(&self) -> &Option<Name>;
     fn resolver(&self) -> &Option<Name>;
     fn event(&self) -> &Option<OneOrMany<Name>>;
     fn event_stream(&self) -> &Option<OneOrMany<Name>>;
@@ -487,7 +652,7 @@ pub trait CapabilityClause {
 }
 
 pub trait AsClause {
-    fn r#as(&self) -> Option<&String>;
+    fn r#as(&self) -> Option<&NameOrPath>;
 }
 
 pub trait FilterClause {
@@ -495,19 +660,19 @@ pub trait FilterClause {
 }
 
 impl CapabilityClause for Use {
-    fn service(&self) -> &Option<String> {
+    fn service(&self) -> &Option<Path> {
         &self.service
     }
-    fn protocol(&self) -> &Option<OneOrMany<String>> {
+    fn protocol(&self) -> &Option<OneOrMany<Path>> {
         &self.protocol
     }
-    fn directory(&self) -> &Option<String> {
+    fn directory(&self) -> &Option<Path> {
         &self.directory
     }
-    fn storage(&self) -> &Option<String> {
+    fn storage(&self) -> &Option<StorageType> {
         &self.storage
     }
-    fn runner(&self) -> &Option<String> {
+    fn runner(&self) -> &Option<Name> {
         &self.runner
     }
     fn resolver(&self) -> &Option<Name> {
@@ -547,7 +712,7 @@ impl FilterClause for Use {
 }
 
 impl AsClause for Use {
-    fn r#as(&self) -> Option<&String> {
+    fn r#as(&self) -> Option<&NameOrPath> {
         self.r#as.as_ref()
     }
 }
@@ -559,21 +724,21 @@ impl FromClause for Expose {
 }
 
 impl CapabilityClause for Expose {
-    fn service(&self) -> &Option<String> {
+    fn service(&self) -> &Option<Path> {
         &self.service
     }
     // TODO(340156): Only OneOrMany::One protocol is supported for now. Teach `expose` rules to accept
     // `Many` protocols.
-    fn protocol(&self) -> &Option<OneOrMany<String>> {
+    fn protocol(&self) -> &Option<OneOrMany<Path>> {
         &self.protocol
     }
-    fn directory(&self) -> &Option<String> {
+    fn directory(&self) -> &Option<Path> {
         &self.directory
     }
-    fn storage(&self) -> &Option<String> {
+    fn storage(&self) -> &Option<StorageType> {
         &None
     }
-    fn runner(&self) -> &Option<String> {
+    fn runner(&self) -> &Option<Name> {
         &self.runner
     }
     fn resolver(&self) -> &Option<Name> {
@@ -603,7 +768,7 @@ impl CapabilityClause for Expose {
 }
 
 impl AsClause for Expose {
-    fn r#as(&self) -> Option<&String> {
+    fn r#as(&self) -> Option<&NameOrPath> {
         self.r#as.as_ref()
     }
 }
@@ -621,19 +786,19 @@ impl FromClause for Offer {
 }
 
 impl CapabilityClause for Offer {
-    fn service(&self) -> &Option<String> {
+    fn service(&self) -> &Option<Path> {
         &self.service
     }
-    fn protocol(&self) -> &Option<OneOrMany<String>> {
+    fn protocol(&self) -> &Option<OneOrMany<Path>> {
         &self.protocol
     }
-    fn directory(&self) -> &Option<String> {
+    fn directory(&self) -> &Option<Path> {
         &self.directory
     }
-    fn storage(&self) -> &Option<String> {
+    fn storage(&self) -> &Option<StorageType> {
         &self.storage
     }
-    fn runner(&self) -> &Option<String> {
+    fn runner(&self) -> &Option<Name> {
         &self.runner
     }
     fn resolver(&self) -> &Option<Name> {
@@ -665,7 +830,7 @@ impl CapabilityClause for Offer {
 }
 
 impl AsClause for Offer {
-    fn r#as(&self) -> Option<&String> {
+    fn r#as(&self) -> Option<&NameOrPath> {
         self.r#as.as_ref()
     }
 }
@@ -712,11 +877,26 @@ where
     r.into()
 }
 
+pub(super) fn alias_or_name<'a>(
+    alias: Option<&'a NameOrPath>,
+    name: &'a Name,
+) -> Result<&'a Name, Error> {
+    Ok(alias.map(|a| a.extract_name_borrowed()).transpose()?.unwrap_or(name))
+}
+
+pub(super) fn alias_or_path<'a>(
+    alias: Option<&'a NameOrPath>,
+    path: &'a Path,
+) -> Result<&'a Path, Error> {
+    Ok(alias.map(|a| a.extract_path_borrowed()).transpose()?.unwrap_or(path))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use cm_json::{self, Error};
     use matches::assert_matches;
+    use serde_json;
 
     // Exercise reference parsing tests on `OfferFromRef` because it contains every reference
     // subtype.
@@ -760,98 +940,113 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_parse_rights() -> Result<(), Error> {
-        assert_eq!(
-            parse_rights(&vec!["r*".to_owned()])?,
-            cm::Rights(vec![
-                cm::Right::Connect,
-                cm::Right::Enumerate,
-                cm::Right::Traverse,
-                cm::Right::ReadBytes,
-                cm::Right::GetAttributes,
-            ])
-        );
-        assert_eq!(
-            parse_rights(&vec!["w*".to_owned()])?,
-            cm::Rights(vec![
-                cm::Right::Connect,
-                cm::Right::Enumerate,
-                cm::Right::Traverse,
-                cm::Right::WriteBytes,
-                cm::Right::ModifyDirectory,
-                cm::Right::UpdateAttributes,
-            ])
-        );
-        assert_eq!(
-            parse_rights(&vec!["x*".to_owned()])?,
-            cm::Rights(vec![
-                cm::Right::Connect,
-                cm::Right::Enumerate,
-                cm::Right::Traverse,
-                cm::Right::Execute,
-            ])
-        );
-        assert_eq!(
-            parse_rights(&vec!["rw*".to_owned()])?,
-            cm::Rights(vec![
-                cm::Right::Connect,
-                cm::Right::Enumerate,
-                cm::Right::Traverse,
-                cm::Right::ReadBytes,
-                cm::Right::WriteBytes,
-                cm::Right::ModifyDirectory,
-                cm::Right::GetAttributes,
-                cm::Right::UpdateAttributes,
-            ])
-        );
-        assert_eq!(
-            parse_rights(&vec!["rx*".to_owned()])?,
-            cm::Rights(vec![
-                cm::Right::Connect,
-                cm::Right::Enumerate,
-                cm::Right::Traverse,
-                cm::Right::ReadBytes,
-                cm::Right::GetAttributes,
-                cm::Right::Execute,
-            ])
-        );
-        assert_eq!(
-            parse_rights(&vec!["rw*".to_owned(), "execute".to_owned()])?,
-            cm::Rights(vec![
-                cm::Right::Connect,
-                cm::Right::Enumerate,
-                cm::Right::Traverse,
-                cm::Right::ReadBytes,
-                cm::Right::WriteBytes,
-                cm::Right::ModifyDirectory,
-                cm::Right::GetAttributes,
-                cm::Right::UpdateAttributes,
-                cm::Right::Execute,
-            ])
-        );
-        assert_eq!(
-            parse_rights(&vec!["connect".to_owned()])?,
-            cm::Rights(vec![cm::Right::Connect])
-        );
-        assert_eq!(
-            parse_rights(&vec!["connect".to_owned(), "read_bytes".to_owned()])?,
-            cm::Rights(vec![cm::Right::Connect, cm::Right::ReadBytes])
-        );
-        assert_matches!(parse_rights(&vec![]), Err(cm::RightsValidationError::EmptyRight));
-        assert_matches!(
-            parse_rights(&vec!["connec".to_owned()]),
-            Err(cm::RightsValidationError::UnknownRight)
-        );
-        assert_matches!(
-            parse_rights(&vec!["connect".to_owned(), "connect".to_owned()]),
-            Err(cm::RightsValidationError::DuplicateRight)
-        );
-        assert_matches!(
-            parse_rights(&vec!["rw*".to_owned(), "connect".to_owned()]),
-            Err(cm::RightsValidationError::DuplicateRight)
-        );
+    macro_rules! test_parse_rights {
+        (
+            $(
+                ($input:expr, $expected:expr),
+            )+
+        ) => {
+            #[test]
+            fn parse_rights() {
+                $(
+                    parse_rights_test($input, $expected);
+                )+
+            }
+        }
+    }
 
-        Ok(())
+    fn parse_rights_test(input: &str, expected: Right) {
+        let v = cm_json::from_json5_str(&format!("\"{}\"", input)).expect("invalid json");
+        let r: Right = serde_json::from_value(v).expect("invalid right");
+        assert_eq!(r, expected);
+    }
+
+    test_parse_rights! {
+        ("connect", Right::Connect),
+        ("enumerate", Right::Enumerate),
+        ("execute", Right::Execute),
+        ("get_attributes", Right::GetAttributes),
+        ("modify_directory", Right::ModifyDirectory),
+        ("read_bytes", Right::ReadBytes),
+        ("traverse", Right::Traverse),
+        ("update_attributes", Right::UpdateAttributes),
+        ("write_bytes", Right::WriteBytes),
+        ("admin", Right::Admin),
+        ("r*", Right::ReadAlias),
+        ("w*", Right::WriteAlias),
+        ("x*", Right::ExecuteAlias),
+        ("rw*", Right::ReadWriteAlias),
+        ("rx*", Right::ReadExecuteAlias),
+    }
+
+    macro_rules! test_expand_rights {
+        (
+            $(
+                ($input:expr, $expected:expr),
+            )+
+        ) => {
+            #[test]
+            fn expand_rights() {
+                $(
+                    expand_rights_test($input, $expected);
+                )+
+            }
+        }
+    }
+
+    fn expand_rights_test(input: Right, expected: Vec<cm::Right>) {
+        assert_eq!(input.expand(), expected);
+    }
+
+    test_expand_rights! {
+        (Right::Connect, vec![cm::Right::Connect]),
+        (Right::Enumerate, vec![cm::Right::Enumerate]),
+        (Right::Execute, vec![cm::Right::Execute]),
+        (Right::GetAttributes, vec![cm::Right::GetAttributes]),
+        (Right::ModifyDirectory, vec![cm::Right::ModifyDirectory]),
+        (Right::ReadBytes, vec![cm::Right::ReadBytes]),
+        (Right::Traverse, vec![cm::Right::Traverse]),
+        (Right::UpdateAttributes, vec![cm::Right::UpdateAttributes]),
+        (Right::WriteBytes, vec![cm::Right::WriteBytes]),
+        (Right::Admin, vec![cm::Right::Admin]),
+        (Right::ReadAlias, vec![
+            cm::Right::Connect,
+            cm::Right::Enumerate,
+            cm::Right::Traverse,
+            cm::Right::ReadBytes,
+            cm::Right::GetAttributes,
+        ]),
+        (Right::WriteAlias, vec![
+            cm::Right::Connect,
+            cm::Right::Enumerate,
+            cm::Right::Traverse,
+            cm::Right::WriteBytes,
+            cm::Right::ModifyDirectory,
+            cm::Right::UpdateAttributes,
+        ]),
+        (Right::ExecuteAlias, vec![
+            cm::Right::Connect,
+            cm::Right::Enumerate,
+            cm::Right::Traverse,
+            cm::Right::Execute,
+        ]),
+        (Right::ReadWriteAlias, vec![
+            cm::Right::Connect,
+            cm::Right::Enumerate,
+            cm::Right::Traverse,
+            cm::Right::ReadBytes,
+            cm::Right::WriteBytes,
+            cm::Right::ModifyDirectory,
+            cm::Right::GetAttributes,
+            cm::Right::UpdateAttributes,
+        ]),
+        (Right::ReadExecuteAlias, vec![
+            cm::Right::Connect,
+            cm::Right::Enumerate,
+            cm::Right::Traverse,
+            cm::Right::ReadBytes,
+            cm::Right::GetAttributes,
+            cm::Right::Execute,
+        ]),
     }
 }

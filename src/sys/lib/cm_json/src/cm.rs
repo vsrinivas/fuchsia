@@ -9,8 +9,8 @@ use thiserror::Error;
 
 // Re-export symbols.
 pub use cm_types::{
-    Name, NameValidationError, Path, PathValidationError, RelativePath, Url, UrlScheme,
-    UrlSchemeValidationError, UrlValidationError,
+    DependencyType, Durability, Name, NameValidationError, Path, PathValidationError, RelativePath,
+    StartupMode, StorageType, Url, UrlScheme, UrlSchemeValidationError, UrlValidationError,
 };
 
 /// The in-memory representation of a binary Component Manifest JSON file.
@@ -73,28 +73,6 @@ pub enum Right {
 /// Rights define what permissions are available to exposed, offered or used routes.
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct Rights(pub Vec<Right>);
-
-/// A component instance's startup mode.
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
-pub enum StartupMode {
-    /// Start the component instance only if another component instance binds to
-    /// it.
-    Lazy,
-    /// Start the component instance as soon as its parent starts.
-    Eager,
-}
-
-/// The duration of child components in a collection.
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
-pub enum Durability {
-    /// The instance exists until it is explicitly destroyed.
-    Persistent,
-    /// The instance exists until its containing realm is stopped or it is
-    /// explicitly destroyed.
-    Transient,
-}
 
 /// A child component. See [`ChildDecl`].
 ///
@@ -389,16 +367,6 @@ pub struct ExposeResolver {
     pub target_name: Name,
 }
 
-/// Offered dependency type. See ['OfferDecl'].
-///
-/// [`OfferDecl`]: ../../fidl_fuchsia_sys2/enum.OfferDecl.html
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "snake_case")]
-pub enum DependencyType {
-    Strong,
-    WeakForMigration,
-}
-
 /// Offered capability. See [`OfferDecl`].
 ///
 /// [`OfferDecl`]: ../../fidl_fuchsia_sys2/enum.OfferDecl.html
@@ -497,17 +465,6 @@ pub struct OfferEvent {
     pub target: Ref,
     pub target_name: Name,
     pub filter: Option<Map<String, Value>>,
-}
-
-/// The type of storage capability. See [`StorageType`].
-///
-/// [`StorageType`]: ../../fidl_fuchsia_sys2/enum.StorageType.html
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "snake_case")]
-pub enum StorageType {
-    Data,
-    Cache,
-    Meta,
 }
 
 /// A reference to a capability relative to this component. See [`Ref`].
@@ -637,7 +594,7 @@ impl Rights {
         Ok(Self(rights))
     }
 
-    /// Creates a `Rights` from a `Vec<String>, returning an `Err` if the strings fails validation.
+    /// Creates a `Rights` from a `Vec<String>`, returning an `Err` if the strings fails validation.
     /// The strings must be non-empty and represent valid keywords. Right aliases are noti
     /// accepted at the cm level.
     pub fn from(tokens: Vec<String>) -> Result<Self, RightsValidationError> {

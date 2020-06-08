@@ -121,28 +121,25 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     for use_ in use_in {
         if let Some(p) = use_.service() {
             let source = extract_use_source(use_)?;
-            let target_id = one_target_capability_id(use_, use_)?;
+            let target_path = one_target_capability_id(use_, use_)?.extract_path()?;
             out_uses.push(cm::Use::Service(cm::UseService {
                 source,
-                source_path: cm::Path::new(p.clone())?,
-                target_path: cm::Path::new(target_id)?,
+                source_path: p.clone(),
+                target_path,
             }));
         } else if let Some(p) = use_.protocol() {
             let source = extract_use_source(use_)?;
-            let target_ids =
-                all_target_capability_ids(use_, use_).ok_or(Error::internal("no capability"))?;
+            let target_ids = all_target_capability_ids(use_, use_)
+                .ok_or_else(|| Error::internal("no capability"))?;
             let source_ids = p.to_vec();
             for target_id in target_ids {
-                let target_path = cm::Path::new(target_id.clone())?;
+                let target_path = target_id.extract_path()?;
                 // When multiple source paths are provided, there is no way to alias each one, so
                 // source_path == target_path.
                 // When one source path is provided, source_path may be aliased to a different
                 // target_path, so we source_paths[0] to derive the source_path.
-                let source_path = if source_ids.len() == 1 {
-                    cm::Path::new(source_ids[0].clone())?
-                } else {
-                    target_path.clone()
-                };
+                let source_path =
+                    if source_ids.len() == 1 { source_ids[0].clone() } else { target_path.clone() };
                 out_uses.push(cm::Use::Protocol(cm::UseProtocol {
                     source: source.clone(),
                     source_path,
@@ -151,37 +148,37 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
             }
         } else if let Some(p) = use_.directory() {
             let source = extract_use_source(use_)?;
-            let target_id = one_target_capability_id(use_, use_)?;
+            let target_path = one_target_capability_id(use_, use_)?.extract_path()?;
             let rights = extract_use_rights(use_)?;
-            let subdir = extract_use_subdir(use_)?;
+            let subdir = extract_use_subdir(use_);
             out_uses.push(cm::Use::Directory(cm::UseDirectory {
                 source,
-                source_path: cm::Path::new(p.clone())?,
-                target_path: cm::Path::new(target_id)?,
+                source_path: p.clone(),
+                target_path,
                 rights,
                 subdir,
             }));
-        } else if let Some(p) = use_.storage() {
+        } else if let Some(s) = use_.storage() {
             let target_path = match all_target_capability_ids(use_, use_) {
-                Some(OneOrMany::One(target_path)) => Ok(cm::Path::new(target_path).ok()),
+                Some(OneOrMany::One(target_id)) => {
+                    let target_path = target_id.extract_path()?;
+                    Ok(Some(target_path))
+                }
                 Some(OneOrMany::Many(_)) => {
                     Err(Error::internal(format!("expecting one capability, but multiple provided")))
                 }
                 None => Ok(None),
             }?;
-            out_uses.push(cm::Use::Storage(cm::UseStorage {
-                type_: str_to_storage_type(p.as_str())?,
-                target_path,
-            }));
-        } else if let Some(p) = use_.runner() {
-            out_uses.push(cm::Use::Runner(cm::UseRunner { source_name: cm::Name::new(p.clone())? }))
-        } else if let Some(p) = use_.event() {
+            out_uses.push(cm::Use::Storage(cm::UseStorage { type_: s.clone(), target_path }));
+        } else if let Some(n) = use_.runner() {
+            out_uses.push(cm::Use::Runner(cm::UseRunner { source_name: n.clone() }))
+        } else if let Some(n) = use_.event() {
             let source = extract_use_event_source(use_)?;
-            let target_ids =
-                all_target_capability_ids(use_, use_).ok_or(Error::internal("no capability"))?;
-            let source_ids = p.to_vec();
+            let target_ids = all_target_capability_ids(use_, use_)
+                .ok_or_else(|| Error::internal("no capability"))?;
+            let source_ids = n.to_vec();
             for target_id in target_ids {
-                let target_name = cm::Name::new(target_id.clone())?;
+                let target_name = target_id.extract_name()?;
                 // When multiple source names are provided, there is no way to alias each one, so
                 // source_name == target_name,
                 // When one source name is provided, source_name may be aliased to a different
@@ -198,11 +195,9 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
                 }));
             }
         } else if let Some(p) = use_.event_stream() {
-            let target_path = one_target_capability_id(use_, use_)?;
-            out_uses.push(cm::Use::EventStream(cm::UseEventStream {
-                target_path: cm::Path::new(target_path)?,
-                events: p.to_vec(),
-            }));
+            let target_path = one_target_capability_id(use_, use_)?.extract_path()?;
+            out_uses
+                .push(cm::Use::EventStream(cm::UseEventStream { target_path, events: p.to_vec() }));
         } else {
             return Err(Error::internal(format!("no capability in use declaration")));
         };
@@ -210,20 +205,20 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     Ok(out_uses)
 }
 
-/// `expose` rules route a single capability from one or more sources (self|framework|#<child>) to one or
-/// more targets (realm|framework).
+/// `expose` rules route a single capability from one or more sources (self|framework|#<child>) to
+/// one or more targets (realm|framework).
 fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Error> {
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
         let target = extract_expose_target(expose)?;
         if let Some(p) = expose.service() {
             let sources = extract_all_expose_sources(expose)?;
-            let target_id = one_target_capability_id(expose, expose)?;
+            let target_path = one_target_capability_id(expose, expose)?.extract_path()?;
             for source in sources {
                 out_exposes.push(cm::Expose::Service(cm::ExposeService {
                     source,
-                    source_path: cm::Path::new(p.clone())?,
-                    target_path: cm::Path::new(target_id.clone())?,
+                    source_path: p.clone(),
+                    target_path: target_path.clone(),
                     target: target.clone(),
                 }))
             }
@@ -231,18 +226,15 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
             let source = extract_single_expose_source(expose)?;
             let source_ids = p.to_vec();
             let target_ids = all_target_capability_ids(expose, expose)
-                .ok_or(Error::internal("no capability"))?;
+                .ok_or_else(|| Error::internal("no capability"))?;
             for target_id in target_ids {
-                let target_path = cm::Path::new(target_id)?;
+                let target_path = target_id.extract_path()?;
                 // When multiple source paths are provided, there is no way to alias each one, so
                 // source_path == target_path.
                 // When one source path is provided, source_path may be aliased to a different
                 // target_path, so we source_paths[0] to derive the source_path.
-                let source_path = if source_ids.len() == 1 {
-                    cm::Path::new(source_ids[0].clone())?
-                } else {
-                    target_path.clone()
-                };
+                let source_path =
+                    if source_ids.len() == 1 { source_ids[0].clone() } else { target_path.clone() };
                 out_exposes.push(cm::Expose::Protocol(cm::ExposeProtocol {
                     source: source.clone(),
                     source_path,
@@ -252,48 +244,40 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
             }
         } else if let Some(p) = expose.directory() {
             let source = extract_single_expose_source(expose)?;
-            let target_id = one_target_capability_id(expose, expose)?;
+            let target_path = one_target_capability_id(expose, expose)?.extract_path()?;
             let rights = extract_expose_rights(expose)?;
-            let subdir = extract_expose_subdir(expose)?;
+            let subdir = extract_expose_subdir(expose);
             out_exposes.push(cm::Expose::Directory(cm::ExposeDirectory {
                 source,
-                source_path: cm::Path::new(p.clone())?,
-                target_path: cm::Path::new(target_id)?,
+                source_path: p.clone(),
+                target_path,
                 target,
                 rights,
                 subdir,
             }))
-        } else if let Some(p) = expose.runner() {
+        } else if let Some(n) = expose.runner() {
             let source = extract_single_expose_source(expose)?;
-            let target_id = one_target_capability_id(expose, expose)?;
+            let target_name = one_target_capability_id(expose, expose)?.extract_name()?;
             out_exposes.push(cm::Expose::Runner(cm::ExposeRunner {
                 source,
-                source_name: cm::Name::new(p.clone())?,
+                source_name: n.clone(),
                 target,
-                target_name: cm::Name::new(target_id)?,
+                target_name,
             }))
-        } else if let Some(p) = expose.resolver() {
+        } else if let Some(n) = expose.resolver() {
             let source = extract_single_expose_source(expose)?;
-            let target_id = one_target_capability_id(expose, expose)?;
+            let target_name = one_target_capability_id(expose, expose)?.extract_name()?;
             out_exposes.push(cm::Expose::Resolver(cm::ExposeResolver {
                 source,
-                source_name: cm::Name::new(p.to_string())?,
+                source_name: n.clone(),
                 target,
-                target_name: cm::Name::new(target_id)?,
+                target_name,
             }))
         } else {
             return Err(Error::internal(format!("expose: must specify a known capability")));
         }
     }
     Ok(out_exposes)
-}
-
-fn dependency_type_from_string(s: &Option<String>) -> Result<cm::DependencyType, Error> {
-    match s.as_ref().map(|s| s.as_str()) {
-        Some("weak_for_migration") => Ok(cm::DependencyType::WeakForMigration),
-        None | Some("strong") => Ok(cm::DependencyType::Strong),
-        Some(x) => Err(Error::internal(format!("offer: unknown dependency {}", x))),
-    }
 }
 
 /// `offer` rules route multiple capabilities from multiple sources to multiple targets.
@@ -308,12 +292,13 @@ fn translate_offer(
             let sources = extract_all_offer_sources(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
+                let target_path = target_id.extract_path()?;
                 for source in &sources {
                     out_offers.push(cm::Offer::Service(cm::OfferService {
-                        source_path: cm::Path::new(p.clone())?,
+                        source_path: p.clone(),
                         source: source.clone(),
                         target: target.clone(),
-                        target_path: cm::Path::new(target_id.clone())?,
+                        target_path: target_path.clone(),
                     }));
                 }
             }
@@ -326,64 +311,70 @@ fn translate_offer(
                 // source_path == target_path.
                 // When one source path is provided, source_path may be aliased to a different
                 // target_path, so we source_ids[0] to derive the source_path.
-                let source_path = if source_ids.len() == 1 {
-                    cm::Path::new(source_ids[0].clone())?
-                } else {
-                    cm::Path::new(target_id.clone())?
-                };
+                let target_path = target_id.extract_path()?;
+                let source_path =
+                    if source_ids.len() == 1 { source_ids[0].clone() } else { target_path.clone() };
                 out_offers.push(cm::Offer::Protocol(cm::OfferProtocol {
                     source_path,
                     source: source.clone(),
                     target,
-                    target_path: cm::Path::new(target_id)?,
-                    dependency_type: dependency_type_from_string(&offer.dependency)?,
+                    target_path,
+                    dependency_type: offer
+                        .dependency
+                        .clone()
+                        .unwrap_or(cm::DependencyType::default()),
                 }));
             }
         } else if let Some(p) = offer.directory() {
             let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
+                let target_path = target_id.extract_path()?;
                 out_offers.push(cm::Offer::Directory(cm::OfferDirectory {
-                    source_path: cm::Path::new(p.clone())?,
+                    source_path: p.clone(),
                     source: source.clone(),
                     target,
-                    target_path: cm::Path::new(target_id)?,
+                    target_path,
                     rights: extract_offer_rights(offer)?,
-                    subdir: extract_offer_subdir(offer)?,
-                    dependency_type: dependency_type_from_string(&offer.dependency)?,
+                    subdir: extract_offer_subdir(offer),
+                    dependency_type: offer
+                        .dependency
+                        .clone()
+                        .unwrap_or(cm::DependencyType::default()),
                 }));
             }
-        } else if let Some(p) = offer.storage() {
-            let type_ = str_to_storage_type(p.as_str())?;
+        } else if let Some(s) = offer.storage() {
             let source = extract_single_offer_storage_source(offer)?;
             let targets = extract_storage_targets(offer, all_children, all_collections)?;
             for target in targets {
                 out_offers.push(cm::Offer::Storage(cm::OfferStorage {
-                    type_: type_.clone(),
+                    type_: s.clone(),
                     source: source.clone(),
                     target,
                 }));
             }
-        } else if let Some(p) = offer.runner() {
+        } else if let Some(n) = offer.runner() {
             let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
+                let target_name = target_id.extract_name()?;
                 out_offers.push(cm::Offer::Runner(cm::OfferRunner {
                     source: source.clone(),
-                    source_name: cm::Name::new(p.clone())?,
+                    source_name: n.clone(),
                     target,
-                    target_name: cm::Name::new(target_id)?,
+                    target_name,
                 }));
             }
-        } else if let Some(p) = offer.resolver() {
+        } else if let Some(n) = offer.resolver() {
             let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
+                let target_name = target_id.extract_name()?;
                 out_offers.push(cm::Offer::Resolver(cm::OfferResolver {
                     source: source.clone(),
-                    source_name: cm::Name::new(p.to_string())?,
+                    source_name: n.clone(),
                     target,
-                    target_name: cm::Name::new(target_id)?,
+                    target_name,
                 }));
             }
         } else if let Some(p) = offer.event() {
@@ -395,7 +386,7 @@ fn translate_offer(
                 // source_name == target_name.
                 // When one source name is provided, source_name may be aliased to a different
                 // source_name, so we source_ids[0] to derive the source_name.
-                let target_name = cm::Name::new(target_id)?;
+                let target_name = target_id.extract_name()?;
                 let source_name =
                     if source_ids.len() == 1 { source_ids[0].clone() } else { target_name.clone() };
                 out_offers.push(cm::Offer::Event(cm::OfferEvent {
@@ -418,24 +409,17 @@ fn translate_offer(
 fn translate_children(children_in: &Vec<cml::Child>) -> Result<Vec<cm::Child>, Error> {
     let mut out_children = vec![];
     for child in children_in.iter() {
-        let startup = match child.startup.as_ref().map(|s| s as &str) {
-            Some(cml::LAZY) | None => cm::StartupMode::Lazy,
-            Some(cml::EAGER) => cm::StartupMode::Eager,
-            Some(_) => {
-                return Err(Error::internal(format!("invalid startup")));
-            }
-        };
         let environment = child
             .environment
             .as_ref()
             .map::<Result<cm::Name, Error>, _>(|e| match e {
-                cml::EnvironmentRef::Named(name) => Ok(cm::Name::new(name.to_string())?),
+                cml::EnvironmentRef::Named(name) => Ok(name.clone()),
             })
             .transpose()?;
         out_children.push(cm::Child {
-            name: cm::Name::new(child.name.to_string())?,
-            url: cm::Url::new(child.url.clone())?,
-            startup,
+            name: child.name.clone(),
+            url: child.url.clone(),
+            startup: child.startup.clone(),
             environment,
         });
     }
@@ -447,15 +431,10 @@ fn translate_collections(
 ) -> Result<Vec<cm::Collection>, Error> {
     let mut out_collections = vec![];
     for collection in collections_in.iter() {
-        let durability = match &collection.durability as &str {
-            cml::PERSISTENT => cm::Durability::Persistent,
-            cml::TRANSIENT => cm::Durability::Transient,
-            _ => {
-                return Err(Error::internal(format!("invalid durability")));
-            }
-        };
-        out_collections
-            .push(cm::Collection { name: cm::Name::new(collection.name.to_string())?, durability });
+        out_collections.push(cm::Collection {
+            name: collection.name.clone(),
+            durability: collection.durability.clone(),
+        });
     }
     Ok(out_collections)
 }
@@ -465,8 +444,8 @@ fn translate_storage(storage_in: &Vec<cml::Storage>) -> Result<Vec<cm::Storage>,
         .iter()
         .map(|storage| {
             Ok(cm::Storage {
-                name: cm::Name::new(storage.name.to_string())?,
-                source_path: cm::Path::new(storage.path.clone())?,
+                name: storage.name.clone(),
+                source_path: storage.path.clone(),
                 source: extract_single_offer_source(storage)?,
             })
         })
@@ -478,8 +457,8 @@ fn translate_runners(runners_in: &Vec<cml::Runner>) -> Result<Vec<cm::Runner>, E
         .iter()
         .map(|runner| {
             Ok(cm::Runner {
-                name: cm::Name::new(runner.name.to_string())?,
-                source_path: cm::Path::new(runner.path.clone())?,
+                name: runner.name.clone(),
+                source_path: runner.path.clone(),
                 source: extract_single_offer_source(runner)?,
             })
         })
@@ -490,10 +469,7 @@ fn translate_resolvers(resolvers_in: &Vec<cml::Resolver>) -> Result<Vec<cm::Reso
     resolvers_in
         .iter()
         .map(|resolver| {
-            Ok(cm::Resolver {
-                name: cm::Name::new(resolver.name.to_string())?,
-                source_path: cm::Path::new(resolver.path.clone())?,
-            })
+            Ok(cm::Resolver { name: resolver.name.clone(), source_path: resolver.path.clone() })
         })
         .collect()
 }
@@ -503,7 +479,7 @@ fn translate_environments(envs_in: &Vec<cml::Environment>) -> Result<Vec<cm::Env
         .iter()
         .map(|env| {
             Ok(cm::Environment {
-                name: cm::Name::new(env.name.to_string())?,
+                name: env.name.clone(),
                 extends: match env.extends {
                     Some(cml::EnvironmentExtends::Realm) => cm::EnvironmentExtends::Realm,
                     Some(cml::EnvironmentExtends::None) => cm::EnvironmentExtends::None,
@@ -539,9 +515,9 @@ fn translate_runner_registration(
     reg: &cml::RunnerRegistration,
 ) -> Result<cm::RunnerRegistration, Error> {
     Ok(cm::RunnerRegistration {
-        source_name: cm::Name::new(reg.runner.to_string())?,
+        source_name: reg.runner.clone(),
         source: extract_single_offer_source(reg)?,
-        target_name: cm::Name::new(reg.r#as.as_ref().unwrap_or(&reg.runner).to_string())?,
+        target_name: reg.r#as.as_ref().unwrap_or(&reg.runner).clone(),
     })
 }
 
@@ -549,7 +525,7 @@ fn translate_resolver_registration(
     reg: &cml::ResolverRegistration,
 ) -> Result<cm::ResolverRegistration, Error> {
     Ok(cm::ResolverRegistration {
-        resolver: cm::Name::new(reg.resolver.to_string())?,
+        resolver: reg.resolver.clone(),
         source: extract_single_offer_source(reg)?,
         scheme: reg
             .scheme
@@ -585,31 +561,16 @@ fn extract_use_rights(in_obj: &cml::Use) -> Result<cm::Rights, Error> {
     }
 }
 
-fn extract_use_subdir(in_obj: &cml::Use) -> Result<Option<cm::RelativePath>, Error> {
-    in_obj
-        .subdir
-        .as_ref()
-        .map(|s| cm::RelativePath::new(s.clone()))
-        .transpose()
-        .map_err(|e| Error::internal(format!("invalid \"subdir\" for \"use\": {}", e)))
+fn extract_use_subdir(in_obj: &cml::Use) -> Option<cm::RelativePath> {
+    in_obj.subdir.clone()
 }
 
-fn extract_expose_subdir(in_obj: &cml::Expose) -> Result<Option<cm::RelativePath>, Error> {
-    in_obj
-        .subdir
-        .as_ref()
-        .map(|s| cm::RelativePath::new(s.clone()))
-        .transpose()
-        .map_err(|e| Error::internal(format!("invalid \"subdir\" for \"expose\": {}", e)))
+fn extract_expose_subdir(in_obj: &cml::Expose) -> Option<cm::RelativePath> {
+    in_obj.subdir.clone()
 }
 
-fn extract_offer_subdir(in_obj: &cml::Offer) -> Result<Option<cm::RelativePath>, Error> {
-    in_obj
-        .subdir
-        .as_ref()
-        .map(|s| cm::RelativePath::new(s.clone()))
-        .transpose()
-        .map_err(|e| Error::internal(format!("invalid \"subdir\" for \"offer\": {}", e)))
+fn extract_offer_subdir(in_obj: &cml::Offer) -> Option<cm::RelativePath> {
+    in_obj.subdir.clone()
 }
 
 fn extract_expose_rights(in_obj: &cml::Expose) -> Result<Option<cm::Rights>, Error> {
@@ -624,9 +585,7 @@ fn extract_expose_rights(in_obj: &cml::Expose) -> Result<Option<cm::Rights>, Err
 
 fn expose_source_from_ref(reference: &cml::ExposeFromRef) -> Result<cm::Ref, Error> {
     match reference {
-        cml::ExposeFromRef::Named(name) => {
-            Ok(cm::Ref::Child(cm::ChildRef { name: cm::Name::new(name.to_string())? }))
-        }
+        cml::ExposeFromRef::Named(name) => Ok(cm::Ref::Child(cm::ChildRef { name: name.clone() })),
         cml::ExposeFromRef::Framework => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
         cml::ExposeFromRef::Self_ => Ok(cm::Ref::Self_(cm::SelfRef {})),
     }
@@ -660,9 +619,7 @@ fn extract_offer_rights(in_obj: &cml::Offer) -> Result<Option<cm::Rights>, Error
 
 fn offer_source_from_ref(reference: cml::AnyRef) -> Result<cm::Ref, Error> {
     match reference {
-        cml::AnyRef::Named(name) => {
-            Ok(cm::Ref::Child(cm::ChildRef { name: cm::Name::new(name.to_string())? }))
-        }
+        cml::AnyRef::Named(name) => Ok(cm::Ref::Child(cm::ChildRef { name: name.clone() })),
         cml::AnyRef::Framework => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
         cml::AnyRef::Realm => Ok(cm::Ref::Realm(cm::RealmRef {})),
         cml::AnyRef::Self_ => Ok(cm::Ref::Self_(cm::SelfRef {})),
@@ -697,8 +654,8 @@ fn extract_single_offer_storage_source(in_obj: &cml::Offer) -> Result<cm::Ref, E
     })?;
     match reference {
         cml::OfferFromRef::Realm => Ok(cm::Ref::Realm(cm::RealmRef {})),
-        cml::OfferFromRef::Named(storage_name) => {
-            Ok(cm::Ref::Storage(cm::StorageRef { name: cm::Name::new(storage_name.to_string())? }))
+        cml::OfferFromRef::Named(name) => {
+            Ok(cm::Ref::Storage(cm::StorageRef { name: name.clone() }))
         }
         other => Err(Error::internal(format!("invalid \"from\" for \"offer\": {}", other))),
     }
@@ -711,10 +668,10 @@ fn translate_child_or_collection_ref(
 ) -> Result<cm::Ref, Error> {
     match reference {
         cml::AnyRef::Named(name) if all_children.contains(name) => {
-            Ok(cm::Ref::Child(cm::ChildRef { name: cm::Name::new(name.to_string())? }))
+            Ok(cm::Ref::Child(cm::ChildRef { name: name.clone() }))
         }
         cml::AnyRef::Named(name) if all_collections.contains(name) => {
-            Ok(cm::Ref::Collection(cm::CollectionRef { name: cm::Name::new(name.to_string())? }))
+            Ok(cm::Ref::Collection(cm::CollectionRef { name: name.clone() }))
         }
         cml::AnyRef::Named(_) => {
             Err(Error::internal(format!("dangling reference: \"{}\"", reference)))
@@ -740,11 +697,11 @@ fn extract_all_targets_for_each_child(
     in_obj: &cml::Offer,
     all_children: &HashSet<&cml::Name>,
     all_collections: &HashSet<&cml::Name>,
-) -> Result<Vec<(cm::Ref, String)>, Error> {
+) -> Result<Vec<(cm::Ref, cml::NameOrPath)>, Error> {
     let mut out_targets = vec![];
 
     let target_ids = all_target_capability_ids(in_obj, in_obj)
-        .ok_or(Error::internal("no capability".to_string()))?;
+        .ok_or_else(|| Error::internal("no capability".to_string()))?;
 
     // Validate the "to" references.
     for to in &in_obj.to {
@@ -758,7 +715,7 @@ fn extract_all_targets_for_each_child(
 }
 
 /// Return the target paths (or names) specified in the given capability.
-fn all_target_capability_ids<T, U>(in_obj: &T, to_obj: &U) -> Option<OneOrMany<String>>
+fn all_target_capability_ids<T, U>(in_obj: &T, to_obj: &U) -> Option<OneOrMany<cml::NameOrPath>>
 where
     T: cml::CapabilityClause,
     U: cml::AsClause,
@@ -768,23 +725,29 @@ where
         Some(OneOrMany::One(as_.clone()))
     } else {
         if let Some(p) = in_obj.service() {
-            Some(OneOrMany::One(p.clone()))
+            Some(OneOrMany::One(cml::NameOrPath::Path(p.clone())))
         } else if let Some(p) = in_obj.protocol() {
-            Some(p.clone())
+            Some(match p {
+                OneOrMany::One(p) => OneOrMany::One(cml::NameOrPath::Path(p.clone())),
+                OneOrMany::Many(v) => {
+                    let many = v.iter().map(|p| cml::NameOrPath::Path(p.clone())).collect();
+                    OneOrMany::Many(many)
+                }
+            })
         } else if let Some(p) = in_obj.directory() {
-            Some(OneOrMany::One(p.clone()))
+            Some(OneOrMany::One(cml::NameOrPath::Path(p.clone())))
         } else if let Some(p) = in_obj.runner() {
-            Some(OneOrMany::One(p.clone()))
+            Some(OneOrMany::One(cml::NameOrPath::Name(p.clone())))
         } else if let Some(p) = in_obj.resolver() {
-            Some(OneOrMany::One(p.to_string()))
+            Some(OneOrMany::One(cml::NameOrPath::Name(p.clone())))
         } else if let Some(OneOrMany::One(event)) = in_obj.event() {
-            Some(OneOrMany::One(event.to_string()))
+            Some(OneOrMany::One(cml::NameOrPath::Name(event.clone())))
         } else if let Some(OneOrMany::Many(events)) = in_obj.event() {
-            Some(OneOrMany::Many(events.iter().map(|e| e.to_string()).collect()))
+            Some(OneOrMany::Many(events.iter().map(|e| cml::NameOrPath::Name(e.clone())).collect()))
         } else if let Some(type_) = in_obj.storage() {
-            match type_.as_str() {
-                "data" => Some(OneOrMany::One("/data".to_string())),
-                "cache" => Some(OneOrMany::One("/cache".to_string())),
+            match type_ {
+                cml::StorageType::Data => Some(OneOrMany::One("/data".parse().unwrap())),
+                cml::StorageType::Cache => Some(OneOrMany::One("/cache".parse().unwrap())),
                 _ => None,
             }
         } else {
@@ -793,8 +756,8 @@ where
     }
 }
 
-// Return the single path (or name) specified in the given capability.
-fn one_target_capability_id<T, U>(in_obj: &T, to_obj: &U) -> Result<String, Error>
+// Return the single name or path specified in the given capability.
+fn one_target_capability_id<T, U>(in_obj: &T, to_obj: &U) -> Result<cml::NameOrPath, Error>
 where
     T: cml::CapabilityClause,
     U: cml::AsClause,
@@ -813,15 +776,6 @@ fn extract_expose_target(in_obj: &cml::Expose) -> Result<cm::ExposeTarget, Error
         Some(cml::ExposeToRef::Realm) => Ok(cm::ExposeTarget::Realm),
         Some(cml::ExposeToRef::Framework) => Ok(cm::ExposeTarget::Framework),
         None => Ok(cm::ExposeTarget::Realm),
-    }
-}
-
-fn str_to_storage_type(s: &str) -> Result<cm::StorageType, Error> {
-    match s {
-        "data" => Ok(cm::StorageType::Data),
-        "cache" => Ok(cm::StorageType::Cache),
-        "meta" => Ok(cm::StorageType::Meta),
-        t => Err(Error::internal(format!("unknown storage type: {}", t))),
     }
 }
 
