@@ -40,13 +40,7 @@ class Corpus(object):
         if root:
             self.root = root
             self._is_tmp = False
-            try:
-                os.makedirs(root)
-            except OSError as e:
-                if e.errno == errno.EEXIST and os.path.isdir(root):
-                    pass
-                else:
-                    raise
+            self.fuzzer.device.host.mkdir(root)
         else:
             self.root = tempfile.mkdtemp()
             self._is_tmp = True
@@ -56,7 +50,7 @@ class Corpus(object):
 
     def __exit__(self, e_type, e_value, traceback):
         if self._is_tmp:
-            shutil.rmtree(self.root)
+            self.fuzzer.device.host.rmdir(self.root, recursive=True)
 
     def push(self):
         """Copy the corpus to the fuzzer's device."""

@@ -19,6 +19,8 @@ from host_fake import FakeHost
 
 class TestHost(unittest.TestCase):
 
+    # Unit tests
+
     def test_read_fuzzers(self):
         # Construct and parse both fuchsia and zircon style fuzzer metadata.
         data = [

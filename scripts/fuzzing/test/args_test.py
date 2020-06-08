@@ -12,7 +12,8 @@ from collections import namedtuple
 
 class TestArgParser(unittest.TestCase):
 
-    # Helper method to check all possible arguments
+    # Unit test assertions
+
     def assertArgsEqual(
             self,
             args,
@@ -33,6 +34,8 @@ class TestArgParser(unittest.TestCase):
         self.assertEqual(args.no_cipd, no_cipd)
         self.assertEqual(args.output, output)
         self.assertEqual(args.staging, staging)
+
+    # Unit tests
 
     def test_parse_args_name(self):
         parser = ArgParser('test_parse_args_name')

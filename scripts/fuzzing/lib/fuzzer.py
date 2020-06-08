@@ -113,6 +113,7 @@ class Fuzzer(object):
         self.host = device.host
         self.package = package
         self.executable = executable
+        self.pid = None
         self._options = {'artifact_prefix': 'data/'}
         self._libfuzzer_args = []
         self._subprocess_args = []
@@ -168,13 +169,18 @@ class Fuzzer(object):
         except subprocess.CalledProcessError:
             return []
 
-    def is_running(self):
-        """Checks the device and returns whether the fuzzer is running."""
-        return str(self) in self.device.getpids()
+    def is_running(self, refresh=False):
+        """Checks the device and returns whether the fuzzer is running.
 
-    def require_stopped(self):
+           See the note about "refresh" on Device.getpid().
+        """
+        self.pid = self.device.getpid(
+            self.package, self.executable, refresh=refresh)
+        return self.pid > 0
+
+    def require_stopped(self, refresh=False):
         """Raise an exception if the fuzzer is running."""
-        if self.is_running():
+        if self.is_running(refresh=refresh):
             raise Fuzzer.StateError(
                 str(self) + ' is running and must be stopped first.')
 
@@ -355,7 +361,7 @@ class Fuzzer(object):
         combines and symbolizes the associated fuzzer and kernel logs. Fetches
         any referenced test artifacts, e.g. crashes.
         """
-        while self.is_running():
+        while self.is_running(refresh=True):
             time.sleep(2)
         self.device.fetch(
             self.data_path('fuzz-*.log'), self.results(), retries=2)
@@ -368,9 +374,8 @@ class Fuzzer(object):
 
     def stop(self):
         """Stops any processes with a matching component manifest on the device."""
-        pids = self.device.getpids()
-        if str(self) in pids:
-            self.device.ssh(['kill', str(pids[str(self)])]).check_call()
+        if self.is_running():
+            self.device.ssh(['kill', str(self.pid)]).check_call()
 
     def repro(self):
         """Runs the fuzzer with test input artifacts.

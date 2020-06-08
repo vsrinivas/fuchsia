@@ -15,56 +15,38 @@ from host_fake import FakeHost
 
 class FakeDevice(Device):
 
-    def __init__(self, port=22):
-        host = FakeHost()
-        super(FakeDevice, self).__init__(host, '::1', port)
-        self.toggle = False
-        self.delay = 0
+    def __init__(self, autoconfigure=True):
+        self.pid = 10000
+        super(FakeDevice, self).__init__(FakeHost(), '::1')
+        if autoconfigure:
+            self.add_fake_pathnames()
+            self.configure()
 
-    def ssh(self, cmdline):
-        """ Overrides Device.ssh to provide canned responses."""
-        p = super(FakeDevice, self).ssh(cmdline)
-        if cmdline[0] == 'cs' and self.toggle:
-            p.response = r"""
-  http.cmx[20963]: fuchsia-pkg://fuchsia.com/http#meta/http.cmx
-  fake-target1.cmx[7412221]: fuchsia-pkg://fuchsia.com/fake-package1#meta/fake-target1.cmx
-  fake-target2.cmx[7412222]: fuchsia-pkg://fuchsia.com/fake-package1#meta/fake-target2.cmx
-  an-extremely-verbose-target-name.cmx[7412223]: fuchsia-pkg://fuchsia.com/fake-package2#meta/an-extremely-verbose-target-name.cmx
-"""
-            self.toggle = False
-        elif cmdline[0] == 'cs':
-            p.response = r"""
-  http.cmx[20963]: fuchsia-pkg://fuchsia.com/http#meta/http.cmx
-  fake-target1.cmx[7412221]: fuchsia-pkg://fuchsia.com/fake-package1#meta/fake-target1.cmx
-  an-extremely-verbose-target-name.cmx[7412223]: fuchsia-pkg://fuchsia.com/fake-package2#meta/an-extremely-verbose-target-name.cmx
-"""
-            self.toggle = True
-        elif cmdline[0] == 'ls' and cmdline[-1].endswith('corpus'):
-            p.response = r"""
--rw-r--r--    1 0        0              1796 Mar 19 17:25 feac37187e77ff60222325cf2829e2273e04f2ea
--rw-r--r--    1 0        0               124 Mar 18 22:02 ff415bddb30e9904bccbbd21fb5d4aa9bae9e5a5
-"""
-        elif cmdline[0] == 'ls':
-            p.response = r"""
-drw-r--r--    2 0        0             13552 Mar 20 01:40 corpus
--rw-r--r--    1 0        0               918 Mar 20 01:40 fuzz-0.log
--rw-r--r--    1 0        0              1337 Mar 20 01:40 crash-deadbeef
--rw-r--r--    1 0        0              1729 Mar 20 01:40 leak-deadfa11
--rw-r--r--    1 0        0             31415 Mar 20 01:40 oom-feedface
-"""
-        elif cmdline[0] == 'log_listener':
-            p.response = r"""
-[0:0] {{{reset}}}
-[0:0] {{{a line to symbolize}}}
-[0:0] {{{another line to symbolize}}}
-[0:0] {{{yet another line to symbolize}}}
-"""
-        return p
+    def add_fake_pathnames(self):
+        host = self.host
+        host.pathnames.append(
+            host.fxpath(host.build_dir, 'ssh-keys', 'ssh_config'))
 
-    def _scp(self, srcs, dst):
-        """ Overrides Device._scp to simulate delayed file creation."""
-        if len(srcs) == 1 and srcs[0].endswith('delayed') and self.delay != 0:
-            self.delay -= 1
-            raise subprocess.CalledProcessError(1, 'scp', 'fake failure')
+    def add_ssh_response(self, args, response):
+        cmd_str = ' '.join(self._ssh_cmd(args))
+        if cmd_str in self.host.responses:
+            self.host.responses[cmd_str] += response
         else:
-            super(FakeDevice, self)._scp(srcs, dst)
+            self.host.responses[cmd_str] = response
+
+    def clear_ssh_response(self, args):
+        cmd_str = ' '.join(self._ssh_cmd(args))
+        del self.host.responses[cmd_str]
+
+    def add_fake_pid(self, package, executable):
+        self.pid += 1
+        cmd = self._cs_cmd()
+        response = [
+            '  {}.cmx[{}]: fuchsia-pkg://fuchsia.com/{}#meta/{}.cmx'.format(
+                executable, self.pid, package, executable)
+        ]
+        self.add_ssh_response(cmd, response)
+        return self.pid
+
+    def clear_fake_pids(self):
+        self.clear_ssh_response(self._cs_cmd())

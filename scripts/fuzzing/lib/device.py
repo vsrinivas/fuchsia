@@ -18,13 +18,18 @@ from host import Host
 class Device(object):
     """Represents a Fuchsia device attached to a host.
 
-    This class abstracts the details of remotely running commands and
-    transferring data to and from the device.
+       This class abstracts the details of remotely running commands and
+       transferring data to and from the device.
 
-    Attributes:
-      host: A Host object represent the local platform attached to this target
-        device.
-  """
+       Attributes:
+         host:             The associated Host object for this device.
+         addr:             The device's IPv6 address.
+         port:             TCP port number that sshd is listening on.
+         ssh_config:       Path to an SSH configuration file.
+         ssh_identity:     Path to an SSH identity file.
+         ssh_options:      SSH options as in an SSH configuration file.
+         ssh_verbosity:    How verbose SSH processes are, from 0 to 3.
+    """
 
     @classmethod
     def from_host(cls, host):
@@ -39,57 +44,108 @@ class Device(object):
         if not addr:
             addr = host.find_device()
         device = cls(host, addr)
-        device.set_ssh_config(
-            host.fxpath(host.build_dir, 'ssh-keys', 'ssh_config'))
+        device.configure()
         return device
 
-    def __init__(self, host, addr, port=22):
-        self.host = host
+    def __init__(self, host, addr):
+        self._host = host
         self._addr = addr
-        self._ssh_opts = {}
-        if port != 22:
-            self._ssh_opts['p'] = [str(port)]
+        self._ssh_options = {}
+        self._ssh_config_options = []
+        self._ssh_verbosity = 0
+        self._pids = None
 
-    def set_ssh_config(self, config_file):
-        """Sets the SSH arguments to use a config file."""
-        if not self.host.isfile(config_file):
-            raise RuntimeError('Unable to find SSH configuration.')
-        self._ssh_opts['F'] = [config_file]
+    @property
+    def host(self):
+        """The associated Host object for this device."""
+        return self._host
 
-    def set_ssh_identity(self, identity_file):
-        if not self.host.isfile(identity_file):
-            raise RuntimeError('Unable to find SSH identity.')
-        self._ssh_opts['i'] = [identity_file]
+    @property
+    def addr(self):
+        """The device's IPv6 address."""
+        return self._addr
 
-    def set_ssh_option(self, option):
-        """Sets SSH configuration options. Can be used multiple times."""
-        if 'o' in self._ssh_opts:
-            self._ssh_opts['o'].append(option)
-        else:
-            self._ssh_opts['o'] = [option]
+    @property
+    def port(self):
+        """The TCP port number that the device's sshd is listening on."""
+        return int(self._ssh_options.get('P', '22'))
 
-    def set_ssh_verbosity(self, level):
-        """Sets how much debugging SSH prints. Default is 0 (none), max is 3."""
-        for i in range(1, 4):
-            opt = 'v' * i
-            if level == i and not opt in self._ssh_opts:
-                self._ssh_opts[opt] = []
-            elif level != i and opt in self._ssh_opts:
-                del self._ssh_opts[opt]
+    @port.setter
+    def port(self, port):
+        self._ssh_options['P'] = str(port)
 
-    def get_ssh_cmd(self, cmd):
+    @property
+    def ssh_config(self):
+        """Path to an SSH configuration file."""
+        return self._ssh_options.get('F', None)
+
+    @ssh_config.setter
+    def ssh_config(self, ssh_config):
+        if not self.host.isfile(ssh_config):
+            raise ValueError(
+                'Invalid SSH configuration file: {}'.format(ssh_config))
+        self._ssh_options['F'] = ssh_config
+
+    @property
+    def ssh_identity(self):
+        """Path to an SSH identity file."""
+        return self._ssh_options.get('i', None)
+
+    @ssh_identity.setter
+    def ssh_identity(self, ssh_identity):
+        if not self.host.isfile(ssh_identity):
+            raise ValueError(
+                'Invalid SSH identity file: {}'.format(ssh_identity))
+        self._ssh_options['i'] = ssh_identity
+
+    @property
+    def ssh_options(self):
+        """SSH configuration options, as in an SSH configuration file."""
+        return self._ssh_config_options
+
+    @ssh_options.setter
+    def ssh_options(self, ssh_options):
+        self._ssh_config_options = ssh_options
+
+    @property
+    def ssh_verbosity(self):
+        """How verbose SSH processes are, from 0 to 3."""
+        return self._ssh_verbosity
+
+    @ssh_verbosity.setter
+    def ssh_verbosity(self, ssh_verbosity):
+        if ssh_verbosity < 0 or ssh_verbosity > 3:
+            raise ValueError('Invalid ssh_verbosity: {}'.format(ssh_verbosity))
+        self._ssh_verbosity = ssh_verbosity
+
+    def configure(self):
+        """Sets the defaults for this device."""
+        self.ssh_config = self.host.fxpath(
+            self.host.build_dir, 'ssh-keys', 'ssh_config')
+
+    def _ssh_opts(self):
         """Returns the SSH executable and options."""
-        result = cmd[:1]
-        for opt, args in self._ssh_opts.iteritems():
-            if len(args) == 0:
-                result.append('-' + opt)
-            else:
-                for arg in args:
-                    result.append('-' + opt)
-                    result.append(arg)
-        return result + cmd[1:]
+        ssh_options = []
 
-    def ssh(self, cmdline, **kwargs):
+        # Flags
+        if self._ssh_verbosity != 0:
+            ssh_options += ['-{}'.format('v' * self._ssh_verbosity)]
+
+        # Options
+        for key, val in sorted(self._ssh_options.iteritems()):
+            ssh_options += ['-{}'.format(key), val]
+
+        # Configuration options
+        for val in sorted(self._ssh_config_options):
+            ssh_options += ['-o', val]
+
+        return ssh_options
+
+    def _ssh_cmd(self, args):
+        """Returns the command line arguments for an SSH commaned."""
+        return ['ssh'] + self._ssh_opts() + [self.addr] + args
+
+    def ssh(self, args, **kwargs):
         """Creates a Process with added SSH arguments.
 
     Provides the additional arguments to handle connecting the device and other
@@ -103,8 +159,8 @@ class Device(object):
     Returns:
       A Process object.
     """
-        args = self.get_ssh_cmd(['ssh', self._addr] + cmdline)
-        p = self.host.create_process(args, **kwargs)
+        cmd = self._ssh_cmd(args)
+        p = self.host.create_process(cmd, **kwargs)
 
         # Explicitly prevent the subprocess from inheriting our stdin
         if not p.stdin:
@@ -112,46 +168,63 @@ class Device(object):
 
         return p
 
-    def getpids(self):
-        """Maps names to process IDs for running fuzzers.
+    def _cs_cmd(self):
+        """Returns the command to list running components on a device."""
+        return ['cs']
 
-    Connects to the device and checks which fuzz targets have a matching entry
-    in the component list given by 'cs'.  This matches on *only* the first 32
-    characters of the component manifest and package URL.  This is due to 'cs'
-    being limited to returning strings of length `ZX_MAX_NAME_LEN`, as defined
-    in //zircon/system/public/zircon/types.h.
+    def _cs_url(self, package, executable):
+        """Returns the Fuchsia URL for a packaged executable."""
+        return (
+            'fuchsia-pkg://fuchsia.com/{}#meta/{}'.format(
+                package, self._cs_cmx(executable)))
 
-    Returns:
-      A dict mapping fuzzer names to process IDs. May be empty if no
-      fuzzers are running.
-    """
-        out = self.ssh(['cs']).check_output()
-        pids = {}
-        for package, executable in self.host.fuzzers:
-            pat = r'  %s.cmx\[(\d+)\]: fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx' % (
-                executable, package, executable)
+    def _cs_cmx(self, executable):
+        """Returns the component manifest name for an executable."""
+        return ('{}.cmx'.format(executable))
+
+    def getpid(self, package, executable, refresh=False):
+        """Returns a process ID for a packaged executable if running, or -1.
+
+           Relative to the duration of most "fx fuzz" commands, the SSH
+           invocation to get component status is fairly expensive. Most
+           prcoesses won't meaningfully change during or command (or will only
+           change as a result of it). Thus, it makes sense to generally cache
+           the PID results. This can lead to small degree of inaccuracy, e.g.
+           "fx fuzz check" reporting a fuzzer as "RUNNING" when it stops
+           between the command invocation and the display of results. This is
+           unlikely (and inconseuqential) enough in normal operation to be
+           deemed acceptable.
+
+           If an accurate status is needed, e.g. as part of a long-lived command
+           like Fuzzer.monitor(), "refresh" can be set to True to re0run the SSH
+           command.
+        """
+        if self._pids == None or refresh:
+            self._pids = {}
+            out = self.ssh(self._cs_cmd()).check_output()
+            pat = re.compile(
+                r'  (?P<executable>.*)\.cmx\[(?P<pid>\d+)\]: ' +
+                r'fuchsia-pkg://fuchsia.com/(?P<package>.*)#meta/(?P=executable).cmx'
+            )
             for line in str(out).split('\n'):
                 match = re.match(pat, line)
-                if match:
-                    pids['/'.join([package, executable])] = int(match.group(1))
-        return pids
+                if not match:
+                    continue
+                groupdict = match.groupdict()
+                nametuple = (groupdict['package'], groupdict['executable'])
+                pid = int(groupdict['pid'])
+                self._pids[nametuple] = pid
+        return self._pids.get((package, executable), -1)
+
+    def _ls_cmd(self, path):
+        """Returns a command to list a path on device."""
+        return ['ls', '-l', path]
 
     def ls(self, path):
-        """Maps file names to sizes for the given path.
-
-    Connects to a Fuchsia device and lists the files in a directory given by
-    the provided path.  Ignore non-existent paths.
-
-    Args:
-      path: Absolute path to a directory on the device.
-
-    Returns:
-      A dict mapping file names to file sizes, or an empty dict if the path
-      does not exist.
-    """
+        """Returns a map of file names to sizes for the given path."""
         results = {}
         try:
-            out = self.ssh(['ls', '-l', path]).check_output()
+            out = self.ssh(self._ls_cmd(path)).check_output()
             for line in str(out).split('\n'):
                 # Line ~= '-rw-r--r-- 1 0 0 8192 Mar 18 22:02 some-name'
                 parts = line.split()
@@ -197,36 +270,33 @@ class Device(object):
                 pid = int(parts[1])
         return pid
 
-    def _scp(self, srcs, dst):
-        """Copies `src` to `dst`.
+    def _rpath(self, pathname):
+        """Returns an scp-style pathname argument for a remote path."""
+        return '[{}]:{}'.format(self.addr, pathname)
 
-    Don't call directly; use `fetch` or `store` instead.`
+    def _scp_cmd(self, args):
+        """Returns the command line arguments for an SSH commaned."""
+        return ['scp'] + self._ssh_opts() + sorted(args[:-1]) + [args[-1]]
 
-    Args:
-      srcs: Local or remote paths to copy from.
-      dst: Local or remote path to copy to.
-    """
-        args = self.get_ssh_cmd(['scp'] + srcs + [dst])
-        p = self.host.create_process(args)
-        p.check_call()
-
-    def fetch(self, data_src, host_dst, retries=0):
+    def fetch(self, data_src, host_dst, retries=0, delay_ms=1000):
         """Copies `data_src` on the target to `host_dst` on the host."""
         if not self.host.isdir(host_dst):
             raise ValueError(host_dst + ' is not a directory')
+        cmd = self._scp_cmd([self._rpath(data_src), host_dst])
         while retries != 0:
             try:
-                self._scp(['[{}]:{}'.format(self._addr, data_src)], host_dst)
+                self.host.create_process(cmd).check_call()
                 return
             except subprocess.CalledProcessError:
-                time.sleep(1)
+                time.sleep(delay_ms * 0.001)
                 retries -= 1
-        self._scp(['[{}]:{}'.format(self._addr, data_src)], host_dst)
+        self.host.create_process(cmd).check_call()
 
     def store(self, host_src, data_dst):
         """Copies `host_src` on the host to `data_dst` on the target."""
         self.ssh(['mkdir', '-p', data_dst]).check_call()
-        srcs = glob.glob(host_src)
+        srcs = self.host.glob(host_src)
         if len(srcs) == 0:
             return
-        self._scp(srcs, '[{}]:{}'.format(self._addr, data_dst))
+        cmd = self._scp_cmd(srcs + [self._rpath(data_dst)])
+        self.host.create_process(cmd).check_call()

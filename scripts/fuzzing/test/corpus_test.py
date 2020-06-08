@@ -18,6 +18,8 @@ from device_fake import FakeDevice
 
 class TestCorpus(unittest.TestCase):
 
+    # Unit tests
+
     def test_from_args(self):
         fuzzer = Fuzzer(FakeDevice(), u'fake-package1', u'fake-target3')
         parser = ArgParser('description')
@@ -42,12 +44,12 @@ class TestCorpus(unittest.TestCase):
         args = parser.parse_args(['1/3'])
         corpus = Corpus.from_args(fuzzer, args)
         with tempfile.NamedTemporaryFile(dir=corpus.root) as f:
+            device.host.pathnames.append(os.path.join(corpus.root, f.name))
             corpus.push()
             self.assertIn(
                 ' '.join(
-                    device.get_ssh_cmd(
-                        ['scp', f.name,
-                         '[::1]:' + fuzzer.data_path('corpus')])),
+                    device._scp_cmd(
+                        [f.name, '[::1]:' + fuzzer.data_path('corpus')])),
                 device.host.history)
 
     def test_pull(self):
@@ -60,11 +62,9 @@ class TestCorpus(unittest.TestCase):
         corpus.pull()
         self.assertIn(
             ' '.join(
-                device.get_ssh_cmd(
-                    [
-                        'scp', '[::1]:' + fuzzer.data_path('corpus/*'),
-                        corpus.root
-                    ])), device.host.history)
+                device._scp_cmd(
+                    ['[::1]:' + fuzzer.data_path('corpus/*'), corpus.root])),
+            device.host.history)
 
 
 if __name__ == '__main__':

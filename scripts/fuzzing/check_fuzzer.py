@@ -24,14 +24,13 @@ def main():
     device = Device.from_host(host)
     fuzzers = Fuzzer.filter(host.fuzzers, args.name)
 
-    pids = device.getpids()
     silent = True
     for package, executable in fuzzers:
         fuzzer = Fuzzer(device, package, executable)
-        if not args.name and str(fuzzer) not in pids:
+        if not args.name and not fuzzer.is_running():
             continue
         silent = False
-        if str(fuzzer) in pids:
+        if fuzzer.is_running():
             print(str(fuzzer) + ': RUNNING')
         else:
             print(str(fuzzer) + ': STOPPED')

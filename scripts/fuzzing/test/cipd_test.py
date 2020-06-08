@@ -18,50 +18,52 @@ from device_fake import FakeDevice
 
 class TestCipd(unittest.TestCase):
 
+    # Unit tests
+
     def test_instances(self):
-        fake_cipd = FakeCipd()
-        corpus = fake_cipd.corpus
+        cipd = FakeCipd()
+        corpus = cipd.corpus
         fuzzer = corpus.fuzzer
         host = fuzzer.device.host
 
-        output = fake_cipd.instances()
+        output = cipd.instances()
         self.assertIn(
-            fake_cipd._bin + ' instances fuchsia/test_data/fuzzing/' +
-            str(fuzzer), host.history)
+            cipd._bin + ' instances fuchsia/test_data/fuzzing/' + str(fuzzer),
+            host.history)
         self.assertIn('some-version', output)
 
     def test_install(self):
-        fake_cipd = FakeCipd()
-        corpus = fake_cipd.corpus
+        cipd = FakeCipd()
+        corpus = cipd.corpus
         fuzzer = corpus.fuzzer
         host = fuzzer.device.host
 
-        self.assertFalse(fake_cipd.install('latest'))
+        self.assertFalse(cipd.install('latest'))
 
-        fake_cipd.add_version('latest')
-        self.assertTrue(fake_cipd.install('latest'))
+        cipd.add_version('latest')
+        self.assertTrue(cipd.install('latest'))
         self.assertIn(
-            'CWD=' + corpus.root + ' ' + fake_cipd._bin +
+            'CWD=' + corpus.root + ' ' + cipd._bin +
             ' install fuchsia/test_data/fuzzing/' + str(fuzzer) + ' latest',
             host.history)
 
-        fake_cipd.add_version('some-version')
-        fake_cipd.install('integration:some-revision')
+        cipd.add_version('some-version')
+        cipd.install('integration:some-revision')
         self.assertIn(
             ' '.join(
                 [
-                    'CWD=' + corpus.root, fake_cipd._bin, 'install',
+                    'CWD=' + corpus.root, cipd._bin, 'install',
                     'fuchsia/test_data/fuzzing/' + str(fuzzer), 'some-version'
                 ]), host.history)
 
     def test_create(self):
-        fake_cipd = FakeCipd()
-        corpus = fake_cipd.corpus
+        cipd = FakeCipd()
+        corpus = cipd.corpus
         host = corpus.fuzzer.device.host
 
-        fake_cipd.create()
+        cipd.create()
         self.assertIn(
-            fake_cipd._bin + ' create --pkg-def ' +
+            cipd._bin + ' create --pkg-def ' +
             os.path.join(corpus.root, 'cipd.yaml') +
             ' --ref latest --tag integration:' + host.snapshot(), host.history)
 

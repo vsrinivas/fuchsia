@@ -19,6 +19,17 @@ from fuzzer_fake import FakeFuzzer
 
 class TestFuzzer(unittest.TestCase):
 
+    # Unit test assertions
+
+    def assertRan(self, host, *args):
+        self.assertIn(' '.join(args), host.history)
+
+    def assertSsh(self, device, *args):
+        """Asserts a previous call was made to device.scp with cmd."""
+        self.assertRan(device.host, *device._ssh_cmd(list(args)))
+
+    # Unit tests
+
     def test_filter(self):
         host = FakeHost()
         fuzzers = host.fuzzers
@@ -43,41 +54,62 @@ class TestFuzzer(unittest.TestCase):
             fuzzer = Fuzzer.from_args(device, args)
 
     def test_measure_corpus(self):
-        fuzzer = Fuzzer(FakeDevice(), u'fake-package1', u'fake-target1')
+        device = FakeDevice()
+        fuzzer = Fuzzer(device, u'fake-package1', u'fake-target1')
+        device.add_ssh_response(
+            device._ls_cmd(fuzzer.data_path('corpus')), [
+                '-rw-r--r-- 1 0 0 1796 Mar 19 17:25 feac37187e77ff60222325cf2829e2273e04f2ea',
+                '-rw-r--r-- 1 0 0  124 Mar 18 22:02 ff415bddb30e9904bccbbd21fb5d4aa9bae9e5a5',
+            ])
         sizes = fuzzer.measure_corpus()
-        self.assertEqual(sizes[0], 2)
-        self.assertEqual(sizes[1], 1796 + 124)
+        self.assertEqual(sizes, (2, 1796 + 124))
 
     def test_list_artifacts(self):
-        fuzzer = Fuzzer(FakeDevice(), u'fake-package1', u'fake-target1')
+        device = FakeDevice()
+        fuzzer = Fuzzer(device, u'fake-package1', u'fake-target1')
+        device.add_ssh_response(
+            device._ls_cmd(fuzzer.data_path()), [
+                'drw-r--r-- 2 0 0 13552 Mar 20 01:40 corpus',
+                '-rw-r--r-- 1 0 0   918 Mar 20 01:40 fuzz-0.log',
+                '-rw-r--r-- 1 0 0  1337 Mar 20 01:40 crash-deadbeef',
+                '-rw-r--r-- 1 0 0  1729 Mar 20 01:40 leak-deadfa11',
+                '-rw-r--r-- 1 0 0 31415 Mar 20 01:40 oom-feedface',
+            ])
         artifacts = fuzzer.list_artifacts()
         self.assertEqual(len(artifacts), 3)
-        self.assertTrue('crash-deadbeef' in artifacts)
-        self.assertTrue('leak-deadfa11' in artifacts)
-        self.assertTrue('oom-feedface' in artifacts)
-        self.assertFalse('fuzz-0.log' in artifacts)
+        self.assertIn('crash-deadbeef', artifacts)
+        self.assertIn('leak-deadfa11', artifacts)
+        self.assertIn('oom-feedface', artifacts)
+        self.assertNotIn('fuzz-0.log', artifacts)
 
     def test_is_running(self):
         device = FakeDevice()
         fuzzer1 = Fuzzer(device, u'fake-package1', u'fake-target1')
         fuzzer2 = Fuzzer(device, u'fake-package1', u'fake-target2')
-        fuzzer3 = Fuzzer(device, u'fake-package1', u'fake-target3')
-        self.assertTrue(fuzzer1.is_running())
-        self.assertTrue(fuzzer2.is_running())
+
+        # Initially stopped
+        self.assertFalse(fuzzer1.is_running())
         self.assertFalse(fuzzer2.is_running())
-        self.assertFalse(fuzzer3.is_running())
+
+        # Previous results cached
+        device.add_fake_pid(fuzzer1.package, fuzzer1.executable)
+        device.add_fake_pid(fuzzer2.package, fuzzer2.executable)
+        self.assertFalse(fuzzer1.is_running())
+        self.assertFalse(fuzzer2.is_running())
+
+        # Fresh status can be requested.
+        self.assertTrue(fuzzer1.is_running(refresh=True))
+        self.assertTrue(fuzzer2.is_running(refresh=True))
 
     def test_require_stopped(self):
         device = FakeDevice()
-        fuzzer1 = Fuzzer(device, u'fake-package1', u'fake-target1')
-        fuzzer2 = Fuzzer(device, u'fake-package1', u'fake-target2')
-        fuzzer3 = Fuzzer(device, u'fake-package1', u'fake-target3')
+        fuzzer = Fuzzer(device, u'fake-package1', u'fake-target1')
+        fuzzer.require_stopped()
+        device.add_fake_pid(fuzzer.package, fuzzer.executable)
         with self.assertRaises(Fuzzer.StateError):
-            fuzzer1.require_stopped()
-        with self.assertRaises(Fuzzer.StateError):
-            fuzzer2.require_stopped()
-        fuzzer2.require_stopped()
-        fuzzer3.require_stopped()
+            fuzzer.require_stopped(refresh=True)
+        device.clear_fake_pids()
+        fuzzer.require_stopped(refresh=True)
 
     # Helper to test Fuzzer.start with different options and arguments. The expected options and
     # arguments to be passed to libFuzzer are given by lf_args. If the helper is expected to raise
@@ -99,15 +131,7 @@ class TestFuzzer(unittest.TestCase):
         finally:
             shutil.rmtree(base_dir)
         if expected:
-            self.assertIn(
-                ' '.join(
-                    device.get_ssh_cmd(
-                        [
-                            'ssh',
-                            '::1',
-                            'run',
-                            fuzzer.url(),
-                        ] + expected)), device.host.history)
+            self.assertSsh(device, 'run', fuzzer.url(), *expected)
 
     def test_start(self):
         self.start_helper(
@@ -264,18 +288,10 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
 
     def test_stop(self):
         device = FakeDevice()
-        pids = device.getpids()
         fuzzer1 = Fuzzer(device, u'fake-package1', u'fake-target1')
+        pid = device.add_fake_pid(fuzzer1.package, fuzzer1.executable)
         fuzzer1.stop()
-        self.assertIn(
-            ' '.join(
-                device.get_ssh_cmd(
-                    [
-                        'ssh',
-                        '::1',
-                        'kill',
-                        str(pids[str(fuzzer1)]),
-                    ])), device.host.history)
+        self.assertSsh(device, 'kill', str(pid))
         fuzzer3 = Fuzzer(device, u'fake-package1', u'fake-target3')
         fuzzer3.stop()
 
@@ -291,20 +307,21 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
         fuzzer.add_libfuzzer_opts(libfuzzer_opts)
         fuzzer.add_libfuzzer_args(libfuzzer_args)
         fuzzer.add_subprocess_args(subprocess_args)
+
+        # No-op if artifacts are empty
+        self.assertEqual(fuzzer.repro(), 0)
+
+        device.add_ssh_response(
+            device._ls_cmd(fuzzer.data_path()), [
+                '-rw-r--r-- 1 0 0  1337 Mar 20 01:40 crash-deadbeef',
+                '-rw-r--r-- 1 0 0  1729 Mar 20 01:40 leak-deadfa11',
+                '-rw-r--r-- 1 0 0 31415 Mar 20 01:40 oom-feedface',
+            ])
         artifacts = ['data/' + artifact for artifact in fuzzer.list_artifacts()]
-        fuzzer.repro()
-        self.assertIn(
-            ' '.join(
-                device.get_ssh_cmd(
-                    [
-                        'ssh',
-                        '::1',
-                        'run',
-                        fuzzer.url(),
-                        '-artifact_prefix=data/',
-                        '-jobs=0',
-                        '-some-lf-arg=value',
-                    ] + artifacts)), device.host.history)
+        self.assertNotEqual(fuzzer.repro(), 0)
+        self.assertSsh(
+            device, 'run', fuzzer.url(), '-artifact_prefix=data/', '-jobs=0',
+            '-some-lf-arg=value', *artifacts)
 
     def test_merge(self):
         device = FakeDevice()
@@ -318,23 +335,20 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
         fuzzer.add_libfuzzer_opts(libfuzzer_opts)
         fuzzer.add_libfuzzer_args(libfuzzer_args)
         fuzzer.add_subprocess_args(subprocess_args)
-        fuzzer.merge()
-        self.assertIn(
-            ' '.join(
-                device.get_ssh_cmd(
-                    [
-                        'ssh',
-                        '::1',
-                        'run',
-                        fuzzer.url(),
-                        '-artifact_prefix=data/',
-                        '-jobs=0',
-                        '-merge=1',
-                        '-merge_control_file=data/.mergefile',
-                        '-some-lf-arg=value',
-                        'data/corpus/',
-                        'data/corpus.prev/',
-                    ])), device.host.history)
+
+        # No-op if corpus is empty
+        self.assertEqual(fuzzer.merge(), (0, 0))
+
+        device.add_ssh_response(
+            device._ls_cmd(fuzzer.data_path('corpus')), [
+                '-rw-r--r-- 1 0 0 1796 Mar 19 17:25 feac37187e77ff60222325cf2829e2273e04f2ea',
+                '-rw-r--r-- 1 0 0  124 Mar 18 22:02 ff415bddb30e9904bccbbd21fb5d4aa9bae9e5a5',
+            ])
+        self.assertNotEqual(fuzzer.merge(), (0, 0))
+        self.assertSsh(
+            device, 'run', fuzzer.url(), '-artifact_prefix=data/', '-jobs=0',
+            '-merge=1', '-merge_control_file=data/.mergefile',
+            '-some-lf-arg=value', 'data/corpus/', 'data/corpus.prev/')
 
 
 if __name__ == '__main__':

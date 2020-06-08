@@ -20,6 +20,21 @@ from host_fake import FakeHost
 class TestDevice(unittest.TestCase):
     """ Tests lib.Device. See FakeDevice for additional details."""
 
+    # Unit test assertions
+
+    def assertRan(self, host, *args):
+        self.assertIn(' '.join(*args), host.history)
+
+    def assertScp(self, device, *args):
+        """Asserts a previous call was made to device.ssh with args."""
+        self.assertRan(device.host, device._scp_cmd(list(args)))
+
+    def assertSsh(self, device, *args):
+        """Asserts a previous call was made to device.scp with cmd."""
+        self.assertRan(device.host, device._ssh_cmd(list(args)))
+
+    # Unit tests
+
     def test_from_host(self):
         host = FakeHost()
         cmd = ' '.join(host._find_device_cmd())
@@ -29,157 +44,181 @@ class TestDevice(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             device = Device.from_host(host)
         host.responses[cmd] = ['::1']
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(ValueError):
             device = Device.from_host(host)
         host.pathnames.append(
             host.fxpath(host.build_dir, 'ssh-keys', 'ssh_config'))
         device = Device.from_host(host)
 
-    def test_set_ssh_config(self):
-        device = FakeDevice()
-        with self.assertRaises(RuntimeError):
-            device.set_ssh_config('no_such_config')
-        if not os.getenv('FUCHSIA_DIR'):
-            return
+    def test_configure(self):
+        device = FakeDevice(autoconfigure=False)
+        self.assertEqual(device.ssh_config, None)
+
+        # Fails due to missing paths
+        with self.assertRaises(ValueError):
+            device.configure()
+
+        device.add_fake_pathnames()
+        device.configure()
         ssh_config = device.host.fxpath(
             device.host.build_dir, 'ssh-keys', 'ssh_config')
-        if not os.path.exists(ssh_config):
-            return
-        device.set_ssh_config(ssh_config)
-        cmd = ' '.join(device.get_ssh_cmd(['ssh']))
-        self.assertIn('ssh', cmd)
-        self.assertIn(' -F ' + ssh_config, cmd)
+        self.assertEqual(device.ssh_config, ssh_config)
+        self.assertEqual(['-F', ssh_config], device._ssh_opts())
 
-    def test_set_ssh_identity(self):
-        device = FakeDevice()
-        with self.assertRaises(RuntimeError):
-            device.set_ssh_identity('no_such_identity')
-        if not os.getenv('FUCHSIA_DIR'):
-            return
-        identity_file = device.host.fxpath('.ssh', 'pkey')
-        if not os.path.exists(identity_file):
-            return
-        device.set_ssh_identity(identity_file)
-        cmd = ' '.join(device.get_ssh_cmd(['scp']))
-        self.assertIn('scp', cmd)
-        self.assertIn(' -i ' + identity_file, cmd)
+    def test_ssh_identity(self):
+        device = FakeDevice(autoconfigure=False)
+        self.assertEqual(device.ssh_identity, None)
 
-    def test_set_ssh_option(self):
-        device = FakeDevice()
-        device.set_ssh_option('StrictHostKeyChecking no')
-        device.set_ssh_option('UserKnownHostsFile=/dev/null')
-        cmd = ' '.join(device.get_ssh_cmd(['ssh']))
-        self.assertIn(' -o StrictHostKeyChecking no', cmd)
-        self.assertIn(' -o UserKnownHostsFile=/dev/null', cmd)
+        with self.assertRaises(ValueError):
+            device.ssh_identity = 'no_such_identity'
 
-    def test_init(self):
-        device = FakeDevice(port=51823)
-        cmd = ' '.join(device.get_ssh_cmd(['ssh', '::1', 'some-command']))
-        self.assertIn(' -p 51823 ', cmd)
+        ssh_identity = device.host.fxpath('.ssh', 'pkey')
+        device.host.pathnames.append(ssh_identity)
+        device.ssh_identity = ssh_identity
+        self.assertEqual(['-i', ssh_identity], device._ssh_opts())
 
-    def test_set_ssh_verbosity(self):
-        device = FakeDevice()
-        device.set_ssh_verbosity(3)
-        cmd = ' '.join(device.get_ssh_cmd(['ssh', '::1', 'some-command']))
-        self.assertIn(' -vvv ', cmd)
-        device.set_ssh_verbosity(1)
-        cmd = ' '.join(device.get_ssh_cmd(['ssh', '::1', 'some-command']))
-        self.assertIn(' -v ', cmd)
-        self.assertNotIn(' -vvv ', cmd)
-        device.set_ssh_verbosity(0)
-        cmd = ' '.join(device.get_ssh_cmd(['ssh', '::1', 'some-command']))
-        self.assertNotIn(' -v ', cmd)
+    def test_ssh_option(self):
+        device = FakeDevice(autoconfigure=False)
+        self.assertEqual(device.ssh_options, [])
+        device.ssh_options = ['StrictHostKeyChecking no']
+        device.ssh_options.append('UserKnownHostsFile=/dev/null')
+        self.assertEqual(
+            [
+                '-o',
+                'StrictHostKeyChecking no',
+                '-o',
+                'UserKnownHostsFile=/dev/null',
+            ], device._ssh_opts())
+
+    def test_ssh_verbosity(self):
+        device = FakeDevice(autoconfigure=False)
+        self.assertEqual(device.ssh_verbosity, 0)
+
+        with self.assertRaises(ValueError):
+            device.ssh_verbosity = 4
+
+        device.ssh_verbosity = 3
+        self.assertEqual(['-vvv'], device._ssh_opts())
+
+        device.ssh_verbosity = 2
+        self.assertEqual(['-vv'], device._ssh_opts())
+
+        device.ssh_verbosity = 1
+        self.assertEqual(['-v'], device._ssh_opts())
+
+        device.ssh_verbosity = 0
+        self.assertEqual([], device._ssh_opts())
+
+        with self.assertRaises(ValueError):
+            device.ssh_verbosity = -1
 
     def test_ssh(self):
         device = FakeDevice()
-        device.ssh(['some-command', '--with', 'some-argument']).check_call()
-        self.assertIn(
-            ' '.join(
-                device.get_ssh_cmd(
-                    ['ssh', '::1', 'some-command', '--with some-argument'])),
-            device.host.history)
+        cmd = ['some-command', '--with', 'some-argument']
+        device.ssh(cmd).check_call()
+        self.assertSsh(device, *cmd)
 
-    def test_getpids(self):
+    def test_getpid(self):
         device = FakeDevice()
-        pids = device.getpids()
-        self.assertTrue('fake-package1/fake-target1' in pids)
-        self.assertEqual(pids['fake-package1/fake-target1'], 7412221)
+        cmd = device._cs_cmd()
+        device.add_ssh_response(
+            cmd, [
+                '  http.cmx[20963]: fuchsia-pkg://fuchsia.com/http#meta/http.cmx',
+                '  fake-target1.cmx[7412221]: fuchsia-pkg://fuchsia.com/fake-package1#meta/fake-target1.cmx',
+                '  fake-target2.cmx[7412222]: fuchsia-pkg://fuchsia.com/fake-package1#meta/fake-target2.cmx',
+                '  an-extremely-verbose-target-name.cmx[7412223]: fuchsia-pkg://fuchsia.com/fake-package2#meta/an-extremely-verbose-target-name.cmx',
+            ])
+
+        # First request invokes "cs".
         self.assertEqual(
-            pids['fake-package2/an-extremely-verbose-target-name'], 7412223)
+            device.getpid('fake-package2', 'an-extremely-verbose-target-name'),
+            7412223)
+        self.assertSsh(device, *cmd)
+
+        # PIDs are retrieved for all packaged executables.
+        self.assertEqual(
+            device.getpid('fake-package1', 'fake-target2'), 7412222)
+        self.assertEqual(
+            device.getpid('fake-package1', 'fake-target1'), 7412221)
+        self.assertEqual(device.getpid('http', 'http'), 20963)
+
+        # PIDs are cached until refresh.
+        device.clear_ssh_response(cmd)
+        self.assertEqual(
+            device.getpid('fake-package1', 'fake-target1'), 7412221)
+        self.assertEqual(
+            device.getpid('fake-package1', 'fake-target1', refresh=True), -1)
+        self.assertEqual(device.getpid('fake-package1', 'fake-target2'), -1)
 
     def test_ls(self):
         device = FakeDevice()
-        files = device.ls('path-to-some-corpus')
-        self.assertIn(
-            ' '.join(
-                device.get_ssh_cmd(
-                    ['ssh', '::1', 'ls', '-l', 'path-to-some-corpus'])),
-            device.host.history)
-        self.assertTrue('feac37187e77ff60222325cf2829e2273e04f2ea' in files)
+        corpus_dir = 'path-to-some-corpus'
+        cmd = device._ls_cmd(corpus_dir)
+        device.add_ssh_response(
+            cmd, [
+                '-rw-r--r-- 1 0 0 1796 Mar 19 17:25 feac37187e77ff60222325cf2829e2273e04f2ea',
+                '-rw-r--r-- 1 0 0  124 Mar 18 22:02 ff415bddb30e9904bccbbd21fb5d4aa9bae9e5a5',
+            ])
+        files = device.ls(corpus_dir)
+        self.assertSsh(device, *cmd)
         self.assertEqual(
             files['feac37187e77ff60222325cf2829e2273e04f2ea'], 1796)
 
     def test_rm(self):
         device = FakeDevice()
-        device.rm('path-to-some-file')
-        device.rm('path-to-some-directory', recursive=True)
-        self.assertIn(
-            ' '.join(
-                device.get_ssh_cmd(
-                    ['ssh', '::1', 'rm', '-f', 'path-to-some-file'])),
-            device.host.history)
-        self.assertIn(
-            ' '.join(
-                device.get_ssh_cmd(
-                    ['ssh', '::1', 'rm', '-rf', 'path-to-some-directory'])),
-            device.host.history)
+        some_file = 'path-to-some-file'
+        some_dir = 'path-to-some-directory'
+        device.rm(some_file)
+        device.rm(some_dir, recursive=True)
+        self.assertSsh(device, 'rm -f path-to-some-file')
+        self.assertSsh(device, 'rm -rf path-to-some-directory')
 
     def test_fetch(self):
         device = FakeDevice()
+        local_path = 'test_fetch'
+        remote_path = 'remote-path'
+
+        # Fails due to missing pathname.
         with self.assertRaises(ValueError):
-            device.fetch('foo', 'not-likely-to-be-a-directory')
-        device.fetch('remote-path', '/tmp')
-        self.assertIn(
-            ' '.join(device.get_ssh_cmd(['scp', '[::1]:remote-path', '/tmp'])),
-            device.host.history)
-        device.fetch('corpus/*', '/tmp')
-        self.assertIn(
-            ' '.join(device.get_ssh_cmd(['scp', '[::1]:corpus/*', '/tmp'])),
-            device.host.history)
-        device.delay = 2
+            device.fetch(remote_path, local_path)
+
+        device.host.mkdir(local_path)
+        device.fetch(remote_path, local_path)
+        self.assertScp(device, device._rpath(remote_path), local_path)
+
+        corpus_dir = os.path.join(remote_path, '*')
+        device.fetch(corpus_dir, local_path)
+        self.assertScp(device, device._rpath(corpus_dir), local_path)
+
+        cmd = [device._rpath(remote_path), local_path]
+        cmd_str = ' '.join(device._scp_cmd(cmd))
+        device.host.failures[cmd_str] = 10
         with self.assertRaises(subprocess.CalledProcessError):
-            device.fetch('delayed', '/tmp')
-        device.delay = 2
+            device.fetch(remote_path, local_path)
+
+        device.host.failures[cmd_str] = 10
         with self.assertRaises(subprocess.CalledProcessError):
-            device.fetch('delayed', '/tmp', retries=1)
-        device.delay = 2
-        device.fetch('delayed', '/tmp', retries=2)
-        self.assertIn(
-            ' '.join(device.get_ssh_cmd(['scp', '[::1]:delayed', '/tmp'])),
-            device.host.history)
+            device.fetch(remote_path, local_path, retries=9, delay_ms=1)
+
+        device.host.failures[cmd_str] = 10
+        device.fetch(remote_path, local_path, retries=10, delay_ms=1)
+        self.assertScp(device, *cmd)
 
     def test_store(self):
         device = FakeDevice()
-        device.store(tempfile.gettempdir(), 'remote-path')
-        self.assertIn(
-            ' '.join(
-                device.get_ssh_cmd(
-                    ['scp', tempfile.gettempdir(), '[::1]:remote-path'])),
-            device.host.history)
-        # Ensure globbing works
-        device.host.history = []
-        with tempfile.NamedTemporaryFile() as f:
-            device.store('{}/*'.format(tempfile.gettempdir()), 'remote-path')
-            for cmd in device.host.history:
-                if cmd.startswith('scp'):
-                    self.assertIn(f.name, cmd)
-        # No copy if glob comes up empty
-        device.store(os.path.join(tempfile.gettempdir(), '*'), 'remote-path')
-        self.assertNotIn(
-            ' '.join(
-                device.get_ssh_cmd(
-                    ['scp', tempfile.gettempdir(), '[::1]:remote-path'])),
-            device.host.history)
+        local_path = 'test_store'
+        remote_path = 'remote-path'
+
+        foo = os.path.join(local_path, 'foo')
+        device.host.pathnames += [foo]
+        device.store(foo, remote_path)
+        self.assertScp(device, foo, device._rpath(remote_path))
+
+        bar = os.path.join(local_path, 'bar')
+        baz = os.path.join(local_path, 'baz')
+        device.host.pathnames += [bar, baz]
+        device.store(os.path.join(local_path, '*'), remote_path)
+        self.assertScp(device, foo, bar, baz, device._rpath(remote_path))
 
 
 if __name__ == '__main__':
