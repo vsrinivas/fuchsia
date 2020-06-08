@@ -151,11 +151,14 @@ void AmlPdmDevice::InitRegs() {
 void AmlPdmDevice::ConfigFilters(uint32_t frames_per_second) {
   ZX_ASSERT(frames_per_second == 96000 || frames_per_second == 48000);
 
-  pdm_mmio_.Write32((1 << 31) |         // Enable
-                        (0x15 << 24) |  // Final gain shift parameter)
-                        (0x80 << 16) |  // Final gain multiplier
-                        (0x08 << 4) |   // hcic downsample rate=8
-                        (0x07 << 0),    // hcic stage number (must be between 3-9)
+  uint32_t gain_shift = (frames_per_second == 96000) ? 0xe : 0x15;
+  uint32_t downsample_rate = (frames_per_second == 96000) ? 0x4 : 0x8;
+
+  pdm_mmio_.Write32((1 << 31) |                   // Enable
+                        (gain_shift << 24) |      // Final gain shift parameter
+                        (0x80 << 16) |            // Final gain multiplier
+                        (downsample_rate << 4) |  // hcic downsample rate
+                        (0x07 << 0),              // hcic stage number (must be between 3-9)
                     PDM_HCIC_CTRL1);
 
   // Note: The round mode field for the lowpass control registers is shown in AmLogic
@@ -172,14 +175,13 @@ void AmlPdmDevice::ConfigFilters(uint32_t frames_per_second) {
                         (kLpf2osr64Len << 0),  // Number of taps in filter
                     PDM_F2_CTRL);
 
-  uint32_t last_filter_downsample_rate = (frames_per_second == 96000) ? 1 : 2;
-  pdm_mmio_.Write32((0x01 << 31) |      // Enable filter
-                        (0x01 << 16) |  // Round mode
-                        (last_filter_downsample_rate << 12) |  // Filter 3 downsample rate
-                        (kLpf3m1Len << 0),                     // Number of taps in filter
+  pdm_mmio_.Write32((0x01 << 31) |          // Enable filter
+                        (0x01 << 16) |      // Round mode
+                        (2 << 12) |         // Filter 3 downsample rate
+                        (kLpf3m1Len << 0),  // Number of taps in filter
                     PDM_F3_CTRL);
   pdm_mmio_.Write32((0x01 << 31) |      // Enable filter
-                        (0x07 << 16) |  // Shift steps
+                        (0x0d << 16) |  // Shift steps
                         (0x8000 << 0),  // Output factor
                     PDM_HPF_CTRL);
 
