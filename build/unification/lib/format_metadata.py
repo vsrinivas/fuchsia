@@ -30,8 +30,9 @@ def main():
     result = []
     for entry in args.entry:
         destination, source = entry.split('=', 1)
-        source = os.path.relpath(
-            os.path.join(args.zircon_build_dir, source), args.build_dir)
+        if not os.path.isabs(source):
+            source = os.path.relpath(
+                os.path.join(args.zircon_build_dir, source), args.build_dir)
         result.append(
             {
                 'source': source,
