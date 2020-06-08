@@ -141,7 +141,11 @@ class GnTester(object):
         """
         invocation = [
             # Invoke the ninja binary
-            self.ninja
+            self.ninja,
+            # Tell ninja to keep depfiles around as some tests want to inspect
+            # them.
+            "-d",
+            "keepdepfile",
         ]
         if explain:
             invocation += [
