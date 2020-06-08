@@ -4,7 +4,7 @@
 
 library fuchsia.media.sessions2;
 
-using Url = string:1000;
+using fuchsia.url;
 
 enum MediaImageType {
     /// Artwork for the playing media.
@@ -16,7 +16,7 @@ enum MediaImageType {
 
 /// A variant of an image at a specific size.
 struct ImageSizeVariant {
-    Url url;
+    fuchsia.url.Url url;
     uint32 width;
     uint32 height;
 };
