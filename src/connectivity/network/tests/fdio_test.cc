@@ -153,11 +153,12 @@ TEST(SocketTest, CloseZXSocketOnClose) {
   int fd;
   ASSERT_GE(fd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
 
-  zx_handle_t handle;
+  zx::channel channel;
   zx_status_t status;
-  ASSERT_EQ(status = fdio_fd_transfer(fd, &handle), ZX_OK) << zx_status_get_string(status);
+  ASSERT_EQ(status = fdio_fd_transfer(fd, channel.reset_and_get_address()), ZX_OK)
+      << zx_status_get_string(status);
 
-  ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client((zx::channel(handle)));
+  ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client(std::move(channel));
 
   auto describe_response = client.Describe();
   ASSERT_EQ(status = describe_response.status(), ZX_OK) << zx_status_get_string(status);
@@ -169,25 +170,24 @@ TEST(SocketTest, CloseZXSocketOnClose) {
                 ZX_SOCKET_WRITABLE, zx::time::infinite_past(), &observed),
             ZX_OK)
       << zx_status_get_string(status);
-  ASSERT_EQ(status = zx::unowned_channel(handle)->wait_one(ZX_CHANNEL_WRITABLE,
-                                                           zx::time::infinite_past(), &observed),
-            ZX_OK)
+  ASSERT_EQ(
+      status = client.channel().wait_one(ZX_CHANNEL_WRITABLE, zx::time::infinite_past(), &observed),
+      ZX_OK)
       << zx_status_get_string(status);
 
   auto close_response = client.Close();
   EXPECT_EQ(status = close_response.status(), ZX_OK) << zx_status_get_string(status);
   EXPECT_EQ(status = close_response.Unwrap()->s, ZX_OK) << zx_status_get_string(status);
 
-  ASSERT_EQ(status = node_info.stream_socket().socket.wait_one(
-                ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), &observed),
+  // Give a generous timeout for closures; the channel closing is inherently asynchronous with
+  // respect to the `Close` FIDL call above (since its return must come over the channel). The
+  // socket closure is not inherently asynchronous, but happens to be as an implementation detail.
+  zx::time deadline = zx::deadline_after(zx::sec(5));
+  ASSERT_EQ(status = node_info.stream_socket().socket.wait_one(ZX_SOCKET_PEER_CLOSED, deadline,
+                                                               &observed),
             ZX_OK)
       << zx_status_get_string(status);
-  // Give a generous timeout for the channel to close; the channel closing is inherently
-  // asynchronous with respect to the `Close` FIDL call above (since its return must come over the
-  // channel).
-  ASSERT_EQ(status = zx::unowned_channel(handle)->wait_one(
-                ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(zx::sec(5)), &observed),
-            ZX_OK)
+  ASSERT_EQ(status = client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, &observed), ZX_OK)
       << zx_status_get_string(status);
 }
 

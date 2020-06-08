@@ -1032,16 +1032,9 @@ func newStreamSocket(eps *endpointWithSocket) (socket.StreamSocketWithCtxInterfa
 	return socket.StreamSocketWithCtxInterface{Channel: peerC}, nil
 }
 
-func (s *streamSocketImpl) close() {
-	clones := s.endpointWithSocket.close(s.loopReadDone, s.loopWriteDone)
-
-	s.cancel()
-
-	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d", s.endpointWithSocket, clones)
-}
-
 func (s *streamSocketImpl) Close(fidl.Context) (int32, error) {
-	s.close()
+	s.cancel()
+	syslog.VLogTf(syslog.DebugVerbosity, "Close", "%p", s.endpointWithSocket)
 	return int32(zx.ErrOk), nil
 }
 
@@ -1054,7 +1047,11 @@ func (s *streamSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtxIn
 		s.ns.stats.SocketCount.Increment()
 		go func() {
 			defer s.ns.stats.SocketCount.Decrement()
-			defer s.close()
+			defer func() {
+				clones := s.close(s.loopReadDone, s.loopWriteDone)
+				syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d", s.endpointWithSocket, clones)
+			}()
+
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 

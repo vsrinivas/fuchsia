@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"fidl/fuchsia/hardware/ethernet"
+	"fidl/fuchsia/io"
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
@@ -221,123 +222,179 @@ func containsRoute(rs []tcpip.Route, r tcpip.Route) bool {
 	return false
 }
 
-// TestEndpointDoubleClose tests that closing an endpoint that has already been
-// closed once will not panic. This is in response to a bug where a socketImpl
-// (whose endpoint had already been closed) was cloned, resulting in a second
-// socketImpl with a reference to the already closed endpoint. When this second
-// socketImpl closes, it will attempt to close the endpoint (which is already
-// closed) resulting in a panic.
-func TestEndpointDoubleClose(t *testing.T) {
+func TestEndpoint_Close(t *testing.T) {
 	ns := newNetstack(t)
 	wq := &waiter.Queue{}
-	ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, wq)
-	if err != nil {
-		t.Fatalf("NewEndpoint = %s", err)
-	}
-
-	ios := endpointWithSocket{
-		endpoint: endpoint{
-			netProto:   ipv6.ProtocolNumber,
-			transProto: tcp.ProtocolNumber,
-			wq:         wq,
-			ep:         ep,
-			ns:         ns,
-		},
-		loopReadDone:  make(chan struct{}),
-		loopWriteDone: make(chan struct{}),
-		closing:       make(chan struct{}),
-	}
-
-	{
-		localS, peerS, err := zx.NewSocket(uint32(zx.SocketStream))
+	// Avoid polluting everything with err of type *tcpip.Error.
+	ep := func() tcpip.Endpoint {
+		ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, wq)
 		if err != nil {
-			t.Fatalf("zx.NewSocket = %s", err)
+			t.Fatalf("NewEndpoint() = %s", err)
+		}
+		return ep
+	}()
+	defer ep.Close()
+
+	eps, err := newEndpointWithSocket(ep, wq, tcp.ProtocolNumber, ipv6.ProtocolNumber, ns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer eps.close()
+
+	// By-value copy since Close will mutate its receiver.
+	key := zx.Handle(eps.local)
+
+	channels := []struct {
+		ch   <-chan struct{}
+		name string
+	}{
+		{ch: eps.closing, name: "closing"},
+		{ch: eps.loopReadDone, name: "loopReadDone"},
+		{ch: eps.loopWriteDone, name: "loopWriteDone"},
+	}
+
+	// Check starting conditions.
+	for _, ch := range channels {
+		select {
+		case <-ch.ch:
+			t.Errorf("%s cleaned up prematurely", ch.name)
+		default:
+		}
+	}
+
+	if _, ok := eps.ns.endpoints.Load(key); !ok {
+		var keys []zx.Handle
+		eps.ns.endpoints.Range(func(key zx.Handle, value tcpip.Endpoint) bool {
+			keys = append(keys, key)
+			return true
+		})
+		t.Errorf("got endpoints map = %v at creation, want %d", keys, key)
+	}
+
+	if t.Failed() {
+		t.FailNow()
+	}
+
+	// Create a referent.
+	s, err := newStreamSocket(eps)
+	if err != nil {
+		t.Fatalf("newStreamSocket() = %s", err)
+	}
+	defer func() {
+		func() {
+			status, err := s.Close(context.Background())
+			if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrPeerClosed {
+				return
+			}
+			t.Errorf("s.Close() = (%s, %v)", zx.Status(status), err)
+		}()
+		if err := s.Channel.Close(); err != nil {
+			t.Errorf("s.Channel.Close() = %s", err)
+		}
+	}()
+
+	// Create another referent.
+	localC, peerC, err := zx.NewChannel(0)
+	if err != nil {
+		t.Fatalf("zx.NewChannel() = %s", err)
+	}
+	defer func() {
+		// Already closed below.
+		if err := localC.Close(); err != nil {
+			t.Errorf("localC.Close() = %s", err)
 		}
 
-		ios.local = localS
-		ios.peer = peerS
-	}
-
-	// We set clones to 2 initially to make sure that resources only get
-	// cleaned up when the ref count drops from 1 to 0.
-	ios.clones = 2
-	if refcount := ios.close(); refcount != 1 {
-		t.Fatalf("got refcount = %d, want = 1", refcount)
-	}
-	select {
-	case <-ios.closing:
-		t.Fatal("ios.closing is closed")
-	default:
-	}
-
-	// Ref count is now 1 so when we call close again, it will cleanup
-	// associated resources.
-	if refcount := ios.close(); refcount != 0 {
-		t.Fatalf("got refcount = %d, want = 0", refcount)
-	}
-	select {
-	case <-ios.closing:
-	default:
-		t.Fatal("ios.closing is not closed")
-	}
-
-	// Set ref count to 1 so it drops to 0 and make sure we do not
-	// do the work of closing again, and therefore should not panic.
-	ios.clones = 1
-	if refcount := ios.close(); refcount != 0 {
-		t.Fatalf("got refcount = %d, want = 0", refcount)
-	}
-}
-
-// Test whether ios.close will delete the reference to the
-// endpoint created here from the netstack`s endpoints.
-func TestCloseEndpointsMap(t *testing.T) {
-	ns := newNetstack(t)
-	wq := &waiter.Queue{}
-	ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv6.ProtocolNumber, wq)
-	if err != nil {
-		t.Fatalf("NewEndpoint = %s", err)
-	}
-
-	ios := endpointWithSocket{
-		endpoint: endpoint{
-			netProto:   ipv6.ProtocolNumber,
-			transProto: tcp.ProtocolNumber,
-			wq:         wq,
-			ep:         ep,
-			ns:         ns,
-		},
-		loopReadDone:  make(chan struct{}),
-		loopWriteDone: make(chan struct{}),
-		closing:       make(chan struct{}),
-	}
-	{
-		localS, peerS, err := zx.NewSocket(uint32(zx.SocketStream))
-		if err != nil {
-			t.Fatalf("zx.NewSocket = %s", err)
+		// By-value copy already closed by the server when we closed the peer.
+		err := peerC.Close()
+		if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrBadHandle {
+			return
 		}
+		t.Errorf("peerC.Close() = %v", err)
+	}()
 
-		ios.local = localS
-		ios.peer = peerS
-	}
-	if _, loaded := ns.endpoints.LoadOrStore(zx.Handle(ios.local), ios.ep); loaded {
-		t.Fatalf("endpoint map store error, key %d exists", ios.local)
-	}
-
-	ios.clones = 1
-	if refcount := ios.close(); refcount != 0 {
-		t.Fatalf("got refcount = %d, want = 0", refcount)
-	}
-	select {
-	case <-ios.closing:
-	default:
-		t.Fatal("ios.closing is not closed")
+	if err := s.Clone(context.Background(), 0, io.NodeWithCtxInterfaceRequest{Channel: peerC}); err != nil {
+		t.Fatalf("s.Clone() = %s", err)
 	}
 
-	// Check if the reference to the endpoint is deleted from endpoints.
-	if _, ok := ios.ns.endpoints.Load(zx.Handle(ios.local)); ok {
-		t.Fatal("endpoint map not updated on ios.close")
+	// Close the original referent.
+	if status, err := s.Close(context.Background()); err != nil {
+		t.Fatalf("s.Close() = %s", err)
+	} else if status := zx.Status(status); status != zx.ErrOk {
+		t.Fatalf("s.Close() = %s", status)
 	}
+
+	// There's still a referent.
+	for _, ch := range channels {
+		select {
+		case <-ch.ch:
+			t.Errorf("%s cleaned up prematurely", ch.name)
+		default:
+		}
+	}
+
+	if _, ok := eps.ns.endpoints.Load(key); !ok {
+		var keys []zx.Handle
+		eps.ns.endpoints.Range(func(key zx.Handle, value tcpip.Endpoint) bool {
+			keys = append(keys, key)
+			return true
+		})
+		t.Errorf("got endpoints map prematurely = %v, want %d", keys, key)
+	}
+
+	if t.Failed() {
+		t.FailNow()
+	}
+
+	// Close the last reference.
+	if err := localC.Close(); err != nil {
+		t.Fatalf("localC.Close() = %s", err)
+	}
+
+	// Give a generous timeout for the closed channel to be detected.
+	timeout := time.After(5 * time.Second)
+	for _, ch := range channels {
+		select {
+		case <-ch.ch:
+		case <-timeout:
+			t.Errorf("%s not cleaned up", ch.name)
+		}
+	}
+
+	for {
+		select {
+		case <-timeout:
+			var keys []zx.Handle
+			eps.ns.endpoints.Range(func(key zx.Handle, value tcpip.Endpoint) bool {
+				keys = append(keys, key)
+				return true
+			})
+			t.Errorf("got endpoints map = %v after closure, want *not* %d", keys, key)
+		default:
+			if _, ok := eps.ns.endpoints.Load(key); ok {
+				continue
+			}
+		}
+		break
+	}
+
+	if t.Failed() {
+		t.FailNow()
+	}
+
+	// Test that closing an endpoint that has already been closed once will not
+	// panic. This is in response to a bug where a socketImpl (whose endpoint had
+	// already been closed) was cloned, resulting in a second socketImpl with a
+	// reference to the already closed endpoint. When this second socketImpl
+	// closes, it will attempt to close the endpoint (which is already closed)
+	// resulting in a panic.
+	t.Run("Double", func(t *testing.T) {
+		// Set ref count to 1 so it drops to 0 and make sure we do not
+		// do the work of closing again, and therefore should not panic.
+		eps.clones = 1
+		if refcount := eps.close(); refcount != 0 {
+			t.Fatalf("got refcount = %d, want = 0", refcount)
+		}
+	})
 }
 
 func TestNICName(t *testing.T) {
