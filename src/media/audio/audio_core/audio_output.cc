@@ -53,14 +53,46 @@ void AudioOutput::Process() {
     // SetNextSchedTime, we consider it an error and shut down.
     next_sched_time_known_ = false;
 
-    auto mix_frames = StartMixJob(now);
-    if (mix_frames) {
-      auto buf = pipeline_->ReadLock(now, mix_frames->start, mix_frames->length);
-      FX_CHECK(buf);
-      FinishMixJob(*mix_frames, reinterpret_cast<float*>(buf->payload()));
-    } else {
-      pipeline_->Trim(now);
-    }
+    uint32_t frames_remaining;
+    do {
+      float* payload = nullptr;
+      auto mix_frames = StartMixJob(now);
+      if (mix_frames && !mix_frames->is_mute) {
+        // If we have frames to mix that are non-silent, we should do the mix now.
+        auto buf = pipeline_->ReadLock(now, mix_frames->start, mix_frames->length);
+        if (buf) {
+          // We have a buffer so call FinishMixJob on this region and perform another MixJob if
+          // we did not mix enough data. This can happen if our pipeline is unable to produce the
+          // entire requested frame region in a single pass.
+          FX_DCHECK(buf->start().Floor() == mix_frames->start);
+          FX_DCHECK(buf->length().Floor() > 0);
+          FX_DCHECK(pipeline_->format().sample_format() ==
+                    fuchsia::media::AudioSampleFormat::FLOAT);
+          payload = reinterpret_cast<float*>(buf->payload());
+
+          // Reduce the frame range if we did not fill the entire requested frame region.
+          uint32_t valid_frames = std::min(mix_frames->length, buf->length().Floor());
+          frames_remaining = mix_frames->length - valid_frames;
+          mix_frames->length = valid_frames;
+        } else {
+          // If the mix pipeline has no frames for this range, we treat this region as silence.
+          // FinishMixJob will be responsible for filling this region of the ring with silence.
+          mix_frames->is_mute = true;
+          payload = nullptr;
+          frames_remaining = 0;
+        }
+      } else {
+        // If we did not |ReadLock| on this region of the pipeline, we should instead trim now to
+        // ensure any client packets that otherwise would have been mixed are still released.
+        pipeline_->Trim(now);
+        frames_remaining = 0;
+      }
+
+      // If we have a mix job, we need to call |FinishMixJob| to commit these bytes to the hardware.
+      if (mix_frames) {
+        FinishMixJob(*mix_frames, payload);
+      }
+    } while (frames_remaining > 0);
   }
 
   if (!next_sched_time_known_) {
@@ -126,13 +158,21 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> AudioOutput::Initializ
   return fit::ok(pipeline_->loopback());
 }
 
+std::unique_ptr<OutputPipeline> AudioOutput::CreateOutputPipeline(
+    const PipelineConfig& config, const VolumeCurve& volume_curve, uint32_t channels,
+    size_t max_block_size_frames, TimelineFunction device_reference_clock_to_fractional_frame) {
+  auto pipeline =
+      std::make_unique<OutputPipelineImpl>(config, volume_curve, channels, max_block_size_frames,
+                                           device_reference_clock_to_fractional_frame);
+  pipeline->SetMinLeadTime(min_lead_time_);
+  return pipeline;
+}
+
 void AudioOutput::SetupMixTask(const PipelineConfig& config, const VolumeCurve& volume_curve,
                                uint32_t channels, size_t max_block_size_frames,
                                TimelineFunction device_reference_clock_to_fractional_frame) {
-  pipeline_ =
-      std::make_unique<OutputPipelineImpl>(config, volume_curve, channels, max_block_size_frames,
-                                           device_reference_clock_to_fractional_frame);
-  pipeline_->SetMinLeadTime(min_lead_time_);
+  pipeline_ = CreateOutputPipeline(config, volume_curve, channels, max_block_size_frames,
+                                   device_reference_clock_to_fractional_frame);
 }
 
 void AudioOutput::Cleanup() {

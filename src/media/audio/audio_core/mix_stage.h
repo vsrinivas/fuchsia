@@ -25,11 +25,6 @@ class MixStage : public ReadableStream {
   MixStage(const Format& output_format, uint32_t block_size,
            fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frame);
 
-  struct FrameSpan {
-    int64_t start;
-    uint32_t length;
-  };
-
   // |media::audio::ReadableStream|
   std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
                                                  uint32_t frame_count) override;

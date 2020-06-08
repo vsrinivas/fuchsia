@@ -12,12 +12,55 @@
 namespace media::audio {
 namespace {
 
+// An OutputPipeline that always returns std::nullopt from |ReadLock|.
+class TestOutputPipeline : public OutputPipeline {
+ public:
+  TestOutputPipeline(const Format& format) : OutputPipeline(format) {}
+
+  void Enqueue(ReadableStream::Buffer buffer) { buffers_.push_back(std::move(buffer)); }
+
+  // |media::audio::ReadableStream|
+  std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
+                                                 uint32_t frame_count) override {
+    if (buffers_.empty()) {
+      return std::nullopt;
+    }
+    auto buffer = std::move(buffers_.front());
+    buffers_.pop_front();
+    return buffer;
+  }
+  void Trim(zx::time trim_threshold) override {}
+  TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override {
+    return TimelineFunctionSnapshot{
+        .timeline_function = TimelineFunction(),
+        .generation = kInvalidGenerationId,
+    };
+  }
+
+  // |media::audio::OutputPipeline|
+  std::shared_ptr<ReadableStream> loopback() const override { return nullptr; }
+  std::shared_ptr<Mixer> AddInput(
+      std::shared_ptr<ReadableStream> stream, const StreamUsage& usage,
+      Mixer::Resampler sampler_hint = Mixer::Resampler::Default) override {
+    return nullptr;
+  }
+  void RemoveInput(const ReadableStream& stream) override {}
+  fit::result<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+      const std::string& instance_name, const std::string& config) override {
+    return fit::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
+  }
+
+ private:
+  std::deque<ReadableStream::Buffer> buffers_;
+};
+
 class TestAudioOutput : public AudioOutput {
  public:
   TestAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix)
       : AudioOutput(threading_model, registry, link_matrix) {}
 
+  using AudioOutput::FrameSpan;
   using AudioOutput::SetNextSchedTime;
   void SetupMixTask(const PipelineConfig& config, const VolumeCurve& volume_curve,
                     uint32_t channels, uint32_t max_frames,
@@ -30,28 +73,41 @@ class TestAudioOutput : public AudioOutput {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
     AudioOutput::Process();
   }
+  std::unique_ptr<OutputPipeline> CreateOutputPipeline(
+      const PipelineConfig& config, const VolumeCurve& volume_curve, uint32_t channels,
+      size_t max_block_size_frames,
+      TimelineFunction device_reference_clock_to_fractional_frame) override {
+    if (output_pipeline_) {
+      return std::move(output_pipeline_);
+    }
+    return AudioOutput::CreateOutputPipeline(config, volume_curve, channels, max_block_size_frames,
+                                             device_reference_clock_to_fractional_frame);
+  }
 
   // Allow a test to provide a delegate to handle |AudioOutput::StartMixJob| invocations.
-  using StartMixDelegate = fit::function<std::optional<MixStage::FrameSpan>(zx::time)>;
+  using StartMixDelegate = fit::function<std::optional<AudioOutput::FrameSpan>(zx::time)>;
   void set_start_mix_delegate(StartMixDelegate delegate) {
     start_mix_delegate_ = std::move(delegate);
   }
 
   // Allow a test to provide a delegate to handle |AudioOutput::FinishMixJob| invocations.
-  using FinishMixDelegate = fit::function<void(const MixStage::FrameSpan&, float* buffer)>;
+  using FinishMixDelegate = fit::function<void(const AudioOutput::FrameSpan&, float* buffer)>;
   void set_finish_mix_delegate(FinishMixDelegate delegate) {
     finish_mix_delegate_ = std::move(delegate);
   }
+  void set_output_pipeline(std::unique_ptr<OutputPipeline> output_pipeline) {
+    output_pipeline_ = std::move(output_pipeline);
+  }
 
   // |AudioOutput|
-  std::optional<MixStage::FrameSpan> StartMixJob(zx::time process_start) override {
+  std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time process_start) override {
     if (start_mix_delegate_) {
       return start_mix_delegate_(process_start);
     } else {
       return std::nullopt;
     }
   }
-  void FinishMixJob(const MixStage::FrameSpan& span, float* buffer) {
+  void FinishMixJob(const AudioOutput::FrameSpan& span, float* buffer) override {
     if (finish_mix_delegate_) {
       finish_mix_delegate_(span, buffer);
     }
@@ -63,6 +119,7 @@ class TestAudioOutput : public AudioOutput {
  private:
   StartMixDelegate start_mix_delegate_;
   FinishMixDelegate finish_mix_delegate_;
+  std::unique_ptr<OutputPipeline> output_pipeline_;
 };
 
 class AudioOutputTest : public testing::ThreadingModelFixture {
@@ -121,6 +178,110 @@ TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
   // Finally after 10ms we will have released packet2.
   RunLoopFor(zx::msec(1));
   ASSERT_TRUE(packet2_released);
+}
+
+TEST_F(AudioOutputTest, ProcessRequestsSilenceIfNoSourceBuffer) {
+  auto format = Format::Create({
+                                   .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                                   .channels = 2,
+                                   .frames_per_second = 48000,
+                               })
+                    .take_value();
+  // Use an output pipeline that will always return nullopt from ReadLock.
+  auto pipeline_owned = std::make_unique<TestOutputPipeline>(format);
+  audio_output_->set_output_pipeline(std::move(pipeline_owned));
+
+  static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
+  static PipelineConfig config = PipelineConfig::Default();
+  static VolumeCurve volume_curve =
+      VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
+  audio_output_->SetupMixTask(config, volume_curve, /* channels */ 2, zx::msec(1).to_msecs(),
+                              kOneFramePerMs);
+
+  // Return some valid, non-silent frame range from StartMixJob.
+  audio_output_->set_start_mix_delegate([](zx::time now) {
+    return TestAudioOutput::FrameSpan{
+        .start = 0,
+        .length = 100,
+        .is_mute = false,
+    };
+  });
+
+  bool finish_called = false;
+  audio_output_->set_finish_mix_delegate([&finish_called](auto span, auto buffer) {
+    EXPECT_EQ(span.start, 0);
+    EXPECT_EQ(span.length, 100u);
+    EXPECT_TRUE(span.is_mute);
+    EXPECT_EQ(buffer, nullptr);
+    finish_called = true;
+  });
+
+  // Now do a mix.
+  audio_output_->Process();
+  EXPECT_TRUE(finish_called);
+}
+
+// Verify we call StartMixJob multiple times if FinishMixJob does not fill buffer.
+TEST_F(AudioOutputTest, ProcessMultipleMixJobs) {
+  const Format format =
+      Format::Create({
+                         .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                         .channels = 2,
+                         .frames_per_second = 48000,
+                     })
+          .take_value();
+  // Use an output pipeline that will always return nullopt from ReadLock.
+  auto pipeline_owned = std::make_unique<TestOutputPipeline>(format);
+  auto pipeline = pipeline_owned.get();
+  audio_output_->set_output_pipeline(std::move(pipeline_owned));
+
+  static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
+  static PipelineConfig config = PipelineConfig::Default();
+  static VolumeCurve volume_curve =
+      VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
+  audio_output_->SetupMixTask(config, volume_curve, /* channels */ 2, zx::msec(1).to_msecs(),
+                              kOneFramePerMs);
+
+  const uint32_t kBufferFrames = 25;
+  const uint32_t kBufferSamples = kBufferFrames * 2;
+  const uint32_t kNumBuffers = 4;
+  // Setup our buffer with data that is just the value of frame 'N' is 'N'.
+  std::vector<float> buffer(kBufferSamples);
+  for (size_t sample = 0; sample < kBufferSamples; ++sample) {
+    buffer[sample] = static_cast<float>(sample);
+  }
+  // Enqueue several buffers, each with the same payload buffer.
+  for (size_t i = 0; i < kNumBuffers; ++i) {
+    pipeline->Enqueue(ReadableStream::Buffer(i * kBufferFrames, kBufferFrames, buffer.data(), true,
+                                             StreamUsageMask(), Gain::kUnityGainDb));
+  }
+
+  // Return some valid, non-silent frame range from StartMixJob.
+  uint32_t mix_jobs = 0;
+  uint32_t frames_finished = 0;
+  audio_output_->set_start_mix_delegate([&frames_finished, &mix_jobs](zx::time now) {
+    ++mix_jobs;
+    return TestAudioOutput::FrameSpan{
+        .start = frames_finished,
+        .length = (kBufferFrames * kNumBuffers) - frames_finished,
+        .is_mute = false,
+    };
+  });
+
+  audio_output_->set_finish_mix_delegate([&frames_finished](auto span, auto buffer) {
+    EXPECT_EQ(span.start, frames_finished);
+    EXPECT_FALSE(span.is_mute);
+    EXPECT_NE(buffer, nullptr);
+    for (size_t sample = 0; sample < kBufferSamples; ++sample) {
+      EXPECT_FLOAT_EQ(static_cast<float>(sample), buffer[sample]);
+    }
+    frames_finished += span.length;
+  });
+
+  // Now do a mix.
+  audio_output_->Process();
+  EXPECT_EQ(frames_finished, kNumBuffers * kBufferFrames);
+  EXPECT_EQ(mix_jobs, kNumBuffers);
 }
 
 }  // namespace

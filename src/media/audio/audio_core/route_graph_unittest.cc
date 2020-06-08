@@ -79,11 +79,11 @@ class FakeAudioOutput : public AudioOutput {
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override {}
   void OnWakeup() override {}
 
-  std::optional<MixStage::FrameSpan> StartMixJob(zx::time process_start) override {
+  std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time process_start) override {
     return std::nullopt;
   }
 
-  void FinishMixJob(const MixStage::FrameSpan& span, float* buffer) override {}
+  void FinishMixJob(const AudioOutput::FrameSpan& span, float* buffer) override {}
   fit::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override {
     return fit::ok(nullptr);

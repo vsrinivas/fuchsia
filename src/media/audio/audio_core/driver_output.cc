@@ -88,7 +88,7 @@ void DriverOutput::OnWakeup() {
   state_ = State::FetchingFormats;
 }
 
-std::optional<MixStage::FrameSpan> DriverOutput::StartMixJob(zx::time uptime) {
+std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time uptime) {
   TRACE_DURATION("audio", "DriverOutput::StartMixJob");
   if (state_ != State::Started) {
     FX_LOGS(ERROR) << "Bad state during StartMixJob " << static_cast<uint32_t>(state_);
@@ -219,21 +219,15 @@ std::optional<MixStage::FrameSpan> DriverOutput::StartMixJob(zx::time uptime) {
 
   uint32_t frames_to_mix = static_cast<uint32_t>(std::min<int64_t>(rb_space, desired_frames));
 
-  auto frames = MixStage::FrameSpan{
+  return AudioOutput::FrameSpan{
       .start = frames_sent_,
       .length = frames_to_mix,
+      .is_mute = output_muted,
   };
-  // If we're muted we simply fill the ring buffer with silence.
-  if (output_muted) {
-    FillRingWithSilence(frames);
-    ScheduleNextLowWaterWakeup();
-    return std::nullopt;
-  }
-  return {frames};
 }
 
 void DriverOutput::WriteToRing(
-    const MixStage::FrameSpan& span,
+    const AudioOutput::FrameSpan& span,
     fit::function<void(uint64_t offset, uint32_t length, void* dest_buf)> writer) {
   TRACE_DURATION("audio", "DriverOutput::FinishMixJob");
   const auto& rb = driver_writable_ring_buffer();
@@ -258,17 +252,22 @@ void DriverOutput::WriteToRing(
   frames_sent_ += offset;
 }
 
-void DriverOutput::FinishMixJob(const MixStage::FrameSpan& span, float* buffer) {
+void DriverOutput::FinishMixJob(const AudioOutput::FrameSpan& span, float* buffer) {
   TRACE_DURATION("audio", "DriverOutput::FinishMixJob");
-  WriteToRing(span, [this, buffer](uint64_t offset, uint32_t frames, void* dest_buf) {
-    auto job_buf_offset = offset * output_producer_->channels();
-    output_producer_->ProduceOutput(buffer + job_buf_offset, dest_buf, frames);
+  if (span.is_mute) {
+    FillRingSpanWithSilence(span);
+  } else {
+    FX_DCHECK(buffer != nullptr);
+    WriteToRing(span, [this, buffer](uint64_t offset, uint32_t frames, void* dest_buf) {
+      auto job_buf_offset = offset * output_producer_->channels();
+      output_producer_->ProduceOutput(buffer + job_buf_offset, dest_buf, frames);
 
-    size_t dest_buf_len = frames * output_producer_->bytes_per_frame();
-    wav_writer_.Write(dest_buf, dest_buf_len);
-    wav_writer_.UpdateHeader();
-    zx_cache_flush(dest_buf, dest_buf_len, ZX_CACHE_FLUSH_DATA);
-  });
+      size_t dest_buf_len = frames * output_producer_->bytes_per_frame();
+      wav_writer_.Write(dest_buf, dest_buf_len);
+      wav_writer_.UpdateHeader();
+      zx_cache_flush(dest_buf, dest_buf_len, ZX_CACHE_FLUSH_DATA);
+    });
+  }
 
   if (VERBOSE_TIMING_DEBUG) {
     auto now = async::Now(mix_domain().dispatcher());
@@ -280,11 +279,10 @@ void DriverOutput::FinishMixJob(const MixStage::FrameSpan& span, float* buffer) 
     FX_LOGS(INFO) << "PLead [" << std::setw(4) << playback_lead_start << ", " << std::setw(4)
                   << playback_lead_end << "]";
   }
-
   ScheduleNextLowWaterWakeup();
 }
 
-void DriverOutput::FillRingWithSilence(const MixStage::FrameSpan& span) {
+void DriverOutput::FillRingSpanWithSilence(const AudioOutput::FrameSpan& span) {
   WriteToRing(span, [this](auto offset, auto frames, auto dest_buf) {
     output_producer_->FillWithSilence(dest_buf, frames);
   });

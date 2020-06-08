@@ -58,7 +58,7 @@ class ThrottleOutput : public AudioOutput {
     }
   }
 
-  std::optional<MixStage::FrameSpan> StartMixJob(zx::time process_start) override {
+  std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time process_start) override {
     // Compute the next callback time; check whether trimming is falling behind.
     last_sched_time_ = last_sched_time_ + TRIM_PERIOD;
     if (process_start > last_sched_time_) {
@@ -82,7 +82,7 @@ class ThrottleOutput : public AudioOutput {
     return std::nullopt;
   }
 
-  void FinishMixJob(const MixStage::FrameSpan& span, float* buffer) override {
+  void FinishMixJob(const AudioOutput::FrameSpan& span, float* buffer) override {
     // Since we never start any jobs, this should never be called.
     FX_DCHECK(false);
   }
