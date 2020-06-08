@@ -670,6 +670,50 @@ func TestBridge(t *testing.T) {
 	}
 }
 
+// TestBridgeableEndpointDetach tests that bridgeable endpoints don't cause
+// panics after attaching to a nil dispatcher.
+func TestBridgeableEndpointDetach(t *testing.T) {
+	ep1 := makeChannelEndpoint(linkAddr1, 1)
+	bep1 := bridge.NewEndpoint(&ep1)
+	var disp testNetworkDispatcher
+
+	if ep1.IsAttached() {
+		t.Fatal("ep1.IsAttached() = true, want = false")
+	}
+	if bep1.IsAttached() {
+		t.Fatal("bep1.IsAttached() = true, want = false")
+	}
+
+	bep1.Attach(&disp)
+	if disp.count != 0 {
+		t.Fatalf("got disp.count = %d, want = 0", disp.count)
+	}
+	if !ep1.IsAttached() {
+		t.Fatal("ep1.IsAttached() = false, want = true")
+	}
+	if !bep1.IsAttached() {
+		t.Fatal("bep1.IsAttached() = false, want = true")
+	}
+
+	bep1.DeliverNetworkPacket(linkAddr1, linkAddr2, header.IPv4ProtocolNumber, stack.PacketBuffer{})
+	if disp.count != 1 {
+		t.Fatalf("got disp.count = %d, want = 1", disp.count)
+	}
+
+	bep1.Attach(nil)
+	if ep1.IsAttached() {
+		t.Fatal("ep1.IsAttached() = true, want = false")
+	}
+	if bep1.IsAttached() {
+		t.Fatal("bep1.IsAttached() = true, want = false")
+	}
+
+	bep1.DeliverNetworkPacket(linkAddr1, linkAddr2, header.IPv4ProtocolNumber, stack.PacketBuffer{})
+	if disp.count != 1 {
+		t.Fatalf("got disp.count = %d, want = 1", disp.count)
+	}
+}
+
 // pipe mints two linked endpoints with the given link addresses.
 func pipe(addr1, addr2 tcpip.LinkAddress) (*endpoint, *endpoint) {
 	ep1, ep2 := &endpoint{linkAddr: addr1}, &endpoint{linkAddr: addr2}

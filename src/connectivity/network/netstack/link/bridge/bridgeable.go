@@ -13,10 +13,10 @@ var _ stack.NetworkDispatcher = (*BridgeableEndpoint)(nil)
 
 type BridgeableEndpoint struct {
 	stack.LinkEndpoint
-	dispatcher stack.NetworkDispatcher
-	mu         struct {
+	mu struct {
 		sync.RWMutex
-		bridge *Endpoint
+		bridge     *Endpoint
+		dispatcher stack.NetworkDispatcher
 	}
 }
 
@@ -27,7 +27,10 @@ func NewEndpoint(lower stack.LinkEndpoint) *BridgeableEndpoint {
 }
 
 func (e *BridgeableEndpoint) IsAttached() bool {
-	return e.dispatcher != nil
+	e.mu.RLock()
+	d := e.mu.dispatcher != nil
+	e.mu.RUnlock()
+	return d
 }
 
 func (e *BridgeableEndpoint) SetBridge(b *Endpoint) {
@@ -37,18 +40,27 @@ func (e *BridgeableEndpoint) SetBridge(b *Endpoint) {
 }
 
 func (e *BridgeableEndpoint) Attach(d stack.NetworkDispatcher) {
-	e.dispatcher = d
-	e.LinkEndpoint.Attach(e)
+	e.mu.Lock()
+	e.mu.dispatcher = d
+	e.mu.Unlock()
+	if d != nil {
+		// Only pass down the BridgeableEndpoint as a dispatcher if we're not
+		// attaching to nil dispatcher.
+		d = e
+	}
+	e.LinkEndpoint.Attach(d)
 }
 
 func (e *BridgeableEndpoint) Dispatcher() stack.NetworkDispatcher {
-	return e.dispatcher
+	e.mu.RLock()
+	d := e.mu.dispatcher
+	e.mu.RUnlock()
+	return d
 }
 
 func (e *BridgeableEndpoint) DeliverNetworkPacket(src, dst tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
-	d := e.dispatcher
-
 	e.mu.RLock()
+	d := e.mu.dispatcher
 	b := e.mu.bridge
 	e.mu.RUnlock()
 
@@ -57,7 +69,9 @@ func (e *BridgeableEndpoint) DeliverNetworkPacket(src, dst tcpip.LinkAddress, pr
 		return
 	}
 
-	d.DeliverNetworkPacket(src, dst, protocol, pkt)
+	if d != nil {
+		d.DeliverNetworkPacket(src, dst, protocol, pkt)
+	}
 }
 
 func (e *BridgeableEndpoint) GSOMaxSize() uint32 {
