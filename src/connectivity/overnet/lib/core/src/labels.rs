@@ -4,6 +4,8 @@
 
 use fidl_fuchsia_overnet_protocol::TRANSFER_KEY_LENGTH;
 use rand::Rng;
+use std::array::TryFromSliceError;
+use std::convert::{TryFrom, TryInto};
 
 /// Labels the endpoint of a client/server connection.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -73,4 +75,51 @@ pub(crate) type TransferKey = [u8; TRANSFER_KEY_LENGTH as usize];
 
 pub(crate) fn generate_transfer_key() -> TransferKey {
     rand::thread_rng().gen::<TransferKey>()
+}
+
+/// Labels a quic connection
+#[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Hash)]
+pub struct ConnectionId([u8; quiche::MAX_CONN_ID_LEN]);
+
+impl ConnectionId {
+    pub(crate) fn new() -> Self {
+        ConnectionId(rand::thread_rng().gen())
+    }
+
+    fn from_slice(slice: &[u8]) -> Result<Self, TryFromSliceError> {
+        Ok(ConnectionId(slice.try_into()?))
+    }
+
+    pub(crate) fn to_array(&self) -> [u8; quiche::MAX_CONN_ID_LEN] {
+        self.0
+    }
+}
+
+impl std::fmt::Debug for ConnectionId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("ConnectionId(")?;
+        base64::encode(&self.0).fmt(f)?;
+        f.write_str(")")
+    }
+}
+
+impl TryFrom<&[u8]> for ConnectionId {
+    type Error = TryFromSliceError;
+    fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
+        ConnectionId::from_slice(slice)
+    }
+}
+
+impl TryFrom<&Vec<u8>> for ConnectionId {
+    type Error = TryFromSliceError;
+    fn try_from(vec: &Vec<u8>) -> Result<Self, Self::Error> {
+        ConnectionId::from_slice(vec.as_slice())
+    }
+}
+
+impl TryFrom<Vec<u8>> for ConnectionId {
+    type Error = TryFromSliceError;
+    fn try_from(vec: Vec<u8>) -> Result<Self, Self::Error> {
+        ConnectionId::from_slice(vec.as_slice())
+    }
 }

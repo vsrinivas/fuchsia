@@ -47,6 +47,13 @@ protocol ServiceProvider {
     ConnectToService(zx.handle:CHANNEL chan, ConnectionInfo info);
 };
 
+/// Protocol spoken by the host implementation to access various sub-interfaces.
+protocol HostOvernet {
+    ConnectServiceConsumer(request<ServiceConsumer> svc);
+    ConnectServicePublisher(request<ServicePublisher> svc);
+    ConnectMeshController(request<MeshController> svc);
+};
+
 /// A `Peer` describes one device on the Overnet mesh.
 struct Peer {
     /// The address of the peer on the Overnet mesh.

@@ -14,9 +14,9 @@ use crate::router::Router;
 use anyhow::{format_err, Error};
 use fidl_fuchsia_overnet_protocol::{StreamId, StreamRef, TransferInitiator, TransferWaiter};
 use fuchsia_zircon_status as zx_status;
-use futures::{future::FusedFuture, prelude::*};
+use futures::prelude::*;
 use std::pin::Pin;
-use std::rc::{Rc, Weak};
+use std::sync::{Arc, Weak};
 use std::task::{Context, Poll};
 
 #[derive(Debug)]
@@ -39,19 +39,13 @@ impl RemoveFromProxyTable {
 }
 
 pub(crate) struct ProxyTransferInitiationReceiver(
-    Pin<Box<dyn FusedFuture<Output = Result<RemoveFromProxyTable, Error>>>>,
+    Pin<Box<dyn Send + Future<Output = Result<RemoveFromProxyTable, Error>>>>,
 );
 
 impl Future for ProxyTransferInitiationReceiver {
     type Output = Result<RemoveFromProxyTable, Error>;
     fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
         self.0.as_mut().poll(ctx)
-    }
-}
-
-impl FusedFuture for ProxyTransferInitiationReceiver {
-    fn is_terminated(&self) -> bool {
-        self.0.is_terminated()
     }
 }
 
@@ -63,9 +57,9 @@ impl std::fmt::Debug for ProxyTransferInitiationReceiver {
 
 impl ProxyTransferInitiationReceiver {
     pub(crate) fn new(
-        f: impl 'static + Future<Output = Result<RemoveFromProxyTable, Error>>,
+        f: impl 'static + Send + Future<Output = Result<RemoveFromProxyTable, Error>>,
     ) -> Self {
-        Self(Box::pin(f.fuse()))
+        Self(Box::pin(f))
     }
 }
 
@@ -115,23 +109,13 @@ impl StreamRefSender {
 }
 
 #[derive(Debug)]
-pub(crate) struct Proxy<Hdl: Proxyable> {
+pub(crate) struct Proxy<Hdl: Proxyable + 'static> {
     hdl: Option<ProxyableHandle<Hdl>>,
 }
 
-impl<Hdl: Proxyable> Drop for Proxy<Hdl> {
-    fn drop(&mut self) {
-        if let Some(hdl) = self.hdl.take() {
-            if let Some(router) = Weak::upgrade(hdl.router()) {
-                router.remove_proxied(hdl.into_fidl_handle().unwrap()).unwrap();
-            }
-        }
-    }
-}
-
 impl<Hdl: 'static + Proxyable> Proxy<Hdl> {
-    fn new(hdl: Hdl, router: Weak<Router>, stats: Rc<MessageStats>) -> Rc<Self> {
-        Rc::new(Self { hdl: Some(ProxyableHandle::new(hdl, router, stats)) })
+    fn new(hdl: Hdl, router: Weak<Router>, stats: Arc<MessageStats>) -> Arc<Self> {
+        Arc::new(Self { hdl: Some(ProxyableHandle::new(hdl, router, stats)) })
     }
 
     fn hdl(&self) -> &ProxyableHandle<Hdl> {
@@ -142,8 +126,11 @@ impl<Hdl: 'static + Proxyable> Proxy<Hdl> {
         self.hdl().write(msg).await
     }
 
-    async fn read_from_handle(&self, msg: &mut Hdl::Message) -> Result<(), zx_status::Status> {
-        self.hdl().read(msg).await
+    fn read_from_handle<'a>(
+        &'a self,
+        msg: &'a mut Hdl::Message,
+    ) -> impl 'a + Future<Output = Result<(), zx_status::Status>> + Unpin {
+        self.hdl().read(msg)
     }
 
     async fn drain_handle_to_stream(

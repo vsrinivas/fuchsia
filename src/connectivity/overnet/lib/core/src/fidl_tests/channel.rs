@@ -5,19 +5,20 @@
 #![cfg(test)]
 
 use super::{Fixture, Target};
-use fidl_handle_tests::channel;
+use fidl_handle_tests::{channel, LoggingFixture};
 
 struct ChanFixture {
     fixture: Fixture,
-    map_purpose_to_target: Box<dyn Fn(channel::CreateHandlePurpose) -> Target>,
+    map_purpose_to_target: Box<dyn Send + Fn(channel::CreateHandlePurpose) -> Target>,
 }
 
 impl ChanFixture {
     fn new(
-        map_purpose_to_target: impl 'static + Fn(channel::CreateHandlePurpose) -> Target,
+        test_name: &'static str,
+        map_purpose_to_target: impl 'static + Send + Fn(channel::CreateHandlePurpose) -> Target,
     ) -> ChanFixture {
         ChanFixture {
-            fixture: Fixture::new(),
+            fixture: Fixture::new(test_name),
             map_purpose_to_target: Box::new(map_purpose_to_target),
         }
     }
@@ -33,23 +34,35 @@ impl channel::Fixture for ChanFixture {
     }
 }
 
+impl LoggingFixture for ChanFixture {
+    fn log(&mut self, msg: &str) {
+        self.fixture.log(msg)
+    }
+}
+
 #[test]
 fn fidl_channel_tests_no_transfer() {
-    channel::run(ChanFixture::new(|purpose| match purpose {
-        channel::CreateHandlePurpose::PrimaryTestChannel => Target::B,
-        channel::CreateHandlePurpose::PayloadChannel => Target::A,
-    }))
+    super::run_test(move || {
+        channel::run(ChanFixture::new("fidl_channel_tests_no_transfer", |purpose| match purpose {
+            channel::CreateHandlePurpose::PrimaryTestChannel => Target::B,
+            channel::CreateHandlePurpose::PayloadChannel => Target::A,
+        }))
+    })
 }
 
 #[test]
 fn fidl_channel_tests_all_to_b() {
-    channel::run(ChanFixture::new(|_| Target::B))
+    super::run_test(move || {
+        channel::run(ChanFixture::new("fidl_channel_tests_all_to_b", |_| Target::B))
+    })
 }
 
 #[test]
 fn fidl_channel_tests_b_then_c() {
-    channel::run(ChanFixture::new(|purpose| match purpose {
-        channel::CreateHandlePurpose::PrimaryTestChannel => Target::B,
-        channel::CreateHandlePurpose::PayloadChannel => Target::C,
-    }))
+    super::run_test(move || {
+        channel::run(ChanFixture::new("fidl_channel_tests_b_then_c", |purpose| match purpose {
+            channel::CreateHandlePurpose::PrimaryTestChannel => Target::B,
+            channel::CreateHandlePurpose::PayloadChannel => Target::C,
+        }))
+    })
 }

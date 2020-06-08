@@ -7,11 +7,10 @@ use argh::FromArgs;
 use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
 use futures::prelude::*;
 use overnet_core::{
-    log_errors, new_deframer, new_framer, spawn, DeframerReader, DeframerWriter, FrameType,
-    FramerReader, FramerWriter, LosslessBinary, Router, RouterOptions,
+    new_deframer, new_framer, DeframerReader, DeframerWriter, FrameType, FramerReader,
+    FramerWriter, LosslessBinary, Router, RouterOptions,
 };
-use std::rc::Rc;
-use tokio::io::AsyncRead;
+use std::sync::Arc;
 
 #[derive(FromArgs, Default)]
 /// daemon to lift a non-Fuchsia device into Overnet.
@@ -23,40 +22,32 @@ pub struct Opt {
 }
 
 async fn read_incoming(
-    stream: tokio::io::ReadHalf<tokio::net::UnixStream>,
+    mut stream: &async_std::os::unix::net::UnixStream,
     mut incoming_writer: DeframerWriter<LosslessBinary>,
 ) -> Result<(), Error> {
-    let mut buf = [0u8; 1024];
-    let mut stream = Some(stream);
+    let mut buf = [0u8; 16384];
 
     loop {
-        let rd = tokio::io::read(stream.take().unwrap(), &mut buf[..]);
-        let rd = futures::compat::Compat01As03::new(rd);
-        let (returned_stream, _, n) = rd.await?;
+        let n = stream.read(&mut buf).await?;
         if n == 0 {
             return Err(format_err!("Incoming socket closed"));
         }
-        stream = Some(returned_stream);
         incoming_writer.write(&buf[..n]).await?;
     }
 }
 
 async fn write_outgoing(
     mut outgoing_reader: FramerReader<LosslessBinary>,
-    tx_bytes: tokio::io::WriteHalf<tokio::net::UnixStream>,
+    mut stream: &async_std::os::unix::net::UnixStream,
 ) -> Result<(), Error> {
-    let mut tx_bytes = Some(tx_bytes);
     loop {
         let out = outgoing_reader.read().await?;
-        let wr = tokio::io::write_all(tx_bytes.take().unwrap(), out.as_slice());
-        let wr = futures::compat::Compat01As03::new(wr).map_err(|e| -> Error { e.into() });
-        let (t, _) = wr.await?;
-        tx_bytes = Some(t);
+        stream.write_all(&out).await?;
     }
 }
 
 async fn process_incoming(
-    node: Rc<Router>,
+    node: Arc<Router>,
     mut rx_frames: DeframerReader<LosslessBinary>,
     mut tx_frames: FramerWriter<LosslessBinary>,
 ) -> Result<(), Error> {
@@ -109,8 +100,7 @@ async fn process_incoming(
     };
 
     // Register our new link!
-    let link_receiver = node.new_link(node_id.into()).await?;
-    let link_sender = link_receiver.clone();
+    let (link_sender, link_receiver) = node.new_link(node_id.into()).await?;
     let _: ((), ()) = futures::future::try_join(
         async move {
             let mut buf = [0u8; 4096];
@@ -133,6 +123,23 @@ async fn process_incoming(
     Ok(())
 }
 
+async fn run_stream(
+    node: Arc<Router>,
+    stream: Result<async_std::os::unix::net::UnixStream, std::io::Error>,
+) -> Result<(), Error> {
+    let stream = stream?;
+    let (framer, outgoing_reader) = new_framer(LosslessBinary, 4096);
+    let (incoming_writer, deframer) = new_deframer(LosslessBinary);
+    log::info!("Processing new Ascendd socket");
+    futures::future::try_join3(
+        read_incoming(&stream, incoming_writer),
+        write_outgoing(outgoing_reader, &stream),
+        process_incoming(node, deframer, framer),
+    )
+    .await
+    .map(drop)
+}
+
 pub async fn run_ascendd(opt: Opt) -> Result<(), Error> {
     let Opt { sockpath } = opt;
 
@@ -141,37 +148,25 @@ pub async fn run_ascendd(opt: Opt) -> Result<(), Error> {
     log::info!("[log] starting ascendd");
     let _ = std::fs::remove_file(&sockpath);
 
-    let incoming = tokio::net::UnixListener::bind(&sockpath)?.incoming();
-    let mut incoming = futures::compat::Compat01As03::new(incoming);
+    let incoming = async_std::os::unix::net::UnixListener::bind(&sockpath).await?;
     log::info!("ascendd listening to socket {}", sockpath);
 
     let node = Router::new(
         RouterOptions::new()
-            .set_quic_server_key_file(hoist::hard_coded_server_key().unwrap())
-            .set_quic_server_cert_file(hoist::hard_coded_server_cert().unwrap())
             .export_diagnostics(fidl_fuchsia_overnet_protocol::Implementation::Ascendd),
+        Box::new(hoist::hard_coded_security_context()),
     )?;
 
-    while let Some(stream) = incoming.next().await {
-        let stream = stream?;
-        let (rx_bytes, tx_bytes) = stream.split();
-        let (framer, outgoing_reader) = new_framer(LosslessBinary, 4096);
-        let (incoming_writer, deframer) = new_deframer(LosslessBinary);
-        let node = node.clone();
-        spawn(log_errors(
+    incoming
+        .incoming()
+        .for_each_concurrent(None, |stream| {
+            let node = node.clone();
             async move {
-                log::info!("Processing new Ascendd socket");
-                let _ = futures::future::try_join3(
-                    read_incoming(rx_bytes, incoming_writer),
-                    write_outgoing(outgoing_reader, tx_bytes),
-                    process_incoming(node, deframer, framer),
-                )
-                .await?;
-                Ok(())
-            },
-            "Failed processing Ascendd socket",
-        ));
-    }
-
+                if let Err(e) = run_stream(node, stream).await {
+                    log::warn!("Failed processing socket: {:?}", e);
+                }
+            }
+        })
+        .await;
     Ok(())
 }

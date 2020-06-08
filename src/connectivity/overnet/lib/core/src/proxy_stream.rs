@@ -4,20 +4,24 @@
 
 use crate::async_quic::{AsyncConnection, StreamProperties};
 use crate::coding::{decode_fidl, encode_fidl};
-use crate::framed_stream::{FrameType, FramedStreamReader, FramedStreamWriter, MessageStats};
+use crate::framed_stream::{
+    FrameType, FramedStreamReader, FramedStreamWriter, MessageStats, ReadNextFrame,
+};
 use crate::labels::{NodeId, TransferKey};
 use crate::proxyable_handle::{Message, Proxyable, ProxyableHandle, RouterHolder, Serializer};
 use crate::router::Router;
-use anyhow::{bail, ensure, format_err, Context as _, Error};
+use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_overnet_protocol::{BeginTransfer, Empty, StreamControl};
 use fuchsia_zircon_status as zx_status;
-use futures::future::poll_fn;
-use std::rc::{Rc, Weak};
+use futures::{future::poll_fn, prelude::*, ready};
+use std::pin::Pin;
+use std::sync::{Arc, Weak};
+use std::task::{Context, Poll};
 
 pub(crate) struct StreamWriter<Msg: Message> {
     stream: FramedStreamWriter,
     send_buffer: Vec<u8>,
-    stats: Rc<MessageStats>,
+    stats: Arc<MessageStats>,
     router: Weak<Router>,
     closed: bool,
     _phantom_msg: std::marker::PhantomData<Msg>,
@@ -147,10 +151,105 @@ pub(crate) enum Frame<'a, Msg: Message> {
 
 #[derive(Debug)]
 pub(crate) struct StreamReader<Msg: Message> {
+    conn: AsyncConnection,
     stream: FramedStreamReader,
     incoming_message: Msg,
     router: Weak<Router>,
-    stats: Rc<MessageStats>,
+    stats: Arc<MessageStats>,
+    state: ReadNextState<Msg::Parser>,
+}
+
+#[derive(Debug)]
+pub(crate) struct ReadNext<'a, Msg: Message> {
+    next_frame: Option<ReadNextFrame<'a>>,
+    state: &'a mut ReadNextState<Msg::Parser>,
+    incoming_message: Option<&'a mut Msg>,
+    stats: &'a Arc<MessageStats>,
+    conn: &'a AsyncConnection,
+    router_holder: RouterHolder<'a>,
+}
+
+#[derive(Debug)]
+enum ReadNextState<Parser> {
+    Reading,
+    DeserializingData(Vec<u8>, Parser),
+}
+
+impl<'a, Msg: Message> ReadNext<'a, Msg> {
+    fn poll_inner(&mut self, ctx: &mut Context<'_>) -> Poll<Result<Frame<'a, Msg>, Error>> {
+        loop {
+            return Poll::Ready(Ok(match *self.state {
+                ReadNextState::Reading => {
+                    let (frame_type, mut bytes, fin) =
+                        ready!(self.next_frame.as_mut().unwrap().poll_unpin(ctx))?;
+                    match frame_type {
+                        FrameType::Hello => {
+                            if fin {
+                                return Poll::Ready(Err(format_err!("unexpected end of stream")));
+                            }
+                            if bytes.len() != 0 {
+                                return Poll::Ready(Err(format_err!("Hello frame must be empty")));
+                            }
+                            Frame::Hello
+                        }
+                        FrameType::Data => {
+                            if fin {
+                                return Poll::Ready(Err(format_err!("unexpected end of stream")));
+                            }
+                            *self.state =
+                                ReadNextState::DeserializingData(bytes, Msg::Parser::new());
+                            continue;
+                        }
+                        FrameType::Control => match (fin, decode_fidl(&mut bytes)?) {
+                            (true, StreamControl::AckTransfer(Empty {})) => Frame::AckTransfer,
+                            (true, StreamControl::EndTransfer(Empty {})) => Frame::EndTransfer,
+                            (true, StreamControl::Shutdown(status_code)) => {
+                                Frame::Shutdown(zx_status::Status::ok(status_code))
+                            }
+                            (
+                                false,
+                                StreamControl::BeginTransfer(BeginTransfer {
+                                    new_destination_node,
+                                    transfer_key,
+                                }),
+                            ) => Frame::BeginTransfer(new_destination_node.into(), transfer_key),
+                            (true, x) => {
+                                return Poll::Ready(Err(format_err!(
+                                    "Unexpected end of stream after {:?}",
+                                    x
+                                )))
+                            }
+                            (false, x) => {
+                                return Poll::Ready(Err(format_err!(
+                                    "Expected end of stream after {:?}",
+                                    x
+                                )))
+                            }
+                        },
+                    }
+                }
+                ReadNextState::DeserializingData(ref mut bytes, ref mut parser) => {
+                    ready!(parser.poll_ser(
+                        self.incoming_message.as_mut().unwrap(),
+                        bytes,
+                        self.conn,
+                        self.stats,
+                        &mut self.router_holder,
+                        ctx
+                    ))?;
+                    *self.state = ReadNextState::Reading;
+                    Frame::Data(self.incoming_message.take().unwrap())
+                }
+            }));
+        }
+    }
+}
+
+impl<'a, Msg: Message> Future for ReadNext<'a, Msg> {
+    type Output = Result<Frame<'a, Msg>, Error>;
+    fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
+        Pin::into_inner(self).poll_inner(ctx)
+    }
 }
 
 impl<Msg: Message> StreamProperties for StreamReader<Msg> {
@@ -164,51 +263,25 @@ impl<Msg: Message> StreamProperties for StreamReader<Msg> {
 }
 
 impl<Msg: Message> StreamReader<Msg> {
-    pub(crate) async fn next<'a>(&'a mut self) -> Result<Frame<'a, Msg>, Error> {
-        let (frame_type, mut bytes, fin) = self.stream.next().await?;
-        Ok(match frame_type {
-            FrameType::Hello => {
-                ensure!(!fin, "unexpected end of stream");
-                ensure!(bytes.len() == 0, "Hello frame must be empty");
-                Frame::Hello
-            }
-            FrameType::Data => {
-                ensure!(!fin, "unexpected end of stream");
-                let mut parser = Msg::Parser::new();
-                let conn = self.stream.conn();
-                let incoming_message = &mut self.incoming_message;
-                let mut rh = RouterHolder::Unused(&self.router);
-                let stats = &self.stats;
-                poll_fn(move |ctx| {
-                    parser.poll_ser(incoming_message, &mut bytes, conn, stats, &mut rh, ctx)
-                })
-                .await?;
-                Frame::Data(&mut self.incoming_message)
-            }
-            FrameType::Control => match (fin, decode_fidl(&mut bytes)?) {
-                (true, StreamControl::AckTransfer(Empty {})) => Frame::AckTransfer,
-                (true, StreamControl::EndTransfer(Empty {})) => Frame::EndTransfer,
-                (true, StreamControl::Shutdown(status_code)) => {
-                    Frame::Shutdown(zx_status::Status::ok(status_code))
-                }
-                (
-                    false,
-                    StreamControl::BeginTransfer(BeginTransfer {
-                        new_destination_node,
-                        transfer_key,
-                    }),
-                ) => Frame::BeginTransfer(new_destination_node.into(), transfer_key),
-                (true, x) => bail!("Unexpected end of stream after {:?}", x),
-                (false, x) => bail!("Expected end of stream after {:?}", x),
+    pub(crate) fn next<'a>(&'a mut self) -> ReadNext<'a, Msg> {
+        ReadNext {
+            conn: &self.conn,
+            next_frame: match self.state {
+                ReadNextState::Reading => Some(self.stream.next()),
+                ReadNextState::DeserializingData(_, _) => None,
             },
-        })
+            state: &mut self.state,
+            incoming_message: Some(&mut self.incoming_message),
+            stats: &self.stats,
+            router_holder: RouterHolder::Unused(&self.router),
+        }
     }
 
     async fn expect(&mut self, frame: Frame<'_, Msg>) -> Result<(), Error> {
         let received = self.next().await?;
         if received != frame {
             let msg = format_err!("Expected {:?} got {:?}", frame, received);
-            self.stream.abandon();
+            self.stream.abandon().await;
             Err(msg)
         } else {
             Ok(())
@@ -244,10 +317,12 @@ impl StreamReaderBinder for FramedStreamReader {
         hdl: &ProxyableHandle<H>,
     ) -> StreamReader<Msg> {
         StreamReader {
+            conn: self.conn().clone(),
             stream: self,
             incoming_message: Default::default(),
             router: hdl.router().clone(),
             stats: hdl.stats().clone(),
+            state: ReadNextState::Reading,
         }
     }
 }

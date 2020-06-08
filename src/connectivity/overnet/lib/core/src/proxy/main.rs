@@ -10,16 +10,14 @@ use super::{
 };
 use crate::async_quic::StreamProperties;
 use crate::framed_stream::{FramedStreamReader, FramedStreamWriter};
-use crate::future_help::log_errors;
 use crate::labels::{NodeId, TransferKey};
 use crate::proxy_stream::{
     Frame, StreamReader, StreamReaderBinder, StreamWriter, StreamWriterBinder,
 };
-use crate::runtime::spawn;
 use anyhow::{bail, format_err, Context as _, Error};
 use fuchsia_zircon_status as zx_status;
-use futures::{prelude::*, select};
-use std::rc::Rc;
+use futures::{future::Either, prelude::*};
+use std::sync::Arc;
 
 // We run two tasks to proxy a handle - one to handle handle->stream, the other to handle
 // stream->handle. When we want to perform a transfer operation we end up wanting to think about
@@ -101,78 +99,102 @@ fn new_task_joiner<Hdl: Proxyable>() -> (FinishProxyLoopSender<Hdl>, FinishProxy
 }
 
 // Spawn a proxy (two tasks, one for each direction of proxying).
-pub(crate) fn spawn_main_loop<Hdl: 'static + Proxyable>(
-    proxy: Rc<Proxy<Hdl>>,
+pub(crate) async fn run_main_loop<Hdl: 'static + Proxyable>(
+    proxy: Arc<Proxy<Hdl>>,
     initiate_transfer: ProxyTransferInitiationReceiver,
     stream_writer: FramedStreamWriter,
     initial_stream_reader: Option<FramedStreamReader>,
     stream_reader: FramedStreamReader,
 ) -> Result<(), Error> {
+    let debug_id = stream_writer.debug_id();
     let (tx_join, rx_join) = new_task_joiner();
     let hdl = proxy.hdl();
     let mut stream_writer = stream_writer.bind(hdl);
     let initial_stream_reader = initial_stream_reader.map(|s| s.bind(hdl));
     let mut stream_reader = stream_reader.bind(hdl);
-    spawn(log_errors(
-        async move {
-            futures::future::try_join(
-                async {
-                    if !stream_reader.is_initiator() {
-                        stream_reader.expect_hello().await?;
-                        log::trace!("[PROXY {:?}] got hello", proxy.hdl().hdl());
-                    } else {
-                        stream_writer.send_hello().await?;
-                        log::trace!("[PROXY {:?}] sent hello", proxy.hdl().hdl());
-                    }
-                    Ok::<(), Error>(())
-                },
-                async {
-                    if let Some(initial_stream_reader) = initial_stream_reader {
-                        drain(proxy.clone(), initial_stream_reader).await?;
-                    }
-                    Ok(())
-                },
-            )
-            .await?;
-            log::trace!("[PROXY {:?}] entering main loop", proxy.hdl().hdl());
-            futures::future::try_join(
-                stream_to_handle(proxy.clone(), initiate_transfer, stream_reader, tx_join),
-                handle_to_stream(proxy, stream_writer, rx_join),
-            )
-            .await?;
+    // TODO: don't detach
+    futures::future::try_join(
+        async {
+            if !stream_reader.is_initiator() {
+                stream_reader.expect_hello().await?;
+                log::trace!("[PROXY {:?} {:?}] got hello", proxy.hdl().hdl(), debug_id);
+            } else {
+                stream_writer.send_hello().await?;
+                log::trace!("[PROXY {:?} {:?}] sent hello", proxy.hdl().hdl(), debug_id);
+            }
+            Ok::<(), Error>(())
+        },
+        async {
+            if let Some(initial_stream_reader) = initial_stream_reader {
+                drain(proxy.clone(), initial_stream_reader).await?;
+            }
             Ok(())
         },
-        "Proxy loop failed",
-    ));
-    Ok(())
+    )
+    .await?;
+    log::trace!("[PROXY {:?} {:?}] entering main loop", proxy.hdl().hdl(), debug_id);
+    let result = futures::future::try_join(
+        stream_to_handle(proxy.clone(), initiate_transfer, stream_reader, tx_join)
+            .map_err(|e| e.context("stream_to_handle")),
+        handle_to_stream(proxy, stream_writer, rx_join).map_err(|e| e.context("handle_to_stream")),
+    )
+    .map_ok(drop)
+    .await;
+    log::trace!("[PROXY {:?}] finished main loop with result {:?}", debug_id, result);
+    result
 }
 
 async fn handle_to_stream<Hdl: 'static + Proxyable>(
-    proxy: Rc<Proxy<Hdl>>,
+    proxy: Arc<Proxy<Hdl>>,
     mut stream: StreamWriter<Hdl::Message>,
-    finish_proxy_loop: FinishProxyLoopReceiver<Hdl>,
+    mut finish_proxy_loop: FinishProxyLoopReceiver<Hdl>,
 ) -> Result<(), Error> {
+    let debug_id = stream.debug_id();
     let mut message = Default::default();
-    let mut finish_proxy_loop = finish_proxy_loop.fuse();
     let finish_proxy_loop_action = loop {
-        let r = select! {
-            x = proxy.read_from_handle(&mut message).fuse() => x,
-            x = finish_proxy_loop => break x
+        let r = match futures::future::select(
+            &mut finish_proxy_loop,
+            proxy.read_from_handle(&mut message),
+        )
+        .await
+        {
+            Either::Left((finish_proxy_loop_action, _)) => {
+                // Note: Proxy guarantees that read_from_handle can be dropped safely without losing data.
+                break finish_proxy_loop_action;
+            }
+            Either::Right((r, _)) => r,
         };
+        log::trace!("[PROXY {:?} {:?}] got from handle {:?}", proxy.hdl().hdl(), debug_id, r);
         match r {
-            Ok(()) => stream.send_data(&mut message).await?,
+            Ok(()) => {
+                log::trace!(
+                    "[PROXY {:?} {:?}] send message {:?}",
+                    proxy.hdl().hdl(),
+                    debug_id,
+                    message
+                );
+                stream.send_data(&mut message).await.context("send_data")?;
+                log::trace!("[PROXY {:?} {:?}] sent message", proxy.hdl().hdl(), debug_id);
+            }
             Err(zx_status::Status::PEER_CLOSED) => {
-                log::trace!("[PROXY {:?}] handle closed normally", proxy.hdl().hdl());
-                stream.send_shutdown(Ok(())).await?;
+                if let Some(finish_proxy_loop_action) = finish_proxy_loop.now_or_never() {
+                    break finish_proxy_loop_action;
+                }
+                log::trace!(
+                    "[PROXY {:?} {:?}] handle closed normally",
+                    proxy.hdl().hdl(),
+                    debug_id
+                );
+                stream.send_shutdown(Ok(())).await.context("send_shutdown")?;
                 return Ok(());
             }
             Err(x) => {
-                stream.send_shutdown(Err(x)).await?;
-                return Err(x.into());
+                stream.send_shutdown(Err(x)).await.context("send_shutdown")?;
+                return Err(x).context("read_from_handle");
             }
         }
     };
-    let proxy = Rc::try_unwrap(proxy).map_err(|_| format_err!("Proxy should be isolated"))?;
+    let proxy = Arc::try_unwrap(proxy).map_err(|_| format_err!("Proxy should be isolated"))?;
     match finish_proxy_loop_action {
         Ok(FinishProxyLoopAction::InitiateTransfer {
             paired_handle,
@@ -180,7 +202,11 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             stream_ref_sender,
             stream_reader,
         }) => {
-            log::trace!("[PROXY {:?}] finish main loop and initiate transfer", proxy.hdl().hdl(),);
+            log::trace!(
+                "[PROXY {:?} {:?}] finish main loop and initiate transfer",
+                proxy.hdl().hdl(),
+                debug_id
+            );
             xfer::initiate(
                 proxy,
                 paired_handle,
@@ -198,9 +224,11 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
             stream_reader,
         }) => {
             log::trace!(
-                "[PROXY {:?}] finish main loop and follow {:?}",
+                "[PROXY {:?} {:?}] finish main loop and follow {:?} to {:?}",
                 proxy.hdl().hdl(),
-                transfer_key
+                debug_id,
+                transfer_key,
+                new_destination_node
             );
             xfer::follow(
                 proxy,
@@ -214,8 +242,9 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
         }
         Ok(FinishProxyLoopAction::Shutdown { result, stream_reader }) => {
             log::trace!(
-                "[PROXY {:?}] finish main loop and shutdown; result={:?}",
+                "[PROXY {:?} {:?}] finish main loop and shutdown; result={:?}",
                 proxy.hdl().hdl(),
+                debug_id,
                 result
             );
             join_shutdown(proxy, stream, stream_reader, result).await
@@ -237,12 +266,13 @@ async fn join_shutdown<Hdl: 'static + Proxyable>(
 }
 
 async fn drain<Hdl: 'static + Proxyable>(
-    proxy: Rc<Proxy<Hdl>>,
+    proxy: Arc<Proxy<Hdl>>,
     mut drain_stream: StreamReader<Hdl::Message>,
 ) -> Result<(), Error> {
+    let debug_id = drain_stream.debug_id();
     loop {
         let frame = drain_stream.next().await?;
-        log::trace!("[PROXY {:?}] drain gets {:?}", proxy.hdl().hdl(), frame);
+        log::trace!("[PROXY {:?} {:?}] drain gets {:?}", proxy.hdl().hdl(), debug_id, frame);
         match frame {
             Frame::Data(message) => proxy.write_to_handle(message).await?,
             Frame::EndTransfer => break,
@@ -256,27 +286,49 @@ async fn drain<Hdl: 'static + Proxyable>(
 }
 
 async fn stream_to_handle<Hdl: 'static + Proxyable>(
-    proxy: Rc<Proxy<Hdl>>,
+    proxy: Arc<Proxy<Hdl>>,
     mut initiate_transfer: ProxyTransferInitiationReceiver,
     mut stream: StreamReader<Hdl::Message>,
     finish_proxy_loop: FinishProxyLoopSender<Hdl>,
 ) -> Result<(), Error> {
+    let debug_id = stream.debug_id();
     let removed_from_proxy_table = loop {
-        let frame = select! {
-            x = stream.next().fuse() => x,
-            x = initiate_transfer => break x,
+        let frame = match futures::future::select(&mut initiate_transfer, stream.next()).await {
+            Either::Left((removed_from_proxy_table, fut)) => {
+                // Note: StreamReader guarantees it's safe to drop a partial read without
+                // losing data.
+                log::trace!(
+                    "[PROXY {:?} {:?}] removed from proxy table {:?}; fut={:?}",
+                    proxy.hdl().hdl(),
+                    debug_id,
+                    removed_from_proxy_table,
+                    fut
+                );
+                break removed_from_proxy_table;
+            }
+            Either::Right((frame, _)) => frame.context("stream.next()")?,
         };
+        log::trace!("[PROXY {:?} {:?}] receive frame {:?}", proxy.hdl().hdl(), debug_id, frame);
         match frame {
-            Ok(Frame::Data(message)) => {
+            Frame::Data(message) => {
                 if let Err(e) = proxy.write_to_handle(message).await {
                     let _ = finish_proxy_loop.and_then_shutdown(Err(e), stream);
                     match e {
-                        zx_status::Status::PEER_CLOSED => return Ok(()),
-                        _ => return Err(e.into()),
+                        zx_status::Status::PEER_CLOSED => {
+                            log::trace!(
+                                "[PROXY {:?} {:?}] peer closed",
+                                proxy.hdl().hdl(),
+                                debug_id
+                            );
+                            return Ok(());
+                        }
+                        _ => return Err(e).context("write_to_handle"),
                     }
+                } else {
+                    log::trace!("[PROXY {:?} {:?}] wrote to handle", proxy.hdl().hdl(), debug_id);
                 }
             }
-            Ok(Frame::BeginTransfer(new_destination_node, transfer_key)) => {
+            Frame::BeginTransfer(new_destination_node, transfer_key) => {
                 if let Err(e) = finish_proxy_loop.and_then_follow(
                     initiate_transfer,
                     new_destination_node,
@@ -287,18 +339,17 @@ async fn stream_to_handle<Hdl: 'static + Proxyable>(
                 }
                 return Ok(());
             }
-            Ok(Frame::EndTransfer) => bail!("Received EndTransfer on a regular stream"),
-            Ok(Frame::AckTransfer) => bail!("Received AckTransfer before sending a BeginTransfer"),
-            Ok(Frame::Hello) => bail!("Hello frame received after stream established"),
-            Ok(Frame::Shutdown(result)) => {
+            Frame::EndTransfer => bail!("Received EndTransfer on a regular stream"),
+            Frame::AckTransfer => bail!("Received AckTransfer before sending a BeginTransfer"),
+            Frame::Hello => bail!("Hello frame received after stream established"),
+            Frame::Shutdown(result) => {
                 let _ = finish_proxy_loop.and_then_shutdown(result, stream);
                 return result.context("Remote shutdown");
             }
-            Err(e) => panic!("{:?}", e),
         }
     };
     match removed_from_proxy_table {
-        Err(e) => panic!(e),
+        Err(e) => Err(e.into()),
         Ok(RemoveFromProxyTable::Dropped) => unreachable!(),
         Ok(RemoveFromProxyTable::InitiateTransfer {
             paired_handle,

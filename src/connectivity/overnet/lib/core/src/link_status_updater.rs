@@ -3,71 +3,91 @@
 // found in the LICENSE file.
 
 use crate::{
-    future_help::{log_errors, Observable},
+    future_help::{Observable, Observer, PollMutex},
     labels::{NodeId, NodeLinkId},
     link::LinkStatus,
-    runtime::spawn,
+    runtime::{wait_for, Task},
 };
-use anyhow::{bail, format_err};
-use futures::{prelude::*, select, stream::SelectAll};
-use std::{collections::HashMap, pin::Pin, rc::Rc, time::Duration};
+use anyhow::Error;
+use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    task::{Poll, Waker},
+    time::Duration,
+};
 
-pub type StatusChangeStream = Pin<Box<dyn Stream<Item = (NodeLinkId, NodeId, Option<Duration>)>>>;
-pub type LinkStatePublisher = futures::channel::mpsc::Sender<StatusChangeStream>;
-type LinkStateReceiver = futures::channel::mpsc::Receiver<StatusChangeStream>;
+pub type LinkStatePublisher =
+    futures::channel::mpsc::Sender<(NodeLinkId, NodeId, Observer<Option<Duration>>)>;
+pub type LinkStateReceiver =
+    futures::channel::mpsc::Receiver<(NodeLinkId, NodeId, Observer<Option<Duration>>)>;
 
-pub fn spawn_link_status_updater(
-    observable: Rc<Observable<Vec<LinkStatus>>>,
+pub async fn run_link_status_updater(
+    my_node_id: NodeId,
+    observable: Arc<Observable<Vec<LinkStatus>>>,
     mut receiver: LinkStateReceiver,
-) {
-    let mut link_status = HashMap::new();
-    spawn(log_errors(
-        async move {
-            let mut select_all = SelectAll::new();
-            loop {
-                enum Action {
-                    Publish(Option<(NodeLinkId, NodeId, Option<Duration>)>),
-                    Register(Option<StatusChangeStream>),
-                };
-                let action = select! {
-                    x = select_all.next().fuse() => Action::Publish(x),
-                    x = receiver.next().fuse() => Action::Register(x),
-                };
-                match action {
-                    Action::Publish(Some((node_link_id, node_id, duration))) => {
-                        if let Some(duration) = duration {
-                            link_status.insert(node_link_id, (node_id, duration));
-                        } else {
-                            link_status.remove(&node_link_id);
+) -> Result<(), Error> {
+    struct RecvState {
+        incoming: Vec<(NodeLinkId, NodeId, Observer<Option<Duration>>)>,
+        waker: Option<Waker>,
+    }
+    let recv_state = Arc::new(Mutex::new(RecvState { incoming: Vec::new(), waker: None }));
+    let publisher_recv_state = recv_state.clone();
+    let _publisher = Task::spawn(async move {
+        let mut poll_mutex = PollMutex::new(&publisher_recv_state);
+        let mut link_status = HashMap::<NodeLinkId, (NodeId, Duration)>::new();
+        loop {
+            poll_fn(|ctx| {
+                let mut updated = false;
+                let mut recv_state = ready!(poll_mutex.poll(ctx));
+                let mut i = 0;
+                while i != recv_state.incoming.len() {
+                    let (node_link_id, node_id, stream) = &mut recv_state.incoming[i];
+                    loop {
+                        match stream.poll_next_unpin(ctx) {
+                            Poll::Pending => {
+                                i += 1;
+                                break;
+                            }
+                            Poll::Ready(Some(Some(duration))) => {
+                                updated = true;
+                                link_status.insert(*node_link_id, (*node_id, duration));
+                            }
+                            Poll::Ready(Some(None)) => (),
+                            Poll::Ready(None) => {
+                                updated = true;
+                                link_status.remove(node_link_id);
+                                recv_state.incoming.remove(i);
+                                break;
+                            }
                         }
-                        // TODO: batch these every few hundred milliseconds
-                        observable.push(
-                            link_status
-                                .iter()
-                                .map(|(node_link_id, (node_id, round_trip_time))| LinkStatus {
-                                    to: *node_id,
-                                    local_id: *node_link_id,
-                                    round_trip_time: *round_trip_time,
-                                })
-                                .collect(),
-                        );
                     }
-                    Action::Publish(None) => {
-                        // Wait for new links
-                        select_all.push(
-                            receiver
-                                .next()
-                                .await
-                                .ok_or_else(|| format_err!("Registration channel is gone"))?,
-                        );
-                    }
-                    Action::Register(Some(s)) => {
-                        select_all.push(s);
-                    }
-                    Action::Register(None) => bail!("Registration channel is gone"),
                 }
-            }
-        },
-        "Failed propagating link status",
-    ));
+                if updated {
+                    Poll::Ready(())
+                } else {
+                    recv_state.waker = Some(ctx.waker().clone());
+                    Poll::Pending
+                }
+            })
+            .await;
+            let new_status: Vec<_> = link_status
+                .iter()
+                .map(|(node_link_id, (node_id, round_trip_time))| LinkStatus {
+                    to: *node_id,
+                    local_id: *node_link_id,
+                    round_trip_time: *round_trip_time,
+                })
+                .collect();
+            log::trace!("[{:?}] new status is {:?}", my_node_id, new_status);
+            observable.push(new_status).await;
+            wait_for(Duration::from_millis(300)).await;
+        }
+    });
+    while let Some(incoming) = receiver.next().await {
+        let mut recv_state = recv_state.lock().await;
+        recv_state.incoming.push(incoming);
+        recv_state.waker.take().map(|w| w.wake());
+    }
+    Ok(())
 }

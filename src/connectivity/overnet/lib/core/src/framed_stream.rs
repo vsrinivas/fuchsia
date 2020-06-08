@@ -5,11 +5,18 @@
 //! Framing and deframing datagrams onto QUIC streams
 
 use crate::{
-    async_quic::{AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, StreamProperties},
+    async_quic::{
+        AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, ReadExact, StreamProperties,
+    },
     stat_counter::StatCounter,
 };
-use anyhow::{bail, Error};
-use std::convert::TryInto;
+use anyhow::{format_err, Error};
+use futures::{prelude::*, ready};
+use std::{
+    convert::TryInto,
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 /// The type of frame that can be received on a QUIC stream
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,6 +36,7 @@ struct FrameHeader {
     length: usize,
 }
 
+/// Length of the header for a frame.
 const FRAME_HEADER_LENGTH: usize = 8;
 
 impl FrameHeader {
@@ -95,8 +103,8 @@ impl From<AsyncQuicStreamWriter> for FramedStreamWriter {
 }
 
 impl FramedStreamWriter {
-    pub(crate) fn abandon(&mut self) {
-        self.quic.abandon()
+    pub(crate) async fn abandon(&mut self) {
+        self.quic.abandon().await
     }
 
     pub(crate) async fn send(
@@ -108,7 +116,7 @@ impl FramedStreamWriter {
     ) -> Result<(), Error> {
         let r = self.send_inner(frame_type, bytes, fin, message_stats).await;
         if r.is_err() {
-            self.abandon();
+            self.abandon().await;
         }
         r
     }
@@ -147,42 +155,99 @@ impl StreamProperties for FramedStreamWriter {
 pub(crate) struct FramedStreamReader {
     /// The underlying QUIC stream
     quic: AsyncQuicStreamReader,
+    /// Current read state
+    read_state: ReadState,
+    /// Scratch space for reading the frame header
+    hdr: [u8; FRAME_HEADER_LENGTH],
+    /// Scratch space for reading the frame payload
+    payload: Vec<u8>,
 }
 
 impl From<AsyncQuicStreamReader> for FramedStreamReader {
     fn from(quic: AsyncQuicStreamReader) -> Self {
-        Self { quic }
+        Self {
+            quic,
+            read_state: ReadState::Initial,
+            hdr: [0u8; FRAME_HEADER_LENGTH],
+            payload: Vec::new(),
+        }
     }
 }
 
 impl FramedStreamReader {
-    pub(crate) fn abandon(&mut self) {
-        self.quic.abandon()
+    pub(crate) async fn abandon(&mut self) {
+        self.quic.abandon().await
     }
 
-    pub(crate) async fn next(&mut self) -> Result<(FrameType, Vec<u8>, bool), Error> {
-        let r = self.next_inner().await;
-        if r.is_err() {
-            self.abandon();
-        }
-        r
-    }
-
-    async fn next_inner(&mut self) -> Result<(FrameType, Vec<u8>, bool), Error> {
-        let mut hdr = [0u8; FRAME_HEADER_LENGTH];
-        let fin = self.quic.read_exact(&mut hdr).await?;
-        let hdr = FrameHeader::from_bytes(&hdr)?;
-        log::trace!("read header: {:?}", hdr);
-        if hdr.length == 0 {
-            Ok((hdr.frame_type, Vec::new(), fin))
-        } else {
-            if fin {
-                bail!("Unexpected end of stream");
+    pub(crate) fn next<'b>(&'b mut self) -> ReadNextFrame<'b> {
+        let (read, payload) = match self.read_state {
+            ReadState::Initial => {
+                self.payload.clear();
+                (self.quic.read_exact(&mut self.hdr), Some(&mut self.payload))
             }
-            let mut backing = vec![0; hdr.length];
-            let fin = self.quic.read_exact(&mut backing).await?;
-            Ok((hdr.frame_type, backing, fin))
+            ReadState::GotHeader(hdr) => {
+                assert_eq!(self.payload.len(), hdr.length);
+                (self.quic.read_exact(&mut self.payload), None)
+            }
+        };
+        ReadNextFrame { read, payload, read_state: &mut self.read_state }
+    }
+}
+
+#[derive(Debug)]
+enum ReadState {
+    Initial,
+    GotHeader(FrameHeader),
+}
+
+#[derive(Debug)]
+pub(crate) struct ReadNextFrame<'b> {
+    read: ReadExact<'b>,
+    read_state: &'b mut ReadState,
+    payload: Option<&'b mut Vec<u8>>,
+}
+
+impl<'b> ReadNextFrame<'b> {
+    #[allow(dead_code)]
+    pub(crate) fn debug_id(&self) -> impl std::fmt::Debug {
+        self.read.debug_id()
+    }
+
+    fn poll_inner(
+        &mut self,
+        ctx: &mut Context<'_>,
+    ) -> Poll<Result<(FrameType, Vec<u8>, bool), Error>> {
+        loop {
+            let fin = ready!(self.read.poll_unpin(ctx))?;
+            match self.read_state {
+                ReadState::Initial => {
+                    let hdr = FrameHeader::from_bytes(self.read.read_buf_mut().as_mut_slice())?;
+                    if hdr.length == 0 {
+                        return Poll::Ready(Ok((hdr.frame_type, Vec::new(), fin)));
+                    }
+                    if fin {
+                        return Poll::Ready(Err(format_err!("Unexpected end of stream")));
+                    }
+                    let payload = self.payload.take().unwrap();
+                    *payload = vec![0u8; hdr.length];
+                    self.read.rearm(payload);
+                    *self.read_state = ReadState::GotHeader(hdr);
+                }
+                ReadState::GotHeader(hdr) => {
+                    let out =
+                        Poll::Ready(Ok((hdr.frame_type, self.read.read_buf_mut().take_vec(), fin)));
+                    *self.read_state = ReadState::Initial;
+                    return out;
+                }
+            }
         }
+    }
+}
+
+impl<'b> Future for ReadNextFrame<'b> {
+    type Output = Result<(FrameType, Vec<u8>, bool), Error>;
+    fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
+        Pin::into_inner(self).poll_inner(ctx)
     }
 }
 

@@ -10,7 +10,7 @@ use fidl_fuchsia_overnet_protocol::SocketType;
 pub(crate) type HandleKey = fuchsia_zircon::Koid;
 
 #[cfg(not(target_os = "fuchsia"))]
-pub(crate) type HandleKey = u32;
+pub(crate) type HandleKey = u64;
 
 /// When sending a datagram on a channel, contains information needed to establish streams
 /// for any handles being sent.
@@ -37,8 +37,8 @@ pub(crate) fn handle_info(hdl: HandleRef<'_>) -> Result<HandleInfo, Error> {
     };
     Ok(HandleInfo {
         handle_type,
-        this_handle_key: hdl.raw_handle(),
-        pair_handle_key: hdl.related().raw_handle(),
+        this_handle_key: hdl.emulated_koid(),
+        pair_handle_key: hdl.related().emulated_koid(),
     })
 }
 

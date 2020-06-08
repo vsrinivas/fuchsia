@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::LoggingFixture;
 use fidl::HandleBased;
 use fuchsia_zircon_status as zx_status;
 
@@ -22,7 +23,7 @@ pub enum CreateHandlePurpose {
     PayloadChannel,
 }
 
-pub trait Fixture {
+pub trait Fixture: LoggingFixture {
     fn create_handles(&self, purpose: CreateHandlePurpose) -> (fidl::Channel, fidl::Channel);
 }
 
@@ -33,16 +34,17 @@ enum AfterSend {
 }
 
 fn send_message(
+    fixture: &mut impl LoggingFixture,
     channels: (fidl::Channel, fidl::Channel),
     after_send: AfterSend,
     mut out: Vec<(&[u8], &mut Vec<fidl::Handle>)>,
 ) {
     let num_handles_in: Vec<_> = out.iter().map(|(_, handles)| handles.len()).collect();
     for (out_bytes, handles) in out.iter_mut() {
-        println!(
+        fixture.log(&format!(
             "#    send message from {:?} to {:?}: {:?}, {:?}",
             channels.0, channels.1, out_bytes, handles
-        );
+        ));
         assert_eq!(channels.0.write(out_bytes, *handles), Ok(()));
     }
     match after_send {
@@ -61,7 +63,7 @@ fn send_message(
                     return;
                 }
                 Err(zx_status::Status::SHOULD_WAIT) => {
-                    std::thread::sleep(std::time::Duration::from_millis(10));
+                    std::thread::sleep(std::time::Duration::from_millis(100));
                     continue;
                 }
                 Err(x) => panic!("Unexpected error {:?}", x),
@@ -71,52 +73,42 @@ fn send_message(
 }
 
 fn send_channel(
+    fixture: &mut impl LoggingFixture,
     first: (fidl::Channel, fidl::Channel),
     second: (fidl::Channel, fidl::Channel),
     after_send_first: AfterSend,
     after_send_second: AfterSend,
 ) {
     let mut second_b = vec![second.1.into_handle()];
-    send_message(first, after_send_first, vec![(&[], &mut second_b)]);
+    send_message(fixture, first, after_send_first, vec![(&[], &mut second_b)]);
     send_message(
+        fixture,
         (second.0, fidl::Channel::from_handle(second_b.into_iter().next().unwrap())),
         after_send_second,
         vec![(&[100, 101, 102, 103, 104], &mut vec![])],
     );
 }
 
-pub fn run(fixture: impl Fixture) {
-    println!("# send message a->b");
-    send_message(
-        fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel),
-        AfterSend::RemainOpen,
-        vec![(&[1, 2, 3], &mut vec![])],
-    );
-    println!("# send message b->a");
-    send_message(
-        reverse(fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel)),
-        AfterSend::RemainOpen,
-        vec![(&[7, 8, 9], &mut vec![])],
-    );
+pub fn run(mut fixture: impl Fixture) {
+    fixture.log(&format!("# send message a->b"));
+    let channels = fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel);
+    send_message(&mut fixture, channels, AfterSend::RemainOpen, vec![(&[1, 2, 3], &mut vec![])]);
+    fixture.log(&format!("# send message b->a"));
+    let channels = reverse(fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel));
+    send_message(&mut fixture, channels, AfterSend::RemainOpen, vec![(&[7, 8, 9], &mut vec![])]);
 
-    println!("# send message then close a->b");
-    send_message(
-        fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel),
-        AfterSend::CloseSender,
-        vec![(&[1, 2, 3], &mut vec![])],
-    );
-    println!("# send message then close b->a");
-    send_message(
-        reverse(fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel)),
-        AfterSend::CloseSender,
-        vec![(&[7, 8, 9], &mut vec![])],
-    );
+    fixture.log(&format!("# send message then close a->b"));
+    let channels = fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel);
+    send_message(&mut fixture, channels, AfterSend::CloseSender, vec![(&[1, 2, 3], &mut vec![])]);
+    fixture.log(&format!("# send message then close b->a"));
+    let channels = reverse(fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel));
+    send_message(&mut fixture, channels, AfterSend::CloseSender, vec![(&[7, 8, 9], &mut vec![])]);
 
     for reverse_ab in [false, true].iter() {
         for reverse_cd in [false, true].iter() {
             for after_send_ab in [AfterSend::RemainOpen, AfterSend::CloseSender].iter() {
                 for after_send_cd in [AfterSend::RemainOpen, AfterSend::CloseSender].iter() {
-                    println!(
+                    fixture.log(&format!(
                         "# send channel {}{}; {}{}",
                         match after_send_ab {
                             AfterSend::RemainOpen => "",
@@ -134,16 +126,13 @@ pub fn run(fixture: impl Fixture) {
                             false => "c->d",
                             true => "d->c",
                         }
-                    );
+                    ));
+                    let ab = fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel);
+                    let cd = fixture.create_handles(CreateHandlePurpose::PayloadChannel);
                     send_channel(
-                        maybe_reverse(
-                            *reverse_ab,
-                            fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel),
-                        ),
-                        maybe_reverse(
-                            *reverse_cd,
-                            fixture.create_handles(CreateHandlePurpose::PayloadChannel),
-                        ),
+                        &mut fixture,
+                        maybe_reverse(*reverse_ab, ab),
+                        maybe_reverse(*reverse_cd, cd),
                         *after_send_ab,
                         *after_send_cd,
                     );
@@ -153,8 +142,10 @@ pub fn run(fixture: impl Fixture) {
     }
 
     // Verify a very large send (just bytes to simplify the test for now)
+    let channels = fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel);
     send_message(
-        fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel),
+        &mut fixture,
+        channels,
         AfterSend::CloseSender,
         vec![
             (&[0], &mut vec![]),
@@ -422,6 +413,12 @@ struct FidlFixture;
 impl Fixture for FidlFixture {
     fn create_handles(&self, _: CreateHandlePurpose) -> (fidl::Channel, fidl::Channel) {
         fidl::Channel::create().unwrap()
+    }
+}
+
+impl LoggingFixture for FidlFixture {
+    fn log(&mut self, msg: &str) {
+        println!("{}", msg);
     }
 }
 

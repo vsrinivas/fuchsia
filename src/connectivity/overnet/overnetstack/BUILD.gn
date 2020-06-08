@@ -53,6 +53,11 @@ package("overnetstack") {
       path = rebase_path("//third_party/rust-mirrors/quiche/examples/cert.key")
       dest = "cert.key"
     },
+    {
+      path =
+          rebase_path("//third_party/rust-mirrors/quiche/examples/rootca.crt")
+      dest = "root.crt"
+    },
   ]
 }
 

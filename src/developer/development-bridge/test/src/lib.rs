@@ -210,19 +210,19 @@ mod test {
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
         hoist::spawn(async move {
-            while let Ok(req) = stream.try_next().await {
+            while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    Some(RemoteControlRequest::LaunchSuite {
+                    RemoteControlRequest::LaunchSuite {
                         test_url: _,
                         suite,
                         controller: _,
                         responder,
-                    }) => {
+                    } => {
                         let suite_request_stream = suite.into_stream().unwrap();
                         spawn_fake_suite_server(suite_request_stream, num_tests);
                         let _ = responder.send(&mut Ok(()));
                     }
-                    _ => assert!(false),
+                    _ => panic!("Unexpected request {:?}", req),
                 }
             }
         });
@@ -232,15 +232,15 @@ mod test {
 
     fn spawn_fake_suite_server(mut stream: SuiteRequestStream, num_tests: usize) {
         hoist::spawn(async move {
-            while let Ok(req) = stream.try_next().await {
+            while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    Some(SuiteRequest::GetTests { iterator, control_handle: _ }) => {
+                    SuiteRequest::GetTests { iterator, control_handle: _ } => {
                         let values: Vec<String> =
                             (0..num_tests).map(|i| format!("Test {}", i)).collect();
                         let iterator_request_stream = iterator.into_stream().unwrap();
                         spawn_fake_iterator_server(values, iterator_request_stream);
                     }
-                    Some(SuiteRequest::Run { mut tests, options: _, listener, .. }) => {
+                    SuiteRequest::Run { mut tests, options: _, listener, .. } => {
                         let listener = listener
                             .into_proxy()
                             .context("Can't convert listener into proxy")
@@ -268,7 +268,6 @@ mod test {
                         });
                         listener.on_finished().context("Cannot send on_finished event").unwrap();
                     }
-                    _ => assert!(false),
                 }
             }
         });

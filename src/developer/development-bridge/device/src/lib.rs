@@ -108,13 +108,9 @@ mod test {
         let ptr_clone = state_ptr.clone();
 
         hoist::spawn(async move {
-            while let Ok(req) = stream.try_next().await {
+            while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    Some(RemoteControlRequest::Connect {
-                        selector: _,
-                        service_chan,
-                        responder,
-                    }) => {
+                    RemoteControlRequest::Connect { selector: _, service_chan, responder } => {
                         setup_fake_admin_service(
                             AdminRequestStream::from_channel(
                                 AsyncChannel::from_channel(service_chan).unwrap(),

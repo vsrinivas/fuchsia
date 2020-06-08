@@ -2,29 +2,57 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::future_help::{log_errors, Observable};
+use crate::future_help::{log_errors, LockInner, PollMutex};
 use crate::labels::Endpoint;
-use crate::link::Link as InsecureLink;
-use crate::runtime::{maybe_wait_until, spawn};
-use anyhow::{format_err, Context as _, Error};
-use futures::future::poll_fn;
-use futures::prelude::*;
-use futures::select;
+use crate::link::{LinkReceiver, LinkSender};
+use crate::runtime::{maybe_wait_until, Task};
+use crate::security_context::quiche_config_from_security_context;
+use anyhow::Error;
+use futures::future::{poll_fn, Either};
+use futures::lock::{Mutex, MutexGuard, MutexLockFuture};
+use futures::ready;
 use rand::Rng;
-use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::pin::Pin;
-use std::rc::{Rc, Weak};
+use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
 use std::time::{Duration, Instant};
 
 const MAX_FRAME_SIZE: usize = 4096;
 
-struct Quic {
+// Shared state for link. Public to statisfy LockInner, but should not expose any fields nor
+// methods -- this is really a private type.
+pub(crate) struct Quic {
     connection: Pin<Box<quiche::Connection>>,
     waiting_for_send: Option<Waker>,
     waiting_for_read: Option<Waker>,
-    timeout: Observable<Option<Instant>>,
+    new_timeout: Option<Waker>,
+    waiting_for_established: Option<Waker>,
+    timeout: Option<Instant>,
+}
+
+impl std::fmt::Debug for Quic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.connection.trace_id())?;
+        f.write_str("|")?;
+        if self.waiting_for_send.is_some() {
+            f.write_str("s")?;
+        }
+        if self.waiting_for_read.is_some() {
+            f.write_str("r")?;
+        }
+        if self.new_timeout.is_some() {
+            f.write_str("t")?;
+        }
+        if self.waiting_for_established.is_some() {
+            f.write_str("e")?;
+        }
+        if let Some(t) = self.timeout {
+            f.write_str("|")?;
+            t.fmt(f)?;
+        }
+        Ok(())
+    }
 }
 
 impl Quic {
@@ -38,8 +66,12 @@ impl Quic {
         Poll::Pending
     }
 
-    fn wakeup(&mut self) {
-        self.waiting_for_send.take().map(|w| w.wake());
+    fn wait_for_established<R>(&mut self, ctx: &mut Context<'_>) -> Poll<R> {
+        self.waiting_for_established = Some(ctx.waker().clone());
+        Poll::Pending
+    }
+
+    fn wakeup_read(&mut self) {
         self.waiting_for_read.take().map(|w| w.wake());
     }
 
@@ -47,162 +79,200 @@ impl Quic {
         self.waiting_for_send.take().map(|w| w.wake());
     }
 
+    fn wakeup_established(&mut self) {
+        self.waiting_for_established.take().map(|w| w.wake());
+    }
+
+    fn maybe_wakeup_established(&mut self) {
+        if self.connection.is_established() {
+            self.wakeup_established();
+        }
+    }
+
+    fn wait_for_new_timeout(
+        &mut self,
+        ctx: &mut Context<'_>,
+        last_seen: Option<Instant>,
+    ) -> Poll<Option<Instant>> {
+        if last_seen == self.timeout {
+            self.new_timeout = Some(ctx.waker().clone());
+            Poll::Pending
+        } else {
+            Poll::Ready(self.timeout)
+        }
+    }
+
     fn update_timeout(&mut self) {
         // TODO: the max(d, 1ms) below is a hedge against unreasonable values coming out of quiche.
         // In particular, at least one version has been observed to produce 0 length durations,
         // which jams us on some platforms/executors into a spin loop, freezing out other activity.
-        self.timeout.push(
-            self.connection
-                .timeout()
-                .map(|d| Instant::now() + std::cmp::max(d, Duration::from_millis(1))),
-        );
+        let new_timeout =
+            self.connection.timeout().map(|d| std::cmp::max(d, Duration::from_millis(1)));
+        log::trace!("new timeout: {:?}", new_timeout);
+        let new_timeout = new_timeout.map(|d| Instant::now() + d);
+        if new_timeout != self.timeout {
+            self.timeout = new_timeout;
+            self.new_timeout.take().map(|w| w.wake());
+        }
     }
 }
 
-/// A link secured by DTLS.
-pub struct Link {
-    link: Rc<InsecureLink>,
-    quic: RefCell<Quic>,
-    _key: Box<dyn AsRef<std::path::Path>>,
-    _cert: Box<dyn AsRef<std::path::Path>>,
+/// Send half for QUIC links
+pub struct QuicSender {
+    quic: Arc<Mutex<Quic>>,
 }
 
-impl Link {
-    /// Create a quic link.
-    pub fn new(
-        link: Rc<InsecureLink>,
-        endpoint: Endpoint,
-        cert: Box<dyn AsRef<std::path::Path>>,
-        key: Box<dyn AsRef<std::path::Path>>,
-    ) -> Result<Rc<Self>, Error> {
-        let scid: Vec<u8> = rand::thread_rng()
-            .sample_iter(&rand::distributions::Standard)
-            .take(quiche::MAX_CONN_ID_LEN)
-            .collect();
-        let mut config = quiche::Config::new(quiche::PROTOCOL_VERSION)?;
-        config.set_application_protos(b"\x10overnet.link/0.1")?;
-        config.set_initial_max_data(10_000_000);
-        config.set_initial_max_stream_data_bidi_local(0);
-        config.set_initial_max_stream_data_bidi_remote(0);
-        config.set_initial_max_stream_data_uni(1_000_000);
-        config.set_initial_max_streams_bidi(0);
-        config.set_initial_max_streams_uni(100);
-        let cert_file =
-            cert.as_ref().as_ref().to_str().ok_or_else(|| format_err!("Failed to load cert"))?;
-        let key_file =
-            key.as_ref().as_ref().to_str().ok_or_else(|| format_err!("Failed to load key"))?;
-        config
-            .load_cert_chain_from_pem_file(cert_file)
-            .context(format!("Loading server certificate '{}'", cert_file))?;
-        config
-            .load_priv_key_from_pem_file(key_file)
-            .context(format!("Loading server private key '{}'", key_file))?;
-        config.verify_peer(false);
+/// Receive half for QUIC links
+pub struct QuicReceiver {
+    quic: Arc<Mutex<Quic>>,
+    _task: Task,
+}
 
-        let link = Rc::new(Self {
-            link,
-            quic: RefCell::new(Quic {
-                connection: match endpoint {
-                    Endpoint::Client => quiche::connect(None, &scid, &mut config)?,
-                    Endpoint::Server => quiche::accept(&scid, None, &mut config)?,
-                },
-                waiting_for_read: None,
-                waiting_for_send: None,
-                timeout: Observable::new(None),
-            }),
-            _cert: cert,
-            _key: key,
-        });
-
-        spawn(log_errors(run_link(Rc::downgrade(&link), endpoint), "Link failed"));
-
-        Ok(link)
+impl LockInner for QuicSender {
+    type Inner = Quic;
+    fn lock_inner<'a>(&'a self) -> MutexLockFuture<'a, Quic> {
+        self.quic.lock()
     }
+}
 
+/// Create a QUIC link to tunnel an Overnet link through.
+pub async fn new_quic_link(
+    sender: LinkSender,
+    receiver: LinkReceiver,
+    endpoint: Endpoint,
+) -> Result<(QuicSender, QuicReceiver), Error> {
+    let scid: Vec<u8> = rand::thread_rng()
+        .sample_iter(&rand::distributions::Standard)
+        .take(quiche::MAX_CONN_ID_LEN)
+        .collect();
+    let mut config =
+        quiche_config_from_security_context(sender.router().security_context()).await?;
+    config.set_application_protos(b"\x10overnet.link/0.1")?;
+    config.set_initial_max_data(10_000_000);
+    config.set_initial_max_stream_data_bidi_local(0);
+    config.set_initial_max_stream_data_bidi_remote(0);
+    config.set_initial_max_stream_data_uni(1_000_000);
+    config.set_initial_max_streams_bidi(0);
+    config.set_initial_max_streams_uni(100);
+
+    let quic = Arc::new(Mutex::new(Quic {
+        connection: match endpoint {
+            Endpoint::Client => quiche::connect(None, &scid, &mut config)?,
+            Endpoint::Server => quiche::accept(&scid, None, &mut config)?,
+        },
+        waiting_for_read: None,
+        waiting_for_send: None,
+        waiting_for_established: None,
+        timeout: None,
+        new_timeout: None,
+    }));
+
+    Ok((
+        QuicSender { quic: quic.clone() },
+        QuicReceiver {
+            _task: Task::spawn(log_errors(
+                run_link(sender, receiver, quic.clone(), endpoint),
+                "QUIC link failed",
+            )),
+            quic,
+        },
+    ))
+}
+
+impl QuicReceiver {
     /// Report a packet was received.
     /// An error processing a packet does not indicate that the link should be closed.
-    pub fn received_packet(&self, packet: &mut [u8]) -> Result<(), Error> {
-        let mut q = self.quic.borrow_mut();
+    pub async fn received_packet(&self, packet: &mut [u8]) -> Result<(), Error> {
+        let mut q = self.quic.lock().await;
         match q.connection.recv(packet) {
             Ok(_) => (),
             Err(quiche::Error::Done) => (),
             Err(x) => return Err(x.into()),
         }
+        q.maybe_wakeup_established();
         q.update_timeout();
-        q.wakeup();
+        q.wakeup_send();
+        q.wakeup_read();
         Ok(())
     }
+}
 
+impl QuicSender {
     /// Fetch the next frame that should be sent by the link. Returns Ok(None) on link
     /// closure, Ok(Some(packet_length)) on successful read, and an error otherwise.
     pub async fn next_send(&self, frame: &mut [u8]) -> Result<Option<usize>, Error> {
-        poll_fn(|ctx| self.poll_next_send(ctx, frame)).await
+        let mut lock = PollMutex::new(&self.quic);
+        poll_fn(|ctx| self.poll_next_send(ctx, frame, &mut lock)).await
     }
 
     fn poll_next_send(
         &self,
         ctx: &mut Context<'_>,
         frame: &mut [u8],
+        lock: &mut PollMutex<'_, Quic>,
     ) -> Poll<Result<Option<usize>, Error>> {
-        let mut q = self.quic.borrow_mut();
+        let mut q = ready!(lock.poll(ctx));
         match q.connection.send(frame) {
             Ok(n) => {
+                q.maybe_wakeup_established();
                 q.update_timeout();
-                q.wakeup();
+                q.wakeup_read();
                 Poll::Ready(Ok(Some(n)))
             }
             Err(quiche::Error::Done) => q.wait_for_send(ctx),
             Err(e) => Poll::Ready(Err(e.into())),
         }
     }
-
-    fn poll_readable_streams(&self, ctx: &mut Context<'_>) -> Poll<impl Iterator<Item = u64>> {
-        let mut q = self.quic.borrow_mut();
-        let it = q.connection.readable();
-        if it.len() == 0 {
-            q.wait_for_read(ctx)
-        } else {
-            Poll::Ready(it)
-        }
-    }
-
-    async fn readable_streams(&self) -> impl Iterator<Item = u64> {
-        poll_fn(|ctx| self.poll_readable_streams(ctx)).await
-    }
 }
 
-async fn run_link(link: Weak<Link>, endpoint: Endpoint) -> Result<(), Error> {
+async fn run_link(
+    sender: LinkSender,
+    receiver: LinkReceiver,
+    quic: Arc<Mutex<Quic>>,
+    endpoint: Endpoint,
+) -> Result<(), Error> {
     futures::future::try_join3(
-        link_to_quic(link.clone(), endpoint),
-        quic_to_link(link.clone()),
-        check_timers(link),
+        link_to_quic(sender, quic.clone(), endpoint),
+        quic_to_link(receiver, quic.clone()),
+        check_timers(quic),
     )
     .await?;
     Ok(())
 }
 
-async fn link_to_quic(link: Weak<Link>, endpoint: Endpoint) -> Result<(), Error> {
+async fn link_to_quic(
+    link: LinkSender,
+    quic: Arc<Mutex<Quic>>,
+    endpoint: Endpoint,
+) -> Result<(), Error> {
     // QUIC stream id's use the lower two bits to designate the type of stream
     const QUIC_STREAM_SERVER_INITIATED: u64 = 0x01; // otherwise client initiated
     const QUIC_STREAM_UNIDIRECTIONAL: u64 = 0x02; // otherwise bidirectional
     const QUIC_STREAM_NUMBER_INCREMENT: u64 = 4;
 
-    let mut frame = [0u8; MAX_FRAME_SIZE];
     let mut send_id: u64 = match endpoint {
         Endpoint::Client => QUIC_STREAM_UNIDIRECTIONAL,
         Endpoint::Server => QUIC_STREAM_UNIDIRECTIONAL | QUIC_STREAM_SERVER_INITIATED,
     };
+    let mut frame = [0u8; 1400];
+    {
+        let mut poll_mutex = PollMutex::new(&*quic);
+        let poll_established = |ctx: &mut Context<'_>| -> Poll<()> {
+            let mut q = ready!(poll_mutex.poll(ctx));
+            if q.connection.is_established() {
+                Poll::Ready(())
+            } else {
+                q.wait_for_established(ctx)
+            }
+        };
+        poll_fn(poll_established).await;
+    }
     loop {
-        let link = Weak::upgrade(&link).ok_or_else(|| format_err!("Link closed"))?;
-        if let Some(n) = link.link.next_send(&mut frame).await? {
+        if let Some(n) = link.next_send(&mut frame).await? {
             let id = send_id;
             send_id += QUIC_STREAM_NUMBER_INCREMENT;
-            // no more .awaits after this point for the rest of scope - since we have q as
-            // a borrow against the link
-            let mut q = link.quic.borrow_mut();
-            let r = q.connection.stream_send(id, &frame[..n], true);
-            log::trace!("send {} {}b -> {:?}", id, n, r);
-            match r {
+            let mut q = quic.lock().await;
+            match q.connection.stream_send(id, &frame[..n], true) {
                 Ok(sent) if n == sent => (),
                 Ok(sent) => {
                     log::warn!("Dropping packet {} (only sent {} of {} bytes)", id, sent, n);
@@ -215,20 +285,31 @@ async fn link_to_quic(link: Weak<Link>, endpoint: Endpoint) -> Result<(), Error>
             }
             q.wakeup_send();
         } else {
-            break Ok::<(), Error>(());
+            break;
         }
     }
+    Ok(())
 }
 
-async fn quic_to_link(link: Weak<Link>) -> Result<(), Error> {
+async fn quic_to_link(link: LinkReceiver, quic: Arc<Mutex<Quic>>) -> Result<(), Error> {
     let mut incoming: BTreeMap<u64, Vec<u8>> = BTreeMap::new();
     let mut frame = [0u8; MAX_FRAME_SIZE];
+    let mut poll_mutex = PollMutex::new(&*quic);
+    let mut poll_readable_streams =
+        |ctx: &mut Context<'_>| -> Poll<(MutexGuard<'_, Quic>, quiche::StreamIter)> {
+            let mut q = ready!(poll_mutex.poll(ctx));
+            let it = q.connection.readable();
+            if it.len() == 0 {
+                q.wait_for_read(ctx)
+            } else {
+                Poll::Ready((q, it))
+            }
+        };
+
     loop {
-        let link = Weak::upgrade(&link).ok_or_else(|| format_err!("Link closed"))?;
-        for stream in link.readable_streams().await {
-            let r = link.quic.borrow_mut().connection.stream_recv(stream, &mut frame);
-            log::trace!("recv {} -> {:?}", stream, r);
-            match r {
+        let (mut q, readable) = poll_fn(&mut poll_readable_streams).await;
+        for stream in readable {
+            match q.connection.stream_recv(stream, &mut frame) {
                 Err(quiche::Error::Done) => continue,
                 Err(x) => {
                     log::warn!("Error reading link frame: {:?}", x);
@@ -238,17 +319,20 @@ async fn quic_to_link(link: Weak<Link>) -> Result<(), Error> {
                     incoming.entry(stream).or_default().extend_from_slice(&frame[..n]);
                 }
                 Ok((n, true)) => {
-                    match incoming.remove(&stream) {
-                        None => link.link.received_packet(&mut frame[..n]).await?,
+                    let packet_result = match incoming.remove(&stream) {
+                        None => link.received_packet(&mut frame[..n]).await,
                         Some(mut so_far) => {
                             so_far.extend_from_slice(&frame[..n]);
-                            link.link.received_packet(&mut so_far).await?;
+                            link.received_packet(&mut so_far).await
                         }
+                    };
+                    match packet_result {
+                        Ok(()) => (),
+                        Err(e) => log::warn!("Error receiving packet: {:?}", e),
                     }
                     let mut only_new = incoming.split_off(&stream);
                     // `incoming` is now only streams that were before the one received.
                     // We ask quiche to cancel them (as they were received late).
-                    let mut q = link.quic.borrow_mut();
                     for old_stream in incoming.keys() {
                         log::trace!(
                             "Drop old packet {} because {} was received",
@@ -264,38 +348,29 @@ async fn quic_to_link(link: Weak<Link>) -> Result<(), Error> {
     }
 }
 
-async fn check_timers(link: Weak<Link>) -> Result<(), Error> {
-    let mut observer = Weak::upgrade(&link)
-        .ok_or_else(|| format_err!("Link disappeared before running timers"))?
-        .quic
-        .borrow()
-        .timeout
-        .new_observer();
-
-    #[derive(Debug)]
-    enum Action {
-        OnTimeout,
-        UpdateTimeout(Option<Option<Instant>>),
-    }
+async fn check_timers(quic: Arc<Mutex<Quic>>) -> Result<(), Error> {
+    let mut poll_mutex = PollMutex::new(&*quic);
 
     let mut current_timeout = None;
+    let mut timeout_fut = maybe_wait_until(current_timeout);
     loop {
         log::trace!("timeout: {:?}", current_timeout);
-        let action = select! {
-            _ = maybe_wait_until(current_timeout).fuse() => Action::OnTimeout,
-            x = observer.next().fuse() => Action::UpdateTimeout(x),
+        let poll_timeout = |ctx: &mut Context<'_>| -> Poll<Option<Instant>> {
+            ready!(poll_mutex.poll(ctx)).wait_for_new_timeout(ctx, current_timeout)
         };
-        log::trace!("action: {:?}", action);
-        match action {
-            Action::OnTimeout => {
-                let link = Weak::upgrade(&link)
-                    .ok_or_else(|| format_err!("Link disappeared before timeout expired"))?;
-                let mut q = link.quic.borrow_mut();
+        match futures::future::select(poll_fn(poll_timeout), &mut timeout_fut).await {
+            Either::Left((timeout, _)) => {
+                current_timeout = timeout;
+                timeout_fut = maybe_wait_until(current_timeout);
+            }
+            Either::Right(_) => {
+                timeout_fut = maybe_wait_until(None);
+                let mut q = poll_mutex.lock().await;
                 q.connection.on_timeout();
+                q.maybe_wakeup_established();
+                q.wakeup_send();
                 q.update_timeout();
             }
-            Action::UpdateTimeout(None) => return Ok(()),
-            Action::UpdateTimeout(Some(timeout)) => current_timeout = timeout,
         }
     }
 }

@@ -21,6 +21,9 @@ union PeerMessage {
     3: UpdateLinkStatus update_link_status;
     /// Open a transfered stream.
     4: OpenTransfer open_transfer;
+    /// Ping the peer and solicit a response. Used for verifying liveness.
+    /// Value is echoed back in the PeerReply.pong message.
+    5: uint64 ping;
 };
 
 /// Overall connection configuration request
@@ -37,6 +40,8 @@ table ConfigResponse {
 union PeerReply {
     /// Acknowledge an UpdateLinkStatus message
     1: Empty update_link_status_ack;
+    /// Acknowledge a ping message.
+    2: uint64 pong;
 };
 
 struct Empty {

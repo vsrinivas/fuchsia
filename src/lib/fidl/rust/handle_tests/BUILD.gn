@@ -9,6 +9,7 @@ source_set("deps") {
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//third_party/rust_crates:parking_lot",
   ]
 }
 

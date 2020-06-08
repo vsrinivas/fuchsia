@@ -5,111 +5,73 @@
 #![cfg(not(target_os = "fuchsia"))]
 
 use {
-    anyhow::{bail, ensure, Context as _, Error},
-    fidl::endpoints::ClientEnd,
-    fidl_fuchsia_overnet::{Peer, ServiceProviderMarker},
+    anyhow::{bail, ensure, Error},
+    fidl::endpoints::{create_proxy, create_proxy_and_stream},
+    fidl_fuchsia_overnet::{
+        HostOvernetMarker, HostOvernetProxy, HostOvernetRequest, HostOvernetRequestStream,
+        MeshControllerMarker, MeshControllerRequest, ServiceConsumerMarker, ServiceConsumerRequest,
+        ServicePublisherMarker, ServicePublisherRequest,
+    },
     fidl_fuchsia_overnet_protocol::StreamSocketGreeting,
-    fuchsia_zircon_status as zx_status,
     futures::prelude::*,
     overnet_core::{
-        new_deframer, new_framer, wait_until, DeframerWriter, FrameType, FramerReader,
-        LosslessBinary, NodeId, Router, RouterOptions,
+        log_errors, new_deframer, new_framer, wait_for, DeframerWriter, FrameType, FramerReader,
+        LosslessBinary, Router, RouterOptions, SecurityContext, Task,
     },
-    parking_lot::Mutex,
-    std::{rc::Rc, sync::Arc, time::Instant},
-    tokio::{io::AsyncRead, runtime::current_thread},
+    std::{sync::Arc, time::Duration},
 };
 
-pub use fidl_fuchsia_overnet::MeshControllerProxyInterface;
-pub use fidl_fuchsia_overnet::ServiceConsumerProxyInterface;
-pub use fidl_fuchsia_overnet::ServicePublisherProxyInterface;
+pub use fidl_fuchsia_overnet::{
+    MeshControllerProxyInterface, ServiceConsumerProxyInterface, ServicePublisherProxyInterface,
+};
 
 pub const ASCENDD_CLIENT_CONNECTION_STRING: &str = "ASCENDD_CLIENT_CONNECTION_STRING";
 pub const ASCENDD_SERVER_CONNECTION_STRING: &str = "ASCENDD_SERVER_CONNECTION_STRING";
 pub const DEFAULT_ASCENDD_PATH: &str = "/tmp/ascendd";
 
-pub fn run<R>(f: impl Future<Output = R> + 'static) -> R {
+pub fn run<R: Send + 'static>(f: impl Future<Output = R> + Send + 'static) -> R {
     overnet_core::run(f)
+}
+
+pub fn spawn(f: impl Future<Output = ()> + Send + 'static) {
+    Task::spawn(f).detach()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Overnet <-> API bindings
 
-#[derive(Debug)]
-enum OvernetCommand {
-    ListPeers(futures::channel::oneshot::Sender<Vec<Peer>>),
-    RegisterService(String, ClientEnd<ServiceProviderMarker>),
-    ConnectToService(NodeId, String, fidl::Channel),
-    AttachSocketLink(fidl::Socket, fidl_fuchsia_overnet::SocketLinkOptions),
+fn start_overnet() -> Result<HostOvernetProxy, Error> {
+    let (c, s) = create_proxy_and_stream::<HostOvernetMarker>()?;
+    Task::spawn(log_errors(run_overnet(s), "overnet main loop failed")).detach();
+    Ok(c)
 }
-
-struct Overnet {
-    tx: Mutex<futures::channel::mpsc::UnboundedSender<OvernetCommand>>,
-    thread: Option<std::thread::JoinHandle<()>>,
-}
-
-impl Drop for Overnet {
-    fn drop(&mut self) {
-        self.tx.lock().close_channel();
-        self.thread.take().unwrap().join().unwrap();
-    }
-}
-
-impl Overnet {
-    fn new() -> Result<Overnet, Error> {
-        let (tx, rx) = futures::channel::mpsc::unbounded();
-        let rx = Arc::new(Mutex::new(rx));
-        let thread = Some(
-            std::thread::Builder::new()
-                .spawn(move || run_overnet(rx))
-                .context("Spawning overnet thread")?,
-        );
-        let tx = Mutex::new(tx);
-        Ok(Overnet { tx, thread })
-    }
-
-    fn send(&self, cmd: OvernetCommand) {
-        self.tx.lock().unbounded_send(cmd).unwrap();
-    }
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
-struct Time(std::time::Instant);
 
 async fn read_incoming(
-    stream: tokio::io::ReadHalf<tokio::net::UnixStream>,
+    mut stream: &async_std::os::unix::net::UnixStream,
     mut incoming_writer: DeframerWriter<LosslessBinary>,
 ) -> Result<(), Error> {
-    let mut buf = [0u8; 1024];
-    let mut stream = Some(stream);
+    let mut buf = [0u8; 16384];
 
     loop {
-        let rd = tokio::io::read(stream.take().unwrap(), &mut buf[..]);
-        let rd = futures::compat::Compat01As03::new(rd);
-        let (returned_stream, _, n) = rd.await?;
+        let n = stream.read(&mut buf).await?;
         if n == 0 {
             return Ok(());
         }
-        stream = Some(returned_stream);
         incoming_writer.write(&buf[..n]).await?;
     }
 }
 
 async fn write_outgoing(
     mut outgoing_reader: FramerReader<LosslessBinary>,
-    tx_bytes: tokio::io::WriteHalf<tokio::net::UnixStream>,
+    mut stream: &async_std::os::unix::net::UnixStream,
 ) -> Result<(), Error> {
-    let mut tx_bytes = Some(tx_bytes);
     loop {
         let out = outgoing_reader.read().await?;
-        let wr = tokio::io::write_all(tx_bytes.take().unwrap(), out.as_slice());
-        let wr = futures::compat::Compat01As03::new(wr).map_err(|e| -> Error { e.into() });
-        let (t, _) = wr.await?;
-        tx_bytes = Some(t);
+        stream.write_all(&out).await?;
     }
 }
 
-async fn run_ascendd_connection(node: Rc<Router>) -> Result<(), Error> {
+async fn run_ascendd_connection(node: Arc<Router>) -> Result<(), Error> {
     let ascendd_path = std::env::var("ASCENDD").unwrap_or(DEFAULT_ASCENDD_PATH.to_string());
     let mut connection_label = std::env::var("OVERNET_CONNECTION_LABEL").ok();
     if connection_label.is_none() {
@@ -123,16 +85,13 @@ async fn run_ascendd_connection(node: Rc<Router>) -> Result<(), Error> {
 
     log::trace!("Ascendd path: {}", ascendd_path);
     log::trace!("Overnet connection label: {:?}", connection_label);
-    let uds = tokio::net::UnixStream::connect(ascendd_path.clone());
-    let uds = futures::compat::Compat01As03::new(uds);
-    let uds = uds.await.context(format!("Opening uds path: {}", ascendd_path))?;
-    let (rx_bytes, tx_bytes) = uds.split();
+    let uds = async_std::os::unix::net::UnixStream::connect(ascendd_path.clone()).await?;
     let (mut framer, outgoing_reader) = new_framer(LosslessBinary, 4096);
     let (incoming_writer, mut deframer) = new_deframer(LosslessBinary);
 
     let _ = futures::future::try_join3(
-        read_incoming(rx_bytes, incoming_writer),
-        write_outgoing(outgoing_reader, tx_bytes),
+        read_incoming(&uds, incoming_writer),
+        write_outgoing(outgoing_reader, &uds),
         async move {
             // Send first frame
             let mut greeting = StreamSocketGreeting {
@@ -181,9 +140,7 @@ async fn run_ascendd_connection(node: Rc<Router>) -> Result<(), Error> {
                 StreamSocketGreeting { node_id: Some(n), .. } => n.id,
             };
 
-            let link = node.new_link(ascendd_node_id.into()).await?;
-
-            let link_receiver = link.clone();
+            let (link_sender, link_receiver) = node.new_link(ascendd_node_id.into()).await?;
             let _: ((), ()) = futures::future::try_join(
                 async move {
                     loop {
@@ -199,7 +156,7 @@ async fn run_ascendd_connection(node: Rc<Router>) -> Result<(), Error> {
                 },
                 async move {
                     let mut buffer = [0u8; 2048];
-                    while let Some(n) = link.next_send(&mut buffer).await? {
+                    while let Some(n) = link_sender.next_send(&mut buffer).await? {
                         framer.write(FrameType::Overnet, &buffer[..n]).await?;
                     }
                     Ok::<_, Error>(())
@@ -215,194 +172,150 @@ async fn run_ascendd_connection(node: Rc<Router>) -> Result<(), Error> {
 
 /// Retry a future until it succeeds or retries run out.
 async fn retry_with_backoff<E, F>(
-    mut backoff: std::time::Duration,
-    max_backoff: std::time::Duration,
+    mut backoff: Duration,
+    max_backoff: Duration,
     f: impl Fn() -> F,
-) where
+) -> Result<(), Error>
+where
     F: futures::Future<Output = Result<(), E>>,
     E: std::fmt::Debug,
 {
     loop {
         match f().await {
-            Ok(()) => return,
+            Ok(()) => return Ok(()),
             Err(e) => {
                 log::warn!("Operation failed: {:?} -- retrying in {:?}", e, backoff);
-                wait_until(Instant::now() + backoff).await;
+                wait_for(backoff).await;
                 backoff = std::cmp::min(backoff * 2, max_backoff);
             }
         }
     }
 }
 
-async fn run_overnet_inner(
-    rx: Arc<Mutex<futures::channel::mpsc::UnboundedReceiver<OvernetCommand>>>,
+async fn handle_consumer_request(
+    node: Arc<Router>,
+    r: ServiceConsumerRequest,
 ) -> Result<(), Error> {
-    let mut rx = rx.lock();
+    match r {
+        ServiceConsumerRequest::ListPeers { responder } => {
+            let mut peers = node.list_peers().await?;
+            responder.send(&mut peers.iter_mut())?
+        }
+        ServiceConsumerRequest::ConnectToService {
+            node: node_id,
+            service_name,
+            chan,
+            control_handle: _,
+        } => node.connect_to_service(node_id.id.into(), &service_name, chan).await?,
+    }
+    Ok(())
+}
+
+async fn handle_publisher_request(
+    node: Arc<Router>,
+    r: ServicePublisherRequest,
+) -> Result<(), Error> {
+    let ServicePublisherRequest::PublishService { service_name, provider, control_handle: _ } = r;
+    node.register_service(service_name, provider).await
+}
+
+async fn handle_controller_request(
+    node: Arc<Router>,
+    r: MeshControllerRequest,
+) -> Result<(), Error> {
+    let MeshControllerRequest::AttachSocketLink { socket, options, control_handle: _ } = r;
+    node.run_socket_link(socket, options).await
+}
+
+async fn handle_request(node: Arc<Router>, req: HostOvernetRequest) -> Result<(), Error> {
+    match req {
+        HostOvernetRequest::ConnectServiceConsumer { svc, control_handle: _ } => {
+            svc.into_stream()?
+                .map_err(Into::<Error>::into)
+                .try_for_each_concurrent(None, move |r| handle_consumer_request(node.clone(), r))
+                .await?
+        }
+        HostOvernetRequest::ConnectServicePublisher { svc, control_handle: _ } => {
+            svc.into_stream()?
+                .map_err(Into::<Error>::into)
+                .try_for_each_concurrent(None, move |r| handle_publisher_request(node.clone(), r))
+                .await?
+        }
+        HostOvernetRequest::ConnectMeshController { svc, control_handle: _ } => {
+            svc.into_stream()?
+                .map_err(Into::<Error>::into)
+                .try_for_each_concurrent(None, move |r| handle_controller_request(node.clone(), r))
+                .await?
+        }
+    }
+    Ok(())
+}
+
+async fn run_overnet(rx: HostOvernetRequestStream) -> Result<(), Error> {
     let node_id = overnet_core::generate_node_id();
     log::trace!("Hoist node id:  {}", node_id.0);
     let node = Router::new(
         RouterOptions::new()
             .export_diagnostics(fidl_fuchsia_overnet_protocol::Implementation::HoistRustCrate)
-            .set_node_id(node_id)
-            .set_quic_server_key_file(hard_coded_server_key()?)
-            .set_quic_server_cert_file(hard_coded_server_cert()?),
+            .set_node_id(node_id),
+        Box::new(hard_coded_security_context()),
     )?;
 
-    {
-        let node = node.clone();
-        spawn(retry_with_backoff(
-            std::time::Duration::from_millis(100),
-            std::time::Duration::from_secs(3),
-            move || run_ascendd_connection(node.clone()),
-        ));
-    }
-
-    // Run application loop
-    loop {
-        let cmd = rx.next().await;
-        let desc = format!("{:?}", cmd);
-        let r = match cmd {
-            None => return Ok(()),
-            Some(OvernetCommand::ListPeers(sender)) => {
-                node.list_peers(Box::new(|peers| {
-                    let _ = sender.send(peers);
-                }))
-                .await
-            }
-            Some(OvernetCommand::RegisterService(service_name, provider)) => {
-                node.register_service(service_name, provider).await
-            }
-            Some(OvernetCommand::ConnectToService(node_id, service_name, channel)) => {
-                node.connect_to_service(node_id, &service_name, channel).await
-            }
-            Some(OvernetCommand::AttachSocketLink(socket, options)) => {
-                node.attach_socket_link(socket, options)
-            }
-        };
-        if let Err(e) = r {
-            log::warn!("cmd {} failed: {:?}", desc, e);
-        }
-    }
-}
-
-fn run_overnet(rx: Arc<Mutex<futures::channel::mpsc::UnboundedReceiver<OvernetCommand>>>) {
-    current_thread::Runtime::new()
-        .unwrap()
-        .block_on(
-            async move {
-                if let Err(e) = run_overnet_inner(rx).await {
-                    log::warn!("Main loop failed: {}", e);
-                }
-            }
-            .unit_error()
-            .boxed_local()
-            .compat(),
-        )
-        .unwrap();
+    futures::future::try_join(
+        {
+            let node = node.clone();
+            retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), move || {
+                run_ascendd_connection(node.clone())
+            })
+        },
+        // Run application loop
+        rx.map_err(Into::into)
+            .try_for_each_concurrent(None, move |req| handle_request(node.clone(), req)),
+    )
+    .await
+    .map(drop)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // ProxyInterface implementations
 
-struct MeshController(Arc<Overnet>);
-
-impl MeshControllerProxyInterface for MeshController {
-    fn attach_socket_link(
-        &self,
-        socket: fidl::Socket,
-        options: fidl_fuchsia_overnet::SocketLinkOptions,
-    ) -> Result<(), fidl::Error> {
-        self.0.send(OvernetCommand::AttachSocketLink(socket, options));
-        Ok(())
-    }
-}
-
-struct ServicePublisher(Arc<Overnet>);
-
-impl ServicePublisherProxyInterface for ServicePublisher {
-    fn publish_service(
-        &self,
-        service_name: &str,
-        provider: ClientEnd<ServiceProviderMarker>,
-    ) -> Result<(), fidl::Error> {
-        self.0.send(OvernetCommand::RegisterService(service_name.to_string(), provider));
-        Ok(())
-    }
-}
-
-struct ServiceConsumer(Arc<Overnet>);
-
-impl ServiceConsumerProxyInterface for ServiceConsumer {
-    type ListPeersResponseFut = futures::future::MapErr<
-        futures::channel::oneshot::Receiver<Vec<Peer>>,
-        fn(futures::channel::oneshot::Canceled) -> fidl::Error,
-    >;
-
-    fn list_peers(&self) -> Self::ListPeersResponseFut {
-        let (sender, receiver) = futures::channel::oneshot::channel();
-        self.0.send(OvernetCommand::ListPeers(sender));
-        receiver.map_err(|_| fidl::Error::ClientRead(zx_status::Status::PEER_CLOSED))
-    }
-
-    fn connect_to_service(
-        &self,
-        node: &mut fidl_fuchsia_overnet_protocol::NodeId,
-        service_name: &str,
-        chan: fidl::Channel,
-    ) -> Result<(), fidl::Error> {
-        self.0.send(OvernetCommand::ConnectToService(
-            node.id.into(),
-            service_name.to_string(),
-            chan,
-        ));
-        Ok(())
-    }
-}
-
 lazy_static::lazy_static! {
-    static ref OVERNET: Arc<Overnet> = Arc::new(Overnet::new().unwrap());
+    static ref OVERNET: Arc<HostOvernetProxy> = Arc::new(start_overnet().unwrap());
 }
 
 pub fn connect_as_service_consumer() -> Result<impl ServiceConsumerProxyInterface, Error> {
-    Ok(ServiceConsumer(OVERNET.clone()))
+    let (c, s) = create_proxy::<ServiceConsumerMarker>()?;
+    OVERNET.connect_service_consumer(s)?;
+    Ok(c)
 }
 
 pub fn connect_as_service_publisher() -> Result<impl ServicePublisherProxyInterface, Error> {
-    Ok(ServicePublisher(OVERNET.clone()))
+    let (c, s) = create_proxy::<ServicePublisherMarker>()?;
+    OVERNET.connect_service_publisher(s)?;
+    Ok(c)
 }
 
 pub fn connect_as_mesh_controller() -> Result<impl MeshControllerProxyInterface, Error> {
-    Ok(MeshController(OVERNET.clone()))
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// Executor implementation
-
-pub fn spawn<F>(future: F)
-where
-    F: Future<Output = ()> + 'static,
-{
-    current_thread::spawn(future.unit_error().boxed_local().compat());
+    let (c, s) = create_proxy::<MeshControllerMarker>()?;
+    OVERNET.connect_mesh_controller(s)?;
+    Ok(c)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Hacks to hardcode a resource file without resources
 
-fn temp_file_containing(bytes: &[u8]) -> Result<Box<dyn AsRef<std::path::Path>>, Error> {
-    let mut path = tempfile::NamedTempFile::new()?;
-    use std::io::Write;
-    path.write_all(bytes)?;
-    Ok(Box::new(path))
-}
-
-pub fn hard_coded_server_cert() -> Result<Box<dyn AsRef<std::path::Path>>, Error> {
-    temp_file_containing(include_bytes!(
-        "../../../../../../third_party/rust-mirrors/quiche/examples/cert.crt"
-    ))
-}
-
-pub fn hard_coded_server_key() -> Result<Box<dyn AsRef<std::path::Path>>, Error> {
-    temp_file_containing(include_bytes!(
-        "../../../../../../third_party/rust-mirrors/quiche/examples/cert.key"
-    ))
+pub fn hard_coded_security_context() -> impl SecurityContext {
+    return overnet_core::MemoryBuffers {
+        node_cert: include_bytes!(
+            "../../../../../../third_party/rust-mirrors/quiche/examples/cert.crt"
+        ),
+        node_private_key: include_bytes!(
+            "../../../../../../third_party/rust-mirrors/quiche/examples/cert.key"
+        ),
+        root_cert: include_bytes!(
+            "../../../../../../third_party/rust-mirrors/quiche/examples/rootca.crt"
+        ),
+    }
+    .into_security_context()
+    .unwrap();
 }

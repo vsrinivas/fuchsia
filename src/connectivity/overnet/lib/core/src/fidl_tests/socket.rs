@@ -5,15 +5,15 @@
 #![cfg(test)]
 
 use super::{Fixture, Target};
-use fidl_handle_tests::socket;
+use fidl_handle_tests::{socket, LoggingFixture};
 
 struct SockFixture {
     fixture: Fixture,
 }
 
 impl SockFixture {
-    fn new() -> SockFixture {
-        SockFixture { fixture: Fixture::new() }
+    fn new(test_name: &'static str) -> SockFixture {
+        SockFixture { fixture: Fixture::new(test_name) }
     }
 }
 
@@ -24,7 +24,13 @@ impl socket::Fixture for SockFixture {
     }
 }
 
+impl LoggingFixture for SockFixture {
+    fn log(&mut self, msg: &str) {
+        self.fixture.log(msg)
+    }
+}
+
 #[test]
 fn fidl_socket_tests() {
-    socket::run(SockFixture::new())
+    super::run_test(move || socket::run(SockFixture::new("fidl_socket_tests")))
 }

@@ -4,3 +4,7 @@
 
 pub mod channel;
 pub mod socket;
+
+pub trait LoggingFixture: Send {
+    fn log(&mut self, msg: &str);
+}

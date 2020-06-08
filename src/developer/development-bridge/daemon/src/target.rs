@@ -646,9 +646,9 @@ mod test {
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
         hoist::spawn(async move {
-            while let Ok(req) = stream.try_next().await {
+            while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    Some(rcs::RemoteControlRequest::IdentifyHost { responder }) => {
+                    rcs::RemoteControlRequest::IdentifyHost { responder } => {
                         if send_internal_error {
                             let _ = responder
                                 .send(&mut Err(rcs::IdentifyHostError::ListInterfacesFailed))

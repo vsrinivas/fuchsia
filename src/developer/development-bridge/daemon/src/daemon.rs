@@ -352,9 +352,9 @@ mod test {
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
         spawn(async move {
-            while let Ok(req) = stream.try_next().await {
+            while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    Some(RemoteControlRequest::StartComponent { responder, .. }) => {
+                    RemoteControlRequest::StartComponent { responder, .. } => {
                         let _ = responder.send(&mut Ok(())).context("sending ok response");
                     }
                     _ => assert!(false),

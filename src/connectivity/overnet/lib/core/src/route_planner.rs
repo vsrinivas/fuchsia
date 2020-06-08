@@ -3,19 +3,24 @@
 // found in the LICENSE file.
 
 use crate::{
-    future_help::{log_errors, Observer},
+    future_help::{Observer, PollMutex},
     labels::{NodeId, NodeLinkId},
     link::LinkStatus,
     router::Router,
-    runtime::{maybe_wait_until, spawn},
+    runtime::wait_for,
 };
 use anyhow::{bail, format_err, Error};
-use futures::{prelude::*, select};
+use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
 use std::{
     collections::{BTreeMap, BinaryHeap},
-    rc::{Rc, Weak},
-    time::{Duration, Instant},
+    sync::{Arc, Weak},
+    task::{Context, Poll, Waker},
+    time::Duration,
 };
+
+/// Assumed forwarding time through a node.
+/// This is a temporary hack to alleviate some bad route selection.
+const FORWARDING_TIME: Duration = Duration::from_millis(100);
 
 /// Collects all information about a node in one place
 #[derive(Debug)]
@@ -52,28 +57,24 @@ pub struct Link {
 struct NodeTable {
     root_node: NodeId,
     nodes: BTreeMap<NodeId, Node>,
+    version: u64,
+    wake_on_version_change: Option<Waker>,
 }
 
 impl NodeTable {
     /// Create a new node table rooted at `root_node`
     pub fn new(root_node: NodeId) -> NodeTable {
-        NodeTable { root_node, nodes: BTreeMap::new() }
+        NodeTable { root_node, nodes: BTreeMap::new(), version: 0, wake_on_version_change: None }
     }
 
-    /// Convert the node table to a string representing a directed graph for graphviz visualization
-    pub fn digraph_string(&self) -> String {
-        let mut s = "digraph G {\n".to_string();
-        s += &format!("  {} [shape=diamond];\n", self.root_node.0);
-        for (id, node) in self.nodes.iter() {
-            for (link_id, link) in node.links.iter() {
-                s += &format!(
-                    "  {} -> {} [label=\"[{}] rtt={:?}\"];\n",
-                    id.0, link.to.0, link_id.0, link.desc.round_trip_time
-                );
-            }
+    fn poll_new_version(&mut self, ctx: &mut Context<'_>, last_version: &mut u64) -> Poll<()> {
+        if *last_version == self.version {
+            self.wake_on_version_change = Some(ctx.waker().clone());
+            Poll::Pending
+        } else {
+            *last_version = self.version;
+            Poll::Ready(())
         }
-        s += "}\n";
-        s
     }
 
     fn get_or_create_node_mut(&mut self, node_id: NodeId) -> &mut Node {
@@ -109,12 +110,16 @@ impl NodeTable {
         for LinkStatus { to, local_id, round_trip_time } in links.into_iter() {
             self.update_link(from, to, local_id, LinkDescription { round_trip_time })?;
         }
+        self.version += 1;
+        self.wake_on_version_change.take().map(|w| w.wake());
         Ok(())
     }
 
     /// Build a routing table for our node based on current link data
     fn build_routes(&self) -> impl Iterator<Item = (NodeId, NodeLinkId)> {
         let mut todo = BinaryHeap::new();
+
+        log::info!("{:?} BUILD ROUTES: {:?}", self.root_node, self.nodes);
 
         let mut progress = BTreeMap::<NodeId, NodeProgress>::new();
         for (link_id, link) in self.nodes.get(&self.root_node).unwrap().links.iter() {
@@ -123,7 +128,7 @@ impl NodeTable {
             }
             todo.push(link.to);
             let new_progress = NodeProgress {
-                round_trip_time: link.desc.round_trip_time,
+                round_trip_time: link.desc.round_trip_time + 2 * FORWARDING_TIME,
                 outgoing_link: *link_id,
             };
             progress
@@ -146,7 +151,9 @@ impl NodeTable {
                     continue;
                 }
                 let new_progress = NodeProgress {
-                    round_trip_time: progress_from.round_trip_time + link.desc.round_trip_time,
+                    round_trip_time: progress_from.round_trip_time
+                        + link.desc.round_trip_time
+                        + 2 * FORWARDING_TIME,
                     outgoing_link: progress_from.outgoing_link,
                 };
                 progress
@@ -184,87 +191,72 @@ pub(crate) fn routing_update_channel() -> (RemoteRoutingUpdateSender, RemoteRout
     futures::channel::mpsc::channel(1)
 }
 
-pub(crate) fn spawn_route_planner(
-    router: Rc<Router>,
+pub(crate) async fn run_route_planner(
+    router: &Weak<Router>,
     mut remote_updates: RemoteRoutingUpdateReceiver,
     mut local_updates: Observer<Vec<LinkStatus>>,
-) {
-    let mut node_table = NodeTable::new(router.node_id());
-    let router = Rc::downgrade(&router);
-    spawn(log_errors(
+) -> Result<(), Error> {
+    let get_router = move || Weak::upgrade(router).ok_or_else(|| format_err!("router gone"));
+    let node_table = Arc::new(Mutex::new(NodeTable::new(get_router()?.node_id())));
+    let remote_node_table = node_table.clone();
+    let local_node_table = node_table.clone();
+    let update_node_table = node_table;
+    let _: ((), (), ()) = futures::future::try_join3(
         async move {
-            let mut next_route_table_update = None;
-            loop {
-                #[derive(Debug)]
-                enum Action {
-                    ApplyRemote(RemoteRoutingUpdate),
-                    ApplyLocal(Vec<LinkStatus>),
-                    UpdateRoutes,
+            while let Some(RemoteRoutingUpdate { from_node_id, status }) =
+                remote_updates.next().await
+            {
+                let mut node_table = remote_node_table.lock().await;
+                if from_node_id == node_table.root_node {
+                    log::warn!("Attempt to update own node id links as remote");
+                    continue;
                 }
-                let action = select! {
-                    x = remote_updates.next().fuse() => match x {
-                        Some(x) => Action::ApplyRemote(x),
-                        None => return Ok(()),
-                    },
-                    x = local_updates.next().fuse() => match x {
-                        Some(x) => Action::ApplyLocal(x),
-                        None => return Ok(()),
-                    },
-                    _ = maybe_wait_until(next_route_table_update).fuse() => Action::UpdateRoutes
-                };
-                log::trace!("{:?} Routing update: {:?}", node_table.root_node, action);
-                match action {
-                    Action::ApplyRemote(RemoteRoutingUpdate { from_node_id, status }) => {
-                        if from_node_id == node_table.root_node {
-                            log::warn!("Attempt to update own node id links as remote");
-                            continue;
-                        }
-                        if let Err(e) = node_table.update_links(from_node_id, status) {
-                            log::warn!(
-                                "Update remote links from {:?} failed: {:?}",
-                                from_node_id,
-                                e
-                            );
-                            continue;
-                        }
-                        if next_route_table_update.is_none() {
-                            next_route_table_update =
-                                Some(Instant::now() + Duration::from_millis(100));
-                        }
-                    }
-                    Action::ApplyLocal(status) => {
-                        if let Err(e) = node_table.update_links(node_table.root_node, status) {
-                            log::warn!("Update local links failed: {:?}", e);
-                            continue;
-                        }
-                        if next_route_table_update.is_none() {
-                            next_route_table_update =
-                                Some(Instant::now() + Duration::from_millis(100));
-                        }
-                    }
-                    Action::UpdateRoutes => {
-                        log::trace!(
-                            "{:?} Route table: {}",
-                            node_table.root_node,
-                            node_table.digraph_string()
-                        );
-                        next_route_table_update = None;
-                        Weak::upgrade(&router)
-                            .ok_or_else(|| format_err!("Router shut down"))?
-                            .update_routes(node_table.build_routes())
-                            .await?;
-                    }
+                if let Err(e) = node_table.update_links(from_node_id, status) {
+                    log::warn!("Update remote links from {:?} failed: {:?}", from_node_id, e);
+                    continue;
                 }
             }
+            Ok::<_, Error>(())
         },
-        "Failed planning routes",
-    ));
+        async move {
+            while let Some(status) = local_updates.next().await {
+                let mut node_table = local_node_table.lock().await;
+                let root_node = node_table.root_node;
+                if let Err(e) = node_table.update_links(root_node, status) {
+                    log::warn!("Update local links failed: {:?}", e);
+                    continue;
+                }
+            }
+            Ok(())
+        },
+        async move {
+            let mut pm = PollMutex::new(&*update_node_table);
+            let mut current_version = 0;
+            let mut poll_version = move |ctx: &mut Context<'_>| {
+                let mut node_table = ready!(pm.poll(ctx));
+                ready!(node_table.poll_new_version(ctx, &mut current_version));
+                Poll::Ready(node_table)
+            };
+            loop {
+                let node_table = poll_fn(&mut poll_version).await;
+                get_router()?.update_routes(node_table.build_routes(), "new_routes").await?;
+                drop(node_table);
+                wait_for(Duration::from_millis(100)).await;
+            }
+        },
+    )
+    .await?;
+    Ok(())
 }
 
 #[cfg(test)]
 mod test {
 
     use super::*;
+    use arbitrary::{Arbitrary, Unstructured};
+    use rand::Rng;
+    use std::collections::HashMap;
+    use std::time::Instant;
 
     fn remove_item<T: Eq>(value: &T, from: &mut Vec<T>) -> bool {
         let len = from.len();
@@ -346,5 +338,44 @@ mod test {
             ],
             &[(2, 1), (3, 1)]
         ));
+    }
+
+    #[derive(Arbitrary, Debug, Clone, Copy)]
+    struct DoesntFormLoops {
+        a_to_b: u64,
+        b_to_a: u64,
+        a_to_c: u64,
+        c_to_a: u64,
+    }
+
+    fn verify_no_loops(config: DoesntFormLoops) {
+        // With node configuration:
+        // B(2) - A(1) - C(3)
+        // Verify that routes from A to B do not point at C
+        // and that routes from A to C do not point at B
+
+        println!("{:?}", config);
+
+        let built: HashMap<NodeId, NodeLinkId> = construct_node_table_from_links(&[
+            (1, 2, 100, config.a_to_b),
+            (2, 1, 200, config.b_to_a),
+            (1, 3, 300, config.a_to_c),
+            (3, 1, 400, config.c_to_a),
+        ])
+        .build_routes()
+        .collect();
+
+        assert_eq!(built.get(&2.into()), Some(&100.into()));
+        assert_eq!(built.get(&3.into()), Some(&300.into()));
+    }
+
+    #[test]
+    fn no_loops() {
+        let start = Instant::now();
+        while Instant::now() - start < Duration::from_secs(1) {
+            let mut random_junk = [0u8; 64];
+            rand::thread_rng().fill(&mut random_junk);
+            verify_no_loops(Arbitrary::arbitrary(&mut Unstructured::new(&random_junk)).unwrap());
+        }
     }
 }

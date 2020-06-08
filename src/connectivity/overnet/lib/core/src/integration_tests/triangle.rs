@@ -7,7 +7,11 @@
 #![cfg(test)]
 
 use {
-    crate::Overnet,
+    super::Overnet,
+    crate::{
+        router::test_util::{run, run_repeatedly},
+        NodeId, Task,
+    },
     anyhow::{Context as _, Error},
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd, ServiceMarker},
     fidl_fidl_examples_echo as echo,
@@ -17,7 +21,6 @@ use {
     },
     fidl_fuchsia_overnet_triangletests as triangle,
     futures::prelude::*,
-    overnet_core::{spawn, NodeId},
     std::sync::Arc,
 };
 
@@ -26,21 +29,21 @@ use {
 
 #[test]
 fn simple_loop() -> Result<(), Error> {
-    crate::run_async_test(async move {
+    run_repeatedly(1, |i| async move {
         // Three nodes, fully connected
         // A creates a channel, passes either end to B, C to do an echo request
-        let a = Overnet::new()?;
-        let b = Overnet::new()?;
-        let c = Overnet::new()?;
-        crate::connect(&a, &b)?;
-        crate::connect(&b, &c)?;
-        crate::connect(&a, &c)?;
+        let a = Overnet::new((i * 10000 + 101).into())?;
+        let b = Overnet::new((i * 10000 + 102).into())?;
+        let c = Overnet::new((i * 10000 + 103).into())?;
+        super::connect(&a, &b)?;
+        super::connect(&b, &c)?;
+        super::connect(&a, &c)?;
         run_triangle_echo_test(
             b.node_id(),
             c.node_id(),
             a,
-            &[],
-            &[b, c],
+            vec![],
+            vec![b, c],
             Some("HELLO INTEGRATION TEST WORLD"),
         )
         .await
@@ -49,20 +52,20 @@ fn simple_loop() -> Result<(), Error> {
 
 #[test]
 fn simple_flat() -> Result<(), Error> {
-    crate::run_async_test(async move {
+    run(async move {
         // Three nodes, connected linearly: C - A - B
         // A creates a channel, passes either end to B, C to do an echo request
-        let a = Overnet::new()?;
-        let b = Overnet::new()?;
-        let c = Overnet::new()?;
-        crate::connect(&a, &b)?;
-        crate::connect(&a, &c)?;
+        let a = Overnet::new(201.into())?;
+        let b = Overnet::new(202.into())?;
+        let c = Overnet::new(203.into())?;
+        super::connect(&a, &b)?;
+        super::connect(&a, &c)?;
         run_triangle_echo_test(
             b.node_id(),
             c.node_id(),
             a,
-            &[],
-            &[b, c],
+            vec![],
+            vec![b, c],
             Some("HELLO INTEGRATION TEST WORLD"),
         )
         .await
@@ -71,18 +74,18 @@ fn simple_flat() -> Result<(), Error> {
 
 #[test]
 fn full_transfer() -> Result<(), Error> {
-    crate::run_async_test(async move {
+    run(async move {
         // Two nodes connected
         // A creates a channel, passes both ends to B to do an echo request
-        let a = Overnet::new()?;
-        let b = Overnet::new()?;
-        crate::connect(&a, &b)?;
+        let a = Overnet::new(301.into())?;
+        let b = Overnet::new(302.into())?;
+        super::connect(&a, &b)?;
         run_triangle_echo_test(
             b.node_id(),
             b.node_id(),
             a,
-            &[],
-            &[b],
+            vec![],
+            vec![b],
             Some("HELLO INTEGRATION TEST WORLD"),
         )
         .await
@@ -91,15 +94,20 @@ fn full_transfer() -> Result<(), Error> {
 
 #[test]
 fn forwarded_twice_to_separate_nodes() -> Result<(), Error> {
-    crate::run_async_test(async move {
-        // Five nodes connected in a loop: A - B - C - D - E - A
+    #[cfg(target_os = "fuchsia")]
+    const RUN_COUNT: u64 = 1;
+    #[cfg(not(target_os = "fuchsia"))]
+    const RUN_COUNT: u64 = 1;
+    run_repeatedly(RUN_COUNT, |i| async move {
+        let base = 1000 * i;
+        // Five nodes connected in a line: A - B - C - D - E
         // A creates a channel, passes either end to B & C
         // B & C forward to D & E (respectively) and then do an echo request
-        let a = Overnet::new()?;
-        let b = Overnet::new()?;
-        let c = Overnet::new()?;
-        let d = Overnet::new()?;
-        let e = Overnet::new()?;
+        let a = Overnet::new((base + 401).into())?;
+        let b = Overnet::new((base + 402).into())?;
+        let c = Overnet::new((base + 403).into())?;
+        let d = Overnet::new((base + 404).into())?;
+        let e = Overnet::new((base + 405).into())?;
         log::info!(
             "NODEIDS:-> A:{:?} B:{:?} C:{:?} D:{:?} E:{:?}",
             a.node_id(),
@@ -108,17 +116,16 @@ fn forwarded_twice_to_separate_nodes() -> Result<(), Error> {
             d.node_id(),
             e.node_id()
         );
-        crate::connect(&a, &b)?;
-        crate::connect(&b, &c)?;
-        crate::connect(&c, &d)?;
-        crate::connect(&d, &e)?;
-        crate::connect(&e, &a)?;
+        super::connect(&a, &b)?;
+        super::connect(&b, &c)?;
+        super::connect(&c, &d)?;
+        super::connect(&d, &e)?;
         run_triangle_echo_test(
             b.node_id(),
             c.node_id(),
             a,
-            &[(b, d.node_id()), (c, e.node_id())],
-            &[d, e],
+            vec![(b, d.node_id()), (c, e.node_id())],
+            vec![d, e],
             Some("HELLO INTEGRATION TEST WORLD"),
         )
         .await
@@ -127,23 +134,23 @@ fn forwarded_twice_to_separate_nodes() -> Result<(), Error> {
 
 #[test]
 fn forwarded_twice_full_transfer() -> Result<(), Error> {
-    crate::run_async_test(async move {
+    run_repeatedly(1, |i| async move {
         // Four nodes connected in a line: A - B - C - D
         // A creates a channel, passes either end to B & C
         // B & C forward to D which then does an echo request
-        let a = Overnet::new()?;
-        let b = Overnet::new()?;
-        let c = Overnet::new()?;
-        let d = Overnet::new()?;
-        crate::connect(&a, &b)?;
-        crate::connect(&b, &c)?;
-        crate::connect(&c, &d)?;
+        let a = Overnet::new((10000 * i + 501).into())?;
+        let b = Overnet::new((10000 * i + 502).into())?;
+        let c = Overnet::new((10000 * i + 503).into())?;
+        let d = Overnet::new((10000 * i + 504).into())?;
+        super::connect(&a, &b)?;
+        super::connect(&b, &c)?;
+        super::connect(&c, &d)?;
         run_triangle_echo_test(
             b.node_id(),
             c.node_id(),
             a,
-            &[(b, d.node_id()), (c, d.node_id())],
-            &[d],
+            vec![(b, d.node_id()), (c, d.node_id())],
+            vec![d],
             Some("HELLO INTEGRATION TEST WORLD"),
         )
         .await
@@ -191,15 +198,20 @@ async fn exec_captain(
     let svc = overnet.connect_as_service_consumer()?;
     loop {
         let peers = svc.list_peers().await?;
-        log::info!("Got peers: {:?}", peers);
+        log::info!("[{:?}] Got peers: {:?}", overnet.node_id(), peers);
         if has_peer_conscript(&peers, client) && has_peer_conscript(&peers, server) {
             let client = connect_peer(&svc, client)?;
             let server = connect_peer(&svc, server)?;
             let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-            log::info!("server/proxy hdls: {:?} {:?}", s, p);
-            log::info!("ENGAGE CONSCRIPTS");
+            log::info!("[{:?}] server/proxy hdls: {:?} {:?}", overnet.node_id(), s, p);
+            log::info!("[{:?}] ENGAGE CONSCRIPTS", overnet.node_id());
             server.serve(ServerEnd::new(s))?;
-            assert_eq!(client.issue(ClientEnd::new(p), text).await?, text.map(|s| s.to_string()));
+            let response = client
+                .issue(ClientEnd::new(p), text)
+                .await
+                .context(format!("awaiting issue response for captain {:?}", overnet.node_id()))?;
+            log::info!("[{:?}] Captain got response: {:?}", overnet.node_id(), response);
+            assert_eq!(response, text.map(|s| s.to_string()));
             return Ok(());
         }
     }
@@ -208,95 +220,109 @@ async fn exec_captain(
 ////////////////////////////////////////////////////////////////////////////////
 // Conscript implementation
 
-async fn exec_server(server: ServerEnd<echo::EchoMarker>) -> Result<(), Error> {
+async fn exec_server(node_id: NodeId, server: ServerEnd<echo::EchoMarker>) -> Result<(), Error> {
     let mut stream = server.into_stream()?;
+    log::info!("{:?} server begins", node_id);
     while let Some(echo::EchoRequest::EchoString { value, responder }) =
         stream.try_next().await.context("error running echo server")?
     {
-        log::info!("Received echo request for string {:?}", value);
+        log::info!("{:?} Received echo request for string {:?}", node_id, value);
         responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
-        log::info!("echo response sent successfully");
+        log::info!("{:?} echo response sent successfully", node_id);
     }
+    log::info!("{:?} server done", node_id);
     Ok(())
 }
 
 async fn exec_client(
+    node_id: NodeId,
     client: ClientEnd<echo::EchoMarker>,
     text: Option<String>,
     responder: triangle::ConscriptIssueResponder,
 ) -> Result<(), Error> {
-    log::info!("CLIENT SEND REQUEST: {:?}", text);
+    log::info!("{:?} CLIENT SEND REQUEST: {:?}", node_id, text);
     let response = client.into_proxy()?.echo_string(text.as_deref()).await.unwrap();
-    log::info!("CLIENT GETS RESPONSE: {:?}", response);
+    log::info!("{:?} CLIENT GETS RESPONSE: {:?}", node_id, response);
     responder.send(response.as_deref())?;
     Ok(())
 }
 
-async fn exec_conscript(
+async fn exec_conscript<
+    F: 'static + Send + Clone + Fn(triangle::ConscriptRequest) -> Fut,
+    Fut: Future<Output = Result<(), Error>>,
+>(
     overnet: Arc<Overnet>,
-    action: impl 'static + Clone + Fn(triangle::ConscriptRequest) -> Result<(), Error>,
+    action: F,
 ) -> Result<(), Error> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
-    let mut stream = ServiceProviderRequestStream::from_channel(chan);
     let node_id = overnet.node_id();
     overnet
         .connect_as_service_publisher()?
         .publish_service(triangle::ConscriptMarker::NAME, ClientEnd::new(p))?;
-    while let Some(ServiceProviderRequest::ConnectToService { chan, info: _, control_handle: _ }) =
-        stream.try_next().await?
-    {
-        log::info!("{:?} Received service request for service", node_id);
-        let chan =
-            fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
-        let action = action.clone();
-        spawn(
+    ServiceProviderRequestStream::from_channel(chan)
+        .map_err(Into::into)
+        .try_for_each_concurrent(None, |req| {
+            let action = action.clone();
             async move {
-                let mut stream = triangle::ConscriptRequestStream::from_channel(chan);
+                let ServiceProviderRequest::ConnectToService { chan, info: _, control_handle: _ } =
+                    req;
+                log::info!("{:?} Received service request for service", node_id);
+                let chan = fidl::AsyncChannel::from_channel(chan)
+                    .context("failed to make async channel")?;
                 log::info!("{:?} Started service handler", node_id);
-                while let Some(request) = stream.try_next().await? {
-                    log::info!("{:?} Received request {:?}", node_id, request);
-                    action(request)?;
-                }
+                triangle::ConscriptRequestStream::from_channel(chan)
+                    .map_err(Into::into)
+                    .try_for_each_concurrent(None, |request| {
+                        let action = action.clone();
+                        async move {
+                            log::info!("{:?} Received request {:?}", node_id, request);
+                            action(request).await
+                        }
+                    })
+                    .await?;
                 log::info!("{:?} Finished service handler", node_id);
                 Ok(())
             }
-            .unwrap_or_else(move |e: Error| log::info!("{:?} failed {:?}", node_id, e)),
-        );
-    }
-    Ok(())
+        })
+        .await
 }
 
-fn conscript_leaf_action(request: triangle::ConscriptRequest) -> Result<(), Error> {
-    log::info!("Handling it");
+async fn conscript_leaf_action(
+    own_id: NodeId,
+    request: triangle::ConscriptRequest,
+) -> Result<(), Error> {
+    log::info!("{:?} Handling it", own_id);
     match request {
         triangle::ConscriptRequest::Serve { iface, control_handle: _ } => {
-            spawn(exec_server(iface).unwrap_or_else(|e| log::warn!("{:?}", e)))
+            exec_server(own_id, iface)
+                .await
+                .context(format!("running conscript server {:?}", own_id))
         }
         triangle::ConscriptRequest::Issue { iface, request, responder } => {
-            spawn(exec_client(iface, request, responder).unwrap_or_else(|e| log::warn!("{:?}", e)))
+            exec_client(own_id, iface, request, responder)
+                .await
+                .context(format!("running conscript client {:?}", own_id))
         }
     }
-    Ok(())
 }
 
-fn conscript_forward_action(
+async fn conscript_forward_action(
+    own_id: NodeId,
     node_id: NodeId,
     request: triangle::ConscriptRequest,
     target: triangle::ConscriptProxy,
 ) -> Result<(), Error> {
-    log::info!("Forwarding request to {:?}", node_id);
+    log::info!("{:?} Forwarding request to {:?}", own_id, node_id);
     match request {
         triangle::ConscriptRequest::Serve { iface, control_handle: _ } => {
             target.serve(iface)?;
         }
-        triangle::ConscriptRequest::Issue { iface, request, responder } => spawn(
-            async move {
-                responder.send(target.issue(iface, request.as_deref()).await?.as_deref())?;
-                Ok(())
-            }
-            .unwrap_or_else(|e: Error| log::warn!("{:?}", e)),
-        ),
+        triangle::ConscriptRequest::Issue { iface, request, responder } => {
+            let response = target.issue(iface, request.as_deref()).await?;
+            log::info!("Forwarder got response: {:?}", response);
+            responder.send(response.as_deref())?;
+        }
     }
     Ok(())
 }
@@ -308,14 +334,14 @@ async fn run_triangle_echo_test(
     client: NodeId,
     server: NodeId,
     captain: Arc<Overnet>,
-    forwarders: &[(Arc<Overnet>, NodeId)],
-    conscripts: &[Arc<Overnet>],
+    forwarders: Vec<(Arc<Overnet>, NodeId)>,
+    conscripts: Vec<Arc<Overnet>>,
     text: Option<&str>,
 ) -> Result<(), Error> {
-    for (forwarder, target_node_id) in forwarders {
-        let forwarder = forwarder.clone();
-        let target_node_id = *target_node_id;
-        spawn(
+    let captain_node_id = captain.node_id();
+    let mut background_tasks = Vec::new();
+    for (forwarder, target_node_id) in forwarders.into_iter() {
+        background_tasks.push(Task::spawn(
             async move {
                 let svc = forwarder.clone().connect_as_service_consumer()?;
                 loop {
@@ -330,17 +356,29 @@ async fn run_triangle_echo_test(
                     }
                 }
                 let target = connect_peer(&svc, target_node_id)?;
+                let own_id = forwarder.node_id();
                 exec_conscript(forwarder, move |request| {
-                    conscript_forward_action(target_node_id, request, target.clone())
+                    conscript_forward_action(own_id, target_node_id, request, target.clone())
                 })
                 .await
             }
             .unwrap_or_else(|e: Error| log::warn!("{:?}", e)),
-        )
+        ));
     }
-    for conscript in conscripts {
+    for conscript in conscripts.into_iter() {
         let conscript = conscript.clone();
-        spawn(async move { exec_conscript(conscript, conscript_leaf_action).await.unwrap() });
+        let own_id = conscript.node_id();
+        background_tasks.push(Task::spawn(async move {
+            exec_conscript(conscript, move |request| conscript_leaf_action(own_id, request))
+                .await
+                .unwrap()
+        }));
     }
-    exec_captain(client, server, captain, text).await
+    exec_captain(client, server, captain, text).await?;
+    for (i, task) in background_tasks.into_iter().enumerate() {
+        log::info!("{:?} drop background task {}", captain_node_id, i);
+        drop(task);
+    }
+    log::info!("{:?} returning from test driver", captain_node_id);
+    Ok(())
 }

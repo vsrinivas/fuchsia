@@ -7,45 +7,23 @@
 use {
     crate::{
         coding::{decode_fidl, encode_fidl},
-        future_help::log_errors,
-        labels::NodeId,
         router::Router,
-        runtime::spawn,
         stream_framer::{new_deframer, new_framer, Format, FrameType, LosslessBinary, LossyBinary},
     },
     anyhow::{bail, Context as _, Error},
     fidl_fuchsia_overnet_protocol::StreamSocketGreeting,
     futures::{io::AsyncWriteExt, prelude::*},
-    std::{rc::Rc, time::Duration},
+    std::{sync::Arc, time::Duration},
 };
 
-pub(crate) fn spawn_socket_link(
-    node: Rc<Router>,
-    node_id: NodeId,
-    connection_label: Option<String>,
-    socket: fidl::Socket,
-    duration_per_byte: Option<Duration>,
-) {
-    spawn(log_errors(
-        run_socket_link(node, node_id, connection_label, socket, duration_per_byte),
-        "Socket link failed",
-    ));
-}
-
-async fn run_socket_link(
-    node: Rc<Router>,
-    node_id: NodeId,
+pub(crate) async fn run_socket_link(
+    node: Arc<Router>,
     connection_label: Option<String>,
     socket: fidl::Socket,
     duration_per_byte: Option<Duration>,
 ) -> Result<(), Error> {
-    let handshake_id = crate::router::generate_node_id().0;
-    log::info!(
-        "[HS:{}] Begin handshake: connection_label:{:?} socket:{:?}",
-        handshake_id,
-        connection_label,
-        socket
-    );
+    log::trace!("Begin handshake: connection_label:{:?} socket:{:?}", connection_label, socket);
+    let dbgid = (node.node_id(), crate::router::generate_node_id().0);
 
     const GREETING_STRING: &str = "OVERNET SOCKET LINK";
 
@@ -66,20 +44,28 @@ async fn run_socket_link(
         async move {
             loop {
                 let msg = framer_read.read().await?;
+                log::trace!("{:?} write bytes {:?}", dbgid, msg.len());
                 tx_bytes.write(&msg).await?;
+                log::trace!("{:?} wrote bytes", dbgid);
             }
         },
         async move {
             let mut buf = [0u8; 4096];
             loop {
                 let n = rx_bytes.read(&mut buf).await?;
+                if n == 0 {
+                    log::trace!("{:?} finished reading bytes", dbgid);
+                    return Ok(());
+                }
+                log::trace!("{:?} read bytes {:?}", dbgid, n);
                 deframer_write.write(&buf[..n]).await?;
+                log::trace!("{:?} queued deframe bytes", dbgid);
             }
         },
         async move {
             let mut greeting = StreamSocketGreeting {
                 magic_string: Some(GREETING_STRING.to_string()),
-                node_id: Some(node_id.into()),
+                node_id: Some(node.node_id().into()),
                 connection_label,
             };
             framer
@@ -89,7 +75,7 @@ async fn run_socket_link(
                 )
                 .await
                 .context("queue greeting")?;
-            log::info!("[HS:{}] Wrote greeting: {:?}", handshake_id, greeting);
+            log::trace!("{:?} Wrote greeting: {:?}", dbgid, greeting);
             // Wait for first frame
             let (frame_type, mut greeting_bytes) = deframer.read().await?;
             if frame_type != Some(FrameType::Overnet) {
@@ -97,7 +83,7 @@ async fn run_socket_link(
             }
             let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut())
                 .context("decoding greeting")?;
-            log::info!("[HS:{}] Got greeting: {:?}", handshake_id, greeting);
+            log::trace!("{:?} Got greeting: {:?}", dbgid, greeting);
             let node_id = match greeting {
                 StreamSocketGreeting { magic_string: None, .. } => {
                     return Err(anyhow::format_err!(
@@ -117,26 +103,31 @@ async fn run_socket_link(
                 }
                 StreamSocketGreeting { node_id: Some(n), .. } => n.id,
             };
-            log::info!("[HS:{}] Handshake complete, creating link", handshake_id);
-            let link_sender = node.new_link(node_id.into()).await.context("creating link")?;
-            let link_receiver = link_sender.clone();
-            log::info!("[HS:{}] Running link", handshake_id);
+            log::trace!("{:?} Handshake complete, creating link", dbgid);
+            let (link_sender, link_receiver) =
+                node.new_link(node_id.into()).await.context("creating link")?;
+            log::trace!("{:?} Running link", dbgid);
             let _: ((), ()) = futures::future::try_join(
                 async move {
                     loop {
                         let (frame_type, mut frame) = deframer.read().await?;
+                        log::trace!("{:?} got frame {:?} {:?}", dbgid, frame_type, frame.len());
                         if frame_type != Some(FrameType::Overnet) {
+                            log::warn!("Skip frame of type {:?}", frame_type);
                             continue;
                         }
                         if let Err(err) = link_receiver.received_packet(frame.as_mut()).await {
-                            log::warn!("[HS:{}] Error reading packet: {:?}", handshake_id, err);
+                            log::warn!("Error reading packet: {:?}", err);
                         }
+                        log::trace!("{:?} handled frame", dbgid);
                     }
                 },
                 async move {
                     let mut buf = [0u8; 4096];
                     while let Some(n) = link_sender.next_send(&mut buf).await? {
+                        log::trace!("{:?} send frame {:?}", dbgid, n);
                         framer.write(FrameType::Overnet, &buf[..n]).await?;
+                        log::trace!("{:?} sent frame", dbgid);
                     }
                     Ok::<_, Error>(())
                 },

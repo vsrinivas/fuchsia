@@ -6,12 +6,12 @@ use crate::{
     async_quic::{AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, StreamProperties},
     coding::{decode_fidl, encode_fidl},
     framed_stream::{FrameType, FramedStreamReader, FramedStreamWriter, MessageStats},
-    future_help::{log_errors, Observer},
-    labels::{Endpoint, NodeId, TransferKey},
-    link::{Link, LinkStatus},
+    future_help::Observer,
+    labels::{ConnectionId, Endpoint, NodeId, TransferKey},
+    link::LinkStatus,
     route_planner::RemoteRoutingUpdate,
-    router::{FoundTransfer, Router},
-    runtime::{spawn, wait_until},
+    router::{FoundTransfer, LinkSource, Router},
+    runtime::{wait_for, FutureExt, Task},
 };
 use anyhow::{bail, format_err, Context as _, Error};
 use fidl::{Channel, HandleBased};
@@ -21,12 +21,20 @@ use fidl_fuchsia_overnet_protocol::{
     OpenTransfer, PeerConnectionDiagnosticInfo, PeerDescription, PeerMessage, PeerReply, StreamId,
     UpdateLinkStatus, ZirconHandle,
 };
-use futures::{lock::Mutex, pin_mut, prelude::*, select};
+use futures::{
+    channel::{mpsc, oneshot},
+    lock::Mutex,
+    prelude::*,
+};
 use std::{
+    collections::HashMap,
     convert::TryInto,
     pin::Pin,
-    rc::{Rc, Weak},
-    task::{Context, Poll},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Weak,
+    },
+    time::Duration,
 };
 
 #[derive(Debug)]
@@ -44,9 +52,9 @@ impl Config {
 
 #[derive(Debug)]
 enum ClientPeerCommand {
-    UpdateLinkStatus(UpdateLinkStatus, futures::channel::oneshot::Sender<()>),
     ConnectToService(ConnectToService),
     OpenTransfer(u64, TransferKey),
+    Ping(oneshot::Sender<()>),
 }
 
 #[derive(Default)]
@@ -57,18 +65,37 @@ pub struct PeerConnStats {
     pub update_link_status: MessageStats,
     pub update_link_status_ack: MessageStats,
     pub open_transfer: MessageStats,
+    pub ping: MessageStats,
+    pub pong: MessageStats,
 }
 
 pub(crate) struct Peer {
     node_id: NodeId,
     endpoint: Endpoint,
+    conn_id: ConnectionId,
     /// The QUIC connection itself
     conn: AsyncConnection,
-    /// Current link choice for this peer
-    current_link: Mutex<Weak<Link>>,
-    commands: Option<futures::channel::mpsc::Sender<ClientPeerCommand>>,
-    conn_stats: Rc<PeerConnStats>,
-    channel_proxy_stats: Rc<MessageStats>,
+    commands: Option<mpsc::Sender<ClientPeerCommand>>,
+    conn_stats: Arc<PeerConnStats>,
+    channel_proxy_stats: Arc<MessageStats>,
+    _task: Task,
+    shutdown: AtomicBool,
+}
+
+impl std::fmt::Debug for Peer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.debug_id().fmt(f)
+    }
+}
+
+impl Drop for Peer {
+    fn drop(&mut self) {
+        let shutdown = self.shutdown.load(Ordering::Acquire);
+        if !shutdown {
+            let conn = self.conn.clone();
+            Task::spawn(async move { conn.close().await }).detach()
+        }
+    }
 }
 
 impl Peer {
@@ -76,158 +103,163 @@ impl Peer {
         self.node_id
     }
 
-    // Common parts of new_client, new_server - create the peer object, get it routed
-    fn new_instance(
-        own_node_id: NodeId,
-        node_id: NodeId,
-        conn: Pin<Box<quiche::Connection>>,
-        endpoint: Endpoint,
-        current_link: &Weak<Link>,
-        commands: Option<futures::channel::mpsc::Sender<ClientPeerCommand>>,
-    ) -> Result<Rc<Self>, Error> {
-        log::trace!(
-            "{:?} CREATE PEER FOR {:?}/{:?} CURRENT_LINK: {:?}",
-            own_node_id,
-            node_id,
-            endpoint,
-            Weak::upgrade(&current_link)
-        );
-        let conn = AsyncConnection::from_connection(conn, endpoint, node_id);
-        let p = Rc::new(Self {
-            endpoint,
-            node_id,
-            conn,
-            current_link: Mutex::new(current_link.clone()),
-            commands,
-            conn_stats: Rc::new(PeerConnStats::default()),
-            channel_proxy_stats: Rc::new(MessageStats::default()),
-        });
-        if let Some(link) = Weak::upgrade(current_link) {
-            link.add_route_for_peer(&p);
-        }
-        Ok(p)
+    pub(crate) fn endpoint(&self) -> Endpoint {
+        self.endpoint
+    }
+
+    pub(crate) fn conn_id(&self) -> ConnectionId {
+        self.conn_id
+    }
+
+    pub(crate) fn debug_id(&self) -> impl std::fmt::Debug + std::cmp::PartialEq {
+        (self.node_id, self.endpoint, self.conn_id)
+    }
+
+    pub(crate) async fn round_trip_time(&self) -> Duration {
+        self.conn.stats().await.rtt
     }
 
     /// Construct a new client peer - spawns tasks to handle making control stream requests, and
     /// publishing link metadata
     pub fn new_client(
-        own_node_id: NodeId,
         node_id: NodeId,
+        conn_id: ConnectionId,
         conn: Pin<Box<quiche::Connection>>,
-        current_link: &Weak<Link>,
         link_status_observer: Observer<Vec<LinkStatus>>,
         service_observer: Observer<Vec<String>>,
-    ) -> Result<Rc<Self>, Error> {
-        let (command_sender, command_receiver) = futures::channel::mpsc::channel(1);
-        let p = Self::new_instance(
-            own_node_id,
+        router: &Arc<Router>,
+        but_why: &str,
+    ) -> Arc<Self> {
+        log::info!(
+            "[{:?}] NEW CLIENT: peer={:?} conn_id={:?} because {:?}",
+            router.node_id(),
             node_id,
+            conn_id,
+            but_why
+        );
+        let (command_sender, command_receiver) = mpsc::channel(1);
+        let conn =
+            AsyncConnection::from_connection(conn, Endpoint::Client, router.node_id(), node_id);
+        let conn_stats = Arc::new(PeerConnStats::default());
+        let (conn_stream_writer, conn_stream_reader) = conn.bind_id(0);
+        let conn_run = conn.run();
+        Arc::new(Self {
+            endpoint: Endpoint::Client,
+            node_id,
+            conn_id,
             conn,
-            Endpoint::Client,
-            current_link,
-            Some(command_sender.clone()),
-        )?;
-        let (conn_stream_writer, conn_stream_reader) = p.conn.bind_id(0);
-        spawn(log_errors(
-            client_conn_stream(
-                node_id,
-                conn_stream_writer,
-                conn_stream_reader,
-                command_receiver,
-                service_observer,
-                p.conn_stats.clone(),
-            ),
-            "Client connection stream failed",
-        ));
-        spawn(log_errors(
-            send_links(node_id, command_sender, link_status_observer),
-            "Sending initial link data failed",
-        ));
-        Ok(p)
+            commands: Some(command_sender.clone()),
+            conn_stats: conn_stats.clone(),
+            channel_proxy_stats: Arc::new(MessageStats::default()),
+            shutdown: AtomicBool::new(false),
+            _task: Task::spawn(Peer::runner(
+                Endpoint::Client,
+                Arc::downgrade(router),
+                conn_id,
+                futures::future::try_join(
+                    client_conn_stream(
+                        router.node_id(),
+                        node_id,
+                        conn_stream_writer,
+                        conn_stream_reader,
+                        command_receiver,
+                        link_status_observer,
+                        service_observer,
+                        conn_stats,
+                    ),
+                    conn_run,
+                )
+                .map_ok(drop),
+            )),
+        })
     }
 
     /// Construct a new server peer - spawns tasks to handle responding to control stream requests
     pub fn new_server(
         node_id: NodeId,
+        conn_id: ConnectionId,
         conn: Pin<Box<quiche::Connection>>,
-        current_link: &Weak<Link>,
-        router: &Rc<Router>,
-    ) -> Result<Rc<Self>, Error> {
-        let p = Self::new_instance(
-            router.node_id(),
+        router: &Arc<Router>,
+    ) -> Arc<Self> {
+        let router = &router;
+        log::info!("[{:?}] NEW SERVER: peer={:?} conn_id={:?}", router.node_id(), node_id, conn_id,);
+        let conn =
+            AsyncConnection::from_connection(conn, Endpoint::Server, router.node_id(), node_id);
+        let conn_stats = Arc::new(PeerConnStats::default());
+        let (conn_stream_writer, conn_stream_reader) = conn.bind_id(0);
+        let conn_run = conn.run();
+        let channel_proxy_stats = Arc::new(MessageStats::default());
+        Arc::new(Self {
+            endpoint: Endpoint::Server,
             node_id,
+            conn_id,
             conn,
-            Endpoint::Server,
-            current_link,
-            None,
-        )?;
-        let (conn_stream_writer, conn_stream_reader) = p.conn.bind_id(0);
-        spawn(log_errors(
-            server_conn_stream(
-                node_id,
-                conn_stream_writer,
-                conn_stream_reader,
-                Rc::downgrade(router),
-                Rc::downgrade(&p),
-                p.conn_stats.clone(),
-                p.channel_proxy_stats.clone(),
-            ),
-            "Server connection stream failed",
-        ));
-        Ok(p)
+            commands: None,
+            conn_stats: conn_stats.clone(),
+            channel_proxy_stats: channel_proxy_stats.clone(),
+            shutdown: AtomicBool::new(false),
+            _task: Task::spawn(Peer::runner(
+                Endpoint::Server,
+                Arc::downgrade(router),
+                conn_id,
+                futures::future::try_join(
+                    server_conn_stream(
+                        node_id,
+                        conn_stream_writer,
+                        conn_stream_reader,
+                        Arc::downgrade(router),
+                        conn_stats,
+                        channel_proxy_stats,
+                    ),
+                    conn_run,
+                )
+                .map_ok(drop),
+            )),
+        })
     }
 
-    pub async fn update_link(self: &Rc<Self>, link: Weak<Link>) {
-        let mut current_link = self.current_link.lock().await;
-        if let Some(link) = Weak::upgrade(&*current_link) {
-            link.remove_route_for_peer(self);
+    async fn runner(
+        endpoint: Endpoint,
+        router: Weak<Router>,
+        conn_id: ConnectionId,
+        f: impl Future<Output = Result<(), Error>>,
+    ) {
+        if let Err(e) = f.await {
+            let node_id = Weak::upgrade(&router)
+                .map(|r| format!("{:?}", r.node_id()))
+                .unwrap_or_else(String::new);
+            log::warn!("[{} conn:{:?}] {:?} runner error: {:?}", node_id, conn_id, endpoint, e);
         }
-        *current_link = link;
-        if let Some(link) = Weak::upgrade(&*current_link) {
-            link.add_route_for_peer(self);
-        }
-    }
-
-    pub async fn update_link_if_unset(self: &Rc<Self>, link: &Weak<Link>) {
-        let mut current_link = self.current_link.lock().await;
-        if Weak::upgrade(&*current_link).is_some() {
-            return;
-        }
-        *current_link = link.clone();
-        if let Some(link) = Weak::upgrade(&*current_link) {
-            link.add_route_for_peer(self);
-        }
-    }
-
-    pub fn poll_next_send(
-        &self,
-        router_node_id: NodeId,
-        frame: &mut [u8],
-        ctx: &mut Context<'_>,
-    ) -> Poll<Result<Option<(usize, NodeId, NodeId, Endpoint)>, Error>> {
-        match self.conn.poll_next_send(frame, ctx) {
-            Poll::Ready(Ok(Some(n))) => {
-                Poll::Ready(Ok(Some((n, router_node_id, self.node_id, self.endpoint.opposite()))))
-            }
-            Poll::Ready(Ok(None)) => Poll::Ready(Ok(None)),
-            Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
-            Poll::Pending => Poll::Pending,
+        if let Some(router) = Weak::upgrade(&router) {
+            router.remove_peer(conn_id).await;
         }
     }
 
-    pub fn receive_frame(&self, frame: &mut [u8]) -> Result<(), Error> {
-        self.conn.recv(frame)
+    pub async fn shutdown(&self) {
+        self.shutdown.store(true, Ordering::Release);
+        self.conn.close().await
     }
 
-    pub async fn current_link(&self) -> Option<Rc<Link>> {
-        self.current_link.lock().await.upgrade()
+    pub async fn ping(&self) -> Result<(), Error> {
+        let (tx, rx) = oneshot::channel();
+        self.commands.as_ref().unwrap().clone().send(ClientPeerCommand::Ping(tx)).await?;
+        rx.await?;
+        Ok(())
+    }
+
+    pub fn next_send<'a>(&'a self) -> crate::async_quic::NextSend<'a> {
+        self.conn.next_send()
+    }
+
+    pub async fn receive_frame(&self, frame: &mut [u8]) -> Result<(), Error> {
+        self.conn.recv(frame).await
     }
 
     pub async fn new_stream(
         &self,
         service: &str,
         chan: Channel,
-        router: &Rc<Router>,
+        router: &Arc<Router>,
     ) -> Result<(), Error> {
         if let ZirconHandle::Channel(ChannelHandle { stream_ref }) = router
             .clone()
@@ -264,13 +296,13 @@ impl Peer {
         Ok(io)
     }
 
-    pub fn diagnostics(&self, source_node_id: NodeId) -> PeerConnectionDiagnosticInfo {
-        let stats = self.conn.stats();
+    pub async fn diagnostics(&self, source_node_id: NodeId) -> PeerConnectionDiagnosticInfo {
+        let stats = self.conn.stats().await;
         PeerConnectionDiagnosticInfo {
             source: Some(source_node_id.into()),
             destination: Some(self.node_id.into()),
             is_client: Some(self.endpoint == Endpoint::Client),
-            is_established: Some(self.conn.is_established()),
+            is_established: Some(self.conn.is_established().await),
             received_packets: Some(stats.recv as u64),
             sent_packets: Some(stats.sent as u64),
             lost_packets: Some(stats.lost as u64),
@@ -300,25 +332,29 @@ impl Peer {
     }
 }
 
-async fn client_conn_stream(
+async fn client_handshake(
+    my_node_id: NodeId,
     peer_node_id: NodeId,
     mut conn_stream_writer: AsyncQuicStreamWriter,
     mut conn_stream_reader: AsyncQuicStreamReader,
-    mut commands: futures::channel::mpsc::Receiver<ClientPeerCommand>,
-    mut services: Observer<Vec<String>>,
-    conn_stats: Rc<PeerConnStats>,
-) -> Result<(), Error> {
+    conn_stats: Arc<PeerConnStats>,
+) -> Result<(FramedStreamWriter, FramedStreamReader), Error> {
+    log::trace!("[{:?} clipeer:{:?}] client connection stream started", my_node_id, peer_node_id);
     // Send FIDL header
+    log::trace!("[{:?} clipeer:{:?}] send fidl header", my_node_id, peer_node_id);
     conn_stream_writer.send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false).await?;
+    log::trace!("[{:?} clipeer:{:?}] send config request", my_node_id, peer_node_id);
     // Send config request
     let mut conn_stream_writer: FramedStreamWriter = conn_stream_writer.into();
     conn_stream_writer
         .send(FrameType::Data, &encode_fidl(&mut ConfigRequest {})?, false, &conn_stats.config)
         .await?;
     // Receive FIDL header
+    log::trace!("[{:?} clipeer:{:?}] read fidl header", my_node_id, peer_node_id);
     let mut fidl_hdr = [0u8; 4];
     conn_stream_reader.read_exact(&mut fidl_hdr).await.context("reading FIDL header")?;
     // Await config response
+    log::trace!("[{:?} clipeer:{:?}] read config", my_node_id, peer_node_id);
     let mut conn_stream_reader: FramedStreamReader = conn_stream_reader.into();
     let _ = Config::from_response(
         if let (FrameType::Data, mut bytes, false) = conn_stream_reader.next().await? {
@@ -327,57 +363,68 @@ async fn client_conn_stream(
             bail!("Failed to read config response")
         },
     );
+    log::trace!("[{:?} clipeer:{:?}] handshake completed", my_node_id, peer_node_id);
 
-    let mut on_link_status_ack = None;
+    Ok((conn_stream_writer, conn_stream_reader))
+}
 
-    loop {
-        let mut next_command = commands.next().fuse();
-        let next_frame = conn_stream_reader.next().fuse();
-        let mut next_services = services.next().fuse();
-        pin_mut!(next_frame);
-        #[derive(Debug)]
-        enum Action {
-            Command(ClientPeerCommand),
-            Frame(FrameType, Vec<u8>, bool),
-            Services(Option<Vec<String>>),
-        };
-        let action = select! {
-            command = next_command => {
-                Action::Command(command.ok_or_else(|| format_err!("Command queue closed"))?)
-            }
-            frame = next_frame => {
-                let (frame_type, bytes, fin) = frame?;
-                Action::Frame(frame_type, bytes, fin)
-            }
-            services = next_services => {
-                Action::Services(services)
-            }
-        };
-        log::trace!(
-            "Peer connection ->{:?} gets connection stream command: {:?}",
-            peer_node_id,
-            action
-        );
-        match action {
-            Action::Command(command) => {
+async fn client_conn_stream(
+    my_node_id: NodeId,
+    peer_node_id: NodeId,
+    conn_stream_writer: AsyncQuicStreamWriter,
+    conn_stream_reader: AsyncQuicStreamReader,
+    mut commands: mpsc::Receiver<ClientPeerCommand>,
+    mut link_status_observer: Observer<Vec<LinkStatus>>,
+    mut services: Observer<Vec<String>>,
+    conn_stats: Arc<PeerConnStats>,
+) -> Result<(), Error> {
+    let (conn_stream_writer, mut conn_stream_reader) = client_handshake(
+        my_node_id,
+        peer_node_id,
+        conn_stream_writer,
+        conn_stream_reader,
+        conn_stats.clone(),
+    )
+    .timeout_after(Duration::from_secs(20))
+    .await??;
+
+    let on_link_status_ack = &Mutex::new(None);
+    let conn_stream_writer = &Mutex::new(conn_stream_writer);
+    let outstanding_pings = &Mutex::new(HashMap::new());
+    let mut next_ping_id = 0;
+
+    let cmd_conn_stats = conn_stats.clone();
+    let svc_conn_stats = conn_stats.clone();
+    let sts_conn_stats = conn_stats;
+
+    let _: ((), (), (), ()) = futures::future::try_join4(
+        async move {
+            while let Some(command) = commands.next().await {
                 client_conn_handle_command(
-                    peer_node_id,
                     command,
-                    &mut conn_stream_writer,
-                    &mut on_link_status_ack,
-                    conn_stats.clone(),
+                    &mut *conn_stream_writer.lock().await,
+                    outstanding_pings,
+                    &mut next_ping_id,
+                    cmd_conn_stats.clone(),
                 )
                 .await?;
             }
-            Action::Frame(frame_type, mut bytes, fin) => {
+            log::trace!("[{:?} clipeer:{:?}] done commands", my_node_id, peer_node_id);
+            Ok(())
+        },
+        async move {
+            loop {
+                let (frame_type, mut bytes, fin) = conn_stream_reader.next().await?;
                 match frame_type {
                     FrameType::Hello => bail!("Hello frames disallowed on peer connections"),
                     FrameType::Control => bail!("Control frames disallowed on peer connections"),
                     FrameType::Data => {
                         client_conn_handle_incoming_frame(
+                            my_node_id,
                             peer_node_id,
                             &mut bytes,
-                            &mut on_link_status_ack,
+                            on_link_status_ack,
+                            outstanding_pings,
                         )
                         .await?;
                     }
@@ -386,43 +433,80 @@ async fn client_conn_stream(
                     bail!("Client connection stream closed");
                 }
             }
-            Action::Services(services) => {
+        },
+        async move {
+            loop {
+                let services = services.next().await;
+                log::trace!(
+                    "[{:?} clipeer:{:?}] Send update node description with services: {:?}",
+                    my_node_id,
+                    peer_node_id,
+                    services
+                );
                 conn_stream_writer
+                    .lock()
+                    .await
                     .send(
                         FrameType::Data,
                         &encode_fidl(&mut PeerMessage::UpdateNodeDescription(PeerDescription {
                             services,
                         }))?,
                         false,
-                        &conn_stats.update_node_description,
+                        &svc_conn_stats.update_node_description,
                     )
                     .await?;
             }
-        }
-    }
+        },
+        async move {
+            log::trace!("[{:?} clipeer:{:?}] SEND_LINKS BEGINS", my_node_id, peer_node_id);
+            while let Some(link_status) = link_status_observer.next().await {
+                log::trace!(
+                    "[{:?} clipeer:{:?}] SEND_LINKS SCHEDULE SEND {:?}",
+                    my_node_id,
+                    peer_node_id,
+                    link_status
+                );
+                let (sender, receiver) = oneshot::channel();
+                {
+                    let mut on_link_status_ack = on_link_status_ack.lock().await;
+                    assert!(on_link_status_ack.is_none());
+                    *on_link_status_ack = Some(sender);
+                }
+                conn_stream_writer
+                    .lock()
+                    .await
+                    .send(
+                        FrameType::Data,
+                        &encode_fidl(&mut PeerMessage::UpdateLinkStatus(UpdateLinkStatus {
+                            link_status: link_status.into_iter().map(|s| s.into()).collect(),
+                        }))?,
+                        false,
+                        &sts_conn_stats.update_link_status,
+                    )
+                    .await?;
+                log::trace!("[{:?} clipeer:{:?}] SEND_LINKS AWAIT ACK", my_node_id, peer_node_id);
+                receiver.await?;
+
+                log::trace!("[{:?} clipeer:{:?}] SEND_LINKS SLEEPY TIME", my_node_id, peer_node_id);
+                wait_for(Duration::from_secs(1)).await;
+            }
+            log::trace!("[{:?} clipeer:{:?}] SEND_LINKS END", my_node_id, peer_node_id);
+            Ok(())
+        },
+    )
+    .await?;
+
+    Ok(())
 }
 
 async fn client_conn_handle_command(
-    peer_node_id: NodeId,
     command: ClientPeerCommand,
     conn_stream_writer: &mut FramedStreamWriter,
-    on_link_status_ack: &mut Option<futures::channel::oneshot::Sender<()>>,
-    conn_stats: Rc<PeerConnStats>,
+    outstanding_pings: &Mutex<HashMap<u64, oneshot::Sender<()>>>,
+    next_ping_id: &mut u64,
+    conn_stats: Arc<PeerConnStats>,
 ) -> Result<(), Error> {
-    log::trace!("Handle client peer command from {:?}: {:?}", peer_node_id, command);
     match command {
-        ClientPeerCommand::UpdateLinkStatus(status, on_ack) => {
-            assert!(on_link_status_ack.is_none());
-            *on_link_status_ack = Some(on_ack);
-            conn_stream_writer
-                .send(
-                    FrameType::Data,
-                    &encode_fidl(&mut PeerMessage::UpdateLinkStatus(status))?,
-                    false,
-                    &conn_stats.update_link_status,
-                )
-                .await?;
-        }
         ClientPeerCommand::ConnectToService(conn) => {
             conn_stream_writer
                 .send(
@@ -446,24 +530,49 @@ async fn client_conn_handle_command(
                 )
                 .await?;
         }
+        ClientPeerCommand::Ping(on_ack) => {
+            let ping_id = *next_ping_id;
+            *next_ping_id += 1;
+            outstanding_pings.lock().await.insert(ping_id, on_ack);
+            conn_stream_writer
+                .send(
+                    FrameType::Data,
+                    &encode_fidl(&mut PeerMessage::Ping(ping_id))?,
+                    false,
+                    &conn_stats.ping,
+                )
+                .await?;
+        }
     }
     Ok(())
 }
 
 async fn client_conn_handle_incoming_frame(
+    my_node_id: NodeId,
     peer_node_id: NodeId,
     bytes: &mut [u8],
-    on_link_status_ack: &mut Option<futures::channel::oneshot::Sender<()>>,
+    on_link_status_ack: &Mutex<Option<oneshot::Sender<()>>>,
+    outstanding_pings: &Mutex<HashMap<u64, oneshot::Sender<()>>>,
 ) -> Result<(), Error> {
     let msg: PeerReply = decode_fidl(bytes)?;
-    log::trace!("Got peer reply from {:?}: {:?}", peer_node_id, msg);
+    log::trace!("[{:?} clipeer:{:?}] got reply {:?}", my_node_id, peer_node_id, msg);
     match msg {
         PeerReply::UpdateLinkStatusAck(_) => {
             on_link_status_ack
+                .lock()
+                .await
                 .take()
                 .ok_or_else(|| format_err!("Got link status ack without sending link status"))?
                 .send(())
                 .map_err(|_| format_err!("Failed to send link status ack"))?;
+        }
+        PeerReply::Pong(id) => {
+            let _ = outstanding_pings
+                .lock()
+                .await
+                .remove(&id)
+                .ok_or_else(|| format_err!("Pong for unsent ping {:?}", id))?
+                .send(());
         }
     }
     Ok(())
@@ -474,18 +583,21 @@ async fn server_conn_stream(
     mut conn_stream_writer: AsyncQuicStreamWriter,
     mut conn_stream_reader: AsyncQuicStreamReader,
     router: Weak<Router>,
-    peer: Weak<Peer>,
-    conn_stats: Rc<PeerConnStats>,
-    channel_proxy_stats: Rc<MessageStats>,
+    conn_stats: Arc<PeerConnStats>,
+    channel_proxy_stats: Arc<MessageStats>,
 ) -> Result<(), Error> {
+    let my_node_id = Weak::upgrade(&router).ok_or_else(|| format_err!("router gone"))?.node_id();
     // Receive FIDL header
+    log::trace!("[{:?} svrpeer:{:?}] read fidl header", my_node_id, node_id);
     let mut fidl_hdr = [0u8; 4];
     conn_stream_reader.read_exact(&mut fidl_hdr).await.context("reading FIDL header")?;
     let mut conn_stream_reader: FramedStreamReader = conn_stream_reader.into();
     // Send FIDL header
+    log::trace!("[{:?} svrpeer:{:?}] send fidl header", my_node_id, node_id);
     conn_stream_writer.send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false).await?;
     let mut conn_stream_writer: FramedStreamWriter = conn_stream_writer.into();
     // Await config request
+    log::trace!("[{:?} svrpeer:{:?}] read config", my_node_id, node_id);
     let (_, mut response) = Config::negotiate(
         if let (FrameType::Data, mut bytes, false) = conn_stream_reader.next().await? {
             decode_fidl(&mut bytes)?
@@ -494,11 +606,13 @@ async fn server_conn_stream(
         },
     );
     // Send config response
+    log::trace!("[{:?} svrpeer:{:?}] send config", my_node_id, node_id);
     conn_stream_writer
         .send(FrameType::Data, &encode_fidl(&mut response)?, false, &conn_stats.config)
         .await?;
 
     loop {
+        log::trace!("[{:?} svrpeer:{:?}] await message", my_node_id, node_id);
         let (frame_type, mut bytes, fin) = conn_stream_reader.next().await?;
 
         let router = Weak::upgrade(&router)
@@ -508,12 +622,7 @@ async fn server_conn_stream(
             FrameType::Control => bail!("Control frames disallowed on peer connections"),
             FrameType::Data => {
                 let msg: PeerMessage = decode_fidl(&mut bytes)?;
-                log::trace!(
-                    "{:?} Got peer request from {:?}: {:?}",
-                    router.node_id(),
-                    node_id,
-                    msg
-                );
+                log::trace!("[{:?} svrpeer:{:?}] Got peer request: {:?}", my_node_id, node_id, msg);
                 match msg {
                     PeerMessage::ConnectToService(ConnectToService {
                         service_name,
@@ -546,8 +655,6 @@ async fn server_conn_stream(
                             .await?;
                     }
                     PeerMessage::UpdateLinkStatus(UpdateLinkStatus { link_status }) => {
-                        let peer = Weak::upgrade(&peer)
-                            .ok_or_else(|| format_err!("Peer gone during link status update"))?;
                         conn_stream_writer
                             .send(
                                 FrameType::Data,
@@ -568,7 +675,11 @@ async fn server_conn_stream(
                         {
                             let to: NodeId = to.id.into();
                             router
-                                .ensure_client_peer(to, &*peer.current_link.lock().await)
+                                .ensure_client_peer(
+                                    to,
+                                    (node_id, LinkSource::PeerReachable),
+                                    &format!("link from {:?} to {:?}", node_id, to),
+                                )
                                 .await
                                 .context("Summoning due to received metrics")?;
                             status.push(LinkStatus {
@@ -591,7 +702,17 @@ async fn server_conn_stream(
                         transfer_key,
                     }) => {
                         let (tx, rx) = conn_stream_writer.conn().bind_id(stream_id);
-                        router.post_transfer(transfer_key, FoundTransfer::Remote(tx, rx))?;
+                        router.post_transfer(transfer_key, FoundTransfer::Remote(tx, rx)).await?;
+                    }
+                    PeerMessage::Ping(id) => {
+                        conn_stream_writer
+                            .send(
+                                FrameType::Data,
+                                &encode_fidl(&mut PeerReply::Pong(id))?,
+                                false,
+                                &conn_stats.pong,
+                            )
+                            .await?;
                     }
                 }
             }
@@ -601,30 +722,4 @@ async fn server_conn_stream(
             bail!("Server connection stream closed");
         }
     }
-}
-
-async fn send_links(
-    peer_node_id: NodeId,
-    mut commands: futures::channel::mpsc::Sender<ClientPeerCommand>,
-    mut observer: Observer<Vec<LinkStatus>>,
-) -> Result<(), Error> {
-    log::trace!("SEND_LINKS:{:?} BEGINS", peer_node_id);
-    while let Some(link_status) = observer.next().await {
-        log::trace!("SEND_LINKS:{:?} SCHEDULE SEND {:?}", peer_node_id, link_status);
-        let (sender, receiver) = futures::channel::oneshot::channel();
-        commands
-            .send(ClientPeerCommand::UpdateLinkStatus(
-                UpdateLinkStatus {
-                    link_status: link_status.into_iter().map(|s| s.into()).collect(),
-                },
-                sender,
-            ))
-            .await?;
-        log::trace!("SEND_LINKS:{:?} AWAIT ACK", peer_node_id);
-        receiver.await?;
-
-        log::trace!("SEND_LINKS:{:?} SLEEPY TIME", peer_node_id);
-        wait_until(std::time::Instant::now() + std::time::Duration::from_secs(1)).await;
-    }
-    Ok(())
 }

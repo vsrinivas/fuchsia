@@ -20,22 +20,23 @@
 
 use crate::{
     async_quic::{AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, StreamProperties},
-    diagnostics_service::spawn_diagostic_service_request_handler,
+    diagnostics_service::run_diagostic_service_request_handler,
     framed_stream::MessageStats,
-    future_help::{Observable, Observer},
+    future_help::{log_errors, Observable, Observer, PollMutex},
     handle_info::{handle_info, HandleKey, HandleType},
-    labels::{Endpoint, NodeId, NodeLinkId, TransferKey},
-    link::{Link, LinkStatus},
-    link_status_updater::{spawn_link_status_updater, LinkStatePublisher},
+    labels::{ConnectionId, Endpoint, NodeId, NodeLinkId, TransferKey},
+    link::{new_link, LinkReceiver, LinkRouting, LinkSender, LinkStatus},
+    link_status_updater::{run_link_status_updater, LinkStatePublisher},
     peer::Peer,
     proxy::{ProxyTransferInitiationReceiver, RemoveFromProxyTable, StreamRefSender},
     proxyable_handle::IntoProxied,
     route_planner::{
-        routing_update_channel, spawn_route_planner, RemoteRoutingUpdate, RemoteRoutingUpdateSender,
+        routing_update_channel, run_route_planner, RemoteRoutingUpdate, RemoteRoutingUpdateSender,
     },
-    runtime::spawn,
+    runtime::{FutureExt, Task},
+    security_context::{quiche_config_from_security_context, SecurityContext},
     service_map::{ListablePeer, ServiceMap},
-    socket_link::spawn_socket_link,
+    socket_link::run_socket_link,
 };
 use anyhow::{bail, format_err, Context as _, Error};
 use fidl::{endpoints::ClientEnd, AsHandleRef, Channel, Handle, HandleBased, Socket, SocketOpts};
@@ -44,14 +45,13 @@ use fidl_fuchsia_overnet_protocol::{
     ChannelHandle, LinkDiagnosticInfo, PeerConnectionDiagnosticInfo, SocketHandle, SocketType,
     StreamId, StreamRef, ZirconHandle,
 };
-use futures::{future::poll_fn, lock::Mutex, prelude::*};
+use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
 use rand::Rng;
 use std::{
-    cell::RefCell,
-    collections::{BTreeMap, HashMap},
-    path::Path,
-    rc::{Rc, Weak},
+    collections::{btree_map, BTreeMap, HashMap, HashSet},
+    convert::TryInto,
     sync::atomic::{AtomicU64, Ordering},
+    sync::{Arc, Weak},
     task::{Context, Poll, Waker},
     time::Duration,
 };
@@ -59,37 +59,18 @@ use std::{
 /// Configuration object for creating a router.
 pub struct RouterOptions {
     node_id: Option<NodeId>,
-    pub(crate) quic_server_key_file: Option<Box<dyn AsRef<Path>>>,
-    pub(crate) quic_server_cert_file: Option<Box<dyn AsRef<Path>>>,
     diagnostics: Option<fidl_fuchsia_overnet_protocol::Implementation>,
 }
 
 impl RouterOptions {
     /// Create with defaults.
     pub fn new() -> Self {
-        RouterOptions {
-            node_id: None,
-            quic_server_key_file: None,
-            quic_server_cert_file: None,
-            diagnostics: None,
-        }
+        RouterOptions { diagnostics: None, node_id: None }
     }
 
     /// Request a specific node id (if unset, one will be generated).
     pub fn set_node_id(mut self, node_id: NodeId) -> Self {
         self.node_id = Some(node_id);
-        self
-    }
-
-    /// Set which file to load the server private key from.
-    pub fn set_quic_server_key_file(mut self, key_file: Box<dyn AsRef<Path>>) -> Self {
-        self.quic_server_key_file = Some(key_file);
-        self
-    }
-
-    /// Set which file to load the server cert from.
-    pub fn set_quic_server_cert_file(mut self, pem_file: Box<dyn AsRef<Path>>) -> Self {
-        self.quic_server_cert_file = Some(pem_file);
         self
     }
 
@@ -108,6 +89,8 @@ enum PendingTransfer {
     Waiting(Waker),
 }
 
+type PendingTransferMap = BTreeMap<TransferKey, PendingTransfer>;
+
 #[derive(Debug)]
 pub(crate) enum FoundTransfer {
     Fused(Handle),
@@ -120,6 +103,459 @@ pub(crate) enum OpenedTransfer {
     Remote(AsyncQuicStreamWriter, AsyncQuicStreamReader, Handle),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub(crate) enum LinkSource {
+    Unknown,
+    PeerHint,
+    PeerReachable,
+    LinkHint,
+    RoutingUpdate,
+}
+
+struct Questioning(NodeId, Task);
+
+pub(crate) struct CurrentLink {
+    link: Weak<LinkRouting>,
+    source: LinkSource,
+    questioning: Option<Questioning>,
+}
+
+struct PeerMaps {
+    clients: BTreeMap<NodeId, Arc<Peer>>,
+    servers: BTreeMap<NodeId, Vec<Arc<Peer>>>,
+    connections: HashMap<ConnectionId, Arc<Peer>>,
+    current_link: BTreeMap<NodeId, CurrentLink>,
+}
+
+impl PeerMaps {
+    async fn get_client(
+        &mut self,
+        peer_node_id: NodeId,
+        link_hint: impl LinkHint,
+        router: &Arc<Router>,
+        but_why: &str,
+    ) -> Result<Arc<Peer>, Error> {
+        if peer_node_id == router.node_id {
+            bail!("Trying to create loopback client peer");
+        }
+        let link = self.apply_link_hint(peer_node_id, router.node_id(), link_hint).await;
+        if let Some(p) = self.clients.get(&peer_node_id) {
+            if p.node_id() != peer_node_id {
+                bail!(
+                    "Existing client peer gets a packet from a new peer node id {:?} (vs {:?})",
+                    peer_node_id,
+                    p.node_id()
+                );
+            }
+            Ok(p.clone())
+        } else if let Some(link) = link {
+            let p = self.new_client(peer_node_id, router, but_why).await?;
+            link.add_route_for_peers(std::iter::once(&p)).await;
+            Ok(p)
+        } else {
+            bail!("no route to node {:?}", peer_node_id)
+        }
+    }
+
+    async fn lookup(
+        &mut self,
+        conn_id: &[u8],
+        ty: quiche::Type,
+        peer_node_id: NodeId,
+        link_hint: impl LinkHint,
+        router: &Arc<Router>,
+    ) -> Result<Arc<Peer>, Error> {
+        if peer_node_id == router.node_id {
+            bail!("Trying to create loopback client peer");
+        }
+        let link = self.apply_link_hint(peer_node_id, router.node_id(), link_hint).await;
+        if let Ok(Some(p)) = conn_id.try_into().map(|conn_id| self.connections.get(&conn_id)) {
+            if p.node_id() != peer_node_id {
+                bail!(
+                    "Existing looked-up peer gets a packet from a new peer node id {:?} (vs {:?})",
+                    peer_node_id,
+                    p.node_id()
+                );
+            }
+            Ok(p.clone())
+        } else if ty != quiche::Type::Initial {
+            bail!("Packet received for unknown connection")
+        } else if let Some(link) = link {
+            if self.clients.get(&peer_node_id).is_none() {
+                let p = self.new_client(peer_node_id, router, "incoming server connection").await?;
+                link.add_route_for_peers(std::iter::once(&p)).await;
+            }
+            let p = self.new_server(peer_node_id, router).await?;
+            link.add_route_for_peers(std::iter::once(&p)).await;
+            Ok(p)
+        } else {
+            bail!("no route back to node {:?}", peer_node_id)
+        }
+    }
+
+    async fn new_client(
+        &mut self,
+        peer_node_id: NodeId,
+        router: &Arc<Router>,
+        but_why: &str,
+    ) -> Result<Arc<Peer>, Error> {
+        let mut config =
+            router.quiche_config().await.context("creating client configuration for quiche")?;
+        let conn_id = ConnectionId::new();
+        let conn = quiche::connect(None, &conn_id.to_array(), &mut config)?;
+        let peer = Peer::new_client(
+            peer_node_id,
+            conn_id,
+            conn,
+            router.link_state_observable.new_observer(),
+            router.service_map.new_local_service_observer(),
+            router,
+            but_why,
+        );
+        self.clients.insert(peer_node_id, peer.clone());
+        self.connections.insert(conn_id, peer.clone());
+        Ok(peer)
+    }
+
+    async fn new_server(
+        &mut self,
+        peer_node_id: NodeId,
+        router: &Arc<Router>,
+    ) -> Result<Arc<Peer>, Error> {
+        let mut config =
+            router.quiche_config().await.context("creating client configuration for quiche")?;
+        let conn_id = ConnectionId::new();
+        let conn = quiche::accept(&conn_id.to_array(), None, &mut config)?;
+        let peer = Peer::new_server(peer_node_id, conn_id, conn, router);
+        self.servers.entry(peer_node_id).or_insert(Vec::new()).push(peer.clone());
+        self.connections.insert(conn_id, peer.clone());
+        Ok(peer)
+    }
+
+    async fn new_route(
+        &mut self,
+        peer_node_id: NodeId,
+        link_hint: impl LinkHint,
+        router: &Arc<Router>,
+        but_why: &str,
+    ) -> Result<(), Error> {
+        self.get_client(peer_node_id, link_hint, router, but_why).map_ok(drop).await
+    }
+
+    async fn apply_link_hint(
+        &mut self,
+        peer_node_id: NodeId,
+        own_node_id: NodeId,
+        link_hint: impl LinkHint,
+    ) -> Option<Arc<LinkRouting>> {
+        let (link, source) = link_hint.to_link(&self.current_link);
+        self.alter_link(peer_node_id, own_node_id, link, source).await
+    }
+
+    async fn question_peer(&mut self, peer: NodeId, router: &Arc<Router>, but_why: &str) {
+        let my_node_id = router.node_id();
+        match self.current_link.get_mut(&peer) {
+            Some(CurrentLink { questioning: Some(_), .. }) => {
+                // Already questioning this link, no need to do more.
+                log::info!(
+                    "{:?} question peer {:?}: already questioning... continue",
+                    my_node_id,
+                    peer
+                );
+            }
+            Some(current_link) => {
+                log::info!("{:?} question peer {:?}: begin questioning", my_node_id, peer);
+                let router = Arc::downgrade(router);
+                let ask = {
+                    let router = router.clone();
+                    let but_why = but_why.to_string();
+                    async move {
+                        let peer_client = Weak::upgrade(&router)
+                            .ok_or_else(|| format_err!("no router"))?
+                            .client_peer(peer, NoLinkHint, &but_why)
+                            .await?;
+                        let rtt = peer_client.round_trip_time().await;
+                        let timeout = std::cmp::max(
+                            Duration::from_secs(5),
+                            std::cmp::min(Duration::from_secs(30), 100 * rtt),
+                        );
+                        log::info!(
+                            "{:?} question peer {:?}: ping with timeout {:?}",
+                            my_node_id,
+                            peer,
+                            timeout
+                        );
+                        peer_client.ping().timeout_after(timeout).await??;
+                        log::info!(
+                            "{:?} question peer {:?}: pinged successfully",
+                            my_node_id,
+                            peer
+                        );
+                        Ok::<_, Error>(())
+                    }
+                };
+                current_link.questioning = Some(Questioning(
+                    peer,
+                    Task::spawn(async move {
+                        let r = ask.await;
+                        if let Some(router) = Weak::upgrade(&router) {
+                            match r {
+                                Ok(_) => {
+                                    router
+                                        .peers
+                                        .lock()
+                                        .await
+                                        .current_link
+                                        .get_mut(&peer)
+                                        .map(|l| l.questioning = None);
+                                }
+                                Err(e) => {
+                                    router
+                                        .remove_peer_id(peer, &format!("query ping error: {:?}", e))
+                                        .await;
+                                }
+                            }
+                        }
+                    }),
+                ));
+            }
+            None => {
+                // No current link, and we don't have a historical link hint either.
+                // This peer can go.
+                self.remove_peer_id(peer, router.node_id, "no known link").await;
+            }
+        }
+    }
+
+    fn peers<'a>(
+        node_id: NodeId,
+        clients: &'a BTreeMap<NodeId, Arc<Peer>>,
+        servers: &'a BTreeMap<NodeId, Vec<Arc<Peer>>>,
+    ) -> impl Iterator<Item = &'a Arc<Peer>> {
+        clients
+            .get(&node_id)
+            .into_iter()
+            .chain(servers.get(&node_id).into_iter().map(|v| v.iter()).flatten())
+    }
+
+    async fn alter_link(
+        &mut self,
+        peer_node_id: NodeId,
+        own_node_id: NodeId,
+        link: Option<Arc<LinkRouting>>,
+        source: LinkSource,
+    ) -> Option<Arc<LinkRouting>> {
+        let clients = &self.clients;
+        let servers = &self.servers;
+        let peers = move || Self::peers(peer_node_id, clients, servers);
+        // See if there's an existing link
+        match self.current_link.entry(peer_node_id) {
+            btree_map::Entry::Occupied(mut o) => {
+                let current_link = o.get_mut();
+                // Is it still current?
+                if let Some(old_link) = Weak::upgrade(&current_link.link) {
+                    // Yep there's still a real link.
+                    // Let's see if the source of routing information is better or worse via this update.
+                    if source < current_link.source {
+                        log::trace!(
+                            "{:?} alter_link to {:?} from {:?} - current source {:?} dominates",
+                            own_node_id,
+                            peer_node_id,
+                            source,
+                            current_link.source
+                        );
+                        return Some(old_link);
+                    }
+                    // This is strong enough information to update the routing table.
+                    if let Some(link) = link.as_ref() {
+                        if !Arc::ptr_eq(&old_link, link) {
+                            log::info!(
+                                concat!(
+                                    "{:?} alter_link to {:?} from {:?} - ",
+                                    "remove old link {:?}, add new link {:?}"
+                                ),
+                                own_node_id,
+                                peer_node_id,
+                                source,
+                                old_link.debug_id(),
+                                link.debug_id(),
+                            );
+                            old_link.remove_route_for_peers(peers()).await;
+                            link.add_route_for_peers(peers()).await;
+                            *current_link = CurrentLink {
+                                link: Arc::downgrade(link),
+                                source,
+                                questioning: None,
+                            };
+                        } else if current_link.questioning.is_some() || source > current_link.source
+                        {
+                            log::info!(
+                                "{:?} alter_link to {:?} from {:?} - refresh link {:?}",
+                                own_node_id,
+                                peer_node_id,
+                                source,
+                                link.debug_id(),
+                            );
+                            *current_link = CurrentLink {
+                                link: Arc::downgrade(link),
+                                source,
+                                questioning: None,
+                            };
+                        }
+                    }
+                } else if let Some(link) = link.as_ref() {
+                    // There was a link but it's gone.
+                    // Just add this new one.
+                    log::info!(
+                        "{:?} alter_link to {:?} from {:?} - replace expired with {:?}",
+                        own_node_id,
+                        peer_node_id,
+                        source,
+                        link.debug_id()
+                    );
+                    link.add_route_for_peers(peers()).await;
+                    *current_link =
+                        CurrentLink { link: Arc::downgrade(link), source, questioning: None };
+                } else {
+                    let was_questioning = current_link.questioning.is_some();
+                    o.remove();
+                    // There was a link but it's gone. Also, this is not a new link.
+                    if was_questioning {
+                        // If we were questioning, then now we have proof that there's no relevant link.
+                        self.remove_peer_id(
+                            peer_node_id,
+                            own_node_id,
+                            "proved no route during alter_link",
+                        )
+                        .await;
+                    }
+                }
+            }
+            btree_map::Entry::Vacant(v) => {
+                // No original link, add a new one if we were given one.
+                if let Some(link) = link.as_ref() {
+                    log::info!(
+                        "{:?} alter_link to {:?} from {:?} - new link {:?}",
+                        own_node_id,
+                        peer_node_id,
+                        source,
+                        link.debug_id(),
+                    );
+                    v.insert(CurrentLink { link: Arc::downgrade(link), source, questioning: None });
+                    link.add_route_for_peers(peers()).await;
+                }
+            }
+        }
+        link
+    }
+
+    async fn update_routes(
+        &mut self,
+        routes: Vec<(NodeId, Arc<LinkRouting>)>,
+        direct_links: HashSet<NodeId>,
+        router: &Arc<Router>,
+        but_why: &str,
+    ) -> Result<(), Error> {
+        log::trace!(
+            "[{:?}] update routes: {:?}",
+            router.node_id(),
+            routes.iter().map(|(n, l)| (n, l.debug_id())).collect::<Vec<_>>()
+        );
+        let mut seen_peers = direct_links;
+        for (node_id, link) in routes.into_iter() {
+            self.alter_link(node_id, router.node_id(), Some(link), LinkSource::RoutingUpdate).await;
+            seen_peers.insert(node_id);
+        }
+        log::trace!("[{:?}] seen peers: {:?}", router.node_id(), seen_peers);
+        let mut unseen_peer_ids = HashSet::new();
+        for peer in self.connections.values().map(|p| p.node_id()) {
+            if seen_peers.contains(&peer) {
+                continue;
+            }
+            unseen_peer_ids.insert(peer);
+        }
+        log::trace!("[{:?}] unseen peer ids: {:?}", router.node_id(), unseen_peer_ids);
+        for peer in unseen_peer_ids {
+            self.question_peer(peer, router, but_why).await;
+        }
+        Ok(())
+    }
+
+    async fn remove_peer_id(&mut self, peer_id: NodeId, own_node_id: NodeId, but_why: &str) {
+        log::info!("[{:?}] remove peer id {:?} because {}", own_node_id, peer_id, but_why);
+        let mut to_shutdown = Vec::new();
+        let mut add_to_shutdown = |peer| to_shutdown.push(peer);
+        self.clients.remove(&peer_id).map(&mut add_to_shutdown);
+        self.servers
+            .remove(&peer_id)
+            .unwrap_or_else(Vec::new)
+            .into_iter()
+            .for_each(&mut add_to_shutdown);
+        self.connections.retain(|_, peer| peer.node_id() != peer_id);
+        futures::stream::iter(to_shutdown.into_iter())
+            .for_each_concurrent(None, |peer| async move { peer.shutdown().await })
+            .await;
+        self.current_link.remove(&peer_id);
+        log::trace!("[{:?}] removed peer id {:?}", own_node_id, peer_id);
+    }
+}
+
+pub(crate) trait LinkHint {
+    fn to_link(
+        self,
+        current_link: &BTreeMap<NodeId, CurrentLink>,
+    ) -> (Option<Arc<LinkRouting>>, LinkSource)
+    where
+        Self: Sized;
+}
+
+impl LinkHint for Weak<LinkRouting> {
+    fn to_link(
+        self,
+        _current_link: &BTreeMap<NodeId, CurrentLink>,
+    ) -> (Option<Arc<LinkRouting>>, LinkSource)
+    where
+        Self: Sized,
+    {
+        (Weak::upgrade(&self), LinkSource::LinkHint)
+    }
+}
+
+impl LinkHint for Arc<LinkRouting> {
+    fn to_link(
+        self,
+        _current_link: &BTreeMap<NodeId, CurrentLink>,
+    ) -> (Option<Arc<LinkRouting>>, LinkSource)
+    where
+        Self: Sized,
+    {
+        (Some(self), LinkSource::LinkHint)
+    }
+}
+
+impl LinkHint for (NodeId, LinkSource) {
+    fn to_link(
+        self,
+        current_link: &BTreeMap<NodeId, CurrentLink>,
+    ) -> (Option<Arc<LinkRouting>>, LinkSource)
+    where
+        Self: Sized,
+    {
+        (current_link.get(&self.0).map(|w| Weak::upgrade(&w.link)).flatten(), self.1)
+    }
+}
+
+pub(crate) struct NoLinkHint;
+
+impl LinkHint for NoLinkHint {
+    fn to_link(
+        self,
+        _current_link: &BTreeMap<NodeId, CurrentLink>,
+    ) -> (Option<Arc<LinkRouting>>, LinkSource) {
+        (None, LinkSource::Unknown)
+    }
+}
+
 /// Router maintains global state for one node_id.
 /// `LinkData` is a token identifying a link for layers above Router.
 /// `Time` is a representation of time for the Router, to assist injecting different platforms
@@ -129,25 +565,24 @@ pub struct Router {
     node_id: NodeId,
     /// Factory for local link id's (the next id to be assigned).
     next_node_link_id: AtomicU64,
-    /// The servers private key file for this node.
-    server_key_file: Box<dyn AsRef<Path>>,
-    /// The servers private cert file for this node.
-    server_cert_file: Box<dyn AsRef<Path>>,
+    security_context: Box<dyn SecurityContext>,
     /// All peers.
-    peers: Mutex<BTreeMap<(NodeId, Endpoint), Rc<Peer>>>,
-    links: Mutex<HashMap<NodeLinkId, Weak<Link>>>,
+    peers: Mutex<PeerMaps>,
+    links: Mutex<HashMap<NodeLinkId, Weak<LinkRouting>>>,
     link_state_publisher: LinkStatePublisher,
-    link_state_observable: Rc<Observable<Vec<LinkStatus>>>,
+    link_state_observable: Arc<Observable<Vec<LinkStatus>>>,
     service_map: ServiceMap,
     routing_update_sender: RemoteRoutingUpdateSender,
     list_peers_observer: Mutex<Option<Observer<Vec<ListablePeer>>>>,
-    proxied_streams: RefCell<HashMap<HandleKey, ProxiedHandle>>,
-    pending_transfers: RefCell<BTreeMap<TransferKey, PendingTransfer>>,
+    proxied_streams: Mutex<HashMap<HandleKey, ProxiedHandle>>,
+    pending_transfers: Mutex<PendingTransferMap>,
+    task: Mutex<Option<Task>>,
 }
 
 struct ProxiedHandle {
     remove_sender: futures::channel::oneshot::Sender<RemoveFromProxyTable>,
     original_paired: HandleKey,
+    proxy_task: Task,
 }
 
 /// Generate a new random node id
@@ -168,73 +603,94 @@ impl std::fmt::Debug for Router {
 
 impl Router {
     /// New with some set of options
-    pub fn new(options: RouterOptions) -> Result<Rc<Self>, Error> {
+    pub fn new(
+        options: RouterOptions,
+        security_context: Box<dyn SecurityContext>,
+    ) -> Result<Arc<Self>, Error> {
+        // Verify that we can read all files in the security_context - this makes debugging easier
+        // later on (since errors from quiche are quite non-descript).
+        let verify_file = |file: &str| {
+            std::fs::File::open(file).context(format_err!("Opening {}", file)).map(drop)
+        };
+        verify_file(security_context.node_cert())?;
+        verify_file(security_context.node_private_key())?;
+        verify_file(security_context.root_cert())?;
+
         let node_id = options.node_id.unwrap_or_else(generate_node_id);
-        let server_cert_file = options
-            .quic_server_cert_file
-            .ok_or_else(|| anyhow::format_err!("No server cert file"))?;
-        if !server_cert_file.as_ref().as_ref().exists() {
-            anyhow::bail!(
-                "Server cert file does not exist: {}",
-                server_cert_file.as_ref().as_ref().display()
-            );
-        }
-        let server_key_file = options
-            .quic_server_key_file
-            .ok_or_else(|| anyhow::format_err!("No server key file"))?;
-        if !server_key_file.as_ref().as_ref().exists() {
-            anyhow::bail!(
-                "Server key file does not exist: {}",
-                server_key_file.as_ref().as_ref().display()
-            );
-        }
         let (routing_update_sender, routing_update_receiver) = routing_update_channel();
         let service_map = ServiceMap::new(node_id);
         let list_peers_observer = Mutex::new(Some(service_map.new_list_peers_observer()));
         let (link_state_publisher, link_state_receiver) = futures::channel::mpsc::channel(1);
-        let router = Rc::new(Router {
+        let router = Arc::new(Router {
             node_id,
             next_node_link_id: 1.into(),
-            server_cert_file,
-            server_key_file,
+            security_context,
             routing_update_sender,
             link_state_publisher,
-            link_state_observable: Rc::new(Observable::new(Vec::new())),
+            link_state_observable: Arc::new(Observable::new(Vec::new())),
             service_map,
             links: Mutex::new(HashMap::new()),
-            peers: Mutex::new(BTreeMap::new()),
+            peers: Mutex::new(PeerMaps {
+                clients: BTreeMap::new(),
+                servers: BTreeMap::new(),
+                connections: HashMap::new(),
+                current_link: BTreeMap::new(),
+            }),
             list_peers_observer,
-            proxied_streams: RefCell::new(HashMap::new()),
-            pending_transfers: RefCell::new(BTreeMap::new()),
+            proxied_streams: Mutex::new(HashMap::new()),
+            pending_transfers: Mutex::new(PendingTransferMap::new()),
+            task: Mutex::new(None),
         });
 
-        spawn_route_planner(
-            router.clone(),
-            routing_update_receiver,
-            router.link_state_observable.new_observer(),
-        );
-        spawn_link_status_updater(router.link_state_observable.clone(), link_state_receiver);
-        // Spawn a future to service diagnostic requests
-        if let Some(implementation) = options.diagnostics {
-            spawn_diagostic_service_request_handler(router.clone(), implementation);
-        }
+        let diagnostics = options.diagnostics;
+        let link_state_observable = router.link_state_observable.clone();
+        let link_state_observer = link_state_observable.new_observer();
+        let weak_router = Arc::downgrade(&router);
+        *futures::executor::block_on(router.task.lock()) = Some(Task::spawn(log_errors(
+            async move {
+                let router = &weak_router;
+                futures::future::try_join3(
+                    run_route_planner(router, routing_update_receiver, link_state_observer),
+                    run_link_status_updater(
+                        node_id,
+                        link_state_observable.clone(),
+                        link_state_receiver,
+                    ),
+                    async move {
+                        if let Some(implementation) = diagnostics {
+                            run_diagostic_service_request_handler(router, implementation).await?;
+                        }
+                        Ok(())
+                    },
+                )
+                .await
+                .map(drop)
+            },
+            format!("router {:?} support loop failed", node_id),
+        )));
+
         Ok(router)
     }
 
     /// Create a new link to some node, returning a `LinkId` describing it.
-    pub async fn new_link(self: &Rc<Self>, peer_node_id: NodeId) -> Result<Rc<Link>, Error> {
+    pub async fn new_link(
+        self: &Arc<Self>,
+        peer_node_id: NodeId,
+    ) -> Result<(LinkSender, LinkReceiver), Error> {
         let node_link_id = self.next_node_link_id.fetch_add(1, Ordering::Relaxed).into();
-        let link = Link::new(peer_node_id, node_link_id, &self).await?;
-        self.link_state_publisher
-            .clone()
-            .send(
-                link.new_round_trip_time_observer()
-                    .map(move |rtt| (node_link_id, peer_node_id, rtt))
-                    .boxed_local(),
-            )
+        let (sender, receiver, routing, observer) = new_link(peer_node_id, node_link_id, &self);
+        log::trace!("[{:?} link {:?}] new link to {:?}", self.node_id, node_link_id, peer_node_id);
+        self.links.lock().await.insert(routing.id(), Arc::downgrade(&routing));
+        log::trace!("[{:?} link {:?}] declare peer {:?}", self.node_id, node_link_id, peer_node_id);
+        self.peers
+            .lock()
+            .await
+            .new_route(peer_node_id, Arc::downgrade(&routing), self, "new_link")
             .await?;
-        self.links.lock().await.insert(link.id(), Rc::downgrade(&link));
-        Ok(link)
+        log::trace!("[{:?} link {:?}] publish link", self.node_id, node_link_id);
+        self.link_state_publisher.clone().send((node_link_id, peer_node_id, observer)).await?;
+        log::trace!("[{:?} link {:?}] return link", self.node_id, node_link_id);
+        Ok((sender, receiver))
     }
 
     /// Accessor for the node id of this router.
@@ -248,7 +704,7 @@ impl Router {
 
     /// Create a new stream to advertised service `service` on remote node id `node`.
     pub async fn connect_to_service(
-        self: &Rc<Self>,
+        self: &Arc<Self>,
         node_id: NodeId,
         service_name: &str,
         chan: Channel,
@@ -265,7 +721,7 @@ impl Router {
                 .connect(service_name, chan, ConnectionInfo { peer: Some(node_id.into()) })
                 .await
         } else {
-            self.client_peer(node_id, &Weak::new())
+            self.client_peer(node_id, NoLinkHint, "connect_to_service")
                 .await
                 .with_context(|| {
                     format_err!(
@@ -290,31 +746,25 @@ impl Router {
     }
 
     /// Implementation of ListPeers fidl method.
-    pub async fn list_peers(
-        self: &Rc<Self>,
-        sink: Box<dyn FnOnce(Vec<fidl_fuchsia_overnet::Peer>)>,
-    ) -> Result<(), Error> {
+    pub async fn list_peers(self: &Arc<Self>) -> Result<Vec<fidl_fuchsia_overnet::Peer>, Error> {
         let mut obs = self
             .list_peers_observer
             .lock()
             .await
             .take()
             .ok_or_else(|| anyhow::format_err!("Already listing peers"))?;
-        let router = self.clone();
-        spawn(async move {
-            if let Some(r) = obs.next().await {
-                *router.list_peers_observer.lock().await = Some(obs);
-                sink(r.into_iter().map(|p| p.into()).collect());
-            } else {
-                *router.list_peers_observer.lock().await = Some(obs);
-            }
-        });
-        Ok(())
+        if let Some(r) = obs.next().await {
+            *self.list_peers_observer.lock().await = Some(obs);
+            Ok(r.into_iter().map(|p| p.into()).collect())
+        } else {
+            *self.list_peers_observer.lock().await = Some(obs);
+            Ok(Vec::new())
+        }
     }
 
     /// Implementation of AttachToSocket fidl method.
-    pub fn attach_socket_link(
-        self: &Rc<Self>,
+    pub async fn run_socket_link(
+        self: &Arc<Self>,
         socket: fidl::Socket,
         options: fidl_fuchsia_overnet::SocketLinkOptions,
     ) -> Result<(), Error> {
@@ -328,67 +778,36 @@ impl Router {
         } else {
             None
         };
-        spawn_socket_link(
-            self.clone(),
-            self.node_id,
-            options.connection_label,
-            socket,
-            duration_per_byte,
-        );
-        Ok(())
+        run_socket_link(self.clone(), options.connection_label, socket, duration_per_byte).await
     }
 
     /// Diagnostic information for links
     pub(crate) async fn link_diagnostics(&self) -> Vec<LinkDiagnosticInfo> {
-        self.links
-            .lock()
-            .await
-            .iter()
-            .filter_map(|(_, link)| Weak::upgrade(link).map(|link| link.diagnostic_info()))
+        futures::stream::iter(self.links.lock().await.iter())
+            .filter_map(|(_, link)| async move {
+                if let Some(link) = Weak::upgrade(link) {
+                    Some(link.diagnostic_info().await)
+                } else {
+                    None
+                }
+            })
             .collect()
+            .await
     }
 
     /// Diagnostic information for peer connections
     pub(crate) async fn peer_diagnostics(&self) -> Vec<PeerConnectionDiagnosticInfo> {
-        self.peers.lock().await.iter().map(|(_, peer)| peer.diagnostics(self.node_id)).collect()
+        futures::stream::iter(self.peers.lock().await.connections.iter())
+            .then(|(_, peer)| peer.diagnostics(self.node_id))
+            .collect()
+            .await
     }
 
-    fn server_config(&self) -> Result<quiche::Config, Error> {
-        let mut config = quiche::Config::new(quiche::PROTOCOL_VERSION)
-            .context("Creating quic configuration for server connection")?;
-        let cert_file = self
-            .server_cert_file
-            .as_ref()
-            .as_ref()
-            .to_str()
-            .ok_or_else(|| format_err!("Cannot convert path to string"))?;
-        let key_file = self
-            .server_key_file
-            .as_ref()
-            .as_ref()
-            .to_str()
-            .ok_or_else(|| format_err!("Cannot convert path to string"))?;
-        config
-            .load_cert_chain_from_pem_file(cert_file)
-            .context(format!("Loading server certificate '{}'", cert_file))?;
-        config
-            .load_priv_key_from_pem_file(key_file)
-            .context(format!("Loading server private key '{}'", key_file))?;
-        // TODO(ctiller): don't hardcode these
-        config
-            .set_application_protos(b"\x0bovernet/0.1")
-            .context("Setting application protocols")?;
-        config.set_initial_max_data(10_000_000);
-        config.set_initial_max_stream_data_bidi_local(1_000_000);
-        config.set_initial_max_stream_data_bidi_remote(1_000_000);
-        config.set_initial_max_stream_data_uni(1_000_000);
-        config.set_initial_max_streams_bidi(100);
-        config.set_initial_max_streams_uni(100);
-        Ok(config)
-    }
-
-    fn client_config(&self) -> Result<quiche::Config, Error> {
-        let mut config = quiche::Config::new(quiche::PROTOCOL_VERSION)?;
+    async fn quiche_config(&self) -> Result<quiche::Config, Error> {
+        let mut config =
+            quiche_config_from_security_context(&*self.security_context).await.with_context(
+                || format_err!("applying security context: {:?}", self.security_context),
+            )?;
         // TODO(ctiller): don't hardcode these
         config.set_application_protos(b"\x0bovernet/0.1")?;
         config.set_initial_max_data(10_000_000);
@@ -397,6 +816,7 @@ impl Router {
         config.set_initial_max_stream_data_uni(1_000_000);
         config.set_initial_max_streams_bidi(100);
         config.set_initial_max_streams_uni(100);
+        config.verify_peer(false);
         Ok(config)
     }
 
@@ -406,125 +826,161 @@ impl Router {
         }
     }
 
+    /// Retrieve the current link for some peer node id - if there is one present.
+    pub(crate) async fn peer_link(&self, peer_id: NodeId) -> Option<Arc<LinkRouting>> {
+        self.peers.lock().await.current_link.get(&peer_id).map(|l| Weak::upgrade(&l.link)).flatten()
+    }
+
     /// Ensure that a client peer id exists for a given `node_id`
     /// If the client peer needs to be created, `link_id_hint` will be used as an interim hint
     /// as to the best route *to* this node, until a full routing update can be performed.
     pub(crate) async fn ensure_client_peer(
-        self: &Rc<Self>,
+        self: &Arc<Self>,
         node_id: NodeId,
-        link_hint: &Weak<Link>,
+        link_hint: impl LinkHint,
+        but_why: &str,
     ) -> Result<(), Error> {
         if node_id == self.node_id {
             return Ok(());
         }
-        self.client_peer(node_id, link_hint).await.map(|_| ())
+        self.client_peer(node_id, link_hint, but_why).await.map(drop)
     }
 
-    /// Map a node id to the client peer id. Since we can always create a client peer, this will
-    /// attempt to initiate a connection if there is no current connection.
-    /// If the client peer needs to be created, `link_id_hint` will be used as an interim hint
-    /// as to the best route *to* this node, until a full routing update can be performed.
+    pub(crate) async fn remove_peer(self: &Arc<Self>, conn_id: ConnectionId) {
+        log::info!("[{:?}] Request remove peer {:?}", self.node_id, conn_id);
+        let mut peers = self.peers.lock().await;
+        if let Some(peer) = peers.connections.remove(&conn_id) {
+            match peer.endpoint() {
+                Endpoint::Client => {
+                    if let btree_map::Entry::Occupied(o) = peers.clients.entry(peer.node_id()) {
+                        if Arc::ptr_eq(o.get(), &peer) {
+                            o.remove_entry();
+                        }
+                    }
+                }
+                Endpoint::Server => {
+                    peers
+                        .servers
+                        .get_mut(&peer.node_id())
+                        .map(|v| v.retain(|other| !Arc::ptr_eq(&peer, other)));
+                }
+            }
+            peer.shutdown().await;
+        }
+    }
+
+    async fn remove_peer_id(self: &Arc<Self>, peer_id: NodeId, but_why: &str) {
+        self.peers.lock().await.remove_peer_id(peer_id, self.node_id, but_why).await
+    }
+
     pub(crate) async fn client_peer(
-        self: &Rc<Self>,
-        node_id: NodeId,
-        link_hint: &Weak<Link>,
-    ) -> Result<Rc<Peer>, Error> {
-        if node_id == self.node_id {
-            bail!("Trying to create loopback client peer");
-        }
-        let key = (node_id, Endpoint::Client);
-        let mut peers = self.peers.lock().await;
-        if let Some(p) = peers.get(&key) {
-            return Ok(p.clone());
-        }
-
-        let mut config = self.client_config()?;
-        let scid: Vec<u8> = rand::thread_rng()
-            .sample_iter(&rand::distributions::Standard)
-            .take(quiche::MAX_CONN_ID_LEN)
-            .collect();
-        let p = Peer::new_client(
-            self.node_id,
-            node_id,
-            quiche::connect(None, &scid, &mut config).context("creating quic client connection")?,
-            link_hint,
-            self.link_state_observable.new_observer(),
-            self.service_map.new_local_service_observer(),
-        )
-        .context("creating client peer")?;
-        peers.insert(key, p.clone());
-        Ok(p)
+        self: &Arc<Self>,
+        peer_node_id: NodeId,
+        link_hint: impl LinkHint,
+        but_why: &str,
+    ) -> Result<Arc<Peer>, Error> {
+        self.peers.lock().await.get_client(peer_node_id, link_hint, self, but_why).await
     }
 
-    /// Retrieve an existing server peer id for some node id.
-    pub(crate) async fn server_peer(
-        self: &Rc<Self>,
-        node_id: NodeId,
-        is_initial_packet: bool,
-        link_hint: &Weak<Link>,
-    ) -> Result<Option<Rc<Peer>>, Error> {
-        if node_id == self.node_id {
-            bail!("Trying to create loopback server peer");
-        }
-        let mut peers = self.peers.lock().await;
-        let key = (node_id, Endpoint::Server);
-        if let Some(p) = peers.get(&key) {
-            return Ok(Some(p.clone()));
-        }
-
-        if !is_initial_packet {
-            return Ok(None);
-        }
-
-        let mut config = self.server_config()?;
-        let scid: Vec<u8> = rand::thread_rng()
-            .sample_iter(&rand::distributions::Standard)
-            .take(quiche::MAX_CONN_ID_LEN)
-            .collect();
-        let p = Peer::new_server(
-            node_id,
-            quiche::accept(&scid, None, &mut config).context("Creating quic server connection")?,
-            link_hint,
-            &self,
-        )
-        .context("creating server peer")?;
-        assert!(peers.insert(key, p.clone()).is_none());
-        Ok(Some(p))
+    pub(crate) async fn lookup_peer(
+        self: &Arc<Self>,
+        conn_id: &[u8],
+        ty: quiche::Type,
+        peer_node_id: NodeId,
+        link_hint: impl LinkHint,
+    ) -> Result<Arc<Peer>, Error> {
+        self.peers.lock().await.lookup(conn_id, ty, peer_node_id, link_hint, self).await
     }
 
     pub(crate) async fn update_routes(
-        self: &Rc<Self>,
+        self: &Arc<Self>,
         routes: impl Iterator<Item = (NodeId, NodeLinkId)>,
+        but_why: &str,
     ) -> Result<(), Error> {
-        let links = self.links.lock().await;
-        let dummy = Weak::new();
-        for (node_id, link_id) in routes {
-            let link = links.get(&link_id).unwrap_or(&dummy);
-            if let Some(peer) = self.server_peer(node_id, false, &Weak::new()).await? {
-                peer.update_link(link.clone()).await;
-            }
-            self.client_peer(node_id, &link)
-                .await
-                .with_context(|| format_err!("Adjusting route to link {:?}", link_id))?
-                .update_link(link.clone())
-                .await;
-        }
+        let (routes, direct_links) = {
+            let links = self.links.lock().await;
+            (
+                routes
+                    .filter_map(|(id, link_id)| {
+                        links.get(&link_id).map(Weak::upgrade).flatten().map(|link| (id, link))
+                    })
+                    .collect(),
+                links.values().filter_map(Weak::upgrade).map(|link| link.peer_node_id()).collect(),
+            )
+        };
+        self.peers.lock().await.update_routes(routes, direct_links, self, but_why).await?;
+        log::trace!("[{:?}] update routes done", self.node_id);
         Ok(())
+    }
+
+    fn add_proxied(
+        self: &Arc<Self>,
+        proxied_streams: &mut HashMap<HandleKey, ProxiedHandle>,
+        this_handle_key: HandleKey,
+        pair_handle_key: HandleKey,
+        remove_sender: futures::channel::oneshot::Sender<RemoveFromProxyTable>,
+        f: impl 'static + Send + Future<Output = Result<(), Error>>,
+    ) {
+        let router = Arc::downgrade(&self);
+        let proxy_task = Task::spawn(async move {
+            if let Err(e) = f.await {
+                log::trace!("[{:?}:{:?}] Proxy failed: {:?}", this_handle_key, pair_handle_key, e);
+            } else {
+                log::trace!(
+                    "[{:?}:{:?}] Proxy completed successfully",
+                    this_handle_key,
+                    pair_handle_key
+                );
+            }
+            if let Some(router) = Weak::upgrade(&router) {
+                router.remove_proxied(this_handle_key, pair_handle_key).await;
+            }
+        });
+        assert!(proxied_streams
+            .insert(
+                this_handle_key,
+                ProxiedHandle { remove_sender, original_paired: pair_handle_key, proxy_task },
+            )
+            .is_none());
+    }
+
+    // Remove a proxied handle from our table.
+    // Called by proxy::Proxy::drop.
+    async fn remove_proxied(
+        self: &Arc<Self>,
+        this_handle_key: HandleKey,
+        pair_handle_key: HandleKey,
+    ) {
+        let mut proxied_streams = self.proxied_streams.lock().await;
+        log::trace!(
+            "{:?} REMOVE_PROXIED: {:?}:{:?} all={:?}",
+            self.node_id,
+            this_handle_key,
+            pair_handle_key,
+            sorted(proxied_streams.keys().map(|x| *x).collect::<Vec<_>>())
+        );
+        if let Some(removed) = proxied_streams.remove(&this_handle_key) {
+            assert_eq!(removed.original_paired, pair_handle_key);
+            let _ = removed.remove_sender.send(RemoveFromProxyTable::Dropped);
+        }
     }
 
     // Prepare a handle to be sent to another machine.
     // Returns a ZirconHandle describing the established proxy.
     pub(crate) async fn send_proxied(
-        self: Rc<Self>,
+        self: Arc<Self>,
         handle: Handle,
         conn: AsyncConnection,
-        stats: Rc<MessageStats>,
+        stats: Arc<MessageStats>,
     ) -> Result<ZirconHandle, Error> {
-        let info = handle_info(handle.as_handle_ref())?;
-        let mut proxied_streams = self.proxied_streams.borrow_mut();
+        let raw_handle = handle.raw_handle(); // for debugging
+        let info = handle_info(handle.as_handle_ref())
+            .with_context(|| format!("Getting handle information for {}", raw_handle))?;
+        let mut proxied_streams = self.proxied_streams.lock().await;
         log::trace!(
-            "{:?} SEND_PROXIED: {:?} all={:?}",
+            "{:?} SEND_PROXIED: {:?} {:?} all={:?}",
             self.node_id,
+            handle,
             info,
             sorted(proxied_streams.keys().map(|x| *x).collect::<Vec<_>>())
         );
@@ -546,7 +1002,10 @@ impl Router {
                     stream_ref_sender,
                 })
                 .map_err(|_| format_err!("Failed to initiate transfer"))?;
-            let stream_ref = stream_ref_receiver.await?;
+            let stream_ref = stream_ref_receiver
+                .await
+                .with_context(|| format!("waiting for stream_ref for {:?}", raw_handle))?;
+            pair.proxy_task.detach();
             match info.handle_type {
                 HandleType::Channel => Ok(ZirconHandle::Channel(ChannelHandle { stream_ref })),
                 HandleType::Socket(socket_type) => {
@@ -557,130 +1016,126 @@ impl Router {
             // This handle (and its pair) is previously unseen... establish a proxy stream for it
             log::trace!("Send proxied {:?}", handle);
             let (tx, rx) = futures::channel::oneshot::channel();
-            let rx =
-                ProxyTransferInitiationReceiver::new(rx.map_err(move |_| {
-                    format_err!("cancelled transfer via send_proxied {:?}", info)
-                }));
-            let (stream_writer, stream_reader) = conn.alloc_bidi();
-            assert!(proxied_streams
-                .insert(
-                    info.this_handle_key,
-                    ProxiedHandle { remove_sender: tx, original_paired: info.pair_handle_key }
+            let rx = ProxyTransferInitiationReceiver::new(rx.map_err(move |_| {
+                format_err!(
+                    "cancelled transfer via send_proxied {:?}\n{}",
+                    info,
+                    111 //std::backtrace::Backtrace::force_capture()
                 )
-                .is_none());
-            drop(proxied_streams);
+            }));
+            let (stream_writer, stream_reader) = conn.alloc_bidi();
             let stream_ref = StreamRef::Creating(StreamId { id: stream_writer.id() });
-            match info.handle_type {
+            Ok(match info.handle_type {
                 HandleType::Channel => {
-                    crate::proxy::spawn::send(
-                        Channel::from_handle(handle).into_proxied()?,
-                        rx,
-                        stream_writer.into(),
-                        stream_reader.into(),
-                        stats,
-                        Rc::downgrade(&self),
-                    )?;
-                    Ok(ZirconHandle::Channel(ChannelHandle { stream_ref }))
+                    self.add_proxied(
+                        &mut *proxied_streams,
+                        info.this_handle_key,
+                        info.pair_handle_key,
+                        tx,
+                        crate::proxy::spawn::send(
+                            Channel::from_handle(handle).into_proxied()?,
+                            rx,
+                            stream_writer.into(),
+                            stream_reader.into(),
+                            stats,
+                            Arc::downgrade(&self),
+                        ),
+                    );
+                    ZirconHandle::Channel(ChannelHandle { stream_ref })
                 }
                 HandleType::Socket(socket_type) => {
-                    crate::proxy::spawn::send(
-                        Socket::from_handle(handle).into_proxied()?,
-                        rx,
-                        stream_writer.into(),
-                        stream_reader.into(),
-                        stats,
-                        Rc::downgrade(&self),
-                    )?;
-                    Ok(ZirconHandle::Socket(SocketHandle { stream_ref, socket_type }))
+                    self.add_proxied(
+                        &mut *proxied_streams,
+                        info.this_handle_key,
+                        info.pair_handle_key,
+                        tx,
+                        crate::proxy::spawn::send(
+                            Socket::from_handle(handle).into_proxied()?,
+                            rx,
+                            stream_writer.into(),
+                            stream_reader.into(),
+                            stats,
+                            Arc::downgrade(&self),
+                        ),
+                    );
+                    ZirconHandle::Socket(SocketHandle { stream_ref, socket_type })
                 }
-            }
+            })
         }
     }
 
     // Take a received handle description and construct a fidl::Handle that represents it
     // whilst establishing proxies as required
     pub(crate) async fn recv_proxied(
-        self: Rc<Self>,
+        self: Arc<Self>,
         handle: ZirconHandle,
         conn: AsyncConnection,
-        stats: Rc<MessageStats>,
+        stats: Arc<MessageStats>,
     ) -> Result<Handle, Error> {
         let (tx, rx) = futures::channel::oneshot::channel();
         let debug_id = generate_node_id().0;
         let rx = ProxyTransferInitiationReceiver::new(rx.map_err(move |_| {
             format_err!("cancelled transfer via recv_proxied; debug_id={}", debug_id)
         }));
-        let (handle, proxying) = match handle {
+        Ok(match handle {
             ZirconHandle::Channel(ChannelHandle { stream_ref }) => {
-                crate::proxy::spawn::recv(
-                    || Channel::create().map_err(Into::into),
+                let (h, p) = crate::proxy::spawn::recv(
+                    move || Channel::create().map_err(Into::into),
                     rx,
                     stream_ref,
                     &conn,
                     stats,
-                    Rc::downgrade(&self),
+                    Arc::downgrade(&self),
                 )
-                .await?
+                .await?;
+                if let Some(p) = p {
+                    let info = handle_info(h.as_handle_ref())?;
+                    self.add_proxied(
+                        &mut *self.proxied_streams.lock().await,
+                        info.pair_handle_key,
+                        info.this_handle_key,
+                        tx,
+                        p,
+                    );
+                }
+                h
             }
             ZirconHandle::Socket(SocketHandle { stream_ref, socket_type }) => {
                 let opts = match socket_type {
                     SocketType::Stream => SocketOpts::STREAM,
                     SocketType::Datagram => SocketOpts::DATAGRAM,
                 };
-                crate::proxy::spawn::recv(
-                    || Socket::create(opts).map_err(Into::into),
+                let (h, p) = crate::proxy::spawn::recv(
+                    move || Socket::create(opts).map_err(Into::into),
                     rx,
                     stream_ref,
                     &conn,
                     stats,
-                    Rc::downgrade(&self),
+                    Arc::downgrade(&self),
                 )
-                .await?
+                .await?;
+                if let Some(p) = p {
+                    let info = handle_info(h.as_handle_ref())?;
+                    self.add_proxied(
+                        &mut *self.proxied_streams.lock().await,
+                        info.pair_handle_key,
+                        info.this_handle_key,
+                        tx,
+                        p,
+                    );
+                }
+                h
             }
-        };
-        if proxying {
-            let mut proxied_streams = self.proxied_streams.borrow_mut();
-            let info = handle_info(handle.as_handle_ref())?;
-            log::trace!(
-                "{:?} RECV_PROXIED: {:?} debug_id={} all={:?}",
-                self.node_id,
-                info,
-                debug_id,
-                sorted(proxied_streams.keys().map(|x| *x).collect::<Vec<_>>())
-            );
-            let prior = proxied_streams.insert(
-                info.pair_handle_key,
-                ProxiedHandle { remove_sender: tx, original_paired: info.this_handle_key },
-            );
-            assert_eq!(prior.map(|p| p.original_paired), None);
-        }
-        Ok(handle)
-    }
-
-    // Remove a proxied handle from our table.
-    // Called by proxy::Proxy::drop.
-    pub(crate) fn remove_proxied(self: &Rc<Self>, handle: Handle) -> Result<(), Error> {
-        let info = handle_info(handle.as_handle_ref())?;
-        log::trace!(
-            "{:?} REMOVE_PROXIED: {:?} all={:?}",
-            self.node_id,
-            info,
-            sorted(self.proxied_streams.borrow().keys().map(|x| *x).collect::<Vec<_>>())
-        );
-        if let Some(removed) = self.proxied_streams.borrow_mut().remove(&info.this_handle_key) {
-            assert_eq!(removed.original_paired, info.pair_handle_key);
-            let _ = removed.remove_sender.send(RemoveFromProxyTable::Dropped);
-        }
-        Ok(())
+        })
     }
 
     // Note the endpoint of a transfer that we know about (may complete a transfer operation)
-    pub(crate) fn post_transfer(
+    pub(crate) async fn post_transfer(
         &self,
         transfer_key: TransferKey,
         other_end: FoundTransfer,
     ) -> Result<(), Error> {
-        let mut pending_transfers = self.pending_transfers.borrow_mut();
+        let mut pending_transfers = self.pending_transfers.lock().await;
         match pending_transfers.insert(transfer_key, PendingTransfer::Complete(other_end)) {
             Some(PendingTransfer::Complete(_)) => bail!("Duplicate transfer received"),
             Some(PendingTransfer::Waiting(w)) => w.wake(),
@@ -691,15 +1146,16 @@ impl Router {
 
     fn poll_find_transfer(
         &self,
-        cx: &mut Context<'_>,
+        ctx: &mut Context<'_>,
         transfer_key: TransferKey,
+        lock: &mut PollMutex<'_, PendingTransferMap>,
     ) -> Poll<Result<FoundTransfer, Error>> {
-        let mut pending_transfers = self.pending_transfers.borrow_mut();
+        let mut pending_transfers = ready!(lock.poll(ctx));
         if let Some(PendingTransfer::Complete(other_end)) = pending_transfers.remove(&transfer_key)
         {
             Poll::Ready(Ok(other_end))
         } else {
-            pending_transfers.insert(transfer_key, PendingTransfer::Waiting(cx.waker().clone()));
+            pending_transfers.insert(transfer_key, PendingTransfer::Waiting(ctx.waker().clone()));
             Poll::Pending
         }
     }
@@ -709,44 +1165,56 @@ impl Router {
         &self,
         transfer_key: TransferKey,
     ) -> Result<FoundTransfer, Error> {
-        poll_fn(|cx| self.poll_find_transfer(cx, transfer_key)).await
+        let mut lock = PollMutex::new(&self.pending_transfers);
+        poll_fn(|ctx| self.poll_find_transfer(ctx, transfer_key, &mut lock)).await
     }
 
     // Begin a transfer operation (opposite of find_transfer), publishing an endpoint on the remote
     // nodes transfer table.
     pub(crate) async fn open_transfer(
-        self: &Rc<Router>,
+        self: &Arc<Router>,
         target: NodeId,
         transfer_key: TransferKey,
         handle: Handle,
-        link_hint: &Weak<Link>,
+        peer_with_route: NodeId,
     ) -> Result<OpenedTransfer, Error> {
         if target == self.node_id {
             // The target is local: we just file away the handle.
             // Later, find_transfer will find this and we'll collapse away Overnet's involvement and
             // reunite the channel ends.
             let info = handle_info(handle.as_handle_ref())?;
+            let mut proxied_streams = self.proxied_streams.lock().await;
             log::trace!(
-                "{:?} OPEN_TRANSFER_REMOVE_PROXIED: {:?} all={:?}",
+                "{:?} OPEN_TRANSFER_REMOVE_PROXIED: key={:?} {:?} all={:?}",
                 self.node_id,
+                transfer_key,
                 info,
-                sorted(self.proxied_streams.borrow().keys().map(|x| *x).collect::<Vec<_>>())
+                sorted(proxied_streams.keys().map(|x| *x).collect::<Vec<_>>())
             );
-            if let Some(removed) = self.proxied_streams.borrow_mut().remove(&info.this_handle_key) {
+            if let Some(removed) = proxied_streams.remove(&info.this_handle_key) {
                 assert_eq!(removed.original_paired, info.pair_handle_key);
                 assert!(removed.remove_sender.send(RemoveFromProxyTable::Dropped).is_ok());
+                removed.proxy_task.detach();
             }
-            if let Some(removed) = self.proxied_streams.borrow_mut().remove(&info.pair_handle_key) {
+            if let Some(removed) = proxied_streams.remove(&info.pair_handle_key) {
                 assert_eq!(removed.original_paired, info.this_handle_key);
                 assert!(removed.remove_sender.send(RemoveFromProxyTable::Dropped).is_ok());
+                removed.proxy_task.detach();
             }
-            self.post_transfer(transfer_key, FoundTransfer::Fused(handle))?;
+            self.post_transfer(transfer_key, FoundTransfer::Fused(handle)).await?;
             Ok(OpenedTransfer::Fused)
         } else {
-            let (writer, reader) =
-                self.client_peer(target, link_hint).await?.send_open_transfer(transfer_key).await?;
+            let (writer, reader) = self
+                .client_peer(target, (peer_with_route, LinkSource::PeerHint), "open_transfer")
+                .await?
+                .send_open_transfer(transfer_key)
+                .await?;
             Ok(OpenedTransfer::Remote(writer, reader, handle))
         }
+    }
+
+    pub(crate) fn security_context(&self) -> &dyn SecurityContext {
+        &*self.security_context
     }
 }
 
@@ -777,8 +1245,10 @@ pub mod test_util {
 
         fn log(&self, record: &log::Record<'_>) {
             if self.enabled(record.metadata()) {
-                println!(
-                    "{} {} [{}]: {}",
+                let msg = format!(
+                    "{:?} {:?} {} {} [{}]: {}",
+                    std::time::Instant::now(),
+                    std::thread::current().id(),
                     record.target(),
                     record
                         .file()
@@ -793,6 +1263,9 @@ pub mod test_util {
                     short_log_level(&record.level()),
                     record.args()
                 );
+                let _ = std::panic::catch_unwind(|| {
+                    println!("{}", msg);
+                });
             }
         }
 
@@ -802,46 +1275,72 @@ pub mod test_util {
     static LOGGER: Logger = Logger;
     static START: Once = Once::new();
 
-    fn init() {
+    pub fn init() {
         START.call_once(|| {
             log::set_logger(&LOGGER).unwrap();
             log::set_max_level(MAX_LOG_LEVEL);
         })
     }
 
-    pub fn run<F, Fut>(f: F)
+    const TEST_TIMEOUT: Duration = Duration::from_secs(300);
+
+    pub fn run<Fut, R>(f: Fut) -> R
     where
-        F: 'static + Send + FnOnce() -> Fut,
-        Fut: Future<Output = ()> + 'static,
+        Fut: Future<Output = R> + Send + 'static,
+        R: Send + 'static,
     {
-        const TEST_TIMEOUT_MS: u32 = 60_000;
         init();
-        timebomb::timeout_ms(move || crate::runtime::run(f()), TEST_TIMEOUT_MS)
+        crate::runtime::run(async move { f.timeout_after(TEST_TIMEOUT).await.unwrap() })
     }
 
-    #[cfg(not(target_os = "fuchsia"))]
-    fn temp_file_containing(bytes: &[u8]) -> Box<dyn AsRef<std::path::Path>> {
-        let mut path = tempfile::NamedTempFile::new().unwrap();
-        use std::io::Write;
-        path.write_all(bytes).unwrap();
-        Box::new(path)
+    #[allow(dead_code)]
+    pub fn run_repeatedly<Fut>(
+        count: u64,
+        f: impl 'static + Send + Fn(u64) -> Fut,
+    ) -> Result<(), Error>
+    where
+        Fut: Future<Output = Result<(), Error>> + Send + 'static,
+    {
+        init();
+        if let Err(e) = crate::runtime::run(async move {
+            futures::stream::iter(0..count)
+                .map(Ok)
+                .try_for_each_concurrent(100, move |i| {
+                    let run = i + 1;
+                    let f = f(run);
+                    async move { Ok(f.timeout_after(TEST_TIMEOUT).await??) }
+                        .map_err(move |e: Error| e.context(format!("run {}", run)))
+                })
+                .await
+        }) {
+            log::info!("ERROR: {:?}", e);
+            Err(e)
+        } else {
+            Ok(())
+        }
     }
 
-    pub fn test_router_options() -> RouterOptions {
-        let options = RouterOptions::new();
+    pub fn test_security_context() -> impl SecurityContext {
         #[cfg(target_os = "fuchsia")]
-        let options = options
-            .set_quic_server_cert_file(Box::new("/pkg/data/cert.crt".to_string()))
-            .set_quic_server_key_file(Box::new("/pkg/data/cert.key".to_string()));
+        return crate::security_context::SimpleSecurityContext {
+            node_cert: "/pkg/data/cert.crt",
+            node_private_key: "/pkg/data/cert.key",
+            root_cert: "/pkg/data/root.crt",
+        };
         #[cfg(not(target_os = "fuchsia"))]
-        let options = options
-            .set_quic_server_cert_file(temp_file_containing(include_bytes!(
+        return crate::security_context::MemoryBuffers {
+            node_cert: include_bytes!(
                 "../../../../../../third_party/rust-mirrors/quiche/examples/cert.crt"
-            )))
-            .set_quic_server_key_file(temp_file_containing(include_bytes!(
+            ),
+            node_private_key: include_bytes!(
                 "../../../../../../third_party/rust-mirrors/quiche/examples/cert.key"
-            )));
-        options
+            ),
+            root_cert: include_bytes!(
+                "../../../../../../third_party/rust-mirrors/quiche/examples/rootca.crt"
+            ),
+        }
+        .into_security_context()
+        .unwrap();
     }
 }
 
@@ -850,115 +1349,171 @@ mod tests {
 
     use super::test_util::*;
     use super::*;
-    use crate::future_help::log_errors;
-    use crate::runtime::{spawn, wait_until};
-    use futures::{executor::block_on, select};
-    use std::time::{Duration, Instant};
 
     #[test]
     fn no_op() {
-        run(|| async move {
-            Router::new(test_router_options()).unwrap();
+        run(async move {
+            Router::new(RouterOptions::new(), Box::new(test_security_context())).unwrap();
             assert_eq!(
-                Router::new(test_router_options().set_node_id(1.into()),).unwrap().node_id.0,
+                Router::new(
+                    RouterOptions::new().set_node_id(1.into()),
+                    Box::new(test_security_context())
+                )
+                .unwrap()
+                .node_id
+                .0,
                 1
             );
         })
     }
 
-    struct TwoNode {
-        router1: Rc<Router>,
-        router2: Rc<Router>,
-    }
-
-    fn forward(sender: Rc<Link>, receiver: Rc<Link>) {
-        spawn(log_errors(
-            async move {
-                let mut frame = [0u8; 2048];
-                while let Some(n) = sender.next_send(&mut frame).await? {
-                    receiver.received_packet(&mut frame[..n]).await?;
-                }
-                Ok(())
-            },
-            "forwarder failed",
-        ));
+    async fn forward(sender: LinkSender, receiver: LinkReceiver) -> Result<(), Error> {
+        let mut frame = [0u8; 2048];
+        while let Some(n) = sender.next_send(&mut frame).await? {
+            log::trace!("got frame {} bytes", n);
+            receiver.received_packet(&mut frame[..n]).await?;
+        }
+        Ok(())
     }
 
     async fn register_test_service(
-        router: &Rc<Router>,
-        service: &str,
+        serving_router: Arc<Router>,
+        client_router: Arc<Router>,
+        service: &'static str,
     ) -> futures::channel::oneshot::Receiver<(NodeId, Channel)> {
-        use std::sync::Mutex;
+        use parking_lot::Mutex;
         let (send, recv) = futures::channel::oneshot::channel();
-        struct TestService(Mutex<Option<futures::channel::oneshot::Sender<(NodeId, Channel)>>>);
+        struct TestService(
+            Mutex<Option<futures::channel::oneshot::Sender<(NodeId, Channel)>>>,
+            &'static str,
+        );
         impl fidl_fuchsia_overnet::ServiceProviderProxyInterface for TestService {
             fn connect_to_service(
                 &self,
                 chan: fidl::Channel,
                 connection_info: fidl_fuchsia_overnet::ConnectionInfo,
             ) -> std::result::Result<(), fidl::Error> {
+                println!("{} got request", self.1);
                 self.0
                     .lock()
-                    .unwrap()
                     .take()
                     .unwrap()
                     .send((connection_info.peer.unwrap().id.into(), chan))
                     .unwrap();
+                println!("{} forwarded channel", self.1);
                 Ok(())
             }
         }
-        router
+        serving_router
             .service_map()
-            .register_service(service.to_string(), Box::new(TestService(Mutex::new(Some(send)))))
+            .register_service(
+                service.to_string(),
+                Box::new(TestService(Mutex::new(Some(send)), service)),
+            )
             .await;
+        let serving_node_id = serving_router.node_id();
+        println!("{} wait for service to appear @ client", service);
+        loop {
+            let peers = client_router.list_peers().await.unwrap();
+            println!("{} got peers {:?}", service, peers);
+            if peers
+                .iter()
+                .find(move |peer| {
+                    serving_node_id == peer.id.into()
+                        && peer
+                            .description
+                            .services
+                            .as_ref()
+                            .unwrap()
+                            .iter()
+                            .find(move |&advertised_service| advertised_service == service)
+                            .is_some()
+                })
+                .is_some()
+            {
+                break;
+            }
+        }
         recv
     }
 
-    impl TwoNode {
-        async fn new() -> Self {
-            let router1 = Router::new(test_router_options()).unwrap();
-            let router2 = Router::new(test_router_options()).unwrap();
-            let link1 = router1.new_link(router2.node_id).await.unwrap();
-            let link2 = router2.new_link(router1.node_id).await.unwrap();
-            forward(link1.clone(), link2.clone());
-            forward(link2, link1);
-
-            TwoNode { router1, router2 }
-        }
-    }
-
-    #[test]
-    fn no_op_env() {
-        run(|| async move {
-            TwoNode::new().await;
+    fn run_two_node<
+        F: 'static + Send + FnOnce(Arc<Router>, Arc<Router>) -> Fut,
+        Fut: 'static + Send + Future<Output = ()>,
+    >(
+        node_id_base: u64,
+        f: F,
+    ) {
+        run(async move {
+            let router1 = Router::new(
+                RouterOptions::new().set_node_id((node_id_base + 1).into()),
+                Box::new(test_security_context()),
+            )
+            .unwrap();
+            let router2 = Router::new(
+                RouterOptions::new().set_node_id((node_id_base + 2).into()),
+                Box::new(test_security_context()),
+            )
+            .unwrap();
+            let (link1_sender, link1_receiver) = router1.new_link(router2.node_id).await.unwrap();
+            let (link2_sender, link2_receiver) = router2.new_link(router1.node_id).await.unwrap();
+            let _fwd = Task::spawn(async move {
+                if let Err(e) = futures::future::try_join(
+                    forward(link1_sender, link2_receiver),
+                    forward(link2_sender, link1_receiver),
+                )
+                .await
+                {
+                    log::trace!("forwarding failed: {:?}", e)
+                }
+            });
+            f(router1.clone(), router2.clone()).await;
         })
     }
 
     #[test]
+    fn no_op_env() {
+        run_two_node(9900, |_router1, _router2| async {})
+    }
+
+    #[test]
     fn create_stream() {
-        run(|| async move {
-            let env = TwoNode::new().await;
+        run_two_node(9910, |router1, router2| async move {
             let (_, p) = fidl::Channel::create().unwrap();
-            let s = register_test_service(&env.router2, "hello world").await;
-            env.router1.connect_to_service(env.router2.node_id, "hello world", p).await.unwrap();
+            println!("create_stream: register service");
+            let s = register_test_service(router2.clone(), router1.clone(), "create_stream").await;
+            println!("create_stream: connect to service");
+            router1.connect_to_service(router2.node_id, "create_stream", p).await.unwrap();
+            println!("create_stream: wait for connection");
             let (node_id, _) = s.await.unwrap();
-            assert_eq!(node_id, env.router1.node_id);
+            assert_eq!(node_id, router1.node_id);
         })
     }
 
     #[test]
     fn send_datagram_immediately() {
-        run(|| async move {
-            let env = TwoNode::new().await;
+        run_two_node(9920, |router1, router2| async move {
             let (c, p) = fidl::Channel::create().unwrap();
-            let s = register_test_service(&env.router2, "hello world").await;
-            env.router1.connect_to_service(env.router2.node_id, "hello world", p).await.unwrap();
+            println!("send_datagram_immediately: register service");
+            let s = register_test_service(
+                router2.clone(),
+                router1.clone(),
+                "send_datagram_immediately",
+            )
+            .await;
+            println!("send_datagram_immediately: connect to service");
+            router1
+                .connect_to_service(router2.node_id, "send_datagram_immediately", p)
+                .await
+                .unwrap();
+            println!("send_datagram_immediately: wait for connection");
             let (node_id, s) = s.await.unwrap();
-            assert_eq!(node_id, env.router1.node_id);
+            assert_eq!(node_id, router1.node_id);
             let c = fidl::AsyncChannel::from_channel(c).unwrap();
             let s = fidl::AsyncChannel::from_channel(s).unwrap();
             c.write(&[1, 2, 3, 4, 5], &mut Vec::new()).unwrap();
             let mut buf = fidl::MessageBuf::new();
+            println!("send_datagram_immediately: wait for datagram");
             s.recv_msg(&mut buf).await.unwrap();
             assert_eq!(buf.n_handles(), 0);
             assert_eq!(buf.bytes(), &[1, 2, 3, 4, 5]);
@@ -967,28 +1522,27 @@ mod tests {
 
     #[test]
     fn ping_pong() {
-        run(|| async move {
-            let env = TwoNode::new().await;
+        run_two_node(9930, |router1, router2| async move {
             let (c, p) = fidl::Channel::create().unwrap();
-            let s = register_test_service(&env.router2, "hello world").await;
-            env.router1.connect_to_service(env.router2.node_id, "hello world", p).await.unwrap();
+            println!("ping_pong: register service");
+            let s = register_test_service(router2.clone(), router1.clone(), "ping_pong").await;
+            println!("ping_pong: connect to service");
+            router1.connect_to_service(router2.node_id, "ping_pong", p).await.unwrap();
+            println!("ping_pong: wait for connection");
             let (node_id, s) = s.await.unwrap();
-            assert_eq!(node_id, env.router1.node_id);
-
+            assert_eq!(node_id, router1.node_id);
             let c = fidl::AsyncChannel::from_channel(c).unwrap();
             let s = fidl::AsyncChannel::from_channel(s).unwrap();
-
-            println!("send ping");
+            println!("ping_pong: send ping");
             c.write(&[1, 2, 3, 4, 5], &mut Vec::new()).unwrap();
-            println!("receive ping");
+            println!("ping_pong: receive ping");
             let mut buf = fidl::MessageBuf::new();
             s.recv_msg(&mut buf).await.unwrap();
             assert_eq!(buf.n_handles(), 0);
             assert_eq!(buf.bytes(), &[1, 2, 3, 4, 5]);
-
-            println!("send pong");
+            println!("ping_pong: send pong");
             s.write(&[9, 8, 7, 6, 5, 4, 3, 2, 1], &mut Vec::new()).unwrap();
-            println!("receive pong");
+            println!("ping_pong: receive pong");
             let mut buf = fidl::MessageBuf::new();
             c.recv_msg(&mut buf).await.unwrap();
             assert_eq!(buf.n_handles(), 0);
@@ -996,68 +1550,58 @@ mod tests {
         })
     }
 
-    async fn assert_avail(r: &mut futures::channel::mpsc::Receiver<()>, mut n: usize) {
-        while n > 0 {
-            r.next().await.unwrap();
-            n -= 1;
-        }
-        select! {
-            _ = r.next().fuse() => panic!("Unexpected output"),
-            _ = wait_until(Instant::now() + Duration::from_secs(1)).fuse() => ()
+    fn ensure_pending(f: &mut (impl Send + Unpin + Future<Output = ()>)) {
+        let mut ctx = Context::from_waker(futures::task::noop_waker_ref());
+        // Poll a bunch of times to convince ourselves the future is pending forever...
+        for _ in 0..1000 {
+            assert!(f.poll_unpin(&mut ctx).is_pending());
         }
     }
 
     #[test]
     fn concurrent_list_peer_calls_will_error() {
-        run(|| async move {
-            let n = Router::new(test_router_options()).unwrap();
-            let (tx, mut rx) = futures::channel::mpsc::channel(1);
-            let mut c1 = tx.clone();
-            let mut c2 = tx.clone();
-            let mut c3 = tx.clone();
-            assert_avail(&mut rx, 0).await;
-            n.list_peers(Box::new(move |_| block_on(c1.send(())).unwrap())).await.unwrap();
-            assert_avail(&mut rx, 1).await;
-            n.list_peers(Box::new(move |_| block_on(c2.send(())).unwrap())).await.unwrap();
-            assert_avail(&mut rx, 0).await;
-            n.list_peers(Box::new(move |_| block_on(c3.send(())).unwrap()))
-                .await
-                .expect_err("Concurrent list peers should fail");
-            assert_avail(&mut rx, 0).await;
+        run(async move {
+            let n = Router::new(RouterOptions::new(), Box::new(test_security_context())).unwrap();
+            n.list_peers().await.unwrap();
+            let mut never_completes = async {
+                n.list_peers().await.unwrap();
+            }
+            .boxed();
+            ensure_pending(&mut never_completes);
+            n.list_peers().await.expect_err("Concurrent list peers should fail");
+            ensure_pending(&mut never_completes);
         })
     }
 
     #[test]
-    #[cfg(not(target_os = "fuchsia"))]
     fn initial_greeting_packet() {
         use crate::coding::decode_fidl;
         use crate::stream_framer::{new_deframer, FrameType, LosslessBinary};
         use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
-        run(|| async move {
-            let n = Router::new(test_router_options()).unwrap();
+        run(async move {
+            let n = Router::new(RouterOptions::new(), Box::new(test_security_context())).unwrap();
             let node_id = n.node_id();
             let (c, s) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
             let mut c = fidl::AsyncSocket::from_socket(c).unwrap();
-            n.attach_socket_link(
-                s,
-                fidl_fuchsia_overnet::SocketLinkOptions {
-                    connection_label: Some("test".to_string()),
-                    bytes_per_second: None,
-                },
-            )
-            .unwrap();
-
             let (mut deframer_writer, mut deframer) = new_deframer(LosslessBinary);
-            spawn(log_errors(
-                async move {
-                    let mut buf = [0u8; 1024];
-                    loop {
-                        let n = c.read(&mut buf).await?;
-                        deframer_writer.write(&buf[..n]).await?;
-                    }
-                },
-                "deframer failed",
-            ));
+            let _s = Task::spawn(async move {
+                n.run_socket_link(
+                    s,
+                    fidl_fuchsia_overnet::SocketLinkOptions {
+                        connection_label: Some("test".to_string()),
+                        bytes_per_second: None,
+                    },
+                )
+                .await
+                .unwrap();
+            });
+            let _d = Task::spawn(async move {
+                let mut buf = [0u8; 1024];
+                loop {
+                    let n = c.read(&mut buf).await.unwrap();
+                    deframer_writer.write(&buf[..n]).await.unwrap();
+                }
+            });
             let (frame_type, mut greeting_bytes) = deframer.read().await.unwrap();
             assert_eq!(frame_type, Some(FrameType::Overnet));
             let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut()).unwrap();
@@ -1068,18 +1612,18 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(target_os = "fuchsia"))]
     fn attach_with_zero_bytes_per_second() {
-        run(|| async move {
-            let n = Router::new(test_router_options()).unwrap();
+        run(async move {
+            let n = Router::new(RouterOptions::new(), Box::new(test_security_context())).unwrap();
             let (c, s) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
-            n.attach_socket_link(
+            n.run_socket_link(
                 s,
                 fidl_fuchsia_overnet::SocketLinkOptions {
                     connection_label: Some("test".to_string()),
                     bytes_per_second: Some(0),
                 },
             )
+            .await
             .expect_err("bytes_per_second == 0 should fail");
             drop(c);
         })
