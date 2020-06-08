@@ -22,6 +22,7 @@ bool ProgramMetadata::Parse(const rapidjson::Value& program_value, json::JSONPar
   data_.clear();
   binary_null_ = true;
   data_null_ = true;
+  unknown_attributes_ = {};
 
   if (!program_value.IsObject()) {
     json_parser->ReportError("Program is not an object.");
@@ -41,6 +42,16 @@ bool ProgramMetadata::Parse(const rapidjson::Value& program_value, json::JSONPar
     args_null_ = false;
   }
 
+  for (const auto& member : program_value.GetObject()) {
+    if (IsWellKnownAttributeName(member.name.GetString())) {
+      continue;
+    }
+    if (!member.value.IsString()) {
+      json_parser->ReportError("Extra attributes in 'program' must have string values.");
+      return false;
+    }
+    unknown_attributes_.push_back({member.name.GetString(), member.value.GetString()});
+  }
   return !json_parser->HasError();
 }
 
@@ -79,6 +90,10 @@ bool ProgramMetadata::ParseData(const rapidjson::Value& program_value,
   data_ = data->value.GetString();
   data_null_ = false;
   return true;
+}
+
+bool ProgramMetadata::IsWellKnownAttributeName(std::string_view name) const {
+  return name == kData || name == kBinary || name == kArgs || name == kEnvVars;
 }
 
 }  // namespace component

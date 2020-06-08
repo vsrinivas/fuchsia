@@ -1,6 +1,7 @@
 {
     "program": {
-        "binary": "bin/fake_component"
+        "binary": "bin/fake_component",
+        "foobar": "baz"
     },
     "runner": "fuchsia-pkg://fuchsia.com/appmgr_mock_runner#meta/appmgr_mock_runner.cmx",
     "sandbox": {

@@ -324,16 +324,20 @@ TEST_F(RealmRunnerTest, ValidateProgramMetadata) {
   std::vector<fuchsia::sys::ProgramMetadata> vec;
   ASSERT_EQ(ZX_OK, component_ptr->GetProgramMetadata(&vec));
 
-  ASSERT_EQ(vec.size(), 2u) << ConvertToString(vec);
+  ASSERT_EQ(vec.size(), 3u) << ConvertToString(vec);
 
   auto data = vec[0];
   auto binary = vec[1];
+  auto foobar_attribute = vec[2];
 
   EXPECT_EQ(data.key, "data");
   EXPECT_EQ(data.value, "data/fake_component_for_runner");
 
   EXPECT_EQ(binary.key, "binary");
   EXPECT_EQ(binary.value, "bin/fake_component");
+
+  EXPECT_EQ(foobar_attribute.key, "foobar");
+  EXPECT_EQ(foobar_attribute.value, "baz");
 }
 
 class RealmRunnerServiceTest : public RealmRunnerTest {

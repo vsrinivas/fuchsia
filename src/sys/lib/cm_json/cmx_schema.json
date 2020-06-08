@@ -9,7 +9,9 @@
     "program": {
       "$id": "/properties/program",
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": {
+        "type": "string"
+      },
       "properties": {
         "binary": {
           "$id": "/properties/program/properties/binary",

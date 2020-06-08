@@ -136,6 +136,28 @@ TEST_F(ProgramMetadataTest, ParseBinaryAndData) {
   EXPECT_EQ("data/component", program.data());
 }
 
+TEST_F(ProgramMetadataTest, ParseUnknownAttributes) {
+  ProgramMetadata program;
+  EXPECT_TRUE(program.IsDataNull());
+  std::string error;
+  EXPECT_TRUE(ParseFrom(&program, R"JSON({ "data": "data/runner_data", "flabble": "frobble" })JSON",
+                        &error));
+  EXPECT_FALSE(program.IsDataNull());
+  EXPECT_FALSE(program.IsDataNull());
+  ProgramMetadata::Attributes expected_attributes = {{"flabble", "frobble"}};
+  EXPECT_EQ(program.unknown_attributes(), expected_attributes);
+}
+
+TEST_F(ProgramMetadataTest, ParseUnknownAttributesWithNonStringValues) {
+  ProgramMetadata program;
+  EXPECT_TRUE(program.IsDataNull());
+  std::string error;
+  EXPECT_FALSE(
+      ParseFrom(&program, R"JSON({ "data": "data/runner_data", "number": 4 })JSON", &error));
+  EXPECT_THAT(error,
+              ::testing::HasSubstr("Extra attributes in 'program' must have string values."));
+}
+
 TEST_F(ProgramMetadataTest, ParseWithErrors) {
   ExpectFailedParse(R"JSON({})JSON", "Both 'binary' and 'data' in program are missing.");
   ExpectFailedParse(R"JSON({ "binary": 3 })JSON", "'binary' in program is not a string.");

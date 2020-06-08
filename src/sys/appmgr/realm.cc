@@ -844,7 +844,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
   zx::vmo executable;
   std::string app_argv0;
   fidl::VectorPtr<fuchsia::sys::ProgramMetadata> program_metadata;
-  const ProgramMetadata program = cmx.program_meta();
+  const ProgramMetadata& program = cmx.program_meta();
 
   if (launch_info.arguments.has_value()) {
     launch_info.arguments->insert(launch_info.arguments->begin(), program.args().begin(),
@@ -892,6 +892,12 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     if (!program.IsBinaryNull()) {
       pg.key = kBinaryKey;
       pg.value = program.binary();
+      program_metadata->push_back(pg);
+    }
+    // Add in whatever else is in the original specification
+    for (const auto& attribute : program.unknown_attributes()) {
+      pg.key = attribute.first;
+      pg.value = attribute.second;
       program_metadata->push_back(pg);
     }
   }
