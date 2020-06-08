@@ -55,7 +55,7 @@ typedef void(UnbindOp)(void* ctx);
 class Bind {
  public:
   Bind();
-  virtual ~Bind() { instance_ = nullptr; }
+  virtual ~Bind();
 
   // Verifies that the whole process of bind and unbind went as expected.
   bool Ok();
@@ -196,7 +196,15 @@ class Bind {
 
   UnbindOp* unbind_op_ = nullptr;
   void* op_ctx_ = nullptr;
-  bool unbind_called_ = false;
+  // Whether |unbind_thread| has been created.
+  std::atomic<bool> unbind_started_ = false;
+  bool unbind_thread_joined_ = false;
+  // Thread for calling the unbind hook.
+  thrd_t unbind_thread_;
+
+ private:
+  // Joins with |unbind_thread_| if it has been created and not yet joined.
+  void JoinUnbindThread();
 };
 
 }  // namespace fake_ddk

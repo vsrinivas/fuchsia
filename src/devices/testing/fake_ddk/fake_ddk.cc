@@ -41,7 +41,22 @@ Bind::Bind() {
   instance_ = this;
 }
 
+Bind::~Bind() {
+  JoinUnbindThread();
+  instance_ = nullptr;
+}
+
+void Bind::JoinUnbindThread() {
+  // Make sure the unbind hook has returned. Users might not have called |WaitUntilRemove| if they
+  // reply to unbind from the same thread.
+  if (unbind_op_ && unbind_started_ && !unbind_thread_joined_) {
+    thrd_join(unbind_thread_, NULL);
+    unbind_thread_joined_ = true;
+  }
+}
+
 bool Bind::Ok() {
+  JoinUnbindThread();
   EXPECT_TRUE(add_called_);
   EXPECT_EQ(has_init_hook_, init_reply_.has_value());
   if (init_reply_.has_value()) {
@@ -137,10 +152,21 @@ void Bind::DeviceAsyncRemove(zx_device_t* device) {
   if (device != kFakeDevice) {
     bad_device_ = true;
   }
+
+  // We need to call unbind from a separate thread, as some drivers may call DdkAsyncRemove
+  // from a worker thread that they then try to join with in their unbind hook.
+  // This will only be run once.
+  auto unbind_thread = [](void* arg) -> int {
+    auto bind = reinterpret_cast<Bind*>(arg);
+    bind->unbind_op_(bind->op_ctx_);
+    return 0;
+  };
+
   // Only call the unbind hook once.
-  if (unbind_op_ && !unbind_called_) {
-    unbind_called_ = true;
-    unbind_op_(op_ctx_);
+  if (unbind_op_ && !unbind_started_) {
+    unbind_started_ = true;
+    int res = thrd_create_with_name(&unbind_thread_, unbind_thread, this, "fake-ddk-unbind-thread");
+    ZX_ASSERT(res == thrd_success);
   } else if (!unbind_op_) {
     // The unbind hook is optional. If not present, we should mark the device as removed.
     remove_called_ = true;

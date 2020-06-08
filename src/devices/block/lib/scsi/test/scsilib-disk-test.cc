@@ -258,6 +258,7 @@ TEST_F(ScsilibDiskTest, TestCreateDestroy) {
   EXPECT_EQ(bind.device()->DdkGetSize(), kFakeBlocks * kBlockSize);
 
   bind.device()->DdkAsyncRemove();
+  EXPECT_OK(bind.WaitUntilRemove());
   bind.device()->DdkRelease();
   EXPECT_TRUE(bind.Ok());
 }
@@ -330,6 +331,7 @@ TEST_F(ScsilibDiskTest, TestCreateReadDestroy) {
   }
   controller_.AsyncIoRelease();
   bind.device()->DdkAsyncRemove();
+  EXPECT_OK(bind.WaitUntilRemove());
   bind.device()->DdkRelease();
   EXPECT_TRUE(bind.Ok());
 }

@@ -367,6 +367,7 @@ TEST(Alc5663, BindUnbind) {
 
   // Shutdown
   device->DdkAsyncRemove();
+  EXPECT_OK(hardware.fake_ddk->WaitUntilRemove());
   device->DdkRelease();
   EXPECT_TRUE(hardware.fake_ddk->Ok());
 }
@@ -410,6 +411,7 @@ TEST(Alc5663, CheckClocksConfigured) {
 
   // Shutdown
   device->DdkAsyncRemove();
+  EXPECT_OK(hardware.fake_ddk->WaitUntilRemove());
   device->DdkRelease();
   EXPECT_TRUE(hardware.fake_ddk->Ok());
 }
@@ -446,6 +448,7 @@ TEST(Alc5663, CheckOutputsEnabled) {
 
   // Shutdown
   device->DdkAsyncRemove();
+  EXPECT_OK(hardware.fake_ddk->WaitUntilRemove());
   device->DdkRelease();
   EXPECT_TRUE(hardware.fake_ddk->Ok());
 }

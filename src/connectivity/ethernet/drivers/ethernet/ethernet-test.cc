@@ -145,6 +145,7 @@ TEST(EthernetTest, OpenTest) {
   zx_device_t* eth_instance;
   EXPECT_OK(eth->DdkOpen(&eth_instance, 0), "Open Failed");
   eth->DdkAsyncRemove();
+  EXPECT_OK(tester.ddk().WaitUntilRemove());
   eth->DdkRelease();
 }
 
