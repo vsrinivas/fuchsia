@@ -40,7 +40,7 @@ typedef struct {
 } ldsvc_ctx_t;
 
 void pkgfs_finish(FilesystemMounter* filesystems, zx::process proc, zx::channel pkgfs_root) {
-  auto deadline = zx::deadline_after(zx::sec(20));
+  auto deadline = zx::deadline_after(zx::sec(40));
   zx_signals_t observed;
   zx_status_t status = proc.wait_one(ZX_USER_SIGNAL_0 | ZX_PROCESS_TERMINATED, deadline, &observed);
   if (status != ZX_OK) {
