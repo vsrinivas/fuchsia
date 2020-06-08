@@ -27,6 +27,7 @@ union TopLevelUnion {
     18: StructWithTwoVectors struct_with_two_vectors;
     19: vector<StructWithOneHandle> vector_of_structs_with_one_handle;
     20: vector<StructWithTwoHandles> vector_of_structs_with_two_handles;
+    22: FlexibleUnion flexible_union;
 };
 
 // 16 bytes + FIDL_ALIGN(string length)
@@ -50,6 +51,10 @@ table Table {
 
 // 24 bytes + selected member size
 union Union {
+    1: uint64 primitive;
+};
+
+flexible union FlexibleUnion {
     1: uint64 primitive;
 };
 

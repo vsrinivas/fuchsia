@@ -271,6 +271,15 @@ func (buf *codeBuffer) CaseSelectVariant(
 			})
 			buf.writef("}\n")
 		})
+
+		// In addition to all the member variants, we need to emit special
+		// handling for uninitialized unions which are marked as 'invalid'.
+		buf.writef("case %s: {\n", fmtInvalidVariant(targetType))
+		buf.indent(func() {
+			buf.writef("MaxOut();\n")
+			buf.writef("break;\n")
+		})
+		buf.writef("}\n")
 	})
 	buf.writef("}\n")
 }
@@ -320,6 +329,10 @@ func fmtKnownVariant(name fidlcommon.Name, variant string) string {
 }
 
 func fmtUnknownVariant(name fidlcommon.Name) string {
+	return fmt.Sprintf("%s::Tag::kUnknown", fmtType(name))
+}
+
+func fmtInvalidVariant(name fidlcommon.Name) string {
 	return fmt.Sprintf("%s::Tag::Invalid", fmtType(name))
 }
 

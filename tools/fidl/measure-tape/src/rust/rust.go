@@ -83,7 +83,7 @@ func (cb *codeBuffer) writeBlock(b *measurer.Block) {
 var _ measurer.StatementFormatter = (*codeBuffer)(nil)
 
 func (cb *codeBuffer) CaseMaxOut() {
-	panic("should never be used")
+	cb.writef("size_agg.maxed_out = true;\n")
 }
 
 func (cb *codeBuffer) CaseAddNumBytes(val measurer.Expression) {
@@ -137,11 +137,13 @@ func (cb *codeBuffer) CaseSelectVariant(
 				cb.writef("%s::%s(%s) => {\n",
 					toTypeName(targetType), fidlcommon.ToUpperCamelCase(member),
 					formatExpr{localWithBlock.Local})
-				cb.indent(func() {
-					cb.writeBlock(localWithBlock.Body)
-				})
-				cb.writef("}\n")
+			} else {
+				cb.writef("%s::__UnknownVariant { .. } => {\n", toTypeName(targetType))
 			}
+			cb.indent(func() {
+				cb.writeBlock(localWithBlock.Body)
+			})
+			cb.writef("}\n")
 		})
 	})
 	cb.writef("}\n")

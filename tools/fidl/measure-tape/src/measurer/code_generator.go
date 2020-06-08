@@ -274,7 +274,7 @@ func (cg *CodeGenerator) writeUnionOutOfLine(mt *MeasuringTape, expr Expression,
 	}
 
 	// unknown
-	{
+	if mt.isFlexible {
 		var variantBody Block
 		variantBody.emitMaxOut()
 		variants[UnknownVariant] = LocalWithBlock{

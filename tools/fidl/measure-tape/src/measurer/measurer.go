@@ -79,6 +79,9 @@ type MeasuringTape struct {
 	// nullable for strings, unions, structs
 	nullable bool
 
+	// isFlexible for unions
+	isFlexible bool
+
 	// elementCount for arrays
 	elementCount int
 
@@ -255,6 +258,7 @@ func (m *Measurer) createUnionMeasuringTape(decl fidlir.Union) (*MeasuringTape, 
 		name:           fidlcommon.MustReadName(string(decl.Name)),
 		decl:           decl,
 		members:        membersMt,
+		isFlexible:     decl.Strictness == fidlir.IsFlexible,
 		hasHandles:     decl.TypeShapeV1.MaxHandles != 0,
 		hasOutOfLine:   true,
 		inlineNumBytes: 24, // sizeof(fidl_xunion_t)
