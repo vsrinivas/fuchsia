@@ -142,7 +142,7 @@ async fn test_discovered_dns<E: Endpoint>() -> Result {
     let () = wait_for_interface_up(
         client_netstack.take_event_stream(),
         client_iface.id(),
-        DEFAULT_INTERFACE_UP_EVENT_TIMEOUT,
+        ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
     )
     .await?;
 

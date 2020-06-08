@@ -21,14 +21,23 @@ use fidl_fuchsia_netstack as netstack;
 use fuchsia_async::{DurationExt, TimeoutExt};
 use fuchsia_zircon as zx;
 
-use anyhow;
+use anyhow::Context as _;
 use futures::future::{self, TryFutureExt};
-use futures::stream::{FusedStream, TryStream, TryStreamExt};
+use futures::stream::{FusedStream, Stream, TryStream, TryStreamExt};
 
 type Result<T = ()> = std::result::Result<T, anyhow::Error>;
 
-/// Default timeout to use when waiting for an interface to come up.
-const DEFAULT_INTERFACE_UP_EVENT_TIMEOUT: zx::Duration = zx::Duration::from_seconds(120);
+/// Extra time to use when waiting for an async event to occur.
+///
+/// A large timeout to help prevent flakes.
+const ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_seconds(120);
+
+/// Extra time to use when waiting for an async event to not occur.
+///
+/// Since a negative check is used to make sure an event did not happen, its okay to use a
+/// smaller timeout compared to the positive case since execution stall in regards to the
+/// monotonic clock will not affect the expected outcome.
+const ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_seconds(5);
 
 /// Returns when an interface is up or when `timeout` elapses.
 async fn wait_for_interface_up<
@@ -60,4 +69,30 @@ where
         })
         .await?
         .ok_or(anyhow::anyhow!("failed to get next OnInterfaceChanged event"))
+}
+
+/// Returns `true` once the stream yields a `true`.
+///
+/// If the stream never yields `true` or never terminates, `try_any` may never resolve.
+async fn try_any<S: Stream<Item = Result<bool>>>(stream: S) -> Result<bool> {
+    futures::pin_mut!(stream);
+    for v in stream.try_next().await.context("get next item")? {
+        if v {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+/// Returns `true` if the stream only yields `true`.
+///
+/// If the stream never yields `false` or never terminates, `try_all` may never resolve.
+async fn try_all<S: Stream<Item = Result<bool>>>(stream: S) -> Result<bool> {
+    futures::pin_mut!(stream);
+    for v in stream.try_next().await.context("get next item")? {
+        if !v {
+            return Ok(false);
+        }
+    }
+    Ok(true)
 }

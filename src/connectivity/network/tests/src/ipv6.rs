@@ -59,18 +59,6 @@ const EXPECTED_DUP_ADDR_DETECT_TRANSMITS: u8 = 1;
 /// performing Duplicate Address Detection.
 const EXPECTED_DAD_RETRANSMIT_TIMER: zx::Duration = zx::Duration::from_seconds(1);
 
-/// Extra time to use when waiting for an async event to occur.
-///
-/// A large timeout to help prevent flakes.
-const ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_seconds(120);
-
-/// Extra time to use when waiting for an async event to not occur.
-///
-/// Since a negative check is used to make sure an event did not happen, its okay to use a
-/// smaller timeout compared to the positive case since execution stall in regards to the
-/// monotonic clock will not affect the expected outcome.
-const ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_seconds(5);
-
 /// Sets up an environment with a network used for tests requiring manual packet
 /// inspection and transmission.
 ///
@@ -108,7 +96,7 @@ where
     let () = wait_for_interface_up(
         netstack.take_event_stream(),
         iface.id(),
-        DEFAULT_INTERFACE_UP_EVENT_TIMEOUT,
+        ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
     )
     .await?;
 

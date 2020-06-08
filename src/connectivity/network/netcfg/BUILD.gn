@@ -26,6 +26,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//src/connectivity/lib/net-declare",
     "//src/connectivity/management/network-manager/core/interface:lib",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",

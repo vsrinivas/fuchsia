@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Result;
-use anyhow::Context as _;
+use std::convert::TryInto as _;
+
 use fidl_fuchsia_net_filter;
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
@@ -11,8 +11,11 @@ use fidl_fuchsia_netemul_environment as netemul_environment;
 use fidl_fuchsia_netemul_network as netemul_network;
 use fidl_fuchsia_netemul_sandbox as netemul_sandbox;
 use fuchsia_zircon as zx;
+
+use anyhow::Context as _;
 use futures::{FutureExt as _, TryFutureExt as _};
-use std::convert::TryInto as _;
+
+use crate::Result;
 
 /// Helper definition to help type system identify `None` as `IntoIterator`
 /// where `Item: Into<netemul_environment::LaunchService`.

@@ -9,12 +9,14 @@ use std::fs;
 use std::io;
 use std::os::unix::io::IntoRawFd as _;
 use std::path;
+use std::str::FromStr;
 
 use fidl_fuchsia_hardware_ethernet as feth;
 use fidl_fuchsia_hardware_ethernet_ext as feth_ext;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_dhcp as fnet_dhcp;
 use fidl_fuchsia_net_ext as fnet_ext;
+use fidl_fuchsia_net_ext::IntoExt as _;
 use fidl_fuchsia_net_filter as fnet_filter;
 use fidl_fuchsia_net_name as fnet_name;
 use fidl_fuchsia_net_stack as fnet_stack;
@@ -29,6 +31,7 @@ use anyhow::Context as _;
 use futures::stream::{StreamExt as _, TryStreamExt as _};
 use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
 use log::{debug, error, info, trace, warn};
+use net_declare::fidl_ip_v4;
 use serde::Deserialize;
 use structopt::StructOpt;
 
@@ -57,6 +60,76 @@ const PERSISTED_INTERFACE_CONFIG_FILEPATH: &str = "/data/net_interfaces.cfg.json
 /// `/dir` and `/dir/.` point to the same directory.
 const THIS_DIRECTORY: &str = ".";
 
+/// The string present in the topological path of a WLAN AP interface.
+const WLAN_AP_TOPO_PATH_CONTAINS: &str = "wlanif-ap";
+
+/// The prefix length for the address assigned to a WLAN AP interface.
+const WLAN_AP_PREFIX_LEN: u8 = 29;
+
+/// The address for the network the WLAN AP interface is a part of.
+const WLAN_AP_NETWORK_ADDR: fnet::Ipv4Address = fidl_ip_v4!(192.168.255.248);
+
+/// The lease time for a DHCP lease.
+///
+/// 1 day in seconds.
+const WLAN_AP_DHCP_LEASE_TIME_SECONDS: u32 = 24 * 60 * 60;
+
+/// Defines log levels.
+#[derive(Debug, Copy, Clone)]
+pub enum LogLevel {
+    /// ALL log level.
+    All,
+
+    /// TRACE log level.
+    Trace,
+
+    /// DEBUG log level.
+    Debug,
+
+    /// INFO log level.
+    Info,
+
+    /// WARN log level.
+    Warn,
+
+    /// ERROR log level.
+    Error,
+
+    /// FATAL log level.
+    Fatal,
+}
+
+impl Into<fsyslog::levels::LogLevel> for LogLevel {
+    fn into(self) -> fsyslog::levels::LogLevel {
+        match self {
+            LogLevel::All => fsyslog::levels::ALL,
+            LogLevel::Trace => fsyslog::levels::TRACE,
+            LogLevel::Debug => fsyslog::levels::DEBUG,
+            LogLevel::Info => fsyslog::levels::INFO,
+            LogLevel::Warn => fsyslog::levels::WARN,
+            LogLevel::Error => fsyslog::levels::ERROR,
+            LogLevel::Fatal => fsyslog::levels::FATAL,
+        }
+    }
+}
+
+impl FromStr for LogLevel {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, anyhow::Error> {
+        match s.to_uppercase().as_str() {
+            "ALL" => Ok(LogLevel::All),
+            "TRACE" => Ok(LogLevel::Trace),
+            "DEBUG" => Ok(LogLevel::Debug),
+            "INFO" => Ok(LogLevel::Info),
+            "WARN" => Ok(LogLevel::Warn),
+            "ERROR" => Ok(LogLevel::Error),
+            "FATAL" => Ok(LogLevel::Fatal),
+            _ => Err(anyhow::anyhow!("unrecognized log level = {}", s)),
+        }
+    }
+}
+
 /// Options.
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -69,10 +142,10 @@ struct Opt {
     netemul: bool,
 
     /// The minimum severity for logs.
-    #[structopt(short, long, default_value = "2")]
-    min_severity: i32,
+    #[structopt(short, long, default_value = "INFO")]
+    min_severity: LogLevel,
 
-    /// The config file to use.
+    /// The config file to use
     #[structopt(short, long, default_value = "default.json")]
     config_data: String,
 }
@@ -183,12 +256,31 @@ enum DnsServersSource {
     Default,
 }
 
+/// State for a WLAN AP interface.
+struct WlanApInterfaceState {
+    /// ID of the interface.
+    id: u32,
+
+    /// Is this interface up?
+    up: bool,
+
+    /// Has this interface been observed by the Netstack yet?
+    seen: bool,
+}
+
+impl WlanApInterfaceState {
+    fn new(id: u32) -> WlanApInterfaceState {
+        WlanApInterfaceState { id, up: false, seen: false }
+    }
+}
+
 /// Network Configuration state.
 struct NetCfg<'a> {
     stack: fnet_stack::StackProxy,
     netstack: fnetstack::NetstackProxy,
     lookup_admin: fnet_name::LookupAdminProxy,
     filter: fnet_filter::FilterProxy,
+    dhcp_server: fnet_dhcp::Server_Proxy,
 
     device_dir_path: String,
     allow_virtual_devices: bool,
@@ -197,6 +289,9 @@ struct NetCfg<'a> {
 
     filter_enabled_interface_types: HashSet<InterfaceType>,
     default_config_rules: Vec<matchers::InterfaceSpec>,
+
+    /// The WLAN-AP interface state.
+    wlan_ap_interface_state: Option<WlanApInterfaceState>,
 }
 
 impl<'a> NetCfg<'a> {
@@ -207,6 +302,9 @@ impl<'a> NetCfg<'a> {
         default_config_rules: Vec<matchers::InterfaceSpec>,
         filter_enabled_interface_types: HashSet<InterfaceType>,
     ) -> Result<NetCfg<'a>, anyhow::Error> {
+        // Note, just because `connect_to_service` returns without an error does not mean
+        // the service is available to us. We will observe an error when we try to use the
+        // proxy if the service is not available.
         let stack = connect_to_service::<fnet_stack::StackMarker>()
             .context("could not connect to stack")?;
         let netstack = connect_to_service::<fnetstack::NetstackMarker>()
@@ -215,6 +313,8 @@ impl<'a> NetCfg<'a> {
             .context("could not connect to lookup admin")?;
         let filter = connect_to_service::<fnet_filter::FilterMarker>()
             .context("could not connect to filter")?;
+        let dhcp_server = connect_to_service::<fnet_dhcp::Server_Marker>()
+            .context("could not connect to DHCP Server")?;
         let persisted_interface_config =
             interface::FileBackedConfig::load(&PERSISTED_INTERFACE_CONFIG_FILEPATH)
                 .context("loading persistent interface configurations")?;
@@ -224,11 +324,13 @@ impl<'a> NetCfg<'a> {
             netstack,
             lookup_admin,
             filter,
+            dhcp_server,
             device_dir_path,
             allow_virtual_devices,
             persisted_interface_config,
             filter_enabled_interface_types,
             default_config_rules,
+            wlan_ap_interface_state: None,
         })
     }
 
@@ -300,6 +402,9 @@ impl<'a> NetCfg<'a> {
         .map(|r| r.with_context(|| format!("watching {}", device_dir_path)))
         .fuse();
 
+        let mut netstack_stream =
+            self.netstack.take_event_stream().map(|r| r.context("Netstack event stream")).fuse();
+
         debug!("starting eventloop...");
 
         loop {
@@ -312,11 +417,82 @@ impl<'a> NetCfg<'a> {
                         ))?;
                     self.handle_device_event(event).await?
                 }
+                netstack_res = netstack_stream.try_next() => {
+                    let event = netstack_res?.ok_or(anyhow::anyhow!("Netstack event stream unexpectedly ended"))?;
+                    self.handle_netstack_event(event).await?
+                }
                 complete => break,
             };
         }
 
         Err(anyhow::anyhow!("unexpectedly ended eventloop"))
+    }
+
+    /// Handles an event from fuchsia.netstack.Netstack.
+    ///
+    /// Starts or stops the DHCP server when a known WLAN AP interface is brought up or down,
+    /// respectively.
+    async fn handle_netstack_event(
+        &mut self,
+        event: fnetstack::NetstackEvent,
+    ) -> Result<(), anyhow::Error> {
+        trace!("got netstack event = {:?}", event);
+
+        let wlan_ap_state = match &mut self.wlan_ap_interface_state {
+            // If we do not have a known WLAN AP interface, do nothing.
+            None => return Ok(()),
+            Some(s) => s,
+        };
+
+        let fnetstack::NetstackEvent::OnInterfacesChanged { interfaces } = event;
+        if let Some(fnetstack::NetInterface { id, flags, name, .. }) =
+            interfaces.iter().find(|i| i.id == wlan_ap_state.id)
+        {
+            wlan_ap_state.seen = true;
+
+            // If the interface's up status has not changed, do nothing further.
+            let up = flags & fnetstack::NET_INTERFACE_FLAG_UP != 0;
+            if wlan_ap_state.up == up {
+                return Ok(());
+            }
+
+            wlan_ap_state.up = up;
+
+            if up {
+                info!("WLAN AP interface {} (id={}) came up so starting DHCP server", name, id);
+                match self.start_dhcp_server().await {
+                    Ok(()) => {}
+                    Err(e) => error!("error starting DHCP server: {}", e),
+                }
+            } else {
+                info!("WLAN AP interface {} (id={}) went down so stopping DHCP server", name, id);
+                match self.stop_dhcp_server().await {
+                    Ok(()) => {}
+                    Err(e) => error!("error stopping DHCP server: {}", e),
+                }
+            }
+
+            return Ok(());
+        }
+
+        // If we have not received an event with the WLAN AP interface, do not remove it yet.
+        // Even if the interface was removed from the Netstack immediately after it was added,
+        // we should get an event with the interface. This is so that we do not prematurely
+        // clear the WLAN AP interface state.
+        if !wlan_ap_state.seen {
+            return Ok(());
+        }
+
+        // The DHCP server should only run on the WLAN AP interface, so stop it since the AP
+        // interface is removed.
+        info!("WLAN AP interface with id={} is removed, stopping DHCP server", wlan_ap_state.id);
+        self.wlan_ap_interface_state = None;
+        match self.stop_dhcp_server().await {
+            Ok(()) => {}
+            Err(e) => error!("error stopping DHCP server: {}", e),
+        }
+
+        Ok(())
     }
 
     /// Handles an event on the device directory.
@@ -328,7 +504,7 @@ impl<'a> NetCfg<'a> {
         trace!("got {:?} event for {}", event, filename.display());
 
         if filename == path::PathBuf::from(THIS_DIRECTORY) {
-            info!("skipping filename = {}", filename.display());
+            debug!("skipping filename = {}", filename.display());
             return Ok(());
         }
 
@@ -340,6 +516,12 @@ impl<'a> NetCfg<'a> {
                 let topological_path = fdio::device_get_topo_path(&device).with_context(|| {
                     format!("fdio::device_get_topo_path({})", filepath.display())
                 })?;
+
+                debug!(
+                    "topological path for device at {} is {}",
+                    filepath.display(),
+                    topological_path
+                );
 
                 let device = device.into_raw_fd();
                 let mut client = 0;
@@ -414,62 +596,26 @@ impl<'a> NetCfg<'a> {
                         )
                     })?;
 
-                if should_enable_filter(&self.filter_enabled_interface_types, &device_info.features)
-                {
-                    info!("enable filter for nic {}", nic_id);
-                    let () = self
-                        .stack
-                        .enable_packet_filter(nic_id as u64)
-                        .await
-                        .context("couldn't call enable_packet_filter")?
-                        .map_err(|e| {
-                            anyhow::anyhow!("failed to enable packet filter with error = {:?}", e)
-                        })?;
-                } else {
-                    info!("disable filter for nic {}", nic_id);
-                    let () = self
-                        .stack
-                        .disable_packet_filter(nic_id as u64)
-                        .await
-                        .context("couldn't call disable_packet_filter")?
-                        .map_err(|e| {
-                            anyhow::anyhow!("failed to disable packet filter with error = {:?}", e)
-                        })?;
-                };
+                if topological_path.contains(WLAN_AP_TOPO_PATH_CONTAINS) {
+                    if let Some(s) = &self.wlan_ap_interface_state {
+                        return Err(anyhow::anyhow!("multiple WLAN AP interfaces are not supported, have WLAN AP interface with id = {}", s.id));
+                    }
+                    self.wlan_ap_interface_state = Some(WlanApInterfaceState::new(nic_id));
 
-                match derived_interface_config.ip_address_config {
-                    fnetstack::IpAddressConfig::Dhcp(_) => {
-                        let (dhcp_client, server_end) =
-                            fidl::endpoints::create_proxy::<fnet_dhcp::ClientMarker>()
-                                .context("dhcp client: failed to create fidl endpoints")?;
-                        let () = self
-                            .netstack
-                            .get_dhcp_client(nic_id, server_end)
-                            .await
-                            .context("failed to call netstack.get_dhcp_client")?
-                            .map_err(zx::Status::from_raw)
-                            .context("failed to get dhcp client")?;
-                        let () = dhcp_client
-                            .start()
-                            .await
-                            .context("start DHCP client request")?
-                            .map_err(zx::Status::from_raw)
-                            .context("failed to start dhcp client")?;
-                    }
-                    fnetstack::IpAddressConfig::StaticIp(fnet::Subnet {
-                        addr: mut address,
-                        prefix_len,
-                    }) => {
-                        let err = self
-                            .netstack
-                            .set_interface_address(nic_id, &mut address, prefix_len)
-                            .await
-                            .context("set interface address request")?;
-                        if err.status != fnetstack::Status::Ok {
-                            error!("failed to set interface address with err = {:?}", err);
-                        }
-                    }
-                };
+                    info!(
+                        "discovered WLAN AP interface with id={}, configuring interface and DHCP server",
+                        nic_id
+                    );
+
+                    let () = self
+                        .configure_wlan_ap_and_dhcp_server(nic_id, derived_interface_config.name)
+                        .await?;
+                } else {
+                    let () = self
+                        .configure_host(nic_id, &device_info, &derived_interface_config)
+                        .await?;
+                }
+
                 let () = self.netstack.set_interface_status(nic_id, true)?;
             }
             fvfs_watcher::WatchEvent::IDLE | fvfs_watcher::WatchEvent::REMOVE_FILE => {}
@@ -480,6 +626,197 @@ impl<'a> NetCfg<'a> {
 
         Ok(())
     }
+
+    /// Start the DHCP server.
+    async fn start_dhcp_server(&mut self) -> Result<(), anyhow::Error> {
+        self.dhcp_server
+            .start_serving()
+            .await
+            .context("start DHCP server request")?
+            .map_err(zx::Status::from_raw)
+            .context("start DHCP server")
+    }
+
+    /// Stop the DHCP server.
+    async fn stop_dhcp_server(&mut self) -> Result<(), anyhow::Error> {
+        self.dhcp_server.stop_serving().await.context("stop DHCP server request")
+    }
+
+    /// Configure host interface.
+    async fn configure_host(
+        &mut self,
+        nic_id: u32,
+        info: &feth_ext::EthernetInfo,
+        config: &fnetstack::InterfaceConfig,
+    ) -> Result<(), anyhow::Error> {
+        if should_enable_filter(&self.filter_enabled_interface_types, &info.features) {
+            info!("enable filter for nic {}", nic_id);
+            let () = self
+                .stack
+                .enable_packet_filter(nic_id.into())
+                .await
+                .context("couldn't call enable_packet_filter")?
+                .map_err(|e: fnet_stack::Error| {
+                    anyhow::anyhow!("failed to enable packet filter with error = {:?}", e)
+                })?;
+        } else {
+            info!("disable filter for nic {}", nic_id);
+            let () = self
+                .stack
+                .disable_packet_filter(nic_id.into())
+                .await
+                .context("couldn't call disable_packet_filter")?
+                .map_err(|e: fnet_stack::Error| {
+                    anyhow::anyhow!("failed to disable packet filter with error = {:?}", e)
+                })?;
+        };
+
+        match config.ip_address_config {
+            fnetstack::IpAddressConfig::Dhcp(_) => {
+                let (dhcp_client, server_end) =
+                    fidl::endpoints::create_proxy::<fnet_dhcp::ClientMarker>()
+                        .context("dhcp client: failed to create fidl endpoints")?;
+                let () = self
+                    .netstack
+                    .get_dhcp_client(nic_id, server_end)
+                    .await
+                    .context("failed to call netstack.get_dhcp_client")?
+                    .map_err(zx::Status::from_raw)
+                    .context("failed to get dhcp client")?;
+                let () = dhcp_client
+                    .start()
+                    .await
+                    .context("start DHCP client request")?
+                    .map_err(zx::Status::from_raw)
+                    .context("failed to start dhcp client")?;
+            }
+            fnetstack::IpAddressConfig::StaticIp(fnet::Subnet {
+                addr: mut address,
+                prefix_len,
+            }) => {
+                let fnetstack::NetErr { status, message } = self
+                    .netstack
+                    .set_interface_address(nic_id, &mut address, prefix_len)
+                    .await
+                    .context("set interface address request")?;
+                if status != fnetstack::Status::Ok {
+                    // Do not consider this a fatal error because the interface could
+                    // have been removed after it was added, but before we reached
+                    // this point.
+                    error!(
+                        "failed to set interface address with status = {:?}: {}",
+                        status, message
+                    );
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Configure the WLAN AP and the DHCP server to serve requests on its network.
+    ///
+    /// Note, this method will not start the DHCP server, it will only be configured
+    /// with the parameters so it is ready to be started when an interface UP event
+    /// is received for the WLAN AP.
+    async fn configure_wlan_ap_and_dhcp_server(
+        &mut self,
+        nic_id: u32,
+        name: String,
+    ) -> Result<(), anyhow::Error> {
+        // Calculate and set the interface address based on the network address.
+        // The interface address should be the first available address.
+        let network_addr_as_u32 = u32::from_be_bytes(WLAN_AP_NETWORK_ADDR.addr);
+        let interface_addr_as_u32 = network_addr_as_u32 + 1;
+        let addr = fnet::Ipv4Address { addr: interface_addr_as_u32.to_be_bytes() };
+        let fnetstack::NetErr { status, message } = self
+            .netstack
+            .set_interface_address(nic_id, &mut addr.into_ext(), WLAN_AP_PREFIX_LEN)
+            .await
+            .context("set interface address request")?;
+        if status != fnetstack::Status::Ok {
+            // Do not consider this a fatal error because the interface could
+            // have been removed after it was added, but before we reached
+            // this point.
+            return Err(anyhow::anyhow!(
+                "failed to set interface address for WLAN AP with status = {:?}: {}",
+                status,
+                message
+            ));
+        }
+
+        // First we clear any leases that the server knows about since the server
+        // will be used on a new interface. If leases exist, configuring the DHCP
+        // server parameters may fail (AddressPool).
+        debug!("clearing DHCP leases");
+        let () = self
+            .dhcp_server
+            .clear_leases()
+            .await
+            .context("clear DHCP leases request")?
+            .map_err(zx::Status::from_raw)
+            .context("clear DHCP leases request")?;
+
+        // Configure the DHCP server.
+        let v = vec![addr.into()];
+        debug!("setting DHCP IpAddrs parameter to {:?}", v);
+        let () = self
+            .dhcp_server
+            .set_parameter(&mut fnet_dhcp::Parameter::IpAddrs(v))
+            .await
+            .context("set DHCP IpAddrs parameter request")?
+            .map_err(zx::Status::from_raw)
+            .context("set DHCP IpAddrs parameter")?;
+
+        let v = vec![name];
+        debug!("setting DHCP BoundDeviceNames parameter to {:?}", v);
+        let () = self
+            .dhcp_server
+            .set_parameter(&mut fnet_dhcp::Parameter::BoundDeviceNames(v))
+            .await
+            .context("set DHCP BoundDeviceName parameter request")?
+            .map_err(zx::Status::from_raw)
+            .context("set DHCP BoundDeviceNames parameter")?;
+
+        let v = fnet_dhcp::LeaseLength {
+            default: Some(WLAN_AP_DHCP_LEASE_TIME_SECONDS),
+            max: Some(WLAN_AP_DHCP_LEASE_TIME_SECONDS),
+        };
+        debug!("setting DHCP LeaseLength parameter to {:?}", v);
+        let () = self
+            .dhcp_server
+            .set_parameter(&mut fnet_dhcp::Parameter::Lease(v))
+            .await
+            .context("set DHCP LeaseLength parameter request")?
+            .map_err(zx::Status::from_raw)
+            .context("set DHCP LeaseLength parameter")?;
+
+        let host_mask = u32::max_value() >> WLAN_AP_PREFIX_LEN;
+        let broadcast_addr_as_u32 = network_addr_as_u32 | host_mask;
+        let broadcast_addr = fnet::Ipv4Address { addr: broadcast_addr_as_u32.to_be_bytes() };
+        // The start address of the DHCP pool should be the first address after the WLAN AP
+        // interface address.
+        let dhcp_pool_start =
+            fnet::Ipv4Address { addr: (interface_addr_as_u32 + 1).to_be_bytes() }.into();
+        // The last address of the DHCP pool should be the last available address
+        // in the interface's network. This is the address immediately before the
+        // network's broadcast address.
+        let dhcp_pool_end = fnet::Ipv4Address { addr: (broadcast_addr_as_u32 - 1).to_be_bytes() };
+
+        let v = fnet_dhcp::AddressPool {
+            network_id: Some(WLAN_AP_NETWORK_ADDR),
+            broadcast: Some(broadcast_addr),
+            mask: Some(fnet::Ipv4Address { addr: (!host_mask).to_be_bytes() }),
+            pool_range_start: Some(dhcp_pool_start),
+            pool_range_stop: Some(dhcp_pool_end),
+        };
+        debug!("setting DHCP AddressPool parameter to {:?}", v);
+        self.dhcp_server
+            .set_parameter(&mut fnet_dhcp::Parameter::AddressPool(v))
+            .await
+            .context("set DHCP AddressPool parameter request")?
+            .map_err(zx::Status::from_raw)
+            .context("set DHCP AddressPool parameter")
+    }
 }
 
 #[fuchsia_async::run_singlethreaded]
@@ -487,7 +824,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let opt = Opt::from_args();
 
     fsyslog::init_with_tags(&["netcfg"])?;
-    fsyslog::set_severity(opt.min_severity);
+    fsyslog::set_severity(opt.min_severity.into());
 
     info!("starting");
     debug!("starting with options = {:?}", opt);

@@ -12,6 +12,7 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.net.dhcp.Server",
             "fuchsia.net.filter.Filter",
             "fuchsia.net.name.LookupAdmin",
             "fuchsia.net.stack.Stack",
