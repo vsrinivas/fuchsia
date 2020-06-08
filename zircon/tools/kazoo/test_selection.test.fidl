@@ -37,12 +37,12 @@ protocol Selection {
 
     // Argument reordering.
     [ArgReorder="handle,data,offset,data_size,actual"]
-    KtraceRead(handle<resource> handle, mutable_vector_void data, uint32 offset) ->
+    KtraceRead(handle:RESOURCE handle, mutable_vector_void data, uint32 offset) ->
         (status status, usize actual);
 
     // Mutable uint32 in the middle of input parameters (rather than as an
     // output).
-    PciCfgPioRw(handle<resource> handle,
+    PciCfgPioRw(handle:RESOURCE handle,
                 uint8 bus,
                 uint8 dev,
                 uint8 func,
@@ -53,7 +53,7 @@ protocol Selection {
         (status status);
 
     // uint32_t for size of a "vector".
-    JobSetPolicy(handle<job> handle, uint32 options, uint32 topic, vector_void_u32size policy) ->
+    JobSetPolicy(handle:JOB handle, uint32 options, uint32 topic, vector_void_u32size policy) ->
         (status status);
 
     // Handling of enums.

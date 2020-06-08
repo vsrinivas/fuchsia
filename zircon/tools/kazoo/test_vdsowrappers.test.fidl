@@ -12,7 +12,7 @@ using vector_void = vector<byte>;
 protocol Syscall {
     // Typical case.
     [blocking]
-    BlockingWrite(handle<vmo> handle, vector_void buffer, uint64 offset) -> (status status);
+    BlockingWrite(handle:VMO handle, vector_void buffer, uint64 offset) -> (status status);
 
     // Special case for abigen's test wrapper.
     TestWrapper(int32 a, int32 b, int32 c) -> (status status);

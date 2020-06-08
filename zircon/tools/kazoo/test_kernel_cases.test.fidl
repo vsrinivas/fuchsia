@@ -17,19 +17,19 @@ using vector_void_u32size = vector<byte>;
 protocol KernelCases {
     // Output vector to out_ptr, and vector<paddr> staying zx_paddr_t (not
     // turning into uint64).
-    BtiPin(handle<bti> handle,
+    BtiPin(handle:BTI handle,
            uint32 options,
-           handle<vmo> vmo,
+           handle:VMO vmo,
            uint64 offset,
            uint64 size) ->
-        (status status, vector_paddr addrs, handle<pmt> pmt);
+        (status status, vector_paddr addrs, handle:PMT pmt);
 
     // Still have NORETURN markup for kernel (but only this one).
     [noreturn]
     ThreadExit();
 
     // inout_ptr.
-    MtraceControl(handle<resource> handle,
+    MtraceControl(handle:RESOURCE handle,
             uint32 kind,
             uint32 action,
             uint32 options,
@@ -38,7 +38,7 @@ protocol KernelCases {
 
     // vector of handles isn't turned into user_out_handle*, rather stays as
     // user_out_ptr<zx_handle_t>, because it's not just one.
-    Read(handle<channel> handle,
+    Read(handle:CHANNEL handle,
          uint32 options) ->
         (status status,
          vector_void_u32size bytes,

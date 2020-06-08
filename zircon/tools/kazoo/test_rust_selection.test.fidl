@@ -22,7 +22,7 @@ protocol Rust {
     NoReturnValue(uint32 x);
 
     // |buffer| treated mutable.
-    InoutArgs(handle<vmo> handle,
+    InoutArgs(handle:VMO handle,
               uint32 op,
               uint64 offset,
               uint64 size,

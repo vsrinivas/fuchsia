@@ -22,7 +22,7 @@ protocol Kwrap {
     ANoRetFunc();
 
     // |buffer| treated as inout parameter.
-    InoutArgs(handle<vmo> handle,
+    InoutArgs(handle:VMO handle,
             uint32 op,
             uint64 offset,
             uint64 size,
@@ -30,11 +30,11 @@ protocol Kwrap {
         (status status);
 
     // Output handle copied properly.
-    OutputHandle() -> (status status, handle<event> event);
+    OutputHandle() -> (status status, handle:EVENT event);
 
     // When two output handles, status and copy are verified before any bytes
     // returned.
-    TwoOutputHandle() -> (status status, handle<event> out0, handle<event> out1);
+    TwoOutputHandle() -> (status status, handle:EVENT out0, handle:EVENT out1);
 
     [testonly]
     CompiledOut() -> (status status);
