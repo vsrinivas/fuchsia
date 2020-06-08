@@ -14,7 +14,8 @@
       "location": {
         "filename": "byte_and_bytes.test.fidl",
         "line": 3,
-        "column": 8
+        "column": 8,
+        "length": 12
       },
       "anonymous": false,
       "members": [
@@ -27,7 +28,8 @@
           "location": {
             "filename": "byte_and_bytes.test.fidl",
             "line": 4,
-            "column": 10
+            "column": 10,
+            "length": 11
           },
           "field_shape_v1": {
             "offset": 0,
@@ -47,7 +49,8 @@
           "location": {
             "filename": "byte_and_bytes.test.fidl",
             "line": 5,
-            "column": 11
+            "column": 11,
+            "length": 10
           },
           "field_shape_v1": {
             "offset": 8,
@@ -68,7 +71,8 @@
           "location": {
             "filename": "byte_and_bytes.test.fidl",
             "line": 6,
-            "column": 16
+            "column": 16,
+            "length": 16
           },
           "field_shape_v1": {
             "offset": 24,
@@ -89,7 +93,8 @@
           "location": {
             "filename": "byte_and_bytes.test.fidl",
             "line": 7,
-            "column": 17
+            "column": 17,
+            "length": 20
           },
           "field_shape_v1": {
             "offset": 40,

@@ -12,7 +12,8 @@
       "location": {
         "filename": "handles.test.fidl",
         "line": 3,
-        "column": 10
+        "column": 10,
+        "length": 12
       },
       "methods": []
     }
@@ -24,7 +25,8 @@
       "location": {
         "filename": "handles.test.fidl",
         "line": 10,
-        "column": 8
+        "column": 8,
+        "length": 7
       },
       "anonymous": false,
       "members": [
@@ -39,7 +41,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 11,
-            "column": 12
+            "column": 12,
+            "length": 12
           },
           "field_shape_v1": {
             "offset": 0,
@@ -57,7 +60,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 13,
-            "column": 17
+            "column": 17,
+            "length": 10
           },
           "field_shape_v1": {
             "offset": 4,
@@ -75,7 +79,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 14,
-            "column": 21
+            "column": 21,
+            "length": 14
           },
           "field_shape_v1": {
             "offset": 8,
@@ -93,7 +98,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 15,
-            "column": 19
+            "column": 19,
+            "length": 12
           },
           "field_shape_v1": {
             "offset": 12,
@@ -111,7 +117,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 16,
-            "column": 22
+            "column": 22,
+            "length": 15
           },
           "field_shape_v1": {
             "offset": 16,
@@ -129,7 +136,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 17,
-            "column": 19
+            "column": 19,
+            "length": 12
           },
           "field_shape_v1": {
             "offset": 20,
@@ -147,7 +155,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 18,
-            "column": 23
+            "column": 23,
+            "length": 16
           },
           "field_shape_v1": {
             "offset": 24,
@@ -165,7 +174,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 19,
-            "column": 23
+            "column": 23,
+            "length": 16
           },
           "field_shape_v1": {
             "offset": 28,
@@ -183,7 +193,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 20,
-            "column": 18
+            "column": 18,
+            "length": 11
           },
           "field_shape_v1": {
             "offset": 32,
@@ -201,7 +212,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 21,
-            "column": 19
+            "column": 19,
+            "length": 12
           },
           "field_shape_v1": {
             "offset": 36,
@@ -219,7 +231,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 22,
-            "column": 23
+            "column": 23,
+            "length": 16
           },
           "field_shape_v1": {
             "offset": 40,
@@ -237,7 +250,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 23,
-            "column": 19
+            "column": 19,
+            "length": 12
           },
           "field_shape_v1": {
             "offset": 44,
@@ -255,7 +269,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 24,
-            "column": 17
+            "column": 17,
+            "length": 10
           },
           "field_shape_v1": {
             "offset": 48,
@@ -273,7 +288,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 25,
-            "column": 19
+            "column": 19,
+            "length": 12
           },
           "field_shape_v1": {
             "offset": 52,
@@ -291,7 +307,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 26,
-            "column": 23
+            "column": 23,
+            "length": 16
           },
           "field_shape_v1": {
             "offset": 56,
@@ -309,7 +326,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 27,
-            "column": 17
+            "column": 17,
+            "length": 10
           },
           "field_shape_v1": {
             "offset": 60,
@@ -327,7 +345,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 28,
-            "column": 18
+            "column": 18,
+            "length": 11
           },
           "field_shape_v1": {
             "offset": 64,
@@ -345,7 +364,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 29,
-            "column": 21
+            "column": 21,
+            "length": 14
           },
           "field_shape_v1": {
             "offset": 68,
@@ -363,7 +383,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 30,
-            "column": 21
+            "column": 21,
+            "length": 14
           },
           "field_shape_v1": {
             "offset": 72,
@@ -381,7 +402,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 31,
-            "column": 22
+            "column": 22,
+            "length": 15
           },
           "field_shape_v1": {
             "offset": 76,
@@ -399,7 +421,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 32,
-            "column": 20
+            "column": 20,
+            "length": 13
           },
           "field_shape_v1": {
             "offset": 80,
@@ -417,7 +440,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 33,
-            "column": 26
+            "column": 26,
+            "length": 19
           },
           "field_shape_v1": {
             "offset": 84,
@@ -435,7 +459,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 34,
-            "column": 20
+            "column": 20,
+            "length": 13
           },
           "field_shape_v1": {
             "offset": 88,
@@ -453,7 +478,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 35,
-            "column": 19
+            "column": 19,
+            "length": 12
           },
           "field_shape_v1": {
             "offset": 92,
@@ -471,7 +497,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 36,
-            "column": 18
+            "column": 18,
+            "length": 11
           },
           "field_shape_v1": {
             "offset": 96,
@@ -489,7 +516,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 37,
-            "column": 18
+            "column": 18,
+            "length": 11
           },
           "field_shape_v1": {
             "offset": 100,
@@ -507,7 +535,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 38,
-            "column": 17
+            "column": 17,
+            "length": 10
           },
           "field_shape_v1": {
             "offset": 104,
@@ -525,7 +554,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 40,
-            "column": 20
+            "column": 20,
+            "length": 13
           },
           "field_shape_v1": {
             "offset": 108,
@@ -548,7 +578,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 42,
-            "column": 26
+            "column": 26,
+            "length": 26
           },
           "field_shape_v1": {
             "offset": 112,
@@ -571,7 +602,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 43,
-            "column": 28
+            "column": 28,
+            "length": 28
           },
           "field_shape_v1": {
             "offset": 116,
@@ -594,7 +626,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 44,
-            "column": 27
+            "column": 27,
+            "length": 27
           },
           "field_shape_v1": {
             "offset": 120,
@@ -611,7 +644,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 46,
-            "column": 18
+            "column": 18,
+            "length": 13
           },
           "field_shape_v1": {
             "offset": 124,
@@ -628,7 +662,8 @@
           "location": {
             "filename": "handles.test.fidl",
             "line": 47,
-            "column": 27
+            "column": 27,
+            "length": 21
           },
           "field_shape_v1": {
             "offset": 128,
@@ -656,7 +691,8 @@
       "location": {
         "filename": "handles.test.fidl",
         "line": 6,
-        "column": 7
+        "column": 7,
+        "length": 20
       },
       "partial_type_ctor": {
         "name": "handle",
@@ -669,7 +705,8 @@
       "location": {
         "filename": "handles.test.fidl",
         "line": 7,
-        "column": 7
+        "column": 7,
+        "length": 22
       },
       "partial_type_ctor": {
         "name": "handle",
@@ -683,7 +720,8 @@
       "location": {
         "filename": "handles.test.fidl",
         "line": 8,
-        "column": 7
+        "column": 7,
+        "length": 21
       },
       "partial_type_ctor": {
         "name": "handle",

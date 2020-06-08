@@ -8,7 +8,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 22,
-        "column": 6
+        "column": 6,
+        "length": 8
       },
       "type": {
         "kind": "primitive",
@@ -21,7 +22,8 @@
           "location": {
             "filename": "constants.test.fidl",
             "line": 23,
-            "column": 5
+            "column": 5,
+            "length": 5
           },
           "value": {
             "kind": "literal",
@@ -39,7 +41,8 @@
           "location": {
             "filename": "constants.test.fidl",
             "line": 24,
-            "column": 5
+            "column": 5,
+            "length": 12
           },
           "value": {
             "kind": "literal",
@@ -57,7 +60,8 @@
           "location": {
             "filename": "constants.test.fidl",
             "line": 25,
-            "column": 5
+            "column": 5,
+            "length": 11
           },
           "value": {
             "kind": "literal",
@@ -78,7 +82,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 37,
-        "column": 6
+        "column": 6,
+        "length": 4
       },
       "type": {
         "kind": "primitive",
@@ -91,7 +96,8 @@
           "location": {
             "filename": "constants.test.fidl",
             "line": 38,
-            "column": 5
+            "column": 5,
+            "length": 1
           },
           "value": {
             "kind": "literal",
@@ -114,7 +120,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 3,
-        "column": 13
+        "column": 13,
+        "length": 5
       },
       "type": {
         "kind": "primitive",
@@ -136,7 +143,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 4,
-        "column": 14
+        "column": 14,
+        "length": 6
       },
       "type": {
         "kind": "primitive",
@@ -158,7 +166,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 5,
-        "column": 14
+        "column": 14,
+        "length": 6
       },
       "type": {
         "kind": "primitive",
@@ -180,7 +189,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 6,
-        "column": 14
+        "column": 14,
+        "length": 6
       },
       "type": {
         "kind": "primitive",
@@ -202,7 +212,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 7,
-        "column": 12
+        "column": 12,
+        "length": 4
       },
       "type": {
         "kind": "primitive",
@@ -224,7 +235,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 8,
-        "column": 13
+        "column": 13,
+        "length": 5
       },
       "type": {
         "kind": "primitive",
@@ -246,7 +258,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 9,
-        "column": 13
+        "column": 13,
+        "length": 5
       },
       "type": {
         "kind": "primitive",
@@ -268,7 +281,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 10,
-        "column": 13
+        "column": 13,
+        "length": 5
       },
       "type": {
         "kind": "primitive",
@@ -290,7 +304,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 11,
-        "column": 15
+        "column": 15,
+        "length": 7
       },
       "type": {
         "kind": "primitive",
@@ -312,7 +327,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 12,
-        "column": 15
+        "column": 15,
+        "length": 7
       },
       "type": {
         "kind": "primitive",
@@ -334,7 +350,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 13,
-        "column": 12
+        "column": 12,
+        "length": 4
       },
       "type": {
         "kind": "primitive",
@@ -356,7 +373,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 14,
-        "column": 14
+        "column": 14,
+        "length": 6
       },
       "type": {
         "kind": "string",
@@ -378,7 +396,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 19,
-        "column": 16
+        "column": 16,
+        "length": 7
       },
       "type": {
         "kind": "identifier",
@@ -397,7 +416,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 20,
-        "column": 13
+        "column": 13,
+        "length": 16
       },
       "type": {
         "kind": "primitive",
@@ -415,7 +435,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 27,
-        "column": 16
+        "column": 16,
+        "length": 7
       },
       "type": {
         "kind": "identifier",
@@ -434,7 +455,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 28,
-        "column": 13
+        "column": 13,
+        "length": 16
       },
       "type": {
         "kind": "primitive",
@@ -452,7 +474,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 30,
-        "column": 16
+        "column": 16,
+        "length": 8
       },
       "type": {
         "kind": "identifier",
@@ -470,7 +493,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 31,
-        "column": 13
+        "column": 13,
+        "length": 20
       },
       "type": {
         "kind": "primitive",
@@ -489,7 +513,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 16,
-        "column": 6
+        "column": 6,
+        "length": 8
       },
       "type": "int32",
       "members": [
@@ -498,7 +523,8 @@
           "location": {
             "filename": "constants.test.fidl",
             "line": 17,
-            "column": 5
+            "column": 5,
+            "length": 5
           },
           "value": {
             "kind": "literal",
@@ -519,7 +545,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 33,
-        "column": 6
+        "column": 6,
+        "length": 4
       },
       "type": "uint32",
       "members": [
@@ -528,7 +555,8 @@
           "location": {
             "filename": "constants.test.fidl",
             "line": 34,
-            "column": 5
+            "column": 5,
+            "length": 1
           },
           "value": {
             "kind": "literal",
@@ -554,7 +582,8 @@
       "location": {
         "filename": "constants.test.fidl",
         "line": 41,
-        "column": 8
+        "column": 8,
+        "length": 6
       },
       "anonymous": false,
       "members": [
@@ -567,7 +596,8 @@
           "location": {
             "filename": "constants.test.fidl",
             "line": 42,
-            "column": 11
+            "column": 11,
+            "length": 18
           },
           "maybe_default_value": {
             "kind": "literal",
@@ -593,7 +623,8 @@
           "location": {
             "filename": "constants.test.fidl",
             "line": 43,
-            "column": 12
+            "column": 12,
+            "length": 19
           },
           "maybe_default_value": {
             "kind": "literal",
@@ -619,7 +650,8 @@
           "location": {
             "filename": "constants.test.fidl",
             "line": 44,
-            "column": 10
+            "column": 10,
+            "length": 17
           },
           "maybe_default_value": {
             "kind": "literal",
@@ -646,7 +678,8 @@
           "location": {
             "filename": "constants.test.fidl",
             "line": 45,
-            "column": 10
+            "column": 10,
+            "length": 17
           },
           "maybe_default_value": {
             "kind": "identifier",
@@ -669,7 +702,8 @@
           "location": {
             "filename": "constants.test.fidl",
             "line": 46,
-            "column": 10
+            "column": 10,
+            "length": 17
           },
           "maybe_default_value": {
             "kind": "identifier",

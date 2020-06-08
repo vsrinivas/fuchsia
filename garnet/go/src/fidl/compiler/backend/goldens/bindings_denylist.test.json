@@ -8,7 +8,8 @@
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 13,
-        "column": 6
+        "column": 6,
+        "length": 13
       },
       "maybe_attributes": [
         {
@@ -27,7 +28,8 @@
           "location": {
             "filename": "bindings_denylist.test.fidl",
             "line": 14,
-            "column": 5
+            "column": 5,
+            "length": 1
           },
           "value": {
             "kind": "literal",
@@ -50,7 +52,8 @@
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 10,
-        "column": 14
+        "column": 14,
+        "length": 11
       },
       "maybe_attributes": [
         {
@@ -80,7 +83,8 @@
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 18,
-        "column": 6
+        "column": 6,
+        "length": 8
       },
       "maybe_attributes": [
         {
@@ -95,7 +99,8 @@
           "location": {
             "filename": "bindings_denylist.test.fidl",
             "line": 19,
-            "column": 5
+            "column": 5,
+            "length": 1
           },
           "value": {
             "kind": "literal",
@@ -119,7 +124,8 @@
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 36,
-        "column": 10
+        "column": 10,
+        "length": 13
       },
       "maybe_attributes": [
         {
@@ -135,7 +141,8 @@
           "location": {
             "filename": "bindings_denylist.test.fidl",
             "line": 37,
-            "column": 5
+            "column": 5,
+            "length": 30
           },
           "has_request": true,
           "maybe_request": [],
@@ -172,7 +179,8 @@
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 41,
-        "column": 9
+        "column": 9,
+        "length": 9
       },
       "maybe_attributes": [
         {
@@ -189,7 +197,8 @@
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 23,
-        "column": 8
+        "column": 8,
+        "length": 6
       },
       "anonymous": false,
       "maybe_attributes": [
@@ -217,7 +226,8 @@
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 27,
-        "column": 7
+        "column": 7,
+        "length": 8
       },
       "maybe_attributes": [
         {
@@ -245,7 +255,8 @@
       "location": {
         "filename": "bindings_denylist.test.fidl",
         "line": 31,
-        "column": 7
+        "column": 7,
+        "length": 9
       },
       "maybe_attributes": [
         {
@@ -265,7 +276,8 @@
           "location": {
             "filename": "bindings_denylist.test.fidl",
             "line": 32,
-            "column": 15
+            "column": 15,
+            "length": 1
           }
         }
       ],

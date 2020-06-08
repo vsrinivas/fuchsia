@@ -10,7 +10,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 14,
-        "column": 6
+        "column": 6,
+        "length": 9
       },
       "type": "uint32",
       "members": [
@@ -19,7 +20,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 15,
-            "column": 5
+            "column": 5,
+            "length": 7
           },
           "value": {
             "kind": "literal",
@@ -37,7 +39,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 16,
-            "column": 5
+            "column": 5,
+            "length": 7
           },
           "value": {
             "kind": "literal",
@@ -61,7 +64,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 3,
-        "column": 10
+        "column": 10,
+        "length": 29
       },
       "methods": [
         {
@@ -71,7 +75,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 4,
-            "column": 5
+            "column": 5,
+            "length": 19
           },
           "has_request": true,
           "maybe_request": [],
@@ -95,7 +100,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 5,
-            "column": 5
+            "column": 5,
+            "length": 22
           },
           "has_request": true,
           "maybe_request": [],
@@ -130,7 +136,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 6,
-            "column": 5
+            "column": 5,
+            "length": 21
           },
           "has_request": true,
           "maybe_request": [],
@@ -155,7 +162,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 6,
-                "column": 40
+                "column": 40,
+                "length": 3
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -183,7 +191,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 7,
-            "column": 5
+            "column": 5,
+            "length": 21
           },
           "has_request": true,
           "maybe_request": [
@@ -196,7 +205,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 7,
-                "column": 34
+                "column": 34,
+                "length": 3
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -225,7 +235,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 8,
-            "column": 5
+            "column": 5,
+            "length": 24
           },
           "has_request": true,
           "maybe_request": [
@@ -238,7 +249,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 8,
-                "column": 37
+                "column": 37,
+                "length": 3
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -278,7 +290,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 9,
-            "column": 5
+            "column": 5,
+            "length": 23
           },
           "has_request": true,
           "maybe_request": [
@@ -291,7 +304,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 9,
-                "column": 36
+                "column": 36,
+                "length": 3
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -321,7 +335,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 9,
-                "column": 52
+                "column": 52,
+                "length": 3
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -349,7 +364,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 10,
-            "column": 8
+            "column": 8,
+            "length": 15
           },
           "has_request": false,
           "has_response": true,
@@ -373,7 +389,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 11,
-            "column": 8
+            "column": 8,
+            "length": 14
           },
           "has_request": false,
           "has_response": true,
@@ -387,7 +404,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 11,
-                "column": 30
+                "column": 30,
+                "length": 3
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -415,7 +433,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 19,
-        "column": 10
+        "column": 10,
+        "length": 15
       },
       "methods": [
         {
@@ -425,7 +444,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 20,
-            "column": 5
+            "column": 5,
+            "length": 16
           },
           "has_request": true,
           "maybe_request": [],
@@ -451,7 +471,8 @@
               "location": {
                 "filename": "generated",
                 "line": 3,
-                "column": 1
+                "column": 1,
+                "length": 6
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -479,7 +500,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 21,
-            "column": 5
+            "column": 5,
+            "length": 16
           },
           "has_request": true,
           "maybe_request": [],
@@ -505,7 +527,8 @@
               "location": {
                 "filename": "generated",
                 "line": 6,
-                "column": 1
+                "column": 1,
+                "length": 6
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -533,7 +556,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 22,
-            "column": 5
+            "column": 5,
+            "length": 11
           },
           "has_request": true,
           "maybe_request": [],
@@ -559,7 +583,8 @@
               "location": {
                 "filename": "generated",
                 "line": 9,
-                "column": 1
+                "column": 1,
+                "length": 6
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -587,7 +612,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 26,
-        "column": 10
+        "column": 10,
+        "length": 15
       },
       "maybe_attributes": [
         {
@@ -603,7 +629,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 27,
-            "column": 5
+            "column": 5,
+            "length": 7
           },
           "has_request": true,
           "maybe_request": [
@@ -616,7 +643,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 27,
-                "column": 19
+                "column": 19,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -632,7 +660,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 27,
-                "column": 28
+                "column": 28,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 24,
@@ -661,7 +690,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 28,
-            "column": 8
+            "column": 8,
+            "length": 6
           },
           "has_request": false,
           "has_response": true,
@@ -675,7 +705,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 28,
-                "column": 21
+                "column": 21,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -691,7 +722,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 28,
-                "column": 30
+                "column": 30,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 24,
@@ -719,7 +751,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 29,
-            "column": 5
+            "column": 5,
+            "length": 7
           },
           "has_request": true,
           "maybe_request": [
@@ -732,7 +765,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 29,
-                "column": 19
+                "column": 19,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -748,7 +782,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 29,
-                "column": 28
+                "column": 28,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 24,
@@ -778,7 +813,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 29,
-                "column": 41
+                "column": 41,
+                "length": 6
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -806,7 +842,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 30,
-            "column": 5
+            "column": 5,
+            "length": 12
           },
           "has_request": true,
           "maybe_request": [
@@ -821,7 +858,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 30,
-                "column": 33
+                "column": 33,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -853,7 +891,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 30,
-                "column": 55
+                "column": 55,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -881,7 +920,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 33,
-        "column": 10
+        "column": 10,
+        "length": 12
       },
       "methods": [
         {
@@ -891,7 +931,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 35,
-            "column": 5
+            "column": 5,
+            "length": 7
           },
           "has_request": true,
           "maybe_attributes": [
@@ -910,7 +951,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 35,
-                "column": 19
+                "column": 19,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -940,7 +982,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 35,
-                "column": 32
+                "column": 32,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -968,7 +1011,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 38,
-            "column": 5
+            "column": 5,
+            "length": 6
           },
           "has_request": true,
           "maybe_attributes": [
@@ -987,7 +1031,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 38,
-                "column": 18
+                "column": 18,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -1016,7 +1061,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 41,
-            "column": 8
+            "column": 8,
+            "length": 5
           },
           "has_request": false,
           "maybe_attributes": [
@@ -1036,7 +1082,8 @@
               "location": {
                 "filename": "protocols.test.fidl",
                 "line": 41,
-                "column": 20
+                "column": 20,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -1067,7 +1114,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 6,
-        "column": 32
+        "column": 32,
+        "length": 12
       },
       "anonymous": true,
       "members": [
@@ -1080,7 +1128,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 6,
-            "column": 40
+            "column": 40,
+            "length": 3
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1104,7 +1153,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 7,
-        "column": 26
+        "column": 26,
+        "length": 12
       },
       "anonymous": true,
       "members": [
@@ -1117,7 +1167,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 7,
-            "column": 34
+            "column": 34,
+            "length": 3
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1141,7 +1192,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 8,
-        "column": 29
+        "column": 29,
+        "length": 12
       },
       "anonymous": true,
       "members": [
@@ -1154,7 +1206,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 8,
-            "column": 37
+            "column": 37,
+            "length": 3
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1178,7 +1231,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 9,
-        "column": 28
+        "column": 28,
+        "length": 12
       },
       "anonymous": true,
       "members": [
@@ -1191,7 +1245,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 9,
-            "column": 36
+            "column": 36,
+            "length": 3
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1215,7 +1270,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 9,
-        "column": 44
+        "column": 44,
+        "length": 12
       },
       "anonymous": true,
       "members": [
@@ -1228,7 +1284,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 9,
-            "column": 52
+            "column": 52,
+            "length": 3
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1252,7 +1309,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 11,
-        "column": 22
+        "column": 22,
+        "length": 12
       },
       "anonymous": true,
       "members": [
@@ -1265,7 +1323,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 11,
-            "column": 30
+            "column": 30,
+            "length": 3
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1289,7 +1348,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 20,
-        "column": 27
+        "column": 27,
+        "length": 27
       },
       "anonymous": false,
       "members": [
@@ -1302,7 +1362,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 20,
-            "column": 34
+            "column": 34,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1318,7 +1379,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 20,
-            "column": 43
+            "column": 43,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 8,
@@ -1334,7 +1396,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 20,
-            "column": 52
+            "column": 52,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 16,
@@ -1358,7 +1421,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 20,
-        "column": 27
+        "column": 27,
+        "length": 27
       },
       "anonymous": true,
       "members": [
@@ -1372,7 +1436,8 @@
           "location": {
             "filename": "generated",
             "line": 3,
-            "column": 1
+            "column": 1,
+            "length": 6
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1396,7 +1461,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 21,
-        "column": 27
+        "column": 27,
+        "length": 2
       },
       "anonymous": false,
       "members": [],
@@ -1416,7 +1482,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 21,
-        "column": 27
+        "column": 27,
+        "length": 2
       },
       "anonymous": true,
       "members": [
@@ -1430,7 +1497,8 @@
           "location": {
             "filename": "generated",
             "line": 6,
-            "column": 1
+            "column": 1,
+            "length": 6
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1454,7 +1522,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 22,
-        "column": 22
+        "column": 22,
+        "length": 2
       },
       "anonymous": false,
       "members": [],
@@ -1474,7 +1543,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 22,
-        "column": 22
+        "column": 22,
+        "length": 2
       },
       "anonymous": true,
       "members": [
@@ -1488,7 +1558,8 @@
           "location": {
             "filename": "generated",
             "line": 9,
-            "column": 1
+            "column": 1,
+            "length": 6
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1512,7 +1583,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 27,
-        "column": 12
+        "column": 12,
+        "length": 18
       },
       "anonymous": true,
       "members": [
@@ -1525,7 +1597,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 27,
-            "column": 19
+            "column": 19,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1541,7 +1614,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 27,
-            "column": 28
+            "column": 28,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 8,
@@ -1565,7 +1639,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 28,
-        "column": 14
+        "column": 14,
+        "length": 18
       },
       "anonymous": true,
       "members": [
@@ -1578,7 +1653,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 28,
-            "column": 21
+            "column": 21,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1594,7 +1670,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 28,
-            "column": 30
+            "column": 30,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 8,
@@ -1618,7 +1695,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 29,
-        "column": 12
+        "column": 12,
+        "length": 18
       },
       "anonymous": true,
       "members": [
@@ -1631,7 +1709,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 29,
-            "column": 19
+            "column": 19,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1647,7 +1726,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 29,
-            "column": 28
+            "column": 28,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 8,
@@ -1671,7 +1751,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 29,
-        "column": 34
+        "column": 34,
+        "length": 14
       },
       "anonymous": true,
       "members": [
@@ -1684,7 +1765,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 29,
-            "column": 41
+            "column": 41,
+            "length": 6
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1708,7 +1790,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 30,
-        "column": 17
+        "column": 17,
+        "length": 18
       },
       "anonymous": true,
       "members": [
@@ -1723,7 +1806,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 30,
-            "column": 33
+            "column": 33,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1747,7 +1831,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 30,
-        "column": 39
+        "column": 39,
+        "length": 18
       },
       "anonymous": true,
       "members": [
@@ -1762,7 +1847,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 30,
-            "column": 55
+            "column": 55,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1786,7 +1872,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 35,
-        "column": 12
+        "column": 12,
+        "length": 9
       },
       "anonymous": true,
       "members": [
@@ -1799,7 +1886,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 35,
-            "column": 19
+            "column": 19,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1823,7 +1911,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 35,
-        "column": 25
+        "column": 25,
+        "length": 9
       },
       "anonymous": true,
       "members": [
@@ -1836,7 +1925,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 35,
-            "column": 32
+            "column": 32,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1860,7 +1950,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 38,
-        "column": 11
+        "column": 11,
+        "length": 9
       },
       "anonymous": true,
       "members": [
@@ -1873,7 +1964,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 38,
-            "column": 18
+            "column": 18,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1897,7 +1989,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 41,
-        "column": 13
+        "column": 13,
+        "length": 9
       },
       "anonymous": true,
       "members": [
@@ -1910,7 +2003,8 @@
           "location": {
             "filename": "protocols.test.fidl",
             "line": 41,
-            "column": 20
+            "column": 20,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
@@ -1937,7 +2031,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 20,
-        "column": 27
+        "column": 27,
+        "length": 27
       },
       "maybe_attributes": [
         {
@@ -1958,7 +2053,8 @@
           "location": {
             "filename": "generated",
             "line": 1,
-            "column": 1
+            "column": 1,
+            "length": 8
           }
         },
         {
@@ -1972,7 +2068,8 @@
           "location": {
             "filename": "generated",
             "line": 2,
-            "column": 1
+            "column": 1,
+            "length": 3
           }
         }
       ],
@@ -1993,7 +2090,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 21,
-        "column": 27
+        "column": 27,
+        "length": 2
       },
       "maybe_attributes": [
         {
@@ -2014,7 +2112,8 @@
           "location": {
             "filename": "generated",
             "line": 4,
-            "column": 1
+            "column": 1,
+            "length": 8
           }
         },
         {
@@ -2028,7 +2127,8 @@
           "location": {
             "filename": "generated",
             "line": 5,
-            "column": 1
+            "column": 1,
+            "length": 3
           }
         }
       ],
@@ -2049,7 +2149,8 @@
       "location": {
         "filename": "protocols.test.fidl",
         "line": 22,
-        "column": 22
+        "column": 22,
+        "length": 2
       },
       "maybe_attributes": [
         {
@@ -2070,7 +2171,8 @@
           "location": {
             "filename": "generated",
             "line": 7,
-            "column": 1
+            "column": 1,
+            "length": 8
           }
         },
         {
@@ -2085,7 +2187,8 @@
           "location": {
             "filename": "generated",
             "line": 8,
-            "column": 1
+            "column": 1,
+            "length": 3
           }
         }
       ],

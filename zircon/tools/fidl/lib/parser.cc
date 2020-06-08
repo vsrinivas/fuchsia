@@ -1525,10 +1525,10 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         auto strictness = maybe_strictness.value_or(types::Strictness::kFlexible);
         switch (strictness) {
           case types::Strictness::kFlexible:
-            reporter_->ReportError(ErrXunionDeprecated, last_token_);
+            Fail(ErrXunionDeprecated);
             return More;
           case types::Strictness::kStrict:
-            reporter_->ReportError(ErrStrictXunionDeprecated, last_token_);
+            Fail(ErrStrictXunionDeprecated);
             return More;
         }
     }

@@ -14,7 +14,8 @@
       "location": {
         "filename": "struct.test.fidl",
         "line": 3,
-        "column": 8
+        "column": 8,
+        "length": 6
       },
       "anonymous": false,
       "members": [
@@ -27,7 +28,8 @@
           "location": {
             "filename": "struct.test.fidl",
             "line": 4,
-            "column": 11
+            "column": 11,
+            "length": 2
           },
           "field_shape_v1": {
             "offset": 0,
@@ -43,7 +45,8 @@
           "location": {
             "filename": "struct.test.fidl",
             "line": 5,
-            "column": 10
+            "column": 10,
+            "length": 2
           },
           "field_shape_v1": {
             "offset": 1,
@@ -67,7 +70,8 @@
       "location": {
         "filename": "struct.test.fidl",
         "line": 8,
-        "column": 8
+        "column": 8,
+        "length": 11
       },
       "anonymous": false,
       "members": [
@@ -80,7 +84,8 @@
           "location": {
             "filename": "struct.test.fidl",
             "line": 9,
-            "column": 12
+            "column": 12,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
@@ -96,7 +101,8 @@
           "location": {
             "filename": "struct.test.fidl",
             "line": 10,
-            "column": 12
+            "column": 12,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 8,

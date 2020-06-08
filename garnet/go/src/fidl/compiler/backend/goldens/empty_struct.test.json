@@ -12,7 +12,8 @@
       "location": {
         "filename": "empty_struct.test.fidl",
         "line": 6,
-        "column": 10
+        "column": 10,
+        "length": 13
       },
       "methods": [
         {
@@ -22,7 +23,8 @@
           "location": {
             "filename": "empty_struct.test.fidl",
             "line": 7,
-            "column": 5
+            "column": 5,
+            "length": 4
           },
           "has_request": true,
           "maybe_request": [
@@ -36,7 +38,8 @@
               "location": {
                 "filename": "empty_struct.test.fidl",
                 "line": 7,
-                "column": 16
+                "column": 16,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -65,7 +68,8 @@
           "location": {
             "filename": "empty_struct.test.fidl",
             "line": 8,
-            "column": 8
+            "column": 8,
+            "length": 7
           },
           "has_request": false,
           "has_response": true,
@@ -80,7 +84,8 @@
               "location": {
                 "filename": "empty_struct.test.fidl",
                 "line": 8,
-                "column": 22
+                "column": 22,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -108,7 +113,8 @@
           "location": {
             "filename": "empty_struct.test.fidl",
             "line": 9,
-            "column": 5
+            "column": 5,
+            "length": 14
           },
           "has_request": true,
           "maybe_request": [
@@ -122,7 +128,8 @@
               "location": {
                 "filename": "empty_struct.test.fidl",
                 "line": 9,
-                "column": 26
+                "column": 26,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -153,7 +160,8 @@
               "location": {
                 "filename": "empty_struct.test.fidl",
                 "line": 9,
-                "column": 39
+                "column": 39,
+                "length": 1
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -184,7 +192,8 @@
       "location": {
         "filename": "empty_struct.test.fidl",
         "line": 7,
-        "column": 9
+        "column": 9,
+        "length": 9
       },
       "anonymous": true,
       "members": [
@@ -198,7 +207,8 @@
           "location": {
             "filename": "empty_struct.test.fidl",
             "line": 7,
-            "column": 16
+            "column": 16,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
@@ -222,7 +232,8 @@
       "location": {
         "filename": "empty_struct.test.fidl",
         "line": 8,
-        "column": 15
+        "column": 15,
+        "length": 9
       },
       "anonymous": true,
       "members": [
@@ -236,7 +247,8 @@
           "location": {
             "filename": "empty_struct.test.fidl",
             "line": 8,
-            "column": 22
+            "column": 22,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
@@ -260,7 +272,8 @@
       "location": {
         "filename": "empty_struct.test.fidl",
         "line": 9,
-        "column": 19
+        "column": 19,
+        "length": 9
       },
       "anonymous": true,
       "members": [
@@ -274,7 +287,8 @@
           "location": {
             "filename": "empty_struct.test.fidl",
             "line": 9,
-            "column": 26
+            "column": 26,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
@@ -298,7 +312,8 @@
       "location": {
         "filename": "empty_struct.test.fidl",
         "line": 9,
-        "column": 32
+        "column": 32,
+        "length": 9
       },
       "anonymous": true,
       "members": [
@@ -312,7 +327,8 @@
           "location": {
             "filename": "empty_struct.test.fidl",
             "line": 9,
-            "column": 39
+            "column": 39,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,
@@ -336,7 +352,8 @@
       "location": {
         "filename": "empty_struct.test.fidl",
         "line": 3,
-        "column": 8
+        "column": 8,
+        "length": 5
       },
       "anonymous": false,
       "members": [],

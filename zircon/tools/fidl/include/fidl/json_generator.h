@@ -17,7 +17,8 @@
 namespace fidl {
 
 struct NameSpan {
-  explicit NameSpan(const SourceSpan& span) : filename(span.source_file().filename()) {
+  explicit NameSpan(const SourceSpan& span)
+      : filename(span.source_file().filename()), length(span.data().length()) {
     span.SourceLine(&position);
   }
 
@@ -30,6 +31,7 @@ struct NameSpan {
 
   const std::string filename;
   SourceFile::Position position;
+  const size_t length;
 };
 
 // Methods or functions named "Emit..." are the actual interface to

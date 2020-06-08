@@ -15,7 +15,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 7,
-        "column": 6
+        "column": 6,
+        "length": 11
       },
       "maybe_attributes": [
         {
@@ -34,7 +35,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 9,
-            "column": 5
+            "column": 5,
+            "length": 6
           },
           "value": {
             "kind": "literal",
@@ -63,7 +65,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 13,
-        "column": 14
+        "column": 14,
+        "length": 13
       },
       "maybe_attributes": [
         {
@@ -93,7 +96,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 16,
-        "column": 6
+        "column": 6,
+        "length": 11
       },
       "maybe_attributes": [
         {
@@ -108,7 +112,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 18,
-            "column": 5
+            "column": 5,
+            "length": 6
           },
           "value": {
             "kind": "literal",
@@ -138,7 +143,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 22,
-        "column": 10
+        "column": 10,
+        "length": 15
       },
       "maybe_attributes": [
         {
@@ -154,7 +160,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 24,
-            "column": 5
+            "column": 5,
+            "length": 6
           },
           "has_request": true,
           "maybe_attributes": [
@@ -174,7 +181,8 @@
               "location": {
                 "filename": "example.test.fidl",
                 "line": 24,
-                "column": 31
+                "column": 31,
+                "length": 3
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -206,7 +214,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 24,
-        "column": 11
+        "column": 11,
+        "length": 24
       },
       "anonymous": true,
       "members": [
@@ -220,7 +229,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 24,
-            "column": 31
+            "column": 31,
+            "length": 3
           },
           "field_shape_v1": {
             "offset": 0,
@@ -244,7 +254,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 28,
-        "column": 8
+        "column": 8,
+        "length": 13
       },
       "anonymous": false,
       "maybe_attributes": [
@@ -263,7 +274,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 30,
-            "column": 12
+            "column": 12,
+            "length": 6
           },
           "maybe_attributes": [
             {
@@ -295,7 +307,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 34,
-        "column": 7
+        "column": 7,
+        "length": 12
       },
       "maybe_attributes": [
         {
@@ -315,7 +328,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 36,
-            "column": 15
+            "column": 15,
+            "length": 6
           },
           "maybe_attributes": [
             {
@@ -344,7 +358,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 43,
-        "column": 7
+        "column": 7,
+        "length": 12
       },
       "maybe_attributes": [
         {
@@ -364,7 +379,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 45,
-            "column": 15
+            "column": 15,
+            "length": 7
           },
           "maybe_attributes": [
             {
@@ -391,7 +407,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 49,
-        "column": 16
+        "column": 16,
+        "length": 13
       },
       "maybe_attributes": [
         {
@@ -411,7 +428,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 51,
-            "column": 15
+            "column": 15,
+            "length": 7
           },
           "maybe_attributes": [
             {
@@ -440,7 +458,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 40,
-        "column": 7
+        "column": 7,
+        "length": 9
       },
       "maybe_attributes": [
         {

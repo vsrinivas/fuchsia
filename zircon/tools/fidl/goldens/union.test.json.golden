@@ -12,7 +12,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 127,
-        "column": 10
+        "column": 10,
+        "length": 12
       },
       "methods": [
         {
@@ -22,7 +23,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 128,
-            "column": 5
+            "column": 5,
+            "length": 44
           },
           "has_request": true,
           "maybe_request": [],
@@ -48,7 +50,8 @@
               "location": {
                 "filename": "union.test.fidl",
                 "line": 128,
-                "column": 76
+                "column": 76,
+                "length": 2
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -76,7 +79,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 129,
-            "column": 5
+            "column": 5,
+            "length": 46
           },
           "has_request": true,
           "maybe_request": [],
@@ -102,7 +106,8 @@
               "location": {
                 "filename": "union.test.fidl",
                 "line": 129,
-                "column": 75
+                "column": 75,
+                "length": 2
               },
               "field_shape_v1": {
                 "offset": 16,
@@ -133,7 +138,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 128,
-        "column": 55
+        "column": 55,
+        "length": 24
       },
       "anonymous": true,
       "members": [
@@ -147,7 +153,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 128,
-            "column": 76
+            "column": 76,
+            "length": 2
           },
           "field_shape_v1": {
             "offset": 0,
@@ -171,7 +178,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 129,
-        "column": 57
+        "column": 57,
+        "length": 21
       },
       "anonymous": true,
       "members": [
@@ -185,7 +193,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 129,
-            "column": 75
+            "column": 75,
+            "length": 2
           },
           "field_shape_v1": {
             "offset": 0,
@@ -209,7 +218,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 3,
-        "column": 8
+        "column": 8,
+        "length": 5
       },
       "anonymous": false,
       "members": [
@@ -227,7 +237,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 4,
-            "column": 23
+            "column": 23,
+            "length": 8
           },
           "field_shape_v1": {
             "offset": 0,
@@ -251,7 +262,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 7,
-        "column": 8
+        "column": 8,
+        "length": 5
       },
       "anonymous": false,
       "members": [
@@ -265,7 +277,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 8,
-            "column": 15
+            "column": 15,
+            "length": 5
           },
           "field_shape_v1": {
             "offset": 0,
@@ -289,7 +302,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 66,
-        "column": 8
+        "column": 8,
+        "length": 19
       },
       "anonymous": false,
       "members": [
@@ -303,7 +317,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 67,
-            "column": 12
+            "column": 12,
+            "length": 9
           },
           "field_shape_v1": {
             "offset": 0,
@@ -327,7 +342,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 114,
-        "column": 8
+        "column": 8,
+        "length": 5
       },
       "anonymous": false,
       "members": [],
@@ -347,7 +363,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 132,
-        "column": 8
+        "column": 8,
+        "length": 24
       },
       "anonymous": false,
       "members": [
@@ -361,7 +378,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 133,
-            "column": 23
+            "column": 23,
+            "length": 2
           },
           "field_shape_v1": {
             "offset": 0,
@@ -388,7 +406,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 11,
-        "column": 7
+        "column": 7,
+        "length": 12
       },
       "members": [
         {
@@ -403,7 +422,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 12,
-            "column": 14
+            "column": 14,
+            "length": 5
           }
         },
         {
@@ -418,7 +438,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 13,
-            "column": 14
+            "column": 14,
+            "length": 5
           }
         }
       ],
@@ -439,7 +460,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 16,
-        "column": 7
+        "column": 7,
+        "length": 20
       },
       "members": [
         {
@@ -448,7 +470,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 17,
-            "column": 5
+            "column": 5,
+            "length": 11
           }
         },
         {
@@ -457,7 +480,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 18,
-            "column": 5
+            "column": 5,
+            "length": 11
           }
         },
         {
@@ -472,7 +496,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 19,
-            "column": 14
+            "column": 14,
+            "length": 5
           }
         },
         {
@@ -487,7 +512,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 20,
-            "column": 14
+            "column": 14,
+            "length": 5
           }
         }
       ],
@@ -508,7 +534,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 23,
-        "column": 16
+        "column": 16,
+        "length": 20
       },
       "members": [
         {
@@ -523,7 +550,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 24,
-            "column": 14
+            "column": 14,
+            "length": 5
           }
         },
         {
@@ -538,7 +566,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 25,
-            "column": 14
+            "column": 14,
+            "length": 5
           }
         }
       ],
@@ -559,7 +588,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 28,
-        "column": 7
+        "column": 7,
+        "length": 18
       },
       "members": [
         {
@@ -574,7 +604,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 29,
-            "column": 14
+            "column": 14,
+            "length": 5
           }
         },
         {
@@ -589,7 +620,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 30,
-            "column": 14
+            "column": 14,
+            "length": 5
           }
         }
       ],
@@ -610,7 +642,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 33,
-        "column": 7
+        "column": 7,
+        "length": 5
       },
       "members": [
         {
@@ -624,7 +657,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 34,
-            "column": 14
+            "column": 14,
+            "length": 9
           }
         },
         {
@@ -638,7 +672,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 35,
-            "column": 15
+            "column": 15,
+            "length": 22
           }
         },
         {
@@ -656,7 +691,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 36,
-            "column": 23
+            "column": 23,
+            "length": 32
           }
         }
       ],
@@ -677,7 +713,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 39,
-        "column": 16
+        "column": 16,
+        "length": 13
       },
       "members": [
         {
@@ -691,7 +728,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 40,
-            "column": 14
+            "column": 14,
+            "length": 9
           }
         },
         {
@@ -705,7 +743,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 41,
-            "column": 15
+            "column": 15,
+            "length": 22
           }
         },
         {
@@ -723,7 +762,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 42,
-            "column": 23
+            "column": 23,
+            "length": 32
           }
         }
       ],
@@ -744,7 +784,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 45,
-        "column": 7
+        "column": 7,
+        "length": 11
       },
       "members": [
         {
@@ -758,7 +799,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 46,
-            "column": 14
+            "column": 14,
+            "length": 9
           }
         },
         {
@@ -772,7 +814,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 47,
-            "column": 15
+            "column": 15,
+            "length": 22
           }
         },
         {
@@ -790,7 +833,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 48,
-            "column": 23
+            "column": 23,
+            "length": 32
           }
         }
       ],
@@ -811,7 +855,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 51,
-        "column": 7
+        "column": 7,
+        "length": 14
       },
       "members": [
         {
@@ -825,7 +870,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 52,
-            "column": 14
+            "column": 14,
+            "length": 19
           }
         }
       ],
@@ -846,7 +892,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 55,
-        "column": 7
+        "column": 7,
+        "length": 13
       },
       "members": [
         {
@@ -855,7 +902,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 56,
-            "column": 5
+            "column": 5,
+            "length": 11
           }
         },
         {
@@ -869,7 +917,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 57,
-            "column": 14
+            "column": 14,
+            "length": 9
           }
         },
         {
@@ -883,7 +932,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 58,
-            "column": 15
+            "column": 15,
+            "length": 22
           }
         }
       ],
@@ -904,7 +954,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 61,
-        "column": 7
+        "column": 7,
+        "length": 19
       },
       "members": [
         {
@@ -918,7 +969,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 62,
-            "column": 15
+            "column": 15,
+            "length": 6
           }
         },
         {
@@ -932,7 +984,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 63,
-            "column": 15
+            "column": 15,
+            "length": 5
           }
         }
       ],
@@ -953,7 +1006,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 70,
-        "column": 16
+        "column": 16,
+        "length": 11
       },
       "members": [
         {
@@ -967,7 +1021,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 71,
-            "column": 15
+            "column": 15,
+            "length": 1
           }
         },
         {
@@ -981,7 +1036,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 72,
-            "column": 14
+            "column": 14,
+            "length": 1
           }
         }
       ],
@@ -1002,7 +1058,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 75,
-        "column": 14
+        "column": 14,
+        "length": 9
       },
       "members": [
         {
@@ -1016,7 +1073,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 76,
-            "column": 15
+            "column": 15,
+            "length": 1
           }
         },
         {
@@ -1030,7 +1088,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 77,
-            "column": 14
+            "column": 14,
+            "length": 1
           }
         }
       ],
@@ -1051,7 +1110,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 80,
-        "column": 16
+        "column": 16,
+        "length": 11
       },
       "members": [
         {
@@ -1065,7 +1125,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 81,
-            "column": 15
+            "column": 15,
+            "length": 1
           }
         },
         {
@@ -1079,7 +1140,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 82,
-            "column": 14
+            "column": 14,
+            "length": 1
           }
         },
         {
@@ -1088,7 +1150,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 83,
-            "column": 5
+            "column": 5,
+            "length": 11
           }
         }
       ],
@@ -1109,7 +1172,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 86,
-        "column": 14
+        "column": 14,
+        "length": 17
       },
       "members": [
         {
@@ -1118,7 +1182,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 87,
-            "column": 5
+            "column": 5,
+            "length": 11
           }
         },
         {
@@ -1132,7 +1197,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 88,
-            "column": 15
+            "column": 15,
+            "length": 1
           }
         },
         {
@@ -1146,7 +1212,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 89,
-            "column": 14
+            "column": 14,
+            "length": 1
           }
         }
       ],
@@ -1167,7 +1234,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 92,
-        "column": 16
+        "column": 16,
+        "length": 16
       },
       "members": [
         {
@@ -1181,7 +1249,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 93,
-            "column": 14
+            "column": 14,
+            "length": 1
           }
         },
         {
@@ -1195,7 +1264,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 94,
-            "column": 16
+            "column": 16,
+            "length": 1
           }
         }
       ],
@@ -1216,7 +1286,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 97,
-        "column": 16
+        "column": 16,
+        "length": 16
       },
       "members": [
         {
@@ -1230,7 +1301,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 100,
-            "column": 14
+            "column": 14,
+            "length": 1
           }
         },
         {
@@ -1244,7 +1316,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 102,
-            "column": 15
+            "column": 15,
+            "length": 1
           }
         },
         {
@@ -1262,7 +1335,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 103,
-            "column": 23
+            "column": 23,
+            "length": 1
           }
         }
       ],
@@ -1283,7 +1357,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 108,
-        "column": 14
+        "column": 14,
+        "length": 18
       },
       "members": [
         {
@@ -1297,7 +1372,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 109,
-            "column": 14
+            "column": 14,
+            "length": 1
           }
         },
         {
@@ -1311,7 +1387,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 110,
-            "column": 16
+            "column": 16,
+            "length": 1
           }
         },
         {
@@ -1325,7 +1402,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 111,
-            "column": 15
+            "column": 15,
+            "length": 1
           }
         }
       ],
@@ -1346,7 +1424,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 117,
-        "column": 16
+        "column": 16,
+        "length": 27
       },
       "members": [
         {
@@ -1361,7 +1440,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 120,
-            "column": 14
+            "column": 14,
+            "length": 5
           }
         }
       ],
@@ -1382,7 +1462,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 123,
-        "column": 14
+        "column": 14,
+        "length": 19
       },
       "members": [
         {
@@ -1401,7 +1482,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 124,
-            "column": 25
+            "column": 25,
+            "length": 1
           }
         }
       ],
@@ -1422,7 +1504,8 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 136,
-        "column": 16
+        "column": 16,
+        "length": 14
       },
       "members": [
         {
@@ -1431,7 +1514,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 137,
-            "column": 5
+            "column": 5,
+            "length": 11
           }
         },
         {
@@ -1440,7 +1524,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 138,
-            "column": 5
+            "column": 5,
+            "length": 11
           }
         },
         {
@@ -1454,7 +1539,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 139,
-            "column": 14
+            "column": 14,
+            "length": 1
           }
         },
         {
@@ -1468,7 +1554,8 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 140,
-            "column": 16
+            "column": 16,
+            "length": 1
           }
         }
       ],

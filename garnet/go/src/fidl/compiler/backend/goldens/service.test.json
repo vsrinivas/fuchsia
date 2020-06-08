@@ -12,7 +12,8 @@
       "location": {
         "filename": "service.test.fidl",
         "line": 7,
-        "column": 10
+        "column": 10,
+        "length": 13
       },
       "methods": [
         {
@@ -22,7 +23,8 @@
           "location": {
             "filename": "service.test.fidl",
             "line": 8,
-            "column": 5
+            "column": 5,
+            "length": 13
           },
           "has_request": true,
           "maybe_request": [],
@@ -46,7 +48,8 @@
       "location": {
         "filename": "service.test.fidl",
         "line": 15,
-        "column": 10
+        "column": 10,
+        "length": 14
       },
       "methods": [
         {
@@ -56,7 +59,8 @@
           "location": {
             "filename": "service.test.fidl",
             "line": 16,
-            "column": 5
+            "column": 5,
+            "length": 14
           },
           "has_request": true,
           "maybe_request": [],
@@ -82,7 +86,8 @@
       "location": {
         "filename": "service.test.fidl",
         "line": 11,
-        "column": 9
+        "column": 9,
+        "length": 19
       },
       "members": [
         {
@@ -95,7 +100,8 @@
           "location": {
             "filename": "service.test.fidl",
             "line": 12,
-            "column": 19
+            "column": 19,
+            "length": 13
           }
         }
       ]
@@ -105,7 +111,8 @@
       "location": {
         "filename": "service.test.fidl",
         "line": 19,
-        "column": 9
+        "column": 9,
+        "length": 31
       },
       "members": [
         {
@@ -118,7 +125,8 @@
           "location": {
             "filename": "service.test.fidl",
             "line": 20,
-            "column": 19
+            "column": 19,
+            "length": 12
           }
         },
         {
@@ -131,7 +139,8 @@
           "location": {
             "filename": "service.test.fidl",
             "line": 21,
-            "column": 20
+            "column": 20,
+            "length": 13
           }
         }
       ]
@@ -141,7 +150,8 @@
       "location": {
         "filename": "service.test.fidl",
         "line": 24,
-        "column": 9
+        "column": 9,
+        "length": 29
       },
       "members": [
         {
@@ -154,7 +164,8 @@
           "location": {
             "filename": "service.test.fidl",
             "line": 25,
-            "column": 19
+            "column": 19,
+            "length": 12
           }
         },
         {
@@ -167,7 +178,8 @@
           "location": {
             "filename": "service.test.fidl",
             "line": 26,
-            "column": 19
+            "column": 19,
+            "length": 13
           }
         }
       ]

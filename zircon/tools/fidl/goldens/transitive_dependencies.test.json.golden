@@ -21,7 +21,8 @@
       "location": {
         "filename": "top.test.fidl",
         "line": 5,
-        "column": 8
+        "column": 8,
+        "length": 3
       },
       "anonymous": false,
       "members": [
@@ -35,7 +36,8 @@
           "location": {
             "filename": "top.test.fidl",
             "line": 6,
-            "column": 16
+            "column": 16,
+            "length": 1
           },
           "field_shape_v1": {
             "offset": 0,

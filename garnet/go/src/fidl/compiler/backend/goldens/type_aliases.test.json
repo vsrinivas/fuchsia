@@ -21,7 +21,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 13,
-        "column": 8
+        "column": 8,
+        "length": 21
       },
       "anonymous": false,
       "members": [
@@ -39,7 +40,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 14,
-            "column": 9
+            "column": 9,
+            "length": 12
           },
           "field_shape_v1": {
             "offset": 0,
@@ -67,7 +69,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 15,
-            "column": 30
+            "column": 30,
+            "length": 35
           },
           "field_shape_v1": {
             "offset": 8,
@@ -95,7 +98,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 16,
-            "column": 30
+            "column": 30,
+            "length": 35
           },
           "field_shape_v1": {
             "offset": 24,
@@ -120,7 +124,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 17,
-            "column": 20
+            "column": 20,
+            "length": 23
           },
           "field_shape_v1": {
             "offset": 40,
@@ -147,7 +152,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 18,
-            "column": 22
+            "column": 22,
+            "length": 36
           },
           "field_shape_v1": {
             "offset": 56,
@@ -173,7 +179,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 19,
-            "column": 30
+            "column": 30,
+            "length": 33
           },
           "field_shape_v1": {
             "offset": 72,
@@ -202,7 +209,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 20,
-            "column": 49
+            "column": 49,
+            "length": 38
           },
           "field_shape_v1": {
             "offset": 88,
@@ -225,7 +233,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 21,
-            "column": 13
+            "column": 13,
+            "length": 16
           },
           "field_shape_v1": {
             "offset": 104,
@@ -248,7 +257,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 22,
-            "column": 16
+            "column": 16,
+            "length": 19
           },
           "field_shape_v1": {
             "offset": 108,
@@ -271,7 +281,8 @@
           "location": {
             "filename": "example.test.fidl",
             "line": 23,
-            "column": 17
+            "column": 17,
+            "length": 28
           },
           "field_shape_v1": {
             "offset": 112,
@@ -299,7 +310,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 5,
-        "column": 7
+        "column": 7,
+        "length": 3
       },
       "partial_type_ctor": {
         "name": "uint32",
@@ -312,7 +324,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 6,
-        "column": 7
+        "column": 7,
+        "length": 16
       },
       "partial_type_ctor": {
         "name": "example/vector",
@@ -335,7 +348,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 7,
-        "column": 7
+        "column": 7,
+        "length": 14
       },
       "partial_type_ctor": {
         "name": "vector",
@@ -354,7 +368,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 8,
-        "column": 7
+        "column": 7,
+        "length": 24
       },
       "partial_type_ctor": {
         "name": "vector",
@@ -383,7 +398,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 9,
-        "column": 7
+        "column": 7,
+        "length": 13
       },
       "partial_type_ctor": {
         "name": "example/vector",
@@ -406,7 +422,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 10,
-        "column": 7
+        "column": 7,
+        "length": 7
       },
       "partial_type_ctor": {
         "name": "handle",
@@ -420,7 +437,8 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 11,
-        "column": 7
+        "column": 7,
+        "length": 10
       },
       "partial_type_ctor": {
         "name": "handle",

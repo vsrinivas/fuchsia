@@ -14,7 +14,8 @@
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 10,
-        "column": 6
+        "column": 6,
+        "length": 6
       },
       "maybe_attributes": [
         {
@@ -33,7 +34,8 @@
           "location": {
             "filename": "doc_comments.test.fidl",
             "line": 14,
-            "column": 5
+            "column": 5,
+            "length": 12
           },
           "value": {
             "kind": "literal",
@@ -57,7 +59,8 @@
           "location": {
             "filename": "doc_comments.test.fidl",
             "line": 15,
-            "column": 5
+            "column": 5,
+            "length": 12
           },
           "value": {
             "kind": "literal",
@@ -80,7 +83,8 @@
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 22,
-        "column": 13
+        "column": 13,
+        "length": 1
       },
       "maybe_attributes": [
         {
@@ -110,7 +114,8 @@
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 28,
-        "column": 6
+        "column": 6,
+        "length": 6
       },
       "maybe_attributes": [
         {
@@ -125,7 +130,8 @@
           "location": {
             "filename": "doc_comments.test.fidl",
             "line": 30,
-            "column": 5
+            "column": 5,
+            "length": 3
           },
           "value": {
             "kind": "literal",
@@ -149,7 +155,8 @@
           "location": {
             "filename": "doc_comments.test.fidl",
             "line": 32,
-            "column": 5
+            "column": 5,
+            "length": 3
           },
           "value": {
             "kind": "literal",
@@ -173,7 +180,8 @@
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 68,
-        "column": 10
+        "column": 10,
+        "length": 9
       },
       "maybe_attributes": [
         {
@@ -189,7 +197,8 @@
           "location": {
             "filename": "doc_comments.test.fidl",
             "line": 72,
-            "column": 5
+            "column": 5,
+            "length": 6
           },
           "has_request": true,
           "maybe_attributes": [
@@ -219,7 +228,8 @@
           "location": {
             "filename": "doc_comments.test.fidl",
             "line": 77,
-            "column": 8
+            "column": 8,
+            "length": 7
           },
           "has_request": false,
           "maybe_attributes": [
@@ -251,7 +261,8 @@
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 83,
-        "column": 9
+        "column": 9,
+        "length": 7
       },
       "maybe_attributes": [
         {
@@ -270,7 +281,8 @@
           "location": {
             "filename": "doc_comments.test.fidl",
             "line": 87,
-            "column": 15
+            "column": 15,
+            "length": 9
           },
           "maybe_attributes": [
             {
@@ -288,7 +300,8 @@
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 38,
-        "column": 8
+        "column": 8,
+        "length": 6
       },
       "anonymous": false,
       "maybe_attributes": [
@@ -307,7 +320,8 @@
           "location": {
             "filename": "doc_comments.test.fidl",
             "line": 42,
-            "column": 11
+            "column": 11,
+            "length": 5
           },
           "maybe_attributes": [
             {
@@ -339,7 +353,8 @@
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 58,
-        "column": 7
+        "column": 7,
+        "length": 5
       },
       "maybe_attributes": [
         {
@@ -359,7 +374,8 @@
           "location": {
             "filename": "doc_comments.test.fidl",
             "line": 62,
-            "column": 14
+            "column": 14,
+            "length": 5
           },
           "maybe_attributes": [
             {
@@ -388,7 +404,8 @@
       "location": {
         "filename": "doc_comments.test.fidl",
         "line": 48,
-        "column": 7
+        "column": 7,
+        "length": 5
       },
       "maybe_attributes": [
         {
@@ -408,7 +425,8 @@
           "location": {
             "filename": "doc_comments.test.fidl",
             "line": 52,
-            "column": 14
+            "column": 14,
+            "length": 5
           },
           "maybe_attributes": [
             {

@@ -17,6 +17,7 @@ void JSONGenerator::Generate(NameSpan value) {
     GenerateObjectMember("filename", value.filename, Position::kFirst);
     GenerateObjectMember("line", (uint32_t)value.position.line);
     GenerateObjectMember("column", (uint32_t)value.position.column);
+    GenerateObjectMember("length", (uint32_t)value.length);
   });
 }
 

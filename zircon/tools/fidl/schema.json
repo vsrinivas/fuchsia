@@ -1329,7 +1329,8 @@
             "required": [
                 "filename",
                 "line",
-                "column"
+                "column",
+                "length"
             ],
             "properties": {
                 "filename": {
@@ -1343,6 +1344,11 @@
                 "column": {
                     "type": "integer",
                     "minimum": 1,
+                    "maximum": 4294967295
+                },
+                "length": {
+                    "type": "integer",
+                    "minimum": 0,
                     "maximum": 4294967295
                 }
             }

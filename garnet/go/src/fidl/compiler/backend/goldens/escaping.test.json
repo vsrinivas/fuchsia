@@ -14,7 +14,8 @@
       "location": {
         "filename": "escaping.test.fidl",
         "line": 4,
-        "column": 8
+        "column": 8,
+        "length": 20
       },
       "anonymous": false,
       "maybe_attributes": [

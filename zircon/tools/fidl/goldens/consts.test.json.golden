@@ -9,7 +9,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 3,
-        "column": 12
+        "column": 12,
+        "length": 12
       },
       "type": {
         "kind": "primitive",
@@ -31,7 +32,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 4,
-        "column": 12
+        "column": 12,
+        "length": 6
       },
       "type": {
         "kind": "primitive",
@@ -53,7 +55,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 5,
-        "column": 14
+        "column": 14,
+        "length": 6
       },
       "type": {
         "kind": "primitive",
@@ -75,7 +78,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 6,
-        "column": 14
+        "column": 14,
+        "length": 16
       },
       "type": {
         "kind": "primitive",
@@ -97,7 +101,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 7,
-        "column": 14
+        "column": 14,
+        "length": 19
       },
       "type": {
         "kind": "primitive",
@@ -119,7 +124,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 8,
-        "column": 14
+        "column": 14,
+        "length": 7
       },
       "type": {
         "kind": "primitive",
@@ -141,7 +147,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 9,
-        "column": 14
+        "column": 14,
+        "length": 7
       },
       "type": {
         "kind": "primitive",
@@ -163,7 +170,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 10,
-        "column": 14
+        "column": 14,
+        "length": 8
       },
       "type": {
         "kind": "string",
@@ -185,7 +193,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 11,
-        "column": 15
+        "column": 15,
+        "length": 8
       },
       "type": {
         "kind": "primitive",
@@ -207,7 +216,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 12,
-        "column": 15
+        "column": 15,
+        "length": 17
       },
       "type": {
         "kind": "primitive",
@@ -229,7 +239,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 17,
-        "column": 16
+        "column": 16,
+        "length": 7
       },
       "type": {
         "kind": "identifier",
@@ -248,7 +259,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 18,
-        "column": 13
+        "column": 13,
+        "length": 16
       },
       "type": {
         "kind": "primitive",
@@ -266,7 +278,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 24,
-        "column": 16
+        "column": 16,
+        "length": 7
       },
       "type": {
         "kind": "identifier",
@@ -285,7 +298,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 25,
-        "column": 13
+        "column": 13,
+        "length": 16
       },
       "type": {
         "kind": "primitive",
@@ -305,7 +319,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 14,
-        "column": 6
+        "column": 6,
+        "length": 8
       },
       "type": "int32",
       "members": [
@@ -314,7 +329,8 @@
           "location": {
             "filename": "consts.test.fidl",
             "line": 15,
-            "column": 5
+            "column": 5,
+            "length": 5
           },
           "value": {
             "kind": "literal",
@@ -335,7 +351,8 @@
       "location": {
         "filename": "consts.test.fidl",
         "line": 21,
-        "column": 6
+        "column": 6,
+        "length": 8
       },
       "type": "int32",
       "members": [
@@ -344,7 +361,8 @@
           "location": {
             "filename": "consts.test.fidl",
             "line": 22,
-            "column": 5
+            "column": 5,
+            "length": 5
           },
           "value": {
             "kind": "literal",
