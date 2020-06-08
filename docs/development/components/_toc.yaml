@@ -12,3 +12,5 @@ toc:
   path: /docs/development/components/troubleshooting.md
 - title: "Enable verbose logging for input events"
   path: /docs/development/components/verbose_logging.md
+- title: "Common capabilities"
+  path: /docs/development/components/common_capabilities.md
