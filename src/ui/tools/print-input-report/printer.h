@@ -15,33 +15,35 @@ namespace print_input_report {
 
 namespace fuchsia_input_report = ::llcpp::fuchsia::input::report;
 
-static_assert(static_cast<int>(fuchsia_input_report::Unit::NONE) == 0);
-static_assert(static_cast<int>(fuchsia_input_report::Unit::OTHER) == 1);
-static_assert(static_cast<int>(fuchsia_input_report::Unit::DISTANCE) == 2);
-static_assert(static_cast<int>(fuchsia_input_report::Unit::WEIGHT) == 3);
-static_assert(static_cast<int>(fuchsia_input_report::Unit::ROTATION) == 4);
-static_assert(static_cast<int>(fuchsia_input_report::Unit::ANGULAR_VELOCITY) == 5);
-static_assert(static_cast<int>(fuchsia_input_report::Unit::LINEAR_VELOCITY) == 6);
-static_assert(static_cast<int>(fuchsia_input_report::Unit::ACCELERATION) == 7);
-static_assert(static_cast<int>(fuchsia_input_report::Unit::MAGNETIC_FLUX) == 8);
-static_assert(static_cast<int>(fuchsia_input_report::Unit::LUMINOUS_FLUX) == 9);
-static_assert(static_cast<int>(fuchsia_input_report::Unit::PRESSURE) == 10);
-static_assert(static_cast<int>(fuchsia_input_report::Unit::LUX) == 11);
+static_assert(static_cast<int>(fuchsia_input_report::UnitType::NONE) == 0);
+static_assert(static_cast<int>(fuchsia_input_report::UnitType::OTHER) == 1);
+static_assert(static_cast<int>(fuchsia_input_report::UnitType::METERS) == 2);
+static_assert(static_cast<int>(fuchsia_input_report::UnitType::GRAMS) == 3);
+static_assert(static_cast<int>(fuchsia_input_report::UnitType::DEGREES) == 4);
+static_assert(static_cast<int>(fuchsia_input_report::UnitType::ENGLISH_ANGULAR_VELOCITY) == 5);
+static_assert(static_cast<int>(fuchsia_input_report::UnitType::SI_LINEAR_VELOCITY) == 6);
+static_assert(static_cast<int>(fuchsia_input_report::UnitType::SI_LINEAR_ACCELERATION) == 7);
+static_assert(static_cast<int>(fuchsia_input_report::UnitType::WEBERS) == 8);
+static_assert(static_cast<int>(fuchsia_input_report::UnitType::CANDELAS) == 9);
+static_assert(static_cast<int>(fuchsia_input_report::UnitType::PASCALS) == 10);
+static_assert(static_cast<int>(fuchsia_input_report::UnitType::LUX) == 11);
+static_assert(static_cast<int>(fuchsia_input_report::UnitType::SECONDS) == 12);
 
 // These strings must be ordered based on the enums in fuchsia.input.report/units.fidl.
 const char* const kUnitStrings[] = {
     "NONE",
     "OTHER",
-    "DISTANCE",
-    "WEIGHT",
-    "ROTATION",
-    "ANGULAR_VELOCITY",
-    "LINEAR_VELOCITY",
-    "ACCELERATION",
-    "MAGNETIC_FLUX",
-    "LUMINOUS_FLUX",
-    "PRESSURE",
+    "METERS",
+    "GRAMS",
+    "DEGREES",
+    "ENGLISH_ANGULAR_VELOCITY",
+    "SI_LINEAR_VELOCITY",
+    "SI_ACCELERATION",
+    "WEBERS",
+    "CANDELAS",
+    "PASCALS",
     "LUX",
+    "SECONDS",
 };
 
 static_assert(static_cast<int>(fuchsia_input_report::SensorType::ACCELEROMETER_X) == 1);
@@ -101,7 +103,7 @@ class Printer {
   // Find the string related to the unit. If we are given a value that we do not
   // recognize, the string "NONE" will be returned and printed.
   static const char* UnitToString(fuchsia_input_report::Unit unit) {
-    uint32_t unit_index = static_cast<uint32_t>(unit);
+    uint32_t unit_index = static_cast<uint32_t>(unit.type);
     if (unit_index >= countof(kUnitStrings)) {
       return kUnitStrings[0];
     }

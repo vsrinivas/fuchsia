@@ -5,48 +5,57 @@
 library fuchsia.input.report;
 
 /// This provides an easy, standardized way to specify units. New units can
-/// be added as needed. There should not be ambiguity between units, so no
-/// new units should be added that can be converted from the old units.
-///  (e.g: Please don't add DISTANCE_METERS since there is already DISTANCE).
-enum Unit : uint32 {
+/// be added as needed. Each UnitType should be named after a specific unit that
+/// should be fully distinguished by the name (E.g: Use METERS instead of
+/// DISTANCE). More complicated units that need to be differentiated should
+/// begin with SI_ (for Internation System of Units) or ENGLISH_ (for English
+/// System of Units).
+enum UnitType : uint32 {
     /// The device did not specify units.
     NONE = 0;
 
     /// The device specified units that are not convertible to any of the other units.
     OTHER = 1;
 
-    /// A measurement of distance in 10^-6 meter units.
-    DISTANCE = 2;
+    /// A measurement of distance in meters.
+    METERS = 2;
 
-    /// A measurement of weight in 10^-3 gram units.
-    WEIGHT = 3;
+    /// A measurement of mass in grams.
+    GRAMS = 3;
 
-    /// A measurement of rotation is 10^-3 degrees.
-    ROTATION = 4;
+    /// A measurement of rotation in degrees.
+    DEGREES = 4;
 
-    /// A measurement of angular velocity is 10^-3 deg/s.
-    ANGULAR_VELOCITY = 5;
+    /// A measurement of angular velocity in degrees per second.
+    ENGLISH_ANGULAR_VELOCITY = 5;
 
-    /// A measurement of linear velocity is 10^-3 m/s
-    LINEAR_VELOCITY = 6;
+    /// A measurement of linear velocity in meters per second.
+    SI_LINEAR_VELOCITY = 6;
 
-    /// A measurement of acceleration is 10^-3 Gs
-    ACCELERATION = 7;
+    /// A measurement of acceleration in meters per second squared.
+    SI_LINEAR_ACCELERATION = 7;
 
-    /// A measurement of magnetic_flux is 10^-6 T
-    MAGNETIC_FLUX = 8;
+    /// A measure of magnetic flux in webers.
+    WEBERS = 8;
 
-    /// A measurement of light is 1 Candela
-    LUMINOUS_FLUX = 9;
+    /// A measurement of luminous intensity in candelas.
+    CANDELAS = 9;
 
-    /// A measurement of pressure is 10^-3 Pascal
-    PRESSURE = 10;
+    /// A measurement of pressure in pascals.
+    PASCALS = 10;
 
-    // A measurement of lux is 10^-6 Candela/(m^2)
+    // A measurement of luminous flux in lumens per meter squared.
     LUX = 11;
 
-    // A measurement of time is 1 nanosecond (10^-9 seconds).
-    TIME = 12;
+    // A measurement of seconds.
+    SECONDS = 12;
+};
+
+/// Describes a given unit by giving the unit and the unit's exponent.
+/// E.g: Nanometers would have type METERS and exponent -9.
+struct Unit {
+    UnitType type;
+    int32 exponent;
 };
 
 /// Describe a `Range` of values.

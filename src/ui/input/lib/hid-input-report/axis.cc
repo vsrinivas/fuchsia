@@ -7,33 +7,57 @@
 namespace hid_input_report {
 
 fuchsia_input_report::Unit HidUnitToLlcppUnit(hid::unit::UnitType unit) {
+  fuchsia_input_report::Unit out_unit;
+  out_unit.type = fuchsia_input_report::UnitType::NONE;
+  out_unit.exponent = 0;
+
   switch (unit) {
     case hid::unit::UnitType::None:
-      return fuchsia_input_report::Unit::NONE;
-    case hid::unit::UnitType::Other:
-      return fuchsia_input_report::Unit::OTHER;
+      return out_unit;
     case hid::unit::UnitType::Distance:
-      return fuchsia_input_report::Unit::DISTANCE;
+      out_unit.type = fuchsia_input_report::UnitType::METERS;
+      out_unit.exponent = -6;
+      return out_unit;
     case hid::unit::UnitType::Weight:
-      return fuchsia_input_report::Unit::WEIGHT;
+      out_unit.type = fuchsia_input_report::UnitType::GRAMS;
+      out_unit.exponent = -3;
+      return out_unit;
     case hid::unit::UnitType::Rotation:
-      return fuchsia_input_report::Unit::ROTATION;
+      out_unit.type = fuchsia_input_report::UnitType::DEGREES;
+      out_unit.exponent = -3;
+      return out_unit;
     case hid::unit::UnitType::AngularVelocity:
-      return fuchsia_input_report::Unit::ANGULAR_VELOCITY;
+      out_unit.type = fuchsia_input_report::UnitType::ENGLISH_ANGULAR_VELOCITY;
+      out_unit.exponent = -3;
+      return out_unit;
     case hid::unit::UnitType::LinearVelocity:
-      return fuchsia_input_report::Unit::LINEAR_VELOCITY;
+      out_unit.type = fuchsia_input_report::UnitType::SI_LINEAR_VELOCITY;
+      out_unit.exponent = -3;
+      return out_unit;
     case hid::unit::UnitType::Acceleration:
-      return fuchsia_input_report::Unit::ACCELERATION;
+      out_unit.type = fuchsia_input_report::UnitType::SI_LINEAR_ACCELERATION;
+      out_unit.exponent = -3;
+      return out_unit;
     case hid::unit::UnitType::MagneticFlux:
-      return fuchsia_input_report::Unit::MAGNETIC_FLUX;
+      out_unit.type = fuchsia_input_report::UnitType::WEBERS;
+      out_unit.exponent = -6;
+      return out_unit;
     case hid::unit::UnitType::Light:
-      return fuchsia_input_report::Unit::LUMINOUS_FLUX;
+      out_unit.type = fuchsia_input_report::UnitType::CANDELAS;
+      out_unit.exponent = 0;
+      return out_unit;
     case hid::unit::UnitType::Pressure:
-      return fuchsia_input_report::Unit::PRESSURE;
+      out_unit.type = fuchsia_input_report::UnitType::PASCALS;
+      out_unit.exponent = -3;
+      return out_unit;
     case hid::unit::UnitType::Lux:
-      return fuchsia_input_report::Unit::LUX;
+      out_unit.type = fuchsia_input_report::UnitType::LUX;
+      out_unit.exponent = -6;
+      return out_unit;
     default:
-      return fuchsia_input_report::Unit::OTHER;
+      out_unit.type = fuchsia_input_report::UnitType::OTHER;
+      out_unit.exponent = 0;
+      return out_unit;
   }
 }
 

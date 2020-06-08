@@ -108,7 +108,8 @@ TEST_F(ReaderInterpreterInputTest, TouchScreen) {
     touch->set_max_contacts(100);
 
     fuchsia::input::report::Axis axis;
-    axis.unit = fuchsia::input::report::Unit::NONE;
+    axis.unit.type = fuchsia::input::report::UnitType::NONE;
+    axis.unit.exponent = 0;
     axis.range.min = 0;
     axis.range.max = 300;
 
@@ -230,7 +231,8 @@ TEST_F(ReaderInterpreterInputTest, Mouse) {
     auto mouse = descriptor->mutable_mouse()->mutable_input();
 
     fuchsia::input::report::Axis axis;
-    axis.unit = fuchsia::input::report::Unit::NONE;
+    axis.unit.type = fuchsia::input::report::UnitType::NONE;
+    axis.unit.exponent = 0;
     axis.range.min = -100;
     axis.range.max = 100;
     mouse->set_movement_x(axis);

@@ -191,21 +191,24 @@ mod tests {
                             SensorAxis {
                                 axis: Axis {
                                     range: Range { min: -100, max: 100 },
-                                    unit: Unit::Acceleration,
+                                    unit: Unit {
+                                        type_: UnitType::SiLinearAcceleration,
+                                        exponent: 0,
+                                    },
                                 },
                                 type_: SensorType::AccelerometerX,
                             },
                             SensorAxis {
                                 axis: Axis {
                                     range: Range { min: -10000, max: 10000 },
-                                    unit: Unit::MagneticFlux,
+                                    unit: Unit { type_: UnitType::Webers, exponent: 0 },
                                 },
                                 type_: SensorType::MagnetometerX,
                             },
                             SensorAxis {
                                 axis: Axis {
                                     range: Range { min: 0, max: 1000 },
-                                    unit: Unit::LuminousFlux,
+                                    unit: Unit { type_: UnitType::Lux, exponent: 0 },
                                 },
                                 type_: SensorType::LightIlluminance,
                             },
@@ -219,15 +222,15 @@ mod tests {
                             ContactInputDescriptor {
                                 position_x: Some(Axis {
                                     range: Range { min: 0, max: 200 },
-                                    unit: Unit::Distance,
+                                    unit: Unit { type_: UnitType::Meters, exponent: -6 },
                                 }),
                                 position_y: Some(Axis {
                                     range: Range { min: 0, max: 100 },
-                                    unit: Unit::Distance,
+                                    unit: Unit { type_: UnitType::Meters, exponent: -6 },
                                 }),
                                 pressure: Some(Axis {
                                     range: Range { min: 0, max: 10 },
-                                    unit: Unit::Pressure,
+                                    unit: Unit { type_: UnitType::Pascals, exponent: -6 },
                                 }),
                                 contact_width: None,
                                 contact_height: None,
@@ -235,15 +238,15 @@ mod tests {
                             ContactInputDescriptor {
                                 position_x: Some(Axis {
                                     range: Range { min: 0, max: 200 },
-                                    unit: Unit::Distance,
+                                    unit: Unit { type_: UnitType::Meters, exponent: -6 },
                                 }),
                                 position_y: Some(Axis {
                                     range: Range { min: 0, max: 100 },
-                                    unit: Unit::Distance,
+                                    unit: Unit { type_: UnitType::Meters, exponent: -6 },
                                 }),
                                 pressure: Some(Axis {
                                     range: Range { min: 0, max: 10 },
-                                    unit: Unit::Pressure,
+                                    unit: Unit { type_: UnitType::Pascals, exponent: -6 },
                                 }),
                                 contact_width: None,
                                 contact_height: None,
@@ -277,21 +280,21 @@ mod tests {
                                 SerializableSensorAxis {
                                     axis: SerializableAxis {
                                         range: SerializableRange { min: -100, max: 100 },
-                                        unit: Unit::Acceleration.into_primitive(),
+                                        unit: UnitType::SiLinearAcceleration.into_primitive(),
                                     },
                                     type_: SensorType::AccelerometerX.into_primitive(),
                                 },
                                 SerializableSensorAxis {
                                     axis: SerializableAxis {
                                         range: SerializableRange { min: -10000, max: 10000 },
-                                        unit: Unit::MagneticFlux.into_primitive(),
+                                        unit: UnitType::Webers.into_primitive(),
                                     },
                                     type_: SensorType::MagnetometerX.into_primitive(),
                                 },
                                 SerializableSensorAxis {
                                     axis: SerializableAxis {
                                         range: SerializableRange { min: 0, max: 1000 },
-                                        unit: Unit::LuminousFlux.into_primitive(),
+                                        unit: UnitType::Lux.into_primitive(),
                                     },
                                     type_: SensorType::LightIlluminance.into_primitive(),
                                 },
@@ -304,15 +307,15 @@ mod tests {
                                 SerializableContactInputDescriptor {
                                     position_x: Some(SerializableAxis {
                                         range: SerializableRange { min: 0, max: 200 },
-                                        unit: Unit::Distance.into_primitive(),
+                                        unit: UnitType::Meters.into_primitive(),
                                     }),
                                     position_y: Some(SerializableAxis {
                                         range: SerializableRange { min: 0, max: 100 },
-                                        unit: Unit::Distance.into_primitive(),
+                                        unit: UnitType::Meters.into_primitive(),
                                     }),
                                     pressure: Some(SerializableAxis {
                                         range: SerializableRange { min: 0, max: 10 },
-                                        unit: Unit::Pressure.into_primitive(),
+                                        unit: UnitType::Pascals.into_primitive(),
                                     }),
                                     contact_width: None,
                                     contact_height: None,
@@ -320,15 +323,15 @@ mod tests {
                                 SerializableContactInputDescriptor {
                                     position_x: Some(SerializableAxis {
                                         range: SerializableRange { min: 0, max: 200 },
-                                        unit: Unit::Distance.into_primitive(),
+                                        unit: UnitType::Meters.into_primitive(),
                                     }),
                                     position_y: Some(SerializableAxis {
                                         range: SerializableRange { min: 0, max: 100 },
-                                        unit: Unit::Distance.into_primitive(),
+                                        unit: UnitType::Meters.into_primitive(),
                                     }),
                                     pressure: Some(SerializableAxis {
                                         range: SerializableRange { min: 0, max: 10 },
-                                        unit: Unit::Pressure.into_primitive(),
+                                        unit: UnitType::Pascals.into_primitive(),
                                     }),
                                     contact_width: None,
                                     contact_height: None,

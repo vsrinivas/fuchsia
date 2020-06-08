@@ -92,7 +92,7 @@ impl SerializableAxis {
     pub fn new(axis: &Axis) -> Self {
         SerializableAxis {
             range: SerializableRange { min: axis.range.min, max: axis.range.max },
-            unit: axis.unit.into_primitive(),
+            unit: axis.unit.type_.into_primitive(),
         }
     }
 }

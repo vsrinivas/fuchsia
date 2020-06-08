@@ -349,16 +349,16 @@ TEST_F(HidDevTest, SensorTest) {
   ASSERT_EQ(4, sensor_desc.values().count());
 
   ASSERT_EQ(sensor_desc.values()[0].type, fuchsia_input_report::SensorType::LIGHT_ILLUMINANCE);
-  ASSERT_EQ(sensor_desc.values()[0].axis.unit, fuchsia_input_report::Unit::NONE);
+  ASSERT_EQ(sensor_desc.values()[0].axis.unit.type, fuchsia_input_report::UnitType::NONE);
 
   ASSERT_EQ(sensor_desc.values()[1].type, fuchsia_input_report::SensorType::LIGHT_RED);
-  ASSERT_EQ(sensor_desc.values()[1].axis.unit, fuchsia_input_report::Unit::NONE);
+  ASSERT_EQ(sensor_desc.values()[1].axis.unit.type, fuchsia_input_report::UnitType::NONE);
 
   ASSERT_EQ(sensor_desc.values()[2].type, fuchsia_input_report::SensorType::LIGHT_BLUE);
-  ASSERT_EQ(sensor_desc.values()[2].axis.unit, fuchsia_input_report::Unit::NONE);
+  ASSERT_EQ(sensor_desc.values()[2].axis.unit.type, fuchsia_input_report::UnitType::NONE);
 
   ASSERT_EQ(sensor_desc.values()[3].type, fuchsia_input_report::SensorType::LIGHT_GREEN);
-  ASSERT_EQ(sensor_desc.values()[3].axis.unit, fuchsia_input_report::Unit::NONE);
+  ASSERT_EQ(sensor_desc.values()[3].axis.unit.type, fuchsia_input_report::UnitType::NONE);
 
   // Create the report.
   ambient_light_input_rpt_t report_data = {};

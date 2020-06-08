@@ -120,12 +120,13 @@ TEST_F(PrintInputReport, PrintMouseInputDescriptor) {
   auto mouse = descriptor->mutable_mouse()->mutable_input();
 
   fuchsia::input::report::Axis axis;
-  axis.unit = fuchsia::input::report::Unit::DISTANCE;
+  axis.unit.type = fuchsia::input::report::UnitType::METERS;
+  axis.unit.exponent = 0;
   axis.range.min = -100;
   axis.range.max = -100;
   mouse->set_movement_x(axis);
 
-  axis.unit = fuchsia::input::report::Unit::NONE;
+  axis.unit.type = fuchsia::input::report::UnitType::NONE;
   axis.range.min = -200;
   axis.range.max = -200;
   mouse->set_movement_y(axis);
@@ -144,7 +145,7 @@ TEST_F(PrintInputReport, PrintMouseInputDescriptor) {
 
   FakePrinter printer;
   printer.SetExpectedStrings(std::vector<std::string>{
-      "Mouse Descriptor:\n",  "  Movement X:\n", "    Unit: DISTANCE\n", "    Min:      -100\n",
+      "Mouse Descriptor:\n",  "  Movement X:\n", "    Unit:   METERS\n", "    Min:      -100\n",
       "    Max:      -100\n", "  Movement Y:\n", "    Unit:     NONE\n", "    Min:      -200\n",
       "    Max:      -200\n", "  Position X:\n", "    Unit:     NONE\n", "    Min:       300\n",
       "    Max:       300\n", "  Position Y:\n", "    Unit:     NONE\n", "    Min:       400\n",
@@ -159,14 +160,15 @@ TEST_F(PrintInputReport, PrintSensorInputDescriptor) {
   auto values = descriptor->mutable_sensor()->mutable_input()->mutable_values();
 
   fuchsia::input::report::SensorAxis axis;
-  axis.axis.unit = fuchsia::input::report::Unit::LINEAR_VELOCITY;
+  axis.axis.unit.type = fuchsia::input::report::UnitType::SI_LINEAR_VELOCITY;
+  axis.axis.unit.exponent = 0;
   axis.axis.range.min = 0;
   axis.axis.range.max = 1000;
   axis.type = fuchsia::input::report::SensorType::ACCELEROMETER_X;
 
   values->push_back(axis);
 
-  axis.axis.unit = fuchsia::input::report::Unit::LUMINOUS_FLUX;
+  axis.axis.unit.type = fuchsia::input::report::UnitType::LUX;
   axis.type = fuchsia::input::report::SensorType::LIGHT_ILLUMINANCE;
 
   values->push_back(axis);
@@ -178,12 +180,12 @@ TEST_F(PrintInputReport, PrintSensorInputDescriptor) {
       "Sensor Descriptor:\n",
       "  Value 00:\n",
       "    SensorType: ACCELEROMETER_X\n",
-      "    Unit: LINEAR_VELOCITY\n",
+      "    Unit: SI_LINEAR_VELOCITY\n",
       "    Min:         0\n",
       "    Max:      1000\n",
       "  Value 01:\n",
       "    SensorType: LIGHT_ILLUMINANCE\n",
-      "    Unit: LUMINOUS_FLUX\n",
+      "    Unit:      LUX\n",
       "    Min:         0\n",
       "    Max:      1000\n",
   });
@@ -216,7 +218,8 @@ TEST_F(PrintInputReport, PrintTouchInputDescriptor) {
   touch->set_max_contacts(100);
 
   fuchsia::input::report::Axis axis;
-  axis.unit = fuchsia::input::report::Unit::NONE;
+  axis.unit.type = fuchsia::input::report::UnitType::NONE;
+  axis.unit.exponent = 0;
   axis.range.min = 0;
   axis.range.max = 300;
 
