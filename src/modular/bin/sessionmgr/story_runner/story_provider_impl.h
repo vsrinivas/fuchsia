@@ -94,7 +94,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   // Called by StoryControllerImpl.
   //
   // Returns nullptr if the StoryInfo for |story_id| is not cached.
-  fuchsia::modular::StoryInfoPtr GetCachedStoryInfo(std::string story_id);
+  fuchsia::modular::StoryInfo2Ptr GetCachedStoryInfo(std::string story_id);
 
   // |fuchsia::modular::StoryProvider|.
   void GetStoryInfo(std::string story_id, GetStoryInfoCallback callback) override;
@@ -117,10 +117,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
                        fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request);
   void WatchVisualState(fidl::StringPtr story_id,
                         fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher);
-
-  // Converts a StoryInfo to StoryInfo2.
-  static fuchsia::modular::StoryInfo2 StoryInfoToStoryInfo2(
-      const fuchsia::modular::StoryInfo& story_info);
 
   // Converts a StoryInfo2 to StoryInfo.
   static fuchsia::modular::StoryInfo StoryInfo2ToStoryInfo(

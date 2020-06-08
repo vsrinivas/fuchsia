@@ -99,7 +99,7 @@ TEST_F(StoryShellEmbeddedModTest, SurfaceRelationships) {
 
     // These should pass when the third module is added to the story
     EXPECT_EQ(view_connection.surface_id, "parent_name:embedded_name:third_name");
-    EXPECT_EQ(surface_info.parent_id(), kParentModuleName);
+    EXPECT_EQ(surface_info.parent_id, kParentModuleName);
   });
 
   LaunchParentModule();
