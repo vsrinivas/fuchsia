@@ -129,6 +129,22 @@ class SchedulerState {
   SchedulerState(const SchedulerState&) = delete;
   SchedulerState& operator=(const SchedulerState&) = delete;
 
+  // Returns the effective mask of CPUs a thread may run on, based on the
+  // thread's affinity masks and CPUs currently active on the system.
+  cpu_mask_t GetEffectiveCpuMask(cpu_mask_t active_mask) {
+    // The thread may run on any active CPU allowed by both its hard and
+    // soft CPU affinity.
+    const cpu_mask_t available_mask = active_mask & soft_affinity_ & hard_affinity_;
+
+    // Return the mask honoring soft affinity if it is viable, otherwise ignore
+    // soft affinity and honor only hard affinity.
+    if (likely(available_mask != 0)) {
+      return available_mask;
+    }
+
+    return active_mask & hard_affinity_;
+  }
+
   // Returns the type of scheduling discipline for this thread.
   SchedDiscipline discipline() const { return discipline_; }
 
@@ -142,6 +158,7 @@ class SchedulerState {
   zx_time_t last_started_running() const { return last_started_running_.raw_value(); }
   zx_duration_t remaining_time_slice() const { return remaining_time_slice_.raw_value(); }
   zx_duration_t runtime_ns() const { return runtime_ns_.raw_value(); }
+  zx_duration_t expected_runtime_ns() const { return expected_runtime_ns_.raw_value(); }
 
   cpu_mask_t hard_affinity() const { return hard_affinity_; }
   cpu_mask_t soft_affinity() const { return soft_affinity_; }
@@ -151,9 +168,17 @@ class SchedulerState {
   int inherited_priority() const { return inherited_priority_; }
 
   cpu_num_t curr_cpu() const { return curr_cpu_; }
+  cpu_num_t last_cpu() const { return last_cpu_; }
+
+  void set_next_cpu(cpu_num_t next_cpu) {
+    next_cpu_ = next_cpu;
+  }
 
  private:
   friend class Scheduler;
+
+  // Allow tests to modify our state.
+  friend class LoadBalancerTest;
 
   // TODO(eieio): Remove these once all of the members accessed by Thread are
   // moved to accessors.

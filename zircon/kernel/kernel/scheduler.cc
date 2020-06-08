@@ -12,6 +12,7 @@
 #include <inttypes.h>
 #include <lib/counters.h>
 #include <lib/ktrace.h>
+#include <lib/load_balancer_percpu.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
@@ -164,24 +165,6 @@ inline bool IsThreadAdjustable(const Thread* thread) {
   // Checking the thread state avoids unnecessary adjustments on a thread that
   // is no longer competing.
   return !thread->IsIdle() && IsFairThread(thread) && thread->state_ == THREAD_READY;
-}
-
-// Returns the effective mask of CPUs a thread is may run on, based on the
-// thread's affinity masks and available CPUs.
-cpu_mask_t GetEffectiveCpuMask(cpu_mask_t active_mask, const Thread* thread) {
-  // The thread may run on any active CPU allowed by both its hard and
-  // soft CPU affinity.
-  const cpu_mask_t soft_affinity = thread->scheduler_state_.soft_affinity();
-  const cpu_mask_t hard_affinity = thread->scheduler_state_.hard_affinity();
-  const cpu_mask_t available_mask = active_mask & soft_affinity & hard_affinity;
-
-  // Return the mask honoring soft affinity if it is viable, otherwise ignore
-  // soft affinity and honor only hard affinity.
-  if (likely(available_mask != 0)) {
-    return available_mask;
-  }
-
-  return active_mask & hard_affinity;
 }
 
 }  // anonymous namespace
@@ -492,7 +475,7 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
 
   // Returns true when the given thread requires active migration.
   const auto needs_migration = [active_mask, current_cpu_mask](Thread* const thread) {
-    return (GetEffectiveCpuMask(active_mask, thread) & current_cpu_mask) == 0 ||
+    return (thread->scheduler_state_.GetEffectiveCpuMask(active_mask) & current_cpu_mask) == 0 ||
            thread->scheduler_state_.next_cpu_ != INVALID_CPU;
   };
 
@@ -558,16 +541,15 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
 
   const cpu_num_t last_cpu = thread->scheduler_state_.last_cpu_;
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
-  const cpu_mask_t last_cpu_mask = cpu_num_to_mask(last_cpu);
   const cpu_mask_t active_mask = mp_get_active_mask();
-  const cpu_mask_t idle_mask = mp_get_idle_mask();
 
   // Determine the set of CPUs the thread is allowed to run on.
   //
   // Threads may be created and resumed before the thread init level. Work around
   // an empty active mask by assuming the current cpu is scheduleable.
   const cpu_mask_t available_mask =
-      active_mask != 0 ? GetEffectiveCpuMask(active_mask, thread) : current_cpu_mask;
+      active_mask != 0 ? thread->scheduler_state_.GetEffectiveCpuMask(active_mask) :
+      current_cpu_mask;
   DEBUG_ASSERT_MSG(available_mask != 0,
                    "thread=%s affinity=%#x soft_affinity=%#x active=%#x "
                    "idle=%#x arch_ints_disabled=%d",
@@ -576,6 +558,20 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
                    arch_ints_disabled());
 
   LOCAL_KTRACE(KTRACE_DETAILED, "target_mask: online,active", mp_get_online_mask(), active_mask);
+
+#if !DISABLE_PERIODIC_LOAD_BALANCER
+  //TODO(edcoyne): When we drop the define refactor this unify these functions.
+  if (IsFairThread(thread)) {
+    const cpu_num_t target_cpu = load_balancer::FindTargetCpu(thread);
+
+    SCHED_LTRACEF("thread=%s target_cpu=%u\n", thread->name_, target_cpu);
+    trace.End(target_cpu, available_mask);
+    return target_cpu;
+  } // deadline threads will follow the old path for now.
+#endif
+
+  const cpu_mask_t last_cpu_mask = cpu_num_to_mask(thread->scheduler_state_.last_cpu_);
+  const cpu_mask_t idle_mask = mp_get_idle_mask();
 
   cpu_num_t target_cpu;
   Scheduler* target_queue;
@@ -1340,14 +1336,14 @@ void Scheduler::Migrate(Thread* thread) {
 
   if (thread->state_ == THREAD_RUNNING) {
     const cpu_mask_t thread_cpu_mask = cpu_num_to_mask(state->curr_cpu_);
-    if (!(GetEffectiveCpuMask(mp_get_active_mask(), thread) & thread_cpu_mask)) {
+    if (!(thread->scheduler_state_.GetEffectiveCpuMask(mp_get_active_mask()) & thread_cpu_mask)) {
       // Mark the CPU the thread is running on for reschedule. The
       // scheduler on that CPU will take care of the actual migration.
       cpus_to_reschedule_mask |= thread_cpu_mask;
     }
   } else if (thread->state_ == THREAD_READY) {
     const cpu_mask_t thread_cpu_mask = cpu_num_to_mask(state->curr_cpu_);
-    if (!(GetEffectiveCpuMask(mp_get_active_mask(), thread) & thread_cpu_mask)) {
+    if (!(thread->scheduler_state_.GetEffectiveCpuMask(mp_get_active_mask()) & thread_cpu_mask)) {
       Scheduler* current = Get(state->curr_cpu_);
 
       DEBUG_ASSERT(state->InQueue());

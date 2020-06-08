@@ -22,6 +22,7 @@
 #include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
+#include <lib/load_balancer_percpu.h>
 #include <ktl/forward.h>
 #include <lockdep/thread_lock_state.h>
 #include <vm/page_state.h>
@@ -49,6 +50,9 @@ struct percpu {
   // state for runtime lock validation when in irq context
   lockdep::ThreadLockState lock_state;
 #endif
+
+  load_balancer::CpuState load_balancer;
+
   // guest entry/exit statistics
   struct guest_stats gstats;
   // thread/cpu level statistics

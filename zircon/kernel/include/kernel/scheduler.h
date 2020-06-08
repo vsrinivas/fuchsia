@@ -115,6 +115,9 @@ class Scheduler {
   // Allow percpu to init our cpu number.
   friend struct percpu;
 
+  // Allow tests to modify our state.
+  friend class LoadBalancerTest;
+
   static void ChangeWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_reschedule_mask)
       TA_REQ(thread_lock);
   static void ChangeDeadline(Thread* thread, const SchedDeadlineParams& params,

@@ -1,0 +1,22 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_library("load_balancer") {
+  host = true
+  kernel = true
+  sources = []
+  deps = [ ":test" ]
+}
+
+source_set("test") {
+  # TODO: testonly = true
+  sources = [ "load_balancer_test.cc" ]
+  include_dirs = [ "include" ]
+  deps = [
+    "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/ktl",
+    "$zx/kernel/lib/topology",
+    "$zx/kernel/lib/unittest",
+  ]
+}
