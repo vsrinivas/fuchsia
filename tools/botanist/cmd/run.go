@@ -60,9 +60,6 @@ type Target interface {
 	// Start starts the target.
 	Start(context.Context, []bootserver.Image, []string) error
 
-	// Restart restarts the target.
-	Restart(context.Context) error
-
 	// Stop stops the target.
 	Stop(context.Context) error
 
@@ -264,15 +261,13 @@ func (r *RunCommand) startTargets(ctx context.Context, targets []Target) error {
 }
 
 func (r *RunCommand) stopTargets(ctx context.Context, targets []Target) {
-	// Restart the targets in parallel.
+	// Stop the targets in parallel.
 	var wg sync.WaitGroup
 	for _, t := range targets {
 		wg.Add(1)
 		go func(t Target) {
 			defer wg.Done()
-			if err := t.Stop(ctx); err == target.ErrUnimplemented {
-				t.Restart(ctx)
-			}
+			t.Stop(ctx)
 		}(t)
 	}
 	wg.Wait()

@@ -194,12 +194,6 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 	return bootserver.Boot(ctx, t.Tftp(), images, args, signers)
 }
 
-// Restart restarts the target. This is a no op for now because botanist is no longer
-// responsible for rebooting physical devices.
-func (t *DeviceTarget) Restart(ctx context.Context) error {
-	return nil
-}
-
 // Stop stops the device.
 func (t *DeviceTarget) Stop(context.Context) error {
 	return ErrUnimplemented

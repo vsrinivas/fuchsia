@@ -153,19 +153,6 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		}()
 	}
 
-	// Defer asynchronously restarts of each device.
-	defer func() {
-		var wg sync.WaitGroup
-		for _, device := range devices {
-			wg.Add(1)
-			go func(device *target.DeviceTarget) {
-				defer wg.Done()
-				device.Restart(ctx)
-			}(device)
-		}
-		wg.Wait()
-	}()
-
 	var wg sync.WaitGroup
 	for _, device := range devices {
 		wg.Add(1)

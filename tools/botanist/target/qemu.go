@@ -366,11 +366,6 @@ func checkForEBUSY(ctx context.Context, output io.Reader) {
 	}
 }
 
-// Restart stops the QEMU target and starts it again.
-func (t *QEMUTarget) Restart(context.Context) error {
-	return ErrUnimplemented
-}
-
 // Stop stops the QEMU target.
 func (t *QEMUTarget) Stop(ctx context.Context) error {
 	if t.process == nil {
