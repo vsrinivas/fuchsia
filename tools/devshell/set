@@ -288,6 +288,9 @@ function main {
           return 1
         fi
         variant+="{variant=\"$2-fuzzer\" target_type=[\"fuzzed_executable\"]},"
+        # TODO(38226): Fuzzers need a version of libfdio.so that is sanitized,
+        # but doesn't collect coverage data.
+        variant+="{variant=\"$2\" label=[\"//zircon/system/ulib/fdio\"]},"
         shift
         ;;
       --args)

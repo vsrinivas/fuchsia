@@ -204,10 +204,20 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
             lib = unexamined_binaries.get(target)
             if lib is None:
                 # It must be in the shared_toolchain output directory.
+                shared_toolchain = context.variant.shared_toolchain
+
+                # TODO(38226): See //zircon/system/ulib/fdio/BUILD.gn.
+                # libFuzzer depends on libfdio, so fuzzers need to use a
+                # version of fdio without SanitizerCoverage instrumentation to
+                # avoid polluting coverage data for the code under test.
+                if soname == 'libfdio.so' and shared_toolchain.endswith(
+                        '-fuzzer-shared'):
+                    shared_toolchain = shared_toolchain[:-len('-fuzzer-shared')]
+                    shared_toolchain += '-shared'
+
                 # Context like group is inherited from the dependent.
                 lib_entry = binary.entry._replace(
-                    source=os.path.join(
-                        context.variant.shared_toolchain, soname),
+                    source=os.path.join(shared_toolchain, soname),
                     target=target)
 
                 assert os.path.exists(lib_entry.source), (

@@ -15,21 +15,29 @@ assert(!defined(zx) || zx != "/",
 import("//build/unification/zbi/resource.gni")
 import("//build/unification/zx_library.gni")
 
-# TODO(38226): This is a kludge to make fuzzer.foosan builds actually just use
-# the plain foosan build of libfdio.  This works around the problem that
+config("fdio_includes") {
+  include_dirs = [ "include" ]
+}
+
+# TODO(38226): This is a kludge to make "foosan-fuzzer" builds actually just use
+# the plain "foosan" build of libfdio.  This works around the problem that
 # libfuzzer itself calls into libfdio and so its own calls pollute the data
-# it's collecting about the code under test.  By redirecting from the fuzzer
-# environment to the base environment (i.e. "user.fuzzer" -> "user"), we get
-# the build that has the same foosan instrumentation to catch bugs but doesn't
-# have the fuzzer (i.e. coverage tracking) instrumentation that influences
-# libfuzzer's choices.
+# it's collecting about the code under test. We explicitly depend on the build
+# that has the same foosan instrumentation to catch bugs but doesn't have the
+# fuzzer (i.e. coverage tracking) instrumentation that influences libfuzzer's
+# choices.
+#
+# In Fuchsia's GN, this requires a `select_variant` scope in args.gn must
+# specify the "foosan" varaint for the toolchain variant to be available.
+# `fx set`ensures this by adding a `select_variant` scope for libfdio.so itself
+# with its "-fuzz-with" parameter.
 fuzzer_configs = [ "//build/config/sanitizers:fuzzer" ]
 if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
     toolchain_variant.configs) {
   group("fdio") {
-    public_deps = [ ":fdio(${toolchain_variant.base})" ]
-
-    deps = [ ":fuzzer-redirect-manifest(${toolchain_variant.base})" ]
+    suffix = string_replace(toolchain_variant.suffix, "-fuzzer", "")
+    public_deps = [ ":fdio(${toolchain_variant.base}${suffix})" ]
+    public_configs = [ ":fdio_includes" ]
   }
 } else if (is_fuchsia) {
   zx_library("fdio") {
@@ -88,24 +96,7 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
     ]
     public_configs = [ "//build/config:Wno-unused-function" ]
   }
-
-  # TODO(38226): Binaries built in the fuzzer environment look for libraries
-  # in that environment.variant's libprefix.  But the redirect above sent it
-  # to the base environment (with the same variant), which has a different
-  # libprefix.  So add metadata that places the runtime shlib binary
-  # underneath the fuzzer libprefix so it will be found where it's expected.
-  # Note that the manifest will also mention the base environment variant
-  # location for the same library, which is superfluous but harmless.
-  resource("fuzzer-redirect-manifest") {
-    visibility = [ ":*" ]
-    sources = [ "$root_out_dir/libfdio.so" ]
-    outputs = [ "lib/fuzzer.${toolchain_variant.name}/{{source_file_part}}" ]
-  }
 } else {
-  config("fdio_includes") {
-    include_dirs = [ "include" ]
-  }
-
   source_set("fdio") {
     public_configs = [ ":fdio_includes" ]
   }
