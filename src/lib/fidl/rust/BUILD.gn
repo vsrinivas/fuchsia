@@ -1,0 +1,69 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
+import("//tools/fidl/gidl/gidl.gni")
+
+conformance_test_source = "$target_gen_dir/src/conformance_test.rs"
+
+gidl("generate_conformance_test") {
+  type = "conformance"
+  language = "rust"
+  inputs = conformance_suite_gidl_files
+  fidl = conformance_suite_fidl_target
+  output = conformance_test_source
+  testonly = true
+}
+
+rustc_test("fidl_rust_conformance_tests") {
+  edition = "2018"
+  source_root = conformance_test_source
+  deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/tests/fidl/conformance_suite:conformance_fidl-rustc",
+    "//third_party/rust_crates:matches",
+  ]
+  non_rust_deps = [ ":generate_conformance_test" ]
+}
+
+unittest_package("fidl-rust-tests") {
+  deps = [
+    ":fidl_rust_conformance_tests",
+    "external_tests:fidl_rust_external_tests",
+    "fidl:fidl_rust_lib_tests",
+    "handle_tests:fidl_rust_handle_tests",
+  ]
+  tests = [
+    {
+      name = "fidl_rust_conformance_tests"
+      environments = basic_envs
+    },
+    {
+      name = "fidl_rust_external_tests"
+      environments = basic_envs
+    },
+    {
+      name = "fidl_rust_lib_tests"
+      environments = basic_envs
+    },
+    {
+      name = "fidl_rust_handle_tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fidl-rust-tests",
+    ":fidl_rust_conformance_tests($host_toolchain)",
+    "compilation_tests:tests",
+    "fidl:fidl_rust_lib_tests($host_toolchain)",
+    "handle_tests:fidl_rust_handle_tests($host_toolchain)",
+  ]
+}

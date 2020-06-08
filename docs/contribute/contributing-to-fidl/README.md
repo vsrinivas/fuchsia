@@ -389,24 +389,24 @@ fx build
 
 ### All Tests
 
-| Name                     | Test Command                                  | Coverage                                                                |
-|--------------------------|-----------------------------------------------|-------------------------------------------------------------------------|
-| gidl parser              | `fx run-host-tests gidl_parser_test`          | tools/fidl/gidl/parser                                                  |
-| fidlgen type definitions | `fx run-host-tests fidlgen_types_test`        | garnet/go/src/fidl/compiler/backend/types                               |
-| fidlgen hlcpp            | `fx run-host-tests fidlgen_hlcpp_test`        | garnet/go/src/fidl/compiler/hlcpp_backend                               |
-| fidlgen llcpp            | `fx run-host-tests fidlgen_llcpp_test`        | garnet/go/src/fidl/compiler/llcpp_backend                               |
-| fidlgen golang           | `fx run-host-tests fidlgen_golang_test`       | garnet/go/src/fidl/compiler/backend/golang                              |
-| fidlgen rust             | `fx test fidlgen_rust_test`                   | tools/fidl/fidlgen_rust                                                 |
-| fidlgen syzkaller        | `fx run-host-tests fidlgen_syzkaller_test`    | garnet/go/src/fidl/compiler/backend/syzkaller                           |
-| fidlgen dart             | `fx run-host-tests fidlgen_dart_backend_test` | topaz/bin/fidlgen_dart                                                  |
-| fidl c runtime host test | `fx run-host-tests fidl-test`                 | zircon/system/ulib/fidl                                                 |
-| c++ host unittests       | `fx run-host-tests fidl_cpp_host_unittests`   | sdk/lib/fidl                                                            |
-| c++ bindings tests       | `fx test fidl_tests`                          | sdk/lib/fidl                                                            |
-| llcpp bindings tests     | `fx test fidl_llcpp_types_test`               | garnet/go/src/fidl/compiler/llcpp_backend                               |
-| go bindings tests        | `fx test go_fidl_tests`                       | third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
-| dart bindings tests      | `fx test fidl_bindings_test`                  | topaz/public/dart/fidl                                                  |
-| rust bindings            | `fx test rust_fidl_tests`                     | src/lib/fidl/rust/fidl                                                  |
-| measure tape test        | `fx test measure-tape-tests`                  | //tools/fidl/measure-tape                        |
+| Name                     | Test Command                        | Coverage                                                                |
+|--------------------------|-------------------------------------|-------------------------------------------------------------------------|
+| gidl parser              | `fx test gidl_parser_test`          | tools/fidl/gidl/parser                                                  |
+| fidlgen type definitions | `fx test fidlgen_types_test`        | garnet/go/src/fidl/compiler/backend/types                               |
+| fidlgen hlcpp            | `fx test fidlgen_hlcpp_test`        | garnet/go/src/fidl/compiler/hlcpp_backend                               |
+| fidlgen llcpp            | `fx test fidlgen_llcpp_test`        | garnet/go/src/fidl/compiler/llcpp_backend                               |
+| fidlgen golang           | `fx test fidlgen_go_test`           | garnet/go/src/fidl/compiler/backend/golang                              |
+| fidlgen rust             | `fx test fidlgen_rust_test`         | tools/fidl/fidlgen_rust                                                 |
+| fidlgen syzkaller        | `fx test fidlgen_syzkaller_test`    | garnet/go/src/fidl/compiler/backend/syzkaller                           |
+| fidlgen dart             | `fx test fidlgen_dart_backend_test` | topaz/bin/fidlgen_dart                                                  |
+| fidl c runtime host test | `fx test fidl-c-tests`              | zircon/system/ulib/fidl                                                 |
+| c++ host unittests       | `fx test fidl_cpp_host_unittests`   | sdk/lib/fidl                                                            |
+| c++ bindings tests       | `fx test fidl_tests`                | sdk/lib/fidl                                                            |
+| llcpp bindings tests     | `fx test fidl_llcpp_types_test`     | garnet/go/src/fidl/compiler/llcpp_backend                               |
+| go bindings tests        | `fx test go_fidl_tests`             | third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
+| dart bindings tests      | `fx test fidl_bindings_test`        | topaz/public/dart/fidl                                                  |
+| rust bindings tests      | `fx test fidl-rust-tests`           | src/lib/fidl/rust/fidl                                                  |
+| measure tape test        | `fx test measure-tape-tests`        | //tools/fidl/measure-tape                                               |
 
 The following requires: `fx set bringup.x64 --with-base //garnet/packages/tests:zircon`
 

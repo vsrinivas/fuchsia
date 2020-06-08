@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/fidl_rust_conformance_tests"
-    }
-}
