@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os/exec"
 	"path"
 	"strings"
 	"time"
@@ -41,20 +40,12 @@ const (
 	timeoutExitCode = 21
 )
 
-type errTestFailure struct {
-	msg string
+type timeoutError struct {
+	timeout time.Duration
 }
 
-func (e errTestFailure) Error() string {
-	return e.msg
-}
-
-func newExitError(exitCode int) errTestFailure {
-	return errTestFailure{fmt.Sprintf("test failed with exit code %d", exitCode)}
-}
-
-func newTimeoutError(timeout time.Duration) errTestFailure {
-	return errTestFailure{fmt.Sprintf("test killed because timeout reached (%v)", timeout)}
+func (e *timeoutError) Error() string {
+	return fmt.Sprintf("test killed because timeout reached (%v)", e.timeout)
 }
 
 // For testability
@@ -108,17 +99,13 @@ func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 		defer cancel()
 	}
 	err := t.r.Run(ctx, command, stdout, stderr)
-	if errors.Is(err, context.DeadlineExceeded) {
-		return nil, newTimeoutError(t.perTestTimeout)
-	}
-	var exitError *exec.ExitError
-	if errors.As(err, &exitError) {
-		return nil, newExitError(exitError.ExitCode())
+	if err == context.DeadlineExceeded {
+		return nil, &timeoutError{t.perTestTimeout}
 	}
 	return nil, err
 }
 
-func (t *subprocessTester) CopySinks(_ context.Context, _ []runtests.DataSinkReference) error {
+func (t *subprocessTester) CopySinks(ctx context.Context, sinks []runtests.DataSinkReference) error {
 	return nil
 }
 
@@ -171,7 +158,7 @@ func newFuchsiaSSHTester(ctx context.Context, nodename, sshKeyFile, localOutputD
 
 func (t *fuchsiaSSHTester) reconnectIfNecessary(ctx context.Context) error {
 	if client, err := t.r.ReconnectIfNecessary(ctx); err != nil {
-		return fmt.Errorf("failed to reestablish SSH connection: %w", err)
+		return fmt.Errorf("failed to restablish SSH connection: %w", err)
 	} else if client != t.client {
 		// Create new DataSinkCopier with new client.
 		t.client = client
@@ -186,13 +173,16 @@ func (t *fuchsiaSSHTester) reconnectIfNecessary(ctx context.Context) error {
 	return nil
 }
 
-func (t *fuchsiaSSHTester) isTimeoutError(test testsharder.Test, err *ssh.ExitError) bool {
+func (t *fuchsiaSSHTester) isTimeoutError(test testsharder.Test, err error) bool {
 	if t.perTestTimeout <= 0 || (
 	// We only know how to interpret the exit codes of these test runners.
 	test.Command[0] != runTestComponentName && test.Command[0] != runTestSuiteName) {
 		return false
 	}
-	return err.Waitmsg.ExitStatus() == timeoutExitCode
+	if exitErr, ok := err.(*ssh.ExitError); ok {
+		return exitErr.Waitmsg.ExitStatus() == timeoutExitCode
+	}
+	return false
 }
 
 // Test runs a test over SSH.
@@ -219,17 +209,12 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 		return nil
 	}, nil)
 
-	var exitErr *ssh.ExitError
-	if errors.As(testErr, &exitErr) {
-		if t.isTimeoutError(test, exitErr) {
-			testErr = newTimeoutError(t.perTestTimeout)
-		} else {
-			testErr = newExitError(exitErr.ExitStatus())
-		}
-	} else {
-		// If err is not an ssh.ExitError then something weird went wrong,
-		// either an ssh connection issue or an internal testrunner error.
+	if errors.Is(testErr, sshutil.ConnectionError) {
 		return nil, testErr
+	}
+
+	if t.isTimeoutError(test, testErr) {
+		testErr = &timeoutError{t.perTestTimeout}
 	}
 
 	var sinkErr error

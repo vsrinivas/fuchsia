@@ -270,8 +270,7 @@ func runTest(ctx context.Context, test testsharder.Test, runIndex int, t tester)
 	if err != nil {
 		result = runtests.TestFailure
 		logger.Errorf(ctx, err.Error())
-		var etf errTestFailure
-		if !errors.As(err, &etf) {
+		if errors.Is(err, sshutil.ConnectionError) {
 			return nil, err
 		}
 	}
