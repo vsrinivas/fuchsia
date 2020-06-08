@@ -28,6 +28,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <array>
 #include <functional>
 #include <memory>
 #include <utility>
@@ -49,21 +50,23 @@ static constexpr zx::duration kPropagateDuration = zx::msec(200);
 // wait longer to further reduce the likelihood of test flakiness.
 #define FAIL_TIMEOUT (zx::deadline_after(kPropagateDuration * 50))
 
-// Because of test flakiness if a previous test case's ethertap device isn't cleaned up, we put a
-// delay at the end of each test to give devmgr time to clean up the ethertap devices.
-#define ETHTEST_CLEANUP_DELAY zx::nanosleep(PROPAGATE_TIME)
-
 namespace {
 
 const char kEthernetDir[] = "/dev/class/ethernet";
 const char kTapctl[] = "/dev/test/tapctl";
-const uint8_t kTapMac[] = {0x12, 0x20, 0x30, 0x40, 0x50, 0x60};
+const uint8_t kTapMacPrefix[] = {0x12, 0x20};
 
 const char* mxstrerror(zx_status_t status) { return zx_status_get_string(status); }
 
 class EthertapClient {
  public:
-  EthertapClient() = default;
+  EthertapClient() {
+    // Each EthertapClient will have a different MAC address based on a monotonically increasing
+    // counter. That allows us to deterministically find each device in devfs (see WatchCb).
+    auto seed = instance_counter_.fetch_add(1);
+    auto* tail = std::copy_n(kTapMacPrefix, sizeof(kTapMacPrefix), mac_.begin());
+    std::copy_n(reinterpret_cast<const uint8_t*>(&seed), sizeof(seed), tail);
+  }
 
   zx_status_t CreateWithOptions(uint32_t mtu, const char* name, uint32_t options = 0) {
     channel_.reset();
@@ -82,7 +85,7 @@ class EthertapClient {
     config.mtu = mtu;
     config.options = options;
     config.features = 0;
-    memcpy(config.mac.octets, kTapMac, 6);
+    std::copy(mac_.begin(), mac_.end(), config.mac.octets);
 
     zx::channel remote;
     status = zx::channel::create(0, &channel_, &remote);
@@ -100,7 +103,6 @@ class EthertapClient {
       channel_.reset();
       return o_status;
     }
-
     return ZX_OK;
   }
 
@@ -207,10 +209,19 @@ class EthertapClient {
 
   void reset() { channel_.reset(); }
 
+  const std::array<uint8_t, ETH_MAC_SIZE>& mac() const { return mac_; }
+
  private:
+  static std::atomic_uint32_t instance_counter_;
+  std::array<uint8_t, ETH_MAC_SIZE> mac_;
   zx::channel channel_;
 };
+std::atomic_uint32_t EthertapClient::instance_counter_;
 
+struct WatchCookie {
+  zx::channel device;
+  std::array<uint8_t, ETH_MAC_SIZE> mac_search;
+};
 zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
   if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;
@@ -246,16 +257,18 @@ zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
     return ZX_OK;
   }
 
+  auto* watch_request = reinterpret_cast<WatchCookie*>(cookie);
+  if (memcmp(info.mac.octets, watch_request->mac_search.data(), ETH_MAC_SIZE) != 0) {
+    // Not a match, keep looking.
+    return ZX_OK;
+  }
+
   // Found it!
-  // TODO(tkilbourn): this might not be the test device we created; need a robust way of getting
-  // the name of the tap device to check. Note that fuchsia.device.Controller/GetDeviceName just
-  // returns "ethernet" since that's the child of the tap device that we've opened here.
-  auto svcp = reinterpret_cast<zx_handle_t*>(cookie);
-  *svcp = svc.release();
+  watch_request->device = std::move(svc);
   return ZX_ERR_STOP;
 }
 
-zx_status_t OpenEthertapDev(zx::channel* svc) {
+zx_status_t OpenEthertapDev(zx::channel* svc, EthertapClient* tap) {
   if (svc == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -266,10 +279,13 @@ zx_status_t OpenEthertapDev(zx::channel* svc) {
     return ZX_ERR_IO;
   }
 
+  WatchCookie cookie;
+  cookie.mac_search = tap->mac();
   zx_status_t status;
   status = fdio_watch_directory(ethdir, WatchCb, zx_deadline_after(ZX_SEC(2)),
-                                reinterpret_cast<void*>(svc->reset_and_get_address()));
+                                reinterpret_cast<void*>(&cookie));
   if (status == ZX_ERR_STOP) {
+    *svc = std::move(cookie.device);
     return ZX_OK;
   } else {
     return status;
@@ -513,7 +529,7 @@ static bool AddClientHelper(EthertapClient* tap, EthernetClient* client,
                             const EthernetOpenInfo& openInfo) {
   // Open the ethernet device
   zx::channel svc;
-  ASSERT_EQ(ZX_OK, OpenEthertapDev(&svc));
+  ASSERT_EQ(ZX_OK, OpenEthertapDev(&svc, tap));
   ASSERT_TRUE(svc.is_valid());
 
   // Initialize the ethernet client
@@ -559,7 +575,6 @@ static bool EthernetCleanupHelper(EthertapClient* tap, EthernetClient* client,
   // Clean up the ethertap device
   tap->reset();
 
-  ETHTEST_CLEANUP_DELAY;
   return true;
 }
 
@@ -694,7 +709,6 @@ static bool EthernetSetPromiscClearOnCloseTest() {
   // Clean up the ethertap device.
   tap.reset();
 
-  ETHTEST_CLEANUP_DELAY;
   END_TEST;
 }
 
@@ -848,7 +862,6 @@ static bool EthernetSetMulticastPromiscClearOnCloseTest() {
   // Clean up the ethertap device.
   tap.reset();
 
-  ETHTEST_CLEANUP_DELAY;
   END_TEST;
 }
 
