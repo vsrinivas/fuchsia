@@ -103,8 +103,7 @@ std::string ToCrashSignature(const RebootReason reboot_reason) {
       // TODO(50946): Stop assuming a kernel panic if the file can't be parsed.
       return "fuchsia-kernel-panic";
     case RebootReason::kSpontaneous:
-      // TODO(50946): Change this to a better crash signature, most likely "brief-power-loss".
-      return "fuchsia-reboot-unknown";
+      return "fuchsia-brief-power-loss";
     case RebootReason::kKernelPanic:
       return "fuchsia-kernel-panic";
     case RebootReason::kOOM:

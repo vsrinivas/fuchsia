@@ -43,7 +43,7 @@ TEST(RebootResonTest, Spontaneous) {
             cobalt::LegacyRebootReason::kUnknown);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kSpontaneous),
             cobalt::LastRebootReason::kBriefPowerLoss);
-  EXPECT_EQ(ToCrashSignature(RebootReason::kSpontaneous), "fuchsia-reboot-unknown");
+  EXPECT_EQ(ToCrashSignature(RebootReason::kSpontaneous), "fuchsia-brief-power-loss");
   EXPECT_EQ(ToCrashProgramName(RebootReason::kSpontaneous), "device");
   EXPECT_EQ(ToFidlRebootReason(RebootReason::kSpontaneous),
             fuchsia::feedback::RebootReason::BRIEF_POWER_LOSS);

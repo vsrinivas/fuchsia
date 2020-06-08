@@ -214,7 +214,7 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, ReporterTest,
                              {
                                  "Spontaneous",
                                  "ZIRCON REBOOT REASON (UNKNOWN)\n\nUPTIME (ms)\n65487494",
-                                 "fuchsia-reboot-unknown",
+                                 "fuchsia-brief-power-loss",
                                  zx::msec(65487494),
                                  cobalt::LegacyRebootReason::kUnknown,
                                  cobalt::LastRebootReason::kBriefPowerLoss,
