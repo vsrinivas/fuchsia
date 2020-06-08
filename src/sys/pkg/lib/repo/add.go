@@ -36,27 +36,6 @@ const (
 	backoffMultiplier = 2.0
 )
 
-// AddInsecurely configures a provided repository as an update source, though
-// offers weaker security guarantees than AddFromConfig (e.g., by allowing a
-// man-in-the-middle attack during the fetching of root keys).
-func AddInsecurely(client *ssh.Client, repoID, repoURL, blobURL string) error {
-	rootKeys, err := GetRootKeysInsecurely(repoURL)
-	if err != nil {
-		return fmt.Errorf("failed to derive public root keys: %s", err)
-	}
-	cfg := &Config{
-		URL:      repoID,
-		RootKeys: rootKeys,
-		Mirrors: []MirrorConfig{
-			{
-				URL:     repoURL,
-				BlobURL: blobURL,
-			},
-		},
-	}
-	return AddFromConfig(client, cfg)
-}
-
 // AddFromConfig writes the given config to the given remote install path and
 // adds it as an update source.
 func AddFromConfig(client *ssh.Client, config *Config) error {
