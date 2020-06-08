@@ -305,3 +305,11 @@ fn vector_of_structs_with_two_handles() {
     ]);
     assert_eq!(Size { num_bytes: 24 + 16 + (3 * 12 + 4), num_handles: 6 }, measure(&value))
 }
+
+#[test]
+fn struct_with_a_vector() {
+    let value = fmt::TopLevelUnion::StructWithAVector(fmt::StructWithAVector {
+        vector_of_strings: vec!["a".to_string()],
+    });
+    assert_eq!(Size { num_bytes: 16 * 4, num_handles: 0 }, measure(&value));
+}

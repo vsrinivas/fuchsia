@@ -115,7 +115,7 @@ func (cb *codeBuffer) CaseGuard(cond measurer.Expression, body *measurer.Block) 
 
 func (cb *codeBuffer) CaseIterate(local, val measurer.Expression, body *measurer.Block) {
 	var iter string
-	if kind := val.AssertKind(measurer.String, measurer.Vector, measurer.Array); kind == measurer.Array {
+	if kind := val.AssertKind(measurer.String, measurer.Vector, measurer.Array); kind == measurer.Array || kind == measurer.Vector {
 		iter = ".iter()"
 	}
 	cb.writef("for %s in %s%s%s {\n", formatExpr{local}, formatExpr{val}, maybeUnwrap(val), iter)

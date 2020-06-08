@@ -28,6 +28,7 @@ union TopLevelUnion {
     19: vector<StructWithOneHandle> vector_of_structs_with_one_handle;
     20: vector<StructWithTwoHandles> vector_of_structs_with_two_handles;
     22: FlexibleUnion flexible_union;
+    23: StructWithAVector struct_with_a_vector;
 };
 
 // 16 bytes + FIDL_ALIGN(string length)
@@ -82,4 +83,9 @@ struct StructWithTwoHandles {
 struct StructWithTwoVectors {
     vector<byte>? vector_of_bytes;
     vector<string>? vector_of_strings;
+};
+
+// 16 bytes
+struct StructWithAVector {
+    vector<string:3>:5 vector_of_strings;
 };
