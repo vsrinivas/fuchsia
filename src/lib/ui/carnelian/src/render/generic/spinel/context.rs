@@ -542,7 +542,7 @@ impl SpinelContext {
                     &vk::DescriptorPoolCreateInfo {
                         sType: vk::STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
                         pNext: ptr::null(),
-                        flags: 0,
+                        flags: vk::DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
                         maxSets: DESCRIPTOR_SET_COUNT as u32,
                         poolSizeCount: 1,
                         pPoolSizes: &vk::DescriptorPoolSize {
