@@ -17,6 +17,7 @@ use fuchsia_inspect_derive::{Inspect, WithInspect};
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::stream::StreamExt;
+use futures::FutureExt;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
@@ -219,26 +220,28 @@ impl SwitchboardImpl {
             inspect_node: inspect_node,
         }));
 
-        {
-            let switchboard_clone = switchboard.clone();
-            fasync::spawn(async move {
-                while let Some(message_event) = receptor.next().await {
-                    // Wait for response
-                    if let MessageEvent::Message(core::Payload::Event(event), _) = message_event {
-                        switchboard_clone.lock().await.process_event(event);
+        let switchboard_clone = switchboard.clone();
+
+        fasync::spawn(async move {
+            loop {
+                let mut message_receptor = receptor.next().fuse();
+                let mut cancel_receptor = cancel_listen_rx.next().fuse();
+                futures::select! {
+                    // Invoked when there is a new message from the registry.
+                    message_event = message_receptor => {
+                        if let Some(MessageEvent::Message(core::Payload::Event(event), _)) = message_event {
+                            switchboard_clone.lock().await.process_event(event);
+                        }
+                    }
+                    // Invoked when a listen session has ended.
+                    cancel_event = cancel_receptor => {
+                        if let Some(info) = cancel_event {
+                            switchboard_clone.lock().await.stop_listening(info);
+                        }
                     }
                 }
-            });
-        }
-
-        {
-            let switchboard_clone = switchboard.clone();
-            fasync::spawn(async move {
-                while let Some(info) = cancel_listen_rx.next().await {
-                    switchboard_clone.lock().await.stop_listening(info);
-                }
-            });
-        }
+            }
+        });
 
         return Ok(SwitchboardClient::new(&(switchboard as SwitchboardHandle)));
     }
