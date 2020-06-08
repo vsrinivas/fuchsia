@@ -48,9 +48,6 @@ group("test") {
     # Ermine tests use Flutter Driver, which only works in debug builds.
     deps += [
       ":experiences_ermine_session_shell_e2e_test($host_toolchain)",
-
-      # Used for intl tests.
-      "//garnet/bin/setui_client:setui_client",
     ]
   }
 }
