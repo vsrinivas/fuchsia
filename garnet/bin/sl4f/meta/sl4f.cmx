@@ -55,7 +55,6 @@
             "fuchsia.process.Launcher",
             "fuchsia.settings.Intl",
             "fuchsia.settings.Setup",
-            "fuchsia.setui.SetUiService",
             "fuchsia.sys.Launcher",
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.sysmem.Allocator",

@@ -14,7 +14,6 @@ use crate::setui::types::SetUiMethod;
 impl Facade for SetUiFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match method.parse()? {
-            SetUiMethod::Mutate => self.mutate(args).await,
             SetUiMethod::SetNetwork => self.set_network(args).await,
             SetUiMethod::GetNetwork => self.get_network_setting().await,
             SetUiMethod::SetIntl => self.set_intl_setting(args).await,

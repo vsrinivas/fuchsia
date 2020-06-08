@@ -7,14 +7,7 @@ import 'package:meta/meta.dart';
 
 import 'sl4f_client.dart';
 
-enum LoginOverride { none, autologinGuest, authProvider }
 enum NetworkOption { wifi, ethernet, unknown }
-
-final _overrideToJson = {
-  LoginOverride.none: 'none',
-  LoginOverride.autologinGuest: 'autologin_guest',
-  LoginOverride.authProvider: 'auth_provider',
-};
 
 final _networkToJson = {
   NetworkOption.wifi: 'wifi',
@@ -74,14 +67,6 @@ class SetUi {
   final Sl4f _sl4f;
 
   SetUi(this._sl4f);
-
-  Future<void> mutateLoginOverride(LoginOverride override) =>
-      _sl4f.request('setui_facade.Mutate', {
-        'account': {
-          'operation': 'set_login_override',
-          'login_override': _overrideToJson[override],
-        }
-      });
 
   Future<void> setDevNetworkOption(NetworkOption option) async {
     _log.info('Setting Dev network option to ${option.toString()}');

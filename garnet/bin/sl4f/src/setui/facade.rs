@@ -6,12 +6,8 @@ use anyhow::{format_err, Error};
 
 use serde_json::{from_value, to_value, Value};
 
-use crate::setui::types::{IntlInfo, JsonMutation, LoginOverrideMode, NetworkType, SetUiResult};
+use crate::setui::types::{IntlInfo, NetworkType, SetUiResult};
 use fidl_fuchsia_settings::{ConfigurationInterfaces, IntlMarker, SetupMarker, SetupSettings};
-use fidl_fuchsia_setui::{
-    AccountMutation, AccountOperation, LoginOverride, Mutation, ReturnCode, SetUiServiceMarker,
-    SettingType,
-};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_syslog::macros::fx_log_info;
 
@@ -22,39 +18,6 @@ pub struct SetUiFacade {}
 impl SetUiFacade {
     pub fn new() -> SetUiFacade {
         SetUiFacade {}
-    }
-
-    /// Sets the value of a given settings object. Returns once operation has completed.
-    pub async fn mutate(&self, args: Value) -> Result<Value, Error> {
-        let json_mutation: JsonMutation = from_value(args)?;
-        fx_log_info!("{:?}", json_mutation);
-
-        let mut mutation: Mutation;
-        let setting_type: SettingType;
-        let setui_svc = match connect_to_service::<SetUiServiceMarker>() {
-            Ok(proxy) => proxy,
-            Err(e) => bail!("Failed to connect to SetUi service {:?}.", e),
-        };
-        match json_mutation {
-            JsonMutation::Account { operation: _, login_override } => {
-                // TODO(isma): Is there a way to just use the fidl enum?
-                let login_override: LoginOverride = match login_override {
-                    LoginOverrideMode::None => LoginOverride::None,
-                    LoginOverrideMode::AutologinGuest => LoginOverride::AutologinGuest,
-                    LoginOverrideMode::AuthProvider => LoginOverride::AuthProvider,
-                };
-                mutation = Mutation::AccountMutationValue(AccountMutation {
-                    operation: Some(AccountOperation::SetLoginOverride),
-                    login_override: Some(login_override),
-                });
-                setting_type = SettingType::Account;
-            }
-        }
-        match setui_svc.mutate(setting_type, &mut mutation).await?.return_code {
-            ReturnCode::Ok => Ok(to_value(SetUiResult::Success)?),
-            ReturnCode::Failed => return Err(format_err!("Update settings failed")),
-            ReturnCode::Unsupported => return Err(format_err!("Update settings unsupported")),
-        }
     }
 
     /// Sets network option used by device setup.

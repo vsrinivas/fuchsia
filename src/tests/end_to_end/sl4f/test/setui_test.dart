@@ -24,10 +24,6 @@ void main() {
   });
 
   group(sl4f.SetUi, () {
-    test('talks to SL4F mutateLoginOverride without error', () async {
-      // If anything throws an exception then we've failed.
-      await setUi.mutateLoginOverride(sl4f.LoginOverride.none);
-    });
     test('talks to SL4F getDevNetworkOption without error', () async {
       // If anything throws an exception then we've failed.
       await setUi.getDevNetworkOption();

@@ -62,7 +62,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
     "//sdk/fidl/fuchsia.power:fuchsia.power.test-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
-    "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo-rustc",
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
