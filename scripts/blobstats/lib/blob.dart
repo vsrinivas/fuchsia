@@ -8,7 +8,6 @@ class Blob {
   String buildPath;
   int size;
   int sizeOnHost;
-  int estimatedCompressedSize;
   int count;
 
   int get saved {

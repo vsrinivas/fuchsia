@@ -53,54 +53,10 @@ class BlobStats {
           ..hash = hash
           ..buildPath = entryPath
           ..sizeOnHost = stat.size
-          ..estimatedCompressedSize =
-              await estimateCompressedBlobSize(stat.size, hash, entryPath)
           ..count = 0;
         blobsByHash[hash] = blob;
       }
     }
-  }
-
-  Future estimateCompressedBlobSize(int size, String hash, String path,
-      {bool lz4Compression = false, bool zstdCompression = false}) async {
-    // TODO(smklein): This is a heuristic matching the internals of blobs.
-    // As this heuristic changes (or the compression algorithm is altered),
-    // this code must be updated.
-    const int minimumSaving = 65536;
-
-    bool compression = lz4Compression | zstdCompression;
-    if (size > minimumSaving && compression) {
-      String tmpPath = '${Directory.systemTemp.path}/compressed.$hash';
-      var compressedFile = File(tmpPath);
-      try {
-        if (lz4Compression) {
-          var result = await Process.run('lz4', ['-1', path, tmpPath]);
-          if (result.exitCode > 0) {
-            print('Could not compress $path');
-            return size;
-          }
-        } else if (zstdCompression) {
-          var result = await Process.run('zstd', [path, '-o', tmpPath]);
-          if (result.exitCode > 0) {
-            print('Could not compress $path');
-            return size;
-          }
-        } else {
-          print('Bad compression algorithm');
-        }
-        var stat = compressedFile.statSync();
-        if (stat.type == FileSystemEntityType.notFound) {
-          print('Could not compress $path');
-          return size;
-        }
-        if (stat.size < size - minimumSaving) {
-          return stat.size;
-        }
-      } finally {
-        await compressedFile.delete();
-      }
-    }
-    return size; // No compression
   }
 
   Future addBlobSizes(String path) async {
@@ -317,7 +273,6 @@ class BlobStats {
         blobTree['c'] = blob.count;
         blobTree['value'] = blob.proportional;
         blobTree['originalSize'] = blob.sizeOnHost;
-        blobTree['estimatedCompressedSize'] = blob.estimatedCompressedSize;
         pkgTree['children'].add(blobTree);
       });
     }
