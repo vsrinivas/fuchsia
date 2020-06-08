@@ -14,10 +14,6 @@ pub enum Error {
     #[error("Internal bt-gap Error: {0}")]
     InternalError(anyhow::Error),
 
-    /// Host Error
-    #[error("Host Error: {0:?}")]
-    HostError(bt::Error),
-
     /// fuchsia.bluetooth.sys API errors. Used to encapsulate errors that are reported by bt-host
     /// and for the fuchsia.bluetooth.sys.Access API.
     #[error("fuchsia.bluetooth.sys Error: {0:?}")]
@@ -29,7 +25,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 impl Error {
     pub fn as_status(self) -> bt::Status {
         match self {
-            Error::HostError(err) => bt::Status { error: Some(Box::new(err)) },
             Error::InternalError(err) => bt_fidl_status!(Failed, format!("{}", err)),
             Error::SysError(err) => {
                 bt::Status { error: Some(Box::new(sys_error_to_deprecated(err))) }
@@ -38,28 +33,14 @@ impl Error {
     }
 
     pub fn no_host() -> Error {
-        Error::HostError(bt::Error {
-            error_code: bt::ErrorCode::BluetoothNotAvailable,
-            protocol_error_code: 0,
-            description: Some("No Host found".to_string()),
-        })
+        Error::SysError(sys::Error::Failed)
     }
 
     pub fn as_failure(self) -> anyhow::Error {
         match self {
             Error::InternalError(err) => err,
-            Error::HostError(err) => format_err!(
-                "Host Error: {}",
-                err.description.unwrap_or("Unknown Host Error".to_string())
-            ),
             Error::SysError(err) => format_err!("Host Error: {:?}", err),
         }
-    }
-}
-
-impl From<bt::Error> for Error {
-    fn from(err: bt::Error) -> Error {
-        Error::HostError(err)
     }
 }
 
@@ -74,7 +55,6 @@ impl Into<sys::Error> for Error {
         match self {
             Error::SysError(err) => err,
             Error::InternalError(_) => sys::Error::Failed,
-            Error::HostError(err) => deprecated_error_to_sys(err),
         }
     }
 }
@@ -88,13 +68,6 @@ impl From<anyhow::Error> for Error {
 impl From<fidl::Error> for Error {
     fn from(err: fidl::Error) -> Error {
         Error::InternalError(format_err!(format!("Internal FIDL error: {}", err)))
-    }
-}
-
-pub fn from_fidl_status(r: fidl::Result<bt::Status>) -> Result<()> {
-    match r {
-        Ok(status) => status.as_result(),
-        Err(e) => Err(Error::from(e)),
     }
 }
 
@@ -120,38 +93,6 @@ fn sys_error_to_deprecated(e: sys::Error) -> bt::Error {
         },
         protocol_error_code: 0,
         description: None,
-    }
-}
-
-// Maps a fuchsia.bluetooth.Error value to a fuchsia.bluetooth.sys.Error. This is maintained for
-// compatibility until fuchsia.bluetooth.control and fuchsia.bluetooth.Status are removed.
-fn deprecated_error_to_sys(e: bt::Error) -> sys::Error {
-    match e.error_code {
-        bt::ErrorCode::Failed => sys::Error::Failed,
-        bt::ErrorCode::NotFound => sys::Error::PeerNotFound,
-        bt::ErrorCode::TimedOut => sys::Error::TimedOut,
-        bt::ErrorCode::Canceled => sys::Error::Canceled,
-        bt::ErrorCode::InProgress => sys::Error::InProgress,
-        bt::ErrorCode::NotSupported => sys::Error::NotSupported,
-        bt::ErrorCode::InvalidArguments => sys::Error::InvalidArguments,
-        bt::ErrorCode::BluetoothNotAvailable => sys::Error::Failed,
-        bt::ErrorCode::BadState => sys::Error::Failed,
-        bt::ErrorCode::Unknown => sys::Error::Failed,
-        bt::ErrorCode::Already => sys::Error::InProgress,
-        bt::ErrorCode::ProtocolError => sys::Error::Failed,
-    }
-}
-
-pub trait StatusExt {
-    fn as_result(self) -> Result<()>;
-}
-
-impl StatusExt for bt::Status {
-    fn as_result(self) -> Result<()> {
-        match self.error {
-            Some(err) => Err((*err).into()),
-            None => Ok(()),
-        }
     }
 }
 

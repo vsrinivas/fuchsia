@@ -55,15 +55,15 @@ fn parse_peer_id(id: &str) -> Result<PeerId, types::Error> {
 }
 
 async fn handle_connect(hd: HostDispatcher, device_id: &str) -> types::Result<()> {
-    hd.connect(parse_peer_id(device_id)?).await
+    hd.connect(parse_peer_id(device_id)?).await.map_err(types::Error::from)
 }
 
 async fn handle_forget(hd: HostDispatcher, device_id: &str) -> types::Result<()> {
-    hd.forget(parse_peer_id(device_id)?).await
+    hd.forget(parse_peer_id(device_id)?).await.map_err(types::Error::from)
 }
 
 async fn handle_disconnect(hd: HostDispatcher, device_id: &str) -> types::Result<()> {
-    hd.disconnect(parse_peer_id(device_id)?).await
+    hd.disconnect(parse_peer_id(device_id)?).await.map_err(types::Error::from)
 }
 
 fn input_cap_to_sys(ioc: fctrl::InputCapabilityType) -> fsys::InputCapability {
@@ -92,7 +92,7 @@ async fn handler(
             responder.send(&mut status_response(result))
         }
         ControlRequest::Pair { id, options, responder } => {
-            let result = hd.pair(id.into(), options).await;
+            let result = hd.pair(id.into(), options.into()).await;
             responder.send(&mut status_response(result))
         }
         ControlRequest::SetDiscoverable { discoverable, responder } => {

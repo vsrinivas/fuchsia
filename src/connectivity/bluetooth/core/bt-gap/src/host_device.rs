@@ -21,7 +21,7 @@ use {
     std::{convert::TryInto, path::PathBuf, sync::Arc},
 };
 
-use crate::types::{self, from_fidl_result, from_fidl_status, Error};
+use crate::types::{self, from_fidl_result, Error};
 
 pub struct HostDevice {
     pub path: PathBuf,
@@ -104,7 +104,18 @@ impl HostDevice {
         bonds: Vec<BondingData>,
     ) -> impl Future<Output = types::Result<()>> {
         let mut bonds: Vec<_> = bonds.into_iter().map(control::BondingData::from).collect();
-        self.host.add_bonded_devices(&mut bonds.iter_mut()).map(from_fidl_status)
+        self.host.add_bonded_devices(&mut bonds.iter_mut()).map(|r| {
+            match r {
+                Err(fidl_error) => Err(Error::from(fidl_error)),
+                // TODO(fxb/44616) - remove when fbt::status is no longer used
+                Ok(fbt::Status { error: Some(error) }) => Err(format_err!(
+                    "Host Error: {}",
+                    error.description.unwrap_or("Unknown Host Error".to_string())
+                )
+                .into()),
+                Ok(_) => Ok(()),
+            }
+        })
     }
 
     pub fn set_connectable(&self, value: bool) -> impl Future<Output = types::Result<()>> {
@@ -253,5 +264,39 @@ async fn watch_state<H: HostListener>(
     loop {
         let info = refresh_host_info(host.clone()).await?;
         listener.on_host_updated(info).await?;
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod test {
+    use super::*;
+
+    use {
+        fidl_fuchsia_bluetooth_sys::TechnologyType,
+        fuchsia_bluetooth::inspect::placeholder_node,
+        fuchsia_bluetooth::types::{Address, HostId},
+        std::path::Path,
+    };
+
+    pub(crate) fn new_mock(
+        id: HostId,
+        address: Address,
+        path: &Path,
+        proxy: HostProxy,
+    ) -> HostDevice {
+        let info = HostInfo {
+            id,
+            technology: TechnologyType::DualMode,
+            address,
+            active: true,
+            local_name: None,
+            discoverable: false,
+            discovering: false,
+        };
+        HostDevice {
+            path: path.into(),
+            host: proxy,
+            info: Inspectable::new(info, placeholder_node()),
+        }
     }
 }

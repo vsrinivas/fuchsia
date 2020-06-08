@@ -7,7 +7,10 @@ use {
     async_helpers::hanging_get::server as hanging_get,
     fidl_fuchsia_bluetooth_sys::{self as sys, AccessRequest, AccessRequestStream},
     fuchsia_async as fasync,
-    fuchsia_bluetooth::types::{Peer, PeerId},
+    fuchsia_bluetooth::types::{
+        pairing_options::{BondableMode, PairingOptions},
+        Peer, PeerId, Technology,
+    },
     fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
     futures::{Stream, StreamExt},
     parking_lot::Mutex,
@@ -103,7 +106,8 @@ async fn handler(
             if let Err(e) = &result {
                 fx_log_warn!("Error connecting to peer {}: {:?}", id, e);
             }
-            responder.send(&mut result.map_err(|_| sys::Error::Failed)).map_err(Error::from)
+            responder.send(&mut result.map_err(|e| e.into()))?;
+            Ok(())
         }
         AccessRequest::Disconnect { id, responder } => {
             let id = PeerId::from(id);
@@ -111,7 +115,33 @@ async fn handler(
             if let Err(e) = &result {
                 fx_log_warn!("Error disconnecting from peer {}: {:?}", id, e);
             }
-            responder.send(&mut result.map_err(|_| sys::Error::Failed)).map_err(Error::from)
+            responder.send(&mut result.map_err(|e| e.into()))?;
+            Ok(())
+        }
+        AccessRequest::Pair { id, options, responder } => {
+            let id = PeerId::from(id);
+            let opts: PairingOptions = options.into();
+            // We currently do not support NonBondable mode on the classic Br/Edr transport
+            // If NonBondable is asked for a Br/Edr pairing, return an InvalidArguments error
+            if opts.bondable == BondableMode::NonBondable && opts.transport == Technology::Classic {
+                fx_log_info!(
+                    "Rejecting Pair() call; non-bondable mode is not allowed for Br/Edr transport"
+                );
+                responder.send(&mut Err(sys::Error::InvalidArguments))?;
+                return Ok(());
+            }
+            let result = hd.pair(id, opts).await;
+            if let Err(e) = &result {
+                fx_log_warn!("Error pairing with peer {}: {:?}", id, e);
+            }
+            let mut result = result.map_err(|e| match e.into() {
+                sys::Error::PeerNotFound => sys::Error::PeerNotFound,
+                sys::Error::InvalidArguments => sys::Error::InvalidArguments,
+                // We map all other host errors to Error::Failed before reporting to the caller
+                _ => sys::Error::Failed,
+            });
+            responder.send(&mut result)?;
+            Ok(())
         }
         AccessRequest::Forget { id, responder } => {
             let id = PeerId::from(id);
@@ -119,7 +149,8 @@ async fn handler(
             if let Err(e) = &result {
                 fx_log_warn!("Error forgetting peer {}: {:?}", id, e);
             }
-            responder.send(&mut result.map_err(|_| sys::Error::Failed)).map_err(Error::from)
+            responder.send(&mut result.map_err(|e| e.into()))?;
+            Ok(())
         }
     }
 }

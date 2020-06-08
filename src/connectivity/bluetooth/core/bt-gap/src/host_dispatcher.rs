@@ -6,19 +6,21 @@ use {
     anyhow::{format_err, Context as _, Error},
     async_helpers::hanging_get::server as hanging_get,
     fidl::endpoints::{self, ServerEnd},
-    fidl_fuchsia_bluetooth::{Appearance, DeviceClass, Error as FidlError, ErrorCode},
+    fidl_fuchsia_bluetooth::{Appearance, DeviceClass},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
-    fidl_fuchsia_bluetooth_control::{self as control, ControlControlHandle, PairingOptions},
+    fidl_fuchsia_bluetooth_control::{self as control, ControlControlHandle},
     fidl_fuchsia_bluetooth_gatt::{LocalServiceDelegateRequest, Server_Marker, Server_Proxy},
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
-    fidl_fuchsia_bluetooth_sys as sys,
-    fidl_fuchsia_bluetooth_sys::{InputCapability, OutputCapability},
+    fidl_fuchsia_bluetooth_sys::{self as sys, InputCapability, OutputCapability},
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
         self as bt,
         inspect::{DebugExt, Inspectable, ToProperty},
-        types::{Address, BondingData, HostData, HostId, HostInfo, Identity, Peer, PeerId},
+        types::{
+            pairing_options::PairingOptions, Address, BondingData, HostData, HostId, HostInfo,
+            Identity, Peer, PeerId,
+        },
     },
     fuchsia_inspect::{self as inspect, unique_name, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
@@ -512,7 +514,7 @@ impl HostDispatcher {
         // peers will be updated by the disconnection(s).
         let adapters = self.get_all_adapters().await;
         if adapters.is_empty() {
-            return Err(types::Error::no_host());
+            return Err(sys::Error::Failed.into());
         }
         let mut adapters_removed: u32 = 0;
         for adapter in adapters {
@@ -521,9 +523,9 @@ impl HostDispatcher {
             let fut = adapter.write().forget(peer_id);
             match fut.await {
                 Ok(()) => adapters_removed += 1,
-                Err(types::Error::HostError(FidlError {
-                    error_code: ErrorCode::NotFound, ..
-                })) => fx_vlog!(1, "No peer {} on adapter {:?}; ignoring", peer_id, adapter_path),
+                Err(types::Error::SysError(sys::Error::PeerNotFound)) => {
+                    fx_vlog!(1, "No peer {} on adapter {:?}; ignoring", peer_id, adapter_path);
+                }
                 err => {
                     fx_log_err!("Could not forget peer {} on adapter {:?}", peer_id, adapter_path);
                     return err;
@@ -548,18 +550,20 @@ impl HostDispatcher {
                 let fut = host.write().connect(peer_id);
                 fut.await
             }
-            None => Err(types::Error::no_host()),
+            None => Err(types::Error::SysError(sys::Error::Failed)),
         }
     }
 
+    /// Instruct the active host to intitiate a pairing procedure with the target peer. If it
+    /// fails, we return the error we receive from the host
     pub async fn pair(&self, id: PeerId, pairing_options: PairingOptions) -> types::Result<()> {
         let host = self.get_active_adapter().await;
         match host {
             Some(host) => {
-                let fut = host.write().pair(id, pairing_options);
+                let fut = host.write().pair(id, pairing_options.into());
                 fut.await
             }
-            None => Err(types::Error::no_host()),
+            None => Err(sys::Error::Failed.into()),
         }
     }
 
@@ -889,6 +893,12 @@ impl HostDispatcher {
         } // Now the lock is dropped, we can run the async notify
         self.notify_host_watchers().await;
     }
+
+    #[cfg(test)]
+    pub(crate) fn add_test_host(&self, id: HostId, host: HostDevice) {
+        let mut state = self.state.write();
+        state.add_host(id, Arc::new(RwLock::new(host)));
+    }
 }
 
 impl HostListener for HostDispatcher {
@@ -1188,5 +1198,34 @@ mod tests {
         // host to test whether or not we can send messages to the GAS task. We just want to make
         // sure that the function actually returns and doesn't deadlock.
         dispatcher.set_name("test-change".to_string()).await.unwrap_err();
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod test {
+    use super::*;
+
+    use fuchsia_bluetooth::inspect::placeholder_node;
+
+    pub(crate) fn make_test_dispatcher(
+        watch_peers_publisher: hanging_get::Publisher<HashMap<PeerId, Peer>>,
+        watch_peers_registrar: hanging_get::SubscriptionRegistrar<PeerWatcher>,
+        watch_hosts_publisher: hanging_get::Publisher<Vec<HostInfo>>,
+        watch_hosts_registrar: hanging_get::SubscriptionRegistrar<sys::HostWatcherWatchResponder>,
+    ) -> Result<HostDispatcher, Error> {
+        let (gas_channel_sender, _ignored_gas_task_req_stream) = mpsc::channel(0);
+        let (host_vmo_sender, _host_vmo_receiver) = mpsc::channel(0);
+        Ok(HostDispatcher::new(
+            "test".to_string(),
+            Appearance::Display,
+            Stash::stub()?,
+            placeholder_node(),
+            gas_channel_sender,
+            host_vmo_sender,
+            watch_peers_publisher,
+            watch_peers_registrar,
+            watch_hosts_publisher,
+            watch_hosts_registrar,
+        ))
     }
 }

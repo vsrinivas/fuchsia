@@ -4,7 +4,8 @@
 
 #![allow(warnings)]
 use {
-    fidl_fuchsia_bluetooth,
+    fidl_fuchsia_bluetooth, fidl_fuchsia_bluetooth_control as control,
+    fidl_fuchsia_bluetooth_sys as sys,
     std::{fmt, str::FromStr},
 };
 
@@ -22,6 +23,7 @@ pub mod host_info;
 mod id;
 /// Bluetooth LowEnergy types
 pub mod le;
+pub mod pairing_options;
 mod peer;
 mod uuid;
 
@@ -95,6 +97,55 @@ impl<L, R> OneOrBoth<L, R> {
             OneOrBoth::Left(_) => None,
             OneOrBoth::Both(_, r) => Some(r),
             OneOrBoth::Right(r) => Some(r),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Technology {
+    LE,
+    Classic,
+    DualMode,
+}
+
+impl From<sys::TechnologyType> for Technology {
+    fn from(tech: sys::TechnologyType) -> Self {
+        match tech {
+            sys::TechnologyType::LowEnergy => Technology::LE,
+            sys::TechnologyType::Classic => Technology::Classic,
+            sys::TechnologyType::DualMode => Technology::DualMode,
+        }
+    }
+}
+
+impl From<Technology> for sys::TechnologyType {
+    fn from(tech: Technology) -> Self {
+        match tech {
+            Technology::LE => sys::TechnologyType::LowEnergy,
+            Technology::Classic => sys::TechnologyType::Classic,
+            Technology::DualMode => sys::TechnologyType::DualMode,
+        }
+    }
+}
+
+// TODO(fxb/48051) - remove once fuchsia.bluetooth.control is retired
+impl From<control::TechnologyType> for Technology {
+    fn from(tech: control::TechnologyType) -> Self {
+        match tech {
+            control::TechnologyType::LowEnergy => Technology::LE,
+            control::TechnologyType::Classic => Technology::Classic,
+            control::TechnologyType::DualMode => Technology::DualMode,
+        }
+    }
+}
+
+// TODO(fxb/48051) - remove once fuchsia.bluetooth.control is retired
+impl From<Technology> for control::TechnologyType {
+    fn from(tech: Technology) -> Self {
+        match tech {
+            Technology::LE => control::TechnologyType::LowEnergy,
+            Technology::Classic => control::TechnologyType::Classic,
+            Technology::DualMode => control::TechnologyType::DualMode,
         }
     }
 }

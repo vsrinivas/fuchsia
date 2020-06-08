@@ -115,6 +115,26 @@ protocol Access {
     /// * error Reports `Error.PEER_NOT_FOUND` if `id` is not recognized.
     Disconnect(bt.PeerId id) -> () error Error;
 
+    /// Initiate a pairing to the remote `id` with the given `options`.
+    /// This call completes only once the pairing procedure has completed or aborted.
+    /// Returns an error if no connected peer with `id` is found or the pairing procedure fails.
+    /// If the named peer is already paired, this returns immediately with a success value - unless
+    /// the pairing is over LE and the PairingOptions.le_security_level is more secure than the
+    /// current security level, in which case we will attempt to raise security to the requested
+    /// level.
+    ///
+    /// Pairing will take place over whichever transport is indicated by `options.transport`. If
+    /// that transport isn't currently connected, the pairing will fail with `Error.PEER_NOT_FOUND`.
+    /// Currently, if DUAL_MODE is requested, we will attempt to pair over the LE transport.
+    ///
+    /// + request `id` The id of the peer to initiate pairing with
+    /// + request `options` The configuration options to use for this pairing request
+    /// * error Reports `Error.PEER_NOT_FOUND` if `id` is not recognized, or the peer is not
+    ///   connected on the requested transport.
+    /// * error Reports `Error.INVALID_ARGUMENTS` if ill-formed options are passed
+    /// * error Reports `Error.FAILED` if an error occurs during pairing
+    Pair(bt.PeerId id, PairingOptions options) -> () error Error;
+
     /// Removes all bonding information and disconnects any existing links with the peer with the
     /// given `id`.
     ///
