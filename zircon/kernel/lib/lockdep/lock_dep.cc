@@ -7,6 +7,7 @@
 #include <debug.h>
 #include <inttypes.h>
 #include <lib/console.h>
+#include <lib/debuglog.h>
 #include <string.h>
 
 #include <new>
@@ -120,7 +121,7 @@ void SystemLockValidationError(AcquiredLockEntry* bad_entry, AcquiredLockEntry* 
   const uint64_t user_pid = current_thread->user_pid_;
   const uint64_t user_tid = current_thread->user_tid_;
 
-  DLOG_KERNEL_OPPS("Lock validation failed for thread %p pid %" PRIu64 " tid %" PRIu64
+  DLOG_KERNEL_OOPS("Lock validation failed for thread %p pid %" PRIu64 " tid %" PRIu64
                    " (%s:%s):\n",
                    current_thread, user_pid, user_tid, owner_name, current_thread->name_);
   printf("Reason: %s\n", ToString(result));
