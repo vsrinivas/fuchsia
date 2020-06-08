@@ -876,16 +876,9 @@ type datagramSocketImpl struct {
 
 var _ socket.DatagramSocketWithCtx = (*datagramSocketImpl)(nil)
 
-func (s *datagramSocketImpl) close() {
-	clones := s.endpointWithEvent.close()
-
-	s.cancel()
-
-	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d", s.endpointWithEvent, clones)
-}
-
 func (s *datagramSocketImpl) Close(fidl.Context) (int32, error) {
-	s.close()
+	s.cancel()
+	syslog.VLogTf(syslog.DebugVerbosity, "Close", "%p", s.endpointWithEvent)
 	return int32(zx.ErrOk), nil
 }
 
@@ -898,7 +891,11 @@ func (s *datagramSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtx
 		s.ns.stats.SocketCount.Increment()
 		go func() {
 			defer s.ns.stats.SocketCount.Decrement()
-			defer s.close()
+			defer func() {
+				clones := s.close()
+				syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d", s.endpointWithEvent, clones)
+			}()
+
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
@@ -938,8 +935,8 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, addrLen, dataLen, controlLe
 	}
 	{
 		var err error
-		// We lock here to ensure that no incoming connection changes readiness
-		// while we clear the signal.
+		// We lock here to ensure that no incoming data changes readiness while we
+		// clear the signal.
 		s.incoming.mu.Lock()
 		if s.endpointWithEvent.incoming.mu.asserted && s.endpoint.ep.Readiness(waiter.EventIn) == 0 {
 			err = s.endpointWithEvent.local.SignalPeer(zxsocket.SignalIncoming, 0)

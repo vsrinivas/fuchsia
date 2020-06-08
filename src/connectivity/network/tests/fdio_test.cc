@@ -149,43 +149,118 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
       << zx_status_get_string(status);
 }
 
-TEST(SocketTest, CloseZXSocketOnClose) {
-  int fd;
-  ASSERT_GE(fd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+static const zx::socket& stream_handle(const ::llcpp::fuchsia::io::NodeInfo& node_info) {
+  return node_info.stream_socket().socket;
+}
 
-  zx::channel channel;
+static const zx::eventpair& datagram_handle(const ::llcpp::fuchsia::io::NodeInfo& node_info) {
+  return node_info.datagram_socket().event;
+}
+
+template <int Type, typename _Client, ::llcpp::fuchsia::io::NodeInfo::Tag Tag, typename _Handle,
+          const _Handle& (*GetHandle)(const ::llcpp::fuchsia::io::NodeInfo& node_info),
+          zx_signals_t PeerClosed>
+struct SocketImpl {
+  using Client = _Client;
+  using Handle = _Handle;
+
+  static int type() { return Type; };
+  static ::llcpp::fuchsia::io::NodeInfo::Tag tag() { return Tag; }
+  static const Handle& handle(const ::llcpp::fuchsia::io::NodeInfo& node_info) {
+    return GetHandle(node_info);
+  }
+  static zx_signals_t peer_closed() { return PeerClosed; };
+};
+
+template <typename Impl>
+class SocketTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    ASSERT_TRUE(fd_ = fbl::unique_fd(socket(AF_INET, Impl::type(), 0))) << strerror(errno);
+    addr_ = {
+        .sin_family = AF_INET,
+        .sin_addr.s_addr = htonl(INADDR_ANY),
+    };
+    ASSERT_EQ(bind(fd_.get(), reinterpret_cast<const struct sockaddr*>(&addr_), sizeof(addr_)), 0)
+        << strerror(errno);
+    socklen_t addrlen = sizeof(addr_);
+    ASSERT_EQ(getsockname(fd_.get(), reinterpret_cast<struct sockaddr*>(&addr_), &addrlen), 0)
+        << strerror(errno);
+    ASSERT_EQ(addrlen, sizeof(addr_));
+  }
+  fbl::unique_fd fd_;
+  struct sockaddr_in addr_;
+};
+
+using StreamSocketImpl =
+    SocketImpl<SOCK_STREAM, ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient,
+               ::llcpp::fuchsia::io::NodeInfo::Tag::kStreamSocket, zx::socket, stream_handle,
+               ZX_SOCKET_PEER_CLOSED>;
+
+using DatagramSocketImpl =
+    SocketImpl<SOCK_DGRAM, ::llcpp::fuchsia::posix::socket::DatagramSocket::SyncClient,
+               ::llcpp::fuchsia::io::NodeInfo::Tag::kDatagramSocket, zx::eventpair, datagram_handle,
+               ZX_EVENTPAIR_PEER_CLOSED>;
+
+class SocketTestNames {
+ public:
+  template <typename T>
+  static std::string GetName(int) {
+    if (std::is_same<T, StreamSocketImpl>())
+      return "Stream";
+    if (std::is_same<T, DatagramSocketImpl>())
+      return "Datagram";
+  }
+};
+
+using SocketTypes = ::testing::Types<StreamSocketImpl, DatagramSocketImpl>;
+TYPED_TEST_SUITE(SocketTest, SocketTypes, SocketTestNames);
+
+TYPED_TEST(SocketTest, CloseResourcesOnClose) {
   zx_status_t status;
-  ASSERT_EQ(status = fdio_fd_transfer(fd, channel.reset_and_get_address()), ZX_OK)
+
+  // Increase the reference count.
+  zx::channel clone;
+  ASSERT_EQ(status = fdio_fd_clone(this->fd_.get(), clone.reset_and_get_address()), ZX_OK)
       << zx_status_get_string(status);
 
-  ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client(std::move(channel));
+  zx::channel channel;
+  ASSERT_EQ(status = fdio_fd_transfer(this->fd_.release(), channel.reset_and_get_address()), ZX_OK)
+      << zx_status_get_string(status);
+
+  typename TypeParam::Client client(std::move(channel));
 
   auto describe_response = client.Describe();
   ASSERT_EQ(status = describe_response.status(), ZX_OK) << zx_status_get_string(status);
   const ::llcpp::fuchsia::io::NodeInfo& node_info = describe_response.Unwrap()->info;
-  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::NodeInfo::Tag::kStreamSocket);
+  ASSERT_EQ(node_info.which(), TypeParam::tag());
 
   zx_signals_t observed;
-  ASSERT_EQ(status = node_info.stream_socket().socket.wait_one(
-                ZX_SOCKET_WRITABLE, zx::time::infinite_past(), &observed),
-            ZX_OK)
-      << zx_status_get_string(status);
-  ASSERT_EQ(
-      status = client.channel().wait_one(ZX_CHANNEL_WRITABLE, zx::time::infinite_past(), &observed),
-      ZX_OK)
+
+  ASSERT_EQ(status = TypeParam::handle(node_info).wait_one(
+                TypeParam::peer_closed(), zx::deadline_after(zx::msec(100)), &observed),
+            ZX_ERR_TIMED_OUT)
       << zx_status_get_string(status);
 
   auto close_response = client.Close();
   EXPECT_EQ(status = close_response.status(), ZX_OK) << zx_status_get_string(status);
   EXPECT_EQ(status = close_response.Unwrap()->s, ZX_OK) << zx_status_get_string(status);
 
+  // We still have `clone`, nothing should be closed yet.
+  ASSERT_EQ(status = TypeParam::handle(node_info).wait_one(
+                TypeParam::peer_closed(), zx::deadline_after(zx::msec(100)), &observed),
+            ZX_ERR_TIMED_OUT)
+      << zx_status_get_string(status);
+
+  clone.reset();
+
   // Give a generous timeout for closures; the channel closing is inherently asynchronous with
   // respect to the `Close` FIDL call above (since its return must come over the channel). The
-  // socket closure is not inherently asynchronous, but happens to be as an implementation detail.
+  // handle closure is not inherently asynchronous, but happens to be as an implementation detail.
   zx::time deadline = zx::deadline_after(zx::sec(5));
-  ASSERT_EQ(status = node_info.stream_socket().socket.wait_one(ZX_SOCKET_PEER_CLOSED, deadline,
-                                                               &observed),
-            ZX_OK)
+  ASSERT_EQ(
+      status = TypeParam::handle(node_info).wait_one(TypeParam::peer_closed(), deadline, &observed),
+      ZX_OK)
       << zx_status_get_string(status);
   ASSERT_EQ(status = client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, &observed), ZX_OK)
       << zx_status_get_string(status);
