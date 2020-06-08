@@ -63,7 +63,7 @@ done
 if [ -z "${formatter}" ]; then
   formatter="text"
 fi
-format="--format=${formatter}"
+format="--format ${formatter}"
 regexps="$@"
 find_target="/hub"
 
@@ -76,7 +76,7 @@ find+=$'\n'"$(fx-command-exec shell iquery list-files "${devfs_target}")"
 
 # Check if we want the system diagnostics
 if [[ "${system_diagnostics}" = "false" ]]; then
-  find="$(echo "${find}" | grep -v "system_diagnostics$")"
+  find="$(echo "${find}" | grep -v "system_diagnostics")"
 fi
 
 # Join all given regexp into a format grep can consume.
@@ -91,4 +91,4 @@ fi
 # Flatten to the format iquery expects.
 flatten="$(echo "${find}" | tr '\n' ' ')"
 
-fx-command-exec shell iquery --format "${format}" show-file "${flatten}"
+fx-command-exec shell iquery "${format}" show-file "${flatten}"
