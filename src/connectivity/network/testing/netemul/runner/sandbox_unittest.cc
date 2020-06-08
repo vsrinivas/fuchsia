@@ -890,13 +890,17 @@ TEST_F(SandboxTest, SyslogWithKlog) {
          false);
   EnableEventCollection();
   int klog_count = 0;
-  EnableLogCapture([this, &klog_count](const fuchsia::logger::LogMessage& msg) {
+  bool got_dummy_log = false;
+  EnableLogCapture([this, &klog_count, &got_dummy_log](const fuchsia::logger::LogMessage& msg) {
     if (std::find(msg.tags.begin(), msg.tags.end(), "dummy-proc") != msg.tags.end()) {
+      got_dummy_log = true;
+    } else if (std::find(msg.tags.begin(), msg.tags.end(), "klog") != msg.tags.end()) {
+      klog_count++;
+    }
+    if (got_dummy_log && klog_count != 0) {
       sync::Event evt;
       evt.set_code(100);
       bus()->Publish(std::move(evt));
-    } else if (std::find(msg.tags.begin(), msg.tags.end(), "klog") != msg.tags.end()) {
-      klog_count++;
     }
   });
   RunSandboxSuccess();
