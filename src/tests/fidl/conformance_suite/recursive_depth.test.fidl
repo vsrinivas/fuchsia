@@ -9,4 +9,40 @@ struct RecursiveOptionalStruct {
     RecursiveOptionalStruct? inner;
 };
 
-// TODO(fxb/53340) Add more test cases here.
+// Wrap with an extra layer of struct and array which should not add any more
+// out of line recursion depth.
+[BindingsDenylist = "dart"]
+struct RecursiveOptionalStructArrayWrapper {
+    array<RecursiveOptionalStruct>:1 arr;
+};
+
+[BindingsDenylist = "dart"]
+union RecursiveOptionalAndUnion {
+    1: RecursiveOptionalStruct recursive_optional;
+};
+
+[BindingsDenylist = "dart"]
+struct RecursiveOptionalAndUnionStruct {
+    RecursiveOptionalAndUnion u;
+};
+
+[BindingsDenylist = "dart"]
+table RecursiveOptionalAndTable {
+    1: RecursiveOptionalStruct recursive_optional;
+};
+
+[BindingsDenylist = "dart"]
+struct RecursiveOptionalAndTableStruct {
+    RecursiveOptionalAndTable t;
+};
+
+[BindingsDenylist = "dart"]
+struct RecursiveOptionalAndVectorStruct {
+    vector<RecursiveOptionalStruct> vec;
+};
+
+[BindingsDenylist = "dart"]
+struct RecursiveOptionalStructWithString {
+    RecursiveOptionalStructWithString? inner;
+    string? str;
+};

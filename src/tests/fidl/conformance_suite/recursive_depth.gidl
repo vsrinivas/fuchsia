@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 
-success("RecusiveOptionalStructUnderLimit") {
+success("RecursiveOptionalStructUnderLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     value = RecursiveOptionalStruct { // 0
     inner: RecursiveOptionalStruct { // 1
@@ -80,7 +81,8 @@ success("RecusiveOptionalStructUnderLimit") {
     }
 }
 
-encode_failure("RecusiveOptionalStructExceedLimit") {
+encode_failure("RecursiveOptionalStructExceedLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     value = RecursiveOptionalStruct { // 0
     inner: RecursiveOptionalStruct { // 1
@@ -154,13 +156,1132 @@ encode_failure("RecusiveOptionalStructExceedLimit") {
     err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
 }
 
-decode_failure("RecusiveOptionalStructExceedLimitDecode") {
+decode_failure("RecursiveOptionalStructExceedLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
     bindings_allowlist = [llcpp, rust],
     type = RecursiveOptionalStruct,
     bytes = {
         v1 = [
             repeat(0xff):264, // 0 - 32
             repeat(0x00):8, // 32
+        ]
+    },
+    err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
+}
+
+success("RecursiveOptionalStructArrayWrapperUnderLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
+    bindings_allowlist = [llcpp, rust],
+    value = RecursiveOptionalStructArrayWrapper { // 0
+    arr: [ // 0
+    RecursiveOptionalStruct { // 0
+    inner: RecursiveOptionalStruct { // 1
+    inner: RecursiveOptionalStruct { // 2
+    inner: RecursiveOptionalStruct { // 3
+    inner: RecursiveOptionalStruct { // 4
+    inner: RecursiveOptionalStruct { // 5
+    inner: RecursiveOptionalStruct { // 6
+    inner: RecursiveOptionalStruct { // 7
+    inner: RecursiveOptionalStruct { // 8
+    inner: RecursiveOptionalStruct { // 9
+    inner: RecursiveOptionalStruct { // 10
+    inner: RecursiveOptionalStruct { // 11
+    inner: RecursiveOptionalStruct { // 12
+    inner: RecursiveOptionalStruct { // 13
+    inner: RecursiveOptionalStruct { // 14
+    inner: RecursiveOptionalStruct { // 15
+    inner: RecursiveOptionalStruct { // 16
+    inner: RecursiveOptionalStruct { // 17
+    inner: RecursiveOptionalStruct { // 18
+    inner: RecursiveOptionalStruct { // 19
+    inner: RecursiveOptionalStruct { // 20
+    inner: RecursiveOptionalStruct { // 21
+    inner: RecursiveOptionalStruct { // 22
+    inner: RecursiveOptionalStruct { // 23
+    inner: RecursiveOptionalStruct { // 24
+    inner: RecursiveOptionalStruct { // 25
+    inner: RecursiveOptionalStruct { // 26
+    inner: RecursiveOptionalStruct { // 27
+    inner: RecursiveOptionalStruct { // 28
+    inner: RecursiveOptionalStruct { // 29
+    inner: RecursiveOptionalStruct { // 30
+    inner: RecursiveOptionalStruct { // 31
+    inner: RecursiveOptionalStruct { // 32
+        inner: null,
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    ]
+    },
+    bytes = {
+        v1 = [
+            repeat(0xff):256, // 0 - 31
+            repeat(0x00):8, // 32
+        ]
+    }
+}
+
+encode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
+    bindings_allowlist = [llcpp, rust],
+    value = RecursiveOptionalStructArrayWrapper { // 0
+    arr: [ // 0
+    RecursiveOptionalStruct { // 0
+    inner: RecursiveOptionalStruct { // 1
+    inner: RecursiveOptionalStruct { // 2
+    inner: RecursiveOptionalStruct { // 3
+    inner: RecursiveOptionalStruct { // 4
+    inner: RecursiveOptionalStruct { // 5
+    inner: RecursiveOptionalStruct { // 6
+    inner: RecursiveOptionalStruct { // 7
+    inner: RecursiveOptionalStruct { // 8
+    inner: RecursiveOptionalStruct { // 9
+    inner: RecursiveOptionalStruct { // 10
+    inner: RecursiveOptionalStruct { // 11
+    inner: RecursiveOptionalStruct { // 12
+    inner: RecursiveOptionalStruct { // 13
+    inner: RecursiveOptionalStruct { // 14
+    inner: RecursiveOptionalStruct { // 15
+    inner: RecursiveOptionalStruct { // 16
+    inner: RecursiveOptionalStruct { // 17
+    inner: RecursiveOptionalStruct { // 18
+    inner: RecursiveOptionalStruct { // 19
+    inner: RecursiveOptionalStruct { // 20
+    inner: RecursiveOptionalStruct { // 21
+    inner: RecursiveOptionalStruct { // 22
+    inner: RecursiveOptionalStruct { // 23
+    inner: RecursiveOptionalStruct { // 24
+    inner: RecursiveOptionalStruct { // 25
+    inner: RecursiveOptionalStruct { // 26
+    inner: RecursiveOptionalStruct { // 27
+    inner: RecursiveOptionalStruct { // 28
+    inner: RecursiveOptionalStruct { // 29
+    inner: RecursiveOptionalStruct { // 30
+    inner: RecursiveOptionalStruct { // 31
+    inner: RecursiveOptionalStruct { // 32
+    inner: RecursiveOptionalStruct { // 33
+        inner: null,
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    ]
+    },
+    err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
+}
+
+decode_failure("RecursiveOptionalStructArrayWrapperExceedLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
+    bindings_allowlist = [llcpp, rust],
+    type = RecursiveOptionalStructArrayWrapper,
+    bytes = {
+        v1 = [
+            repeat(0xff):264, // 0 - 32
+            repeat(0x00):8, // 32
+        ]
+    },
+    err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
+}
+
+success("RecursiveOptionalAndUnionUnderLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
+    bindings_allowlist = [llcpp, rust],
+    value = RecursiveOptionalAndUnionStruct { // 0
+    u: RecursiveOptionalAndUnion { // 0
+    recursive_optional: RecursiveOptionalStruct { // 1
+    inner: RecursiveOptionalStruct { // 2
+    inner: RecursiveOptionalStruct { // 3
+    inner: RecursiveOptionalStruct { // 4
+    inner: RecursiveOptionalStruct { // 5
+    inner: RecursiveOptionalStruct { // 6
+    inner: RecursiveOptionalStruct { // 7
+    inner: RecursiveOptionalStruct { // 8
+    inner: RecursiveOptionalStruct { // 9
+    inner: RecursiveOptionalStruct { // 10
+    inner: RecursiveOptionalStruct { // 11
+    inner: RecursiveOptionalStruct { // 12
+    inner: RecursiveOptionalStruct { // 13
+    inner: RecursiveOptionalStruct { // 14
+    inner: RecursiveOptionalStruct { // 15
+    inner: RecursiveOptionalStruct { // 16
+    inner: RecursiveOptionalStruct { // 17
+    inner: RecursiveOptionalStruct { // 18
+    inner: RecursiveOptionalStruct { // 19
+    inner: RecursiveOptionalStruct { // 20
+    inner: RecursiveOptionalStruct { // 21
+    inner: RecursiveOptionalStruct { // 22
+    inner: RecursiveOptionalStruct { // 23
+    inner: RecursiveOptionalStruct { // 24
+    inner: RecursiveOptionalStruct { // 25
+    inner: RecursiveOptionalStruct { // 26
+    inner: RecursiveOptionalStruct { // 27
+    inner: RecursiveOptionalStruct { // 28
+    inner: RecursiveOptionalStruct { // 29
+    inner: RecursiveOptionalStruct { // 30
+    inner: RecursiveOptionalStruct { // 31
+    inner: RecursiveOptionalStruct { // 32
+        inner: null,
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    },
+    bytes = {
+        v1 = [
+            num(1):4, padding:4, // ordinal, padding
+            num(256):4, num(0):4, // num bytes, num handles
+            repeat(0xff):8, // union data
+            repeat(0xff):248, // 1 - 31
+            repeat(0x00):8, // 32
+        ]
+    }
+}
+
+encode_failure("RecursiveOptionalAndUnionExceedLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
+    bindings_allowlist = [llcpp, rust],
+    value = RecursiveOptionalAndUnionStruct { // 0
+    u: RecursiveOptionalAndUnion { // 0
+    recursive_optional: RecursiveOptionalStruct { // 1
+    inner: RecursiveOptionalStruct { // 2
+    inner: RecursiveOptionalStruct { // 3
+    inner: RecursiveOptionalStruct { // 4
+    inner: RecursiveOptionalStruct { // 5
+    inner: RecursiveOptionalStruct { // 6
+    inner: RecursiveOptionalStruct { // 7
+    inner: RecursiveOptionalStruct { // 8
+    inner: RecursiveOptionalStruct { // 9
+    inner: RecursiveOptionalStruct { // 10
+    inner: RecursiveOptionalStruct { // 11
+    inner: RecursiveOptionalStruct { // 12
+    inner: RecursiveOptionalStruct { // 13
+    inner: RecursiveOptionalStruct { // 14
+    inner: RecursiveOptionalStruct { // 15
+    inner: RecursiveOptionalStruct { // 16
+    inner: RecursiveOptionalStruct { // 17
+    inner: RecursiveOptionalStruct { // 18
+    inner: RecursiveOptionalStruct { // 19
+    inner: RecursiveOptionalStruct { // 20
+    inner: RecursiveOptionalStruct { // 21
+    inner: RecursiveOptionalStruct { // 22
+    inner: RecursiveOptionalStruct { // 23
+    inner: RecursiveOptionalStruct { // 24
+    inner: RecursiveOptionalStruct { // 25
+    inner: RecursiveOptionalStruct { // 26
+    inner: RecursiveOptionalStruct { // 27
+    inner: RecursiveOptionalStruct { // 28
+    inner: RecursiveOptionalStruct { // 29
+    inner: RecursiveOptionalStruct { // 30
+    inner: RecursiveOptionalStruct { // 31
+    inner: RecursiveOptionalStruct { // 32
+    inner: RecursiveOptionalStruct { // 33
+        inner: null,
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    },
+    err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
+}
+
+decode_failure("RecursiveOptionalAndUnionExceedLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
+    bindings_allowlist = [llcpp, rust],
+    type = RecursiveOptionalAndUnionStruct,
+    bytes = {
+        v1 = [
+            num(1):4, padding:4, // ordinal, padding
+            num(264):4, num(0):4, // num bytes, num handles
+            repeat(0xff):8, // union data
+            repeat(0xff):256, // 1 - 32
+            repeat(0x00):8, // 33
+        ]
+    },
+    err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
+}
+
+success("RecursiveOptionalAndTableUnderLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
+    bindings_allowlist = [llcpp, rust],
+    value = RecursiveOptionalAndTableStruct { // 0
+    t: RecursiveOptionalAndTable { // 0
+    recursive_optional: RecursiveOptionalStruct { // 2
+    inner: RecursiveOptionalStruct { // 3
+    inner: RecursiveOptionalStruct { // 4
+    inner: RecursiveOptionalStruct { // 5
+    inner: RecursiveOptionalStruct { // 6
+    inner: RecursiveOptionalStruct { // 7
+    inner: RecursiveOptionalStruct { // 8
+    inner: RecursiveOptionalStruct { // 9
+    inner: RecursiveOptionalStruct { // 10
+    inner: RecursiveOptionalStruct { // 11
+    inner: RecursiveOptionalStruct { // 12
+    inner: RecursiveOptionalStruct { // 13
+    inner: RecursiveOptionalStruct { // 14
+    inner: RecursiveOptionalStruct { // 15
+    inner: RecursiveOptionalStruct { // 16
+    inner: RecursiveOptionalStruct { // 17
+    inner: RecursiveOptionalStruct { // 18
+    inner: RecursiveOptionalStruct { // 19
+    inner: RecursiveOptionalStruct { // 20
+    inner: RecursiveOptionalStruct { // 21
+    inner: RecursiveOptionalStruct { // 22
+    inner: RecursiveOptionalStruct { // 23
+    inner: RecursiveOptionalStruct { // 24
+    inner: RecursiveOptionalStruct { // 25
+    inner: RecursiveOptionalStruct { // 26
+    inner: RecursiveOptionalStruct { // 27
+    inner: RecursiveOptionalStruct { // 28
+    inner: RecursiveOptionalStruct { // 29
+    inner: RecursiveOptionalStruct { // 30
+    inner: RecursiveOptionalStruct { // 31
+    inner: RecursiveOptionalStruct { // 32
+        inner: null,
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    },
+    bytes = {
+        v1 = [
+            num(1):8, // table max ordinal
+            repeat(0xff):8, // table vector body
+            num(248):4, num(0):4, // num bytes, num handles
+            repeat(0xff):8, // envelope data
+            repeat(0xff):240, // 2 - 31
+            repeat(0x00):8, // 32
+        ]
+    }
+}
+
+encode_failure("RecursiveOptionalAndTableExceedLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
+    bindings_allowlist = [llcpp, rust],
+    value = RecursiveOptionalAndTableStruct { // 0
+    t: RecursiveOptionalAndTable { // 0
+    recursive_optional: RecursiveOptionalStruct { // 2
+    inner: RecursiveOptionalStruct { // 3
+    inner: RecursiveOptionalStruct { // 4
+    inner: RecursiveOptionalStruct { // 5
+    inner: RecursiveOptionalStruct { // 6
+    inner: RecursiveOptionalStruct { // 7
+    inner: RecursiveOptionalStruct { // 8
+    inner: RecursiveOptionalStruct { // 9
+    inner: RecursiveOptionalStruct { // 10
+    inner: RecursiveOptionalStruct { // 11
+    inner: RecursiveOptionalStruct { // 12
+    inner: RecursiveOptionalStruct { // 13
+    inner: RecursiveOptionalStruct { // 14
+    inner: RecursiveOptionalStruct { // 15
+    inner: RecursiveOptionalStruct { // 16
+    inner: RecursiveOptionalStruct { // 17
+    inner: RecursiveOptionalStruct { // 18
+    inner: RecursiveOptionalStruct { // 19
+    inner: RecursiveOptionalStruct { // 20
+    inner: RecursiveOptionalStruct { // 21
+    inner: RecursiveOptionalStruct { // 22
+    inner: RecursiveOptionalStruct { // 23
+    inner: RecursiveOptionalStruct { // 24
+    inner: RecursiveOptionalStruct { // 25
+    inner: RecursiveOptionalStruct { // 26
+    inner: RecursiveOptionalStruct { // 27
+    inner: RecursiveOptionalStruct { // 28
+    inner: RecursiveOptionalStruct { // 29
+    inner: RecursiveOptionalStruct { // 30
+    inner: RecursiveOptionalStruct { // 31
+    inner: RecursiveOptionalStruct { // 32
+    inner: RecursiveOptionalStruct { // 33
+        inner: null,
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    },
+    err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
+}
+
+decode_failure("RecursiveOptionalAndTableExceedLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
+    bindings_allowlist = [llcpp, rust],
+    type = RecursiveOptionalAndTableStruct,
+    bytes = {
+        v1 = [
+            num(1):8, // table max ordinal
+            repeat(0xff):8, // table vector body
+            num(256):4, num(0):4, // num bytes, num handles
+            repeat(0xff):8, // envelope data
+            repeat(0xff):248, // 2 - 32
+            repeat(0x00):8, // 33
+        ]
+    },
+    err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
+}
+
+success("RecursiveOptionalAndVectorUnderLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
+    bindings_allowlist = [llcpp, rust],
+    value = RecursiveOptionalAndVectorStruct { // 0
+    vec: [ RecursiveOptionalStruct { // 1
+    inner: RecursiveOptionalStruct { // 2
+    inner: RecursiveOptionalStruct { // 3
+    inner: RecursiveOptionalStruct { // 4
+    inner: RecursiveOptionalStruct { // 5
+    inner: RecursiveOptionalStruct { // 6
+    inner: RecursiveOptionalStruct { // 7
+    inner: RecursiveOptionalStruct { // 8
+    inner: RecursiveOptionalStruct { // 9
+    inner: RecursiveOptionalStruct { // 10
+    inner: RecursiveOptionalStruct { // 11
+    inner: RecursiveOptionalStruct { // 12
+    inner: RecursiveOptionalStruct { // 13
+    inner: RecursiveOptionalStruct { // 14
+    inner: RecursiveOptionalStruct { // 15
+    inner: RecursiveOptionalStruct { // 16
+    inner: RecursiveOptionalStruct { // 17
+    inner: RecursiveOptionalStruct { // 18
+    inner: RecursiveOptionalStruct { // 19
+    inner: RecursiveOptionalStruct { // 20
+    inner: RecursiveOptionalStruct { // 21
+    inner: RecursiveOptionalStruct { // 22
+    inner: RecursiveOptionalStruct { // 23
+    inner: RecursiveOptionalStruct { // 24
+    inner: RecursiveOptionalStruct { // 25
+    inner: RecursiveOptionalStruct { // 26
+    inner: RecursiveOptionalStruct { // 27
+    inner: RecursiveOptionalStruct { // 28
+    inner: RecursiveOptionalStruct { // 29
+    inner: RecursiveOptionalStruct { // 30
+    inner: RecursiveOptionalStruct { // 31
+    inner: RecursiveOptionalStruct { // 32
+        inner: null,
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    ]
+    },
+    bytes = {
+        v1 = [
+            num(1):8, // vector count
+            repeat(0xff):8, // vector data
+            repeat(0xff):248, // 1 - 31
+            repeat(0x00):8, // 32
+        ]
+    }
+}
+
+encode_failure("RecursiveOptionalAndVectorExceedLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
+    bindings_allowlist = [llcpp, rust],
+    value = RecursiveOptionalAndVectorStruct { // 0
+    vec: [ RecursiveOptionalStruct { // 1
+    inner: RecursiveOptionalStruct { // 2
+    inner: RecursiveOptionalStruct { // 3
+    inner: RecursiveOptionalStruct { // 4
+    inner: RecursiveOptionalStruct { // 5
+    inner: RecursiveOptionalStruct { // 6
+    inner: RecursiveOptionalStruct { // 7
+    inner: RecursiveOptionalStruct { // 8
+    inner: RecursiveOptionalStruct { // 9
+    inner: RecursiveOptionalStruct { // 10
+    inner: RecursiveOptionalStruct { // 11
+    inner: RecursiveOptionalStruct { // 12
+    inner: RecursiveOptionalStruct { // 13
+    inner: RecursiveOptionalStruct { // 14
+    inner: RecursiveOptionalStruct { // 15
+    inner: RecursiveOptionalStruct { // 16
+    inner: RecursiveOptionalStruct { // 17
+    inner: RecursiveOptionalStruct { // 18
+    inner: RecursiveOptionalStruct { // 19
+    inner: RecursiveOptionalStruct { // 20
+    inner: RecursiveOptionalStruct { // 21
+    inner: RecursiveOptionalStruct { // 22
+    inner: RecursiveOptionalStruct { // 23
+    inner: RecursiveOptionalStruct { // 24
+    inner: RecursiveOptionalStruct { // 25
+    inner: RecursiveOptionalStruct { // 26
+    inner: RecursiveOptionalStruct { // 27
+    inner: RecursiveOptionalStruct { // 28
+    inner: RecursiveOptionalStruct { // 29
+    inner: RecursiveOptionalStruct { // 30
+    inner: RecursiveOptionalStruct { // 31
+    inner: RecursiveOptionalStruct { // 32
+    inner: RecursiveOptionalStruct { // 33
+        inner: null,
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    ]
+    },
+    err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
+}
+
+decode_failure("RecursiveOptionalAndVectorExceedLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
+    bindings_allowlist = [llcpp, rust],
+    type = RecursiveOptionalAndVectorStruct,
+    bytes = {
+        v1 = [
+            num(1):8, // vector count
+            repeat(0xff):8, // vector data
+            repeat(0xff):256, // 1 - 32
+            repeat(0x00):8, // 33
+        ]
+    },
+    err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
+}
+
+success("RecursiveOptionalStructWithStringUnderLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
+    bindings_allowlist = [llcpp, rust],
+    value = RecursiveOptionalStructWithString { // 0
+    inner: RecursiveOptionalStructWithString { // 1
+    inner: RecursiveOptionalStructWithString { // 2
+    inner: RecursiveOptionalStructWithString { // 3
+    inner: RecursiveOptionalStructWithString { // 4
+    inner: RecursiveOptionalStructWithString { // 5
+    inner: RecursiveOptionalStructWithString { // 6
+    inner: RecursiveOptionalStructWithString { // 7
+    inner: RecursiveOptionalStructWithString { // 8
+    inner: RecursiveOptionalStructWithString { // 9
+    inner: RecursiveOptionalStructWithString { // 10
+    inner: RecursiveOptionalStructWithString { // 11
+    inner: RecursiveOptionalStructWithString { // 12
+    inner: RecursiveOptionalStructWithString { // 13
+    inner: RecursiveOptionalStructWithString { // 14
+    inner: RecursiveOptionalStructWithString { // 15
+    inner: RecursiveOptionalStructWithString { // 16
+    inner: RecursiveOptionalStructWithString { // 17
+    inner: RecursiveOptionalStructWithString { // 18
+    inner: RecursiveOptionalStructWithString { // 19
+    inner: RecursiveOptionalStructWithString { // 20
+    inner: RecursiveOptionalStructWithString { // 21
+    inner: RecursiveOptionalStructWithString { // 22
+    inner: RecursiveOptionalStructWithString { // 23
+    inner: RecursiveOptionalStructWithString { // 24
+    inner: RecursiveOptionalStructWithString { // 25
+    inner: RecursiveOptionalStructWithString { // 26
+    inner: RecursiveOptionalStructWithString { // 27
+    inner: RecursiveOptionalStructWithString { // 28
+    inner: RecursiveOptionalStructWithString { // 29
+    inner: RecursiveOptionalStructWithString { // 30
+    inner: RecursiveOptionalStructWithString { // 31
+    str: "X" // 32
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    },
+    bytes = {
+        v1 = [
+            // 0
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 1
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 2
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 3
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 4
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 5
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 6
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 7
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 8
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 9
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 10
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 11
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 12
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 13
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 14
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 15
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 16
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 17
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 18
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 19
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 20
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 21
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 22
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 23
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 24
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 25
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 26
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 27
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 28
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 29
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 30
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 31
+            repeat(0x00):8, // inner,
+            num(1):8, // string count
+            repeat(0xff):8, // string body
+            // 32
+            'X', padding:7
+        ]
+    }
+}
+
+encode_failure("RecursiveOptionalStructWithStringExceedLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
+    bindings_allowlist = [llcpp, rust],
+    value = RecursiveOptionalStructWithString { // 0
+    inner: RecursiveOptionalStructWithString { // 1
+    inner: RecursiveOptionalStructWithString { // 2
+    inner: RecursiveOptionalStructWithString { // 3
+    inner: RecursiveOptionalStructWithString { // 4
+    inner: RecursiveOptionalStructWithString { // 5
+    inner: RecursiveOptionalStructWithString { // 6
+    inner: RecursiveOptionalStructWithString { // 7
+    inner: RecursiveOptionalStructWithString { // 8
+    inner: RecursiveOptionalStructWithString { // 9
+    inner: RecursiveOptionalStructWithString { // 10
+    inner: RecursiveOptionalStructWithString { // 11
+    inner: RecursiveOptionalStructWithString { // 12
+    inner: RecursiveOptionalStructWithString { // 13
+    inner: RecursiveOptionalStructWithString { // 14
+    inner: RecursiveOptionalStructWithString { // 15
+    inner: RecursiveOptionalStructWithString { // 16
+    inner: RecursiveOptionalStructWithString { // 17
+    inner: RecursiveOptionalStructWithString { // 18
+    inner: RecursiveOptionalStructWithString { // 19
+    inner: RecursiveOptionalStructWithString { // 20
+    inner: RecursiveOptionalStructWithString { // 21
+    inner: RecursiveOptionalStructWithString { // 22
+    inner: RecursiveOptionalStructWithString { // 23
+    inner: RecursiveOptionalStructWithString { // 24
+    inner: RecursiveOptionalStructWithString { // 25
+    inner: RecursiveOptionalStructWithString { // 26
+    inner: RecursiveOptionalStructWithString { // 27
+    inner: RecursiveOptionalStructWithString { // 28
+    inner: RecursiveOptionalStructWithString { // 29
+    inner: RecursiveOptionalStructWithString { // 30
+    inner: RecursiveOptionalStructWithString { // 31
+    inner: RecursiveOptionalStructWithString { // 32
+    str: "X" // 33
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    }
+    },
+    err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,
+}
+
+decode_failure("RecursiveOptionalStructWithStringExceedLimit") {
+    // TODO(fxb/53616) Enable in all bindings.
+    bindings_allowlist = [llcpp, rust],
+    type = RecursiveOptionalStructWithString,
+    bytes = {
+        v1 = [
+                        // 0
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 1
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 2
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 3
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 4
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 5
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 6
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 7
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 8
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 9
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 10
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 11
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 12
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 13
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 14
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 15
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 16
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 17
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 18
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 19
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 20
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 21
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 22
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 23
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 24
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 25
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 26
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 27
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 28
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 29
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 30
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 31
+            repeat(0xff):8, // inner,
+            num(0):8, // string count
+            repeat(0x00):8, // string body
+            // 32
+            repeat(0x00):8, // inner,
+            num(1):8, // string count
+            repeat(0xff):8, // string body
+            // 33
+            'X', padding:7
         ]
     },
     err = EXCEEDED_MAX_OUT_OF_LINE_DEPTH,

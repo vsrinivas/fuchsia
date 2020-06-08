@@ -145,8 +145,8 @@ pub struct Encoder<'a> {
     /// Offset at which to write new objects.
     offset: usize,
 
-    /// The maximum remaining number of recursive steps.
-    remaining_depth: usize,
+    /// The out of line depth.
+    depth: usize,
 
     /// Buffer to write output data into.
     ///
@@ -165,8 +165,8 @@ pub struct Encoder<'a> {
 /// Decoding state
 #[derive(Debug)]
 pub struct Decoder<'a> {
-    /// The maximum remaining number of recursive steps.
-    remaining_depth: usize,
+    /// The out of line depth.
+    depth: usize,
 
     /// Buffer from which to read data for the inline part of the message.
     buf: &'a [u8],
@@ -229,7 +229,7 @@ impl<'a> Encoder<'a> {
             buf.truncate(0);
             buf.resize(inline_size, 0);
             handles.truncate(0);
-            Encoder { offset: 0, remaining_depth: MAX_RECURSION, buf, handles, context }
+            Encoder { offset: 0, depth: 0, buf, handles, context }
         }
 
         let mut encoder = prepare_for_encoding(context, buf, handles, x.inline_size(context));
@@ -276,6 +276,21 @@ impl<'a> Encoder<'a> {
         self.padding(target_inline_size - (self.offset - start_pos))
     }
 
+    /// Runs the provided closure at at the next recursion depth level,
+    /// erroring if the maximum recursion limit has been reached.
+    pub fn with_increased_recursion_depth<F, R>(&mut self, f: F) -> Result<R>
+    where
+        F: FnOnce(&mut Encoder<'_>) -> Result<R>,
+    {
+        self.depth += 1;
+        if self.depth > MAX_RECURSION {
+            return Err(Error::MaxRecursionDepth);
+        }
+        let res = f(self)?;
+        self.depth -= 1;
+        Ok(res)
+    }
+
     /// Runs the provided closure inside an encoder modified
     /// to write the data out-of-line.
     ///
@@ -289,12 +304,7 @@ impl<'a> Encoder<'a> {
         self.offset = self.buf.len();
         // Create space for the new data
         self.reserve_out_of_line(len);
-        if self.remaining_depth == 0 {
-            return Err(Error::MaxRecursionDepth);
-        }
-        self.remaining_depth -= 1;
-        f(self)?;
-        self.remaining_depth += 1;
+        self.with_increased_recursion_depth(|encoder| f(encoder))?;
         self.offset = old_offset;
         Ok(())
     }
@@ -390,7 +400,7 @@ impl<'a> Decoder<'a> {
         let (buf, out_of_line_buf) = buf.split_at(out_of_line_offset);
 
         let mut decoder = Decoder {
-            remaining_depth: MAX_RECURSION,
+            depth: 0,
             buf,
             initial_buf_len: buf.len(),
             out_of_line_buf,
@@ -441,13 +451,13 @@ impl<'a> Decoder<'a> {
         F: FnOnce(&mut Decoder<'_>) -> Result<R>,
     {
         let (old_buf, old_initial_buf_len) = self.before_read_out_of_line(len)?;
-        if self.remaining_depth == 0 {
+
+        self.depth += 1;
+        if self.depth > MAX_RECURSION {
             return Err(Error::MaxRecursionDepth);
         }
-
-        self.remaining_depth -= 1;
         let res = f(self);
-        self.remaining_depth += 1;
+        self.depth -= 1;
 
         // Set the current `buf` back to its original position.
         //
@@ -910,11 +920,13 @@ fn encode_byte_slice(encoder: &mut Encoder<'_>, slice_opt: Option<&[u8]>) -> Res
     match slice_opt {
         None => encode_absent_vector(encoder),
         Some(slice) => {
-            // Two u64: (len, present)
-            (slice.len() as u64).encode(encoder)?;
-            ALLOC_PRESENT_U64.encode(encoder)?;
-            encoder.append_bytes(slice);
-            Ok(())
+            encoder.with_increased_recursion_depth(|encoder| {
+                // Two u64: (len, present)
+                (slice.len() as u64).encode(encoder)?;
+                ALLOC_PRESENT_U64.encode(encoder)?;
+                encoder.append_bytes(slice);
+                Ok(())
+            })
         }
     }
 }
@@ -2137,12 +2149,13 @@ macro_rules! fidl_xunion {
                 let mut ordinal = self.ordinal();
                 // Encode ordinal
                 $crate::fidl_encode!(&mut ordinal, encoder)?;
-                    match self {
-                        $(
-                            $name::$member_name ( val ) => $crate::encoding::encode_in_envelope(&mut Some(val), encoder),
-                        )*
-                        $(
-                            $name::$unknown_name { ordinal: _, bytes, handles } => {
+                match self {
+                    $(
+                        $name::$member_name ( val ) => $crate::encoding::encode_in_envelope(&mut Some(val), encoder),
+                    )*
+                    $(
+                        $name::$unknown_name { ordinal: _, bytes, handles } => {
+                            encoder.with_increased_recursion_depth(|encoder| {
                                 // Throw the raw data from the unrecognized variant
                                 // back onto the wire. This will allow correct proxies even in
                                 // the event that they don't yet recognize this union variant.
@@ -2154,9 +2167,10 @@ macro_rules! fidl_xunion {
                                 encoder.append_bytes(bytes);
                                 encoder.append_handles(handles);
                                 Ok(())
-                            },
-                        )?
-                    }
+                            })
+                        },
+                    )?
+                }
             }
         }
 
