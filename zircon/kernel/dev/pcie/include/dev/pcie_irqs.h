@@ -19,6 +19,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/spinlock.h>
+#include <lockdep/lock_traits.h>
 #include <region-alloc/region-alloc.h>
 
 /* Fwd decls */
@@ -155,7 +156,11 @@ class SharedLegacyIrqHandler
   void Handler();
 
   struct list_node device_handler_list_;
-  mutable DECLARE_SPINLOCK(SharedLegacyIrqHandler) device_handler_list_lock_;
+  // TODO(32978): Tracking of this lock is disabled to silence the circular
+  // dependency warning from lockdep. The circular dependency is a known issue
+  // that will be addressed by refactoring PCI support into userspace.
+  mutable DECLARE_SPINLOCK(SharedLegacyIrqHandler,
+                           lockdep::LockFlagsTrackingDisabled) device_handler_list_lock_;
   const uint irq_id_;
 };
 
