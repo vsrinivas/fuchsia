@@ -125,8 +125,8 @@ class Reporter {
   void InitInspect();
   void InitCobalt();
 
-  void OutputUnderflowColbolt(const AudioDevice& device, zx::duration output_duration_missed,
-                              zx::time uptime_to_underflow);
+  void OutputUnderflowCobalt(const AudioDevice& device, zx::duration output_duration_missed,
+                             zx::time uptime_to_underflow);
   void OutputUnderflowInspect(const AudioDevice& device);
 
   struct Device {
