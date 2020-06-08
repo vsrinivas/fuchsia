@@ -240,7 +240,7 @@ impl<'a> Encoder<'a> {
     pub fn next_offset(&mut self, len: usize) -> usize {
         let cur_offset = self.offset;
         self.offset += len;
-        return cur_offset;
+        cur_offset
     }
 
     /// Adds specified number of zero bytes as padding.  Effectively, just increases `offset` by
