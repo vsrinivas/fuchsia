@@ -64,7 +64,7 @@ group("gtest") {
 fuchsia_unittest_package("gtest-runner-tests") {
   deps = [
     ":bin_test",
-    "test_data",
+    "test_data:all_bins",
   ]
   manifest = "meta/gtest_runner_bin_test.cmx"
 }

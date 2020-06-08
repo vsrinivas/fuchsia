@@ -1,6 +1,6 @@
 {
     program: {
-        binary: "bin/huge_gtest",
+        binary: "bin/huge_gtest_runner_example",
     },
     use: [
         { runner: "gtest_runner" },

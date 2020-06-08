@@ -1,6 +1,6 @@
 {
     program: {
-        binary: "test/gtest_runner_integration_test",
+        binary: "bin/gtest_runner_integration_test",
     },
     children: [
         {

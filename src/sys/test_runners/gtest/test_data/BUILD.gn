@@ -1,30 +1,10 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-import("//build/package.gni")
 
-executable("gtest_runner_sample_tests") {
-  testonly = true
-  sources = [ "sample_tests.cc" ]
-
-  deps = [
-    "//garnet/public/lib/gtest",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-}
-
-executable("gtest_runner_no_tests") {
-  testonly = true
-  sources = [ "empty_test_file.cc" ]
-
-  deps = [
-    "//garnet/public/lib/gtest",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-}
+import("//src/sys/build/components.gni")
 
 executable("echo_gtest_client") {
-  output_name = "echo_gtest_client_example"
   testonly = true
   sources = [ "echo_test.cc" ]
 
@@ -39,6 +19,47 @@ executable("echo_gtest_client") {
   ]
 }
 
+fuchsia_component("echo_gtest_client_component") {
+  testonly = true
+  manifest = "meta/echo_gtest_client.cml"
+  component_name = "echo_gtest_client"
+  deps = [ ":echo_gtest_client" ]
+}
+
+executable("gtest_runner_no_tests") {
+  testonly = true
+  sources = [ "empty_test_file.cc" ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_component("empty_test_component") {
+  testonly = true
+  manifest = "meta/empty_test.cml"
+  component_name = "empty_test"
+  deps = [ ":gtest_runner_no_tests" ]
+}
+
+executable("gtest_runner_sample_tests") {
+  testonly = true
+  sources = [ "sample_tests.cc" ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_component("gtest_runner_sample_tests_component") {
+  testonly = true
+  manifest = "meta/sample_tests.cml"
+  component_name = "sample_tests"
+  deps = [ ":gtest_runner_sample_tests" ]
+}
+
 executable("huge_gtest_runner_example") {
   output_name = "huge_gtest_runner_example"
   testonly = true
@@ -47,74 +68,36 @@ executable("huge_gtest_runner_example") {
   deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
-group("test_data") {
+fuchsia_component("huge_gtest_component") {
   testonly = true
-  public_deps = [
-    ":echo_gtest_client",
-    ":gtest-runner-example-tests",
-    ":gtest_runner_no_tests",
-    ":gtest_runner_sample_tests",
-    ":huge_gtest_runner_example",
-  ]
+  manifest = "meta/huge_gtest.cml"
+  component_name = "huge_gtest"
+  deps = [ ":huge_gtest_runner_example" ]
 }
 
-package("gtest-runner-example-tests") {
+group("all_bins") {
   testonly = true
   deps = [
     ":echo_gtest_client",
     ":gtest_runner_no_tests",
     ":gtest_runner_sample_tests",
     ":huge_gtest_runner_example",
-    "//examples/components/routing/echo_server",
   ]
+}
 
-  binaries = [
-    {
-      name = "gtest_runner_sample_tests"
-      dest = "sample_tests"
-    },
-    {
-      name = "gtest_runner_no_tests"
-      dest = "empty_test"
-    },
-    {
-      name = "echo_server"
-    },
-    {
-      name = "echo_gtest_client_example"
-      dest = "echo_gtest_client"
-    },
-    {
-      name = "huge_gtest_runner_example"
-      dest = "huge_gtest"
-    },
-  ]
+fuchsia_component("echo_test_realm") {
+  testonly = true
+  manifest = "meta/echo_test_realm.cml"
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/sample_tests.cml")
-      dest = "sample_tests.cm"
-    },
-    {
-      path = rebase_path("meta/empty_test.cml")
-      dest = "empty_test.cm"
-    },
-    {
-      path = "meta/echo_test_realm.cml"
-      dest = "echo_test_realm.cm"
-    },
-    {
-      path = "meta/echo_gtest_client.cml"
-      dest = "echo_gtest_client.cm"
-    },
-    {
-      path = rebase_path(
-              "//examples/components/routing/echo_server/meta/echo_server.cml")
-      dest = "echo_server.cm"
-    },
-    {
-      path = "meta/huge_gtest.cml"
-      dest = "huge_gtest.cm"
-    },
+fuchsia_package("gtest-runner-example-tests") {
+  testonly = true
+  deps = [
+    ":echo_gtest_client_component",
+    ":echo_test_realm",
+    ":empty_test_component",
+    ":gtest_runner_sample_tests_component",
+    ":huge_gtest_component",
+    "//examples/components/routing/echo_server:echo_server_component",
   ]
 }

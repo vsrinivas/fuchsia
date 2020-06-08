@@ -1,6 +1,6 @@
 {
     program: {
-        binary: "bin/sample_tests",
+        binary: "bin/gtest_runner_sample_tests",
     },
     use: [
         { runner: "gtest_runner" },
