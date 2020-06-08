@@ -40,7 +40,10 @@ rustc_binary("bin") {
 fuchsia_component("service") {
   component_name = "timekeeper"
   manifest = "meta/service.cmx"
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    ":timekeeper_config",
+  ]
 }
 
 fuchsia_package("timekeeper") {
