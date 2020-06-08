@@ -35,6 +35,9 @@ test_package("last-reboot-tests") {
       name = "reboot_reason_unittest"
     },
     {
+      name = "reboot_watcher_unittest"
+    },
+    {
       name = "reporter_unittest"
     },
   ]
@@ -44,6 +47,7 @@ test_package("last-reboot-tests") {
     ":main_service_unittest",
     ":reboot_log_unittest",
     ":reboot_reason_unittest",
+    ":reboot_watcher_unittest",
     ":reporter_unittest",
   ]
 }
@@ -113,6 +117,26 @@ executable("reboot_reason_unittest") {
     "//sdk/fidl/fuchsia.feedback",
     "//src/developer/feedback/last_reboot:reboot_reason",
     "//src/developer/feedback/utils/cobalt",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("reboot_watcher_unittest") {
+  testonly = true
+
+  sources = [ "reboot_watcher_unittest.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//src/developer/feedback/last_reboot:reboot_watcher",
+    "//src/developer/feedback/testing:cobalt_test_fixture",
+    "//src/developer/feedback/testing:gpretty_printers",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:cobalt",
+    "//src/lib/files",
+    "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

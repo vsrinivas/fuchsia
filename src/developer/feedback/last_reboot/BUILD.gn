@@ -113,6 +113,23 @@ source_set("reboot_reason") {
   visibility = [ "//src/developer/feedback/last_reboot/*" ]
 }
 
+source_set("reboot_watcher") {
+  sources = [
+    "reboot_watcher.cc",
+    "reboot_watcher.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//src/developer/feedback/utils/cobalt",
+  ]
+
+  deps = [
+    "//src/lib/files",
+    "//src/lib/fxl",
+  ]
+}
+
 source_set("reporter") {
   sources = [
     "reporter.cc",

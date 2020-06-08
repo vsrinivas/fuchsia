@@ -15,6 +15,7 @@ cobalt::EventType DetermineCobaltEventType(uint32_t metric_id, uint32_t event_co
   // This swtich statement needs to be updated if any new count or time elapsed metrics are added.
   // We need to use a single event code of each event type as a canary to get the metric id.
   switch (metric_id) {
+    case MetricIDForEventCode(cobalt::RebootReasonWriteResult::kSuccess):
     case MetricIDForEventCode(cobalt::LastRebootReason::kUnknown):
     case MetricIDForEventCode(cobalt::BugreportGenerationFlow::kUnknown):
       return cobalt::EventType::kTimeElapsed;

@@ -89,6 +89,15 @@ enum class LastRebootReason {
       cobalt_registry::LastRebootUptimeMetricDimensionReason::SoftwareWatchdogTimeout,
 };
 
+enum class RebootReasonWriteResult {
+  kSuccess = cobalt_registry::RebootReasonPersistDurationUsecsMetricDimensionWriteResult::Success,
+  kFailure = cobalt_registry::RebootReasonPersistDurationUsecsMetricDimensionWriteResult::Failure,
+};
+
+inline constexpr uint32_t MetricIDForEventCode(const RebootReasonWriteResult write_result) {
+  return cobalt_registry::kRebootReasonPersistDurationUsecsMetricId;
+}
+
 inline constexpr uint32_t MetricIDForEventCode(const LastRebootReason bug_report) {
   return cobalt_registry::kLastRebootUptimeMetricId;
 }
@@ -153,6 +162,10 @@ enum class EventType {
   kTimeElapsed,
   kMultidimensionalOccurrence,
 };
+
+inline constexpr EventType EventTypeForEventCode(const RebootReasonWriteResult write_result) {
+  return EventType::kTimeElapsed;
+}
 
 inline constexpr EventType EventTypeForEventCode(const LastRebootReason status) {
   return EventType::kTimeElapsed;
