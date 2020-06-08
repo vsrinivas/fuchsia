@@ -11,6 +11,7 @@ use crate::message::base::MessageEvent;
 use crate::switchboard::base::{SettingRequest, SwitchboardError};
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
+use futures::StreamExt;
 
 blueprint_definition!(
     crate::agent::base::Descriptor::Component("restore_agent"),
@@ -25,7 +26,7 @@ impl RestoreAgent {
         let mut agent = RestoreAgent;
 
         fasync::spawn(async move {
-            while let Ok(event) = context.receptor.watch().await {
+            while let Some(event) = context.receptor.next().await {
                 if let MessageEvent::Message(Payload::Invocation(invocation), client) = event {
                     client.reply(Payload::Complete(agent.handle(invocation).await)).send().ack();
                 }

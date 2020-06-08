@@ -12,6 +12,7 @@ use fuchsia_inspect as inspect;
 use fuchsia_inspect::Property;
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
+use futures::StreamExt;
 
 use crate::clock;
 use crate::internal::handler::message::{Client, Factory, Messenger, Signature};
@@ -60,7 +61,7 @@ impl InspectBroker {
         }));
 
         fasync::spawn(async move {
-            while let Ok(message_event) = receptor.watch().await {
+            while let Some(message_event) = receptor.next().await {
                 if let MessageEvent::Message(payload, client) = message_event {
                     match payload {
                         // When we see a Restore message, we know a given setting is starting up, so
@@ -243,7 +244,7 @@ mod tests {
                 hour_cycle: None,
             })))))
             .send()
-            .watch()
+            .next()
             .await
             .expect("failed to reply to get request");
 
@@ -301,7 +302,7 @@ mod tests {
                 hour_cycle: None,
             })))))
             .send()
-            .watch()
+            .next()
             .await
             .expect("failed to reply to get request");
 

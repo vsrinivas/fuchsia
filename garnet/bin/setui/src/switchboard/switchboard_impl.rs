@@ -222,7 +222,7 @@ impl SwitchboardImpl {
         {
             let switchboard_clone = switchboard.clone();
             fasync::spawn(async move {
-                while let Ok(message_event) = receptor.watch().await {
+                while let Some(message_event) = receptor.next().await {
                     // Wait for response
                     if let MessageEvent::Message(core::Payload::Event(event), _) = message_event {
                         switchboard_clone.lock().await.process_event(event);
@@ -348,7 +348,7 @@ impl Switchboard for SwitchboardImpl {
                 )
                 .send();
 
-            while let Ok(message_event) = receptor.watch().await {
+            while let Some(message_event) = receptor.next().await {
                 // Wait for response
                 if let MessageEvent::Message(
                     core::Payload::Event(SettingEvent::Response(_id, response)),
@@ -425,7 +425,7 @@ mod tests {
         setting_type: SettingType,
         setting_data: SettingActionData,
     ) -> (core::message::Client, SettingAction) {
-        while let Ok(event) = receptor.watch().await {
+        while let Some(event) = receptor.next().await {
             match event {
                 MessageEvent::Message(core::Payload::Action(action), client) => {
                     assert_eq!(setting_type, action.setting_type);

@@ -36,7 +36,7 @@ async fn verify_payload<P: Payload + PartialEq + 'static, A: Address + PartialEq
         Box<dyn Fn(&mut MessageClient<P, A>) -> BoxFuture<'_, ()> + Send + Sync + 'static>,
     >,
 ) {
-    while let Ok(message_event) = receptor.watch().await {
+    while let Some(message_event) = receptor.next().await {
         if let MessageEvent::Message(incoming_payload, mut client) = message_event {
             assert_eq!(payload, incoming_payload);
             if let Some(func) = client_fn {
@@ -54,7 +54,7 @@ async fn verify_result<P: Payload + PartialEq + 'static, A: Address + PartialEq 
     expected: DeliveryStatus,
     receptor: &mut Receptor<P, A>,
 ) {
-    while let Ok(message_event) = receptor.watch().await {
+    while let Some(message_event) = receptor.next().await {
         if let MessageEvent::Status(status) = message_event {
             if status == expected {
                 return;
@@ -475,7 +475,7 @@ async fn test_message_timestamp() {
     messenger.message(ORIGINAL, Audience::Broadcast).send().ack();
     let post_send_time = now();
 
-    while let Ok(message_event) = receptor.watch().await {
+    while let Some(message_event) = receptor.next().await {
         if let MessageEvent::Message(incoming_payload, client) = message_event {
             assert_eq!(ORIGINAL, incoming_payload);
             let current_time = now();
@@ -511,7 +511,7 @@ async fn test_bind_to_recipient() {
             .send()
             .ack();
 
-        if let Ok(MessageEvent::Message(payload, mut client)) = receptor.watch().await {
+        if let Some(MessageEvent::Message(payload, mut client)) = receptor.next().await {
             assert_eq!(payload, ORIGINAL);
             client
                 .bind_to_recipient(

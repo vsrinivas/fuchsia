@@ -487,7 +487,7 @@ async fn test_unimplemented_error() {
             )
             .send();
 
-        while let Ok(message_event) = receptor.watch().await {
+        while let Some(message_event) = receptor.next().await {
             if let MessageEvent::Message(incoming_payload, _) = message_event {
                 if let Payload::Result(Err(SwitchboardError::UnimplementedRequest {
                     setting_type: incoming_type,

@@ -14,6 +14,7 @@ use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
+use futures::StreamExt;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use thiserror::Error;
@@ -122,7 +123,7 @@ impl ClientImpl {
 
         // Process MessageHub requests
         fasync::spawn(async move {
-            while let Ok(event) = context.receptor.watch().await {
+            while let Some(event) = context.receptor.next().await {
                 let setting_type = client.lock().await.setting_type;
                 match event {
                     MessageEvent::Message(

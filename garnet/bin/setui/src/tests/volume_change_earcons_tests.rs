@@ -233,8 +233,8 @@ async fn verify_earcon(receiver: &mut SoundEventReceiver, id: u32) {
 }
 
 async fn verify_event(receptor: &mut event::message::Receptor, event: event::Event) {
-    if let Ok(MessageEvent::Message(event::Payload::Event(received_event), ..)) =
-        receptor.watch().await
+    if let Some(MessageEvent::Message(event::Payload::Event(received_event), ..)) =
+        receptor.next().await
     {
         assert_eq!(received_event, event);
     }

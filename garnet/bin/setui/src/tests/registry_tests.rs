@@ -77,7 +77,7 @@ impl SettingHandler {
 
         let handler_clone = handler.clone();
         fasync::spawn(async move {
-            while let Ok(event) = receptor.watch().await {
+            while let Some(event) = receptor.next().await {
                 match event {
                     MessageEvent::Message(
                         handler::Payload::Command(Command::HandleRequest(request)),
@@ -193,7 +193,7 @@ async fn test_notify() {
 
         handler.lock().await.notify();
 
-        while let Ok(event) = receptor.watch().await {
+        while let Some(event) = receptor.next().await {
             if let MessageEvent::Message(Payload::Event(SettingEvent::Changed(changed_type)), _) =
                 event
             {
@@ -274,7 +274,7 @@ async fn test_request() {
         )
         .send();
 
-    while let Ok(event) = receptor.watch().await {
+    while let Some(event) = receptor.next().await {
         if let MessageEvent::Message(
             Payload::Event(SettingEvent::Response(response_id, response)),
             _,
@@ -413,7 +413,7 @@ async fn test_regeneration() {
 }
 
 async fn get_response(mut receptor: SwitchboardReceptor) -> Option<(u64, SettingResponseResult)> {
-    while let Ok(event) = receptor.watch().await {
+    while let Some(event) = receptor.next().await {
         if let MessageEvent::Message(
             Payload::Event(SettingEvent::Response(response_id, response)),
             _,

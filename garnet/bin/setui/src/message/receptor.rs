@@ -7,10 +7,10 @@ use crate::message::base::{Address, DeliveryStatus, MessageEvent, Payload};
 use crate::message::message_client::MessageClient;
 use anyhow::{format_err, Error};
 use futures::channel::mpsc::UnboundedReceiver;
+use futures::task::{Context, Poll};
+use futures::Stream;
 use futures::StreamExt;
-
-use futures::lock::Mutex;
-use std::sync::Arc;
+use std::pin::Pin;
 
 type EventReceiver<P, A> = UnboundedReceiver<MessageEvent<P, A>>;
 
@@ -22,28 +22,28 @@ type EventReceiver<P, A> = UnboundedReceiver<MessageEvent<P, A>>;
 /// Clients interact with the Receptor similar to a Receiver, waiting on a new
 /// MessageEvent via the watch method.
 pub struct Receptor<P: Payload + 'static, A: Address + 'static> {
-    event_rx: Arc<Mutex<EventReceiver<P, A>>>,
+    event_rx: EventReceiver<P, A>,
     // Fuse to be triggered when all receptors go out of scope.
     _fuse: ActionFuseHandle,
 }
 
-impl<P: Payload + 'static, A: Address + 'static> Receptor<P, A> {
-    pub(super) fn new(event_rx: EventReceiver<P, A>, fuse: ActionFuseHandle) -> Receptor<P, A> {
-        Receptor { event_rx: Arc::new(Mutex::new(event_rx)), _fuse: fuse }
+impl<P: Payload + 'static, A: Address + 'static> Stream for Receptor<P, A> {
+    type Item = MessageEvent<P, A>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.event_rx.poll_next_unpin(cx)
     }
+}
 
-    pub async fn watch(&mut self) -> Result<MessageEvent<P, A>, Error> {
-        if let Some(event) = self.event_rx.lock().await.next().await {
-            return Ok(event);
-        }
-
-        return Err(format_err!("could not retrieve event"));
+impl<P: Payload + 'static, A: Address + 'static> Receptor<P, A> {
+    pub(super) fn new(event_rx: EventReceiver<P, A>, fuse: ActionFuseHandle) -> Self {
+        Self { event_rx, _fuse: fuse }
     }
 
     /// Returns the next pending payload, returning an Error if the origin
     /// message (if any) was not deliverable or another error was encountered.
     pub async fn next_payload(&mut self) -> Result<(P, MessageClient<P, A>), Error> {
-        while let Ok(event) = self.watch().await {
+        while let Some(event) = self.next().await {
             match event {
                 MessageEvent::Message(payload, client) => {
                     return Ok((payload, client));

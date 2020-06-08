@@ -13,6 +13,7 @@ use crate::EnvironmentBuilder;
 use fuchsia_async as fasync;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
+use futures::StreamExt;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_event_test_environment";
@@ -85,7 +86,7 @@ async fn test_agent_event_propagation() {
     publisher.send_event(sent_event.clone());
 
     let received_event =
-        receptor.watch().await.expect("First message should have been the broadcast");
+        receptor.next().await.expect("First message should have been the broadcast");
     match received_event {
         MessageEvent::Message(event::Payload::Event(broadcasted_event), _) => {
             assert_eq!(broadcasted_event, sent_event);

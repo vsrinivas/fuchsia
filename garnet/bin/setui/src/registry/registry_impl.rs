@@ -123,7 +123,7 @@ impl RegistryImpl {
         {
             let registry = registry.clone();
             fasync::spawn(async move {
-                while let Ok(event) = controller_receptor.watch().await {
+                while let Some(event) = controller_receptor.next().await {
                     match event {
                         MessageEvent::Message(handler::Payload::Changed(setting), _) => {
                             registry.lock().await.notify(setting);
@@ -138,7 +138,7 @@ impl RegistryImpl {
         {
             let registry_clone = registry.clone();
             fasync::spawn(async move {
-                while let Ok(event) = receptor.watch().await {
+                while let Some(event) = receptor.next().await {
                     match event {
                         MessageEvent::Message(core::Payload::Action(action), client) => {
                             registry_clone.lock().await.process_action(action, client).await;
@@ -316,7 +316,7 @@ impl RegistryImpl {
 
                 let active_controller_sender_clone = self.active_controller_sender.clone();
                 fasync::spawn(async move {
-                    while let Ok(message_event) = receptor.watch().await {
+                    while let Some(message_event) = receptor.next().await {
                         match message_event {
                             MessageEvent::Message(handler::Payload::Result(result), _) => {
                                 // Mark the request as having been handled.
@@ -421,8 +421,8 @@ impl RegistryImpl {
             .send();
 
         // Wait for the teardown phase to be over before continuing.
-        if let Ok(MessageEvent::Status(DeliveryStatus::Received)) =
-            controller_receptor.watch().await
+        if let Some(MessageEvent::Status(DeliveryStatus::Received)) =
+            controller_receptor.next().await
         {
             if !self.active_controllers.contains_key(&setting_type) {
                 fx_log_err!(

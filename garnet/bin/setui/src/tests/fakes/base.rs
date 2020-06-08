@@ -12,6 +12,7 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
+use futures::StreamExt;
 use std::sync::Arc;
 
 /// Trait for providing a service.
@@ -35,7 +36,7 @@ pub fn create_setting_handler<T: DeviceStorageFactory + Send + Sync + 'static>(
     return Box::new(move |mut context| {
         let handler = shared_handler.clone();
         fasync::spawn(async move {
-            while let Ok(event) = context.receptor.watch().await {
+            while let Some(event) = context.receptor.next().await {
                 match event {
                     MessageEvent::Message(
                         Payload::Command(Command::HandleRequest(request)),

@@ -11,6 +11,7 @@ use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::SettingType;
 use async_trait::async_trait;
 use futures::lock::Mutex;
+use futures::StreamExt;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -68,8 +69,8 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
                     .send();
 
                 // Wait for the startup phase to be over before continuing.
-                if let Ok(MessageEvent::Status(DeliveryStatus::Received)) =
-                    controller_receptor.watch().await
+                if let Some(MessageEvent::Status(DeliveryStatus::Received)) =
+                    controller_receptor.next().await
                 {
                     // Startup phase is complete and had no errors. The registry can assume it
                     // has an active controller with create() and startup() already run on it
