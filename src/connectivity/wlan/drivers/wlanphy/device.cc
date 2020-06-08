@@ -10,9 +10,10 @@
 #include <net/ethernet.h>
 #include <zircon/status.h>
 
+#include <iterator>
+
 #include <ddk/device.h>
 #include <ddk/hw/wlan/wlaninfo.h>
-#include <wlan/common/arraysize.h>
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/element.h>
@@ -189,7 +190,7 @@ static void ConvertPhyChannels(wlan_device::ChannelList* Channels,
   // channels
   Channels->channels.resize(0);
   size_t channel_ndx = 0;
-  while ((channel_ndx < arraysize(phy_channels->channels)) &&
+  while ((channel_ndx < std::size(phy_channels->channels)) &&
          (phy_channels->channels[channel_ndx] > 0)) {
     Channels->channels.push_back(phy_channels->channels[channel_ndx]);
     channel_ndx++;
@@ -223,7 +224,7 @@ void ConvertPhyBandInfo(::std::vector<wlan_device::BandInfo>* BandInfo, uint8_t 
     // rates
     out_band.rates.resize(0);
     size_t rate_ndx = 0;
-    while ((rate_ndx < arraysize(this_phy_band.rates)) && (this_phy_band.rates[rate_ndx] > 0)) {
+    while ((rate_ndx < std::size(this_phy_band.rates)) && (this_phy_band.rates[rate_ndx] > 0)) {
       out_band.rates.push_back(this_phy_band.rates[rate_ndx]);
       rate_ndx++;
     }
