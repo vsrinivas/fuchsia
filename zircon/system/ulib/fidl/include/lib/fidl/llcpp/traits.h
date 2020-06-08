@@ -177,18 +177,6 @@ struct IsTableBuilder<
 
 // Code-gen will explicitly conform the generated FIDL structures to IsFidlType.
 
-template <typename FidlType>
-struct NeedsEncodeDecode {
-  // A FIDL type with no coding table definition does not need any encoding/decoding,
-  // as the in-memory representation of the type is identical to its on-wire representation.
-  // Sometimes, GCC knows that the value can never equal nullptr and it may complain
-  // that the comparison is always true. Just suppress the warning.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Waddress"
-  static constexpr bool value = FidlType::Type != nullptr;
-#pragma GCC diagnostic pop
-};
-
 // The direction where a message is going.
 // This has implications on the allocated buffer and handle size.
 enum class MessageDirection {

@@ -35,11 +35,12 @@ struct FromFailureMixin {
 }  // namespace internal
 
 // The request/response type of any FIDL method with zero in/out parameters.
+extern "C" const fidl_type_t _llcpp_coding_AnyZeroArgMessageTable;
 struct AnyZeroArgMessage final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
 
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = sizeof(fidl_message_header_t);
   static constexpr uint32_t MaxOutOfLine = 0;
@@ -123,21 +124,12 @@ struct LinearizeResult final : internal::FromFailureMixin<LinearizeResult<FidlTy
 // If the message is invalid, discards the buffer and returns an error.
 template <typename FidlType>
 DecodeResult<FidlType> Decode(EncodedMessage<FidlType> msg) {
+  static_assert(IsFidlType<FidlType>::value, "FIDL type required");
+  static_assert(FidlType::Type != nullptr, "FidlType should have a coding table");
   DecodeResult<FidlType> result;
   // Perform in-place decoding
-  if (NeedsEncodeDecode<FidlType>::value) {
-    result.status = fidl_decode(FidlType::Type, msg.bytes().data(), msg.bytes().actual(),
-                                msg.handles().data(), msg.handles().actual(), &result.error);
-  } else {
-    // Boring type does not need decoding
-    if (msg.bytes().actual() != FidlType::PrimarySize) {
-      result.error = "invalid size decoding";
-    } else if (msg.handles().actual() != 0) {
-      result.error = "invalid handle count decoding";
-    } else {
-      result.status = ZX_OK;
-    }
-  }
+  result.status = fidl_decode(FidlType::Type, msg.bytes().data(), msg.bytes().actual(),
+                              msg.handles().data(), msg.handles().actual(), &result.error);
   // Clear out |msg| independent of success or failure
   BytePart bytes = msg.ReleaseBytesAndHandles();
   if (result.status == ZX_OK) {
@@ -152,27 +144,15 @@ DecodeResult<FidlType> Decode(EncodedMessage<FidlType> msg) {
 // The message's contents are always consumed by this operation, even in case of an error.
 template <typename FidlType>
 EncodeResult<FidlType> Encode(DecodedMessage<FidlType> msg) {
+  static_assert(IsFidlType<FidlType>::value, "FIDL type required");
+  static_assert(FidlType::Type != nullptr, "FidlType should have a coding table");
   EncodeResult<FidlType> result;
   result.message.bytes() = std::move(msg.bytes_);
-  if (NeedsEncodeDecode<FidlType>::value) {
-    uint32_t actual_handles = 0;
-    result.status =
-        fidl_encode(FidlType::Type, result.message.bytes().data(), result.message.bytes().actual(),
-                    result.message.handles().data(), result.message.handles().capacity(),
-                    &actual_handles, &result.error);
-    result.message.handles().set_actual(actual_handles);
-  } else {
-    if (result.message.bytes().actual() != FidlAlign(FidlType::PrimarySize)) {
-      result.error = "invalid size encoding";
-      result.status = ZX_ERR_INVALID_ARGS;
-    } else {
-      memset(result.message.bytes().data() + FidlType::PrimarySize, 0,
-             result.message.bytes().actual() - FidlType::PrimarySize);
-      // Boring type does not need encoding
-      result.message.handles().set_actual(0);
-      result.status = ZX_OK;
-    }
-  }
+  uint32_t actual_handles = 0;
+  result.status = fidl_encode(FidlType::Type, result.message.bytes().data(),
+                              result.message.bytes().actual(), result.message.handles().data(),
+                              result.message.handles().capacity(), &actual_handles, &result.error);
+  result.message.handles().set_actual(actual_handles);
   return result;
 }
 
