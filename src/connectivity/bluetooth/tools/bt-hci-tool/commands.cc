@@ -27,7 +27,7 @@ namespace {
     const CommandData* cmd_data, std::unique_ptr<::bt::hci::CommandPacket> packet,
     ::bt::hci::CommandChannel::CommandCallback cb, fit::closure complete_cb) {
   return cmd_data->cmd_channel()->SendCommand(
-      std::move(packet), cmd_data->dispatcher(),
+      std::move(packet),
       [complete_cb = std::move(complete_cb), cb = std::move(cb)](
           ::bt::hci::CommandChannel::TransactionId id, const ::bt::hci::EventPacket& event) {
         if (event.event_code() == ::bt::hci::kCommandStatusEventCode) {
@@ -593,7 +593,7 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
     return ::bt::hci::CommandChannel::EventCallbackResult::kContinue;
   };
   auto event_handler_id = cmd_data->cmd_channel()->AddLEMetaEventHandler(
-      ::bt::hci::kLEAdvertisingReportSubeventCode, le_adv_report_cb, cmd_data->dispatcher());
+      ::bt::hci::kLEAdvertisingReportSubeventCode, le_adv_report_cb);
 
   fit::closure cleanup_cb = [complete_cb = complete_cb.share(), event_handler_id,
                              cmd_channel = cmd_data->cmd_channel()] {
@@ -734,7 +734,7 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   };
 
   event_handler_ids->push_back(cmd_data->cmd_channel()->AddEventHandler(
-      ::bt::hci::kInquiryResultEventCode, std::move(inquiry_result_cb), cmd_data->dispatcher()));
+      ::bt::hci::kInquiryResultEventCode, std::move(inquiry_result_cb)));
 
   // The callback invoked for an Inquiry Complete response.
   auto inquiry_complete_cb = [cleanup_cb =
@@ -746,8 +746,7 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   };
 
   event_handler_ids->push_back(cmd_data->cmd_channel()->AddEventHandler(
-      ::bt::hci::kInquiryCompleteEventCode, std::move(inquiry_complete_cb),
-      cmd_data->dispatcher()));
+      ::bt::hci::kInquiryCompleteEventCode, std::move(inquiry_complete_cb)));
 
   // Delayed task that stops scanning.
   auto inquiry_cancel_cb = [cleanup_cb = cleanup_cb.share(), cmd_data]() mutable {
@@ -772,8 +771,8 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   // Inquiry sends a Command Status, and then we wait for the Inquiry Complete,
   // or the timer to run out, for a long time. Count this as "complete" when the
   // Status comes in.
-  auto id = cmd_data->cmd_channel()->SendCommand(std::move(packet), cmd_data->dispatcher(),
-                                                 std::move(cb), ::bt::hci::kCommandStatusEventCode);
+  auto id = cmd_data->cmd_channel()->SendCommand(std::move(packet), std::move(cb),
+                                                 ::bt::hci::kCommandStatusEventCode);
   std::cout << "  Sent HCI_Inquiry (id=" << id << ")" << std::endl;
 
   return true;
