@@ -67,7 +67,7 @@ fuchsia_component("my-component") {
 }
 
 fuchsia_package("my-package") {
-  components = [ ":my-component" ]
+  deps = [ ":my-component" ]
 }
 ```
 
@@ -134,7 +134,7 @@ paths.
    }
 
    fuchsia_package("my-package") {
-     components = [ ":my-component" ]
+     deps = [ ":my-component" ]
    }
    ```
 
@@ -154,7 +154,7 @@ paths.
    }
 
    fuchsia_package("my-package") {
-     components = [ ":my-component" ]
+     deps = [ ":my-component" ]
    }
    ```
 
@@ -174,7 +174,7 @@ paths.
    }
 
    fuchsia_package("my-package") {
-     components = [ ":my-component" ]
+     deps = [ ":my-component" ]
    }
    ```
 
@@ -228,7 +228,7 @@ fuchsia_component("my-other-component-under-test") {
 
 fuchsia_test_package("my-integration-test") {
   test_components = [ ":my-test-component" ]
-  components = [ ":my-other-component-under-test" ]
+  deps = [ ":my-other-component-under-test" ]
   environments = [ vim2_env ]
 }
 
@@ -694,7 +694,7 @@ fuchsia_component("service") {
 }
 
 fuchsia_package("timekeeper") {
-  components = [ ":service" ]
+  deps = [ ":service" ]
 }
 
 resource("testdata") {
