@@ -233,10 +233,7 @@ test_package("vmm_tests") {
   tests = [
     {
       name = "device_tests"
-      environments = [
-        nuc_env,
-        vim2_env,
-      ]
+      environments = [ nuc_env ]
     },
     {
       name = "device_unittests"

@@ -506,8 +506,6 @@ test_package("termina_integration_tests") {
   tests = [
     {
       name = "termina_integration_tests"
-
-      # TODO(37320): The tests are temporarily disabled for vim2_env due to an unresolved bug.
       environments = [ nuc_env ]
     },
   ]

@@ -79,18 +79,6 @@ _all_named_envs += [
   },
 ]
 
-vim2_env = {
-  dimensions = {
-    device_type = "Khadas Vim2 Max"
-  }
-}
-_all_named_envs += [
-  {
-    name = "vim2"
-    env = vim2_env
-  },
-]
-
 linux_env = {
   dimensions = {
     os = "Linux"
@@ -100,7 +88,7 @@ linux_env = {
 _all_named_envs += [
   {
     name = "linux"
-    env = vim2_env
+    env = linux_env
   },
 ]
 

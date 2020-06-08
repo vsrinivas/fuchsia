@@ -62,7 +62,6 @@ intel_gpu_envs = [ nuc_env ]
 # Target environments with an ARM Mali GPU.
 arm_gpu_envs = [
   astro_env,
-  vim2_env,
   sherlock_env,
 ]
 

@@ -76,7 +76,6 @@ package("use_h264_decoder_test") {
 
       # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
       environments = [
-        vim2_env,
         sherlock_env,
         emu_env,
       ]
@@ -113,10 +112,7 @@ package("use-h264-multi-decoder-test") {
 
       # Only works on amlogic hardware.
       # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
-      environments = [
-        vim2_env,
-        sherlock_env,
-      ]
+      environments = [ sherlock_env ]
     },
   ]
 
@@ -154,9 +150,7 @@ package("use_h264_decoder_stream_switching_test") {
       #
       # Disable on qemu because the test flakes so far. TODO(fxb/49932) Re-enable in emu_env.
       environments = [
-        vim2_env,
         sherlock_env,
-
         # emu_env,
         # astro_env,
       ]
@@ -193,10 +187,7 @@ package("use-h264-multi-decoder-stream-switching-test") {
 
       # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable in
       # astro_env.
-      environments = [
-        vim2_env,
-        sherlock_env,
-      ]
+      environments = [ sherlock_env ]
     },
   ]
 
@@ -319,7 +310,6 @@ package("h264_decoder_fuzzer_test") {
 
       # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
       environments = [
-        vim2_env,
         sherlock_env,
         emu_env,
       ]
@@ -329,10 +319,7 @@ package("h264_decoder_fuzzer_test") {
       name = "h264_multi_decoder_fuzzer_test"
 
       # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
-      environments = [
-        vim2_env,
-        sherlock_env,
-      ]
+      environments = [ sherlock_env ]
     },
   ]
 
@@ -363,10 +350,7 @@ package("vp9_decoder_fuzzer_test") {
       name = "vp9_decoder_fuzzer_test"
 
       # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
-      environments = [
-        vim2_env,
-        sherlock_env,
-      ]
+      environments = [ sherlock_env ]
     },
   ]
 
@@ -431,7 +415,6 @@ package("use_vp9_decoder_test") {
       environments = [
         astro_env,
         sherlock_env,
-        vim2_env,
       ]
     },
   ]
@@ -464,10 +447,7 @@ package("use-vp9-decoder-stream-switching-test") {
       name = "use_vp9_decoder_stream_switching_test"
 
       # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
-      environments = [
-        vim2_env,
-        sherlock_env,
-      ]
+      environments = [ sherlock_env ]
     },
   ]
 
@@ -500,10 +480,7 @@ package("use_vp9_decoder_skip_first_frame_test") {
       name = "use_vp9_decoder_skip_first_frame_test"
 
       # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
-      environments = [
-        vim2_env,
-        sherlock_env,
-      ]
+      environments = [ sherlock_env ]
     },
   ]
 
@@ -540,10 +517,7 @@ package("use_vp9_decoder_24_output_frames_test") {
       #
       # TODO(fxb/41735): Depending on how we re-enable, maybe we can also enable
       # this one.
-      environments = [
-        vim2_env,
-        sherlock_env,
-      ]
+      environments = [ sherlock_env ]
     },
   ]
 
@@ -642,10 +616,7 @@ template("vp9_file_decoder_conformance_test") {
         # This should pass when run on VIM2 or astro, and will fail in any env
         # that lacks VP9 decode.
         # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
-        environments = [
-          vim2_env,
-          sherlock_env,
-        ]
+        environments = [ sherlock_env ]
       },
     ]
 
