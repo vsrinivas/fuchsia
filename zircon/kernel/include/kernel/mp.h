@@ -104,7 +104,7 @@ struct mp_state {
   SpinLock ipi_task_lock;
   // list of outstanding tasks for CPUs to execute.  Should only be
   // accessed with the ipi_task_lock held
-  struct list_node ipi_task_list[SMP_MAX_CPUS];
+  struct list_node ipi_task_list[SMP_MAX_CPUS] TA_GUARDED(ipi_task_lock);
 
   // lock for serializing CPU hotplug/unplug operations
   DECLARE_LOCK(mp_state, Mutex) hotplug_lock;
