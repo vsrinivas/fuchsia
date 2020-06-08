@@ -274,6 +274,22 @@ TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
   ASSERT_TRUE(connfd = fbl::unique_fd(accept(serverfd.get(), nullptr, nullptr))) << strerror(errno);
   ASSERT_EQ(close(serverfd.release()), 0) << strerror(errno);
 
+  // Clone the file descriptor a bunch of times to increase the refcount.
+  std::vector<fbl::unique_fd> connfds;
+  for (int i = 0; i < 10; i++) {
+    fbl::unique_fd clonefd;
+    {
+      zx_status_t status;
+      zx::channel channel;
+      ASSERT_EQ(status = fdio_fd_clone(connfd.get(), channel.reset_and_get_address()), ZX_OK)
+          << zx_status_get_string(status);
+
+      ASSERT_EQ(status = fdio_fd_create(channel.release(), clonefd.reset_and_get_address()), ZX_OK)
+          << zx_status_get_string(status);
+    }
+    connfds.push_back(std::move(clonefd));
+  }
+
   // Fill up the rcvbuf (client-side).
   fill_stream_send_buf(connfd.get(), clientfd.get());
 
@@ -281,32 +297,42 @@ TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
   // read by the client should trigger a TCP RST.
   ASSERT_EQ(close(clientfd.release()), 0) << strerror(errno);
 
-  struct pollfd pfd = {};
-  pfd.fd = connfd.get();
-  pfd.events = POLLOUT;
-  int n = poll(&pfd, 1, kTimeout);
+  std::vector<pollfd> pfd;
+  for (auto const& fd : connfds) {
+    pfd.push_back({
+        .fd = fd.get(),
+        .events = POLLOUT,
+    });
+  }
+  int n = poll(pfd.data(), pfd.size(), kTimeout);
   ASSERT_GE(n, 0) << strerror(errno);
-  ASSERT_EQ(n, 1);
-  ASSERT_EQ(pfd.revents, POLLOUT | POLLERR | POLLHUP);
+  ASSERT_EQ(static_cast<size_t>(n), pfd.size());
+  for (auto const& pfd : pfd) {
+    ASSERT_EQ(pfd.revents, POLLOUT | POLLERR | POLLHUP);
+  }
 
-  // Now that the socket's endpoint has been closed, clone the socket (twice
-  // to increase the endpoint's reference count to at least 1), then close all
-  // copies of the socket.
-  zx_status_t status;
-  zx::channel channel1, channel2;
-  ASSERT_EQ(status = fdio_fd_clone(connfd.get(), channel1.reset_and_get_address()), ZX_OK)
-      << zx_status_get_string(status);
-  ASSERT_EQ(status = fdio_fd_clone(connfd.get(), channel2.reset_and_get_address()), ZX_OK)
-      << zx_status_get_string(status);
+  // Now that the socket's endpoint has been closed, clone the socket again to increase the
+  // endpoint's reference count, then close all copies of the socket.
+  std::vector<::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient> clients;
+  for (int i = 0; i < 10; i++) {
+    zx::channel channel;
+    zx_status_t status;
+    ASSERT_EQ(status = fdio_fd_clone(connfd.get(), channel.reset_and_get_address()), ZX_OK)
+        << zx_status_get_string(status);
+    clients.emplace_back(std::move(channel));
+  }
 
-  for (auto channel : {&channel1, &channel2}) {
-    ::llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client(std::move(*channel));
+  for (auto& client : clients) {
     auto response = client.Close();
+    zx_status_t status;
     EXPECT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
     EXPECT_EQ(status = response.Unwrap()->s, ZX_OK) << zx_status_get_string(status);
   }
 
   ASSERT_EQ(close(connfd.release()), 0) << strerror(errno);
+  for (auto& fd : connfds) {
+    ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
+  }
 }
 
 TEST(SocketTest, PassFD) {

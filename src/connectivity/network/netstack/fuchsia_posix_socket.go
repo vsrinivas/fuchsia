@@ -423,37 +423,41 @@ const localSignalClosing = zx.SignalUser1
 // the cleanup work will only be done once.
 func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) int64 {
 	return eps.endpoint.close(func() {
-		eps.closeOnce.Do(func() {
-			// Interrupt waits on notification channels. Notification reads
-			// are always combined with closing in a select statement.
-			close(eps.closing)
+		eps.cleanup(loopDone...)
+	})
+}
 
-			// Interrupt waits on endpoint.local. Handle waits always
-			// include localSignalClosing.
-			if err := eps.local.Handle().Signal(0, localSignalClosing); err != nil {
-				panic(err)
-			}
+func (eps *endpointWithSocket) cleanup(loopDone ...<-chan struct{}) {
+	eps.closeOnce.Do(func() {
+		// Interrupt waits on notification channels. Notification reads
+		// are always combined with closing in a select statement.
+		close(eps.closing)
 
-			// The interruptions above cause our loops to exit. Wait until
-			// they do before releasing resources they may be using.
-			for _, ch := range loopDone {
-				<-ch
-			}
+		// Interrupt waits on endpoint.local. Handle waits always
+		// include localSignalClosing.
+		if err := eps.local.Handle().Signal(0, localSignalClosing); err != nil {
+			panic(err)
+		}
 
-			// Copy the handle before closing below; (*zx.Handle).Close sets the
-			// receiver to zx.HandleInvalid.
-			key := zx.Handle(eps.local)
+		// The interruptions above cause our loops to exit. Wait until
+		// they do before releasing resources they may be using.
+		for _, ch := range loopDone {
+			<-ch
+		}
 
-			if err := eps.local.Close(); err != nil {
-				panic(err)
-			}
+		// Copy the handle before closing below; (*zx.Handle).Close sets the
+		// receiver to zx.HandleInvalid.
+		key := zx.Handle(eps.local)
 
-			if err := eps.peer.Close(); err != nil {
-				panic(err)
-			}
+		if err := eps.local.Close(); err != nil {
+			panic(err)
+		}
 
-			eps.endpoint.ns.onRemoveEndpoint(key)
-		})
+		if err := eps.peer.Close(); err != nil {
+			panic(err)
+		}
+
+		eps.endpoint.ns.onRemoveEndpoint(key)
 	})
 }
 
@@ -522,7 +526,7 @@ func (eps *endpointWithSocket) Accept(fidl.Context) (int32, *endpointWithSocket,
 
 // loopWrite shuttles signals and data from the zircon socket to the tcpip.Endpoint.
 func (eps *endpointWithSocket) loopWrite() {
-	closeFn := func() { eps.close(eps.loopReadDone) }
+	closeFn := func() { eps.cleanup(eps.loopReadDone) }
 
 	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled |
 		zx.SignalSocketPeerClosed | localSignalClosing
@@ -618,10 +622,15 @@ func (eps *endpointWithSocket) loopWrite() {
 					panic(err)
 				}
 				return
-			case tcpip.ErrConnectionReset, tcpip.ErrTimeout:
-				// We got a TCP RST, or the maximum duration of missing ACKs was
-				// reached, or the maximum number of unacknowledged keepalives was
-				// reached.
+			case tcpip.ErrConnectionReset:
+				// We got a TCP RST. This condition is more reliably observed by
+				// loopRead, so we clean up from there. Attempting to clean up here
+				// *and* there will deadlock the two cleanup functions as each waits
+				// for the other loop to exit.
+				return
+			case tcpip.ErrTimeout:
+				// The maximum duration of missing ACKs was reached, or the maximum
+				// number of unacknowledged keepalives was reached.
 				closeFn()
 				return
 			default:
@@ -637,7 +646,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 	var initOnce sync.Once
 	initDone := func() { initOnce.Do(func() { close(initCh) }) }
 
-	closeFn := func() { eps.close(eps.loopWriteDone) }
+	closeFn := func() { eps.cleanup(eps.loopWriteDone) }
 
 	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled |
 		zx.SignalSocketPeerClosed | localSignalClosing
