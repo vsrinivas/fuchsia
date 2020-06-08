@@ -421,7 +421,7 @@ TEST_F(MsiTest, AllocationAndCreation) {
   // Invalid MSI id.
   ASSERT_STATUS(
       zx::msi::create(msi, /*options=*/0, /*msi_id=*/msi_cnt, vmo, /*vmo_offset=*/0, &interrupt),
-      ZX_ERR_BAD_STATE);
+      ZX_ERR_INVALID_ARGS);
   ASSERT_OK(zx::msi::create(msi, /*options=*/0, /*msi_id=*/0, vmo, /*vmo_offset=*/0, &interrupt));
   ASSERT_OK(msi.get_info(ZX_INFO_MSI, &msi_info, sizeof(msi_info), nullptr, nullptr));
   ASSERT_EQ(msi_info.interrupt_count, 1);

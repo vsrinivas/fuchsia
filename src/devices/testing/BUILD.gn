@@ -8,6 +8,7 @@ group("tests") {
     "fake-bti:tests",
     "fake-dma-buffer:tests",
     "fake-mmio-reg:tests",
+    "fake-msi:tests",
     "fake-object:tests",
     "fake-resource:tests",
     "mock-mmio-reg:tests",

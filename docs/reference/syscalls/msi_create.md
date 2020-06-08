@@ -69,11 +69,9 @@ negative error value is returned.
 
 **ZX_ERR_WRONG_TYPE** *handle* is not the appropriate type.
 
-**ZX_ERR_BAD_STATE** *msi_id* is not a valid MSI id within the allocation
-referred to by *handle*.
-
-**ZX_ERR_INVALID_ARGS** *vmo* is not the size of a ZX_PAGE_SIZE, *vmo* is not
-physical or contiguous, *vmo* does not have cache policy set to
+**ZX_ERR_INVALID_ARGS** *msi_id* is not a valid MSI id within the allocation
+referred to by *handle*, *vmo* is not the size of a ZX_PAGE_SIZE, *vmo* is
+not physical or contiguous, *vmo* does not have cache policy set to
 ZX_CACHE_POLICY_UNCACHED_DEVICE, *vmo* does not appear to contain a supported
 MSI/MSI-X capability, *vmo_offset* is out of bounds of *vmo*, *vmo_offset* is
 invalid for the type of capability structure found, *options* is not 0, or

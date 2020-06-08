@@ -56,7 +56,7 @@ zx_status_t MsiDispatcher::Create(fbl::RefPtr<MsiAllocation> alloc, uint32_t msi
     if (msi_id >= alloc->block().num_irq) {
       LTRACEF("msi_id %u is out of range for the block (num_irqs: %u)\n", msi_id,
               alloc->block().num_irq);
-      return ZX_ERR_BAD_STATE;
+      return ZX_ERR_INVALID_ARGS;
     }
     base_irq_id = alloc->block().base_irq_id;
   }
