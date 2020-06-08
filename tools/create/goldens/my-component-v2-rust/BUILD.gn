@@ -45,7 +45,7 @@ fuchsia_component("component") {
 
 fuchsia_package("package") {
   package_name = "my-component-v2-rust"
-  components = [ ":component" ]
+  deps = [ ":component" ]
 }
 
 # Run with `fx test my-component-v2-rust-unittests`.

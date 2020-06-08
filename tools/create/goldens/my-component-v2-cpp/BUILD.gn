@@ -51,7 +51,7 @@ fuchsia_component("component") {
 
 fuchsia_package("package") {
   package_name = "my-component-v2-cpp"
-  components = [ ":component" ]
+  deps = [ ":component" ]
 }
 
 executable("unittests") {

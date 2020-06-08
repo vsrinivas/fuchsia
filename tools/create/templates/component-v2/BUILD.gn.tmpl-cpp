@@ -47,7 +47,7 @@ fuchsia_component("component") {
 
 fuchsia_package("package") {
   package_name = "{{PROJECT_NAME}}"
-  components = [ ":component" ]
+  deps = [ ":component" ]
 }
 
 executable("unittests") {
