@@ -6,10 +6,11 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
+        config::RuntimeConfig,
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-            model::{ComponentManagerConfig, Model},
+            model::Model,
             moniker::{AbsoluteMoniker, PartialMoniker},
             realm::{BindReason, Realm},
         },
@@ -77,12 +78,12 @@ impl CapabilityProvider for RealmCapabilityProvider {
 #[derive(Clone)]
 pub struct RealmCapabilityHost {
     model: Arc<Model>,
-    config: ComponentManagerConfig,
+    config: Arc<RuntimeConfig>,
 }
 
 // `RealmCapabilityHost` is a `Hook` that serves the `Realm` FIDL protocol.
 impl RealmCapabilityHost {
-    pub fn new(model: Arc<Model>, config: ComponentManagerConfig) -> Self {
+    pub fn new(model: Arc<Model>, config: Arc<RuntimeConfig>) -> Self {
         Self { model, config }
     }
 
@@ -124,7 +125,13 @@ impl RealmCapabilityHost {
                     responder.send(&mut res)?;
                 }
                 fsys::RealmRequest::ListChildren { responder, collection, iter } => {
-                    let mut res = Self::list_children(&self.config, realm, collection, iter).await;
+                    let mut res = Self::list_children(
+                        self.config.list_children_batch_size,
+                        realm,
+                        collection,
+                        iter,
+                    )
+                    .await;
                     responder.send(&mut res)?;
                 }
             }
@@ -220,7 +227,7 @@ impl RealmCapabilityHost {
     }
 
     async fn list_children(
-        config: &ComponentManagerConfig,
+        batch_size: usize,
         realm: Arc<Realm>,
         collection: fsys::CollectionRef,
         iter: ServerEnd<fsys::ChildIteratorMarker>,
@@ -261,7 +268,6 @@ impl RealmCapabilityHost {
             }
         });
         let stream = iter.into_stream().expect("could not convert iterator channel into stream");
-        let batch_size = config.list_children_batch_size;
         fasync::spawn(async move {
             if let Err(e) = Self::serve_child_iterator(children, stream, batch_size).await {
                 // TODO: Set an epitaph to indicate this was an unexpected error.
@@ -336,7 +342,7 @@ mod tests {
     use super::*;
     use {
         crate::{
-            builtin_environment::{BuiltinEnvironment,},
+            builtin_environment::BuiltinEnvironment,
             model::{
                 binding::Binder,
                 events::{event::SyncMode, source::EventSource, stream::EventStream},
@@ -381,7 +387,7 @@ mod tests {
             events: Vec<CapabilityName>,
         ) -> Self {
             // Init model.
-            let mut config = ComponentManagerConfig::default();
+            let mut config = RuntimeConfig::default();
             config.list_children_batch_size = 2;
             let TestModelResult { model, builtin_environment, mock_runner, .. } =
                 new_test_model("root", components, config).await;

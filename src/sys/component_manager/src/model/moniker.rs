@@ -234,6 +234,26 @@ impl AbsoluteMoniker {
         Ok(AbsoluteMoniker::new(path?))
     }
 
+    /// Parse the given string as an absolute moniker. The string should be a '/' delimited series
+    /// of child monikers without any instance identifiers, e.g. "/", or "/name1/name2" or
+    /// "/name1:collection1".
+    // TODO(fxb/49968): Remove instance ID 0 assumption when removing instance IDs from
+    // AbsoluteMoniker/ChildMoniker (and rename to parse_str + add From<&str> impl).
+    pub fn parse_string_without_instances(input: &str) -> Result<Self, MonikerError> {
+        if input.chars().nth(0) != Some('/') {
+            return Err(MonikerError::invalid_moniker(input));
+        }
+        if input == "/" {
+            return Ok(Self::root());
+        }
+        let path = input[1..]
+            .split('/')
+            .map(PartialMoniker::parse)
+            .map(|p| p.map(|ok_p| ChildMoniker::from_partial(&ok_p, 0)))
+            .collect::<Result<_, MonikerError>>()?;
+        Ok(Self::new(path))
+    }
+
     pub fn path(&self) -> &Vec<ChildMoniker> {
         &self.path
     }
@@ -439,7 +459,7 @@ impl MonikerError {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, anyhow::Error};
 
     #[test]
     fn child_monikers() {
@@ -704,6 +724,33 @@ mod tests {
         assert!(!abd.contains_in_realm(&a));
         assert!(!abd.contains_in_realm(&ab));
         assert!(!abd.contains_in_realm(&abc));
+    }
+
+    #[test]
+    fn absolute_moniker_from_string_without_instance_id() -> Result<(), Error> {
+        let under_test = |s| AbsoluteMoniker::parse_string_without_instances(s);
+
+        assert_eq!(under_test("/")?, AbsoluteMoniker::root());
+
+        let a = ChildMoniker::new("a".to_string(), None, 0);
+        let bb = ChildMoniker::new("b".to_string(), Some("b".to_string()), 0);
+
+        assert_eq!(under_test("/a")?, AbsoluteMoniker::new(vec![a.clone()]));
+        assert_eq!(under_test("/a/b:b")?, AbsoluteMoniker::new(vec![a.clone(), bb.clone()]));
+        assert_eq!(
+            under_test("/a/b:b/a/b:b")?,
+            AbsoluteMoniker::new(vec![a.clone(), bb.clone(), a.clone(), bb.clone()])
+        );
+
+        assert!(under_test("").is_err(), "cannot be empty");
+        assert!(under_test("a").is_err(), "must start with root");
+        assert!(under_test("a/b").is_err(), "must start with root");
+        assert!(under_test("//").is_err(), "path segments cannot be empty");
+        assert!(under_test("/a/").is_err(), "path segments cannot be empty");
+        assert!(under_test("/a//b").is_err(), "path segments cannot be empty");
+        assert!(under_test("/a:a:0").is_err(), "cannot contain instance id");
+
+        Ok(())
     }
 
     #[test]

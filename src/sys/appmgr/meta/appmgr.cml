@@ -1,6 +1,10 @@
 {
     program: {
         binary: "bin/appmgr",
+
+        // Run appmgr in a job with ZX_POL_AMBIENT_MARK_VMO_EXEC job policy, so that it can in turn
+        // implement the v1 'deprecated-ambient-replace-as-executable' feature.
+        job_policy_ambient_mark_vmo_exec: "true",
     },
     use: [
         { runner: "elf" },

@@ -5,10 +5,11 @@
 use {
     crate::{
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
+        config::RuntimeConfig,
         klog,
         model::{
             hooks::HooksRegistration,
-            model::{ComponentManagerConfig, Model},
+            model::Model,
             moniker::{AbsoluteMoniker, PartialMoniker},
             realm::Realm,
             testing::{
@@ -520,7 +521,7 @@ pub struct TestModelResult {
 pub async fn new_test_model(
     root_component: &str,
     components: Vec<(&str, ComponentDecl)>,
-    config: ComponentManagerConfig,
+    config: RuntimeConfig,
 ) -> TestModelResult {
     let mock_runner = Arc::new(MockRunner::new());
 
@@ -574,7 +575,7 @@ impl ActionsTest {
         let _ = klog::KernelLogger::init();
 
         let TestModelResult { model, builtin_environment, mock_runner } =
-            new_test_model(root_component, components, ComponentManagerConfig::default()).await;
+            new_test_model(root_component, components, RuntimeConfig::default()).await;
 
         // TODO(fsamuel): Don't install the Hub's hooks because the Hub expects components
         // to start and stop in a certain lifecycle ordering. In particular, some unit

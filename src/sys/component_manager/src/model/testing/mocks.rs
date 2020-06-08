@@ -3,14 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{
-        binding::Binder,
-        environment::{Environment, RunnerRegistry},
-        error::ModelError,
-        moniker::AbsoluteMoniker,
-        realm::{BindReason, Realm, WeakRealm},
-        resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
-        runner::{Runner, RunnerError},
+    crate::{
+        builtin::runner::BuiltinRunnerFactory,
+        config::ScopedPolicyChecker,
+        model::{
+            binding::Binder,
+            environment::{Environment, RunnerRegistry},
+            error::ModelError,
+            moniker::AbsoluteMoniker,
+            realm::{BindReason, Realm, WeakRealm},
+            resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
+            runner::{Runner, RunnerError},
+        },
     },
     anyhow::format_err,
     async_trait::async_trait,
@@ -197,6 +201,8 @@ struct MockRunnerInner {
     runner_requests: Arc<Mutex<HashMap<Koid, Vec<ControlMessage>>>>,
 
     controllers: HashMap<Koid, AbortHandle>,
+
+    last_checker: Option<ScopedPolicyChecker>,
 }
 
 pub struct MockRunner {
@@ -221,6 +227,7 @@ impl MockRunner {
                 failing_urls: HashSet::new(),
                 runner_requests: Arc::new(Mutex::new(HashMap::new())),
                 controllers: HashMap::new(),
+                last_checker: None,
             }),
         }
     }
@@ -277,6 +284,20 @@ impl MockRunner {
         let state = self.inner.lock().unwrap();
         let controller = state.controllers.get(koid).expect("koid was not available");
         controller.abort();
+    }
+
+    pub fn last_checker(&self) -> Option<ScopedPolicyChecker> {
+        self.inner.lock().unwrap().last_checker.take()
+    }
+}
+
+impl BuiltinRunnerFactory for MockRunner {
+    fn get_scoped_runner(self: Arc<Self>, checker: ScopedPolicyChecker) -> Arc<dyn Runner> {
+        {
+            let mut state = self.inner.lock().unwrap();
+            state.last_checker = Some(checker);
+        }
+        self
     }
 }
 

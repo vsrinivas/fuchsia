@@ -84,6 +84,9 @@ pub async fn load_vmo<'a>(
     dir_proxy: &'a DirectoryProxy,
     object_name: &'a str,
 ) -> Result<zx::Vmo, Error> {
+    // TODO(fxb/52468): This does not ask or wait for a Describe event, which means a failure to
+    // open the file will appear as a PEER_CLOSED on the get_buffer call. It also means this could
+    // be a Vmofile node and that we're relying on it still supporting the File protocol.
     let file_proxy = io_util::open_file(
         dir_proxy,
         &Path::new(object_name),

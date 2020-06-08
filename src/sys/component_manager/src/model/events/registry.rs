@@ -336,11 +336,13 @@ impl Hook for EventRegistry {
 mod tests {
     use {
         super::*,
-        crate::model::{
-            hooks::{Event as ComponentEvent, EventError, EventErrorPayload, EventPayload},
-            model::ComponentManagerConfig,
-            moniker::AbsoluteMoniker,
-            testing::test_helpers::{TestModelResult, *},
+        crate::{
+            config::RuntimeConfig,
+            model::{
+                hooks::{Event as ComponentEvent, EventError, EventErrorPayload, EventPayload},
+                moniker::AbsoluteMoniker,
+                testing::test_helpers::{TestModelResult, *},
+            },
         },
         matches::assert_matches,
     };
@@ -370,7 +372,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn drop_dispatcher_when_event_stream_dropped() {
         let TestModelResult { model, .. } =
-            new_test_model("root", Vec::new(), ComponentManagerConfig::default()).await;
+            new_test_model("root", Vec::new(), RuntimeConfig::default()).await;
         let event_registry = EventRegistry::new(Arc::downgrade(&model));
 
         assert_eq!(0, event_registry.dispatchers_per_event_type(EventType::Discovered).await);
@@ -421,7 +423,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn event_error_dispatch() {
         let TestModelResult { model, .. } =
-            new_test_model("root", Vec::new(), ComponentManagerConfig::default()).await;
+            new_test_model("root", Vec::new(), RuntimeConfig::default()).await;
         let event_registry = EventRegistry::new(Arc::downgrade(&model));
 
         assert_eq!(0, event_registry.dispatchers_per_event_type(EventType::Resolved).await);

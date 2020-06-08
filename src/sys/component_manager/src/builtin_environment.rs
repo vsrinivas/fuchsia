@@ -12,10 +12,12 @@ use {
             process_launcher::ProcessLauncher,
             root_job::{RootJob, ROOT_JOB_CAPABILITY_PATH, ROOT_JOB_FOR_INSPECT_CAPABILITY_PATH},
             root_resource::RootResource,
+            runner::{BuiltinRunner, BuiltinRunnerFactory},
             system_controller::SystemController,
             vmex::VmexService,
         },
         capability_ready_notifier::CapabilityReadyNotifier,
+        config::RuntimeConfig,
         framework::RealmCapabilityHost,
         fuchsia_base_pkg_resolver, fuchsia_boot_resolver, fuchsia_pkg_resolver,
         model::{
@@ -30,12 +32,10 @@ use {
             },
             hooks::EventType,
             hub::Hub,
-            model::{ComponentManagerConfig, Model, ModelParams},
+            model::{Model, ModelParams},
             resolver::{Resolver, ResolverRegistry},
-            runner::Runner,
         },
         root_realm_stop_notifier::RootRealmStopNotifier,
-        runner::BuiltinRunner,
         startup::Arguments,
         work_scheduler::WorkScheduler,
     },
@@ -59,13 +59,12 @@ use {
     },
 };
 
-// TODO(viktard): Merge Arguments, ComponentManagerConfig and root_component_url from
-// ModelParams
+// TODO(viktard): Merge Arguments, RuntimeConfig and root_component_url from ModelParams
 #[derive(Default)]
 pub struct BuiltinEnvironmentBuilder {
     args: Option<Arguments>,
-    config: Option<ComponentManagerConfig>,
-    runners: Vec<Arc<BuiltinRunner>>,
+    config: Option<RuntimeConfig>,
+    runners: Vec<(CapabilityName, Arc<dyn BuiltinRunnerFactory>)>,
     resolvers: ResolverRegistry,
     // This is used to initialize fuchsia_base_pkg_resolver's Model reference. Resolvers must
     // be created to construct the Model.
@@ -82,13 +81,19 @@ impl BuiltinEnvironmentBuilder {
         self
     }
 
-    pub fn set_config(mut self, config: ComponentManagerConfig) -> Self {
+    pub fn set_config(mut self, config: RuntimeConfig) -> Self {
         self.config = Some(config);
         self
     }
 
-    pub fn add_runner(mut self, name: CapabilityName, runner: Arc<dyn Runner>) -> Self {
-        self.runners.push(Arc::new(BuiltinRunner::new(name, runner)));
+    pub fn add_runner(
+        mut self,
+        name: CapabilityName,
+        runner: Arc<dyn BuiltinRunnerFactory>,
+    ) -> Self {
+        // We don't wrap these in a BuiltinRunner immediately because that requires the
+        // RuntimeConfig, which may be provided after this or may fall back to the default.
+        self.runners.push((name, runner));
         self
     }
 
@@ -150,11 +155,11 @@ impl BuiltinEnvironmentBuilder {
         let runner_map = self
             .runners
             .iter()
-            .map(|r| {
+            .map(|(name, _)| {
                 (
-                    r.name().clone(),
+                    name.clone(),
                     RunnerRegistration {
-                        source_name: r.name().clone(),
+                        source_name: name.clone(),
                         source: cm_rust::RegistrationSource::Self_,
                     },
                 )
@@ -178,8 +183,17 @@ impl BuiltinEnvironmentBuilder {
                 .map_err(|_| format_err!("sending model to resolver failed"))?;
         }
 
-        Ok(BuiltinEnvironment::new(model, args, self.config.unwrap_or_default(), self.runners)
-            .await?)
+        // Wrap BuiltinRunnerFactory in BuiltinRunner now that we have the definite RuntimeConfig.
+        let config = Arc::new(self.config.unwrap_or_default());
+        let builtin_runners = self
+            .runners
+            .into_iter()
+            .map(|(name, runner)| {
+                Arc::new(BuiltinRunner::new(name, runner, Arc::downgrade(&config)))
+            })
+            .collect();
+
+        Ok(BuiltinEnvironment::new(model, args, config, builtin_runners).await?)
     }
 
     /// Checks if the appmgr loader service is available through our namespace and connects to it if
@@ -232,7 +246,7 @@ impl BuiltinEnvironment {
     async fn new(
         model: Arc<Model>,
         args: Arguments,
-        config: ComponentManagerConfig,
+        config: Arc<RuntimeConfig>,
         builtin_runners: Vec<Arc<BuiltinRunner>>,
     ) -> Result<BuiltinEnvironment, ModelError> {
         // Set up ProcessLauncher if available.

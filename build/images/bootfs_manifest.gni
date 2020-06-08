@@ -40,8 +40,8 @@ import("//src/sys/cmc/build/cml.gni")
 #         target. If the resource is generated, this will typically be
 #         specified relative to `$target_gen_dir`.
 #
-#       dest (required)
-#         [path] Location the resource will be placed within `meta/`.
+#       dest (optional)
+#         [path] Location the resource will be placed within `config/`.
 #
 #   drivers (optional)
 #     [list of scopes] Defines drivers in the ZBI. A driver is typically
@@ -127,14 +127,18 @@ template("bootfs_manifest") {
 
   foreach(c, config) {
     assert(defined(c.path), "path is required")
-    assert(defined(c.dest), "dest is required")
-
-    dest = "config/" + c.dest
+    if (defined(c.dest)) {
+      dest = c.dest
+    } else {
+      dest = c.name
+    }
+    dest = "config/" + dest
 
     manifest_args += [ "--entry=" + dest + "=" + rebase_path(c.path) ]
   }
 
   foreach(driver, drivers) {
+    assert(defined(driver.name), "name is required")
     if (defined(driver.dest)) {
       dest = driver.dest
     } else {

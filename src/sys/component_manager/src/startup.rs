@@ -30,6 +30,9 @@ pub struct Arguments {
 
     /// URL of the root component to launch.
     pub root_component_url: String,
+
+    /// If set, load component_manager's configuration from this path.
+    pub config_file: Option<String>,
 }
 
 impl Arguments {
@@ -51,6 +54,11 @@ impl Arguments {
                 args.use_builtin_process_launcher = true;
             } else if arg == "--debug" {
                 args.debug = true;
+            } else if arg == "--config-file" {
+                args.config_file = iter.next();
+                if args.config_file.is_none() {
+                    return Err(format_err!("No value given for '--config-file'"));
+                }
             } else if arg.starts_with("--") {
                 return Err(format_err!("Unrecognized flag: {}", arg));
             } else {
@@ -146,6 +154,7 @@ mod tests {
                 use_builtin_process_launcher: true,
                 root_component_url: dummy_url(),
                 debug: true,
+                config_file: None,
             }
         );
 

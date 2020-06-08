@@ -9,6 +9,7 @@
 
 pub mod builtin_environment;
 pub mod capability;
+pub mod config;
 pub mod elf_runner;
 pub mod klog;
 pub mod model;
@@ -26,4 +27,3 @@ pub(crate) mod work_scheduler;
 
 mod builtin;
 mod constants;
-mod runner;

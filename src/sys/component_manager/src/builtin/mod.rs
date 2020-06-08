@@ -9,5 +9,6 @@ pub mod log;
 pub mod process_launcher;
 pub mod root_job;
 pub mod root_resource;
+pub mod runner;
 pub mod system_controller;
 pub mod vmex;

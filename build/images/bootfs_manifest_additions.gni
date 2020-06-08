@@ -3,14 +3,17 @@
 # found in the LICENSE file.
 
 import("//build/board.gni")
+import("//build/product.gni")
 
 # The labels in this list are bootfs manifests (created with the template in
 # //build/images/bootfs_manifest.gni) that describe files from the GN build that
 # are to be included in the ZBI on every build.
+default_bootfs_labels = [
+  "//src/devices/bin/driver_manager:driver_manager.manifest",
+  "//src/devices:devices.manifest",
+  "//src/sys/bootstrap:root_manifests.manifest",
+  "//src/sys/component_manager:component_manager_bootfs.manifest",
+]
+
 bootfs_manifest_additions =
-    [
-      "//src/devices/bin/driver_manager:driver_manager.manifest",
-      "//src/devices:devices.manifest",
-      "//src/sys/bootstrap:root_manifests.manifest",
-      "//src/sys/component_manager:component_manager_bootfs.manifest",
-    ] + board_bootfs_labels
+    default_bootfs_labels + product_bootfs_labels + board_bootfs_labels

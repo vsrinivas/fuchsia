@@ -4,7 +4,8 @@
 
 use {
     crate::{
-        builtin::process_launcher::ProcessLauncher,
+        builtin::{process_launcher::ProcessLauncher, runner::BuiltinRunnerFactory},
+        config::{PolicyError, ScopedPolicyChecker},
         model::runner::{Runner, RunnerError},
         startup::Arguments,
     },
@@ -24,7 +25,7 @@ use {
     futures::future::{BoxFuture, FutureExt},
     log::{error, warn},
     std::convert::TryFrom,
-    std::{fmt, path::Path, sync::Arc},
+    std::{path::Path, sync::Arc},
     thiserror::Error,
     vfs::{
         directory::entry::DirectoryEntry, directory::entry_container::DirectlyMutable,
@@ -77,13 +78,20 @@ pub enum ElfRunnerError {
         #[source]
         err: ClonableError,
     },
-    #[error("failed to add runtime/elf directory for component with url \"{}\".", url)]
+    #[error("failed to add runtime/elf directory for component with url \"{}\"", url)]
     ComponentElfDirectoryError { url: String },
-    #[error(
-        "the lifecyle event declaration(s) are invalid for the component with url \"{}\".",
-        url
-    )]
-    LifecycleDeclarationError { url: String },
+    #[error("program key \"{}\" invalid for component with url \"{}\"", key, url)]
+    ProgramDictionaryError { key: String, url: String },
+    #[error("{err}")]
+    SecurityPolicyError {
+        #[from]
+        err: PolicyError,
+    },
+    #[error("{err}")]
+    GenericRunnerError {
+        #[from]
+        err: RunnerError,
+    },
 }
 
 impl ElfRunnerError {
@@ -122,11 +130,20 @@ impl ElfRunnerError {
     pub fn component_elf_directory_error(url: impl Into<String>) -> ElfRunnerError {
         ElfRunnerError::ComponentElfDirectoryError { url: url.into() }
     }
-}
 
-impl From<ElfRunnerError> for RunnerError {
-    fn from(err: ElfRunnerError) -> Self {
-        RunnerError::component_runtime_directory_error(err)
+    pub fn program_dictionary_error(
+        key: impl Into<String>,
+        url: impl Into<String>,
+    ) -> ElfRunnerError {
+        ElfRunnerError::ProgramDictionaryError { key: key.into(), url: url.into() }
+    }
+
+    pub fn as_zx_status(&self) -> zx::Status {
+        match self {
+            ElfRunnerError::GenericRunnerError { err } => err.as_zx_status(),
+            ElfRunnerError::SecurityPolicyError { .. } => zx::Status::ACCESS_DENIED,
+            _ => zx::Status::INTERNAL,
+        }
     }
 }
 
@@ -135,26 +152,9 @@ pub struct ElfRunner {
     launcher_connector: ProcessLauncherConnector,
 }
 
-enum LifecycleInterest {
-    Notify,
-    Ignore,
-}
-
-impl fmt::Display for LifecycleInterest {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let out = {
-            match self {
-                Self::Notify => "notify",
-                Self::Ignore => "ignore",
-            }
-        };
-        writeln!(f, "{}", out)
-    }
-}
-
 impl ElfRunner {
-    pub fn new(launcher_connector: ProcessLauncherConnector) -> ElfRunner {
-        ElfRunner { launcher_connector }
+    pub fn new(args: &Arguments) -> ElfRunner {
+        ElfRunner { launcher_connector: ProcessLauncherConnector::new(args) }
     }
 
     async fn create_runtime_directory<'a>(
@@ -189,7 +189,7 @@ impl ElfRunner {
         resolved_url: &String,
         process_id: u64,
         job_id: u64,
-    ) -> Result<(), RunnerError> {
+    ) -> Result<(), ElfRunnerError> {
         let elf_dir = pseudo_directory!(
             "process_id" => read_only_static(process_id.to_string()),
             "job_id" => read_only_static(job_id.to_string()),
@@ -201,20 +201,6 @@ impl ElfRunner {
         Ok(())
     }
 
-    fn find<'a>(dict: &'a fdata::Dictionary, key: &str) -> Option<&'a fdata::DictionaryValue> {
-        match &dict.entries {
-            Some(entries) => {
-                for entry in entries {
-                    if entry.key == key {
-                        return entry.value.as_ref().map(|val| &**val);
-                    }
-                }
-                None
-            }
-            _ => None,
-        }
-    }
-
     async fn configure_launcher(
         &self,
         resolved_url: &String,
@@ -222,7 +208,7 @@ impl ElfRunner {
         job: zx::Job,
         launcher: &fidl_fuchsia_process::LauncherProxy,
         lifecycle_server: Option<zx::Channel>,
-    ) -> Result<Option<(fidl_fuchsia_process::LaunchInfo, RuntimeDirectory)>, RunnerError> {
+    ) -> Result<Option<(fidl_fuchsia_process::LaunchInfo, RuntimeDirectory)>, ElfRunnerError> {
         let bin_path = runner::get_program_binary(&start_info)
             .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
 
@@ -288,7 +274,8 @@ impl ElfRunner {
     async fn start_component(
         &self,
         start_info: fcrunner::ComponentStartInfo,
-    ) -> Result<Option<ElfComponent>, RunnerError> {
+        checker: &ScopedPolicyChecker,
+    ) -> Result<Option<ElfComponent>, ElfRunnerError> {
         let resolved_url =
             runner::get_resolved_url(&start_info).map_err(|e| RunnerError::invalid_args("", e))?;
 
@@ -326,42 +313,38 @@ impl ElfRunner {
             ))
             .map_err(|e| ElfRunnerError::component_job_policy_error(resolved_url.clone(), e))?;
 
+        // This also checks relevant security policy for config that it wraps using the provided
+        // PolicyChecker.
+        let program_config = start_info
+            .program
+            .as_ref()
+            .map(|p| ElfProgramConfig::parse_and_check(p, &checker, &resolved_url))
+            .transpose()?
+            .unwrap_or_default();
+
+        // Default deny the job policy which allows ambiently marking VMOs executable, i.e. calling
+        // vmo_replace_as_executable without an appropriate resource handle.
+        if !program_config.ambient_mark_vmo_exec {
+            component_job
+                .set_policy(zx::JobPolicy::Basic(
+                    zx::JobPolicyOption::Absolute,
+                    vec![(zx::JobCondition::AmbientMarkVmoExec, zx::JobAction::Deny)],
+                ))
+                .map_err(|e| ElfRunnerError::component_job_policy_error(resolved_url.clone(), e))?;
+        }
+
+        let (lifecycle_client, lifecycle_server) = match program_config.notify_lifecycle_stop {
+            true => {
+                fidl::endpoints::create_proxy::<LifecycleMarker>().map(|(c, s)| (Some(c), Some(s)))
+            }
+            false => Ok((None, None)),
+        }
+        .map_err(|_| RunnerError::Unsupported)?;
+        let lifecycle_server = lifecycle_server.map(|s| s.into_channel());
+
         let job_dup = component_job.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(|e| {
             ElfRunnerError::component_job_duplication_error(resolved_url.clone(), e)
         })?;
-
-        let lifecycle_interest = {
-            if let Some(program) = &start_info.program {
-                match Self::find(&program, "lifecycle.stop_event") {
-                    Some(fdata::DictionaryValue::Str(str_val)) => match &str_val[..] {
-                        "notify" => Ok(LifecycleInterest::Notify),
-                        "ignore" => Ok(LifecycleInterest::Ignore),
-                        _ => Err(ElfRunnerError::LifecycleDeclarationError {
-                            url: resolved_url.clone(),
-                        }),
-                    },
-                    Some(_) => {
-                        Err(ElfRunnerError::LifecycleDeclarationError { url: resolved_url.clone() })
-                    }
-                    None => Ok(LifecycleInterest::Ignore),
-                }
-            } else {
-                Ok(LifecycleInterest::Ignore)
-            }
-        }?;
-
-        let (lifecycle_client, lifecycle_server) = match lifecycle_interest {
-            LifecycleInterest::Notify => fidl::endpoints::create_endpoints::<LifecycleMarker>()
-                .map(|(c, s)| (Some(c), Some(s))),
-            LifecycleInterest::Ignore => Ok((None, None)),
-        }
-        .map_err(|_| RunnerError::Unsupported)?;
-
-        let lifecycle_server =
-            lifecycle_server.map(|lifecycle_server| lifecycle_server.into_channel());
-        let lifecycle_client = lifecycle_client.map(|lifecycle_client| {
-            lifecycle_client.into_proxy().expect("converion to proxy failed")
-        });
 
         let (mut launch_info, runtime_dir) = match self
             .configure_launcher(&resolved_url, start_info, job_dup, &launcher, lifecycle_server)
@@ -377,34 +360,90 @@ impl ElfRunner {
             .raw_koid();
 
         // Launch the component
-        let process_koid = async {
-            let (status, process) = launcher
-                .launch(&mut launch_info)
-                .await
-                .map_err(|e| RunnerError::component_launch_error(&*resolved_url, e))?;
-            if zx::Status::from_raw(status) != zx::Status::OK {
-                return Err(RunnerError::component_launch_error(
-                    resolved_url.clone(),
-                    format_err!("failed to launch component: {}", status),
-                ));
-            }
-
-            let mut process_koid = 0;
-            if let Some(process) = &process {
-                process_koid = process
-                    .get_koid()
-                    .map_err(|e| {
-                        ElfRunnerError::component_process_id_error(resolved_url.clone(), e)
-                    })?
-                    .raw_koid();
-            }
-            Ok(process_koid)
-        }
-        .await
-        .map_err(|e| RunnerError::component_launch_error(resolved_url.clone(), e))?;
+        let (status, process) = launcher
+            .launch(&mut launch_info)
+            .await
+            .map_err(|e| RunnerError::component_launch_error(&*resolved_url, e))?;
+        zx::Status::ok(status).map_err(|s| {
+            RunnerError::component_launch_error(
+                resolved_url.clone(),
+                format_err!("failed to launch component: {}", s),
+            )
+        })?;
+        let process = process.ok_or(RunnerError::component_launch_error(
+            resolved_url.clone(),
+            format_err!("failed to launch component, no process"),
+        ))?;
+        let process_koid = process
+            .get_koid()
+            .map_err(|e| ElfRunnerError::component_process_id_error(resolved_url.clone(), e))?
+            .raw_koid();
 
         self.create_elf_directory(&runtime_dir, &resolved_url, process_koid, job_koid).await?;
         Ok(Some(ElfComponent::new(runtime_dir, Job::from(component_job), lifecycle_client)))
+    }
+}
+
+/// Wraps ELF runner-specific keys in component's "program" dictionary.
+#[derive(Default)]
+struct ElfProgramConfig {
+    notify_lifecycle_stop: bool,
+    ambient_mark_vmo_exec: bool,
+}
+
+impl ElfProgramConfig {
+    /// Parse the given dictionary into an ElfProgramConfig, checking it against security policy as
+    /// needed.
+    ///
+    /// Checking against security policy is intentionally combined with parsing here, so that policy
+    /// enforcement is as close to the point of parsing as possible and can't be inadvertently skipped.
+    pub fn parse_and_check(
+        program: &fdata::Dictionary,
+        checker: &ScopedPolicyChecker,
+        url: &str,
+    ) -> Result<Self, ElfRunnerError> {
+        const STOP_EVENT_KEY: &str = "lifecycle.stop_event";
+        let notify_lifecycle_stop = match Self::find(program, STOP_EVENT_KEY) {
+            Some(fdata::DictionaryValue::Str(str_val)) => match &str_val[..] {
+                "notify" => Ok(true),
+                "ignore" => Ok(false),
+                _ => Err(()),
+            },
+            Some(_) => Err(()),
+            None => Ok(false),
+        }
+        .map_err(|_| ElfRunnerError::program_dictionary_error(STOP_EVENT_KEY, url))?;
+
+        const VMEX_KEY: &str = "job_policy_ambient_mark_vmo_exec";
+        let ambient_mark_vmo_exec = match Self::find(program, VMEX_KEY) {
+            Some(fdata::DictionaryValue::Str(str_val)) => match &str_val[..] {
+                "true" => Ok(true),
+                "false" => Ok(false),
+                _ => Err(()),
+            },
+            Some(_) => Err(()),
+            None => Ok(false),
+        }
+        .map_err(|_| ElfRunnerError::program_dictionary_error(VMEX_KEY, url))?;
+        if ambient_mark_vmo_exec {
+            checker.ambient_mark_vmo_exec_allowed()?;
+        }
+
+        Ok(ElfProgramConfig { notify_lifecycle_stop, ambient_mark_vmo_exec })
+    }
+
+    fn find<'a>(dict: &'a fdata::Dictionary, key: &str) -> Option<&'a fdata::DictionaryValue> {
+        match &dict.entries {
+            Some(entries) => {
+                for entry in entries {
+                    if entry.key == key {
+                        return entry.value.as_ref().map(|val| &**val);
+                    }
+                }
+                None
+            }
+            _ => None,
+        }
     }
 }
 
@@ -467,8 +506,19 @@ impl Drop for ElfComponent {
     }
 }
 
+impl BuiltinRunnerFactory for ElfRunner {
+    fn get_scoped_runner(self: Arc<Self>, checker: ScopedPolicyChecker) -> Arc<dyn Runner> {
+        Arc::new(ScopedElfRunner { runner: self, checker })
+    }
+}
+
+struct ScopedElfRunner {
+    runner: Arc<ElfRunner>,
+    checker: ScopedPolicyChecker,
+}
+
 #[async_trait]
-impl Runner for ElfRunner {
+impl Runner for ScopedElfRunner {
     /// Starts a component by creating a new Job and Process for the component.
     /// The Runner also creates and hosts a namespace for the component. The
     /// namespace and other runtime state of the component will live until the
@@ -484,7 +534,7 @@ impl Runner for ElfRunner {
         // start the component and move the Controller into a new async
         // execution context.
         let resolved_url = runner::get_resolved_url(&start_info).unwrap_or(String::new());
-        match self.start_component(start_info).await {
+        match self.runner.start_component(start_info, &self.checker).await {
             Ok(Some(elf_component)) => {
                 // This future completes when the
                 // Controller is told to stop/kill the component.
@@ -518,10 +568,10 @@ impl Runner for ElfRunner {
 /// because the service is stateful per connection, so it is not safe to share a connection between
 /// multiple asynchronous process launchers.
 ///
-/// If `LibraryOpts::use_builtin_process_launcher` is true, this will connect to the built-in
+/// If `Arguments.use_builtin_process_launcher` is true, this will connect to the built-in
 /// `fuchsia.process.Launcher` service using the provided `ProcessLauncher`. Otherwise, this connects
 /// to the launcher service under /svc in component_manager's namespace.
-pub struct ProcessLauncherConnector {
+struct ProcessLauncherConnector {
     use_builtin: bool,
 }
 
@@ -553,11 +603,12 @@ impl ProcessLauncherConnector {
 mod tests {
     use {
         super::*,
+        crate::{config::RuntimeConfig, model::moniker::AbsoluteMoniker},
         fidl::endpoints::{create_proxy, ClientEnd, Proxy},
         fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::DirectoryProxy,
         fuchsia_async as fasync,
-        futures::stream::StreamExt,
+        futures::prelude::*,
         io_util,
         matches::assert_matches,
         runner::component::Controllable,
@@ -645,14 +696,15 @@ mod tests {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let launcher_connector = ProcessLauncherConnector::new(&args);
-        let runner = ElfRunner::new(launcher_connector);
+        let config = Arc::new(RuntimeConfig::default());
+        let runner = Arc::new(ElfRunner::new(&args));
+        let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
+            Arc::downgrade(&config),
+            AbsoluteMoniker::root(),
+        ));
         let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
             .expect("could not create component controller endpoints");
 
-        // TODO: This test currently results in a bunch of log spew when this test process exits
-        // because this does not stop the component, which means its loader service suddenly goes
-        // away. Stop the component when the Runner trait provides a way to do so.
         runner.start(start_info, server_controller).await;
 
         // Verify that args are added to the runtime directory.
@@ -692,15 +744,19 @@ mod tests {
             use_builtin_process_launcher: !should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let launcher_connector = ProcessLauncherConnector::new(&args);
-        let runner = ElfRunner::new(launcher_connector);
+        let config = Arc::new(RuntimeConfig::default());
+        let runner = Arc::new(ElfRunner::new(&args));
+        let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
+            Arc::downgrade(&config),
+            AbsoluteMoniker::root(),
+        ));
         let (client_controller, server_controller) =
             create_proxy::<fcrunner::ComponentControllerMarker>()
                 .expect("could not create component controller endpoints");
 
         runner.start(start_info, server_controller).await;
         assert_matches!(
-            client_controller.take_event_stream().next().await.unwrap(),
+            client_controller.take_event_stream().try_next().await,
             Err(fidl::Error::ClientChannelClosed(_))
         );
         Ok(())
@@ -892,6 +948,87 @@ mod tests {
 
         let job_info = job_copy.info()?;
         assert!(job_info.exited);
+        Ok(())
+    }
+
+    // Modify the standard test StartInfo to request ambient_mark_vmo_exec job policy
+    fn hello_world_startinfo_mark_vmo_exec(
+        runtime_dir: Option<ServerEnd<DirectoryMarker>>,
+    ) -> fcrunner::ComponentStartInfo {
+        let mut start_info = hello_world_startinfo(runtime_dir);
+        start_info.program.as_mut().map(|dict| {
+            dict.entries.as_mut().map(|ent| {
+                ent.push(fdata::DictionaryEntry {
+                    key: "job_policy_ambient_mark_vmo_exec".to_string(),
+                    value: Some(Box::new(fdata::DictionaryValue::Str("true".to_string()))),
+                });
+                ent
+            })
+        });
+        start_info
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn security_policy_denied() -> Result<(), Error> {
+        let start_info = hello_world_startinfo_mark_vmo_exec(None);
+
+        // Config does not allowlist any monikers to have access to the job policy.
+        let config = Arc::new(RuntimeConfig::default());
+        let args = Arguments {
+            use_builtin_process_launcher: should_use_builtin_process_launcher(),
+            ..Default::default()
+        };
+        let runner = Arc::new(ElfRunner::new(&args));
+        let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
+            Arc::downgrade(&config),
+            AbsoluteMoniker::root(),
+        ));
+        let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
+            .expect("could not create component controller endpoints");
+
+        // Attempting to start the component should fail, which we detect by looking for an
+        // ACCESS_DENIED epitaph on the ComponentController's event stream.
+        runner.start(start_info, server_controller).await;
+        assert_matches!(
+            controller.take_event_stream().try_next().await,
+            Err(fidl::Error::ClientChannelClosed(zx::Status::ACCESS_DENIED))
+        );
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn security_policy_allowed() -> Result<(), Error> {
+        let (runtime_dir_client, runtime_dir_server) = zx::Channel::create()?;
+        let start_info =
+            hello_world_startinfo_mark_vmo_exec(Some(ServerEnd::new(runtime_dir_server)));
+        let runtime_dir_proxy = DirectoryProxy::from_channel(
+            fasync::Channel::from_channel(runtime_dir_client).unwrap(),
+        );
+
+        let config = r#"{ security_policy: { job_policy: { ambient_mark_vmo_exec: ["/foo"] } } }"#;
+        let config = Arc::new(RuntimeConfig::try_from(config).expect("Bad config"));
+        let args = Arguments {
+            use_builtin_process_launcher: should_use_builtin_process_launcher(),
+            ..Default::default()
+        };
+        let runner = Arc::new(ElfRunner::new(&args));
+        let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
+            Arc::downgrade(&config),
+            AbsoluteMoniker::from(vec!["foo:0"]),
+        ));
+        let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
+            .expect("could not create component controller endpoints");
+
+        runner.start(start_info, server_controller).await;
+
+        // Runtime dir won't exist if the component failed to start.
+        let process_id = read_file(&runtime_dir_proxy, "elf/process_id").await.parse::<u64>()?;
+        assert!(process_id > 0);
+        // Component controller should get shutdown normally; no ACCESS_DENIED epitaph.
+        controller.kill().expect("kill failed");
+        assert_matches!(controller.take_event_stream().try_next().await, Ok(None));
+
         Ok(())
     }
 }

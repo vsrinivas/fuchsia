@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     component_manager_lib::{
         builtin_environment::BuiltinEnvironmentBuilder,
-        elf_runner::{ElfRunner, ProcessLauncherConnector},
+        elf_runner::ElfRunner,
         model::{
             binding::Binder, moniker::AbsoluteMoniker, realm::BindReason, testing::test_helpers,
         },
@@ -85,8 +85,7 @@ async fn main() -> Result<(), Error> {
     };
 
     // Create an ELF runner for the root component.
-    let launcher_connector = ProcessLauncherConnector::new(&args);
-    let runner = Arc::new(ElfRunner::new(launcher_connector));
+    let runner = Arc::new(ElfRunner::new(&args));
 
     let builtin_environment = BuiltinEnvironmentBuilder::new()
         .set_args(args)

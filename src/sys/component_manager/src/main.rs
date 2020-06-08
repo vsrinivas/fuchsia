@@ -9,7 +9,8 @@ use {
     anyhow::{Context as _, Error},
     component_manager_lib::{
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
-        elf_runner::{ElfRunner, ProcessLauncherConnector},
+        config::RuntimeConfig,
+        elf_runner::ElfRunner,
         klog,
         model::{binding::Binder, moniker::AbsoluteMoniker, realm::BindReason},
         startup,
@@ -87,13 +88,25 @@ fn main() -> Result<(), Error> {
 }
 
 async fn run_root(args: startup::Arguments) -> Result<BuiltinEnvironment, Error> {
+    let config = match RuntimeConfig::load_from_file(&args).await {
+        Ok(Some((config, path))) => {
+            info!("Loaded runtime config from {}", path.display());
+            config
+        }
+        Ok(None) => {
+            warn!("No config file specified, using default runtime config");
+            RuntimeConfig::default()
+        }
+        Err(err) => panic!("Failed to load runtime config: {}", err),
+    };
+
     // Create an ELF runner for the root component.
-    let launcher_connector = ProcessLauncherConnector::new(&args);
-    let runner = Arc::new(ElfRunner::new(launcher_connector));
+    let runner = Arc::new(ElfRunner::new(&args));
 
     let root_url = args.root_component_url.clone();
     let builtin_environment = BuiltinEnvironmentBuilder::new()
         .set_args(args)
+        .set_config(config)
         .add_runner("elf".into(), runner)
         .add_available_resolvers_from_namespace()?
         .build()

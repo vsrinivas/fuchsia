@@ -9,23 +9,11 @@ use {
     std::sync::Arc,
 };
 
-/// Holds configuration options for the component manager.
-#[derive(Clone)]
-pub struct ComponentManagerConfig {
-    /// How many children, maximum, are returned by a call to `ChildIterator.next()`.
-    pub list_children_batch_size: usize,
-}
-
-impl Default for ComponentManagerConfig {
-    fn default() -> Self {
-        ComponentManagerConfig { list_children_batch_size: 1000 }
-    }
-}
-
 /// Parameters for initializing a component model, particularly the root of the component
 /// instance tree.
 pub struct ModelParams {
     /// The URL of the root component.
+    // TODO(viktard): Merge into RuntimeConfig
     pub root_component_url: String,
     /// The environment provided to the root realm.
     pub root_environment: Environment,

@@ -176,9 +176,12 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
                        const zx::vmo& bootargs_vmo, const uint64_t bootargs_size) {
   const char* bootsvc_next = getenv("bootsvc.next");
   if (bootsvc_next == nullptr) {
+    // Note that arguments are comma-delimited.
     bootsvc_next =
         "bin/component_manager,"
         "fuchsia-boot:///#meta/root.cm,"
+        "--config-file,"
+        "/boot/config/component_manager,"
         "--use-builtin-process-launcher";
   }
 

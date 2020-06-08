@@ -133,11 +133,11 @@ mod tests {
     use {
         crate::{
             builtin_environment::BuiltinEnvironment,
+            config::RuntimeConfig,
             model::{
                 actions::{Action, ActionSet},
                 events::event::SyncMode,
                 hooks::{EventPayload, EventType, HooksRegistration},
-                model::ComponentManagerConfig,
                 moniker::PartialMoniker,
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::TestHook},
             },
@@ -163,7 +163,7 @@ mod tests {
         additional_hooks: Vec<HooksRegistration>,
     ) -> (Arc<Model>, Arc<BuiltinEnvironment>, Arc<MockRunner>) {
         let TestModelResult { model, builtin_environment, mock_runner, .. } =
-            new_test_model("root", components, ComponentManagerConfig::default()).await;
+            new_test_model("root", components, RuntimeConfig::default()).await;
         model.root_realm.hooks.install(additional_hooks).await;
         (model, builtin_environment, mock_runner)
     }
