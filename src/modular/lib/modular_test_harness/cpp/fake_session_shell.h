@@ -101,16 +101,11 @@ class SimpleStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher
   SimpleStoryProviderWatcher() : binding_(this) {}
   ~SimpleStoryProviderWatcher() override = default;
 
-  using OnChangeFunction =
-      fit::function<void(fuchsia::modular::StoryInfo, fuchsia::modular::StoryState,
-                         fuchsia::modular::StoryVisibilityState)>;
-
   using OnChange2Function =
       fit::function<void(fuchsia::modular::StoryInfo2, fuchsia::modular::StoryState,
                          fuchsia::modular::StoryVisibilityState)>;
   using OnDeleteFunction = fit::function<void(std::string)>;
 
-  void set_on_change(OnChangeFunction on_change) { on_change_ = std::move(on_change); }
   void set_on_change_2(OnChange2Function on_change_2) { on_change_2_ = std::move(on_change_2); }
   void set_on_delete(OnDeleteFunction on_delete) { on_delete_ = std::move(on_delete); }
 
@@ -120,23 +115,14 @@ class SimpleStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher
   // any existing stories when watching starts).
   void Watch(
       fuchsia::modular::StoryProvider* story_provider,
-      fit::function<void(std::vector<fuchsia::modular::StoryInfo> stories)>* on_get_stories) {
-    story_provider->GetStories(
+      fit::function<void(std::vector<fuchsia::modular::StoryInfo2> stories)>* on_get_stories) {
+    story_provider->GetStories2(
         binding_.NewBinding(), on_get_stories != nullptr
                                    ? std::move(*on_get_stories)
-                                   : [](std::vector<fuchsia::modular::StoryInfo>) {});
+                                   : [](std::vector<fuchsia::modular::StoryInfo2>) {});
   }
 
  private:
-  // |fuchsia::modular::StoryProviderWatcher|
-  void OnChange(fuchsia::modular::StoryInfo story_info, fuchsia::modular::StoryState story_state,
-                fuchsia::modular::StoryVisibilityState story_visibility_state) override {
-    if (!on_change_) {
-      return;
-    }
-    on_change_(std::move(story_info), story_state, story_visibility_state);
-  }
-
   // |fuchsia::modular::StoryProviderWatcher|
   void OnChange2(fuchsia::modular::StoryInfo2 story_info, fuchsia::modular::StoryState story_state,
                  fuchsia::modular::StoryVisibilityState story_visibility_state) override {
@@ -154,8 +140,6 @@ class SimpleStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher
     on_delete_(story_id);
   }
 
-  // Optional user-provided lambda that will run with each OnChange().
-  OnChangeFunction on_change_;
   // Optional user-provided lambda that will run with each OnChange2().
   OnChange2Function on_change_2_;
   // Optional user-provided lambda that will run with each OnDelete().

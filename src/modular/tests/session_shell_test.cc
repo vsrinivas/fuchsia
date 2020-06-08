@@ -139,11 +139,11 @@ TEST_F(SessionShellTest, GetStoryInfoNonexistentStory) {
   ASSERT_TRUE(story_provider != nullptr);
 
   bool tried_get_story_info = false;
-  story_provider->GetStoryInfo("X",
-                               [&tried_get_story_info](fuchsia::modular::StoryInfo story_info) {
-                                 EXPECT_TRUE(story_info.IsEmpty());
-                                 tried_get_story_info = true;
-                               });
+  story_provider->GetStoryInfo2("X",
+                                [&tried_get_story_info](fuchsia::modular::StoryInfo2 story_info) {
+                                  EXPECT_TRUE(story_info.IsEmpty());
+                                  tried_get_story_info = true;
+                                });
 
   RunLoopUntil([&] { return tried_get_story_info; });
 }
@@ -155,8 +155,8 @@ TEST_F(SessionShellTest, GetStoriesEmpty) {
   ASSERT_TRUE(story_provider != nullptr);
 
   bool called_get_stories = false;
-  story_provider->GetStories(
-      nullptr, [&called_get_stories](const std::vector<fuchsia::modular::StoryInfo>& stories) {
+  story_provider->GetStories2(
+      nullptr, [&called_get_stories](const std::vector<fuchsia::modular::StoryInfo2>& stories) {
         EXPECT_THAT(stories, testing::IsEmpty());
         called_get_stories = true;
       });
@@ -260,8 +260,8 @@ TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {
                          story_provider](fuchsia::modular::ExecuteResult result) {
     // Verify that the newly created story returns something for
     // GetStoryInfo().
-    story_provider->GetStoryInfo(kStoryId, [&execute_and_get_story_info_called,
-                                            kStoryId](fuchsia::modular::StoryInfo story_info) {
+    story_provider->GetStoryInfo2(kStoryId, [&execute_and_get_story_info_called,
+                                             kStoryId](fuchsia::modular::StoryInfo2 story_info) {
       ASSERT_TRUE(story_info.has_id());
       EXPECT_EQ(story_info.id(), kStoryId);
       execute_and_get_story_info_called = true;
@@ -272,7 +272,7 @@ TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {
   // Delete the story and confirm that the story info is null now.
   bool delete_called = false;
   puppet_master->DeleteStory(kStoryId, [&delete_called, kStoryId, story_provider] {
-    story_provider->GetStoryInfo(kStoryId, [](fuchsia::modular::StoryInfo story_info) {
+    story_provider->GetStoryInfo2(kStoryId, [](fuchsia::modular::StoryInfo2 story_info) {
       EXPECT_TRUE(story_info.IsEmpty());
     });
     delete_called = true;
@@ -423,7 +423,7 @@ TEST_F(SessionShellTest, StoryStopDoesntWaitOnDetachView) {
                                    StoryState::STOPPED));
 }
 
-TEST_F(SessionShellTest, GetStoryInfoHasId) {
+TEST_F(SessionShellTest, GetStoryInfo2HasId) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and launch a new story shell.
@@ -455,9 +455,9 @@ TEST_F(SessionShellTest, GetStoryInfoHasId) {
   story_master->Execute([&execute_and_get_story_info_called, kStoryId,
                          story_provider](fuchsia::modular::ExecuteResult result) {
     // Verify that the newly created story returns something for
-    // GetStoryInfo().
-    story_provider->GetStoryInfo(kStoryId, [&execute_and_get_story_info_called,
-                                            kStoryId](fuchsia::modular::StoryInfo story_info) {
+    // GetStoryInfo2().
+    story_provider->GetStoryInfo2(kStoryId, [&execute_and_get_story_info_called,
+                                             kStoryId](fuchsia::modular::StoryInfo2 story_info) {
       ASSERT_FALSE(story_info.IsEmpty());
       EXPECT_TRUE(story_info.has_id());
       EXPECT_EQ(story_info.id(), kStoryId);
@@ -467,7 +467,7 @@ TEST_F(SessionShellTest, GetStoryInfoHasId) {
   RunLoopUntil([&] { return execute_and_get_story_info_called; });
 }
 
-TEST_F(SessionShellTest, GetStoriesReturnsStoryInfo) {
+TEST_F(SessionShellTest, GetStories2ReturnsStoryInfo) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and launch a new story shell.
@@ -498,17 +498,17 @@ TEST_F(SessionShellTest, GetStoriesReturnsStoryInfo) {
   bool execute_and_get_stories_called = false;
   story_master->Execute([&execute_and_get_stories_called, kStoryId,
                          story_provider](fuchsia::modular::ExecuteResult result) {
-    // Verify that GetStories returns the StoryInfo for the newly created story
-    story_provider->GetStories(/*watcher=*/nullptr,
-                               [&execute_and_get_stories_called,
-                                kStoryId](std::vector<fuchsia::modular::StoryInfo> story_infos) {
-                                 ASSERT_FALSE(story_infos.empty());
-                                 const auto& story_info = story_infos.at(0);
-                                 ASSERT_FALSE(story_info.IsEmpty());
-                                 EXPECT_TRUE(story_info.has_id());
-                                 EXPECT_EQ(story_info.id(), kStoryId);
-                                 execute_and_get_stories_called = true;
-                               });
+    // Verify that GetStories2 returns the StoryInfo2 for the newly created story
+    story_provider->GetStories2(/*watcher=*/nullptr,
+                                [&execute_and_get_stories_called,
+                                 kStoryId](std::vector<fuchsia::modular::StoryInfo2> story_infos) {
+                                  ASSERT_FALSE(story_infos.empty());
+                                  const auto& story_info = story_infos.at(0);
+                                  ASSERT_FALSE(story_info.IsEmpty());
+                                  EXPECT_TRUE(story_info.has_id());
+                                  EXPECT_EQ(story_info.id(), kStoryId);
+                                  execute_and_get_stories_called = true;
+                                });
   });
   RunLoopUntil([&] { return execute_and_get_stories_called; });
 }
@@ -569,7 +569,7 @@ TEST_F(SessionShellTest, StoryProviderWatcher) {
   // perform another operation that is enqueued after them and wait for it
   // to return.
   bool get_stories_done = false;
-  story_provider->GetStories(nullptr, [&](auto /*ignored*/) { get_stories_done = true; });
+  story_provider->GetStories2(nullptr, [&](auto /*ignored*/) { get_stories_done = true; });
 
   RunLoopUntil([&] { return get_stories_done; });
   EXPECT_EQ(on_delete_calls.size(), 1u);
@@ -619,10 +619,10 @@ TEST_F(SessionShellTest, StoryControllerAnnotate) {
   RunLoopUntil([&] { return done_annotating; });
 
   // GetStoryInfo should contain the annotations.
-  fuchsia::modular::StoryInfo story_info;
+  fuchsia::modular::StoryInfo2 story_info;
   bool done_getting_story_info = false;
 
-  story_provider->GetStoryInfo(story_name, [&](fuchsia::modular::StoryInfo data) {
+  story_provider->GetStoryInfo2(story_name, [&](fuchsia::modular::StoryInfo2 data) {
     done_getting_story_info = true;
     story_info = std::move(data);
   });
@@ -671,7 +671,7 @@ TEST_F(SessionShellTest, StoryControllerAnnotateMerge) {
 
   // GetStoryData should contain the first annotation.
   done = false;
-  story_provider->GetStoryInfo(story_name, [&](fuchsia::modular::StoryInfo story_info) {
+  story_provider->GetStoryInfo2(story_name, [&](fuchsia::modular::StoryInfo2 story_info) {
     EXPECT_FALSE(story_info.IsEmpty());
     EXPECT_TRUE(story_info.has_annotations());
 
@@ -704,7 +704,7 @@ TEST_F(SessionShellTest, StoryControllerAnnotateMerge) {
 
   // GetStoryData should now return annotations from both the first and second set.
   done = false;
-  story_provider->GetStoryInfo(story_name, [&](fuchsia::modular::StoryInfo story_info) {
+  story_provider->GetStoryInfo2(story_name, [&](fuchsia::modular::StoryInfo2 story_info) {
     EXPECT_FALSE(story_info.IsEmpty());
 
     EXPECT_EQ(2u, story_info.annotations().size());

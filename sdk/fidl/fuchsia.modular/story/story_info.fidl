@@ -5,21 +5,24 @@
 library fuchsia.modular;
 
 /// Information about a story as provided to the SessionShell.
-table StoryInfo {
+struct StoryInfo {
+    /// URL of the first module run in this story. This module is free to
+    /// run more modules in the story. Used for display purposes only.
+    // TODO(thatguy): Remove this. It is not being set any more.
+    string? url;
+
     /// The ID of the Story, used to reference it in method arguments.
-    1: string:MAX id;
+    string id;
 
     /// Wallclock time when the story was last focused. From
-    /// ZX_CLOCK_UTC, thus nanoseconds since UNIX epoch (1970-01-01 00:00 UTC).
+    /// `ZX_CLOCK_UTC`, thus nanoseconds since UNIX epoch (1970-01-01 00:00 UTC).
     ///
     /// A value of zero means the story has never been focused.
-    2: int64 last_focus_time;
+    int64 last_focus_time;
 
-    /// Collection of user-defined key-value attributes that describe
-    /// this story.
-    ///
-    /// The `Annotation.value` field of each `Annotation` is always set.
-    3: vector<Annotation>:MAX_ANNOTATIONS_PER_STORY annotations;
+    /// Data the SessionShell wants to keep associated with this Story, like
+    /// title, a color, or a display rank.
+    vector<StoryInfoExtraEntry>? extra;
 };
 
 /// Information about a story as provided to the SessionShell.

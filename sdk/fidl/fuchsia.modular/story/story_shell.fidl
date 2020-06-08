@@ -27,15 +27,11 @@ protocol StoryShell {
     /// focus is obviously missing.
     /// `view_connection` the new view and the associated Surface ID.
     /// `surface_info` metadata relating to the Surface.
-    [Transitional]
+    [Transitional = "Implement AddSurface3 instead"]
     AddSurface(ViewConnection view_connection, SurfaceInfo surface_info);
-
-    /// Adds a new Surface and its corresponding view to be displayed by the
-    /// StoryShell. More context that allows the story shell to decide how
-    /// to layout will be added later. Also, interface to influence life cycle and
-    /// focus is obviously missing.
-    /// `view_connection` the new view and the associated Surface ID.
-    /// `surface_info` metadata relating to the Surface.
+    /// DEPRECATED.  For transition purposes only.
+    [Transitional = "Implement AddSurface3 instead"]
+    AddSurface2(ViewConnection2 view_connection, SurfaceInfo surface_info);
     /// For transition purposes only.
     [Transitional = "Only implement while AddSurface is transitional"]
     AddSurface3(ViewConnection view_connection, SurfaceInfo2 surface_info);
@@ -66,10 +62,12 @@ protocol StoryShell {
     ///
     /// E.g called when an intent resolves to a module that is known by the
     /// caller to already be running, to update associated metadata.
-    /// For transition purposes only.
-    [Transitional]
+    [Transitional = "Implement UpdateSurface3 instead"]
     UpdateSurface(ViewConnection view_connection, SurfaceInfo surface_info);
-
+    /// DEPRECATED.  For transition purposes only.
+    [Transitional = "Implement UpdateSurface3 instead"]
+    UpdateSurface2(ViewConnection2 view_connection, SurfaceInfo surface_info);
+    /// For transition purposes only.
     [Transitional = "Only implement while UpdateSurface is transitional"]
     UpdateSurface3(ViewConnection view_connection, SurfaceInfo2 surface_info);
 };
@@ -93,28 +91,20 @@ struct ViewConnection2 {
 };
 
 /// Contains metadata for a Surface.
-table SurfaceInfo {
+struct SurfaceInfo {
     /// ID of the view that is parent of this Surface.
-    1: string:MAX parent_id;
+    string parent_id;
 
     /// The relationship between the parent Surface and this new Surface. Used
     /// for layout optimization.
-    2: SurfaceRelation surface_relation;
+    SurfaceRelation? surface_relation;
 
     /// Information about the module populates the view.
-    3: ModuleManifest module_manifest;
+    ModuleManifest? module_manifest;
 
     /// How the Surface was generated. By an action internal to the story or by
     /// an external action.
-    4: ModuleSource module_source;
-
-    /// Collection of user-defined key-value attributes that describe this surface (module).
-    ///
-    /// The `Annotation.value` field of each `Annotation` is always set.
-    5: vector<Annotation>:MAX_ANNOTATIONS_PER_MODULE annotations;
-
-    /// The view ref associated with the surface, if one is present.
-    6: fuchsia.ui.views.ViewRef view_ref;
+    ModuleSource module_source;
 };
 
 /// Contains metadata for a Surface.

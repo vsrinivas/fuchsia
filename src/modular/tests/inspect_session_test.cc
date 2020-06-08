@@ -100,10 +100,6 @@ class TestStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher {
   TestStoryProviderWatcher() : binding_(this) {}
   ~TestStoryProviderWatcher() override = default;
 
-  void OnChange(fit::function<void(fuchsia::modular::StoryInfo)> on_change) {
-    on_change_ = std::move(on_change);
-  }
-
   void OnChange2(fit::function<void(fuchsia::modular::StoryInfo2)> on_change) {
     on_change_2_ = std::move(on_change);
   }
@@ -117,24 +113,12 @@ class TestStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher {
   void OnDelete(::std::string story_id) override {}
 
   // |fuchsia::modular::StoryProviderWatcher|
-  void OnChange(fuchsia::modular::StoryInfo story_info, fuchsia::modular::StoryState story_state,
-                fuchsia::modular::StoryVisibilityState story_visibility_state) override {
-    if (!on_change_) {
-      return;
-    }
-    on_change_(std::move(story_info));
-  }
-
-  // |fuchsia::modular::StoryProviderWatcher|
   void OnChange2(fuchsia::modular::StoryInfo2 story_info, fuchsia::modular::StoryState story_state,
                  fuchsia::modular::StoryVisibilityState story_visibility_state) override {
-    if (!on_change_2_) {
-      return;
-    }
     on_change_2_(std::move(story_info));
+    return;
   }
 
-  fit::function<void(fuchsia::modular::StoryInfo)> on_change_;
   fit::function<void(fuchsia::modular::StoryInfo2)> on_change_2_;
   fidl::Binding<fuchsia::modular::StoryProviderWatcher> binding_;
 };
@@ -146,8 +130,8 @@ TEST_F(InspectSessionTest, NodeHierarchyNoStories) {
   ASSERT_TRUE(story_provider != nullptr);
 
   bool called_get_stories = false;
-  story_provider->GetStories(
-      nullptr, [&called_get_stories](const std::vector<fuchsia::modular::StoryInfo>& stories) {
+  story_provider->GetStories2(
+      nullptr, [&called_get_stories](const std::vector<fuchsia::modular::StoryInfo2>& stories) {
         EXPECT_THAT(stories, testing::IsEmpty());
         called_get_stories = true;
       });
@@ -217,7 +201,7 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
 
   // Keep track of the focus timestamp that we receive for the story.
   std::vector<int64_t> last_focus_timestamps;
-  story_provider_watcher.OnChange([&](fuchsia::modular::StoryInfo story_info) {
+  story_provider_watcher.OnChange2([&](fuchsia::modular::StoryInfo2 story_info) {
     ASSERT_TRUE(story_info.has_id());
     ASSERT_TRUE(story_info.has_last_focus_time());
     ASSERT_EQ(kStoryId, story_info.id());

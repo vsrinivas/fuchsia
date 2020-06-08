@@ -70,9 +70,12 @@ class FakeStoryShell : public modular_testing::FakeComponent, fuchsia::modular::
       fidl::InterfaceHandle<fuchsia::modular::StoryShellContext> story_shell_context) override;
 
   // |fuchsia::modular::StoryShell|
-  // Checks if the surface relationships match expectations
   void AddSurface(fuchsia::modular::ViewConnection view_connection,
                   fuchsia::modular::SurfaceInfo surface_info) override;
+
+  // |fuchsia::modular::StoryShell|
+  void AddSurface2(fuchsia::modular::ViewConnection2 view_connection,
+                   fuchsia::modular::SurfaceInfo surface_info) override;
 
   // |fuchsia::modular::StoryShell|
   // Checks if the surface relationships match expectations
@@ -91,8 +94,8 @@ class FakeStoryShell : public modular_testing::FakeComponent, fuchsia::modular::
   void RemoveSurface(std::string /* surface_id */) override {}
 
   // |fuchsia::modular::StoryShell|
-  void UpdateSurface3(fuchsia::modular::ViewConnection view_connection,
-                      fuchsia::modular::SurfaceInfo2 /* surface_info */) override {}
+  void UpdateSurface(fuchsia::modular::ViewConnection view_connection,
+                     fuchsia::modular::SurfaceInfo /* surface_info */) override {}
 
   fuchsia::modular::StoryShellContextPtr story_shell_context_;
   fidl::BindingSet<fuchsia::modular::StoryShell> bindings_;
