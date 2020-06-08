@@ -50,6 +50,7 @@ class PciDriverTests : public zxtest::Test {
 TEST_F(PciDriverTests, TestRunner) {
   IsolatedDevmgr::Args args;
   // /boot/ is for bringup builds, /system/ is for core/workstation/etc.
+  args.driver_search_paths.push_back("/pkg/bin");
   args.driver_search_paths.push_back("/boot/driver");
   args.driver_search_paths.push_back("/system/driver");
   args.device_list.push_back(kDeviceEntry);

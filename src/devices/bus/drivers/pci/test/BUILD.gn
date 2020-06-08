@@ -5,6 +5,7 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
 
 # The output of the test code below is made up of several binaries
 # pci-unit-test: A binary to run the unit tests defiend in test/
@@ -64,6 +65,24 @@ test("pci-driver") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/driver-integration-test",
+  ]
+}
+
+devmgr_manifest("devmgr-manifest") {
+}
+
+test_package("pci-driver-package") {
+  package_name = "pci-driver"
+  deps = [
+    ":devmgr-manifest",
+    ":pci-driver",
+  ]
+  extra = [ "$target_gen_dir/devmgr.manifest" ]
+  tests = [
+    {
+      name = "pci-driver"
+      dest = "pci-driver-test"
+    },
   ]
 }
 

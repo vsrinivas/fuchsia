@@ -1,0 +1,21 @@
+{
+  "program": {
+    "binary": "test/pci-driver-test"
+  },
+    "sandbox": {
+          "boot": [
+            "bin",
+            "driver",
+            "lib"
+          ],
+          "system" : [
+            "driver"
+          ],
+          "services": [
+            "fuchsia.exception.Handler",
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher"
+          ]
+    }
+}
