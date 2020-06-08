@@ -2,7 +2,7 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Catapult user guide (Version 1)"
+- title: "Viewing Zircon microbenchmarks with Catapult"
   path: /docs/development/benchmarking/catapult_user_guide.md
 - title: "Benchmark results schema"
   path: /docs/development/benchmarking/results_schema.md
@@ -10,5 +10,3 @@ toc:
   path: /docs/development/benchmarking/running_on_ci.md
 - title: "Trace-based benchmarking"
   path: /docs/development/benchmarking/trace_based_benchmarking.md
-- title: "Microbenchmarks"
-  path: /docs/development/benchmarking/microbenchmarks.md

@@ -1,6 +1,6 @@
 # Zircon
 
-Zircon is the core platform that powers the Fuchsia OS.  Zircon is
+Zircon is the core platform that powers the Fuchsia OS. Zircon is
 composed of a microkernel (source in [/zircon/kernel](/zircon/kernel)
 as well as a small set of userspace services, drivers, and libraries
 (source in [/zircon/system/](/zircon/system) necessary for the system
@@ -16,11 +16,11 @@ changes, and locking (via futexes).
 
 Currently there are some temporary syscalls that have been used for early
 bringup work, which will be going away in the future as the long term
-syscall API/ABI surface is finalized.  The expectation is that there will
+syscall API and ABI surface is finalized. The expectation is that there will
 be about 100 syscalls.
 
-Zircon syscalls are generally non-blocking.  The wait_one, wait_many
-port_wait and thread sleep being the notable exceptions.
+Zircon syscalls are generally non-blocking. The `wait_one`, `wait_many`
+`port_wait` and `thread sleep` being the notable exceptions.
 
 This page is a non-comprehensive index of the zircon documentation.
 
@@ -29,7 +29,7 @@ This page is a non-comprehensive index of the zircon documentation.
   Patches to Zircon](/docs/development/source_code/contribute_changes.md#contributing-patches-to-zircon)
 + [GN in Zircon](/docs/concepts/build_system/zircon_gn.md)
 
-+ [Concepts Overview](/docs/concepts/kernel/concepts.md)
++ [Zircon Concepts](/docs/concepts/kernel/concepts.md)
 + [Kernel Objects](/docs/reference/kernel_objects/objects.md)
 + [Kernel Invariants](kernel_invariants.md)
 + [Kernel Scheduling](kernel_scheduling.md)
@@ -64,5 +64,5 @@ This page is a non-comprehensive index of the zircon documentation.
 + [Memory usage analysis tools](/docs/development/kernel/memory/memory.md)
 + [Symbolizer](/docs/reference/kernel/symbolizer_markup.md)
 + [Relationship with LK](zx_and_lk.md)
-+ [Micro-benchmarks](/docs/development/benchmarking/microbenchmarks.md)
++ [Viewing microbenchmarks with Catapult](/docs/development/benchmarking/catapult_user_guide.md)
 + [Avoiding a problem with the SYSRET instruction](sysret_problem.md)
