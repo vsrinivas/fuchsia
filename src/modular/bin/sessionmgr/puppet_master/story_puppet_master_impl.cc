@@ -128,98 +128,6 @@ class AnnotateOperation : public Operation<fuchsia::modular::StoryPuppetMaster_A
   std::vector<fuchsia::modular::Annotation> annotations_;
 };
 
-class AnnotateModuleOperation
-    : public Operation<fuchsia::modular::StoryPuppetMaster_AnnotateModule_Result> {
- public:
-  AnnotateModuleOperation(SessionStorage* const session_storage, std::string story_name,
-                          std::string module_id,
-                          std::vector<fuchsia::modular::Annotation> annotations, ResultCall done)
-      : Operation("StoryPuppetMasterImpl.AnnotateModuleOperation", std::move(done)),
-        session_storage_(session_storage),
-        story_name_(std::move(story_name)),
-        module_id_(std::move(module_id)),
-        annotations_(std::move(annotations)) {}
-
- private:
-  void Run() override {
-    for (auto const& annotation : annotations_) {
-      if (annotation.value && annotation.value->is_buffer() &&
-          annotation.value->buffer().size >
-              fuchsia::modular::MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES) {
-        fuchsia::modular::StoryPuppetMaster_AnnotateModule_Result result{};
-        result.set_err(fuchsia::modular::AnnotationError::VALUE_TOO_BIG);
-        Done(std::move(result));
-        return;
-      }
-    }
-
-    auto story_storage = session_storage_->GetStoryStorage(story_name_);
-    if (story_storage == nullptr) {
-      // Since Modules are created by an external component, and the external component
-      // would only be able to add a Module to a Story that it managed, it isn't possible
-      // for AnnotateModule() to create it's own StoryStorage, if not found. So this is
-      // an error.
-      fuchsia::modular::StoryPuppetMaster_AnnotateModule_Result result{};
-      result.set_err(fuchsia::modular::AnnotationError::NOT_FOUND);
-      Done(std::move(result));
-      return;
-    }
-    story_storage_ = std::move(story_storage);
-    auto module_data = story_storage_->ReadModuleData({module_id_});
-    if (module_data != nullptr) {
-      AnnotateModuleIfFirstAttempt(std::move(module_data));
-    } else {
-      // If the module_data is not found, the callback will be called if and
-      // when the ModuleData is stored, later.
-      story_storage_->SubscribeModuleDataUpdated([&](fuchsia::modular::ModuleData new_module_data) {
-        if (new_module_data.module_path().back() == module_id_) {
-          AnnotateModuleIfFirstAttempt(
-              std::make_unique<fuchsia::modular::ModuleData>(std::move(new_module_data)));
-          // We've fulfilled our goal.  Signal to story_storage_
-          // that we're no longer interested in callbacks, so
-          // it'll drop its reference to this lambda before we
-          // complete and get deallocated.
-          return StoryStorage::NotificationInterest::STOP;
-        }
-        // Otherwise keep subscribed to other updates
-        return StoryStorage::NotificationInterest::CONTINUE;
-      });
-    }
-  }
-
-  void AnnotateModuleIfFirstAttempt(fuchsia::modular::ModuleDataPtr module_data) {
-    if (attempted_)
-      return;
-    attempted_ = true;
-    // Merge the annotations provided to the operation into any existing ones in `module_data`.
-    auto new_annotations = module_data->has_annotations()
-                               ? annotations::Merge(std::move(*module_data->mutable_annotations()),
-                                                    std::move(annotations_))
-                               : std::move(annotations_);
-
-    if (new_annotations.size() > fuchsia::modular::MAX_ANNOTATIONS_PER_MODULE) {
-      fuchsia::modular::StoryPuppetMaster_AnnotateModule_Result result{};
-      result.set_err(fuchsia::modular::AnnotationError::TOO_MANY_ANNOTATIONS);
-      Done(std::move(result));
-      return;
-    }
-
-    // Save the new version of module_data with annotations added.
-    module_data->set_annotations(std::move(new_annotations));
-    story_storage_->WriteModuleData(std::move(*module_data));
-    fuchsia::modular::StoryPuppetMaster_AnnotateModule_Result result{};
-    result.set_response({});
-    Done(std::move(result));
-  }
-
-  SessionStorage* const session_storage_;
-  std::shared_ptr<StoryStorage> story_storage_;
-  std::string story_name_;
-  std::string module_id_;
-  std::vector<fuchsia::modular::Annotation> annotations_;
-  bool attempted_ = false;
-};
-
 }  // namespace
 
 StoryPuppetMasterImpl::StoryPuppetMasterImpl(std::string story_name,
@@ -260,13 +168,6 @@ void StoryPuppetMasterImpl::Annotate(std::vector<fuchsia::modular::Annotation> a
                                      AnnotateCallback callback) {
   operations_->Add(std::make_unique<AnnotateOperation>(
       session_storage_, story_name_, std::move(annotations), std::move(callback)));
-}
-
-void StoryPuppetMasterImpl::AnnotateModule(std::string module_id,
-                                           std::vector<fuchsia::modular::Annotation> annotations,
-                                           AnnotateModuleCallback callback) {
-  operations_->Add(std::make_unique<AnnotateModuleOperation>(
-      session_storage_, story_name_, module_id, std::move(annotations), std::move(callback)));
 }
 
 }  // namespace modular

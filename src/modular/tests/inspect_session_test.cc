@@ -303,15 +303,6 @@ TEST_F(InspectSessionTest, DISABLED_CheckNodeHierarchyMods) {
   std::vector<fuchsia::modular::Annotation> mod_annotations;
   mod_annotations.push_back(fidl::Clone(text_mod_annotation));
 
-  bool annotate_done = false;
-  story_master->AnnotateModule(
-      "mod1", std::move(mod_annotations),
-      [&](fuchsia::modular::StoryPuppetMaster_AnnotateModule_Result result) {
-        EXPECT_FALSE(result.is_err());
-        annotate_done = true;
-      });
-  RunLoopUntil([&] { return annotate_done; });
-
   auto data_result = GetInspectDiagnosticsData();
   ASSERT_TRUE(data_result.is_ok());
   auto data = data_result.take_value();
@@ -334,20 +325,5 @@ TEST_F(InspectSessionTest, DISABLED_CheckNodeHierarchyMods) {
                             modular_config::kInspectSurfaceRelationEmphasis}));
   EXPECT_EQ(rapidjson::Value("mod1"),
             data.GetByPath({"root", kStoryId, kFakeModuleUrl, modular_config::kInspectModulePath}));
-
-  // Due to flake fxbug.dev/50778, explicitly wait for a value to exist at 'annotation: text_key'
-  // before validating it has the correct value. The race was not reproducible on developer machines
-  // but exhibited as 'annotation: text_key' being null. If there is even a single execution run
-  // loop step between the callback to StoryPuppetMaster.AnnotateModule() and when Inspect data
-  // is available in the snapshot, the race could theorectically happen. This explicit wait
-  // ensures that the Inspect snapshot has caught up.
-  RunLoopUntil([this, &kStoryId]() -> bool {
-    auto data_result = GetInspectDiagnosticsData();
-    assert(data_result.is_ok());
-    auto data = data_result.take_value();
-    return !data.GetByPath({"root", kStoryId, kFakeModuleUrl, "annotation: text_key"}).IsNull();
-  });
-  EXPECT_EQ(rapidjson::Value("bytes"),
-            data.GetByPath({"root", kStoryId, kFakeModuleUrl, "annotation: text_key"}));
 }
 }  // namespace

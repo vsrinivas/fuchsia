@@ -105,12 +105,4 @@ protocol StoryPuppetMaster {
     /// deleted if new value is null.
     Annotate(vector<Annotation>:MAX_ANNOTATIONS_PER_UPDATE annotations)
         -> () error AnnotationError;
-
-    /// Attach the `annotations` to the module with the given `id`.
-    /// The module can be annotated before being added to the story, but if the
-    /// story does not yet exist, AnnotationError.NOT_FOUND is returned.
-    ///
-    /// Existing annotations with the same key will be overwritten.
-    AnnotateModule(string module_id, vector<Annotation>:MAX_ANNOTATIONS_PER_UPDATE annotations)
-        -> () error AnnotationError;
 };
