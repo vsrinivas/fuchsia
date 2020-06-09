@@ -18,7 +18,7 @@
 #include "src/sys/appmgr/integration_tests/sandbox/namespace_test.h"
 
 TEST_F(NamespaceTest, SomeServices) {
-  // Only whitelisted service is available.
+  // Only allowlisted service is available.
   fuchsia::sys::LoaderSyncPtr loader;
   fuchsia::process::ResolverSyncPtr resolver;
   ConnectToService(loader.NewRequest());

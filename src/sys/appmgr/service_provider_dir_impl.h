@@ -74,8 +74,8 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::
   // take precedence.
   void InitLogging();
 
-  bool IsServiceWhitelisted(const std::string& service_name) {
-    return (!has_services_whitelist_ || services_whitelist_.count(service_name) > 0);
+  bool IsServiceAllowlisted(const std::string& service_name) {
+    return (!has_services_allowlist_ || services_allowlist_.count(service_name) > 0);
   }
 
  private:
@@ -90,10 +90,10 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::
 
   bool has_builtin_logsink_ = false;
 
-  // TODO(CP-25): Remove has_services_whitelist_ when empty services is
+  // TODO(CP-25): Remove has_services_allowlist_ when empty services is
   // equivalent to no services.
-  bool has_services_whitelist_ = false;
-  std::unordered_set<std::string> services_whitelist_;
+  bool has_services_allowlist_ = false;
+  std::unordered_set<std::string> services_allowlist_;
   // Secondary storage for services under |root_| in a format that can easily
   // be consumed by children. Stored as vector to preserve order.
   typedef std::pair<std::string, fbl::RefPtr<fs::Service>> ServiceHandle;

@@ -158,12 +158,12 @@ TEST_F(ServiceProviderTest, Parent) {
 }
 
 TEST_F(ServiceProviderTest, RestrictedServices) {
-  static const std::vector<std::string> kWhitelist{"parent_service1", "my_service1"};
+  static const std::vector<std::string> kAllowlist{"parent_service1", "my_service1"};
   auto parent_service_provider =
       fbl::AdoptRef(new ServiceProviderDirImpl(AdoptRef(new LogConnectorImpl("parent"))));
   AddService(parent_service_provider.get(), "parent", 1);
   AddService(parent_service_provider.get(), "parent", 2);
-  ServiceProviderDirImpl service_provider(AdoptRef(new LogConnectorImpl("main")), &kWhitelist);
+  ServiceProviderDirImpl service_provider(AdoptRef(new LogConnectorImpl("main")), &kAllowlist);
   AddService(&service_provider, "my", 1);
   AddService(&service_provider, "my", 2);
   service_provider.set_parent(parent_service_provider);
@@ -258,10 +258,10 @@ TEST_F(ServiceProviderTest, Readdir_WithParent) {
 
 // Test that a parent's custom LogSink is inherited by child, and not provided by appmgr.
 TEST_F(ServiceProviderTest, CustomLogSinkInheritedFromParent) {
-  static const std::vector<std::string> kWhitelist{fuchsia::logger::LogSink::Name_};
+  static const std::vector<std::string> kAllowlist{fuchsia::logger::LogSink::Name_};
   // parent has a custom LogSink.
   auto parent =
-      AdoptRef(new ServiceProviderDirImpl(AdoptRef(new LogConnectorImpl("root")), &kWhitelist));
+      AdoptRef(new ServiceProviderDirImpl(AdoptRef(new LogConnectorImpl("root")), &kAllowlist));
   int parent_logger_requests = 0;
   parent->AddService(fuchsia::logger::LogSink::Name_,
                      fbl::AdoptRef(new fs::Service([&](zx::channel channel) {
@@ -272,7 +272,7 @@ TEST_F(ServiceProviderTest, CustomLogSinkInheritedFromParent) {
 
   // child requests a LogSink.
   auto child =
-      AdoptRef(new ServiceProviderDirImpl(AdoptRef(new LogConnectorImpl("child")), &kWhitelist));
+      AdoptRef(new ServiceProviderDirImpl(AdoptRef(new LogConnectorImpl("child")), &kAllowlist));
   child->set_parent(parent);
   child->InitLogging();
 

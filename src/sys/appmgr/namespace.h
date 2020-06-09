@@ -73,7 +73,7 @@ class Namespace : public fuchsia::sys::Environment,
       fuchsia::sys::LaunchInfo launch_info,
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) override;
 
-  // Adds the service to the service directory if it's whitelisted.
+  // Adds the service to the service directory if it's allowlisted.
   void MaybeAddComponentEventProvider();
 
   // Notifies a realms ComponentEventListener with the out/diagnostics directory for a component.
@@ -94,7 +94,7 @@ class Namespace : public fuchsia::sys::Environment,
   FRIEND_MAKE_REF_COUNTED(Namespace);
   Namespace(fxl::RefPtr<Namespace> parent, fxl::WeakPtr<Realm> realm,
             fuchsia::sys::ServiceListPtr additional_services,
-            const std::vector<std::string>* service_whitelist);
+            const std::vector<std::string>* service_allowlist);
 
   FRIEND_REF_COUNTED_THREAD_SAFE(Namespace);
   ~Namespace() override;

@@ -24,13 +24,13 @@ namespace component {
 
 Namespace::Namespace(fxl::RefPtr<Namespace> parent, fxl::WeakPtr<Realm> realm,
                      fuchsia::sys::ServiceListPtr additional_services,
-                     const std::vector<std::string>* service_whitelist)
+                     const std::vector<std::string>* service_allowlist)
     : vfs_(async_get_default_dispatcher()) {
   fbl::RefPtr<LogConnectorImpl> connector;
   if (realm) {
     connector = realm->log_connector();
   }
-  services_ = fbl::AdoptRef(new ServiceProviderDirImpl(connector, service_whitelist));
+  services_ = fbl::AdoptRef(new ServiceProviderDirImpl(connector, service_allowlist));
   job_provider_ = fbl::AdoptRef(new JobProviderImpl(realm.get()));
   realm_ = std::move(realm);
   // WARNING! Do not add new services here! This makes services available in all
@@ -165,7 +165,7 @@ void Namespace::NotifyComponentStopped(const std::string& component_url,
 }
 
 void Namespace::MaybeAddComponentEventProvider() {
-  if (services_->IsServiceWhitelisted(fuchsia::sys::internal::ComponentEventProvider::Name_)) {
+  if (services_->IsServiceAllowlisted(fuchsia::sys::internal::ComponentEventProvider::Name_)) {
     services_->AddService(
         fuchsia::sys::internal::ComponentEventProvider::Name_,
         fbl::AdoptRef(new fs::Service([this](zx::channel channel) {

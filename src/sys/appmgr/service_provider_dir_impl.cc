@@ -43,8 +43,8 @@ ServiceProviderDirImpl::ServiceProviderDirImpl(fbl::RefPtr<LogConnectorImpl> log
       log_connector_(log_connector),
       weak_factory_(this) {
   if (services != nullptr) {
-    has_services_whitelist_ = true;
-    services_whitelist_.insert(services->begin(), services->end());
+    has_services_allowlist_ = true;
+    services_allowlist_.insert(services->begin(), services->end());
   }
 }
 
@@ -75,7 +75,7 @@ void ServiceProviderDirImpl::AddService(const std::string& service_name,
     // has. In that case, the child's service should take priority.
     return;
   }
-  if (IsServiceWhitelisted(service_name)) {
+  if (IsServiceAllowlisted(service_name)) {
     service_handles_.push_back({service_name, service});
     root_->AddEntry(service_name, std::move(service));
     all_service_names_.insert(service_name);
@@ -88,7 +88,7 @@ void ServiceProviderDirImpl::AddBinding(
 }
 
 void ServiceProviderDirImpl::ConnectToService(std::string service_name, zx::channel channel) {
-  if (!IsServiceWhitelisted(service_name)) {
+  if (!IsServiceAllowlisted(service_name)) {
     FX_LOGS(WARNING) << ServiceNotInSandbox(component_url_, service_name);
     return;
   }
@@ -126,7 +126,7 @@ fs::VnodeProtocolSet ServiceProviderDirImpl::GetProtocols() const {
 
 zx_status_t ServiceProviderDirImpl::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
   const std::string sname(name.data(), name.length());
-  if (!IsServiceWhitelisted(sname)) {
+  if (!IsServiceAllowlisted(sname)) {
     FX_LOGS(WARNING) << ServiceNotInSandbox(component_url_, sname);
   }
   return root_->Lookup(out, name);
@@ -134,7 +134,7 @@ zx_status_t ServiceProviderDirImpl::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::Str
 
 void ServiceProviderDirImpl::InitLogging() {
   // A log connector if they ask for it.
-  if (IsServiceWhitelisted(fuchsia::sys::internal::LogConnector::Name_)) {
+  if (IsServiceAllowlisted(fuchsia::sys::internal::LogConnector::Name_)) {
     AddService(
         fuchsia::sys::internal::LogConnector::Name_,
         fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
@@ -144,10 +144,10 @@ void ServiceProviderDirImpl::InitLogging() {
         })));
   }
 
-  // If LogSink was whitelisted and wasn't explicitly provided to us, give it an attributed log
+  // If LogSink was allowlisted and wasn't explicitly provided to us, give it an attributed log
   // sink.
   if (all_service_names_.count(fuchsia::logger::LogSink::Name_) == 0 &&
-      IsServiceWhitelisted(fuchsia::logger::LogSink::Name_)) {
+      IsServiceAllowlisted(fuchsia::logger::LogSink::Name_)) {
     has_builtin_logsink_ = true;
     // Forward the LogSink request to the backing LogConnector, attributing it with
     AddService(

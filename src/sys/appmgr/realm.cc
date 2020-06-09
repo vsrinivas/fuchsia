@@ -928,12 +928,12 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
   builder.AddPackage(std::move(pkg));
 
   // If meta/*.cmx exists, attempt to read sandbox data from it.
-  const std::vector<std::string>* service_whitelist = nullptr;
+  const std::vector<std::string>* service_allowlist = nullptr;
   std::vector<zx_policy_basic_v2_t> policies;
 
   if (!cmx.sandbox_meta().IsNull()) {
     const auto& sandbox = cmx.sandbox_meta();
-    service_whitelist = &sandbox.services();
+    service_allowlist = &sandbox.services();
 
     builder.AddConfigData(sandbox, fp.package_name());
 
@@ -961,7 +961,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
 
     fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
         default_namespace_, weak_ptr_factory_.GetWeakPtr(),
-        std::move(launch_info.additional_services), service_whitelist);
+        std::move(launch_info.additional_services), service_allowlist);
 
     if (security_policy->enable_component_event_provider) {
       ns->MaybeAddComponentEventProvider();
