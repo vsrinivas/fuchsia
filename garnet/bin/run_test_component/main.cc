@@ -34,10 +34,10 @@
 #include <vector>
 
 #include "garnet/bin/run_test_component/component.h"
-#include "garnet/bin/run_test_component/env_config.h"
 #include "garnet/bin/run_test_component/log_collector.h"
 #include "garnet/bin/run_test_component/max_severity_config.h"
 #include "garnet/bin/run_test_component/run_test_component.h"
+#include "garnet/bin/run_test_component/sys_tests.h"
 #include "garnet/bin/run_test_component/test_metadata.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/zx/object_traits.h"
@@ -93,27 +93,24 @@ Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-s
 )");
 }
 
-bool ConnectToRequiredEnvironment(const run::EnvironmentType& env_type, zx::channel request) {
+bool ConnectToSysEnvironment(zx::channel request) {
   std::string current_env;
   files::ReadFileToString("/hub/name", &current_env);
   std::string svc_path = "/hub/svc";
-  switch (env_type) {
-    case run::EnvironmentType::SYS:
-      if (current_env == "app") {
-        files::Glob glob("/hub/r/sys/*/svc");
-        if (glob.size() != 1) {
-          fprintf(stderr, "Cannot run test. Something wrong with hub.");
-          return false;
-        }
-        svc_path = *(glob.begin());
-      } else if (current_env != "sys") {
-        fprintf(stderr,
-                "Cannot run test in sys environment as this utility was "
-                "started in '%s' environment",
-                current_env.c_str());
-        return false;
-      }
-      break;
+
+  if (current_env == "app") {
+    files::Glob glob("/hub/r/sys/*/svc");
+    if (glob.size() != 1) {
+      fprintf(stderr, "Cannot run test. Something wrong with hub.");
+      return false;
+    }
+    svc_path = *(glob.begin());
+  } else if (current_env != "sys") {
+    fprintf(stderr,
+            "Cannot run test in sys environment as this utility was "
+            "started in '%s' environment",
+            current_env.c_str());
+    return false;
   }
 
   // launch test
@@ -237,6 +234,7 @@ int main(int argc, const char** argv) {
   }
   fuchsia::sys::PackagePtr pkg;
   status = loader->LoadUrl(program_name, &pkg);
+
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to load %s: %s\n", program_name.c_str(), zx_status_get_string(status));
     return 1;
@@ -272,7 +270,6 @@ int main(int argc, const char** argv) {
   fuchsia::sys::LauncherPtr launcher;
   std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_env;
 
-  run::EnvironmentConfig config;
   std::vector<std::shared_ptr<fuchsia::logger::LogMessage>> restricted_logs;
   auto max_severity_allowed = FX_LOG_FATAL;
   bool restrict_logs = false;
@@ -302,8 +299,7 @@ int main(int argc, const char** argv) {
 
   std::unique_ptr<run::Component> observer_component = nullptr;
 
-  auto map_entry = config.url_map()->find(parse_result.launch_info.url);
-  if (map_entry != config.url_map()->end()) {
+  if (run::should_run_in_sys(parse_result.launch_info.url)) {
     if (test_metadata.HasServices()) {
       fprintf(stderr,
               "Cannot run this test in sys/root environment as it defines "
@@ -311,7 +307,7 @@ int main(int argc, const char** argv) {
               run::kFuchsiaTest);
       return 1;
     }
-    if (!ConnectToRequiredEnvironment(map_entry->second, parent_env.NewRequest().TakeChannel())) {
+    if (!ConnectToSysEnvironment(parent_env.NewRequest().TakeChannel())) {
       return 1;
     }
 

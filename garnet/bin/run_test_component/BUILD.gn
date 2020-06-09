@@ -13,7 +13,6 @@ source_set("lib") {
   sources = [
     "component.cc",
     "component.h",
-    "env_config.h",
     "log_collector.cc",
     "log_collector.h",
     "max_severity_config.cc",
@@ -22,6 +21,8 @@ source_set("lib") {
     "output_collector.h",
     "run_test_component.cc",
     "run_test_component.h",
+    "sys_tests.cc",
+    "sys_tests.h",
     "test_metadata.cc",
     "test_metadata.h",
   ]
@@ -109,6 +110,7 @@ executable("test_bin") {
     "max_severity_config_unittests.cc",
     "output_collector_unittests.cc",
     "run_test_component_unittest.cc",
+    "sys_tests_unittests.cc",
     "test_metadata_unittest.cc",
   ]
 
