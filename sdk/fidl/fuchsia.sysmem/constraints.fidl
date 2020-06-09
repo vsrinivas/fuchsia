@@ -438,13 +438,9 @@ struct ImageFormat_2 {
     /// two values are relatively prime by reducing the fraction (dividing
     /// both by GCF) if necessary.
     ///
-    /// When has_pixel_aspect_ratio == false, pixel_aspect_ratio_width and
-    /// pixel_aspect_ratio_height will both be 1, but in that case the
-    /// pixel_aspect_ratio_width : pixel_aspect_ratio_height of 1:1 is just
-    /// a very weak suggestion re. reasonable-ish handling, not in any way
-    /// authoritative. In this case (or in any case really) the receiver of
-    /// this message may have other OOB means to determine the actual
-    /// pixel_aspect_ratio.
+    /// When has_pixel_aspect_ratio == false, the pixel_aspect_ratio is unknown.
+    /// A default of 1:1 can be appropriate in some cases, but as always, a
+    /// consumer may determine the actual pixel_aspect_ratio by OOB means.
     bool has_pixel_aspect_ratio = false;
     uint32 pixel_aspect_ratio_width = 1;
     uint32 pixel_aspect_ratio_height = 1;

@@ -4,8 +4,12 @@
 
 #include "buffer_collection.h"
 
+#include <fuchsia/sysmem/c/fidl.h>
+#include <lib/fidl-async-2/fidl_struct.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/sysmem-version/sysmem-version.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 
 #include <atomic>
 
@@ -13,16 +17,17 @@
 
 #include "fuchsia/sysmem/c/fidl.h"
 #include "logical_buffer_collection.h"
+#include "macros.h"
+#include "utils.h"
 
 namespace sysmem_driver {
 
 namespace {
 
-namespace {
+using BufferCollectionInfo_v1 = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
+                                           llcpp::fuchsia::sysmem::BufferCollectionInfo_2>;
 
 constexpr uint32_t kConcurrencyCap = 64;
-
-}  // namespace
 
 // For max client vmo rights, we specify the RIGHT bits individually to avoid
 // picking up any newly-added rights unintentionally.  This is based on
@@ -43,6 +48,7 @@ const uint32_t kMaxClientVmoRights =
     //
     // Remaining bits of ZX_DEFAULT_VMO_RIGHTS (as of this writing):
     ZX_RIGHT_MAP;
+
 }  // namespace
 
 const fuchsia_sysmem_BufferCollection_ops_t BufferCollection::kOps = {
@@ -117,6 +123,39 @@ zx_status_t BufferCollection::Sync(fidl_txn_t* txn) {
   return fuchsia_sysmem_BufferCollectionSync_reply(txn);
 }
 
+zx_status_t BufferCollection::SetConstraintsAuxBuffers(
+    const fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers* constraints_param) {
+  ZX_DEBUG_ASSERT(constraints_param);
+
+  // Copy data and own handles.
+  static_assert(sizeof(llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers) ==
+                sizeof(fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers));
+  llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers local_constraints;
+  memcpy(&local_constraints, constraints_param, sizeof(local_constraints));
+
+  if (is_set_constraints_aux_buffers_seen_) {
+    FailAsync(ZX_ERR_NOT_SUPPORTED, "SetConstraintsAuxBuffers() can be called only once.");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  is_set_constraints_aux_buffers_seen_ = true;
+  if (is_done_) {
+    FailAsync(ZX_ERR_BAD_STATE,
+              "BufferCollectionToken::SetConstraintsAuxBuffers() when already is_done_");
+    // We're failing async - no need to try to fail sync.
+    return ZX_OK;
+  }
+  if (is_set_constraints_seen_) {
+    FailAsync(ZX_ERR_NOT_SUPPORTED,
+              "SetConstraintsAuxBuffers() after SetConstraints() causes failure.");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  ZX_DEBUG_ASSERT(!constraints_aux_buffers_);
+  constraints_aux_buffers_.emplace(std::move(local_constraints));
+  // LogicalBufferCollection doesn't care about "clear aux buffers" constraints until the last
+  // SetConstraints(), so done for now.
+  return ZX_OK;
+}
+
 zx_status_t BufferCollection::SetConstraints(
     bool has_constraints, const fuchsia_sysmem_BufferCollectionConstraints* constraints_param) {
   TRACE_DURATION("gfx", "BufferCollection::SetConstraints", "this", this, "parent", parent_.get());
@@ -124,24 +163,71 @@ zx_status_t BufferCollection::SetConstraints(
   // ownership of any handles in constraints_param.  Not that there are
   // necessarily any handles in here currently, but to avoid being fragile re.
   // any handles potentially added later.
-  constraints_.reset(constraints_param);
+  ZX_DEBUG_ASSERT(constraints_param);
+
+  // Copy data and own handles.
+  static_assert(sizeof(llcpp::fuchsia::sysmem::BufferCollectionConstraints) ==
+                sizeof(fuchsia_sysmem_BufferCollectionConstraints));
+  std::optional<llcpp::fuchsia::sysmem::BufferCollectionConstraints> local_constraints;
+  local_constraints.emplace();
+  memcpy(&local_constraints.value(), constraints_param, sizeof(local_constraints.value()));
+
+  if (is_set_constraints_seen_) {
+    FailAsync(ZX_ERR_NOT_SUPPORTED, "2nd SetConstraints() causes failure.");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  is_set_constraints_seen_ = true;
   if (is_done_) {
     FailAsync(ZX_ERR_BAD_STATE, "BufferCollectionToken::SetConstraints() when already is_done_");
     // We're failing async - no need to try to fail sync.
     return ZX_OK;
   }
-  if (is_set_constraints_seen_) {
-    FailAsync(ZX_ERR_NOT_SUPPORTED, "For now, 2nd SetConstraints() causes failure.");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  is_set_constraints_seen_ = true;
-
   if (!has_constraints) {
-    // We don't need any of the handles/info in constraints_param, so close
-    // the handles sooner rather than later.  This also lets us track
-    // whether we have null constraints without a separate bool.
-    constraints_.reset(nullptr);
+    // Not needed.
+    local_constraints.reset();
+    if (is_set_constraints_aux_buffers_seen_) {
+      // No constraints are fine, just not aux buffers constraints without main constraints, because
+      // I can't think of any reason why we'd need to support aux buffers constraints without main
+      // constraints, so disallow at least for now.
+      FailAsync(ZX_ERR_NOT_SUPPORTED, "SetConstraintsAuxBuffers() && !has_constraints");
+      return ZX_ERR_NOT_SUPPORTED;
+    }
   }
+
+  ZX_DEBUG_ASSERT(!constraints_);
+  // enforced above
+  ZX_DEBUG_ASSERT(!constraints_aux_buffers_ || local_constraints);
+  ZX_DEBUG_ASSERT(has_constraints == !!local_constraints);
+  {  // scope result
+    auto result = sysmem::V2CopyFromV1BufferCollectionConstraints(
+        &allocator_, local_constraints ? &local_constraints.value() : nullptr,
+        constraints_aux_buffers_ ? &constraints_aux_buffers_.value() : nullptr);
+    if (!result.is_ok()) {
+      LOG(ERROR, "V2CopyFromV1BufferCollectionConstraints() failed");
+      return ZX_ERR_INVALID_ARGS;
+    }
+    ZX_DEBUG_ASSERT(!result.value().IsEmpty() || !local_constraints);
+    constraints_.emplace(result.take_value());
+  }  // ~result
+  // No longer needed.
+  constraints_aux_buffers_.reset();
+
+  // Stash BufferUsage also, for benefit of GetUsageBasedRightsAttenuation() depsite
+  // TakeConstraints().
+  {  // scope buffer_usage
+    llcpp::fuchsia::sysmem::BufferUsage empty_buffer_usage{};
+    llcpp::fuchsia::sysmem::BufferUsage* source_buffer_usage = &empty_buffer_usage;
+    if (local_constraints) {
+      source_buffer_usage = &local_constraints.value().usage;
+    }
+    auto result = sysmem::V2CopyFromV1BufferUsage(&allocator_, *source_buffer_usage);
+    if (!result.is_ok()) {
+      LOG(ERROR, "V2CopyFromV1BufferUsage failed");
+      // Not expected given current impl of sysmem-version.
+      return ZX_ERR_INTERNAL;
+    }
+    usage_.emplace(result.take_value().build());
+  }  // ~buffer_usage
 
   // LogicalBufferCollection will ask for constraints when it needs them,
   // possibly during this call if this is the last participant to report
@@ -193,6 +279,21 @@ zx_status_t BufferCollection::CheckBuffersAllocated(fidl_txn_t* txn) {
   }
   // Buffer collection has either been allocated or failed.
   return fuchsia_sysmem_BufferCollectionCheckBuffersAllocated_reply(txn, allocation_result.status);
+}
+
+zx_status_t BufferCollection::GetAuxBuffers(fidl_txn_t* txn_param) {
+  BindingType::Txn::RecognizeTxn(txn_param);
+  BufferCollection::V1CBufferCollectionInfo to_send(
+      BufferCollection::V1CBufferCollectionInfo::Default);
+  zx_status_t reply_status = fuchsia_sysmem_BufferCollectionGetAuxBuffers_reply(
+      txn_param, ZX_ERR_NOT_SUPPORTED, to_send.release());
+  if (reply_status != ZX_OK) {
+    FailAsync(reply_status,
+              "fuchsia_sysmem_BufferCollectionGetAuxBuffers_reply failed - status: %d",
+              reply_status);
+    return ZX_OK;
+  }
+  return ZX_OK;
 }
 
 zx_status_t BufferCollection::CloseSingleBuffer(uint64_t buffer_index) {
@@ -270,26 +371,51 @@ zx_status_t BufferCollection::SetDebugClientInfo(const char* name_data, size_t n
   return ZX_OK;
 }
 
-zx_status_t BufferCollection::SetConstraintsAuxBuffers(
-    const fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers* constraints_aux_buffers) {
-  // Regardless of has_constraints or not, we need to unconditionally take
-  // ownership of any handles in constraints_aux_buffers_param.
-  ConstraintsAuxBuffers local_constraints_aux_buffers(*constraints_aux_buffers);
-  return ZX_ERR_NOT_SUPPORTED;
+fit::result<llcpp::fuchsia::sysmem2::BufferCollectionInfo::Builder>
+BufferCollection::CloneResultForSendingV2(
+    const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info) {
+  auto clone_result = sysmem::V2CloneBufferCollectionInfo(
+      &allocator_, buffer_collection_info, GetClientVmoRights(), GetClientAuxVmoRights());
+  if (!clone_result.is_ok()) {
+    FailAsync(clone_result.error(),
+              "CloneResultForSendingV1() V2CloneBufferCollectionInfo() failed - status: %d",
+              clone_result.error());
+    return fit::error();
+  }
+  auto v2_b = clone_result.take_value();
+  if (!IsAnyUsage(usage_.value())) {
+    // No VMO handles should be sent to the client in this case.
+    if (v2_b.has_buffers()) {
+      for (auto& vmo_buffer : v2_b.buffers()) {
+        if (vmo_buffer.has_vmo()) {
+          vmo_buffer.vmo().reset();
+        }
+        if (vmo_buffer.has_aux_vmo()) {
+          vmo_buffer.aux_vmo().reset();
+        }
+      }
+    }
+  }
+  return fit::ok(std::move(v2_b));
 }
 
-zx_status_t BufferCollection::GetAuxBuffers(fidl_txn_t* txn_param) {
-  BindingType::Txn::RecognizeTxn(txn_param);
-  BufferCollectionInfo to_send(BufferCollectionInfo::Default);
-  zx_status_t reply_status = fuchsia_sysmem_BufferCollectionGetAuxBuffers_reply(
-      txn_param, ZX_ERR_NOT_SUPPORTED, to_send.release());
-  if (reply_status != ZX_OK) {
-    FailAsync(reply_status,
-              "fuchsia_sysmem_BufferCollectionGetAuxBuffers_reply failed - status: %d",
-              reply_status);
-    return ZX_OK;
+fit::result<BufferCollection::V1CBufferCollectionInfo> BufferCollection::CloneResultForSendingV1(
+    const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info) {
+  auto v2_builder_result = CloneResultForSendingV2(buffer_collection_info);
+  if (!v2_builder_result.is_ok()) {
+    // FailAsync() already called.
+    return fit::error();
   }
-  return ZX_OK;
+  auto v1_result = sysmem::V1MoveFromV2BufferCollectionInfo(v2_builder_result.take_value().build());
+  if (!v1_result.is_ok()) {
+    FailAsync(ZX_ERR_INVALID_ARGS,
+              "CloneResultForSendingV1() V1MoveFromV2BufferCollectionInfo() failed");
+    return fit::error();
+  }
+  V1CBufferCollectionInfo v1_c(V1CBufferCollectionInfo::Default);
+  // struct move
+  v1_c.BorrowAsLlcpp() = v1_result.take_value();
+  return fit::ok(std::move(v1_c));
 }
 
 void BufferCollection::OnBuffersAllocated() {
@@ -303,36 +429,38 @@ void BufferCollection::OnBuffersAllocated() {
     return;
   }
 
-  LogicalBufferCollection::AllocationResult allocation_result = parent()->allocation_result();
-  ZX_DEBUG_ASSERT(allocation_result.buffer_collection_info || allocation_result.status != ZX_OK);
-
-  BufferCollectionInfo to_send(BufferCollectionInfo::Default);
-  if (allocation_result.buffer_collection_info) {
-    to_send = BufferCollectionInfoClone(allocation_result.buffer_collection_info);
-    if (!to_send) {
-      // FailAsync() already called by Clone()
+  BufferCollection::V1CBufferCollectionInfo v1_c(
+      BufferCollection::V1CBufferCollectionInfo::Default);
+  if (parent()->allocation_result().status == ZX_OK) {
+    ZX_DEBUG_ASSERT(parent()->allocation_result().buffer_collection_info);
+    auto v1_c_result =
+        CloneResultForSendingV1(*parent()->allocation_result().buffer_collection_info);
+    if (!v1_c_result.is_ok()) {
+      // FailAsync() already called.
       return;
     }
+    v1_c = v1_c_result.take_value();
   }
 
   // Ownership of all handles in to_send is transferred to this function.
-  fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocated(events_.get(), allocation_result.status,
-                                                          to_send.release());
+  fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocated(
+      events_.get(), parent()->allocation_result().status, v1_c.release());
 }
 
-bool BufferCollection::is_set_constraints_seen() { return is_set_constraints_seen_; }
+bool BufferCollection::has_constraints() { return !!constraints_; }
 
-const fuchsia_sysmem_BufferCollectionConstraints* BufferCollection::constraints() {
-  ZX_DEBUG_ASSERT(is_set_constraints_seen());
-  if (!constraints_) {
-    return nullptr;
-  }
-  return constraints_.get();
+const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder&
+BufferCollection::constraints() {
+  ZX_DEBUG_ASSERT(has_constraints());
+  return constraints_.value();
 }
 
-BufferCollection::Constraints BufferCollection::TakeConstraints() {
-  ZX_DEBUG_ASSERT(is_set_constraints_seen());
-  return std::move(constraints_);
+llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder BufferCollection::TakeConstraints() {
+  ZX_DEBUG_ASSERT(has_constraints());
+  llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder result =
+      std::move(constraints_.value());
+  constraints_.reset();
+  return result;
 }
 
 LogicalBufferCollection* BufferCollection::parent() { return parent_.get(); }
@@ -343,7 +471,8 @@ bool BufferCollection::is_done() { return is_done_; }
 
 BufferCollection::BufferCollection(fbl::RefPtr<LogicalBufferCollection> parent)
     : FidlServer(parent->parent_device()->dispatcher(), "BufferCollection", kConcurrencyCap),
-      parent_(parent) {
+      parent_(parent),
+      allocator_(parent->fidl_allocator()) {
   TRACE_DURATION("gfx", "BufferCollection::BufferCollection", "this", this, "parent",
                  parent_.get());
   ZX_DEBUG_ASSERT(parent_);
@@ -351,38 +480,16 @@ BufferCollection::BufferCollection(fbl::RefPtr<LogicalBufferCollection> parent)
 
 // This method is only meant to be called from GetClientVmoRights().
 uint32_t BufferCollection::GetUsageBasedRightsAttenuation() {
-  ZX_DEBUG_ASSERT(is_set_constraints_seen_);
-  // If there are no constraints from this participant, it means this
-  // participant doesn't intend to do any "usage" at all aside from referring
-  // to buffers by their index in communication with other participants, so
-  // this participant doesn't need any VMO handles at all.  So this method
-  // never should be called if that's the case.
-  ZX_DEBUG_ASSERT(constraints_);
+  // This method won't be called for participants without any buffer data "usage".
+  ZX_DEBUG_ASSERT(usage_);
 
-  // We assume that read and map are both needed by all participants.  Only
+  // We assume that read and map are both needed by all participants with any "usage".  Only
   // ZX_RIGHT_WRITE is controlled by usage.
-
-  bool is_write_needed = false;
-
-  const fuchsia_sysmem_BufferUsage* usage = &constraints_->usage;
-
-  const uint32_t kCpuWriteBits = fuchsia_sysmem_cpuUsageWriteOften | fuchsia_sysmem_cpuUsageWrite;
-  // This list may not be complete.
-  const uint32_t kVulkanWriteBits =
-      fuchsia_sysmem_vulkanUsageTransferDst | fuchsia_sysmem_vulkanUsageStorage;
-  // Display usages don't include any writing.
-  const uint32_t kDisplayWriteBits = 0;
-  const uint32_t kVideoWriteBits =
-      fuchsia_sysmem_videoUsageHwDecoder | fuchsia_sysmem_videoUsageHwDecoderInternal |
-      fuchsia_sysmem_videoUsageDecryptorOutput | fuchsia_sysmem_videoUsageHwEncoder;
-
-  is_write_needed = (usage->cpu & kCpuWriteBits) || (usage->vulkan & kVulkanWriteBits) ||
-                    (usage->display & kDisplayWriteBits) || (usage->video & kVideoWriteBits);
 
   // It's not this method's job to attenuate down to kMaxClientVmoRights, so
   // let's not pretend like it is.
   uint32_t result = std::numeric_limits<uint32_t>::max();
-  if (!is_write_needed) {
+  if (!IsWriteUsage(usage_.value())) {
     result &= ~ZX_RIGHT_WRITE;
   }
 
@@ -401,6 +508,11 @@ uint32_t BufferCollection::GetClientVmoRights() {
       client_rights_attenuation_mask_;
 }
 
+uint32_t BufferCollection::GetClientAuxVmoRights() {
+  // At least for now.
+  return GetClientVmoRights();
+}
+
 void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
   LogicalBufferCollection::AllocationResult allocation_result = parent()->allocation_result();
   if (allocation_result.status == ZX_OK && !allocation_result.buffer_collection_info) {
@@ -410,20 +522,23 @@ void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
   while (!pending_wait_for_buffers_allocated_.empty()) {
     auto [async_id, txn] = std::move(pending_wait_for_buffers_allocated_.front());
     pending_wait_for_buffers_allocated_.pop_front();
-    BufferCollectionInfo to_send(BufferCollectionInfo::Default);
-    ZX_DEBUG_ASSERT(allocation_result.buffer_collection_info || allocation_result.status != ZX_OK);
-    if (allocation_result.buffer_collection_info) {
-      to_send = BufferCollectionInfoClone(allocation_result.buffer_collection_info);
-      if (!to_send) {
-        // FailAsync() has already been run by the Clone()
+
+    BufferCollection::V1CBufferCollectionInfo v1_c(
+        BufferCollection::V1CBufferCollectionInfo::Default);
+    if (allocation_result.status == ZX_OK) {
+      ZX_DEBUG_ASSERT(allocation_result.buffer_collection_info);
+      auto v1_c_result = CloneResultForSendingV1(*allocation_result.buffer_collection_info);
+      if (!v1_c_result.is_ok()) {
+        // FailAsync() already called.
         return;
       }
+      v1_c = v1_c_result.take_value();
     }
     TRACE_ASYNC_END("gfx", "BufferCollection::WaitForBuffersAllocated async", async_id, "this",
                     this, "parent", parent_.get());
     // Ownership of handles in to_send are transferred to _reply().
     zx_status_t reply_status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated_reply(
-        &txn->raw_txn(), allocation_result.status, to_send.release());
+        &txn->raw_txn(), allocation_result.status, v1_c.release());
     if (reply_status != ZX_OK) {
       FailAsync(reply_status,
                 "fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated_"
@@ -433,80 +548,6 @@ void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
     }
     // ~txn
   }
-}
-
-BufferCollection::BufferCollectionInfo BufferCollection::BufferCollectionInfoClone(
-    const fuchsia_sysmem_BufferCollectionInfo_2* buffer_collection_info) {
-  // We must not set handles in here that we don't own.  This means any
-  // sending of handles involves duplicating handles first, not just assigning
-  // a handle value into the |to_send| struct.
-  BufferCollectionInfo clone(BufferCollectionInfo::Default);
-
-  // We don't close the handles in temp on returning from this method.  Those
-  // handles don't belong to this method call, they belong to the caller.
-  //
-  // struct copy
-  fuchsia_sysmem_BufferCollectionInfo_2 temp = *buffer_collection_info;
-
-  // Zero the handles in temp so we can copy the rest of temp into to_send
-  // without putting any handles in to_send yet (as we haven't duplicated any
-  // handles yet).  There isn't any fidl_zero_handles() and
-  // fidl::internal::BufferWalker isn't meant to be used as a lib, so do this
-  // manually for now.
-  for (auto& vmo_buffer : temp.buffers) {
-    if (vmo_buffer.vmo == ZX_HANDLE_INVALID) {
-      // All the rest are already 0, so we can stop here.
-      break;
-    }
-    vmo_buffer.vmo = ZX_HANDLE_INVALID;
-  }
-
-  // Now we can copy the data of |temp| into to_send without owning handles we
-  // haven't duplicated yet.
-  //
-  // struct copy
-  *clone.get() = temp;
-
-  if (!constraints_) {
-    // No VMO handles should be copied in this case.
-    //
-    // TODO(dustingreen): Usage "none" should also do this.
-    return clone;
-  }
-
-  // We duplicate the handles in buffer_collection_info into to_send, so that
-  // if we fail mid-way we'll still remember to close the non-sent duplicates.
-  for (uint32_t i = 0; i < countof(buffer_collection_info->buffers); ++i) {
-    if (buffer_collection_info->buffers[i].vmo == ZX_HANDLE_INVALID) {
-      // The rest are ZX_HANDLE_INVALID also.
-      break;
-    }
-    zx::vmo handle_to_send;
-    zx_status_t duplicate_status =
-        zx_handle_duplicate(buffer_collection_info->buffers[i].vmo, GetClientVmoRights(),
-                            handle_to_send.reset_and_get_address());
-    if (duplicate_status != ZX_OK) {
-      // We fail the BufferCollection view with FailAsync(), which the
-      // LogicalBufferCollection will likely handle by failing the whole
-      // LogicalBufferCollection.  However, the LogicalBufferCollection is
-      // still permitted to delete |this| before FailAsync() is fully done
-      // - that possibility is handled cleanly by FailAsync() code.
-      //
-      // The important thing here is that by failing async, this
-      // particular stack doesn't have to check whether |this| still
-      // exists, or whether LogicalBufferCollection still exists.
-      FailAsync(duplicate_status,
-                "BufferCollection::OnBuffersAllocated() "
-                "zx::vmo::duplicate() failed - status: %d",
-                duplicate_status);
-      return BufferCollectionInfo(BufferCollectionInfo::Null);
-    }
-    // Transfer ownership of owned handle directly from zx::vmo to
-    // FidlStruct, in a way that can't fail.
-    clone->buffers[i].vmo = handle_to_send.release();
-  }
-
-  return clone;
 }
 
 }  // namespace sysmem_driver

@@ -24,6 +24,7 @@ source_set("sysmem_common_srcs") {
     "logical_buffer_collection.cc",
     "memory_allocator.cc",
     "usage_pixel_format_cost.cc",
+    "utils.cc",
   ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
@@ -31,6 +32,7 @@ source_set("sysmem_common_srcs") {
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/async-cpp",
@@ -56,6 +58,8 @@ source_set("sysmem_common_srcs") {
     "//zircon/system/ulib/fidl-async-2",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/sysmem-make-tracking",
+    "//zircon/system/ulib/sysmem-version",
   ]
 }
 
@@ -115,6 +119,8 @@ test("sysmem-unittest-executable") {
     "//zircon/system/ulib/fidl-async-2",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/sysmem-make-tracking",
+    "//zircon/system/ulib/sysmem-version",
   ]
 }
 

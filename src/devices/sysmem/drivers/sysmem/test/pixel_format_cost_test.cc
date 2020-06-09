@@ -2,86 +2,146 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/llcpp/heap_allocator.h>
+#include <lib/sysmem-make-tracking/make_tracking.h>
+
 #include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
+#include "out/default/fidling/gen/sdk/fidl/fuchsia.sysmem2/fuchsia/sysmem2/llcpp/fidl.h"
 #include "usage_pixel_format_cost.h"
 
 namespace sysmem_driver {
 namespace {
 
-TEST(PixelFormatCost, Afbc) {
-  fuchsia_sysmem_BufferCollectionConstraints constraints = {};
-  constraints.image_format_constraints_count = 2;
-  constraints.image_format_constraints[0].pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-  constraints.image_format_constraints[0].pixel_format.has_format_modifier = false;
-  constraints.image_format_constraints[1].pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-  constraints.image_format_constraints[1].pixel_format.has_format_modifier = true;
-  constraints.image_format_constraints[1].pixel_format.format_modifier.value =
-      fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8;
+fidl::HeapAllocator heap_allocator;
 
-  EXPECT_LT(0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912, &constraints,
-                                             0, 1));
-  EXPECT_GT(0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912, &constraints,
-                                             1, 0));
-  EXPECT_EQ(0, UsagePixelFormatCost::Compare(0u, PDEV_PID_AMLOGIC_S912, &constraints, 0, 1));
-  EXPECT_EQ(0, UsagePixelFormatCost::Compare(0u, PDEV_PID_AMLOGIC_S912, &constraints, 1, 0));
+TEST(PixelFormatCost, Afbc) {
+  auto constraints =
+      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
+  constraints.set_image_format_constraints(
+      heap_allocator.make_vec_ptr<llcpp::fuchsia::sysmem2::ImageFormatConstraints>(2));
+  constraints.image_format_constraints()[0] =
+      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::ImageFormatConstraints>()
+          .set_pixel_format(sysmem::MakeTracking(
+              &heap_allocator,
+              heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+                  .set_type(sysmem::MakeTracking(&heap_allocator,
+                                                 llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+                  .build()))
+          .build();
+  constraints.image_format_constraints()[1] =
+      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::ImageFormatConstraints>()
+          .set_pixel_format(sysmem::MakeTracking(
+              &heap_allocator,
+              heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+                  .set_type(sysmem::MakeTracking(&heap_allocator,
+                                                 llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+                  .set_format_modifier_value(sysmem::MakeTracking(
+                      &heap_allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8))
+                  .build()))
+          .build();
+
+  EXPECT_LT(
+      0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912, constraints, 0, 1));
+  EXPECT_GT(
+      0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912, constraints, 1, 0));
+  EXPECT_EQ(0, UsagePixelFormatCost::Compare(0u, PDEV_PID_AMLOGIC_S912, constraints, 0, 1));
+  EXPECT_EQ(0, UsagePixelFormatCost::Compare(0u, PDEV_PID_AMLOGIC_S912, constraints, 1, 0));
 }
 
 TEST(PixelFormatCost, IntelTiling) {
-  fuchsia_sysmem_BufferCollectionConstraints constraints = {};
-  constraints.image_format_constraints_count = 2;
-  constraints.image_format_constraints[0].pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-  constraints.image_format_constraints[0].pixel_format.has_format_modifier = true;
-  constraints.image_format_constraints[1].pixel_format.format_modifier.value =
-      fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
-
-  uint64_t tiling_types[] = {fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED,
-                             fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED,
-                             fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED};
+  auto constraints =
+      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
+  constraints.set_image_format_constraints(
+      heap_allocator.make_vec_ptr<llcpp::fuchsia::sysmem2::ImageFormatConstraints>(2));
+  uint64_t tiling_types[] = {llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_X_TILED,
+                             llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_YF_TILED,
+                             llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_Y_TILED};
   for (auto modifier : tiling_types) {
-    constraints.image_format_constraints[0].pixel_format.has_format_modifier = true;
-    constraints.image_format_constraints[1].pixel_format.type =
-        fuchsia_sysmem_PixelFormatType_BGRA32;
-    constraints.image_format_constraints[1].pixel_format.has_format_modifier = true;
-    constraints.image_format_constraints[1].pixel_format.format_modifier.value = modifier;
-
+    constraints.image_format_constraints()[0] =
+        heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::ImageFormatConstraints>()
+            .set_pixel_format(sysmem::MakeTracking(
+                &heap_allocator,
+                heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+                    .set_type(sysmem::MakeTracking(
+                        &heap_allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+                    .set_format_modifier_value(sysmem::MakeTracking(
+                        &heap_allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR))
+                    .build()))
+            .build();
+    constraints.image_format_constraints()[1] =
+        heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::ImageFormatConstraints>()
+            .set_pixel_format(sysmem::MakeTracking(
+                &heap_allocator,
+                heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+                    .set_type(sysmem::MakeTracking(
+                        &heap_allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+                    .set_format_modifier_value(sysmem::MakeTracking(&heap_allocator, modifier))
+                    .build()))
+            .build();
     constexpr uint32_t kUnknownPid = 0;
     constexpr uint32_t kUnknownVid = 0;
-    EXPECT_LT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, &constraints, 0, 1));
-    EXPECT_GT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, &constraints, 1, 0));
+    EXPECT_LT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 0, 1));
+    EXPECT_GT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 1, 0));
     // Intel tiled formats aren't necessarily useful on AMLOGIC, but if some hardware supported them
     // they should probably be used anyway.
-    EXPECT_LT(0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912,
-                                               &constraints, 0, 1));
-    EXPECT_GT(0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912,
-                                               &constraints, 1, 0));
+    EXPECT_LT(0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912, constraints,
+                                               0, 1));
+    EXPECT_GT(0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912, constraints,
+                                               1, 0));
 
-    // Explicit linear should be treated the same as no format modifier.
-    constraints.image_format_constraints[0].pixel_format.has_format_modifier = false;
-    EXPECT_LT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, &constraints, 0, 1));
-    EXPECT_GT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, &constraints, 1, 0));
+    // Explicit linear should be treated the same as no format modifier value.
+    constraints.image_format_constraints()[0].pixel_format().format_modifier_value() =
+        llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_NONE;
+    EXPECT_LT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 0, 1));
+    EXPECT_GT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 1, 0));
+
+    // Explicit linear should be treated the same as no format modifier value.
+    constraints.image_format_constraints()[0].pixel_format() =
+        heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+            .set_type(sysmem::MakeTracking(&heap_allocator,
+                                           llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+            .build();
+    EXPECT_LT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 0, 1));
+    EXPECT_GT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 1, 0));
   }
 }
 
 TEST(PixelFormatCost, ArmTransactionElimination) {
-  fuchsia_sysmem_BufferCollectionConstraints constraints = {};
-  constraints.image_format_constraints_count = 2;
-  constraints.image_format_constraints[0].pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-  constraints.image_format_constraints[0].pixel_format.has_format_modifier = true;
-  constraints.image_format_constraints[1].pixel_format.format_modifier.value =
-      fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8;
-  constraints.image_format_constraints[1].pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-  constraints.image_format_constraints[1].pixel_format.has_format_modifier = true;
-  constraints.image_format_constraints[1].pixel_format.format_modifier.value =
-      fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8_TE;
+  auto constraints =
+      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
+  constraints.set_image_format_constraints(
+      heap_allocator.make_vec_ptr<llcpp::fuchsia::sysmem2::ImageFormatConstraints>(2));
+  constraints.image_format_constraints()[0] =
+      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::ImageFormatConstraints>()
+          .set_pixel_format(sysmem::MakeTracking(
+              &heap_allocator,
+              heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+                  .set_type(sysmem::MakeTracking(&heap_allocator,
+                                                 llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+                  .set_format_modifier_value(sysmem::MakeTracking(
+                      &heap_allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8))
+                  .build()))
+          .build();
+  constraints.image_format_constraints()[1] =
+      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::ImageFormatConstraints>()
+          .set_pixel_format(sysmem::MakeTracking(
+              &heap_allocator,
+              heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+                  .set_type(sysmem::MakeTracking(&heap_allocator,
+                                                 llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+                  .set_format_modifier_value(sysmem::MakeTracking(
+                      &heap_allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8_TE))
+                  .build()))
+          .build();
 
-  EXPECT_LT(0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912, &constraints,
-                                             0, 1));
-  EXPECT_GT(0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912, &constraints,
-                                             1, 0));
-  EXPECT_EQ(0, UsagePixelFormatCost::Compare(0u, PDEV_PID_AMLOGIC_S912, &constraints, 0, 1));
-  EXPECT_EQ(0, UsagePixelFormatCost::Compare(0u, PDEV_PID_AMLOGIC_S912, &constraints, 1, 0));
+  EXPECT_LT(
+      0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912, constraints, 0, 1));
+  EXPECT_GT(
+      0, UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912, constraints, 1, 0));
+  EXPECT_EQ(0, UsagePixelFormatCost::Compare(0u, PDEV_PID_AMLOGIC_S912, constraints, 0, 1));
+  EXPECT_EQ(0, UsagePixelFormatCost::Compare(0u, PDEV_PID_AMLOGIC_S912, constraints, 1, 0));
 }
 
 }  // namespace

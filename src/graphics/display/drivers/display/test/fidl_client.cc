@@ -284,6 +284,11 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::ImageConfig& 
   sysmem::BufferCollectionConstraints constraints = {};
   constraints.min_buffer_count = 1;
   constraints.usage.none = sysmem::noneUsage;
+  // We specify min_size_bytes 1 so that something is specifying a minimum size.  More typically the
+  // display client would specify ImageFormatConstraints that implies a non-zero min_size_bytes.
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.min_size_bytes = 1;
+  constraints.buffer_memory_constraints.ram_domain_supported = true;
   zx_status_t status = sysmem_collection->SetConstraints(true, constraints).status();
   if (status != ZX_OK) {
     zxlogf(ERROR, "Unable to set constraints (%d)", status);

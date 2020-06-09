@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_USAGE_PIXEL_FORMAT_COST_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_USAGE_PIXEL_FORMAT_COST_H_
 
-#include <fuchsia/sysmem/c/fidl.h>
+#include <fuchsia/sysmem2/llcpp/fidl.h>
 
 #include <cstdint>
 
@@ -35,10 +35,10 @@ class UsagePixelFormatCost {
   //
   // By passing in the BufferCollectionConstraints, the implementation can
   // consider other aspects of constraints in addition to the usage.
-  static int32_t Compare(uint32_t pdev_device_info_vid, uint32_t pdev_device_info_pid,
-                         const fuchsia_sysmem_BufferCollectionConstraints* constraints,
-                         uint32_t image_format_constraints_index_a,
-                         uint32_t image_format_constraints_index_b);
+  static int32_t Compare(
+      uint32_t pdev_device_info_vid, uint32_t pdev_device_info_pid,
+      const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder& constraints,
+      uint32_t image_format_constraints_index_a, uint32_t image_format_constraints_index_b);
 
  private:
   // For now the implementation is via a static table.

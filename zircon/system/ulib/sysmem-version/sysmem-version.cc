@@ -120,7 +120,7 @@ fit::result<fidl::VectorView<llcpp::fuchsia::sysmem2::HeapType>> V2CopyFromV1Hea
   ZX_DEBUG_ASSERT(&v1a);
   ZX_DEBUG_ASSERT(v1_count);
   if (v1_count > v1a.size()) {
-    LOG(ERROR, "v1_count > v1a.size()");
+    LOG(ERROR, "v1_count > v1a.size() - v1_count: %u v1a.size(): %zu", v1_count, v1a.size());
     return fit::error();
   }
   auto v2a = allocator->make_vec<llcpp::fuchsia::sysmem2::HeapType>(v1_count);
@@ -138,7 +138,7 @@ fit::result<fidl::VectorView<llcpp::fuchsia::sysmem2::ColorSpace>> V2CopyFromV1C
   ZX_DEBUG_ASSERT(&v1a);
   ZX_DEBUG_ASSERT(v1_count);
   if (v1_count > v1a.size()) {
-    LOG(ERROR, "v1_count > v1a.size()");
+    LOG(ERROR, "v1_count > v1a.size() - v1_count: %u v1a.size(): %zu", v1_count, v1a.size());
     return fit::error();
   }
   auto v2a = allocator->make_vec<llcpp::fuchsia::sysmem2::ColorSpace>(v1_count);
@@ -158,7 +158,7 @@ V2CopyFromV1ImageFormatConstraintsArray(
   ZX_DEBUG_ASSERT(&v1a);
   ZX_DEBUG_ASSERT(v1_count);
   if (v1_count > v1a.size()) {
-    LOG(ERROR, "v1_count > v1a.size()");
+    LOG(ERROR, "v1_count > v1a.size() - v1_count: %u v1a.size(): %zu", v1_count, v1a.size());
     return fit::error();
   }
   auto v2a = allocator->make_vec<llcpp::fuchsia::sysmem2::ImageFormatConstraints>(v1_count);

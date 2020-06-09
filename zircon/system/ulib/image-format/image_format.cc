@@ -344,6 +344,8 @@ class LinearFormats : public ImageFormatSet {
     ZX_DEBUG_ASSERT(image_format.has_pixel_format());
     ZX_DEBUG_ASSERT(image_format.pixel_format().has_type());
     ZX_DEBUG_ASSERT(IsSupported(image_format.pixel_format()));
+    ZX_DEBUG_ASSERT(image_format.has_coded_height());
+    ZX_DEBUG_ASSERT(image_format.has_bytes_per_row());
     uint32_t coded_height = image_format.has_coded_height() ? image_format.coded_height() : 0;
     uint32_t bytes_per_row = image_format.has_bytes_per_row() ? image_format.bytes_per_row() : 0;
     return linear_size(coded_height, bytes_per_row, image_format.pixel_format().type());
@@ -449,6 +451,9 @@ class ArmTELinearFormats : public ImageFormatSet {
   uint64_t ImageFormatImageSize(
       const llcpp::fuchsia::sysmem2::ImageFormat& image_format) const override {
     ZX_DEBUG_ASSERT(IsSupported(image_format.pixel_format()));
+    ZX_DEBUG_ASSERT(image_format.has_coded_width());
+    ZX_DEBUG_ASSERT(image_format.has_coded_height());
+    ZX_DEBUG_ASSERT(image_format.has_bytes_per_row());
     uint32_t coded_width = image_format.has_coded_width() ? image_format.coded_width() : 0;
     uint32_t coded_height = image_format.has_coded_height() ? image_format.coded_height() : 0;
     uint32_t bytes_per_row = image_format.has_bytes_per_row() ? image_format.bytes_per_row() : 0;
@@ -463,6 +468,8 @@ class ArmTELinearFormats : public ImageFormatSet {
     if (plane < kTransactionEliminationPlane) {
       return kLinearFormats.ImageFormatPlaneByteOffset(image_format, plane, offset_out);
     } else if (plane == kTransactionEliminationPlane) {
+      ZX_DEBUG_ASSERT(image_format.has_coded_height());
+      ZX_DEBUG_ASSERT(image_format.has_bytes_per_row());
       uint32_t coded_height = image_format.has_coded_height() ? image_format.coded_height() : 0;
       uint32_t bytes_per_row = image_format.has_bytes_per_row() ? image_format.bytes_per_row() : 0;
       uint64_t size = linear_size(coded_height, bytes_per_row, image_format.pixel_format().type());
@@ -919,8 +926,6 @@ bool ImageFormatMinimumRowBytes(const llcpp::fuchsia::sysmem2::ImageFormatConstr
       constraints.has_min_bytes_per_row() ? constraints.min_bytes_per_row() : 0;
   uint32_t constraints_bytes_per_row_divisor =
       constraints.has_bytes_per_row_divisor() ? constraints.bytes_per_row_divisor() : 1;
-  // Caller must set bytes_per_row_divisor.
-  ZX_DEBUG_ASSERT(constraints.has_bytes_per_row_divisor());
   // This code should match the code in garnet/public/rust/fuchsia-framebuffer/src/sysmem.rs.
   *minimum_row_bytes_out = fbl::round_up(
       fbl::max(ImageFormatStrideBytesPerWidthPixel(constraints.pixel_format()) * width,

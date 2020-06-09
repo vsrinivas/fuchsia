@@ -261,7 +261,8 @@ zx_status_t Device::Bind() {
   OverrideSizeFromCommandLine("driver.sysmem.protected_memory_size", &protected_memory_size);
   OverrideSizeFromCommandLine("driver.sysmem.contiguous_memory_size", &contiguous_memory_size);
 
-  allocators_[fuchsia_sysmem_HeapType_SYSTEM_RAM] = std::make_unique<SystemRamMemoryAllocator>();
+  allocators_[llcpp::fuchsia::sysmem2::HeapType::SYSTEM_RAM] =
+      std::make_unique<SystemRamMemoryAllocator>();
 
   status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
@@ -305,8 +306,8 @@ zx_status_t Device::Bind() {
       DRIVER_ERROR("Failed to init allocator for amlogic protected memory: %d", status);
       return status;
     }
-    secure_allocators_[fuchsia_sysmem_HeapType_AMLOGIC_SECURE] = amlogic_allocator.get();
-    allocators_[fuchsia_sysmem_HeapType_AMLOGIC_SECURE] = std::move(amlogic_allocator);
+    secure_allocators_[llcpp::fuchsia::sysmem2::HeapType::AMLOGIC_SECURE] = amlogic_allocator.get();
+    allocators_[llcpp::fuchsia::sysmem2::HeapType::AMLOGIC_SECURE] = std::move(amlogic_allocator);
   }
 
   ddk::PBusProtocolClient pbus;
@@ -360,12 +361,13 @@ zx_status_t Device::SysmemConnect(zx::channel allocator_request) {
                          });
 }
 
-zx_status_t Device::SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection) {
+zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_connection) {
   // External heaps should not have bit 63 set but bit 60 must be set.
-  if ((heap & 0x8000000000000000) || !(heap & 0x1000000000000000)) {
+  if ((heap_param & 0x8000000000000000) || !(heap_param & 0x1000000000000000)) {
     DRIVER_ERROR("Invalid external heap");
     return ZX_ERR_INVALID_ARGS;
   }
+  auto heap = static_cast<llcpp::fuchsia::sysmem2::HeapType>(heap_param);
 
   return async::PostTask(
       loop_.dispatcher(), [this, heap, heap_connection = std::move(heap_connection)]() mutable {
@@ -507,7 +509,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
           LOG(DEBUG,
               "created secure allocator: heap_type: %08lx base: %016" PRIx64 " size: %016" PRIx64,
               static_cast<uint64_t>(heap.heap), heap.physical_address, heap.size_bytes);
-          auto heap_type = static_cast<fuchsia_sysmem_HeapType>(heap.heap);
+          auto heap_type = static_cast<llcpp::fuchsia::sysmem2::HeapType>(heap.heap);
           ZX_ASSERT(secure_allocators_.find(heap_type) == secure_allocators_.end());
           secure_allocators_[heap_type] = secure_allocator.get();
           ZX_ASSERT(allocators_.find(heap_type) == allocators_.end());
@@ -589,12 +591,14 @@ BufferCollectionToken* Device::FindTokenByServerChannelKoid(zx_koid_t token_serv
   return iter->second;
 }
 
-MemoryAllocator* Device::GetAllocator(const fuchsia_sysmem_BufferMemorySettings* settings) {
-  if (settings->heap == fuchsia_sysmem_HeapType_SYSTEM_RAM && settings->is_physically_contiguous) {
+MemoryAllocator* Device::GetAllocator(
+    const llcpp::fuchsia::sysmem2::BufferMemorySettings::Builder& settings) {
+  if (settings.heap() == llcpp::fuchsia::sysmem2::HeapType::SYSTEM_RAM &&
+      settings.is_physically_contiguous()) {
     return contiguous_system_ram_allocator_.get();
   }
 
-  auto iter = allocators_.find(settings->heap);
+  auto iter = allocators_.find(settings.heap());
   if (iter == allocators_.end()) {
     return nullptr;
   }

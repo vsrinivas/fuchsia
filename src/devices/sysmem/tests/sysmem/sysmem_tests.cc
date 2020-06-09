@@ -6,6 +6,7 @@
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
+#include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -1472,7 +1473,7 @@ TEST(Sysmem, CpuUsageAndNoBufferMemoryConstraints) {
   constraints_2->min_buffer_count_for_camping = 1;
   constraints_2->has_buffer_memory_constraints = true;
   constraints_2->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
-      .min_size_bytes = 0,
+      .min_size_bytes = 1,  // must be at least 1 else no participant has specified min size
       .max_size_bytes = 0xffffffff,
       .physically_contiguous_required = false,
       .secure_required = false,
@@ -1616,6 +1617,8 @@ TEST(Sysmem, ContiguousSystemRamIsRecycled) {
   uint64_t total_bytes_allocated = 0;
   constexpr uint64_t kBytesToAllocatePerPass = 4 * 1024 * 1024;
   zx::time deadline_time = zx::deadline_after(zx::sec(10));
+  int64_t iteration_count = 0;
+  zx::time start_time = zx::clock::get_monotonic();
   while (total_bytes_allocated < total_bytes_to_allocate) {
     if (zx::clock::get_monotonic() > deadline_time) {
       // Otherwise, we'd potentially trigger the test watchdog.  So far we've only seen this happen
@@ -1624,7 +1627,7 @@ TEST(Sysmem, ContiguousSystemRamIsRecycled) {
           "\ntest_sysmem_contiguous_system_ram_is_recycled() internal timeout - fake success - "
           "total_bytes_allocated so far: %zu\n",
           total_bytes_allocated);
-      return;
+      break;
     }
 
     zx::channel token_client;
@@ -1683,11 +1686,20 @@ TEST(Sysmem, ContiguousSystemRamIsRecycled) {
 
     total_bytes_allocated += kBytesToAllocatePerPass;
 
+    iteration_count++;
+
     // ~collection_client and ~buffer_collection_info should recycle the space used by the VMOs for
     // re-use so that more can be allocated.
   }
+  zx::time end_time = zx::clock::get_monotonic();
+  zx::duration duration_per_iteration = (end_time - start_time) / iteration_count;
 
-  printf("\ntest_sysmem_contiguous_system_ram_is_recycled() real success\n");
+  printf("duration_per_iteration: %" PRId64 "us, or %" PRId64 "ms\n",
+         duration_per_iteration.to_usecs(), duration_per_iteration.to_msecs());
+
+  if (total_bytes_allocated >= total_bytes_to_allocate) {
+    printf("\ntest_sysmem_contiguous_system_ram_is_recycled() real success\n");
+  }
 }
 
 TEST(Sysmem, OnlyNoneUsageFails) {

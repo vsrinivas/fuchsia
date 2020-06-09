@@ -4,14 +4,18 @@
 
 #include "usage_pixel_format_cost.h"
 
-#include <fuchsia/sysmem/c/fidl.h>
+#include <fuchsia/sysmem2/llcpp/fidl.h>
+#include <lib/fidl/llcpp/allocator.h>
 #include <lib/image-format/image_format.h>
+#include <lib/sysmem-make-tracking/make_tracking.h>
 #include <zircon/assert.h>
 
 #include <list>
 #include <map>
 
 #include <ddk/platform-defs.h>
+
+#include "macros.h"
 
 namespace sysmem_driver {
 
@@ -58,10 +62,10 @@ const std::map<uint64_t, Platform> kPlatformTranslation = {
 // later-listed otherwise-equally-close-match to be ignored.
 struct UsagePixelFormatCostEntry {
   // The query's pixel_format must match for this entry to be considered.
-  const fuchsia_sysmem_PixelFormat pixel_format;
+  llcpp::fuchsia::sysmem2::PixelFormat pixel_format;
   // A query's usage bits must contain all these usage bits for this entry to
   // be considered.
-  const fuchsia_sysmem_BufferUsage required_buffer_usage_bits;
+  llcpp::fuchsia::sysmem2::BufferUsage required_buffer_usage_bits;
   // First the entry that's the best match for the GetCost() query is
   // determined.  If this entry is selected as the best match for the query,
   // this is the cost returned by GetCost().
@@ -78,326 +82,253 @@ struct PlatformCostsEntry {
   // platform values.
   const Platform next_platform;
 
-  const std::list<const UsagePixelFormatCostEntry> costs;
+  const std::list<const UsagePixelFormatCostEntry>& costs;
 };
 
-const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = {
-    // AFBC TE is best.
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_BGRA32,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16_TE},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        500.0L,
-    },
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16_TE},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        500.0L,
-    },
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_BGRA32,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8_TE},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        500.0L,
-    },
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8_TE},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        500.0L,
-    },
-    // AFBC always preferred when supported.
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_BGRA32,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        1000.0L,
-    },
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        1000.0L,
-    },
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_BGRA32,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        1000.0L,
-    },
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_32X8},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        1000.0L,
-    },
-    // Linear TE is better than linear.
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_BGRA32,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_LINEAR_TE},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        1500.0L,
-    },
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_LINEAR_TE},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        1500.0L,
-    },
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_BGRA32,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_LINEAR_TE},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        1500.0L,
-    },
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_ARM_LINEAR_TE},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        1500.0L,
-    },
-};
+// Since we know exactly how much space we need to avoid using heap, and because this buffer is
+// exactly full of stuff that has trivial dtor, we can (marginally) justify avoiding the heap for
+// this stuff, since I happen to already know the appropriate size this time.  However, it's a good
+// idea to avoid spending the time to update this number each time more entries are added, since the
+// opportunity cost of that time will almost certainly be more than any real savings from updating
+// this number.
+constexpr size_t kBufferThenHeapAllocatorSize = 3792;
+fidl::BufferThenHeapAllocator<kBufferThenHeapAllocatorSize> allocator;
+
+const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = [] {
+  std::list<const UsagePixelFormatCostEntry> result;
+  // AFBC TE is best.
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_TE))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      500.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_TE))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      500.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8_TE))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      500.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8_TE))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      500.0L,
+  });
+  // AFBC always preferred when supported.
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1000.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1000.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1000.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1000.0L,
+  });
+  // Linear TE is better than linear.
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_LINEAR_TE))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1500.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_LINEAR_TE))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1500.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_LINEAR_TE))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1500.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_LINEAR_TE))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1500.0L,
+  });
+  return result;
+}();
 
 const PlatformCostsEntry kArm_Mali_Costs = {
     .platform = kPlatform_Arm_Mali,
@@ -405,195 +336,152 @@ const PlatformCostsEntry kArm_Mali_Costs = {
     .costs = kArm_Mali_Cost_Entries,
 };
 
-const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries = {
-    // NV12 weakly preferred for videoUsageHwDecoder.
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_NV12,
-            // .has_format_modifier
-            false,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_NONE},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            fuchsia_sysmem_videoUsageHwDecoder,
-        },
-        // .cost
-        100.0L,
-    },
-};
+const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries = [] {
+  std::list<const UsagePixelFormatCostEntry> result;
+  result.emplace_back(
+      // NV12 weakly preferred for VIDEO_USAGE_HW_DECODER.
+      UsagePixelFormatCostEntry{
+          // .pixel_format
+          allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+              .set_type(
+                  sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::NV12))
+              .build(),
+          // .required_buffer_usage_bits
+          allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+              .set_none(sysmem::MakeTracking(&allocator, 0u))
+              .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+              .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+              .set_display(sysmem::MakeTracking(&allocator, 0u))
+              .set_video(
+                  sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::VIDEO_USAGE_HW_DECODER))
+              .build(),
+          // .cost
+          100.0L,
+      });
+  return result;
+}();
 
 // These costs are expected to be true on every platform.
-const std::list<const UsagePixelFormatCostEntry> kGeneric_Cost_Entries = {
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_BGRA32,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        1000.0L,
-    },
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_BGRA32,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        1000.0L,
-    },
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_BGRA32,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        1000.0L,
-    },
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        1000.0L,
-    },
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        1000.0L,
-    },
-    {
-        // .pixel_format
-        {
-            // .type
-            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
-            // .has_format_modifier
-            true,
-            // .format_modifier.value
-            {fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED},
-        },
-        // .required_buffer_usage_bits
-        {
-            // .none
-            0,
-            // .cpu
-            0,
-            // .vulkan
-            0,
-            // .display
-            0,
-            // .video
-            0,
-        },
-        // .cost
-        1000.0L,
-    },
-};
+const std::list<const UsagePixelFormatCostEntry> kGeneric_Cost_Entries = [] {
+  std::list<const UsagePixelFormatCostEntry> result;
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_X_TILED))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1000.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_YF_TILED))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1000.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_Y_TILED))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1000.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_X_TILED))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1000.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_YF_TILED))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1000.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator, llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_INTEL_I915_Y_TILED))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1000.0L,
+  });
+  // LOG(INFO, "usage_pixel_format_cost.cc - allocator.needed_buffer_size(): %zu",
+  //    allocator.inner_allocator().needed_buffer_size());
+  return result;
+}();
 
 const PlatformCostsEntry kAmlogic_Generic_Costs = {
     .platform = kPlatform_Amlogic_Generic,
@@ -667,10 +555,18 @@ bool HasAllRequiredBits(uint32_t a, uint32_t r) { return (r & a) == r; }
 
 // |a| to check
 // |r| required bits
-bool HasAllRequiredUsageBits(const fuchsia_sysmem_BufferUsage& a,
-                             const fuchsia_sysmem_BufferUsage& r) {
-  return HasAllRequiredBits(a.cpu, r.cpu) && HasAllRequiredBits(a.vulkan, r.vulkan) &&
-         HasAllRequiredBits(a.display, r.display) && HasAllRequiredBits(a.video, r.video);
+bool HasAllRequiredUsageBits(const llcpp::fuchsia::sysmem2::BufferUsage& a,
+                             const llcpp::fuchsia::sysmem2::BufferUsage& r) {
+  const uint32_t a_cpu = a.has_cpu() ? a.cpu() : 0;
+  const uint32_t a_vulkan = a.has_vulkan() ? a.vulkan() : 0;
+  const uint32_t a_display = a.has_display() ? a.display() : 0;
+  const uint32_t a_video = a.has_video() ? a.video() : 0;
+  const uint32_t r_cpu = r.has_cpu() ? r.cpu() : 0;
+  const uint32_t r_vulkan = r.has_vulkan() ? r.vulkan() : 0;
+  const uint32_t r_display = r.has_display() ? r.display() : 0;
+  const uint32_t r_video = r.has_video() ? r.video() : 0;
+  return HasAllRequiredBits(a_cpu, r_cpu) && HasAllRequiredBits(a_vulkan, r_vulkan) &&
+         HasAllRequiredBits(a_display, r_display) && HasAllRequiredBits(a_video, r_video);
 }
 
 uint32_t SharedBitsCount(uint32_t a, uint32_t b) {
@@ -687,10 +583,18 @@ uint32_t SharedBitsCount(uint32_t a, uint32_t b) {
   return count;
 }
 
-uint32_t SharedUsageBitsCount(const fuchsia_sysmem_BufferUsage& a,
-                              const fuchsia_sysmem_BufferUsage& b) {
-  return SharedBitsCount(a.cpu, b.cpu) + SharedBitsCount(a.vulkan, b.vulkan) +
-         SharedBitsCount(a.display, b.display) + SharedBitsCount(a.video, b.video);
+uint32_t SharedUsageBitsCount(const llcpp::fuchsia::sysmem2::BufferUsage& a,
+                              const llcpp::fuchsia::sysmem2::BufferUsage& b) {
+  const uint32_t a_cpu = a.has_cpu() ? a.cpu() : 0;
+  const uint32_t a_vulkan = a.has_vulkan() ? a.vulkan() : 0;
+  const uint32_t a_display = a.has_display() ? a.display() : 0;
+  const uint32_t a_video = a.has_video() ? a.video() : 0;
+  const uint32_t b_cpu = b.has_cpu() ? b.cpu() : 0;
+  const uint32_t b_vulkan = b.has_vulkan() ? b.vulkan() : 0;
+  const uint32_t b_display = b.has_display() ? b.display() : 0;
+  const uint32_t b_video = b.has_video() ? b.video() : 0;
+  return SharedBitsCount(a_cpu, b_cpu) + SharedBitsCount(a_vulkan, b_vulkan) +
+         SharedBitsCount(a_display, b_display) + SharedBitsCount(a_video, b_video);
 }
 
 // This comparison has nothing to do with the cost of a or cost of b.  This is
@@ -704,20 +608,27 @@ uint32_t SharedUsageBitsCount(const fuchsia_sysmem_BufferUsage& a,
 // |a| the new UsagePixelFormatCostEntry to consider
 //
 // |b| the existing UsagePixelFormatCostEntry that a is being compared against
-bool IsBetterMatch(const fuchsia_sysmem_BufferCollectionConstraints* constraints,
+bool IsBetterMatch(const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder& constraints,
                    uint32_t image_format_constraints_index, const UsagePixelFormatCostEntry* a,
                    const UsagePixelFormatCostEntry* b) {
-  ZX_DEBUG_ASSERT(constraints);
+  ZX_DEBUG_ASSERT(&constraints);
   ZX_DEBUG_ASSERT(a);
-  ZX_DEBUG_ASSERT(image_format_constraints_index < constraints->image_format_constraints_count);
+  ZX_DEBUG_ASSERT(image_format_constraints_index < constraints.image_format_constraints().count());
   // We intentionally allow b to be nullptr.
 
   if (!ImageFormatIsPixelFormatEqual(
           a->pixel_format,
-          constraints->image_format_constraints[image_format_constraints_index].pixel_format))
+          constraints.image_format_constraints()[image_format_constraints_index].pixel_format()))
     return false;
 
-  const fuchsia_sysmem_BufferUsage& usage = constraints->usage;
+  llcpp::fuchsia::sysmem2::BufferUsage default_usage;
+  const llcpp::fuchsia::sysmem2::BufferUsage* usage_ptr;
+  if (constraints.has_usage()) {
+    usage_ptr = &constraints.usage();
+  } else {
+    usage_ptr = &default_usage;
+  }
+  const llcpp::fuchsia::sysmem2::BufferUsage& usage = *usage_ptr;
   if (!HasAllRequiredUsageBits(usage, a->required_buffer_usage_bits)) {
     return false;
   }
@@ -732,8 +643,9 @@ bool IsBetterMatch(const fuchsia_sysmem_BufferCollectionConstraints* constraints
   return a_shared_bits > b_shared_bits;
 }
 
-double GetCostInternal(const fuchsia_sysmem_BufferCollectionConstraints* constraints,
-                       uint32_t image_format_constraints_index, Platform platform) {
+double GetCostInternal(
+    const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder& constraints,
+    uint32_t image_format_constraints_index, Platform platform) {
   const PlatformCostsEntry* platform_costs = FindPlatformCosts(platform);
   if (!platform_costs) {
     return kDefaultCost;
@@ -755,7 +667,7 @@ double GetCostInternal(const fuchsia_sysmem_BufferCollectionConstraints* constra
 }
 
 double GetCost(uint32_t pdev_device_info_vid, uint32_t pdev_device_info_pid,
-               const fuchsia_sysmem_BufferCollectionConstraints* constraints,
+               const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder& constraints,
                uint32_t image_format_constraints_index) {
   Platform platform = FindPlatform(pdev_device_info_vid, pdev_device_info_pid);
   if (platform == kPlatform_None) {
@@ -766,10 +678,10 @@ double GetCost(uint32_t pdev_device_info_vid, uint32_t pdev_device_info_pid,
 
 }  // namespace
 
-int32_t UsagePixelFormatCost::Compare(uint32_t pdev_device_info_vid, uint32_t pdev_device_info_pid,
-                                      const fuchsia_sysmem_BufferCollectionConstraints* constraints,
-                                      uint32_t image_format_constraints_index_a,
-                                      uint32_t image_format_constraints_index_b) {
+int32_t UsagePixelFormatCost::Compare(
+    uint32_t pdev_device_info_vid, uint32_t pdev_device_info_pid,
+    const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder& constraints,
+    uint32_t image_format_constraints_index_a, uint32_t image_format_constraints_index_b) {
   double cost_a = GetCost(pdev_device_info_vid, pdev_device_info_pid, constraints,
                           image_format_constraints_index_a);
   double cost_b = GetCost(pdev_device_info_vid, pdev_device_info_pid, constraints,

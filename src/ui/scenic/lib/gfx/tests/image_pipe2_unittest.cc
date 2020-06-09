@@ -236,7 +236,14 @@ TEST_F(ImagePipe2Test, BufferCollectionIdMustNotBeZero) {
 
 // Present an image with an Id of zero, and expect an error.
 TEST_F(ImagePipe2Test, ImagePipeImageIdMustNotBeZero) {
-  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), false);
+  auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
+
+  // So that at least one participant is specifying a non-zero minimum / needed buffer size.
+  const uint32_t kWidth = 2;
+  const uint32_t kHeight = 2;
+  const uint32_t kImageCount = 1;
+  SetConstraints(image_pipe_->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
+                 kImageCount, fuchsia::sysmem::PixelFormatType::BGRA32, false, nullptr);
 
   const uint32_t kBufferId = 1;
   image_pipe_->AddBufferCollection(kBufferId, std::move(tokens.local_token));

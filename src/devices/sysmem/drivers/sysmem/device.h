@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_DEVICE_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_DEVICE_H_
 
-#include <fuchsia/sysmem/c/fidl.h>
+#include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/closure-queue/closure_queue.h>
@@ -94,7 +94,8 @@ class Device final : public DdkDeviceType,
 
   // Get allocator for |settings|. Returns NULL if allocator is not
   // registered for settings.
-  MemoryAllocator* GetAllocator(const fuchsia_sysmem_BufferMemorySettings* settings);
+  MemoryAllocator* GetAllocator(
+      const llcpp::fuchsia::sysmem2::BufferMemorySettings::Builder& settings);
 
   const sysmem_protocol_t* proto() const { return &in_proc_sysmem_protocol_; }
   const zx_device_t* device() const { return zxdev_; }
@@ -146,12 +147,12 @@ class Device final : public DdkDeviceType,
   std::map<zx_koid_t, BufferCollectionToken*> tokens_by_koid_;
 
   // This map contains all registered memory allocators.
-  std::map<fuchsia_sysmem_HeapType, std::unique_ptr<MemoryAllocator>> allocators_;
+  std::map<llcpp::fuchsia::sysmem2::HeapType, std::unique_ptr<MemoryAllocator>> allocators_;
 
   // This map contains only the secure allocators, if any.  The pointers are owned by allocators_.
   //
   // TODO(dustingreen): Consider unordered_map for this and some of above.
-  std::map<fuchsia_sysmem_HeapType, MemoryAllocator*> secure_allocators_;
+  std::map<llcpp::fuchsia::sysmem2::HeapType, MemoryAllocator*> secure_allocators_;
 
   // This flag is used to determine if the closing of the current secure mem
   // connection is an error (true), or expected (false).

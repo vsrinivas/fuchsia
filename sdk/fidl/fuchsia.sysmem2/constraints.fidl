@@ -359,34 +359,23 @@ table ImageFormat {
     /// cropping on the bottom (not top).
     6: uint32 display_height;
 
-    /// Number of layers within a multi-layered image.
-    ///
-    /// un-set means 1.
-    7: uint32 layers;
-
     /// Color space.
-    8: ColorSpace color_space;
+    7: ColorSpace color_space;
 
-    /// The pixel_aspect_ratio_width : pixel_aspect_ratio_height is the
-    /// pixel aspect ratio (AKA sample aspect ratio aka SAR) for the luma
-    /// (AKA Y) samples. A pixel_aspect_ratio of 1:1 mean square pixels. A
-    /// pixel_aspect_ratio of 2:1 would mean pixels that are displayed twice
-    /// as wide as they are tall. Codec implementation should ensure these
-    /// two values are relatively prime by reducing the fraction (dividing
-    /// both by GCF) if necessary.
+    /// The pixel_aspect_ratio_width : pixel_aspect_ratio_height is the pixel
+    /// aspect ratio (AKA sample aspect ratio aka SAR) for the luma (AKA Y)
+    /// samples. A pixel_aspect_ratio of 1:1 mean square pixels. A
+    /// pixel_aspect_ratio of 2:1 would mean pixels that are displayed twice as
+    /// wide as they are tall. Codec implementation should ensure these two
+    /// values are relatively prime by reducing the fraction (dividing both by
+    /// GCF) if necessary.
     ///
-    /// When has_pixel_aspect_ratio == false, pixel_aspect_ratio_width and
-    /// pixel_aspect_ratio_height will both be 1, but in that case the
-    /// pixel_aspect_ratio_width : pixel_aspect_ratio_height of 1:1 is just
-    /// a very weak suggestion re. reasonable-ish handling, not in any way
-    /// authoritative. In this case (or in any case really) the receiver of
-    /// this message may have other OOB means to determine the actual
-    /// pixel_aspect_ratio.
+    /// A producer should set both these fields, or neither of them.
     ///
-    /// un-set is false
-    9: bool has_pixel_aspect_ratio;
-    /// un-set is 1
-    10: uint32 pixel_aspect_ratio_width;
-    /// un-set is 1
-    11: uint32 pixel_aspect_ratio_height;
+    /// A consumer should interpret either of these fields being un-set as an
+    /// unknown pixel_aspect_ratio.  A default of 1:1 can be appropriate in some
+    /// cases, but a consumer may determine the actual pixel_aspect_ratio by OOB
+    /// means.
+    8: uint32 pixel_aspect_ratio_width;
+    9: uint32 pixel_aspect_ratio_height;
 };
