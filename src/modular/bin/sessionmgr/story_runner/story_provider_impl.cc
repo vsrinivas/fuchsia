@@ -32,9 +32,6 @@
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/fidl/proxy.h"
 
-// In tests prefetching mondrian saved ~30ms in story start up time.
-#define PREFETCH_MONDRIAN 1
-
 namespace modular {
 
 class StoryProviderImpl::StopStoryCall : public Operation<> {
