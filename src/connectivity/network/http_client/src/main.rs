@@ -43,6 +43,19 @@ fn to_status_line(version: hyper::Version, status: hyper::StatusCode) -> Vec<u8>
     }
 }
 
+fn tcp_options() -> fhyper::TcpOptions {
+    let mut options: fhyper::TcpOptions = std::default::Default::default();
+
+    // Use TCP keepalive to notice stuck connections.
+    // After 60s with no data received send a probe every 15s.
+    options.keepalive_idle = Some(std::time::Duration::from_secs(60));
+    options.keepalive_interval = Some(std::time::Duration::from_secs(15));
+    // After 8 probes go unacknowledged treat the connection as dead.
+    options.keepalive_count = Some(8);
+
+    options
+}
+
 struct RedirectInfo {
     url: Option<hyper::Uri>,
     referrer: Option<hyper::Uri>,
@@ -244,7 +257,7 @@ impl Loader {
         loader_client: net_http::LoaderClientProxy,
     ) -> BoxFuture<'static, Result<(), Error>> {
         async move {
-            let client = fhyper::new_https_client();
+            let client = fhyper::new_https_client_from_tcp_options(tcp_options());
             let hyper_response = match client.request(self.build_request()?).compat().await {
                 Ok(response) => response,
                 Err(error) => {
@@ -304,7 +317,7 @@ impl Loader {
         let deadline = self.deadline;
 
         async move {
-            let client = fhyper::new_https_client();
+            let client = fhyper::new_https_client_from_tcp_options(tcp_options());
             let result = client.request(self.build_request()?).compat().await;
 
             Ok(match result {
