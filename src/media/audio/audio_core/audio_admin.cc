@@ -140,17 +140,59 @@ void AudioAdmin::SetUsageDuck(fuchsia::media::AudioCaptureUsage usage) {
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::DUCK);
 }
 
+bool AudioAdmin::IsUsageMuted(fuchsia::media::AudioRenderUsage usage) {
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  auto usage_gain_settings = stream_volume_manager_.GetUsageGainSettings();
+  auto gain_adjustment = usage_gain_settings.GetUsageGainAdjustment(
+      fuchsia::media::Usage::WithRenderUsage(std::move(usage)));
+  return gain_adjustment == behavior_gain_.mute_gain_db;
+}
+
+bool AudioAdmin::IsUsageMuted(fuchsia::media::AudioCaptureUsage usage) {
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  auto usage_gain_settings = stream_volume_manager_.GetUsageGainSettings();
+  auto gain_adjustment = usage_gain_settings.GetUsageGainAdjustment(
+      fuchsia::media::Usage::WithCaptureUsage(std::move(usage)));
+  return gain_adjustment == behavior_gain_.mute_gain_db;
+}
+
+bool AudioAdmin::IsUsageDucked(fuchsia::media::AudioRenderUsage usage) {
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  auto usage_gain_settings = stream_volume_manager_.GetUsageGainSettings();
+  auto gain_adjustment = usage_gain_settings.GetUsageGainAdjustment(
+      fuchsia::media::Usage::WithRenderUsage(std::move(usage)));
+  return gain_adjustment == behavior_gain_.duck_gain_db;
+}
+
+bool AudioAdmin::IsUsageDucked(fuchsia::media::AudioCaptureUsage usage) {
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  auto usage_gain_settings = stream_volume_manager_.GetUsageGainSettings();
+  auto gain_adjustment = usage_gain_settings.GetUsageGainAdjustment(
+      fuchsia::media::Usage::WithCaptureUsage(std::move(usage)));
+  return gain_adjustment == behavior_gain_.duck_gain_db;
+}
+
 void AudioAdmin::ApplyPolicies(fuchsia::media::AudioCaptureUsage active) {
   TRACE_DURATION("audio", "AudioAdmin::ApplyPolicies(Capture)");
   std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+
+  // If a stream is muted as the result of another policy, do not apply its policy.
+  if (IsUsageMuted(active)) {
+    return;
+  }
+
   for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
     auto affected = static_cast<fuchsia::media::AudioRenderUsage>(i);
     switch (active_rules_.GetPolicy(active, affected)) {
       case fuchsia::media::Behavior::NONE:
-        SetUsageNone(affected);
+        if (!IsUsageMuted(affected) && !IsUsageDucked(affected)) {
+          SetUsageNone(affected);
+        }
         break;
       case fuchsia::media::Behavior::DUCK:
-        SetUsageDuck(affected);
+        if (!IsUsageMuted(affected)) {
+          SetUsageDuck(affected);
+        }
         break;
       case fuchsia::media::Behavior::MUTE:
         SetUsageMute(affected);
@@ -161,10 +203,14 @@ void AudioAdmin::ApplyPolicies(fuchsia::media::AudioCaptureUsage active) {
     auto affected = static_cast<fuchsia::media::AudioCaptureUsage>(i);
     switch (active_rules_.GetPolicy(active, affected)) {
       case fuchsia::media::Behavior::NONE:
-        SetUsageNone(affected);
+        if (!IsUsageMuted(affected) && !IsUsageDucked(affected)) {
+          SetUsageNone(affected);
+        }
         break;
       case fuchsia::media::Behavior::DUCK:
-        SetUsageDuck(affected);
+        if (!IsUsageMuted(affected)) {
+          SetUsageDuck(affected);
+        }
         break;
       case fuchsia::media::Behavior::MUTE:
         SetUsageMute(affected);
@@ -176,14 +222,22 @@ void AudioAdmin::ApplyPolicies(fuchsia::media::AudioCaptureUsage active) {
 void AudioAdmin::ApplyPolicies(fuchsia::media::AudioRenderUsage active) {
   TRACE_DURATION("audio", "AudioAdmin::ApplyPolicies(Render)");
   std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  if (IsUsageMuted(active)) {
+    return;
+  }
+
   for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
     auto affected = static_cast<fuchsia::media::AudioRenderUsage>(i);
     switch (active_rules_.GetPolicy(active, affected)) {
       case fuchsia::media::Behavior::NONE:
-        SetUsageNone(affected);
+        if (!IsUsageMuted(affected) && !IsUsageDucked(affected)) {
+          SetUsageNone(affected);
+        }
         break;
       case fuchsia::media::Behavior::DUCK:
-        SetUsageDuck(affected);
+        if (!IsUsageMuted(affected)) {
+          SetUsageDuck(affected);
+        }
         break;
       case fuchsia::media::Behavior::MUTE:
         SetUsageMute(affected);
@@ -194,10 +248,14 @@ void AudioAdmin::ApplyPolicies(fuchsia::media::AudioRenderUsage active) {
     auto affected = static_cast<fuchsia::media::AudioCaptureUsage>(i);
     switch (active_rules_.GetPolicy(active, affected)) {
       case fuchsia::media::Behavior::NONE:
-        SetUsageNone(affected);
+        if (!IsUsageMuted(affected) && !IsUsageDucked(affected)) {
+          SetUsageNone(affected);
+        }
         break;
       case fuchsia::media::Behavior::DUCK:
-        SetUsageDuck(affected);
+        if (!IsUsageMuted(affected)) {
+          SetUsageDuck(affected);
+        }
         break;
       case fuchsia::media::Behavior::MUTE:
         SetUsageMute(affected);
@@ -206,29 +264,50 @@ void AudioAdmin::ApplyPolicies(fuchsia::media::AudioRenderUsage active) {
   }
 }
 
+void AudioAdmin::InitPolicies() {
+  std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
+  for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
+    auto usage = static_cast<fuchsia::media::AudioRenderUsage>(i);
+    stream_volume_manager_.SetUsageGainAdjustment(
+        fuchsia::media::Usage::WithRenderUsage(std::move(usage)), behavior_gain_.none_gain_db);
+  }
+  for (int i = 0; i < fuchsia::media::CAPTURE_USAGE_COUNT; i++) {
+    auto usage = static_cast<fuchsia::media::AudioCaptureUsage>(i);
+    stream_volume_manager_.SetUsageGainAdjustment(
+        fuchsia::media::Usage::WithCaptureUsage(std::move(usage)), behavior_gain_.none_gain_db);
+  }
+}
+
 void AudioAdmin::UpdatePolicy() {
   TRACE_DURATION("audio", "AudioAdmin::UpdatePolicy");
   // TODO(perley): convert this to an array of Usage unions or something else
   //               that makes it at least a little flexible.
-  // The processing order of this represents the 'priorities' of the streams
-  // with this implementation.
+  InitPolicies();
+  if (IsActive(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)) {
+    ApplyPolicies(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
+  }
+  if (IsActive(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT)) {
+    ApplyPolicies(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
+  }
+  if (IsActive(fuchsia::media::AudioRenderUsage::INTERRUPTION)) {
+    ApplyPolicies(fuchsia::media::AudioRenderUsage::INTERRUPTION);
+  }
   if (IsActive(fuchsia::media::AudioCaptureUsage::COMMUNICATION)) {
     ApplyPolicies(fuchsia::media::AudioCaptureUsage::COMMUNICATION);
-  } else if (IsActive(fuchsia::media::AudioRenderUsage::COMMUNICATION)) {
+  }
+  if (IsActive(fuchsia::media::AudioRenderUsage::COMMUNICATION)) {
     ApplyPolicies(fuchsia::media::AudioRenderUsage::COMMUNICATION);
-  } else if (IsActive(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)) {
-    ApplyPolicies(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
-  } else if (IsActive(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT)) {
-    ApplyPolicies(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
-  } else if (IsActive(fuchsia::media::AudioRenderUsage::INTERRUPTION)) {
-    ApplyPolicies(fuchsia::media::AudioRenderUsage::INTERRUPTION);
-  } else if (IsActive(fuchsia::media::AudioCaptureUsage::FOREGROUND)) {
-    ApplyPolicies(fuchsia::media::AudioCaptureUsage::FOREGROUND);
-  } else if (IsActive(fuchsia::media::AudioRenderUsage::MEDIA)) {
+  }
+  if (IsActive(fuchsia::media::AudioRenderUsage::MEDIA)) {
     ApplyPolicies(fuchsia::media::AudioRenderUsage::MEDIA);
-  } else if (IsActive(fuchsia::media::AudioCaptureUsage::BACKGROUND)) {
+  }
+  if (IsActive(fuchsia::media::AudioCaptureUsage::FOREGROUND)) {
+    ApplyPolicies(fuchsia::media::AudioCaptureUsage::FOREGROUND);
+  }
+  if (IsActive(fuchsia::media::AudioCaptureUsage::BACKGROUND)) {
     ApplyPolicies(fuchsia::media::AudioCaptureUsage::BACKGROUND);
-  } else {
+  }
+  if (IsActive(fuchsia::media::AudioRenderUsage::BACKGROUND)) {
     ApplyPolicies(fuchsia::media::AudioRenderUsage::BACKGROUND);
   }
 }

@@ -351,5 +351,141 @@ TEST_F(AudioAdminTest, ActivityDispatched) {
   }
 }
 
+// Test to verify that Mute overrides Duck, and both override None.
+TEST_F(AudioAdminTest, PriorityActionsApplied) {
+  StreamVolumeManager stream_volume_manager(dispatcher());
+  MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
+  MockActivityDispatcher mock_activity_dispatcher;
+  AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
+                   &mock_activity_dispatcher, dispatcher());
+  test::NullAudioRenderer r1, r2, r3;
+  test::NullAudioCapturer c1;
+
+  // Interruption should duck when SystemAgent(render) is active.
+  admin.SetInteraction(
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT),
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::INTERRUPTION),
+      fuchsia::media::Behavior::DUCK);
+
+  // Communication(render) should duck when SystemAgent(render) is active.
+  admin.SetInteraction(
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT),
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION),
+      fuchsia::media::Behavior::DUCK);
+
+  // Communication(render) should mute when SystemAgent(capture) is active.
+  admin.SetInteraction(
+      fuchsia::media::Usage::WithCaptureUsage(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT),
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION),
+      fuchsia::media::Behavior::MUTE);
+
+  // Set an initial stream volume.
+  const float kStreamGain = 1.0;
+  stream_volume_manager.SetUsageGain(
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::INTERRUPTION),
+      kStreamGain);
+  stream_volume_manager.SetUsageGain(
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION),
+      kStreamGain);
+
+  // Create Interruption active stream.
+  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::INTERRUPTION, true, &r1);
+  RunLoopUntilIdle();
+  EXPECT_EQ(
+      kStreamGain + kNoneGain,
+      stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+          fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::INTERRUPTION)));
+
+  // Create Communication active stream.
+  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, true, &r2);
+  RunLoopUntilIdle();
+  EXPECT_EQ(
+      kStreamGain + kNoneGain,
+      stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+          fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION)));
+
+  // SystemAgent capturer becomes active; Interruption should not change, Communication should mute.
+  admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT, true, &c1);
+  RunLoopUntilIdle();
+  EXPECT_EQ(
+      kStreamGain + kNoneGain,
+      stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+          fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::INTERRUPTION)));
+  EXPECT_EQ(
+      kStreamGain + kMuteGain,
+      stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+          fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION)));
+
+  // SystemAgent renderer becomes active; Interruption should duck, Communication should remain
+  // muted.
+  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT, true, &r3);
+  RunLoopUntilIdle();
+  EXPECT_EQ(
+      kStreamGain + kDuckGain,
+      stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+          fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::INTERRUPTION)));
+  EXPECT_EQ(
+      kStreamGain + kMuteGain,
+      stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+          fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION)));
+}
+
+// Test to verify that a muted active stream's policy is not applied.
+TEST_F(AudioAdminTest, IgnoreMutedActiveStreamPolicy) {
+  StreamVolumeManager stream_volume_manager(dispatcher());
+  MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
+  MockActivityDispatcher mock_activity_dispatcher;
+  AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
+                   &mock_activity_dispatcher, dispatcher());
+  test::NullAudioRenderer r1, r2;
+  test::NullAudioCapturer c1;
+
+  // Media should duck when Communication(render) is active.
+  admin.SetInteraction(
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION),
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA),
+      fuchsia::media::Behavior::DUCK);
+
+  // Communication(render) should mute when SystemAgent(capture) is active.
+  admin.SetInteraction(
+      fuchsia::media::Usage::WithCaptureUsage(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT),
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION),
+      fuchsia::media::Behavior::MUTE);
+
+  // Set an initial stream volume.
+  const float kStreamGain = 1.0;
+  stream_volume_manager.SetUsageGain(
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA), kStreamGain);
+  stream_volume_manager.SetUsageGain(
+      fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION),
+      kStreamGain);
+
+  // Create Media active stream.
+  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::MEDIA, true, &r1);
+  RunLoopUntilIdle();
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)));
+
+  // Communication renderer becomes active; Media should duck.
+  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, true, &r2);
+  RunLoopUntilIdle();
+  EXPECT_EQ(kStreamGain + kDuckGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)));
+
+  // SystemAgent capturer becomes active; Communication should mute, so its policy should no longer
+  // apply to Media.
+  admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT, true, &c1);
+  RunLoopUntilIdle();
+  EXPECT_EQ(
+      kStreamGain + kMuteGain,
+      stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+          fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION)));
+  EXPECT_EQ(kStreamGain + kNoneGain,
+            stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
+                fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)));
+}
+
 }  // namespace
 }  // namespace media::audio

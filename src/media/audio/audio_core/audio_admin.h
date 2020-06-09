@@ -110,6 +110,14 @@ class AudioAdmin {
   void SetUsageDuck(fuchsia::media::AudioRenderUsage usage);
   void SetUsageDuck(fuchsia::media::AudioCaptureUsage usage);
 
+  bool IsUsageMuted(fuchsia::media::AudioRenderUsage usage);
+  bool IsUsageMuted(fuchsia::media::AudioCaptureUsage usage);
+
+  bool IsUsageDucked(fuchsia::media::AudioRenderUsage usage);
+  bool IsUsageDucked(fuchsia::media::AudioCaptureUsage usage);
+
+  void InitPolicies();
+
   void ApplyPolicies(fuchsia::media::AudioCaptureUsage category);
   void ApplyPolicies(fuchsia::media::AudioRenderUsage category);
 
