@@ -3784,7 +3784,7 @@ zx_status_t Device::GetCountry(wlanphy_country_t* out_country) {
 }
 
 zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
-  uint16_t role;
+  wlan_info_mac_role_t role;
   {
     std::lock_guard<std::mutex> guard(lock_);
     if (phy_state_ != PHY_RUNNING || iface_state_ != IFC_RUNNING) {

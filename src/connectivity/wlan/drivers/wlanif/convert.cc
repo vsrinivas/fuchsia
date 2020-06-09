@@ -801,7 +801,7 @@ wlan_mlme::EapolResultCodes ConvertEapolResultCode(uint8_t code) {
   }
 }
 
-wlan_mlme::MacRole ConvertMacRole(uint8_t role) {
+wlan_mlme::MacRole ConvertMacRole(wlan_info_mac_role_t role) {
   switch (role) {
     case WLAN_INFO_MAC_ROLE_CLIENT:
       return wlan_mlme::MacRole::CLIENT;

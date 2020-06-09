@@ -200,7 +200,7 @@ void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCall
     return;
   }
 
-  uint16_t role = 0;
+  wlan_info_mac_role_t role = 0;
   switch (req.role) {
     case wlan_device::MacRole::CLIENT:
       role = WLAN_INFO_MAC_ROLE_CLIENT;

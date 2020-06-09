@@ -49,7 +49,8 @@ static wlanmac_protocol_ops_t wlanmac_test_protocol_ops = {
 };
 #undef DEV
 
-IfaceDevice::IfaceDevice(zx_device_t* device, uint16_t role) : parent_(device), role_(role) {}
+IfaceDevice::IfaceDevice(zx_device_t* device, wlan_info_mac_role_t role)
+    : parent_(device), role_(role) {}
 
 zx_status_t IfaceDevice::Bind() {
   zxlogf(INFO, "wlan::testing::IfaceDevice::Bind()");

@@ -72,6 +72,44 @@ TEST(WlanphyTest, ConvertPhyBandInfo) {
   EXPECT_EQ(out[1].supported_channels.channels, expected_channels_5g);
 }
 
+bool is_power_of_two(unsigned int v) { return v && !(v & (v - 1)); }
+
+TEST(WlanphyTest, ConvertPhyRolesInfo) {
+  constexpr wlan_info_mac_role_mask_t kClient = WLAN_INFO_MAC_ROLE_CLIENT;
+  constexpr wlan_info_mac_role_mask_t kAp = WLAN_INFO_MAC_ROLE_AP;
+  constexpr wlan_info_mac_role_mask_t kMesh = WLAN_INFO_MAC_ROLE_MESH;
+  constexpr wlan_info_mac_role_mask_t kClientAp = WLAN_INFO_MAC_ROLE_CLIENT | WLAN_INFO_MAC_ROLE_AP;
+  constexpr wlan_info_mac_role_mask_t kClientApMesh =
+      WLAN_INFO_MAC_ROLE_CLIENT | WLAN_INFO_MAC_ROLE_AP | WLAN_INFO_MAC_ROLE_MESH;
+
+  // Check that each role only occupies one bitfield
+  EXPECT_TRUE(is_power_of_two(WLAN_INFO_MAC_ROLE_CLIENT));
+  EXPECT_TRUE(is_power_of_two(WLAN_INFO_MAC_ROLE_AP));
+  EXPECT_TRUE(is_power_of_two(WLAN_INFO_MAC_ROLE_MESH));
+
+  std::vector<wlan_device::MacRole> roles;
+
+  // Check the return value of the function for each role and some combinations
+  // Client
+  ConvertPhyRolesInfo(&roles, kClient);
+  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::CLIENT), roles.end());
+  // AP
+  ConvertPhyRolesInfo(&roles, kAp);
+  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::AP), roles.end());
+  // Mesh
+  ConvertPhyRolesInfo(&roles, kMesh);
+  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::MESH), roles.end());
+  // Client + AP
+  ConvertPhyRolesInfo(&roles, kClientAp);
+  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::CLIENT), roles.end());
+  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::AP), roles.end());
+  // Client + AP + Mesh
+  ConvertPhyRolesInfo(&roles, kClientApMesh);
+  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::CLIENT), roles.end());
+  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::AP), roles.end());
+  EXPECT_NE(std::find(roles.begin(), roles.end(), wlan_device::MacRole::MESH), roles.end());
+}
+
 TEST(WlanphyTest, ConvertPhyCaps) {
   std::vector<wlan_device::Capability> caps;
   uint32_t phy_caps_mask = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME |

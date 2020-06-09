@@ -434,7 +434,7 @@ enum WlanifFeature : uint32 {
 struct WlanifQueryInfo {
     array<uint8>:WLAN_ETH_ALEN mac_addr;
     /// WLAN_MAC_ROLE_*
-    uint8 role;
+    ddk.hw.wlan.wlaninfo.WlanInfoMacRole role;
     /// WLANIF_FEATURE_*
     uint32 features;
     usize num_bands;

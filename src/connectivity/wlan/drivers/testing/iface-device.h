@@ -2,21 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_IFACE_DEVICE_H
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_IFACE_DEVICE_H
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_IFACE_DEVICE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_IFACE_DEVICE_H_
 
-#include <ddk/device.h>
-#include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
 #include <mutex>
+
+#include <ddk/device.h>
+#include <ddk/hw/wlan/wlaninfo.h>
+#include <wlan/protocol/mac.h>
 
 namespace wlan {
 namespace testing {
 
 class IfaceDevice {
  public:
-  IfaceDevice(zx_device_t* device, uint16_t role);
+  IfaceDevice(zx_device_t* device, wlan_info_mac_role_t role);
 
   zx_device_t* zxdev() { return zxdev_; }
 
@@ -36,11 +38,10 @@ class IfaceDevice {
   std::mutex lock_;
   wlanmac_ifc_protocol_t ifc_ = {};
 
-  // One of the WLAN_MAC_ROLE_* constants from lib/wlan/protocol/mac.h
-  uint16_t role_;
+  wlan_info_mac_role_t role_;
 };
 
 }  // namespace testing
 }  // namespace wlan
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_IFACE_DEVICE_H
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_IFACE_DEVICE_H_

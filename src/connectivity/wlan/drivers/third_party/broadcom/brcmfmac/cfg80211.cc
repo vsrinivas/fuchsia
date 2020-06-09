@@ -151,7 +151,8 @@ static zx_status_t brcmf_vif_change_validate(struct brcmf_cfg80211_info* cfg,
   return ret;
 }
 
-static zx_status_t brcmf_vif_add_validate(struct brcmf_cfg80211_info* cfg, uint16_t new_type) {
+static zx_status_t brcmf_vif_add_validate(struct brcmf_cfg80211_info* cfg,
+                                          wlan_info_mac_role_t new_type) {
   struct brcmf_cfg80211_vif* pos;
   struct iface_combination_params params = {
       .num_different_channels = 1,

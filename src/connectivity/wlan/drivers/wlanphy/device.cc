@@ -149,8 +149,8 @@ static void ConvertPhyDriverFeaturesInfo(::std::vector<wlan_common::DriverFeatur
   }
 }
 
-static void ConvertPhyRolesInfo(::std::vector<wlan_device::MacRole>* MacRoles,
-                                uint16_t mac_roles_mask) {
+void ConvertPhyRolesInfo(::std::vector<wlan_device::MacRole>* MacRoles,
+                         wlan_info_mac_role_mask_t mac_roles_mask) {
   MacRoles->resize(0);
   if (mac_roles_mask & WLAN_INFO_MAC_ROLE_CLIENT) {
     MacRoles->push_back(wlan_device::MacRole::CLIENT);
@@ -269,7 +269,7 @@ void Device::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallbac
   debugfn();
   wlan_device::CreateIfaceResponse resp;
 
-  uint16_t role = 0;
+  wlan_info_mac_role_t role = 0;
   switch (req.role) {
     case wlan_device::MacRole::CLIENT:
       role = WLAN_INFO_MAC_ROLE_CLIENT;
