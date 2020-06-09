@@ -35,6 +35,10 @@ table LastReboot {
 
 /// Reasons why a device last rebooted.
 enum RebootReason : uint16 {
+    // ///////////////////////////////////////////////////////////////////////////////////////////
+    // Ungraceful reboot reasons
+    // |graceful| has a value of false in LastReboot above.
+
     /// The device booted from a cold state.
     ///
     /// This is most likely the result of an extended period of time without power or a device
@@ -47,11 +51,29 @@ enum RebootReason : uint16 {
     /// device's power supply in rapid succession.
     BRIEF_POWER_LOSS = 3;
 
-    /// The device rebooted because its voltage dipped below an allowable level
-    /// without going to 0.
+    /// The device rebooted because its voltage dipped below an allowable level without going to 0.
     BROWNOUT = 4;
+
     KERNEL_PANIC = 5;
     SYSTEM_OUT_OF_MEMORY = 6;
     HARDWARE_WATCHDOG_TIMEOUT = 7;
     SOFTWARE_WATCHDOG_TIMEOUT = 8;
+
+    // ///////////////////////////////////////////////////////////////////////////////////////////
+    // Graceful reboot reasons
+    // |graceful| has a value of true in LastReboot above.
+
+    /// The device rebooted because a user of the device initiated the reboot. A user can be a
+    /// human or a program that interacts with the device on behalf of a human, such as SL4F or RCS.
+    USER_REQUEST = 9;
+
+    /// The device rebooted because of an OTA.
+    SYSTEM_UPDATE = 10;
+
+    /// The device rebooted because it was determined to be too hot.
+    HIGH_TEMPERATURE = 11;
+
+    /// The device rebooted becuase of an issue with a session or because the session manager was
+    /// unable to  recover from an error.
+    SESSION_FAILURE = 12;
 };

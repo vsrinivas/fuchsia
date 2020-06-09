@@ -6,5 +6,5 @@
   "fidl/fuchsia.feedback/data_provider.fidl": "6f72e03999726f629a4687d04823b434",
   "fidl/fuchsia.feedback/data_register.fidl": "2584d63f1f850abbab201cc674db905d",
   "fidl/fuchsia.feedback/device_id_provider.fidl": "c81fab3df1b512f0fee6d0f49a80679e",
-  "fidl/fuchsia.feedback/last_reboot_info.fidl": "d59274508cc25d142184369062dbace6"
+  "fidl/fuchsia.feedback/last_reboot_info.fidl": "6c8feb8d5e151affbd397524593bb566"
 }
