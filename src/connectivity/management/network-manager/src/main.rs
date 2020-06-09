@@ -37,15 +37,15 @@ pub(crate) struct Opt {
     )]
     dev_path: String,
     /// severity level to set logger
-    #[argh(option, long = "severity", default = "-2")]
-    severity: i32,
+    #[argh(option, long = "severity")]
+    severity: Option<i32>,
 }
 
 fn main() -> Result<(), anyhow::Error> {
     let options: Opt = argh::from_env();
 
     syslog::init().expect("failed to initialize logger");
-    fuchsia_syslog::set_severity(options.severity);
+    fuchsia_syslog::set_severity(options.severity.unwrap_or(fuchsia_syslog::levels::INFO));
 
     info!("Starting Network Manager!");
     let mut executor = fuchsia_async::Executor::new()?;

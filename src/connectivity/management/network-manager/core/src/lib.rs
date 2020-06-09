@@ -213,20 +213,33 @@ impl DeviceState {
     /// interface. This means that the port must be registered with port manager before this method
     /// is called otherwise the `nicid` lookup will fail.
     pub async fn apply_packet_filters(&self, topo_path: &str) -> error::Result<()> {
-        let acls = self
-            .config
-            .get_acl_entries(topo_path)
-            .ok_or_else(|| error::NetworkManager::Config(error::Config::FailedToGetAclEntries))?;
+        let acls = self.config.get_acl_entries(topo_path).and_then(|it| {
+            let mut peek = it.peekable();
+            if peek.peek().is_some() {
+                Some(peek)
+            } else {
+                None
+            }
+        });
         let pid = self
             .port_manager
             .port_id(topo_path)
             .ok_or_else(|| error::NetworkManager::Port(error::Port::NotFound))?;
-        for entry in acls {
-            for rule in self.packet_filter.parse_aclentry(entry).await?.iter() {
-                self.set_filter_on_interface(rule, pid.to_u32()).await?;
+
+        if let Some(acls) = acls {
+            for entry in acls {
+                for rule in self.packet_filter.parse_aclentry(entry).await?.iter() {
+                    info!("Applying filter rule {:?} to port {:?}", rule, pid);
+                    self.set_filter_on_interface(rule, pid.to_u32()).await?;
+                }
             }
+            Ok(())
+        } else {
+            // No filter rules, disable filters.
+            // TODO(fxbug.dev/52968): Revisit whether we need to disable filters
+            // once we drill down on why it's causing such a slow down.
+            self.hal.disable_filters(*pid).await
         }
-        Ok(())
     }
 
     /// Restores state of global system options and services from stored configuration.

@@ -1039,6 +1039,24 @@ impl NetCfg {
 
         Ok(StackPortId::from(u64::from(nic_id)).into())
     }
+
+    /// Disables packet filters on `port`.
+    pub async fn disable_filters(&self, port: PortId) -> error::Result<()> {
+        info!("Disabling filters for port {:?}", port);
+        self.stack
+            .disable_packet_filter(port.to_u64())
+            .await
+            .context("disable_packet_filter FIDL error")
+            .and_then(|r| {
+                r.map_err(|error: fidl_fuchsia_net_stack::Error| {
+                    anyhow::anyhow!("disable_packet_filter returned {:?}", error)
+                })
+            })
+            .map_err(|e| {
+                error!("disable_packet_filter error {:?}", e);
+                error::NetworkManager::Hal(error::Hal::OperationFailed)
+            })
+    }
 }
 
 #[cfg(test)]
