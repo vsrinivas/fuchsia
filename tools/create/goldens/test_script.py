@@ -65,10 +65,12 @@ def main():
     parser.add_argument('create_bin', help='path to the create binary')
     parser.add_argument(
         'golden_files', help='path to the JSON file listing all golden files')
+    parser.add_argument('project_type', help='project type as per fx create')
+    parser.add_argument('project_name', help='project name as per fx create')
     parser.add_argument(
         'create_args',
         nargs=argparse.REMAINDER,
-        help='arguments to `fx create`')
+        help='other arguments to `fx create`')
     args = parser.parse_args()
 
     # Read the set of golden files accessible to this script.
@@ -77,10 +79,13 @@ def main():
 
     # Create a temporary directory to house the generated project.
     with TemporaryDirectory() as project_dir:
-        args.create_args += ['--dest', project_dir]
+        args = [
+            args.create_bin, args.project_type,
+            os.path.join(project_dir, args.project_name)
+        ] + args.create_args
 
         # Call the create tool
-        subprocess.check_call([args.create_bin] + args.create_args)
+        subprocess.check_call(args)
 
         error = False
 

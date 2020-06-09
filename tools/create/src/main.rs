@@ -12,7 +12,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
 use std::str::FromStr;
-use std::{env, fmt, fs, io};
+use std::{fmt, fs, io};
 use structopt::StructOpt;
 use termion::{color, style};
 
@@ -20,9 +20,6 @@ const LANG_AGNOSTIC_EXTENSION: &'static str = "tmpl";
 
 fn main() -> Result<(), anyhow::Error> {
     let args = CreateArgs::from_args();
-    if args.project_name.contains("_") {
-        bail!("project-name cannot contain underscores");
-    }
     let templates_dir_path = util::get_templates_dir_path()?;
 
     // Get the list of template file paths available to this project type and language.
@@ -65,6 +62,7 @@ fn main() -> Result<(), anyhow::Error> {
     project.write(&dest_project_path)?;
 
     if !args.silent {
+        let project_name = &args.project_path.project_name;
         println!("Project created at {}.", dest_project_path.display());
 
         // Find the parent BUILD.gn file and suggest adding the test target.
@@ -74,7 +72,7 @@ fn main() -> Result<(), anyhow::Error> {
             println!(
                 "{}note:{} Don't forget to include the {}{}:tests{} GN target in the parent {}tests{} target ({}).",
                 color::Fg(color::Yellow), color::Fg(color::Reset),
-                style::Bold, &args.project_name, style::Reset,
+                style::Bold, project_name, style::Reset,
                 style::Bold, style::Reset,
                 parent_build.display()
             );
@@ -84,32 +82,37 @@ fn main() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
+/// Creates scaffolding for new projects.
+///
+/// Eg.
+///
+/// fx create component-v1 src/sys/my-project --lang rust
 #[derive(Debug, StructOpt)]
-#[structopt(name = "fx-create", about = "Creates scaffolding for new projects.", version = "0.1")]
-#[structopt(rename_all = "kebab")]
+#[structopt(name = "fx-create", rename_all = "kebab")]
 struct CreateArgs {
     /// The type of project to create.
     ///
     /// This can be one of:
     ///
     /// - component-v1: A V1 component launched with appmgr,
+    ///
     /// - component-v2: A V2 component launched with Component Manager,
+    ///
     /// - driver: A driver launched in a devhost,
     project_type: String,
 
-    /// The name of the new project.
+    /// The path at which to create the new project.
     ///
-    /// This will be the name of the GN target and directory for the project.
-    /// The name should not contain any underscores.
-    project_name: String,
+    /// The last segment of the path will be the name of the GN target.
+    /// GN-style paths are supported (//src/sys).
+    /// The last segment of the path must start with an alphabetic
+    /// character and be followed by zero or more alphanumeric characters,
+    /// or the `-` character.
+    project_path: ProjectPath,
 
     /// The programming language.
     #[structopt(short, long)]
     lang: Language,
-
-    /// Destination directory of new project (default current working directory).
-    #[structopt(long)]
-    dest: Option<PathBuf>,
 
     /// Override for the project include path. For testing.
     #[structopt(long)]
@@ -124,19 +127,49 @@ struct CreateArgs {
     silent: bool,
 }
 
+/// A project path pointing to a non-existent leaf directory which
+/// will be the home of the new project. The project name is derived
+/// from the leaf directory.
+#[derive(PartialEq, Eq, Debug, Clone)]
+struct ProjectPath {
+    project_parent: PathBuf,
+    project_name: String,
+}
+
+impl FromStr for ProjectPath {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // First handle a GN absolute path (//foo/bar).
+        let path = if s.starts_with("//") {
+            util::get_fuchsia_root()?.join(Path::new(&s[2..]))
+        } else {
+            Path::new(s).to_path_buf()
+        };
+        let project_parent = {
+            let mut parent = path.parent().expect("parent should never be None");
+            if parent == Path::new("") {
+                parent = Path::new(".");
+            }
+            parent.canonicalize().context("path to project is invalid")?
+        };
+        let project_name =
+            util::filename_to_string(path.file_name().with_context(|| "missing project name")?)?;
+        let mut chars_iter = project_name.chars();
+        if !chars_iter.next().with_context(|| "project name is empty")?.is_alphabetic() {
+            return Err(anyhow!("project name must start with an alphabetic character"));
+        }
+        if chars_iter.any(|c| !c.is_alphanumeric() && c != '-') {
+            return Err(anyhow!("project name must only contain alphanumeric characters and `-`"));
+        }
+        Ok(ProjectPath { project_parent, project_name })
+    }
+}
+
 impl CreateArgs {
     /// Returns the absolute path to the new project.
     fn absolute_project_path(&self) -> io::Result<PathBuf> {
-        let parent_dir = if let Some(dest) = self.dest.as_ref() {
-            if dest.is_absolute() {
-                dest.clone()
-            } else {
-                env::current_dir()?.join(dest)
-            }
-        } else {
-            env::current_dir()?
-        };
-        Ok(parent_dir.join(&self.project_name))
+        Ok(self.project_path.project_parent.join(&self.project_path.project_name))
     }
 }
 
@@ -301,7 +334,7 @@ impl TemplateArgs {
     /// Build TemplateArgs from the program args and environment.
     fn from_create_args(create_args: &CreateArgs) -> Result<Self, anyhow::Error> {
         let project_path = if let Some(override_project_path) = &create_args.override_project_path {
-            override_project_path.join(&create_args.project_name)
+            override_project_path.join(&create_args.project_path.project_name)
         } else {
             let absolute_project_path = create_args.absolute_project_path()?;
             let fuchsia_root = util::get_fuchsia_root()?;
@@ -324,7 +357,7 @@ impl TemplateArgs {
 
         Ok(TemplateArgs {
             copyright_year,
-            project_name: create_args.project_name.clone(),
+            project_name: create_args.project_path.project_name.clone(),
             project_path: project_path
                 .to_str()
                 .ok_or_else(|| anyhow!("invalid path {:?}", &project_path))?
@@ -506,6 +539,89 @@ impl FileReader for StdFs {
 mod tests {
     use super::*;
     use matches::assert_matches;
+    use std::env;
+    use tempfile::tempdir;
+
+    #[test]
+    fn project_path_parsed() {
+        // Create a dir structure like //foo, where FUCHSIA_DIR points to //.
+        let temp_dir = tempdir().expect("failed to create temp dir");
+        let foo_path = temp_dir.path().join("foo");
+        std::fs::File::create(&foo_path).expect("failed to create foo dir");
+
+        // Test GN absolute labels (need to point to actual file, so set FUCHSIA_DIR to temp dir).
+        env::set_var("FUCHSIA_DIR", temp_dir.path());
+        assert_eq!(
+            "//foo/bar".parse::<ProjectPath>().unwrap(),
+            ProjectPath { project_parent: foo_path.clone(), project_name: "bar".to_string() }
+        );
+        assert_eq!(
+            "//bar".parse::<ProjectPath>().unwrap(),
+            ProjectPath {
+                project_parent: temp_dir.path().to_path_buf(),
+                project_name: "bar".to_string()
+            }
+        );
+
+        // Test absolute paths (need to point to actual files, so use the temp dir).
+        assert_eq!(
+            foo_path.join("bar").display().to_string().parse::<ProjectPath>().unwrap(),
+            ProjectPath { project_parent: foo_path.clone(), project_name: "bar".to_string() }
+        );
+        assert_eq!(
+            temp_dir.path().join("bar").display().to_string().parse::<ProjectPath>().unwrap(),
+            ProjectPath {
+                project_parent: temp_dir.path().to_path_buf(),
+                project_name: "bar".to_string()
+            }
+        );
+
+        // Test relative paths (need to point to actual files, so change current dir to temp dir).
+        with_current_dir(temp_dir.path(), || {
+            assert_eq!(
+                "foo/bar".parse::<ProjectPath>().unwrap(),
+                ProjectPath { project_parent: foo_path.clone(), project_name: "bar".to_string() }
+            );
+            assert_eq!(
+                "bar".parse::<ProjectPath>().unwrap(),
+                ProjectPath {
+                    project_parent: temp_dir.path().to_path_buf(),
+                    project_name: "bar".to_string()
+                }
+            );
+        });
+    }
+
+    /// Runs a closure with the current working directory set to `path`. When the closure finishes
+    /// executing, the previous working directory is reinstated.
+    fn with_current_dir<P, F, R>(path: P, f: F) -> R
+    where
+        P: AsRef<Path>,
+        F: FnOnce() -> R + std::panic::UnwindSafe,
+    {
+        let prev_dir = env::current_dir().expect("failed to get current dir");
+        env::set_current_dir(path).expect("failed to set current dir");
+        let result = std::panic::catch_unwind(f);
+        env::set_current_dir(prev_dir).expect("failed to restore previous current dir");
+        match result {
+            Ok(r) => r,
+            Err(err) => std::panic::resume_unwind(err),
+        }
+    }
+
+    #[test]
+    fn project_name_is_valid() {
+        // Set FUCHSIA_DIR to something valid.
+        env::set_var("FUCHSIA_DIR", env::current_dir().expect("failed to get current dir"));
+
+        assert_matches!("foo_bar".parse::<ProjectPath>(), Err(_));
+        assert_matches!("foo.bar".parse::<ProjectPath>(), Err(_));
+        assert_matches!("1foo".parse::<ProjectPath>(), Err(_));
+        assert_matches!("-foo".parse::<ProjectPath>(), Err(_));
+
+        assert_matches!("foo-bar".parse::<ProjectPath>(), Ok(_));
+        assert_matches!("foo1".parse::<ProjectPath>(), Ok(_));
+    }
 
     #[test]
     fn language_display_can_be_parsed() {
