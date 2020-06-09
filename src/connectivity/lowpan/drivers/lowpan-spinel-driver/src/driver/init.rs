@@ -108,13 +108,21 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
 
         fx_log_info!("init_task: NCP Version: {:?}", ncp_version);
 
+        let iface_type = self.get_property_simple::<InterfaceType, _>(Prop::InterfaceType).await?;
+
+        fx_log_info!("init_task: Interface Type: {:?}", iface_type);
+
+        let caps = self.get_property_simple::<Vec<Cap>, _>(Prop::Caps).await?;
+
+        fx_log_info!("init_task: Capabilities: {:?}", caps);
+
         fx_log_info!("init_task: Finally updating driver state to initialized");
 
         // Update the driver state.
         {
             let mut driver_state = self.driver_state.lock();
             driver_state.init_state = InitState::Initialized;
-            // TODO: Update any synchronized state here once added.
+            driver_state.caps = caps;
         }
         self.driver_state_change.trigger();
 

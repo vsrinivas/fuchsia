@@ -17,6 +17,11 @@ use std::ops::Deref;
 pub(super) struct DriverState {
     pub(super) init_state: InitState,
     pub(super) connectivity_state: ConnectivityState,
+
+    /// Spinel capabilities supported by this device.
+    ///
+    /// This is updated exclusively at initialization.
+    pub(super) caps: Vec<Cap>,
 }
 
 impl Clone for DriverState {
@@ -24,6 +29,7 @@ impl Clone for DriverState {
         DriverState {
             init_state: self.init_state.clone(),
             connectivity_state: self.connectivity_state.clone(),
+            caps: self.caps.clone(),
         }
     }
 }
@@ -32,6 +38,7 @@ impl PartialEq for DriverState {
     fn eq(&self, other: &Self) -> bool {
         self.init_state.eq(&other.init_state)
             && self.connectivity_state.eq(&other.connectivity_state)
+            && self.caps.eq(&other.caps)
     }
 }
 
@@ -42,6 +49,7 @@ impl Default for DriverState {
         DriverState {
             init_state: Default::default(),
             connectivity_state: ConnectivityState::Inactive,
+            caps: Default::default(),
         }
     }
 }
@@ -80,8 +88,7 @@ impl DriverState {
             _ => {}
         }
 
-        // TODO: Reset any synchronized state here, once those
-        //       members are added.
+        self.caps = Default::default();
 
         if old_state.is_invalid_during_initialization() {
             self.connectivity_state = ConnectivityState::Attaching;

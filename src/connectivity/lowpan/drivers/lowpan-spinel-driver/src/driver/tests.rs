@@ -10,6 +10,12 @@ use mock::*;
 
 use lowpan_driver_common::Driver as _;
 
+impl<DS> SpinelDriver<DS> {
+    pub(super) fn get_driver_state_snapshot(&self) -> DriverState {
+        self.driver_state.lock().clone()
+    }
+}
+
 #[fasync::run_until_stalled(test)]
 async fn test_spinel_lowpan_driver() {
     let (device_client, device_stream, ncp_task) = new_fake_spinel_pair();
@@ -17,7 +23,15 @@ async fn test_spinel_lowpan_driver() {
     let driver = SpinelDriver::from(device_client);
     let driver_stream = driver.wrap_inbound_stream(device_stream);
 
+    assert_eq!(driver.get_driver_state_snapshot().caps.len(), 0);
+
     let app_task = async {
+        // Wait until we are ready.
+        driver.wait_for_state(DriverState::is_initialized).await;
+
+        // Verify that our capabilities have been set by this point.
+        assert_eq!(driver.get_driver_state_snapshot().caps.len(), 2);
+
         for i in 1u8..32 {
             traceln!("app_task: Iteration {}", i);
 
