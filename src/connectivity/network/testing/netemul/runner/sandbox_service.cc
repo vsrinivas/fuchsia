@@ -56,6 +56,8 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
     // Sandbox binding can't be destroyed on the thread of its loop,
     // it'll cause a deadlock upon loop destruction
     ZX_ASSERT(loop_->dispatcher() != async_get_default_dispatcher());
+    // Shutdown the loop before destroying any of the bindings.
+    loop_->Shutdown();
   }
 
   void CreateEnvironment(fidl::InterfaceRequest<ManagedEnvironment::FManagedEnvironment> req,
