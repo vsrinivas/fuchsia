@@ -56,6 +56,9 @@ use crate::device::facade::DeviceFacade;
 // Diagnostics related includes
 use crate::diagnostics::facade::DiagnosticsFacade;
 
+// Factory reset related includes
+use crate::factory_reset::facade::FactoryResetFacade;
+
 // Factory related includes
 use crate::factory_store::facade::FactoryStoreFacade;
 
@@ -182,6 +185,7 @@ impl Sl4f {
                 "component_search_facade" => ComponentSearchFacade::new(),
                 "diagnostics_facade" => DiagnosticsFacade::new(),
                 "device_facade" => DeviceFacade::new(),
+                "factory_reset_facade" => FactoryResetFacade::new(),
                 "factory_store_facade" => FactoryStoreFacade::new(),
                 "file_facade" => FileFacade::new(),
                 "gatt_client_facade" => GattClientFacade::new(),

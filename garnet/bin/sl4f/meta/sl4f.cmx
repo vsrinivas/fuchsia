@@ -48,6 +48,7 @@
             "fuchsia.net.stack.Stack",
             "fuchsia.netstack.Netstack",
             "fuchsia.paver.Paver",
+            "fuchsia.recovery.FactoryReset",
             "fuchsia.pkg.RepositoryManager",
             "fuchsia.posix.socket.Provider",
             "fuchsia.power.BatteryManager",
