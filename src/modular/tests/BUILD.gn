@@ -185,20 +185,6 @@ executable("module_context_test") {
   ]
 }
 
-executable("story_module_test") {
-  testonly = true
-
-  sources = [ "story_module_test.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
-  ]
-}
-
 executable("sessionmgr_integration_test") {
   testonly = true
 
@@ -378,10 +364,6 @@ test_package("modular_integration_tests") {
       environments = basic_envs
     },
     {
-      name = "story_module_test"
-      environments = basic_envs
-    },
-    {
       name = "story_shell_factory_test"
       environments = basic_envs
     },
@@ -421,7 +403,6 @@ test_package("modular_integration_tests") {
     ":sessionctl_test",
     ":sessionmgr_integration_test",
     ":stories_share_session_runners_test",
-    ":story_module_test",
     ":story_shell_embedded_mod_test",
     ":story_shell_factory_test",
     ":story_shell_test",
