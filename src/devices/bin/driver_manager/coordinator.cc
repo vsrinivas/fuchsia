@@ -1289,6 +1289,7 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
         // problem and should show as a bug
         LOGF(ERROR, "Failed to suspend: %s", zx_status_get_string(status));
         ctx.set_flags(SuspendContext::Flags::kRunning);
+        reboot_watcher_manager_.ClearRebootReason();
         if (callback_info->callback) {
           callback_info->callback(status);
           callback_info->callback = nullptr;
@@ -1302,6 +1303,7 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
         ::suspend_fallback(root_resource(), ctx.sflags());
         // if we get here the system did not suspend successfully
         ctx.set_flags(SuspendContext::Flags::kRunning);
+        reboot_watcher_manager_.ClearRebootReason();
       }
 
       if (callback_info->callback) {
@@ -1753,6 +1755,8 @@ void Coordinator::Reboot(
 
   if (InSuspend()) {
     // Reboot already in progress.
+    LOGF(ERROR, "Aborting reboot, a system suspend is already in progress");
+    callback(ZX_ERR_ALREADY_EXISTS);
     return;
   }
 

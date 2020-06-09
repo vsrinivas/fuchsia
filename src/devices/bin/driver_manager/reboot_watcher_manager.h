@@ -41,6 +41,7 @@ class RebootWatcherManager : public llcpp::fuchsia::hardware::power::statecontro
   void ExecuteWatchdog();
 
   bool HasRebootReason() const { return reason_.has_value(); }
+  void ClearRebootReason() { reason_ = std::nullopt; }
 
  private:
   void UnbindWatcher(size_t idx);

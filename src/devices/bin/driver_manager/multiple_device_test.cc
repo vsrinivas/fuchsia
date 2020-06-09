@@ -190,7 +190,7 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
   ASSERT_FALSE(suspend_task_sys.is_pending());
 }
 
-TEST_F(MultipleDeviceTestCase, RebootReasonSet) {
+TEST_F(MultipleDeviceTestCase, RebootReasonCleared) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
 
@@ -241,7 +241,7 @@ TEST_F(MultipleDeviceTestCase, RebootReasonSet) {
   });
 
   ASSERT_EQ(coordinator()->suspend_context().sflags(), DEVICE_SUSPEND_FLAG_REBOOT);
-  ASSERT_TRUE(coordinator()->reboot_watcher_manager().HasRebootReason());
+  ASSERT_FALSE(coordinator()->reboot_watcher_manager().HasRebootReason());
   ASSERT_TRUE(callback_executed);
   ASSERT_FALSE(suspend_task_pbus.is_pending());
   ASSERT_FALSE(suspend_task_sys.is_pending());
