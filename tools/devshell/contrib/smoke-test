@@ -63,13 +63,13 @@ if [[ -n "$REGENERATE" ]]; then
 fi
 
 # Generate Ninja graph
-trap 'rm -f "$GRAPH"' EXIT
 readonly GRAPH=$(mktemp -u)
-mkfifo $GRAPH
-"$PREBUILT_NINJA" -C "$FUCHSIA_BUILD_DIR" -t graph > ${GRAPH} &
+trap 'rm -f "$GRAPH"' EXIT
+mkfifo "$GRAPH"
+"$PREBUILT_NINJA" -C "$FUCHSIA_BUILD_DIR" -t graph > "${GRAPH}" &
 
 # Get modified sources
-readonly MODIFIED=$(git diff --name-only $(get-diff-base) "${GIT_FILTER[@]}")
+readonly MODIFIED=$(git diff --name-only $(get-diff-base))
 if [[ -n "$VERBOSE" ]]; then
   printf "Modified files:\n%s\n\n" "${MODIFIED}"
 fi
@@ -79,7 +79,7 @@ readonly TESTS_JSON="${FUCHSIA_BUILD_DIR}/tests.json"
 # Build `affectedtests` if needed
 readonly TOOL="${HOST_OUT_DIR}/affectedtests"
 if [[ ! -f $TOOL ]]; then
-  fx-command-run build `realpath --relative-to="${FUCHSIA_BUILD_DIR}" "${TOOL}"`
+  fx-command-run build "${TOOL#$FUCHSIA_BUILD_DIR/}"
 fi
 
 # Find affected tests
@@ -94,7 +94,7 @@ fi
 
 # Run affected tests
 if [[ -z "$DRY_RUN" && -n "$AFFECTED" ]]; then
-  fx-command-run test "${AFFECTED}"
+  fx-command-run test ${AFFECTED}
 fi
 
 if [[ -z "$NO_FEEDBACK" ]]; then
