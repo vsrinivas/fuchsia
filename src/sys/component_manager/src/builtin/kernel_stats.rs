@@ -172,14 +172,7 @@ mod tests {
         let mem_stats = kernel_stats_provider.get_memory_stats().await?;
 
         assert!(mem_stats.total_bytes.unwrap() > 0);
-        assert!(mem_stats.free_bytes.unwrap() > 0);
-        assert!(mem_stats.wired_bytes.unwrap() > 0);
         assert!(mem_stats.total_heap_bytes.unwrap() > 0);
-        assert!(mem_stats.free_heap_bytes.unwrap() > 0);
-        assert!(mem_stats.vmo_bytes.unwrap() > 0);
-        assert!(mem_stats.mmu_overhead_bytes.unwrap() > 0);
-        assert!(mem_stats.ipc_bytes.unwrap() > 0);
-        assert!(mem_stats.other_bytes.unwrap() > 0);
 
         Ok(())
     }
@@ -197,42 +190,15 @@ mod tests {
         let per_cpu_stats = cpu_stats.per_cpu_stats.unwrap();
 
         let mut idle_time_sum = 0;
-        let mut reschedules_sum = 0;
-        let mut context_switches_sum = 0;
-        let mut irq_preempts_sum = 0;
-        let mut yields_sum = 0;
-        let mut ints_sum = 0;
-        let mut timer_ints_sum = 0;
-        let mut timers_sum = 0;
-        let mut page_faults_sum = 0;
         let mut syscalls_sum = 0;
-        let mut reschedule_ipis_sum = 0;
 
         for per_cpu_stat in per_cpu_stats.iter() {
             idle_time_sum += per_cpu_stat.idle_time.unwrap();
-            reschedules_sum += per_cpu_stat.reschedules.unwrap();
-            context_switches_sum += per_cpu_stat.context_switches.unwrap();
-            irq_preempts_sum += per_cpu_stat.irq_preempts.unwrap();
-            yields_sum += per_cpu_stat.yields.unwrap();
-            ints_sum += per_cpu_stat.ints.unwrap();
-            timer_ints_sum += per_cpu_stat.timer_ints.unwrap();
-            timers_sum += per_cpu_stat.timers.unwrap();
-            page_faults_sum += per_cpu_stat.page_faults.unwrap();
             syscalls_sum += per_cpu_stat.syscalls.unwrap();
-            reschedule_ipis_sum += per_cpu_stat.reschedule_ipis.unwrap();
         }
 
         assert!(idle_time_sum > 0);
-        assert!(reschedules_sum > 0);
-        assert!(context_switches_sum > 0);
-        assert!(irq_preempts_sum > 0);
-        assert!(yields_sum > 0);
-        assert!(ints_sum > 0);
-        assert!(timer_ints_sum > 0);
-        assert!(timers_sum > 0);
-        assert!(page_faults_sum > 0);
         assert!(syscalls_sum > 0);
-        assert!(reschedule_ipis_sum > 0);
 
         Ok(())
     }
