@@ -199,6 +199,10 @@ func (c *Conn) Run(ctx context.Context, command []string, stdout io.Writer, stde
 	logger.Debugf(ctx, "running over ssh: %v", command)
 
 	if err := session.Run(ctx, command); err != nil {
+		if ctx.Err() != nil {
+			// Don't bother logging the error if the context was canceled.
+			return err
+		}
 		var log string
 		switch e := err.(type) {
 		case *ssh.ExitError:
