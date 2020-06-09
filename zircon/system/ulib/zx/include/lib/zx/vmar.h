@@ -30,8 +30,14 @@ class vmar final : public object<vmar> {
     return *this;
   }
 
+  // DEPRECATED: Argument order does not match the C version.
   zx_status_t map(size_t vmar_offset, const vmo& vmo_handle, uint64_t vmo_offset, size_t len,
                   zx_vm_option_t options, zx_vaddr_t* ptr) const {
+    return zx_vmar_map(get(), options, vmar_offset, vmo_handle.get(), vmo_offset, len, ptr);
+  }
+
+  zx_status_t map(zx_vm_option_t options, size_t vmar_offset, const vmo& vmo_handle,
+                  uint64_t vmo_offset, size_t len, zx_vaddr_t* ptr) const {
     return zx_vmar_map(get(), options, vmar_offset, vmo_handle.get(), vmo_offset, len, ptr);
   }
 
@@ -39,7 +45,12 @@ class vmar final : public object<vmar> {
     return zx_vmar_unmap(get(), address, len);
   }
 
+  // DEPRECATED: Argument order does not match the C version.
   zx_status_t protect(uintptr_t address, size_t len, zx_vm_option_t prot) const {
+    return zx_vmar_protect(get(), prot, address, len);
+  }
+
+  zx_status_t protect2(zx_vm_option_t prot, uintptr_t address, size_t len) const {
     return zx_vmar_protect(get(), prot, address, len);
   }
 
@@ -50,8 +61,14 @@ class vmar final : public object<vmar> {
 
   zx_status_t destroy() const { return zx_vmar_destroy(get()); }
 
+  // DEPRECATED: Argument order does not match the C version.
   zx_status_t allocate(size_t offset, size_t size, uint32_t options, vmar* child,
                        uintptr_t* child_addr) const;
+
+  zx_status_t allocate2(uint32_t options, size_t offset, size_t size, vmar* child,
+                        uintptr_t* child_addr) const {
+    return allocate(offset, size, options, child, child_addr);
+  }
 
   static inline unowned<vmar> root_self() { return unowned<vmar>(zx_vmar_root_self()); }
 };
