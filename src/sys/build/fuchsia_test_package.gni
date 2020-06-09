@@ -99,6 +99,7 @@ template("fuchsia_test_package") {
       deps = []
     }
     deps += invoker.test_components
+    deps += test_deps
     testonly = true
   }
 }
