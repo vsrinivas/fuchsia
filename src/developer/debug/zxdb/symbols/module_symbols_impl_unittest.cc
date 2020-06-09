@@ -65,8 +65,7 @@ TEST(ModuleSymbols, Basic) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(), "");
   EXPECT_TRUE(setup.Init().ok());
 
-  // Make a symbol context with some load address to ensure that the addresses
-  // round-trip properly.
+  // Make a symbol context with some load address to ensure that the addresses round-trip properly.
   SymbolContext symbol_context(0x18000);
 
   // MyFunction() should have one implementation.
@@ -75,17 +74,15 @@ TEST(ModuleSymbols, Basic) {
       InputLocation(Identifier(IdentifierComponent(TestSymbolModule::kMyFunctionName))));
   ASSERT_EQ(1u, addrs.size());
 
-  // On one occasion Clang generated a symbol file that listed many functions
-  // in this file starting at offset 0. This obviously causes problems and
-  // the test fails below with bafflingly incorrect line numbers. The problem
-  // went away after forcing recompilation of that file. It might be an
-  // intermittent Clang bug or some random corruption. If this assert hits,
-  // check the function start addresses in the DWARF dump, there should be
-  // no functions starting at offset 0 in the file.
+  // On one occasion Clang generated a symbol file that listed many functions in this file starting
+  // at offset 0. This obviously causes problems and the test fails below with bafflingly incorrect
+  // line numbers. The problem went away after forcing recompilation of that file. It might be an
+  // intermittent Clang bug or some random corruption. If this assert hits, check the function start
+  // addresses in the DWARF dump, there should be no functions starting at offset 0 in the file.
   ASSERT_NE(0u, addrs[0].address());
 
-  // That address should resolve back to the function name (don't know the
-  // exact file path the compiler generated so just check the name).
+  // That address should resolve back to the function name (don't know the exact file path the
+  // compiler generated so just check the name).
   auto locations =
       setup.symbols()->ResolveInputLocation(symbol_context, InputLocation(addrs[0].address()));
   ASSERT_EQ(1u, locations.size());
@@ -93,8 +90,8 @@ TEST(ModuleSymbols, Basic) {
   EXPECT_TRUE(StringEndsWith(locations[0].file_line().file(), "/zxdb_symbol_test.cc"));
   EXPECT_EQ(109, locations[0].file_line().line());
 
-  // The function symbol should have a compilation unit with a C-style language
-  // defined and the name should contain the file.
+  // The function symbol should have a compilation unit with a C-style language defined and the name
+  // should contain the file.
   ASSERT_TRUE(locations[0].symbol());
   fxl::RefPtr<CompileUnit> unit = locations[0].symbol().Get()->GetCompileUnit();
   ASSERT_TRUE(unit);
@@ -106,8 +103,7 @@ TEST(ModuleSymbols, LineDetailsForAddress) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(), "");
   EXPECT_TRUE(setup.Init().ok());
 
-  // Make a symbol context with some load address to ensure that the addresses
-  // round-trip properly.
+  // Make a symbol context with some load address to ensure that the addresses round-trip properly.
   SymbolContext symbol_context(0x18000);
 
   // Get the canonical file name to test.
@@ -129,9 +125,8 @@ TEST(ModuleSymbols, LineDetailsForAddress) {
   EXPECT_EQ(kLineToQuery, locations[0].file_line().line());
   EXPECT_EQ(file_name, locations[0].file_line().file());
 
-  // Lookup the line info. Normally we expect one line table entry for this but
-  // don't want to assume that since the compiler could emit multiple entries
-  // for it.
+  // Lookup the line info. Normally we expect one line table entry for this but don't want to assume
+  // that since the compiler could emit multiple entries for it.
   LineDetails line_details =
       setup.symbols()->LineDetailsForAddress(symbol_context, addrs[0].address(), false);
   EXPECT_EQ(file_name, line_details.file_line().file());
@@ -162,8 +157,7 @@ TEST(ModuleSymbols, ResolveLineInputLocation) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(), "");
   EXPECT_TRUE(setup.Init().ok());
 
-  // Make a symbol context with some load address to ensure that the addresses
-  // round-trip properly.
+  // Make a symbol context with some load address to ensure that the addresses round-trip properly.
   SymbolContext symbol_context(0x18000);
 
   // Get the canonical file name to test.
@@ -194,8 +188,8 @@ TEST(ModuleSymbols, ResolveLineInputLocation) {
   EXPECT_EQ(27, locations[0].file_line().line());
   EXPECT_EQ(file_name, locations[0].file_line().file());
 
-  // Line 15 is the beginning of the templatized function. There should be
-  // two matches since its instantiated twice.
+  // Line 15 is the beginning of the templatized function. There should be two matches since its
+  // instantiated twice.
   addrs = setup.symbols()->ResolveInputLocation(symbol_context,
                                                 InputLocation(FileLine(file_name, 15)), options);
   ASSERT_EQ(2u, addrs.size());
@@ -210,8 +204,8 @@ TEST(ModuleSymbols, ResolveLineInputLocation) {
   EXPECT_EQ(15, locations[0].file_line().line());
   EXPECT_EQ(file_name, locations[0].file_line().file());
 
-  // Line 17 is only present in one of the two template instantiations.
-  // We should only find it once (see note below about case #2).
+  // Line 17 is only present in one of the two template instantiations.  We should only find it once
+  // (see note below about case #2).
   addrs = setup.symbols()->ResolveInputLocation(symbol_context,
                                                 InputLocation(FileLine(file_name, 17)), options);
   ASSERT_TRUE(addrs.size() == 1u || addrs.size() == 2u);
@@ -220,11 +214,10 @@ TEST(ModuleSymbols, ResolveLineInputLocation) {
   ASSERT_EQ(1u, locations.size());
   EXPECT_EQ(17, locations[0].file_line().line());
   if (addrs.size() == 2u) {
-    // MSVC in debug mode will emit the full code in both instantiations of the
-    // template which is valid. To be more robust this test allows that form
-    // even though Clang doesn't do this. The important thing is that looking
-    // up line 17 never gives us line 19 (which is the other template
-    // instantiation).
+    // MSVC in debug mode will emit the full code in both instantiations of the template which is
+    // valid. To be more robust this test allows that form even though Clang doesn't do this. The
+    // important thing is that looking up line 17 never gives us line 19 (which is the other
+    // template instantiation).
     locations =
         setup.symbols()->ResolveInputLocation(symbol_context, InputLocation(addrs[1].address()));
     EXPECT_EQ(17, locations[0].file_line().line());
@@ -336,11 +329,10 @@ TEST(ModuleSymbols, ResolveMainFunction) {
   auto addrs = setup.symbols()->ResolveInputLocation(symbol_context, input_loc, options);
   EXPECT_TRUE(addrs.empty());
 
-  // Inject a function named "main" (but not marked in the symbols as the
-  // official main function). This is kind of a hack. The ModuleSymbolsImpl is
-  // using a real symbol file and need to be able to generate the function
-  // symbol from the DieRef for this call to succeed. So we can't just inject a
-  // fake DieRef. Instead, redirect "main" in the index to an existing function
+  // Inject a function named "main" (but not marked in the symbols as the official main function).
+  // This is kind of a hack. The ModuleSymbolsImpl is using a real symbol file and need to be able
+  // to generate the function symbol from the SymbolRef for this call to succeed. So we can't just
+  // inject a fake SymbolRef. Instead, redirect "main" in the index to an existing function
   // ("MyFunction").
   auto my_function_matches = setup.symbols()->index_.FindExact(
       Identifier(IdentifierComponent(TestSymbolModule::kMyFunctionName)));
@@ -348,15 +340,13 @@ TEST(ModuleSymbols, ResolveMainFunction) {
   auto main_node = setup.symbols()->index_.root().AddChild(IndexNode::Kind::kFunction, "main");
   main_node->AddDie(my_function_matches[0]);
 
-  // Query for $main again. Since nothing is marked as the main function, the
-  // one named "main" should be returned. Since we redirected the index above,
-  // this will actually be "MyFunction".
+  // Query for $main again. Since nothing is marked as the main function, the one named "main"
+  // should be returned. Since we redirected the index above, this will actually be "MyFunction".
   addrs = setup.symbols()->ResolveInputLocation(symbol_context, input_loc, options);
   ASSERT_EQ(1u, addrs.size());
   EXPECT_EQ(TestSymbolModule::kMyFunctionName, addrs[0].symbol().Get()->GetFullName());
 
-  // Now mark a different function as the official main one
-  // (kNamespaceFunctionName).
+  // Now mark a different function as the official main one (kNamespaceFunctionName).
   auto anon_function_matches = setup.symbols()->index_.FindExact(
       TestSymbolModule::SplitName(TestSymbolModule::kNamespaceFunctionName));
   ASSERT_EQ(1u, anon_function_matches.size());

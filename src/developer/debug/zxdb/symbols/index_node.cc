@@ -43,13 +43,13 @@ IndexNode* IndexNode::AddChild(Kind kind, const char* name) {
   return &found->second;
 }
 
-IndexNode* IndexNode::AddChild(Kind kind, const char* name, const DieRef& ref) {
+IndexNode* IndexNode::AddChild(Kind kind, const char* name, const SymbolRef& ref) {
   auto added = AddChild(kind, name);
   added->AddDie(ref);
   return added;
 }
 
-void IndexNode::AddDie(const DieRef& ref) {
+void IndexNode::AddDie(const SymbolRef& ref) {
   switch (kind_) {
     case Kind::kNone:
     case Kind::kRoot:
@@ -71,7 +71,7 @@ void IndexNode::AddDie(const DieRef& ref) {
       break;
     case Kind::kFunction:
     case Kind::kVar:
-      break;  // Always store functions and variables.
+      break;  // Always store these kinds.
   }
 
   dies_.push_back(ref);
@@ -114,7 +114,7 @@ void IndexNode::Dump(const std::string& name, std::ostream& out,
   if (factory_for_loc) {
     // Dump location information too.
     const char* separator = ": ";
-    for (const DieRef& die_ref : dies_) {
+    for (const SymbolRef& die_ref : dies_) {
       out << separator;
       separator = ", ";
 

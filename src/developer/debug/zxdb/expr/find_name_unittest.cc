@@ -61,7 +61,7 @@ TEST(FindName, FindLocalVariable) {
 
   // Set up the module symbols. This creates "ns" and "ns_value" in the symbol index.
   const char kNsName[] = "ns";
-  auto ns_node = index_root.AddChild(IndexNode::Kind::kNamespace, kNsName, IndexNode::DieRef());
+  auto ns_node = index_root.AddChild(IndexNode::Kind::kNamespace, kNsName, IndexNode::SymbolRef());
   const char kNsVarName[] = "ns_value";
   TestIndexedGlobalVariable ns_value(module_symbols, ns_node, kNsVarName);
 
@@ -337,7 +337,7 @@ TEST(FindName, FindIndexedNameInModule) {
   EXPECT_EQ(global.var.get(), found[0].variable());
 
   // Add a variable in the nested namespace with the same name.
-  auto ns_node = index_root.AddChild(IndexNode::Kind::kNamespace, kNsName, IndexNode::DieRef());
+  auto ns_node = index_root.AddChild(IndexNode::Kind::kNamespace, kNsName, IndexNode::SymbolRef());
   TestIndexedGlobalVariable ns(module_symbols.get(), ns_node, kVarName);
 
   // Re-search for the same name in the nested namespace, it should get the nested one first.

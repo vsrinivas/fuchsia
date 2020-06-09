@@ -58,7 +58,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   std::vector<std::string> FindFileMatches(std::string_view name) const override;
   std::vector<fxl::RefPtr<Function>> GetMainFunctions() const override;
   const Index& GetIndex() const override;
-  LazySymbol IndexDieRefToSymbol(const IndexNode::DieRef&) const override;
+  LazySymbol IndexSymbolRefToSymbol(const IndexNode::SymbolRef&) const override;
   bool HasBinary() const override;
 
  private:

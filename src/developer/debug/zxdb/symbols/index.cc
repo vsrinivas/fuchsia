@@ -21,15 +21,15 @@ namespace {
 // Don't index more than this number of levels to prevent infinite recursion.
 constexpr size_t kMaxParentPath = 16;
 
-// Stores a name with a DieRef for later indexing.
-class NamedDieRef : public IndexNode::DieRef {
+// Stores a name with a SymbolRef for later indexing.
+class NamedSymbolRef : public IndexNode::SymbolRef {
  public:
-  NamedDieRef() = default;
+  NamedSymbolRef() = default;
 
-  // Creates a DieRef we should index. The pointed-to string must outlive this class.
-  NamedDieRef(bool is_decl, uint32_t offset, IndexNode::Kind k, const char* name,
-              uint32_t decl_offset, bool has_abstract_origin)
-      : DieRef(is_decl, offset),
+  // Creates a SymbolRef we should index. The pointed-to string must outlive this class.
+  NamedSymbolRef(SymbolRef::Kind kind, uint32_t offset, IndexNode::Kind k, const char* name,
+                 uint32_t decl_offset, bool has_abstract_origin)
+      : SymbolRef(kind, offset),
         kind_(k),
         name_(name),
         decl_offset_(decl_offset),
@@ -41,8 +41,8 @@ class NamedDieRef : public IndexNode::DieRef {
 
   // The name associated with the DIE. Could be null.
   //
-  // It's also possible for this to be valid for an otherwise !should_index() DieRef. In the case of
-  // a function with a specification, the implementation will have should_index set, but we'll
+  // It's also possible for this to be valid for an otherwise !should_index() SymbolRef. In the case
+  // of a function with a specification, the implementation will have should_index set, but we'll
   // traverse the specification to fill in the name. This will generate a valid but not indexable
   // item for the specification.
   const char* name() const { return name_; }
@@ -166,7 +166,7 @@ class UnitIndexer {
   // To use, first call Scan() to populate the indexable_ array, then call Index() to add the
   // items to the given index node root. The Scan pass will additionally add any entrypoint
   // functions it finds to the main_functions vector.
-  void Scan(std::vector<IndexNode::DieRef>* main_functions);
+  void Scan(std::vector<IndexNode::SymbolRef>* main_functions);
   void Index(IndexNode* root);
 
  private:
@@ -189,7 +189,7 @@ class UnitIndexer {
 
   // Slow path for adding an entry.
   //
-  // This takes the index of a DieRef we want to index and adds it to the index without using
+  // This takes the index of a SymbolRef we want to index and adds it to the index without using
   // anything that references the compilation unit, notably the scanner_ which computes parent
   // information.
   //
@@ -199,7 +199,7 @@ class UnitIndexer {
   // conceptually simpler but requires a binary search at each step.
   void AddStandaloneEntryToIndex(uint32_t index_me, IndexNode* root);
 
-  // Given the index of a NamedDieRef known to have an abstract origin, fills in the index of the
+  // Given the index of a NamedSymbolRef known to have an abstract origin, fills in the index of the
   // abstract origin to the given output variable if it exists in the same unit and returns true.
   //
   // If it doesn't exist or is in a different unit, returns false. Being in the same unit is
@@ -212,11 +212,11 @@ class UnitIndexer {
   bool force_slow_path_ = false;  // See setter above.
 
   DwarfDieScanner2 scanner_;
-  std::vector<NamedDieRef> indexable_;
+  std::vector<NamedSymbolRef> indexable_;
 
   // Variable used for collecting the path of parents in AddDIE. This would make more sense as a
   // local variable but having it here prevents reallocating each time.
-  std::vector<NamedDieRef*> path_;
+  std::vector<NamedSymbolRef*> path_;
 
   // Used to decode names for DIEs in the second pass when we find one we need that wasn't extracted
   // in the first.
@@ -225,7 +225,7 @@ class UnitIndexer {
 };
 
 // The symbol storage will be filled with the indexable entries.
-void UnitIndexer::Scan(std::vector<IndexNode::DieRef>* main_functions) {
+void UnitIndexer::Scan(std::vector<IndexNode::SymbolRef>* main_functions) {
   DwarfDieDecoder decoder(context_);
 
   // The offset of the declaration. This can be unit-relative or .debug_info-relative (global).
@@ -291,13 +291,14 @@ void UnitIndexer::Scan(std::vector<IndexNode::DieRef>* main_functions) {
     }
 
     FX_DCHECK(scanner_.die_index() < indexable_.size());
-    indexable_[scanner_.die_index()] =
-        NamedDieRef(is_declaration && *is_declaration, die->getOffset(), kind,
-                    name ? *name : nullptr, decl_offset, has_abstract_origin);
+    auto ref_kind = is_declaration && *is_declaration ? IndexNode::SymbolRef::kDwarfDeclaration
+                                                      : IndexNode::SymbolRef::kDwarf;
+    indexable_[scanner_.die_index()] = NamedSymbolRef(
+        ref_kind, die->getOffset(), kind, name ? *name : nullptr, decl_offset, has_abstract_origin);
 
     // Check for "main" function annotation.
     if (kind == IndexNode::Kind::kFunction && is_main_subprogram && *is_main_subprogram)
-      main_functions->emplace_back(false, die->getOffset());
+      main_functions->emplace_back(IndexNode::SymbolRef::kDwarf, die->getOffset());
   }
 }
 
@@ -448,7 +449,7 @@ void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode* root) {
 
   // Add the path to the index (walk in reverse to start from the root).
   for (int path_i = static_cast<int>(path_.size()) - 1; path_i >= 0; path_i--) {
-    NamedDieRef* named_ref = path_[path_i];
+    NamedSymbolRef* named_ref = path_[path_i];
     const char* name = named_ref->name() ? named_ref->name() : "";
 
     // Only save the DIE reference for the thing we're attempting to index (the leaf node at
@@ -471,7 +472,7 @@ void UnitIndexer::AddStandaloneEntryToIndex(uint32_t index_me, IndexNode* index_
   // cross-unit references.
 
   // Thing to add to the index.
-  const NamedDieRef& named_ref = indexable_[index_me];
+  const NamedSymbolRef& named_ref = indexable_[index_me];
 
   // Compute the name (avoiding GetDieName()) and the DIE to start indexing from.
   const char* name = named_ref.name();
@@ -548,7 +549,7 @@ bool UnitIndexer::GetAbstractOriginIndex(uint32_t source, uint32_t* abstract_ori
 }
 
 void RecursiveFindExact(const IndexNode* node, const Identifier& input, size_t input_index,
-                        std::vector<IndexNode::DieRef>* result) {
+                        std::vector<IndexNode::SymbolRef>* result) {
   if (input_index == input.components().size()) {
     result->insert(result->end(), node->dies().begin(), node->dies().end());
     return;
@@ -601,8 +602,8 @@ void Index::DumpFileIndex(std::ostream& out) const {
   }
 }
 
-std::vector<IndexNode::DieRef> Index::FindExact(const Identifier& input) const {
-  std::vector<IndexNode::DieRef> result;
+std::vector<IndexNode::SymbolRef> Index::FindExact(const Identifier& input) const {
+  std::vector<IndexNode::SymbolRef> result;
   RecursiveFindExact(&root_, input, 0, &result);
   return result;
 }

@@ -95,9 +95,9 @@ VisitResult VisitVariableVector(const std::vector<LazySymbol>& vect,
   return VisitResult::kContinue;
 }
 
-FoundName FoundNameFromDieRef(const ModuleSymbols* module_symbols, const FindNameOptions& options,
-                              const IndexNode::DieRef& ref) {
-  LazySymbol lazy_symbol = module_symbols->IndexDieRefToSymbol(ref);
+FoundName FoundNameFromSymbolRef(const ModuleSymbols* module_symbols,
+                                 const FindNameOptions& options, const IndexNode::SymbolRef& ref) {
+  LazySymbol lazy_symbol = module_symbols->IndexSymbolRefToSymbol(ref);
   if (!lazy_symbol)
     return FoundName();
   const Symbol* symbol = lazy_symbol.Get();
@@ -139,10 +139,10 @@ FoundName FoundNameFromDieRef(const ModuleSymbols* module_symbols, const FindNam
 }
 
 VisitResult GetNamesFromDieList(const ModuleSymbols* module_symbols, const FindNameOptions& options,
-                                const std::vector<IndexNode::DieRef>& dies,
+                                const std::vector<IndexNode::SymbolRef>& dies,
                                 std::vector<FoundName>* results) {
-  for (const IndexNode::DieRef& cur : dies) {
-    if (FoundName found = FoundNameFromDieRef(module_symbols, options, cur))
+  for (const IndexNode::SymbolRef& cur : dies) {
+    if (FoundName found = FoundNameFromSymbolRef(module_symbols, options, cur))
       results->push_back(std::move(found));
 
     if (results->size() >= options.max_results)

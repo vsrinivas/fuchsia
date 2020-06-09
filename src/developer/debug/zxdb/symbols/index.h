@@ -52,7 +52,7 @@ class Index {
   // TODO(bug 36754) it would be nice if this could be deleted and all code go through
   // expr/find_name.h to query the index. As-is this duplicates some of FindName's logic in a less
   // flexible way.
-  std::vector<IndexNode::DieRef> FindExact(const Identifier& input) const;
+  std::vector<IndexNode::SymbolRef> FindExact(const Identifier& input) const;
 
   // Looks up the name in the file index and returns the set of matches. The name is matched from
   // the right side with a left boundary of either a slash or the beginning of the full path. This
@@ -73,8 +73,8 @@ class Index {
   const std::vector<unsigned>* FindFileUnitIndices(const std::string& name) const;
 
   // See main_functions_ below.
-  const std::vector<IndexNode::DieRef>& main_functions() const { return main_functions_; }
-  std::vector<IndexNode::DieRef>& main_functions() { return main_functions_; }
+  const std::vector<IndexNode::SymbolRef>& main_functions() const { return main_functions_; }
+  std::vector<IndexNode::SymbolRef>& main_functions() { return main_functions_; }
 
   const IndexNode& root() const { return root_; }
   IndexNode& root() { return root_; }
@@ -121,7 +121,7 @@ class Index {
 
   // All references to functions in this module found annotated with the DW_AT_main_subprogram
   // attribute. Normally there will be 0 (not all compiler annotate this) or 1.
-  std::vector<IndexNode::DieRef> main_functions_;
+  std::vector<IndexNode::SymbolRef> main_functions_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Index);
 };

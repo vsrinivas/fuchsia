@@ -265,7 +265,7 @@ std::vector<std::string> ModuleSymbolsImpl::FindFileMatches(std::string_view nam
 std::vector<fxl::RefPtr<Function>> ModuleSymbolsImpl::GetMainFunctions() const {
   std::vector<fxl::RefPtr<Function>> result;
   for (const auto& ref : index_.main_functions()) {
-    auto symbol_ref = IndexDieRefToSymbol(ref);
+    auto symbol_ref = IndexSymbolRefToSymbol(ref);
     const Function* func = symbol_ref.Get()->AsFunction();
     if (func)
       result.emplace_back(RefPtrTo(func));
@@ -275,8 +275,17 @@ std::vector<fxl::RefPtr<Function>> ModuleSymbolsImpl::GetMainFunctions() const {
 
 const Index& ModuleSymbolsImpl::GetIndex() const { return index_; }
 
-LazySymbol ModuleSymbolsImpl::IndexDieRefToSymbol(const IndexNode::DieRef& die_ref) const {
-  return symbol_factory_->MakeLazy(die_ref.offset());
+LazySymbol ModuleSymbolsImpl::IndexSymbolRefToSymbol(const IndexNode::SymbolRef& ref) const {
+  // TODO(bug 53091) in the future we may want to add ELF symbol support here.
+  switch (ref.kind()) {
+    case IndexNode::SymbolRef::kNull:
+      break;
+    case IndexNode::SymbolRef::kDwarf:
+    case IndexNode::SymbolRef::kDwarfDeclaration:
+      // Handled by the DWARF symbol factory.
+      return symbol_factory_->MakeLazy(ref.offset());
+  }
+  return LazySymbol();
 }
 
 bool ModuleSymbolsImpl::HasBinary() const { return binary_->HasBinary(); }
@@ -344,8 +353,8 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
   // TODO(bug 37654) it would be nice if this could be deleted and all code go through
   // expr/find_name.h to query the index. As-is this duplicates some of FindName's logic in a less
   // flexible way.
-  for (const auto& die_ref : index_.FindExact(symbol_to_find)) {
-    LazySymbol lazy_symbol = IndexDieRefToSymbol(die_ref);
+  for (const auto& ref : index_.FindExact(symbol_to_find)) {
+    LazySymbol lazy_symbol = IndexSymbolRefToSymbol(ref);
     const Symbol* symbol = lazy_symbol.Get();
 
     if (const Function* function = symbol->AsFunction()) {

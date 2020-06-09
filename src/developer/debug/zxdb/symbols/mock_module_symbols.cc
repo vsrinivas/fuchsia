@@ -34,7 +34,7 @@ void MockModuleSymbols::AddLineDetails(uint64_t address, LineDetails details) {
   lines_[address] = std::move(details);
 }
 
-void MockModuleSymbols::AddDieRef(const IndexNode::DieRef& die, fxl::RefPtr<Symbol> symbol) {
+void MockModuleSymbols::AddSymbolRef(const IndexNode::SymbolRef& die, fxl::RefPtr<Symbol> symbol) {
   die_refs_[die.offset()] = std::move(symbol);
 }
 
@@ -115,7 +115,7 @@ std::vector<fxl::RefPtr<Function>> MockModuleSymbols::GetMainFunctions() const {
 
 const Index& MockModuleSymbols::GetIndex() const { return index_; }
 
-LazySymbol MockModuleSymbols::IndexDieRefToSymbol(const IndexNode::DieRef& die_ref) const {
+LazySymbol MockModuleSymbols::IndexSymbolRefToSymbol(const IndexNode::SymbolRef& die_ref) const {
   auto found = die_refs_.find(die_ref.offset());
   if (found == die_refs_.end())
     return LazySymbol();

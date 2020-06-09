@@ -13,14 +13,14 @@ namespace zxdb {
 
 // Creates a symbol in the index and the mock module symbols.
 struct TestIndexedSymbol {
-  // Index of the next DieRef to generated. This ensures the generated IDs are unique.
+  // Index of the next SymbolRef to generated. This ensures the generated IDs are unique.
   static int next_die_ref;
 
   TestIndexedSymbol(MockModuleSymbols* mod_sym, IndexNode* index_parent, const std::string& name,
                     fxl::RefPtr<Symbol> sym);
 
-  // The DieRef links the index and the entry injected into the ModuleSymbols.
-  IndexNode::DieRef die_ref;
+  // The SymbolRef links the index and the entry injected into the ModuleSymbols.
+  IndexNode::SymbolRef die_ref;
 
   // Place where this variable is indexed.
   IndexNode* index_node;

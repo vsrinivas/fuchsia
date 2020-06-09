@@ -37,7 +37,7 @@ TEST(Index, CrossUnitInline) {
   Identifier session_connection_ident =
       TestSymbolModule::SplitName("flutter_runner::SessionConnection::SessionConnection");
 
-  std::vector<IndexNode::DieRef> refs =
+  std::vector<IndexNode::SymbolRef> refs =
       setup.symbols()->GetIndex().FindExact(session_connection_ident);
   EXPECT_EQ(1u, refs.size());
 

@@ -37,15 +37,16 @@ class MockModuleSymbols : public ModuleSymbols {
   // range.
   void AddLineDetails(uint64_t absolute_address, LineDetails details);
 
-  // Injects a response to IndexDieRefToSymbol for resolving symbols from the index. See index()
+  // Injects a response to IndexSymbolRefToSymbol for resolving symbols from the index. See index()
   // getter.
-  void AddDieRef(const IndexNode::DieRef& die, fxl::RefPtr<Symbol> symbol);
+  void AddSymbolRef(const IndexNode::SymbolRef& die, fxl::RefPtr<Symbol> symbol);
 
   // Adds a name to the list of files considered for FindFileMatches().
   void AddFileName(const std::string& file_name);
 
   // Provides writable access to the index for tests to insert data. To hook up symbols, add them to
-  // the index and call AddDieRef() with the same DieRef and the symbol you want it to resolve to.
+  // the index and call AddSymbolRef() with the same SymbolRef and the symbol you want it to resolve
+  // to.
   Index& index() { return index_; }
 
   void set_modification_time(std::size_t mtime) { modification_time_ = mtime; }
@@ -61,7 +62,7 @@ class MockModuleSymbols : public ModuleSymbols {
   std::vector<std::string> FindFileMatches(std::string_view name) const override;
   std::vector<fxl::RefPtr<Function>> GetMainFunctions() const override;
   const Index& GetIndex() const override;
-  LazySymbol IndexDieRefToSymbol(const IndexNode::DieRef&) const override;
+  LazySymbol IndexSymbolRefToSymbol(const IndexNode::SymbolRef&) const override;
   bool HasBinary() const override;
 
  protected:
@@ -85,7 +86,7 @@ class MockModuleSymbols : public ModuleSymbols {
   // Maps manually-added addresses to line details.
   std::map<uint64_t, LineDetails> lines_;
 
-  // Maps manually-aded DieRefs offsets to symbols.
+  // Maps manually-aded SymbolRefs offsets to symbols.
   std::map<uint32_t, fxl::RefPtr<Symbol>> die_refs_;
 
   std::vector<std::string> files_;

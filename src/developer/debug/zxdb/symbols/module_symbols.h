@@ -106,8 +106,8 @@ class ModuleSymbols : public fxl::RefCountedThreadSafe<ModuleSymbols> {
   // Returns the symbol index for this module.
   virtual const Index& GetIndex() const = 0;
 
-  // Converts the given DieRef from the symbol index to an actual Symbol object for reading.
-  virtual LazySymbol IndexDieRefToSymbol(const IndexNode::DieRef&) const = 0;
+  // Converts the given SymbolRef from the symbol index to an actual Symbol object for reading.
+  virtual LazySymbol IndexSymbolRefToSymbol(const IndexNode::SymbolRef&) const = 0;
 
   // Return whether this module has been given the opportunity to include symbols from the binary
   // itself, such as PLT entries.

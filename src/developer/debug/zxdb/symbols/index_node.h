@@ -40,18 +40,27 @@ class IndexNode {
   // The offset stored in this structure is the offset from the beginning of the .debug_info
   // section, which is the same as the offset stored in the llvm::DWARFDebugInfoEntry.
   //
-  // Random code reading the index can convert a DieRef to a Symbol object using
-  // ModuleSymbols::IndexDieRefToSymbol().
-  class DieRef {
+  // Random code reading the index can convert a SymbolRef to a Symbol object using
+  // ModuleSymbols::IndexSymbolRefToSymbol().
+  //
+  // TODO(bug 53091) in the future we may want to add ELF symbol support to this class.
+  class SymbolRef {
    public:
-    DieRef() = default;
-    DieRef(bool is_decl, uint32_t offset) : is_declaration_(is_decl), offset_(offset) {}
+    enum Kind {
+      kNull,              // Empty.
+      kDwarf,             // Normal DWARF symbol.
+      kDwarfDeclaration,  // A DWARF declaration.
+    };
 
-    bool is_declaration() const { return is_declaration_; }
+    SymbolRef() = default;
+    SymbolRef(Kind kind, uint32_t offset) : kind_(kind), offset_(offset) {}
+
+    Kind kind() const { return kind_; }
+    bool is_declaration() const { return kind_ == kDwarfDeclaration; }
     uint32_t offset() const { return offset_; }
 
    private:
-    bool is_declaration_ = false;
+    Kind kind_ = kNull;
     uint32_t offset_ = 0;
   };
 
@@ -60,10 +69,10 @@ class IndexNode {
 
   Kind kind() const { return kind_; }
 
-  // The DieRef can be omitted when indexing namespaces as the DIEs are not stored for that case.
+  // The SymbolRef can be omitted when indexing namespaces as the DIEs are not stored for that case.
   IndexNode* AddChild(Kind kind, const char* name);
-  IndexNode* AddChild(Kind kind, const char* name, const DieRef& ref);
-  void AddDie(const DieRef& ref);
+  IndexNode* AddChild(Kind kind, const char* name, const SymbolRef& ref);
+  void AddDie(const SymbolRef& ref);
 
   const Map& namespaces() const { return children_[static_cast<int>(Kind::kNamespace)]; }
   Map& namespaces() { return children_[static_cast<int>(Kind::kNamespace)]; }
@@ -97,20 +106,20 @@ class IndexNode {
   void Dump(const std::string& name, std::ostream& out,
             DwarfSymbolFactory* factory_for_loc = nullptr, int indent_level = 0) const;
 
-  const std::vector<DieRef>& dies() const { return dies_; }
+  const std::vector<SymbolRef>& dies() const { return dies_; }
 
  private:
   Kind kind_;
 
   // TODO(brettw) evaluate whether we can save a lot of memory using optionally-null unique_ptrs
-  // here since in most cases all but on of these maps will be empty.
+  // here since in most cases all but one of these maps will be empty.
   Map children_[static_cast<int>(Kind::kEndPhysical)];
 
   // Contains the references to the definitions (if possible) or the declarations (if not) of the
   // type, function, or variable. This will not have any entries for namespaces.
   //
   // TODO(brettw) consider an optimization because in most cases there will be exactly one DIE.
-  std::vector<DieRef> dies_;
+  std::vector<SymbolRef> dies_;
 };
 
 }  // namespace zxdb
