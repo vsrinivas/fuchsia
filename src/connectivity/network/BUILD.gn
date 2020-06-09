@@ -42,6 +42,7 @@ group("tests") {
     "dns:tests",
     "drivers:tests",
     "http_client:tests",
+    "lib:tests",
     "mdns:tests",
     "net-cli:net-cli-tests",
     "netcfg:netcfg_tests",

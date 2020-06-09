@@ -4,12 +4,12 @@
 
 //! Test utilities.
 
-/// Utilities useful when testing DNS.
-pub(crate) mod dns {
+/// Useful constants for tests.
+pub(crate) mod constants {
     use fidl_fuchsia_net as fnet;
     use fidl_fuchsia_net_name as fname;
 
-    use crate::eventloop::DEFAULT_DNS_PORT;
+    use crate::DEFAULT_DNS_PORT;
 
     pub(crate) const UNSPECIFIED_SOURCE_SERVER: fname::DnsServer_ = fname::DnsServer_ {
         address: Some(fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {

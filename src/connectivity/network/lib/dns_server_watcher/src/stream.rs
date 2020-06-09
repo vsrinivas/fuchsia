@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! DNS Server watcher.
+//! DNS Server watcher stream.
 
 use fidl_fuchsia_net_name::{DnsServerWatcherProxy, DnsServer_};
 use futures::{future::TryFutureExt as _, stream::Stream};
@@ -11,22 +11,22 @@ use futures::{future::TryFutureExt as _, stream::Stream};
 #[derive(Debug, PartialEq)]
 pub struct DnsServerWatcherEvent {
     /// The source of the DNS server update.
-    pub(super) source: DnsServerWatcherSource,
+    pub source: DnsServersUpdateSource,
 
     /// The updated list of DNS servers.
-    pub(super) servers: Vec<DnsServer_>,
+    pub servers: Vec<DnsServer_>,
 }
 
 /// The possible sources of DNS server updates.
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub(super) enum DnsServerWatcherSource {
+pub enum DnsServersUpdateSource {
     Netstack,
 }
 
 /// Returns a `Stream` of [`DnsServerWatcherEvent`]s from watching the server configuration
 /// provided by `proxy`.
-pub(super) fn new_dns_server_stream(
-    source: DnsServerWatcherSource,
+pub fn new_dns_server_stream(
+    source: DnsServersUpdateSource,
     proxy: DnsServerWatcherProxy,
 ) -> impl Stream<Item = Result<DnsServerWatcherEvent, fidl::Error>> {
     futures::stream::try_unfold(proxy, move |proxy| {
@@ -38,8 +38,8 @@ pub(super) fn new_dns_server_stream(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::test_util::dns::*;
+    use std::collections::VecDeque;
+    use std::sync::Arc;
 
     use fidl_fuchsia_net_name::{
         DnsServerWatcherMarker, DnsServerWatcherRequest, DnsServerWatcherRequestStream,
@@ -49,8 +49,9 @@ mod tests {
     use fuchsia_async as fasync;
     use futures::lock::Mutex;
     use futures::{FutureExt, StreamExt, TryStreamExt};
-    use std::collections::VecDeque;
-    use std::sync::Arc;
+
+    use super::*;
+    use crate::test_util::constants::*;
 
     struct MockDnsServerWatcher {
         configs: VecDeque<Vec<DnsServer_>>,
@@ -111,7 +112,7 @@ mod tests {
             futures::future::abortable(MockDnsServerWatcher::serve(watcher.clone(), rs));
 
         let (serve_result, mut stream) = futures::future::join(serve_fut, async move {
-            let mut stream = new_dns_server_stream(DnsServerWatcherSource::Netstack, proxy);
+            let mut stream = new_dns_server_stream(DnsServersUpdateSource::Netstack, proxy);
             assert!(stream.next().now_or_never().is_none());
             assert!(stream.next().now_or_never().is_none());
             {
@@ -127,7 +128,7 @@ mod tests {
             assert_eq!(
                 nxt,
                 DnsServerWatcherEvent {
-                    source: DnsServerWatcherSource::Netstack,
+                    source: DnsServersUpdateSource::Netstack,
                     servers: vec![DHCPV6_SERVER]
                 }
             );
@@ -139,7 +140,7 @@ mod tests {
             assert_eq!(
                 nxt,
                 DnsServerWatcherEvent {
-                    source: DnsServerWatcherSource::Netstack,
+                    source: DnsServersUpdateSource::Netstack,
                     servers: vec![STATIC_SERVER]
                 }
             );
