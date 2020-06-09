@@ -69,8 +69,12 @@ class MagmaSystemDevice {
     return msd_device_query_returns_buffer(msd_dev(), id, buffer_out);
   }
 
+  void set_perf_count_access_token_id(uint64_t id) { perf_count_access_token_id_ = id; }
+  uint64_t perf_count_access_token_id() const { return perf_count_access_token_id_; }
+
  private:
   msd_device_unique_ptr_t msd_dev_;
+  uint64_t perf_count_access_token_id_ = 0u;
 
   struct Connection {
     std::thread thread;

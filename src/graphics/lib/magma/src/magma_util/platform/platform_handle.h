@@ -27,6 +27,9 @@ class PlatformHandle {
 
   virtual std::string GetName() = 0;
 
+  // Returns a globally-unique ID for this handle.
+  virtual uint64_t GetId() = 0;
+
   static bool duplicate_handle(uint32_t handle_in, uint32_t* handle_out);
 
   static std::unique_ptr<PlatformHandle> Create(uint32_t handle);

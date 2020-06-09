@@ -16,6 +16,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/device.h>
 
+#include "magma_performance_counter_device.h"
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
 #include "platform_handle.h"
@@ -37,6 +38,7 @@ struct gpu_device {
   std::shared_ptr<MagmaSystemDevice> magma_system_device;
   std::mutex magma_mutex;
   zx_status_t unit_test_status = ZX_ERR_NOT_SUPPORTED;
+  zx_koid_t perf_counter_koid = 0;
 };
 
 gpu_device* get_gpu_device(void* context) { return static_cast<gpu_device*>(context); }
@@ -45,6 +47,7 @@ static zx_status_t magma_start(gpu_device* gpu) {
   gpu->magma_system_device = gpu->magma_driver->CreateDevice(gpu->parent_device);
   if (!gpu->magma_system_device)
     return DRET_MSG(ZX_ERR_NO_RESOURCES, "Failed to create device");
+  gpu->magma_system_device->set_perf_count_access_token_id(gpu->perf_counter_koid);
   return ZX_OK;
 }
 
@@ -57,6 +60,17 @@ static zx_status_t magma_stop(gpu_device* gpu) {
 static zx_status_t device_open(void* context, zx_device_t** out, uint32_t flags) { return ZX_OK; }
 
 static zx_status_t device_close(void* context, uint32_t flags) { return ZX_OK; }
+
+static void device_init(void* context) {
+  gpu_device* gpu = static_cast<gpu_device*>(context);
+  if (!magma::MagmaPerformanceCounterDevice::AddDevice(gpu->zx_device, &gpu->perf_counter_koid)) {
+    device_init_reply(gpu->zx_device, ZX_ERR_INTERNAL, nullptr);
+    return;
+  }
+
+  gpu->magma_system_device->set_perf_count_access_token_id(gpu->perf_counter_koid);
+  device_init_reply(gpu->zx_device, ZX_OK, nullptr);
+}
 
 static void device_unbind(void* context) {
   gpu_device* gpu = static_cast<gpu_device*>(context);
@@ -212,6 +226,7 @@ static void device_release(void* context) {
 
 static zx_protocol_device_t device_proto = {
     .version = DEVICE_OPS_VERSION,
+    .init = device_init,
     .open = device_open,
     .close = device_close,
     .unbind = device_unbind,

@@ -89,4 +89,19 @@ protocol Primary {
     /// Ensures that `page_count` pages starting at `page_offset` from the beginning of the
     /// buffer are backed by physical memory.
     CommitBuffer(zx.koid buffer_id, uint64 page_offset, uint64 page_count);
+
+    /// Tries to enable performance counter FIDL messages. To be successful, |access_token| must
+    /// have been returned by PerformanceCounterAccess.GetPerformanceCountToken() from the matching
+    /// device.
+    AccessPerformanceCounters(handle<event> access_token);
+
+    /// Returns true if any AccessPerformanceCounters message has succeeded.
+    IsPerformanceCounterAccessEnabled() -> (bool enabled);
+};
+
+/// This protocol is implemented by ZX_PROTOCOL_GPU_PERFORMANCE_COUNTERS devices.
+protocol PerformanceCounterAccess {
+    /// This access token is not used as an event, but is instead passed to
+    /// Primary.EnablePerformanceCounterAccess.
+    GetPerformanceCountToken() -> (handle<event> access_token);
 };

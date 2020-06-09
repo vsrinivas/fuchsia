@@ -22,6 +22,12 @@ bool ZirconPlatformHandle::GetCount(uint32_t* count_out) {
   return true;
 }
 
+uint64_t ZirconPlatformHandle::GetId() {
+  uint64_t key;
+  PlatformObject::IdFromHandle(get(), &key);
+  return key;
+}
+
 bool ZirconPlatformHandle::WaitAsync(PlatformPort* port, uint64_t* key_out) {
   if (!PlatformObject::IdFromHandle(get(), key_out))
     return DRET_MSG(false, "IdFromHandle failed");

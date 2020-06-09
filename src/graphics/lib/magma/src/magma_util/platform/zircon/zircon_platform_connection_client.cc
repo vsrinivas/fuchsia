@@ -8,6 +8,7 @@
 #include <mutex>
 
 #include "platform_connection_client.h"
+#include "zircon_platform_handle.h"
 
 namespace {
 // Convert zx channel status to magma status.
@@ -232,6 +233,25 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     return MAGMA_STATUS_OK;
   }
 
+  magma_status_t AccessPerformanceCounters(std::unique_ptr<magma::PlatformHandle> handle) override {
+    if (!handle)
+      return DRET(MAGMA_STATUS_INVALID_ARGS);
+    zx::event event(static_cast<ZirconPlatformHandle*>(handle.get())->release());
+    magma_status_t result =
+        MagmaChannelStatus(magma_fidl_.AccessPerformanceCounters(std::move(event)).status());
+    if (result != MAGMA_STATUS_OK)
+      return DRET_MSG(result, "failed to write to channel");
+    return MAGMA_STATUS_OK;
+  }
+
+  magma_status_t IsPerformanceCounterAccessEnabled(bool* enabled_out) override {
+    auto rsp = magma_fidl_.IsPerformanceCounterAccessEnabled();
+    if (!rsp.ok())
+      return DRET_MSG(MagmaChannelStatus(rsp.status()), "failed to write to channel");
+    *enabled_out = rsp->enabled;
+    return MAGMA_STATUS_OK;
+  }
+
   void SetError(magma_status_t error) {
     std::lock_guard<std::mutex> lock(get_error_lock_);
     if (!error_)
@@ -286,6 +306,22 @@ std::unique_ptr<PlatformConnectionClient> PlatformConnectionClient::Create(
     uint32_t device_handle, uint32_t device_notification_handle) {
   return std::unique_ptr<ZirconPlatformConnectionClient>(new ZirconPlatformConnectionClient(
       zx::channel(device_handle), zx::channel(device_notification_handle)));
+}
+
+// static
+std::unique_ptr<magma::PlatformHandle> PlatformConnectionClient::RetrieveAccessToken(
+    magma::PlatformHandle* channel) {
+  if (!channel)
+    return DRETP(nullptr, "No channel");
+  auto rsp = llcpp::fuchsia::gpu::magma::PerformanceCounterAccess::Call::GetPerformanceCountToken(
+      zx::unowned_channel(static_cast<const ZirconPlatformHandle*>(channel)->get()));
+  if (!rsp.ok()) {
+    return DRETP(nullptr, "GetPerformanceCountToken failed");
+  }
+  if (!rsp->access_token) {
+    return DRETP(nullptr, "GetPerformanceCountToken retrieved no event.");
+  }
+  return magma::PlatformHandle::Create(rsp->access_token.release());
 }
 
 }  // namespace magma

@@ -183,6 +183,25 @@ class TestPlatformConnection {
     test_complete = true;
   }
 
+  void TestEnablePerformanceCounters() {
+    bool enabled = false;
+    EXPECT_EQ(MAGMA_STATUS_OK, client_connection_->IsPerformanceCounterAccessEnabled(&enabled));
+    EXPECT_FALSE(enabled);
+
+    can_access_performance_counters = true;
+    EXPECT_EQ(MAGMA_STATUS_OK, client_connection_->IsPerformanceCounterAccessEnabled(&enabled));
+    EXPECT_TRUE(enabled);
+
+    auto semaphore = magma::PlatformSemaphore::Create();
+    uint32_t handle;
+    EXPECT_TRUE(semaphore->duplicate_handle(&handle));
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              client_connection_->AccessPerformanceCounters(magma::PlatformHandle::Create(handle)));
+
+    EXPECT_EQ(client_connection_->GetError(), 0);
+    EXPECT_EQ(test_access_token->GetId(), semaphore->id());
+  }
+
   static uint64_t test_buffer_id;
   static uint32_t test_context_id;
   static uint64_t test_semaphore_id;
@@ -193,6 +212,8 @@ class TestPlatformConnection {
   static std::vector<magma_system_exec_resource> test_resources;
   static std::vector<uint64_t> test_semaphores;
   static magma_system_command_buffer test_command_buffer;
+  static std::unique_ptr<magma::PlatformHandle> test_access_token;
+  static bool can_access_performance_counters;
 
  private:
   static void IpcThreadFunc(std::shared_ptr<magma::PlatformConnection> connection) {
@@ -219,6 +240,8 @@ magma_system_command_buffer TestPlatformConnection::test_command_buffer = {
     .wait_semaphore_count = 2,
     .signal_semaphore_count = 3,
 };
+std::unique_ptr<magma::PlatformHandle> TestPlatformConnection::test_access_token;
+bool TestPlatformConnection::can_access_performance_counters;
 
 class TestDelegate : public magma::PlatformConnection::Delegate {
  public:
@@ -338,6 +361,15 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
     return MAGMA_STATUS_OK;
   }
 
+  magma::Status AccessPerformanceCounters(std::unique_ptr<magma::PlatformHandle> event) override {
+    TestPlatformConnection::test_access_token = std::move(event);
+    TestPlatformConnection::test_complete = true;
+    return MAGMA_STATUS_OK;
+  }
+  bool IsPerformanceCounterAccessEnabled() override {
+    return TestPlatformConnection::can_access_performance_counters;
+  }
+
   uint64_t immediate_commands_bytes_executed_ = 0;
 };
 
@@ -445,4 +477,10 @@ TEST(PlatformConnection, MultipleGetError) {
   auto Test = TestPlatformConnection::Create();
   ASSERT_NE(Test, nullptr);
   Test->TestMultipleGetError();
+}
+
+TEST(PlatformConnection, EnablePerformanceCounters) {
+  auto Test = TestPlatformConnection::Create();
+  ASSERT_NE(Test, nullptr);
+  Test->TestEnablePerformanceCounters();
 }

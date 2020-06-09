@@ -9,11 +9,14 @@
 #include <thread>
 
 #if defined(__Fuchsia__)
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/zx/channel.h>
 
 #include <filesystem>
 
+#include "fuchsia/gpu/magma/llcpp/fidl.h"
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include "magma_sysmem.h"
 #include "platform_logger.h"
@@ -35,6 +38,17 @@ inline uint64_t page_size() { return sysconf(_SC_PAGESIZE); }
 
 inline constexpr int64_t ms_to_ns(int64_t ms) { return ms * 1000000ull; }
 }  // namespace
+
+#if defined(__Fuchsia__)
+class FakePerfCountAccessServer
+    : public llcpp::fuchsia::gpu::magma::PerformanceCounterAccess::Interface {
+  void GetPerformanceCountToken(GetPerformanceCountTokenCompleter::Sync completer) override {
+    zx::event event;
+    zx::event::create(0, &event);
+    completer.Reply(std::move(event));
+  }
+};
+#endif
 
 class TestConnection {
  public:
@@ -732,6 +746,49 @@ class TestConnection {
     // We don't care about the value of |is_supported|, just that the query returns ok.
   }
 
+  #if defined(__Fuchsia__)
+  void CheckAccessWithInvalidToken(magma_status_t expected_result) {
+    FakePerfCountAccessServer server;
+    async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+    ASSERT_EQ(ZX_OK, loop.StartThread("server-loop"));
+
+    zx::channel server_endpoint, client_endpoint;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &server_endpoint, &client_endpoint));
+    auto result = fidl::BindServer(loop.dispatcher(), std::move(server_endpoint), &server);
+
+    ASSERT_TRUE(result.is_ok());
+
+    EXPECT_EQ(expected_result,
+              magma_connection_access_performance_counters(connection_, client_endpoint.release()));
+  }
+  #endif
+  
+  void EnablePerformanceCounters() {
+#if !defined(__Fuchsia__)
+    GTEST_SKIP();
+#else
+    CheckAccessWithInvalidToken(MAGMA_STATUS_ACCESS_DENIED);
+
+    bool success = false;
+    for (auto& p : std::filesystem::directory_iterator("/dev/class/gpu-performance-counters")) {
+      zx::channel server_end, client_end;
+      zx::channel::create(0, &server_end, &client_end);
+
+      zx_status_t zx_status = fdio_service_connect(p.path().c_str(), server_end.release());
+      EXPECT_EQ(ZX_OK, zx_status);
+      magma_status_t status =
+          magma_connection_access_performance_counters(connection_, client_end.release());
+      EXPECT_TRUE(status == MAGMA_STATUS_OK || status == MAGMA_STATUS_ACCESS_DENIED);
+      if (status == MAGMA_STATUS_OK) {
+        success = true;
+      }
+    }
+    EXPECT_TRUE(success);
+    // Access should remain enabled even though an invalid token is used.
+    CheckAccessWithInvalidToken(MAGMA_STATUS_OK);
+#endif
+  }
+
  private:
   int fd_ = -1;
   magma_device_t device_ = 0;
@@ -926,3 +983,5 @@ TEST(MagmaAbiPerf, ExecuteCommandBufferWithResources) {
   printf("ExecuteCommandBufferWithResources: avg duration %lld ns\n",
          duration.count() / kTestIterations);
 }
+
+TEST(MagmaAbi, EnablePerformanceCounters) { TestConnection().EnablePerformanceCounters(); }

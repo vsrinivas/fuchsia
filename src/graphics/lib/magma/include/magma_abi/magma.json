@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 53,
+    "next-free-ordinal": 54,
     "exports": [
       {
         "ordinal": 4,
@@ -919,6 +919,24 @@
             "name": "timeout_ns",
             "type": "uint64_t",
             "description": "Time in ns to wait before returning MAGMA_STATUS_TIMED_OUT."
+          }
+        ]
+      },
+      {
+        "ordinal": 53,
+        "name": "magma_connection_access_performance_counters",
+        "type": "magma_status_t",
+        "description": "Tries to enable access to performance counters. Returns MAGMA_STATUS_OK if counters were successfully enabled or MAGMA_STATUS_ACCESS_DENIED if channel is for the wrong device and counters were not successfully enabled previously.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection to a device."
+          },
+          {
+            "name": "channel",
+            "type": "magma_handle_t",
+            "description": "A handle to a channel to a gpu-performance-counter device."
           }
         ]
       }

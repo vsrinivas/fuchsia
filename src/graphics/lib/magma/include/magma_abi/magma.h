@@ -493,6 +493,17 @@ magma_status_t magma_poll(
     uint32_t count,
     uint64_t timeout_ns);
 
+///
+/// \brief Tries to enable access to performance counters. Returns MAGMA_STATUS_OK if counters were
+///        successfully enabled or MAGMA_STATUS_ACCESS_DENIED if channel is for the wrong device and
+///        counters were not successfully enabled previously.
+/// \param connection An open connection to a device.
+/// \param channel A handle to a channel to a gpu-performance-counter device.
+///
+magma_status_t magma_connection_access_performance_counters(
+    magma_connection_t connection,
+    magma_handle_t channel);
+
 #if defined(__cplusplus)
 }
 #endif

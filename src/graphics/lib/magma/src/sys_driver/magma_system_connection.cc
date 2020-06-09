@@ -97,6 +97,28 @@ magma::Status MagmaSystemConnection::ExecuteImmediateCommands(uint32_t context_i
   return context->ExecuteImmediateCommands(commands_size, commands, semaphore_count, semaphore_ids);
 }
 
+magma::Status MagmaSystemConnection::AccessPerformanceCounters(
+    std::unique_ptr<magma::PlatformHandle> access_token) {
+  auto device = device_.lock();
+  if (!device) {
+    return DRET(MAGMA_STATUS_INVALID_ARGS);
+  }
+  uint64_t perf_count_access_token_id = device->perf_count_access_token_id();
+  DASSERT(perf_count_access_token_id);
+  if (!access_token) {
+    return DRET(MAGMA_STATUS_INVALID_ARGS);
+  }
+  if (access_token->GetId() != perf_count_access_token_id) {
+    // This is not counted as an error, since it can happen if the client uses the event from the
+    // wrong driver.
+    return MAGMA_STATUS_OK;
+  }
+
+  DLOG("Performance counter access enabled");
+  can_access_performance_counters_ = true;
+  return MAGMA_STATUS_OK;
+}
+
 bool MagmaSystemConnection::ImportBuffer(uint32_t handle, uint64_t* id_out) {
   auto buffer = magma::PlatformBuffer::Import(handle);
   if (!buffer)

@@ -207,6 +207,22 @@ void ZirconPlatformConnection::CommitBuffer(uint64_t buffer_id, uint64_t page_of
     SetError(MAGMA_STATUS_INVALID_ARGS);
 }
 
+void ZirconPlatformConnection::AccessPerformanceCounters(
+    zx::event event, AccessPerformanceCountersCompleter::Sync completer) {
+  DLOG("ZirconPlatformConnection:::AccessPerformanceCounters");
+  magma::Status status =
+      delegate_->AccessPerformanceCounters(magma::PlatformHandle::Create(event.release()));
+  if (!status) {
+    SetError(status.get());
+  }
+}
+
+void ZirconPlatformConnection::IsPerformanceCounterAccessEnabled(
+    IsPerformanceCounterAccessEnabledCompleter::Sync completer) {
+  DLOG("ZirconPlatformConnection:::IsPerformanceCounterAccessEnabled");
+  completer.Reply(delegate_->IsPerformanceCounterAccessEnabled());
+}
+
 std::shared_ptr<PlatformConnection> PlatformConnection::Create(
     std::unique_ptr<PlatformConnection::Delegate> delegate, msd_client_id_t client_id,
     std::unique_ptr<magma::PlatformHandle> thread_profile) {

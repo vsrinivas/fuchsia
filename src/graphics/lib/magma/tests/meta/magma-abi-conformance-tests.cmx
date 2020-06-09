@@ -10,6 +10,9 @@
         "binary": "test/magma_abi_conformance_tests"
     },
     "sandbox": {
+        "dev": [
+            "class/gpu-performance-counters"
+        ],
         "features": [
             "isolated-temp",
             "vulkan"

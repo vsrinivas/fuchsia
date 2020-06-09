@@ -47,6 +47,9 @@ class PlatformConnection {
     virtual magma::Status ExecuteImmediateCommands(uint32_t context_id, uint64_t commands_size,
                                                    void* commands, uint64_t semaphore_count,
                                                    uint64_t* semaphore_ids) = 0;
+    virtual magma::Status AccessPerformanceCounters(
+        std::unique_ptr<magma::PlatformHandle> access_token) = 0;
+    virtual bool IsPerformanceCounterAccessEnabled() = 0;
   };
 
   PlatformConnection(std::shared_ptr<magma::PlatformEvent> shutdown_event,

@@ -61,6 +61,13 @@ class PlatformConnectionClient : public magma_connection {
                                                  uint64_t* semaphores) = 0;
   virtual void ExecuteImmediateCommands(uint32_t context_id, uint64_t command_count,
                                         magma_inline_command_buffer* command_buffers) = 0;
+  virtual magma_status_t AccessPerformanceCounters(
+      std::unique_ptr<magma::PlatformHandle> handle) = 0;
+  virtual magma_status_t IsPerformanceCounterAccessEnabled(bool* enabled_out) = 0;
+
+  // Retrieve the performance counter access token from a channel to a gpu-performance-counters
+  // device.
+  static std::unique_ptr<magma::PlatformHandle> RetrieveAccessToken(magma::PlatformHandle* channel);
 
   static PlatformConnectionClient* cast(magma_connection_t connection) {
     DASSERT(connection);

@@ -534,3 +534,24 @@ magma_status_t magma_initialize_logging(magma_handle_t channel) {
 
   return MAGMA_STATUS_OK;
 }
+
+magma_status_t magma_connection_access_performance_counters(magma_connection_t connection,
+                                                            magma_handle_t channel) {
+  auto handle = magma::PlatformHandle::Create(channel);
+  if (!handle)
+    return DRET(MAGMA_STATUS_INVALID_ARGS);
+  auto access_token = magma::PlatformConnectionClient::RetrieveAccessToken(handle.get());
+  if (!access_token)
+    return DRET(MAGMA_STATUS_INTERNAL_ERROR);
+  magma_status_t result = magma::PlatformConnectionClient::cast(connection)
+                              ->AccessPerformanceCounters(std::move(access_token));
+  if (result != MAGMA_STATUS_OK)
+    return DRET_MSG(result, "EnablePerformanceCounterAccess failed: %d", result);
+  bool enabled = false;
+  result = magma::PlatformConnectionClient::cast(connection)
+               ->IsPerformanceCounterAccessEnabled(&enabled);
+  if (result != MAGMA_STATUS_OK)
+    return DRET_MSG(result, "IsPerformanceCounterAccessEnabled failed: %d", result);
+
+  return enabled ? MAGMA_STATUS_OK : MAGMA_STATUS_ACCESS_DENIED;
+}

@@ -72,6 +72,9 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
   magma::Status ExecuteImmediateCommands(uint32_t context_id, uint64_t commands_size,
                                          void* commands, uint64_t semaphore_count,
                                          uint64_t* semaphore_ids) override;
+  magma::Status AccessPerformanceCounters(
+      std::unique_ptr<magma::PlatformHandle> access_token) override;
+  bool IsPerformanceCounterAccessEnabled() override { return can_access_performance_counters_; }
 
  private:
   struct BufferReference {
@@ -96,6 +99,7 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
   std::unordered_map<uint32_t, std::unique_ptr<MagmaSystemContext>> context_map_;
   std::unordered_map<uint64_t, BufferReference> buffer_map_;
   std::unordered_map<uint64_t, SemaphoreReference> semaphore_map_;
+  bool can_access_performance_counters_ = false;
 };
 
 #endif  // SRC_GRAPHICS_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_SYSTEM_CONNECTION_H_

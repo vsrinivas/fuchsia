@@ -25,6 +25,7 @@
 #include "platform_trace.h"
 #include "platform_trace_provider.h"
 #include "platform_trace_provider_with_fdio.h"
+#include "src/graphics/lib/magma/src/magma_util/platform/zircon/magma_performance_counter_device.h"
 #include "sys_driver/magma_driver.h"
 
 #if MAGMA_TEST_DRIVER
@@ -40,6 +41,7 @@ struct sysdrv_device_t {
   std::unique_ptr<MagmaDriver> magma_driver;
   std::shared_ptr<MagmaSystemDevice> magma_system_device;
   std::mutex magma_mutex;
+  zx_koid_t perf_count_access_token_id = 0;
 };
 
 static int magma_start(sysdrv_device_t* dev);
@@ -49,6 +51,18 @@ static int magma_stop(sysdrv_device_t* dev);
 #endif
 
 sysdrv_device_t* get_device(void* context) { return static_cast<sysdrv_device_t*>(context); }
+
+static void sysdrv_gpu_init(void* context) {
+  auto* gpu = static_cast<sysdrv_device_t*>(context);
+  if (!magma::MagmaPerformanceCounterDevice::AddDevice(gpu->zx_device_gpu,
+                                                       &gpu->perf_count_access_token_id)) {
+    device_init_reply(gpu->zx_device_gpu, ZX_ERR_INTERNAL, nullptr);
+    return;
+  }
+
+  gpu->magma_system_device->set_perf_count_access_token_id(gpu->perf_count_access_token_id);
+  device_init_reply(gpu->zx_device_gpu, ZX_OK, nullptr);
+}
 
 // implement device protocol
 
@@ -158,6 +172,7 @@ static void sysdrv_gpu_release(void* ctx) {
 
 static zx_protocol_device_t sysdrv_gpu_device_proto = {
     .version = DEVICE_OPS_VERSION,
+    .init = sysdrv_gpu_init,
     .release = sysdrv_gpu_release,
     .message = sysdrv_gpu_message,
 };
@@ -230,6 +245,7 @@ static int magma_start(sysdrv_device_t* device) {
     return DRET_MSG(ZX_ERR_NO_RESOURCES, "Failed to create device");
 
   DLOG("Created device %p", device->magma_system_device.get());
+  device->magma_system_device->set_perf_count_access_token_id(device->perf_count_access_token_id);
 
   return ZX_OK;
 }

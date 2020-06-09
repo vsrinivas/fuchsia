@@ -60,13 +60,30 @@ source_set("bus_mapper") {
   ]
 }
 
+source_set("performance_counter_device") {
+  sources = [
+    "magma_performance_counter_device.cc",
+    "magma_performance_counter_device.h",
+  ]
+  deps = [ "//src/graphics/lib/magma/src/magma_util:macros" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 entry_deps = [
+  ":performance_counter_device",
   "..:logger",
   "..:trace",
   "..:trace_provider",
   "..:trace_provider_with_fdio",
   "//sdk/banjo/ddk.protocol.platform.device",
   "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
+  "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
   "//src/devices/lib/driver",
   "//src/graphics/lib/magma/src/magma_util:macros",
   "//src/graphics/lib/magma/src/sys_driver",
@@ -130,6 +147,7 @@ source_set("connection_client") {
   sources = [ "zircon_platform_connection_client.cc" ]
 
   deps = [
+    ":handle",
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/zx",
