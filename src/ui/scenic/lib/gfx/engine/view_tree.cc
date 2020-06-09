@@ -249,14 +249,14 @@ bool ViewTree::IsStateValid() const {
       return false;
     }
     // Count of connected KOIDs from this session_id is at most 1.
-    int connected_koid = 0;
+    int connected_non_root_koid = 0;
     const auto range = ref_node_koids_.equal_range(session_id);
     for (auto it = range.first; it != range.second; ++it) {
-      if (IsConnectedToScene(it->second)) {
-        ++connected_koid;
+      if (it->second != root_ && IsConnectedToScene(it->second)) {
+        ++connected_non_root_koid;
       }
     }
-    if (connected_koid > 1) {
+    if (connected_non_root_koid > 1) {
       FX_LOGS(ERROR) << "Count of scene-connected ViewRefs for session " << session_id
                      << " exceeds 1. Reference SCN-1249.";
       // TODO(SCN-1249): Enable invariant check when one-view-per-session is enforced.
