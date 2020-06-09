@@ -9,7 +9,7 @@ TODO(52369): Temporary until asan runtime decommits large allocations.
 
 **Current value (from the default):** `"detect_leaks=0:clear_shadow_mmap_threshold=16384"`
 
-From //public/gn/config/instrumentation/BUILD.gn:20
+From //public/gn/config/instrumentation/BUILD.zircon.gn:20
 
 ### assert_level
 Controls which asserts are enabled.
@@ -43,7 +43,7 @@ default format is used.
 
 **Current value (from the default):** `""`
 
-From //public/gn/config/BUILD.gn:24
+From //public/gn/config/BUILD.zircon.gn:24
 
 ### clang_tool_dir
 Directory where the Clang toolchain binaries ("clang", "llvm-nm", etc.) are
@@ -59,7 +59,7 @@ Clang crash reports directory path. Use empty path to disable altogether.
 
 **Current value (from the default):** `"/b/s/w/ir/k/root_build_dir.zircon/clang-crashreports"`
 
-From //public/gn/config/BUILD.gn:12
+From //public/gn/config/BUILD.zircon.gn:12
 
 ### current_cpu
 
@@ -79,7 +79,7 @@ From /b/s/w/ir/k/root_build_dir.zircon/args.gn:5
 
 **Overridden from the default:** `false`
 
-From //BUILD.gn:17
+From //BUILD.zircon.gn:17
 
 ### disable_kernel_pci
 Disable kernel PCI driver support. A counterpart of the the build
@@ -98,7 +98,7 @@ Enable debug output in the ACPI library (used by the ACPI bus driver).
 
 **Current value (from the default):** `false`
 
-From //third_party/lib/acpica/BUILD.gn:9
+From //third_party/lib/acpica/BUILD.zircon.gn:9
 
 ### enable_lock_dep
 Enable kernel lock dependency tracking.
@@ -231,19 +231,19 @@ From //vdso/vdso.gni:7
 
 **Current value (from the default):** `false`
 
-From //system/ulib/fidl/BUILD.gn:6
+From //system/ulib/fidl/BUILD.zircon.gn:6
 
 ### fidlc_deprecate_c_unions
 
 **Current value (from the default):** `false`
 
-From //tools/fidl/BUILD.gn:7
+From //tools/fidl/BUILD.zircon.gn:7
 
 ### fidlc_union_not_simple
 
 **Current value (from the default):** `false`
 
-From //tools/fidl/BUILD.gn:6
+From //tools/fidl/BUILD.zircon.gn:6
 
 ### gcc_tool_dir
 Directory where the GCC toolchain binaries ("gcc", "nm", etc.) are
@@ -321,13 +321,13 @@ revision of the checkout.
 
 **Current value (from the default):** `""`
 
-From //kernel/lib/version/BUILD.gn:11
+From //kernel/lib/version/BUILD.zircon.gn:11
 
 ### malloc
 
 **Current value (from the default):** `"scudo"`
 
-From //third_party/ulib/musl/BUILD.gn:6
+From //third_party/ulib/musl/BUILD.zircon.gn:6
 
 ### optimize
 * `none`: really unoptimized, usually only build-tested and not run
@@ -396,7 +396,7 @@ The empty list (or empty string) means don't use `--sysroot` at all.
 }]
 ```
 
-From //public/gn/config/BUILD.gn:18
+From //public/gn/config/BUILD.zircon.gn:18
 
 ### target_cpu
 
@@ -411,14 +411,14 @@ ThinLTO cache directory path.
 
 **Current value (from the default):** `"host-arm64-linux-lto/thinlto-cache"`
 
-From //public/gn/config/lto/BUILD.gn:22
+From //public/gn/config/lto/BUILD.zircon.gn:22
 
 ### thinlto_jobs
 Number of parallel ThinLTO jobs.
 
 **Current value (from the default):** `8`
 
-From //public/gn/config/lto/BUILD.gn:19
+From //public/gn/config/lto/BUILD.zircon.gn:19
 
 ### toolchain
 *This must never be set as a build argument.*
@@ -448,7 +448,7 @@ function.
 
 **Current value (from the default):** `"print_stacktrace=1:halt_on_error=1"`
 
-From //public/gn/config/instrumentation/BUILD.gn:30
+From //public/gn/config/instrumentation/BUILD.zircon.gn:30
 
 ### use_ccache
 Set to true to enable compiling with ccache.
