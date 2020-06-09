@@ -101,25 +101,16 @@ func (u *SystemUpdater) Update(ctx context.Context, c client) error {
 		return fmt.Errorf("error setting up server: %w", err)
 	}
 	defer server.Shutdown(ctx)
-	// In order to manually trigger the system updater, we need the `run`
-	// package. Since builds can be configured to not automatically install
-	// packages, we need to explicitly resolve it.
-	cmd := []string{"pkgctl", "resolve", "fuchsia-pkg://fuchsia.com/run/0"}
-	if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		return fmt.Errorf("error resolving the run package: %w", err)
-	}
+
 	log.Printf("Downloading system OTA")
-	cmd = []string{
-		"run",
-		"\"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\"",
-		"--initiator", "manual",
-		// Go's boolean flag parsing requires that the argument name and value
-		// be separated by "=" instead of by whitespace.
-		"--reboot=false",
-		"--update", fmt.Sprintf("%q", u.updatePackageUrl),
+	cmd := []string{
+		"update",
+		"force-install",
+		"--reboot", "false",
+		fmt.Sprintf("%q", u.updatePackageUrl),
 	}
 	if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		return fmt.Errorf("failed to run system_updater.cmx: %w", err)
+		return fmt.Errorf("failed to run system updater: %w", err)
 	}
 	log.Printf("OTA successfully downloaded in %s", time.Now().Sub(startTime))
 	return nil
