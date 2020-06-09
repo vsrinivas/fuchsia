@@ -40,7 +40,7 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
 
   StopStoryCall(fidl::StringPtr story_id, const bool bulk,
                 StoryRuntimesMap* const story_runtime_containers, ResultCall result_call)
-      : Operation("StoryProviderImpl::DeleteStoryCall", std::move(result_call)),
+      : Operation("StoryProviderImpl::StopStoryCall", std::move(result_call)),
         story_id_(story_id),
         bulk_(bulk),
         story_runtime_containers_(story_runtime_containers) {}
