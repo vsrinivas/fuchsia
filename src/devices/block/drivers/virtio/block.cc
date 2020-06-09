@@ -166,11 +166,11 @@ void BlockDevice::DdkRelease() {
   virtio::Device::Release();
 }
 
-void BlockDevice::DdkUnbindDeprecated() {
+void BlockDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   worker_shutdown_.store(true);
   sync_completion_signal(&worker_signal_);
   sync_completion_signal(&txn_signal_);
-  virtio::Device::Unbind();
+  virtio::Device::Unbind(std::move(txn));
 }
 
 void BlockDevice::IrqRingUpdate() {

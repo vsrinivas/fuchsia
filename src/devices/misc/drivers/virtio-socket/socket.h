@@ -36,7 +36,7 @@ namespace virtio {
 using vsock_Addr = fuchsia_hardware_vsock_Addr;
 
 class SocketDevice : public Device,
-                     public ddk::Device<SocketDevice, ddk::UnbindableDeprecated, ddk::Messageable>,
+                     public ddk::Device<SocketDevice, ddk::UnbindableNew, ddk::Messageable>,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE> {
  public:
   class ConnectionKey;
@@ -47,7 +47,7 @@ class SocketDevice : public Device,
   // DDKTL hooks:
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
-  void DdkUnbindDeprecated() { virtio::Device::Unbind(); }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { virtio::Device::Unbind(std::move(txn)); }
 
   // Handlers for the incoming FIDL message endpoint. Public as the messages
   // get forwarded by C dispatch code.

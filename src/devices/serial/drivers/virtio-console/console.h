@@ -77,7 +77,7 @@ class ConsoleDevice : public Device,
   void DdkRelease() { virtio::Device::Release(); }
 
   zx_status_t Init() override;
-  void Unbind() override;
+  void Unbind(ddk::UnbindTxn txn) override;
 
   void IrqRingUpdate() override;
   void IrqConfigChange() override {}  // No need to handle configuration changes
@@ -115,6 +115,8 @@ class ConsoleDevice : public Device,
   fs::ManagedVfs vfs_{loop_.dispatcher()};
   fbl::RefPtr<fs::Vnode> console_vnode_;
   zx::eventpair event_, event_remote_;
+
+  std::optional<ddk::UnbindTxn> unbind_txn_;
 };
 
 }  // namespace virtio

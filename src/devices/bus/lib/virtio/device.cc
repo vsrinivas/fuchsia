@@ -33,7 +33,7 @@ Device::Device(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> ba
 
 Device::~Device() { LTRACE_ENTRY; }
 
-void Device::Unbind() { device_remove_deprecated(device_); }
+void Device::Unbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Device::Release() {
   irq_thread_should_exit_.store(true, std::memory_order_release);

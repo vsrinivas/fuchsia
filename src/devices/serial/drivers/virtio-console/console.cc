@@ -213,11 +213,17 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
   return ZX_OK;
 }
 
-void ConsoleDevice::Unbind() {
+void ConsoleDevice::Unbind(ddk::UnbindTxn txn) {
+  unbind_txn_ = std::move(txn);
+
   // Request all console connections be terminated.  Once that completes, finish
   // the unbind.
   fs::Vfs::ShutdownCallback shutdown_cb = [this](zx_status_t status) {
-    device_remove_deprecated(device_);
+    if (unbind_txn_.has_value()) {
+      unbind_txn_->Reply();
+    } else {
+      zxlogf(ERROR, "No saved unbind txn to reply to");
+    }
   };
   vfs_.Shutdown(std::move(shutdown_cb));
 }
