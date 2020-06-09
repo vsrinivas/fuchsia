@@ -11,11 +11,10 @@
 #include <zircon/syscalls/scheduler.h>
 #include <zircon/types.h>
 
-#include <utility>
-
 #include <fbl/intrusive_wavl_tree.h>
 #include <ffl/fixed.h>
 #include <kernel/cpu.h>
+#include <ktl/pair.h>
 
 // Forward declaration.
 struct Thread;
@@ -117,7 +116,7 @@ enum class SchedDiscipline {
 class SchedulerState {
  public:
   // The key type of this node operated on by WAVLTree.
-  using KeyType = std::pair<SchedTime, uint64_t>;
+  using KeyType = ktl::pair<SchedTime, uint64_t>;
 
   SchedulerState() {}
 

@@ -45,7 +45,7 @@ class Scheduler {
 
   // The adjustment rate of the exponential moving average tracking the expected
   // runtime of each thread.
-  static constexpr size_t kExpectedRuntimeAdjustmentRateShift = 8;
+  static constexpr ffl::Fixed<int32_t, 2> kExpectedRuntimeAlpha = ffl::FromRatio(3, 4);
 
   Scheduler() = default;
   ~Scheduler() = default;
@@ -64,7 +64,10 @@ class Scheduler {
   cpu_num_t this_cpu() const { return this_cpu_; }
 
   zx_duration_t predicted_queue_time_ns() const {
-    return total_expected_runtime_ns_.load().raw_value();
+    return exported_total_expected_runtime_ns_.load().raw_value();
+  }
+  SchedUtilization predicted_deadline_utilization() const {
+    return exported_total_deadline_utilization_.load();
   }
 
   // Public entry points.
@@ -247,6 +250,14 @@ class Scheduler {
            deadline_run_queue_.front().scheduler_state_.start_time_ <= eligible_time;
   }
 
+  // Updates the total expected runtime estimator and exports the atomic shadow
+  // variable for cross-CPU readers.
+  inline void UpdateTotalExpectedRuntime(SchedDuration delta) TA_REQ(thread_lock);
+
+  // Updates to total deadline utilization estimator and exports the atomic
+  // shadow variable for cross-CPU readers.
+  inline void UpdateTotalDeadlineUtilization(SchedUtilization delta) TA_REQ(thread_lock);
+
   // Traits type to adapt the WAVLTree to Thread with node state in the
   // scheduler_state member.
   struct TaskTraits {
@@ -356,7 +367,8 @@ class Scheduler {
   // The sum of the expected runtimes of all active threads on this CPU. This
   // value is an estimate of the average queuimg time for this CPU, given the
   // current set of active threads.
-  RelaxedAtomic<SchedDuration> total_expected_runtime_ns_{SchedNs(0)};
+  TA_GUARDED(thread_lock)
+  SchedDuration total_expected_runtime_ns_{SchedNs(0)};
 
   // The sum of the worst case utilization of all active deadline threads on
   // this CPU.
@@ -383,6 +395,16 @@ class Scheduler {
   // oversubscribed.
   TA_GUARDED(thread_lock)
   SchedDuration peak_latency_grans_{kDefaultPeakLatency / kDefaultMinimumGranularity};
+
+  // Values exported for lock-free access across CPUs. These are mirrors of the
+  // members of the same name without the exported_ prefix. This avoids
+  // unnecessary atomic loads when updating the values using arithmetic
+  // operations on the local CPU. These values are atomically readonly to other
+  // CPUs.
+  // TODO(eieio): Look at cache line alignment for these members to optimize
+  // cache performance.
+  RelaxedAtomic<SchedDuration> exported_total_expected_runtime_ns_{SchedNs(0)};
+  RelaxedAtomic<SchedUtilization> exported_total_deadline_utilization_{SchedUtilization{0}};
 
   // The CPU this scheduler instance is associated with.
   // NOTE: This member is not initialized to prevent clobbering the value set

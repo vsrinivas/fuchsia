@@ -5,14 +5,15 @@
 #ifndef ZIRCON_KERNEL_LIB_LOAD_BALANCER_LOAD_BALANCER_PERCPU_H_
 #define ZIRCON_KERNEL_LIB_LOAD_BALANCER_LOAD_BALANCER_PERCPU_H_
 
+#include <lib/relaxed_atomic.h>
+#include <zircon/types.h>
+
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
 #include <kernel/thread_lock.h>
 #include <ktl/array.h>
-#include <lib/relaxed_atomic.h>
-#include <zircon/types.h>
 
-//TODO(edcoyne): delete this override and default these on.
+// TODO(edcoyne): delete this override and default these on.
 #ifndef DISABLE_PERIODIC_LOAD_BALANCER
 #define DISABLE_PERIODIC_LOAD_BALANCER 1
 #endif
@@ -32,7 +33,8 @@ class CpuState {
 
     bool AllValid() const {
       for (int i = 0; i < cpu_count; ++i) {
-        if (!is_valid_cpu_num(cpus[i])) return false;
+        if (!is_valid_cpu_num(cpus[i]))
+          return false;
       }
       return true;
     }
@@ -46,7 +48,6 @@ class CpuState {
     target_cpus_ = cpus;
   }
 
-
   zx_duration_t queue_time_threshold() const { return queue_time_threshold_.load(); }
   CpuSet target_cpus() const { return target_cpus_.load(); }
 
@@ -58,7 +59,7 @@ class CpuState {
   // If we start shedding load this is an ordered list of other cpus we will
   // consider.
   // We expect this to be set by the global load balancer.
-  RelaxedAtomic<CpuSet> target_cpus_{{.cpus={}, .cpu_count = 0}};
+  RelaxedAtomic<CpuSet> target_cpus_{{.cpus = {}, .cpu_count = 0}};
 };
 
 // Determines where a newly unblocked thread should run given its last cpu, the
@@ -68,13 +69,11 @@ class CpuState {
 // this is safe. If you are using "percpu" as the PerCpuProvider (it is
 // confusingly its own container) then you should use the FindTargetCpu()
 // function below that requires the thread_lock.
-template<typename PerCpuProvider, cpu_num_t curr_cpu_num() = arch_curr_cpu_num>
+template <typename PerCpuProvider, cpu_num_t curr_cpu_num() = arch_curr_cpu_num>
 static cpu_num_t FindTargetCpuLocked(Thread* thread) {
   // Like cpu_num_to_mask but skips validation branching, assumes validated cpu
   // numbers. We validate when we accept the data.
-  constexpr auto ToMask = [](cpu_num_t num) {
-    return ((cpu_mask_t)1u << num);
-  };
+  constexpr auto ToMask = [](cpu_num_t num) { return ((cpu_mask_t)1u << num); };
 
   constexpr auto GetScheduler = [](cpu_num_t cpu) -> const Scheduler& {
     return PerCpuProvider::Get(cpu).scheduler;
@@ -87,14 +86,13 @@ static cpu_num_t FindTargetCpuLocked(Thread* thread) {
   // for the CPU running this logic, it wasn't heavily loaded during the last
   // rebalance.
   const cpu_num_t last_cpu = thread->scheduler_state_.last_cpu();
-  DEBUG_ASSERT(last_cpu != INVALID_CPU ||
-               Get(curr_cpu_num()).target_cpus().cpu_count > 0 ||
+  DEBUG_ASSERT(last_cpu != INVALID_CPU || Get(curr_cpu_num()).target_cpus().cpu_count > 0 ||
                curr_cpu_num() == 0);
   // It is possible the target_cpus is unset in early boot, in this case
   // the cpus[] is initialized to 0, and the initial_cpu is the boot cpu
   // "0", this is a reasonable choice.
-  const cpu_num_t initial_cpu = last_cpu != INVALID_CPU ? last_cpu :
-      Get(curr_cpu_num()).target_cpus().cpus[0];
+  const cpu_num_t initial_cpu =
+      last_cpu != INVALID_CPU ? last_cpu : Get(curr_cpu_num()).target_cpus().cpus[0];
 
   const auto& initial = Get(initial_cpu);
   const CpuState::CpuSet cpus = initial.target_cpus();
@@ -124,10 +122,10 @@ static cpu_num_t FindTargetCpuLocked(Thread* thread) {
   // Keep track of least loaded so we can return that if everything is over.
   for (int i = 0; i < cpus.cpu_count && lowest_runtime > load_shed_threshold; ++i) {
     // Skip cpus not available to this task.
-    if (unlikely((ToMask(cpus.cpus[i]) & available_mask) == 0)) continue;
+    if (unlikely((ToMask(cpus.cpus[i]) & available_mask) == 0))
+      continue;
 
-    const zx_duration_t candidate_runtime =
-        GetScheduler(cpus.cpus[i]).predicted_queue_time_ns();
+    const zx_duration_t candidate_runtime = GetScheduler(cpus.cpus[i]).predicted_queue_time_ns();
     if (candidate_runtime < lowest_runtime) {
       lowest_cpu = cpus.cpus[i];
       lowest_runtime = candidate_runtime;

@@ -90,7 +90,7 @@ class LoadBalancerTest {
     Thread thread;
     thread.scheduler_state_.last_cpu_ = 1;
     percpus[1]->load_balancer.Update({}, 10000);
-    percpus[1]->scheduler.total_expected_runtime_ns_ = SchedNs(100);
+    percpus[1]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(100);
 
     cpu_num_t selected = load_balancer::FindTargetCpuLocked<TestingContext>(&thread);
     EXPECT_EQ(1u, selected);
@@ -113,7 +113,7 @@ class LoadBalancerTest {
     // thread..last_cpu_ is undefined, like a new thread on the system.
 
     percpus[kCurrCpu]->load_balancer.Update({.cpus = {3,2,1,0}, .cpu_count = 4}, 10000);
-    percpus[kCurrCpu]->scheduler.total_expected_runtime_ns_ = SchedNs(100);
+    percpus[kCurrCpu]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(100);
 
     cpu_num_t selected =
         load_balancer::FindTargetCpuLocked<TestingContext, TestingContext::CurrentCpu>(&thread);
@@ -137,10 +137,10 @@ class LoadBalancerTest {
     thread.scheduler_state_.last_cpu_ = kLastCpu;
 
     TestingContext::UpdateAll({.cpus = {3,2,1,0}, .cpu_count = 4}, kThreshold);
-    percpus[3]->scheduler.total_expected_runtime_ns_ = SchedNs(kThreshold + 1);
-    percpus[2]->scheduler.total_expected_runtime_ns_ = SchedNs(kThreshold + 1);
-    percpus[1]->scheduler.total_expected_runtime_ns_ = SchedNs(kThreshold + 1);
-    percpus[0]->scheduler.total_expected_runtime_ns_ = SchedNs(kThreshold - 1);
+    percpus[3]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(kThreshold + 1);
+    percpus[2]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(kThreshold + 1);
+    percpus[1]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(kThreshold + 1);
+    percpus[0]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(kThreshold - 1);
 
     cpu_num_t selected =
         load_balancer::FindTargetCpuLocked<TestingContext, TestingContext::CurrentCpu>(&thread);
@@ -163,10 +163,10 @@ class LoadBalancerTest {
     thread.scheduler_state_.last_cpu_ = kLastCpu;
 
     TestingContext::UpdateAll({.cpus = {3,2,1,0}, .cpu_count = 4}, kThreshold);
-    percpus[3]->scheduler.total_expected_runtime_ns_ = SchedNs(kThreshold + 2);
-    percpus[2]->scheduler.total_expected_runtime_ns_ = SchedNs(kThreshold + 1);
-    percpus[1]->scheduler.total_expected_runtime_ns_ = SchedNs(kThreshold + 3);
-    percpus[0]->scheduler.total_expected_runtime_ns_ = SchedNs(kThreshold + 4);
+    percpus[3]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(kThreshold + 2);
+    percpus[2]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(kThreshold + 1);
+    percpus[1]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(kThreshold + 3);
+    percpus[0]->scheduler.exported_total_expected_runtime_ns_ = SchedNs(kThreshold + 4);
 
     cpu_num_t selected =
         load_balancer::FindTargetCpuLocked<TestingContext, TestingContext::CurrentCpu>(&thread);
