@@ -19,12 +19,12 @@ static uint32_t GetVmarHandle(uint64_t size) {
   zx::vmar test_vmar;
   uint64_t child_addr;
   EXPECT_EQ(ZX_OK,
-            zx::vmar::root_self()->allocate(0,                                         // offset,
-                                            size,                                      // size
-                                            ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,  // flags
-                                            &test_vmar,                                // child
-                                            &child_addr                                // child_addr
-                                            ));
+            zx::vmar::root_self()->allocate2(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,  // flags
+                                             0,                                         // offset,
+                                             size,                                      // size
+                                             &test_vmar,                                // child
+                                             &child_addr                                // child_addr
+                                             ));
   return test_vmar.release();
 }
 

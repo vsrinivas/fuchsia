@@ -24,8 +24,8 @@ constexpr size_t kSize = MB(1);
 
 struct Helper {
   Helper() {
-    ASSERT_OK(zx::vmar::root_self()->allocate(0, GB(1), ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_SPECIFIC,
-                                              &vmar, &vmar_base));
+    ASSERT_OK(zx::vmar::root_self()->allocate2(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_SPECIFIC, 0, GB(1),
+                                               &vmar, &vmar_base));
 
     ASSERT_OK(zx::vmo::create(MB(4), 0, &vmo));
   }

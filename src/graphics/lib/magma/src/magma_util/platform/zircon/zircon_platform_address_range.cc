@@ -29,7 +29,7 @@ class ZirconPlatformAddressRange : public PlatformAddressRange {
 std::unique_ptr<PlatformAddressRange> PlatformAddressRange::Create(uint64_t size) {
   uint64_t address;
   zx::vmar vmar;
-  zx_status_t status = zx::vmar::root_self()->allocate(0, size, 0, &vmar, &address);
+  zx_status_t status = zx::vmar::root_self()->allocate2(0, 0, size, &vmar, &address);
   if (status != ZX_OK)
     return DRETP(nullptr, "zx_vmar_allocate failed: %x", status);
   return std::make_unique<ZirconPlatformAddressRange>(std::move(vmar), address, size);

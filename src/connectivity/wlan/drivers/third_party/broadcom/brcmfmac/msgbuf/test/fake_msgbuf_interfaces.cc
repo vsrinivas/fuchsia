@@ -128,9 +128,9 @@ zx_status_t FakeMsgbufInterfaces::Create(std::unique_ptr<FakeMsgbufInterfaces>* 
 
   zx::vmar vmar;
   zx_vaddr_t vmar_address = 0;
-  if ((status = zx::vmar::root_self()->allocate(0, kDmaBufferPermanentMappingSize,
-                                                ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, &vmar,
-                                                &vmar_address)) != ZX_OK) {
+  if ((status = zx::vmar::root_self()->allocate2(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0,
+                                                 kDmaBufferPermanentMappingSize, &vmar,
+                                                 &vmar_address)) != ZX_OK) {
     return status;
   }
   interfaces->vmar_ = std::move(vmar);

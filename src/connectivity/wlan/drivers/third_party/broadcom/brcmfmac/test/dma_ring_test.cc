@@ -88,8 +88,8 @@ TEST(DmaRingTest, ReadTest) {
   uintptr_t dma_buffer_address = 0;
 
   ASSERT_EQ(ZX_OK,
-            zx::vmar::root_self()->allocate(0, kVmoSize, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
-                                            &vmar, &vmar_address));
+            zx::vmar::root_self()->allocate2(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0, kVmoSize,
+                                             &vmar, &vmar_address));
   ASSERT_EQ(ZX_OK, DmaBuffer::Create(bti, ZX_CACHE_POLICY_CACHED, kVmoSize, &dma_buffer));
   EXPECT_EQ(ZX_OK, dma_buffer->Map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &dma_buffer_address));
   ASSERT_NE(0u, dma_buffer_address);
@@ -165,8 +165,8 @@ TEST(DmaRingTest, WriteTest) {
   uintptr_t dma_buffer_address = 0;
 
   ASSERT_EQ(ZX_OK,
-            zx::vmar::root_self()->allocate(0, kVmoSize, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
-                                            &vmar, &vmar_address));
+            zx::vmar::root_self()->allocate2(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0, kVmoSize,
+                                             &vmar, &vmar_address));
   ASSERT_EQ(ZX_OK, DmaBuffer::Create(bti, ZX_CACHE_POLICY_CACHED, kVmoSize, &dma_buffer));
   EXPECT_EQ(ZX_OK, dma_buffer->Map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &dma_buffer_address));
   ASSERT_NE(0u, dma_buffer_address);

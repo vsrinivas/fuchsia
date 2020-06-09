@@ -21,7 +21,7 @@ bool DeviceReader::Create(fxl::WeakPtr<Controller> controller, uint32_t buffer_s
   // The controller records the buffer size in pages, but internally the
   // size in bytes is what we use.
   size_t buffer_size = buffer_size_in_pages * Controller::kPageSize;
-  auto status = zx::vmar::root_self()->allocate(0u, buffer_size, ZX_VM_CAN_MAP_READ, &vmar, &addr);
+  auto status = zx::vmar::root_self()->allocate2(ZX_VM_CAN_MAP_READ, 0u, buffer_size, &vmar, &addr);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to obtain vmar for reading trace data: " << status;
     return false;

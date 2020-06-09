@@ -82,9 +82,9 @@ zx_status_t FakeMapRange::Init() {
   // We don't intend to map anything in the VMAR, so don't need ZX_VM_CAN_MAP_READ or WRITE.
   constexpr uint32_t kAllocateOptions = 0;
   zx_status_t status =
-      zx::vmar::root_self()->allocate(0, vmar_size_, kAllocateOptions, &vmar_, &vmar_addr_);
+      zx::vmar::root_self()->allocate2(kAllocateOptions, 0, vmar_size_, &vmar_, &vmar_addr_);
   if (status != ZX_OK) {
-    printf("zx::vmar::root_self()->allocate() failed - status: %d\n", status);
+    printf("zx::vmar::root_self()->allocate2() failed - status: %d\n", status);
     return status;
   }
   // We don't need to call vmar::protect(0), because a VMAR without any sub-regions already faults

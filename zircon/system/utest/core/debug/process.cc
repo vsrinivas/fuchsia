@@ -72,7 +72,7 @@ class ProcessDebugFixture : public zxtest::Test {
 
   void SetUp() override {
     ASSERT_OK(zx::vmo::create(kVmoSize, 0u, &vmo_));
-    ASSERT_OK(zx::vmar::root_self()->allocate(0u, kVmarSize, kVmarOpts, &vmar_, &vmar_addr_));
+    ASSERT_OK(zx::vmar::root_self()->allocate2(kVmarOpts, 0u, kVmarSize, &vmar_, &vmar_addr_));
     ASSERT_OK(vmar_.map(0u, vmo_, 0u, kVmoSize, kMapOpts, &map_addr_));
   }
 

@@ -37,8 +37,8 @@ InStreamPeeker::InStreamPeeker(async::Loop* fidl_loop, thrd_t fidl_thread,
   //
   // First create a child VMAR that'll have room and that has
   // ZX_VM_CAN_MAP_SPECIFIC.
-  status = zx::vmar::root_self()->allocate(
-      0, vmo_size_bytes_ * 2, ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+  status = zx::vmar::root_self()->allocate2(
+      ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0, vmo_size_bytes_ * 2,
       &ring_vmar_, reinterpret_cast<uintptr_t*>(&ring_base_));
   ZX_ASSERT(status == ZX_OK);
 

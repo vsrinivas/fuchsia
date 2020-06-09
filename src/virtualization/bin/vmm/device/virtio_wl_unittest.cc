@@ -54,7 +54,7 @@ class VirtioWlTest : public TestWithDevice {
     uintptr_t vmar_addr;
     zx::vmar vmar;
     ASSERT_EQ(
-        zx::vmar::root_self()->allocate(0u, kVirtioWlVmarSize, kAllocateFlags, &vmar, &vmar_addr),
+        zx::vmar::root_self()->allocate2(kAllocateFlags, 0u, kVirtioWlVmarSize, &vmar, &vmar_addr),
         ZX_OK);
     fuchsia::virtualization::hardware::StartInfo start_info;
     zx_status_t status = LaunchDevice(kVirtioWlUrl, out_queue_.end(), &start_info);

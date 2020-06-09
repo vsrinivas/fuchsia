@@ -321,7 +321,7 @@ TEST(TraitsTestCase, PortTraits) {
 TEST(TraitsTestCase, VmarTraits) {
   zx::vmar vmar;
   uintptr_t addr;
-  ASSERT_OK(zx::vmar::root_self()->allocate(0u, 4096u, 0u, &vmar, &addr));
+  ASSERT_OK(zx::vmar::root_self()->allocate2(0u, 0u, 4096u, &vmar, &addr));
   ASSERT_NO_FATAL_FAILURES(Duplicating(vmar));
   ASSERT_NO_FATAL_FAILURES(GetChild(vmar));
   ASSERT_NO_FATAL_FAILURES(SetProfile(vmar));

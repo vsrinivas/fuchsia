@@ -217,8 +217,8 @@ void CheckPartiallyUnmappedBufferIsError(zx_object_info_topic_t topic,
   uintptr_t vmar_addr;
   const auto& handle = provider();
 
-  ASSERT_OK(zx::vmar::root_self()->allocate(
-      0, 2 * PAGE_SIZE, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, &vmar,
+  ASSERT_OK(zx::vmar::root_self()->allocate2(
+      ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, 0, 2 * PAGE_SIZE, &vmar,
       &vmar_addr));
 
   // Create a one-page VMO.
