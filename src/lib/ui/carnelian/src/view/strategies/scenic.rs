@@ -27,6 +27,7 @@ use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
 use fuchsia_async::{self as fasync, OnSignals};
 use fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameSet, FrameUsage, ImageId};
 use fuchsia_scenic::{EntityNode, ImagePipe2, Material, Rectangle, SessionPtr, ShapeNode};
+use fuchsia_trace::{self, duration, instant};
 use fuchsia_zircon::{self as zx, ClockId, Event, HandleBased, Signals, Time};
 use futures::channel::mpsc::UnboundedSender;
 use std::{
@@ -297,13 +298,16 @@ impl ViewStrategy for ScenicViewStrategy {
     }
 
     async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
+        duration!("gfx", "ScenicViewStrategy::update");
         let size = view_details.logical_size.floor().to_u32();
         if size.width > 0 && size.height > 0 {
             if self.plumber.is_none() {
+                duration!("gfx", "ScenicViewStrategy::update.create_plumber");
                 self.create_plumber(size).await.expect("create_plumber");
             } else {
                 let current_size = self.plumber.as_ref().expect("plumber").size;
                 if current_size != size {
+                    duration!("gfx", "ScenicViewStrategy::update.create_plumber");
                     let retired_plumber = self.plumber.take().expect("plumber");
                     self.retiring_plumbers.push(retired_plumber);
                     self.create_plumber(size).await.expect("create_plumber");
@@ -319,6 +323,7 @@ impl ViewStrategy for ScenicViewStrategy {
                 view_details.physical_size.height as f32,
             );
             if let Some(available) = plumber.frame_set.get_available_image() {
+                duration!("gfx", "ScenicViewStrategy::update.render_to_image");
                 let available_index =
                     plumber.image_indexes.get(&available).expect("index for image");
                 self.content_node.set_shape(&rectangle);
@@ -366,6 +371,7 @@ impl ViewStrategy for ScenicViewStrategy {
     }
 
     fn present(&mut self, view_details: &ViewDetails) {
+        duration!("gfx", "ScenicViewStrategy::present");
         if self.pending_present_count < 3 {
             let app_sender = self.app_sender.clone();
             let presentation_time = self.next_presentation_time;
@@ -381,6 +387,13 @@ impl ViewStrategy for ScenicViewStrategy {
             self.pending_present_count += 1;
             self.last_presentation_time = presentation_time;
             self.next_presentation_time += self.presentation_interval;
+        } else {
+            instant!(
+                "gfx",
+                "ScenicViewStrategy::too_many_presents",
+                fuchsia_trace::Scope::Process,
+                "pending_present_count" => format!("{:?}", self.pending_present_count).as_str()
+            );
         }
     }
 
@@ -425,6 +438,12 @@ impl ViewStrategy for ScenicViewStrategy {
     }
 
     fn image_freed(&mut self, image_id: u64, collection_id: u32) {
+        instant!(
+            "gfx",
+            "ScenicViewStrategy::image_freed",
+            fuchsia_trace::Scope::Process,
+            "image_freed" => format!("{} in {}", image_id, collection_id).as_str()
+        );
         if let Some(plumber) = self.plumber.as_mut() {
             if plumber.collection_id == collection_id {
                 plumber.frame_set.mark_done_presenting(image_id);

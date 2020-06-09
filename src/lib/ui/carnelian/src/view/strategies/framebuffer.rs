@@ -20,6 +20,7 @@ use async_trait::async_trait;
 use fidl::endpoints::create_endpoints;
 use fuchsia_async::{self as fasync};
 use fuchsia_framebuffer::{FrameSet, ImageId};
+use fuchsia_trace::{self, duration, instant};
 use fuchsia_zircon::{self as zx, ClockId, Duration, Event, HandleBased, Time};
 use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
@@ -180,7 +181,14 @@ impl ViewStrategy for FrameBufferViewStrategy {
     }
 
     async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
+        duration!("gfx", "FrameBufferViewStrategy::update");
         if let Some(available) = self.frame_set.get_available_image() {
+            instant!(
+                "gfx",
+                "FrameBufferViewStrategy::update_image",
+                fuchsia_trace::Scope::Process,
+                "available" => format!("{}", available).as_str()
+            );
             let buffer_ready_event = self.wait_events.get(&available).expect("wait event");
             let buffer_ready_event = buffer_ready_event
                 .duplicate_handle(zx::Rights::SAME_RIGHTS)
@@ -195,7 +203,14 @@ impl ViewStrategy for FrameBufferViewStrategy {
     }
 
     fn present(&mut self, _view_details: &ViewDetails) {
+        duration!("gfx", "FrameBufferViewStrategy::present");
         if let Some(prepared) = self.frame_set.prepared {
+            instant!(
+                "gfx",
+                "FrameBufferViewStrategy::present_image",
+                fuchsia_trace::Scope::Process,
+                "prepared" => format!("{}", prepared).as_str()
+            );
             let mut fb = self.frame_buffer.borrow_mut();
             fb.present_frame(prepared, Some(self.image_sender.clone()), false)
                 .unwrap_or_else(|e| panic!("Present error: {:?}", e));
@@ -227,6 +242,12 @@ impl ViewStrategy for FrameBufferViewStrategy {
     }
 
     fn image_freed(&mut self, image_id: u64, _collection_id: u32) {
+        instant!(
+            "gfx",
+            "FrameBufferViewStrategy::image_freed",
+            fuchsia_trace::Scope::Process,
+            "image_freed" => format!("{}", image_id).as_str()
+        );
         self.frame_set.mark_done_presenting(image_id);
     }
 
