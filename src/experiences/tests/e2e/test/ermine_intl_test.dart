@@ -11,12 +11,12 @@ import 'package:test/test.dart';
 ///   - Change locale via setui_client and that change takes effect
 void main() {
   Sl4f sl4f;
-  SetUi setUi;
   FlutterDriverConnector connector;
   FlutterDriver driver;
 
   Future<void> setLocale(String localeId) async {
-    await setUi.setLocale(localeId);
+    var result = await sl4f.ssh.run('run setui_client.cm intl -l $localeId');
+    expect(result.exitCode, 0);
   }
 
   void findTextOnScreen(String text) {
@@ -26,8 +26,6 @@ void main() {
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
     await sl4f.startServer();
-
-    setUi = sl4f.SetUi(sl4f);
 
     connector = FlutterDriverConnector(sl4f);
     await connector.initialize();
