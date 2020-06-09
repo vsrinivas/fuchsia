@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "bin/emergency"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.http.Loader"
+        ]
     }
 }

@@ -21,13 +21,12 @@ pub struct BssCache {
     bss_map: BTreeMap<BssId, Bss>,
 }
 
-const BSS_ADDR_LEN_BYTES: usize = 6;
-type BssId = [u8; BSS_ADDR_LEN_BYTES];
+pub type BssId = [u8; BSS_ADDR_LEN_BYTES];
 
 #[derive(Debug, PartialEq)]
 pub struct Bss {
-    rssi: Option<i8>,
-    frequency: Option<u32>,
+    pub(crate) rssi: Option<i8>,
+    pub(crate) frequency: Option<u32>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -37,6 +36,9 @@ pub enum UpdateError {
     Ipc,
     Service,
 }
+
+// Length of a BSS ID. Governed by IEEE standards.
+const BSS_ADDR_LEN_BYTES: usize = 6;
 
 // Upper bound on the number of BSSes cached. Our goals in tuning this value are:
 // * retain enough BSSes to give a tight radius of confidence, and

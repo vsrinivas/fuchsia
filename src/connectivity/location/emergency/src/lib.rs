@@ -3,3 +3,4 @@
 // found in the LICENSE file.
 
 pub mod bss_cache;
+pub mod bss_resolver;
