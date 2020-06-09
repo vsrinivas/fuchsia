@@ -335,72 +335,91 @@ is_matching_device(VkPhysicalDeviceProperties const * const phy_device_props,
   if ((phy_device_props->vendorID != vendor_id) || (phy_device_props->deviceID != device_id))
     return false;
 
-  if (phy_device_props->vendorID == 0x10DE)
+  switch (vendor_id)
     {
-      //
-      // NVIDIA SM35+
-      //
-      // FIXME -- for now, the kernels in this app are targeting
-      // sm_35+ devices.  You could add some rigorous rejection by
-      // device id here...
-      //
-      if (key_val_words == 1)
-        *hs_target = hs_nvidia_sm35_u32;
-      else
-        *hs_target = hs_nvidia_sm35_u64;
-    }
-  else if (phy_device_props->vendorID == 0x8086)
-    {
-      //
-      // INTEL GEN8+
-      //
-      // FIXME -- for now, the kernels in this app are targeting GEN8+
-      // devices -- this does *not* include variants of GEN9LP+
-      // "Apollo Lake" because that device has a different
-      // architectural "shape" than GEN8 GTx.  You could add some
-      // rigorous rejection by device id here...
-      //
-      if (key_val_words == 1)
-        *hs_target = hs_intel_gen8_u32;
-      else
-        *hs_target = hs_intel_gen8_u64;
-    }
-  else if (phy_device_props->vendorID == 0x1002)
-    {
-      //
-      // AMD GCN3+
-      //
-      if (key_val_words == 1)
-        *hs_target = hs_amd_gcn3_u32;
-      else
-        *hs_target = hs_amd_gcn3_u64;
-    }
-  else if ((phy_device_props->vendorID == 0x1AE0) && (phy_device_props->deviceID == 0xC0DE))
-    {
-      //
-      // GOOGLE SWIFTSHADER
-      //
-      if (key_val_words == 1)
-        *hs_target = hs_google_swiftshader_u32;
-      else
-        *hs_target = hs_google_swiftshader_u64;
-    }
-  else if ((phy_device_props->vendorID == 0x13B5) && (phy_device_props->deviceID == 0x72120000))
-    {
-      //
-      // ARM BIFROST8
-      //
-      if (key_val_words == 1)
-        *hs_target = hs_arm_bifrost8_u32;
-      else
-        *hs_target = hs_arm_bifrost8_u64;
-    }
-  else
-    {
-      return false;
-    }
+        case 0x10DE: {
+          //
+          // NVIDIA SM35+
+          //
+          // FIXME -- for now, the kernels in this app are targeting
+          // sm_35+ devices.  You could add some rigorous rejection by
+          // device id here...
+          //
+          if (key_val_words == 1)
+            *hs_target = hs_nvidia_sm35_u32;
+          else
+            *hs_target = hs_nvidia_sm35_u64;
 
-  return true;
+          return true;
+        }
+        case 0x1002: {
+          //
+          // AMD GCN3+
+          //
+          if (key_val_words == 1)
+            *hs_target = hs_amd_gcn3_u32;
+          else
+            *hs_target = hs_amd_gcn3_u64;
+
+          return true;
+        }
+        case 0x1AE0: {
+          if (device_id == 0xC0DE)
+            {
+              //
+              // GOOGLE SWIFTSHADER
+              //
+              if (key_val_words == 1)
+                *hs_target = hs_google_swiftshader_u32;
+              else
+                *hs_target = hs_google_swiftshader_u64;
+
+              return true;
+            }
+          else
+            {
+              return false;
+            }
+        }
+        case 0x8086: {
+          //
+          // INTEL GEN8+
+          //
+          // FIXME -- for now, the kernels in this app are targeting GEN8+
+          // devices -- this does *not* include variants of GEN9LP+
+          // "Apollo Lake" because that device has a different
+          // architectural "shape" than GEN8 GTx.  You could add some
+          // rigorous rejection by device id here...
+          //
+          if (key_val_words == 1)
+            *hs_target = hs_intel_gen8_u32;
+          else
+            *hs_target = hs_intel_gen8_u64;
+
+          return true;
+        }
+        case 0x13B5: {
+          if (device_id == 0x72120000)
+            {
+              //
+              // ARM BIFROST8
+              //
+              if (key_val_words == 1)
+                *hs_target = hs_arm_bifrost8_u32;
+              else
+                *hs_target = hs_arm_bifrost8_u64;
+
+              return true;
+            }
+          else
+            {
+              return false;
+            }
+        }
+        default: {
+          return false;
+        }
+    }
 }
 
 //
