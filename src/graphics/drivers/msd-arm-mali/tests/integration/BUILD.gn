@@ -14,15 +14,10 @@ executable("msd_arm_mali_integration_tests") {
   testonly = true
 
   sources = [
+    "run_unit_tests.cc",
     "test_fault_recovery.cc",
     "test_shutdown.cc",
   ]
-
-  if (magma_enable_developer_build) {
-    defines = [ "MSD_ARM_NAME=\"libmsd_arm_test.so\"" ]
-  } else {
-    defines = [ "MSD_ARM_NAME=\"libmsd_arm.so\"" ]
-  }
 
   public_deps = [
     "$zircon_build_root/public/lib/fdio",

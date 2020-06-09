@@ -27,7 +27,7 @@
 #include "sys_driver/magma_system_device.h"
 
 #if MAGMA_TEST_DRIVER
-void magma_indriver_test(zx_device_t* device);
+zx_status_t magma_indriver_test(zx_device_t* device);
 #endif
 
 struct gpu_device {
@@ -36,6 +36,7 @@ struct gpu_device {
   std::unique_ptr<MagmaDriver> magma_driver;
   std::shared_ptr<MagmaSystemDevice> magma_system_device;
   std::mutex magma_mutex;
+  zx_status_t unit_test_status = ZX_ERR_NOT_SUPPORTED;
 };
 
 gpu_device* get_gpu_device(void* context) { return static_cast<gpu_device*>(context); }
@@ -172,12 +173,24 @@ static zx_status_t device_fidl_test_restart(void* context) {
 #endif
 }
 
+static zx_status_t device_fidl_get_unit_test_status(void* context, fidl_txn_t* transaction) {
+#if MAGMA_TEST_DRIVER
+  DLOG("device_fidl_unit_test_status");
+  gpu_device* device = get_gpu_device(context);
+  std::unique_lock<std::mutex> lock(device->magma_mutex);
+  return fuchsia_gpu_magma_DeviceGetUnitTestStatus_reply(transaction, device->unit_test_status);
+#else
+  return ZX_ERR_NOT_SUPPORTED;
+#endif
+}
+
 static fuchsia_gpu_magma_Device_ops_t device_fidl_ops = {
     .Query = device_fidl_query,
     .QueryReturnsBuffer = device_fidl_query_returns_buffer,
     .Connect = device_fidl_connect,
     .DumpState = device_fidl_dump_state,
     .TestRestart = device_fidl_test_restart,
+    .GetUnitTestStatus = device_fidl_get_unit_test_status,
 };
 
 static zx_status_t device_message(void* context, fidl_msg_t* message, fidl_txn_t* transaction) {
@@ -220,7 +233,7 @@ static zx_status_t driver_bind(void* context, zx_device_t* parent) {
 
 #if MAGMA_TEST_DRIVER
   DLOG("running magma indriver test");
-  magma_indriver_test(parent);
+  gpu->unit_test_status = magma_indriver_test(parent);
 #endif
 
   zx_status_t status = magma_start(gpu.get());

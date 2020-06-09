@@ -13,22 +13,26 @@ have_libvulkan_mali =
 
 group("magma-vulkan") {
   if (!magma_enable_developer_build) {
-    public_deps = [ ":magma-arm-mali" ]
+    public_deps = [
+      ":magma-arm-mali",
+      ":msd-arm-mali",
+    ]
     if (have_libvulkan_mali) {
       public_deps += [ ":magma-arm-mali-config" ]
     }
   }
 }
 
-if (magma_enable_developer_build) {
-  group("magma-dev") {
-    testonly = true
-    public_deps = [ ":magma-arm-mali" ]
-    if (have_libvulkan_mali) {
-      public_deps += [ ":magma-arm-mali-config" ]
-    }
-    deps = [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
+group("magma-dev") {
+  testonly = true
+  public_deps = [
+    ":magma-arm-mali",
+    ":msd-arm-mali-test",
+  ]
+  if (have_libvulkan_mali) {
+    public_deps += [ ":magma-arm-mali-config" ]
   }
+  deps = [ "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file" ]
 }
 
 if (have_libvulkan_mali) {
@@ -51,31 +55,31 @@ if (have_libvulkan_mali) {
   }
 }
 
+driver_package("msd-arm-mali-test") {
+  testonly = true
+
+  deps = [ "//src/graphics/drivers/msd-arm-mali:msd_arm_test" ]
+  drivers = [
+    {
+      name = "libmsd_arm_test.so"
+    },
+  ]
+}
+
+driver_package("msd-arm-mali") {
+  deps = [ "//src/graphics/drivers/msd-arm-mali:msd_arm" ]
+  drivers = [
+    {
+      name = "libmsd_arm.so"
+    },
+  ]
+}
+
 driver_package("magma-arm-mali") {
-  if (magma_enable_developer_build) {
-    testonly = true
-  }
-
-  if (magma_enable_developer_build) {
-    deps = [ "//src/graphics/drivers/msd-arm-mali:msd_arm_test" ]
-    drivers = [
-      {
-        name = "libmsd_arm_test.so"
-      },
-    ]
-  } else {
-    deps = [ "//src/graphics/drivers/msd-arm-mali:msd_arm" ]
-    drivers = [
-      {
-        name = "libmsd_arm.so"
-      },
-    ]
-  }
-
   if (have_libvulkan_mali) {
     resources = []
     libraries = []
-    deps += build_libvulkan_arm_mali
+    deps = build_libvulkan_arm_mali
 
     foreach(entry, icd_list) {
       icd_name = entry.name

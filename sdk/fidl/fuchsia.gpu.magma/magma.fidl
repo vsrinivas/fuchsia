@@ -22,6 +22,9 @@ protocol Device {
 
     /// For testing only.
     TestRestart();
+
+    /// For testing only - on non-test drivers this will close the channel.
+    GetUnitTestStatus() -> (zx.status status);
 };
 
 /// Primary declarations.

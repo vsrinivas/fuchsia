@@ -11,7 +11,12 @@
 extern struct zx_driver_ops msd_driver_ops;
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(magma_pdev_gpu, msd_driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(magma_pdev_gpu, msd_driver_ops, "zircon", "0.1", 4 + MAGMA_DISABLE_AUTOBIND)
+#if MAGMA_DISABLE_AUTOBIND
+    // If this is the set of bind commands for the test driver we should disable autobind so the
+    // driver will only load when explicitly asked to bind by an integration thest.
+    BI_ABORT_IF_AUTOBIND,
+#endif
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),

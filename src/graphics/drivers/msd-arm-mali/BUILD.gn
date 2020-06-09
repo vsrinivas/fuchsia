@@ -44,6 +44,7 @@ magma_pdev_entry("msd_arm_entry") {
 magma_pdev_entry("msd_arm_test_entry") {
   pdev_device_id = ARM_MALI_DEVICE_ID
   test_entry = true
+  disable_autobind = true
 }
 
 group("tests") {

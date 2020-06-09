@@ -45,12 +45,19 @@ template("magma_pdev_entry") {
       testonly = true
     }
 
+    if (!defined(invoker.disable_autobind)) {
+      disable_autobind = false
+    }
+
     forward_variables_from(invoker, "*")
 
     sources = [
       "//src/graphics/lib/magma/src/magma_util/platform/zircon/pdev_entry.cc",
     ]
-    defines = [ "MAGMA_PDEV_DEVICE_ID=" + pdev_device_id ]
+    defines = [
+      "MAGMA_PDEV_DEVICE_ID=" + pdev_device_id,
+      "MAGMA_DISABLE_AUTOBIND=${disable_autobind}",
+    ]
 
     if (!defined(invoker.deps)) {
       deps = []
