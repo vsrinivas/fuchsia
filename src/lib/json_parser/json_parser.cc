@@ -89,8 +89,7 @@ void JSONParser::ParseFromDirectoryAt(int dirfd, const std::string& path,
                                       fit::function<void(rapidjson::Document)> cb) {
   fbl::unique_fd dir_fd(openat(dirfd, path.c_str(), O_RDONLY | O_DIRECTORY));
   if (!dir_fd.is_valid()) {
-    ReportError(
-        fxl::StringPrintf("Could not open directory %s error %s", path.c_str(), strerror(errno)));
+    // A non-existent directory is not an error.
     return;
   }
 

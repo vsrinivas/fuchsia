@@ -255,8 +255,9 @@ TEST_F(JSONParserTest, ParseFromDirectoryDoesNotExist) {
 
   JSONParser parser;
   std::string error;
-  EXPECT_FALSE(ParseFromDirectory(&parser, dir, &error));
-  EXPECT_NE(std::string::npos, error.find("Could not open directory"));
+  EXPECT_TRUE(ParseFromDirectory(&parser, dir, &error));
+  EXPECT_EQ("", error);
+  EXPECT_EQ(0, props_found_);
 }
 
 TEST_F(JSONParserTest, ParseFromDirectoryAt) {
