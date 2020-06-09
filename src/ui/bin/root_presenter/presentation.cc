@@ -351,11 +351,6 @@ void Presentation::OnReport(uint32_t device_id, fuchsia::ui::input::InputReport 
   state->Update(std::move(input_report), size);
 }
 
-void Presentation::CapturePointerEventsHACK(
-    fidl::InterfaceHandle<fuchsia::ui::policy::PointerCaptureListenerHACK> listener_handle) {
-  captured_pointerbindings_.AddInterfacePtr(listener_handle.Bind());
-}
-
 void Presentation::SetClipSpaceTransform(float x, float y, float scale,
                                          SetClipSpaceTransformCallback callback) {
   camera_.SetClipSpaceTransform(x, y, scale);
@@ -429,37 +424,6 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
             it->second.visible = false;
             invalidate = true;
           }
-        }
-      }
-
-      // The following steps are different ways of dispatching pointer events, which differ in their
-      // coordinate systems.
-
-      if (!captured_pointerbindings_.ptrs().empty()) {
-        // |CapturePointerEventsHACK| clients like SysUI expect rotated, transformed coordinates as
-        // this bypasses normal input dispatch and so needs to be pretty much ready-to-use.
-        glm::vec2 capture_point =
-            RotatePointerCoordinates(transformed_point.x, transformed_point.y);
-
-        // Adjust pointer origin with simulated screen offset.
-        capture_point.x -=
-            (display_model_.display_info().width_in_px - display_metrics_.width_in_px()) / 2.f;
-        capture_point.y -=
-            (display_model_.display_info().height_in_px - display_metrics_.height_in_px()) / 2.f;
-
-        // Scale by device pixel density.
-        capture_point.x *= display_metrics_.x_scale_in_pp_per_px();
-        capture_point.y *= display_metrics_.y_scale_in_pp_per_px();
-
-        FX_VLOGS(2) << "Sending PointerCaptureHack event: " << capture_point.x << " "
-                    << capture_point.y;
-
-        for (auto& listener : captured_pointerbindings_.ptrs()) {
-          fuchsia::ui::input::PointerEvent clone;
-          fidl::Clone(pointer, &clone);
-          clone.x = capture_point.x;
-          clone.y = capture_point.y;
-          (*listener)->OnPointerEvent(std::move(clone));
         }
       }
 

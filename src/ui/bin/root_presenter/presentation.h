@@ -76,7 +76,9 @@ class Presentation : fuchsia::ui::policy::Presentation,
 
   // |fuchsia::ui::policy::Presentation|
   void CapturePointerEventsHACK(
-      fidl::InterfaceHandle<fuchsia::ui::policy::PointerCaptureListenerHACK> listener) override;
+      fidl::InterfaceHandle<fuchsia::ui::policy::PointerCaptureListenerHACK> listener) override {
+    FX_LOGS(ERROR) << "CapturePointerEventsHACK is obsolete.";
+  }
 
   // |fuchsia::accessibility::MagnificationHandler|
   // Sets the transform for screen magnification, applied after the camera projection.
@@ -168,9 +170,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
   std::map<uint32_t, CursorState> cursors_;
   std::map<uint32_t, std::pair<ui_input::InputDeviceImpl*, std::unique_ptr<ui_input::DeviceState>>>
       device_states_by_id_;
-
-  // A registry of listeners who want to be notified when pointer event happens.
-  fidl::InterfacePtrSet<fuchsia::ui::policy::PointerCaptureListenerHACK> captured_pointerbindings_;
 
   fxl::WeakPtrFactory<Presentation> weak_factory_;
 
