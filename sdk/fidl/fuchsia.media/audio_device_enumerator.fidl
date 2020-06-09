@@ -7,13 +7,15 @@ library fuchsia.media;
 using fuchsia.hardware.audio;
 using zx;
 
-const uint32 AudioGainInfoFlag_Mute = 0x01;
-const uint32 AudioGainInfoFlag_AgcSupported = 0x02;
-const uint32 AudioGainInfoFlag_AgcEnabled = 0x04;
+bits AudioGainInfoFlags : uint32 {
+    MUTE = 0x01;
+    AGC_SUPPORTED = 0x02;
+    AGC_ENABLED = 0x04;
+};
 
 struct AudioGainInfo {
     float32 gain_db;
-    uint32 flags;
+    AudioGainInfoFlags flags;
 };
 
 struct AudioDeviceInfo {
@@ -29,9 +31,11 @@ struct AudioDeviceInfo {
     bool is_default;
 };
 
-const uint32 SetAudioGainFlag_GainValid = 0x01;
-const uint32 SetAudioGainFlag_MuteValid = 0x02;
-const uint32 SetAudioGainFlag_AgcValid = 0x04;
+bits AudioGainValidFlags : uint32 {
+    GAIN_VALID = 0x01;
+    MUTE_VALID = 0x02;
+    AGC_VALID = 0x04;
+};
 
 [Discoverable]
 protocol AudioDeviceEnumerator {
@@ -81,7 +85,7 @@ protocol AudioDeviceEnumerator {
         -> (uint64 device_token, AudioGainInfo gain_info);
     SetDeviceGain(uint64 device_token,
                   AudioGainInfo gain_info,
-                  uint32 set_flags);
+                  AudioGainValidFlags valid_flags);
 
     /// Default Device
     ///

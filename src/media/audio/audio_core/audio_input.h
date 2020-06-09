@@ -37,7 +37,8 @@ class AudioInput : public AudioDevice {
       const AudioObject& dest) override;
 
   // |media::audio::AudioDevice|
-  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override;
+  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
+                       fuchsia::media::AudioGainValidFlags set_flags) override;
 
   zx_status_t Init() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 

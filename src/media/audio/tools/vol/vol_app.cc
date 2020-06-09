@@ -253,9 +253,11 @@ class VolApp {
     int level = PerceivedLevel::GainToLevel(info.gain_db, kLevelMax);
 
     namespace flag = ::fuchsia::media;
-    bool muted = (info.flags & flag::AudioGainInfoFlag_Mute) != 0;
-    bool can_agc = (info.flags & flag::AudioGainInfoFlag_AgcSupported) != 0;
-    bool agc = (info.flags & flag::AudioGainInfoFlag_AgcEnabled) != 0;
+    bool muted = (info.flags & flag::AudioGainInfoFlags::MUTE) == flag::AudioGainInfoFlags::MUTE;
+    bool can_agc = (info.flags & flag::AudioGainInfoFlags::AGC_SUPPORTED) ==
+                   flag::AudioGainInfoFlags::AGC_SUPPORTED;
+    bool agc = (info.flags & flag::AudioGainInfoFlags::AGC_ENABLED) ==
+               flag::AudioGainInfoFlags::AGC_ENABLED;
 
     os << std::string(level, '=') << "|" << std::string(kLevelMax - level, '-') << " :: ["
        << (muted ? " muted " : "unmuted") << "]" << (can_agc ? (agc ? "[agc]" : "[   ]") : "")
@@ -310,9 +312,12 @@ class VolApp {
       const auto& dev = map_entry.second;
       namespace flag = ::fuchsia::media;
 
-      bool muted = (dev.gain_info.flags & flag::AudioGainInfoFlag_Mute) != 0;
-      bool can_agc = (dev.gain_info.flags & flag::AudioGainInfoFlag_AgcSupported) != 0;
-      bool agc_enb = (dev.gain_info.flags & flag::AudioGainInfoFlag_AgcEnabled) != 0;
+      bool muted =
+          (dev.gain_info.flags & flag::AudioGainInfoFlags::MUTE) == flag::AudioGainInfoFlags::MUTE;
+      bool can_agc = (dev.gain_info.flags & flag::AudioGainInfoFlags::AGC_SUPPORTED) ==
+                     flag::AudioGainInfoFlags::AGC_SUPPORTED;
+      bool agc_enb = (dev.gain_info.flags & flag::AudioGainInfoFlags::AGC_ENABLED) ==
+                     flag::AudioGainInfoFlags::AGC_ENABLED;
 
       std::cout << "Audio " << (dev.is_input ? "Input" : "Output") << " (id " << dev.token_id << ")"
                 << std::endl;
@@ -347,7 +352,7 @@ class VolApp {
                 << std::endl;
     }
 
-    audio_->SetDeviceGain(control_token_, cmd, fuchsia::media::SetAudioGainFlag_GainValid);
+    audio_->SetDeviceGain(control_token_, cmd, fuchsia::media::AudioGainValidFlags::GAIN_VALID);
   }
 
   void SetDeviceMute(BoolAction action) {
@@ -363,7 +368,7 @@ class VolApp {
     const auto& dev_state = devices_[control_token_];
     AudioGainInfo cmd = dev_state.gain_info;
 
-    constexpr uint32_t flag = fuchsia::media::AudioGainInfoFlag_Mute;
+    constexpr fuchsia::media::AudioGainInfoFlags flag = fuchsia::media::AudioGainInfoFlags::MUTE;
     // clang-format off
     switch (action) {
       case BoolAction::kTrue: cmd.flags |= flag; break;
@@ -374,11 +379,11 @@ class VolApp {
 
     if (!interactive()) {
       std::cout << "Setting audio " << (dev_state.is_input ? "input" : "output") << " \""
-                << dev_state.name << "\" mute to " << ((cmd.flags & flag) ? "on" : "off") << "."
-                << std::endl;
+                << dev_state.name << "\" mute to " << (((cmd.flags & flag) == flag) ? "on" : "off")
+                << "." << std::endl;
     }
 
-    audio_->SetDeviceGain(control_token_, cmd, fuchsia::media::SetAudioGainFlag_MuteValid);
+    audio_->SetDeviceGain(control_token_, cmd, fuchsia::media::AudioGainValidFlags::MUTE_VALID);
   }
 
   void SetDeviceAgc(BoolAction action) {
@@ -394,7 +399,8 @@ class VolApp {
     const auto& dev_state = devices_[control_token_];
     AudioGainInfo cmd = dev_state.gain_info;
 
-    if (!(cmd.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported)) {
+    if ((cmd.flags & fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED) !=
+        fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED) {
       if (!interactive()) {
         std::cout << "Audio " << (dev_state.is_input ? "input" : "output") << " \""
                   << dev_state.name << "\" does not support AGC." << std::endl;
@@ -402,7 +408,8 @@ class VolApp {
       return;
     }
 
-    constexpr uint32_t flag = fuchsia::media::AudioGainInfoFlag_AgcEnabled;
+    constexpr fuchsia::media::AudioGainInfoFlags flag =
+        fuchsia::media::AudioGainInfoFlags::AGC_ENABLED;
     // clang-format off
     switch (action) {
       case BoolAction::kTrue: cmd.flags |= flag; break;
@@ -413,11 +420,11 @@ class VolApp {
 
     if (!interactive()) {
       std::cout << "Setting audio " << (dev_state.is_input ? "input" : "output") << " \""
-                << dev_state.name << "\" AGC to " << ((cmd.flags & flag) ? "on" : "off") << "."
-                << std::endl;
+                << dev_state.name << "\" AGC to " << (((cmd.flags & flag) == flag) ? "on" : "off")
+                << "." << std::endl;
     }
 
-    audio_->SetDeviceGain(control_token_, cmd, fuchsia::media::SetAudioGainFlag_AgcValid);
+    audio_->SetDeviceGain(control_token_, cmd, fuchsia::media::AudioGainValidFlags::AGC_VALID);
   }
 
   void ShowSelectedDevice() {

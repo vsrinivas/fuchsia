@@ -113,7 +113,8 @@ class TestAudioOutput : public AudioOutput {
     }
   }
   // |AudioDevice|
-  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override {}
+  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
+                       fuchsia::media::AudioGainValidFlags set_flags) override {}
   void OnWakeup() {}
 
  private:

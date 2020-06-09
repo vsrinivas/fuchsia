@@ -236,7 +236,7 @@ void AudioDeviceManager::GetDeviceGain(uint64_t device_token, GetDeviceGainCallb
 
 void AudioDeviceManager::SetDeviceGain(uint64_t device_token,
                                        fuchsia::media::AudioGainInfo gain_info,
-                                       uint32_t set_flags) {
+                                       fuchsia::media::AudioGainValidFlags set_flags) {
   TRACE_DURATION("audio", "AudioDeviceManager::SetDeviceGain");
   auto it = devices_.find(device_token);
   if (it == devices_.end()) {
@@ -246,7 +246,9 @@ void AudioDeviceManager::SetDeviceGain(uint64_t device_token,
 
   // SetGainInfo clamps out-of-range values (e.g. +infinity) into the device-
   // allowed gain range. NAN is undefined (signless); handle it here and exit.
-  if ((set_flags & fuchsia::media::SetAudioGainFlag_GainValid) && isnan(gain_info.gain_db)) {
+  if (((set_flags & fuchsia::media::AudioGainValidFlags::GAIN_VALID) ==
+       fuchsia::media::AudioGainValidFlags::GAIN_VALID) &&
+      isnan(gain_info.gain_db)) {
     FX_LOGS(WARNING) << "Invalid device gain " << gain_info.gain_db << " dB -- making no change";
     return;
   }

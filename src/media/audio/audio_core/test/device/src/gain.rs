@@ -22,14 +22,14 @@ async fn on_device_gain_changed_ignores_invalid_tokens_in_sets() -> Result<()> {
 
     enumerator.set_device_gain(
         NULL_TOKEN,
-        &mut AudioGainInfo { gain_db: -30.0, flags: 0 },
-        /*flags=*/ 0,
+        &mut AudioGainInfo { gain_db: -30.0, flags: AudioGainInfoFlags::empty() },
+        /*flags=*/ AudioGainValidFlags::empty(),
     )?;
 
     enumerator.set_device_gain(
         INVALID_TOKEN,
-        &mut AudioGainInfo { gain_db: -30.0, flags: 0 },
-        /*flags=*/ 0,
+        &mut AudioGainInfo { gain_db: -30.0, flags: AudioGainInfoFlags::empty() },
+        /*flags=*/ AudioGainValidFlags::empty(),
     )?;
 
     // Synchronize with enumerator.
@@ -59,15 +59,15 @@ async fn set_input_device_gain() -> Result<()> {
             });
         assets.enumerator.set_device_gain(
             assets.token,
-            &mut AudioGainInfo { gain_db: -30.0, flags: 0 },
-            SET_AUDIO_GAIN_FLAG_GAIN_VALID | SET_AUDIO_GAIN_FLAG_MUTE_VALID,
+            &mut AudioGainInfo { gain_db: -30.0, flags: AudioGainInfoFlags::empty() },
+            AudioGainValidFlags::GainValid | AudioGainValidFlags::MuteValid,
         )?;
 
         let (changed_token, gain_info) =
             gain_change_events.try_next().await?.expect("Waiting for a gain info event");
 
         assert_eq!(changed_token, assets.token);
-        assert_eq!(gain_info.flags, 0);
+        assert_eq!(gain_info.flags, AudioGainInfoFlags::empty());
         assert_near!(gain_info.gain_db, -30.0, std::f32::EPSILON);
 
         Ok(())
@@ -85,15 +85,15 @@ async fn set_output_device_gain() -> Result<()> {
             });
         assets.enumerator.set_device_gain(
             assets.token,
-            &mut AudioGainInfo { gain_db: -30.0, flags: 0 },
-            SET_AUDIO_GAIN_FLAG_GAIN_VALID | SET_AUDIO_GAIN_FLAG_MUTE_VALID,
+            &mut AudioGainInfo { gain_db: -30.0, flags: AudioGainInfoFlags::empty() },
+            AudioGainValidFlags::GainValid | AudioGainValidFlags::MuteValid,
         )?;
 
         let (changed_token, gain_info) =
             gain_change_events.try_next().await?.expect("Waiting for a gain info event");
 
         assert_eq!(changed_token, assets.token);
-        assert_eq!(gain_info.flags, 0);
+        assert_eq!(gain_info.flags, AudioGainInfoFlags::empty());
         assert_near!(gain_info.gain_db, -30.0, std::f32::EPSILON);
 
         Ok(())

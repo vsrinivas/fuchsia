@@ -80,7 +80,8 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // wakes up the device in the event of a meaningful change in gain settings.
   //
   // Only called by AudioDeviceManager, and only after the device is activated.
-  void SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_t set_flags);
+  void SetGainInfo(const fuchsia::media::AudioGainInfo& info,
+                   fuchsia::media::AudioGainValidFlags set_flags);
 
   // Device info used during device enumeration and add-notifications.
   fuchsia::media::AudioDeviceInfo GetDeviceInfo() const;
@@ -127,7 +128,8 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // Modify the contents of a user request to change the gain state to reflect
   // the actual gain that we are going to end up setting.  This may differ from
   // the requested gain due to hardware limitations or general policy.
-  virtual void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) = 0;
+  virtual void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
+                               fuchsia::media::AudioGainValidFlags set_flags) = 0;
 
   //////////////////////////////////////////////////////////////////////////////
   //

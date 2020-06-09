@@ -352,8 +352,8 @@ TEST_F(DriverOutputTest, WriteSilenceToRingWhenMuted) {
 
   // Mute the output.
   fuchsia::media::AudioGainInfo gain_info;
-  gain_info.flags = fuchsia::media::AudioGainInfoFlag_Mute;
-  output_->SetGainInfo(gain_info, fuchsia::media::SetAudioGainFlag_MuteValid);
+  gain_info.flags = fuchsia::media::AudioGainInfoFlags::MUTE;
+  output_->SetGainInfo(gain_info, fuchsia::media::AudioGainValidFlags::MUTE_VALID);
   RunLoopUntilIdle();
 
   // Create an add a renderer. We enqueue some audio in this renderer, however we'll expect the
@@ -646,8 +646,8 @@ TEST_F(DriverV2OutputTest, WriteSilenceToRingWhenMuted) {
 
   // Mute the output.
   fuchsia::media::AudioGainInfo gain_info;
-  gain_info.flags = fuchsia::media::AudioGainInfoFlag_Mute;
-  output_->SetGainInfo(gain_info, fuchsia::media::SetAudioGainFlag_MuteValid);
+  gain_info.flags = fuchsia::media::AudioGainInfoFlags::MUTE;
+  output_->SetGainInfo(gain_info, fuchsia::media::AudioGainValidFlags::MUTE_VALID);
   RunLoopUntilIdle();
 
   // Create an add a renderer. We enqueue some audio in this renderer, however we'll expect the

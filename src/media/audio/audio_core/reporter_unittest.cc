@@ -229,11 +229,11 @@ TEST_F(ReporterTest, SettingDeviceGainInfo) {
 
   fuchsia::media::AudioGainInfo gain_info_a{
       .gain_db = -1.0f,
-      .flags = fuchsia::media::AudioGainInfoFlag_Mute |
-               fuchsia::media::AudioGainInfoFlag_AgcSupported |
-               fuchsia::media::AudioGainInfoFlag_AgcEnabled};
+      .flags = fuchsia::media::AudioGainInfoFlags::MUTE |
+               fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED |
+               fuchsia::media::AudioGainInfoFlags::AGC_ENABLED};
 
-  under_test_.SettingDeviceGainInfo(output_device, gain_info_a, 0);
+  under_test_.SettingDeviceGainInfo(output_device, gain_info_a, {});
 
   // Expect initial device metric values.
   EXPECT_THAT(GetHierarchy(),
@@ -246,7 +246,7 @@ TEST_F(ReporterTest, SettingDeviceGainInfo) {
                           UintIs("agc enabled", 0), UintIs("underflows", 0)))))))))));
 
   under_test_.SettingDeviceGainInfo(output_device, gain_info_a,
-                                    fuchsia::media::SetAudioGainFlag_GainValid);
+                                    fuchsia::media::AudioGainValidFlags::GAIN_VALID);
 
   // Expect a gain change.
   EXPECT_THAT(GetHierarchy(),
@@ -259,7 +259,7 @@ TEST_F(ReporterTest, SettingDeviceGainInfo) {
                           UintIs("agc enabled", 0), UintIs("underflows", 0)))))))))));
 
   under_test_.SettingDeviceGainInfo(output_device, gain_info_a,
-                                    fuchsia::media::SetAudioGainFlag_MuteValid);
+                                    fuchsia::media::AudioGainValidFlags::MUTE_VALID);
 
   // Expect a mute change.
   EXPECT_THAT(GetHierarchy(),
@@ -272,7 +272,7 @@ TEST_F(ReporterTest, SettingDeviceGainInfo) {
                           UintIs("agc enabled", 0), UintIs("underflows", 0)))))))))));
 
   under_test_.SettingDeviceGainInfo(output_device, gain_info_a,
-                                    fuchsia::media::SetAudioGainFlag_AgcValid);
+                                    fuchsia::media::AudioGainValidFlags::AGC_VALID);
 
   // Expect an agc change.
   EXPECT_THAT(GetHierarchy(),
@@ -284,11 +284,11 @@ TEST_F(ReporterTest, SettingDeviceGainInfo) {
                           DoubleIs("gain db", -1.0), UintIs("muted", 1), UintIs("agc supported", 1),
                           UintIs("agc enabled", 1), UintIs("underflows", 0)))))))))));
 
-  fuchsia::media::AudioGainInfo gain_info_b{.gain_db = -2.0f, .flags = 0};
+  fuchsia::media::AudioGainInfo gain_info_b{.gain_db = -2.0f, .flags = {}};
   under_test_.SettingDeviceGainInfo(output_device, gain_info_b,
-                                    fuchsia::media::SetAudioGainFlag_GainValid |
-                                        fuchsia::media::SetAudioGainFlag_MuteValid |
-                                        fuchsia::media::SetAudioGainFlag_AgcValid);
+                                    fuchsia::media::AudioGainValidFlags::GAIN_VALID |
+                                        fuchsia::media::AudioGainValidFlags::MUTE_VALID |
+                                        fuchsia::media::AudioGainValidFlags::AGC_VALID);
 
   // Expect all changes.
   EXPECT_THAT(GetHierarchy(),

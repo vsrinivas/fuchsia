@@ -151,12 +151,14 @@ VirtualOutput<SampleFormat>* HermeticAudioTest::CreateOutput(
   auto& info = devices_[id].info;
   auto is_gain_unity = [info]() {
     return info->gain_info.gain_db == 0.0f &&
-           !(info->gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
+           ((info->gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE) !=
+            fuchsia::media::AudioGainInfoFlags::MUTE);
   };
   if (!is_gain_unity()) {
-    fuchsia::media::AudioGainInfo unity = {.gain_db = 0.0f, .flags = 0};
-    uint32_t set_flags =
-        fuchsia::media::SetAudioGainFlag_GainValid | fuchsia::media::SetAudioGainFlag_MuteValid;
+    fuchsia::media::AudioGainInfo unity = {.gain_db = 0.0f, .flags = {}};
+    fuchsia::media::AudioGainValidFlags set_flags =
+        fuchsia::media::AudioGainValidFlags::GAIN_VALID |
+        fuchsia::media::AudioGainValidFlags::MUTE_VALID;
     audio_dev_enum_->SetDeviceGain(info->token_id, unity, set_flags);
     RunLoopUntil(is_gain_unity);
   }
@@ -281,8 +283,10 @@ void HermeticAudioTest::WatchForDeviceArrivals() {
     devices_[id].info->gain_info = gain_info;
     AUD_VLOG(TRACE) << "Our output device (" << id << ") changed gain: " << gain_info.gain_db
                     << " dB, "
-                    << ((gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute) ? "MUTE"
-                                                                                   : "UNMUTE");
+                    << (((gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE) ==
+                         fuchsia::media::AudioGainInfoFlags::MUTE)
+                            ? "MUTE"
+                            : "UNMUTE");
   };
 
   audio_dev_enum_.events().OnDefaultDeviceChanged = [this](uint64_t old_default_token,

@@ -111,25 +111,36 @@ void Reporter::ActivatingDevice(const AudioDevice& device) {
 
 void Reporter::SettingDeviceGainInfo(const AudioDevice& device,
                                      const fuchsia::media::AudioGainInfo& gain_info,
-                                     uint32_t set_flags) {
+                                     fuchsia::media::AudioGainValidFlags set_flags) {
   Device* d = device.is_output() ? FindOutput(device) : FindInput(device);
   if (d == nullptr) {
     FX_LOGS(ERROR) << kDeviceNotFound;
     return;
   }
 
-  if (set_flags & fuchsia::media::SetAudioGainFlag_GainValid) {
+  if ((set_flags & fuchsia::media::AudioGainValidFlags::GAIN_VALID) ==
+      fuchsia::media::AudioGainValidFlags::GAIN_VALID) {
     d->gain_db_.Set(gain_info.gain_db);
   }
 
-  if (set_flags & fuchsia::media::SetAudioGainFlag_MuteValid) {
-    d->muted_.Set((gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute) ? 1 : 0);
+  if ((set_flags & fuchsia::media::AudioGainValidFlags::MUTE_VALID) ==
+      fuchsia::media::AudioGainValidFlags::MUTE_VALID) {
+    d->muted_.Set(((gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE) ==
+                   fuchsia::media::AudioGainInfoFlags::MUTE)
+                      ? 1
+                      : 0);
   }
 
-  if (set_flags & fuchsia::media::SetAudioGainFlag_AgcValid) {
-    d->agc_supported_.Set((gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported) ? 1
-                                                                                             : 0);
-    d->agc_enabled_.Set((gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled) ? 1 : 0);
+  if ((set_flags & fuchsia::media::AudioGainValidFlags::AGC_VALID) ==
+      fuchsia::media::AudioGainValidFlags::AGC_VALID) {
+    d->agc_supported_.Set(((gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED) ==
+                           fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED)
+                              ? 1
+                              : 0);
+    d->agc_enabled_.Set(((gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_ENABLED) ==
+                         fuchsia::media::AudioGainInfoFlags::AGC_ENABLED)
+                            ? 1
+                            : 0);
   }
 }
 

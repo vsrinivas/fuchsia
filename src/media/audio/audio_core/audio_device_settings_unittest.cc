@@ -37,8 +37,10 @@ TEST_F(AudioDeviceSettingsTest, AgcFalseWhenNotSupported) {
 
   auto gain_info = settings.GetGainInfo();
 
-  EXPECT_FALSE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
-  EXPECT_FALSE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
+  EXPECT_NE(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_ENABLED,
+            fuchsia::media::AudioGainInfoFlags::AGC_ENABLED);
+  EXPECT_NE(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED,
+            fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED);
 }
 
 // If can_mute is false, still allow the device to be muted. In cases without the hardware mute
@@ -52,7 +54,8 @@ TEST_F(AudioDeviceSettingsTest, MuteTrueWhenNotSupported) {
 
   auto gain_info = settings.GetGainInfo();
 
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE,
+            fuchsia::media::AudioGainInfoFlags::MUTE);
 }
 
 TEST_F(AudioDeviceSettingsTest, SetGainInfoDoesNothingWithNoFlags) {
@@ -67,22 +70,28 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoDoesNothingWithNoFlags) {
 
   // Verify initial state.
   auto gain_info = settings.GetGainInfo();
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE,
+            fuchsia::media::AudioGainInfoFlags::MUTE);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_ENABLED,
+            fuchsia::media::AudioGainInfoFlags::AGC_ENABLED);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED,
+            fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED);
   EXPECT_EQ(5.0f, gain_info.gain_db);
 
   // Update gain state
   fuchsia::media::AudioGainInfo new_gain_info;
   new_gain_info.gain_db = 10.0;
-  new_gain_info.flags = 0;
-  EXPECT_FALSE(settings.SetGainInfo(new_gain_info, 0 /* flags */));
+  new_gain_info.flags = {};
+  EXPECT_FALSE(settings.SetGainInfo(new_gain_info, {} /* flags */));
 
   // State should match initial state.
   gain_info = settings.GetGainInfo();
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE,
+            fuchsia::media::AudioGainInfoFlags::MUTE);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_ENABLED,
+            fuchsia::media::AudioGainInfoFlags::AGC_ENABLED);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED,
+            fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED);
   EXPECT_EQ(5.0f, gain_info.gain_db);
 }
 
@@ -98,22 +107,28 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyGainDb) {
 
   // Verify initial state.
   auto gain_info = settings.GetGainInfo();
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE,
+            fuchsia::media::AudioGainInfoFlags::MUTE);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_ENABLED,
+            fuchsia::media::AudioGainInfoFlags::AGC_ENABLED);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED,
+            fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED);
   EXPECT_EQ(5.0f, gain_info.gain_db);
 
   // Update gain state
   fuchsia::media::AudioGainInfo new_gain_info;
   new_gain_info.gain_db = 10.0;
-  new_gain_info.flags = 0;
-  EXPECT_TRUE(settings.SetGainInfo(new_gain_info, fuchsia::media::SetAudioGainFlag_GainValid));
+  new_gain_info.flags = {};
+  EXPECT_TRUE(settings.SetGainInfo(new_gain_info, fuchsia::media::AudioGainValidFlags::GAIN_VALID));
 
   // Only gain updated.
   gain_info = settings.GetGainInfo();
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE,
+            fuchsia::media::AudioGainInfoFlags::MUTE);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_ENABLED,
+            fuchsia::media::AudioGainInfoFlags::AGC_ENABLED);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED,
+            fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED);
   EXPECT_EQ(10.0f, gain_info.gain_db);
 }
 
@@ -129,22 +144,28 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyMute) {
 
   // Verify initial state.
   auto gain_info = settings.GetGainInfo();
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE,
+            fuchsia::media::AudioGainInfoFlags::MUTE);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_ENABLED,
+            fuchsia::media::AudioGainInfoFlags::AGC_ENABLED);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED,
+            fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED);
   EXPECT_EQ(5.0f, gain_info.gain_db);
 
   // Update gain state
   fuchsia::media::AudioGainInfo new_gain_info;
   new_gain_info.gain_db = 10.0;
-  new_gain_info.flags = 0;
-  EXPECT_TRUE(settings.SetGainInfo(new_gain_info, fuchsia::media::SetAudioGainFlag_MuteValid));
+  new_gain_info.flags = {};
+  EXPECT_TRUE(settings.SetGainInfo(new_gain_info, fuchsia::media::AudioGainValidFlags::MUTE_VALID));
 
   // Only gain updated.
   gain_info = settings.GetGainInfo();
-  EXPECT_FALSE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
+  EXPECT_NE(gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE,
+            fuchsia::media::AudioGainInfoFlags::MUTE);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_ENABLED,
+            fuchsia::media::AudioGainInfoFlags::AGC_ENABLED);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED,
+            fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED);
   EXPECT_EQ(5.0f, gain_info.gain_db);
 }
 
@@ -160,23 +181,29 @@ TEST_F(AudioDeviceSettingsTest, SetGainInfoOnlyAgc) {
 
   // Verify initial state.
   auto gain_info = settings.GetGainInfo();
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE,
+            fuchsia::media::AudioGainInfoFlags::MUTE);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_ENABLED,
+            fuchsia::media::AudioGainInfoFlags::AGC_ENABLED);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED,
+            fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED);
   EXPECT_EQ(5.0f, gain_info.gain_db);
 
   // Update gain state
   fuchsia::media::AudioGainInfo new_gain_info;
   new_gain_info.gain_db = 10.0;
-  new_gain_info.flags = 0;
-  EXPECT_TRUE(settings.SetGainInfo(new_gain_info, fuchsia::media::SetAudioGainFlag_AgcValid));
+  new_gain_info.flags = {};
+  EXPECT_TRUE(settings.SetGainInfo(new_gain_info, fuchsia::media::AudioGainValidFlags::AGC_VALID));
 
   // Only gain updated.
   gain_info = settings.GetGainInfo();
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
-  EXPECT_FALSE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::MUTE,
+            fuchsia::media::AudioGainInfoFlags::MUTE);
+  EXPECT_NE(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_ENABLED,
+            fuchsia::media::AudioGainInfoFlags::AGC_ENABLED);
   // Note that we expect AgcSupported to remain unchanged.
-  EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED,
+            fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED);
   EXPECT_EQ(5.0f, gain_info.gain_db);
 }
 

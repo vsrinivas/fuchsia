@@ -288,7 +288,8 @@ void DriverOutput::FillRingSpanWithSilence(const AudioOutput::FrameSpan& span) {
   });
 }
 
-void DriverOutput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) {
+void DriverOutput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
+                                   fuchsia::media::AudioGainValidFlags set_flags) {
   TRACE_DURATION("audio", "DriverOutput::ApplyGainLimits");
   // See the comment at the start of StartMixJob.  The actual limits we set here
   // are going to eventually depend on what our HW gain control capabilities
@@ -301,7 +302,7 @@ void DriverOutput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, u
   }
 
   // Audio outputs should never support AGC
-  in_out_info->flags &= ~(fuchsia::media::AudioGainInfoFlag_AgcEnabled);
+  in_out_info->flags &= ~(fuchsia::media::AudioGainInfoFlags::AGC_ENABLED);
 }
 
 void DriverOutput::ScheduleNextLowWaterWakeup() {

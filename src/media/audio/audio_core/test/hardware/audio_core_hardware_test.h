@@ -27,9 +27,10 @@ class AudioCoreHardwareTest : public TestFixture {
   static constexpr fuchsia::media::AudioCaptureUsage kUsage =
       fuchsia::media::AudioCaptureUsage::FOREGROUND;
 
-  static constexpr uint32_t kSetGainFlags =
-      fuchsia::media::SetAudioGainFlag_GainValid & fuchsia::media::SetAudioGainFlag_MuteValid;
-  static constexpr fuchsia::media::AudioGainInfo kDeviceGain{.gain_db = kDeviceGainDb, .flags = 0};
+  static constexpr fuchsia::media::AudioGainValidFlags kSetGainFlags =
+      fuchsia::media::AudioGainValidFlags::GAIN_VALID &
+      fuchsia::media::AudioGainValidFlags::MUTE_VALID;
+  static constexpr fuchsia::media::AudioGainInfo kDeviceGain{.gain_db = kDeviceGainDb, .flags = {}};
 
   // We'll use just one payload buffer here.
   static constexpr uint32_t kPayloadBufferId = 0;

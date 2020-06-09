@@ -76,7 +76,8 @@ class FakeAudioOutput : public AudioOutput {
                   LinkMatrix* link_matrix)
       : AudioOutput(threading_model, device_registry, link_matrix) {}
 
-  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override {}
+  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
+                       fuchsia::media::AudioGainValidFlags set_flags) override {}
   void OnWakeup() override {}
 
   std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time process_start) override {

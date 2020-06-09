@@ -91,7 +91,8 @@ uint64_t AudioDevice::token() const {
 }
 
 // Change a device's gain, propagating the change to the affected links.
-void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_t set_flags) {
+void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info,
+                              fuchsia::media::AudioGainValidFlags set_flags) {
   TRACE_DURATION("audio", "AudioDevice::SetGainInfo");
   // Limit the request to what the hardware can support
   fuchsia::media::AudioGainInfo limited = info;
@@ -101,7 +102,8 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
   if (is_output()) {
     link_matrix_.ForEachSourceLink(*this, [&limited](LinkMatrix::LinkHandle link) {
       if (link.object->type() == AudioObject::Type::AudioRenderer) {
-        const auto muted = limited.flags & fuchsia::media::AudioGainInfoFlag_Mute;
+        const auto muted = (limited.flags & fuchsia::media::AudioGainInfoFlags::MUTE) ==
+                           fuchsia::media::AudioGainInfoFlags::MUTE;
         if (muted) {
           FX_LOGS(WARNING) << "Destination device is muted";
         } else {
@@ -118,7 +120,8 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
     FX_DCHECK(is_input());
     link_matrix_.ForEachDestLink(*this, [&limited](LinkMatrix::LinkHandle link) {
       if (link.object->type() == AudioObject::Type::AudioCapturer) {
-        const auto muted = limited.flags & fuchsia::media::AudioGainInfoFlag_Mute;
+        const auto muted = (limited.flags & fuchsia::media::AudioGainInfoFlags::MUTE) ==
+                           fuchsia::media::AudioGainInfoFlags::MUTE;
         if (muted) {
           FX_LOGS(WARNING) << "Source device is muted";
         } else {

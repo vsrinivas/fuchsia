@@ -52,7 +52,8 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings> {
   // SetGainInfo
   // Update the internal gain state using the supplied FIDL gain info structure. Return true if
   // a meaningful change occurred (this warrants waking up the AudioDevice), else return false.
-  bool SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_t set_flags)
+  bool SetGainInfo(const fuchsia::media::AudioGainInfo& info,
+                   fuchsia::media::AudioGainValidFlags set_flags)
       FXL_LOCKS_EXCLUDED(settings_lock_);
 
   // GetGainInfo

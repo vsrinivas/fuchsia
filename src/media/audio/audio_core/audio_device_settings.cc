@@ -30,25 +30,31 @@ AudioDeviceSettings::AudioDeviceSettings(const AudioDeviceSettings& o)
 }
 
 bool AudioDeviceSettings::SetGainInfo(const fuchsia::media::AudioGainInfo& req,
-                                      uint32_t set_flags) {
+                                      fuchsia::media::AudioGainValidFlags set_flags) {
   TRACE_DURATION("audio", "AudioDeviceSettings::SetGainInfo");
   std::lock_guard<std::mutex> lock(settings_lock_);
   audio_set_gain_flags_t dirtied = gain_state_dirty_flags_;
 
-  if ((set_flags & fuchsia::media::SetAudioGainFlag_GainValid) &&
+  if (((set_flags & fuchsia::media::AudioGainValidFlags::GAIN_VALID) ==
+       fuchsia::media::AudioGainValidFlags::GAIN_VALID) &&
       (gain_state_.gain_db != req.gain_db)) {
     gain_state_.gain_db = req.gain_db;
     dirtied = static_cast<audio_set_gain_flags_t>(dirtied | AUDIO_SGF_GAIN_VALID);
   }
 
-  bool mute_tgt = (req.flags & fuchsia::media::AudioGainInfoFlag_Mute) != 0;
-  if ((set_flags & fuchsia::media::SetAudioGainFlag_MuteValid) && (gain_state_.muted != mute_tgt)) {
+  bool mute_tgt = (req.flags & fuchsia::media::AudioGainInfoFlags::MUTE) ==
+                  fuchsia::media::AudioGainInfoFlags::MUTE;
+  if (((set_flags & fuchsia::media::AudioGainValidFlags::MUTE_VALID) ==
+       fuchsia::media::AudioGainValidFlags::MUTE_VALID) &&
+      (gain_state_.muted != mute_tgt)) {
     gain_state_.muted = mute_tgt;
     dirtied = static_cast<audio_set_gain_flags_t>(dirtied | AUDIO_SGF_MUTE_VALID);
   }
 
-  bool agc_tgt = (req.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled) != 0;
-  if ((set_flags & fuchsia::media::SetAudioGainFlag_AgcValid) &&
+  bool agc_tgt = (req.flags & fuchsia::media::AudioGainInfoFlags::AGC_ENABLED) ==
+                 fuchsia::media::AudioGainInfoFlags::AGC_ENABLED;
+  if (((set_flags & fuchsia::media::AudioGainValidFlags::AGC_VALID) ==
+       fuchsia::media::AudioGainValidFlags::AGC_VALID) &&
       (gain_state_.agc_enabled != agc_tgt)) {
     gain_state_.agc_enabled = agc_tgt;
     dirtied = static_cast<audio_set_gain_flags_t>(dirtied | AUDIO_SGF_AGC_VALID);
@@ -73,16 +79,16 @@ fuchsia::media::AudioGainInfo AudioDeviceSettings::GetGainInfo() const {
   // for read which should always succeed without contention.
   std::lock_guard<std::mutex> lock(settings_lock_);
 
-  uint32_t flags = 0;
+  fuchsia::media::AudioGainInfoFlags flags = {};
 
   if (gain_state_.muted) {
-    flags |= fuchsia::media::AudioGainInfoFlag_Mute;
+    flags |= fuchsia::media::AudioGainInfoFlags::MUTE;
   }
 
   if (can_agc_) {
-    flags |= fuchsia::media::AudioGainInfoFlag_AgcSupported;
+    flags |= fuchsia::media::AudioGainInfoFlags::AGC_SUPPORTED;
     if (gain_state_.agc_enabled) {
-      flags |= fuchsia::media::AudioGainInfoFlag_AgcEnabled;
+      flags |= fuchsia::media::AudioGainInfoFlags::AGC_ENABLED;
     }
   }
 

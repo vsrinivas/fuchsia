@@ -73,7 +73,8 @@ class Reporter {
   void IgnoringDevice(const AudioDevice& device);
   void ActivatingDevice(const AudioDevice& device);
   void SettingDeviceGainInfo(const AudioDevice& device,
-                             const fuchsia::media::AudioGainInfo& gain_info, uint32_t set_flags);
+                             const fuchsia::media::AudioGainInfo& gain_info,
+                             fuchsia::media::AudioGainValidFlags set_flags);
 
   // Renderers.
   void AddingRenderer(const fuchsia::media::AudioRenderer& renderer);

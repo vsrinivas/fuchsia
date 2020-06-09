@@ -25,7 +25,8 @@ class FakeAudioDevice : public AudioDevice {
                     std::make_unique<AudioDriverV1>(this)) {}
 
   // Needed because AudioDevice is an abstract class
-  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) {}
+  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
+                       fuchsia::media::AudioGainValidFlags set_flags) {}
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override {}
 };
 

@@ -83,7 +83,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   void GetDevices(GetDevicesCallback cbk) final;
   void GetDeviceGain(uint64_t device_token, GetDeviceGainCallback cbk) final;
   void SetDeviceGain(uint64_t device_token, fuchsia::media::AudioGainInfo gain_info,
-                     uint32_t set_flags) final;
+                     fuchsia::media::AudioGainValidFlags) final;
   void GetDefaultInputDevice(GetDefaultInputDeviceCallback cbk) final;
   void GetDefaultOutputDevice(GetDefaultOutputDeviceCallback cbk) final;
   void AddDeviceByChannel(::zx::channel device_channel, std::string device_name,
