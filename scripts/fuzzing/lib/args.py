@@ -15,7 +15,6 @@ class ArgParser:
     def __init__(self, description):
         """ Create an argument parser for the described command."""
         self._description = description
-        self._label_allowed = False
         self._name_required = True
         self._reset()
 
@@ -24,17 +23,9 @@ class ArgParser:
         self._name_required = required
         self._reset()
 
-    def allow_label(self, allowed):
-        """ Sets whether the command allows a 'label' argument."""
-        self._label_allowed = allowed
-        self._reset()
-
     def _reset(self):
         """ Rebuilds the underlying ArgumentParser. """
         self._parser = argparse.ArgumentParser(description=self._description)
-
-        # Optional positional label implies a name is required.
-        assert not self._label_allowed or self._name_required
 
         # Positional arguments
         name_help = (
@@ -45,17 +36,6 @@ class ArgParser:
             self._parser.add_argument('name', help=name_help)
         else:
             self._parser.add_argument('name', nargs='?', help=name_help)
-        if self._label_allowed:
-            self._parser.add_argument(
-                'label',
-                nargs='?',
-                default='latest',
-                help='Installs the labeled version from CIPD. "label" may be ' +
-                'either a "ref" or a key:value "tag"  as described in ' +
-                '`cipd help`. By default, corpora are uploaded with the ' +
-                '"latest" ref and a tag of "integration:<git-revision>" ' +
-                'corresponding to current revision of the //integration ' +
-                'repository.')
 
         # Flags
         self._parser.add_argument(
@@ -67,16 +47,7 @@ class ArgParser:
             action='store_true',
             help='If true, disable exception handling in libFuzzer.')
         self._parser.add_argument(
-            '--no-cipd',
-            action='store_true',
-            help='Skip steps which involve transferring packages to or from CIPD'
-        )
-        self._parser.add_argument(
             '--output', help='Path under which to store results.')
-        self._parser.add_argument(
-            '--staging',
-            help='Host directory to use for un/packing corpus bundles. Defaults '
-            + 'to a temporary directory.')
         self._parser.add_argument(
             '--monitor', action='store_true', help=argparse.SUPPRESS)
 

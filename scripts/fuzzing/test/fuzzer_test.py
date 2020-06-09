@@ -306,33 +306,6 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
             device, 'run', fuzzer.url(), '-artifact_prefix=data/',
             '-some-lf-arg=value', *artifacts)
 
-    def test_merge(self):
-        device = FakeDevice()
-        parser = ArgParser('test_merge')
-        args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse(
-            [
-                'package1/target2',
-                '-some-lf-arg=value',
-            ])
-        fuzzer = Fuzzer.from_args(device, args)
-        fuzzer.libfuzzer_opts = libfuzzer_opts
-        fuzzer.libfuzzer_args = libfuzzer_args
-        fuzzer.subprocess_args = subprocess_args
-
-        # No-op if corpus is empty
-        self.assertEqual(fuzzer.merge(), (0, 0))
-
-        device.add_ssh_response(
-            device._ls_cmd(fuzzer.data_path('corpus')), [
-                '-rw-r--r-- 1 0 0 1796 Mar 19 17:25 feac37187e77ff60222325cf2829e2273e04f2ea',
-                '-rw-r--r-- 1 0 0  124 Mar 18 22:02 ff415bddb30e9904bccbbd21fb5d4aa9bae9e5a5',
-            ])
-        self.assertNotEqual(fuzzer.merge(), (0, 0))
-        self.assertSsh(
-            device, 'run', fuzzer.url(), '-artifact_prefix=data/', '-merge=1',
-            '-merge_control_file=data/.mergefile', '-some-lf-arg=value',
-            'data/corpus/', 'data/corpus.prev/')
-
 
 if __name__ == '__main__':
     unittest.main()

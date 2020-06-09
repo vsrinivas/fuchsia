@@ -19,21 +19,14 @@ class TestArgParser(unittest.TestCase):
             args,
             debug=False,
             foreground=False,
-            label=None,
             monitor=False,
             name=None,
-            no_cipd=False,
-            output=None,
-            staging=None):
+            output=None):
         self.assertEqual(args.debug, debug)
         self.assertEqual(args.foreground, foreground)
-        if hasattr(args, 'label'):
-            self.assertEqual(args.label, label)
         self.assertEqual(args.monitor, monitor)
         self.assertEqual(args.name, name)
-        self.assertEqual(args.no_cipd, no_cipd)
         self.assertEqual(args.output, output)
-        self.assertEqual(args.staging, staging)
 
     # Unit tests
 
@@ -56,23 +49,6 @@ class TestArgParser(unittest.TestCase):
         args = parser.parse_args(['name'])
         self.assertArgsEqual(args, name='name')
 
-    def test_parse_args_label(self):
-        parser = ArgParser('test_parse_args_label')
-
-        # Error if label present when not allowed.
-        with self.assertRaises(SystemExit):
-            parser.parse_args(['name', 'label'])
-
-        # label not allowed if name is optional.
-        parser.require_name(False)
-        with self.assertRaises(AssertionError):
-            parser.allow_label(True)
-
-        parser.require_name(True)
-        parser.allow_label(True)
-        args = parser.parse_args(['name', 'label'])
-        self.assertArgsEqual(args, name='name', label='label')
-
     def test_parse_args_each_flag(self):
         parser = ArgParser('test_parse_args_each_flag')
 
@@ -85,14 +61,8 @@ class TestArgParser(unittest.TestCase):
         args = parser.parse_args(['--monitor', 'name'])
         self.assertArgsEqual(args, monitor=True, name='name')
 
-        args = parser.parse_args(['--no-cipd', 'name'])
-        self.assertArgsEqual(args, name='name', no_cipd=True)
-
         args = parser.parse_args(['--output', 'output', 'name'])
         self.assertArgsEqual(args, name='name', output='output')
-
-        args = parser.parse_args(['--staging', 'staging', 'name'])
-        self.assertArgsEqual(args, name='name', staging='staging')
 
     def test_parse_args_missing_value(self):
         parser = ArgParser('test_parse_args_missing_value')
@@ -100,9 +70,6 @@ class TestArgParser(unittest.TestCase):
 
         with self.assertRaises(SystemExit):
             parser.parse_args(['--output'])
-
-        with self.assertRaises(SystemExit):
-            parser.parse_args(['--staging'])
 
     def test_parse_args_unrecognized(self):
         parser = ArgParser('test_parse_args_unrecognized')
@@ -115,36 +82,27 @@ class TestArgParser(unittest.TestCase):
             parser.parse_args(['-help=1'])
 
         parser.require_name(True)
-        parser.allow_label(True)
         with self.assertRaises(SystemExit):
-            parser.parse_args(['one', 'two', 'three'])
+            parser.parse_args(['one', 'two'])
 
     def test_parse_all_flags(self):
         parser = ArgParser('test_parse_all_flags')
-        parser.allow_label(True)
         args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse(
             [
                 '--debug',
                 '--foreground',
                 '--monitor',
-                '--no-cipd',
                 '--output',
                 'output',
-                '--staging',
-                'staging',
                 'name',
-                'label',
             ])
         self.assertArgsEqual(
             args,
             debug=True,
             foreground=True,
             monitor=True,
-            no_cipd=True,
             output='output',
-            staging='staging',
-            name='name',
-            label='label')
+            name='name')
         self.assertEqual(libfuzzer_opts, {})
         self.assertEqual(libfuzzer_args, [])
         self.assertEqual(subprocess_args, [])

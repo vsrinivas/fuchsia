@@ -12,7 +12,6 @@
 ## Options:
 ##   -f, --foreground        Run in the foreground (default is background).
 ##   -g, --debug             Disable libFuzzer exception handling.
-##   -n, --no-cipd           Skip steps involving CIPD.
 ##   -o, --output   <dir>    Use the given directory for saving output files.
 ##                           Defaults to the current directory.
 ##   -s, --staging  <dir>    Use the given directory for staging temporary
@@ -25,15 +24,6 @@
 ##   help                    Prints this message and exits.
 ##   list    [name]          Lists fuzzers matching 'name' if provided, or all
 ##                           fuzzers.
-##   corpus  [name]          Lists the corpus instances in CIPD for the named
-##                           fuzzer.
-##   fetch   <name> [label]  Retrieves the corpus for the named fuzzer.  If
-##                           'label' is a directory, installs the corpus from
-##                           that location.  Otherwise fetches and installs the
-##                           corpus from CIPD given by 'label', which may
-##                           either be a CIPD "ref", or a CIPD "tag" of the
-##                           form "key:value".  If omitted, 'label' defaults to
-##                           "latest".
 ##   start   <name> [...]    Fetches the latest corpus for a named fuzzer and
 ##                           starts it. Additional arguments are passed to the
 ##                           fuzzer. This is default command if not provided.
@@ -44,18 +34,10 @@
 ##   repro   <name> [...]    Runs the named fuzzer on specific inputs. If no
 ##                           additional inputs are provided, uses all previously
 ##                           found crashes.
-##   merge   <name> [...]    Fetches the latest corpus in CIPD, merges and
-##                           minimizes it with the corpus on device, and stores
-##                           the result in CIPD.
-##   store   <name>          Gathers the current corpus from the target platform
-##                           and publishes it to CIPD.  The package will be
-##                           tagged with the current integration revision and
-##                           referenced as 'latest'.
 ##
 ## Typical workflow is one of three commands:
 ##   fx fuzz <name>        # Fetches the latest corpus and starts the fuzzer
 ##   fx fuzz repro <name>  # Replays any test input artifacts found
-##   fx fuzz merge <name>  # Merges the current corpus with the latest in CIPD
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 
@@ -68,10 +50,6 @@ for arg in "$@"; do
   case "$arg" in
     -h)
       cmd="help"
-      ;;
-    -d|--device)
-      arg="--device"
-      add=2
       ;;
     -g|--debug)
       arg="--debug"
@@ -87,10 +65,6 @@ for arg in "$@"; do
       ;;
     -f|--foreground)
       arg="--foreground"
-      add=1
-      ;;
-    -n|--no-cipd)
-      arg="--no-cipd"
       add=1
       ;;
     *)
@@ -114,12 +88,6 @@ case "$cmd" in
   list)
     python ${FUZZING_DIR}/list_fuzzers.py "$@"
     ;;
-  corpus)
-    python ${FUZZING_DIR}/list_corpora.py "$@"
-    ;;
-  fetch)
-    python ${FUZZING_DIR}/fetch_corpus.py "$@"
-    ;;
   start)
     python ${FUZZING_DIR}/start_fuzzer.py "$@"
     ;;
@@ -131,12 +99,6 @@ case "$cmd" in
     ;;
   repro)
     python ${FUZZING_DIR}/repro_units.py "$@"
-    ;;
-  merge)
-    python ${FUZZING_DIR}/merge_corpus.py "$@"
-    ;;
-  store)
-    python ${FUZZING_DIR}/store_corpus.py "$@"
     ;;
   *)
     name="$cmd"

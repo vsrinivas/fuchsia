@@ -9,8 +9,6 @@ import subprocess
 import sys
 
 from lib.args import ArgParser
-from lib.cipd import Cipd
-from lib.corpus import Corpus
 from lib.device import Device
 from lib.fuzzer import Fuzzer
 from lib.host import Host
@@ -29,12 +27,6 @@ def main():
     fuzzer.subprocess_args = subprocess_args
 
     if not args.monitor:
-        with Corpus.from_args(fuzzer, args) as corpus:
-            cipd = Cipd(corpus)
-            if not args.no_cipd:
-                cipd.install('latest')
-            corpus.push()
-
         print(
             '\n****************************************************************'
         )
