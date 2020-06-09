@@ -170,7 +170,14 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_status_t status = ZX_OK;
+  zx_status_t status;
+  if (err_inj_.CheckIfErrInjCmdEnabled(dcmd->cmd, &status, ifidx)) {
+    if (status == ZX_OK) {
+      bcdc_response_.Set(msg, len);
+    }
+    return status;
+  }
+  status = ZX_OK;
   switch (dcmd->cmd) {
     // Get/Set a firmware IOVAR. This message is comprised of a NULL-terminated string
     // for the variable name, followed by the value to assign to it.
@@ -287,11 +294,6 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
           if (join_params->ssid_le.SSID_len) {
             // non-zero SSID - assume AP start
             ZX_ASSERT(iface_tbl_[ifidx].ap_config.ap_started == false);
-            if (brcmf_test_bit_in_array(SIM_FW_AP_START_FAIL, &error_inject_bits_)) {
-              // For now, fail the request as timer handling in SIM is not working yet.
-              status = ZX_ERR_NOT_SUPPORTED;
-              break;
-            }
             // Schedule a Link Event to be sent to driver (simulating behviour
             // in real HW).
             ScheduleLinkEvent(kStartAPConfDelay, ifidx);
@@ -312,6 +314,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
         } else {
           // When iface_tbl_[ifidx].ap_mode == false, start an association
           ZX_ASSERT(join_params->params_le.chanspec_num == 1);
+
           auto assoc_opts = std::make_unique<AssocOpts>();
           wlan_channel_t channel;
 
@@ -1244,6 +1247,12 @@ zx_status_t SimFirmware::HandleBssCfgSet(const uint16_t ifidx, const char* name,
 
 zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void* value,
                                    size_t value_len) {
+  // If Error Injection is enabled return with the appropriate status right away
+  zx_status_t status;
+  if (err_inj_.CheckIfErrInjIovarEnabled(name, &status, ifidx)) {
+    return status;
+  }
+
   const size_t bsscfg_prefix_len = strlen(BRCMF_FWIL_BSSCFG_PREFIX);
   if (!std::strncmp(name, BRCMF_FWIL_BSSCFG_PREFIX, bsscfg_prefix_len)) {
     return HandleBssCfgSet(ifidx, name + bsscfg_prefix_len, value, value_len);
@@ -1360,6 +1369,11 @@ const char* kFirmwareVer = "wl0: Sep 10 2018 16:37:38 version 7.35.79 (r487924) 
 
 zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value_out,
                                    size_t value_len) {
+  zx_status_t status;
+  if (err_inj_.CheckIfErrInjIovarEnabled(name, &status, ifidx)) {
+    memset(value_out, 0, value_len);
+    return status;
+  }
   if (!std::strcmp(name, "ver")) {
     if (value_len >= (strlen(kFirmwareVer) + 1)) {
       strlcpy(static_cast<char*>(value_out), kFirmwareVer, value_len);
@@ -2000,13 +2014,6 @@ void SimFirmware::SendFrameToDriver(uint16_t ifidx, size_t payload_size,
 
   brmcf_sim_rx_frame(simdev_, std::move(buf));
 }
-void SimFirmware::ErrorInjectSetBit(size_t inject_bit) {
-  brcmf_set_bit_in_array(inject_bit, &error_inject_bits_);
-}
-void SimFirmware::ErrorInjectClearBit(size_t inject_bit) {
-  brcmf_clear_bit_in_array(inject_bit, &error_inject_bits_);
-}
-void SimFirmware::ErrorInjectAllClear() { error_inject_bits_ = 0; }
 
 void SimFirmware::convert_chanspec_to_channel(uint16_t chanspec, wlan_channel_t* channel) {
   chanspec_to_channel(&d11_inf_, chanspec, channel);
@@ -2014,4 +2021,5 @@ void SimFirmware::convert_chanspec_to_channel(uint16_t chanspec, wlan_channel_t*
 uint16_t SimFirmware::convert_channel_to_chanspec(wlan_channel_t* channel) {
   return channel_to_chanspec(&d11_inf_, channel);
 }
+
 }  // namespace wlan::brcmfmac

@@ -22,6 +22,8 @@ source_set("sim") {
     "sim.cc",
     "sim.h",
     "sim_device.cc",
+    "sim_errinj.cc",
+    "sim_errinj.h",
     "sim_fw.cc",
     "sim_fw.h",
     "sim_hw.cc",

@@ -97,6 +97,7 @@ class Debug {
     kFWCON = 1 << 19,
     kSIM = 1 << 20,
     kWLANIF = 1 << 21,
+    kSIMERRINJ = 1 << 22,
     kALL = ~0u,
   };
 

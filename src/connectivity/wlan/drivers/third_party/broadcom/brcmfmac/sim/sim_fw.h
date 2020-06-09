@@ -32,15 +32,11 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_wifi.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_errinj.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_hw.h"
 
 namespace wlan::brcmfmac {
 
-// bit definitions to inject specific errors in SIM FW to check corresponding
-// error handling in the driver
-enum sim_fw_error_inject {
-  SIM_FW_AP_START_FAIL,
-};
 // The amount of time we will wait for an association response after an association request
 constexpr zx::duration kAssocTimeout = zx::sec(1);
 // The amount of time we will wait for an authentication response after an authentication request
@@ -180,6 +176,7 @@ class SimFirmware {
   explicit SimFirmware(brcmf_simdev* simdev, simulation::Environment* env);
   ~SimFirmware();
 
+  SimErrorInjector err_inj_;
   simulation::StationIfc* GetHardwareIfc();
   void GetChipInfo(uint32_t* chip, uint32_t* chiprev);
   int32_t GetPM();
@@ -402,7 +399,6 @@ class SimFirmware {
   bool dev_is_up_ = false;
   uint32_t mpc_ = 1;  // Read FW appears to be setting this to 1 by default.
   zx::duration beacon_timeout_ = kBeaconTimeout;
-  std::atomic<unsigned long> error_inject_bits_ = 0;
 };
 
 }  // namespace wlan::brcmfmac

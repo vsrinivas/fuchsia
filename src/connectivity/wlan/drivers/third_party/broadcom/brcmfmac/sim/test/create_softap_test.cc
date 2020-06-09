@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
+#include <wifi/wifi-config.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
@@ -192,7 +193,7 @@ zx_status_t CreateSoftAPTest::StartSoftAP() {
 
 void CreateSoftAPTest::InjectStartAPError() {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->ErrorInjectSetBit(SIM_FW_AP_START_FAIL);
+  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_ERR_IO, softap_ifc_->iface_id_);
 }
 
 zx_status_t CreateSoftAPTest::StopSoftAP() {

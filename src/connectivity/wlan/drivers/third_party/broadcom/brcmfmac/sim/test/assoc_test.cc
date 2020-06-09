@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/protocol/wlanif.h>
+#include <wifi/wifi-config.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
@@ -59,6 +60,8 @@ class AssocTest : public SimTest {
   void StartDeauth();
   void DeauthClient();
   void DeauthFromAp();
+
+  void AssocErrorInject();
 
  protected:
   struct AssocContext {
@@ -344,6 +347,11 @@ void AssocTest::ScheduleCall(void (AssocTest::*fn)(), zx::duration when) {
   env_->ScheduleNotification(std::move(cb_fn), when);
 }
 
+void AssocTest::AssocErrorInject() {
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, client_ifc_->iface_id_);
+}
+
 void AssocTest::StartDisassoc() {
   // Send disassoc request
   if (!disassoc_from_ap_) {
@@ -583,6 +591,25 @@ TEST_F(AssocTest, ApRejectedRequest) {
 
   // Make sure we got our response from the driver
   EXPECT_EQ(context_.assoc_resp_count, 1U);
+}
+
+// SIM FW ignore client assoc request. Note that currently there is no timeout
+// mechanism in the driver to handle this situation. It is currently being
+// worked on.
+TEST_F(AssocTest, SimFwIgnoreAssocReq) {
+  // Create our device instance
+  Init();
+
+  // Start up fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  aps_.push_back(&ap);
+
+  AssocErrorInject();
+  ScheduleCall(&AssocTest::StartAssoc, zx::msec(50));
+  env_->Run();
+
+  // We should not have received a assoc response from SIM FW
+  EXPECT_EQ(context_.assoc_resp_count, 0U);
 }
 
 void AssocTest::SendBadResp() {
