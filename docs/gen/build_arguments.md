@@ -1707,6 +1707,25 @@ The path to a prebuilt libvulkan.so for an IMG GPU.
 
 From //src/graphics/lib/magma/gnbuild/magma.gni:32
 
+### product_bootfs_labels
+A list of bootfs_manifest labels to include in ZBIs built for this product.
+
+**Current value for `target_cpu = "arm64"`:** `["//src/security/policy:component_manager_policy.manifest"]`
+
+From //products/bringup.gni:22
+
+**Overridden from the default:** `[]`
+
+From //build/product.gni:7
+
+**Current value for `target_cpu = "x64"`:** `["//src/security/policy:component_manager_policy.manifest"]`
+
+From //products/bringup.gni:22
+
+**Overridden from the default:** `[]`
+
+From //build/product.gni:7
+
 ### prototype_account_transfer
 Whether or not prototype account transfer is enabled.
 NOTE: This is not secure and should NOT be enabled for any products!  This
