@@ -97,8 +97,9 @@ union spn_vk_target_extensions
 //
 
 // clang-format off
-#define SPN_VK_TARGET_FEATURES()                \
-  SPN_VK_TARGET_FEATURE(shaderInt64)
+#define SPN_VK_TARGET_FEATURES()                                \
+  SPN_VK_TARGET_FEATURE(shaderInt64)                            \
+  SPN_VK_TARGET_FEATURE(shaderStorageImageWriteWithoutFormat)
 // clang-format on
 
 //
