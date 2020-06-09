@@ -36,6 +36,18 @@ float UsageGainSettings::GetUnadjustedUsageGain(const fuchsia::media::Usage& usa
   }
 }
 
+float UsageGainSettings::GetUsageGainAdjustment(const fuchsia::media::Usage& usage) const {
+  TRACE_DURATION("audio", "UsageGainSettings::GetUsageGainAdjustment");
+  if (usage.is_render_usage()) {
+    const auto usage_index = fidl::ToUnderlying(usage.render_usage());
+    return render_usage_gain_adjustment_[usage_index];
+  } else {
+    FX_DCHECK(!usage.has_invalid_tag());
+    const auto usage_index = fidl::ToUnderlying(usage.capture_usage());
+    return capture_usage_gain_adjustment_[usage_index];
+  }
+}
+
 void UsageGainSettings::SetUsageGain(fuchsia::media::Usage usage, float gain_db) {
   TRACE_DURATION("audio", "UsageGainSettings::SetUsageGain");
   if (usage.is_render_usage()) {

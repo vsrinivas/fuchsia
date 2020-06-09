@@ -79,8 +79,7 @@ void StreamVolumeManager::SetUsageGain(fuchsia::media::Usage usage, float gain_d
 }
 
 void StreamVolumeManager::SetUsageGainAdjustment(fuchsia::media::Usage usage, float gain_db) {
-  float gain_adjustment = usage_gain_settings_.GetAdjustedUsageGain(usage) -
-                          usage_gain_settings_.GetUnadjustedUsageGain(usage);
+  float gain_adjustment = usage_gain_settings_.GetUsageGainAdjustment(usage);
   if (gain_db != gain_adjustment) {
     usage_gain_settings_.SetUsageGainAdjustment(fidl::Clone(usage), gain_db);
     UpdateStreamsWithUsage(std::move(usage));

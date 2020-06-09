@@ -25,6 +25,9 @@ class UsageGainSettings {
   // Gets the gain of the usage, without accounting for transient adjustments.
   float GetUnadjustedUsageGain(const fuchsia::media::Usage& usage) const;
 
+  // Gets the gain adjustment included in the usage's total adjusted usage gain.
+  float GetUsageGainAdjustment(const fuchsia::media::Usage& usage) const;
+
   void SetUsageGain(fuchsia::media::Usage usage, float gain_db);
 
   void SetUsageGainAdjustment(fuchsia::media::Usage usage, float gain_db);
