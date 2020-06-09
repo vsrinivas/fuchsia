@@ -7,6 +7,7 @@
 #include <lib/zx/bti.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/port.h>
+#include <zircon/syscalls.h>
 #include <zircon/syscalls/iommu.h>
 
 #include <memory>
@@ -2064,6 +2065,52 @@ TEST(Pager, FailErrorCode) {
     uint64_t offset, length;
     ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
   }
+}
+
+// Test that writing to a forked zero pager marker does not cause a kernel panic. This is a
+// regression test for fxb/53181. Note that although writing to page backed vmo is not strictly
+// supported and has no guaranteed semantics it is still currently allowed.
+TEST(Pager, WritingZeroFork) {
+  zx::pager pager;
+  ASSERT_EQ(zx::pager::create(0, &pager), ZX_OK);
+
+  zx::port port;
+  ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
+
+  zx::vmo vmo;
+
+  ASSERT_EQ(pager.create_vmo(0, port, 0, ZX_PAGE_SIZE, &vmo), ZX_OK);
+
+  zx::vmo empty;
+  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &empty));
+
+  // Transferring the uncommitted page in empty can be implemented in the kernel by a zero page
+  // marker in the pager backed vmo (and not a committed page).
+  ASSERT_OK(pager.supply_pages(vmo, 0, ZX_PAGE_SIZE, empty, 0));
+
+  // Writing to this page may cause it to be committed, and if it was a marker it will fork from
+  // the zero page.
+  // Do not assert that the write succeeds as we do not want to claim that it should, only that
+  // doing so should not crash the kernel.
+  uint64_t data = 42;
+  vmo.write(&data, 0, sizeof(data));
+
+  // Normally forking a zero page puts that page in a special list for one time zero page scanning
+  // and merging. Once scanned it goes into the general unswappable page list. Both of these lists
+  // are incompatible with a user pager backed vmo. To try and detect this we need to wait for the
+  // zero scanner to run, since the zero fork queue looks close enough to the pager backed queue
+  // that most things will 'just work'.
+  constexpr char k_command[] = "k scanner reclaim_all";
+  if (!&get_root_resource ||
+      zx_debug_send_command(get_root_resource(), k_command, strlen(k_command)) != ZX_OK) {
+    // Failed to manually force the zero scanner to run, fall back to sleeping for a moment and hope
+    // it runs.
+    zx::nanosleep(zx::deadline_after(zx::sec(1)));
+  }
+
+  // If our page did go marker->zero fork queue->unswappable this next write will crash the kernel
+  // when it attempts to update our position in the pager backed list.
+  vmo.write(&data, 0, sizeof(data));
 }
 
 }  // namespace pager_tests

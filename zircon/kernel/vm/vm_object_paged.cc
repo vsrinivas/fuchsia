@@ -1969,7 +1969,7 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
       pmm_free_page(insert.ReleasePage());
       return status;
     }
-    if (p == vm_get_zero_page()) {
+    if (p == vm_get_zero_page() && !page_source_) {
       pmm_page_queues()->MoveToUnswappableZeroFork(res_page, this, offset);
     }
 
