@@ -133,7 +133,12 @@ void RectangleCompositor::DrawBatch(CommandBuffer* cmd_buf,
   // Initialize the render pass.
   RenderPassInfo render_pass;
   vk::Rect2D render_area = {{0, 0}, {output_image->width(), output_image->height()}};
-  RenderPassInfo::InitRenderPassInfo(&render_pass, render_area, output_image, depth_buffer);
+
+  if (!RenderPassInfo::InitRenderPassInfo(&render_pass, render_area, output_image, depth_buffer)) {
+    FX_LOGS(ERROR) << "RectangleCompositor::DrawBatch(): RenderPassInfo initialization failed. "
+                      "Exiting.";
+    return;
+  }
 
   // Construct the bounds that are used in the vertex shader to convert the
   // renderable positions into normalized device coordinates (NDC). The width

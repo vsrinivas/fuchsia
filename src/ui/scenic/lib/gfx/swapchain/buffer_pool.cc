@@ -16,7 +16,9 @@
 #include "src/ui/lib/escher/util/bit_ops.h"
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/vk/chained_semaphore_generator.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
+#include "src/ui/lib/escher/vk/image_layout_updater.h"
 
 #define VK_CHECK_RESULT(XXX) FX_CHECK(XXX.result == vk::Result::eSuccess)
 
@@ -271,6 +273,8 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
     return false;
   }
 
+  escher::ImageLayoutUpdater layout_updater(environment->escher->GetWeakPtr());
+
   for (uint32_t i = 0; i < count; ++i) {
     vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
     collection_image_info.collection = import_result.value;
@@ -335,7 +339,9 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
       environment->vk_device.destroyImage(image_result.value);
       return false;
     } else {
-      buffer.escher_image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
+      vk::ImageLayout kSwapchainLayout = vk::ImageLayout::eColorAttachmentOptimal;
+      buffer.escher_image->set_swapchain_layout(kSwapchainLayout);
+      layout_updater.ScheduleSetImageInitialLayout(buffer.escher_image, kSwapchainLayout);
     }
     zx_status_t import_image_status = ZX_OK;
     zx_status_t transport_status = (*environment->display_controller)
@@ -350,6 +356,12 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
     buffers_[i] = std::move(buffer);
     used_[i] = false;
   }
+
+  auto semaphore_pair = environment->escher->semaphore_chain()->TakeLastAndCreateNextSemaphore();
+  layout_updater.AddWaitSemaphore(std::move(semaphore_pair.semaphore_to_wait),
+                                  vk::PipelineStageFlagBits::eColorAttachmentOutput);
+  layout_updater.AddSignalSemaphore(std::move(semaphore_pair.semaphore_to_signal));
+  layout_updater.Submit();
 
   sysmem_collection->Close();
 

@@ -123,6 +123,10 @@ class PaperRenderer final : public fxl::RefCountedThreadSafe<PaperRenderer> {
   // See |BeginFrame()|.  After telling the renderer to draw the scene content,
   // |EndFrame()| emits commands into a Vulkan command buffer.  Submitting this
   // command buffer causes the scene to be rendered into |output_image|.
+  //
+  // The layout of |output_image| should be initialized to its swapchain layout
+  // (or scheduled to be initialized by the time we submit te commands) before
+  // we call this method.
   void EndFrame(const std::vector<SemaphorePtr>& upload_wait_semaphores);
 
   void EndFrame(SemaphorePtr upload_wait_semaphore) {

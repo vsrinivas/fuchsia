@@ -485,9 +485,14 @@ void PaperRenderer::GenerateCommandsForNoShadows(uint32_t camera_index) {
   RenderPassInfo render_pass_info;
   FX_DCHECK(camera_index < frame_data_->cameras.size());
   auto render_area = frame_data_->cameras[camera_index].rect;
-  RenderPassInfo::InitRenderPassInfo(&render_pass_info, render_area, frame_data_->output_image,
-                                     frame_data_->depth_texture, frame_data_->msaa_texture,
-                                     escher()->image_view_allocator());
+
+  if (!RenderPassInfo::InitRenderPassInfo(&render_pass_info, render_area, frame_data_->output_image,
+                                          frame_data_->depth_texture, frame_data_->msaa_texture,
+                                          escher()->image_view_allocator())) {
+    FX_LOGS(ERROR) << "PaperRenderer::GenerateCommandsForNoShadows(): "
+                      "RenderPassInfo initialization failed. Exiting.";
+    return;
+  }
 
   cmd_buf->BeginRenderPass(render_pass_info);
   frame->AddTimestamp("started no-shadows render pass");
@@ -536,9 +541,14 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
   RenderPassInfo render_pass_info;
   FX_DCHECK(camera_index < frame_data_->cameras.size());
   auto render_area = frame_data_->cameras[camera_index].rect;
-  RenderPassInfo::InitRenderPassInfo(&render_pass_info, render_area, frame_data_->output_image,
-                                     frame_data_->depth_texture, frame_data_->msaa_texture,
-                                     escher()->image_view_allocator());
+
+  if (!RenderPassInfo::InitRenderPassInfo(&render_pass_info, render_area, frame_data_->output_image,
+                                          frame_data_->depth_texture, frame_data_->msaa_texture,
+                                          escher()->image_view_allocator())) {
+    FX_LOGS(ERROR) << "PaperRenderer::GenerateCommandsForShadowVolumes(): "
+                      "RenderPassInfo initialization failed. Exiting.";
+    return;
+  }
 
   cmd_buf->BeginRenderPass(render_pass_info);
   frame->AddTimestamp("started shadow_volume render pass");
@@ -695,17 +705,22 @@ void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
   frame->AddTimestamp("started debug render pass");
 
   auto& output_image = frame_data_->output_image;
-  auto initial_layout = output_image->layout();
-  auto target_layout = output_image->swapchain_layout();
+  auto swapchain_layout = output_image->swapchain_layout();
 
-  if (target_layout == vk::ImageLayout::eUndefined) {
-    FX_LOGS(WARNING) << "PaperRenderer::GenerateDebugCommands(): "
-                        "exiting due to undefined swapchain layout.";
+  if (swapchain_layout == vk::ImageLayout::eUndefined) {
+    FX_LOGS(ERROR) << "PaperRenderer::GenerateDebugCommands(): "
+                      "exiting due to undefined swapchain layout.";
+    return;
+  }
+
+  if (output_image->layout() != swapchain_layout) {
+    FX_LOGS(ERROR) << "PaperRenderer::GeneratedDebugCommands(): "
+                      "Layout of output_image is not initialized to swapchain layout. Exiting.";
     return;
   }
 
   cmd_buf->ImageBarrier(
-      output_image, initial_layout, vk::ImageLayout::eTransferDstOptimal,
+      output_image, swapchain_layout, vk::ImageLayout::eTransferDstOptimal,
       vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer,
       vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eTransferWrite,
       vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferWrite);
@@ -727,7 +742,7 @@ void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
   }
 
   cmd_buf->ImageBarrier(
-      output_image, vk::ImageLayout::eTransferDstOptimal, target_layout,
+      output_image, vk::ImageLayout::eTransferDstOptimal, swapchain_layout,
       vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferWrite,
       vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer,
       vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eTransferWrite);
@@ -750,8 +765,11 @@ static impl::RenderPassPtr WarmRenderPassCache(impl::RenderPassCache* cache,
   color_attachment_info.swapchain_layout = output_swapchain_layout;
   color_attachment_info.sample_count = 1;
 
-  RenderPassInfo::InitRenderPassInfo(&info, color_attachment_info, config.depth_stencil_format,
-                                     output_format, config.msaa_sample_count, false);
+  if (!RenderPassInfo::InitRenderPassInfo(&info, color_attachment_info, config.depth_stencil_format,
+                                          output_format, config.msaa_sample_count, false)) {
+    FX_LOGS(ERROR) << "WarmRenderPassCache(): InitRenderPassInfo failed. Exiting.";
+    return nullptr;
+  };
 
   return cache->ObtainRenderPass(info, /*allow_render_pass_creation*/ true);
 }

@@ -71,7 +71,7 @@ bool FillColorAttachmentDescription(const RenderPassInfo& rpi,
 
   auto& desc = attachment_descriptions[index];
   const auto& color_info = rpi.color_attachment_infos[index];
-  const bool is_swapchain_image = color_info.swapchain_layout != vk::ImageLayout::eUndefined;
+  const bool is_swapchain_image = color_info.is_swapchain_image();
 
   // TODO(ES-73): support for transient images.  What's missing?
   FX_DCHECK(!color_info.is_transient || !is_swapchain_image)
@@ -99,7 +99,7 @@ bool FillColorAttachmentDescription(const RenderPassInfo& rpi,
     desc.finalLayout = vk::ImageLayout::eUndefined;
     return true;
   } else if (is_swapchain_image) {
-    desc.initialLayout = vk::ImageLayout::eUndefined;
+    desc.initialLayout = color_info.swapchain_layout;
     desc.finalLayout = color_info.swapchain_layout;
     return true;
   } else if (rpi.op_flags & RenderPassInfo::kOptimalColorLayoutOp) {

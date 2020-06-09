@@ -321,7 +321,7 @@ static void InitRenderPassInfoHelper(RenderPassInfo* rp,
   }
 }
 
-void RenderPassInfo::InitRenderPassInfo(RenderPassInfo* rp, vk::Rect2D render_area,
+bool RenderPassInfo::InitRenderPassInfo(RenderPassInfo* rp, vk::Rect2D render_area,
                                         const ImagePtr& output_image,
                                         const TexturePtr& depth_texture,
                                         const TexturePtr& msaa_texture,
@@ -333,6 +333,16 @@ void RenderPassInfo::InitRenderPassInfo(RenderPassInfo* rp, vk::Rect2D render_ar
   AttachmentInfo depth_stencil_info;
   AttachmentInfo msaa_info;
   if (output_image) {
+    if (!output_image->is_swapchain_image()) {
+      FX_LOGS(ERROR) << "RenderPassInfo::InitRenderPassInfo(): Output image doesn't have valid "
+                        "swapchain layout.";
+      return false;
+    }
+    if (output_image->swapchain_layout() != output_image->layout()) {
+      FX_LOGS(ERROR) << "RenderPassInfo::InitRenderPassInfo(): Current layout of output image "
+                        "does not match its swapchain layout.";
+      return false;
+    }
     color_info.InitFromImage(output_image);
   }
   if (depth_texture) {
@@ -357,9 +367,10 @@ void RenderPassInfo::InitRenderPassInfo(RenderPassInfo* rp, vk::Rect2D render_ar
     rp->color_attachments[kRenderTargetAttachmentIndex] = std::move(output_image_view);
   }
   rp->depth_stencil_attachment = depth_texture;
+  return true;
 }
 
-void RenderPassInfo::InitRenderPassInfo(RenderPassInfo* rp,
+bool RenderPassInfo::InitRenderPassInfo(RenderPassInfo* rp,
                                         const RenderPassInfo::AttachmentInfo& color_info,
                                         vk::Format depth_stencil_format, vk::Format msaa_format,
                                         uint32_t sample_count, bool use_transient_depth_and_msaa) {
@@ -375,6 +386,7 @@ void RenderPassInfo::InitRenderPassInfo(RenderPassInfo* rp,
   msaa_info.sample_count = sample_count;
 
   InitRenderPassInfoHelper(rp, color_info, depth_stencil_info, has_msaa ? &msaa_info : nullptr);
+  return true;
 }
 
 }  // namespace escher

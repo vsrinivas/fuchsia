@@ -171,7 +171,12 @@ struct RenderPassInfo {
   //
   // This variant of InitRenderPassInfo() is used when the application wants to begin a render pass,
   // which requires the attachment images to be provided.
-  static void InitRenderPassInfo(RenderPassInfo* rp, vk::Rect2D render_area,
+  //
+  // The layout of |output_image| should be initialized to its swapchain layout (or scheduled to
+  // be initialized by the time we submit the render pass) before we call this.
+  //
+  // Returns true if and only if initialization is successful.
+  static bool InitRenderPassInfo(RenderPassInfo* rp, vk::Rect2D render_area,
                                  const ImagePtr& output_image, const TexturePtr& depth_texture,
                                  const TexturePtr& msaa_texture = nullptr,
                                  ImageViewAllocator* allocator = nullptr);
@@ -180,7 +185,9 @@ struct RenderPassInfo {
   // cache to avoid jank caused by creating render-passes/pipelines at runtime.
   //
   // |msaa_format| will be ignored if |sample_count| == 1.
-  static void InitRenderPassInfo(RenderPassInfo* rp,
+  //
+  // Returns true if and only if initialization is successful.
+  static bool InitRenderPassInfo(RenderPassInfo* rp,
                                  const RenderPassInfo::AttachmentInfo& color_info,
                                  vk::Format depth_stencil_format, vk::Format msaa_format,
                                  uint32_t sample_count, bool use_transient_depth_and_msaa);
@@ -192,6 +199,7 @@ struct RenderPassInfo {
   //
   // TODO(44566): this is mostly used for tests, some (all?) of which can be rewritten to use the
   // "no images" variant of InitRenderPassInfo.  Aim for deletion of this function.
+  //
   static void InitRenderPassAttachmentInfosFromImages(RenderPassInfo* rp);
 };
 

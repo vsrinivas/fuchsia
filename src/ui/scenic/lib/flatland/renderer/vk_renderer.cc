@@ -184,9 +184,12 @@ std::optional<BufferCollectionMetadata> VkRenderer::Validate(
 
 escher::ImagePtr VkRenderer::ExtractRenderTarget(escher::CommandBuffer* command_buffer,
                                                  ImageMetadata metadata) {
-  return ExtractImage(command_buffer, metadata,
-                      escher::RectangleCompositor::kRenderTargetUsageFlags,
-                      vk::ImageLayout::eColorAttachmentOptimal);
+  const vk::ImageLayout kRenderTargetLayout = vk::ImageLayout::eColorAttachmentOptimal;
+  auto render_target =
+      ExtractImage(command_buffer, metadata, escher::RectangleCompositor::kRenderTargetUsageFlags,
+                   kRenderTargetLayout);
+  render_target->set_swapchain_layout(kRenderTargetLayout);
+  return render_target;
 }
 
 escher::TexturePtr VkRenderer::ExtractTexture(escher::CommandBuffer* command_buffer,

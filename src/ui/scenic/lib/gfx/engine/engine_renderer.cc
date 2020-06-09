@@ -214,9 +214,6 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
 
   frame->cmds()->AddWaitSemaphore(render_target.output_image_acquire_semaphore,
                                   vk::PipelineStageFlagBits::eColorAttachmentOutput);
-  frame->cmds()->impl()->TransitionImageLayout(render_target.output_image,
-                                               vk::ImageLayout::eUndefined,
-                                               vk::ImageLayout::eColorAttachmentOptimal);
 
   auto& renderer = layer->renderer();
   auto camera = renderer->camera();
@@ -254,6 +251,9 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
 
   auto gpu_uploader = std::make_shared<escher::BatchGpuUploader>(escher_, frame->frame_number());
   auto layout_updater = std::make_unique<escher::ImageLayoutUpdater>(escher_);
+
+  FX_CHECK(render_target.output_image->layout() == vk::ImageLayout::eColorAttachmentOptimal)
+      << "Layout of output image is not initialized.";
 
   paper_renderer_->BeginFrame(
       frame, gpu_uploader, paper_scene,

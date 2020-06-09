@@ -17,6 +17,7 @@
 #include "src/ui/lib/escher/impl/command_buffer.h"
 #include "src/ui/lib/escher/impl/command_buffer_pool.h"
 #include "src/ui/lib/escher/impl/image_cache.h"
+#include "src/ui/lib/escher/vk/image_layout_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
@@ -170,6 +171,14 @@ void Screenshotter::TakeScreenshot(
   // TODO(ES-7): cache is never trimmed.
   escher::ImagePtr image = escher->image_cache()->NewImage(image_info);
   escher::FramePtr frame = escher->NewFrame("Scenic Compositor", 0);
+
+  // Transition layout of |image| to |eColorAttachmentOptimal|.
+  image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
+  frame->cmds()->ImageBarrier(
+      image, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
+      vk::PipelineStageFlagBits::eTopOfPipe, vk::AccessFlags(),
+      vk::PipelineStageFlagBits::eColorAttachmentOutput,
+      vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eColorAttachmentRead);
 
   std::vector<Layer*> drawable_layers = compositor->GetDrawableLayers();
   engine->renderer()->RenderLayers(frame, zx::time(dispatcher_clock_now()), {.output_image = image},
