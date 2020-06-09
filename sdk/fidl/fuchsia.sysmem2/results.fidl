@@ -4,6 +4,8 @@
 
 library fuchsia.sysmem2;
 
+using zx;
+
 // The contents of this file are not final.  Incompatible changes are still
 // being made to this file.  Do not rely on the contents of this file to provide
 // backward compatibility (yet).
@@ -22,7 +24,7 @@ table VmoBuffer {
     ///
     /// |vmo| can be un-set if a participant has no usage which requires a
     /// VMO handle.
-    1: handle<vmo> vmo;
+    1: zx.handle:VMO vmo;
 
     /// Offset within the VMO of the first usable byte.  Must be < the VMO's
     /// size in bytes, and leave sufficient room for
@@ -38,7 +40,7 @@ table VmoBuffer {
     ///
     /// |aux_vmo| will be un-set if there are no aux buffers, or in the same
     /// cases that |vmo| can be un-set.
-    3: handle<vmo> aux_vmo;
+    3: zx.handle:VMO aux_vmo;
 };
 
 const uint32 MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS = 128;
