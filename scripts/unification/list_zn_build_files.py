@@ -24,11 +24,11 @@ def main():
     with open(os.path.join(args.build_dir, 'build.ninja.d'), 'r') as ninja_file:
         content = ninja_file.readlines()[0]
     files = content.split()
-    files = [f for f in files if f.endswith('BUILD.gn')]
+    files = [f for f in files if f.endswith('BUILD.zircon.gn')]
     if args.files:
         files = [f.replace('../..', FUCHSIA_ROOT) for f in files]
     else:
-        files = [f.replace('../../zircon', '/').replace('/BUILD.gn', '') for f in files]
+        files = [f.replace('../../zircon', '/').replace('/BUILD.zircon.gn', '') for f in files]
     for file in sorted(files):
         print(file)
 
