@@ -1281,51 +1281,7 @@ TEST_F(ProgressiveCloneDiscardTests, ProgressiveCloneTruncate) {
   ASSERT_NO_FATAL_FAILURES(ProgressiveCloneDiscardTest(kTruncate));
 }
 
-// Tests that a contiguous VMO remains contiguous even after writes to its clones.
-TEST_F(VmoClone2TestCase, ContiguousVmo) {
-  if (!RootResource()) {
-    printf("Root resource not available, skipping\n");
-    return;
-  }
-
-  zx::iommu iommu;
-  zx::bti bti;
-  zx_iommu_desc_dummy_t desc;
-  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
-
-  ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-  ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
-
-  zx::vmo vmos[4];
-  ASSERT_OK(zx::vmo::create_contiguous(bti, 4 * ZX_PAGE_SIZE, 0, vmos));
-
-  // Tag each page.
-  for (unsigned i = 0; i < 4; i++) {
-    ASSERT_NO_FATAL_FAILURES(VmoWrite(vmos[0], i + 1, i * ZX_PAGE_SIZE));
-  }
-
-  // Create two clones of the original VMO and one clone of one of those clones.
-  ASSERT_OK(vmos[0].create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, 4 * ZX_PAGE_SIZE, vmos + 1));
-  ASSERT_OK(vmos[0].create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, 4 * ZX_PAGE_SIZE, vmos + 2));
-  ASSERT_OK(vmos[1].create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, 4 * ZX_PAGE_SIZE, vmos + 3));
-
-  // Write to one page in each different VMO.
-  for (unsigned i = 0; i < 4; i++) {
-    ASSERT_NO_FATAL_FAILURES(VmoWrite(vmos[i], 5, i * ZX_PAGE_SIZE));
-  }
-
-  // Verify that the data is correct in each VMO.
-  for (unsigned i = 0; i < 4; i++) {
-    for (unsigned j = 0; j < 4; j++) {
-      ASSERT_NO_FATAL_FAILURES(VmoCheck(vmos[i], i == j ? 5 : j + 1, j * ZX_PAGE_SIZE));
-    }
-  }
-
-  ASSERT_NO_FATAL_FAILURES(CheckContigState<4>(bti, vmos[0]));
-}
-
-// Tests that closing the clone of a contiguous VMO doesn't cause problems with contiguity.
-TEST_F(VmoClone2TestCase, ContiguousVmoCloseChild) {
+TEST_F(VmoClone2TestCase, ForbidContiguousVmo) {
   if (!RootResource()) {
     printf("Root resource not available, skipping\n");
     return;
@@ -1340,113 +1296,14 @@ TEST_F(VmoClone2TestCase, ContiguousVmoCloseChild) {
   ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create_contiguous(bti, 2 * ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create_contiguous(bti, ZX_PAGE_SIZE, 0, &vmo));
 
-  ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, 1, 0));
-  ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, 2, ZX_PAGE_SIZE));
+  // Any kind of copy-on-write child should copy.
+  zx::vmo child;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &child));
 
-  zx::vmo clone;
-  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, 2 * ZX_PAGE_SIZE, &clone));
-
-  // Write to one page in the contig VMO so that one page is forked and one page isn't forked.
-  ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, 3, 0));
-
-  // Reset the original VMO and check that things got properly merged into the child.
-  clone.reset();
-
-  ASSERT_NO_FATAL_FAILURES(VmoCheck(vmo, 3, 0));
-  ASSERT_NO_FATAL_FAILURES(VmoCheck(vmo, 2, ZX_PAGE_SIZE));
-  ASSERT_NO_FATAL_FAILURES(CheckContigState<2>(bti, vmo));
-}
-
-// Tests that pages are properly become 'non-contiguous' after closing a contiguous VMO
-// with a child.
-TEST_F(VmoClone2TestCase, ContiguousVmoCloseOriginal) {
-  if (!RootResource()) {
-    printf("Root resource not available, skipping\n");
-    return;
-  }
-
-  zx::iommu iommu;
-  zx::bti bti;
-  zx_iommu_desc_dummy_t desc;
-  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
-
-  ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-  ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
-
-  zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create_contiguous(bti, 3 * ZX_PAGE_SIZE, 0, &vmo));
-
-  ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, 1, 0));
-  ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, 2, ZX_PAGE_SIZE));
-  ASSERT_NO_FATAL_FAILURES(VmoWrite(vmo, 3, 2 * ZX_PAGE_SIZE));
-
-  // Create the clone so that there is a page before and after it.
-  zx::vmo clone;
-  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, ZX_PAGE_SIZE, ZX_PAGE_SIZE, &clone));
-
-  ASSERT_NO_FATAL_FAILURES(VmoCheck(clone, 2));
-
-  vmo.reset();
-
-  ASSERT_NO_FATAL_FAILURES(VmoCheck(clone, 2));
-  ASSERT_EQ(VmoCommittedBytes(clone), ZX_PAGE_SIZE);
-}
-
-TEST_F(VmoCloneResizeTests, ContiguousVmoResizeChild) {
-  ASSERT_NO_FATAL_FAILURES(ResizeTest(Contiguity::Contig, ResizeTarget::Child));
-}
-
-TEST_F(VmoCloneResizeTests, ContiguousVmoResizeOriginal) {
-  ASSERT_NO_FATAL_FAILURES(ResizeTest(Contiguity::Contig, ResizeTarget::Parent));
-}
-
-// Tests partial clones of contiguous vmos.
-TEST_F(VmoClone2TestCase, ContiguousVmoPartialClone) {
-  if (!RootResource()) {
-    printf("Root resource not available, skipping\n");
-    return;
-  }
-
-  zx::iommu iommu;
-  zx::bti bti;
-  zx_iommu_desc_dummy_t desc;
-  auto final_bti_check = vmo_test::CreateDeferredBtiCheck(bti);
-
-  ASSERT_OK(zx::iommu::create(RootResource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
-  ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
-
-  zx::vmo vmos[4];
-  ASSERT_OK(zx::vmo::create_contiguous(bti, 3 * ZX_PAGE_SIZE, 0, vmos));
-
-  // Tag each page.
-  for (unsigned i = 0; i < 3; i++) {
-    ASSERT_NO_FATAL_FAILURES(VmoWrite(vmos[0], i + 1, i * ZX_PAGE_SIZE));
-  }
-
-  // Create two clones of the original VMO and one clone of one of those clones.
-  ASSERT_OK(vmos[0].create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, vmos + 1));
-  ASSERT_OK(vmos[0].create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, vmos + 2));
-  ASSERT_OK(vmos[0].create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, 4 * ZX_PAGE_SIZE, vmos + 3));
-
-  ASSERT_NO_FATAL_FAILURES(VmoWrite(vmos[0], 5, ZX_PAGE_SIZE));
-  ASSERT_NO_FATAL_FAILURES(VmoWrite(vmos[3], 6, ZX_PAGE_SIZE));
-
-  ASSERT_NO_FATAL_FAILURES(VmoWrite(vmos[3], 6, 2 * ZX_PAGE_SIZE));
-  ASSERT_NO_FATAL_FAILURES(VmoWrite(vmos[0], 5, 2 * ZX_PAGE_SIZE));
-
-  // Verify that the data is correct in each VMO.
-  for (unsigned i = 0; i < 4; i++) {
-    ASSERT_NO_FATAL_FAILURES(VmoCheck(vmos[i], 1, 0 * ZX_PAGE_SIZE));
-    if (i == 0 || i == 3) {
-      uint32_t target_val = i == 0 ? 5 : 6;
-      ASSERT_NO_FATAL_FAILURES(VmoCheck(vmos[i], target_val, 1 * ZX_PAGE_SIZE));
-      ASSERT_NO_FATAL_FAILURES(VmoCheck(vmos[i], target_val, 2 * ZX_PAGE_SIZE));
-    }
-  }
-
-  ASSERT_NO_FATAL_FAILURES(CheckContigState<3>(bti, vmos[0]));
+  ASSERT_NO_FATAL_FAILURES(CheckContigState<1>(bti, vmo));
 }
 
 TEST_F(VmoClone2TestCase, PinBeforeCreateFailure) {

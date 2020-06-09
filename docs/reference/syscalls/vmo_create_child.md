@@ -37,7 +37,8 @@ the parent to diverge from each other. Any reads from ranges outside of the pare
 contain zeros, and writes allocate new zero filled pages.
 This flag is not supported on:
  - VMOs with pinned regions.
- - VMOs created with or descended from [`zx_vmo_create_physical()`]
+ - VMOs created with or descended from [`zx_vmo_create_physical()`] or
+   [`zx_vmo_create_contiguous()`]
  - VMOs backed by a user pager.
 For information on VMO syscall interactions with children, see [NOTES](#notes).
 
@@ -45,8 +46,8 @@ For information on VMO syscall interactions with children, see [NOTES](#notes).
 write semantics. Any write operation on the child brings in a copy of the page from the parent,
 after which its contents may diverge from the parent. Until a page is written to, and copied, reads
 are permitted, although not guaranteed, to return changing values if the parent performs writes.
-This flag may not be used for VMOs created with [`zx_vmo_create_physical()`] or descendants of such
-a VMO.
+This flag may not be used for VMOs created with [`zx_vmo_create_physical()`],
+[`zx_vmo_create_contiguous()`] or descendants of such VMOs.
 For information on VMO syscall interactions with children, see [NOTES](#notes).
 
 - **ZX_VMO_CHILD_SLICE** - Create a slice that has direct read/write access into
@@ -54,7 +55,7 @@ a section of the parent. All operations on the slice vmo behave as if they were
 done on the parent. A slice differs from a duplicate handle to the parent by allowing
 access to only a subrange of the parent vmo, and allowing for the
 **ZX_VMO_ZERO_CHILDREN** signal to be used. This flag may be used with vmos created with
-[`zx_vmo_create_physical()`] and their descendants.
+[`zx_vmo_create_physical()`] or [`zx_vmo_create_contiguous()`] and their descendants.
 
 An alias child type of **ZX_VMO_CHILD_COPY_ON_WRITE** is also defined and is equivalent to
 **ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE**. This alias is intended to be used when
