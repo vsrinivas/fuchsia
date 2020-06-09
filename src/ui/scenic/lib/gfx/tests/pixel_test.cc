@@ -18,7 +18,9 @@ namespace gfx {
 
 namespace {
 
-constexpr zx::duration kScreenshotTimeout = zx::sec(15), kPresentTimeout = zx::sec(15);
+// 15s is not enough time for some bots to launch Scenic, see fxb/52939.
+constexpr zx::duration kScreenshotTimeout = zx::sec(15), kPresentTimeout = zx::sec(15),
+                       kIndirectPresentTimeout = zx::sec(30);
 
 // These tests need Scenic and RootPresenter at minimum, which expand to the
 // dependencies below. Using |sys::testing::TestWithEnvironment|, we use
@@ -151,7 +153,7 @@ void PixelTest::RunUntilIndirectPresent(scenic::TestView* view) {
   //    callback, which quits the loop.
 
   view->set_present_callback([this](auto) { QuitLoop(); });
-  ASSERT_FALSE(RunLoopWithTimeout(kPresentTimeout));
+  ASSERT_FALSE(RunLoopWithTimeout(kIndirectPresentTimeout));
 }
 
 void PixelTest::Present(scenic::Session* session, zx::time present_time) {

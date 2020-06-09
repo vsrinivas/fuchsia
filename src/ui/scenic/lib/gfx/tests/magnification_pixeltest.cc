@@ -82,8 +82,7 @@ class MagnificationPixelTest : public gfx::PixelTest {
   std::unique_ptr<scenic::CoordinateTestView> view_;
 };
 
-// TODO(fxb/52939): Solve flakiness issues.
-TEST_F(MagnificationPixelTest, DISABLED_Identity) {
+TEST_F(MagnificationPixelTest, Identity) {
   SetClipSpaceTransform(0, 0, 1);
   scenic::Screenshot screenshot = TakeScreenshot();
 
