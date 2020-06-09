@@ -8,6 +8,7 @@
 
 ## Usage: fx smoke-test
 ##           [--regenerate] [--dry-run] [--verbose] [--no-feedback]
+##           [-- [fx test arguments]]
 ##
 ##   --regenerate Regenerates Ninja first.
 ##                If your change affects test definitions or modifies
@@ -16,6 +17,11 @@
 ##   --dry-run Finds affected tests but doesn't run them
 ##   --verbose Prints modified files and affected tests
 ##   --no-feedback Don't print feedback link
+##
+##   Optionally add -- followed by arguments to be passed to `fx test`
+##   if tests are run. For example:
+##   fx smoke-test -- -o
+##   This will run `fx test [tests...] -o`
 
 set -e
 
@@ -52,7 +58,7 @@ while [ $# -gt 0 ]; do
     --verbose) VERBOSE="1" ;;
     --dry-run) DRY_RUN="1" ;;
     --no-feedback) NO_FEEDBACK="1" ;;
-    --) break ;;
+    --) shift; break ;;
     *) usage && printf "Unknown flag %s\n" "${ARG}" && exit 1 ;;
   esac
   shift
@@ -94,7 +100,7 @@ fi
 
 # Run affected tests
 if [[ -z "$DRY_RUN" && -n "$AFFECTED" ]]; then
-  fx-command-run test ${AFFECTED}
+  fx-command-run test ${AFFECTED} "$@"
 fi
 
 if [[ -z "$NO_FEEDBACK" ]]; then
