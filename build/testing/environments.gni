@@ -11,7 +11,7 @@ declare_args() {
   include_tests_that_fail_on_nuc_asan = true
 
   # The list of environment names to include in "basic_envs".
-  basic_env_names = []
+  basic_env_names = [ "emu" ]
 }
 
 _all_named_envs = []
@@ -125,24 +125,10 @@ if (include_tests_that_fail_on_nuc_asan) {
 }
 
 basic_envs = []
-
-# TODO(49414): Change default value of basic_env_names to "emu"
-# and get rid of this if statement.
-if (basic_env_names == []) {
-  if (board_name == "x64") {
-    basic_envs = [
-      emu_env,
-      nuc_env,
-    ]
-  } else if (board_name == "qemu-arm64" || board_name == "qemu-x64") {
-    basic_envs = [ emu_env ]
-  }
-} else {
-  foreach(name, basic_env_names) {
-    foreach(named_env, _all_named_envs) {
-      if (name == named_env.name) {
-        basic_envs += [ named_env.env ]
-      }
+foreach(name, basic_env_names) {
+  foreach(named_env, _all_named_envs) {
+    if (name == named_env.name) {
+      basic_envs += [ named_env.env ]
     }
   }
 }
