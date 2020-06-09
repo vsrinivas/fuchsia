@@ -14,9 +14,8 @@
 #include <zircon/syscalls/object.h>
 
 #include <iostream>
+#include <iterator>
 #include <sstream>
-
-#include "src/lib/fxl/arraysize.h"
 
 using fuchsia::testing::runner::TestResult;
 using fuchsia::testing::runner::TestRunner;
@@ -116,7 +115,7 @@ int main(int argc, char** argv) {
   zx_handle_t handle = ZX_HANDLE_INVALID;
   zx_status_t status =
       fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO, argv[1],
-                     argv + 1, nullptr, arraysize(actions), actions, &handle, error);
+                     argv + 1, nullptr, std::size(actions), actions, &handle, error);
   if (status < 0) {
     reporter.Finish(true, error);
     return 1;

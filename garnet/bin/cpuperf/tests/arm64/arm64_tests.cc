@@ -4,7 +4,7 @@
 
 #include "arm64_tests.h"
 
-#include "src/lib/fxl/arraysize.h"
+#include <iterator>
 
 // List of tests.
 // A test automatically fails if it's not listed here.
@@ -12,4 +12,4 @@ extern const TestSpec* const kTestSpecs[] = {
     &kTallySpec,
 };
 
-extern const size_t kTestSpecCount = arraysize(kTestSpecs);
+extern const size_t kTestSpecCount = std::size(kTestSpecs);

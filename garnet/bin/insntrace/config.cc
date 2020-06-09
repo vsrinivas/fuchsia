@@ -11,12 +11,12 @@
 #include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
+#include <iterator>
 #include <limits>
 #include <string>
 #include <vector>
 
 #include "garnet/bin/insntrace/control.h"
-#include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace insntrace {
@@ -79,12 +79,12 @@ uint64_t IptConfig::CtlMsr() const {
 }
 
 uint64_t IptConfig::AddrBegin(unsigned i) const {
-  FX_DCHECK(i < arraysize(addr_range));
+  FX_DCHECK(i < std::size(addr_range));
   return addr_range[i].begin;
 }
 
 uint64_t IptConfig::AddrEnd(unsigned i) const {
-  FX_DCHECK(i < arraysize(addr_range));
+  FX_DCHECK(i < std::size(addr_range));
   return addr_range[i].end;
 }
 

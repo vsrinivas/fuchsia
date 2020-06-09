@@ -29,8 +29,6 @@
 
 #include "instruction.h"
 
-#include "src/lib/fxl/arraysize.h"
-
 namespace simple_pt {
 
 void TransferEvents(Instruction* insn, const struct pt_insn* raw_insn) {

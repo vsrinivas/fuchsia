@@ -4,10 +4,11 @@
 
 #include "session_spec.h"
 
+#include <iterator>
+
 #include <gtest/gtest.h>
 
 #include "garnet/lib/perfmon/events.h"
-#include "src/lib/fxl/arraysize.h"
 
 namespace cpuperf {
 
@@ -33,12 +34,12 @@ class SessionSpecTest : public ::testing::Test {
            "test-event description"},
       };
       perfmon::ModelEventManager::RegisterEvents("test", "misc", &TestEvents[0],
-                                                 arraysize(TestEvents));
+                                                 std::size(TestEvents));
       // Also register events for the default model: Some tests don't specify
       // one (on purpose) and we want to control what events are present. Do
       // this by registering them first.
       perfmon::ModelEventManager::RegisterEvents(perfmon::GetDefaultModelName().c_str(), "misc",
-                                                 &TestEvents[0], arraysize(TestEvents));
+                                                 &TestEvents[0], std::size(TestEvents));
       models_registered_ = true;
     }
   }

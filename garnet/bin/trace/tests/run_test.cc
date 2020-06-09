@@ -20,6 +20,7 @@
 #include <zircon/types.h>
 
 #include <initializer_list>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -28,7 +29,6 @@
 #include "garnet/bin/trace/tests/integration_test_utils.h"
 #include "src/developer/tracing/lib/test_utils/run_program.h"
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -181,7 +181,7 @@ bool RunTrace(const zx::job& job, const std::vector<std::string>& args, zx::proc
     return false;
   }
 
-  FX_CHECK(num_actions <= arraysize(spawn_actions));
+  FX_CHECK(num_actions <= std::size(spawn_actions));
 
   return RunProgram(job, argv, num_actions, spawn_actions, out_child) == ZX_OK;
 }

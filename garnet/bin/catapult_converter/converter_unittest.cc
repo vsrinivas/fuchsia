@@ -6,13 +6,14 @@
 
 #include <zircon/compiler.h>
 
+#include <iterator>
+
 #include <gtest/gtest.h>
 
 #include "rapidjson/error/en.h"
 #include "rapidjson/filereadstream.h"
 #include "rapidjson/filewritestream.h"
 #include "rapidjson/prettywriter.h"
-#include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace {
@@ -758,7 +759,7 @@ TEST(CatapultConverter, ConverterMain) {
       "--bots",
       "example_arg_bots",
   };
-  EXPECT_EQ(ConverterMain(arraysize(args), const_cast<char**>(args)), 0);
+  EXPECT_EQ(ConverterMain(std::size(args), const_cast<char**>(args)), 0);
 
   // Check just that the output file contains valid JSON.
   FILE* fp = fopen(output_file.pathname(), "r");

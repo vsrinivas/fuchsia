@@ -29,7 +29,7 @@
 
 #include "printer-util.h"
 
-#include "src/lib/fxl/arraysize.h"
+#include <iterator>
 
 namespace simple_pt {
 
@@ -40,7 +40,7 @@ const char* InsnClassName(enum pt_insn_class iclass) {
       [ptic_return] = "return",  [ptic_jump] = "jump",          [ptic_cond_jump] = "cjump",
       [ptic_far_call] = "fcall", [ptic_far_return] = "freturn", [ptic_far_jump] = "fjump",
   };
-  if (iclass >= arraysize(class_name))
+  if (iclass >= std::size(class_name))
     return ";;;";
   return class_name[iclass] ? class_name[iclass] : "???";
 }

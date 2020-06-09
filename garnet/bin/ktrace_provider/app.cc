@@ -16,9 +16,10 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/log.h>
 
+#include <iterator>
+
 #include "garnet/bin/ktrace_provider/device_reader.h"
 #include "garnet/bin/ktrace_provider/importer.h"
-#include "src/lib/fxl/arraysize.h"
 
 namespace ktrace_provider {
 namespace {
@@ -106,7 +107,7 @@ void App::UpdateState() {
   bool retain_current_data = false;
   if (trace_state() == TRACE_STARTED) {
     size_t num_enabled_categories = 0;
-    for (size_t i = 0; i < arraysize(kGroupCategories); i++) {
+    for (size_t i = 0; i < std::size(kGroupCategories); i++) {
       auto& category = kGroupCategories[i];
       if (trace_is_category_enabled(category.name)) {
         group_mask |= category.group;
@@ -117,12 +118,12 @@ void App::UpdateState() {
     // Avoid capturing log traces in the default case by detecting whether all
     // categories are enabled or not.
     capture_log = trace_is_category_enabled(kLogCategory) &&
-                  num_enabled_categories != arraysize(kGroupCategories);
+                  num_enabled_categories != std::size(kGroupCategories);
 
     // The default case is everything is enabled, but |kRetainCategory| must be
     // explicitly passed.
     retain_current_data = trace_is_category_enabled(kRetainCategory) &&
-                          num_enabled_categories != arraysize(kGroupCategories);
+                          num_enabled_categories != std::size(kGroupCategories);
   }
 
   if (current_group_mask_ != group_mask) {

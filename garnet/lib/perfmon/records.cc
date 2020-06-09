@@ -4,7 +4,7 @@
 
 #include "records.h"
 
-#include "src/lib/fxl/arraysize.h"
+#include <iterator>
 
 namespace perfmon {
 
@@ -36,7 +36,7 @@ size_t GetRecordSize(const RecordHeader* hdr) {
       return sizeof(PcRecord);
     case kRecordTypeLastBranch: {
       auto rec = reinterpret_cast<const LastBranchRecord*>(hdr);
-      if (rec->num_branches > arraysize(rec->branches))
+      if (rec->num_branches > std::size(rec->branches))
         return 0;
       return LastBranchRecordSize(rec);
     }

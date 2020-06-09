@@ -5,9 +5,10 @@
 // This file contains Intel events.
 // When needed separate files will describe non-Intel x64 events.
 
+#include <iterator>
+
 #include "garnet/lib/perfmon/event-registry.h"
 #include "garnet/lib/perfmon/events.h"
-#include "src/lib/fxl/arraysize.h"
 
 namespace perfmon {
 
@@ -19,7 +20,7 @@ const EventDetails g_fixed_event_details[] = {
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 };
 
-const size_t g_num_fixed_event_details = arraysize(g_fixed_event_details);
+const size_t g_num_fixed_event_details = std::size(g_fixed_event_details);
 
 const EventDetails g_arch_event_details[] = {
 #define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, umask, flags, readable_name, \
@@ -28,7 +29,7 @@ const EventDetails g_arch_event_details[] = {
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 };
 
-const size_t g_num_arch_event_details = arraysize(g_arch_event_details);
+const size_t g_num_arch_event_details = std::size(g_arch_event_details);
 
 const EventDetails g_skl_event_details[] = {
 #define DEF_SKL_EVENT(symbol, event_name, id, event, umask, flags, readable_name, description) \
@@ -36,7 +37,7 @@ const EventDetails g_skl_event_details[] = {
 #include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
 };
 
-const size_t g_num_skl_event_details = arraysize(g_skl_event_details);
+const size_t g_num_skl_event_details = std::size(g_skl_event_details);
 
 const EventDetails g_skl_misc_event_details[] = {
 #define DEF_MISC_SKL_EVENT(symbol, event_name, id, offset, size, flags, readable_name, \
@@ -45,7 +46,7 @@ const EventDetails g_skl_misc_event_details[] = {
 #include <lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc>
 };
 
-const size_t g_num_skl_misc_event_details = arraysize(g_skl_misc_event_details);
+const size_t g_num_skl_misc_event_details = std::size(g_skl_misc_event_details);
 
 // Register all events for Intel Skylake.
 void RegisterIntelSkylakeEvents(internal::EventRegistry* registry) {

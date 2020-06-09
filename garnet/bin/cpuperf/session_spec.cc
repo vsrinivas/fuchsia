@@ -11,6 +11,7 @@
 #include <zircon/syscalls.h>
 
 #include <array>
+#include <iterator>
 #include <limits>
 #include <string>
 #include <vector>
@@ -21,7 +22,6 @@
 #include <rapidjson/stringbuffer.h>
 
 #include "garnet/lib/perfmon/events.h"
-#include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/json_parser/rapidjson_validation.h"
 

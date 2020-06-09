@@ -5,9 +5,10 @@
 // This file contains arm64 events.
 // When needed separate files will describe various models.
 
+#include <iterator>
+
 #include "garnet/lib/perfmon/event-registry.h"
 #include "garnet/lib/perfmon/events.h"
-#include "src/lib/fxl/arraysize.h"
 
 namespace perfmon {
 
@@ -19,7 +20,7 @@ const EventDetails g_fixed_event_details[] = {
 #include <lib/zircon-internal/device/cpu-trace/arm64-pm-events.inc>
 };
 
-const size_t g_num_fixed_event_details = arraysize(g_fixed_event_details);
+const size_t g_num_fixed_event_details = std::size(g_fixed_event_details);
 
 const EventDetails g_arch_event_details[] = {
 #define DEF_ARCH_EVENT(symbol, event_name, id, pmceid_bit, event, flags, readable_name, \
@@ -28,7 +29,7 @@ const EventDetails g_arch_event_details[] = {
 #include <lib/zircon-internal/device/cpu-trace/arm64-pm-events.inc>
 };
 
-const size_t g_num_arch_event_details = arraysize(g_arch_event_details);
+const size_t g_num_arch_event_details = std::size(g_arch_event_details);
 
 // Register all events for armv8.
 void RegisterArmv8Events(internal::EventRegistry* registry) {
