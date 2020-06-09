@@ -312,6 +312,16 @@ Internally, this command runs the following:
 <code class="devsite-terminal">fx shell run-test-component <var>TEST_NAME</var> --timeout=5</code>
 </pre>
 
+If your test is a [Components v2][glossary-components-v2] test, then you can
+specify a filter which controls which test cases actually run:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx test <var>TEST_NAME</var> -- --test-filter FooTest*</code>
+</pre>
+
+Note that there must be a space between `--test-filter` and the filter; you cannot
+use `=`. The filter is a [glob style pattern][rust-glob-syntax].
+
 #### Implementation
 
 When `fx test` runs your test component, `fx test` calls `run-test-component`
@@ -358,3 +368,5 @@ provided to `run-test-component`.
 [test_package]: /docs/concepts/testing/test_component.md
 [isolated-storage]: /docs/concepts/testing/test_component.md#isolated_storage
 [fuchsia_package_url]: /docs/concepts/packages/package_url.md
+[glossary-components-v2]: /docs/glossary.md#components-v2
+[rust-glob-syntax]: https://docs.rs/glob/0.3.0/glob/struct.Pattern.html
