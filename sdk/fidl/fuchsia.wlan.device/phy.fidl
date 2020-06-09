@@ -30,20 +30,6 @@ enum Capability {
     SIMULTANEOUS_CLIENT_AP = 5;
 };
 
-struct HtCapabilities {
-    uint16 ht_capability_info;
-    uint8 ampdu_params;
-    array<uint8>:16 supported_mcs_set;
-    uint16 ht_ext_capabilities;
-    uint32 tx_beamforming_capabilities;
-    uint8 asel_capabilities;
-};
-
-struct VhtCapabilities {
-    uint32 vht_capability_info;
-    uint64 supported_vht_mcs_and_nss_set;
-};
-
 struct ChannelList {
     uint16 base_freq;
     vector<uint8>:200 channels;
