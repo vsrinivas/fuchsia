@@ -32,7 +32,10 @@ class SystemInstance : public FsProvider {
 
   // The heart of the public API, in the order that things get called during
   // startup.
+  zx_status_t CreateDriverHostJob(const zx::job& root_job, zx::job* driver_host_job_out);
   zx_status_t CreateSvcJob(const zx::job& root_job);
+  zx_status_t MaybeCreateShellJob(const zx::job& root_job,
+                                  llcpp::fuchsia::boot::Arguments::SyncClient& boot_args);
   zx_status_t PrepareChannels();
 
   zx_status_t StartSvchost(const zx::job& root_job, const zx::channel& root_dir,
@@ -53,9 +56,9 @@ class SystemInstance : public FsProvider {
   zx_status_t clone_fshost_ldsvc(zx::channel* loader);
 
  protected:
-  // Protected constructor for SystemInstance that allows injecting a different
-  // namespace, primarily for use in unit tests.
-  explicit SystemInstance(fdio_ns_t* default_ns);
+  DevmgrLauncher& launcher() { return launcher_; }
+  zx::job& svc_job() { return svc_job_; }
+  zx::job& shell_job() { return shell_job_; }
 
  private:
   // Private helper functions.
@@ -76,19 +79,20 @@ class SystemInstance : public FsProvider {
   // The outgoing (exposed) connection to the svchost.
   zx::channel svchost_outgoing_;
 
-  // The job in which we run "svc" realm services, like svchost, fshost,
-  // miscsvc, netsvc, the consoles, autorun, and others.
+  // The job in which we run "svc" realm services, like svchost, miscsvc, netsvc, etc.
   zx::job svc_job_;
+
+  // The job in which we run shell processes like consoles and autorun.
+  // WARNING: This job is created directly from the root job with no additional job policy
+  // restrictions. Specifically, it has ZX_POL_AMBIENT_MARK_VMO_EXEC allowed. It should only be used
+  // to launch processes like the shell, autorun processes, and other debug-only functions that are
+  // disabled on userdebug/user build types. Because of this, we only create it when the
+  // 'console.shell' kernel command line argument is enabled.
+  zx::job shell_job_;
 
   // Used to bind the svchost to the virtual-console binary to provide fidl
   // services.
   zx::channel virtcon_fidl_;
-
-  // The namespace into which SystemInstance::CloneFs will send open requests
-  // for directories hosted by fshost. Defaults to the results of
-  // fdio_ns_get_installed during construction, but can be overridden for test
-  // cases.
-  fdio_ns_t* default_ns_;
 
   DevmgrLauncher launcher_;
 };

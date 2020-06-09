@@ -63,9 +63,12 @@ Sets the initial offset (from the Unix epoch, in seconds) for the UTC clock.
 The clock will be set by the device coordinator at boot time, and then later,
 if an RTC is present, the RTC clock will be sanitized to at least this time.
 
-## console\.shell=\<bool\>
+## console.shell=\<bool\>
 If this option is set to true driver_manager will launch the shell if
 kernel.shell has not already been launched. Defaults to false.
+
+If this is false, it also disables the zircon.autorun.boot and
+zircon.autorun.system options.
 
 ## devmgr\.require-system=\<bool\>
 
@@ -643,6 +646,8 @@ This option requests that *command* be run at boot, after devmgr starts up.
 Any `+` characters in *command* are treated as argument separators, allowing
 you to pass arguments to an executable.
 
+This option is disabled if console.shell is false.
+
 ## zircon.autorun.system=\<command>
 
 This option requests that *command* be run once the system partition is mounted
@@ -651,6 +656,8 @@ will never be launched.
 
 Any `+` characters in *command* are treated as argument separators, allowing
 you to pass arguments to an executable.
+
+This option is disabled if console.shell is false.
 
 ## zircon.system.disable-automount=\<bool>
 

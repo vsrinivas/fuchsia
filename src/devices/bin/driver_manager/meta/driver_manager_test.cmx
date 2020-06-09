@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.RootJob"
+            ]
+        }
+    },
     "program": {
         "binary": "test/driver_manager_test"
     },
@@ -7,7 +14,9 @@
             "deprecated-shell"
         ],
         "services": [
-            "fuchsia.boot.Items"
+            "fuchsia.boot.Items",
+            "fuchsia.boot.RootJob",
+            "fuchsia.process.Launcher"
         ]
     }
 }

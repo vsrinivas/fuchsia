@@ -40,3 +40,29 @@ func TestShellDisabled(t *testing.T) {
 	i.RunCommand("echo '" + tokenFromSerial + "'")
 	i.AssertLogMessageNotSeenWithinTimeout(tokenFromSerial, 3*time.Second)
 }
+
+func TestAutorunDisabled(t *testing.T) {
+	distro, err := qemu.Unpack()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer distro.Delete()
+	arch, err := distro.TargetCPU()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := distro.Create(qemu.Params{
+		Arch:          arch,
+		ZBI:           support.ZbiPath(t),
+		AppendCmdline: "devmgr.log-to-debuglog console.shell=false zircon.autorun.boot=foobar",
+	})
+
+	i.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer i.Kill()
+
+	i.WaitForLogMessage("Couldn't launch autorun command 'foobar'")
+}

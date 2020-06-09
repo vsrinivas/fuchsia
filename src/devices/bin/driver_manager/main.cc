@@ -184,32 +184,6 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
   }
 }
 
-zx_status_t CreateDriverHostJob(const zx::job& root_job, zx::job* driver_host_job_out) {
-  zx::job driver_host_job;
-  zx_status_t status = zx::job::create(root_job, 0u, &driver_host_job);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Unable to create driver_host job: %s", zx_status_get_string(status));
-    return status;
-  }
-  static const zx_policy_basic_v2_t policy[] = {
-      {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_ALLOW_EXCEPTION, ZX_POL_OVERRIDE_DENY},
-  };
-  status = driver_host_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy,
-                                      std::size(policy));
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to set driver_host job policy: %s", zx_status_get_string(status));
-    return status;
-  }
-  status = driver_host_job.set_property(ZX_PROP_NAME, "zircon-drivers", 15);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to set driver_host job property: %s", zx_status_get_string(status));
-    return status;
-  }
-
-  *driver_host_job_out = std::move(driver_host_job);
-  return ZX_OK;
-}
-
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -279,7 +253,7 @@ int main(int argc, char** argv) {
     LOGF(ERROR, "Failed to get root job: %s", zx_status_get_string(status));
     return status;
   }
-  status = CreateDriverHostJob(root_job, &config.driver_host_job);
+  status = system_instance.CreateDriverHostJob(root_job, &config.driver_host_job);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to create driver_host job: %s", zx_status_get_string(status));
     return status;
@@ -352,6 +326,11 @@ int main(int argc, char** argv) {
   }
 
   status = system_instance.CreateSvcJob(root_job);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = system_instance.MaybeCreateShellJob(root_job, boot_args);
   if (status != ZX_OK) {
     return status;
   }

@@ -149,29 +149,93 @@ zx_status_t wait_for_file(const char* path, zx::time deadline) {
   return status;
 }
 
-SystemInstance::SystemInstance() : SystemInstance(nullptr) {}
-
-SystemInstance::SystemInstance(fdio_ns_t* default_ns) : default_ns_(default_ns), launcher_(this) {
-  if (default_ns_ == nullptr) {
-    zx_status_t status;
-    status = fdio_ns_get_installed(&default_ns_);
-    ZX_ASSERT_MSG(status == ZX_OK, "driver_manager: cannot get namespace: %s\n",
-                  zx_status_get_string(status));
-  }
-}
+SystemInstance::SystemInstance() : launcher_(this) {}
 
 zx_status_t SystemInstance::CreateSvcJob(const zx::job& root_job) {
-  zx_status_t status = zx::job::create(root_job, 0u, &svc_job_);
+  zx::job svc_job;
+  zx_status_t status = zx::job::create(root_job, 0u, &svc_job);
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to create job for service: %s", zx_status_get_string(status));
+    LOGF(ERROR, "Failed to create svc_job: %s", zx_status_get_string(status));
     return status;
   }
-  status = svc_job_.set_property(ZX_PROP_NAME, "zircon-services", 16);
+  // TODO(fxb/53125): This currently manually restricts AMBIENT_MARK_VMO_EXEC since this job is
+  // created from the root job. The processes spawned under this job will eventually move out of
+  // driver_manager into their own components.
+  static const zx_policy_basic_v2_t policy[] = {
+      {ZX_POL_AMBIENT_MARK_VMO_EXEC, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY}};
+  status = svc_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy, std::size(policy));
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to set job name for service: %s", zx_status_get_string(status));
+    LOGF(ERROR, "Failed to set svc_job job policy: %s", zx_status_get_string(status));
+    return status;
+  }
+  status = svc_job.set_property(ZX_PROP_NAME, "zircon-services", 16);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to set svc_job job name: %s", zx_status_get_string(status));
     return status;
   }
 
+  // Set member variable now that we're sure all job creation steps succeeded.
+  svc_job_ = std::move(svc_job);
+  return ZX_OK;
+}
+
+zx_status_t SystemInstance::CreateDriverHostJob(const zx::job& root_job,
+                                                zx::job* driver_host_job_out) {
+  zx::job driver_host_job;
+  zx_status_t status = zx::job::create(root_job, 0u, &driver_host_job);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Unable to create driver_host job: %s", zx_status_get_string(status));
+    return status;
+  }
+  // TODO(fxb/53125): This currently manually restricts AMBIENT_MARK_VMO_EXEC since this job is
+  // created from the root job. The driver_host job should move to being created from something
+  // other than the root job. (Although note that it can't simply be created from driver_manager's
+  // own job, because that has timer slack job policy automatically applied by the ELF runner.)
+  static const zx_policy_basic_v2_t policy[] = {
+      {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_ALLOW_EXCEPTION, ZX_POL_OVERRIDE_DENY},
+      {ZX_POL_AMBIENT_MARK_VMO_EXEC, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY}};
+  status = driver_host_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy,
+                                      std::size(policy));
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to set driver_host job policy: %s", zx_status_get_string(status));
+    return status;
+  }
+  status = driver_host_job.set_property(ZX_PROP_NAME, "zircon-drivers", 15);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to set driver_host job property: %s", zx_status_get_string(status));
+    return status;
+  }
+  *driver_host_job_out = std::move(driver_host_job);
+  return ZX_OK;
+}
+
+zx_status_t SystemInstance::MaybeCreateShellJob(
+    const zx::job& root_job, llcpp::fuchsia::boot::Arguments::SyncClient& boot_args) {
+  // WARNING: This job is created directly from the root job with no additional job policy
+  // restrictions. We only create it when 'console.shell' is enabled to help protect against
+  // accidental usage.
+  auto console_resp = boot_args.GetBool(fidl::StringView{"console.shell"}, false);
+  if (!console_resp.ok() || !console_resp->value) {
+    LOGF(INFO, "console.shell: disabled");
+    return ZX_OK;
+  } else {
+    LOGF(INFO, "console.shell: enabled");
+  }
+
+  zx::job shell_job;
+  zx_status_t status = zx::job::create(root_job, 0u, &shell_job);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to create shell_job: %s", zx_status_get_string(status));
+    return status;
+  }
+  status = shell_job.set_property(ZX_PROP_NAME, "zircon-shell", 16);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to set shell_job job name: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  // Set member variable now that we're sure all job creation steps succeeded.
+  shell_job_ = std::move(shell_job);
   return ZX_OK;
 }
 
@@ -441,18 +505,14 @@ int console_starter(void* arg) {
 }
 
 void SystemInstance::start_console_shell(llcpp::fuchsia::boot::Arguments::SyncClient& boot_args) {
+  // If the shell job wasn't created, console.shell is disabled so we have nothing to launch.
+  if (!shell_job_.is_valid()) {
+    return;
+  }
   // Only start a shell on the kernel console if it isn't already running a shell.
   auto resp = boot_args.GetBool(fidl::StringView{"kernel.shell"}, false);
   if (resp.ok() && resp->value) {
     return;
-  }
-  // Disable the console shell if explicitly told to.
-  auto console_resp = boot_args.GetBool(fidl::StringView{"console.shell"}, false);
-  if (!console_resp.ok() || !console_resp->value) {
-    LOGF(INFO, "console.shell: disabled");
-    return;
-  } else {
-    LOGF(INFO, "console.shell: enabled");
   }
 
   auto args = std::make_unique<ConsoleStarterArgs>();
@@ -543,7 +603,7 @@ int SystemInstance::ConsoleStarter(llcpp::fuchsia::boot::Arguments::SyncClient* 
 
     const char* argv_sh[] = {ZX_SHELL_DEFAULT, nullptr};
     zx::process proc;
-    status = launcher_.LaunchWithLoader(svc_job_, "sh:console", zx::vmo(), std::move(ldsvc),
+    status = launcher_.LaunchWithLoader(shell_job_, "sh:console", zx::vmo(), std::move(ldsvc),
                                         argv_sh, envp, fd.release(), zx::resource(), nullptr,
                                         nullptr, 0, &proc, FS_ALL);
     if (status != ZX_OK) {
@@ -787,24 +847,30 @@ zx_status_t SystemInstance::clone_fshost_ldsvc(zx::channel* loader) {
 
 void SystemInstance::do_autorun(const char* name, const char* cmd,
                                 const zx::resource& root_resource) {
-  if (cmd != nullptr) {
-    auto args = ArgumentVector::FromCmdline(cmd);
-    args.Print("autorun");
+  if (cmd == nullptr) {
+    return;
+  }
 
-    zx::channel ldsvc;
-    zx_status_t status = clone_fshost_ldsvc(&ldsvc);
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to clone loader service for %s '%s': %s", name, args.argv()[0],
-           zx_status_get_string(status));
-      return;
-    }
+  auto args = ArgumentVector::FromCmdline(cmd);
+  if (!shell_job_.is_valid()) {
+    LOGF(ERROR, "Couldn't launch autorun command '%s', shell job disabled", args.argv()[0]);
+    return;
+  }
+  args.Print("autorun");
 
-    status = launcher_.LaunchWithLoader(svc_job_, name, zx::vmo(), std::move(ldsvc), args.argv(),
-                                        nullptr, -1, root_resource, nullptr, nullptr, 0, nullptr,
-                                        FS_ALL);
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed %s '%s': %s", name, args.argv()[0], zx_status_get_string(status));
-    }
+  zx::channel ldsvc;
+  zx_status_t status = clone_fshost_ldsvc(&ldsvc);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to clone loader service for %s '%s': %s", name, args.argv()[0],
+         zx_status_get_string(status));
+    return;
+  }
+
+  status =
+      launcher_.LaunchWithLoader(shell_job_, name, zx::vmo(), std::move(ldsvc), args.argv(),
+                                 nullptr, -1, root_resource, nullptr, nullptr, 0, nullptr, FS_ALL);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed %s '%s': %s", name, args.argv()[0], zx_status_get_string(status));
   }
 }
 

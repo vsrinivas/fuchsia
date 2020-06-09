@@ -139,11 +139,17 @@ test("driver_manager_test") {
 }
 
 test_package("driver_manager_tests") {
-  deps = [ ":driver_manager_test" ]
+  deps = [
+    ":driver_manager_test",
+    "testing:ambient_vmex_test_util",
+  ]
 
   binaries = [
     {
       name = "driver_manager_test"
+    },
+    {
+      name = "ambient_vmex_test_util"
     },
   ]
 
