@@ -41,7 +41,7 @@ fit::result<zx::unowned_profile, zx_status_t> GetHighPriorityProfile() {
     status = provider.GetProfile(kHighPriority, kProfileName, &get_profile_result_status, &profile);
 
     if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to call fuchsia.scheduler.GetProfile";
+      FX_PLOGS(WARNING, status) << "Failed to call fuchsia.scheduler.GetProfile (normal in tests)";
       return status;
     }
 

@@ -337,6 +337,7 @@ std::list<std::unique_ptr<FakeSysmem::Expectations>> MediaPlayerTests::BearSysme
 
 // Play a synthetic WAV file from beginning to end.
 TEST_F(MediaPlayerTests, PlayWav) {
+  fake_audio_.renderer().DumpPackets();
   fake_audio_.renderer().ExpectPackets({{0, 4096, 0x20c39d1e31991800},
                                         {1024, 4096, 0xeaf137125d313800},
                                         {2048, 4096, 0x6162095671991800},
