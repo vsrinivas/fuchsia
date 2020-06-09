@@ -31,7 +31,12 @@ class Ssh {
       : assert(target != null && target.isNotEmpty),
         assert(sshKeyPath != null && sshKeyPath.isNotEmpty),
         assert(sshPort == null || sshPort > 0) {
-    _log.info('SSH key path: $sshKeyPath');
+    _log.info('SSH key path: $sshKeyPath, setting owner only');
+    // Swarming does not maintain file permissions any longer, so this file will
+    // be world-readable when it arrives on the tester bot. Ensure that it's not
+    // readable otherwise ssh will reject it. See https://fxbug.dev/53492 and
+    // https://crbug.com/1092020.
+    Process.run('chmod', ['og-rwx', sshKeyPath], runInShell: true);
   }
 
   /// Builds an SSH object that uses the credentials from ssh-agent only.
