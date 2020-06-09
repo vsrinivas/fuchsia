@@ -173,6 +173,11 @@ class SynchronousInterfacePtr final {
   InterfaceSync* operator->() const { return get(); }
   InterfaceSync& operator*() const { return *get(); }
 
+  // The underlying channel, or null channel if not currently bound.
+  zx::unowned_channel unowned_channel() const {
+    return proxy_ ? zx::unowned_channel(proxy_->proxy_.channel()) : zx::unowned_channel();
+  }
+
  private:
   std::unique_ptr<typename InterfaceSync::Proxy_> proxy_;
 };

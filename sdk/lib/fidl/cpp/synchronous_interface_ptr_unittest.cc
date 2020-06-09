@@ -59,5 +59,14 @@ TEST(SynchronousInterfacePtr, Unbind) {
   EXPECT_TRUE(handle.is_valid());
 }
 
+TEST(SynchronousInterfacePtr, ChannelGetter) {
+  fidl::test::frobinator::FrobinatorSyncPtr ptr;
+  EXPECT_FALSE(*ptr.unowned_channel());
+  auto request = ptr.NewRequest();
+  EXPECT_TRUE(*ptr.unowned_channel());
+  ptr.Unbind();
+  EXPECT_FALSE(*ptr.unowned_channel());
+}
+
 }  // namespace
 }  // namespace fidl

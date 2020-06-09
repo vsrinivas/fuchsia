@@ -51,6 +51,9 @@ class SynchronousProxy final : public MessageSender {
   zx_status_t Call(const fidl_type_t* request_type, const fidl_type_t* response_type,
                    Message request, Message* response);
 
+  // The underlying channel.
+  const zx::channel& channel() const { return channel_; }
+
  private:
   zx::channel channel_;
 };
