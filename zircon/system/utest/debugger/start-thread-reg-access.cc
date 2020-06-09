@@ -89,11 +89,18 @@ bool test_thread_start_register_access(reg_access_test_state_t* test_state, zx_h
                                        zx_koid_t tid) {
   BEGIN_HELPER;
 
-  zx::thread thread{tu_process_get_thread(inferior, tid)};
+  zx::thread thread;
+  zx_status_t status =
+      zx_object_get_child(inferior, tid, ZX_RIGHT_SAME_RIGHTS, thread.reset_and_get_address());
+  if (status == ZX_ERR_NOT_FOUND) {
+    thread.reset();
+  } else {
+    ASSERT_EQ(status, ZX_OK);
+  }
   ASSERT_TRUE(thread.is_valid());
 
   zx_info_thread_t info;
-  zx_status_t status = thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
+  status = thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
   ASSERT_EQ(status, ZX_OK);
   EXPECT_EQ(info.state, ZX_THREAD_STATE_BLOCKED_EXCEPTION, "");
 
@@ -104,7 +111,9 @@ bool test_thread_start_register_access(reg_access_test_state_t* test_state, zx_h
   // If we're the first thread the pc should be the ELF entry point.
   // If not the pc should be the thread's entry point.
   zx_koid_t threads[1 + kNumExtraThreads];
-  size_t num_threads = tu_process_get_threads(inferior, threads, fbl::count_of(threads));
+  size_t num_threads;
+  status = zx_object_get_info(inferior, ZX_INFO_PROCESS_THREADS, threads, sizeof(threads),
+                              &num_threads, nullptr);
   if (num_threads == 1) {
     // We don't know the inferior's load address yet so we can't do a full
     // validation of the PC yet. Save it for later when we can.

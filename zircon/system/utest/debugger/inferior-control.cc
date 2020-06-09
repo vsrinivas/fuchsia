@@ -152,8 +152,13 @@ inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t port, size_t 
   // N.B. We assume threads aren't being created as we're running.
   // This is just a testcase so we can assume that. A real debugger
   // would not have this assumption.
-  zx_koid_t* thread_koids = reinterpret_cast<zx_koid_t*>(malloc(max_threads * sizeof(zx_koid_t)));
-  size_t num_threads = tu_process_get_threads(inferior, thread_koids, max_threads);
+  size_t buffer_size = max_threads * sizeof(zx_koid_t);
+  zx_koid_t* thread_koids = reinterpret_cast<zx_koid_t*>(malloc(buffer_size));
+  size_t num_threads;
+  zx_status_t status = zx_object_get_info(inferior, ZX_INFO_PROCESS_THREADS, thread_koids,
+                                          buffer_size, &num_threads, nullptr);
+  if (status != ZX_OK)
+    tu_fatal(__func__, status);
   // For now require |max_threads| to be big enough.
   if (num_threads > max_threads)
     tu_fatal(__func__, ZX_ERR_BUFFER_TOO_SMALL);
@@ -164,8 +169,8 @@ inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t port, size_t 
   data->threads = reinterpret_cast<thread_data_t*>(calloc(max_threads, sizeof(data->threads[0])));
   data->inferior = inferior;
   data->port = port;
-  zx_status_t status = zx_task_create_exception_channel(inferior, ZX_EXCEPTION_CHANNEL_DEBUGGER,
-                                                        &data->exception_channel);
+  status = zx_task_create_exception_channel(inferior, ZX_EXCEPTION_CHANNEL_DEBUGGER,
+                                            &data->exception_channel);
   ZX_ASSERT(status == ZX_OK);
   data->max_num_threads = max_threads;
 
@@ -180,7 +185,14 @@ inferior_data_t* attach_inferior(zx_handle_t inferior, zx_handle_t port, size_t 
   size_t j = 0;
   zx_signals_t thread_signals = ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
   for (size_t i = 0; i < num_threads; ++i) {
-    zx_handle_t thread = tu_process_get_thread(inferior, thread_koids[i]);
+    zx_handle_t thread;
+    zx_status_t status =
+        zx_object_get_child(inferior, thread_koids[i], ZX_RIGHT_SAME_RIGHTS, &thread);
+    if (status == ZX_ERR_NOT_FOUND) {
+      thread = ZX_HANDLE_INVALID;
+    } else {
+      ZX_ASSERT(status == ZX_OK);
+    }
     if (thread != ZX_HANDLE_INVALID) {
       data->threads[j].tid = thread_koids[i];
       data->threads[j].handle = thread;
@@ -376,7 +388,14 @@ static bool wait_inferior_thread_worker(inferior_data_t* inferior_data,
           thread_signals |= ZX_THREAD_SUSPENDED;
         if (packet.signal.observed & ZX_THREAD_SUSPENDED)
           thread_signals |= ZX_THREAD_RUNNING;
-        zx_handle_t thread = tu_process_get_thread(inferior, packet.key);
+        zx_handle_t thread;
+        zx_status_t status =
+            zx_object_get_child(inferior, packet.key, ZX_RIGHT_SAME_RIGHTS, &thread);
+        if (status == ZX_ERR_NOT_FOUND) {
+          thread = ZX_HANDLE_INVALID;
+        } else {
+          ZX_ASSERT(status == ZX_OK);
+        }
         if (thread == ZX_HANDLE_INVALID) {
           continue;
         }

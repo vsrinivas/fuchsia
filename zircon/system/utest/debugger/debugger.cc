@@ -213,8 +213,6 @@ bool DebuggerThreadListTest() {
   send_simple_request(channel, RQST_START_LOOPING_THREADS);
   EXPECT_TRUE(recv_simple_response(channel, RESP_THREADS_STARTED), "");
 
-  // This doesn't use tu_process_get_threads() because here we're testing
-  // various aspects of ZX_INFO_PROCESS_THREADS.
   uint32_t buf_size = 100 * sizeof(zx_koid_t);
   size_t num_threads;
   zx_koid_t* threads = static_cast<zx_koid_t*>(malloc(buf_size));

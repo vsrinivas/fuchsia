@@ -82,10 +82,6 @@ bool tu_channel_wait_readable(zx_handle_t channel);
 
 void tu_process_wait_signaled(zx_handle_t process);
 
-// Return true if |process| has exited.
-
-bool tu_process_has_exited(zx_handle_t process);
-
 // Fetch the return code of |process|.
 
 int tu_process_get_return_code(zx_handle_t process);
@@ -93,19 +89,6 @@ int tu_process_get_return_code(zx_handle_t process);
 // Wait for |process| to exit and then fetch its return code.
 
 int tu_process_wait_exit(zx_handle_t process);
-
-// Return the handle of thread |tid| in |process|.
-// Returns ZX_HANDLE_INVALID if the thread is not found (could have died).
-
-zx_handle_t tu_process_get_thread(zx_handle_t process, zx_koid_t tid);
-
-// Fetch the current threads of |process|.
-// |max_threads| is the size of the |threads| buffer.
-// Returns the actual number of threads at the point in time when the list
-// of threads is obtained. It could be larger than |max_threads|.
-// See discussion of ZX_INFO_PROCESS_THREADS in object_get_info.md.
-
-size_t tu_process_get_threads(zx_handle_t process, zx_koid_t* threads, size_t max_threads);
 
 // A ZX_EXCP_SW_BREAKPOINT requires some registers tune-up in order to be handled correctly
 // depending on the architecture. This functions takes care of the correct setup of the program

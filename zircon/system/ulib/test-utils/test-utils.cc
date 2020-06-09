@@ -271,14 +271,6 @@ void tu_process_wait_signaled(zx_handle_t process) {
   }
 }
 
-bool tu_process_has_exited(zx_handle_t process) {
-  zx_info_process_t info;
-  zx_status_t status;
-  if ((status = zx_object_get_info(process, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL)) < 0)
-    tu_fatal("get process info", status);
-  return info.exited;
-}
-
 int tu_process_get_return_code(zx_handle_t process) {
   zx_info_process_t info;
   zx_status_t status;
@@ -294,26 +286,6 @@ int tu_process_get_return_code(zx_handle_t process) {
 int tu_process_wait_exit(zx_handle_t process) {
   tu_process_wait_signaled(process);
   return tu_process_get_return_code(process);
-}
-
-zx_handle_t tu_process_get_thread(zx_handle_t process, zx_koid_t tid) {
-  zx_handle_t thread;
-  zx_status_t status = zx_object_get_child(process, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
-  if (status == ZX_ERR_NOT_FOUND)
-    return ZX_HANDLE_INVALID;
-  if (status < 0)
-    tu_fatal(__func__, status);
-  return thread;
-}
-
-size_t tu_process_get_threads(zx_handle_t process, zx_koid_t* threads, size_t max_threads) {
-  size_t num_threads;
-  size_t buf_size = max_threads * sizeof(threads[0]);
-  zx_status_t status =
-      zx_object_get_info(process, ZX_INFO_PROCESS_THREADS, threads, buf_size, &num_threads, NULL);
-  if (status < 0)
-    tu_fatal(__func__, status);
-  return num_threads;
 }
 
 zx_status_t tu_cleanup_breakpoint(zx_handle_t thread) {
