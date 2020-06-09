@@ -4,7 +4,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:quiver/testing/async.dart';
 import 'package:mockito/mockito.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
@@ -116,7 +115,8 @@ void main(List<String> args) {
         completion(equals('Success')));
   });
 
-  test('call boot with no config', () {
+  test('call boot with no config', () async {
+    bool called = false;
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
@@ -130,6 +130,7 @@ void main(List<String> args) {
         expect(body['method'], 'basemgr_facade.StartBasemgr');
         expect(body['params'], isNotNull);
         expect(body['params'], isEmpty);
+        called = true;
         req.response.write(
             jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
       }
@@ -138,15 +139,12 @@ void main(List<String> args) {
 
     fakeServer.listen(handler);
 
-    FakeAsync().run((async) {
-      expect(() {
-        Modular(sl4f).boot();
-        async.elapse(Duration(seconds: 10));
-      }, returnsNormally);
-    });
+    await Modular(sl4f).boot();
+    expect(called, isTrue, reason: 'StartBasemgr facade not called');
   });
 
-  test('call boot with custom config', () {
+  test('call boot with custom config', () async {
+    bool called = false;
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
@@ -165,6 +163,7 @@ void main(List<String> args) {
                 'config',
                 allOf(containsPair('basemgr', contains('base_shell')),
                     containsPair('sessionmgr', contains('session_agents')))));
+        called = true;
         req.response.write(
             jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
       }
@@ -173,22 +172,19 @@ void main(List<String> args) {
 
     fakeServer.listen(handler);
 
-    FakeAsync().run((async) {
-      expect(() {
-        Modular(sl4f).boot(config: '''{
-          "basemgr": {
-            "base_shell": {
-              "url": "foo",
-              "args": ["--bar"]
-            }
-          },
-          "sessionmgr": {
-            "session_agents": ["baz"]
-          }
-        }''');
-        async.elapse(Duration(seconds: 10));
-      }, returnsNormally);
-    });
+    await Modular(sl4f).boot(config: '''{
+      "basemgr": {
+        "base_shell": {
+          "url": "foo",
+          "args": ["--bar"]
+        }
+      },
+      "sessionmgr": {
+        "session_agents": ["baz"]
+      }
+    }''');
+
+    expect(called, isTrue, reason: 'StartBasemgr facade not called');
   });
 
   test('isRunning: no', () {
@@ -243,5 +239,51 @@ void main(List<String> args) {
     fakeServer.listen(handler);
 
     expect(Modular(sl4f).killBasemgr(), completion(equals('Success')));
+  });
+
+  test('shutdown kills modular when it owns it', () async {
+    int searchCount = 0;
+    bool killed = false;
+    void handler(HttpRequest req) async {
+      expect(req.contentLength, greaterThan(0));
+      final body = jsonDecode(await utf8.decoder.bind(req).join());
+      if (body['method'] == 'component_search_facade.Search') {
+        req.response.write(jsonEncode({
+          'id': body['id'],
+          'result': searchCount == 0 ? 'NotFound' : 'Success',
+          'error': null,
+        }));
+        searchCount++;
+      } else if (body['method'] == 'basemgr_facade.StartBasemgr') {
+        expect(
+          body['params'],
+          isNotNull,
+        );
+        expect(body['params'], isEmpty);
+        req.response.write(
+            jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
+      } else {
+        expect(body['method'], 'basemgr_facade.KillBasemgr');
+        expect(body['params'], anyOf(isNull, isEmpty));
+        killed = true;
+        req.response.write(
+            jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
+      }
+      await req.response.close();
+    }
+
+    fakeServer.listen(handler);
+
+    final modular = Modular(sl4f);
+    await modular.boot();
+
+    expect(modular.controlsBasemgr, isTrue,
+        reason: 'controlsBasemgr after boot');
+
+    await modular.shutdown();
+
+    expect(modular.controlsBasemgr, isFalse,
+        reason: 'still controlsBasemgr after shutdown');
+    expect(killed, isTrue, reason: 'did not call KillBasemgr');
   });
 }

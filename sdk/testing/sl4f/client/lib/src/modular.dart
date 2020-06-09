@@ -25,6 +25,10 @@ class Modular {
 
   bool _controlsBasemgr = false;
 
+  /// Whether this instance controls the currently running basemgr so it will
+  /// shut it down when [shutdown] is called.
+  bool get controlsBasemgr => _controlsBasemgr;
+
   Modular(Sl4f sl4f, {ComponentSearch componentSearch})
       : _request = sl4f.request,
         _componentSearch = componentSearch ?? ComponentSearch(sl4f);
@@ -79,9 +83,9 @@ class Modular {
   /// Takes a custom [config] as JSON serialized string, or launches basemgr
   /// with system default config if not provided.
   ///
-  /// If [assumeControl] is true and basemgr wasn't running, then this object
-  /// will stop basemgr when [shutdown] is called with no arguments.
-  Future<void> boot({String config, bool assumeControl = false}) async {
+  /// If [assumeControl] is true (the default) and basemgr wasn't running, then
+  /// this object will stop basemgr when [shutdown] is called with no arguments.
+  Future<void> boot({String config, bool assumeControl = true}) async {
     if (await isRunning) {
       _log.info('Not taking control of basemgr, it was already running.');
       return;
