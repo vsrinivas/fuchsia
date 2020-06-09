@@ -147,15 +147,14 @@ void SessionCtlApp::ExecuteDeleteStoryCommand(const fxl::CommandLine& command_li
   async::PostTask(dispatcher_, [this, story_name, params, done = std::move(done)]() mutable {
     puppet_master_->GetStories([this, story_name, params, done = std::move(done)](
                                    std::vector<std::string> story_names) mutable {
-      auto story_exists = std::find(story_names.begin(), story_names.end(), story_name);
-      if (story_exists != story_names.end()) {
-        puppet_master_->DeleteStory(story_name, [] {});
-        logger_.Log(kDeleteStoryCommandString, params);
-      } else {
+      auto story_exists =
+          std::find(story_names.begin(), story_names.end(), story_name) != story_names.end();
+      if (!story_exists) {
         done("Non-existent story_name " + story_name);
         return;
       }
-      done("");
+      puppet_master_->DeleteStory(story_name, [done = std::move(done)] { done(""); });
+      logger_.Log(kDeleteStoryCommandString, params);
     });
   });
 }
@@ -163,12 +162,23 @@ void SessionCtlApp::ExecuteDeleteStoryCommand(const fxl::CommandLine& command_li
 void SessionCtlApp::ExecuteDeleteAllStoriesCommand(fit::function<void(std::string)> done) {
   async::PostTask(dispatcher_, [this, done = std::move(done)]() mutable {
     puppet_master_->GetStories(
-        [this, done = std::move(done)](std::vector<std::string> story_names) {
+        [this, done = std::move(done)](std::vector<std::string> story_names) mutable {
+          struct BarrierState {
+            int remaining;
+            fit::function<void(std::string)> done;
+          };
+          auto shared_state = std::make_shared<BarrierState>();
+          shared_state->remaining = story_names.size();
+          shared_state->done = std::move(done);
           for (auto story : story_names) {
-            puppet_master_->DeleteStory(story, [] {});
+            puppet_master_->DeleteStory(story, [shared_state] {
+              --shared_state->remaining;
+              if (shared_state->remaining == 0) {
+                shared_state->done("");
+              }
+            });
           }
           logger_.Log(kDeleteAllStoriesCommandString, std::move(story_names));
-          done("");
         });
   });
 }
