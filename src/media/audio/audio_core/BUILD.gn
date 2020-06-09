@@ -241,6 +241,7 @@ executable("unittest_bin") {
     "audio_input_unittest.cc",
     "audio_output_unittest.cc",
     "audio_renderer_unittest.cc",
+    "audio_tuner_impl_unittest.cc",
     "clock_reference_unittest.cc",
     "device_config_unittest.cc",
     "driver_output_unittest.cc",
