@@ -13,6 +13,7 @@
             "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.hwinfo.Device",
             "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.weave.FactoryDataManager",
             "fuchsia.weave.Signer",
