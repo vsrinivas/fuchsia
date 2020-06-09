@@ -25,7 +25,7 @@ use {
 };
 
 #[cfg(test)]
-mod access_point;
+mod state_machine;
 pub mod types;
 
 #[derive(Debug)]

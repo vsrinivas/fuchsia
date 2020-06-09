@@ -80,6 +80,16 @@ impl SavedNetworksManager {
         })
     }
 
+    /// Creates a new config at a random path, ensuring a clean environment for an individual test
+    #[cfg(test)]
+    pub async fn new_for_test() -> Result<Self, anyhow::Error> {
+        use rand::{distributions::Alphanumeric, thread_rng, Rng};
+        let stash_id: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
+        let path: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
+        let tmp_path: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
+        Self::new_with_stash_or_paths(stash_id, Path::new(&path), Path::new(&tmp_path)).await
+    }
+
     /// Read from the old persistent storage of network configs, then write them into the new
     /// storage, both in the hashmap and the stash that stores them persistently.
     async fn migrate_legacy(

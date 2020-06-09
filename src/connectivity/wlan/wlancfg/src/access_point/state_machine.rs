@@ -255,12 +255,12 @@ async fn starting_state(
 /// processed by the ApSmeProxy, all requests to stop the AP are acknowledged.  The state machine
 /// then transitions into the stopped state.
 ///
-/// The stopped state can be entered in the following ways.
+/// The stopping state can be entered in the following ways.
 /// 1. As the initial entering point of the state machine.
 /// 2. When a manual stop request is made when the state machine is in the starting state.
 /// 3. When a manual stop request is made when the state machine is in the started state.
 ///
-/// The stopped state can be exited in the following ways.
+/// The stopping state can be exited in the following ways.
 /// 1. When a manual start request is made, the state machine will transition to the starting
 ///    state.
 /// 2. When the request to stop the SME completes, the state machine will transition to the stopped

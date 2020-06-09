@@ -16,6 +16,7 @@
         "services": [
             "fuchsia.location.sensor",
             "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
             "fuchsia.stash.SecureStore"
         ]
     }

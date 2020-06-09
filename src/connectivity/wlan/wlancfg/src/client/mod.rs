@@ -35,6 +35,8 @@ use {
 };
 
 mod scan;
+mod state_machine;
+pub mod types;
 
 /// Max number of network configs that we will send at once through the network config iterator
 /// in get_saved_networks. This depends on the maximum size of a FIDL NetworkConfig, so it may
@@ -70,7 +72,7 @@ impl Client {
     async fn disconnect_from(
         &mut self,
         network: (NetworkIdentifier, Credential),
-        update_sender: listener::ClientMessageSender,
+        update_sender: listener::ClientListenerMessageSender,
     ) {
         if self.current_connection.as_ref() != Some(&network) {
             return;
@@ -148,7 +150,7 @@ pub type ClientPtr = Arc<Mutex<Client>>;
 
 pub fn spawn_provider_server(
     client: ClientPtr,
-    update_sender: listener::ClientMessageSender,
+    update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
     requests: fidl_policy::ClientProviderRequestStream,
 ) {
@@ -156,7 +158,7 @@ pub fn spawn_provider_server(
 }
 
 pub fn spawn_listener_server(
-    update_sender: listener::ClientMessageSender,
+    update_sender: listener::ClientListenerMessageSender,
     requests: fidl_policy::ClientListenerRequestStream,
 ) {
     fasync::spawn(serve_listener_requests(update_sender, requests));
@@ -167,7 +169,7 @@ pub fn spawn_listener_server(
 /// will result in their channel being immediately closed.
 async fn serve_provider_requests(
     client: ClientPtr,
-    update_sender: listener::ClientMessageSender,
+    update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
     mut requests: fidl_policy::ClientProviderRequestStream,
 ) {
@@ -239,7 +241,7 @@ async fn serve_provider_requests(
 
 /// Serves the ClientListener protocol.
 async fn serve_listener_requests(
-    update_sender: listener::ClientMessageSender,
+    update_sender: listener::ClientListenerMessageSender,
     requests: fidl_policy::ClientListenerRequestStream,
 ) {
     let serve_fut = requests
@@ -254,7 +256,7 @@ async fn serve_listener_requests(
 async fn handle_provider_request(
     client: ClientPtr,
     internal_msg_sink: InternalMsgSink,
-    update_sender: listener::ClientMessageSender,
+    update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
     req: fidl_policy::ClientProviderRequest,
 ) -> Result<(), fidl::Error> {
@@ -296,7 +298,7 @@ fn log_client_request(request: &fidl_policy::ClientControllerRequest) {
 async fn handle_client_requests(
     client: ClientPtr,
     internal_msg_sink: InternalMsgSink,
-    update_sender: listener::ClientMessageSender,
+    update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
     requests: ClientRequests,
 ) -> Result<(), fidl::Error> {
@@ -374,7 +376,7 @@ async fn handle_client_requests(
 const DISCONNECTION_MONITOR_SECONDS: i64 = 10;
 async fn wait_for_disconnection(
     client: ClientPtr,
-    update_sender: listener::ClientMessageSender,
+    update_sender: listener::ClientListenerMessageSender,
     network: NetworkIdentifier,
     credential: Credential,
 ) {
@@ -420,7 +422,7 @@ async fn wait_for_disconnection(
 }
 
 async fn handle_sme_connect_response(
-    update_sender: listener::ClientMessageSender,
+    update_sender: listener::ClientListenerMessageSender,
     internal_msg_sink: InternalMsgSink,
     id: NetworkIdentifier,
     credential: Credential,
@@ -474,7 +476,7 @@ async fn handle_sme_connect_response(
 /// Attempts to issue a new connect request to the currently active Client.
 /// The network's configuration must have been stored before issuing a connect request.
 async fn handle_client_request_connect(
-    update_sender: listener::ClientMessageSender,
+    update_sender: listener::ClientListenerMessageSender,
     client: ClientPtr,
     saved_networks: SavedNetworksPtr,
     network: &fidl_policy::NetworkIdentifier,
@@ -568,7 +570,7 @@ async fn handle_client_request_remove_network(
     saved_networks: SavedNetworksPtr,
     network_config: fidl_policy::NetworkConfig,
     client: ClientPtr,
-    update_sender: listener::ClientMessageSender,
+    update_sender: listener::ClientListenerMessageSender,
 ) -> Result<(), NetworkConfigError> {
     // The FIDL network config fields are defined as Options, and we consider it an error if either
     // field is missing (ie None) here.
@@ -634,7 +636,7 @@ pub fn sme_credential_from_policy(cred: &Credential) -> fidl_sme::Credential {
 
 /// Handle inbound requests to register an additional ClientStateUpdates listener.
 async fn handle_listener_request(
-    update_sender: listener::ClientMessageSender,
+    update_sender: listener::ClientListenerMessageSender,
     req: fidl_policy::ClientListenerRequest,
 ) -> Result<(), fidl::Error> {
     match req {
@@ -648,7 +650,7 @@ async fn handle_listener_request(
 /// Registers a new update listener.
 /// The client's current state will be send to the newly added listener immediately.
 fn register_listener(
-    update_sender: listener::ClientMessageSender,
+    update_sender: listener::ClientListenerMessageSender,
     listener: fidl_policy::ClientStateUpdatesProxy,
 ) {
     let _ignored = update_sender.unbounded_send(listener::Message::NewListener(listener));
@@ -737,8 +739,8 @@ mod tests {
         requests: fidl_policy::ClientProviderRequestStream,
         client: ClientPtr,
         sme_stream: fidl_sme::ClientSmeRequestStream,
-        update_sender: mpsc::UnboundedSender<listener::ClientMessage>,
-        listener_updates: mpsc::UnboundedReceiver<listener::ClientMessage>,
+        update_sender: mpsc::UnboundedSender<listener::ClientListenerMessage>,
+        listener_updates: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
     }
 
     // setup channels and proxies needed for the tests to use use the Client Provider and

@@ -76,8 +76,8 @@ impl Listener<fidl_policy::ClientStateSummary> for fidl_policy::ClientStateUpdat
 }
 
 // Helpful aliases for servicing client updates
-pub type ClientMessage = Message<fidl_policy::ClientStateUpdatesProxy, ClientStateUpdate>;
-pub type ClientMessageSender = mpsc::UnboundedSender<ClientMessage>;
+pub type ClientListenerMessage = Message<fidl_policy::ClientStateUpdatesProxy, ClientStateUpdate>;
+pub type ClientListenerMessageSender = mpsc::UnboundedSender<ClientListenerMessage>;
 
 #[cfg(test)]
 mod tests {

@@ -95,7 +95,7 @@ mod tests {
         /// Broadcasts an update to all registered listeners.
         pub fn broadcast_update<F>(
             exec: &mut fasync::Executor,
-            sender: &mut ClientMessageSender,
+            sender: &mut ClientListenerMessageSender,
             update: ClientStateUpdate,
             serve_listeners: &mut F,
         ) where
@@ -125,7 +125,7 @@ mod tests {
         /// Registers a new listener.
         pub fn register_listener<F>(
             exec: &mut fasync::Executor,
-            sender: &mut ClientMessageSender,
+            sender: &mut ClientListenerMessageSender,
             serve_listeners: &mut F,
         ) -> fidl_policy::ClientStateUpdatesRequestStream
         where
@@ -163,7 +163,7 @@ mod tests {
     #[test]
     fn initial_update() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (mut update_sender, listener_updates) = mpsc::unbounded::<ClientMessage>();
+        let (mut update_sender, listener_updates) = mpsc::unbounded::<ClientListenerMessage>();
         let serve_listeners = serve::<
             fidl_policy::ClientStateUpdatesProxy,
             fidl_policy::ClientStateSummary,
@@ -191,7 +191,7 @@ mod tests {
     #[test]
     fn multiple_listeners_broadcast() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (mut update_sender, listener_updates) = mpsc::unbounded::<ClientMessage>();
+        let (mut update_sender, listener_updates) = mpsc::unbounded::<ClientListenerMessage>();
         let serve_listeners = serve::<
             fidl_policy::ClientStateUpdatesProxy,
             fidl_policy::ClientStateSummary,
@@ -242,7 +242,7 @@ mod tests {
     #[test]
     fn multiple_listeners_unacked() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (mut update_sender, listener_updates) = mpsc::unbounded::<ClientMessage>();
+        let (mut update_sender, listener_updates) = mpsc::unbounded::<ClientListenerMessage>();
         let serve_listeners = serve::<
             fidl_policy::ClientStateUpdatesProxy,
             fidl_policy::ClientStateSummary,
