@@ -1351,29 +1351,30 @@ TEST(NetStreamTest, BlockingAcceptWrite) {
   socklen_t addrlen = sizeof(addr);
   ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
-  int ntfyfd[2];
-  ASSERT_EQ(0, pipe(ntfyfd));
+  ASSERT_EQ(listen(acptfd, 1), 0) << strerror(errno);
 
-  ASSERT_EQ(listen(acptfd, 10), 0) << strerror(errno);
-
-  std::string out;
-  std::thread thrd(StreamConnectRead, &addr, &out, ntfyfd[1]);
+  int clientfd;
+  ASSERT_GE(clientfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+  ASSERT_EQ(connect(clientfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   int connfd;
   ASSERT_GE(connfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
 
-  const char* msg = "hello";
-  ASSERT_EQ((ssize_t)strlen(msg), write(connfd, msg, strlen(msg)));
-  ASSERT_EQ(0, close(connfd));
+  const char msg[] = "hello";
+  ASSERT_EQ(write(connfd, msg, sizeof(msg)), (ssize_t)sizeof(msg)) << strerror(errno);
+  ASSERT_EQ(close(connfd), 0) << strerror(errno);
 
-  ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
-  thrd.join();
-
-  EXPECT_STREQ(msg, out.c_str());
+  struct pollfd pfd = {
+      .fd = clientfd,
+      .events = POLLIN,
+  };
+  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+  char buf[sizeof(msg) + 1] = {};
+  ASSERT_EQ(read(clientfd, buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
+  ASSERT_STREQ(buf, msg);
+  ASSERT_EQ(close(clientfd), 0) << strerror(errno);
 
   EXPECT_EQ(close(acptfd), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 class TimeoutSockoptsTest : public ::testing::TestWithParam<int /* optname */> {};
@@ -1486,40 +1487,37 @@ TEST(NetStreamTest, BlockingAcceptWriteMultiple) {
   socklen_t addrlen = sizeof(addr);
   ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
-  int ntfyfd[2];
-  ASSERT_EQ(0, pipe(ntfyfd));
-
   ASSERT_EQ(listen(acptfd, kConnections), 0) << strerror(errno);
 
-  std::thread thrd[kConnections];
-  std::string out[kConnections];
-  const char* msg = "hello";
-
+  int clientfds[kConnections];
   for (int i = 0; i < kConnections; i++) {
-    thrd[i] = std::thread(StreamConnectRead, &addr, &out[i], ntfyfd[1]);
+    ASSERT_GE(clientfds[i] = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+    ASSERT_EQ(connect(clientfds[i], (const struct sockaddr*)&addr, sizeof(addr)), 0)
+        << strerror(errno);
   }
 
+  const char msg[] = "hello";
   for (int i = 0; i < kConnections; i++) {
-    struct pollfd pfd = {acptfd, POLLIN, 0};
-    ASSERT_EQ(1, poll(&pfd, 1, kTimeout));
-
     int connfd;
     ASSERT_GE(connfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
 
-    ASSERT_EQ((ssize_t)strlen(msg), write(connfd, msg, strlen(msg)));
-    ASSERT_EQ(0, close(connfd));
-
-    ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
+    ASSERT_EQ(write(connfd, msg, sizeof(msg)), (ssize_t)sizeof(msg)) << strerror(errno);
+    ASSERT_EQ(close(connfd), 0) << strerror(errno);
   }
 
   for (int i = 0; i < kConnections; i++) {
-    thrd[i].join();
-    EXPECT_STREQ(msg, out[i].c_str());
+    struct pollfd pfd = {
+        .fd = clientfds[i],
+        .events = POLLIN,
+    };
+    ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+    char buf[sizeof(msg) + 1] = {};
+    ASSERT_EQ(read(clientfds[i], buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
+    ASSERT_STREQ(buf, msg);
+    ASSERT_EQ(close(clientfds[i]), 0) << strerror(errno);
   }
 
   EXPECT_EQ(close(acptfd), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 TEST(NetStreamTest, BlockingAcceptDupWrite) {
@@ -1535,38 +1533,38 @@ TEST(NetStreamTest, BlockingAcceptDupWrite) {
   socklen_t addrlen = sizeof(addr);
   ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
-  int ntfyfd[2];
-  ASSERT_EQ(0, pipe(ntfyfd));
+  ASSERT_EQ(listen(acptfd, 1), 0) << strerror(errno);
 
-  ASSERT_EQ(listen(acptfd, 10), 0) << strerror(errno);
-
-  std::string out;
-  std::thread thrd(StreamConnectRead, &addr, &out, ntfyfd[1]);
+  int clientfd;
+  ASSERT_GE(clientfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+  ASSERT_EQ(connect(clientfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   int connfd;
   ASSERT_GE(connfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
 
   int dupfd;
   ASSERT_GE(dupfd = dup(connfd), 0) << strerror(errno);
-  ASSERT_EQ(0, close(connfd));
+  ASSERT_EQ(close(connfd), 0) << strerror(errno);
 
-  const char* msg = "hello";
-  ASSERT_EQ((ssize_t)strlen(msg), write(dupfd, msg, strlen(msg)));
-  ASSERT_EQ(0, close(dupfd));
+  const char msg[] = "hello";
+  ASSERT_EQ(write(dupfd, msg, sizeof(msg)), (ssize_t)sizeof(msg)) << strerror(errno);
+  ASSERT_EQ(close(dupfd), 0) << strerror(errno);
 
-  ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
-  thrd.join();
-
-  EXPECT_STREQ(msg, out.c_str());
-
+  struct pollfd pfd = {
+      .fd = clientfd,
+      .events = POLLIN,
+  };
+  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+  char buf[sizeof(msg) + 1] = {};
+  ASSERT_EQ(read(clientfd, buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
+  ASSERT_STREQ(buf, msg);
+  ASSERT_EQ(close(clientfd), 0) << strerror(errno);
   EXPECT_EQ(close(acptfd), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 TEST(NetStreamTest, NonBlockingAcceptWrite) {
   int acptfd;
-  ASSERT_GE(acptfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+  ASSERT_GE(acptfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0), 0) << strerror(errno);
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
@@ -1577,40 +1575,34 @@ TEST(NetStreamTest, NonBlockingAcceptWrite) {
   socklen_t addrlen = sizeof(addr);
   ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
-  int ntfyfd[2];
-  ASSERT_EQ(0, pipe(ntfyfd));
+  ASSERT_EQ(listen(acptfd, 1), 0) << strerror(errno);
 
-  ASSERT_EQ(listen(acptfd, 10), 0) << strerror(errno);
-
-  std::string out;
-  std::thread thrd(StreamConnectRead, &addr, &out, ntfyfd[1]);
-
-  int status = fcntl(acptfd, F_GETFL, 0);
-  ASSERT_EQ(0, fcntl(acptfd, F_SETFL, status | O_NONBLOCK));
-
-  struct pollfd pfd = {acptfd, POLLIN, 0};
-  ASSERT_EQ(1, poll(&pfd, 1, kTimeout));
+  int clientfd;
+  ASSERT_GE(clientfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+  ASSERT_EQ(connect(clientfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   int connfd;
   ASSERT_GE(connfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
 
-  const char* msg = "hello";
-  ASSERT_EQ((ssize_t)strlen(msg), write(connfd, msg, strlen(msg)));
-  ASSERT_EQ(0, close(connfd));
+  const char msg[] = "hello";
+  ASSERT_EQ(write(connfd, msg, sizeof(msg)), (ssize_t)sizeof(msg)) << strerror(errno);
+  ASSERT_EQ(close(connfd), 0) << strerror(errno);
 
-  ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
-  thrd.join();
-
-  EXPECT_STREQ(msg, out.c_str());
-
+  struct pollfd pfd = {
+      .fd = clientfd,
+      .events = POLLIN,
+  };
+  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+  char buf[sizeof(msg) + 1] = {};
+  ASSERT_EQ(read(clientfd, buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
+  ASSERT_STREQ(buf, msg);
+  ASSERT_EQ(close(clientfd), 0) << strerror(errno);
   EXPECT_EQ(close(acptfd), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
   int acptfd;
-  ASSERT_GE(acptfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+  ASSERT_GE(acptfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0), 0) << strerror(errno);
 
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
@@ -1621,39 +1613,33 @@ TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
   socklen_t addrlen = sizeof(addr);
   ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
-  int ntfyfd[2];
-  ASSERT_EQ(0, pipe(ntfyfd));
+  ASSERT_EQ(listen(acptfd, 1), 0) << strerror(errno);
 
-  ASSERT_EQ(listen(acptfd, 10), 0) << strerror(errno);
-
-  std::string out;
-  std::thread thrd(StreamConnectRead, &addr, &out, ntfyfd[1]);
-
-  int status = fcntl(acptfd, F_GETFL, 0);
-  ASSERT_EQ(0, fcntl(acptfd, F_SETFL, status | O_NONBLOCK));
-
-  struct pollfd pfd = {acptfd, POLLIN, 0};
-  ASSERT_EQ(1, poll(&pfd, 1, kTimeout));
+  int clientfd;
+  ASSERT_GE(clientfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+  ASSERT_EQ(connect(clientfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
   int connfd;
   ASSERT_GE(connfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
 
   int dupfd;
   ASSERT_GE(dupfd = dup(connfd), 0) << strerror(errno);
-  ASSERT_EQ(0, close(connfd));
+  ASSERT_EQ(close(connfd), 0) << strerror(errno);
 
-  const char* msg = "hello";
-  ASSERT_EQ((ssize_t)strlen(msg), write(dupfd, msg, strlen(msg)));
-  ASSERT_EQ(0, close(dupfd));
+  const char msg[] = "hello";
+  ASSERT_EQ(write(dupfd, msg, sizeof(msg)), (ssize_t)sizeof(msg)) << strerror(errno);
+  ASSERT_EQ(close(dupfd), 0) << strerror(errno);
 
-  ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
-  thrd.join();
-
-  EXPECT_STREQ(msg, out.c_str());
-
+  struct pollfd pfd = {
+      .fd = clientfd,
+      .events = POLLIN,
+  };
+  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+  char buf[sizeof(msg) + 1] = {};
+  ASSERT_EQ(read(clientfd, buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
+  ASSERT_STREQ(buf, msg);
+  ASSERT_EQ(close(clientfd), 0) << strerror(errno);
   EXPECT_EQ(close(acptfd), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 TEST(NetStreamTest, NonBlockingConnectWrite) {
@@ -1669,26 +1655,20 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
   socklen_t addrlen = sizeof(addr);
   ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
-  int ntfyfd[2];
-  ASSERT_EQ(0, pipe(ntfyfd));
-
   ASSERT_EQ(listen(acptfd, 10), 0) << strerror(errno);
 
-  std::string out;
-  std::thread thrd(StreamAcceptRead, acptfd, &out, ntfyfd[1]);
-
   int connfd;
-  ASSERT_GE(connfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
-
-  int status = fcntl(connfd, F_GETFL, 0);
-  ASSERT_EQ(0, fcntl(connfd, F_SETFL, status | O_NONBLOCK));
+  ASSERT_GE(connfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0), 0) << strerror(errno);
 
   int ret;
   EXPECT_EQ(ret = connect(connfd, (const struct sockaddr*)&addr, sizeof(addr)), -1);
   if (ret == -1) {
     ASSERT_EQ(EINPROGRESS, errno) << strerror(errno);
 
-    struct pollfd pfd = {connfd, POLLOUT, 0};
+    struct pollfd pfd = {
+        .fd = connfd,
+        .events = POLLOUT,
+    };
     ASSERT_EQ(1, poll(&pfd, 1, kTimeout));
 
     int val;
@@ -1697,18 +1677,23 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
     ASSERT_EQ(0, val);
   }
 
-  const char* msg = "hello";
-  ASSERT_EQ((ssize_t)strlen(msg), write(connfd, msg, strlen(msg)));
-  ASSERT_EQ(0, close(connfd));
+  int clientfd;
+  ASSERT_GE(clientfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
 
-  ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
-  thrd.join();
+  const char msg[] = "hello";
+  ASSERT_EQ(write(connfd, msg, sizeof(msg)), (ssize_t)sizeof(msg)) << strerror(errno);
+  ASSERT_EQ(close(connfd), 0) << strerror(errno);
 
-  EXPECT_STREQ(msg, out.c_str());
-
+  struct pollfd pfd = {
+      .fd = clientfd,
+      .events = POLLIN,
+  };
+  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+  char buf[sizeof(msg) + 1] = {};
+  ASSERT_EQ(read(clientfd, buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
+  ASSERT_STREQ(buf, msg);
+  ASSERT_EQ(close(clientfd), 0) << strerror(errno);
   EXPECT_EQ(close(acptfd), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 TEST(NetStreamTest, NonBlockingConnectRead) {
@@ -1724,51 +1709,41 @@ TEST(NetStreamTest, NonBlockingConnectRead) {
   socklen_t addrlen = sizeof(addr);
   ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
-  int ntfyfd[2];
-  ASSERT_EQ(0, pipe(ntfyfd));
-
-  ASSERT_EQ(listen(acptfd, 10), 0) << strerror(errno);
-
-  const char* msg = "hello";
-  std::thread thrd(StreamAcceptWrite, acptfd, msg, ntfyfd[1]);
+  ASSERT_EQ(listen(acptfd, 1), 0) << strerror(errno);
 
   int connfd;
-  ASSERT_GE(connfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
-
-  int status = fcntl(connfd, F_GETFL, 0);
-  ASSERT_EQ(0, fcntl(connfd, F_SETFL, status | O_NONBLOCK));
+  ASSERT_GE(connfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0), 0) << strerror(errno);
 
   int ret;
   EXPECT_EQ(ret = connect(connfd, (const struct sockaddr*)&addr, sizeof(addr)), -1);
   if (ret == -1) {
     ASSERT_EQ(EINPROGRESS, errno) << strerror(errno);
 
+    int clientfd;
+    ASSERT_GE(clientfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
+
+    const char msg[] = "hello";
+    ASSERT_EQ(write(clientfd, msg, sizeof(msg)), (ssize_t)sizeof(msg)) << strerror(errno);
+    ASSERT_EQ(close(clientfd), 0) << strerror(errno);
+
     // Note: the success of connection can be detected with POLLOUT, but
     // we use POLLIN here to wait until some data is written by the peer.
-    struct pollfd pfd = {connfd, POLLIN, 0};
-    ASSERT_EQ(1, poll(&pfd, 1, kTimeout));
+    struct pollfd pfd = {
+        .fd = connfd,
+        .events = POLLIN,
+    };
+    ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
 
     int val;
     socklen_t vallen = sizeof(val);
     ASSERT_EQ(0, getsockopt(connfd, SOL_SOCKET, SO_ERROR, &val, &vallen));
     ASSERT_EQ(0, val);
 
-    std::string out;
-    int n;
-    char buf[4096];
-    while ((n = read(connfd, buf, sizeof(buf))) > 0) {
-      out.append(buf, n);
-    }
-    ASSERT_EQ(0, close(connfd));
-
-    ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
-    thrd.join();
-
-    EXPECT_STREQ(msg, out.c_str());
-
+    char buf[sizeof(msg) + 1] = {};
+    ASSERT_EQ(read(connfd, buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
+    ASSERT_STREQ(buf, msg);
+    ASSERT_EQ(close(connfd), 0) << strerror(errno);
     EXPECT_EQ(close(acptfd), 0) << strerror(errno);
-    EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
-    EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
   }
 }
 
@@ -1798,7 +1773,10 @@ TEST(NetStreamTest, NonBlockingConnectRefused) {
   if (ret == -1) {
     ASSERT_EQ(EINPROGRESS, errno) << strerror(errno);
 
-    struct pollfd pfd = {connfd, POLLOUT, 0};
+    struct pollfd pfd = {
+        .fd = connfd,
+        .events = POLLOUT,
+    };
     ASSERT_EQ(1, poll(&pfd, 1, kTimeout));
 
     int val;
@@ -1843,7 +1821,7 @@ TEST(NetStreamTest, DisconnectedRead) {
   // Test non blocking socket read.
   int flags;
   EXPECT_GE(flags = fcntl(socketfd, F_GETFL, 0), 0) << strerror(errno);
-  EXPECT_EQ(fcntl(socketfd, F_SETFL, flags | O_NONBLOCK), 0);
+  EXPECT_EQ(fcntl(socketfd, F_SETFL, flags | O_NONBLOCK), 0) << strerror(errno);
   EXPECT_EQ(recvfrom(socketfd, nullptr, 0, 0, nullptr, nullptr), -1);
   EXPECT_EQ(errno, ENOTCONN) << strerror(errno);
   // Test with MSG_PEEK.
@@ -1943,7 +1921,7 @@ TEST(NetStreamTest, ResetOnFullReceiveBufferShutdown) {
 #endif
 
   // Close the server to trigger a TCP Reset now that linger is 0.
-  EXPECT_EQ(close(server.release()), 0);
+  EXPECT_EQ(close(server.release()), 0) << strerror(errno);
 
   // Shutdown the client side to unblock the client receive loop.
 #if defined(__linux__)
@@ -2346,28 +2324,23 @@ TEST(NetDatagramTest, DatagramConnectWrite) {
   socklen_t addrlen = sizeof(addr);
   ASSERT_EQ(getsockname(recvfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
 
-  int ntfyfd[2];
-  ASSERT_EQ(0, pipe(ntfyfd));
-
-  std::string out;
-  std::thread thrd(DatagramRead, recvfd, &out, &addr, &addrlen, ntfyfd[1], kTimeout);
-
-  const char* msg = "hello";
+  const char msg[] = "hello";
 
   int sendfd;
   ASSERT_GE(sendfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
-  ASSERT_EQ(0, connect(sendfd, (struct sockaddr*)&addr, addrlen));
-  ASSERT_EQ((ssize_t)strlen(msg), write(sendfd, msg, strlen(msg)));
-  ASSERT_EQ(0, close(sendfd));
+  ASSERT_EQ(connect(sendfd, (struct sockaddr*)&addr, addrlen), 0) << strerror(errno);
+  ASSERT_EQ(write(sendfd, msg, sizeof(msg)), (ssize_t)sizeof(msg)) << strerror(errno);
+  ASSERT_EQ(close(sendfd), 0) << strerror(errno);
 
-  ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
-  thrd.join();
-
-  EXPECT_STREQ(msg, out.c_str());
-
+  struct pollfd pfd = {
+      .fd = recvfd,
+      .events = POLLIN,
+  };
+  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+  char buf[sizeof(msg) + 1] = {};
+  ASSERT_EQ(read(recvfd, buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
+  ASSERT_STREQ(buf, msg);
   EXPECT_EQ(close(recvfd), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 TEST(NetDatagramTest, DatagramPartialRecv) {
@@ -2456,31 +2429,35 @@ TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
       << strerror(errno);
   ASSERT_EQ(addrlen, sizeof(addr));
 
-  int ntfyfd[2];
-  ASSERT_EQ(0, pipe(ntfyfd));
-
-  std::thread thrd(DatagramReadWrite, recvfd, ntfyfd[1]);
-
-  const char* msg = "hello";
+  const char msg[] = "hello";
 
   int sendfd;
   ASSERT_GE(sendfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
-  ASSERT_EQ(sendto(sendfd, msg, strlen(msg), 0, reinterpret_cast<struct sockaddr*>(&addr), addrlen),
-            (ssize_t)strlen(msg))
+  ASSERT_EQ(sendto(sendfd, msg, sizeof(msg), 0, reinterpret_cast<struct sockaddr*>(&addr), addrlen),
+            (ssize_t)sizeof(msg))
       << strerror(errno);
 
-  struct pollfd fds = {sendfd, POLLIN, 0};
-  int nfds = poll(&fds, 1, kTimeout);
-  ASSERT_EQ(1, nfds) << "poll returned: " << nfds << " errno: " << strerror(errno);
+  char buf[sizeof(msg) + 1] = {};
 
-  char buf[32];
   struct sockaddr_in peer;
   socklen_t peerlen = sizeof(peer);
   ASSERT_EQ(
-      recvfrom(sendfd, buf, sizeof(buf), 0, reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
-      (ssize_t)strlen(msg))
+      recvfrom(recvfd, buf, sizeof(buf), 0, reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
+      (ssize_t)sizeof(msg))
       << strerror(errno);
   ASSERT_EQ(peerlen, sizeof(peer));
+  ASSERT_STREQ(msg, buf);
+
+  ASSERT_EQ(sendto(recvfd, buf, sizeof(msg), 0, reinterpret_cast<struct sockaddr*>(&peer), peerlen),
+            (ssize_t)sizeof(msg))
+      << strerror(errno);
+
+  ASSERT_EQ(
+      recvfrom(sendfd, buf, sizeof(buf), 0, reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
+      (ssize_t)sizeof(msg))
+      << strerror(errno);
+  ASSERT_EQ(peerlen, sizeof(peer));
+  ASSERT_STREQ(msg, buf);
 
   char addrbuf[INET_ADDRSTRLEN], peerbuf[INET_ADDRSTRLEN];
   const char* addrstr = inet_ntop(addr.sin_family, &addr.sin_addr, addrbuf, sizeof(addrbuf));
@@ -2489,19 +2466,13 @@ TEST(NetDatagramTest, DatagramSendtoRecvfrom) {
   ASSERT_NE(peerstr, nullptr);
   ASSERT_STREQ(peerstr, addrstr);
 
-  ASSERT_EQ(0, close(sendfd));
-
-  ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
-  thrd.join();
+  ASSERT_EQ(close(sendfd), 0) << strerror(errno);
 
   EXPECT_EQ(close(recvfd), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 // DatagramSendtoRecvfromV6 tests if UDP send automatically binds an ephemeral
 // port where the receiver can responds to.
-
 TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
   int recvfd;
   ASSERT_GE(recvfd = socket(AF_INET6, SOCK_DGRAM, 0), 0) << strerror(errno);
@@ -2518,31 +2489,35 @@ TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
       << strerror(errno);
   ASSERT_EQ(addrlen, sizeof(addr));
 
-  int ntfyfd[2];
-  ASSERT_EQ(0, pipe(ntfyfd));
-
-  std::thread thrd(DatagramReadWriteV6, recvfd, ntfyfd[1]);
-
-  const char* msg = "hello";
+  const char msg[] = "hello";
 
   int sendfd;
   ASSERT_GE(sendfd = socket(AF_INET6, SOCK_DGRAM, 0), 0) << strerror(errno);
-  ASSERT_EQ(sendto(sendfd, msg, strlen(msg), 0, reinterpret_cast<struct sockaddr*>(&addr), addrlen),
-            (ssize_t)strlen(msg))
+  ASSERT_EQ(sendto(sendfd, msg, sizeof(msg), 0, reinterpret_cast<struct sockaddr*>(&addr), addrlen),
+            (ssize_t)sizeof(msg))
       << strerror(errno);
 
-  struct pollfd fds = {sendfd, POLLIN, 0};
-  int nfds = poll(&fds, 1, kTimeout);
-  ASSERT_EQ(1, nfds) << "poll returned: " << nfds << " errno: " << strerror(errno);
+  char buf[sizeof(msg) + 1] = {};
 
-  char buf[32];
   struct sockaddr_in6 peer;
   socklen_t peerlen = sizeof(peer);
   ASSERT_EQ(
-      recvfrom(sendfd, buf, sizeof(buf), 0, reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
-      (ssize_t)strlen(msg))
+      recvfrom(recvfd, buf, sizeof(buf), 0, reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
+      (ssize_t)sizeof(msg))
       << strerror(errno);
   ASSERT_EQ(peerlen, sizeof(peer));
+  ASSERT_STREQ(msg, buf);
+
+  ASSERT_EQ(sendto(recvfd, buf, sizeof(msg), 0, reinterpret_cast<struct sockaddr*>(&peer), peerlen),
+            (ssize_t)sizeof(msg))
+      << strerror(errno);
+
+  ASSERT_EQ(
+      recvfrom(sendfd, buf, sizeof(buf), 0, reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
+      (ssize_t)sizeof(msg))
+      << strerror(errno);
+  ASSERT_EQ(peerlen, sizeof(peer));
+  ASSERT_STREQ(msg, buf);
 
   char addrbuf[INET6_ADDRSTRLEN], peerbuf[INET6_ADDRSTRLEN];
   const char* addrstr = inet_ntop(addr.sin6_family, &addr.sin6_addr, addrbuf, sizeof(addrbuf));
@@ -2551,14 +2526,9 @@ TEST(NetDatagramTest, DatagramSendtoRecvfromV6) {
   ASSERT_NE(peerstr, nullptr);
   ASSERT_STREQ(peerstr, addrstr);
 
-  ASSERT_EQ(0, close(sendfd));
-
-  ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
-  thrd.join();
+  ASSERT_EQ(close(sendfd), 0) << strerror(errno);
 
   EXPECT_EQ(close(recvfd), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
-  EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
 }
 
 TEST(NetDatagramTest, ConnectAnyV4) {
@@ -2879,7 +2849,7 @@ INSTANTIATE_TEST_SUITE_P(NetSocket, IcmpSocketTest,
                                            std::make_pair(AF_INET6, IPPROTO_ICMPV6)));
 
 TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
-  const char* msg = "hello";
+  const char msg[] = "hello";
   char addrbuf[INET_ADDRSTRLEN];
   std::array<int, 5> sampleAddrOctets = {0, 1, 100, 200, 255};
   for (auto i : sampleAddrOctets) {
@@ -2913,35 +2883,27 @@ TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
             << strerror(errno);
         ASSERT_EQ(sizeof(rcv_addr), rcv_addrlen);
 
-        int tmpfd[2];
-        ASSERT_EQ(0, pipe(tmpfd)) << strerror(errno);
-        fbl::unique_fd ntfyfd[2] = {fbl::unique_fd(tmpfd[0]), fbl::unique_fd(tmpfd[1])};
-
-        struct sockaddr_in src_addr = {};
-        socklen_t src_addrlen = sizeof(src_addr);
-        std::string out;
-        std::thread thrd(DatagramRead, recvfd.get(), &out, &src_addr, &src_addrlen, ntfyfd[1].get(),
-                         kTimeout);
-
         fbl::unique_fd sendfd;
         ASSERT_TRUE(sendfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
         struct sockaddr_in sendto_addr = {};
         sendto_addr.sin_family = AF_INET;
         sendto_addr.sin_addr = loopback_sin_addr;
         sendto_addr.sin_port = rcv_addr.sin_port;
-        ASSERT_EQ(sendto(sendfd.get(), msg, strlen(msg), 0, (struct sockaddr*)&sendto_addr,
+        ASSERT_EQ(sendto(sendfd.get(), msg, sizeof(msg), 0, (struct sockaddr*)&sendto_addr,
                          sizeof(sendto_addr)),
-                  (ssize_t)strlen(msg))
+                  (ssize_t)sizeof(msg))
             << "sendtoaddr=" << loopback_addrstr << ": " << strerror(errno);
         EXPECT_EQ(close(sendfd.release()), 0) << strerror(errno);
 
-        ASSERT_EQ(true, WaitSuccess(ntfyfd[0].get(), kTimeout));
-        thrd.join();
+        struct pollfd pfd = {
+            .fd = recvfd.get(),
+            .events = POLLIN,
+        };
+        ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+        char buf[sizeof(msg) + 1] = {};
+        ASSERT_EQ(read(recvfd.get(), buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
+        ASSERT_STREQ(buf, msg);
 
-        EXPECT_STREQ(msg, out.c_str());
-
-        EXPECT_EQ(close(ntfyfd[0].release()), 0) << strerror(errno);
-        EXPECT_EQ(close(ntfyfd[1].release()), 0) << strerror(errno);
         EXPECT_EQ(close(recvfd.release()), 0) << strerror(errno);
       }
     }

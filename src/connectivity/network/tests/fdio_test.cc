@@ -56,25 +56,28 @@ TEST(NetStreamTest, BlockingAcceptWriteNoClose) {
     // remember the assigned port and use it for the next bind.
     port = addr.sin_port;
 
-    int ntfyfd[2];
-    ASSERT_EQ(pipe(ntfyfd), 0) << strerror(errno);
+    ASSERT_EQ(listen(acptfd, 1), 0) << strerror(errno);
 
-    ASSERT_EQ(listen(acptfd, 10), 0) << strerror(errno);
-
-    std::string out;
-    std::thread thrd(StreamConnectRead, &addr, &out, ntfyfd[1]);
+    int clientfd;
+    ASSERT_GE(clientfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+    ASSERT_EQ(connect(clientfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
     int connfd;
     ASSERT_GE(connfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
 
-    const char* msg = "hello";
-    ASSERT_EQ((ssize_t)strlen(msg), write(connfd, msg, strlen(msg)));
+    const char msg[] = "hello";
+    ASSERT_EQ(write(connfd, msg, sizeof(msg)), (ssize_t)sizeof(msg)) << strerror(errno);
     ASSERT_EQ(close(connfd), 0) << strerror(errno);
 
-    ASSERT_TRUE(WaitSuccess(ntfyfd[0], kTimeout));
-    thrd.join();
-
-    EXPECT_STREQ(msg, out.c_str());
+    struct pollfd pfd = {
+        .fd = clientfd,
+        .events = POLLIN,
+    };
+    ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+    char buf[sizeof(msg) + 1] = {};
+    ASSERT_EQ(read(clientfd, buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
+    ASSERT_STREQ(buf, msg);
+    ASSERT_EQ(close(clientfd), 0) << strerror(errno);
 
     // Simulate unexpected process exit by closing the handle
     // without sending a Close op to netstack.
@@ -83,9 +86,6 @@ TEST(NetStreamTest, BlockingAcceptWriteNoClose) {
     ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
     status = zx_handle_close(handle);
     ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
-
-    EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
-    EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
   }
 }
 

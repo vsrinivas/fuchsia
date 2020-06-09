@@ -13,17 +13,6 @@
 // TODO(iyerm): 10s seems too long for our test-cases
 const int32_t kTimeout = 10000;  // 10 seconds
 
-void NotifySuccess(int ntfyfd);
-void NotifyFail(int ntfyfd);
-bool WaitSuccess(int ntfyfd, int timeout);
-void StreamAcceptRead(int acptfd, std::string* out, int ntfyfd);
-void StreamConnectRead(struct sockaddr_in* addr, std::string* out, int ntfyfd);
-void StreamAcceptWrite(int acptfd, const char* msg, int ntfyfd);
-void DatagramRead(int recvfd, std::string* out, struct sockaddr_in* addr, socklen_t* addrlen,
-                  int ntfyfd, int timeout);
-void DatagramReadWrite(int recvfd, int ntfyfd);
-void DatagramReadWriteV6(int recvfd, int ntfyfd);
-
 void fill_stream_send_buf(int fd, int peer_fd);
 
 #endif  // SRC_CONNECTIVITY_NETWORK_TESTS_UTIL_H_
