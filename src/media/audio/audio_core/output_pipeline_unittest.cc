@@ -63,6 +63,7 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
                            .effects = {},
                            .loopback = false,
                            .output_rate = 48000,
+                           .output_channels = 2,
                        },
                        {
                            .name = "communications",
@@ -73,18 +74,21 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
                            .effects = {},
                            .loopback = false,
                            .output_rate = 48000,
+                           .output_channels = 2,
                        }},
             .loopback = false,
             .output_rate = 48000,
+            .output_channels = 2,
 
         }},
         .loopback = false,
         .output_rate = 48000,
+        .output_channels = 2,
     };
 
     auto pipeline_config = PipelineConfig(root);
-    return std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve,
-                                                kDefaultFormat.channels(), 128, kDefaultTransform);
+    return std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128,
+                                                kDefaultTransform);
   }
 
   void CheckBuffer(void* buffer, float expected_sample, size_t num_samples) {
@@ -194,14 +198,16 @@ TEST_F(OutputPipelineTest, Loopback) {
               },
           .loopback = true,
           .output_rate = 48000,
+          .output_channels = 2,
       }},
       .loopback = false,
       .output_rate = 48000,
+      .output_channels = 2,
   };
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  auto pipeline = std::make_shared<OutputPipelineImpl>(
-      pipeline_config, volume_curve, kDefaultFormat.channels(), 128, kDefaultTransform);
+  auto pipeline =
+      std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128, kDefaultTransform);
 
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
@@ -264,14 +270,16 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
               },
           .loopback = true,
           .output_rate = 48000,
+          .output_channels = 2,
       }},
       .loopback = false,
       .output_rate = 96000,
+      .output_channels = 2,
   };
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  auto pipeline = std::make_shared<OutputPipelineImpl>(
-      pipeline_config, volume_curve, kDefaultFormat.channels(), 128, kDefaultTransform);
+  auto pipeline =
+      std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128, kDefaultTransform);
 
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a two effects that adds 1.0 to each sample (one on the mix stage
@@ -328,13 +336,15 @@ TEST_F(OutputPipelineTest, UpdateEffect) {
               },
           .effects = {},
           .output_rate = 48000,
+          .output_channels = 2,
       }},
       .output_rate = 48000,
+      .output_channels = 2,
   };
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  auto pipeline = std::make_shared<OutputPipelineImpl>(
-      pipeline_config, volume_curve, kDefaultFormat.channels(), 128, kDefaultTransform);
+  auto pipeline =
+      std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128, kDefaultTransform);
 
   pipeline->UpdateEffect(kInstanceName, kConfig);
 
@@ -383,6 +393,7 @@ TEST_F(OutputPipelineTest, ReportMinLeadTime) {
                              },
                          },
                      .output_rate = kDefaultFormat.frames_per_second(),
+                     .output_channels = 2,
                  },
                  {
                      .name = "communications",
@@ -399,14 +410,15 @@ TEST_F(OutputPipelineTest, ReportMinLeadTime) {
                              },
                          },
                      .output_rate = kDefaultFormat.frames_per_second(),
+                     .output_channels = 2,
                  }},
       .output_rate = kDefaultFormat.frames_per_second(),
+      .output_channels = 2,
   };
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  auto pipeline =
-      std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, kDefaultFormat.channels(),
-                                           128, kDefaultTransform, Mixer::Resampler::SampleAndHold);
+  auto pipeline = std::make_shared<OutputPipelineImpl>(
+      pipeline_config, volume_curve, 128, kDefaultTransform, Mixer::Resampler::SampleAndHold);
 
   // Add 2 streams, one with a MEDIA usage and one with COMMUNICATION usage. These should receive
   // different lead times since they have different effects (with different latencies) applied.
@@ -454,9 +466,11 @@ TEST_F(OutputPipelineTest, DifferentMixRates) {
           .effects = {},
           .loopback = true,
           .output_rate = 24000,
+          .output_channels = 2,
       }},
       .loopback = false,
       .output_rate = 48000,
+      .output_channels = 2,
   };
   testing::PacketFactory packet_factory1(dispatcher(), kDefaultFormat, PAGE_SIZE);
   // Add the stream with a usage that routes to the mix stage. We request a simple point sampler
@@ -466,8 +480,8 @@ TEST_F(OutputPipelineTest, DifferentMixRates) {
   auto stream1 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  auto pipeline = std::make_shared<OutputPipelineImpl>(
-      pipeline_config, volume_curve, kDefaultFormat.channels(), 480, kDefaultTransform, resampler);
+  auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 480,
+                                                       kDefaultTransform, resampler);
 
   pipeline->AddInput(stream1, StreamUsage::WithRenderUsage(RenderUsage::MEDIA), resampler);
 
@@ -543,14 +557,16 @@ TEST_F(OutputPipelineTest, PipelineWithRechannelEffects) {
               },
           .loopback = true,
           .output_rate = 48000,
+          .output_channels = 2,
       }},
       .loopback = false,
       .output_rate = 48000,
+      .output_channels = 2,
   };
   auto pipeline_config = PipelineConfig(root);
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  auto pipeline = std::make_shared<OutputPipelineImpl>(
-      pipeline_config, volume_curve, kDefaultFormat.channels(), 128, kDefaultTransform);
+  auto pipeline =
+      std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve, 128, kDefaultTransform);
 
   // Verify the pipeline format includes the rechannel effect.
   EXPECT_EQ(4u, pipeline->format().channels());

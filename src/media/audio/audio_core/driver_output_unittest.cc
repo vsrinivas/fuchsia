@@ -17,6 +17,7 @@
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
+#include "src/media/audio/lib/effects_loader/testing/test_effects.h"
 #include "src/media/audio/lib/format/driver_format.h"
 #include "src/media/audio/lib/logging/logging.h"
 
@@ -405,6 +406,41 @@ TEST_F(DriverOutputTest, WriteSilenceToRingWhenMuted) {
 
 class DriverV2OutputTest : public testing::ThreadingModelFixture {
  protected:
+  static constexpr uint32_t kRequestedDeviceRate = 48000;
+  static constexpr uint16_t kRequestedDeviceChannels = 4;
+  static PipelineConfig CreatePipelineConfig() {
+    PipelineConfig config;
+    config.mutable_root().name = "default";
+    config.mutable_root().input_streams = {
+        RenderUsage::BACKGROUND,   RenderUsage::MEDIA,         RenderUsage::INTERRUPTION,
+        RenderUsage::SYSTEM_AGENT, RenderUsage::COMMUNICATION,
+    };
+    config.mutable_root().output_rate = kRequestedDeviceRate;
+    config.mutable_root().output_channels = kRequestedDeviceChannels / 2;
+    config.mutable_root().loopback = true;
+    config.mutable_root().effects = {{
+        .lib_name = testing::kTestEffectsModuleName,
+        .effect_name = "rechannel",
+        .instance_name = "1:2 upchannel",
+        .effect_config = "",
+        .output_channels = kRequestedDeviceChannels,
+    }};
+    return config;
+  }
+
+  DriverV2OutputTest()
+      : ThreadingModelFixture(
+            ProcessConfig::Builder()
+                .AddDeviceProfile(
+                    {std::nullopt,
+                     DeviceConfig::OutputDeviceProfile(
+                         /* eligible_for_loopback */ true,
+                         StreamUsageSetFromRenderUsages(kFidlRenderUsages),
+                         /* independent_volume_control */ false, CreatePipelineConfig())})
+                .SetDefaultVolumeCurve(
+                    VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
+                .Build()) {}
+
   void SetUp() override {
     ThreadingModelFixture::SetUp();
     zx::channel c1, c2;
@@ -424,6 +460,11 @@ class DriverV2OutputTest : public testing::ThreadingModelFixture {
 
     ring_buffer_mapper_ = driver_->CreateRingBuffer(kRingBufferSizeBytes);
     ASSERT_NE(ring_buffer_mapper_.start(), nullptr);
+
+    // Add a rechannel effect.
+    test_effects_.AddEffect("rechannel")
+        .WithChannelization(FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY, FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY)
+        .WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
   }
 
   // Use len = -1 for the end of the buffer.
@@ -452,14 +493,18 @@ class DriverV2OutputTest : public testing::ThreadingModelFixture {
     formats.bytes_per_sample.push_back(sample_format.bytes_per_sample);
     formats.valid_bits_per_sample.push_back(sample_format.valid_bits_per_sample);
     formats.frame_rates.push_back(sample_format.frame_rate);
+    ConfigureDriverForSampleFormats(std::move(formats));
+  }
+  void ConfigureDriverForSampleFormats(fuchsia::hardware::audio::PcmSupportedFormats formats) {
     driver_->set_formats(std::move(formats));
   }
 
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
   std::unique_ptr<testing::FakeAudioDriverV2> driver_;
-  std::shared_ptr<AudioOutput> output_;
+  std::shared_ptr<DriverOutput> output_;
   fzl::VmoMapper ring_buffer_mapper_;
   zx::vmo ring_buffer_;
+  testing::TestEffectsModule test_effects_ = testing::TestEffectsModule::Open();
 };
 
 // Simple sanity test that the DriverOutput properly initializes the driver.
@@ -695,6 +740,64 @@ TEST_F(DriverV2OutputTest, WriteSilenceToRingWhenMuted) {
 
   threading_model().FidlDomain().ScheduleTask(output_->Shutdown());
   RunLoopUntilIdle();
+}
+
+TEST_F(DriverV2OutputTest, SelectRateAndChannelizationFromDeviceConfig) {
+  // Setup our driver to advertise support for a single format.
+  fuchsia::hardware::audio::PcmSupportedFormats formats = {};
+  formats.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
+  formats.bytes_per_sample.push_back(2);
+  formats.valid_bits_per_sample.push_back(16);
+
+  // Support the requested rate/channelization from the pipeline config, but also support additional
+  // rates and channelizations.
+  formats.number_of_channels.push_back(kRequestedDeviceChannels / 2);
+  formats.number_of_channels.push_back(kRequestedDeviceChannels);
+  formats.number_of_channels.push_back(kRequestedDeviceChannels * 2);
+  formats.frame_rates.push_back(kRequestedDeviceRate / 2);
+  formats.frame_rates.push_back(kRequestedDeviceRate);
+  formats.frame_rates.push_back(kRequestedDeviceRate * 2);
+  ConfigureDriverForSampleFormats(std::move(formats));
+
+  threading_model().FidlDomain().ScheduleTask(output_->Startup());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(driver_->is_running());
+
+  // Expect the pipeline to include the 1:2 upchannel effect.
+  ASSERT_TRUE(output_->pipeline_config());
+  EXPECT_EQ(1u, output_->pipeline_config()->root().effects.size());
+  EXPECT_EQ(output_->pipeline_config()->root().output_channels, kRequestedDeviceChannels / 2);
+  EXPECT_EQ(output_->pipeline_config()->root().output_rate, kRequestedDeviceRate);
+  EXPECT_EQ(output_->pipeline_config()->channels(), kRequestedDeviceChannels);
+  EXPECT_EQ(output_->pipeline_config()->frames_per_second(), kRequestedDeviceRate);
+}
+
+TEST_F(DriverV2OutputTest, UseBestAvailableSampleRateAndChannelization) {
+  // Setup our driver to advertise support for a single format.
+  fuchsia::hardware::audio::PcmSupportedFormats formats = {};
+  formats.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
+  formats.bytes_per_sample.push_back(2);
+  formats.valid_bits_per_sample.push_back(16);
+
+  // Support the requested channelization but not the requested sample rate.
+  static constexpr uint32_t kSupportedFrameRate = kRequestedDeviceRate / 2;
+  static constexpr uint16_t kSupportedChannels = kRequestedDeviceChannels / 2;
+  formats.number_of_channels.push_back(kSupportedChannels);
+  formats.frame_rates.push_back(kSupportedFrameRate);
+  ConfigureDriverForSampleFormats(std::move(formats));
+
+  threading_model().FidlDomain().ScheduleTask(output_->Startup());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(driver_->is_running());
+
+  // If the device does not meet our requirements, then we don't attempt to use the rechannel effect
+  // and just rely on our root mix stage to meet the channelization required.
+  ASSERT_TRUE(output_->pipeline_config());
+  EXPECT_TRUE(output_->pipeline_config()->root().effects.empty());
+  EXPECT_EQ(output_->pipeline_config()->root().output_channels, kSupportedChannels);
+  EXPECT_EQ(output_->pipeline_config()->root().output_rate, kSupportedFrameRate);
+  EXPECT_EQ(output_->pipeline_config()->channels(), kSupportedChannels);
+  EXPECT_EQ(output_->pipeline_config()->frames_per_second(), kSupportedFrameRate);
 }
 
 }  // namespace

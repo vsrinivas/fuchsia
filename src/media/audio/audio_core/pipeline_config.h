@@ -46,15 +46,16 @@ class PipelineConfig {
     uint16_t output_channels;
   };
 
-  static PipelineConfig Default() {
+  static PipelineConfig Default(uint32_t frame_rate = kDefaultMixGroupRate,
+                                uint16_t channels = kDefaultMixGroupChannels) {
     PipelineConfig config;
     config.root_.name = "default";
     config.root_.input_streams = {
         RenderUsage::BACKGROUND,   RenderUsage::MEDIA,         RenderUsage::INTERRUPTION,
         RenderUsage::SYSTEM_AGENT, RenderUsage::COMMUNICATION,
     };
-    config.root_.output_rate = kDefaultMixGroupRate;
-    config.root_.output_channels = kDefaultMixGroupChannels;
+    config.root_.output_rate = frame_rate;
+    config.root_.output_channels = channels;
     config.root_.loopback = true;
     return config;
   }
@@ -65,6 +66,9 @@ class PipelineConfig {
   const MixGroup& root() const { return root_; }
 
   MixGroup& mutable_root() { return root_; }
+
+  uint16_t channels() const;
+  uint32_t frames_per_second() const { return root_.output_rate; }
 
  private:
   friend class ProcessConfigBuilder;

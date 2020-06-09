@@ -64,7 +64,7 @@ class OutputPipelineImpl : public OutputPipeline {
   // The |sampler| is optionally used to select the type of sampler to be used when joining
   // mix stages together.
   OutputPipelineImpl(const PipelineConfig& config, const VolumeCurve& volume_curve,
-                     uint32_t channels, uint32_t max_block_size_frames,
+                     uint32_t max_block_size_frames,
                      TimelineFunction reference_clock_to_fractional_frame,
                      Mixer::Resampler sampler = Mixer::Resampler::Default);
   ~OutputPipelineImpl() override = default;
@@ -104,14 +104,13 @@ class OutputPipelineImpl : public OutputPipeline {
   struct State {
     State() = default;
 
-    State(const PipelineConfig& config, const VolumeCurve& curve, uint32_t channels,
-          uint32_t max_block_size_frames, TimelineFunction ref_clock_to_fractional_frame,
-          Mixer::Resampler sampler);
+    State(const PipelineConfig& config, const VolumeCurve& curve, uint32_t max_block_size_frames,
+          TimelineFunction ref_clock_to_fractional_frame, Mixer::Resampler sampler);
 
     std::shared_ptr<ReadableStream> CreateMixStage(
-        const PipelineConfig::MixGroup& spec, const VolumeCurve& volume_curve, uint32_t channels,
-        uint32_t block_size, fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_output_frame,
-        uint32_t* usage_mask, Mixer::Resampler sampler);
+        const PipelineConfig::MixGroup& spec, const VolumeCurve& volume_curve, uint32_t block_size,
+        fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_output_frame, uint32_t* usage_mask,
+        Mixer::Resampler sampler);
 
     std::vector<std::pair<std::shared_ptr<MixStage>, std::vector<StreamUsage>>> mix_stages;
     std::vector<std::shared_ptr<EffectsStage>> effects_stages;

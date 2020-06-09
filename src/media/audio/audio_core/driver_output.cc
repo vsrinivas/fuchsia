@@ -19,7 +19,6 @@ constexpr bool VERBOSE_TIMING_DEBUG = false;
 
 namespace media::audio {
 
-static constexpr uint32_t kDefaultChannelCount = 2;
 static constexpr fuchsia::media::AudioSampleFormat kDefaultAudioFmt =
     fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
 static constexpr zx::duration kDefaultMaxRetentionNsec = zx::msec(60);
@@ -347,8 +346,8 @@ void DriverOutput::OnDriverInfoFetched() {
 
   pipeline_config_ = {output_device_profile.pipeline_config()};
 
-  uint32_t pref_fps = pipeline_config_->root().output_rate;
-  uint32_t pref_chan = kDefaultChannelCount;
+  uint32_t pref_fps = pipeline_config_->frames_per_second();
+  uint32_t pref_chan = pipeline_config_->channels();
   fuchsia::media::AudioSampleFormat pref_fmt = kDefaultAudioFmt;
   zx::duration min_rb_duration =
       kDefaultHighWaterNsec + kDefaultMaxRetentionNsec + kDefaultRetentionGapNsec;
@@ -375,12 +374,30 @@ void DriverOutput::OnDriverInfoFetched() {
   auto& format = format_result.value();
 
   // Update our pipeline to produce audio in the compatible format.
-  if (pipeline_config_->root().output_rate != pref_fps) {
+  if (pipeline_config_->frames_per_second() != pref_fps) {
     FX_LOGS(WARNING) << "Hardware does not support the requested rate of "
                      << pipeline_config_->root().output_rate << " fps; hardware will run at "
                      << pref_fps << " fps";
     pipeline_config_->mutable_root().output_rate = pref_fps;
   }
+  if (pipeline_config_->channels() != pref_chan) {
+    FX_LOGS(WARNING) << "Hardware does not support the requested channelization of "
+                     << pipeline_config_->channels() << " channels; hardware will run at "
+                     << pref_chan << " channels";
+    pipeline_config_->mutable_root().output_channels = pref_chan;
+    // Some effects may perform rechannelization. If the hardware does not support the
+    // channelization with rechannelization effects we clear all effects on the final stage. This
+    // is a compromise in being robust and gracefully handling misconfiguration.
+    for (const auto& effect : pipeline_config_->root().effects) {
+      if (effect.output_channels && effect.output_channels != pref_chan) {
+        FX_LOGS(ERROR) << "Removing effects on the root stage due to unsupported channelization";
+        pipeline_config_->mutable_root().effects.clear();
+        break;
+      }
+    }
+  }
+  FX_DCHECK(pipeline_config_->frames_per_second() == pref_fps);
+  FX_DCHECK(pipeline_config_->channels() == pref_chan);
 
   // Select our output producer
   output_producer_ = OutputProducer::Select(format.stream_type());
@@ -472,8 +489,7 @@ void DriverOutput::OnDriverStartComplete() {
   auto format = driver()->GetFormat();
   FX_CHECK(format);
   FX_DCHECK(pipeline_config_);
-  SetupMixTask(*pipeline_config_, volume_curve_, format->channels(),
-               driver_writable_ring_buffer()->frames(),
+  SetupMixTask(*pipeline_config_, volume_curve_, driver_writable_ring_buffer()->frames(),
                driver_ptscts_ref_clock_to_fractional_frames());
 
   // Tell AudioDeviceManager we are ready to be an active audio device.

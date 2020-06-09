@@ -28,6 +28,8 @@ class AudioOutput : public AudioDevice {
   fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& config) override;
 
+  OutputPipeline* output_pipeline() const { return pipeline_.get(); }
+
  protected:
   friend class AudioOutputTest;
 
@@ -54,12 +56,12 @@ class AudioOutput : public AudioDevice {
   }
 
   void SetupMixTask(const PipelineConfig& config, const VolumeCurve& volume_curve,
-                    uint32_t channels, size_t max_block_size_frames,
+                    size_t max_block_size_frames,
                     TimelineFunction device_reference_clock_to_fractional_frame)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   virtual std::unique_ptr<OutputPipeline> CreateOutputPipeline(
-      const PipelineConfig& config, const VolumeCurve& volume_curve, uint32_t channels,
-      size_t max_block_size_frames, TimelineFunction device_reference_clock_to_fractional_frame);
+      const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
+      TimelineFunction device_reference_clock_to_fractional_frame);
 
   void SetMinLeadTime(zx::duration min_lead_time) { min_lead_time_ = min_lead_time; }
 

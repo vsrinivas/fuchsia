@@ -33,6 +33,8 @@ class DriverOutput : public AudioOutput {
 
   ~DriverOutput();
 
+  const std::optional<PipelineConfig>& pipeline_config() const { return pipeline_config_; }
+
  protected:
   // AudioOutput implementation
   zx_status_t Init() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;

@@ -159,19 +159,18 @@ fit::result<std::shared_ptr<ReadableStream>, zx_status_t> AudioOutput::Initializ
 }
 
 std::unique_ptr<OutputPipeline> AudioOutput::CreateOutputPipeline(
-    const PipelineConfig& config, const VolumeCurve& volume_curve, uint32_t channels,
-    size_t max_block_size_frames, TimelineFunction device_reference_clock_to_fractional_frame) {
-  auto pipeline =
-      std::make_unique<OutputPipelineImpl>(config, volume_curve, channels, max_block_size_frames,
-                                           device_reference_clock_to_fractional_frame);
+    const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
+    TimelineFunction device_reference_clock_to_fractional_frame) {
+  auto pipeline = std::make_unique<OutputPipelineImpl>(config, volume_curve, max_block_size_frames,
+                                                       device_reference_clock_to_fractional_frame);
   pipeline->SetMinLeadTime(min_lead_time_);
   return pipeline;
 }
 
 void AudioOutput::SetupMixTask(const PipelineConfig& config, const VolumeCurve& volume_curve,
-                               uint32_t channels, size_t max_block_size_frames,
+                               size_t max_block_size_frames,
                                TimelineFunction device_reference_clock_to_fractional_frame) {
-  pipeline_ = CreateOutputPipeline(config, volume_curve, channels, max_block_size_frames,
+  pipeline_ = CreateOutputPipeline(config, volume_curve, max_block_size_frames,
                                    device_reference_clock_to_fractional_frame);
 }
 

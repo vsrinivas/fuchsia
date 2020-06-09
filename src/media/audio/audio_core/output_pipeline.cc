@@ -20,36 +20,35 @@ std::vector<StreamUsage> UsagesFromRenderUsages(const std::vector<RenderUsage>& 
   return usages;
 }
 
-const Format FormatForMixGroup(const PipelineConfig::MixGroup& mix_group, uint32_t channels) {
-  auto result = Format::Create(fuchsia::media::AudioStreamType{
-      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-      .channels = channels,
-      .frames_per_second = mix_group.output_rate,
-  });
-  FX_DCHECK(result.is_ok());
-  return result.take_value();
+const Format FormatForMixGroup(const PipelineConfig::MixGroup& mix_group) {
+  return Format::Create(fuchsia::media::AudioStreamType{
+                            .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                            .channels = mix_group.output_channels,
+                            .frames_per_second = mix_group.output_rate,
+                        })
+      .take_value();
 }
 
 }  // namespace
 
 OutputPipelineImpl::OutputPipelineImpl(const PipelineConfig& config,
-                                       const VolumeCurve& volume_curve, uint32_t channels,
+                                       const VolumeCurve& volume_curve,
                                        uint32_t max_block_size_frames,
                                        TimelineFunction ref_clock_to_fractional_frame,
                                        Mixer::Resampler sampler)
-    : OutputPipelineImpl(State(config, volume_curve, channels, max_block_size_frames,
+    : OutputPipelineImpl(State(config, volume_curve, max_block_size_frames,
                                ref_clock_to_fractional_frame, sampler)) {}
 
 OutputPipelineImpl::OutputPipelineImpl(State state)
     : OutputPipeline(state.stream->format()), state_(std::move(state)) {}
 
 OutputPipelineImpl::State::State(const PipelineConfig& config, const VolumeCurve& volume_curve,
-                                 uint32_t channels, uint32_t max_block_size_frames,
+                                 uint32_t max_block_size_frames,
                                  TimelineFunction ref_clock_to_fractional_frame,
                                  Mixer::Resampler sampler) {
   uint32_t usage_mask = 0;
   stream =
-      CreateMixStage(config.root(), volume_curve, channels, max_block_size_frames,
+      CreateMixStage(config.root(), volume_curve, max_block_size_frames,
                      fbl::MakeRefCounted<VersionedTimelineFunction>(ref_clock_to_fractional_frame),
                      &usage_mask, sampler);
 }
@@ -85,11 +84,11 @@ fit::result<void, fuchsia::media::audio::UpdateEffectError> OutputPipelineImpl::
 }
 
 std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
-    const PipelineConfig::MixGroup& spec, const VolumeCurve& volume_curve, uint32_t channels,
+    const PipelineConfig::MixGroup& spec, const VolumeCurve& volume_curve,
     uint32_t max_block_size_frames,
     fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_fractional_frame, uint32_t* usage_mask,
     Mixer::Resampler sampler) {
-  auto output_format = FormatForMixGroup(spec, channels);
+  auto output_format = FormatForMixGroup(spec);
 
   auto stage = std::make_shared<MixStage>(output_format, max_block_size_frames,
                                           ref_clock_to_fractional_frame);
@@ -115,7 +114,7 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
     FX_DCHECK(!loopback) << "Only a single loopback point is allowed.";
     const uint32_t ring_size = output_format.frames_per_second();
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
-        output_format, ref_clock_to_fractional_frame, ring_size);
+        root->format(), ref_clock_to_fractional_frame, ring_size);
     loopback = std::move(endpoints.reader);
     root = std::make_shared<TapStage>(std::move(root), std::move(endpoints.writer));
   }
@@ -131,8 +130,8 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
         // we align frames between intermediate mix stages to integral frame numbers.
         timeline_function.subject_time(), timeline_function.reference_time(),
         TimelineRate(frac_fps, zx::sec(1).to_nsecs())));
-    auto substage = CreateMixStage(input, volume_curve, channels, max_block_size_frames, function,
-                                   usage_mask, sampler);
+    auto substage =
+        CreateMixStage(input, volume_curve, max_block_size_frames, function, usage_mask, sampler);
     stage->AddInput(substage, sampler);
   }
   return root;

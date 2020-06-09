@@ -41,7 +41,7 @@ class ThrottleOutput : public AudioOutput {
     static const uint32_t kMaxBatchSize = PAGE_SIZE;
     static PipelineConfig default_config = PipelineConfig::Default();
     SetupMixTask(default_config,
-                 VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume), 1,
+                 VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume),
                  kMaxBatchSize, TimelineFunction());
   }
 

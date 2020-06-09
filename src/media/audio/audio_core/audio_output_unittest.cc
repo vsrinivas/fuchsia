@@ -63,24 +63,21 @@ class TestAudioOutput : public AudioOutput {
   using AudioOutput::FrameSpan;
   using AudioOutput::SetNextSchedTime;
   void SetupMixTask(const PipelineConfig& config, const VolumeCurve& volume_curve,
-                    uint32_t channels, uint32_t max_frames,
-                    TimelineFunction clock_mono_to_output_frame) {
+                    uint32_t max_frames, TimelineFunction clock_mono_to_output_frame) {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
-    AudioOutput::SetupMixTask(config, volume_curve, channels, max_frames,
-                              clock_mono_to_output_frame);
+    AudioOutput::SetupMixTask(config, volume_curve, max_frames, clock_mono_to_output_frame);
   }
   void Process() {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
     AudioOutput::Process();
   }
   std::unique_ptr<OutputPipeline> CreateOutputPipeline(
-      const PipelineConfig& config, const VolumeCurve& volume_curve, uint32_t channels,
-      size_t max_block_size_frames,
+      const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
       TimelineFunction device_reference_clock_to_fractional_frame) override {
     if (output_pipeline_) {
       return std::move(output_pipeline_);
     }
-    return AudioOutput::CreateOutputPipeline(config, volume_curve, channels, max_block_size_frames,
+    return AudioOutput::CreateOutputPipeline(config, volume_curve, max_block_size_frames,
                                              device_reference_clock_to_fractional_frame);
   }
 
@@ -135,8 +132,7 @@ TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
                                                                           &context().link_matrix());
   static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
   static PipelineConfig config = PipelineConfig::Default();
-  audio_output_->SetupMixTask(config, volume_curve_, renderer->format()->channels(),
-                              zx::msec(1).to_msecs(), kOneFramePerMs);
+  audio_output_->SetupMixTask(config, volume_curve_, zx::msec(1).to_msecs(), kOneFramePerMs);
   context().link_matrix().LinkObjects(renderer, audio_output_,
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
 
@@ -196,8 +192,7 @@ TEST_F(AudioOutputTest, ProcessRequestsSilenceIfNoSourceBuffer) {
   static PipelineConfig config = PipelineConfig::Default();
   static VolumeCurve volume_curve =
       VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  audio_output_->SetupMixTask(config, volume_curve, /* channels */ 2, zx::msec(1).to_msecs(),
-                              kOneFramePerMs);
+  audio_output_->SetupMixTask(config, volume_curve, zx::msec(1).to_msecs(), kOneFramePerMs);
 
   // Return some valid, non-silent frame range from StartMixJob.
   audio_output_->set_start_mix_delegate([](zx::time now) {
@@ -240,8 +235,7 @@ TEST_F(AudioOutputTest, ProcessMultipleMixJobs) {
   static PipelineConfig config = PipelineConfig::Default();
   static VolumeCurve volume_curve =
       VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  audio_output_->SetupMixTask(config, volume_curve, /* channels */ 2, zx::msec(1).to_msecs(),
-                              kOneFramePerMs);
+  audio_output_->SetupMixTask(config, volume_curve, zx::msec(1).to_msecs(), kOneFramePerMs);
 
   const uint32_t kBufferFrames = 25;
   const uint32_t kBufferSamples = kBufferFrames * 2;
