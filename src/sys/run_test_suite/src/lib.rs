@@ -59,13 +59,14 @@ pub async fn run_test<W: Write>(
     url: String,
     writer: &mut W,
     timeout: Option<u32>,
+    test_filter: Option<String>,
 ) -> Result<RunResult, Error> {
     let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()?;
 
     let (sender, mut recv) = mpsc::channel(1);
 
     let (remote, test_fut) =
-        test_executor::run_v2_test_component(harness, url, sender).remote_handle();
+        test_executor::run_v2_test_component(harness, url, sender, test_filter).remote_handle();
 
     let timed_out = Arc::new(AtomicBool::new(false));
     let timed_out_clone = timed_out.clone();

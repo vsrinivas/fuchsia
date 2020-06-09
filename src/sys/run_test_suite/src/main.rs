@@ -14,6 +14,10 @@ struct Args {
     /// test url. Test should implement `fuchsia.test.Suite` protocol.
     #[argh(positional)]
     test_url: String,
+
+    /// test filter. A glob pattern for matching tests.
+    #[argh(option)]
+    test_filter: Option<String>,
 }
 
 #[fuchsia_async::run_singlethreaded]
@@ -23,8 +27,13 @@ async fn main() {
     println!("\nRunning test '{}'", args.test_url);
 
     let mut stdout = io::stdout();
-    let result =
-        run_test_suite_lib::run_test(args.test_url.clone(), &mut stdout, args.timeout).await;
+    let result = run_test_suite_lib::run_test(
+        args.test_url.clone(),
+        &mut stdout,
+        args.timeout,
+        args.test_filter.clone(),
+    )
+    .await;
     if result.is_err() {
         let err = result.unwrap_err();
         println!("Test suite encountered error trying to run tests: {:?}", err);

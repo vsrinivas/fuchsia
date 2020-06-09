@@ -56,6 +56,82 @@ async fn launch_and_test_passing_v2_test() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_with_filter() {
+    let test_facade = TestFacade::new();
+    let test_result = test_facade
+        .run_test_with_filter(
+            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/passing-test-example.cm"
+                .to_string(),
+            "*Test2".to_string(),
+        )
+        .await
+        .expect("Running test should not fail");
+
+    assert_eq!(test_result["result"].as_str().unwrap(), "passed");
+    let steps = test_result["steps"].as_array().expect("test result should contain step");
+    assert_eq!(steps.len(), 1);
+    assert_eq!(steps[0]["name"].as_str().unwrap(), "Example.Test2");
+    assert_eq!(steps[0]["status"].as_str().unwrap(), "passed");
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_with_filter_that_matches_multiple_but_not_all_tests() {
+    let test_facade = TestFacade::new();
+    let test_result = test_facade
+        .run_test_with_filter(
+            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/passing-test-example.cm"
+                .to_string(),
+            "Example.Test[32]".to_string(),
+        )
+        .await
+        .expect("Running test should not fail");
+
+    assert_eq!(test_result["result"].as_str().unwrap(), "passed");
+    let steps = test_result["steps"].as_array().expect("test result should contain step");
+    assert_eq!(steps.len(), 2);
+    let mut names = vec!["Example.Test2", "Example.Test3"];
+    for step in steps {
+        assert_eq!(step["status"].as_str().unwrap(), "passed");
+        names.remove(names.iter().position(|n| *n == step["name"].as_str().unwrap()).unwrap());
+    }
+    assert_eq!(names.len(), 0);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_with_filter_that_matches_all_tests() {
+    let test_facade = TestFacade::new();
+    let test_result = test_facade
+        .run_test_with_filter(
+            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/passing-test-example.cm"
+                .to_string(),
+            "*".to_string(),
+        )
+        .await
+        .expect("Running test should not fail");
+
+    assert_eq!(test_result["result"].as_str().unwrap(), "passed");
+    let steps = test_result["steps"].as_array().expect("test result should contain step");
+    assert_eq!(steps.len(), 3);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_with_filter_that_matches_no_tests() {
+    let test_facade = TestFacade::new();
+    let test_result = test_facade
+        .run_test_with_filter(
+            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/passing-test-example.cm"
+                .to_string(),
+            "NonExistentTest".to_string(),
+        )
+        .await
+        .expect("Running test should not fail");
+
+    assert_eq!(test_result["result"].as_str().unwrap(), "passed");
+    let steps = test_result["steps"].as_array().expect("test result should contain step");
+    assert_eq!(steps.len(), 0);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_failing_test() {
     let test_facade = TestFacade::new();
     let test_result = test_facade

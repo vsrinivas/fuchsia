@@ -55,7 +55,7 @@ async fn run_test(test_url: &str) -> Result<Vec<TestEvent>, Error> {
     let (sender, recv) = mpsc::channel(1);
 
     let (remote, test_fut) =
-        test_executor::run_and_collect_results(suite_proxy, sender).remote_handle();
+        test_executor::run_and_collect_results(suite_proxy, sender, None).remote_handle();
 
     fasync::spawn(remote);
 

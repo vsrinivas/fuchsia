@@ -23,6 +23,7 @@ use {
         ready,
         task::{Context, Poll},
     },
+    glob,
     log::*,
     std::{cell::RefCell, marker::Unpin, pin::Pin},
 };
@@ -232,6 +233,7 @@ impl TestCaseProcessor {
 pub async fn run_and_collect_results(
     suite: fidl_fuchsia_test::SuiteProxy,
     sender: mpsc::Sender<TestEvent>,
+    test_filter: Option<String>,
 ) -> Result<(), anyhow::Error> {
     debug!("enumerating tests");
     let (case_iterator, server_end) = fidl::endpoints::create_proxy()?;
@@ -240,6 +242,16 @@ pub async fn run_and_collect_results(
         .map_err(|e| format_err!("Error getting test cases: {}", suite_error(e)))?;
 
     let mut invocations = Vec::<Invocation>::new();
+    let pattern = {
+        if let Some(ref filter) = test_filter {
+            Some(
+                glob::Pattern::new(filter)
+                    .map_err(|e| format_err!("Bad test filter pattern: {}", e))?,
+            )
+        } else {
+            None
+        }
+    };
     loop {
         let cases = case_iterator
             .get_next()
@@ -249,7 +261,11 @@ pub async fn run_and_collect_results(
             break;
         }
         for case in cases {
-            invocations.push(Invocation { name: Some(case.name.unwrap()), tag: None });
+            let case_name = case.name.unwrap();
+            if !pattern.as_ref().map_or(true, |p| p.matches(&case_name)) {
+                continue;
+            }
+            invocations.push(Invocation { name: Some(case_name), tag: None });
         }
     }
     debug!("invocations: {:#?}", invocations);
@@ -356,7 +372,7 @@ pub async fn run_v1_test_component(
         .connect_to_service::<fidl_fuchsia_test::SuiteMarker>()
         .map_err(|e| format_err!("Error connecting to test service: {}", e))?;
 
-    run_and_collect_results(suite, sender).await?;
+    run_and_collect_results(suite, sender, None).await?;
 
     Ok(())
 }
@@ -366,6 +382,7 @@ pub async fn run_v2_test_component(
     harness: HarnessProxy,
     test_url: String,
     sender: mpsc::Sender<TestEvent>,
+    test_filter: Option<String>,
 ) -> Result<(), anyhow::Error> {
     if !test_url.ends_with(".cm") {
         return Err(format_err!(
@@ -383,7 +400,7 @@ pub async fn run_v2_test_component(
         .context("launch_test call failed")?
         .map_err(|e| format_err!("error launching test: {:?}", e))?;
 
-    run_and_collect_results(suite_proxy, sender).await?;
+    run_and_collect_results(suite_proxy, sender, test_filter).await?;
 
     Ok(())
 }

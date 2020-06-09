@@ -28,7 +28,7 @@ async fn launch_and_test_no_clean_exit() {
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm"
             .to_string(),
-        &mut output,None,
+        &mut output, None, None
     )
     .await
     .expect("Running test should not fail");
@@ -65,7 +65,7 @@ async fn launch_and_test_passing_v2_test() {
     let mut output: Vec<u8> = vec![];
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example_v2.cm"
-            .to_string(), &mut output,None,
+            .to_string(), &mut output, None, None
     )
     .await
     .expect("Running test should not fail");
@@ -98,12 +98,40 @@ async fn launch_and_test_passing_v2_test() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_with_filter() {
+    let mut output: Vec<u8> = vec![];
+    let run_result = run_test(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example_v2.cm"
+            .to_string(), &mut output, None, Some("*Test3".to_string())
+    )
+    .await
+    .expect("Running test should not fail");
+
+    let expected_output = "[RUNNING]	Example.Test3
+[Example.Test3]	log1 for Example.Test3
+[Example.Test3]	log2 for Example.Test3
+[Example.Test3]	log3 for Example.Test3
+[PASSED]	Example.Test3
+";
+    assert_output!(output, expected_output);
+
+    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert_eq!(run_result.executed, run_result.passed);
+
+    let expected = vec!["Example.Test3"];
+
+    assert_eq!(run_result.executed, expected);
+    assert!(run_result.successful_completion);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_empty_test() {
     let mut output: Vec<u8> = vec![];
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-test-example.cm"
             .to_string(),
         &mut output,
+        None,
         None,
     )
     .await
@@ -123,6 +151,7 @@ async fn launch_and_test_huge_test() {
             .to_string(),
         &mut output,
         None,
+        None,
     )
     .await
     .expect("Running test should not fail");
@@ -139,6 +168,7 @@ async fn launch_and_test_failing_test() {
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm"
             .to_string(),
         &mut output,
+        None,
         None,
     )
     .await
@@ -176,7 +206,7 @@ async fn launch_and_test_incomplete_test() {
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm"
             .to_string(),
-            &mut output,None,
+            &mut output, None, None
     )
     .await
     .expect("Running test should not fail");
@@ -216,6 +246,7 @@ async fn launch_and_test_invalid_test() {
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cm"
             .to_string(),
         &mut output,
+        None,
         None,
     )
     .await
@@ -257,6 +288,7 @@ async fn launch_and_run_echo_test() {
             .to_string(),
         &mut output,
         None,
+        None,
     )
     .await
     .expect("Running test should not fail");
@@ -281,6 +313,7 @@ async fn test_timeout() {
             .to_string(),
         &mut output,
         Some(1),
+        None,
     )
     .await
     .expect("Running test should not fail");
@@ -299,6 +332,7 @@ async fn test_zero_timeout() {
             .to_string(),
         &mut output,
         Some(0),
+        None,
     )
     .await
     .expect_err("this function should have failed with timeout error");
@@ -312,6 +346,7 @@ async fn test_passes_with_large_timeout() {
             .to_string(),
         &mut output,
         Some(600), //make timeout 10 minutes.
+        None,
     )
     .await
     .expect("Running test should not fail");

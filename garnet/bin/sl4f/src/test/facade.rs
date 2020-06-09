@@ -51,7 +51,7 @@ impl TestFacade {
         for test in plan.tests.iter() {
             match test {
                 TestPlanTest::ComponentUrl(c) => {
-                    let result = self.run_test_component(c.to_string()).await?;
+                    let result = self.run_test_component(c.to_string(), None).await?;
                     results.results.push(TestResultItem::Result(result));
                 }
             }
@@ -60,12 +60,26 @@ impl TestFacade {
     }
 
     pub async fn run_test(&self, url: String) -> Result<Value, anyhow::Error> {
-        let test_results = self.run_test_component(url).await?;
+        let test_results = self.run_test_component(url, None).await?;
         serde_json::to_value(test_results)
             .map_err(|e| format_err!("Not able to format test results: {}", e))
     }
 
-    async fn run_test_component(&self, url: String) -> Result<TestResult, anyhow::Error> {
+    pub async fn run_test_with_filter(
+        &self,
+        url: String,
+        filter: String,
+    ) -> Result<Value, anyhow::Error> {
+        let test_results = self.run_test_component(url, Some(filter)).await?;
+        serde_json::to_value(test_results)
+            .map_err(|e| format_err!("Not able to format test results: {}", e))
+    }
+
+    async fn run_test_component(
+        &self,
+        url: String,
+        filter: Option<String>,
+    ) -> Result<TestResult, anyhow::Error> {
         let (sender, mut recv) = mpsc::channel(1);
 
         let test_fut = match url.ends_with("cm") {
@@ -74,7 +88,7 @@ impl TestFacade {
                     fidl_fuchsia_test_manager::HarnessMarker,
                 >()?;
                 let (remote, test_fut) =
-                    test_executor::run_v2_test_component(harness, url.clone(), sender)
+                    test_executor::run_v2_test_component(harness, url.clone(), sender, filter)
                         .remote_handle();
                 fasync::spawn(remote);
                 test_fut
