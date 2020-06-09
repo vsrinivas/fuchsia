@@ -77,6 +77,8 @@ spn_styling_reset(spn_styling_t styling)
 spn_result_t
 spn_styling_group_alloc(spn_styling_t styling, spn_group_id * const group_id)
 {
+  assert(styling->dwords.next + SPN_STYLING_GROUP_COUNT_DWORDS <= styling->dwords.count);
+
   spn_result_t const res = styling->unseal(styling->impl);
 
   if (res)
