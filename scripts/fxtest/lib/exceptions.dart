@@ -75,3 +75,8 @@ class OutputClosedException implements Exception {
   final int exitCode;
   OutputClosedException([this.exitCode = 0]);
 }
+
+class BadMapPathException implements Exception {
+  final String message;
+  BadMapPathException(this.message);
+}

@@ -23,15 +23,20 @@ class CommandTokens {
   List<String> get args => tokens.sublist(1);
   String get fullCommand => tokens.join(' ').trim();
 
-  /// Same as [fullCommand], minus the absolute path to fx
-  String fullCommandDisplay(String fxSuffix) {
-    if (fxSuffix != null && fxSuffix != '') {
-      return fullCommand;
+  /// Same as [fullCommand], minus the absolute path to fx, and with any
+  /// last-second flags added in.
+  String fullCommandDisplay(String fxSuffix, [List<String> extraArgs]) {
+    var _tokens = List<String>.from(tokens);
+    if (extraArgs != null) {
+      _tokens.addAll(extraArgs);
     }
-    return tokens
-        .map((var token) => token.endsWith(fxSuffix) ? 'fx' : token)
-        .toList()
-        .join(' ');
+
+    if (fxSuffix != null && fxSuffix.isNotEmpty) {
+      _tokens = _tokens
+          .map((String token) => token.endsWith(fxSuffix) ? 'fx' : token)
+          .toList();
+    }
+    return _tokens.join(' ');
   }
 
   @override

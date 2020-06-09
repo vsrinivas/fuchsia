@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 import 'package:args/args.dart';
 import 'package:fxtest/fxtest.dart';
 
@@ -120,6 +124,14 @@ randomized\none.''')
   ..addFlag('exact',
       defaultsTo: false,
       help: 'If true, does not perform any fuzzy-matching on tests')
+  ..addFlag('e2e',
+      defaultsTo: false,
+      help: 'If true, allows the execution of host tests that require a '
+          'connected device or emulator, such as end-to-end tests.')
+  ..addFlag('only-e2e',
+      defaultsTo: false,
+      help: 'If true, skips all non-e2e tests. The `--e2e` flag is redundant '
+          'when passing this flag.')
   ..addFlag('skipped',
       defaultsTo: false,
       negatable: false,

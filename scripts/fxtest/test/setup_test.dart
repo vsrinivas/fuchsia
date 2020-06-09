@@ -29,6 +29,7 @@ class FuchsiaTestCommandFake extends FuchsiaTestCommand {
   }) : super(
           analyticsReporter: AnalyticsFaker(),
           checklist: AlwaysAllowChecklist(),
+          directoryBuilder: (String path, {bool recursive}) => null,
           fuchsiaLocator: FuchsiaLocator.shared,
           outputFormatters: outputFormatters,
           testsConfig: testsConfig,
@@ -267,6 +268,7 @@ void main() {
       var cmd = FuchsiaTestCommand(
         analyticsReporter: AnalyticsFaker(),
         checklist: AlwaysAllowChecklist(),
+        directoryBuilder: (String path, {bool recursive}) => null,
         fuchsiaLocator: fuchsiaLocator,
         outputFormatters: [
           OutputFormatter.fromConfig(
@@ -302,6 +304,7 @@ void main() {
       var cmd = FuchsiaTestCommand(
         analyticsReporter: AnalyticsFaker(),
         checklist: AlwaysAllowChecklist(),
+        directoryBuilder: (String path, {bool recursive}) => null,
         fuchsiaLocator: fuchsiaLocator,
         outputFormatters: [
           OutputFormatter.fromConfig(
@@ -330,6 +333,93 @@ void main() {
         (cmd.analyticsReporter as AnalyticsFaker).reportHistory,
         hasLength(0),
       );
+    });
+  });
+
+  group('output directories', () {
+    // Helper to assemble fixtures
+    List<TestBundle> createFixtures(
+      /// Mock builder that should create evidence of having been called
+      DirectoryBuilder mockBuilder,
+    ) {
+      final envReader = MockEnvReader();
+      when(envReader.getEnv('FUCHSIA_TEST_OUTDIR')).thenReturn('/whatever');
+      when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
+      FuchsiaLocator fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+      final testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--e2e'],
+        fuchsiaLocator: fuchsiaLocator,
+      );
+      var cmd = FuchsiaTestCommand.fromConfig(
+        testsConfig,
+        directoryBuilder: mockBuilder,
+        fuchsiaLocator: fuchsiaLocator,
+        testRunnerBuilder: (testsConfig) => FakeTestRunner.passing(),
+      );
+      return <TestBundle>[
+        cmd.testBundleBuilder(
+          TestDefinition.fromJson(
+            {
+              'environments': [
+                {
+                  'dimensions': {
+                    'device_type': 'asdf',
+                  },
+                },
+              ],
+              'test': {
+                'cpu': 'x64',
+                'label': '//scripts/e2e:e2e_tests(//build/toolchain:host_x64)',
+                'name': 'e2e_tests',
+                'os': 'linux',
+                'path': 'path/to/e2e_tests',
+                'runtime_deps': 'host_x64/gen/scripts/e2e/e2e_tests.deps.json'
+              }
+            },
+            buildDir: '/whatever',
+            fx: '/whatever/fx',
+          ),
+        ),
+        cmd.testBundleBuilder(
+          TestDefinition.fromJson(
+            {
+              'environments': [],
+              'test': {
+                'cpu': 'x64',
+                'label': '//scripts/lib:lib_tests(//build/toolchain:host_x64)',
+                'name': 'lib_tests',
+                'os': 'fuchsia',
+                'package_url':
+                    'fuchsia-pkg://fuchsia.com/lib-pkg-name#meta/lib-component-name.cmx',
+                'runtime_deps': 'host_x64/gen/scripts/lib/lib_tests.deps.json'
+              }
+            },
+            buildDir: '/whatever',
+            fx: '/whatever/fx',
+          ),
+        ),
+      ];
+    }
+
+    test('are created for e2e tests', () async {
+      bool builtDirectory = false;
+      List<TestBundle> bundles = createFixtures(
+        (path, {recursive}) => builtDirectory = true,
+      );
+      // e2e test
+      expect(bundles.first.testDefinition.isE2E, true);
+      await bundles.first.run().forEach((event) => null);
+      expect(builtDirectory, true, reason: 'because test was e2e');
+    });
+
+    test('are not created for non-e2e tests', () async {
+      bool builtDirectory = false;
+      List<TestBundle> bundles = createFixtures(
+        (path, {recursive}) => builtDirectory = true,
+      );
+      // "lib" test
+      await bundles.last.run().forEach((event) => null);
+      expect(builtDirectory, false);
     });
   });
 }

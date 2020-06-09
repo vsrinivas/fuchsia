@@ -63,6 +63,9 @@ class FuchsiaTestCommand {
 
   final ExitCodeSetter _exitCodeSetter;
 
+  /// Used to create any new directories needed to house test output / artifacts.
+  final DirectoryBuilder directoryBuilder;
+
   int _numberOfTests;
 
   FuchsiaTestCommand({
@@ -72,6 +75,7 @@ class FuchsiaTestCommand {
     @required this.checklist,
     @required this.testsConfig,
     @required this.testRunnerBuilder,
+    @required this.directoryBuilder,
     ExitCodeSetter exitCodeSetter,
   })  : _exitCodeSetter = exitCodeSetter ?? setExitCode,
         _numberOfTests = 0 {
@@ -88,9 +92,10 @@ class FuchsiaTestCommand {
   factory FuchsiaTestCommand.fromConfig(
     TestsConfig testsConfig, {
     @required TestRunner Function(TestsConfig) testRunnerBuilder,
+    DirectoryBuilder directoryBuilder,
+    ExitCodeSetter exitCodeSetter,
     FuchsiaLocator fuchsiaLocator,
     OutputFormatter outputFormatter,
-    ExitCodeSetter exitCodeSetter,
   }) {
     fuchsiaLocator = fuchsiaLocator ?? FuchsiaLocator.shared;
     var _outputFormatter =
@@ -106,6 +111,7 @@ class FuchsiaTestCommand {
         testsConfig,
         eventSink: _outputFormatter.update,
       ),
+      directoryBuilder: directoryBuilder ?? (path, {recursive}) => null,
       fuchsiaLocator: fuchsiaLocator,
       outputFormatters: [
         _outputFormatter,
@@ -232,6 +238,7 @@ class FuchsiaTestCommand {
   ]) =>
       TestBundle.build(
         confidence: confidence ?? 1,
+        directoryBuilder: directoryBuilder,
         fxSuffix: fuchsiaLocator.fx,
         realtimeOutputSink: (String val) => emitEvent(TestOutputEvent(val)),
         timeElapsedSink: (Duration duration, String cmd, String output) =>

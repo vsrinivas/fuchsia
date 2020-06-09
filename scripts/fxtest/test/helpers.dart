@@ -49,6 +49,7 @@ class ScriptedTestRunner extends TestRunner {
     String command,
     List<String> args, {
     @required String workingDirectory,
+    Map<String, String> environment,
   }) async {
     var _out = StringBuffer();
     var _err = StringBuffer();
@@ -84,8 +85,8 @@ class FakeTestRunner extends TestRunner {
   Future<ProcessResult> run(
     String command,
     List<String> args, {
-    @required String fx,
     @required String workingDirectory,
+    Map<String, String> environment,
   }) async {
     String _stdout = args.join(' ');
     addOutput(_stdout);

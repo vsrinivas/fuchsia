@@ -61,6 +61,23 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
+export FUCHSIA_DEVICE_ADDR="$(get-fuchsia-device-addr)"
+
+if [[ "$FUCHSIA_DEVICE_ADDR" == "::1" && -z "$SL4F_HTTP_PORT" ]]; then
+  # Device addr is localhost, assume that means that ports were forwarded with
+  # fx serve-remote from a remote workstation/laptop with a device attached.
+  export SL4F_HTTP_PORT=9080
+fi
+
+port="$(get-device-ssh-port)"
+if [[ -n "${port}" ]]; then
+  export FUCHSIA_SSH_PORT="${port}"
+fi
+
+export FUCHSIA_SSH_KEY="${FUCHSIA_DIR}/.ssh/pkey"
+export FUCHSIA_TEST_OUTDIR="${FUCHSIA_OUT_DIR}/test_out/$(date +'%F-%H:%M:%S')"
+
 exec "${PREBUILT_DART_DIR}/bin/dart" \
   --packages="${FUCHSIA_DIR}/scripts/fxtest/fxtest.packages" \
-  "${FUCHSIA_DIR}/scripts/fxtest/bin/main.dart" "$@"
+  "${FUCHSIA_DIR}/scripts/fxtest/bin/main.dart" \
+  "$@"

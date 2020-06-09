@@ -413,6 +413,7 @@ void main() {
         matchLength: MatchLength.partial,
         testBundleBuilder: (TestDefinition _testDef, [double confidence]) =>
             TestBundle.build(
+          directoryBuilder: (String path, {bool recursive}) => null,
           testDefinition: _testDef,
           testRunnerBuilder: (testsConfig) => TestRunner(),
           timeElapsedSink: (duration, cmd, output) => null,
@@ -435,6 +436,7 @@ void main() {
         matchLength: MatchLength.partial,
         testBundleBuilder: (TestDefinition _testDef, [double confidence]) =>
             TestBundle.build(
+          directoryBuilder: (String path, {bool recursive}) => null,
           testDefinition: _testDef,
           testRunnerBuilder: (testsConfig) => TestRunner(),
           timeElapsedSink: (duration, cmd, output) => null,
@@ -610,6 +612,136 @@ void main() {
       expect(bundles, hasLength(2));
       expect(bundles[0].testDefinition.name, 'pkg 1 test 2');
       expect(bundles[1].testDefinition.name, '//host/test');
+    });
+  });
+
+  group('command parameters are used', () {
+    test('for e2e tests', () {
+      var testData = <String, dynamic>{
+        'environments': [
+          {
+            'dimensions': {'device_type': 'asdf'},
+          }
+        ],
+        'test': {
+          'command': [
+            '--special',
+            '--flags',
+          ],
+          'cpu': 'x64',
+          'label': '//src/tests/pkg-name:test-name(//build/toolchain)',
+          'name': '//src/tests/pkg-name:test-name',
+          'os': 'linux',
+          'path': 'host_x64/test-name',
+        }
+      };
+      List<TestDefinition> testDefinitions =
+          TestsManifestReader().parseManifest(
+        testJson: [testData],
+        buildDir: '/whatever',
+        fxLocation: '/whatever/fx',
+      );
+      expect(testDefinitions[0].executionHandle.testType, TestType.e2e);
+
+      var commandTokens =
+          testDefinitions[0].executionHandle.getInvocationTokens([]);
+      var fullCommand = commandTokens.fullCommandDisplay('', []);
+      expect(fullCommand, contains('--special'));
+      expect(fullCommand, contains('--flags'));
+    });
+  });
+
+  group('TestEnvironment objects are parsed correctly', () {
+    // Pass this into `buildTest` when you want an empty case. This simplifies
+    // null-checking in the test.
+    const emptyEnvs = <Map<String, dynamic>>[];
+    const testJson = <String, dynamic>{
+      'environments': emptyEnvs,
+      'test': {
+        'cpu': 'x64',
+        'label': '//src/tests/pkg-name:test-name(//build/toolchain)',
+        'name': '//src/tests/pkg-name:test-name',
+        'os': 'linux',
+        'path': 'host_x64/test-name',
+      }
+    };
+
+    TestDefinition buildTest(List<Map<String, dynamic>> environments) =>
+        TestDefinition.fromJson(
+          Map<String, dynamic>.from(testJson)
+            ..update('environments', (current) => environments),
+          buildDir: 'whatever',
+          fx: 'whatever',
+        );
+
+    test('when the values are empty', () {
+      final testDef = buildTest(emptyEnvs);
+      expect(testDef.testEnvironments, hasLength(0));
+      expect(testDef.isE2E, false);
+    });
+    test('when the values re-specify the host', () {
+      final testDef = buildTest(<Map<String, dynamic>>[
+        {
+          'dimensions': {'os': 'linux'}
+        }
+      ]);
+      expect(testDef.testEnvironments, hasLength(1));
+      expect(testDef.testEnvironments.first.isDefined, true);
+      expect(testDef.testEnvironments.first.os, 'linux');
+      expect(testDef.testEnvironments.first.deviceDimension, null);
+      expect(testDef.isE2E, false);
+    });
+
+    test('when the values re-specify the host with capitalization', () {
+      final testDef = buildTest(<Map<String, dynamic>>[
+        {
+          'dimensions': {'os': 'Linux'}
+        }
+      ]);
+      expect(testDef.testEnvironments, hasLength(1));
+      expect(testDef.testEnvironments.first.isDefined, true);
+      expect(testDef.testEnvironments.first.os, 'Linux');
+      expect(testDef.testEnvironments.first.deviceDimension, null);
+      expect(testDef.isE2E, false);
+    });
+
+    test('when the values specify a device', () {
+      final testDef = buildTest(<Map<String, dynamic>>[
+        {
+          'dimensions': {'device_type': 'asdf'}
+        }
+      ]);
+      expect(testDef.testEnvironments, hasLength(1));
+      expect(testDef.testEnvironments.first.isDefined, true);
+      expect(testDef.testEnvironments.first.os, null);
+      expect(testDef.testEnvironments.first.deviceDimension, 'asdf');
+      expect(testDef.isE2E, true);
+    });
+
+    test('when the values specify a non-host os', () {
+      final testDef = buildTest(<Map<String, dynamic>>[
+        {
+          'dimensions': {'os': 'fuchsia'}
+        }
+      ]);
+      expect(testDef.testEnvironments, hasLength(1));
+      expect(testDef.testEnvironments.first.isDefined, true);
+      expect(testDef.testEnvironments.first.os, 'fuchsia');
+      expect(testDef.testEnvironments.first.deviceDimension, null);
+      expect(testDef.isE2E, true);
+    });
+
+    test('when the values specify a non-host os with capitalization', () {
+      final testDef = buildTest(<Map<String, dynamic>>[
+        {
+          'dimensions': {'os': 'Fuchsia'}
+        }
+      ]);
+      expect(testDef.testEnvironments, hasLength(1));
+      expect(testDef.testEnvironments.first.isDefined, true);
+      expect(testDef.testEnvironments.first.os, 'Fuchsia');
+      expect(testDef.testEnvironments.first.deviceDimension, null);
+      expect(testDef.isE2E, true);
     });
   });
 }

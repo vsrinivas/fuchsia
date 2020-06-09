@@ -11,6 +11,9 @@ import 'package:meta/meta.dart';
 typedef String Stylizer(String value, Iterable<ansi.AnsiCode> codes,
     {bool forScript});
 
+// ignore: prefer_generic_function_type_aliases
+typedef void DirectoryBuilder(String path, {bool recursive});
+
 /// Simple class to hold shared parameters.
 class Flags {
   final bool dryRun;
@@ -25,10 +28,12 @@ class Flags {
   final bool allOutput;
   final bool shouldRebuild;
 
+  final bool e2e;
   final int fuzzyThreshold;
   final bool infoOnly;
   final String logPath;
   final MatchLength matchLength;
+  final bool onlyE2e;
   final bool shouldFailFast;
   final bool shouldLog;
   final bool simpleOutput;
@@ -41,6 +46,7 @@ class Flags {
   final bool shouldUpdateIfInBase;
   final bool shouldUsePackageHash;
   final int slowThreshold;
+
   Flags({
     this.dryRun = false,
     this.isVerbose = false,
@@ -48,10 +54,12 @@ class Flags {
     this.realm,
     this.minSeverityLogs,
     this.allOutput = false,
+    this.e2e = false,
     this.fuzzyThreshold,
     this.infoOnly = false,
     this.logPath,
     this.matchLength = MatchLength.partial,
+    this.onlyE2e = false,
     this.simpleOutput = false,
     this.shouldLog = true,
     this.shouldFailFast = false,
@@ -71,7 +79,9 @@ class Flags {
     return Flags(
       allOutput: argResults['output'],
       dryRun: argResults['info'] || argResults['dry'],
+      e2e: argResults['e2e'] || argResults['only-e2e'],
       fuzzyThreshold: int.parse(argResults['fuzzy']),
+      onlyE2e: argResults['only-e2e'],
       infoOnly: argResults['info'],
       isVerbose: argResults['verbose'] || argResults['output'],
       limit: int.parse(argResults['limit'] ?? '0'),
@@ -104,6 +114,7 @@ class Flags {
   dryRun: $dryRun
   fuzzyThreshold: $fuzzyThreshold
   isVerbose: $isVerbose
+  e2e: $e2e,
   info: $infoOnly,
   limit: $limit
   logPath: $logPath,
@@ -223,6 +234,23 @@ class TestsConfig {
       flags.simpleOutput
           ? value
           : ansi.wrapWith(value, codes, forScript: forScript);
+
+  /// Environment variables to pass to the spawned process that runs our test.
+  Map<String, String> get environment => flags.e2e
+      ? {
+          'FUCHSIA_DEVICE_ADDR':
+              fuchsiaLocator.envReader.getEnv('FUCHSIA_DEVICE_ADDR'),
+          'FUCHSIA_SSH_KEY': fuchsiaLocator.envReader.getEnv('FUCHSIA_SSH_KEY'),
+          'FUCHSIA_SSH_PORT':
+              fuchsiaLocator.envReader.getEnv('FUCHSIA_SSH_PORT'),
+          'FUCHSIA_TEST_OUTDIR':
+              fuchsiaLocator.envReader.getEnv('FUCHSIA_TEST_OUTDIR'),
+          'SL4F_HTTP_PORT': fuchsiaLocator.envReader.getEnv('SL4F_HTTP_PORT'),
+          // Legacy key
+          'FUCHSIA_IPV4_ADDR':
+              fuchsiaLocator.envReader.getEnv('FUCHSIA_DEVICE_ADDR'),
+        }
+      : const {};
 }
 
 /// An expanded set of flags passed to `fx test` against which all available

@@ -23,12 +23,16 @@ class FuchsiaTestCommandCli {
   /// The underlying class which does all the work.
   FuchsiaTestCommand _cmd;
 
+  /// Used to create any new directories needed to house test output / artifacts.
+  final DirectoryBuilder directoryBuilder;
+
   final FuchsiaLocator _fuchsiaLocator;
 
   FuchsiaTestCommandCli(
     List<String> rawArgs, {
     @required this.usage,
     FuchsiaLocator fuchsiaLocator,
+    this.directoryBuilder,
   }) : _fuchsiaLocator = fuchsiaLocator ?? FuchsiaLocator.shared {
     testsConfig = TestsConfig.fromRawArgs(
       rawArgs: rawArgs,
@@ -51,14 +55,14 @@ class FuchsiaTestCommandCli {
     }
     if (testsConfig.testArguments.parsedArgs['printtests']) {
       ProcessResult result = await Process.run('cat', ['tests.json'],
-          workingDirectory: FuchsiaLocator.shared.buildDir);
+          workingDirectory: _fuchsiaLocator.buildDir);
       stdoutWriter(result.stdout);
       return false;
     }
 
     // This command uses extensive fx re-entry, so it's good to make sure fx
     // is actually located where we expect
-    var fxFile = File(fxLocation);
+    final fxFile = File(fxLocation);
     if (!fxFile.existsSync()) {
       throw MissingFxException();
     }
@@ -68,7 +72,6 @@ class FuchsiaTestCommandCli {
 
   Future<void> run() async {
     _cmd = createCommand();
-
     if (testsConfig.flags.shouldRebuild) {
       _cmd.emitEvent(
         TestInfo(wrapWith('> fx build', [green, styleBold])),
@@ -103,6 +106,7 @@ class FuchsiaTestCommandCli {
 
   FuchsiaTestCommand createCommand() => FuchsiaTestCommand.fromConfig(
         testsConfig,
+        directoryBuilder: directoryBuilder,
         testRunnerBuilder: (TestsConfig testsConfig) => SymbolizingTestRunner(
           fx: testsConfig.fuchsiaLocator.fx,
         ),

@@ -7,6 +7,7 @@ import 'dart:io';
 
 import 'package:io/ansi.dart';
 import 'package:fxtest/fxtest.dart';
+import 'package:path/path.dart' as p;
 import 'package:meta/meta.dart';
 
 /// Container that holds enough information about a test to execute it and
@@ -22,6 +23,8 @@ class TestBundle {
   /// means total confidence and a value of 0 means this [TestBundle] should
   /// never have been created.
   final double confidence;
+
+  final DirectoryBuilder directoryBuilder;
 
   /// Sink for realtime updates from the running test process.
   final Function(String) _realtimeOutputSink;
@@ -46,6 +49,9 @@ class TestBundle {
   /// Tokens to pass through to individual tests.
   final List<String> extraFlags;
 
+  /// Environment variables to pass to the spawned process that runs our test.
+  final Map<String, String> environment;
+
   /// Flag to disable actually running the test.
   final bool isDryRun;
 
@@ -69,6 +75,8 @@ class TestBundle {
     @required this.timeElapsedSink,
     @required this.workingDirectory,
     @required this.confidence,
+    @required this.directoryBuilder,
+    this.environment = const <String, String>{},
     this.extraFlags = const [],
     this.fxSuffix,
     this.isDryRun = false,
@@ -92,6 +100,7 @@ class TestBundle {
   }
 
   factory TestBundle.build({
+    @required DirectoryBuilder directoryBuilder,
     @required TestDefinition testDefinition,
     @required TestsConfig testsConfig,
     @required Function(Duration, String, String) timeElapsedSink,
@@ -104,6 +113,8 @@ class TestBundle {
       TestBundle(
         testDefinition,
         confidence: confidence ?? 1,
+        directoryBuilder: directoryBuilder,
+        environment: testsConfig.environment,
         extraFlags: testsConfig.testArguments.passThroughArgs,
         isDryRun: testsConfig.flags.dryRun,
         fxSuffix: fxSuffix,
@@ -154,7 +165,8 @@ class TestBundle {
       yield TestInfo(commandTokens.warning);
     }
 
-    String fullCommandDisplay = commandTokens.fullCommandDisplay(fxSuffix);
+    String fullCommandDisplay =
+        commandTokens.fullCommandDisplay(fxSuffix, extraFlags);
 
     yield TestStarted(
       testDefinition: testDefinition,
@@ -164,6 +176,10 @@ class TestBundle {
     if (isDryRun) {
       yield TestResult.skipped(testName: fullCommandDisplay);
       return;
+    }
+
+    if (testDefinition.isE2E) {
+      _createE2eDirectory();
     }
     yield* _runTestWithStopwatch(commandTokens, fullCommandDisplay);
   }
@@ -208,6 +224,7 @@ class TestBundle {
     ProcessResult result = await testRunner.run(
       commandTokens.command,
       commandTokens.args..addAll(extraFlags),
+      environment: environment,
       workingDirectory: workingDirectory,
     );
     return TestResult(
@@ -234,6 +251,22 @@ class TestBundle {
       ...resultStdout,
       result.stderr,
     ].join('\n');
+  }
+
+  void _createE2eDirectory() {
+    if (!environment.containsKey('FUCHSIA_TEST_OUTDIR') ||
+        environment['FUCHSIA_TEST_OUTDIR'] == null ||
+        environment['FUCHSIA_TEST_OUTDIR'] == '') {
+      throw Exception(
+          '`FUCHSIA_TEST_OUTDIR` environment variable must be set when running e2e tests.');
+    }
+    directoryBuilder(
+      p.join(
+        environment['FUCHSIA_TEST_OUTDIR'],
+        testDefinition.name,
+      ),
+      recursive: true,
+    );
   }
 
   @override

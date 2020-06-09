@@ -43,6 +43,10 @@ will execute all descendent tests.
     ''');
 }
 
+void _directoryBuilder(String path, {bool recursive}) {
+  Directory(path).createSync(recursive: recursive);
+}
+
 /// CLI entry point for [FuchsiaTestCommand]. The [main] function mostly
 /// handles the SIGINT signal, routing through [FuchsiaTestCommandCli] to handle
 /// translating raw command line arguments into constructs that make sense to
@@ -50,7 +54,11 @@ will execute all descendent tests.
 Future<void> main(List<String> args) async {
   FuchsiaTestCommandCli cmdCli;
   try {
-    cmdCli = FuchsiaTestCommandCli(args, usage: usage);
+    cmdCli = FuchsiaTestCommandCli(
+      args,
+      usage: usage,
+      directoryBuilder: _directoryBuilder,
+    );
   } on Exception catch (ex) {
     stderr.writeln('Invalid syntax: $ex');
     usage(fxTestArgParser);

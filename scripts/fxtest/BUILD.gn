@@ -71,6 +71,7 @@ dart_library("fxtest_lib") {
     "test_runner.dart",
     "tests_config.dart",
     "tests_manifest_reader.dart",
+    "utils.dart",
   ]
 
   deps = [

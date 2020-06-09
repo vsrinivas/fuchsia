@@ -119,6 +119,7 @@ class PackageRepository {
         // Expands each signed.targets map into its entries
         .expand((jsonObj) => jsonObj['signed']['targets'].entries)
         // Merges target entries to _packages
+        // ignore: unnecessary_lambdas
         .forEach((targetEntry) => _mergeTarget(targetEntry));
   }
 

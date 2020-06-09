@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 import 'package:test/test.dart';
 import 'package:fxtest/fxtest.dart';
 
@@ -268,5 +272,95 @@ void main() {
       expect(comparer.computeConfidence(4), 0.2);
       expect(comparer.computeConfidence(5), 0);
     });
+  });
+  group('getMapPath works with', () {
+    Map<String, dynamic> data = {
+      'top': 'level',
+      'nested': {
+        'data': 'is cool too',
+      },
+      'numbers': {
+        'one': 1,
+        'two': '2',
+      },
+      'true': true,
+      'false': false,
+      'list': [
+        {'key': 'value'},
+        {'KEY': 'VALUE'},
+      ],
+      'listWithLists': [
+        1,
+        [2, 3],
+      ],
+    };
+    test('too many keys', () {
+      expect(
+        // `top` key exists, but `extra` and `keys` cannot be satisfied
+        () => getMapPath(data, ['top', 'extra', 'keys']),
+        throwsA(TypeMatcher<BadMapPathException>()),
+      );
+    });
+    test('lists', () {
+      expect(getMapPath(data, ['list', 1, 'KEY']), 'VALUE');
+    });
+    test('listsWithLists', () {
+      expect(getMapPath(data, ['listWithLists', 1, 1]), 3);
+    });
+    test('listsWithLists that ends before terminal node', () {
+      expect(getMapPath<List<int>>(data, ['listWithLists', 1]), <int>[2, 3]);
+    });
+    test('returning whole lists', () {
+      expect(getMapPath(data, ['list']), [
+        {'key': 'value'},
+        {'KEY': 'VALUE'},
+      ]);
+    });
+    test(
+      'top-level children',
+      () => expect(getMapPath<String>(data, ['top']), 'level'),
+    );
+    test(
+      'nested children',
+      () => expect(getMapPath<String>(data, ['nested', 'data']), 'is cool too'),
+    );
+    test(
+      'missing children',
+      () => expect(getMapPath<String>(data, ['missing key']), null),
+    );
+    test(
+      'partially correct paths',
+      () => expect(getMapPath<String>(data, ['nested', 'missing key']), null),
+    );
+    test(
+      'return types honored',
+      () {
+        expect(getMapPath<int>(data, ['numbers', 'one']), 1);
+        expect(
+            getMapPath<int>(data, ['numbers', 'two'],
+                // (this lambda is actually necessary because `parse` takes other
+                //  optional parameters which break type safety if applied to
+                //  `caster`)
+                // ignore: unnecessary_lambdas
+                caster: (val) => int.parse(val)),
+            2);
+      },
+    );
+    test(
+      'when T is redundant',
+      () {
+        expect(
+            getMapPath<int>(data, ['numbers', 'one'],
+                // (this lambda is actually necessary because `parse` takes other
+                //  optional parameters which break type safety if applied to
+                //  `caster`)
+                // ignore: unnecessary_lambdas
+                caster: (val) => int.parse(val)),
+            1);
+      },
+    );
+    test(
+        'when T == bool', () => expect(getMapPath<bool>(data, ['true']), true));
+    test('no input', () => expect(getMapPath(null, ['asdf']), null));
   });
 }

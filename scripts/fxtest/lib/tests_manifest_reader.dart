@@ -94,7 +94,7 @@ class TestsManifestReader {
     return jsonDecode(await File(manifestLocation).readAsString());
   }
 
-  // Handler for tests which are unsupported due to never before seen problems.
+  /// Handles tests which are unsupported due to never before seen problems.
   void _handleUnsupportedTest(
     TestDefinition testDefinition,
     TestsConfig testsConfig,
@@ -132,6 +132,7 @@ class TestsManifestReader {
     List<TestBundle> testBundles = [];
     List<TestDefinition> skippedTests = [];
     Set<String> seenPackages = {};
+    bool hasRaisedE2E = false;
     int numDuplicateTests = 0;
     int numUnparsedTests = 0;
 
@@ -160,6 +161,23 @@ class TestsManifestReader {
           // DeviceTests warnings are handled at runtime, meaning if none are
           // matched, a user doesn't have to think or worry about them.
         }
+      }
+
+      // TODO: Move this to after an optional `--limit` flag is applied.
+      bool isE2E = testDefinition.executionHandle.testType == TestType.e2e;
+      if (!isE2E && testsConfig.flags.onlyE2e) {
+        continue;
+      } else if (isE2E && !testsConfig.flags.e2e) {
+        if (!hasRaisedE2E) {
+          eventEmitter(TestInfo(
+            testsConfig.wrapWith(
+              'Found opt-in-only E2E tests. Use `--e2e` flag to enable them.',
+              [magenta],
+            ),
+          ));
+          hasRaisedE2E = true;
+        }
+        continue;
       }
 
       testIsClaimed = false;

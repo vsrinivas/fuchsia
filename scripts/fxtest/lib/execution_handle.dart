@@ -5,21 +5,24 @@
 import 'package:fxtest/fxtest.dart';
 
 /// Concrete flag for an individual test, indicating how it should be executed.
-///
-/// Note that [unsupported] is included as a bucket for tests we have failed
-/// to account for. It is not an acceptable place for tests to end up. Should
-/// any tests find their way here, an exception will be raised that will halt
-/// test execution entirely (but which can be silenced with a flag).
 enum TestType {
   command,
   component,
   host,
   suite,
 
-  /// Catch-all for a test we know we haven't correctly included handling logic
+  /// Special tests that start on the host and then interact with a device.
+  /// These tests do not always clean up after themselves and thus must be
+  /// opted-in to for any given test run.
+  e2e,
+
+  /// Catch-all for a test we know `fxtest` has yet to include correct handling
+  /// logic. This is not an okay problem, and will raise an error unless a
+  /// silencing flag is passed.
   unsupported,
 
-  /// Non-component but on-device tests (an illegal and mostly legacy configuration)
+  /// Non-component but on-device tests (an illegal and mostly legacy
+  /// configuration).
   unsupportedDeviceTest,
 }
 
@@ -33,28 +36,55 @@ const Set<TestType> unsupportedTestTypes = {
   TestType.unsupported,
 };
 
+/// Container for all the string primitives required to execute a test.
+///
+/// Includes a filesystem path to the fx script itself, for re-entry, and every
+/// relevant command line argument, flag, and environment variable.
 class ExecutionHandle {
+  /// Absolute path to the fx entry point.
   final String fx;
+
+  /// Complete string passed to `fx` to execute the test.
   final String handle;
+
+  /// Name of the operating system which will execute this test. "linux" or "mac"
+  /// designate the host, while "fuchsia" designates the target device.
   final String os;
+
+  /// Concrete representation of this class of test.
   final TestType testType;
-  ExecutionHandle(this.fx, this.handle, this.os, {this.testType});
-  ExecutionHandle.command(this.fx, this.handle, this.os)
+
+  /// Environment variables to pass to the spawned [Process] that will actually
+  /// execute the test.
+  final Map<String, String> environment;
+
+  ExecutionHandle(this.fx, this.handle, this.os,
+      {this.testType, this.environment});
+  ExecutionHandle.command(this.fx, this.handle, this.os,
+      {this.environment = const {}})
       : testType = TestType.command;
-  ExecutionHandle.component(this.fx, this.handle, this.os)
+  ExecutionHandle.component(this.fx, this.handle, this.os,
+      {this.environment = const {}})
       : testType = TestType.component;
-  ExecutionHandle.suite(this.fx, this.handle, this.os)
+  ExecutionHandle.e2e(this.fx, this.handle, this.os,
+      {this.environment = const {}})
+      : testType = TestType.e2e;
+  ExecutionHandle.suite(this.fx, this.handle, this.os,
+      {this.environment = const {}})
       : testType = TestType.suite;
-  ExecutionHandle.host(this.fx, this.handle, this.os)
+  ExecutionHandle.host(this.fx, this.handle, this.os,
+      {this.environment = const {}})
       : testType = TestType.host;
-  ExecutionHandle.unsupportedDeviceTest(this.handle)
+  ExecutionHandle.unsupportedDeviceTest(this.handle,
+      {this.environment = const {}})
       : fx = '',
         os = 'fuchsia',
         testType = TestType.unsupportedDeviceTest;
-  ExecutionHandle.unsupported()
+  const ExecutionHandle.unsupported()
       : fx = '',
         handle = '',
         os = '',
+        environment = const {},
         testType = TestType.unsupported;
 
   bool get isUnsupported => unsupportedTestTypes.contains(testType);
@@ -73,6 +103,8 @@ class ExecutionHandle {
       return _getHostTokens();
     } else if (testType == TestType.suite) {
       return _getSuiteTokens();
+    } else if (testType == TestType.e2e) {
+      return _getEndToEndTokens();
     }
     return CommandTokens.empty();
   }
@@ -116,6 +148,12 @@ class ExecutionHandle {
 
   /// Handler for `tests.json` entries containing the `path` key.
   CommandTokens _getHostTokens() {
+    return CommandTokens([handle]);
+  }
+
+  /// Assembles the full invocation command for tests with a device dimension,
+  /// but which start on the host machine.
+  CommandTokens _getEndToEndTokens() {
     return CommandTokens([handle]);
   }
 }

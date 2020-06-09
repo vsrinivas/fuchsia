@@ -22,3 +22,4 @@ export 'test_names_collector.dart';
 export 'test_runner.dart';
 export 'tests_config.dart';
 export 'tests_manifest_reader.dart';
+export 'utils.dart';

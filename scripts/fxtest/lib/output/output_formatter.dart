@@ -5,7 +5,6 @@
 import 'package:fxtest/fxtest.dart';
 import 'package:io/ansi.dart';
 import 'package:meta/meta.dart';
-import 'package:path/path.dart' as p;
 
 class Emoji {
   final String emoji;
@@ -403,7 +402,7 @@ List<String> infoPrint(TestDefinition testDefinition) {
 class FileFormatter extends StandardOutputFormatter {
   /// Internal constructor which sets all variables appropriately for writing
   /// output to a file.
-  FileFormatter._({@required String path, @required bool pathIsFolder})
+  FileFormatter._({@required String path})
       : assert(path != null),
         super(
           isVerbose: true,
@@ -420,7 +419,6 @@ class FileFormatter extends StandardOutputFormatter {
     if (testsConfig.flags.shouldLog) {
       return FileFormatter._(
         path: testsConfig.flags.logPath ?? testsConfig.fuchsiaLocator.buildDir,
-        pathIsFolder: testsConfig.flags.logPath == null,
       );
     }
     return null;

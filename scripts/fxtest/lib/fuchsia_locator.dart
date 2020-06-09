@@ -15,6 +15,9 @@ class FuchsiaLocator {
   /// Path to the fx executable
   String get fx => p.join(fuchsiaDir, fxLocation);
 
+  /// Path to the ssh key required to reach the device.
+  String get sshKey => envReader.getEnv('FUCHSIA_SSH_KEY');
+
   /// Absolute path to the build directory. Read from the environment variable.
   String get buildDir => envReader.getEnv('FUCHSIA_BUILD_DIR');
 

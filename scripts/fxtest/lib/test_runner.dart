@@ -38,11 +38,13 @@ class TestRunner {
     String command,
     List<String> args, {
     @required String workingDirectory,
+    Map<String, String> environment,
   }) async {
     var processArgs = _buildProcessArgs(command, args);
     Process process = await _startProcess(
       processArgs.command,
       processArgs.args,
+      environment: environment,
       workingDirectory: workingDirectory,
     );
 

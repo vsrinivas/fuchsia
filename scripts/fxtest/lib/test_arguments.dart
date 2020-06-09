@@ -24,13 +24,15 @@ class TestArguments {
   /// as the value.
   final Map<String, String> defaultRawArgs;
 
+  /// Similar to [passThroughArgs], but unique to e2e tests.
+  final List<String> e2ePassThroughArgs;
+
   TestArguments({
     @required this.rawArgs,
     @required ArgParser parser,
     this.defaultRawArgs,
-  })  : passThroughArgs = TestArguments._extractPassThroughArgs(
-          rawArgs,
-        ),
+  })  : e2ePassThroughArgs = <String>[],
+        passThroughArgs = TestArguments._extractPassThroughArgs(rawArgs),
         parsedArgs = TestArguments._parseArgs(
           rawArgs,
           parser,
