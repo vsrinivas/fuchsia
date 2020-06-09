@@ -2,10 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fidl.gni")
+import("//build/fidl/fidl.gni")
 
-fidl_library("zx") {
+fidl("zx") {
   sources = [ "../zx_common.fidl" ]
 
-  sdk = true
+  sdk_category = "partner"
+
+  api = "//sdk/fidl/zx/zx.api"
 }
