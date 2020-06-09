@@ -27,6 +27,7 @@
 #include <net/ethernet.h>
 
 #include "src/lib/fsl/vmo/strings.h"
+#include "configuration_manager_delegate_impl.h"
 #include "weave_test_fixture.h"
 
 namespace nl::Weave::DeviceLayer::Internal {
@@ -207,6 +208,13 @@ class FakeWeaveFactoryStoreProvider
   async_dispatcher_t* dispatcher_;
 };
 
+class ConfigurationManagerTestDelegateImpl : public ConfigurationManagerDelegateImpl {
+ public:
+  zx_status_t ReadFactoryFile(const char* path, char* buf, size_t buf_size, size_t* out_len) {
+    return ConfigurationManagerDelegateImpl::ReadFactoryFile(path, buf, buf_size, out_len);
+  }
+};
+
 class ConfigurationManagerTest : public WeaveTestFixture {
  public:
   ConfigurationManagerTest() {
@@ -224,8 +232,8 @@ class ConfigurationManagerTest : public WeaveTestFixture {
     WeaveTestFixture::SetUp();
     WeaveTestFixture::RunFixtureLoop();
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
-    cfg_mgr_ = std::make_unique<ConfigurationManagerImpl>();
-    EXPECT_EQ(cfg_mgr_->_Init(), WEAVE_NO_ERROR);
+    ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
+    EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
   }
 
   void TearDown() {
@@ -234,74 +242,68 @@ class ConfigurationManagerTest : public WeaveTestFixture {
   }
 
  protected:
-  std::unique_ptr<ConfigurationManagerImpl> cfg_mgr_;
-
- private:
-  sys::testing::ComponentContextProvider context_provider_;
-  std::unique_ptr<sys::ComponentContext> context_;
-
   FakeHwinfo fake_hwinfo_;
   FakeWlanStack fake_wlan_stack_;
   FakeWeaveFactoryDataManager fake_weave_factory_data_manager_;
   FakeWeaveFactoryStoreProvider fake_weave_factory_store_provider_;
 
- public:
-  FakeWeaveFactoryStoreProvider* GetFactoryProvider(void) {
-    return &fake_weave_factory_store_provider_;
-  }
+ private:
+  sys::testing::ComponentContextProvider context_provider_;
+  std::unique_ptr<sys::ComponentContext> context_;
 };
 
 TEST_F(ConfigurationManagerTest, SetAndGetFabricId) {
   const uint64_t fabric_id = 123456789U;
   uint64_t stored_fabric_id = 0U;
-  EXPECT_EQ(cfg_mgr_->StoreFabricId(fabric_id), WEAVE_NO_ERROR);
-  EXPECT_EQ(cfg_mgr_->GetFabricId(stored_fabric_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(ConfigurationMgr().StoreFabricId(fabric_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(ConfigurationMgr().GetFabricId(stored_fabric_id), WEAVE_NO_ERROR);
   EXPECT_EQ(stored_fabric_id, fabric_id);
 }
 
 TEST_F(ConfigurationManagerTest, GetDeviceId) {
   uint64_t device_id = 0U;
-  EXPECT_EQ(cfg_mgr_->GetDeviceId(device_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(ConfigurationMgr().GetDeviceId(device_id), WEAVE_NO_ERROR);
   EXPECT_EQ(device_id, kExpectedDeviceId);
 }
 
 TEST_F(ConfigurationManagerTest, GetPrimaryWiFiMacAddress) {
   uint8_t mac[ETH_ALEN];
-  EXPECT_EQ(cfg_mgr_->GetPrimaryWiFiMACAddress(mac), WEAVE_NO_ERROR);
+  EXPECT_EQ(ConfigurationMgr().GetPrimaryWiFiMACAddress(mac), WEAVE_NO_ERROR);
   EXPECT_TRUE(std::equal(std::begin(kExpectedMac), std::end(kExpectedMac), std::begin(mac)));
 }
 
 TEST_F(ConfigurationManagerTest, GetVendorId) {
   uint16_t vendor_id;
-  EXPECT_EQ(cfg_mgr_->GetVendorId(vendor_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(ConfigurationMgr().GetVendorId(vendor_id), WEAVE_NO_ERROR);
   EXPECT_EQ(vendor_id, kExpectedVendorId);
 }
 
 TEST_F(ConfigurationManagerTest, GetProductId) {
   uint16_t product_id;
-  EXPECT_EQ(cfg_mgr_->GetProductId(product_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(ConfigurationMgr().GetProductId(product_id), WEAVE_NO_ERROR);
   EXPECT_EQ(product_id, kExpectedProductId);
 }
 
 TEST_F(ConfigurationManagerTest, GetFirmwareRevision) {
   char firmware_revision[kMaxFirmwareRevisionSize];
   size_t out_len;
-  EXPECT_EQ(cfg_mgr_->GetFirmwareRevision(firmware_revision, sizeof(firmware_revision), out_len),
-            WEAVE_NO_ERROR);
+  EXPECT_EQ(
+      ConfigurationMgr().GetFirmwareRevision(firmware_revision, sizeof(firmware_revision), out_len),
+      WEAVE_NO_ERROR);
   EXPECT_EQ(strncmp(firmware_revision, kExpectedFirmwareRevision, out_len), 0);
 }
 
 TEST_F(ConfigurationManagerTest, GetSerialNumber) {
   char serial_num[kMaxSerialNumberSize];
   size_t serial_num_len;
-  EXPECT_EQ(cfg_mgr_->GetSerialNumber(serial_num, sizeof(serial_num), serial_num_len),
+  EXPECT_EQ(ConfigurationMgr().GetSerialNumber(serial_num, sizeof(serial_num), serial_num_len),
             WEAVE_NO_ERROR);
   EXPECT_STREQ(serial_num, kExpectedSerialNumber);
 }
 
 TEST_F(ConfigurationManagerTest, GetDeviceDescriptor) {
   ::nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor device_desc;
-  EXPECT_EQ(cfg_mgr_->GetDeviceDescriptor(device_desc), WEAVE_NO_ERROR);
+  EXPECT_EQ(ConfigurationMgr().GetDeviceDescriptor(device_desc), WEAVE_NO_ERROR);
 
   EXPECT_STREQ(device_desc.SerialNumber, kExpectedSerialNumber);
   EXPECT_EQ(device_desc.ProductId, kExpectedProductId);
@@ -311,7 +313,7 @@ TEST_F(ConfigurationManagerTest, GetDeviceDescriptor) {
 TEST_F(ConfigurationManagerTest, GetPairingCode) {
   char pairing_code[kMaxPairingCodeSize];
   size_t pairing_code_len;
-  EXPECT_EQ(cfg_mgr_->GetPairingCode(pairing_code, sizeof(pairing_code), pairing_code_len),
+  EXPECT_EQ(ConfigurationMgr().GetPairingCode(pairing_code, sizeof(pairing_code), pairing_code_len),
             WEAVE_NO_ERROR);
   EXPECT_EQ(pairing_code_len,
             strnlen(kExpectedPairingCode, WeaveDeviceDescriptor::kMaxPairingCodeLength) + 1);
@@ -325,11 +327,17 @@ TEST_F(ConfigurationManagerTest, ReadFactoryFile) {
   char buf[kBufSize] = {};
   size_t out_len;
 
+  ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerTestDelegateImpl>());
+
+  ConfigurationManagerTestDelegateImpl* delegate =
+      (ConfigurationManagerTestDelegateImpl*)ConfigurationMgrImpl().GetDelegate();
+  EXPECT_EQ(delegate->Init(), WEAVE_NO_ERROR);
+
   auto fake_dir = std::make_unique<FakeDirectory>();
   EXPECT_EQ(ZX_OK, fake_dir->AddResource(kFilename, data));
-  GetFactoryProvider()->AttachDir(std::move(fake_dir));
+  fake_weave_factory_store_provider_.AttachDir(std::move(fake_dir));
 
-  EXPECT_EQ(cfg_mgr_->ReadFactoryFile(kFilename, buf, kBufSize, &out_len), ZX_OK);
+  EXPECT_EQ(delegate->ReadFactoryFile(kFilename, buf, kBufSize, &out_len), ZX_OK);
 
   EXPECT_EQ(out_len, data.length());
   EXPECT_EQ(std::string(buf, out_len), data);
@@ -342,11 +350,17 @@ TEST_F(ConfigurationManagerTest, ReadFactoryFileLargerThanExpected) {
   char buf[kBufSize] = {};
   size_t out_len;
 
+  ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerTestDelegateImpl>());
+
+  ConfigurationManagerTestDelegateImpl* delegate =
+      (ConfigurationManagerTestDelegateImpl*)ConfigurationMgrImpl().GetDelegate();
+  EXPECT_EQ(delegate->Init(), WEAVE_NO_ERROR);
+
   auto fake_dir = std::make_unique<FakeDirectory>();
   EXPECT_EQ(ZX_OK, fake_dir->AddResource(kFilename, data));
-  GetFactoryProvider()->AttachDir(std::move(fake_dir));
+  fake_weave_factory_store_provider_.AttachDir(std::move(fake_dir));
 
-  EXPECT_EQ(cfg_mgr_->ReadFactoryFile(kFilename, buf, kBufSize, &out_len), ZX_ERR_BUFFER_TOO_SMALL);
+  EXPECT_EQ(delegate->ReadFactoryFile(kFilename, buf, kBufSize, &out_len), ZX_ERR_BUFFER_TOO_SMALL);
 }
 
 TEST_F(ConfigurationManagerTest, SetAndGetDeviceId) {
@@ -359,30 +373,32 @@ TEST_F(ConfigurationManagerTest, SetAndGetDeviceId) {
 
   auto fake_dir = std::make_unique<FakeDirectory>();
   EXPECT_EQ(ZX_OK, fake_dir->AddResource(test_device_id_file, test_device_id_data));
-  GetFactoryProvider()->AttachDir(std::move(fake_dir));
-  EXPECT_EQ(cfg_mgr_->GetDeviceId(stored_weave_device_id), WEAVE_NO_ERROR);
+  fake_weave_factory_store_provider_.AttachDir(std::move(fake_dir));
+  EXPECT_EQ(ConfigurationMgr().GetDeviceId(stored_weave_device_id), WEAVE_NO_ERROR);
   EXPECT_EQ(stored_weave_device_id, strtoull(test_device_id_data.c_str(), NULL, 16));
 
   // Show that even if the file is modified, it doesn't affect us as we read from
   // factory only once.
   stored_weave_device_id = 0;
   auto fake_dir2 = std::make_unique<FakeDirectory>();
-  GetFactoryProvider()->AttachDir(std::move(fake_dir2));
-  EXPECT_EQ(cfg_mgr_->GetDeviceId(stored_weave_device_id), WEAVE_NO_ERROR);
+  fake_weave_factory_store_provider_.AttachDir(std::move(fake_dir2));
+  EXPECT_EQ(ConfigurationMgr().GetDeviceId(stored_weave_device_id), WEAVE_NO_ERROR);
   EXPECT_EQ(stored_weave_device_id, strtoull(test_device_id_data.c_str(), NULL, 16));
 }
 
-TEST_F(ConfigurationManagerTest, GetMfrCert) {
+TEST_F(ConfigurationManagerTest, GetManufacturerDeviceCertificate) {
   constexpr char test_mfr_cert_file[] = "test_mfr_cert";
   const std::string test_mfr_cert_data("====Fake Certificate Data====");
   uint8_t mfr_cert_buf[UINT16_MAX] = {0};
   size_t cert_len;
 
-  EXPECT_EQ(nl::Weave::DeviceLayer::Internal::EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
+  EXPECT_EQ(nl::Weave::DeviceLayer::Internal::EnvironmentConfig::FactoryResetConfig(),
+            WEAVE_NO_ERROR);
   auto fake_dir = std::make_unique<FakeDirectory>();
   EXPECT_EQ(ZX_OK, fake_dir->AddResource(test_mfr_cert_file, test_mfr_cert_data));
-  GetFactoryProvider()->AttachDir(std::move(fake_dir));
-  EXPECT_EQ(cfg_mgr_->GetManufacturerDeviceCertificate(mfr_cert_buf, sizeof(mfr_cert_buf), cert_len),
+  fake_weave_factory_store_provider_.AttachDir(std::move(fake_dir));
+  EXPECT_EQ(ConfigurationMgr().GetManufacturerDeviceCertificate(mfr_cert_buf, sizeof(mfr_cert_buf),
+                                                                cert_len),
             WEAVE_NO_ERROR);
   EXPECT_EQ(cert_len, test_mfr_cert_data.size());
   EXPECT_TRUE(std::equal(mfr_cert_buf, mfr_cert_buf + std::min(cert_len, sizeof(mfr_cert_buf)),
@@ -391,8 +407,9 @@ TEST_F(ConfigurationManagerTest, GetMfrCert) {
   // Show that after being read in once, modifying the  data has no effect
   std::memset(mfr_cert_buf, 0, sizeof(mfr_cert_buf));
   auto fake_dir2 = std::make_unique<FakeDirectory>();
-  GetFactoryProvider()->AttachDir(std::move(fake_dir2));
-  EXPECT_EQ(cfg_mgr_->GetManufacturerDeviceCertificate(mfr_cert_buf, sizeof(mfr_cert_buf), cert_len),
+  fake_weave_factory_store_provider_.AttachDir(std::move(fake_dir2));
+  EXPECT_EQ(ConfigurationMgr().GetManufacturerDeviceCertificate(mfr_cert_buf, sizeof(mfr_cert_buf),
+                                                                cert_len),
             WEAVE_NO_ERROR);
   EXPECT_EQ(cert_len, test_mfr_cert_data.size());
   EXPECT_TRUE(std::equal(mfr_cert_buf, mfr_cert_buf + std::min(cert_len, sizeof(mfr_cert_buf)),

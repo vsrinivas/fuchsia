@@ -15,6 +15,7 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "configuration_manager_delegate_impl.h"
 #include "weave_test_fixture.h"
 
 namespace nl::Weave::DeviceLayer::Internal {
@@ -96,10 +97,14 @@ class BLEManagerTest : public WeaveTestFixture {
   void SetUp() {
     WeaveTestFixture::SetUp();
     WeaveTestFixture::RunFixtureLoop();
+
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
     PlatformMgrImpl().SetDispatcher(event_loop_.dispatcher());
+
+    ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
+    EXPECT_EQ(ConfigurationMgrImpl().IsWoBLEEnabled(), true);
+
     ble_mgr_ = std::make_unique<BLEManagerImpl>();
-    EXPECT_EQ(ConfigurationMgrImpl().IsWOBLEEnabled(), true);
     InitBleMgr();
   }
   void TearDown() {

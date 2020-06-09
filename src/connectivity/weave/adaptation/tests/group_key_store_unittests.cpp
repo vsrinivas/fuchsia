@@ -16,7 +16,6 @@ namespace nl::Weave::DeviceLayer::Internal {
 namespace testing {
 namespace {
 using nl::Weave::WeaveKeyId;
-using nl::Weave::DeviceLayer::ConfigurationMgr;
 using nl::Weave::DeviceLayer::Internal::EnvironmentConfig;
 using nl::Weave::DeviceLayer::Internal::GroupKeyStoreImpl;
 using nl::Weave::Profiles::Security::AppKeys::WeaveGroupKey;

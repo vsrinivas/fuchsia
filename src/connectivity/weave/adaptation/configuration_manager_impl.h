@@ -21,16 +21,14 @@
 namespace nl {
 namespace Weave {
 namespace DeviceLayer {
-namespace Internal {
-class NetworkProvisioningServerImpl;
-class WeaveConfigReader;
-namespace testing {
-class ConfigurationManagerTest;
-}  // namespace testing
-}  // namespace Internal
 
 /**
- * Concrete implementation of the ConfigurationManager singleton object for the Fuchsia platform.
+ * Defines the ConfigurationManager singleton object for OpenWeave. This class
+ * internally proxies calls on ConfigurationMgr to either the delegate that
+ * contains the platform-specific implementation, or default implementations
+ * provided by GenericConfigurationManagerImpl.
+ *
+ * This class and its name scheme is enforced by the adaptation layer.
  */
 class ConfigurationManagerImpl final
     : public ConfigurationManager,
@@ -44,9 +42,111 @@ class ConfigurationManagerImpl final
   // defined on this class.
   friend class Internal::GenericConfigurationManagerImpl<ConfigurationManagerImpl>;
 
- private:
-  // ===== Members that implement the ConfigurationManager public interface.
+ public:
+  /**
+   * Delegate class to handle platform-specific implementations of the
+   * ConfigurationManager API surface. This enables tests to swap out the
+   * implementation of the static ConfigurationManager instance.
+   */
+  class Delegate {
+   public:
+    using GroupKeyStoreBase = ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase;
+    using Key = ::nl::Weave::Platform::PersistedStorage::Key;
 
+    virtual ~Delegate() = default;
+
+    // Provides a handle to ConfigurationManagerImpl object that this delegate
+    // was attached to. This allows the delegate to invoke functions on
+    // GenericConfigurationManagerImpl if required.
+    void SetConfigurationManagerImpl(ConfigurationManagerImpl* impl) { impl_ = impl; }
+
+    // ConfigurationManager APIs.
+
+    // Performs any required initialization for the delegate. This method must
+    // be called before other methods.
+    virtual WEAVE_ERROR Init(void) = 0;
+
+    // Populates |device_id| with the weave device ID.
+    virtual WEAVE_ERROR GetDeviceId(uint64_t& device_id) = 0;
+
+    // Populates |buf| with the firmware revision, where |buf_size| is the
+    // length of |buf| in bytes. If |buf| does not have enough capacity to hold
+    // the firmware revision, |out_len| is not modified. Otherwise, |out_len|
+    // contains the size of the data.
+    virtual WEAVE_ERROR GetFirmwareRevision(char* buf, size_t buf_size, size_t& out_len) = 0;
+
+    // Populates |buf| with the manufacturer device certificate, where
+    // |buf_size| is the length of |buf| in bytes. If |buf| does not have
+    // enough capacity to hold the firmware revision, |out_len| is not modified.
+    // Otherwise, |out_len| contains the size of the data.
+    virtual WEAVE_ERROR GetManufacturerDeviceCertificate(uint8_t* buf, size_t buf_size,
+                                                         size_t& out_len) = 0;
+
+    // Populates |product_id| with the weave product ID.
+    virtual WEAVE_ERROR GetProductId(uint16_t& product_id) = 0;
+
+    // Populates |buf| with the MAC address of the primary WiFi interface.
+    // It is expected that the |buf| has at least |ETH_MAX| bytes.
+    virtual WEAVE_ERROR GetPrimaryWiFiMACAddress(uint8_t* buf) = 0;
+
+    // Populates |vendor_id| with the weave vendor ID.
+    virtual WEAVE_ERROR GetVendorId(uint16_t& vendor_id) = 0;
+
+    // Gets the instance of group key store used by this ConfigurationManager.
+    virtual GroupKeyStoreBase* GetGroupKeyStore(void) = 0;
+
+    // Returns whether factory reset is supported.
+    virtual bool CanFactoryReset(void) = 0;
+
+    // Erases all mutable configuration held by the delegate.
+    virtual void InitiateFactoryReset(void) = 0;
+
+    // Reads stored K/V int pairs and writes them to |value|. If the key is not
+    // found or is not of 'uint32_t' type, |value| is unmodified.
+    virtual WEAVE_ERROR ReadPersistedStorageValue(Key key, uint32_t& value) = 0;
+
+    // Writes K/V int pair to store.
+    virtual WEAVE_ERROR WritePersistedStorageValue(Key key, uint32_t value) = 0;
+
+    // Acquires the BLE device name prefix from config-data and populates it in
+    // |device_name_prefix|, with the length in |out_len|. If the provided
+    // |buf_size| is not sufficient, |out_len| will not be modified.
+    virtual WEAVE_ERROR GetBleDeviceNamePrefix(char* device_name_prefix,
+                                               size_t device_name_prefix_size, size_t* out_len) = 0;
+
+    // Returns whether WoBLE is enabled.
+    virtual bool IsWoBLEEnabled() = 0;
+
+   protected:
+    ConfigurationManagerImpl* impl_;
+  };
+
+  // Sets the delegate containing the platform-specific implementation. It is
+  // invalid to invoke the ConfigurationManager without setting a delegate
+  // first. However, the OpenWeave surface requires a no-constructor
+  // instantiation of this class, so it is up to the caller to enforce this.
+  void SetDelegate(std::unique_ptr<Delegate> delegate);
+
+  // Gets the delegate currently in use. This may return nullptr if no delegate
+  // was set on this class.
+  Delegate* GetDelegate();
+
+  // Reads the BLE device name prefix, see definition in delegate.
+  WEAVE_ERROR GetBleDeviceNamePrefix(char* device_name_prefix, size_t device_name_prefix_size,
+                                     size_t* out_len);
+
+  // Returns whether WoBLE is enabled, see definition in delegate.
+  bool IsWoBLEEnabled();
+
+ private:
+  using GroupKeyStoreBase = ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase;
+  using Key = ::nl::Weave::Platform::PersistedStorage::Key;
+
+  std::unique_ptr<Delegate> delegate_;
+
+  // ConfigurationManagerImpl APIs. These are proxy functions that invoke
+  // functions of the same prototype in the |delegate_|. The function prototype
+  // definitions are owned by ConfigurationManager in OpenWeave.
   WEAVE_ERROR _Init(void);
   WEAVE_ERROR _GetDeviceId(uint64_t& device_id);
   WEAVE_ERROR _GetFirmwareRevision(char* buf, size_t buf_size, size_t& out_len);
@@ -55,7 +155,7 @@ class ConfigurationManagerImpl final
   WEAVE_ERROR _GetPrimaryWiFiMACAddress(uint8_t* buf);
   WEAVE_ERROR _GetVendorId(uint16_t& vendor_id);
 
-  ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase* _GetGroupKeyStore(void);
+  GroupKeyStoreBase* _GetGroupKeyStore(void);
   bool _CanFactoryReset(void);
   void _InitiateFactoryReset(void);
 
@@ -64,45 +164,12 @@ class ConfigurationManagerImpl final
   WEAVE_ERROR _WritePersistedStorageValue(::nl::Weave::Platform::PersistedStorage::Key key,
                                           uint32_t value);
 
-  // ===== Members for internal use by the following friends.
-
-  friend class Internal::NetworkProvisioningServerImpl;
-  friend class Internal::testing::ConfigurationManagerTest;
+  // Friend functions that are used by OpenWeave core implementations to access
+  // the static instance of ConfigurationManager and ConfigurationManagerImpl.
   friend ConfigurationManager& ConfigurationMgr(void);
   friend ConfigurationManagerImpl& ConfigurationMgrImpl(void);
 
   static ConfigurationManagerImpl sInstance;
-
-  zx_status_t GetDeviceIdFromFactory(const char* path, uint64_t* factory_device_id);
-
-  fuchsia::hwinfo::DeviceSyncPtr hwinfo_device_;
-  fuchsia::weave::FactoryDataManagerSyncPtr weave_factory_data_manager_;
-  fuchsia::wlan::device::service::DeviceServiceSyncPtr wlan_device_service_;
-  std::unique_ptr<Internal::WeaveConfigReader> device_info_;
-  fuchsia::factory::WeaveFactoryStoreProviderSyncPtr factory_store_provider_;
-
-  WEAVE_ERROR GetAndStoreHWInfo();
-  WEAVE_ERROR GetAndStorePairingCode();
-  WEAVE_ERROR GetAndStoreMfrDeviceCert();
-
- public:
-  ConfigurationManagerImpl();
-  // Read a file from the factory partition into |buf| up to a maximum of
-  // |buf_size| bytes. If not null, the total number of bytes read in is stored
-  // in *|out_len|.
-  zx_status_t ReadFactoryFile(const char* path, char* buf, size_t buf_size, size_t* out_len);
-
-  // Reads the BLE device name prefix from the configuration data into |device_name_prefix|.
-  //
-  // |device_name_prefix_size| holds the size of |device_name_prefix| in bytes. If
-  // |device_name_prefix| is too small to hold the BLE device name prefix, this method will
-  // return |WEAVE_ERROR_BUFFER_TOO_SMALL|.
-  //
-  // When this method returns successfully, |out_len| will hold the number of bytes used in
-  // |device_name_prefix| to store the BLE device name.
-  WEAVE_ERROR GetBleDeviceNamePrefix(char* device_name_prefix, size_t device_name_prefix_size,
-                                     size_t* out_len);
-  bool IsWOBLEEnabled();
 };
 
 /**

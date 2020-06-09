@@ -7,6 +7,8 @@ openweave_adaptation_layer("adaptation") {
   sources = [
     "ble_manager_impl.cpp",
     "ble_manager_impl.h",
+    "configuration_manager_delegate_impl.cpp",
+    "configuration_manager_delegate_impl.h",
     "configuration_manager_impl.cpp",
     "configuration_manager_impl.h",
     "connectivity_manager_impl.cpp",

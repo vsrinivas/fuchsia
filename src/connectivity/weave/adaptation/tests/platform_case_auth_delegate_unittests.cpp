@@ -2,13 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// clang-format off
+#include "platform_case_auth_delegate.h"
+#include "configuration_manager_delegate_impl.h"
+// clang-format on
+
 #include <fuchsia/weave/cpp/fidl.h>
 #include <fuchsia/weave/cpp/fidl_test_base.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <Weave/Core/WeaveTLV.h>
 
-#include "platform_case_auth_delegate.h"
 #include "weave_test_fixture.h"
 
 namespace nl::Weave::DeviceLayer::Internal {
@@ -166,6 +170,9 @@ class PlatformCASEAuthDelegateTest : public WeaveTestFixture {
   void SetUp() {
     WeaveTestFixture::SetUp();
     WeaveTestFixture::RunFixtureLoop();
+
+    ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
+    EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
     // Initialize dummy certificate and service configuration.
     EXPECT_EQ(ConfigurationMgr().StoreManufacturerDeviceCertificate(kTestDeviceCert,
                                                                     sizeof(kTestDeviceCert)),

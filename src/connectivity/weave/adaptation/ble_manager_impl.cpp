@@ -42,7 +42,7 @@ WEAVE_ERROR BLEManagerImpl::_Init() {
   adv_handle_.set_error_handler(
       [](zx_status_t status) { FX_LOGS(INFO) << "LE advertising was stopped: " << status; });
 
-  if (ConfigurationMgrImpl().IsWOBLEEnabled()) {
+  if (ConfigurationMgrImpl().IsWoBLEEnabled()) {
     service_mode_ = ConnectivityManager::kWoBLEServiceMode_Enabled;
   }
 

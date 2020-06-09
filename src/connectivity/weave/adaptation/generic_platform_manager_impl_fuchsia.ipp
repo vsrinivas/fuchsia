@@ -65,7 +65,7 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
     initContext.listenTCP = true;
     initContext.listenUDP = true;
 #if WEAVE_DEVICE_CONFIG_ENABLE_WOBLE
-    if(ConfigurationMgrImpl().IsWOBLEEnabled()) {
+    if(ConfigurationMgrImpl().IsWoBLEEnabled()) {
       initContext.ble = BLEMgr().GetBleLayer();
       initContext.listenBLE = true;
     }
@@ -129,7 +129,7 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
     }
 
 #if WEAVE_DEVICE_CONFIG_ENABLE_WOBLE
-    if(ConfigurationMgrImpl().IsWOBLEEnabled()) {
+    if(ConfigurationMgrImpl().IsWoBLEEnabled()) {
       err = BLEMgr().Init();
       if (err != WEAVE_NO_ERROR)
       {

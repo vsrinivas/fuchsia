@@ -5,8 +5,8 @@
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_PLATFORM_MANAGER_IMPL_H_
 
 #include <BuildConfig.h>
-
 #include <lib/sys/cpp/component_context.h>
+
 #include "generic_platform_manager_impl_fuchsia.h"
 
 namespace nl {
@@ -29,14 +29,14 @@ class PlatformManagerImpl final
 
  public:
   // ===== Platform-specific members that may be accessed directly by the application.
- void ShutdownWeaveStack(void);
- sys::ComponentContext* GetComponentContextForProcess(void);
- void SetComponentContextForProcess(std::unique_ptr<sys::ComponentContext> context);
+  void ShutdownWeaveStack(void);
+  sys::ComponentContext* GetComponentContextForProcess(void);
+  void SetComponentContextForProcess(std::unique_ptr<sys::ComponentContext> context);
 
- // Sets the dispatcher to which tasks will be posted.
- //
- // This method will panic if |dispatcher| is NULL.
- void SetDispatcher(async_dispatcher_t *dispatcher);
+  // Sets the dispatcher to which tasks will be posted.
+  //
+  // This method will panic if |dispatcher| is NULL.
+  void SetDispatcher(async_dispatcher_t* dispatcher);
 
  private:
   // ===== Methods that implement the PlatformManager abstract interface.
@@ -47,7 +47,7 @@ class PlatformManagerImpl final
   // by the main async loop.
   //
   // This method will panic if the dispatcher is not set.
-  void _PostEvent(const WeaveDeviceEvent * event);
+  void _PostEvent(const WeaveDeviceEvent* event);
 
   // ===== Members for internal use by the following friends.
 
