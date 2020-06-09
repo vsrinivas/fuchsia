@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/fidl/llcpp/heap_allocator.h>
 #include <lib/sysmem-make-tracking/make_tracking.h>
 
 #include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
-#include "out/default/fidling/gen/sdk/fidl/fuchsia.sysmem2/fuchsia/sysmem2/llcpp/fidl.h"
 #include "usage_pixel_format_cost.h"
 
 namespace sysmem_driver {
