@@ -197,7 +197,7 @@ TEST(VmoZeroTestCase, EmptyCowChildren) {
 TEST(VmoZeroTestCase, MergeZeroChildren) {
   zx::vmo parent;
   EXPECT_OK(zx::vmo::create(PAGE_SIZE * 2, 0, &parent));
-  EXPECT_OK(parent.op_range(ZX_VMO_OP_COMMIT, 0, PAGE_SIZE, NULL, 0));
+  VmoWrite(parent, 1, 0);
 
   zx::vmo child;
   EXPECT_OK(parent.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, PAGE_SIZE, &child));
@@ -369,7 +369,7 @@ TEST(VmoZeroTestCase, ChildZeroThenWrite) {
 TEST(VmoZeroTestCase, Nested) {
   zx::vmo parent;
   EXPECT_OK(zx::vmo::create(PAGE_SIZE * 2, 0, &parent));
-  EXPECT_OK(parent.op_range(ZX_VMO_OP_COMMIT, 0, PAGE_SIZE, NULL, 0));
+  VmoWrite(parent, 1, 0);
 
   // Create two children.
   zx::vmo child1, child2;
