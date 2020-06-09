@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <zircon/syscalls.h>
+#include <zircon/testonly-syscalls.h>
 
 #include <zxtest/zxtest.h>
 

@@ -142,6 +142,7 @@ group("tests") {
     "//zircon/system/utest/status:status-package",
     "//zircon/system/utest/stdio:stdio-test-package",
     "//zircon/system/utest/svchost:svchost-package",
+    "//zircon/system/utest/syscall-generation:syscall-generation-package",
     "//zircon/system/utest/sysconf:sysconf-package",
     "//zircon/system/utest/task-utils:task-utils-package",
     "//zircon/system/utest/thread-initial-state:thread-initial-state-package",
