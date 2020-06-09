@@ -176,13 +176,6 @@ func (b *FuchsiaDirBuild) GetVbmetaPath(ctx context.Context) (string, error) {
 	return filepath.Join(b.dir, "fuchsia.vbmeta"), nil
 }
 
-func addArgsToVbmeta(ctx context.Context, avbtool *avb.AVBTool, destVbmeta string, srcVbmeta string, bootArguments map[string]string) error {
-	// TODO build a ZBI and populate it with the boot args to be baked into the vbmeta.
-	var props map[string]string
-
-	return avbtool.MakeVBMetaImage(ctx, destVbmeta, srcVbmeta, props)
-}
-
 type OmahaBuild struct {
 	build    Build
 	omahaUrl string
@@ -221,7 +214,7 @@ func (b *OmahaBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
 		return nil, err
 	}
 
-	err = addArgsToVbmeta(ctx, b.avbtool, destVbmeta, srcVbmeta, bootArgs)
+	err = b.avbtool.MakeVBMetaImage(ctx, destVbmeta, srcVbmeta, bootArgs)
 	if err != nil {
 		return nil, err
 	}
