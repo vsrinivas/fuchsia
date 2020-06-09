@@ -131,16 +131,21 @@ func (c *config) getDowngradeBuild(ctx context.Context, dir string) (artifacts.B
 		return nil, err
 	}
 
+	var build artifacts.Build
 	if buildID != "" {
-		return c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir, sshPrivateKey.PublicKey())
+		build, err = c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir, sshPrivateKey.PublicKey())
+	} else if c.upgradeFuchsiaBuildDir != "" {
+		build, err = artifacts.NewFuchsiaDirBuild(c.downgradeFuchsiaBuildDir, sshPrivateKey.PublicKey()), nil
 	}
 
-	if c.downgradeFuchsiaBuildDir != "" {
-		return artifacts.NewFuchsiaDirBuild(c.downgradeFuchsiaBuildDir, sshPrivateKey.PublicKey()), nil
+	if err != nil {
+		return nil, err
 	}
-
-	// the downgrade build isn't required, so don't err if we can't create one.
-	return nil, nil
+	if build == nil {
+		// The downgrade build isn't required, so don't err if we can't create one.
+		return nil, nil
+	}
+	return c.installerConfig.ConfigureBuild(ctx, build)
 }
 
 func (c *config) getUpgradeBuilder() (*artifacts.Builder, error) {
@@ -173,13 +178,19 @@ func (c *config) getUpgradeBuild(ctx context.Context, dir string) (artifacts.Bui
 		return nil, err
 	}
 
+	var build artifacts.Build
 	if buildID != "" {
-		return c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir, nil)
+		build, err = c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir, nil)
+	} else if c.upgradeFuchsiaBuildDir != "" {
+		build, err = artifacts.NewFuchsiaDirBuild(c.upgradeFuchsiaBuildDir, nil), nil
 	}
 
-	if c.upgradeFuchsiaBuildDir != "" {
-		return artifacts.NewFuchsiaDirBuild(c.upgradeFuchsiaBuildDir, nil), nil
+	if err != nil {
+		return nil, err
 	}
-
-	return nil, nil
+	if build == nil {
+		// The upgrade build isn't required, so don't err if we can't create one.
+		return nil, nil
+	}
+	return c.installerConfig.ConfigureBuild(ctx, build)
 }

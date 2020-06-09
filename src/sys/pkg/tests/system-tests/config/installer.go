@@ -13,6 +13,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/artifacts"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/avb"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/omaha"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/updater"
 )
@@ -20,6 +21,7 @@ import (
 type InstallerMode = string
 
 const (
+	Omaha               = "omaha"
 	SystemUpdateChecker = "system-update-checker"
 )
 
@@ -30,6 +32,7 @@ type InstallerConfig struct {
 	keyMetadataPath string
 	avbTool         *avb.AVBTool
 	updater         updater.Updater
+	omahaServer     *omaha.OmahaServer
 }
 
 func NewInstallerConfig(fs *flag.FlagSet) (*InstallerConfig, error) {
@@ -60,6 +63,19 @@ func (c *InstallerConfig) AVBTool() (*avb.AVBTool, error) {
 
 func (c *InstallerConfig) ConfigureBuild(ctx context.Context, build artifacts.Build) (artifacts.Build, error) {
 	switch c.installerMode {
+	case Omaha:
+		if c.omahaServer == nil {
+			omahaServer, err := omaha.NewOmahaServer(ctx, "localhost")
+			if err != nil {
+				return nil, err
+			}
+			c.omahaServer = omahaServer
+		}
+		avbTool, err := c.AVBTool()
+		if err != nil {
+			return nil, err
+		}
+		return artifacts.NewOmahaBuild(build, c.omahaServer.URL(), avbTool), nil
 	case SystemUpdateChecker:
 		return build, nil
 	default:
@@ -68,14 +84,12 @@ func (c *InstallerConfig) ConfigureBuild(ctx context.Context, build artifacts.Bu
 }
 
 func (c *InstallerConfig) Updater(repo *packages.Repository) (updater.Updater, error) {
-	if c.updater == nil {
-		switch c.installerMode {
-		case SystemUpdateChecker:
-			c.updater = updater.NewSystemUpdateChecker(repo)
-		default:
-			return nil, errors.New("Invalid installer mode")
-		}
+	switch c.installerMode {
+	case Omaha:
+		return nil, errors.New("Omaha updater isn't implemented yet")
+	case SystemUpdateChecker:
+		return updater.NewSystemUpdateChecker(repo), nil
+	default:
+		return nil, errors.New("Invalid installer mode")
 	}
-
-	return c.updater, nil
 }
