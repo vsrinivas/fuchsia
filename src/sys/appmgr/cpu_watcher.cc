@@ -26,8 +26,8 @@ void CpuWatcher::AddTask(const InstancePath& instance_path, zx::job job) {
     auto it = cur_task->children().find(part);
     if (it == cur_task->children().end()) {
       bool inserted;
-      std::tie(it, inserted) = cur_task->children().emplace(
-          part, std::make_unique<Task>(Task(cur_task, zx::job(), part, max_samples_)));
+      std::tie(it, inserted) =
+          cur_task->children().emplace(part, std::make_unique<Task>(Task(zx::job(), max_samples_)));
       task_count_ += 1;
       task_count_value_.Set(task_count_);
     }
@@ -107,6 +107,65 @@ void CpuWatcher::Task::Measure(const zx::time& timestamp) {
     TRACE_DURATION("appmgr", "CpuWatcher::Task::Measure:Rotate");
     rotate();
   }
+}
+
+fit::promise<inspect::Inspector> CpuWatcher::PopulateInspector() const {
+  TRACE_DURATION("appmgr", "CpuWatcher::PopulateInspector");
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  inspect::Inspector inspector(inspect::InspectSettings{.maximum_size = 2 * 1024 * 1024});
+
+  struct WorkEntry {
+    const char* name;
+    const Task* task;
+    inspect::Node* parent;
+  };
+  std::vector<WorkEntry> work_stack;
+  work_stack.push_back(WorkEntry{.name = "root", .task = &root_, .parent = &inspector.GetRoot()});
+
+  while (!work_stack.empty()) {
+    auto entry = work_stack.back();
+    work_stack.pop_back();
+
+    auto node = std::make_unique<inspect::Node>(entry.parent->CreateChild(entry.name));
+    inspect::Node* node_ptr = node.get();
+    inspector.emplace(std::move(node));
+    if (!entry.task->measurements().empty()) {
+      inspect::Node samples = node_ptr->CreateChild("@samples");
+      size_t next_id = 0;
+      for (const auto& measurement : entry.task->measurements()) {
+        auto sample = samples.CreateChild(std::to_string(next_id++));
+        sample.CreateInt("timestamp", measurement.timestamp, &inspector);
+        sample.CreateInt("cpu_time", measurement.cpu_time, &inspector);
+        sample.CreateInt("queue_time", measurement.queue_time, &inspector);
+        inspector.emplace(std::move(sample));
+      }
+      inspector.emplace(std::move(samples));
+    }
+
+    for (const auto& child : entry.task->children()) {
+      work_stack.push_back(
+          WorkEntry{.name = child.first.c_str(), .task = &*child.second, .parent = node_ptr});
+    }
+  }
+
+  // Include stats about the Inspector that is being exposed.
+  // This data can be used to determine if the measurement inspector is full.
+  auto stats_node = inspector.GetRoot().CreateChild("@inspect");
+  auto size = stats_node.CreateUint("current_size", 0);
+  auto max_size = stats_node.CreateUint("maximum_size", 0);
+  auto dynamic_links = stats_node.CreateUint("dynamic_links", 0);
+  auto stats = inspector.GetStats();
+  size.Set(stats.size);
+  max_size.Set(stats.maximum_size);
+  dynamic_links.Set(stats.dynamic_child_count);
+
+  inspector.emplace(std::move(stats_node));
+  inspector.emplace(std::move(size));
+  inspector.emplace(std::move(max_size));
+  inspector.emplace(std::move(dynamic_links));
+
+  return fit::make_result_promise<inspect::Inspector>(fit::ok(inspector));
 }
 
 }  // namespace component

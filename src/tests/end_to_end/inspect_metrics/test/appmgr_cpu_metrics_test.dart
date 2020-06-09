@@ -61,11 +61,11 @@ void main() {
         singleValue(greaterThan(0)));
   });
 
-  test('appmgr is not out of inspect space', () async {
-    var size = await getInspectValues(
-        inspect, 'core/appmgr:root/inspect_stats:current_size');
-    var maxSize = await getInspectValues(
-        inspect, 'core/appmgr:root/inspect_stats:maximum_size');
+  test('appmgr is not out of inspect space for measurements', () async {
+    var size = await getInspectValues(inspect,
+        'core/appmgr:root/cpu_stats/measurements/@inspect:current_size');
+    var maxSize = await getInspectValues(inspect,
+        'core/appmgr:root/cpu_stats/measurements/@inspect:maximum_size');
 
     expect(size, singleValue(greaterThan(0)));
     expect(maxSize, singleValue(greaterThan(0)));

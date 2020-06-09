@@ -32,12 +32,13 @@ class CpuWatcher {
   // appears as the root of the hierarchy.
   CpuWatcher(inspect::Node node, zx::job job, size_t max_samples = kDefaultMaxSamples)
       : top_node_(std::move(node)),
-        measurements_(top_node_.CreateChild("measurements")),
+        measurements_(
+            top_node_.CreateLazyNode("measurements", [this] { return PopulateInspector(); })),
         task_count_value_(top_node_.CreateInt("task_count", 0)),
         process_times_(top_node_.CreateExponentialIntHistogram(
             "process_time_ns", kProcessTimeFloor, kProcessTimeStep, kProcessTimeMultiplier,
             kProcessTimeBuckets)),
-        root_(measurements_.CreateChild("root"), std::move(job), max_samples),
+        root_(std::move(job), max_samples),
         max_samples_(max_samples) {}
 
   // Add a task to this watcher by instance path.
@@ -57,34 +58,24 @@ class CpuWatcher {
   static constexpr int64_t kProcessTimeBuckets = 16;
   static constexpr size_t kDefaultMaxSamples = 60;
 
+  fit::promise<inspect::Inspector> PopulateInspector() const;
+
   // An individual measurement.
   struct Measurement {
-    // Root node for measurement values.
-    inspect::Node node;
-    // Holder for values stored under the node.
-    inspect::ValueList values;
+    zx_time_t timestamp;
+    zx_duration_t cpu_time;
+    zx_duration_t queue_time;
   };
 
   // A task that can be measured.
   class Task {
    public:
-    Task(inspect::Node node, zx::job job, size_t max_samples)
-        : node_(std::move(node)),
-          samples_(node_.CreateChild("@samples")),
-          job_(std::move(job)),
-          max_samples_(max_samples){};
-
-    Task(Task* parent, zx::job job, const std::string& name, size_t max_samples)
-        : Task(parent->node_.CreateChild(name), std::move(job), max_samples) {}
+    Task(zx::job job, size_t max_samples) : job_(std::move(job)), max_samples_(max_samples){};
 
     // Add a measurement to this task.
     void add_measurement(zx_time_t time, zx_duration_t cpu, zx_duration_t queue) {
-      Measurement ret{.node = samples_.CreateChild(std::to_string(next_id++))};
-      ret.node.CreateInt("timestamp", time, &ret.values);
-      ret.node.CreateInt("cpu_time", cpu, &ret.values);
-      ret.node.CreateInt("queue_time", queue, &ret.values);
-
-      measurements_.emplace_back(std::move(ret));
+      measurements_.emplace_back(
+          Measurement{.timestamp = time, .cpu_time = cpu, .queue_time = queue});
       while (measurements_.size() > max_samples_) {
         measurements_.pop_front();
       }
@@ -106,16 +97,12 @@ class CpuWatcher {
 
     zx::job& job() { return job_; }
     std::map<std::string, std::unique_ptr<Task>>& children() { return children_; }
+    const std::map<std::string, std::unique_ptr<Task>>& children() const { return children_; }
+    const std::deque<Measurement>& measurements() const { return measurements_; }
 
     void Measure(const zx::time& timestamp);
 
    private:
-    // The node that roots this task's output.
-    inspect::Node node_;
-
-    // The node that roots this task's sample output.
-    inspect::Node samples_;
-
     // The job to sample.
     zx::job job_;
 
@@ -127,14 +114,11 @@ class CpuWatcher {
 
     // Map of children for this task.
     std::map<std::string, std::unique_ptr<Task>> children_;
-
-    // Unique id counter.
-    size_t next_id = 0;
   };
 
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
   inspect::Node top_node_;
-  inspect::Node measurements_;
+  inspect::LazyNode measurements_;
   inspect::IntProperty task_count_value_;
   inspect::ExponentialIntHistogram process_times_;
 

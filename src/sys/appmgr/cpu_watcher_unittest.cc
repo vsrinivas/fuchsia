@@ -4,7 +4,9 @@
 
 #include "src/sys/appmgr/cpu_watcher.h"
 
-#include <lib/gtest/real_loop_fixture.h>
+#include <lib/async-loop/default.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
 
@@ -13,6 +15,18 @@
 namespace component {
 namespace {
 
+inspect::Hierarchy GetHierarchy(const inspect::Inspector& inspector) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  async::Executor executor(loop.dispatcher());
+  fit::result<inspect::Hierarchy> hierarchy;
+  executor.schedule_task(inspect::ReadFromInspector(inspector).then(
+      [&](fit::result<inspect::Hierarchy>& res) { hierarchy = std::move(res); }));
+  while (!hierarchy) {
+    loop.Run(zx::deadline_after(zx::sec(1)), true);
+  }
+  return hierarchy.take_value();
+}
+
 TEST(CpuWatcher, EmptyTasks) {
   inspect::Inspector inspector;
   CpuWatcher watcher(inspector.GetRoot().CreateChild("test"), zx::job());
@@ -20,8 +34,8 @@ TEST(CpuWatcher, EmptyTasks) {
   watcher.Measure();
 
   // Ensure that we do not record any measurements for an invalid job handle.
-  auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
-  const auto* node = hierarchy.GetByPath({"test", "measurements", "root", "@samples"});
+  auto hierarchy = GetHierarchy(inspector);
+  const auto* node = hierarchy.GetByPath({"test", "measurements", "root"});
   ASSERT_NE(nullptr, node);
   EXPECT_TRUE(node->children().empty());
   EXPECT_TRUE(node->node().properties().empty());
@@ -40,9 +54,8 @@ TEST(CpuWatcher, BadTask) {
   watcher.Measure();
 
   // Ensure that we do not record any measurements for a task that cannot be read.
-  auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
-  const auto* node =
-      hierarchy.GetByPath({"test", "measurements", "root", "test_invalid", "@samples"});
+  auto hierarchy = GetHierarchy(inspector);
+  const auto* node = hierarchy.GetByPath({"test", "measurements", "root", "test_invalid"});
   ASSERT_NE(nullptr, node);
   EXPECT_TRUE(node->children().empty());
   EXPECT_TRUE(node->node().properties().empty());
@@ -57,8 +70,7 @@ int64_t GetValidSampleCount(const inspect::Hierarchy* hierarchy) {
 
   hierarchy = hierarchy->GetByPath({"@samples"});
   if (!hierarchy) {
-    printf("hierarchy does not have @samples!\n");
-    return -1;
+    return 0;
   }
 
   size_t ret = 0;
@@ -104,46 +116,46 @@ TEST(CpuWatcher, SampleSingle) {
   watcher.AddTask({"test_valid"}, std::move(self));
 
   // Ensure that we record measurements up to the limit.
-  auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
+  auto hierarchy = GetHierarchy(inspector);
   EXPECT_EQ(
       1, GetValidSampleCount(hierarchy.GetByPath({"test", "measurements", "root", "test_valid"})));
 
   watcher.Measure();
-  hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
+  hierarchy = GetHierarchy(inspector);
   EXPECT_EQ(
       2, GetValidSampleCount(hierarchy.GetByPath({"test", "measurements", "root", "test_valid"})));
 
   watcher.Measure();
-  hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
+  hierarchy = GetHierarchy(inspector);
   EXPECT_EQ(
       3, GetValidSampleCount(hierarchy.GetByPath({"test", "measurements", "root", "test_valid"})));
 
   // One measurement rolled out.
   watcher.Measure();
-  hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
+  hierarchy = GetHierarchy(inspector);
   EXPECT_EQ(
       3, GetValidSampleCount(hierarchy.GetByPath({"test", "measurements", "root", "test_valid"})));
 
   // Remove the task, the value is still there for now.
   watcher.RemoveTask({"test_valid"});
-  hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
+  hierarchy = GetHierarchy(inspector);
   EXPECT_EQ(
       3, GetValidSampleCount(hierarchy.GetByPath({"test", "measurements", "root", "test_valid"})));
 
   // Measurements roll out now.
   watcher.Measure();
-  hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
+  hierarchy = GetHierarchy(inspector);
   EXPECT_EQ(
       2, GetValidSampleCount(hierarchy.GetByPath({"test", "measurements", "root", "test_valid"})));
 
   watcher.Measure();
-  hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
+  hierarchy = GetHierarchy(inspector);
   EXPECT_EQ(
       1, GetValidSampleCount(hierarchy.GetByPath({"test", "measurements", "root", "test_valid"})));
 
   // After the last measurement rolls out, the node is deleted.
   watcher.Measure();
-  hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
+  hierarchy = GetHierarchy(inspector);
   EXPECT_EQ(nullptr, hierarchy.GetByPath({"test", "measurements", "root", "test_valid"}));
 }
 
@@ -170,7 +182,7 @@ TEST(CpuWatcher, SampleMultiple) {
   //   separate: 0 samples
   //     nested: 3 samples
 
-  auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
+  auto hierarchy = GetHierarchy(inspector);
 
   inspect::Hierarchy *test_valid = nullptr, *test_valid_nested = nullptr,
                      *separate_nested = nullptr, *separate = nullptr;
