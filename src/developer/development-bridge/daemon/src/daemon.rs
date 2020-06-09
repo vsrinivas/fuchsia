@@ -6,8 +6,8 @@ use {
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
     crate::mdns::MdnsTargetFinder,
+    crate::ok_or_return,
     crate::target::{RCSConnection, Target, TargetCollection, ToFidlTarget},
-    crate::{ok_or_continue, ok_or_return},
     anyhow::{anyhow, Context, Error},
     async_std::task,
     async_trait::async_trait,
@@ -113,13 +113,14 @@ impl Daemon {
                 for dev in fastboot_devices {
                     // Add to target collection
                     let nodename = format!("{:?}", dev);
-                    ok_or_continue!(
-                        queue
-                            .push(DaemonEvent::WireTraffic(WireTrafficType::Fastboot(
-                                events::TargetInfo { nodename, addresses: Vec::new() }
-                            )))
-                            .await
-                    );
+                    queue
+                        .push(DaemonEvent::WireTraffic(WireTrafficType::Fastboot(
+                            events::TargetInfo { nodename, addresses: Vec::new() },
+                        )))
+                        .await
+                        .unwrap_or_else(|err| {
+                            log::warn!("Fastboot discovery failed to enqueue event: {}", err)
+                        });
                 }
                 // Sleep
                 task::sleep(std::time::Duration::from_secs(3)).await;
@@ -129,24 +130,43 @@ impl Daemon {
 
     pub fn spawn_onet_discovery(mut queue: events::Queue<DaemonEvent>) {
         spawn(async move {
-            let svc = hoist::connect_as_service_consumer().unwrap();
             loop {
-                let peers = svc.list_peers().await.unwrap();
-                for peer in peers {
-                    if peer.description.services.is_none() {
+                let svc = match hoist::connect_as_service_consumer() {
+                    Ok(svc) => svc,
+                    Err(err) => {
+                        log::info!("Overnet setup failed: {}, will retry in 1s", err);
+                        task::sleep(Duration::from_secs(1)).await;
                         continue;
                     }
-                    if peer
-                        .description
-                        .services
-                        .unwrap()
-                        .iter()
-                        .find(|name| *name == RemoteControlMarker::NAME)
-                        .is_none()
-                    {
-                        continue;
+                };
+                loop {
+                    let peers = match svc.list_peers().await {
+                        Ok(peers) => peers,
+                        Err(err) => {
+                            log::info!("Overnet peer discovery failed: {}, will retry", err);
+                            task::sleep(Duration::from_secs(1)).await;
+                            // break out of the peer discovery loop on error in
+                            // order to reconnect, in case the error causes the
+                            // overnet interface to go bad.
+                            break;
+                        }
+                    };
+                    for peer in peers {
+                        let peer_has_rcs = peer.description.services.map_or(false, |s| {
+                            s.iter().find(|name| *name == RemoteControlMarker::NAME).is_some()
+                        });
+                        if peer_has_rcs {
+                            queue.push(DaemonEvent::OvernetPeer(peer.id.id)).await.unwrap_or_else(
+                                |err| {
+                                    log::warn!(
+                                        "Overnet discovery failed to enqueue event: {}",
+                                        err
+                                    );
+                                },
+                            );
+                        }
                     }
-                    ok_or_continue!(queue.push(DaemonEvent::OvernetPeer(peer.id.id)).await);
+                    task::sleep(Duration::from_millis(100)).await;
                 }
             }
         });

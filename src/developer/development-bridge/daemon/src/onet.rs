@@ -116,17 +116,14 @@ impl HostPipeChild {
 
 impl Drop for HostPipeChild {
     fn drop(&mut self) {
-        let cancel_tx = self.cancel_tx.take().expect("cancel_tx is gone");
-        let reader_handle = self.reader_handle.take().expect("reader_handle is gone");
-        let writer_handle = self.writer_handle.take().expect("writer_handle is gone");
-        let logger_handle = self.logger_handle.take().expect("logger_handle is gone");
-
         // Ignores whether the receiver has been closed, this is just to
         // un-stick it from an attempt at reading from Ascendd.
-        let _ = cancel_tx.send(());
-        let reader_result = futures::executor::block_on(reader_handle).unwrap();
-        let writer_result = futures::executor::block_on(writer_handle).unwrap();
-        let logger_result = futures::executor::block_on(logger_handle).unwrap();
+        self.cancel_tx.take().map(|c| c.send(()));
+
+        let reader_result = self.reader_handle.take().map(|rh| futures::executor::block_on(rh));
+        let writer_result = self.writer_handle.take().map(|wh| futures::executor::block_on(wh));
+        let logger_result = self.logger_handle.take().map(|lh| futures::executor::block_on(lh));
+
         log::trace!(
             "Dropped HostPipeChild. Writer result: '{:?}'; reader result: '{:?}'; logger result: '{:?}'",
             writer_result,
