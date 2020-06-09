@@ -219,7 +219,7 @@ zx_status_t import_buffer_collection(uint64_t collection_id, fhd::ImageConfig* c
   RETURN_IF_ERROR(import_rsp, "vc: Failed to import image call");
 
   if (import_rsp->res != ZX_OK) {
-    printf("vc: Failed to import vmo %d\n", import_rsp->res);
+    printf("vc: Failed to import vmo collection %d\n", import_rsp->res);
     return import_rsp->res;
   }
 
