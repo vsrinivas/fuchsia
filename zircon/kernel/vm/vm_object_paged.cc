@@ -2139,7 +2139,7 @@ zx_status_t VmObjectPaged::ZeroRange(uint64_t offset, uint64_t len) {
 
 zx_status_t VmObjectPaged::ZeroPartialPage(uint64_t page_base_offset, uint64_t zero_start_offset,
                                            uint64_t zero_end_offset, Guard<Mutex>* guard) {
-  DEBUG_ASSERT(zero_start_offset < zero_end_offset);
+  DEBUG_ASSERT(zero_start_offset <= zero_end_offset);
   DEBUG_ASSERT(zero_end_offset <= PAGE_SIZE);
   DEBUG_ASSERT(IS_PAGE_ALIGNED(page_base_offset));
   DEBUG_ASSERT(page_base_offset < size_);

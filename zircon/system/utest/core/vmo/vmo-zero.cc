@@ -390,4 +390,13 @@ TEST(VmoZeroTestCase, Nested) {
   EXPECT_EQ(PAGE_SIZE, VmoCommittedBytes(child2));
 }
 
+TEST(VmoZeroTestCase, ZeroLengths) {
+  zx::vmo vmo;
+  EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_ZERO, 0, 0, NULL, 0));
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_ZERO, 10, 0, NULL, 0));
+  EXPECT_OK(vmo.op_range(ZX_VMO_OP_ZERO, PAGE_SIZE, 0, NULL, 0));
+}
+
 }  // namespace vmo_test
