@@ -215,9 +215,9 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // WARNING: This method must not be called concurrently by two separate threads.
   // For now, this method is protected by the thread_lock, but in the future this may change.
   void UpdateRuntimeStats(const Thread::RuntimeStats& update) TA_REQ(thread_lock) {
-    uint64_t before = stats_generation_count_.fetch_add(1, std::memory_order_acq_rel);
+    uint64_t before = stats_generation_count_.fetch_add(1, ktl::memory_order_acq_rel);
     runtime_stats_.Update(update);
-    uint64_t after = stats_generation_count_.fetch_add(1, std::memory_order_acq_rel);
+    uint64_t after = stats_generation_count_.fetch_add(1, ktl::memory_order_acq_rel);
     // Ensure no concurrent write was happening at the start and that no concurrent writes happened
     // during this operation.
     DEBUG_ASSERT((before % 2) == 0);
