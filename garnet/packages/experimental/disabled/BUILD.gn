@@ -23,11 +23,6 @@ group("rfb_layer") {
   ]
 }
 
-group("fidl_fuzz") {
-  testonly = true
-  public_deps = [ "//garnet/public/lib/fidl/fuzz:host" ]
-}
-
 group("biscotti_guest") {
   testonly = true
   public_deps = [

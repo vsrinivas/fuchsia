@@ -1,8 +1,0 @@
-library fuchsia.example_6;
-
-using somethinort.path as othere_6
-
-using somethinort.path as other
-
-const int x = 2tring req) -> (string response);
-}

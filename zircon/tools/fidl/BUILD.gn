@@ -15,8 +15,6 @@ config("fidlc_config") {
 }
 
 if (!defined(zx) || zx != "/") {
-  # TODO(BLD-353): Referenced by //garnet/public/lib/fidl/fuzz:compiler.
-
   config("fidl_config") {
     visibility = [ ":*" ]
     include_dirs = [ "include" ]
