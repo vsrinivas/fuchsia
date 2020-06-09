@@ -57,6 +57,7 @@ zx_status_t EffectsProcessor::AddEffect(Effect e) {
   }
 
   delay_frames_ += params.signal_latency_frames;
+  ring_out_frames_ += params.ring_out_frames;
   effects_chain_.emplace_back(std::move(e));
   effects_parameters_.emplace_back(std::move(params));
   return ZX_OK;

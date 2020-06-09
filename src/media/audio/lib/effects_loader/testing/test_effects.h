@@ -65,6 +65,11 @@ class TestEffectBuilder {
     return *this;
   }
 
+  TestEffectBuilder& WithRingOutFrames(uint32_t ring_out_frames) {
+    spec_.ring_out_frames = ring_out_frames;
+    return *this;
+  }
+
   TestEffectBuilder& WithChannelization(uint16_t channels_in, uint16_t channels_out) {
     spec_.description.incoming_channels = channels_in;
     spec_.description.outgoing_channels = channels_out;
@@ -91,6 +96,7 @@ class TestEffectBuilder {
       .block_size_frames = FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY,
       .max_batch_size = FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
       .signal_latency_frames = 0,
+      .ring_out_frames = 0,
       .action = TEST_EFFECTS_ACTION_ADD,
       .value = 0.0f,
   };

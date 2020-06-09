@@ -55,12 +55,25 @@ typedef struct {
   //
   // Use |FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY| to indicate any alignment is acceptable.
   uint32_t block_size_frames;
+
+  // When an effect has a positive filter width, it will shift that signal |signal_latency_frames|.
+  //
+  // In other words, compute frame 'N', 'signal_latency_frames' prior frames are used in the stream
+  // as part of that computation.
   uint32_t signal_latency_frames;
+
   // The maximum number of frames the effect can handle with a single call to |process| or
   // |process_inplace|.
   //
   // Use |FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY| to indicate any frame count is acceptable.
   uint32_t max_frames_per_buffer;
+
+  // When an effect has a negative filter width, it will impact 'ring_out_frames' frames _after_
+  // the frame has played.
+  //
+  // When a stream idles, there will be at least 'ring_out_frames' additional frames of silence
+  // provided to the effect to allow this state to 'ring_out'.
+  uint32_t ring_out_frames;
 } fuchsia_audio_effects_parameters;
 
 typedef struct {

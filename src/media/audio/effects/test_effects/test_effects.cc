@@ -48,6 +48,7 @@ class TestEffect {
   uint32_t block_size_frames() const { return g_effects[effect_id()].block_size_frames; }
   uint32_t max_batch_size() const { return g_effects[effect_id()].max_batch_size; }
   uint32_t latency_frames() const { return g_effects[effect_id()].signal_latency_frames; }
+  uint32_t ring_out_frames() const { return g_effects[effect_id()].ring_out_frames; }
   std::string_view config() const { return config_; }
   size_t flush_count() const { return flush_count_; }
 
@@ -64,6 +65,7 @@ class TestEffect {
     params->block_size_frames = block_size_frames();
     params->max_frames_per_buffer = max_batch_size();
     params->signal_latency_frames = latency_frames();
+    params->ring_out_frames = ring_out_frames();
     return true;
   }
 

@@ -30,6 +30,7 @@ typedef struct {
   uint32_t block_size_frames;
   uint32_t max_batch_size;
   uint32_t signal_latency_frames;
+  uint32_t ring_out_frames;
   EffectAction action;
   float value;
 } test_effect_spec;

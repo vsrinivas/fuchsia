@@ -418,5 +418,27 @@ TEST_F(EffectsProcessorTest, SetStreamInfo) {
   }
 }
 
+TEST_F(EffectsProcessorTest, FilterWidth) {
+  test_effects()
+      .AddEffect("effect1")
+      .WithChannelization(FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY, FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY)
+      .WithSignalLatencyFrames(10)
+      .WithRingOutFrames(4);
+  test_effects()
+      .AddEffect("effect2")
+      .WithChannelization(FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY, FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY)
+      .WithSignalLatencyFrames(50)
+      .WithRingOutFrames(19);
+  RecreateLoader();
+
+  EffectsProcessor processor;
+  processor.AddEffect(effects_loader()->CreateEffectByName("effect1", "", 1, 1, 1, {}));
+  processor.AddEffect(effects_loader()->CreateEffectByName("effect2", "", 1, 1, 1, {}));
+
+  // Sum of the inputs.
+  EXPECT_EQ(60u, processor.delay_frames());
+  EXPECT_EQ(23u, processor.ring_out_frames());
+}
+
 }  // namespace
 }  // namespace media::audio
