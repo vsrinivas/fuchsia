@@ -157,7 +157,6 @@ common_image_contents = [
   "//src/devices/usb/drivers/usb-virtual-bus",
   "//src/devices/usb/drivers/virtual-bus-tester:virtual-bus-tester-function",
   "//src/devices/usb/drivers/virtual-bus-tester",
-  "//src/devices/usb/drivers/xhci-rewrite:xhci",
   "//src/graphics/display/drivers/aml-canvas",
   "//src/graphics/display/drivers/amlogic-display",
   "//src/graphics/display/drivers/display",
@@ -240,7 +239,10 @@ common_image_contents = [
 ]
 
 if (target_cpu == "arm64") {
-  common_image_contents += [ "//src/devices/board/drivers/astro" ]
+  common_image_contents += [
+    "//src/devices/board/drivers/astro",
+    "//src/devices/usb/drivers/xhci-rewrite:xhci"
+  ]
 } else if (target_cpu == "x64") {
   common_image_contents += [
     "//src/connectivity/ethernet/drivers/intel-ethernet",
@@ -250,6 +252,7 @@ if (target_cpu == "arm64") {
     "//src/devices/rtc/drivers/intel-rtc",
     "//src/devices/serial/drivers/intel-serialio",
     "//src/devices/serial/drivers/uart16550",
+    "//src/devices/usb/drivers/xhci:xhci-x86",
     "//src/graphics/display/drivers/intel-i915",
     "//src/ui/input/drivers/pc-ps2",
     "//zircon/system/uapp/acpidump",
