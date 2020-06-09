@@ -1,0 +1,397 @@
+#!/usr/bin/env python3
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Run, inspect and debug
+### generate a report of CPU stats from a bugreport
+
+import argparse
+from collections import defaultdict
+from datetime import timedelta
+import json
+from math import sqrt
+import numpy as np
+import os
+import subprocess
+import sys
+from tempfile import TemporaryDirectory
+import zipfile
+
+MIN_MEASUREMENTS_FOR_CROSS_CORRELATION = 5
+
+
+# Try to process the input file as a bugreport.zip file.
+def try_unzip(zip_file):
+  with zipfile.ZipFile(zip_file) as f:
+    with f.open('inspect.json') as json_file:
+      return json_file.read()
+
+
+# Calculate CPU stats for a bugreport.
+#
+# Example: fx cpu-stats -f html -o output.html
+#          (Loads the latest data from an attached Fuchsia device and creates HTML output)
+#
+# Example: fx cpu-stats -f html -o output.html /tmp/bugreport.zip
+#          (Loads the given bugreport and creates HTML output)
+#
+# Example: fx cpu-stats -f json  /tmp/bugreport.zip
+#          (Prints the stats for the given bugreport as JSON to stdout)
+def main():
+  parser = argparse.ArgumentParser('Process CPU stats from bugreports')
+  parser.add_argument(
+      'input',
+      nargs='*',
+      type=argparse.FileType('rb'),
+      help='One or more bugreport.zip or inspect.json files. If not set, attempt to use `fx bugreport` to get a fresh report.'
+  )
+  parser.add_argument(
+      '--format',
+      '-f',
+      default='json',
+      choices=['json', 'html'],
+      help='The output format. Use JSON for raw data, and HTML for a pretty page'
+  )
+  parser.add_argument(
+      '--out',
+      '-o',
+      type=argparse.FileType('w'),
+      default=sys.stdout,
+      help='The output file')
+  args = parser.parse_args()
+
+  tempdir = None
+  if not args.input:
+    print('No input specified, reading a new bugreport', file=sys.stderr)
+    tempdir = TemporaryDirectory()
+    report = subprocess.check_call(
+        ['fx', 'bugreport', '--output-directory', tempdir.name],
+        stdout=sys.stderr,
+        stderr=sys.stderr)
+    args.input = [open(os.path.join(tempdir.name, 'bugreport.zip'), 'rb')]
+
+  json_contents = []
+  for input_file in args.input:
+    try:
+      json_string = try_unzip(input_file)
+    except zipfile.BadZipFile:
+      # File wasn't a zip, we'll fall back to inspect.json
+      input_file.seek(0, 0)
+      json_string = input_file.read()
+      pass
+    except KeyError as e:
+      print(f'File {input_file.name} is not valid: {e}', file=sys.stderr)
+      return 1
+
+    try:
+      json_contents.append((input_file.name, json.loads(json_string)))
+    except json.JSONDecodeError as e:
+      print(
+          f'Failed to parse JSON from {input_file.name}: {e}', file=sys.stderr)
+      return 1
+
+  results = dict()
+  return_code = 0
+  for (name, content) in json_contents:
+    try:
+      results[name] = process_content(content)
+    except ProcessError as e:
+      print(f'Failed to process {name}: {e}', file=sys.stderr)
+      return_code = 1
+
+  if args.format == 'json':
+    json.dump(results, args.out, indent=2)
+    args.out.write('\n')
+  elif args.format == 'html':
+    arrays = {}
+    for name, result in results.items():
+      arrays[f'CPU percentages for {name}'] = {
+          'line': make_line_chart_array(result['percentages'], 'cpu_percent')
+      }
+      arrays[f'Queue percentages for {name}'] = {
+          'line': make_line_chart_array(result['percentages'], 'queue_percent')
+      }
+      arrays[f'Correlations for {name}'] = {
+          'table':
+              make_table_chart_array(
+                  result['correlations'],
+                  keys=[
+                      'name1', 'name2', 'correlation', 'weighted_correlation'
+                  ],
+                  titles=[
+                      'Name', 'Name (other)', 'Correlation',
+                      'Weighted Correlation'
+                  ],
+                  where=lambda x: x['correlation'] >= 0.5)
+      }
+
+    args.out.write(HTML_TEMPLATE.replace('<<SAMPLE_DATA>>', json.dumps(arrays)))
+
+  print(f'Wrote to {args.out.name}', file=sys.stderr)
+  return return_code
+
+
+class ProcessError(Exception):
+  pass
+
+
+# Obtain a field from the percentages array and format it as the input to a line chart.
+def make_line_chart_array(percentages, field):
+  names = set()
+  times = set()
+  name_to_time_to_measure = defaultdict(lambda: dict())
+  for val in percentages:
+    names.add(val['name'])
+    times.add(val['timestamp'])
+    name_to_time_to_measure[val['name']][val['timestamp']] = val
+
+  names = sorted(names)
+  times = sorted(times)
+
+  output = [['Time (since boot)'] + names]
+
+  for time in times:
+    delta = timedelta(microseconds=time / 1000)
+    column = [str(delta)]
+    for name in names:
+      column.append(
+          name_to_time_to_measure.get(name, dict()).get(time,
+                                                        dict()).get(field))
+    output.append(column)
+
+  return output
+
+
+# Take a list of data dicts with the given keys and format it as the input for a table.
+# Titles gives the name for the corresponding key.
+# If "where" is set, only rows matching that predicate will be included
+def make_table_chart_array(data, keys=None, titles=None, where=lambda _: True):
+  if not keys:
+    keys = []
+  if not titles:
+    titles = []
+
+  assert (len(titles) == len(keys))
+
+  out = [titles]
+  for val in data:
+    if not where(val):
+      continue
+    row = [val[k] for k in keys]
+    out.append(row)
+
+  return out
+
+
+def process_content(content):
+  appmgr = None
+  for component in content:
+    if component['moniker'] == 'core/appmgr':
+      appmgr = component['payload']
+  if not appmgr:
+    raise ProcessError('Could not find payload for appmgr')
+
+  try:
+    measurements = appmgr['root']['cpu_stats']['measurements']['root']
+  except KeyError as e:
+    raise ProcessError(f'Missing key: {e}')
+
+  # Map from name to timestamp to sample
+  samples = defaultdict(lambda: defaultdict())
+
+  # DFS processing of the Inspect hierarchy.
+  # Add all samples to the map keyed by name and timestamp.
+  to_process = [('', measurements)]
+  while to_process:
+    (name, cur) = to_process.pop()
+    for k, v in cur.items():
+      if k == '@samples':
+        for _, sample in v.items():
+          samples[name][sample['timestamp']] = {
+              'cpu_time': sample['cpu_time'],
+              'queue_time': sample['queue_time']
+          }
+      else:
+        to_process.append((f'{name}/{k}', v))
+
+  # Create a table of samples including value differences between successive timestamps.
+  # Output:
+  #  - name:          The name of the component
+  #  - timestamp:     The timestamp for the measurement.
+  #  - cpu_percent:   The percentage of CPU time since the previous
+  #                   measurement used by this process. Out of the time
+  #                   available on a single processor. For example, a
+  #                   component using 2 CPUs at 100% would have a value
+  #                   of 200.
+  #  - queue_percent: The percentage of queue time since the previous measurement.
+  #  - cpu_diff:      The total time spent running since the previous measurement.
+  #  - queue_diff:    The total time spent queued to run since the previous measurement.
+  percentages = []
+  for name, s in samples.items():
+    prev = None
+
+    for timestamp, sample in s.items():
+      if not prev:
+        percentages.append({
+            'name': name,
+            'timestamp': timestamp,
+            'cpu_percent': 100.0 * sample['cpu_time'] / timestamp,
+            'queue_percent': 100.0 * sample['queue_time'] / timestamp,
+            'cpu_diff': sample['cpu_time'],
+            'queue_diff': sample['queue_time']
+        })
+      else:
+        cpu_diff = sample['cpu_time'] - prev[1]['cpu_time']
+        queue_diff = sample['queue_time'] - prev[1]['queue_time']
+        time_diff = timestamp - prev[0]
+        percentages.append({
+            'name': name,
+            'timestamp': timestamp,
+            'cpu_percent': 100.0 * cpu_diff / time_diff,
+            'queue_percent': 100.0 * queue_diff / time_diff,
+            'cpu_diff': cpu_diff,
+            'queue_diff': queue_diff
+        })
+      prev = (timestamp, sample)
+
+  # Extract sets of all timestamps and names, and create a lookup table
+  # identifying a measurement for a particular component at a time.
+  timestamps = sorted(list({p['timestamp'] for p in percentages}))
+  names = sorted(list({p['name'] for p in percentages}))
+  by_name_time = {(p['name'], p['timestamp']): p for p in percentages}
+
+  # Extract a time series for each component.
+  # Every component will have an entry for every timestamp in the
+  # input. If no measurement existed at that time, the value will be False.
+  series = dict()
+  for name in names:
+    series[name + ' (cpu)'] = [
+        by_name_time.get((name, time), dict()).get('cpu_percent') or False
+        for time in timestamps
+    ]
+    series[name + ' (queue)'] = [
+        by_name_time.get((name, time), dict()).get('queue_percent') or False
+        for time in timestamps
+    ]
+
+  # Compute O(n^2) cross correlations for each pair of percentages.
+  # This is used to identify components that frequently run together
+  keys = list(series.keys())
+  correlations = []
+  for i, key1 in enumerate(keys):
+    for j in range(i + 1, len(keys)):
+      key2 = keys[j]
+
+      # Omit timestamps for which either of the components is missing a
+      # measurement, or for which the measurements are both zero. Otherwise
+      # we will find a strong correlation between components that are
+      # both not running at the same time.
+      entries = [
+          v for v in zip(series[key1], series[key2]) if v[0] is not False and
+          v[1] is not False and not (v[0] == v[1] and v[1] == 0)
+      ]
+
+      # Omit entries with too few samples for us to have very good estimates.
+      if len(entries) < MIN_MEASUREMENTS_FOR_CROSS_CORRELATION:
+        continue
+
+      # Calculate the covariance between the two data series.
+      # The output of np.cov is a 2x2 symmetric matrix with variances
+      # along the diagonal and the covariance in (0,1) and (1,0).
+      #
+      # We normalize the covariance by the product of individual standard
+      # deviations to produce a correlation coefficient in the range [-1, 1]
+      #
+      # We additionally report a correlation coefficient weighted by the
+      # total amount of either CPU or queue time for the measurements. This
+      # helps to identify the components that not only run together
+      # frequently, but in doing so have the largest impact on overall
+      # CPU usage.
+      vals1 = np.array(list(map(lambda x: x[0], entries)))
+      vals2 = np.array(list(map(lambda x: x[1], entries)))
+      cov = np.cov(vals1, vals2, bias=True)
+      if (cov[0][0] >= 0 and cov[1][1] >= 0 and cov[0][1] >= 0):
+        correlation = cov[0][1] / (sqrt(cov[0][0]) * sqrt(cov[1][1]))
+
+        # Weight by the arithmetic mean of geometric means of matched measurements.
+        weight = np.mean([sqrt(e[0] * e[1]) for e in entries])
+        correlations.append({
+            'name1': key1,
+            'name2': key2,
+            'correlation': correlation,
+            'weighted_correlation': correlation * weight
+        })
+
+  return {
+      'samples': samples,
+      'percentages': percentages,
+      'correlations': correlations
+  }
+
+
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>CPU Stats</title>
+    <style type="text/css">
+    #charts > div {
+      height: 700px;
+      width: 900px;
+    }
+    </style>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+      var sampleData = <<SAMPLE_DATA>>;
+    </script>
+    <script type="text/javascript">
+      google.charts.load('current', {'packages':['corechart', 'table']});
+      google.charts.setOnLoadCallback(drawChart);
+
+      function drawChart() {
+        var id = 0;
+        for (var name in sampleData) {
+          if (sampleData[name].line) {
+              var data = google.visualization.arrayToDataTable(sampleData[name].line);
+
+              var options = {
+                title: name,
+                theme: 'material',
+                interpolateNulls: true
+              };
+
+              var idname = 'chart-' + (id++);
+              var div = document.createElement('div');
+              div.id = idname;
+              document.getElementById('charts').appendChild(div);
+              var chart = new google.visualization.LineChart(document.getElementById(idname));
+              chart.draw(data, options);
+          } else if (sampleData[name].table) {
+              var data = google.visualization.arrayToDataTable(sampleData[name].table);
+
+              var options = {
+                title: name,
+              };
+
+              var idname = 'chart-' + (id++);
+              var div = document.createElement('div');
+              div.id = idname;
+              document.getElementById('charts').appendChild(div);
+              var chart = new google.visualization.Table(document.getElementById(idname));
+              chart.draw(data, options);
+          }
+        }
+      }
+    </script>
+</head>
+<body>
+  <div id="charts">
+  </div>
+</body>
+</html>
+"""
+
+if __name__ == '__main__':
+  sys.exit(main())
