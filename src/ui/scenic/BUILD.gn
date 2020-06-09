@@ -58,7 +58,7 @@ test_package("scenic_tests") {
     },
     {
       name = "flatland_renderer_unittests"
-      environments = basic_envs
+      environments = basic_envs + magma_libvulkan_hardware_envs
     },
     {
       name = "gfx_apptests"
