@@ -208,9 +208,7 @@ void MdnsImpl::Quit() {
   quit_callback_();
 }
 
-void MdnsImpl::OnPublication(bool query, fidl::StringPtr subtype,
-                             std::vector<fuchsia::net::IpAddress> source_addresses,
-                             OnPublicationCallback callback) {
+void MdnsImpl::OnPublication(bool query, fidl::StringPtr subtype, OnPublicationCallback callback) {
   std::cout << (query ? "query" : "initial publication");
   if (subtype) {
     std::cout << " for subtype " << subtype;
@@ -242,10 +240,6 @@ void MdnsImpl::OnInstanceLost(std::string service_name, std::string instance_nam
                               OnInstanceLostCallback callback) {
   std::cout << "lost:" << fostr::Indent << fostr::NewLine << service_name << " " << instance_name
             << fostr::Outdent << "\n";
-  callback();
-}
-
-void MdnsImpl::OnQuery(fuchsia::net::mdns::ResourceType resource_type, OnQueryCallback callback) {
   callback();
 }
 

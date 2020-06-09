@@ -12,9 +12,9 @@ using zx;
 //    Subscriber.SubscribeToService2
 //    ServiceSubscriber2
 //    Publisher.PublishServiceInstance2
-//    PublicationResponder2 (completed)
-// 2) Transition all clients to the '2' versions. (completed)
-// 3) Change the originals to be identical to the '2' versions. (completed)
+//    PublicationResponder2
+// 2) Transition all clients to the '2' versions.
+// 3) Change the originals to be identical to the '2' versions.
 // 4) Transition all clients to the original names.
 // 5) Remove the '2' versions.
 
@@ -69,12 +69,12 @@ protocol Resolver {
 protocol Subscriber {
     /// Subscribes to a service. The subscription lasts until `subscriber` is
     /// unbound.
-    [Transitional]
+    [Transitional, Deprecated]
     SubscribeToService(service_name service, ServiceSubscriber subscriber);
 
     /// Subscribes to a service. The subscription lasts until `subscriber` is
     /// unbound.
-    [Transitional, Deprecated]
+    [Transitional]
     SubscribeToService2(service_name service, ServiceSubscriber2 subscriber);
 };
 
@@ -89,7 +89,7 @@ protocol Publisher {
     /// `perform_probe` indicates whether a probe for a conflicting instance
     /// should be performed before publishing the instance. This value should
     /// be `true` unless the instance name is known to be unique.
-    [Transitional]
+    [Transitional, Deprecated]
     PublishServiceInstance(service_name service,
                            instance_name instance,
                            bool perform_probe,
@@ -103,7 +103,7 @@ protocol Publisher {
     /// `perform_probe` indicates whether a probe for a conflicting instance
     /// should be performed before publishing the instance. This value should
     /// be `true` unless the instance name is known to be unique.
-    [Transitional, Deprecated]
+    [Transitional]
     PublishServiceInstance2(service_name service,
                             instance_name instance,
                             bool perform_probe,
@@ -141,9 +141,6 @@ protocol ServiceSubscriber {
 
     /// Notifies the subscriber that a known service instance has been lost.
     OnInstanceLost(service_name service, instance_name instance) -> ();
-
-    /// Notifies the subscriber that a PTR query has been sent.
-    OnQuery(ResourceType resource_type) -> ();
 };
 
 /// Client-implemented interface for subscribers. Method replies are used to
@@ -173,29 +170,27 @@ enum ResourceType {
 };
 
 /// Describes a service instance.
-table ServiceInstance {
+struct ServiceInstance {
     /// The name of the service.
-    1: service_name service;
+    service_name service;
 
     /// The name of the service instance.
-    2: instance_name instance;
+    instance_name instance;
 
-    /// IPv4 socket address for the service. May be unset.
-    3: fuchsia.net.Ipv4SocketAddress ipv4_endpoint;
-
-    /// IPv6 socket address for the service. May be unset.
-    4: fuchsia.net.Ipv6SocketAddress ipv6_endpoint;
+    /// Endpoints for the service. If two endpoints are supplied, one will be a
+    /// V4 and the other will be a V6.
+    vector<fuchsia.net.Endpoint>:2 endpoints;
 
     /// Text strings describing the instance.
-    5: vector<txt_string>:MAX_TEXT_STRINGS text;
+    vector<txt_string>:MAX_TEXT_STRINGS text;
 
     /// The priority of the SRV resource record for this publication. See
     /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
-    6: uint16 srv_priority;
+    uint16 srv_priority;
 
     /// The weight of the SRV resource record for this publication. See
     /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
-    7: uint16 srv_weight;
+    uint16 srv_weight;
 };
 
 /// Describes a service instance.
@@ -234,9 +229,7 @@ protocol PublicationResponder {
     /// `subtype` contains the subtype, otherwise it is null. If `publication`
     /// is null, no announcement or response is transmitted. Strings in `text`
     /// are transmitted in the TXT record.
-    OnPublication(
-        bool query, subtype_name? subtype, vector<fuchsia.net.IpAddress>:64 source_addresses)
-        -> (Publication? publication);
+    OnPublication(bool query, subtype_name? subtype) -> (Publication? publication);
 
     /// Sets the subtypes for the service instance. The specified subtypes will
     /// be announced subject to filtering through the responder. The initial

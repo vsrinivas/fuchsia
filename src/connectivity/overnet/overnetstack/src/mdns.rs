@@ -94,28 +94,25 @@ fn convert_ipv6_buffer(in_arr: [u8; 16]) -> [u16; 8] {
     out_arr
 }
 
-fn fuchsia_to_rust_ipaddr4(addr: fidl_fuchsia_net::Ipv4Address) -> std::net::IpAddr {
-    std::net::IpAddr::V4(std::net::Ipv4Addr::new(
-        addr.addr[0],
-        addr.addr[1],
-        addr.addr[2],
-        addr.addr[3],
-    ))
+fn fuchsia_to_rust_ipaddr(addr: fidl_fuchsia_net::IpAddress) -> std::net::IpAddr {
+    match addr {
+        fidl_fuchsia_net::IpAddress::Ipv4(addr) => std::net::IpAddr::V4(std::net::Ipv4Addr::new(
+            addr.addr[0],
+            addr.addr[1],
+            addr.addr[2],
+            addr.addr[3],
+        )),
+        fidl_fuchsia_net::IpAddress::Ipv6(addr) => {
+            let addr = convert_ipv6_buffer(addr.addr);
+            std::net::IpAddr::V6(std::net::Ipv6Addr::new(
+                addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7],
+            ))
+        }
+    }
 }
 
-fn fuchsia_to_rust_ipaddr6(addr: fidl_fuchsia_net::Ipv6Address) -> std::net::IpAddr {
-    let addr = convert_ipv6_buffer(addr.addr);
-    std::net::IpAddr::V6(std::net::Ipv6Addr::new(
-        addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7],
-    ))
-}
-
-fn endpoint4_to_socket(ep: fidl_fuchsia_net::Ipv4SocketAddress) -> std::net::SocketAddr {
-    std::net::SocketAddr::new(fuchsia_to_rust_ipaddr4(ep.address), ep.port)
-}
-
-fn endpoint6_to_socket(ep: fidl_fuchsia_net::Ipv6SocketAddress) -> std::net::SocketAddr {
-    std::net::SocketAddr::new(fuchsia_to_rust_ipaddr6(ep.address), ep.port)
+fn endpoint_to_socket(ep: fidl_fuchsia_net::Endpoint) -> std::net::SocketAddr {
+    std::net::SocketAddr::new(fuchsia_to_rust_ipaddr(ep.addr), ep.port)
 }
 
 /// Run main loop to look for overnet mdns advertisements and add them to the mesh.
@@ -137,23 +134,12 @@ pub async fn subscribe(
         match request {
             ServiceSubscriberRequest::OnInstanceDiscovered { instance, responder } => {
                 log::info!("Discovered: {:?}", instance);
-                let parsed_instance = instance
-                    .instance
-                    .ok_or(anyhow::format_err!("ServiceInstance.instance not supplied"))?
-                    .parse::<u64>()?
-                    .into();
-                if let Some(ipv4_endpoint) = instance.ipv4_endpoint {
+                for endpoint in instance.endpoints.into_iter() {
                     if found
-                        .send((endpoint4_to_socket(ipv4_endpoint), parsed_instance))
-                        .await
-                        .is_err()
-                    {
-                        break;
-                    }
-                }
-                if let Some(ipv6_endpoint) = instance.ipv6_endpoint {
-                    if found
-                        .send((endpoint6_to_socket(ipv6_endpoint), parsed_instance))
+                        .send((
+                            endpoint_to_socket(endpoint),
+                            instance.instance.parse::<u64>()?.into(),
+                        ))
                         .await
                         .is_err()
                     {
@@ -164,23 +150,12 @@ pub async fn subscribe(
             }
             ServiceSubscriberRequest::OnInstanceChanged { instance, responder } => {
                 log::info!("Changed: {:?}", instance);
-                let parsed_instance = instance
-                    .instance
-                    .ok_or(anyhow::format_err!("ServiceInstance.instance not supplied"))?
-                    .parse::<u64>()?
-                    .into();
-                if let Some(ipv4_endpoint) = instance.ipv4_endpoint {
+                for endpoint in instance.endpoints.into_iter() {
                     if found
-                        .send((endpoint4_to_socket(ipv4_endpoint), parsed_instance))
-                        .await
-                        .is_err()
-                    {
-                        break;
-                    }
-                }
-                if let Some(ipv6_endpoint) = instance.ipv6_endpoint {
-                    if found
-                        .send((endpoint6_to_socket(ipv6_endpoint), parsed_instance))
+                        .send((
+                            endpoint_to_socket(endpoint),
+                            instance.instance.parse::<u64>()?.into(),
+                        ))
                         .await
                         .is_err()
                     {
@@ -191,9 +166,6 @@ pub async fn subscribe(
             }
             ServiceSubscriberRequest::OnInstanceLost { responder, .. } => {
                 log::info!("Removed a thing");
-                responder.send()?;
-            }
-            ServiceSubscriberRequest::OnQuery { responder, .. } => {
                 responder.send()?;
             }
         }

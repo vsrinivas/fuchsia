@@ -39,12 +39,12 @@ class MdnsFidlUtil {
 
   static fuchsia::net::mdns::ResourceType Convert(DnsType type);
 
-  static void FillServiceInstance(fuchsia::net::mdns::ServiceInstance* service_instance,
-                                  const std::string& service, const std::string& instance,
-                                  const inet::SocketAddress& v4_address,
-                                  const inet::SocketAddress& v6_address,
-                                  const std::vector<std::string>& text, uint16_t srv_priority,
-                                  uint16_t srv_weight);
+  static void FillServiceInstance2(fuchsia::net::mdns::ServiceInstance2* service_instance,
+                                   const std::string& service, const std::string& instance,
+                                   const inet::SocketAddress& v4_address,
+                                   const inet::SocketAddress& v6_address,
+                                   const std::vector<std::string>& text, uint16_t srv_priority,
+                                   uint16_t srv_weight);
 };
 
 }  // namespace mdns

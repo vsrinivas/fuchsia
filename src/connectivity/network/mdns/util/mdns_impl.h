@@ -44,9 +44,7 @@ class MdnsImpl : public fuchsia::net::mdns::PublicationResponder,
   void Quit();
 
   // fuchsia::net::mdns::PublicationResponder implementation.
-  void OnPublication(bool query, fidl::StringPtr subtype,
-                     std::vector<fuchsia::net::IpAddress> source_addresses,
-                     OnPublicationCallback callback) override;
+  void OnPublication(bool query, fidl::StringPtr subtype, OnPublicationCallback callback) override;
 
   // fuchsia::net::mdns::ServiceSubscriber implementation.
   void OnInstanceDiscovered(fuchsia::net::mdns::ServiceInstance instance,
@@ -57,8 +55,6 @@ class MdnsImpl : public fuchsia::net::mdns::PublicationResponder,
 
   void OnInstanceLost(std::string service_name, std::string instance_name,
                       OnInstanceLostCallback callback) override;
-
-  void OnQuery(fuchsia::net::mdns::ResourceType resource_type, OnQueryCallback callback) override;
 
   sys::ComponentContext* component_context_;
   fit::closure quit_callback_;

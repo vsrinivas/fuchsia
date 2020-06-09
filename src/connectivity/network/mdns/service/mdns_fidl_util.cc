@@ -140,12 +140,12 @@ fuchsia::net::mdns::ResourceType MdnsFidlUtil::Convert(DnsType type) {
   }
 }
 
-void MdnsFidlUtil::FillServiceInstance(fuchsia::net::mdns::ServiceInstance* service_instance,
-                                       const std::string& service, const std::string& instance,
-                                       const inet::SocketAddress& v4_address,
-                                       const inet::SocketAddress& v6_address,
-                                       const std::vector<std::string>& text, uint16_t srv_priority,
-                                       uint16_t srv_weight) {
+void MdnsFidlUtil::FillServiceInstance2(fuchsia::net::mdns::ServiceInstance2* service_instance,
+                                        const std::string& service, const std::string& instance,
+                                        const inet::SocketAddress& v4_address,
+                                        const inet::SocketAddress& v6_address,
+                                        const std::vector<std::string>& text, uint16_t srv_priority,
+                                        uint16_t srv_weight) {
   service_instance->set_service(service);
   service_instance->set_instance(instance);
   service_instance->set_text(text);

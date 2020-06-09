@@ -24,19 +24,15 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const fuchsia::net::mdns::ServiceInstance& value) {
-  os << value.service() << " " << value.instance();
+  os << value.service << " " << value.instance;
   os << fostr::Indent;
 
-  if (value.has_ipv4_endpoint()) {
-    os << fostr::NewLine << "IPV4 endpoint: " << value.ipv4_endpoint();
+  if (!value.endpoints.empty()) {
+    os << fostr::NewLine << "endpoints: " << value.endpoints;
   }
 
-  if (value.has_ipv6_endpoint()) {
-    os << fostr::NewLine << "IPV6 endpoint: " << value.ipv6_endpoint();
-  }
-
-  if (value.has_text() && !value.text().empty()) {
-    os << fostr::NewLine << "text: " << value.text();
+  if (!value.text.empty()) {
+    os << fostr::NewLine << "text: " << value.text;
   }
 
   return os << fostr::Outdent;
@@ -104,12 +100,28 @@ std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv6Address& valu
   return os << std::dec << "]";
 }
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv4SocketAddress& value) {
-  return os << value.address << ":" << value.port;
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::IpAddress& value) {
+  switch (value.Which()) {
+    case fuchsia::net::IpAddress::Tag::Invalid:
+      os << "<invalid>";
+      break;
+    case fuchsia::net::IpAddress::Tag::kIpv4:
+      os << value.ipv4();
+      break;
+    case fuchsia::net::IpAddress::Tag::kIpv6:
+      os << value.ipv6();
+      break;
+  }
+
+  return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::net::Ipv6SocketAddress& value) {
-  return os << value.address << ":" << value.port;
+std::ostream& operator<<(std::ostream& os, const fuchsia::net::Endpoint& value) {
+  if (value.addr.Which() == fuchsia::net::IpAddress::Tag::Invalid) {
+    return os << "<unspecified>";
+  }
+
+  return os << value.addr << ":" << value.port;
 }
 
 }  // namespace mdns
