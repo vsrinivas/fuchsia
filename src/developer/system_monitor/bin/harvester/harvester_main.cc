@@ -35,8 +35,10 @@ int main(int argc, char** argv) {
   // Command line options.
   constexpr char COMMAND_LOCAL[] = "local";
   constexpr char COMMAND_VERSION[] = "version";
+  constexpr char COMMAND_ONCE[] = "once";
 
   bool use_grpc = true;
+  bool run_loop_once = false;
 
   // Parse command line.
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -51,6 +53,10 @@ int main(int argc, char** argv) {
   if (command_line.HasOption(COMMAND_LOCAL)) {
     FX_LOGS(INFO) << "Option: local only, not using transport to Dockyard.";
     use_grpc = false;
+  }
+  if (command_line.HasOption(COMMAND_ONCE)) {
+    FX_LOGS(INFO) << "Option: Only run the update loop once, then exit.";
+    run_loop_once = true;
   }
 
   // Set up.
@@ -108,8 +114,9 @@ int main(int argc, char** argv) {
   harvester.GatherFastData(fast_calls_loop.dispatcher());
   harvester.GatherSlowData(slow_calls_loop.dispatcher());
   // The slow_calls_thread that runs heavier calls takes over this thread.
-  slow_calls_loop.Run();
+  slow_calls_loop.Run(zx::time::infinite(), run_loop_once);
   fast_calls_loop.Quit();
+  fast_calls_loop.JoinThreads();
 
   FX_LOGS(INFO) << "System Monitor Harvester - exiting";
   return 0;
