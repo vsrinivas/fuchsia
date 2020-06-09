@@ -1,0 +1,226 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  fidlc_union_not_simple = false
+  fidlc_deprecate_c_unions = false
+}
+
+config("fidlc_config") {
+  defines = []
+  if (defined(fidlc_deprecate_c_unions) && fidlc_deprecate_c_unions) {
+    defines += [ "FIDLC_DEPRECATE_C_UNIONS" ]
+  }
+}
+
+if (!defined(zx) || zx != "/") {
+  # TODO(BLD-353): Referenced by //garnet/public/lib/fidl/fuzz:compiler.
+
+  config("fidl_config") {
+    visibility = [ ":*" ]
+    include_dirs = [ "include" ]
+  }
+
+  source_set("compiler") {
+    public_configs = [ ":fidl_config" ]
+    sources = [
+      "lib/attributes.cc",
+      "lib/c_generator.cc",
+      "lib/coded_types_generator.cc",
+      "lib/diagnostic_types.cc",
+      "lib/diagnostics_json.cc",
+      "lib/experimental_flags.cc",
+      "lib/findings_json.cc",
+      "lib/flat_ast.cc",
+      "lib/formatter.cc",
+      "lib/json_generator.cc",
+      "lib/lexer.cc",
+      "lib/linter.cc",
+      "lib/linting_tree_callbacks.cc",
+      "lib/names.cc",
+      "lib/ordinals.cc",
+      "lib/parser.cc",
+      "lib/raw_ast.cc",
+      "lib/reporter.cc",
+      "lib/source_file.cc",
+      "lib/source_manager.cc",
+      "lib/source_span.cc",
+      "lib/tables_generator.cc",
+      "lib/template_string.cc",
+      "lib/tree_visitor.cc",
+      "lib/type_shape.cc",
+      "lib/utils.cc",
+      "lib/virtual_source_file.cc",
+    ]
+    if (is_host) {
+      public_deps = [
+        "//third_party/boringssl",
+        "//zircon/public/lib/cmdline",
+        "//zircon/public/lib/fit",
+        "//zircon/public/lib/safemath",
+        "//zircon/system/public",
+      ]
+    }
+  }
+} else {
+  zx_library("fidl") {
+    host = true
+    sources = [
+      "lib/attributes.cc",
+      "lib/c_generator.cc",
+      "lib/coded_types_generator.cc",
+      "lib/diagnostic_types.cc",
+      "lib/diagnostics_json.cc",
+      "lib/experimental_flags.cc",
+      "lib/findings_json.cc",
+      "lib/flat_ast.cc",
+      "lib/formatter.cc",
+      "lib/json_generator.cc",
+      "lib/lexer.cc",
+      "lib/linter.cc",
+      "lib/linting_tree_callbacks.cc",
+      "lib/names.cc",
+      "lib/ordinals.cc",
+      "lib/parser.cc",
+      "lib/raw_ast.cc",
+      "lib/reporter.cc",
+      "lib/source_file.cc",
+      "lib/source_manager.cc",
+      "lib/source_span.cc",
+      "lib/tables_generator.cc",
+      "lib/template_string.cc",
+      "lib/tree_visitor.cc",
+      "lib/type_shape.cc",
+      "lib/utils.cc",
+      "lib/virtual_source_file.cc",
+    ]
+    public_deps = [
+      "$zx/system/ulib/cmdline:headers",
+      "$zx/system/ulib/fit:headers",
+      "$zx/third_party/ulib/safemath",
+    ]
+    deps = [
+      ":json_schema",
+      "$zx/system/ulib/cmdline",
+      "$zx/system/ulib/fit",
+      "$zx/third_party/ulib/boringssl",
+    ]
+    configs += [ ":fidlc_config" ]
+  }
+
+  source_set("json_schema") {
+    visibility = [ ":*" ]
+    sources = [ "$target_gen_dir/json_schema.cc" ]
+    deps = [
+      ":gen-json-schema",
+      ":headers",
+    ]
+  }
+
+  action("gen-json-schema") {
+    visibility = [ ":json_schema" ]
+    outputs = [ "$target_gen_dir/json_schema.cc" ]
+    sources = [ "schema.json" ]
+    script = "gen-json-schema.sh"
+    args = rebase_path(outputs, root_build_dir) +
+           rebase_path(sources, root_build_dir)
+  }
+
+  group("tools") {
+    deps = [
+      ":fidl-format",
+      ":fidl-lint",
+      ":fidlc",
+    ]
+  }
+
+  zx_host_tool("fidlc") {
+    sources = [ "compiler/main.cc" ]
+    deps = [ ":fidl" ]
+  }
+
+  zx_host_tool("fidl-format") {
+    sources = [ "formatter/main.cc" ]
+    deps = [ ":fidl" ]
+  }
+
+  zx_host_tool("fidl-lint") {
+    sources = [
+      "linter/command_line_options.cc",
+      "linter/main.cc",
+    ]
+    deps = [ ":fidl" ]
+  }
+
+  template("fidlgen_executable") {
+    assert(current_os != "fuchsia")
+    assert(defined(invoker.go_path))
+    assert(defined(invoker.go_package))
+
+    if (defined(invoker.output_name)) {
+      output_name = invoker.output_name
+    } else {
+      output_name = target_name
+    }
+    output_path = "${target_gen_dir}/${output_name}"
+    depfile_path = "${output_path}.d"
+
+    go_root = "$zx/../prebuilt/third_party/go/${host_platform}"
+    go_executable = "${go_root}/bin/go"
+    godepfile_executable =
+        "$zx/../prebuilt/tools/godepfile/${host_platform}/godepfile"
+
+    go_cache = "${root_build_dir}/gocache"
+
+    if (current_os == "mac") {
+      go_os = "darwin"
+    } else {
+      go_os = current_os
+    }
+    if (current_cpu == "x64") {
+      go_arch = "amd64"
+    } else {
+      go_arch = current_cpu
+    }
+
+    action(target_name) {
+      script = "build_fidlgen_executable.sh"
+
+      # go_root, go_path, go_cache must be absolute.
+      args = [
+        rebase_path(go_executable, root_build_dir),
+        rebase_path(godepfile_executable, root_build_dir),
+        rebase_path(go_root),
+        rebase_path(invoker.go_path),
+        invoker.go_package,
+        go_os,
+        go_arch,
+        rebase_path(depfile_path, root_build_dir),
+        rebase_path(output_path, root_build_dir),
+        rebase_path(go_cache),
+      ]
+      depfile = depfile_path
+      inputs = [
+        go_executable,
+        godepfile_executable,
+      ]
+      outputs = [ output_path ]
+
+      # See host_tool_action().
+      metadata = {
+        # Dependencies come before the "--".
+        host_tool_rspfile = rebase_path(inputs, root_build_dir)
+        host_tool_rspfile += [ "--" ]
+
+        # The command line to run comes after the "--".
+        host_tool_rspfile += [ rebase_path(output_path, root_build_dir) ]
+      }
+    }
+  }
+
+  fidlgen_executable("fidlgen_llcpp") {
+    go_path = "$zx/../garnet/go"
+    go_package = "fidl/compiler/llcpp_backend"
+  }
+}

@@ -18,7 +18,7 @@ primitives**.
 
 The validator is enabled at compile time by setting the GN build argument
 `enable_lock_dep` to true. As of this writing logic for this variable is
-handled by [kernel/BUILD.gn](/zircon/kernel/BUILD.gn).
+handled by [kernel/BUILD.zircon.gn](/zircon/kernel/BUILD.zircon.gn).
 
 You can set this variable in your GN invocation like this:
 

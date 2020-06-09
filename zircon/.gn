@@ -9,3 +9,6 @@ buildconfig = "//public/gn/BUILDCONFIG.gn"
 
 # The executable used to execute scripts in action and exec_script.
 script_executable = "/usr/bin/env"
+
+# Expect build files named BUILD.zircon.gn.
+build_file_extension = "zircon"
