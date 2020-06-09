@@ -2,14 +2,55 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+
+if (!is_fuchsia) {
+  rustc_library("lib") {
+    testonly = true
+    name = "scrutiny"
+    with_unit_tests = true
+    edition = "2018"
+    visibility = [ "//src/security/tools/scrutiny/*" ]
+    deps = [
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:rouille",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:thiserror",
+      "//third_party/rust_crates:uuid",
+    ]
+  }
+
+  rustc_binary("bin") {
+    testonly = true
+    name = "scrutiny"
+    with_unit_tests = true
+    edition = "2018"
+    deps = [
+      ":lib",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:simplelog",
+      "//third_party/rust_crates:termion",
+    ]
+  }
+}
+
+install_host_tools("host") {
+  testonly = true
+  deps = [ ":bin" ]
+  outputs = [ "scrutiny" ]
+}
+
 group("scrutiny") {
   testonly = true
-  public_deps =
-      [ "//src/security/tools/scrutiny/service:host($host_toolchain)" ]
+  public_deps = [ ":host" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps =
-      [ "//src/security/tools/scrutiny/service:tests($host_toolchain)" ]
+  public_deps = [ ":lib_test($host_toolchain)" ]
 }
