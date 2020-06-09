@@ -24,9 +24,9 @@ def main():
     host = Host.from_build()
     device = Device.from_host(host)
     fuzzer = Fuzzer.from_args(device, args)
-    fuzzer.add_libfuzzer_opts(libfuzzer_opts)
-    fuzzer.add_libfuzzer_args(libfuzzer_args)
-    fuzzer.add_subprocess_args(subprocess_args)
+    fuzzer.libfuzzer_opts = libfuzzer_opts
+    fuzzer.libfuzzer_args = libfuzzer_args
+    fuzzer.subprocess_args = subprocess_args
 
     if not args.monitor:
         with Corpus.from_args(fuzzer, args) as corpus:
@@ -40,7 +40,7 @@ def main():
         )
         print(' Starting ' + str(fuzzer) + '.')
         print(' Outputs will be written to:')
-        print('   ' + fuzzer.results())
+        print('   ' + fuzzer.output)
         if not args.foreground:
             print(' You should be notified when the fuzzer stops.')
             print(
@@ -57,7 +57,7 @@ def main():
     else:
         fuzzer.monitor()
         title = str(fuzzer) + ' has stopped.'
-        body = 'Output written to ' + fuzzer.results() + '.'
+        body = 'Output written to ' + fuzzer.output + '.'
         print(title)
         print(body)
     return 0

@@ -116,10 +116,6 @@ class Host(object):
                 'Invalid LLVM symbolizer: {}'.format(llvm_symbolizer))
         self._llvm_symbolizer = llvm_symbolizer
 
-    @property
-    def fuzzers(self):
-        return self._fuzzers
-
     # Initialization routines
 
     def configure(self, build_dir, opened_fuzzers_json=None):
@@ -143,8 +139,39 @@ class Host(object):
         for fuzz_spec in fuzz_specs:
             package = fuzz_spec['fuzzers_package']
             for executable in fuzz_spec['fuzzers']:
-                self.fuzzers.append((package, executable))
-        self.fuzzers.sort()
+                self._fuzzers.append((package, executable))
+        self._fuzzers.sort()
+
+    def fuzzers(self, name=None):
+        """Returns a (possibly filtered) list of fuzzer names.
+
+        Takes a list of fuzzer names in the form `package`/`executable` and a name to filter
+        on.  If the name is of the form 'x/y', the filtered list will include all
+        the fuzzer names where 'x' is a substring of `package` and y is a substring
+        of `executable`; otherwise it includes all the fuzzer names where `name` is a
+        substring of either `package` or `executable`.
+
+        Returns:
+            A list of fuzzer names matching the given name.
+
+        Raises:
+            ValueError: Name is malformed, e.g. of the form 'x/y/z'.
+    """
+        if not name or name == '':
+            return self._fuzzers
+        names = name.split('/')
+        if len(names) == 2 and (names[0], names[1]) in self._fuzzers:
+            return [(names[0], names[1])]
+        if len(names) == 1:
+            return list(
+                set(self.fuzzers('/' + name)) | set(self.fuzzers(name + '/')))
+        elif len(names) != 2:
+            raise ValueError('Malformed fuzzer name: ' + name)
+        filtered = []
+        for package, executable in self._fuzzers:
+            if names[0] in package and names[1] in executable:
+                filtered.append((package, executable))
+        return filtered
 
     # Filesystem routines.
     # These can be overriden during testing to remove dependencies on real files
@@ -159,7 +186,7 @@ class Host(object):
     def mkdir(self, pathname):
         try:
             os.makedirs(pathname)
-        except OSError:
+        except OSError as e:
             if e.errno != errno.EEXIST:
                 raise
 

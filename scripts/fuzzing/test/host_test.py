@@ -41,9 +41,24 @@ class TestHost(unittest.TestCase):
 
         host = FakeHost()
         host.read_fuzzers(sio)
-        self.assertIn(('foo_fuzzers', 'foo_fuzzer'), host.fuzzers)
-        self.assertIn(('zircon_fuzzers', 'zx_fuzzer.asan'), host.fuzzers)
-        self.assertIn(('zircon_fuzzers', 'zx_fuzzer.ubsan'), host.fuzzers)
+        self.assertIn(('foo_fuzzers', 'foo_fuzzer'), host.fuzzers())
+        self.assertIn(('zircon_fuzzers', 'zx_fuzzer.asan'), host.fuzzers())
+        self.assertIn(('zircon_fuzzers', 'zx_fuzzer.ubsan'), host.fuzzers())
+
+    def test_fuzzers(self):
+        host = FakeHost(autoconfigure=False)
+        host.add_fake_fuzzers()
+        self.assertEqual(len(host.fuzzers('')), 6)
+        self.assertEqual(len(host.fuzzers('/')), 6)
+        self.assertEqual(len(host.fuzzers('fake')), 6)
+        self.assertEqual(len(host.fuzzers('package1')), 3)
+        self.assertEqual(len(host.fuzzers('target1')), 3)
+        self.assertEqual(len(host.fuzzers('package2/target1')), 2)
+        self.assertEqual(len(host.fuzzers('fake-package2/fake-target1')), 1)
+        self.assertEqual(len(host.fuzzers('1/2')), 1)
+        self.assertEqual(len(host.fuzzers('target4')), 0)
+        with self.assertRaises(ValueError):
+            host.fuzzers('a/b/c')
 
     def test_configure(self):
         host = FakeHost(autoconfigure=False)

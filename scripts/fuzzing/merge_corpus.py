@@ -25,9 +25,9 @@ def main():
     host = Host.from_build()
     device = Device.from_host(host)
     fuzzer = Fuzzer.from_args(device, args)
-    fuzzer.add_libfuzzer_opts(libfuzzer_opts)
-    fuzzer.add_libfuzzer_args(libfuzzer_args)
-    fuzzer.add_subprocess_args(subprocess_args)
+    fuzzer.libfuzzer_opts = libfuzzer_opts
+    fuzzer.libfuzzer_args = libfuzzer_args
+    fuzzer.subprocess_args = subprocess_args
 
     with Corpus.from_args(fuzzer, args) as corpus:
         cipd = Cipd(corpus)

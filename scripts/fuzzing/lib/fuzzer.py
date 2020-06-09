@@ -39,54 +39,15 @@ class Fuzzer(object):
         'crash', 'leak', 'mismatch', 'oom', 'slow-unit', 'timeout'
     ]
 
-    class NameError(ValueError):
-        """Indicates a supplied name is malformed or unusable."""
-        pass
-
-    class StateError(ValueError):
-        """Indicates a command isn't valid for the fuzzer in its current state."""
-        pass
-
-    @classmethod
-    def filter(cls, fuzzers, name):
-        """Filters a list of fuzzer names.
-
-      Takes a list of fuzzer names in the form `package`/`executable` and a name to filter
-      on.  If the name is of the form 'x/y', the filtered list will include all
-      the fuzzer names where 'x' is a substring of `package` and y is a substring
-      of `executable`; otherwise it includes all the fuzzer names where `name` is a
-      substring of either `package` or `executable`.
-
-      Returns:
-        A list of fuzzer names matching the given name.
-
-      Raises:
-        FuzzerNameError: Name is malformed, e.g. of the form 'x/y/z'.
-    """
-        if not name or name == '':
-            return fuzzers
-        names = name.split('/')
-        if len(names) == 2 and (names[0], names[1]) in fuzzers:
-            return [(names[0], names[1])]
-        if len(names) == 1:
-            return list(
-                set(Fuzzer.filter(fuzzers, '/' + name)) |
-                set(Fuzzer.filter(fuzzers, name + '/')))
-        elif len(names) != 2:
-            raise Fuzzer.NameError('Malformed fuzzer name: ' + name)
-        filtered = []
-        for package, executable in fuzzers:
-            if names[0] in package and names[1] in executable:
-                filtered.append((package, executable))
-        return filtered
+    DEBUG_OPTIONS = [
+        'handle_segv', 'handle_bus', 'handle_ill', 'handle_fpe', 'handle_abrt'
+    ]
 
     @classmethod
     def from_args(cls, device, args):
         """Constructs a Fuzzer from command line arguments, showing a
         disambiguation menu if specified name matches more than one fuzzer."""
-
-        matches = Fuzzer.filter(device.host.fuzzers, args.name)
-
+        matches = device.host.fuzzers(args.name)
         if not matches:
             sys.exit('No matching fuzzers found. Try `fx fuzz list`.')
 
@@ -97,51 +58,90 @@ class Fuzzer(object):
         else:
             fuzzer_name = matches[0]
 
-        return cls(
-            device, fuzzer_name[0], fuzzer_name[1], args.output,
-            args.foreground, args.debug)
+        fuzzer = cls(device, fuzzer_name[0], fuzzer_name[1])
+        if args.output:
+            fuzzer.output = args.output
+        fuzzer.foreground = args.foreground
+        fuzzer.debug = args.debug
+        return fuzzer
 
-    def __init__(
-            self,
-            device,
-            package,
-            executable,
-            output=None,
-            foreground=False,
-            debug=False):
-        self.device = device
-        self.host = device.host
-        self.package = package
-        self.executable = executable
-        self.pid = None
+    def __init__(self, device, package, executable):
+        self._device = device
+        self._package = package
+        self._executable = executable
+        self._pid = None
         self._options = {'artifact_prefix': 'data/'}
         self._libfuzzer_args = []
         self._subprocess_args = []
-        if output:
-            self._output = output
-        else:
-            self._output = self.host.fxpath(
-                'test_data', 'fuzzing', self.package, self.executable)
-        self._foreground = foreground
-        self._debug = debug
-
-    def set_default_option(self, key, value):
-        if key not in self._options:
-            self._options[key] = value
-
-    def add_libfuzzer_opts(self, libfuzzer_opts):
-        if 'artifact_prefix' in libfuzzer_opts:
-            raise ValueError('Changing artifact_prefix is unsupported.')
-        self._options.update(libfuzzer_opts)
-
-    def add_libfuzzer_args(self, libfuzzer_args):
-        self._libfuzzer_args += libfuzzer_args
-
-    def add_subprocess_args(self, subprocess_args):
-        self._subprocess_args += subprocess_args
+        self._debug = False
+        self._foreground = False
+        self._output = device.host.fxpath(
+            'local', '{}_{}'.format(self.package, self.executable))
 
     def __str__(self):
-        return self.package + '/' + self.executable
+        return '{}/{}'.format(self.package, self.executable)
+
+    @property
+    def device(self):
+        return self._device
+
+    @property
+    def package(self):
+        return self._package
+
+    @property
+    def executable(self):
+        return self._executable
+
+    @property
+    def libfuzzer_opts(self):
+        return self._libfuzzer_opts
+
+    @libfuzzer_opts.setter
+    def libfuzzer_opts(self, libfuzzer_opts):
+        self._libfuzzer_opts = libfuzzer_opts
+
+    @property
+    def libfuzzer_args(self):
+        return self._libfuzzer_args
+
+    @libfuzzer_args.setter
+    def libfuzzer_args(self, libfuzzer_args):
+        self._libfuzzer_args = libfuzzer_args
+
+    @property
+    def subprocess_args(self):
+        return self._subprocess_args
+
+    @subprocess_args.setter
+    def subprocess_args(self, subprocess_args):
+        self._subprocess_args = subprocess_args
+
+    @property
+    def output(self):
+        return self._output
+
+    @output.setter
+    def output(self, output):
+        if not output or not self.device.host.isdir(output):
+            raise ValueError('Invalid output directory: {}'.format(output))
+        self._output = output
+
+    @property
+    def foreground(self):
+        return self._foreground
+
+    @foreground.setter
+    def foreground(self, foreground):
+        self._foreground = foreground
+
+    @property
+    def debug(self):
+        return self._debug
+
+    @debug.setter
+    def debug(self, debug):
+        self._debug = debug
 
     def data_path(self, relpath=''):
         """Canonicalizes the location of mutable data for this fuzzer."""
@@ -174,22 +174,15 @@ class Fuzzer(object):
 
            See the note about "refresh" on Device.getpid().
         """
-        self.pid = self.device.getpid(
+        self._pid = self.device.getpid(
             self.package, self.executable, refresh=refresh)
-        return self.pid > 0
+        return self._pid > 0
 
     def require_stopped(self, refresh=False):
         """Raise an exception if the fuzzer is running."""
         if self.is_running(refresh=refresh):
-            raise Fuzzer.StateError(
+            raise RuntimeError(
                 str(self) + ' is running and must be stopped first.')
-
-    def results(self, relpath=None):
-        """Returns the path in the previously prepared results directory."""
-        if relpath:
-            return os.path.join(self._output, 'latest', relpath)
-        else:
-            return os.path.join(self._output, 'latest')
 
     def url(self):
         return 'fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx' % (
@@ -213,20 +206,12 @@ class Fuzzer(object):
         self._libfuzzer_args = ['data/corpus/']
 
     def _create(self):
-        if self._debug:
-            for key in [
-                    'handle_segv',
-                    'handle_bus',
-                    'handle_ill',
-                    'handle_fpe',
-                    'handle_abrt',
-            ]:
-                self.set_default_option(key, '0')
-        if self._foreground:
-            self.set_default_option('jobs', '0')
-        else:
-            self.set_default_option('jobs', '1')
-
+        if not self.foreground:
+            self._options['jobs'] = '1'
+        for option in Fuzzer.DEBUG_OPTIONS:
+            if self.debug:
+                self._options[option] = '0'
+        self._options.update(self._libfuzzer_opts)
         fuzz_cmd = ['run', self.url()]
         for key, value in sorted(self._options.items()):
             fuzz_cmd.append('-{}={}'.format(key, value))
@@ -258,43 +243,33 @@ class Fuzzer(object):
         The fuzzer's process ID. May be 0 if the fuzzer stops immediately.
     """
         self.require_stopped()
-        self.device.rm(self.data_path('fuzz-*.log'))
-        results = os.path.join(
-            self._output,
-            datetime.datetime.today().isoformat())
-        try:
-            os.unlink(self.results())
-        except OSError as e:
-            if e.errno != errno.ENOENT:
-                raise
+        logs = self.data_path('fuzz-*.log')
+        self.device.rm(logs)
+        self.device.host.mkdir(self._output)
 
-        self.host.mkdir(results)
-        self.host.link(results, self.results())
-
-        self.set_default_option(
-            'dict', 'pkg/data/{}/dictionary'.format(self.executable))
+        self._options['dict'] = 'pkg/data/{}/dictionary'.format(self.executable)
 
         # Fuzzer logs are saved to fuzz-*.log when running in the background.
         # We tee the output to fuzz-0.log when running in the foreground to
         # make the rest of the plumbing look the same.
         self._set_libfuzzer_args()
         cmd = self._create()
-        if self._options['jobs'] == '0':
+        if self.foreground:
             cmd.stderr = subprocess.PIPE
         proc = cmd.popen()
-        if self._options['jobs'] == '0':
-            logfile = self.results('fuzz-0.log')
-            self.symbolize_log(
-                fd_in=proc.stderr, filename_out=logfile, echo=True)
+        if self.foreground:
+            self.symbolize_log(proc.stderr, 0, echo=True)
             proc.wait()
 
-    def symbolize_log(
-            self,
-            fd_in=None,
-            filename_in=None,
-            fd_out=None,
-            filename_out=None,
-            echo=False):
+    def _logfile(self, job_num):
+        """Returns the path to the symbolized log for a fuzzing job."""
+        if not self._logbase:
+            now = datetime.datetime.now().replace(microsecond=0)
+            self._logbase = now.strftime('%Y-%m-%d-%H%M')
+        logfile = 'fuzz-{}-{}.log'.format(self._logbase, job)
+        return os.path.join(self._output, logfile)
+
+    def symbolize_log(self, fd_in, job_num, echo=False):
         """Constructs a symbolized fuzzer log from a device.
 
         Merges the provided fuzzer log with the symbolized system log for the
@@ -304,23 +279,15 @@ class Fuzzer(object):
         This method is overridden when testing.
 
         Args:
-          fd_in: An object supporting readline(), such as a file or pipe.
-          filename_in: A path to a file to read.
-          fd_out: An object supporting write(), such as a file.
-          filename_in: A path to a file to write.
-          echo: If true, display text being written to fd_out.
+          fd_in:        An object supporting readline(), such as a file or pipe.
+          filename_in:  A path to a file to write.
+          echo:         If true, display text being written to fd_out.
         """
-        try:
-            if filename_in:
-                fd_in = open(filename_in, 'r')
-            if filename_out:
-                fd_out = open(filename_out, 'w')
+        filename_out = self._logfile(job_num)
+        with open(filename_out, 'w') as fd_out:
             return self._symbolize_log_impl(fd_in, fd_out, echo)
-        finally:
-            if filename_in and fd_in:
-                fd_in.close()
-            if filename_out and fd_out:
-                fd_out.close()
+        self.device.host.link(
+            filename_out, os.path.join(self.output, 'fuzz-latest.log'))
 
     def _symbolize_log_impl(self, fd_in, fd_out, echo):
         """Implementation of symbolize_log that takes file-like objects."""
@@ -341,7 +308,7 @@ class Fuzzer(object):
                     pid = self.device.guess_pid()
                 if not sym:
                     raw = self.device.dump_log(['--pid', str(pid)])
-                    sym = self.host.symbolize(raw)
+                    sym = self.device.host.symbolize(raw)
                     fd_out.write(sym)
                     if echo:
                         print(sym.strip())
@@ -351,7 +318,7 @@ class Fuzzer(object):
             if echo:
                 print(line.strip())
         for artifact in artifacts:
-            self.device.fetch(self.data_path(artifact), self.results())
+            self.device.fetch(self.data_path(artifact), self.output)
         return sym != None
 
     def monitor(self):
@@ -363,19 +330,21 @@ class Fuzzer(object):
         """
         while self.is_running(refresh=True):
             time.sleep(2)
-        self.device.fetch(
-            self.data_path('fuzz-*.log'), self.results(), retries=2)
-        logs = glob.glob(self.results('fuzz-*.log'))
-        artifacts = []
-        for log in logs:
-            tmp = log + '.tmp'
-            self.symbolize_log(filename_in=log, filename_out=tmp, echo=False)
-            os.rename(tmp, log)
+
+        logs = self.data_path('fuzz-*.log')
+        self.device.fetch(logs, self._output, retries=2)
+        self.device.rm(logs)
+
+        logs = sorted(glob.glob(os.path.join(self.output, 'fuzz-*.log')))
+        for job_num, log in enumerate(logs):
+            with open(log) as fd_in:
+                self.symbolize_log(fd_in, job_num, echo=False)
+            self.device.host.rm(log)
 
     def stop(self):
         """Stops any processes with a matching component manifest on the device."""
         if self.is_running():
-            self.device.ssh(['kill', str(self.pid)]).check_call()
+            self.device.ssh(['kill', str(self._pid)]).check_call()
 
     def repro(self):
         """Runs the fuzzer with test input artifacts.
@@ -407,7 +376,8 @@ class Fuzzer(object):
         self._libfuzzer_args = namespaced
 
         # Default to repro-ing in the foreground
-        self.set_default_option('jobs', '0')
+        self.foreground = True
+
         self._create().call()
         return len(self._libfuzzer_args)
 
@@ -429,11 +399,11 @@ class Fuzzer(object):
             return (0, 0)
 
         # Default to merging in the foreground
-        self.set_default_option('jobs', '0')
+        self.foreground = True
 
         # Save mergefile in case we are interrupted
-        self.set_default_option('merge', '1')
-        self.set_default_option('merge_control_file', 'data/.mergefile')
+        self._options['merge'] = '1'
+        self._options['merge_control_file'] = 'data/.mergefile'
         self._set_libfuzzer_args()
         self.device.ssh(['mkdir', '-p',
                          self.data_path('corpus.prev')]).check_call()

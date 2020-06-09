@@ -30,22 +30,6 @@ class TestFuzzer(unittest.TestCase):
 
     # Unit tests
 
-    def test_filter(self):
-        host = FakeHost()
-        fuzzers = host.fuzzers
-        self.assertEqual(len(Fuzzer.filter(fuzzers, '')), 6)
-        self.assertEqual(len(Fuzzer.filter(fuzzers, '/')), 6)
-        self.assertEqual(len(Fuzzer.filter(fuzzers, 'fake')), 6)
-        self.assertEqual(len(Fuzzer.filter(fuzzers, 'package1')), 3)
-        self.assertEqual(len(Fuzzer.filter(fuzzers, 'target1')), 3)
-        self.assertEqual(len(Fuzzer.filter(fuzzers, 'package2/target1')), 2)
-        self.assertEqual(
-            len(Fuzzer.filter(fuzzers, 'fake-package2/fake-target1')), 1)
-        self.assertEqual(len(Fuzzer.filter(fuzzers, '1/2')), 1)
-        self.assertEqual(len(Fuzzer.filter(fuzzers, 'target4')), 0)
-        with self.assertRaises(Fuzzer.NameError):
-            Fuzzer.filter(fuzzers, 'a/b/c')
-
     def test_from_args(self):
         device = FakeDevice()
         parser = ArgParser('test_from_args')
@@ -106,7 +90,7 @@ class TestFuzzer(unittest.TestCase):
         fuzzer = Fuzzer(device, u'fake-package1', u'fake-target1')
         fuzzer.require_stopped()
         device.add_fake_pid(fuzzer.package, fuzzer.executable)
-        with self.assertRaises(Fuzzer.StateError):
+        with self.assertRaises(RuntimeError):
             fuzzer.require_stopped(refresh=True)
         device.clear_fake_pids()
         fuzzer.require_stopped(refresh=True)
@@ -123,9 +107,9 @@ class TestFuzzer(unittest.TestCase):
                 ['package1/target2'] + args)
             args.output = base_dir
             fuzzer = FakeFuzzer.from_args(device, args)
-            fuzzer.add_libfuzzer_opts(libfuzzer_opts)
-            fuzzer.add_libfuzzer_args(libfuzzer_args)
-            fuzzer.add_subprocess_args(subprocess_args)
+            fuzzer.libfuzzer_opts = libfuzzer_opts
+            fuzzer.libfuzzer_args = libfuzzer_args
+            fuzzer.subprocess_args = subprocess_args
             fuzzer.start()
 
         finally:
@@ -147,7 +131,6 @@ class TestFuzzer(unittest.TestCase):
             ['--foreground'], [
                 '-artifact_prefix=data/',
                 '-dict=pkg/data/fake-target2/dictionary',
-                '-jobs=0',
                 'data/corpus/',
             ])
 
@@ -207,7 +190,7 @@ class TestFuzzer(unittest.TestCase):
             "[000001.234569][123][456][klog] INFO: Symbolized line 3",
         ]
         fuzzer = FakeFuzzer(device, u'fake-package1', u'fake-target2')
-        device.host.mkdir(os.path.join(fuzzer._output, 'latest'))
+        device.host.mkdir(os.path.join(fuzzer._output))
         fuzzer.unsymbolized.write(log_in)
         if fuzzer.symbolize_log():
             self.assertIn(cmd, host.history)
@@ -304,9 +287,9 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
                 '-some-lf-arg=value',
             ])
         fuzzer = Fuzzer.from_args(device, args)
-        fuzzer.add_libfuzzer_opts(libfuzzer_opts)
-        fuzzer.add_libfuzzer_args(libfuzzer_args)
-        fuzzer.add_subprocess_args(subprocess_args)
+        fuzzer.libfuzzer_opts = libfuzzer_opts
+        fuzzer.libfuzzer_args = libfuzzer_args
+        fuzzer.subprocess_args = subprocess_args
 
         # No-op if artifacts are empty
         self.assertEqual(fuzzer.repro(), 0)
@@ -320,7 +303,7 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
         artifacts = ['data/' + artifact for artifact in fuzzer.list_artifacts()]
         self.assertNotEqual(fuzzer.repro(), 0)
         self.assertSsh(
-            device, 'run', fuzzer.url(), '-artifact_prefix=data/', '-jobs=0',
+            device, 'run', fuzzer.url(), '-artifact_prefix=data/',
             '-some-lf-arg=value', *artifacts)
 
     def test_merge(self):
@@ -332,9 +315,9 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
                 '-some-lf-arg=value',
             ])
         fuzzer = Fuzzer.from_args(device, args)
-        fuzzer.add_libfuzzer_opts(libfuzzer_opts)
-        fuzzer.add_libfuzzer_args(libfuzzer_args)
-        fuzzer.add_subprocess_args(subprocess_args)
+        fuzzer.libfuzzer_opts = libfuzzer_opts
+        fuzzer.libfuzzer_args = libfuzzer_args
+        fuzzer.subprocess_args = subprocess_args
 
         # No-op if corpus is empty
         self.assertEqual(fuzzer.merge(), (0, 0))
@@ -346,9 +329,9 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
             ])
         self.assertNotEqual(fuzzer.merge(), (0, 0))
         self.assertSsh(
-            device, 'run', fuzzer.url(), '-artifact_prefix=data/', '-jobs=0',
-            '-merge=1', '-merge_control_file=data/.mergefile',
-            '-some-lf-arg=value', 'data/corpus/', 'data/corpus.prev/')
+            device, 'run', fuzzer.url(), '-artifact_prefix=data/', '-merge=1',
+            '-merge_control_file=data/.mergefile', '-some-lf-arg=value',
+            'data/corpus/', 'data/corpus.prev/')
 
 
 if __name__ == '__main__':

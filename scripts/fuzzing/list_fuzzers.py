@@ -18,8 +18,7 @@ def main():
     args = parser.parse_args()
 
     host = Host.from_build()
-
-    fuzzers = Fuzzer.filter(host.fuzzers, args.name)
+    fuzzers = host.fuzzers(args.name)
     if len(fuzzers) == 0:
         print('No matching fuzzers.')
         return 1

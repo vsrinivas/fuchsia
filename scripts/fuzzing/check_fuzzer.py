@@ -22,7 +22,7 @@ def main():
 
     host = Host.from_build()
     device = Device.from_host(host)
-    fuzzers = Fuzzer.filter(host.fuzzers, args.name)
+    fuzzers = host.fuzzers(args.name)
 
     silent = True
     for package, executable in fuzzers:

@@ -16,16 +16,8 @@ class FakeFuzzer(Fuzzer):
        to inject StringIO objects.
     """
 
-    def __init__(
-            self,
-            device,
-            package,
-            executable,
-            output=None,
-            foreground=False,
-            debug=False):
-        super(FakeFuzzer, self).__init__(
-            device, package, executable, output, foreground, debug)
+    def __init__(self, device, package, executable):
+        super(FakeFuzzer, self).__init__(device, package, executable)
         self.unsymbolized = StringIO()
         self.symbolized = None
 
