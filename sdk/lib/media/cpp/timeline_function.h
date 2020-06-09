@@ -5,9 +5,8 @@
 #ifndef LIB_MEDIA_CPP_TIMELINE_FUNCTION_H_
 #define LIB_MEDIA_CPP_TIMELINE_FUNCTION_H_
 
-#include <zircon/assert.h>
-
 #include <lib/media/cpp/timeline_rate.h>
+#include <zircon/assert.h>
 
 namespace media {
 
@@ -72,7 +71,7 @@ class TimelineFunction final {
   // Applies the function.  Returns TimelineRate::kOverflow on overflow.
   int64_t operator()(int64_t reference_input) const { return Apply(reference_input); }
 
-  // Returns a timeline function that is the inverse if this timeline function.
+  // Returns a timeline function that is the inverse of this timeline function.
   TimelineFunction Inverse() const {
     ZX_DEBUG_ASSERT(rate_.reference_delta() != 0u);
     return TimelineFunction(reference_time_, subject_time_, rate_.Inverse());
