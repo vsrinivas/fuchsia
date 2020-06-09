@@ -16,9 +16,9 @@ struct BandwidthMeasurementConfig {
     array<uint64>:MAX_COUNT_CHANNELS channels;
 };
 
-/// Contains the actual buys cycles granted to each channel. Not all hardware
+/// Contains the actual cycles granted to each channel. Not all hardware
 /// supports all 3 counters. If a counter is not supported the value
-///  returned is zero.
+/// returned is zero.
 struct GrantedCyclesResult {
     uint64 read_cycles;
     uint64 write_cycles;
@@ -30,6 +30,8 @@ struct BandwidthInfo {
     zx.time timestamp;
     // Bus frequency in hertz (Hz) when the measurement started.
     uint64 frequency;
+    // Number of bytes per cycle.
+    uint64 bytes_per_cycle;
     array<GrantedCyclesResult>:MAX_COUNT_CHANNELS channels;
     GrantedCyclesResult total;
 };

@@ -233,12 +233,13 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
 
   EXPECT_GT(info->result.response().info.timestamp, 0u);
   EXPECT_EQ(info->result.response().info.frequency, 24000000u);
+  EXPECT_EQ(info->result.response().info.bytes_per_cycle, 16u);
 
   // Check FIDL result makes sense. AML hw does not support read or write only counters.
   int ix = 0;
   for (auto& c : info->result.response().info.channels) {
     if (ix < 4) {
-      EXPECT_EQ(c.readwrite_cycles, kReadCycles[ix] * 16ul);
+      EXPECT_EQ(c.readwrite_cycles, kReadCycles[ix]);
     } else {
       EXPECT_EQ(c.readwrite_cycles, 0u);
     }
@@ -247,7 +248,7 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
     ++ix;
   }
   EXPECT_EQ(info->result.response().info.total.readwrite_cycles,
-            (kReadCycles[0] + kReadCycles[1] + kReadCycles[2] + kReadCycles[3]) * 16ul);
+            kReadCycles[0] + kReadCycles[1] + kReadCycles[2] + kReadCycles[3]);
 }
 
 }  // namespace amlogic_ram

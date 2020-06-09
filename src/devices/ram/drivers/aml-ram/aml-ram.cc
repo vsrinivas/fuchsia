@@ -26,6 +26,10 @@ constexpr uint64_t kPortKeyIrqMsg = 0x0;
 constexpr uint64_t kPortKeyCancelMsg = 0x1;
 constexpr uint64_t kPortKeyWorkPendingMsg = 0x2;
 
+// TODO(reveman): Understand why this is 16. Configurable and a product
+// decision, or simply the way these counters are wired?
+constexpr uint64_t kBytesPerCycle = 16ul;
+
 zx_status_t ValidateRequest(const ram_metrics::BandwidthMeasurementConfig& config) {
   // Restrict timer to reasonable values.
   if ((config.cycles_to_measure < kMinimumCycleCount) ||
@@ -202,16 +206,17 @@ void AmlRam::FinishReadBandwithCounters(ram_metrics::BandwidthInfo* bpi, zx_time
 
   bpi->timestamp = start_time;
   bpi->frequency = ReadFrequency();
+  bpi->bytes_per_cycle = kBytesPerCycle;
 
   uint32_t value = mmio_.Read32(MEMBW_PORTS_CTRL);
   ZX_ASSERT((value & DMC_QOS_ENABLE_CTRL) == 0);
 
-  bpi->channels[0].readwrite_cycles = mmio_.Read32(MEMBW_C0_GRANT_CNT) * 16ul;
-  bpi->channels[1].readwrite_cycles = mmio_.Read32(MEMBW_C1_GRANT_CNT) * 16ul;
-  bpi->channels[2].readwrite_cycles = mmio_.Read32(MEMBW_C2_GRANT_CNT) * 16ul;
-  bpi->channels[3].readwrite_cycles = mmio_.Read32(MEMBW_C3_GRANT_CNT) * 16ul;
+  bpi->channels[0].readwrite_cycles = mmio_.Read32(MEMBW_C0_GRANT_CNT);
+  bpi->channels[1].readwrite_cycles = mmio_.Read32(MEMBW_C1_GRANT_CNT);
+  bpi->channels[2].readwrite_cycles = mmio_.Read32(MEMBW_C2_GRANT_CNT);
+  bpi->channels[3].readwrite_cycles = mmio_.Read32(MEMBW_C3_GRANT_CNT);
 
-  bpi->total.readwrite_cycles = all_grant_broken_ ? 0 : mmio_.Read32(MEMBW_ALL_GRANT_CNT) * 16ul;
+  bpi->total.readwrite_cycles = all_grant_broken_ ? 0 : mmio_.Read32(MEMBW_ALL_GRANT_CNT);
 
   mmio_.Write32(0x0f | DMC_QOS_CLEAR_CTRL, MEMBW_PORTS_CTRL);
 }
