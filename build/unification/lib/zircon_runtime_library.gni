@@ -39,9 +39,9 @@ template("zircon_runtime_library") {
 
   format_args = [
     "--zircon-build-dir",
-    zircon_root_build_dir,
+    rebase_path(zircon_root_build_dir),
     "--build-dir",
-    root_build_dir,
+    rebase_path(root_build_dir),
 
     # NOTE: not including the toolchain here as this target can be reached from
     # different paths due to its hacky nature, and label stability is key to
