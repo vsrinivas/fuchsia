@@ -11,7 +11,7 @@
 
 #include "src/developer/feedback/feedback_data/attachments/types.h"
 #include "src/developer/feedback/feedback_data/constants.h"
-#include "src/developer/feedback/utils/rotating_file_set.h"
+#include "src/developer/feedback/feedback_data/system_log_recorder/reader.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 
@@ -42,8 +42,7 @@ AttachmentValue ReadAttachmentValueFromFilepath(const AttachmentKey& key,
 
 void CreatePreviousLogsFile() {
   // We read the set of /cache files into a single /tmp file.
-  RotatingFileSetReader log_reader(kCurrentLogsFilePaths);
-  if (log_reader.Concatenate(kPreviousLogsFilePath)) {
+  if (Concatenate(kCurrentLogsFilePaths, kPreviousLogsFilePath)) {
     FX_LOGS(INFO) << "Found logs from previous boot cycle, available at " << kPreviousLogsFilePath;
 
     // Clean up the /cache files now that they have been concatenated into a single /tmp file.

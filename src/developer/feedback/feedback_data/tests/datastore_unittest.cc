@@ -36,7 +36,7 @@
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt/logger.h"
 #include "src/developer/feedback/utils/file_size.h"
-#include "src/developer/feedback/utils/rotating_file_set.h"
+#include "src/developer/feedback/feedback_data/system_log_recorder/reader.h"
 #include "src/developer/feedback/utils/time.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -145,16 +145,8 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
     }
   }
 
-  void WriteCurrentLogsFile(const std::string& content) {
-    const FileSize kFileSize = FileSize::Kilobytes(1);
-    FX_CHECK(content.size() < kFileSize.to_bytes())
-        << "This helper does not support a string that large";
-    RotatingFileSetWriter writer(kCurrentLogsFilePaths, kFileSize * kCurrentLogsFilePaths.size());
-    writer.Write(content);
-  }
-
-  void WritePreviousLogsFile(const std::string& content) {
-    ASSERT_TRUE(files::WriteFile(kPreviousLogsFilePath, content.c_str(), content.size()));
+  void WriteFile(const std::string& filepath, const std::string& content) {
+    FX_CHECK(files::WriteFile(filepath, content.c_str(), content.size()));
   }
 
   std::string device_id() {
@@ -458,9 +450,14 @@ TEST_F(DatastoreTest, GetAttachments_Inspect) {
   EXPECT_THAT(GetStaticAttachments(), IsEmpty());
 }
 
+
 TEST_F(DatastoreTest, GetAttachments_PreviousSyslog) {
-  const std::string previous_log_contents = "LAST SYSTEM LOG";
-  WriteCurrentLogsFile(previous_log_contents);
+  std::string previous_log_contents = "";
+  for(const auto& filepath : kCurrentLogsFilePaths) {
+    const std::string str = "Log for file:" + filepath + "\n";
+    previous_log_contents = str + previous_log_contents;
+    WriteFile(filepath, str);
+  }
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
 
   ::fit::result<Attachments> attachments = GetAttachments();
@@ -481,7 +478,7 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslog) {
 
 TEST_F(DatastoreTest, GetAttachments_PreviousSyslogAlreadyCached) {
   const std::string previous_log_contents = "LAST SYSTEM LOG";
-  WritePreviousLogsFile(previous_log_contents);
+  WriteFile(kPreviousLogsFilePath, previous_log_contents);
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
 
   ::fit::result<Attachments> attachments = GetAttachments();

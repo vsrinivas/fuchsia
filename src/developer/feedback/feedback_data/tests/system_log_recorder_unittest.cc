@@ -18,7 +18,7 @@
 #include "src/developer/feedback/testing/stubs/logger.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/log_format.h"
-#include "src/developer/feedback/utils/rotating_file_set.h"
+#include "src/developer/feedback/feedback_data/system_log_recorder/reader.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
@@ -272,6 +272,43 @@ std::vector<const std::string> LogFiles(files::ScopedTempDir& temp_dir) {
   return log_files;
 }
 
+TEST(WriterTest, VerifyFileRotation) {
+  files::ScopedTempDir temp_dir;
+  const std::vector<const std::string> log_files = LogFiles(temp_dir);
+
+  // Set up the writer such that each file can fit 1 log message. We will then write 7 messages
+  // and only expect the last 4 to remain as there are 4 files in the rotation.
+  LogMessageStore store(kMaxLogLineSize);
+  SystemLogWriter writer(log_files, FileSize::Bytes(log_files.size() * kMaxLogLineSize), &store);
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+  writer.Write();
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2")));
+  writer.Write();
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 3")));
+  writer.Write();
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 4")));
+  writer.Write();
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 5")));
+  writer.Write();
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 6")));
+  writer.Write();
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 7")));
+  writer.Write();
+
+  const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
+
+  ASSERT_TRUE(Concatenate(log_files, output_path));
+
+  std::string contents;
+  ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
+  EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 4
+[15604.000][07559][07687][] INFO: line 5
+[15604.000][07559][07687][] INFO: line 6
+[15604.000][07559][07687][] INFO: line 7
+)");
+}
+
 TEST(WriterTest, WritesMessages) {
   files::ScopedTempDir temp_dir;
   const std::vector<const std::string> log_files = LogFiles(temp_dir);
@@ -299,9 +336,8 @@ TEST(WriterTest, WritesMessages) {
   writer.Write();
 
   const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
-  RotatingFileSetReader reader(log_files);
 
-  ASSERT_TRUE(reader.Concatenate(output_path));
+  ASSERT_TRUE(Concatenate(log_files, output_path));
 
   std::string contents;
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -323,7 +359,7 @@ TEST(WriterTest, WritesMessages) {
   EXPECT_FALSE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 10")));
   writer.Write();
 
-  ASSERT_TRUE(reader.Concatenate(output_path));
+  ASSERT_TRUE(Concatenate(log_files, output_path));
 
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 2
@@ -404,14 +440,13 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
                              });
   recorder.Start();
 
-  RotatingFileSetReader reader(log_files);
   std::string contents;
 
   RunLoopFor(kWriterPeriod);
 
   const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
 
-  ASSERT_TRUE(reader.Concatenate(output_path));
+  ASSERT_TRUE(Concatenate(log_files, output_path));
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
@@ -420,7 +455,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   RunLoopFor(kWriterPeriod);
 
-  ASSERT_TRUE(reader.Concatenate(output_path));
+  ASSERT_TRUE(Concatenate(log_files, output_path));
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
@@ -430,7 +465,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   RunLoopFor(kWriterPeriod);
 
-  ASSERT_TRUE(reader.Concatenate(output_path));
+  ASSERT_TRUE(Concatenate(log_files, output_path));
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
@@ -441,7 +476,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   RunLoopFor(kWriterPeriod);
 
-  ASSERT_TRUE(reader.Concatenate(output_path));
+  ASSERT_TRUE(Concatenate(log_files, output_path));
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
@@ -454,7 +489,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   RunLoopFor(kWriterPeriod);
 
-  ASSERT_TRUE(reader.Concatenate(output_path));
+  ASSERT_TRUE(Concatenate(log_files, output_path));
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
@@ -468,7 +503,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   RunLoopFor(kWriterPeriod);
 
-  ASSERT_TRUE(reader.Concatenate(output_path));
+  ASSERT_TRUE(Concatenate(log_files, output_path));
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 0
 [15604.000][07559][07687][] INFO: line 1
@@ -483,7 +518,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   RunLoopFor(kWriterPeriod);
 
-  ASSERT_TRUE(reader.Concatenate(output_path));
+  ASSERT_TRUE(Concatenate(log_files, output_path));
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
   EXPECT_EQ(contents, R"([15604.000][07559][07687][] INFO: line 8
 [15604.000][07559][07687][] INFO: line 9

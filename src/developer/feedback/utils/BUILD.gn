@@ -36,8 +36,6 @@ source_set("errors") {
 source_set("files") {
   sources = [
     "file_size.h",
-    "rotating_file_set.cc",
-    "rotating_file_set.h",
     "write_only_file.cc",
     "write_only_file.h",
   ]

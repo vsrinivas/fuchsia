@@ -311,6 +311,7 @@ executable("datastore_unittest") {
     "//src/developer/feedback/feedback_data:device_id_provider",
     "//src/developer/feedback/feedback_data/annotations:types",
     "//src/developer/feedback/feedback_data/attachments:types",
+    "//src/developer/feedback/feedback_data/system_log_recorder:reader",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
@@ -574,6 +575,7 @@ executable("system_log_recorder_unittest") {
 
   deps = [
     "//src/developer/feedback/feedback_data/attachments:types",
+    "//src/developer/feedback/feedback_data/system_log_recorder:reader",
     "//src/developer/feedback/feedback_data/system_log_recorder:src",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",

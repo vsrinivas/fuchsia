@@ -10,7 +10,7 @@
 
 #include "src/developer/feedback/feedback_data/system_log_recorder/log_message_store.h"
 #include "src/developer/feedback/utils/file_size.h"
-#include "src/developer/feedback/utils/rotating_file_set.h"
+#include "src/developer/feedback/utils/write_only_file.h"
 
 namespace feedback {
 
@@ -23,7 +23,17 @@ class SystemLogWriter {
   void Write();
 
  private:
-  RotatingFileSetWriter logs_;
+  // Deletes the last log file and shifts the remaining log files by one position: The first file
+  // becomes the second file, the second file becomes the third file, and so on.
+  void RotateFilePaths();
+
+  // Truncates the first file to start anew.
+  void StartNewFile();
+
+  const std::vector<const std::string> file_paths_;
+  const FileSize individual_file_size_;
+
+  WriteOnlyFile current_file_;
   LogMessageStore* store_;
 };
 

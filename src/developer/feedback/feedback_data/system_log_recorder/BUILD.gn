@@ -50,3 +50,18 @@ source_set("src") {
     "//zircon/system/ulib/trace",
   ]
 }
+
+# This file is not needed in system_log_recorder per se, but should be kept in sync
+# with the writer.
+source_set("reader") {
+  sources = [
+    "reader.cc",
+    "reader.h",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/trace",
+  ]
+}

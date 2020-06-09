@@ -55,9 +55,6 @@ test_package("feedback-utils-tests") {
       name = "promise_unittest"
     },
     {
-      name = "rotating_file_set_unittest"
-    },
-    {
       name = "time_unittest"
     },
     {
@@ -89,7 +86,6 @@ test_package("feedback-utils-tests") {
     ":log_format_unittest",
     ":oneshot_ptr_unittest",
     ":promise_unittest",
-    ":rotating_file_set_unittest",
     ":time_unittest",
     ":utc_time_provider_unittest",
     ":write_only_file_unittest",
@@ -296,20 +292,6 @@ executable("promise_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
-  ]
-}
-
-executable("rotating_file_set_unittest") {
-  testonly = true
-
-  sources = [ "rotating_file_set_unittest.cc" ]
-
-  deps = [
-    "//src/developer/feedback/utils:files",
-    "//src/lib/files",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
   ]
 }
 
