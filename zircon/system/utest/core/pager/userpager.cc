@@ -7,10 +7,12 @@
 #include <lib/zx/vmar.h>
 #include <string.h>
 #include <zircon/process.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
 #include <atomic>
+#include <cstdio>
 #include <memory>
 
 #include <fbl/algorithm.h>
@@ -45,12 +47,15 @@ bool Vmo::CheckVmo(uint64_t offset, uint64_t len, const void* expected) {
   zx::vmo tmp_vmo;
   zx_vaddr_t buf = 0;
 
-  if (zx::vmo::create(len, ZX_VMO_RESIZABLE, &tmp_vmo) != ZX_OK) {
+  zx_status_t status;
+  if ((status = zx::vmo::create(len, ZX_VMO_RESIZABLE, &tmp_vmo)) != ZX_OK) {
+    fprintf(stderr, "vmo create failed with %s\n", zx_status_get_string(status));
     return false;
   }
 
-  if (zx::vmar::root_self()->map(0, tmp_vmo, 0, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &buf) !=
-      ZX_OK) {
+  if ((status = zx::vmar::root_self()->map(0, tmp_vmo, 0, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                           &buf)) != ZX_OK) {
+    fprintf(stderr, "vmar map failed with %s\n", zx_status_get_string(status));
     return false;
   }
 
@@ -86,14 +91,17 @@ void Vmo::GenerateBufferContents(void* dest_buffer, uint64_t len, uint64_t paged
 
 std::unique_ptr<Vmo> Vmo::Clone() {
   zx::vmo clone;
-  if (vmo_.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY | ZX_VMO_CHILD_RESIZABLE, 0, size_,
-                        &clone) != ZX_OK) {
+  zx_status_t status;
+  if ((status = vmo_.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY | ZX_VMO_CHILD_RESIZABLE, 0,
+                                  size_, &clone)) != ZX_OK) {
+    fprintf(stderr, "vmo create_child failed with %s\n", zx_status_get_string(status));
     return nullptr;
   }
 
   zx_vaddr_t addr;
-  if (zx::vmar::root_self()->map(0, clone, 0, size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr) !=
-      ZX_OK) {
+  if ((status = zx::vmar::root_self()->map(0, clone, 0, size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                           &addr)) != ZX_OK) {
+    fprintf(stderr, "vmar map failed with %s\n", zx_status_get_string(status));
     return nullptr;
   }
 
@@ -109,19 +117,31 @@ UserPager::~UserPager() {
 }
 
 bool UserPager::Init() {
-  return zx::pager::create(0, &pager_) == ZX_OK && zx::port::create(0, &port_) == ZX_OK;
+  zx_status_t status;
+  if ((status = zx::pager::create(0, &pager_)) != ZX_OK) {
+    fprintf(stderr, "pager create failed with %s\n", zx_status_get_string(status));
+    return false;
+  }
+  if ((status = zx::port::create(0, &port_)) != ZX_OK) {
+    fprintf(stderr, "port create failed with %s\n", zx_status_get_string(status));
+    return false;
+  }
+  return true;
 }
 
 bool UserPager::CreateVmo(uint64_t size, Vmo** vmo_out) {
   zx::vmo vmo;
   size *= ZX_PAGE_SIZE;
-  if (pager_.create_vmo(ZX_VMO_RESIZABLE, port_, next_base_, size, &vmo) != ZX_OK) {
+  zx_status_t status;
+  if ((status = pager_.create_vmo(ZX_VMO_RESIZABLE, port_, next_base_, size, &vmo)) != ZX_OK) {
+    fprintf(stderr, "pager create_vmo failed with %s\n", zx_status_get_string(status));
     return false;
   }
 
   zx_vaddr_t addr;
-  if (zx::vmar::root_self()->map(0, vmo, 0, size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr) !=
-      ZX_OK) {
+  if ((status = zx::vmar::root_self()->map(0, vmo, 0, size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                           &addr)) != ZX_OK) {
+    fprintf(stderr, "vmar map failed with %s\n", zx_status_get_string(status));
     return false;
   }
 
@@ -137,26 +157,35 @@ bool UserPager::CreateVmo(uint64_t size, Vmo** vmo_out) {
 }
 
 bool UserPager::UnmapVmo(Vmo* vmo) {
-  return zx::vmar::root_self()->unmap(vmo->base_addr_, vmo->size_) == ZX_OK;
+  zx_status_t status;
+  if ((status = zx::vmar::root_self()->unmap(vmo->base_addr_, vmo->size_)) != ZX_OK) {
+    fprintf(stderr, "vmar unmap failed with %s\n", zx_status_get_string(status));
+    return false;
+  }
+  return true;
 }
 
 bool UserPager::ReplaceVmo(Vmo* vmo, zx::vmo* old_vmo) {
   zx::vmo new_vmo;
-  zx_status_t s;
-  if ((s = pager_.create_vmo(0, port_, next_base_, vmo->size_, &new_vmo)) != ZX_OK) {
+  zx_status_t status;
+  if ((status = pager_.create_vmo(0, port_, next_base_, vmo->size_, &new_vmo)) != ZX_OK) {
+    fprintf(stderr, "pager create_vmo failed with %s\n", zx_status_get_string(status));
     return false;
   }
 
   zx_info_vmar_t info;
   uint64_t a1, a2;
-  if (zx::vmar::root_self()->get_info(ZX_INFO_VMAR, &info, sizeof(info), &a1, &a2) != ZX_OK) {
+  if ((status = zx::vmar::root_self()->get_info(ZX_INFO_VMAR, &info, sizeof(info), &a1, &a2)) !=
+      ZX_OK) {
+    fprintf(stderr, "vmar get_info failed with %s\n", zx_status_get_string(status));
     return false;
   }
 
   zx_vaddr_t addr;
-  if ((s = zx::vmar::root_self()->map(vmo->base_addr_ - info.base, new_vmo, 0, vmo->size_,
-                                      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC_OVERWRITE,
-                                      &addr)) != ZX_OK) {
+  if ((status = zx::vmar::root_self()->map(
+           vmo->base_addr_ - info.base, new_vmo, 0, vmo->size_,
+           ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC_OVERWRITE, &addr)) != ZX_OK) {
+    fprintf(stderr, "vmar map failed with %s\n", zx_status_get_string(status));
     return false;
   }
   std::atomic_thread_fence(std::memory_order_seq_cst);
@@ -170,7 +199,14 @@ bool UserPager::ReplaceVmo(Vmo* vmo, zx::vmo* old_vmo) {
   return true;
 }
 
-bool UserPager::DetachVmo(Vmo* vmo) { return pager_.detach_vmo(vmo->vmo()) == ZX_OK; }
+bool UserPager::DetachVmo(Vmo* vmo) {
+  zx_status_t status;
+  if ((status = pager_.detach_vmo(vmo->vmo())) != ZX_OK) {
+    fprintf(stderr, "pager detach_vmo failed with %s\n", zx_status_get_string(status));
+    return false;
+  }
+  return true;
+}
 
 void UserPager::ReleaseVmo(Vmo* vmo) {
   zx::vmar::root_self()->unmap(vmo->base_addr_, vmo->size_);
@@ -264,7 +300,9 @@ bool UserPager::WaitForRequest(fbl::Function<bool(const zx_port_packet_t& packet
 bool UserPager::SupplyPages(Vmo* paged_vmo, uint64_t dest_offset, uint64_t length,
                             uint64_t src_offset) {
   zx::vmo vmo;
-  if (zx::vmo::create((length + src_offset) * ZX_PAGE_SIZE, 0, &vmo) != ZX_OK) {
+  zx_status_t status;
+  if ((status = zx::vmo::create((length + src_offset) * ZX_PAGE_SIZE, 0, &vmo)) != ZX_OK) {
+    fprintf(stderr, "vmo create failed with %s\n", zx_status_get_string(status));
     return false;
   }
 
@@ -273,7 +311,8 @@ bool UserPager::SupplyPages(Vmo* paged_vmo, uint64_t dest_offset, uint64_t lengt
     uint8_t data[ZX_PAGE_SIZE];
     paged_vmo->GenerateBufferContents(data, 1, dest_offset + cur);
 
-    if (vmo.write(data, (src_offset + cur) * ZX_PAGE_SIZE, ZX_PAGE_SIZE) != ZX_OK) {
+    if ((status = vmo.write(data, (src_offset + cur) * ZX_PAGE_SIZE, ZX_PAGE_SIZE)) != ZX_OK) {
+      fprintf(stderr, "vmo write failed with %s\n", zx_status_get_string(status));
       return false;
     }
 
@@ -289,6 +328,7 @@ bool UserPager::SupplyPages(Vmo* paged_vmo, uint64_t dest_offset, uint64_t lengt
   if ((status = pager_.supply_pages(paged_vmo->vmo_, dest_offset * ZX_PAGE_SIZE,
                                     length * ZX_PAGE_SIZE, src, src_offset * ZX_PAGE_SIZE)) !=
       ZX_OK) {
+    fprintf(stderr, "pager supply_pages failed with %s\n", zx_status_get_string(status));
     return false;
   }
   return true;
@@ -296,8 +336,10 @@ bool UserPager::SupplyPages(Vmo* paged_vmo, uint64_t dest_offset, uint64_t lengt
 
 bool UserPager::FailPages(Vmo* paged_vmo, uint64_t page_offset, uint64_t page_count,
                           zx_status_t error_status) {
-  if (pager_.op_range(ZX_PAGER_OP_FAIL, paged_vmo->vmo_, page_offset * ZX_PAGE_SIZE,
-                      page_count * ZX_PAGE_SIZE, error_status) != ZX_OK) {
+  zx_status_t status;
+  if ((status = pager_.op_range(ZX_PAGER_OP_FAIL, paged_vmo->vmo_, page_offset * ZX_PAGE_SIZE,
+                                page_count * ZX_PAGE_SIZE, error_status)) != ZX_OK) {
+    fprintf(stderr, "pager op_range failed with %s\n", zx_status_get_string(status));
     return false;
   }
   return true;
