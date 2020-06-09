@@ -159,10 +159,10 @@ static ACPI_STATUS ec_space_setup_handler(ACPI_HANDLE Region, UINT32 Function, v
   *ReturnContext = dev;
 
   if (Function == ACPI_REGION_ACTIVATE) {
-    xprintf("acpi-ec: Setting up EC region\n");
+    xprintf("acpi-ec: Setting up EC region");
     return AE_OK;
   } else if (Function == ACPI_REGION_DEACTIVATE) {
-    xprintf("acpi-ec: Tearing down EC region\n");
+    xprintf("acpi-ec: Tearing down EC region");
     return AE_OK;
   } else {
     return AE_SUPPORT;
@@ -265,11 +265,11 @@ static int acpi_ec_thread(void* arg) {
       if (event_code != 0) {
         char method[5] = {0};
         snprintf(method, sizeof(method), "_Q%02x", event_code);
-        xprintf("acpi-ec: Invoking method %s\n", method);
+        xprintf("acpi-ec: Invoking method %s", method);
         AcpiEvaluateObject(dev->acpi_handle, method, NULL, NULL);
-        xprintf("acpi-ec: Invoked method %s\n", method);
+        xprintf("acpi-ec: Invoked method %s", method);
       } else {
-        xprintf("acpi-ec: Spurious event?\n");
+        xprintf("acpi-ec: Spurious event?");
       }
 
       processed_evt = true;
@@ -282,7 +282,7 @@ static int acpi_ec_thread(void* arg) {
     }
 
     if (!processed_evt) {
-      xprintf("acpi-ec: Spurious wakeup, no evt: %#x\n", status);
+      xprintf("acpi-ec: Spurious wakeup, no evt: %#x", status);
     }
 
     AcpiReleaseGlobalLock(global_lock);
@@ -291,7 +291,7 @@ static int acpi_ec_thread(void* arg) {
 exiting_with_lock:
   AcpiReleaseGlobalLock(global_lock);
 exiting_without_lock:
-  xprintf("acpi-ec: thread terminated\n");
+  xprintf("acpi-ec: thread terminated");
   return 0;
 }
 
@@ -371,7 +371,7 @@ static ACPI_STATUS get_ec_ports_callback(ACPI_RESOURCE* Resource, void* Context)
   /* The third resource only exists on HW-Reduced platforms, which we don't
    * support at the moment. */
   if (ctx->resource_num == 2) {
-    xprintf("RESOURCE TYPE %d\n", Resource->Type);
+    xprintf("RESOURCE TYPE %d", Resource->Type);
     return AE_NOT_IMPLEMENTED;
   }
 
@@ -464,7 +464,7 @@ static zx_protocol_device_t acpi_ec_device_proto = [] {
 }();
 
 zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
-  xprintf("acpi-ec: init\n");
+  xprintf("acpi-ec: init");
 
   acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(calloc(1, sizeof(acpi_ec_device_t)));
   if (!dev) {
@@ -474,7 +474,7 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
 
   zx_status_t err = zx_event_create(0, &dev->interrupt_event);
   if (err != ZX_OK) {
-    xprintf("acpi-ec: Failed to create event: %d\n", err);
+    xprintf("acpi-ec: Failed to create event: %d", err);
     acpi_ec_release(dev);
     return err;
   }
@@ -483,13 +483,13 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
 
   ACPI_STATUS status = get_ec_gpe_info(acpi_handle, &dev->gpe_block, &dev->gpe);
   if (status != AE_OK) {
-    xprintf("acpi-ec: Failed to decode GPE info: %d\n", status);
+    xprintf("acpi-ec: Failed to decode GPE info: %d", status);
     goto acpi_error;
   }
 
   status = get_ec_ports(acpi_handle, &dev->data_port, &dev->cmd_port);
   if (status != AE_OK) {
-    xprintf("acpi-ec: Failed to decode comm info: %d\n", status);
+    xprintf("acpi-ec: Failed to decode comm info: %d", status);
     goto acpi_error;
   }
 
@@ -497,12 +497,12 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   status = AcpiInstallGpeHandler(dev->gpe_block, dev->gpe, ACPI_GPE_EDGE_TRIGGERED,
                                  raw_ec_event_gpe_handler, dev);
   if (status != AE_OK) {
-    xprintf("acpi-ec: Failed to install GPE %d: %x\n", dev->gpe, status);
+    xprintf("acpi-ec: Failed to install GPE %d: %x", dev->gpe, status);
     goto acpi_error;
   }
   status = AcpiEnableGpe(dev->gpe_block, dev->gpe);
   if (status != AE_OK) {
-    xprintf("acpi-ec: Failed to enable GPE %d: %x\n", dev->gpe, status);
+    xprintf("acpi-ec: Failed to enable GPE %d: %x", dev->gpe, status);
     AcpiRemoveGpeHandler(dev->gpe_block, dev->gpe, raw_ec_event_gpe_handler);
     goto acpi_error;
   }
@@ -512,7 +512,7 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
      it takes the ACPI global lock which is shared with SMM. */
   ret = thrd_create_with_name(&dev->evt_thread, acpi_ec_thread, dev, "acpi-ec-evt");
   if (ret != thrd_success) {
-    xprintf("acpi-ec: Failed to create thread\n");
+    xprintf("acpi-ec: Failed to create thread");
     acpi_ec_release(dev);
     return ZX_ERR_INTERNAL;
   }
@@ -521,7 +521,7 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_EC,
                                           ec_space_request_handler, ec_space_setup_handler, dev);
   if (status != AE_OK) {
-    xprintf("acpi-ec: Failed to install ec space handler\n");
+    xprintf("acpi-ec: Failed to install ec space handler");
     acpi_ec_release(dev);
     return acpi_to_zx_status(status);
   }
@@ -538,7 +538,7 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     status = device_add(parent, &args, &dev->zxdev);
   }
   if (status != ZX_OK) {
-    xprintf("acpi-ec: could not add device! err=%d\n", status);
+    xprintf("acpi-ec: could not add device! err=%d", status);
     acpi_ec_release(dev);
     return status;
   }
