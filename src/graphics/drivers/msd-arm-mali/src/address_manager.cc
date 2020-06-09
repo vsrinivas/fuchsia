@@ -5,6 +5,7 @@
 #include "address_manager.h"
 
 #include <chrono>
+#include <thread>
 
 #include "address_space.h"
 #include "msd_arm_connection.h"
@@ -49,11 +50,19 @@ bool AddressManager::AssignAddressSpace(MsdArmAtom* atom) {
   return mapping ? true : false;
 }
 
+void AddressManager::NotifySlotPotentiallyFree() {
+  std::lock_guard<std::mutex> lock(address_slot_lock_);
+  // This needs to be done after |address_slot_lock_| is acquired to ensure that there can't be a
+  // AllocateMappingForAddressSpace that's currently between checking expired mappings and waiting
+  // for a notify, which would cause it to miss a notification.
+  address_slot_free_.notify_one();
+}
+
 void AddressManager::AtomFinished(MsdArmAtom* atom) {
   if (!atom->address_slot_mapping())
     return;
   atom->set_address_slot_mapping(nullptr);
-  address_slot_free_.notify_one();
+  NotifySlotPotentiallyFree();
 }
 
 void AddressManager::ClearAddressMappings(bool force_expire) {
@@ -128,8 +137,8 @@ void AddressManager::FlushAddressMappingRange(AddressSpace* address_space, uint6
   // can be sure that the mapping will be expired after ReleaseSpaceMappings
   // acquires the hardware lock.
   mapping.reset();
-  address_slot_free_.notify_one();
   slot->lock.unlock();
+  NotifySlotPotentiallyFree();
 }
 
 void AddressManager::UnlockAddressSpace(AddressSpace* address_space) {
@@ -153,8 +162,8 @@ void AddressManager::UnlockAddressSpace(AddressSpace* address_space) {
   // can be sure that the mapping will be expired after ReleaseSpaceMappings
   // acquires the hardware lock.
   mapping.reset();
-  address_slot_free_.notify_one();
   slot->lock.unlock();
+  NotifySlotPotentiallyFree();
 }
 
 // Disable thread safety analysis because it doesn't understand unique_lock.
@@ -177,6 +186,11 @@ std::shared_ptr<AddressSlotMapping> AddressManager::AllocateMappingForAddressSpa
     for (size_t i = 0; i < address_slots_.size(); ++i) {
       if (address_slots_[i].mapping.expired())
         return AssignToSlot(connection, i);
+    }
+
+    if (increase_notify_race_window_) {
+      constexpr auto kRaceDelay = std::chrono::milliseconds(100);
+      std::this_thread::sleep_for(kRaceDelay);
     }
 
     // There are normally 8 hardware address slots but only 6 jobs can be running in hardware at

@@ -53,6 +53,8 @@ class AddressManager final : public AddressSpaceObserver {
   void set_acquire_slot_timeout_seconds(uint32_t timeout) {
     acquire_slot_timeout_seconds_ = timeout;
   }
+  // For testing only.
+  void set_increase_notify_race_window(bool set) { increase_notify_race_window_ = set; }
 
  private:
   // AddressSlots handle the mappings between AddressSpaces and the hardware
@@ -88,9 +90,14 @@ class AddressManager final : public AddressSpaceObserver {
       const AddressSpace* address_space) __TA_REQUIRES(address_slot_lock_);
   std::shared_ptr<AddressSlotMapping> AssignToSlot(std::shared_ptr<MsdArmConnection> connection,
                                                    uint32_t slot) __TA_REQUIRES(address_slot_lock_);
+  // Notify a waiting thread that a slot could be free. Should not be called with a hardware slot
+  // lock held.
+  void NotifySlotPotentiallyFree();
 
   Owner* owner_;
   uint32_t acquire_slot_timeout_seconds_ = 10;
+  // Add an extra sleep to make a race in address notification more likely.
+  bool increase_notify_race_window_ = false;
   std::mutex address_slot_lock_;
   __TA_GUARDED(address_slot_lock_) std::vector<AddressSlot> address_slots_;
   std::condition_variable address_slot_free_;

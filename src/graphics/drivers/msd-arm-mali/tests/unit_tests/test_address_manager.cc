@@ -137,6 +137,7 @@ TEST(AddressManager, ReuseSlot) {
   address_manager.set_acquire_slot_timeout_seconds(1);
   EXPECT_FALSE(address_manager.AssignAddressSpace(atoms.back().get()));
   address_manager.set_acquire_slot_timeout_seconds(10);
+  address_manager.set_increase_notify_race_window(true);
 
   auto future = std::async(std::launch::async, [&]() {
     // Sleep to try to ensure AssignAddressSpace is currently running.
