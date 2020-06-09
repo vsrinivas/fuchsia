@@ -14,6 +14,7 @@ source_set("address-descriptor") {
 
 source_set("options") {
   public = [ "options.h" ]
+  public_deps = [ "//src/storage/volume_image:volume-descriptor" ]
 }
 
 source_set("partition") {
@@ -26,20 +27,35 @@ source_set("partition") {
   ]
 }
 
+source_set("fvm-descriptor") {
+  sources = [ "fvm_descriptor.cc" ]
+  public = [ "fvm_descriptor.h" ]
+  public_deps = [
+    ":options",
+    ":partition",
+    "//src/storage/volume_image/utils:extent",
+    "//zircon/public/lib/fit",
+  ]
+  deps = [ "//zircon/system/ulib/fvm" ]
+}
+
 source_set("fvm-test") {
   testonly = true
   sources = [
     "address_descriptor_test.cc",
+    "fvm_descriptor_test.cc",
     "partition_test.cc",
   ]
   deps = [
     ":address-descriptor",
+    ":fvm-descriptor",
     ":partition",
     "//src/lib/json_parser",
     "//src/storage/volume_image/serialization:schema",
     "//src/storage/volume_image/utils:guid",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//zircon/system/ulib/fvm",
   ]
 }
 

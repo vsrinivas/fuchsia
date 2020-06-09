@@ -37,9 +37,9 @@ class Partition {
         address_(std::move(address_descriptor)),
         reader_(std::move(reader)) {}
   Partition(const Partition&) = delete;
-  Partition(Partition&&) = default;
+  Partition(Partition&&) noexcept = default;
   Partition& operator=(const Partition&) = delete;
-  Partition& operator=(Partition&&) = default;
+  Partition& operator=(Partition&&) noexcept = default;
   ~Partition() = default;
 
   // Returns the volume descriptor for this partition.
