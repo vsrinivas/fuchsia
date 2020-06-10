@@ -443,7 +443,7 @@ async fn test_down_close_race<E: Endpoint>(name: &str) -> Result {
         .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
         .context("failed to connect to netstack")?;
 
-    for _ in 0..100u64 {
+    for _ in 0..10u64 {
         let dev = sandbox
             .create_endpoint::<E, _>("ep")
             .await
@@ -528,7 +528,7 @@ async fn test_close_data_race<E: Endpoint>(name: &str) -> Result {
     // skip ARP resolution.
     const MCAST_ADDR: std::net::IpAddr = std_ip!(224.0.0.1);
 
-    for _ in 0..100u64 {
+    for _ in 0..10u64 {
         let dev = net
             .create_endpoint::<E, _>("ep")
             .await
