@@ -395,6 +395,22 @@ zx_status_t SyncClient::Write(size_t offset, size_t len, const zx::vmo& vmo, zx_
   return result.ok() ? result.value().status : result.status();
 }
 
+zx_status_t SyncClient::WriteBytesWithoutErase(size_t offset, size_t len, const zx::vmo& vmo,
+                                               zx_off_t vmo_offset) {
+  zx::vmo dup;
+  if (zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
+    return status;
+  }
+  skipblock::WriteBytesOperation operation = {
+      .vmo = std::move(dup),
+      .vmo_offset = vmo_offset,
+      .offset = offset,
+      .size = len,
+  };
+  auto result = skip_block_.WriteBytesWithoutErase(std::move(operation));
+  return result.ok() ? result.value().status : result.status();
+}
+
 zx_status_t SyncClient::InitializeReadMapper() {
   auto result = skip_block_.GetPartitionInfo();
   zx_status_t status = result.ok() ? result.value().status : result.status();
@@ -673,6 +689,14 @@ const uint8_t* SyncClientBuffered::GetCacheBuffer(PartitionType partition) {
     return nullptr;
   }
   return start;
+}
+
+zx_status_t SyncClientBuffered::UpdateLayout(const sysconfig_header& target_header) {
+  if (auto status = Flush(); status != ZX_OK) {
+    return status;
+  }
+
+  return client_.UpdateLayout(target_header);
 }
 
 // One example layout that supports abr wear-leveling.

@@ -364,6 +364,17 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
     return *reinterpret_cast<AbrData*>(buf);
   }
 
+  // Equivalence of GetAbr() in the context of abr wear-leveling.
+  // Since there can be multiple pages in abr sub-partition that may have valid abr data,
+  // argument |copy_index| is used to read a specific one.
+  AbrData GetAbrInWearLeveling(const sysconfig_header& header, size_t copy_index) {
+    auto* buf = reinterpret_cast<uint8_t*>(device_->mapper().start()) + (14 * kSkipBlockSize) +
+                header.abr_metadata.offset + copy_index * 4 * kKilobyte;
+    AbrData ret;
+    memcpy(&ret, buf, sizeof(ret));
+    return ret;
+  }
+
   using PaverServiceTest::ValidateWritten;
 
   // Checks that the device mapper contains |expected| at each byte in the given
@@ -782,7 +793,7 @@ TEST_F(PaverServiceSkipBlockTest, BootManagerBuffered) {
     ASSERT_OK(result->status);
   }
 
-  // haven't synced yet, storage shall stay the same.
+  // haven't flushed yet, storage shall stay the same.
   auto abr = GetAbr();
   ASSERT_BYTES_EQ(&abr, &abr_data, sizeof(abr));
 
@@ -908,6 +919,147 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigRecovery) {
   ASSERT_OK(sync_result.value().status);
 
   ValidateWrittenPages(14 * kPagesPerBlock + 96, 32);
+}
+
+TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutNotUpdated) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  // Enable write-caching + abr metadata wear-leveling
+  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
+  fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
+
+  // Active slot b
+  AbrData abr_data = kAbrData;
+  abr_data.slot_data[0].tries_remaining = 3;
+  abr_data.slot_data[0].successful_boot = 0;
+  abr_data.slot_data[0].priority = 0;
+  abr_data.slot_data[1].tries_remaining = 3;
+  abr_data.slot_data[1].successful_boot = 0;
+  abr_data.slot_data[1].priority = 1;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  // Layout will not be updated as A/B state does not meet requirement.
+  // (one successful slot + one unbootable slot)
+  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+
+  {
+    auto result = boot_manager_->QueryActiveConfiguration();
+    ASSERT_OK(result.status());
+    ASSERT_TRUE(result->result.is_response());
+    ASSERT_EQ(result->result.response().configuration, ::llcpp::fuchsia::paver::Configuration::B);
+  }
+
+  {
+    auto result = boot_manager_->SetActiveConfigurationHealthy();
+    ASSERT_OK(result.status());
+  }
+
+  {
+    // The query result will come from the cache as flushed is not called.
+    // Validate that it is correct.
+    auto result = boot_manager_->QueryActiveConfiguration();
+    ASSERT_OK(result.status());
+    ASSERT_EQ(result->result.response().configuration, paver::Configuration::B);
+  }
+
+  {
+    // Mark the old slot A as unbootable.
+    auto set_unbootable_result = boot_manager_->SetConfigurationUnbootable(paver::Configuration::A);
+    ASSERT_OK(set_unbootable_result.status());
+  }
+
+  // Haven't flushed yet. abr data in storage should stayed the same.
+  auto actual = GetAbr();
+  ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
+
+  {
+    auto result_sync = boot_manager_->Flush();
+    ASSERT_OK(result_sync.status());
+    ASSERT_OK(result_sync->status);
+  }
+
+  // Expected result: unbootable slot a, successful active slot b
+  abr_data.slot_data[0].tries_remaining = 0;
+  abr_data.slot_data[0].successful_boot = 0;
+  abr_data.slot_data[0].priority = 0;
+  abr_data.slot_data[1].tries_remaining = 0;
+  abr_data.slot_data[1].successful_boot = 1;
+  abr_data.slot_data[1].priority = 1;
+  ComputeCrc(&abr_data);
+
+  // Validate that new abr data is flushed to memory.
+  // Since layout is not updated, Abr metadata is expected to be at the traditional position
+  // (16th page).
+  actual = GetAbr();
+  ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
+}
+
+TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+  // Enable write-caching + abr metadata wear-leveling
+  fake_svc_.fake_boot_args().SetAstroSysConfigBufferedClient(true);
+  fake_svc_.fake_boot_args().SetAstroSysConfigAbrWearLeveling(true);
+
+  // Unbootable slot a, successful active slot b
+  AbrData abr_data = kAbrData;
+  abr_data.slot_data[0].tries_remaining = 0;
+  abr_data.slot_data[0].successful_boot = 0;
+  abr_data.slot_data[0].priority = 0;
+  abr_data.slot_data[1].tries_remaining = 0;
+  abr_data.slot_data[1].successful_boot = 1;
+  abr_data.slot_data[1].priority = 1;
+  ComputeCrc(&abr_data);
+  SetAbr(abr_data);
+
+  // Layout will be updated. Since A/B state is one successful + one unbootable
+  ASSERT_NO_FATAL_FAILURES(FindBootManager());
+
+  {
+    auto result = boot_manager_->QueryActiveConfiguration();
+    ASSERT_OK(result.status());
+    ASSERT_TRUE(result->result.is_response());
+    ASSERT_EQ(result->result.response().configuration, ::llcpp::fuchsia::paver::Configuration::B);
+  }
+
+  {
+    auto result = boot_manager_->SetConfigurationActive(paver::Configuration::A);
+    ASSERT_OK(result.status());
+  }
+
+  {
+    // The query result will come from the cache as we haven't flushed.
+    // Validate that it is correct.
+    auto result = boot_manager_->QueryActiveConfiguration();
+    ASSERT_OK(result.status());
+    ASSERT_EQ(result->result.response().configuration, paver::Configuration::A);
+  }
+
+  // Haven't flushed yet. abr data in storage should stayed the same.
+  // Since layout changed, use the updated layout to find abr.
+  auto header = sysconfig::SyncClientAbrWearLeveling::GetAbrWearLevelingSupportedLayout();
+  auto actual = GetAbrInWearLeveling(header, 0);
+  ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
+
+  {
+    auto result_sync = boot_manager_->Flush();
+    ASSERT_OK(result_sync.status());
+    ASSERT_OK(result_sync->status);
+  }
+
+  // Expected result: successful slot a, active slot b with max tries and priority.
+  abr_data.slot_data[0].tries_remaining = kAbrMaxTriesRemaining;
+  abr_data.slot_data[0].successful_boot = 0;
+  abr_data.slot_data[0].priority = kAbrMaxPriority;
+  abr_data.slot_data[1].tries_remaining = 0;
+  abr_data.slot_data[1].successful_boot = 1;
+  abr_data.slot_data[1].priority = 1;
+  ComputeCrc(&abr_data);
+
+  // Validate that new abr data is flushed to memory.
+  // The first page (page 0) in the abr sub-partition is occupied by the initial abr data.
+  // Thus, the new abr metadata is expected to be appended at the 2nd page (page 1).
+  actual = GetAbrInWearLeveling(header, 1);
+  ASSERT_BYTES_EQ(&abr_data, &actual, sizeof(abr_data));
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetBuffered) {

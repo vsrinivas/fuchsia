@@ -49,12 +49,9 @@ class __EXPORT SyncClient {
   // |vmo| must have a size greater than or equal to the partitions size + |vmo_offset|.
   zx_status_t WritePartition(PartitionType partition, const zx::vmo& vmo, zx_off_t vmo_offset);
 
-  // TODO(47505): The method is not implemented yet. Here we use normal write for test
-  // purpose. Update it once support for write-without-erase in SkipBlock service lands.
+  // Write pages without first erasing.
   zx_status_t WriteBytesWithoutErase(size_t offset, size_t len, const zx::vmo& vmo,
-                                     zx_off_t vmo_offset) {
-    return Write(offset, len, vmo, vmo_offset);
-  }
+                                     zx_off_t vmo_offset);
 
   // Provides read access for the partition specified. Always reads full partition.
   //
@@ -144,6 +141,8 @@ class SyncClientBuffered {
 
   SyncClientBuffered(SyncClientBuffered&&) = default;
   SyncClientBuffered& operator=(SyncClientBuffered&&) = default;
+
+  zx_status_t UpdateLayout(const sysconfig_header& target_header);
 
  protected:
   enum CacheBitMask {

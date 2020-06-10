@@ -40,6 +40,7 @@
 #include <soc/aml-common/aml-guid.h>
 #include <zxcrypt/volume.h>
 
+#include "abr-client.h"
 #include "partition-client.h"
 #include "pave-logging.h"
 #include "validation.h"
@@ -1229,7 +1230,7 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch ar
                                                      fidl::StringView("/boot/driver/gpt.so"));
   }
 
-  auto partitioner =  WrapUnique(new CrosDevicePartitioner(std::move(gpt_partitioner)));
+  auto partitioner = WrapUnique(new CrosDevicePartitioner(std::move(gpt_partitioner)));
   if (initialize_partition_tables) {
     status = partitioner->InitPartitionTables();
     if (status != ZX_OK) {
@@ -1993,6 +1994,49 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
   return result2.ok() ? result2.value().status : result2.status();
 }
 
+bool AstroPartitioner::CanSafelyUpdateLayout(std::shared_ptr<Context> context) {
+  // Condition: one successful slot + one unbootable slot
+  // Once the layout is updated, it is dangerous to roll back to an older version of system
+  // that doesn't have the new logic. Therefore, here we require the A/B state to be in the
+  // above state, where it is impossible to roll back to older version.
+  std::unique_ptr<abr::Client> abr_client;
+  std::unique_ptr<PartitionClient> partition_client =
+      std::make_unique<AstroSysconfigPartitionClientBuffered>(
+          context, sysconfig::SyncClient::PartitionType::kABRMetadata);
+
+  if (auto status = abr::AbrPartitionClient::Create(std::move(partition_client), &abr_client);
+      status != ZX_OK) {
+    LOG("Failed to create abr-client. Conservatively consider not safe to update layout. %s\n",
+        zx_status_get_string(status));
+    return false;
+  }
+
+  AbrSlotInfo slot_a, slot_b;
+  if (auto status = abr_client->GetSlotInfo(kAbrSlotIndexA, &slot_a); status != ZX_OK) {
+    LOG("Failed to get info for slot A. Conservatively consider not safe to update layout. %s\n",
+        zx_status_get_string(status));
+    return false;
+  }
+
+  if (auto status = abr_client->GetSlotInfo(kAbrSlotIndexB, &slot_b); status != ZX_OK) {
+    LOG("Failed to get info for slot B. Conservatively consider not safe to update layout. %s\n",
+        zx_status_get_string(status));
+    return false;
+  }
+
+  if (!slot_a.is_marked_successful && !slot_b.is_marked_successful) {
+    LOG("No slot is marked successful. Not updating layout.\n")
+    return false;
+  }
+
+  if (slot_a.is_bootable && slot_b.is_bootable) {
+    LOG("The other slot is not marked unbootable. Not updating layout.\n")
+    return false;
+  }
+
+  return true;
+}
+
 zx_status_t AstroPartitioner::InitializeContext(const fbl::unique_fd& devfs_root,
                                                 AbrWearLevelingOption abr_wear_leveling_opt,
                                                 std::shared_ptr<Context> context) {
@@ -2047,6 +2091,18 @@ zx_status_t AstroPartitioner::Initialize(fbl::unique_fd devfs_root, const zx::ch
     if (auto status = InitializeContext(devfs_root, option, context); status != ZX_OK) {
       ERROR("Failed to initialize context. %s\n", zx_status_get_string(status));
       return status;
+    }
+
+    // CanSafelyUpdateLayout internally acquires the context.lock_. Thus we don't put it in
+    // context.Call() or InitializeContext to avoid dead lock.
+    if (option == AbrWearLevelingOption::ON && CanSafelyUpdateLayout(context)) {
+      if (auto status = context->Call<AstroPartitionerContext>([](auto* ctx) {
+            return ctx->client_->UpdateLayout(
+                ::sysconfig::SyncClientAbrWearLeveling::GetAbrWearLevelingSupportedLayout());
+          });
+          status != ZX_OK) {
+        return status;
+      }
     }
   }
 

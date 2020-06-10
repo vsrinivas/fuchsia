@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_PAVER_DEVICE_PARTITIONER_H_
-#define ZIRCON_SYSTEM_ULIB_PAVER_DEVICE_PARTITIONER_H_
+#ifndef SRC_STORAGE_LIB_PAVER_DEVICE_PARTITIONER_H_
+#define SRC_STORAGE_LIB_PAVER_DEVICE_PARTITIONER_H_
 
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/hardware/block/llcpp/fidl.h>
@@ -395,6 +395,8 @@ class AstroPartitioner : public DevicePartitioner {
                                        AbrWearLevelingOption abr_wear_leveling_opt,
                                        std::shared_ptr<Context> context);
 
+  static bool CanSafelyUpdateLayout(std::shared_ptr<Context> context);
+
   std::unique_ptr<SkipBlockDevicePartitioner> skip_block_;
 
   std::shared_ptr<Context> context_;
@@ -472,4 +474,4 @@ class SherlockPartitioner : public DevicePartitioner {
 
 }  // namespace paver
 
-#endif  // ZIRCON_SYSTEM_ULIB_PAVER_DEVICE_PARTITIONER_H_
+#endif  // SRC_STORAGE_LIB_PAVER_DEVICE_PARTITIONER_H_
