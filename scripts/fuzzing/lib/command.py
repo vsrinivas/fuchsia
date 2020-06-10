@@ -5,19 +5,16 @@
 
 import sys
 
-from factory import Factory
 from fuzzer import Fuzzer
 
 # This file contains the top-level implementations for each of the subcommands
-# for `fx fuzz`.
+# for "fx fuzz".
 
 
 def list_fuzzers(args, factory):
-    """Implementation of `fx fuzz list`."""
-    if not factory:
-        factory = Factory()
+    """Implementation of "fx fuzz list"."""
     host = factory.create_host()
-    fuzzers = sorted(host.fuzzers(args.name))
+    fuzzers = host.fuzzers(args.name)
     if len(fuzzers) == 0:
         factory.cli.echo('No matching fuzzers.')
     else:
@@ -26,36 +23,23 @@ def list_fuzzers(args, factory):
             factory.cli.echo('  {}/{}'.format(package, executable))
 
 
-def _monitor_cmd(fuzzer):
-    """Command line to invoke fuzzer.monitor()."""
-    cmd = ['python', sys.argv[0], '--monitor']
-    if fuzzer.output:
-        cmd += ['--output', fuzzer.output]
-    return cmd + [str(fuzzer)]
-
-
 def start_fuzzer(args, factory):
-    """Implementation of `fx fuzz start`."""
-    if not factory:
-        factory = Factory()
+    """Implementation of "fx fuzz start"."""
     fuzzer = factory.create_fuzzer(args)
-    if fuzzer.libfuzzer_inputs:
-        factory.cli.error(
-            'Passing corpus arguments to libFuzzer is unsupported',
-            'You can run specific inputs with "fx fuzz repro".',
-            'You can add elements to a seed corpus in GN.',
-            'You can also analyze a corpus using `fx fuzz analyze`.')
     if not args.monitor:
         factory.cli.echo(
-            ' Starting {}.'.format(fuzzer),
-            ' Outputs will be written to: {}'.format(fuzzer.output))
+            'Starting {}.'.format(fuzzer),
+            'Outputs will be written to: {}'.format(fuzzer.output))
         if not args.foreground:
             factory.cli.echo(
-                'Check status with `fx fuzz check {}`.'.format(fuzzer),
-                'Stop manually with `fx fuzz stop {}`.'.format(fuzzer))
+                'Check status with "fx fuzz check {}".'.format(fuzzer),
+                'Stop manually with "fx fuzz stop {}".'.format(fuzzer))
         fuzzer.start()
         if not args.foreground:
-            cmd = _monitor_cmd(fuzzer)
+            cmd = ['python', sys.argv[0], 'start', '--monitor']
+            if fuzzer.output:
+                cmd += ['--output', fuzzer.output]
+            cmd.append(str(fuzzer))
             fuzzer.device.host.create_process(cmd).popen()
     else:
         fuzzer.monitor()
@@ -65,9 +49,7 @@ def start_fuzzer(args, factory):
 
 
 def check_fuzzer(args, factory):
-    """Implementation of `fx fuzz check`."""
-    if not factory:
-        factory = Factory()
+    """Implementation of "fx fuzz check"."""
     device = factory.create_device()
     status = None
     for package, executable in device.host.fuzzers(args.name):
@@ -91,9 +73,7 @@ def check_fuzzer(args, factory):
 
 
 def stop_fuzzer(args, factory):
-    """Implementation of `fx fuzz stop`."""
-    if not factory:
-        factory = Factory()
+    """Implementation of "fx fuzz stop"."""
     fuzzer = factory.create_fuzzer(args)
     if fuzzer.is_running():
         factory.cli.echo('Stopping {}.'.format(fuzzer))
@@ -103,11 +83,6 @@ def stop_fuzzer(args, factory):
 
 
 def repro_units(args, factory):
-    """Implementation of `fx fuzz repro`."""
-    if not factory:
-        factory = Factory()
+    """Implementation of "fx fuzz repro"."""
     fuzzer = factory.create_fuzzer(args)
-    if fuzzer.libfuzzer_inputs:
-        fuzzer.repro()
-    else:
-        factory.cli.error('No artifacts provided.', 'Try `fx fuzz help`.')
+    fuzzer.repro()

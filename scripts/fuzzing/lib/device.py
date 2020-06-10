@@ -46,7 +46,7 @@ class Device(object):
 
     @property
     def addr(self):
-        """The device's IPv6 address."""
+        """IPv6 address of the device."""
         return self._addr
 
     @property
@@ -152,10 +152,6 @@ class Device(object):
 
         return p
 
-    def _cs_cmd(self):
-        """Returns the command to list running components on a device."""
-        return ['cs']
-
     def _cs_url(self, package, executable):
         """Returns the Fuchsia URL for a packaged executable."""
         return (
@@ -185,7 +181,7 @@ class Device(object):
         """
         if self._pids == None or refresh:
             self._pids = {}
-            out = self.ssh(self._cs_cmd()).check_output()
+            out = self.ssh(['cs']).check_output()
             pat = re.compile(
                 r'  (?P<executable>.*)\.cmx\[(?P<pid>\d+)\]: ' +
                 r'fuchsia-pkg://fuchsia.com/(?P<package>.*)#meta/(?P=executable).cmx'
@@ -200,15 +196,11 @@ class Device(object):
                 self._pids[nametuple] = pid
         return self._pids.get((package, executable), -1)
 
-    def _ls_cmd(self, path):
-        """Returns a command to list a path on device."""
-        return ['ls', '-l', path]
-
     def ls(self, path):
         """Returns a map of file names to sizes for the given path."""
         results = {}
         try:
-            out = self.ssh(self._ls_cmd(path)).check_output()
+            out = self.ssh(['ls', '-l', path]).check_output()
             for line in str(out).split('\n'):
                 # Line ~= '-rw-r--r-- 1 0 0 8192 Mar 18 22:02 some-name'
                 parts = line.split()
@@ -280,7 +272,8 @@ class Device(object):
         """Copies `host_src` on the host to `data_dst` on the target."""
         self.ssh(['mkdir', '-p', data_dst]).check_call()
         srcs = self.host.glob(host_src)
-        if len(srcs) == 0:
+        if not srcs:
             return
         cmd = self._scp_cmd(srcs + [self._rpath(data_dst)])
         self.host.create_process(cmd).check_call()
+        return srcs

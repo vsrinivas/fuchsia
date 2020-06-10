@@ -15,39 +15,59 @@ from process_fake import FakeProcess
 
 
 class FakeHost(Host):
+    """Represents a fake host with fake paths and processes.
+
+       This object can be used to fake the existence of files. It also fakes the
+       behavior of subprocesses. Tests can preset responses and even failures
+       for the FakeProcesses it returns.
+
+       Attributes:
+         pathnames:     List of paths whose existence is faked.
+         responses:     Maps commands to responses.
+         failures:      Maps commands to number of times the command will fail.
+         history:       List of commands whose execution has been faked.
+    """
 
     def __init__(self, cli=None, autoconfigure=True):
         if not cli:
             cli = FakeCLI()
-        ########
-        # Variables specific to FakeHost
-
-        # Set of paths whose existence is faked.
         fuchsia_dir = 'fuchsia_dir'
-        self.pathnames = [fuchsia_dir]
-
-        # Maps commands to responses.
-        self.responses = {}
-
-        # Response to return if command not found in self.responses.
-        self.default_response = ''
-
-        #  Maps commands to number of times the command should fail.
-        self.failures = {}
-
-        # List of commands whose execution has been faked.
-        self.history = []
-
-        ########
-        # Initialize superclass and set defaults
         super(FakeHost, self).__init__(cli, fuchsia_dir)
         self._platform = 'fake'
         self._fuzzers = []
+        self._pathnames = [fuchsia_dir]
+        self._responses = {}
+        self._failures = {}
+        self._history = []
         if autoconfigure:
             build_dir = 'build_dir'
             self.add_fake_pathnames(build_dir)
             self.configure(build_dir)
             self.add_fake_fuzzers()
+
+    @property
+    def pathnames(self):
+        """List of paths whose existence is faked."""
+        return self._pathnames
+
+    @pathnames.setter
+    def pathnames(self, pathnames):
+        self._pathnames = pathnames
+
+    @property
+    def responses(self):
+        """Maps commands to responses."""
+        return self._responses
+
+    @property
+    def failures(self):
+        """Maps commands to number of times the command will fail."""
+        return self._failures
+
+    @property
+    def history(self):
+        """List of commands whose execution has been faked."""
+        return self._history
 
     def add_fake_pathnames(self, build_dir):
         """Add additional default fake paths."""
@@ -115,14 +135,8 @@ class FakeHost(Host):
             raise subprocess.CalledProcessError(1, joined_args, None)
         if joined_args in self.responses:
             p.response = '\n'.join(self.responses[joined_args]) + '\n'
-        else:
-            p.response = self.default_response
         return p
 
     def as_input(self, line):
         """Returns history pattern for standard input."""
-        return ' < ' + line
-
-    def with_cwd(self, line, cwd):
-        """Returns history pattern for current working directory."""
-        return 'CWD={} {}'.format(cwd, line)
+        return '<<' + line

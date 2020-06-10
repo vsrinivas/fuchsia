@@ -16,9 +16,16 @@ from lib.host import Host
 
 from cli_fake import FakeCLI
 from host_fake import FakeHost
+from cli_fake import FakeCLI
 
 
-class TestHost(unittest.TestCase):
+class HostTestCase(unittest.TestCase):
+
+    def assertRan(self, host, cmd):
+        self.assertIn(' '.join(cmd), host.history)
+
+
+class TestHost(HostTestCase):
 
     # Unit tests
 
@@ -192,7 +199,7 @@ class TestHost(unittest.TestCase):
     def test_killall(self):
         host = FakeHost()
         host.killall('fake_tool')
-        self.assertIn('killall fake_tool', host.history)
+        self.assertRan(host, ['killall', 'fake_tool'])
 
     # Other routines
 
@@ -210,7 +217,11 @@ class TestHost(unittest.TestCase):
         device_name = 'test_find_device'
         addrs = ['::1', '::2']
 
-        cmd = ' '.join(host._find_device_cmd(device_name))
+        cmd = [
+            host.fxpath('.jiri_root', 'bin', 'fx'), 'device-finder', 'resolve',
+            '-device-limit', '1', device_name
+        ]
+        cmd = ' '.join(cmd)
         host.responses[cmd] = addrs[:1]
         self.assertEqual(host.find_device(device_name=device_name), addrs[0])
 
@@ -222,12 +233,23 @@ class TestHost(unittest.TestCase):
         # No results from `fx device-finder list`
         with self.assertRaises(SystemExit):
             host.find_device()
+        self.assertEqual(
+            host.cli.log, [
+                'ERROR: Unable to find device.',
+                '       Try "fx set-device".',
+            ])
 
         # Multiple results from `fx device-finder list`
-        cmd = ' '.join(host._find_device_cmd())
+        cmd = [host.fxpath('.jiri_root', 'bin', 'fx'), 'device-finder', 'list']
+        cmd = ' '.join(cmd)
         host.responses[cmd] = addrs
         with self.assertRaises(SystemExit):
             host.find_device()
+        self.assertEqual(
+            host.cli.log, [
+                'ERROR: Multiple devices found.',
+                '       Try "fx set-device".',
+            ])
 
         host.responses[cmd] = addrs[:1]
         self.assertEqual(host.find_device(), addrs[0])
@@ -239,35 +261,24 @@ class TestHost(unittest.TestCase):
             'another line',
             'yet another line',
         ]
-        cmd = ' '.join(
-            [
-                host.symbolizer_exec,
-                '-llvm-symbolizer',
-                host.llvm_symbolizer,
-            ])
-        cmd = ' -build-id-dir '.join([cmd] + host.build_id_dirs)
-        host.responses[cmd] = [
-            '[000001.234567][123][456][klog] INFO: Symbolized line 1',
-            '[000001.234568][123][456][klog] INFO: Symbolized line 2',
-            '[000001.234569][123][456][klog] INFO: Symbolized line 3',
+        cmd = [host.symbolizer_exec, '-llvm-symbolizer', host.llvm_symbolizer]
+        for build_id_dir in host.build_id_dirs:
+            cmd += ['-build-id-dir', build_id_dir]
+        host.responses[' '.join(cmd)] = [
+            "[000001.234567][123][456][klog] INFO: Symbolized line 1",
+            "[000001.234568][123][456][klog] INFO: Symbolized line 2",
+            "[000001.234569][123][456][klog] INFO: Symbolized line 3",
         ]
         symbolized = host.symbolize('\n'.join(stacktrace))
-        self.assertIn(cmd, host.history)
+        self.assertRan(host, cmd)
         for line in stacktrace:
-            self.assertIn(host.as_input(line), host.history)
+            self.assertRan(host, [host.as_input(line)])
         self.assertEqual(
             symbolized.strip().split('\n'), [
                 'Symbolized line 1',
                 'Symbolized line 2',
                 'Symbolized line 3',
             ])
-
-    def test_snapshot(self):
-        host = FakeHost()
-        cmd = ' '.join(['git', 'rev-parse', 'HEAD'])
-        line = host.snapshot()
-        self.assertIn(
-            host.with_cwd(cmd, host.fxpath('integration')), host.history)
 
 
 if __name__ == '__main__':

@@ -21,8 +21,13 @@ class Host(object):
     paths, as well as details about the host architecture and platform.
 
     Attributes:
-      fuzzers:   The fuzzer binaries available in the current Fuchsia image
-      build_dir: The build output directory, if present.
+      cli:              The associated CommandLineInterface object.
+      fuchsia_dir:      Path to the Fuchsia source tree.
+      build_dir:        Path to the Fuchsia build output.
+      zxtools:          Path to the Zircon tools directory.
+      symbolizer_exec:  Path to the Fuchsia symbolizer executable.
+      llvm_symbolizer:  Path to the LLVM/Clang symbolizer library.
+      build_id_dirs:    List of paths to symbolizer debug symbols.
   """
 
     # Convenience file descriptor for silencing subprocess output
@@ -48,31 +53,11 @@ class Host(object):
             raise RuntimeError('Fuchsia source tree location not set.')
         return self._fuchsia_dir
 
-    @fuchsia_dir.setter
-    def fuchsia_dir(self, fuchsia_dir):
-        if not self.isdir(fuchsia_dir):
-            raise ValueError('Invalid FUCHSIA_DIR: {}'.format(fuchsia_dir))
-        self._fuchsia_dir = fuchsia_dir
-
     @property
     def build_dir(self):
         if not self._build_dir:
             raise RuntimeError('Build directory not set')
         return self._build_dir
-
-    @property
-    def build_id_dirs(self):
-        if not self._build_id_dirs:
-            raise RuntimeError('Build ID directories not set.')
-        return self._build_id_dirs
-
-    @build_id_dirs.setter
-    def build_id_dirs(self, build_id_dirs):
-        for build_id_dir in build_id_dirs:
-            if not self.isdir(build_id_dir):
-                raise ValueError(
-                    'Invalid build ID directory: {}'.format(build_id_dir))
-        self._build_id_dirs = build_id_dirs
 
     @property
     def symbolizer_exec(self):
@@ -99,6 +84,20 @@ class Host(object):
             raise ValueError(
                 'Invalid LLVM symbolizer: {}'.format(llvm_symbolizer))
         self._llvm_symbolizer = llvm_symbolizer
+
+    @property
+    def build_id_dirs(self):
+        if not self._build_id_dirs:
+            raise RuntimeError('Build ID directories not set.')
+        return self._build_id_dirs
+
+    @build_id_dirs.setter
+    def build_id_dirs(self, build_id_dirs):
+        for build_id_dir in build_id_dirs:
+            if not self.isdir(build_id_dir):
+                raise ValueError(
+                    'Invalid build ID directory: {}'.format(build_id_dir))
+        self._build_id_dirs = build_id_dirs
 
     # Initialization routines
 
@@ -147,15 +146,16 @@ class Host(object):
         if len(names) == 2 and (names[0], names[1]) in self._fuzzers:
             return [(names[0], names[1])]
         if len(names) == 1:
-            return list(
-                set(self.fuzzers('/' + name)) | set(self.fuzzers(name + '/')))
+            as_package = set(self.fuzzers(name + '/'))
+            as_executable = set(self.fuzzers('/' + name))
+            return sorted(list(as_package | as_executable))
         elif len(names) != 2:
             raise ValueError('Malformed fuzzer name: ' + name)
         filtered = []
         for package, executable in self._fuzzers:
             if names[0] in package and names[1] in executable:
                 filtered.append((package, executable))
-        return filtered
+        return sorted(filtered)
 
     # Filesystem routines.
     # These can be overriden during testing to remove dependencies on real files
@@ -209,33 +209,23 @@ class Host(object):
             joined = os.path.join(self.fuchsia_dir, joined)
         return joined
 
-    def _find_device_cmd(self, device_name=None):
-        cmd = [self.fxpath('.jiri_root', 'bin', 'fx'), 'device-finder']
-        if device_name:
-            cmd += ['resolve', '-device-limit', '1', device_name]
-        else:
-            cmd += ['list']
-        return cmd
-
     def find_device(self, device_name=None, device_file=None):
         """Returns the IPv6 address for a device."""
         assert (not device_name or not device_file)
         if not device_name and device_file:
             device_name = device_file.read().strip()
-        cmd = self._find_device_cmd(device_name)
+        cmd = [self.fxpath('.jiri_root', 'bin', 'fx'), 'device-finder']
+        if device_name:
+            cmd += ['resolve', '-device-limit', '1', device_name]
+        else:
+            cmd += ['list']
         addrs = self.create_process(cmd).check_output().strip()
         if not addrs:
-            self.cli.error('Unable to find device.', 'Try `fx set-device`.')
+            self.cli.error('Unable to find device.', 'Try "fx set-device".')
         addrs = addrs.split('\n')
         if len(addrs) != 1:
-            self.cli.error('Multiple devices found', 'Try `fx set-device`.')
+            self.cli.error('Multiple devices found.', 'Try "fx set-device".')
         return addrs[0]
-
-    def _symbolizer_cmd(self):
-        cmd = [self.symbolizer_exec, '-llvm-symbolizer', self.llvm_symbolizer]
-        for build_id_dir in self.build_id_dirs:
-            cmd += ['-build-id-dir', build_id_dir]
-        return cmd
 
     def symbolize(self, raw):
         """Symbolizes backtraces in a log file using the current build.
@@ -246,7 +236,10 @@ class Host(object):
         Returns:
             Bytes representing symbolized lines.
         """
-        p = self.create_process(self._symbolizer_cmd())
+        cmd = [self.symbolizer_exec, '-llvm-symbolizer', self.llvm_symbolizer]
+        for build_id_dir in self.build_id_dirs:
+            cmd += ['-build-id-dir', build_id_dir]
+        p = self.create_process(cmd)
         p.stdin = subprocess.PIPE
         p.stdout = subprocess.PIPE
         proc = p.popen()
@@ -254,9 +247,3 @@ class Host(object):
         if proc.returncode != 0:
             out = ''
         return re.sub(r'[0-9\[\]\.]*\[klog\] INFO: ', '', out)
-
-    def snapshot(self):
-        integration = self.fxpath('integration')
-        p = self.create_process(
-            ['git', 'rev-parse', 'HEAD'], stderr=Host.DEVNULL, cwd=integration)
-        return p.check_output().strip()

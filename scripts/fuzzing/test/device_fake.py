@@ -15,18 +15,20 @@ from host_fake import FakeHost
 
 
 class FakeDevice(Device):
+    """Fake device that uses a fake host and fake PIDs."""
 
     def __init__(self, host=None, autoconfigure=True):
         if not host:
             host = FakeHost()
-        self._pid = 10000
         super(FakeDevice, self).__init__(host, '::1')
+        # Arbitrary starting PID number
+        self._pid = 10000
         if autoconfigure:
             self.add_fake_pathnames()
             self.configure()
 
     def add_fake_pathnames(self):
-        """Makes the test claim a pathname exits."""
+        """Adds the fake paths for this object to the fake host."""
         host = self.host
         host.pathnames.append(
             host.fxpath(host.build_dir, 'ssh-keys', 'ssh_config'))
@@ -42,24 +44,23 @@ class FakeDevice(Device):
     def clear_ssh_response(self, args):
         """Clears the output for running an SSH command."""
         cmd_str = ' '.join(self._ssh_cmd(args))
-        del self.host.responses[cmd_str]
+        if cmd_str in self.host.responses:
+            del self.host.responses[cmd_str]
 
-    def add_fake_pid(self, package, executable):
-        """Makes 'cs' report the package executable as running."""
+    def add_fake_pid(self, package, executable, refresh=True):
+        """Marks a packaged executable as running on device."""
         self._pid += 1
-        cmd = self._cs_cmd()
-        response = [
-            '  {}.cmx[{}]: fuchsia-pkg://fuchsia.com/{}#meta/{}.cmx'.format(
-                executable, self._pid, package, executable)
-        ]
-
-        # Force refresh
-        self._pids = None
-        self.add_ssh_response(cmd, response)
-
+        self.add_ssh_response(
+            ['cs'], [
+                '  {}.cmx[{}]: fuchsia-pkg://fuchsia.com/{}#meta/{}.cmx'.format(
+                    executable, self._pid, package, executable)
+            ])
+        if refresh:
+            self._pids = None
         return self._pid
 
-    def clear_fake_pids(self):
-        """Makes 'cs' report the package executable as stopped."""
-        self._pids = None
-        self.clear_ssh_response(self._cs_cmd())
+    def clear_fake_pids(self, refresh=True):
+        """Marks all executables as stopped on device."""
+        self.clear_ssh_response(['cs'])
+        if refresh:
+            self._pids = None

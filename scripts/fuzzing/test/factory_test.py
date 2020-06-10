@@ -9,7 +9,6 @@ import tempfile
 import unittest
 
 import test_env
-from lib.args import ArgParser
 from lib.factory import Factory
 
 from cli_fake import FakeCLI
@@ -27,16 +26,18 @@ class TestFactory(unittest.TestCase):
         with self.assertRaises(SystemExit):
             host = factory.create_host(fuchsia_dir=None)
         self.assertEqual(
-            factory.cli.log,
-            ['FUCHSIA_DIR not set.', 'Have you sourced "scripts/fx-env.sh"?'])
+            factory.cli.log, [
+                'ERROR: FUCHSIA_DIR not set.',
+                '       Have you sourced "scripts/fx-env.sh"?'
+            ])
 
         # Use a non-existent directory to simulate an unconfigured $FUCHSIA_DIR
         with self.assertRaises(SystemExit):
             host = factory.create_host(fuchsia_dir='fuchsia_dir')
         self.assertEqual(
             factory.cli.log, [
-                'Initialization failure.',
-                'Have you run `fx set ... --fuzz-with <sanitizer>`?',
+                'ERROR: Initialization failure.',
+                '       Have you run "fx set ... --fuzz-with <sanitizer>"?',
             ])
 
         # Use the "real" $FUCHSIA_DIR
@@ -52,8 +53,8 @@ class TestFactory(unittest.TestCase):
             device = factory.create_device(host=host)
         self.assertEqual(
             factory.cli.log, [
-                'Unable to find device.',
-                'Try `fx set-device`.',
+                'ERROR: Unable to find device.',
+                '       Try "fx set-device".',
             ])
 
         # Use a temporary directory to simulate a default.device file.
@@ -75,7 +76,12 @@ class TestFactory(unittest.TestCase):
                 opened.write(device_name + '\n')
 
             device_addr = '::1'
-            cmd = ' '.join(host._find_device_cmd(device_name))
+
+            cmd = [
+                host.fxpath('.jiri_root', 'bin', 'fx'), 'device-finder',
+                'resolve', '-device-limit', '1', device_name
+            ]
+            cmd = ' '.join(cmd)
             host.responses[cmd] = [device_addr]
 
             device = factory.create_device(host=host)
@@ -84,28 +90,30 @@ class TestFactory(unittest.TestCase):
             shutil.rmtree(tmpdir)
 
     def test_create_fuzzer(self):
-        parser = ArgParser('test_create_fuzzer')
         factory = Factory(cli=FakeCLI())
+        parser = factory.create_parser()
+
         device = FakeDevice()
+        device.host.pathnames += [
+            'fuchsia_dir/local/fake-package2_fake-target1',
+            'fuchsia_dir/local/fake-package2_fake-target11',
+            'output',
+        ]
 
         # No match
         with self.assertRaises(SystemExit):
-            fuzzer = factory.create_fuzzer(
-                parser.parse([
-                    'no/match',
-                ]), device=device)
+            args = parser.parse_args(['check', 'no/match'])
+            fuzzer = factory.create_fuzzer(args, device=device)
         self.assertEqual(
             factory.cli.log, [
-                'No matching fuzzers found.',
-                'Try `fx fuzz list`.',
+                'ERROR: No matching fuzzers found.',
+                '       Try "fx fuzz list".',
             ])
 
         # Multiple matches
         factory.cli.selection = 1
-        fuzzer = factory.create_fuzzer(
-            parser.parse([
-                '2/1',
-            ]), device=device)
+        args = parser.parse_args(['check', '2/1'])
+        fuzzer = factory.create_fuzzer(args, device=device)
         self.assertEqual(
             factory.cli.log, [
                 'More than one match found.',
@@ -115,32 +123,28 @@ class TestFactory(unittest.TestCase):
         self.assertEqual(fuzzer.executable, 'fake-target1')
 
         # Exact match
-        fuzzer = factory.create_fuzzer(
-            parser.parse([
-                '2/11',
-            ]), device=device)
+        args = parser.parse_args(['check', '2/11'])
+        fuzzer = factory.create_fuzzer(args, device=device)
         self.assertEqual(fuzzer.package, 'fake-package2')
         self.assertEqual(fuzzer.executable, 'fake-target11')
 
         # Fuzzer properties get set by args
         device.host.pathnames.append('output')
-        fuzzer = factory.create_fuzzer(
-            parser.parse(
-                [
-                    '--debug',
-                    '--foreground',
-                    '--monitor',
-                    '--output',
-                    'output',
-                    '2/11',
-                    '-output=foo',
-                    'input1',
-                    'input2',
-                    '--',
-                    'sub1',
-                    'sub2',
-                ]),
-            device=device)
+        args = parser.parse_args(
+            [
+                'start',
+                '--debug',
+                '--foreground',
+                '--monitor',
+                '--output',
+                'output',
+                '2/11',
+                '-output=foo',
+                '--',
+                'sub1',
+                'sub2',
+            ])
+        fuzzer = factory.create_fuzzer(args, device=device)
         self.assertEqual(fuzzer.package, 'fake-package2')
         self.assertEqual(fuzzer.executable, 'fake-target11')
         self.assertTrue(fuzzer.debug)
@@ -148,7 +152,6 @@ class TestFactory(unittest.TestCase):
         self.assertTrue(fuzzer.monitor)
         self.assertEqual(fuzzer.output, 'output')
         self.assertEqual(fuzzer.libfuzzer_opts, {'output': 'foo'})
-        self.assertEqual(fuzzer.libfuzzer_inputs, ['input1', 'input2'])
         self.assertEqual(fuzzer.subprocess_args, ['sub1', 'sub2'])
 
 

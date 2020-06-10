@@ -21,8 +21,6 @@ class FakeProcess(Process):
 
     def popen(self):
         line = ' '.join(self.args)
-        if self.cwd:
-            line = self.host.with_cwd(line, self.cwd)
         self.host.history.append(line)
         return FakePopen(self.host, self.response)
 
@@ -45,10 +43,7 @@ class FakePopen(object):
         self.host = host
         self.returncode = 0
         self.stderr = FakePipe()
-        if response:
-            self.response = response
-        else:
-            self.response = ''
+        self.response = response
 
     def communicate(self, inputs=None):
         if inputs:
@@ -61,6 +56,7 @@ class FakePopen(object):
 
 
 class FakePipe(object):
+    """Minimal fake pipe object used by FakePopen."""
 
     def readline(self):
         return ''

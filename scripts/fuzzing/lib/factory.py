@@ -7,6 +7,7 @@ import errno
 import re
 import os
 
+from args import ArgParser
 from cli import CommandLineInterface
 from host import Host
 from device import Device
@@ -36,6 +37,13 @@ class Factory(object):
             self._cli = CommandLineInterface()
         return self._cli
 
+    def create_parser(self):
+        """Returns an argument parser."""
+        parser = ArgParser()
+        parser.factory = self
+        parser.add_parsers()
+        return parser
+
     def create_host(self, fuchsia_dir=os.getenv('FUCHSIA_DIR')):
         """Constructs a Host from a local build directory."""
         if not fuchsia_dir:
@@ -51,7 +59,7 @@ class Factory(object):
             if e.errno == errno.ENOENT:
                 self.cli.error(
                     'Initialization failure.',
-                    'Have you run `fx set ... --fuzz-with <sanitizer>`?')
+                    'Have you run "fx set ... --fuzz-with <sanitizer>"?')
             else:
                 raise
         return host
@@ -77,7 +85,7 @@ class Factory(object):
         """Matches a fuzzer name pattern to a fuzzer."""
         matches = host.fuzzers(name)
         if not matches:
-            self.cli.error('No matching fuzzers found.', 'Try `fx fuzz list`.')
+            self.cli.error('No matching fuzzers found.', 'Try "fx fuzz list".')
         if len(matches) > 1:
             choices = ["/".join(m) for m in matches]
             self.cli.echo('More than one match found.')
@@ -97,11 +105,9 @@ class Factory(object):
         """Creates a Fuzzer-like object of the given class."""
         package, executable = self._resolve_fuzzer(device.host, args.name)
         fuzzer = cls(device, package, executable)
-        if args.output:
-            fuzzer.output = args.output
-        fuzzer.foreground = args.foreground
-        fuzzer.debug = args.debug
-        fuzzer.libfuzzer_opts = args.libfuzzer_opts
-        fuzzer.libfuzzer_inputs = args.libfuzzer_inputs
-        fuzzer.subprocess_args = args.subprocess_args
+
+        # Skip args with value of None
+        args = dict((k, v) for k, v in vars(args).items() if v is not None)
+
+        fuzzer.update(args)
         return fuzzer

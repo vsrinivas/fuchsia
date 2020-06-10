@@ -5,33 +5,34 @@
 
 import os
 import shutil
-import unittest
+import sys
 import tempfile
+import unittest
 
 import test_env
 import lib.command as command
-from lib.args import ArgParser
 
+from device_test import DeviceTestCase
 from device_fake import FakeDevice
 from fuzzer_fake import FakeFuzzer
 from factory_fake import FakeFactory
 
 
-class TestCommand(unittest.TestCase):
+class TestCommand(DeviceTestCase):
 
     # Unit tests
 
     def test_list_fuzzers(self):
         factory = FakeFactory()
-        parser = ArgParser('test_list_fuzzers')
+        parser = factory.create_parser()
 
         # No match
-        args = parser.parse(['no/match'])
+        args = parser.parse_args(['list', 'no/match'])
         command.list_fuzzers(args, factory)
         self.assertEqual(factory.cli.log, ['No matching fuzzers.'])
 
         # Multiple matches
-        args = parser.parse(['fake-package1'])
+        args = parser.parse_args(['list', 'fake-package1'])
         command.list_fuzzers(args, factory)
         self.assertEqual(
             factory.cli.log, [
@@ -42,7 +43,7 @@ class TestCommand(unittest.TestCase):
             ])
 
         # Exact match
-        args = parser.parse(['fake-package1/fake-target1'])
+        args = parser.parse_args(['list', 'fake-package1/fake-target1'])
         command.list_fuzzers(args, factory)
         self.assertEqual(
             factory.cli.log, [
@@ -52,62 +53,60 @@ class TestCommand(unittest.TestCase):
 
     def test_start_fuzzer(self):
         factory = FakeFactory()
-        parser = ArgParser('test_start_fuzzer')
-        factory.host.pathnames.append('output')
+        parser = factory.create_parser()
 
-        #  With corpus
-        args = parser.parse([
-            'fake-package1/fake-target1',
-            '/path/to/corpus',
-        ])
-        with self.assertRaises(SystemExit):
-            command.start_fuzzer(args, factory)
-        self.assertEqual(
-            factory.cli.log, [
-                'Passing corpus arguments to libFuzzer is unsupported',
-                'You can run specific inputs with "fx fuzz repro".',
-                'You can add elements to a seed corpus in GN.',
-                'You can also analyze a corpus using `fx fuzz analyze`.',
-            ])
+        output = 'output'
+        factory.host.mkdir(output)
 
         # In the foreground
-        args = parser.parse(
+        args = parser.parse_args(
             [
+                'start',
                 '--foreground',
                 '--output',
-                'output',
+                output,
                 'fake-package1/fake-target1',
             ])
         command.start_fuzzer(args, factory)
         self.assertEqual(
             factory.cli.log, [
-                ' Starting fake-package1/fake-target1.',
-                ' Outputs will be written to: output',
+                'Starting fake-package1/fake-target1.',
+                'Outputs will be written to: output',
             ])
 
         # In the background
-        args = parser.parse(
+        args = parser.parse_args(
             [
+                'start',
                 '--output',
-                'output',
+                output,
                 'fake-package1/fake-target1',
             ])
         command.start_fuzzer(args, factory)
         self.assertEqual(
             factory.cli.log, [
-                ' Starting fake-package1/fake-target1.',
-                ' Outputs will be written to: output',
-                'Check status with `fx fuzz check fake-package1/fake-target1`.',
-                'Stop manually with `fx fuzz stop fake-package1/fake-target1`.',
+                'Starting fake-package1/fake-target1.',
+                'Outputs will be written to: output',
+                'Check status with "fx fuzz check fake-package1/fake-target1".',
+                'Stop manually with "fx fuzz stop fake-package1/fake-target1".',
             ])
-        cmd = command._monitor_cmd(factory.fuzzer)
-        self.assertIn(' '.join(cmd), factory.host.history)
+        cmd = [
+            'python',
+            sys.argv[0],
+            'start',
+            '--monitor',
+            '--output',
+            output,
+            'fake-package1/fake-target1',
+        ]
+        self.assertRan(factory.host, *cmd)
 
-        args = parser.parse(
+        args = parser.parse_args(
             [
+                'start',
                 '--monitor',
                 '--output',
-                'output',
+                output,
                 'fake-package1/fake-target1',
             ])
         command.start_fuzzer(args, factory)
@@ -119,11 +118,10 @@ class TestCommand(unittest.TestCase):
 
     def test_check_fuzzer(self):
         factory = FakeFactory()
-        parser = ArgParser('test_check_fuzzer')
-        parser.require_name(False)
+        parser = factory.create_parser()
 
         # No name, none running
-        args = parser.parse([])
+        args = parser.parse_args(['check'])
         command.check_fuzzer(args, factory)
         self.assertEqual(
             factory.cli.log, [
@@ -133,7 +131,7 @@ class TestCommand(unittest.TestCase):
 
         # No name, some running
         factory.device.add_fake_pid('fake-package1', 'fake-target2')
-        args = parser.parse([])
+        args = parser.parse_args(['check'])
         command.check_fuzzer(args, factory)
         self.assertEqual(
             factory.cli.log, [
@@ -144,7 +142,7 @@ class TestCommand(unittest.TestCase):
             ])
 
         # Name provided, running
-        args = parser.parse(['fake-package1/fake-target2'])
+        args = parser.parse_args(['check', 'fake-package1/fake-target2'])
         command.check_fuzzer(args, factory)
         self.assertEqual(
             factory.cli.log, [
@@ -156,7 +154,7 @@ class TestCommand(unittest.TestCase):
 
         # Name provided, not running
         factory.device.clear_fake_pids()
-        args = parser.parse(['fake-package1/fake-target2'])
+        args = parser.parse_args(['check', 'fake-package1/fake-target2'])
         command.check_fuzzer(args, factory)
         self.assertEqual(
             factory.cli.log, [
@@ -168,37 +166,28 @@ class TestCommand(unittest.TestCase):
 
     def test_stop_fuzzer(self):
         factory = FakeFactory()
-        parser = ArgParser('test_list_fuzzers')
+        parser = factory.create_parser()
 
         # Not running
-        args = parser.parse(['fake-package1/fake-target3'])
+        args = parser.parse_args(['stop', 'fake-package1/fake-target3'])
         command.stop_fuzzer(args, factory)
         self.assertEqual(
             factory.cli.log, ['fake-package1/fake-target3 is already stopped.'])
 
         # Running
         factory.device.add_fake_pid('fake-package1', 'fake-target3')
-        args = parser.parse(['fake-package1/fake-target3'])
+        args = parser.parse_args(['stop', 'fake-package1/fake-target3'])
         command.stop_fuzzer(args, factory)
         self.assertEqual(
             factory.cli.log, ['Stopping fake-package1/fake-target3.'])
 
     def test_repro_units(self):
         factory = FakeFactory()
-        parser = ArgParser('test_list_fuzzers')
-
-        args = parser.parse(['fake-package1/fake-target3'])
-        with self.assertRaises(SystemExit):
-            command.repro_units(args, factory)
-        self.assertEqual(
-            factory.cli.log, [
-                'No artifacts provided.',
-                'Try `fx fuzz help`.',
-            ])
+        parser = factory.create_parser()
 
         unit = 'crash-deadbeef'
         factory.host.pathnames.append(unit)
-        args = parser.parse(['fake-package1/fake-target3', unit])
+        args = parser.parse_args(['repro', 'fake-package1/fake-target3', unit])
         command.repro_units(args, factory)
 
 

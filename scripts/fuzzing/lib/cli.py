@@ -16,7 +16,11 @@ class CommandLineInterface(object):
 
     def error(self, *lines):
         """Print an error message and exit."""
-        self.echo(*lines)
+        if not lines:
+            raise RuntimeError('Fatal error without error message.')
+        self.echo(
+            'ERROR: {}'.format(lines[0]),
+            *['       {}'.format(line) for line in lines[1:]])
         sys.exit(1)
 
     def choose(self, prompt, choices):

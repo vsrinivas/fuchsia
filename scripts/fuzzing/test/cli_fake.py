@@ -47,8 +47,6 @@ class FakeCLI(CommandLineInterface):
 
     def echo(self, *lines):
         for line in lines:
-            if not line:
-                continue
             self._log += line.split('\n')
 
     def choose(self, prompt, choices):

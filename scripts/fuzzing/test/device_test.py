@@ -9,31 +9,32 @@ import subprocess
 import tempfile
 
 import test_env
-from lib.args import ArgParser
 from lib.device import Device
 from lib.host import Host
+
+from host_test import HostTestCase
 
 from device_fake import FakeDevice
 from host_fake import FakeHost
 
 
-class TestDevice(unittest.TestCase):
-    """ Tests lib.Device. See FakeDevice for additional details."""
-
-    # Unit test assertions
+class DeviceTestCase(HostTestCase):
+    """Test case with additional, device-specific assertions."""
 
     def assertRan(self, host, *args):
-        self.assertIn(' '.join(*args), host.history)
+        self.assertIn(' '.join(args), host.history)
 
     def assertScp(self, device, *args):
         """Asserts a previous call was made to device.ssh with args."""
-        self.assertRan(device.host, device._scp_cmd(list(args)))
+        self.assertRan(device.host, *device._scp_cmd(list(args)))
 
     def assertSsh(self, device, *args):
         """Asserts a previous call was made to device.scp with cmd."""
-        self.assertRan(device.host, device._ssh_cmd(list(args)))
+        self.assertRan(device.host, *device._ssh_cmd(list(args)))
 
-    # Unit tests
+
+class TestDevice(DeviceTestCase):
+    """ Tests lib.Device. See FakeDevice for additional details."""
 
     def test_configure(self):
         device = FakeDevice(autoconfigure=False)
@@ -105,7 +106,7 @@ class TestDevice(unittest.TestCase):
 
     def test_getpid(self):
         device = FakeDevice()
-        cmd = device._cs_cmd()
+        cmd = ['cs']
         device.add_ssh_response(
             cmd, [
                 '  http.cmx[20963]: fuchsia-pkg://fuchsia.com/http#meta/http.cmx',
@@ -138,7 +139,7 @@ class TestDevice(unittest.TestCase):
     def test_ls(self):
         device = FakeDevice()
         corpus_dir = 'path-to-some-corpus'
-        cmd = device._ls_cmd(corpus_dir)
+        cmd = ['ls', '-l', corpus_dir]
         device.add_ssh_response(
             cmd, [
                 '-rw-r--r-- 1 0 0 1796 Mar 19 17:25 feac37187e77ff60222325cf2829e2273e04f2ea',
@@ -202,7 +203,9 @@ class TestDevice(unittest.TestCase):
         bar = os.path.join(local_path, 'bar')
         baz = os.path.join(local_path, 'baz')
         device.host.pathnames += [bar, baz]
-        device.store(os.path.join(local_path, '*'), remote_path)
+        self.assertEqual(
+            device.store(os.path.join(local_path, '*'), remote_path),
+            [foo, bar, baz])
         self.assertScp(device, foo, bar, baz, device._rpath(remote_path))
 
 

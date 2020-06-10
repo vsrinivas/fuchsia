@@ -51,7 +51,7 @@ class FakeFactory(Factory):
     def create_host(self):
         """Returns the factory's fake host, creating it if needed."""
         if not self._host:
-            self._host = FakeHost(cli=self._cli)
+            self._host = FakeHost(cli=self.cli)
         return self._host
 
     def create_device(self):
