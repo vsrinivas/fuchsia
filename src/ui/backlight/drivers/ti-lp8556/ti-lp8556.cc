@@ -6,6 +6,8 @@
 #include <lib/device-protocol/i2c.h>
 #include <lib/device-protocol/pdev.h>
 
+#include <algorithm>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
@@ -185,7 +187,7 @@ void Lp8556Device::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::S
 
 void Lp8556Device::SetNormalizedBrightnessScale(
     double scale, SetNormalizedBrightnessScaleCompleter::Sync completer) {
-  scale = fbl::clamp(scale, 0.0, 1.0);
+  scale = std::clamp(scale, 0.0, 1.0);
 
   zx_status_t status = SetCurrentScale(static_cast<uint16_t>(scale * kBrightnessRegMaxValue));
   if (status != ZX_OK) {

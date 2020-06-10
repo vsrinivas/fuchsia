@@ -12,7 +12,6 @@
 
 namespace fbl {
 
-using std::clamp;
 using std::max;
 using std::min;
 
