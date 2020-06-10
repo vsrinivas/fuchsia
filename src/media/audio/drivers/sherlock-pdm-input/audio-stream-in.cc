@@ -17,13 +17,14 @@
 namespace audio {
 namespace sherlock {
 
-// Expects 2 mics.
-constexpr size_t kNumberOfChannels = 2;
+constexpr size_t kMinNumberOfChannels = 1;
+constexpr size_t kMaxNumberOfChannels = 2;
 constexpr size_t kMinSampleRate = 48000;
 constexpr size_t kMaxSampleRate = 96000;
+constexpr size_t kBytesPerSample = 2;
 // Calculate ring buffer size for 1 second of 16-bit, 48kHz.
-constexpr size_t kRingBufferSize =
-    fbl::round_up<size_t, size_t>(kMaxSampleRate * 2 * kNumberOfChannels, ZX_PAGE_SIZE);
+constexpr size_t kRingBufferSize = fbl::round_up<size_t, size_t>(
+    kMaxSampleRate * kBytesPerSample * kMaxNumberOfChannels, ZX_PAGE_SIZE);
 
 SherlockAudioStreamIn::SherlockAudioStreamIn(zx_device_t* parent)
     : SimpleAudioStream(parent, true /* is input */) {
@@ -109,22 +110,38 @@ zx_status_t SherlockAudioStreamIn::InitPDev() {
 
   pdm_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, pinned_ring_buffer_.region(0).size);
 
-  pdm_->ConfigPdmIn((1 << kNumberOfChannels) - 1);  // First kNumberOfChannels channels.
-
-  pdm_->Sync();
+  InitHw();
 
   return ZX_OK;
+}
+
+void SherlockAudioStreamIn::InitHw() {
+  // First kNumberOfChannels channels.
+  pdm_->ConfigPdmIn(static_cast<uint8_t>((1 << number_of_channels_) - 1));
+  uint8_t mute_slots = 0;
+  // Set muted slots from channels_to_use_bitmask limited to channels in use.
+  if (channels_to_use_bitmask_ != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED)
+    mute_slots = static_cast<uint8_t>(~channels_to_use_bitmask_ & ((1 << number_of_channels_) - 1));
+  pdm_->SetMute(mute_slots);
+  pdm_->SetRate(frames_per_second_);
+  pdm_->Sync();
 }
 
 zx_status_t SherlockAudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
   fifo_depth_ = pdm_->fifo_depth();
   external_delay_nsec_ = 0;
 
-  auto status = pdm_->SetRate(req.frames_per_second);
-  if (status != ZX_OK) {
-    return status;
+  if (req.channels < kMinNumberOfChannels || req.channels > kMaxNumberOfChannels) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (req.frames_per_second != 48000 && req.frames_per_second != 96000) {
+    return ZX_ERR_INVALID_ARGS;
   }
   frames_per_second_ = req.frames_per_second;
+  number_of_channels_ = static_cast<uint8_t>(req.channels);
+  channels_to_use_bitmask_ = req.channels_to_use_bitmask;
+
+  InitHw();
 
   return ZX_OK;
 }
@@ -195,8 +212,8 @@ zx_status_t SherlockAudioStreamIn::AddFormats() {
   }
 
   audio_stream_format_range_t range;
-  range.min_channels = kNumberOfChannels;
-  range.max_channels = kNumberOfChannels;
+  range.min_channels = kMinNumberOfChannels;
+  range.max_channels = kMaxNumberOfChannels;
   range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
   range.min_frames_per_second = kMinSampleRate;
   range.max_frames_per_second = kMaxSampleRate;

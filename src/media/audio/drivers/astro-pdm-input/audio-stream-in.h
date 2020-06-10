@@ -34,16 +34,22 @@ class AstroAudioStreamIn : public SimpleAudioStream {
   zx_status_t Stop() __TA_REQUIRES(domain_token()) override;
   void ShutdownHook() __TA_REQUIRES(domain_token()) override;
 
+ protected:
+  std::unique_ptr<AmlPdmDevice> pdm_;
+
  private:
   friend class fbl::RefPtr<AstroAudioStreamIn>;
 
   zx_status_t AddFormats() __TA_REQUIRES(domain_token());
   zx_status_t InitBuffer(size_t size);
   zx_status_t InitPDev();
+  void InitHw();
   void ProcessRingNotification();
 
   uint32_t us_per_notification_ = 0;
   uint32_t frames_per_second_ = 0;
+  uint64_t channels_to_use_bitmask_ = AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED;
+  uint8_t number_of_channels_ = 0;
   async::TaskClosureMethod<AstroAudioStreamIn, &AstroAudioStreamIn::ProcessRingNotification>
       notify_timer_ __TA_GUARDED(domain_token()){this};
 
@@ -51,8 +57,6 @@ class AstroAudioStreamIn : public SimpleAudioStream {
 
   zx::vmo ring_buffer_vmo_;
   fzl::PinnedVmo pinned_ring_buffer_;
-
-  std::unique_ptr<AmlPdmDevice> pdm_;
 
   zx::bti bti_;
 };

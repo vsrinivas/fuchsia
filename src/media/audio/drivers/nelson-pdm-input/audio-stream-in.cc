@@ -152,10 +152,7 @@ zx_status_t NelsonAudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtReq
   fifo_depth_ = lib_->fifo_depth();
   external_delay_nsec_ = 0;
 
-  auto status = lib_->SetRate(req.frames_per_second);
-  if (status != ZX_OK) {
-    return status;
-  }
+  lib_->SetRate(req.frames_per_second);
   frames_per_second_ = req.frames_per_second;
 
   return ZX_OK;

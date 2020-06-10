@@ -33,3 +33,8 @@ driver_module("sherlock-pdm-input") {
     "//zircon/system/ulib/fzl",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:sherlock-audio-in-test-manifest" ]
+}

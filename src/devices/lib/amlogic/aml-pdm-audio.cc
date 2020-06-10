@@ -205,12 +205,13 @@ void AmlPdmDevice::ConfigFilters(uint32_t frames_per_second) {
   pdm_mmio_.Write32(0x0000, PDM_COEFF_ADDR);
 }
 
-zx_status_t AmlPdmDevice::SetRate(uint32_t frames_per_second) {
-  if (frames_per_second != 48000 && frames_per_second != 96000) {
-    return ZX_ERR_INVALID_ARGS;
-  }
+void AmlPdmDevice::SetMute(uint8_t mute_mask) {
+  pdm_mmio_.ModifyBits<uint32_t>(static_cast<uint32_t>(mute_mask) << 20, 0xff << 20, PDM_CTRL);
+}
+
+void AmlPdmDevice::SetRate(uint32_t frames_per_second) {
+  ZX_ASSERT(frames_per_second == 48000 || frames_per_second == 96000);
   ConfigFilters(frames_per_second);
-  return ZX_OK;
 }
 
 uint32_t AmlPdmDevice::GetRingPosition() {

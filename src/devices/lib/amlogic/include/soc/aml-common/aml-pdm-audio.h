@@ -53,7 +53,7 @@ class AmlPdmDevice {
   */
   void Sync();
 
-  zx_status_t SetRate(uint32_t frames_per_second);
+  virtual void SetMute(uint8_t mute_mask);
 
   /*
       shuts down toddr, stops writing data to ring buffer
@@ -62,11 +62,11 @@ class AmlPdmDevice {
 
   uint32_t fifo_depth() const { return fifo_depth_; }
 
-  void ConfigPdmIn(uint8_t mask);
+  virtual void ConfigPdmIn(uint8_t mask);
 
- private:
-  friend class std::default_delete<AmlPdmDevice>;
+  void SetRate(uint32_t frames_per_second);
 
+ protected:
   AmlPdmDevice(ddk::MmioBuffer pdm_mmio, ddk::MmioBuffer audio_mmio, ee_audio_mclk_src_t clk_src,
                uint32_t sysclk_div, uint32_t dclk_div, aml_toddr_t toddr, uint32_t fifo_depth,
                AmlVersion version)
@@ -80,9 +80,10 @@ class AmlPdmDevice {
         audio_mmio_(std::move(audio_mmio)),
         version_(version) {}
 
-  ~AmlPdmDevice() = default;
+  virtual ~AmlPdmDevice() = default;
 
-  void ConfigFilters(uint32_t frames_per_second);
+ private:
+  friend class std::default_delete<AmlPdmDevice>;
 
   /* Get the register block offset for our ddr block */
   static zx_off_t GetToddrBase(aml_toddr_t ch) {
@@ -106,6 +107,7 @@ class AmlPdmDevice {
   void TODDRDisable();
   void PdmInDisable();
   void PdmInEnable();
+  void ConfigFilters(uint32_t frames_per_second);
 
   /* Get the register block offset for our ddr block */
   zx_off_t GetToddrOffset(zx_off_t off) { return toddr_base_ + off; }
