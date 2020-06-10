@@ -15,6 +15,10 @@ There are four GN target templates which should be used for Rust projects:
 The [examples/rust][rust-examples] directory has some examples of Rust
 packages that use these targets, as do the [Rust FIDL examples][fidl-tutorial].
 
+Note: The example [Rust BUILD.gn file](/examples/rust/BUILD.gn)
+contains the line `group("rust")`. In this instance, `rust` refers to the directory
+the `.gn` file is in, not the language.
+
 ### Building with a custom toolchain
 
 If you want to test out Fuchsia with your own custom-built versions of rustc or
