@@ -1,0 +1,27 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.testing.sl4f;
+
+using zx;
+
+/// Implemented by a backend component hosting one or more facades. Used to acquire the list of
+/// facades hosted by a `FacadeProvider` instance.
+protocol FacadeIterator {
+    GetNext() -> (vector<string:MAX>:MAX facades);
+};
+
+/// Implemented by a backend component hosting one or more facades. A facade must only be hosted by
+/// a signel `FacadeProvider` instance.
+/// NOTE: The current implementation uses ComponentsV1 and only supports a single `FacadeProvider`
+/// instance. This is intended to change and may result in changes to the protocol.
+[Discoverable]
+protocol FacadeProvider {
+    /// Connect to a `FacadeIterator` to obtain the list of facades hosted by this `FacadeProvider`.
+    GetFacades(request<FacadeIterator> iterator);
+
+    /// Executes ‘command’ on ‘facade’. Returns an optional result JSON blob and error string.
+    Execute(string:MAX facade, string:MAX command, zx.handle:VMO params_blob)
+        -> (zx.handle:VMO? result_blob, string:MAX? error);
+};
