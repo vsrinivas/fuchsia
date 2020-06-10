@@ -13,6 +13,12 @@
 
 namespace hwstress {
 
+// Level of log detail.
+enum class LogLevel {
+  kNormal,
+  kVerbose,
+};
+
 // Provides a simple console status line.
 //
 // Users can either |Set| an ephemeral status line (such as a progress
@@ -24,7 +30,7 @@ namespace hwstress {
 // Thread compatible.
 class StatusLine {
  public:
-  StatusLine() = default;
+  explicit StatusLine(LogLevel level = LogLevel::kNormal);
 
   // Log the given string to console, ensuring that the current status
   // line is re-displayed afterwards.
@@ -39,6 +45,10 @@ class StatusLine {
   void Set(const char* fmt, ...) __PRINTFLIKE(2, 3);
   void Set(const char* fmt, va_list ap);
 
+  // Print a verbose logging statement.
+  void Verbose(std::string_view s);
+  void Verbose(const char* fmt, ...) __PRINTFLIKE(2, 3);
+
  private:
   // Remove the status line from the console.
   void ClearLineIfNeeded();
@@ -52,6 +62,9 @@ class StatusLine {
   // If true, the line should be cleared before anything else is
   // printed.
   bool line_needs_clear_ = false;
+
+  // Detail level of logs.
+  LogLevel log_level_;
 };
 
 }  // namespace hwstress

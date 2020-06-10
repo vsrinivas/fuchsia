@@ -32,6 +32,8 @@ std::string StripNewlines(std::string_view s) {
 }
 }  // namespace
 
+StatusLine::StatusLine(LogLevel level) : log_level_(level) {}
+
 void StatusLine::Log(std::string_view s) {
   // Remove any status already on the current line.
   ClearLineIfNeeded();
@@ -81,6 +83,21 @@ void StatusLine::Set(const char* fmt, ...) {
   va_start(ap, fmt);
   Set(fmt, ap);
   va_end(ap);
+}
+
+void StatusLine::Verbose(const char* fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  if (log_level_ == LogLevel::kVerbose) {
+    Log(fmt, ap);
+  }
+  va_end(ap);
+}
+
+void StatusLine::Verbose(std::string_view status) {
+  if (log_level_ == LogLevel::kVerbose) {
+    Log(status);
+  }
 }
 
 // Remove the status line from the console.

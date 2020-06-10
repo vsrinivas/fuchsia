@@ -26,6 +26,7 @@ std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> GetParser() {
   parser->AddSwitch("fvm-path", 'f', "Path to Fuchsia Volume Manager.",
                     &CommandLineArgs::fvm_path);
   parser->AddSwitch("help", 'h', "Show this help.", &CommandLineArgs::help);
+  parser->AddSwitch("verbose", 'v', "Show verbose logging.", &CommandLineArgs::verbose);
   return parser;
 }
 
@@ -46,6 +47,7 @@ Subcommands:
 Global options:
   -d, --duration=<secs>  Test duration in seconds. A value of "0" (the default)
                          indicates to continue testing until stopped.
+  -v, --verbose          Show additional logging.
   -h, --help             Show this help.
 
 Flash test options:

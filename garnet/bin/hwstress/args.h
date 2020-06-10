@@ -31,6 +31,9 @@ struct CommandLineArgs {
   // Path to the Fuchsia Volume Manager
   std::string fvm_path;
 
+  // Verbose diagnostics.
+  bool verbose = false;
+
   // Duration in seconds.
   //
   // A value of "0" indicates forever.
