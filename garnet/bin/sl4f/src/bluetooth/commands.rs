@@ -361,8 +361,9 @@ impl Facade for ProfileServerFacade {
             }
             "ProfileServerConnectL2cap" => {
                 let id = parse_identifier(args.clone())?;
-                let psm = parse_psm(args)?;
-                let result = self.connect(id, psm as u16).await?;
+                let psm = parse_psm(args.clone())?;
+                let mode = parse_arg!(args, as_str, "mode")?;
+                let result = self.connect(id, psm as u16, &mode.to_string()).await?;
                 Ok(to_value(result)?)
             }
             "ProfileServerRemoveService" => {

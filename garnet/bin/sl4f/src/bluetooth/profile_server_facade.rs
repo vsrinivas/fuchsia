@@ -7,7 +7,7 @@ use anyhow::{Context, Error};
 use fidl::encoding::Decodable;
 use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_bluetooth_bredr::{
-    Attribute, Channel, ChannelParameters, ConnectionReceiverRequest,
+    Attribute, Channel, ChannelMode, ChannelParameters, ConnectionReceiverRequest,
     ConnectionReceiverRequestStream, DataElement, Information, ProfileDescriptor, ProfileMarker,
     ProfileProxy, ProtocolDescriptor, ProtocolIdentifier, SearchResultsRequest,
     SearchResultsRequestStream, SecurityRequirements, ServiceClassProfileIdentifier,
@@ -683,7 +683,15 @@ impl ProfileServerFacade {
         Ok(())
     }
 
-    pub async fn connect(&self, id: String, psm: u16) -> Result<(), Error> {
+    /// Sends an outgoing l2cap connection request
+    ///
+    /// # Arguments:
+    /// * `id`: String - The peer id to connect to.
+    /// * `psm`: u16 - The PSM value to connect to:
+    ///     Valid PSM values: https://www.bluetooth.com/specifications/assigned-numbers/logical-link-control/
+    /// * `mode`: String - The channel mode to connect over
+    ///     Available Values: BASIC, ERTM
+    pub async fn connect(&self, id: String, psm: u16, mode: &str) -> Result<(), Error> {
         let tag = "ProfileServerFacade::connect";
         let peer_id: PeerId = match id.parse() {
             Ok(id) => id,
@@ -694,9 +702,25 @@ impl ProfileServerFacade {
                 );
             }
         };
+
+        let mode = match mode {
+            "BASIC" => ChannelMode::Basic,
+            "ERTM" => ChannelMode::EnhancedRetransmission,
+            _ => fx_err_and_bail!(&with_line!(tag), format!("Invalid mode: {:?}.", mode)),
+        };
+
         let connection_result = match &self.inner.read().profile_server_proxy {
             Some(server) => {
-                server.connect(&mut peer_id.into(), psm, ChannelParameters::new_empty()).await?
+                server
+                    .connect(
+                        &mut peer_id.into(),
+                        psm,
+                        ChannelParameters {
+                            channel_mode: Some(mode),
+                            ..ChannelParameters::new_empty()
+                        },
+                    )
+                    .await?
             }
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
         };
