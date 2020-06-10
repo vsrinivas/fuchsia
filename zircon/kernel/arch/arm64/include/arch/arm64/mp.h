@@ -48,6 +48,10 @@ struct arm64_percpu {
 
   // Microarchitecture of this cpu (ex: Cortex-A53)
   arm64_microarch microarch;
+
+  // True if the branch predictor should be invalidated during context switch or on suspicious
+  // entries to EL2 to mitigate Spectre V2 attacks.
+  bool should_invalidate_bp_on_context_switch;
 } __CPU_ALIGN;
 
 void arch_init_cpu_map(uint cluster_count, const uint* cluster_cpus);

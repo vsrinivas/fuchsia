@@ -21,6 +21,7 @@
 #include <arch/arm64/feature.h>
 #include <arch/arm64/mmu.h>
 #include <arch/arm64/registers.h>
+#include <arch/arm64/uarch.h>
 #include <arch/mp.h>
 #include <arch/ops.h>
 #include <kernel/atomic.h>
@@ -232,7 +233,13 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
   arch_clean_cache_range((vaddr_t)&secondaries_released, sizeof(secondaries_released));
 }
 
-void arch_late_init_percpu(void) {}
+void arch_late_init_percpu(void) {
+  bool disable_spec_mitigations = gCmdline.GetBool("kernel.arm64.disable_spec_mitigations",
+                                                  /*default_value=*/false);
+
+  arm64_read_percpu_ptr()->should_invalidate_bp_on_context_switch = !disable_spec_mitigations &&
+    arm64_uarch_needs_spectre_v2_mitigation();
+}
 
 __NO_RETURN int arch_idle_thread_routine(void*) {
   for (;;) {

@@ -14,6 +14,7 @@
 
 #include <arch/arm64.h>
 #include <arch/arm64/mp.h>
+#include <arch/arm64/uarch.h>
 #include <kernel/thread.h>
 
 #define LOCAL_TRACE 0
@@ -93,6 +94,20 @@ __NO_SAFESTACK static void arm64_debug_restore_state(Thread* thread) {
   }
 }
 
+__NO_SAFESTACK static void arm64_context_switch_spec_mitigations(Thread* oldthread,
+                                                                 Thread* newthread) {
+  // Spectre V2: Flush Indirect Branch Predictor State, if:
+  // 0) Speculative Execution infoleak mitigations are enabled AND
+  // 1) The current CPU requires Spectre V2 mitigations AND
+  // 2a) We are switching between threads in different address spaces AND
+  // 2b)    the old address space is not nullptr (not a kernel thread).
+  //        If the old thread is a kernel thread, it can be trusted not to attack userspace
+  if (__arm64_percpu->should_invalidate_bp_on_context_switch &&
+      ((oldthread->aspace_ != newthread->aspace_) && oldthread->aspace_)) {
+    arm64_uarch_do_spectre_v2_mitigation();
+  }
+}
+
 __NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {
   LTRACEF("old %p (%s), new %p (%s)\n", oldthread, oldthread->name_, newthread, newthread->name_);
 
@@ -133,6 +148,8 @@ __NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {
     arm64_tpidr_restore_state(newthread);
     arm64_debug_restore_state(newthread);
   }
+
+  arm64_context_switch_spec_mitigations(oldthread, newthread);
 
   // Call into the inner assembly context switch routine to save integer registers on the old stack
   // and swap to the new stack.
