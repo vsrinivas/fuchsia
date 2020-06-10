@@ -197,8 +197,8 @@ if (target_cpu == "x64") {
     "//src/devices/board/drivers/x86:x86-lid-test",
     "//src/devices/board/drivers/x86:x86-pwrsrc-test",
     "//src/devices/board/drivers/x86:x86-thermal-test",
+    "//src/devices/board/drivers/x86/test:x86-board",
     "//zircon/system/uapp/acpidump:test",
-    "//zircon/system/utest/x86-board",
     "//zircon/system/utest/x86-umip",
   ]
 }
