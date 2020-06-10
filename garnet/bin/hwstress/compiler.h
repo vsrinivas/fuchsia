@@ -76,6 +76,9 @@ void ForceEval(T x) {
 #define UNROLL_LOOP_4 _Pragma("unroll(4)")
 #define UNROLL_LOOP_16 _Pragma("unroll(16)")
 
+// Assume the given pointer is aligned to the given alignment.
+#define ASSUME_ALIGNED(x) __attribute__((assume_aligned(x)))
+
 }  // namespace hwstress
 
 #endif  // GARNET_BIN_HWSTRESS_COMPILER_H_
