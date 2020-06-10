@@ -52,7 +52,7 @@ source_set("utils") {
 executable("unittest_bin") {
   visibility = [ ":*" ]
   testonly = true
-  output_name = "audio-clock-lib-unittests"
+  output_name = "audio-libclock-unittests"
 
   sources = [
     "clone_mono_unittest.cc",
@@ -70,16 +70,12 @@ executable("unittest_bin") {
   libs = [ "zircon" ]
 }
 
-test_package("audio-clock-lib-unittests") {
+test_package("audio-libclock-unittests") {
   deps = [ ":unittest_bin" ]
 
   tests = [
     {
-      name = "audio-clock-lib-unittests"
-
-      dest = "audio_clock_lib_unittests"
-      manifest = rebase_path("meta/audio_clock_lib_unittests.cmx")
-
+      name = "audio-libclock-unittests"
       environments = basic_envs
     },
   ]
@@ -87,5 +83,5 @@ test_package("audio-clock-lib-unittests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":audio-clock-lib-unittests" ]
+  deps = [ ":audio-libclock-unittests" ]
 }

@@ -241,6 +241,50 @@ TEST(ClockUtilsTest, MonoToRefTime) {
   }
 }
 
+// Make alternating readings from clock_A and clock_B: call them A1, B2, A3, B4.
+// Translate B2 into clock_A's timeline as predict_A2, and A3 to clock_B's timeline as predict_B3.
+// We expect strict sequencing of [time_A1,predict_A2,time_A3] and [time_B2,predict_B3,time_B4].
+void PredictBetweenReferenceClocks(zx::clock& clock_A, zx::clock& clock_B) {
+  zx::time time_A1, time_B2, time_A3, time_B4;
+
+  clock_A.read(time_A1.get_address());
+  clock_B.read(time_B2.get_address());
+  clock_A.read(time_A3.get_address());
+  clock_B.read(time_B4.get_address());
+
+  auto predict_A2 = ReferenceTimeFromReferenceTime(clock_B, time_B2, clock_A).take_value();
+  EXPECT_GT(predict_A2, time_A1) << "Translated reference time too small.";
+  EXPECT_LT(predict_A2, time_A3) << "Translated reference time too large.";
+
+  auto predict_B3 = ReferenceTimeFromReferenceTime(clock_A, time_A3, clock_B).take_value();
+  EXPECT_GT(predict_B3, time_B2) << "Translated reference time too small.";
+  EXPECT_LT(predict_B3, time_B4) << "Translated reference time too large.";
+}
+
+TEST(ClockUtilsTest, RefToRefTime) {
+  zx::clock ref_clock_A, ref_clock_B;
+  ASSERT_EQ(
+      zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS | ZX_CLOCK_OPT_AUTO_START,
+                        nullptr, &ref_clock_A),
+      ZX_OK);
+  ASSERT_EQ(
+      zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr, &ref_clock_B),
+      ZX_OK);
+
+  zx::clock::update_args args_A, args_B;
+  args_A.reset().set_rate_adjust(-1000);
+  args_B.reset().set_value(zx::time(987'654'321)).set_rate_adjust(1000);
+  ASSERT_EQ(ref_clock_A.update(args_A), ZX_OK);
+  ASSERT_EQ(ref_clock_B.update(args_B), ZX_OK);
+
+  PredictBetweenReferenceClocks(ref_clock_A, ref_clock_B);
+
+  for (auto repeats = 3u; repeats > 0; --repeats) {
+    zx::nanosleep(zx::deadline_after(kWaitDuration));
+    PredictBetweenReferenceClocks(ref_clock_A, ref_clock_B);
+  }
+}
+
 TEST(ClockUtilsTest, TimelineToAffine) {
   auto tl_function = TimelineFunction(2, 3, 5, 7);
   auto affine_transform = ToAffineTransform(tl_function);

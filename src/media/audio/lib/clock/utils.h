@@ -29,6 +29,9 @@ fit::result<zx::time, zx_status_t> ReferenceTimeFromMonotonicTime(const zx::cloc
                                                                   zx::time mono_time);
 fit::result<zx::time, zx_status_t> MonotonicTimeFromReferenceTime(const zx::clock& ref_clock,
                                                                   zx::time ref_time);
+fit::result<zx::time, zx_status_t> ReferenceTimeFromReferenceTime(const zx::clock& ref_clock_a,
+                                                                  zx::time ref_time_a,
+                                                                  const zx::clock& ref_clock_b);
 
 affine::Transform ToAffineTransform(TimelineFunction& tl_function);
 TimelineFunction ToTimelineFunction(affine::Transform affine_trans);

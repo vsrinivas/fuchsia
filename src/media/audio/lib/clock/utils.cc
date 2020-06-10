@@ -119,6 +119,35 @@ fit::result<zx::time, zx_status_t> MonotonicTimeFromReferenceTime(const zx::cloc
       ref_time.get())));
 }
 
+fit::result<zx::time, zx_status_t> ReferenceTimeFromReferenceTime(const zx::clock& ref_clock_a,
+                                                                  zx::time ref_time_a,
+                                                                  const zx::clock& ref_clock_b) {
+  zx_clock_details_v1_t clock_details_a, clock_details_b;
+
+  auto status = ref_clock_a.get_details(&clock_details_a);
+  if (status == ZX_OK) {
+    status = ref_clock_b.get_details(&clock_details_b);
+  }
+  if (status != ZX_OK) {
+    return fit::error(status);
+  }
+
+  auto mono_to_ref_a = clock_details_a.mono_to_synthetic;
+  auto mono_to_ref_b = clock_details_b.mono_to_synthetic;
+
+  auto mono_time = affine::Transform::ApplyInverse(
+      mono_to_ref_a.reference_offset, mono_to_ref_a.synthetic_offset,
+      affine::Ratio(mono_to_ref_a.rate.synthetic_ticks, mono_to_ref_a.rate.reference_ticks),
+      ref_time_a.get());
+
+  auto ref_time_b = affine::Transform::Apply(
+      mono_to_ref_b.reference_offset, mono_to_ref_b.synthetic_offset,
+      affine::Ratio(mono_to_ref_b.rate.synthetic_ticks, mono_to_ref_b.rate.reference_ticks),
+      mono_time);
+
+  return fit::ok(zx::time(ref_time_b));
+}
+
 affine::Transform ToAffineTransform(TimelineFunction& tl_function) {
   return affine::Transform(
       tl_function.reference_time(), tl_function.subject_time(),
