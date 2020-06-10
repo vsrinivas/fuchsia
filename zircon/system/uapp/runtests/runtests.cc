@@ -53,7 +53,7 @@ class FuchsiaStopwatch final : public runtests::Stopwatch {
 // Parse |argv| for an output directory argument.
 const char* GetOutputDir(int argc, const char* const* argv) {
   int i = 1;
-  while (i < argc - 1 && strcmp(argv[i], "-o") != 0) {
+  while (i < argc - 1 && (strcmp(argv[i], "--output") != 0 && strcmp(argv[i], "-o"))) {
     ++i;
   }
   if (i >= argc - 1) {
