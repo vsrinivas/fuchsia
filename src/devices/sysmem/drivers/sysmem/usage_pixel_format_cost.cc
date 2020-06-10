@@ -327,6 +327,88 @@ const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = [] {
       // .cost
       1500.0L,
   });
+  // AFBC TE is best. Split block is slightly worse than non-split-block for GPU<->GPU, but better
+  // for GPU->display.
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator,
+              llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      600.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator,
+              llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      600.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator,
+              llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1100.0L,
+  });
+  result.emplace_back(UsagePixelFormatCostEntry{
+      // .pixel_format
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+          .set_type(
+              sysmem::MakeTracking(&allocator, llcpp::fuchsia::sysmem2::PixelFormatType::R8G8B8A8))
+          .set_format_modifier_value(sysmem::MakeTracking(
+              &allocator,
+              llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV))
+          .build(),
+      // .required_buffer_usage_bits
+      allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferUsage>()
+          .set_none(sysmem::MakeTracking(&allocator, 0u))
+          .set_cpu(sysmem::MakeTracking(&allocator, 0u))
+          .set_vulkan(sysmem::MakeTracking(&allocator, 0u))
+          .set_display(sysmem::MakeTracking(&allocator, 0u))
+          .set_video(sysmem::MakeTracking(&allocator, 0u))
+          .build(),
+      // .cost
+      1100.0L,
+  });
   return result;
 }();
 

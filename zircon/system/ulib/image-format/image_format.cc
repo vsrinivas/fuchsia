@@ -185,6 +185,12 @@ class AfbcFormats : public ImageFormatSet {
  public:
   const char* Name() const override { return "AfbcFormats"; }
 
+  static constexpr uint64_t kAfbcModifierMask =
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_TE_BIT |
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_SPLIT_BLOCK_BIT |
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_SPARSE_BIT |
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_YUV_BIT |
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_BCH_BIT;
   bool IsSupported(const PixelFormat& pixel_format) const override {
     if (!pixel_format.has_format_modifier_value())
       return false;
@@ -194,11 +200,9 @@ class AfbcFormats : public ImageFormatSet {
         pixel_format.type() != PixelFormatType::BGRA32) {
       return false;
     }
-    switch (pixel_format.format_modifier_value()) {
+    switch (pixel_format.format_modifier_value() & ~kAfbcModifierMask) {
       case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16:
       case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8:
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_TE:
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8_TE:
         return true;
       default:
         return false;
@@ -215,15 +219,13 @@ class AfbcFormats : public ImageFormatSet {
     ZX_DEBUG_ASSERT(IsSupported(image_format.pixel_format()));
     uint32_t block_width;
     uint32_t block_height;
-    switch (image_format.pixel_format().format_modifier_value()) {
+    switch (image_format.pixel_format().format_modifier_value() & ~kAfbcModifierMask) {
       case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16:
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_TE:
         block_width = 16;
         block_height = 16;
         break;
 
       case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8:
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8_TE:
         block_width = 32;
         block_height = 8;
         break;
@@ -247,11 +249,10 @@ class AfbcFormats : public ImageFormatSet {
 
   uint64_t ImageFormatImageSize(const ImageFormat& image_format) const override {
     uint64_t size = NonTESize(image_format);
-    switch (image_format.pixel_format().format_modifier_value()) {
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_TE:
-      case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8_TE:
-        size += arm_transaction_elimination_buffer_size(size, image_format.coded_width(),
-                                                        image_format.coded_height());
+    if (image_format.pixel_format().format_modifier_value() &
+        llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_TE_BIT) {
+      size += arm_transaction_elimination_buffer_size(size, image_format.coded_width(),
+                                                      image_format.coded_height());
     }
 
     return size;
@@ -1261,12 +1262,14 @@ bool ImageFormatCompatibleWithProtectedMemory(
   ZX_DEBUG_ASSERT(&pixel_format);
   if (!pixel_format.has_format_modifier_value())
     return true;
-  switch (pixel_format.format_modifier_value()) {
-    // TE formats occasionally need CPU writes to the TE buffer.
-    case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_LINEAR_TE:
-    case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_TE:
-    case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8_TE:
-      return false;
+  constexpr uint64_t kArmLinearFormat = 0x0800000000000000ul;
+  switch (pixel_format.format_modifier_value() & ~AfbcFormats::kAfbcModifierMask) {
+    case kArmLinearFormat:
+    case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16:
+    case llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8:
+      // TE formats occasionally need CPU writes to the TE buffer.
+      return !(pixel_format.format_modifier_value() &
+               llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_TE_BIT);
 
     default:
       return true;

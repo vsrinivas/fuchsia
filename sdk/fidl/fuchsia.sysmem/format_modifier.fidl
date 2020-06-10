@@ -53,6 +53,19 @@ const uint64 FORMAT_MODIFIER_INTEL_I915_YF_TILED = 0x0100000000000003;
 // BROADCOM format modifier values
 
 // ARM format modifier values
+
+// bit 0x10 is for using the YUV transform.
+const uint64 FORMAT_MODIFIER_ARM_YUV_BIT = 0x10;
+// bit 0x20 is for split-block formats.
+const uint64 FORMAT_MODIFIER_ARM_SPLIT_BLOCK_BIT = 0x20;
+// bit 0x40 is for sparse formats.
+const uint64 FORMAT_MODIFIER_ARM_SPARSE_BIT = 0x40;
+// bit 0x800 is for variants with buffer content hints.
+const uint64 FORMAT_MODIFIER_ARM_BCH_BIT = 0x800;
+// bit 0x1000 is for variants with a transaction elimination buffer allocated.
+const uint64 FORMAT_MODIFIER_ARM_TE_BIT = 0x1000;
+// Not all values are equally useful, so we only have format modifiers for some particularly interesting ones.
+
 // To make the variants with bits set more consistent 0x0800000000000000 is reserved for linear.
 const uint64 FORMAT_MODIFIER_ARM_AFBC_16X16 = 0x0800000000000001;
 const uint64 FORMAT_MODIFIER_ARM_AFBC_32X8 = 0x0800000000000002;
@@ -60,3 +73,6 @@ const uint64 FORMAT_MODIFIER_ARM_AFBC_32X8 = 0x0800000000000002;
 const uint64 FORMAT_MODIFIER_ARM_LINEAR_TE = 0x0800000000001000;
 const uint64 FORMAT_MODIFIER_ARM_AFBC_16X16_TE = 0x0800000000001001;
 const uint64 FORMAT_MODIFIER_ARM_AFBC_32X8_TE = 0x0800000000001002;
+
+const uint64 FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV = 0x0800000000000071;
+const uint64 FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE = 0x0800000000001071;

@@ -144,5 +144,48 @@ TEST(PixelFormatCost, ArmTransactionElimination) {
   EXPECT_EQ(0, UsagePixelFormatCost::Compare(0u, PDEV_PID_AMLOGIC_S912, constraints, 1, 0));
 }
 
+TEST(PixelFormatCost, AfbcWithFlags) {
+  // Formats are in ascending preference order (descending cost order).
+  std::array modifier_list = {
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_LINEAR,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE,
+      llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16_TE,
+  };
+  auto constraints =
+      heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::BufferCollectionConstraints>();
+  constraints.set_image_format_constraints(
+      heap_allocator.make_vec_ptr<llcpp::fuchsia::sysmem2::ImageFormatConstraints>(
+          modifier_list.size()));
+
+  for (uint32_t i = 0; i < modifier_list.size(); ++i) {
+    constraints.image_format_constraints()[i] =
+        heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::ImageFormatConstraints>()
+            .set_pixel_format(sysmem::MakeTracking(
+                &heap_allocator,
+                heap_allocator.make_table_builder<llcpp::fuchsia::sysmem2::PixelFormat>()
+                    .set_type(sysmem::MakeTracking(
+                        &heap_allocator, llcpp::fuchsia::sysmem2::PixelFormatType::BGRA32))
+                    .set_format_modifier_value(
+                        sysmem::MakeTracking(&heap_allocator, modifier_list[i]))
+                    .build()))
+            .build();
+  }
+
+  for (uint32_t i = 1; i < modifier_list.size(); ++i) {
+    EXPECT_LT(0,
+              UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912, constraints,
+                                            i - 1, i),
+              "i=%d", i);
+    EXPECT_GT(0,
+              UsagePixelFormatCost::Compare(PDEV_VID_AMLOGIC, PDEV_PID_AMLOGIC_S912, constraints, i,
+                                            i - 1),
+              "i=%d", i);
+    EXPECT_EQ(0, UsagePixelFormatCost::Compare(0u, PDEV_PID_AMLOGIC_S912, constraints, i - 1, i));
+    EXPECT_EQ(0, UsagePixelFormatCost::Compare(0u, PDEV_PID_AMLOGIC_S912, constraints, i, i - 1));
+  }
+}
+
 }  // namespace
 }  // namespace sysmem_driver

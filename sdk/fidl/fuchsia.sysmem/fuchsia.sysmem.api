@@ -4,7 +4,7 @@
   "fidl/fuchsia.sysmem/collections_deprecated.fidl": "850a0851215e2881389b9bac181d4de9",
   "fidl/fuchsia.sysmem/constraints.fidl": "ca306f0c2ad5f68ff833a3de3fd84e71",
   "fidl/fuchsia.sysmem/driver_connector.fidl": "693ac2de1a21b33d00e79dc474279f36",
-  "fidl/fuchsia.sysmem/format_modifier.fidl": "c5d435a33e3db0c7433f0698dcc21108",
+  "fidl/fuchsia.sysmem/format_modifier.fidl": "635a5a36515e48bda31c5a0c3a5b9abe",
   "fidl/fuchsia.sysmem/formats_deprecated.fidl": "a5bdfe8267467e4a9603ead594d2b327",
   "fidl/fuchsia.sysmem/heap.fidl": "13625ef29d886568fa6f2d51303a2c44",
   "fidl/fuchsia.sysmem/image_formats.fidl": "9df39ba4b5a0591a1789e57ed9ba85ef",

@@ -640,3 +640,25 @@ TEST(ImageFormat, BasicSizes_V1_C) {
   EXPECT_EQ(2, ImageFormatCodedHeightMinDivisor(&image_format_nv12.pixel_format));
   EXPECT_EQ(2, ImageFormatSampleAlignment(&image_format_nv12.pixel_format));
 }
+
+TEST(ImageFormat, AfbcFlagFormats_V1_LLCPP) {
+  sysmem_v1::PixelFormat format;
+  format.type = sysmem_v1::PixelFormatType::BGRA32;
+  format.has_format_modifier = true;
+  format.format_modifier.value =
+      sysmem_v1::FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE;
+
+  EXPECT_FALSE(image_format::FormatCompatibleWithProtectedMemory(format));
+
+  sysmem_v1::ImageFormatConstraints constraints = {};
+  constraints.pixel_format = format;
+  constraints.min_coded_width = 12;
+  constraints.max_coded_width = 100;
+  constraints.min_coded_height = 12;
+  constraints.max_coded_height = 100;
+  constraints.bytes_per_row_divisor = 4 * 8;
+  constraints.max_bytes_per_row = 100000;
+
+  auto optional_format = image_format::ConstraintsToFormat(constraints, 18, 17);
+  EXPECT_TRUE(optional_format);
+}
