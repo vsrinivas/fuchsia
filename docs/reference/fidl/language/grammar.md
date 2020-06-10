@@ -80,7 +80,7 @@ compound-identifier = IDENTIFIER ( "." , IDENTIFIER )* ;
 
 declaration = bits-declaration | const-declaration | enum-declaration | protocol-declaration
             | struct-declaration | table-declaration | union-declaration
-            | type-alias-declaration | service-declaration ;
+            | type-alias-declaration | resource-declaration | service-declaration ;
 
 declaration-modifiers = "flexible" | "strict" ;
 
@@ -130,6 +130,11 @@ ordinal-member-field = ( attribute-list ) , ordinal , ":" , ordinal-member-field
 ordinal-member-field-body = member-field | "reserved";
 
 type-alias-declaration = ( attribute-list ) , "using" , IDENTIFIER ,  "=" , type-constructor ;
+
+resource-declaration = ( attribute-list ) , "resource" , IDENTIFIER , ":",
+                       "uint32" , "{" , resource-properties ,  "}" ; [NOTE 7]
+
+resource-properties = "properties" , "{" , ( type-constructor , IDENTIFIER  , ";" )* , "}" , ";"
 
 service-declaration = ( attribute-list ) , "service" , IDENTIFIER , "{" ,
                       ( service-member , ";" )* , "}" ;
@@ -189,6 +194,10 @@ Attributes cannot be placed on a reserved member.
 ### NOTE 6
 The `service-member` allows the more liberal `type-constructor` in the grammar, but the compiler
 limits this to protocols.
+
+### NOTE 7
+Resource declaration is an experimental feature.
+
 
 <!-- xrefs -->
 [primitives]: /docs/reference/fidl/language/language.md#primitives
