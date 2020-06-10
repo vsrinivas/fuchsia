@@ -15,7 +15,7 @@
         }
     },
     "program": {
-        "binary": "test/crash_reports_integration_test"
+        "binary": "bin/crash_reports_integration_test_exe"
     },
     "sandbox": {
         "services": [

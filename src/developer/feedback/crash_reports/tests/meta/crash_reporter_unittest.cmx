@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/crash_reporter_unittest"
+        "binary": "bin/crash_reporter_unittest_exe"
     },
     "sandbox": {
         "features": [

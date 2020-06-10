@@ -3,179 +3,17 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
-
-###############################################################################
-# GROUPS
-###############################################################################
-group("tests") {
-  testonly = true
-
-  public_deps = [
-    ":crash-reports-tests",
-    ":invalid_override_config",
-    ":valid_override_config",
-
-    # To run the Crashpad tests.
-    "//third_party/crashpad:crashpad_test",
-
-    # Packages for the components that we are injecting in the integration tests.
-    "//src/cobalt/bin/testing/mock_cobalt",
-    "//src/connectivity/network/netstack",
-    "//src/developer/feedback/crash_reports:fake-crash-reports",
-    "//src/developer/feedback/crash_reports:fake-crash-reports-invalid-override-config",
-    "//src/developer/feedback/crash_reports:fake-crash-reports-valid-override-config",
-    "//src/developer/feedback/testing/fakes:fake-data-provider",
-    "//src/developer/feedback/testing/fakes:fake-device-id-provider",
-    "//src/diagnostics/archivist",
-    "//src/sys/pkg/bin/system-update-checker",
-    "//src/sys/timekeeper",
-  ]
-}
-
-###############################################################################
-# PACKAGES
-###############################################################################
-# TODO(53656): switch to fuchsia_test_package once we figure out how to have a
-# different name for the binary on the host and on the target.
-test_package("crash-reports-tests") {
-  tests = [
-    {
-      name = "crash_register_unittest"
-    },
-    {
-      name = "crash_reporter_unittest"
-    },
-    {
-      # Binary name on the host. We prefix it with "crash_reports" to reduce collisions.
-      name = "crash_reports_config_unittest"
-
-      # Component and binary name on the target. Confined to the package so no risk of collisions.
-      dest = "config_unittest"
-    },
-    {
-      # Binary name on the host. We prefix it with "crash_reports" to reduce collisions.
-      name = "crash_reports_database_unittest"
-
-      # Component and binary name on the target. Confined to the package so no risk of collisions.
-      dest = "database_unittest"
-    },
-    {
-      # Binary name on the host. We prefix it with "crash_reports" to reduce collisions.
-      name = "crash_reports_inspect_manager_unittest"
-
-      # Component and binary name on the target. Confined to the package so no risk of collisions.
-      dest = "inspect_manager_unittest"
-    },
-    {
-      name = "crash_reports_integration_test"
-    },
-    {
-      # Binary name on the host. Shared across all integration test components.
-      name = "crash_reports_integration_test"
-
-      # Component and binary name on the target. Specific to each integration test component.
-      dest = "crash_reports_integration_test_invalid_override_config"
-    },
-    {
-      # Binary name on the host. Shared across all integration test components.
-      name = "crash_reports_integration_test"
-
-      # Component and binary name on the target. Specific to each integration test component.
-      dest = "crash_reports_integration_test_valid_override_config"
-    },
-    {
-      # Binary name on the host. We prefix it with "crash_reports" to reduce collisions.
-      name = "crash_reports_main_service_unittest"
-
-      # Component and binary name on the target. Confined to the package so no risk of collisions.
-      dest = "main_service_unittest"
-    },
-    {
-      name = "privacy_settings_ptr_unittest"
-    },
-    {
-      name = "queue_unittest"
-    },
-  ]
-
-  resources = [
-    # needed for config_unittest
-    {
-      path = "configs/valid_upload_disabled.json"
-      dest = "valid_config_upload_disabled.json"
-    },
-
-    # needed for config_unittest
-    {
-      path = "configs/valid_upload_enabled.json"
-      dest = "valid_config_upload_enabled.json"
-    },
-
-    # needed for config_unittest
-    {
-      path = "configs/valid_upload_read_from_privacy_settings.json"
-      dest = "valid_config_upload_read_from_privacy_settings.json"
-    },
-
-    # needed for config_unittest
-    {
-      path = "configs/valid_upload_disabled_spurious_server.json"
-      dest = "valid_config_upload_disabled_spurious_server.json"
-    },
-
-    # needed for config_unittest
-    {
-      path = "configs/bad_schema_spurious_field.json"
-      dest = "bad_schema_spurious_field_config.json"
-    },
-
-    # needed for config_unittest
-    {
-      path = "configs/bad_schema_missing_required_field.json"
-      dest = "bad_schema_missing_required_field_config.json"
-    },
-
-    # needed for config_unittest
-    {
-      path = "configs/bad_schema_missing_server_upload_enabled.json"
-      dest = "bad_schema_missing_server_upload_enabled_config.json"
-    },
-
-    # needed for config_unittest
-    {
-      path = "configs/bad_schema_missing_server_upload_read_from_privacy_settings.json"
-      dest = "bad_schema_missing_server_upload_read_from_privacy_settings_config.json"
-    },
-
-    # needed for config_unittest
-    {
-      path = "configs/bad_schema_invalid_upload_policy.json"
-      dest = "bad_schema_invalid_upload_policy_config.json"
-    },
-  ]
-
-  deps = [
-    ":config_unittest",
-    ":crash_register_unittest",
-    ":crash_reporter_unittest",
-    ":crash_reports_integration_test",
-    ":database_unittest",
-    ":inspect_manager_unittest",
-    ":main_service_unittest",
-    ":privacy_settings_ptr_unittest",
-    ":queue_unittest",
-  ]
-}
+import("//src/sys/build/components.gni")
 
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
-executable("config_unittest") {
+executable("config_unittest_exe") {
   testonly = true
 
-  output_name = "crash_reports_config_unittest"
+  # "config_unittest" is rather generic for the default_output_dir that is set
+  # to root_out_dir so instead we write the binary to target_out_dir.
+  output_dir = target_out_dir
 
   sources = [ "config_unittest.cc" ]
 
@@ -186,7 +24,7 @@ executable("config_unittest") {
   ]
 }
 
-executable("crash_register_unittest") {
+executable("crash_register_unittest_exe") {
   testonly = true
 
   sources = [ "crash_register_unittest.cc" ]
@@ -210,7 +48,7 @@ executable("crash_register_unittest") {
   ]
 }
 
-executable("crash_reporter_unittest") {
+executable("crash_reporter_unittest_exe") {
   testonly = true
 
   sources = [
@@ -250,7 +88,7 @@ executable("crash_reporter_unittest") {
   ]
 }
 
-executable("crash_reports_integration_test") {
+executable("crash_reports_integration_test_exe") {
   testonly = true
 
   sources = [ "crash_reports_integration_test.cc" ]
@@ -269,10 +107,12 @@ executable("crash_reports_integration_test") {
   ]
 }
 
-executable("main_service_unittest") {
+executable("main_service_unittest_exe") {
   testonly = true
 
-  output_name = "crash_reports_main_service_unittest"
+  # "main_service_unittest" is rather generic for the default_output_dir that
+  # is set to root_out_dir so instead we write the binary to target_out_dir.
+  output_dir = target_out_dir
 
   sources = [ "main_service_unittest.cc" ]
 
@@ -297,10 +137,12 @@ executable("main_service_unittest") {
   ]
 }
 
-executable("database_unittest") {
+executable("database_unittest_exe") {
   testonly = true
 
-  output_name = "crash_reports_database_unittest"
+  # "database_unittest" is rather generic for the default_output_dir that
+  # is set to root_out_dir so instead we write the binary to target_out_dir.
+  output_dir = target_out_dir
 
   sources = [
     "crashpad_database_gremlin.cc",
@@ -325,10 +167,13 @@ executable("database_unittest") {
   ]
 }
 
-executable("inspect_manager_unittest") {
+executable("inspect_manager_unittest_exe") {
   testonly = true
 
-  output_name = "crash_reports_inspect_manager_unittest"
+  # "inspect_manager_unittest" is rather generic for the default_output_dir
+  # that is set to root_out_dir so instead we write the binary to
+  # target_out_dir.
+  output_dir = target_out_dir
 
   sources = [ "inspect_manager_unittest.cc" ]
 
@@ -347,7 +192,7 @@ executable("inspect_manager_unittest") {
   ]
 }
 
-executable("privacy_settings_ptr_unittest") {
+executable("privacy_settings_ptr_unittest_exe") {
   testonly = true
 
   sources = [ "privacy_settings_ptr_unittest.cc" ]
@@ -366,7 +211,7 @@ executable("privacy_settings_ptr_unittest") {
   ]
 }
 
-executable("queue_unittest") {
+executable("queue_unittest_exe") {
   testonly = true
 
   sources = [
@@ -393,6 +238,25 @@ executable("queue_unittest") {
 }
 
 ###############################################################################
+# RESOURCES
+###############################################################################
+resource("test_configs") {
+  sources = [
+    "configs/bad_schema_invalid_upload_policy.json",
+    "configs/bad_schema_missing_required_field.json",
+    "configs/bad_schema_missing_server_upload_enabled.json",
+    "configs/bad_schema_missing_server_upload_read_from_privacy_settings.json",
+    "configs/bad_schema_spurious_field.json",
+    "configs/valid_upload_disabled.json",
+    "configs/valid_upload_disabled_spurious_server.json",
+    "configs/valid_upload_enabled.json",
+    "configs/valid_upload_read_from_privacy_settings.json",
+  ]
+
+  outputs = [ "data/configs/{{source_file_part}}" ]
+}
+
+###############################################################################
 # CONFIGS
 ###############################################################################
 config_data("invalid_override_config") {
@@ -409,4 +273,149 @@ config_data("valid_override_config") {
   sources = [ "configs/valid_override.json" ]
 
   outputs = [ "override_config.json" ]
+}
+
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_component("config_unittest") {
+  testonly = true
+
+  manifest = "meta/config_unittest.cmx"
+
+  deps = [
+    ":config_unittest_exe",
+    ":test_configs",
+  ]
+}
+
+fuchsia_component("crash_register_unittest") {
+  testonly = true
+
+  manifest = "meta/crash_register_unittest.cmx"
+
+  deps = [ ":crash_register_unittest_exe" ]
+}
+
+fuchsia_component("crash_reporter_unittest") {
+  testonly = true
+
+  manifest = "meta/crash_reporter_unittest.cmx"
+
+  deps = [ ":crash_reporter_unittest_exe" ]
+}
+
+fuchsia_component("crash_reports_integration_test") {
+  testonly = true
+
+  manifest = "meta/crash_reports_integration_test.cmx"
+
+  deps = [ ":crash_reports_integration_test_exe" ]
+}
+
+fuchsia_component("crash_reports_integration_test_invalid_override_config") {
+  testonly = true
+
+  manifest = "meta/crash_reports_integration_test_invalid_override_config.cmx"
+
+  deps = [
+    ":crash_reports_integration_test_exe",
+    ":invalid_override_config",
+  ]
+}
+
+fuchsia_component("crash_reports_integration_test_valid_override_config") {
+  testonly = true
+
+  manifest = "meta/crash_reports_integration_test_valid_override_config.cmx"
+
+  deps = [
+    ":crash_reports_integration_test_exe",
+    ":valid_override_config",
+  ]
+}
+
+fuchsia_component("database_unittest") {
+  testonly = true
+
+  manifest = "meta/database_unittest.cmx"
+
+  deps = [ ":database_unittest_exe" ]
+}
+
+fuchsia_component("inspect_manager_unittest") {
+  testonly = true
+
+  manifest = "meta/inspect_manager_unittest.cmx"
+
+  deps = [ ":inspect_manager_unittest_exe" ]
+}
+
+fuchsia_component("main_service_unittest") {
+  testonly = true
+
+  manifest = "meta/main_service_unittest.cmx"
+
+  deps = [ ":main_service_unittest_exe" ]
+}
+
+fuchsia_component("privacy_settings_ptr_unittest") {
+  testonly = true
+
+  manifest = "meta/privacy_settings_ptr_unittest.cmx"
+
+  deps = [ ":privacy_settings_ptr_unittest_exe" ]
+}
+
+fuchsia_component("queue_unittest") {
+  testonly = true
+
+  manifest = "meta/queue_unittest.cmx"
+
+  deps = [ ":queue_unittest_exe" ]
+}
+
+###############################################################################
+# PACKAGES
+###############################################################################
+fuchsia_test_package("crash-reports-tests") {
+  test_components = [
+    ":config_unittest",
+    ":crash_register_unittest",
+    ":crash_reporter_unittest",
+    ":crash_reports_integration_test",
+    ":crash_reports_integration_test_invalid_override_config",
+    ":crash_reports_integration_test_valid_override_config",
+    ":database_unittest",
+    ":inspect_manager_unittest",
+    ":main_service_unittest",
+    ":privacy_settings_ptr_unittest",
+    ":queue_unittest",
+  ]
+}
+
+###############################################################################
+# GROUPS
+###############################################################################
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":crash-reports-tests",
+
+    # To run the Crashpad tests.
+    "//third_party/crashpad:crashpad_test",
+
+    # Packages for the components that we are injecting in the integration tests.
+    "//src/cobalt/bin/testing/mock_cobalt",
+    "//src/connectivity/network/netstack",
+    "//src/developer/feedback/crash_reports:fake-crash-reports",
+    "//src/developer/feedback/crash_reports:fake-crash-reports-invalid-override-config",
+    "//src/developer/feedback/crash_reports:fake-crash-reports-valid-override-config",
+    "//src/developer/feedback/testing/fakes:fake-data-provider",
+    "//src/developer/feedback/testing/fakes:fake-device-id-provider",
+    "//src/diagnostics/archivist",
+    "//src/sys/pkg/bin/system-update-checker",
+    "//src/sys/timekeeper",
+  ]
 }

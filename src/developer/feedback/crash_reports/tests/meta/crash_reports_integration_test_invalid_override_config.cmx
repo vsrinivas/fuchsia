@@ -6,7 +6,7 @@
                 "fuchsia.cobalt.test.LoggerQuerier": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/fake-crash-reports-invalid-override-config#meta/crash_reports.cmx",
                 "fuchsia.feedback.CrashReportingProductRegister": "fuchsia-pkg://fuchsia.com/fake-crash-reports#meta/crash_reports.cmx",
-                "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/fake_data_provider#meta/fake_data_provider.cmx",
+                "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/fake-data-provider#meta/fake_data_provider.cmx",
                 "fuchsia.feedback.DeviceIdProvider": "fuchsia-pkg://fuchsia.com/fake-device-id-provider#meta/fake_device_id_provider.cmx",
                 "fuchsia.net.Connectivity": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                 "fuchsia.time.Utc": "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx",
@@ -15,7 +15,7 @@
         }
     },
     "program": {
-        "binary": "test/crash_reports_integration_test"
+        "binary": "bin/crash_reports_integration_test_exe"
     },
     "sandbox": {
         "services": [

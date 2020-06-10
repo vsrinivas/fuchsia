@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/queue_unittest"
+        "binary": "bin/queue_unittest_exe"
     },
     "sandbox": {
         "features": [

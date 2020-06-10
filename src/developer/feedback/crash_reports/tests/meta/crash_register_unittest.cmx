@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/crash_register_unittest"
+        "binary": "bin/crash_register_unittest_exe"
     },
     "sandbox": {
         "services": [
