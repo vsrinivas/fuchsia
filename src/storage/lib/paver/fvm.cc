@@ -207,7 +207,7 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
     while (bytes_left > 0) {
       uint64_t length = fbl::min(bytes_left, vmo_cap) / block_size;
       if (length > UINT32_MAX) {
-        ERROR("Error writing trailing zeroes: Too large\n");
+        ERROR("Error writing trailing zeroes: Too large(%lu)\n", length);
         return ZX_ERR_OUT_OF_RANGE;
       }
       request->length = static_cast<uint32_t>(length);
@@ -216,7 +216,8 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
 
       zx_status_t status;
       if ((status = client.Transaction(request, 1)) != ZX_OK) {
-        ERROR("Error writing trailing zeroes\n");
+        ERROR("Error writing trailing zeroes length:%u dev_offset:%lu vmo_offset:%lu\n",
+              request->length, request->dev_offset, request->vmo_offset);
         return status;
       }
 
