@@ -109,8 +109,8 @@ trait EthertapName {
 
 impl<'a> EthertapName for &'a str {
     fn ethertap_compatible_name(&self) -> &'a str {
-        &self[self.len()
-            - usize::try_from(ethertap::MAX_NAME_LENGTH).expect("u32 could not fit into usize")
-            ..self.len()]
+        let max_len =
+            usize::try_from(ethertap::MAX_NAME_LENGTH).expect("u32 could not fit into usize");
+        &self[self.len().checked_sub(max_len).unwrap_or(0)..self.len()]
     }
 }
