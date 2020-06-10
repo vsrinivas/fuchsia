@@ -14,6 +14,11 @@ use {
     std::path,
 };
 
+/// A node that represents the directory it is in.
+///
+/// `/dir` and `/dir/.` point to the same directory.
+const THIS_DIRECTORY: &str = ".";
+
 fn ethdir_path() -> std::path::PathBuf {
     let options: crate::Opt = argh::from_env();
     path::Path::new(&options.dev_path).join("class/ethernet")
@@ -99,6 +104,11 @@ pub(super) async fn new_stream(
         .map(|r| r.context("getting next VFS event from"))
         .try_filter_map(|fuchsia_vfs_watcher::WatchMessage { event, filename }| async move {
             info!("received {:?} event for filename: {:?}", event, filename);
+
+            if filename == path::PathBuf::from(THIS_DIRECTORY) {
+                debug!("skipping filename = {}", filename.display());
+                return Ok(None);
+            }
 
             match event {
                 fuchsia_vfs_watcher::WatchEvent::ADD_FILE

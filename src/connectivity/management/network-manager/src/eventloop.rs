@@ -230,6 +230,7 @@ impl EventLoop {
 
     async fn handle_dns_server_watcher_event(&mut self, event: DnsServerWatcherEvent) {
         let DnsServerWatcherEvent { source, servers } = event;
+        trace!("got DNS server event from source = {:?} with servers = {:?}", source, servers);
         let () = self.dns_servers.set_servers_from_source(source, servers);
         let () = self
             .device

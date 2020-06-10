@@ -14,9 +14,11 @@ mod fidl;
 mod ipv6;
 mod socket;
 
+use std::convert::TryFrom;
 use std::fmt::Display;
 use std::marker::Unpin;
 
+use fidl_fuchsia_hardware_ethertap as ethertap;
 use fidl_fuchsia_netstack as netstack;
 use fuchsia_async::{DurationExt, TimeoutExt};
 use fuchsia_zircon as zx;
@@ -38,11 +40,6 @@ const ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_seco
 /// smaller timeout compared to the positive case since execution stall in regards to the
 /// monotonic clock will not affect the expected outcome.
 const ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_seconds(5);
-
-/// The URL to NetCfg for use in a netemul environment.
-///
-/// Note, netcfg.cmx must never be used in a Netemul environment as it breaks hermeticity.
-const NETCFG_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg_netemul.cmx";
 
 /// The path to the default configuration file for DHCP server.
 const DHCP_SERVER_DEFAULT_CONFIG_PATH: &str = "/pkg/data/default_config.json";
@@ -103,4 +100,17 @@ async fn try_all<S: Stream<Item = Result<bool>>>(stream: S) -> Result<bool> {
         }
     }
     Ok(true)
+}
+
+trait EthertapName {
+    /// Returns an Ethertap compatible name.
+    fn ethertap_compatible_name(&self) -> Self;
+}
+
+impl<'a> EthertapName for &'a str {
+    fn ethertap_compatible_name(&self) -> &'a str {
+        &self[self.len()
+            - usize::try_from(ethertap::MAX_NAME_LENGTH).expect("u32 could not fit into usize")
+            ..self.len()]
+    }
 }

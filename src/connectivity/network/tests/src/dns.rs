@@ -11,7 +11,7 @@ use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6};
 use net_types::ethernet::Mac;
 use net_types::ip as net_types_ip;
 use net_types::Witness;
-use netstack_testing_macros::*;
+use netstack_testing_macros::variants_test;
 use packet_formats::icmp::ndp::{
     options::{NdpOption, RecursiveDnsServer},
     RouterAdvertisement,
@@ -60,9 +60,8 @@ async fn test_set_default_dns_servers() -> Result {
 
 /// Tests that Netstack exposes DNS servers discovered dynamically and NetworkManager
 /// configures the Lookup service.
-// TODO(52971): re-enable this test for network maanger when it respects hermeticity.
-#[endpoint_variants_test]
-async fn test_discovered_dns<E: Endpoint>() -> Result {
+#[variants_test]
+async fn test_discovered_dns<E: Endpoint, M: Manager>(name: &str) -> Result {
     const SERVER_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
     /// DNS server served by DHCP.
     const DHCP_DNS_SERVER: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!(123.12.34.56);
@@ -77,7 +76,6 @@ async fn test_discovered_dns<E: Endpoint>() -> Result {
 
     const DEFAULT_DNS_PORT: u16 = 53;
 
-    let name = format!("test_discovered_dns_{}", E::NAME);
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
 
     let network = sandbox.create_network("net").await.context("failed to create network")?;
@@ -166,14 +164,14 @@ async fn test_discovered_dns<E: Endpoint>() -> Result {
         &fake_ep,
     )?;
 
-    // Start NetCfg on the client.
+    // Start the network manager on the client.
     //
-    // NetCfg should listen for DNS server events from the netstack and
+    // The network manager should listen for DNS server events from the netstack and
     // configure the DNS resolver accordingly.
     let launcher =
         client_environment.get_launcher().context("failed to create launcher for client env")?;
-    let mut netcfg = fuchsia_component::client::launch(&launcher, NETCFG_PKG_URL.to_string(), None)
-        .context("launch netcfg")?;
+    let mut netmgr = fuchsia_component::client::launch(&launcher, M::PKG_URL.to_string(), None)
+        .context("launch the network manager")?;
 
     // The list of servers we expect to retrieve from `fuchsia.net.name/LookupAdmin`.
     let expect = vec![
@@ -210,14 +208,14 @@ async fn test_discovered_dns<E: Endpoint>() -> Result {
     let lookup_admin = client_environment
         .connect_to_service::<fidl_fuchsia_net_name::LookupAdminMarker>()
         .context("failed to connect to LookupAdmin")?;
-    let mut wait_for_netcfg_fut = netcfg.wait().fuse();
+    let mut wait_for_netmgr_fut = netmgr.wait().fuse();
     for i in 0..RETRY_COUNT {
         let () = futures::select! {
             () = fuchsia_async::Timer::new(POLL_WAIT.after_now()).fuse() => {
                 Ok(())
             }
-            wait_for_netcfg_res = wait_for_netcfg_fut => {
-                Err(anyhow::anyhow!("NetCfg unexpectedly exited with exit status = {:?}", wait_for_netcfg_res?))
+            wait_for_netmgr_res = wait_for_netmgr_fut => {
+                Err(anyhow::anyhow!("the network manager unexpectedly exited with exit status = {:?}", wait_for_netmgr_res?))
             }
         }?;
 
@@ -236,6 +234,7 @@ async fn test_discovered_dns<E: Endpoint>() -> Result {
             return Ok(());
         }
     }
+
     // Too many retries.
     Err(anyhow::anyhow!("Timed out waiting for DNS server configurations"))
 }

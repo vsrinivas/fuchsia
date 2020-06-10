@@ -8,7 +8,7 @@ use net_declare::fidl_ip;
 
 use crate::environments::*;
 use crate::Result;
-use netstack_testing_macros::*;
+use netstack_testing_macros::variants_test;
 
 /// Endpoints in DHCP tests are either
 /// 1. attached to the server stack, which will have DHCP servers serving on them.
@@ -38,10 +38,10 @@ struct DhcpTestNetwork<'a> {
 }
 
 // TODO(tamird): could this be done with a single stack and bridged interfaces?
-#[endpoint_variants_test]
-async fn acquire_dhcp<E: Endpoint>() -> Result {
+#[variants_test]
+async fn acquire_dhcp<E: Endpoint>(name: &str) -> Result {
     test_dhcp::<E>(
-        "acquire_dhcp",
+        name,
         &mut [DhcpTestNetwork {
             name: "net",
             eps: &mut [
@@ -68,10 +68,10 @@ async fn acquire_dhcp<E: Endpoint>() -> Result {
     .await
 }
 
-#[endpoint_variants_test]
-async fn acquire_dhcp_with_dhcpd_bound_device<E: Endpoint>() -> Result {
+#[variants_test]
+async fn acquire_dhcp_with_dhcpd_bound_device<E: Endpoint>(name: &str) -> Result {
     test_dhcp::<E>(
-        "acquire_dhcp_with_dhcpd_bound_device",
+        name,
         &mut [DhcpTestNetwork {
             name: "net",
             eps: &mut [
@@ -98,10 +98,10 @@ async fn acquire_dhcp_with_dhcpd_bound_device<E: Endpoint>() -> Result {
     .await
 }
 
-#[endpoint_variants_test]
-async fn acquire_dhcp_with_multiple_network<E: Endpoint>() -> Result {
+#[variants_test]
+async fn acquire_dhcp_with_multiple_network<E: Endpoint>(name: &str) -> Result {
     test_dhcp::<E>(
-        "acquire_dhcp_with_dhcpd_bound_device",
+        name,
         &mut [
             DhcpTestNetwork {
                 name: "net1",

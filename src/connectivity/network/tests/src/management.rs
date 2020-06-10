@@ -15,15 +15,15 @@ use futures::future::{self, FutureExt as _};
 use futures::stream::{self, StreamExt as _};
 use net_declare::fidl_ip_v4;
 use net_types::ip as net_types_ip;
+use netstack_testing_macros::variants_test;
 
 use crate::environments::*;
 use crate::*;
 
-/// Test that NetCfg discovers a newly added device and it adds the device to the
-/// Netstack.
-#[fasync::run_singlethreaded(test)]
-async fn test_oir() -> Result {
-    let name = "test_oir";
+/// Test that the network manager discovers a newly added device and it adds the device
+/// to the Netstack.
+#[variants_test]
+async fn test_oir<M: Manager>(name: &str) -> Result {
     let sandbox = TestSandbox::new().context("create sandbox")?;
     // Create an environment with the LookupAdmin service as NetCfg tries to configure
     // it. NetCfg will fail if it can't send the LookupAdmin a request.
@@ -31,10 +31,10 @@ async fn test_oir() -> Result {
         .create_netstack_environment_with::<Netstack2, _, _>(name, &[KnownServices::LookupAdmin])
         .context("create netstack environment")?;
 
-    // Start NetCfg.
+    // Start the network manager.
     let launcher = environment.get_launcher().context("get launcher")?;
-    let mut netcfg = fuchsia_component::client::launch(&launcher, NETCFG_PKG_URL.to_string(), None)
-        .context("launch netcfg")?;
+    let mut netmgr = fuchsia_component::client::launch(&launcher, M::PKG_URL.to_string(), None)
+        .context("launch the network manager")?;
 
     // Add a device to the environment.
     let endpoint = sandbox.create_endpoint::<Ethernet, _>(name).await.context("create endpoint")?;
@@ -67,13 +67,13 @@ async fn test_oir() -> Result {
             ))
         })
         .fuse();
-    let mut wait_for_netcfg = netcfg.wait().fuse();
+    let mut wait_for_netmgr = netmgr.wait().fuse();
     let _id = futures::select! {
         wait_for_interface_res = wait_for_interface => {
             wait_for_interface_res?.ok_or(anyhow::anyhow!("Netstack event stream unexpectedly ended"))
         }
-        wait_for_netcfg_res = wait_for_netcfg => {
-            Err(anyhow::anyhow!("NetCfg unexpectedly exited with exit status = {:?}", wait_for_netcfg_res?))
+        wait_for_netmgr_res = wait_for_netmgr => {
+            Err(anyhow::anyhow!("the network manager unexpectedly exited with exit status = {:?}", wait_for_netmgr_res?))
         }
     }?;
 
@@ -329,8 +329,9 @@ async fn test_wlan_ap_dhcp_server() -> Result {
 
     // Start NetCfg.
     let launcher = environment.get_launcher().context("get launcher")?;
-    let mut netcfg = fuchsia_component::client::launch(&launcher, NETCFG_PKG_URL.to_string(), None)
-        .context("launch netcfg")?;
+    let mut netcfg =
+        fuchsia_component::client::launch(&launcher, NetCfg::PKG_URL.to_string(), None)
+            .context("launch netcfg")?;
     let mut wait_for_netcfg_fut = netcfg.wait().fuse();
 
     // Add a WLAN AP, make sure the DHCP server gets configurd and starts or stops when the

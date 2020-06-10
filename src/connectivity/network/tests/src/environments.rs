@@ -155,6 +155,33 @@ impl Netstack for Netstack3 {
     const VERSION: NetstackVersion = NetstackVersion::Netstack3;
 }
 
+/// Abstraction for a Fuchsia component which offers network configuration services.
+pub trait Manager: Copy + Clone {
+    /// The Fuchsia package URL to the component.
+    const PKG_URL: &'static str;
+}
+
+/// Uninstantiable type that represents NetCfg's implementation of a network manager.
+#[derive(Copy, Clone)]
+pub enum NetCfg {}
+
+impl Manager for NetCfg {
+    // Note, netcfg.cmx must never be used in a Netemul environment as it breaks
+    // hermeticity.
+    const PKG_URL: &'static str = "fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg_netemul.cmx";
+}
+
+/// Uninstantiable type that represents NetworkManager's implementation of a network manager.
+#[derive(Copy, Clone)]
+pub enum NetworkManager {}
+
+impl Manager for NetworkManager {
+    // Note, network-manager.cmx must never be used in a Netemul environment as it breaks
+    // hermeticity.
+    const PKG_URL: &'static str =
+        "fuchsia-pkg://fuchsia.com/network-manager#meta/network-manager-netemul.cmx";
+}
+
 /// A test sandbox backed by a [`netemul_sandbox::SandboxProxy`].
 ///
 /// `TestSandbox` provides various utility methods to set up network
@@ -169,7 +196,6 @@ pub struct TestSandbox {
 /// Abstraction for different endpoint backing types.
 pub trait Endpoint: Copy + Clone {
     const NETEMUL_BACKING: netemul_network::EndpointBacking;
-    const NAME: &'static str;
 }
 
 #[derive(Copy, Clone)]
@@ -178,7 +204,6 @@ pub enum Ethernet {}
 impl Endpoint for Ethernet {
     const NETEMUL_BACKING: netemul_network::EndpointBacking =
         netemul_network::EndpointBacking::Ethertap;
-    const NAME: &'static str = "eth";
 }
 
 #[derive(Copy, Clone)]
@@ -187,7 +212,6 @@ pub enum NetworkDevice {}
 impl Endpoint for NetworkDevice {
     const NETEMUL_BACKING: netemul_network::EndpointBacking =
         netemul_network::EndpointBacking::NetworkDevice;
-    const NAME: &'static str = "netdev";
 }
 
 impl TestSandbox {

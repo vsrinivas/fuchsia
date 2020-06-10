@@ -7,7 +7,7 @@ use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fuchsia_async::TimeoutExt as _;
 use futures::{TryFutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6};
-use netstack_testing_macros::endpoint_variants_test;
+use netstack_testing_macros::variants_test;
 use packet::Serializer;
 use packet_formats;
 use packet_formats::ipv4::Ipv4Header;
@@ -58,13 +58,13 @@ async fn run_udp_socket_test(
     Ok(())
 }
 
-#[endpoint_variants_test]
-async fn test_udp_socket<E: Endpoint>() -> Result {
+#[variants_test]
+async fn test_udp_socket<E: Endpoint>(name: &str) -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let net = sandbox.create_network("net").await.context("failed to create network")?;
 
     let client = sandbox
-        .create_netstack_environment::<Netstack2, _>("test_udp_socket_client")
+        .create_netstack_environment::<Netstack2, _>(name)
         .context("failed to create client environment")?;
 
     const CLIENT_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.2);

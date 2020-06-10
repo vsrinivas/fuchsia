@@ -57,6 +57,10 @@ package("network-manager") {
       path = rebase_path("meta/network-manager.cmx")
       dest = "network-manager.cmx"
     },
+    {
+      path = rebase_path("meta/network-manager-netemul.cmx")
+      dest = "network-manager-netemul.cmx"
+    },
   ]
 
   resources = [

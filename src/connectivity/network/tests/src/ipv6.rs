@@ -20,7 +20,7 @@ use futures::stream::TryStreamExt;
 use net_types::ethernet::Mac;
 use net_types::ip::{self as net_types_ip, Ip};
 use net_types::{SpecifiedAddress, Witness};
-use netstack_testing_macros::*;
+use netstack_testing_macros::variants_test;
 use packet::serialize::{InnerPacketBuilder, Serializer};
 use packet_formats::ethernet::{EtherType, EthernetFrameBuilder};
 use packet_formats::icmp::ndp::{
@@ -77,14 +77,14 @@ async fn setup_network<E, S>(
 )>
 where
     E: Endpoint,
-    S: Copy + Into<String>,
+    S: Copy + Into<String> + EthertapName,
 {
     let network = sandbox.create_network(name).await.context("failed to create network")?;
     let environment = sandbox
-        .create_netstack_environment_with::<Netstack2, _, _>(name, &[])
+        .create_netstack_environment::<Netstack2, _>(name)
         .context("failed to create netstack environment")?;
     let iface = environment
-        .join_network::<E, _>(&network, name, InterfaceConfig::None)
+        .join_network::<E, _>(&network, name.ethertap_compatible_name(), InterfaceConfig::None)
         .await
         .context("failed to configure networking")?;
     let fake_ep = network.create_fake_endpoint()?;
@@ -194,16 +194,17 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
 
 /// Test that across netstack runs, a device will initially be assigned the same
 /// IPv6 addresses.
-#[endpoint_variants_test]
-async fn consistent_initial_ipv6_addrs<E: Endpoint>() -> Result {
-    let name = "consistent_initial_ipv6_addrs";
+#[variants_test]
+async fn consistent_initial_ipv6_addrs<E: Endpoint>(name: &str) -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let env = sandbox
         .create_environment(name, &[KnownServices::SecureStash])
         .context("failed to create environment")?;
     let launcher = env.get_launcher().context("failed to get launcher")?;
-    let endpoint =
-        sandbox.create_endpoint::<Ethernet, _>(name).await.context("failed to create endpoint")?;
+    let endpoint = sandbox
+        .create_endpoint::<Ethernet, _>(name.ethertap_compatible_name())
+        .await
+        .context("failed to create endpoint")?;
 
     // Make sure netstack uses the same addresses across runs for a device.
     let first_run_addrs = run_netstack_and_get_ipv6_addrs_for_endpoint::<Netstack2>(
@@ -225,9 +226,8 @@ async fn consistent_initial_ipv6_addrs<E: Endpoint>() -> Result {
 
 /// Tests that `EXPECTED_ROUTER_SOLICIATIONS` Router Solicitation messages are transmitted
 /// when the interface is brought up.
-#[endpoint_variants_test]
-async fn sends_router_solicitations<E: Endpoint>() -> Result {
-    let name = "sends_router_solicitations";
+#[variants_test]
+async fn sends_router_solicitations<E: Endpoint>(name: &str) -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let (_network, _environment, _netstack, _iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await?;
@@ -332,9 +332,8 @@ async fn sends_router_solicitations<E: Endpoint>() -> Result {
 }
 
 /// Tests that both stable and temporary SLAAC addresses are generated for a SLAAC prefix.
-#[endpoint_variants_test]
-async fn slaac_with_privacy_extensions<E: Endpoint>() -> Result {
-    let name = "slaac_with_privacy_extensions";
+#[variants_test]
+async fn slaac_with_privacy_extensions<E: Endpoint>(name: &str) -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let (_network, _environment, netstack, iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await?;
@@ -509,7 +508,7 @@ async fn add_address_for_dad<
 // TODO(53644): Reenable when we figure out how to handle timing issues in CQ when the address
 // may resolve before the netstack processes the NA/NS messagee.
 #[allow(unused)]
-async fn duplicate_address_detection<E: Endpoint>() -> Result {
+async fn duplicate_address_detection<E: Endpoint>(name: &str) -> Result {
     /// Makes sure that `ipv6_consts::LINK_LOCAL_ADDR` is not assigned to the interface after the
     /// DAD resolution time.
     async fn check_address_failed_dad(iface: &TestInterface<'_>) -> Result {
@@ -569,7 +568,6 @@ async fn duplicate_address_detection<E: Endpoint>() -> Result {
         check_address_failed_dad(iface).await
     }
 
-    let name = "duplicate_address_detection";
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let (_network, _environment, netstack, iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await?;
