@@ -17,8 +17,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWIL_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWIL_H_
 
-#include "core.h"
 #include <wifi/wifi-config.h>
+
+#include "core.h"
 
 #define BRCMF_FWIL_BSSCFG_PREFIX "bsscfg:"
 
@@ -47,5 +48,7 @@ zx_status_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, const char* name, vo
 zx_status_t brcmf_fil_bsscfg_int_set(struct brcmf_if* ifp, const char* name, uint32_t data);
 zx_status_t brcmf_fil_bsscfg_int_get(struct brcmf_if* ifp, const char* name, uint32_t* data);
 const char* brcmf_fil_get_errstr(int32_t err);
+zx_status_t brcmf_send_cmd_to_firmware(brcmf_pub* drvr, uint32_t ifidx, uint32_t cmd, void* data,
+                                       uint32_t len, bool set);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWIL_H_

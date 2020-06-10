@@ -15,8 +15,11 @@
 
 #include <zircon/status.h>
 
+#include <ddktl/fidl.h>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/wlan_interface.h"
 
 namespace wlan {
@@ -30,12 +33,46 @@ constexpr uint16_t kApInterfaceId = 1;
 
 }  // namespace
 
+namespace wlan_llcpp = ::llcpp::fuchsia::factory::wlan;
+
 Device::Device(zx_device_t* parent)
-    : ::ddk::Device<Device>(parent), client_interface_(nullptr), ap_interface_(nullptr) {}
+    : ::ddk::Device<Device, ddk::Messageable>(parent),
+      client_interface_(nullptr),
+      ap_interface_(nullptr) {}
 
 Device::~Device() = default;
 
 void Device::DdkRelease() { delete this; }
+
+zx_status_t Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  DdkTransaction transaction(txn);
+  wlan_llcpp::Iovar::Dispatch(this, msg, &transaction);
+  return transaction.Status();
+}
+
+void Device::Get(int32_t iface_idx, int32_t cmd, ::fidl::VectorView<uint8_t> request,
+                 GetCompleter::Sync _completer) {
+  BRCMF_DBG(INFO, "brcmfmac: Device::Get cmd: %d len: %lu\n", cmd, request.count());
+  zx_status_t status = brcmf_send_cmd_to_firmware(brcmf_pub_.get(), iface_idx, cmd,
+                                                  (void*)request.data(), request.count(), false);
+  if (status == ZX_OK) {
+    _completer.ReplySuccess(std::move(request));
+  } else {
+    _completer.ReplyError(status);
+  }
+}
+
+void Device::Set(int32_t iface_idx, int32_t cmd, ::fidl::VectorView<uint8_t> request,
+                 SetCompleter::Sync _completer) {
+  BRCMF_DBG(INFO, "brcmfmac: Device::Set cmd: %d len: %lu\n", cmd, request.count());
+  zx_status_t status = brcmf_send_cmd_to_firmware(brcmf_pub_.get(), iface_idx, cmd,
+                                                  (void*)request.data(), request.count(), true);
+  if (status == ZX_OK) {
+    _completer.ReplySuccess();
+  } else {
+    _completer.ReplyError(status);
+  }
+}
 
 zx_status_t Device::Init() {
   zx_status_t status = ZX_OK;

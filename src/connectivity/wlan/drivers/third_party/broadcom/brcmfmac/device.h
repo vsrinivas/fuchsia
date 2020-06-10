@@ -14,6 +14,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_DEVICE_H_
 
+#include <fuchsia/factory/wlan/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <zircon/types.h>
@@ -30,7 +31,8 @@ namespace brcmfmac {
 class Device;
 class WlanInterface;
 
-class Device : public ::ddk::Device<Device>,
+class Device : public ::ddk::Device<Device, ddk::Messageable>,
+               ::llcpp::fuchsia::factory::wlan::Iovar::Interface,
                public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
  public:
   virtual ~Device();
@@ -40,6 +42,7 @@ class Device : public ::ddk::Device<Device>,
   const brcmf_pub* drvr() const;
 
   // ::ddk::Device implementation.
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
   // WlanphyImpl interface implementation.
@@ -74,6 +77,12 @@ class Device : public ::ddk::Device<Device>,
   // Two fixed interfaces supported; the default instance as a client, and a second one as an AP.
   WlanInterface* client_interface_;
   WlanInterface* ap_interface_;
+
+  // ::llcpp::fuchsia::factory::wlan::iovar::Iovar::Interface Implementation
+  void Get(int32_t iface_idx, int32_t cmd, ::fidl::VectorView<uint8_t> request,
+           GetCompleter::Sync _completer) override;
+  void Set(int32_t iface_idx, int32_t cmd, ::fidl::VectorView<uint8_t> request,
+           SetCompleter::Sync _completer) override;
 };
 
 }  // namespace brcmfmac

@@ -391,3 +391,14 @@ zx_status_t brcmf_fil_bsscfg_int_get(struct brcmf_if* ifp, const char* name, uin
   }
   return err;
 }
+
+// Send iovar command to firmware and return status
+zx_status_t brcmf_send_cmd_to_firmware(brcmf_pub* drvr, uint32_t ifidx, uint32_t cmd, void* data,
+                                       uint32_t len, bool set) {
+  struct brcmf_if* ifp = brcmf_get_ifp(drvr, ifidx);
+
+  if (!ifp)
+    return ZX_ERR_UNAVAILABLE;
+
+  return brcmf_fil_cmd_data(ifp, cmd, data, len, set, nullptr);
+}
