@@ -131,7 +131,7 @@ pub fn connect_to_protocol_at_dir<S: DiscoverableService>(
     let node_proxy = io_util::open_node(
         directory,
         &PathBuf::from(format!("svc/{}", S::SERVICE_NAME)),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
     )
     .context("Failed to open protocol in directory")?;
@@ -147,7 +147,7 @@ pub fn connect_request_to_protocol_at_dir<S: DiscoverableService>(
 ) -> Result<(), Error> {
     directory
         .open(
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
             fidl_fuchsia_io::MODE_TYPE_SERVICE,
             &format!("svc/{}", S::SERVICE_NAME),
             ServerEnd::new(server_end.into_channel()),

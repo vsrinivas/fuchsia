@@ -83,7 +83,7 @@ impl BlackBoxTest {
     /// At the end of this function call, a component manager has been created
     /// in a hermetic environment and its execution is halted.
     pub async fn default(root_component_url: &str) -> Result<Self, Error> {
-        Self::custom(COMPONENT_MANAGER_URL, root_component_url, vec![]).await
+        Self::custom(COMPONENT_MANAGER_URL, root_component_url, vec![], None).await
     }
 
     /// Creates a black box test from the given component manager and
@@ -97,6 +97,7 @@ impl BlackBoxTest {
         component_manager_url: &str,
         root_component_url: &str,
         dir_handles: Vec<(String, zx::Handle)>,
+        config_file: Option<&str>,
     ) -> Result<Self, Error> {
         // Use a random integer to identify this component manager
         let random_num = random::<u32>();
@@ -108,6 +109,7 @@ impl BlackBoxTest {
             component_manager_url,
             root_component_url,
             dir_handles,
+            config_file,
         )
         .await?;
 
@@ -199,6 +201,7 @@ async fn launch_component_manager(
     component_manager_url: &str,
     root_component_url: &str,
     dir_handles: Vec<(String, zx::Handle)>,
+    config_file: Option<&str>,
 ) -> Result<App, Error> {
     let mut options = LaunchOptions::new();
 
@@ -208,13 +211,13 @@ async fn launch_component_manager(
     }
 
     // Start component manager, giving the debug flag and the root component URL.
-    let component_manager_app = launch_with_options(
-        &launcher,
-        component_manager_url.to_string(),
-        Some(vec![root_component_url.to_string(), "--debug".to_string()]),
-        options,
-    )
-    .context("could not launch component manager")?;
+    let mut args = vec![root_component_url.to_string(), "--debug".to_string()];
+    if let Some(config_file) = config_file {
+        args.extend(vec!["--config-file".to_string(), config_file.to_string()]);
+    }
+    let component_manager_app =
+        launch_with_options(&launcher, component_manager_url.to_string(), Some(args), options)
+            .context("could not launch component manager")?;
 
     // Wait for component manager to setup the out directory
     let event_stream = component_manager_app.controller().take_event_stream();

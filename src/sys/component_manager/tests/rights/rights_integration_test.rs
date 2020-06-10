@@ -25,7 +25,7 @@ async fn run_test_with_extra_dirs(
     dir_handles: Vec<(String, zx::Handle)>,
     expected_result: &str,
 ) {
-    let test = BlackBoxTest::custom(COMPONENT_MANAGER_URL, url, dir_handles)
+    let test = BlackBoxTest::custom(COMPONENT_MANAGER_URL, url, dir_handles, None)
         .await
         .expect("failed to start component manager");
     let trigger = test

@@ -1,0 +1,14 @@
+{
+    program: {
+        binary: "bin/protected_ops_util",
+    },
+    use: [
+        { runner: "elf" },
+    ],
+    expose: [
+        {
+            protocol: "/svc/test.policy.ProtectedOperations",
+            from: "self",
+        },
+    ],
+}

@@ -21,6 +21,7 @@ group("tests") {
     "hub:hub_integration_test",
     "rights:tests",
     "routing:tests",
+    "security_policy:tests",
     "storage:storage_integration_test",
     "work_scheduler:work_scheduler_integration_test",
   ]

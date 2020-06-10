@@ -1,0 +1,105 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":security-policy-integration-test" ]
+}
+
+rustc_test("security_policy_integration_test_bin") {
+  name = "security_policy_integration_test"
+  edition = "2018"
+  source_root = "security_policy_integration_test.rs"
+  deps = [
+    ":test.policy-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/component_manager/tests:test_utils_lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:matches",
+  ]
+}
+
+fidl("test.policy") {
+  name = "test.policy"
+  sources = [ "policy.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+rustc_binary("protected_ops_util") {
+  edition = "2018"
+  source_root = "protected_ops_util.rs"
+  deps = [
+    ":test.policy-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+test_package("security-policy-integration-test") {
+  deps = [
+    ":protected_ops_util",
+    ":security_policy_integration_test_bin",
+    "//src/sys/component_manager:bin",
+  ]
+
+  tests = [
+    {
+      name = "security_policy_integration_test"
+    },
+  ]
+
+  meta = [
+    # This test needs a slightly customized version of component_manager.cmx that includes
+    # deprecated-ambient-replace-as-executable, so that the test ELF runner can actually grant the
+    # job policy we're testing. The config file below can also only be loaded from the same package.
+    {
+      path = "meta/cm_for_test.cmx"
+      dest = "cm_for_test.cmx"
+    },
+
+    # v2 manifests used in the integration test
+    {
+      path = "meta/test_root.cml"
+      dest = "test_root.cm"
+    },
+    {
+      path = "meta/protected_ops.cml"
+      dest = "protected_ops.cm"
+    },
+    {
+      path = "meta/protected_ops_no_request.cml"
+      dest = "protected_ops_no_request.cm"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "component_manager"
+    },
+    {
+      name = "protected_ops_util"
+    },
+  ]
+
+  resources = [
+    {
+      path = "cm_config.json"
+      dest = "cm_config.json"
+    },
+  ]
+}

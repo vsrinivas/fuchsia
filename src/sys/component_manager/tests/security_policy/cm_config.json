@@ -1,0 +1,9 @@
+{
+    security_policy: {
+        job_policy: {
+            ambient_mark_vmo_exec: [
+                "/policy_allowed",
+            ],
+        }
+    }
+}

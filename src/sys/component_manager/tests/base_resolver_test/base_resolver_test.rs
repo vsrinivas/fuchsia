@@ -25,6 +25,7 @@ async fn base_resolver_test() -> Result<(), Error> {
         "fuchsia-pkg://fuchsia.com/base_resolver_test#meta/component_manager_without_loader.cmx",
         "fuchsia-boot:///#meta/root.cm",
         vec![("/boot".to_string(), pkg_channel.into())],
+        None,
     )
     .await?;
 
