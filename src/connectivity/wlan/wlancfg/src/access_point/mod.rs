@@ -24,8 +24,7 @@ use {
     std::sync::Arc,
 };
 
-#[cfg(test)]
-mod state_machine;
+pub mod state_machine;
 pub mod types;
 
 #[derive(Debug)]

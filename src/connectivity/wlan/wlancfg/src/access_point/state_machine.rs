@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(test)]
-
 use {
     crate::{
         access_point::types,
@@ -53,7 +51,7 @@ pub struct AccessPoint {
 }
 
 impl AccessPoint {
-    fn new(req_sender: mpsc::Sender<ManualRequest>) -> Self {
+    pub fn new(req_sender: mpsc::Sender<ManualRequest>) -> Self {
         Self { req_sender }
     }
 }
@@ -135,7 +133,7 @@ fn consume_sme_status_update(state: &mut ApStateUpdate, cbw: Cbw, update: fidl_s
     state.clients = Some(ConnectedClientInformation { count: update.num_clients as u8 })
 }
 
-async fn serve(
+pub async fn serve(
     iface_id: u16,
     proxy: fidl_sme::ApSmeProxy,
     sme_event_stream: fidl_sme::ApSmeEventStream,
