@@ -77,7 +77,7 @@ static fx_log_severity_t log_min_severity(const char* name, const char* flag) {
     return FX_LOG_WARNING;
   }
   if (!strcmp(flag, "info")) {
-    return FX_LOG_ERROR;
+    return FX_LOG_INFO;
   }
   if (!strcmp(flag, "debug")) {
     return FX_LOG_DEBUG;
