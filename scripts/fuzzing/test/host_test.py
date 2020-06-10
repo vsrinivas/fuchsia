@@ -220,13 +220,13 @@ class TestHost(unittest.TestCase):
         self.assertEqual(host.find_device(device_file=sio), addrs[0])
 
         # No results from `fx device-finder list`
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(SystemExit):
             host.find_device()
 
         # Multiple results from `fx device-finder list`
         cmd = ' '.join(host._find_device_cmd())
         host.responses[cmd] = addrs
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(SystemExit):
             host.find_device()
 
         host.responses[cmd] = addrs[:1]

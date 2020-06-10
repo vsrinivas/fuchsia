@@ -31,22 +31,6 @@ class Device(object):
          ssh_verbosity:    How verbose SSH processes are, from 0 to 3.
     """
 
-    @classmethod
-    def from_host(cls, host):
-        """Constructs a Device from a Host object."""
-        addr = None
-        try:
-            with open('{}.device'.format(host.build_dir)) as opened:
-                addr = host.find_device(device_file=opened)
-        except IOError as e:
-            if e.errno != errno.ENOENT:
-                raise
-        if not addr:
-            addr = host.find_device()
-        device = cls(host, addr)
-        device.configure()
-        return device
-
     def __init__(self, host, addr):
         self._host = host
         self._addr = addr

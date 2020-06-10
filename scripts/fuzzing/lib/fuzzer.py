@@ -43,37 +43,13 @@ class Fuzzer(object):
         'handle_segv', 'handle_bus', 'handle_ill', 'handle_fpe', 'handle_abrt'
     ]
 
-    @classmethod
-    def from_args(cls, device, args):
-        """Constructs a Fuzzer from command line arguments, showing a
-        disambiguation menu if specified name matches more than one fuzzer."""
-        cli = device.host.cli
-        matches = device.host.fuzzers(args.name)
-        if not matches:
-            sys.exit('No matching fuzzers found. Try `fx fuzz list`.')
-
-        if len(matches) > 1:
-            cli.echo(
-                'More than one match found, please pick one from the list:')
-            choices = ['/'.join(m) for m in matches]
-            fuzzer_name = cli.choose(choices).split('/')
-        else:
-            fuzzer_name = matches[0]
-
-        fuzzer = cls(device, fuzzer_name[0], fuzzer_name[1])
-        if args.output:
-            fuzzer.output = args.output
-        fuzzer.foreground = args.foreground
-        fuzzer.debug = args.debug
-        return fuzzer
-
     def __init__(self, device, package, executable):
         self._device = device
         self._package = package
         self._executable = executable
         self._pid = None
         self._options = {'artifact_prefix': 'data/'}
-        self._libfuzzer_args = []
+        self._libfuzzer_inputs = []
         self._subprocess_args = []
         self._debug = False
         self._foreground = False
@@ -104,12 +80,12 @@ class Fuzzer(object):
         self._libfuzzer_opts = libfuzzer_opts
 
     @property
-    def libfuzzer_args(self):
-        return self._libfuzzer_args
+    def libfuzzer_inputs(self):
+        return self._libfuzzer_inputs
 
-    @libfuzzer_args.setter
-    def libfuzzer_args(self, libfuzzer_args):
-        self._libfuzzer_args = libfuzzer_args
+    @libfuzzer_inputs.setter
+    def libfuzzer_inputs(self, libfuzzer_inputs):
+        self._libfuzzer_inputs = libfuzzer_inputs
 
     @property
     def subprocess_args(self):
@@ -190,10 +166,10 @@ class Fuzzer(object):
         return 'fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx' % (
             self.package, self.executable)
 
-    def _set_libfuzzer_args(self):
+    def _set_libfuzzer_inputs(self):
         """ Adds the corpus directory and argument."""
-        if self._libfuzzer_args:
-            arg = self._libfuzzer_args[0]
+        if self._libfuzzer_inputs:
+            arg = self._libfuzzer_inputs[0]
             if arg.startswith('-'):
                 raise ValueError(
                     'Unrecognized flag \'{}\'; use -help=1 to list all flags'.
@@ -205,7 +181,7 @@ class Fuzzer(object):
                     'is unsupported due to namespacing; use `fx fuzz fetch` instead.'
                     .format(arg))
         self.device.ssh(['mkdir', '-p', self.data_path('corpus')]).check_call()
-        self._libfuzzer_args = ['data/corpus/']
+        self._libfuzzer_inputs = ['data/corpus/']
 
     def _create(self):
         if not self.foreground:
@@ -217,7 +193,7 @@ class Fuzzer(object):
         fuzz_cmd = ['run', self.url()]
         for key, value in sorted(self._options.items()):
             fuzz_cmd.append('-{}={}'.format(key, value))
-        fuzz_cmd += self._libfuzzer_args
+        fuzz_cmd += self._libfuzzer_inputs
         if self._subprocess_args:
             fuzz_cmd += ['--']
             fuzz_cmd += self._subprocess_args
@@ -254,7 +230,7 @@ class Fuzzer(object):
         # Fuzzer logs are saved to fuzz-*.log when running in the background.
         # We tee the output to fuzz-0.log when running in the foreground to
         # make the rest of the plumbing look the same.
-        self._set_libfuzzer_args()
+        self._set_libfuzzer_inputs()
         cmd = self._create()
         if self.foreground:
             cmd.stderr = subprocess.PIPE
@@ -364,21 +340,21 @@ class Fuzzer(object):
       Returns: Number of test input artifacts found.
     """
         # If no files provided, use artifacts on device.
-        if not self._libfuzzer_args:
-            self._libfuzzer_args = self.list_artifacts()
+        if not self._libfuzzer_inputs:
+            self._libfuzzer_inputs = self.list_artifacts()
         else:
-            for arg in self._libfuzzer_args:
+            for arg in self._libfuzzer_inputs:
                 self.device.store(arg, self.data_path())
-        if not self._libfuzzer_args:
+        if not self._libfuzzer_inputs:
             return 0
 
         namespaced = []
-        for arg in self._libfuzzer_args:
+        for arg in self._libfuzzer_inputs:
             namespaced.append(os.path.join('data', os.path.basename(arg)))
-        self._libfuzzer_args = namespaced
+        self._libfuzzer_inputs = namespaced
 
         # Default to repro-ing in the foreground
         self.foreground = True
 
         self._create().call()
-        return len(self._libfuzzer_args)
+        return len(self._libfuzzer_inputs)

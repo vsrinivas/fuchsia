@@ -21,7 +21,11 @@ class FakeCLI(CommandLineInterface):
 
     @property
     def log(self):
-        """Saves messages printed by echo, error, or choose."""
+        """Saves messages printed by echo, error, or choose.
+
+           NOTE! Reading this attribute clears it (allowing it to be easily
+           reused multiple times in a single test).
+        """
         log = self._log
         self._log = []
         return log

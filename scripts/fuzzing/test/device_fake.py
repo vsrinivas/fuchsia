@@ -16,11 +16,11 @@ from host_fake import FakeHost
 
 class FakeDevice(Device):
 
-    def __init__(self, cli=None, autoconfigure=True):
-        if not cli:
-            cli = FakeCLI()
+    def __init__(self, host=None, autoconfigure=True):
+        if not host:
+            host = FakeHost()
         self.pid = 10000
-        super(FakeDevice, self).__init__(FakeHost(cli), '::1')
+        super(FakeDevice, self).__init__(host, '::1')
         if autoconfigure:
             self.add_fake_pathnames()
             self.configure()

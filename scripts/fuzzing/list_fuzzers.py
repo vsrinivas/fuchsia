@@ -9,17 +9,18 @@ import sys
 from lib.args import ArgParser
 from lib.fuzzer import Fuzzer
 from lib.host import Host
-from lib.cli import CommandLineInterface
+from lib.factory import Factory
 
 
 def main():
-    cli = CommandLineInterface()
+    factory = Factory()
     parser = ArgParser(
-        cli, 'Lists fuzzers matching NAME if provided, or all fuzzers.')
+        factory.cli, 'Lists fuzzers matching NAME if provided, or all fuzzers.')
     parser.require_name(False)
-    args = parser.parse_args()
+    args = parser.parse()
 
-    host = Host.from_build(cli)
+    cli = factory.cli
+    host = factory.create_host()
     fuzzers = host.fuzzers(args.name)
     if len(fuzzers) == 0:
         cli.error('No matching fuzzers.')

@@ -15,6 +15,7 @@ from lib.fuzzer import Fuzzer
 from device_fake import FakeDevice
 from host_fake import FakeHost
 from fuzzer_fake import FakeFuzzer
+from factory_fake import FakeFactory
 
 
 class TestFuzzer(unittest.TestCase):
@@ -29,13 +30,6 @@ class TestFuzzer(unittest.TestCase):
         self.assertRan(device.host, *device._ssh_cmd(list(args)))
 
     # Unit tests
-
-    def test_from_args(self):
-        device = FakeDevice()
-        parser = ArgParser('test_from_args')
-        with self.assertRaises(SystemExit):
-            args = parser.parse_args(['target4'])
-            fuzzer = Fuzzer.from_args(device, args)
 
     def test_measure_corpus(self):
         device = FakeDevice()
@@ -99,23 +93,19 @@ class TestFuzzer(unittest.TestCase):
     # arguments to be passed to libFuzzer are given by lf_args. If the helper is expected to raise
     # an exception, leave `expected` empty and have the caller handle the exception.
     def start_helper(self, args, expected):
-        device = FakeDevice()
+        factory = FakeFactory()
         base_dir = tempfile.mkdtemp()
         try:
             parser = ArgParser('start_helper')
-            args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse(
-                ['package1/target2'] + args)
+            args = parser.parse(['package1/target2'] + args)
             args.output = base_dir
-            fuzzer = FakeFuzzer.from_args(device, args)
-            fuzzer.libfuzzer_opts = libfuzzer_opts
-            fuzzer.libfuzzer_args = libfuzzer_args
-            fuzzer.subprocess_args = subprocess_args
+            fuzzer = factory.create_fuzzer(args)
             fuzzer.start()
 
         finally:
             shutil.rmtree(base_dir)
         if expected:
-            self.assertSsh(device, 'run', fuzzer.url(), *expected)
+            self.assertSsh(factory.device, 'run', fuzzer.url(), *expected)
 
     def test_start(self):
         self.start_helper(
@@ -160,7 +150,7 @@ class TestFuzzer(unittest.TestCase):
             ])
 
     def test_start_with_bad_option(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(SystemExit):
             self.start_helper(['-option2=foo', '-option1'], None)
 
     def test_start_with_bad_corpus(self):
@@ -181,19 +171,19 @@ class TestFuzzer(unittest.TestCase):
 
     # Helper to test Fuzzer.symbolize with different logs.
     def symbolize_helper(self, log_in, log_out):
-        device = FakeDevice()
-        host = device.host
-        cmd = ' '.join(host._symbolizer_cmd())
-        host.responses[cmd] = [
+        factory = FakeFactory()
+        cmd = ' '.join(factory.host._symbolizer_cmd())
+        factory.host.responses[cmd] = [
             "[000001.234567][123][456][klog] INFO: Symbolized line 1",
             "[000001.234568][123][456][klog] INFO: Symbolized line 2",
             "[000001.234569][123][456][klog] INFO: Symbolized line 3",
         ]
-        fuzzer = FakeFuzzer(device, u'fake-package1', u'fake-target2')
-        device.host.mkdir(os.path.join(fuzzer._output))
+        parser = ArgParser('symbolize_helper')
+        fuzzer = factory.create_fuzzer(parser.parse(['package1/target2']))
+        factory.host.mkdir(os.path.join(fuzzer._output))
         fuzzer.unsymbolized.write(log_in)
         if fuzzer.symbolize_log():
-            self.assertIn(cmd, host.history)
+            self.assertIn(cmd, factory.host.history)
         self.assertEqual(fuzzer.symbolized.read(), log_out)
 
     def test_symbolize_log_no_mutation_sequence(self):
@@ -270,32 +260,31 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
 """)
 
     def test_stop(self):
-        device = FakeDevice()
-        fuzzer1 = Fuzzer(device, u'fake-package1', u'fake-target1')
-        pid = device.add_fake_pid(fuzzer1.package, fuzzer1.executable)
+        factory = FakeFactory()
+        parser = ArgParser('test_stop')
+        fuzzer1 = factory.create_fuzzer(
+            parser.parse(['fake-package1/fake-target1']))
+        pid = factory.device.add_fake_pid(fuzzer1.package, fuzzer1.executable)
         fuzzer1.stop()
-        self.assertSsh(device, 'kill', str(pid))
-        fuzzer3 = Fuzzer(device, u'fake-package1', u'fake-target3')
+        self.assertSsh(factory.device, 'kill', str(pid))
+        fuzzer3 = factory.create_fuzzer(
+            parser.parse(['fake-package1/fake-target3']))
         fuzzer3.stop()
 
     def test_repro(self):
-        device = FakeDevice()
+        factory = FakeFactory()
         parser = ArgParser('test_repro')
-        args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse(
-            [
-                'package1/target2',
-                '-some-lf-arg=value',
-            ])
-        fuzzer = Fuzzer.from_args(device, args)
-        fuzzer.libfuzzer_opts = libfuzzer_opts
-        fuzzer.libfuzzer_args = libfuzzer_args
-        fuzzer.subprocess_args = subprocess_args
+        args = parser.parse([
+            'package1/target2',
+            '-some_lf_arg=value',
+        ])
+        fuzzer = factory.create_fuzzer(args)
 
         # No-op if artifacts are empty
         self.assertEqual(fuzzer.repro(), 0)
 
-        device.add_ssh_response(
-            device._ls_cmd(fuzzer.data_path()), [
+        factory.device.add_ssh_response(
+            factory.device._ls_cmd(fuzzer.data_path()), [
                 '-rw-r--r-- 1 0 0  1337 Mar 20 01:40 crash-deadbeef',
                 '-rw-r--r-- 1 0 0  1729 Mar 20 01:40 leak-deadfa11',
                 '-rw-r--r-- 1 0 0 31415 Mar 20 01:40 oom-feedface',
@@ -303,8 +292,8 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
         artifacts = ['data/' + artifact for artifact in fuzzer.list_artifacts()]
         self.assertNotEqual(fuzzer.repro(), 0)
         self.assertSsh(
-            device, 'run', fuzzer.url(), '-artifact_prefix=data/',
-            '-some-lf-arg=value', *artifacts)
+            factory.device, 'run', fuzzer.url(), '-artifact_prefix=data/',
+            '-some_lf_arg=value', *artifacts)
 
 
 if __name__ == '__main__':

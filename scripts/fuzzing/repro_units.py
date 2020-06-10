@@ -10,25 +10,20 @@ from lib.args import ArgParser
 from lib.device import Device
 from lib.fuzzer import Fuzzer
 from lib.host import Host
-from lib.cli import CommandLineInterface
+from lib.factory import Factory
 
 
 def main():
-    cli = CommandLineInterface()
+    factory = Factory()
     parser = ArgParser(
-        cli,
+        factory.cli,
         'Runs the named fuzzer on provided test units, or all current test ' +
         'units for the fuzzer. Use \'check-fuzzer\' to see current tests units.'
     )
-    args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse()
+    args = parser.parse()
 
-    host = Host.from_build(cli)
-    device = Device.from_host(host)
-    fuzzer = Fuzzer.from_args(device, args)
-    fuzzer.libfuzzer_opts = libfuzzer_opts
-    fuzzer.libfuzzer_args = libfuzzer_args
-    fuzzer.subprocess_args = subprocess_args
-
+    cli = factory.cli
+    fuzzer = factory.create_fuzzer(args)
     if fuzzer.repro() == 0:
         cli.error('No matching artifacts found.')
 

@@ -35,21 +35,6 @@ class TestDevice(unittest.TestCase):
 
     # Unit tests
 
-    def test_from_host(self):
-        host = FakeHost()
-        cmd = ' '.join(host._find_device_cmd())
-        with self.assertRaises(RuntimeError):
-            device = Device.from_host(host)
-        host.responses[cmd] = ['::1', '::2']
-        with self.assertRaises(RuntimeError):
-            device = Device.from_host(host)
-        host.responses[cmd] = ['::1']
-        with self.assertRaises(ValueError):
-            device = Device.from_host(host)
-        host.pathnames.append(
-            host.fxpath(host.build_dir, 'ssh-keys', 'ssh_config'))
-        device = Device.from_host(host)
-
     def test_configure(self):
         device = FakeDevice(autoconfigure=False)
         self.assertEqual(device.ssh_config, None)

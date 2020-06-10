@@ -10,22 +10,21 @@ from lib.args import ArgParser
 from lib.device import Device
 from lib.fuzzer import Fuzzer
 from lib.host import Host
-from lib.cli import CommandLineInterface
+from lib.factory import Factory
 
 
 def main():
-    cli = CommandLineInterface()
+    factory = Factory()
     parser = ArgParser(
-        cli, 'Reports status for the fuzzer matching NAME if ' +
+        factory.cli, 'Reports status for the fuzzer matching NAME if ' +
         'provided, or for all running fuzzers.  Status includes execution ' +
         'state, corpus size, and number of artifacts.')
     parser.require_name(False)
-    args = parser.parse_args()
+    args = parser.parse()
 
-    host = Host.from_build(cli)
-    device = Device.from_host(host)
-    fuzzers = host.fuzzers(args.name)
-
+    cli = factory.cli
+    device = factory.create_device()
+    fuzzers = device.host.fuzzers(args.name)
     silent = True
     for package, executable in fuzzers:
         fuzzer = Fuzzer(device, package, executable)

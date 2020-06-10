@@ -28,28 +28,6 @@ class Host(object):
     # Convenience file descriptor for silencing subprocess output
     DEVNULL = open(os.devnull, 'w')
 
-    @classmethod
-    def from_build(cls, cli):
-        """Uses a local build directory to configure a Host object from it."""
-        fuchsia_dir = os.getenv('FUCHSIA_DIR')
-        if not _fuchsia_dir:
-            cli.error(
-                'FUCHSIA_DIR not set.', 'Have you sourced "scripts/fx-env.sh"?')
-        host = cls(cli, fuchsia_dir)
-        try:
-            with open(host.fxpath('.fx-build-dir')) as opened:
-                build_dir = opened.read().strip()
-            with open(host.fxpath(build_dir, 'fuzzers.json')) as opened:
-                host.configure(build_dir, opened)
-        except IOError as e:
-            if e.errno == errno.ENOENT:
-                cli.error(
-                    'Initialization failure; have you run ' +
-                    '`fx set ... --fuzz-with <sanitizer>`?')
-            else:
-                raise
-        return host
-
     def __init__(self, cli, fuchsia_dir):
         self._platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
         self._cli = cli
@@ -247,10 +225,10 @@ class Host(object):
         cmd = self._find_device_cmd(device_name)
         addrs = self.create_process(cmd).check_output().strip()
         if not addrs:
-            raise RuntimeError('Unable to find device; try `fx set-device`.')
+            self.cli.error('Unable to find device.', 'Try `fx set-device`.')
         addrs = addrs.split('\n')
         if len(addrs) != 1:
-            raise RuntimeError('Multiple devices found; try `fx set-device`.')
+            self.cli.error('Multiple devices found', 'Try `fx set-device`.')
         return addrs[0]
 
     def _symbolizer_cmd(self):

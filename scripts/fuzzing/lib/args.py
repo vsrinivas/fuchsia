@@ -50,10 +50,8 @@ class ArgParser:
             '--output', help='Path under which to store results.')
         self._parser.add_argument(
             '--monitor', action='store_true', help=argparse.SUPPRESS)
-
-    def parse_args(self, args=None):
-        """ Parses arguments, all of which must be recognized. """
-        return self._parser.parse_args(args)
+        self._parser.add_argument(
+            'libfuzzer_inputs', nargs='*', help='Inputs to libFuzzer.')
 
     def parse(self, args=None):
         """ Parses arguments for fx fuzz, libFuzzer, and the fuzzer.
@@ -75,10 +73,12 @@ class ArgParser:
             A tuple consisting of:
                 1. An argparse-populated namespace
                 2. A dict of libFuzzer options mapping keys to values.
-                3. A list of libFuzzer positional arguments.
+                3. A list of libFuzzer inputs.
                 4. A list of fuzzer subprocess arguments.
         """
-        pat = re.compile(r'-(\S+)=(.*)')
+        libfuzzer_opt_re = re.compile(r'-(\w+)=(.*)')
+        long_opt_re = re.compile(r'--\w+')
+        positional_re = re.compile(r'[^-].*')
         other = []
         libfuzzer_opts = {}
         subprocess_args = []
@@ -86,14 +86,20 @@ class ArgParser:
         if not args:
             args = sys.argv[1:]
         for arg in args:
-            m = pat.match(arg)
+            libfuzzer_opt = libfuzzer_opt_re.match(arg)
+            long_opt = long_opt_re.match(arg)
+            positional = positional_re.match(arg)
             if pass_to_subprocess:
                 subprocess_args.append(arg)
             elif arg == '--':
                 pass_to_subprocess = True
-            elif m:
-                libfuzzer_opts[m.group(1)] = m.group(2)
-            else:
+            elif libfuzzer_opt:
+                libfuzzer_opts[libfuzzer_opt.group(1)] = libfuzzer_opt.group(2)
+            elif long_opt or positional:
                 other.append(arg)
-        args, libfuzzer_args = self._parser.parse_known_args(other)
-        return args, libfuzzer_opts, libfuzzer_args, subprocess_args
+            else:
+                self._parser.error('unrecognized option: {}'.format(arg))
+        args = self._parser.parse_args(other)
+        args.libfuzzer_opts = libfuzzer_opts
+        args.subprocess_args = subprocess_args
+        return args
