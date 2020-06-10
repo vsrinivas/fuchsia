@@ -50,11 +50,11 @@ uint64_t GetMetadataSize(const FvmOptions& options, uint64_t slice_count) {
 }  // namespace internal
 
 FvmDescriptor::Builder::Builder(FvmDescriptor descriptor)
-    : options_(std::move(descriptor.options)),
-      accumulated_slices_(descriptor.slice_count),
-      metadata_allocated_size_(descriptor.metadata_required_size) {
-  for (auto it = descriptor.partitions.begin(); it != descriptor.partitions.end();) {
-    partitions_.emplace_back(std::move(descriptor.partitions.extract(it++).value()));
+    : options_(std::move(descriptor.options_)),
+      accumulated_slices_(descriptor.slice_count_),
+      metadata_allocated_size_(descriptor.metadata_required_size_) {
+  for (auto it = descriptor.partitions_.begin(); it != descriptor.partitions_.end();) {
+    partitions_.emplace_back(std::move(descriptor.partitions_.extract(it++).value()));
   }
 }
 
@@ -89,10 +89,11 @@ fit::result<FvmDescriptor, std::string> FvmDescriptor::Builder::Build() {
     return fit::error(error);
   }
 
+  accumulated_slices_ = 0;
   // Check for duplicated partition entries <Name, InstanceGUID> unique pair.
   for (auto& partition : partitions_) {
-    auto it = descriptor.partitions.find(partition);
-    if (it != descriptor.partitions.end()) {
+    auto it = descriptor.partitions_.find(partition);
+    if (it != descriptor.partitions_.end()) {
       std::string error = "Partition already exists, could not add partition ";
       error.append(partition.volume().name)
           .append(" and instance guid ")
@@ -114,7 +115,7 @@ fit::result<FvmDescriptor, std::string> FvmDescriptor::Builder::Build() {
       accumulated_slices_ += slice_extents.count();
     }
 
-    descriptor.partitions.emplace(std::move(partition));
+    descriptor.partitions_.emplace(std::move(partition));
   }
   partitions_.clear();
 
@@ -131,9 +132,9 @@ fit::result<FvmDescriptor, std::string> FvmDescriptor::Builder::Build() {
     return fit::error(error);
   }
 
-  descriptor.metadata_required_size = metadata_allocated_size_;
-  descriptor.slice_count = accumulated_slices_;
-  descriptor.options = std::move(options_.value());
+  descriptor.metadata_required_size_ = metadata_allocated_size_;
+  descriptor.slice_count_ = accumulated_slices_;
+  descriptor.options_ = std::move(options_.value());
 
   return fit::ok(std::move(descriptor));
 }

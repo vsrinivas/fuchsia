@@ -69,17 +69,17 @@ fvm::sparse_image_t FvmSparseGenerateHeader(const FvmDescriptor& descriptor) {
   fvm::sparse_image_t sparse_image_header = {};
   sparse_image_header.magic = fvm::kSparseFormatMagic;
   sparse_image_header.version = fvm::kSparseFormatVersion;
-  sparse_image_header.slice_size = descriptor.options.slice_size;
-  sparse_image_header.partition_count = descriptor.partitions.size();
-  sparse_image_header.maximum_disk_size = descriptor.options.max_volume_size.value_or(0);
-  sparse_image_header.flags = fvm_sparse_internal::GetImageFlags(descriptor.options);
+  sparse_image_header.slice_size = descriptor.options().slice_size;
+  sparse_image_header.partition_count = descriptor.partitions().size();
+  sparse_image_header.maximum_disk_size = descriptor.options().max_volume_size.value_or(0);
+  sparse_image_header.flags = fvm_sparse_internal::GetImageFlags(descriptor.options());
 
   unsigned int extent_count = 0;
-  for (const auto& partition : descriptor.partitions) {
+  for (const auto& partition : descriptor.partitions()) {
     extent_count += partition.address().mappings.size();
   }
   sparse_image_header.header_length =
-      sizeof(fvm::partition_descriptor_t) * descriptor.partitions.size() +
+      sizeof(fvm::partition_descriptor_t) * descriptor.partitions().size() +
       sizeof(fvm::extent_descriptor_t) * extent_count + sizeof(fvm::sparse_image_t);
 
   return sparse_image_header;
@@ -124,9 +124,9 @@ fit::result<void, std::string> FvmSparseWriteImage(const FvmDescriptor& descript
   }
   current_offset += sizeof(fvm::sparse_image_t);
 
-  for (const auto& partition : descriptor.partitions) {
+  for (const auto& partition : descriptor.partitions()) {
     FvmSparsePartitionEntry entry =
-        FvmSparseGeneratePartitionEntry(descriptor.options.slice_size, partition);
+        FvmSparseGeneratePartitionEntry(descriptor.options().slice_size, partition);
     auto partition_result = writer->Write(current_offset, FixedSizeStructToSpan(entry.descriptor));
     if (!partition_result.empty()) {
       return fit::error(partition_result);
@@ -149,7 +149,7 @@ fit::result<void, std::string> FvmSparseWriteImage(const FvmDescriptor& descript
   // TODO(gevalentino): In order to add compression support of the partition data, we need to
   // provide a compression context for this entire chunk.
   std::vector<uint8_t> data(kReadBufferSize, 0);
-  for (const auto& partition : descriptor.partitions) {
+  for (const auto& partition : descriptor.partitions()) {
     const auto* reader = partition.reader();
     for (const auto& mapping : partition.address().mappings) {
       uint64_t remaining_bytes = mapping.count * partition.volume().block_size;
@@ -182,7 +182,7 @@ fit::result<void, std::string> FvmSparseWriteImage(const FvmDescriptor& descript
 uint64_t FvmSparseCalculateImageSize(const FvmDescriptor& descriptor) {
   uint64_t image_size = sizeof(fvm::sparse_image_t);
 
-  for (const auto& partition : descriptor.partitions) {
+  for (const auto& partition : descriptor.partitions()) {
     image_size += sizeof(fvm::partition_descriptor_t);
     for (const auto& mapping : partition.address().mappings) {
       // Account for extent size, in the current format trailing zeroes are omitted,

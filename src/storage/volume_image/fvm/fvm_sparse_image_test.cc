@@ -189,15 +189,15 @@ TEST(FvmSparseImageTest, FvmSparseGenerateHeaderMatchersFvmDescriptor) {
   FvmDescriptor descriptor = MakeDescriptor();
   auto header = FvmSparseGenerateHeader(descriptor);
 
-  EXPECT_EQ(descriptor.partitions.size(), header.partition_count);
-  EXPECT_EQ(descriptor.options.max_volume_size.value(), header.maximum_disk_size);
-  EXPECT_EQ(descriptor.options.slice_size, header.slice_size);
+  EXPECT_EQ(descriptor.partitions().size(), header.partition_count);
+  EXPECT_EQ(descriptor.options().max_volume_size.value(), header.maximum_disk_size);
+  EXPECT_EQ(descriptor.options().slice_size, header.slice_size);
   EXPECT_EQ(fvm::kSparseFormatMagic, header.magic);
   EXPECT_EQ(fvm::kSparseFormatVersion, header.version);
-  EXPECT_EQ(fvm_sparse_internal::GetImageFlags(descriptor.options), header.flags);
+  EXPECT_EQ(fvm_sparse_internal::GetImageFlags(descriptor.options()), header.flags);
 
   uint64_t extent_count = 0;
-  for (const auto& partition : descriptor.partitions) {
+  for (const auto& partition : descriptor.partitions()) {
     extent_count += partition.address().mappings.size();
   }
   uint64_t expected_header_length = sizeof(fvm::sparse_image_t) +
@@ -208,9 +208,10 @@ TEST(FvmSparseImageTest, FvmSparseGenerateHeaderMatchersFvmDescriptor) {
 
 TEST(FvmSparseImageTest, FvmSparGeneratePartitionEntryMatchesPartition) {
   FvmDescriptor descriptor = MakeDescriptor();
-  const auto& partition = *descriptor.partitions.begin();
+  const auto& partition = *descriptor.partitions().begin();
 
-  auto partition_entry = FvmSparseGeneratePartitionEntry(descriptor.options.slice_size, partition);
+  auto partition_entry =
+      FvmSparseGeneratePartitionEntry(descriptor.options().slice_size, partition);
 
   EXPECT_EQ(fvm::kPartitionDescriptorMagic, partition_entry.descriptor.magic);
   EXPECT_TRUE(memcmp(partition.volume().type.data(), partition_entry.descriptor.type,
@@ -231,7 +232,7 @@ TEST(FvmSparseImageTest,
   FvmDescriptor descriptor = MakeDescriptor();
   uint64_t header_length = FvmSparseGenerateHeader(descriptor).header_length;
   uint64_t data_length = 0;
-  for (const auto& partition : descriptor.partitions) {
+  for (const auto& partition : descriptor.partitions()) {
     for (const auto& mapping : partition.address().mappings) {
       data_length += mapping.count * partition.volume().block_size;
     }
@@ -325,7 +326,7 @@ TEST(FvmSparseImageTest, FvmSparseWriteImageDataUncompressedCompliesWithFormat) 
 
   auto header = FvmSparseGenerateHeader(descriptor);
   std::vector<FvmSparsePartitionEntry> partitions;
-  for (const auto& partition : descriptor.partitions) {
+  for (const auto& partition : descriptor.partitions()) {
     partitions.push_back(FvmSparseGeneratePartitionEntry(options.slice_size, partition));
   }
 
@@ -335,7 +336,7 @@ TEST(FvmSparseImageTest, FvmSparseWriteImageDataUncompressedCompliesWithFormat) 
   EXPECT_TRUE(memcmp(&serialized_sparse_image->header, &header, sizeof(fvm::sparse_image_t)) == 0);
 
   // Check partition and entry descriptors.
-  auto it = descriptor.partitions.begin();
+  auto it = descriptor.partitions().begin();
   const auto& partition_1 = *it++;
   auto partition_1_entry = FvmSparseGeneratePartitionEntry(options.slice_size, partition_1);
   ASSERT_NO_FATAL_FAILURE(PartitionsAreEqual(serialized_sparse_image->partition_1.descriptor,
@@ -362,7 +363,7 @@ TEST(FvmSparseImageTest, FvmSparseWriteImageDataUncompressedCompliesWithFormat) 
       {serialized_sparse_image->extent_1, serialized_sparse_image->extent_2,
        serialized_sparse_image->extent_3},
       {serialized_sparse_image->extent_4, serialized_sparse_image->extent_5}};
-  for (const auto& partition : descriptor.partitions) {
+  for (const auto& partition : descriptor.partitions()) {
     auto read_content = partition_index == 0 ? GetContents<1> : GetContents<2>;
     std::vector<uint8_t> extent_content;
     uint64_t extent_index = 0;

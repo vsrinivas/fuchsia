@@ -81,24 +81,25 @@ TEST(FvmDescriptorBuilderTest, ConstructFromDescriptorIsOk) {
   // Metadata for the fvm should get this past the upper bound of target size.
   Partition partition =
       MakePartitionWithNameAndInstanceGuid("Partition-1", guid.value(), options.slice_size, 20);
-  FvmDescriptor descriptor;
-  descriptor.partitions.emplace(std::move(partition));
-  descriptor.options = options;
-  FvmDescriptor::Builder builder(std::move(descriptor));
+  FvmDescriptor::Builder builder;
+  auto descriptor_result = builder.SetOptions(options).AddPartition(std::move(partition)).Build();
+  ASSERT_TRUE(descriptor_result.is_ok()) << descriptor_result.error();
+  FvmDescriptor descriptor = descriptor_result.take_value();
+  builder = FvmDescriptor::Builder(std::move(descriptor));
   auto result = builder.Build();
   ASSERT_TRUE(result.is_ok()) << result.error();
 
-  EXPECT_EQ(options.compression.schema, result.value().options.compression.schema);
-  EXPECT_EQ(options.compression.options, result.value().options.compression.options);
-  EXPECT_EQ(options.max_volume_size, result.value().options.max_volume_size);
-  EXPECT_EQ(options.target_volume_size, result.value().options.target_volume_size);
-  EXPECT_EQ(options.slice_size, result.value().options.slice_size);
+  EXPECT_EQ(options.compression.schema, result.value().options().compression.schema);
+  EXPECT_EQ(options.compression.options, result.value().options().compression.options);
+  EXPECT_EQ(options.max_volume_size, result.value().options().max_volume_size);
+  EXPECT_EQ(options.target_volume_size, result.value().options().target_volume_size);
+  EXPECT_EQ(options.slice_size, result.value().options().slice_size);
 
-  ASSERT_EQ(1u, result.value().partitions.size());
-  EXPECT_EQ(20u, result.value().slice_count);
-  EXPECT_GT(result.value().metadata_required_size, 0u);
+  ASSERT_EQ(1u, result.value().partitions().size());
+  EXPECT_EQ(20u, result.value().slice_count());
+  EXPECT_GT(result.value().metadata_required_size(), 0u);
   CheckPartition("Partition-1", guid.value(), options.slice_size, 20,
-                 *result.value().partitions.begin());
+                 *result.value().partitions().begin());
 }
 
 TEST(FvmDescriptorBuilderTest, BuildWithoutOptionsIsError) {
@@ -170,14 +171,14 @@ TEST(FvmDescriptorBuilderTest, BuildWithNoPartitionsIsOk) {
   ASSERT_TRUE(result.is_ok());
   auto fvm_descriptor = result.take_value();
 
-  EXPECT_TRUE(fvm_descriptor.partitions.empty());
-  EXPECT_EQ(options.compression.schema, fvm_descriptor.options.compression.schema);
-  EXPECT_EQ(options.compression.options, fvm_descriptor.options.compression.options);
-  EXPECT_EQ(options.max_volume_size, fvm_descriptor.options.max_volume_size);
-  EXPECT_EQ(options.target_volume_size, fvm_descriptor.options.target_volume_size);
-  EXPECT_EQ(options.slice_size, fvm_descriptor.options.slice_size);
-  EXPECT_EQ(0u, fvm_descriptor.slice_count);
-  EXPECT_EQ(GetMetadataSize(options, 0), fvm_descriptor.metadata_required_size);
+  EXPECT_TRUE(fvm_descriptor.partitions().empty());
+  EXPECT_EQ(options.compression.schema, fvm_descriptor.options().compression.schema);
+  EXPECT_EQ(options.compression.options, fvm_descriptor.options().compression.options);
+  EXPECT_EQ(options.max_volume_size, fvm_descriptor.options().max_volume_size);
+  EXPECT_EQ(options.target_volume_size, fvm_descriptor.options().target_volume_size);
+  EXPECT_EQ(options.slice_size, fvm_descriptor.options().slice_size);
+  EXPECT_EQ(0u, fvm_descriptor.slice_count());
+  EXPECT_EQ(GetMetadataSize(options, 0), fvm_descriptor.metadata_required_size());
 }
 
 TEST(FvmDescriptorBuilderTest, BuildWithDifferentPartitionsIsOk) {
@@ -209,15 +210,15 @@ TEST(FvmDescriptorBuilderTest, BuildWithDifferentPartitionsIsOk) {
   ASSERT_TRUE(result.is_ok());
   auto fvm_descriptor = result.take_value();
 
-  EXPECT_EQ(options.compression.schema, fvm_descriptor.options.compression.schema);
-  EXPECT_EQ(options.compression.options, fvm_descriptor.options.compression.options);
-  EXPECT_EQ(options.max_volume_size, fvm_descriptor.options.max_volume_size);
-  EXPECT_EQ(options.target_volume_size, fvm_descriptor.options.target_volume_size);
-  EXPECT_EQ(options.slice_size, fvm_descriptor.options.slice_size);
-  EXPECT_EQ(40u, fvm_descriptor.slice_count);
-  EXPECT_EQ(GetMetadataSize(options, 40), fvm_descriptor.metadata_required_size);
+  EXPECT_EQ(options.compression.schema, fvm_descriptor.options().compression.schema);
+  EXPECT_EQ(options.compression.options, fvm_descriptor.options().compression.options);
+  EXPECT_EQ(options.max_volume_size, fvm_descriptor.options().max_volume_size);
+  EXPECT_EQ(options.target_volume_size, fvm_descriptor.options().target_volume_size);
+  EXPECT_EQ(options.slice_size, fvm_descriptor.options().slice_size);
+  EXPECT_EQ(40u, fvm_descriptor.slice_count());
+  EXPECT_EQ(GetMetadataSize(options, 40), fvm_descriptor.metadata_required_size());
 
-  const auto& partitions = fvm_descriptor.partitions;
+  const auto& partitions = fvm_descriptor.partitions();
   ASSERT_EQ(3u, partitions.size());
 
   auto partition = partitions.begin();
@@ -245,8 +246,8 @@ TEST(FvmDescriptorBuilderTest, BuildWitPartitionsWithTailInMappingsIsOk) {
   auto result = builder.AddPartition(std::move(partition_1)).SetOptions(options).Build();
   ASSERT_TRUE(result.is_ok()) << result.error();
 
-  ASSERT_EQ(11u, result.value().slice_count);
-  const auto& partitions = result.value().partitions;
+  ASSERT_EQ(11u, result.value().slice_count());
+  const auto& partitions = result.value().partitions();
   ASSERT_EQ(1u, partitions.size());
 
   auto partition = partitions.begin();

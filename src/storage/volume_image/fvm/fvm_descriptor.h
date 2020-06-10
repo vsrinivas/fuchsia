@@ -26,7 +26,8 @@ uint64_t GetMetadataSize(const FvmOptions& options, uint64_t slice_count);
 
 // A FVM descriptor represents a collection of partitions and constraints that should eventually be
 // converted into an image.
-struct FvmDescriptor {
+class FvmDescriptor {
+ public:
   // This class provides the mechanism for generating a valid FVM descriptor, so that constraints
   // can be verified.
   class Builder {
@@ -58,17 +59,38 @@ struct FvmDescriptor {
     uint64_t metadata_allocated_size_ = 0;
   };
 
+  FvmDescriptor() = default;
+  FvmDescriptor(const FvmDescriptor&) = delete;
+  FvmDescriptor(FvmDescriptor&&) = default;
+  FvmDescriptor& operator=(const FvmDescriptor&) = delete;
+  FvmDescriptor& operator=(FvmDescriptor&&) = default;
+  ~FvmDescriptor() = default;
+
+  // Returns the partitions that belong to this fvm descriptor.
+  const std::set<Partition, Partition::LessThan>& partitions() const { return partitions_; }
+
+  // Returns the options of this descriptor.
+  const FvmOptions& options() const { return options_; }
+
+  // Returns the amount of slices required for the partitions of this descriptor,
+  // once a volume is formatted with it.
+  uint64_t slice_count() const { return slice_count_; }
+
+  // Returns the amount of bytes required for this descriptor to format a volume.
+  uint64_t metadata_required_size() const { return metadata_required_size_; }
+
+ private:
   // Set of partitions that belong to the fvm.
-  std::set<Partition, Partition::LessThan> partitions;
+  std::set<Partition, Partition::LessThan> partitions_;
 
   // Options used to construct and validate this descriptor.
-  FvmOptions options;
+  FvmOptions options_;
 
   // Number of slices required for this fvm descriptor.
-  uint64_t slice_count = 0;
+  uint64_t slice_count_ = 0;
 
   // Size in bytes of the metadata required to generate this image.
-  uint64_t metadata_required_size = 0;
+  uint64_t metadata_required_size_ = 0;
 };
 
 }  // namespace storage::volume_image
