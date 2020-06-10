@@ -11,8 +11,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
 
-#include "src/camera/lib/stream_utils/image_io_util.h"
-
 namespace camera {
 
 // The server-side implementation for the factory calibrations API. Also acts as a stream client and
@@ -61,7 +59,6 @@ class FactoryServer : public fuchsia::camera2::Stream_EventSender,
 
   async::Loop loop_;
   fuchsia::camera2::hal::ControllerPtr controller_;
-  std::unique_ptr<ImageIOUtil> image_io_util_;
   bool streaming_ = false;
   bool frames_received_ = false;
 };

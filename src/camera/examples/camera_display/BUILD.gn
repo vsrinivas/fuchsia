@@ -22,7 +22,6 @@ executable("bin") {
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/camera/lib/stream_utils",
     "//src/lib/fsl",
     "//src/lib/ui/base_view",
     "//src/ui/lib/glm_workaround",

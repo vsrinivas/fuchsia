@@ -19,7 +19,6 @@
 #include "lib/ui/scenic/cpp/session.h"
 #include "src/camera/examples/camera_display/stream_provider/stream_provider.h"
 #include "src/camera/examples/camera_display/text_node/text_node.h"
-#include "src/camera/lib/stream_utils/image_io_util.h"
 
 namespace camera {
 
