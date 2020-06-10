@@ -12,7 +12,7 @@ macro_rules! assert_lt {
     ($x:expr, $y:expr) => {
         assert!(
             $x < $y,
-            "assertion `{} < {}` failed; actual: {} is not less than {}",
+            "assertion `{} < {}` failed; actual: {:?} is not less than {:?}",
             stringify!($x),
             stringify!($y),
             $x,
@@ -27,7 +27,7 @@ macro_rules! assert_leq {
     ($x:expr, $y:expr) => {
         assert!(
             $x <= $y,
-            "assertion `{} <= {}` failed; actual: {} is not less than or equal to {}",
+            "assertion `{} <= {}` failed; actual: {:?} is not less than or equal to {:?}",
             stringify!($x),
             stringify!($y),
             $x,
@@ -42,7 +42,7 @@ macro_rules! assert_gt {
     ($x:expr, $y:expr) => {
         assert!(
             $x > $y,
-            "assertion `{} > {}` failed; actual: {} is not greater than {}",
+            "assertion `{} > {}` failed; actual: {:?} is not greater than {:?}",
             stringify!($x),
             stringify!($y),
             $x,
@@ -57,7 +57,7 @@ macro_rules! assert_geq {
     ($x:expr, $y:expr) => {
         assert!(
             $x >= $y,
-            "assertion `{} >= {}` failed; actual: {} is not greater than or equal to {}",
+            "assertion `{} >= {}` failed; actual: {:?} is not greater than or equal to {:?}",
             stringify!($x),
             stringify!($y),
             $x,
@@ -78,7 +78,7 @@ macro_rules! assert_near {
         let difference = $x - $y;
         assert!(
             -$delta <= difference && difference <= $delta,
-            "assertion `{} is near {} (within delta {})` failed; actual: |{} - {}| > {}",
+            "assertion `{} is near {} (within delta {})` failed; actual: |{:?} - {:?}| > {:?}",
             stringify!($x),
             stringify!($y),
             stringify!($delta),
@@ -176,6 +176,27 @@ mod tests {
         std::thread,
     };
 
+    #[derive(Debug, PartialEq, PartialOrd)]
+    struct NotDisplay {
+        x: i32,
+    }
+
+    impl core::ops::Sub for NotDisplay {
+        type Output = Self;
+
+        fn sub(self, other: Self) -> Self {
+            NotDisplay { x: self.x - other.x }
+        }
+    }
+
+    impl core::ops::Neg for NotDisplay {
+        type Output = Self;
+
+        fn neg(self) -> Self {
+            NotDisplay { x: -self.x }
+        }
+    }
+
     #[test]
     fn test_assert_lt_passes() {
         assert_lt!(1, 2);
@@ -192,6 +213,7 @@ mod tests {
         assert_lt!(-2.0f32, 7.0f32);
         assert_lt!(-2.0f64, 7.0f64);
         assert_lt!('a', 'b');
+        assert_lt!(NotDisplay { x: 1 }, NotDisplay { x: 2 });
     }
 
     #[test]
@@ -218,6 +240,8 @@ mod tests {
         assert_leq!(3.0, 3.0);
         assert_leq!('a', 'b');
         assert_leq!('b', 'b');
+        assert_leq!(NotDisplay { x: 1 }, NotDisplay { x: 2 });
+        assert_leq!(NotDisplay { x: 2 }, NotDisplay { x: 2 });
     }
 
     #[test]
@@ -246,6 +270,7 @@ mod tests {
         assert_gt!(7.0f32, -2.0f32);
         assert_gt!(7.0f64, -2.0f64);
         assert_gt!('b', 'a');
+        assert_gt!(NotDisplay { x: 2 }, NotDisplay { x: 1 });
     }
 
     #[test]
@@ -272,6 +297,8 @@ mod tests {
         assert_geq!(3.0, 3.0);
         assert_geq!('b', 'a');
         assert_geq!('b', 'b');
+        assert_geq!(NotDisplay { x: 2 }, NotDisplay { x: 1 });
+        assert_geq!(NotDisplay { x: 2 }, NotDisplay { x: 2 });
     }
 
     #[test]
@@ -299,6 +326,8 @@ mod tests {
         assert_near!(7i16, 5i16, 2i16);
         assert_near!(7i32, 5i32, 2i32);
         assert_near!(7i64, 5i64, 2i64);
+
+        assert_near!(NotDisplay { x: 7 }, NotDisplay { x: 5 }, NotDisplay { x: 2 });
     }
 
     #[test]
