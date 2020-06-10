@@ -6,7 +6,9 @@
 #define SRC_STORAGE_VOLUME_IMAGE_FVM_PARTITION_H_
 
 #include <memory>
+#include <string>
 
+#include "lib/fit/result.h"
 #include "src/storage/volume_image/fvm/address_descriptor.h"
 #include "src/storage/volume_image/utils/reader.h"
 #include "src/storage/volume_image/volume_descriptor.h"
@@ -29,6 +31,12 @@ class Partition {
     // Returns true if |lhs| partition should be before |rhs| partition.
     bool operator()(const Partition& lhs, const Partition& rhs) const;
   };
+
+  // On success returns a Partition representing the serialized volume image, which contains the
+  // volume and address descriptors, and backed by |reader|. On error retruns a string describing
+  // the failure reason.
+  static fit::result<Partition, std::string> Create(std::string_view serialized_volume_image,
+                                                    std::unique_ptr<Reader> reader);
 
   Partition() = default;
   Partition(VolumeDescriptor volume_descriptor, AddressDescriptor address_descriptor,

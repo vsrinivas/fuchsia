@@ -68,5 +68,147 @@ TEST(PartitionLessThanTest, WithSameNameOrdersLexicographicallyByInstanceGuid) {
   EXPECT_FALSE(is_before(second, first));
 }
 
+// Placeholder reader.
+class FakeReader final : public Reader {
+ public:
+  ~FakeReader() final = default;
+
+  std::string Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final { return ""; }
+};
+
+TEST(PartitionTest, CreateFromValidVolumeImageIsOk) {
+  constexpr std::string_view kSerializedVolumeImage = R"(
+    {
+      "volume": {
+        "magic": 11602964,
+        "instance_guid": "04030201-0605-0807-1009-111213141516",
+        "type_guid": "A4A3A2A1-B6B5-C8C7-D0D1-E0E1E2E3E4E5",
+        "name": "partition-1",
+        "block_size": 512,
+        "encryption_type": "ENCRYPTION_TYPE_ZXCRYPT",
+        "options" : [
+          "OPTION_NONE",
+          "OPTION_EMPTY"
+        ]
+      },
+      "address": {
+          "magic": 12526821592682033285,
+          "mappings": [
+            {
+              "source": 20,
+              "target": 400,
+              "count": 10
+            }
+          ]
+      }
+    })";
+
+  std::unique_ptr<Reader> fake_reader(new FakeReader());
+  auto* expected_reader = fake_reader.get();
+  auto result = Partition::Create(kSerializedVolumeImage, std::move(fake_reader));
+  ASSERT_TRUE(result.is_ok());
+  auto partition = result.take_value();
+
+  // Sanity check that values are actually set.
+  EXPECT_EQ(expected_reader, partition.reader());
+  EXPECT_STREQ("partition-1", partition.volume().name.data());
+  EXPECT_EQ(1u, partition.address().mappings.size());
+}
+
+TEST(PartitionTest, CreateFromInvalidJsonIsError) {
+  constexpr std::string_view kSerializedVolumeImage = R"(
+    {
+     )";
+
+  auto result = Partition::Create(kSerializedVolumeImage, nullptr);
+  ASSERT_FALSE(result.is_ok());
+}
+
+TEST(PartitionTest, CreateFromValidJsonWithMissingVolumeIsError) {
+  constexpr std::string_view kSerializedVolumeImage = R"(
+    {
+      "address": {
+          "magic": 12526821592682033285,
+          "mappings": [
+            {
+              "source": 20,
+              "target": 400,
+              "count": 10
+            }
+          ]
+      }
+    })";
+
+  auto result = Partition::Create(kSerializedVolumeImage, nullptr);
+  ASSERT_FALSE(result.is_ok());
+}
+
+TEST(PartitionTest, CreateFromValidJsonWithMissingAddressIsError) {
+  constexpr std::string_view kSerializedVolumeImage = R"(
+    {
+      "volume": {
+        "magic": 11602964,
+        "instance_guid": "04030201-0605-0807-1009-111213141516",
+        "type_guid": "A4A3A2A1-B6B5-C8C7-D0D1-E0E1E2E3E4E5",
+        "name": "partition-1",
+        "block_size": 512,
+        "encryption_type": "ENCRYPTION_TYPE_ZXCRYPT",
+        "options" : [
+          "OPTION_NONE",
+          "OPTION_EMPTY"
+        ]
+      }
+    })";
+
+  auto result = Partition::Create(kSerializedVolumeImage, nullptr);
+  ASSERT_FALSE(result.is_ok());
+}
+
+TEST(PartitionTest, CreateFromVolumeImageWithInvalidVolumeIsError) {
+  constexpr std::string_view kSerializedVolumeImage = R"(
+    {
+      "volume": {
+        "magic": 0,
+      },
+      "address": {
+          "magic": 12526821592682033285,
+          "mappings": [
+            {
+              "source": 20,
+              "target": 400,
+              "count": 10
+            }
+          ]
+      }
+    })";
+
+  auto result = Partition::Create(kSerializedVolumeImage, nullptr);
+  ASSERT_FALSE(result.is_ok());
+}
+
+TEST(PartitionTest, CreateFromVolumeImageWithInvalidAddressIsError) {
+  constexpr std::string_view kSerializedVolumeImage = R"(
+    {
+      "volume": {
+        "magic": 11602964,
+        "instance_guid": "04030201-0605-0807-1009-111213141516",
+        "type_guid": "A4A3A2A1-B6B5-C8C7-D0D1-E0E1E2E3E4E5",
+        "name": "partition-1",
+        "block_size": 512,
+        "encryption_type": "ENCRYPTION_TYPE_ZXCRYPT",
+        "options" : [
+          "OPTION_NONE",
+          "OPTION_EMPTY"
+        ]
+      },
+      "address": {
+          "magic": 0,
+      }
+    })";
+
+  auto result = Partition::Create(kSerializedVolumeImage, nullptr);
+  ASSERT_FALSE(result.is_ok());
+}
+
 }  // namespace
 }  // namespace storage::volume_image

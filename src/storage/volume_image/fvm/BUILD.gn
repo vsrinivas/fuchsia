@@ -25,6 +25,7 @@ source_set("partition") {
     "//src/storage/volume_image:volume-descriptor",
     "//src/storage/volume_image/utils:io-interfaces",
   ]
+  deps = [ "//third_party/rapidjson" ]
 }
 
 source_set("fvm-descriptor") {
