@@ -53,25 +53,9 @@ pub fn round_up_to_align(x: usize, align: usize) -> usize {
     (x + align - 1) & !(align - 1)
 }
 
-/// Split off the first element from a slice.
-fn split_off_first<'a, T>(slice: &mut &'a [T]) -> Result<&'a T> {
-    split_off_front(slice, 1).map(|res| &res[0])
-}
-
 /// Split off the first element from a mutable slice.
 fn split_off_first_mut<'a, T>(slice: &mut &'a mut [T]) -> Result<&'a mut T> {
     split_off_front_mut(slice, 1).map(|res| &mut res[0])
-}
-
-/// Split of the first `n` bytes from `slice`.
-fn split_off_front<'a, T>(slice: &mut &'a [T], n: usize) -> Result<&'a [T]> {
-    if n > slice.len() {
-        return Err(Error::OutOfRange);
-    }
-    let original = take_slice(slice);
-    let (head, tail) = original.split_at(n);
-    *slice = tail;
-    Ok(head)
 }
 
 /// Split of the first `n` mutable bytes from `slice`.
@@ -83,11 +67,6 @@ fn split_off_front_mut<'a, T>(slice: &mut &'a mut [T], n: usize) -> Result<&'a m
     let (head, tail) = original.split_at_mut(n);
     *slice = tail;
     Ok(head)
-}
-
-/// Empty out a slice.
-fn take_slice<'a, T>(x: &mut &'a [T]) -> &'a [T] {
-    mem::replace(x, &mut [])
 }
 
 /// Empty out a mutable slice.
@@ -159,34 +138,6 @@ pub struct Encoder<'a> {
     handles: &'a mut Vec<Handle>,
 
     /// Encoding context.
-    context: &'a Context,
-}
-
-/// Decoding state
-#[derive(Debug)]
-pub struct Decoder<'a> {
-    /// The out of line depth.
-    depth: usize,
-
-    /// Buffer from which to read data for the inline part of the message.
-    buf: &'a [u8],
-
-    /// Original length of the buf slice. Used to report error messages. A difference between this
-    /// value and buf.len() is the current decoding position for the inline part of the message.
-    initial_buf_len: usize,
-
-    /// Buffer from which to read out-of-line data.
-    out_of_line_buf: &'a [u8],
-
-    /// Original length of the out_of_line_buf slice. Used to report error messages. A difference
-    /// between this value and out_of_line_buf.len() is the current decoding position for the
-    /// out-of-line part of the message.
-    initial_out_of_line_buf_len: usize,
-
-    /// Buffer from which to read handles.
-    handles: &'a mut [Handle],
-
-    /// Decoding context.
     context: &'a Context,
 }
 
@@ -366,6 +317,31 @@ impl<'a> Encoder<'a> {
     }
 }
 
+/// Decoding state
+#[derive(Debug)]
+pub struct Decoder<'a> {
+    /// The out of line depth.
+    depth: usize,
+
+    /// The the next offset to read from in buf.
+    offset: usize,
+
+    /// The end of the current inline block in buf.
+    end_block: usize,
+
+    /// Next out of line block in buf.
+    next_out_of_line: usize,
+
+    /// Buffer from which to read data.
+    buf: &'a [u8],
+
+    /// Buffer from which to read handles.
+    handles: &'a mut [Handle],
+
+    /// Decoding context.
+    context: &'a Context,
+}
+
 impl<'a> Decoder<'a> {
     /// FIDL2-decodes a value of type `T` from the provided data and handle
     /// buffers. Assumes the buffers came from inside a transaction message
@@ -392,159 +368,124 @@ impl<'a> Decoder<'a> {
         value: &mut T,
     ) -> Result<()> {
         let inline_size = T::inline_size(context);
-        let out_of_line_offset = round_up_to_align(inline_size, 8);
-        if buf.len() < out_of_line_offset {
+        let next_out_of_line = round_up_to_align(inline_size, 8);
+        if next_out_of_line > buf.len() {
             return Err(Error::OutOfRange);
         }
 
-        let (buf, out_of_line_buf) = buf.split_at(out_of_line_offset);
-
         let mut decoder = Decoder {
             depth: 0,
+            offset: 0,
+            end_block: next_out_of_line,
+            next_out_of_line: next_out_of_line,
             buf,
-            initial_buf_len: buf.len(),
-            out_of_line_buf,
-            initial_out_of_line_buf_len: out_of_line_buf.len(),
             handles,
             context,
         };
         value.decode(&mut decoder)?;
-        if decoder.out_of_line_buf.len() != 0 {
+        if decoder.next_out_of_line < decoder.buf.len() {
             return Err(Error::ExtraBytes);
         }
         if decoder.handles.len() != 0 {
             return Err(Error::ExtraHandles);
         }
         debug_assert!(
-            decoder.buf.len() == out_of_line_offset - inline_size,
+            decoder.offset == inline_size,
             "Inline part of the buffer was not completely consumed. Most likely, this indicates a \
              bug in the FIDL decoders.\n\
-             Inline buffer size: {}\n\
-             Type size: {}\n\
-             Consumed: {}\n\
-             Leftover size: {}\n\
+             Offset: {}\n\
+             Block end offset: {}\n\
              Buffer: {:X?}",
-            out_of_line_offset,
+            decoder.offset,
             inline_size,
-            out_of_line_offset - decoder.buf.len(),
-            decoder.buf.len(),
             decoder.buf,
         );
-        for i in 0..decoder.buf.len() {
+        for i in decoder.offset..next_out_of_line {
             if decoder.buf[i] != 0 {
                 return Err(Error::NonZeroPadding {
-                    padding_start: inline_size,
-                    non_zero_pos: inline_size + i,
+                    padding_start: decoder.offset,
+                    non_zero_pos: i,
                 });
             }
         }
         Ok(())
     }
 
-    /// Runs the provided closure inside an decoder modified
-    /// to read out-of-line data.
-    ///
-    /// `absolute_offset` indicates the offset of the start of the out-of-line data to read,
-    /// relative to the original start of the buffer.
-    pub fn read_out_of_line<F, R>(&mut self, len: usize, f: F) -> Result<R>
-    where
-        F: FnOnce(&mut Decoder<'_>) -> Result<R>,
-    {
-        let (old_buf, old_initial_buf_len) = self.before_read_out_of_line(len)?;
-
-        self.depth += 1;
-        if self.depth > MAX_RECURSION {
-            return Err(Error::MaxRecursionDepth);
-        }
-        let res = f(self);
-        self.depth -= 1;
-
-        // Set the current `buf` back to its original position.
-        //
-        // After this transformation, the final `Decoder` looks like this:
-        // [---------------------------------]
-        //     ^---buf--^               ^ool^ (slices)
-        //                              ^out-of-line-advanced (index)
-        self.buf = old_buf;
-        self.initial_buf_len = old_initial_buf_len;
-        res
-    }
-
-    // Returns old_buf and old_initial_buf_len
-    fn before_read_out_of_line(&mut self, len: usize) -> Result<(&'a [u8], usize)> {
-        // Currently, out-of-line points here:
-        // [---------------------------------]
-        //     ^---buf--^    ^-out-of-line--^ (slices)
-        //
-        // We want to shift so that `buf` points to the first `len` bytes in `out-of-line` that
-        // are aligned to `align`, and `old-buf` points to the previous value of `buf`:
-        //
-        // [---------------------------------]
-        //     ^old--buf^      ^--buf--^^ool^
-        //
-        // We also adjust the initial_buf_len, so that the index of an invalid byte can still be
-        // comupted using the same formula: initial_buf_len - buf.len().
-
-        // We split off the first `len` bytes from `out_of_line`.
-        let new_buf = split_off_front(&mut self.out_of_line_buf, len)?;
-        let new_initial_buf_len =
-            self.initial_buf_len + self.initial_out_of_line_buf_len - self.out_of_line_buf.len();
-        // Split off any trailing bytes up to the alignment and discard them.
-        if len % 8 != 0 {
-            let trailer = 8 - (len % 8);
-            let _ = split_off_front(&mut self.out_of_line_buf, trailer)?;
-        }
-
-        // Store the current `buf` slice and shift the `buf` slice to point at the out-of-line data.
-        let old_buf = take_slice(&mut self.buf);
-        let old_initial_buf_len = self.initial_buf_len;
-        self.buf = new_buf;
-        self.initial_buf_len = new_initial_buf_len;
-
-        Ok((old_buf, old_initial_buf_len))
-    }
-
-    /// Whether or not the current section of inline bytes has been fully read.
-    pub fn is_empty(&self) -> bool {
-        self.buf.is_empty()
-    }
-
-    /// Current decoding position in the inline part of the message, counting from the original
-    /// first byte passed to `decode_into`.
-    pub fn inline_pos(&self) -> usize {
-        self.initial_buf_len - self.buf.len()
-    }
-
-    /// Current decoding position in the out-of-line part of the message, counting from the
-    /// original first byte passed to `decode_into`.
-    pub fn out_of_line_pos(&self) -> usize {
-        self.initial_out_of_line_buf_len - self.out_of_line_buf.len()
-    }
-
-    /// The number of out-of-line bytes not yet accounted for by a `read_out_of_line`
-    /// call.
-    pub fn remaining_out_of_line(&self) -> usize {
-        self.out_of_line_buf.len()
-    }
-
-    /// The number of handles that have not yet been consumed.
-    pub fn remaining_handles(&self) -> usize {
-        self.handles.len()
-    }
-
-    /// Returns a slice of the next `len` bytes to be decoded into and shifts the decoding buffer.
-    pub fn next_slice(&mut self, len: usize) -> Result<&[u8]> {
-        split_off_front(&mut self.buf, len)
-    }
-
-    /// Like `next_slice`, but doesn't remove the bytes from `Self`.
-    pub fn peek_slice(&mut self, len: usize) -> Result<&[u8]> {
-        self.buf.get(0..len).ok_or_else(|| std::process::abort())
+    /// Returns the next offset for reading and increases `offset` by `len`.
+    pub fn next_offset(&mut self, len: usize) -> usize {
+        let cur_offset = self.offset;
+        self.offset += len;
+        cur_offset
     }
 
     /// Take the next handle from the `handles` list and shift the list down by one element.
     pub fn take_handle(&mut self) -> Result<Handle> {
         split_off_first_mut(&mut self.handles).map(take_handle)
+    }
+
+    /// Runs the provided closure inside an decoder modified
+    /// to read out-of-line data.
+    pub fn read_out_of_line<F, R>(&mut self, len: usize, f: F) -> Result<R>
+    where
+        F: FnOnce(&mut Decoder<'_>) -> Result<R>,
+    {
+        // Save current state.
+        let old_offset = self.offset;
+        let old_end_block = self.end_block;
+        let old_next_out_of_line = self.next_out_of_line;
+
+        // Compute offsets for out of line block.
+        self.offset = self.next_out_of_line;
+        self.next_out_of_line = self.next_out_of_line + round_up_to_align(len, 8);
+        self.end_block = self.next_out_of_line;
+        if self.next_out_of_line > self.buf.len() {
+            return Err(Error::OutOfRange);
+        }
+
+        // Descend into block.
+        self.depth += 1;
+        if self.depth > MAX_RECURSION {
+            return Err(Error::MaxRecursionDepth);
+        }
+        let res = f(self)?;
+        self.depth -= 1;
+
+        // Ensure all bytes are consumed.
+        debug_assert!(
+            self.offset == old_next_out_of_line + len,
+            "Out of line block was not completely consumed. Most likely, this indicates a \
+             bug in the FIDL decoders.\n\
+             Offset: {}\n\
+             Block end offset: {}\n\
+             Buffer: {:X?}",
+            self.offset,
+            old_next_out_of_line + len,
+            self.buf,
+        );
+
+        // Validate padding bytes at the end of the block.
+        for i in self.offset..self.end_block {
+            if self.buf[i] != 0 {
+                return Err(Error::NonZeroPadding { padding_start: self.offset, non_zero_pos: i });
+            }
+        }
+
+        // Restore saved state.
+        self.offset = old_offset;
+        self.end_block = old_end_block;
+
+        // Return.
+        Ok(res)
+    }
+
+    /// Whether or not the current section of inline bytes has been fully read.
+    pub fn is_empty(&self) -> bool {
+        self.offset >= self.end_block
+    }
+
+    /// The number of handles that have not yet been consumed.
+    pub fn remaining_handles(&self) -> usize {
+        self.handles.len()
     }
 
     /// A convenience method to skip over the specified number of zero bytes used for padding, also
@@ -554,16 +495,12 @@ impl<'a> Decoder<'a> {
             // Skip body (so it can be optimized out).
             return Ok(());
         }
-        let padding_start = self.inline_pos();
-        let padding = self.next_slice(len)?;
-        for i in 0..padding.len() {
-            if padding[i] != 0 {
-                return Err(Error::NonZeroPadding {
-                    padding_start,
-                    non_zero_pos: padding_start + i,
-                });
+        for i in self.offset..self.offset + len {
+            if self.buf[i] != 0 {
+                return Err(Error::NonZeroPadding { padding_start: self.offset, non_zero_pos: i });
             }
         }
+        self.offset += len;
         Ok(())
     }
 
@@ -577,20 +514,22 @@ impl<'a> Decoder<'a> {
         Target::inline_size(&self.context)
     }
 
-    /// Skips padding at the end of the object, by decoding as many bytes as
-    /// necessary to decode `inline_size_of::<Target>()` bytes starting at the
-    /// `start_pos`. Uses `Decoder::skip_padding`, so will check that all the
-    /// skipped bytes are indeed zeroes.
-    pub fn skip_tail_padding<Target: Decodable>(&mut self, start_pos: usize) -> Result<()> {
-        debug_assert!(start_pos <= self.inline_pos());
-        self.skip_padding(self.inline_size_of::<Target>() - (self.inline_pos() - start_pos))
-    }
-
     /// Returns the decoder's context.
     ///
     /// This is needed for accessing the context in macros during migrations.
     pub fn context(&self) -> &Context {
         self.context
+    }
+
+    /// The position of the next out of line block and the end of the current
+    /// blocks.
+    pub fn next_out_of_line(&self) -> usize {
+        self.next_out_of_line
+    }
+
+    /// The buffer holding the message to be decoded.
+    pub fn buffer(&self) -> &[u8] {
+        self.buf
     }
 }
 
@@ -770,7 +709,7 @@ macro_rules! impl_codable_num { ($($prim_ty:ty,)*) => { $(
         fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
             let size = mem::size_of::<Self>();
             let offset = encoder.next_offset(size);
-            encoder.buf[offset..(offset+size)].copy_from_slice(&self.to_le_bytes());
+            encoder.buf[offset..offset+size].copy_from_slice(&self.to_le_bytes());
             Ok(())
         }
     }
@@ -779,8 +718,8 @@ macro_rules! impl_codable_num { ($($prim_ty:ty,)*) => { $(
         fn new_empty() -> Self { 0 as $prim_ty }
         fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
             const SIZE: usize = mem::size_of::<$prim_ty>();
-            let range = split_off_front(&mut decoder.buf, SIZE)?;
-            match <[u8; SIZE]>::try_from(range) {
+            let offset = decoder.next_offset(SIZE);
+            match <[u8; SIZE]>::try_from(&decoder.buf[offset .. offset+SIZE]) {
                 Ok(array) => {
                     *self = Self::from_le_bytes(array);
                     Ok(())
@@ -810,8 +749,8 @@ impl Decodable for bool {
         false
     }
     fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
-        let num = *split_off_first(&mut decoder.buf)?;
-        *self = match num {
+        let offset = decoder.next_offset(1);
+        *self = match decoder.buf[offset] {
             0 => false,
             1 => true,
             _ => return Err(Error::Invalid),
@@ -836,7 +775,8 @@ impl Decodable for u8 {
         0
     }
     fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
-        *self = *split_off_first(&mut decoder.buf)?;
+        let offset = decoder.next_offset(1);
+        *self = decoder.buf[offset];
         Ok(())
     }
 }
@@ -857,7 +797,8 @@ impl Decodable for i8 {
         0
     }
     fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
-        *self = *split_off_first(&mut decoder.buf)? as i8;
+        let offset = decoder.next_offset(1);
+        *self = decoder.buf[offset] as i8;
         Ok(())
     }
 }
@@ -989,8 +930,10 @@ fn decode_string(decoder: &mut Decoder<'_>, string: &mut String) -> Result<bool>
     };
     let len = len as usize;
     decoder.read_out_of_line(len, |decoder| {
+        let offset = decoder.next_offset(len);
         string.truncate(0);
-        string.push_str(str::from_utf8(decoder.buf).map_err(|_| Error::Utf8Error)?);
+        let bytes = &decoder.buf[offset..offset + len];
+        string.push_str(str::from_utf8(bytes).map_err(|_| Error::Utf8Error)?);
         Ok(true)
     })
 }
@@ -1471,7 +1414,7 @@ impl Encodable for zx_status::Status {
         type Raw = zx_status::zx_status_t;
         let size = mem::size_of::<Raw>();
         let offset = encoder.next_offset(size);
-        encoder.buf[offset..(offset + size)].copy_from_slice(&self.into_raw().to_le_bytes());
+        encoder.buf[offset..offset + size].copy_from_slice(&self.into_raw().to_le_bytes());
         Ok(())
     }
 }
@@ -1483,8 +1426,8 @@ impl Decodable for zx_status::Status {
     fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         type Raw = zx_status::zx_status_t;
         const SIZE: usize = mem::size_of::<Raw>();
-        let range = split_off_front(&mut decoder.buf, SIZE)?;
-        match <[u8; SIZE]>::try_from(range) {
+        let offset = decoder.next_offset(SIZE);
+        match <[u8; SIZE]>::try_from(&decoder.buf[offset..offset + SIZE]) {
             Ok(array) => {
                 *self = Self::from_raw(Raw::from_le_bytes(array));
                 Ok(())
@@ -1573,7 +1516,7 @@ impl<T: Autonull> Encodable for Option<&mut T> {
                 None => {
                     let size = encoder.inline_size_of::<T>();
                     let offset = encoder.next_offset(size);
-                    for i in offset..(offset + size) {
+                    for i in offset..offset + size {
                         encoder.buf[i] = 0;
                     }
                     Ok(())
@@ -1611,7 +1554,7 @@ impl<T: Autonull> Encodable for Option<Box<T>> {
 // Presence indicators always include at least one non-zero byte,
 // while absence indicators should always be entirely zeros.
 fn check_for_presence(decoder: &mut Decoder<'_>, inline_size: usize) -> Result<bool> {
-    Ok(decoder.peek_slice(inline_size)?.iter().any(|byte| *byte != 0))
+    Ok(decoder.buf[decoder.offset..decoder.offset + inline_size].iter().any(|byte| *byte != 0))
 }
 
 impl<T: Autonull> Decodable for Option<Box<T>> {
@@ -1813,7 +1756,7 @@ pub fn decode_unknown_table_field(decoder: &mut Decoder<'_>) -> Result<()> {
 
     match present {
         ALLOC_PRESENT_U64 => decoder.read_out_of_line(num_bytes as usize, |decoder| {
-            decoder.next_slice(num_bytes as usize)?;
+            decoder.next_offset(num_bytes as usize);
             for _ in 0..num_handles {
                 decoder.take_handle()?;
             }
@@ -1940,7 +1883,7 @@ macro_rules! fidl_table {
                             $crate::fidl_decode!(&mut num_handles, decoder)?;
                             let mut present: u64 = 0;
                             $crate::fidl_decode!(&mut present, decoder)?;
-                            let bytes_before = decoder.remaining_out_of_line();
+                            let next_out_of_line = decoder.next_out_of_line();
                             let handles_before = decoder.remaining_handles();
                             match present {
                                 $crate::encoding::ALLOC_PRESENT_U64 => {
@@ -1963,7 +1906,7 @@ macro_rules! fidl_table {
                                 }
                                 _ => return Err($crate::Error::Invalid),
                             }
-                            if bytes_before != (decoder.remaining_out_of_line() + (num_bytes as usize)) {
+                            if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
                                 return Err($crate::Error::Invalid);
                             }
                             if handles_before != (decoder.remaining_handles() + (num_handles as usize)) {
@@ -2076,7 +2019,15 @@ where
                         *self = Ok(fidl_new_empty!(O));
                     }
                     if let Ok(val) = self {
-                        val.decode(decoder)
+                        // If the inline size is 0, then the type is ().
+                        // () has a different wire-format representation in
+                        // a result vs outside of a result, so special case
+                        // decode.
+                        if decoder.inline_size_of::<O>() == 0 {
+                            decoder.skip_padding(1)
+                        } else {
+                            val.decode(decoder)
+                        }
                     } else {
                         unreachable!()
                     }
@@ -2235,7 +2186,8 @@ macro_rules! fidl_xunion {
                             )*
                             $(
                                 ordinal => {
-                                    let bytes = decoder.next_slice(num_bytes as usize)?.to_vec();
+                                    let offset = decoder.next_offset(num_bytes as usize);
+                                    let bytes = decoder.buffer()[offset.. offset+(num_bytes as usize)].to_vec();
                                     let mut handles = Vec::with_capacity(num_handles as usize);
                                     for _ in 0..num_handles {
                                         handles.push(decoder.take_handle()?);
