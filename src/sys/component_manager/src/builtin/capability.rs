@@ -8,7 +8,7 @@ use {
         channel,
         model::{
             error::ModelError,
-            hooks::{EventType, Hook, HooksRegistration},
+            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
         },
     },
     anyhow::Error,
@@ -22,6 +22,11 @@ use {
     },
 };
 
+/// A builtin capability, whether it be a `framework` capability
+/// or a capability that originates above the root realm (from component_manager).
+///
+/// Implementing this trait takes care of certain boilerplate, like registering
+/// event hooks and the creation of a CapabilityProvider.
 #[async_trait]
 pub trait BuiltinCapability {
     /// Name of the capability. Used for hook registration and logging.
@@ -50,15 +55,30 @@ pub trait BuiltinCapability {
         )]
     }
 
-    /// Returns a `CapabilityProvider` for a given framework capability.
-    async fn on_framework_capability_routed<'a>(
-        self: &'a Arc<Self>,
-        capability: &'a InternalCapability,
-        capability_provider: Option<Box<dyn CapabilityProvider>>,
-    ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError>;
+    /// Returns true if the builtin capability matches the requested `capability`
+    /// and should be served.
+    fn matches_routed_capability(&self, capability: &InternalCapability) -> bool;
 }
 
-pub struct BuiltinCapabilityProvider<B: BuiltinCapability> {
+#[async_trait]
+impl<B: 'static + BuiltinCapability + Send + Sync> Hook for B {
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        if let Ok(EventPayload::CapabilityRouted {
+            source: CapabilitySource::AboveRoot { capability },
+            capability_provider,
+        }) = &event.result
+        {
+            if self.matches_routed_capability(&capability) {
+                let mut provider = capability_provider.lock().await;
+                *provider =
+                    Some(Box::new(BuiltinCapabilityProvider::<B>::new(Arc::downgrade(&self))));
+            }
+        }
+        Ok(())
+    }
+}
+
+struct BuiltinCapabilityProvider<B: BuiltinCapability> {
     capability: Weak<B>,
 }
 

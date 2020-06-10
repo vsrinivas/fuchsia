@@ -3,14 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        builtin::capability::{BuiltinCapability, BuiltinCapabilityProvider},
-        capability::*,
-        model::{
-            error::ModelError,
-            hooks::{Event, EventPayload, Hook},
-        },
-    },
+    crate::{builtin::capability::BuiltinCapability, capability::*},
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::CapabilityPath,
@@ -65,36 +58,11 @@ impl BuiltinCapability for ReadOnlyLog {
         Ok(())
     }
 
-    async fn on_framework_capability_routed<'a>(
-        self: &'a Arc<Self>,
-        capability: &'a InternalCapability,
-        capability_provider: Option<Box<dyn CapabilityProvider>>,
-    ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
-        match capability {
-            InternalCapability::Protocol(capability_path)
-                if *capability_path == *READ_ONLY_LOG_CAPABILITY_PATH =>
-            {
-                Ok(Some(Box::new(BuiltinCapabilityProvider::<ReadOnlyLog>::new(Arc::downgrade(
-                    &self,
-                )))))
-            }
-            _ => Ok(capability_provider),
-        }
-    }
-}
-
-#[async_trait]
-impl Hook for ReadOnlyLog {
-    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::AboveRoot { capability },
-            capability_provider,
-        }) = &event.result
-        {
-            let mut provider = capability_provider.lock().await;
-            *provider = self.on_framework_capability_routed(&capability, provider.take()).await?;
-        };
-        Ok(())
+    fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
+        matches!(
+            capability,
+            InternalCapability::Protocol(path) if *path == *READ_ONLY_LOG_CAPABILITY_PATH
+        )
     }
 }
 
@@ -124,36 +92,11 @@ impl BuiltinCapability for WriteOnlyLog {
         Ok(())
     }
 
-    async fn on_framework_capability_routed<'a>(
-        self: &'a Arc<Self>,
-        capability: &'a InternalCapability,
-        capability_provider: Option<Box<dyn CapabilityProvider>>,
-    ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
-        match capability {
-            InternalCapability::Protocol(capability_path)
-                if *capability_path == *WRITE_ONLY_LOG_CAPABILITY_PATH =>
-            {
-                Ok(Some(Box::new(BuiltinCapabilityProvider::<WriteOnlyLog>::new(Arc::downgrade(
-                    &self,
-                )))))
-            }
-            _ => Ok(capability_provider),
-        }
-    }
-}
-
-#[async_trait]
-impl Hook for WriteOnlyLog {
-    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::AboveRoot { capability },
-            capability_provider,
-        }) = &event.result
-        {
-            let mut provider = capability_provider.lock().await;
-            *provider = self.on_framework_capability_routed(&capability, provider.take()).await?;
-        };
-        Ok(())
+    fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
+        matches!(
+            capability,
+            InternalCapability::Protocol(path) if *path == *WRITE_ONLY_LOG_CAPABILITY_PATH
+        )
     }
 }
 
@@ -161,7 +104,10 @@ impl Hook for WriteOnlyLog {
 mod tests {
     use {
         super::*,
-        crate::model::{hooks::Hooks, moniker::AbsoluteMoniker},
+        crate::model::{
+            hooks::{Event, EventPayload, Hooks},
+            moniker::AbsoluteMoniker,
+        },
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,
         fuchsia_zircon::AsHandleRef,

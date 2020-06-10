@@ -3,14 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        builtin::capability::{BuiltinCapability, BuiltinCapabilityProvider},
-        capability::*,
-        model::{
-            error::ModelError,
-            hooks::{Event, EventPayload, Hook},
-        },
-    },
+    crate::{builtin::capability::BuiltinCapability, capability::*},
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::CapabilityPath,
@@ -133,38 +126,14 @@ impl BuiltinCapability for Arguments {
         Ok(())
     }
 
-    async fn on_framework_capability_routed<'a>(
-        self: &'a Arc<Self>,
-        capability: &'a InternalCapability,
-        capability_provider: Option<Box<dyn CapabilityProvider>>,
-    ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
-        match capability {
-            InternalCapability::Protocol(capability_path)
-                if *capability_path == *BOOT_ARGS_CAPABILITY_PATH =>
-            {
-                Ok(Some(Box::new(BuiltinCapabilityProvider::<Arguments>::new(Arc::downgrade(
-                    &self,
-                )))))
-            }
-            _ => Ok(capability_provider),
-        }
+    fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
+        matches!(
+            capability,
+            InternalCapability::Protocol(path) if *path == *BOOT_ARGS_CAPABILITY_PATH
+        )
     }
 }
 
-#[async_trait]
-impl Hook for Arguments {
-    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::AboveRoot { capability },
-            capability_provider,
-        }) = &event.result
-        {
-            let mut provider = capability_provider.lock().await;
-            *provider = self.on_framework_capability_routed(&capability, provider.take()).await?;
-        };
-        Ok(())
-    }
-}
 #[cfg(test)]
 mod tests {
     use {super::*, fuchsia_async as fasync, std::collections::HashMap};
