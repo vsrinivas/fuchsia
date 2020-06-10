@@ -257,14 +257,14 @@ impl PeerMaps {
         match self.current_link.get_mut(&peer) {
             Some(CurrentLink { questioning: Some(_), .. }) => {
                 // Already questioning this link, no need to do more.
-                log::info!(
+                log::trace!(
                     "{:?} question peer {:?}: already questioning... continue",
                     my_node_id,
                     peer
                 );
             }
             Some(current_link) => {
-                log::info!("{:?} question peer {:?}: begin questioning", my_node_id, peer);
+                log::trace!("{:?} question peer {:?}: begin questioning", my_node_id, peer);
                 let router = Arc::downgrade(router);
                 let ask = {
                     let router = router.clone();
@@ -279,14 +279,14 @@ impl PeerMaps {
                             Duration::from_secs(5),
                             std::cmp::min(Duration::from_secs(30), 100 * rtt),
                         );
-                        log::info!(
+                        log::trace!(
                             "{:?} question peer {:?}: ping with timeout {:?}",
                             my_node_id,
                             peer,
                             timeout
                         );
                         peer_client.ping().timeout_after(timeout).await??;
-                        log::info!(
+                        log::trace!(
                             "{:?} question peer {:?}: pinged successfully",
                             my_node_id,
                             peer
@@ -369,7 +369,7 @@ impl PeerMaps {
                     // This is strong enough information to update the routing table.
                     if let Some(link) = link.as_ref() {
                         if !Arc::ptr_eq(&old_link, link) {
-                            log::info!(
+                            log::trace!(
                                 concat!(
                                     "{:?} alter_link to {:?} from {:?} - ",
                                     "remove old link {:?}, add new link {:?}"
@@ -389,7 +389,7 @@ impl PeerMaps {
                             };
                         } else if current_link.questioning.is_some() || source > current_link.source
                         {
-                            log::info!(
+                            log::trace!(
                                 "{:?} alter_link to {:?} from {:?} - refresh link {:?}",
                                 own_node_id,
                                 peer_node_id,
@@ -406,7 +406,7 @@ impl PeerMaps {
                 } else if let Some(link) = link.as_ref() {
                     // There was a link but it's gone.
                     // Just add this new one.
-                    log::info!(
+                    log::trace!(
                         "{:?} alter_link to {:?} from {:?} - replace expired with {:?}",
                         own_node_id,
                         peer_node_id,
@@ -434,7 +434,7 @@ impl PeerMaps {
             btree_map::Entry::Vacant(v) => {
                 // No original link, add a new one if we were given one.
                 if let Some(link) = link.as_ref() {
-                    log::info!(
+                    log::trace!(
                         "{:?} alter_link to {:?} from {:?} - new link {:?}",
                         own_node_id,
                         peer_node_id,
@@ -556,6 +556,31 @@ impl LinkHint for NoLinkHint {
     }
 }
 
+/// Wrapper to get the right list_peers behavior.
+pub struct ListPeersContext(Mutex<Option<Observer<Vec<ListablePeer>>>>);
+
+static LIST_PEERS_CALL: AtomicU64 = AtomicU64::new(0);
+
+impl ListPeersContext {
+    /// Implementation of ListPeers fidl method.
+    pub async fn list_peers(&self) -> Result<Vec<fidl_fuchsia_overnet::Peer>, Error> {
+        let call_id = LIST_PEERS_CALL.fetch_add(1, Ordering::SeqCst);
+        log::trace!("LIST_PEERS_CALL[{}] get observer", call_id);
+        let mut obs = self
+            .0
+            .lock()
+            .await
+            .take()
+            .ok_or_else(|| anyhow::format_err!("Already listing peers"))?;
+        log::trace!("LIST_PEERS_CALL[{}] wait for value", call_id);
+        let r = obs.next().await;
+        log::trace!("LIST_PEERS_CALL[{}] replace observer", call_id);
+        *self.0.lock().await = Some(obs);
+        log::trace!("LIST_PEERS_CALL[{}] return", call_id);
+        Ok(r.unwrap_or_else(Vec::new).into_iter().map(|p| p.into()).collect())
+    }
+}
+
 /// Router maintains global state for one node_id.
 /// `LinkData` is a token identifying a link for layers above Router.
 /// `Time` is a representation of time for the Router, to assist injecting different platforms
@@ -573,7 +598,6 @@ pub struct Router {
     link_state_observable: Arc<Observable<Vec<LinkStatus>>>,
     service_map: ServiceMap,
     routing_update_sender: RemoteRoutingUpdateSender,
-    list_peers_observer: Mutex<Option<Observer<Vec<ListablePeer>>>>,
     proxied_streams: Mutex<HashMap<HandleKey, ProxiedHandle>>,
     pending_transfers: Mutex<PendingTransferMap>,
     task: Mutex<Option<Task>>,
@@ -619,7 +643,6 @@ impl Router {
         let node_id = options.node_id.unwrap_or_else(generate_node_id);
         let (routing_update_sender, routing_update_receiver) = routing_update_channel();
         let service_map = ServiceMap::new(node_id);
-        let list_peers_observer = Mutex::new(Some(service_map.new_list_peers_observer()));
         let (link_state_publisher, link_state_receiver) = futures::channel::mpsc::channel(1);
         let router = Arc::new(Router {
             node_id,
@@ -636,7 +659,6 @@ impl Router {
                 connections: HashMap::new(),
                 current_link: BTreeMap::new(),
             }),
-            list_peers_observer,
             proxied_streams: Mutex::new(HashMap::new()),
             pending_transfers: Mutex::new(PendingTransferMap::new()),
             task: Mutex::new(None),
@@ -745,21 +767,9 @@ impl Router {
         Ok(())
     }
 
-    /// Implementation of ListPeers fidl method.
-    pub async fn list_peers(self: &Arc<Self>) -> Result<Vec<fidl_fuchsia_overnet::Peer>, Error> {
-        let mut obs = self
-            .list_peers_observer
-            .lock()
-            .await
-            .take()
-            .ok_or_else(|| anyhow::format_err!("Already listing peers"))?;
-        if let Some(r) = obs.next().await {
-            *self.list_peers_observer.lock().await = Some(obs);
-            Ok(r.into_iter().map(|p| p.into()).collect())
-        } else {
-            *self.list_peers_observer.lock().await = Some(obs);
-            Ok(Vec::new())
-        }
+    /// Create a new list_peers context
+    pub fn new_list_peers_context(&self) -> ListPeersContext {
+        ListPeersContext(Mutex::new(Some(self.service_map.new_list_peers_observer())))
     }
 
     /// Implementation of AttachToSocket fidl method.
@@ -847,7 +857,7 @@ impl Router {
     }
 
     pub(crate) async fn remove_peer(self: &Arc<Self>, conn_id: ConnectionId) {
-        log::info!("[{:?}] Request remove peer {:?}", self.node_id, conn_id);
+        log::trace!("[{:?}] Request remove peer {:?}", self.node_id, conn_id);
         let mut peers = self.peers.lock().await;
         if let Some(peer) = peers.connections.remove(&conn_id) {
             match peer.endpoint() {
@@ -1413,8 +1423,9 @@ mod tests {
             .await;
         let serving_node_id = serving_router.node_id();
         println!("{} wait for service to appear @ client", service);
+        let lpc = client_router.new_list_peers_context();
         loop {
-            let peers = client_router.list_peers().await.unwrap();
+            let peers = lpc.list_peers().await.unwrap();
             println!("{} got peers {:?}", service, peers);
             if peers
                 .iter()
@@ -1562,13 +1573,14 @@ mod tests {
     fn concurrent_list_peer_calls_will_error() {
         run(async move {
             let n = Router::new(RouterOptions::new(), Box::new(test_security_context())).unwrap();
-            n.list_peers().await.unwrap();
+            let lp = n.new_list_peers_context();
+            lp.list_peers().await.unwrap();
             let mut never_completes = async {
-                n.list_peers().await.unwrap();
+                lp.list_peers().await.unwrap();
             }
             .boxed();
             ensure_pending(&mut never_completes);
-            n.list_peers().await.expect_err("Concurrent list peers should fail");
+            lp.list_peers().await.expect_err("Concurrent list peers should fail");
             ensure_pending(&mut never_completes);
         })
     }

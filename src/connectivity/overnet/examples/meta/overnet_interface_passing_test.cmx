@@ -33,8 +33,8 @@
                             "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
                             "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
                             "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                            "fuchsia.overnet.ServiceConsumer": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx",
-                            "fuchsia.overnet.ServicePublisher": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx",
+                            "fuchsia.overnet.ServiceConsumer": "fuchsia-pkg://fuchsia.com/overnetstack-with-udp#meta/overnetstack-with-udp.cmx",
+                            "fuchsia.overnet.ServicePublisher": "fuchsia-pkg://fuchsia.com/overnetstack-with-udp#meta/overnetstack-with-udp.cmx",
                             "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
                         },
                         "setup": [
@@ -69,8 +69,8 @@
                     "fuchsia.net.mdns.Publisher": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
                     "fuchsia.net.mdns.Subscriber": "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cmx",
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                    "fuchsia.overnet.ServiceConsumer": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx",
-                    "fuchsia.overnet.ServicePublisher": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx",
+                    "fuchsia.overnet.ServiceConsumer": "fuchsia-pkg://fuchsia.com/overnetstack-with-udp#meta/overnetstack-with-udp.cmx",
+                    "fuchsia.overnet.ServicePublisher": "fuchsia-pkg://fuchsia.com/overnetstack-with-udp#meta/overnetstack-with-udp.cmx",
                     "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
                 },
                 "setup": [

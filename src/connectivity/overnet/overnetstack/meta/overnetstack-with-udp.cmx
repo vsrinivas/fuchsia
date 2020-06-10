@@ -1,0 +1,18 @@
+{
+    "program": {
+        "args": [
+            "--udp",
+            "--mdns-connect",
+            "--mdns-publish"
+        ],
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.mdns.Publisher",
+            "fuchsia.net.mdns.Subscriber",
+            "fuchsia.posix.socket.Provider"
+        ]
+    }
+}

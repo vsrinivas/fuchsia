@@ -9,6 +9,7 @@
 mod mdns;
 
 use anyhow::{Context as _, Error};
+use argh::FromArgs;
 use fidl_fuchsia_overnet::{
     MeshControllerRequest, MeshControllerRequestStream, ServiceConsumerRequest,
     ServiceConsumerRequestStream, ServicePublisherRequest, ServicePublisherRequestStream,
@@ -25,28 +26,48 @@ use std::collections::HashMap;
 use std::net::{SocketAddr, SocketAddrV6};
 use std::sync::Arc;
 
+#[derive(FromArgs)]
+/// Overnet.
+struct Opts {
+    #[argh(switch)]
+    /// publish mdns service
+    mdns_publish: bool,
+
+    #[argh(switch)]
+    /// connect to mdns services
+    mdns_connect: bool,
+
+    #[argh(switch)]
+    /// open a udp port
+    udp: bool,
+}
+
 struct UdpSocketHolder {
     sock: Arc<fasync::net::UdpSocket>,
-    abort_publisher: AbortHandle,
+    abort_publisher: Option<AbortHandle>,
 }
 
 impl UdpSocketHolder {
-    fn new(node_id: NodeId) -> Result<Self, Error> {
+    fn new(node_id: NodeId, publish_mdns: bool) -> Result<Self, Error> {
         let sock = std::net::UdpSocket::bind("[::]:0").context("Creating UDP socket")?;
-        let publisher =
-            mdns::publish(node_id, sock.local_addr().context("Getting UDP local address")?.port());
+        let port = sock.local_addr().context("Getting UDP local address")?.port();
         let sock = Arc::new(fasync::net::UdpSocket::from_socket(sock)?);
-        let (publisher, abort_publisher) = abortable(publisher);
-        fasync::spawn_local(async move {
-            let _ = publisher.await;
-        });
+        let abort_publisher = if publish_mdns {
+            let (publisher, abort_publisher) = abortable(mdns::publish(node_id, port));
+            fasync::spawn_local(async move {
+                let _ = publisher.await;
+            });
+            Some(abort_publisher)
+        } else {
+            None
+        };
         Ok(Self { sock, abort_publisher })
     }
 }
 
 impl Drop for UdpSocketHolder {
     fn drop(&mut self) {
-        self.abort_publisher.abort();
+        self.abort_publisher.take().map(|a| a.abort());
     }
 }
 
@@ -130,14 +151,16 @@ async fn run_service_consumer_server(
     node: Arc<Router>,
     stream: ServiceConsumerRequestStream,
 ) -> Result<(), Error> {
+    let list_peers_context = Arc::new(node.new_list_peers_context());
     stream
         .map_err(Into::into)
         .try_for_each_concurrent(None, |request| {
             let node = node.clone();
+            let list_peers_context = list_peers_context.clone();
             async move {
                 match request {
                     ServiceConsumerRequest::ListPeers { responder, .. } => {
-                        let mut peers = node.list_peers().await?;
+                        let mut peers = list_peers_context.list_peers().await?;
                         responder.send(&mut peers.iter_mut())?;
                         Ok(())
                     }
@@ -164,7 +187,10 @@ async fn run_mesh_controller_server(
             async move {
                 match request {
                     MeshControllerRequest::AttachSocketLink { socket, options, .. } => {
-                        node.run_socket_link(socket, options).await
+                        if let Err(e) = node.run_socket_link(socket, options).await {
+                            log::warn!("Socket link failed: {:?}", e);
+                        }
+                        Ok(())
                     }
                 }
             }
@@ -181,6 +207,8 @@ enum IncomingService {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    let opt: Opts = argh::from_env();
+
     fuchsia_syslog::init_with_tags(&["overnet"]).context("initialize logging")?;
 
     let mut fs = ServiceFs::new_local();
@@ -201,31 +229,35 @@ async fn main() -> Result<(), Error> {
         }),
     )?;
 
-    let udp_socket = Arc::new(UdpSocketHolder::new(node.node_id())?);
-    let udp_links: UdpLinks = Arc::new(Mutex::new(HashMap::new()));
-    let (tx_addr, mut rx_addr) = futures::channel::mpsc::channel(1);
-    fasync::spawn_local(log_errors(mdns::subscribe(tx_addr), "MDNS Subscriber failed"));
-    fasync::spawn_local(log_errors(
-        read_udp(udp_socket.clone(), udp_links.clone()),
-        "Error reading UDP socket",
-    ));
-    let udp_node = node.clone();
-    fasync::spawn_local(log_errors(
-        async move {
-            while let Some((addr, node_id)) = rx_addr.next().await {
-                register_udp(
-                    addr,
-                    node_id,
-                    udp_node.clone(),
-                    udp_socket.clone(),
-                    udp_links.clone(),
-                )
-                .await?;
-            }
-            Ok(())
-        },
-        "Error registering links",
-    ));
+    if opt.udp {
+        let udp_socket = Arc::new(UdpSocketHolder::new(node.node_id(), opt.mdns_publish)?);
+        let udp_links: UdpLinks = Arc::new(Mutex::new(HashMap::new()));
+        let (tx_addr, mut rx_addr) = futures::channel::mpsc::channel(1);
+        fasync::spawn_local(log_errors(
+            read_udp(udp_socket.clone(), udp_links.clone()),
+            "Error reading UDP socket",
+        ));
+        if opt.mdns_connect {
+            fasync::spawn_local(log_errors(mdns::subscribe(tx_addr), "MDNS Subscriber failed"));
+        }
+        let udp_node = node.clone();
+        fasync::spawn_local(log_errors(
+            async move {
+                while let Some((addr, node_id)) = rx_addr.next().await {
+                    register_udp(
+                        addr,
+                        node_id,
+                        udp_node.clone(),
+                        udp_socket.clone(),
+                        udp_links.clone(),
+                    )
+                    .await?;
+                }
+                Ok(())
+            },
+            "Error registering links",
+        ));
+    }
 
     fs.for_each_concurrent(None, move |svcreq| match svcreq {
         IncomingService::MeshController(stream) => run_mesh_controller_server(node.clone(), stream)

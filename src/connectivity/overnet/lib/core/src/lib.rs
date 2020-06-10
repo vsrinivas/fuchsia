@@ -41,8 +41,8 @@ pub use future_help::log_errors;
 pub use labels::{Endpoint, NodeId, NodeLinkId};
 pub use link::{LinkReceiver, LinkSender};
 pub use quic_link::{new_quic_link, QuicReceiver, QuicSender};
-pub use router::{generate_node_id, Router, RouterOptions};
-pub use runtime::{run, wait_for, wait_until, Task};
+pub use router::{generate_node_id, ListPeersContext, Router, RouterOptions};
+pub use runtime::{run, wait_for, wait_until, FutureExt, Task, Timeout, TimeoutError};
 pub use security_context::{SecurityContext, SimpleSecurityContext};
 pub use stream_framer::*;
 

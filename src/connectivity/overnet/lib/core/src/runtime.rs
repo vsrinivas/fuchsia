@@ -74,7 +74,9 @@ impl<Fut: Future> Future for Timeout<Fut> {
     }
 }
 
+/// Extension methods for Future
 pub trait FutureExt {
+    /// A timeout method that works on any platform that Overnet works on.
     fn timeout_after(self, after: Duration) -> Timeout<Self>
     where
         Self: Sized;

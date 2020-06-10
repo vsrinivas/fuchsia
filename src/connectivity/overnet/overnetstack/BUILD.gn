@@ -42,7 +42,38 @@ package("overnetstack") {
     },
   ]
 
-  # TODO(ctiller): This is clearly insanity and we should not be hardcoding certificates
+  # TODO(ctiller): This is clearly not great and we should not be hardcoding certificates
+  # and private keys into the overnetstack package. Design and implement security.
+  resources = [
+    {
+      path = rebase_path("//third_party/rust-mirrors/quiche/examples/cert.crt")
+      dest = "cert.crt"
+    },
+    {
+      path = rebase_path("//third_party/rust-mirrors/quiche/examples/cert.key")
+      dest = "cert.key"
+    },
+    {
+      path =
+          rebase_path("//third_party/rust-mirrors/quiche/examples/rootca.crt")
+      dest = "root.crt"
+    },
+  ]
+}
+
+package("overnetstack-with-udp") {
+  deps = [ ":bin" ]
+
+  binary = "overnetstack"
+
+  meta = [
+    {
+      path = rebase_path("meta/overnetstack-with-udp.cmx")
+      dest = "overnetstack-with-udp.cmx"
+    },
+  ]
+
+  # TODO(ctiller): This is clearly not great and we should not be hardcoding certificates
   # and private keys into the overnetstack package. Design and implement security.
   resources = [
     {

@@ -119,8 +119,9 @@ async fn fixture_thread(
         .register_service(service.clone(), Box::new(Service(send_handle, test_name)))
         .await;
     // Wait til we can see both peers in the service map before progressing.
+    let lpc = router1.new_list_peers_context();
     loop {
-        let peers = router1.list_peers().await.unwrap();
+        let peers = lpc.list_peers().await.unwrap();
         let has_peer = |node_id: NodeId| {
             peers
                 .iter()

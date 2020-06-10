@@ -16,9 +16,13 @@ use {
     futures::prelude::*,
     overnet_core::{
         log_errors, new_deframer, new_framer, wait_for, DeframerWriter, FrameType, FramerReader,
-        LosslessBinary, Router, RouterOptions, SecurityContext, Task,
+        ListPeersContext, LosslessBinary, Router, RouterOptions, SecurityContext, Task,
     },
-    std::{sync::Arc, time::Duration},
+    std::{
+        sync::atomic::{AtomicU64, Ordering},
+        sync::Arc,
+        time::Duration,
+    },
 };
 
 pub use fidl_fuchsia_overnet::{
@@ -40,10 +44,17 @@ pub fn spawn(f: impl Future<Output = ()> + Send + 'static) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Overnet <-> API bindings
 
-fn start_overnet() -> Result<HostOvernetProxy, Error> {
+struct Overnet {
+    proxy: HostOvernetProxy,
+    _task: Task,
+}
+
+fn start_overnet() -> Result<Overnet, Error> {
     let (c, s) = create_proxy_and_stream::<HostOvernetMarker>()?;
-    Task::spawn(log_errors(run_overnet(s), "overnet main loop failed")).detach();
-    Ok(c)
+    Ok(Overnet {
+        proxy: c,
+        _task: Task::spawn(log_errors(run_overnet(s), "overnet main loop failed")),
+    })
 }
 
 async fn read_incoming(
@@ -171,18 +182,17 @@ async fn run_ascendd_connection(node: Arc<Router>) -> Result<(), Error> {
 }
 
 /// Retry a future until it succeeds or retries run out.
-async fn retry_with_backoff<E, F>(
-    mut backoff: Duration,
-    max_backoff: Duration,
-    f: impl Fn() -> F,
-) -> Result<(), Error>
+async fn retry_with_backoff<E, F>(backoff0: Duration, max_backoff: Duration, f: impl Fn() -> F)
 where
     F: futures::Future<Output = Result<(), E>>,
     E: std::fmt::Debug,
 {
+    let mut backoff = backoff0;
     loop {
         match f().await {
-            Ok(()) => return Ok(()),
+            Ok(()) => {
+                backoff = backoff0;
+            }
             Err(e) => {
                 log::warn!("Operation failed: {:?} -- retrying in {:?}", e, backoff);
                 wait_for(backoff).await;
@@ -194,11 +204,12 @@ where
 
 async fn handle_consumer_request(
     node: Arc<Router>,
+    list_peers_context: Arc<ListPeersContext>,
     r: ServiceConsumerRequest,
 ) -> Result<(), Error> {
     match r {
         ServiceConsumerRequest::ListPeers { responder } => {
-            let mut peers = node.list_peers().await?;
+            let mut peers = list_peers_context.list_peers().await?;
             responder.send(&mut peers.iter_mut())?
         }
         ServiceConsumerRequest::ConnectToService {
@@ -224,27 +235,64 @@ async fn handle_controller_request(
     r: MeshControllerRequest,
 ) -> Result<(), Error> {
     let MeshControllerRequest::AttachSocketLink { socket, options, control_handle: _ } = r;
-    node.run_socket_link(socket, options).await
+    if let Err(e) = node.run_socket_link(socket, options).await {
+        log::warn!("Socket link failed: {:#?}", e);
+    }
+    Ok(())
+}
+
+static NEXT_LOG_ID: AtomicU64 = AtomicU64::new(0);
+
+fn log_request<
+    R: 'static + Send + std::fmt::Debug,
+    Fut: Send + Future<Output = Result<(), Error>>,
+>(
+    f: impl 'static + Send + Clone + Fn(R) -> Fut,
+) -> impl Fn(R) -> std::pin::Pin<Box<dyn Send + Future<Output = Result<(), Error>>>> {
+    move |r| {
+        let f = f.clone();
+        async move {
+            let log_id = NEXT_LOG_ID.fetch_add(1, Ordering::SeqCst);
+            log::trace!("[REQUEST:{}] begin {:?}", log_id, r);
+            let f = f(r);
+            let r = f.await;
+            log::trace!("[REQUEST:{}] end {:?}", log_id, r);
+            r
+        }
+        .boxed()
+    }
 }
 
 async fn handle_request(node: Arc<Router>, req: HostOvernetRequest) -> Result<(), Error> {
     match req {
         HostOvernetRequest::ConnectServiceConsumer { svc, control_handle: _ } => {
+            let list_peers_context = Arc::new(node.new_list_peers_context());
             svc.into_stream()?
                 .map_err(Into::<Error>::into)
-                .try_for_each_concurrent(None, move |r| handle_consumer_request(node.clone(), r))
+                .try_for_each_concurrent(
+                    None,
+                    log_request(move |r| {
+                        handle_consumer_request(node.clone(), list_peers_context.clone(), r)
+                    }),
+                )
                 .await?
         }
         HostOvernetRequest::ConnectServicePublisher { svc, control_handle: _ } => {
             svc.into_stream()?
                 .map_err(Into::<Error>::into)
-                .try_for_each_concurrent(None, move |r| handle_publisher_request(node.clone(), r))
+                .try_for_each_concurrent(
+                    None,
+                    log_request(move |r| handle_publisher_request(node.clone(), r)),
+                )
                 .await?
         }
         HostOvernetRequest::ConnectMeshController { svc, control_handle: _ } => {
             svc.into_stream()?
                 .map_err(Into::<Error>::into)
-                .try_for_each_concurrent(None, move |r| handle_controller_request(node.clone(), r))
+                .try_for_each_concurrent(
+                    None,
+                    log_request(move |r| handle_controller_request(node.clone(), r)),
+                )
                 .await?
         }
     }
@@ -261,43 +309,49 @@ async fn run_overnet(rx: HostOvernetRequestStream) -> Result<(), Error> {
         Box::new(hard_coded_security_context()),
     )?;
 
-    futures::future::try_join(
-        {
+    let _connect = Task::spawn({
+        let node = node.clone();
+        retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), move || {
+            run_ascendd_connection(node.clone())
+        })
+    });
+
+    // Run application loop
+    rx.map_err(Into::into)
+        .try_for_each_concurrent(None, move |req| {
             let node = node.clone();
-            retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), move || {
-                run_ascendd_connection(node.clone())
-            })
-        },
-        // Run application loop
-        rx.map_err(Into::into)
-            .try_for_each_concurrent(None, move |req| handle_request(node.clone(), req)),
-    )
-    .await
-    .map(drop)
+            async move {
+                if let Err(e) = handle_request(node, req).await {
+                    log::warn!("Service handler failed: {:?}", e);
+                }
+                Ok(())
+            }
+        })
+        .await
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // ProxyInterface implementations
 
 lazy_static::lazy_static! {
-    static ref OVERNET: Arc<HostOvernetProxy> = Arc::new(start_overnet().unwrap());
+    static ref OVERNET: Overnet = start_overnet().unwrap();
 }
 
 pub fn connect_as_service_consumer() -> Result<impl ServiceConsumerProxyInterface, Error> {
     let (c, s) = create_proxy::<ServiceConsumerMarker>()?;
-    OVERNET.connect_service_consumer(s)?;
+    OVERNET.proxy.connect_service_consumer(s)?;
     Ok(c)
 }
 
 pub fn connect_as_service_publisher() -> Result<impl ServicePublisherProxyInterface, Error> {
     let (c, s) = create_proxy::<ServicePublisherMarker>()?;
-    OVERNET.connect_service_publisher(s)?;
+    OVERNET.proxy.connect_service_publisher(s)?;
     Ok(c)
 }
 
 pub fn connect_as_mesh_controller() -> Result<impl MeshControllerProxyInterface, Error> {
     let (c, s) = create_proxy::<MeshControllerMarker>()?;
-    OVERNET.connect_mesh_controller(s)?;
+    OVERNET.proxy.connect_mesh_controller(s)?;
     Ok(c)
 }
 

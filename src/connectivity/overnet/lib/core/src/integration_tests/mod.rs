@@ -13,8 +13,8 @@ mod triangle;
 
 use {
     crate::{
-        log_errors, new_quic_link, Endpoint, LinkReceiver, LinkSender, NodeId, QuicReceiver,
-        Router, RouterOptions, SecurityContext, Task,
+        log_errors, new_quic_link, Endpoint, LinkReceiver, LinkSender, ListPeersContext, NodeId,
+        QuicReceiver, Router, RouterOptions, SecurityContext, Task,
     },
     anyhow::Error,
     fidl::endpoints::ClientEnd,
@@ -151,10 +151,14 @@ impl Overnet {
     }
 }
 
-async fn run_overnet_command(node: Arc<Router>, cmd: OvernetCommand) -> Result<(), Error> {
+async fn run_overnet_command(
+    node: Arc<Router>,
+    lpc: Arc<ListPeersContext>,
+    cmd: OvernetCommand,
+) -> Result<(), Error> {
     match cmd {
         OvernetCommand::ListPeers(sender) => {
-            let peers = node.list_peers().await?;
+            let peers = lpc.list_peers().await?;
             let _ = sender.send(peers);
             Ok(())
         }
@@ -182,14 +186,16 @@ async fn run_overnet(
 ) -> Result<(), Error> {
     let node_id = node.node_id();
     log::info!("{:?} RUN OVERNET", node_id);
+    let lpc = Arc::new(node.new_list_peers_context());
     // Run application loop
     rx.for_each_concurrent(None, move |cmd| {
         let node = node.clone();
+        let lpc = lpc.clone();
         async move {
             let cmd_text = format!("{:?}", cmd);
             let cmd_id = NEXT_CMD_ID.fetch_add(1, Ordering::Relaxed);
             log::info!("{:?} CMD[{}] START: {}", node_id, cmd_id, cmd_text);
-            if let Err(e) = run_overnet_command(node, cmd).await {
+            if let Err(e) = run_overnet_command(node, lpc, cmd).await {
                 log::info!(
                     "{:?} CMD[{}] FAILED: {} with error: {:?}",
                     node_id,

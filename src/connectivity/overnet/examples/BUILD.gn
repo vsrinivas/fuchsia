@@ -27,6 +27,8 @@ test_package("overnet_examples_tests") {
     "echo:bin",
     "interface_passing:bin",
     "socket_passing:bin",
+    "//src/connectivity/network/tests:device_name_provider",
+    "//src/connectivity/overnet/overnetstack:overnetstack-with-udp",
   ]
 
   meta = [
@@ -76,6 +78,8 @@ group("tests") {
     ":overnet_examples_tests",
     "//src/connectivity/network/mdns/service:mdns",
     "//src/connectivity/network/testing/netemul",
+    "//src/connectivity/network/tests:device_name_provider",
     "//src/connectivity/overnet/overnetstack",
+    "//src/connectivity/overnet/overnetstack:overnetstack-with-udp",
   ]
 }
