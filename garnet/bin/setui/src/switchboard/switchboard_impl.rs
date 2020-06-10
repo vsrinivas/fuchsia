@@ -4,6 +4,8 @@
 
 use crate::clock;
 use crate::internal::core;
+use crate::internal::switchboard;
+use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::switchboard::base::{
     ListenCallback, ListenSession, SettingAction, SettingActionData, SettingEvent, SettingRequest,
@@ -23,6 +25,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 type ListenerMap = HashMap<SettingType, Vec<ListenSessionInfo>>;
+type SwitchboardListenerMap = HashMap<SettingType, Vec<switchboard::message::Client>>;
 
 const INSPECT_REQUESTS_COUNT: usize = 25;
 
@@ -137,12 +140,22 @@ impl Drop for ListenSessionImpl {
 
 pub struct SwitchboardBuilder {
     registry_messenger_factory: Option<core::message::Factory>,
+    switchboard_messenger_factory: Option<switchboard::message::Factory>,
     inspect_node: Option<inspect::Node>,
 }
 
 impl SwitchboardBuilder {
     pub fn create() -> Self {
-        SwitchboardBuilder { registry_messenger_factory: None, inspect_node: None }
+        SwitchboardBuilder {
+            registry_messenger_factory: None,
+            switchboard_messenger_factory: None,
+            inspect_node: None,
+        }
+    }
+
+    pub fn switchboard_messenger_factory(mut self, factory: switchboard::message::Factory) -> Self {
+        self.switchboard_messenger_factory = Some(factory);
+        self
     }
 
     pub fn registry_messenger_factory(mut self, factory: core::message::Factory) -> Self {
@@ -156,18 +169,12 @@ impl SwitchboardBuilder {
     }
 
     pub async fn build(self) -> Result<SwitchboardClient, Error> {
-        let registry_messenger_factory = if let Some(factory) = self.registry_messenger_factory {
-            factory
-        } else {
-            core::message::create_hub()
-        };
-        let inspect_node = if let Some(node) = self.inspect_node {
-            node
-        } else {
-            component::inspector().root().create_child("switchboard")
-        };
-
-        SwitchboardImpl::create(registry_messenger_factory, inspect_node).await
+        SwitchboardImpl::create(
+            self.registry_messenger_factory.unwrap_or(core::message::create_hub()),
+            self.switchboard_messenger_factory.unwrap_or(switchboard::message::create_hub()),
+            self.inspect_node.unwrap_or(component::inspector().root().create_child("switchboard")),
+        )
+        .await
     }
 }
 
@@ -176,11 +183,18 @@ pub struct SwitchboardImpl {
     next_session_id: u64,
     /// Next available action id.
     next_action_id: u64,
-    /// Acquired during construction - passed during listen to allow callback
-    /// for canceling listen.
-    listen_cancellation_sender: UnboundedSender<ListenSessionInfo>,
+    // TODO(fxb/50634): remove listen_cancellation_sender_deprecated and
+    // listeners_deprecated.
+    /// Deprecated - to be removed when all clients have switched to
+    /// `MessageHub` communication.
+    listen_cancellation_sender_deprecated: UnboundedSender<ListenSessionInfo>,
     /// mapping of listeners for changes
-    listeners: ListenerMap,
+    listeners_deprecated: ListenerMap,
+    /// Passed as with an `ActionFuse` to listen clients to capture when
+    /// the listen session goes out of scope.
+    listen_cancellation_sender: UnboundedSender<(SettingType, switchboard::message::Client)>,
+    /// mapping of listeners for changes
+    listeners: SwitchboardListenerMap,
     /// registry messenger
     registry_messenger: core::message::Messenger,
     /// Last requests for inspect to save.
@@ -196,45 +210,79 @@ impl SwitchboardImpl {
     /// Requests will be recorded to the given inspect node.
     async fn create(
         registry_messenger_factory: core::message::Factory,
+        switchboard_messenger_factory: switchboard::message::Factory,
         inspect_node: inspect::Node,
     ) -> Result<SwitchboardClient, Error> {
-        let (cancel_listen_tx, mut cancel_listen_rx) =
+        let (cancel_listen_tx_deprecated, mut cancel_listen_rx_deprecated) =
             futures::channel::mpsc::unbounded::<ListenSessionInfo>();
-        let messenger_result = registry_messenger_factory
+
+        let (cancel_listen_tx, mut cancel_listen_rx) =
+            futures::channel::mpsc::unbounded::<(SettingType, switchboard::message::Client)>();
+
+        let (registry_messenger, mut registry_receptor) = registry_messenger_factory
             .create(MessengerType::Addressable(core::Address::Switchboard))
-            .await;
+            .await
+            .map_err(Error::new)?;
 
-        if let Err(error) = messenger_result {
-            return Err(Error::new(error));
-        }
-
-        let (registry_messenger, mut receptor) = messenger_result.unwrap();
+        let (_, mut switchboard_receptor) = switchboard_messenger_factory
+            .create(MessengerType::Addressable(switchboard::Address::Switchboard))
+            .await
+            .map_err(Error::new)?;
 
         let switchboard = Arc::new(Mutex::new(Self {
             next_session_id: 0,
             next_action_id: 0,
+            listen_cancellation_sender_deprecated: cancel_listen_tx_deprecated,
             listen_cancellation_sender: cancel_listen_tx,
+            listeners_deprecated: HashMap::new(),
             listeners: HashMap::new(),
-            registry_messenger: registry_messenger,
+            registry_messenger,
             last_requests: HashMap::new(),
-            inspect_node: inspect_node,
+            inspect_node,
         }));
 
         let switchboard_clone = switchboard.clone();
 
         fasync::spawn(async move {
             loop {
-                let mut message_receptor = receptor.next().fuse();
+                let mut registry_receptor = registry_receptor.next().fuse();
+                let mut switchboard_receptor = switchboard_receptor.next().fuse();
+                let mut cancel_receptor_deprecated = cancel_listen_rx_deprecated.next().fuse();
                 let mut cancel_receptor = cancel_listen_rx.next().fuse();
+
                 futures::select! {
                     // Invoked when there is a new message from the registry.
-                    message_event = message_receptor => {
-                        if let Some(MessageEvent::Message(core::Payload::Event(event), _)) = message_event {
+                    registry_event = registry_receptor => {
+                        if let Some(MessageEvent::Message(core::Payload::Event(event), _)) = registry_event {
                             switchboard_clone.lock().await.process_event(event);
                         }
                     }
-                    // Invoked when a listen session has ended.
+                    // Invoked when there is a new message from the switchboard
+                    // message interface.
+                    switchboard_event = switchboard_receptor => {
+                        if let Some(MessageEvent::Message(payload, client)) = switchboard_event {
+                            match payload {
+                                switchboard::Payload::Action(switchboard::Action::Request(setting_type, request)) => {
+                                    switchboard_clone.lock().await.process_action_request(setting_type, request, client);
+                                }
+                                switchboard::Payload::Listen(switchboard::Listen::Request(setting_type)) => {
+                                    switchboard_clone.lock().await.process_listen_request(setting_type, client).await;
+                                }
+                                _ => {
+                                }
+                            }
+                        }
+                    }
+                    // Invoked when listener drops `MessageClient` associated
+                    // with a listen request.
                     cancel_event = cancel_receptor => {
+                        if let Some((setting_type, client)) = cancel_event {
+                            switchboard_clone.lock().await.remove_setting_listener(setting_type, client);
+                        }
+
+                    }
+                    // Invoked when a listen session has ended.
+                    cancel_event = cancel_receptor_deprecated => {
                         if let Some(info) = cancel_event {
                             switchboard_clone.lock().await.stop_listening(info);
                         }
@@ -261,35 +309,128 @@ impl SwitchboardImpl {
         }
     }
 
-    fn stop_listening(&mut self, session_info: ListenSessionInfo) {
+    async fn process_listen_request(
+        &mut self,
+        setting_type: SettingType,
+        mut reply_client: switchboard::message::Client,
+    ) {
+        let cancellation_sender = self.listen_cancellation_sender.clone();
+        let client = reply_client.clone();
+        reply_client
+            .bind_to_recipient(
+                ActionFuseBuilder::new()
+                    .add_action(Box::new(move || {
+                        cancellation_sender.unbounded_send((setting_type, client.clone())).ok();
+                    }))
+                    .build(),
+            )
+            .await;
+
+        if !self.listeners.contains_key(&setting_type) {
+            self.listeners.insert(setting_type, vec![]);
+        }
+
+        self.listeners.entry(setting_type).or_insert(vec![]).push(reply_client);
+
+        self.notify_registry_listen(setting_type);
+    }
+
+    fn remove_setting_listener(
+        &mut self,
+        setting_type: SettingType,
+        client: switchboard::message::Client,
+    ) {
+        if let Some(listeners) = self.listeners.get_mut(&setting_type) {
+            if let Some(index) = listeners.iter().position(|x| *x == client) {
+                listeners.remove(index);
+                self.notify_registry_listen(setting_type);
+            }
+        }
+    }
+
+    fn process_action_request(
+        &mut self,
+        setting_type: SettingType,
+        request: SettingRequest,
+        reply_client: switchboard::message::Client,
+    ) {
+        let messenger = self.registry_messenger.clone();
         let action_id = self.get_next_action_id();
 
-        if let Some(session_infos) = self.listeners.get_mut(&session_info.setting_type) {
+        self.record_request(setting_type.clone(), request.clone());
+
+        let mut receptor = messenger
+            .message(
+                core::Payload::Action(SettingAction {
+                    id: action_id,
+                    setting_type,
+                    data: SettingActionData::Request(request),
+                }),
+                Audience::Address(core::Address::Registry),
+            )
+            .send();
+
+        fasync::spawn(async move {
+            while let Some(message_event) = receptor.next().await {
+                // Wait for response
+                if let MessageEvent::Message(
+                    core::Payload::Event(SettingEvent::Response(_id, response)),
+                    _,
+                ) = message_event
+                {
+                    reply_client
+                        .reply(switchboard::Payload::Action(switchboard::Action::Response(
+                            response,
+                        )))
+                        .send();
+                    return;
+                }
+            }
+        });
+    }
+
+    fn stop_listening(&mut self, session_info: ListenSessionInfo) {
+        if let Some(session_infos) = self.listeners_deprecated.get_mut(&session_info.setting_type) {
             // FIXME: use `Vec::remove_item` upon stabilization
             let listener_to_remove =
                 session_infos.iter().enumerate().find(|(_i, elem)| **elem == session_info);
             if let Some((i, _elem)) = listener_to_remove {
                 session_infos.remove(i);
-
-                let _ = self
-                    .registry_messenger
-                    .message(
-                        core::Payload::Action(SettingAction {
-                            id: action_id,
-                            setting_type: session_info.setting_type,
-                            data: SettingActionData::Listen(session_infos.len() as u64),
-                        }),
-                        Audience::Address(core::Address::Registry),
-                    )
-                    .send();
+                self.notify_registry_listen(session_info.setting_type);
             }
         }
     }
 
+    fn notify_registry_listen(&mut self, setting_type: SettingType) {
+        let action_id = self.get_next_action_id();
+        let listener_count = self.listeners_deprecated.get(&setting_type).map_or(0, |x| x.len())
+            + self.listeners.get(&setting_type).map_or(0, |x| x.len());
+
+        self.registry_messenger
+            .message(
+                core::Payload::Action(SettingAction {
+                    id: action_id,
+                    setting_type,
+                    data: SettingActionData::Listen(listener_count as u64),
+                }),
+                Audience::Address(core::Address::Registry),
+            )
+            .send();
+    }
+
     fn notify_listeners(&self, setting_type: SettingType) {
-        if let Some(session_infos) = self.listeners.get(&setting_type) {
+        if let Some(session_infos) = self.listeners_deprecated.get(&setting_type) {
             for info in session_infos {
                 (info.callback)(setting_type);
+            }
+        }
+
+        if let Some(clients) = self.listeners.get(&setting_type) {
+            for client in clients {
+                client
+                    .reply(switchboard::Payload::Listen(switchboard::Listen::Update(setting_type)))
+                    .send()
+                    .ack();
             }
         }
     }
@@ -372,13 +513,11 @@ impl Switchboard for SwitchboardImpl {
         setting_type: SettingType,
         listener: ListenCallback,
     ) -> Result<Box<dyn ListenSession + Send + Sync>, Error> {
-        let action_id = self.get_next_action_id();
-
-        if !self.listeners.contains_key(&setting_type) {
-            self.listeners.insert(setting_type, vec![]);
+        if !self.listeners_deprecated.contains_key(&setting_type) {
+            self.listeners_deprecated.insert(setting_type, vec![]);
         }
 
-        if let Some(listeners) = self.listeners.get_mut(&setting_type) {
+        if let Some(listeners) = self.listeners_deprecated.get_mut(&setting_type) {
             let info = ListenSessionInfo {
                 session_id: self.next_session_id,
                 setting_type: setting_type,
@@ -389,21 +528,11 @@ impl Switchboard for SwitchboardImpl {
 
             listeners.push(info.clone());
 
-            let _ = self
-                .registry_messenger
-                .message(
-                    core::Payload::Action(SettingAction {
-                        id: action_id,
-                        setting_type,
-                        data: SettingActionData::Listen(listeners.len() as u64),
-                    }),
-                    Audience::Address(core::Address::Registry),
-                )
-                .send();
+            self.notify_registry_listen(setting_type);
 
             return Ok(Box::new(ListenSessionImpl::new(
                 info,
-                self.listen_cancellation_sender.clone(),
+                self.listen_cancellation_sender_deprecated.clone(),
             )));
         }
 
@@ -466,8 +595,59 @@ mod tests {
         switchboard_client.request(SettingType::Unknown, SettingRequest::Get).await.ok();
     }
 
-    #[fuchsia_async::run_until_stalled(test)]
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_request() {
+        let messenger_factory = core::message::create_hub();
+        let switchboard_factory = switchboard::message::create_hub();
+        let _ = SwitchboardBuilder::create()
+            .registry_messenger_factory(messenger_factory.clone())
+            .switchboard_messenger_factory(switchboard_factory.clone())
+            .build()
+            .await
+            .unwrap();
+
+        // Create registry endpoint.
+        let (_, mut registry_receptor) = messenger_factory
+            .create(MessengerType::Addressable(core::Address::Registry))
+            .await
+            .unwrap();
+
+        // Create client.
+        let (messenger, _) = switchboard_factory.create(MessengerType::Unbound).await.unwrap();
+
+        // Send request.
+        let mut message_receptor = messenger
+            .message(
+                switchboard::Payload::Action(switchboard::Action::Request(
+                    SettingType::Unknown,
+                    SettingRequest::Get,
+                )),
+                Audience::Address(switchboard::Address::Switchboard),
+            )
+            .send();
+
+        // Ensure request is received.
+        let (client, action) = retrieve_and_verify_action(
+            &mut registry_receptor,
+            SettingType::Unknown,
+            SettingActionData::Request(SettingRequest::Get),
+        )
+        .await;
+
+        client.reply(core::Payload::Event(SettingEvent::Response(action.id, Ok(None)))).send();
+
+        // Ensure response is received.
+        let (response, _) = message_receptor.next_payload().await.unwrap();
+
+        if let switchboard::Payload::Action(switchboard::Action::Response(result)) = response {
+            assert!(result.is_ok());
+        } else {
+            panic!("should have received a switchboard::Action::Response");
+        }
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_request_deprecated() {
         let messenger_factory = core::message::create_hub();
         let switchboard_client = SwitchboardBuilder::create()
             .registry_messenger_factory(messenger_factory.clone())
@@ -502,6 +682,52 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_listen() {
+        let messenger_factory = core::message::create_hub();
+        let switchboard_factory = switchboard::message::create_hub();
+
+        let _ = SwitchboardBuilder::create()
+            .registry_messenger_factory(messenger_factory.clone())
+            .switchboard_messenger_factory(switchboard_factory.clone())
+            .build()
+            .await
+            .unwrap();
+        let setting_type = SettingType::Unknown;
+
+        // Create client.
+        let (messenger, _) = switchboard_factory.create(MessengerType::Unbound).await.unwrap();
+
+        // Create registry endpoint.
+        let (_, mut receptor) = messenger_factory
+            .create(MessengerType::Addressable(core::Address::Registry))
+            .await
+            .unwrap();
+
+        // Register first listener and verify count.
+        {
+            let _ = messenger
+                .message(
+                    switchboard::Payload::Listen(switchboard::Listen::Request(
+                        SettingType::Unknown,
+                    )),
+                    Audience::Address(switchboard::Address::Switchboard),
+                )
+                .send();
+
+            let _ = retrieve_and_verify_action(
+                &mut receptor,
+                setting_type,
+                SettingActionData::Listen(1),
+            )
+            .await;
+        }
+
+        let _ =
+            retrieve_and_verify_action(&mut receptor, setting_type, SettingActionData::Listen(0))
+                .await;
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_listen_deprecated() {
         let messenger_factory = core::message::create_hub();
         let switchboard_client = SwitchboardBuilder::create()
             .registry_messenger_factory(messenger_factory.clone())
@@ -546,6 +772,83 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_notify() {
+        let messenger_factory = core::message::create_hub();
+        let switchboard_factory = switchboard::message::create_hub();
+
+        let _ = SwitchboardBuilder::create()
+            .registry_messenger_factory(messenger_factory.clone())
+            .switchboard_messenger_factory(switchboard_factory.clone())
+            .build()
+            .await
+            .unwrap();
+        let setting_type = SettingType::Unknown;
+
+        // Create registry endpoint.
+        let (registry_messenger, mut registry_receptor) = messenger_factory
+            .create(MessengerType::Addressable(core::Address::Registry))
+            .await
+            .unwrap();
+
+        // Create client.
+        let (messenger_1, _) = switchboard_factory.create(MessengerType::Unbound).await.unwrap();
+
+        let mut receptor_1 = messenger_1
+            .message(
+                switchboard::Payload::Listen(switchboard::Listen::Request(SettingType::Unknown)),
+                Audience::Address(switchboard::Address::Switchboard),
+            )
+            .send();
+
+        let _ = retrieve_and_verify_action(
+            &mut registry_receptor,
+            setting_type,
+            SettingActionData::Listen(1),
+        )
+        .await;
+
+        // Create client.
+        let (messenger_2, _) = switchboard_factory.create(MessengerType::Unbound).await.unwrap();
+
+        let mut receptor_2 = messenger_2
+            .message(
+                switchboard::Payload::Listen(switchboard::Listen::Request(SettingType::Unknown)),
+                Audience::Address(switchboard::Address::Switchboard),
+            )
+            .send();
+
+        let _ = retrieve_and_verify_action(
+            &mut registry_receptor,
+            setting_type,
+            SettingActionData::Listen(2),
+        )
+        .await;
+
+        registry_messenger
+            .message(
+                core::Payload::Event(SettingEvent::Changed(setting_type)),
+                Audience::Address(core::Address::Switchboard),
+            )
+            .send();
+
+        // Ensure both listeners receive notifications.
+        if let (switchboard::Payload::Listen(switchboard::Listen::Update(setting)), _) =
+            receptor_1.next_payload().await.unwrap()
+        {
+            assert_eq!(setting, setting_type);
+        } else {
+            panic!("should have received a switchboard::Listen::Update");
+        }
+        if let (switchboard::Payload::Listen(switchboard::Listen::Update(setting)), _) =
+            receptor_2.next_payload().await.unwrap()
+        {
+            assert_eq!(setting, setting_type);
+        } else {
+            panic!("should have received a switchboard::Listen::Update");
+        }
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_notify_deprecated() {
         let messenger_factory = core::message::create_hub();
         let switchboard_client = SwitchboardBuilder::create()
             .registry_messenger_factory(messenger_factory.clone())

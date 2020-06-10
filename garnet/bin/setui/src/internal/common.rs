@@ -30,6 +30,8 @@ macro_rules! message_hub_definition {
             use crate::message::receptor::Receptor as BaseReceptor;
 
             pub type Factory = BaseFactory<$payload, $address>;
+
+            #[allow(dead_code)]
             pub type Messenger = BaseMessengerClient<$payload, $address>;
 
             #[allow(dead_code)]

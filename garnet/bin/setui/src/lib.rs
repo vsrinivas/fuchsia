@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// This declaration is required to support the `select!`.
+#![recursion_limit = "256"]
+
 use {
     crate::accessibility::accessibility_controller::AccessibilityController,
     crate::accessibility::spawn_accessibility_fidl_handler,
@@ -21,10 +24,6 @@ use {
     crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController,
     crate::do_not_disturb::spawn_do_not_disturb_fidl_handler,
     crate::inspect::inspect_broker::InspectBroker,
-    crate::internal::agent as internal_agent,
-    crate::internal::core as internal_core,
-    crate::internal::event as internal_event,
-    crate::internal::handler as internal_handler,
     crate::intl::intl_controller::IntlController,
     crate::intl::intl_fidl_handler::spawn_intl_fidl_handler,
     crate::night_mode::night_mode_controller::NightModeController,
@@ -132,7 +131,7 @@ impl Environment {
 pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     configuration: Option<ServiceConfiguration>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
-    event_subscriber_blueprints: Vec<internal_event::subscriber::BlueprintHandle>,
+    event_subscriber_blueprints: Vec<internal::event::subscriber::BlueprintHandle>,
     storage_factory: Arc<Mutex<T>>,
     generate_service: Option<GenerateService>,
     handlers: HashMap<SettingType, GenerateHandler<T>>,
@@ -192,7 +191,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     /// Event subscribers to participate
     pub fn event_subscribers(
         mut self,
-        subscribers: &[internal_event::subscriber::BlueprintHandle],
+        subscribers: &[internal::event::subscriber::BlueprintHandle],
     ) -> EnvironmentBuilder<T> {
         self.event_subscriber_blueprints.append(&mut subscribers.to_vec());
         self
@@ -370,13 +369,14 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     components: HashSet<switchboard::base::SettingType>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
-    event_subscriber_blueprints: Vec<internal_event::subscriber::BlueprintHandle>,
+    event_subscriber_blueprints: Vec<internal::event::subscriber::BlueprintHandle>,
     service_context_handle: ServiceContextHandle,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
 ) -> Result<(), Error> {
-    let registry_messenger_factory = internal_core::message::create_hub();
-    let setting_handler_messenger_factory = internal_handler::message::create_hub();
-    let event_messenger_factory = internal_event::message::create_hub();
+    let registry_messenger_factory = internal::core::message::create_hub();
+    let switchboard_messenger_factory = internal::switchboard::message::create_hub();
+    let setting_handler_messenger_factory = internal::handler::message::create_hub();
+    let event_messenger_factory = internal::event::message::create_hub();
 
     for blueprint in event_subscriber_blueprints {
         blueprint.create(event_messenger_factory.clone()).await;
@@ -393,12 +393,13 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     // to handlers.
     let switchboard_client = SwitchboardBuilder::create()
         .registry_messenger_factory(registry_messenger_factory.clone())
+        .switchboard_messenger_factory(switchboard_messenger_factory.clone())
         .build()
         .await
         .expect("could not create switchboard");
 
     let mut agent_authority = AuthorityImpl::create(
-        internal_agent::message::create_hub(),
+        internal::agent::message::create_hub(),
         event_messenger_factory.clone(),
     )
     .await?;
