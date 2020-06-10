@@ -227,6 +227,20 @@ source_set("network_reachability_provider") {
   ]
 }
 
+source_set("reboot_methods_watcher_register") {
+  testonly = true
+
+  sources = [
+    "reboot_methods_watcher_register.cc",
+    "reboot_methods_watcher_register.h",
+  ]
+
+  public_deps = [
+    ":fidl_server",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+  ]
+}
+
 source_set("scenic") {
   testonly = true
 

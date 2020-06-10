@@ -50,7 +50,8 @@ class ReporterTest : public UnitTestFixture,
                      public CobaltTestFixture,
                      public testing::WithParamInterface<TestParam> {
  public:
-  ReporterTest() : CobaltTestFixture(/*unit_test_fixture=*/this) {}
+  ReporterTest()
+      : CobaltTestFixture(/*unit_test_fixture=*/this), cobalt_(dispatcher(), services()) {}
 
   void TearDown() override { files::DeletePath(kHasReportedOnPath, /*recursive=*/false); }
 
@@ -66,13 +67,13 @@ class ReporterTest : public UnitTestFixture,
     FX_CHECK(tmp_dir_.NewTempFileWithData(contents, &reboot_log_path_));
   }
 
-  void ReportOnRebootLog() {
+  void ReportLog() {
     const auto reboot_log = RebootLog::ParseRebootLog(reboot_log_path_);
     ReportOn(reboot_log);
   }
 
   void ReportOn(const RebootLog& reboot_log) {
-    Reporter reporter(dispatcher(), services());
+    Reporter reporter(dispatcher(), services(), &cobalt_);
     reporter.ReportOn(reboot_log, /*delay=*/zx::sec(0));
     RunLoopUntilIdle();
   }
@@ -81,6 +82,7 @@ class ReporterTest : public UnitTestFixture,
   std::unique_ptr<stubs::CrashReporterBase> crash_reporter_server_;
 
  private:
+  cobalt::Logger cobalt_;
   files::ScopedTempDir tmp_dir_;
 };
 
@@ -260,7 +262,7 @@ TEST_P(ReporterTest, Succeed) {
       }));
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  ReportOnRebootLog();
+  ReportLog();
 
   const zx::duration expected_uptime =
       (param.output_uptime.has_value()) ? param.output_uptime.value() : zx::usec(0);

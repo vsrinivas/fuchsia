@@ -30,8 +30,6 @@ executable("main") {
 
   deps = [
     ":main_service",
-    ":reboot_log",
-    ":reporter",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
@@ -70,11 +68,15 @@ source_set("main_service") {
 
   public_deps = [
     ":last_reboot_info_provider",
+    ":reboot_log",
+    ":reboot_watcher",
+    ":reporter",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/developer/feedback/utils:inspect_node_manager",
     "//src/developer/feedback/utils:inspect_protocol_stats",
+    "//src/developer/feedback/utils/cobalt",
   ]
 }
 
@@ -89,6 +91,7 @@ source_set("reboot_log") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
+    "//src/lib/fxl",
   ]
 }
 

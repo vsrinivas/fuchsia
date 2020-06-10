@@ -7,11 +7,13 @@
             "log"
         ],
         "features": [
+            "isolated-cache-storage",
             "isolated-temp"
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.feedback.CrashReporter",
+            "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
             "fuchsia.logger.LogSink"
         ]
     }

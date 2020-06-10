@@ -26,11 +26,12 @@ constexpr char kHasReportedOnPath[] = "/tmp/has_reported_on_reboot_log.txt";
 
 }  // namespace
 
-Reporter::Reporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
+Reporter::Reporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+                   cobalt::Logger* cobalt)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       crash_reporter_(dispatcher, services),
-      cobalt_(dispatcher, services) {}
+      cobalt_(cobalt) {}
 
 void Reporter::ReportOn(const RebootLog& reboot_log, zx::duration crash_reporting_delay) {
   if (files::IsFile(kHasReportedOnPath)) {
@@ -52,10 +53,10 @@ void Reporter::ReportOn(const RebootLog& reboot_log, zx::duration crash_reportin
   }
 
   const zx::duration uptime = (reboot_log.HasUptime()) ? reboot_log.Uptime() : zx::usec(0);
-  cobalt_.LogDuration(ToCobaltLastRebootReason(reboot_log.RebootReason()), uptime);
+  cobalt_->LogDuration(ToCobaltLastRebootReason(reboot_log.RebootReason()), uptime);
 
   // TODO(53131): Remove this once the new metric has been adopted.
-  cobalt_.LogOccurrence(ToCobaltLegacyRebootReason(reboot_log.RebootReason()));
+  cobalt_->LogOccurrence(ToCobaltLegacyRebootReason(reboot_log.RebootReason()));
 
   // We don't want to file a crash report on graceful  or cold reboots.
   if (const auto graceful = OptionallyGraceful(reboot_log.RebootReason());

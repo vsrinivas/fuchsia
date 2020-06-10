@@ -16,7 +16,14 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/feedback/testing/cobalt_test_fixture.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger.h"
+#include "src/developer/feedback/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/reboot_methods_watcher_register.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 namespace feedback {
 namespace {
@@ -31,28 +38,63 @@ using inspect::testing::UintIs;
 using testing::Contains;
 using testing::UnorderedElementsAreArray;
 
-class MainServiceTest : public UnitTestFixture {
+class MainServiceTest : public UnitTestFixture, public CobaltTestFixture {
  public:
   MainServiceTest()
-      : inspector_(std::make_unique<inspect::Inspector>()),
-        main_service_(RebootLog(RebootReason::kKernelPanic, std::nullopt, std::nullopt),
-                      &inspector_->GetRoot()) {}
+      : CobaltTestFixture(/*unit_test_fixture=*/this),
+        inspector_(std::make_unique<inspect::Inspector>()),
+        main_service_(MainService::Config{
+            .dispatcher = dispatcher(),
+            .services = services(),
+            .root_node = &inspector_->GetRoot(),
+            .reboot_log = RebootLog(RebootReason::kNotParseable, std::nullopt, std::nullopt),
+            .graceful_reboot_reason_write_path = Path(),
+        }) {}
 
  protected:
+  void SetUpRebootMethodsWatcherRegisterServer(
+      std::unique_ptr<stubs::RebootMethodsWatcherRegisterBase> server) {
+    reboot_watcher_register_server_ = std::move(server);
+    if (reboot_watcher_register_server_) {
+      InjectServiceProvider(reboot_watcher_register_server_.get());
+    }
+  }
+
   inspect::Hierarchy InspectTree() {
     auto result = inspect::ReadFromVmo(inspector_->DuplicateVmo());
     FX_CHECK(result.is_ok());
     return result.take_value();
   }
 
+  std::string Path() { return files::JoinPath(tmp_dir_.path(), "graceful_reboot_reason.txt"); }
+
  private:
+  files::ScopedTempDir tmp_dir_;
+  std::unique_ptr<stubs::RebootMethodsWatcherRegisterBase> reboot_watcher_register_server_;
   std::unique_ptr<inspect::Inspector> inspector_;
 
  protected:
   MainService main_service_;
 };
 
+TEST_F(MainServiceTest, Check_RegistersRebootWatcher) {
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
+  SetUpRebootMethodsWatcherRegisterServer(std::make_unique<stubs::RebootMethodsWatcherRegister>(
+      fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST));
+  RunLoopUntilIdle();
+
+  main_service_.WatchForImminentGracefulReboot();
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(files::IsFile(Path()));
+
+  std::string reboot_reason_str;
+  ASSERT_TRUE(files::ReadFileToString(Path(), &reboot_reason_str));
+  EXPECT_EQ(reboot_reason_str, "USER REQUEST");
+}
+
 TEST_F(MainServiceTest, CheckInspect) {
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(UnorderedElementsAreArray({
@@ -68,6 +110,7 @@ TEST_F(MainServiceTest, CheckInspect) {
 }
 
 TEST_F(MainServiceTest, LastRebootInfoProvider_CheckInspect) {
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
   LastRebootInfoProviderSyncPtr last_reboot_info_provider_1;
   main_service_.HandleLastRebootInfoProviderRequest(last_reboot_info_provider_1.NewRequest());
   EXPECT_THAT(

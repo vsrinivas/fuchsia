@@ -33,12 +33,14 @@ std::string FormatReason(fuchsia::hardware::power::statecontrol::RebootReason re
 void ImminentGracefulRebootWatcher::OnReboot(
     fuchsia::hardware::power::statecontrol::RebootReason reason, OnRebootCallback callback) {
   const std::string content = FormatReason(reason);
+  FX_LOGS(INFO) << "Received reboot reason  '" << content << "' ";
 
   const size_t timer_id = cobalt_->StartTimer();
   if (files::WriteFile(path_, content.c_str(), content.size())) {
     cobalt_->LogElapsedTime(cobalt::RebootReasonWriteResult::kSuccess, timer_id);
   } else {
     cobalt_->LogElapsedTime(cobalt::RebootReasonWriteResult::kFailure, timer_id);
+    FX_LOGS(ERROR) << "Failed to write reboot reason '" << FormatReason(reason) << "' to " << path_;
   }
 
   callback();

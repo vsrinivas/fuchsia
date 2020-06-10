@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_REPORTER_H_
-#define SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_REPORTER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REPORTER_H_
+#define SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REPORTER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
@@ -24,9 +24,9 @@ namespace feedback {
 // Logs the reboot reason with Cobalt and if the reboot was non-graceful, files a crash report.
 class Reporter {
  public:
-  // fuchsia.feedback.CrashReporter and fuchsia.cobalt.LoggerFactory are expected to be in
-  // |services|.
-  Reporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
+  // fuchsia.feedback.CrashReporter is expected to be in |services|.
+  Reporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+           cobalt::Logger* cobalt);
 
   void ReportOn(const RebootLog& reboot_log, zx::duration crash_reporting_delay);
 
@@ -37,7 +37,7 @@ class Reporter {
   async::Executor executor_;
 
   fidl::OneShotPtr<fuchsia::feedback::CrashReporter> crash_reporter_;
-  cobalt::Logger cobalt_;
+  cobalt::Logger* cobalt_;
 
   // We wrap the delayed task we post on the async loop to delay the crash reporting in a
   // CancelableClosure so we can cancel it if we are done another way.
@@ -46,4 +46,4 @@ class Reporter {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_REBOOT_INFO_REPORTER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_LAST_REBOOT_REPORTER_H_
