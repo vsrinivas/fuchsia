@@ -146,6 +146,9 @@ impl RealmCapabilityHost {
     ) -> Result<(), fcomponent::Error> {
         cm_fidl_validator::validate_child(&child_decl)
             .map_err(|_| fcomponent::Error::InvalidArguments)?;
+        if child_decl.environment.is_some() {
+            return Err(fcomponent::Error::InvalidArguments);
+        }
         let child_decl = child_decl.fidl_into_native();
         realm.add_dynamic_child(collection.name, &child_decl).await.map_err(|e| match e {
             ModelError::InstanceAlreadyExists { .. } => fcomponent::Error::InstanceAlreadyExists,
@@ -451,12 +454,7 @@ mod tests {
         let test = RealmCapabilityTest::new(
             vec![
                 ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
-                (
-                    "system",
-                    ComponentDeclBuilder::new()
-                        .add_collection("coll", fsys::Durability::Transient)
-                        .build(),
-                ),
+                ("system", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
             ],
             vec!["system:0"].into(),
             vec![],
@@ -489,8 +487,13 @@ mod tests {
                 (
                     "system",
                     ComponentDeclBuilder::new()
-                        .add_collection("coll", fsys::Durability::Transient)
-                        .add_collection("pcoll", fsys::Durability::Persistent)
+                        .add_transient_collection("coll")
+                        .add_collection(
+                            CollectionDeclBuilder::new()
+                                .name("pcoll")
+                                .durability(fsys::Durability::Persistent)
+                                .build(),
+                        )
                         .build(),
                 ),
             ],
@@ -507,6 +510,22 @@ mod tests {
                 url: None,
                 startup: Some(fsys::StartupMode::Lazy),
                 environment: None,
+            };
+            let err = test
+                .realm_proxy
+                .create_child(&mut collection_ref, child_decl)
+                .await
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fcomponent::Error::InvalidArguments);
+        }
+        {
+            let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+            let child_decl = fsys::ChildDecl {
+                name: Some("a".to_string()),
+                url: Some("test:///a".to_string()),
+                startup: Some(fsys::StartupMode::Lazy),
+                environment: Some("env".to_string()),
             };
             let err = test
                 .realm_proxy
@@ -580,12 +599,7 @@ mod tests {
         let mut test = RealmCapabilityTest::new(
             vec![
                 ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
-                (
-                    "system",
-                    ComponentDeclBuilder::new()
-                        .add_collection("coll", fsys::Durability::Transient)
-                        .build(),
-                ),
+                ("system", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
                 ("a", component_decl_with_test_runner()),
                 ("b", component_decl_with_test_runner()),
             ],
@@ -692,12 +706,7 @@ mod tests {
         let test = RealmCapabilityTest::new(
             vec![
                 ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
-                (
-                    "system",
-                    ComponentDeclBuilder::new()
-                        .add_collection("coll", fsys::Durability::Transient)
-                        .build(),
-                ),
+                ("system", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
             ],
             vec!["system:0"].into(),
             vec![],
@@ -798,12 +807,7 @@ mod tests {
         out_dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
         let test = RealmCapabilityTest::new(
             vec![
-                (
-                    "root",
-                    ComponentDeclBuilder::new()
-                        .add_collection("coll", fsys::Durability::Transient)
-                        .build(),
-                ),
+                ("root", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
                 (
                     "system",
                     ComponentDeclBuilder::new()
@@ -942,8 +946,8 @@ mod tests {
                     "root",
                     ComponentDeclBuilder::new()
                         .add_lazy_child("static")
-                        .add_collection("coll", fsys::Durability::Transient)
-                        .add_collection("coll2", fsys::Durability::Transient)
+                        .add_transient_collection("coll")
+                        .add_transient_collection("coll2")
                         .build(),
                 ),
                 ("static", component_decl_with_test_runner()),
@@ -1002,12 +1006,7 @@ mod tests {
     async fn list_children_errors() {
         // Create a root component with a collection.
         let test = RealmCapabilityTest::new(
-            vec![(
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_collection("coll", fsys::Durability::Transient)
-                    .build(),
-            )],
+            vec![("root", ComponentDeclBuilder::new().add_transient_collection("coll").build())],
             vec![].into(),
             vec![],
         )

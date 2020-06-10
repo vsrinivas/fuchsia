@@ -19,7 +19,7 @@ use {
         },
         startup::Arguments,
     },
-    cm_rust::{ChildDecl, CollectionDecl, ComponentDecl, NativeIntoFidl},
+    cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl},
     fidl::endpoints::{self, ServerEnd},
     fidl_fidl_examples_echo as echo, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_data as fdata,
@@ -198,11 +198,9 @@ impl ComponentDeclBuilder {
         self
     }
 
-    /// Add a child element with the given name and durability.
-    pub fn add_collection(mut self, name: &str, durability: fsys::Durability) -> Self {
-        self.result
-            .collections
-            .push(CollectionDecl { name: name.to_string(), durability: durability });
+    // Add a collection element.
+    pub fn add_collection(mut self, decl: impl Into<cm_rust::CollectionDecl>) -> Self {
+        self.result.collections.push(decl.into());
         self
     }
 
@@ -219,6 +217,11 @@ impl ComponentDeclBuilder {
                 .url(&format!("test:///{}", name))
                 .startup(fsys::StartupMode::Eager),
         )
+    }
+
+    /// Add a transient collection.
+    pub fn add_transient_collection(self, name: &str) -> Self {
+        self.add_collection(CollectionDeclBuilder::new_transient_collection(name))
     }
 
     /// Add a "use" clause, using the given runner.
@@ -323,6 +326,55 @@ impl ChildDeclBuilder {
 
 impl From<ChildDeclBuilder> for cm_rust::ChildDecl {
     fn from(builder: ChildDeclBuilder) -> Self {
+        builder.build()
+    }
+}
+
+/// A convenience builder for constructing CollectionDecls.
+#[derive(Debug)]
+pub struct CollectionDeclBuilder(cm_rust::CollectionDecl);
+
+impl CollectionDeclBuilder {
+    /// Creates a new builder.
+    pub fn new() -> Self {
+        CollectionDeclBuilder(cm_rust::CollectionDecl {
+            name: String::new(),
+            durability: fsys::Durability::Transient,
+            environment: None,
+        })
+    }
+
+    /// Creates a new builder initialized with a transient collection.
+    pub fn new_transient_collection(name: &str) -> Self {
+        Self::new().name(name).durability(fsys::Durability::Transient)
+    }
+
+    /// Sets the CollectionDecl's name.
+    pub fn name(mut self, name: &str) -> Self {
+        self.0.name = name.to_string();
+        self
+    }
+
+    /// Sets the CollectionDecl's durability
+    pub fn durability(mut self, durability: fsys::Durability) -> Self {
+        self.0.durability = durability;
+        self
+    }
+
+    /// Sets the CollectionDecl's environment name.
+    pub fn environment(mut self, environment: &str) -> Self {
+        self.0.environment = Some(environment.to_string());
+        self
+    }
+
+    /// Consumes the builder and returns a CollectionDecl.
+    pub fn build(self) -> cm_rust::CollectionDecl {
+        self.0
+    }
+}
+
+impl From<CollectionDeclBuilder> for cm_rust::CollectionDecl {
+    fn from(builder: CollectionDeclBuilder) -> Self {
         builder.build()
     }
 }

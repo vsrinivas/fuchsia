@@ -610,6 +610,7 @@ pub struct Child {
 pub struct Collection {
     pub name: Name,
     pub durability: Durability,
+    pub environment: Option<EnvironmentRef>,
 }
 
 #[derive(Deserialize, Debug)]

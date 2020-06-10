@@ -340,6 +340,13 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
+        // Validate "collections".
+        if let Some(collections) = &self.document.collections {
+            for collection in collections {
+                self.validate_collection(&collection)?;
+            }
+        }
+
         // Validate "use".
         if let Some(uses) = self.document.r#use.as_ref() {
             let mut used_ids = HashMap::new();
@@ -421,6 +428,24 @@ impl<'a> ValidationContext<'a> {
                     let source = DependencyNode::Environment(environment_name.as_str());
                     let target = DependencyNode::Child(child.name.as_str());
                     strong_dependencies.add_edge(source, target);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_collection(&self, collection: &'a cml::Collection) -> Result<(), Error> {
+        if let Some(environment_ref) = &collection.environment {
+            match environment_ref {
+                cml::EnvironmentRef::Named(environment_name) => {
+                    if !self.all_environment_names.contains(&environment_name) {
+                        return Err(Error::validate(format!(
+                            "\"{}\" does not appear in \"environments\"",
+                            &environment_name
+                        )));
+                    }
+                    // If there is an environment, we don't need to account for it in the dependency
+                    // graph because a collection is always a sink node.
                 }
             }
         }
@@ -2392,6 +2417,48 @@ mod tests {
             }),
             result = Ok(()),
         },
+        test_cml_collections_bad_environment => {
+            input = json!({
+                "collections": [
+                    {
+                        "name": "tests",
+                        "durability": "transient",
+                        "environment": "realm",
+                    }
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /collections/0/environment")),
+        },
+        test_cml_collections_unknown_environment => {
+            input = json!({
+                "collections": [
+                    {
+                        "name": "tests",
+                        "durability": "transient",
+                        "environment": "#foo_env",
+                    }
+                ]
+            }),
+            result = Err(Error::validate("\"foo_env\" does not appear in \"environments\"")),
+        },
+        test_cml_collections_environment => {
+            input = json!({
+                "collections": [
+                    {
+                        "name": "tests",
+                        "durability": "transient",
+                        "environment": "#foo_env",
+                    }
+                ],
+                "environments": [
+                    {
+                        "name": "foo_env",
+                    }
+                ]
+            }),
+            result = Ok(()),
+        },
+
 
         test_cml_environment_timeout => {
             input = json!({

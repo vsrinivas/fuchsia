@@ -355,6 +355,7 @@ impl CmInto<fsys::CollectionDecl> for cm::Collection {
         Ok(fsys::CollectionDecl {
             name: Some(self.name.into()),
             durability: Some(self.durability.cm_into()?),
+            environment: self.environment.map(|e| e.into()),
         })
     }
 }
@@ -1506,6 +1507,7 @@ mod tests {
                     fsys::CollectionDecl{
                         name: Some("modular".to_string()),
                         durability: Some(fsys::Durability::Persistent),
+                        environment: None,
                     },
                 ];
                 let storages = vec![
@@ -1537,6 +1539,13 @@ mod tests {
                         "url": "fuchsia-pkg://fuchsia.com/gtest#meta/gtest.cm",
                         "startup": "lazy"
                     }
+                ],
+                "collections": [
+                    {
+                        "name": "foo",
+                        "durability": "transient",
+                        "environment": "env"
+                    },
                 ],
                 "environments": [
                     {
@@ -1585,6 +1594,13 @@ mod tests {
                         environment: None,
                     },
                 ];
+                let collections = vec![
+                    fsys::CollectionDecl {
+                        name: Some("foo".to_string()),
+                        durability: Some(fsys::Durability::Transient),
+                        environment: Some("env".to_string()),
+                    },
+                ];
                 let environments = vec![
                     fsys::EnvironmentDecl {
                         name: Some("test_env".to_string()),
@@ -1618,6 +1634,7 @@ mod tests {
                 ];
                 let mut decl = new_component_decl();
                 decl.children = Some(children);
+                decl.collections = Some(collections);
                 decl.environments = Some(environments);
                 decl
             },
@@ -1675,10 +1692,12 @@ mod tests {
                     fsys::CollectionDecl{
                         name: Some("modular".to_string()),
                         durability: Some(fsys::Durability::Persistent),
+                        environment: None,
                     },
                     fsys::CollectionDecl{
                         name: Some("tests".to_string()),
                         durability: Some(fsys::Durability::Transient),
+                        environment: None,
                     },
                 ];
                 let mut decl = new_component_decl();
@@ -1960,6 +1979,7 @@ mod tests {
                     fsys::CollectionDecl {
                         name: Some("modular".to_string()),
                         durability: Some(fsys::Durability::Persistent),
+                        environment: None,
                     },
                 ];
                 let facets = fsys::Object {entries: vec![

@@ -1397,7 +1397,7 @@ async fn use_in_collection() {
                     target: OfferTarget::Collection("coll".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
-                .add_collection("coll", fsys::Durability::Transient)
+                .add_transient_collection("coll")
                 .build(),
         ),
         (
@@ -1423,7 +1423,6 @@ async fn use_in_collection() {
                 .build(),
         ),
     ];
-    // `RealmCapabilityHost` is needed to create dynamic children.
     let test = RoutingTest::new("a", components).await;
     test.create_dynamic_child(
         vec!["b:0"].into(),
@@ -1497,7 +1496,7 @@ async fn use_in_collection_not_offered() {
                     source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                 }))
-                .add_collection("coll", fsys::Durability::Transient)
+                .add_transient_collection("coll")
                 .build(),
         ),
         (
@@ -1518,7 +1517,6 @@ async fn use_in_collection_not_offered() {
                 .build(),
         ),
     ];
-    // `RealmCapabilityHost` is needed to create dynamic children.
     let test = RoutingTest::new("a", components).await;
     test.create_dynamic_child(
         vec!["b:0"].into(),
@@ -1938,6 +1936,86 @@ async fn use_runner_from_parent_environment() {
         // Bind "b:0". We expect to see a call to our runner service for the new component.
         async move {
             universe.bind_instance(&vec!["b:0"].into()).await.unwrap();
+        },
+        // Wait for a request, and ensure it has the correct URL.
+        async move {
+            assert_eq!(
+                wait_for_runner_request(&mut receiver).await.resolved_url,
+                Some("test:///b_resolved".to_string())
+            );
+        }
+    );
+}
+
+///  a
+///   \
+///   [b]
+///
+/// a: declares runner "elf" with service "/svc/runner" from "self".
+/// a: registers runner "elf" from self in environment as "hobbit".
+/// b: instance in collection uses runner "hobbit".
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_runner_from_environment_in_collection() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("coll")
+                        .environment("env")
+                        .build(),
+                )
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .add_runner(RunnerRegistration {
+                            source_name: "elf".into(),
+                            source: RegistrationSource::Self_,
+                            target_name: "hobbit".into(),
+                        })
+                        .build(),
+                )
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                }))
+                .runner(RunnerDecl {
+                    name: "elf".into(),
+                    source: RunnerSource::Self_,
+                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                })
+                .build(),
+        ),
+        ("b", ComponentDeclBuilder::new_empty_component().use_runner("hobbit").build()),
+    ];
+
+    // Set up the system.
+    let (runner_service, mut receiver) =
+        create_service_directory_entry::<fcrunner::ComponentRunnerMarker>();
+    let universe = RoutingTestBuilder::new("a", components)
+        // Component "a" exposes a runner service.
+        .add_outgoing_path("a", CapabilityPath::try_from("/svc/runner").unwrap(), runner_service)
+        .build()
+        .await;
+    universe
+        .create_dynamic_child(
+            AbsoluteMoniker::root(),
+            "coll",
+            ChildDecl {
+                name: "b".to_string(),
+                url: "test:///b".to_string(),
+                startup: fsys::StartupMode::Lazy,
+                environment: None,
+            },
+        )
+        .await;
+
+    join!(
+        // Bind "coll:b:1". We expect to see a call to our runner service for the new component.
+        async move {
+            universe.bind_instance(&vec!["coll:b:1"].into()).await.unwrap();
         },
         // Wait for a request, and ensure it has the correct URL.
         async move {
@@ -2391,7 +2469,7 @@ async fn use_with_destroyed_parent() {
                     target: OfferTarget::Collection("coll".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
-                .add_collection("coll", fsys::Durability::Transient)
+                .add_transient_collection("coll")
                 .build(),
         ),
         (

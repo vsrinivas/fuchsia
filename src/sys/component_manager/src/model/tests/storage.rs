@@ -431,7 +431,7 @@ async fn use_in_collection_from_parent() {
                     source_path: "/minfs".try_into().unwrap(),
                     source: StorageDirectorySource::Realm,
                 })
-                .add_collection("coll", fsys::Durability::Transient)
+                .add_transient_collection("coll")
                 .build(),
         ),
         (
@@ -558,7 +558,7 @@ async fn use_in_collection_from_grandparent() {
                     source: OfferStorageSource::Realm,
                     target: OfferTarget::Collection("coll".to_string()),
                 })))
-                .add_collection("coll", fsys::Durability::Transient)
+                .add_transient_collection("coll")
                 .build(),
         ),
         (

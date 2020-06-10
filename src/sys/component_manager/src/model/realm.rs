@@ -20,7 +20,9 @@ use {
         },
     },
     clonable_error::ClonableError,
-    cm_rust::{self, CapabilityPath, ChildDecl, ComponentDecl, UseDecl, UseStorageDecl},
+    cm_rust::{
+        self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl, UseStorageDecl,
+    },
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
@@ -411,7 +413,8 @@ impl Realm {
             let collection_decl = state
                 .decl()
                 .find_collection(&collection_name)
-                .ok_or_else(|| ModelError::collection_not_found(collection_name.clone()))?;
+                .ok_or_else(|| ModelError::collection_not_found(collection_name.clone()))?
+                .clone();
             match collection_decl.durability {
                 fsys::Durability::Transient => {}
                 fsys::Durability::Persistent => {
@@ -419,7 +422,7 @@ impl Realm {
                 }
             }
             if let Some(child_realm) =
-                state.add_child_realm(self, child_decl, Some(collection_name.clone())).await?
+                state.add_child_realm(self, child_decl, Some(&collection_decl)).await?
             {
                 child_realm
             } else {
@@ -797,8 +800,15 @@ impl RealmState {
         &self,
         realm: &Arc<Realm>,
         child: &ChildDecl,
+        collection: Option<&CollectionDecl>,
     ) -> Result<Environment, ModelError> {
-        if let Some(environment_name) = &child.environment {
+        // For instances in a collection, the environment (if any) is designated in the collection.
+        // Otherwise, it's specified in the ChildDecl.
+        let environment_name = match collection {
+            Some(c) => c.environment.as_ref(),
+            None => child.environment.as_ref(),
+        };
+        if let Some(environment_name) = environment_name {
             // The child has an environment assigned to it. Find that environment
             // in the list of environment declarations.
             let decl = self
@@ -826,7 +836,7 @@ impl RealmState {
         &mut self,
         realm: &Arc<Realm>,
         child: &ChildDecl,
-        collection: Option<String>,
+        collection: Option<&CollectionDecl>,
     ) -> Result<Option<Arc<Realm>>, ModelError> {
         let instance_id = match collection {
             Some(_) => {
@@ -836,11 +846,12 @@ impl RealmState {
             }
             None => 0,
         };
-        let child_moniker = ChildMoniker::new(child.name.clone(), collection.clone(), instance_id);
+        let child_moniker =
+            ChildMoniker::new(child.name.clone(), collection.map(|c| c.name.clone()), instance_id);
         let partial_moniker = child_moniker.to_partial();
         if self.get_live_child_realm(&partial_moniker).is_none() {
             let child_realm = Arc::new(Realm {
-                environment: self.environment_for_child(realm, child)?,
+                environment: self.environment_for_child(realm, child, collection.clone())?,
                 abs_moniker: realm.abs_moniker.child(child_moniker.clone()),
                 component_url: child.url.clone(),
                 startup: child.startup,

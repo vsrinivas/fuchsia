@@ -222,7 +222,10 @@ mod tests {
             realm::BindReason,
             testing::{
                 mocks::MockResolver,
-                test_helpers::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
+                test_helpers::{
+                    ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder,
+                    EnvironmentDeclBuilder,
+                },
             },
         },
         fuchsia_async as fasync,
@@ -364,6 +367,80 @@ mod tests {
             root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
         }));
         let realm = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
+        assert_eq!(realm.component_url, "test:///b");
+
+        let registered_runner = realm.environment.get_registered_runner(&"test".into()).unwrap();
+        assert_matches!(registered_runner.as_ref(), Some((Some(_), r)) if r == &runner_reg);
+        let parent_moniker = &registered_runner.unwrap().0.unwrap().abs_moniker;
+        assert_eq!(parent_moniker, &AbsoluteMoniker::root());
+        assert_matches!(realm.environment.get_registered_runner(&"foo".into()), Ok(None));
+
+        Ok(())
+    }
+
+    // A component in a collection declares an environment that inherits from realm, and the
+    // realm's environment added something that should be available in the component's realm.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_inherit_in_collection() -> Result<(), ModelError> {
+        let runner_reg = RunnerRegistration {
+            source: cm_rust::RegistrationSource::Realm,
+            source_name: "test-src".into(),
+        };
+        let runners: HashMap<cm_rust::CapabilityName, RunnerRegistration> = hashmap! {
+            "test".into() => runner_reg.clone()
+        };
+
+        let mut resolver = MockResolver::new();
+        resolver.add_component(
+            "root",
+            ComponentDeclBuilder::new_empty_component()
+                .add_child(ChildDeclBuilder::new().name("a").url("test:///a").environment("env_a"))
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env_a")
+                        .extends(fsys::EnvironmentExtends::Realm)
+                        .add_runner(cm_rust::RunnerRegistration {
+                            source: cm_rust::RegistrationSource::Realm,
+                            source_name: "test-src".into(),
+                            target_name: "test".into(),
+                        }),
+                )
+                .build(),
+        );
+        resolver.add_component(
+            "a",
+            ComponentDeclBuilder::new_empty_component()
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("coll").environment("env_b"),
+                )
+                .add_environment(
+                    EnvironmentDeclBuilder::new()
+                        .name("env_b")
+                        .extends(fsys::EnvironmentExtends::Realm),
+                )
+                .build(),
+        );
+        resolver.add_component("b", ComponentDeclBuilder::new_empty_component().build());
+        let resolvers = {
+            let mut registry = ResolverRegistry::new();
+            registry.register("test".to_string(), Box::new(resolver));
+            registry
+        };
+
+        let model = Arc::new(Model::new(ModelParams {
+            root_component_url: "test:///root".to_string(),
+            root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
+        }));
+        // Add instance to collection.
+        {
+            let parent_realm = model.bind(&vec!["a:0"].into(), &BindReason::Eager).await?;
+            let child_decl = ChildDeclBuilder::new_lazy_child("b").build();
+            parent_realm
+                .add_dynamic_child("coll".into(), &child_decl)
+                .await
+                .expect("failed to add child");
+        }
+        let realm = model.bind(&vec!["a:0", "coll:b:1"].into(), &BindReason::Eager).await?;
         assert_eq!(realm.component_url, "test:///b");
 
         let registered_runner = realm.environment.get_registered_runner(&"test".into()).unwrap();

@@ -615,6 +615,7 @@ fidl_into_struct!(CollectionDecl, CollectionDecl, fsys::CollectionDecl, fsys::Co
 {
     name: String,
     durability: fsys::Durability,
+    environment: Option<String>,
 });
 fidl_into_struct!(ResolverDecl, ResolverDecl, fsys::ResolverDecl, fsys::ResolverDecl,
 {
@@ -1976,10 +1977,12 @@ mod tests {
                     fsys::CollectionDecl {
                         name: Some("modular".to_string()),
                         durability: Some(fsys::Durability::Persistent),
+                        environment: None,
                     },
                     fsys::CollectionDecl {
                         name: Some("tests".to_string()),
                         durability: Some(fsys::Durability::Transient),
+                        environment: Some("test_env".to_string()),
                     },
                ]),
                facets: Some(fsys::Object{entries: vec![
@@ -2198,10 +2201,12 @@ mod tests {
                         CollectionDecl {
                             name: "modular".to_string(),
                             durability: fsys::Durability::Persistent,
+                            environment: None,
                         },
                         CollectionDecl {
                             name: "tests".to_string(),
                             durability: fsys::Durability::Transient,
+                            environment: Some("test_env".to_string()),
                         },
                     ],
                     facets: Some(fsys::Object{entries: vec![

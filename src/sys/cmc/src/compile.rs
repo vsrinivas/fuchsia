@@ -409,18 +409,11 @@ fn translate_offer(
 fn translate_children(children_in: &Vec<cml::Child>) -> Result<Vec<cm::Child>, Error> {
     let mut out_children = vec![];
     for child in children_in.iter() {
-        let environment = child
-            .environment
-            .as_ref()
-            .map::<Result<cm::Name, Error>, _>(|e| match e {
-                cml::EnvironmentRef::Named(name) => Ok(name.clone()),
-            })
-            .transpose()?;
         out_children.push(cm::Child {
             name: child.name.clone(),
             url: child.url.clone(),
             startup: child.startup.clone(),
-            environment,
+            environment: extract_environment_ref(child.environment.as_ref()),
         });
     }
     Ok(out_children)
@@ -434,6 +427,7 @@ fn translate_collections(
         out_collections.push(cm::Collection {
             name: collection.name.clone(),
             durability: collection.durability.clone(),
+            environment: extract_environment_ref(collection.environment.as_ref()),
         });
     }
     Ok(out_collections)
@@ -777,6 +771,13 @@ fn extract_expose_target(in_obj: &cml::Expose) -> Result<cm::ExposeTarget, Error
         Some(cml::ExposeToRef::Framework) => Ok(cm::ExposeTarget::Framework),
         None => Ok(cm::ExposeTarget::Realm),
     }
+}
+
+fn extract_environment_ref(r: Option<&cml::EnvironmentRef>) -> Option<cm::Name> {
+    r.map(|r| {
+        let cml::EnvironmentRef::Named(name) = r;
+        name.clone()
+    })
 }
 
 #[cfg(test)]
@@ -1710,8 +1711,15 @@ mod tests {
                         "name": "echo",
                         "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm",
                         "startup": "lazy",
+                        "environment": "#myenv",
                     },
-                ]
+                ],
+                "environments": [
+                    {
+                        "name": "myenv",
+                        "extends": "realm",
+                    },
+                ],
             }),
             output = r#"{
     "children": [
@@ -1728,7 +1736,14 @@ mod tests {
         {
             "name": "echo",
             "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm",
-            "startup": "lazy"
+            "startup": "lazy",
+            "environment": "myenv"
+        }
+    ],
+    "environments": [
+        {
+            "name": "myenv",
+            "extends": "realm"
         }
     ]
 }"#,
@@ -1744,8 +1759,15 @@ mod tests {
                     {
                         "name": "tests",
                         "durability": "transient",
+                        "environment": "#myenv",
                     },
-                ]
+                ],
+                "environments": [
+                    {
+                        "name": "myenv",
+                        "extends": "realm",
+                    }
+                ],
             }),
             output = r#"{
     "collections": [
@@ -1755,7 +1777,14 @@ mod tests {
         },
         {
             "name": "tests",
-            "durability": "transient"
+            "durability": "transient",
+            "environment": "myenv"
+        }
+    ],
+    "environments": [
+        {
+            "name": "myenv",
+            "extends": "realm"
         }
     ]
 }"#,

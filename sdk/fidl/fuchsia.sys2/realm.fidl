@@ -44,6 +44,9 @@ protocol Realm {
     /// Creates a child component instance dynamically. When this function
     /// returns successfully, the instance exists, but it may not be running.
     ///
+    /// The environment of the child instance is determined by the environment
+    /// of the collection. `decl` must not set `environment`.
+    ///
     /// Errors:
     /// - `INVALID_ARGUMENTS`: `collection` is not a valid reference or `child`
     ///   is not a valid declaration.

@@ -344,7 +344,6 @@ pub mod tests {
             ExposeTarget, OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget, UseDecl,
             UseProtocolDecl, UseSource,
         },
-        fidl_fuchsia_sys2 as fsys,
         futures::{channel::mpsc, SinkExt, StreamExt},
         std::{convert::TryFrom, sync::Weak, task::Context},
     };
@@ -482,7 +481,7 @@ pub mod tests {
             (
                 "container",
                 ComponentDeclBuilder::new()
-                    .add_collection("coll", fsys::Durability::Transient)
+                    .add_transient_collection("coll")
                     .add_lazy_child("c")
                     .build(),
             ),
@@ -1609,12 +1608,7 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn mark_deleting_in_collection() {
         let components = vec![
-            (
-                "root",
-                ComponentDeclBuilder::new()
-                    .add_collection("coll", fsys::Durability::Transient)
-                    .build(),
-            ),
+            ("root", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
             ("a", component_decl_with_test_runner()),
             ("b", component_decl_with_test_runner()),
         ];
@@ -1713,12 +1707,7 @@ pub mod tests {
     async fn destroy_collection() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("container").build()),
-            (
-                "container",
-                ComponentDeclBuilder::new()
-                    .add_collection("coll", fsys::Durability::Transient)
-                    .build(),
-            ),
+            ("container", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
             ("a", component_decl_with_test_runner()),
             ("b", component_decl_with_test_runner()),
         ];

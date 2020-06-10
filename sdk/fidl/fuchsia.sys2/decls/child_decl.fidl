@@ -23,8 +23,7 @@ table ChildDecl {
     /// The startup mode for the component instance.
     3: StartupMode startup;
 
-    /// The environment assigned to the child. This environment will be used
-    /// when resolving the child's `url`.
+    /// The environment assigned to this child.
     ///
     /// Must be non-empty, reference an environment defined in the containing
     /// `ComponentDecl`, and contain only the following characters:

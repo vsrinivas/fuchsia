@@ -1164,6 +1164,19 @@
               "persistent",
               "transient"
             ]
+          },
+          "environment": {
+            "title": "Assigned environment",
+            "description": "The environment assigned to instances in this collection.",
+            "pattern": "^#[0-9a-z_\\-\\.]+$",
+            "allOf": [
+              {
+                "$ref": "#/definitions/relative-ref-clause"
+              }
+            ],
+            "examples": [
+              "#test_env"
+            ]
           }
         }
       }

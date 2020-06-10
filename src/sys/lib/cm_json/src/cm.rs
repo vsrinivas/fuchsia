@@ -93,6 +93,8 @@ pub struct Child {
 pub struct Collection {
     pub name: Name,
     pub durability: Durability,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub environment: Option<Name>,
 }
 
 /// A storage capability. See [`StorageDecl`].

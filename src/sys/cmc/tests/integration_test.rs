@@ -155,6 +155,7 @@ fn main() {
         let collections = vec![CollectionDecl {
             name: Some("modular".to_string()),
             durability: Some(Durability::Persistent),
+            environment: None,
         }];
         let facets = Object {
             entries: vec![

@@ -14,6 +14,13 @@ table CollectionDecl {
 
     /// The durability of instances in the collection.
     2: Durability durability;
+
+    /// The environment assigned to child instances in this collection.
+    ///
+    /// Must be non-empty, reference an environment defined in the containing
+    /// `ComponentDecl`, and contain only the following characters:
+    /// [a-z0-9-_.].
+    3: fuchsia.component.environment_name environment;
 };
 
 /// The durability of component instances created in a collection.

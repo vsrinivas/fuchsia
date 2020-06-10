@@ -732,9 +732,20 @@ impl<'a> ValidationContext<'a> {
             if !self.all_collections.insert(name) {
                 self.errors.push(Error::duplicate_field("CollectionDecl", "name", name));
             }
+            // If there is an environment, we don't need to account for it in the dependency
+            // graph because a collection is always a sink node.
         }
         if collection.durability.is_none() {
             self.errors.push(Error::missing_field("CollectionDecl", "durability"));
+        }
+        if let Some(environment) = collection.environment.as_ref() {
+            if !self.all_environment_names.contains(environment.as_str()) {
+                self.errors.push(Error::invalid_environment(
+                    "CollectionDecl",
+                    "environment",
+                    environment,
+                ));
+            }
         }
     }
 
@@ -3844,6 +3855,7 @@ mod tests {
                     CollectionDecl {
                         name: Some("modular".to_string()),
                         durability: Some(Durability::Persistent),
+                        environment: None,
                     },
                 ]);
                 decl
@@ -3976,6 +3988,7 @@ mod tests {
                     CollectionDecl{
                         name: Some("modular".to_string()),
                         durability: Some(Durability::Persistent),
+                        environment: None,
                     },
                 ]);
                 decl
@@ -4190,6 +4203,7 @@ mod tests {
                     CollectionDecl {
                         name: Some("modular".to_string()),
                         durability: Some(Durability::Persistent),
+                        environment: None,
                     },
                 ]);
                 decl
@@ -4677,6 +4691,7 @@ mod tests {
                 decl.collections = Some(vec![CollectionDecl{
                     name: None,
                     durability: None,
+                    environment: None,
                 }]);
                 decl
             },
@@ -4691,6 +4706,7 @@ mod tests {
                 decl.collections = Some(vec![CollectionDecl{
                     name: Some("^bad".to_string()),
                     durability: Some(Durability::Persistent),
+                    environment: None,
                 }]);
                 decl
             },
@@ -4704,11 +4720,26 @@ mod tests {
                 decl.collections = Some(vec![CollectionDecl{
                     name: Some("a".repeat(1025)),
                     durability: Some(Durability::Transient),
+                    environment: None,
                 }]);
                 decl
             },
             result = Err(ErrorList::new(vec![
                 Error::field_too_long("CollectionDecl", "name"),
+            ])),
+        },
+        test_validate_collection_references_unknown_env => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.collections = Some(vec![CollectionDecl {
+                    name: Some("foo".to_string()),
+                    durability: Some(Durability::Transient),
+                    environment: Some("test_env".to_string()),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_environment("CollectionDecl", "environment", "test_env"),
             ])),
         },
 
