@@ -91,6 +91,20 @@ impl FIDLClone for AudioStreamSettings {
     }
 }
 
+impl FIDLClone for InputDeviceSettings {
+    fn clone(&self) -> Self {
+        InputDeviceSettings {
+            microphone: Some(Microphone { muted: self.microphone.as_ref().unwrap().muted }),
+        }
+    }
+}
+
+impl FIDLClone for Microphone {
+    fn clone(&self) -> Self {
+        Microphone { muted: self.muted }
+    }
+}
+
 impl FIDLClone for AccessibilitySettings {
     fn clone(&self) -> Self {
         let mut settings = AccessibilitySettings::empty();

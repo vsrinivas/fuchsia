@@ -1,0 +1,40 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.settings;
+
+/// Settings related to input to the device.
+///
+/// Supported SettingsEpitaph enums:
+/// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
+[Discoverable]
+protocol Input {
+    /// Gets the current [InputDeviceSettings]. Returns immediately on first call;
+    /// subsequent calls return when the value changes.
+    ///
+    /// If this call fails, it is considered a fatal error and the channel
+    /// will be closed.
+    Watch() -> (InputDeviceSettings settings);
+
+    /// Sets [InputDeviceSettings]. Any field not explicitly set in the table
+    /// performs a no-op, and will not make any changes.
+    Set(InputDeviceSettings settings) -> () error Error;
+};
+
+/// Settings related to audio input. Replacement for fuchsia.settings.AudioSettings.input.
+table InputDeviceSettings {
+    1: Microphone microphone;
+};
+
+/// Settings related to the microphone.
+table Microphone {
+    /// Whether the microphone is muted.
+    ///
+    /// This is only tracking the software mute state. The service will pick up the hardware state
+    /// and combine the two states to find the overall state. If either software or hardware is
+    /// muted, the overall state is muted. The two may be different if the device should not
+    /// listen regardless of hardware state, or if the software state is unmuted and the user
+    /// turns the microphone off.
+    1: bool muted;
+};

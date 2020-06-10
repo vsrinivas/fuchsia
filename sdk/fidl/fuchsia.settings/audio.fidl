@@ -68,7 +68,7 @@ table AudioSettings {
     /// one AudioStreamSettings for each fuchsia.media.AudioRenderUsage.
     1: vector<AudioStreamSettings>:5 streams;
 
-    /// Settings related to the audio input.
+    /// To be deprecated in favor of fuchsia.settings.InputDeviceSettings.
     2: AudioInput input;
 };
 

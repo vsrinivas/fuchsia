@@ -13,6 +13,7 @@ fidl("fuchsia.settings") {
     "device.fidl",
     "display.fidl",
     "do_not_disturb.fidl",
+    "input.fidl",
     "intl.fidl",
     "night_mode.fidl",
     "privacy.fidl",

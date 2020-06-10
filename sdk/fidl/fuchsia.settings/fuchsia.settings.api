@@ -1,9 +1,10 @@
 {
   "fidl/fuchsia.settings/accessibility.fidl": "3fd864b48e26a5d7f5eddb6cad62807a",
-  "fidl/fuchsia.settings/audio.fidl": "4f30a99c8fcd688cb74119d197903691",
+  "fidl/fuchsia.settings/audio.fidl": "dd2bfaf8219b51cd9354b9c44ccadd22",
   "fidl/fuchsia.settings/device.fidl": "c5e0660e8c5a277ff3d41409f9905b90",
   "fidl/fuchsia.settings/display.fidl": "23822f0523c01be0b33f72bed573fc6c",
   "fidl/fuchsia.settings/do_not_disturb.fidl": "9bd21511bc939ad7cea3b6fa7b71fce8",
+  "fidl/fuchsia.settings/input.fidl": "f28c4a3932944d6b89f56b9dea79bba2",
   "fidl/fuchsia.settings/intl.fidl": "a07d39b62d04166e56a232f0ebbe65dd",
   "fidl/fuchsia.settings/night_mode.fidl": "c37d97b3111d3d8db4017872f6176e7a",
   "fidl/fuchsia.settings/privacy.fidl": "76c47f32005b9943071a598b174f97d9",
