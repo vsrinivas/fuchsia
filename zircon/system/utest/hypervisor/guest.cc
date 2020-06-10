@@ -21,7 +21,10 @@
 #include <zircon/types.h>
 
 #include <string>
+#include <thread>
 
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
 #include <unittest/unittest.h>
 
@@ -1108,7 +1111,28 @@ static bool guest_set_trap_with_io() {
 
 #endif  // __x86_64__
 
+static bool vcpu_use_after_thread_exits() {
+  BEGIN_TEST;
+
+  test_t test;
+  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+  // Do the setup on another thread so that the VCPU attaches to the other thread.
+  std::thread t([&]() {
+    if (setup(&test, vcpu_resume_start, vcpu_resume_end)) {
+      status = ZX_OK;
+    }
+  });
+  t.join();
+
+  ASSERT_EQ(status, ZX_OK);
+  // Shutdown the VCPU after the thread has been shutdown.
+  test.vcpu.reset();
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(guest)
+RUN_TEST(vcpu_use_after_thread_exits)
 RUN_TEST(vcpu_resume)
 RUN_TEST(vcpu_invalid_thread_reuse)
 RUN_TEST(vcpu_read_write_state)

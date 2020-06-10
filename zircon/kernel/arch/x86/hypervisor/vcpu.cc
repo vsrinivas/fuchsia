@@ -744,20 +744,31 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
 }
 
 Vcpu::Vcpu(Guest* guest, uint16_t vpid, Thread* thread)
-    : guest_(guest), vpid_(vpid), thread_(thread), vmx_state_(/* zero-init */) {
-  thread_->flags_ |= THREAD_FLAG_VCPU;
-  thread_->SetMigrateFn([this](auto stage) { MigrateCpu(stage); });
+    : guest_(guest),
+      vpid_(vpid),
+      thread_(thread),
+      last_cpu_(thread->LastCpu()),
+      vmx_state_(/* zero-init */) {
+  thread->flags_ |= THREAD_FLAG_VCPU;
+  // We have to disable thread safety analysis because it's not smart enough to realize
+  // that SetMigrateFn will always be called with the ThreadLock.
+  thread->SetMigrateFn([this](Thread* thread, auto stage)
+                           TA_NO_THREAD_SAFETY_ANALYSIS { MigrateCpu(thread, stage); });
 }
 
 Vcpu::~Vcpu() {
   local_apic_state_.timer.Cancel();
 
-  // Clear the migration function, so that |thread_| does not reference |this|
-  // after destruction of the VCPU.
-  thread_->SetMigrateFn(nullptr);
   {
+    // Taking the ThreadLock guarantees that thread_ isn't going to be freed while we access it.
     Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
-    thread_->flags_ &= ~THREAD_FLAG_VCPU;
+    Thread* thread = thread_.load();
+    if (thread != nullptr) {
+      thread->flags_ &= ~THREAD_FLAG_VCPU;
+      // Clear the migration function, so that |thread_| does not reference |this|
+      // after destruction of the VCPU.
+      thread->SetMigrateFnLocked(nullptr);
+    }
   }
 
   if (vmcs_page_.IsAllocated()) {
@@ -772,7 +783,7 @@ Vcpu::~Vcpu() {
   DEBUG_ASSERT(status == ZX_OK);
 }
 
-void Vcpu::MigrateCpu(Thread::MigrateStage stage) {
+void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
   // Volume 3, Section 31.8.2: An MP-aware VMM is free to assign any logical
   // processor to a VM. But for performance considerations, moving a guest VMCS
   // to another logical processor is slower than resuming that guest VMCS on the
@@ -817,7 +828,7 @@ void Vcpu::MigrateCpu(Thread::MigrateStage stage) {
       // processor.
       x86_percpu* percpu = x86_get_percpu();
       vmwrite(static_cast<uint64_t>(VmcsField16::HOST_TR_SELECTOR), TSS_SELECTOR(percpu->cpu_num));
-      vmwrite(static_cast<uint64_t>(VmcsFieldXX::HOST_FS_BASE), thread_->arch_.fs_base);
+      vmwrite(static_cast<uint64_t>(VmcsFieldXX::HOST_FS_BASE), thread->arch_.fs_base);
       vmwrite(static_cast<uint64_t>(VmcsFieldXX::HOST_GS_BASE), read_msr(X86_MSR_IA32_GS_BASE));
       vmwrite(static_cast<uint64_t>(VmcsFieldXX::HOST_TR_BASE),
               reinterpret_cast<uint64_t>(&percpu->default_tss));
@@ -825,23 +836,30 @@ void Vcpu::MigrateCpu(Thread::MigrateStage stage) {
       // Invalidate TLB mappings for the EPT.
       zx_paddr_t pml4_address = guest_->AddressSpace()->arch_aspace()->arch_table_phys();
       invept(InvEpt::SINGLE_CONTEXT, ept_pointer(pml4_address));
+
+      last_cpu_ = thread->LastCpuLocked();
+      break;
+    }
+    case Thread::MigrateStage::Exiting: {
+      // The thread this VCPU is bound to is exiting, so erase our local pointer to the thread.
+      thread_.store(nullptr);
       break;
     }
   }
 }
 
-void Vcpu::RestoreGuestExtendedRegisters(uint64_t guest_cr4) {
+void Vcpu::RestoreGuestExtendedRegisters(Thread* thread, uint64_t guest_cr4) {
   DEBUG_ASSERT(arch_ints_disabled());
   if (!x86_xsave_supported()) {
     // Save host and restore guest x87/SSE state with fxrstor/fxsave.
-    x86_extended_register_save_state(thread_->arch_.extended_register_state);
+    x86_extended_register_save_state(thread->arch_.extended_register_state);
     x86_extended_register_restore_state(guest_extended_registers_.get());
     return;
   }
 
   // Save host state.
   vmx_state_.host_state.xcr0 = x86_xgetbv(0);
-  x86_extended_register_save_state(thread_->arch_.extended_register_state);
+  x86_extended_register_save_state(thread->arch_.extended_register_state);
 
   // Restore guest state.
   x86_xsetbv(0, x86_extended_xcr0_component_bitmap());
@@ -849,12 +867,12 @@ void Vcpu::RestoreGuestExtendedRegisters(uint64_t guest_cr4) {
   x86_xsetbv(0, vmx_state_.guest_state.xcr0);
 }
 
-void Vcpu::SaveGuestExtendedRegisters(uint64_t guest_cr4) {
+void Vcpu::SaveGuestExtendedRegisters(Thread* thread, uint64_t guest_cr4) {
   DEBUG_ASSERT(arch_ints_disabled());
   if (!x86_xsave_supported()) {
     // Save host and restore guest x87/SSE state with fxrstor/fxsave.
     x86_extended_register_save_state(guest_extended_registers_.get());
-    x86_extended_register_restore_state(thread_->arch_.extended_register_state);
+    x86_extended_register_restore_state(thread->arch_.extended_register_state);
     return;
   }
 
@@ -865,7 +883,7 @@ void Vcpu::SaveGuestExtendedRegisters(uint64_t guest_cr4) {
 
   // Restore host state.
   x86_xsetbv(0, vmx_state_.host_state.xcr0);
-  x86_extended_register_restore_state(thread_->arch_.extended_register_state);
+  x86_extended_register_restore_state(thread->arch_.extended_register_state);
 }
 
 // Injects an interrupt into the guest, if there is one pending.
@@ -930,9 +948,11 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
-  if (Thread::Current::Get() != thread_) {
+  Thread* current_thread = Thread::Current::Get();
+  if (current_thread != thread_) {
     return ZX_ERR_BAD_STATE;
   }
+
   zx_status_t status;
   do {
     AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
@@ -941,7 +961,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
       return status;
     }
 
-    RestoreGuestExtendedRegisters(vmcs.Read(VmcsFieldXX::GUEST_CR4));
+    RestoreGuestExtendedRegisters(current_thread, vmcs.Read(VmcsFieldXX::GUEST_CR4));
 
     // Updates guest system time if the guest subscribed to updates.
     pv_clock_update_system_time(&pv_clock_state_, guest_->AddressSpace());
@@ -963,7 +983,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     running_.store(false);
     GUEST_STATS_INC(vm_exits);
 
-    SaveGuestExtendedRegisters(vmcs.Read(VmcsFieldXX::GUEST_CR4));
+    SaveGuestExtendedRegisters(current_thread, vmcs.Read(VmcsFieldXX::GUEST_CR4));
 
     if (!x86_get_disable_spec_mitigations()) {
       // Spectre V2: Ensure that code executed in the VM guest cannot influence either
@@ -1006,7 +1026,7 @@ void vmx_exit(VmxState* vmx_state) {
 void Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
   local_apic_state_.interrupt_tracker.Interrupt(vector, type);
   if (running_.load()) {
-    mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(thread_->LastCpu()));
+    mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu_.load()));
   }
 }
 
@@ -1029,8 +1049,9 @@ static void register_copy(Out* out, const In& in) {
   out->r15 = in.r15;
 }
 
-zx_status_t Vcpu::ReadState(zx_vcpu_state_t* vcpu_state) const {
-  if (Thread::Current::Get() != thread_) {
+zx_status_t Vcpu::ReadState(zx_vcpu_state_t* vcpu_state) {
+  Thread* current_thread = Thread::Current::Get();
+  if (current_thread != thread_) {
     return ZX_ERR_BAD_STATE;
   }
   register_copy(vcpu_state, vmx_state_.guest_state);
@@ -1041,7 +1062,8 @@ zx_status_t Vcpu::ReadState(zx_vcpu_state_t* vcpu_state) const {
 }
 
 zx_status_t Vcpu::WriteState(const zx_vcpu_state_t& vcpu_state) {
-  if (Thread::Current::Get() != thread_) {
+  Thread* current_thread = Thread::Current::Get();
+  if (current_thread != thread_) {
     return ZX_ERR_BAD_STATE;
   }
   register_copy(&vmx_state_.guest_state, vcpu_state);
@@ -1056,7 +1078,8 @@ zx_status_t Vcpu::WriteState(const zx_vcpu_state_t& vcpu_state) {
 }
 
 zx_status_t Vcpu::WriteState(const zx_vcpu_io_t& io_state) {
-  if (Thread::Current::Get() != thread_) {
+  Thread* current_thread = Thread::Current::Get();
+  if (current_thread != thread_) {
     return ZX_ERR_BAD_STATE;
   }
   if ((io_state.access_size != 1) && (io_state.access_size != 2) && (io_state.access_size != 4)) {

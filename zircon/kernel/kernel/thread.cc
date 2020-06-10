@@ -480,6 +480,10 @@ __NO_RETURN static void thread_exit_locked(Thread* current_thread, int retcode)
   current_thread->state_ = THREAD_DEATH;
   current_thread->retcode_ = retcode;
 
+  if (unlikely(current_thread->migrate_fn_)) {
+    current_thread->migrate_fn_(current_thread, Thread::MigrateStage::Exiting);
+  }
+
   // Make sure that we have released any wait queues we may have owned when we
   // exited.  TODO(johngro):  Should we log a warning or take any other
   // actions here?  Normally, if a thread exits while owning a wait queue, it
@@ -675,6 +679,11 @@ void Thread::Current::MigrateToCpu(const cpu_num_t target_cpu) {
 void Thread::SetMigrateFn(MigrateFn migrate_fn) {
   DEBUG_ASSERT(magic_ == THREAD_MAGIC);
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+  SetMigrateFnLocked(ktl::move(migrate_fn));
+}
+
+void Thread::SetMigrateFnLocked(MigrateFn migrate_fn) {
+  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
   migrate_fn_ = ktl::move(migrate_fn);
 }
 
@@ -1078,6 +1087,12 @@ cpu_num_t Thread::LastCpu() const {
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   return scheduler_state_.last_cpu_;
 }
+
+/**
+ * @brief Get the last CPU the given thread was run on, or INVALID_CPU if the
+ * thread has never run.
+ */
+cpu_num_t Thread::LastCpuLocked() const { return scheduler_state_.last_cpu_; }
 
 /**
  * @brief Construct a thread t around the current running state

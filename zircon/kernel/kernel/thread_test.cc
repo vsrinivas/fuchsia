@@ -303,11 +303,11 @@ bool set_migrate_fn_test() {
     Thread::MigrateStage next_stage = Thread::MigrateStage::Before;
     bool success = true;
   } migrate_state;
-  worker->SetMigrateFn([&migrate_state](Thread::MigrateStage stage) {
+  worker->SetMigrateFn([&migrate_state](Thread* thread, Thread::MigrateStage stage) {
     ++migrate_state.count;
 
     cpu_num_t current_cpu = arch_curr_cpu_num();
-    if (migrate_state.last_cpu == current_cpu) {
+    if ((stage == Thread::MigrateStage::After) && (migrate_state.last_cpu == current_cpu)) {
       UNITTEST_FAIL_TRACEF("Expected to have migrated CPU.");
       migrate_state.success = false;
     }
@@ -318,7 +318,17 @@ bool set_migrate_fn_test() {
                            static_cast<int>(migrate_state.next_stage), static_cast<int>(stage));
       migrate_state.success = false;
     }
-    migrate_state.next_stage = Thread::MigrateStage::After;
+
+    switch (migrate_state.next_stage) {
+      case Thread::MigrateStage::Before:
+        migrate_state.next_stage = Thread::MigrateStage::After;
+        break;
+      case Thread::MigrateStage::After:
+        migrate_state.next_stage = Thread::MigrateStage::Exiting;
+        break;
+      case Thread::MigrateStage::Exiting:
+        break;
+    }
 
     if (!thread_lock_held()) {
       UNITTEST_FAIL_TRACEF("Expected the thread lock to be held.");
@@ -331,7 +341,7 @@ bool set_migrate_fn_test() {
   int worker_retcode;
   ASSERT_EQ(worker->Join(&worker_retcode, ZX_TIME_INFINITE), ZX_OK, "Failed to join thread.");
   EXPECT_EQ(worker_retcode, ZX_OK, "Worker thread failed.");
-  EXPECT_EQ(migrate_state.count, 2, "Migrate function was not called 2 times.");
+  EXPECT_EQ(migrate_state.count, 3, "Migrate function was not called 3 times.");
   EXPECT_TRUE(migrate_state.success, "Migrate function was not called with the expected state.")
 
   END_TEST;

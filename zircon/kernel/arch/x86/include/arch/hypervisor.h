@@ -95,15 +95,17 @@ class Vcpu {
 
   zx_status_t Resume(zx_port_packet_t* packet);
   void Interrupt(uint32_t vector, hypervisor::InterruptType type);
-  zx_status_t ReadState(zx_vcpu_state_t* vcpu_state) const;
+  zx_status_t ReadState(zx_vcpu_state_t* vcpu_state);
   zx_status_t WriteState(const zx_vcpu_state_t& vcpu_state);
   zx_status_t WriteState(const zx_vcpu_io_t& io_state);
 
  private:
   Guest* const guest_;
   const uint16_t vpid_;
-  Thread* const thread_;
+  // |thread_| will be set to nullptr when the thread exits.
+  ktl::atomic<Thread*> thread_;
   ktl::atomic<bool> running_;
+  ktl::atomic<cpu_num_t> last_cpu_;
   LocalApicState local_apic_state_;
   PvClockState pv_clock_state_;
   VmxState vmx_state_;
@@ -114,9 +116,9 @@ class Vcpu {
 
   Vcpu(Guest* guest, uint16_t vpid, Thread* thread);
 
-  void MigrateCpu(Thread::MigrateStage stage);
-  void SaveGuestExtendedRegisters(uint64_t cr4);
-  void RestoreGuestExtendedRegisters(uint64_t cr4);
+  void MigrateCpu(Thread* thread, Thread::MigrateStage stage) TA_REQ(ThreadLock::Get());
+  void SaveGuestExtendedRegisters(Thread* thread, uint64_t cr4);
+  void RestoreGuestExtendedRegisters(Thread* thread, uint64_t cr4);
 };
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_HYPERVISOR_H_

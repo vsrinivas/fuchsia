@@ -185,17 +185,21 @@ struct Thread {
     Before,
     // The stage after the thread has migrated. Called from the new CPU.
     After,
+    // The Thread is exiting. Can be called from any CPU.
+    Exiting,
   };
   // The migrate function will be invoked twice when a thread is migrate between
   // CPUs. Firstly when the thread is removed from the old CPUs scheduler,
   // secondly when the thread is rescheduled on the new CPU. When the migrate
   // function is called, |thread_lock| is held.
-  using MigrateFn = fbl::Function<void(MigrateStage stage)> TA_REQ(thread_lock);
+  using MigrateFn = fbl::Function<void(Thread* thread, MigrateStage stage)> TA_REQ(thread_lock);
 
   void SetMigrateFn(MigrateFn migrate_fn) TA_EXCL(thread_lock);
-  void CallMigrateFnLocked(MigrateStage stage) const TA_REQ(thread_lock) {
+  void SetMigrateFnLocked(MigrateFn migrate_fn) TA_REQ(thread_lock);
+
+  void CallMigrateFnLocked(MigrateStage stage) TA_REQ(thread_lock) {
     if (unlikely(migrate_fn_)) {
-      migrate_fn_(stage);
+      migrate_fn_(this, stage);
     }
   }
 
@@ -204,8 +208,10 @@ struct Thread {
   void OwnerName(char out_name[THREAD_NAME_LENGTH]);
   // Return the number of nanoseconds a thread has been running for.
   zx_duration_t Runtime() const;
+
   // Last cpu this thread was running on, or INVALID_CPU if it has never run.
   cpu_num_t LastCpu() const TA_EXCL(thread_lock);
+  cpu_num_t LastCpuLocked() const;
 
   // Return true if thread has been signaled.
   bool IsSignaled() { return signals_ != 0; }
