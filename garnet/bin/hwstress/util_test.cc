@@ -43,5 +43,12 @@ TEST(Util, DoubleAsHex) {
   EXPECT_EQ(DoubleAsHex(nan("")), "0x7ff8000000000000");
 }
 
+TEST(Util, RepeatByte) {
+  EXPECT_EQ(RepeatByte(0x00), 0x00000000'00000000ul);
+  EXPECT_EQ(RepeatByte(0x01), 0x01010101'01010101ul);
+  EXPECT_EQ(RepeatByte(0xab), 0xabababab'ababababul);
+  EXPECT_EQ(RepeatByte(0xff), 0xffffffff'fffffffful);
+}
+
 }  // namespace
 }  // namespace hwstress

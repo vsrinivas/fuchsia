@@ -12,6 +12,7 @@
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Environment"
         ]
