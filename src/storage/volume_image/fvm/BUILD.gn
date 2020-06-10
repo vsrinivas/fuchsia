@@ -40,16 +40,30 @@ source_set("fvm-descriptor") {
   deps = [ "//zircon/system/ulib/fvm" ]
 }
 
+source_set("fvm-sparse-image") {
+  sources = [ "fvm_sparse_image.cc" ]
+  public = [ "fvm_sparse_image.h" ]
+  public_deps = [
+    ":fvm-descriptor",
+    "//src/storage/volume_image/utils:io-interfaces",
+    "//src/storage/volume_image/utils:io-interfaces",
+    "//zircon/system/ulib/fvm",
+  ]
+  deps = []
+}
+
 source_set("fvm-test") {
   testonly = true
   sources = [
     "address_descriptor_test.cc",
     "fvm_descriptor_test.cc",
+    "fvm_sparse_image_test.cc",
     "partition_test.cc",
   ]
   deps = [
     ":address-descriptor",
     ":fvm-descriptor",
+    ":fvm-sparse-image",
     ":partition",
     "//src/lib/json_parser",
     "//src/storage/volume_image/serialization:schema",
