@@ -35,7 +35,7 @@ use {
 };
 
 mod scan;
-mod state_machine;
+pub mod state_machine;
 pub mod types;
 
 /// Max number of network configs that we will send at once through the network config iterator

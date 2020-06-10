@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[allow(unused)] // TODO: remove when serve() is used
 use {
     crate::{
         client::{sme_credential_from_policy, types},
@@ -57,8 +56,7 @@ pub struct Client {
 }
 
 impl Client {
-    #[cfg(test)]
-    fn new(req_sender: mpsc::Sender<ManualRequest>) -> Self {
+    pub fn new(req_sender: mpsc::Sender<ManualRequest>) -> Self {
         Self { req_sender }
     }
 }
@@ -114,8 +112,7 @@ pub struct ConnectRequest {
     pub credential: Credential,
 }
 
-#[allow(unused)] // TODO: remove (also remove the one near the `use` directive at top)
-async fn serve(
+pub async fn serve(
     iface_id: u16,
     proxy: fidl_sme::ClientSmeProxy,
     sme_event_stream: fidl_sme::ClientSmeEventStream,
