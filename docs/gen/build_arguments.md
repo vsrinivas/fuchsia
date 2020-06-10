@@ -142,7 +142,7 @@ From //BUILD.gn:25
 ### basic_env_names
 The list of environment names to include in "basic_envs".
 
-**Current value (from the default):** `[]`
+**Current value (from the default):** `["emu"]`
 
 From //build/testing/environments.gni:14
 
@@ -583,7 +583,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/bb1b9454bbdfd2401ac18a3812b175177416ce7f/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/4ed89a113a07f244970672d1da072dc1b98734e3/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -591,14 +591,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/bb1b9454bbdfd2401ac18a3812b175177416ce7f/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/4ed89a113a07f244970672d1da072dc1b98734e3/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/bb1b9454bbdfd2401ac18a3812b175177416ce7f/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/4ed89a113a07f244970672d1da072dc1b98734e3/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -789,18 +789,6 @@ writing v1 wire-format by default.
 
 From //build/fidl/wireformat.gni:9
 
-### fidlc_deprecate_c_unions
-
-**Current value (from the default):** `false`
-
-From //zircon/tools/fidl/BUILD.gn:7
-
-### fidlc_union_not_simple
-
-**Current value (from the default):** `false`
-
-From //zircon/tools/fidl/BUILD.gn:6
-
 ### filter_out_of_astro
 Use this flag to exclude artifacts from Astro builds.
 This is a very hacky way of ensuring that the resulting fuchsia.zbi fits
@@ -842,7 +830,7 @@ From //build/images/args.gni:68
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/bb1b9454bbdfd2401ac18a3812b175177416ce7f/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/4ed89a113a07f244970672d1da072dc1b98734e3/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -857,14 +845,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/bb1b9454bbdfd2401ac18a3812b175177416ce7f/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/4ed89a113a07f244970672d1da072dc1b98734e3/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/bb1b9454bbdfd2401ac18a3812b175177416ce7f/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/4ed89a113a07f244970672d1da072dc1b98734e3/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
