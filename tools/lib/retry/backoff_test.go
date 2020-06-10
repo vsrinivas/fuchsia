@@ -66,27 +66,23 @@ func TestMaxDurationBackoff(t *testing.T) {
 }
 
 func TestExponentialBackoff(t *testing.T) {
-	backoff := NewExponentialBackoff(time.Second*5, time.Second*64, 2)
+	multiplier := 2.0
+	maxInterval := 32 * time.Second
+	backoff := NewExponentialBackoff(500*time.Millisecond, maxInterval, multiplier)
 	testBackoff := func() {
+		low := 250 * time.Millisecond
+		high := 750 * time.Millisecond
+		for low < maxInterval {
+			val := backoff.Next()
+			if val < low || val > high {
+				t.Errorf("expecting backoff between %s and %s, got %s", low, high, val)
+			}
+			low *= time.Duration(multiplier)
+			high *= time.Duration(multiplier)
+		}
 		val := backoff.Next()
-		if val < 5*time.Second || val > 15*time.Second {
-			t.Errorf("expecting backoff between 5 to 15 secs, got %v", val)
-		}
-		val = backoff.Next()
-		if val < 10*time.Second || val > 25*time.Second {
-			t.Errorf("expecting backoff between 10 to 25 secs, got %v", val)
-		}
-		val = backoff.Next()
-		if val < 20*time.Second || val > 35*time.Second {
-			t.Errorf("expecting backoff between 20 to 35 secs, got %v", val)
-		}
-		val = backoff.Next()
-		if val < 40*time.Second || val > 55*time.Second {
-			t.Errorf("expecting backoff between 40 to 55 secs, got %v", val)
-		}
-		val = backoff.Next()
-		if val != 64*time.Second {
-			t.Errorf("expecting backoff of 64 secs, got %v", val)
+		if val != maxInterval {
+			t.Errorf("expecting backoff of %s secs, got %s", maxInterval, val)
 		}
 	}
 	testBackoff()

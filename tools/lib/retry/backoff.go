@@ -94,7 +94,8 @@ func WithMaxDuration(b Backoff, max time.Duration) Backoff {
 	return &maxDurationBackoff{backOff: b, maxDuration: max, c: &systemClock{}}
 }
 
-// ExponentialBackoff is a policy that increase the delay exponentially.
+// ExponentialBackoff is a policy that increase the delay exponentially, with a
+// small amount of randomness.
 type ExponentialBackoff struct {
 	initialInterval time.Duration
 	maxInterval     time.Duration
@@ -119,13 +120,17 @@ func (e *ExponentialBackoff) Reset() {
 }
 
 func (e *ExponentialBackoff) Next() time.Duration {
-	// next is sec in float64
-	next := float64(e.initialInterval)/float64(time.Second)*math.Pow(e.multiplier, float64(e.iteration)) + 10*e.randObj.Float64()
-	if next > float64(e.maxInterval)/float64(time.Second) {
+	// Number of seconds to wait for the next attempt.
+	seconds := float64(e.initialInterval) / float64(time.Second) * math.Pow(e.multiplier, float64(e.iteration))
+	// Plus a random interval proportional to the number of seconds, with a
+	// ceiling.
+	seconds += math.Min(10.0, seconds/2) * e.randObj.Float64()
+	next := time.Duration(seconds * float64(time.Second))
+	if next > e.maxInterval {
 		return e.maxInterval
 	}
 	e.iteration++
-	return time.Duration(float64(time.Second) * next)
+	return next
 }
 
 // NoRetries returns a backoff that will do a single attempt, with no retries.
