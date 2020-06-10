@@ -5,6 +5,7 @@
 #ifndef LIB_FITX_RESULT_H_
 #define LIB_FITX_RESULT_H_
 
+#include <lib/fitx/internal/compiler.h>
 #include <lib/fitx/internal/result.h>
 #include <lib/fitx/internal/type_traits.h>
 
@@ -199,7 +200,7 @@ class result;
 
 // Specialization of result for one value type.
 template <typename E, typename T>
-class result<E, T> {
+class LIB_FITX_NODISCARD result<E, T> {
   static_assert(!::fitx::internal::is_success<E>,
                 "fitx::success may not be used as the error type of fitx::result!");
   static_assert(!std::is_same<failed, std::decay_t<T>>::value,
@@ -378,7 +379,7 @@ class result<E, T> {
 
 // Specialization of the result type for zero values.
 template <typename E>
-class result<E> {
+class LIB_FITX_NODISCARD result<E> {
   static_assert(!::fitx::internal::is_success<E>,
                 "fitx::success may not be used as the error type of fitx::result!");
 

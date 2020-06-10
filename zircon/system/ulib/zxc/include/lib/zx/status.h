@@ -5,6 +5,7 @@
 #ifndef LIB_ZX_STATUS_H_
 #define LIB_ZX_STATUS_H_
 
+#include <lib/fitx/internal/compiler.h>
 #include <lib/fitx/result.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -52,7 +53,7 @@ class status;
 
 // Specialization of status for returning a single value.
 template <typename T>
-class status<T> : public ::fitx::result<zx_status_t, T> {
+class LIB_FITX_NODISCARD status<T> : public ::fitx::result<zx_status_t, T> {
   using base = ::fitx::result<zx_status_t, T>;
 
  public:
@@ -82,7 +83,7 @@ class status<T> : public ::fitx::result<zx_status_t, T> {
 
 // Specialization of status for empty value type.
 template <>
-class status<> : public ::fitx::result<zx_status_t> {
+class LIB_FITX_NODISCARD status<> : public ::fitx::result<zx_status_t> {
   using base = ::fitx::result<zx_status_t>;
 
  public:
