@@ -29,7 +29,7 @@ namespace media::audio::test {
 class HermeticAudioEnvironment {
  public:
   struct Options {
-    std::string audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio_core";
+    std::string audio_core_base_url = "fuchsia-pkg://fuchsia.com/audio-core-for-test";
     std::string audio_core_config_data_path = "";
   };
   HermeticAudioEnvironment(Options options);

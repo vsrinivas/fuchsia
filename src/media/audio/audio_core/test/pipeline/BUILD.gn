@@ -17,7 +17,7 @@ loadable_module("inversion_filter") {
   ]
 }
 
-audio_core_package("audio-core-for-pipeline-tests") {
+audio_core_test_package("audio-core-for-pipeline-tests") {
   effects = {
     target = "//src/media/audio/audio_core/test/pipeline:inversion_filter"
     name = "inversion_filter.so"

@@ -37,7 +37,7 @@ struct ComponentLaunchInfo {
 
 lazy_static! {
     static ref SERVICES: HashMap<ComponentUrl, ComponentLaunchInfo> = hashmap! {
-        "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core_nodevfs.cmx" => ComponentLaunchInfo {
+        "fuchsia-pkg://fuchsia.com/audio-core-for-test#meta/audio_core_nodevfs.cmx" => ComponentLaunchInfo {
             services: vec![
                 AudioCoreMarker::SERVICE_NAME,
                 UsageReporterMarker::SERVICE_NAME,
@@ -46,7 +46,7 @@ lazy_static! {
             ],
             arguments: None
         },
-        "fuchsia-pkg://fuchsia.com/virtual_audio_service#meta/virtual_audio_service_nodevfs.cmx" => ComponentLaunchInfo {
+        "fuchsia-pkg://fuchsia.com/virtual-audio-service-for-test#meta/virtual_audio_service_nodevfs.cmx" => ComponentLaunchInfo {
             services: vec![
                 InputMarker::SERVICE_NAME,
                 OutputMarker::SERVICE_NAME,

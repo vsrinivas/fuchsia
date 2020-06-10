@@ -132,8 +132,10 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
   } else {
     audio_core_url += "#meta/audio_core_nodevfs.cmx";
   }
+  // clang-format off
   std::string virtual_audio_url =
-      "fuchsia-pkg://fuchsia.com/virtual_audio_service#meta/virtual_audio_service_nodevfs.cmx";
+      "fuchsia-pkg://fuchsia.com/virtual-audio-service-for-test#meta/virtual_audio_service_nodevfs.cmx";
+  // clang-format on
 
   // Add in the services that will be available in our hermetic environment.
   struct ComponentLaunchInfo {

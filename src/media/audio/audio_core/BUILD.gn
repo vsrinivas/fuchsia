@@ -51,6 +51,8 @@ audio_core_package("audio_core") {
     target = "//src/media/audio/effects/passthrough:audio_effects"
     name = "audio_effects.so"
   }
+
+  test_package_name = "audio-core-for-test"
 }
 
 source_set("audio_core_lib") {

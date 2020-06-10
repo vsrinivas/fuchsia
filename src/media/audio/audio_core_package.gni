@@ -5,33 +5,16 @@
 import("//build/config.gni")
 import("//build/package.gni")
 
-# Creates a 'audio_core' package. All packages created with this template will be identical, except
-# for the addition of the effects module.
-#
-# Parameters
-#     effects (optional)
-#       A scope defining a loadable module that implements audio effects.
-#
-# Ex:
-#   audio_core_package("foo_audio") {
-#     effects = {
-#       target = "//path/to/effects/module"
-#       name = "module_name.so"
-#     }
-#   }
-template("audio_core_package") {
+template("_audio_core_package") {
   package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "effects",
+                             "meta",
+                             "package_name",
+                             "testonly",
+                           ])
     deps = [ "//src/media/audio/audio_core:audio_core_bin" ]
-    if (defined(invoker.effects)) {
-      forward_variables_from(invoker, [ "effects" ])
-      assert(defined(effects.target))
-      deps += [ effects.target ]
-    } else {
-      # If a target doesn't provide effects, we won't end up using the 'invoker' variable and that
-      # causes some GN errors. We explicitly mark the invoker as unused in this situation to allow
-      # for this use case.
-      not_needed([ "invoker" ])
-    }
 
     binaries = [
       {
@@ -40,20 +23,46 @@ template("audio_core_package") {
     ]
 
     if (defined(effects)) {
+      assert(defined(effects.target))
       assert(defined(effects.name))
+
+      deps += [ effects.target ]
+
       loadable_modules = [
         {
           name = effects.name
         },
       ]
     }
+  }
+}
+
+# Creates a 'audio_core' test package, designed to be used in the hermetic testing envirionment.
+#
+# Parameters
+#     effects (optional)
+#       A scope defining a loadable module that implements audio effects.
+#
+#     package_name (optional)
+#       The name of the audio_core package. Defaults to 'target_name'.
+#
+# Ex:
+#   audio_core_test_package("foo-audio-for-test") {
+#     effects = {
+#       target = "//path/to/effects/module"
+#       name = "module_name.so"
+#     }
+#   }
+template("audio_core_test_package") {
+  _audio_core_package(target_name) {
+    testonly = true
+    forward_variables_from(invoker,
+                           [
+                             "effects",
+                             "package_name",
+                           ])
 
     meta = [
-      {
-        path = rebase_path("//src/media/audio/audio_core/meta/audio_core.cmx")
-        dest = "audio_core.cmx"
-      },
-
       # The nodevfs cmx is used in some test environments where we would like to provide our own
       # devfs for the test. At this time we need to remove any dev sandbox metadata as appmgr does
       # not allow these namespaces to be overridden.
@@ -71,5 +80,57 @@ template("audio_core_package") {
         dest = "audio_core_nodevfs_noconfigdata.cmx"
       },
     ]
+  }
+}
+
+# Creates a 'audio_core' package. All packages created with this template will be identical, except
+# for the addition of the effects module.
+#
+# Parameters
+#     effects (optional)
+#       A scope defining a loadable module that implements audio effects.
+#
+#     package_name (optional)
+#       The name of the audio_core package. Defaults to 'target_name'.
+#
+#     test_package_name (optional)
+#       The name of the audio_core test package. This package contains manifests that allow
+#       for the component to run in a hermetic test environment. No package will be generated
+#       if this is not provided.
+#
+# Ex:
+#   audio_core_package("foo_audio") {
+#     effects = {
+#       target = "//path/to/effects/module"
+#       name = "module_name.so"
+#     }
+#   }
+template("audio_core_package") {
+  forward_variables_from(invoker,
+                         [
+                           "package_name",
+                           "test_package_name",
+                         ])
+
+  _audio_core_package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "effects",
+                             "package_name",
+                           ])
+    meta = [
+      {
+        path = rebase_path("//src/media/audio/audio_core/meta/audio_core.cmx")
+        dest = "audio_core.cmx"
+      },
+    ]
+  }
+
+  if (defined(test_package_name)) {
+    audio_core_test_package(test_package_name) {
+      forward_variables_from(invoker, [ "effects" ])
+
+      package_name = test_package_name
+    }
   }
 }
