@@ -20,9 +20,6 @@ double DurationToSecs(zx::duration d);
 // Represent a double as a hexadecimal constant.
 std::string DoubleAsHex(double v);
 
-// Create a 64-bit pattern by repeating the same 8-bit value 8 times.
-inline uint64_t RepeatByte(uint8_t v) { return v * 0x0101'0101'0101'0101ul; }
-
 }  // namespace hwstress
 
 #endif  // GARNET_BIN_HWSTRESS_UTIL_H_
