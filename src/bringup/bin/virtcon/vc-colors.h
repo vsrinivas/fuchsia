@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_BRINGUP_VIRTCON_VC_COLORS_H_
-#define SRC_BRINGUP_VIRTCON_VC_COLORS_H_
+#ifndef SRC_BRINGUP_BIN_VIRTCON_VC_COLORS_H_
+#define SRC_BRINGUP_BIN_VIRTCON_VC_COLORS_H_
 
 #include <string.h>
 
@@ -70,4 +70,4 @@ constexpr const color_scheme_t* string_to_color_scheme(const char* string) {
   return &color_schemes[kDefaultColorScheme];
 }
 
-#endif  // SRC_BRINGUP_VIRTCON_VC_COLORS_H_
+#endif  // SRC_BRINGUP_BIN_VIRTCON_VC_COLORS_H_

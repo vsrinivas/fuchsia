@@ -330,7 +330,7 @@ Although drivers run in user space processes, they have a more restricted set of
 rights than normal processes. Drivers are not allowed to access the filesystem,
 including devfs. That means a driver cannot interact with arbitrary devices. If
 your driver needs to do this, consider writing a service instead. For example,
-the virtual console is implemented by the [virtcon](/src/bringup/virtcon)
+the virtual console is implemented by the [virtcon](/src/bringup/bin/virtcon)
 service.
 
 Privileged operations such as `zx_vmo_create_contiguous()` and

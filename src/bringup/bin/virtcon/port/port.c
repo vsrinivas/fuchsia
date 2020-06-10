@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/bringup/virtcon/port/port.h"
+#include "src/bringup/bin/virtcon/port/port.h"
 
 #include <lib/fdio/unsafe.h>
 #include <stdio.h>

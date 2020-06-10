@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_BRINGUP_VIRTCON_VC_H_
-#define SRC_BRINGUP_VIRTCON_VC_H_
+#ifndef SRC_BRINGUP_BIN_VIRTCON_VC_H_
+#define SRC_BRINGUP_BIN_VIRTCON_VC_H_
 
 #include <assert.h>
 #include <lib/fdio/vfs.h>
@@ -15,7 +15,7 @@
 #include <gfx/gfx.h>
 #include <hid/hid.h>
 
-#include "src/bringup/virtcon/port/port.h"
+#include "src/bringup/bin/virtcon/port/port.h"
 #include "textcon.h"
 #include "vc-colors.h"
 #include "vc-gfx.h"
@@ -170,4 +170,4 @@ void set_log_listener_active(bool active);
 zx_status_t handle_device_dir_event(port_handler_t* ph, zx_signals_t signals,
                                     zx_status_t (*event_handler)(unsigned event, const char* msg));
 
-#endif  // SRC_BRINGUP_VIRTCON_VC_H_
+#endif  // SRC_BRINGUP_BIN_VIRTCON_VC_H_

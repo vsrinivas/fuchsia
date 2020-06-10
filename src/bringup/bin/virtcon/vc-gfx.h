@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_BRINGUP_VIRTCON_VC_GFX_H_
-#define SRC_BRINGUP_VIRTCON_VC_GFX_H_
+#ifndef SRC_BRINGUP_BIN_VIRTCON_VC_GFX_H_
+#define SRC_BRINGUP_BIN_VIRTCON_VC_GFX_H_
 
 #include <zircon/types.h>
 
@@ -45,4 +45,4 @@ void vc_gfx_draw_char(vc_gfx_t* gfx, vc_t* vc, vc_char_t ch, unsigned x, unsigne
 
 void vc_gfx_invalidate_mem(vc_gfx_t* gfx, size_t offset, size_t size);
 
-#endif  // SRC_BRINGUP_VIRTCON_VC_GFX_H_
+#endif  // SRC_BRINGUP_BIN_VIRTCON_VC_GFX_H_

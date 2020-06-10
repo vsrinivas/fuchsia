@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_BRINGUP_VIRTCON_KEYBOARD_H_
-#define SRC_BRINGUP_VIRTCON_KEYBOARD_H_
+#ifndef SRC_BRINGUP_BIN_VIRTCON_KEYBOARD_H_
+#define SRC_BRINGUP_BIN_VIRTCON_KEYBOARD_H_
 
 #include <fuchsia/input/report/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
@@ -100,4 +100,4 @@ class KeyboardWatcher {
   port_handler_t dir_handler_ = {};
 };
 
-#endif  // SRC_BRINGUP_VIRTCON_KEYBOARD_H_
+#endif  // SRC_BRINGUP_BIN_VIRTCON_KEYBOARD_H_

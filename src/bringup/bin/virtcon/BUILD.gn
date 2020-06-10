@@ -30,7 +30,7 @@ group("common") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_c",
-    "//src/bringup/virtcon/port",
+    "//src/bringup/bin/virtcon/port",
     "//src/storage/deprecated-fs-fidl-handler",
     "//src/ui/input/lib/hid-input-report",
     "//src/ui/lib/key_util",

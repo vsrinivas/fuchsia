@@ -178,7 +178,7 @@ template("assemble_system") {
 
     # Inject virtcon into the system image.
     # TODO(41410): Remove when unified build exists.
-    deps += [ "//src/bringup/virtcon:virtual-console" ]
+    deps += [ "//src/bringup/bin/virtcon:virtual-console" ]
     args += [ "--entry=bin/virtual-console=" +
               rebase_path("$root_build_dir/virtual-console", root_build_dir) ]
   }

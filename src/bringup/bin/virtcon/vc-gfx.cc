@@ -52,7 +52,6 @@ void vc_free_gfx(vc_gfx_t* gfx) {
   }
 }
 
-
 #if BUILD_FOR_TEST
 
 zx_status_t vc_init_gfx(vc_gfx_t* gfx, gfx_surface* test) {
