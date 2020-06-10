@@ -77,7 +77,7 @@ executable("hwstress_test") {
     ":lib",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing",
+    "//src/lib/testing/predicates",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",

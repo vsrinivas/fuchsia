@@ -13,8 +13,8 @@
 #include <thread>
 
 #include <gtest/gtest.h>
-#include <src/lib/testing/predicates/status.h>
 
+#include "src/lib/testing/predicates/status.h"
 #include "testing_util.h"
 
 namespace hwstress {
