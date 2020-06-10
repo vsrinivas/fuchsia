@@ -299,17 +299,29 @@ to use this)
 
 ## Logging
 
-[ddk/debug.h](/src/lib/ddk/include/ddk/debug.h) defines the
-`zxlogf(<log_level>,...)` macro. The log messages are printed to the system
-debuglog over the network and on the serial port if available for the device. By
-default, `ERROR` and `INFO` are always printed. You can control the log level
-for a driver by passing the boot cmdline
-`driver.<driver_name>.log=+<level>,-<level>`. For example,
-`driver.sdhci.log=-info,+trace,+spew` enables the `TRACE` and `SPEW` logs and
-disable the `INFO` logs for the sdhci driver.
+A driver can send log messages to the
+[syslog](/docs/development/logs/recording.md) through the use of the
+`zxlogf(<log_level>,...)` macro, defined in
+[ddk/debug.h](/src/lib/ddk/include/ddk/debug.h).
 
-The log levels prefixed by "L" (`LERROR`, `LINFO`, etc.) do not get sent over
-the network and are useful for network logging.
+By default, log messages that use the log levels: `ERROR`, `WARNING`, or `INFO`,
+are always sent to the syslog. To control which log levels are sent to the
+syslog, the
+[kernel commandline](/docs/reference/kernel/kernel_cmdline.md#drivernamelogflags)
+`driver.<driver_name>.log=<level>` can be used. For example,
+`driver.sdhci.log=TRACE` additionally enables `DEBUG` and `TRACE` logs for the
+sdhci driver.
+
+If the log level `SERIAL` is used, the log will be sent to the kernel
+[debuglog](/docs/development/logs/recording.md#debuglog_handles), instead of the
+syslog.
+
+A driver's logs are tagged with the process name, "driver", and the driver name.
+This can be used to filter the output of the syslog whilst searching for
+particular logs.
+
+For further information on how to view driver logs, see
+[viewing logs](/docs/development/logs/viewing.md).
 
 ## Driver testing
 

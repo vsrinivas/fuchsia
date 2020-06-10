@@ -52,11 +52,13 @@ complicated to follow because they are routed differently in different parts of 
 
 ### Drivers
 
-`stdout` and `stderr` are inherited from devmgr which binds its own stdio fd's to debuglog, forwarding
-directly to the kernel log.
+Drivers log to the `LogSink` sink service, but do so through the use of [`zxlogf`]. This function
+provides a wrapper around the syslog library, so that each driver will have its own log message
+socket.
 
-[`ddk/debug.h`] includes the [`zxlogf`] macro which prints if the given severity is enabled. Drivers
-can configure the minimum severity in [kernel params].
+In addition, `driver_manager` binds `stdout` and `stderr` to debuglog. This allows `driver_manager`
+to output critical information to the debuglog, or to fallback to the debuglog for certain product
+configurations where the `LogSink` service is not available.
 
 ### Processes
 
@@ -92,7 +94,7 @@ lack a way to express the severity of a message.
 [bindable to file descriptors]: https://fuchsia.googlesource.com/fuchsia/+/1bdbf8a4e6f758c3b1782dee352071cc592ca3ab/zircon/system/ulib/fdio/include/lib/fdio/fdio.h#36
 [`debuglog_write`]: /docs/reference/syscalls/debuglog_write.md
 [`debuglog_read`]: /docs/reference/syscalls/debuglog_read.md
-[`zxlogf`]: https://fuchsia.googlesource.com/fuchsia/+/1bdbf8a4e6f758c3b1782dee352071cc592ca3ab/src/lib/ddk/include/ddk/debug.h#96
+[`zxlogf`]: https://fuchsia.googlesource.com/fuchsia/+/1bdbf8a4e6f758c3b1782dee352071cc592ca3ab/src/lib/ddk/include/ddk/debug.h#103
 [kernel params]: /docs/reference/kernel/kernel_cmdline.md#drivernamelogflags
 [populated in procargs]: https://fuchsia.googlesource.com/fuchsia/+/1bdbf8a4e6f758c3b1782dee352071cc592ca3ab/src/sys/appmgr/realm.cc#140
 [`fuchsia.sys/LaunchInfo`]: https://fuchsia.dev/reference/fidl/fuchsia.sys#LaunchInfo
