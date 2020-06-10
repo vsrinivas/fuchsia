@@ -25,7 +25,7 @@ pub struct LaunchRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum LaunchResult {
+pub enum LaunchResponse {
     Success,
-    Fail,
+    Fail(i64),
 }

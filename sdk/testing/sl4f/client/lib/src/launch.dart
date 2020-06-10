@@ -10,7 +10,7 @@ class Launch {
 
   Launch(this._sl4f);
 
-  Future<String> launch(String url, [List<String> args]) async {
+  Future<dynamic> launch(String url, [List<String> args]) async {
     if (args != null && args.isNotEmpty) {
       return await _sl4f
           .request('launch_facade.Launch', {'url': url, 'arguments': args});

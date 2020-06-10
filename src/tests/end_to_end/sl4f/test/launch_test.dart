@@ -19,4 +19,9 @@ void main() {
     await sl4f.Launch(sl4fDriver)
         .launch('system_monitor_harvester', ['--version']);
   }, timeout: Timeout.none);
+
+  test('tests launcher with error', () async {
+    final result = await sl4f.Launch(sl4fDriver).launch('fake');
+    expect(result['Fail'], -1);
+  }, timeout: Timeout.none);
 }

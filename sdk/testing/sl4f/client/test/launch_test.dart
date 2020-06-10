@@ -36,7 +36,6 @@ void main(List<String> args) {
     }
 
     fakeServer.listen(handler);
-
     expect(
         Launch(sl4f)
             .launch('fake_url', ['--arg1=arg1value', '--arg2=arg2value']),

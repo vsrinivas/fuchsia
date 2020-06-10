@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
-use crate::launch::types::{LaunchRequest, LaunchResult};
+use crate::launch::types::{LaunchRequest, LaunchResponse};
 use anyhow::Error;
 use fidl_fuchsia_sys::ComponentControllerEvent;
 use fuchsia_component::client;
@@ -31,7 +31,6 @@ impl LaunchFacade {
     /// * `arguments`: optional arguments for the component
     async fn create_launch_app(&self, args: Value) -> Result<client::App, Error> {
         let tag = "LaunchFacade::create_launch_app";
-
         let req: LaunchRequest = from_value(args)?;
         // Building the component url from the name of component.
         let component_url = match req.url {
@@ -63,7 +62,7 @@ impl LaunchFacade {
     /// * `args`: will be parsed to LaunchRequest in create_launch_app
     /// * `url`: url of the component
     /// * `arguments`: optional arguments for the component
-    pub async fn launch(&self, args: Value) -> Result<LaunchResult, Error> {
+    pub async fn launch(&self, args: Value) -> Result<LaunchResponse, Error> {
         let tag = "LaunchFacade::launch";
         let launch_app = Some(self.create_launch_app(args).await?);
         let app = match launch_app {
@@ -71,6 +70,7 @@ impl LaunchFacade {
             None => fx_err_and_bail!(&with_line!(tag), "Failed to launch component."),
         };
 
+        let mut code = 0;
         let mut component_stream = app.controller().take_event_stream();
         match component_stream
             .next()
@@ -83,8 +83,9 @@ impl LaunchFacade {
             }
             // if there's exception (like url package not found, return fail)
             ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
+                code = return_code;
                 if return_code != 0 {
-                    bail!(
+                    fx_log_info!(
                         "Component terminated unexpectedly. Code: {}. Reason: {:?}",
                         return_code,
                         termination_reason
@@ -92,6 +93,9 @@ impl LaunchFacade {
                 }
             }
         }
-        Ok(LaunchResult::Success)
+        match code {
+            0 => Ok(LaunchResponse::Success),
+            _ => Ok(LaunchResponse::Fail(code)),
+        }
     }
 }
