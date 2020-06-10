@@ -2,11 +2,15 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Build and pave quickstart"
-  path: /docs/development/build/build_and_pave_quickstart.md
 - title: "fx workflows"
   path: /docs/development/build/fx.md
+- title: "Build and pave quickstart"
+  path: /docs/development/build/build_and_pave_quickstart.md
 - title: "Retrieve build information"
   path: /docs/development/build/build_information.md
-- title: "Build Clang toolchain"
-  path: /docs/development/build/toolchain.md
+- title: "Advanced"
+  section:
+  - title: "Build Clang toolchain"
+    path: /docs/development/build/toolchain.md
+  - title: "Run Clang static analysis"
+    path: /docs/development/build/static_analysis.md

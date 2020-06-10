@@ -2,9 +2,7 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Set up and troubleshooting"
+- title: "Set up zxdb"
   path: /docs/development/debugger/README.md
-- title: "Usage guide"
+- title: "User guide for zxdb"
   path: /docs/development/debugger/debugger_usage.md
-- title: "Just In Time Debugging"
-  path: /docs/development/debugger/just_in_time_debugging.md

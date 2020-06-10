@@ -4,8 +4,6 @@
 toc:
 - title: "Run the Fuchsia emulator"
   path: /docs/development/run/femu.md
-- title: "Run the QEMU emulator"
-  path: /docs/development/run/qemu.md
 - title: "Run an example component"
   path: /docs/development/run/run-examples.md
 - title: "Run components in a test"

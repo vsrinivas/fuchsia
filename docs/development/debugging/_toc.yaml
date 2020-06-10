@@ -2,18 +2,24 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Use the debugger"
-  section:
-  - include: /docs/development/debugger/_toc.yaml
-- title: "ACPI debugging"
-  path: /docs/development/debugging/acpi.md
-- title: "Debugging tips"
-  path: /docs/development/debugging/tips.md
 - title: "Debugging workflow"
   path: /docs/development/debugging/debugging.md
-- title: "UI Debugging Tips"
-  path: /docs/development/debugging/ui_tips.md
 - title: "Packet capture"
   path: /docs/development/debugging/packet_capture.md
-- title: "Run Clang static analysis"
-  path: /docs/development/debugging/static_analysis.md
+- title: "Just In Time Debugging"
+  path: /docs/development/debugging/just_in_time_debugging.md
+- title: "UI debugging tips"
+  path: /docs/development/debugging/ui_tips.md
+- title: "Use the native debugger (zxdb)"
+  section:
+  - include: /docs/development/debugger/_toc.yaml
+- title: "Debug the kernel"
+  section:
+  - title: "Debug the kernal using QEMU"
+    path: /docs/development/debugging/qemu.md
+  - title: "Kernel debugging tips"
+    path: /docs/development/debugging/tips.md
+- title: "Advanced"
+  section:
+  - title: "ACPI debugging"
+    path: /docs/development/debugging/acpi.md

@@ -1,4 +1,4 @@
-# UI Debugging Tips
+# UI debugging tips
 
 For general debugging info see the [Fuchsia Debugging Workflow](/docs/development/debugging/debugging.md).
 

@@ -1,4 +1,4 @@
-# QEMU
+# Debug the kernel using QEMU
 
 Zircon can [run under emulation](/docs/getting_started.md#Boot-from-QEMU)
 using QEMU. QEMU can either be installed via prebuilt binaries, or built

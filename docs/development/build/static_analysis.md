@@ -1,4 +1,4 @@
-# Static analysis
+# Run Clang static analysis
 
 Static analysis is a way of analyzing source code without
 executing it. One of its applications is to find

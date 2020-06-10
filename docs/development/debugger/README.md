@@ -1,4 +1,4 @@
-# zxdb: Fuchsia native debugger setup and troubleshooting
+# Set up Fuchsia's native debugger (zxdb)
 
 ## Overview
 
