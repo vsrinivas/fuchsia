@@ -9,7 +9,9 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/spawn.h>
 #include <lib/sync/completion.h>
+#include <netinet/in.h>
 #include <poll.h>
+#include <sys/socket.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 

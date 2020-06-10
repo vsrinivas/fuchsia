@@ -380,21 +380,6 @@ func TestEndpoint_Close(t *testing.T) {
 	if t.Failed() {
 		t.FailNow()
 	}
-
-	// Test that closing an endpoint that has already been closed once will not
-	// panic. This is in response to a bug where a socketImpl (whose endpoint had
-	// already been closed) was cloned, resulting in a second socketImpl with a
-	// reference to the already closed endpoint. When this second socketImpl
-	// closes, it will attempt to close the endpoint (which is already closed)
-	// resulting in a panic.
-	t.Run("Double", func(t *testing.T) {
-		// Set ref count to 1 so it drops to 0 and make sure we do not
-		// do the work of closing again, and therefore should not panic.
-		eps.clones = 1
-		if refcount := eps.close(); refcount != 0 {
-			t.Fatalf("got refcount = %d, want = 0", refcount)
-		}
-	})
 }
 
 func TestNICName(t *testing.T) {

@@ -5,10 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTS_UTIL_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTS_UTIL_H_
 
-#include <netinet/in.h>
-#include <sys/socket.h>
-
-#include <gtest/gtest.h>
+#include <cstdint>
 
 // TODO(iyerm): 10s seems too long for our test-cases
 const int32_t kTimeout = 10000;  // 10 seconds

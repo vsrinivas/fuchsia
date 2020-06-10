@@ -13,7 +13,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall/zx"
 	"syscall/zx/fidl"
 	"syscall/zx/zxsocket"
@@ -60,26 +59,13 @@ type endpoint struct {
 		sockOptTimestamp bool
 	}
 
-	// The number of live bindings that reference this structure.
-	clones int64
+	// wg tracks the running handler goroutines.
+	wg sync.WaitGroup
 
 	transProto tcpip.TransportProtocolNumber
 	netProto   tcpip.NetworkProtocolNumber
 
 	ns *Netstack
-}
-
-func (ep *endpoint) close(cleanup func()) int64 {
-	clones := atomic.AddInt64(&ep.clones, -1)
-
-	if clones == 0 {
-		if cleanup != nil {
-			cleanup()
-		}
-		ep.ep.Close()
-	}
-
-	return clones
 }
 
 func (ep *endpoint) Sync(fidl.Context) (int32, error) {
@@ -263,14 +249,12 @@ type endpointWithSocket struct {
 
 	incoming boolWithMutex
 
-	// Along with (*endpoint).close, these channels are used to coordinate
-	// orderly shutdown of loops, handles, and endpoints. See the comment
-	// on (*endpoint).close for more information.
+	// These channels enable coordination of orderly shutdown of loops, handles,
+	// and endpoints. See the comment on `close` for more information.
 	//
 	// Notes:
 	//
-	//  - closing is signaled iff close has been called and the reference
-	//    count has reached zero.
+	//  - closing is signaled iff close has been called.
 	//
 	//  - loop{Read,Write}Done are signaled iff loop{Read,Write} have
 	//    exited, respectively.
@@ -351,26 +335,6 @@ type endpointWithEvent struct {
 	entry waiter.Entry
 }
 
-func (epe *endpointWithEvent) close() int64 {
-	epe.wq.EventUnregister(&epe.entry)
-
-	return epe.endpoint.close(func() {
-		// Copy the handle before closing below; (*zx.Handle).Close sets the
-		// receiver to zx.HandleInvalid.
-		key := epe.local
-
-		if err := epe.local.Close(); err != nil {
-			panic(err)
-		}
-
-		if err := epe.peer.Close(); err != nil {
-			panic(err)
-		}
-
-		epe.endpoint.ns.onRemoveEndpoint(key)
-	})
-}
-
 func (epe *endpointWithEvent) Describe(fidl.Context) (io.NodeInfo, error) {
 	var info io.NodeInfo
 	event, err := epe.peer.Duplicate(zx.RightsBasic)
@@ -412,8 +376,7 @@ func (epe *endpointWithEvent) Shutdown(_ fidl.Context, how int16) (socket.Datagr
 
 const localSignalClosing = zx.SignalUser1
 
-// close destroys the endpoint and releases associated resources, taking its
-// reference count into account.
+// close destroys the endpoint and releases associated resources.
 //
 // When called, close signals loopRead and loopWrite (via closing and
 // local) to exit, and then blocks until its arguments are signaled. close
@@ -421,13 +384,7 @@ const localSignalClosing = zx.SignalUser1
 //
 // Note, calling close on an endpoint that has already been closed is safe as
 // the cleanup work will only be done once.
-func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) int64 {
-	return eps.endpoint.close(func() {
-		eps.cleanup(loopDone...)
-	})
-}
-
-func (eps *endpointWithSocket) cleanup(loopDone ...<-chan struct{}) {
+func (eps *endpointWithSocket) close(loopDone ...<-chan struct{}) {
 	eps.closeOnce.Do(func() {
 		// Interrupt waits on notification channels. Notification reads
 		// are always combined with closing in a select statement.
@@ -458,6 +415,10 @@ func (eps *endpointWithSocket) cleanup(loopDone ...<-chan struct{}) {
 		}
 
 		eps.endpoint.ns.onRemoveEndpoint(key)
+
+		eps.ep.Close()
+
+		syslog.VLogTf(syslog.DebugVerbosity, "close", "%p", eps)
 	})
 }
 
@@ -526,7 +487,7 @@ func (eps *endpointWithSocket) Accept(fidl.Context) (int32, *endpointWithSocket,
 
 // loopWrite shuttles signals and data from the zircon socket to the tcpip.Endpoint.
 func (eps *endpointWithSocket) loopWrite() {
-	closeFn := func() { eps.cleanup(eps.loopReadDone) }
+	closeFn := func() { eps.close(eps.loopReadDone) }
 
 	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled |
 		zx.SignalSocketPeerClosed | localSignalClosing
@@ -625,7 +586,7 @@ func (eps *endpointWithSocket) loopWrite() {
 			case tcpip.ErrConnectionReset:
 				// We got a TCP RST. This condition is more reliably observed by
 				// loopRead, so we clean up from there. Attempting to clean up here
-				// *and* there will deadlock the two cleanup functions as each waits
+				// *and* there will deadlock the two close functions as each waits
 				// for the other loop to exit.
 				return
 			case tcpip.ErrTimeout:
@@ -646,7 +607,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 	var initOnce sync.Once
 	initDone := func() { initOnce.Do(func() { close(initCh) }) }
 
-	closeFn := func() { eps.cleanup(eps.loopWriteDone) }
+	closeFn := func() { eps.close(eps.loopWriteDone) }
 
 	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled |
 		zx.SignalSocketPeerClosed | localSignalClosing
@@ -882,19 +843,16 @@ func (s *datagramSocketImpl) Close(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (s *datagramSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtxInterfaceRequest) int64 {
-	clones := atomic.AddInt64(&s.clones, 1)
+func (s *datagramSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtxInterfaceRequest) {
 	{
 		sCopy := *s
 		s := &sCopy
 
 		s.ns.stats.SocketCount.Increment()
+		s.wg.Add(1)
 		go func() {
+			defer s.wg.Done()
 			defer s.ns.stats.SocketCount.Decrement()
-			defer func() {
-				clones := s.close()
-				syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d", s.endpointWithEvent, clones)
-			}()
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -906,13 +864,12 @@ func (s *datagramSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtx
 			})
 		}()
 	}
-	return clones
 }
 
 func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object io.NodeWithCtxInterfaceRequest) error {
-	clones := s.addConnection(ctx, object)
+	s.addConnection(ctx, object)
 
-	syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b", s.endpointWithEvent, clones, flags)
+	syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: flags=%b", s.endpointWithEvent, flags)
 
 	return nil
 }
@@ -1033,8 +990,13 @@ func newStreamSocket(eps *endpointWithSocket) (socket.StreamSocketWithCtxInterfa
 	s := &streamSocketImpl{
 		endpointWithSocket: eps,
 	}
-	clones := s.addConnection(context.Background(), io.NodeWithCtxInterfaceRequest{Channel: localC})
-	syslog.VLogTf(syslog.DebugVerbosity, "NewStream", "%p: clones=%d", s.endpointWithSocket, clones)
+	s.addConnection(context.Background(), io.NodeWithCtxInterfaceRequest{Channel: localC})
+	go func() {
+		s.wg.Wait()
+
+		s.close(s.loopReadDone, s.loopWriteDone)
+	}()
+	syslog.VLogTf(syslog.DebugVerbosity, "NewStream", "%p", s.endpointWithSocket)
 	return socket.StreamSocketWithCtxInterface{Channel: peerC}, nil
 }
 
@@ -1044,19 +1006,16 @@ func (s *streamSocketImpl) Close(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (s *streamSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtxInterfaceRequest) int64 {
-	clones := atomic.AddInt64(&s.clones, 1)
+func (s *streamSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtxInterfaceRequest) {
 	{
 		sCopy := *s
 		s := &sCopy
 
 		s.ns.stats.SocketCount.Increment()
+		s.wg.Add(1)
 		go func() {
+			defer s.wg.Done()
 			defer s.ns.stats.SocketCount.Decrement()
-			defer func() {
-				clones := s.close(s.loopReadDone, s.loopWriteDone)
-				syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d", s.endpointWithSocket, clones)
-			}()
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -1068,13 +1027,12 @@ func (s *streamSocketImpl) addConnection(_ fidl.Context, object io.NodeWithCtxIn
 			})
 		}()
 	}
-	return clones
 }
 
 func (s *streamSocketImpl) Clone(ctx fidl.Context, flags uint32, object io.NodeWithCtxInterfaceRequest) error {
-	clones := s.addConnection(ctx, object)
+	s.addConnection(ctx, object)
 
-	syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b", s.endpointWithSocket, clones, flags)
+	syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: flags=%b", s.endpointWithSocket, flags)
 
 	return nil
 }
@@ -1238,15 +1196,37 @@ func (sp *providerImpl) Socket2(ctx fidl.Context, domain, typ, protocol int16) (
 
 		s.wq.EventRegister(&s.entry, waiter.EventIn)
 
-		clones := s.addConnection(ctx, io.NodeWithCtxInterfaceRequest{Channel: localC})
-		syslog.VLogTf(syslog.DebugVerbosity, "NewDatagram", "%p: clones=%d", s.endpointWithEvent, clones)
+		s.addConnection(ctx, io.NodeWithCtxInterfaceRequest{Channel: localC})
+		go func() {
+			s.wg.Wait()
+
+			s.wq.EventUnregister(&s.entry)
+
+			// Copy the handle before closing below; (*zx.Handle).Close sets the
+			// receiver to zx.HandleInvalid.
+			key := s.local
+
+			if err := s.local.Close(); err != nil {
+				panic(fmt.Sprintf("local.Close() = %s", err))
+			}
+
+			if err := s.peer.Close(); err != nil {
+				panic(fmt.Sprintf("peer.Close() = %s", err))
+			}
+
+			s.ns.onRemoveEndpoint(key)
+
+			s.ep.Close()
+
+			syslog.VLogTf(syslog.DebugVerbosity, "close", "%p", s.endpointWithEvent)
+		}()
+		syslog.VLogTf(syslog.DebugVerbosity, "NewDatagram", "%p", s.endpointWithEvent)
 		datagramSocketInterface := socket.DatagramSocketWithCtxInterface{Channel: peerC}
 
 		sp.ns.onAddEndpoint(localE, ep)
 
 		if err := s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalOutgoing); err != nil {
-			s.close()
-			return socket.ProviderSocket2Result{}, err
+			panic(fmt.Sprintf("local.SignalPeer(0, zxsocket.SignalOutgoing) = %s", err))
 		}
 
 		return socket.ProviderSocket2ResultWithResponse(socket.ProviderSocket2Response{
