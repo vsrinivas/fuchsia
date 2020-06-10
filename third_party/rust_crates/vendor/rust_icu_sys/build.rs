@@ -70,9 +70,10 @@ mod inner {
             "UErrorCode",
             "UMessageFormat",
             "UParseError",
-            "UText",
+            "UCollation.*",
             "UCollator",
             "USet",
+            "UText",
             "UCol.*",
         ];
     }

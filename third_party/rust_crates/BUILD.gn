@@ -428,57 +428,47 @@ group("rust-crypto") {
 
 if (is_fuchsia) {
   group("rust_icu_common") {
-    deps = [ ":rust_icu_common-v0_2_2" ]
+    deps = [ ":rust_icu_common-v0_2_3" ]
   }
 }
 if (is_fuchsia) {
   group("rust_icu_sys") {
-    deps = [ ":rust_icu_sys-v0_2_2" ]
+    deps = [ ":rust_icu_sys-v0_2_3" ]
   }
 }
 if (is_fuchsia) {
   group("rust_icu_ucal") {
-    deps = [ ":rust_icu_ucal-v0_2_2" ]
-  }
-}
-if (is_fuchsia) {
-  group("rust_icu_ucol") {
-    deps = [ ":rust_icu_ucol-v0_2_2" ]
+    deps = [ ":rust_icu_ucal-v0_2_3" ]
   }
 }
 if (is_fuchsia) {
   group("rust_icu_udat") {
-    deps = [ ":rust_icu_udat-v0_2_2" ]
+    deps = [ ":rust_icu_udat-v0_2_3" ]
   }
 }
 if (is_fuchsia) {
   group("rust_icu_udata") {
-    deps = [ ":rust_icu_udata-v0_2_2" ]
+    deps = [ ":rust_icu_udata-v0_2_3" ]
   }
 }
 if (is_fuchsia) {
   group("rust_icu_uenum") {
-    deps = [ ":rust_icu_uenum-v0_2_2" ]
+    deps = [ ":rust_icu_uenum-v0_2_3" ]
   }
 }
 if (is_fuchsia) {
   group("rust_icu_uloc") {
-    deps = [ ":rust_icu_uloc-v0_2_2" ]
-  }
-}
-if (is_fuchsia) {
-  group("rust_icu_umsg") {
-    deps = [ ":rust_icu_umsg-v0_2_2" ]
+    deps = [ ":rust_icu_uloc-v0_2_3" ]
   }
 }
 if (is_fuchsia) {
   group("rust_icu_ustring") {
-    deps = [ ":rust_icu_ustring-v0_2_2" ]
+    deps = [ ":rust_icu_ustring-v0_2_3" ]
   }
 }
 if (is_fuchsia) {
   group("rust_icu_utext") {
-    deps = [ ":rust_icu_utext-v0_2_2" ]
+    deps = [ ":rust_icu_utext-v0_2_3" ]
   }
 }
 group("rustc-hash") {
@@ -6734,10 +6724,10 @@ rust_library("rust-crypto-v0_2_36") {
   ]
 }
 
-rust_library("rust_icu_common-v0_2_2") {
+rust_library("rust_icu_common-v0_2_3") {
   crate_name = "rust_icu_common"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_common/src/lib.rs"
-  output_name = "rust_icu_common-f0a8b7b6d7213c84"
+  output_name = "rust_icu_common-c70ab113debdefda"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -6745,7 +6735,7 @@ rust_library("rust_icu_common-v0_2_2") {
 
   deps = []
   deps += [ ":anyhow-v1_0_25" ]
-  deps += [ ":rust_icu_sys-v0_2_2" ]
+  deps += [ ":rust_icu_sys-v0_2_3" ]
   deps += [ ":thiserror-v1_0_9" ]
 
   rustenv = []
@@ -6753,16 +6743,16 @@ rust_library("rust_icu_common-v0_2_2") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=f0a8b7b6d7213c84",
-    "-Cextra-filename=-f0a8b7b6d7213c84",
+    "-Cmetadata=c70ab113debdefda",
+    "-Cextra-filename=-c70ab113debdefda",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_sys-v0_2_2") {
+rust_library("rust_icu_sys-v0_2_3") {
   crate_name = "rust_icu_sys"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_sys/src/lib.rs"
-  output_name = "rust_icu_sys-e8802f2e04ec4b15"
+  output_name = "rust_icu_sys-773fdfd868dc0272"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -6777,16 +6767,16 @@ rust_library("rust_icu_sys-v0_2_2") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=e8802f2e04ec4b15",
-    "-Cextra-filename=-e8802f2e04ec4b15",
+    "-Cmetadata=773fdfd868dc0272",
+    "-Cextra-filename=-773fdfd868dc0272",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_ucal-v0_2_2") {
+rust_library("rust_icu_ucal-v0_2_3") {
   crate_name = "rust_icu_ucal"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_ucal/src/lib.rs"
-  output_name = "rust_icu_ucal-32890a352666f4b8"
+  output_name = "rust_icu_ucal-a5ce7a2e0f7b1408"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -6795,55 +6785,26 @@ rust_library("rust_icu_ucal-v0_2_2") {
   deps = []
   deps += [ ":log-v0_4_8" ]
   deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_2_2" ]
-  deps += [ ":rust_icu_sys-v0_2_2" ]
-  deps += [ ":rust_icu_uenum-v0_2_2" ]
-  deps += [ ":rust_icu_ustring-v0_2_2" ]
+  deps += [ ":rust_icu_common-v0_2_3" ]
+  deps += [ ":rust_icu_sys-v0_2_3" ]
+  deps += [ ":rust_icu_uenum-v0_2_3" ]
+  deps += [ ":rust_icu_ustring-v0_2_3" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=32890a352666f4b8",
-    "-Cextra-filename=-32890a352666f4b8",
+    "-Cmetadata=a5ce7a2e0f7b1408",
+    "-Cextra-filename=-a5ce7a2e0f7b1408",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_ucol-v0_2_2") {
-  crate_name = "rust_icu_ucol"
-  crate_root = "//third_party/rust_crates/vendor/rust_icu_ucol/src/lib.rs"
-  output_name = "rust_icu_ucol-8937f62aca496403"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":anyhow-v1_0_25" ]
-  deps += [ ":log-v0_4_8" ]
-  deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_2_2" ]
-  deps += [ ":rust_icu_sys-v0_2_2" ]
-  deps += [ ":rust_icu_uenum-v0_2_2" ]
-  deps += [ ":rust_icu_ustring-v0_2_2" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=8937f62aca496403",
-    "-Cextra-filename=-8937f62aca496403",
-    "--cfg=feature=\"renaming\"",
-  ]
-}
-
-rust_library("rust_icu_udat-v0_2_2") {
+rust_library("rust_icu_udat-v0_2_3") {
   crate_name = "rust_icu_udat"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_udat/src/lib.rs"
-  output_name = "rust_icu_udat-5583b1b77d238f9c"
+  output_name = "rust_icu_udat-cd07b682306e073"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -6852,28 +6813,28 @@ rust_library("rust_icu_udat-v0_2_2") {
   deps = []
   deps += [ ":log-v0_4_8" ]
   deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_2_2" ]
-  deps += [ ":rust_icu_sys-v0_2_2" ]
-  deps += [ ":rust_icu_ucal-v0_2_2" ]
-  deps += [ ":rust_icu_uenum-v0_2_2" ]
-  deps += [ ":rust_icu_uloc-v0_2_2" ]
-  deps += [ ":rust_icu_ustring-v0_2_2" ]
+  deps += [ ":rust_icu_common-v0_2_3" ]
+  deps += [ ":rust_icu_sys-v0_2_3" ]
+  deps += [ ":rust_icu_ucal-v0_2_3" ]
+  deps += [ ":rust_icu_uenum-v0_2_3" ]
+  deps += [ ":rust_icu_uloc-v0_2_3" ]
+  deps += [ ":rust_icu_ustring-v0_2_3" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=5583b1b77d238f9c",
-    "-Cextra-filename=-5583b1b77d238f9c",
+    "-Cmetadata=cd07b682306e073",
+    "-Cextra-filename=-cd07b682306e073",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_udata-v0_2_2") {
+rust_library("rust_icu_udata-v0_2_3") {
   crate_name = "rust_icu_udata"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_udata/src/lib.rs"
-  output_name = "rust_icu_udata-c1a541c5c22a3fac"
+  output_name = "rust_icu_udata-f3b9621efd3ebf5b"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -6882,24 +6843,24 @@ rust_library("rust_icu_udata-v0_2_2") {
   deps = []
   deps += [ ":log-v0_4_8" ]
   deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_2_2" ]
-  deps += [ ":rust_icu_sys-v0_2_2" ]
+  deps += [ ":rust_icu_common-v0_2_3" ]
+  deps += [ ":rust_icu_sys-v0_2_3" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=c1a541c5c22a3fac",
-    "-Cextra-filename=-c1a541c5c22a3fac",
+    "-Cmetadata=f3b9621efd3ebf5b",
+    "-Cextra-filename=-f3b9621efd3ebf5b",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_uenum-v0_2_2") {
+rust_library("rust_icu_uenum-v0_2_3") {
   crate_name = "rust_icu_uenum"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_uenum/src/lib.rs"
-  output_name = "rust_icu_uenum-a20881cba6380485"
+  output_name = "rust_icu_uenum-25ac8f5d41360a50"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -6907,24 +6868,24 @@ rust_library("rust_icu_uenum-v0_2_2") {
 
   deps = []
   deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_2_2" ]
-  deps += [ ":rust_icu_sys-v0_2_2" ]
+  deps += [ ":rust_icu_common-v0_2_3" ]
+  deps += [ ":rust_icu_sys-v0_2_3" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=a20881cba6380485",
-    "-Cextra-filename=-a20881cba6380485",
+    "-Cmetadata=25ac8f5d41360a50",
+    "-Cextra-filename=-25ac8f5d41360a50",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_uloc-v0_2_2") {
+rust_library("rust_icu_uloc-v0_2_3") {
   crate_name = "rust_icu_uloc"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_uloc/src/lib.rs"
-  output_name = "rust_icu_uloc-8cba40e440ca9141"
+  output_name = "rust_icu_uloc-435b156331b71ead"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -6933,57 +6894,27 @@ rust_library("rust_icu_uloc-v0_2_2") {
   deps = []
   deps += [ ":log-v0_4_8" ]
   deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_2_2" ]
-  deps += [ ":rust_icu_sys-v0_2_2" ]
-  deps += [ ":rust_icu_uenum-v0_2_2" ]
-  deps += [ ":rust_icu_ustring-v0_2_2" ]
+  deps += [ ":rust_icu_common-v0_2_3" ]
+  deps += [ ":rust_icu_sys-v0_2_3" ]
+  deps += [ ":rust_icu_uenum-v0_2_3" ]
+  deps += [ ":rust_icu_ustring-v0_2_3" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=8cba40e440ca9141",
-    "-Cextra-filename=-8cba40e440ca9141",
+    "-Cmetadata=435b156331b71ead",
+    "-Cextra-filename=-435b156331b71ead",
     "--cfg=feature=\"icu_version_64_plus\"",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_umsg-v0_2_2") {
-  crate_name = "rust_icu_umsg"
-  crate_root = "//third_party/rust_crates/vendor/rust_icu_umsg/src/lib.rs"
-  output_name = "rust_icu_umsg-8795f3f670cabd08"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":anyhow-v1_0_25" ]
-  deps += [ ":log-v0_4_8" ]
-  deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_2_2" ]
-  deps += [ ":rust_icu_sys-v0_2_2" ]
-  deps += [ ":rust_icu_uloc-v0_2_2" ]
-  deps += [ ":rust_icu_ustring-v0_2_2" ]
-  deps += [ ":thiserror-v1_0_9" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=8795f3f670cabd08",
-    "-Cextra-filename=-8795f3f670cabd08",
-    "--cfg=feature=\"renaming\"",
-  ]
-}
-
-rust_library("rust_icu_ustring-v0_2_2") {
+rust_library("rust_icu_ustring-v0_2_3") {
   crate_name = "rust_icu_ustring"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_ustring/src/lib.rs"
-  output_name = "rust_icu_ustring-b31a4a07eea58f13"
+  output_name = "rust_icu_ustring-22538a6d85cb237e"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -6992,24 +6923,24 @@ rust_library("rust_icu_ustring-v0_2_2") {
   deps = []
   deps += [ ":log-v0_4_8" ]
   deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_2_2" ]
-  deps += [ ":rust_icu_sys-v0_2_2" ]
+  deps += [ ":rust_icu_common-v0_2_3" ]
+  deps += [ ":rust_icu_sys-v0_2_3" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=b31a4a07eea58f13",
-    "-Cextra-filename=-b31a4a07eea58f13",
+    "-Cmetadata=22538a6d85cb237e",
+    "-Cextra-filename=-22538a6d85cb237e",
     "--cfg=feature=\"renaming\"",
   ]
 }
 
-rust_library("rust_icu_utext-v0_2_2") {
+rust_library("rust_icu_utext-v0_2_3") {
   crate_name = "rust_icu_utext"
   crate_root = "//third_party/rust_crates/vendor/rust_icu_utext/src/lib.rs"
-  output_name = "rust_icu_utext-6f1cc8a8dc3cd83e"
+  output_name = "rust_icu_utext-617cc1d277e30a65"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -7017,16 +6948,16 @@ rust_library("rust_icu_utext-v0_2_2") {
 
   deps = []
   deps += [ ":paste-v0_1_5" ]
-  deps += [ ":rust_icu_common-v0_2_2" ]
-  deps += [ ":rust_icu_sys-v0_2_2" ]
+  deps += [ ":rust_icu_common-v0_2_3" ]
+  deps += [ ":rust_icu_sys-v0_2_3" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=6f1cc8a8dc3cd83e",
-    "-Cextra-filename=-6f1cc8a8dc3cd83e",
+    "-Cmetadata=617cc1d277e30a65",
+    "-Cextra-filename=-617cc1d277e30a65",
     "--cfg=feature=\"renaming\"",
   ]
 }

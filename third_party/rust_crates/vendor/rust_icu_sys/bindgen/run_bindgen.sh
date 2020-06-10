@@ -62,6 +62,7 @@ readonly BINDGEN_ALLOWLIST_TYPES=(
         "UParseError"
         "UText"
         "UCollator"
+        "UCollation.*"
         "USet"
         "UCol.*"
 )
