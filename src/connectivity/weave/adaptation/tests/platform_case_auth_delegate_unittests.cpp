@@ -379,32 +379,36 @@ TEST_F(PlatformCASEAuthDelegateTest, HandleValidationResult) {
             WEAVE_NO_ERROR);
   EXPECT_EQ(result, ~WEAVE_NO_ERROR);
 
-  // Verify behavior when the signing cert is a device certificate.
+  // Verify behavior when the signing cert is a device certificate. Expect to
+  // receive WEAVE_ERROR_WRONG_CERTIFICATE_SUBJECT if the weave ID and peer node
+  // ID do not match.
   result = WEAVE_NO_ERROR;
   signing_cert.CertType = kCertType_Device;
   signing_cert.SubjectDN.AttrValue.WeaveId = 1U;
-  msg_ctx.PeerNodeId = 1U;
+  msg_ctx.PeerNodeId = signing_cert.SubjectDN.AttrValue.WeaveId + 1;
   EXPECT_EQ(platform_case_auth_delegate_->HandleValidationResult(msg_ctx, valid_ctx, certs, result),
             WEAVE_NO_ERROR);
   EXPECT_EQ(result, WEAVE_ERROR_WRONG_CERTIFICATE_SUBJECT);
 
   result = WEAVE_NO_ERROR;
-  msg_ctx.PeerNodeId = 2U;
+  msg_ctx.PeerNodeId = signing_cert.SubjectDN.AttrValue.WeaveId;
   EXPECT_EQ(platform_case_auth_delegate_->HandleValidationResult(msg_ctx, valid_ctx, certs, result),
             WEAVE_NO_ERROR);
   EXPECT_EQ(result, WEAVE_NO_ERROR);
 
   // Verify behavior when the signing cert is a service endpoint certificate.
+  // Expect to receive WEAVE_ERROR_WRONG_CERTIFICATE_SUBJECT if the weave ID and
+  // peer node ID do not match.
   result = WEAVE_NO_ERROR;
   signing_cert.CertType = kCertType_ServiceEndpoint;
   signing_cert.SubjectDN.AttrValue.WeaveId = 1U;
-  msg_ctx.PeerNodeId = 1U;
+  msg_ctx.PeerNodeId = signing_cert.SubjectDN.AttrValue.WeaveId + 1;
   EXPECT_EQ(platform_case_auth_delegate_->HandleValidationResult(msg_ctx, valid_ctx, certs, result),
             WEAVE_NO_ERROR);
   EXPECT_EQ(result, WEAVE_ERROR_WRONG_CERTIFICATE_SUBJECT);
 
   result = WEAVE_NO_ERROR;
-  msg_ctx.PeerNodeId = 2U;
+  msg_ctx.PeerNodeId = signing_cert.SubjectDN.AttrValue.WeaveId;
   EXPECT_EQ(platform_case_auth_delegate_->HandleValidationResult(msg_ctx, valid_ctx, certs, result),
             WEAVE_NO_ERROR);
   EXPECT_EQ(result, WEAVE_NO_ERROR);

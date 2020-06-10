@@ -189,15 +189,15 @@ WEAVE_ERROR PlatformCASEAuthDelegate::HandleValidationResult(const BeginSessionC
   switch (valid_ctx.SigningCert->CertType) {
     // If the peer authenticated with a device certificate:
     case kCertType_Device:
-      // Verify that the certificate node id matches the peer's node id:
-      if (cert_id == msg_ctx.PeerNodeId) {
+      // Reject the peer if the certificate node ID and peer node ID do not match.
+      if (cert_id != msg_ctx.PeerNodeId) {
         valid_res = WEAVE_ERROR_WRONG_CERTIFICATE_SUBJECT;
       }
       break;
     // If the peer authenticated with a service endpoint certificate:
     case kCertType_ServiceEndpoint:
-      // Verify that the certificate node id matches the peer's node id:
-      if (cert_id == msg_ctx.PeerNodeId) {
+      // Reject the peer if the certificate node ID and peer node ID do not match.
+      if (cert_id != msg_ctx.PeerNodeId) {
         valid_res = WEAVE_ERROR_WRONG_CERTIFICATE_SUBJECT;
       }
       // Reject the peer if they are initiating the session. Service endpoint
