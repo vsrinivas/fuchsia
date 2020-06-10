@@ -509,6 +509,9 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
     bool is_handle_identifier =
         identifier->components.size() == 1 && identifier->components[0]->span().data() == "handle";
     if (is_handle_identifier) {
+      if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDisallowOldHandleSyntax)) {
+        return Fail(ErrOldHandleSyntax);
+      }
       auto sub_identifier = ParseIdentifier(true);
       if (!Ok())
         return Fail();

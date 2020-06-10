@@ -60,6 +60,8 @@ constexpr WarningDef WarnDocCommentMustBeFollowedByDeclaration(
     "doc comment must be followed by a declaration");
 constexpr ErrorDef ErrMustHaveOneProperty(
     "must have at least one property");
+constexpr ErrorDef ErrOldHandleSyntax(
+    "handle<type> is no longer supported, please use zx.handle:TYPE");
 
 // ---------------------------------------------------------------------------
 // Library::ConsumeFile: Consume* methods and declaration registration

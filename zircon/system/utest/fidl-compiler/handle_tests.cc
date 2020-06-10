@@ -193,6 +193,29 @@ struct MyStruct {
   END_TEST;
 }
 
+bool disallow_old_handles() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kDisallowOldHandleSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct MyStruct {
+    handle<vmo> h;
+};
+)FIDL",
+                      std::move(experimental_flags));
+
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrOldHandleSyntax);
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(handle_tests)
@@ -202,4 +225,5 @@ RUN_TEST(invalid_handle_rights_test)
 RUN_TEST(plain_handle_test)
 RUN_TEST(handle_fidl_defined_test)
 RUN_TEST(invalid_fidl_defined_handle_subtype)
+RUN_TEST(disallow_old_handles)
 END_TEST_CASE(handle_tests)

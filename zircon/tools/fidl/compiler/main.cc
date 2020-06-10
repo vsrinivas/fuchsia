@@ -39,6 +39,7 @@ void Usage() {
          "             [--tables TABLES_PATH]\n"
          "             [--json JSON_PATH]\n"
          "             [--name LIBRARY_NAME]\n"
+         "             [--experimental FLAG_NAME]\n"
          "             [--werror]\n"
          "             [--format=[text|json]]\n"
          "             [--json-schema]\n"

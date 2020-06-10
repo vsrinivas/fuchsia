@@ -16,6 +16,7 @@ class ExperimentalFlags {
   enum class Flag {
     kEnableHandleRights = 0b01,
     kFlexibleBitsAndEnums = 0b10,
+    kDisallowOldHandleSyntax = 0b100,
   };
 
   ExperimentalFlags() {}
