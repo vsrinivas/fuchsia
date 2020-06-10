@@ -26,6 +26,7 @@ abstract class OutputFormatter {
   final List<TestStarted> _testStartedEvents;
   final List<TestResult> _testResultEvents;
   final OutputBuffer buffer;
+  final Stylizer wrapWith;
   DateTime _testSuiteStartTime;
   DateTime _lastTestStartTime;
   bool _hasStartedTests;
@@ -38,6 +39,7 @@ abstract class OutputFormatter {
     @required this.isVerbose,
     @required this.hasRealTimeOutput,
     @required this.slowTestThreshold,
+    @required this.wrapWith,
     this.simpleOutput = false,
     OutputBuffer buffer,
   })  : buffer = buffer ?? OutputBuffer.realIO(),
@@ -66,6 +68,7 @@ abstract class OutputFormatter {
       isVerbose: testsConfig.flags.isVerbose || testsConfig.flags.allOutput,
       simpleOutput: testsConfig.flags.simpleOutput,
       slowTestThreshold: slowTestThreshold,
+      wrapWith: testsConfig.wrapWith,
     );
   }
 
@@ -83,8 +86,8 @@ abstract class OutputFormatter {
   }
 
   String get ratioDisplay {
-    var passed = colorize('PASS: $_numPassed', [green]);
-    var failed = colorize('FAIL: $_numFailed', [red]);
+    var passed = wrapWith('PASS: $_numPassed', [green]);
+    var failed = wrapWith('FAIL: $_numFailed', [red]);
     return '$passed $failed';
   }
 
@@ -95,10 +98,6 @@ abstract class OutputFormatter {
   void close() => buffer.close();
 
   void forcefullyClose() => buffer.forcefullyClose();
-
-  String colorize(String content, Iterable<AnsiCode> args) {
-    return simpleOutput ? content : wrapWith(content, args);
-  }
 
   String addEmoji(Emoji emoji) {
     return simpleOutput ? emoji.fallback : emoji.emoji;
@@ -158,10 +157,10 @@ abstract class OutputFormatter {
   /// Handles only the first [TimeElapsedEvent] that passes the slow threshold.
   void _handleSlowTest(TimeElapsedEvent event) {
     var hint =
-        colorize('(adjust this value with the -s|--slow flag)', [darkGray]);
+        wrapWith('(adjust this value with the -s|--slow flag)', [darkGray]);
     buffer
       ..addLine(
-        colorize(
+        wrapWith(
             ' >> Runtime has exceeded ${slowTestThreshold.inSeconds} '
             'seconds $hint',
             [magenta]),
@@ -204,7 +203,7 @@ abstract class OutputFormatter {
     String summary =
         '$verb ${_testResultEvents.length} tests with $numFailures $failures$verboseHint';
     if (numFailures == 0) {
-      summary = '${addEmoji(Emoji.party)}  ${colorize(summary, [
+      summary = '${addEmoji(Emoji.party)}  ${wrapWith(summary, [
         green
       ])} ${addEmoji(Emoji.party)}';
     }
@@ -240,12 +239,14 @@ class StandardOutputFormatter extends OutputFormatter {
     Duration slowTestThreshold,
     OutputBuffer buffer,
     bool isVerbose,
+    Stylizer wrapWith,
   }) : super(
           isVerbose: isVerbose,
           hasRealTimeOutput: hasRealTimeOutput,
           simpleOutput: simpleOutput,
           slowTestThreshold: slowTestThreshold,
           buffer: buffer,
+          wrapWith: wrapWith,
         );
 
   @override
@@ -265,7 +266,7 @@ class StandardOutputFormatter extends OutputFormatter {
 
   @override
   void _handleTestStarted(TestStarted event) {
-    String testName = colorize(event.testName, [cyan]);
+    String testName = wrapWith(event.testName, [cyan]);
     // Add some padding for our first test event
     if (_testStartedEvents.length == 1) {
       buffer.addLine('');
@@ -290,9 +291,9 @@ class StandardOutputFormatter extends OutputFormatter {
   void _handleTestResult(TestResult event) {
     if (_lastTestHadOutput) buffer.addLines(['']);
 
-    String testName = colorize(event.testName, [cyan]);
+    String testName = wrapWith(event.testName, [cyan]);
     String emoji = event.isDryRun
-        ? colorize('(dry run)', [darkGray])
+        ? wrapWith('(dry run)', [darkGray])
         : event.isSuccess
             ? '${addEmoji(Emoji.check)} '
             : '${addEmoji(Emoji.x)} ';
