@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/process/llcpp/fidl.h>
 #include <lib/backtrace-request/backtrace-request.h>
 #include <lib/fdio/directory.h>
@@ -25,6 +26,7 @@
 #include <cstdio>
 #include <string>
 
+#include <fbl/unique_fd.h>
 #include <runtime/thread.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
@@ -32,6 +34,7 @@
 #define TU_FAIL_ERRCODE 10
 
 namespace fprocess = ::llcpp::fuchsia::process;
+namespace fio = ::llcpp::fuchsia::io;
 
 void tu_fatal(const char* what, zx_status_t status) {
   const char* reason = zx_status_get_string(status);
@@ -76,18 +79,13 @@ zx_handle_t tu_launch_process(zx_handle_t job, const char* name, int argc, const
 
 // Loads the executable at the given path into the given VMO.
 static zx_status_t load_executable_vmo(const char* path, zx::vmo* result) {
-  int fd = open(path, O_RDONLY);
-  if (fd < 0) {
-    return ZX_ERR_NOT_FOUND;
-  }
+  fbl::unique_fd fd;
+  zx_status_t status = fdio_open_fd(path, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+                                    fd.reset_and_get_address());
+  tu_check("open executable fd", status);
 
-  zx::vmo vmo;
-  zx_status_t status = fdio_get_vmo_clone(fd, vmo.reset_and_get_address());
-  close(fd);
-  tu_check("load vmo from fd", status);
-
-  status = vmo.replace_as_executable(zx::resource(), result);
-  tu_check("replace vmo as executable", status);
+  status = fdio_get_vmo_exec(fd.get(), result->reset_and_get_address());
+  tu_check("get exec vmo from fd", status);
 
   if (strlen(path) >= ZX_MAX_NAME_LEN) {
     const char* p = strrchr(path, '/');

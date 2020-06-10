@@ -3,28 +3,30 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
+#include <lib/zx/vmo.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
+#include <fbl/unique_fd.h>
 #include <launchpad/vmo.h>
+
+namespace fio = ::llcpp::fuchsia::io;
 
 __EXPORT
 zx_status_t launchpad_vmo_from_file(const char* filename, zx_handle_t* out) {
-  int fd = open(filename, O_RDONLY);
-  if (fd < 0)
-    return ZX_ERR_IO;
-  zx_handle_t vmo;
-  zx_handle_t exec_vmo;
-  zx_status_t status = fdio_get_vmo_clone(fd, &vmo);
-  close(fd);
-
+  fbl::unique_fd fd;
+  zx_status_t status = fdio_open_fd(filename, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+                                    fd.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }
 
-  status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &exec_vmo);
+  zx::vmo exec_vmo;
+  status = fdio_get_vmo_exec(fd.get(), exec_vmo.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }
@@ -36,12 +38,11 @@ zx_status_t launchpad_vmo_from_file(const char* filename, zx_handle_t* out) {
     }
   }
 
-  status = zx_object_set_property(exec_vmo, ZX_PROP_NAME, filename, strlen(filename));
+  status = exec_vmo.set_property(ZX_PROP_NAME, filename, strlen(filename));
   if (status != ZX_OK) {
-    zx_handle_close(exec_vmo);
     return status;
   }
 
-  *out = exec_vmo;
+  *out = exec_vmo.release();
   return ZX_OK;
 }

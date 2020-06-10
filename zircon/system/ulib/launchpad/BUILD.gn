@@ -25,10 +25,11 @@ zx_library("launchpad") {
     "elf.c",
     "fdio.c",
     "launchpad.c",
-    "vmo.c",
+    "vmo.cc",
   ]
   defines = [ "_ALL_SOURCE" ]
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//zircon/public/lib/elf-psabi",
     "//zircon/public/lib/elfload",
     "//zircon/public/lib/fdio",
