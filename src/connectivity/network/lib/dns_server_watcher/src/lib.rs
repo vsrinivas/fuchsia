@@ -25,6 +25,11 @@ pub const DEFAULT_DNS_PORT: u16 = 53;
 /// The DNS servers learned from all sources.
 #[derive(Default)]
 pub struct DnsServers {
+    /// DNS servers obtained from some default configurations.
+    ///
+    /// These servers will have the lowest priority of all servers.
+    default: Vec<DnsServer_>,
+
     /// DNS servers obtained from the netstack.
     netstack: Vec<DnsServer_>,
 }
@@ -37,6 +42,7 @@ impl DnsServers {
         servers: Vec<DnsServer_>,
     ) {
         match source {
+            DnsServersUpdateSource::Default => self.default = servers,
             DnsServersUpdateSource::Netstack => self.netstack = servers,
         }
     }
@@ -52,11 +58,14 @@ impl DnsServers {
     /// the `DnsServer_` with the most preferred source will be present in the consolidated
     /// list of servers.
     pub fn consolidated(&self) -> Vec<DnsServer_> {
-        let Self { netstack } = self;
+        let Self { default, netstack } = self;
         let mut servers = netstack.clone();
         // Sorting happens before deduplication to ensure that when multiple sources report the same
         // address, the highest priority source wins.
         let () = servers.sort_by(Self::ordering);
+        // Default servers are considered to have the lowest priority so we append them to the end
+        // of the list of sorted dynamically learned servers.
+        let () = servers.extend(default.clone());
         let mut addresses = HashSet::new();
         let () = servers.retain(move |s| addresses.insert(s.address));
         servers
@@ -88,6 +97,7 @@ mod tests {
     fn test_dnsservers_consolidation() {
         // Simple deduplication and sorting of repeated `DnsServer_`.
         let servers = DnsServers {
+            default: vec![NDP_SERVER, NDP_SERVER],
             netstack: vec![
                 DHCP_SERVER,
                 DHCPV6_SERVER,
@@ -104,6 +114,25 @@ mod tests {
             vec![NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER]
         );
 
+        // Default servers should always have low priority, but if the same server
+        // is observed by a higher priority source, then use the higher source for
+        // ordering.
+        let servers = DnsServers {
+            default: vec![NDP_SERVER, NDP_SERVER, DHCP_SERVER],
+            netstack: vec![
+                DHCP_SERVER,
+                DHCPV6_SERVER,
+                STATIC_SERVER,
+                DHCPV6_SERVER,
+                DHCP_SERVER,
+                STATIC_SERVER,
+            ],
+        };
+        assert_eq!(
+            servers.consolidated(),
+            vec![DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER, NDP_SERVER]
+        );
+
         // Deduplication and sorting of same address across different sources.
 
         // DHCPv6 is not as preferred as NDP so this should not be in the consolidated
@@ -116,6 +145,7 @@ mod tests {
         };
 
         let servers = DnsServers {
+            default: vec![],
             netstack: vec![
                 dhcpv6_with_ndp_address(),
                 DHCP_SERVER,
@@ -127,6 +157,7 @@ mod tests {
         let expected = vec![NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER];
         assert_eq!(servers.consolidated(), expected);
         let servers = DnsServers {
+            default: vec![],
             netstack: vec![
                 DHCP_SERVER,
                 DHCPV6_SERVER,
@@ -144,11 +175,13 @@ mod tests {
             ..DHCPV6_SERVER
         };
         let servers = DnsServers {
+            default: vec![],
             netstack: vec![ndp_with_dhcpv6_address(), DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER],
         };
         let expected = vec![ndp_with_dhcpv6_address(), DHCP_SERVER, STATIC_SERVER];
         assert_eq!(servers.consolidated(), expected);
         let servers = DnsServers {
+            default: vec![],
             netstack: vec![DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER, ndp_with_dhcpv6_address()],
         };
         assert_eq!(servers.consolidated(), expected);

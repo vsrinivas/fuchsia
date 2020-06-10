@@ -20,6 +20,7 @@ pub struct DnsServerWatcherEvent {
 /// The possible sources of DNS server updates.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum DnsServersUpdateSource {
+    Default,
     Netstack,
 }
 

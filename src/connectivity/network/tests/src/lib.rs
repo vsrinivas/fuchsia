@@ -39,6 +39,14 @@ const ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_seco
 /// monotonic clock will not affect the expected outcome.
 const ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_seconds(5);
 
+/// The URL to NetCfg for use in a netemul environment.
+///
+/// Note, netcfg.cmx must never be used in a Netemul environment as it breaks hermeticity.
+const NETCFG_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg_netemul.cmx";
+
+/// The path to the default configuration file for DHCP server.
+const DHCP_SERVER_DEFAULT_CONFIG_PATH: &str = "/pkg/data/default_config.json";
+
 /// Returns when an interface is up or when `timeout` elapses.
 async fn wait_for_interface_up<
     S: Unpin + FusedStream + TryStreamExt<Ok = netstack::NetstackEvent>,

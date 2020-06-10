@@ -56,7 +56,7 @@ func (dns *nameLookupAdminImpl) SetDefaultDnsServers(_ fidl.Context, servers []n
 // here in expectation that dns_resolver will be used for name resolution.
 func (*nameLookupAdminImpl) SetDnsServers(fidl.Context, []name.DnsServer) (name.LookupAdminSetDnsServersResult, error) {
 	syslog.ErrorTf(tag, "SetDnsServers not implemented")
-	return name.LookupAdminSetDnsServersResult{}, &zx.Error{Status: zx.ErrNotSupported, Text: "name.LookupAdminWithCtx.SetDnsServers"}
+	return name.LookupAdminSetDnsServersResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (dns *nameLookupAdminImpl) GetDnsServers(fidl.Context) ([]name.DnsServer, error) {

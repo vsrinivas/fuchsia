@@ -28,6 +28,9 @@ use fuchsia_vfs_watcher as fvfs_watcher;
 use fuchsia_zircon::{self as zx, DurationNum as _};
 
 use anyhow::Context as _;
+use dns_server_watcher::{
+    DnsServerWatcherEvent, DnsServers, DnsServersUpdateSource, DEFAULT_DNS_PORT,
+};
 use futures::stream::{StreamExt as _, TryStreamExt as _};
 use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
 use log::{debug, error, info, trace, warn};
@@ -250,12 +253,6 @@ fn should_enable_filter(
     }
 }
 
-/// The source of a DNS Servers update.
-enum DnsServersSource {
-    /// A list of default servers to use.
-    Default,
-}
-
 /// State for a WLAN AP interface.
 struct WlanApInterfaceState {
     /// ID of the interface.
@@ -292,6 +289,28 @@ struct NetCfg<'a> {
 
     /// The WLAN-AP interface state.
     wlan_ap_interface_state: Option<WlanApInterfaceState>,
+
+    dns_servers: DnsServers,
+}
+
+/// Returns a [`fnet_name::DnsServer_`] with a static source from a [`fnet::IpAddress`].
+fn static_source_from_ip(f: fnet::IpAddress) -> fnet_name::DnsServer_ {
+    let socket_addr = match f {
+        fnet::IpAddress::Ipv4(addr) => fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
+            address: addr,
+            port: DEFAULT_DNS_PORT,
+        }),
+        fnet::IpAddress::Ipv6(addr) => fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
+            address: addr,
+            port: DEFAULT_DNS_PORT,
+            zone_index: 0,
+        }),
+    };
+
+    fnet_name::DnsServer_ {
+        address: Some(socket_addr),
+        source: Some(fnet_name::DnsServerSource::StaticSource(fnet_name::StaticDnsServerSource {})),
+    }
 }
 
 impl<'a> NetCfg<'a> {
@@ -331,6 +350,7 @@ impl<'a> NetCfg<'a> {
             filter_enabled_interface_types,
             default_config_rules,
             wlan_ap_interface_state: None,
+            dns_servers: Default::default(),
         })
     }
 
@@ -359,32 +379,77 @@ impl<'a> NetCfg<'a> {
         Ok(())
     }
 
+    /// Updates the default DNS servers used by the DNS resolver.
+    async fn update_default_dns_servers(
+        &mut self,
+        mut servers: Vec<fnet::IpAddress>,
+    ) -> Result<(), anyhow::Error> {
+        trace!("updating default DNS servers to {:?}", servers);
+
+        // fuchsia.net.name/LookupAdmin.SetDefaultDnsServers is deprecated so the
+        // LookupAdmin service may not implement it. We still try to set the default
+        // servers with this method until it is removed just in case the LookupAdmin
+        // in the enclosing environment still uses it.
+        //
+        // TODO(52055): Remove the call to fuchsia.net.name/LookupAdmin.SetDefaultDnsServers
+        let () = self
+            .lookup_admin
+            .set_default_dns_servers(&mut servers.iter_mut())
+            .await
+            .context("set default DNS servers request")?
+            .map_err(zx::Status::from_raw)
+            .or_else(|e| {
+                if e == zx::Status::NOT_SUPPORTED {
+                    warn!("LookupAdmin does not support setting default DNS servers");
+                    Ok(())
+                } else {
+                    Err(e)
+                }
+            })
+            .context("set default DNS servers")?;
+
+        self.update_dns_servers(
+            DnsServersUpdateSource::Default,
+            servers.into_iter().map(static_source_from_ip).collect(),
+        )
+        .await
+    }
+
     /// Updates the DNS servers used by the DNS resolver.
     async fn update_dns_servers(
         &mut self,
-        source: DnsServersSource,
-        mut servers: Vec<fnet::IpAddress>,
+        source: DnsServersUpdateSource,
+        servers: Vec<fnet_name::DnsServer_>,
     ) -> Result<(), anyhow::Error> {
-        match source {
-            DnsServersSource::Default => {
-                // fuchsia.net.name/LookupAdmin.SetDefaultDnsServers is deprecated so the
-                // LookupAdmin service may not implement it. We still try to set the default
-                // servers with this method until it is removed just in case the LookupAdmin
-                // in the enclosing environment still uses it.
-                //
-                // TODO(52055): Remove the call to fuchsia.net.name/LookupAdmin.SetDefaultDnsServers
-                let ret = self
-                    .lookup_admin
-                    .set_default_dns_servers(&mut servers.iter_mut())
-                    .await
-                    .context("set default DNS servers request")?;
-                if ret == Err(zx::Status::NOT_SUPPORTED.into_raw()) {
+        trace!("updating DNS servers from {:?} to {:?}", source, servers);
+
+        let () = self.dns_servers.set_servers_from_source(source, servers);
+        let servers = self.dns_servers.consolidated();
+        trace!("updating LookupAdmin with DNS servers = {:?}", servers);
+
+        // Netstack2's LookupAdmin service does not implement
+        // fuchsia.net.name/LookupAdmin.SetDnsServers in anticipation of the transition
+        // to dns-resolver.
+        //
+        // TODO(51998): Remove the NOT_SUPPORTED check and consider all errors as
+        // a true error.
+        let () = self
+            .lookup_admin
+            .set_dns_servers(&mut servers.into_iter())
+            .await
+            .context("set DNS servers request")?
+            .map_err(zx::Status::from_raw)
+            .or_else(|e| {
+                if e == zx::Status::NOT_SUPPORTED {
+                    warn!("LookupAdmin does not support setting consolidated list of DNS servers");
                     Ok(())
                 } else {
-                    ret.map_err(zx::Status::from_raw).context("failed to set default DNS servers")
+                    Err(e)
                 }
-            }
-        }
+            })
+            .context("set DNS servers")?;
+
+        Ok(())
     }
 
     /// Run the network configuration eventloop.
@@ -405,6 +470,20 @@ impl<'a> NetCfg<'a> {
         let mut netstack_stream =
             self.netstack.take_event_stream().map(|r| r.context("Netstack event stream")).fuse();
 
+        let (dns_server_watcher, dns_server_watcher_req) =
+            fidl::endpoints::create_proxy::<fnet_name::DnsServerWatcherMarker>()
+                .context("create dns server watcher")?;
+        let () = self
+            .stack
+            .get_dns_server_watcher(dns_server_watcher_req)
+            .context("get dns server watcher")?;
+        let mut netstack_dns_server_stream = dns_server_watcher::new_dns_server_stream(
+            DnsServersUpdateSource::Netstack,
+            dns_server_watcher,
+        )
+        .map(|r| r.context("Netstack DNS server event stream"))
+        .fuse();
+
         debug!("starting eventloop...");
 
         loop {
@@ -412,20 +491,25 @@ impl<'a> NetCfg<'a> {
                 device_dir_watcher_res = device_dir_watcher_stream.try_next() => {
                     let event = device_dir_watcher_res?
                         .ok_or(anyhow::anyhow!(
-                            "device directory {} watcher stream unexpectedly ended",
+                            "device directory {} watcher stream ended unexpectedly",
                             self.device_dir_path
                         ))?;
                     self.handle_device_event(event).await?
                 }
                 netstack_res = netstack_stream.try_next() => {
-                    let event = netstack_res?.ok_or(anyhow::anyhow!("Netstack event stream unexpectedly ended"))?;
+                    let event = netstack_res?.ok_or(anyhow::anyhow!("Netstack event stream ended unexpectedly"))?;
                     self.handle_netstack_event(event).await?
+                }
+                netstack_dns_server_res = netstack_dns_server_stream.try_next() => {
+                    let DnsServerWatcherEvent { source, servers } = netstack_dns_server_res?
+                        .ok_or(anyhow::anyhow!("Netstack DNS Server watcher stream ended unexpectedly"))?;
+                    self.update_dns_servers(source, servers).await?
                 }
                 complete => break,
             };
         }
 
-        Err(anyhow::anyhow!("unexpectedly ended eventloop"))
+        Err(anyhow::anyhow!("eventloop ended unexpectedly"))
     }
 
     /// Handles an event from fuchsia.netstack.Netstack.
@@ -868,10 +952,8 @@ async fn main() -> Result<(), anyhow::Error> {
         .map(Into::into)
         .collect::<Vec<fnet::IpAddress>>();
     debug!("updating default servers to {:?}", servers);
-    let () = netcfg
-        .update_dns_servers(DnsServersSource::Default, servers)
-        .await
-        .context("updating default servers")?;
+    let () =
+        netcfg.update_default_dns_servers(servers).await.context("updating default servers")?;
 
     netcfg.run().await.context("run eventloop")
 }

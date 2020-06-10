@@ -19,14 +19,6 @@ use net_types::ip as net_types_ip;
 use crate::environments::*;
 use crate::*;
 
-/// The URL to NetCfg for use in a netemul environment.
-///
-/// Note, netcfg.cmx must never be used in a Netemul environment as it breaks hermeticity.
-const NETCFG_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg_netemul.cmx";
-
-/// The path to the default configuration file for DHCP server.
-const DHCP_SERVER_DEFAULT_CONFIG_PATH: &str = "/pkg/data/default_config.json";
-
 /// Test that NetCfg discovers a newly added device and it adds the device to the
 /// Netstack.
 #[fasync::run_singlethreaded(test)]
