@@ -197,7 +197,7 @@ async fn test_fetch_past_deadline() -> Result<(), Error> {
         })
         .await?;
 
-    assert_eq!(response.error.unwrap(), http::Error::DeadlineExceeded);
+    assert_eq!(response.error, Some(http::Error::DeadlineExceeded));
     assert!(response.body.is_none());
 
     Ok(())
