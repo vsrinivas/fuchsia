@@ -3,16 +3,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import argparse
-import errno
-import glob
-import os
 import re
-import shlex
 import subprocess
 import time
 
 from host import Host
+from cli import CommandLineInterface
 
 
 class Device(object):
@@ -32,6 +28,8 @@ class Device(object):
     """
 
     def __init__(self, host, addr):
+        assert host, 'Device host not set.'
+        assert addr, 'Device address not set.'
         self._host = host
         self._addr = addr
         self._ssh_options = {}
@@ -43,6 +41,11 @@ class Device(object):
     def host(self):
         """The associated Host object for this device."""
         return self._host
+
+    @property
+    def cli(self):
+        """Alias for host.cli."""
+        return self.host.cli
 
     @property
     def addr(self):
@@ -65,7 +68,7 @@ class Device(object):
 
     @ssh_config.setter
     def ssh_config(self, ssh_config):
-        if not self.host.isfile(ssh_config):
+        if not self.cli.isfile(ssh_config):
             raise ValueError(
                 'Invalid SSH configuration file: {}'.format(ssh_config))
         self._ssh_options['F'] = ssh_config
@@ -77,7 +80,7 @@ class Device(object):
 
     @ssh_identity.setter
     def ssh_identity(self, ssh_identity):
-        if not self.host.isfile(ssh_identity):
+        if not self.cli.isfile(ssh_identity):
             raise ValueError(
                 'Invalid SSH identity file: {}'.format(ssh_identity))
         self._ssh_options['i'] = ssh_identity
@@ -107,7 +110,7 @@ class Device(object):
         self.ssh_config = self.host.fxpath(
             self.host.build_dir, 'ssh-keys', 'ssh_config')
 
-    def _ssh_opts(self):
+    def ssh_opts(self):
         """Returns the SSH executable and options."""
         ssh_options = []
 
@@ -125,10 +128,6 @@ class Device(object):
 
         return ssh_options
 
-    def _ssh_cmd(self, args):
-        """Returns the command line arguments for an SSH commaned."""
-        return ['ssh'] + self._ssh_opts() + [self.addr] + args
-
     def ssh(self, args, **kwargs):
         """Creates a Process with added SSH arguments.
 
@@ -143,12 +142,12 @@ class Device(object):
     Returns:
       A Process object.
     """
-        cmd = self._ssh_cmd(args)
-        p = self.host.create_process(cmd, **kwargs)
+        args = ['ssh'] + self.ssh_opts() + [self.addr] + args
+        p = self.cli.create_process(args, **kwargs)
 
         # Explicitly prevent the subprocess from inheriting our stdin
         if not p.stdin:
-            p.stdin = Host.DEVNULL
+            p.stdin = CommandLineInterface.DEVNULL
 
         return p
 
@@ -210,15 +209,18 @@ class Device(object):
             pass
         return results
 
-    def rm(self, pathname, recursive=False):
+    def mkdir(self, pathname):
+        """Make a directory on the device."""
+        cmd = ['mkdir', '-p', pathname]
+        self.ssh(cmd).check_call()
+
+    def remove(self, pathname, recursive=False):
         """Removes a file or directory from the device."""
-        args = ['rm']
         if recursive:
-            args.append('-rf')
+            cmd = ['rm', '-rf', pathname]
         else:
-            args.append('-f')
-        args.append(pathname)
-        self.ssh(args).check_call()
+            cmd = ['rm', '-f', pathname]
+        self.ssh(cmd).check_call()
 
     def dump_log(self, args):
         """Retrieve a syslog from the device."""
@@ -250,30 +252,24 @@ class Device(object):
         """Returns an scp-style pathname argument for a remote path."""
         return '[{}]:{}'.format(self.addr, pathname)
 
-    def _scp_cmd(self, args):
-        """Returns the command line arguments for an SSH commaned."""
-        return ['scp'] + self._ssh_opts() + sorted(args[:-1]) + [args[-1]]
+    def fetch(self, data_src, host_dst):
+        """Copies `data_src` on the target to `host_dst` on the host.
 
-    def fetch(self, data_src, host_dst, retries=0, delay_ms=1000):
-        """Copies `data_src` on the target to `host_dst` on the host."""
-        if not self.host.isdir(host_dst):
+           This does not retry, even if the fetch is racing the file creation.
+           In this case, the correct approach is to use some other signal to
+           determine when the file(s) should be fetched. See Fuzzer._launch()
+           for an example.
+        """
+        if not self.cli.isdir(host_dst):
             raise ValueError(host_dst + ' is not a directory')
-        cmd = self._scp_cmd([self._rpath(data_src), host_dst])
-        while retries != 0:
-            try:
-                self.host.create_process(cmd).check_call()
-                return
-            except subprocess.CalledProcessError:
-                time.sleep(delay_ms * 0.001)
-                retries -= 1
-        self.host.create_process(cmd).check_call()
+        cmd = ['scp'] + self.ssh_opts() + [self._rpath(data_src), host_dst]
+        self.cli.create_process(cmd).check_call()
 
     def store(self, host_src, data_dst):
         """Copies `host_src` on the host to `data_dst` on the target."""
-        self.ssh(['mkdir', '-p', data_dst]).check_call()
-        srcs = self.host.glob(host_src)
-        if not srcs:
-            return
-        cmd = self._scp_cmd(srcs + [self._rpath(data_dst)])
-        self.host.create_process(cmd).check_call()
+        self.mkdir(data_dst)
+        srcs = self.cli.glob(host_src)
+        if srcs:
+            cmd = ['scp'] + self.ssh_opts() + srcs + [self._rpath(data_dst)]
+            self.cli.create_process(cmd).check_call()
         return srcs

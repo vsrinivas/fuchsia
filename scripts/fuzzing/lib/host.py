@@ -4,11 +4,9 @@
 # found in the LICENSE file.
 
 import errno
-import glob
 import json
 import os
 import re
-import shutil
 import subprocess
 
 from process import Process
@@ -22,21 +20,19 @@ class Host(object):
 
     Attributes:
       cli:              The associated CommandLineInterface object.
-      fuchsia_dir:      Path to the Fuchsia source tree.
       build_dir:        Path to the Fuchsia build output.
-      zxtools:          Path to the Zircon tools directory.
       symbolizer_exec:  Path to the Fuchsia symbolizer executable.
       llvm_symbolizer:  Path to the LLVM/Clang symbolizer library.
       build_id_dirs:    List of paths to symbolizer debug symbols.
   """
 
-    # Convenience file descriptor for silencing subprocess output
-    DEVNULL = open(os.devnull, 'w')
-
     def __init__(self, cli, fuchsia_dir):
-        self._platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
-        self._cli = cli
+        assert cli, 'CLI not set.'
+        if not fuchsia_dir:
+            cli.error(
+                'FUCHSIA_DIR not set.', 'Have you sourced "scripts/fx-env.sh"?')
         self._fuchsia_dir = fuchsia_dir
+        self._cli = cli
         self._build_dir = None
         self._symbolizer_exec = None
         self._llvm_symbolizer = None
@@ -49,63 +45,57 @@ class Host(object):
 
     @property
     def fuchsia_dir(self):
-        if not self._fuchsia_dir:
-            raise RuntimeError('Fuchsia source tree location not set.')
         return self._fuchsia_dir
 
     @property
     def build_dir(self):
-        if not self._build_dir:
-            raise RuntimeError('Build directory not set')
+        assert self._build_dir, 'Build directory not set'
         return self._build_dir
 
     @property
     def symbolizer_exec(self):
-        if not self._symbolizer_exec:
-            raise RuntimeError('Symbolizer executable not set.')
+        assert self._symbolizer_exec, 'Symbolizer executable not set.'
         return self._symbolizer_exec
 
     @symbolizer_exec.setter
     def symbolizer_exec(self, symbolizer_exec):
-        if not self.isfile(symbolizer_exec):
+        if not self.cli.isfile(symbolizer_exec):
             raise ValueError(
                 'Invalid symbolizer executable: {}'.format(symbolizer_exec))
         self._symbolizer_exec = symbolizer_exec
 
     @property
     def llvm_symbolizer(self):
-        if not self._llvm_symbolizer:
-            raise RuntimeError('LLVM symbolizer not set.')
+        assert self._llvm_symbolizer, 'LLVM symbolizer not set.'
         return self._llvm_symbolizer
 
     @llvm_symbolizer.setter
     def llvm_symbolizer(self, llvm_symbolizer):
-        if not self.isfile(llvm_symbolizer):
+        if not self.cli.isfile(llvm_symbolizer):
             raise ValueError(
                 'Invalid LLVM symbolizer: {}'.format(llvm_symbolizer))
         self._llvm_symbolizer = llvm_symbolizer
 
     @property
     def build_id_dirs(self):
-        if not self._build_id_dirs:
-            raise RuntimeError('Build ID directories not set.')
+        assert self._build_id_dirs, 'Build ID directories not set.'
         return self._build_id_dirs
 
     @build_id_dirs.setter
     def build_id_dirs(self, build_id_dirs):
         for build_id_dir in build_id_dirs:
-            if not self.isdir(build_id_dir):
+            if not self.cli.isdir(build_id_dir):
                 raise ValueError(
                     'Invalid build ID directory: {}'.format(build_id_dir))
         self._build_id_dirs = build_id_dirs
 
     # Initialization routines
 
-    def configure(self, build_dir, opened_fuzzers_json=None):
+    def configure(self, build_dir):
         """Sets multiple properties based on the given build directory."""
         self._build_dir = self.fxpath(build_dir)
         clang_dir = os.path.join(
-            'prebuilt', 'third_party', 'clang', self._platform)
+            'prebuilt', 'third_party', 'clang', self.cli.platform)
         self.symbolizer_exec = self.fxpath(build_dir, 'host_x64', 'symbolize')
         self.llvm_symbolizer = self.fxpath(clang_dir, 'bin', 'llvm-symbolizer')
         self.build_id_dirs = [
@@ -113,17 +103,18 @@ class Host(object):
             self.fxpath(build_dir, '.build-id'),
             self.fxpath(build_dir + '.zircon', '.build-id'),
         ]
-        if opened_fuzzers_json:
-            self.read_fuzzers(opened_fuzzers_json)
 
-    def read_fuzzers(self, open_file_obj):
-        """Parses the available fuzzers from an open file object."""
-        fuzz_specs = json.load(open_file_obj)
+    def read_fuzzers(self, pathname):
+        """Parses the available fuzzers from an fuzzers.json pathname."""
+        with self.cli.open(pathname, on_error=[
+                'Failed to read fuzzers from {}.'.format(pathname),
+                'Have you run "fx set ... --fuzz-with <sanitizer>"?'
+        ]) as opened:
+            fuzz_specs = json.load(opened)
         for fuzz_spec in fuzz_specs:
             package = fuzz_spec['fuzzers_package']
             for executable in fuzz_spec['fuzzers']:
                 self._fuzzers.append((package, executable))
-        self._fuzzers.sort()
 
     def fuzzers(self, name=None):
         """Returns a (possibly filtered) list of fuzzer names.
@@ -157,50 +148,6 @@ class Host(object):
                 filtered.append((package, executable))
         return sorted(filtered)
 
-    # Filesystem routines.
-    # These can be overriden during testing to remove dependencies on real files
-    # and directories.
-
-    def isdir(self, pathname):
-        return os.path.isdir(pathname)
-
-    def isfile(self, pathname):
-        return os.path.isfile(pathname)
-
-    def mkdir(self, pathname):
-        try:
-            os.makedirs(pathname)
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise
-
-    def rmdir(self, pathname):
-        shutil.rmtree(pathname)
-
-    def link(self, pathname, linkname):
-        try:
-            os.unlink(linkname)
-        except OSError as e:
-            if e.errno != errno.ENOENT:
-                raise
-        os.symlink(pathname, linkname)
-
-    def glob(self, pattern):
-        return glob.glob(pattern)
-
-    # Subprocess routines.
-    # These can be overriden during testing to remove dependencies on real files
-    # and directories.
-
-    def create_process(self, args, **kwargs):
-        return Process(args, **kwargs)
-
-    def killall(self, process):
-        """ Invokes killall on the process name."""
-        p = self.create_process(
-            ['killall', process], stdout=Host.DEVNULL, stderr=Host.DEVNULL)
-        p.call()
-
     # Other routines
 
     def fxpath(self, *segments):
@@ -219,7 +166,7 @@ class Host(object):
             cmd += ['resolve', '-device-limit', '1', device_name]
         else:
             cmd += ['list']
-        addrs = self.create_process(cmd).check_output().strip()
+        addrs = self.cli.create_process(cmd).check_output().strip()
         if not addrs:
             self.cli.error('Unable to find device.', 'Try "fx set-device".')
         addrs = addrs.split('\n')
@@ -239,7 +186,7 @@ class Host(object):
         cmd = [self.symbolizer_exec, '-llvm-symbolizer', self.llvm_symbolizer]
         for build_id_dir in self.build_id_dirs:
             cmd += ['-build-id-dir', build_id_dir]
-        p = self.create_process(cmd)
+        p = self.cli.create_process(cmd)
         p.stdin = subprocess.PIPE
         p.stdout = subprocess.PIPE
         proc = p.popen()

@@ -17,19 +17,41 @@ class Process(object):
 
     def __init__(self, args, **kwargs):
         self.args = args
-        self.cwd = kwargs.get('cwd', None)
-        self.stdin = kwargs.get('stdin', None)
-        self.stdout = kwargs.get('stdout', None)
-        self.stderr = kwargs.get('stderr', None)
+        self._stdin = kwargs.get('stdin', None)
+        self._stdout = kwargs.get('stdout', None)
+        self._stderr = kwargs.get('stderr', None)
+
+    @property
+    def stdin(self):
+        return self._stdin
+
+    @stdin.setter
+    def stdin(self, stdin):
+        self._stdin = stdin
+
+    @property
+    def stdout(self):
+        return self._stdout
+
+    @stdout.setter
+    def stdout(self, stdout):
+        self._stdout = stdout
+
+    @property
+    def stderr(self):
+        return self._stderr
+
+    @stderr.setter
+    def stderr(self, stderr):
+        self._stderr = stderr
 
     def popen(self):
         """Analogous to subprocess.Popen."""
         p = subprocess.Popen(
             self.args,
-            cwd=self.cwd,
-            stdin=self.stdin,
-            stdout=self.stdout,
-            stderr=self.stderr)
+            stdin=self._stdin,
+            stdout=self._stdout,
+            stderr=self._stderr)
         return p
 
     def call(self):
@@ -52,7 +74,7 @@ class Process(object):
     def check_output(self):
         """Analogous to subprocess.check_output."""
         cmd = self.args
-        self.stdout = subprocess.PIPE
+        self._stdout = subprocess.PIPE
         p = self.popen()
         out, _ = p.communicate()
         rc = p.returncode

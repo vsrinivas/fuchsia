@@ -51,6 +51,7 @@ class ArgParser(argparse.ArgumentParser):
     @property
     def factory(self):
         """Returns the factory that created this object."""
+        assert self._factory, 'Factory not set.'
         return self._factory
 
     @factory.setter
@@ -259,7 +260,6 @@ class ArgParser(argparse.ArgumentParser):
 
     def parse_args(self, args=None):
         """Parse args either as a top-level parser or subcommand."""
-        assert self.factory, 'Factory is unset.'
         if args == None:
             args = sys.argv[1:]
         if self._parsers:

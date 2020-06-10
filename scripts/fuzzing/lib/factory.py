@@ -4,8 +4,6 @@
 # found in the LICENSE file.
 
 import errno
-import re
-import os
 
 from args import ArgParser
 from cli import CommandLineInterface
@@ -21,20 +19,19 @@ class Factory(object):
        Fuzzers. More importantly, it can construct them with references to
        each other, i.e. a Factory-constructed Fuzzer automatically gets a
        reference to a Factory-constructed Device, which has a reference to a
-       Factory-constructed Host, which may have a reference to a Factory-
-       constructed CommandLineInterface.
+       Factory-constructed Host.
 
        Attributes:
          cli:       Command line interface object for user interactions.
     """
 
     def __init__(self, cli=None):
+        if not cli:
+            cli = CommandLineInterface()
         self._cli = cli
 
     @property
     def cli(self):
-        if not self._cli:
-            self._cli = CommandLineInterface()
         return self._cli
 
     def create_parser(self):
@@ -44,39 +41,32 @@ class Factory(object):
         parser.add_parsers()
         return parser
 
-    def create_host(self, fuchsia_dir=os.getenv('FUCHSIA_DIR')):
+    def create_host(self, **kwargs):
         """Constructs a Host from a local build directory."""
+        fuchsia_dir = kwargs.pop('fuchsia_dir', self.cli.getenv('FUCHSIA_DIR'))
         if not fuchsia_dir:
-            self.cli.error(
+            self.host.error(
                 'FUCHSIA_DIR not set.', 'Have you sourced "scripts/fx-env.sh"?')
+        assert not kwargs, 'Unexpected keyword arguments: {}'.format(kwargs)
         host = Host(self.cli, fuchsia_dir)
-        try:
-            with open(host.fxpath('.fx-build-dir')) as opened:
-                build_dir = opened.read().strip()
-            with open(host.fxpath(build_dir, 'fuzzers.json')) as opened:
-                host.configure(build_dir, opened)
-        except IOError as e:
-            if e.errno == errno.ENOENT:
-                self.cli.error(
-                    'Initialization failure.',
-                    'Have you run "fx set ... --fuzz-with <sanitizer>"?')
-            else:
-                raise
+        pathname = host.fxpath('.fx-build-dir')
+        build_dir = self.cli.readfile(
+            pathname,
+            on_error=[
+                'Failed to read build directory from {}.'.format(pathname),
+                'Have you run "fx set ... --fuzz-with <sanitizer>"?'
+            ])
+        host.configure(build_dir)
+        host.read_fuzzers(host.fxpath(build_dir, 'fuzzers.json'))
         return host
 
     def create_device(self, host=None):
         """Constructs a Device from the build environment"""
         if not host:
             host = self.create_host()
-        addr = None
-        try:
-            with open('{}.device'.format(host.build_dir)) as opened:
-                addr = host.find_device(device_file=opened)
-        except IOError as e:
-            if e.errno != errno.ENOENT:
-                raise
-        if not addr:
-            addr = host.find_device()
+        pathname = '{}.device'.format(host.build_dir)
+        device_name = self.cli.readfile(pathname, missing_ok=True)
+        addr = host.find_device(device_name)
         device = Device(host, addr)
         device.configure()
         return device
@@ -99,15 +89,16 @@ class Factory(object):
         disambiguation menu if specified name matches more than one fuzzer."""
         if not device:
             device = self.create_device()
-        return self._create_fuzzer_impl(Fuzzer, device, args)
 
-    def _create_fuzzer_impl(self, cls, device, args):
-        """Creates a Fuzzer-like object of the given class."""
         package, executable = self._resolve_fuzzer(device.host, args.name)
-        fuzzer = cls(device, package, executable)
+        fuzzer = Fuzzer(device, package, executable)
 
-        # Skip args with value of None
-        args = dict((k, v) for k, v in vars(args).items() if v is not None)
+        keys = [
+            key for key, val in vars(Fuzzer).items()
+            if isinstance(val, property) and val.fset
+        ]
+        for key, val in vars(args).items():
+            if key in keys and val is not None:
+                setattr(fuzzer, key, val)
 
-        fuzzer.update(args)
         return fuzzer

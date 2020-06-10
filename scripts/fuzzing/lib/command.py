@@ -40,7 +40,7 @@ def start_fuzzer(args, factory):
             if fuzzer.output:
                 cmd += ['--output', fuzzer.output]
             cmd.append(str(fuzzer))
-            fuzzer.device.host.create_process(cmd).popen()
+            factory.cli.create_process(cmd).popen()
     else:
         fuzzer.monitor()
         factory.cli.echo(

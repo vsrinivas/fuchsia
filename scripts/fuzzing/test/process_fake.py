@@ -3,6 +3,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import subprocess
+from StringIO import StringIO
+
 import test_env
 from lib.process import Process
 
@@ -14,49 +17,99 @@ class FakeProcess(Process):
        commands. Other fakes can additionally add canned responses.
     """
 
-    def __init__(self, host, args, **kwargs):
-        self.host = host
-        self.response = ''
-        super(FakeProcess, self).__init__(args, **kwargs)
+    def __init__(self, args, **kwargs):
+        self._popen = FakeProcess.Popen()
+        super(FakeProcess, self).__init__(args)
+
+    @property
+    def succeeds(self):
+        return self._popen._succeeds
+
+    @succeeds.setter
+    def succeeds(self, succeeds):
+        self._popen._succeeds = succeeds
+
+    @property
+    def stdin(self):
+        return self._popen.stdin
+
+    @stdin.setter
+    def stdin(self, stdin):
+        pass
+
+    @property
+    def stdout(self):
+        return self._popen.stdout
+
+    @stdout.setter
+    def stdout(self, stdout):
+        pass
+
+    @property
+    def stderr(self):
+        return self._popen.stderr
+
+    @stderr.setter
+    def stderr(self, stderr):
+        pass
 
     def popen(self):
-        line = ' '.join(self.args)
-        self.host.history.append(line)
-        return FakePopen(self.host, self.response)
+        assert not self._popen._running, 'popen() called twice: {}'.format(
+            self.args)
+        self._popen._running = True
+        self.stdin.truncate(0)
+        return self._popen
 
-    def call(self):
-        p = self.popen()
-        return p.returncode
+    class Popen(object):
+        """Fakes subprocess.Popen for FakeProcess.
 
-    def check_call(self):
-        self.popen()
+        Unlike a real subprocess.Popen, this object always buffers stdio.
+        """
 
-    def check_output(self):
-        self.popen()
-        return self.response
+        def __init__(self):
+            self._running = False
+            self._succeeds = True
+            self._returncode = None
+            self._stdin = StringIO()
+            self._stdout = StringIO()
+            self._stderr = StringIO()
 
+        @property
+        def stdin(self):
+            return self._stdin
 
-class FakePopen(object):
-    """Fakes subprocess.Popen for FakeProcess."""
+        @property
+        def stdout(self):
+            return self._stdout
 
-    def __init__(self, host, response):
-        self.host = host
-        self.returncode = 0
-        self.stderr = FakePipe()
-        self.response = response
+        @property
+        def stderr(self):
+            return self._stderr
 
-    def communicate(self, inputs=None):
-        if inputs:
-            for line in str(inputs).split('\n'):
-                self.host.history.append(self.host.as_input(line))
-        return (self.response, '')
+        @property
+        def returncode(self):
+            return self._returncode
 
-    def wait(self, timeout=None):
-        return 0
+        def communicate(self, inputs=None):
+            """Like subprocess.Popen.communicate().
 
+            In particular, writes bytes from inputs to stdin, and returns a
+            tuple of stdout and stderr.
+            """
+            self._stdin.write(str(inputs))
+            self.wait()
+            self._stdout.seek(0)
+            self._stderr.seek(0)
+            return (self._stdout.read(), self._stderr.read())
 
-class FakePipe(object):
-    """Minimal fake pipe object used by FakePopen."""
+        def poll(self):
+            if self._running:
+                self._returncode = 0 if self._succeeds else 1
+                self._running = False
+            return self._returncode
 
-    def readline(self):
-        return ''
+        def wait(self):
+            return self.poll()
+
+        def kill(self):
+            self._running = False

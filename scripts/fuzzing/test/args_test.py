@@ -7,40 +7,33 @@ import unittest
 
 import test_env
 import lib.command as command
+from test_case import TestCase
 
-from factory_fake import FakeFactory
 
-
-class TestArgs(unittest.TestCase):
+class ArgsTest(TestCase):
 
     # Unit test assertions
 
-    def assertParse(self, factory, args, **kwargs):
-        parser = factory.create_parser()
-        args = vars(parser.parse_args(args))
+    def assertParse(self, args, **kwargs):
+        args = vars(self.parse_args(*args))
         for key, val in kwargs.iteritems():
             self.assertEqual(args[key], val)
 
-    def assertParseFails(self, factory, args, msg):
-        parser = factory.create_parser()
+    def assertParseFails(self, args, msg):
         with self.assertRaises(SystemExit):
-            parser.parse_args(args)
-        self.assertEqual(
-            factory.cli.log, [
-                'ERROR: {}'.format(msg),
-                '       Try "fx fuzz help".',
-            ])
+            self.parse_args(*args)
+        self.assertLogged('ERROR: {}'.format(msg), '       Try "fx fuzz help".')
 
-    def assertParseHelp(self, factory, args, log):
-        parser = factory.create_parser()
+    def assertParseHelp(self, args, log):
         with self.assertRaises(SystemExit):
-            parser.parse_args(args)
-        self.assertEqual(factory.cli.log, log)
+            self.parse_args(*args)
+        self.assertLogged(*log)
+
+    # Unit tests
 
     # Unit tests
 
     def test_help_parser(self):
-        factory = FakeFactory()
         generic_help = [
             '',
             'Usage: fx fuzz [SUBCOMMAND] [...]',
@@ -62,7 +55,7 @@ class TestArgs(unittest.TestCase):
             '',
         ]
         self.assertParseHelp(
-            factory, ['help', 'help'], [
+            ['help', 'help'], [
                 '',
                 'Usage: fx fuzz help [SUBCOMMAND]',
                 '',
@@ -72,18 +65,17 @@ class TestArgs(unittest.TestCase):
                 '  SUBCOMMAND          Subcommand for which to print detailed help.',
                 '',
             ])
-        self.assertParseHelp(factory, ['-h'], generic_help)
-        self.assertParseHelp(factory, ['--help'], generic_help)
-        self.assertParseHelp(factory, ['help'], generic_help)
+        self.assertParseHelp(['-h'], generic_help)
+        self.assertParseHelp(['--help'], generic_help)
+        self.assertParseHelp(['help'], generic_help)
 
         self.assertParseFails(
-            factory, ['help', 'bad-subcommand'],
+            ['help', 'bad-subcommand'],
             'Unrecognized subcommand: "bad-subcommand".')
 
     def test_list_parser(self):
-        factory = FakeFactory()
         self.assertParseHelp(
-            factory, ['help', 'list'], [
+            ['help', 'list'], [
                 '',
                 'Usage: fx fuzz list [NAME]',
                 '',
@@ -95,16 +87,14 @@ class TestArgs(unittest.TestCase):
                 '                      match "foo_package/bar_target".',
                 '',
             ])
-        self.assertParse(
-            factory, ['list'], command=command.list_fuzzers, name=None)
-        self.assertParse(factory, ['list', 'name'], name='name')
+        self.assertParse(['list'], command=command.list_fuzzers, name=None)
+        self.assertParse(['list', 'name'], name='name')
         self.assertParseFails(
-            factory, ['list', 'name', 'extra'], 'Unrecognized arguments: extra')
+            ['list', 'name', 'extra'], 'Unrecognized arguments: extra')
 
     def test_start_parser(self):
-        factory = FakeFactory()
         self.assertParseHelp(
-            factory, ['help', 'start'], [
+            ['help', 'start'], [
                 '',
                 'Usage: fx fuzz start [OPTIONS] NAME [...]',
                 '',
@@ -125,32 +115,28 @@ class TestArgs(unittest.TestCase):
                 '',
             ])
 
-        self.assertParseFails(factory, ['start'], 'Too few arguments.')
+        self.assertParseFails(['start'], 'Too few arguments.')
 
         self.assertParse(
-            factory, [
+            [
                 'start',
                 'name',
-            ],
-            command=command.start_fuzzer,
-            name='name')
-        self.assertParse(
-            factory, ['name'], command=command.start_fuzzer, name='name')
+            ], command=command.start_fuzzer, name='name')
+        self.assertParse(['name'], command=command.start_fuzzer, name='name')
 
-        self.assertParse(factory, ['start', '--debug', 'name'], debug=True)
-        self.assertParse(factory, ['start', '-g', 'name'], debug=True)
+        self.assertParse(['start', '--debug', 'name'], debug=True)
+        self.assertParse(['start', '-g', 'name'], debug=True)
 
-        self.assertParse(
-            factory, ['start', '--foreground', 'name'], foreground=True)
-        self.assertParse(factory, ['start', '-f', 'name'], foreground=True)
+        self.assertParse(['start', '--foreground', 'name'], foreground=True)
+        self.assertParse(['start', '-f', 'name'], foreground=True)
 
-        self.assertParse(factory, ['start', '--monitor', 'name'], monitor=True)
-        self.assertParse(factory, ['start', '-m', 'name'], monitor=True)
+        self.assertParse(['start', '--monitor', 'name'], monitor=True)
+        self.assertParse(['start', '-m', 'name'], monitor=True)
 
         self.assertParseFails(
-            factory, ['start', '--output', 'name'], 'Too few arguments.')
+            ['start', '--output', 'name'], 'Too few arguments.')
         self.assertParseFails(
-            factory, [
+            [
                 'start',
                 '--output',
                 'output1',
@@ -158,15 +144,14 @@ class TestArgs(unittest.TestCase):
                 'output2',
                 'name',
             ], 'Repeated option: output')
+        self.assertParse([
+            'start',
+            '-o',
+            'output',
+            'name',
+        ], output='output')
         self.assertParse(
-            factory, [
-                'start',
-                '-o',
-                'output',
-                'name',
-            ], output='output')
-        self.assertParse(
-            factory, [
+            [
                 'start',
                 '--output',
                 'output',
@@ -174,7 +159,7 @@ class TestArgs(unittest.TestCase):
             ], output='output')
 
         self.assertParse(
-            factory, [
+            [
                 'start',
                 'name',
                 '-output=foo',
@@ -184,7 +169,7 @@ class TestArgs(unittest.TestCase):
             })
 
         self.assertParseFails(
-            factory, [
+            [
                 'start',
                 'name',
                 'input1',
@@ -192,7 +177,7 @@ class TestArgs(unittest.TestCase):
             ], 'Unrecognized arguments: input1 input2')
 
         self.assertParse(
-            factory, [
+            [
                 'start',
                 'name',
                 '--',
@@ -206,7 +191,7 @@ class TestArgs(unittest.TestCase):
 
         # All together now, in different order.
         self.assertParse(
-            factory, [
+            [
                 'start',
                 '-output=foo',
                 'name',
@@ -230,9 +215,8 @@ class TestArgs(unittest.TestCase):
             subprocess_args=['-o', '--output', '-output=bar'])
 
     def test_check_parser(self):
-        factory = FakeFactory()
         self.assertParseHelp(
-            factory, ['help', 'check'], [
+            ['help', 'check'], [
                 '',
                 'Usage: fx fuzz check [NAME]',
                 '',
@@ -245,17 +229,14 @@ class TestArgs(unittest.TestCase):
                 '                      match "foo_package/bar_target".',
                 '',
             ])
-        self.assertParse(
-            factory, ['check'], command=command.check_fuzzer, name=None)
-        self.assertParse(factory, ['check', 'name'], name='name')
+        self.assertParse(['check'], command=command.check_fuzzer, name=None)
+        self.assertParse(['check', 'name'], name='name')
         self.assertParseFails(
-            factory, ['check', 'name', 'extra'],
-            'Unrecognized arguments: extra')
+            ['check', 'name', 'extra'], 'Unrecognized arguments: extra')
 
     def test_stop_parser(self):
-        factory = FakeFactory()
         self.assertParseHelp(
-            factory, ['help', 'stop'], [
+            ['help', 'stop'], [
                 '',
                 'Usage: fx fuzz stop NAME',
                 '',
@@ -267,23 +248,20 @@ class TestArgs(unittest.TestCase):
                 '                      match "foo_package/bar_target".',
                 '',
             ])
-        self.assertParseFails(factory, ['stop'], 'Too few arguments.')
+        self.assertParseFails(['stop'], 'Too few arguments.')
 
         self.assertParse(
-            factory, [
+            [
                 'stop',
                 'name',
-            ],
-            command=command.stop_fuzzer,
-            name='name')
+            ], command=command.stop_fuzzer, name='name')
 
         self.assertParseFails(
-            factory, ['stop', 'name', 'extra'], 'Unrecognized arguments: extra')
+            ['stop', 'name', 'extra'], 'Unrecognized arguments: extra')
 
     def test_repro_parser(self):
-        factory = FakeFactory()
         self.assertParseHelp(
-            factory, ['help', 'repro'], [
+            ['help', 'repro'], [
                 '',
                 'Usage: fx fuzz repro [OPTIONS] NAME UNIT... [...]',
                 '',
@@ -307,25 +285,33 @@ class TestArgs(unittest.TestCase):
                 '',
             ])
 
-        self.assertParseFails(factory, ['repro'], 'Too few arguments.')
+        self.assertParseFails(['repro'], 'Too few arguments.')
+        self.assertParseFails(['repro', 'name'], 'Too few arguments.')
 
         self.assertParse(
-            factory, [
+            [
                 'repro',
                 'name',
                 'unit',
             ],
             command=command.repro_units,
-            name='name')
+            name='name',
+            libfuzzer_inputs=[
+                'unit',
+            ])
 
-        self.assertParse(
-            factory, ['repro', '--debug', 'name', 'unit'], debug=True)
-        self.assertParse(factory, ['repro', '-g', 'name', 'unit'], debug=True)
+        self.assertParse(['repro', '--debug', 'name', 'unit'], debug=True)
+        self.assertParse(['repro', '-g', 'name', 'unit'], debug=True)
 
         self.assertParseFails(
-            factory, ['repro', '--output', 'name'], 'Too few arguments.')
+            [
+                'repro',
+                '--output',
+                'name',
+                'unit',
+            ], 'Too few arguments.')
         self.assertParseFails(
-            factory, [
+            [
                 'repro',
                 '--output',
                 'output1',
@@ -335,26 +321,24 @@ class TestArgs(unittest.TestCase):
                 'unit',
             ], 'Repeated option: output')
         self.assertParse(
-            factory, [
-                'repro',
-                '--output',
-                'output',
-                'name',
-                'unit',
-            ],
-            output='output')
-        self.assertParse(
-            factory, [
+            [
                 'repro',
                 '-o',
                 'output',
                 'name',
                 'unit',
-            ],
-            output='output')
+            ], output='output')
+        self.assertParse(
+            [
+                'repro',
+                '-o',
+                'output',
+                'name',
+                'unit',
+            ], output='output')
 
         self.assertParse(
-            factory, [
+            [
                 'repro',
                 'name',
                 '-output=foo',
@@ -365,19 +349,7 @@ class TestArgs(unittest.TestCase):
             })
 
         self.assertParse(
-            factory, [
-                'repro',
-                'name',
-                'input1',
-                'input2',
-            ],
-            libfuzzer_inputs=[
-                'input1',
-                'input2',
-            ])
-
-        self.assertParse(
-            factory, [
+            [
                 'repro',
                 'name',
                 'unit',
@@ -392,7 +364,7 @@ class TestArgs(unittest.TestCase):
 
         # All together now, in different order.
         self.assertParse(
-            factory, [
+            [
                 'repro',
                 'name',
                 'input',
