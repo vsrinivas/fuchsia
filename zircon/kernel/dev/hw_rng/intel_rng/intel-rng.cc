@@ -13,6 +13,7 @@
 #include <arch/x86/feature.h>
 #include <dev/hw_rng.h>
 #include <fbl/algorithm.h>
+#include <ktl/algorithm.h>
 #include <lk/init.h>
 
 enum entropy_instr {
@@ -71,7 +72,7 @@ static ssize_t get_entropy_from_instruction(void* buf, size_t len, enum entropy_
     if (!instruction_step(instr, &val)) {
       continue;
     }
-    const size_t to_copy = fbl::min(len - written, sizeof(val));
+    const size_t to_copy = ktl::min(len - written, sizeof(val));
     memcpy(static_cast<uint8_t*>(buf) + written, &val, to_copy);
     written += to_copy;
   }

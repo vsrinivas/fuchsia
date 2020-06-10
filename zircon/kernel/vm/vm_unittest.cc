@@ -19,6 +19,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <kernel/semaphore.h>
+#include <ktl/algorithm.h>
 #include <ktl/iterator.h>
 #include <ktl/move.h>
 #include <vm/fault.h>
@@ -356,7 +357,7 @@ static bool pmm_node_multi_watermark_level_test2() {
     list_add_tail(&list, &page->queue_node);
 
     count--;
-    uint64_t expected = fbl::min(static_cast<uint64_t>(MAX_WATERMARK_COUNT),
+    uint64_t expected = ktl::min(static_cast<uint64_t>(MAX_WATERMARK_COUNT),
                                  (count + ManagedPmmNode::kDefaultDebounce - 1) / kInterval);
     EXPECT_EQ(node.cur_level(), expected);
   }
@@ -369,7 +370,7 @@ static bool pmm_node_multi_watermark_level_test2() {
   while (!list_is_empty(&list)) {
     node.node().FreePage(list_remove_head_type(&list, vm_page_t, queue_node));
     count++;
-    uint64_t expected = fbl::min(static_cast<uint64_t>(MAX_WATERMARK_COUNT),
+    uint64_t expected = ktl::min(static_cast<uint64_t>(MAX_WATERMARK_COUNT),
                                  count > ManagedPmmNode::kDefaultDebounce
                                      ? (count - ManagedPmmNode::kDefaultDebounce) / kInterval
                                      : 0);

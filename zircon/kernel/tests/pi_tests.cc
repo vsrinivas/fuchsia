@@ -18,6 +18,7 @@
 #include <kernel/scheduler.h>
 #include <kernel/thread.h>
 #include <kernel/wait.h>
+#include <ktl/algorithm.h>
 #include <ktl/array.h>
 #include <ktl/atomic.h>
 #include <ktl/iterator.h>
@@ -662,7 +663,7 @@ bool pi_test_changing_priority() {
   // Run up and down through a bunch of priorities
   for (int ascending = TEST_LOWEST_PRIORITY; ascending < TEST_HIGHEST_PRIORITY; ++ascending) {
     PRINT_LOOP_ITER(ascending);
-    int expected = fbl::max(ascending, TEST_DEFAULT_PRIORITY);
+    int expected = ktl::max(ascending, TEST_DEFAULT_PRIORITY);
     ASSERT_TRUE(pressure_thread.SetBasePriority(ascending));
     ASSERT_EQ(expected, blocking_thread.effective_priority());
     print_ascending.cancel();
@@ -671,7 +672,7 @@ bool pi_test_changing_priority() {
   for (int descending = TEST_HIGHEST_PRIORITY - 1; descending >= TEST_LOWEST_PRIORITY;
        --descending) {
     PRINT_LOOP_ITER(descending);
-    int expected = fbl::max(descending, TEST_DEFAULT_PRIORITY);
+    int expected = ktl::max(descending, TEST_DEFAULT_PRIORITY);
     ASSERT_TRUE(pressure_thread.SetBasePriority(descending));
     ASSERT_EQ(expected, blocking_thread.effective_priority());
     print_descending.cancel();
@@ -780,7 +781,7 @@ bool pi_test_chain() {
           if ((tndx >= links->size()) || !(*links)[tndx].active) {
             expected_prio = prio_map[tndx];
           } else {
-            expected_prio = fbl::max(expected_prio, prio_map[tndx]);
+            expected_prio = ktl::max(expected_prio, prio_map[tndx]);
           }
 
           ASSERT_EQ(expected_prio, t.effective_priority());
@@ -1106,7 +1107,7 @@ bool pi_test_multi_owned_queues() {
         for (const auto& q : *queues) {
           ASSERT_EQ(q.prio, q.thread.effective_priority());
           if (q.is_waiting) {
-            max_pressure = fbl::max(max_pressure, q.prio);
+            max_pressure = ktl::max(max_pressure, q.prio);
           }
         }
 
@@ -1116,7 +1117,7 @@ bool pi_test_multi_owned_queues() {
 
           ASSERT_EQ(q.prio, q.thread.effective_priority());
           if (q.is_waiting) {
-            max_pressure = fbl::max(max_pressure, q.prio);
+            max_pressure = ktl::max(max_pressure, q.prio);
           }
 
           print_queue_ndx.cancel();
@@ -1124,7 +1125,7 @@ bool pi_test_multi_owned_queues() {
 
         // Now that we know the pressure which is being applied to the
         // blocking thread, verify its effective priority.
-        int expected_prio = fbl::max(max_pressure, bt_prio);
+        int expected_prio = ktl::max(max_pressure, bt_prio);
         ASSERT_EQ(expected_prio, blocking_thread.effective_priority());
 
         END_TEST;

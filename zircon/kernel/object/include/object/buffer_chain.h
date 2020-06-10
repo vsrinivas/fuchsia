@@ -17,6 +17,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_single_list.h>
+#include <ktl/algorithm.h>
 #include <ktl/move.h>
 #include <vm/page.h>
 #include <vm/physmap.h>
@@ -71,7 +72,7 @@ class BufferChain {
     size_t rem = size;
     const auto end = buffers_.end();
     for (auto iter = buffers_.begin(); rem > 0 && iter != end; ++iter) {
-      const size_t copy_len = fbl::min(rem, iter->size() - copy_offset);
+      const size_t copy_len = ktl::min(rem, iter->size() - copy_offset);
       const char* src = iter->data() + copy_offset;
       const zx_status_t status = dst.copy_array_to_user(src, copy_len);
       if (unlikely(status != ZX_OK)) {
@@ -189,7 +190,7 @@ class BufferChain {
     size_t rem = size;
     const auto end = buffers_.end();
     for (auto iter = buffers_.begin(); rem > 0 && iter != end; ++iter) {
-      const size_t copy_len = fbl::min(rem, iter->size() - copy_offset);
+      const size_t copy_len = ktl::min(rem, iter->size() - copy_offset);
       char* dst = iter->data() + copy_offset;
       const zx_status_t status = src.copy_array_from_user(dst, copy_len);
       if (unlikely(status != ZX_OK)) {

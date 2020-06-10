@@ -12,6 +12,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
+#include <ktl/algorithm.h>
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
 #include <object/timer_dispatcher.h>
@@ -53,7 +54,7 @@ zx_status_t sys_timer_set(zx_handle_t handle, zx_time_t deadline, zx_duration_t 
 
   // Effective slack can only be increased so use max of the requested and the policy slack.
   const zx_duration_t policySlack = up->GetTimerSlackPolicy().amount();
-  const zx_duration_t effectiveSlack = fbl::max(slack, policySlack);
+  const zx_duration_t effectiveSlack = ktl::max(slack, policySlack);
 
   return timer->Set(deadline, effectiveSlack);
 }

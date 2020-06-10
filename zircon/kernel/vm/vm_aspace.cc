@@ -25,6 +25,7 @@
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
+#include <ktl/algorithm.h>
 #include <vm/fault.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
@@ -645,7 +646,7 @@ void VmAspace::InitializeAslr() {
 
   if (aslr_enabled_) {
     aslr_entropy_bits_ =
-        fbl::min(static_cast<uint8_t>(gCmdline.GetUInt32("aslr.entropy_bits", kDefaultASLREntropy)),
+        ktl::min(static_cast<uint8_t>(gCmdline.GetUInt32("aslr.entropy_bits", kDefaultASLREntropy)),
                  (uint8_t)36);
     aslr_compact_entropy_bits_ = 8;
   }

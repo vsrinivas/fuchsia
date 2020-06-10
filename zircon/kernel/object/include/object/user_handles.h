@@ -11,6 +11,7 @@
 #include <zircon/types.h>
 
 #include <fbl/ref_ptr.h>
+#include <ktl/algorithm.h>
 #include <object/process_dispatcher.h>
 
 // Extracts the handles that would be consumed on syscalls with handle_release semantics
@@ -33,7 +34,7 @@ zx_status_t RemoveUserHandles(T user_handles, size_t num_handles, ProcessDispatc
   while (offset < num_handles) {
     // We process |num_handles| in chunks of |kMaxMessageHandles| because we don't have
     // a limit on how large |num_handles| can be.
-    auto chunk_size = fbl::min<size_t>(num_handles - offset, kMaxMessageHandles);
+    auto chunk_size = ktl::min<size_t>(num_handles - offset, kMaxMessageHandles);
     status = get_user_handles_to_consume(user_handles, offset, chunk_size, handles);
     if (status != ZX_OK) {
       break;

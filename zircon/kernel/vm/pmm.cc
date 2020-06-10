@@ -27,6 +27,7 @@
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/timer.h>
+#include <ktl/algorithm.h>
 #include <lk/init.h>
 #include <vm/bootalloc.h>
 #include <vm/physmap.h>
@@ -250,7 +251,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
       if (rate > 0) {
         uint64_t pages_leaked = 0;
         while (pages_leaked < pages_till_oom) {
-          uint64_t alloc_pages = fbl::min(rate, pages_till_oom - pages_leaked);
+          uint64_t alloc_pages = ktl::min(rate, pages_till_oom - pages_leaked);
           if (pmm_node.AllocPages(alloc_pages, 0, &list) == ZX_OK) {
             pages_leaked += alloc_pages;
             printf("Leaked %lu pages\n", pages_leaked);

@@ -6,6 +6,8 @@
 
 #include "object/user_handles.h"
 
+#include <ktl/algorithm.h>
+
 namespace {
 // Basic checks for a |handle| to be able to be sent via |channel|.
 static zx_status_t handle_checks_locked(const Handle* handle, const Dispatcher* channel,
@@ -42,7 +44,7 @@ zx_status_t get_user_handles_to_consume(user_inout_ptr<zx_handle_disposition_t> 
                                         size_t offset, size_t chunk_size, zx_handle_t* handles) {
   zx_handle_disposition_t local_handle_disposition[kMaxMessageHandles] = {};
 
-  chunk_size = fbl::min<size_t>(chunk_size, kMaxMessageHandles);
+  chunk_size = ktl::min<size_t>(chunk_size, kMaxMessageHandles);
 
   zx_status_t status =
       user_handles.copy_array_from_user(local_handle_disposition, chunk_size, offset);

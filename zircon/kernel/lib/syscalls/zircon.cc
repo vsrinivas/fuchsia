@@ -24,6 +24,7 @@
 #include <fbl/ref_ptr.h>
 #include <kernel/auto_lock.h>
 #include <kernel/thread.h>
+#include <ktl/algorithm.h>
 #include <ktl/atomic.h>
 #include <object/event_dispatcher.h>
 #include <object/event_pair_dispatcher.h>
@@ -239,7 +240,7 @@ zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options, user_out
   if ((status = log->Read(options, buf, DLOG_MAX_RECORD, &actual)) < 0)
     return status;
 
-  const size_t to_copy = fbl::min(actual, len);
+  const size_t to_copy = ktl::min(actual, len);
   if (ptr.reinterpret<char>().copy_array_to_user(buf, to_copy) != ZX_OK)
     return ZX_ERR_INVALID_ARGS;
 

@@ -126,7 +126,7 @@ zx_status_t MBufChain::WriteDatagram(user_in_ptr<const char> src, size_t len, si
 
   size_t pos = 0;
   for (auto& buf : bufs) {
-    size_t copy_len = fbl::min(MBuf::kPayloadSize, len - pos);
+    size_t copy_len = ktl::min(MBuf::kPayloadSize, len - pos);
     if (src.byte_offset(pos).copy_array_from_user(buf.data_, copy_len) != ZX_OK) {
       while (!bufs.is_empty())
         FreeMBuf(bufs.pop_front());
@@ -172,7 +172,7 @@ zx_status_t MBufChain::WriteStream(user_in_ptr<const char> src, size_t len, size
       head_ = next;
     }
     char* dst = head_->data_ + head_->off_ + head_->len_;
-    size_t copy_len = fbl::min(head_->rem(), len - pos);
+    size_t copy_len = ktl::min(head_->rem(), len - pos);
     if (size_ + copy_len > kSizeMax) {
       copy_len = kSizeMax - size_;
       if (copy_len == 0)

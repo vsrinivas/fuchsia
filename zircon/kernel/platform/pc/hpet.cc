@@ -13,6 +13,7 @@
 #include <fbl/auto_call.h>
 #include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
+#include <ktl/algorithm.h>
 #include <ktl/limits.h>
 #include <lk/init.h>
 #include <platform/pc/hpet.h>
@@ -170,7 +171,7 @@ uint64_t hpet_get_value(void) {
    * reads the low 32-bits first, so the result is a large jump when it
    * wraps 32 bits.  To work around this, we return the lesser of two reads.
    */
-  return fbl::min(v, v2);
+  return ktl::min(v, v2);
 }
 
 zx_status_t hpet_set_value(uint64_t v) {

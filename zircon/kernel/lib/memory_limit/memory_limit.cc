@@ -17,6 +17,7 @@
 
 #include <fbl/algorithm.h>
 #include <kernel/range_check.h>
+#include <ktl/algorithm.h>
 #include <pretty/sizes.h>
 #include <vm/bootreserve.h>
 #include <vm/pmm.h>
@@ -136,7 +137,7 @@ zx_status_t memory_limit_add_range(uintptr_t range_base, size_t range_size,
       // another reservation so we know where to set our starting point for this section.
       // We can tell which one by seeing which is closest to us: the start of the range
       // being added, or the end of the last reserved space we dealt with.
-      uintptr_t start = fbl::max(range_base, prev.end);
+      uintptr_t start = ktl::max(range_base, prev.end);
       if (start == prev.end) {
         // How much room is between us and the start of the previous entry?
         size_t spare_bytes = (reserve.pa - start);
@@ -226,14 +227,14 @@ zx_status_t memory_limit_add_arenas(pmm_arena_info_t arena_template) {
     auto& entry = ReservedRegions[i];
     // Now expand based on any remaining memory we have to spare from the front
     // and back of the reserved region.
-    size_t available = fbl::min(SystemMemoryRemaining, entry.unused_front);
+    size_t available = ktl::min(SystemMemoryRemaining, entry.unused_front);
     if (available) {
       SystemMemoryRemaining -= available;
       entry.unused_front -= available;
       entry.start = PAGE_ALIGN(entry.start - available);
     }
 
-    available = fbl::min(SystemMemoryRemaining, entry.unused_back);
+    available = ktl::min(SystemMemoryRemaining, entry.unused_back);
     if (available) {
       SystemMemoryRemaining -= available;
       entry.unused_back -= available;

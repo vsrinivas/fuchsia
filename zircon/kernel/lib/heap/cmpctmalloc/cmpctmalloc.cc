@@ -16,6 +16,8 @@
 #include <zircon/errors.h>
 #include <zircon/limits.h>
 
+#include <algorithm>
+
 #include <fbl/algorithm.h>
 #include <pretty/hexdump.h>
 
@@ -872,15 +874,15 @@ NO_ASAN void* cmpct_alloc(size_t size) {
   int bucket = find_nonempty_bucket(start_bucket);
   if (bucket == -1) {
     // Grow heap by at least 12% if we can.
-    size_t growby = fbl::min(HEAP_LARGE_ALLOC_BYTES,
-                             fbl::max(theheap.size >> 3, fbl::max(HEAP_GROW_SIZE, rounded_up)));
+    size_t growby = std::min(HEAP_LARGE_ALLOC_BYTES,
+                             std::max(theheap.size >> 3, std::max(HEAP_GROW_SIZE, rounded_up)));
     // Try to add a new OS allocation to the heap, reducing the size until
     // we succeed or get too small.
     while (heap_grow(growby) < 0) {
       if (growby <= rounded_up) {
         return NULL;
       }
-      growby = fbl::max(growby >> 1, rounded_up);
+      growby = std::max(growby >> 1, rounded_up);
     }
     bucket = find_nonempty_bucket(start_bucket);
   }
@@ -931,7 +933,7 @@ NO_ASAN void* cmpct_realloc(void* payload, size_t size) {
     return NULL;
   }
 
-  memcpy(new_payload, payload, fbl::min(size, old_size));
+  memcpy(new_payload, payload, std::min(size, old_size));
   cmpct_free(payload);
   return new_payload;
 }

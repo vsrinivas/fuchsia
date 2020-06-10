@@ -24,6 +24,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
+#include <ktl/algorithm.h>
 #include <lk/init.h>
 
 // See note in //zircon/third_party/ulib/boringssl/BUILD.gn
@@ -55,7 +56,7 @@ static bool IntegrateCmdlineEntropy() {
   }
 
   const size_t kMaxEntropyArgumentLen = 128;
-  const size_t hex_len = fbl::min(strlen(entropy), kMaxEntropyArgumentLen);
+  const size_t hex_len = ktl::min(strlen(entropy), kMaxEntropyArgumentLen);
 
   for (size_t i = 0; i < hex_len; ++i) {
     if (!isxdigit(entropy[i])) {
@@ -78,7 +79,7 @@ static bool IntegrateCmdlineEntropy() {
     memcpy(const_cast<char*>(entropy) - 1, ".redacted=", sizeof(".redacted=") - 1);
   }
 
-  const size_t entropy_added = fbl::max(hex_len / 2, sizeof(digest));
+  const size_t entropy_added = ktl::max(hex_len / 2, sizeof(digest));
   LTRACEF("Collected %zu bytes of entropy from the kernel cmdline.\n", entropy_added);
   return (entropy_added >= PRNG::kMinEntropy);
 }
@@ -95,7 +96,7 @@ static bool SeedFrom(entropy::Collector* collector) {
   }
 #endif
   while (remaining > 0) {
-    size_t result = collector->DrawEntropy(buf, fbl::min(sizeof(buf), remaining));
+    size_t result = collector->DrawEntropy(buf, ktl::min(sizeof(buf), remaining));
     if (result == 0) {
       LTRACEF(
           "Collected 0 bytes; aborting. "

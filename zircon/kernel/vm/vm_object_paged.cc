@@ -18,6 +18,7 @@
 #include <arch/ops.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include <ktl/algorithm.h>
 #include <ktl/array.h>
 #include <ktl/move.h>
 #include <vm/bootreserve.h>
@@ -770,7 +771,7 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
     if (offset > size_) {
       vmo->parent_limit_ = 0;
     } else {
-      vmo->parent_limit_ = fbl::min(size, size_ - offset);
+      vmo->parent_limit_ = ktl::min(size, size_ - offset);
     }
 
     VmObjectPaged* clone_parent;
@@ -957,7 +958,7 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
       child.parent_start_limit_ = 0;
     } else {
       child.parent_limit_ = parent_limit_ - child.parent_offset_;
-      child.parent_start_limit_ = fbl::min(child.parent_start_limit_, child.parent_limit_);
+      child.parent_start_limit_ = ktl::min(child.parent_start_limit_, child.parent_limit_);
     }
   } else {
     // The child will be able to see less of its new parent than this hidden vmo was
@@ -1244,7 +1245,7 @@ uint64_t VmObjectPaged::CountAttributedAncestorPagesLocked(uint64_t offset, uint
 
     // Work out how much of the desired size is actually visible to us in the parent, we just use
     // this to walk the correct amount of the page_list_
-    const uint64_t parent_size = fbl::min(cur_size, cur->parent_limit_ - cur_offset);
+    const uint64_t parent_size = ktl::min(cur_size, cur->parent_limit_ - cur_offset);
 
     // By default we expect to process the entire range, hence our next_size is 0. Should we need to
     // iterate up the stack then these will be set by one of the callbacks.
@@ -2529,8 +2530,8 @@ void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t e
       auto parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
       AssertHeld(parent->lock_);
       parent->partial_cow_release_ = true;
-      cur_start = fbl::max(cur_start + cur->parent_offset_, parent->parent_start_limit_);
-      cur_end = fbl::min(cur_end + cur->parent_offset_, parent->parent_limit_);
+      cur_start = ktl::max(cur_start + cur->parent_offset_, parent->parent_start_limit_);
+      cur_end = ktl::min(cur_end + cur->parent_offset_, parent->parent_limit_);
       cur = parent;
     }
     skip_split_bits = false;
@@ -2602,8 +2603,8 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t ro
 
   do {
     AssertHeld(cur->lock_);
-    uint64_t start = fbl::max(cur_start, cur->parent_start_limit_);
-    uint64_t end = fbl::min(cur_end, cur->parent_limit_);
+    uint64_t start = ktl::max(cur_start, cur->parent_start_limit_);
+    uint64_t end = ktl::min(cur_end, cur->parent_limit_);
 
     // First check to see if the given range in cur even refers to ancestor pages.
     if (start < end && cur->parent_ && cur->parent_start_limit_ != cur->parent_limit_) {
@@ -2629,7 +2630,7 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t ro
           // tree to process this vmo, we won't fall into this branch since the
           // start offset will be set to head_end.
           uint64_t head_end =
-              fbl::min(other.parent_offset_ + other.parent_start_limit_, parent_range_end);
+              ktl::min(other.parent_offset_ + other.parent_start_limit_, parent_range_end);
           parent->page_list_.RemovePages(page_remover.RemovePagesCallback(), parent_range_start,
                                          head_end);
 
@@ -2653,7 +2654,7 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t ro
           continue;
         }
         // Calculate the start of the region which this vmo can see but the sibling can't.
-        tail_start = fbl::max(other.parent_offset_ + other.parent_limit_, parent_range_start);
+        tail_start = ktl::max(other.parent_offset_ + other.parent_limit_, parent_range_start);
       } else {
         // If the sibling can't access anything in the parent, the whole region
         // we're operating on is the 'tail' region.
@@ -2756,7 +2757,7 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
       // update the parent limit.
       ReleaseCowParentPagesLocked(start, end, &free_list);
     } else {
-      parent_limit_ = fbl::min(parent_limit_, s);
+      parent_limit_ = ktl::min(parent_limit_, s);
     }
     // If the tail of a parent disappears, the children shouldn't be able to see that region
     // again, even if the parent is later reenlarged. So update the child parent limits.
@@ -2794,7 +2795,7 @@ void VmObjectPaged::UpdateChildParentLimitsLocked(uint64_t new_size) {
     if (new_size < child.parent_offset_) {
       child.parent_limit_ = 0;
     } else {
-      child.parent_limit_ = fbl::min(child.parent_limit_, new_size - child.parent_offset_);
+      child.parent_limit_ = ktl::min(child.parent_limit_, new_size - child.parent_offset_);
     }
   }
 }
@@ -2838,7 +2839,7 @@ zx_status_t VmObjectPaged::ReadWriteInternalLocked(uint64_t offset, size_t len, 
   size_t dest_offset = 0;
   while (len > 0) {
     const size_t page_offset = src_offset % PAGE_SIZE;
-    const size_t tocopy = fbl::min(PAGE_SIZE - page_offset, len);
+    const size_t tocopy = ktl::min(PAGE_SIZE - page_offset, len);
 
     // fault in the page
     PageRequest page_request;

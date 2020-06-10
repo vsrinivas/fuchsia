@@ -26,6 +26,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/percpu.h>
 #include <kernel/stats.h>
+#include <ktl/algorithm.h>
 #include <platform/pc/timer.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>
@@ -929,7 +930,7 @@ static zx_status_t fetch_data(hypervisor::GuestPhysicalAddressSpace* gpas, zx_va
 
   size_t page_offset = guest_vaddr & PAGE_OFFSET_MASK_4KB;
   uint8_t* page = static_cast<uint8_t*>(paddr_to_physmap(pa));
-  size_t from_page = fbl::min(size, PAGE_SIZE - page_offset);
+  size_t from_page = ktl::min(size, PAGE_SIZE - page_offset);
   mandatory_memcpy(data, page + page_offset, from_page);
 
   // If the fetch is not split across pages, return.

@@ -500,7 +500,7 @@ zx_status_t JobDispatcher::SetTimerSlackPolicy(const zx_policy_timer_slack& poli
   };
 
   const TimerSlack old_slack = policy_.GetTimerSlack();
-  const zx_duration_t new_amount = fbl::max(old_slack.amount(), policy.min_slack);
+  const zx_duration_t new_amount = ktl::max(old_slack.amount(), policy.min_slack);
   const TimerSlack new_slack(new_amount, new_mode);
 
   policy_.SetTimerSlack(new_slack);

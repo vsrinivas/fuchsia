@@ -17,6 +17,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <ktl/algorithm.h>
 #include <object/bus_transaction_initiator_dispatcher.h>
 #include <vm/pinned_vm_object.h>
 #include <vm/vm.h>
@@ -123,7 +124,7 @@ zx_status_t PinnedMemoryTokenDispatcher::MapIntoIommu(uint32_t perms) TA_NO_THRE
     // Break the range up into chunks of length |min_contig|
     size_t mapped_remaining = mapped_len;
     while (mapped_remaining > 0) {
-      size_t addr_pages = fbl::min<size_t>(mapped_remaining, min_contig);
+      size_t addr_pages = ktl::min<size_t>(mapped_remaining, min_contig);
       mapped_addrs_[next_addr_idx] = vaddr;
       next_addr_idx++;
       vaddr += addr_pages;
@@ -131,7 +132,7 @@ zx_status_t PinnedMemoryTokenDispatcher::MapIntoIommu(uint32_t perms) TA_NO_THRE
     }
 
     curr_offset += mapped_len;
-    remaining -= fbl::min(mapped_len, remaining);
+    remaining -= ktl::min(mapped_len, remaining);
   }
   DEBUG_ASSERT(next_addr_idx == mapped_addrs_.size());
 
@@ -159,7 +160,7 @@ zx_status_t PinnedMemoryTokenDispatcher::UnmapFromIommuLocked() {
         break;
       }
 
-      size_t size = fbl::min(remaining, min_contig);
+      size_t size = ktl::min(remaining, min_contig);
       DEBUG_ASSERT(size == min_contig || i == mapped_addrs_.size() - 1);
       // Try to unmap all pages even if we get an error, and return the
       // first error encountered.

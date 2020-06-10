@@ -11,6 +11,7 @@
 
 #include <dev/hw_rng.h>
 #include <fbl/algorithm.h>
+#include <ktl/algorithm.h>
 #include <pretty/hexdump.h>
 
 static int cmd_rng32(int argc, const cmd_args* argv, uint32_t flags) {
@@ -48,7 +49,7 @@ static int cmd_rng(int argc, const cmd_args* argv, uint32_t flags) {
     uint8_t bytes[16];
     size_t todo, done;
 
-    todo = fbl::min(sizeof(bytes), argv[1].u - offset);
+    todo = ktl::min(sizeof(bytes), argv[1].u - offset);
     done = hw_rng_get_entropy(bytes, todo);
     DEBUG_ASSERT(done <= todo);
 

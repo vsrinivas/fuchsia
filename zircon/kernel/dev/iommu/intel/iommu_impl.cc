@@ -17,6 +17,7 @@
 #include <dev/interrupt.h>
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
+#include <ktl/algorithm.h>
 #include <ktl/iterator.h>
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
@@ -620,7 +621,7 @@ zx_status_t IommuImpl::WaitForValueLocked(RegType* reg,
       break;
     }
 
-    zx_time_t sleep_deadline = fbl::min(zx_time_add_duration(now, kMaxSleepDuration), deadline);
+    zx_time_t sleep_deadline = ktl::min(zx_time_add_duration(now, kMaxSleepDuration), deadline);
     Thread::Current::Sleep(sleep_deadline);
   }
   return ZX_ERR_TIMED_OUT;

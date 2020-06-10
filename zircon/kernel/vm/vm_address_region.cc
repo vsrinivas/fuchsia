@@ -16,6 +16,7 @@
 #include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
+#include <ktl/algorithm.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
@@ -588,7 +589,7 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
     vaddr_t curr_end_byte = 0;
     DEBUG_ASSERT(curr->size() > 0);
     overflowed = add_overflow(curr->base(), curr->size() - 1, &curr_end_byte);
-    op_end_byte = fbl::min(curr_end_byte, end_addr_byte);
+    op_end_byte = ktl::min(curr_end_byte, end_addr_byte);
     const uint64_t op_offset = (base - curr->base()) + vmo_offset;
     size_t op_size = 0;
     overflowed = add_overflow(op_end_byte - base, 1, &op_size);
@@ -721,8 +722,8 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
         DEBUG_ASSERT(curr->size() > 1);
         overflowed = add_overflow(curr->base(), curr->size() - 1, &curr_end_byte);
         ASSERT(!overflowed);
-        const vaddr_t unmap_base = fbl::max(curr->base(), base);
-        const vaddr_t unmap_end_byte = fbl::min(curr_end_byte, end_addr_byte);
+        const vaddr_t unmap_base = ktl::max(curr->base(), base);
+        const vaddr_t unmap_end_byte = ktl::min(curr_end_byte, end_addr_byte);
         size_t unmap_size;
         overflowed = add_overflow(unmap_end_byte - unmap_base, 1, &unmap_size);
         ASSERT(!overflowed);
@@ -871,8 +872,8 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
     vaddr_t curr_end_byte = 0;
     overflowed = add_overflow(itr->base(), itr->size() - 1, &curr_end_byte);
     ASSERT(!overflowed);
-    const vaddr_t protect_base = fbl::max(itr->base(), base);
-    const vaddr_t protect_end_byte = fbl::min(curr_end_byte, end_addr_byte);
+    const vaddr_t protect_base = ktl::max(itr->base(), base);
+    const vaddr_t protect_end_byte = ktl::min(curr_end_byte, end_addr_byte);
     size_t protect_size;
     overflowed = add_overflow(protect_end_byte - protect_base, 1, &protect_size);
     ASSERT(!overflowed);
@@ -915,7 +916,7 @@ zx_status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, ui
 
   LTRACEF_LEVEL(2, "aspace %p size 0x%zx align %hhu\n", this, size, align_pow2);
 
-  align_pow2 = fbl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
+  align_pow2 = ktl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
   const vaddr_t align = 1UL << align_pow2;
   // Ensure our candidate calculation shift will not overflow.
   const uint8_t entropy = aspace_->AslrEntropyBits(flags_ & VMAR_FLAG_COMPACT);

@@ -14,6 +14,7 @@
 #include <fbl/auto_lock.h>
 #include <kernel/scheduler.h>
 #include <kernel/wait_queue_internal.h>
+#include <ktl/algorithm.h>
 #include <ktl/popcount.h>
 #include <ktl/type_traits.h>
 
@@ -315,7 +316,7 @@ bool OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
         // our original new priority to be greater than the priority of
         // any of the queues currently owned by this thread.
         DEBUG_ASSERT(orig_new_prio <= queue_prio);
-        new_prio = fbl::max(new_prio, queue_prio);
+        new_prio = ktl::max(new_prio, queue_prio);
       }
 
       // If our calculated new priority is still the same as our current

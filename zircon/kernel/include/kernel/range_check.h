@@ -9,6 +9,7 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_RANGE_CHECK_H_
 
 #include <fbl/algorithm.h>
+#include <ktl/algorithm.h>
 #include <ktl/limits.h>
 
 // Is the range [offset, offset + len] fully inside the range [0, max] ?
@@ -108,12 +109,12 @@ static inline bool GetIntersect(O offset1, L len1, O offset2, L len2, O* offset_
   if (offset1 < offset2) {
     // range 1 starts lower then range 2, but must extend into it or across it
     *offset_out = offset2;
-    *len_out = fbl::min((offset1 + len1) - offset2, len2);
+    *len_out = ktl::min((offset1 + len1) - offset2, len2);
   } else {  // (offset2 <= offset1)
     // range 2 starts lower then range 1, but must extend into it or across it
     // also range 1 and two may start at the same address
     *offset_out = offset1;
-    *len_out = fbl::min((offset2 + len2) - offset1, len1);
+    *len_out = ktl::min((offset2 + len2) - offset1, len1);
   }
 
   return true;

@@ -13,6 +13,7 @@
 
 #include <fbl/auto_call.h>
 #include <kernel/range_check.h>
+#include <ktl/algorithm.h>
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
 #include <vm/vm.h>
@@ -259,7 +260,7 @@ zx_status_t DeviceContext::SecondLevelMapDiscontiguous(const fbl::RefPtr<VmObjec
 
   while (remaining > 0) {
     const size_t kNumEntriesPerLookup = 32;
-    size_t chunk_size = fbl::min(remaining, kNumEntriesPerLookup * PAGE_SIZE);
+    size_t chunk_size = ktl::min(remaining, kNumEntriesPerLookup * PAGE_SIZE);
     paddr_t paddrs[kNumEntriesPerLookup] = {};
     status = vmo->Lookup(offset, chunk_size, lookup_fn, &paddrs);
     if (status != ZX_OK) {
@@ -424,7 +425,7 @@ zx_status_t DeviceContext::SecondLevelUnmap(paddr_t virt_paddr, size_t size) {
 
 void DeviceContext::SecondLevelUnmapAllLocked() {
   while (allocated_regions_.size() > 0) {
-    auto &region = allocated_regions_[allocated_regions_.size() - 1];
+    auto& region = allocated_regions_[allocated_regions_.size() - 1];
     zx_status_t status = SecondLevelUnmap(region->base, region->size);
     // SecondLevelUnmap only fails on invalid inputs, and our inputs would only be invalid if our
     // internals are corrupt.

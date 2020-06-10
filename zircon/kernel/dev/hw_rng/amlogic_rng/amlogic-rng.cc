@@ -12,6 +12,7 @@
 #include <explicit-memory/bytes.h>
 #include <fbl/algorithm.h>
 #include <kernel/thread.h>
+#include <ktl/algorithm.h>
 #include <pdev/driver.h>
 
 // Mask for the bit indicating RNG status.
@@ -53,7 +54,7 @@ static size_t amlogic_hw_rng_get_entropy(void* buf, size_t len) {
     uint32_t read_buf = readl(rng_data);
     static_assert(sizeof(read_buf) == kRngDrawSize);
 
-    size_t read_size = fbl::min(len, kRngDrawSize);
+    size_t read_size = ktl::min(len, kRngDrawSize);
     memcpy(dest + total_read, &read_buf, read_size);
     mandatory_memset(&read_buf, 0, sizeof(read_buf));
 

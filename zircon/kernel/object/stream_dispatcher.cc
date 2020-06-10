@@ -10,6 +10,7 @@
 #include <zircon/rights.h>
 
 #include <fbl/alloc_checker.h>
+#include <ktl/algorithm.h>
 
 KCOUNTER(dispatcher_stream_create_count, "dispatcher.stream.create")
 KCOUNTER(dispatcher_stream_destroy_count, "dispatcher.stream.destroy")
@@ -71,7 +72,7 @@ zx_status_t StreamDispatcher::ReadVector(VmAspace* current_aspace, user_out_iove
     }
 
     offset = seek_;
-    length = fbl::min(total_capacity, content_size - offset);
+    length = ktl::min(total_capacity, content_size - offset);
     seek_ += length;
   }
 
@@ -95,7 +96,7 @@ zx_status_t StreamDispatcher::ReadVectorAt(VmAspace* current_aspace, user_out_io
     return ZX_OK;
   }
 
-  size_t length = fbl::min(total_capacity, content_size - offset);
+  size_t length = ktl::min(total_capacity, content_size - offset);
 
   *out_actual = length;
   return vmo_->ReadVector(current_aspace, user_data, length, offset);
@@ -128,7 +129,7 @@ zx_status_t StreamDispatcher::WriteVector(VmAspace* current_aspace, user_in_iove
     }
 
     offset = seek_;
-    length = fbl::min(total_capacity, content_size - offset);
+    length = ktl::min(total_capacity, content_size - offset);
     seek_ += length;
   }
 
@@ -156,7 +157,7 @@ zx_status_t StreamDispatcher::WriteVectorAt(VmAspace* current_aspace, user_in_io
     return ZX_ERR_NO_SPACE;
   }
 
-  size_t length = fbl::min(total_capacity, content_size - offset);
+  size_t length = ktl::min(total_capacity, content_size - offset);
 
   *out_actual = length;
   return vmo_->WriteVector(current_aspace, user_data, length, offset);
@@ -190,7 +191,7 @@ zx_status_t StreamDispatcher::AppendVector(VmAspace* current_aspace, user_in_iov
       return ZX_ERR_NO_SPACE;
     }
 
-    length = fbl::min(total_capacity, content_size - offset);
+    length = ktl::min(total_capacity, content_size - offset);
     seek_ = offset + length;
   }
 

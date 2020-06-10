@@ -14,6 +14,7 @@
 #include <arch/x86/page_tables/page_tables.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
+#include <ktl/algorithm.h>
 #include <ktl/iterator.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
@@ -638,7 +639,7 @@ zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_fl
         if (m == nullptr) {
           // The mapping wasn't fully updated, but there is work here
           // that might need to be undone.
-          size_t partial_update = fbl::min(ps, new_cursor->size);
+          size_t partial_update = ktl::min(ps, new_cursor->size);
           new_cursor->paddr += partial_update;
           new_cursor->vaddr += partial_update;
           new_cursor->size -= partial_update;
