@@ -52,6 +52,8 @@ class Encoder final {
 
   std::vector<uint8_t> bytes_;
   std::vector<zx_handle_t> handles_;
+
+  static const size_t kMinAllocSize;
 };
 
 }  // namespace fidl

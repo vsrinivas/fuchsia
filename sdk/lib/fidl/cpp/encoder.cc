@@ -22,10 +22,13 @@ Encoder::Encoder(uint64_t ordinal) { EncodeMessageHeader(ordinal); }
 
 Encoder::~Encoder() = default;
 
+const size_t Encoder::kMinAllocSize = 512;
+
 size_t Encoder::Alloc(size_t size) {
   size_t offset = bytes_.size();
   size_t new_size = bytes_.size() + Align(size);
   ZX_ASSERT(new_size >= offset);
+  bytes_.reserve(std::max(kMinAllocSize, new_size));
   bytes_.resize(new_size);
   return offset;
 }
