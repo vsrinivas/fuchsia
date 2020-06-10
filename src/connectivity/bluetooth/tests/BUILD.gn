@@ -24,7 +24,12 @@ test_package("tests") {
     {
       name = "bt_integration_tests"
       dest = "bt-integration-tests"
-      environments = basic_envs
+      environments = [{
+        dimensions = {
+          device_type = "QEMU"
+        }
+        tags = [ "flaky" ] # fxb/49570
+      }]
     },
     {
       name = "bt-lib-fidl-unittests"
