@@ -3,17 +3,19 @@
 
 #include "usb_bus.h"
 
-#include <algorithm>
-
-#include <ddk/debug.h>
-#include <ddk/protocol/usb.h>
-#include <fbl/algorithm.h>
 #include <lib/zx/time.h>
-#include <usb/usb.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/hw/usb.h>
 #include <zircon/status.h>
+
+#include <algorithm>
+#include <iterator>
+
+#include <ddk/debug.h>
+#include <ddk/protocol/usb.h>
+#include <fbl/algorithm.h>
+#include <usb/usb.h>
 
 #include "rtl88xx_registers.h"
 
@@ -79,7 +81,7 @@ zx_status_t UsbBus::Create(usb_protocol_t* usb_protocol,
                            std::unique_ptr<Bus>* bus) {
   zx_status_t status = ZX_OK;
 
-#if 0   // TODO(sheu): re-enable when Zircon control endpoint stalls are fixed.
+#if 0  // TODO(sheu): re-enable when Zircon control endpoint stalls are fixed.
     status = usb_set_interface(usb_protocol, usb_iface_desc.bInterfaceNumber,
                                usb_iface_desc.bAlternateSetting);
     if (status != ZX_OK) {
@@ -281,7 +283,7 @@ zx_status_t CreateUsbBus(zx_device_t* bus_device, std::unique_ptr<Bus>* bus) {
                                   &actual_buflen) != ZX_OK) {
       actual_buflen = 0;
     }
-    id_buf[std::min(actual_buflen, fbl::count_of(id_buf) - 1)] = '\0';
+    id_buf[std::min(actual_buflen, std::size(id_buf) - 1)] = '\0';
     zxlogf(INFO,
            "rtl88xx: CreateUsbBus() vid=%04x pid=%04x interface=%d alternate=%d class=%d "
            "subclass=%d protocol=%d id=\"%s\"\n",

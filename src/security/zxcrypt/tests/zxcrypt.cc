@@ -14,6 +14,7 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <iterator>
 #include <memory>
 
 #include <crypto/bytes.h>
@@ -142,10 +143,10 @@ bool QueryLeadingFvmSlice(const TestDevice& device, bool fvm) {
   size_t actual_parent_ranges_count, actual_zxcrypt_ranges_count;
   zx_status_t parent_io_status, zxcrypt_io_status, parent_status, zxcrypt_status;
   parent_io_status = fuchsia_hardware_block_volume_VolumeQuerySlices(
-      parent->get(), start_slices, fbl::count_of(start_slices), &parent_status, parent_ranges,
+      parent->get(), start_slices, std::size(start_slices), &parent_status, parent_ranges,
       &actual_parent_ranges_count);
   zxcrypt_io_status = fuchsia_hardware_block_volume_VolumeQuerySlices(
-      zxcrypt->get(), start_slices, fbl::count_of(start_slices), &zxcrypt_status, zxcrypt_ranges,
+      zxcrypt->get(), start_slices, std::size(start_slices), &zxcrypt_status, zxcrypt_ranges,
       &actual_zxcrypt_ranges_count);
 
   if (fvm) {
@@ -527,7 +528,7 @@ bool TestVmoManyToOne(Volume::Version version, bool fvm) {
 DEFINE_EACH_DEVICE(TestVmoManyToOne)
 
 // Disabled (See fxb/31974)
-//bool TestVmoStall(Volume::Version version, bool fvm) {
+// bool TestVmoStall(Volume::Version version, bool fvm) {
 //  BEGIN_TEST;
 //  TestDevice device;
 //  ASSERT_TRUE(device.SetupDevmgr());
@@ -559,7 +560,7 @@ DEFINE_EACH_DEVICE(TestVmoManyToOne)
 //
 //  END_TEST;
 //}
-//DEFINE_EACH_DEVICE(TestVmoStall)
+// DEFINE_EACH_DEVICE(TestVmoStall)
 
 bool TestWriteAfterFvmExtend(Volume::Version version) {
   BEGIN_TEST;

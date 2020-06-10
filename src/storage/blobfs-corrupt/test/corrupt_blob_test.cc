@@ -4,6 +4,8 @@
 
 #include "corrupt_blob.h"
 
+#include <iterator>
+
 #include <blobfs/format.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
@@ -91,7 +93,7 @@ void MockBlockDevice::WriteBlock(uint64_t block_num, uint64_t fs_block_size, con
   requests[1].opcode = BLOCKIO_CLOSE_VMO;
   requests[1].vmoid = vmoid.TakeId();
 
-  ASSERT_OK(FifoTransaction(requests, fbl::count_of(requests)));
+  ASSERT_OK(FifoTransaction(requests, std::size(requests)));
 }
 
 std::unique_ptr<MockBlockDevice> CreateAndFormatDevice() {

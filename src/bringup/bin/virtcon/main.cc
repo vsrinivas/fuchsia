@@ -29,6 +29,7 @@
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/object.h>
 
+#include <iterator>
 #include <memory>
 #include <utility>
 
@@ -62,7 +63,7 @@ static zx_status_t launch_shell(vc_t* vc, int fd, const char* cmd) {
 
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], argv, nullptr,
-                                      fbl::count_of(actions), actions, &vc->proc, err_msg);
+                                      std::size(actions), actions, &vc->proc, err_msg);
   if (status != ZX_OK) {
     printf("vc: cannot spawn shell: %s: %d (%s)\n", err_msg, status, zx_status_get_string(status));
   }

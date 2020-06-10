@@ -3233,7 +3233,7 @@ static uint8_t ralink_mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, 
   uint8_t rate_tbl_idx = 255;  // Init with invalid idx.
   uint8_t nss = 1;             // Minimum NSS
 
-  if (phy_mode >= fbl::count_of(kDataRates)) {
+  if (phy_mode >= std::size(kDataRates)) {
     return rate;
   }
 
@@ -3261,8 +3261,8 @@ static uint8_t ralink_mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, 
         // 40MHz, ShortGuardInterval case: HT duplicate 6 Mbps.
         rate_tbl_idx = 0;
       } else if (mcs < kHtDuplicateMcs) {
-        rate_tbl_idx = mcs % fbl::count_of(kDataRates[0]);
-        nss = 1 + mcs / fbl::count_of(kDataRates[0]);
+        rate_tbl_idx = mcs % std::size(kDataRates[0]);
+        nss = 1 + mcs / std::size(kDataRates[0]);
       } else {
         rate_tbl_idx = mcs;
       }
@@ -3273,7 +3273,7 @@ static uint8_t ralink_mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, 
       return rate;
   }
 
-  if (rate_tbl_idx >= fbl::count_of(kDataRates[0])) {
+  if (rate_tbl_idx >= std::size(kDataRates[0])) {
     warnf("ralink: illegal rate_tbl_idx %u for phy %u mcs %u is_40mhz %u is_sgi %u\n", rate_tbl_idx,
           phy_mode, mcs, is_40mhz, is_sgi);
     return rate;

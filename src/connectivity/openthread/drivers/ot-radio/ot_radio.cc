@@ -17,6 +17,7 @@
 #include <zircon/time.h>
 
 #include <iostream>
+#include <iterator>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -190,8 +191,8 @@ zx_status_t OtRadioDevice::Init() {
 
   zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_fragments(&composite, fragments, fbl::count_of(fragments), &actual);
-  if (actual != fbl::count_of(fragments)) {
+  composite_get_fragments(&composite, fragments, std::size(fragments), &actual);
+  if (actual != std::size(fragments)) {
     zxlogf(ERROR, "could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }

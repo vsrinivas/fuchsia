@@ -16,6 +16,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <iterator>
+
 #include <fs/vfs.h>
 #include <loader-service/loader-service.h>
 
@@ -89,7 +91,7 @@ class FsManager {
 
   static constexpr const char* kMountPoints[] = {"/bin",     "/data", "/volume", "/system",
                                                  "/install", "/blob", "/pkgfs"};
-  fbl::RefPtr<fs::Vnode> mount_nodes[fbl::count_of(kMountPoints)];
+  fbl::RefPtr<fs::Vnode> mount_nodes[std::size(kMountPoints)];
 
   // The Root VFS manages the following filesystems:
   // - The global root filesystem (including the mount points)

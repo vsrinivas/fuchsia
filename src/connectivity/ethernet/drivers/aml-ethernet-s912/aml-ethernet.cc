@@ -10,6 +10,8 @@
 #include <string.h>
 #include <zircon/compiler.h>
 
+#include <iterator>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
@@ -53,11 +55,11 @@ zx_status_t AmlEthernet::InitPdev() {
 
   zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_fragments(&composite, fragments, fbl::count_of(fragments), &actual);
-  if (actual == fbl::count_of(fragments)) {
+  composite_get_fragments(&composite, fragments, std::size(fragments), &actual);
+  if (actual == std::size(fragments)) {
     has_reset_ = true;
   } else {
-    if (actual == (fbl::count_of(fragments) - 1)) {
+    if (actual == (std::size(fragments) - 1)) {
       has_reset_ = false;
     } else {
       zxlogf(ERROR, "could not get fragments");
@@ -159,7 +161,7 @@ zx_status_t AmlEthernet::Bind() {
       {BIND_PLATFORM_DEV_DID, 0, mac_info.did},
   };
 
-  return DdkAdd("aml-ethernet", 0, props, fbl::count_of(props));
+  return DdkAdd("aml-ethernet", 0, props, std::size(props));
 }
 
 void AmlEthernet::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }

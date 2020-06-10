@@ -21,6 +21,7 @@
 #include <zircon/threads.h>
 #include <zircon/types.h>
 
+#include <iterator>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -123,7 +124,7 @@ static zx_status_t parse_input_report_type(const char* arg,
       {.name = "feature", .type = llcpp::fuchsia::hardware::input::ReportType::FEATURE},
   };
 
-  for (size_t i = 0; i < fbl::count_of(LUT); ++i) {
+  for (size_t i = 0; i < std::size(LUT); ++i) {
     if (!strcasecmp(arg, LUT[i].name)) {
       *out_type = LUT[i].type;
       return ZX_OK;

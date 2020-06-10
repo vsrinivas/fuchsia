@@ -7,6 +7,8 @@
 #include <lib/zx/socket.h>
 #include <string.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <virtio/wl.h>
 
@@ -416,13 +418,13 @@ TEST_F(VirtioWlTest, Recv) {
   uint32_t data = 1234u;
   zx_handle_t handles[] = {vmo.release(), remote_socket.release()};
   ASSERT_EQ(
-      zx_channel_write(channels_[0].get(), 0, &data, sizeof(data), handles, fbl::count_of(handles)),
+      zx_channel_write(channels_[0].get(), 0, &data, sizeof(data), handles, std::size(handles)),
       ZX_OK);
   RunLoopUntilIdle();
 
   virtio_wl_ctrl_vfd_new_t* new_vfd_cmd[2];
   size_t buffer_size =
-      sizeof(virtio_wl_ctrl_vfd_recv_t) + sizeof(uint32_t) * fbl::count_of(handles) + sizeof(data);
+      sizeof(virtio_wl_ctrl_vfd_recv_t) + sizeof(uint32_t) * std::size(handles) + sizeof(data);
   uint8_t* buffer;
   uint16_t descriptor_id[3];
   ASSERT_EQ(DescriptorChainBuilder(in_queue_)
@@ -486,7 +488,7 @@ TEST_F(VirtioWlTest, Recv) {
   EXPECT_EQ(header->vfd_count, 2u);
   EXPECT_EQ(vfds[0], static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE));
   EXPECT_EQ(vfds[1], static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE + 1));
-  EXPECT_EQ(*reinterpret_cast<uint32_t*>(vfds + fbl::count_of(handles)), 1234u);
+  EXPECT_EQ(*reinterpret_cast<uint32_t*>(vfds + std::size(handles)), 1234u);
 
   {  // Check that closing shared memory works as expected.
     uint16_t descriptor_id;

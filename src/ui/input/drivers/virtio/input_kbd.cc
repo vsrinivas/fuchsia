@@ -4,6 +4,8 @@
 
 #include <zircon/status.h>
 
+#include <iterator>
+
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
 
@@ -199,7 +201,7 @@ void HidKeyboard::ReceiveEvent(virtio_input_event_t* event) {
   if (event->code == 0) {
     return;
   }
-  if (event->code >= fbl::count_of(kEventCodeMap)) {
+  if (event->code >= std::size(kEventCodeMap)) {
     LTRACEF("unknown key\n");
     return;
   }

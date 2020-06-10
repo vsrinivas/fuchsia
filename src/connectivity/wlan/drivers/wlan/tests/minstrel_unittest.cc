@@ -4,11 +4,14 @@
 
 #include "../minstrel.h"
 
+#include <lib/timekeeper/test_clock.h>
+#include <test_timer.h>
+
+#include <iterator>
+
 #include <ddk/protocol/wlan/info.h>
 #include <fbl/algorithm.h>
 #include <gtest/gtest.h>
-#include <lib/timekeeper/test_clock.h>
-#include <test_timer.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/timer_manager.h>
 
@@ -284,7 +287,7 @@ TEST_F(MinstrelTest, DataFramesEligibleForProbing) {
 
   FrameControl fc;
   fc.set_type(FrameType::kData);
-  for (tx_vec_idx_t i = 0; i < kProbeInterval * fbl::count_of(want_probe_idx_); ++i) {
+  for (tx_vec_idx_t i = 0; i < kProbeInterval * std::size(want_probe_idx_); ++i) {
     const tx_vec_idx_t idx = minstrel_.GetTxVectorIdx(fc, kTestMacAddr, 0);
     if (i % kProbeInterval == kProbeInterval - 1) {
       tx_vec_idx_t want = want_probe_idx_[(i + 1) / kProbeInterval - 1];

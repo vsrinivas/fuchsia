@@ -23,6 +23,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <iterator>
 #include <memory>
 #include <string_view>
 #include <utility>
@@ -193,7 +194,7 @@ zx_status_t FsManager::Initialize() {
   if ((status = global_root_->Create(&vn, "tmp", S_IFDIR)) != ZX_OK) {
     return status;
   }
-  for (unsigned n = 0; n < fbl::count_of(kMountPoints); n++) {
+  for (unsigned n = 0; n < std::size(kMountPoints); n++) {
     auto open_result = root_vfs_->Open(global_root_, std::string_view(kMountPoints[n]),
                                        fs::VnodeConnectionOptions::ReadWrite().set_create(),
                                        fs::Rights::ReadWrite(), S_IFDIR);
@@ -218,7 +219,7 @@ zx_status_t FsManager::Initialize() {
 void FsManager::FlushMetrics() { mutable_metrics()->FlushUntilSuccess(global_loop_->dispatcher()); }
 
 zx_status_t FsManager::InstallFs(const char* path, zx::channel h) {
-  for (unsigned n = 0; n < fbl::count_of(kMountPoints); n++) {
+  for (unsigned n = 0; n < std::size(kMountPoints); n++) {
     if (!strcmp(path, kMountPoints[n])) {
       return root_vfs_->InstallRemote(mount_nodes[n], fs::MountChannel(std::move(h)));
     }

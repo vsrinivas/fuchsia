@@ -4,6 +4,7 @@
 
 #include "ddk/phys-iter.h"
 
+#include <iterator>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -23,7 +24,7 @@ TEST(PhyIterTests, SimpleIterationTest) {
 
   const phys_iter_buffer_t kIterBuffer = {
       .phys = kPhysList,
-      .phys_count = fbl::count_of(kPhysList),
+      .phys_count = std::size(kPhysList),
       .length = ZX_PAGE_SIZE,
       .vmo_offset = 0,
       .sg_list = nullptr,
@@ -61,7 +62,7 @@ TEST(PhyIterTests, ContiguousTest) {
 
   const phys_iter_buffer_t kIterBuffer = {
       .phys = kPhysList,
-      .phys_count = fbl::count_of(kPhysList),
+      .phys_count = std::size(kPhysList),
       .length = 4 * ZX_PAGE_SIZE,
       .vmo_offset = 0,
       .sg_list = nullptr,
@@ -91,7 +92,7 @@ TEST(PhyIterTests, DiscontiguousTest) {
 
   const phys_iter_buffer_t kIterBuffer = {
       .phys = kPhysList,
-      .phys_count = fbl::count_of(kPhysList),
+      .phys_count = std::size(kPhysList),
       .length = 4 * ZX_PAGE_SIZE,
       .vmo_offset = 0,
       .sg_list = nullptr,
@@ -137,7 +138,7 @@ TEST(PhyIterTests, UnalignedTest) {
 
   const phys_iter_buffer_t kIterBuffer = {
       .phys = kPhysList,
-      .phys_count = fbl::count_of(kPhysList),
+      .phys_count = std::size(kPhysList),
       .length = 2 * ZX_PAGE_SIZE - 7,
       .vmo_offset = 7,
       .sg_list = nullptr,
@@ -187,11 +188,11 @@ TEST(PhyIterTests, ScatterGatherTest) {
 
   const phys_iter_buffer_t kIterBuffer = {
       .phys = kPhysList,
-      .phys_count = fbl::count_of(kPhysList),
+      .phys_count = std::size(kPhysList),
       .length = 0,
       .vmo_offset = 0,
       .sg_list = kScatterGatherList,
-      .sg_count = fbl::count_of(kScatterGatherList),
+      .sg_count = std::size(kScatterGatherList),
   };
 
   ddk::PhysIter phys_iter(kIterBuffer, 0);
