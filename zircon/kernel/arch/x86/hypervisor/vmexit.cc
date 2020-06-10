@@ -316,8 +316,10 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
           // MSRs, which are not implemented.
           guest_state->rdx &= ~(1u << X86_FEATURE_IBRS_IBPB.bit | 1u << X86_FEATURE_STIBP.bit |
                                 1u << X86_FEATURE_SSBD.bit);
-          // Disable support of IA32_ARCH_CAPABILITIES MSR.
+          // Disable support for the IA32_ARCH_CAPABILITIES MSR.
           guest_state->rdx &= ~(1u << X86_FEATURE_ARCH_CAPABILITIES.bit);
+          // Disable support for the IA32_FLUSH_CMD MSR.
+          guest_state->rdx &= ~(1u << X86_FEATURE_L1D_FLUSH.bit);
           break;
       }
       return ZX_OK;
