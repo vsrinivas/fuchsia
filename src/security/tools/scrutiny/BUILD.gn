@@ -52,5 +52,8 @@ group("scrutiny") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":lib_test($host_toolchain)" ]
+  public_deps = [
+    ":lib_test($host_toolchain)",
+    "//src/security/tools/scrutiny/plugins/components:tests",
+  ]
 }
