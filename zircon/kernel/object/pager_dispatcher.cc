@@ -4,9 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/cmdline.h>
 #include <lib/counters.h>
 #include <trace.h>
 
+#include <lk/init.h>
 #include <object/pager_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <vm/page_source.h>
@@ -15,6 +17,10 @@
 
 KCOUNTER(dispatcher_pager_create_count, "dispatcher.pager.create")
 KCOUNTER(dispatcher_pager_destroy_count, "dispatcher.pager.destroy")
+KCOUNTER(dispatcher_pager_overtime_wait_count, "dispatcher.pager.overtime_waits")
+
+static constexpr uint64_t kDefaultPagerOvertimeSeconds = 20;
+static uint64_t pager_overtime_wait_seconds = kDefaultPagerOvertimeSeconds;
 
 zx_status_t PagerDispatcher::Create(KernelHandle<PagerDispatcher>* handle, zx_rights_t* rights) {
   fbl::AllocChecker ac;
@@ -250,5 +256,43 @@ void PagerSource::OnPacketFreedLocked() {
 
 zx_status_t PagerSource::WaitOnEvent(Event* event) {
   ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::PAGER);
-  return event->Wait(Deadline::infinite());
+  uint32_t waited = 0;
+  // declare a lambda to calculate our deadline to avoid an excessively large statement in our
+  // loop condition.
+  auto make_deadline = []() {
+    if (pager_overtime_wait_seconds == 0) {
+      return Deadline::infinite();
+    } else {
+      return Deadline(zx_time_add_duration(current_time(), ZX_SEC(pager_overtime_wait_seconds)),
+                      TimerSlack::none());
+    }
+  };
+  zx_status_t result;
+  while ((result = event->Wait(make_deadline())) == ZX_ERR_TIMED_OUT) {
+    waited++;
+    // We might trigger this loop multiple times as we exceed multiples of the overtime counter, but
+    // we only want to count each unique overtime event in the kcounter.
+    if (waited == 1) {
+      dispatcher_pager_overtime_wait_count.Add(1);
+    }
+    // Determine whether we have any requests that have not yet been received off of the port.
+    bool active;
+    {
+      Guard<Mutex> guard{&mtx_};
+      active = !!active_request_;
+    }
+    printf("WARNING pager source %p has been blocked for %" PRIu64
+           " seconds with%s message waiting on port.\n",
+           this, waited * pager_overtime_wait_seconds, active ? "" : " no");
+    // Dump out the rest of the state of the oustanding requests.
+    Dump();
+  }
+  return result;
 }
+
+static void pager_init_func(uint level) {
+  pager_overtime_wait_seconds =
+      gCmdline.GetUInt64("kernel.userpager.overtime_wait_seconds", kDefaultPagerOvertimeSeconds);
+}
+
+LK_INIT_HOOK(pager_init, &pager_init_func, LK_INIT_LEVEL_LAST)

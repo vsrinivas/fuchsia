@@ -467,6 +467,13 @@ This option, false by default, allows for the scanner to evict user pager backed
 pages. Eviction can reduce memory usage, but removes predictability from system
 behavior.
 
+## kernel.userpager.overtime_wait_seconds=\<num>
+
+This option, 20 by default, configures how long a user pager fault may block
+before being considered overtime and triggering an action. Current action is to
+print an information message to the debuglog and continue to wait. A value of 0
+indicates a wait is never considered to be overtime.
+
 ## kernel.x86.disable_spec_mitigations=\<bool>
 
 If set, disable all speculative execution information leak mitigations.
