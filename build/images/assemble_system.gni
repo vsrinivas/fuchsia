@@ -362,6 +362,8 @@ template("assemble_system") {
                            [
                              "cmdline",
                              "cmdline_inputs",
+                             "testonly",
+                             "visibility",
                            ])
 
     testonly = true
