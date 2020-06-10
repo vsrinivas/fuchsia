@@ -2,50 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test.gni")
-import("//build/test/test_package.gni")
-
-###############################################################################
-# GROUPS
-###############################################################################
-group("tests") {
-  testonly = true
-
-  public_deps = [
-    ":bugreport-tests",
-
-    # Packages for the components that we are injecting in the integration tests.
-    "//src/developer/feedback/testing/fakes:fake-data-provider",
-  ]
-}
-
-###############################################################################
-# PACKAGES
-###############################################################################
-test_package("bugreport-tests") {
-  tests = [
-    {
-      name = "bugreport_integration_test"
-    },
-    {
-      name = "bugreport_unittest"
-    },
-    {
-      name = "command_line_options_unittest"
-    },
-  ]
-
-  deps = [
-    ":bugreport_integration_test",
-    ":bugreport_unittest",
-    ":command_line_options_unittest",
-  ]
-}
+import("//src/sys/build/components.gni")
 
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
-executable("bugreport_integration_test") {
+executable("bugreport_integration_test_exe") {
   testonly = true
 
   sources = [ "bug_reporter_integration_test.cc" ]
@@ -61,7 +23,7 @@ executable("bugreport_integration_test") {
   ]
 }
 
-executable("bugreport_unittest") {
+executable("bugreport_unittest_exe") {
   testonly = true
 
   sources = [ "bug_reporter_unittest.cc" ]
@@ -83,7 +45,7 @@ executable("bugreport_unittest") {
   ]
 }
 
-executable("command_line_options_unittest") {
+executable("command_line_options_unittest_exe") {
   testonly = true
 
   sources = [ "command_line_options_unittest.cc" ]
@@ -92,5 +54,57 @@ executable("command_line_options_unittest") {
     "//src/developer/feedback/bugreport:command_line_options",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
+  ]
+}
+
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_component("bugreport_integration_test") {
+  testonly = true
+
+  manifest = "meta/bugreport_integration_test.cmx"
+
+  deps = [ ":bugreport_integration_test_exe" ]
+}
+
+fuchsia_component("bugreport_unittest") {
+  testonly = true
+
+  manifest = "meta/bugreport_unittest.cmx"
+
+  deps = [ ":bugreport_unittest_exe" ]
+}
+
+fuchsia_component("command_line_options_unittest") {
+  testonly = true
+
+  manifest = "meta/command_line_options_unittest.cmx"
+
+  deps = [ ":command_line_options_unittest_exe" ]
+}
+
+###############################################################################
+# PACKAGES
+###############################################################################
+fuchsia_test_package("bugreport-tests") {
+  test_components = [
+    ":bugreport_integration_test",
+    ":bugreport_unittest",
+    ":command_line_options_unittest",
+  ]
+}
+
+###############################################################################
+# GROUPS
+###############################################################################
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":bugreport-tests",
+
+    # Packages for the components that we are injecting in the integration tests.
+    "//src/developer/feedback/testing/fakes:fake-data-provider",
   ]
 }

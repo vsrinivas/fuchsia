@@ -1,5 +1,5 @@
 {
     "program": {
-        "binary": "test/caching_ptr_unittest"
+        "binary": "bin/caching_ptr_unittest_exe"
     }
 }

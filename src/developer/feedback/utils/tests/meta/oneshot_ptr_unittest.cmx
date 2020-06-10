@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/oneshot_ptr_unittest"
+        "binary": "bin/oneshot_ptr_unittest_exe"
     },
     "sandbox": {
         "services": [

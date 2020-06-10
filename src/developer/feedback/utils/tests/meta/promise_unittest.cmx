@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/promise_unittest"
+        "binary": "bin/promise_unittest_exe"
     },
     "sandbox": {
         "services": [

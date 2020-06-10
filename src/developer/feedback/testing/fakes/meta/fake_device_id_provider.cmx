@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/fake_device_id_provider_exe"
     },
     "sandbox": {
         "services": [

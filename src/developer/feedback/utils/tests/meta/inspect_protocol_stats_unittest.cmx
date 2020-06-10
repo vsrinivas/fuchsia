@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/inspect_protocol_stats_unittest"
+        "binary": "bin/inspect_protocol_stats_unittest_exe"
     },
     "sandbox": {
         "services": [

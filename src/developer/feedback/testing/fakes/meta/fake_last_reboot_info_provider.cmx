@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/fake_last_reboot_info_provider"
+        "binary": "bin/fake_last_reboot_info_provider_exe"
     },
     "sandbox": {
         "services": [

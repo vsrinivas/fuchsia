@@ -2,84 +2,73 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 visibility = [ "//src/developer/feedback/*" ]
 
 ###############################################################################
 # PACKAGES
 ###############################################################################
-package("fake-crash-reporter") {
-  binary = "fake_crash_reporter"
+fuchsia_package("fake-crash-reporter") {
+  testonly = true
 
-  meta = [
-    {
-      path = "meta/fake_crash_reporter.cmx"
-      dest = "fake_crash_reporter.cmx"
-    },
-  ]
-
-  deps = [ ":crash_reporter_main" ]
+  deps = [ ":fake_crash_reporter" ]
 
   visibility += [ "//src/developer/exception_broker/tests" ]
 }
 
-package("fake-data-provider") {
-  binary = "fake_data_provider"
+fuchsia_package("fake-data-provider") {
+  testonly = true
 
-  meta = [
-    {
-      path = "meta/fake_data_provider.cmx"
-      dest = "fake_data_provider.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = "//src/developer/feedback/testing/resources/checkerboard_100.png"
-      dest = "checkboard_100.png"
-    },
-  ]
-
-  deps = [ ":data_provider_main" ]
+  deps = [ ":fake_data_provider" ]
 }
 
-package("fake-device-id-provider") {
-  binary = "fake_device_id_provider"
+fuchsia_package("fake-device-id-provider") {
+  testonly = true
 
-  meta = [
-    {
-      path = "meta/fake_device_id_provider.cmx"
-      dest = "fake_device_id_provider.cmx"
-    },
-  ]
-
-  deps = [ ":device_id_provider_main" ]
+  deps = [ ":fake_device_id_provider" ]
 }
 
-package("fake-last-reboot-info-provider") {
-  binaries = [
-    {
-      name = "fake_last_reboot_info_provider"
-    },
-  ]
+fuchsia_package("fake-last-reboot-info-provider") {
+  testonly = true
 
-  meta = [
-    {
-      path = "meta/fake_last_reboot_info_provider.cmx"
-      dest = "fake_last_reboot_info_provider.cmx"
-    },
-  ]
+  deps = [ ":fake_last_reboot_info_provider" ]
+}
 
-  deps = [ ":last_reboot_info_provider_main" ]
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_component("fake_crash_reporter") {
+  manifest = "meta/fake_crash_reporter.cmx"
+
+  deps = [ ":fake_crash_reporter_exe" ]
+}
+
+fuchsia_component("fake_data_provider") {
+  manifest = "meta/fake_data_provider.cmx"
+
+  deps = [
+    ":checkboard_100",
+    ":fake_data_provider_exe",
+  ]
+}
+
+fuchsia_component("fake_device_id_provider") {
+  manifest = "meta/fake_device_id_provider.cmx"
+
+  deps = [ ":fake_device_id_provider_exe" ]
+}
+
+fuchsia_component("fake_last_reboot_info_provider") {
+  manifest = "meta/fake_last_reboot_info_provider.cmx"
+
+  deps = [ ":fake_last_reboot_info_provider_exe" ]
 }
 
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
-executable("crash_reporter_main") {
-  output_name = "fake_crash_reporter"
-
+executable("fake_crash_reporter_exe") {
   sources = [
     "crash_reporter.cc",
     "crash_reporter.h",
@@ -96,9 +85,7 @@ executable("crash_reporter_main") {
   ]
 }
 
-executable("data_provider_main") {
-  output_name = "fake_data_provider"
-
+executable("fake_data_provider_exe") {
   sources = [
     "data_provider.cc",
     "data_provider.h",
@@ -119,9 +106,7 @@ executable("data_provider_main") {
   ]
 }
 
-executable("device_id_provider_main") {
-  output_name = "fake_device_id_provider"
-
+executable("fake_device_id_provider_exe") {
   sources = [
     "device_id_provider.cc",
     "device_id_provider.h",
@@ -139,9 +124,7 @@ executable("device_id_provider_main") {
   ]
 }
 
-executable("last_reboot_info_provider_main") {
-  output_name = "fake_last_reboot_info_provider"
-
+executable("fake_last_reboot_info_provider_exe") {
   sources = [
     "last_reboot_info_provider.cc",
     "last_reboot_info_provider.h",
@@ -194,4 +177,14 @@ source_set("privacy_settings") {
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/fit",
   ]
+}
+
+###############################################################################
+# RESOURCES
+###############################################################################
+resource("checkboard_100") {
+  sources =
+      [ "//src/developer/feedback/testing/resources/checkerboard_100.png" ]
+
+  outputs = [ "checkboard_100.png" ]
 }

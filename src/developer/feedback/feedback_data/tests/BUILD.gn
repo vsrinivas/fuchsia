@@ -33,6 +33,8 @@ group("tests") {
 ###############################################################################
 # PACKAGES
 ###############################################################################
+# TODO(53656): switch to fuchsia_test_package once we figure out how to have a
+# different name for the binary on the host and on the target.
 test_package("feedback-data-tests") {
   tests = [
     {

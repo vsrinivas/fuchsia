@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/fake_crash_reporter_exe"
     },
     "sandbox": {
         "services": [

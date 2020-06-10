@@ -2,100 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
-
-###############################################################################
-# GROUPS
-###############################################################################
-group("tests") {
-  testonly = true
-
-  public_deps = [ ":feedback-utils-tests" ]
-}
-
-###############################################################################
-# PACKAGES
-###############################################################################
-test_package("feedback-utils-tests") {
-  tests = [
-    {
-      name = "archive_unittest"
-    },
-    {
-      name = "bridge_unittest"
-    },
-    {
-      name = "caching_ptr_unittest"
-    },
-    {
-      name = "channel_provider_ptr_unittest"
-    },
-    {
-      name = "cobalt_unittest"
-    },
-    {
-      name = "data_provider_ptr_unittest"
-    },
-    {
-      name = "device_id_provider_ptr_unittest"
-    },
-    {
-      name = "inspect_node_manager_unittest"
-    },
-    {
-      name = "inspect_protocol_stats_unittest"
-    },
-    {
-      name = "log_format_unittest"
-    },
-    {
-      name = "oneshot_ptr_unittest"
-    },
-    {
-      name = "promise_unittest"
-    },
-    {
-      name = "time_unittest"
-    },
-    {
-      name = "utc_time_provider_unittest"
-    },
-    {
-      name = "write_only_file_unittest"
-    },
-  ]
-
-  resources = [
-    # needed for archive_unittest
-    {
-      path = "resources/test_data.zip"
-      dest = "test_data.zip"
-    },
-  ]
-
-  deps = [
-    ":archive_unittest",
-    ":bridge_unittest",
-    ":caching_ptr_unittest",
-    ":channel_provider_ptr_unittest",
-    ":cobalt_unittest",
-    ":data_provider_ptr_unittest",
-    ":device_id_provider_ptr_unittest",
-    ":inspect_node_manager_unittest",
-    ":inspect_protocol_stats_unittest",
-    ":log_format_unittest",
-    ":oneshot_ptr_unittest",
-    ":promise_unittest",
-    ":time_unittest",
-    ":utc_time_provider_unittest",
-    ":write_only_file_unittest",
-  ]
-}
+import("//src/sys/build/components.gni")
 
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
-executable("archive_unittest") {
+executable("archive_unittest_exe") {
   testonly = true
 
   sources = [ "archive_unittest.cc" ]
@@ -115,7 +27,7 @@ executable("archive_unittest") {
   ]
 }
 
-executable("bridge_unittest") {
+executable("bridge_unittest_exe") {
   testonly = true
 
   sources = [ "bridge_unittest.cc" ]
@@ -130,7 +42,7 @@ executable("bridge_unittest") {
   ]
 }
 
-executable("caching_ptr_unittest") {
+executable("caching_ptr_unittest_exe") {
   testonly = true
 
   sources = [ "caching_ptr_unittest.cc" ]
@@ -148,7 +60,7 @@ executable("caching_ptr_unittest") {
   ]
 }
 
-executable("channel_provider_ptr_unittest") {
+executable("channel_provider_ptr_unittest_exe") {
   testonly = true
 
   sources = [ "channel_provider_ptr_unittest.cc" ]
@@ -166,7 +78,7 @@ executable("channel_provider_ptr_unittest") {
   ]
 }
 
-executable("cobalt_unittest") {
+executable("cobalt_unittest_exe") {
   testonly = true
 
   sources = [ "cobalt_unittest.cc" ]
@@ -185,7 +97,7 @@ executable("cobalt_unittest") {
   ]
 }
 
-executable("data_provider_ptr_unittest") {
+executable("data_provider_ptr_unittest_exe") {
   testonly = true
 
   sources = [ "data_provider_ptr_unittest.cc" ]
@@ -203,7 +115,7 @@ executable("data_provider_ptr_unittest") {
   ]
 }
 
-executable("device_id_provider_ptr_unittest") {
+executable("device_id_provider_ptr_unittest_exe") {
   testonly = true
 
   sources = [ "device_id_provider_ptr_unittest.cc" ]
@@ -219,7 +131,7 @@ executable("device_id_provider_ptr_unittest") {
   ]
 }
 
-executable("inspect_node_manager_unittest") {
+executable("inspect_node_manager_unittest_exe") {
   testonly = true
 
   sources = [ "inspect_node_manager_unittest.cc" ]
@@ -234,7 +146,7 @@ executable("inspect_node_manager_unittest") {
   ]
 }
 
-executable("inspect_protocol_stats_unittest") {
+executable("inspect_protocol_stats_unittest_exe") {
   testonly = true
 
   sources = [ "inspect_protocol_stats_unittest.cc" ]
@@ -247,7 +159,7 @@ executable("inspect_protocol_stats_unittest") {
   ]
 }
 
-executable("log_format_unittest") {
+executable("log_format_unittest_exe") {
   testonly = true
 
   sources = [ "log_format_unittest.cc" ]
@@ -260,7 +172,7 @@ executable("log_format_unittest") {
   ]
 }
 
-executable("oneshot_ptr_unittest") {
+executable("oneshot_ptr_unittest_exe") {
   testonly = true
 
   sources = [ "oneshot_ptr_unittest.cc" ]
@@ -279,7 +191,7 @@ executable("oneshot_ptr_unittest") {
   ]
 }
 
-executable("promise_unittest") {
+executable("promise_unittest_exe") {
   testonly = true
 
   sources = [ "promise_unittest.cc" ]
@@ -295,7 +207,7 @@ executable("promise_unittest") {
   ]
 }
 
-executable("time_unittest") {
+executable("time_unittest_exe") {
   testonly = true
 
   sources = [ "time_unittest.cc" ]
@@ -308,7 +220,7 @@ executable("time_unittest") {
   ]
 }
 
-executable("utc_time_provider_unittest") {
+executable("utc_time_provider_unittest_exe") {
   testonly = true
 
   sources = [ "utc_time_provider_unittest.cc" ]
@@ -324,7 +236,7 @@ executable("utc_time_provider_unittest") {
   ]
 }
 
-executable("write_only_file_unittest") {
+executable("write_only_file_unittest_exe") {
   testonly = true
 
   sources = [ "write_only_file_unittest.cc" ]
@@ -336,4 +248,171 @@ executable("write_only_file_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
+}
+
+###############################################################################
+# RESOURCES
+###############################################################################
+resource("test_data_zip") {
+  sources = [ "resources/test_data.zip" ]
+
+  outputs = [ "data/test_data.zip" ]
+}
+
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_component("archive_unittest") {
+  testonly = true
+
+  manifest = "meta/archive_unittest.cmx"
+
+  deps = [
+    ":archive_unittest_exe",
+    ":test_data_zip",
+  ]
+}
+
+fuchsia_component("bridge_unittest") {
+  testonly = true
+
+  manifest = "meta/bridge_unittest.cmx"
+
+  deps = [ ":bridge_unittest_exe" ]
+}
+
+fuchsia_component("caching_ptr_unittest") {
+  testonly = true
+
+  manifest = "meta/caching_ptr_unittest.cmx"
+
+  deps = [ ":caching_ptr_unittest_exe" ]
+}
+
+fuchsia_component("channel_provider_ptr_unittest") {
+  testonly = true
+
+  manifest = "meta/channel_provider_ptr_unittest.cmx"
+
+  deps = [ ":channel_provider_ptr_unittest_exe" ]
+}
+
+fuchsia_component("cobalt_unittest") {
+  testonly = true
+
+  manifest = "meta/cobalt_unittest.cmx"
+
+  deps = [ ":cobalt_unittest_exe" ]
+}
+
+fuchsia_component("data_provider_ptr_unittest") {
+  testonly = true
+
+  manifest = "meta/data_provider_ptr_unittest.cmx"
+
+  deps = [ ":data_provider_ptr_unittest_exe" ]
+}
+
+fuchsia_component("device_id_provider_ptr_unittest") {
+  testonly = true
+
+  manifest = "meta/device_id_provider_ptr_unittest.cmx"
+
+  deps = [ ":device_id_provider_ptr_unittest_exe" ]
+}
+
+fuchsia_component("inspect_node_manager_unittest") {
+  testonly = true
+
+  manifest = "meta/inspect_node_manager_unittest.cmx"
+
+  deps = [ ":inspect_node_manager_unittest_exe" ]
+}
+
+fuchsia_component("inspect_protocol_stats_unittest") {
+  testonly = true
+
+  manifest = "meta/inspect_protocol_stats_unittest.cmx"
+
+  deps = [ ":inspect_protocol_stats_unittest_exe" ]
+}
+
+fuchsia_component("log_format_unittest") {
+  testonly = true
+
+  manifest = "meta/log_format_unittest.cmx"
+
+  deps = [ ":log_format_unittest_exe" ]
+}
+
+fuchsia_component("oneshot_ptr_unittest") {
+  testonly = true
+
+  manifest = "meta/oneshot_ptr_unittest.cmx"
+
+  deps = [ ":oneshot_ptr_unittest_exe" ]
+}
+
+fuchsia_component("promise_unittest") {
+  testonly = true
+
+  manifest = "meta/promise_unittest.cmx"
+
+  deps = [ ":promise_unittest_exe" ]
+}
+
+fuchsia_component("time_unittest") {
+  testonly = true
+
+  manifest = "meta/time_unittest.cmx"
+
+  deps = [ ":time_unittest_exe" ]
+}
+
+fuchsia_component("utc_time_provider_unittest") {
+  testonly = true
+
+  manifest = "meta/utc_time_provider_unittest.cmx"
+
+  deps = [ ":utc_time_provider_unittest_exe" ]
+}
+
+fuchsia_component("write_only_file_unittest") {
+  testonly = true
+
+  manifest = "meta/write_only_file_unittest.cmx"
+
+  deps = [ ":write_only_file_unittest_exe" ]
+}
+
+###############################################################################
+# PACKAGES
+###############################################################################
+fuchsia_test_package("feedback-utils-tests") {
+  test_components = [
+    ":archive_unittest",
+    ":bridge_unittest",
+    ":caching_ptr_unittest",
+    ":channel_provider_ptr_unittest",
+    ":cobalt_unittest",
+    ":data_provider_ptr_unittest",
+    ":device_id_provider_ptr_unittest",
+    ":inspect_node_manager_unittest",
+    ":inspect_protocol_stats_unittest",
+    ":log_format_unittest",
+    ":oneshot_ptr_unittest",
+    ":promise_unittest",
+    ":time_unittest",
+    ":utc_time_provider_unittest",
+    ":write_only_file_unittest",
+  ]
+}
+
+###############################################################################
+# GROUPS
+###############################################################################
+group("tests") {
+  testonly = true
+
+  public_deps = [ ":feedback-utils-tests" ]
 }

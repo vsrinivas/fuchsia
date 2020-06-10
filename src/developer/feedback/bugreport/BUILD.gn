@@ -11,6 +11,9 @@ package("bugreport") {
   binaries = [
     {
       name = "bugreport"
+
+      # This allows us to invoke `bugreport` on the device, but prevents us
+      # from using fuchsia_package().
       shell = true
     },
   ]

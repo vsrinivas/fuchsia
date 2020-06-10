@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/data_provider_ptr_unittest"
+        "binary": "bin/data_provider_ptr_unittest_exe"
     },
     "sandbox": {
         "services": [

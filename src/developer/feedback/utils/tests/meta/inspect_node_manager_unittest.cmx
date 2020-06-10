@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/inspect_node_manager_unittest"
+        "binary": "bin/inspect_node_manager_unittest_exe"
     },
     "sandbox": {
         "services": [

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/cobalt_unittest"
+        "binary": "bin/cobalt_unittest_exe"
     },
     "sandbox": {
         "services": [

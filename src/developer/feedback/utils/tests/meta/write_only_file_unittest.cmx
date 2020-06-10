@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/write_only_file_unittest"
+        "binary": "bin/write_only_file_unittest_exe"
     },
     "sandbox": {
         "features": [

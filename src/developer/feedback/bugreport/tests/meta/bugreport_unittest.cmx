@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/bugreport_unittest"
+        "binary": "bin/bugreport_unittest_exe"
     },
     "sandbox": {
         "features": [

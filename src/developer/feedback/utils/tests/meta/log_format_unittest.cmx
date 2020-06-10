@@ -1,5 +1,5 @@
 {
     "program": {
-        "binary": "test/log_format_unittest"
+        "binary": "bin/log_format_unittest_exe"
     }
 }

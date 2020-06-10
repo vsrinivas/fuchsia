@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/archive_unittest"
+        "binary": "bin/archive_unittest_exe"
     },
     "sandbox": {
         "features": [

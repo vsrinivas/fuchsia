@@ -3,35 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 ###############################################################################
 # PACKAGES
 ###############################################################################
 # We use a template to keep the real and fake packages in sync.
 template("crash_reports_package") {
-  package(target_name) {
-    binaries = [
-      {
-        name = "crash_reports"
-      },
-    ]
-
-    meta = [
-      {
-        path = "meta/crash_reports.cmx"
-        dest = "crash_reports.cmx"
-      },
-    ]
-
-    resources = [
-      {
-        path = "configs/default.json"
-        dest = "default_config.json"
-      },
-    ]
-
-    deps = [ ":main" ]
+  fuchsia_package(target_name) {
+    deps = [ ":crash_reports" ]
   }
 
   # Suppress unused variable warnings as the invoker is expected to be empty.
@@ -55,6 +35,18 @@ crash_reports_package("fake-crash-reports-valid-override-config") {
 # A fake package for integration test purposes where we want an invalid override config_data() that
 # only affects the fake package.
 crash_reports_package("fake-crash-reports-invalid-override-config") {
+}
+
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_component("crash_reports") {
+  manifest = "meta/crash_reports.cmx"
+
+  deps = [
+    ":default_config",
+    ":main",
+  ]
 }
 
 ###############################################################################
@@ -331,6 +323,15 @@ source_set("settings") {
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
+###############################################################################
+# RESOURCES
+###############################################################################
+resource("default_config") {
+  sources = [ "configs/default.json" ]
+
+  outputs = [ "data/default_config.json" ]
 }
 
 ###############################################################################

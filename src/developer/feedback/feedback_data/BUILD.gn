@@ -8,6 +8,8 @@ import("//build/package.gni")
 ###############################################################################
 # PACKAGES
 ###############################################################################
+# TODO(49566): switch to fuchsia_package once using feedback-data as package
+# name.
 package("feedback_agent") {
   binaries = [
     {
