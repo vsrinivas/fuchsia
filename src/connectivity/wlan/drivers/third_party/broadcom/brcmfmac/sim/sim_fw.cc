@@ -80,7 +80,8 @@ void SimFirmware::BusStop() { ZX_PANIC("%s unimplemented", __FUNCTION__); }
 // Returns a bufer that can be used for BCDC-formatted communications, with the requested
 // payload size and an initialized BCDC header. "data_offset" represents any signalling offset
 // (in words) and "offset_out" represents the offset of the payload within the returned buffer.
-std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateBcdcBuffer(size_t requested_size,
+std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateBcdcBuffer(int16_t ifidx,
+                                                                    size_t requested_size,
                                                                     size_t data_offset,
                                                                     size_t* offset_out) {
   size_t header_size = sizeof(brcmf_proto_bcdc_header);
@@ -92,6 +93,7 @@ std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateBcdcBuffer(size_t reque
   header->flags = (BCDC_PROTO_VER << BCDC_FLAG_VER_SHIFT) & BCDC_FLAG_VER_MASK;
   header->priority = 0xff & BCDC_PRIORITY_MASK;
   header->flags2 = 0;
+  BCDC_SET_IF_IDX(header, ifidx);
 
   header->data_offset = data_offset;
 
@@ -1916,7 +1918,10 @@ std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateEventBuffer(
     size_t requested_size, brcmf_event_msg_be** msg_out_be, size_t* payload_offset_out) {
   size_t total_size = sizeof(brcmf_event) + requested_size;
   size_t event_data_offset;
-  auto buf = CreateBcdcBuffer(total_size, 0, &event_data_offset);
+
+  // Note: events always encode the interface index into the event header and 0 into the BCDC
+  // header.
+  auto buf = CreateBcdcBuffer(0, total_size, 0, &event_data_offset);
 
   uint8_t* buffer_data = buf->data();
   auto event = reinterpret_cast<brcmf_event*>(&buffer_data[event_data_offset]);
@@ -1994,7 +1999,8 @@ void SimFirmware::SendFrameToDriver(uint16_t ifidx, size_t payload_size,
     signal_size_bytes = FWS_TLV_TYPE_SIZE + FWS_TLV_LEN_SIZE + FWS_RSSI_DATA_LEN;
   }
   auto signal_size_words = signal_size_bytes >> 2;
-  auto buf = CreateBcdcBuffer(payload_size + signal_size_bytes, signal_size_words, &header_offset);
+  auto buf = CreateBcdcBuffer(ifidx, payload_size + signal_size_bytes, signal_size_words,
+                              &header_offset);
 
   if (payload_size != 0) {
     ZX_ASSERT(!buffer_in.empty());

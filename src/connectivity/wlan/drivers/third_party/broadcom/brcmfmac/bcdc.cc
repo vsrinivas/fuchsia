@@ -32,10 +32,6 @@
 #include "netbuf.h"
 #include "proto.h"
 
-#define BCDC_GET_IF_IDX(hdr) ((int)((((hdr)->flags2) & BCDC_FLAG2_IF_MASK) >> BCDC_FLAG2_IF_SHIFT))
-#define BCDC_SET_IF_IDX(hdr, idx) \
-  ((hdr)->flags2 = (((hdr)->flags2 & ~BCDC_FLAG2_IF_MASK) | ((idx) << BCDC_FLAG2_IF_SHIFT)))
-
 /*
  * maximum length of firmware signal data between
  * the BCDC header and packet data in the tx path.

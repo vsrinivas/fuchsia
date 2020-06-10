@@ -266,8 +266,8 @@ class SimFirmware {
   static constexpr uint8_t kMaxIfSupported = 4;
 
   // BCDC interface
-  std::unique_ptr<std::vector<uint8_t>> CreateBcdcBuffer(size_t requested_size, size_t data_offset,
-                                                         size_t* offset_out);
+  std::unique_ptr<std::vector<uint8_t>> CreateBcdcBuffer(int16_t ifidx, size_t requested_size,
+                                                         size_t data_offset, size_t* offset_out);
   zx_status_t BcdcVarOp(uint16_t ifidx, brcmf_proto_bcdc_dcmd* msg, uint8_t* data, size_t len,
                         bool is_set);
 
