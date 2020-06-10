@@ -625,6 +625,7 @@ class AutoReschedDisable {
 bool thread_is_user_state_saved_locked(Thread* thread);
 
 // RAII helper that installs/removes an exception context and saves/restores user register state.
+// The class operates on the current thread.
 //
 // When a thread takes an exception, this class is used to make user register state available to
 // debuggers and exception handlers.
@@ -651,8 +652,7 @@ bool thread_is_user_state_saved_locked(Thread* thread);
 //
 class ScopedThreadExceptionContext {
  public:
-  // |thread| must be the calling thread.
-  ScopedThreadExceptionContext(Thread* thread, const arch_exception_context_t* context);
+  explicit ScopedThreadExceptionContext(const arch_exception_context_t* context);
   ~ScopedThreadExceptionContext();
   DISALLOW_COPY_ASSIGN_AND_MOVE(ScopedThreadExceptionContext);
 

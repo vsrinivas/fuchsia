@@ -736,7 +736,7 @@ bool ThreadDispatcher::HandleSingleShotException(Exceptionate* exceptionate,
   // We're about to handle the exception (|HandleException|).  Use a |ScopedThreadExceptionContext|
   // to make the thread's user register state available to debuggers and exception handlers while
   // the thread is "in exception".
-  ScopedThreadExceptionContext context(core_thread_, &arch_context);
+  ScopedThreadExceptionContext context(&arch_context);
 
   bool sent = false;
   HandleException(exceptionate, exception, &sent);

@@ -769,10 +769,8 @@ static void thread_restore_user_state_locked(Thread* thread) {
   arch_restore_user_state(thread);
 }
 
-ScopedThreadExceptionContext::ScopedThreadExceptionContext(Thread* thread,
-                                                           const arch_exception_context_t* context)
-    : thread_(thread), context_(context) {
-  DEBUG_ASSERT(thread == Thread::Current::Get());
+ScopedThreadExceptionContext::ScopedThreadExceptionContext(const arch_exception_context_t* context)
+    : thread_(Thread::Current::Get()), context_(context) {
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
   // It's possible that the context and state have been installed/saved earlier in the call chain.
   // If so, then it's some other object's responsibilty to remove/restore.

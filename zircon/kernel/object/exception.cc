@@ -229,7 +229,7 @@ zx_status_t dispatch_user_exception(uint exception_type,
     // We're about to handle the exception.  Use a |ScopedThreadExceptionContext| to make the
     // thread's user register state available to debuggers and exception handlers while the thread
     // is "in exception".
-    ScopedThreadExceptionContext context(lk_thread, arch_context);
+    ScopedThreadExceptionContext context(arch_context);
     status = exception_handler_worker(exception_type, arch_context, thread, &processed);
   }
 
