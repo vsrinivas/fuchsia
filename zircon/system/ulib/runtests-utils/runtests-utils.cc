@@ -299,7 +299,7 @@ int DiscoverTestsInDirGlobs(const fbl::Vector<fbl::String>& dir_globs, const cha
 
 bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl::String>& test_args,
               int repeat, uint64_t timeout_msec, const char* output_dir,
-              const fbl::StringPiece output_file_basename, signed char verbosity, int* failed_count,
+              const fbl::StringPiece output_file_basename, int* failed_count,
               fbl::Vector<std::unique_ptr<Result>>* results) {
   std::map<fbl::String, int> test_name_to_count;
   for (int i = 1; i <= repeat; ++i) {
@@ -332,14 +332,6 @@ bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl:
       // Assemble test binary args.
       fbl::Vector<const char*> argv;
       argv.push_back(test_path.c_str());
-      fbl::String verbosity_arg;
-      if (verbosity >= 0) {
-        // verbosity defaults to -1: "unspecified". Only pass it along
-        // if it was specified: i.e., non-negative.
-        verbosity_arg = fbl::StringPrintf("v=%d", verbosity);
-        argv.push_back(verbosity_arg.c_str());
-      }
-      // Add in args to the test binary
       argv.reserve(test_args.size());
       for (auto test_arg = test_args.begin(); test_arg != test_args.end(); ++test_arg) {
         argv.push_back(test_arg->c_str());

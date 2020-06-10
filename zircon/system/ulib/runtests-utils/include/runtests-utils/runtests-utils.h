@@ -153,7 +153,7 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs, fbl::Vector<fbl::String>
 // Returns false if any test binary failed, true otherwise.
 bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl::String>& test_args,
               int repeat, uint64_t timeout_msec, const char* output_dir,
-              const fbl::StringPiece output_file_basename, signed char verbosity, int* failed_count,
+              const fbl::StringPiece output_file_basename, int* failed_count,
               fbl::Vector<std::unique_ptr<Result>>* results);
 
 // Expands |dir_globs| and searches those directories for files.

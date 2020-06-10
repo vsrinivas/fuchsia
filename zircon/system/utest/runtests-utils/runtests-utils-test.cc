@@ -503,36 +503,6 @@ bool DiscoverTestsInDirGlobsIgnore() {
   END_TEST;
 }
 
-bool RunTestsWithVerbosity() {
-  BEGIN_TEST;
-
-  ScopedTestDir test_dir;
-  PackagedScriptFile succeed_script("succeed-with-echo.sh");
-  const fbl::String succeed_file_name = succeed_script.path();
-  int num_failed = 0;
-  fbl::Vector<std::unique_ptr<Result>> results;
-  const signed char verbosity = 77;
-  const fbl::String output_dir = JoinPath(test_dir.path(), "output");
-  const char output_file_base_name[] = "output.txt";
-  ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests({succeed_file_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name,
-                       verbosity, &num_failed, &results));
-  EXPECT_EQ(0, num_failed);
-  EXPECT_EQ(1, results.size());
-
-  fbl::String output_path =
-      JoinPath(JoinPath(output_dir, succeed_file_name), output_file_base_name);
-  FILE* output_file = fopen(output_path.c_str(), "r");
-  ASSERT_TRUE(output_file);
-  char buf[1024];
-  memset(buf, 0, sizeof(buf));
-  EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
-  fclose(output_file);
-  EXPECT_STR_EQ("Success! v=77\n", buf);
-
-  END_TEST;
-}
-
 bool RunTestsWithArguments() {
   BEGIN_TEST;
 
@@ -540,14 +510,13 @@ bool RunTestsWithArguments() {
   PackagedScriptFile succeed_script("succeed-with-echo.sh");
   const fbl::String succeed_file_name = succeed_script.path();
   int num_failed = 0;
-  const signed char verbosity = -1;
   fbl::Vector<std::unique_ptr<Result>> results;
   fbl::Vector<fbl::String> args{"first", "second", "third", "-4", "--", "-", "seventh"};
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
   EXPECT_TRUE(RunTests({succeed_file_name}, args, 1, 0, output_dir.c_str(), output_file_base_name,
-                       verbosity, &num_failed, &results));
+                       &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(1, results.size());
 
@@ -571,13 +540,12 @@ bool RunTestsCreatesOutputFile() {
   ScopedTestDir test_dir;
   const fbl::String does_not_exist_file_name = JoinPath(test_dir.path(), "i-do-not-exist.sh");
   int num_failed = 0;
-  const signed char verbosity = -1;
   fbl::Vector<std::unique_ptr<Result>> results;
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
   EXPECT_TRUE(RunTests({does_not_exist_file_name}, {}, 1, 0, output_dir.c_str(),
-                       output_file_base_name, verbosity, &num_failed, &results));
+                       output_file_base_name, &num_failed, &results));
   EXPECT_EQ(1, num_failed);
   EXPECT_EQ(1, results.size());
 
@@ -863,7 +831,6 @@ END_TEST_CASE(DiscoverTestsInDirGlobs)
 
 BEGIN_TEST_CASE(RunTests)
 RUN_TEST(RunTestsCreatesOutputFile)
-RUN_TEST_MEDIUM(RunTestsWithVerbosity)
 RUN_TEST_MEDIUM(RunTestsWithArguments)
 END_TEST_CASE(RunTests)
 

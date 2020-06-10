@@ -108,11 +108,10 @@ bool RunTestsPublishData() {
   fbl::String test_name = PublishDataHelperBin();
   int num_failed = 0;
   fbl::Vector<std::unique_ptr<Result>> results;
-  const signed char verbosity = 77;
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name, verbosity,
+  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name,
                        &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(1, results.size());
@@ -128,12 +127,11 @@ bool RunDuplicateTestsPublishData() {
   fbl::String test_name = PublishDataHelperBin();
   int num_failed = 0;
   fbl::Vector<std::unique_ptr<Result>> results;
-  const signed char verbosity = 77;
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
   EXPECT_TRUE(RunTests({test_name, test_name, test_name}, {}, 1, 0, output_dir.c_str(),
-                       output_file_base_name, verbosity, &num_failed, &results));
+                       output_file_base_name, &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(3, results.size());
   EXPECT_STR_EQ(test_name.c_str(), results[0]->name.c_str());
@@ -208,14 +206,13 @@ bool RunProfileMergeData() {
   fbl::String test_name = ProfileHelperBin();
   int num_failed = 0;
   fbl::Vector<std::unique_ptr<Result>> results;
-  const signed char verbosity = 77;
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
 
   // Run the test for the first time.
   EXPECT_TRUE(RunTests({test_name, test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name,
-                       verbosity, &num_failed, &results));
+                       &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(2, results.size());
   EXPECT_LE(1, results[0]->data_sinks.size());
@@ -223,7 +220,7 @@ bool RunProfileMergeData() {
   EXPECT_EQ(1, results[0]->data_sinks["llvm-profile"].size());
 
   // Run the test for the second time.
-  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name, verbosity,
+  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name,
                        &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(3, results.size());
