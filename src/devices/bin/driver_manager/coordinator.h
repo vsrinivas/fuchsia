@@ -8,6 +8,7 @@
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/fshost/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
@@ -38,6 +39,7 @@
 #include "reboot_watcher_manager.h"
 #include "resume_task.h"
 #include "suspend_task.h"
+#include "system_state_manager.h"
 #include "unbind_task.h"
 #include "vmo_writer.h"
 
@@ -47,6 +49,7 @@ namespace device_manager_fidl = llcpp::fuchsia::device::manager;
 
 class DriverHostLoaderService;
 class FsProvider;
+class SystemStateManager;
 
 constexpr zx::duration kDefaultResumeTimeout = zx::sec(30);
 constexpr zx::duration kDefaultSuspendTimeout = zx::sec(30);
@@ -192,7 +195,7 @@ struct CoordinatorConfig {
   zx::duration resume_timeout = kDefaultResumeTimeout;
   // System will be transitioned to this system power state during
   // component shutdown.
-  power_fidl::statecontrol::SystemPowerState shutdown_system_state =
+  power_fidl::statecontrol::SystemPowerState default_shutdown_system_state =
       power_fidl::statecontrol::SystemPowerState::REBOOT;
   // Something to clone a handle from the environment to pass to a Devhost.
   FsProvider* fs_provider = nullptr;
@@ -210,8 +213,7 @@ struct SuspendCallbackInfo : public fbl::RefCounted<SuspendCallbackInfo> {
 };
 
 class Coordinator : public power_fidl::statecontrol::Admin::Interface,
-                    public device_manager_fidl::BindDebugger::Interface,
-                    public device_manager_fidl::SystemStateTransition::Interface {
+                    public device_manager_fidl::BindDebugger::Interface {
  public:
   Coordinator(const Coordinator&) = delete;
   Coordinator& operator=(const Coordinator&) = delete;
@@ -307,19 +309,28 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
   bool require_system() const { return config_.require_system; }
   bool suspend_fallback() const { return config_.suspend_fallback; }
   power_fidl::statecontrol::SystemPowerState shutdown_system_state() const {
-    return config_.shutdown_system_state;
+    return shutdown_system_state_;
+  }
+  power_fidl::statecontrol::SystemPowerState default_shutdown_system_state() const {
+    return config_.default_shutdown_system_state;
   }
   void set_shutdown_system_state(power_fidl::statecontrol::SystemPowerState state) {
-    config_.shutdown_system_state = state;
+    shutdown_system_state_ = state;
   }
 
   void set_running(bool running) { running_ = running; }
   bool system_available() const { return system_available_; }
   void set_system_available(bool system_available) { system_available_ = system_available; }
+  void set_power_manager_registered(bool registered) { power_manager_registered_ = registered; }
+  bool power_manager_registered() { return power_manager_registered_; }
   bool system_loaded() const { return system_loaded_; }
 
   void set_loader_service_connector(DriverHost::LoaderServiceConnector loader_service_connector) {
     loader_service_connector_ = std::move(loader_service_connector);
+  }
+
+  void set_system_state_manager(std::unique_ptr<SystemStateManager> system_state_mgr) {
+    system_state_manager_ = std::move(system_state_mgr);
   }
 
   fbl::DoublyLinkedList<std::unique_ptr<Driver>>& drivers() { return drivers_; }
@@ -387,13 +398,11 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
   void RegisterDriverHost(DriverHost* dh) { driver_hosts_.push_back(dh); }
   void UnregisterDriverHost(DriverHost* dh) { driver_hosts_.erase(*dh); }
 
-  // SystemStateTransition interface
-  void SetTerminationSystemState(device_manager_fidl::SystemPowerState state,
-                                 device_manager_fidl::SystemStateTransition::Interface::
-                                     SetTerminationSystemStateCompleter::Sync completer) override;
-
   // Returns path to driver that should be bound to fragments of composite devices.
   std::string GetFragmentDriverPath() const;
+  zx_status_t RegisterWithPowerManager(zx::channel power_manager_client,
+                                       zx::channel system_state_transition_client,
+                                       zx::channel devfs_handle);
 
  protected:
   std::unique_ptr<llcpp::fuchsia::fshost::Admin::SyncClient> fshost_admin_client_;
@@ -404,6 +413,7 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
   bool launched_first_driver_host_ = false;
   bool system_available_ = false;
   bool system_loaded_ = false;
+  bool power_manager_registered_ = false;
   DriverHost::LoaderServiceConnector loader_service_connector_;
 
   // All Drivers
@@ -434,6 +444,8 @@ class Coordinator : public power_fidl::statecontrol::Admin::Interface,
 
   InspectManager inspect_manager_;
   RebootWatcherManager reboot_watcher_manager_;
+  std::unique_ptr<SystemStateManager> system_state_manager_;
+  power_fidl::statecontrol::SystemPowerState shutdown_system_state_;
 
   // Bind debugger interface
   void GetBindProgram(::fidl::StringView driver_path,

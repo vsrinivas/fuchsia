@@ -9,6 +9,7 @@
 #include <string>
 
 #include "component_lifecycle.h"
+#include "coordinator_test_mock_power_manager.h"
 #include "src/devices/lib/log/log.h"
 
 TEST_F(MultipleDeviceTestCase, UnbindThenSuspend) {
@@ -597,7 +598,7 @@ TEST_F(MultipleDeviceTestCase, ResumeThenSuspend) {
   ASSERT_EQ(device(child_index)->device->state(), Device::State::kActive);
 }
 
-/*TEST_F(MultipleDeviceTestCase, ResumeTimeout) {
+TEST_F(MultipleDeviceTestCase, DISABLED_ResumeTimeout) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
 
@@ -625,7 +626,7 @@ TEST_F(MultipleDeviceTestCase, ResumeThenSuspend) {
   // Dont reply for sys proxy resume. we should timeout
   async::Wait resume_task_sys_proxy(
       sys_proxy_controller_remote_.get(), ZX_CHANNEL_READABLE, 0,
-      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+      [this](async_dispatcher_t *, async::Wait *, zx_status_t, const zx_packet_signal_t *) {
         zx_txid_t txid;
         ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(
             sys_proxy_controller_remote_, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, &txid));
@@ -635,7 +636,7 @@ TEST_F(MultipleDeviceTestCase, ResumeThenSuspend) {
   // Wait for the event that the callback sets, otherwise the test will quit.
   resume_received_event.wait_one(ZX_USER_SIGNAL_0, zx::time(ZX_TIME_INFINITE), nullptr);
   ASSERT_TRUE(resume_callback_executed);
-}*/
+}
 
 // Test devices are suspended when component lifecycle stop event is received.
 TEST_F(MultipleDeviceTestCase, ComponentLifecycleStop) {
@@ -680,24 +681,19 @@ TEST_F(MultipleDeviceTestCase, ComponentLifecycleStop) {
 TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
+  zx::channel system_state_transition_client, system_state_transition_server;
+  ASSERT_OK(
+      zx::channel::create(0, &system_state_transition_client, &system_state_transition_server));
 
-  zx::channel services, services_remote;
-  ASSERT_OK(zx::channel::create(0, &services, &services_remote));
-
-  svc::Outgoing outgoing{coordinator_loop()->dispatcher()};
-  ASSERT_OK(coordinator()->InitOutgoingServices(outgoing.svc_dir()));
-  ASSERT_OK(outgoing.Serve(std::move(services_remote)));
-
-  zx::channel channel, channel_remote;
-  ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));
-  std::string svc_dir = "/svc/";
-  std::string service = svc_dir + llcpp::fuchsia::device::manager::SystemStateTransition::Name;
-  ASSERT_OK(fdio_service_connect_at(services.get(), service.c_str(), channel_remote.release()));
-
+  std::unique_ptr<SystemStateManager> state_mgr;
+  ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), coordinator(),
+                                       std::move(system_state_transition_server), &state_mgr));
+  coordinator()->set_system_state_manager(std::move(state_mgr));
   auto response =
       llcpp::fuchsia::device::manager::SystemStateTransition::Call::SetTerminationSystemState(
-          zx::unowned_channel(channel.get()),
-          llcpp::fuchsia::device::manager::SystemPowerState::SYSTEM_POWER_STATE_MEXEC);
+          zx::unowned_channel(system_state_transition_client.get()),
+          llcpp::fuchsia::device::manager::SystemPowerState::SYSTEM_POWER_STATE_POWEROFF);
+
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -705,30 +701,27 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl) {
   }
   ASSERT_OK(call_status);
   ASSERT_EQ(coordinator()->shutdown_system_state(),
-            llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::MEXEC);
+            llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::POWEROFF);
 }
 
 TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
 
-  zx::channel services, services_remote;
-  ASSERT_OK(zx::channel::create(0, &services, &services_remote));
+  zx::channel system_state_transition_client, system_state_transition_server;
+  ASSERT_OK(
+      zx::channel::create(0, &system_state_transition_client, &system_state_transition_server));
 
-  svc::Outgoing outgoing{coordinator_loop()->dispatcher()};
-  ASSERT_OK(coordinator()->InitOutgoingServices(outgoing.svc_dir()));
-  ASSERT_OK(outgoing.Serve(std::move(services_remote)));
-
-  zx::channel channel, channel_remote;
-  ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));
-  std::string svc_dir = "/svc/";
-  std::string service = svc_dir + llcpp::fuchsia::device::manager::SystemStateTransition::Name;
-  ASSERT_OK(fdio_service_connect_at(services.get(), service.c_str(), channel_remote.release()));
+  std::unique_ptr<SystemStateManager> state_mgr;
+  ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), coordinator(),
+                                       std::move(system_state_transition_server), &state_mgr));
+  coordinator()->set_system_state_manager(std::move(state_mgr));
 
   auto response =
       llcpp::fuchsia::device::manager::SystemStateTransition::Call::SetTerminationSystemState(
-          zx::unowned_channel(channel.get()),
+          zx::unowned_channel(system_state_transition_client.get()),
           llcpp::fuchsia::device::manager::SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON);
+
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -738,4 +731,30 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
   // Default shutdown_system_state in test is MEXEC.
   ASSERT_EQ(coordinator()->shutdown_system_state(),
             llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::MEXEC);
+}
+
+TEST_F(MultipleDeviceTestCase, PowerManagerRegistration) {
+  ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
+  set_coordinator_loop_thread_running(true);
+
+  zx::channel system_state_transition_client, system_state_transition_server;
+  ASSERT_OK(
+      zx::channel::create(0, &system_state_transition_client, &system_state_transition_server));
+
+  std::unique_ptr<SystemStateManager> state_mgr;
+  ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), coordinator(),
+                                       std::move(system_state_transition_server), &state_mgr));
+  coordinator()->set_system_state_manager(std::move(state_mgr));
+
+  MockPowerManager mock_power_manager;
+  zx::channel mock_power_manager_client, mock_power_manager_server;
+  zx::channel dev_local, dev_remote;
+  ASSERT_OK(zx::channel::create(0, &dev_local, &dev_remote));
+  ASSERT_OK(zx::channel::create(0, &mock_power_manager_client, &mock_power_manager_server));
+  ASSERT_OK(fidl::Bind(coordinator_loop()->dispatcher(), std::move(mock_power_manager_server),
+                       &mock_power_manager));
+  ASSERT_OK(coordinator()->RegisterWithPowerManager(std::move(mock_power_manager_client),
+                                                    std::move(system_state_transition_client),
+                                                    std::move(dev_local)));
+  ASSERT_TRUE(mock_power_manager.register_called());
 }

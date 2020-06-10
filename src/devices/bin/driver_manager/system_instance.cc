@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
+#include <fuchsia/power/manager/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/unsafe.h>
@@ -29,6 +30,7 @@
 #include "devfs.h"
 #include "fdio.h"
 #include "src/devices/lib/log/log.h"
+#include "system_state_manager.h"
 
 struct ConsoleStarterArgs {
   SystemInstance* instance;
@@ -835,6 +837,39 @@ int SystemInstance::WaitForSystemAvailable(Coordinator* coordinator) {
   do_autorun("autorun:system", autorun.empty() ? nullptr : autorun.data(),
              coordinator->root_resource());
 
+  zx::channel system_state_transition_client, system_state_transition_server;
+  zx_status_t status =
+      zx::channel::create(0, &system_state_transition_client, &system_state_transition_server);
+  if (status != ZX_OK) {
+    return status;
+  }
+  std::unique_ptr<SystemStateManager> system_state_manager;
+  status =
+      SystemStateManager::Create(coordinator->dispatcher(), coordinator,
+                                 std::move(system_state_transition_server), &system_state_manager);
+  if (status != ZX_OK) {
+    return status;
+  }
+  coordinator->set_system_state_manager(std::move(system_state_manager));
+  zx::channel dev_handle = CloneFs("dev");
+  zx::channel local, remote;
+  status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+  std::string registration_svc =
+      "/svc/" + std::string(llcpp::fuchsia::power::manager::DriverManagerRegistration::Name);
+
+  status = fdio_service_connect(registration_svc.c_str(), remote.release());
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to connect to fuchsia.power.manager: %s", zx_status_get_string(status));
+  }
+
+  status = coordinator->RegisterWithPowerManager(
+      std::move(local), std::move(system_state_transition_client), std::move(dev_handle));
+  if (status == ZX_OK) {
+    coordinator->set_power_manager_registered(true);
+  }
   return 0;
 }
 

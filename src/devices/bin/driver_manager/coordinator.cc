@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/power/manager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/receiver.h>
@@ -66,6 +67,7 @@ constexpr char kBootFirmwarePath[] = "lib/firmware";
 constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 constexpr char kFshostAdminPath[] = "/svc/fuchsia.fshost.Admin";
+constexpr zx::duration kPowerManagerConnectionTimeout = zx::sec(40);
 
 // The driver_host doesn't just define its own __asan_default_options()
 // function because that conflicts with the build-system feature of injecting
@@ -119,6 +121,7 @@ void suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
 }  // namespace
 
 namespace power_fidl = llcpp::fuchsia::hardware::power;
+namespace power_manager_fidl = llcpp::fuchsia::power::manager;
 
 Coordinator::Coordinator(CoordinatorConfig config)
     : config_(std::move(config)),
@@ -129,6 +132,7 @@ Coordinator::Coordinator(CoordinatorConfig config)
     wait_on_oom_event_.set_trigger(ZX_EVENT_SIGNALED);
     wait_on_oom_event_.Begin(config_.dispatcher);
   }
+  shutdown_system_state_ = config_.default_shutdown_system_state;
 }
 
 Coordinator::~Coordinator() {}
@@ -154,6 +158,62 @@ void Coordinator::ShutdownFilesystems() {
   }
 
   LOGF(INFO, "Successfully waited for VFS exit completion");
+}
+
+zx_status_t Coordinator::RegisterWithPowerManager(zx::channel power_manager_client,
+                                                  zx::channel system_state_transition_client,
+                                                  zx::channel devfs_handle) {
+  using RegisterRequest = power_manager_fidl::DriverManagerRegistration::RegisterRequest;
+  using RegisterResponse = power_manager_fidl::DriverManagerRegistration::RegisterResponse;
+
+  // This request is manually sent to allow timeout for the fidl::Call, until fxb/53240
+  // is resolved.
+  RegisterRequest request = {};
+  request.system_state_transition = std::move(system_state_transition_client);
+  request.dir = std::move(devfs_handle);
+  fidl::Buffer<RegisterRequest> request_buffer;
+  fidl::BytePart request_bytes = request_buffer.view();
+  memset(request_bytes.data(), 0, request_bytes.capacity());
+  memcpy(request_bytes.data(), &request, request_bytes.capacity());
+  request_bytes.set_actual(sizeof(RegisterRequest));
+  fidl::DecodedMessage<RegisterRequest> msg(std::move(request_bytes));
+  power_manager_fidl::DriverManagerRegistration::SetTransactionHeaderFor::RegisterRequest(msg);
+
+  fidl::EncodeResult<RegisterRequest> encode_result = fidl::Encode(std::move(msg));
+  if (encode_result.status != ZX_OK) {
+    LOGF(ERROR, "Failed to register with power_manager.Encoding failed:%d Encode error:%s",
+         encode_result.status, encode_result.error);
+    return encode_result.status;
+  }
+
+  fidl::Buffer<RegisterResponse> response_buffer;
+  auto result = fidl::Call<RegisterRequest, RegisterResponse>(
+      power_manager_client, std::move(encode_result.message), response_buffer.view(),
+      zx::deadline_after(kPowerManagerConnectionTimeout));
+  if (result.status != ZX_OK) {
+    LOGF(ERROR, "Failed to register with power_manager.Call failed:%s",
+         zx_status_get_string(result.status));
+    return result.status;
+  }
+
+  auto decode_result = fidl::Decode(std::move(result.message));
+  if (decode_result.status != ZX_OK) {
+    LOGF(ERROR, "Failed to register with power_manager.Decode failed:%d\n", decode_result.status);
+    return decode_result.status;
+  }
+
+  if (decode_result.message.message()->result.is_err()) {
+    power_manager_fidl::RegistrationError err = decode_result.message.message()->result.err();
+    if (err == power_manager_fidl::RegistrationError::INVALID_HANDLE) {
+      LOGF(ERROR, "Failed to register with power_manager.Invalid handle.\n");
+      return ZX_ERR_INVALID_ARGS;
+    }
+    LOGF(ERROR, "Failed to register with power_manager\n");
+    return ZX_ERR_INTERNAL;
+  }
+
+  LOGF(INFO, "Registered with power manager successfully");
+  return ZX_OK;
 }
 
 zx_status_t Coordinator::InitCoreDevices(std::string_view sys_device_driver) {
@@ -1862,19 +1922,6 @@ void Coordinator::SuspendToRam(
           std::move(callback));
 }
 
-void Coordinator::SetTerminationSystemState(
-    device_manager_fidl::SystemPowerState state,
-    device_manager_fidl::SystemStateTransition::Interface::SetTerminationSystemStateCompleter::Sync
-        completer) {
-  if (state == device_manager_fidl::SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON) {
-    LOGF(INFO, "Invalid termination state");
-    completer.ReplyError(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-  set_shutdown_system_state(static_cast<power_fidl::statecontrol::SystemPowerState>(state));
-  completer.ReplySuccess();
-}
-
 void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
                                  GetBindProgramCompleter::Sync completer) {
   fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
@@ -1998,23 +2045,6 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
     LOGF(ERROR, "Failed to add entry in service directory for '%s': %s",
          power_fidl::statecontrol::RebootMethodsWatcherRegister::Name,
          zx_status_get_string(status));
-    return status;
-  }
-
-  const auto systemstate_transition = [this](zx::channel request) {
-    auto status = fidl::Bind<device_manager_fidl::SystemStateTransition::Interface>(
-        this->config_.dispatcher, std::move(request), this);
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           device_manager_fidl::SystemStateTransition::Name, zx_status_get_string(status));
-    }
-    return status;
-  };
-  status = svc_dir->AddEntry(device_manager_fidl::SystemStateTransition::Name,
-                             fbl::MakeRefCounted<fs::Service>(systemstate_transition));
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to add entry in service directory for '%s': %s",
-         device_manager_fidl::SystemStateTransition::Name, zx_status_get_string(status));
     return status;
   }
 
