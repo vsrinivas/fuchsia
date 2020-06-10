@@ -113,6 +113,17 @@ protocol Frame {
     /// - `view_token`: Token for the new view.
     CreateView(fuchsia.ui.views.ViewToken view_token);
 
+    /// Creates a new view using the specified `view_token`. Caller should pass the other end of
+    /// the token to [`fuchsia.ui.gfx.ViewHolderArgs/token`] to attach the new view to a view tree.
+    /// `view_ref` can be cloned before passing it to this method, which will allow clients to
+    /// track the view.
+    /// `view_ref_control` must not have the ZX_RIGHT_DUPLICATE set, or view creation will fail
+    /// and `view_token` will be closed.
+    [Transitional]
+    CreateViewWithViewRef(fuchsia.ui.views.ViewToken view_token,
+                          fuchsia.ui.views.ViewRefControl view_ref_control,
+                          fuchsia.ui.views.ViewRef view_ref);
+
     /// Enables headless rendering of the Frame.
     /// This is used when content depends on layout and/or animation events firing normally.
     /// May only be used on a Context created with the `HEADLESS` feature flag.
