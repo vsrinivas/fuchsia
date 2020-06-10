@@ -12,6 +12,7 @@
 #include "common/util.h"
 #include "common/vk/assert.h"
 #include "common/vk/barrier.h"
+#include "common/vk/debug_utils.h"
 #include "targets/hotsort_vk_target.h"
 
 //
@@ -138,6 +139,147 @@ struct hotsort_vk
     VkPipeline   all[];
   } pipelines;
 };
+
+//
+//
+//
+
+static void
+hs_debug_utils_set(VkDevice            device,
+                   struct hotsort_vk * hs,
+                   uint32_t const      count_bs,
+                   uint32_t const      count_bc,
+                   uint32_t const      count_fm_0,
+                   uint32_t const      count_fm_1,
+                   uint32_t const      count_fm_2,
+                   uint32_t const      count_hm_0,
+                   uint32_t const      count_hm_1,
+                   uint32_t const      count_hm_2)
+{
+  if (pfn_vkSetDebugUtilsObjectNameEXT != NULL)
+    {
+      VkDebugUtilsObjectNameInfoEXT name = {
+        .sType      = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+        .pNext      = NULL,
+        .objectType = VK_OBJECT_TYPE_PIPELINE,
+      };
+
+      {
+        char object_name[] = "bs[*]";
+
+        name.pObjectName = object_name;
+
+        for (uint32_t ii = 0; ii < count_bs; ii++)
+          {
+            object_name[3]    = '0' + ii;
+            name.objectHandle = (uint64_t)hs->pipelines.bs[ii];
+            vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+          }
+      }
+      {
+        char object_name[] = "bc[*]";
+
+        name.pObjectName = object_name;
+
+        for (uint32_t ii = 0; ii < count_bc; ii++)
+          {
+            object_name[3]    = '0' + ii;
+            name.objectHandle = (uint64_t)hs->pipelines.bc[ii];
+            vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+          }
+      }
+      if (count_fm_0 > 0)
+        {
+          char object_name[] = "fm[0][*]";
+
+          name.pObjectName = object_name;
+
+          for (uint32_t ii = 0; ii < count_fm_0; ii++)
+            {
+              object_name[6]    = '0' + ii;
+              name.objectHandle = (uint64_t)hs->pipelines.fm[0][ii];
+              vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+            }
+        }
+      if (count_fm_1 > 0)
+        {
+          char object_name[] = "fm[1][*]";
+
+          name.pObjectName = object_name;
+
+          for (uint32_t ii = 0; ii < count_fm_1; ii++)
+            {
+              object_name[6]    = '0' + ii;
+              name.objectHandle = (uint64_t)hs->pipelines.fm[1][ii];
+              vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+            }
+        }
+      if (count_fm_2 > 0)
+        {
+          char object_name[] = "fm[2][*]";
+
+          name.pObjectName = object_name;
+
+          for (uint32_t ii = 0; ii < count_fm_2; ii++)
+            {
+              object_name[6]    = '0' + ii;
+              name.objectHandle = (uint64_t)hs->pipelines.fm[2][ii];
+              vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+            }
+        }
+      if (count_hm_0 > 0)
+        {
+          char object_name[] = "hm[0][*]";
+
+          name.pObjectName = object_name;
+
+          for (uint32_t ii = 0; ii < count_hm_0; ii++)
+            {
+              object_name[6]    = '0' + ii;
+              name.objectHandle = (uint64_t)hs->pipelines.hm[0][ii];
+              vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+            }
+        }
+      if (count_hm_1 > 0)
+        {
+          char object_name[] = "hm[1][*]";
+
+          name.pObjectName = object_name;
+
+          for (uint32_t ii = 0; ii < count_hm_1; ii++)
+            {
+              object_name[6]    = '0' + ii;
+              name.objectHandle = (uint64_t)hs->pipelines.hm[1][ii];
+              vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+            }
+        }
+      if (count_hm_2 > 0)
+        {
+          char object_name[] = "hm[2][*]";
+
+          name.pObjectName = object_name;
+
+          for (uint32_t ii = 0; ii < count_hm_2; ii++)
+            {
+              object_name[6]    = '0' + ii;
+              name.objectHandle = (uint64_t)hs->pipelines.hm[2][ii];
+              vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+            }
+        }
+
+      name.objectHandle = (uint64_t)hs->pipelines.fill_in[0];
+      name.pObjectName  = "fill_in";
+      vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+
+      name.objectHandle = (uint64_t)hs->pipelines.fill_out[0];
+      name.pObjectName  = "fill_out";
+      vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+
+      name.objectHandle = (uint64_t)hs->pipelines.transpose[0];
+      name.pObjectName  = "transpose";
+      vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+    }
+}
 
 //
 //
@@ -365,6 +507,20 @@ hotsort_vk_create(VkDevice                               device,
   // TRANSPOSE
   hs->pipelines.transpose = pipeline_next;
   pipeline_next += 1;
+
+  //
+  // tag pipelines with names
+  //
+  hs_debug_utils_set(device,
+                     hs,
+                     count_bs,
+                     count_bc,
+                     count_fm[0],
+                     count_fm[1],
+                     count_fm[2],
+                     count_hm[0],
+                     count_hm[1],
+                     count_hm[2]);
 
   //
   // optionally dump pipeline stats
@@ -687,6 +843,35 @@ hs_cmd_bs(VkCommandBuffer cb, struct hotsort_vk const * const hs, uint32_t const
 //
 
 void
+hs_debug_utils_cmd_begin(VkCommandBuffer cb, char const * const label_name)
+{
+  if (pfn_vkCmdBeginDebugUtilsLabelEXT != NULL)
+    {
+      VkDebugUtilsLabelEXT const label = {
+        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+        NULL,
+        label_name,
+        { 1.0f, 0.0f, 0.0f, 1.0f },
+      };
+
+      pfn_vkCmdBeginDebugUtilsLabelEXT(cb, &label);
+    }
+}
+
+void
+hs_debug_utils_cmd_end(VkCommandBuffer cb)
+{
+  if (pfn_vkCmdEndDebugUtilsLabelEXT != NULL)
+    {
+      pfn_vkCmdEndDebugUtilsLabelEXT(cb);
+    }
+}
+
+//
+//
+//
+
+void
 hotsort_vk_sort(VkCommandBuffer                            cb,
                 struct hotsort_vk const * const            hs,
                 struct hotsort_vk_ds_offsets const * const offsets,
@@ -695,6 +880,8 @@ hotsort_vk_sort(VkCommandBuffer                            cb,
                 uint32_t const                             padded_out,
                 bool const                                 linearize)
 {
+  hs_debug_utils_cmd_begin(cb, "HotSort");
+
   //
   // append the push constants
   //
@@ -736,7 +923,10 @@ hotsort_vk_sort(VkCommandBuffer                            cb,
       hs_cmd_fill_in(cb, hs, from_slab, to_slab);
 
       if (count <= 1)
-        return;
+        {
+          hs_debug_utils_cmd_end(cb);
+          return;
+        }
 
       vk_barrier_compute_w_to_compute_r(cb);
     }
@@ -820,6 +1010,8 @@ hotsort_vk_sort(VkCommandBuffer                            cb,
 
       hs_cmd_transpose(cb, hs, bx_ru);
     }
+
+  hs_debug_utils_cmd_end(cb);
 }
 
 //
