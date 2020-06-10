@@ -35,7 +35,17 @@ bits LookupIpOptions : uint8 {
     CNAME_LOOKUP = 0b100;
 };
 
+/// The maximum length of a hostname, as per [RFC 1035 section 2.3.4](https://tools.ietf.org/html/rfc1035#section-2.3.4).
 const uint64 MAX_HOSTNAME_SIZE = 255;
+
+/// A hostname.
+///
+/// Although the maximum length of a domain or hostname is 255 characters,
+/// each label within a name must not be longer than 63 characters as per
+/// [RFC 1035 section 2.3.4](https://tools.ietf.org/html/rfc1035#section-2.3.4).
+/// A label in a host name is the alphanumeric characters or hyphens, seperated
+/// by a period (e.g. abc.com has two labels, 'abc' and 'com').
+using Hostname = string:MAX_HOSTNAME_SIZE;
 
 // TODO(49741): Move to fuchsia.net.name once build unification is done.
 [Discoverable]
@@ -43,7 +53,7 @@ protocol NameLookup {
     /// Look up a list of IP addresses by hostname.
     ///
     /// If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
-    LookupIp(string:MAX_HOSTNAME_SIZE hostname, LookupIpOptions options) -> (IpAddressInfo addr) error LookupError;
+    LookupIp(Hostname hostname, LookupIpOptions options) -> (IpAddressInfo addr) error LookupError;
     /// Look up a hostname by IP address.
-    LookupHostname(IpAddress addr) -> (string:MAX_HOSTNAME_SIZE hostname) error LookupError;
+    LookupHostname(IpAddress addr) -> (Hostname hostname) error LookupError;
 };
