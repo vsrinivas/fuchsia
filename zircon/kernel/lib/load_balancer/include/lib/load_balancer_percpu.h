@@ -1,9 +1,11 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Copyright 2020 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_LIB_LOAD_BALANCER_LOAD_BALANCER_PERCPU_H_
-#define ZIRCON_KERNEL_LIB_LOAD_BALANCER_LOAD_BALANCER_PERCPU_H_
+#ifndef ZIRCON_KERNEL_LIB_LOAD_BALANCER_INCLUDE_LIB_LOAD_BALANCER_PERCPU_H_
+#define ZIRCON_KERNEL_LIB_LOAD_BALANCER_INCLUDE_LIB_LOAD_BALANCER_PERCPU_H_
 
 #include <lib/relaxed_atomic.h>
 #include <zircon/types.h>
@@ -170,4 +172,4 @@ static inline cpu_num_t FindTargetCpu(Thread* thread) TA_REQ(thread_lock) {
 
 }  // namespace load_balancer
 
-#endif  // ZIRCON_KERNEL_LIB_LOAD_BALANCER_LOAD_BALANCER_PERCPU_H_
+#endif  // ZIRCON_KERNEL_LIB_LOAD_BALANCER_INCLUDE_LIB_LOAD_BALANCER_PERCPU_H_
