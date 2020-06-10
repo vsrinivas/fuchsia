@@ -52,16 +52,17 @@ int Run(int argc, const char** argv) {
   }
 
   // Run the stress test.
+  StatusLine status;
   bool success = false;
   switch (args.subcommand) {
     case StressTest::kCpu:
-      success = StressCpu(duration, sensor.get());
+      success = StressCpu(&status, duration, sensor.get());
       break;
     case StressTest::kFlash:
       fprintf(stderr, "Error: flash test not yet implemented\n");
       break;
     case StressTest::kMemory:
-      success = StressMemory(duration, sensor.get());
+      success = StressMemory(&status, duration, sensor.get());
       break;
   }
 

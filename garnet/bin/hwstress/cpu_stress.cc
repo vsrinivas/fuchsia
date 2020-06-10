@@ -59,29 +59,27 @@ void RunWorkload(StatusLine* status, ProfileManager* profile_manager, Temperatur
 
 }  // namespace
 
-bool StressCpu(zx::duration duration, TemperatureSensor* temperature_sensor) {
-  StatusLine status;
-
+bool StressCpu(StatusLine* status, zx::duration duration, TemperatureSensor* temperature_sensor) {
   // Calculate finish time.
   zx::time start_time = zx::clock::get_monotonic();
   zx::time finish_time = start_time + duration;
 
   // Get number of CPUs.
   uint32_t num_cpus = zx_system_get_num_cpus();
-  status.Log("Detected %d CPU(s) in the system.\n", num_cpus);
+  status->Log("Detected %d CPU(s) in the system.\n", num_cpus);
 
   // Create a profile manager.
   std::unique_ptr<ProfileManager> profile_manager = ProfileManager::CreateFromEnvironment();
   if (profile_manager == nullptr) {
-    status.Log("Error: could not create profile manager.");
+    status->Log("Error: could not create profile manager.");
     return false;
   }
 
   // Print start banner.
   if (finish_time == zx::time::infinite()) {
-    status.Log("Exercising CPU until stopped...\n");
+    status->Log("Exercising CPU until stopped...\n");
   } else {
-    status.Log("Exercising CPU for %0.2f seconds...\n", DurationToSecs(duration));
+    status->Log("Exercising CPU for %0.2f seconds...\n", DurationToSecs(duration));
   }
 
   // Get workloads.
@@ -123,15 +121,15 @@ bool StressCpu(zx::duration duration, TemperatureSensor* temperature_sensor) {
   // Run the workloads.
   uint64_t iteration = 1;
   do {
-    status.Log("Iteration %ld: %0.2fs per test.", iteration++, DurationToSecs(time_per_test));
+    status->Log("Iteration %ld: %0.2fs per test.", iteration++, DurationToSecs(time_per_test));
     for (const auto& workload : workloads) {
-      RunWorkload(&status, profile_manager.get(), temperature_sensor, workload, num_cpus,
+      RunWorkload(status, profile_manager.get(), temperature_sensor, workload, num_cpus,
                   time_per_test);
     }
     time_per_test *= 2;
   } while (zx::clock::get_monotonic() < finish_time);
 
-  status.Log("Complete.\n");
+  status->Log("Complete.\n");
   return true;
 }
 

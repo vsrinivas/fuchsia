@@ -164,9 +164,8 @@ std::vector<MemoryWorkload> GenerateMemoryWorkloads() {
   return result;
 }
 
-bool StressMemory(zx::duration duration, TemperatureSensor* /*temperature_sensor*/) {
-  StatusLine status;
-
+bool StressMemory(StatusLine* status, zx::duration duration,
+                  TemperatureSensor* /*temperature_sensor*/) {
   // Get workloads.
   size_t workload_index = 0;
   std::vector<MemoryWorkload> workloads = GenerateMemoryWorkloads();
@@ -176,7 +175,7 @@ bool StressMemory(zx::duration duration, TemperatureSensor* /*temperature_sensor
   zx::status<std::unique_ptr<MemoryRange>> maybe_memory =
       MemoryRange::Create(kMemoryToTest, CacheMode::kCached);
   if (maybe_memory.is_error()) {
-    status.Log("Failed to allocate memory: %s", maybe_memory.status_string());
+    status->Log("Failed to allocate memory: %s", maybe_memory.status_string());
     return false;
   }
   MemoryRange* memory = maybe_memory.value().get();
@@ -185,14 +184,14 @@ bool StressMemory(zx::duration duration, TemperatureSensor* /*temperature_sensor
   uint64_t num_tests = 1;
   zx::time end_time = zx::deadline_after(duration);
   while (zx::clock::get_monotonic() < end_time) {
-    status.Set("Test %4ld: %s", num_tests, workloads[workload_index].name.c_str());
+    status->Set("Test %4ld: %s", num_tests, workloads[workload_index].name.c_str());
 
     zx::time test_start = zx::clock::get_monotonic();
     workloads[workload_index].exec(memory);
     zx::time test_end = zx::clock::get_monotonic();
 
-    status.Log("Test %4ld: %s: %0.3fs", num_tests, workloads[workload_index].name.c_str(),
-               DurationToSecs(test_end - test_start));
+    status->Log("Test %4ld: %s: %0.3fs", num_tests, workloads[workload_index].name.c_str(),
+                DurationToSecs(test_end - test_start));
 
     workload_index = (workload_index + 1) % workloads.size();
     num_tests++;

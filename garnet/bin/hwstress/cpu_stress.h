@@ -7,10 +7,7 @@
 
 #include <lib/zx/time.h>
 
-#include <atomic>
-#include <thread>
-#include <vector>
-
+#include "status.h"
 #include "temperature_sensor.h"
 
 namespace hwstress {
@@ -18,7 +15,7 @@ namespace hwstress {
 // Start a stress test.
 //
 // Return true on success.
-bool StressCpu(zx::duration duration_seconds,
+bool StressCpu(StatusLine* status, zx::duration duration_seconds,
                TemperatureSensor* sensor = GetNullTemperatureSensor());
 
 }  // namespace hwstress

@@ -14,6 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "memory_range.h"
+#include "status.h"
 
 namespace hwstress {
 namespace {
@@ -108,7 +109,8 @@ TEST(Memory, CatchBitFlip) {
 
 TEST(Memory, StressMemory) {
   // Exercise the main StressMemory function for a tiny amount of time.
-  EXPECT_TRUE(StressMemory(zx::msec(1)));
+  StatusLine status;
+  EXPECT_TRUE(StressMemory(&status, zx::msec(1)));
 }
 
 }  // namespace
