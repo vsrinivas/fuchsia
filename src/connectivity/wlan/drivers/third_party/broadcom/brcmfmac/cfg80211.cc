@@ -1459,7 +1459,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
     if (err != ZX_OK) {
       BRCMF_ERR("wpaie failed: %s, fw err %s", zx_status_get_string(err),
                 brcmf_fil_get_errstr(fw_err));
-      return err;
+      goto fail;
     }
   }
 
@@ -2910,9 +2910,11 @@ void brcmf_if_auth_req(net_device* ndev, const wlanif_auth_req_t* req) {
     BRCMF_ERR("Ignoring mismatch and using join MAC address");
   }
 
-  brcmf_set_auth_type(ndev, req->auth_type);
-
-  response.result_code = WLAN_AUTH_RESULT_SUCCESS;
+  if (brcmf_set_auth_type(ndev, req->auth_type) == ZX_OK) {
+    response.result_code = WLAN_AUTH_RESULT_SUCCESS;
+  } else {
+    response.result_code = WLAN_AUTH_RESULT_REJECTED;
+  }
   response.auth_type = req->auth_type;
   memcpy(&response.peer_sta_address, ifp->bss.bssid, ETH_ALEN);
 

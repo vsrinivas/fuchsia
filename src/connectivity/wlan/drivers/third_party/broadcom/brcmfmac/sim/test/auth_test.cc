@@ -218,7 +218,6 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
           CreateKeyReq(&test_key13[0], kWEP104KeyLen, WPA_CIPHER_WEP_104);
       client_ifc_->if_impl_ops_->set_keys_req(client_ifc_->if_impl_ctx_, &set_keys_req);
       auth_req.auth_type = WLAN_AUTH_TYPE_SHARED_KEY;
-      client_ifc_->if_impl_ops_->auth_req(client_ifc_->if_impl_ctx_, &auth_req);
       break;
     }
 
@@ -227,7 +226,6 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
           CreateKeyReq(&test_key5[0], kWEP40KeyLen, WPA_CIPHER_WEP_40);
       client_ifc_->if_impl_ops_->set_keys_req(client_ifc_->if_impl_ctx_, &set_keys_req);
       auth_req.auth_type = WLAN_AUTH_TYPE_SHARED_KEY;
-      client_ifc_->if_impl_ops_->auth_req(client_ifc_->if_impl_ctx_, &auth_req);
       break;
     }
 
@@ -236,19 +234,19 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
           CreateKeyReq(&test_key5[0], kWEP40KeyLen, WPA_CIPHER_WEP_40);
       client_ifc_->if_impl_ops_->set_keys_req(client_ifc_->if_impl_ctx_, &set_keys_req);
       auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
-      client_ifc_->if_impl_ops_->auth_req(client_ifc_->if_impl_ctx_, &auth_req);
       break;
     }
 
     case SEC_TYPE_WPA1:
     case SEC_TYPE_WPA2: {
       auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
-      client_ifc_->if_impl_ops_->auth_req(client_ifc_->if_impl_ctx_, &auth_req);
       break;
     }
 
-    default:;
+    default:
+      return;
   }
+  client_ifc_->if_impl_ops_->auth_req(client_ifc_->if_impl_ctx_, &auth_req);
 }
 
 void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
@@ -457,6 +455,19 @@ TEST_F(AuthTest, WEPOPEN) {
   VerifyAuthFrames();
 }
 
+TEST_F(AuthTest, AuthFail) {
+  Init();
+  sec_type_ = SEC_TYPE_WEP_OPEN;
+  ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
+                   .sec_type = simulation::SEC_PROTO_TYPE_OPEN});
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->err_inj_.AddErrInjIovar("auth", ZX_ERR_IO, client_ifc_->iface_id_);
+  ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
+
+  env_->Run();
+  EXPECT_NE(auth_status_, WLAN_AUTH_RESULT_SUCCESS);
+}
+
 TEST_F(AuthTest, IgnoreTest) {
   Init();
   sec_type_ = SEC_TYPE_WEP_OPEN;
@@ -498,6 +509,21 @@ TEST_F(AuthTest, WPA1Test) {
   VerifyAuthFrames();
   // Make sure that OnAssocConf is called, so the check inside is called.
   EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_SUCCESS);
+}
+
+TEST_F(AuthTest, WPA1Fail) {
+  Init();
+  sec_type_ = SEC_TYPE_WPA1;
+  ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
+                   .sec_type = simulation::SEC_PROTO_TYPE_WPA1});
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->err_inj_.AddErrInjIovar("wpaie", ZX_ERR_IO, client_ifc_->iface_id_);
+  ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
+
+  env_->Run();
+
+  // Assoc should have failed
+  EXPECT_NE(assoc_status_, WLAN_ASSOC_RESULT_SUCCESS);
 }
 
 TEST_F(AuthTest, WPA2Test) {
