@@ -90,6 +90,13 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   // Sensible 5x5x1 view bounds for a |scenic::ViewHolder| for a test view configured using
   // |SetUpTestView|.
   static constexpr fuchsia::ui::gfx::ViewProperties k5x5x1 = {.bounding_box = {.max = {5, 5, 1}}};
+  // clang-format off
+  static constexpr std::array<float, 9> kIdentityMatrix = {
+    1.f, 0.f, 0.f, // first column
+    0.f, 1.f, 0.f, // second column
+    0.f, 0.f, 1.f, // third column
+  };
+  // clang-format on
 
   // Convenience function; triggers scene operations by scheduling the next
   // render task in the event loop.
@@ -114,6 +121,16 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   // Creates a test session with a view containing a 5x5 rectangle centered at (2, 2).
   SessionWrapper CreateClient(const std::string& name, fuchsia::ui::views::ViewToken view_token);
 
+  // Inject an event. Must have first called RegisterInjector.
+  void Inject(float x, float y, fuchsia::ui::pointerinjector::EventPhase phase);
+
+  void RegisterInjector(fuchsia::ui::views::ViewRef context_view_ref,
+                        fuchsia::ui::views::ViewRef target_view_ref,
+                        fuchsia::ui::pointerinjector::DispatchPolicy dispatch_policy,
+                        fuchsia::ui::pointerinjector::DeviceType type,
+                        std::array<std::array<float, 2>, 2> extents,
+                        std::array<float, 9> viewport_matrix = kIdentityMatrix);
+
   // |testing::Test|
   // InputSystemTest needs its own teardown sequence, for session management.
   void TearDown() override;
@@ -128,6 +145,7 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   std::shared_ptr<scenic_impl::display::Display> display_;
 
   scenic_impl::input::InputSystem* input_system_ = nullptr;
+  fuchsia::ui::pointerinjector::DevicePtr injector_;
 };
 
 // Creates pointer event commands for one finger, where the pointer "device" is

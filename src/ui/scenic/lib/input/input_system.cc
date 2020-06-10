@@ -200,16 +200,28 @@ void InputSystem::Register(fuchsia::ui::pointerinjector::Config config,
           ColumnMajorMat3VectorToMat4(config.viewport().viewport_to_context_transform()),
   };
 
+  fit::function<void(const InternalPointerEvent&)> inject_func;
+  switch (settings.dispatch_policy) {
+    case fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET:
+      inject_func = [this](const InternalPointerEvent& event) { InjectTouchEventExclusive(event); };
+      break;
+    case fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET:
+      inject_func = [this](const InternalPointerEvent& event) {
+        InjectTouchEventHitTested(event, /*parallel_dispatch*/ false);
+      };
+      break;
+    default:
+      FX_CHECK(false) << "Should never be reached.";
+      break;
+  }
+
   const auto [it, success] = injectors_.try_emplace(
       id, std::move(settings), std::move(viewport), std::move(injector),
       /*is_descendant_and_connected*/
       [this](zx_koid_t descendant, zx_koid_t ancestor) {
         return IsDescendantAndConnected(scene_graph_->view_tree(), descendant, ancestor);
       },
-      /*inject*/
-      [this](const InternalPointerEvent& pointer_event) {
-        InjectTouchEventExclusive(pointer_event);
-      });
+      std::move(inject_func));
   FX_CHECK(success) << "Injector already exists.";
 
   // Remove the injector if the channel has an error.

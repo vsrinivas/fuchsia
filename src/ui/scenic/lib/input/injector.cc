@@ -90,9 +90,11 @@ bool Injector::IsValidConfig(const fuchsia::ui::pointerinjector::Config& config)
     return false;
   }
 
-  if (config.dispatch_policy() != fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET) {
-    FX_LOGS(ERROR)
-        << "InjectorRegistry::Register : Only DispatchPolicy EXCLUSIVE_TARGET is supported.";
+  if (config.dispatch_policy() != fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET &&
+      config.dispatch_policy() !=
+          fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET) {
+    FX_LOGS(ERROR) << "InjectorRegistry::Register : Only EXCLUSIVE_TARGET and "
+                      "TOP_HIT_AND_ANCESTORS_IN_TARGET DispatchPolicy is supported.";
     return false;
   }
 

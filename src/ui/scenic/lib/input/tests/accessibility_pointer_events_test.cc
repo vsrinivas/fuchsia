@@ -94,10 +94,18 @@ class MockAccessibilityPointerEventListener
   uint32_t num_events_until_response_ = 0;
 };
 
-// Setup common to most of the tests in this suite, which set up a single view.
-struct SingleViewSetup {
-  SessionWrapper root_session;
-  SessionWrapper view;
+// Setup common to most of the tests in this suite, which set up a single child view.
+struct SingleChildViewSetup {
+  SessionWrapper root_view;
+  SessionWrapper child_view;
+  const uint32_t compositor_id;
+};
+
+// Setup with two nested child views, for testing injection that requires context and target views.
+struct TwoChildViewSetup {
+  SessionWrapper root_view;
+  SessionWrapper child_view;
+  SessionWrapper child_view2;
   const uint32_t compositor_id;
 };
 
@@ -109,21 +117,43 @@ class AccessibilityPointerEventsTest : public InputSystemTest {
   uint32_t test_display_height_px() const override { return 5; }
 
   // Most of the tests in this suite set up a single view.
-  SingleViewSetup SetUpSingleView(const fuchsia::ui::gfx::ViewProperties& view_properties) {
-    auto [root_session, root_resources] = CreateScene();
-
+  SingleChildViewSetup SetUpSingleView(const fuchsia::ui::gfx::ViewProperties& view_properties) {
+    auto [root_view, root_resources] = CreateScene();
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-    scenic::Session* const session = root_session.session();
+    {
+      scenic::ViewHolder view_holder(root_view.session(), std::move(view_holder_token),
+                                     "View Holder");
+      view_holder.SetViewProperties(view_properties);
+      root_view.view()->AddChild(view_holder);
+    }
 
-    scenic::ViewHolder view_holder(session, std::move(view_holder_token), "View Holder");
-    view_holder.SetViewProperties(view_properties);
-    root_resources.scene.AddChild(view_holder);
-    RequestToPresent(session);
+    RequestToPresent(root_view.session());
 
     return {
-        std::move(root_session),
+        std::move(root_view),
         CreateClient("a11y-single-view", std::move(view_token)),
         root_resources.compositor.id(),
+    };
+  }
+
+  TwoChildViewSetup SetUpTwoViews(const fuchsia::ui::gfx::ViewProperties& view_properties) {
+    SingleChildViewSetup single_view_scene = SetUpSingleView(view_properties);
+
+    auto [view_token2, view_holder_token2] = scenic::ViewTokenPair::New();
+    {
+      scenic::ViewHolder view_holder(single_view_scene.child_view.session(),
+                                     std::move(view_holder_token2), "View Holder");
+      view_holder.SetViewProperties(view_properties);
+      single_view_scene.child_view.view()->AddChild(view_holder);
+    }
+
+    RequestToPresent(single_view_scene.child_view.session());
+
+    return {
+        .root_view = std::move(single_view_scene.root_view),
+        .child_view = std::move(single_view_scene.child_view),
+        .child_view2 = CreateClient("a11y-second-view", std::move(view_token2)),
+        .compositor_id = single_view_scene.compositor_id,
     };
   }
 };
@@ -147,7 +177,7 @@ TEST_F(AccessibilityPointerEventsTest, RegistersAccessibilityListenerOnlyOnce) {
 // four pointer events, will be accepted in the second pointer event. The second one, also with four
 // pointer events, will be accepted in the fourth one.
 TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
-  auto [root_session, view, compositor_id] = SetUpSingleView(k5x5x1);
+  auto [root_view, view, compositor_id] = SetUpSingleView(k5x5x1);
 
   MockAccessibilityPointerEventListener listener(input_system());
   listener.SetResponses({
@@ -157,7 +187,7 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
 
   // Scene is now set up; send in the input.
   {
-    scenic::Session* const session = root_session.session();
+    scenic::Session* const session = root_view.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
@@ -203,7 +233,7 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
   // Accessibility consumed the two events. Continue sending pointer events in the same stream (a
   // phase == REMOVE hasn't came yet, so they are part of the same stream).
   {
-    scenic::Session* const session = root_session.session();
+    scenic::Session* const session = root_view.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     session->Enqueue(pointer.Up(2.5, 3.5));
@@ -247,7 +277,7 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
 
   // Now, sends an entire stream at once.
   {
-    scenic::Session* const session = root_session.session();
+    scenic::Session* const session = root_view.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     session->Enqueue(pointer.Add(3.5, 1.5));
@@ -314,14 +344,14 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
 // One pointer stream is injected in the input system. The listener rejects the pointer event. this
 // test makes sure that buffered (past), as well as future pointer events are sent to the view.
 TEST_F(AccessibilityPointerEventsTest, RejectsPointerEvents) {
-  auto [root_session, view, compositor_id] = SetUpSingleView(k5x5x1);
+  auto [root_view, view, compositor_id] = SetUpSingleView(k5x5x1);
 
   MockAccessibilityPointerEventListener listener(input_system());
   listener.SetResponses({{2, fuchsia::ui::input::accessibility::EventHandling::REJECTED}});
 
   // Scene is now set up; send in the input.
   {
-    scenic::Session* const session = root_session.session();
+    scenic::Session* const session = root_view.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
@@ -388,7 +418,7 @@ TEST_F(AccessibilityPointerEventsTest, RejectsPointerEvents) {
 
   // Send the rest of the stream.
   {
-    scenic::Session* const session = root_session.session();
+    scenic::Session* const session = root_view.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     session->Enqueue(pointer.Up(2.5, 3.5));
@@ -424,7 +454,7 @@ TEST_F(AccessibilityPointerEventsTest, RejectsPointerEvents) {
 // In this test three streams will be injected in the input system, where the first will be
 // consumed, the second rejected and the third also consumed.
 TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
-  auto [root_session, view, compositor_id] = SetUpSingleView(k5x5x1);
+  auto [root_view, view, compositor_id] = SetUpSingleView(k5x5x1);
 
   MockAccessibilityPointerEventListener listener(input_system());
   listener.SetResponses({
@@ -435,7 +465,7 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
 
   // Scene is now set up; send in the input.
   {
-    scenic::Session* const session = root_session.session();
+    scenic::Session* const session = root_view.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
@@ -644,11 +674,11 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
 // This test makes sure that if there is a stream in progress and the accessibility listener
 // connects, the existing stream is not sent to the listener.
 TEST_F(AccessibilityPointerEventsTest, DiscardActiveStreamOnConnection) {
-  auto [root_session, view, compositor_id] = SetUpSingleView(k5x5x1);
+  auto [root_view, view, compositor_id] = SetUpSingleView(k5x5x1);
 
   // Scene is now set up, send in the input.
   {
-    scenic::Session* const session = root_session.session();
+    scenic::Session* const session = root_view.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
@@ -667,7 +697,7 @@ TEST_F(AccessibilityPointerEventsTest, DiscardActiveStreamOnConnection) {
 
   // Sends the rest of the stream.
   {
-    scenic::Session* const session = root_session.session();
+    scenic::Session* const session = root_view.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     session->Enqueue(pointer.Up(2.5, 3.5));
@@ -704,14 +734,14 @@ TEST_F(AccessibilityPointerEventsTest, DiscardActiveStreamOnConnection) {
 // This tests makes sure that if there is an active stream, and accessibility disconnects, the
 // stream is sent to regular clients.
 TEST_F(AccessibilityPointerEventsTest, DispatchEventsAfterDisconnection) {
-  auto [root_session, view, compositor_id] = SetUpSingleView(k5x5x1);
+  auto [root_view, view, compositor_id] = SetUpSingleView(k5x5x1);
 
   {
     MockAccessibilityPointerEventListener listener(input_system());
 
     // Scene is now set up; send in the input.
     {
-      scenic::Session* const session = root_session.session();
+      scenic::Session* const session = root_view.session();
       PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                       /*pointer id*/ 1, PointerEventType::TOUCH);
       // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
@@ -734,7 +764,7 @@ TEST_F(AccessibilityPointerEventsTest, DispatchEventsAfterDisconnection) {
 
   // Sends the rest of the stream.
   {
-    scenic::Session* const session = root_session.session();
+    scenic::Session* const session = root_view.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     session->Enqueue(pointer.Up(2.5, 3.5));
@@ -787,14 +817,14 @@ TEST_F(AccessibilityPointerEventsTest, DispatchEventsAfterDisconnection) {
 // the ADD event. This test makes sure that the focus event gets sent, even though the stream is no
 // longer buffered and its information is coming only from the active stream info data.
 TEST_F(AccessibilityPointerEventsTest, FocusGetsSentAfterAddRejecting) {
-  auto [root_session, view, compositor_id] = SetUpSingleView(k5x5x1);
+  auto [root_view, view, compositor_id] = SetUpSingleView(k5x5x1);
 
   MockAccessibilityPointerEventListener listener(input_system());
   listener.SetResponses({{1, fuchsia::ui::input::accessibility::EventHandling::REJECTED}});
 
   // Scene is now set up; send in the input.
   {
-    scenic::Session* const session = root_session.session();
+    scenic::Session* const session = root_view.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
@@ -850,7 +880,7 @@ TEST_F(AccessibilityPointerEventsTest, FocusGetsSentAfterAddRejecting) {
 
   // Sends the rest of the stream.
   {
-    scenic::Session* const session = root_session.session();
+    scenic::Session* const session = root_view.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     session->Enqueue(pointer.Up(2.5, 3.5));
@@ -893,8 +923,8 @@ TEST_F(AccessibilityPointerEventsTest, ExposeTopMostViewRefKoid) {
 
   // Set up a scene with two views.
   // Since we need to manipulate the scene graph, go ahead and do this all at function scope.
-  auto [root_session, root_resources] = CreateScene();
-  scenic::Session* const session = root_session.session();
+  auto [root_view, root_resources] = CreateScene();
+  scenic::Session* const session = root_view.session();
   scenic::Scene* const scene = &root_resources.scene;
 
   scenic::ViewHolder view_holder_a(session, std::move(vh_a), "View Holder A"),
@@ -1028,9 +1058,9 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yRejects) {
   auto [vt, vht] = scenic::ViewTokenPair::New();
 
   // Set up a scene with one view.
-  auto [root_session, root_resources] = CreateScene();
+  auto [root_view, root_resources] = CreateScene();
   {
-    scenic::Session* const session = root_session.session();
+    scenic::Session* const session = root_view.session();
     scenic::Scene* const scene = &root_resources.scene;
     // Set scene origin (0, 0) to coincide with display (1, 1) -- this translation ensures that a
     // 5x5 view is centered on the display.
@@ -1054,7 +1084,7 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yRejects) {
   RunLoopUntilIdle();  // Flush out focus events to clients.
 
   // Clear out events.
-  root_session.events().clear();
+  root_view.events().clear();
   view.events().clear();
 
   // Setup is finished.  Scene is now set up; send in the input.
@@ -1062,22 +1092,22 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yRejects) {
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // A touch sequence that starts at the (0.5,0.5) location of the 7x7 display.
-    root_session.session()->Enqueue(pointer.Add(0.5, 0.5));
-    root_session.session()->Enqueue(pointer.Down(0.5, 0.5));
+    root_view.session()->Enqueue(pointer.Add(0.5, 0.5));
+    root_view.session()->Enqueue(pointer.Down(0.5, 0.5));
   }
   RunLoopUntilIdle();
 
   // Verify view did not receive events.
   EXPECT_EQ(view.events().size(), 0u);
   // Verify root session did not receive events.
-  EXPECT_EQ(root_session.events().size(), 0u);
+  EXPECT_EQ(root_view.events().size(), 0u);
 
   // Send in third touch event, which causes accessibility to reject.
   {
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // A touch sequence that starts at the (0.5,0.5) location of the 7x7 display.
-    root_session.session()->Enqueue(pointer.Move(0.5, 0.5));
+    root_view.session()->Enqueue(pointer.Move(0.5, 0.5));
   }
   RunLoopUntilIdle();
 
@@ -1091,7 +1121,7 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yRejects) {
 
   // Verify root session received only the focus event (since we revert to root of focus chain).
   {
-    const std::vector<InputEvent>& events = root_session.events();
+    const std::vector<InputEvent>& events = root_view.events();
     ASSERT_EQ(events.size(), 1u);
     EXPECT_TRUE(events[0].is_focus());
     EXPECT_TRUE(events[0].focus().focused);
@@ -1109,9 +1139,9 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yAccepts) {
   auto [vt, vht] = scenic::ViewTokenPair::New();
 
   // Set up a scene with one view.
-  auto [root_session, root_resources] = CreateScene();
+  auto [root_view, root_resources] = CreateScene();
   {
-    scenic::Session* const session = root_session.session();
+    scenic::Session* const session = root_view.session();
     scenic::Scene* const scene = &root_resources.scene;
     // Set scene origin (0, 0) to coincide with display (1, 1) -- this translation ensures that a
     // 5x5 view is centered on the display.
@@ -1135,7 +1165,7 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yAccepts) {
   RunLoopUntilIdle();  // Flush out focus events to clients.
 
   // Clear out events.
-  root_session.events().clear();
+  root_view.events().clear();
   view.events().clear();
 
   // Setup is finished.  Scene is now set up; send in the input.
@@ -1143,30 +1173,30 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yAccepts) {
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // A touch sequence that starts at the (0.5,0.5) location of the 7x7 display.
-    root_session.session()->Enqueue(pointer.Add(0.5, 0.5));
-    root_session.session()->Enqueue(pointer.Down(0.5, 0.5));
+    root_view.session()->Enqueue(pointer.Add(0.5, 0.5));
+    root_view.session()->Enqueue(pointer.Down(0.5, 0.5));
   }
   RunLoopUntilIdle();
 
   // Verify view did not receive events.
   EXPECT_EQ(view.events().size(), 0u);
   // Verify root session did not receive events.
-  EXPECT_EQ(root_session.events().size(), 0u);
+  EXPECT_EQ(root_view.events().size(), 0u);
 
   // Send in third touch event, which causes accessibility to consume existing and future events.
   {
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // Send MOVE events *over* the view.
-    root_session.session()->Enqueue(pointer.Move(1.5, 1.5));
-    root_session.session()->Enqueue(pointer.Move(2.5, 2.5));
+    root_view.session()->Enqueue(pointer.Move(1.5, 1.5));
+    root_view.session()->Enqueue(pointer.Move(2.5, 2.5));
   }
   RunLoopUntilIdle();
 
   // Verify view did not receive events.
   EXPECT_EQ(view.events().size(), 0u);
   // Verify root session did not receive events.
-  EXPECT_EQ(root_session.events().size(), 0u);
+  EXPECT_EQ(root_view.events().size(), 0u);
 
   // Verify accessibility received 4 events so far.
   {
@@ -1202,6 +1232,90 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yAccepts) {
       EXPECT_EQ(move.local_point().y, 1.5);
     }
   }
+}
+
+// Injection in TOP_HIT_AND_ANCESTORS_IN_TARGET mode should be delivered to a11y only if the context
+// is the root view. This test registers an injector where the context is the root view.
+TEST_F(AccessibilityPointerEventsTest, TopHitInjectionByRootView_IsDeliveredToA11y) {
+  auto [root_view, child_view, child_view2, compositor_id] = SetUpTwoViews(k5x5x1);
+  MockAccessibilityPointerEventListener listener(input_system());
+
+  // Scene is now set up; send in the input.
+  {
+    RegisterInjector(/*context=*/root_view.view_ref(), /*target=*/child_view2.view_ref(),
+                     fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET,
+                     fuchsia::ui::pointerinjector::DeviceType::TOUCH,
+                     /*extents*/ {{/*min*/ {-100.f, -50.f}, /*max*/ {50.f, 100.f}}});
+    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::ADD);
+    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+    RunLoopUntilIdle();
+  }
+
+  // Verify views have no events.
+  EXPECT_TRUE(child_view.events().empty());
+  EXPECT_TRUE(child_view2.events().empty());
+
+  // Verify accessibility's events.
+  // 5 because ADD gets converted to ADD + DOWN and REMOVE to UP + REMOVE.
+  ASSERT_EQ(listener.events().size(), 5u);
+  EXPECT_EQ(listener.events()[0].phase(), fuchsia::ui::input::PointerEventPhase::ADD);
+  EXPECT_EQ(listener.events()[1].phase(), fuchsia::ui::input::PointerEventPhase::DOWN);
+  EXPECT_EQ(listener.events()[2].phase(), fuchsia::ui::input::PointerEventPhase::MOVE);
+  EXPECT_EQ(listener.events()[3].phase(), fuchsia::ui::input::PointerEventPhase::UP);
+  EXPECT_EQ(listener.events()[4].phase(), fuchsia::ui::input::PointerEventPhase::REMOVE);
+}
+
+// Injection in TOP_HIT_AND_ANCESTORS_IN_TARGET mode should be delivered to a11y only if the context
+// is the root view. This test registers an injector where the context is further down the graph.
+TEST_F(AccessibilityPointerEventsTest, TopHitInjectionByNonRootView_IsNotDeliveredToA11y) {
+  auto [root_view, child_view, child_view2, compositor_id] = SetUpTwoViews(k5x5x1);
+  MockAccessibilityPointerEventListener listener(input_system());
+
+  // Scene is now set up; send in the input.
+  {
+    RegisterInjector(/*context=*/child_view.view_ref(), /*target=*/child_view2.view_ref(),
+                     fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET,
+                     fuchsia::ui::pointerinjector::DeviceType::TOUCH,
+                     /*extents*/ {{/*min*/ {-100.f, -50.f}, /*max*/ {50.f, 100.f}}});
+    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::ADD);
+    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+    RunLoopUntilIdle();
+  }
+
+  // Verify child_view2 received the events.
+  EXPECT_FALSE(child_view2.events().empty());
+
+  // Verify other view and accessibility have no events.
+  EXPECT_TRUE(child_view.events().empty());
+  EXPECT_TRUE(listener.events().empty());
+}
+
+// Injection in EXCLUSIVE_TARGET mode should never be delivered to a11y. This test sets up
+// a valid environment for a11y to get events, except for the DispatchPolicy.
+TEST_F(AccessibilityPointerEventsTest, ExclusiveInjectionByRootView_IsNotDeliveredToA11y) {
+  auto [root_view, child_view, child_view2, compositor_id] = SetUpTwoViews(k5x5x1);
+  MockAccessibilityPointerEventListener listener(input_system());
+
+  // Scene is now set up; send in the input.
+  {
+    RegisterInjector(/*context=*/root_view.view_ref(), /*target=*/child_view2.view_ref(),
+                     fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET,
+                     fuchsia::ui::pointerinjector::DeviceType::TOUCH,
+                     /*extents*/ {{/*min*/ {-100.f, -50.f}, /*max*/ {50.f, 100.f}}});
+    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::ADD);
+    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+    RunLoopUntilIdle();
+  }
+
+  // Verify child_view2 received the events.
+  EXPECT_FALSE(child_view2.events().empty());
+
+  // Verify other view and accessibility have no events.
+  EXPECT_TRUE(child_view.events().empty());
+  EXPECT_TRUE(listener.events().empty());
 }
 
 }  // namespace
