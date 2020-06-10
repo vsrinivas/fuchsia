@@ -137,7 +137,14 @@ fn construct_network_config(config: PolicyNetworkConfig) -> wlan_policy::Network
     let credential = match config.credential_type {
         CredentialTypeArg::r#None => wlan_policy::Credential::None(wlan_policy::Empty),
         CredentialTypeArg::Psk => {
-            wlan_policy::Credential::Psk(config.credential.unwrap().as_bytes().to_vec())
+            // The PSK is given in a 64 character hexadecimal string. Config args are safe to
+            // unwrap because the tool requires them to be present in the command.
+            let psk_arg = config.credential.unwrap().as_bytes().to_vec();
+            let psk = hex::decode(psk_arg).expect(
+                "Error: PSK must be 64 hexadecimal characters.\
+                Example: \"123456789ABCDEF123456789ABCDEF123456789ABCDEF123456789ABCDEF1234\"",
+            );
+            wlan_policy::Credential::Psk(psk)
         }
         CredentialTypeArg::Password => {
             wlan_policy::Credential::Password(config.credential.unwrap().as_bytes().to_vec())
@@ -163,8 +170,8 @@ pub fn print_saved_networks(saved_networks: Vec<wlan_policy::NetworkConfig>) -> 
                     password.unwrap()
                 }
                 wlan_policy::Credential::Psk(bytes) => {
-                    let password = std::string::String::from_utf8(bytes);
-                    password.unwrap()
+                    // PSK is stored as bytes but is displayed as hex to prevent UTF-8 errors
+                    hex::encode(bytes)
                 }
                 _ => return Err(format_err!("unknown credential variant detected")),
             },
@@ -1031,6 +1038,101 @@ mod tests {
         send_network_config_response(&mut exec, test_values.client_stream, false);
 
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
+    }
+
+    /// Tests that a WEP network config will be correctly translated for save and remove network.
+    #[test]
+    fn test_construct_config_wep() {
+        test_construct_config_security(wlan_policy::SecurityType::Wep, SecurityTypeArg::Wep);
+    }
+
+    /// Tests that a WPA network config will be correctly translated for save and remove network.
+    #[test]
+    fn test_construct_config_wpa() {
+        test_construct_config_security(wlan_policy::SecurityType::Wpa, SecurityTypeArg::Wpa);
+    }
+
+    /// Tests that a WPA2 network config will be correctly translated for save and remove network.
+    #[test]
+    fn test_construct_config_wpa2() {
+        test_construct_config_security(wlan_policy::SecurityType::Wpa2, SecurityTypeArg::Wpa2);
+    }
+
+    /// Tests that a WPA3 network config will be correctly translated for save and remove network.
+    #[test]
+    fn test_construct_config_wpa3() {
+        test_construct_config_security(wlan_policy::SecurityType::Wpa3, SecurityTypeArg::Wpa3);
+    }
+
+    /// Tests that a config for an open netowrk will be correctly translated to FIDL values for
+    /// save and remove network.
+    #[test]
+    fn test_construct_config_open() {
+        let open_config = PolicyNetworkConfig {
+            ssid: "some_ssid".to_string(),
+            security_type: SecurityTypeArg::None,
+            credential_type: CredentialTypeArg::None,
+            credential: Some("".to_string()),
+        };
+        let expected_cfg = wlan_policy::NetworkConfig {
+            id: Some(wlan_policy::NetworkIdentifier {
+                ssid: "some_ssid".as_bytes().to_vec(),
+                type_: wlan_policy::SecurityType::None,
+            }),
+            credential: Some(wlan_policy::Credential::None(wlan_policy::Empty {})),
+        };
+        let result_cfg = construct_network_config(open_config);
+        assert_eq!(expected_cfg, result_cfg);
+    }
+
+    /// Test that a config with a PSK will be translated correctly, including a transfer from a
+    /// hex string to bytes.
+    #[test]
+    fn test_construct_config_psk() {
+        // Test PSK separately since it has a unique credential
+        const ASCII_ZERO: u8 = 49;
+        let psk =
+            String::from_utf8([ASCII_ZERO; 64].to_vec()).expect("Failed to create PSK test value");
+        let wpa_config = PolicyNetworkConfig {
+            ssid: "some_ssid".to_string(),
+            security_type: SecurityTypeArg::Wpa2,
+            credential_type: CredentialTypeArg::Psk,
+            credential: Some(psk),
+        };
+        let expected_cfg = wlan_policy::NetworkConfig {
+            id: Some(wlan_policy::NetworkIdentifier {
+                ssid: "some_ssid".as_bytes().to_vec(),
+                type_: wlan_policy::SecurityType::Wpa2,
+            }),
+            credential: Some(wlan_policy::Credential::Psk([17; 32].to_vec())),
+        };
+        let result_cfg = construct_network_config(wpa_config);
+        assert_eq!(expected_cfg, result_cfg);
+    }
+
+    /// Test that the given variant of security type with a password works when constructing
+    /// network configs as used by save and remove network.
+    fn test_construct_config_security(
+        fidl_type: wlan_policy::SecurityType,
+        tool_type: SecurityTypeArg,
+    ) {
+        let wpa_config = PolicyNetworkConfig {
+            ssid: "some_ssid".to_string(),
+            security_type: tool_type,
+            credential_type: CredentialTypeArg::Password,
+            credential: Some("some_password_here".to_string()),
+        };
+        let expected_cfg = wlan_policy::NetworkConfig {
+            id: Some(wlan_policy::NetworkIdentifier {
+                ssid: "some_ssid".as_bytes().to_vec(),
+                type_: fidl_type,
+            }),
+            credential: Some(wlan_policy::Credential::Password(
+                "some_password_here".as_bytes().to_vec(),
+            )),
+        };
+        let result_cfg = construct_network_config(wpa_config);
+        assert_eq!(expected_cfg, result_cfg);
     }
 
     /// Tests the case where the client successfully connects.

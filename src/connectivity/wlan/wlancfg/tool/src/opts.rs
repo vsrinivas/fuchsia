@@ -70,9 +70,9 @@ impl ::std::convert::From<SecurityTypeArg> for wlan_policy::SecurityType {
         match arg {
             SecurityTypeArg::r#None => wlan_policy::SecurityType::None,
             SecurityTypeArg::Wep => wlan_policy::SecurityType::Wep,
-            SecurityTypeArg::Wpa => wlan_policy::SecurityType::Wep,
-            SecurityTypeArg::Wpa2 => wlan_policy::SecurityType::Wep,
-            SecurityTypeArg::Wpa3 => wlan_policy::SecurityType::Wep,
+            SecurityTypeArg::Wpa => wlan_policy::SecurityType::Wpa,
+            SecurityTypeArg::Wpa2 => wlan_policy::SecurityType::Wpa2,
+            SecurityTypeArg::Wpa3 => wlan_policy::SecurityType::Wpa3,
         }
     }
 }
