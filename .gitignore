@@ -16,6 +16,7 @@
 .DS_Store
 .gdb_history
 .gdbinit
+.ignore
 .jiri_manifest
 .landmines
 .packages
