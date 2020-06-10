@@ -419,8 +419,7 @@ VK_TEST_F(VulkanRendererTest, AsyncEventSignalTest) {
 // ----------------
 // ----------------
 // ----------------
-// TODO(53715): Disabled due to flakiness.
-VK_TEST_F(VulkanRendererTest, DISABLED_RenderTest) {
+VK_TEST_F(VulkanRendererTest, RenderTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher =
       std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
@@ -510,6 +509,10 @@ VK_TEST_F(VulkanRendererTest, DISABLED_RenderTest) {
     const uint8_t kNumWrites = 8;
     const uint8_t kWriteValues[] = {/*red*/ 255U, 0, 0, 255U, /*green*/ 0, 255U, 0, 255U};
     memcpy(vmo_host, kWriteValues, sizeof(kWriteValues));
+
+    // Flush the cache after writing to host VMO.
+    EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kNumWrites,
+                                    ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
   }
 
   // Render the renderable to the render target.
@@ -520,6 +523,10 @@ VK_TEST_F(VulkanRendererTest, DISABLED_RenderTest) {
   // and read its values. This should show that the renderable was rendered to the center
   // of the render target, with its associated texture.
   GetVmoHostPtr(&vmo_host, client_target_info, render_target.vmo_idx);
+
+  // Flush the cache before reading back target image.
+  EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
+                                  ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
 
   // Make sure the pixels are in the right order give that we rotated
   // the rectangle.
@@ -557,8 +564,7 @@ VK_TEST_F(VulkanRendererTest, DISABLED_RenderTest) {
 // ----------------
 // TODO(52632): Transparency is currently hardcoded in the renderer to be on. This test will
 // break if that is changed to be hardcoded to false before we expose it in the API.
-// TODO(53715): Disabled due to flakiness.
-VK_TEST_F(VulkanRendererTest, DISABLED_TransparencyTest) {
+VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher =
       std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
@@ -650,6 +656,10 @@ VK_TEST_F(VulkanRendererTest, DISABLED_TransparencyTest) {
     const uint8_t kNumWrites = 4;
     const uint8_t kWriteValues[] = {/*red*/ 255U, 0, 0, 255U};
     memcpy(vmo_host, kWriteValues, sizeof(kWriteValues));
+
+    // Flush the cache after writing to host VMO.
+    EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kNumWrites,
+                                    ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
   }
 
   {
@@ -658,6 +668,10 @@ VK_TEST_F(VulkanRendererTest, DISABLED_TransparencyTest) {
     const uint8_t kNumWrites = 4;
     const uint8_t kWriteValues[] = {/*red*/ 0, 255, 0, 128U};
     memcpy(vmo_host, kWriteValues, sizeof(kWriteValues));
+
+    // Flush the cache after writing to host VMO.
+    EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kNumWrites,
+                                    ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
   }
 
   // Render the renderable to the render target.
@@ -669,6 +683,10 @@ VK_TEST_F(VulkanRendererTest, DISABLED_TransparencyTest) {
   // and read its values. This should show that the renderable was rendered to the center
   // of the render target, with its associated texture.
   GetVmoHostPtr(&vmo_host, client_target_info, render_target.vmo_idx);
+
+  // Flush the cache before reading back target image.
+  EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
+                                  ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
 
   // Make sure the pixels are in the right order give that we rotated
   // the rectangle.
