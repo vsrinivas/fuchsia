@@ -83,6 +83,9 @@ use crate::input::facade::InputFacade;
 // Input report related includes
 use crate::input_report::facade::InputReportFacade;
 
+// Kernel related includes
+use crate::kernel::facade::KernelFacade;
+
 // Launch related includes
 use crate::launch::facade::LaunchFacade;
 
@@ -196,6 +199,7 @@ impl Sl4f {
                 "i2c_facade" => I2cFacade::new(),
                 "input_facade" => InputFacade::new(),
                 "input_report_facade" => InputReportFacade::new(),
+                "kernel_facade" => KernelFacade::new(),
                 "launch_facade" => LaunchFacade::new(),
                 "light_facade" => LightFacade::new(),
                 "location_emergency_provider_facade" => EmergencyProviderFacade::new()?,

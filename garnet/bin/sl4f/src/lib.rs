@@ -26,6 +26,7 @@ pub mod hwinfo;
 pub mod i2c;
 pub mod input;
 pub mod input_report;
+pub mod kernel;
 pub mod launch;
 pub mod light;
 pub mod location;

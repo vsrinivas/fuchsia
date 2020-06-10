@@ -10,6 +10,7 @@
             "class/input-report",
             "class/light",
             "class/wlanphy",
+            "svc/fuchsia.kernel.Stats",
             "sys/platform",
             "wifi"
         ],
@@ -40,6 +41,7 @@
             "fuchsia.hwinfo.Device",
             "fuchsia.hwinfo.Product",
             "fuchsia.input.report.InputDevice",
+            "fuchsia.kernel.Stats",
             "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
             "fuchsia.location.position.EmergencyProvider",
             "fuchsia.logger.Log",

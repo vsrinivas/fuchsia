@@ -48,6 +48,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
     "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",
     "//sdk/fidl/fuchsia.location.position:fuchsia.location.position-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
