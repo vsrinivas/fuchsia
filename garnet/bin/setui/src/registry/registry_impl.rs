@@ -15,7 +15,7 @@ use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
-use futures::StreamExt;
+use futures::{FutureExt, StreamExt};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -92,7 +92,8 @@ impl RegistryImpl {
         if let Err(error) = messenger_result {
             return Err(Error::new(error));
         }
-        let (messenger_client, mut receptor) = messenger_result.unwrap();
+        let (registry_messenger_client, mut registry_messenger_receptor) =
+            messenger_result.unwrap();
 
         let controller_messenger_result = controller_messenger_factory
             .create(MessengerType::Addressable(handler::Address::Registry))
@@ -108,67 +109,61 @@ impl RegistryImpl {
 
         // We must create handle here rather than return back the value as we
         // reference the registry in the async tasks below.
+        // TODO (fxb/53819): Remove the Arc(Mutex).
         let registry = Arc::new(Mutex::new(Self {
             active_listeners: Vec::new(),
             handler_factory,
-            messenger_client,
+            messenger_client: registry_messenger_client,
             active_controllers: HashMap::new(),
             controller_messenger_client,
             controller_messenger_factory,
             active_controller_sender,
         }));
+        let registry_clone = registry.clone();
 
-        // TODO(fxb/52859): combine the following loops into one with a select macro.
-        // Async task for handling top level message from controllers
-        {
-            let registry = registry.clone();
-            fasync::spawn(async move {
-                while let Some(event) = controller_receptor.next().await {
-                    match event {
-                        MessageEvent::Message(handler::Payload::Changed(setting), _) => {
-                            registry.lock().await.notify(setting);
+        fasync::spawn(async move {
+            loop {
+                let mut controller_fuse = controller_receptor.next().fuse();
+                let mut registry_fuse = registry_messenger_receptor.next().fuse();
+                futures::select! {
+                    // handle top level message from controllers.
+                    controller_event = controller_fuse => {
+                        if let Some(
+                            MessageEvent::Message(handler::Payload::Changed(setting), _)
+                        )= controller_event {
+                            registry_clone.lock().await.notify(setting);
                         }
-                        _ => {}
                     }
-                }
-            });
-        }
 
-        // Async task for handling messages from the receptor.
-        {
-            let registry_clone = registry.clone();
-            fasync::spawn(async move {
-                while let Some(event) = receptor.next().await {
-                    match event {
-                        MessageEvent::Message(core::Payload::Action(action), client) => {
-                            registry_clone.lock().await.process_action(action, client).await;
+                    // Handle messages from the registry messenger.
+                    registry_event = registry_fuse => {
+                        if let Some(
+                            MessageEvent::Message(core::Payload::Action(action), message_client)
+                        ) = registry_event {
+                            registry_clone.lock().await.process_action(action, message_client).await;
                         }
-                        _ => {}
                     }
-                }
-            });
-        }
 
-        // Async task for handling messages for dealing with the active_controllers.
-        {
-            let registry_clone = registry.clone();
-            fasync::spawn(async move {
-                while let Some(request) = active_controller_receiver.next().await {
-                    let mut registry = registry_clone.lock().await;
-                    match request {
-                        ActiveControllerRequest::AddActive(setting_type, id) => {
-                            registry.add_active_request(id, setting_type).await;
-                        }
-                        ActiveControllerRequest::RemoveActive(setting_type, id) => {
-                            registry.remove_active_request(id, setting_type).await;
-                        }
-                        ActiveControllerRequest::Teardown(setting_type, signature) => {
-                            registry.teardown_if_ready(setting_type, signature).await;
+                    // Handle messages for dealing with the active_controllers.
+                    request = active_controller_receiver.next() => {
+                        if let Some(request) = request {
+                            let mut registry = registry_clone.lock().await;
+                            match request {
+                                ActiveControllerRequest::AddActive(setting_type, id) => {
+                                    registry.add_active_request(id, setting_type).await;
+                                }
+                                ActiveControllerRequest::RemoveActive(setting_type, id) => {
+                                    registry.remove_active_request(id, setting_type).await;
+                                }
+                                ActiveControllerRequest::Teardown(setting_type, signature) => {
+                                    registry.teardown_if_ready(setting_type, signature).await;
+                                }
+                            }
                         }
                     }
                 }
-            });
-        }
+            }
+        });
         Ok(registry)
     }
 
