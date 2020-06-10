@@ -9,14 +9,57 @@
 #   Bazel SDK
 #     Writes the contents of the Bazel SDK to the ${root_out_dir}/sdk/bazel
 #     directory.
-action("bazel") {
-  testonly = true
-  script = "//scripts/sdk/bazel/generate.py"
-  inputs = [
-    "//scripts/sdk/bazel/create_test_workspace.py",
-    "//scripts/sdk/common/files.py",
-    "//scripts/sdk/common/template_model.py",
-  ]
+#
+#   Bazel test workspace
+#     Writes the contents of the Bazel test workspace to the
+#     ${root_out_dir}/sdk/bazel_tests directory.
+template("bazel_workspace") {
+  action("${target_name}") {
+    testonly = true
+
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "sources",
+                             "outputs",
+                           ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    if (!defined(sources)) {
+      sources = []
+    }
+    if (!defined(outputs)) {
+      outputs = []
+    }
+
+    script = "//scripts/sdk/bazel/generate.py"
+    args = [
+      "--directory",
+      rebase_path("${root_out_dir}/sdk/exported/core"),
+      "--output",
+      rebase_path("${root_out_dir}/sdk/bazel"),
+    ]
+    inputs = [
+      "//scripts/sdk/bazel/create_test_workspace.py",
+      "//scripts/sdk/common/files.py",
+      "//scripts/sdk/common/frontend.py",
+      "//scripts/sdk/common/template_model.py",
+    ]
+
+    if (defined(invoker.install_tests) && invoker.install_tests) {
+      args += [
+        "--nosdk",
+        "--tests",
+        rebase_path("${root_out_dir}/sdk/bazel_tests"),
+      ]
+    }
+  }
+}
+
+bazel_workspace("bazel") {
+  deps = [ "//sdk:core_export($target_toolchain)" ]
+  outputs = [ "${root_out_dir}/sdk/bazel/tools/BUILD" ]
   sources = [
     "//scripts/sdk/bazel/base/cc/build_defs/cc_binary_component.bzl",
     "//scripts/sdk/bazel/base/cc/build_defs/cc_fidl_library.bzl",
@@ -54,6 +97,14 @@ action("bazel") {
     "//scripts/sdk/bazel/templates/sysroot_arch.mako",
     "//scripts/sdk/bazel/templates/sysroot_pkg.mako",
     "//scripts/sdk/bazel/templates/sysroot_version.mako",
+  ]
+}
+
+bazel_workspace("tests") {
+  install_tests = true
+  deps = [ ":bazel" ]
+  outputs = [ "${root_out_dir}/sdk/bazel_tests/WORKSPACE" ]
+  sources = [
     "//scripts/sdk/bazel/templates/tests/bazelrc.mako",
     "//scripts/sdk/bazel/templates/tests/fidl_build.mako",
     "//scripts/sdk/bazel/templates/tests/fidl_headers.mako",
@@ -64,13 +115,35 @@ action("bazel") {
     "//scripts/sdk/bazel/templates/tests/workspace.mako",
     "//scripts/sdk/bazel/templates/toolchain_build.mako",
     "//scripts/sdk/bazel/templates/tools.mako",
+    "//scripts/sdk/bazel/tests/cc/cc/BUILD",
+    "//scripts/sdk/bazel/tests/cc/cc/compilation.cc",
+    "//scripts/sdk/bazel/tests/cc/cc/library.cc",
+    "//scripts/sdk/bazel/tests/cc/cc/library.h",
+    "//scripts/sdk/bazel/tests/cc/cc/manifest.cmx",
+    "//scripts/sdk/bazel/tests/cc/cc/pkg_dep.cc",
+    "//scripts/sdk/bazel/tests/cc/fidl-cc/BUILD",
+    "//scripts/sdk/bazel/tests/cc/fidl-cc/simple_user.cc",
+    "//scripts/sdk/bazel/tests/common/build_defs/BUILD",
+    "//scripts/sdk/bazel/tests/common/build_defs/package_verifier.py",
+    "//scripts/sdk/bazel/tests/common/build_defs/verify_package.bzl",
+    "//scripts/sdk/bazel/tests/common/fidl/BUILD",
+    "//scripts/sdk/bazel/tests/common/fidl/fuchsia_deps.fidl",
+    "//scripts/sdk/bazel/tests/common/fidl/local_deps.fidl",
+    "//scripts/sdk/bazel/tests/common/fidl/simple.fidl",
+    "//scripts/sdk/bazel/tests/common/package/BUILD",
+    "//scripts/sdk/bazel/tests/common/package/file1.txt",
+    "//scripts/sdk/bazel/tests/common/package/file2.txt",
+    "//scripts/sdk/bazel/tests/dart/dart/BUILD",
+    "//scripts/sdk/bazel/tests/dart/dart/lib/hello.dart",
+    "//scripts/sdk/bazel/tests/dart/dart/lib/main.dart",
+    "//scripts/sdk/bazel/tests/dart/dart/meta/dart.cmx",
+    "//scripts/sdk/bazel/tests/dart/dart/meta/dart_with_unused_dependencies.cmx",
+    "//scripts/sdk/bazel/tests/dart/fidl-dart/BUILD",
+    "//scripts/sdk/bazel/tests/dart/fidl-dart/instrument_bindings.dart",
+    "//scripts/sdk/bazel/tests/dart/fidl-dart/meta/compile.cmx",
+    "//scripts/sdk/bazel/tests/dart/flutter/BUILD",
+    "//scripts/sdk/bazel/tests/dart/flutter/assets/logo.png",
+    "//scripts/sdk/bazel/tests/dart/flutter/main.dart",
+    "//scripts/sdk/bazel/tests/dart/flutter/meta/app.cmx",
   ]
-  outputs = [ "${root_out_dir}/sdk/bazel/tools/BUILD" ]
-  args = [
-    "--directory",
-    rebase_path("${root_out_dir}/sdk/exported/core"),
-    "--output",
-    rebase_path("${root_out_dir}/sdk/bazel"),
-  ]
-  deps = [ "//sdk:core_export($target_toolchain)" ]
 }

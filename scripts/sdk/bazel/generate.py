@@ -30,6 +30,7 @@ def sanitize(name):
 class BazelBuilder(Frontend):
 
     def __init__(self, **kwargs):
+        self.install = kwargs.pop('install', True)
         super(BazelBuilder, self).__init__(**kwargs)
         self.has_dart = False
         self.has_cc = False
@@ -53,20 +54,21 @@ class BazelBuilder(Frontend):
 
     def prepare(self, arch, types):
         self.target_arches = arch['target']
+        cc_types = ('sysroot', 'cc_source_library', 'cc_prebuilt_library')
+        self.has_cc = any(t in types for t in cc_types)
 
-        # Copy the common files.
-        shutil.copytree(self.local('base', 'common'), self.output)
-        # Copy C/C++ files if needed.
-        if ('sysroot' in types or 'cc_source_library' in types or
-                'cc_prebuilt_library' in types):
-            self.has_cc = True
-            copy_tree(self.local('base', 'cc'), self.output)
-        # Copy Dart files if needed.
-        if 'dart_library' in types:
-            # fxb/41514 : disable dart/flutter bits
-            # self.has_dart = True
-            # copy_tree(self.local('base', 'dart'), self.output)
-            pass
+        if self.install:
+            # Copy the common files.
+            shutil.copytree(self.local('base', 'common'), self.output)
+            # Copy C/C++ files if needed.
+            if self.has_cc:
+                copy_tree(self.local('base', 'cc'), self.output)
+            # Copy Dart files if needed.
+            if 'dart_library' in types:
+                # fxb/41514 : disable dart/flutter bits
+                # self.has_dart = True
+                # copy_tree(self.local('base', 'dart'), self.output)
+                pass
 
         self.install_crosstool(arch)
 
@@ -80,6 +82,9 @@ class BazelBuilder(Frontend):
 
     def install_tools(self):
         '''Write BUILD files for tools directories.'''
+        if not self.install:
+            return
+
         tools_root = os.path.join(self.output, 'tools')
         for directory, _, _ in os.walk(tools_root, topdown=True):
             self.write_file(os.path.join(directory, 'BUILD'), 'tools', {})
@@ -88,8 +93,9 @@ class BazelBuilder(Frontend):
         '''Generates crosstool.bzl based on the availability of sysroot
         versions.
         '''
-        if not self.has_cc:
+        if not self.has_cc or not self.install:
             return
+
         crosstool = model.Crosstool(arches['target'])
         crosstool_base = self.dest('build_defs', 'internal', 'crosstool')
         self.write_file(
@@ -106,7 +112,7 @@ class BazelBuilder(Frontend):
             crosstool)
 
     def install_dart(self):
-        if not self.has_dart:
+        if not self.has_dart or not self.install:
             return
         # Write the rule for setting up Dart packages.
         # TODO(pylaligand): this process currently does not capture dependencies
@@ -116,6 +122,9 @@ class BazelBuilder(Frontend):
             self.dart_vendor_packages)
 
     def install_dart_library_atom(self, atom):
+        if not self.install:
+            return
+
         package_name = atom['name']
         name = sanitize(package_name)
         library = model.DartLibrary(name, package_name)
@@ -139,10 +148,16 @@ class BazelBuilder(Frontend):
 
     def install_cc_prebuilt_library_atom(self, atom):
         name = sanitize(atom['name'])
+        include_paths = map(
+            lambda h: os.path.relpath(h, atom['include_dir']), atom['headers'])
+        self.workspace_info.headers['//pkg/' + name] = include_paths
+
+        if not self.install:
+            return
+
         library = model.CppPrebuiltLibrary(name)
         library.is_static = atom['format'] == 'static'
         base = self.dest('pkg', name)
-
         self.copy_files(atom['headers'], atom['root'], base, library.hdrs)
 
         for arch in self.target_arches:
@@ -172,18 +187,20 @@ class BazelBuilder(Frontend):
 
         library.includes = os.path.relpath(atom['include_dir'], atom['root'])
 
-        include_paths = map(
-            lambda h: os.path.relpath(h, atom['include_dir']), atom['headers'])
-        self.workspace_info.headers['//pkg/' + name] = include_paths
-
         self.write_file(
             os.path.join(base, 'BUILD'), 'cc_prebuilt_library', library)
 
     def install_cc_source_library_atom(self, atom):
         name = sanitize(atom['name'])
+        include_paths = map(
+            lambda h: os.path.relpath(h, atom['include_dir']), atom['headers'])
+        self.workspace_info.headers['//pkg/' + name] = include_paths
+
+        if not self.install:
+            return
+
         library = model.CppSourceLibrary(name)
         base = self.dest('pkg', name)
-
         self.copy_files(atom['headers'], atom['root'], base, library.hdrs)
         self.copy_files(atom['sources'], atom['root'], base, library.srcs)
 
@@ -196,13 +213,12 @@ class BazelBuilder(Frontend):
 
         library.includes = os.path.relpath(atom['include_dir'], atom['root'])
 
-        include_paths = map(
-            lambda h: os.path.relpath(h, atom['include_dir']), atom['headers'])
-        self.workspace_info.headers['//pkg/' + name] = include_paths
-
         self.write_file(os.path.join(base, 'BUILD'), 'cc_library', library)
 
     def install_sysroot_atom(self, atom):
+        if not self.install:
+            return
+
         for arch in self.target_arches:
             base = self.dest('arch', arch, 'sysroot')
             arch_data = atom['versions'][arch]
@@ -224,6 +240,9 @@ class BazelBuilder(Frontend):
             self.target_arches)
 
     def install_host_tool_atom(self, atom):
+        if not self.install:
+            return
+
         if 'files' in atom:
             self.copy_files(atom['files'], atom['root'], 'tools')
         if 'target_files' in atom:
@@ -232,6 +251,11 @@ class BazelBuilder(Frontend):
 
     def install_fidl_library_atom(self, atom):
         name = sanitize(atom['name'])
+        self.workspace_info.fidl_libraries.append(name)
+
+        if not self.install:
+            return
+
         data = model.FidlLibrary(name, atom['name'])
         data.with_cc = self.has_cc
         data.with_dart = self.has_dart
@@ -240,7 +264,6 @@ class BazelBuilder(Frontend):
         for dep in atom['deps']:
             data.deps.append(sanitize(dep))
         self.write_file(os.path.join(base, 'BUILD'), 'fidl', data)
-        self.workspace_info.fidl_libraries.append(name)
 
 
 def main():
@@ -257,16 +280,26 @@ def main():
         required=True)
     parser.add_argument(
         '--tests', help='Path to the directory where to generate tests')
+    parser.add_argument(
+        '--nosdk',
+        action='store_false',
+        dest='install_sdk',
+        help='''Do not
+        install the Bazel SDK. If --tests is set, the tests will still be
+        generated, but the Bazel SDK must be installed at the location specified
+        by --output before running the tests.''')
     args = parser.parse_args()
 
-    # Remove any existing output.
-    shutil.rmtree(args.output, ignore_errors=True)
+    if args.install_sdk:
+        # Remove any existing output.
+        shutil.rmtree(args.output, ignore_errors=True)
 
     builder = BazelBuilder(
         archive=args.archive,
         directory=args.directory,
         output=args.output,
-        local_dir=SCRIPT_DIR)
+        local_dir=SCRIPT_DIR,
+        install=args.install_sdk)
     if not builder.run():
         return 1
 
