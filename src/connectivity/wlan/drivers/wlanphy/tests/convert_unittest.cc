@@ -72,7 +72,25 @@ TEST(WlanphyTest, ConvertPhyBandInfo) {
   EXPECT_EQ(out[1].supported_channels.channels, expected_channels_5g);
 }
 
-bool is_power_of_two(unsigned int v) { return v && !(v & (v - 1)); }
+template <typename T>
+static inline constexpr bool is_power_of_two(T v) {
+  static_assert(std::is_integral<T>::value, "T must be an integral type.");
+  return (v > 0) && !(v & (v - 1));
+}
+
+TEST(WlanphyTest, is_power_of_two) {
+  // All uint32_t powers of two should return true
+  for (int i = 0; i < 32; i++) {
+    EXPECT_TRUE(is_power_of_two((uint32_t)1 << i));
+  }
+  // Zero, negative numbers, any byte representation of a negative number, and
+  // all other positive numbers are not powers of two.
+  EXPECT_FALSE(is_power_of_two(0));
+  EXPECT_FALSE(is_power_of_two(-1));
+  EXPECT_TRUE(is_power_of_two((uint8_t)0b10000000));
+  EXPECT_FALSE(is_power_of_two((int8_t)0b10000000));
+  EXPECT_FALSE(is_power_of_two(754));
+}
 
 TEST(WlanphyTest, ConvertPhyRolesInfo) {
   constexpr wlan_info_mac_role_mask_t kClient = WLAN_INFO_MAC_ROLE_CLIENT;
