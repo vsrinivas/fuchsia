@@ -16,4 +16,7 @@ void Executor::Init() {
   if (!ac.check()) {
     panic("root-job: failed to allocate observer\n");
   }
+
+  // Initialize the memory watchdog.
+  memory_watchdog_.Init(this);
 }

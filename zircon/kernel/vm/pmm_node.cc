@@ -30,7 +30,7 @@ KCOUNTER(pmm_alloc_async, "vm.pmm.alloc.async")
 
 namespace {
 
-void noop_callback(uint8_t idx) {}
+void noop_callback(void* context, uint8_t idx) {}
 
 }  // namespace
 
@@ -53,7 +53,7 @@ PmmNode::PmmNode() {
   // Initialize the reclaimation watermarks such that system never
   // falls into a low memory state.
   uint64_t default_watermark = 0;
-  InitReclamation(&default_watermark, 1, 0, noop_callback);
+  InitReclamation(&default_watermark, 1, 0, nullptr, noop_callback);
 }
 
 PmmNode::~PmmNode() {
@@ -603,7 +603,7 @@ int PmmNode::RequestThreadLoop() {
 }
 
 zx_status_t PmmNode::InitReclamation(const uint64_t* watermarks, uint8_t watermark_count,
-                                     uint64_t debounce,
+                                     uint64_t debounce, void* context,
                                      mem_avail_state_updated_callback_t callback) {
   if (watermark_count > MAX_WATERMARK_COUNT) {
     return ZX_ERR_INVALID_ARGS;
@@ -628,6 +628,7 @@ zx_status_t PmmNode::InitReclamation(const uint64_t* watermarks, uint8_t waterma
 
   mem_avail_state_watermark_count_ = watermark_count;
   mem_avail_state_debounce_ = tmp_debounce;
+  mem_avail_state_context_ = context;
   mem_avail_state_callback_ = callback;
   memcpy(mem_avail_state_watermarks_, tmp, sizeof(mem_avail_state_watermarks_));
   static_assert(sizeof(tmp) == sizeof(mem_avail_state_watermarks_));
@@ -679,7 +680,7 @@ void PmmNode::SetMemAvailStateLocked(uint8_t mem_avail_state) {
     mem_avail_state_upper_bound_ = UINT64_MAX / PAGE_SIZE;
   }
 
-  mem_avail_state_callback_(mem_avail_state_cur_index_);
+  mem_avail_state_callback_(mem_avail_state_context_, mem_avail_state_cur_index_);
 }
 
 void PmmNode::DumpMemAvailState() const {

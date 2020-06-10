@@ -62,10 +62,7 @@ class ManagedPmmNode {
     }
     node_.AddFreePages(&list);
 
-    ASSERT(instance_ == nullptr);
-    instance_ = this;
-
-    ZX_ASSERT(node_.InitReclamation(watermarks, watermark_count, debounce * PAGE_SIZE,
+    ZX_ASSERT(node_.InitReclamation(watermarks, watermark_count, debounce * PAGE_SIZE, this,
                                     StateCallback) == ZX_OK);
     node_.InitRequestThread();
   }
@@ -79,9 +76,6 @@ class ManagedPmmNode {
       page->set_state(VM_PAGE_STATE_ALLOC);
     }
     pmm_free(&list);
-
-    ASSERT(instance_ == this);
-    instance_ = nullptr;
   }
 
   uint8_t cur_level() const { return cur_level_; }
@@ -91,13 +85,13 @@ class ManagedPmmNode {
   PmmNode node_;
   uint8_t cur_level_ = MAX_WATERMARK_COUNT + 1;
 
-  static void StateCallback(uint8_t level) { instance_->cur_level_ = level; }
-  static ManagedPmmNode* instance_;
+  static void StateCallback(void* context, uint8_t level) {
+    ManagedPmmNode* instance = reinterpret_cast<ManagedPmmNode*>(context);
+    instance->cur_level_ = level;
+  }
 
   static constexpr uint64_t kDefaultArray[1] = {kDefaultWatermark * PAGE_SIZE};
 };
-
-ManagedPmmNode* ManagedPmmNode::instance_ = nullptr;
 
 class TestPageRequest {
  public:

@@ -48,7 +48,7 @@ zx_status_t pmm_get_arena_info(size_t count, uint64_t i, pmm_arena_info_t* buffe
                                size_t buffer_size);
 
 // flags for allocation routines below
-#define PMM_ALLOC_FLAG_ANY (0 << 0)     // no restrictions on which arena to allocate from
+#define PMM_ALLOC_FLAG_ANY (0 << 0)  // no restrictions on which arena to allocate from
 #define PMM_ALLOC_FLAG_LO_MEM (1 << 0)  // allocate only from arenas marked LO_MEM
 // the caller can handle allocation failures with a delayed page_request_t request.
 #define PMM_ALLOC_DELAY_OK (1 << 1)
@@ -113,7 +113,7 @@ vm_page_t* paddr_to_vm_page(paddr_t addr);
 
 #define MAX_WATERMARK_COUNT 8
 
-typedef void (*mem_avail_state_updated_callback_t)(uint8_t cur_state);
+typedef void (*mem_avail_state_updated_callback_t)(void* context, uint8_t cur_state);
 
 // Function to initialize PMM memory reclamation.
 //
@@ -125,7 +125,7 @@ typedef void (*mem_avail_state_updated_callback_t)(uint8_t cur_state);
 // When the system has a given amount of free memory available, the memory availability state is
 // defined as the index of the smallest watermark which is greater than that amount of free
 // memory.  Whenever the amount of memory enters a new state, |mem_avail_state_updated_callback|
-// will be invoked with the index of the new state.
+// will be invoked with the registered context and the index of the new state.
 //
 // Transitions are debounced by not leaving a state until the amount of memory is at least
 // |debounce| bytes outside of the state. Note that large |debounce| values can cause states
@@ -144,7 +144,8 @@ typedef void (*mem_avail_state_updated_callback_t)(uint8_t cur_state);
 // is immediately invoked during the execution of this function with the index of the initial memory
 // state.
 zx_status_t pmm_init_reclamation(const uint64_t* watermarks, uint8_t watermark_count,
-                                 uint64_t debounce, mem_avail_state_updated_callback_t callback);
+                                 uint64_t debounce, void* context,
+                                 mem_avail_state_updated_callback_t callback);
 
 // Should be called after the kernel command line has been parsed.
 void pmm_checker_init_from_cmdline();

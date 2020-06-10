@@ -10,6 +10,7 @@
 #include <fbl/ref_ptr.h>
 #include <ktl/unique_ptr.h>
 #include <object/job_dispatcher.h>
+#include <object/memory_watchdog.h>
 #include <object/root_job_observer.h>
 
 // An Executor encapsulates the kernel state necessary to implement the Zircon system calls. It
@@ -25,14 +26,17 @@
 //   ZX_ERR_NO_MEMORY when creating a zx::event, or reporting bad handle faults.
 //
 // TODO(kulakowski) The above comment is aspirational. So far, only the root job (and its observer)
-// is managed by the Executor. Other subsystems, like port arenas, handle arenas, and memory
-// pressure monitoring, are not yet included. And e.g. tests are not yet written against the
-// Executor.
+// is managed by the Executor. Other subsystems, like port arenas and handle arenas, are not yet
+// included. And e.g. tests are not yet written against the Executor.
 class Executor {
  public:
   void Init();
 
   const fbl::RefPtr<JobDispatcher>& GetRootJobDispatcher() { return root_job_; }
+
+  fbl::RefPtr<EventDispatcher> GetMemPressureEvent(uint32_t kind) {
+    return memory_watchdog_.GetMemPressureEvent(kind);
+  }
 
  private:
   // All jobs and processes of this Executor are rooted at this job.
@@ -41,6 +45,10 @@ class Executor {
   // Watch the root job, taking action (such as a system reboot) if it ends up
   // with no children.
   ktl::unique_ptr<RootJobObserver> root_job_observer_;
+
+  // The memory watchdog for this Executor. When it observes low memory
+  // conditions, it notifies the root job of this executor.
+  MemoryWatchdog memory_watchdog_;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_EXECUTOR_H_

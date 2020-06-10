@@ -42,7 +42,8 @@ class PmmNode {
   void SwapRequest(page_request_t* old, page_request_t* new_req);
 
   zx_status_t InitReclamation(const uint64_t* watermarks, uint8_t watermark_count,
-                              uint64_t debounce, mem_avail_state_updated_callback_t callback);
+                              uint64_t debounce, void* context,
+                              mem_avail_state_updated_callback_t callback);
 
   int RequestThreadLoop();
   void InitRequestThread();
@@ -168,6 +169,7 @@ class PmmNode {
   uint64_t mem_avail_state_debounce_ TA_GUARDED(lock_);
   uint64_t mem_avail_state_upper_bound_ TA_GUARDED(lock_);
   uint64_t mem_avail_state_lower_bound_ TA_GUARDED(lock_);
+  void* mem_avail_state_context_ TA_GUARDED(lock_);
   mem_avail_state_updated_callback_t mem_avail_state_callback_ TA_GUARDED(lock_);
 
   Thread* request_thread_ = nullptr;

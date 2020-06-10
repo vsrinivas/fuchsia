@@ -114,8 +114,9 @@ uint64_t pmm_count_total_bytes() { return pmm_node.CountTotalBytes(); }
 PageQueues* pmm_page_queues() { return pmm_node.GetPageQueues(); }
 
 zx_status_t pmm_init_reclamation(const uint64_t* watermarks, uint8_t watermark_count,
-                                 uint64_t debounce, mem_avail_state_updated_callback_t callback) {
-  return pmm_node.InitReclamation(watermarks, watermark_count, debounce, callback);
+                                 uint64_t debounce, void* context,
+                                 mem_avail_state_updated_callback_t callback) {
+  return pmm_node.InitReclamation(watermarks, watermark_count, debounce, context, callback);
 }
 
 void pmm_checker_check_all_free_pages() { pmm_node.CheckAllFreePages(); }
