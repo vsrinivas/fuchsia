@@ -4,9 +4,7 @@
 
 #include "src/connectivity/network/mdns/service/config.h"
 
-#include <fcntl.h>
 #include <lib/syslog/cpp/macros.h>
-#include <sys/stat.h>
 
 #include <sstream>
 
@@ -94,15 +92,11 @@ const char Config::kConfigDir[] = "/config/data";
 void Config::ReadConfigFiles(const std::string& host_name, const std::string& config_dir) {
   FX_DCHECK(MdnsNames::IsValidHostName(host_name));
 
-  struct stat buf;
-  if (fstatat(AT_FDCWD, config_dir.c_str(), &buf, 0) != 0 || !S_ISDIR(buf.st_mode)) {
-    // There's no config directory. That's OK. We'll use the defaults.
-    return;
-  }
-
   auto schema_result = json_parser::InitSchema(kSchema);
   FX_CHECK(schema_result.is_ok()) << schema_result.error_value().ToString();
   auto schema = std::move(schema_result.value());
+  // |ParseFromDirectory| treats a non-existent directory the same as an empty directory, which
+  // is what we want.
   parser_.ParseFromDirectory(config_dir, [this, &schema, &host_name](rapidjson::Document document) {
     auto validation_result = json_parser::ValidateSchema(document, schema);
     if (validation_result.is_error()) {
