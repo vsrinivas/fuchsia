@@ -29,7 +29,11 @@ pub fn connect_to_root_service<S: DiscoverableService>(
 }
 
 async fn start_policy_test() -> Result<(BlackBoxTest, fsys::RealmProxy), Error> {
-    let test = BlackBoxTest::custom(CM_URL, ROOT_URL, vec![], Some(TEST_CONFIG_PATH)).await?;
+    let test = BlackBoxTestBuilder::new(ROOT_URL)
+        .component_manager_url(CM_URL)
+        .config_file(TEST_CONFIG_PATH)
+        .build()
+        .await?;
     let event_source = test.connect_to_event_source().await?;
     let mut event_stream = event_source.subscribe(vec![Started::NAME]).await?;
     event_source.start_component_tree().await?;

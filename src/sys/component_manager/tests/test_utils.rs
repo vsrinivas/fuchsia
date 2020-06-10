@@ -57,7 +57,6 @@ pub static COMPONENT_MANAGER_URL: &str =
 ///
 /// Usage: /src/sys/component_manager/tests contains multiple tests such as
 /// routing, base_resolver and shutdown which use this class.
-
 pub struct BlackBoxTest {
     /// The environment under which component manager runs
     pub env: EnvironmentControllerProxy,
@@ -82,45 +81,10 @@ impl BlackBoxTest {
     ///
     /// At the end of this function call, a component manager has been created
     /// in a hermetic environment and its execution is halted.
-    pub async fn default(root_component_url: &str) -> Result<Self, Error> {
-        Self::custom(COMPONENT_MANAGER_URL, root_component_url, vec![], None).await
-    }
-
-    /// Creates a black box test from the given component manager and
-    /// root component URL. The supplied directory handles are given to the
-    /// started component manager. If an output file descriptor is supplied it
-    /// is attached to the component manager's output.
     ///
-    /// At the end of this function call, a component manager has been created
-    /// in a hermetic environment and its execution is halted.
-    pub async fn custom(
-        component_manager_url: &str,
-        root_component_url: &str,
-        dir_handles: Vec<(String, zx::Handle)>,
-        config_file: Option<&str>,
-    ) -> Result<Self, Error> {
-        // Use a random integer to identify this component manager
-        let random_num = random::<u32>();
-        let label = format!("test_{}", random_num);
-
-        let (env, launcher) = create_isolated_environment(&label).await?;
-        let component_manager_app = launch_component_manager(
-            launcher,
-            component_manager_url,
-            root_component_url,
-            dir_handles,
-            config_file,
-        )
-        .await?;
-
-        let test = Self {
-            env,
-            component_manager_app,
-            component_manager_url: component_manager_url.to_string(),
-            root_component_url: root_component_url.to_string(),
-            label,
-        };
-        Ok(test)
+    /// For greater control over test setup parameters, use [`BlackBoxTestBuilder`].
+    pub async fn default(root_component_url: &str) -> Result<Self, Error> {
+        BlackBoxTestBuilder::new(root_component_url).build().await
     }
 
     /// The path from Hub v1 to component manager.
@@ -141,6 +105,95 @@ impl BlackBoxTest {
     pub async fn connect_to_event_source(&self) -> Result<EventSource, Error> {
         let path = self.get_component_manager_path();
         connect_to_event_source(&path).await
+    }
+}
+
+/// Configures a [`BlackBoxTest`].
+pub struct BlackBoxTestBuilder {
+    root_component_url: String,
+    component_manager_url: Option<String>,
+    dir_handles: Vec<(String, zx::Handle)>,
+    config_file: Option<String>,
+    extra_args: Vec<String>,
+}
+
+impl BlackBoxTestBuilder {
+    /// Creates a new BlackBoxTestBuilder instance configured to launch the root component
+    /// identified by the URL `root_component_url`.
+    pub fn new(root_component_url: impl Into<String>) -> Self {
+        BlackBoxTestBuilder {
+            root_component_url: root_component_url.into(),
+            component_manager_url: None,
+            dir_handles: Vec::new(),
+            config_file: None,
+            extra_args: Vec::new(),
+        }
+    }
+
+    /// Changes the URL of the component manager used for the black box test from the
+    /// default [`COMPONENT_MANAGER_URL`] to `url`.
+    pub fn component_manager_url(mut self, url: impl Into<String>) -> Self {
+        self.component_manager_url = Some(url.into());
+        self
+    }
+
+    /// Adds a directory `handle` to be installed in the component manager's namespace at
+    /// the given `path`. If an output file descriptor is supplied, it is attached to the
+    /// component manager's output.
+    pub fn add_dir_handle(mut self, path: impl Into<String>, handle: zx::Handle) -> Self {
+        self.dir_handles.push((path.into(), handle));
+        self
+    }
+
+    /// Sets the path to the configuration file for component manager.
+    pub fn config_file(mut self, config_file: impl Into<String>) -> Self {
+        self.config_file = Some(config_file.into());
+        self
+    }
+
+    /// Extends the set of directory handles to include those in `handles`. If an output file
+    /// descriptor is supplied, it is attached to the component manager's output.
+    pub fn extend_dir_handles(
+        mut self,
+        handles: impl IntoIterator<Item = (String, zx::Handle)>,
+    ) -> Self {
+        self.dir_handles.extend(handles);
+        self
+    }
+
+    /// Adds an extra parameter to pass to the started component manager.
+    pub fn add_extra_arg(mut self, arg: impl Into<String>) -> Self {
+        self.extra_args.push(arg.into());
+        self
+    }
+
+    /// Builds a BlackBoxTest. Upon success, a component manager has been created
+    /// in a hermetic environment and its execution is halted.
+    pub async fn build(self) -> Result<BlackBoxTest, Error> {
+        // Use a random integer to identify this component manager
+        let random_num = random::<u32>();
+        let label = format!("test_{}", random_num);
+
+        let (env, launcher) = create_isolated_environment(&label).await?;
+        let component_manager_url =
+            self.component_manager_url.unwrap_or_else(|| COMPONENT_MANAGER_URL.to_string());
+        let component_manager_app = launch_component_manager(
+            launcher,
+            &component_manager_url,
+            &self.root_component_url,
+            self.dir_handles,
+            self.config_file,
+            self.extra_args,
+        )
+        .await?;
+
+        Ok(BlackBoxTest {
+            env,
+            component_manager_app,
+            component_manager_url,
+            root_component_url: self.root_component_url,
+            label,
+        })
     }
 }
 
@@ -201,7 +254,8 @@ async fn launch_component_manager(
     component_manager_url: &str,
     root_component_url: &str,
     dir_handles: Vec<(String, zx::Handle)>,
-    config_file: Option<&str>,
+    config_file: Option<String>,
+    extra_args: Vec<String>,
 ) -> Result<App, Error> {
     let mut options = LaunchOptions::new();
 
@@ -210,11 +264,12 @@ async fn launch_component_manager(
         options.add_handle_to_namespace(dir.0, dir.1);
     }
 
-    // Start component manager, giving the debug flag and the root component URL.
     let mut args = vec![root_component_url.to_string(), "--debug".to_string()];
     if let Some(config_file) = config_file {
-        args.extend(vec!["--config-file".to_string(), config_file.to_string()]);
+        args.extend(vec!["--config-file".to_string(), config_file]);
     }
+    args.extend(extra_args);
+
     let component_manager_app =
         launch_with_options(&launcher, component_manager_url.to_string(), Some(args), options)
             .context("could not launch component manager")?;

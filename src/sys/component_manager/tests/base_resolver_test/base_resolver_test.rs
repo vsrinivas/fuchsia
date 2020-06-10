@@ -21,13 +21,10 @@ async fn base_resolver_test() -> Result<(), Error> {
     // A custom BlackBoxTest is required because
     // 1. the /pkg dir of this component has to be passed in to component manager as /boot
     // 2. the component manager needs a manifest without fuchsia.sys.Loader
-    let test = BlackBoxTest::custom(
-        "fuchsia-pkg://fuchsia.com/base_resolver_test#meta/component_manager_without_loader.cmx",
-        "fuchsia-boot:///#meta/root.cm",
-        vec![("/boot".to_string(), pkg_channel.into())],
-        None,
-    )
-    .await?;
+    let test = BlackBoxTestBuilder::new("fuchsia-boot:///#meta/root.cm")
+        .component_manager_url("fuchsia-pkg://fuchsia.com/base_resolver_test#meta/component_manager_without_loader.cmx")
+        .add_dir_handle("/boot", pkg_channel.into())
+        .build().await?;
 
     let event_source = &test.connect_to_event_source().await?;
 
