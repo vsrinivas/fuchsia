@@ -20,13 +20,13 @@ TEST(HwStress, RunHelp) {
 
 TEST(HwStress, RunCpuShort) {
   // Run with default args for a short duration.
-  const char* args[] = {"hwstress", "-d", "0.1", "cpu"};
+  const char* args[] = {"hwstress", "cpu", "-d", "0.1"};
   EXPECT_EQ(0, hwstress::Run(4, args));
 }
 
 TEST(HwStress, RunMemTestShort) {
   // Run with default args for a short duration.
-  const char* args[] = {"hwstress", "-d", "0.1", "memory"};
+  const char* args[] = {"hwstress", "memory", "-d", "0.1"};
   EXPECT_EQ(0, hwstress::Run(4, args));
 }
 

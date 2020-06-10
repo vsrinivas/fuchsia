@@ -35,13 +35,24 @@ TEST(Args, ParseSubcommand) {
 
 TEST(Args, ParseDuration) {
   // Good duration specified.
-  EXPECT_EQ(ParseArgs({{"hwstress", "-d", "5", "cpu"}})->test_duration_seconds, 5.0);
-  EXPECT_EQ(ParseArgs({{"hwstress", "-d", "0.1", "cpu"}})->test_duration_seconds, 0.1);
-  EXPECT_EQ(ParseArgs({{"hwstress", "--duration", "3", "cpu"}})->test_duration_seconds, 3.0);
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu", "-d", "5"}})->test_duration_seconds, 5.0);
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu", "-d", "0.1"}})->test_duration_seconds, 0.1);
+  EXPECT_EQ(ParseArgs({{"hwstress", "cpu", "--duration", "3"}})->test_duration_seconds, 3.0);
 
   // Bad durations.
-  EXPECT_TRUE(ParseArgs({{"hwstress", "-d", "x", "cpu"}}).is_error());
-  EXPECT_TRUE(ParseArgs({{"hwstress", "-d", "-3", "cpu"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "cpu", "-d", "x"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "cpu", "-d", "-3"}}).is_error());
+}
+
+TEST(Args, ParseFlash) {
+  // Flash subcommand given with FVM path provided
+  EXPECT_EQ(ParseArgs({{"hwstress", "flash", "-f", "/path"}})->subcommand, StressTest::kFlash);
+  EXPECT_EQ(ParseArgs({{"hwstress", "flash", "--fvm-path", "/path"}})->subcommand, StressTest::kFlash);
+  EXPECT_TRUE(ParseArgs({{"hwstress", "flash", "-f", "/path/to/fvm"}})->fvm_path.compare("/path/to/fvm") == 0);
+  EXPECT_TRUE(ParseArgs({{"hwstress", "flash", "--fvm-path", "/fvm/path"}})->fvm_path.compare("/fvm/path") == 0);
+
+  // Flash subcommand given without FVM path
+  EXPECT_TRUE(ParseArgs({{"hwstress", "flash"}}).is_error());
 }
 
 }  // namespace

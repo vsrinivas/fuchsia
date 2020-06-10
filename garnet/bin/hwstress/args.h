@@ -20,12 +20,16 @@ namespace hwstress {
 // Subcommand to run.
 enum class StressTest {
   kCpu,
+  kFlash,
   kMemory,
 };
 
 struct CommandLineArgs {
   // Show help.
   bool help = false;
+
+  // Path to the Fuchsia Volume Manager
+  std::string fvm_path;
 
   // Duration in seconds.
   //
