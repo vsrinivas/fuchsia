@@ -7,14 +7,17 @@
 #include <float.h>
 #include <math.h>
 #include <stdint.h>
+#include <zircon/pixelformat.h>
 
 #include <algorithm>
 
 #include <ddk/debug.h>
+#include <ddk/protocol/display/controller.h>
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 
 #include "rdma-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/common.h"
 #include "vpp-regs.h"
 #include "vpu-regs.h"
 
@@ -30,10 +33,15 @@ constexpr uint32_t VpuViuOsd1BlkCfgOsdBlkMode32Bit = 5;
 constexpr uint32_t VpuViuOsd1BlkCfgOsdBlkModeShift = 8;
 constexpr uint32_t VpuViuOsd1BlkCfgColorMatrixArgb = 1;
 constexpr uint32_t VpuViuOsd1BlkCfgColorMatrixShift = 2;
+
+constexpr uint32_t VpuViuOsd1CtrlStatOsdBlkEnable = (1 << 0);
+
 constexpr uint32_t VpuViuOsd1CtrlStat2ReplacedAlphaEn = (1 << 14);
 constexpr uint32_t VpuViuOsd1CtrlStat2ReplacedAlphaShift = 6u;
 
-constexpr uint32_t kOsdGlobalAlphaDef = 0xff;
+constexpr uint32_t kMaximumAlpha = 0xff;
+constexpr uint32_t kOsdGlobalAlphaShift = 12;
+constexpr uint32_t kOsdGlobalAlphaMask = (0x1FF << kOsdGlobalAlphaShift);
 constexpr uint32_t kHwOsdBlockEnable0 = 0x0001;  // osd blk0 enable
 
 // We use bicubic interpolation for scaling.
@@ -143,21 +151,6 @@ void Osd::Enable(void) {
   vpu_mmio_->SetBits32(1 << 0, VPU_VIU_OSD1_CTRL_STAT);
 }
 
-zx_status_t Osd::Configure() {
-  // TODO(payamm): OSD for g12a is slightly different from gxl. Currently, uBoot enables
-  // scaling and 16bit mode (565) and configures various layers based on that assumption.
-  // Since we don't have a full end-to-end driver at this moment, we cannot simply turn off
-  // scaling.
-  // For now, we will only configure the OSD layer to use the new Canvas index,
-  // and use 32-bit color.
-  // Set to use BGRX instead of BGRA.
-  vpu_mmio_->SetBits32(
-      VpuViuOsd1CtrlStat2ReplacedAlphaEn | (0xff << VpuViuOsd1CtrlStat2ReplacedAlphaShift),
-      VPU_VIU_OSD1_CTRL_STAT2);
-
-  return ZX_OK;
-}
-
 uint32_t Osd::FloatToFixed2_10(float f) {
   auto fixed_num = static_cast<int32_t>(round(f * kFloatToFixed2_10ScaleFactor));
 
@@ -199,8 +192,55 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
                     (VpuViuOsd1BlkCfgOsdBlkMode32Bit << VpuViuOsd1BlkCfgOsdBlkModeShift) |
                     (VpuViuOsd1BlkCfgColorMatrixArgb << VpuViuOsd1BlkCfgColorMatrixShift);
   SetRdmaTableValue(rdma_channel, IDX_CFG_W0, cfg_w0);
-  SetRdmaTableValue(rdma_channel, IDX_CTRL_STAT,
-                    vpu_mmio_->Read32(VPU_VIU_OSD1_CTRL_STAT) | (1 << 0));
+
+  auto primary_layer = config->layer_list[0]->cfg.primary;
+
+  // Configure ctrl_stat and ctrl_stat2 registers
+  uint32_t osd_ctrl_stat_val = vpu_mmio_->Read32(VPU_VIU_OSD1_CTRL_STAT);
+  uint32_t osd_ctrl_stat2_val = vpu_mmio_->Read32(VPU_VIU_OSD1_CTRL_STAT2);
+
+  // enable OSD Block
+  osd_ctrl_stat_val |= VpuViuOsd1CtrlStatOsdBlkEnable;
+
+  // Amlogic supports two types of alpha blending:
+  // Global: This alpha value is applied to the entire plane (i.e. all pixels)
+  // Per-Pixel: Each pixel will be multiplied by its corresponding alpha channel
+  //
+  // If alpha blending is disabled by the client or we are supporting a format that does
+  // not have an alpha channel, we need to:
+  // a) Set global alpha multiplier to 1 (i.e. 0xFF)
+  // b) Enable "replaced_alpha" and set its value to 0xFF. This will effectively
+  //    tell the hardware to replace the value found in alpha channel with the "replaced"
+  //    value
+  //
+  // If alpha blending is enabled but alpha_layer_val is NaN:
+  // - Set global alpha multiplier to 1 (i.e. 0xFF)
+  // - Disable "replaced_alpha" which allows hardware to use per-pixel alpha channel.
+  //
+  // If alpha blending is enabled and alpha_layer_val has a value:
+  // - Set global alpha multiplier to alpha_layer_val
+  // - Disable "replaced_alpha" which allows hardware to use per-pixel alpha channel.
+
+  // Load default values: Set global alpha to 1 and enable replaced_alpha.
+  osd_ctrl_stat2_val |=
+      (kMaximumAlpha << VpuViuOsd1CtrlStat2ReplacedAlphaShift) | VpuViuOsd1CtrlStat2ReplacedAlphaEn;
+  osd_ctrl_stat_val |= kMaximumAlpha << kOsdGlobalAlphaShift;
+
+  if (primary_layer.alpha_mode != ALPHA_DISABLE) {
+    // If a global alpha value is provided, apply it.
+    if (!isnan(primary_layer.alpha_layer_val)) {
+      auto num = static_cast<uint8_t>(round(primary_layer.alpha_layer_val * kMaximumAlpha));
+      osd_ctrl_stat_val &= ~(kOsdGlobalAlphaMask);
+      osd_ctrl_stat_val |= (num << kOsdGlobalAlphaShift);
+    }
+    // If format includes alpha channel, disable "replaced_alpha"
+    if (primary_layer.image.pixel_format != ZX_PIXEL_FORMAT_RGB_x888) {
+      osd_ctrl_stat2_val &= ~(VpuViuOsd1CtrlStat2ReplacedAlphaEn);
+    }
+  }
+
+  SetRdmaTableValue(rdma_channel, IDX_CTRL_STAT, osd_ctrl_stat_val);
+  SetRdmaTableValue(rdma_channel, IDX_CTRL_STAT2, osd_ctrl_stat2_val);
 
   // Perform color correction if needed
   if (config->cc_flags) {
@@ -420,10 +460,11 @@ void Osd::EnableScaling(bool enable) {
 void Osd::ResetRdmaTable() {
   // For Amlogic display driver, RDMA table is simple.
   // Setup RDMA Table Register values
-  for (int i = 0; i < kMaxRdmaChannels; i++) {
-    RdmaTable* rdma_table = reinterpret_cast<RdmaTable*>(rdma_chnl_container_[i].virt_offset);
+  for (auto& i : rdma_chnl_container_) {
+    auto* rdma_table = reinterpret_cast<RdmaTable*>(i.virt_offset);
     rdma_table[IDX_CFG_W0].reg = (VPU_VIU_OSD1_BLK0_CFG_W0 >> 2);
     rdma_table[IDX_CTRL_STAT].reg = (VPU_VIU_OSD1_CTRL_STAT >> 2);
+    rdma_table[IDX_CTRL_STAT2].reg = (VPU_VIU_OSD1_CTRL_STAT2 >> 2);
     rdma_table[IDX_MATRIX_EN_CTRL].reg = (VPU_VPP_POST_MATRIX_EN_CTRL >> 2);
     rdma_table[IDX_MATRIX_COEF00_01].reg = (VPU_VPP_POST_MATRIX_COEF00_01 >> 2);
     rdma_table[IDX_MATRIX_COEF02_10].reg = (VPU_VPP_POST_MATRIX_COEF02_10 >> 2);
@@ -440,7 +481,7 @@ void Osd::ResetRdmaTable() {
 void Osd::SetRdmaTableValue(uint32_t channel, uint32_t idx, uint32_t val) {
   ZX_DEBUG_ASSERT(idx < IDX_MAX);
   ZX_DEBUG_ASSERT(channel < kMaxRdmaChannels);
-  RdmaTable* rdma_table = reinterpret_cast<RdmaTable*>(rdma_chnl_container_[channel].virt_offset);
+  auto* rdma_table = reinterpret_cast<RdmaTable*>(rdma_chnl_container_[channel].virt_offset);
   rdma_table[idx].val = val;
 }
 
@@ -544,7 +585,7 @@ void Osd::HwInit() {
   CLEAR_MASK32(VPU, VPP_MISC, VPP_PREBLEND_EN);
   // just disable osd to avoid booting hang up
   regVal = 0x1 << 0;
-  regVal |= kOsdGlobalAlphaDef << 12;
+  regVal |= kMaximumAlpha << kOsdGlobalAlphaShift;
   regVal |= (1 << 21);
   WRITE32_REG(VPU, VPU_VIU_OSD1_CTRL_STAT, regVal);
   WRITE32_REG(VPU, VPU_VIU_OSD2_CTRL_STAT, regVal);
@@ -555,13 +596,13 @@ void Osd::HwInit() {
 
   // Apply scale coefficients
   SET_BIT32(VPU, VPU_VPP_OSD_SCALE_COEF_IDX, 0x0000, 0, 9);
-  for (int i = 0; i < 33; i++) {
-    WRITE32_REG(VPU, VPU_VPP_OSD_SCALE_COEF, osd_filter_coefs_bicubic[i]);
+  for (unsigned int i : osd_filter_coefs_bicubic) {
+    WRITE32_REG(VPU, VPU_VPP_OSD_SCALE_COEF, i);
   }
 
   SET_BIT32(VPU, VPU_VPP_OSD_SCALE_COEF_IDX, 0x0100, 0, 9);
-  for (int i = 0; i < 33; i++) {
-    WRITE32_REG(VPU, VPU_VPP_OSD_SCALE_COEF, osd_filter_coefs_bicubic[i]);
+  for (unsigned int i : osd_filter_coefs_bicubic) {
+    WRITE32_REG(VPU, VPU_VPP_OSD_SCALE_COEF, i);
   }
 
   // update blending
@@ -650,6 +691,8 @@ void Osd::Dump() {
     reg = offset + VPU_VIU_OSD1_FIFO_CTRL_STAT;
     DISP_INFO("reg[0x%x]: 0x%08x\n", reg, READ32_REG(VPU, reg));
     reg = offset + VPU_VIU_OSD1_CTRL_STAT;
+    DISP_INFO("reg[0x%x]: 0x%08x\n", reg, READ32_REG(VPU, reg));
+    reg = offset + VPU_VIU_OSD1_CTRL_STAT2;
     DISP_INFO("reg[0x%x]: 0x%08x\n", reg, READ32_REG(VPU, reg));
     reg = offset + VPU_VIU_OSD1_BLK0_CFG_W0;
     DISP_INFO("reg[0x%x]: 0x%08x\n", reg, READ32_REG(VPU, reg));

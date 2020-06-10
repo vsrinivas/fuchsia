@@ -43,7 +43,16 @@ namespace amlogic_display {
 namespace {
 
 // List of supported pixel formats
-zx_pixel_format_t kSupportedPixelFormats[] = {ZX_PIXEL_FORMAT_RGB_x888};
+zx_pixel_format_t kSupportedPixelFormats[2] = {ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888};
+
+bool is_format_supported(zx_pixel_format_t format) {
+  for (auto f : kSupportedPixelFormats) {
+    if (f == format) {
+      return true;
+    }
+  }
+  return false;
+}
 
 constexpr uint64_t kDisplayId = PANEL_DISPLAY_ID;
 
@@ -191,15 +200,7 @@ zx_status_t AmlogicDisplay::DisplayInit() {
   }
 
   osd_->HwInit();
-
-  // Configure osd layer
   current_image_valid_ = false;
-  status = osd_->Configure();
-  if (status != ZX_OK) {
-    DISP_ERROR("OSD configuration failed!\n");
-    return status;
-  }
-
   return ZX_OK;
 }
 
@@ -229,7 +230,7 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
     return ZX_ERR_NO_MEMORY;
   }
 
-  if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != format_) {
+  if (image->type != IMAGE_TYPE_SIMPLE || !is_format_supported(image->pixel_format)) {
     status = ZX_ERR_INVALID_ARGS;
     return status;
   }
@@ -346,11 +347,16 @@ uint32_t AmlogicDisplay::DisplayControllerImplCheckConfiguration(
         .width = width_,
         .height = height_,
     };
-    success =
-        display_configs[0]->layer_list[0]->type == LAYER_TYPE_PRIMARY &&
-        layer.transform_mode == FRAME_TRANSFORM_IDENTITY && layer.image.width == width_ &&
-        layer.image.height == height_ && memcmp(&layer.dest_frame, &frame, sizeof(frame_t)) == 0 &&
-        memcmp(&layer.src_frame, &frame, sizeof(frame_t)) == 0 && layer.alpha_mode == ALPHA_DISABLE;
+
+    if (layer.alpha_mode == ALPHA_PREMULTIPLIED) {
+      // we don't support pre-multiplied alpha mode
+      layer_cfg_results[0][0] |= CLIENT_ALPHA;
+    }
+    success = display_configs[0]->layer_list[0]->type == LAYER_TYPE_PRIMARY &&
+              layer.transform_mode == FRAME_TRANSFORM_IDENTITY && layer.image.width == width_ &&
+              layer.image.height == height_ &&
+              memcmp(&layer.dest_frame, &frame, sizeof(frame_t)) == 0 &&
+              memcmp(&layer.src_frame, &frame, sizeof(frame_t)) == 0;
   }
   if (!success) {
     layer_cfg_results[0][0] = CLIENT_MERGE_BASE;

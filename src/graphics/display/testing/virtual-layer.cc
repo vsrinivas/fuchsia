@@ -122,7 +122,7 @@ bool PrimaryLayer::Init(fhd::Controller::SyncClient* dc) {
   uint32_t fg_color = override_colors_ ? fgcolor_ : get_fg_color();
   uint32_t bg_color = alpha_enable_ ? 0x3fffffff : 0xffffffff;
   if (override_colors_) {
-    bg_color = alpha_enable_ ? (0x3f000000 | (bgcolor_ & 0x00ffffff)) : bgcolor_;
+    bg_color = bgcolor_;
   }
 
   images_[0] = Image::Create(dc, image_width_, image_height_, image_format_, fg_color, bg_color,

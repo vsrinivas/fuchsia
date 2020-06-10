@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstring>
 #include <memory>
 #include <string_view>
@@ -581,7 +582,9 @@ void usage(void) {
       "--preoffsets x,y,z       : set preoffsets for color correction\n"
       "--postoffsets x,y,z      : set postoffsets for color correction\n"
       "--coeff c00,c01,...,,c22 : 3x3 coefficient matrix for color correction\n"
-
+      "--enable-alpha           : Enable per-pixel alpha blending.\n"
+      "--opacity o              : Set the opacity of the screen\n"
+      "                           <o> is a value between [0 1] inclusive\n"
       "\nTest Modes:\n\n"
       "--bundle N       : Run test from test bundle N as described below\n\n"
       "                   bundle %d: Display a single pattern using single buffer\n"
@@ -700,6 +703,9 @@ int main(int argc, const char* argv[]) {
   bool use_color_correction = false;
   testing::display::ColorCorrectionArgs color_correction_args;
 
+  float alpha_val = std::nanf("");
+  bool enable_alpha = false;
+
   while (argc) {
     if (strcmp(argv[0], "--dump") == 0) {
       for (auto& display : displays) {
@@ -785,6 +791,20 @@ int main(int argc, const char* argv[]) {
              &color_correction_args.coeff[5], &color_correction_args.coeff[6],
              &color_correction_args.coeff[7], &color_correction_args.coeff[8]);
       use_color_correction = true;
+      argv += 2;
+      argc -= 2;
+    } else if (strcmp(argv[0], "--enable-alpha") == 0) {
+      enable_alpha = true;
+      argv += 1;
+      argc -= 1;
+    } else if (strcmp(argv[0], "--opacity") == 0) {
+      enable_alpha = true;
+      alpha_val = std::stof(argv[1]);
+      if (alpha_val < 0 || alpha_val > 1) {
+        printf("Invalid alpha value. Must be between 0 and 1\n");
+        usage();
+        return -1;
+      }
       argv += 2;
       argc -= 2;
     } else if (strcmp(argv[0], "--help") == 0) {
@@ -920,6 +940,9 @@ int main(int argc, const char* argv[]) {
         fbl::make_unique_checked<PrimaryLayer>(&ac, displays, fgcolor_rgba, bgcolor_rgba);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
+    }
+    if (enable_alpha) {
+      layer1->SetAlpha(true, alpha_val);
     }
     layer1->SetLayerFlipping(true);
     layers.push_back(std::move(layer1));

@@ -30,6 +30,7 @@ struct RdmaTable {
 enum {
   IDX_CFG_W0,
   IDX_CTRL_STAT,
+  IDX_CTRL_STAT2,
   IDX_MATRIX_COEF00_01,
   IDX_MATRIX_COEF02_10,
   IDX_MATRIX_COEF11_12,
@@ -67,7 +68,6 @@ class Osd {
 
   zx_status_t Init(zx_device_t* parent);
   void HwInit();
-  zx_status_t Configure();
   void Disable();
   // This function will apply configuration when VSYNC interrupt occurs using RDMA
   void FlipOnVsync(uint8_t idx, const display_config_t* config);
