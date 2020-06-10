@@ -55,9 +55,6 @@ bootfs_manifest("devices.manifest") {
     {
       name = "driver_host"
     },
-
-    # Inject Virtcon into the ZBI
-    # TODO(41410): Remove when unified build exists.
     {
       name = "virtual-console"
     },
