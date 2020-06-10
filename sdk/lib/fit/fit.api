@@ -4,7 +4,7 @@
   "pkg/fit/include/lib/fit/bridge_internal.h": "d7fbd122d830a182e178db711fa62e51",
   "pkg/fit/include/lib/fit/constructors_internal.h": "8bfa14d14273b96823adfd2ae9f002bd",
   "pkg/fit/include/lib/fit/defer.h": "c1a745ecee5796cabac92e8c1176e9ee",
-  "pkg/fit/include/lib/fit/function.h": "bd5da334665727c380a77101ecbb659f",
+  "pkg/fit/include/lib/fit/function.h": "3fa94ed03e6b046d082701c5d6827ee5",
   "pkg/fit/include/lib/fit/function_internal.h": "ef6d6f4d127a8e831a4a739043b8bfd6",
   "pkg/fit/include/lib/fit/function_traits.h": "4db000fe2c2daba6d1b999c21c851da9",
   "pkg/fit/include/lib/fit/in_place_internal.h": "a01bbea21f21abecc6d0bb57192057b9",

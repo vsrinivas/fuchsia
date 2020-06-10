@@ -894,6 +894,50 @@ bool callback_once() {
   END_TEST;
 }
 
+namespace test_copy_move_constructions {
+
+template <typename F>
+class assert_move_only {
+  static_assert(!std::is_copy_assignable<F>::value);
+  static_assert(!std::is_copy_constructible<F>::value);
+  static_assert(std::is_move_assignable<F>::value);
+  static_assert(std::is_move_constructible<F>::value);
+
+  // It seems that just testing `!std::is_copy_assignable<F>` is not enough,
+  // as the `fit::function` class could use a perfect-forwarding mechanism
+  // that still allows expressions of the form `fit::function func1 = func2`
+  // to compile, even though `std::is_copy_assignable<F>` is false.
+  template <typename T, typename = void>
+  struct test : std::false_type {};
+  template <typename T>
+  struct test<T, std::void_t<decltype(T::v1 = T::v2)>> : std::true_type {};
+
+  struct NoAssign {
+    static F v1;
+    static F v2;
+  };
+  static_assert(!test<NoAssign>::value);
+
+  struct CanAssign {
+    static int v1;
+    static int v2;
+  };
+  static_assert(test<CanAssign>::value);
+
+  template <typename T, typename = void>
+  struct test_construct : std::false_type {};
+  template <typename T>
+  struct test_construct<T, std::void_t<decltype(T{std::declval<const T&>()})>> : std::true_type {};
+
+  static_assert(!test_construct<F>::value);
+  static_assert(test_construct<int>::value);
+};
+
+template class assert_move_only<fit::function<void()>>;
+template class assert_move_only<fit::callback<void()>>;
+
+}  // namespace test_copy_move_constructions
+
 }  // namespace
 
 namespace test_conversions {
@@ -943,6 +987,6 @@ RUN_TEST(move_only_argument_and_result)
 RUN_TEST(implicit_construction)
 RUN_TEST(overload_resolution)
 RUN_TEST(sharing)
+RUN_TEST(bind_member)
 RUN_TEST(callback_once)
-RUN_TEST(bind_member);
 END_TEST_CASE(function_tests)
