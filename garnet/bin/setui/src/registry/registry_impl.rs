@@ -419,14 +419,13 @@ impl RegistryImpl {
         if let Some(MessageEvent::Status(DeliveryStatus::Received)) =
             controller_receptor.next().await
         {
-            if !self.active_controllers.contains_key(&setting_type) {
+            if self.active_controllers.contains_key(&setting_type) {
                 fx_log_err!(
-                    "Failed to remove {:?} from active controllers, not found",
+                    "active_controllers still unexpectedly contains {:?}, removing.",
                     setting_type
                 );
-                return;
+                self.active_controllers.remove(&setting_type);
             }
-            self.active_controllers.remove(&setting_type);
         } else {
             // Invalid response from Teardown phase.
             fx_log_err!("Failed to tear down {:?} controller", setting_type);
