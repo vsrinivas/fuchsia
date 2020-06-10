@@ -90,7 +90,7 @@ static zx_status_t gueststats(zx_handle_t root_resource, zx_duration_t delay) {
       " ept"
       " ctrl_reg"
       " msr(rd wr)"
-      " inst(io hlt cpuid pause vmcall xsetbv)\n");
+      " inst(io hlt cpuid ple vmcall xsetbv)\n");
 
   for (size_t i = 0; i < actual; i++) {
     printf(
@@ -102,7 +102,7 @@ static zx_status_t gueststats(zx_handle_t root_resource, zx_duration_t delay) {
         " %6lu"
         " %6lu"
         " %8lu %3lu"
-        " %9lu %5lu %5lu %6lu %6lu %6lu\n",
+        " %6lu %5lu %5lu %4lu %4lu %6lu\n",
         i,
         stats[i].vm_entries- old_stats[i].vm_entries,
         stats[i].vm_exits - old_stats[i].vm_exits,
