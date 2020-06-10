@@ -35,63 +35,73 @@ constexpr char kIgnoreDirName[] = "helper";
 int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
   bool test_dirs_required = default_test_dirs.is_empty();
   fprintf(stderr,
-          "Usage: %s [-S|-s] [-M|-m] [-L|-l]                     \n"
-          "    [-t test names] [-o directory]                    \n"
-          "    [directory globs ...]                             \n"
-          "    [-- [-args -to -the -test -bins]]                 \n"
-          "                                                      \n"
-          "The %s [directory globs...] is a list of              \n"
-          "globs which match directories containing tests to run,\n"
-          "non-recursively. Note that non-directories captured by\n"
-          "a glob will be silently ignored.                      \n"
-          "                                                      \n"
-          "After directory globs, `--` can be followed by any    \n"
-          "number of arguments to pass to the binaries under     \n"
-          "test.                                                 \n"
-          "                                                      \n"
-          "After test is run, a signature of [runtests][PASSED]  \n"
-          "or [runtests][FAILED] will be printed                 \n",
+          "Usage: %s [-S|-s] [-M|-m] [-L|-l] [--all]                \n"
+          "    [--name|-t test names] [--output|-o directory]       \n"
+          "    [directory globs ...]                                \n"
+          "    [-- [-args -to -the -test -bins]]                    \n"
+          "                                                         \n"
+          "The %s [directory globs...] is a list of                 \n"
+          "globs which match directories containing tests to run,   \n"
+          "non-recursively. Note that non-directories captured by   \n"
+          "a glob will be silently ignored.                         \n"
+          "                                                         \n"
+          "After directory globs, `--` can be followed by any       \n"
+          "number of arguments to pass to the binaries under        \n"
+          "test.                                                    \n"
+          "                                                         \n"
+          "After test is run, a signature of [runtests][PASSED]     \n"
+          "or [runtests][FAILED] will be printed                    \n",
           name, test_dirs_required ? "required" : "optional");
   if (!test_dirs_required) {
-    fprintf(stderr, "If unspecified, the default set of directories is\n");
+    fprintf(stderr,
+            "If --all or --name is passed, or if no directory       \n"
+            "globs are specified, tests will be run from the default\n"
+            "globs:                                                 \n");
     for (const auto& test_dir : default_test_dirs) {
-      fprintf(stderr, "   %s\n", test_dir.c_str());
+      fprintf(stderr, "\t%s\n", test_dir.c_str());
     }
   }
   fprintf(stderr,
-          "\noptions:                                            \n"
-          "   -h: See this message                               \n"
-          "   -d: Dry run, just print test file names and exit   \n"
-          "   -S: Turn ON  Small tests      (on by default)  [2] \n"
-          "   -s: Turn OFF Small tests                       [2] \n"
-          "   -M: Turn ON  Medium tests     (on by default)  [2] \n"
-          "   -m: Turn OFF Medium tests                      [2] \n"
-          "   -L: Turn ON  Large tests      (off by default) [2] \n"
-          "   -l: Turn OFF Large tests                       [2] \n"
-          "   -t: Filter tests found in directory globs by these \n"
-          "       basenames. Also accepts fuchsia-pkg URIs, which\n"
-          "       are run regardless of directory globs.         \n"
-          "       (accepts a comma-separated list)               \n"
-          "   -r: Repeat the test suite this many times          \n"
-          "   -o: Write test output to a directory [1]           \n"
-          "   -i: Per-test timeout in seconds. [3]               \n"
-          "\n"
-          "[1] If -o is enabled, then a JSON summary of the test \n"
-          "    results will be written to a file named           \n"
-          "    \"summary.json\" under the desired directory, in  \n"
-          "    addition to each test's standard output and error.\n"
-          "    The summary contains a listing of the tests       \n"
-          "    executed by full path (e.g.,                      \n"
-          "    /boot/test/core/futex_test), as well as whether   \n"
-          "    the test passed or failed. For details, see       \n"
-          "    //system/ulib/runtests-utils/summary-schema.json  \n"
-          "\n"
-          "[2] The test selection options -[sSmMlL] only work    \n"
-          "    for tests that support the RUNTESTS_TEST_CLASS    \n"
-          "    environment variable.                             \n"
-          "\n"
-          "[3] Will consider tests failed if they don't          \n"
-          "    finish in this time.                              \n");
+          "                                                         \n"
+          "options:                                                 \n"
+          "       -h: See this message                              \n"
+          "       -d: Dry run, just print test file names and exit  \n"
+          "       -S: Turn ON  Small tests   (on by default)  [1]   \n"
+          "       -s: Turn OFF Small tests                    [1]   \n"
+          "       -M: Turn ON  Medium tests  (on by default)  [1]   \n"
+          "       -m: Turn OFF Medium tests                   [1]   \n"
+          "       -L: Turn ON  Large tests   (off by default) [1]   \n"
+          "       -l: Turn OFF Large tests                    [1]   \n"
+          "       -i: Per-test timeout in seconds.            [2]   \n"
+          "       -r: Repeat the test suite this many times         \n"
+          "   --name: Filter tests found in the default directory   \n"
+          "           globs by these basenames. Also accepts        \n"
+          "           fuchsia-pkg URIs, which are run regardless    \n"
+          "           of directory globs. (accepts a                \n"
+          "           comma-separated list)                         \n"
+          "       -t: Same as --name, except it will filter among   \n"
+          "           provided test dir globs                       \n"
+          " --output: Write test output to a directory        [3]   \n"
+          "       -o: Same as --output.                             \n"
+          "    --all: Run tests found in the default directory      \n"
+          "           globs.                                        \n"
+          "                                                         \n"
+          "[1] The test selection options -[sSmMlL] only work       \n"
+          "    for tests that support the RUNTESTS_TEST_CLASS       \n"
+          "    environment variable.                                \n"
+          "                                                         \n"
+          "[2] Will consider tests failed if they don't             \n"
+          "    finish in this time.                                 \n"
+          "                                                         \n"
+          "[3] If -o is enabled, then a JSON summary of the test    \n"
+          "    results will be written to a file named              \n"
+          "    \"summary.json\" under the desired directory, in     \n"
+          "    addition to each test's standard output and error.   \n"
+          "    The summary contains a listing of the tests          \n"
+          "    executed by full path (e.g.,                         \n"
+          "    /boot/test/core/futex_test), as well as whether      \n"
+          "    the test passed or failed. For details, see          \n"
+          "    //system/ulib/runtests-utils/summary-schema.json     \n");
   return EXIT_FAILURE;
 }
 }  // namespace
@@ -127,6 +137,29 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
       break;
     }
 
+    if (arg == "--all" || arg == "--name") {
+      for (const fbl::String& glob : default_test_dirs) {
+        test_dir_globs.push_back(glob);
+      }
+      if (arg == "--name") {
+        if (optind > argc) {
+          fprintf(stderr, "Missing argument for --name\n");
+          return EXIT_FAILURE;
+        }
+        ParseTestNames(argv[optind++], &basename_whitelist);
+      }
+      continue;
+    }
+
+    if (arg == "--output") {
+      if (optind > argc) {
+        fprintf(stderr, "Missing argument for --output\n");
+        return EXIT_FAILURE;
+      }
+      output_dir = argv[optind++];
+      continue;
+    }
+
     if (arg.length() < 2 || arg.data()[0] != '-') {
       test_dir_globs.push_back(std::move(arg));
       continue;
@@ -153,6 +186,7 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
         break;
       case 'h':
         return Usage(argv[0], default_test_dirs);
+      // TODO(fxbug.dev/53344): deprecate in favour of --name.
       case 't':
         if (optind > argc) {
           fprintf(stderr, "Missing argument for -t\n");
@@ -160,6 +194,7 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
         }
         ParseTestNames(argv[optind++], &basename_whitelist);
         break;
+      // TODO(fxbug.dev/53344): deprecate in favour of --output.
       case 'o':
         if (optind > argc) {
           fprintf(stderr, "Missing argument for -o\n");

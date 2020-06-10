@@ -77,13 +77,9 @@ static fbl::String PublishDataHelperBin() {
   return JoinPath(PublishDataHelperDir(), "publish-data-helper");
 }
 
-static fbl::String ProfileHelperDir() {
-  return JoinPath(packaged_script_dir(), "profile");
-}
+static fbl::String ProfileHelperDir() { return JoinPath(packaged_script_dir(), "profile"); }
 
-static fbl::String ProfileHelperBin() {
-  return JoinPath(ProfileHelperDir(), "profile-helper");
-}
+static fbl::String ProfileHelperBin() { return JoinPath(ProfileHelperDir(), "profile-helper"); }
 
 bool RunTestDontPublishData() {
   BEGIN_TEST;
@@ -151,7 +147,7 @@ bool RunAllTestsPublishData() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "run-all-tests-output-1");
   EXPECT_EQ(0, MkDirAll(output_dir));
 
-  const char* const argv[] = {"./runtests", "-o", output_dir.c_str(), test_containing_dir.c_str()};
+  const char* const argv[] = {"./runtests", "--output", output_dir.c_str(), test_containing_dir.c_str()};
   TestStopwatch stopwatch;
   EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(4, argv, {}, &stopwatch, ""));
 
@@ -171,8 +167,7 @@ bool RunAllTestsPublishData() {
   std::regex expected_output_regex(expected_output_buf.c_str());
 
   fbl::String test_data_sink_rel_path;
-  ASSERT_TRUE(
-      GetOutputFileRelPath(output_dir, "test", &test_data_sink_rel_path));
+  ASSERT_TRUE(GetOutputFileRelPath(output_dir, "test", &test_data_sink_rel_path));
 
   fbl::StringBuffer<1024> expected_data_sink_buf;
   expected_data_sink_buf.AppendPrintf(
@@ -229,7 +224,8 @@ bool RunProfileMergeData() {
   EXPECT_EQ(1, results[1]->data_sinks["llvm-profile"].size());
 
   // Check that the data was merged (i.e. they're the same).
-  EXPECT_TRUE(results[0]->data_sinks["llvm-profile"][0].file == results[1]->data_sinks["llvm-profile"][0].file);
+  EXPECT_TRUE(results[0]->data_sinks["llvm-profile"][0].file ==
+              results[1]->data_sinks["llvm-profile"][0].file);
 
   END_TEST;
 }

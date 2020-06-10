@@ -644,7 +644,7 @@ bool DiscoverAndRunTestsWithGlobs() {
   END_TEST;
 }
 
-// Passing an -o argument should result in output being written to that
+// Passing an --output argument should result in output being written to that
 // location.
 bool DiscoverAndRunTestsWithOutput() {
   BEGIN_TEST;
@@ -659,7 +659,7 @@ bool DiscoverAndRunTestsWithOutput() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "run-all-tests-output-1");
   EXPECT_EQ(0, MkDirAll(output_dir));
 
-  const char* const argv[] = {"./runtests", "-o", output_dir.c_str(), script_dir.c_str()};
+  const char* const argv[] = {"./runtests", "--output", output_dir.c_str(), script_dir.c_str()};
   TestStopwatch stopwatch;
   EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(4, argv, {}, &stopwatch, ""));
 
@@ -719,7 +719,7 @@ bool DiscoverAndRunTestsWithOutput() {
   END_TEST;
 }
 
-// Passing an -o argument *and* a syslog file name should result in output being
+// Passing an --output argument *and* a syslog file name should result in output being
 // written that includes a syslog reference.
 bool DiscoverAndRunTestsWithSyslogOutput() {
   BEGIN_TEST;
@@ -733,7 +733,7 @@ bool DiscoverAndRunTestsWithSyslogOutput() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "run-all-tests-output-2");
   EXPECT_EQ(0, MkDirAll(output_dir));
 
-  const char* const argv[] = {"./runtests", "-o", output_dir.c_str(), script_dir.c_str()};
+  const char* const argv[] = {"./runtests", "--output", output_dir.c_str(), script_dir.c_str()};
   TestStopwatch stopwatch;
   EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(4, argv, {}, &stopwatch, "syslog.txt"));
 
