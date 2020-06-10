@@ -108,7 +108,7 @@ class ConfigurationManagerImpl final
     // Writes K/V int pair to store.
     virtual WEAVE_ERROR WritePersistedStorageValue(Key key, uint32_t value) = 0;
 
-    // Acquires the BLE device name prefix from config-data and populates it in
+    // Acquires the BLE device name prefix and populates it in
     // |device_name_prefix|, with the length in |out_len|. If the provided
     // |buf_size| is not sufficient, |out_len| will not be modified.
     virtual WEAVE_ERROR GetBleDeviceNamePrefix(char* device_name_prefix,
@@ -116,6 +116,12 @@ class ConfigurationManagerImpl final
 
     // Returns whether WoBLE is enabled.
     virtual bool IsWoBLEEnabled() = 0;
+
+    // Acquires the device descriptor in Weave TLV format and populates it in
+    // |buf|, with the length in |encoded_len|. If the provided |buf_size| is
+    // not sufficient, |encoded_len| will not be modified.
+    virtual WEAVE_ERROR GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size,
+                                               size_t& encoded_len) = 0;
 
    protected:
     ConfigurationManagerImpl* impl_;
@@ -154,6 +160,7 @@ class ConfigurationManagerImpl final
   WEAVE_ERROR _GetProductId(uint16_t& product_id);
   WEAVE_ERROR _GetPrimaryWiFiMACAddress(uint8_t* buf);
   WEAVE_ERROR _GetVendorId(uint16_t& vendor_id);
+  WEAVE_ERROR _GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size, size_t& encoded_len);
 
   GroupKeyStoreBase* _GetGroupKeyStore(void);
   bool _CanFactoryReset(void);

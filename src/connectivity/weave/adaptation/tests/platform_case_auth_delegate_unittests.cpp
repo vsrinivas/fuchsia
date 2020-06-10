@@ -27,6 +27,7 @@ using Profiles::Security::kKeyUsageFlag_DigitalSignature;
 using Profiles::Security::kValidateFlag_IgnoreNotBefore;
 using Profiles::Security::WeaveCertificateData;
 
+using nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor;
 using nl::Weave::Profiles::Security::kTag_CASECertificateInfo_EntityCertificate;
 using nl::Weave::Profiles::Security::kTag_ECDSASignature;
 using nl::Weave::Profiles::Security::kTag_ECDSASignature_r;
@@ -158,6 +159,19 @@ class FakeWeaveSigner : public fuchsia::weave::testing::Signer_TestBase {
   size_t signed_hash_size_;
 };
 
+class ConfigurationManagerTestDelegateImpl : public ConfigurationManagerDelegateImpl {
+ public:
+  WEAVE_ERROR GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size, size_t& encoded_len) override {
+    return WeaveDeviceDescriptor::EncodeTLV(descriptor_, buf, (uint32_t)buf_size,
+                                            (uint32_t&)encoded_len);
+  }
+
+  void SetDeviceDescriptor(WeaveDeviceDescriptor descriptor) { descriptor_ = descriptor; }
+
+ private:
+  WeaveDeviceDescriptor descriptor_;
+};
+
 class PlatformCASEAuthDelegateTest : public WeaveTestFixture {
  public:
   PlatformCASEAuthDelegateTest() {
@@ -171,7 +185,7 @@ class PlatformCASEAuthDelegateTest : public WeaveTestFixture {
     WeaveTestFixture::SetUp();
     WeaveTestFixture::RunFixtureLoop();
 
-    ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
+    ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerTestDelegateImpl>());
     EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
     // Initialize dummy certificate and service configuration.
     EXPECT_EQ(ConfigurationMgr().StoreManufacturerDeviceCertificate(kTestDeviceCert,
@@ -193,6 +207,61 @@ class PlatformCASEAuthDelegateTest : public WeaveTestFixture {
 
   FakeWeaveSigner fake_weave_signer_;
 };
+
+TEST_F(PlatformCASEAuthDelegateTest, EncodeNodePayload) {
+  BeginSessionContext context;
+  WeaveDeviceDescriptor descriptor;
+  uint8_t payload_buf[WeaveDeviceDescriptor::kMaxPairingCodeLength + 1];
+  uint16_t payload_len;
+
+  // Set dummy descriptor to return when encoding node payload.
+  ConfigurationManagerTestDelegateImpl* configuration_manager_delegate =
+      static_cast<ConfigurationManagerTestDelegateImpl*>(ConfigurationMgrImpl().GetDelegate());
+  configuration_manager_delegate->SetDeviceDescriptor(descriptor);
+
+  // Acquire node payload and decoded contents to device descriptor.
+  WeaveDeviceDescriptor decoded_descriptor;
+  EXPECT_EQ(platform_case_auth_delegate_->EncodeNodePayload(context, payload_buf,
+                                                            sizeof(payload_buf), payload_len),
+            WEAVE_NO_ERROR);
+  EXPECT_EQ(WeaveDeviceDescriptor::DecodeTLV(payload_buf, payload_len, decoded_descriptor),
+            WEAVE_NO_ERROR);
+
+  // Compare device descriptor from delegate and configuration manager.
+  uint8_t descriptor_buf[WeaveDeviceDescriptor::kMaxPairingCodeLength + 1];
+  uint32_t descriptor_buf_len;
+  EXPECT_EQ(WeaveDeviceDescriptor::EncodeTLV(descriptor, descriptor_buf, sizeof(descriptor_buf),
+                                             descriptor_buf_len),
+            WEAVE_NO_ERROR);
+
+  uint8_t decoded_descriptor_buf[WeaveDeviceDescriptor::kMaxPairingCodeLength + 1];
+  uint32_t decoded_descriptor_buf_len;
+  EXPECT_EQ(
+      WeaveDeviceDescriptor::EncodeTLV(decoded_descriptor, decoded_descriptor_buf,
+                                       sizeof(decoded_descriptor_buf), decoded_descriptor_buf_len),
+      WEAVE_NO_ERROR);
+
+  EXPECT_EQ(memcmp(descriptor_buf, decoded_descriptor_buf, descriptor_buf_len), 0);
+}
+
+TEST_F(PlatformCASEAuthDelegateTest, EncodeNodePayloadEncodingFailure) {
+  BeginSessionContext context;
+  WeaveDeviceDescriptor descriptor;
+  uint8_t payload_buf[WeaveDeviceDescriptor::kMaxPairingCodeLength + 1];
+  uint16_t payload_len = 0U;
+
+  // Set dummy descriptor to return when encoding node payload.
+  ConfigurationManagerTestDelegateImpl* configuration_manager_delegate =
+      static_cast<ConfigurationManagerTestDelegateImpl*>(ConfigurationMgrImpl().GetDelegate());
+  configuration_manager_delegate->SetDeviceDescriptor(descriptor);
+
+  // Acquire node payload and decoded contents to device descriptor, but supply
+  // insufficient space to encode the descriptor.
+  uint64_t payload_len_stored = payload_len;
+  EXPECT_EQ(platform_case_auth_delegate_->EncodeNodePayload(context, payload_buf, 0, payload_len),
+            WEAVE_ERROR_BUFFER_TOO_SMALL);
+  EXPECT_EQ(payload_len, payload_len_stored);
+}
 
 TEST_F(PlatformCASEAuthDelegateTest, EncodeNodeCertInfo) {
   constexpr size_t kMaxCerts = 4;

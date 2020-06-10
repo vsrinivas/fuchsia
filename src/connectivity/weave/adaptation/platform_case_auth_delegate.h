@@ -34,6 +34,8 @@ class PlatformCASEAuthDelegate final : public WeaveCASEAuthDelegate {
   ~PlatformCASEAuthDelegate() {}
 
   // nl::Weave::Profiles::Security::CASE::WeaveCASEAuthDelegate implementation
+  WEAVE_ERROR EncodeNodePayload(const BeginSessionContext& msg_ctx, uint8_t* payload_buf,
+                                uint16_t payload_buf_size, uint16_t& payload_len) override;
   WEAVE_ERROR EncodeNodeCertInfo(const BeginSessionContext& msg_ctx, TLVWriter& writer) override;
   WEAVE_ERROR GenerateNodeSignature(const BeginSessionContext& msg_ctx, const uint8_t* msg_hash,
                                     uint8_t msg_hash_len, TLVWriter& writer, uint64_t tag) override;

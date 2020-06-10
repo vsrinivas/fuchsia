@@ -70,6 +70,11 @@ WEAVE_ERROR ConfigurationManagerImpl::_WritePersistedStorageValue(Key key, uint3
   return delegate_->WritePersistedStorageValue(key, value);
 }
 
+WEAVE_ERROR ConfigurationManagerImpl::_GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size,
+                                                              size_t& encoded_len) {
+  return delegate_->GetDeviceDescriptorTLV(buf, buf_size, encoded_len);
+}
+
 void ConfigurationManagerImpl::SetDelegate(std::unique_ptr<Delegate> delegate) {
   delegate_ = std::move(delegate);
   if (delegate_) {

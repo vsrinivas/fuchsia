@@ -45,6 +45,23 @@ PlatformCASEAuthDelegate::PlatformCASEAuthDelegate() : PlatformCASEAuthDelegate(
 PlatformCASEAuthDelegate::PlatformCASEAuthDelegate(std::unique_ptr<sys::ComponentContext> context)
     : context_(std::move(context)) {}
 
+WEAVE_ERROR PlatformCASEAuthDelegate::EncodeNodePayload(const BeginSessionContext& msg_ctx,
+                                                        uint8_t* payload_buf,
+                                                        uint16_t payload_buf_size,
+                                                        uint16_t& payload_len) {
+  WEAVE_ERROR error = WEAVE_NO_ERROR;
+  size_t device_desc_len;
+
+  error = ConfigurationMgr().GetDeviceDescriptorTLV(payload_buf, (size_t)payload_buf_size,
+                                                    device_desc_len);
+  if (error != WEAVE_NO_ERROR) {
+    return error;
+  }
+
+  payload_len = device_desc_len;
+  return WEAVE_NO_ERROR;
+}
+
 WEAVE_ERROR PlatformCASEAuthDelegate::EncodeNodeCertInfo(const BeginSessionContext& msg_ctx,
                                                          TLVWriter& writer) {
   std::vector<uint8_t> device_cert;

@@ -29,6 +29,7 @@ namespace DeviceLayer {
 namespace {
 
 using ::nl::Weave::DeviceLayer::Internal::EnvironmentConfig;
+using ::nl::Weave::DeviceLayer::Internal::GenericConfigurationManagerImpl;
 using ::nl::Weave::DeviceLayer::Internal::WeaveConfigManager;
 using ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase;
 
@@ -207,6 +208,12 @@ bool ConfigurationManagerDelegateImpl::IsWoBLEEnabled() {
   bool is_enabled = false;
   device_info_->ReadConfigValue(kDeviceInfoConfigKey_EnableWoBLE, &is_enabled);
   return is_enabled;
+}
+
+WEAVE_ERROR ConfigurationManagerDelegateImpl::GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size,
+                                                                     size_t& encoded_len) {
+  return static_cast<GenericConfigurationManagerImpl<ConfigurationManagerImpl>*>(impl_)
+      ->_GetDeviceDescriptorTLV(buf, buf_size, encoded_len);
 }
 
 WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStoreHWInfo() {

@@ -45,6 +45,7 @@ class ConfigurationManagerDelegateImpl : public ConfigurationManagerImpl::Delega
   WEAVE_ERROR GetBleDeviceNamePrefix(char* device_name_prefix, size_t device_name_prefix_size,
                                      size_t* out_len) override;
   bool IsWoBLEEnabled() override;
+  WEAVE_ERROR GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size, size_t& encoded_len) override;
 
  protected:
   // Read up to |buf_size| bytes from the file |path| in the factory partition
