@@ -87,7 +87,7 @@ void brcmf_configure_arp_nd_offload(struct brcmf_if* ifp, bool enable) {
 
   /* Try to set and enable ARP offload feature, this may fail, then it  */
   /* is simply not supported and err 0 will be returned                 */
-  BRCMF_ERR("Calling ARP offload with enable: %d", enable);
+  BRCMF_ERR("Calling ARP offload on interface %d with enable: %d", ifp->ifidx, enable);
   err = brcmf_fil_iovar_int_set(ifp, "arp_ol", mode, &fw_err);
   if (err != ZX_OK) {
     BRCMF_DBG(TRACE, "failed to set ARP offload mode to 0x%x, err=%s, fw_err=%s", mode,
@@ -111,8 +111,7 @@ void brcmf_configure_arp_nd_offload(struct brcmf_if* ifp, bool enable) {
   }
 }
 
-static void _brcmf_set_multicast_list(WorkItem* work) {
-  struct brcmf_if* ifp;
+static void brcmf_set_multicast_list(struct brcmf_if* ifp) {
   struct net_device* ndev;
   struct netdev_hw_addr* ha;
   uint32_t cmd_value, cnt;
@@ -122,8 +121,6 @@ static void _brcmf_set_multicast_list(WorkItem* work) {
   uint32_t buflen;
   zx_status_t err;
   int32_t fw_err = 0;
-
-  ifp = containerof(work, struct brcmf_if, multicast_work);
 
   BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d", ifp->bsscfgidx);
 
@@ -184,6 +181,12 @@ static void _brcmf_set_multicast_list(WorkItem* work) {
   brcmf_configure_arp_nd_offload(ifp, !cmd_value);
 }
 
+static void brcmf_set_multicast_list_worker(WorkItem* work) {
+  struct brcmf_if* ifp;
+  ifp = containerof(work, struct brcmf_if, multicast_work);
+  brcmf_set_multicast_list(ifp);
+}
+
 zx_status_t brcmf_netdev_set_mac_address(struct net_device* ndev, uint8_t* addr) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   zx_status_t err;
@@ -206,7 +209,11 @@ zx_status_t brcmf_netdev_set_mac_address(struct net_device* ndev, uint8_t* addr)
 void brcmf_netdev_set_multicast_list(struct net_device* ndev) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
-  WorkQueue::ScheduleDefault(&ifp->multicast_work);
+  if (brcmf_bus_get_bus_type(ifp->drvr->bus_if) == BRCMF_BUS_TYPE_SIM) {
+    brcmf_set_multicast_list(ifp);
+  } else {
+    WorkQueue::ScheduleDefault(&ifp->multicast_work);
+  }
 }
 
 void brcmf_netdev_start_xmit(struct net_device* ndev,
@@ -421,7 +428,7 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
   BRCMF_DBG(TRACE, "Enter-New, bsscfgidx=%d mac=%pM", ifp->bsscfgidx, ifp->mac_addr);
 
   ndev->needed_headroom += drvr->hdrlen;
-  ifp->multicast_work = WorkItem(_brcmf_set_multicast_list);
+  ifp->multicast_work = WorkItem(brcmf_set_multicast_list_worker);
   return ZX_OK;
 }
 
