@@ -68,6 +68,24 @@ async fn verify_result<P: Payload + PartialEq + 'static, A: Address + PartialEq 
 static ORIGINAL: TestMessage = TestMessage::Foo;
 static REPLY: TestMessage = TestMessage::Bar;
 
+/// Tests message client creation results in unique ids.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_message_client_equality() {
+    let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
+    let (messenger, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    let (_, mut receptor) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
+
+    messenger.message(ORIGINAL, Audience::Broadcast).send();
+    let (_, client_1) = receptor.next_payload().await.unwrap();
+
+    messenger.message(ORIGINAL, Audience::Broadcast).send();
+    let (_, client_2) = receptor.next_payload().await.unwrap();
+
+    assert!(client_1 != client_2);
+
+    assert_eq!(client_1, client_1.clone());
+}
+
 /// Tests messenger creation and address space collision.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_messenger_creation() {

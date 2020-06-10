@@ -4,7 +4,7 @@
 
 use crate::internal::common::Timestamp;
 use crate::message::action_fuse::{ActionFuse, ActionFuseBuilder, ActionFuseHandle};
-use crate::message::base::{Address, Message, MessageType, Payload, Signature};
+use crate::message::base::{Address, Message, MessageClientId, MessageType, Payload, Signature};
 use crate::message::beacon::BeaconBuilder;
 use crate::message::message_builder::MessageBuilder;
 use crate::message::messenger::Messenger;
@@ -16,6 +16,9 @@ use crate::message::receptor::Receptor;
 /// message is forwarded to the next Messenger if no interaction preceded it.
 #[derive(Clone, Debug)]
 pub struct MessageClient<P: Payload + 'static, A: Address + 'static> {
+    // A unique identifier that identifies this client within the parent message
+    // hub.
+    id: MessageClientId,
     // The "source" message for the client. Any replies or action are done in the
     // context of this message.
     message: Message<P, A>,
@@ -26,13 +29,24 @@ pub struct MessageClient<P: Payload + 'static, A: Address + 'static> {
     forwarder: ActionFuseHandle,
 }
 
+impl<P: Payload + 'static, A: Address + 'static> PartialEq for MessageClient<P, A> {
+    fn eq(&self, other: &MessageClient<P, A>) -> bool {
+        other.id == self.id
+    }
+}
+
 impl<P: Payload + 'static, A: Address + 'static> MessageClient<P, A> {
-    pub(super) fn new(message: Message<P, A>, messenger: Messenger<P, A>) -> MessageClient<P, A> {
+    pub(super) fn new(
+        id: MessageClientId,
+        message: Message<P, A>,
+        messenger: Messenger<P, A>,
+    ) -> MessageClient<P, A> {
         let fuse_messenger_clone = messenger.clone();
         let fuse_message_clone = message.clone();
         MessageClient {
-            message: message.clone(),
-            messenger: messenger.clone(),
+            id,
+            message,
+            messenger,
             forwarder: ActionFuseBuilder::new()
                 .add_action(Box::new(move || {
                     fuse_messenger_clone.forward(fuse_message_clone.clone(), None);

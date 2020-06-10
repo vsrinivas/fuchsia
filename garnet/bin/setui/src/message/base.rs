@@ -194,6 +194,9 @@ pub(super) type ActionSender<P, A> =
 /// An internal identifier used by the MessageHub to identify messengers.
 pub(super) type MessengerId = usize;
 
+/// An internal identifier used by the `MessageHub` to identify `MessageClient`.
+pub(super) type MessageClientId = usize;
+
 pub(super) type CreateMessengerResult<P, A> =
     Result<(MessengerClient<P, A>, Receptor<P, A>), MessageError<A>>;
 

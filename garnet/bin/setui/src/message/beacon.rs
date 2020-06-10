@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use crate::message::action_fuse::{ActionFuseBuilder, ActionFuseHandle};
-use crate::message::base::{Address, DeliveryStatus, Message, MessageEvent, MessengerId, Payload};
+use crate::message::base::{
+    Address, DeliveryStatus, Message, MessageClientId, MessageEvent, MessengerId, Payload,
+};
 use crate::message::message_client::MessageClient;
 use crate::message::messenger::Messenger;
 use crate::message::receptor::Receptor;
@@ -95,12 +97,16 @@ impl<P: Payload + 'static, A: Address + 'static> Beacon<P, A> {
     }
 
     /// Delivers a response to the original message that spawned this Beacon.
-    pub async fn deliver(&self, message: Message<P, A>) -> Result<(), Error> {
+    pub async fn deliver(
+        &self,
+        message: Message<P, A>,
+        client_id: MessageClientId,
+    ) -> Result<(), Error> {
         if self
             .event_sender
             .unbounded_send(MessageEvent::Message(
                 message.payload(),
-                MessageClient::new(message, self.messenger.clone()),
+                MessageClient::new(client_id, message, self.messenger.clone()),
             ))
             .is_err()
         {

@@ -5,8 +5,8 @@
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{
     ActionSender, Address, Audience, DeliveryStatus, Fingerprint, Message, MessageAction,
-    MessageError, MessageType, MessengerAction, MessengerActionSender, MessengerId, MessengerType,
-    Payload, Signature,
+    MessageClientId, MessageError, MessageType, MessengerAction, MessengerActionSender,
+    MessengerId, MessengerType, Payload, Signature,
 };
 use crate::message::beacon::{Beacon, BeaconBuilder};
 use crate::message::messenger::{Messenger, MessengerClient, MessengerFactory};
@@ -39,6 +39,8 @@ pub struct MessageHub<P: Payload + 'static, A: Address + 'static> {
     brokers: Vec<MessengerId>,
     // The next id to be given to a messenger.
     next_id: MessengerId,
+    // The next id to be given to a `MessageClient`.
+    next_message_client_id: MessageClientId,
 }
 
 impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
@@ -54,6 +56,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
 
         let hub = Arc::new(Mutex::new(MessageHub {
             next_id: 0,
+            next_message_client_id: 0,
             messenger_tx: messenger_tx.clone(),
             action_tx: action_tx,
             beacons: HashMap::new(),
@@ -104,7 +107,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
     /// return path of the source message. The provided sender id represents the
     /// id of the current messenger possessing the message and not necessarily
     /// the original author.
-    async fn send_to_next(&self, sender_id: MessengerId, mut message: Message<P, A>) {
+    async fn send_to_next(&mut self, sender_id: MessengerId, mut message: Message<P, A>) {
         let mut recipients = vec![];
 
         let message_type = message.get_message_type();
@@ -229,7 +232,8 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
         let mut successful_delivery = None;
         // Send message to each specified recipient.
         for recipient in recipients {
-            if recipient.deliver(message.clone()).await.is_ok() {
+            if recipient.deliver(message.clone(), self.next_message_client_id).await.is_ok() {
+                self.next_message_client_id += 1;
                 if successful_delivery.is_none() {
                     successful_delivery = Some(true);
                 }
@@ -331,7 +335,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
 
     // Translates messenger requests into actions upon the MessageHub.
     async fn process_request(
-        &self,
+        &mut self,
         fingerprint: Fingerprint<A>,
         action: MessageAction<P, A>,
         beacon: Option<Beacon<P, A>>,
