@@ -32,7 +32,10 @@ struct MemoryWorkload {
   std::string name;
 
   // Execute the workload.
-  std::function<void(MemoryRange* memory)> exec;
+  std::function<void(StatusLine* line, MemoryRange* memory)> exec;
+
+  // Memory type needed for the test.
+  CacheMode memory_type;
 };
 
 // Get all memory stress workloads.

@@ -36,7 +36,10 @@ class MemoryRange {
   static zx::status<std::unique_ptr<MemoryRange>> Create(uint64_t size, CacheMode mode);
 
   // Create a MemoryRange from the given pre-mapped VMO.
-  MemoryRange(zx::vmo vmo, uint8_t* addr, uint64_t size);
+  MemoryRange(zx::vmo vmo, uint8_t* addr, uint64_t size, CacheMode mode);
+
+  // Get the cache mode of the memory.
+  CacheMode cache() const { return cache_mode_; }
 
   // Get the memory range as a fbl::Span.
   fbl::Span<uint8_t> span() const { return fbl::Span<uint8_t>(addr_, size_); }
@@ -66,6 +69,7 @@ class MemoryRange {
   zx::vmo vmo_;
   uint8_t* addr_;
   uint64_t size_;
+  CacheMode cache_mode_;
 };
 
 }  // namespace hwstress

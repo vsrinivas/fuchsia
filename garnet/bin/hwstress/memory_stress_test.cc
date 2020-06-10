@@ -69,11 +69,13 @@ TEST(VerifyPattern, Simple) {
 }
 
 TEST(Memory, GenerateMemoryWorkloads) {
+  StatusLine status;
+
   // Generate workloads, and exercise each on 4096 bytes of RAM.
   std::unique_ptr<MemoryRange> memory =
       MemoryRange::Create(ZX_PAGE_SIZE, CacheMode::kCached).value();
   for (const MemoryWorkload& workload : GenerateMemoryWorkloads()) {
-    workload.exec(memory.get());
+    workload.exec(&status, memory.get());
   }
 }
 
@@ -93,10 +95,11 @@ TEST(Memory, CatchBitFlip) {
 
   // Ensure we catch it with a panic.
   std::vector<MemoryWorkload> workloads = GenerateMemoryWorkloads();
+  StatusLine status;
   EXPECT_DEATH(({
                  while (true) {
                    for (const MemoryWorkload& workload : workloads) {
-                     workload.exec(memory.get());
+                     workload.exec(&status, memory.get());
                    }
                  }
                }),

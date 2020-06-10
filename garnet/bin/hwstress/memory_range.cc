@@ -42,11 +42,11 @@ zx::status<std::unique_ptr<MemoryRange>> MemoryRange::Create(uint64_t size, Cach
   }
 
   return zx::ok(
-      std::make_unique<MemoryRange>(std::move(vmo), reinterpret_cast<uint8_t*>(addr), size));
+      std::make_unique<MemoryRange>(std::move(vmo), reinterpret_cast<uint8_t*>(addr), size, mode));
 }
 
-MemoryRange::MemoryRange(zx::vmo vmo, uint8_t* addr, uint64_t size)
-    : vmo_(std::move(vmo)), addr_(addr), size_(size) {
+MemoryRange::MemoryRange(zx::vmo vmo, uint8_t* addr, uint64_t size, CacheMode mode)
+    : vmo_(std::move(vmo)), addr_(addr), size_(size), cache_mode_(mode) {
   ZX_ASSERT(reinterpret_cast<uintptr_t>(addr) % ZX_PAGE_SIZE == 0);
   ZX_ASSERT(size % ZX_PAGE_SIZE == 0);
 }

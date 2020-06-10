@@ -28,6 +28,14 @@ namespace hwstress {
 
 namespace {
 
+constexpr size_t kMemoryToTest = 32 * 1024 * 1024;  // 32 MiB.
+
+// Create a std::default_random_engine PRNG pre-seeded with a small truly random value.
+std::default_random_engine CreateRandomEngine() {
+  std::random_device rng;
+  return std::default_random_engine(rng());
+}
+
 // Writes a pattern to memory; verifies it is still the same, and writes out the
 // complement; and finally verify the complement has been correctly written out.
 void TestPatternAndComplement(MemoryRange* memory, uint64_t pattern) {
@@ -63,10 +71,76 @@ void TestPatternAndComplement(MemoryRange* memory, uint64_t pattern) {
 MemoryWorkload MakeSimplePatternWorkload(std::string_view name, uint64_t pattern) {
   MemoryWorkload result;
   result.name = std::string(name);
-  result.exec = [pattern](MemoryRange* memory) {
+  result.exec = [pattern](StatusLine* /*unused*/, MemoryRange* memory) {
     // Write and verify the pattern followed by its negation.
     TestPatternAndComplement(memory, pattern);
   };
+  result.memory_type = CacheMode::kCached;
+  return result;
+}
+
+// Repeatedly open/close individual rows on a RAM bank to try and trigger bit errors.
+//
+// See https://en.wikipedia.org/wiki/Row_hammer for background.
+void RowHammer(StatusLine* status, MemoryRange* memory, uint32_t iterations, uint64_t pattern) {
+  constexpr int kAddressesPerIteration = 4;
+  constexpr int kReadsPerIteration = 1'000'000;
+
+  // Set all memory to the desired pattern.
+  WritePattern(memory->span(), pattern);
+
+  // Get random numbers returning a random page.
+  uint32_t num_pages = memory->size_bytes() / ZX_PAGE_SIZE;
+  std::default_random_engine rng = CreateRandomEngine();
+  std::uniform_int_distribution<uint32_t> random_page(0, num_pages - 1);
+
+  // Perform several iterations on different addresses before spending time
+  // verifying memory.
+  status->Verbose("Performing %d hammer iterations with pattern %016lx...", iterations, pattern);
+  zx::time start = zx::clock::get_monotonic();
+  for (uint32_t i = 0; i < iterations; i++) {
+    // Select addresses to hammer.
+    //
+    // Our goal is to force the DRAM to open and close a single row many
+    // times between a refresh cycle. We can do this by reading two
+    // different rows on the same bank of RAM in quick succession.
+    //
+    // Because we don't know the layout of RAM, we select N random
+    // pages, and read them quickly in succession. There is a good
+    // chance we'll get lucky and end up with at least two rows in the
+    // same bank.
+    volatile uint32_t* targets[kAddressesPerIteration];
+    uint8_t* data = memory->bytes();
+    for (auto& target : targets) {
+      target = reinterpret_cast<volatile uint32_t*>(data + random_page(rng) * ZX_PAGE_SIZE);
+    }
+
+    // Quickly activate the different rows.
+    UNROLL_LOOP_4
+    for (uint32_t j = 0; j < kReadsPerIteration; j++) {
+      UNROLL_LOOP
+      for (volatile uint32_t* target : targets) {
+        ForceEval(*target);
+      }
+    };
+  }
+  zx::time end = zx::clock::get_monotonic();
+  double seconds_per_iteration = DurationToSecs(end - start) / iterations;
+  status->Verbose("Done. Time per iteration = %0.2fs, row activations per 64ms refresh ~= %0.0f",
+                  seconds_per_iteration,
+                  (kReadsPerIteration / seconds_per_iteration) * (64. / 1000.));
+
+  // Ensure memory is still as expected.
+  VerifyPattern(memory->span(), pattern);
+}
+
+MemoryWorkload MakeRowHammerWorkload(std::string_view name, uint64_t pattern) {
+  MemoryWorkload result;
+  result.name = std::string(name);
+  result.exec = [pattern](StatusLine* status, MemoryRange* memory) {
+    RowHammer(status, memory, /*iterations=*/100, pattern);
+  };
+  result.memory_type = CacheMode::kUncached;
   return result;
 }
 
@@ -161,7 +235,35 @@ std::vector<MemoryWorkload> GenerateMemoryWorkloads() {
         fxl::StringPrintf("Single bit set 8-bit (%ld/8)", i + 1), RepeatByte(1ul << i)));
   }
 
+  // Row hammer workloads.
+  result.push_back(MakeRowHammerWorkload("Row hammer, all bits clear", 0x0000'0000'0000'0000ul));
+  result.push_back(MakeRowHammerWorkload("Row hammer, all bits set", 0xffff'ffff'ffff'fffful));
+  result.push_back(
+      MakeRowHammerWorkload("Row hammer, alternating bits (1/2)", 0xaaaa'aaaa'aaaa'aaaaul));
+  result.push_back(
+      MakeRowHammerWorkload("Row hammer, alternating bits (1/2)", 0x5555'5555'5555'5555ul));
+
   return result;
+}
+
+// Ensure that |result| contains at least |size| bytes of memory, mapped in as mode |mode|.
+//
+// Will deallocate and reallocate memory as required to achieve this.
+zx::status<> ReallocateMemoryAsRequired(CacheMode mode, size_t size,
+                                        std::unique_ptr<MemoryRange>* result) {
+  // If we are already allocated and have the right cache mode, nothing to do.
+  if (*result != nullptr && result->get()->cache() == mode && result->get()->size_bytes() >= size) {
+    return zx::ok();
+  }
+
+  // Otherwise, allocate new memory.
+  result->reset();
+  zx::status<std::unique_ptr<MemoryRange>> maybe_memory = MemoryRange::Create(size, mode);
+  if (maybe_memory.is_error()) {
+    return zx::error(maybe_memory.status_value());
+  }
+  *result = std::move(maybe_memory).value();
+  return zx::ok();
 }
 
 bool StressMemory(StatusLine* status, zx::duration duration,
@@ -170,24 +272,24 @@ bool StressMemory(StatusLine* status, zx::duration duration,
   size_t workload_index = 0;
   std::vector<MemoryWorkload> workloads = GenerateMemoryWorkloads();
 
-  // Allocate memory for tests.
-  constexpr size_t kMemoryToTest = 32 * 1024 * 1024;  // 32 MiB.
-  zx::status<std::unique_ptr<MemoryRange>> maybe_memory =
-      MemoryRange::Create(kMemoryToTest, CacheMode::kCached);
-  if (maybe_memory.is_error()) {
-    status->Log("Failed to allocate memory: %s", maybe_memory.status_string());
-    return false;
-  }
-  MemoryRange* memory = maybe_memory.value().get();
-
-  // Keep looping until we run out of time.
+  // Keep looping over the memory tests until we run out of time.
+  std::unique_ptr<MemoryRange> memory;
   uint64_t num_tests = 1;
   zx::time end_time = zx::deadline_after(duration);
   while (zx::clock::get_monotonic() < end_time) {
+    const MemoryWorkload& workload = workloads[workload_index];
+
+    // Allocate memory for tests.
+    zx::status<> result = ReallocateMemoryAsRequired(workload.memory_type, kMemoryToTest, &memory);
+    if (result.is_error()) {
+      status->Log("Failed to allocate memory: %s", result.status_string());
+      return false;
+    }
+
     status->Set("Test %4ld: %s", num_tests, workloads[workload_index].name.c_str());
 
     zx::time test_start = zx::clock::get_monotonic();
-    workloads[workload_index].exec(memory);
+    workload.exec(status, memory.get());
     zx::time test_end = zx::clock::get_monotonic();
 
     status->Log("Test %4ld: %s: %0.3fs", num_tests, workloads[workload_index].name.c_str(),
