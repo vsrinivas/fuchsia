@@ -58,8 +58,6 @@ struct FvmDescriptor {
     uint64_t metadata_allocated_size_ = 0;
   };
 
-  FvmDescriptor() = default;
-
   // Set of partitions that belong to the fvm.
   std::set<Partition, Partition::LessThan> partitions;
 

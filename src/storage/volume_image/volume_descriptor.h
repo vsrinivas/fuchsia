@@ -38,19 +38,19 @@ struct VolumeDescriptor {
   fit::result<std::vector<uint8_t>, std::string> Serialize() const;
 
   // Instance Guid expected for the partition.
-  std::array<uint8_t, kGuidLength> instance;
+  std::array<uint8_t, kGuidLength> instance = {};
 
   // Type Guid expected for the partition.
-  std::array<uint8_t, kGuidLength> type;
+  std::array<uint8_t, kGuidLength> type = {};
 
   // Name expected for the partition.
   std::string name;
 
   // Number of bytes used to chunk the image.
-  uint64_t block_size;
+  uint64_t block_size = 0;
 
   // Encryption options for this image.
-  EncryptionType encryption;
+  EncryptionType encryption = EncryptionType::kNone;
 
   // Arbitrary options to tweak the tools behavior for the respective image.
   std::unordered_set<Option> options;

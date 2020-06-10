@@ -62,11 +62,11 @@ class Partition {
 
  private:
   // Information about the volume in this partition.
-  VolumeDescriptor volume_ = {};
+  VolumeDescriptor volume_;
 
   // Information about the address or extents in this partitions and how to map them to target
   // space.
-  AddressDescriptor address_ = {};
+  AddressDescriptor address_;
 
   // Mechanism for reading volume data.
   std::unique_ptr<Reader> reader_ = nullptr;

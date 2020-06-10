@@ -14,8 +14,7 @@ namespace storage::volume_image {
 
 // Sets the desired properties of the expected FVM.
 struct FvmOptions {
-  // If set, fvm creation should fail if the size exceeds this hard limit of the generated image.
-  // This represents the initial size of the target volume to be formatted with this image.
+  // If set, fvm creation should fail if the size exceeds this hard limit.
   std::optional<uint64_t> target_volume_size = std::nullopt;
 
   // If set, the fvm will preallocate enough metadata space to address a volume of |max_volume_size|
@@ -28,7 +27,7 @@ struct FvmOptions {
   uint64_t slice_size = 0;
 
   // The compression scheme used for partition data in the generated image.
-  CompressionOptions compression = {};
+  CompressionOptions compression;
 };
 
 }  // namespace storage::volume_image

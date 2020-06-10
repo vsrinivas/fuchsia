@@ -32,7 +32,7 @@ enum class Option : uint64_t {
 
 struct CompressionOptions {
   // Compression type used.
-  CompressionSchema schema;
+  CompressionSchema schema = CompressionSchema::kNone;
 
   // 'schema' specific options and parameters.
   std::unordered_map<std::string, uint64_t> options;

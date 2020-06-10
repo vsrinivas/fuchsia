@@ -20,13 +20,13 @@ namespace storage::volume_image {
 // The target space is the fvm virtual address space that each partition has.
 struct AddressMap {
   // Original address space, where data is read from.
-  uint64_t source;
+  uint64_t source = 0;
 
   // Target address space, where data is written to, in the fvm image.
-  uint64_t target;
+  uint64_t target = 0;
 
   // Number of addressable blocks in this address space to be written.
-  uint64_t count;
+  uint64_t count = 0;
 
   // Options that apply to this mapping.
   std::map<std::string, uint64_t> options;
