@@ -4,6 +4,8 @@
 
 library fidl.difl.test;
 
+using zx;
+
 // Before
 
 //!DeclRemoved
@@ -135,7 +137,7 @@ struct StructMemberHandleFromOptionalHandle {
 
 struct StructMemberHandleTypeChanged {
 //!StructMemberTypeChanged
-    handle<channel> field;
+    zx.handle:CHANNEL field;
 };
 
 struct StructMemberStringLengthChanged {

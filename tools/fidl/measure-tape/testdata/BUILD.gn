@@ -10,4 +10,6 @@ fidl("measuretape") {
   name = "measuretape"
 
   sources = [ "measuretape.test.fidl" ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }

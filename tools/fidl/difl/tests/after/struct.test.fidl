@@ -4,6 +4,8 @@
 
 library fidl.difl.test;
 
+using zx;
+
 // After
 
 //!DeclAdded
@@ -135,7 +137,7 @@ struct StructMemberHandleFromOptionalHandle {
 
 struct StructMemberHandleTypeChanged {
 //!StructMemberTypeChanged
-    handle<socket> field;
+    zx.handle:SOCKET field;
 };
 
 struct StructMemberStringLengthChanged {

@@ -4,6 +4,8 @@
 
 library measuretape;
 
+using zx;
+
 // 24 bytes + selected member size
 union TopLevelUnion {
     1: uint64 primitive;
@@ -68,15 +70,15 @@ struct StructWithTwoArrays {
 // 9 bytes
 struct StructWithOneHandle {
     uint8 tiny1;
-    handle<vmo> vmo;
+    zx.handle:VMO vmo;
     uint8 tiny2;
 };
 
 // 12 bytes
 struct StructWithTwoHandles {
     uint8 tiny1;
-    handle<vmo> vmo1;
-    handle<vmo> vmo2;
+    zx.handle:VMO vmo1;
+    zx.handle:VMO vmo2;
 };
 
 // 32 bytes

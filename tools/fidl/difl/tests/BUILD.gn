@@ -24,6 +24,8 @@ template("fidl_ir") {
              "--name",
              invoker.name,
              "--files",
+             rebase_path("//zircon/vdso/zx_common.fidl"),
+             "--files",
            ] + rebase_path(invoker.sources, root_build_dir)
   }
 }
