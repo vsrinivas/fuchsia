@@ -4,6 +4,8 @@
 
 library fidl.test.llcpp.dirent;
 
+using zx;
+
 const uint32 TEST_MAX_PATH = 10;
 
 /// Fake dirent structure to exercise linearization codepaths.
@@ -32,5 +34,5 @@ protocol DirEntTestInterface {
 
     /// Binding will not wait for response.
     /// But here we send an eventpair which the server will signal upon receipt of message.
-    OneWayDirents(vector<DirEnt>:1000 dirents, handle<eventpair> ep);
+    OneWayDirents(vector<DirEnt>:1000 dirents, zx.handle:EVENTPAIR ep);
 };

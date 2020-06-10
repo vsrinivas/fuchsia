@@ -52,4 +52,5 @@ fidl("fidl.test.llcpp.controlflow") {
 fidl("fidl.test.llcpp.dirent") {
   visibility = [ ":*" ]
   sources = [ "dirent.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

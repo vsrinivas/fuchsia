@@ -31,7 +31,7 @@ protocol TestDevice {
     ScheduleWorkDifferentThread() -> () error zx.status;
 
     /// Triggers once all outstanding work is complete.
-    GetDoneEvent() -> (handle<event> event) error zx.status;
+    GetDoneEvent() -> (zx.handle:EVENT event) error zx.status;
 
     /// Returns whether how many work items ran since last time it was invoked.
     ScheduledWorkRan() -> (uint32 work_items_run, LatencyHistogram histogram);

@@ -9,7 +9,8 @@ using zx;
 protocol TestDevice {
     /// Creates a new device that will return instance devices on open().
     /// |lifecycle| will provide a stream of lifecycle events for the device itself.
-    CreateDevice(request<Lifecycle> lifecycle, handle<channel>? client_remote) -> () error zx.status;
+    CreateDevice(request<Lifecycle> lifecycle, zx.handle:CHANNEL? client_remote)
+        -> () error zx.status;
 };
 
 protocol InstanceDevice {

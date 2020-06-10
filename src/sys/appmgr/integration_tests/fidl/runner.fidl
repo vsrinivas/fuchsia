@@ -5,6 +5,7 @@
 library test.component.mockrunner;
 
 using fuchsia.sys;
+using zx;
 
 struct ComponentInfo {
     uint64 unique_id;
@@ -14,11 +15,11 @@ struct ComponentInfo {
 // interface to control the fake component created by MockRunner.
 protocol MockComponent {
     Kill(uint64 errorcode);
-    ConnectToService(string service_name, handle<channel> channel);
+    ConnectToService(string service_name, zx.handle:CHANNEL channel);
 
     // Set backend service directory which can be used by `PublishService` to
     // publish mock services.
-    SetServiceDirectory(handle<channel> channel);
+    SetServiceDirectory(zx.handle:CHANNEL channel);
 
     // Publishes `service_name` and connects to |backend service directory| when
     // request comes in.

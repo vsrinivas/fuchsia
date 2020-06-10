@@ -111,7 +111,7 @@ protocol Network {
 protocol DeviceProxy {
     /// Fulfills the device request.
     /// The fulfilled requests's protocol is defined by the `Endpoint`'s `EndpointBacking`.
-    ServeDevice(handle<channel> req);
+    ServeDevice(zx.handle:CHANNEL req);
 };
 
 /// A connection to an endpoint's underlying protocol.

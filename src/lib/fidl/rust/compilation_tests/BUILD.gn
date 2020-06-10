@@ -4,10 +4,11 @@
 
 import("//build/fidl/fidl.gni")
 
-# Not actually used. Just ensures successful compilation.gg
+# Not actually used. Just ensures successful compilation.
 fidl("fidl.rust.test.compilation") {
   testonly = true
   sources = [ "compilation.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 # Not actually used. Just ensures successful compilation.

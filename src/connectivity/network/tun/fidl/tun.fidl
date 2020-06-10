@@ -180,7 +180,7 @@ protocol Device {
     ReadFrame() -> (Frame frame) error zx.status;
     /// Retrieves an eventpair that is signalled with `SIGNAL_READABLE` and `SIGNAL_WRITABLE` when
     /// read and write buffers are available, respectively.
-    GetSignals() -> (handle<eventpair> signals);
+    GetSignals() -> (zx.handle:EVENTPAIR signals);
     /// Gets a snapshot of the device's internal state.
     GetState() -> (InternalState state);
     /// Observes changes to internal state.

@@ -6,4 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.test") {
   sources = [ "test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

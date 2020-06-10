@@ -4,6 +4,8 @@
 
 library fidl.rust.test.compilation;
 
+using zx;
+
 flexible union TestXUnion {
     1: bool variant;
 };
@@ -35,5 +37,5 @@ struct Result {
 };
 
 struct HasHostFidlHandleStubbing {
-    handle<debuglog> log;
+    zx.handle:LOG log;
 };

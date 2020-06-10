@@ -8,8 +8,8 @@ using zx;
 
 struct SimpleStruct {
     int32 field;
-    handle<eventpair> ep;
-    array<array<handle<eventpair>>:4>:5 arr;
+    zx.handle:EVENTPAIR ep;
+    array<array<zx.handle:EVENTPAIR>:4>:5 arr;
 };
 
 /// Test interface implemented by both C and LLCPP

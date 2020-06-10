@@ -148,6 +148,8 @@ fidl("fidl") {
     "testdata/types.test.fidl",
     "testdata/xunionmigration.fidl",
   ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 fidl("fidl-composed") {
@@ -162,4 +164,6 @@ fidl("fidl-sys") {
   name = "test.fidlcodec.sys"
 
   sources = [ "testdata/sys.test.fidl" ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }

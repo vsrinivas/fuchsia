@@ -14,16 +14,16 @@ protocol FakeClock {
     /// provided `time` is reached by the fake clock.
     /// The `FakeClock` instance will retain this event (even after it's fired) for as long as the
     /// client-side of the provided event pair `event` is open.
-    RegisterEvent(handle<eventpair> event, zx.time time);
+    RegisterEvent(zx.handle:EVENTPAIR event, zx.time time);
     /// Reschedules an event to be signalled with `ZX_EVENTPAIR_SIGNALED` at the new deadline in
     /// `time`.
     /// `event` is a duplicate of the client-side of the event pair, and it's used to retrieve the
     /// originally registered event through its kernel object identifier.
-    RescheduleEvent(handle<eventpair> event, zx.time time) -> ();
+    RescheduleEvent(zx.handle:EVENTPAIR event, zx.time time) -> ();
     /// Cancels a previously registered event.
     /// `event` is a duplicate of the client-side of the event pair, and it's used to retrieve the
     /// originally registered event through its kernel object identifier.
-    CancelEvent(handle<eventpair> event) -> ();
+    CancelEvent(zx.handle:EVENTPAIR event) -> ();
 };
 
 /// A fake clock increment in a uniform random range.

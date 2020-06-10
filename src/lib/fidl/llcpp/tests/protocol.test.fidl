@@ -4,13 +4,15 @@
 
 library llcpptest.protocol.test;
 
+using zx;
+
 enum MyError : int32 {
     BAD_ERROR = 1;
     REALLY_BAD_ERROR = 2;
 };
 
 struct HandleStruct {
-    handle<event> h;
+    zx.handle:EVENT h;
 };
 
 struct VectorStruct {
@@ -18,7 +20,7 @@ struct VectorStruct {
 };
 
 union HandleUnion {
-    1: handle<event> h;
+    1: zx.handle:EVENT h;
 };
 
 struct HandleUnionStruct {

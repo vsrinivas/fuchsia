@@ -6,6 +6,7 @@ library fuchsia.netemul.environment;
 using fuchsia.sys;
 using fuchsia.netemul.network;
 using fuchsia.logger;
+using zx;
 
 /// A single service to be launched in managed environment.
 struct LaunchService {
@@ -75,7 +76,7 @@ protocol ManagedEnvironment {
     /// Creates a nested managed environment.
     CreateChildEnvironment(request<ManagedEnvironment> child_env, EnvironmentOptions options);
     /// Connects to a service named `name` provided by this environment.
-    ConnectToService(string name, handle<channel> req);
+    ConnectToService(string name, zx.handle:CHANNEL req);
     /// Exposes new virtual device `device` for all components within this environment
     AddDevice(VirtualDevice device);
     /// Removes virtual device mounted at `path` (relative to /vdev)

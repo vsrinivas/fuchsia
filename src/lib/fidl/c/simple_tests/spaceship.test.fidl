@@ -65,7 +65,7 @@ protocol SpaceShip {
     ScanForLifeforms() -> (vector<uint32>:MaxStarsScanForLifeforms lifesigns);
     SetAstrometricsListener(AstrometricsListener listener);
     SetDefenseCondition(Alert alert);
-    GetFuelRemaining(handle<eventpair>? cancel) -> (zx.status status, FuelLevel? level);
+    GetFuelRemaining(zx.handle:EVENTPAIR? cancel) -> (zx.status status, FuelLevel? level);
     AddFuelTank(FuelLevel? level) -> (uint32 consumed);
     ScanForTensorLifeforms() -> (array<array<array<uint32>:3>:5>:8 lifesigns);
     ActivateShields(Shields shields);

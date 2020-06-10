@@ -4,6 +4,8 @@
 
 library test.fidlcodec.examples;
 
+using zx;
+
 protocol Echo {
     EchoString(string:100? value) -> (string:100? response);
 };
@@ -81,8 +83,8 @@ protocol FidlCodecTestInterface {
 
     Table(ValueTable table, int32 i);
 
-    Handle(handle<channel> ch);
-    NullableHandle(handle<channel>? ch);
+    Handle(zx.handle:CHANNEL ch);
+    NullableHandle(zx.handle:CHANNEL? ch);
     HandleStructMessage(HandleStruct hs);
     HandleTableMessage(HandleTable t);
     TraversalOrderMessage(TraversalOrder t);
@@ -239,30 +241,30 @@ table ValueTable {
 };
 
 struct HandleStruct {
-    handle<channel> h1;
-    handle<channel> h2;
-    handle<channel> h3;
+    zx.handle:CHANNEL h1;
+    zx.handle:CHANNEL h2;
+    zx.handle:CHANNEL h3;
 };
 
 struct OptHandleStruct {
-    handle<channel>? sh1;
-    handle<channel>? sh2;
+    zx.handle:CHANNEL? sh1;
+    zx.handle:CHANNEL? sh2;
 };
 
 table HandleTable {
-    1: handle<channel> h1;
+    1: zx.handle:CHANNEL h1;
     2: OptHandleStruct s1;
 };
 
 struct TraversalOrder {
     OptHandleStruct? s;
-    handle<channel>? h1;
-    handle<channel>? h2;
+    zx.handle:CHANNEL? h1;
+    zx.handle:CHANNEL? h2;
 };
 
 struct TraversalStruct {
     uint32 a;
-    handle<channel>? b;
+    zx.handle:CHANNEL? b;
 };
 
 struct TraversalMain {

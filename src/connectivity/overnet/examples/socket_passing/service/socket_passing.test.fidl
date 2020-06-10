@@ -4,7 +4,9 @@
 
 library fuchsia.overnet.socketpassingexample;
 
+using zx;
+
 [Discoverable]
 protocol Example {
-    Pass(handle<socket> socket) -> ();
+    Pass(zx.handle:SOCKET socket) -> ();
 };

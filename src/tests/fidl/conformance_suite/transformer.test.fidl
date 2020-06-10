@@ -553,7 +553,7 @@ struct LaunchInfo {
     vector<string>? arguments;
     TransformerEmptyStruct? out;
     TransformerEmptyStruct? err;
-    // handle<channel>? directory_request; // TODO(fxb/36441): Support handles in GIDL.
+    // zx.handle:CHANNEL? directory_request; // TODO(fxb/36441): Support handles in GIDL.
     uint32 directory_request;
     TransformerEmptyStruct? flat_namespace;
     TransformerEmptyStruct? additional_services;

@@ -63,6 +63,7 @@ fidl("llcpptest.flexible.test") {
 
 fidl("llcpptest.protocol.test") {
   sources = [ "protocol.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 fidl("llcpptest.transitional.test") {

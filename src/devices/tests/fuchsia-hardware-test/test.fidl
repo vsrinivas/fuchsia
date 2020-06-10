@@ -4,6 +4,8 @@
 
 library fuchsia.hardware.test;
 
+using zx;
+
 protocol Device {
-    GetChannel() -> (handle<channel> ch);
+    GetChannel() -> (zx.handle:CHANNEL ch);
 };
