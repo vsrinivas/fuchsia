@@ -169,6 +169,9 @@ pub(crate) struct Formatter {
     /// The UTF-8 bytes of the output document as it is being generated.
     bytes: Vec<u8>,
 
+    /// The 1-based column number of the next character to be appended.
+    column: usize,
+
     /// While generating the formatted document, these are the options to be applied at each nesting
     /// depth and path, from the document root to the object or array currently being generated. If
     /// the current path has no explicit options, the value at the top of the stack is None.
@@ -192,6 +195,7 @@ impl Formatter {
             depth: 0,
             pending_indent: false,
             bytes: vec![],
+            column: 1,
             subpath_options_stack: vec![Some(document_root_options_ref)],
             default_options,
         }
@@ -207,13 +211,29 @@ impl Formatter {
         Ok(self)
     }
 
+    /// Appends the given string, indenting if required.
     pub fn append(&mut self, content: &str) -> Result<&mut Formatter, Error> {
         if self.pending_indent && !content.starts_with("\n") {
             let spaces = self.depth * self.default_options.indent_by;
             self.bytes.extend_from_slice(" ".repeat(spaces).as_bytes());
+            self.column = spaces + 1;
             self.pending_indent = false;
         }
-        self.bytes.extend_from_slice(content.as_bytes());
+        if content.ends_with("\n") {
+            self.column = 1;
+            self.bytes.extend_from_slice(content.as_bytes());
+        } else {
+            let mut first = true;
+            for line in content.lines() {
+                if !first {
+                    self.bytes.extend_from_slice("\n".as_bytes());
+                    self.column = 1;
+                }
+                self.bytes.extend_from_slice(line.as_bytes());
+                self.column += line.len();
+                first = false;
+            }
+        }
         Ok(self)
     }
 
@@ -221,6 +241,8 @@ impl Formatter {
         self.append("\n")
     }
 
+    /// Outputs a newline (unless this is the first line), and sets the `pending_indent` flag to
+    /// indicate the next non-blank line should be indented.
     pub fn start_next_line(&mut self) -> Result<&mut Formatter, Error> {
         if self.bytes.len() > 0 {
             self.append_newline()?;
@@ -229,7 +251,7 @@ impl Formatter {
         Ok(self)
     }
 
-    pub fn format_content<F>(&mut self, content_fn: F) -> Result<&mut Formatter, Error>
+    fn format_content<F>(&mut self, content_fn: F) -> Result<&mut Formatter, Error>
     where
         F: FnOnce(&mut Formatter) -> Result<&mut Formatter, Error>,
     {
@@ -339,7 +361,7 @@ impl Formatter {
         let collapsed = is_first
             && is_last
             && value.is_primitive()
-            && !value.meta().has_comments()
+            && !value.has_comments()
             && !container_has_pending_comments
             && self.options_in_scope().collapse_containers_of_one;
         match name {
@@ -355,12 +377,12 @@ impl Formatter {
             if is_first {
                 self.start_next_line()?;
             }
-            self.format_comments(&value.meta().get_comments(), is_first)?;
+            self.format_comments(&value.comments().before_value(), is_first)?;
         }
         if let Some(name) = name {
             self.append(&format!("{}: ", name))?;
         }
-        value.meta().format(self)?;
+        value.format(self)?;
         self.exit_scope();
         //   ^^^^^^^^^^
         // Named property or item SubpathOptions affect Formatting above exit_scope(...)
@@ -369,7 +391,7 @@ impl Formatter {
             self.append(" ")?;
         } else {
             self.append_comma(is_last)?
-                .append_end_of_line_comment(value.meta().get_end_of_line_comment())?
+                .append_end_of_line_comment(value.comments().end_of_line())?
                 .start_next_line()?;
         }
         Ok(self)
@@ -421,12 +443,24 @@ impl Formatter {
         Ok(self)
     }
 
+    /// Outputs the value's end-of-line comment. If the comment has multiple lines, the first line
+    /// is written from the current position and all subsequent lines are written on their own line,
+    /// left-aligned directly under the first comment.
     fn append_end_of_line_comment(
         &mut self,
         comment: &Option<String>,
     ) -> Result<&mut Formatter, Error> {
         if let Some(comment) = comment {
-            self.append(&format!(" //{}", comment))?;
+            let start_column = self.column;
+            let mut first = true;
+            for line in comment.lines() {
+                if !first {
+                    self.append_newline()?;
+                    self.append(&" ".repeat(start_column - 1))?;
+                }
+                self.append(&format!(" //{}", line))?;
+                first = false;
+            }
         }
         Ok(self)
     }

@@ -125,70 +125,178 @@ impl Comment {
     }
 }
 
-pub(crate) trait ValueMeta {
-    fn as_value_meta(&mut self) -> &mut dyn ValueMeta;
+pub(crate) struct Comments {
+    /// Comments applied to the associated value.
+    before_value: Vec<Comment>,
 
-    fn get_comments(&mut self) -> &mut Vec<Comment>;
+    /// A line comment positioned after and on the same line as the last character of the value. The
+    /// comment may have multiple lines, if parsed as a contiguous group of line comments that are
+    /// all left-aligned with the initial line comment.
+    end_of_line_comment: Option<String>,
+}
 
-    fn check_end_of_line_comment_is_none(&self, option: &Option<String>) -> Result<(), Error> {
-        if option.is_none() {
-            Ok(())
-        } else {
-            Err(Error::internal(
-                None,
-                "multiple end of line comments are currently considered \
-                 ambiguous, and the parser is supposed to consider all subsequent line \
-                 comments as comments for the next value.",
-            ))
+impl Comments {
+    pub fn before_value(&mut self) -> &mut Vec<Comment> {
+        &mut self.before_value
+    }
+
+    pub fn append_end_of_line_comment(&mut self, comment: &str) -> Result<(), Error> {
+        let updated = match self.end_of_line_comment.take() {
+            None => comment.to_string(),
+            Some(current) => current + "\n" + comment,
+        };
+        self.end_of_line_comment = Some(updated);
+        Ok(())
+    }
+
+    pub fn end_of_line(&mut self) -> &Option<String> {
+        &self.end_of_line_comment
+    }
+}
+
+pub(crate) struct ContainedComments {
+    /// Parsed comments to be applied to the next Value, when reached.
+    /// If there are any pending comments after the last item, they are written after the last
+    /// item when formatting.
+    pending_comments: Vec<Comment>,
+
+    /// Immediately after capturing a Value (primitive or start of an object or array block),
+    /// this is set to the new Value. If a line comment is captured *before* capturing a
+    /// newline, the line comment is applied to the current_line_value.
+    current_line_value: Option<Rc<RefCell<Value>>>,
+
+    /// If an end-of-line comment is captured after capturing a Value, this saves the column of the
+    /// first character in the line comment. Successive line comments with the same start column
+    /// are considered continuations of the end-of-line comment.
+    end_of_line_comment_start_column: Option<usize>,
+}
+
+impl ContainedComments {
+    fn new() -> Self {
+        Self {
+            pending_comments: vec![],
+            current_line_value: None,
+            end_of_line_comment_start_column: None,
         }
     }
 
-    fn set_end_of_line_comment(&mut self, comment: &str) -> Result<(), Error>;
-
-    fn get_end_of_line_comment(&mut self) -> &Option<String>;
-
-    fn has_comments(&mut self) -> bool {
-        self.get_comments().len() > 0 || self.get_end_of_line_comment().is_some()
+    /// After parsing a value, if a newline is encountered before an end-of-line comment, the
+    /// current line no longer has the value.
+    fn on_newline(&mut self) -> Result<(), Error> {
+        if self.end_of_line_comment_start_column.is_none() {
+            self.current_line_value = None;
+        }
+        Ok(())
     }
 
-    fn format<'a>(&self, formatter: &'a mut Formatter) -> Result<&'a mut Formatter, Error>;
+    /// Adds a standalone line comment to this container, or adds an end_of_line_comment to the
+    /// current container's current value.
+    ///
+    /// # Arguments
+    ///   * `content`: the line comment content (including leading spaces)
+    ///   * `start_column`: the column number of the first character of content. If this line
+    ///     comment was immediately preceded by an end-of-line comment, and both line comments
+    ///     have the same start_column, then this line comment is a continuation of the end-of-line
+    ///     comment (on a new line). Formatting should retain the associated vertical alignment.
+    ///   * `pending_new_line_comment_block` - If true and the comment is not an
+    ///     end_of_line_comment, the container should insert a line_comment_break before inserting
+    ///     the next line comment. This should only be true if this standalone line comment was
+    ///     preceded by one or more standalone line comments and one or more blank lines.
+    ///     (This flag is ignored if the comment is part of an end-of-line comment.)
+    ///
+    /// # Returns
+    ///   true if the line comment is standalone, that is, not an end_of_line_comment
+    fn add_line_comment(
+        &mut self,
+        content: &str,
+        start_column: usize,
+        pending_new_line_comment_block: bool,
+    ) -> Result<bool, Error> {
+        if let Some(value_ref) = &mut self.current_line_value {
+            if start_column == *self.end_of_line_comment_start_column.get_or_insert(start_column) {
+                (*value_ref.borrow_mut()).comments().append_end_of_line_comment(content)?;
+                return Ok(false); // the comment is (part of) an end-of-line comment
+            }
+            self.current_line_value = None;
+        }
+        if pending_new_line_comment_block {
+            self.pending_comments.push(Comment::Break);
+        }
+        self.pending_comments.push(Comment::Line(content.to_string()));
+        Ok(true)
+    }
+
+    /// Add a block comment, to be applied to the next contained value, or to the end of the current
+    /// container.
+    fn add_block_comment(&mut self, comment: Comment) -> Result<(), Error> {
+        self.current_line_value = None;
+        self.pending_comments.push(comment);
+        Ok(())
+    }
+
+    /// There are one or more line and/or block comments to be applied to the next contained value,
+    /// or to the end of the current container.
+    fn has_pending_comments(&self) -> bool {
+        self.pending_comments.len() > 0
+    }
+
+    /// When a value is encountered inside the current container, move all pending comments from the
+    /// container to the new value.
+    fn take_pending_comments(&mut self) -> Vec<Comment> {
+        self.pending_comments.drain(..).collect()
+    }
 }
 
 pub(crate) enum Value {
-    Array(Array),
-    Object(Object),
-    Primitive(Primitive),
+    Primitive { val: Primitive, comments: Comments },
+    Array { val: Array, comments: Comments },
+    Object { val: Object, comments: Comments },
 }
 
 impl Value {
     pub fn is_array(&self) -> bool {
         match self {
-            Value::Array(..) => true,
+            Value::Array { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_object(&self) -> bool {
         match self {
-            Value::Object(..) => true,
+            Value::Object { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_primitive(&self) -> bool {
         match self {
-            Value::Primitive(..) => true,
+            Value::Primitive { .. } => true,
             _ => false,
         }
     }
 
-    pub fn meta(&mut self) -> &mut dyn ValueMeta {
+    pub fn format<'a>(&self, formatter: &'a mut Formatter) -> Result<&'a mut Formatter, Error> {
         use Value::*;
         match self {
-            Primitive(v) => v.as_value_meta(),
-            Array(v) => v.as_value_meta(),
-            Object(v) => v.as_value_meta(),
+            Primitive { val, .. } => val.format(formatter),
+            Array { val, .. } => val.format(formatter),
+            Object { val, .. } => val.format(formatter),
         }
+    }
+
+    pub fn comments(&mut self) -> &mut Comments {
+        use Value::*;
+        match self {
+            Primitive { comments, .. } | Array { comments, .. } | Object { comments, .. } => {
+                comments
+            }
+        }
+    }
+
+    /// Returns true if this value has any block, line, or end-of-line comment(s).
+    pub fn has_comments(&mut self) -> bool {
+        let comments = self.comments();
+        comments.before_value().len() > 0 || comments.end_of_line().is_some()
     }
 }
 
@@ -196,42 +304,23 @@ impl std::fmt::Debug for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Value::*;
         match self {
-            Primitive(v) => v.fmt(f),
-            Array(v) => v.fmt(f),
-            Object(v) => v.fmt(f),
+            Primitive { val, .. } => val.fmt(f),
+            Array { val, .. } => val.fmt(f),
+            Object { val, .. } => val.fmt(f),
         }
     }
 }
 
 pub(crate) struct Primitive {
     value_string: String,
-    comments: Vec<Comment>,
-    end_of_line_comment: Option<String>,
 }
 
 impl Primitive {
     pub fn new(value_string: String, comments: Vec<Comment>) -> Value {
-        Value::Primitive(Primitive { comments, end_of_line_comment: None, value_string })
-    }
-}
-
-impl ValueMeta for Primitive {
-    fn as_value_meta(&mut self) -> &mut dyn ValueMeta {
-        self
-    }
-
-    fn get_comments(&mut self) -> &mut Vec<Comment> {
-        &mut self.comments
-    }
-
-    fn set_end_of_line_comment(&mut self, comment: &str) -> Result<(), Error> {
-        self.check_end_of_line_comment_is_none(&self.end_of_line_comment)?;
-        self.end_of_line_comment = Some(comment.to_string());
-        Ok(())
-    }
-
-    fn get_end_of_line_comment(&mut self) -> &Option<String> {
-        &self.end_of_line_comment
+        Value::Primitive {
+            val: Primitive { value_string },
+            comments: Comments { before_value: comments, end_of_line_comment: None },
+        }
     }
 
     fn format<'a>(&self, formatter: &'a mut Formatter) -> Result<&'a mut Formatter, Error> {
@@ -245,33 +334,8 @@ impl std::fmt::Debug for Primitive {
     }
 }
 
-pub(crate) trait Container: ValueMeta {
-    fn on_newline(&mut self) -> Result<(), Error>;
-
-    /// Adds a standalone line comment to this container, or adds an end_of_line_comment to the
-    /// current container's current value.
-    ///
-    /// # Arguments
-    ///   * `content`: the line comment content (including leading spaces)
-    ///   * `pending_new_line_comment_block` - If true and the comment is not an
-    ///     end_of_line_comment, the container should insert a line_comment_break before inserting
-    ///     the next line comment. This should only be true if this standalone line comment was
-    ///     preceeded by one or more standalone line comments and one or more blank lines.
-    ///
-    /// # Returns
-    ///   true if the line comment is standalone, that is, not an end_of_line_comment
-    fn add_line_comment(
-        &mut self,
-        content: &str,
-        pending_new_line_comment_block: bool,
-    ) -> Result<bool, Error>;
-
-    fn add_block_comment(&mut self, comment: Comment) -> Result<(), Error>;
-
-    fn has_pending_comments(&self) -> bool;
-
-    fn take_pending_comments(&mut self) -> Vec<Comment>;
-
+pub(crate) trait Container {
+    /// Called by the `Parser` to add a parsed `Value` to the current `Container`.
     fn add_value(&mut self, value: Rc<RefCell<Value>>, parser: &Parser<'_>) -> Result<(), Error>;
 
     /// The parser encountered a comma, indicating the end of an element declaration. Since
@@ -281,44 +345,66 @@ pub(crate) trait Container: ValueMeta {
     /// The parser encountered a closing brace indicating the end of the container's declaration.
     fn close(&mut self, _parser: &Parser<'_>) -> Result<(), Error>;
 
+    /// Formats the content of a container (inside the braces) in accordance with the JSON5 syntax
+    /// and given format options.
     fn format_content<'a>(&self, formatter: &'a mut Formatter) -> Result<&'a mut Formatter, Error>;
+
+    fn contained_comments(&self) -> &ContainedComments;
+    fn contained_comments_mut(&mut self) -> &mut ContainedComments;
+
+    fn on_newline(&mut self) -> Result<(), Error> {
+        self.contained_comments_mut().on_newline()
+    }
+
+    fn add_line_comment(
+        &mut self,
+        content: &str,
+        start_column: usize,
+        pending_new_line_comment_block: bool,
+    ) -> Result<bool, Error> {
+        self.contained_comments_mut().add_line_comment(
+            content,
+            start_column,
+            pending_new_line_comment_block,
+        )
+    }
+
+    fn add_block_comment(&mut self, comment: Comment) -> Result<(), Error> {
+        self.contained_comments_mut().add_block_comment(comment)
+    }
+
+    fn has_pending_comments(&self) -> bool {
+        self.contained_comments().has_pending_comments()
+    }
+
+    fn take_pending_comments(&mut self) -> Vec<Comment> {
+        self.contained_comments_mut().take_pending_comments()
+    }
 }
 
 pub(crate) struct Array {
-    /// comments applied to this Array
-    comments: Vec<Comment>,
-
-    end_of_line_comment: Option<String>,
-
-    /// Parsed comments to be applied to the next Value, when reached.
-    /// If there are any pending comments after the last item, they are written after the last
-    /// item when formatting.
-    pending_comments: Vec<Comment>,
-
     /// The array items
     items: Vec<Rc<RefCell<Value>>>,
-
-    /// Immediately after capturing a Value (primitive or start of an object or array block),
-    /// this is set to the new Value. If a line comment is captured *before* capturing a
-    /// newline, the line comment is applied to the current_line_value.
-    current_line_value: Option<Rc<RefCell<Value>>>,
 
     /// Set to true when a value is encountered (parsed primitive, or sub-container in process)
     /// and false when a comma or the array's closing brace is encountered. This supports
     /// validating that each array item is separated by one and only one comma.
     is_parsing_value: bool,
+
+    /// Manages comments applied to contained items, or to be placed at the end of the container.
+    contained_comments: ContainedComments,
 }
 
 impl Array {
     pub fn new(comments: Vec<Comment>) -> Value {
-        Value::Array(Array {
-            comments,
-            end_of_line_comment: None,
-            pending_comments: vec![],
-            items: vec![],
-            current_line_value: None,
-            is_parsing_value: false,
-        })
+        Value::Array {
+            val: Array {
+                items: vec![],
+                is_parsing_value: false,
+                contained_comments: ContainedComments::new(),
+            },
+            comments: Comments { before_value: comments, end_of_line_comment: None },
+        }
     }
 
     /// Returns a cloned vector of item references in sorted order. The items owned by this Array
@@ -329,8 +415,8 @@ impl Array {
             items.sort_by(|left, right| {
                 let left: &Value = &*left.borrow();
                 let right: &Value = &*right.borrow();
-                if let Value::Primitive(left_primitive) = left {
-                    if let Value::Primitive(right_primitive) = right {
+                if let Value::Primitive { val: left_primitive, .. } = left {
+                    if let Value::Primitive { val: right_primitive, .. } = right {
                         let mut ordering = left_primitive
                             .value_string
                             .to_lowercase()
@@ -352,26 +438,6 @@ impl Array {
         }
         items
     }
-}
-
-impl ValueMeta for Array {
-    fn as_value_meta(&mut self) -> &mut dyn ValueMeta {
-        self
-    }
-
-    fn get_comments(&mut self) -> &mut Vec<Comment> {
-        &mut self.comments
-    }
-
-    fn set_end_of_line_comment(&mut self, comment: &str) -> Result<(), Error> {
-        self.check_end_of_line_comment_is_none(&self.end_of_line_comment)?;
-        self.end_of_line_comment = Some(comment.to_string());
-        Ok(())
-    }
-
-    fn get_end_of_line_comment(&mut self) -> &Option<String> {
-        &self.end_of_line_comment
-    }
 
     fn format<'a>(&self, formatter: &'a mut Formatter) -> Result<&'a mut Formatter, Error> {
         formatter.format_container("[", "]", |formatter| self.format_content(formatter))
@@ -379,47 +445,13 @@ impl ValueMeta for Array {
 }
 
 impl Container for Array {
-    fn on_newline(&mut self) -> Result<(), Error> {
-        self.current_line_value = None;
-        Ok(())
-    }
-
-    fn add_line_comment(
-        &mut self,
-        content: &str,
-        pending_new_line_comment_block: bool,
-    ) -> Result<bool, Error> {
-        if let Some(value_ref) = &mut self.current_line_value {
-            (*value_ref.borrow_mut()).meta().set_end_of_line_comment(content)?;
-            Ok(false)
-        } else {
-            if pending_new_line_comment_block {
-                self.pending_comments.push(Comment::Break);
-            }
-            self.pending_comments.push(Comment::Line(content.to_string()));
-            Ok(true)
-        }
-    }
-
-    fn add_block_comment(&mut self, comment: Comment) -> Result<(), Error> {
-        self.pending_comments.push(comment);
-        Ok(())
-    }
-
-    fn has_pending_comments(&self) -> bool {
-        self.pending_comments.len() > 0
-    }
-
-    fn take_pending_comments(&mut self) -> Vec<Comment> {
-        self.pending_comments.drain(..).collect()
-    }
-
     fn add_value(&mut self, value: Rc<RefCell<Value>>, parser: &Parser<'_>) -> Result<(), Error> {
         if self.is_parsing_value {
             Err(parser.error("Array items must be separated by a comma"))
         } else {
             self.is_parsing_value = true;
-            self.current_line_value = Some(value.clone());
+            self.contained_comments.current_line_value = Some(value.clone());
+            self.contained_comments.end_of_line_comment_start_column = None;
             self.items.push(value);
             Ok(())
         }
@@ -435,7 +467,6 @@ impl Container for Array {
     }
 
     fn close(&mut self, _parser: &Parser<'_>) -> Result<(), Error> {
-        self.is_parsing_value = false;
         Ok(())
     }
 
@@ -445,10 +476,23 @@ impl Container for Array {
         for (index, item) in sorted_items.iter().enumerate() {
             let is_first = index == 0;
             let is_last = index == len - 1;
-            formatter.format_item(item, is_first, is_last, self.has_pending_comments())?;
+            formatter.format_item(
+                item,
+                is_first,
+                is_last,
+                self.contained_comments.has_pending_comments(),
+            )?;
         }
 
-        formatter.format_trailing_comments(&self.pending_comments)
+        formatter.format_trailing_comments(&self.contained_comments.pending_comments)
+    }
+
+    fn contained_comments(&self) -> &ContainedComments {
+        &self.contained_comments
+    }
+
+    fn contained_comments_mut(&mut self) -> &mut ContainedComments {
+        &mut self.contained_comments
     }
 }
 
@@ -486,44 +530,32 @@ impl std::fmt::Debug for Property {
 }
 
 pub(crate) struct Object {
-    /// comments applied to this Object
-    comments: Vec<Comment>,
-
-    end_of_line_comment: Option<String>,
-
-    /// Parsed comments to be applied to the next Value, when reached.
-    /// If there are any pending comments after the last property, they are written after the last
-    /// property when formatting.
-    pending_comments: Vec<Comment>,
-
     /// Parsed property name to be applied to the next upcoming Value.
     pending_property_name: Option<String>,
 
     /// Properties of this object.
     properties: Vec<Property>,
 
-    /// Immediately after capturing a Value (primitive or start of an object or array block),
-    /// this is set to the new Value. If a line comment is captured *before* capturing a
-    /// newline, the line comment is applied to the current_line_value.
-    current_line_value: Option<Rc<RefCell<Value>>>,
-
     /// Set to true when a value is encountered (parsed primitive, or sub-container in process)
     /// and false when a comma or the object's closing brace is encountered. This supports
     /// validating that each property is separated by one and only one comma.
     is_parsing_property: bool,
+
+    /// Manages comments applied to contained items, or to be placed at the end of the container.
+    contained_comments: ContainedComments,
 }
 
 impl Object {
     pub fn new(comments: Vec<Comment>) -> Value {
-        Value::Object(Object {
-            comments,
-            pending_comments: vec![],
-            end_of_line_comment: None,
-            pending_property_name: None,
-            properties: vec![],
-            current_line_value: None,
-            is_parsing_property: false,
-        })
+        Value::Object {
+            val: Object {
+                pending_property_name: None,
+                properties: vec![],
+                is_parsing_property: false,
+                contained_comments: ContainedComments::new(),
+            },
+            comments: Comments { before_value: comments, end_of_line_comment: None },
+        }
     }
 
     /// The given property name was parsed. Once it's value is also parsed, the property will be
@@ -533,6 +565,7 @@ impl Object {
     ///   * name - the property name, possibly quoted
     ///   * parser - reference to the current state of the parser
     pub fn set_pending_property(&mut self, name: String, parser: &Parser<'_>) -> Result<(), Error> {
+        self.contained_comments.current_line_value = None;
         if self.is_parsing_property {
             Err(parser.error("Properties must be separated by a comma"))
         } else {
@@ -570,26 +603,6 @@ impl Object {
         });
         properties
     }
-}
-
-impl ValueMeta for Object {
-    fn as_value_meta(&mut self) -> &mut dyn ValueMeta {
-        self
-    }
-
-    fn get_comments(&mut self) -> &mut Vec<Comment> {
-        &mut self.comments
-    }
-
-    fn set_end_of_line_comment(&mut self, comment: &str) -> Result<(), Error> {
-        self.check_end_of_line_comment_is_none(&self.end_of_line_comment)?;
-        self.end_of_line_comment = Some(comment.to_string());
-        Ok(())
-    }
-
-    fn get_end_of_line_comment(&mut self) -> &Option<String> {
-        &self.end_of_line_comment
-    }
 
     fn format<'a>(&self, formatter: &'a mut Formatter) -> Result<&'a mut Formatter, Error> {
         formatter.format_container("{", "}", |formatter| self.format_content(formatter))
@@ -597,45 +610,11 @@ impl ValueMeta for Object {
 }
 
 impl Container for Object {
-    fn on_newline(&mut self) -> Result<(), Error> {
-        self.current_line_value = None;
-        Ok(())
-    }
-
-    fn add_line_comment(
-        &mut self,
-        content: &str,
-        pending_new_line_comment_block: bool,
-    ) -> Result<bool, Error> {
-        if let Some(value_ref) = &mut self.current_line_value {
-            (*value_ref.borrow_mut()).meta().set_end_of_line_comment(content)?;
-            Ok(false)
-        } else {
-            if pending_new_line_comment_block {
-                self.pending_comments.push(Comment::Break);
-            }
-            self.pending_comments.push(Comment::Line(content.to_string()));
-            Ok(true)
-        }
-    }
-
-    fn add_block_comment(&mut self, comment: Comment) -> Result<(), Error> {
-        self.pending_comments.push(comment);
-        Ok(())
-    }
-
-    fn has_pending_comments(&self) -> bool {
-        self.pending_comments.len() > 0
-    }
-
-    fn take_pending_comments(&mut self) -> Vec<Comment> {
-        self.pending_comments.drain(..).collect()
-    }
-
     fn add_value(&mut self, value: Rc<RefCell<Value>>, parser: &Parser<'_>) -> Result<(), Error> {
         match self.pending_property_name.take() {
             Some(name) => {
-                self.current_line_value = Some(value.clone());
+                self.contained_comments.current_line_value = Some(value.clone());
+                self.contained_comments.end_of_line_comment_start_column = None;
                 self.properties.push(Property::new(name, value));
                 Ok(())
             }
@@ -666,10 +645,7 @@ impl Container for Object {
                 "Property '{}' must have a value before closing an object",
                 property_name
             ))),
-            None => {
-                self.is_parsing_property = false;
-                Ok(())
-            }
+            None => Ok(()),
         }
     }
 
@@ -687,10 +663,23 @@ impl Container for Object {
         for (index, property) in properties.iter().enumerate() {
             let is_first = index == 0;
             let is_last = index == len - 1;
-            formatter.format_property(&property, is_first, is_last, self.has_pending_comments())?;
+            formatter.format_property(
+                &property,
+                is_first,
+                is_last,
+                self.contained_comments.has_pending_comments(),
+            )?;
         }
 
-        formatter.format_trailing_comments(&self.pending_comments)
+        formatter.format_trailing_comments(&self.contained_comments.pending_comments)
+    }
+
+    fn contained_comments(&self) -> &ContainedComments {
+        &self.contained_comments
+    }
+
+    fn contained_comments_mut(&mut self) -> &mut ContainedComments {
+        &mut self.contained_comments
     }
 }
 

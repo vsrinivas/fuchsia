@@ -92,7 +92,7 @@ fn test_format(test: FormatTest<'_>) -> Result<(), Error> {
 }
 
 #[test]
-fn test_format_simple_cml() {
+fn test_format_simple_objects() {
     test_format(FormatTest {
         input: r##"{ "program": {} }"##,
         expected: r##"{
@@ -230,6 +230,137 @@ fn test_comment_block() {
 }
 
 #[test]
+fn test_end_of_line_comments() {
+    test_format(FormatTest {
+        input: r##"
+{ // not an end-of-line comment
+  // because it's not an end of a value
+
+  program: {}, // end of line comment
+
+  expose: [
+    "value1",// eol comment
+             // is here
+    "value2", // eol comment 2
+              //
+              //
+              // is also here
+    "value3",  // this end of line comment is followed by a comment that is not vertically aligned
+    // so we assume this line comment is not part of the previous end-of-line comment
+    /*item4*/"value4", /*item5*/"value5", /*item6*/"value6" // eol comment without comma
+                                                            // here also
+  ],
+  some_object: {
+    prop1: // eol comment is not here
+      "value1",// eol comment
+               // is here
+    prop2: "value2", // eol comment 2
+                     //
+                     //
+                     // is also here
+    prop3: "value3",  // this end of line comment is followed by a comment that is not vertically aligned
+    // so we assume this line comment is not part of the previous end-of-line comment
+    prop4: "value4", prop5: "value5", prop6: "value6" // eol comment without comma
+                                                      // here also
+  },
+  children:
+  [ // line comment after open brace for "children"
+  ],
+  use: // line comment for "use"
+       // and "use" line comment's second line
+  [
+  ],
+  offer: [
+  ], // end of line comment for "offer"
+  collections: [
+  ], // not just one line but this
+     // is a multi-line end of line comment for "collections"
+     //
+     //   - and should have indentation preserved
+     //   - with multiple bullet points
+  other: [
+  ], /// This doc comment style should still work like any other line
+     /// or end-of-line comment
+     ///
+     ///   - and should also have indentation preserved
+     ///   - also with multiple bullet points
+}
+      // not an end-of-line comment because there is a newline; and end of
+
+      // the doc comment was another break,
+      // and the document ends without the required newline"##,
+        expected: r##"{
+    // not an end-of-line comment
+    // because it's not an end of a value
+    program: {}, // end of line comment
+    expose: [
+        "value1", // eol comment
+                  // is here
+        "value2", // eol comment 2
+                  //
+                  //
+                  // is also here
+        "value3", // this end of line comment is followed by a comment that is not vertically aligned
+
+        // so we assume this line comment is not part of the previous end-of-line comment
+
+        /*item4*/
+        "value4",
+
+        /*item5*/
+        "value5",
+
+        /*item6*/
+        "value6", // eol comment without comma
+                  // here also
+    ],
+    some_object: {
+        // eol comment is not here
+        prop1: "value1", // eol comment
+                         // is here
+        prop2: "value2", // eol comment 2
+                         //
+                         //
+                         // is also here
+        prop3: "value3", // this end of line comment is followed by a comment that is not vertically aligned
+
+        // so we assume this line comment is not part of the previous end-of-line comment
+        prop4: "value4",
+        prop5: "value5",
+        prop6: "value6", // eol comment without comma
+                         // here also
+    },
+    children: [
+        // line comment after open brace for "children"
+    ],
+
+    // line comment for "use"
+    // and "use" line comment's second line
+    use: [],
+    offer: [], // end of line comment for "offer"
+    collections: [], // not just one line but this
+                     // is a multi-line end of line comment for "collections"
+                     //
+                     //   - and should have indentation preserved
+                     //   - with multiple bullet points
+    other: [], /// This doc comment style should still work like any other line
+               /// or end-of-line comment
+               ///
+               ///   - and should also have indentation preserved
+               ///   - also with multiple bullet points
+}
+
+// not an end-of-line comment because there is a newline; and end of
+
+// the doc comment was another break,
+// and the document ends without the required newline
+"##,
+        ..Default::default()
+    })
+    .unwrap()
+}
+
+#[test]
 fn test_breaks_between_line_comments() {
     test_format(FormatTest {
         input: r##"// Copyright or other header
@@ -275,9 +406,17 @@ fn test_breaks_between_line_comments() {
 /* and a block comment
         */
     ],
+    children:
+    [ // line comment after open brace for "children"
+    ],
     use: // line comment for "use"
     [
     ],
+    collections: [
+    ], // not just one line but this
+       // is a multi-line end of line comment for "collections"
+       //
+       //   - and should have indentation preserved
     offer: [
     ], // end of line comment for "offer"
 }
@@ -327,9 +466,16 @@ fn test_breaks_between_line_comments() {
         /* and a block comment
         */
     ],
+    children: [
+        // line comment after open brace for "children"
+    ],
 
     // line comment for "use"
     use: [],
+    collections: [], // not just one line but this
+                     // is a multi-line end of line comment for "collections"
+                     //
+                     //   - and should have indentation preserved
     offer: [], // end of line comment for "offer"
 }
 

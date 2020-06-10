@@ -258,8 +258,8 @@ impl<'parser> Parser<'parser> {
         F: FnOnce(&mut dyn Container) -> Result<T, Error>,
     {
         match &mut *self.current_scope().borrow_mut() {
-            Value::Array(array) => f(array),
-            Value::Object(object) => f(object),
+            Value::Array { val, .. } => f(val),
+            Value::Object { val, .. } => f(val),
             unexpected => Err(Error::internal(
                 self.location(),
                 format!(
@@ -275,7 +275,7 @@ impl<'parser> Parser<'parser> {
         F: FnOnce(&mut Array) -> Result<T, Error>,
     {
         match &mut *self.current_scope().borrow_mut() {
-            Value::Array(array) => f(array),
+            Value::Array { val, .. } => f(val),
             unexpected => Err(self.error(format!(
                 "Invalid Array token found while parsing an {:?} (mismatched braces?)",
                 unexpected
@@ -288,7 +288,7 @@ impl<'parser> Parser<'parser> {
         F: FnOnce(&mut Object) -> Result<T, Error>,
     {
         match &mut *self.current_scope().borrow_mut() {
-            Value::Object(object) => f(object),
+            Value::Object { val, .. } => f(val),
             unexpected => Err(self.error(format!(
                 "Invalid Object token found while parsing an {:?} (mismatched braces?)",
                 unexpected
@@ -297,10 +297,7 @@ impl<'parser> Parser<'parser> {
     }
 
     fn is_in_array(&self) -> bool {
-        match &mut *self.current_scope().borrow_mut() {
-            Value::Array(_) => true,
-            _ => false,
-        }
+        (*self.current_scope().borrow()).is_array()
     }
 
     fn is_in_object(&self) -> bool {
@@ -321,18 +318,18 @@ impl<'parser> Parser<'parser> {
         self.with_container(|container| container.on_newline())
     }
 
-    /// Adds a standalone line comment to the current container, or adds an end_of_line_comment
+    /// Adds a standalone line comment to the current container, or adds an end-of-line comment
     /// to the current container's current value.
     ///
     /// # Arguments
     ///   * `captured`: the line comment content (including leading spaces)
     ///   * `pending_new_line_comment_block` - If true and the comment is not an
-    ///     end_of_line_comment, the container should insert a line_comment_break before inserting
+    ///     end-of-line comment, the container should insert a line_comment_break before inserting
     ///     the next line comment. This should only be true if this standalone line comment was
-    ///     preceeded by one or more standalone line comments and one or more blank lines.
+    ///     preceded by one or more standalone line comments and one or more blank lines.
     ///
     /// # Returns
-    ///   true if the line comment is standalone, that is, not an end_of_line_comment
+    ///   true if the line comment is standalone, that is, not an end-of-line comment
     fn add_line_comment(
         &self,
         captured: Option<&str>,
@@ -342,7 +339,11 @@ impl<'parser> Parser<'parser> {
             Some(content) => {
                 let content = content.trim_end();
                 self.with_container(|container| {
-                    container.add_line_comment(content, pending_new_line_comment_block)
+                    container.add_line_comment(
+                        content,
+                        self.column_number,
+                        pending_new_line_comment_block,
+                    )
                 })
             }
             None => Err(Error::internal(
@@ -627,11 +628,10 @@ impl<'parser> Parser<'parser> {
                     pending_blank_line = false;
                     let line_comment = self.consume(&mut line_comment);
                     if self.add_line_comment(line_comment, pending_new_line_comment_block)? {
+                        // standalone line comment
                         just_captured_line_comment = true;
-                        if pending_new_line_comment_block {
-                            pending_new_line_comment_block = false;
-                        }
-                    } // else it was an end_of_line_comment
+                        pending_new_line_comment_block = false;
+                    } // else it was an end-of-line comment
                     Ok(())
                 } else if let Some(_block_comment_start) = next_token.captured(*OPEN_BLOCK_COMMENT)
                 {
@@ -663,7 +663,7 @@ impl<'parser> Parser<'parser> {
             .map_err(|_| Error::internal(None, "Rc<> for document array could not be unwrapped."))?
             .into_inner()
         {
-            Value::Array(array) => Ok(array),
+            Value::Array { val, .. } => Ok(val),
             unexpected => Err(Error::internal(
                 self.location(),
                 format!("Final scope should be an Array, but scope was {:?}", unexpected),
