@@ -66,6 +66,11 @@ go_test("botanist_lib_tests") {
   deps = [ ":botanist_lib" ]
 }
 
+go_test("botanist_main_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/botanist/cmd" ]
+  deps = [ ":main" ]
+}
+
 go_test("botanist_target_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/botanist/target" ]
   deps = [ ":target" ]
@@ -81,6 +86,7 @@ group("tests") {
 
   deps = [
     ":botanist_lib_tests",
+    ":botanist_main_tests",
     ":botanist_target_tests",
   ]
 }

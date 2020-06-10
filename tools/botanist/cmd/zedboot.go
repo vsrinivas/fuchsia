@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
@@ -21,7 +20,15 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 
 	"github.com/google/subcommands"
+	"golang.org/x/sync/errgroup"
 )
+
+// deviceTarget represents a subset of the methods of target.DeviceTarget.
+type deviceTarget interface {
+	Tftp() tftp.Client
+	Serial() io.ReadWriteCloser
+	Start(context.Context, []bootserver.Image, []string) error
+}
 
 // ZedbootCommand is a Command implementation for running the testing workflow on a device
 // that boots with Zedboot.
@@ -113,7 +120,7 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		Netboot: cmd.netboot,
 	}
 
-	var devices []*target.DeviceTarget
+	var devices []deviceTarget
 	for _, config := range configs {
 		device, err := target.NewDeviceTarget(ctx, config, opts)
 		if err != nil {
@@ -122,6 +129,10 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		devices = append(devices, device)
 	}
 
+	return cmd.runAgainstTargets(ctx, devices, imgs, cmdlineArgs)
+}
+
+func (cmd *ZedbootCommand) runAgainstTargets(ctx context.Context, devices []deviceTarget, imgs []bootserver.Image, cmdlineArgs []string) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	errs := make(chan error)
@@ -153,19 +164,18 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		}()
 	}
 
-	var wg sync.WaitGroup
+	var eg errgroup.Group
 	for _, device := range devices {
-		wg.Add(1)
-		go func(device *target.DeviceTarget) {
-			defer wg.Done()
-			if err := device.Start(ctx, imgs, cmdlineArgs); err != nil {
-				errs <- err
-			}
-		}(device)
+		device := device
+		eg.Go(func() error {
+			return device.Start(ctx, imgs, cmdlineArgs)
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return err
 	}
 
 	go func() {
-		wg.Wait()
 		// We execute tests here against the 0th device, there may be N devices
 		// in the test bed but all other devices are driven by the tests not
 		// the test runner.
