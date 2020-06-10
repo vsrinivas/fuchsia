@@ -29,6 +29,29 @@ inside of `/system/driver/` it should be added to the system package via a
 file(s) under `//boards/`. The device coordinator looks first in
 `/boot/driver/`, then `/system/driver/` for loadable drivers.
 
+## Creating a new driver
+
+Creating a new driver can be done automatically by using the
+[Create Tool](/tools/create/README.md). Simply run the following command:
+
+```
+fx create driver <NAME> --lang cpp --dest <PATH>
+```
+
+This will create an empty driver `<NAME>` at location `<PATH>/<NAME>`. After
+this command is run, the following steps need to be followed:
+
+1) Include the `driver_module` or `driver_package` build target in the correct
+place to get your driver included into the system.
+ - For packaged drivers the `driver_package` build target should be added to
+   the relevant board file in `//boards` or `//vendor/boards`.
+ - For boot drivers the `driver_module` build target should be added to
+   [//build/unification/images/common_image_contents.gni](/build/unification/images/common_image_contents.gni)
+2) Include the `tests` build target in the `<PATH>:tests` build target to get
+your tests included in CQ.
+3) Add proper bind rules in `<NAME>.bind`.
+4) Write the functionality for the driver.
+
 ## Declaring a driver
 
 At a minimum, a driver should contain the driver declaration and implement the
