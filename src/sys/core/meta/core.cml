@@ -48,6 +48,7 @@
                 "/svc/fuchsia.device.manager.DebugDumper",
                 "/svc/fuchsia.device.NameProvider",
                 "/svc/fuchsia.hardware.power.statecontrol.Admin",
+                "/svc/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
                 "/svc/fuchsia.hardware.pty.Device",
                 "/svc/fuchsia.kernel.Counter",
                 "/svc/fuchsia.kernel.DebugBroker",

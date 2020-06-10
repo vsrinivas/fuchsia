@@ -106,6 +106,10 @@
             as: "/svc_for_sys/fuchsia.hardware.power.statecontrol.Admin",
         },
         {
+            protocol: "/svc/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+            as: "/svc_for_sys/fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+        },
+        {
             protocol: "/svc/fuchsia.kernel.Counter",
             as: "/svc_for_sys/fuchsia.kernel.Counter",
         },

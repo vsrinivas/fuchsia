@@ -231,6 +231,7 @@ static constexpr const char* devmgr_services[] = {
     fuchsia_device_manager_Administrator_Name,
     fuchsia_device_manager_DebugDumper_Name,
     fuchsia_hardware_power_statecontrol_Admin_Name,
+    fuchsia_hardware_power_statecontrol_RebootMethodsWatcherRegister_Name,
     llcpp::fuchsia::device::manager::BindDebugger::Name,
     nullptr,
 };
