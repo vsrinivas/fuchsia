@@ -10,7 +10,6 @@ source_set("common") {
   sources = [
     "arraysize.h",
     "build_config.h",
-    "compiler_specific.h",
     "fxl_export.h",
     "macros.h",
   ]

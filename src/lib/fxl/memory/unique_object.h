@@ -9,7 +9,6 @@
 
 #include <utility>
 
-#include "src/lib/fxl/compiler_specific.h"
 #include "src/lib/fxl/macros.h"
 
 namespace fxl {
@@ -77,7 +76,7 @@ class UniqueObject {
   // Release the object. The return value is the current object held by this
   // object. After this operation, this object will hold an invalid value, and
   // will not own the object any more.
-  T release() FXL_WARN_UNUSED_RESULT {
+  [[nodiscard]] T release() {
     T old_generic = data_.generic;
     data_.generic = Traits::InvalidValue();
     return old_generic;

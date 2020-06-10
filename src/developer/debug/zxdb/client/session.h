@@ -186,8 +186,8 @@ class Session : public SettingStoreObserver {
                           fit::callback<void(const Err&)> callback);
 
   // Sends a notification to all the UI observers.
-  void SendSessionNotification(SessionObserver::NotificationType, const char* fmt, ...)
-      FXL_PRINTF_FORMAT(3, 4);
+  [[gnu::format(printf, 3, 4)]] void SendSessionNotification(SessionObserver::NotificationType,
+                                                             const char* fmt, ...);
   void SendSessionNotification(SessionObserver::NotificationType, const std::string& msg);
 
   SessionObserver::NotificationType HandleProcessIO(ProcessImpl*, const debug_ipc::NotifyIO&);

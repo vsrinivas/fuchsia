@@ -7,7 +7,6 @@
 
 // ICU integration functions.
 
-#include "src/lib/fxl/compiler_specific.h"
 #include "src/lib/url/url_canon.h"
 #include "src/lib/url/url_canon_internal.h"
 #include "src/lib/url/url_export.h"

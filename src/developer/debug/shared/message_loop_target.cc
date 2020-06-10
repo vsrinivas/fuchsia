@@ -19,7 +19,6 @@
 #include "src/developer/debug/shared/socket_watcher.h"
 #include "src/developer/debug/shared/zircon_exception_watcher.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/fxl/compiler_specific.h"
 
 namespace debug_ipc {
 

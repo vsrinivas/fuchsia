@@ -13,7 +13,6 @@
 #include <functional>
 #include <utility>
 
-#include "src/lib/fxl/compiler_specific.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr_internal.h"
 
