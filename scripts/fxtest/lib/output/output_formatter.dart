@@ -32,7 +32,6 @@ abstract class OutputFormatter {
   bool _currentTestIsSlow;
   bool _lastTestHadOutput;
   int _numPassed;
-  int _numRun;
   int _numFailed;
 
   OutputFormatter({
@@ -46,7 +45,6 @@ abstract class OutputFormatter {
         _infoEvents = [],
         _testStartedEvents = [],
         _numPassed = 0,
-        _numRun = 0,
         _numFailed = 0,
         _currentTestIsSlow = false,
         _hasStartedTests = false,
@@ -85,9 +83,9 @@ abstract class OutputFormatter {
   }
 
   String get ratioDisplay {
-    var passed = colorize(_numPassed.toString(), [green]);
-    var run = colorize(_numRun.toString(), [numFailures == 0 ? green : red]);
-    return '[$passed/$run]';
+    var passed = colorize('PASS: $_numPassed', [green]);
+    var failed = colorize('FAIL: $_numFailed', [red]);
+    return '$passed $failed';
   }
 
   /// Future that resolves when the stdout closes for any reason
@@ -128,7 +126,6 @@ abstract class OutputFormatter {
     } else if (event is TestStarted) {
       _currentTestIsSlow = false;
       _lastTestStartTime = _now;
-      _numRun += 1;
       _handleTestStarted(event);
     } else if (event is TestResult) {
       (event.isSuccess) ? _numPassed += 1 : _numFailed += 1;
