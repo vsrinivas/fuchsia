@@ -133,6 +133,27 @@ TEST_F(SystemInstanceTest, SvcJobLacksAmbientVmex) {
   ASSERT_EQ(proc_info.return_code, 1);
 }
 
+TEST_F(SystemInstanceTest, SvcJobLacksNewProcess) {
+  zx::job root_job;
+  ASSERT_OK(get_root_job(&root_job));
+
+  ASSERT_OK(under_test_->CreateSvcJob(root_job));
+  ASSERT_TRUE(under_test_->svc_job().is_valid());
+
+  zx::process proc;
+  const char* args[] = {"/pkg/bin/new_process_test_util", nullptr};
+  ASSERT_OK(under_test_->launcher().Launch(under_test_->svc_job(), args[0], args, nullptr, -1,
+                                           zx::resource(), nullptr, nullptr, 0, &proc, 0));
+
+  ASSERT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
+  zx_info_process_t proc_info;
+  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
+  ASSERT_TRUE(proc_info.exited);
+  // A return code of 1 from the util process indicates the process_create call failed with
+  // ACCESS_DENIED.
+  ASSERT_EQ(proc_info.return_code, 1);
+}
+
 // Verify the job that driver_hosts are launched under also lacks ZX_POL_AMBIENT_MARK_VMO_EXEC.
 TEST_F(SystemInstanceTest, DriverHostJobLacksAmbientVmex) {
   zx::job root_job;
@@ -151,6 +172,27 @@ TEST_F(SystemInstanceTest, DriverHostJobLacksAmbientVmex) {
   ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
   ASSERT_TRUE(proc_info.exited);
   // A return code of 1 from the util process indicates the replace_as_executable call failed with
+  // ACCESS_DENIED.
+  ASSERT_EQ(proc_info.return_code, 1);
+}
+
+TEST_F(SystemInstanceTest, DriverHostJobLacksNewProcess) {
+  zx::job root_job;
+  ASSERT_OK(get_root_job(&root_job));
+
+  zx::job driver_job;
+  ASSERT_OK(under_test_->CreateDriverHostJob(root_job, &driver_job));
+
+  zx::process proc;
+  const char* args[] = {"/pkg/bin/new_process_test_util", nullptr};
+  ASSERT_OK(under_test_->launcher().Launch(driver_job, args[0], args, nullptr, -1, zx::resource(),
+                                           nullptr, nullptr, 0, &proc, 0));
+
+  ASSERT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
+  zx_info_process_t proc_info;
+  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
+  ASSERT_TRUE(proc_info.exited);
+  // A return code of 1 from the util process indicates the process_create call failed with
   // ACCESS_DENIED.
   ASSERT_EQ(proc_info.return_code, 1);
 }
@@ -188,6 +230,27 @@ TEST_F(SystemInstanceTest, ShellJobHasAmbientVmex) {
   ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
   ASSERT_TRUE(proc_info.exited);
   // A return code of 0 from the util process indicates the replace_as_executable call succeeded.
+  ASSERT_EQ(proc_info.return_code, 0);
+}
+
+TEST_F(SystemInstanceTest, ShellJobHasNewProcess) {
+  zx::job root_job;
+  ASSERT_OK(get_root_job(&root_job));
+
+  boot_args_server_->SetBool("console.shell", true);
+  ASSERT_OK(under_test_->MaybeCreateShellJob(root_job, boot_args_client_));
+  ASSERT_TRUE(under_test_->shell_job().is_valid());
+
+  zx::process proc;
+  const char* args[] = {"/pkg/bin/new_process_test_util", nullptr};
+  ASSERT_OK(under_test_->launcher().Launch(under_test_->shell_job(), args[0], args, nullptr, -1,
+                                           zx::resource(), nullptr, nullptr, 0, &proc, 0));
+
+  ASSERT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
+  zx_info_process_t proc_info;
+  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
+  ASSERT_TRUE(proc_info.exited);
+  // A return code of 0 from the util process indicates the process_create call succeeded.
   ASSERT_EQ(proc_info.return_code, 0);
 }
 

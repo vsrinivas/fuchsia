@@ -158,11 +158,12 @@ zx_status_t SystemInstance::CreateSvcJob(const zx::job& root_job) {
     LOGF(ERROR, "Failed to create svc_job: %s", zx_status_get_string(status));
     return status;
   }
-  // TODO(fxb/53125): This currently manually restricts AMBIENT_MARK_VMO_EXEC since this job is
-  // created from the root job. The processes spawned under this job will eventually move out of
-  // driver_manager into their own components.
+  // TODO(fxb/53125): This currently manually restricts AMBIENT_MARK_VMO_EXEC and NEW_PROCESS since
+  // this job is created from the root job. The processes spawned under this job will eventually
+  // move out of driver_manager into their own components.
   static const zx_policy_basic_v2_t policy[] = {
-      {ZX_POL_AMBIENT_MARK_VMO_EXEC, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY}};
+      {ZX_POL_AMBIENT_MARK_VMO_EXEC, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY},
+      {ZX_POL_NEW_PROCESS, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY}};
   status = svc_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy, std::size(policy));
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to set svc_job job policy: %s", zx_status_get_string(status));
@@ -187,13 +188,15 @@ zx_status_t SystemInstance::CreateDriverHostJob(const zx::job& root_job,
     LOGF(ERROR, "Unable to create driver_host job: %s", zx_status_get_string(status));
     return status;
   }
-  // TODO(fxb/53125): This currently manually restricts AMBIENT_MARK_VMO_EXEC since this job is
-  // created from the root job. The driver_host job should move to being created from something
-  // other than the root job. (Although note that it can't simply be created from driver_manager's
-  // own job, because that has timer slack job policy automatically applied by the ELF runner.)
+  // TODO(fxb/53125): This currently manually restricts AMBIENT_MARK_VMO_EXEC and NEW_PROCESS since
+  // this job is created from the root job. The driver_host job should move to being created from
+  // something other than the root job. (Although note that it can't simply be created from
+  // driver_manager's own job, because that has timer slack job policy automatically applied by the
+  // ELF runner.)
   static const zx_policy_basic_v2_t policy[] = {
       {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_ALLOW_EXCEPTION, ZX_POL_OVERRIDE_DENY},
-      {ZX_POL_AMBIENT_MARK_VMO_EXEC, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY}};
+      {ZX_POL_AMBIENT_MARK_VMO_EXEC, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY},
+      {ZX_POL_NEW_PROCESS, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY}};
   status = driver_host_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy,
                                       std::size(policy));
   if (status != ZX_OK) {
