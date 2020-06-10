@@ -42,8 +42,7 @@ class TestSpiDevice : public DeviceType,
       return status;
     }
 
-    status = dev->DdkAddMetadata(DEVICE_METADATA_PRIVATE, &dev->bus_id_,
-                                 sizeof dev->bus_id_);
+    status = dev->DdkAddMetadata(DEVICE_METADATA_PRIVATE, &dev->bus_id_, sizeof dev->bus_id_);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: DdkAddMetadata failed: %d", __func__, status);
       return status;
@@ -56,8 +55,8 @@ class TestSpiDevice : public DeviceType,
     return ZX_OK;
   }
 
-  explicit TestSpiDevice(zx_device_t* parent, uint32_t bus_id) : DeviceType(parent),
-    bus_id_(bus_id) {}
+  explicit TestSpiDevice(zx_device_t* parent, uint32_t bus_id)
+      : DeviceType(parent), bus_id_(bus_id) {}
 
   uint32_t SpiImplGetChipSelectCount() { return 1; }
   zx_status_t SpiImplExchange(uint32_t cs, const uint8_t* txdata_list, size_t txdata_count,
@@ -90,7 +89,8 @@ class TestSpiDevice : public DeviceType,
 
   // Methods required by the ddk mixins
   void DdkRelease() { delete this; }
-private:
+
+ private:
   uint32_t bus_id_;
 };
 

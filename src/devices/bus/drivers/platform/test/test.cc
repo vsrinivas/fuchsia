@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "test.h"
+
 #include <ddk/platform-defs.h>
 
-#include "test.h"
 #include "test-resources.h"
 
 namespace board_test {

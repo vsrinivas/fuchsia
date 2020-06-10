@@ -15,14 +15,12 @@ namespace board_test {
 
 namespace {
 
-
-static const spi_channel_t spi_channels[] = {
-    {.bus_id = 0,
-     .cs = 0,
-     // VID/PID/DID unused.
-     .vid = 0,
-     .pid = 0,
-     .did = 0}};
+static const spi_channel_t spi_channels[] = {{.bus_id = 0,
+                                              .cs = 0,
+                                              // VID/PID/DID unused.
+                                              .vid = 0,
+                                              .pid = 0,
+                                              .did = 0}};
 
 static const pbus_metadata_t spi_metadata[] = {{
     .type = DEVICE_METADATA_SPI_CHANNELS,

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UTEST_PLATFORM_BUS_TEST_H_
-#define ZIRCON_SYSTEM_UTEST_PLATFORM_BUS_TEST_H_
+#ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_TEST_TEST_H_
+#define SRC_DEVICES_BUS_DRIVERS_PLATFORM_TEST_TEST_H_
 
 #include <threads.h>
 
@@ -52,4 +52,4 @@ __BEGIN_CDECLS
 zx_status_t test_bind(void* ctx, zx_device_t* parent);
 __END_CDECLS
 
-#endif  // ZIRCON_SYSTEM_UTEST_PLATFORM_BUS_TEST_H_
+#endif  // SRC_DEVICES_BUS_DRIVERS_PLATFORM_TEST_TEST_H_
