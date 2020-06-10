@@ -8,8 +8,8 @@ use {
     crate::heuristic_config::HeuristicFn,
     anyhow::{anyhow, Error},
     async_std::sync::{Arc, RwLock},
-    ffx_command::Ffx,
     ffx_core::constants::CONFIG_CACHE_TIMEOUT,
+    ffx_lib_args::Ffx,
     std::collections::HashMap,
     std::time::Instant,
 };
@@ -102,8 +102,8 @@ async fn load_config_with_instant(
 #[cfg(test)]
 mod test {
     use super::*;
-    use ffx_command::Subcommand;
     use ffx_core::args::DaemonCommand;
+    use ffx_lib_sub_command::Subcommand;
     use futures::future::join_all;
     use std::time::Duration;
 

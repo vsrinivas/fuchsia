@@ -6,9 +6,10 @@ use {
     crate::logger::setup_logger,
     crate::target_formatter::TargetFormatter,
     anyhow::{anyhow, format_err, Context, Error},
-    ffx_command::{Ffx, Subcommand},
     ffx_core::constants::DAEMON,
     ffx_daemon::{find_and_connect, is_daemon_running, start as start_daemon},
+    ffx_lib_args::Ffx,
+    ffx_lib_sub_command::Subcommand,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::{DaemonProxy, Target as FidlTarget},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
@@ -49,27 +50,6 @@ async fn list_targets(
         }
         Err(e) => panic!("ERROR: {:?}", e),
     }
-}
-
-async fn exec_plugins<D, DFut, R, RFut>(
-    daemon_factory: D,
-    remote_factory: R,
-    subcommand: Subcommand,
-) -> Result<(), Error>
-where
-    D: FnOnce() -> DFut,
-    DFut: std::future::Future<
-        Output = std::result::Result<fidl_fuchsia_developer_bridge::DaemonProxy, anyhow::Error>,
-    >,
-    R: FnOnce() -> RFut,
-    RFut: std::future::Future<
-        Output = std::result::Result<
-            fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
-            anyhow::Error,
-        >,
-    >,
-{
-    ffx_plugins::plugins(daemon_factory, remote_factory, subcommand).await
 }
 
 async fn quit(daemon_proxy: DaemonProxy) -> Result<(), Error> {
@@ -130,7 +110,7 @@ async fn async_main() -> Result<(), Error> {
             Ok(())
         }
         Subcommand::Daemon(_) => start_daemon().await,
-        _ => exec_plugins(get_daemon_proxy, get_remote_proxy, app.subcommand).await,
+        _ => ffx_lib::ffx_plugin_impl(get_daemon_proxy, get_remote_proxy, app).await,
     }
 }
 

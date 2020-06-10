@@ -36,6 +36,11 @@ def main(args_list=None):
         help='Comma-seperated libraries to generate code from',
         required=True)
 
+    parser.add_argument(
+        '--template',
+        help='The template file to use to generate code',
+        required=True)
+
     if args_list:
         args = parser.parse_args(args_list)
     else:
@@ -46,7 +51,7 @@ def main(args_list=None):
         loader=FileSystemLoader(template_path),
         trim_blocks=True,
         lstrip_blocks=True)
-    template = env.get_template('command.md')
+    template = env.get_template(args.template)
     libraries = args.deps.split(',')
     deps = map(wrap_deps, libraries)
     with open(args.out, 'w') as file:

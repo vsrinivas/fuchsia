@@ -2,9 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+
+// TODO: Once DaemonCommand, ListCommand, and QuitCommand are made
+// into plugins they can be removed from here and then this can merged
+// with suite_command.md
+
 use {
   argh::FromArgs,
-  ffx_core::args::{DaemonCommand, ListCommand, QuitCommand},
+  ffx_core::{
+    args::{DaemonCommand, ListCommand, QuitCommand},
+  }
 };
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -18,13 +25,3 @@ pub enum Subcommand {
 {% endfor %}
 }
 
-#[derive(FromArgs, Debug, PartialEq)]
-/// Fuchsia Development Bridge
-pub struct Ffx {
-    #[argh(option)]
-    /// configuration information
-    pub config: Option<String>,
-
-    #[argh(subcommand)]
-    pub subcommand: Subcommand,
-}

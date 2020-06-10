@@ -36,6 +36,17 @@ def main(args_list=None):
         help='Comma-seperated libraries to generate code from',
         required=True)
 
+    parser.add_argument('--args', help='args lib', required=True)
+
+    parser.add_argument('--sub_command', help='sub command lib', required=True)
+
+    parser.add_argument(
+        '--not_complete',
+        type=bool,
+        help='is the command match incomplete',
+        required=False,
+        default=False)
+
     if args_list:
         args = parser.parse_args(args_list)
     else:
@@ -50,7 +61,12 @@ def main(args_list=None):
     libraries = args.deps.split(',')
     plugins = map(wrap_deps, libraries)
     with open(args.out, 'w') as file:
-        file.write(template.render(plugins=plugins))
+        file.write(
+            template.render(
+                plugins=plugins,
+                suite_subcommand_lib=args.sub_command,
+                suite_args_lib=args.args,
+                not_complete=args.not_complete))
 
 
 if __name__ == '__main__':

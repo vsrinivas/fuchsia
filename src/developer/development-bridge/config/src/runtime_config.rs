@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::api::ReadConfig, ffx_command::Ffx, serde_json::Value, std::collections::HashMap};
+use {crate::api::ReadConfig, ffx_lib_args::Ffx, serde_json::Value, std::collections::HashMap};
 
 pub(crate) struct Runtime {
     pub runtime_config: HashMap<String, String>,
@@ -36,8 +36,8 @@ impl ReadConfig for Runtime {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ffx_command::Subcommand;
     use ffx_core::args::DaemonCommand;
+    use ffx_lib_sub_command::Subcommand;
 
     fn test_cli_params(test: &str) -> Ffx {
         Ffx { config: Some(test.to_string()), subcommand: Subcommand::Daemon(DaemonCommand {}) }

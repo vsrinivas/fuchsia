@@ -6,5 +6,9 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "daemon", description = "run echo test against the daemon")]
-pub struct EchoCommand {}
+#[argh(subcommand, name = "cli", description = "run echo test against the cli")]
+pub struct EchoCommand {
+    #[argh(positional)]
+    /// number of times to print
+    pub times: Option<usize>,
+}

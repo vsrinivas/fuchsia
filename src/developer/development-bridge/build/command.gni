@@ -22,17 +22,27 @@ template("command") {
   generated_file = "$target_gen_dir/" + output_name
   outputs = [ generated_file ]
 
+  template = "command.md"
+  if (defined(invoker.template)) {
+    template = invoker.template
+  }
+
   lib_str = string_join(",", libraries)
   action(target_name) {
-    script = "build/gn_generate_cmd.py"
+    script = "//src/developer/development-bridge/build/gn_generate_cmd.py"
     args = [
       "--out",
       rebase_path(generated_file),
       "--deps",
       lib_str,
+      "--template",
+      template,
     ]
 
     # Rebuild if the template changes
-    inputs = [ "//src/developer/development-bridge/build/templates/command.md" ]
+    inputs = [
+      "//src/developer/development-bridge/build/templates/command.md",
+      "//src/developer/development-bridge/build/templates/suite_command.md",
+    ]
   }
 }

@@ -23,14 +23,27 @@ template("plugins") {
   outputs = [ generated_file ]
 
   lib_str = string_join(",", libraries)
-  action(target_name) {
-    script = "build/gn_generate_plugins.py"
-    args = [
-      "--out",
-      rebase_path(generated_file),
-      "--deps",
-      lib_str,
+  script_args = [
+    "--out",
+    rebase_path(generated_file),
+    "--deps",
+    lib_str,
+    "--args",
+    invoker.args,
+    "--sub_command",
+    invoker.sub_command,
+  ]
+
+  if (defined(invoker.not_complete)) {
+    script_args += [
+      "--not_complete",
+      invoker.not_complete,
     ]
+  }
+
+  action(target_name) {
+    script = "//src/developer/development-bridge/build/gn_generate_plugins.py"
+    args = script_args
 
     # Rebuild if the template changes
     inputs = [ "//src/developer/development-bridge/build/templates/plugins.md" ]

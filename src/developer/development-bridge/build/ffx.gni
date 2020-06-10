@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
-import("//build/rust/rustc_library.gni")
-import("command.gni")
-import("plugins.gni")
+import("ffx_plugin_suite.gni")
 
 # Defines FFX
 #
@@ -24,48 +22,21 @@ template("ffx") {
     output_name = invoker.name
   }
 
-  args_deps = []
-  if (defined(invoker.plugin_deps)) {
-    foreach(d, invoker.plugin_deps) {
-      dep = d + "_args"
-      args_deps += [ dep ]
-    }
+  suite_name = output_name + "_lib"
+
+  ffx_plugin_suite(suite_name) {
+    template = "command.md"
+    not_complete = "True"
+    forward_variables_from(invoker, "*", [])
+    args_deps = [ "core:lib" ]
   }
 
-  command("ffx_sub_command") {
-    output_name = "cmd_args.rs"
-    plugin_deps = invoker.plugin_deps
-  }
-
-  rustc_library("command_lib") {
-    name = "ffx_command"
-    source_root = "$target_gen_dir/cmd_args.rs"
-    deps = args_deps + [
-             ":ffx_sub_command",
-             "core:lib",
-             "//third_party/rust_crates:argh",
-           ]
-  }
-
-  plugins("ffx_plugins") {
-    output_name = "plugins.rs"
-    plugin_deps = invoker.plugin_deps
-  }
-
-  rustc_library("plugins_lib") {
-    name = "ffx_plugins"
-    source_root = "$target_gen_dir/plugins.rs"
-    deps = ffx_deps + [
-             ":command_lib",
-             ":ffx_plugins",
-           ]
-  }
-
-  rustc_binary("bin") {
+  rustc_binary(output_name + "_bin") {
     name = output_name
     deps = ffx_deps + [
-             ":command_lib",
-             ":plugins_lib",
+             ":" + suite_name + "_args",
+             ":" + suite_name + "_sub_command",
+             ":" + suite_name,
            ]
     non_rust_deps = [ "//third_party/boringssl" ]
     forward_variables_from(invoker,
@@ -88,11 +59,12 @@ template("ffx") {
     }
   }
 
-  group("ffx_tests") {
+  group(output_name + "_tests") {
     testonly = true
 
     deps = tests_deps + [
-             ":bin_test($host_toolchain)",
+             ":" + output_name + "_bin_test($host_toolchain)",
+             ":" + suite_name + "_tests($host_toolchain)",
              "config:tests($host_toolchain)",
            ]
   }

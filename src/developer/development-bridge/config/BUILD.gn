@@ -14,7 +14,8 @@ if (host_toolchain == current_toolchain) {
     deps = [
       "macro:config-macros",
       "//src/connectivity/overnet/lib/hoist",
-      "//src/developer/development-bridge:command_lib",
+      "//src/developer/development-bridge:ffx_lib_args",
+      "//src/developer/development-bridge:ffx_lib_sub_command",
       "//src/developer/development-bridge/core:lib",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",

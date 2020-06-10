@@ -51,13 +51,13 @@ if (host_toolchain == current_toolchain) {
 }
 
 install_host_tools("host") {
-  deps = [ ":bin($host_toolchain)" ]
+  deps = [ ":ffx_bin($host_toolchain)" ]
   outputs = [ "ffx" ]
 }
 
 group("ffx") {
   deps = [
-    ":bin($host_toolchain)",
+    ":ffx_bin($host_toolchain)",
     ":host",
     "daemon:lib($host_toolchain)",
   ]

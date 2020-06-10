@@ -4,12 +4,11 @@
 
 use {
     anyhow::Error, ffx_core::ffx_plugin, ffx_echo_args::EchoCommand as ParentEchoCommand,
-    ffx_echo_daemon_args::EchoCommand, ffx_lib_args::Ffx, ffx_lib_sub_command::Subcommand,
-    fidl_fuchsia_developer_bridge::DaemonProxy,
+    ffx_echo_cli_args::EchoCommand, ffx_lib_args::Ffx, ffx_lib_sub_command::Subcommand,
 };
 
 #[ffx_plugin()]
-pub async fn echo(daemon_proxy: DaemonProxy, _cmd: EchoCommand) -> Result<(), Error> {
+pub async fn echo(cmd: EchoCommand) -> Result<(), Error> {
     // If you need access to args from a higher up subcommand - use argh::from_env()
     let app: Ffx = argh::from_env();
     let echo_text =
@@ -18,11 +17,9 @@ pub async fn echo(daemon_proxy: DaemonProxy, _cmd: EchoCommand) -> Result<(), Er
         } else {
             "Ffx".to_string()
         };
-    match daemon_proxy.echo_string(&echo_text).await {
-        Ok(r) => {
-            println!("SUCCESS: received {:?}", r);
-            return Ok(());
-        }
-        Err(e) => panic!("ERROR: {:?}", e),
+    let times = cmd.times.unwrap_or(1);
+    for _ in 0..times {
+        println!("CLI ECHO: {}", &echo_text);
     }
+    Ok(())
 }
