@@ -7,6 +7,7 @@
 use super::{main, Proxy, ProxyTransferInitiationReceiver};
 use crate::async_quic::{AsyncConnection, StreamProperties};
 use crate::framed_stream::{FramedStreamReader, FramedStreamWriter, MessageStats};
+use crate::handle_info::WithRights;
 use crate::proxyable_handle::{IntoProxied, Proxyable, ProxyableHandle};
 use crate::router::{FoundTransfer, OpenedTransfer, Router};
 use anyhow::{format_err, Error};
@@ -44,6 +45,7 @@ pub(crate) async fn send<Hdl: 'static + Proxyable>(
 // Returns a handle, and an optional future that runs the proxying activity (or none if no proxying is occurring).
 pub(crate) async fn recv<Hdl, CreateType>(
     create_handles: impl FnOnce() -> Result<(CreateType, CreateType), Error>,
+    rights: CreateType::Rights,
     initiate_transfer: ProxyTransferInitiationReceiver,
     stream_ref: StreamRef,
     conn: &AsyncConnection,
@@ -52,11 +54,12 @@ pub(crate) async fn recv<Hdl, CreateType>(
 ) -> Result<(fidl::Handle, Option<impl Send + Future<Output = Result<(), Error>>>), Error>
 where
     Hdl: 'static + Proxyable,
-    CreateType: fidl::HandleBased + IntoProxied<Proxied = Hdl> + std::fmt::Debug,
+    CreateType: fidl::HandleBased + IntoProxied<Proxied = Hdl> + std::fmt::Debug + WithRights,
 {
     Ok(match stream_ref {
         StreamRef::Creating(StreamId { id: stream_id }) => {
             let (app_chan, overnet_chan) = create_handles()?;
+            let app_chan = app_chan.with_rights(rights)?;
             let (stream_writer, stream_reader) = conn.bind_id(stream_id);
             let overnet_chan = overnet_chan.into_proxied()?;
             log::trace!(
@@ -84,6 +87,7 @@ where
             transfer_key,
         }) => {
             let (app_chan, overnet_chan) = create_handles()?;
+            let app_chan = app_chan.with_rights(rights)?;
             let initial_stream_reader: FramedStreamReader = conn.bind_uni_id(stream_id).into();
             let opened_transfer = Weak::upgrade(&router)
                 .ok_or_else(|| format_err!("No router to handle draining stream ref"))?
@@ -178,7 +182,7 @@ where
                         transfer_key
                     );
                     (
-                        app_chan.into_handle(),
+                        app_chan.with_rights(rights)?.into_handle(),
                         Some(main::run_main_loop(
                             Proxy::new(overnet_chan.into_proxied()?, router, stats),
                             initiate_transfer,

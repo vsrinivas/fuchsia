@@ -261,7 +261,7 @@ impl Peer {
         chan: Channel,
         router: &Arc<Router>,
     ) -> Result<(), Error> {
-        if let ZirconHandle::Channel(ChannelHandle { stream_ref }) = router
+        if let ZirconHandle::Channel(ChannelHandle { stream_ref, rights }) = router
             .clone()
             .send_proxied(chan.into_handle(), self.conn.clone(), self.channel_proxy_stats.clone())
             .await?
@@ -273,6 +273,7 @@ impl Peer {
                 .send(ClientPeerCommand::ConnectToService(ConnectToService {
                     service_name: service.to_string(),
                     stream_ref,
+                    rights,
                     options: ConnectToServiceOptions {},
                 }))
                 .await?;
@@ -627,13 +628,14 @@ async fn server_conn_stream(
                     PeerMessage::ConnectToService(ConnectToService {
                         service_name,
                         stream_ref,
+                        rights,
                         options: _,
                     }) => {
                         let app_channel = Channel::from_handle(
                             router
                                 .clone()
                                 .recv_proxied(
-                                    ZirconHandle::Channel(ChannelHandle { stream_ref }),
+                                    ZirconHandle::Channel(ChannelHandle { stream_ref, rights }),
                                     conn_stream_writer.conn().clone(),
                                     channel_proxy_stats.clone(),
                                 )

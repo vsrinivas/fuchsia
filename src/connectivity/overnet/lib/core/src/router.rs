@@ -1017,9 +1017,11 @@ impl Router {
                 .with_context(|| format!("waiting for stream_ref for {:?}", raw_handle))?;
             pair.proxy_task.detach();
             match info.handle_type {
-                HandleType::Channel => Ok(ZirconHandle::Channel(ChannelHandle { stream_ref })),
-                HandleType::Socket(socket_type) => {
-                    Ok(ZirconHandle::Socket(SocketHandle { stream_ref, socket_type }))
+                HandleType::Channel(rights) => {
+                    Ok(ZirconHandle::Channel(ChannelHandle { stream_ref, rights }))
+                }
+                HandleType::Socket(socket_type, rights) => {
+                    Ok(ZirconHandle::Socket(SocketHandle { stream_ref, socket_type, rights }))
                 }
             }
         } else {
@@ -1036,7 +1038,7 @@ impl Router {
             let (stream_writer, stream_reader) = conn.alloc_bidi();
             let stream_ref = StreamRef::Creating(StreamId { id: stream_writer.id() });
             Ok(match info.handle_type {
-                HandleType::Channel => {
+                HandleType::Channel(rights) => {
                     self.add_proxied(
                         &mut *proxied_streams,
                         info.this_handle_key,
@@ -1051,9 +1053,9 @@ impl Router {
                             Arc::downgrade(&self),
                         ),
                     );
-                    ZirconHandle::Channel(ChannelHandle { stream_ref })
+                    ZirconHandle::Channel(ChannelHandle { stream_ref, rights })
                 }
-                HandleType::Socket(socket_type) => {
+                HandleType::Socket(socket_type, rights) => {
                     self.add_proxied(
                         &mut *proxied_streams,
                         info.this_handle_key,
@@ -1068,7 +1070,7 @@ impl Router {
                             Arc::downgrade(&self),
                         ),
                     );
-                    ZirconHandle::Socket(SocketHandle { stream_ref, socket_type })
+                    ZirconHandle::Socket(SocketHandle { stream_ref, socket_type, rights })
                 }
             })
         }
@@ -1088,9 +1090,10 @@ impl Router {
             format_err!("cancelled transfer via recv_proxied; debug_id={}", debug_id)
         }));
         Ok(match handle {
-            ZirconHandle::Channel(ChannelHandle { stream_ref }) => {
+            ZirconHandle::Channel(ChannelHandle { stream_ref, rights }) => {
                 let (h, p) = crate::proxy::spawn::recv(
                     move || Channel::create().map_err(Into::into),
+                    rights,
                     rx,
                     stream_ref,
                     &conn,
@@ -1110,13 +1113,14 @@ impl Router {
                 }
                 h
             }
-            ZirconHandle::Socket(SocketHandle { stream_ref, socket_type }) => {
+            ZirconHandle::Socket(SocketHandle { stream_ref, socket_type, rights }) => {
                 let opts = match socket_type {
                     SocketType::Stream => SocketOpts::STREAM,
                     SocketType::Datagram => SocketOpts::DATAGRAM,
                 };
                 let (h, p) = crate::proxy::spawn::recv(
                     move || Socket::create(opts).map_err(Into::into),
+                    rights,
                     rx,
                     stream_ref,
                     &conn,

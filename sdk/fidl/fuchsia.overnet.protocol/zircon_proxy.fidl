@@ -25,6 +25,8 @@ union ZirconHandle {
 
 /// A proxied channel.
 struct ChannelHandle {
+    /// The handle rights that are given to this handle.
+    ChannelRights rights;
     /// The Overnet proxy stream that was created to carry this channel.
     /// The protocol over said stream will be a `ZirconChannel`.
     StreamRef stream_ref;
@@ -40,9 +42,27 @@ enum SocketType {
 
 /// A proxied socket.
 struct SocketHandle {
+    /// The handle rights that are given to this handle.
+    SocketRights rights;
     /// The Overnet proxy stream that was created to carry this socket.
     /// The protocol over said stream will be a `ZirconSocket`.
     StreamRef stream_ref;
     /// Socket options, per `zx_socket_create`.
     SocketType socket_type;
+};
+
+/// Channel rights.
+/// Overnet treats rights as per-object type, to reduce the space of things that can be communicated
+/// over its wire format. Transfer rights are always assumed present.
+bits ChannelRights : uint32 {
+    READ = 0x01;
+    WRITE = 0x02;
+};
+
+/// Socket rights.
+/// Overnet treats rights as per-object type, to reduce the space of things that can be communicated
+/// over its wire format. Transfer rights are always assumed present.
+bits SocketRights : uint32 {
+    READ = 0x01;
+    WRITE = 0x02;
 };

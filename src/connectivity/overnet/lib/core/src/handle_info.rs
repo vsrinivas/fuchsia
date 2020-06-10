@@ -4,7 +4,7 @@
 
 use anyhow::{bail, Error};
 use fidl::{AsHandleRef, HandleRef};
-use fidl_fuchsia_overnet_protocol::SocketType;
+use fidl_fuchsia_overnet_protocol::{ChannelRights, SocketRights, SocketType};
 
 #[cfg(target_os = "fuchsia")]
 pub(crate) type HandleKey = fuchsia_zircon::Koid;
@@ -17,8 +17,8 @@ pub(crate) type HandleKey = u64;
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum HandleType {
     /// A handle of type channel is being sent.
-    Channel,
-    Socket(SocketType),
+    Channel(ChannelRights),
+    Socket(SocketType, SocketRights),
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -31,8 +31,12 @@ pub(crate) struct HandleInfo {
 #[cfg(not(target_os = "fuchsia"))]
 pub(crate) fn handle_info(hdl: HandleRef<'_>) -> Result<HandleInfo, Error> {
     let handle_type = match hdl.handle_type() {
-        fidl::FidlHdlType::Channel => HandleType::Channel,
-        fidl::FidlHdlType::Socket => HandleType::Socket(SocketType::Stream),
+        fidl::FidlHdlType::Channel => {
+            HandleType::Channel(ChannelRights::Read | ChannelRights::Write)
+        }
+        fidl::FidlHdlType::Socket => {
+            HandleType::Socket(SocketType::Stream, SocketRights::Read | SocketRights::Write)
+        }
         fidl::FidlHdlType::Invalid => bail!("Unsupported handle type"),
     };
     Ok(HandleInfo {
@@ -56,7 +60,12 @@ pub(crate) fn handle_info(handle: HandleRef<'_>) -> Result<HandleInfo, Error> {
     let basic_info = handle.basic_info()?;
 
     let handle_type = match basic_info.object_type {
-        zx::ObjectType::CHANNEL => HandleType::Channel,
+        zx::ObjectType::CHANNEL => {
+            let mut rights = ChannelRights::empty();
+            rights.set(ChannelRights::Read, basic_info.rights.contains(zx::Rights::READ));
+            rights.set(ChannelRights::Write, basic_info.rights.contains(zx::Rights::WRITE));
+            HandleType::Channel(rights)
+        }
         zx::ObjectType::SOCKET => {
             let mut info = zx::sys::zx_info_socket_t::default();
             let info = zx::object_get_info::<SocketInfoQuery>(
@@ -69,7 +78,10 @@ pub(crate) fn handle_info(handle: HandleRef<'_>) -> Result<HandleInfo, Error> {
                 zx::SocketOpts::DATAGRAM => SocketType::Datagram,
                 _ => bail!("Unhandled socket options"),
             };
-            HandleType::Socket(socket_type)
+            let mut rights = SocketRights::empty();
+            rights.set(SocketRights::Read, basic_info.rights.contains(zx::Rights::READ));
+            rights.set(SocketRights::Write, basic_info.rights.contains(zx::Rights::WRITE));
+            HandleType::Socket(socket_type, rights)
         }
         _ => bail!("Handle type not proxyable {:?}", handle.basic_info()?.object_type),
     };
@@ -79,4 +91,61 @@ pub(crate) fn handle_info(handle: HandleRef<'_>) -> Result<HandleInfo, Error> {
         this_handle_key: basic_info.koid,
         pair_handle_key: basic_info.related_koid,
     })
+}
+
+pub(crate) trait WithRights {
+    type Rights;
+    fn with_rights(self, rights: Self::Rights) -> Result<Self, Error>
+    where
+        Self: Sized;
+}
+
+#[cfg(target_os = "fuchsia")]
+impl WithRights for fidl::Channel {
+    type Rights = ChannelRights;
+    fn with_rights(self, rights: ChannelRights) -> Result<Self, Error> {
+        use fuchsia_zircon as zx;
+        use zx::HandleBased;
+        let mut zx_rights = self.basic_info()?.rights;
+        zx_rights.set(zx::Rights::READ, rights.contains(ChannelRights::Read));
+        zx_rights.set(zx::Rights::WRITE, rights.contains(ChannelRights::Write));
+        zx_rights.insert(zx::Rights::TRANSFER);
+        Ok(self.replace_handle(zx_rights)?)
+    }
+}
+
+#[cfg(target_os = "fuchsia")]
+impl WithRights for fidl::Socket {
+    type Rights = SocketRights;
+    fn with_rights(self, rights: SocketRights) -> Result<Self, Error> {
+        use fuchsia_zircon as zx;
+        use zx::HandleBased;
+        let mut zx_rights = self.basic_info()?.rights;
+        zx_rights.set(zx::Rights::READ, rights.contains(SocketRights::Read));
+        zx_rights.set(zx::Rights::WRITE, rights.contains(SocketRights::Write));
+        zx_rights.insert(zx::Rights::TRANSFER);
+        Ok(self.replace_handle(zx_rights)?)
+    }
+}
+
+#[cfg(not(target_os = "fuchsia"))]
+impl WithRights for fidl::Channel {
+    type Rights = ChannelRights;
+    fn with_rights(self, rights: ChannelRights) -> Result<Self, Error> {
+        if rights != ChannelRights::Read | ChannelRights::Write {
+            bail!("Restricted rights not supported on non-Fuchsia platforms");
+        }
+        Ok(self)
+    }
+}
+
+#[cfg(not(target_os = "fuchsia"))]
+impl WithRights for fidl::Socket {
+    type Rights = SocketRights;
+    fn with_rights(self, rights: SocketRights) -> Result<Self, Error> {
+        if rights != SocketRights::Read | SocketRights::Write {
+            bail!("Restricted rights not supported on non-Fuchsia platforms");
+        }
+        Ok(self)
+    }
 }

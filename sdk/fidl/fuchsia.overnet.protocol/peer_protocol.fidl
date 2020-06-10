@@ -64,6 +64,8 @@ struct ConnectToService {
     string:MAX_SERVICE_NAME_LENGTH service_name;
     /// On which QUIC stream will this service connection be formed.
     StreamRef stream_ref;
+    /// The channel rights for this connection.
+    ChannelRights rights;
     /// Ancillary options for this connection.
     ConnectToServiceOptions options;
 };

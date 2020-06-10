@@ -11,6 +11,9 @@ source_set("deps") {
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:parking_lot",
   ]
+  if (is_fuchsia) {
+    deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
+  }
 }
 
 rustc_test("fidl_rust_handle_tests") {
