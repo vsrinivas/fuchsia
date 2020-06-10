@@ -38,8 +38,8 @@ intended point of transit for your message. See [Viewing] logs once you know the
 
 ### Persistent
 
-The [feedback agent] maintains a [persistent disk store] of messages from previous boots. These
-messages appear when running [`fx bugreport`].
+The [feedback agent] maintains a [persistent disk store] of messages from the previous boot.
+These messages appear when running [`fx bugreport`].
 
 [LogMessage]: https://fuchsia.dev/reference/fidl/fuchsia.logger#LogMessage
 [`LogSink`]: https://fuchsia.dev/reference/fidl/fuchsia.logger#LogSink
