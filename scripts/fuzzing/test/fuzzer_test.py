@@ -23,11 +23,15 @@ class TestFuzzer(unittest.TestCase):
     # Unit test assertions
 
     def assertRan(self, host, *args):
-        self.assertIn(' '.join(args), host.history)
+        self.assertIn(' '.join(*args), host.history)
+
+    def assertScp(self, device, *args):
+        """Asserts a previous call was made to device.ssh with args."""
+        self.assertRan(device.host, device._scp_cmd(list(args)))
 
     def assertSsh(self, device, *args):
         """Asserts a previous call was made to device.scp with cmd."""
-        self.assertRan(device.host, *device._ssh_cmd(list(args)))
+        self.assertRan(device.host, device._ssh_cmd(list(args)))
 
     # Unit tests
 
@@ -65,19 +69,20 @@ class TestFuzzer(unittest.TestCase):
         fuzzer1 = Fuzzer(device, u'fake-package1', u'fake-target1')
         fuzzer2 = Fuzzer(device, u'fake-package1', u'fake-target2')
 
-        # Initially stopped
         self.assertFalse(fuzzer1.is_running())
         self.assertFalse(fuzzer2.is_running())
 
-        # Previous results cached
         device.add_fake_pid(fuzzer1.package, fuzzer1.executable)
-        device.add_fake_pid(fuzzer2.package, fuzzer2.executable)
-        self.assertFalse(fuzzer1.is_running())
+        self.assertTrue(fuzzer1.is_running())
         self.assertFalse(fuzzer2.is_running())
 
-        # Fresh status can be requested.
-        self.assertTrue(fuzzer1.is_running(refresh=True))
-        self.assertTrue(fuzzer2.is_running(refresh=True))
+        device.add_fake_pid(fuzzer2.package, fuzzer2.executable)
+        self.assertTrue(fuzzer1.is_running())
+        self.assertTrue(fuzzer2.is_running())
+
+        device.clear_fake_pids()
+        self.assertFalse(fuzzer1.is_running())
+        self.assertFalse(fuzzer2.is_running())
 
     def test_require_stopped(self):
         device = FakeDevice()
@@ -294,6 +299,15 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
         self.assertSsh(
             factory.device, 'run', fuzzer.url(), '-artifact_prefix=data/',
             '-some_lf_arg=value', *artifacts)
+
+        # Input provided in args
+        unit = 'crash-deadbeef'
+        factory.host.pathnames.append(unit)
+        args = parser.parse(['fake-package1/fake-target3', unit])
+        fuzzer = factory.create_fuzzer(args)
+        self.assertNotEqual(fuzzer.repro(), 0)
+        rpath = factory.device._rpath(factory.fuzzer.data_path())
+        self.assertScp(factory.device, unit, rpath)
 
 
 if __name__ == '__main__':

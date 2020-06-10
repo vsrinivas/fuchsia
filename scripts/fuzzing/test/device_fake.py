@@ -19,18 +19,20 @@ class FakeDevice(Device):
     def __init__(self, host=None, autoconfigure=True):
         if not host:
             host = FakeHost()
-        self.pid = 10000
+        self._pid = 10000
         super(FakeDevice, self).__init__(host, '::1')
         if autoconfigure:
             self.add_fake_pathnames()
             self.configure()
 
     def add_fake_pathnames(self):
+        """Makes the test claim a pathname exits."""
         host = self.host
         host.pathnames.append(
             host.fxpath(host.build_dir, 'ssh-keys', 'ssh_config'))
 
     def add_ssh_response(self, args, response):
+        """Sets the output from running an SSH command."""
         cmd_str = ' '.join(self._ssh_cmd(args))
         if cmd_str in self.host.responses:
             self.host.responses[cmd_str] += response
@@ -38,18 +40,26 @@ class FakeDevice(Device):
             self.host.responses[cmd_str] = response
 
     def clear_ssh_response(self, args):
+        """Clears the output for running an SSH command."""
         cmd_str = ' '.join(self._ssh_cmd(args))
         del self.host.responses[cmd_str]
 
     def add_fake_pid(self, package, executable):
-        self.pid += 1
+        """Makes 'cs' report the package executable as running."""
+        self._pid += 1
         cmd = self._cs_cmd()
         response = [
             '  {}.cmx[{}]: fuchsia-pkg://fuchsia.com/{}#meta/{}.cmx'.format(
-                executable, self.pid, package, executable)
+                executable, self._pid, package, executable)
         ]
+
+        # Force refresh
+        self._pids = None
         self.add_ssh_response(cmd, response)
-        return self.pid
+
+        return self._pid
 
     def clear_fake_pids(self):
+        """Makes 'cs' report the package executable as stopped."""
+        self._pids = None
         self.clear_ssh_response(self._cs_cmd())

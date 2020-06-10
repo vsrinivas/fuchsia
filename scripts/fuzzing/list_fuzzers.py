@@ -3,12 +3,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import argparse
 import sys
 
+import lib.command as command
 from lib.args import ArgParser
-from lib.fuzzer import Fuzzer
-from lib.host import Host
 from lib.factory import Factory
 
 
@@ -17,16 +15,7 @@ def main():
     parser = ArgParser(
         factory.cli, 'Lists fuzzers matching NAME if provided, or all fuzzers.')
     parser.require_name(False)
-    args = parser.parse()
-
-    cli = factory.cli
-    host = factory.create_host()
-    fuzzers = host.fuzzers(args.name)
-    if len(fuzzers) == 0:
-        cli.error('No matching fuzzers.')
-    cli.echo('Found %d matching fuzzers:' % len(fuzzers))
-    for fuzzer in fuzzers:
-        cli.echo('  %s/%s' % fuzzer)
+    command.list_fuzzers(parser.parse(), factory=factory)
 
 
 if __name__ == '__main__':
