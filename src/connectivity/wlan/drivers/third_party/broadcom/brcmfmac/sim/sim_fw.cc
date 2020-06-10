@@ -1709,13 +1709,15 @@ void SimFirmware::RxMgmtFrame(std::shared_ptr<const simulation::SimManagementFra
 
 void SimFirmware::RxDataFrame(std::shared_ptr<const simulation::SimDataFrame> data_frame,
                               std::shared_ptr<const simulation::WlanRxInfo> info) {
-  auto ifidx = GetIfidxByMac(data_frame->addr1_);
-  if (ifidx == -1) {
-    // Not meant for any of the valid IFs, ignore
-    return;
-  }
+  bool is_broadcast = (data_frame->addr1_ == common::kBcastMac);
 
-  SendFrameToDriver(ifidx, data_frame->payload_.size(), data_frame->payload_, info);
+  for (uint8_t idx = 0; idx < kMaxIfSupported; idx++) {
+    if (!iface_tbl_[idx].allocated)
+      continue;
+    if (!(is_broadcast || (data_frame->addr1_ == iface_tbl_[idx].mac_addr)))
+      continue;
+    SendFrameToDriver(idx, data_frame->payload_.size(), data_frame->payload_, info);
+  }
 }
 
 // Start or restart the beacon watchdog. This is a timeout event mirroring how the firmware can
