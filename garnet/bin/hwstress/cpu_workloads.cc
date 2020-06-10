@@ -195,12 +195,12 @@ void MersenneTwisterWorkload(const StopIndicator& indicator) {
 
 }  // namespace
 
-std::vector<Workload> GetWorkloads() {
-  return std::vector<Workload>{{"fibonacci", FibonacciWorkload},
-                               {"matrix", MatrixMultiplicationWorkload},
-                               {"memset", MemsetWorkload},
-                               {"mersenne", MersenneTwisterWorkload},
-                               {"trigonometry", SinCosWorkload}};
+std::vector<CpuWorkload> GetCpuWorkloads() {
+  return std::vector<CpuWorkload>{{"fibonacci", FibonacciWorkload},
+                                  {"matrix", MatrixMultiplicationWorkload},
+                                  {"memset", MemsetWorkload},
+                                  {"mersenne", MersenneTwisterWorkload},
+                                  {"trigonometry", SinCosWorkload}};
 }
 
 }  // namespace hwstress

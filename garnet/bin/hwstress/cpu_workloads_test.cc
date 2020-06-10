@@ -23,7 +23,7 @@ TEST(CpuWorkloads, Test) {
   //
   // Even though the stop indicator is already set, each workload should
   // unconditionally perform one iteration before returning.
-  for (const auto& workload : GetWorkloads()) {
+  for (const auto& workload : GetCpuWorkloads()) {
     printf("  Testing %s... ", workload.name.c_str());
     fflush(stdout);
     workload.work(indicator);

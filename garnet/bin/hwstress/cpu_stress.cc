@@ -28,7 +28,7 @@ namespace hwstress {
 namespace {
 
 void RunWorkload(StatusLine* status, ProfileManager* profile_manager, TemperatureSensor* sensor,
-                 const Workload& workload, uint32_t num_cpus, zx::duration duration) {
+                 const CpuWorkload& workload, uint32_t num_cpus, zx::duration duration) {
   // Start a workload.
   CpuStressor stressor{num_cpus, workload.work, profile_manager};
   stressor.Start();
@@ -53,7 +53,7 @@ void RunWorkload(StatusLine* status, ProfileManager* profile_manager, Temperatur
 
   // Log final temperature
   status->Set("");
-  status->Log("* Workload %s complete after %0.2fs: final temp: %s\n", workload.name.c_str(),
+  status->Log("* CpuWorkload %s complete after %0.2fs: final temp: %s\n", workload.name.c_str(),
               DurationToSecs(duration), TemperatureToString(temperature).c_str());
 }
 
@@ -83,7 +83,7 @@ bool StressCpu(StatusLine* status, zx::duration duration, TemperatureSensor* tem
   }
 
   // Get workloads.
-  std::vector<Workload> workloads = GetWorkloads();
+  std::vector<CpuWorkload> workloads = GetCpuWorkloads();
 
   // Get initial time per test.
   //
