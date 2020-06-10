@@ -9,23 +9,23 @@ import sys
 from lib.args import ArgParser
 from lib.fuzzer import Fuzzer
 from lib.host import Host
+from lib.cli import CommandLineInterface
 
 
 def main():
+    cli = CommandLineInterface()
     parser = ArgParser(
-        'Lists fuzzers matching NAME if provided, or all fuzzers.')
+        cli, 'Lists fuzzers matching NAME if provided, or all fuzzers.')
     parser.require_name(False)
     args = parser.parse_args()
 
-    host = Host.from_build()
+    host = Host.from_build(cli)
     fuzzers = host.fuzzers(args.name)
     if len(fuzzers) == 0:
-        print('No matching fuzzers.')
-        return 1
-    print('Found %d matching fuzzers:' % len(fuzzers))
+        cli.error('No matching fuzzers.')
+    cli.echo('Found %d matching fuzzers:' % len(fuzzers))
     for fuzzer in fuzzers:
-        print('  %s/%s' % fuzzer)
-    return 0
+        cli.echo('  %s/%s' % fuzzer)
 
 
 if __name__ == '__main__':

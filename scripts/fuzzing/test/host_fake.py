@@ -10,12 +10,15 @@ import subprocess
 import test_env
 from lib.host import Host
 
+from cli_fake import FakeCLI
 from process_fake import FakeProcess
 
 
 class FakeHost(Host):
 
-    def __init__(self, autoconfigure=True):
+    def __init__(self, cli=None, autoconfigure=True):
+        if not cli:
+            cli = FakeCLI()
         ########
         # Variables specific to FakeHost
 
@@ -37,7 +40,7 @@ class FakeHost(Host):
 
         ########
         # Initialize superclass and set defaults
-        super(FakeHost, self).__init__(fuchsia_dir)
+        super(FakeHost, self).__init__(cli, fuchsia_dir)
         self._platform = 'fake'
         self._fuzzers = []
         if autoconfigure:

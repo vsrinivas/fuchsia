@@ -29,12 +29,13 @@ class Host(object):
     DEVNULL = open(os.devnull, 'w')
 
     @classmethod
-    def from_build(cls):
+    def from_build(cls, cli):
         """Uses a local build directory to configure a Host object from it."""
         fuchsia_dir = os.getenv('FUCHSIA_DIR')
         if not _fuchsia_dir:
-            raise RuntimeError('FUCHSIA_DIR not set: have you `fx set`?')
-        host = cls(fuchsia_dir)
+            cli.error(
+                'FUCHSIA_DIR not set.', 'Have you sourced "scripts/fx-env.sh"?')
+        host = cls(cli, fuchsia_dir)
         try:
             with open(host.fxpath('.fx-build-dir')) as opened:
                 build_dir = opened.read().strip()
@@ -42,21 +43,26 @@ class Host(object):
                 host.configure(build_dir, opened)
         except IOError as e:
             if e.errno == errno.ENOENT:
-                raise RuntimeError(
+                cli.error(
                     'Initialization failure; have you run ' +
                     '`fx set ... --fuzz-with <sanitizer>`?')
             else:
                 raise
         return host
 
-    def __init__(self, fuchsia_dir):
+    def __init__(self, cli, fuchsia_dir):
         self._platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
+        self._cli = cli
         self._fuchsia_dir = fuchsia_dir
         self._build_dir = None
         self._symbolizer_exec = None
         self._llvm_symbolizer = None
         self._build_id_dirs = None
         self._fuzzers = []
+
+    @property
+    def cli(self):
+        return self._cli
 
     @property
     def fuchsia_dir(self):

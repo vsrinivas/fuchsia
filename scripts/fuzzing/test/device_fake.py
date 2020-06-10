@@ -10,14 +10,17 @@ import test_env
 from lib.device import Device
 from lib.process import Process
 
+from cli_fake import FakeCLI
 from host_fake import FakeHost
 
 
 class FakeDevice(Device):
 
-    def __init__(self, autoconfigure=True):
+    def __init__(self, cli=None, autoconfigure=True):
+        if not cli:
+            cli = FakeCLI()
         self.pid = 10000
-        super(FakeDevice, self).__init__(FakeHost(), '::1')
+        super(FakeDevice, self).__init__(FakeHost(cli), '::1')
         if autoconfigure:
             self.add_fake_pathnames()
             self.configure()

@@ -12,14 +12,17 @@ from lib.args import ArgParser
 from lib.device import Device
 from lib.fuzzer import Fuzzer
 from lib.host import Host
+from lib.cli import CommandLineInterface
 
 
 def main():
+    cli = CommandLineInterface()
     parser = ArgParser(
+        cli,
         'Starts the named fuzzer.  Additional arguments are passed through.')
     args, libfuzzer_opts, libfuzzer_args, subprocess_args = parser.parse()
 
-    host = Host.from_build()
+    host = Host.from_build(cli)
     device = Device.from_host(host)
     fuzzer = Fuzzer.from_args(device, args)
     fuzzer.libfuzzer_opts = libfuzzer_opts
@@ -27,20 +30,20 @@ def main():
     fuzzer.subprocess_args = subprocess_args
 
     if not args.monitor:
-        print(
+        cli.echo(
             '\n****************************************************************'
         )
-        print(' Starting ' + str(fuzzer) + '.')
-        print(' Outputs will be written to:')
-        print('   ' + fuzzer.output)
+        cli.echo(' Starting {}.'.format(fuzzer))
+        cli.echo(' Outputs will be written to:')
+        cli.echo('   ' + fuzzer.output)
         if not args.foreground:
-            print(' You should be notified when the fuzzer stops.')
-            print(
-                ' To check its progress, use `fx fuzz check ' + str(fuzzer) +
-                '`.')
-            print(
-                ' To stop it manually, use `fx fuzz stop ' + str(fuzzer) + '`.')
-        print(
+            cli.echo(' You should be notified when the fuzzer stops.')
+            cli.echo(
+                ' To check its progress, use "fx fuzz check {}".'.format(
+                    fuzzer))
+            cli.echo(
+                ' To stop it manually, use "fx fuzz stop {}".'.format(fuzzer))
+        cli.echo(
             '****************************************************************\n'
         )
         fuzzer.start()
@@ -48,11 +51,8 @@ def main():
             subprocess.Popen(['python', sys.argv[0], '--monitor', str(fuzzer)])
     else:
         fuzzer.monitor()
-        title = str(fuzzer) + ' has stopped.'
-        body = 'Output written to ' + fuzzer.output + '.'
-        print(title)
-        print(body)
-    return 0
+        cli.echo(str(fuzzer) + ' has stopped.')
+        cli.echo('Output written to  {}.'.format(fuzzer.output))
 
 
 if __name__ == '__main__':

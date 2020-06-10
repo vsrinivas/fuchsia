@@ -10,17 +10,19 @@ from lib.args import ArgParser
 from lib.device import Device
 from lib.fuzzer import Fuzzer
 from lib.host import Host
+from lib.cli import CommandLineInterface
 
 
 def main():
+    cli = CommandLineInterface()
     parser = ArgParser(
-        'Reports status for the fuzzer matching NAME if ' +
+        cli, 'Reports status for the fuzzer matching NAME if ' +
         'provided, or for all running fuzzers.  Status includes execution ' +
         'state, corpus size, and number of artifacts.')
     parser.require_name(False)
     args = parser.parse_args()
 
-    host = Host.from_build()
+    host = Host.from_build(cli)
     device = Device.from_host(host)
     fuzzers = host.fuzzers(args.name)
 
@@ -31,25 +33,23 @@ def main():
             continue
         silent = False
         if fuzzer.is_running():
-            print(str(fuzzer) + ': RUNNING')
+            cli.echo(str(fuzzer) + ': RUNNING')
         else:
-            print(str(fuzzer) + ': STOPPED')
-        print('    Output path:  ' + fuzzer.data_path())
-        print(
+            cli.echo(str(fuzzer) + ': STOPPED')
+        cli.echo('    Output path:  ' + fuzzer.data_path())
+        cli.echo(
             '    Corpus size:  %d inputs / %d bytes' % fuzzer.measure_corpus())
         artifacts = fuzzer.list_artifacts()
         if len(artifacts) == 0:
-            print('    Artifacts:    None')
+            cli.echo('    Artifacts:    None')
         else:
-            print('    Artifacts:    ' + artifacts[0])
+            cli.echo('    Artifacts:    ' + artifacts[0])
             for artifact in artifacts[1:]:
-                print('                  ' + artifact)
+                cli.echo('                  ' + artifact)
     if silent:
-        print(
+        cli.echo(
             'No fuzzers are running.  Include \'name\' to check specific ' +
             'fuzzers.')
-        return 1
-    return 0
 
 
 if __name__ == '__main__':

@@ -14,6 +14,7 @@ from StringIO import StringIO
 import test_env
 from lib.host import Host
 
+from cli_fake import FakeCLI
 from host_fake import FakeHost
 
 
@@ -102,7 +103,7 @@ class TestHost(unittest.TestCase):
 
     def test_isdir(self):
         base_dir = tempfile.mkdtemp()
-        host = Host(base_dir)
+        host = Host(FakeCLI(), base_dir)
         try:
             pathname = os.path.join(base_dir, 'test_isdir')
             self.assertFalse(host.isdir(pathname))
@@ -113,7 +114,7 @@ class TestHost(unittest.TestCase):
 
     def test_isfile(self):
         base_dir = tempfile.mkdtemp()
-        host = Host(base_dir)
+        host = Host(FakeCLI(), base_dir)
         try:
             pathname = os.path.join(base_dir, 'test_isfile')
             self.assertFalse(host.isfile(pathname))
@@ -124,7 +125,7 @@ class TestHost(unittest.TestCase):
 
     def test_mkdir(self):
         base_dir = tempfile.mkdtemp()
-        host = Host(base_dir)
+        host = Host(FakeCLI(), base_dir)
         try:
             pathname = os.path.join(base_dir, 'test', 'mkdir')
             self.assertFalse(os.path.isdir(pathname))
@@ -135,7 +136,7 @@ class TestHost(unittest.TestCase):
 
     def test_rmdir(self):
         base_dir = tempfile.mkdtemp()
-        host = Host(base_dir)
+        host = Host(FakeCLI(), base_dir)
         try:
             pathname = os.path.join(base_dir, 'test_rmdir')
             os.makedirs(pathname)
@@ -147,7 +148,7 @@ class TestHost(unittest.TestCase):
 
     def test_link(self):
         base_dir = tempfile.mkdtemp()
-        host = Host(base_dir)
+        host = Host(FakeCLI(), base_dir)
         try:
             pathname = os.path.join(base_dir, 'test_link')
             foo = os.path.join(base_dir, 'foo')
@@ -166,7 +167,7 @@ class TestHost(unittest.TestCase):
 
     def test_glob(self):
         base_dir = tempfile.mkdtemp()
-        host = Host(base_dir)
+        host = Host(FakeCLI(), base_dir)
         try:
             foo = os.path.join(base_dir, 'foo')
             bar = os.path.join(base_dir, 'bar')
@@ -184,7 +185,7 @@ class TestHost(unittest.TestCase):
     # process.
 
     def test_create_process(self):
-        host = Host(tempfile.gettempdir())
+        host = Host(FakeCLI(), tempfile.gettempdir())
         p = host.create_process(['true'])
         p.check_call()
 

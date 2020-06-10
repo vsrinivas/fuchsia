@@ -47,14 +47,16 @@ class Fuzzer(object):
     def from_args(cls, device, args):
         """Constructs a Fuzzer from command line arguments, showing a
         disambiguation menu if specified name matches more than one fuzzer."""
+        cli = device.host.cli
         matches = device.host.fuzzers(args.name)
         if not matches:
             sys.exit('No matching fuzzers found. Try `fx fuzz list`.')
 
         if len(matches) > 1:
-            print('More than one match found, please pick one from the list:')
+            cli.echo(
+                'More than one match found, please pick one from the list:')
             choices = ['/'.join(m) for m in matches]
-            fuzzer_name = show_menu(choices).split('/')
+            fuzzer_name = cli.choose(choices).split('/')
         else:
             fuzzer_name = matches[0]
 

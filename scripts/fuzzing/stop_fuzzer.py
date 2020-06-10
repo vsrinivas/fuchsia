@@ -10,22 +10,23 @@ from lib.args import ArgParser
 from lib.device import Device
 from lib.fuzzer import Fuzzer
 from lib.host import Host
+from lib.cli import CommandLineInterface
 
 
 def main():
-    parser = ArgParser('Stops the named fuzzer.')
+    cli = CommandLineInterface()
+    parser = ArgParser(cli, 'Stops the named fuzzer.')
     args = parser.parse_args()
 
-    host = Host.from_build()
+    host = Host.from_build(cli)
     device = Device.from_host(host)
     fuzzer = Fuzzer.from_args(device, args)
 
     if fuzzer.is_running():
-        print('Stopping ' + str(fuzzer) + '.')
+        cli.echo('Stopping ' + str(fuzzer) + '.')
         fuzzer.stop()
     else:
-        print(str(fuzzer) + ' is already stopped.')
-    return 0
+        cli.echo(str(fuzzer) + ' is already stopped.')
 
 
 if __name__ == '__main__':
