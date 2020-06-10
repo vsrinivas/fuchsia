@@ -39,6 +39,9 @@ class CpuWatcher {
             "process_time_ns", kProcessTimeFloor, kProcessTimeStep, kProcessTimeMultiplier,
             kProcessTimeBuckets)),
         root_(std::move(job), max_samples),
+        total_node_(top_node_.CreateChild("@total")),
+        recent_cpu_usage_(
+            top_node_.CreateLazyNode("recent_usage", [this] { return PopulateRecentUsage(); })),
         max_samples_(max_samples) {}
 
   // Add a task to this watcher by instance path.
@@ -59,6 +62,7 @@ class CpuWatcher {
   static constexpr size_t kDefaultMaxSamples = 60;
 
   fit::promise<inspect::Inspector> PopulateInspector() const;
+  fit::promise<inspect::Inspector> PopulateRecentUsage() const;
 
   // An individual measurement.
   struct Measurement {
@@ -100,7 +104,9 @@ class CpuWatcher {
     const std::map<std::string, std::unique_ptr<Task>>& children() const { return children_; }
     const std::deque<Measurement>& measurements() const { return measurements_; }
 
-    void Measure(const zx::time& timestamp);
+    // Takes and records a new measurement for this task. A copy of the measurement is returned if
+    // one was taken.
+    fit::optional<Measurement> Measure(const zx::time& timestamp);
 
    private:
     // The job to sample.
@@ -124,6 +130,17 @@ class CpuWatcher {
 
   size_t task_count_ __TA_GUARDED(mutex_) = 1;  // 1 for root_
   Task root_ __TA_GUARDED(mutex_);
+
+  // Total CPU and queue time of exited tasks. Used to ensure those values are not lost when
+  // calculating overall CPU usage on the system.
+  zx_duration_t exited_cpu_ __TA_GUARDED(mutex_) = 0;
+  zx_duration_t exited_queue_ __TA_GUARDED(mutex_) = 0;
+  inspect::Node total_node_;
+  size_t next_total_measurement_id_ __TA_GUARDED(mutex_) = 0;
+  std::deque<inspect::ValueList> total_measurements_ __TA_GUARDED(mutex_);
+
+  inspect::LazyNode recent_cpu_usage_;
+  Measurement most_recent_total_ = {}, second_most_recent_total_ = {};
 
   const size_t max_samples_;
 

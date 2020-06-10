@@ -15,6 +15,18 @@
 
 namespace component {
 
+namespace {
+constexpr char kTimestamp[] = "timestamp";
+constexpr char kCpuTime[] = "cpu_time";
+constexpr char kQueueTime[] = "queue_time";
+constexpr char kPreviousCpuTime[] = "previous_cpu_time";
+constexpr char kPreviousQueueTime[] = "previous_queue_time";
+constexpr char kPreviousTimestamp[] = "previous_timestamp";
+constexpr char kRecentCpuTime[] = "recent_cpu_time";
+constexpr char kRecentQueueTime[] = "recent_queue_time";
+constexpr char kRecentTimestamp[] = "recent_timestamp";
+}  // namespace
+
 void CpuWatcher::AddTask(const InstancePath& instance_path, zx::job job) {
   TRACE_DURATION("appmgr", "CpuWatcher::AddTask", "name",
                  instance_path.empty() ? "" : instance_path.back());
@@ -55,6 +67,12 @@ void CpuWatcher::RemoveTask(const InstancePath& instance_path) {
 
   // Measure before resetting the job, so we get final runtime stats.
   cur_task->Measure(zx::clock::get_monotonic());
+  const auto& measurements = cur_task->measurements();
+  auto it = measurements.rbegin();
+  if (it != measurements.rend()) {
+    exited_cpu_ += it->cpu_time;
+    exited_queue_ += it->queue_time;
+  }
   cur_task->job().reset();
 }
 
@@ -63,6 +81,8 @@ void CpuWatcher::Measure() {
   {
     TRACE_DURATION("appmgr", "CpuWatcher::Measure", "num_tasks", task_count_);
     std::lock_guard<std::mutex> lock(mutex_);
+    Measurement overall{
+        .timestamp = start.get(), .cpu_time = exited_cpu_, .queue_time = exited_queue_};
     std::vector<Task*> to_measure;
     to_measure.push_back(&root_);
     to_measure.reserve(task_count_);
@@ -79,7 +99,11 @@ void CpuWatcher::Measure() {
     for (auto cur_iter = to_measure.rbegin(); cur_iter != to_measure.rend(); ++cur_iter) {
       auto* cur = *cur_iter;
 
-      cur->Measure(stamp);
+      auto measurement = cur->Measure(stamp);
+      if (measurement.has_value()) {
+        overall.cpu_time += measurement.value().cpu_time;
+        overall.queue_time += measurement.value().queue_time;
+      }
 
       for (auto it = cur->children().begin(); it != cur->children().end();) {
         if (!it->second->is_alive()) {
@@ -91,11 +115,26 @@ void CpuWatcher::Measure() {
         }
       }
     }
+
+    inspect::ValueList value_list;
+    inspect::Node total_measurement =
+        total_node_.CreateChild(std::to_string(next_total_measurement_id_++));
+    total_measurement.CreateInt(kTimestamp, overall.timestamp, &value_list);
+    total_measurement.CreateInt(kCpuTime, overall.cpu_time, &value_list);
+    total_measurement.CreateInt(kQueueTime, overall.queue_time, &value_list);
+    value_list.emplace(std::move(total_measurement));
+    total_measurements_.emplace_back(std::move(value_list));
+    while (total_measurements_.size() > max_samples_) {
+      total_measurements_.pop_front();
+    }
+
+    second_most_recent_total_ = most_recent_total_;
+    most_recent_total_ = overall;
   }
   process_times_.Insert((zx::clock::get_monotonic() - start).get());
 }
 
-void CpuWatcher::Task::Measure(const zx::time& timestamp) {
+fit::optional<CpuWatcher::Measurement> CpuWatcher::Task::Measure(const zx::time& timestamp) {
   if (job().is_valid()) {
     TRACE_DURATION("appmgr", "CpuWatcher::Task::Measure");
     zx_info_task_runtime_t info;
@@ -103,9 +142,12 @@ void CpuWatcher::Task::Measure(const zx::time& timestamp) {
       TRACE_DURATION("appmgr", "CpuWatcher::Task::Measure::AddMeasurement");
       add_measurement(timestamp.get(), info.cpu_time, info.queue_time);
     }
+    return fit::make_optional(Measurement{
+        .timestamp = timestamp.get(), .cpu_time = info.cpu_time, .queue_time = info.queue_time});
   } else {
     TRACE_DURATION("appmgr", "CpuWatcher::Task::Measure:Rotate");
     rotate();
+    return fit::nullopt;
   }
 }
 
@@ -135,9 +177,9 @@ fit::promise<inspect::Inspector> CpuWatcher::PopulateInspector() const {
       size_t next_id = 0;
       for (const auto& measurement : entry.task->measurements()) {
         auto sample = samples.CreateChild(std::to_string(next_id++));
-        sample.CreateInt("timestamp", measurement.timestamp, &inspector);
-        sample.CreateInt("cpu_time", measurement.cpu_time, &inspector);
-        sample.CreateInt("queue_time", measurement.queue_time, &inspector);
+        sample.CreateInt(kTimestamp, measurement.timestamp, &inspector);
+        sample.CreateInt(kCpuTime, measurement.cpu_time, &inspector);
+        sample.CreateInt(kQueueTime, measurement.queue_time, &inspector);
         inspector.emplace(std::move(sample));
       }
       inspector.emplace(std::move(samples));
@@ -165,7 +207,26 @@ fit::promise<inspect::Inspector> CpuWatcher::PopulateInspector() const {
   inspector.emplace(std::move(max_size));
   inspector.emplace(std::move(dynamic_links));
 
-  return fit::make_result_promise<inspect::Inspector>(fit::ok(inspector));
+  return fit::make_ok_promise(std::move(inspector));
+}
+
+fit::promise<inspect::Inspector> CpuWatcher::PopulateRecentUsage() const {
+  TRACE_DURATION("appmgr", "CpuWatcher::PopulateRecentUsage");
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  inspect::Inspector inspector(inspect::InspectSettings{.maximum_size = 4096});
+
+  inspector.GetRoot().CreateInt(kPreviousCpuTime, second_most_recent_total_.cpu_time, &inspector);
+  inspector.GetRoot().CreateInt(kPreviousQueueTime, second_most_recent_total_.queue_time,
+                                &inspector);
+  inspector.GetRoot().CreateInt(kPreviousTimestamp, second_most_recent_total_.timestamp,
+                                &inspector);
+
+  inspector.GetRoot().CreateInt(kRecentCpuTime, most_recent_total_.cpu_time, &inspector);
+  inspector.GetRoot().CreateInt(kRecentQueueTime, most_recent_total_.queue_time, &inspector);
+  inspector.GetRoot().CreateInt(kRecentTimestamp, most_recent_total_.timestamp, &inspector);
+
+  return fit::make_ok_promise(std::move(inspector));
 }
 
 }  // namespace component

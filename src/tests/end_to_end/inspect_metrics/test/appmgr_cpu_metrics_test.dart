@@ -9,6 +9,9 @@ import 'util.dart';
 const String archivistPath =
     'core/appmgr:root/cpu_stats/measurements/root/app/sys/archivist.cmx';
 
+const String appmgrPath =
+    'core/appmgr:root/cpu_stats/measurements/root/appmgr.cm';
+
 void main() {
   sl4f.Sl4f sl4fDriver;
   sl4f.Inspect inspect;
@@ -47,6 +50,17 @@ void main() {
         multiValue(greaterThan(0), length: greaterThan(0)));
   });
 
+  test('appmgr exposes cpu metrics for itself', () async {
+    expect(await getInspectValues(inspect, '$appmgrPath/*/@samples/*:cpu_time'),
+        multiValue(greaterThan(0), length: greaterThan(0)));
+    expect(
+        await getInspectValues(inspect, '$appmgrPath/*/@samples/*:queue_time'),
+        multiValue(greaterThan(0), length: greaterThan(0)));
+    expect(
+        await getInspectValues(inspect, '$appmgrPath/*/@samples/*:timestamp'),
+        multiValue(greaterThan(0), length: greaterThan(0)));
+  });
+
   test('appmgr exposes stats on measurement time', () async {
     expect(
         await getInspectValues(
@@ -61,6 +75,17 @@ void main() {
         singleValue(greaterThan(0)));
   });
 
+  test('appmgr is not out of inspect space', () async {
+    var size = await getInspectValues(
+        inspect, 'core/appmgr:root/inspect_stats:current_size');
+    var maxSize = await getInspectValues(
+        inspect, 'core/appmgr:root/inspect_stats:maximum_size');
+
+    expect(size, singleValue(greaterThan(0)));
+    expect(maxSize, singleValue(greaterThan(0)));
+    expect(maxSize, singleValue(greaterThan(size[0])));
+  });
+
   test('appmgr is not out of inspect space for measurements', () async {
     var size = await getInspectValues(inspect,
         'core/appmgr:root/cpu_stats/measurements/@inspect:current_size');
@@ -70,5 +95,11 @@ void main() {
     expect(size, singleValue(greaterThan(0)));
     expect(maxSize, singleValue(greaterThan(0)));
     expect(maxSize, singleValue(greaterThan(size[0])));
+  });
+
+  test('appmgr exposes overall recent cpu usage', () async {
+    var allParams = await getInspectValues(
+        inspect, 'core/appmgr:root/cpu_stats/recent_usage:*');
+    expect(allParams, multiValue(isNonNegative, length: equals(6)));
   });
 }

@@ -40,6 +40,10 @@ class Appmgr {
   ~Appmgr();
 
  private:
+  // Initialize recording of appmgr's own CPU usage in the CpuWatcher.
+  void RecordSelfCpuStats();
+
+  // Take a CPU measurement.
   void MeasureCpu(async_dispatcher_t* dispatcher);
 
   inspect::Inspector inspector_;

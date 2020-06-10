@@ -4,8 +4,8 @@
 
 #include "src/sys/appmgr/cpu_watcher.h"
 
-#include <lib/async-loop/default.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
@@ -39,6 +39,15 @@ TEST(CpuWatcher, EmptyTasks) {
   ASSERT_NE(nullptr, node);
   EXPECT_TRUE(node->children().empty());
   EXPECT_TRUE(node->node().properties().empty());
+}
+
+int64_t PropertyIntValueOr(const inspect::Hierarchy* hierarchy, const std::string& name,
+                           int64_t default_value) {
+  const auto* prop = hierarchy->node().get_property<inspect::IntPropertyValue>(name);
+  if (!prop) {
+    return default_value;
+  }
+  return prop->value();
 }
 
 TEST(CpuWatcher, BadTask) {
@@ -174,6 +183,8 @@ TEST(CpuWatcher, SampleMultiple) {
   watcher.AddTask({"separate", "nested"}, std::move(self));
   watcher.Measure();
   watcher.Measure();
+  // Ensure total CPU rotates
+  watcher.Measure();
 
   // Expected hierarchy:
   // root:
@@ -206,6 +217,86 @@ TEST(CpuWatcher, SampleMultiple) {
   EXPECT_EQ(3, GetValidSampleCount(test_valid_nested));
   EXPECT_EQ(0, GetValidSampleCount(separate));
   EXPECT_EQ(3, GetValidSampleCount(separate_nested));
+
+  // Check that total CPU contains the right number of measurements.
+  auto* total = hierarchy.GetByPath({"test", "@total"});
+  ASSERT_NE(nullptr, total);
+  EXPECT_EQ(3u, total->children().size());
+}
+
+TEST(CpuWatcher, RecentCpu) {
+  zx::job self;
+  ASSERT_EQ(ZX_OK, zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &self));
+  inspect::Inspector inspector;
+  CpuWatcher watcher(inspector.GetRoot().CreateChild("test"), std::move(self));
+
+  auto hierarchy = GetHierarchy(inspector);
+  const auto* node = hierarchy.GetByPath({"test", "recent_usage"});
+  ASSERT_NE(nullptr, node);
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "recent_timestamp", -1));
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "recent_cpu_time", -1));
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "recent_queue_time", -1));
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "previous_timestamp", -1));
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "previous_cpu_time", -1));
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "previous_queue_time", -1));
+
+  watcher.Measure();
+
+  hierarchy = GetHierarchy(inspector);
+  node = hierarchy.GetByPath({"test", "recent_usage"});
+  ASSERT_NE(nullptr, node);
+  EXPECT_LT(0u, PropertyIntValueOr(node, "recent_timestamp", -1));
+  EXPECT_LT(0u, PropertyIntValueOr(node, "recent_cpu_time", -1));
+  EXPECT_LT(0u, PropertyIntValueOr(node, "recent_queue_time", -1));
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "previous_timestamp", -1));
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "previous_cpu_time", -1));
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "previous_queue_time", -1));
+
+  watcher.Measure();
+
+  hierarchy = GetHierarchy(inspector);
+  node = hierarchy.GetByPath({"test", "recent_usage"});
+  ASSERT_NE(nullptr, node);
+  EXPECT_LT(0u, PropertyIntValueOr(node, "recent_timestamp", -1));
+  EXPECT_LT(0u, PropertyIntValueOr(node, "recent_cpu_time", -1));
+  EXPECT_LT(0u, PropertyIntValueOr(node, "recent_queue_time", -1));
+  EXPECT_LT(0u, PropertyIntValueOr(node, "previous_timestamp", -1));
+  EXPECT_LT(0u, PropertyIntValueOr(node, "previous_cpu_time", -1));
+  EXPECT_LT(0u, PropertyIntValueOr(node, "previous_queue_time", -1));
+}
+
+TEST(CpuWatcher, TotalCpuIncludesEndedJobs) {
+  zx::job self;
+  ASSERT_EQ(ZX_OK, zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &self));
+  inspect::Inspector inspector;
+  CpuWatcher watcher(inspector.GetRoot().CreateChild("test"), zx::job());
+  watcher.Measure();
+
+  // This sample calculates 0 as the queue and CPU totals since there are no jobs.
+  auto hierarchy = GetHierarchy(inspector);
+  const auto* node = hierarchy.GetByPath({"test", "recent_usage"});
+  ASSERT_NE(nullptr, node);
+  EXPECT_LT(0u, PropertyIntValueOr(node, "recent_timestamp", -1));
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "recent_cpu_time", -1));
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "recent_queue_time", -1));
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "previous_timestamp", -1));
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "previous_cpu_time", -1));
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "previous_queue_time", -1));
+
+  watcher.AddTask({"testing"}, std::move(self));
+  watcher.RemoveTask({"testing"});
+  watcher.Measure();
+
+  // This sample collects the runtime from the exited job.
+  hierarchy = GetHierarchy(inspector);
+  node = hierarchy.GetByPath({"test", "recent_usage"});
+  ASSERT_NE(nullptr, node);
+  EXPECT_LT(0u, PropertyIntValueOr(node, "recent_timestamp", -1));
+  EXPECT_LT(0u, PropertyIntValueOr(node, "recent_cpu_time", -1));
+  EXPECT_LT(0u, PropertyIntValueOr(node, "recent_queue_time", -1));
+  EXPECT_LT(0u, PropertyIntValueOr(node, "previous_timestamp", -1));
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "previous_cpu_time", -1));
+  EXPECT_EQ(0u, PropertyIntValueOr(node, "previous_queue_time", -1));
 }
 
 }  // namespace
