@@ -90,6 +90,14 @@ std::string GetReason(const LastReboot& last_reboot) {
         return "hardware watchdog timeout";
       case RebootReason::SOFTWARE_WATCHDOG_TIMEOUT:
         return "software watchdog timeout";
+      case RebootReason::USER_REQUEST:
+        return "user request";
+      case RebootReason::SYSTEM_UPDATE:
+        return "system update";
+      case RebootReason::HIGH_TEMPERATURE:
+        return "device too hot";
+      case RebootReason::SESSION_FAILURE:
+        return "fatal session failure";
       default:
         if (!last_reboot.has_graceful()) {
           return "unknown";
