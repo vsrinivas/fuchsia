@@ -419,7 +419,8 @@ VK_TEST_F(VulkanRendererTest, AsyncEventSignalTest) {
 // ----------------
 // ----------------
 // ----------------
-VK_TEST_F(VulkanRendererTest, RenderTest) {
+// TODO(53715): Disabled due to flakiness.
+VK_TEST_F(VulkanRendererTest, DISABLED_RenderTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher =
       std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
@@ -556,7 +557,8 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
 // ----------------
 // TODO(52632): Transparency is currently hardcoded in the renderer to be on. This test will
 // break if that is changed to be hardcoded to false before we expose it in the API.
-VK_TEST_F(VulkanRendererTest, TransparencyTest) {
+// TODO(53715): Disabled due to flakiness.
+VK_TEST_F(VulkanRendererTest, DISABLED_TransparencyTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
   auto unique_escher =
       std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
