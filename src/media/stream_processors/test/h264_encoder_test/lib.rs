@@ -41,7 +41,7 @@ fn h264_stream_output_generated() -> Result<()> {
             display_width: WIDTH,
             display_height: HEIGHT,
             layers: 0,
-            color_space: sysmem::ColorSpace { type_: sysmem::ColorSpaceType::Rec709 },
+            color_space: sysmem::ColorSpace { type_: sysmem::ColorSpaceType::Rec601Pal },
             has_pixel_aspect_ratio: false,
             pixel_aspect_ratio_width: 0,
             pixel_aspect_ratio_height: 0,

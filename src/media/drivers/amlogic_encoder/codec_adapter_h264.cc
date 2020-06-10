@@ -11,11 +11,9 @@
 #include "src/media/drivers/amlogic_encoder/device_ctx.h"
 #include "src/media/drivers/amlogic_encoder/macros.h"
 
-// TODO(afoxley) adjust to higher value when we get real data flowing
-constexpr uint32_t kOutputBufferMinSizeBytes = 4 * 4096;
-constexpr uint32_t kOutputBufferMaxSizeBytes = 4 * 4096;
+constexpr uint32_t kOutputBufferMinSizeBytes = 500 * 1024;
+constexpr uint32_t kOutputBufferMaxSizeBytes = 0; // unbounded
 constexpr uint32_t kOutputMinBufferCountForCamping = 2;
-// constexpr uint32_t kOutputMinBufferCountForDedicatedSlack = 1;
 constexpr uint32_t kOutputMaxBufferCount = 0;  // unbounded
 constexpr uint32_t kInputMinBufferCountForCamping = 2;
 constexpr uint32_t kInputMaxBufferCount = 0;  // unbounded
@@ -364,12 +362,12 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
     image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
     image_constraints.pixel_format.has_format_modifier = true;
     image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
-    // TODO(MTWN-251): confirm that REC709 is always what we want here, or plumb
-    // actual YUV color space if it can ever be REC601_*.  Since 2020 and 2100
-    // are minimum 10 bits per Y sample and we're outputting NV12, 601 is the
-    // only other potential possibility here.
-    image_constraints.color_spaces_count = 1;
+
+    image_constraints.color_spaces_count = 3;
     image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC709;
+    // Some sources (camera) currently claim to produce color_space REC601_* so also allow that.
+    image_constraints.color_space[1].type = fuchsia::sysmem::ColorSpaceType::REC601_NTSC;
+    image_constraints.color_space[2].type = fuchsia::sysmem::ColorSpaceType::REC601_PAL;
 
     // The non-"required_" fields indicate the decoder's ability to potentially
     // output frames at various dimensions as coded in the stream.  Aside from

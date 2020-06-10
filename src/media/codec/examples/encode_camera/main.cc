@@ -57,7 +57,7 @@ static void Usage(const fxl::CommandLine& command_line) {
   printf("\n    By default will select encoded bitrate of %s\n", kDefaultEncoderBitrate);
   printf("  --%s=<bitrate>\tTarget encoded bitrate\n", kEncoderBitrateOption);
   printf("\n    By default will select encoded GOP size of %s\n", kDefaultEncoderGop);
-  printf("  --%s=<gop>\tThe number of frames between key frames\n", kEncoderBitrateOption);
+  printf("  --%s=<gop>\tThe number of frames between key frames\n", kEncoderGopSizeOption);
 }
 
 int main(int argc, char* argv[]) {
