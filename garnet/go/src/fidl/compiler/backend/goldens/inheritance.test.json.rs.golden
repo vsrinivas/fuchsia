@@ -85,6 +85,10 @@ impl Super_Proxy {
     }
 
     /// Get a Stream of events from the remote end of the Super_ protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
     pub fn take_event_stream(&self) -> Super_EventStream {
         Super_EventStream { event_receiver: self.client.take_event_receiver() }
     }
@@ -531,6 +535,10 @@ impl SubProxy {
     }
 
     /// Get a Stream of events from the remote end of the Sub protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
     pub fn take_event_stream(&self) -> SubEventStream {
         SubEventStream { event_receiver: self.client.take_event_receiver() }
     }

@@ -86,6 +86,10 @@ impl TopProxy {
     }
 
     /// Get a Stream of events from the remote end of the Top protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
     pub fn take_event_stream(&self) -> TopEventStream {
         TopEventStream { event_receiver: self.client.take_event_receiver() }
     }

@@ -256,6 +256,10 @@ impl SomeProtocolProxy {
     }
 
     /// Get a Stream of events from the remote end of the SomeProtocol protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
     pub fn take_event_stream(&self) -> SomeProtocolEventStream {
         SomeProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }

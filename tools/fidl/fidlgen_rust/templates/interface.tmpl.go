@@ -160,6 +160,10 @@ impl {{ $protocol.Name }}Proxy {
 	}
 
 	/// Get a Stream of events from the remote end of the {{ $protocol.Name }} protocol
+	///
+	/// # Panics
+	///
+	/// Panics if the event stream was already taken.
 	pub fn take_event_stream(&self) -> {{ $protocol.Name }}EventStream {
 		{{ $protocol.Name }}EventStream {
 			event_receiver: self.client.take_event_receiver(),

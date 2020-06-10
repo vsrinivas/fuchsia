@@ -170,6 +170,10 @@ impl WithAndWithoutRequestResponseProxy {
     }
 
     /// Get a Stream of events from the remote end of the WithAndWithoutRequestResponse protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
     pub fn take_event_stream(&self) -> WithAndWithoutRequestResponseEventStream {
         WithAndWithoutRequestResponseEventStream {
             event_receiver: self.client.take_event_receiver(),
@@ -1335,6 +1339,10 @@ impl WithErrorSyntaxProxy {
     }
 
     /// Get a Stream of events from the remote end of the WithErrorSyntax protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
     pub fn take_event_stream(&self) -> WithErrorSyntaxEventStream {
         WithErrorSyntaxEventStream { event_receiver: self.client.take_event_receiver() }
     }
@@ -2151,6 +2159,10 @@ impl ChannelProtocolProxy {
     }
 
     /// Get a Stream of events from the remote end of the ChannelProtocol protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
     pub fn take_event_stream(&self) -> ChannelProtocolEventStream {
         ChannelProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }
@@ -2890,6 +2902,10 @@ impl TransitionalProxy {
     }
 
     /// Get a Stream of events from the remote end of the Transitional protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
     pub fn take_event_stream(&self) -> TransitionalEventStream {
         TransitionalEventStream { event_receiver: self.client.take_event_receiver() }
     }

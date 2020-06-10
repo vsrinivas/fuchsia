@@ -84,6 +84,10 @@ impl FirstProtocolProxy {
     }
 
     /// Get a Stream of events from the remote end of the FirstProtocol protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
     pub fn take_event_stream(&self) -> FirstProtocolEventStream {
         FirstProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }
@@ -424,6 +428,10 @@ impl SecondProtocolProxy {
     }
 
     /// Get a Stream of events from the remote end of the SecondProtocol protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
     pub fn take_event_stream(&self) -> SecondProtocolEventStream {
         SecondProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }

@@ -168,6 +168,10 @@ impl InterfaceProxy {
     }
 
     /// Get a Stream of events from the remote end of the Interface protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
     pub fn take_event_stream(&self) -> InterfaceEventStream {
         InterfaceEventStream { event_receiver: self.client.take_event_receiver() }
     }
