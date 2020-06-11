@@ -774,6 +774,13 @@ This is just added to [`known_variants`](#known_variants).
 
 From //build/config/BUILDCONFIG.gn:671
 
+### factory_mode
+factory_mode: enables/disables factory mode
+
+**Current value (from the default):** `false`
+
+From //build/images/factory.gni:9
+
 ### fastboot_product
 
 **Current value (from the default):** `""`
@@ -801,7 +808,7 @@ TODO(45680): remove this hack.
 
 **Current value (from the default):** `false`
 
-From //build/unification/images/common_image_contents.gni:14
+From //build/unification/images/common_image_contents.gni:16
 
 ### firmware_prebuilts
 List of prebuilt firmware blobs to include in update packages.
@@ -1613,7 +1620,7 @@ From //products/core.gni:9
 
 **Overridden from the default:** `false`
 
-From //build/unification/images/common_image_contents.gni:20
+From //build/unification/images/common_image_contents.gni:22
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -1621,7 +1628,7 @@ From //products/core.gni:9
 
 **Overridden from the default:** `false`
 
-From //build/unification/images/common_image_contents.gni:20
+From //build/unification/images/common_image_contents.gni:22
 
 ### optimize
 * `none`: really unoptimized, usually only build-tested and not run
