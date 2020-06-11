@@ -100,12 +100,30 @@ type QEMUConfig struct {
 
 // QEMUTarget is a QEMU target.
 type QEMUTarget struct {
+	binary  string
+	builder EMUCommandBuilder
 	config  QEMUConfig
 	opts    Options
 	c       chan error
 	process *os.Process
 	serial  io.ReadWriteCloser
 	pts     *os.File
+}
+
+// EMUCommandBuilder defines the common set of functions used to build up an
+// EMU command-line.
+type EMUCommandBuilder interface {
+	SetFlag(...string)
+	SetBinary(string)
+	SetKernel(string)
+	SetInitrd(string)
+	SetTarget(qemu.Target, bool)
+	SetMemory(int)
+	SetCPUCount(int)
+	AddVirtioBlkPciDrive(qemu.Drive)
+	AddNetwork(qemu.Netdev)
+	AddKernelArg(string)
+	Build() ([]string, error)
 }
 
 // NewQEMUTarget returns a new QEMU target with a given configuration.
@@ -135,14 +153,21 @@ func NewQEMUTarget(config QEMUConfig, opts Options) (*QEMUTarget, error) {
 		}{stdoutBuf, ptm}
 	}
 
+	qemuTarget, ok := qemuTargetMapping[config.Target]
+	if !ok {
+		return nil, fmt.Errorf("invalid target %q", config.Target)
+	}
+
 	// TODO(joshuaseaton): Figure out how to manage ownership of pts so that it
 	// may be closed.
 	return &QEMUTarget{
-		config: config,
-		opts:   opts,
-		c:      make(chan error),
-		serial: serial,
-		pts:    pts,
+		binary:  fmt.Sprintf("%s-%s", qemuSystemPrefix, qemuTarget),
+		builder: &qemu.QEMUCommandBuilder{},
+		config:  config,
+		opts:    opts,
+		c:       make(chan error),
+		serial:  serial,
+		pts:     pts,
 	}, nil
 }
 
@@ -186,7 +211,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	if t.process != nil {
 		return fmt.Errorf("a process has already been started with PID %d", t.process.Pid)
 	}
-	qemuCmd := &qemu.QEMUCommandBuilder{}
+	qemuCmd := t.builder
 
 	qemuTarget, ok := qemuTargetMapping[t.config.Target]
 	if !ok {
@@ -197,7 +222,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	if t.config.Path == "" {
 		return fmt.Errorf("directory must be set")
 	}
-	qemuSystem := filepath.Join(t.config.Path, fmt.Sprintf("%s-%s", qemuSystemPrefix, qemuTarget))
+	qemuSystem := filepath.Join(t.config.Path, t.binary)
 	absQEMUSystemPath, err := normalizeFile(qemuSystem)
 	if err != nil {
 		return fmt.Errorf("could not find qemu binary %q: %w", qemuSystem, err)

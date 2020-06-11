@@ -7,6 +7,8 @@ package qemu
 import (
 	"fmt"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 type expected struct {
@@ -15,19 +17,14 @@ type expected struct {
 }
 
 func check(t *testing.T, e expected, cmd []string, err error) {
-	if (err != e.err) && (err != nil && e.err != nil && err.Error() != e.err.Error()) {
-		t.Errorf("Unexpected error %s, expected %s", err, e.err)
-		return
+	t.Helper()
+	if diff := cmp.Diff(e.err, err, cmp.Comparer(func(x, y error) bool {
+		return x == nil && y == nil || x != nil && y != nil && x.Error() == y.Error()
+	})); diff != "" {
+		t.Errorf("-want, +got: %s", diff)
 	}
-	if len(cmd) != len(e.cmd) {
-		t.Errorf("Unexpected cmd %v, expected %v", cmd, e.cmd)
-		return
-	}
-	for i := range cmd {
-		if cmd[i] != e.cmd[i] {
-			t.Errorf("Unexpected cmd %v, expected %v", cmd, e.cmd)
-			return
-		}
+	if diff := cmp.Diff(e.cmd, cmd); diff != "" {
+		t.Errorf("-want, +got: %s", diff)
 	}
 }
 

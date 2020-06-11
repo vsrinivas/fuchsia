@@ -10,7 +10,7 @@ import (
 )
 
 func TestAEMUCommandBuilder(t *testing.T) {
-	b := &AEMUCommandBuilder{}
+	b := NewAEMUCommandBuilder()
 
 	// No binary set.
 	cmd, err := b.Build()
@@ -43,9 +43,15 @@ func TestAEMUCommandBuilder(t *testing.T) {
 	check(t, expected{
 		cmd: []string{
 			"./bin/emulator",
+			"-feature", "GLDirectMem,VirtioInput,Vulkan",
+			"-gpu", "swiftshader_indirect",
+			"-no-window",
 			"-fuchsia",
 			"-kernel", "./data/qemu-kernel",
 			"-initrd", "./data/zircon-a",
+			"-vga", "none",
+			"-device", "virtio-keyboard-pci",
+			"-device", "virtio_input_multi_touch_pci_1",
 			"-net", "none"},
 		err: nil,
 	}, cmd, err)
@@ -58,10 +64,15 @@ func TestAEMUCommandBuilder(t *testing.T) {
 	check(t, expected{
 		cmd: []string{
 			"./bin/emulator",
-			"-feature", "GLDirectMem,KVM",
+			"-feature", "GLDirectMem,KVM,VirtioInput,Vulkan",
+			"-gpu", "swiftshader_indirect",
+			"-no-window",
 			"-fuchsia",
 			"-kernel", "./data/qemu-kernel",
 			"-initrd", "./data/zircon-a",
+			"-vga", "none",
+			"-device", "virtio-keyboard-pci",
+			"-device", "virtio_input_multi_touch_pci_1",
 			"-machine", "virt,gic_version=host",
 			"-cpu", "host",
 			"-enable-kvm",
@@ -83,10 +94,15 @@ func TestAEMUCommandBuilder(t *testing.T) {
 	check(t, expected{
 		cmd: []string{
 			"./bin/emulator",
-			"-feature", "GLDirectMem,KVM",
+			"-feature", "GLDirectMem,KVM,VirtioInput,Vulkan",
+			"-gpu", "swiftshader_indirect",
+			"-no-window",
 			"-fuchsia",
 			"-kernel", "./data/qemu-kernel",
 			"-initrd", "./data/zircon-a",
+			"-vga", "none",
+			"-device", "virtio-keyboard-pci",
+			"-device", "virtio_input_multi_touch_pci_1",
 			"-machine", "virt,gic_version=host",
 			"-cpu", "host",
 			"-enable-kvm",
@@ -106,10 +122,15 @@ func TestAEMUCommandBuilder(t *testing.T) {
 	check(t, expected{
 		cmd: []string{
 			"./bin/emulator",
-			"-feature", "GLDirectMem,KVM",
+			"-feature", "GLDirectMem,KVM,VirtioInput,Vulkan",
+			"-gpu", "swiftshader_indirect",
+			"-no-window",
 			"-fuchsia",
 			"-kernel", "./data/qemu-kernel",
 			"-initrd", "./data/zircon-a",
+			"-vga", "none",
+			"-device", "virtio-keyboard-pci",
+			"-device", "virtio_input_multi_touch_pci_1",
 			"-machine", "virt,gic_version=host",
 			"-cpu", "host",
 			"-enable-kvm",
@@ -119,7 +140,7 @@ func TestAEMUCommandBuilder(t *testing.T) {
 			"-drive", "id=otherdisk,file=./data/otherdisk,format=raw,if=none,cache=unsafe,aio=threads",
 			"-device", "virtio-blk-pci,drive=otherdisk,iothread=iothread-otherdisk,addr=04.2",
 			"-net", "none",
-			"-append", "kernel.serial=legacy infra.foo=bar"},
+			"-append", "infra.foo=bar kernel.serial=legacy"},
 		err: nil,
 	}, cmd, err)
 
@@ -135,35 +156,15 @@ func TestAEMUCommandBuilder(t *testing.T) {
 	check(t, expected{
 		cmd: []string{
 			"./bin/emulator",
-			"-feature", "GLDirectMem,KVM",
-			"-fuchsia",
-			"-kernel", "./data/qemu-kernel",
-			"-initrd", "./data/zircon-a",
-			"-machine", "virt,gic_version=host",
-			"-cpu", "host",
-			"-enable-kvm",
-			"-m", "4096",
-			"-smp", "4",
-			"-object", "iothread,id=iothread-otherdisk",
-			"-drive", "id=otherdisk,file=./data/otherdisk,format=raw,if=none,cache=unsafe,aio=threads",
-			"-device", "virtio-blk-pci,drive=otherdisk,iothread=iothread-otherdisk,addr=04.2",
-			"-netdev", "user,id=net0",
-			"-device", "virtio-net-pci,netdev=net0,mac=52:54:00:63:5e:7a",
-			"-append", "kernel.serial=legacy infra.foo=bar"},
-		err: nil,
-	}, cmd, err)
-
-	b.SetGPU("swiftshader_indirect")
-
-	cmd, err = b.Build()
-	check(t, expected{
-		cmd: []string{
-			"./bin/emulator",
-			"-feature", "GLDirectMem,KVM,VULKAN",
+			"-feature", "GLDirectMem,KVM,VirtioInput,Vulkan",
 			"-gpu", "swiftshader_indirect",
+			"-no-window",
 			"-fuchsia",
 			"-kernel", "./data/qemu-kernel",
 			"-initrd", "./data/zircon-a",
+			"-vga", "none",
+			"-device", "virtio-keyboard-pci",
+			"-device", "virtio_input_multi_touch_pci_1",
 			"-machine", "virt,gic_version=host",
 			"-cpu", "host",
 			"-enable-kvm",
@@ -174,7 +175,7 @@ func TestAEMUCommandBuilder(t *testing.T) {
 			"-device", "virtio-blk-pci,drive=otherdisk,iothread=iothread-otherdisk,addr=04.2",
 			"-netdev", "user,id=net0",
 			"-device", "virtio-net-pci,netdev=net0,mac=52:54:00:63:5e:7a",
-			"-append", "kernel.serial=legacy infra.foo=bar"},
+			"-append", "infra.foo=bar kernel.serial=legacy"},
 		err: nil,
 	}, cmd, err)
 }

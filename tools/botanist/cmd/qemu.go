@@ -81,6 +81,9 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 	if cmd.qemuBinDir == "" {
 		return fmt.Errorf("-qemu-dir must be set")
 	}
+	if cmd.qemuType == "" {
+		return fmt.Errorf("-type must be set")
+	}
 
 	imgs, closeFunc, err := bootserver.GetImages(ctx, cmd.imageManifest, bootserver.ModePave)
 	if err != nil {
@@ -104,9 +107,16 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 		}
 	}
 
-	t, err := target.NewQEMUTarget(config, target.Options{})
-	if err != nil {
-		return err
+	var t Target
+	switch cmd.qemuType {
+	case "aemu":
+		if t, err = target.NewAEMUTarget(config, target.Options{}); err != nil {
+			return err
+		}
+	case "qemu":
+		if t, err = target.NewQEMUTarget(config, target.Options{}); err != nil {
+			return err
+		}
 	}
 	if err := t.Start(ctx, imgs, cmdlineArgs); err != nil {
 		return err

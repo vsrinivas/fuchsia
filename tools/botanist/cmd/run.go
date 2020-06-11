@@ -412,6 +412,12 @@ func deriveTarget(ctx context.Context, obj []byte, opts target.Options) (Target,
 		return nil, fmt.Errorf("object in list has no \"type\" field: %v", err)
 	}
 	switch x.Type {
+	case "aemu":
+		var cfg target.QEMUConfig
+		if err := json.Unmarshal(obj, &cfg); err != nil {
+			return nil, fmt.Errorf("invalid QEMU config found: %v", err)
+		}
+		return target.NewAEMUTarget(cfg, opts)
 	case "qemu":
 		var cfg target.QEMUConfig
 		if err := json.Unmarshal(obj, &cfg); err != nil {

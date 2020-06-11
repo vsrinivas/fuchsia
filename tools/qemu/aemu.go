@@ -5,6 +5,7 @@
 package qemu
 
 import (
+	"sort"
 	"strings"
 )
 
@@ -13,6 +14,24 @@ type AEMUCommandBuilder struct {
 
 	aemuArgs []string
 	features []string
+}
+
+func NewAEMUCommandBuilder() *AEMUCommandBuilder {
+	a := &AEMUCommandBuilder{}
+	// Default values for AEMU
+	a.SetFeature("GLDirectMem")
+	a.SetFeature("VirtioInput")
+
+	a.SetGPU("swiftshader_indirect")
+
+	// headless
+	a.SetAEMUFlag("-no-window")
+
+	a.SetFlag("-vga", "none")
+	a.SetFlag("-device", "virtio-keyboard-pci")
+	a.SetFlag("-device", "virtio_input_multi_touch_pci_1")
+	// End defaults
+	return a
 }
 
 func (a *AEMUCommandBuilder) SetFeature(feature string) {
@@ -24,16 +43,13 @@ func (a *AEMUCommandBuilder) SetAEMUFlag(args ...string) {
 }
 
 func (a *AEMUCommandBuilder) SetGPU(gpu string) {
-	a.SetFeature("VULKAN")
+	a.SetFeature("Vulkan")
 	a.SetAEMUFlag("-gpu", gpu)
 }
 
 func (a *AEMUCommandBuilder) SetTarget(target Target, kvm bool) {
 	if kvm {
-		a.SetFeature("GLDirectMem")
 		a.SetFeature("KVM")
-	} else {
-		a.SetFeature("-GLDirectMem")
 	}
 	a.QEMUCommandBuilder.SetTarget(target, kvm)
 }
@@ -48,6 +64,7 @@ func (a *AEMUCommandBuilder) Build() ([]string, error) {
 
 	if len(a.features) > 0 {
 		cmd = append(cmd, "-feature")
+		sort.Sort(sort.StringSlice(a.features))
 		cmd = append(cmd, strings.Join(a.features, ","))
 	}
 
@@ -67,6 +84,7 @@ func (a *AEMUCommandBuilder) Build() ([]string, error) {
 	}
 
 	if len(a.kernelArgs) > 0 {
+		sort.Sort(sort.StringSlice(a.kernelArgs))
 		cmd = append(cmd, "-append", strings.Join(a.kernelArgs, " "))
 	}
 
