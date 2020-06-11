@@ -230,7 +230,7 @@ fn render_composition(
                         FillRule::WholeTile => mold::FillRule::NonZero,
                     },
                     fill: match layer.style.fill {
-                        Fill::Solid(color) => mold::Fill::Solid(color.to_linear_brga()),
+                        Fill::Solid(color) => mold::Fill::Solid(color.to_linear_bgra()),
                     },
                     blend_mode: match layer.style.blend_mode {
                         BlendMode::Over => mold::BlendMode::Over,
@@ -250,7 +250,7 @@ fn render_composition(
         }
     }
 
-    mold_composition.render(buffer, composition.background_color.to_linear_brga());
+    mold_composition.render(buffer, composition.background_color.to_linear_bgra());
 }
 
 impl Context<Mold> for MoldContext {

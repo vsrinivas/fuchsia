@@ -68,7 +68,7 @@ impl Color {
         ]
     }
 
-    pub fn to_linear_brga(&self) -> [f32; 4] {
+    pub fn to_linear_bgra(&self) -> [f32; 4] {
         [
             srgb_to_linear(self.b),
             srgb_to_linear(self.g),
