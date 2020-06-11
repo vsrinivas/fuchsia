@@ -19,8 +19,8 @@ TEST(RebootReasonTest, NotParseable) {
             cobalt::LegacyRebootReason::kKernelPanic);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kNotParseable),
             cobalt::LastRebootReason::kUnknown);
-  EXPECT_EQ(ToCrashSignature(RebootReason::kNotParseable), "fuchsia-kernel-panic");
-  EXPECT_EQ(ToCrashProgramName(RebootReason::kNotParseable), "kernel");
+  EXPECT_EQ(ToCrashSignature(RebootReason::kNotParseable), "fuchsia-reboot-log-not-parseable");
+  EXPECT_EQ(ToCrashProgramName(RebootReason::kNotParseable), "reboot-log");
   EXPECT_EQ(ToFidlRebootReason(RebootReason::kNotParseable), std::nullopt);
 }
 

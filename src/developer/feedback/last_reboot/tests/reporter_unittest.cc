@@ -263,6 +263,14 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, UngracefulReporterTest,
                                  cobalt::LegacyRebootReason::kBrownout,
                                  cobalt::LastRebootReason::kBrownout,
                              },
+                             {
+                                 "NotParseable",
+                                 "NOT PARSEABLE",
+                                 "fuchsia-reboot-log-not-parseable",
+                                 std::nullopt,
+                                 cobalt::LegacyRebootReason::kKernelPanic,
+                                 cobalt::LastRebootReason::kUnknown,
+                             },
                          })),
                          [](const testing::TestParamInfo<UngracefulRebootTestParam>& info) {
                            return info.param.test_name;

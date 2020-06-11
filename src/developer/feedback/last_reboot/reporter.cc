@@ -45,13 +45,6 @@ void Reporter::ReportOn(const RebootLog& reboot_log, zx::duration crash_reportin
     FX_LOGS(ERROR) << "Failed to record reboot log as reported on";
   }
 
-  // TODO(49689): Start logging Cobalt events and filing crash reports for non-parseable reboot
-  // logs.
-  if (reboot_log.RebootReason() == RebootReason::kNotParseable && !reboot_log.HasRebootLogStr()) {
-    FX_LOGS(ERROR) << "Error parsing reboot log";
-    return;
-  }
-
   const zx::duration uptime = (reboot_log.HasUptime()) ? reboot_log.Uptime() : zx::usec(0);
   cobalt_->LogDuration(ToCobaltLastRebootReason(reboot_log.RebootReason()), uptime);
 

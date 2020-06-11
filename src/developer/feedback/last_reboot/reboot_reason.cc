@@ -66,7 +66,6 @@ std::optional<bool> OptionallyGraceful(const RebootReason reboot_reason) {
 cobalt::LegacyRebootReason ToCobaltLegacyRebootReason(const RebootReason reboot_reason) {
   switch (reboot_reason) {
     case RebootReason::kNotParseable:
-      // TODO(50946): Stop assuming a kernel panic if the file can't be parsed.
       return cobalt::LegacyRebootReason::kKernelPanic;
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
@@ -125,8 +124,7 @@ cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reboot_reason) {
 std::string ToCrashSignature(const RebootReason reboot_reason) {
   switch (reboot_reason) {
     case RebootReason::kNotParseable:
-      // TODO(50946): Stop assuming a kernel panic if the file can't be parsed.
-      return "fuchsia-kernel-panic";
+      return "fuchsia-reboot-log-not-parseable";
     case RebootReason::kSpontaneous:
       return "fuchsia-brief-power-loss";
     case RebootReason::kKernelPanic:
@@ -153,8 +151,8 @@ std::string ToCrashSignature(const RebootReason reboot_reason) {
 std::string ToCrashProgramName(const RebootReason reboot_reason) {
   switch (reboot_reason) {
     case RebootReason::kNotParseable:
+      return "reboot-log";
     case RebootReason::kKernelPanic:
-      // TODO(50946): Stop assuming a kernel panic if the file can't be parsed.
       return "kernel";
     case RebootReason::kBrownout:
     case RebootReason::kHardwareWatchdogTimeout:
