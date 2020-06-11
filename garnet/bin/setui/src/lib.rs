@@ -12,7 +12,6 @@ use {
     crate::agent::authority_impl::AuthorityImpl,
     crate::agent::base::{
         Authority, BlueprintHandle as AgentBlueprintHandle, InitializationContext, Lifespan,
-        RunContext,
     },
     crate::audio::audio_controller::AudioController,
     crate::audio::spawn_audio_fidl_handler,
@@ -408,6 +407,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     let mut agent_authority = AuthorityImpl::create(
         internal::agent::message::create_hub(),
+        switchboard_messenger_factory.clone(),
         event_messenger_factory.clone(),
     )
     .await?;
@@ -517,7 +517,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .execute_lifespan(
             Lifespan::Initialization(InitializationContext {
                 available_components: components.clone(),
-                switchboard_client: switchboard_client.clone(),
             }),
             service_context_handle.clone(),
             true,
@@ -530,11 +529,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // Execute service agents concurrently
     agent_authority
-        .execute_lifespan(
-            Lifespan::Service(RunContext { switchboard_client: switchboard_client.clone() }),
-            service_context_handle.clone(),
-            false,
-        )
+        .execute_lifespan(Lifespan::Service, service_context_handle.clone(), false)
         .await
         .ok();
 

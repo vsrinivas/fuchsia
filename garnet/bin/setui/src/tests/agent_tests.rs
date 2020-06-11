@@ -10,10 +10,10 @@ use crate::agent::base::{
 };
 use crate::internal::agent;
 use crate::internal::event;
+use crate::internal::switchboard;
 use crate::registry::device_storage::testing::InMemoryStorageFactory;
 use crate::service_context::ServiceContext;
 use crate::switchboard::base::SettingType;
-use crate::switchboard::switchboard_impl::SwitchboardBuilder;
 use crate::tests::scaffold;
 use crate::EnvironmentBuilder;
 use anyhow::{format_err, Error};
@@ -122,7 +122,7 @@ impl TestAgent {
                     return Err(AgentError::UnhandledLifespan);
                 }
             }
-            Lifespan::Service(_) => {
+            Lifespan::Service => {
                 if self.lifespan_target != LifespanTarget::Service {
                     return Err(AgentError::UnhandledLifespan);
                 }
@@ -204,7 +204,13 @@ async fn test_environment_startup() {
 }
 
 async fn create_authority() -> AuthorityImpl {
-    AuthorityImpl::create(agent::message::create_hub(), event::message::create_hub()).await.unwrap()
+    AuthorityImpl::create(
+        agent::message::create_hub(),
+        switchboard::message::create_hub(),
+        event::message::create_hub(),
+    )
+    .await
+    .unwrap()
 }
 
 /// Ensures that agents are executed in sequential order and the
@@ -212,8 +218,6 @@ async fn create_authority() -> AuthorityImpl {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_sequential() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
-
-    let switchboard_client = SwitchboardBuilder::create().build().await.unwrap();
     let mut authority = create_authority().await;
     let service_context = ServiceContext::create(None);
 
@@ -245,10 +249,7 @@ async fn test_sequential() {
     // Ensure lifespan execution completes.
     assert!(authority
         .execute_lifespan(
-            Lifespan::Initialization(InitializationContext::new(
-                switchboard_client.clone(),
-                HashSet::new(),
-            )),
+            Lifespan::Initialization(InitializationContext::new(HashSet::new(),)),
             service_context,
             true,
         )
@@ -261,7 +262,6 @@ async fn test_sequential() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_simultaneous() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
-    let switchboard_client = SwitchboardBuilder::create().build().await.unwrap();
     let mut authority = create_authority().await;
     let service_context = ServiceContext::create(None);
     let agent_ids =
@@ -290,10 +290,7 @@ async fn test_simultaneous() {
     // Execute lifespan non-sequentially.
     assert!(authority
         .execute_lifespan(
-            Lifespan::Initialization(InitializationContext::new(
-                switchboard_client.clone(),
-                HashSet::new(),
-            )),
+            Lifespan::Initialization(InitializationContext::new(HashSet::new(),)),
             service_context,
             false,
         )
@@ -305,8 +302,6 @@ async fn test_simultaneous() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_err_handling() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
-
-    let switchboard_client = SwitchboardBuilder::create().build().await.unwrap();
     let mut authority = create_authority().await;
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
@@ -345,10 +340,7 @@ async fn test_err_handling() {
     // Execute lifespan sequentially. Should fail since agent 2 returns an error.
     assert!(authority
         .execute_lifespan(
-            Lifespan::Initialization(InitializationContext::new(
-                switchboard_client.clone(),
-                HashSet::new(),
-            )),
+            Lifespan::Initialization(InitializationContext::new(HashSet::new(),)),
             service_context,
             true,
         )
@@ -363,8 +355,6 @@ async fn test_err_handling() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_available_components() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
-
-    let switchboard_client = SwitchboardBuilder::create().build().await.unwrap();
     let mut authority = create_authority().await;
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
@@ -405,10 +395,7 @@ async fn test_available_components() {
     // Execute lifespan sequentially
     assert!(authority
         .execute_lifespan(
-            Lifespan::Initialization(InitializationContext::new(
-                switchboard_client.clone(),
-                available_components.clone(),
-            )),
+            Lifespan::Initialization(InitializationContext::new(available_components.clone(),)),
             service_context,
             true,
         )

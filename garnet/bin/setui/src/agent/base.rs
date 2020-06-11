@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 use crate::internal::agent::message::Receptor;
 use crate::internal::event;
+use crate::internal::switchboard;
+use crate::message::base::MessengerType;
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::{SettingType, SwitchboardClient};
+use crate::switchboard::base::SettingType;
 use anyhow::Error;
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -35,23 +37,38 @@ pub enum Descriptor {
     Component(&'static str),
 }
 
-/// TODO(b/52428): Move lifecycle stage context contents here.
+/// TODO(fxb/52428): Move lifecycle stage context contents here.
 pub struct Context {
     pub receptor: Receptor,
     publisher: event::Publisher,
+    switchboard_messenger_factory: switchboard::message::Factory,
 }
 
 impl Context {
     pub async fn new(
         receptor: Receptor,
         descriptor: Descriptor,
+        switchboard_messenger_factory: switchboard::message::Factory,
         event_factory: event::message::Factory,
     ) -> Self {
         Self {
             receptor,
             publisher: event::Publisher::create(&event_factory, event::Address::Agent(descriptor))
                 .await,
+            switchboard_messenger_factory,
         }
+    }
+
+    /// Generates a new `Messenger` on the switchboard's `MessageHub`. Only
+    /// top-level messages can be sent, not received, as the associated
+    /// `Receptor` is discarded.
+    pub async fn create_switchboard_messenger(
+        &self,
+    ) -> Result<switchboard::message::Messenger, switchboard::message::MessageError> {
+        let (messenger, _) =
+            self.switchboard_messenger_factory.create(MessengerType::Unbound).await?;
+
+        Ok(messenger)
     }
 
     pub fn get_publisher(&self) -> event::Publisher {
@@ -65,26 +82,19 @@ impl Context {
 #[derive(Clone, Debug)]
 pub enum Lifespan {
     Initialization(InitializationContext),
-    Service(RunContext),
+    Service,
 }
 
 #[derive(Clone, Debug)]
 pub struct InitializationContext {
     pub available_components: HashSet<SettingType>,
-    pub switchboard_client: SwitchboardClient,
 }
 
 impl InitializationContext {
-    pub fn new(switchboard_client: SwitchboardClient, components: HashSet<SettingType>) -> Self {
-        Self { available_components: components, switchboard_client: switchboard_client }
+    pub fn new(components: HashSet<SettingType>) -> Self {
+        Self { available_components: components }
     }
 }
-
-#[derive(Clone, Debug)]
-pub struct RunContext {
-    pub switchboard_client: SwitchboardClient,
-}
-
 /// Struct of information passed to the agent during each invocation.
 #[derive(Clone, Debug)]
 pub struct Invocation {

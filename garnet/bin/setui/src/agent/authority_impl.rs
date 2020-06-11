@@ -6,6 +6,7 @@ use crate::agent::base::{AgentError, Authority, BlueprintHandle, Context, Invoca
 
 use crate::internal::agent;
 use crate::internal::event;
+use crate::internal::switchboard;
 use crate::message::base::{Audience, MessengerType};
 use crate::service_context::ServiceContextHandle;
 use anyhow::{format_err, Error};
@@ -19,6 +20,8 @@ pub struct AuthorityImpl {
     agent_signatures: Vec<agent::message::Signature>,
     // Factory to generate messengers to comunicate with the agent
     messenger_factory: agent::message::Factory,
+    // Factory passed to agents for communicating with the switchboard.
+    switchboard_messenger_factory: switchboard::message::Factory,
     // Messenger
     messenger: agent::message::Messenger,
     // Factory to generate event messengers
@@ -28,6 +31,7 @@ pub struct AuthorityImpl {
 impl AuthorityImpl {
     pub async fn create(
         messenger_factory: agent::message::Factory,
+        switchboard_messenger_factory: switchboard::message::Factory,
         event_factory: event::message::Factory,
     ) -> Result<AuthorityImpl, Error> {
         let messenger_result = messenger_factory.create(MessengerType::Unbound).await;
@@ -39,9 +43,10 @@ impl AuthorityImpl {
         let (client, _) = messenger_result.unwrap();
         return Ok(AuthorityImpl {
             agent_signatures: Vec::new(),
-            messenger_factory: messenger_factory,
+            messenger_factory,
+            switchboard_messenger_factory,
             messenger: client,
-            event_factory: event_factory,
+            event_factory,
         });
     }
 
@@ -118,8 +123,13 @@ impl Authority for AuthorityImpl {
 
         blueprint
             .create(
-                Context::new(receptor, blueprint.get_descriptor(), self.event_factory.clone())
-                    .await,
+                Context::new(
+                    receptor,
+                    blueprint.get_descriptor(),
+                    self.switchboard_messenger_factory.clone(),
+                    self.event_factory.clone(),
+                )
+                .await,
             )
             .await;
 

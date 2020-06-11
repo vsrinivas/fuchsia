@@ -21,6 +21,7 @@ macro_rules! message_hub_definition {
     ($payload:ty, $address:ty) => {
         pub mod message {
             use super::*;
+            use crate::message::base::MessageError as BaseMessageError;
             use crate::message::base::Signature as BaseSignature;
             use crate::message::message_client::MessageClient as BaseMessageClient;
             use crate::message::message_hub::MessageHub;
@@ -33,6 +34,9 @@ macro_rules! message_hub_definition {
 
             #[allow(dead_code)]
             pub type Messenger = BaseMessengerClient<$payload, $address>;
+
+            #[allow(dead_code)]
+            pub type MessageError = BaseMessageError<$address>;
 
             #[allow(dead_code)]
             pub type Client = BaseMessageClient<$payload, $address>;

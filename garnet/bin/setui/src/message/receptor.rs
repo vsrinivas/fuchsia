@@ -61,3 +61,15 @@ impl<P: Payload + 'static, A: Address + 'static> Receptor<P, A> {
     // Used to consume receptor.
     pub fn ack(self) {}
 }
+
+/// Extracts the payload from a given `MessageEvent`. Such event is provided
+/// in an optional argument to match the return value from `Receptor` stream.
+pub fn extract_payload<P: Payload + 'static, A: Address + 'static>(
+    event: Option<MessageEvent<P, A>>,
+) -> Option<P> {
+    if let Some(MessageEvent::Message(payload, _)) = event {
+        return Some(payload);
+    } else {
+        return None;
+    }
+}

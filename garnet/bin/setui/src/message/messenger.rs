@@ -37,7 +37,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessengerFactory<P, A> {
 }
 
 /// MessengerClient is a wrapper around a messenger with a fuse.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MessengerClient<P: Payload + 'static, A: Address + 'static> {
     messenger: Messenger<P, A>,
     fuse: ActionFuseHandle,

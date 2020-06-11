@@ -7,7 +7,8 @@ use crate::agent::base::{AgentError, Context, Invocation, InvocationResult, Life
 /// external sources to the last known value. It is invoked during startup.
 use crate::blueprint_definition;
 use crate::internal::agent::Payload;
-use crate::message::base::MessageEvent;
+use crate::internal::switchboard;
+use crate::message::base::{Audience, MessageEvent};
 use crate::switchboard::base::{SettingRequest, SwitchboardError};
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
@@ -19,11 +20,20 @@ blueprint_definition!(
 );
 
 #[derive(Debug)]
-pub struct RestoreAgent;
+pub struct RestoreAgent {
+    switchboard_messenger: switchboard::message::Messenger,
+}
 
 impl RestoreAgent {
     async fn create(mut context: Context) {
-        let mut agent = RestoreAgent;
+        let messenger_result = context.create_switchboard_messenger().await;
+
+        if messenger_result.is_err() {
+            fx_log_err!("RestoreAgent: could not acquire switchboard messenger");
+            return;
+        }
+
+        let mut agent = RestoreAgent { switchboard_messenger: messenger_result.unwrap() };
 
         fasync::spawn(async move {
             while let Some(event) = context.receptor.next().await {
@@ -38,21 +48,32 @@ impl RestoreAgent {
         match invocation.lifespan.clone() {
             Lifespan::Initialization(context) => {
                 for component in context.available_components {
-                    if let Ok(result_rx) =
-                        context.switchboard_client.request(component, SettingRequest::Restore).await
+                    let mut receptor = self
+                        .switchboard_messenger
+                        .message(
+                            switchboard::Payload::Action(switchboard::Action::Request(
+                                component,
+                                SettingRequest::Restore,
+                            )),
+                            Audience::Address(switchboard::Address::Switchboard),
+                        )
+                        .send();
+
+                    if let switchboard::Payload::Action(switchboard::Action::Response(response)) =
+                        receptor.next_payload().await.map_err(|_| AgentError::UnexpectedError)?.0
                     {
-                        match result_rx.await {
-                            Ok(Ok(_)) => {
+                        match response {
+                            Ok(_) => {
                                 continue;
                             }
-                            Ok(Err(SwitchboardError::UnimplementedRequest {
+                            Err(SwitchboardError::UnimplementedRequest {
                                 setting_type,
                                 request: _,
-                            })) => {
+                            }) => {
                                 fx_log_info!("setting does not support restore:{:?}", setting_type);
                                 continue;
                             }
-                            Ok(Err(SwitchboardError::UnhandledType { setting_type })) => {
+                            Err(SwitchboardError::UnhandledType { setting_type }) => {
                                 fx_log_info!(
                                     "setting not available for restore: {:?}",
                                     setting_type
