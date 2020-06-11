@@ -302,7 +302,7 @@ void SyscallDecoderDispatcher::StopMonitoring(zx_koid_t koid) {
 
 void SyscallDecoderDispatcher::ComputeTypes() {
   for (const auto& syscall : syscalls_) {
-    syscall->ComputeTypes();
+    syscall.second->ComputeTypes();
   }
 }
 

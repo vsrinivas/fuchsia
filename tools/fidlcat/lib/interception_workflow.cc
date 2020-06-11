@@ -73,19 +73,19 @@ void InterceptingThreadObserver::OnThreadStopped(zxdb::Thread* thread, const zxd
         settings.locations[0].type == zxdb::InputLocation::Type::kName &&
         settings.locations[0].name.components().size() == 1u) {
       threads_in_error_.erase(thread->GetKoid());
-      for (auto& syscall : workflow_->syscall_decoder_dispatcher()->syscalls()) {
-        // Compare against the syscall->name() which is the syscall name not including the $plt
-        // prefix. The Identifier component's name won't include this annotation without running
-        // GetFullName() which is slower. We already checked that it's a $plt annotation above.
-        if (settings.locations[0].name.components()[0].name() == syscall->name()) {
-          workflow_->syscall_decoder_dispatcher()->DecodeSyscall(this, thread, syscall.get());
-          return;
-        }
+      // Compare against the syscall->name() which is the syscall name not including the $plt
+      // prefix. The Identifier component's name won't include this annotation without running
+      // GetFullName() which is slower. We already checked that it's a $plt annotation above.
+      auto syscall = workflow_->syscall_decoder_dispatcher()->SearchSyscall(
+          settings.locations[0].name.components()[0].name());
+      if (syscall == nullptr) {
+        FX_LOGS(ERROR) << thread->GetProcess()->GetName() << ' ' << thread->GetProcess()->GetKoid()
+                       << ':' << thread->GetKoid() << ": Internal error: breakpoint "
+                       << settings.locations[0].name.components()[0].name() << " not managed";
+        thread->Continue();
+        return;
       }
-      FX_LOGS(ERROR) << thread->GetProcess()->GetName() << ' ' << thread->GetProcess()->GetKoid()
-                     << ':' << thread->GetKoid() << ": Internal error: breakpoint "
-                     << settings.locations[0].name.components()[0].name() << " not managed";
-      thread->Continue();
+      workflow_->syscall_decoder_dispatcher()->DecodeSyscall(this, thread, syscall);
       return;
     }
   }
@@ -431,14 +431,14 @@ void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* process) {
 
   for (auto& syscall : syscall_decoder_dispatcher()->syscalls()) {
     bool put_breakpoint = true;
-    if (!syscall->is_function()) {
+    if (!syscall.second->is_function()) {
       // Only apply the filters to syscalls. We always want to intercept regular
       // functions because they give us the information about the starting handles.
       if (!syscall_decoder_dispatcher()->decode_options().syscall_filters.empty()) {
         put_breakpoint = false;
         for (const auto& syscall_filter :
              syscall_decoder_dispatcher()->decode_options().syscall_filters) {
-          if (syscall_filter->Matches(syscall->name())) {
+          if (syscall_filter->Matches(syscall.second->name())) {
             put_breakpoint = true;
             break;
           }
@@ -447,7 +447,7 @@ void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* process) {
       if (put_breakpoint) {
         for (const auto& syscall_filter :
              syscall_decoder_dispatcher()->decode_options().exclude_syscall_filters) {
-          if (syscall_filter->Matches(syscall->name())) {
+          if (syscall_filter->Matches(syscall.second->name())) {
             put_breakpoint = false;
             break;
           }
@@ -457,13 +457,14 @@ void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* process) {
     if (put_breakpoint) {
       zxdb::BreakpointSettings settings;
       settings.enabled = true;
-      settings.name = syscall->name();
+      settings.name = syscall.second->name();
       settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
       settings.type = debug_ipc::BreakpointType::kSoftware;
       settings.scope = zxdb::ExecutionScope(process->GetTarget());
 
       zxdb::Identifier identifier;
-      zxdb::Err err = zxdb::ExprParser::ParseIdentifier(syscall->breakpoint_name(), &identifier);
+      zxdb::Err err =
+          zxdb::ExprParser::ParseIdentifier(syscall.second->breakpoint_name(), &identifier);
       FX_CHECK(err.ok());
       settings.locations.emplace_back(std::move(identifier));
 

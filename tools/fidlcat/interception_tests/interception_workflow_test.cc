@@ -401,9 +401,9 @@ void InterceptionWorkflowTest::PerformFunctionTest(ProcessController* controller
   // call our function interception code.
   SyscallDecoderDispatcher* dispatcher = controller->workflow().syscall_decoder_dispatcher();
   for (const auto& syscall : dispatcher->syscalls()) {
-    if (syscall->name() == syscall_name) {
+    if (syscall.second->name() == syscall_name) {
       dispatcher->DecodeSyscall(&controller->workflow().thread_observer(), threads_[tid],
-                                syscall.get());
+                                syscall.second.get());
       break;
     }
   }
@@ -500,182 +500,180 @@ void ProcessController::Detach() {
 // This test keep track of all syscalls which can be printed using a values.
 // It will be destroyed when everything will be implemented.
 TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
-  std::stringstream ss;
+  std::set<std::string> actual;
   SyscallDecoderDispatcherTest dispatcher(decode_options_, nullptr);
   for (const auto& syscall : dispatcher.syscalls()) {
-    if (syscall->fidl_codec_values_ready()) {
-      ss << syscall->name() << '\n';
+    if (syscall.second->fidl_codec_values_ready()) {
+      actual.insert(syscall.second->name());
     }
   }
-  std::string result = ss.str();
-  ASSERT_EQ(
-      "zx_clock_get_monotonic\n"
-      "zx_nanosleep\n"
-      "zx_ticks_get\n"
-      "zx_ticks_per_second\n"
-      "zx_system_get_dcache_line_size\n"
-      "zx_system_get_num_cpus\n"
-      "zx_system_get_physmem\n"
-      "zx_system_mexec\n"
-      "zx_handle_close\n"
-      "zx_object_set_profile\n"
-      "zx_channel_create\n"
-      "zx_channel_read\n"
-      "zx_channel_read_etc\n"
-      "zx_channel_write\n"
-      "zx_channel_call\n"
-      "zx_thread_exit\n"
-      "zx_process_exit\n"
-      "zx_job_create\n"
-      "zx_task_suspend\n"
-      "zx_task_suspend_token\n"
-      "zx_task_create_exception_channel\n"
-      "zx_task_kill\n"
-      "zx_exception_get_thread\n"
-      "zx_exception_get_process\n"
-      "zx_event_create\n"
-      "zx_eventpair_create\n"
-      "zx_port_create\n"
-      "zx_port_cancel\n"
-      "zx_timer_cancel\n"
-      "zx_vmo_get_size\n"
-      "zx_vmo_set_size\n"
-      "zx_vmo_replace_as_executable\n"
-      "zx_vmar_destroy\n"
-      "zx_debuglog_create\n"
-      "zx_ktrace_write\n"
-      "zx_interrupt_bind\n"
-      "zx_interrupt_destroy\n"
-      "zx_interrupt_ack\n"
-      "zx_interrupt_bind_vcpu\n"
-      "zx_ioports_request\n"
-      "zx_ioports_release\n"
-      "zx_bti_create\n"
-      "zx_bti_release_quarantine\n"
-      "zx_pmt_unpin\n"
-      "zx_framebuffer_get_info\n"
-      "zx_framebuffer_set_range\n"
-      "zx_pci_enable_bus_master\n"
-      "zx_pci_reset_device\n"
-      "zx_pci_map_interrupt\n"
-      "zx_pci_query_irq_mode\n"
-      "zx_pci_set_irq_mode\n"
-      "zx_pci_add_subtract_io_range\n"
-      "zx_guest_create\n"
-      "zx_vcpu_interrupt\n"
-      "zx_pager_create\n"
-      "zx_pager_create_vmo\n"
-      "zx_pager_detach_vmo\n"
-      "zx_pager_supply_pages\n",
-      result);
+
+  std::set<std::string> expected = {"zx_bti_create",
+                                    "zx_bti_release_quarantine",
+                                    "zx_channel_call",
+                                    "zx_channel_create",
+                                    "zx_channel_read",
+                                    "zx_channel_read_etc",
+                                    "zx_channel_write",
+                                    "zx_clock_get_monotonic",
+                                    "zx_debuglog_create",
+                                    "zx_event_create",
+                                    "zx_eventpair_create",
+                                    "zx_exception_get_process",
+                                    "zx_exception_get_thread",
+                                    "zx_framebuffer_get_info",
+                                    "zx_framebuffer_set_range",
+                                    "zx_guest_create",
+                                    "zx_handle_close",
+                                    "zx_interrupt_ack",
+                                    "zx_interrupt_bind",
+                                    "zx_interrupt_bind_vcpu",
+                                    "zx_interrupt_destroy",
+                                    "zx_ioports_release",
+                                    "zx_ioports_request",
+                                    "zx_job_create",
+                                    "zx_ktrace_write",
+                                    "zx_nanosleep",
+                                    "zx_object_set_profile",
+                                    "zx_pager_create",
+                                    "zx_pager_create_vmo",
+                                    "zx_pager_detach_vmo",
+                                    "zx_pager_supply_pages",
+                                    "zx_pci_add_subtract_io_range",
+                                    "zx_pci_enable_bus_master",
+                                    "zx_pci_map_interrupt",
+                                    "zx_pci_query_irq_mode",
+                                    "zx_pci_reset_device",
+                                    "zx_pci_set_irq_mode",
+                                    "zx_pmt_unpin",
+                                    "zx_port_cancel",
+                                    "zx_port_create",
+                                    "zx_process_exit",
+                                    "zx_system_get_dcache_line_size",
+                                    "zx_system_get_num_cpus",
+                                    "zx_system_get_physmem",
+                                    "zx_system_mexec",
+                                    "zx_task_create_exception_channel",
+                                    "zx_task_kill",
+                                    "zx_task_suspend",
+                                    "zx_task_suspend_token",
+                                    "zx_thread_exit",
+                                    "zx_ticks_get",
+                                    "zx_ticks_per_second",
+                                    "zx_timer_cancel",
+                                    "zx_vcpu_interrupt",
+                                    "zx_vmar_destroy",
+                                    "zx_vmo_get_size",
+                                    "zx_vmo_replace_as_executable",
+                                    "zx_vmo_set_size"};
+  ASSERT_EQ(expected, actual);
 }
 
 // This test keep track of all syscalls which are still directly printed.
 // It will be destroyed when everything will be implemented.
 TEST_F(InterceptionWorkflowTestX64, ValuesNotImplemented) {
-  std::stringstream ss;
+  std::set<std::string> actual;
   SyscallDecoderDispatcherTest dispatcher(decode_options_, nullptr);
   for (const auto& syscall : dispatcher.syscalls()) {
-    if (!syscall->fidl_codec_values_ready()) {
-      ss << syscall->name() << '\n';
+    if (!syscall.second->fidl_codec_values_ready()) {
+      actual.insert(syscall.second->name());
     }
   }
-  std::string result = ss.str();
-  ASSERT_EQ(
-      "processargs_extract_handles\n"
-      "__libc_extensions_init\n"
-      "zx_clock_get\n"
-      "zx_deadline_after\n"
-      "zx_clock_adjust\n"
-      "zx_system_get_version\n"
-      "zx_system_get_event\n"
-      "zx_system_get_features\n"
-      "zx_system_mexec_payload_get\n"
-      "zx_system_powerctl\n"
-      "zx_cache_flush\n"
-      "zx_handle_close_many\n"
-      "zx_handle_duplicate\n"
-      "zx_handle_replace\n"
-      "zx_object_wait_one\n"
-      "zx_object_wait_many\n"
-      "zx_object_wait_async\n"
-      "zx_object_signal\n"
-      "zx_object_signal_peer\n"
-      "zx_object_get_property\n"
-      "zx_object_set_property\n"
-      "zx_object_get_info\n"
-      "zx_object_get_child\n"
-      "zx_socket_create\n"
-      "zx_socket_write\n"
-      "zx_socket_read\n"
-      "zx_socket_shutdown\n"
-      "zx_thread_create\n"
-      "zx_thread_start\n"
-      "zx_thread_read_state\n"
-      "zx_thread_write_state\n"
-      "zx_process_create\n"
-      "zx_process_start\n"
-      "zx_process_read_memory\n"
-      "zx_process_write_memory\n"
-      "zx_job_set_policy\n"
-      "zx_futex_wait\n"
-      "zx_futex_wake\n"
-      "zx_futex_requeue\n"
-      "zx_futex_wake_single_owner\n"
-      "zx_futex_requeue_single_owner\n"
-      "zx_futex_get_owner\n"
-      "zx_futex_wake_handle_close_thread_exit\n"
-      "zx_port_queue\n"
-      "zx_port_wait\n"
-      "zx_timer_create\n"
-      "zx_timer_set\n"
-      "zx_vmo_create\n"
-      "zx_vmo_read\n"
-      "zx_vmo_write\n"
-      "zx_vmo_op_range\n"
-      "zx_vmo_create_child\n"
-      "zx_vmo_set_cache_policy\n"
-      "zx_vmo_create_contiguous\n"
-      "zx_vmo_create_physical\n"
-      "zx_vmar_allocate\n"
-      "zx_vmar_map\n"
-      "zx_vmar_unmap\n"
-      "zx_vmar_protect\n"
-      "zx_vmar_unmap_handle_close_thread_exit\n"
-      "zx_cprng_draw\n"
-      "zx_cprng_add_entropy\n"
-      "zx_fifo_create\n"
-      "zx_fifo_read\n"
-      "zx_fifo_write\n"
-      "zx_profile_create\n"
-      "zx_debuglog_write\n"
-      "zx_debuglog_read\n"
-      "zx_ktrace_read\n"
-      "zx_ktrace_control\n"
-      "zx_mtrace_control\n"
-      "zx_debug_read\n"
-      "zx_debug_write\n"
-      "zx_debug_send_command\n"
-      "zx_interrupt_create\n"
-      "zx_interrupt_wait\n"
-      "zx_interrupt_trigger\n"
-      "zx_iommu_create\n"
-      "zx_bti_pin\n"
-      "zx_pci_get_nth_device\n"
-      "zx_pci_config_read\n"
-      "zx_pci_config_write\n"
-      "zx_pci_cfg_pio_rw\n"
-      "zx_pci_get_bar\n"
-      "zx_pci_init\n"
-      "zx_pc_firmware_tables\n"
-      "zx_smc_call\n"
-      "zx_resource_create\n"
-      "zx_guest_set_trap\n"
-      "zx_vcpu_create\n"
-      "zx_vcpu_resume\n"
-      "zx_vcpu_read_state\n"
-      "zx_vcpu_write_state\n",
-      result);
+
+  std::set<std::string> expected = {"__libc_extensions_init",
+                                    "processargs_extract_handles",
+                                    "zx_bti_pin",
+                                    "zx_cache_flush",
+                                    "zx_clock_adjust",
+                                    "zx_clock_get",
+                                    "zx_cprng_add_entropy",
+                                    "zx_cprng_draw",
+                                    "zx_deadline_after",
+                                    "zx_debug_read",
+                                    "zx_debug_send_command",
+                                    "zx_debug_write",
+                                    "zx_debuglog_read",
+                                    "zx_debuglog_write",
+                                    "zx_fifo_create",
+                                    "zx_fifo_read",
+                                    "zx_fifo_write",
+                                    "zx_futex_get_owner",
+                                    "zx_futex_requeue",
+                                    "zx_futex_requeue_single_owner",
+                                    "zx_futex_wait",
+                                    "zx_futex_wake",
+                                    "zx_futex_wake_handle_close_thread_exit",
+                                    "zx_futex_wake_single_owner",
+                                    "zx_guest_set_trap",
+                                    "zx_handle_close_many",
+                                    "zx_handle_duplicate",
+                                    "zx_handle_replace",
+                                    "zx_interrupt_create",
+                                    "zx_interrupt_trigger",
+                                    "zx_interrupt_wait",
+                                    "zx_iommu_create",
+                                    "zx_job_set_policy",
+                                    "zx_ktrace_control",
+                                    "zx_ktrace_read",
+                                    "zx_mtrace_control",
+                                    "zx_object_get_child",
+                                    "zx_object_get_info",
+                                    "zx_object_get_property",
+                                    "zx_object_set_property",
+                                    "zx_object_signal",
+                                    "zx_object_signal_peer",
+                                    "zx_object_wait_async",
+                                    "zx_object_wait_many",
+                                    "zx_object_wait_one",
+                                    "zx_pc_firmware_tables",
+                                    "zx_pci_cfg_pio_rw",
+                                    "zx_pci_config_read",
+                                    "zx_pci_config_write",
+                                    "zx_pci_get_bar",
+                                    "zx_pci_get_nth_device",
+                                    "zx_pci_init",
+                                    "zx_port_queue",
+                                    "zx_port_wait",
+                                    "zx_process_create",
+                                    "zx_process_read_memory",
+                                    "zx_process_start",
+                                    "zx_process_write_memory",
+                                    "zx_profile_create",
+                                    "zx_resource_create",
+                                    "zx_smc_call",
+                                    "zx_socket_create",
+                                    "zx_socket_read",
+                                    "zx_socket_shutdown",
+                                    "zx_socket_write",
+                                    "zx_system_get_event",
+                                    "zx_system_get_features",
+                                    "zx_system_get_version",
+                                    "zx_system_mexec_payload_get",
+                                    "zx_system_powerctl",
+                                    "zx_thread_create",
+                                    "zx_thread_read_state",
+                                    "zx_thread_start",
+                                    "zx_thread_write_state",
+                                    "zx_timer_create",
+                                    "zx_timer_set",
+                                    "zx_vcpu_create",
+                                    "zx_vcpu_read_state",
+                                    "zx_vcpu_resume",
+                                    "zx_vcpu_write_state",
+                                    "zx_vmar_allocate",
+                                    "zx_vmar_map",
+                                    "zx_vmar_protect",
+                                    "zx_vmar_unmap",
+                                    "zx_vmar_unmap_handle_close_thread_exit",
+                                    "zx_vmo_create",
+                                    "zx_vmo_create_child",
+                                    "zx_vmo_create_contiguous",
+                                    "zx_vmo_create_physical",
+                                    "zx_vmo_op_range",
+                                    "zx_vmo_read",
+                                    "zx_vmo_set_cache_policy",
+                                    "zx_vmo_write"};
+  ASSERT_EQ(expected, actual);
 }
 
 }  // namespace fidlcat

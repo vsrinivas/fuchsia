@@ -1546,7 +1546,7 @@ class SyscallDecoderDispatcher {
   bool with_handle_info() const { return with_handle_info_; }
   void set_with_handle_info() { with_handle_info_ = true; }
 
-  const std::vector<std::unique_ptr<Syscall>>& syscalls() const { return syscalls_; }
+  const std::map<std::string, std::unique_ptr<Syscall>>& syscalls() const { return syscalls_; }
 
   const std::map<zx_koid_t, std::unique_ptr<Process>>& processes() const { return processes_; }
 
@@ -1557,6 +1557,14 @@ class SyscallDecoderDispatcher {
   void set_display_started() { display_started_ = true; }
 
   bool has_filter() const { return has_filter_; }
+
+  Syscall* SearchSyscall(const std::string& name) const {
+    auto result = syscalls_.find(name);
+    if (result == syscalls_.end()) {
+      return nullptr;
+    }
+    return result->second.get();
+  }
 
   Process* SearchProcess(zx_koid_t koid) const {
     auto process = processes_.find(koid);
@@ -1647,7 +1655,7 @@ class SyscallDecoderDispatcher {
   Syscall* AddFunction(std::string_view name, SyscallReturnType return_type) {
     auto syscall = std::make_unique<Syscall>(name, return_type, SyscallKind::kFunction);
     auto result = syscall.get();
-    syscalls_.push_back(std::move(syscall));
+    syscalls_.emplace(std::make_pair(syscall->name(), std::move(syscall)));
     return result;
   }
 
@@ -1656,7 +1664,7 @@ class SyscallDecoderDispatcher {
                SyscallKind kind = SyscallKind::kRegularSyscall) {
     auto syscall = std::make_unique<Syscall>(name, return_type, kind);
     auto result = syscall.get();
-    syscalls_.push_back(std::move(syscall));
+    syscalls_.emplace(std::make_pair(syscall->name(), std::move(syscall)));
     return result;
   }
 
@@ -1703,7 +1711,7 @@ class SyscallDecoderDispatcher {
   bool with_handle_info_ = false;
 
   // The definition of all the syscalls we can decode.
-  std::vector<std::unique_ptr<Syscall>> syscalls_;
+  std::map<std::string, std::unique_ptr<Syscall>> syscalls_;
 
   // The intercepted syscalls we are currently decoding.
   std::map<uint64_t, std::unique_ptr<SyscallDecoder>> syscall_decoders_;
