@@ -38,7 +38,6 @@ group("tests") {
   deps = [
     ":camera_tests",
     "bin",
-    "examples/camera_display",
   ]
 }
 
@@ -54,7 +53,6 @@ test_package("camera_tests") {
     "//src/camera/drivers/hw_accel/ge2d/test",
     "//src/camera/drivers/test_utils/test:button_checker_test",
     "//src/camera/drivers/test_utils/test:test_utils_test",
-    "//src/camera/examples/camera_display/stream_provider/test",
     "//src/camera/lib/fake_camera/test",
     "//src/camera/lib/fake_legacy_stream/test",
     "//src/camera/lib/fake_stream/test",
@@ -113,11 +111,6 @@ test_package("camera_tests") {
       name = "stream_utils_test"
       manifest = "lib/stream_utils/test/meta/stream_utils_test.cmx"
       environments = basic_envs
-    },
-    {
-      name = "stream_provider_test"
-      manifest = "examples/camera_display/stream_provider/test/stream_provider_test.cmx"
-      environments = [ sherlock_env ]
     },
     {
       name = "fake_legacy_stream_test"
