@@ -10,6 +10,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::{connect_to_service, launch},
     fuchsia_inspect::{assert_inspect_tree, testing},
+    fuchsia_zircon::Duration,
     futures::stream::StreamExt,
     lazy_static::lazy_static,
 };
@@ -53,6 +54,9 @@ async fn check_nested(
     expected_results: usize,
 ) -> Result<(), Error> {
     let mut fetcher = testing::InspectDataFetcher::new();
+    if expected_results == 0 {
+        fetcher = fetcher.with_timeout(Duration::from_seconds(5));
+    }
     if let Some(mut moniker) = realm_path {
         moniker.push(TEST_COMPONENT.clone());
         fetcher = fetcher.add_selector(testing::ComponentSelector::new(moniker));

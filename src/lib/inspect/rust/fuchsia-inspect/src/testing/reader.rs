@@ -21,7 +21,6 @@ use {
 
 lazy_static! {
     static ref RETRY_DELAY_MS: i64 = 150;
-    static ref DEFAULT_TIMEOUT_SECS: i64 = 5;
     static ref MAX_RETRIES: usize = std::usize::MAX;
     static ref PAYLOAD_KEY: &'static str = "payload";
 }
@@ -88,15 +87,15 @@ impl ToSelectorArguments for ComponentSelector {
 pub struct InspectDataFetcher {
     selectors: Vec<String>,
     should_retry: bool,
-    timeout: Duration,
+    timeout: Option<Duration>,
 }
 
 impl InspectDataFetcher {
     /// Creates a new data fetcher with default configuration:
     ///  - Maximum retries: 2^64-1
-    ///  - Timeout: 5 seconds
+    ///  - Timeout: Never. Use with_timeout() to set a timeout.
     pub fn new() -> Self {
-        Self { timeout: DEFAULT_TIMEOUT_SECS.seconds(), selectors: vec![], should_retry: true }
+        Self { timeout: None, selectors: vec![], should_retry: true }
     }
 
     /// Requests a single component tree (or sub-tree).
@@ -124,8 +123,9 @@ impl InspectDataFetcher {
     }
 
     /// Sets the maximum time to wait for a response from the Archive.
+    /// Do not use in tests unless timeout is the expected behavior.
     pub fn with_timeout(mut self, duration: Duration) -> Self {
-        self.timeout = duration;
+        self.timeout = Some(duration);
         self
     }
 
@@ -151,8 +151,11 @@ impl InspectDataFetcher {
     /// fetched.
     pub async fn get_raw_json(self) -> Result<serde_json::Value, Error> {
         let timeout = self.timeout;
-        let data =
-            self.get_inspect_data().on_timeout(timeout.after_now(), || Ok(Vec::new())).await?;
+        let data_future = self.get_inspect_data();
+        let data = match timeout {
+            Some(timeout) => data_future.on_timeout(timeout.after_now(), || Ok(Vec::new())).await?,
+            None => data_future.await?,
+        };
         Ok(serde_json::Value::Array(data))
     }
 

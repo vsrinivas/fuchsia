@@ -17,6 +17,10 @@ impl DiagnosticsFacade {
     }
 
     pub async fn snapshot_inspect(&self, args: SnapshotInspectArgs) -> Result<Value, Error> {
-        InspectDataFetcher::new().add_selectors(args.selectors.into_iter()).get_raw_json().await
+        InspectDataFetcher::new()
+            .retry_if_empty(false)
+            .add_selectors(args.selectors.into_iter())
+            .get_raw_json()
+            .await
     }
 }

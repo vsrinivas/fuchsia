@@ -5,6 +5,7 @@
 use {
     crate::{
         commands::{types::*, utils},
+        constants,
         types::{Error, ToText},
     },
     argh::FromArgs,
@@ -76,7 +77,7 @@ impl Command for ListCommand {
         // TODO(fxbug.dev/45458): support including the url in the response
         // TODO(fxbug.dev/51165): once the archive exposes lifecycle we don't need to query all the
         // inspect data. We can just query a snapshot of all running components with inspect data.
-        let fetcher = InspectDataFetcher::new();
+        let fetcher = InspectDataFetcher::new().with_timeout(*constants::IQUERY_TIMEOUT);
         let mut results = fetcher.get_raw_json().await.map_err(|e| Error::Fetch(e))?;
         let mut results = results
             .as_array_mut()

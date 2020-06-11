@@ -17,6 +17,7 @@ use {
 
 mod command_line;
 mod commands;
+mod constants;
 mod deprecated_commands;
 mod deprecated_options;
 mod formatting;

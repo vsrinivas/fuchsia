@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::types::Error,
+    crate::{constants, types::Error},
     fuchsia_inspect::testing::InspectDataFetcher,
     fuchsia_inspect_node_hierarchy::{
         serialization::{HierarchyDeserializer, RawJsonNodeHierarchySerializer},
@@ -25,7 +25,8 @@ pub fn get_moniker_from_result(result: &serde_json::Value) -> Result<String, Err
 /// Returns the component "moniker" and the hierarchy data for results of
 /// reading from the archive using the given selectors.
 pub async fn fetch_data(selectors: &[String]) -> Result<Vec<(String, NodeHierarchy)>, Error> {
-    let mut fetcher = InspectDataFetcher::new().retry_if_empty(false);
+    let mut fetcher =
+        InspectDataFetcher::new().with_timeout(*constants::IQUERY_TIMEOUT).retry_if_empty(false);
     // We support receiving the moniker or a tree selector
     for selector in selectors {
         if selector.contains(":") {
