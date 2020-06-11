@@ -6,6 +6,7 @@ per-file check-licenses=solomonkinard@google.com,jcecil@google.com,gridman@googl
 per-file clang-tidy=haowei@google.com,phosek@google.com
 per-file component-graph=benwright@google.com
 per-file component-surveyor=geb@google.com
+per-file cpu-stats=crjohns@google.com
 per-file dart-remote-test=zra@google.com
 per-file dart-tunnel=zra@google.com
 per-file debug=brettw@google.com

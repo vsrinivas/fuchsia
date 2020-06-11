@@ -153,7 +153,7 @@ def make_line_chart_array(percentages, field):
 
   for time in times:
     delta = timedelta(microseconds=time / 1000)
-    column = [str(delta)]
+    column = [{'v': delta.total_seconds(), 'f': str(delta)}]
     for name in names:
       column.append(
           name_to_time_to_measure.get(name, dict()).get(time,
@@ -356,10 +356,24 @@ HTML_TEMPLATE = """
           if (sampleData[name].line) {
               var data = google.visualization.arrayToDataTable(sampleData[name].line);
 
+              // The first column is formatted to provide ticks on the
+              // horizontal axis.  Many measurements at locations < 60s
+              // confuses the spacing algorithm for grid lines, so we omit
+              // them from the ticks.
+              var ticks = sampleData[name].line.slice(1)
+                  .map(function(e) { return e[0]; })
+                  .filter(function(v) { return v['v'] >= 60; });
+              console.log(ticks);
               var options = {
                 title: name,
                 theme: 'material',
-                interpolateNulls: true
+                interpolateNulls: true,
+                hAxis: {
+                    ticks: ticks,
+                    gridlines: {
+                        interval: [15, 30, 60]
+                    }
+                }
               };
 
               var idname = 'chart-' + (id++);
@@ -372,7 +386,7 @@ HTML_TEMPLATE = """
               var data = google.visualization.arrayToDataTable(sampleData[name].table);
 
               var options = {
-                title: name,
+                title: name
               };
 
               var idname = 'chart-' + (id++);
