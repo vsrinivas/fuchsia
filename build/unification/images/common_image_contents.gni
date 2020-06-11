@@ -223,7 +223,7 @@ common_image_contents = [
   "//zircon/system/uapp/psutils:top",
   "//zircon/system/uapp/psutils:vmaps",
   "//zircon/system/uapp/psutils:vmos",
-  "//zircon/system/uapp/run-vc",
+  "//src/bringup/bin/run-vc",
   "//zircon/system/uapp/runtests",
   "//zircon/system/uapp/spawn",
   "//zircon/system/uapp/storage-metrics",
@@ -244,7 +244,7 @@ common_image_contents = [
 if (target_cpu == "arm64") {
   common_image_contents += [
     "//src/devices/board/drivers/astro",
-    "//src/devices/usb/drivers/xhci-rewrite:xhci"
+    "//src/devices/usb/drivers/xhci-rewrite:xhci",
   ]
 } else if (target_cpu == "x64") {
   common_image_contents += [
