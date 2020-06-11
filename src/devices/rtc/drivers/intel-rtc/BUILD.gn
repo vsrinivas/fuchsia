@@ -15,7 +15,7 @@ driver_module("intel-rtc") {
   sources = [ "intel-rtc.c" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
+    "//src/devices/rtc/lib/rtc",
     "//src/lib/ddk",
-    "//zircon/system/ulib/rtc",
   ]
 }

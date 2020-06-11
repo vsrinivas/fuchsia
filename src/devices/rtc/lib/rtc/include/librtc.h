@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIBRTC_H_
-#define LIBRTC_H_
+#ifndef SRC_DEVICES_RTC_LIB_RTC_INCLUDE_LIBRTC_H_
+#define SRC_DEVICES_RTC_LIB_RTC_INCLUDE_LIBRTC_H_
 
 #include <fuchsia/hardware/rtc/c/fidl.h>
 #include <zircon/compiler.h>
@@ -35,4 +35,4 @@ uint8_t from_bcd(uint8_t bcd);
 
 __END_CDECLS
 
-#endif  // LIBRTC_H_
+#endif  // SRC_DEVICES_RTC_LIB_RTC_INCLUDE_LIBRTC_H_
