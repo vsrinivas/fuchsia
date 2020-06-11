@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context as _, Result},
+    fidl::endpoints::ServerEnd,
     fidl_fuchsia_net_dhcpv6::{
-        ClientProviderRequest, ClientProviderRequestStream, ClientRequestStream, OperationalModels,
+        ClientMarker, ClientProviderRequest, ClientProviderRequestStream, NewClientParams,
+        OperationalModels,
     },
-    futures::{Future, TryStreamExt},
+    futures::{Future, StreamExt as _, TryStreamExt as _},
 };
 
 /// Handles client provider requests from the input stream.
@@ -17,26 +19,14 @@ pub(crate) async fn run_client_provider<Fut, F>(
 ) -> Result<()>
 where
     Fut: Future<Output = Result<()>>,
-    F: Fn(u64, OperationalModels, ClientRequestStream) -> Fut,
+    F: Fn(NewClientParams, ServerEnd<ClientMarker>) -> Fut,
 {
     stream
-        .map_err(|err| anyhow!("reading client provider request from stream: {}", err))
+        .map(|res| res.context("reading client provider request from stream"))
         .try_for_each_concurrent(None, |request| async {
             match request {
-                ClientProviderRequest::NewClient {
-                    interface_id,
-                    models,
-                    request,
-                    control_handle: _,
-                } => {
-                    start_client(
-                        interface_id,
-                        models,
-                        request.into_stream().map_err(|err| {
-                            anyhow!("getting new client request stream from channel: {}", err)
-                        })?,
-                    )
-                    .await
+                ClientProviderRequest::NewClient { params, request, control_handle: _ } => {
+                    start_client(params, request).await
                 }
             }
         })
@@ -49,23 +39,22 @@ mod tests {
         super::*,
         anyhow::Error,
         fidl::endpoints::create_endpoints,
-        fidl_fuchsia_net_dhcpv6::{ClientMarker, ClientProviderMarker, ClientRequestStream},
+        fidl_fuchsia_net_dhcpv6::ClientProviderMarker,
         fuchsia_async as fasync,
         futures::{join, try_join},
+        net_declare::fidl_socket_addr_v6,
     };
 
     async fn start_client(
-        _interface_id: u64,
-        _models: OperationalModels,
-        _request_stream: ClientRequestStream,
+        _param: NewClientParams,
+        _request: ServerEnd<ClientMarker>,
     ) -> Result<()> {
         Ok(())
     }
 
     async fn start_err_client(
-        _interface_id: u64,
-        _models: OperationalModels,
-        _request_stream: ClientRequestStream,
+        _param: NewClientParams,
+        _request: ServerEnd<ClientMarker>,
     ) -> Result<()> {
         Err(anyhow!("fake test error"))
     }
@@ -84,7 +73,14 @@ mod tests {
                 let (_client_end, server_end) =
                     create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
                 client_provider_proxy
-                    .new_client(interface_id, OperationalModels { stateless: None }, server_end)
+                    .new_client(
+                        NewClientParams {
+                            interface_id: Some(interface_id),
+                            address: Some(fidl_socket_addr_v6!([fe01::1:2]:546)),
+                            models: Some(OperationalModels { stateless: None }),
+                        },
+                        server_end,
+                    )
                     .expect("failed to request new client");
             }
             drop(client_provider_proxy);
@@ -107,8 +103,11 @@ mod tests {
         let test_fut = async {
             let (_client_end, server_end) = create_endpoints::<ClientMarker>()?;
             client_provider_proxy.new_client(
-                1,
-                OperationalModels { stateless: None },
+                NewClientParams {
+                    interface_id: Some(1),
+                    address: Some(fidl_socket_addr_v6!([fe01::1:2]:546)),
+                    models: Some(OperationalModels { stateless: None }),
+                },
                 server_end,
             )?;
             drop(client_provider_proxy);

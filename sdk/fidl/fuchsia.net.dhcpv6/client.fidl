@@ -5,6 +5,11 @@
 library fuchsia.net.dhcpv6;
 
 using fuchsia.net.name;
+using fuchsia.net;
+
+/// Default port a DHCPv6 client should listen to according to [RFC 8415,
+/// Section 7.2](https://tools.ietf.org/html/rfc8415#section-7.2).
+const uint16 DEFAULT_CLIENT_PORT = 546;
 
 /// Supported DHCPv6 option codes that can be included in the client's
 /// [Option Request Option](https://tools.ietf.org/html/rfc8415#section-21.7).
@@ -34,18 +39,48 @@ table OperationalModels {
     1: Stateless stateless;
 };
 
+/// Parameters for calling [`fuchsia.net.dhcpv6/ClientProvider.NewClient`].
+table NewClientParams {
+    /// The ID of the interface the client will run on.
+    ///
+    /// Required.
+    1: uint64 interface_id;
+
+    /// The socket address to use when communicating with servers.
+    ///
+    /// DHCPv6 servers listen for link-local multicasts, so not using a
+    /// link-local address here may cause interoperability issues.
+    ///
+    /// Client creation will fail with `INVALID_ARGS` if:
+    ///
+    /// * a multicast address is provided;
+    /// * or a link-local address is provided, and its zone index doesn't match
+    ///   `interface_id` (Fuchsia has a 1:1 mapping from zone index to interface
+    ///   ID).
+    ///
+    /// Client creation will fail if it fails to bind a socket to this address.
+    ///
+    /// Required.
+    2: fuchsia.net.Ipv6SocketAddress address;
+
+    /// The [`fuchsia.net.dhcpv6/OperationalModels`] the client will start in.
+    ///
+    /// Client creation will fail if `models` is empty or unsupported.
+    ///
+    /// Required.
+    3: OperationalModels models;
+};
+
 /// Provides a method to create new clients.
 [Discoverable]
 protocol ClientProvider {
     /// Provides a DHCPv6 client.
     ///
-    /// + request `interface_id` the id of the interface the client will run on.
-    /// + request `models` the `OperationalModels` the client will start in.
-    ///     Empty or unsupported `models` will cause client creation to fail.
+    /// + request `params` the parameters to create the client with.
     /// + request `request` the channel handle that can be used to control the
     ///     newly created client. Will be closed if a client cannot be created,
     ///     with an epitaph explaining the reason.
-    NewClient(uint64 interface_id, OperationalModels models, request<Client> request);
+    NewClient(NewClientParams params, request<Client> request);
 };
 
 /// Provides methods to watch for discovered network configurations.
