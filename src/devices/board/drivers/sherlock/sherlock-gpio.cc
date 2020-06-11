@@ -67,6 +67,42 @@ static const pbus_irq_t gpio_irqs[] = {
 };
 
 // GPIOs to expose from generic GPIO driver.
+#ifdef _FACTORY
+#define GPIO_PIN_COUNT 120
+static const gpio_pin_t gpio_pins[] = {
+    {T931_GPIOZ(0)},     {T931_GPIOZ(1)},     {T931_GPIOZ(2)},     {T931_GPIOZ(3)},
+    {T931_GPIOZ(4)},     {T931_GPIOZ(5)},     {T931_GPIOZ(6)},     {T931_GPIOZ(7)},
+    {T931_GPIOZ(8)},     {T931_GPIOZ(9)},     {T931_GPIOZ(10)},    {T931_GPIOZ(11)},
+    {T931_GPIOZ(12)},    {T931_GPIOZ(13)},    {T931_GPIOZ(14)},    {T931_GPIOZ(15)},
+    {T931_GPIOA(0)},     {T931_GPIOA(1)},     {T931_GPIOA(2)},     {T931_GPIOA(3)},
+    {T931_GPIOA(4)},     {T931_GPIOA(5)},     {T931_GPIOA(6)},     {T931_GPIOA(7)},
+    {T931_GPIOA(8)},     {T931_GPIOA(9)},     {T931_GPIOA(10)},    {T931_GPIOA(11)},
+    {T931_GPIOA(12)},    {T931_GPIOA(13)},    {T931_GPIOA(14)},    {T931_GPIOA(15)},
+    {T931_GPIOBOOT(0)},  {T931_GPIOBOOT(1)},  {T931_GPIOBOOT(2)},  {T931_GPIOBOOT(3)},
+    {T931_GPIOBOOT(4)},  {T931_GPIOBOOT(5)},  {T931_GPIOBOOT(6)},  {T931_GPIOBOOT(7)},
+    {T931_GPIOBOOT(8)},  {T931_GPIOBOOT(9)},  {T931_GPIOBOOT(10)}, {T931_GPIOBOOT(11)},
+    {T931_GPIOBOOT(12)}, {T931_GPIOBOOT(13)}, {T931_GPIOBOOT(14)}, {T931_GPIOBOOT(15)},
+    {T931_GPIOC(0)},     {T931_GPIOC(1)},     {T931_GPIOC(2)},     {T931_GPIOC(3)},
+    {T931_GPIOC(4)},     {T931_GPIOC(5)},     {T931_GPIOC(6)},     {T931_GPIOC(7)},
+    {T931_GPIOX(0)},     {T931_GPIOX(1)},     {T931_GPIOX(2)},     {T931_GPIOX(3)},
+    {T931_GPIOX(4)},     {T931_GPIOX(5)},     {T931_GPIOX(6)},     {T931_GPIOX(7)},
+    {T931_GPIOX(8)},     {T931_GPIOX(9)},     {T931_GPIOX(10)},    {T931_GPIOX(11)},
+    {T931_GPIOX(12)},    {T931_GPIOX(13)},    {T931_GPIOX(14)},    {T931_GPIOX(15)},
+    {T931_GPIOX(16)},    {T931_GPIOX(17)},    {T931_GPIOX(18)},    {T931_GPIOX(19)},
+    {T931_GPIOX(20)},    {T931_GPIOX(21)},    {T931_GPIOX(22)},    {T931_GPIOX(23)},
+    {T931_GPIOH(0)},     {T931_GPIOH(1)},     {T931_GPIOH(2)},     {T931_GPIOH(3)},
+    {T931_GPIOH(4)},     {T931_GPIOH(5)},     {T931_GPIOH(6)},     {T931_GPIOH(7)},
+    {T931_GPIOH(8)},     {T931_GPIOH(9)},     {T931_GPIOH(10)},    {T931_GPIOH(11)},
+    {T931_GPIOH(12)},    {T931_GPIOH(13)},    {T931_GPIOH(14)},    {T931_GPIOH(15)},
+    {T931_GPIOAO(0)},    {T931_GPIOAO(1)},    {T931_GPIOAO(2)},    {T931_GPIOAO(3)},
+    {T931_GPIOAO(4)},    {T931_GPIOAO(5)},    {T931_GPIOAO(6)},    {T931_GPIOAO(7)},
+    {T931_GPIOAO(8)},    {T931_GPIOAO(9)},    {T931_GPIOAO(10)},   {T931_GPIOAO(11)},
+    {T931_GPIOAO(12)},   {T931_GPIOAO(13)},   {T931_GPIOAO(14)},   {T931_GPIOAO(15)},
+    {T931_GPIOE(0)},     {T931_GPIOE(1)},     {T931_GPIOE(2)},     {T931_GPIOE(3)},
+    {T931_GPIOE(4)},     {T931_GPIOE(5)},     {T931_GPIOE(6)},     {T931_GPIOE(7)},
+};
+#else
+#define GPIO_PIN_COUNT 25
 static const gpio_pin_t gpio_pins[] = {
     // For wifi.
     {T931_WIFI_HOST_WAKE},
@@ -106,6 +142,7 @@ static const gpio_pin_t gpio_pins[] = {
     {GPIO_SOC_WIFI_LPO_32k768},
     {GPIO_SOC_BT_REG_ON},
 };
+#endif
 
 static const pbus_metadata_t gpio_metadata[] = {
     {
@@ -131,6 +168,8 @@ static pbus_dev_t gpio_dev = []() {
 }();
 
 zx_status_t Sherlock::GpioInit() {
+  static_assert(countof(gpio_pins) == GPIO_PIN_COUNT, "Incorrect pin count.");
+
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d", __func__, status);

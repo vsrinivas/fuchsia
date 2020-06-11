@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/images/factory.gni")
+
 declare_args() {
   # Use this flag to exclude artifacts from Astro builds.
   # This is a very hacky way of ensuring that the resulting fuchsia.zbi fits
@@ -407,10 +409,17 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
       "//src/devices/board/drivers/mt8167s_ref",
       "//src/devices/board/drivers/nelson",
       "//src/devices/board/drivers/qemu-arm64",
-      "//src/devices/board/drivers/sherlock",
       "//src/devices/board/drivers/vim2",
       "//src/devices/board/drivers/vim3",
       "//src/devices/board/drivers/vs680-evk",
     ]
+
+    if (factory_mode) {
+      common_image_contents +=
+          [ "//src/devices/board/drivers/sherlock:sherlock-factory" ]
+    } else {
+      common_image_contents +=
+          [ "//src/devices/board/drivers/sherlock:sherlock" ]
+    }
   }
 }
