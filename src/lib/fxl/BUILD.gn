@@ -8,7 +8,6 @@ source_set("common") {
   visibility = [ ":*" ]
 
   sources = [
-    "arraysize.h",
     "build_config.h",
     "fxl_export.h",
     "macros.h",
@@ -125,7 +124,6 @@ executable("fxl_unittests") {
     "//src/lib/files/path_unittest.cc",
     "//src/lib/files/scoped_temp_dir_unittest.cc",
     "//src/lib/fxl/log_settings_command_line_unittest.cc",
-    "arraysize_unittest.cc",
     "command_line_unittest.cc",
     "functional/apply_unittest.cc",
     "functional/cancelable_callback_unittest.cc",

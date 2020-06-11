@@ -13,9 +13,9 @@
 #include <zircon/syscalls/object.h>
 
 #include <iostream>
+#include <iterator>
 #include <vector>
 
-#include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 // ProcessSpawner is a simple utility that waits for user input on stdin and
@@ -49,7 +49,7 @@ zx_status_t LaunchProcess(zx_handle_t job, const std::vector<const char*>& argv,
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   zx_status_t status =
       fdio_spawn_etc(job, FDIO_SPAWN_CLONE_ALL, normalized_argv.front(), normalized_argv.data(),
-                     nullptr, arraysize(actions), actions, proc, err_msg);
+                     nullptr, std::size(actions), actions, proc, err_msg);
   return status;
 }
 

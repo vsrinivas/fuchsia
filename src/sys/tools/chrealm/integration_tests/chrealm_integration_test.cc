@@ -18,6 +18,7 @@
 #include <zircon/types.h>
 
 #include <cstdio>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -25,7 +26,6 @@
 
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
-#include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -113,7 +113,7 @@ class ChrealmTest : public sys::testing::TestWithEnvironment,
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
     zx_status_t status =
         fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO, argv[0],
-                       normalized_argv.data(), nullptr, arraysize(actions), actions, proc, err_msg);
+                       normalized_argv.data(), nullptr, std::size(actions), actions, proc, err_msg);
     ASSERT_EQ(status, ZX_OK) << "Failed to spawn command: " << err_msg;
   }
 

@@ -11,11 +11,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <iterator>
+
 #include <fbl/unique_fd.h>
 #include <gmock/gmock.h>
 
 #include "guest_test.h"
-#include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/vmm/device/block.h"
 #include "src/virtualization/bin/vmm/device/qcow.h"
@@ -72,20 +73,20 @@ static zx_status_t write_qcow_file(int fd) {
   }
 
   // Convert L1 entries to big-endian
-  uint64_t be_table[arraysize(kL2TableClusterOffsets)];
-  for (size_t i = 0; i < arraysize(kL2TableClusterOffsets); ++i) {
+  uint64_t be_table[std::size(kL2TableClusterOffsets)];
+  for (size_t i = 0; i < std::size(kL2TableClusterOffsets); ++i) {
     be_table[i] = HostToBigEndianTraits::Convert(kL2TableClusterOffsets[i]);
   }
 
   // Write L1 table.
   write_success =
-      write_at(fd, be_table, arraysize(kL2TableClusterOffsets), kDefaultHeaderV2.l1_table_offset);
+      write_at(fd, be_table, std::size(kL2TableClusterOffsets), kDefaultHeaderV2.l1_table_offset);
   if (!write_success) {
     return ZX_ERR_IO;
   }
 
   // Initialize empty L2 tables.
-  for (size_t i = 0; i < arraysize(kL2TableClusterOffsets); ++i) {
+  for (size_t i = 0; i < std::size(kL2TableClusterOffsets); ++i) {
     write_success = write_at(fd, kZeroCluster, sizeof(kZeroCluster), kL2TableClusterOffsets[i]);
     if (!write_success) {
       return ZX_ERR_IO;

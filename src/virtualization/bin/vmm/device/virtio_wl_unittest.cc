@@ -12,7 +12,6 @@
 #include <fbl/algorithm.h>
 #include <virtio/wl.h>
 
-#include "src/lib/fxl/arraysize.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 
@@ -352,7 +351,7 @@ TEST_F(VirtioWlTest, HandleSend) {
   uint32_t data;
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_bytes, actual_handles;
-  ASSERT_EQ(zx_channel_read(channels_[0].get(), 0, &data, handles, sizeof(data), arraysize(handles),
+  ASSERT_EQ(zx_channel_read(channels_[0].get(), 0, &data, handles, sizeof(data), std::size(handles),
                             &actual_bytes, &actual_handles),
             ZX_OK);
   EXPECT_EQ(actual_handles, 2u);

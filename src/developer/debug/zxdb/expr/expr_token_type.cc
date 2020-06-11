@@ -6,8 +6,9 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <iterator>
+
 #include "src/developer/debug/zxdb/expr/expr_language.h"
-#include "src/lib/fxl/arraysize.h"
 
 namespace zxdb {
 
@@ -100,7 +101,7 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
 }  // namespace
 
 const ExprTokenRecord& RecordForTokenType(ExprTokenType type) {
-  static_assert(arraysize(kRecords) == static_cast<int>(ExprTokenType::kNumTypes),
+  static_assert(std::size(kRecords) == static_cast<int>(ExprTokenType::kNumTypes),
                 "kRecords needs updating to match ExprTokenType");
 
   // Checks that this record is in the right place.

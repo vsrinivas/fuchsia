@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
+#include <iterator>
 
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
@@ -17,7 +18,6 @@
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
-#include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 // The parser is a Pratt parser. The basic idea there is to have the precedences (and
@@ -153,7 +153,7 @@ const ExprToken ExprParser::kInvalidToken;
 ExprParser::ExprParser(std::vector<ExprToken> tokens, ExprLanguage lang,
                        NameLookupCallback name_lookup)
     : language_(lang), name_lookup_callback_(std::move(name_lookup)), tokens_(std::move(tokens)) {
-  static_assert(arraysize(ExprParser::kDispatchInfo) == static_cast<int>(ExprTokenType::kNumTypes),
+  static_assert(std::size(ExprParser::kDispatchInfo) == static_cast<int>(ExprTokenType::kNumTypes),
                 "kDispatchInfo needs updating to match ExprTokenType");
 }
 
@@ -1132,7 +1132,7 @@ int ExprParser::CurPrecedenceWithShiftTokenConversion() const {
 // static
 const ExprParser::DispatchInfo& ExprParser::DispatchForToken(const ExprToken& token) {
   size_t index = static_cast<size_t>(token.type());
-  FX_DCHECK(index < arraysize(kDispatchInfo));
+  FX_DCHECK(index < std::size(kDispatchInfo));
   return kDispatchInfo[index];
 }
 

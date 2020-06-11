@@ -12,7 +12,6 @@
 
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/types/type_converters.h"
-#include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

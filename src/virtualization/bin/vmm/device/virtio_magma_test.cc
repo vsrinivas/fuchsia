@@ -12,7 +12,6 @@
 #include <fbl/algorithm.h>
 
 #include "src/graphics/lib/magma/include/magma_abi/magma.h"
-#include "src/lib/fxl/arraysize.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 

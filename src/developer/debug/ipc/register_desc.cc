@@ -7,10 +7,10 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
+#include <iterator>
 #include <map>
 
 #include "src/developer/debug/ipc/protocol.h"
-#include "src/lib/fxl/arraysize.h"
 
 namespace debug_ipc {
 namespace {

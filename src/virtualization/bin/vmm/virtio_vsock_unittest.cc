@@ -6,7 +6,8 @@
 
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "src/lib/fxl/arraysize.h"
+#include <iterator>
+
 #include "src/virtualization/bin/vmm/phys_mem_fake.h"
 #include "src/virtualization/bin/vmm/virtio_queue_fake.h"
 
@@ -250,7 +251,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
   }
 
   void FillRxQueue() {
-    for (size_t i = 0; i < arraysize(rx_buffers); ++i) {
+    for (size_t i = 0; i < std::size(rx_buffers); ++i) {
       ASSERT_EQ(rx_queue_.BuildDescriptor()
                     .AppendWritable(&rx_buffers[i].header, sizeof(rx_buffers[i].header))
                     .AppendWritable(&rx_buffers[i].data, sizeof(rx_buffers[i].data))

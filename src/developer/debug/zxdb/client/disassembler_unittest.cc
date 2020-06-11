@@ -4,13 +4,13 @@
 
 #include "src/developer/debug/zxdb/client/disassembler.h"
 
+#include <iterator>
 #include <string>
 
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/zxdb/client/arch_info.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
-#include "src/lib/fxl/arraysize.h"
 
 namespace zxdb {
 
@@ -30,7 +30,7 @@ TEST(Disassembler, X64Individual) {
 
   // "int3".
   const uint8_t int3_data[1] = {0xCC};
-  size_t consumed = d.DisassembleOne(int3_data, arraysize(int3_data), 0x1234567890, opts, &out);
+  size_t consumed = d.DisassembleOne(int3_data, std::size(int3_data), 0x1234567890, opts, &out);
   EXPECT_EQ(1u, consumed);
   EXPECT_EQ(std::vector<uint8_t>({0xcc}), out.bytes);
   EXPECT_EQ("int3", out.op);
@@ -39,7 +39,7 @@ TEST(Disassembler, X64Individual) {
 
   // "mov edi, 0x28e5e0" with bytes and address.
   const uint8_t mov_data[5] = {0xbf, 0xe0, 0xe5, 0x28, 0x00};
-  consumed = d.DisassembleOne(mov_data, arraysize(mov_data), 0x1234, opts, &out);
+  consumed = d.DisassembleOne(mov_data, std::size(mov_data), 0x1234, opts, &out);
   EXPECT_EQ(5u, consumed);
   EXPECT_EQ(std::vector<uint8_t>({0xbf, 0xe0, 0xe5, 0x28, 0x00}), out.bytes);
   EXPECT_EQ("mov", out.op);
@@ -65,13 +65,13 @@ TEST(Disassembler, X64Undecodable) {
 
   // Check with no emitting undecodable.
   opts.emit_undecodable = false;
-  size_t consumed = d.DisassembleOne(mov_data, arraysize(mov_data) - 1, 0x1234, opts, &out);
+  size_t consumed = d.DisassembleOne(mov_data, std::size(mov_data) - 1, 0x1234, opts, &out);
   EXPECT_EQ(0u, consumed);
   EXPECT_TRUE(out.op.empty());
 
   // Emit undecodable. On X64 this will consume one byte.
   opts.emit_undecodable = true;
-  consumed = d.DisassembleOne(mov_data, arraysize(mov_data) - 1, 0x1234, opts, &out);
+  consumed = d.DisassembleOne(mov_data, std::size(mov_data) - 1, 0x1234, opts, &out);
   EXPECT_EQ(1u, consumed);
   EXPECT_EQ(std::vector<uint8_t>({0xbf}), out.bytes);
   EXPECT_EQ(".byte", out.op);
@@ -98,8 +98,8 @@ TEST(Disassembler, X64Many) {
   };
 
   // Full block.
-  size_t consumed = d.DisassembleMany(data, arraysize(data), 0x123456780, opts, 0, &out);
-  EXPECT_EQ(arraysize(data), consumed);
+  size_t consumed = d.DisassembleMany(data, std::size(data), 0x123456780, opts, 0, &out);
+  EXPECT_EQ(std::size(data), consumed);
   ASSERT_EQ(3u, out.size());
   EXPECT_EQ(Row(0x123456780, &data[0], 5, "mov", "edi, 0x28e5e0", ""), out[0]);
   EXPECT_EQ(Row(0x123456785, &data[5], 3, "mov", "rsi, rbx", ""), out[1]);
@@ -107,7 +107,7 @@ TEST(Disassembler, X64Many) {
 
   // Limit the number of instructions.
   out.clear();
-  consumed = d.DisassembleMany(data, arraysize(data), 0x123456780, opts, 2, &out);
+  consumed = d.DisassembleMany(data, std::size(data), 0x123456780, opts, 2, &out);
   EXPECT_EQ(8u, consumed);
   ASSERT_EQ(2u, out.size());
   EXPECT_EQ(Row(0x123456780, &data[0], 5, "mov", "edi, 0x28e5e0", ""), out[0]);
@@ -116,8 +116,8 @@ TEST(Disassembler, X64Many) {
   // Have 3 bytes off the end.
   opts.emit_undecodable = false;  // Should be overridden.
   out.clear();
-  consumed = d.DisassembleMany(data, arraysize(data) - 3, 0x123456780, opts, 0, &out);
-  EXPECT_EQ(arraysize(data) - 3, consumed);
+  consumed = d.DisassembleMany(data, std::size(data) - 3, 0x123456780, opts, 0, &out);
+  EXPECT_EQ(std::size(data) - 3, consumed);
   ASSERT_EQ(4u, out.size());
   EXPECT_EQ(Row(0x123456780, &data[0], 5, "mov", "edi, 0x28e5e0", ""), out[0]);
   EXPECT_EQ(Row(0x123456785, &data[5], 3, "mov", "rsi, rbx", ""), out[1]);
@@ -230,8 +230,8 @@ TEST(Disassembler, Arm64Many) {
   };
 
   Disassembler::Options opts;
-  size_t consumed = d.DisassembleMany(data, arraysize(data), 0x123456780, opts, 0, &out);
-  EXPECT_EQ(arraysize(data), consumed);
+  size_t consumed = d.DisassembleMany(data, std::size(data), 0x123456780, opts, 0, &out);
+  EXPECT_EQ(std::size(data), consumed);
   ASSERT_EQ(3u, out.size());
   EXPECT_EQ(Row(0x123456780, &data[0], 4, "str", "x19, [sp, #-0x20]!", ""), out[0]);
   EXPECT_EQ(Row(0x123456784, &data[4], 4, "stp", "x29, x30, [sp, #0x10]", ""), out[1]);
@@ -241,8 +241,8 @@ TEST(Disassembler, Arm64Many) {
 
   // Test an instruction off the end.
   out.clear();
-  consumed = d.DisassembleMany(data, arraysize(data) - 1, 0x123456780, opts, 0, &out);
-  EXPECT_EQ(arraysize(data) - 1, consumed);
+  consumed = d.DisassembleMany(data, std::size(data) - 1, 0x123456780, opts, 0, &out);
+  EXPECT_EQ(std::size(data) - 1, consumed);
   ASSERT_EQ(3u, out.size());
   EXPECT_EQ(Row(0x123456780, &data[0], 4, "str", "x19, [sp, #-0x20]!", ""), out[0]);
   EXPECT_EQ(Row(0x123456784, &data[4], 4, "stp", "x29, x30, [sp, #0x10]", ""), out[1]);

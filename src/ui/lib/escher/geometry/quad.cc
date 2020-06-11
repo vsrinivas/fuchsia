@@ -4,7 +4,7 @@
 
 #include "src/ui/lib/escher/geometry/quad.h"
 
-#include "src/lib/fxl/arraysize.h"
+#include <iterator>
 
 namespace escher {
 namespace {
@@ -36,6 +36,6 @@ Quad Quad::CreateFillClipSpace(float z) {
 
 const unsigned short* Quad::GetIndices() { return g_indices; }
 
-int Quad::GetIndexCount() { return arraysize(g_indices); }
+int Quad::GetIndexCount() { return std::size(g_indices); }
 
 }  // namespace escher

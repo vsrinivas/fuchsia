@@ -7,10 +7,11 @@
 #include <lib/syslog/cpp/macros.h>
 #include <sys/stat.h>
 
+#include <iterator>
+
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/arraysize.h"
 #include "src/virtualization/bin/vmm/device/qcow_test_data.h"
 
 namespace {
@@ -53,7 +54,7 @@ class QcowTest : public testing::Test {
 
   void VerifyPaddingClustersAreEmpty() {
     uint8_t cluster[kClusterSize];
-    for (size_t i = 0; i < arraysize(kPaddingClusterOffsets); ++i) {
+    for (size_t i = 0; i < std::size(kPaddingClusterOffsets); ++i) {
       ASSERT_EQ(static_cast<int>(kClusterSize),
                 pread(fd_.get(), cluster, kClusterSize, kPaddingClusterOffsets[i]));
       ASSERT_EQ(0, memcmp(cluster, kZeroCluster, kClusterSize));
@@ -70,32 +71,32 @@ class QcowTest : public testing::Test {
 
   void WriteL1Table() {
     // Convert l1 entries to big-endian
-    uint64_t be_table[arraysize(kL2TableClusterOffsets)];
-    for (size_t i = 0; i < arraysize(kL2TableClusterOffsets); ++i) {
+    uint64_t be_table[std::size(kL2TableClusterOffsets)];
+    for (size_t i = 0; i < std::size(kL2TableClusterOffsets); ++i) {
       be_table[i] = HostToBigEndianTraits::Convert(kL2TableClusterOffsets[i]);
     }
 
     // Write L1 table.
-    WriteAt(be_table, arraysize(kL2TableClusterOffsets), header_.l1_table_offset);
+    WriteAt(be_table, std::size(kL2TableClusterOffsets), header_.l1_table_offset);
 
     // Initialize empty L2 tables.
-    for (size_t i = 0; i < arraysize(kL2TableClusterOffsets); ++i) {
+    for (size_t i = 0; i < std::size(kL2TableClusterOffsets); ++i) {
       WriteAt(kZeroCluster, sizeof(kZeroCluster), kL2TableClusterOffsets[i]);
     }
   }
 
   void WriteRefcountTable() {
     // Convert entries to big-endian
-    uint64_t be_table[arraysize(kRefcountBlockClusterOffsets)];
-    for (size_t i = 0; i < arraysize(kRefcountBlockClusterOffsets); ++i) {
+    uint64_t be_table[std::size(kRefcountBlockClusterOffsets)];
+    for (size_t i = 0; i < std::size(kRefcountBlockClusterOffsets); ++i) {
       be_table[i] = HostToBigEndianTraits::Convert(kRefcountBlockClusterOffsets[i]);
     }
 
     // Write refcount table
-    WriteAt(be_table, arraysize(kRefcountBlockClusterOffsets), header_.refcount_table_offset);
+    WriteAt(be_table, std::size(kRefcountBlockClusterOffsets), header_.refcount_table_offset);
 
     // Initialize empty refcount blocks.
-    for (size_t i = 0; i < arraysize(kRefcountBlockClusterOffsets); ++i) {
+    for (size_t i = 0; i < std::size(kRefcountBlockClusterOffsets); ++i) {
       WriteAt(kZeroCluster, sizeof(kZeroCluster), kRefcountBlockClusterOffsets[i]);
     }
   }

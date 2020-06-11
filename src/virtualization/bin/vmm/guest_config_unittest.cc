@@ -10,7 +10,6 @@
 #include <gtest/gtest.h>
 
 #include "guest.h"
-#include "src/lib/fxl/arraysize.h"
 
 class GuestConfigParserTest : public ::testing::Test {
  protected:

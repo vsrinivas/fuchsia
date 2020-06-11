@@ -27,7 +27,6 @@
 #include "in_stream_peeker.h"
 #include "input_copier.h"
 #include "lib/zx/time.h"
-#include "src/lib/fxl/arraysize.h"
 #include "util.h"
 
 namespace {

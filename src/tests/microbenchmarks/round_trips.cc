@@ -17,12 +17,12 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
+#include <iterator>
 #include <thread>
 #include <vector>
 
 #include "assert.h"
 #include "lib/fidl/cpp/binding.h"
-#include "src/lib/fxl/arraysize.h"
 #include "test_runner.h"
 
 // This file measures two things:
@@ -665,7 +665,7 @@ const ThreadFuncEntry thread_funcs[] = {
 // clang-format on
 
 ThreadFunc GetThreadFunc(const char* name) {
-  for (size_t i = 0; i < arraysize(thread_funcs); ++i) {
+  for (size_t i = 0; i < std::size(thread_funcs); ++i) {
     if (!strcmp(name, thread_funcs[i].name))
       return thread_funcs[i].func;
   }

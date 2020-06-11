@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/debug_agent/arch_arm64_helpers.h"
 
+#include <iterator>
 #include <optional>
 
 #include <gtest/gtest.h>
@@ -13,7 +14,6 @@
 #include "src/developer/debug/ipc/register_test_support.h"
 #include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/lib/fxl/arraysize.h"
 
 namespace debug_agent {
 namespace arch {
@@ -61,7 +61,7 @@ TEST(arm64Helpers, SettingBreakpoints) {
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1, ZX_OK);
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbvr, kAddress1);
-  for (size_t i = 1; i < arraysize(debug_regs.hw_bps); i++) {
+  for (size_t i = 1; i < std::size(debug_regs.hw_bps); i++) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbcr & kDbgbvrE, 0u);
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }
@@ -70,7 +70,7 @@ TEST(arm64Helpers, SettingBreakpoints) {
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1, ZX_OK);
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbvr, kAddress1);
-  for (size_t i = 1; i < arraysize(debug_regs.hw_bps); i++) {
+  for (size_t i = 1; i < std::size(debug_regs.hw_bps); i++) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbcr & kDbgbvrE, 0u);
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }
@@ -81,7 +81,7 @@ TEST(arm64Helpers, SettingBreakpoints) {
   EXPECT_EQ(debug_regs.hw_bps[0].dbgbvr, kAddress1);
   EXPECT_EQ(debug_regs.hw_bps[1].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[1].dbgbvr, kAddress2);
-  for (size_t i = 2; i < arraysize(debug_regs.hw_bps); i++) {
+  for (size_t i = 2; i < std::size(debug_regs.hw_bps); i++) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbcr & kDbgbvrE, 0u);
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }
@@ -93,7 +93,7 @@ TEST(arm64Helpers, SettingBreakpoints) {
   EXPECT_EQ(debug_regs.hw_bps[1].dbgbvr, kAddress2);
   EXPECT_EQ(debug_regs.hw_bps[2].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[2].dbgbvr, kAddress3);
-  for (size_t i = 3; i < arraysize(debug_regs.hw_bps); i++) {
+  for (size_t i = 3; i < std::size(debug_regs.hw_bps); i++) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbcr & kDbgbvrE, 0u);
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }
@@ -107,7 +107,7 @@ TEST(arm64Helpers, SettingBreakpoints) {
   EXPECT_EQ(debug_regs.hw_bps[2].dbgbvr, kAddress3);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbvr, kAddress4);
-  for (size_t i = 4; i < arraysize(debug_regs.hw_bps); i++) {
+  for (size_t i = 4; i < std::size(debug_regs.hw_bps); i++) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbcr & kDbgbvrE, 0u);
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }
@@ -122,7 +122,7 @@ TEST(arm64Helpers, SettingBreakpoints) {
   EXPECT_EQ(debug_regs.hw_bps[2].dbgbvr, kAddress3);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbvr, kAddress4);
-  for (size_t i = 4; i < arraysize(debug_regs.hw_bps); i++) {
+  for (size_t i = 4; i < std::size(debug_regs.hw_bps); i++) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbcr & kDbgbvrE, 0u);
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }
@@ -147,7 +147,7 @@ TEST(arm64Helpers, Removing) {
   EXPECT_EQ(debug_regs.hw_bps[2].dbgbvr, 0u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbvr, kAddress4);
-  for (size_t i = 4; i < arraysize(debug_regs.hw_bps); i++) {
+  for (size_t i = 4; i < std::size(debug_regs.hw_bps); i++) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbcr & kDbgbvrE, 0u);
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }
@@ -162,7 +162,7 @@ TEST(arm64Helpers, Removing) {
   EXPECT_EQ(debug_regs.hw_bps[2].dbgbvr, 0u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbvr, kAddress4);
-  for (size_t i = 4; i < arraysize(debug_regs.hw_bps); i++) {
+  for (size_t i = 4; i < std::size(debug_regs.hw_bps); i++) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbcr & kDbgbvrE, 0u);
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }
@@ -177,7 +177,7 @@ TEST(arm64Helpers, Removing) {
   EXPECT_EQ(debug_regs.hw_bps[2].dbgbvr, 0u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbvr, kAddress4);
-  for (size_t i = 4; i < arraysize(debug_regs.hw_bps); i++) {
+  for (size_t i = 4; i < std::size(debug_regs.hw_bps); i++) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbcr & kDbgbvrE, 0u);
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }
@@ -191,7 +191,7 @@ TEST(arm64Helpers, Removing) {
   EXPECT_EQ(debug_regs.hw_bps[2].dbgbvr, 0u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbvr, kAddress4);
-  for (size_t i = 4; i < arraysize(debug_regs.hw_bps); i++) {
+  for (size_t i = 4; i < std::size(debug_regs.hw_bps); i++) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbcr & kDbgbvrE, 0u);
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }
@@ -206,7 +206,7 @@ TEST(arm64Helpers, Removing) {
   EXPECT_EQ(debug_regs.hw_bps[2].dbgbvr, 0u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbvr, kAddress4);
-  for (size_t i = 4; i < arraysize(debug_regs.hw_bps); i++) {
+  for (size_t i = 4; i < std::size(debug_regs.hw_bps); i++) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbcr & kDbgbvrE, 0u);
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }
@@ -220,7 +220,7 @@ TEST(arm64Helpers, Removing) {
   EXPECT_EQ(debug_regs.hw_bps[2].dbgbvr, kAddress1);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbvr, kAddress4);
-  for (size_t i = 4; i < arraysize(debug_regs.hw_bps); i++) {
+  for (size_t i = 4; i < std::size(debug_regs.hw_bps); i++) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbcr & kDbgbvrE, 0u);
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }
@@ -235,7 +235,7 @@ TEST(arm64Helpers, Removing) {
   EXPECT_EQ(debug_regs.hw_bps[2].dbgbvr, kAddress1);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbvr, kAddress4);
-  for (size_t i = 4; i < arraysize(debug_regs.hw_bps); i++) {
+  for (size_t i = 4; i < std::size(debug_regs.hw_bps); i++) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbcr & kDbgbvrE, 0u);
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }
@@ -249,7 +249,7 @@ TEST(arm64Helpers, Removing) {
   EXPECT_EQ(debug_regs.hw_bps[2].dbgbvr, kAddress1);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbvr, kAddress4);
-  for (size_t i = 4; i < arraysize(debug_regs.hw_bps); i++) {
+  for (size_t i = 4; i < std::size(debug_regs.hw_bps); i++) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbcr & kDbgbvrE, 0u);
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }
@@ -264,7 +264,7 @@ TEST(arm64Helpers, Removing) {
   EXPECT_EQ(debug_regs.hw_bps[2].dbgbvr, kAddress1);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbcr & kDbgbvrE, 1u);
   EXPECT_EQ(debug_regs.hw_bps[3].dbgbvr, kAddress4);
-  for (size_t i = 4; i < arraysize(debug_regs.hw_bps); i++) {
+  for (size_t i = 4; i < std::size(debug_regs.hw_bps); i++) {
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbcr & kDbgbvrE, 0u);
     EXPECT_EQ(debug_regs.hw_bps[i].dbgbvr, 0u);
   }

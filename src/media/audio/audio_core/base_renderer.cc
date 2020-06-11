@@ -5,7 +5,6 @@
 
 #include <lib/fit/defer.h>
 
-#include "src/lib/fxl/arraysize.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/reporter.h"

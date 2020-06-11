@@ -13,8 +13,6 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include "src/lib/fxl/arraysize.h"
-
 namespace ui_input {
 
 namespace {

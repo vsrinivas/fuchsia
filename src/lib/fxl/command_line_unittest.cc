@@ -4,11 +4,11 @@
 
 #include "src/lib/fxl/command_line.h"
 
+#include <iterator>
 #include <utility>
 
 #include <gtest/gtest.h>
 
-#include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/macros.h"
 
 namespace fxl {
@@ -191,7 +191,7 @@ TEST(CommandLineTest, CommandLineFromIterators) {
   {
     static const char* const argv[] = {"my_program", "--flag=value", "arg"};
 
-    auto cl = CommandLineFromIterators(argv, argv + arraysize(argv));
+    auto cl = CommandLineFromIterators(argv, argv + std::size(argv));
     EXPECT_TRUE(cl.has_argv0());
     EXPECT_EQ(argv[0], cl.argv0());
     std::vector<CommandLine::Option> expected_options = {CommandLine::Option("flag", "value")};
@@ -204,7 +204,7 @@ TEST(CommandLineTest, CommandLineFromIterators) {
 
 TEST(CommandLineTest, CommandLineFromArgcArgv) {
   static const char* const argv[] = {"my_program", "--flag=value", "arg"};
-  const int argc = static_cast<int>(arraysize(argv));
+  const int argc = static_cast<int>(std::size(argv));
 
   auto cl = CommandLineFromArgcArgv(argc, argv);
   EXPECT_TRUE(cl.has_argv0());
