@@ -427,20 +427,30 @@ void Flatland::RegisterBufferCollection(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
   FX_DCHECK(renderer_);
 
-  pending_operations_.push_back([=, token = std::move(token)]() mutable {
-    if (collection_id == 0) {
+  if (collection_id == 0) {
+    pending_operations_.push_back([=]() {
       FX_LOGS(ERROR) << "RegisterBufferCollection called with collection_id 0";
       return false;
-    }
+    });
+    return;
+  }
 
-    if (buffer_collections_.count(collection_id)) {
+  if (buffer_collections_.count(collection_id)) {
+    pending_operations_.push_back([=]() {
       FX_LOGS(ERROR) << "RegisterBufferCollection called with pre-existing collection_id "
                      << collection_id;
       return false;
-    }
+    });
+    return;
+  }
 
-    auto renderer_collection_id =
-        renderer_->RegisterTextureCollection(sysmem_allocator_.get(), std::move(token));
+  // Register the texture collection immediately since the client may block on buffers being
+  // allocated before calling Present().
+  auto renderer_collection_id =
+      renderer_->RegisterTextureCollection(sysmem_allocator_.get(), std::move(token));
+
+  // But don't allow the collection to be referenced in other function calls until presented.
+  pending_operations_.push_back([=]() {
     if (renderer_collection_id == Renderer::kInvalidId) {
       FX_LOGS(ERROR)
           << "RegisterBufferCollection failed to register the sysmem token with the renderer.";

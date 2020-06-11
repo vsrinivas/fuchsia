@@ -2127,6 +2127,20 @@ TEST_F(FlatlandTest, RegisterBufferCollectionErrorCases) {
   }
 }
 
+// Tests that Flatland passes the Sysmem token to the Renderer even if the client has not called
+// Present(). This is necessary since the client may block on buffers being allocated before
+// presenting.
+TEST_F(FlatlandTest, RendererGetsSysmemTokenBeforePresent) {
+  Flatland flatland = CreateFlatland();
+
+  // Register a buffer collection and expect the mock Renderer call, even without presenting.
+  const BufferCollectionId kId = 1;
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+
+  EXPECT_CALL(*mock_renderer_, RegisterTextureCollection(_, _)).WillOnce(Return(1));
+  flatland.RegisterBufferCollection(kId, std::move(token));
+}
+
 TEST_F(FlatlandTest, CreateImageErrorCases) {
   Flatland flatland = CreateFlatland();
 
