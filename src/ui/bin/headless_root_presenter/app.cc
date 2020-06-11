@@ -17,8 +17,8 @@ namespace headless_root_presenter {
 App::App(const fxl::CommandLine& command_line, async::Loop* loop,
          std::unique_ptr<sys::ComponentContext> component_context, bool use_input_reader)
     : component_context_(std::move(component_context)),
-      fdr_manager_(
-          std::make_unique<root_presenter::FactoryResetManager>(*component_context_.get())),
+      fdr_manager_(std::make_unique<root_presenter::FactoryResetManager>(
+          *component_context_.get(), std::make_shared<root_presenter::MediaRetriever>())),
       activity_notifier_(loop->dispatcher(), root_presenter::ActivityNotifierImpl::kDefaultInterval,
                          *component_context_.get()),
       media_buttons_handler_(&activity_notifier_) {

@@ -4,6 +4,7 @@
 
 #include "src/ui/bin/root_presenter/factory_reset_manager.h"
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/async/time.h>
@@ -11,6 +12,12 @@
 #include <zircon/status.h>
 
 namespace root_presenter {
+
+using fuchsia::media::AudioRenderUsage;
+using fuchsia::media::sounds::Player_AddSoundFromFile_Result;
+using fuchsia::media::sounds::Player_PlaySound_Result;
+
+constexpr uint32_t FACTORY_RESET_SOUND_ID = 0;
 
 FactoryResetManager::WatchHandler::WatchHandler(
     const fuchsia::recovery::ui::FactoryResetCountdownState& state) {
@@ -39,7 +46,9 @@ void FactoryResetManager::WatchHandler::SendIfChanged() {
   }
 }
 
-FactoryResetManager::FactoryResetManager(sys::ComponentContext& context) {
+FactoryResetManager::FactoryResetManager(sys::ComponentContext& context,
+                                         std::shared_ptr<MediaRetriever> media_retriever)
+    : media_retriever_(media_retriever) {
   context.outgoing()->AddPublicService<fuchsia::recovery::ui::FactoryResetCountdown>(
       [this](fidl::InterfaceRequest<fuchsia::recovery::ui::FactoryResetCountdown> request) {
         auto handler = std::make_unique<WatchHandler>(State());
@@ -48,6 +57,8 @@ FactoryResetManager::FactoryResetManager(sys::ComponentContext& context) {
 
   context.svc()->Connect(factory_reset_.NewRequest());
   FX_DCHECK(factory_reset_);
+  context.svc()->Connect(sound_player_.NewRequest());
+  FX_DCHECK(sound_player_);
 }
 
 bool FactoryResetManager::OnMediaButtonReport(
@@ -65,10 +76,47 @@ bool FactoryResetManager::OnMediaButtonReport(
   return false;
 }
 
-void FactoryResetManager::TriggerFactoryReset() {
-  FX_LOGS(WARNING) << "Triggering factory reset";
+void FactoryResetManager::PlayCompleteSoundThenReset() {
+  FX_LOGS(DEBUG) << "Playing countdown complete sound";
   countdown_started_ = false;
 
+  MediaRetriever::ResetSoundResult result = media_retriever_->GetResetSound();
+  if (result.is_error()) {
+    FX_LOGS(INFO) << "Skipping countdown complete sound. Unable to open audio file: "
+                  << zx_status_get_string(result.error());
+    TriggerFactoryReset();
+    return;
+  }
+
+  sound_player_->AddSoundFromFile(
+      FACTORY_RESET_SOUND_ID, std::move(result.value()),
+      [this](Player_AddSoundFromFile_Result result) {
+        if (result.is_response()) {
+          sound_player_->PlaySound(FACTORY_RESET_SOUND_ID, AudioRenderUsage::SYSTEM_AGENT,
+                                   [this](Player_PlaySound_Result result) {
+                                     if (result.is_err()) {
+                                       FX_LOGS(WARNING)
+                                           << "Failed to play countdown complete sound in player";
+                                     } else {
+                                       sound_player_->RemoveSound(FACTORY_RESET_SOUND_ID);
+                                     }
+
+                                     // Trigger reset after sound completes, otherwise sound
+                                     // is cut off. Reset regardless of whether the sound
+                                     // played successfully or not.
+                                     TriggerFactoryReset();
+                                   });
+        } else {
+          FX_LOGS(WARNING) << "Failed to add countdown complete sound to player";
+          // If we couldn't add the sound, don't bother trying to play
+          // the sound, just trigger the reset early.
+          TriggerFactoryReset();
+        }
+      });
+}
+
+void FactoryResetManager::TriggerFactoryReset() {
+  FX_LOGS(WARNING) << "Triggering factory reset";
   FX_DCHECK(factory_reset_);
   factory_reset_->Reset([](zx_status_t status) {
     if (status != ZX_OK) {
@@ -103,7 +151,8 @@ void FactoryResetManager::StartFactoryResetCountdown() {
   deadline_ = async_now(async_get_default_dispatcher()) + kCountdownDuration.get();
   NotifyStateChange();
 
-  reset_after_timeout_.Reset(fit::bind_member(this, &FactoryResetManager::TriggerFactoryReset));
+  reset_after_timeout_.Reset(
+      fit::bind_member(this, &FactoryResetManager::PlayCompleteSoundThenReset));
   async::PostDelayedTask(async_get_default_dispatcher(), reset_after_timeout_.callback(),
                          kCountdownDuration);
 }

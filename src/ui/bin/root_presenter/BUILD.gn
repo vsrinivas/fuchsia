@@ -72,6 +72,7 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.media.sounds",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.recovery.ui",
     "//sdk/fidl/fuchsia.ui.activity",
@@ -171,9 +172,12 @@ source_set("factory_reset_manager") {
   sources = [
     "factory_reset_manager.cc",
     "factory_reset_manager.h",
+    "media_retriever.cc",
+    "media_retriever.h",
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.media.sounds",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.recovery.ui",
     "//sdk/lib/sys/cpp",
@@ -181,8 +185,10 @@ source_set("factory_reset_manager") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
+    "//zircon/public/lib/fdio",
   ]
 }
 

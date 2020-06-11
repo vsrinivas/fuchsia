@@ -25,7 +25,8 @@ namespace root_presenter {
 App::App(const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher)
     : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       input_reader_(this),
-      fdr_manager_(std::make_unique<FactoryResetManager>(*component_context_.get())),
+      fdr_manager_(std::make_unique<FactoryResetManager>(*component_context_.get(),
+                                                         std::make_shared<MediaRetriever>())),
       activity_notifier_(dispatcher, ActivityNotifierImpl::kDefaultInterval,
                          *component_context_.get()),
       focuser_binding_(this),

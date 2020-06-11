@@ -5,6 +5,7 @@
 #ifndef SRC_UI_BIN_ROOT_PRESENTER_FACTORY_RESET_MANAGER_H_
 #define SRC_UI_BIN_ROOT_PRESENTER_FACTORY_RESET_MANAGER_H_
 
+#include <fuchsia/media/sounds/cpp/fidl.h>
 #include <fuchsia/recovery/cpp/fidl.h>
 #include <fuchsia/recovery/ui/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
@@ -13,6 +14,7 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include "src/lib/fxl/functional/cancelable_callback.h"
+#include "src/ui/bin/root_presenter/media_retriever.h"
 
 namespace root_presenter {
 
@@ -47,7 +49,8 @@ class FactoryResetManager {
     FXL_DISALLOW_COPY_AND_ASSIGN(WatchHandler);
   };
 
-  explicit FactoryResetManager(sys::ComponentContext& component_context);
+  FactoryResetManager(sys::ComponentContext& component_context,
+                      std::shared_ptr<MediaRetriever> media_retriever);
 
   // Returns true if the event is handled.
   bool OnMediaButtonReport(const fuchsia::ui::input::MediaButtonsReport& report);
@@ -58,6 +61,7 @@ class FactoryResetManager {
   void StartFactoryResetCountdown();
   void CancelFactoryResetCountdown();
 
+  void PlayCompleteSoundThenReset();
   void TriggerFactoryReset();
 
   void NotifyStateChange();
@@ -70,6 +74,8 @@ class FactoryResetManager {
   zx_time_t deadline_ = 0u;
 
   fuchsia::recovery::FactoryResetPtr factory_reset_;
+  fuchsia::media::sounds::PlayerPtr sound_player_;
+  std::shared_ptr<MediaRetriever> media_retriever_;
 
   fidl::BindingSet<fuchsia::recovery::ui::FactoryResetCountdown, std::unique_ptr<WatchHandler>>
       countdown_bindings_;

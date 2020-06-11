@@ -13,6 +13,7 @@
             "fuchsia.accessibility.ColorTransform",
             "fuchsia.accessibility.Magnifier",
             "fuchsia.logger.LogSink",
+            "fuchsia.media.sounds.Player",
             "fuchsia.recovery.FactoryReset",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",

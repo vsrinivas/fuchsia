@@ -4,6 +4,7 @@
 
 #include "src/ui/bin/root_presenter/factory_reset_manager.h"
 
+#include <fuchsia/media/sounds/cpp/fidl_test_base.h>
 #include <fuchsia/recovery/cpp/fidl_test_base.h>
 #include <lib/async/time.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -11,6 +12,7 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <zircon/status.h>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
@@ -18,8 +20,25 @@
 namespace root_presenter {
 namespace testing {
 
+using fuchsia::media::AudioRenderUsage;
+using fuchsia::media::sounds::Player_AddSoundFromFile_Response;
+using fuchsia::media::sounds::Player_AddSoundFromFile_Result;
+using fuchsia::media::sounds::Player_PlaySound_Response;
+using fuchsia::media::sounds::Player_PlaySound_Result;
+using fuchsia::media::sounds::PlaySoundError;
+using fuchsia::media::sounds::testing::Player_TestBase;
+using ::testing::ByMove;
+using ::testing::InSequence;
+using ::testing::MockFunction;
+using ::testing::NiceMock;
+using ::testing::Return;
+
 class FakeFactoryReset : public fuchsia::recovery::testing::FactoryReset_TestBase {
  public:
+  FakeFactoryReset() : fuchsia::recovery::testing::FactoryReset_TestBase() {}
+  FakeFactoryReset(MockFunction<void(std::string check_point_name)>* check)
+      : fuchsia::recovery::testing::FactoryReset_TestBase(), check_(check) {}
+
   void NotImplemented_(const std::string& name) final {}
 
   fidl::InterfaceRequestHandler<fuchsia::recovery::FactoryReset> GetHandler(
@@ -30,6 +49,9 @@ class FakeFactoryReset : public fuchsia::recovery::testing::FactoryReset_TestBas
   }
 
   void Reset(ResetCallback callback) override {
+    if (check_ != nullptr) {
+      check_->Call("Reset");
+    }
     callback(ZX_OK);
     triggered_ = true;
   }
@@ -38,13 +60,15 @@ class FakeFactoryReset : public fuchsia::recovery::testing::FactoryReset_TestBas
 
  private:
   bool triggered_ = false;
+  MockFunction<void(std::string check_point_name)>* check_ = nullptr;
 
   fidl::BindingSet<fuchsia::recovery::FactoryReset> bindings_;
 };
 
 class FactoryResetManagerTest : public gtest::TestLoopFixture {
  public:
-  FactoryResetManagerTest() : factory_reset_manager_(*context_provider_.context()) {
+  FactoryResetManagerTest()
+      : factory_reset_manager_(*context_provider_.context(), std::make_shared<MediaRetriever>()) {
     context_provider_.service_directory_provider()->AddService(factory_reset_.GetHandler());
   }
 
@@ -133,6 +157,185 @@ TEST_F(FactoryResetManagerTest, WatchHandler) {
   // When state changes before watch is called, watch should return immediately.
   EXPECT_TRUE(watchReturned);
   EXPECT_FALSE(outputState.has_scheduled_reset_time());
+}
+
+class MockMediaRetriever : public MediaRetriever {
+ public:
+  virtual ~MockMediaRetriever() {}
+
+  MOCK_METHOD(MediaRetriever::ResetSoundResult, GetResetSound, ());
+};
+
+class FakeSoundPlayer : public Player_TestBase {
+ public:
+  FakeSoundPlayer(MockFunction<void(std::string check_point_name)>* check) : check_(check) {}
+  virtual ~FakeSoundPlayer() {}
+
+  void NotImplemented_(const std::string& name) final {}
+
+  fidl::InterfaceRequestHandler<fuchsia::media::sounds::Player> GetHandler(
+      async_dispatcher_t* dispatcher = nullptr) {
+    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::media::sounds::Player> request) {
+      bindings_.AddBinding(this, std::move(request), dispatcher);
+    };
+  }
+
+  void AddSoundFromFile(uint32_t id, ::fidl::InterfaceHandle<class ::fuchsia::io::File> handle,
+                        Player_TestBase::AddSoundFromFileCallback cb) override {
+    ASSERT_EQ(id, static_cast<uint32_t>(0));
+    check_->Call("AddSoundFromFile");
+    if (add) {
+      cb(Player_AddSoundFromFile_Result::WithResponse(Player_AddSoundFromFile_Response(10)));
+    } else {
+      cb(Player_AddSoundFromFile_Result::WithErr(10));
+    }
+  }
+  void PlaySound(uint32_t id, AudioRenderUsage usage,
+                 Player_TestBase::PlaySoundCallback cb) override {
+    ASSERT_EQ(id, static_cast<uint32_t>(0));
+    check_->Call("PlaySound");
+    if (play) {
+      cb(Player_PlaySound_Result::WithResponse(Player_PlaySound_Response()));
+    } else {
+      cb(Player_PlaySound_Result::WithErr(PlaySoundError::NO_SUCH_SOUND));
+    }
+  }
+  void RemoveSound(uint32_t id) override {
+    ASSERT_EQ(id, static_cast<uint32_t>(0));
+    check_->Call("RemoveSound");
+  }
+
+  bool add = true;
+  bool play = true;
+
+ private:
+  MockFunction<void(std::string check_point_name)>* check_ = nullptr;
+  fidl::BindingSet<fuchsia::media::sounds::Player> bindings_;
+};
+
+class FactoryResetManagerSoundTest : public gtest::TestLoopFixture {
+ public:
+  FactoryResetManagerSoundTest()
+      : media_retriever_(std::make_shared<NiceMock<MockMediaRetriever>>()),
+        factory_reset_manager_(*context_provider_.context(), media_retriever_),
+        factory_reset_(&check_),
+        sound_player_(&check_) {
+    context_provider_.service_directory_provider()->AddService(factory_reset_.GetHandler());
+    context_provider_.service_directory_provider()->AddService(sound_player_.GetHandler());
+  }
+
+  bool triggered() const { return factory_reset_.triggered(); }
+
+  void SetUp() override {
+    zx::channel client;
+    zx::channel::create(0, &client, &server_);
+    EXPECT_CALL(*media_retriever_, GetResetSound())
+        .WillRepeatedly(
+            Return(ByMove(fit::ok(fidl::InterfaceHandle<fuchsia::io::File>(std::move(client))))));
+
+    sound_player_.add = true;
+    sound_player_.play = true;
+  }
+
+ protected:
+  sys::testing::ComponentContextProvider context_provider_;
+  std::shared_ptr<NiceMock<MockMediaRetriever>> media_retriever_;
+  FactoryResetManager factory_reset_manager_;
+  FakeFactoryReset factory_reset_;
+  FakeSoundPlayer sound_player_;
+  MockFunction<void(std::string check_point_name)> check_;
+  zx::channel server_;
+};
+
+TEST_F(FactoryResetManagerSoundTest, FactoryResetManagerPlaysSoundBeforeReset) {
+  EXPECT_FALSE(factory_reset_manager_.countdown_started());
+
+  fuchsia::ui::input::MediaButtonsReport report;
+  report.reset = true;
+
+  {
+    InSequence s;
+
+    EXPECT_CALL(check_, Call("AddSoundFromFile"));
+    EXPECT_CALL(check_, Call("PlaySound"));
+    EXPECT_CALL(check_, Call("RemoveSound"));
+    EXPECT_CALL(check_, Call("Reset"));
+  }
+
+  factory_reset_manager_.OnMediaButtonReport(report);
+  EXPECT_TRUE(factory_reset_manager_.countdown_started());
+
+  RunLoopFor(kCountdownDuration);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(triggered());
+}
+
+TEST_F(FactoryResetManagerSoundTest, FactoryResetManagerResetsWhenFailsToGetSound) {
+  EXPECT_FALSE(factory_reset_manager_.countdown_started());
+
+  fuchsia::ui::input::MediaButtonsReport report;
+  report.reset = true;
+
+  EXPECT_CALL(*media_retriever_, GetResetSound()).WillOnce(Return(ByMove(fit::error(-1))));
+  EXPECT_CALL(check_, Call("Reset")).Times(1);
+  EXPECT_CALL(check_, Call("AddSoundFromFile")).Times(0);
+  EXPECT_CALL(check_, Call("PlaySound")).Times(0);
+  EXPECT_CALL(check_, Call("RemoveSound")).Times(0);
+
+  factory_reset_manager_.OnMediaButtonReport(report);
+  EXPECT_TRUE(factory_reset_manager_.countdown_started());
+
+  RunLoopFor(kCountdownDuration);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(triggered());
+}
+
+TEST_F(FactoryResetManagerSoundTest, FactoryResetManagerResetsWhenFailsToAddSound) {
+  EXPECT_FALSE(factory_reset_manager_.countdown_started());
+
+  fuchsia::ui::input::MediaButtonsReport report;
+  report.reset = true;
+  sound_player_.add = false;
+
+  {
+    InSequence s;
+
+    EXPECT_CALL(check_, Call("AddSoundFromFile")).Times(1);
+    EXPECT_CALL(check_, Call("Reset")).Times(1);
+  }
+  EXPECT_CALL(check_, Call("PlaySound")).Times(0);
+  EXPECT_CALL(check_, Call("RemoveSound")).Times(0);
+
+  factory_reset_manager_.OnMediaButtonReport(report);
+  EXPECT_TRUE(factory_reset_manager_.countdown_started());
+
+  RunLoopFor(kCountdownDuration);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(triggered());
+}
+
+TEST_F(FactoryResetManagerSoundTest, FactoryResetManagerResetsWhenFailsToPlaySound) {
+  EXPECT_FALSE(factory_reset_manager_.countdown_started());
+
+  fuchsia::ui::input::MediaButtonsReport report;
+  report.reset = true;
+  sound_player_.play = false;
+
+  {
+    InSequence s;
+
+    EXPECT_CALL(check_, Call("AddSoundFromFile")).Times(1);
+    EXPECT_CALL(check_, Call("PlaySound")).Times(1);
+    EXPECT_CALL(check_, Call("Reset")).Times(1);
+  }
+  EXPECT_CALL(check_, Call("RemoveSound")).Times(0);
+
+  factory_reset_manager_.OnMediaButtonReport(report);
+  EXPECT_TRUE(factory_reset_manager_.countdown_started());
+
+  RunLoopFor(kCountdownDuration);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(triggered());
 }
 
 }  // namespace testing

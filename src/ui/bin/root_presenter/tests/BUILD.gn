@@ -44,6 +44,7 @@ executable("root_presenter_unittests") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.media.sounds",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.activity",
@@ -66,6 +67,7 @@ executable("root_presenter_unittests") {
     "//src/ui/bin/root_presenter/tests/fakes",
     "//src/ui/lib/key_util",
     "//src/ui/testing:mock_input_device",
+    "//third_party/googletest:gmock",
   ]
 }
 

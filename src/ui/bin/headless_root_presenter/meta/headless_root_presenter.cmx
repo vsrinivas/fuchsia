@@ -10,6 +10,7 @@
             "config-data"
         ],
         "services": [
+            "fuchsia.media.sounds.Player",
             "fuchsia.recovery.FactoryReset",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
