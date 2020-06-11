@@ -80,17 +80,20 @@ template("component_id_index_config_data") {
   # into 1 index.
   component_id_index_merge = "${target_name}_merge"
   component_id_index_merged_index_path =
-      "${target_gen_dir}/${target_name}_merged_index.json"
+      "${target_out_dir}/${target_name}_merged_index.json"
   compiled_action(component_id_index_merge) {
     forward_variables_from(invoker, [ "testonly" ])
     tool = "//tools/component_id_index"
     sources = [ component_id_index_input_manifest_path ]
     outputs = [ component_id_index_merged_index_path ]
+    depfile = "${target_out_dir}/${target_name}.d"
     args = [
-      "-i",
+      "--input_manifest",
       rebase_path(component_id_index_input_manifest_path),
-      "-o",
+      "--output_file",
       rebase_path(component_id_index_merged_index_path),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
     ]
     deps = [ ":${component_id_index_merged_inputs}" ]
   }

@@ -27,6 +27,13 @@ struct CommandLineOpts {
 
     #[structopt(short, long, help = "Where to write the merged index file.")]
     output_file: PathBuf,
+
+    #[structopt(
+        short,
+        long,
+        help = "Where to write a dep file (.d) file of indices from --input_manifest."
+    )]
+    depfile: PathBuf,
 }
 
 // MergeContext maintains a single merged index, along with some state for error checking, as indicies are merged together using MergeContext::merge().
@@ -106,28 +113,38 @@ impl MergeContext {
     }
 }
 
-fn run(input_manifest_path: PathBuf, output_index_path: PathBuf) -> anyhow::Result<()> {
+fn run(opts: CommandLineOpts) -> anyhow::Result<()> {
     let mut ctx = MergeContext::new();
     let input_manifest =
-        fs::File::open(input_manifest_path).context("Could not open input manifest")?;
-    let input_files = BufReader::new(input_manifest).lines();
-    for input_file_path in input_files {
-        let path = input_file_path.context("Could not read line from input manifest")?;
-        let index = Index::from_file(&path)
-            .with_context(|| anyhow!("Could not parse index file {}", &path))?;
-        ctx.merge(&path, &index)
-            .with_context(|| anyhow!("Could not merge index file {}", &path))?;
+        fs::File::open(opts.input_manifest).context("Could not open input manifest")?;
+    let input_files = BufReader::new(input_manifest)
+        .lines()
+        .collect::<Result<Vec<String>, _>>()
+        .context("Could not read input manifest")?;
+    for input_file_path in &input_files {
+        let index = Index::from_file(&input_file_path)
+            .with_context(|| anyhow!("Could not parse index file {}", &input_file_path))?;
+        ctx.merge(&input_file_path, &index)
+            .with_context(|| anyhow!("Could not merge index file {}", &input_file_path))?;
     }
 
+    // write out the merged index
     let serialized_output =
         json5::to_string(&ctx.output()).context("Could not json-encode merged index")?;
-    fs::write(output_index_path, serialized_output.as_bytes())
-        .context("Could not write merged index to file")
+    fs::write(&opts.output_file, serialized_output.as_bytes())
+        .context("Could not write merged index to file")?;
+
+    // write out the depfile
+    fs::write(
+        &opts.depfile,
+        format!("{}: {}\n", opts.output_file.to_str().unwrap(), input_files.join(" ")),
+    )
+    .context("Could not write to depfile")
 }
 
 fn main() -> anyhow::Result<()> {
     let opts = CommandLineOpts::from_args();
-    run(opts.input_manifest, opts.output_file)
+    run(opts)
 }
 
 #[cfg(test)]
@@ -225,6 +242,7 @@ mod tests {
         let mut tmp_input_index1 = tempfile::NamedTempFile::new().unwrap();
         let mut tmp_input_index2 = tempfile::NamedTempFile::new().unwrap();
         let tmp_output_manifest = tempfile::NamedTempFile::new().unwrap();
+        let tmp_output_depfile = tempfile::NamedTempFile::new().unwrap();
 
         // the manifest lists two index files:
         write!(
@@ -244,7 +262,11 @@ mod tests {
         tmp_input_index2.write_all(json5::to_string(&index2).unwrap().as_bytes()).unwrap();
 
         assert!(matches!(
-            run(tmp_input_manifest.path().to_path_buf(), tmp_output_manifest.path().to_path_buf()),
+            run(CommandLineOpts {
+                input_manifest: tmp_input_manifest.path().to_path_buf(),
+                output_file: tmp_output_manifest.path().to_path_buf(),
+                depfile: tmp_output_depfile.path().to_path_buf(),
+            }),
             Ok(_)
         ));
 
@@ -256,5 +278,17 @@ mod tests {
             ctx.output(),
             Index::from_file(&tmp_output_manifest.path().to_str().unwrap()).unwrap()
         );
+
+        // assert the structure of the dependency file:
+        //  <output_manifest>: <input index 1> <input index 2>\n
+        assert_eq!(
+            format!(
+                "{}: {} {}\n",
+                tmp_output_manifest.path().to_str().unwrap(),
+                tmp_input_index1.path().to_str().unwrap(),
+                tmp_input_index2.path().to_str().unwrap()
+            ),
+            fs::read_to_string(tmp_output_depfile.path()).unwrap()
+        )
     }
 }
