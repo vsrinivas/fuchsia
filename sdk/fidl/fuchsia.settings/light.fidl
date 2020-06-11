@@ -1,0 +1,104 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.settings;
+
+using fuchsia.ui.types;
+
+const uint8 MAX_LIGHT_NAME_LENGTH = 32;
+
+/// Enum describing the possible types of values for controlling a light.
+enum LightType {
+    /// This type of light supports setting brightness to a uint8_t value.
+    BRIGHTNESS = 1;
+
+    /// This type of light supports setting an RGB value.
+    RGB = 2;
+
+    /// Light can only be turned on or off.
+    SIMPLE = 3;
+};
+
+/// State of a given light.
+table LightState {
+    1: LightValue value;
+};
+
+/// Value of a light. Only one of the three values in the union will be present,
+/// depending on the light's LightType.
+union LightValue {
+    /// Lights with LightType.SIMPLE will have this value.
+    1: bool on;
+
+    /// Lights with LightType.BRIGHTNESS will have this value, an integer from 0
+    /// to 255, where 0 means the light is off.
+    2: uint8 brightness;
+
+    /// Lights with LightType.RGB will have this value.
+    3: fuchsia.ui.types.ColorRgb color;
+};
+
+/// Information about a controllable light group. A group may have one or more
+/// lights.
+table LightGroup {
+    /// Identifier for this light group, clients should pass this back into the
+    /// service to set the group's light values.
+    1: string:MAX_LIGHT_NAME_LENGTH name;
+
+    /// True if the light group is enabled and changes will be visible to the
+    /// user. False if the light group is forced off by hardware. If the light
+    /// group is disabled, its value can still be set, but the change may not be
+    /// visible until the light group is back on.
+    2: bool enabled;
+
+    /// Defines the acceptable value type for controlling this light group.
+    3: LightType type;
+
+    /// States of the lights in this group.
+    4: vector<LightState>:MAX lights;
+};
+
+enum LightError {
+    /// Call failed for unspecified reasons.
+    FAILED = 1;
+
+    /// Call not supported, this setting may not be present on this .
+    UNSUPPORTED = 2;
+
+    /// An invalid/unknown light group name was provided.
+    INVALID_NAME = 3;
+
+    /// An invalid LightValue was provided that did not match the light group's
+    /// LightType.
+    INVALID_VALUE = 4;
+};
+
+[Discoverable]
+protocol Light {
+    /// Fetches information on the controllable light groups on the device.
+    /// Returns immediately on first call; subsequent calls return when the
+    /// value changes.
+    ///
+    /// If this call fails, it is considered a fatal error and the channel
+    /// will be closed.
+    WatchLightGroups() -> (vector<LightGroup>:MAX groups);
+
+    /// Fetches information on an individual light group on the device with the
+    /// given name. Returns immediately on first call; subsequent calls return
+    /// when the value changes.
+    ///
+    /// If this call fails, it is considered a fatal error and the channel
+    /// will be closed.
+    WatchLightGroup(string:MAX_LIGHT_NAME_LENGTH name) -> (LightGroup group);
+
+    /// Sets the values for the lights in the group with the given name.
+    ///
+    /// If the provided value does not match the light group's type, this
+    /// call will fail.
+    ///
+    /// The requested changes may not take immediate effect if
+    /// the light is forced to a certain state by the device's hardware. This
+    /// call will still succeed, but the light's value may not change.
+    SetLightGroupValues(string:MAX_LIGHT_NAME_LENGTH name, vector<LightState>:MAX state) -> () error LightError;
+};

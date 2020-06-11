@@ -6,6 +6,7 @@
   "fidl/fuchsia.settings/do_not_disturb.fidl": "9bd21511bc939ad7cea3b6fa7b71fce8",
   "fidl/fuchsia.settings/input.fidl": "f28c4a3932944d6b89f56b9dea79bba2",
   "fidl/fuchsia.settings/intl.fidl": "a07d39b62d04166e56a232f0ebbe65dd",
+  "fidl/fuchsia.settings/light.fidl": "4ff0872f406594f4a22b0bc87a04a9b6",
   "fidl/fuchsia.settings/night_mode.fidl": "c37d97b3111d3d8db4017872f6176e7a",
   "fidl/fuchsia.settings/privacy.fidl": "76c47f32005b9943071a598b174f97d9",
   "fidl/fuchsia.settings/settings.fidl": "30fc2c4d2806f968f501f96621d81a6a",
