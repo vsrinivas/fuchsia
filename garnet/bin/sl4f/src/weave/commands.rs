@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::server::Facade;
-use crate::weave::{facade::WeaveFacade, types::FactoryDataManagerMethod};
+use crate::weave::{facade::WeaveFacade, types::WeaveMethod};
 use anyhow::Error;
 use async_trait::async_trait;
 use serde_json::{to_value, Value};
@@ -12,7 +12,8 @@ use serde_json::{to_value, Value};
 impl Facade for WeaveFacade {
     async fn handle_request(&self, method: String, _args: Value) -> Result<Value, Error> {
         Ok(match method.parse()? {
-            FactoryDataManagerMethod::GetPairingCode => to_value(self.get_pairing_code().await?),
+            WeaveMethod::GetPairingCode => to_value(self.get_pairing_code().await?),
+            WeaveMethod::GetQrCode => to_value(self.get_qr_code().await?),
         }?)
     }
 }

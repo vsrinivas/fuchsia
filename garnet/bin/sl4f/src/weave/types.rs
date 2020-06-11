@@ -3,16 +3,18 @@
 // found in the LICENSE file.
 
 /// Supported Weave commands.
-pub enum FactoryDataManagerMethod {
+pub enum WeaveMethod {
     GetPairingCode,
+    GetQrCode,
 }
 
-impl std::str::FromStr for FactoryDataManagerMethod {
+impl std::str::FromStr for WeaveMethod {
     type Err = anyhow::Error;
 
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
-            "GetPairingCode" => Ok(FactoryDataManagerMethod::GetPairingCode),
+            "GetPairingCode" => Ok(WeaveMethod::GetPairingCode),
+            "GetQrCode" => Ok(WeaveMethod::GetQrCode),
             _ => return Err(format_err!("invalid Weave FIDL method: {}", method)),
         }
     }

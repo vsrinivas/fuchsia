@@ -74,6 +74,7 @@
             "fuchsia.virtualaudio.Input",
             "fuchsia.virtualaudio.Output",
             "fuchsia.weave.FactoryDataManager",
+            "fuchsia.weave.Stack",
             "fuchsia.web.ContextProvider",
             "fuchsia.wlan.device.Phy",
             "fuchsia.wlan.device.service.DeviceService",
