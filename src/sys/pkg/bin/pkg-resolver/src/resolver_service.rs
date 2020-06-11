@@ -247,7 +247,11 @@ async fn hash_from_base_or_repo_or_cache(
                             TUF repository disagree on what the package hash should be. The hash from the base \
                             package manifest will be used from now on. This behavior changed recently. Contact \
                             SWD for help if you were relying on ephemeral base packages. \
-                            base hash {}, TUF hash {}", blob, tuf_or_cache.inner()
+                            base hash {}, TUF hash {}, package URL {}, rewritten URL {}",
+                            blob,
+                            tuf_or_cache.inner(),
+                            pkg_url,
+                            rewritten_url,
                         );
                     }
                 }
@@ -368,7 +372,11 @@ async fn package_from_base_or_repo_or_cache(
                             TUF repository disagree on what the package hash should be. The hash from the base \
                             package manifest will be used from now on. This behavior changed recently. Contact \
                             SWD for help if you were relying on ephemeral base packages. \
-                            base hash {}, TUF hash {}", blob, tuf_or_cache.inner()
+                            base hash {}, TUF hash {}, package URL {}, rewritten URL {}",
+                            blob,
+                            tuf_or_cache.inner(),
+                            pkg_url,
+                            rewritten_url,
                         );
                     }
                 }
