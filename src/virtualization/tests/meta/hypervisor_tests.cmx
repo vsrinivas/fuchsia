@@ -1,0 +1,19 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.RootResource",
+                "fuchsia.sysinfo.SysInfo"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/hypervisor_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.boot.RootResource",
+            "fuchsia.sysinfo.SysInfo"
+        ]
+    }
+}

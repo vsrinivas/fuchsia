@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "constants_priv.h"
+#include "hypervisor_tests_constants.h"
 
 #define ICC_IAR1_EL1 S3_0_C12_C12_0
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -28,7 +29,7 @@
 #include <fbl/unique_fd.h>
 #include <unittest/unittest.h>
 
-#include "constants_priv.h"
+#include "hypervisor_tests_constants.h"
 
 static constexpr uint32_t kGuestMapFlags =
     ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE | ZX_VM_SPECIFIC;
@@ -36,7 +37,6 @@ static constexpr uint32_t kHostMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
 // Inject an interrupt with vector 32, the first user defined interrupt vector.
 static constexpr uint32_t kInterruptVector = 32u;
 static constexpr uint64_t kTrapKey = 0x1234;
-static const std::string kSysInfoPath = "/svc/" + std::string(fuchsia::sysinfo::SysInfo::Name_);
 
 #ifdef __x86_64__
 static constexpr uint32_t kNmiVector = 2u;
@@ -99,9 +99,19 @@ typedef struct test {
   }
 } test_t;
 
+// Ideally, we'd use fuchsia.security.resource.Vmex, but it fails during parsing
+// of the .cmx file for the test.
+static zx_status_t get_root_resource(zx::resource* resource) {
+  fuchsia::boot::RootResourceSyncPtr root_resource;
+  auto path = std::string("/svc/") + fuchsia::boot::RootResource::Name_;
+  fdio_service_connect(path.data(), root_resource.NewRequest().TakeChannel().release());
+  return root_resource->Get(resource);
+}
+
 static fuchsia::sysinfo::SysInfoSyncPtr get_sysinfo() {
   fuchsia::sysinfo::SysInfoSyncPtr sysinfo;
-  fdio_service_connect(kSysInfoPath.c_str(), sysinfo.NewRequest().TakeChannel().release());
+  auto path = std::string("/svc/") + fuchsia::sysinfo::SysInfo::Name_;
+  fdio_service_connect(path.data(), sysinfo.NewRequest().TakeChannel().release());
   return sysinfo;
 }
 
@@ -140,12 +150,13 @@ static bool setup(test_t* test, const char* start, const char* end) {
             ZX_OK);
 
   // Add ZX_RIGHT_EXECUTABLE so we can map into guest address space.
-  ASSERT_EQ(test->vmo.replace_as_executable(zx::resource(), &test->vmo), ZX_OK);
+  zx::resource root_resource;
+  ASSERT_EQ(get_root_resource(&root_resource), ZX_OK);
+  ASSERT_EQ(test->vmo.replace_as_executable(root_resource, &test->vmo), ZX_OK);
 
-  zx::resource resource;
-  zx_status_t status = get_hypervisor_resource(&resource);
-  ASSERT_EQ(status, ZX_OK);
-  status = zx::guest::create(resource, 0, &test->guest, &test->vmar);
+  zx::resource hypervisor_resource;
+  ASSERT_EQ(get_hypervisor_resource(&hypervisor_resource), ZX_OK);
+  zx_status_t status = zx::guest::create(hypervisor_resource, 0, &test->guest, &test->vmar);
   test->supported = status != ZX_ERR_NOT_SUPPORTED;
   if (!test->supported) {
     fprintf(stderr, "Guest creation not supported\n");
