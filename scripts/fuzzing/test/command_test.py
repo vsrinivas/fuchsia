@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import os
 import sys
 import unittest
 
@@ -157,6 +158,62 @@ class CommandTest(TestCase):
         self.cli.touch(unit)
         args = self.parse_args('repro', 'fake-package1/fake-target3', unit)
         command.repro_units(args, self.factory)
+
+    def test_analyze_fuzzer(self):
+        args = self.parse_args('analyze', '-l', 'fake-package1/fake-target3')
+        command.analyze_fuzzer(args, self.factory)
+
+        # We shouldn't have copied anything
+        self.assertFalse([cmd for cmd in self.cli.processes if 'gs' in cmd])
+
+        # Invalid corpus
+        corpus1 = 'corpus1'
+        corpus2 = 'corpus2'
+        local_dict = 'local_dict'
+        package = 'fake-package1'
+        executable = 'fake-target3'
+        args = self.parse_args(
+            'analyze', '-c', corpus1, '-c', corpus2, '-d', local_dict,
+            '{}/{}'.format(package, executable))
+        self.assertError(
+            lambda: command.analyze_fuzzer(args, self.factory),
+            'No such directory: {}'.format(corpus1))
+
+        self.cli.mkdir(corpus1)
+        foo = os.path.join(corpus1, 'foo')
+        bar = os.path.join(corpus1, 'bar')
+        self.cli.touch(foo)
+        self.cli.touch(bar)
+        self.assertError(
+            lambda: command.analyze_fuzzer(args, self.factory),
+            'No such directory: {}'.format(corpus2))
+
+        # Invalid dictionary
+        self.cli.mkdir(corpus2)
+        baz = os.path.join(corpus2, 'baz')
+        self.cli.touch(baz)
+        self.assertError(
+            lambda: command.analyze_fuzzer(args, self.factory),
+            'No such file: {}'.format(local_dict))
+
+        self.cli.touch(local_dict)
+        with self.cli.temp_dir() as temp_dir:
+            # Make it appear as if something was retrieved from GCS.
+            qux = os.path.join(temp_dir.pathname, 'qux')
+            self.cli.touch(qux)
+        command.analyze_fuzzer(args, self.factory)
+        gcs_url = 'gs://corpus.internal.clusterfuzz.com/libFuzzer/fuchsia_{}-{}'.format(
+            package, executable)
+        with self.cli.temp_dir() as temp_dir:
+            cmd = ['gsutil', '-m', 'cp', gcs_url + '/*', temp_dir.pathname]
+            self.assertRan(*cmd)
+
+        abspath = self.fuzzer.ns.abspath(self.fuzzer.corpus.nspath)
+        self.assertScpTo(bar, foo, abspath)
+        self.assertScpTo(baz, abspath)
+        self.assertEqual(
+            self.fuzzer.dictionary.nspath, self.fuzzer.ns.data(local_dict))
+        self.assertEqual(self.cli.log[0], 'Analyzing fuzzer...')
 
 
 if __name__ == '__main__':

@@ -21,10 +21,7 @@ class ArgsTest(TestCase):
 
     def assertParseFails(self, args, msg):
         self.assertError(
-            lambda: self.parse_args(*args),
-            'ERROR: {}'.format(msg),
-            '       Try "fx fuzz help".',
-        )
+            lambda: self.parse_args(*args), msg, 'Try "fx fuzz help".')
 
     def assertParseHelp(self, args, log):
         with self.assertRaises(SystemExit):
@@ -43,6 +40,7 @@ class ArgsTest(TestCase):
             'Manage Fuchsia fuzzers. SUBCOMMAND defaults to "start" if omitted.',
             '',
             'Subcommands:',
+            '  analyze             Report coverage info for a given corpus and/or dictionary.',
             '  check               Check on the status of one or more fuzzers.',
             '  help                Print this message and exit.',
             '  list                List available fuzzers in the current build.',
@@ -386,6 +384,164 @@ class ArgsTest(TestCase):
             libfuzzer_opts={'output': 'foo'},
             libfuzzer_inputs=['input'],
             subprocess_args=['-o', '-output=bar', '--output'])
+
+    def test_analyze_parser(self):
+        self.assertParseHelp(
+            ['help', 'analyze'], [
+                '',
+                'Usage: fx fuzz analyze [OPTIONS] NAME [...]',
+                '',
+                'Analyze the corpus and/or dictionary for the given fuzzer.',
+                '',
+                'Arguments:',
+                '  NAME                Fuzzer name to match.  This can be part of the package',
+                '                      and/or target name, e.g. "foo", "bar", and "foo/bar" all',
+                '                      match "foo_package/bar_target".',
+                '',
+                'Options:',
+                '  -c,--corpus CORPUS  Path to additional corpus elements. May be repeated.',
+                '  -d,--dict DICT      Path to a fuzzer dictionary. Replaces the package default.',
+                '  -l,--local          Exclude corpus elements from Clusterfuzz.',
+                '  -o,--output OUTPUT  Path under which to store results.',
+                '',
+                'Additional options and/or arguments are passed through to libFuzzer.',
+                'See https://llvm.org/docs/LibFuzzer.html for details.',
+                '',
+            ])
+
+        self.assertParseFails(['analyze'], 'Too few arguments.')
+
+        self.assertParse(
+            [
+                'analyze',
+                'name',
+            ], command=command.analyze_fuzzer, name='name')
+
+        self.assertParseFails(
+            ['analyze', '--corpus', 'name'], 'Too few arguments.')
+        self.assertParse(
+            [
+                'analyze',
+                '--corpus',
+                'corpus1',
+                '--corpus',
+                'corpus2',
+                'name',
+            ],
+            corpora=['corpus1', 'corpus2'])
+        self.assertParse(
+            [
+                'analyze',
+                '-c',
+                'corpus1',
+                '-c',
+                'corpus2',
+                'name',
+            ],
+            corpora=['corpus1', 'corpus2'])
+
+        self.assertParseFails(
+            ['analyze', '--dict', 'name'], 'Too few arguments.')
+        self.assertParseFails(
+            [
+                'analyze',
+                '--dict',
+                'dict1',
+                '--dict',
+                'dict2',
+                'name',
+            ], 'Repeated option: dict')
+        self.assertParse([
+            'analyze',
+            '--dict',
+            'dict',
+            'name',
+        ], dict='dict')
+        self.assertParse([
+            'analyze',
+            '-d',
+            'dict',
+            'name',
+        ], dict='dict')
+
+        self.assertParse(['analyze', '--local', 'name'], local=True)
+        self.assertParse(['analyze', '-l', 'name'], local=True)
+
+        self.assertParseFails(
+            ['analyze', '--output', 'name'], 'Too few arguments.')
+        self.assertParseFails(
+            [
+                'analyze',
+                '--output',
+                'output1',
+                '--output',
+                'output2',
+                'name',
+            ], 'Repeated option: output')
+        self.assertParse(
+            [
+                'analyze',
+                '--output',
+                'output',
+                'name',
+            ], output='output')
+        self.assertParse([
+            'analyze',
+            '-o',
+            'output',
+            'name',
+        ], output='output')
+
+        self.assertParse(
+            [
+                'analyze',
+                'name',
+                '-output=foo',
+                '--',
+                'sub1',
+                'sub2',
+            ],
+            libfuzzer_opts={'output': 'foo'})
+
+        self.assertParse(
+            [
+                'analyze',
+                'name',
+                '-output=foo',
+                '--',
+                '--output',
+                '-output=output',
+            ],
+            subprocess_args=[
+                '--output',
+                '-output=output',
+            ])
+
+        # All together now, in a different order.
+        self.assertParse(
+            [
+                'analyze',
+                '-output=foo',
+                'name',
+                '--output',
+                'output',
+                '--dict',
+                'dict',
+                '--corpus',
+                'corpus',
+                '--local',
+                '--',
+                '--sub',
+                '-sub=val',
+            ],
+            command=command.analyze_fuzzer,
+            corpora=['corpus'],
+            dict='dict',
+            local=True,
+            output='output',
+            name='name',
+            libfuzzer_opts={'output': 'foo'},
+            subprocess_args=['--sub', '-sub=val'])
 
 
 if __name__ == '__main__':

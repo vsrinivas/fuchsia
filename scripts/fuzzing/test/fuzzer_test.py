@@ -7,10 +7,10 @@ import os
 import unittest
 
 import test_env
-from test_case import TestCase
+from test_case import FuzzerTestCase
 
 
-class FuzzerTest(TestCase):
+class FuzzerTest(FuzzerTestCase):
 
     def test_list_artifacts(self):
         fuzzer = self.create_fuzzer('check', 'fake-package1/fake-target1')
@@ -50,8 +50,7 @@ class FuzzerTest(TestCase):
         self.set_running(fuzzer.package, fuzzer.executable, duration=10)
         self.assertError(
             lambda: fuzzer.require_stopped(),
-            'ERROR: fake-package1/fake-target1 is running and must be stopped first.'
-        )
+            'fake-package1/fake-target1 is running and must be stopped first.')
         self.cli.sleep(10)
         fuzzer.require_stopped()
 
@@ -80,8 +79,7 @@ class FuzzerTest(TestCase):
         self.set_running(fuzzer.package, fuzzer.executable)
         self.assertError(
             lambda: fuzzer.start(),
-            'ERROR: fake-package1/fake-target1 is running and must be stopped first.'
-        )
+            'fake-package1/fake-target1 is running and must be stopped first.')
 
     def test_start_foreground(self):
         self.start_helper(
@@ -119,8 +117,7 @@ class FuzzerTest(TestCase):
     def test_start_with_bad_option(self):
         self.assertError(
             lambda: self.start_helper(['-option2=foo', '-option1'], None),
-            'ERROR: Unrecognized option: -option1',
-            '       Try "fx fuzz help".')
+            'Unrecognized option: -option1', 'Try "fx fuzz help".')
 
     def test_start_with_passthrough(self):
         self.start_helper(
@@ -153,7 +150,7 @@ class FuzzerTest(TestCase):
         # Start the fuzzer
         self.assertError(
             lambda: fuzzer.start(),
-            'ERROR: fake-package1/fake-target2 failed to start.')
+            'fake-package1/fake-target2 failed to start.')
         self.assertSsh(*cmd)
         self.assertEqual(self.cli.elapsed, 20)
 
@@ -331,7 +328,7 @@ MS: 1 SomeMutation; base unit: foo
 
         with self.cli.open(os.path.join(fuzzer.output, 'fuzz-0.log'),
                            'w') as log:
-            log.write('==67890== ERROR: libFuzzer: deadly signal\n')
+            log.write('==67890== libFuzzer: deadly signal\n')
             log.write('MS: 1 SomeMutation; base unit: foo\n')
 
         # Monitor the fuzzer until it exits
@@ -375,7 +372,7 @@ MS: 1 SomeMutation; base unit: foo
         # Invalid units
         self.assertError(
             lambda: fuzzer.repro(),
-            'ERROR: No matching files: "crash-* oom-feedface".')
+            'No matching files: "crash-* oom-feedface".')
 
         # Valid units, but already running
         self.cli.touch('crash-deadbeef')
@@ -384,8 +381,7 @@ MS: 1 SomeMutation; base unit: foo
         self.set_running(fuzzer.package, fuzzer.executable, duration=60)
         self.assertError(
             lambda: fuzzer.repro(),
-            'ERROR: fake-package1/fake-target2 is running and must be stopped first.'
-        )
+            'fake-package1/fake-target2 is running and must be stopped first.')
         self.cli.sleep(60)
 
         #  Valid
@@ -398,6 +394,43 @@ MS: 1 SomeMutation; base unit: foo
             'data/crash-deadfa11',
             'data/oom-feedface',
         )
+
+    def test_analyze(self):
+        fuzzer = self.create_fuzzer('analyze', 'fake-package1/fake-target2')
+
+        self.set_running(fuzzer.package, fuzzer.executable, duration=10)
+        with self.assertRaises(SystemExit):
+            fuzzer.analyze()
+        self.cli.sleep(10)
+
+        # Make the log file appear right away
+        cmd = [
+            'ls', '-l',
+            self.fuzzer.ns.abspath(self.fuzzer.ns.data('fuzz-*.log'))
+        ]
+        self.set_outputs(
+            cmd, ['-rw-r--r-- 1 0 0 0 Dec 25 00:00 fuzz-0.log'], ssh=True)
+
+        # Make the fuzzer run for 60 "seconds".
+        cmd = [
+            'run',
+            fuzzer.url(),
+            '-artifact_prefix=data/',
+            '-dict=pkg/data/fake-target2/dictionary',
+            '-jobs=1',
+            '-max_total_time=60',
+            '-print_coverage=1',
+            'data/corpus',
+            'pkg/data/fake-target2/corpus',
+        ]
+        process = self.get_process(cmd, ssh=True)
+        process.duration = 60
+
+        fuzzer.analyze()
+        self.assertSsh(*cmd)
+
+        # Round to the nearest microsecond
+        self.assertEqual(round(self.cli.elapsed, 6), 70)
 
 
 if __name__ == '__main__':

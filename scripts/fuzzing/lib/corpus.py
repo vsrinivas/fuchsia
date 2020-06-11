@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import os
+import subprocess
 
 
 class Corpus(object):
@@ -47,12 +48,13 @@ class Corpus(object):
         self.ns.mkdir(self.nspath)
         return [self.nspath]
 
-    def add_from_host(self, host_path):
-        """Copies elements from a host directory on a device to this corpus."""
+    def add_from_host(self, pathname):
+        """Copies elements from a host directory to the corpus on a device."""
         self.fuzzer.require_stopped()
-        if not host_path.endswith('*'):
-            host_path = os.path.join(host_path, '*')
-        self.ns.store(self.nspath, host_path)
+        if not self.cli.isdir(pathname):
+            self.cli.error('No such directory: {}'.format(pathname))
+        pathname = os.path.join(pathname, '*')
+        return self.ns.store(self.nspath, pathname)
 
     def add_from_gcs(self, gcs_url):
         """Copies corpus elements from a GCS bucket to this corpus."""
@@ -60,8 +62,14 @@ class Corpus(object):
             gcs_url += '/*'
         with self.cli.temp_dir() as temp_dir:
             cmd = ['gsutil', '-m', 'cp', gcs_url, temp_dir.pathname]
-            self.cli.create_process(cmd).check_call()
-            self.add_from_host(temp_dir.pathname)
+            try:
+                self.cli.create_process(cmd).check_call()
+            except subprocess.CalledProcessError:
+                self.cli.error(
+                    'Failed to download corpus from GCS.',
+                    'You can skip downloading from GCS with the "--local" flag.'
+                )
+            return self.add_from_host(temp_dir.pathname)
 
     def measure(self):
         """Returns the number of corpus elements and corpus size as a pair."""

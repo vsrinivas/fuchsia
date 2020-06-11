@@ -12,6 +12,10 @@ from corpus import Corpus
 from dictionary import Dictionary
 from namespace import Namespace
 
+from corpus import Corpus
+from dictionary import Dictionary
+from namespace import Namespace
+
 
 class Fuzzer(object):
     """Represents a Fuchsia fuzz target.
@@ -23,6 +27,8 @@ class Fuzzer(object):
 
     Attributes:
       device:           The associated Device object.
+      host:             Alias for host.
+      cli:              Alias for cli.
       package:          The GN fuzzers_package name (or package_name).
       executable:       The GN fuzzers name  (or output_name).
       libfuzzer_opts:   "-key=val" options to pass to libFuzzer
@@ -211,6 +217,7 @@ class Fuzzer(object):
             fuzz_cmd += self._subprocess_args
 
         # Start the process
+        self.cli.mkdir(self.output)
         cmd = self.device.ssh(fuzz_cmd)
         if self.foreground:
             cmd.stderr = subprocess.PIPE
@@ -274,7 +281,6 @@ class Fuzzer(object):
         # Prep output
         logs = self._logs()
         self.ns.remove(logs)
-        self.cli.mkdir(self._output)
 
         # When running in the foreground, interpret the output as coming from
         # fuzzing job 0. This makes the rest of the plumbing look the same.
@@ -380,3 +386,28 @@ class Fuzzer(object):
         # Default to repro-ing in the foreground
         self.foreground = True
         self._launch().wait()
+
+    def analyze(self):
+        """Collects coverage data for a finite amount of time."""
+        self.require_stopped()
+
+        # Add dictionary
+        self._options['dict'] = self.dictionary.nspath
+
+        # Add corpus
+        self._libfuzzer_inputs = self.corpus.inputs
+
+        # Run in the background for 1 minute, then print results.
+        self._options['max_total_time'] = '60'
+        self._options['print_coverage'] = '1'
+        self.foreground = False
+        proc = self._launch()
+
+        self.cli.echo('Analyzing fuzzer...')
+        delay = float(self._options['max_total_time']) / 79
+        for i in range(79):
+            self.cli.echo('\r[' + ('#' * i).ljust(78) + ']', end='')
+            self.cli.sleep(delay)
+        self.cli.echo('')
+        proc.wait()
+        self.monitor()

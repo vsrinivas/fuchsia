@@ -192,7 +192,7 @@ class DeviceTest(TestCase):
         # Fails due to missing pathname.
         self.assertError(
             lambda: self.device.fetch(local_path, remote_path),
-            'ERROR: No such directory: test_fetch')
+            'No such directory: test_fetch')
 
         self.cli.mkdir(local_path)
         self.device.fetch(local_path, remote_path)
@@ -210,13 +210,13 @@ class DeviceTest(TestCase):
         self.assertError(
             lambda: self.device.store(
                 remote_path, os.path.join(local_path, '*')),
-            'ERROR: No matching files: "test_store/*".')
+            'No matching files: "test_store/*".')
 
         # Local path must exist
         foo = os.path.join(local_path, 'foo')
         self.assertError(
             lambda: self.device.store(remote_path, foo),
-            'ERROR: No matching files: "test_store/foo".')
+            'No matching files: "test_store/foo".')
 
         # Valid
         self.cli.touch(foo)

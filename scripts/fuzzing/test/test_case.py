@@ -19,13 +19,9 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         super(TestCase, self).setUp()
         self._factory = None
-        self._parser = None
-        self._host = None
-        self._device = None
-        self._fuzzer = None
         self._next_pid = 10000
 
-    # Unit test context, lazily instantiated.
+    # Unit test context, as aliases to the Factory.
 
     @property
     def factory(self):
@@ -42,29 +38,22 @@ class TestCase(unittest.TestCase):
     @property
     def parser(self):
         """The associated ArgParser object."""
-        if not self._parser:
-            self._parser = self.factory.create_parser()
-        return self._parser
+        return self.factory.parser
 
     @property
     def host(self):
         """The associated Host object."""
-        if not self._host:
-            self._host = self.factory.create_host()
-        return self._host
+        return self.factory.host
 
     @property
     def device(self):
         """The associated Device object."""
-        if not self._device:
-            self._device = self.factory.create_device()
-        return self._device
+        return self.factory.device
 
     @property
     def fuzzer(self):
         """The most recently created FakeFuzzer object."""
-        assert self._fuzzer, 'No fuzzer created.'
-        return self._fuzzer
+        return self.factory.fuzzer
 
     # Unit test utilities
 
@@ -84,8 +73,7 @@ class TestCase(unittest.TestCase):
 
     def create_fuzzer(self, *args):
         args = self.parse_args(*args)
-        self._fuzzer = self.factory.create_fuzzer(args)
-        return self.fuzzer
+        return self.factory.create_fuzzer(args, self.device)
 
     def set_outputs(
             self, args, outputs, start=None, end=None, reset=True, ssh=False):
@@ -114,20 +102,11 @@ class TestCase(unittest.TestCase):
         cmd = ['cs']
         output = '  {}.cmx[{}]: fuchsia-pkg://fuchsia.com/{}#meta/{}.cmx'.format(
             executable, pid, package, executable)
-
-        end = None
-        if duration:
-            end = self.cli.elapsed + duration
+        end = None if not duration else self.cli.elapsed + duration
         self.set_outputs(cmd, [output], end=end, reset=False, ssh=True)
 
-        if refresh:
-            self.device._pids = None
-
+        self.device.getpid(package, executable, refresh)
         return pid
-
-    def data_abspath(self, relpath):
-        """Returns the absolute path for a fuzzer-namespaced data path."""
-        return self.fuzzer.ns.abspath(self.fuzzer.ns.data(relpath))
 
     # Unit test assertions
 
@@ -136,6 +115,10 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.cli.log, list(logs))
 
     def assertError(self, expr, *logs):
+        assert logs, 'Missing error message.'
+        logs = ['ERROR: {}'.format(logs[0])
+               ] + ['       {}'.format(log) for log in logs[1:]]
+        _ = self.cli.log
         with self.assertRaises(SystemExit):
             expr()
         self.assertLogged(*logs)
@@ -164,3 +147,24 @@ class TestCase(unittest.TestCase):
         """Asserts a previous call was made to device.ssh with cmd."""
         cmd = self._ssh_cmd(list(args))
         self.assertRan(*cmd)
+
+
+class FuzzerTestCase(TestCase):
+
+    # Unit test "constructor"
+
+    def setUp(self):
+        super(FuzzerTestCase, self).setUp()
+        self.create_fuzzer('check', 'fake-package1/fake-target1')
+
+    # Unit test context.
+
+    @property
+    def ns(self):
+        return self.fuzzer.ns
+
+    # Unit test utilities
+
+    def data_abspath(self, relpath):
+        """Returns the absolute path for a fuzzer-namespaced data path."""
+        return self.fuzzer.ns.abspath(self.fuzzer.ns.data(relpath))

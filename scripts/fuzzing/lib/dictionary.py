@@ -29,6 +29,11 @@ class Dictionary(object):
         return self._fuzzer
 
     @property
+    def cli(self):
+        """Alias for fuzzer.cli."""
+        return self.fuzzer.cli
+
+    @property
     def ns(self):
         """Alias for fuzzer.ns."""
         return self.fuzzer.ns
@@ -39,6 +44,8 @@ class Dictionary(object):
         return self._nspath
 
     def replace(self, pathname):
+        if not self.cli.isfile(pathname):
+            self.cli.error('No such file: {}'.format(pathname))
         relpath = os.path.basename(pathname)
         self._nspath = self.ns.data(relpath)
         self.ns.store(self._nspath, pathname)

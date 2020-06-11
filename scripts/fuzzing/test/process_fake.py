@@ -136,7 +136,8 @@ class FakeProcess(Process):
             return self.returncode
 
         def wait(self):
-            self._cli.sleep(self._completion - self._cli.elapsed)
+            if self._completion:
+                self._cli.sleep(self._completion - self._cli.elapsed)
             return self.poll()
 
         def kill(self):

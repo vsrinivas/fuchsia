@@ -37,6 +37,7 @@ class Host(object):
         self._symbolizer_exec = None
         self._llvm_symbolizer = None
         self._build_id_dirs = None
+        self._gsutil = None
         self._fuzzers = []
 
     @property
@@ -88,6 +89,24 @@ class Host(object):
                 raise ValueError(
                     'Invalid build ID directory: {}'.format(build_id_dir))
         self._build_id_dirs = build_id_dirs
+
+    @property
+    def gsutil(self):
+        if not self._gsutil:
+            try:
+                self._gsutil = self.create_process(['which',
+                                                    'gsutil']).check_output()
+            except subprocess.CalledProcessError:
+                self.cli.error(
+                    'Unable to find gsutil.',
+                    'Try installing the Google Cloud SDK.')
+        return self._gsutil
+
+    @gsutil.setter
+    def gsutil(self, gsutil):
+        if not self.cli.isfile(gsutil):
+            raise ValueError('Invalid GS utility: {}'.format(gsutil))
+        self._gsutil = gsutil
 
     # Initialization routines
 

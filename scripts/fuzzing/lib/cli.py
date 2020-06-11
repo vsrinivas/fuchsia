@@ -28,13 +28,11 @@ class CommandLineInterface(object):
     # Convenience file descriptor for silencing subprocess output
     DEVNULL = open(os.devnull, 'w')
 
-    def __init__(self, out=None):
+    def __init__(self, fd_out=None, fd_err=None, tracing=False):
         self._platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
-        if not out:
-            out = sys.stdout
-        self._out = out
-        self._tempdir = None
-        self._tracing = False
+        self._fd_out = fd_out if fd_out else sys.stdout
+        self._fd_err = fd_err if fd_err else sys.stdout
+        self._tracing = tracing
 
     @property
     def platform(self):
@@ -51,22 +49,37 @@ class CommandLineInterface(object):
 
     # I/O routines
 
-    def trace(self, *lines):
+    def trace(self, *lines, **kwargs):
         if self._tracing:
-            self.echo(['+ {}'.format(line) for line in lines])
+            self.echo(['+ {}'.format(line) for line in lines], **kwargs)
 
-    def echo(self, *lines):
-        """Print an informational message from a list of strings."""
-        for line in lines:
-            self._out.write('{}\n'.format(line))
+    def echo(self, *args, **kwargs):
+        """Print an informational message from a list of strings.
 
-    def error(self, *lines):
+        Arguments:
+            fd      File descriptor to print to.
+            end     Terminating character to append to message.
+        """
+        if not args:
+            args = ['']
+        fd = kwargs.pop('fd', self._fd_out)
+        end = kwargs.pop('end', '\n')
+        assert not kwargs, 'Unexpected keyword arguments: {}'.format(kwargs)
+        for line in args:
+            fd.write(line)
+            fd.write(end)
+            fd.flush()
+
+    def error(self, *lines, **kwargs):
         """Print an error message and exit."""
         assert lines, 'Fatal error without error message.'
-        self.echo('ERROR: {}'.format(lines[0]))
+        fd = kwargs.pop('fd', self._fd_err)
+        status = kwargs.pop('status', 1)
+        assert not kwargs, 'Unexpected keyword arguments: {}'.format(kwargs)
+        self.echo('ERROR: {}'.format(lines[0]), fd=fd)
         for line in lines[1:]:
-            self.echo('       {}'.format(line))
-        sys.exit(1)
+            self.echo('       {}'.format(line), fd=fd)
+        sys.exit(status)
 
     def choose(self, prompt, choices, preselected=None):
         """Displays a simple interactive menu."""

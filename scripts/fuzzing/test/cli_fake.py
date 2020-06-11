@@ -31,8 +31,8 @@ class FakeCLI(CommandLineInterface):
         self._dirs = set()
         self._files = {}
         self._links = {}
+        self._envvars = {}
         self._processes = {}
-        self._history = []
         self._elapsed = 0.0
 
     @property
@@ -70,8 +70,8 @@ class FakeCLI(CommandLineInterface):
 
     # Fake I/O routines
 
-    def echo(self, *lines):
-        for line in lines:
+    def echo(self, *args, **kwargs):
+        for line in args:
             self._log += line.split('\n')
 
     def choose(self, prompt, choices):
@@ -162,13 +162,22 @@ class FakeCLI(CommandLineInterface):
         self.create_process(['rm', '-rf', pathname])
 
     def _mkdtemp(self):
-        return 'temp_dir'
+        temp_dir = 'temp_dir'
+        self.mkdir(temp_dir)
+        return temp_dir
 
     # Other routines
 
     def getenv(self, name):
-        """Fake of implementation of getenv that returns constant values."""
-        return FakeCLI.ENVVARS.get(name, None)
+        """Fake of implementation of getenv."""
+        if name in self._envvars:
+            return self._envvars[name]
+        else:
+            return FakeCLI.ENVVARS.get(name, None)
+
+    def setenv(self, name, value):
+        """Fake of implementation of setenv."""
+        self._envvars[name] = value
 
     def create_process(self, args, **kwargs):
         """Creates a FakeProcess from subprocess-like parameters.

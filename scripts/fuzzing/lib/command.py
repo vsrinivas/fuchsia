@@ -86,3 +86,19 @@ def repro_units(args, factory):
     """Implementation of "fx fuzz repro"."""
     fuzzer = factory.create_fuzzer(args)
     fuzzer.repro()
+
+
+def analyze_fuzzer(args, factory):
+    """Implementation of "fx fuzz analyze"."""
+    fuzzer = factory.create_fuzzer(args)
+
+    if args.corpora:
+        for corpus in args.corpora:
+            fuzzer.corpus.add_from_host(corpus)
+    if args.dict:
+        fuzzer.dictionary.replace(args.dict)
+    if not args.local:
+        gcs_url = 'gs://corpus.internal.clusterfuzz.com/libFuzzer/fuchsia_{}-{}'.format(
+            fuzzer.package, fuzzer.executable)
+        fuzzer.corpus.add_from_gcs(gcs_url)
+    fuzzer.analyze()

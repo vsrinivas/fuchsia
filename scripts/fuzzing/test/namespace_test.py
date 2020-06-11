@@ -7,23 +7,17 @@ import os
 import unittest
 
 import test_env
-from test_case import TestCase
+from test_case import FuzzerTestCase
 
 
-class NamespaceTest(TestCase):
-
-    def setUp(self):
-        super(NamespaceTest, self).setUp()
-        self.create_fuzzer('check', 'fake-package1/fake-target1')
-        self.ns = self.fuzzer.ns
+class NamespaceTest(FuzzerTestCase):
 
     def test_abspath(self):
         self.assertEqual(
             self.ns.abspath(self.ns.data('foo')),
             '/data/r/sys/fuchsia.com:fake-package1:0#meta:fake-target1.cmx/foo')
 
-        self.assertError(
-            lambda: self.ns.abspath('bar'), 'ERROR: Not a data path: bar')
+        self.assertError(lambda: self.ns.abspath('bar'), 'Not a data path: bar')
 
     def test_data(self):
         self.assertEqual(self.ns.data(), 'data/')
@@ -36,8 +30,7 @@ class NamespaceTest(TestCase):
 
     def test_ls(self):
         # Must be data path
-        self.assertError(
-            lambda: self.ns.ls('foo'), 'ERROR: Not a data path: foo')
+        self.assertError(lambda: self.ns.ls('foo'), 'Not a data path: foo')
 
         # Valid
         cmd = ['ls', '-l', self.ns.abspath(self.ns.data('bar'))]
@@ -54,8 +47,7 @@ class NamespaceTest(TestCase):
 
     def test_mkdir(self):
         # Must be data path
-        self.assertError(
-            lambda: self.ns.mkdir('foo'), 'ERROR: Not a data path: foo')
+        self.assertError(lambda: self.ns.mkdir('foo'), 'Not a data path: foo')
 
         # Valid
         cmd = ['mkdir', '-p', self.ns.abspath(self.ns.data('bar'))]
@@ -64,8 +56,7 @@ class NamespaceTest(TestCase):
 
     def test_remove(self):
         # Must be data path
-        self.assertError(
-            lambda: self.ns.remove('foo'), 'ERROR: Not a data path: foo')
+        self.assertError(lambda: self.ns.remove('foo'), 'Not a data path: foo')
 
         #  Valid file
         cmd = ['rm', '-f', self.ns.abspath(self.ns.data('foo'))]
@@ -91,17 +82,17 @@ class NamespaceTest(TestCase):
         # Local path must exist
         self.assertError(
             lambda: self.ns.fetch(local_path, data_path1, data_path2),
-            'ERROR: No such directory: {}'.format(local_path))
+            'No such directory: {}'.format(local_path))
 
         # Must be data path(s)
         self.cli.mkdir(local_path)
         self.assertError(
             lambda: self.ns.fetch(local_path, relpath1, data_path2),
-            'ERROR: Not a data path: {}'.format(relpath1))
+            'Not a data path: {}'.format(relpath1))
 
         self.assertError(
             lambda: self.ns.fetch(local_path, data_path1, relpath2),
-            'ERROR: Not a data path: {}'.format(relpath2))
+            'Not a data path: {}'.format(relpath2))
 
         # Valid
         self.ns.fetch(local_path, data_path1, data_path2)
@@ -116,19 +107,19 @@ class NamespaceTest(TestCase):
         # Globs must resolve
         self.assertError(
             lambda: self.ns.store(data_path, os.path.join(local_path, '*')),
-            'ERROR: No matching files: "test_store/*".')
+            'No matching files: "test_store/*".')
 
         # Local path must exist
         foo = os.path.join(local_path, 'foo')
         self.assertError(
             lambda: self.ns.store(data_path, foo),
-            'ERROR: No matching files: "test_store/foo".')
+            'No matching files: "test_store/foo".')
 
         # Must be data path(s)
         self.cli.touch(foo)
         self.assertError(
             lambda: self.ns.store(relpath, foo),
-            'ERROR: Not a data path: {}'.format(relpath))
+            'Not a data path: {}'.format(relpath))
 
         # Valid
         self.ns.store(data_path, foo)

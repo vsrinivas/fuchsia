@@ -15,11 +15,9 @@ from test_case import TestCase
 class HostTest(TestCase):
 
     def test_fuchsia_dir(self):
-        with self.assertRaises(SystemExit):
-            Host(self.cli, None)
-        self.assertLogged(
-            'ERROR: FUCHSIA_DIR not set.',
-            '       Have you sourced "scripts/fx-env.sh"?')
+        self.assertError(
+            lambda: Host(self.cli, None), 'FUCHSIA_DIR not set.',
+            'Have you sourced "scripts/fx-env.sh"?')
 
     def test_configure(self):
         # Fails due to missing paths
@@ -51,6 +49,8 @@ class HostTest(TestCase):
     # Unit tests
 
     def test_read_fuzzers(self):
+        host = self.factory.create_host()
+
         # Construct and parse both fuchsia and zircon style fuzzer metadata.
         data = [
             {
@@ -65,7 +65,6 @@ class HostTest(TestCase):
             },
         ]
 
-        host = self.factory.create_host()
         fuzzers_json = host.fxpath(host.build_dir, 'fuzzers.json')
         with self.cli.open(fuzzers_json, 'w') as opened:
             json.dump(data, opened)
@@ -124,8 +123,8 @@ class HostTest(TestCase):
 
         # No results from 'fx device-finder list'
         self.assertError(
-            lambda: self.host.find_device(None),
-            'ERROR: Unable to find device.', '       Try "fx set-device".')
+            lambda: self.host.find_device(None), 'Unable to find device.',
+            'Try "fx set-device".')
 
         # Multiple results from `fx device-finder list`
         cmd = [
@@ -133,8 +132,8 @@ class HostTest(TestCase):
         ]
         self.set_outputs(cmd, addrs)
         self.assertError(
-            lambda: self.host.find_device(None),
-            'ERROR: Multiple devices found.', '       Try "fx set-device".')
+            lambda: self.host.find_device(None), 'Multiple devices found.',
+            'Try "fx set-device".')
 
         # Reset output
         self.set_outputs(cmd, addrs[:1])

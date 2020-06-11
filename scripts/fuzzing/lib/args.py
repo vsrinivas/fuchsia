@@ -147,6 +147,30 @@ class ArgParser(argparse.ArgumentParser):
         repro_parser._add_libfuzzer_extras()
         repro_parser.set_defaults(command=command.repro_units)
 
+        # fx fuzz analyze [-c <dir>] [-d <file>] [-l] [-o <output>] <name>
+        analyze_parser = self._add_parser('analyze')
+        analyze_parser.description = [
+            'Analyze the corpus and/or dictionary for the given fuzzer.'
+        ]
+
+        analyze_parser.help = 'Report coverage info for a given corpus and/or dictionary.'
+        analyze_parser.add_option(
+            '-c',
+            '--corpus',
+            dest='corpora',
+            help=['Path to additional corpus elements. May be repeated.'])
+        analyze_parser.add_option(
+            '-d',
+            '--dict',
+            unique=True,
+            help=['Path to a fuzzer dictionary. Replaces the package default.'])
+        analyze_parser._add_flag(
+            '-l', '--local', help=['Exclude corpus elements from Clusterfuzz.'])
+        analyze_parser._add_output_option()
+        analyze_parser._add_name_argument(required=True)
+        analyze_parser._add_libfuzzer_extras()
+        analyze_parser.set_defaults(command=command.analyze_fuzzer)
+
         self.epilog = [
             'See "fx fuzz help [SUBCOMMAND]" for details on each subcommand.',
             'See also "fx help fuzz" for global "fx" options.',
@@ -338,7 +362,6 @@ class ArgParser(argparse.ArgumentParser):
 
         # Include a reference to the Factory
         args.factory = self.factory
-
         return args
 
     def generate_help(self):
@@ -387,6 +410,10 @@ class ArgParser(argparse.ArgumentParser):
             lines += self.epilog
 
         lines += ['']
+
+        for line in lines:
+            assert len(line) <= 80, 'Line is too long:\n"{}"'.format(line)
+
         return lines
 
     def exit(self, status=0, message=None):

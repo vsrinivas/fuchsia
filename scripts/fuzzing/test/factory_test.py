@@ -15,13 +15,22 @@ from test_case import TestCase
 class FactoryTest(TestCase):
 
     def test_create_host(self):
-        # Use a non-existent directory to simulate an unconfigured $FUCHSIA_DIR
         factory = Factory(cli=self.cli)
+
+        # Clear $FUCHSIA_DIR
+        fuchsia_dir = self.cli.getenv('FUCHSIA_DIR')
+        self.cli.setenv('FUCHSIA_DIR', None)
+        self.assertError(
+            lambda: factory.create_host(), 'FUCHSIA_DIR not set.',
+            'Have you sourced "scripts/fx-env.sh"?')
+
+        # Use a non-existent directory to simulate an unconfigured $FUCHSIA_DIR
+        self.cli.setenv('FUCHSIA_DIR', fuchsia_dir)
         build_dir = self.host.build_dir
         self.assertError(
             lambda: factory.create_host(),
-            'ERROR: Failed to read build directory from fuchsia_dir/.fx-build-dir.',
-            '       Have you run "fx set ... --fuzz-with <sanitizer>"?')
+            'Failed to read build directory from fuchsia_dir/.fx-build-dir.',
+            'Have you run "fx set ... --fuzz-with <sanitizer>"?')
 
         # No $FUCHSIA_DIR/out/default/fuzzer.json
         fx_build_dir = os.path.join(self.host.fuchsia_dir, '.fx-build-dir')
@@ -29,8 +38,8 @@ class FactoryTest(TestCase):
             opened.write(build_dir + '\n')
         self.assertError(
             lambda: factory.create_host(),
-            'ERROR: Failed to read fuzzers from fuchsia_dir/build_dir/fuzzers.json.',
-            '       Have you run "fx set ... --fuzz-with <sanitizer>"?',
+            'Failed to read fuzzers from fuchsia_dir/build_dir/fuzzers.json.',
+            'Have you run "fx set ... --fuzz-with <sanitizer>"?',
         )
 
         # Minimally valid
@@ -82,8 +91,8 @@ class FactoryTest(TestCase):
         args = self.parse_args('check', 'no/match')
         self.assertError(
             lambda: factory.create_fuzzer(args, device=self.device),
-            'ERROR: No matching fuzzers found.',
-            '       Try "fx fuzz list".',
+            'No matching fuzzers found.',
+            'Try "fx fuzz list".',
         )
 
         # Multiple matches

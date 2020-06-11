@@ -41,13 +41,13 @@ class Factory(object):
         parser.add_parsers()
         return parser
 
-    def create_host(self, **kwargs):
+    def create_host(self, fuchsia_dir=None):
         """Constructs a Host from a local build directory."""
-        fuchsia_dir = kwargs.pop('fuchsia_dir', self.cli.getenv('FUCHSIA_DIR'))
         if not fuchsia_dir:
-            self.host.error(
+            fuchsia_dir = self.cli.getenv('FUCHSIA_DIR')
+        if not fuchsia_dir:
+            self.cli.error(
                 'FUCHSIA_DIR not set.', 'Have you sourced "scripts/fx-env.sh"?')
-        assert not kwargs, 'Unexpected keyword arguments: {}'.format(kwargs)
         host = Host(self.cli, fuchsia_dir)
         pathname = host.fxpath('.fx-build-dir')
         build_dir = self.cli.readfile(

@@ -7,19 +7,20 @@ import os
 import unittest
 
 import test_env
-from test_case import TestCase
+from test_case import FuzzerTestCase
 
 
-class DictionaryTest(TestCase):
+class DictionaryTest(FuzzerTestCase):
 
-    def setUp(self):
-        super(DictionaryTest, self).setUp()
-        self.create_fuzzer('check', 'fake-package1/fake-target1')
-        self.ns = self.fuzzer.ns
-        self.dictionary = self.fuzzer.dictionary
+    @property
+    def dictionary(self):
+        return self.fuzzer.dictionary
 
     def test_replace(self):
         local_dict = 'local_dict'
+        self.assertError(
+            lambda: self.dictionary.replace(local_dict),
+            'No such file: {}'.format(local_dict))
         self.cli.touch(local_dict)
         self.assertEqual(self.dictionary.nspath, self.ns.resource('dictionary'))
         self.dictionary.replace(local_dict)

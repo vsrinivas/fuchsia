@@ -21,7 +21,7 @@ class NonHermeticTestCase(unittest.TestCase):
     def setUp(self):
         super(NonHermeticTestCase, self).setUp()
         self._err = StringIO()
-        self._cli = CommandLineInterface(out=self._err)
+        self._cli = CommandLineInterface(fd_err=self._err)
         self._temp_dir = tempfile.mkdtemp()
 
     @property
@@ -197,6 +197,10 @@ class CommandLineInterfaceTestCase(object):
         self.assertTrue(self.isfile(pathname))
         self.cli.remove(pathname)
         self.assertFalse(self.isfile(pathname))
+
+    def test_temp_dir(self):
+        with self.cli.temp_dir() as temp_dir:
+            self.assertTrue(self.isdir(temp_dir.pathname))
 
     def test_create_process(self):
         self.cli.create_process(['true']).call()
