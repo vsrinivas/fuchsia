@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_input_report::{
-    Axis, ContactInputDescriptor, ContactInputReport, DeviceDescriptor, DeviceInfo, InputReport,
-    SensorAxis, SensorDescriptor, SensorInputDescriptor, SensorInputReport, TouchDescriptor,
+    Axis, ContactInputDescriptor, ContactInputReport, DeviceDescriptor, DeviceInfo, FeatureReport,
+    InputReport, SensorAxis, SensorDescriptor, SensorFeatureDescriptor, SensorFeatureReport,
+    SensorInputDescriptor, SensorInputReport, SensorReportingState, TouchDescriptor,
     TouchInputDescriptor, TouchInputReport,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::vec::Vec;
 
@@ -15,6 +16,8 @@ pub enum InputReportMethod {
     GetReports,
     GetDescriptor,
     SendOutputReport,
+    GetFeatureReport,
+    SetFeatureReport,
     UndefinedFunc,
 }
 
@@ -25,6 +28,8 @@ impl std::str::FromStr for InputReportMethod {
             "GetReports" => InputReportMethod::GetReports,
             "GetDescriptor" => InputReportMethod::GetDescriptor,
             "SendOutputReport" => InputReportMethod::SendOutputReport,
+            "GetFeatureReport" => InputReportMethod::GetFeatureReport,
+            "SetFeatureReport" => InputReportMethod::SetFeatureReport,
             _ => InputReportMethod::UndefinedFunc,
         })
     }
@@ -47,12 +52,12 @@ impl InputDeviceMatchArgs {
     }
 }
 
-impl std::convert::From<Value> for InputDeviceMatchArgs {
-    fn from(value: Value) -> Self {
+impl std::convert::From<&Value> for InputDeviceMatchArgs {
+    fn from(value: &Value) -> Self {
         InputDeviceMatchArgs {
-            vendor_id: InputDeviceMatchArgs::get_u32_arg(&value, "vendor_id"),
-            product_id: InputDeviceMatchArgs::get_u32_arg(&value, "product_id"),
-            version: InputDeviceMatchArgs::get_u32_arg(&value, "version"),
+            vendor_id: InputDeviceMatchArgs::get_u32_arg(value, "vendor_id"),
+            product_id: InputDeviceMatchArgs::get_u32_arg(value, "product_id"),
+            version: InputDeviceMatchArgs::get_u32_arg(value, "version"),
         }
     }
 }
@@ -77,6 +82,13 @@ impl SerializableDeviceInfo {
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+pub struct SerializableUnit {
+    #[serde(rename = "type")]
+    pub type_: u32,
+    pub exponent: i32,
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct SerializableRange {
     pub min: i64,
     pub max: i64,
@@ -85,14 +97,17 @@ pub struct SerializableRange {
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct SerializableAxis {
     pub range: SerializableRange,
-    pub unit: u32,
+    pub unit: SerializableUnit,
 }
 
 impl SerializableAxis {
     pub fn new(axis: &Axis) -> Self {
         SerializableAxis {
             range: SerializableRange { min: axis.range.min, max: axis.range.max },
-            unit: axis.unit.type_.into_primitive(),
+            unit: SerializableUnit {
+                type_: axis.unit.type_.into_primitive(),
+                exponent: axis.unit.exponent,
+            },
         }
     }
 }
@@ -100,6 +115,7 @@ impl SerializableAxis {
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct SerializableSensorAxis {
     pub axis: SerializableAxis,
+    #[serde(rename = "type")]
     pub type_: u32,
 }
 
@@ -129,14 +145,44 @@ impl SerializableSensorInputDescriptor {
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+pub struct SerializableSensorFeatureDescriptor {
+    pub report_interval: Option<SerializableAxis>,
+    pub supports_reporting_state: Option<bool>,
+    pub sensitivity: Option<Vec<SerializableSensorAxis>>,
+    pub threshold_high: Option<Vec<SerializableSensorAxis>>,
+    pub threshold_low: Option<Vec<SerializableSensorAxis>>,
+}
+
+impl SerializableSensorFeatureDescriptor {
+    pub fn new(sensor_feature: &SensorFeatureDescriptor) -> Self {
+        SerializableSensorFeatureDescriptor {
+            report_interval: sensor_feature.report_interval.as_ref().map(SerializableAxis::new),
+            supports_reporting_state: sensor_feature.supports_reporting_state.clone(),
+            sensitivity: sensor_feature
+                .sensitivity
+                .as_ref()
+                .map(|sensitivity| sensitivity.iter().map(SerializableSensorAxis::new).collect()),
+            threshold_high: sensor_feature.threshold_high.as_ref().map(|threshold_high| {
+                threshold_high.iter().map(SerializableSensorAxis::new).collect()
+            }),
+            threshold_low: sensor_feature.threshold_low.as_ref().map(|threshold_low| {
+                threshold_low.iter().map(SerializableSensorAxis::new).collect()
+            }),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct SerializableSensorDescriptor {
     pub input: Option<SerializableSensorInputDescriptor>,
+    pub feature: Option<SerializableSensorFeatureDescriptor>,
 }
 
 impl SerializableSensorDescriptor {
     pub fn new(sensor: &SensorDescriptor) -> Self {
         SerializableSensorDescriptor {
             input: sensor.input.as_ref().map(SerializableSensorInputDescriptor::new),
+            feature: sensor.feature.as_ref().map(SerializableSensorFeatureDescriptor::new),
         }
     }
 }
@@ -222,6 +268,75 @@ pub struct SerializableSensorInputReport {
 impl SerializableSensorInputReport {
     pub fn new(sensor_report: &SensorInputReport) -> Self {
         SerializableSensorInputReport { values: sensor_report.values.clone() }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SerializableSensorFeatureReport {
+    pub report_interval: Option<i64>,
+    pub reporting_state: Option<u32>,
+    pub sensitivity: Option<Vec<i64>>,
+    pub threshold_high: Option<Vec<i64>>,
+    pub threshold_low: Option<Vec<i64>>,
+}
+
+impl SerializableSensorFeatureReport {
+    pub fn new(sensor_report: &SensorFeatureReport) -> Self {
+        SerializableSensorFeatureReport {
+            report_interval: sensor_report.report_interval.clone(),
+            reporting_state: sensor_report.reporting_state.map(|state| state.into_primitive()),
+            sensitivity: sensor_report.sensitivity.clone(),
+            threshold_high: sensor_report.threshold_high.clone(),
+            threshold_low: sensor_report.threshold_low.clone(),
+        }
+    }
+}
+
+impl std::convert::TryInto<SensorFeatureReport> for SerializableSensorFeatureReport {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> Result<SensorFeatureReport, Self::Error> {
+        Ok(SensorFeatureReport {
+            report_interval: self.report_interval.clone(),
+            reporting_state: match self.reporting_state {
+                Some(r) => {
+                    Some(SensorReportingState::from_primitive(r).ok_or(anyhow!(
+                        "Invalid reporting_state value: {:?}",
+                        self.reporting_state
+                    ))?)
+                }
+                None => None,
+            },
+            sensitivity: self.sensitivity.clone(),
+            threshold_high: self.threshold_high.clone(),
+            threshold_low: self.threshold_low.clone(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SerializableFeatureReport {
+    pub sensor: Option<SerializableSensorFeatureReport>,
+}
+
+impl SerializableFeatureReport {
+    pub fn new(report: &FeatureReport) -> Self {
+        SerializableFeatureReport {
+            sensor: report.sensor.as_ref().map(SerializableSensorFeatureReport::new),
+        }
+    }
+}
+
+impl std::convert::TryInto<FeatureReport> for SerializableFeatureReport {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> Result<FeatureReport, Self::Error> {
+        Ok(FeatureReport {
+            sensor: match self.sensor {
+                Some(s) => Some(s.try_into()?),
+                None => None,
+            },
+        })
     }
 }
 

@@ -5,11 +5,12 @@
 use crate::{
     common_utils::common::macros::{fx_err_and_bail, with_line},
     input_report::types::{
-        InputDeviceMatchArgs, SerializableDeviceDescriptor, SerializableInputReport,
+        InputDeviceMatchArgs, SerializableDeviceDescriptor, SerializableFeatureReport,
+        SerializableInputReport,
     },
 };
 use anyhow::Error;
-use fidl_fuchsia_input_report::{InputDeviceMarker, InputDeviceProxy, InputReport};
+use fidl_fuchsia_input_report::{FeatureReport, InputDeviceMarker, InputDeviceProxy, InputReport};
 use fuchsia_syslog::macros::*;
 use glob::glob;
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
@@ -118,6 +119,39 @@ impl InputReportFacade {
         let descriptor = self.get_proxy(match_args).await?.get_descriptor().await?;
         Ok(SerializableDeviceDescriptor::new(&descriptor))
     }
+
+    pub async fn get_feature_report(
+        &self,
+        match_args: InputDeviceMatchArgs,
+    ) -> Result<SerializableFeatureReport, Error> {
+        match self.get_proxy(match_args).await?.get_feature_report().await? {
+            Ok(r) => Ok(SerializableFeatureReport::new(&r)),
+            Err(e) => {
+                let tag = "InputReportFacade::get_feature_report";
+                fx_err_and_bail!(
+                    &with_line!(tag),
+                    format_err!("GetFeaturereReport failed: {:?}", e)
+                )
+            }
+        }
+    }
+
+    pub async fn set_feature_report(
+        &self,
+        match_args: InputDeviceMatchArgs,
+        feature_report: FeatureReport,
+    ) -> Result<(), Error> {
+        match self.get_proxy(match_args).await?.set_feature_report(feature_report).await? {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                let tag = "InputReportFacade::set_feature_report";
+                fx_err_and_bail!(
+                    &with_line!(tag),
+                    format_err!("SetFeaturereReport failed: {:?}", e)
+                )
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -127,6 +161,8 @@ mod tests {
     use fidl_fuchsia_input_report::*;
     use futures::{future::Future, join, stream::StreamExt};
     use matches::assert_matches;
+    use serde::de::Deserialize;
+    use serde_json::{Map, Number, Value};
 
     struct MockInputReportBuilder {
         expected: Vec<Box<dyn FnOnce(InputDeviceRequest) + Send + 'static>>,
@@ -155,6 +191,25 @@ mod tests {
             self.push(move |req| match req {
                 InputDeviceRequest::GetDescriptor { responder } => {
                     assert_matches!(responder.send(descriptor), Ok(()));
+                }
+                req => panic!("unexpected request: {:?}", req),
+            })
+        }
+
+        fn expect_get_feature_report(self, feature_report: FeatureReport) -> Self {
+            self.push(move |req| match req {
+                InputDeviceRequest::GetFeatureReport { responder } => {
+                    assert_matches!(responder.send(&mut Ok(feature_report)), Ok(()));
+                }
+                req => panic!("unexpected request: {:?}", req),
+            })
+        }
+
+        fn expect_set_feature_report(self, feature_report: FeatureReport) -> Self {
+            self.push(move |req| match req {
+                InputDeviceRequest::SetFeatureReport { report, responder } => {
+                    assert_eq!(report, feature_report);
+                    assert_matches!(responder.send(&mut Ok(())), Ok(()));
                 }
                 req => panic!("unexpected request: {:?}", req),
             })
@@ -214,7 +269,34 @@ mod tests {
                             },
                         ]),
                     }),
-                    feature: None,
+                    feature: Some(SensorFeatureDescriptor {
+                        report_interval: Some(Axis {
+                            range: Range { min: 0, max: 1000000000 },
+                            unit: Unit { type_: UnitType::Seconds, exponent: 0 },
+                        }),
+                        supports_reporting_state: Some(true),
+                        sensitivity: Some(vec![SensorAxis {
+                            axis: Axis {
+                                range: Range { min: 0, max: 3 },
+                                unit: Unit { type_: UnitType::Lux, exponent: 0 },
+                            },
+                            type_: SensorType::LightIlluminance,
+                        }]),
+                        threshold_high: Some(vec![SensorAxis {
+                            axis: Axis {
+                                range: Range { min: 0, max: 0xfff },
+                                unit: Unit { type_: UnitType::Lux, exponent: 0 },
+                            },
+                            type_: SensorType::LightIlluminance,
+                        }]),
+                        threshold_low: Some(vec![SensorAxis {
+                            axis: Axis {
+                                range: Range { min: 0, max: 0xfff },
+                                unit: Unit { type_: UnitType::Lux, exponent: 0 },
+                            },
+                            type_: SensorType::LightIlluminance,
+                        }]),
+                    }),
                 }),
                 touch: Some(TouchDescriptor {
                     input: Some(TouchInputDescriptor {
@@ -280,26 +362,75 @@ mod tests {
                                 SerializableSensorAxis {
                                     axis: SerializableAxis {
                                         range: SerializableRange { min: -100, max: 100 },
-                                        unit: UnitType::SiLinearAcceleration.into_primitive(),
+                                        unit: SerializableUnit {
+                                            type_: UnitType::SiLinearAcceleration.into_primitive(),
+                                            exponent: 0
+                                        },
                                     },
                                     type_: SensorType::AccelerometerX.into_primitive(),
                                 },
                                 SerializableSensorAxis {
                                     axis: SerializableAxis {
                                         range: SerializableRange { min: -10000, max: 10000 },
-                                        unit: UnitType::Webers.into_primitive(),
+                                        unit: SerializableUnit {
+                                            type_: UnitType::Webers.into_primitive(),
+                                            exponent: 0
+                                        },
                                     },
                                     type_: SensorType::MagnetometerX.into_primitive(),
                                 },
                                 SerializableSensorAxis {
                                     axis: SerializableAxis {
                                         range: SerializableRange { min: 0, max: 1000 },
-                                        unit: UnitType::Lux.into_primitive(),
+                                        unit: SerializableUnit {
+                                            type_: UnitType::Lux.into_primitive(),
+                                            exponent: 0
+                                        },
                                     },
                                     type_: SensorType::LightIlluminance.into_primitive(),
                                 },
                             ])
-                        })
+                        }),
+                        feature: Some(SerializableSensorFeatureDescriptor {
+                            report_interval: Some(SerializableAxis {
+                                range: SerializableRange { min: 0, max: 1000000000 },
+                                unit: SerializableUnit {
+                                    type_: UnitType::Seconds.into_primitive(),
+                                    exponent: 0
+                                },
+                            }),
+                            supports_reporting_state: Some(true),
+                            sensitivity: Some(vec![SerializableSensorAxis {
+                                axis: SerializableAxis {
+                                    range: SerializableRange { min: 0, max: 3 },
+                                    unit: SerializableUnit {
+                                        type_: UnitType::Lux.into_primitive(),
+                                        exponent: 0
+                                    },
+                                },
+                                type_: SensorType::LightIlluminance.into_primitive(),
+                            }]),
+                            threshold_high: Some(vec![SerializableSensorAxis {
+                                axis: SerializableAxis {
+                                    range: SerializableRange { min: 0, max: 0xfff },
+                                    unit: SerializableUnit {
+                                        type_: UnitType::Lux.into_primitive(),
+                                        exponent: 0
+                                    },
+                                },
+                                type_: SensorType::LightIlluminance.into_primitive(),
+                            }]),
+                            threshold_low: Some(vec![SerializableSensorAxis {
+                                axis: SerializableAxis {
+                                    range: SerializableRange { min: 0, max: 0xfff },
+                                    unit: SerializableUnit {
+                                        type_: UnitType::Lux.into_primitive(),
+                                        exponent: 0
+                                    },
+                                },
+                                type_: SensorType::LightIlluminance.into_primitive(),
+                            }]),
+                        }),
                     }),
                     touch: Some(SerializableTouchDescriptor {
                         input: Some(SerializableTouchInputDescriptor {
@@ -307,15 +438,24 @@ mod tests {
                                 SerializableContactInputDescriptor {
                                     position_x: Some(SerializableAxis {
                                         range: SerializableRange { min: 0, max: 200 },
-                                        unit: UnitType::Meters.into_primitive(),
+                                        unit: SerializableUnit {
+                                            type_: UnitType::Meters.into_primitive(),
+                                            exponent: -6
+                                        },
                                     }),
                                     position_y: Some(SerializableAxis {
                                         range: SerializableRange { min: 0, max: 100 },
-                                        unit: UnitType::Meters.into_primitive(),
+                                        unit: SerializableUnit {
+                                            type_: UnitType::Meters.into_primitive(),
+                                            exponent: -6
+                                        },
                                     }),
                                     pressure: Some(SerializableAxis {
                                         range: SerializableRange { min: 0, max: 10 },
-                                        unit: UnitType::Pascals.into_primitive(),
+                                        unit: SerializableUnit {
+                                            type_: UnitType::Pascals.into_primitive(),
+                                            exponent: -6
+                                        },
                                     }),
                                     contact_width: None,
                                     contact_height: None,
@@ -323,15 +463,24 @@ mod tests {
                                 SerializableContactInputDescriptor {
                                     position_x: Some(SerializableAxis {
                                         range: SerializableRange { min: 0, max: 200 },
-                                        unit: UnitType::Meters.into_primitive(),
+                                        unit: SerializableUnit {
+                                            type_: UnitType::Meters.into_primitive(),
+                                            exponent: -6
+                                        },
                                     }),
                                     position_y: Some(SerializableAxis {
                                         range: SerializableRange { min: 0, max: 100 },
-                                        unit: UnitType::Meters.into_primitive(),
+                                        unit: SerializableUnit {
+                                            type_: UnitType::Meters.into_primitive(),
+                                            exponent: -6
+                                        },
                                     }),
                                     pressure: Some(SerializableAxis {
                                         range: SerializableRange { min: 0, max: 10 },
-                                        unit: UnitType::Pascals.into_primitive(),
+                                        unit: SerializableUnit {
+                                            type_: UnitType::Pascals.into_primitive(),
+                                            exponent: -6
+                                        },
                                     }),
                                     contact_width: None,
                                     contact_height: None,
@@ -512,5 +661,165 @@ mod tests {
         };
 
         join!(expectations, test);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn get_feature_report() {
+        let (facade, expectations) = MockInputReportBuilder::new()
+            .expect_get_feature_report(FeatureReport {
+                sensor: Some(SensorFeatureReport {
+                    report_interval: Some(100),
+                    reporting_state: Some(SensorReportingState::ReportAllEvents),
+                    sensitivity: Some(vec![1, 2, 3]),
+                    threshold_high: None,
+                    threshold_low: Some(vec![4, 5]),
+                }),
+            })
+            .build();
+        let test = async move {
+            let report = facade.get_feature_report(InputDeviceMatchArgs::default()).await;
+            assert!(report.is_ok());
+            assert_eq!(
+                report.unwrap(),
+                SerializableFeatureReport {
+                    sensor: Some(SerializableSensorFeatureReport {
+                        report_interval: Some(100),
+                        reporting_state: Some(2),
+                        sensitivity: Some(vec![1, 2, 3]),
+                        threshold_high: None,
+                        threshold_low: Some(vec![4, 5]),
+                    })
+                }
+            );
+        };
+        join!(expectations, test);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn set_feature_report() {
+        let (facade, expectations) = MockInputReportBuilder::new()
+            .expect_set_feature_report(FeatureReport {
+                sensor: Some(SensorFeatureReport {
+                    report_interval: None,
+                    reporting_state: None,
+                    sensitivity: Some(vec![6]),
+                    threshold_high: Some(vec![7, 8]),
+                    threshold_low: Some(vec![10, 11, 12]),
+                }),
+            })
+            .build();
+        let test = async move {
+            let result = facade
+                .set_feature_report(
+                    InputDeviceMatchArgs::default(),
+                    FeatureReport {
+                        sensor: Some(SensorFeatureReport {
+                            report_interval: None,
+                            reporting_state: None,
+                            sensitivity: Some(vec![6]),
+                            threshold_high: Some(vec![7, 8]),
+                            threshold_low: Some(vec![10, 11, 12]),
+                        }),
+                    },
+                )
+                .await;
+            assert!(result.is_ok());
+        };
+        join!(expectations, test);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn parse_json_feature_report() {
+        let mut map = Map::new();
+
+        let mut sensor_map = Map::new();
+        sensor_map.insert("report_interval".to_string(), Value::Number(Number::from(100)));
+        sensor_map.insert("reporting_state".to_string(), Value::Number(Number::from(3)));
+        sensor_map.insert(
+            "sensitivity".to_string(),
+            Value::Array(vec![
+                Value::Number(Number::from(50)),
+                Value::Number(Number::from(150)),
+                Value::Number(Number::from(200)),
+            ]),
+        );
+        sensor_map.insert(
+            "threshold_high".to_string(),
+            Value::Array(vec![
+                Value::Number(Number::from(1)),
+                Value::Number(Number::from(2)),
+                Value::Number(Number::from(3)),
+                Value::Number(Number::from(4)),
+            ]),
+        );
+
+        map.insert("sensor".to_string(), Value::Object(sensor_map));
+
+        let result = SerializableFeatureReport::deserialize(Value::Object(map));
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            SerializableFeatureReport {
+                sensor: Some(SerializableSensorFeatureReport {
+                    report_interval: Some(100),
+                    reporting_state: Some(3),
+                    sensitivity: Some(vec![50, 150, 200]),
+                    threshold_high: Some(vec![1, 2, 3, 4]),
+                    threshold_low: None,
+                })
+            }
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn parse_json_feature_report_invalid_array_entry() {
+        let mut map = Map::new();
+
+        let mut sensor_map = Map::new();
+        sensor_map.insert("report_interval".to_string(), Value::Number(Number::from(100)));
+        sensor_map.insert(
+            "sensitivity".to_string(),
+            Value::Array(vec![
+                Value::Number(Number::from(50)),
+                Value::Number(Number::from(150)),
+                Value::Number(Number::from(200)),
+            ]),
+        );
+        sensor_map.insert(
+            "threshold_high".to_string(),
+            Value::Array(vec![
+                Value::Number(Number::from(1)),
+                Value::Number(Number::from(2)),
+                Value::String("invalid".to_string()),
+                Value::Number(Number::from(4)),
+            ]),
+        );
+
+        map.insert("sensor".to_string(), Value::Object(sensor_map));
+
+        let result = SerializableFeatureReport::deserialize(Value::Object(map));
+        assert!(!result.is_ok());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn parse_json_feature_report_invalid_array() {
+        let mut map = Map::new();
+
+        let mut sensor_map = Map::new();
+        sensor_map.insert("report_interval".to_string(), Value::Number(Number::from(100)));
+        sensor_map.insert(
+            "sensitivity".to_string(),
+            Value::Array(vec![
+                Value::Number(Number::from(50)),
+                Value::Number(Number::from(150)),
+                Value::Number(Number::from(200)),
+            ]),
+        );
+        sensor_map.insert("threshold_high".to_string(), Value::Number(Number::from(1234)));
+
+        map.insert("sensor".to_string(), Value::Object(sensor_map));
+
+        let result = SerializableFeatureReport::deserialize(Value::Object(map));
+        assert!(!result.is_ok());
     }
 }
