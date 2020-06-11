@@ -591,89 +591,176 @@ unsigned int arch_mmu_flags_to_vm_flags(unsigned int arch_mmu_flags) {
   return ret;
 }
 
-// Builds a description of an apsace/vmar/mapping hierarchy.
-class VmMapBuilder final : public VmEnumerator {
+// This provides a generic way to perform VmAspace::EnumerateChildren in scenarios where the
+// enumeration may need to be retried due to page faults for user copies needing to be handled.
+// Mostly it serves to reduce the duplication in logic between the VmMapBuilder and the
+// AspaceVmoEnumerator and so the template options exist to handle precisely those two cases.
+// IMPL is the object type that the Make* methods will be called on if the respective Enumerate*
+// options are true.
+template <typename ENTRY, typename IMPL, bool EnumerateVmar, bool EnumerateMapping,
+          size_t FirstEntry>
+class RestartableVmEnumerator {
  public:
   // NOTE: Code outside of the syscall layer should not typically know about
   // user_ptrs; do not use this pattern as an example.
-  VmMapBuilder(user_out_ptr<zx_info_maps_t> maps, size_t max) : maps_(maps), max_(max) { reset(); }
+  // max is the total number of elements that entries can support, with FirstEntry being the first
+  // of these entries that this enumerator will store to. This means we can write at most
+  // max-FirstEntry entries.
+  RestartableVmEnumerator(user_out_ptr<ENTRY> entries, size_t max) : entries_(entries), max_(max) {}
 
-  bool OnVmAddressRegion(const VmAddressRegion* vmar, uint depth) override {
-    available_++;
-    if (nelem_ < max_) {
-      zx_info_maps_t entry = {};
-      strlcpy(entry.name, vmar->name(), sizeof(entry.name));
-      entry.base = vmar->base();
-      entry.size = vmar->size();
-      entry.depth = depth + 1;  // The root aspace is depth 0.
-      entry.type = ZX_INFO_MAPS_TYPE_VMAR;
+  zx_status_t Enumerate(VmAspace* target) {
+    nelem_ = FirstEntry;
+    available_ = FirstEntry;
+    start_ = 0;
+    faults_ = 0;
+    visited_ = 0;
 
-      copy_res_ = maps_.copy_array_to_user_capture_faults(&entry, 1, nelem_);
-      if (copy_res_.status != ZX_OK) {
-        return false;
+    // EnumerateChildren only fails if copying to the user hit a fault. We redo the copy outside
+    // of the enumeration so that we're not holding the aspace lock. If it still fails then we
+    // consider it an error, otherwise we restart the enumeration skipping any entries with a
+    // virtual address in the segment we already processed. A segment is represented by an address
+    // and a depth pair, as vmars/mappings can exist at the same base address due to them being
+    // hierarchical, but they will have a higher depth.
+    Enumerator enumerator{this};
+    while (!target->EnumerateChildren(&enumerator)) {
+      DEBUG_ASSERT(nelem_ < max_);
+      zx_status_t result = entries_.element_offset(nelem_).copy_to_user(entry_);
+      if (result != ZX_OK) {
+        return result;
       }
-
       nelem_++;
     }
-    return true;
-  }
 
-  bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar, uint depth) override {
-    available_++;
-    if (nelem_ < max_) {
-      zx_info_maps_t entry = {};
-      auto vmo = map->vmo_locked();
-      vmo->get_name(entry.name, sizeof(entry.name));
-      entry.base = map->base();
-      entry.size = map->size();
-      entry.depth = depth + 1;  // The root aspace is depth 0.
-      entry.type = ZX_INFO_MAPS_TYPE_MAPPING;
-      zx_info_maps_mapping_t* u = &entry.u.mapping;
-      u->mmu_flags = arch_mmu_flags_to_vm_flags(map->arch_mmu_flags());
-      u->vmo_koid = vmo->user_id();
-      u->committed_pages = vmo->AttributedPagesInRange(map->object_offset(), map->size());
-      u->vmo_offset = map->object_offset();
+    // This aims to ensure that the logic of skipping already processed segments does not cause us
+    // to miss any segments. Guards against the VmAspace failing to correctly enumerate in depth
+    // first order.
+    DEBUG_ASSERT(faults_ > 0 || visited_ + FirstEntry == available_);
 
-      copy_res_ = maps_.copy_array_to_user_capture_faults(&entry, 1, nelem_);
-      if (copy_res_.status != ZX_OK) {
-        return false;
-      }
-
-      nelem_++;
-    }
-    return true;
-  }
-
-  zx_status_t ResolveFault(VmAspace* aspace) {
-    DEBUG_ASSERT(copy_res_.status != ZX_OK);
-
-    // If a fault actually occurred, attempt to handle it.  Otherwise, just
-    // propagate the error.
-    if (copy_res_.fault_info.has_value()) {
-      const auto& info = *copy_res_.fault_info;
-      return aspace->SoftFault(info.pf_va, info.pf_flags);
-    }
-
-    return copy_res_.status;
-  }
-
-  void reset() {
-    // The caller must write an entry for the root VmAspace at index 0.
-    nelem_ = 1;
-    available_ = 1;
-    copy_res_ = UserCopyCaptureFaultsResult{ZX_OK};
+    return ZX_OK;
   }
 
   size_t nelem() const { return nelem_; }
   size_t available() const { return available_; }
 
  private:
-  const user_out_ptr<zx_info_maps_t> maps_;
+  class Enumerator : public VmEnumerator {
+   public:
+    Enumerator(RestartableVmEnumerator* parent) : parent_(parent) {}
+
+    bool OnVmAddressRegion([[maybe_unused]] const VmAddressRegion* vmar,
+                           [[maybe_unused]] uint depth) override {
+      if constexpr (EnumerateVmar) {
+        return parent_->DoEntry(
+            [vmar, depth, this] { IMPL::MakeVmarEntry(vmar, depth, &parent_->entry_); },
+            vmar->base(), depth);
+      }
+      return true;
+    }
+
+    bool OnVmMapping([[maybe_unused]] const VmMapping* map,
+                     [[maybe_unused]] const VmAddressRegion* vmar,
+                     [[maybe_unused]] uint depth) override {
+      if constexpr (EnumerateMapping) {
+        return parent_->DoEntry(
+            [map, vmar, depth, this] {
+              IMPL::MakeMappingEntry(map, vmar, depth, &parent_->entry_);
+            },
+            map->base(), depth);
+      }
+      return true;
+    }
+
+   private:
+    RestartableVmEnumerator* parent_;
+  };
+  friend Enumerator;
+
+  // This helper is templated to allow the maximum code sharing between the two On* callbacks.
+  template <typename F>
+  bool DoEntry(F&& make_entry, zx_vaddr_t base, uint depth) {
+    visited_++;
+    // Skip anything that is at an earlier address or depth to prevent us double processing any
+    // segments.
+    if (base < start_ || (base == start_ && depth < start_depth_)) {
+      return true;
+    }
+    // Whatever happens we never want to process this again. We set this *always*, and not just on
+    // faults so that the logic of skipping above is consistently applied helping catch any bugs in
+    // changes to enumeration order.
+    start_ = base;
+    start_depth_ = depth + 1;
+
+    available_++;
+    if (nelem_ >= max_) {
+      return true;
+    }
+    ktl::forward<F>(make_entry)();
+
+    UserCopyCaptureFaultsResult res =
+        entries_.element_offset(nelem_).copy_to_user_capture_faults(entry_);
+    if (res.status != ZX_OK) {
+      // This entry will get written out by the main loop, so return false to break all the way out.
+      faults_++;
+      return false;
+    }
+
+    nelem_++;
+    return true;
+  }
+
+  const user_out_ptr<ENTRY> entries_;
   const size_t max_;
 
-  size_t nelem_ = 1;
-  size_t available_ = 1;
-  UserCopyCaptureFaultsResult copy_res_{ZX_OK};
+  // Use a single ENTRY stashed here and pass it by reference anywhere as this can be a large
+  // structure and we want to avoid multiple stack allocations from occurring.
+  ENTRY entry_{};
+  static_assert(sizeof(ENTRY) < 512);
+  size_t nelem_ = 0;
+  size_t available_ = 0;
+
+  zx_vaddr_t start_ = 0;
+  uint start_depth_ = 0;
+
+  // Count some statistics so we can do some lightweight sanity checking that we correctly process
+  // everything.
+  size_t faults_ = 0;
+  size_t visited_ = 0;
+};
+
+// Builds a description of an apsace/vmar/mapping hierarchy. Entries start at 1 as the user must
+// write an entry for the root VmAspace at index 0.
+class VmMapBuilder final
+    : public RestartableVmEnumerator<zx_info_maps_t, VmMapBuilder, true, true, 1> {
+ public:
+  // NOTE: Code outside of the syscall layer should not typically know about
+  // user_ptrs; do not use this pattern as an example.
+  VmMapBuilder(user_out_ptr<zx_info_maps_t> maps, size_t max)
+      : RestartableVmEnumerator(maps, max) {}
+
+  static void MakeVmarEntry(const VmAddressRegion* vmar, uint depth, zx_info_maps_t* entry) {
+    *entry = {};
+    strlcpy(entry->name, vmar->name(), sizeof(entry->name));
+    entry->base = vmar->base();
+    entry->size = vmar->size();
+    entry->depth = depth + 1;  // The root aspace is depth 0.
+    entry->type = ZX_INFO_MAPS_TYPE_VMAR;
+  }
+
+  static void MakeMappingEntry(const VmMapping* map, const VmAddressRegion* vmar, uint depth,
+                               zx_info_maps_t* entry) {
+    *entry = {};
+    auto vmo = map->vmo_locked();
+    vmo->get_name(entry->name, sizeof(entry->name));
+    entry->base = map->base();
+    entry->size = map->size();
+    entry->depth = depth + 1;  // The root aspace is depth 0.
+    entry->type = ZX_INFO_MAPS_TYPE_MAPPING;
+    zx_info_maps_mapping_t* u = &entry->u.mapping;
+    u->mmu_flags = arch_mmu_flags_to_vm_flags(map->arch_mmu_flags());
+    u->vmo_koid = vmo->user_id();
+    u->committed_pages = vmo->AttributedPagesInRange(map->object_offset(), map->size());
+    u->vmo_offset = map->object_offset();
+  }
 };
 }  // namespace
 
@@ -701,17 +788,12 @@ zx_status_t GetVmAspaceMaps(VmAspace* current_aspace, fbl::RefPtr<VmAspace> targ
   }
 
   VmMapBuilder b(maps, max);
-  while (!target_aspace->EnumerateChildren(&b)) {
-    // VmMapBuilder only returns false when the copy to the user pointer fails.
-    // Attempt to handle any fault which may have occurred during the copy.
-    zx_status_t status = b.ResolveFault(current_aspace);
-    if (status != ZX_OK) {
-      return status;
-    }
-    // As the |target_aspace| may have changed by this point we start enumeration from the
-    // beginning.
-    b.reset();
+
+  zx_status_t status = b.Enumerate(target_aspace.get());
+  if (status != ZX_OK) {
+    return status;
   }
+
   *actual = max > 0 ? b.nelem() : 0;
   *available = b.available();
   return ZX_OK;
@@ -719,63 +801,23 @@ zx_status_t GetVmAspaceMaps(VmAspace* current_aspace, fbl::RefPtr<VmAspace> targ
 
 namespace {
 // Builds a list of all VMOs mapped into a VmAspace.
-class AspaceVmoEnumerator final : public VmEnumerator {
+class AspaceVmoEnumerator final
+    : public RestartableVmEnumerator<zx_info_vmo_t, AspaceVmoEnumerator, false, true, 0> {
  public:
   // NOTE: Code outside of the syscall layer should not typically know about
   // user_ptrs; do not use this pattern as an example.
-  AspaceVmoEnumerator(user_out_ptr<zx_info_vmo_t> vmos, size_t max) : vmos_(vmos), max_(max) {
-    reset();
+  AspaceVmoEnumerator(user_out_ptr<zx_info_vmo_t> vmos, size_t max)
+      : RestartableVmEnumerator(vmos, max) {}
+
+  static void MakeMappingEntry(const VmMapping* map, const VmAddressRegion* vmar, uint depth,
+                               zx_info_vmo_t* entry) {
+    // We're likely to see the same VMO a couple times in a given
+    // address space (e.g., somelib.so mapped as r--, r-x), but leave it
+    // to userspace to do deduping.
+    *entry = VmoToInfoEntry(map->vmo_locked().get(),
+                            /*is_handle=*/false,
+                            /*handle_rights=*/0);
   }
-
-  bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar, uint depth) override {
-    available_++;
-    if (nelem_ < max_) {
-      // We're likely to see the same VMO a couple times in a given
-      // address space (e.g., somelib.so mapped as r--, r-x), but leave it
-      // to userspace to do deduping.
-      zx_info_vmo_t entry = VmoToInfoEntry(map->vmo_locked().get(),
-                                           /*is_handle=*/false,
-                                           /*handle_rights=*/0);
-
-      copy_res_ = vmos_.copy_array_to_user_capture_faults(&entry, 1, nelem_);
-      if (copy_res_.status != ZX_OK) {
-        return false;
-      }
-
-      nelem_++;
-    }
-    return true;
-  }
-
-  zx_status_t ResolveFault(VmAspace* aspace) {
-    DEBUG_ASSERT(copy_res_.status != ZX_OK);
-
-    // If a fault actually occurred, attempt to handle it.  Otherwise, just
-    // propagate the error.
-    if (copy_res_.fault_info.has_value()) {
-      const auto& info = *copy_res_.fault_info;
-      return aspace->SoftFault(info.pf_va, info.pf_flags);
-    }
-
-    return copy_res_.status;
-  }
-
-  void reset() {
-    nelem_ = 0;
-    available_ = 0;
-    copy_res_ = UserCopyCaptureFaultsResult{ZX_OK};
-  }
-
-  size_t nelem() const { return nelem_; }
-  size_t available() const { return available_; }
-
- private:
-  const user_out_ptr<zx_info_vmo_t> vmos_;
-  const size_t max_;
-
-  size_t nelem_ = 0;
-  size_t available_ = 0;
-  UserCopyCaptureFaultsResult copy_res_{ZX_OK};
 };
 }  // namespace
 
@@ -794,18 +836,12 @@ zx_status_t GetVmAspaceVmos(VmAspace* current_aspace, fbl::RefPtr<VmAspace> targ
   }
 
   AspaceVmoEnumerator ave(vmos, max);
-  while (!target_aspace->EnumerateChildren(&ave)) {
-    // AspaceVmoEnumerator only returns false when the copy to the user pointer
-    // fails.  Attempt to handle any fault which may have occurred during the
-    // copy.
-    zx_status_t status = ave.ResolveFault(current_aspace);
-    if (status != ZX_OK) {
-      return status;
-    }
-    // As the |target_aspace| may have changed by this point we start enumeration from the
-    // beginning.
-    ave.reset();
+
+  zx_status_t status = ave.Enumerate(target_aspace.get());
+  if (status != ZX_OK) {
+    return status;
   }
+
   *actual = ave.nelem();
   *available = ave.available();
   return ZX_OK;

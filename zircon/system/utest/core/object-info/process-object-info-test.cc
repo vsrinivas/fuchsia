@@ -535,9 +535,9 @@ TEST_F(ProcessGetInfoTest, InfoProcessMapsSmallBufferIsOk) {
       (CheckSmallBufferSucceeds<zx_info_maps_t>(ZX_INFO_PROCESS_MAPS, 1, GetHandleProvider())));
 }
 
-TEST_F(ProcessGetInfoTest, InfoProcessMapsPartiallyUnmappedBufferIsNotFound) {
+TEST_F(ProcessGetInfoTest, InfoProcessMapsPartiallyUnmappedBufferIsInvalidArgs) {
   ASSERT_NO_FATAL_FAILURES((CheckPartiallyUnmappedBufferIsError<zx_info_maps_t>(
-      ZX_INFO_PROCESS_MAPS, GetHandleProvider(), ZX_ERR_NOT_FOUND)));
+      ZX_INFO_PROCESS_MAPS, GetHandleProvider(), ZX_ERR_INVALID_ARGS)));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessMapsRequiresInspectRights) {
@@ -728,9 +728,9 @@ TEST_F(ProcessGetInfoTest, InfoProcessVmosSmallBufferIsOk) {
       (CheckSmallBufferSucceeds<zx_info_vmo_t>(ZX_INFO_PROCESS_VMOS, 1, GetHandleProvider())));
 }
 
-TEST_F(ProcessGetInfoTest, InfoProcessVmosPartiallyUnmappedBufferIsNotFound) {
+TEST_F(ProcessGetInfoTest, InfoProcessVmosPartiallyUnmappedBufferIsInvalidArgs) {
   ASSERT_NO_FATAL_FAILURES((CheckPartiallyUnmappedBufferIsError<zx_info_vmo_t>(
-      ZX_INFO_PROCESS_VMOS, GetHandleProvider(), ZX_ERR_NOT_FOUND)));
+      ZX_INFO_PROCESS_VMOS, GetHandleProvider(), ZX_ERR_INVALID_ARGS)));
 }
 
 TEST_F(ProcessGetInfoTest, InfoProcessVmosRequiresInspectRights) {
