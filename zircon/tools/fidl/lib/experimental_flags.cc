@@ -4,8 +4,6 @@
 
 #include "fidl/experimental_flags.h"
 
-#include <set>
-
 namespace fidl {
 
 bool ExperimentalFlags::SetFlagByName(const std::string_view flag) {
@@ -17,13 +15,16 @@ bool ExperimentalFlags::SetFlagByName(const std::string_view flag) {
   return true;
 }
 
-void ExperimentalFlags::SetFlag(Flag flag) { flags.insert(flag); }
+void ExperimentalFlags::SetFlag(Flag flag) { flags_ |= static_cast<FlagSet>(flag); }
 
-bool ExperimentalFlags::IsFlagEnabled(Flag flag) const { return flags.find(flag) != flags.end(); }
+bool ExperimentalFlags::IsFlagEnabled(Flag flag) const {
+  return (flags_ & static_cast<FlagSet>(flag)) != 0;
+}
 
 std::map<const std::string_view, const ExperimentalFlags::Flag> ExperimentalFlags::FLAG_STRINGS = {
     {"enable_handle_rights", Flag::kEnableHandleRights},
     {"disallow_old_handle_syntax", Flag::kDisallowOldHandleSyntax},
+    {"unique_canonical_names", Flag::kUniqueCanonicalNames},
 };
 
 }  // namespace fidl

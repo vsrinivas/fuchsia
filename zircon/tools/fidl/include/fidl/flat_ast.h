@@ -29,6 +29,7 @@
 #include <safemath/checked_math.h>
 
 #include "attributes.h"
+#include "experimental_flags.h"
 #include "flat/name.h"
 #include "flat/object.h"
 #include "flat/types.h"
@@ -726,8 +727,12 @@ class Library {
   friend VerifyAttributesStep;
 
  public:
-  Library(const Libraries* all_libraries, Reporter* reporter, Typespace* typespace)
-      : all_libraries_(all_libraries), reporter_(reporter), typespace_(typespace) {}
+  Library(const Libraries* all_libraries, Reporter* reporter, Typespace* typespace,
+          ExperimentalFlags experimental_flags)
+      : all_libraries_(all_libraries),
+        reporter_(reporter),
+        typespace_(typespace),
+        experimental_flags_(experimental_flags) {}
 
   bool ConsumeFile(std::unique_ptr<raw::File> file);
   bool Compile();
@@ -894,12 +899,18 @@ class Library {
   Dependencies dependencies_;
   const Libraries* all_libraries_;
 
-  // All Name, Constant, Using, and Decl pointers here are non-null and are
-  // owned by the various foo_declarations_.
+  // All Decl pointers here are non-null. They are owned by the various
+  // foo_declarations_ members of this Library object, or of one of the Library
+  // objects in dependencies_.
   std::map<Name::Key, Decl*> declarations_;
+
+  // This map contains a subset of declarations_ (no imported declarations)
+  // keyed by `utils::canonicalize(name.decl_name())` rather than `name.key()`.
+  std::map<std::string, Decl*> declarations_by_canonical_name_;
 
   Reporter* reporter_;
   Typespace* typespace_;
+  const ExperimentalFlags experimental_flags_;
 
   uint32_t anon_counter_ = 0;
 

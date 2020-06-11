@@ -58,18 +58,25 @@ constexpr WarningDef WarnBlankLinesWithinDocCommentBlock(
     "cannot have blank lines within doc comment block");
 constexpr WarningDef WarnDocCommentMustBeFollowedByDeclaration(
     "doc comment must be followed by a declaration");
-constexpr ErrorDef ErrMustHaveOneProperty(
-    "must have at least one property");
+constexpr ErrorDef ErrMustHaveOneProperty("must have at least one property");
 constexpr ErrorDef ErrOldHandleSyntax(
     "handle<type> is no longer supported, please use zx.handle:TYPE");
 
 // ---------------------------------------------------------------------------
 // Library::ConsumeFile: Consume* methods and declaration registration
 // ---------------------------------------------------------------------------
-constexpr ErrorDef<flat::Name> ErrNameCollision("Name collision: {}");
+constexpr ErrorDef<flat::Name, SourceSpan> ErrNameCollision(
+    "multiple declarations of '{}'; also declared at {}");
+constexpr ErrorDef<flat::Name, flat::Name, SourceSpan, std::string> ErrNameCollisionCanonical(
+    "declaration name '{}' conflicts with '{}' from {}; both are represented "
+    "by the canonical form '{}'");
 constexpr ErrorDef<flat::Name> ErrDeclNameConflictsWithLibraryImport(
-    "Declaration name '{}' conflicts with a library import; consider using the "
+    "Declaration name '{}' conflicts with a library import. Consider using the "
     "'as' keyword to import the library under a different name.");
+constexpr ErrorDef<flat::Name, std::string> ErrDeclNameConflictsWithLibraryImportCanonical(
+    "Declaration name '{}' conflicts with a library import due to its "
+    "canonical form '{}'. Consider using the 'as' keyword to import the "
+    "library under a different name.");
 constexpr ErrorDef ErrFilesDisagreeOnLibraryName(
     "Two files in the library disagree about the name of the library");
 constexpr ErrorDef<std::vector<std::string_view>> ErrDuplicateLibraryImport(
@@ -101,8 +108,8 @@ constexpr ErrorDef<const flat::Type *> ErrInvalidConstantType("invalid constant 
 constexpr ErrorDef ErrCannotResolveConstantValue("unable to resolve constant value");
 constexpr ErrorDef ErrOrOperatorOnNonPrimitiveValue(
     "Or operator can only be applied to primitive-kinded values");
-constexpr ErrorDef ErrUnknownEnumMember("Unknown enum member");
-constexpr ErrorDef ErrUnknownBitsMember("Unknown bits member");
+constexpr ErrorDef<std::string_view> ErrUnknownEnumMember("unknown enum member '{}'");
+constexpr ErrorDef<std::string_view> ErrUnknownBitsMember("unknown bits member '{}'");
 constexpr ErrorDef<flat::IdentifierConstant *> ErrExpectedValueButGotType(
     "{} is a type, but a value was expected");
 constexpr ErrorDef<flat::Name, flat::Name> ErrMismatchedNameTypeAssignment(
@@ -133,31 +140,55 @@ constexpr ErrorDef ErrUnknownAttributeOnInvalidType(
 constexpr ErrorDef ErrUnknownAttributeOnMultipleMembers(
     "[Unknown] attribute can be only applied to one member.");
 constexpr ErrorDef ErrComposingNonProtocol("This declaration is not a protocol");
-constexpr ErrorDef<SourceSpan> ErrDuplicateMethodName(
-    "Multiple methods with the same name in a protocol; last occurrence was at {}");
+constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateMethodName(
+    "multiple protocol methods named '{}'; previous was at {}");
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
+    ErrDuplicateMethodNameCanonical(
+        "protocol method '{}' conflicts with method '{}' from {}; both are "
+        "represented by the canonical form '{}'");
 constexpr ErrorDef ErrGeneratedZeroValueOrdinal("Ordinal value 0 disallowed.");
 constexpr ErrorDef<SourceSpan, std::string> ErrDuplicateMethodOrdinal(
     "Multiple methods with the same ordinal in a protocol; previous was at {}. "
     "Consider using attribute [Selector=\"{}\"] to change the name used to "
     "calculate the ordinal.");
-constexpr ErrorDef<SourceSpan> ErrDuplicateMethodParameterName(
-    "Multiple parameters with the same name in a method; previous was at {}");
-constexpr ErrorDef<SourceSpan> ErrDuplicateServiceMemberName(
-    "multiple service members with the same name; previous was at {}");
+constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateMethodParameterName(
+    "multiple method parameters named '{}'; previous was at {}");
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
+    ErrDuplicateMethodParameterNameCanonical(
+        "method parameter '{}' conflicts with parameter '{}' from {}; both are "
+        "represented by the canonical form '{}'s");
+constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateServiceMemberName(
+    "multiple service members named '{}'; previous was at {}");
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
+    ErrDuplicateServiceMemberNameCanonical(
+        "service member '{}' conflicts with member '{}' from {}; both are "
+        "represented by the canonical form '{}'");
 constexpr ErrorDef ErrNonProtocolServiceMember("only protocol members are allowed");
 constexpr ErrorDef ErrNullableServiceMember("service members cannot be nullable");
-constexpr ErrorDef<SourceSpan> ErrDuplicateStructMemberName(
-    "Multiple struct fields with the same name; previous was at {}");
+constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateStructMemberName(
+    "multiple struct fields named '{}'; previous was at {}");
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
+    ErrDuplicateStructMemberNameCanonical(
+        "struct field '{}' conflicts with field '{}' from {}; both are represented "
+        "by the canonical form '{}'");
 constexpr ErrorDef<std::string, const flat::Type *> ErrInvalidStructMemberType(
     "struct field {} has an invalid default type{}");
 constexpr ErrorDef<SourceSpan> ErrDuplicateTableFieldOrdinal(
-    "Multiple table fields with the same ordinal; previous was at {}");
-constexpr ErrorDef<SourceSpan> ErrDuplicateTableFieldName(
-    "Multiple table fields with the same name; previous was at {}");
+    "multiple table fields with the same ordinal; previous was at {}");
+constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateTableFieldName(
+    "multiple table fields named '{}'; previous was at {}");
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
+    ErrDuplicateTableFieldNameCanonical(
+        "table field '{}' conflicts with field '{}' from {}; both are represented "
+        "by the canonical form '{}'");
 constexpr ErrorDef<SourceSpan> ErrDuplicateUnionMemberOrdinal(
-    "Multiple union fields with the same ordinal; previous was at {}");
-constexpr ErrorDef<SourceSpan> ErrDuplicateUnionMemberName(
-    "Multiple union members with the same name; previous was at {}");
+    "multiple union fields with the same ordinal; previous was at {}");
+constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateUnionMemberName(
+    "multiple union members named '{}'; previous was at {}");
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
+    ErrDuplicateUnionMemberNameCanonical(
+        "union member '{}' conflicts with member '{}' from {}; both are represented "
+        "by the canonical form '{}'");
 constexpr ErrorDef<uint32_t> ErrNonDenseOrdinal(
     "missing ordinal {} (ordinals must be dense); consider marking it reserved");
 constexpr ErrorDef ErrCouldNotResolveHandleRights("unable to resolve handle rights");
@@ -165,12 +196,17 @@ constexpr ErrorDef<flat::Name> ErrCouldNotResolveHandleSubtype(
     "unable to resolve handle subtype {}");
 constexpr ErrorDef ErrCouldNotParseSizeBound("unable to parse size bound");
 constexpr ErrorDef<std::string> ErrCouldNotResolveMember("unable to resolve {} member");
-constexpr ErrorDef<std::string, std::string, flat::Name> ErrDuplicateMemberName(
-    "name of member {} conflicts with previously declared member in the {} {}");
-constexpr ErrorDef<std::string, std::string, std::string, flat::Name> ErrDuplicateMemberValue(
-    "value of member {} conflicts with previously declared member {} in the {} {}");
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan> ErrDuplicateMemberName(
+    "multiple {} members named '{}'; previous was at {}");
+constexpr ErrorDef<std::string_view, std::string_view, std::string_view, SourceSpan, std::string>
+    ErrDuplicateMemberNameCanonical(
+        "{} member '{}' conflicts with member '{}' from {}; both are "
+        "represented by the canonical form '{}'");
+constexpr ErrorDef<std::string_view, std::string_view, std::string_view, SourceSpan>
+    ErrDuplicateMemberValue(
+        "value of {} member '{}' conflicts with previously declared member '{}' at {}");
 constexpr ErrorDef<SourceSpan> ErrDuplicateResourcePropertyName(
-    "Multiple resource properties with the same name; previous was at {}");
+    "multiple resource properties with the same name; previous was at {}");
 
 // ---------------------------------------------------------------------------
 // Attribute Validation: Placement, Values, Constraints

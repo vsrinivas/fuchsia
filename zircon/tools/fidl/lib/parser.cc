@@ -71,7 +71,7 @@ void add(std::vector<std::unique_ptr<T>>* elements, Fn producer_fn) {
 
 }  // namespace
 
-Parser::Parser(Lexer* lexer, Reporter* reporter, const ExperimentalFlags& experimental_flags)
+Parser::Parser(Lexer* lexer, Reporter* reporter, ExperimentalFlags experimental_flags)
     : lexer_(lexer), reporter_(reporter), experimental_flags_(experimental_flags) {
   handle_subtype_table_ = {
       {"bti", types::HandleSubtype::kBti},

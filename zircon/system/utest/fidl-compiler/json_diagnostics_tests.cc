@@ -125,7 +125,7 @@ table Table {
   ASSERT_JSON(diagnostics, R"JSON([
   {
     "category": "fidlc/error",
-    "message": "Name collision: P",
+    "message": "multiple declarations of 'P'; also declared at example.fidl:4:10",
     "path": "example.fidl",
     "start_line": 5,
     "start_char": 9,

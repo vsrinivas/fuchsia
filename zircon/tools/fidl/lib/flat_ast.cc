@@ -89,7 +89,7 @@ std::optional<std::pair<uint32_t, SourceSpan>> FindFirstNonDenseOrdinal(
 
 struct MethodScope {
   Ordinal64Scope ordinals;
-  Scope<std::string_view> names;
+  Scope<std::string> canonical_names;
   Scope<const Protocol*> protocols;
 };
 
@@ -1309,13 +1309,33 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
   }  // switch
 
   const Name& name = decl_ptr->name;
-  auto iter = declarations_.emplace(name, decl_ptr);
-  if (!iter.second) {
-    return Fail(ErrNameCollision, name.span(), name);
+  {
+    const auto it = declarations_.emplace(name, decl_ptr);
+    if (!it.second) {
+      const auto previous_name = it.first->second->name;
+      assert(previous_name.span() && "declarations_ has a name with no span");
+      return Fail(ErrNameCollision, name.span(), name, *previous_name.span());
+    }
   }
+
+  const auto canonical_decl_name = utils::canonicalize(name.decl_name());
+  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUniqueCanonicalNames)) {
+    const auto it = declarations_by_canonical_name_.emplace(canonical_decl_name, decl_ptr);
+    if (!it.second) {
+      const auto previous_name = it.first->second->name;
+      assert(previous_name.span() && "declarations_by_canonical_name_ has a name with no span");
+      return Fail(ErrNameCollisionCanonical, name.span(), name, previous_name,
+                  *previous_name.span(), canonical_decl_name);
+    }
+  }
+
   if (name.span()) {
     if (dependencies_.Contains(name.span()->source_file().filename(), {name.span()->data()})) {
       return Fail(ErrDeclNameConflictsWithLibraryImport, name, name);
+    }
+    if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUniqueCanonicalNames) &&
+        dependencies_.Contains(name.span()->source_file().filename(), {canonical_decl_name})) {
+      return Fail(ErrDeclNameConflictsWithLibraryImportCanonical, name, name, canonical_decl_name);
     }
   }
 
@@ -2062,7 +2082,8 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
           }
         }
         if (!const_val) {
-          return Fail(ErrUnknownEnumMember, identifier_constant->name.span());
+          return Fail(ErrUnknownEnumMember, identifier_constant->name.span(),
+                      std::string_view(*member_name));
         }
         break;
       }
@@ -2079,7 +2100,8 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
           }
         }
         if (!const_val) {
-          return Fail(ErrUnknownBitsMember, identifier_constant->name.span());
+          return Fail(ErrUnknownBitsMember, identifier_constant->name.span(),
+                      std::string_view(*member_name));
         }
         break;
       }
@@ -3061,9 +3083,20 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
       }
     }
     for (const auto& method : protocol->methods) {
-      auto name_result = method_scope.names.Insert(method.name.data(), method.name);
-      if (!name_result.ok())
-        return Fail(ErrDuplicateMethodName, method.name, name_result.previous_occurrence());
+      const auto original_name = method.name.data();
+      const auto canonical_name = utils::canonicalize(original_name);
+      const auto name_result = method_scope.canonical_names.Insert(canonical_name, method.name);
+      if (!name_result.ok()) {
+        if (original_name == name_result.previous_occurrence().data()) {
+          return Fail(ErrDuplicateMethodName, method.name, original_name,
+                      name_result.previous_occurrence());
+        }
+        if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUniqueCanonicalNames)) {
+          const auto previous_span = name_result.previous_occurrence();
+          return Fail(ErrDuplicateMethodNameCanonical, method.name, original_name,
+                      previous_span.data(), previous_span, canonical_name);
+        }
+      }
       auto ordinal_result =
           method_scope.ordinals.Insert(method.generated_ordinal32->value, method.name);
       if (method.generated_ordinal32->value == 0)
@@ -3100,11 +3133,21 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
 }
 
 bool Library::CompileService(Service* service_decl) {
-  Scope<std::string_view> scope;
-  for (auto& member : service_decl->members) {
-    auto name_result = scope.Insert(member.name.data(), member.name);
-    if (!name_result.ok())
-      return Fail(ErrDuplicateServiceMemberName, member.name, name_result.previous_occurrence());
+  Scope<std::string> scope;
+  for (const auto& member : service_decl->members) {
+    const auto original_name = member.name.data();
+    const auto canonical_name = utils::canonicalize(original_name);
+    const auto name_result = scope.Insert(canonical_name, member.name);
+    if (!name_result.ok()) {
+      const auto previous_span = name_result.previous_occurrence();
+      if (original_name == name_result.previous_occurrence().data()) {
+        return Fail(ErrDuplicateServiceMemberName, member.name, original_name, previous_span);
+      }
+      if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUniqueCanonicalNames)) {
+        return Fail(ErrDuplicateServiceMemberNameCanonical, member.name, original_name,
+                    previous_span.data(), previous_span, canonical_name);
+      }
+    }
     if (!CompileTypeConstructor(member.type_ctor.get()))
       return false;
     if (member.type_ctor->type->kind != Type::Kind::kIdentifier)
@@ -3119,13 +3162,24 @@ bool Library::CompileService(Service* service_decl) {
 }
 
 bool Library::CompileStruct(Struct* struct_declaration) {
-  Scope<std::string_view> scope;
-  for (auto& member : struct_declaration->members) {
-    auto name_result = scope.Insert(member.name.data(), member.name);
+  Scope<std::string> scope;
+  for (const auto& member : struct_declaration->members) {
+    const auto original_name = member.name.data();
+    const auto canonical_name = utils::canonicalize(original_name);
+    const auto name_result = scope.Insert(canonical_name, member.name);
     if (!name_result.ok()) {
-      return Fail(struct_declaration->is_request_or_response ? ErrDuplicateMethodParameterName
-                                                             : ErrDuplicateStructMemberName,
-                  member.name, name_result.previous_occurrence());
+      const auto previous_span = name_result.previous_occurrence();
+      if (original_name == previous_span.data()) {
+        return Fail(struct_declaration->is_request_or_response ? ErrDuplicateMethodParameterName
+                                                               : ErrDuplicateStructMemberName,
+                    member.name, original_name, previous_span);
+      }
+      if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUniqueCanonicalNames)) {
+        return Fail(
+            struct_declaration->is_request_or_response ? ErrDuplicateMethodParameterNameCanonical
+                                                       : ErrDuplicateStructMemberNameCanonical,
+            member.name, original_name, previous_span.data(), previous_span, canonical_name);
+      }
     }
 
     if (!CompileTypeConstructor(member.type_ctor.get()))
@@ -3148,19 +3202,29 @@ bool Library::CompileStruct(Struct* struct_declaration) {
 }
 
 bool Library::CompileTable(Table* table_declaration) {
-  Scope<std::string_view> name_scope;
+  Scope<std::string> name_scope;
   Ordinal32Scope ordinal_scope;
 
-  for (auto& member : table_declaration->members) {
-    auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
+  for (const auto& member : table_declaration->members) {
+    const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
     if (!ordinal_result.ok())
       return Fail(ErrDuplicateTableFieldOrdinal, member.ordinal->span(),
                   ordinal_result.previous_occurrence());
     if (member.maybe_used) {
-      auto name_result = name_scope.Insert(member.maybe_used->name.data(), member.maybe_used->name);
-      if (!name_result.ok())
-        return Fail(ErrDuplicateTableFieldName, member.maybe_used->name,
-                    name_result.previous_occurrence());
+      const auto original_name = member.maybe_used->name.data();
+      const auto canonical_name = utils::canonicalize(original_name);
+      const auto name_result = name_scope.Insert(canonical_name, member.maybe_used->name);
+      if (!name_result.ok()) {
+        const auto previous_span = name_result.previous_occurrence();
+        if (original_name == name_result.previous_occurrence().data()) {
+          return Fail(ErrDuplicateTableFieldName, member.maybe_used->name, original_name,
+                      previous_span);
+        }
+        if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUniqueCanonicalNames)) {
+          return Fail(ErrDuplicateTableFieldNameCanonical, member.maybe_used->name, original_name,
+                      previous_span.data(), previous_span, canonical_name);
+        }
+      }
       if (!CompileTypeConstructor(member.maybe_used->type_ctor.get()))
         return false;
     }
@@ -3175,22 +3239,34 @@ bool Library::CompileTable(Table* table_declaration) {
 }
 
 bool Library::CompileUnion(Union* union_declaration) {
-  Scope<std::string_view> scope;
+  Scope<std::string> scope;
   Ordinal32Scope ordinal_scope;
 
-  for (auto& member : union_declaration->members) {
-    auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
-    if (!ordinal_result.ok())
+  for (const auto& member : union_declaration->members) {
+    const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
+    if (!ordinal_result.ok()) {
       return Fail(ErrDuplicateUnionMemberOrdinal, member.ordinal->span(),
                   ordinal_result.previous_occurrence());
+    }
     if (member.maybe_used) {
-      auto name_result = scope.Insert(member.maybe_used->name.data(), member.maybe_used->name);
-      if (!name_result.ok())
-        return Fail(ErrDuplicateUnionMemberName, member.maybe_used->name,
-                    name_result.previous_occurrence());
+      const auto original_name = member.maybe_used->name.data();
+      const auto canonical_name = utils::canonicalize(original_name);
+      const auto name_result = scope.Insert(canonical_name, member.maybe_used->name);
+      if (!name_result.ok()) {
+        const auto previous_span = name_result.previous_occurrence();
+        if (original_name == name_result.previous_occurrence().data()) {
+          return Fail(ErrDuplicateUnionMemberName, member.maybe_used->name, original_name,
+                      previous_span);
+        }
+        if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUniqueCanonicalNames)) {
+          return Fail(ErrDuplicateUnionMemberNameCanonical, member.maybe_used->name, original_name,
+                      previous_span.data(), previous_span, canonical_name);
+        }
+      }
 
-      if (!CompileTypeConstructor(member.maybe_used->type_ctor.get()))
+      if (!CompileTypeConstructor(member.maybe_used->type_ctor.get())) {
         return false;
+      }
     }
   }
 
@@ -3386,7 +3462,7 @@ bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> valida
   Scope<std::string> name_scope;
   Scope<MemberType> value_scope;
   bool success = true;
-  for (auto& member : decl->members) {
+  for (const auto& member : decl->members) {
     assert(member.value != nullptr && "Compiler bug: member value is null!");
 
     if (!ResolveConstant(member.value.get(), decl->subtype_ctor->type)) {
@@ -3394,21 +3470,30 @@ bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> valida
     }
 
     // Check that the member identifier hasn't been used yet
-    std::string name = NameIdentifier(member.name);
-    auto name_result = name_scope.Insert(name, member.name);
+    const auto original_name = member.name.data();
+    const auto canonical_name = utils::canonicalize(original_name);
+    const auto name_result = name_scope.Insert(canonical_name, member.name);
     if (!name_result.ok()) {
+      const auto previous_span = name_result.previous_occurrence();
       // We can log the error and then continue validating for other issues in the decl
-      success = Fail(ErrDuplicateMemberName, member.name, name, std::string(decl_type), decl->name);
+      if (original_name == name_result.previous_occurrence().data()) {
+        success = Fail(ErrDuplicateMemberName, member.name, std::string_view(decl_type),
+                       original_name, previous_span);
+      } else if (experimental_flags_.IsFlagEnabled(
+                     ExperimentalFlags::Flag::kUniqueCanonicalNames)) {
+        success = Fail(ErrDuplicateMemberNameCanonical, member.name, std::string_view(decl_type),
+                       original_name, previous_span.data(), previous_span, canonical_name);
+      }
     }
 
     MemberType value =
         static_cast<const NumericConstantValue<MemberType>&>(member.value->Value()).value;
-    auto value_result = value_scope.Insert(value, member.name);
+    const auto value_result = value_scope.Insert(value, member.name);
     if (!value_result.ok()) {
+      const auto previous_span = value_result.previous_occurrence();
       // We can log the error and then continue validating other members for other bugs
-      success = Fail(ErrDuplicateMemberValue, member.name, name,
-                     NameIdentifier(value_result.previous_occurrence()), std::string(decl_type),
-                     decl->name);
+      success = Fail(ErrDuplicateMemberValue, member.name, std::string_view(decl_type),
+                     original_name, previous_span.data(), previous_span);
     }
 
     auto err = validator(value, member.attributes.get());

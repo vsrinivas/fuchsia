@@ -396,7 +396,8 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
     if (source_manager.sources().empty()) {
       continue;
     }
-    auto library = std::make_unique<fidl::flat::Library>(&all_libraries, reporter, typespace);
+    auto library = std::make_unique<fidl::flat::Library>(&all_libraries, reporter, typespace,
+                                                         experimental_flags);
     for (const auto& source_file : source_manager.sources()) {
       if (!Parse(*source_file, reporter, library.get(), experimental_flags)) {
         return 1;

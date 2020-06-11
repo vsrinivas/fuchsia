@@ -38,12 +38,12 @@ class TestLibrary final {
   explicit TestLibrary(SharedAmongstLibraries* shared,
                        fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())
       : reporter_(&shared->reporter),
+        experimental_flags_(experimental_flags),
         typespace_(&shared->typespace),
         all_libraries_(&shared->all_libraries),
         all_sources_of_all_libraries_(&shared->all_sources_of_all_libraries),
-        library_(std::make_unique<fidl::flat::Library>(all_libraries_, reporter_, typespace_)) {
-    experimental_flags_ = std::move(experimental_flags);
-  }
+        library_(std::make_unique<fidl::flat::Library>(all_libraries_, reporter_, typespace_,
+                                                       experimental_flags_)) {}
 
   explicit TestLibrary(const std::string& raw_source_code,
                        fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())

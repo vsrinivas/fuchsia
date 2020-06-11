@@ -11,6 +11,7 @@
 #include <cstring>
 #include <set>
 #include <string>
+#include <string_view>
 
 #include <fidl/findings.h>
 #include <fidl/reporter.h>
@@ -145,6 +146,11 @@ std::string to_lower_snake_case(const std::string& str);
 std::string to_upper_snake_case(const std::string& str);
 std::string to_lower_camel_case(const std::string& str);
 std::string to_upper_camel_case(const std::string& str);
+
+// Returns the canonical form of an identifier, used to detect name collisions
+// in FIDL libraries. For example, the identifers "FooBar" and "FOO_BAR" collide
+// because canonicalize returns "foo_bar" for both.
+std::string canonicalize(std::string_view identifier);
 
 // Used by fidl-lint FormatFindings, and for testing,
 // this generates the linter error message string in the format

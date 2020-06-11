@@ -23,7 +23,7 @@ using reporter::Reporter;
 // for additional context
 class Parser {
  public:
-  Parser(Lexer* lexer, Reporter* reporter, const ExperimentalFlags& experimental_flags);
+  Parser(Lexer* lexer, Reporter* reporter, ExperimentalFlags experimental_flags);
 
   std::unique_ptr<raw::File> Parse() { return ParseFile(); }
 
@@ -343,7 +343,7 @@ class Parser {
 
   Lexer* lexer_;
   Reporter* reporter_;
-  const ExperimentalFlags& experimental_flags_;
+  const ExperimentalFlags experimental_flags_;
 
   // The stack of information interesting to the currently active ASTScope
   // objects.

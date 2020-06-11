@@ -172,6 +172,28 @@ std::string to_upper_camel_case(const std::string& astr) {
 
 std::string to_konstant_case(const std::string& str) { return "k" + to_upper_camel_case(str); }
 
+std::string canonicalize(std::string_view identifier) {
+  const auto size = identifier.size();
+  std::string canonical;
+  char prev = '_';
+  for (size_t i = 0; i < size; i++) {
+    const char c = identifier[i];
+    if (c == '_') {
+      if (prev != '_') {
+        canonical.push_back('_');
+      }
+    } else if (((islower(prev) || isdigit(prev)) && isupper(c)) ||
+               (prev != '_' && isupper(c) && i + 1 < size && islower(identifier[i + 1]))) {
+      canonical.push_back('_');
+      canonical.push_back(static_cast<char>(tolower(c)));
+    } else {
+      canonical.push_back(static_cast<char>(tolower(c)));
+    }
+    prev = c;
+  }
+  return canonical;
+}
+
 void PrintFinding(std::ostream& os, const Finding& finding) {
   os << finding.message() << " [";
   os << finding.subcategory();

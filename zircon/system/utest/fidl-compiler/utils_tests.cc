@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/utils.h>
 #include <lib/fit/function.h>
+
+#include <fidl/utils.h>
 
 #include "examples.h"
 #include "unittest_helpers.h"
@@ -483,6 +484,94 @@ bool is_only_whitespace() {
   END_TEST;
 }
 
+bool canonical_form() {
+  BEGIN_TEST;
+
+  EXPECT_STRING_EQ(canonicalize(""), "");
+
+  // Basic letter combinations.
+  EXPECT_STRING_EQ(canonicalize("a"), "a");
+  EXPECT_STRING_EQ(canonicalize("A"), "a");
+  EXPECT_STRING_EQ(canonicalize("ab"), "ab");
+  EXPECT_STRING_EQ(canonicalize("AB"), "ab");
+  EXPECT_STRING_EQ(canonicalize("Ab"), "ab");
+  EXPECT_STRING_EQ(canonicalize("aB"), "a_b");
+  EXPECT_STRING_EQ(canonicalize("a_b"), "a_b");
+  EXPECT_STRING_EQ(canonicalize("A_B"), "a_b");
+  EXPECT_STRING_EQ(canonicalize("A_b"), "a_b");
+  EXPECT_STRING_EQ(canonicalize("a_B"), "a_b");
+
+  // Digits are treated like lowercase letters.
+  EXPECT_STRING_EQ(canonicalize("1"), "1");
+  EXPECT_STRING_EQ(canonicalize("a1"), "a1");
+  EXPECT_STRING_EQ(canonicalize("A1"), "a1");
+
+  // Leading digits are illegal in FIDL identifiers, so these do not matter.
+  EXPECT_STRING_EQ(canonicalize("1a"), "1a");
+  EXPECT_STRING_EQ(canonicalize("1A"), "1_a");
+  EXPECT_STRING_EQ(canonicalize("12"), "12");
+
+  // Lower/upper snake/camel case conventions.
+  EXPECT_STRING_EQ(canonicalize("lowerCamelCase"), "lower_camel_case");
+  EXPECT_STRING_EQ(canonicalize("UpperCamelCase"), "upper_camel_case");
+  EXPECT_STRING_EQ(canonicalize("lower_snake_case"), "lower_snake_case");
+  EXPECT_STRING_EQ(canonicalize("UPPER_SNAKE_CASE"), "upper_snake_case");
+  EXPECT_STRING_EQ(canonicalize("Camel_With_Underscores"), "camel_with_underscores");
+  EXPECT_STRING_EQ(canonicalize("camelWithAOneLetterWord"), "camel_with_a_one_letter_word");
+  EXPECT_STRING_EQ(canonicalize("1_2__3___underscores"), "1_2_3_underscores");
+
+  // Acronym casing.
+  EXPECT_STRING_EQ(canonicalize("HTTPServer"), "http_server");
+  EXPECT_STRING_EQ(canonicalize("HttpServer"), "http_server");
+  EXPECT_STRING_EQ(canonicalize("URLIsATLA"), "url_is_atla");
+  EXPECT_STRING_EQ(canonicalize("UrlIsATla"), "url_is_a_tla");
+
+  // Words with digits: H264 encoder.
+  EXPECT_STRING_EQ(canonicalize("h264encoder"), "h264encoder");
+  EXPECT_STRING_EQ(canonicalize("H264ENCODER"), "h264_encoder");
+  EXPECT_STRING_EQ(canonicalize("h264_encoder"), "h264_encoder");
+  EXPECT_STRING_EQ(canonicalize("H264_ENCODER"), "h264_encoder");
+  EXPECT_STRING_EQ(canonicalize("h264Encoder"), "h264_encoder");
+  EXPECT_STRING_EQ(canonicalize("H264Encoder"), "h264_encoder");
+
+  // Words with digits: DDR4 memory.
+  EXPECT_STRING_EQ(canonicalize("ddr4memory"), "ddr4memory");
+  EXPECT_STRING_EQ(canonicalize("DDR4MEMORY"), "ddr4_memory");
+  EXPECT_STRING_EQ(canonicalize("ddr4_memory"), "ddr4_memory");
+  EXPECT_STRING_EQ(canonicalize("DDR4_MEMORY"), "ddr4_memory");
+  EXPECT_STRING_EQ(canonicalize("ddr4Memory"), "ddr4_memory");
+  EXPECT_STRING_EQ(canonicalize("Ddr4Memory"), "ddr4_memory");
+  EXPECT_STRING_EQ(canonicalize("DDR4Memory"), "ddr4_memory");
+
+  // Words with digits: A2DP profile.
+  EXPECT_STRING_EQ(canonicalize("a2dpprofile"), "a2dpprofile");
+  EXPECT_STRING_EQ(canonicalize("A2DPPROFILE"), "a2_dpprofile");
+  EXPECT_STRING_EQ(canonicalize("a2dp_profile"), "a2dp_profile");
+  EXPECT_STRING_EQ(canonicalize("A2DP_PROFILE"), "a2_dp_profile");
+  EXPECT_STRING_EQ(canonicalize("a2dpProfile"), "a2dp_profile");
+  EXPECT_STRING_EQ(canonicalize("A2dpProfile"), "a2dp_profile");
+  EXPECT_STRING_EQ(canonicalize("A2DPProfile"), "a2_dp_profile");
+
+  // Words with digits: R2D2 is one word.
+  EXPECT_STRING_EQ(canonicalize("r2d2isoneword"), "r2d2isoneword");
+  EXPECT_STRING_EQ(canonicalize("R2D2ISONEWORD"), "r2_d2_isoneword");
+  EXPECT_STRING_EQ(canonicalize("r2d2_is_one_word"), "r2d2_is_one_word");
+  EXPECT_STRING_EQ(canonicalize("R2D2_IS_ONE_WORD"), "r2_d2_is_one_word");
+  EXPECT_STRING_EQ(canonicalize("r2d2IsOneWord"), "r2d2_is_one_word");
+  EXPECT_STRING_EQ(canonicalize("R2d2IsOneWord"), "r2d2_is_one_word");
+  EXPECT_STRING_EQ(canonicalize("R2D2IsOneWord"), "r2_d2_is_one_word");
+
+  // Leading and trailing underscores are illegal in FIDL identifiers, so these
+  // do not matter.
+  EXPECT_STRING_EQ(canonicalize("_"), "");
+  EXPECT_STRING_EQ(canonicalize("_a"), "a");
+  EXPECT_STRING_EQ(canonicalize("a_"), "a_");
+  EXPECT_STRING_EQ(canonicalize("_a_"), "a_");
+  EXPECT_STRING_EQ(canonicalize("__a__"), "a_");
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(utils_tests)
 
 RUN_TEST(id_to_words)
@@ -494,6 +583,7 @@ RUN_TEST(konstant_case)
 RUN_TEST(lower_no_separator_case)
 RUN_TEST(whitespace_and_comments)
 RUN_TEST(is_only_whitespace)
+RUN_TEST(canonical_form)
 
 END_TEST_CASE(utils_tests)
 

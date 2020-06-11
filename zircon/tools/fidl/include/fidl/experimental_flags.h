@@ -7,20 +7,21 @@
 
 #include <map>
 #include <string_view>
-#include <unordered_set>
 
 namespace fidl {
 
 class ExperimentalFlags {
  public:
-  enum class Flag {
+  using FlagSet = uint32_t;
+  enum class Flag : FlagSet {
     kEnableHandleRights = 0b01,
     kFlexibleBitsAndEnums = 0b10,
     kDisallowOldHandleSyntax = 0b100,
+    kUniqueCanonicalNames = 0b1000,
   };
 
-  ExperimentalFlags() {}
-  ExperimentalFlags(Flag flag) { SetFlag(flag); }
+  ExperimentalFlags() : flags_(0) {}
+  ExperimentalFlags(Flag flag) : flags_(static_cast<FlagSet>(flag)) {}
 
   bool SetFlagByName(const std::string_view flag);
   void SetFlag(Flag flag);
@@ -30,7 +31,7 @@ class ExperimentalFlags {
  private:
   static std::map<const std::string_view, const Flag> FLAG_STRINGS;
 
-  std::unordered_set<Flag> flags;
+  FlagSet flags_;
 };
 
 }  // namespace fidl

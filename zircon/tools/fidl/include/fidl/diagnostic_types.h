@@ -96,7 +96,7 @@ struct DiagnosticDef {
   std::string_view msg;
 };
 
-// The definition of an error. All instances of ErrorDef are in errors.h.
+// The definition of an error. All instances of ErrorDef are in diagnostics.h.
 // Template args define format parameters in the error message.
 template <typename... Args>
 struct ErrorDef : DiagnosticDef {
@@ -107,8 +107,8 @@ struct ErrorDef : DiagnosticDef {
   }
 };
 
-// The definition of a warning. All instances of WarningDef are in errors.h.
-// Template args define format parameters in the warning message.
+// The definition of a warning. All instances of WarningDef are in
+// diagnostics.h. Template args define format parameters in the warning message.
 template <typename... Args>
 struct WarningDef : DiagnosticDef {
   constexpr WarningDef(std::string_view msg) : DiagnosticDef(msg) {
