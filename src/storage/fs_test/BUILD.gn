@@ -21,7 +21,6 @@ executable("fs_tests") {
   sources = [
     "access.cc",
     "append.cc",
-    "attr.cc",
     "fs_test.cc",
     "fs_test_fixture.cc",
     "overflow.cc",
