@@ -113,6 +113,10 @@ if they have the same name.
 
 ### Package variant
 
+Note: Package variants are considered deprecated and you should not rely on
+them at this time. For the purposes of almost all operations, if a variant
+is required, it should be specified as `0`.
+
 A package variant is a symbolic label for a sequence of package updates.
 Different variants of the same package may receive different updates, at
 different rates, and/or with different content.  The package variant is used to
