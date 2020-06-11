@@ -22,7 +22,6 @@ executable("fs_tests") {
     "access.cc",
     "append.cc",
     "attr.cc",
-    "basic.cc",
     "fs_test.cc",
     "fs_test_fixture.cc",
     "overflow.cc",
