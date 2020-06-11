@@ -67,3 +67,13 @@ spn_device_queue_next(struct spn_device * const device)
 //
 //
 //
+
+VkQueue
+spn_device_queue_label(struct spn_device * const device)
+{
+  return device->queue_pool->q;
+}
+
+//
+//
+//

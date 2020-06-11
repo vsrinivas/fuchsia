@@ -35,6 +35,13 @@ VkQueue
 spn_device_queue_next(struct spn_device * const device);
 
 //
+// Queue to which all debug info labels are attached
+//
+
+VkQueue
+spn_device_queue_label(struct spn_device * const device);
+
+//
 //
 //
 

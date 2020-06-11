@@ -146,13 +146,12 @@ SPN_VK_GLSL_DECL_KERNEL_PLACE_TTSK();
 //
 
 // clang-format off
-#define SPN_TTIK_LO_MASK_IS_TTSK          SPN_BITS_TO_MASK_AT(31, 1)
+#define SPN_IS_VALID_TTSK(t_)             (SPN_BITFIELD_EXTRACT((t_)[1],SPN_TTXK_HI_BITS_SPAN-1,1) != 0)
 
-#define SPN_PLACE_IS_TTSK(t_)             ((t_[0] & SPN_TTIK_LO_MASK_IS_TTSK) != 0)
-#define SPN_TTIK_IS_TTSK(t_)              SPN_PLACE_IS_TTSK(t_)
+#define SPN_TTIK_IS_TTSK(t_)              (SPN_BITFIELD_EXTRACT((t_)[0],31,1) != 0)
 
 #define SPN_TTIK_LO_MASK_ZERO_TTSK_TRUE   0x10
-#define SPN_TTIK_LO_MASK_ZERO_TTSK_FALSE  0
+#define SPN_TTIK_LO_MASK_ZERO_TTSK_FALSE  0x00
 
 #define SPN_TTIK_LO_BITS_ZERO_TTSK        5
 
@@ -163,8 +162,8 @@ SPN_VK_GLSL_DECL_KERNEL_PLACE_TTSK();
 #define SPN_TTIK_HI_OFFSET_X              SPN_TTCK_HI_OFFSET_X
 #define SPN_TTIK_HI_OFFSET_Y              SPN_TTCK_HI_OFFSET_Y
 
-#define SPN_TTIK_SET_X(t_, x_)            t_[1] = SPN_BITFIELD_INSERT(t_[1], x_,   SPN_TTIK_HI_OFFSET_X,   SPN_TTIK_HI_BITS_X)
-#define SPN_TTIK_SET_Y(t_, y_)            t_[1] = SPN_BITFIELD_INSERT(t_[1], y_,   SPN_TTIK_HI_OFFSET_Y,   SPN_TTIK_HI_BITS_Y)
+#define SPN_TTIK_SET_X(t_,x_)             (t_)[1] = SPN_BITFIELD_INSERT((t_)[1],x_,SPN_TTIK_HI_OFFSET_X,SPN_TTIK_HI_BITS_X)
+#define SPN_TTIK_SET_Y(t_,y_)             (t_)[1] = SPN_BITFIELD_INSERT((t_)[1],y_,SPN_TTIK_HI_OFFSET_Y,SPN_TTIK_HI_BITS_Y)
 // clang-format on
 
 //
@@ -177,9 +176,9 @@ spn_ttsk_translate_and_clip(SPN_SUBGROUP_UNIFORM const spn_cmd_place cmd,
                             inout uint                               lane_keys)
 {
   //
-  // we know span is -1 or 0
+  // we know a valid TTSK has a negative span
   //
-  bool is_ttsk = SPN_PLACE_IS_TTSK(ttsk);
+  bool is_ttsk = SPN_IS_VALID_TTSK(ttsk);
 
   if (is_ttsk)
     {
@@ -373,7 +372,10 @@ main()
     //
     // load all ttsks in head block otherwise invalidating
     //
-    uint ttsks_base = gl_SubgroupInvocationID - SPN_RASTER_HEAD_QWORDS;
+    // NOTE: highp = mediump - highp
+    //
+    const uint raster_head_qwords = SPN_RASTER_HEAD_QWORDS;
+    const uint ttsks_base         = gl_SubgroupInvocationID - raster_head_qwords;
 
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \

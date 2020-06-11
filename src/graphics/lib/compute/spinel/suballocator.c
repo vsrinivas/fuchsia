@@ -111,9 +111,7 @@ spn_suballocator_create(struct spn_suballocator * const        suballocator,
   for (uint32_t ii = 0; ii < subbufs; ii++)
     suballocator->ids[ii] = ii;
 
-#ifndef NDEBUG
   suballocator->name = name;
-#endif
 }
 
 void
@@ -131,11 +129,11 @@ spn_suballocator_dispose(struct spn_suballocator * const        suballocator,
 void
 spn_suballocator_subbuf_alloc(struct spn_suballocator * const suballocator,
                               struct spn_device * const       device,
-                              spn_result_t (*const wait)(struct spn_device * const device),
-                              uint64_t const          size,
-                              spn_subbuf_id_t * const subbuf_id,
-                              uint64_t * const        subbuf_origin,
-                              uint64_t * const        subbuf_size)
+                              spn_suballocator_wait_pfn       wait,
+                              uint64_t const                  size,
+                              spn_subbuf_id_t * const         subbuf_id,
+                              uint64_t * const                subbuf_origin,
+                              uint64_t * const                subbuf_size)
 {
   //
   // Note that we can't deadlock here because everything allocated is
@@ -259,7 +257,7 @@ spn_suballocator_subbuf_alloc(struct spn_suballocator * const suballocator,
         }
 
       // uh oh... couldn't find enough memory
-      spn_ok(wait(device));
+      spn_ok(wait(device, suballocator->name));
     }
 }
 

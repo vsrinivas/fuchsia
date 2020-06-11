@@ -55,7 +55,10 @@ uint32_t
 spn_ring_dropped(struct spn_ring const * const ring);
 
 uint32_t
-spn_ring_rem_nowrap(struct spn_ring const * const ring);
+spn_ring_head_nowrap(struct spn_ring const * const ring);
+
+uint32_t
+spn_ring_tail_nowrap(struct spn_ring const * const ring);
 
 uint32_t
 spn_ring_acquire_1(struct spn_ring * const ring);

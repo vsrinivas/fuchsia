@@ -68,6 +68,10 @@ struct spn_vk_target_config
       struct {
         VkMemoryPropertyFlagBits properties;
         VkBufferUsageFlags       usage;
+      } hrw_dr; // host read-write / device read
+      struct {
+        VkMemoryPropertyFlagBits properties;
+        VkBufferUsageFlags       usage;
       } hr_dw; // host read / device write
       struct {
         uint32_t                 subbufs;
@@ -102,6 +106,8 @@ struct spn_vk_target_config
   } path_builder;
 
   struct {
+    uint32_t     no_staging;  // do not create a command staging ring on discrete GPUs
+
     struct {
       uint32_t   dispatches;  // number of in-flight dispatches
       uint32_t   ring;        // number of commands in ring
@@ -118,11 +124,12 @@ struct spn_vk_target_config
   } raster_builder;
 
   struct {
+    uint32_t     no_staging;  // do not create a command staging ring on discrete GPUs
+
     struct {
       uint32_t   dispatches;  // number of in-flight dispatches
       uint32_t   ring;        // number of commands in ring
       uint32_t   eager;       // number of commands that will force an eager launch
-      uint32_t   cmds;        // max number of place cmds in the composition
       uint32_t   ttcks;       // max number of ttcks that can be emitted by successive PLACE shaders
       uint32_t   rasters;     // max number of retained rasters
     } size;
@@ -130,8 +137,10 @@ struct spn_vk_target_config
 
   struct {
     struct {
-      uint32_t   paths;       // number of paths
-      uint32_t   rasters;     // number of rasters
+      uint32_t   dispatches;  // number of in-flight dispatches
+      uint32_t   paths;       // number of paths in reclamation ring
+      uint32_t   rasters;     // number of rasters in reclamation ring
+      uint32_t   eager;       // number of handles that will force an eager launch
     } size;
   } reclaim;
 
@@ -148,8 +157,7 @@ struct spn_vk_target_config
 #define SPN_VK_DESC_TYPE_STORAGE_BUFFER(_ds_id, _d_idx, _d_id) uint32_t _d_id;
 
 #undef SPN_VK_DESC_TYPE_STORAGE_IMAGE
-#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(_ds_id, _d_idx, _d_id)                                      \
-  uint32_t _d_id;  // do nothing for now
+#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(_ds_id, _d_idx, _d_id) uint32_t _d_id;  // do nothing for now
 
 #undef SPN_VK_DS_EXPAND_X
 #define SPN_VK_DS_EXPAND_X(_ds_idx, _ds_id, _ds)                                                   \

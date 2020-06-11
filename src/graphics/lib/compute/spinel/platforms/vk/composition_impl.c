@@ -87,7 +87,7 @@ struct spn_ci_dispatch
 
   spn_ci_dispatch_state_e state;
 
-  bool unreleased;
+  bool complete;
 
   spn_dispatch_id_t id;
 };
@@ -206,6 +206,17 @@ struct spn_composition_impl
 };
 
 //
+//
+//
+
+static bool
+spn_ci_is_staged(struct spn_vk_target_config const * const config)
+{
+  return ((config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0) &&
+         (config->composition.no_staging == 0);
+}
+
+//
 // A dispatch captures how many paths and blocks are in a dispatched or
 // the work-in-progress compute grid.
 //
@@ -238,11 +249,11 @@ static void
 spn_ci_dispatch_init(struct spn_composition_impl * const impl,
                      struct spn_ci_dispatch * const      dispatch)
 {
-  dispatch->cp.head    = impl->mapped.cp.ring.head;
-  dispatch->cp.span    = 0;
-  dispatch->rd.head    = impl->rasters.count;
-  dispatch->state      = SPN_CI_DISPATCH_STATE_PLACING;
-  dispatch->unreleased = false;
+  dispatch->cp.head  = impl->mapped.cp.ring.head;
+  dispatch->cp.span  = 0;
+  dispatch->rd.head  = impl->rasters.count;
+  dispatch->state    = SPN_CI_DISPATCH_STATE_PLACING;
+  dispatch->complete = false;
 
   spn(device_dispatch_acquire(impl->device, SPN_DISPATCH_STAGE_COMPOSITION_PLACE, &dispatch->id));
 }
@@ -253,10 +264,16 @@ spn_ci_dispatch_drop(struct spn_composition_impl * const impl)
   struct spn_ring * const ring = &impl->dispatches.ring;
 
   spn_ring_drop_1(ring);
+}
+
+static void
+spn_ci_dispatch_acquire(struct spn_composition_impl * const impl)
+{
+  struct spn_ring * const ring = &impl->dispatches.ring;
 
   while (spn_ring_is_empty(ring))
     {
-      SPN_DEVICE_WAIT(impl->device);
+      spn(device_wait(impl->device, __func__));
     }
 
   struct spn_ci_dispatch * const dispatch = spn_ci_dispatch_idx(impl, ring->head);
@@ -346,18 +363,24 @@ spn_ci_complete_place(void * pfn_payload)
 
   if (spn_ring_is_tail(&impl->dispatches.ring, dispatch_idx))
     {
-      do
+      while (true)
         {
           spn_ring_release_n(&impl->mapped.cp.ring, dispatch->cp.span);
           spn_ring_release_n(&impl->dispatches.ring, 1);
 
+          // any dispatches in flight?
+          if (spn_ring_is_full(&impl->dispatches.ring))
+            break;
+
           dispatch = spn_ci_dispatch_tail(impl);
+
+          if (!dispatch->complete)
+            break;
         }
-      while (dispatch->unreleased);
     }
   else
     {
-      dispatch->unreleased = true;
+      dispatch->complete = true;
     }
 }
 
@@ -389,7 +412,7 @@ spn_ci_flush(struct spn_composition_impl * const impl)
   //
   // If this is a discrete GPU, copy the place command ring.
   //
-  if ((impl->config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
+  if (spn_ci_is_staged(impl->config))
     {
       VkDeviceSize const head_offset = dispatch->cp.head * sizeof(struct spn_cmd_place);
 
@@ -524,20 +547,25 @@ spn_ci_flush(struct spn_composition_impl * const impl)
     }
 
   //
-  // Wait for rasters associated with this dispatch to materialize
+  // the current dispatch is now sealed so drop it
+  //
+  spn_ci_dispatch_drop(impl);
+
+  //
+  // wait for rasters associated with this dispatch to materialize
   //
   spn_device_dispatch_happens_after_handles_and_submit(device,
                                                        (spn_dispatch_flush_pfn_t)spn_rbi_flush,
                                                        dispatch->id,
                                                        impl->rasters.extent + dispatch->rd.head,
                                                        UINT32_MAX,
-                                                       dispatch->cp.span,
-                                                       0);
+                                                       0,
+                                                       dispatch->cp.span);
+
   //
-  // The current dispatch is now "in flight" so drop it and try to
-  // acquire and initialize the next.
+  // acquire and initialize the next dispatch
   //
-  spn_ci_dispatch_drop(impl);
+  spn_ci_dispatch_acquire(impl);
 }
 
 //
@@ -675,22 +703,30 @@ spn_ci_complete_sealing_1(void * pfn_payload)
 
   hotsort_vk_sort(cb, device->hs, &keys_offsets, keys_count, padded_in, padded_out, false);
 
-  vk_barrier_compute_w_to_compute_r(cb);
-
   ////////////////////////////////////////////////////////////////
   //
   // PIPELINE: SEGMENT_TTCK
   //
   ////////////////////////////////////////////////////////////////
 
-  // bind the pipeline
-  spn_vk_p_bind_segment_ttck(instance, cb);
+  //
+  // TODO(allanmac): evaluate whether or not to remove this conditional
+  // once fxb:50840 is resolved.
+  //
+  if (slabs_in > 0)
+    {
+      //
+      vk_barrier_compute_w_to_compute_r(cb);
 
-  // dispatch one workgroup per fill command
-  vkCmdDispatch(cb, slabs_in, 1, 1);
+      // bind the pipeline
+      spn_vk_p_bind_segment_ttck(instance, cb);
+
+      // dispatch one workgroup per slab
+      vkCmdDispatch(cb, slabs_in, 1, 1);
+    }
 
   //
-  // we dispatch *indirectly* off of the output SEGMENT_TTCK
+  // Note that we dispatch *indirectly* off of the output SEGMENT_TTCK
   //
 
   //
@@ -800,10 +836,7 @@ spn_ci_unsealed_to_sealing(struct spn_composition_impl * const impl)
   //
   // make the copyback visible to the host
   //
-  if ((impl->config->allocator.device.hr_dw.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
-    {
-      vk_barrier_transfer_w_to_host_r(cb);
-    }
+  vk_barrier_transfer_w_to_host_r(cb);
 
   //
   // submit the dispatch
@@ -887,6 +920,7 @@ spn_ci_unsealed_reset(struct spn_composition_impl * const impl)
                   dbi_src_offset + SPN_VK_BUFFER_OFFSETOF(ttcks, ttcks, ttcks_count),
                   SPN_VK_BUFFER_MEMBER_SIZE(ttcks, ttcks, ttcks_count),
                   0);
+
   //
   // set a completion payload
   //
@@ -914,7 +948,7 @@ spn_ci_block_until_sealed(struct spn_composition_impl * const impl)
 
   while (impl->state != SPN_CI_STATE_SEALED)
     {
-      SPN_DEVICE_WAIT(device);
+      spn(device_wait(device, __func__));
     }
 }
 
@@ -928,7 +962,7 @@ spn_ci_sealed_unseal(struct spn_composition_impl * const impl)
 
   while (impl->lock_count > 0)
     {
-      SPN_DEVICE_WAIT(device);
+      spn(device_wait(device, __func__));
     }
 
   impl->state = SPN_CI_STATE_UNSEALED;
@@ -993,11 +1027,11 @@ spn_ci_reset(struct spn_composition_impl * const impl)
         return SPN_SUCCESS;
 
       case SPN_CI_STATE_SEALING:
-        return SPN_ERROR_RASTER_BUILDER_SEALED;
+        return SPN_ERROR_COMPOSITION_SEALED;
 
       case SPN_CI_STATE_SEALED:
         // default:
-        return SPN_ERROR_RASTER_BUILDER_SEALED;
+        return SPN_ERROR_COMPOSITION_SEALED;
     }
 }
 
@@ -1049,7 +1083,7 @@ spn_ci_set_clip(struct spn_composition_impl * const impl, uint32_t const clip[4]
       case SPN_CI_STATE_RESETTING:
         do
           {
-            SPN_DEVICE_WAIT(impl->device);
+            spn(device_wait(impl->device, __func__));
           }
         while (impl->state == SPN_CI_STATE_RESETTING);
         break;
@@ -1060,7 +1094,7 @@ spn_ci_set_clip(struct spn_composition_impl * const impl, uint32_t const clip[4]
       case SPN_CI_STATE_SEALING:
       case SPN_CI_STATE_SEALED:
       default:
-        return SPN_ERROR_RASTER_BUILDER_SEALED;
+        return SPN_ERROR_COMPOSITION_SEALED;
     }
 
   //
@@ -1111,7 +1145,7 @@ spn_ci_place(struct spn_composition_impl * const impl,
       case SPN_CI_STATE_RESETTING:
         do
           {
-            SPN_DEVICE_WAIT(impl->device);
+            spn(device_wait(impl->device, __func__));
           }
         while (impl->state == SPN_CI_STATE_RESETTING);
         break;
@@ -1122,7 +1156,7 @@ spn_ci_place(struct spn_composition_impl * const impl,
       case SPN_CI_STATE_SEALING:
       case SPN_CI_STATE_SEALED:
       default:
-        return SPN_ERROR_RASTER_BUILDER_SEALED;
+        return SPN_ERROR_COMPOSITION_SEALED;
     }
 
   // nothing to do?
@@ -1131,7 +1165,7 @@ spn_ci_place(struct spn_composition_impl * const impl,
       return SPN_SUCCESS;
     }
 
-  // validate there is enough room for rasters
+  // validate there is enough room for retained rasters
   if (impl->rasters.count + count > impl->rasters.size)
     {
       return SPN_ERROR_COMPOSITION_TOO_MANY_RASTERS;
@@ -1176,7 +1210,8 @@ spn_ci_place(struct spn_composition_impl * const impl,
   //
   while (impl->state == SPN_CI_STATE_RESETTING)
     {
-      SPN_DEVICE_WAIT(device);  // FIXME(allanmac): wait on resetting id
+      // FIXME(allanmac): wait on resetting id
+      spn(device_wait(device, "spn_ci_place: (impl->state == SPN_CI_STATE_RESETTING)"));
     }
 
   //
@@ -1201,7 +1236,8 @@ spn_ci_place(struct spn_composition_impl * const impl,
       //
       // how many slots left in ring?
       //
-      uint32_t avail = MIN_MACRO(uint32_t, count, spn_ring_rem_nowrap(ring));
+      uint32_t const head_nowrap = spn_ring_head_nowrap(ring);
+      uint32_t       avail       = MIN_MACRO(uint32_t, count, head_nowrap);
 
       //
       // if ring is full then this implies we're already waiting on
@@ -1209,7 +1245,7 @@ spn_ci_place(struct spn_composition_impl * const impl,
       //
       if (avail == 0)
         {
-          SPN_DEVICE_WAIT(device);
+          spn(device_wait(device, "spn_ci_place: (avail == 0)"));
           continue;
         }
 
@@ -1299,7 +1335,7 @@ spn_ci_release(struct spn_composition_impl * const impl)
   //
   while (!spn_ring_is_full(&impl->dispatches.ring))
     {
-      SPN_DEVICE_WAIT(device);
+      spn(device_wait(device, "spn_ci_release: (!spn_ring_is_full(&impl->dispatches.ring)"));
     }
 
   //
@@ -1307,7 +1343,7 @@ spn_ci_release(struct spn_composition_impl * const impl)
   //
   while (impl->lock_count > 0)
     {
-      SPN_DEVICE_WAIT(device);
+      spn(device_wait(device, "spn_ci_release: (impl->lock_count > 0)"));
     }
 
   //
@@ -1341,7 +1377,7 @@ spn_ci_release(struct spn_composition_impl * const impl)
   //
   // free ring
   //
-  if ((impl->config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
+  if (spn_ci_is_staged(impl->config))
     {
       spn_allocator_device_perm_free(&device->allocator.device.perm.drw,
                                      &device->environment,
@@ -1446,7 +1482,7 @@ spn_composition_impl_create(struct spn_device * const       device,
                0,
                (void **)&impl->mapped.cp.extent));
 
-  if ((impl->config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
+  if (spn_ci_is_staged(impl->config))
     {
       spn_allocator_device_perm_alloc(&device->allocator.device.perm.drw,
                                       &device->environment,

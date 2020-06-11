@@ -9,6 +9,7 @@
 #include "styling_impl.h"
 
 #include "common/vk/assert.h"
+#include "common/vk/barrier.h"
 #include "device.h"
 #include "queue_pool.h"
 #include "spinel_assert.h"
@@ -180,7 +181,7 @@ spn_si_unseal(struct spn_styling_impl * const impl)
   while (impl->state != SPN_SI_STATE_SEALED)
     {
       // wait for SEALING > SEALED transition ...
-      SPN_DEVICE_WAIT(device);
+      spn(device_wait(device, "spn_si_unseal: (impl->state != SPN_SI_STATE_SEALED)"));
     }
 
   //
@@ -188,7 +189,7 @@ spn_si_unseal(struct spn_styling_impl * const impl)
   //
   while (impl->lock_count > 0)
     {
-      SPN_DEVICE_WAIT(device);
+      spn(device_wait(device, "spn_si_unseal: (impl->lock_count > 0)"));
     }
 
   //
@@ -222,7 +223,7 @@ spn_si_release(struct spn_styling_impl * const impl)
   //
   while (impl->lock_count > 0)
     {
-      SPN_DEVICE_WAIT(device);
+      spn(device_wait(device, __func__));
     }
 
   //

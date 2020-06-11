@@ -89,14 +89,15 @@ struct spn_suballocator
 
   spn_subbuf_id_t   * ids;        // [<-AVAIL-><-empty-><-SPARE->]
 
-#ifndef NDEBUG
   char const        * name;
-#endif
 };
 
 //
 // clang-format on
 //
+
+typedef spn_result_t (*spn_suballocator_wait_pfn)(struct spn_device * const device,
+                                                  char const * const        label);
 
 //
 // Assumes 'size' is a multiple of power-of-two 'align'
@@ -115,18 +116,17 @@ spn_suballocator_dispose(struct spn_suballocator * const        suballocator,
                          struct spn_allocator_host_perm * const host_perm);
 
 //
-// FIXME(allanmac): go ahead and create a typedef for the wait function
-// so that clang-format stops mangling the prototype.
+//
 //
 
 void
 spn_suballocator_subbuf_alloc(struct spn_suballocator * const suballocator,
                               struct spn_device * const       device,
-                              spn_result_t (*const wait)(struct spn_device * const device),
-                              uint64_t const          size,
-                              spn_subbuf_id_t * const subbuf_id,
-                              uint64_t * const        subbuf_origin,
-                              uint64_t * const        subbuf_size);
+                              spn_suballocator_wait_pfn       wait,
+                              uint64_t const                  size,
+                              spn_subbuf_id_t * const         subbuf_id,
+                              uint64_t * const                subbuf_origin,
+                              uint64_t * const                subbuf_size);
 
 void
 spn_suballocator_subbuf_free(struct spn_suballocator * const suballocator,

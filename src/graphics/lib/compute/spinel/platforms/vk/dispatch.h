@@ -351,8 +351,8 @@ spn_device_dispatch_happens_after_handles_and_submit(struct spn_device * const  
                                                      spn_dispatch_id_t const        id_after,
                                                      spn_handle_t const * const     handles,
                                                      uint32_t const                 size,
-                                                     uint32_t const                 span,
-                                                     uint32_t const                 head);
+                                                     uint32_t const                 head,
+                                                     uint32_t const                 span);
 
 //
 // Called after handles are materialized
@@ -362,8 +362,8 @@ void
 spn_device_dispatch_handles_complete(struct spn_device * const  device,
                                      spn_handle_t const * const handles,
                                      uint32_t const             size,
-                                     uint32_t const             span,
-                                     uint32_t const             head);
+                                     uint32_t const             head,
+                                     uint32_t const             span);
 
 //
 //

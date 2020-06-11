@@ -90,8 +90,8 @@ STATIC_ASSERT_MACRO_1(sizeof(union spn_path_header) == SPN_PATH_HEAD_DWORDS * si
 
 struct spn_pbi_span_head
 {
-  uint32_t span;
   uint32_t head;
+  uint32_t span;
 };
 
 struct spn_pbi_dispatch
@@ -99,9 +99,10 @@ struct spn_pbi_dispatch
   struct spn_pbi_span_head blocks;
   struct spn_pbi_span_head paths;
 
-  uint32_t          rolling;
-  bool              unreleased;
-  spn_dispatch_id_t id;
+  uint32_t          rolling;  // FIXME(allanmac): move to wip
+  spn_dispatch_id_t id;       // FIXME(allanmac): move to wip
+
+  bool complete;
 };
 
 //
@@ -357,16 +358,16 @@ spn_pbi_dispatch_init(struct spn_path_builder_impl * const impl,
   struct spn_pbi_dispatch * const dispatch = spn_pbi_dispatch_idx(impl, dispatches_ring->head);
 
   // head is the wip path's head idx
-  dispatch->blocks.span = 0;
   dispatch->blocks.head = impl->wip.head.idx;
+  dispatch->blocks.span = 0;
 
   // no paths have been appended
-  dispatch->paths.span = 0;
   dispatch->paths.head = impl->paths.next.head;
+  dispatch->paths.span = 0;
 
   // rolling is the wip's path's rolling counter
-  dispatch->rolling    = impl->wip.head.rolling;
-  dispatch->unreleased = false;
+  dispatch->rolling  = impl->wip.head.rolling;
+  dispatch->complete = false;
 
   spn(device_dispatch_acquire(impl->device, SPN_DISPATCH_STAGE_PATH_BUILDER, &dispatch->id));
 
@@ -379,10 +380,16 @@ spn_pbi_dispatch_drop(struct spn_path_builder_impl * const impl)
   struct spn_ring * const ring = &impl->dispatches.ring;
 
   spn_ring_drop_1(ring);
+}
+
+static void
+spn_pbi_dispatch_acquire(struct spn_path_builder_impl * const impl)
+{
+  struct spn_ring * const ring = &impl->dispatches.ring;
 
   while (spn_ring_is_empty(ring))
     {
-      SPN_DEVICE_WAIT(impl->device);
+      spn(device_wait(impl->device, __func__));
     }
 
   spn_pbi_dispatch_init(impl, ring);
@@ -428,6 +435,10 @@ struct spn_pbi_complete_payload
   uint32_t                       dispatch_idx;
 };
 
+//
+//
+//
+
 static void
 spn_pbi_complete(void * pfn_payload)
 {
@@ -436,7 +447,7 @@ spn_pbi_complete(void * pfn_payload)
   struct spn_device * const                     device   = impl->device;
   struct spn_vk * const                         instance = device->instance;
 
-  // immediately release descriptor set -- simple increment
+  // immediately release descriptor set
   spn_vk_ds_release_paths_copy(instance, payload->ds_pc);
 
   //
@@ -451,8 +462,8 @@ spn_pbi_complete(void * pfn_payload)
   spn_device_dispatch_handles_complete(device,
                                        impl->paths.extent,
                                        impl->paths.next.size,
-                                       dispatch->paths.span,
-                                       dispatch->paths.head);
+                                       dispatch->paths.head,
+                                       dispatch->paths.span);
 
   //
   // Release the paths -- may invoke wait()
@@ -460,8 +471,8 @@ spn_pbi_complete(void * pfn_payload)
   spn_device_handle_pool_release_ring_d_paths(device,
                                               impl->paths.extent,
                                               impl->paths.next.size,
-                                              dispatch->paths.span,
-                                              dispatch->paths.head);
+                                              dispatch->paths.head,
+                                              dispatch->paths.span);
   //
   // If the dispatch is the tail of the ring then try to release as
   // many dispatch records as possible...
@@ -469,22 +480,29 @@ spn_pbi_complete(void * pfn_payload)
   // Note that kernels can complete in any order so the release
   // records need to add to the mapped.ring.tail in order.
   //
-  if (spn_ring_is_tail(&impl->dispatches.ring, dispatch_idx))
+  if (impl->mapped.ring.tail == dispatch->blocks.head)
     {
-      do
+      while (true)
         {
-          dispatch->unreleased = false;
-
+          // release the blocks and cmds
           spn_ring_release_n(&impl->mapped.ring, dispatch->blocks.span);
+
+          // release the dispatch
           spn_ring_release_n(&impl->dispatches.ring, 1);
 
+          // any dispatches in flight?
+          if (spn_ring_is_full(&impl->dispatches.ring))
+            break;
+
           dispatch = spn_pbi_dispatch_tail(impl);
+
+          if (!dispatch->complete)
+            break;
         }
-      while (dispatch->unreleased);
     }
   else
     {
-      dispatch->unreleased = true;
+      dispatch->complete = true;
     }
 
   SPN_VK_TRACE_PATH_BUILDER_DISPATCH_RELEASE(impl, dispatch_idx);
@@ -529,7 +547,7 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
 
   spn_vk_ds_acquire_paths_copy(instance, device, &ds_pc);
 
-  // copy the dbi structs
+  // init the dbi structs
   *spn_vk_ds_get_paths_copy_pc_alloc(instance, ds_pc) = impl->vk.alloc.dbi;
   *spn_vk_ds_get_paths_copy_pc_ring(instance, ds_pc)  = impl->vk.ring.dbi;
 
@@ -577,19 +595,23 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   // dispatch the pipeline
   vkCmdDispatch(cb, dispatch->blocks.span, 1, 1);
 
-#if 0
-  fprintf(stderr,"paths_copy<<< %u, 1, 1 >>>\n", dispatch->blocks.span);
-#endif
-
   //
   // on completion... return resources
   //
   struct spn_pbi_complete_payload * const payload =
-    spn_device_dispatch_set_completion(device, dispatch->id, spn_pbi_complete, sizeof(*payload));
+    spn_device_dispatch_set_completion(device,  //
+                                       dispatch->id,
+                                       spn_pbi_complete,
+                                       sizeof(*payload));
 
   payload->impl         = impl;
   payload->ds_pc        = ds_pc;
   payload->dispatch_idx = impl->dispatches.ring.head;
+
+  //
+  // the current dispatch is now sealed so drop it
+  //
+  spn_pbi_dispatch_drop(impl);
 
   //
   // submit the dispatch
@@ -597,10 +619,9 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   spn_device_dispatch_submit(device, dispatch->id);
 
   //
-  // the current dispatch is now "in flight" so drop it and try to
-  // acquire and initialize the next
+  // acquire and initialize the next dispatch
   //
-  spn_pbi_dispatch_drop(impl);
+  spn_pbi_dispatch_acquire(impl);
 
   return SPN_SUCCESS;
 }
@@ -697,7 +718,7 @@ spn_pbi_acquire_head_block(struct spn_path_builder_impl * const impl)
 
       do
         {
-          SPN_DEVICE_WAIT(impl->device);
+          spn(device_wait(impl->device, __func__));
         }
       while (spn_ring_is_empty(ring));
     }
@@ -734,7 +755,7 @@ spn_pbi_acquire_node_segs_block(struct spn_path_builder_impl * const impl, uint3
       //
       do
         {
-          SPN_DEVICE_WAIT(impl->device);
+          spn(device_wait(impl->device, __func__));
         }
       while (spn_ring_is_empty(ring));
     }
@@ -1057,7 +1078,7 @@ spn_pbi_release(struct spn_path_builder_impl * const impl)
 
   while (!spn_ring_is_full(ring))
     {
-      SPN_DEVICE_WAIT(device);
+      spn(device_wait(device, __func__));
     }
 
   //
@@ -1108,6 +1129,7 @@ spn_path_builder_impl_create(struct spn_device * const        device,
   //
   struct spn_path_builder_impl * const impl =
     spn_allocator_host_perm_alloc(perm, SPN_MEM_FLAGS_READ_WRITE, sizeof(*impl));
+
   //
   // allocate path builder
   //

@@ -178,6 +178,11 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
   // NOTE(allanmac): realize that all memory is visible -- image layout
   // transitions and transfers are all we're concerned with.
   //
+  // NOTE(allanmac): the imgbar is implicitly:
+  //   {
+  //     .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED
+  //   }
+  //
   VkPipelineStageFlags src_stage    = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
   VkImageMemoryBarrier imgbar       = { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
   uint32_t             imgbar_count = 0;
@@ -429,10 +434,13 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
   // - indirect dispatch the pipeline
   // - shader only *writes* to surface
   //
+  // NOTE(allanmac): the indirect dispatch buffer was already resolved
+  // with a fence during composition creation
+  //
   {
     imgbar.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 
-    vkCmdPipelineBarrier(cb,
+    vkCmdPipelineBarrier(cb,  //
                          src_stage,
                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                          0,

@@ -36,7 +36,11 @@ SPN_VK_GLSL_DECL_KERNEL_FILLS_SCAN();
 //
 //
 
+// clang-format off
 #define SPN_FILLS_SCAN_SUBGROUP_SIZE (1 << SPN_DEVICE_FILLS_SCAN_SUBGROUP_SIZE_LOG2)
+#define SPN_FILLS_SCAN_SLAB_SIZE     (SPN_FILLS_SCAN_SUBGROUP_SIZE * SPN_DEVICE_FILLS_SCAN_ROWS)
+#define SPN_FILLS_SCAN_SUBGROUPS     (SPN_DEVICE_FILLS_SCAN_WORKGROUP_SIZE / SPN_FILLS_SCAN_SUBGROUP_SIZE)
+// clang-format on
 
 //
 //
@@ -60,17 +64,16 @@ SPN_VK_GLSL_DECL_KERNEL_FILLS_SCAN();
 //          carry1 == carry of (a_[1] + b_[1] + carry0)
 //          carry2 == carry of (a_[2] + b_[2] + carry1)
 //
-#define SPN_PATH_PRIMS_ADD_UNSAFE(a_, b_, c_)                         \
-  {                                                                   \
-    uint sum, carry0, carry1, carry1b, carry2b, carry2;               \
-    c_[0] = uaddCarry(a_[0], b_[0], carry0);                          \
-    sum   = uaddCarry(a_[1], b_[1], carry1);                          \
-    c_[1] = uaddCarry(sum, carry0, carry1b);                          \
-    sum   = uaddCarry(a_[2], b_[2], carry2);                          \
-    c_[2] = uaddCarry(sum, carry1 + carry1b, carry2b);                \
-    c_[3] = a_[3] + b_[3] + carry2 + carry2b;                         \
+#define SPN_PATH_PRIMS_ADD_UNSAFE(a_, b_, c_)                                                      \
+  {                                                                                                \
+    uint sum, carry0, carry1, carry1b, carry2b, carry2;                                            \
+    c_[0] = uaddCarry(a_[0], b_[0], carry0);                                                       \
+    sum   = uaddCarry(a_[1], b_[1], carry1);                                                       \
+    c_[1] = uaddCarry(sum, carry0, carry1b);                                                       \
+    sum   = uaddCarry(a_[2], b_[2], carry2);                                                       \
+    c_[2] = uaddCarry(sum, carry1 + carry1b, carry2b);                                             \
+    c_[3] = a_[3] + b_[3] + carry2 + carry2b;                                                      \
   }
-
 
 //
 // This kernel is executing a prefix-sum on each path primitive count.
@@ -89,10 +92,9 @@ main()
   // The expansion factor can be tuned -- bigger is usually better
   // unless it results in spills.
   //
-  const uint gid_base = gl_GlobalInvocationID.x &  //
-                        ~SPN_GLSL_BITS_TO_MASK(SPN_DEVICE_FILLS_SCAN_SUBGROUP_SIZE_LOG2);
-
-  const uint cmd_base = gid_base * SPN_DEVICE_FILLS_SCAN_ROWS + gl_SubgroupInvocationID;
+  SPN_SUBGROUP_UNIFORM
+  const uint sid      = gl_WorkGroupID.x * SPN_FILLS_SCAN_SUBGROUPS + gl_SubgroupID;
+  const uint cmd_base = sid * SPN_FILLS_SCAN_SLAB_SIZE + gl_SubgroupInvocationID;
 
   //
   // convert host path ids to device path ids here vs. in a less dense
@@ -101,24 +103,21 @@ main()
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
   uint path_id##I = SPN_TAGGED_BLOCK_ID_INVALID;                                                   \
-  uint cmd_idx##I = SPN_UINT_MAX;                                                                  \
-  {                                                                                                \
-    cmd_idx##I = cmd_base + I * SPN_FILLS_SCAN_SUBGROUP_SIZE;                                      \
+  uint cmd_idx##I = cmd_base + I * SPN_FILLS_SCAN_SUBGROUP_SIZE;                                   \
                                                                                                    \
-    if (cmd_idx##I < cmd_span)                                                                     \
-      {                                                                                            \
-        cmd_idx##I += cmd_head;                                                                    \
+  if (cmd_idx##I < cmd_span)                                                                       \
+    {                                                                                              \
+      cmd_idx##I += cmd_head;                                                                      \
                                                                                                    \
-        if (cmd_idx##I >= cmd_size)                                                                \
-          {                                                                                        \
-            cmd_idx##I -= cmd_size;                                                                \
-          }                                                                                        \
+      if (cmd_idx##I >= cmd_size)                                                                  \
+        {                                                                                          \
+          cmd_idx##I -= cmd_size;                                                                  \
+        }                                                                                          \
                                                                                                    \
-        const uint path_h = SPN_CMD_FILL_GET_PATH_H(fill_cmds[cmd_idx##I]);                        \
+      const uint path_h = SPN_CMD_FILL_GET_PATH_H(fill_cmds[cmd_idx##I]);                          \
                                                                                                    \
-        path_id##I = bp_host_map[path_h];                                                          \
-      }                                                                                            \
-  }
+      path_id##I = bp_host_map[path_h];                                                            \
+    }
 
   SPN_DEVICE_FILLS_SCAN_EXPAND();
 
@@ -143,22 +142,6 @@ main()
     SPN_DEVICE_FILLS_SCAN_EXPAND();
   }
 #endif
-
-  //
-  // update the path fill command's path_h member in place with the
-  // device block id so we don't have to pay for the potentially
-  // sparse map[] lookup twice here and in the FILLS_EXPAND kernel
-  //
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  {                                                                                                \
-    if (path_id##I != SPN_TAGGED_BLOCK_ID_INVALID)                                                 \
-      {                                                                                            \
-        SPN_CMD_RASTERIZE_SET_NODE_ID(fill_cmds[cmd_idx##I], path_id##I);                          \
-      }                                                                                            \
-  }
-
-  SPN_DEVICE_FILLS_SCAN_EXPAND();
 
   //
   // load the path header's path primitive count with a uvec4

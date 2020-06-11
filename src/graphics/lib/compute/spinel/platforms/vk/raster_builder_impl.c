@@ -135,7 +135,7 @@ struct spn_rbi_dispatch
   struct spn_rbi_span_head tc;  // transform quads and clips
   struct spn_rbi_span_head rc;  // rasters in cohort
 
-  bool unreleased;
+  bool complete;
 
   spn_dispatch_id_t id;
 };
@@ -158,25 +158,33 @@ struct spn_rbi_dispatch
 // ring spans from the host-coherent buffer to a device-local buffer.
 //
 
+struct spn_rbi_vk_dbi_dm
+{
+  VkDescriptorBufferInfo dbi;
+  VkDeviceMemory         dm;
+};
+
 struct spn_rbi_vk
 {
   struct
   {
     struct
     {
-      VkDescriptorBufferInfo dbi;
-      VkDeviceMemory         dm;
-    } h;
+      struct spn_rbi_vk_dbi_dm h;
+      struct spn_rbi_vk_dbi_dm d;
+    } cf;
 
     struct
     {
-      VkDescriptorBufferInfo dbi;
-      VkDeviceMemory         dm;
-    } d;
+      struct spn_rbi_vk_dbi_dm h;
+      struct spn_rbi_vk_dbi_dm d;
+    } tc;
 
-    VkDescriptorBufferInfo cf;
-    VkDescriptorBufferInfo tc;
-    VkDescriptorBufferInfo rc;
+    struct
+    {
+      struct spn_rbi_vk_dbi_dm h;
+      struct spn_rbi_vk_dbi_dm d;
+    } rc;
   } rings;
 
   struct
@@ -273,6 +281,17 @@ struct spn_raster_builder_impl
     struct spn_ring           ring;
   } dispatches;
 };
+
+//
+//
+//
+
+static bool
+spn_rbi_is_staged(struct spn_vk_target_config const * const config)
+{
+  return ((config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0) &&
+         (config->raster_builder.no_staging == 0);
+}
 
 //
 //
@@ -394,7 +413,7 @@ spn_rbi_dispatch_init(struct spn_raster_builder_impl * const impl,
   dispatch->rc.span = 0;
   dispatch->rc.head = impl->mapped.rc.next.head;
 
-  dispatch->unreleased = false;
+  dispatch->complete = false;
 
   spn(device_dispatch_acquire(impl->device, SPN_DISPATCH_STAGE_RASTER_BUILDER_2, &dispatch->id));
 
@@ -407,10 +426,16 @@ spn_rbi_dispatch_drop(struct spn_raster_builder_impl * const impl)
   struct spn_ring * const ring = &impl->dispatches.ring;
 
   spn_ring_drop_1(ring);
+};
+
+static void
+spn_rbi_dispatch_acquire(struct spn_raster_builder_impl * const impl)
+{
+  struct spn_ring * const ring = &impl->dispatches.ring;
 
   while (spn_ring_is_empty(ring))
     {
-      SPN_DEVICE_WAIT(impl->device);
+      spn(device_wait(impl->device, __func__));
     }
 
   struct spn_rbi_dispatch * const dispatch = spn_rbi_dispatch_head(impl);
@@ -511,8 +536,8 @@ spn_rbi_complete_2(void * pfn_payload)
   spn_device_dispatch_handles_complete(device,
                                        impl->rasters.extent,
                                        impl->mapped.rc.next.size,
-                                       dispatch->rc.span,
-                                       dispatch->rc.head);
+                                       dispatch->rc.head,
+                                       dispatch->rc.span);
 
   //
   // Release the rasters -- may invoke wait()
@@ -520,8 +545,8 @@ spn_rbi_complete_2(void * pfn_payload)
   spn_device_handle_pool_release_ring_d_rasters(device,
                                                 impl->rasters.extent,
                                                 impl->mapped.rc.next.size,
-                                                dispatch->rc.span,
-                                                dispatch->rc.head);
+                                                dispatch->rc.head,
+                                                dispatch->rc.span);
   //
   // If the dispatch is the tail of the ring then try to release as
   // many dispatch records as possible...
@@ -531,20 +556,24 @@ spn_rbi_complete_2(void * pfn_payload)
   //
   if (spn_ring_is_tail(&impl->dispatches.ring, dispatch_idx))
     {
-      do
+      while (true)
         {
-          dispatch->unreleased = false;
-
           spn_ring_release_n(&impl->mapped.cf.ring, dispatch->cf.span);
           spn_ring_release_n(&impl->dispatches.ring, 1);
 
+          // any dispatches in flight?
+          if (spn_ring_is_full(&impl->dispatches.ring))
+            break;
+
           dispatch = spn_rbi_dispatch_tail(impl);
+
+          if (!dispatch->complete)
+            break;
         }
-      while (dispatch->unreleased);
     }
   else
     {
-      dispatch->unreleased = true;
+      dispatch->complete = true;
     }
 }
 
@@ -621,7 +650,7 @@ spn_rbi_complete_1(void * pfn_payload)
   spn_vk_ds_acquire_raster_ids(instance, device, &payload_2->ds.i);
 
   // dbi: raster_ids
-  *spn_vk_ds_get_raster_ids_raster_ids(instance, payload_2->ds.i) = impl->vk.rings.rc;
+  *spn_vk_ds_get_raster_ids_raster_ids(instance, payload_2->ds.i) = impl->vk.rings.rc.d.dbi;
 
   // update raster_ids ds
   spn_vk_ds_update_raster_ids(instance, &device->environment, payload_2->ds.i);
@@ -694,14 +723,21 @@ spn_rbi_complete_1(void * pfn_payload)
   //
   ////////////////////////////////////////////////////////////////
 
-  // bind the pipeline
-  spn_vk_p_bind_segment_ttrk(instance, cb);
+  //
+  // TODO(allanmac): evaluate whether or not to remove this conditional
+  // once fxb:50840 is resolved.
+  //
+  if (slabs_in > 0)
+    {
+      // bind the pipeline
+      spn_vk_p_bind_segment_ttrk(instance, cb);
 
-  // dispatch one subgroup (workgroup) per slab
-  vkCmdDispatch(cb, slabs_in, 1, 1);
+      // dispatch one subgroup (workgroup) per slab
+      vkCmdDispatch(cb, slabs_in, 1, 1);
 
-  // compute barrier
-  vk_barrier_compute_w_to_compute_r(cb);
+      // compute barrier
+      vk_barrier_compute_w_to_compute_r(cb);
+    }
 
   ////////////////////////////////////////////////////////////////
   //
@@ -762,8 +798,8 @@ spn_rbi_complete_1(void * pfn_payload)
   spn_device_handle_pool_release_ring_d_paths(device,
                                               impl->paths.extent,
                                               impl->mapped.cf.ring.size,
-                                              dispatch->cf.span,
-                                              dispatch->cf.head);
+                                              dispatch->cf.head,
+                                              dispatch->cf.span);
 }
 
 //
@@ -771,31 +807,40 @@ spn_rbi_complete_1(void * pfn_payload)
 //
 
 static void
-spn_rbi_copy_rings(VkDeviceSize const                     ring_base_h,
-                   VkDeviceSize const                     ring_base_d,
-                   VkDeviceSize const                     elem_size,
-                   uint32_t const                         ring_size,
-                   struct spn_rbi_span_head const * const sh,
-                   VkBufferCopy * const                   bcs,
-                   uint32_t * const                       bc_count)
+spn_rbi_copy_ring(VkCommandBuffer                        cb,
+                  struct spn_rbi_vk_dbi_dm const * const h,
+                  struct spn_rbi_vk_dbi_dm const * const d,
+                  VkDeviceSize const                     elem_size,
+                  uint32_t const                         ring_size,
+                  struct spn_rbi_span_head const * const span_head)
 {
-  VkDeviceSize const   sh_lo_head = elem_size * sh->head;
-  uint32_t const       sh_lo      = MIN_MACRO(uint32_t, sh->head + sh->span, ring_size) - sh->head;
-  VkBufferCopy * const bc_lo      = bcs + (*bc_count)++;
+  VkBufferCopy bcs[2];
+  uint32_t     bc_count;
 
-  bc_lo->srcOffset = ring_base_h + sh_lo_head;
-  bc_lo->dstOffset = ring_base_d + sh_lo_head;
-  bc_lo->size      = elem_size * sh_lo;
+  bool const     is_wrap   = (span_head->span + span_head->head) > ring_size;
+  uint32_t const span_hi   = is_wrap ? (ring_size - span_head->head) : span_head->span;
+  VkDeviceSize   offset_hi = elem_size * span_head->head;
 
-  if (sh->span > sh_lo)
+  bcs[0].srcOffset = h->dbi.offset + offset_hi;
+  bcs[0].dstOffset = d->dbi.offset + offset_hi;
+  bcs[0].size      = elem_size * span_hi;
+
+  if (is_wrap)
     {
-      uint32_t const       sh_hi = sh->span - sh_lo;
-      VkBufferCopy * const bc_hi = bcs + (*bc_count)++;
+      uint32_t const span_lo = span_head->span - span_hi;
 
-      bc_hi->srcOffset = ring_base_h;
-      bc_hi->dstOffset = ring_base_d;
-      bc_hi->size      = elem_size * sh_hi;
+      bcs[1].srcOffset = h->dbi.offset;
+      bcs[1].dstOffset = d->dbi.offset;
+      bcs[1].size      = elem_size * span_lo;
+
+      bc_count = 2;
     }
+  else
+    {
+      bc_count = 1;
+    }
+
+  vkCmdCopyBuffer(cb, h->dbi.buffer, d->dbi.buffer, bc_count, bcs);
 }
 
 //
@@ -927,10 +972,10 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   spn_vk_ds_acquire_rasterize(instance, device, &payload_1->ds.r);
 
   // dbi: fill_cmds
-  *spn_vk_ds_get_rasterize_fill_cmds(instance, payload_1->ds.r) = impl->vk.rings.cf;
+  *spn_vk_ds_get_rasterize_fill_cmds(instance, payload_1->ds.r) = impl->vk.rings.cf.d.dbi;
 
   // dbi: fill_quads
-  *spn_vk_ds_get_rasterize_fill_quads(instance, payload_1->ds.r) = impl->vk.rings.tc;
+  *spn_vk_ds_get_rasterize_fill_quads(instance, payload_1->ds.r) = impl->vk.rings.tc.d.dbi;
 
   // dbi: fill_scan -- allocate a temporary buffer
   VkDescriptorBufferInfo * const dbi_fill_scan =
@@ -973,14 +1018,15 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   VkDescriptorBufferInfo * const dbi_ttrks = spn_vk_ds_get_ttrks_ttrks(instance, payload_1->ds.t);
 
   // dbi: ttrks -- allocate a temporary buffer
-  spn_allocator_device_temp_alloc(
-    &device->allocator.device.temp.drw,
-    device,
-    spn_device_wait,
-    SPN_VK_BUFFER_OFFSETOF(ttrks, ttrks, ttrks_keys) +
-      impl->config->raster_builder.size.ttrks * sizeof(SPN_TYPE_UVEC2),
-    &payload_1->temp.ttrks,
-    dbi_ttrks);
+  VkDeviceSize const ttrks_size = SPN_VK_BUFFER_OFFSETOF(ttrks, ttrks, ttrks_keys) +
+                                  impl->config->raster_builder.size.ttrks * sizeof(SPN_TYPE_UVEC2);
+
+  spn_allocator_device_temp_alloc(&device->allocator.device.temp.drw,
+                                  device,
+                                  spn_device_wait,
+                                  ttrks_size,
+                                  &payload_1->temp.ttrks,
+                                  dbi_ttrks);
 
   // update ttrks ds
   spn_vk_ds_update_ttrks(instance, &device->environment, payload_1->ds.t);
@@ -992,107 +1038,76 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   // FILL: RASTER COHORT META TABLE
   //
-  // FIXME(allanmac): this has no dependencies until stage 2 so add a
-  // bottom of pipe barrier.
-  //
-  // FIXME(allanmac): the entire meta table doesn't have to be
-  // initialized.  Three spans can be zeroed.
-  //
   ////////////////////////////////////////////////////////////////
 
-  // zero ttrks.ttrks_meta and ttrks.ttrks_count
-  VkDeviceSize const ttrks_offset =
-    dbi_ttrks->offset + SPN_VK_BUFFER_OFFSETOF(ttrks, ttrks, ttrks_meta.blocks);
+  {
+    //
+    // zero ttrks.ttrks_meta.[rk_off|blocks|ttpks|ttrks]
+    //
+    // NOTE(allanmac): This fill has no dependencies until stage 2
+    //
+    VkDeviceSize const offset = SPN_VK_BUFFER_OFFSETOF(ttrks, ttrks, ttrks_meta.rk_off);
+    VkDeviceSize const size   = SPN_VK_BUFFER_MEMBER_SIZE(ttrks, ttrks, ttrks_meta) - offset;
 
-  VkDeviceSize const ttrks_size = SPN_VK_BUFFER_MEMBER_SIZE(ttrks, ttrks, ttrks_meta) -
-                                  SPN_VK_BUFFER_OFFSETOF(ttrks, ttrks, ttrks_meta.blocks);
-
-  vkCmdFillBuffer(cb, dbi_ttrks->buffer, ttrks_offset, ttrks_size, 0);
+    vkCmdFillBuffer(cb, dbi_ttrks->buffer, dbi_ttrks->offset + offset, size, 0);
+  }
 
   ////////////////////////////////////////////////////////////////
   //
   // COPY: COMMAND RINGS
   //
+  // On a discrete GPU, 1-2 regions of 3 rings are copied from H>D
+  //
   ////////////////////////////////////////////////////////////////
 
-  if ((impl->config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
+  if (spn_rbi_is_staged(impl->config))
     {
-      //
-      // On a discrete GPU we need to copy between 3-6 regions because
-      // each sub-ring in the vk.ring might wrap.
-      //
-      // - copy ring of cmds
-      // - copy ring of transform and clip quads
-      // - copy ring of handles
-      //
-      VkDeviceSize const ring_base_h = impl->vk.rings.h.dbi.offset;
-      VkDeviceSize const ring_base_d = impl->vk.rings.d.dbi.offset;
-
-      uint32_t     bc_count = 0;
-      VkBufferCopy bcs[6];
-
-      //
       // CF
-      //
-      {
-        spn_rbi_copy_rings(ring_base_h + impl->vk.rings.cf.offset,  // + 0
-                           ring_base_d + impl->vk.rings.cf.offset,  // + 0
-                           sizeof(*impl->mapped.cf.extent),
-                           impl->mapped.cf.ring.size,
-                           &dispatch->cf,
-                           bcs,
-                           &bc_count);
-      }
+      spn_rbi_copy_ring(cb,
+                        &impl->vk.rings.cf.h,
+                        &impl->vk.rings.cf.d,
+                        sizeof(*impl->mapped.cf.extent),
+                        impl->mapped.cf.ring.size,
+                        &dispatch->cf);
 
-      //
       // TC
-      //
-      {
-        spn_rbi_copy_rings(ring_base_h + impl->vk.rings.tc.offset,
-                           ring_base_d + impl->vk.rings.tc.offset,
-                           sizeof(*impl->mapped.tc.extent),
-                           impl->mapped.tc.next.size,
-                           &dispatch->tc,
-                           bcs,
-                           &bc_count);
-      }
+      spn_rbi_copy_ring(cb,
+                        &impl->vk.rings.tc.h,
+                        &impl->vk.rings.tc.d,
+                        sizeof(*impl->mapped.tc.extent),
+                        impl->mapped.tc.next.size,
+                        &dispatch->tc);
 
-      //
       // RC
-      //
-      {
-        spn_rbi_copy_rings(ring_base_h + impl->vk.rings.rc.offset,
-                           ring_base_d + impl->vk.rings.rc.offset,
-                           sizeof(*impl->mapped.rc.extent),
-                           impl->mapped.rc.next.size,
-                           &dispatch->rc,
-                           bcs,
-                           &bc_count);
-      }
-
-      vkCmdCopyBuffer(cb, impl->vk.rings.h.dbi.buffer, impl->vk.rings.d.dbi.buffer, bc_count, bcs);
+      spn_rbi_copy_ring(cb,
+                        &impl->vk.rings.rc.h,
+                        &impl->vk.rings.rc.d,
+                        sizeof(*impl->mapped.rc.extent),
+                        impl->mapped.rc.next.size,
+                        &dispatch->rc);
     }
 
   ////////////////////////////////////////////////////////////////
   //
-  // FILL: ZERO RASTERIZE & TTRKS
+  // FILL: ZERO RASTERIZE.FILL_SCAN_COUNTS and TTRKS.COUNT
   //
   ////////////////////////////////////////////////////////////////
 
   // zero the rasterize.fill_scan_counts member
-  vkCmdFillBuffer(
-    cb,
-    dbi_fill_scan->buffer,
-    dbi_fill_scan->offset + SPN_VK_BUFFER_OFFSETOF(rasterize, fill_scan, fill_scan_counts),
-    SPN_VK_BUFFER_MEMBER_SIZE(rasterize, fill_scan, fill_scan_counts),
-    0);
+  {
+    VkDeviceSize const offset = SPN_VK_BUFFER_OFFSETOF(rasterize, fill_scan, fill_scan_counts);
+    VkDeviceSize const size   = SPN_VK_BUFFER_MEMBER_SIZE(rasterize, fill_scan, fill_scan_counts);
+
+    vkCmdFillBuffer(cb, dbi_fill_scan->buffer, dbi_fill_scan->offset + offset, size, 0);
+  }
 
   // zero the ttrks_count member
-  vkCmdFillBuffer(cb,
-                  dbi_ttrks->buffer,
-                  dbi_ttrks->offset + SPN_VK_BUFFER_OFFSETOF(ttrks, ttrks, ttrks_count),
-                  SPN_VK_BUFFER_MEMBER_SIZE(ttrks, ttrks, ttrks_count),
-                  0);
+  {
+    VkDeviceSize const offset = SPN_VK_BUFFER_OFFSETOF(ttrks, ttrks, ttrks_count);
+    VkDeviceSize const size   = SPN_VK_BUFFER_MEMBER_SIZE(ttrks, ttrks, ttrks_count);
+
+    vkCmdFillBuffer(cb, dbi_ttrks->buffer, dbi_ttrks->offset + offset, size, 0);
+  }
 
   ////////////////////////////////////////////////////////////////
   //
@@ -1128,8 +1143,18 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
 
   uint32_t const wg_count = (dispatch->cf.span + cmds_per_wg - 1) / cmds_per_wg;
 
-#if 0
-  printf("fills_scan<<< %u, 1, 1 >>>( cmd_count = %u );\n", wg_count, dispatch->cf.span);
+#if !defined(NDEBUG) && 0
+  fprintf(stderr,
+          "<<< [ %5u, %5u, %5u, %5u ] ( %08X , %08X , %08X, %08X ) <<< %5u, 1, 1 >>>\n",
+          impl->dispatches.ring.size,
+          impl->dispatches.ring.head,
+          impl->dispatches.ring.tail,
+          impl->dispatches.ring.rem,
+          dispatch->cf.span,
+          dispatch->cf.head,
+          (dispatch->cf.head + dispatch->cf.span) % impl->mapped.cf.ring.size,
+          impl->mapped.cf.ring.size,
+          wg_count);
 #endif
 
   vkCmdDispatch(cb, wg_count, 1, 1);
@@ -1232,10 +1257,12 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   // make the copyback visible to the host
   //
-  if ((impl->config->allocator.device.hr_dw.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
-    {
-      vk_barrier_transfer_w_to_host_r(cb);
-    }
+  vk_barrier_transfer_w_to_host_r(cb);
+
+  //
+  // the current dispatch is now sealed so drop it
+  //
+  spn_rbi_dispatch_drop(impl);
 
   //
   // Declare that this dispatch can't start until the path handles are
@@ -1246,14 +1273,13 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
                                                        id_1,
                                                        impl->paths.extent,
                                                        impl->mapped.cf.ring.size,
-                                                       dispatch->cf.span,
-                                                       dispatch->cf.head);
+                                                       dispatch->cf.head,
+                                                       dispatch->cf.span);
 
   //
-  // the current dispatch is now "in flight" so drop it and try to
-  // acquire and initialize the next
+  // acquire and initialize the next dispatch
   //
-  spn_rbi_dispatch_drop(impl);
+  spn_rbi_dispatch_acquire(impl);
 
   return SPN_SUCCESS;
 }
@@ -1409,22 +1435,30 @@ spn_rbi_add(struct spn_raster_builder_impl * const impl,
 {
   // anything to do?
   if (count == 0)
-    return SPN_SUCCESS;
+    {
+      return SPN_SUCCESS;
+    }
 
   //
-  // get ring and dispatch structs
+  // If the number of paths is larger than the ring then fail!
   //
-  struct spn_ring * const         cf_ring  = &impl->mapped.cf.ring;
+  struct spn_ring * const cf_ring = &impl->mapped.cf.ring;
+
+  if (count > cf_ring->size)
+    {
+      return SPN_ERROR_RASTER_BUILDER_TOO_MANY_PATHS;
+    }
+
+  //
+  // If not enough entries are left in the command ring then flush now!
+  //
   struct spn_rbi_dispatch * const dispatch = spn_rbi_dispatch_head(impl);
 
-  //
-  // if no more slots in command ring then flush now!
-  //
-  if (cf_ring->rem < count)
+  if (count > cf_ring->rem)
     {
-      // If dispatch is empty and the work-in-progress is going to
+      // if dispatch is empty and the work-in-progress is going to
       // exceed the size of the ring then this is a fatal error. At
-      // this point, we can kill the path builder instead of the
+      // this point, we can kill the raster builder instead of the
       // device.
       if (spn_rbi_is_wip_dispatch_empty(dispatch) || (impl->wip.cf.span + count > cf_ring->size))
         {
@@ -1443,17 +1477,9 @@ spn_rbi_add(struct spn_raster_builder_impl * const impl,
       //
       do
         {
-          SPN_DEVICE_WAIT(impl->device);
+          spn(device_wait(impl->device, __func__));
         }
       while (cf_ring->rem < count);
-    }
-
-  //
-  // if the number of paths is larger than the ring then fail
-  //
-  if (cf_ring->size < count)
-    {
-      return SPN_ERROR_RASTER_BUILDER_TOO_MANY_PATHS;
     }
 
   //
@@ -1480,96 +1506,119 @@ spn_rbi_add(struct spn_raster_builder_impl * const impl,
     return result;
 
   //
-  // Everything validates... retain the paths on the device
+  // everything validates... retain the paths on the device
   //
   spn_device_handle_pool_retain_d_paths(impl->device, paths, count);
 
   // increment the cf span
   impl->wip.cf.span += count;
 
-#if 0
-  printf("impl->wip.cf.span = %u\n", impl->wip.cf.span);
+#if !defined(NDEBUG) && 0
+  fprintf(stderr,
+          ">>> ( %5u , %5u , %5u )\n",
+          dispatch->cf.span + impl->wip.cf.span,
+          dispatch->cf.head,
+          cf_ring->size);
 #endif
 
-  struct spn_cmd_fill cf;
-
-  // initialize the fill command cohort
-  cf.cohort = dispatch->rc.span;
-
+  //
+  // There will always be enough room in the TC ring so only its head
+  // needs to be tracked.
+  //
   struct spn_next * const tc_next = &impl->mapped.tc.next;
 
-  do
+  //
+  // The command's cohort id is the same for all commands
+  //
+  struct spn_cmd_fill cf;
+
+  cf.cohort = dispatch->rc.span;
+
+  //
+  // append commands to the cf ring and dependent quads to the tc ring
+  //
+  while (true)
     {
-      spn_handle_t *        path_extent = impl->paths.extent + cf_ring->head;
-      struct spn_cmd_fill * cf_extent   = impl->mapped.cf.extent + cf_ring->head;
-      uint32_t              cf_rem      = MIN_MACRO(uint32_t, count, spn_ring_rem_nowrap(cf_ring));
+      uint32_t const cf_idx = spn_ring_acquire_1(cf_ring);
 
-      count -= cf_rem;
+      //
+      // get the path
+      //
+      uint32_t const handle = paths->handle;
 
-      spn_ring_drop_n(cf_ring, cf_rem);
+      impl->paths.extent[cf_idx] = handle;
+      cf.path_h                  = handle;
 
-      for (uint32_t ii = 0; ii < cf_rem; ii++)
+      //
+      // classify the transform
+      //
+      // if (w0==w1==0) then it's an affine matrix
+      cf.transform_type = (transforms->w0 == 0.0f) && (transforms->w1 == 0.0f)
+                            ? SPN_CMD_FILL_TRANSFORM_TYPE_AFFINE
+                            : SPN_CMD_FILL_TRANSFORM_TYPE_PROJECTIVE;
+
+      //
+      // if the weakref exists then reuse existing transform index
+      //
+      if (!spn_transform_weakrefs_get_index(transform_weakrefs, 0, &impl->epoch, &cf.transform))
         {
-          spn_path_t const * const path = paths + ii;
+          uint32_t const t_idx = spn_next_acquire_2(tc_next);
 
-          // save path
-          path_extent[ii] = path->handle;
+          spn_transform_weakrefs_init(transform_weakrefs, 0, &impl->epoch, t_idx);
 
-          // start initializing command
-          cf.path_h = path->handle;
+          cf.transform = t_idx;
 
-#if 0
-          printf("*** %u\n", path->handle);
-#endif
+          spn_rbi_transform_copy_lo(impl->mapped.tc.extent + t_idx + 0, transforms);
+          spn_rbi_transform_copy_hi(impl->mapped.tc.extent + t_idx + 1, transforms);
 
-          //
-          // classify the transform
-          //
-          spn_transform_t const * const transform = transforms + ii;
-
-          // if (w0==w1==0) then it's an affine matrix
-          cf.transform_type = (transform->w0 == 0.0f) && (transform->w1 == 0.0f)
-                                ? SPN_CMD_FILL_TRANSFORM_TYPE_AFFINE
-                                : SPN_CMD_FILL_TRANSFORM_TYPE_PROJECTIVE;
-
-          //
-          // determine the transform's index
-          //
-          if (!spn_transform_weakrefs_get_index(transform_weakrefs,
-                                                ii,
-                                                &impl->epoch,
-                                                &cf.transform))
-            {
-              uint32_t const t_idx = spn_next_acquire_2(tc_next);
-
-              spn_transform_weakrefs_init(transform_weakrefs, ii, &impl->epoch, t_idx);
-
-              cf.transform = t_idx;
-
-              spn_rbi_transform_copy_lo(impl->mapped.tc.extent + t_idx + 0, transform);
-              spn_rbi_transform_copy_hi(impl->mapped.tc.extent + t_idx + 1, transform);
-
-              impl->wip.tc.span += 2;
-            }
-
-          if (!spn_clip_weakrefs_get_index(clip_weakrefs, ii, &impl->epoch, &cf.clip))
-            {
-              uint32_t const c_idx = spn_next_acquire_1(tc_next);
-
-              spn_clip_weakrefs_init(clip_weakrefs, ii, &impl->epoch, c_idx);
-
-              cf.clip = c_idx;
-
-              memcpy(impl->mapped.tc.extent + c_idx, clips + ii, sizeof(*impl->mapped.tc.extent));
-
-              impl->wip.tc.span += 1;
-            }
-
-          // store the command to the ring
-          cf_extent[ii] = cf;
+          impl->wip.tc.span += 2;
         }
+
+      //
+      // if the weakref exists then reuse existing clip index
+      //
+      if (!spn_clip_weakrefs_get_index(clip_weakrefs, 0, &impl->epoch, &cf.clip))
+        {
+          uint32_t const c_idx = spn_next_acquire_1(tc_next);
+
+          spn_clip_weakrefs_init(clip_weakrefs, 0, &impl->epoch, c_idx);
+
+          cf.clip = c_idx;
+
+          memcpy(impl->mapped.tc.extent + c_idx, clips, sizeof(*impl->mapped.tc.extent));
+
+          impl->wip.tc.span += 1;
+        }
+
+      //
+      // store the command to the ring
+      //
+      impl->mapped.cf.extent[cf_idx] = cf;
+
+      //
+      // no more paths?
+      //
+      if (--count == 0)
+        break;
+
+      //
+      // otherwise, increment pointers
+      //
+      // FIXME(allanmac): this will be updated with an argument
+      // "template" struct
+      //
+      paths++;
+
+      if (transform_weakrefs != NULL)
+        transform_weakrefs++;
+
+      transforms++;
+
+      if (clip_weakrefs != NULL)
+        clip_weakrefs++;
+
+      clips++;
     }
-  while (count > 0);
 
   return SPN_SUCCESS;
 }
@@ -1594,7 +1643,7 @@ spn_rbi_release(struct spn_raster_builder_impl * const impl)
 
   while (!spn_ring_is_full(ring))
     {
-      SPN_DEVICE_WAIT(impl->device);
+      spn(device_wait(impl->device, __func__));
     }
 
   //
@@ -1611,23 +1660,45 @@ spn_rbi_release(struct spn_raster_builder_impl * const impl)
   //
   // free ring
   //
-  if ((impl->config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
+  if (spn_rbi_is_staged(impl->config))
     {
       spn_allocator_device_perm_free(&device->allocator.device.perm.drw,
                                      &device->environment,
-                                     &impl->vk.rings.d.dbi,
-                                     impl->vk.rings.d.dm);
+                                     &impl->vk.rings.rc.d.dbi,
+                                     impl->vk.rings.rc.d.dm);
+
+      spn_allocator_device_perm_free(&device->allocator.device.perm.drw,
+                                     &device->environment,
+                                     &impl->vk.rings.tc.d.dbi,
+                                     impl->vk.rings.tc.d.dm);
+
+      spn_allocator_device_perm_free(&device->allocator.device.perm.drw,
+                                     &device->environment,
+                                     &impl->vk.rings.cf.d.dbi,
+                                     impl->vk.rings.cf.d.dm);
     }
 
   spn_allocator_device_perm_free(&device->allocator.device.perm.hw_dr,
                                  &device->environment,
-                                 &impl->vk.rings.h.dbi,
-                                 impl->vk.rings.h.dm);
+                                 &impl->vk.rings.rc.h.dbi,
+                                 impl->vk.rings.rc.h.dm);
+
+  spn_allocator_device_perm_free(&device->allocator.device.perm.hw_dr,
+                                 &device->environment,
+                                 &impl->vk.rings.tc.h.dbi,
+                                 impl->vk.rings.tc.h.dm);
+
+  spn_allocator_device_perm_free(&device->allocator.device.perm.hw_dr,
+                                 &device->environment,
+                                 &impl->vk.rings.cf.h.dbi,
+                                 impl->vk.rings.cf.h.dm);
   //
   // free host allocations
   //
   struct spn_allocator_host_perm * const perm = &impl->device->allocator.host.perm;
 
+  spn_allocator_host_perm_free(perm, impl->rasters.extent);
+  spn_allocator_host_perm_free(perm, impl->paths.extent);
   spn_allocator_host_perm_free(perm, impl->dispatches.extent);
   spn_allocator_host_perm_free(perm, impl->raster_builder);
   spn_allocator_host_perm_free(perm, impl);
@@ -1691,79 +1762,124 @@ spn_raster_builder_impl_create(struct spn_device * const    device,
   SPN_ASSERT_STATE_INIT(SPN_RASTER_BUILDER_STATE_READY, rb);
 
   //
-  // init ring/next/next
+  // Allocate rings
   //
-  // number of commands
+
+  //
+  // CF: 1 ring entry per command
+  //
   spn_ring_init(&impl->mapped.cf.ring, config->raster_builder.size.ring);
 
-  // 1 transform + 1 clip = 3 quads
-  uint32_t const tc_ring_size = config->raster_builder.size.ring * 3;
+  //
+  // TC: 1 transform + 1 clip = 3 quads
+  //
+  // NOTE(allanmac): one additional quad is required because transforms
+  // require 2 consecutive quads and the worst case would be a full ring
+  // of commands each with a transform and clip.
+  //
+  uint32_t const tc_ring_size = config->raster_builder.size.ring * 3 + 1;
 
   spn_next_init(&impl->mapped.tc.next, tc_ring_size);
 
-  // worst case 1:1 (cmds:rasters)
+  //
+  // RC:  worst case 1:1 (cmds:rasters)
+  //
   spn_next_init(&impl->mapped.rc.next, config->raster_builder.size.ring);
 
-  size_t const cf_size        = config->raster_builder.size.ring * sizeof(*impl->mapped.cf.extent);
-  size_t const tc_size        = tc_ring_size * sizeof(*impl->mapped.tc.extent);
-  size_t const rc_size        = config->raster_builder.size.ring * sizeof(*impl->mapped.rc.extent);
-  size_t const cf_tc_size     = cf_size + tc_size;
-  size_t const vk_extent_size = cf_tc_size + rc_size;
-
-  impl->vk.rings.cf.offset = 0;
-  impl->vk.rings.cf.range  = cf_size;
-
-  impl->vk.rings.tc.offset = cf_size;
-  impl->vk.rings.tc.range  = tc_size;
-
-  impl->vk.rings.rc.offset = cf_tc_size;
-  impl->vk.rings.rc.range  = rc_size;
-
   //
-  // allocate and map rings
+  // allocate and map CF
   //
+  VkDeviceSize const cf_size = sizeof(*impl->mapped.cf.extent) * config->raster_builder.size.ring;
+
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.hw_dr,
                                   &device->environment,
-                                  vk_extent_size,
+                                  cf_size,
                                   NULL,
-                                  &impl->vk.rings.h.dbi,
-                                  &impl->vk.rings.h.dm);
+                                  &impl->vk.rings.cf.h.dbi,
+                                  &impl->vk.rings.cf.h.dm);
 
   vk(MapMemory(device->environment.d,
-               impl->vk.rings.h.dm,
+               impl->vk.rings.cf.h.dm,
                0,
                VK_WHOLE_SIZE,
                0,
                (void **)&impl->mapped.cf.extent));
 
-  impl->mapped.tc.extent = (void *)(impl->mapped.cf.extent + config->raster_builder.size.ring);
-  impl->mapped.rc.extent = (void *)(impl->mapped.tc.extent + tc_ring_size);
+  //
+  // allocate and map TC
+  //
+  VkDeviceSize const tc_size = sizeof(*impl->mapped.tc.extent) * tc_ring_size;
 
-#if 0
-  printf("diff = %zu\n",
-         (ptrdiff_t)((void *)impl->mapped.tc.extent - (void *)impl->mapped.cf.extent));
-#endif
+  spn_allocator_device_perm_alloc(&device->allocator.device.perm.hw_dr,
+                                  &device->environment,
+                                  tc_size,
+                                  NULL,
+                                  &impl->vk.rings.tc.h.dbi,
+                                  &impl->vk.rings.tc.h.dm);
 
-  if ((impl->config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
+  vk(MapMemory(device->environment.d,
+               impl->vk.rings.tc.h.dm,
+               0,
+               VK_WHOLE_SIZE,
+               0,
+               (void **)&impl->mapped.tc.extent));
+
+  //
+  // allocate and map RC
+  //
+  VkDeviceSize const rc_size = sizeof(*impl->mapped.rc.extent) * config->raster_builder.size.ring;
+
+  spn_allocator_device_perm_alloc(&device->allocator.device.perm.hw_dr,
+                                  &device->environment,
+                                  rc_size,
+                                  NULL,
+                                  &impl->vk.rings.rc.h.dbi,
+                                  &impl->vk.rings.rc.h.dm);
+
+  vk(MapMemory(device->environment.d,
+               impl->vk.rings.rc.h.dm,
+               0,
+               VK_WHOLE_SIZE,
+               0,
+               (void **)&impl->mapped.rc.extent));
+
+  //
+  // discrete GPU?
+  //
+  if (spn_rbi_is_staged(impl->config))
     {
       spn_allocator_device_perm_alloc(&device->allocator.device.perm.drw,
                                       &device->environment,
-                                      vk_extent_size,
+                                      cf_size,
                                       NULL,
-                                      &impl->vk.rings.d.dbi,
-                                      &impl->vk.rings.d.dm);
+                                      &impl->vk.rings.cf.d.dbi,
+                                      &impl->vk.rings.cf.d.dm);
+
+      spn_allocator_device_perm_alloc(&device->allocator.device.perm.drw,
+                                      &device->environment,
+                                      tc_size,
+                                      NULL,
+                                      &impl->vk.rings.tc.d.dbi,
+                                      &impl->vk.rings.tc.d.dm);
+
+      spn_allocator_device_perm_alloc(&device->allocator.device.perm.drw,
+                                      &device->environment,
+                                      rc_size,
+                                      NULL,
+                                      &impl->vk.rings.rc.d.dbi,
+                                      &impl->vk.rings.rc.d.dm);
     }
   else
     {
-      impl->vk.rings.d.dbi = impl->vk.rings.h.dbi;
-      impl->vk.rings.d.dm  = impl->vk.rings.h.dm;
+      impl->vk.rings.cf.d.dbi = impl->vk.rings.cf.h.dbi;
+      impl->vk.rings.cf.d.dm  = impl->vk.rings.cf.h.dm;
+
+      impl->vk.rings.tc.d.dbi = impl->vk.rings.tc.h.dbi;
+      impl->vk.rings.tc.d.dm  = impl->vk.rings.tc.h.dm;
+
+      impl->vk.rings.rc.d.dbi = impl->vk.rings.rc.h.dbi;
+      impl->vk.rings.rc.d.dm  = impl->vk.rings.rc.h.dm;
     }
-
-  VkBuffer const rings = impl->vk.rings.d.dbi.buffer;
-
-  impl->vk.rings.cf.buffer = rings;
-  impl->vk.rings.tc.buffer = rings;
-  impl->vk.rings.rc.buffer = rings;
 
   //
   // allocate and map copyback
@@ -1788,16 +1904,21 @@ spn_raster_builder_impl_create(struct spn_device * const    device,
   //
   // allocate release resources
   //
-  size_t const dispatches_size = max_in_flight * sizeof(*impl->dispatches.extent);
-  size_t const paths_size      = config->raster_builder.size.ring * sizeof(*impl->paths.extent);
-  size_t const rasters_size    = config->raster_builder.size.ring * sizeof(*impl->rasters.extent);
-  size_t const h_extent_size   = dispatches_size + paths_size + rasters_size;
+  size_t const dispatches_size = sizeof(*impl->dispatches.extent) * max_in_flight;
+  size_t const paths_size      = sizeof(*impl->paths.extent) * config->raster_builder.size.ring;
+  size_t const rasters_size    = sizeof(*impl->rasters.extent) * config->raster_builder.size.ring;
 
-  impl->dispatches.extent =
-    spn_allocator_host_perm_alloc(perm, SPN_MEM_FLAGS_READ_WRITE, h_extent_size);
+  impl->dispatches.extent = spn_allocator_host_perm_alloc(perm,  //
+                                                          SPN_MEM_FLAGS_READ_WRITE,
+                                                          dispatches_size);
 
-  impl->paths.extent   = (void *)(impl->dispatches.extent + max_in_flight);
-  impl->rasters.extent = (void *)(impl->paths.extent + config->raster_builder.size.ring);
+  impl->paths.extent = spn_allocator_host_perm_alloc(perm,  //
+                                                     SPN_MEM_FLAGS_READ_WRITE,
+                                                     paths_size);
+
+  impl->rasters.extent = spn_allocator_host_perm_alloc(perm,  //
+                                                       SPN_MEM_FLAGS_READ_WRITE,
+                                                       rasters_size);
 
   spn_ring_init(&impl->dispatches.ring, max_in_flight);
 

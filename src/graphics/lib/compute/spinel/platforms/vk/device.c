@@ -52,7 +52,7 @@ spn_device_lost(struct spn_device * const device)
   //
   // FIXME(allanmac): Properly shutting down Spinel is WIP.
   //
-  exit(-1);
+  abort();
 }
 
 //
@@ -124,22 +124,32 @@ spn_device_create(struct spn_vk_environment * const               environment,
                                    NULL);
 
   //
-  // perm host read / device write
-  //
-  spn_allocator_device_perm_create(&device->allocator.device.perm.hr_dw,
-                                   environment,
-                                   config->allocator.device.hr_dw.properties,
-                                   config->allocator.device.hr_dw.usage,
-                                   0,
-                                   NULL);
-
-  //
   // perm host write / device read
   //
   spn_allocator_device_perm_create(&device->allocator.device.perm.hw_dr,
                                    environment,
                                    config->allocator.device.hw_dr.properties,
                                    config->allocator.device.hw_dr.usage,
+                                   0,
+                                   NULL);
+
+  //
+  // perm host read-write / device read
+  //
+  spn_allocator_device_perm_create(&device->allocator.device.perm.hrw_dr,
+                                   environment,
+                                   config->allocator.device.hrw_dr.properties,
+                                   config->allocator.device.hrw_dr.usage,
+                                   0,
+                                   NULL);
+
+  //
+  // perm host read / device write
+  //
+  spn_allocator_device_perm_create(&device->allocator.device.perm.hr_dw,
+                                   environment,
+                                   config->allocator.device.hr_dw.properties,
+                                   config->allocator.device.hr_dw.usage,
                                    0,
                                    NULL);
 
@@ -164,7 +174,7 @@ spn_device_create(struct spn_vk_environment * const               environment,
 
   spn_device_block_pool_create(device,
                                create_info->block_pool_size,
-                               spn_device_handle_pool_get_allocated_handle_count(device));
+                               spn_device_handle_pool_get_handle_count(device));
 
   spn_device_status_create(device);
 
@@ -183,7 +193,7 @@ spn_device_dispose(struct spn_device * const device)
   //
 
   // drain all in-flight completions
-  spn(device_wait_all(device, true));
+  spn(device_wait_all(device, true, __func__));
 
   // shut down each major module in reverse order
   spn_device_status_dispose(device);
@@ -233,26 +243,6 @@ spn_vk_context_create(struct spn_vk_environment * const               environmen
   (*context)->render         = spn_render_impl;
 
   return spn_device_create(environment, create_info, *context);
-}
-
-//
-// CONTEXT SCHEDULING
-//
-
-spn_result_t
-spn_vk_context_wait(spn_context_t    context,
-                    uint32_t const   imports_count,
-                    VkFence * const  imports,
-                    bool const       wait_all,
-                    uint64_t const   timeout_ns,
-                    uint32_t * const executing_count)
-{
-  return spn_device_wait_for_fences(context->device,
-                                    imports_count,
-                                    imports,
-                                    wait_all,
-                                    timeout_ns,
-                                    executing_count);
 }
 
 //

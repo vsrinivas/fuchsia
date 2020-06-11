@@ -37,9 +37,10 @@ struct spn_device
     {
       struct
       {
-        struct spn_allocator_device_perm drw;    // device read-write
-        struct spn_allocator_device_perm hw_dr;  // host write / device read
-        struct spn_allocator_device_perm hr_dw;  // host read / device write
+        struct spn_allocator_device_perm drw;     // device read-write
+        struct spn_allocator_device_perm hw_dr;   // host write / device read once
+        struct spn_allocator_device_perm hrw_dr;  // host read-write / device read once
+        struct spn_allocator_device_perm hr_dw;   // host read / device write once
       } perm;
 
       struct
@@ -76,38 +77,22 @@ spn_device_get_timeout_ns(struct spn_device * const device);
 //
 
 spn_result_t
-spn_device_wait_for_fences(struct spn_device * const device,
-                           uint32_t const            imports_count,
-                           VkFence * const           imports,
-                           bool const                wait_all,
-                           uint64_t const            timeout_ns,
-                           uint32_t *                executing_count);
+spn_device_wait_all(struct spn_device * const device,
+                    bool const                wait_all,
+                    char const * const        label_name);
 
 spn_result_t
-spn_device_wait_all(struct spn_device * const device, bool const wait_all);
-
-spn_result_t
-spn_device_wait(struct spn_device * const device);
+spn_device_wait(struct spn_device * const device, char const * const label_name);
 
 //
 //
 //
 
-#ifdef SPN_DEVICE_DEBUG_WAIT_VERBOSE
+void
+spn_debug_utils_cmd_begin(VkCommandBuffer cb, char const * const label_name);
 
-spn_result_t
-spn_device_wait_verbose(struct spn_device * const device,
-                        char const * const        file_line,
-                        char const * const        func_name);
-
-#define SPN_DEVICE_WAIT(device_)                                                                   \
-  spn_device_wait_verbose(device_, __FILE__ ":" STRINGIFY_MACRO(__LINE__) ":", __func__)
-
-#else
-
-#define SPN_DEVICE_WAIT(device_) spn_device_wait(device_)
-
-#endif
+void
+spn_debug_utils_cmd_end(VkCommandBuffer cb);
 
 //
 //

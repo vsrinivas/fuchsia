@@ -94,6 +94,7 @@
 #define SPN_VK_DS_ID_PLACE           place
 #define SPN_VK_DS_ID_STYLING         styling
 #define SPN_VK_DS_ID_SURFACE         surface
+#define SPN_VK_DS_ID_RECLAIM         reclaim
 
 #define SPN_VK_GLSL_DS_EXPAND()                                                                        \
   SPN_VK_GLSL_DS_STATUS    (SPN_EMPTY,SPN_EMPTY);                                                      \
@@ -105,7 +106,8 @@
   SPN_VK_GLSL_DS_TTCKS     (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY);                                            \
   SPN_VK_GLSL_DS_PLACE     (SPN_EMPTY,SPN_EMPTY);                                                      \
   SPN_VK_GLSL_DS_STYLING   (SPN_EMPTY,SPN_EMPTY);                                                      \
-  SPN_VK_GLSL_DS_SURFACE   (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY);
+  SPN_VK_GLSL_DS_SURFACE   (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY);                                            \
+  SPN_VK_GLSL_DS_RECLAIM   (SPN_EMPTY,SPN_EMPTY);
 
 #define SPN_VK_DS_EXPAND()                                                            \
   SPN_VK_DS_EXPAND_X(0 ,SPN_VK_DS_ID_STATUS,          SPN_VK_DS_STATUS())             \
@@ -117,9 +119,10 @@
   SPN_VK_DS_EXPAND_X(6 ,SPN_VK_DS_ID_TTCKS,           SPN_VK_DS_TTCKS())              \
   SPN_VK_DS_EXPAND_X(7 ,SPN_VK_DS_ID_PLACE,           SPN_VK_DS_PLACE())              \
   SPN_VK_DS_EXPAND_X(8 ,SPN_VK_DS_ID_STYLING,         SPN_VK_DS_STYLING())            \
-  SPN_VK_DS_EXPAND_X(9 ,SPN_VK_DS_ID_SURFACE,         SPN_VK_DS_SURFACE())
+  SPN_VK_DS_EXPAND_X(9 ,SPN_VK_DS_ID_SURFACE,         SPN_VK_DS_SURFACE())            \
+  SPN_VK_DS_EXPAND_X(10,SPN_VK_DS_ID_RECLAIM,         SPN_VK_DS_RECLAIM())
 
-#define SPN_VK_DS_COUNT  10  // this is validated with a static assert
+#define SPN_VK_DS_COUNT  11  // this is validated with a static assert
 
 //
 // DESCRIPTOR SET: STATUS
@@ -187,7 +190,7 @@
 #define SPN_VK_BINDING_BP_HOST_MAP    2
 #define SPN_VK_BINDING_BP_DEBUG       3
 
-#define SPN_VK_DS_BLOCK_POOL()                                                                                            \
+#define SPN_VK_DS_BLOCK_POOL()                                                                        \
   SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_BLOCK_POOL, SPN_VK_BINDING_BP_IDS,      bp_ids)        \
   SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_BLOCK_POOL, SPN_VK_BINDING_BP_BLOCKS,   bp_blocks)     \
   SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_BLOCK_POOL, SPN_VK_BINDING_BP_HOST_MAP, bp_host_map)   \
@@ -238,7 +241,7 @@
 #define SPN_VK_BINDING_PC_ALLOC       0
 #define SPN_VK_BINDING_PC_RING        1
 
-#define SPN_VK_DS_PATHS_COPY()                                                                                                  \
+#define SPN_VK_DS_PATHS_COPY()                                                                       \
   SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_PATHS_COPY, SPN_VK_BINDING_PC_ALLOC, pc_alloc)        \
   SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_PATHS_COPY, SPN_VK_BINDING_PC_RING,  pc_ring)
 
@@ -261,7 +264,7 @@
 #define SPN_VK_BINDING_FILL_SCAN      2
 #define SPN_VK_BINDING_RAST_CMDS      3
 
-#define SPN_VK_DS_RASTERIZE()                                                                                                   \
+#define SPN_VK_DS_RASTERIZE()                                                                      \
   SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_RASTERIZE, SPN_VK_BINDING_FILL_CMDS,  fill_cmds)    \
   SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_RASTERIZE, SPN_VK_BINDING_FILL_QUADS, fill_quads)   \
   SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_RASTERIZE, SPN_VK_BINDING_FILL_SCAN,  fill_scan)    \
@@ -296,7 +299,7 @@
 //
 #define SPN_VK_BINDING_TTRKS          0
 
-#define SPN_VK_DS_TTRKS()                                                               \
+#define SPN_VK_DS_TTRKS()                                               \
   SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_TTRKS, SPN_VK_BINDING_TTRKS, ttrks)
 
 #define SPN_VK_GLSL_DS_TTRKS(idx,mq_ttrks_meta,mq_ttrks_count,mq_ttrks_keys)                    \
@@ -330,7 +333,7 @@
 
 #define SPN_VK_BINDING_TTCKS          0
 
-#define SPN_VK_DS_TTCKS()                                                               \
+#define SPN_VK_DS_TTCKS()                                               \
   SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_TTCKS, SPN_VK_BINDING_TTCKS, ttcks)
 
 #define SPN_VK_GLSL_DS_TTCKS(idx,mq_keys,mq_offsets)                            \
@@ -339,7 +342,7 @@
     mq_keys    SPN_MEMBER_FARRAY_UINT(ttcks_count,4);                           \
     mq_offsets SPN_MEMBER_FARRAY_UINT(offsets_count,4);                         \
     SPN_VK_GLSL_ALIGN_GPU_SEGMENT()                                             \
-    mq_offsets SPN_MEMBER_FARRAY_UINT(offsets,(1<<SPN_TTCK_HI_BITS_YX));        \
+    mq_offsets SPN_MEMBER_FARRAY_UINT(offsets,(1<<SPN_TTCK_HI_BITS_XY));        \
     mq_keys    SPN_MEMBER_VARRAY_UVEC2(ttcks_keys);                             \
   };
 
@@ -351,7 +354,7 @@
 
 #define SPN_VK_BINDING_PLACE          0
 
-#define SPN_VK_DS_PLACE()                                                               \
+#define SPN_VK_DS_PLACE()                                               \
   SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_PLACE, SPN_VK_BINDING_PLACE, place)
 
 #define SPN_VK_GLSL_DS_PLACE(idx,mq_cmds)                       \
@@ -366,7 +369,7 @@
 
 #define SPN_VK_BINDING_STYLING        0
 
-#define SPN_VK_DS_STYLING()                                                                     \
+#define SPN_VK_DS_STYLING()                                             \
   SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_STYLING, SPN_VK_BINDING_STYLING, styling)
 
 #define SPN_VK_GLSL_DS_STYLING(idx,mq_styling)                  \
@@ -381,13 +384,28 @@
 
 #define SPN_VK_BINDING_SURFACE        0 // STORAGE_IMAGE
 
-#define SPN_VK_DS_SURFACE()                                                             \
+#define SPN_VK_DS_SURFACE()                                             \
   SPN_VK_DESC_TYPE_STORAGE_IMAGE(SPN_VK_DS_ID_SURFACE, SPN_VK_BINDING_SURFACE, surface)
 
 #define SPN_VK_GLSL_DS_SURFACE(idx,mq_surface,surface_type)     \
   SPN_VK_GLSL_LAYOUT_IMAGE2D(SPN_VK_DS_ID_SURFACE,idx,          \
                              SPN_VK_BINDING_SURFACE,            \
                              surface_type,surface);
+
+//
+// DESCRIPTOR SET: RECLAIM
+//
+
+#define SPN_VK_BINDING_RECLAIM        0
+
+#define SPN_VK_DS_RECLAIM()                                             \
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_RECLAIM, SPN_VK_BINDING_RECLAIM, reclaim)
+
+#define SPN_VK_GLSL_DS_RECLAIM(idx,mq_ring)                     \
+  SPN_VK_GLSL_LAYOUT_BUFFER(SPN_VK_DS_ID_RECLAIM,idx,           \
+                            SPN_VK_BINDING_RECLAIM,ring) {      \
+    mq_ring SPN_MEMBER_VARRAY_UINT(ring);                       \
+  };
 
 /////////////////////////////////////////////////////////////////
 //
@@ -415,7 +433,7 @@
 #define SPN_VK_GLSL_PUSH_KERNEL_BLOCK_POOL_INIT()       \
   SPN_VK_PUSH_UINT(bp_size)
 
-#define SPN_VK_GLSL_DECL_KERNEL_BLOCK_POOL_INIT()                               \
+#define SPN_VK_GLSL_DECL_KERNEL_BLOCK_POOL_INIT()                       \
   SPN_VK_GLSL_DS_BLOCK_POOL(0,readwrite,writeonly,writeonly,writeonly); \
   SPN_VK_GLSL_PUSH(SPN_VK_GLSL_PUSH_KERNEL_BLOCK_POOL_INIT());
 
@@ -477,8 +495,8 @@
 #define SPN_VK_GLSL_DECL_KERNEL_FILLS_SCAN()                              \
   SPN_VK_GLSL_DS_BLOCK_POOL_UVEC4(0,readonly,readonly,readonly,readonly); \
   SPN_VK_GLSL_DS_RASTERIZE       (1,                                      \
-                                  readwrite,noaccess,                     \
-                                  noaccess,noaccess,noaccess,             \
+                                  readonly,noaccess,                      \
+                                  noaccess,readwrite,writeonly,           \
                                   noaccess);                              \
   SPN_VK_GLSL_PUSH(SPN_VK_GLSL_PUSH_KERNEL_FILLS_SCAN());
 
@@ -796,32 +814,40 @@
 // KERNEL: PATHS RECLAIM
 //
 
-#define SPN_VK_GLSL_PUSH_KERNEL_PATHS_RECLAIM()                                 \
-  SPN_VK_PUSH_UINT(bp_mask)                                                     \
-  SPN_VK_PUSH_UINT_VARRAY(path_ids,SPN_DEVICE_PATHS_RECLAIM_IDS_SIZE)
+#define SPN_VK_GLSL_PUSH_KERNEL_PATHS_RECLAIM()                         \
+  SPN_VK_PUSH_UINT(bp_mask)                                             \
+  SPN_VK_PUSH_UINT(ring_size)                                           \
+  SPN_VK_PUSH_UINT(ring_head)                                           \
+  SPN_VK_PUSH_UINT(ring_span)
 
-#define SPN_VK_GLSL_DECL_KERNEL_PATHS_RECLAIM()                           \
-  SPN_VK_GLSL_DS_BLOCK_POOL(0,readwrite,readwrite,readonly,readonly);     \
+#define SPN_VK_GLSL_DECL_KERNEL_PATHS_RECLAIM()                         \
+  SPN_VK_GLSL_DS_BLOCK_POOL(0,readwrite,readwrite,readonly,readonly);   \
+  SPN_VK_GLSL_DS_RECLAIM(1,readonly);                                   \
   SPN_VK_GLSL_PUSH(SPN_VK_GLSL_PUSH_KERNEL_PATHS_RECLAIM());
 
 #define SPN_VK_HOST_DECL_KERNEL_PATHS_RECLAIM()                          \
   SPN_VK_HOST_DS(SPN_VK_P_ID_PATHS_RECLAIM,0,SPN_VK_DS_ID_BLOCK_POOL)    \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_PATHS_RECLAIM,1,SPN_VK_DS_ID_RECLAIM)       \
   SPN_VK_HOST_PUSH(SPN_VK_P_ID_PATHS_RECLAIM,SPN_VK_GLSL_PUSH_KERNEL_PATHS_RECLAIM())
 
 //
 // KERNEL: RASTERS RECLAIM
 //
 
-#define SPN_VK_GLSL_PUSH_KERNEL_RASTERS_RECLAIM()                                       \
-  SPN_VK_PUSH_UINT(bp_mask)                                                             \
-  SPN_VK_PUSH_UINT_VARRAY(raster_ids,SPN_DEVICE_RASTERS_RECLAIM_IDS_SIZE)
+#define SPN_VK_GLSL_PUSH_KERNEL_RASTERS_RECLAIM()                       \
+  SPN_VK_PUSH_UINT(bp_mask)                                             \
+  SPN_VK_PUSH_UINT(ring_size)                                           \
+  SPN_VK_PUSH_UINT(ring_head)                                           \
+  SPN_VK_PUSH_UINT(ring_span)
 
-#define SPN_VK_GLSL_DECL_KERNEL_RASTERS_RECLAIM()                     \
-  SPN_VK_GLSL_DS_BLOCK_POOL(0,readwrite,readwrite,readonly,readonly); \
+#define SPN_VK_GLSL_DECL_KERNEL_RASTERS_RECLAIM()                       \
+  SPN_VK_GLSL_DS_BLOCK_POOL(0,readwrite,readwrite,readonly,readonly);   \
+  SPN_VK_GLSL_DS_RECLAIM(1,readonly);                                   \
   SPN_VK_GLSL_PUSH(SPN_VK_GLSL_PUSH_KERNEL_RASTERS_RECLAIM());
 
-#define SPN_VK_HOST_DECL_KERNEL_RASTERS_RECLAIM()                                               \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERS_RECLAIM,0,SPN_VK_DS_ID_BLOCK_POOL)                         \
+#define SPN_VK_HOST_DECL_KERNEL_RASTERS_RECLAIM()                       \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERS_RECLAIM,0,SPN_VK_DS_ID_BLOCK_POOL) \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERS_RECLAIM,1,SPN_VK_DS_ID_RECLAIM)    \
   SPN_VK_HOST_PUSH(SPN_VK_P_ID_RASTERS_RECLAIM,SPN_VK_GLSL_PUSH_KERNEL_RASTERS_RECLAIM())
 
 //

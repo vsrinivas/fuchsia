@@ -242,29 +242,40 @@ void
 spn_ttrk_to_ttsk(const uvec2 rk, out uvec2 sk)
 {
   //
-  // Convert TTRK to pseudo-TTSK
+  // Convert from a TTRK to a nearly correct TTSK:
   //
-  // TTRK (32-BIT COMPARE) (DEFAULT)
+  // TTRK (64-BIT COMPARE)
   //
-  //  0                                                                   63
-  //  | TTSB_ID | NEW_X | NEW_Y |  EXTRA  |   X  |   Y  | RASTER COHORT ID |
-  //  +---------+-------+-------+---------+------+------+------------------+
-  //  |    27   |   1   |   1   | 3 [0x7] |  12  |  12  |        8         |
+  //  0                                                                63
+  //  | TTSB_ID | NEW_X | NEW_Y | X_LO | X_HI |   Y  | RASTER COHORT ID |
+  //  +---------+-------+-------+------+------+------+------------------+
+  //  |    27   |   1   |   1   |   3  |   9  |  12  |        11        |
   //
-  //  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  //  TO:
   //
-  //  0                            63
-  //  | TTSB ID |   SPAN  |  X |  Y |
-  //  +---------+---------+----+----+
-  //  |    27   | 13 [<0] | 12 | 12 |
+  //  0                                             63
+  //  | TTSB ID | NEW_X | NEW_Y | SPAN_REM |  X |  Y |
+  //  +---------+-------+-------+----------+----+----+
+  //  |    27   |   1   |   1   | 11 [<0]  | 12 | 12 |
   //
   //
-  // NOTE: The [-1] span is relaxed to really only needing bit 31
+  // NOTE: The [-1] span is relaxed to really only need bit 31
   // enabled.  This works because TTSK and TTPK keys are now
-  // segregated.
+  // segregated.  For now, the high 8 bits of the span are lit.
   //
-  sk[0] = rk[0];  // for now, inherit the TTRK dword unmodified
-  sk[1] = rk[1] << SPN_TTXK_HI_OFFSET_YX;
+  // This results in:
+  //
+  //  0                                                     63
+  //  | TTSB ID | NEW_X | NEW_Y | UNUSED | SPAN_HI |  X |  Y |
+  //  +---------+-------+-------+--------+---------+----+----+
+  //  |    27   |   1   |   1   |    3   |  8 (=1) | 12 | 12 |
+  //
+  sk[0] = rk[0];
+  sk[1] = SPN_TTXK_HI_MASK_SPAN | (rk[1] << SPN_TTRK_HI_BITS_COHORT);  // TTSK.SPAN < 0
+
+  const uint x_lo = SPN_BITFIELD_EXTRACT(rk[0], SPN_TTRK_LO_OFFSET_X, SPN_TTRK_LO_BITS_X);
+
+  sk[1] = SPN_BITFIELD_INSERT(sk[1], x_lo, SPN_TTXK_HI_OFFSET_X, SPN_TTRK_LO_BITS_X);
 }
 
 //
@@ -617,6 +628,7 @@ main()
   if ((gl_SubgroupInvocationID >= SPN_RP_INFO_OFFSET_SK_READS) &&  //
       (gl_SubgroupInvocationID <= SPN_RP_INFO_OFFSET_PK_READS))
     {
+      // NOTE: highp = mediump - undefined
       const uint iid = gl_SubgroupInvocationID - SPN_RP_INFO_OFFSET_SK_READS;
 
       info[0] = ttrks_meta.alloc[cid][iid];
@@ -630,6 +642,7 @@ main()
   if ((gl_SubgroupInvocationID >= SPN_RP_INFO_OFFSET_SK_READS - 4) &&  //
       (gl_SubgroupInvocationID <= SPN_RP_INFO_OFFSET_PK_READS - 4))
     {
+      // NOTE: highp = mediump - undefined
       const uint iid = gl_SubgroupInvocationID - SPN_RP_INFO_OFFSET_SK_READS - 4;
 
       info[1] = ttrks_meta.alloc[cid][iid];
@@ -822,6 +835,9 @@ main()
           // default to an invalid key
           uvec2 sk = SPN_TTXK_INVALID;
 
+          //
+          // DEBUG
+          //
           if (rk_is_valid)
             {
               // try to be branchless
@@ -904,7 +920,7 @@ main()
           //     2) from: max lane of Y less than x_lsb / ELSE previous 'to'
           //     3) if y_lsb was found: zero
           //     4) accumulate [from,to]
-          //     5) if x_lsb was found: store to TTPK(yx[to]-yx[from])
+          //     5) if x_lsb was found: store to TTPK(xy[to]-xy[from])
           //     6) mask off x_lsb and y_lsb lanes [0,to)
           //
           // Note that this isn't precise and may accumulate more TTSB
@@ -947,7 +963,7 @@ main()
                   // Y followed by X
                   sk_iid_from = sk_iid_from_new_y;
 
-                  // there is a new YX coordinate
+                  // there is a new XY coordinate
                   sk_hi_from = subgroupShuffle(SPN_TTXK_GET_HI(sk), sk_iid_from);
                 }
 
@@ -979,7 +995,7 @@ main()
                   spn_ttpb_store(ttpb_id, ttp);
 
                   // both are on same Y tile line and to > from
-                  SPN_SUBGROUP_UNIFORM uint span = (sk_hi_to - sk_hi_from) >> SPN_TTXK_HI_OFFSET_YX;
+                  SPN_SUBGROUP_UNIFORM uint span = (sk_hi_to - sk_hi_from) >> SPN_TTXK_HI_OFFSET_XY;
 
                   // set TTPK span
                   SPN_TTXK_SET_SPAN(ttpk, span);
@@ -1038,6 +1054,7 @@ main()
 
                   if (gl_SubgroupInvocationID >= 1)
                     {
+                      // NOTE: highp = highp + mediump - 1;
                       sk_blocks = bp_ids[(info_sk_reads + gl_SubgroupInvocationID - 1) & bp_mask];
                     }
 
@@ -1065,6 +1082,23 @@ main()
     SPN_SUBGROUP_UNIFORM const uint pk_block0  = subgroupShuffle(pk_blocks, pk_blocks_next);
     SPN_SUBGROUP_UNIFORM const uint pk_bp_base = pk_block0 * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
     uint                            pk_bp_off  = pk_off + gl_SubgroupInvocationID;
+
+    //
+    // DEBUG
+    //
+#if 0
+    {
+      uint debug_base = 0;
+
+      if (gl_SubgroupInvocationID == 0)
+        debug_base = atomicAdd(bp_debug_count[0], 2 * SPN_RP_SUBGROUP_SIZE);
+
+      debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
+
+      bp_debug[debug_base + 0 * SPN_RP_SUBGROUP_SIZE] = 0xFEEDFACE;
+      bp_debug[debug_base + 1 * SPN_RP_SUBGROUP_SIZE] = pk_bp_base + pk_bp_off;
+    }
+#endif
 
     for (; pk_bp_off < SPN_BLOCK_POOL_BLOCK_QWORDS; pk_bp_off += SPN_RP_SUBGROUP_SIZE)
       {

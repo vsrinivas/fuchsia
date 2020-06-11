@@ -9,15 +9,18 @@
 #include "handle_pool.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "block_pool.h"
 #include "common/macros.h"
 #include "common/vk/assert.h"
+#include "common/vk/barrier.h"
 #include "core_vk.h"
 #include "device.h"
 #include "dispatch.h"
 #include "queue_pool.h"
+#include "ring.h"
 #include "spinel_assert.h"
 #include "vk.h"
 #include "vk_target.h"
@@ -111,63 +114,7 @@ union spn_handle_refcnt
 STATIC_ASSERT_MACRO_1(sizeof(union spn_handle_refcnt) == sizeof(spn_handle_refcnt_hd));
 
 //
-//
-//
-
-typedef enum spn_handle_pool_reclaim_type_e
-{
-  SPN_HANDLE_POOL_RECLAIM_TYPE_PATH,
-  SPN_HANDLE_POOL_RECLAIM_TYPE_RASTER,
-  SPN_HANDLE_POOL_RECLAIM_TYPE_COUNT
-} spn_handle_pool_reclaim_type_e;
-
-struct spn_handle_pool_br
-{
-  uint32_t block;
-  uint32_t rem;
-};
-
-//
-//
-//
-
-struct spn_handle_pool
-{
-  struct
-  {
-    spn_handle_t *            extent;  // array of individual host handles -- segmented into blocks
-    union spn_handle_refcnt * refcnts; // array of reference counts indexed by a handle
-    uint32_t                  count;   // total number of handles
-  } handle;
-
-  struct
-  {
-    uint32_t *                indices; // block indices
-    uint32_t                  size;    // number of handles in a block
-
-    uint32_t                  count;   // total number of indices
-
-    struct
-    {
-      uint32_t                avail;   // blocks with handles
-      uint32_t                empty;   // blocks with no handles
-    } rem;
-
-  } block;
-
-  struct
-  {
-    struct spn_handle_pool_br acquire;
-    struct spn_handle_pool_br reclaim[SPN_HANDLE_POOL_RECLAIM_TYPE_COUNT];
-    //
-    // FIXME(allanmac): see below -- verify pading of the reclaim[]
-    // array
-    //
-  } wip;
-};
-
-//
-// make sure these sizes match
+// make sure these sizes always match
 //
 
 STATIC_ASSERT_MACRO_1(sizeof(struct spn_path)   == sizeof(spn_handle_t));
@@ -190,44 +137,588 @@ union spn_rasters_to_handles
 };
 
 //
-// Maximum reclamation size in bytes
+//
 //
 
-#define SPN_HANDLE_POOL_MAX_PUSH_SIZE  256
+struct spn_handle_pool_vk_dbi_dm
+{
+  VkDescriptorBufferInfo dbi;
+  VkDeviceMemory         dm;
+};
+
+//
+//
+//
+
+struct spn_handle_pool_handle_ring
+{
+  spn_handle_t *  extent;
+  struct spn_ring ring;
+};
+
+
+//
+//
+//
+
+struct spn_handle_pool_dispatch
+{
+  uint32_t head;
+  uint32_t span;
+
+  bool     complete;
+};
+
+//
+//
+//
+
+struct spn_handle_pool_dispatch_ring
+{
+  struct spn_handle_pool_dispatch * extent;
+  struct spn_ring                   ring;
+};
+
+//
+//
+//
+
+typedef void (*spn_handle_pool_reclaim_pfn_flush)(struct spn_device * const device);
+
+struct spn_handle_pool_reclaim
+{
+  spn_handle_pool_reclaim_pfn_flush    pfn_flush;
+
+  struct spn_handle_pool_vk_dbi_dm     vk;
+  struct spn_handle_pool_handle_ring   mapped;
+  struct spn_handle_pool_dispatch_ring dispatches;
+};
+
+//
+//
+//
+
+struct spn_handle_pool
+{
+  // ring of handles
+  struct spn_handle_pool_handle_ring   handles;
+
+  // array of reference counts indexed by a handle
+  union spn_handle_refcnt *            refcnts;
+
+
+  struct spn_handle_pool_reclaim       paths;
+  struct spn_handle_pool_reclaim       rasters;
+};
+
+//
+//
+//
+
+struct spn_handle_pool_reclaim_complete_payload
+{
+  struct spn_device *               device;
+  struct spn_handle_pool_reclaim *  reclaim;
+  struct spn_handle_pool_dispatch * dispatch;
+  struct spn_vk_ds_reclaim_t        ds_reclaim;
+};
 
 //
 // clang-format on
 //
 
-//
-// Sanity check for push constants
-//
-
-#ifndef NDEBUG
-
-void
-spn_device_handle_pool_assert_reclaim_size(struct spn_vk_target_config const * const config)
+static struct spn_handle_pool_dispatch *
+spn_handle_pool_reclaim_dispatch_head(struct spn_handle_pool_reclaim * const reclaim)
 {
-  // make sure these remain the same
-  uint32_t const push_size_paths   = config->p.push_sizes.named.paths_reclaim;
-  uint32_t const push_size_rasters = config->p.push_sizes.named.rasters_reclaim;
-
-  // double-check these two sizes match
-  assert(push_size_paths == push_size_rasters);
-
-  // double-check they're less than the constant
-  assert(push_size_paths <= SPN_HANDLE_POOL_MAX_PUSH_SIZE);
-
-  // reclaim size matches the push constant size
-  uint32_t const reclaim_size =
-    (push_size_paths - OFFSETOF_MACRO(struct spn_vk_push_paths_reclaim, path_ids)) /
-    sizeof(spn_handle_t);
-
-  assert(reclaim_size == config->reclaim.size.paths);
-  assert(reclaim_size == config->reclaim.size.rasters);
+  return (reclaim->dispatches.extent + reclaim->dispatches.ring.head);
 }
 
-#endif
+static struct spn_handle_pool_dispatch *
+spn_handle_pool_reclaim_dispatch_tail(struct spn_handle_pool_reclaim * const reclaim)
+{
+  return (reclaim->dispatches.extent + reclaim->dispatches.ring.tail);
+}
+
+//
+//
+//
+
+static void
+spn_handle_pool_reclaim_dispatch_init(struct spn_handle_pool_reclaim * const reclaim)
+{
+  struct spn_handle_pool_dispatch * const wip = spn_handle_pool_reclaim_dispatch_head(reclaim);
+
+  *wip = (struct spn_handle_pool_dispatch){ .head     = reclaim->mapped.ring.head,
+                                            .span     = 0,
+                                            .complete = false };
+}
+
+//
+//
+//
+
+static void
+spn_handle_pool_reclaim_dispatch_drop(struct spn_handle_pool_reclaim * const reclaim)
+{
+  struct spn_ring * const ring = &reclaim->dispatches.ring;
+
+  spn_ring_drop_1(ring);
+}
+
+//
+//
+//
+
+static void
+spn_handle_pool_reclaim_dispatch_acquire(struct spn_handle_pool_reclaim * const reclaim,
+                                         struct spn_device * const              device)
+{
+  struct spn_ring * const ring = &reclaim->dispatches.ring;
+
+  while (spn_ring_is_empty(ring))
+    {
+      spn(device_wait(device, __func__));
+    }
+
+  spn_handle_pool_reclaim_dispatch_init(reclaim);
+}
+
+//
+// See Vulkan specification's "Required Limits" section.
+//
+
+// clang-format off
+#define SPN_VK_MAX_NONCOHERENT_ATOM_SIZE    256
+#define SPN_VK_MAX_NONCOHERENT_ATOM_HANDLES (SPN_VK_MAX_NONCOHERENT_ATOM_SIZE / sizeof(spn_handle_t))
+// clang-format on
+
+//
+//
+//
+
+static void
+spn_handle_pool_reclaim_create(struct spn_handle_pool_reclaim * const reclaim,
+                               struct spn_device * const              device,
+                               uint32_t const                         count_handles,
+                               uint32_t                               count_dispatches)
+{
+  //
+  // allocate device ring
+  //
+  spn_ring_init(&reclaim->mapped.ring, count_handles);
+
+  uint32_t const count_handles_ru = ROUND_UP_POW2_MACRO(count_handles,  //
+                                                        SPN_VK_MAX_NONCOHERENT_ATOM_HANDLES);
+
+  VkDeviceSize const size_ru = sizeof(*reclaim->mapped.extent) * count_handles_ru;
+
+  spn_allocator_device_perm_alloc(&device->allocator.device.perm.hrw_dr,
+                                  &device->environment,
+                                  size_ru,
+                                  NULL,
+                                  &reclaim->vk.dbi,
+                                  &reclaim->vk.dm);
+
+  //
+  // map device ring
+  //
+  vk(MapMemory(device->environment.d,
+               reclaim->vk.dm,
+               0,
+               VK_WHOLE_SIZE,
+               0,
+               (void **)&reclaim->mapped.extent));
+
+  //
+  // allocate and init dispatch ring
+  //
+  spn_ring_init(&reclaim->dispatches.ring, count_dispatches);
+
+  size_t const size_dispatches = sizeof(*reclaim->dispatches.extent) * count_dispatches;
+
+  reclaim->dispatches.extent = spn_allocator_host_perm_alloc(&device->allocator.host.perm,
+                                                             SPN_MEM_FLAGS_READ_WRITE,
+                                                             size_dispatches);
+
+  //
+  // init first dispatch
+  //
+  spn_handle_pool_reclaim_dispatch_init(reclaim);
+}
+
+//
+//
+//
+
+static void
+spn_handle_pool_reclaim_dispose(struct spn_handle_pool_reclaim * const reclaim,
+                                struct spn_device * const              device)
+{
+  //
+  // free host allocations
+  //
+  spn_allocator_host_perm_free(&device->allocator.host.perm, reclaim->dispatches.extent);
+
+  //
+  // free device allocations
+  //
+  spn_allocator_device_perm_free(&device->allocator.device.perm.hrw_dr,
+                                 &device->environment,
+                                 &reclaim->vk.dbi,
+                                 reclaim->vk.dm);
+}
+
+//
+//
+//
+
+static void
+spn_handle_pool_copy(struct spn_ring * const    from_ring,
+                     spn_handle_t const * const from,
+                     struct spn_ring * const    to_ring,
+                     spn_handle_t * const       to,
+                     uint32_t                   span)
+{
+  while (span > 0)
+    {
+      uint32_t from_nowrap = spn_ring_tail_nowrap(from_ring);
+      uint32_t to_nowrap   = spn_ring_tail_nowrap(to_ring);
+      uint32_t min_nowrap  = MIN_MACRO(uint32_t, from_nowrap, to_nowrap);
+      uint32_t span_nowrap = MIN_MACRO(uint32_t, min_nowrap, span);
+
+      memcpy(to + to_ring->tail, from + from_ring->tail, sizeof(*to) * span_nowrap);
+
+      spn_ring_release_n(from_ring, span_nowrap);
+      spn_ring_release_n(to_ring, span_nowrap);
+
+      span -= span_nowrap;
+    }
+}
+
+//
+//
+//
+
+static void
+spn_handle_pool_reclaim_complete(void * const pfn_payload)
+{
+  struct spn_handle_pool_reclaim_complete_payload const * const payload = pfn_payload;
+
+  // immediately release descriptor set
+  spn_vk_ds_release_reclaim(payload->device->instance, payload->ds_reclaim);
+
+  struct spn_handle_pool * const         handle_pool = payload->device->handle_pool;
+  struct spn_handle_pool_reclaim * const reclaim     = payload->reclaim;
+  struct spn_handle_pool_dispatch *      dispatch    = payload->dispatch;
+
+  //
+  // If the dispatch is the tail of the ring then release as many
+  // completed dispatch records as possible.
+  //
+  // Note that kernels can complete in any order so the release records
+  // need to be added to release ring slots in order.
+  //
+  if (reclaim->mapped.ring.tail == dispatch->head)
+    {
+      while (true)
+        {
+          // copy from mapped to handles
+          spn_handle_pool_copy(&reclaim->mapped.ring,
+                               reclaim->mapped.extent,
+                               &handle_pool->handles.ring,
+                               handle_pool->handles.extent,
+                               dispatch->span);
+
+          // release the dispatch
+          spn_ring_release_n(&reclaim->dispatches.ring, 1);
+
+          // any dispatches in flight?
+          if (spn_ring_is_full(&reclaim->dispatches.ring))
+            break;
+
+          // get next dispatch
+          dispatch = spn_handle_pool_reclaim_dispatch_tail(reclaim);
+
+          // is this dispatch still in flight?
+          if (!dispatch->complete)
+            break;
+        }
+    }
+  else
+    {
+      // out-of-order completion
+      dispatch->complete = true;
+    }
+}
+
+//
+// Flush the noncoherent mapped ring
+//
+
+static void
+spn_handle_pool_reclaim_flush_mapped(VkDevice       vk_d,  //
+                                     VkDeviceMemory ring,
+                                     uint32_t const size,
+                                     uint32_t const head,
+                                     uint32_t const span)
+{
+  uint32_t const idx_max = head + span;
+  uint32_t const idx_hi  = MIN_MACRO(uint32_t, idx_max, size);
+  uint32_t const span_hi = idx_hi - head;
+
+  uint32_t const idx_rd    = ROUND_DOWN_POW2_MACRO(head, SPN_VK_MAX_NONCOHERENT_ATOM_HANDLES);
+  uint32_t const idx_hi_ru = ROUND_UP_POW2_MACRO(idx_hi, SPN_VK_MAX_NONCOHERENT_ATOM_HANDLES);
+
+  VkMappedMemoryRange mmr[2];
+
+  mmr[0].sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+  mmr[0].pNext  = NULL;
+  mmr[0].memory = ring;
+  mmr[0].offset = sizeof(spn_handle_t) * idx_rd;
+  mmr[0].size   = sizeof(spn_handle_t) * (idx_hi_ru - idx_rd);
+
+  if (span <= span_hi)
+    {
+      vk(FlushMappedMemoryRanges(vk_d, 1, mmr));
+    }
+  else
+    {
+      uint32_t const span_lo    = span - span_hi;
+      uint32_t const span_lo_ru = ROUND_UP_POW2_MACRO(span_lo, SPN_VK_MAX_NONCOHERENT_ATOM_HANDLES);
+
+      mmr[1].sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+      mmr[1].pNext  = NULL;
+      mmr[1].memory = ring;
+      mmr[1].offset = 0;
+      mmr[1].size   = sizeof(spn_handle_t) * span_lo_ru;
+
+      vk(FlushMappedMemoryRanges(vk_d, 2, mmr));
+    }
+}
+
+//
+// NOTE: the flush_paths() and flush_rasters() functions are nearly
+// indentical but they might diverge in the future so there is no need
+// to refactor.
+//
+
+static void
+spn_device_handle_pool_flush_paths(struct spn_device * const device)
+{
+  struct spn_handle_pool * const          handle_pool = device->handle_pool;
+  struct spn_handle_pool_reclaim * const  reclaim     = &handle_pool->paths;
+  struct spn_handle_pool_dispatch * const wip = spn_handle_pool_reclaim_dispatch_head(reclaim);
+
+  // anything to do?
+  if (wip->span == 0)
+    return;
+
+  //
+  // if ring is not coherent then flush
+  //
+  struct spn_vk * const                     instance = device->instance;
+  struct spn_vk_target_config const * const config   = spn_vk_get_config(instance);
+
+  if ((config->allocator.device.hrw_dr.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
+    {
+      spn_handle_pool_reclaim_flush_mapped(device->environment.d,
+                                           reclaim->vk.dm,
+                                           reclaim->mapped.ring.size,
+                                           wip->head,
+                                           wip->span);
+    }
+
+  //
+  // acquire an id for this stage
+  //
+  spn_dispatch_id_t id;
+
+  spn(device_dispatch_acquire(device, SPN_DISPATCH_STAGE_RECLAIM_PATHS, &id));
+
+  //
+  // bind descriptor set, push constants and pipeline
+  //
+  VkCommandBuffer cb = spn_device_dispatch_get_cb(device, id);
+
+  // bind global BLOCK_POOL descriptor set
+  spn_vk_ds_bind_paths_reclaim_block_pool(instance, cb, spn_device_block_pool_get_ds(device));
+
+  // acquire RECLAIM descriptor set
+  struct spn_vk_ds_reclaim_t ds_r;
+
+  spn_vk_ds_acquire_reclaim(instance, device, &ds_r);
+
+  // store the dbi
+  *spn_vk_ds_get_reclaim_reclaim(instance, ds_r) = reclaim->vk.dbi;
+
+  // update RECLAIM descriptor set
+  spn_vk_ds_update_reclaim(instance, &device->environment, ds_r);
+
+  // bind RECLAIM descriptor set
+  spn_vk_ds_bind_paths_reclaim_reclaim(instance, cb, ds_r);
+
+  // init and bind push constants
+  struct spn_vk_push_paths_reclaim const push = {
+
+    .bp_mask   = spn_device_block_pool_get_mask(device),
+    .ring_size = reclaim->mapped.ring.size,
+    .ring_head = wip->head,
+    .ring_span = wip->span
+  };
+
+  spn_vk_p_push_paths_reclaim(instance, cb, &push);
+
+  // bind the RECLAIM_PATHS pipeline
+  spn_vk_p_bind_paths_reclaim(instance, cb);
+
+  //
+  // FIXME(allanmac): dispatch based on workgroup size
+  //
+
+  // dispatch one workgroup per reclamation block
+  vkCmdDispatch(cb, wip->span, 1, 1);
+
+  //
+  // set completion routine
+  //
+  struct spn_handle_pool_reclaim_complete_payload * const payload =
+    spn_device_dispatch_set_completion(device,
+                                       id,
+                                       spn_handle_pool_reclaim_complete,
+                                       sizeof(*payload));
+
+  payload->device     = device;
+  payload->ds_reclaim = ds_r;
+  payload->reclaim    = reclaim;
+  payload->dispatch   = wip;
+
+  //
+  // the current dispatch is now "in flight" so drop it
+  //
+  spn_handle_pool_reclaim_dispatch_drop(reclaim);
+
+  //
+  // submit the dispatch
+  //
+  spn_device_dispatch_submit(device, id);
+
+  //
+  // acquire and initialize the next
+  //
+  spn_handle_pool_reclaim_dispatch_acquire(reclaim, device);
+}
+
+//
+// NOTE: the flush_paths() and flush_rasters() functions are nearly
+// indentical but they might diverge in the future so there is no need
+// to refactor.
+//
+
+static void
+spn_device_handle_pool_flush_rasters(struct spn_device * const device)
+{
+  struct spn_handle_pool * const          handle_pool = device->handle_pool;
+  struct spn_handle_pool_reclaim * const  reclaim     = &handle_pool->rasters;
+  struct spn_handle_pool_dispatch * const wip = spn_handle_pool_reclaim_dispatch_head(reclaim);
+
+  // anything to do?
+  if (wip->span == 0)
+    return;
+
+  //
+  // if ring is not coherent then flush
+  //
+  struct spn_vk * const                     instance = device->instance;
+  struct spn_vk_target_config const * const config   = spn_vk_get_config(instance);
+
+  if ((config->allocator.device.hrw_dr.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
+    {
+      spn_handle_pool_reclaim_flush_mapped(device->environment.d,
+                                           reclaim->vk.dm,
+                                           reclaim->mapped.ring.size,
+                                           wip->head,
+                                           wip->span);
+    }
+
+  //
+  // acquire an id for this stage
+  //
+  spn_dispatch_id_t id;
+
+  spn(device_dispatch_acquire(device, SPN_DISPATCH_STAGE_RECLAIM_RASTERS, &id));
+
+  //
+  // bind descriptor set, push constants and pipeline
+  //
+  VkCommandBuffer cb = spn_device_dispatch_get_cb(device, id);
+
+  // bind global BLOCK_POOL descriptor set
+  spn_vk_ds_bind_rasters_reclaim_block_pool(instance, cb, spn_device_block_pool_get_ds(device));
+
+  // acquire RECLAIM descriptor set
+  struct spn_vk_ds_reclaim_t ds_r;
+
+  spn_vk_ds_acquire_reclaim(instance, device, &ds_r);
+
+  // store the dbi
+  *spn_vk_ds_get_reclaim_reclaim(instance, ds_r) = reclaim->vk.dbi;
+
+  // update RECLAIM descriptor set
+  spn_vk_ds_update_reclaim(instance, &device->environment, ds_r);
+
+  // bind RECLAIM descriptor set
+  spn_vk_ds_bind_rasters_reclaim_reclaim(instance, cb, ds_r);
+
+  // init and bind push constants
+  struct spn_vk_push_rasters_reclaim const push = {
+
+    .bp_mask   = spn_device_block_pool_get_mask(device),
+    .ring_size = reclaim->mapped.ring.size,
+    .ring_head = wip->head,
+    .ring_span = wip->span
+  };
+
+  spn_vk_p_push_rasters_reclaim(instance, cb, &push);
+
+  // bind the RECLAIM_RASTERS pipeline
+  spn_vk_p_bind_rasters_reclaim(instance, cb);
+
+  //
+  // FIXME(allanmac): dispatch based on workgroup size
+  //
+
+  // dispatch one workgroup per reclamation block
+  vkCmdDispatch(cb, wip->span, 1, 1);
+
+  //
+  // set completion routine
+  //
+  struct spn_handle_pool_reclaim_complete_payload * const payload =
+    spn_device_dispatch_set_completion(device,
+                                       id,
+                                       spn_handle_pool_reclaim_complete,
+                                       sizeof(*payload));
+
+  payload->device     = device;
+  payload->reclaim    = reclaim;
+  payload->dispatch   = wip;
+  payload->ds_reclaim = ds_r;
+
+  //
+  // the current dispatch is now sealed so drop it
+  //
+  spn_handle_pool_reclaim_dispatch_drop(reclaim);
+
+  //
+  // submit the dispatch
+  //
+  spn_device_dispatch_submit(device, id);
+
+  //
+  // acquire and initialize the next dispatch
+  //
+  spn_handle_pool_reclaim_dispatch_acquire(reclaim, device);
+}
 
 //
 //
@@ -236,6 +727,9 @@ spn_device_handle_pool_assert_reclaim_size(struct spn_vk_target_config const * c
 void
 spn_device_handle_pool_create(struct spn_device * const device, uint32_t const handle_count)
 {
+  //
+  // allocate the structure
+  //
   struct spn_handle_pool * const handle_pool =
     spn_allocator_host_perm_alloc(&device->allocator.host.perm,
                                   SPN_MEM_FLAGS_READ_WRITE,
@@ -243,91 +737,52 @@ spn_device_handle_pool_create(struct spn_device * const device, uint32_t const h
 
   device->handle_pool = handle_pool;
 
+  //
+  //
+  // allocate and init handles
+  //
+  spn_ring_init(&handle_pool->handles.ring, handle_count);
+
+  size_t const size_handles = sizeof(*handle_pool->handles.extent) * handle_count;
+
+  handle_pool->handles.extent = spn_allocator_host_perm_alloc(&device->allocator.host.perm,
+                                                              SPN_MEM_FLAGS_READ_WRITE,
+                                                              size_handles);
+  for (uint32_t ii = 0; ii < handle_count; ii++)
+    {
+      handle_pool->handles.extent[ii] = ii;
+    }
+
+  //
+  // allocate and init refcnts
+  //
+  size_t const size_refcnts = sizeof(*handle_pool->refcnts) * handle_count;
+
+  handle_pool->refcnts = spn_allocator_host_perm_alloc(&device->allocator.host.perm,
+                                                       SPN_MEM_FLAGS_READ_WRITE,
+                                                       size_refcnts);
+  memset(handle_pool->refcnts, 0, size_refcnts);
+
+  //
+  // initialize the reclamation rings
+  //
   struct spn_vk_target_config const * const config = spn_vk_get_config(device->instance);
 
-#ifndef NDEBUG
-  spn_device_handle_pool_assert_reclaim_size(config);
-#endif
+  spn_handle_pool_reclaim_create(&handle_pool->paths,
+                                 device,
+                                 config->reclaim.size.paths,
+                                 config->reclaim.size.dispatches);
 
-  uint32_t const reclaim_size = config->reclaim.size.paths;
-  uint32_t const blocks       = (handle_count + reclaim_size - 1) / reclaim_size;
-
-  //
-  // FIXME(allanmac): the "block pad" may necessary for this allocator.
-  // I'll revisit this once this code is heavily exercised during
-  // integration testing.  Verify that have one extra block per reclaim
-  // type is enough.
-  //
-  uint32_t const blocks_padded = blocks + SPN_HANDLE_POOL_RECLAIM_TYPE_COUNT;
-
-  uint32_t const handles        = reclaim_size * blocks;
-  uint32_t const handles_padded = reclaim_size * blocks_padded;
+  spn_handle_pool_reclaim_create(&handle_pool->rasters,
+                                 device,
+                                 config->reclaim.size.rasters,
+                                 config->reclaim.size.dispatches);
 
   //
-  // allocate handle extent with padding -- (handles_padded >= handles)
+  // initialize the flush pfns
   //
-  handle_pool->handle.extent =
-    spn_allocator_host_perm_alloc(&device->allocator.host.perm,
-                                  SPN_MEM_FLAGS_READ_WRITE,
-                                  handles_padded * sizeof(*handle_pool->handle.extent));
-
-  // initialize handles -- (handles <= handles_padded)
-  for (uint32_t ii = 0; ii < handles; ii++)
-    {
-      handle_pool->handle.extent[ii] = ii;
-    }
-
-  //
-  // allocate refcnts
-  //
-  size_t const size_refcnts = handles * sizeof(*handle_pool->handle.refcnts);
-
-  handle_pool->handle.refcnts = spn_allocator_host_perm_alloc(&device->allocator.host.perm,
-                                                              SPN_MEM_FLAGS_READ_WRITE,
-                                                              size_refcnts);
-  // zero refcnts
-  memset(handle_pool->handle.refcnts, 0, size_refcnts);
-
-  //
-  // save the count
-  //
-  handle_pool->handle.count = handles;
-
-  //
-  // allocate blocks of handles
-  //
-  size_t const size_indices = blocks_padded * sizeof(*handle_pool->block.indices);
-
-  handle_pool->block.indices = spn_allocator_host_perm_alloc(&device->allocator.host.perm,
-                                                             SPN_MEM_FLAGS_READ_WRITE,
-                                                             size_indices);
-
-  // initialize block accounting
-  for (uint32_t ii = 0; ii < blocks_padded; ii++)
-    {
-      handle_pool->block.indices[ii] = ii;
-    }
-
-  handle_pool->block.size      = reclaim_size;  // reclaim size for both paths and rasters
-  handle_pool->block.count     = blocks_padded;
-  handle_pool->block.rem.avail = blocks;
-  handle_pool->block.rem.empty = blocks_padded - blocks;
-
-  handle_pool->wip.acquire.rem = 0;
-
-  // initialize reclaim/acquire
-  for (uint32_t ii = 0; ii < SPN_HANDLE_POOL_RECLAIM_TYPE_COUNT; ii++)
-    handle_pool->wip.reclaim[ii].rem = 0;
-}
-
-//
-//
-//
-
-uint32_t
-spn_device_handle_pool_get_allocated_handle_count(struct spn_device * const device)
-{
-  return device->handle_pool->handle.count;
+  handle_pool->paths.pfn_flush   = spn_device_handle_pool_flush_paths;
+  handle_pool->rasters.pfn_flush = spn_device_handle_pool_flush_rasters;
 }
 
 //
@@ -337,59 +792,32 @@ spn_device_handle_pool_get_allocated_handle_count(struct spn_device * const devi
 void
 spn_device_handle_pool_dispose(struct spn_device * const device)
 {
-  struct spn_allocator_host_perm * const perm        = &device->allocator.host.perm;
-  struct spn_handle_pool * const         handle_pool = device->handle_pool;
-
-  spn_allocator_host_perm_free(perm, handle_pool->block.indices);
-  spn_allocator_host_perm_free(perm, handle_pool->handle.refcnts);
-  spn_allocator_host_perm_free(perm, handle_pool->handle.extent);
-
-  spn_allocator_host_perm_free(perm, device->handle_pool);
-}
-
-//
-//
-//
-
-static uint32_t
-spn_device_handle_pool_block_acquire_pop(struct spn_device * const      device,
-                                         struct spn_handle_pool * const handle_pool)
-{
-  uint32_t avail;
-
-  while ((avail = handle_pool->block.rem.avail) == 0)
-    {
-      SPN_DEVICE_WAIT(device);
-    }
-
-  uint32_t idx = avail - 1;
-
-  handle_pool->block.rem.avail = idx;
-
-  return handle_pool->block.indices[idx];
-}
-
-static uint32_t
-spn_device_handle_pool_block_reclaim_pop(struct spn_device * const      device,
-                                         struct spn_handle_pool * const handle_pool)
-{
-  uint32_t empty;
+  struct spn_handle_pool * const handle_pool = device->handle_pool;
 
   //
-  // FIXME(allanmac): Pretty sure we will (1) never wait and (2) never
-  // want to wait here.  So remove this and ensure there are always
-  // enough blocks.
+  // There is currently no need to drain the reclamation rings before
+  // disposal because the entire context is being disposed.  Any
+  // in-flight submissions will be drained elsewhere.
   //
-  while ((empty = handle_pool->block.rem.empty) == 0)
-    {
-      SPN_DEVICE_WAIT(device);
-    }
 
-  uint32_t idx = handle_pool->block.count - empty;
+  // free reclamation rings
+  spn_handle_pool_reclaim_dispose(&handle_pool->rasters, device);
+  spn_handle_pool_reclaim_dispose(&handle_pool->paths, device);
 
-  handle_pool->block.rem.empty = empty - 1;
+  // free host allocations
+  spn_allocator_host_perm_free(&device->allocator.host.perm, handle_pool->refcnts);
+  spn_allocator_host_perm_free(&device->allocator.host.perm, handle_pool->handles.extent);
+  spn_allocator_host_perm_free(&device->allocator.host.perm, handle_pool);
+}
 
-  return handle_pool->block.indices[idx];
+//
+//
+//
+
+uint32_t
+spn_device_handle_pool_get_handle_count(struct spn_device * const device)
+{
+  return device->handle_pool->handles.ring.size;
 }
 
 //
@@ -397,258 +825,223 @@ spn_device_handle_pool_block_reclaim_pop(struct spn_device * const      device,
 //
 
 static void
-spn_device_handle_pool_block_acquire_push(struct spn_handle_pool * const handle_pool,
-                                          uint32_t const                 block)
+spn_device_handle_pool_reclaim_h(struct spn_device * const              device,
+                                 struct spn_handle_pool_reclaim * const reclaim,
+                                 union spn_handle_refcnt * const        refcnts,
+                                 spn_handle_t const *                   handles,
+                                 uint32_t                               count)
 {
-  uint32_t const idx              = handle_pool->block.rem.avail++;
-  handle_pool->block.indices[idx] = block;
-}
-
-static void
-spn_device_handle_pool_block_reclaim_push(struct spn_handle_pool * const handle_pool,
-                                          uint32_t const                 block)
-{
-  uint32_t const idx              = handle_pool->block.count - ++handle_pool->block.rem.empty;
-  handle_pool->block.indices[idx] = block;
-}
-
-//
-//
-//
-
-#if !defined(NDEBUG) && 0
-#define SPN_HANDLE_POOL_DEBUG
-#endif
-
-//
-//
-//
-
-struct spn_handle_pool_reclaim_complete_payload
-{
-  struct spn_handle_pool * handle_pool;
-  uint32_t                 block;
-
-#ifdef SPN_HANDLE_POOL_DEBUG
-  spn_handle_pool_reclaim_type_e reclaim_type;
-#endif
-};
-
-//
-//
-//
-
-static void
-spn_handle_pool_reclaim_complete(void * const pfn_payload)
-{
-  struct spn_handle_pool_reclaim_complete_payload const * const payload     = pfn_payload;
-  struct spn_handle_pool * const                                handle_pool = payload->handle_pool;
-
-#ifdef SPN_HANDLE_POOL_DEBUG
-  static const char * const reclaim_type_to_str[] = {
-    STRINGIFY_MACRO(SPN_HANDLE_POOL_RECLAIM_TYPE_PATH),
-    STRINGIFY_MACRO(SPN_HANDLE_POOL_RECLAIM_TYPE_RASTER)
-  };
-  fprintf(stderr, "%s : %s\n", __func__, reclaim_type_to_str[payload->reclaim_type]);
-#endif
-
-  spn_device_handle_pool_block_acquire_push(handle_pool, payload->block);
-}
-
-//
-// Launch reclamation grid:
-//
-// - acquire a command buffer
-// - acquire reclamation descriptor set -- always zero for the block pool!
-// - bind the block pool
-// - initialize push constants
-// - append the push constants
-// - bind the pipeline
-//
-
-static void
-spn_device_bind_paths_reclaim(struct spn_device * const            device,
-                              struct spn_handle_pool const * const handle_pool,
-                              spn_handle_t const * const           handles,
-                              VkCommandBuffer                      cb)
-{
-  struct spn_vk * const               instance = device->instance;
-  struct spn_vk_ds_block_pool_t const ds       = spn_device_block_pool_get_ds(device);
-
-  spn_vk_ds_bind_paths_reclaim_block_pool(instance, cb, ds);
-
-  union
-  {
-    struct spn_vk_push_paths_reclaim reclaim;
-    uint8_t                          bytes[SPN_HANDLE_POOL_MAX_PUSH_SIZE];
-  } push;
-
-  push.reclaim.bp_mask = spn_device_block_pool_get_mask(device);
+  struct spn_vk_target_config const * const config = spn_vk_get_config(device->instance);
 
   //
-  // FIXME -- any way to avoid this copy?  Only if the push constant
-  // structure mirrored the reclamation structure so probably not.
+  // add handles to linear ring spans until done
   //
-  memcpy(push.reclaim.path_ids, handles, sizeof(*handles) * handle_pool->block.size);
-
-  spn_vk_p_push_paths_reclaim(instance, cb, &push.reclaim);
-
-  spn_vk_p_bind_paths_reclaim(instance, cb);
-}
-
-static void
-spn_device_bind_rasters_reclaim(struct spn_device * const            device,
-                                struct spn_handle_pool const * const handle_pool,
-                                spn_handle_t const * const           handles,
-                                VkCommandBuffer                      cb)
-{
-  struct spn_vk * const               instance = device->instance;
-  struct spn_vk_ds_block_pool_t const ds       = spn_device_block_pool_get_ds(device);
-
-  spn_vk_ds_bind_rasters_reclaim_block_pool(instance, cb, ds);
-
-  union
-  {
-    struct spn_vk_push_rasters_reclaim reclaim;
-    uint8_t                            bytes[SPN_HANDLE_POOL_MAX_PUSH_SIZE];
-  } push;
-
-  push.reclaim.bp_mask = spn_device_block_pool_get_mask(device);
-
-  memcpy(push.reclaim.raster_ids, handles, sizeof(*handles) * handle_pool->block.size);
-
-  spn_vk_p_push_rasters_reclaim(instance, cb, &push.reclaim);
-
-  spn_vk_p_bind_rasters_reclaim(instance, cb);
-}
-
-//
-// FIXME(allanmac): make the reclamation API hand over a pointer to the
-// entire reclamation block instead of adding a handle one at a time.
-//
-
-static void
-spn_device_handle_pool_reclaim(struct spn_device * const            device,
-                               struct spn_handle_pool * const       handle_pool,
-                               spn_handle_pool_reclaim_type_e const reclaim_type,
-                               spn_handle_t const                   handle)
-{
-  struct spn_handle_pool_br * const reclaim = handle_pool->wip.reclaim + reclaim_type;
-
-  if (reclaim->rem == 0)
-    {
-      reclaim->block = spn_device_handle_pool_block_reclaim_pop(device, handle_pool);
-      reclaim->rem   = handle_pool->block.size;
-    }
-
-  reclaim->rem -= 1;
-
-  uint32_t const handle_idx = reclaim->block * handle_pool->block.size + reclaim->rem;
-
-  spn_handle_t * const handles = handle_pool->handle.extent + handle_idx;
-
-  *handles = handle;
-
-  if (reclaim->rem == 0)
+  while (count > 0)
     {
       //
-      // acquire a dispatch id
+      // how many ring slots are available?
       //
-      bool const is_path = (reclaim_type == SPN_HANDLE_POOL_RECLAIM_TYPE_PATH);
+      uint32_t head_nowrap;
 
-      spn_dispatch_stage_e const stage =
-        is_path ? SPN_DISPATCH_STAGE_RECLAIM_PATHS : SPN_DISPATCH_STAGE_RECLAIM_RASTERS;
-
-      spn_dispatch_id_t id;
-
-      spn(device_dispatch_acquire(device, stage, &id));
-
-      //
-      // bind descriptor set, push constants and pipeline
-      //
-      VkCommandBuffer cb = spn_device_dispatch_get_cb(device, id);
-
-      if (reclaim_type == SPN_HANDLE_POOL_RECLAIM_TYPE_PATH)
+      while ((head_nowrap = spn_ring_head_nowrap(&reclaim->mapped.ring)) == 0)
         {
-          spn_device_bind_paths_reclaim(device, handle_pool, handles, cb);
-        }
-      else
-        {
-          spn_device_bind_rasters_reclaim(device, handle_pool, handles, cb);
+          // no need to flush here -- a flush would've already occurred
+          spn(device_wait(device, __func__));
         }
 
-      // dispatch one workgroup per reclamation block
-      vkCmdDispatch(cb, 1, 1, 1);
+      //
+      // copy all releasable handles to the linear ring span
+      //
+      spn_handle_t * extent = reclaim->mapped.extent + reclaim->mapped.ring.head;
+      uint32_t       rem    = head_nowrap;
+
+      do
+        {
+          count -= 1;
+
+          spn_handle_t const              handle     = *handles++;
+          union spn_handle_refcnt * const refcnt_ptr = refcnts + handle;
+          union spn_handle_refcnt         refcnt     = *refcnt_ptr;
+
+          refcnt.h--;
+
+          *refcnt_ptr = refcnt;
+
+          if (refcnt.hd == 0)
+            {
+              *extent++ = handle;
+
+              if (--rem == 0)
+                break;
+            }
+      } while (count > 0);
 
       //
-      // on completion:
+      // were no handles appended?
       //
-      // - return reclamation descriptor set
-      // - return block index to handle pool
-      //
-      struct spn_handle_pool_reclaim_complete_payload * const payload =
-        spn_device_dispatch_set_completion(device,
-                                           id,
-                                           spn_handle_pool_reclaim_complete,
-                                           sizeof(*payload));
+      uint32_t const span = head_nowrap - rem;
 
-      payload->handle_pool = handle_pool;
-      payload->block       = reclaim->block;
-
-#ifdef SPN_HANDLE_POOL_DEBUG
-      payload->reclaim_type = reclaim_type;
-#endif
+      if (span == 0)
+        return;
 
       //
-      // submit the dispatch
+      // update ring
       //
-      spn_device_dispatch_submit(device, id);
+      spn_ring_drop_n(&reclaim->mapped.ring, span);
 
-#ifdef SPN_HANDLE_POOL_DEBUG
-      fprintf(stderr, "%s\n", __func__);
-      spn(device_wait_all(device, true));
-#endif
+      struct spn_handle_pool_dispatch * const wip = spn_handle_pool_reclaim_dispatch_head(reclaim);
+
+      wip->span += span;
+
+      //
+      // flush?
+      //
+      if (wip->span >= config->reclaim.size.eager)
+        {
+          reclaim->pfn_flush(device);
+        }
     }
 }
 
 //
 //
+//
+
+static void
+spn_device_handle_pool_reclaim_d(struct spn_device * const              device,
+                                 struct spn_handle_pool_reclaim * const reclaim,
+                                 union spn_handle_refcnt * const        refcnts,
+                                 spn_handle_t const *                   handles,
+                                 uint32_t                               count)
+{
+  struct spn_vk_target_config const * const config = spn_vk_get_config(device->instance);
+
+  //
+  // add handles to linear ring spans until done
+  //
+  while (count > 0)
+    {
+      //
+      // how many ring slots are available?
+      //
+      uint32_t head_nowrap;
+
+      while ((head_nowrap = spn_ring_head_nowrap(&reclaim->mapped.ring)) == 0)
+        {
+          // no need to flush here -- a flush would've already occurred
+          spn(device_wait(device, __func__));
+        }
+
+      //
+      // copy all releasable handles to the linear ring span
+      //
+      spn_handle_t * extent = reclaim->mapped.extent + reclaim->mapped.ring.head;
+      uint32_t       rem    = head_nowrap;
+
+      do
+        {
+          count -= 1;
+
+          spn_handle_t const              handle     = *handles++;
+          union spn_handle_refcnt * const refcnt_ptr = refcnts + handle;
+          union spn_handle_refcnt         refcnt     = *refcnt_ptr;
+
+          refcnt.d--;
+
+          *refcnt_ptr = refcnt;
+
+          if (refcnt.hd == 0)
+            {
+              *extent++ = handle;
+
+              if (--rem == 0)
+                break;
+            }
+      } while (count > 0);
+
+      //
+      // were no handles appended?
+      //
+      uint32_t const span = head_nowrap - rem;
+
+      if (span == 0)
+        return;
+
+      //
+      // update ring
+      //
+      spn_ring_drop_n(&reclaim->mapped.ring, span);
+
+      struct spn_handle_pool_dispatch * const wip = spn_handle_pool_reclaim_dispatch_head(reclaim);
+
+      wip->span += span;
+
+      //
+      // flush?
+      //
+      if (wip->span >= config->reclaim.size.eager)
+        {
+          reclaim->pfn_flush(device);
+        }
+    }
+}
+
+//
+// NOTE(allanmac): A batch-oriented version of this function will likely
+// be required when the batch API is exposed.  For now, the Spinel API
+// is implicitly acquiring one handle at a time.
 //
 
 void
-spn_device_handle_pool_acquire(struct spn_device * const device, spn_handle_t * const handle)
+spn_device_handle_pool_acquire(struct spn_device * const device, spn_handle_t * const p_handle)
 {
   //
-  // FIXME(allanmac): running out of handles is almost always going to
-  // be *fatal*.  Think about how to surface this situation or simply
-  // kill the device... it's probably best to invoke spn_device_lost().
+  // FIXME(allanmac): Running out of handles usually implies the app is
+  // not reclaiming unused handles or the handle pool is too small.
+  // Either case can be considered fatal unless reclamations are in
+  // flight.
+  //
+  // This condition may need to be surfaced through the API ... or
+  // simply kill the device with spn_device_lost() and log the reason.
+  //
+  // A comprehensive solution can be surfaced *after* the block pool
+  // allocation becomes more precise.
   //
   struct spn_handle_pool * const handle_pool = device->handle_pool;
+  struct spn_ring * const        ring        = &handle_pool->handles.ring;
 
-  // need a new block of handles?
-  if (handle_pool->wip.acquire.rem == 0)
+  while (ring->rem == 0)
     {
-      handle_pool->wip.acquire.block =
-        spn_device_handle_pool_block_acquire_pop(device, handle_pool);
+      // flush both reclamation rings
+      bool const flushable_paths   = !spn_ring_is_full(&handle_pool->paths.mapped.ring);
+      bool const flushable_rasters = !spn_ring_is_full(&handle_pool->rasters.mapped.ring);
 
-      handle_pool->wip.acquire.rem = handle_pool->block.size;
+      if (!flushable_paths && !flushable_rasters)
+        {
+          spn_device_lost(device);
+        }
+      else
+        {
+          if (flushable_paths)
+            {
+              spn_device_handle_pool_flush_paths(device);
+            }
+
+          if (flushable_rasters)
+            {
+              spn_device_handle_pool_flush_rasters(device);
+            }
+
+          spn(device_wait(device, __func__));
+        }
     }
 
-  // pop handle from block
-  handle_pool->wip.acquire.rem -= 1;
+  uint32_t const     idx    = spn_ring_acquire_1(ring);
+  spn_handle_t const handle = handle_pool->handles.extent[idx];
 
-  uint32_t const handle_idx =
-    handle_pool->wip.acquire.block * handle_pool->block.size + handle_pool->wip.acquire.rem;
+  handle_pool->refcnts[handle] = (union spn_handle_refcnt){ .h = 1, .d = 1 };
 
-  *handle = handle_pool->handle.extent[handle_idx];
-
-  handle_pool->handle.refcnts[*handle] = (union spn_handle_refcnt){ .h = 1, .d = 1 };
-
-  // if the block is empty, put it on the reclamation stack
-  if (handle_pool->wip.acquire.rem == 0)
-    {
-      spn_device_handle_pool_block_reclaim_push(handle_pool, handle_pool->wip.acquire.block);
-    }
+  *p_handle = handle;
 }
 
 //
@@ -661,7 +1054,7 @@ spn_device_handle_pool_acquire(struct spn_device * const device, spn_handle_t * 
 //   - host refcnt is not zero
 //   - host refcnt is not at the maximum value
 //
-// After validation, retain the handles for the host
+// After validation, go ahead and retain the handles for the host.
 //
 
 static spn_result_t
@@ -670,8 +1063,8 @@ spn_device_handle_pool_validate_retain_h(struct spn_device * const  device,
                                          uint32_t                   count)
 {
   struct spn_handle_pool * const  handle_pool = device->handle_pool;
-  union spn_handle_refcnt * const refcnts     = handle_pool->handle.refcnts;
-  uint32_t const                  handle_max  = handle_pool->handle.count;
+  union spn_handle_refcnt * const refcnts     = handle_pool->refcnts;
+  uint32_t const                  handle_max  = handle_pool->handles.ring.size;
 
   for (uint32_t ii = 0; ii < count; ii++)
     {
@@ -683,8 +1076,7 @@ spn_device_handle_pool_validate_retain_h(struct spn_device * const  device,
         }
       else
         {
-          union spn_handle_refcnt * const refcnt_ptr = refcnts + handle;
-          union spn_handle_refcnt const   refcnt     = *refcnt_ptr;
+          union spn_handle_refcnt const refcnt = refcnts[handle];
 
           if (refcnt.h == 0)
             {
@@ -742,14 +1134,12 @@ spn_device_handle_pool_validate_retain_h_rasters(struct spn_device * const      
 //
 
 static spn_result_t
-spn_device_handle_pool_validate_release_h(struct spn_device * const            device,
-                                          spn_handle_t const * const           handles,
-                                          uint32_t                             count,
-                                          spn_handle_pool_reclaim_type_e const reclaim_type)
+spn_device_handle_pool_validate_release_h(struct spn_handle_pool * const  handle_pool,
+                                          union spn_handle_refcnt * const refcnts,
+                                          spn_handle_t const * const      handles,
+                                          uint32_t                        count)
 {
-  struct spn_handle_pool * const  handle_pool = device->handle_pool;
-  union spn_handle_refcnt * const refcnts     = handle_pool->handle.refcnts;
-  uint32_t const                  handle_max  = handle_pool->handle.count;
+  uint32_t const handle_max = handle_pool->handles.ring.size;
 
   //
   // validate
@@ -764,8 +1154,7 @@ spn_device_handle_pool_validate_release_h(struct spn_device * const            d
         }
       else
         {
-          union spn_handle_refcnt * const refcnt_ptr = refcnts + handle;
-          union spn_handle_refcnt const   refcnt     = *refcnt_ptr;
+          union spn_handle_refcnt const refcnt = refcnts[handle];
 
           if (refcnt.h == 0)
             {
@@ -775,58 +1164,57 @@ spn_device_handle_pool_validate_release_h(struct spn_device * const            d
     }
 
   //
-  // all the handles validated, so release them all..
+  // all the handles validated
   //
-  for (uint32_t ii = 0; ii < count; ii++)
-    {
-      spn_handle_t const handle = handles[ii];
-
-      refcnts[handle].h--;
-    }
-
-  //
-  // ... reclaim any that were zero -- this may block/spin
-  //
-  // TODO(allanmac): spn_device_handle_pool_reclaim(handles[])
-  //
-  //
-  for (uint32_t ii = 0; ii < count; ii++)
-    {
-      spn_handle_t const handle = handles[ii];
-
-      if (refcnts[handle].hd == 0)
-        {
-          spn_device_handle_pool_reclaim(device, handle_pool, reclaim_type, handle);
-        }
-    }
-
   return SPN_SUCCESS;
 }
 
-spn_result_t
-spn_device_handle_pool_validate_release_h_paths(struct spn_device * const     device,
-                                                struct spn_path const * const paths,
-                                                uint32_t const                count)
-{
-  union spn_paths_to_handles const p2h = { paths };
+//
+//
+//
 
-  return spn_device_handle_pool_validate_release_h(device,
-                                                   p2h.handles,
-                                                   count,
-                                                   SPN_HANDLE_POOL_RECLAIM_TYPE_PATH);
+spn_result_t
+spn_device_handle_pool_validate_release_h_paths(struct spn_device * const device,
+                                                struct spn_path const *   paths,
+                                                uint32_t                  count)
+{
+  struct spn_handle_pool * const   handle_pool = device->handle_pool;
+  union spn_handle_refcnt * const  refcnts     = handle_pool->refcnts;
+  union spn_paths_to_handles const p2h         = { paths };
+
+  spn_result_t const result = spn_device_handle_pool_validate_release_h(handle_pool,  //
+                                                                        refcnts,
+                                                                        p2h.handles,
+                                                                        count);
+
+  if (result == SPN_SUCCESS)
+    {
+      spn_device_handle_pool_reclaim_h(device, &handle_pool->paths, refcnts, p2h.handles, count);
+    }
+
+  return result;
 }
 
 spn_result_t
-spn_device_handle_pool_validate_release_h_rasters(struct spn_device * const       device,
-                                                  struct spn_raster const * const rasters,
-                                                  uint32_t const                  count)
+spn_device_handle_pool_validate_release_h_rasters(struct spn_device * const device,
+                                                  struct spn_raster const * rasters,
+                                                  uint32_t                  count)
 {
-  union spn_rasters_to_handles const r2h = { rasters };
+  struct spn_handle_pool * const     handle_pool = device->handle_pool;
+  union spn_handle_refcnt * const    refcnts     = handle_pool->refcnts;
+  union spn_rasters_to_handles const r2h         = { rasters };
 
-  return spn_device_handle_pool_validate_release_h(device,
-                                                   r2h.handles,
-                                                   count,
-                                                   SPN_HANDLE_POOL_RECLAIM_TYPE_RASTER);
+  spn_result_t const result = spn_device_handle_pool_validate_release_h(handle_pool,  //
+                                                                        refcnts,
+                                                                        r2h.handles,
+                                                                        count);
+
+  if (result == SPN_SUCCESS)
+    {
+      spn_device_handle_pool_reclaim_h(device, &handle_pool->rasters, refcnts, r2h.handles, count);
+    }
+
+  return result;
 }
 
 //
@@ -838,13 +1226,13 @@ spn_device_handle_pool_validate_release_h_rasters(struct spn_device * const     
 //
 
 static spn_result_t
-spn_device_handle_pool_validate_d(struct spn_device * const  device,
-                                  spn_handle_t const * const handles,
-                                  uint32_t const             count)
+spn_device_handle_pool_validate_retain_d(struct spn_device * const  device,
+                                         spn_handle_t const * const handles,
+                                         uint32_t const             count)
 {
   struct spn_handle_pool * const  handle_pool = device->handle_pool;
-  union spn_handle_refcnt * const refcnts     = handle_pool->handle.refcnts;
-  uint32_t const                  handle_max  = handle_pool->handle.count;
+  union spn_handle_refcnt * const refcnts     = handle_pool->refcnts;
+  uint32_t const                  handle_max  = handle_pool->handles.ring.size;
 
   for (uint32_t ii = 0; ii < count; ii++)
     {
@@ -856,8 +1244,7 @@ spn_device_handle_pool_validate_d(struct spn_device * const  device,
         }
       else
         {
-          union spn_handle_refcnt * const refcnt_ptr = refcnts + handle;
-          union spn_handle_refcnt const   refcnt     = *refcnt_ptr;
+          union spn_handle_refcnt const refcnt = refcnts[handle];
 
           if (refcnt.h == 0)
             {
@@ -880,7 +1267,7 @@ spn_device_handle_pool_validate_d_paths(struct spn_device * const     device,
 {
   union spn_paths_to_handles const p2h = { paths };
 
-  return spn_device_handle_pool_validate_d(device, p2h.handles, count);
+  return spn_device_handle_pool_validate_retain_d(device, p2h.handles, count);
 }
 
 spn_result_t
@@ -890,11 +1277,11 @@ spn_device_handle_pool_validate_d_rasters(struct spn_device * const       device
 {
   union spn_rasters_to_handles const r2h = { rasters };
 
-  return spn_device_handle_pool_validate_d(device, r2h.handles, count);
+  return spn_device_handle_pool_validate_retain_d(device, r2h.handles, count);
 }
 
 //
-// After validation, retain the handles for the device
+// After explicit validation, retain the handles for the device
 //
 
 static void
@@ -904,7 +1291,7 @@ spn_device_handle_pool_retain_d(struct spn_device * const  device,
 
 {
   struct spn_handle_pool * const  handle_pool = device->handle_pool;
-  union spn_handle_refcnt * const refcnts     = handle_pool->handle.refcnts;
+  union spn_handle_refcnt * const refcnts     = handle_pool->refcnts;
 
   for (uint32_t ii = 0; ii < count; ii++)
     {
@@ -935,70 +1322,31 @@ spn_device_handle_pool_retain_d_rasters(struct spn_device * const       device,
 }
 
 //
-// Release the pre-validated device-held handles
-//
-
-static void
-spn_device_handle_pool_release_d(struct spn_device * const            device,
-                                 spn_handle_pool_reclaim_type_e const reclaim_type,
-                                 spn_handle_t const * const           handles,
-                                 uint32_t const                       count)
-{
-  struct spn_handle_pool * const  handle_pool = device->handle_pool;
-  union spn_handle_refcnt * const refcnts     = handle_pool->handle.refcnts;
-
-  //
-  // TODO(allanmac): Change this loop to fill reclaim block directly
-  // to save a bunch of cycles.
-  //
-  // TODO(allanmac): In a future CL, evaluate if using separate
-  // iterations for invalidating the timeline events and decrementing
-  // the device-side count is a more performant approach.
-  //
-  // For now, let's keep it simple until we've integrated.
-  //
-  for (uint32_t ii = 0; ii < count; ii++)
-    {
-      spn_handle_t const handle = handles[ii];
-
-      //
-      // decrement the handle's device-side count
-      //
-      union spn_handle_refcnt * const refcnt_ptr = refcnts + handle;
-      union spn_handle_refcnt         refcnt     = *refcnt_ptr;
-
-      refcnt.d--;
-
-      *refcnt_ptr = refcnt;
-
-      //
-      // reclaim the handle?
-      //
-      if (refcnt.hd == 0)
-        {
-          spn_device_handle_pool_reclaim(device, handle_pool, reclaim_type, handle);
-        }
-    }
-}
-
-//
 // Release device-held spans of handles of known type
 //
 
 void
-spn_device_handle_pool_release_d_paths(struct spn_device * const  device,
-                                       spn_handle_t const * const handles,
-                                       uint32_t const             count)
+spn_device_handle_pool_release_d_paths(struct spn_device * const device,
+                                       spn_handle_t const *      handles,
+                                       uint32_t                  count)
 {
-  spn_device_handle_pool_release_d(device, SPN_HANDLE_POOL_RECLAIM_TYPE_PATH, handles, count);
+  struct spn_handle_pool * const         handle_pool = device->handle_pool;
+  struct spn_handle_pool_reclaim * const reclaim     = &handle_pool->paths;
+  union spn_handle_refcnt * const        refcnts     = handle_pool->refcnts;
+
+  spn_device_handle_pool_reclaim_d(device, reclaim, refcnts, handles, count);
 }
 
 void
-spn_device_handle_pool_release_d_rasters(struct spn_device * const  device,
-                                         spn_handle_t const * const handles,
-                                         uint32_t const             count)
+spn_device_handle_pool_release_d_rasters(struct spn_device * const device,
+                                         spn_handle_t const *      handles,
+                                         uint32_t                  count)
 {
-  spn_device_handle_pool_release_d(device, SPN_HANDLE_POOL_RECLAIM_TYPE_RASTER, handles, count);
+  struct spn_handle_pool * const         handle_pool = device->handle_pool;
+  struct spn_handle_pool_reclaim * const reclaim     = &handle_pool->rasters;
+  union spn_handle_refcnt * const        refcnts     = handle_pool->refcnts;
+
+  spn_device_handle_pool_reclaim_d(device, reclaim, refcnts, handles, count);
 }
 
 //
@@ -1006,40 +1354,50 @@ spn_device_handle_pool_release_d_rasters(struct spn_device * const  device,
 //
 
 void
-spn_device_handle_pool_release_ring_d_paths(struct spn_device * const  device,
-                                            spn_handle_t const * const paths,
-                                            uint32_t const             size,
-                                            uint32_t const             span,
-                                            uint32_t const             head)
+spn_device_handle_pool_release_ring_d_paths(struct spn_device * const device,
+                                            spn_handle_t const *      paths,
+                                            uint32_t const            size,
+                                            uint32_t const            head,
+                                            uint32_t const            span)
 {
-  uint32_t const count_lo = MIN_MACRO(uint32_t, head + span, size) - head;
+  struct spn_handle_pool * const         handle_pool = device->handle_pool;
+  struct spn_handle_pool_reclaim * const reclaim     = &handle_pool->paths;
+  union spn_handle_refcnt * const        refcnts     = handle_pool->refcnts;
 
-  spn_device_handle_pool_release_d_paths(device, paths + head, count_lo);
+  uint32_t const head_max = head + span;
+  uint32_t       count_lo = MIN_MACRO(uint32_t, head_max, size) - head;
+
+  spn_device_handle_pool_reclaim_d(device, reclaim, refcnts, paths + head, count_lo);
 
   if (span > count_lo)
     {
-      uint32_t const count_hi = span - count_lo;
+      uint32_t count_hi = span - count_lo;
 
-      spn_device_handle_pool_release_d_paths(device, paths, count_hi);
+      spn_device_handle_pool_reclaim_d(device, reclaim, refcnts, paths, count_hi);
     }
 }
 
 void
-spn_device_handle_pool_release_ring_d_rasters(struct spn_device * const  device,
-                                              spn_handle_t const * const rasters,
-                                              uint32_t const             size,
-                                              uint32_t const             span,
-                                              uint32_t const             head)
+spn_device_handle_pool_release_ring_d_rasters(struct spn_device * const device,
+                                              spn_handle_t const *      rasters,
+                                              uint32_t const            size,
+                                              uint32_t const            head,
+                                              uint32_t const            span)
 {
-  uint32_t const count_lo = MIN_MACRO(uint32_t, head + span, size) - head;
+  struct spn_handle_pool * const         handle_pool = device->handle_pool;
+  struct spn_handle_pool_reclaim * const reclaim     = &handle_pool->rasters;
+  union spn_handle_refcnt * const        refcnts     = handle_pool->refcnts;
 
-  spn_device_handle_pool_release_d_rasters(device, rasters + head, count_lo);
+  uint32_t const head_max = head + span;
+  uint32_t       count_lo = MIN_MACRO(uint32_t, head_max, size) - head;
+
+  spn_device_handle_pool_reclaim_d(device, reclaim, refcnts, rasters + head, count_lo);
 
   if (span > count_lo)
     {
-      uint32_t const count_hi = span - count_lo;
+      uint32_t count_hi = span - count_lo;
 
-      spn_device_handle_pool_release_d_rasters(device, rasters, count_hi);
+      spn_device_handle_pool_reclaim_d(device, reclaim, refcnts, rasters, count_hi);
     }
 }
 

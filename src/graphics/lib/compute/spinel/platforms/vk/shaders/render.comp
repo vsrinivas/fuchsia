@@ -371,7 +371,7 @@ shared uint lgf[SPN_LGF_COUNT];
 // clang-format on
 //
 
-SPN_SUBGROUP_UNIFORM uvec2 lgf_yxl;
+SPN_SUBGROUP_UNIFORM uvec2 lgf_lxy;
 SPN_SUBGROUP_UNIFORM uint  lgf_flags;
 SPN_SUBGROUP_UNIFORM uint  lgf_group_id;
 
@@ -558,7 +558,9 @@ spn_lgf_group_load()
   //
   // SHUFFLE
   //
-  const uint iid = gl_SubgroupInvocationID - SPN_LGF_GROUP_FIRST;
+  // highp = mediump - highp;
+  const uint lgf_group_first = SPN_LGF_GROUP_FIRST;
+  const uint iid             = gl_SubgroupInvocationID - lgf_group_first;
 
   if (iid < SPN_LGF_GROUP_LAST - SPN_LGF_GROUP_FIRST + 1)
     lgf[0] = styling[lgf_group_id + iid];
@@ -635,20 +637,20 @@ spn_lgf_load_parent_group()
 //
 
 bool
-spn_ttck_yxl_equal(const uvec2 a, SPN_SUBGROUP_UNIFORM const uvec2 yxl)
+spn_ttck_lxy_equal(const uvec2 a, SPN_SUBGROUP_UNIFORM const uvec2 lxy)
 {
   // FIXME FIXME
-  uvec2 c = a ^ yxl;
+  uvec2 c = a ^ lxy;
 
   return ((c[0] & SPN_TTCK_LO_MASK_LAYER) | c[1]) == 0;
 }
 
 SPN_SUBGROUP_UNIFORM
 bool
-spn_ttck_yxl_neq_uni(SPN_SUBGROUP_UNIFORM const uvec2 a, SPN_SUBGROUP_UNIFORM const uvec2 yxl)
+spn_ttck_lxy_neq_uni(SPN_SUBGROUP_UNIFORM const uvec2 a, SPN_SUBGROUP_UNIFORM const uvec2 lxy)
 {
   // FIXME FIXME
-  uvec2 c = a ^ yxl;
+  uvec2 c = a ^ lxy;
 
   c[0] = c[0] & SPN_TTCK_LO_MASK_LAYER;
 
@@ -656,25 +658,25 @@ spn_ttck_yxl_neq_uni(SPN_SUBGROUP_UNIFORM const uvec2 a, SPN_SUBGROUP_UNIFORM co
 }
 
 bool
-spn_ttck_hi_yx_equal(const uint a, SPN_SUBGROUP_UNIFORM const uint yxl_hi)
+spn_ttck_hi_xy_equal(const uint a, SPN_SUBGROUP_UNIFORM const uint lxy_hi)
 {
   // FIXME FIXME
-  return ((a ^ yxl_hi) & SPN_TTCK_HI_MASK_YX) == 0;
+  return ((a ^ lxy_hi) & SPN_TTCK_HI_MASK_XY) == 0;
 }
 
 SPN_SUBGROUP_UNIFORM
 bool
-spn_ttck_hi_yx_equal_uni(SPN_SUBGROUP_UNIFORM const uint a, SPN_SUBGROUP_UNIFORM const uint yxl_hi)
+spn_ttck_hi_xy_equal_uni(SPN_SUBGROUP_UNIFORM const uint a, SPN_SUBGROUP_UNIFORM const uint lxy_hi)
 {
   // FIXME FIXME
-  return ((a ^ yxl_hi) & SPN_TTCK_HI_MASK_YX) == 0;
+  return ((a ^ lxy_hi) & SPN_TTCK_HI_MASK_XY) == 0;
 }
 
 SPN_SUBGROUP_UNIFORM
 uint
-spn_ttck_get_layer_uni(SPN_SUBGROUP_UNIFORM const uvec2 yxl)
+spn_ttck_get_layer_uni(SPN_SUBGROUP_UNIFORM const uvec2 lxy)
 {
-  return SPN_TTCK_GET_LAYER(yxl);
+  return SPN_TTCK_GET_LAYER(lxy);
 }
 
 //
@@ -1482,8 +1484,8 @@ spn_tile_color_acc_over_background(SPN_SUBGROUP_UNIFORM const uint rg32,
 void
 spn_tile_color_acc_store_to_surface()
 {
-  SPN_SUBGROUP_UNIFORM const uint x_uni = SPN_TTCK_GET_X(lgf_yxl) * SPN_TILE_WIDTH;
-  SPN_SUBGROUP_UNIFORM const uint y_uni = SPN_TTCK_GET_Y(lgf_yxl) * SPN_TILE_HEIGHT;
+  SPN_SUBGROUP_UNIFORM const uint x_uni = SPN_TTCK_GET_X(lgf_lxy) * SPN_TILE_WIDTH;
+  SPN_SUBGROUP_UNIFORM const uint y_uni = SPN_TTCK_GET_Y(lgf_lxy) * SPN_TILE_HEIGHT;
 
   ivec2 xy = ivec2(x_uni + SPN_RENDER_SUBTILE_LANE_TO_X(gl_SubgroupInvocationID),
                    y_uni + SPN_RENDER_SUBTILE_LANE_TO_Y(gl_SubgroupInvocationID));
@@ -1508,8 +1510,8 @@ spn_tile_color_acc_store_to_surface()
 void
 spn_tile_color_acc_store_to_surface()
 {
-  SPN_SUBGROUP_UNIFORM const uint x_uni = SPN_TTCK_GET_X(lgf_yxl) * SPN_TILE_WIDTH;
-  SPN_SUBGROUP_UNIFORM const uint y_uni = SPN_TTCK_GET_Y(lgf_yxl) * SPN_TILE_HEIGHT;
+  SPN_SUBGROUP_UNIFORM const uint x_uni = SPN_TTCK_GET_X(lgf_lxy) * SPN_TILE_WIDTH;
+  SPN_SUBGROUP_UNIFORM const uint y_uni = SPN_TTCK_GET_Y(lgf_lxy) * SPN_TILE_HEIGHT;
 
   ivec2 xy = ivec2(y_uni + SPN_RENDER_SUBTILE_LANE_TO_Y(gl_SubgroupInvocationID),
                    x_uni + SPN_RENDER_SUBTILE_LANE_TO_X(gl_SubgroupInvocationID));
@@ -1618,12 +1620,12 @@ main()
 
     ttck_idx_next += SPN_RENDER_SUBGROUP_SIZE;
 
-    lgf_yxl[0] = subgroupShuffle(ttck_sg[0], ttck_lane) & SPN_TTCK_LO_MASK_LAYER;
-    lgf_yxl[1] = subgroupShuffle(ttck_sg[1], ttck_lane);
+    lgf_lxy[0] = subgroupShuffle(ttck_sg[0], ttck_lane) & SPN_TTCK_LO_MASK_LAYER;
+    lgf_lxy[1] = subgroupShuffle(ttck_sg[1], ttck_lane);
 
-    // bit-twiddle invalid keys so they mismatch: ~yx
+    // bit-twiddle invalid keys so they mismatch: ~xy
     if (!is_valid)
-      ttck_sg[1] = ~lgf_yxl[1];
+      ttck_sg[1] = ~lgf_lxy[1];
   }
 
 #elif defined(SPN_DEVICE_RENDER_TTCKS_USE_SHARED)
@@ -1653,10 +1655,10 @@ main()
     SPN_SUBGROUP_UNIFORM const uvec2 ttck_first = ttck_smem[ttck_lane];
 
     if (!is_valid)
-      ttck_smem[gl_SubgroupInvocationID][1] = ~ttck_first[1];  // ~yx
+      ttck_smem[gl_SubgroupInvocationID][1] = ~ttck_first[1];  // ~xy
 
-    lgf_yxl[0] = ttck_first[0] & SPN_TTCK_LO_MASK_LAYER;
-    lgf_yxl[1] = ttck_first[1];
+    lgf_lxy[0] = ttck_first[0] & SPN_TTCK_LO_MASK_LAYER;
+    lgf_lxy[1] = ttck_first[1];
   }
 
 #elif defined(SPN_DEVICE_RENDER_TTCKS_NO_SHARED)
@@ -1667,8 +1669,8 @@ main()
   SPN_SUBGROUP_UNIFORM uvec2 ttck_sgu;  // subgroup uniform TTCK key
   {
     ttck_sgu   = ttcks_keys[ttck_idx_next++];
-    lgf_yxl[0] = ttck_sgu[0] & SPN_TTCK_LO_MASK_LAYER;
-    lgf_yxl[1] = ttck_sgu[1];
+    lgf_lxy[0] = ttck_sgu[0] & SPN_TTCK_LO_MASK_LAYER;
+    lgf_lxy[1] = ttck_sgu[1];
   }
 
 #endif
@@ -1676,7 +1678,7 @@ main()
   //
   // evaluate the coarse clip as late as possible
   //
-  SPN_SUBGROUP_UNIFORM const uint ttck_x = SPN_TTCK_GET_X(lgf_yxl);
+  SPN_SUBGROUP_UNIFORM const uint ttck_x = SPN_TTCK_GET_X(lgf_lxy);
 
   if (ttck_x < render_clip[0])
     return;
@@ -1684,7 +1686,7 @@ main()
   if (ttck_x >= render_clip[2])
     return;
 
-  SPN_SUBGROUP_UNIFORM const uint ttck_y = SPN_TTCK_GET_Y(lgf_yxl);
+  SPN_SUBGROUP_UNIFORM const uint ttck_y = SPN_TTCK_GET_Y(lgf_lxy);
 
   if (ttck_y < render_clip[1])
     return;
@@ -1708,7 +1710,7 @@ main()
       spn_tile_smem_zero();
 
       // load the layer we're working on
-      SPN_SUBGROUP_UNIFORM const uint layer_id = spn_ttck_get_layer_uni(lgf_yxl);
+      SPN_SUBGROUP_UNIFORM const uint layer_id = spn_ttck_get_layer_uni(lgf_lxy);
 
       spn_lgf_layer_load(layer_id);
 
@@ -1728,8 +1730,8 @@ main()
           //
           // How many matches?  Note that matches will be contiguous.
           //
-          const bool                       yxl_equal = spn_ttck_yxl_equal(ttck_sg, lgf_yxl);
-          SPN_SUBGROUP_UNIFORM const uvec4 match     = subgroupBallot(yxl_equal);
+          const bool                       lxy_equal = spn_ttck_lxy_equal(ttck_sg, lgf_lxy);
+          SPN_SUBGROUP_UNIFORM const uvec4 match     = subgroupBallot(lxy_equal);
           SPN_SUBGROUP_UNIFORM uint        count     = subgroupBallotBitCount(match);
           SPN_SUBGROUP_UNIFORM uint        last      = 0;
 
@@ -1792,7 +1794,7 @@ main()
                       // NOTE(allanmac): POTENTIAL OPTIMIZATION -- It's
                       // not a requirement, but sorting against all
                       // 64-bits of the TTCK keys results in all PREFIX
-                      // keys being placed at the end of a YXL sequence.
+                      // keys being placed at the end of a LXY sequence.
                       //
                       const bool is_ttpb = SPN_TTCK_LO_IS_PREFIX(ttck_lo);
 
@@ -1816,7 +1818,7 @@ main()
             {
               // mark all keys invalid
               last       = 0;
-              ttck_sg[1] = ~lgf_yxl[1];
+              ttck_sg[1] = ~lgf_lxy[1];
 
               if (ttck_idx_next <= ttcks_count_minus_1)
                 ttck_sg = ttcks_keys[ttck_idx_next];
@@ -1830,14 +1832,14 @@ main()
             subgroupShuffle(ttck_sg[1], last)
           };
 
-          // is this a new YXL?
-          if (spn_ttck_yxl_neq_uni(ttck_first, lgf_yxl))
+          // is this a new LXY?
+          if (spn_ttck_lxy_neq_uni(ttck_first, lgf_lxy))
             {
-              if (spn_ttck_hi_yx_equal_uni(ttck_first[1], lgf_yxl[1]))
+              if (spn_ttck_hi_xy_equal_uni(ttck_first[1], lgf_lxy[1]))
                 {
-                  // this is a new layer and the ttck is the new yxl
-                  lgf_yxl[0] = ttck_first[0] & SPN_TTCK_LO_MASK_LAYER;
-                  lgf_yxl[1] = ttck_first[1];
+                  // this is a new layer and the ttck is the new lxy
+                  lgf_lxy[0] = ttck_first[0] & SPN_TTCK_LO_MASK_LAYER;
+                  lgf_lxy[1] = ttck_first[1];
                 }
               else
                 {
@@ -1857,14 +1859,14 @@ main()
           SPN_SUBGROUP_UNIFORM const uint ttck_lane = (ttck_idx_next & SPN_RENDER_SUBGROUP_MASK);
           SPN_SUBGROUP_UNIFORM const uvec2 ttck = ttck_smem[ttck_lane];
 
-          // is this a new YXL?
-          if (spn_ttck_yxl_neq_uni(ttck, lgf_yxl))
+          // is this a new LXY?
+          if (spn_ttck_lxy_neq_uni(ttck, lgf_lxy))
             {
-              if (spn_ttck_hi_yx_equal_uni(ttck[1], lgf_yxl[1]))
+              if (spn_ttck_hi_xy_equal_uni(ttck[1], lgf_lxy[1]))
                 {
-                  // this is a new layer and the ttck is the new yxl
-                  lgf_yxl[0] = ttck[0] & SPN_TTCK_LO_MASK_LAYER;
-                  lgf_yxl[1] = ttck[1];
+                  // this is a new layer and the ttck is the new lxy
+                  lgf_lxy[0] = ttck[0] & SPN_TTCK_LO_MASK_LAYER;
+                  lgf_lxy[1] = ttck[1];
                 }
               else
                 {
@@ -1904,7 +1906,7 @@ main()
 
               const bool is_valid = (ttck_idx_aligned <= ttcks_count_minus_1);
 
-              uvec2 ttck_new = { 0, ~lgf_yxl[1] };
+              uvec2 ttck_new = { 0, ~lgf_lxy[1] };
 
               if (is_valid)
                 ttck_new = ttcks_keys[ttck_idx_aligned];

@@ -38,24 +38,25 @@ static struct spn_vk_target const target =
     //
     //
     //
-    .queueing                             = SPN_VK_TARGET_QUEUEING_SIMPLE,
+    .queueing                               = SPN_VK_TARGET_QUEUEING_SIMPLE,
 
     .extensions.named = {
-      .EXT_subgroup_size_control          = 1,
-      .KHR_shader_float16_int8            = 1,
+      .EXT_subgroup_size_control            = 1,
+      .KHR_shader_float16_int8              = 1,
     },
 
     .features.named = {
-      .shaderInt64                        = 1
+      .shaderInt64                          = 1,
+      .shaderStorageImageWriteWithoutFormat = 1,
     },
 
     .structures.named = {
       .ShaderFloat16Int8FeaturesKHR = {
-        .shaderFloat16                    = 1,
+        .shaderFloat16                      = 1,
       },
       .SubgroupSizeControlFeaturesEXT = {
-        .subgroupSizeControl              = 1,
-        .computeFullSubgroups             = 1
+        .subgroupSizeControl                = 1,
+        .computeFullSubgroups               = 1
       }
     },
 
@@ -76,6 +77,20 @@ static struct spn_vk_target const target =
                                VK_BUFFER_USAGE_TRANSFER_SRC_BIT     |
                                VK_BUFFER_USAGE_TRANSFER_DST_BIT)
         },
+        .hw_dr = {
+          .properties       = (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+          .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
+                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+        },
+        .hrw_dr = {
+          .properties       = (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                               VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
+          .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+        },
         .hr_dw = {
           .properties       = (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT  |
                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
@@ -83,13 +98,6 @@ static struct spn_vk_target const target =
                                VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
           .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
                                VK_BUFFER_USAGE_TRANSFER_DST_BIT)
-        },
-        .hw_dr = {
-          .properties       = (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT  |
-                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
-                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-          .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
-                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
         },
         .temp = {
           .subbufs          = 256,      // 256 subbufs
@@ -136,7 +144,6 @@ static struct spn_vk_target const target =
         .dispatches         = 32,
         .ring               = 8192,
         .eager              = 1024,
-        .cmds               = 1 << 18,
         .ttcks              = 1 << 20,
         .rasters            = 1 << 17
       }
@@ -144,8 +151,10 @@ static struct spn_vk_target const target =
 
     .reclaim = {
       .size = {
-        .paths              = SPN_DEVICE_PATHS_RECLAIM_IDS_SIZE,
-        .rasters            = SPN_DEVICE_RASTERS_RECLAIM_IDS_SIZE
+        .dispatches         = 32,
+        .paths              = 16384,
+        .rasters            = 16384,
+        .eager              = 1024
       }
     },
 
@@ -183,6 +192,9 @@ static struct spn_vk_target const target =
         .sets = SPN_DS_WAG_COUNT
       },
       .surface = {
+        .sets = SPN_DS_WAG_COUNT
+      },
+      .reclaim = {
         .sets = SPN_DS_WAG_COUNT
       }
     },

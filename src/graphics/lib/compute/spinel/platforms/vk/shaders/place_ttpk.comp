@@ -139,12 +139,10 @@ SPN_VK_GLSL_DECL_KERNEL_PLACE_TTSK();
 //
 
 // clang-format off
-#define SPN_TTIK_LO_MASK_IS_TTPK                 SPN_BITS_TO_MASK_AT(31, 1)
-
-#define SPN_TTIK_IS_TTPK(t_)                     ((t_[0] & SPN_TTIK_LO_MASK_IS_TTPK) != 0)
+#define SPN_TTIK_IS_TTPK(t_)                     (SPN_BITFIELD_EXTRACT((t_)[0],31,1) != 0)
 
 #define SPN_TTIK_LO_MASK_PREFIX_ZERO_TTPK_TRUE   0x11
-#define SPN_TTIK_LO_MASK_PREFIX_ZERO_TTPK_FALSE  0x0
+#define SPN_TTIK_LO_MASK_PREFIX_ZERO_TTPK_FALSE  0x00
 
 #define SPN_TTIK_LO_BITS_PREFIX_ZERO_TTPK        5
 
@@ -475,7 +473,7 @@ main()
   // load only valid ttpks
   //
   uint ttpks_idx  = ttpks_first_base + gl_SubgroupInvocationID;
-  uint ttpks_base = gl_SubgroupInvocationID - ttpks_first_off;
+  uint ttpks_base = gl_SubgroupInvocationID - ttpks_first_off;  // NOTE: highp = mediump - highp;
 
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
@@ -490,7 +488,6 @@ main()
   SPN_PLACE_BLOCK_EXPAND();
 
   {
-
     //
     // - translate and clip TTPK keys in the head
     // - count total clipped TTPK keys in this slab

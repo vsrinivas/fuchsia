@@ -63,7 +63,8 @@ main()
   //
   [[unroll]]
 
-  for (SPN_SUBGROUP_UNIFORM uint ii = 0; ii < SPN_DEVICE_BLOCK_POOL_INIT_BP_IDS_PER_INVOCATION;
+  for (SPN_SUBGROUP_UNIFORM uint ii = 0;  //
+       ii < SPN_DEVICE_BLOCK_POOL_INIT_BP_IDS_PER_INVOCATION;
        ii++)
   {
     if (bp_id < bp_size)

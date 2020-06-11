@@ -10,8 +10,13 @@
 
 #extension GL_GOOGLE_include_directive : require
 #extension GL_KHR_shader_subgroup_basic : require
+#extension GL_EXT_control_flow_attributes : require
 
-#if 1
+//
+//
+//
+
+#ifndef NDEBUG
 #extension GL_KHR_shader_subgroup_ballot : require
 #endif
 
@@ -68,7 +73,7 @@ SPN_VK_GLSL_DECL_KERNEL_PATHS_COPY();
 //
 
 #define SPN_PATHS_COPY_GET_ROLLING(diff)                                                           \
-  SPN_BITFIELD_EXTRACT(diff, SPN_PATHS_COPY_ONE_BITS, 32 - SPN_PATHS_COPY_ONE_BITS)
+  SPN_BITFIELD_EXTRACT(uint(diff), SPN_PATHS_COPY_ONE_BITS, 32 - SPN_PATHS_COPY_ONE_BITS)
 
 #define SPN_PATHS_COPY_UPDATE_ROLLING(tbid, bid)                                                   \
   (((bid) << SPN_TAGGED_BLOCK_ID_BITS_TAG) | ((tbid)&SPN_PATHS_COPY_ONE_MASK))
@@ -80,12 +85,11 @@ SPN_VK_GLSL_DECL_KERNEL_PATHS_COPY();
 void
 spn_copy_segs(const uint bp_block_idx, const uint pc_block_idx)
 {
-  // FIXME(allanmac) -- unroll with GLSL extension once we have access
-  // to a new version of glslangValidator
+  [[unroll]]  //
   for (int ii = 0; ii < SPN_BLOCK_POOL_BLOCK_DWORDS; ii += SPN_PATHS_COPY_SUBGROUP_SIZE)
-    {
-      bp_blocks[bp_block_idx + ii] = pc_ring[pc_block_idx + ii];
-    }
+  {
+    bp_blocks[bp_block_idx + ii] = pc_ring[pc_block_idx + ii];
+  }
 }
 
 //
@@ -371,7 +375,7 @@ main()
   // index into id ring
   SPN_SUBGROUP_UNIFORM const uint bp_ids_idx = (bp_base + bp_offset) & bp_mask;
 
-  // convert the pc_cmd's offset counter pc_elems a block id
+  // convert the pc_cmd's block pool ring idx into a block id
   SPN_SUBGROUP_UNIFORM const uint path_id_d = bp_ids[bp_ids_idx];
 
   //

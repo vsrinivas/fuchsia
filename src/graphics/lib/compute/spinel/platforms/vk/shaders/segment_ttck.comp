@@ -116,16 +116,16 @@ SPN_VK_GLSL_DECL_KERNEL_SEGMENT_TTCK()
 //
 
 #define SPN_HS_HI_XOR(row_, prev_) (r##row_[1] ^ r##prev_[1])
-#define SPN_HS_YX_XOR(row_, prev_) (SPN_HS_HI_XOR(row_, prev_) & SPN_TTCK_HI_MASK_YX)
+#define SPN_HS_XY_XOR(row_, prev_) (SPN_HS_HI_XOR(row_, prev_) & SPN_TTCK_HI_MASK_XY)
 
 //
-// Note that the SPN_HS_YX_NEQ() is probably the same number of
+// Note that the SPN_HS_XY_NEQ() is probably the same number of
 // instructions -- eventually choose one and delete the other.
 //
 #if 1  // branchless
-#define SPN_HS_YX_NEQ(row_, prev_) (min(1u, SPN_HS_YX_XOR(row_, prev_)) << prev_)
+#define SPN_HS_XY_NEQ(row_, prev_) (min(1u, SPN_HS_XY_XOR(row_, prev_)) << prev_)
 #else  // select
-#define SPN_HS_YX_NEQ(row_, prev_) ((SPN_HS_YX_XOR(row_, prev_) != 0) ? 1u << prev_ : 0)
+#define SPN_HS_XY_NEQ(row_, prev_) ((SPN_HS_XY_XOR(row_, prev_) != 0) ? 1u << prev_ : 0)
 #endif
 
 //
@@ -236,7 +236,7 @@ main()
   SPN_HS_COL_FLAG_TYPE diffs = 0;
 
 #undef HS_SLAB_ROW
-#define HS_SLAB_ROW(row, prev) diffs |= SPN_HS_YX_NEQ(row, prev);
+#define HS_SLAB_ROW(row, prev) diffs |= SPN_HS_XY_NEQ(row, prev);
 
   HS_SLAB_ROWS()
 

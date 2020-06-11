@@ -167,7 +167,13 @@
 
 #define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT16                 // GEN8+ supports fp16x2
 
-// expecting VK_FORMAT_R8G8B8A8_UNORM or equivalent
+//
+// NOTE(allanmac): Intel doesn't advertise support for the
+// VK_FORMAT_FEATURE_IMAGE_STORAGE_BIT on a BGRA8 surface but will
+// implicitly support this bit if the image is `writeonly`.
+//
+
+#define SPN_VK_GLSL_LAYOUT_IMAGE2D_FORMAT_IGNORED
 #define SPN_DEVICE_RENDER_SURFACE_TYPE                            rgba8
 
 //
@@ -177,16 +183,12 @@
 #define SPN_DEVICE_PATHS_RECLAIM_SUBGROUP_SIZE_LOG2               SPN_DEVICE_INTEL_SIMD8_LOG2
 #define SPN_DEVICE_PATHS_RECLAIM_WORKGROUP_SIZE                   ((1 << SPN_DEVICE_PATHS_RECLAIM_SUBGROUP_SIZE_LOG2) * 1)
 
-#define SPN_DEVICE_PATHS_RECLAIM_IDS_SIZE                         (SPN_DEVICE_MAX_PUSH_CONSTANTS_SIZE / 4 - 1)
-
 //
 // KERNEL: RASTERS RECLAIM
 //
 
 #define SPN_DEVICE_RASTERS_RECLAIM_SUBGROUP_SIZE_LOG2             SPN_DEVICE_INTEL_SIMD8_LOG2
 #define SPN_DEVICE_RASTERS_RECLAIM_WORKGROUP_SIZE                 ((1 << SPN_DEVICE_RASTERS_RECLAIM_SUBGROUP_SIZE_LOG2) * 1)
-
-#define SPN_DEVICE_RASTERS_RECLAIM_IDS_SIZE                       (SPN_DEVICE_MAX_PUSH_CONSTANTS_SIZE / 4 - 1)
 
 //
 // clang-format on

@@ -100,51 +100,66 @@ SPN_VK_GLSL_DECL_KERNEL_RASTERS_RECLAIM();
 void
 main()
 {
-  for (uint reclaim_idx = gl_SubgroupID; reclaim_idx < SPN_DEVICE_RASTERS_RECLAIM_IDS_SIZE;
-       reclaim_idx += SPN_RASTERS_RECLAIM_SUBGROUPS)
-    {
-      //
-      // NOTE(allanmac): there is no reason to handle "invalid" handles.
-      // This shader is only launched with a fixed number of valid
-      // handles.
-      //
+  //
+  // This is a subgroup/warp-centric kernel.
+  //
+  // Which subgroup in the grid is this?
+  //
+#if (SPN_RASTERS_RECLAIM_SUBGROUPS == 1)
 
-      // get host raster id
-      SPN_SUBGROUP_UNIFORM const uint raster_h = raster_ids[reclaim_idx];
+  SPN_SUBGROUP_UNIFORM uint sid = gl_WorkGroupID.x;
 
-      // get the raster header block from the map
-      SPN_SUBGROUP_UNIFORM uint node_id = bp_host_map[raster_h];
+#else
 
-      //
-      // Load the first half of the head block into registers and
-      // start reclaiming blocks.
-      //
-      // The layout of a raster node is optimized for reclamation:
-      //
-      //   union {
-      //     uvec2  qwords[block_qwords];
-      //     struct {
-      //       uint dwords_lo[block_qwords];
-      //       uint dwords_hi[block_qwords];
-      //     };
-      //   };
-      //
+  SPN_SUBGROUP_UNIFORM uint sid = gl_WorkGroupID.x * SPN_RASTERS_RECLAIM_SUBGROUPS + gl_SubgroupID;
 
-      //
-      // load "lo" half of head
-      //
-      const uint h_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
+  // this an empty subgroup?
+  if (sid >= ring_span)
+    return;
+
+#endif
+
+  uint reclaim_idx = ring_head + sid;
+
+  if (reclaim_idx >= ring_size)
+    reclaim_idx -= ring_size;
+
+  // get host raster id
+  SPN_SUBGROUP_UNIFORM const uint raster_h = ring[reclaim_idx];
+
+  // get the raster header block from the map
+  SPN_SUBGROUP_UNIFORM uint node_id = bp_host_map[raster_h];
+
+  //
+  // Load the first half of the head block into registers and
+  // start reclaiming blocks.
+  //
+  // The layout of a raster node is optimized for reclamation:
+  //
+  //   union {
+  //     uvec2  qwords[block_qwords];
+  //     struct {
+  //       uint dwords_lo[block_qwords];
+  //       uint dwords_hi[block_qwords];
+  //     };
+  //   };
+  //
+
+  //
+  // load "lo" half of head
+  //
+  const uint h_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
 
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
   uint h##I = bp_blocks[h_idx + I * SPN_RASTERS_RECLAIM_SUBGROUP_SIZE];
 
-      SPN_RASTERS_RECLAIM_BLOCK_EXPAND();
+  SPN_RASTERS_RECLAIM_BLOCK_EXPAND();
 
-      //
-      // pick out count.blocks the header
-      //
-      SPN_SUBGROUP_UNIFORM uint count_blocks;
+  //
+  // pick out count.blocks the header
+  //
+  SPN_SUBGROUP_UNIFORM uint count_blocks;
 
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
@@ -155,40 +170,40 @@ main()
       count_blocks = SPN_RASTERS_RECLAIM_BROADCAST(h##I, SPN_RASTER_HEAD_LO_OFFSET_BLOCKS, I);     \
     }
 
-      SPN_RASTERS_RECLAIM_BLOCK_EXPAND();
+  SPN_RASTERS_RECLAIM_BLOCK_EXPAND();
 
-      //
-      // acquire a span in the block pool ids ring for reclaimed ids
-      //
-      uint bp_ids_writes = 0;
+  //
+  // acquire a span in the block pool ids ring for reclaimed ids
+  //
+  uint bp_ids_writes = 0;
 
-      if (gl_SubgroupInvocationID == 0)
-        {
-          bp_ids_writes = atomicAdd(bp_atomics[SPN_BLOCK_POOL_ATOMICS_WRITES], count_blocks);
-        }
+  if (gl_SubgroupInvocationID == 0)
+    {
+      bp_ids_writes = atomicAdd(bp_atomics[SPN_BLOCK_POOL_ATOMICS_WRITES], count_blocks);
+    }
 
-      SPN_SUBGROUP_UNIFORM uint       bp_ids_base = subgroupBroadcast(bp_ids_writes, 0);
-      SPN_SUBGROUP_UNIFORM const uint bp_ids_max  = bp_ids_base + count_blocks;
+  SPN_SUBGROUP_UNIFORM uint       bp_ids_base = subgroupBroadcast(bp_ids_writes, 0);
+  SPN_SUBGROUP_UNIFORM const uint bp_ids_max  = bp_ids_base + count_blocks;
 
-      //
-      // blindly swap the current node id with the "next" id
-      //
+  //
+  // blindly swap the current node id with the "next" id
+  //
+  {
+    SPN_SUBGROUP_UNIFORM const uint node_next =
+      subgroupBroadcast(SPN_GLSL_CONCAT(h, SPN_RASTERS_RECLAIM_BLOCK_EXPAND_I_LAST),
+                        SPN_RASTERS_RECLAIM_SUBGROUP_SIZE - 1);
+
+    if (gl_SubgroupInvocationID == SPN_RASTERS_RECLAIM_SUBGROUP_SIZE - 1)
       {
-        SPN_SUBGROUP_UNIFORM const uint node_next =
-          subgroupBroadcast(SPN_GLSL_CONCAT(h, SPN_RASTERS_RECLAIM_BLOCK_EXPAND_I_LAST),
-                            SPN_RASTERS_RECLAIM_SUBGROUP_SIZE - 1);
-
-        if (gl_SubgroupInvocationID == SPN_RASTERS_RECLAIM_SUBGROUP_SIZE - 1)
-          {
-            SPN_GLSL_CONCAT(h, SPN_RASTERS_RECLAIM_BLOCK_EXPAND_I_LAST) = node_id;
-          }
-
-        node_id = node_next;
+        SPN_GLSL_CONCAT(h, SPN_RASTERS_RECLAIM_BLOCK_EXPAND_I_LAST) = node_id;
       }
 
-      //
-      // invalidate all header components
-      //
+    node_id = node_next;
+  }
+
+  //
+  // invalidate all header components
+  //
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
   if (!SPN_RASTER_HEAD_ENTIRELY_HEADER(SPN_RASTERS_RECLAIM_SUBGROUP_SIZE, I))                      \
@@ -202,53 +217,7 @@ main()
         }                                                                                          \
     }
 
-      SPN_RASTERS_RECLAIM_BLOCK_EXPAND();
-
-      //
-      // DEBUG -- dump the head block
-      //
-#if 0
-      {
-        uint debug_base = 0;
-
-        if (gl_SubgroupInvocationID == 0)
-          debug_base =
-            atomicAdd(bp_debug_count[0],
-                      SPN_BLOCK_POOL_BLOCK_QWORDS + SPN_RASTERS_RECLAIM_SUBGROUP_SIZE);
-
-        debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
-
-        bp_debug[debug_base] = 0xCAFEBABE;
-
-        debug_base += SPN_RASTERS_RECLAIM_SUBGROUP_SIZE;
-
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  bp_debug[debug_base + I * SPN_RASTERS_RECLAIM_SUBGROUP_SIZE] = h##I;
-
-        SPN_RASTERS_RECLAIM_BLOCK_EXPAND();
-      }
-#endif
-
-      //
-      // DEBUG
-      //
-#if 0
-#define SPN_RR_DEBUG()                                                                             \
-  {                                                                                                \
-    uint debug_base = 0;                                                                           \
-                                                                                                   \
-    if (gl_SubgroupInvocationID == 0)                                                              \
-      debug_base = atomicAdd(bp_debug_count[0], SPN_RASTERS_RECLAIM_SUBGROUP_SIZE * 2);            \
-                                                                                                   \
-    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;                       \
-                                                                                                   \
-    bp_debug[debug_base + SPN_RASTERS_RECLAIM_SUBGROUP_SIZE * 0] = bp_ids_max;                     \
-    bp_debug[debug_base + SPN_RASTERS_RECLAIM_SUBGROUP_SIZE * 1] = bp_ids_base;                    \
-  }
-#else
-#define SPN_RR_DEBUG()
-#endif
+  SPN_RASTERS_RECLAIM_BLOCK_EXPAND();
 
 //
 // find ring index of all blocks and store
@@ -270,78 +239,51 @@ main()
                                                                                                    \
       bp_ids_base += subgroupBallotBitCount(block_ballot);                                         \
                                                                                                    \
-      if (bp_ids_base >= bp_ids_max)                                                               \
+      if (bp_ids_base == bp_ids_max)                                                               \
         {                                                                                          \
-          SPN_RR_DEBUG();                                                                          \
-          continue;                                                                                \
+          return;                                                                                  \
         }                                                                                          \
     }
 
-      SPN_RASTERS_RECLAIM_BLOCK_EXPAND();
+  SPN_RASTERS_RECLAIM_BLOCK_EXPAND();
 
+  //
+  // process next node
+  //
+  while (true)
+    {
       //
-      // process next node
+      // load entire node
       //
-      while (true)
-        {
-          //
-          // load entire node
-          //
-          const uint n_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
+      const uint n_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
 
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
   uint n##I = bp_blocks[n_idx + I * SPN_RASTERS_RECLAIM_SUBGROUP_SIZE];
 
-          SPN_RASTERS_RECLAIM_BLOCK_EXPAND();
+      SPN_RASTERS_RECLAIM_BLOCK_EXPAND();
 
-          //
-          // blindly swap the current node id with the "next" id
-          //
+      //
+      // blindly swap the current node id with the "next" id
+      //
+      {
+        SPN_SUBGROUP_UNIFORM const uint node_next =
+          subgroupBroadcast(SPN_GLSL_CONCAT(n, SPN_RASTERS_RECLAIM_BLOCK_EXPAND_I_LAST),
+                            SPN_RASTERS_RECLAIM_SUBGROUP_SIZE - 1);
+
+        if (gl_SubgroupInvocationID == SPN_RASTERS_RECLAIM_SUBGROUP_SIZE - 1)
           {
-            SPN_SUBGROUP_UNIFORM const uint node_next =
-              subgroupBroadcast(SPN_GLSL_CONCAT(n, SPN_RASTERS_RECLAIM_BLOCK_EXPAND_I_LAST),
-                                SPN_RASTERS_RECLAIM_SUBGROUP_SIZE - 1);
-
-            if (gl_SubgroupInvocationID == SPN_RASTERS_RECLAIM_SUBGROUP_SIZE - 1)
-              {
-                SPN_GLSL_CONCAT(n, SPN_RASTERS_RECLAIM_BLOCK_EXPAND_I_LAST) = node_id;
-              }
-
-            node_id = node_next;
+            SPN_GLSL_CONCAT(n, SPN_RASTERS_RECLAIM_BLOCK_EXPAND_I_LAST) = node_id;
           }
 
-          //
-          // DEBUG -- dump the node block
-          //
-#if 0
-      {
-        uint debug_base = 0;
-
-        if (gl_SubgroupInvocationID == 0)
-          debug_base =
-            atomicAdd(bp_debug_count[0],
-                      SPN_BLOCK_POOL_BLOCK_QWORDS + SPN_RASTERS_RECLAIM_SUBGROUP_SIZE);
-
-        debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
-
-        bp_debug[debug_base] = 0xFEEDFACE;
-
-        debug_base += SPN_RASTERS_RECLAIM_SUBGROUP_SIZE;
-
-#undef SPN_EXPAND_X
-#define SPN_EXPAND_X(I, N, P, L)                                                                   \
-  bp_debug[debug_base + I * SPN_RASTERS_RECLAIM_SUBGROUP_SIZE] = n##I;
-
-        SPN_RASTERS_RECLAIM_BLOCK_EXPAND();
+        node_id = node_next;
       }
-#endif
 
-          //
-          // find ring index of all blocks and store
-          //
-          // FIXME(allanmac): this is NOT COALESCED -- fix this
-          //
+      //
+      // find ring index of all blocks and store
+      //
+      // FIXME(allanmac): this is NOT COALESCED -- fix this
+      //
 #undef SPN_EXPAND_X
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
   {                                                                                                \
@@ -356,14 +298,13 @@ main()
                                                                                                    \
     bp_ids_base += subgroupBallotBitCount(block_ballot);                                           \
                                                                                                    \
-    if (bp_ids_base >= bp_ids_max)                                                                 \
+    if (bp_ids_base == bp_ids_max)                                                                 \
       {                                                                                            \
-        break;                                                                                     \
+        return;                                                                                    \
       }                                                                                            \
   }
 
-          SPN_RASTERS_RECLAIM_BLOCK_EXPAND();
-        }
+      SPN_RASTERS_RECLAIM_BLOCK_EXPAND();
     }
 }
 

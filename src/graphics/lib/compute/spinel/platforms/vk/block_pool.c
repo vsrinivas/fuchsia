@@ -5,6 +5,7 @@
 #include "block_pool.h"
 
 #include "common/vk/assert.h"
+#include "common/vk/barrier.h"
 #include "device.h"
 #include "dispatch.h"
 #include "handle_pool.h"
@@ -118,8 +119,6 @@ spn_device_block_pool_debug_snap(struct spn_device * const device, VkCommandBuff
                   &bc);
 
   vk_barrier_debug(cb);
-
-  // vk_barrier_transfer_w_to_host_r(cb);
 }
 
 void
@@ -435,7 +434,7 @@ spn_device_block_pool_create(struct spn_device * const device,
   // FIXME(allanmac): we could continue intializing and drain the device
   // as late as possible.
   //
-  spn(device_wait_all(device, true));
+  spn(device_wait_all(device, true, __func__));
 }
 
 //

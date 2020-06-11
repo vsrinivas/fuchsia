@@ -6,12 +6,14 @@
 
 #include <assert.h>  // REMOVE ME once we get DUTD integrated with scheduler
 #include <inttypes.h>
+#include <spinel/spinel_assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "common/macros.h"
 #include "common/vk/assert.h"
+#include "common/vk/debug_utils.h"
 #include "trace.h"
 
 //
@@ -27,19 +29,37 @@
 #endif
 
 //
-// Associates a readable name with a pipeline
-//
-
-#if !defined(NDEBUG) && defined(SPN_VK_PIPELINE_CODE_SIZE)
-#define SPN_VK_PIPELINE_NAMES_DEFINE
-#endif
-
-//
 //
 //
 
 #include "device.h"
 #include "vk_target.h"
+
+//
+// Report SPIR-V module code size
+//
+
+#ifndef NDEBUG
+#define SPN_VK_PIPELINE_CODE_SIZE
+#endif
+
+//
+// Define pipeline name strings
+//
+
+#define SPN_VK_PIPELINE_NAMES  // for now, always define the names
+
+// clang-format off
+#if defined(SPN_VK_PIPELINE_CODE_SIZE)         ||   \
+    defined(SPN_VK_SHADER_INFO_AMD_STATISTICS) ||   \
+    defined(SPN_VK_SHADER_INFO_AMD_DISASSEMBLY)
+// clang-format on
+
+#ifndef SPN_VK_PIPELINE_NAMES
+#define SPN_VK_PIPELINE_NAMES
+#endif
+
+#endif
 
 //
 // Verify pipeline count matches
@@ -91,8 +111,7 @@ struct spn_vk_pipelines
 //
 // Define the pipeline names
 //
-
-#ifdef SPN_VK_PIPELINE_NAMES_DEFINE
+#ifdef SPN_VK_PIPELINE_NAMES
 
 static char const * const spn_vk_p_names[] = {
 
@@ -102,11 +121,9 @@ static char const * const spn_vk_p_names[] = {
   SPN_VK_P_EXPAND()
 };
 
-#define SPN_VK_PIPELINE_NAMES spn_vk_p_names
-
 #else
 
-#define SPN_VK_PIPELINE_NAMES NULL
+static char const * const spn_vk_p_names[] = NULL;
 
 #endif
 
@@ -312,11 +329,11 @@ struct spn_vk_dp
 //
 
 #undef SPN_VK_DESC_TYPE_STORAGE_BUFFER
-#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_idx_, d_id_)                                  \
+#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_idx_, d_id_)                                     \
   { .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = SPN_VK_DPS_COUNT(ds_id_) },
 
 #undef SPN_VK_DESC_TYPE_STORAGE_IMAGE
-#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(ds_id_, d_idx_, d_id_)                                   \
+#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(ds_id_, d_idx_, d_id_)                                      \
   { .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = SPN_VK_DPS_COUNT(ds_id_) },
 
 #define SPN_VK_DPS_NAME(ds_id_) spn_vk_dps_##ds_id_
@@ -611,7 +628,7 @@ spn_vk_create(struct spn_vk_environment * const  environment,
       {                                                                                             \
         instance->dutdp.ds_id_.pool[ii] = ii;                                                       \
                                                                                                     \
-        vkAllocateDescriptorSets(environment->d, &dsai, instance->dutdp.ds_id_.ds + ii);            \
+        vk(AllocateDescriptorSets(environment->d, &dsai, instance->dutdp.ds_id_.ds + ii));          \
       }                                                                                             \
                                                                                                     \
     SPN_VK_TRACE_DS_POOL_CREATE(STRINGIFY_MACRO(ds_id_), size);                                     \
@@ -686,29 +703,6 @@ spn_vk_create(struct spn_vk_environment * const  environment,
   };
 
   //
-  // Set the subgroup size to what we expected when we built the
-  // Spinel target
-  //
-  // FIXME(allanmac): remove this as soon as we update Fuchsia's toolchain
-  //
-#ifndef VK_EXT_subgroup_size_control
-
-#define VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO_EXT 1000225001
-#define VK_PIPELINE_SHADER_STAGE_CREATE_REQUIRE_FULL_SUBGROUPS_BIT_EXT 0x00000002
-
-  typedef struct VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT
-  {
-    VkStructureType sType;
-    void *          pNext;
-    uint32_t        requiredSubgroupSize;
-  } VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT;
-
-#endif
-  //
-  // REMOVEME(allanmac) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  //
-
-  //
   // Control the pipeline's subgroup size
   //
   VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT rssci = {
@@ -741,7 +735,7 @@ spn_vk_create(struct spn_vk_environment * const  environment,
       // DEBUG
       //
 #if !defined(NDEBUG) && defined(SPN_VK_PIPELINE_CODE_SIZE)
-      fprintf(stderr, "%-38s ", SPN_VK_PIPELINE_NAMES[ii]);
+      fprintf(stderr, "%-38s ", spn_vk_p_names[ii]);
       fprintf(stderr, "(codeSize = %6zu) ... ", smci.codeSize);
 #endif
 
@@ -783,11 +777,29 @@ spn_vk_create(struct spn_vk_environment * const  environment,
 #if !defined(NDEBUG) && defined(SPN_VK_PIPELINE_CODE_SIZE)
       fprintf(stderr, "OK\n");
 #endif
+
+      //
+      // Tag the pipeline with a name
+      //
+#ifdef SPN_VK_PIPELINE_NAMES
+      if (pfn_vkSetDebugUtilsObjectNameEXT != NULL)
+        {
+          VkDebugUtilsObjectNameInfoEXT const name = {
+            .sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+            .pNext        = NULL,
+            .objectType   = VK_OBJECT_TYPE_PIPELINE,
+            .objectHandle = (uint64_t)instance->p.array[ii],
+            .pObjectName  = spn_vk_p_names[ii]
+          };
+
+          vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(environment->d, &name));
+        }
+#endif
     }
 
-    //
-    // optionally dump pipeline stats on AMD devices
-    //
+//
+// optionally dump pipeline stats on AMD devices
+//
 #ifndef NDEBUG
 
 #ifdef SPN_VK_SHADER_INFO_AMD_STATISTICS
@@ -795,7 +807,7 @@ spn_vk_create(struct spn_vk_environment * const  environment,
     {
       vk_shader_info_amd_statistics(environment->d,
                                     instance->p.array,
-                                    SPN_VK_PIPELINE_NAMES,
+                                    spn_vk_p_names,
                                     SPN_VK_P_COUNT);
     }
 #endif
@@ -804,7 +816,7 @@ spn_vk_create(struct spn_vk_environment * const  environment,
     {
       vk_shader_info_amd_disassembly(environment->d,
                                      instance->p.array,
-                                     SPN_VK_PIPELINE_NAMES,
+                                     spn_vk_p_names,
                                      SPN_VK_P_COUNT);
     }
 #endif
@@ -843,7 +855,7 @@ spn_vk_create(struct spn_vk_environment * const  environment,
   {                                                                                                \
     while (instance->dutdp.ds_id_.rem == 0)                                                        \
       {                                                                                            \
-        SPN_DEVICE_WAIT(device);                                                                   \
+        spn(device_wait(device, __func__));                                                        \
       }                                                                                            \
                                                                                                    \
     ds->idx = instance->dutdp.ds_id_.pool[--instance->dutdp.ds_id_.rem];                           \

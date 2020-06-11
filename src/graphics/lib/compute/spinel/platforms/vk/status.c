@@ -137,7 +137,7 @@ spn_device_get_status(struct spn_device * const device, spn_status_t const * sta
   //
   // drain all work in flight
   //
-  spn(device_wait_all(device, true));
+  spn(device_wait_all(device, true, "spn_device_get_status: drain all work in flight"));
 
   //
   // prepare a dispatch
@@ -169,16 +169,20 @@ spn_device_get_status(struct spn_device * const device, spn_status_t const * sta
   spn_device_block_pool_debug_snap(device, cb);
 #endif
 
+  //
   // make the copyback visible to the host
+  //
   vk_barrier_compute_w_to_host_r(cb);
 
+  //
   // launch!
+  //
   spn_device_dispatch_submit(device, id);
 
   //
   // wait for completion
   //
-  spn(device_wait_all(device, true));
+  spn(device_wait_all(device, true, "spn_device_get_status: wait for completion"));
 
   //
   // return the results
@@ -200,9 +204,9 @@ spn_device_get_status(struct spn_device * const device, spn_status_t const * sta
 
       size_t const block_bytes = sizeof(uint32_t) << config->block_pool.block_dwords_log2;
 
-      uint32_t const reads   = status_bp->h.mapped->status_bp_atomics[SPN_BLOCK_POOL_ATOMICS_READS];
-      uint32_t const writes  = status_bp->h.mapped->status_bp_atomics[SPN_BLOCK_POOL_ATOMICS_WRITES];
-      uint32_t const avail   = writes - reads;
+      uint32_t const reads  = status_bp->h.mapped->status_bp_atomics[SPN_BLOCK_POOL_ATOMICS_READS];
+      uint32_t const writes = status_bp->h.mapped->status_bp_atomics[SPN_BLOCK_POOL_ATOMICS_WRITES];
+      uint32_t const avail  = writes - reads;
       uint32_t const bp_size = spn_device_block_pool_get_size(device);
       uint32_t const inuse   = bp_size - avail;
 
@@ -210,9 +214,9 @@ spn_device_get_status(struct spn_device * const device, spn_status_t const * sta
       block_pool->inuse = inuse * block_bytes;
     }
 
-  //
-  // Temporarily dump the debug buffer here
-  //
+    //
+    // Temporarily dump the debug buffer here
+    //
 #ifdef SPN_BP_DEBUG
   spn_device_block_pool_debug_print(device);
 #endif

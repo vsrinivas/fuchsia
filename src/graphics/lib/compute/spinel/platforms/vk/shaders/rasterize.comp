@@ -53,13 +53,13 @@ SPN_VK_GLSL_DECL_KERNEL_RASTERIZE_LINE();
 #define SPN_RASTERIZE_SUBGROUP_SIZE           (1 << SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2)
 #define SPN_RASTERIZE_SUBGROUP_MASK           SPN_BITS_TO_MASK(SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2)
 
-#define SPN_RASTERIZE_SMEM_CACHE_YX_INVALID   SPN_UINT_MAX
+#define SPN_RASTERIZE_SMEM_CACHE_XY_INVALID   SPN_UINT_MAX
 
 #define SPN_RASTERIZE_SMEM_CACHE_BITS_Y_LOG2  2
 #define SPN_RASTERIZE_SMEM_CACHE_BITS_X_LOG2  2
 #define SPN_RASTERIZE_SMEM_CACHE_BITS_LOG2    4
 
-#define SPN_RASTERIZE_SMEM_YX_SIZE            (SPN_RASTERIZE_SUBGROUP_SIZE * 2 + SPN_RASTERIZE_SUBGROUP_SIZE - 1)
+#define SPN_RASTERIZE_SMEM_XY_SIZE            (SPN_RASTERIZE_SUBGROUP_SIZE * 2 + SPN_RASTERIZE_SUBGROUP_SIZE - 1)
 
 #define SPN_RASTERIZE_SMEM_CACHE_SIZE         (1 << SPN_RASTERIZE_SMEM_CACHE_BITS_LOG2)
 
@@ -77,7 +77,7 @@ SPN_VK_GLSL_DECL_KERNEL_RASTERIZE_LINE();
 //
 // Declare per-subgroup smem struct
 //
-// YX/TTS
+// XY/TTS
 //
 //   Rasterization can result in each subgroup lane producing 2
 //   line segments.
@@ -121,22 +121,22 @@ SPN_VK_GLSL_DECL_KERNEL_RASTERIZE_LINE();
 
 struct spn_rasterize_cache
 {
-  uint yx  [SPN_RASTERIZE_SMEM_CACHE_SIZE]; // 16
+  uint xy  [SPN_RASTERIZE_SMEM_CACHE_SIZE]; // 16
   uint base[SPN_RASTERIZE_SMEM_CACHE_SIZE]; // 16
 };
 
 struct spn_rasterize_flush
 {
   uint ttsb[SPN_RASTERIZE_SMEM_FLUSH_SIZE];
-  uint yx  [SPN_RASTERIZE_SMEM_FLUSH_SIZE];
+  uint xy  [SPN_RASTERIZE_SMEM_FLUSH_SIZE];
 };
 
 struct spn_rasterize_smem
 {
   uint                scratch[SPN_RASTERIZE_SUBGROUP_SIZE]; // SUBGROUP_SIZE
 
-  uint                yx     [SPN_RASTERIZE_SMEM_YX_SIZE];  // SUBGROUP_SIZE *  3 -  1
-  uint                tts    [SPN_RASTERIZE_SMEM_YX_SIZE];  // SUBGROUP_SIZE *  3 -  1
+  uint                xy     [SPN_RASTERIZE_SMEM_XY_SIZE];  // SUBGROUP_SIZE *  3 -  1
+  uint                tts    [SPN_RASTERIZE_SMEM_XY_SIZE];  // SUBGROUP_SIZE *  3 -  1
 
   spn_rasterize_cache cache;                                //                    + 32
 
@@ -552,7 +552,7 @@ spn_segment_rat_cubic(const vec3 a,  //
 }
 
 //
-// SMEM WRITES: yx, tts
+// SMEM WRITES: xy, tts
 //
 
 void
@@ -570,8 +570,8 @@ spn_append(const ivec2 h0u, const ivec2 hmu, const ivec2 h1u)
 
     uint h0m_idx = SPN_RCV_LD(ring_base) + SPN_RCV_LD(ring_span) + h0m_lt;
 
-    if (h0m_idx >= SPN_RASTERIZE_SMEM_YX_SIZE)
-      h0m_idx -= SPN_RASTERIZE_SMEM_YX_SIZE;
+    if (h0m_idx >= SPN_RASTERIZE_SMEM_XY_SIZE)
+      h0m_idx -= SPN_RASTERIZE_SMEM_XY_SIZE;
 
     SPN_RCV_INC(ring_span, subgroupBallotBitCount(h0m_ballot));
 
@@ -579,19 +579,19 @@ spn_append(const ivec2 h0u, const ivec2 hmu, const ivec2 h1u)
     // FIXME(allanmac): predicate this entire block with h0m_is_nez
     //
 
-    // construct YX
+    // construct XY
     const uvec2 h0m_min = uvec2(min(h0u, hmu) + SPN_TTXK_XY_BIAS);
     const uint  h0m_x   = h0m_min.x >> SPN_TILE_SUBPIXEL_X_BITS_LOG2;
     const uint  h0m_y   = h0m_min.y >> SPN_TILE_SUBPIXEL_Y_BITS_LOG2;
-    const uint  h0m_yx  = SPN_BITFIELD_INSERT(h0m_x,  //
+    const uint  h0m_xy  = SPN_BITFIELD_INSERT(h0m_x,  //
                                             h0m_y,
-                                            SPN_TTRK_HI_BITS_X,
+                                            SPN_TTRK_LO_HI_BITS_X,
                                             SPN_TTRK_HI_BITS_Y);
 
-    // save yx
+    // save xy
     if (h0m_is_nez)
       {
-        SPN_RASTERIZE_SMEM().yx[h0m_idx] = h0m_yx;
+        SPN_RASTERIZE_SMEM().xy[h0m_idx] = h0m_xy;
       }
 
     const uint h0m_tx = h0m_min.x & SPN_BITS_TO_MASK(SPN_TILE_SUBPIXEL_X_BITS_LOG2);
@@ -633,8 +633,8 @@ spn_append(const ivec2 h0u, const ivec2 hmu, const ivec2 h1u)
 
         uint hm1_idx = SPN_RCV_LD(ring_base) + SPN_RCV_LD(ring_span) + hm1_lt;
 
-        if (hm1_idx >= SPN_RASTERIZE_SMEM_YX_SIZE)
-          hm1_idx -= SPN_RASTERIZE_SMEM_YX_SIZE;
+        if (hm1_idx >= SPN_RASTERIZE_SMEM_XY_SIZE)
+          hm1_idx -= SPN_RASTERIZE_SMEM_XY_SIZE;
 
         SPN_RCV_INC(ring_span, subgroupBallotBitCount(hm1_ballot));
 
@@ -642,19 +642,19 @@ spn_append(const ivec2 h0u, const ivec2 hmu, const ivec2 h1u)
         // FIXME(allanmac): predicate this entire block with hm1_is_nez
         //
 
-        // construct YX
+        // construct XY
         const uvec2 hm1_min = uvec2(min(hmu, h1u) + SPN_TTXK_XY_BIAS);
         const uint  hm1_x   = hm1_min.x >> SPN_TILE_SUBPIXEL_X_BITS_LOG2;
         const uint  hm1_y   = hm1_min.y >> SPN_TILE_SUBPIXEL_Y_BITS_LOG2;
-        const uint  hm1_yx  = SPN_BITFIELD_INSERT(hm1_x,  //
+        const uint  hm1_xy  = SPN_BITFIELD_INSERT(hm1_x,  //
                                                 hm1_y,
-                                                SPN_TTRK_HI_BITS_X,
+                                                SPN_TTRK_LO_HI_BITS_X,
                                                 SPN_TTRK_HI_BITS_Y);
 
-        // save yx
+        // save xy
         if (hm1_is_nez)
           {
-            SPN_RASTERIZE_SMEM().yx[hm1_idx] = hm1_yx;
+            SPN_RASTERIZE_SMEM().xy[hm1_idx] = hm1_xy;
           }
 
         const uint hm1_tx = hm1_min.x & SPN_BITS_TO_MASK(SPN_TILE_SUBPIXEL_X_BITS_LOG2);
@@ -813,7 +813,7 @@ spn_partition_broadcast(const uint v)
 }
 
 //
-// Partition the 24 bit YX value and 1 extra bit using ballots.
+// Partition the 24 bit XY value and 1 extra bit using ballots.
 //
 // This implementation may be preferable on wide subgroup devices.
 //
@@ -871,11 +871,11 @@ spn_partition_ballot_25(const uint v)
 }
 
 //
-// We're assuming that SPN_TTRK_HI_BITS_XY remains at 24 bits
+// We're assuming that SPN_TTRK_BITS_XY remains at 24 bits
 //
 
-#if (SPN_TTRK_HI_BITS_XY != 24)
-#error "SPN_TTRK_HI_BITS_XY != 24"
+#if (SPN_TTRK_BITS_XY != 24)
+#error "SPN_TTRK_BITS_XY != 24"
 #endif
 
 //
@@ -902,7 +902,7 @@ spn_partition_ballot_25(const uint v)
 //
 
 uint
-spn_hash(const uint yx)
+spn_hash(const uint xy)
 {
   //
   //          0  12  24  31
@@ -912,19 +912,13 @@ spn_hash(const uint yx)
   //
   // Return : x.01 | (y.01 << 2)
   //
+  // FIXME(allanmac): Benchmark other bit-twiddling schemes
+  //
+  const uint x01    = SPN_BITFIELD_EXTRACT(xy, 0, 2);
+  const uint y01    = SPN_BITFIELD_EXTRACT(xy, SPN_TTRK_LO_HI_BITS_X, 2);
+  const uint x01y23 = x01 | (y01 << 2);
 
-  //
-  // FIXME(allanmac): Benchmark other bit-twiddling has schemes
-  //
-#if 0
-  return SPN_BITFIELD_INSERT(yx,
-                             yx >> SPN_TTRK_HI_BITS_X,
-                             SPN_RASTERIZE_SMEM_CACHE_BITS_X_LOG2,
-                             SPN_RASTERIZE_SMEM_CACHE_BITS_Y_LOG2) &
-         SPN_BITS_TO_MASK(SPN_RASTERIZE_SMEM_CACHE_BITS_LOG2);
-#else
-  return (yx & 0x3) | ((yx >> (SPN_TTRK_HI_BITS_X - 2)) & (0x3 << 2));
-#endif
+  return x01y23;
 }
 
 //
@@ -940,8 +934,8 @@ spn_cache_init()
   // UNROLL
   for (uint ii = 0; ii < SPN_RASTERIZE_SMEM_CACHE_SIZE; ii += SPN_RASTERIZE_SUBGROUP_SIZE)
   {
-    SPN_RASTERIZE_SMEM().cache.yx[ii + gl_SubgroupInvocationID] =
-      SPN_RASTERIZE_SMEM_CACHE_YX_INVALID;
+    SPN_RASTERIZE_SMEM().cache.xy[ii + gl_SubgroupInvocationID] =
+      SPN_RASTERIZE_SMEM_CACHE_XY_INVALID;
   }
 
 #else
@@ -949,7 +943,7 @@ spn_cache_init()
   for (uint ii = gl_SubgroupInvocationID; ii < SPN_RASTERIZE_SMEM_CACHE_SIZE;
        ii += SPN_RASTERIZE_SUBGROUP_SIZE)
     {
-      SPN_RASTERIZE_SMEM().cache.yx[ii] = SPN_RASTERIZE_SMEM_CACHE_YX_INVALID;
+      SPN_RASTERIZE_SMEM().cache.xy[ii] = SPN_RASTERIZE_SMEM_CACHE_XY_INVALID;
     }
 
 #endif
@@ -960,7 +954,7 @@ spn_cache_init()
 //
 // (e.g. backwards, etc.)
 //
-// SMEM READS: flush.ttsb, flush.yx
+// SMEM READS: flush.ttsb, flush.xy
 //
 
 void
@@ -979,8 +973,13 @@ spn_flush_ttrks(SPN_SUBGROUP_UNIFORM const uint ttrk_count)
 
   for (uint ii = gl_SubgroupInvocationID; ii < ttrk_count; ii += SPN_RASTERIZE_SUBGROUP_SIZE)
     {
-      uvec2 ttrk = { SPN_RASTERIZE_SMEM().flush.ttsb[ii], SPN_RASTERIZE_SMEM().flush.yx[ii] };
+      uvec2 ttrk;
 
+      ttrk[0] = SPN_RASTERIZE_SMEM().flush.ttsb[ii];
+
+      const uint xy = SPN_RASTERIZE_SMEM().flush.xy[ii];
+
+      SPN_TTRK_SET_XY(ttrk, xy);
       SPN_TTRK_SET_COHORT(ttrk, cohort);
 
       ttrks_keys[ttrks_base + ii] = ttrk;
@@ -989,11 +988,11 @@ spn_flush_ttrks(SPN_SUBGROUP_UNIFORM const uint ttrk_count)
 
 //
 // SMEM READS  : subblocks_rem, ttrk_count
-// SMEM WRITES : flush.ttsb, flush.yx, ttrk_count
+// SMEM WRITES : flush.ttsb, flush.xy, ttrk_count
 //
 
 uint
-spn_alloc(const uint                      yx,
+spn_alloc(const uint                      xy,
           SPN_SUBGROUP_UNIFORM const uint ttsb_count,
           const uint                      ttsb_lane,
           const uint                      ttsb_idx)
@@ -1097,13 +1096,13 @@ spn_alloc(const uint                      yx,
   if (gl_SubgroupInvocationID == ttsb_lane)
     {
       SPN_RASTERIZE_SMEM().flush.ttsb[ttrk_idx] = subblock_id;
-      SPN_RASTERIZE_SMEM().flush.yx[ttrk_idx]   = yx;
+      SPN_RASTERIZE_SMEM().flush.xy[ttrk_idx]   = xy;
     }
 
   // flush if there are too many TTRK keys
   if (ttrk_count > SPN_RASTERIZE_SMEM_FLUSH_MARK)
     {
-      // SMEM READS: flush.ttsb, flush.yx
+      // SMEM READS: flush.ttsb, flush.xy
       subgroupBarrier();
 
       spn_flush_ttrks(ttrk_count);
@@ -1210,15 +1209,15 @@ spn_ballot_and_le_msb(const uvec4 a, const uvec4 b)
 // OpenCL implementations and an important generalization for Vulkan
 // targets.
 //
-// SMEM READS: cache.yx, cache.base
-// SMEM WRITES: cache.yx, cache.base
+// SMEM READS: cache.xy, cache.base
+// SMEM WRITES: cache.xy, cache.base
 //
 void
-spn_bin_subgroup(const uint yx, const uint tts)
+spn_bin_subgroup(const uint xy, const uint tts)
 {
   // look up cache entries
-  const uint hash       = spn_hash(yx);
-  const uint entry_yx   = SPN_RASTERIZE_SMEM().cache.yx[hash];
+  const uint hash       = spn_hash(xy);
+  const uint entry_xy   = SPN_RASTERIZE_SMEM().cache.xy[hash];
   const uint entry_base = SPN_RASTERIZE_SMEM().cache.base[hash];
 
   //
@@ -1233,15 +1232,15 @@ spn_bin_subgroup(const uint yx, const uint tts)
   // It's unclear if native compilation is doing a good job dropping the
   // 3 or 2 irrelevant dwords from the overall register footprint.
   //
-  // NOTE(allanmac): in the final spn_bin() any invalid yx values will
+  // NOTE(allanmac): in the final spn_bin() any invalid xy values will
   // form a partition.
   //
-  const uvec4 part     = SPN_PARTITION(yx);
+  const uvec4 part     = SPN_PARTITION(xy);
   const uint  part_msb = subgroupBallotFindMSB(part);
   uint        part_idx = subgroupBallotExclusiveBitCount(part);
 
   // is this a valid cache hit?
-  const bool is_entry_hit = (entry_yx == yx);
+  const bool is_entry_hit = (entry_xy == xy);
 
   // is this the lane of a valid partition?
   const bool is_part_msb = (part_msb == gl_SubgroupInvocationID);
@@ -1259,7 +1258,7 @@ spn_bin_subgroup(const uint yx, const uint tts)
   if (is_entry_hit)
     {
       // entry is lost because we're going to either lose it or update it
-      SPN_RASTERIZE_SMEM().cache.yx[hash] = SPN_RASTERIZE_SMEM_CACHE_YX_INVALID;
+      SPN_RASTERIZE_SMEM().cache.xy[hash] = SPN_RASTERIZE_SMEM_CACHE_XY_INVALID;
 
       // adjust partition idx
       part_idx += (entry_base & SPN_BLOCK_POOL_SUBBLOCK_DWORDS_MASK);
@@ -1289,10 +1288,10 @@ spn_bin_subgroup(const uint yx, const uint tts)
   // fight for new entry
   if (is_new_entry)
     {
-      SPN_RASTERIZE_SMEM().cache.yx[hash] = yx;
+      SPN_RASTERIZE_SMEM().cache.xy[hash] = xy;
     }
 
-  // SMEM READS: cache.yx
+  // SMEM READS: cache.xy
   subgroupBarrier();
 
   // an index of 0 is a new TTSB subblock
@@ -1321,9 +1320,9 @@ spn_bin_subgroup(const uint yx, const uint tts)
       // allocate subblocks
       //
       // SMEM READS  : subblocks_next, ttrk_count
-      // SMEM WRITES : flush.ttsb, flush.yx, ttrk_count
+      // SMEM WRITES : flush.ttsb, flush.xy, ttrk_count
       //
-      const uint ttsb_id = spn_alloc(yx, ttsb_count, ttsb_lane, ttsb_idx);
+      const uint ttsb_id = spn_alloc(xy, ttsb_count, ttsb_lane, ttsb_idx);
 
       // adjust bp_idx
       if (!is_partial_ttsb)
@@ -1344,7 +1343,7 @@ spn_bin_subgroup(const uint yx, const uint tts)
   //
   if (is_new_entry)
     {
-      const bool is_winner = (SPN_RASTERIZE_SMEM().cache.yx[hash] == yx);
+      const bool is_winner = (SPN_RASTERIZE_SMEM().cache.xy[hash] == xy);
 
       if (is_winner)
         {
@@ -1358,11 +1357,11 @@ spn_bin_subgroup(const uint yx, const uint tts)
 //
 
 void
-spn_bin_rem(const uint yx, const uint tts)
+spn_bin_rem(const uint xy, const uint tts)
 {
   // look up cache entries
-  const uint hash       = spn_hash(yx);
-  const uint entry_yx   = SPN_RASTERIZE_SMEM().cache.yx[hash];
+  const uint hash       = spn_hash(xy);
+  const uint entry_xy   = SPN_RASTERIZE_SMEM().cache.xy[hash];
   const uint entry_base = SPN_RASTERIZE_SMEM().cache.base[hash];
 
   //
@@ -1377,18 +1376,18 @@ spn_bin_rem(const uint yx, const uint tts)
   // It's unclear if native compilation is doing a good job dropping the
   // 3 or 2 irrelevant dwords from the overall register footprint.
   //
-  // NOTE(allanmac): in the final spn_bin() any invalid yx values will
+  // NOTE(allanmac): in the final spn_bin() any invalid xy values will
   // form a partition.
   //
-  const uvec4 part     = SPN_PARTITION(yx);
+  const uvec4 part     = SPN_PARTITION(xy);
   const uint  part_msb = subgroupBallotFindMSB(part);
   uint        part_idx = subgroupBallotExclusiveBitCount(part);
 
-  // is this a valid yx?
-  const bool is_yx_valid = (yx != SPN_RASTERIZE_SMEM_CACHE_YX_INVALID);
+  // is this a valid xy?
+  const bool is_xy_valid = (xy != SPN_RASTERIZE_SMEM_CACHE_XY_INVALID);
 
   // is this a valid cache hit?
-  const bool is_entry_hit = is_yx_valid && (entry_yx == yx);
+  const bool is_entry_hit = is_xy_valid && (entry_xy == xy);
 
   //
   // append to cache entry
@@ -1425,7 +1424,7 @@ spn_bin_rem(const uint yx, const uint tts)
   part_idx &= SPN_BLOCK_POOL_SUBBLOCK_DWORDS_MASK;
 
   // an index of 0 is a new TTSB subblock
-  const bool is_new_ttsb = is_yx_valid && (part_idx == 0);
+  const bool is_new_ttsb = is_xy_valid && (part_idx == 0);
 
   // ballot of all TTSB starting lanes
   const uvec4 ballot_ttsb = subgroupBallot(is_new_ttsb);
@@ -1450,9 +1449,9 @@ spn_bin_rem(const uint yx, const uint tts)
       // allocate subblocks
       //
       // SMEM READS  : subblocks_next, ttrk_count
-      // SMEM WRITES : flush.ttsb, flush.yx, ttrk_count
+      // SMEM WRITES : flush.ttsb, flush.xy, ttrk_count
       //
-      const uint ttsb_id = spn_alloc(yx, ttsb_count, ttsb_lane, ttsb_idx);
+      const uint ttsb_id = spn_alloc(xy, ttsb_count, ttsb_lane, ttsb_idx);
 
       // adjust bp_idx
       if (!is_partial_ttsb)
@@ -1464,7 +1463,7 @@ spn_bin_rem(const uint yx, const uint tts)
   //
   // write TTS values to TTSB blocks
   //
-  if (is_yx_valid)
+  if (is_xy_valid)
     {
       const uint bp_idx = part_base + part_idx;
 
@@ -1475,7 +1474,7 @@ spn_bin_rem(const uint yx, const uint tts)
 //
 // There is at least a subgroup of keys
 //
-// SMEM READS: yx, tts
+// SMEM READS: xy, tts
 //
 // FIXME(allanmac): It might be possible to hoist the base/index
 // computation upward.
@@ -1486,37 +1485,37 @@ spn_flush_subgroup()
   SPN_SUBGROUP_UNIFORM uint ring_base = SPN_RCV_LD(ring_base);
 
   // compute ring index
-  uint yx_idx = ring_base + gl_SubgroupInvocationID;
+  uint xy_idx = ring_base + gl_SubgroupInvocationID;
 
   // increment ring base
   ring_base += SPN_RASTERIZE_SUBGROUP_SIZE;
 
-  if (ring_base >= SPN_RASTERIZE_SMEM_YX_SIZE)
+  if (ring_base >= SPN_RASTERIZE_SMEM_XY_SIZE)
     {
-      ring_base -= SPN_RASTERIZE_SMEM_YX_SIZE;
+      ring_base -= SPN_RASTERIZE_SMEM_XY_SIZE;
     }
 
   // save ring base
   SPN_RCV_ST(ring_base, ring_base);
 
   // load
-  if (yx_idx >= SPN_RASTERIZE_SMEM_YX_SIZE)
+  if (xy_idx >= SPN_RASTERIZE_SMEM_XY_SIZE)
     {
-      yx_idx -= SPN_RASTERIZE_SMEM_YX_SIZE;
+      xy_idx -= SPN_RASTERIZE_SMEM_XY_SIZE;
     }
 
   // load from smem
-  const uint yx  = SPN_RASTERIZE_SMEM().yx[yx_idx];
-  const uint tts = SPN_RASTERIZE_SMEM().tts[yx_idx];
+  const uint xy  = SPN_RASTERIZE_SMEM().xy[xy_idx];
+  const uint tts = SPN_RASTERIZE_SMEM().tts[xy_idx];
 
-  // bin the YX/TTS
-  spn_bin_subgroup(yx, tts);
+  // bin the XY/TTS
+  spn_bin_subgroup(xy, tts);
 }
 
 //
 // There is less than a subgroup of keys
 //
-// SMEM READS: yx, tts
+// SMEM READS: xy, tts
 //
 void
 spn_flush_rem()
@@ -1527,29 +1526,29 @@ spn_flush_rem()
     {
       const bool is_valid = (gl_SubgroupInvocationID < ring_span);
 
-      uint yx  = SPN_RASTERIZE_SMEM_CACHE_YX_INVALID;
+      uint xy  = SPN_RASTERIZE_SMEM_CACHE_XY_INVALID;
       uint tts = SPN_TTS_INVALID;
 
       // compute ring index
-      uint yx_idx = SPN_RCV_LD(ring_base) + gl_SubgroupInvocationID;
+      uint xy_idx = SPN_RCV_LD(ring_base) + gl_SubgroupInvocationID;
 
-      if (yx_idx >= SPN_RASTERIZE_SMEM_YX_SIZE)
+      if (xy_idx >= SPN_RASTERIZE_SMEM_XY_SIZE)
         {
-          yx_idx -= SPN_RASTERIZE_SMEM_YX_SIZE;
+          xy_idx -= SPN_RASTERIZE_SMEM_XY_SIZE;
         }
 
-      // SMEM READS: yx, tts
+      // SMEM READS: xy, tts
       subgroupBarrier();
 
       if (is_valid)
         {
           // load from smem
-          yx  = SPN_RASTERIZE_SMEM().yx[yx_idx];
-          tts = SPN_RASTERIZE_SMEM().tts[yx_idx];
+          xy  = SPN_RASTERIZE_SMEM().xy[xy_idx];
+          tts = SPN_RASTERIZE_SMEM().tts[xy_idx];
         }
 
-      // bin the YX/TTS
-      spn_bin_rem(yx, tts);
+      // bin the XY/TTS
+      spn_bin_rem(xy, tts);
     }
 }
 
@@ -1728,25 +1727,6 @@ main()
 
   SPN_SUBGROUP_UNIFORM uint tb_id    = bp_blocks[tb_id_idx];
   SPN_SUBGROUP_UNIFORM uint block_id = SPN_TAGGED_BLOCK_ID_GET_ID(tb_id);
-
-  //
-  // DEBUG -- dump the cmd
-  //
-#if 0
-  {
-    uint debug_base = 0;
-
-    if (gl_SubgroupInvocationID == 0)
-      debug_base = atomicAdd(bp_debug_count[0], 4 * SPN_RASTERIZE_SUBGROUP_SIZE);
-
-    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
-
-    bp_debug[debug_base + 0 * SPN_RASTERIZE_SUBGROUP_SIZE] = cmd[0];
-    bp_debug[debug_base + 1 * SPN_RASTERIZE_SUBGROUP_SIZE] = cmd[1];
-    bp_debug[debug_base + 2 * SPN_RASTERIZE_SUBGROUP_SIZE] = cmd[2];
-    bp_debug[debug_base + 3 * SPN_RASTERIZE_SUBGROUP_SIZE] = cmd[3];
-  }
-#endif
 
   //
   // FIXME(allanmac): This initial load may be able to load multiple
@@ -2074,7 +2054,7 @@ main()
 #ifndef SPN_RASTERIZE_SHUFFLE_RECIPROCAL_IS_FAST
       const float ys_d = 1.0f / (e1s.y - e0s.y);
 #else
-      const float ys_d      = subgroupShuffle(y_denom, yp_src);
+      const float ys_d = subgroupShuffle(y_denom, yp_src);
 #endif
       const float ys_t = (f1.y - e0s.y) * ys_d;
 
@@ -2175,13 +2155,42 @@ main()
           const vec2 gm = fm * neg_xy_src;
           const vec2 g1 = f1 * neg_xy_src;
 
+#if 0
+          //
+          // FIXME(allanmac): I'd prefer to use this branchless select
+          // but this results in a codegen issue with Mali Bifrost8 R19-R24.
+          //
+
           // exchange
           const vec2 h0 = { is_xchg_src ? g0.y : g0.x, is_xchg_src ? g0.x : g0.y };
           const vec2 hm = { is_xchg_src ? gm.y : gm.x, is_xchg_src ? gm.x : gm.y };
           const vec2 h1 = { is_xchg_src ? g1.y : g1.x, is_xchg_src ? g1.x : g1.y };
+#else
+          //
+          // FIXME(allanmac): Workaround for Mali Bifrost8 on R19-R24
+          //
+
+          // exchange
+          vec2 h0 = g0, hm = gm, h1 = g1;
+
+          if (is_xchg_src)
+            {
+              const float t0 = h0.x;
+              h0.x           = h0.y;
+              h0.y           = t0;
+
+              const float tm = hm.x;
+              hm.x           = hm.y;
+              hm.y           = tm;
+
+              const float t1 = h1.x;
+              h1.x           = h1.y;
+              h1.y           = t1;
+            }
+#endif
 
           //
-          // append YX/TTS values to SMEM
+          // append XY/TTS values to SMEM
           //
           spn_append(ivec2(h0), ivec2(hm), ivec2(h1));
 
@@ -2200,12 +2209,11 @@ main()
 
               do
                 {
-                  // SMEM READS: yx, tts, cache.yx, cache.base
+                  // SMEM READS: xy, tts, cache.xy, cache.base
                   subgroupBarrier();
 
                   spn_flush_subgroup();
-                }
-              while (--subgroup_count > 0);
+              } while (--subgroup_count > 0);
             }
         }
 
@@ -2229,7 +2237,7 @@ main()
   SPN_RASTERIZE_PATH_PRIM_END()
 
   //
-  // flush remaining YX/TTS values
+  // flush remaining XY/TTS values
   //
   spn_flush_rem();
 
@@ -2245,7 +2253,7 @@ main()
 
   if (ttrk_count > 0)
     {
-      // SMEM READS: flush.ttsb, flush.yx
+      // SMEM READS: flush.ttsb, flush.xy
       subgroupBarrier();
       spn_flush_ttrks(ttrk_count);
     }

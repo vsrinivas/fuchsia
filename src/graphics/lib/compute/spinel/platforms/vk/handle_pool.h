@@ -38,19 +38,19 @@ void
 spn_device_handle_pool_dispose(struct spn_device * const device);
 
 //
-// How many handles in the pool?  The allocated number of handles may
-// be slightly larger than the handle_count provided at creation time.
+// How many handles in the pool?  This number may differ from the count
+// provided at creation time.
 //
 
 uint32_t
-spn_device_handle_pool_get_allocated_handle_count(struct spn_device * const device);
+spn_device_handle_pool_get_handle_count(struct spn_device * const device);
 
 //
 // Acquire a handle
 //
 
 void
-spn_device_handle_pool_acquire(struct spn_device * const device, spn_handle_t * const handle);
+spn_device_handle_pool_acquire(struct spn_device * const device, spn_handle_t * const p_handle);
 
 //
 // Host-invoked handle retain
@@ -130,15 +130,15 @@ void
 spn_device_handle_pool_release_ring_d_paths(struct spn_device * const  device,
                                             spn_handle_t const * const paths,
                                             uint32_t const             size,
-                                            uint32_t const             span,
-                                            uint32_t const             head);
+                                            uint32_t const             head,
+                                            uint32_t const             span);
 
 void
 spn_device_handle_pool_release_ring_d_rasters(struct spn_device * const  device,
                                               spn_handle_t const * const rasters,
                                               uint32_t const             size,
-                                              uint32_t const             span,
-                                              uint32_t const             head);
+                                              uint32_t const             head,
+                                              uint32_t const             span);
 //
 //
 //

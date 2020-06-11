@@ -41,7 +41,6 @@ static struct spn_vk_target const target =
     .queueing                             = SPN_VK_TARGET_QUEUEING_SIMPLE,
 
     .extensions.named = {
-      .AMD_gpu_shader_half_float          = 1, // NOTE(allanmac): this extension is deprecated but may be still necessary for pre-GCN5/AMDVLK
       .AMD_shader_info                    = 1,
       .KHR_shader_float16_int8            = 1,
     },
@@ -66,7 +65,7 @@ static struct spn_vk_target const target =
     .allocator = {
       .host = {
         .perm = {
-          .alignment        = 16,      // 16 byte alignment
+          .alignment        = 16, // 16 byte alignment
         }
       },
       .device = {
@@ -77,18 +76,24 @@ static struct spn_vk_target const target =
                                VK_BUFFER_USAGE_TRANSFER_SRC_BIT     |
                                VK_BUFFER_USAGE_TRANSFER_DST_BIT)
         },
+        .hw_dr = {
+          .properties       = (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+          .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
+                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+        },
+        .hrw_dr = {
+          .properties       = (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                               VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
+          .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+        },
         .hr_dw = {
           .properties       = (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
                                VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
                                VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
           .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
                                VK_BUFFER_USAGE_TRANSFER_DST_BIT)
-        },
-        .hw_dr = {
-          .properties       = (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
-                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-          .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
-                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
         },
         .temp = {
           .subbufs          = 256,      // 256 subbufs
@@ -135,7 +140,6 @@ static struct spn_vk_target const target =
         .dispatches         = 32,
         .ring               = 8192,
         .eager              = 1024,
-        .cmds               = 1 << 18,
         .ttcks              = 1 << 20,
         .rasters            = 1 << 17
       }
@@ -143,8 +147,10 @@ static struct spn_vk_target const target =
 
     .reclaim = {
       .size = {
-        .paths              = SPN_DEVICE_PATHS_RECLAIM_IDS_SIZE,
-        .rasters            = SPN_DEVICE_RASTERS_RECLAIM_IDS_SIZE
+        .dispatches         = 32,
+        .paths              = 16384,
+        .rasters            = 16384,
+        .eager              = 1024
       }
     },
 
@@ -182,6 +188,9 @@ static struct spn_vk_target const target =
         .sets = SPN_DS_WAG_COUNT
       },
       .surface = {
+        .sets = SPN_DS_WAG_COUNT
+      },
+      .reclaim = {
         .sets = SPN_DS_WAG_COUNT
       }
     },

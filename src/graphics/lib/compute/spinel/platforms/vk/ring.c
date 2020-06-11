@@ -50,9 +50,20 @@ spn_ring_dropped(struct spn_ring const * const ring)
 }
 
 uint32_t
-spn_ring_rem_nowrap(struct spn_ring const * const ring)
+spn_ring_head_nowrap(struct spn_ring const * const ring)
 {
-  return ring->size - ring->head;
+  uint32_t const nowrap = ring->size - ring->head;
+
+  return (ring->rem <= nowrap) ? ring->rem : nowrap;
+}
+
+uint32_t
+spn_ring_tail_nowrap(struct spn_ring const * const ring)
+{
+  uint32_t const nowrap  = ring->size - ring->tail;
+  uint32_t const dropped = spn_ring_dropped(ring);
+
+  return (dropped <= nowrap) ? dropped : nowrap;
 }
 
 uint32_t

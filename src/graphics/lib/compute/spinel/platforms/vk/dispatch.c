@@ -4,11 +4,14 @@
 
 #include "dispatch.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "common/macros.h"
 #include "common/vk/assert.h"
+#include "common/vk/debug_utils.h"
+#include "context.h"
 #include "device.h"
 #include "queue_pool.h"
 
@@ -27,10 +30,12 @@
 #define SPN_DISPATCH_TRACK_WAITING
 #endif
 
+#define SPN_DISPATCH_TRACK_STAGE
+
 //
 // NOTE:
 //
-// It's unlikely we'll want to support more than 254 outstanding
+// It's unlikely we'll want to support more than 255 outstanding
 // dispatch ids unless we're running on an extremely large GPU.
 //
 // Note that 255 in-flight or waiting dispatches represents a very large
@@ -51,8 +56,8 @@
 //
 
 // clang-format off
-#define SPN_DISPATCH_ID_BITS (8 * sizeof(spn_dispatch_id_t))
-#define SPN_DISPATCH_ID_COUNT BITS_TO_MASK_MACRO(SPN_DISPATCH_STAGE_ID_BITS)
+#define SPN_DISPATCH_ID_BITS   (8 * sizeof(spn_dispatch_id_t))
+#define SPN_DISPATCH_ID_COUNT  BITS_TO_MASK_MACRO(SPN_DISPATCH_STAGE_ID_BITS)
 // clang-format on
 
 //
@@ -139,6 +144,75 @@ struct spn_dispatch_submitter
 //
 //
 
+#ifdef SPN_DISPATCH_TRACK_STAGE
+
+struct spn_dispatch_track
+{
+  // map of ids to stages
+  spn_dispatch_stage_e stage[SPN_DISPATCH_STAGE_ID_COUNT];
+
+  // stage counts
+  union
+  {
+    struct
+    {
+#undef SPN_DISPATCH_STAGE
+#define SPN_DISPATCH_STAGE(e_) uint16_t e_;
+
+      SPN_DISPATCH_STAGES()
+    } named;
+
+#undef SPN_DISPATCH_STAGE
+#define SPN_DISPATCH_STAGE(e_) +1
+
+    uint16_t array[0 SPN_DISPATCH_STAGES()];
+  } count;
+};
+
+static void
+spn_dispatch_track_reset(struct spn_dispatch_track * const track)
+{
+  memset(track, 0, sizeof(*track));
+}
+
+static void
+spn_dispatch_track_begin(struct spn_dispatch_track * const track,
+                         spn_dispatch_stage_e const        stage,
+                         spn_dispatch_id_t const           id)
+{
+  track->stage[id] = stage;
+
+  track->count.array[stage] += 1;
+}
+
+static void
+spn_dispatch_track_end(struct spn_dispatch_track * const track, spn_dispatch_id_t const id)
+{
+  spn_dispatch_stage_e stage = track->stage[id];
+
+  track->count.array[stage] -= 1;
+}
+
+static void
+spn_dispatch_track_dump_count(struct spn_dispatch_track const * const track)
+{
+  fprintf(stderr,
+          "{\n"
+#undef SPN_DISPATCH_STAGE
+#define SPN_DISPATCH_STAGE(e_) "\t" #e_ ": %u\n"
+          SPN_DISPATCH_STAGES() "}\n"
+
+#undef SPN_DISPATCH_STAGE
+#define SPN_DISPATCH_STAGE(e_) , track->count.named.e_
+          SPN_DISPATCH_STAGES());
+}
+
+#endif
+
+//
+//
+//
+
 struct spn_dispatch
 {
   VkCommandPool cp;
@@ -167,11 +241,112 @@ struct spn_dispatch
     spn_dispatch_stage_id_t available[SPN_DISPATCH_STAGE_ID_COUNT];
     spn_dispatch_id_t       executing[SPN_DISPATCH_ID_COUNT];
     spn_dispatch_id_t       complete[SPN_DISPATCH_ID_COUNT];
+
+#ifdef SPN_DISPATCH_TRACK_STAGE
+    struct spn_dispatch_track track;
+#endif
   } indices;
 
   // a large array that maps handle ids to dispatch stage ids
   spn_dispatch_stage_id_t * handle_stage_ids;
 };
+
+//
+//
+//
+
+#ifdef SPN_DISPATCH_TRACK_STAGE
+
+static void
+spn_dispatch_track_dump(struct spn_dispatch const * const dispatch,
+                        uint64_t const                    timeout_ns,
+                        VkResult const                    result)
+{
+  if (timeout_ns > 0ul)
+    {
+      static char const * const stage_names[] = {
+
+#undef SPN_DISPATCH_STAGE
+#define SPN_DISPATCH_STAGE(e_) #e_,
+
+        SPN_DISPATCH_STAGES()
+      };
+
+      fprintf(stderr,
+              "dispatch->counts.executing: %u --> %s\n",
+              dispatch->counts.executing,
+              vk_get_result_string(result));
+
+      for (uint32_t ii = 0; ii < dispatch->counts.executing; ii++)
+        {
+          spn_dispatch_id_t    id    = dispatch->indices.executing[ii];
+          spn_dispatch_stage_e stage = dispatch->indices.track.stage[id];
+
+          fprintf(stderr,
+                  "dispatch->indices.stage[ %3u ] = ( %2u ) : %s\n",
+                  id,
+                  stage,
+                  stage_names[stage]);
+        }
+
+      spn_dispatch_track_dump_count(&dispatch->indices.track);
+    }
+}
+
+#endif
+
+//
+//
+//
+
+static void
+spn_debug_utils_cmd_begin_stage(VkCommandBuffer cb, spn_dispatch_stage_e const stage)
+{
+  if (pfn_vkCmdBeginDebugUtilsLabelEXT != NULL)
+    {
+      static char const * const stage_names[] = {
+
+#undef SPN_DISPATCH_STAGE
+#define SPN_DISPATCH_STAGE(e_) #e_,
+
+        SPN_DISPATCH_STAGES()
+      };
+
+      VkDebugUtilsLabelEXT const label = {
+        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+        NULL,
+        stage_names[stage],
+        { 1.0f, 0.0f, 0.0f, 1.0f },
+      };
+
+      pfn_vkCmdBeginDebugUtilsLabelEXT(cb, &label);
+    }
+}
+
+void
+spn_debug_utils_cmd_begin(VkCommandBuffer cb, char const * const label_name)
+{
+  if (pfn_vkCmdBeginDebugUtilsLabelEXT != NULL)
+    {
+      VkDebugUtilsLabelEXT const label = {
+        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+        NULL,
+        label_name,
+        { 0.0f, 1.0f, 0.0f, 1.0f },
+      };
+
+      pfn_vkCmdBeginDebugUtilsLabelEXT(cb, &label);
+    }
+}
+
+void
+spn_debug_utils_cmd_end(VkCommandBuffer cb)
+{
+  if (pfn_vkCmdEndDebugUtilsLabelEXT != NULL)
+    {
+      pfn_vkCmdEndDebugUtilsLabelEXT(cb);
+    }
+}
 
 //
 //
@@ -240,7 +415,7 @@ spn_device_dispatch_create(struct spn_device * const device)
   //
   // allocate and initialize handle stage ids
   //
-  uint32_t const handle_count          = spn_device_handle_pool_get_allocated_handle_count(device);
+  uint32_t const handle_count          = spn_device_handle_pool_get_handle_count(device);
   size_t const   handle_stage_ids_size = sizeof(*dispatch->handle_stage_ids) * handle_count;
 
   dispatch->handle_stage_ids = spn_allocator_host_perm_alloc(&device->allocator.host.perm,
@@ -258,6 +433,10 @@ spn_device_dispatch_create(struct spn_device * const device)
 
 #ifdef SPN_DISPATCH_TRACK_WAITING
   dispatch->counts.waiting = 0;
+#endif
+
+#ifdef SPN_DISPATCH_TRACK_STAGE
+  spn_dispatch_track_reset(&dispatch->indices.track);
 #endif
 
   for (uint32_t ii = 0; ii < SPN_DISPATCH_STAGE_ID_COUNT; ii++)
@@ -396,7 +575,7 @@ spn_device_dispatch_process_complete(struct spn_device * const   device,
                                      struct spn_dispatch * const dispatch)
 {
   //
-  // it's possible that excution of a pfn will update this count
+  // it's possible that execution of a pfn will update this count
   //
   while (dispatch->counts.complete > 0)
     {
@@ -412,6 +591,10 @@ spn_device_dispatch_process_complete(struct spn_device * const   device,
 
       // NOTE: we make the dispatch available *before* invoking the callback
       dispatch->indices.available[dispatch->counts.available++] = id;
+
+#ifdef SPN_DISPATCH_TRACK_STAGE
+      spn_dispatch_track_end(&dispatch->indices.track, id);
+#endif
 
       // invoke completion
       if (is_pfn && is_signalling)
@@ -496,7 +679,13 @@ spn_device_dispatch_process_executing(struct spn_device * const   device,
   //
   // wait for signalled or timeout
   //
-  switch (vkWaitForFences(device->environment.d, fences_count, fences, wait_all, timeout_ns))
+  VkResult result = vkWaitForFences(device->environment.d,  //
+                                    fences_count,
+                                    fences,
+                                    wait_all,
+                                    timeout_ns);
+
+  switch (result)
     {
       case VK_SUCCESS:
         break;
@@ -523,12 +712,14 @@ spn_device_dispatch_process_executing(struct spn_device * const   device,
             );
           }
 #endif
+        spn_dispatch_track_dump(dispatch, timeout_ns, result);
         return SPN_TIMEOUT;
 
       case VK_ERROR_OUT_OF_HOST_MEMORY:
       case VK_ERROR_OUT_OF_DEVICE_MEMORY:
       case VK_ERROR_DEVICE_LOST:
       default:
+        spn_dispatch_track_dump(dispatch, timeout_ns, result);
         spn_device_lost(device);
         return SPN_ERROR_CONTEXT_LOST;
     }
@@ -570,7 +761,7 @@ spn_device_dispatch_process_executing(struct spn_device * const   device,
 //
 //
 
-spn_result_t
+static spn_result_t
 spn_device_wait_for_fences(struct spn_device * const device,
                            uint32_t const            imports_count,
                            VkFence * const           imports,
@@ -595,7 +786,6 @@ spn_device_wait_for_fences(struct spn_device * const device,
         {
           *executing_count = dispatch->counts.executing;
         }
-
       return result;
     }
 
@@ -616,39 +806,68 @@ spn_device_wait_for_fences(struct spn_device * const device,
 //
 
 spn_result_t
-spn_device_wait_all(struct spn_device * const device, bool const wait_all)
+spn_device_wait_all(struct spn_device * const device,
+                    bool const                wait_all,
+                    char const * const        label_name)
 {
-  return spn_device_wait_for_fences(device,
-                                    0,
-                                    NULL,
+  // begin debug info label
+  if (pfn_vkQueueBeginDebugUtilsLabelEXT != NULL)
+    {
+      VkDebugUtilsLabelEXT const label = {
+        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+        NULL,
+        label_name,
+        { 0.0f, 0.0f, 1.0f, 1.0f },
+      };
+
+      pfn_vkQueueBeginDebugUtilsLabelEXT(spn_device_queue_label(device), &label);
+    }
+
+  spn_result_t const result = spn_device_wait_for_fences(device,  //
+                                                         0,
+                                                         NULL,
+                                                         wait_all,
+                                                         spn_device_get_timeout_ns(device),
+                                                         NULL);
+
+  // end debug info label
+  if (pfn_vkQueueEndDebugUtilsLabelEXT != NULL)
+    {
+      pfn_vkQueueEndDebugUtilsLabelEXT(spn_device_queue_label(device));
+    }
+
+  return result;
+}
+
+spn_result_t
+spn_device_wait(struct spn_device * const device, char const * const label_name)
+{
+  return spn_device_wait_all(device, false, label_name);
+}
+
+//
+//
+//
+
+//
+// CONTEXT SCHEDULING
+//
+
+spn_result_t
+spn_vk_context_wait(spn_context_t    context,
+                    uint32_t const   imports_count,
+                    VkFence * const  imports,
+                    bool const       wait_all,
+                    uint64_t const   timeout_ns,
+                    uint32_t * const executing_count)
+{
+  return spn_device_wait_for_fences(context->device,
+                                    imports_count,
+                                    imports,
                                     wait_all,
-                                    spn_device_get_timeout_ns(device),
-                                    NULL);
+                                    timeout_ns,
+                                    executing_count);
 }
-
-spn_result_t
-spn_device_wait(struct spn_device * const device)
-{
-  return spn_device_wait_all(device, false);
-}
-
-//
-//
-//
-
-#ifdef SPN_DEVICE_DEBUG_WAIT_VERBOSE
-
-spn_result_t
-spn_device_wait_verbose(struct spn_device * const device,
-                        char const * const        file_line,
-                        char const * const        func_name)
-{
-  fprintf(stderr, "%s %s() calls %s()\n", file_line, func_name, __func__);
-
-  return spn_device_wait_all(device, false);
-}
-
-#endif
 
 //
 //
@@ -657,42 +876,71 @@ spn_device_wait_verbose(struct spn_device * const device,
 spn_result_t
 spn_device_dispatch_acquire(struct spn_device * const  device,
                             spn_dispatch_stage_e const stage,
-                            spn_dispatch_id_t * const  id)
+                            spn_dispatch_id_t * const  p_id)
 {
   struct spn_dispatch * const dispatch = device->dispatch;
 
   // any available?
   while (dispatch->counts.available == 0)
     {
-      spn_result_t const result = spn_device_wait(device);
+      spn_result_t const result = spn_device_wait(device, __func__);
 
-      if (result)
-        return result;
+      if (result != SPN_SUCCESS)
+        {
+          return result;
+        }
     }
 
   // pop
-  *id = dispatch->indices.available[--dispatch->counts.available];
+  spn_dispatch_id_t const id = dispatch->indices.available[--dispatch->counts.available];
+
+  // save
+  *p_id = id;
+
+#ifdef SPN_DISPATCH_TRACK_STAGE
+  spn_dispatch_track_begin(&dispatch->indices.track, stage, id);
+#endif
 
   // reset the fence
-  vk(ResetFences(device->environment.d, 1, dispatch->fences + *id));
+  vk(ResetFences(device->environment.d, 1, dispatch->fences + id));
 
   // zero the signals
-  struct spn_dispatch_signal * signal = dispatch->signals + *id;
+  struct spn_dispatch_signal * signal = dispatch->signals + id;
 
   memset(signal, 0, sizeof(*signal));
 
   // NULL the flush arg
-  dispatch->flushes[*id].arg = NULL;
+  dispatch->flushes[id].arg = NULL;
 
   // set up default pfn/data
-  dispatch->submitters[*id] =
-    (struct spn_dispatch_submitter){ .pfn = spn_device_dispatch_submitter_default, .data = NULL };
+  dispatch->submitters[id] = (struct spn_dispatch_submitter){
+
+    .pfn  = spn_device_dispatch_submitter_default,
+    .data = NULL
+  };
 
   // NULL the completion pfn
-  dispatch->completions[*id].pfn = NULL;
+  dispatch->completions[id].pfn = NULL;
 
   // zero the wait count
-  dispatch->wait_counts[*id] = 0;
+  dispatch->wait_counts[id] = 0;
+
+  // initialize the cb now
+  static VkCommandBufferBeginInfo const cbbi = {
+
+    .sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+    .pNext            = NULL,
+    .flags            = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    .pInheritanceInfo = NULL
+  };
+
+  VkCommandBuffer cb = dispatch->cbs[id];
+
+  // all ids are eventually submitted
+  vk(BeginCommandBuffer(cb, &cbbi));
+
+  // label the cb
+  spn_debug_utils_cmd_begin_stage(cb, stage);
 
   return SPN_SUCCESS;
 }
@@ -704,21 +952,7 @@ spn_device_dispatch_acquire(struct spn_device * const  device,
 VkCommandBuffer
 spn_device_dispatch_get_cb(struct spn_device * const device, spn_dispatch_id_t const id)
 {
-  struct spn_dispatch * const dispatch = device->dispatch;
-
-  VkCommandBuffer cb = dispatch->cbs[id];
-
-  VkCommandBufferBeginInfo const cbbi = {
-
-    .sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-    .pNext            = NULL,
-    .flags            = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-    .pInheritanceInfo = NULL
-  };
-
-  vk(BeginCommandBuffer(cb, &cbbi));
-
-  return cb;
+  return device->dispatch->cbs[id];
 }
 
 void
@@ -790,11 +1024,14 @@ void
 spn_device_dispatch_submit(struct spn_device * const device, spn_dispatch_id_t const id)
 {
   struct spn_dispatch * const dispatch = device->dispatch;
+  VkCommandBuffer             cb       = dispatch->cbs[id];
+
+  spn_debug_utils_cmd_end(cb);
 
   //
   // end the command buffer
   //
-  vk(EndCommandBuffer(dispatch->cbs[id]));
+  vk(EndCommandBuffer(cb));
 
   //
   // shortcut: launch immediately if there are no dependencies
@@ -809,7 +1046,7 @@ spn_device_dispatch_submit(struct spn_device * const device, spn_dispatch_id_t c
       // submit!
       dispatch->submitters[id].pfn(spn_device_queue_next(device),
                                    dispatch->fences[id],
-                                   dispatch->cbs[id],
+                                   cb,
                                    dispatch->submitters[id].data);
     }
 #ifdef SPN_DISPATCH_TRACK_WAITING
@@ -992,8 +1229,8 @@ spn_device_dispatch_happens_after_handles_and_submit(struct spn_device * const  
                                                      spn_dispatch_id_t const        id_after,
                                                      spn_handle_t const * const     handles,
                                                      uint32_t const                 size,
-                                                     uint32_t const                 span,
-                                                     uint32_t const                 head)
+                                                     uint32_t const                 head,
+                                                     uint32_t const                 span)
 {
   struct spn_dispatch * const dispatch = device->dispatch;
 
@@ -1125,8 +1362,8 @@ void
 spn_device_dispatch_handles_complete(struct spn_device * const  device,
                                      spn_handle_t const * const handles,
                                      uint32_t const             size,
-                                     uint32_t const             span,
-                                     uint32_t const             head)
+                                     uint32_t const             head,
+                                     uint32_t const             span)
 {
   struct spn_dispatch * const dispatch = device->dispatch;
 

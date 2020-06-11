@@ -143,7 +143,7 @@ main()
     }
 
   //
-  // load the rast cmd from the ring
+  // load the fill cmd from the ring
   //
   uvec4 cmd = fill_cmds[cmd_idx];
 
@@ -187,14 +187,17 @@ main()
   rast_base += counts_exc;
 
   //
-  // Note that the 'path_h' component was converted to a node_id in
-  // order to avoid a very scattered lookup in the map[].
+  // Convert the path_h to a node_id.
+  //
+  // Unfortunately, this is a subgroup-wide "broadcast read" of a
+  // single dword but is fairly low intensity.
   //
   // The cmd is not subgroup uniform because we reuse it in each lane.
   //
-  // But the node id is subgroup uniform.
-  //
-  SPN_SUBGROUP_UNIFORM uint node_id = SPN_CMD_RASTERIZE_GET_NODE_ID(cmd);
+  const uint                path_h  = SPN_CMD_FILL_GET_PATH_H(cmd);
+  SPN_SUBGROUP_UNIFORM uint node_id = bp_host_map[path_h];
+
+  SPN_CMD_RASTERIZE_SET_NODE_ID(cmd, node_id);
 
   //
   // vertically count tags
@@ -239,9 +242,9 @@ main()
 
   SPN_FILLS_EXPAND_BLOCK_EXPAND();
 
-    //
-    // DEBUG -- dump the head
-    //
+  //
+  // DEBUG -- dump the head
+  //
 #if 0
   {
     uint debug_base = 0;
