@@ -1,0 +1,131 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Software delivery
+### unarchive a Fuchsia package in FAR format
+
+## Usage: fx unarchive-package <.far file> [ --out-dir <output directory> ]
+##
+## The script unarchives a Fuchsia package in FAR format and puts the contents
+## in the output directory. Files in the package will be renamed and arranged
+## according to its meta/contents file.
+##
+## The command will by default create a directory with the same name as the .far
+## file under the current directory, which can be overridden by --output-dir
+## option. If --output-dir is an existing directory, then a sub-directory with
+## the same name as the .far file will be created.
+##
+## Example:
+##   $ fx unarchive-package foo.far
+##   Unarchived foo.far under foo
+##
+##   # directory "foo" will be created as
+##   $ tree foo
+##   foo
+##   ├── bin
+##   │   └── foo
+##   ├── lib
+##   │   ├── ld.so.1
+##   │   ├── libc++abi.so.1
+##   │   ├── libc++.so.2
+##   │   ├── libfdio.so
+##   │   └── libunwind.so.1
+##   └── meta
+##       ├── contents
+##       ├── foo_component.cmx
+##       └── package
+##
+##   $ fx unarchive-package foo.far --out-dir foo2  # assuming foo2 doesn't exist
+##   Unarchived foo.far under foo2
+##
+##   $ fx unarchive-package foo.far --out-dir /tmp
+##   Unarchived foo.far under /tmp/foo
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+fx-config-read
+
+# Cleanup at exit
+function cleanup {
+  [[ ${TMP_META_FAR} && -f ${TMP_META_FAR} ]] && rm "${TMP_META_FAR}"
+}
+trap cleanup EXIT
+
+# Useful function
+function die {
+  fx-error "$@"
+  exit 1
+}
+
+# `fx far` wrapper
+function far {
+  local far="${FUCHSIA_BUILD_DIR}/host-tools/far"
+  if [[ ! -f ${far} ]]; then
+    fx-error "\"far\" host tool not found."
+    fx-error "Run \"fx build\" to build host tools."
+    exit 1
+  fi
+
+  "${far}" "$@" || exit $?
+}
+
+# Parse arguments
+while [[ $# -ge 1 ]]; do
+  case "$1" in
+    -h|--help)
+      fx-command-help
+      exit 0
+      ;;
+    --out-dir)
+      shift
+      [[ ! $1 ]] && die "--out-dir requires an argument after it"
+      OUTPUT="$1"
+      ;;
+    -*)
+      die "Cannot understand option $1"
+      ;;
+    *)
+      [[ ${FAR_FILE} ]] && die "Only one .far file can be provided"
+      FAR_FILE="$1"
+  esac
+  shift
+done
+
+[[ ! ${FAR_FILE} ]] && fx-command-help && die "No input provided"
+[[ ! -e ${FAR_FILE} ]] && die "${FAR_FILE} does not exist"
+
+PKG_NAME="$(basename "${FAR_FILE%.far}")"
+if [[ ${OUTPUT} ]]; then
+  # Append $PKG_NAME if $OUTPUT is existing, e.g. /tmp
+  [[ -e ${OUTPUT} ]] && OUTPUT="${OUTPUT}/${PKG_NAME}"
+else
+  # By default output to the current directory
+  OUTPUT="${PKG_NAME}"
+fi
+[[ -e ${OUTPUT} ]] && die "${OUTPUT} already exists"
+
+TMP_META_FAR="$(mktemp)"
+
+# It first extracts meta.far from $FAR_FILE and then from its contents
+# file we lookup the blob ID to extract that particular file indexed by
+# blob ID under its readable name.
+far extract-file "--archive=${FAR_FILE}" --file=meta.far "--output=${TMP_META_FAR}"
+far extract "--archive=${TMP_META_FAR}" "--output=${OUTPUT}"
+
+[[ ! -f ${OUTPUT}/meta/contents ]] && die "Cannot find ${OUTPUT}/meta/contents"
+
+while IFS= read -r line; do
+  # Each line is of the format "$dst=$src" where $dst is a readable name like "lib/libfoo.so"
+  # and $src is a blob sha1.
+  dst="${line%=*}"
+  src="${line##*=}"
+
+  dir="$(dirname "${OUTPUT}/${dst}")"
+  if [[ ! -d ${dir} ]]; then
+    mkdir -p "${dir}"
+  fi
+  far extract-file "--archive=${FAR_FILE}" "--file=${src}" "--output=${OUTPUT}/${dst}"
+done < "${OUTPUT}/meta/contents"
+
+echo "Unarchived ${FAR_FILE} under ${OUTPUT}"
