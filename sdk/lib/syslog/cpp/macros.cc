@@ -11,10 +11,6 @@
 #if defined(__Fuchsia__)
 #include <lib/syslog/global.h>
 #include <zircon/status.h>
-#elif defined(OS_ANDROID)
-#include <android/log.h>
-#elif defined(OS_IOS)
-#include <lib/syslog.h>
 #endif
 
 namespace syslog {
@@ -113,25 +109,6 @@ LogMessage::~LogMessage() {
     std::cerr << stream_.str() << std::endl;
   fx_logger_t* logger = fx_log_get_logger();
   fx_logger_log(logger, severity_, tag_, stream_.str().c_str());
-#elif defined(OS_ANDROID)
-  android_LogPriority priority = (severity_ < 0) ? ANDROID_LOG_VERBOSE : ANDROID_LOG_UNKNOWN;
-  switch (severity_) {
-    case LOG_INFO:
-      priority = ANDROID_LOG_INFO;
-      break;
-    case LOG_WARNING:
-      priority = ANDROID_LOG_WARN;
-      break;
-    case LOG_ERROR:
-      priority = ANDROID_LOG_ERROR;
-      break;
-    case LOG_FATAL:
-      priority = ANDROID_LOG_FATAL;
-      break;
-  }
-  __android_log_write(priority, ANDROID_LOG_TAG, stream_.str().c_str());
-#elif defined(OS_IOS)
-  syslog(LOG_ALERT, "%s", stream_.str().c_str());
 #else
   std::cerr << stream_.str();
   std::cerr.flush();
