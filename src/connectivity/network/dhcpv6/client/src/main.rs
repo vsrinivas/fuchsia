@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// For the select macro to expand.
+#![recursion_limit = "256"]
+
 mod client;
 mod provider;
 

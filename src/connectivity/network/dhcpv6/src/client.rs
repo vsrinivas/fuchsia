@@ -98,21 +98,21 @@ fn clipped_duration(secs: f64) -> Duration {
 }
 
 /// Identifies what event should be triggered when a timer fires.
-#[derive(Debug, PartialEq, Eq, Hash)]
-enum Dhcpv6ClientTimerType {
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
+pub enum Dhcpv6ClientTimerType {
     Retransmission,
     Refresh,
 }
 
 /// Possible actions that need to be taken for a state transition to happen successfully.
 #[derive(Debug, PartialEq)]
-enum Action {
+pub enum Action {
     SendMessage(Vec<u8>),
     ScheduleTimer(Dhcpv6ClientTimerType, Duration),
     CancelTimer(Dhcpv6ClientTimerType),
 }
 
-type Actions = Vec<Action>;
+pub type Actions = Vec<Action>;
 
 /// Holds data and provides methods for handling state transitions from information requesting
 /// state.
@@ -302,7 +302,8 @@ impl Dhcpv6ClientState {
 /// events (e.g. packets received, timer expired, etc.). All the functions provided by this struct
 /// are pure-functional. All state transition functions return a list of actions that the
 /// imperative shell should take to complete the transition.
-struct Dhcpv6ClientStateMachine<R: Rng> {
+#[derive(Debug)]
+pub struct Dhcpv6ClientStateMachine<R: Rng> {
     transaction_id: [u8; 3],
     options_to_request: Vec<Dhcpv6OptionCode>,
     state: Option<Dhcpv6ClientState>,
@@ -310,27 +311,16 @@ struct Dhcpv6ClientStateMachine<R: Rng> {
     rng: R,
 }
 
-/// Creates a transaction id that can be used by the client as defined in [RFC 8415, Section 16.1].
-///
-/// [RFC 8415, Section 16.1]: https://tools.ietf.org/html/rfc8415#section-16.1
-fn transaction_id<R: Rng>(rng: &mut R) -> [u8; 3] {
-    let mut id = [0u8; 3];
-    for i in 0..id.len() {
-        id[i] = rng.gen();
-    }
-    id
-}
-
 impl<R: Rng> Dhcpv6ClientStateMachine<R> {
     /// Starts the client to send information requests and respond to replies. The client will
     /// operate in the Stateless DHCP model defined in [RFC 8415, Section 6.1].
     ///
     /// [RFC 8415, Section 6.1]: https://tools.ietf.org/html/rfc8415#section-6.1
-    fn start_information_request(
+    pub fn start_information_request(
+        transaction_id: [u8; 3],
         options_to_request: Vec<Dhcpv6OptionCode>,
         mut rng: R,
     ) -> (Self, Actions) {
-        let transaction_id = transaction_id(&mut rng);
         let (state, actions) =
             InformationRequesting::start(transaction_id, &options_to_request, &mut rng);
         (Self { state: Some(state), transaction_id, options_to_request, rng }, actions)
@@ -341,7 +331,7 @@ impl<R: Rng> Dhcpv6ClientStateMachine<R> {
     /// # Panics
     ///
     /// `handle_timeout` panics if current state is None.
-    fn handle_timeout(&mut self, timeout_type: Dhcpv6ClientTimerType) -> Actions {
+    pub fn handle_timeout(&mut self, timeout_type: Dhcpv6ClientTimerType) -> Actions {
         let state = self.state.take().expect("state should not be empty");
         let (new_state, actions) = match timeout_type {
             Dhcpv6ClientTimerType::Retransmission => state.retransmission_timer_expired(
@@ -364,7 +354,7 @@ impl<R: Rng> Dhcpv6ClientStateMachine<R> {
     /// # Panics
     ///
     /// `handle_reply` panics if current state is None.
-    fn handle_message_receive<B: ByteSlice>(&mut self, msg: Dhcpv6Message<'_, B>) -> Actions {
+    pub fn handle_message_receive<B: ByteSlice>(&mut self, msg: Dhcpv6Message<'_, B>) -> Actions {
         if msg.transaction_id != &self.transaction_id {
             Vec::new() // Ignore messages for other clients.
         } else {
@@ -410,6 +400,7 @@ mod tests {
             vec![Dhcpv6OptionCode::DnsServers, Dhcpv6OptionCode::DomainList],
         ] {
             let (mut client, actions) = Dhcpv6ClientStateMachine::start_information_request(
+                [0, 1, 2],
                 options.clone(),
                 StepRng::new(std::u64::MAX / 2, 0),
             );
@@ -470,6 +461,7 @@ mod tests {
     #[test]
     fn test_unexpected_messages_are_ignored() {
         let (mut client, _) = Dhcpv6ClientStateMachine::start_information_request(
+            [0, 1, 2],
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
         );
@@ -516,6 +508,7 @@ mod tests {
     #[test]
     fn test_unexpected_events_are_ignored() {
         let (mut client, _) = Dhcpv6ClientStateMachine::start_information_request(
+            [0, 1, 2],
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
         );
@@ -550,6 +543,7 @@ mod tests {
     #[test]
     fn test_information_request_retransmission() {
         let (mut client, actions) = Dhcpv6ClientStateMachine::start_information_request(
+            [0, 1, 2],
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
         );
@@ -569,6 +563,7 @@ mod tests {
     #[test]
     fn test_information_request_refresh() {
         let (mut client, _) = Dhcpv6ClientStateMachine::start_information_request(
+            [0, 1, 2],
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
         );

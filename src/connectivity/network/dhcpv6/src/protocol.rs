@@ -49,7 +49,7 @@ pub enum ProtocolError {
 /// [RFC 8415, Section 7.3]: https://tools.ietf.org/html/rfc8415#section-7.3
 #[derive(Debug, PartialEq, FromPrimitive, AsBytes)]
 #[repr(u8)]
-pub(crate) enum Dhcpv6MessageType {
+pub enum Dhcpv6MessageType {
     Solicit = 1,
     Advertise = 2,
     Request = 3,
@@ -121,7 +121,7 @@ impl TryFrom<u16> for Dhcpv6OptionCode {
 ///
 /// [options]: https://www.iana.org/assignments/dhcpv6-parameters/dhcpv6-parameters.xhtml#dhcpv6-parameters-2
 #[derive(Debug, PartialEq)]
-pub(crate) enum Dhcpv6Option<'a> {
+pub enum Dhcpv6Option<'a> {
     // TODO(jayzhuang): add more options.
     // https://tools.ietf.org/html/rfc8415#section-21.2
     ClientId(&'a Duid),
@@ -151,7 +151,7 @@ mod checked {
 
     /// A checked domain that can only be created through the provided constructor.
     #[derive(Debug, PartialEq)]
-    pub(crate) struct Domain {
+    pub struct Domain {
         domain: String,
         builder: DomainBuilder,
     }
@@ -210,7 +210,7 @@ impl Dhcpv6Option<'_> {
 }
 
 #[derive(Debug)]
-pub(crate) struct Dhcpv6OptionsImpl;
+pub struct Dhcpv6OptionsImpl;
 
 impl RecordsImplLayout for Dhcpv6OptionsImpl {
     type Context = ();
@@ -474,10 +474,11 @@ type TransactionId = [u8; 3];
 ///
 /// [RFC 8415, Section 8]: https://tools.ietf.org/html/rfc8415#section-8
 #[derive(Debug)]
-pub(crate) struct Dhcpv6Message<'a, B> {
-    pub(crate) msg_type: Dhcpv6MessageType,
-    pub(crate) transaction_id: &'a TransactionId,
-    pub(crate) options: Records<B, Dhcpv6OptionsImpl>,
+pub struct Dhcpv6Message<'a, B> {
+    // TODO(http://fxbug.dev/53401): create getters instead of directly exposing these fields.
+    pub msg_type: Dhcpv6MessageType,
+    pub transaction_id: &'a TransactionId,
+    pub options: Records<B, Dhcpv6OptionsImpl>,
 }
 
 impl<'a, B: 'a + ByteSlice> ParsablePacket<B, ()> for Dhcpv6Message<'a, B> {
@@ -505,14 +506,14 @@ impl<'a, B: 'a + ByteSlice> ParsablePacket<B, ()> for Dhcpv6Message<'a, B> {
     }
 }
 
-pub(crate) struct Dhcpv6MessageBuilder<'a> {
+pub struct Dhcpv6MessageBuilder<'a> {
     msg_type: Dhcpv6MessageType,
     transaction_id: TransactionId,
     options: RecordsSerializer<'a, Dhcpv6OptionsImpl, Dhcpv6Option<'a>, Iter<'a, Dhcpv6Option<'a>>>,
 }
 
 impl<'a> Dhcpv6MessageBuilder<'a> {
-    pub(crate) fn new(
+    pub fn new(
         msg_type: Dhcpv6MessageType,
         transaction_id: TransactionId,
         options: &'a [Dhcpv6Option<'a>],
