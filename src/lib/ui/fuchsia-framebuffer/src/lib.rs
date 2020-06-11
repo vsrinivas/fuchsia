@@ -807,21 +807,24 @@ impl FrameBuffer {
 mod test {
     use super::*;
     use fidl_fuchsia_hardware_display::ControllerRequest;
+    use std::cell::Cell;
+    use std::rc::Rc;
 
     #[fasync::run_singlethreaded(test)]
     async fn test_no_vsync() -> Result<(), anyhow::Error> {
         let (client, server) = fidl::endpoints::create_endpoints::<ControllerMarker>()?;
         let mut stream = server.into_stream()?;
-        let mut vsync_enabled = false;
+        let vsync_enabled = Rc::new(Cell::new(false));
+        let vsync_enabled_clone = Rc::clone(&vsync_enabled);
 
-        fasync::spawn(async move {
+        fasync::spawn_local(async move {
             while let Some(req) = stream.try_next().await.expect("Failed to get request!") {
                 match req {
                     ControllerRequest::EnableVsync { enable: true, control_handle: _ } => {
-                        vsync_enabled = true
+                        vsync_enabled_clone.set(true)
                     }
                     ControllerRequest::EnableVsync { enable: false, control_handle: _ } => {
-                        vsync_enabled = false
+                        vsync_enabled_clone.set(false)
                     }
                     _ => panic!("Unexpected request"),
                 }
@@ -831,7 +834,7 @@ mod test {
         let proxy = client.into_proxy()?;
         let (dummy, _) = zx::Channel::create()?;
         let _fb = FrameBuffer::new_with_proxy(FrameUsage::Cpu, proxy, dummy, None);
-        if vsync_enabled {
+        if vsync_enabled.get() {
             panic!("Vsync should be disabled");
         }
 

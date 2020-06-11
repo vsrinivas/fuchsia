@@ -176,7 +176,7 @@ async fn process_watch_event(
             while let Some(()) = (timer.next()).await {
                 fx_vlog!(LOG_VERBOSITY, "::power:: periodic timer fired => UPDDATE_STATUS");
                 let power_info = get_power_info(&file).await.unwrap();
-                battery_info = Some(get_battery_info(&file).await.unwrap());
+                let battery_info = Some(get_battery_info(&file).await.unwrap());
                 if let Err(e) =
                     battery_manager.update_status(power_info.clone(), battery_info.clone())
                 {
