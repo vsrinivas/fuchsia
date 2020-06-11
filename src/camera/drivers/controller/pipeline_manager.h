@@ -27,7 +27,7 @@ namespace camera {
 
 namespace {
 constexpr auto kPipelineManagerSignalExitDone = ZX_USER_SIGNAL_0;
-constexpr auto kSerialzedTaskQueued = ZX_USER_SIGNAL_0;
+constexpr auto kTaskQueued = ZX_USER_SIGNAL_0;
 }  // namespace
 
 // |PipelineManager|
@@ -80,25 +80,18 @@ class PipelineManager {
   FindGraphHead(fuchsia::camera2::CameraStreamType stream_type);
 
  private:
-  // Creates a async wait object which waits on |serialized_tasks_event_|
-  // to check the serialized task queue and drains it.
+  // Creates an async wait object which waits on |tasks_event_| to check the task queue and drains
+  // it.
   void SetupTaskWaiter();
 
-  // Signals the completion of a serialized task.
-  void SerializedTaskComplete();
+  // Posts a task on the task queue. All the tasks related to the manipulation of the stream
+  // configurations need to be posted on the task queue instead of directly posting them on the loop
+  // using async::PostTask(). Note: The task posted to the queue needs to call TaskComplete() to
+  // signal completion of the task.
+  void PostTask(fit::closure task);
 
-  // Posts a task on the serialized task queue.
-  // Note: The serialized task posted to the queue needs
-  // to call SerializedTaskComplete() to signal completion
-  // of the task.
-  void PostTaskOnSerializedTaskQueue(fit::closure task) {
-    if (global_shutdown_requested_) {
-      FX_LOGS(DEBUG) << "Global shutdown requested, ignoring posted task on serialized task queue";
-      return;
-    }
-    serialized_task_queue_.emplace(std::move(task));
-    serialized_tasks_event_.signal(0u, kSerialzedTaskQueued);
-  }
+  // Signals the completion of the task.
+  void TaskComplete();
 
   // Frees up the nodes after the stream pipeline has been shutdown
   // when |stream_to_disconnect| stream is disconnected.
@@ -150,10 +143,11 @@ class PipelineManager {
   // Map of Output streams -> OutputNodes
   std::unordered_map<fuchsia::camera2::CameraStreamType, OutputNode*> output_nodes_info_;
   std::vector<fuchsia::camera2::CameraStreamType> stream_shutdown_requested_;
-  bool serialized_task_in_progress_ = false;
-  zx::event serialized_tasks_event_;
-  async::Wait serialized_tasks_event_waiter_;
-  std::queue<fit::closure> serialized_task_queue_;
+  // Queue for stream creation & deletion tasks.
+  std::queue<fit::closure> task_queue_;
+  bool task_in_progress_ = false;
+  zx::event tasks_event_;
+  async::Wait tasks_event_waiter_;
 };
 
 }  // namespace camera
