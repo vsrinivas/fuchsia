@@ -141,6 +141,7 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   std::vector<std::unique_ptr<StreamImpl>> streams_;
   MuteState mute_state_;
   bool controller_streaming_ = true;
+  std::mutex sysmem_mutex_;
 
   friend class Client;
 };

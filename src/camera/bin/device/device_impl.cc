@@ -6,6 +6,7 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -261,21 +262,106 @@ void DeviceImpl::ConnectToStream(uint32_t index,
       std::move(on_stream_requested), std::move(on_no_clients));
 }
 
+// Returns when the provided allocator will likely succeed in allocating a collection with the given
+// constraints and some number of other participants. This is necessary prior to a solution for
+// fxbug.dev/53305. Returns true iff the wait completed successfully.
+static bool WaitForFreeSpace(fuchsia::sysmem::AllocatorPtr& allocator_ptr,
+                             fuchsia::sysmem::BufferCollectionConstraints constraints) {
+  // Incorporate typical client constraints.
+  constexpr uint32_t kMaxClientBuffers = 5;
+  constexpr uint32_t kBytesPerRowDivisor = 32 * 16;  // GPU-optimal stride.
+  constraints.min_buffer_count_for_camping += kMaxClientBuffers;
+  for (auto& format_constraints : constraints.image_format_constraints) {
+    format_constraints.bytes_per_row_divisor =
+        std::max(format_constraints.bytes_per_row_divisor, kBytesPerRowDivisor);
+  }
+
+  // Adopt the allocator channel as SyncPtr. This is only safe because the call is performed in the
+  // thread owned by the previously associated loop dispatcher, and the entire function is
+  // synchronous.
+  ZX_ASSERT(async_get_default_dispatcher() == allocator_ptr.dispatcher());
+  fuchsia::sysmem::AllocatorSyncPtr allocator;
+  allocator.Bind(allocator_ptr.Unbind());
+
+  // Repeatedly attempt allocation as long as it fails due to lack of memory.
+  fuchsia::sysmem::BufferCollectionInfo_2 buffers;
+  zx_status_t status = ZX_OK;
+  uint32_t num_attempts = 0;
+  constexpr uint32_t kMaxAttempts = 50;
+  do {
+    fuchsia::sysmem::BufferCollectionSyncPtr collection;
+    ZX_ASSERT(allocator->AllocateNonSharedCollection(collection.NewRequest()) == ZX_OK);
+    ZX_ASSERT(collection->SetName(0, "FreeSpaceProbe") == ZX_OK);
+    ZX_ASSERT(collection->SetConstraints(true, constraints) == ZX_OK);
+
+    // After calling SetConstraints, allocation may fail. This results in Wait returning NO_MEMORY
+    // followed by channel closure. Because the client may observe these in either order, treat
+    // channel closure as if it were NO_MEMORY.
+    zx_status_t status_out = ZX_OK;
+    status = collection->WaitForBuffersAllocated(&status_out, &buffers);
+    if (status == ZX_ERR_PEER_CLOSED) {
+      status = ZX_ERR_NO_MEMORY;
+    } else {
+      ZX_ASSERT(status == ZX_OK);
+      status = status_out;
+      collection->Close();
+    }
+
+    // Free any allocated buffers and wait enough time for them to be freed by sysmem as well.
+    collection = nullptr;
+    buffers = {};
+    zx::nanosleep(zx::deadline_after(zx::msec(100)));
+  } while (++num_attempts < kMaxAttempts && status == ZX_ERR_NO_MEMORY);
+
+  // Return the channel to the async binding.
+  ZX_ASSERT(allocator_ptr.Bind(allocator.Unbind()) == ZX_OK);
+
+  if (status != ZX_OK) {
+    FX_PLOGS(INFO, status) << "Timeout waiting for free space.";
+    return false;
+  }
+
+  return true;
+}
+
 void DeviceImpl::OnStreamRequested(
     uint32_t index, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
     fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
     fit::function<void(uint32_t)> max_camping_buffers_callback, uint32_t format_index) {
+  // TODO(53305): sysmem should help transition between collections that cannot exist concurrently
+  std::unique_lock sysmem_lock(sysmem_mutex_, std::try_to_lock);
+  if (!sysmem_lock.owns_lock()) {
+    async::PostTask(loop_.dispatcher(),
+                    [this, index, token = std::move(token), request = std::move(request),
+                     max_camping_buffers_callback = std::move(max_camping_buffers_callback),
+                     format_index]() mutable {
+                      OnStreamRequested(index, std::move(token), std::move(request),
+                                        std::move(max_camping_buffers_callback), format_index);
+                    });
+    return;
+  }
   // Negotiate buffers for this stream.
   // TODO(44770): Watch for buffer collection events.
   fuchsia::sysmem::BufferCollectionPtr collection;
   allocator_->BindSharedCollection(std::move(token), collection.NewRequest(loop_.dispatcher()));
+  if (!WaitForFreeSpace(allocator_,
+                        configs_[current_configuration_index_].stream_configs[index].constraints)) {
+    request.Close(ZX_ERR_NO_MEMORY);
+    return;
+  }
+  // Assign friendly names to each buffer for debugging and profiling.
+  std::ostringstream oss;
+  oss << "camera_c" << current_configuration_index_ << "_s" << index;
+  constexpr uint32_t kNamePriority = 30;  // Higher than Scenic but below the maximum.
+  collection->SetName(kNamePriority, oss.str());
   collection->SetConstraints(
       true, configs_[current_configuration_index_].stream_configs[index].constraints);
   collection->WaitForBuffersAllocated(
       [this, index, format_index, request = std::move(request),
        max_camping_buffers_callback = std::move(max_camping_buffers_callback),
-       collection = std::move(collection)](
+       collection = std::move(collection), sysmem_lock = std::move(sysmem_lock)](
           zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) mutable {
+        sysmem_lock.unlock();
         if (status != ZX_OK) {
           FX_PLOGS(ERROR, status) << "Failed to allocate buffers for stream.";
           request.Close(status);
@@ -288,15 +374,6 @@ void DeviceImpl::OnStreamRequested(
                                        .stream_configs[index]
                                        .constraints.min_buffer_count_for_camping;
         max_camping_buffers_callback(max_camping_buffers);
-
-        // Assign friendly names to each buffer for debugging and profiling.
-        for (uint32_t i = 0; i < buffers.buffer_count; ++i) {
-          std::ostringstream oss;
-          oss << "camera_c" << current_configuration_index_ << "_s" << index << "_b" << i;
-          fsl::MaybeSetObjectName(buffers.buffers[i].vmo.get(), oss.str(), [](std::string s) {
-            return s.find("Sysmem") == 0 || s.find("ImagePipe2") == 0;
-          });
-        }
 
         // Get the legacy stream using the negotiated buffers.
         controller_->CreateStream(current_configuration_index_, index, format_index,

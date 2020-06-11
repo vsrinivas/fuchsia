@@ -351,7 +351,7 @@ TEST_F(DeviceTest, RequestStreamFromController) {
     vmo_name = fsl::GetObjectName(vmo.get());
     return vmo_name != "Sysmem-core";
   });
-  EXPECT_EQ(vmo_name, "camera_c0_s0_b0");
+  EXPECT_EQ(vmo_name, "camera_c0_s0:0");
 
   constexpr uint32_t kBufferId = 42;
   bool callback_received = false;
