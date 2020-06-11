@@ -54,14 +54,32 @@ table SensorInputDescriptor {
     1: vector<SensorAxis>:SENSOR_MAX_VALUES values;
 };
 
+/// `SensorReportingState` determines when a sensor will send reports.
+enum SensorReportingState : uint32 {
+    /// No events will be sent from the sensor.
+    REPORT_NO_EVENTS = 1;
+    /// All events will be sent from the sensor. For most sensors, this
+    /// frequency can be set by `report_interval`.
+    REPORT_ALL_EVENTS = 2;
+    /// Only events that cross a threshold will be reported.
+    REPORT_THRESHOLD_EVENTS = 3;
+};
+
 /// Describes the format of the sensor's feature report. Feature reports can be
 /// requested from the sensor, or sent to the sensor.
 table SensorFeatureDescriptor {
     /// Describes the minimum and maximum reporting interval this sensor
     /// supports.
     1: Axis report_interval;
+    /// If this is true then SensorFeatureReport supports setting a
+    /// SensorReportingState.
+    3: bool supports_reporting_state;
     /// Sets the sensitivity for the given `SensorType`.
     2: vector<SensorAxis>:SENSOR_MAX_VALUES sensitivity;
+    /// Sets the high threshold values for the given `SensorType`.
+    4: vector<SensorAxis>:SENSOR_MAX_VALUES threshold_high;
+    /// Sets the low threshold values for the given `SensorType`.
+    5: vector<SensorAxis>:SENSOR_MAX_VALUES threshold_low;
 };
 
 /// The capabilities of a sensor device.
@@ -84,7 +102,15 @@ table SensorInputReport {
 table SensorFeatureReport {
     /// The time between reports sent by the sensor.
     1: int64 report_interval;
+    /// This determines when the sensor will send reports.
+    3: SensorReportingState reporting_state;
     /// The sensitivity for various `SensorType`. This vector must be given in
     /// the order of the descriptor's `sensitivity` vector.
     2: vector<int64>:SENSOR_MAX_VALUES sensitivity;
+    /// The high thresholds for various `SensorType`. This vector must be given in
+    /// the order of the descriptor's `threshold_high` vector.
+    4: vector<int64>:SENSOR_MAX_VALUES threshold_high;
+    /// The low thresholds for various `SensorType`. This vector must be given in
+    /// the order of the descriptor's `threshold_low` vector.
+    5: vector<int64>:SENSOR_MAX_VALUES threshold_low;
 };
