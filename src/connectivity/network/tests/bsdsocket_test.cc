@@ -1364,11 +1364,6 @@ TEST(NetStreamTest, BlockingAcceptWrite) {
   ASSERT_EQ(write(connfd, msg, sizeof(msg)), (ssize_t)sizeof(msg)) << strerror(errno);
   ASSERT_EQ(close(connfd), 0) << strerror(errno);
 
-  struct pollfd pfd = {
-      .fd = clientfd,
-      .events = POLLIN,
-  };
-  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
   char buf[sizeof(msg) + 1] = {};
   ASSERT_EQ(read(clientfd, buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
   ASSERT_STREQ(buf, msg);
@@ -1506,11 +1501,6 @@ TEST(NetStreamTest, BlockingAcceptWriteMultiple) {
   }
 
   for (int i = 0; i < kConnections; i++) {
-    struct pollfd pfd = {
-        .fd = clientfds[i],
-        .events = POLLIN,
-    };
-    ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
     char buf[sizeof(msg) + 1] = {};
     ASSERT_EQ(read(clientfds[i], buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
     ASSERT_STREQ(buf, msg);
@@ -1550,11 +1540,6 @@ TEST(NetStreamTest, BlockingAcceptDupWrite) {
   ASSERT_EQ(write(dupfd, msg, sizeof(msg)), (ssize_t)sizeof(msg)) << strerror(errno);
   ASSERT_EQ(close(dupfd), 0) << strerror(errno);
 
-  struct pollfd pfd = {
-      .fd = clientfd,
-      .events = POLLIN,
-  };
-  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
   char buf[sizeof(msg) + 1] = {};
   ASSERT_EQ(read(clientfd, buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
   ASSERT_STREQ(buf, msg);
@@ -1581,6 +1566,12 @@ TEST(NetStreamTest, NonBlockingAcceptWrite) {
   ASSERT_GE(clientfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
   ASSERT_EQ(connect(clientfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
+  struct pollfd pfd = {
+      .fd = acptfd,
+      .events = POLLIN,
+  };
+  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+
   int connfd;
   ASSERT_GE(connfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
 
@@ -1588,11 +1579,6 @@ TEST(NetStreamTest, NonBlockingAcceptWrite) {
   ASSERT_EQ(write(connfd, msg, sizeof(msg)), (ssize_t)sizeof(msg)) << strerror(errno);
   ASSERT_EQ(close(connfd), 0) << strerror(errno);
 
-  struct pollfd pfd = {
-      .fd = clientfd,
-      .events = POLLIN,
-  };
-  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
   char buf[sizeof(msg) + 1] = {};
   ASSERT_EQ(read(clientfd, buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
   ASSERT_STREQ(buf, msg);
@@ -1619,6 +1605,12 @@ TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
   ASSERT_GE(clientfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
   ASSERT_EQ(connect(clientfd, (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
 
+  struct pollfd pfd = {
+      .fd = acptfd,
+      .events = POLLIN,
+  };
+  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
+
   int connfd;
   ASSERT_GE(connfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
 
@@ -1630,11 +1622,6 @@ TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
   ASSERT_EQ(write(dupfd, msg, sizeof(msg)), (ssize_t)sizeof(msg)) << strerror(errno);
   ASSERT_EQ(close(dupfd), 0) << strerror(errno);
 
-  struct pollfd pfd = {
-      .fd = clientfd,
-      .events = POLLIN,
-  };
-  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
   char buf[sizeof(msg) + 1] = {};
   ASSERT_EQ(read(clientfd, buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
   ASSERT_STREQ(buf, msg);
@@ -1684,11 +1671,6 @@ TEST(NetStreamTest, NonBlockingConnectWrite) {
   ASSERT_EQ(write(connfd, msg, sizeof(msg)), (ssize_t)sizeof(msg)) << strerror(errno);
   ASSERT_EQ(close(connfd), 0) << strerror(errno);
 
-  struct pollfd pfd = {
-      .fd = clientfd,
-      .events = POLLIN,
-  };
-  ASSERT_EQ(poll(&pfd, 1, kTimeout), 1) << strerror(errno);
   char buf[sizeof(msg) + 1] = {};
   ASSERT_EQ(read(clientfd, buf, sizeof(buf)), (ssize_t)sizeof(msg)) << strerror(errno);
   ASSERT_STREQ(buf, msg);
