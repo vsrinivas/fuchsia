@@ -23,7 +23,9 @@ typedef enum { Default, Optimal, Monotonic, Custom } ClockType;
 namespace media::tools {
 
 class WavRecorder {
-  static constexpr float kDefaultCaptureGainDb = 0.0f;
+  static constexpr float kUnityGainDb = 0.0f;
+  static constexpr float kCaptureGainDefaultDb = kUnityGainDb;
+  static constexpr float kUsageGainDefaultDb = kUnityGainDb;
 
   static constexpr float kDefaultFileDurationSecs = 2.0f;
   static constexpr float kMaxFileDurationSecs = 86400.0f;
@@ -44,8 +46,11 @@ class WavRecorder {
  private:
   void Usage();
 
-  void SetupPayloadBuffer();
+  void ParseAdditionalOptions();
+  void ConnectAndSetUsageAndGain(sys::ComponentContext* app_context);
   void EstablishReferenceClock();
+
+  void SetupPayloadBuffer();
   void ReceiveClockAndContinue(
       zx::clock received_clock,
       std::optional<fuchsia::media::AudioStreamType> stream_type = std::nullopt);
@@ -59,8 +64,11 @@ class WavRecorder {
   void OnQuit();
   bool Shutdown();
 
+  fuchsia::media::AudioPtr audio_;
+  fuchsia::media::AudioCorePtr audio_core_;
   fuchsia::media::AudioCapturerPtr audio_capturer_;
-  fuchsia::media::audio::GainControlPtr gain_control_;
+  fuchsia::media::audio::GainControlPtr stream_gain_control_;
+
   fsl::FDWaiter keystroke_waiter_;
   media::audio::WavWriter<> wav_writer_;
   bool wav_writer_initialized_ = false;
@@ -70,6 +78,16 @@ class WavRecorder {
   const char* filename_ = "";
   bool verbose_ = false;
   bool loopback_ = false;
+
+  bool set_usage_ = false;
+  fuchsia::media::AudioCaptureUsage usage_ = fuchsia::media::AudioCaptureUsage::FOREGROUND;
+  bool set_usage_gain_ = false;
+  float usage_gain_db_;
+
+  bool set_stream_gain_ = false;
+  float stream_gain_db_;
+  bool set_stream_mute_ = false;
+  bool stream_mute_ = false;
 
   zx::clock reference_clock_;
   ClockType clock_type_ = ClockType::Default;
@@ -84,8 +102,6 @@ class WavRecorder {
   bool pack_24bit_samples_ = false;
 
   fuchsia::media::AudioSampleFormat sample_format_;
-  float stream_gain_db_ = kDefaultCaptureGainDb;
-  bool stream_mute_ = false;
   uint32_t channel_count_ = 0;
   uint32_t frames_per_second_ = 0;
   uint32_t bytes_per_frame_ = 0;
