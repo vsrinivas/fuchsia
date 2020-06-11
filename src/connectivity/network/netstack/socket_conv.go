@@ -53,9 +53,10 @@ const (
 
 	// Max values for sockopt TCP_KEEPIDLE and TCP_KEEPINTVL in Linux.
 	//
-	// https://github.com/torvalds/linux/blob/f2850dd5ee015bd7b77043f731632888887689c7/include/net/tcp.h#L156-L157
+	// https://github.com/torvalds/linux/blob/f2850dd5ee015bd7b77043f731632888887689c7/include/net/tcp.h#L156-L158
 	maxTCPKeepIdle  = 32767
 	maxTCPKeepIntvl = 32767
+	maxTCPKeepCnt   = 127
 )
 
 func boolToInt32(v bool) int32 {
@@ -669,6 +670,10 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
+		// https://github.com/torvalds/linux/blob/f2850dd5ee015bd7b77043f731632888887689c7/net/ipv4/tcp.c#L3014
+		if v < 1 || v > maxTCPKeepCnt {
+			return tcpip.ErrInvalidOptionValue
+		}
 		return ep.SetSockOptInt(tcpip.KeepaliveCountOption, int(v))
 
 	case C.TCP_USER_TIMEOUT:

@@ -203,6 +203,7 @@ mod test {
 
     const MAX_TCP_KEEPALIVE_IDLE: u64 = 32_767;
     const MAX_TCP_KEEPALIVE_INTERVAL: u64 = 32_767;
+    const MAX_TCP_KEEPALIVE_COUNT: i32 = 127;
 
     #[test]
     fn set_keepalive_rejects_more_than_i32_seconds() {
@@ -271,7 +272,7 @@ mod test {
 
         #[test]
         fn keepalive_count_roundtrip
-            (count in proptest::num::i32::ANY)
+            (count in 1..=MAX_TCP_KEEPALIVE_COUNT)
         {
             let listener = TcpListener::bind(
                 &SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0)
