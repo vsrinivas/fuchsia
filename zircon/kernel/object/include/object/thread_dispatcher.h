@@ -87,7 +87,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
 
   // Performs initialization on a newly constructed ThreadDispatcher
   // If this fails, then the object is invalid and should be deleted
-  zx_status_t Initialize();
+  zx_status_t Initialize() TA_EXCL(get_lock());
   // Start this thread running inside the parent process with the provided entry state, only
   // valid to be called on a thread in the INITIALIZED state that has not yet been started.
   zx_status_t Start(const EntryState& entry, bool initial_thread);
@@ -114,8 +114,8 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // true it will never flip back to false.
   bool HasStarted() const TA_EXCL(get_lock());
 
-  zx_status_t set_name(const char* name, size_t len) final __NONNULL((2));
-  void get_name(char out_name[ZX_MAX_NAME_LEN]) const final __NONNULL((2));
+  zx_status_t set_name(const char* name, size_t len) final __NONNULL((2)) TA_EXCL(get_lock());
+  void get_name(char out_name[ZX_MAX_NAME_LEN]) const final __NONNULL((2)) TA_EXCL(get_lock());
 
   // Assuming the thread is stopped waiting for an exception response,
   // fill in |*report| with the exception report.
@@ -149,13 +149,13 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   //
   // Returns true if the exception was sent.
   bool HandleSingleShotException(Exceptionate* exceptionate, zx_excp_type_t exception_type,
-                                 const arch_exception_context_t& context);
+                                 const arch_exception_context_t& context) TA_EXCL(get_lock());
 
   // Fetch the state of the thread for userspace tools.
   zx_status_t GetInfoForUserspace(zx_info_thread_t* info);
 
   // Fetch per thread stats for userspace.
-  zx_status_t GetStatsForUserspace(zx_info_thread_stats_t* info);
+  zx_status_t GetStatsForUserspace(zx_info_thread_stats_t* info) TA_EXCL(get_lock());
 
   // Fetch a consistent snapshot of the runtime stats.
   zx_status_t GetRuntimeStats(Thread::RuntimeStats* out) const;
@@ -174,9 +174,9 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
 
   // For debugger usage.
   zx_status_t ReadState(zx_thread_state_topic_t state_kind, user_out_ptr<void> buffer,
-                        size_t buffer_size);
+                        size_t buffer_size) TA_EXCL(get_lock());
   zx_status_t WriteState(zx_thread_state_topic_t state_kind, user_in_ptr<const void> buffer,
-                         size_t buffer_size);
+                         size_t buffer_size) TA_EXCL(get_lock());
 
   // Profile support
   zx_status_t SetPriority(int32_t priority) TA_EXCL(get_lock());
@@ -255,17 +255,17 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   bool HasStartedLocked() const TA_REQ(get_lock());
 
   template <typename T, typename F>
-  zx_status_t ReadStateGeneric(F get_state_func, Thread* thread, user_out_ptr<void> buffer,
-                               size_t buffer_size);
+  zx_status_t ReadStateGeneric(F get_state_func, user_out_ptr<void> buffer, size_t buffer_size)
+      TA_EXCL(get_lock());
   template <typename T, typename F>
-  zx_status_t WriteStateGeneric(F set_state_func, Thread* thread, user_in_ptr<const void> buffer,
-                                size_t buffer_size);
+  zx_status_t WriteStateGeneric(F set_state_func, user_in_ptr<const void> buffer,
+                                size_t buffer_size) TA_EXCL(get_lock());
 
   // a ref pointer back to the parent process.
   const fbl::RefPtr<ProcessDispatcher> process_;
 
   // The thread as understood by the lower kernel.
-  Thread* const core_thread_;
+  Thread* const core_thread_ TA_GUARDED(get_lock());
 
   // User thread starting register values.
   EntryState user_entry_;
@@ -299,9 +299,6 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // Tracks the number of times Suspend() has been called. Resume() will resume this thread
   // only when this reference count reaches 0.
   int suspend_count_ TA_GUARDED(get_lock()) = 0;
-
-  // Used to protect thread name read/writes
-  mutable DECLARE_SPINLOCK(ThreadDispatcher) name_lock_;
 
   // Per-thread structure used while waiting in a ChannelDispatcher::Call.
   // Needed to support the requirements of being able to interrupt a Call

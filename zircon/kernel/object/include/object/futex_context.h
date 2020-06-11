@@ -128,6 +128,20 @@ class FutexContext {
   zx_status_t FutexGetOwner(user_in_ptr<const zx_futex_t> value_ptr, user_out_ptr<zx_koid_t> koid);
 
  private:
+  template <typename GuardType>
+  zx_status_t FutexWaitInternal(user_in_ptr<const zx_futex_t> value_ptr, zx_futex_t current_value,
+                                ThreadDispatcher* futex_owner_thread, Thread* new_owner,
+                                GuardType&& adopt_new_owner_guard, zx_status_t validator_status,
+                                const Deadline& deadline);
+
+  template <typename GuardType>
+  zx_status_t FutexRequeueInternal(user_in_ptr<const zx_futex_t> wake_ptr, uint32_t wake_count,
+                                   zx_futex_t current_value, OwnerAction owner_action,
+                                   user_in_ptr<const zx_futex_t> requeue_ptr,
+                                   uint32_t requeue_count, ThreadDispatcher* requeue_owner_thread,
+                                   Thread* new_requeue_owner, GuardType&& adopt_new_owner_guard,
+                                   zx_status_t validator_status);
+
   // Notes about FutexState lifecycle.
   // aka. Why is this safe?
   //
