@@ -13,7 +13,7 @@ class FuchsiaLocator {
   FuchsiaLocator({envReader}) : envReader = envReader ?? EnvReader.shared;
 
   /// Path to the fx executable
-  String get fx => p.join(fuchsiaDir, fxLocation);
+  String get fx => (fuchsiaDir == null ? null : p.join(fuchsiaDir, fxLocation));
 
   /// Path to the ssh key required to reach the device.
   String get sshKey => envReader.getEnv('FUCHSIA_SSH_KEY');

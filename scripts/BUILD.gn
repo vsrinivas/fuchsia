@@ -4,5 +4,8 @@
 
 group("tests") {
   testonly = true
-  deps = [ "blobstats:tests" ]
+  deps = [
+    "blobstats:tests",
+    "fxtest:tests",
+  ]
 }

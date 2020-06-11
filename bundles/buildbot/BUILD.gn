@@ -24,6 +24,7 @@ group("core") {
     "//examples:tests",
     "//garnet",
     "//garnet/packages:all",
+    "//scripts:tests",
     "//scripts/sdk/gn:tests",
     "//src",
     "//src:tests",
