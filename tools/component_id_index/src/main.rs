@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Context, Result};
-use serde::{Deserialize, Serialize};
+
 use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader};
@@ -11,6 +11,9 @@ use std::path::PathBuf;
 use std::str;
 use structopt::StructOpt;
 use thiserror::Error;
+
+mod index;
+use index::{is_valid_instance_id, GenerateInstanceIds, Index, InstanceIdEntry};
 
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Verify and merge component ID index files.")]
@@ -24,30 +27,6 @@ struct CommandLineOpts {
 
     #[structopt(short, long, help = "Where to write the merged index file.")]
     output_file: PathBuf,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-struct AppmgrMoniker {
-    url: String,
-    realm_path: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-struct InstanceIdEntry {
-    instance_id: String,
-    appmgr_moniker: AppmgrMoniker,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct Index {
-    instances: Vec<InstanceIdEntry>,
-}
-
-impl Index {
-    fn from_file(path: &str) -> anyhow::Result<Index> {
-        let contents = fs::read_to_string(path).context("unable to read file")?;
-        json5::from_str::<Index>(&contents).context("unable to parse to json5")
-    }
 }
 
 // MergeContext maintains a single merged index, along with some state for error checking, as indicies are merged together using MergeContext::merge().
@@ -68,6 +47,10 @@ pub struct MergeContext {
 enum MergeError {
     #[error("Instance ID '{}' must be unique but exists in following index files:\n {}\n {}", .instance_id, .source1, .source2)]
     DuplicateIds { instance_id: String, source1: String, source2: String },
+    #[error("{}", .entries)]
+    MissingInstanceIds { entries: GenerateInstanceIds },
+    #[error("The following entry's instance_id is invalid (must be 64 lower-cased hex chars): {:?}", .entry)]
+    InvalidInstanceId { entry: InstanceIdEntry },
 }
 
 impl MergeContext {
@@ -82,21 +65,39 @@ impl MergeContext {
     // This method can be called multiple times to merge multiple indicies.
     // The accumulated index can be accessed with output().
     fn merge(&mut self, source_index_path: &str, index: &Index) -> Result<(), MergeError> {
-        for instance in &index.instances {
-            if let Some(previous_source_path) = self
-                .accumulated_instance_ids
-                .insert(instance.instance_id.clone(), source_index_path.to_string())
-            {
-                return Err(MergeError::DuplicateIds {
-                    instance_id: instance.instance_id.clone(),
-                    source1: previous_source_path.clone(),
-                    source2: source_index_path.to_string(),
-                });
+        let mut missing_instance_ids = vec![];
+        for entry in &index.instances {
+            match entry.instance_id.as_ref() {
+                None => {
+                    // Instead of failing right away, continue processing the other entries.
+                    missing_instance_ids.push(entry.clone());
+                    continue;
+                }
+                Some(instance_id) => {
+                    if !is_valid_instance_id(&instance_id) {
+                        return Err(MergeError::InvalidInstanceId { entry: entry.clone() });
+                    }
+                    if let Some(previous_source_path) = self
+                        .accumulated_instance_ids
+                        .insert(instance_id.clone(), source_index_path.to_string())
+                    {
+                        return Err(MergeError::DuplicateIds {
+                            instance_id: instance_id.clone(),
+                            source1: previous_source_path.clone(),
+                            source2: source_index_path.to_string(),
+                        });
+                    }
+                    self.output_index.instances.push(entry.clone());
+                }
             }
-
-            self.output_index.instances.push(instance.clone());
         }
-        Ok(())
+        if missing_instance_ids.len() > 0 {
+            Err(MergeError::MissingInstanceIds {
+                entries: GenerateInstanceIds::new(&mut rand::thread_rng(), missing_instance_ids),
+            })
+        } else {
+            Ok(())
+        }
     }
 
     // Access the accumulated index from calls to merge().
@@ -132,24 +133,15 @@ fn main() -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::*;
+    use index::*;
     use std::io::Write;
     use tempfile;
-
-    fn gen_instance_id() -> String {
-        // generate random 256bits into a byte array
-        let mut rng = rand::thread_rng();
-        let mut num: [u8; 256 / 8] = [0; 256 / 8];
-        rng.fill_bytes(&mut num);
-        // turn the byte array into a hex string
-        num.iter().map(|byte| format!("{:x}", byte)).collect::<Vec<String>>().join("")
-    }
 
     fn gen_index(num_instances: u32) -> Index {
         Index {
             instances: (0..num_instances)
                 .map(|i| InstanceIdEntry {
-                    instance_id: gen_instance_id(),
+                    instance_id: Some(gen_instance_id(&mut rand::thread_rng())),
                     appmgr_moniker: AppmgrMoniker {
                         url: format!(
                             "fuchsia-pkg://example.com/fake_pkg#meta/fake_component_{}.cmx",
@@ -193,11 +185,38 @@ mod tests {
         assert_eq!(
             err,
             MergeError::DuplicateIds {
-                instance_id: index1.instances[0].instance_id.clone(),
+                instance_id: index1.instances[0].instance_id.as_ref().unwrap().clone(),
                 source1: source1.to_string(),
                 source2: source2.to_string()
             }
         );
+    }
+
+    #[test]
+    fn missing_instance_ids() {
+        let mut index = gen_index(4);
+        index.instances[1].instance_id = None;
+        index.instances[3].instance_id = None;
+
+        let mut ctx = MergeContext::new();
+        // this should be an error, since `index` has entries with a missing instance ID.
+        let merge_result: Result<(), MergeError> = ctx.merge("/a/b/c", &index);
+        let mut fixed_entries = match merge_result.as_ref() {
+            Err(MergeError::MissingInstanceIds { entries: GenerateInstanceIds(fixed_entries) }) => {
+                fixed_entries.clone()
+            }
+            _ => panic!("Expected merge failure MissingInstanceIds, got: {}"),
+        };
+
+        // check that the generated instance IDs are valid
+        assert!(is_valid_instance_id(fixed_entries[0].instance_id.as_ref().unwrap()));
+        assert!(is_valid_instance_id(fixed_entries[1].instance_id.as_ref().unwrap()));
+
+        // match everything except for the generated instance IDs.
+        let expected_entries = vec![index.instances[1].clone(), index.instances[3].clone()];
+        fixed_entries[0].instance_id = None;
+        fixed_entries[1].instance_id = None;
+        assert_eq!(expected_entries, fixed_entries);
     }
 
     #[test]
