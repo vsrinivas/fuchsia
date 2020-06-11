@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/bind_debugger"
     },
     "sandbox": {
         "services": [

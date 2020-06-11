@@ -67,8 +67,11 @@ group("tests") {
 package("bind_debugger") {
   deps = [ ":bin" ]
 
-  binary = "bind_debugger"
-
+  binaries = [
+    {
+      name = "bind_debugger"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/bind_debugger.cmx")
