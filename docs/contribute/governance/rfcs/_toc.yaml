@@ -8,5 +8,7 @@ toc:
   path: /docs/contribute/governance/rfcs/0001_rfc_process.md
 - title: "RFC-0002: Platform Versioning"
   path: /docs/contribute/governance/rfcs/0002_platform_versioning.md
+- title: "RFC-0003: Logging"
+  path: /docs/contribute/governance/rfcs/0003_logging.md
 - title: "RFC template"
   path: /docs/contribute/governance/rfcs/TEMPLATE.md
