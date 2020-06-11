@@ -23,6 +23,8 @@ use {
     crate::display::spawn_display_fidl_handler,
     crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController,
     crate::do_not_disturb::spawn_do_not_disturb_fidl_handler,
+    crate::input::input_controller::InputController,
+    crate::input::spawn_input_fidl_handler,
     crate::inspect::inspect_broker::InspectBroker,
     crate::intl::intl_controller::IntlController,
     crate::intl::intl_fidl_handler::spawn_intl_fidl_handler,
@@ -44,8 +46,8 @@ use {
     crate::setup::spawn_setup_fidl_handler,
     crate::switchboard::accessibility_types::AccessibilityInfo,
     crate::switchboard::base::{
-        AudioInfo, DisplayInfo, DoNotDisturbInfo, NightModeInfo, PrivacyInfo, SettingType,
-        SetupInfo, SystemInfo,
+        AudioInfo, DisplayInfo, DoNotDisturbInfo, InputInfo, NightModeInfo, PrivacyInfo,
+        SettingType, SetupInfo, SystemInfo,
     },
     crate::switchboard::intl_types::IntlInfo,
     crate::switchboard::switchboard_impl::SwitchboardBuilder,
@@ -321,6 +323,12 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             SettingType::LightSensor,
             Handler::<LightSensorController>::spawn
         );
+        // Input
+        register_handler!(
+            factory_handle,
+            SettingType::Input,
+            DataHandler::<InputInfo, InputController>::spawn
+        );
         // Intl
         register_handler!(
             factory_handle,
@@ -445,6 +453,13 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         let switchboard_client = switchboard_client.clone();
         service_dir.add_fidl_service(move |stream: DoNotDisturbRequestStream| {
             spawn_do_not_disturb_fidl_handler(switchboard_client.clone(), stream);
+        });
+    }
+
+    if components.contains(&SettingType::Input) {
+        let switchboard_client = switchboard_client.clone();
+        service_dir.add_fidl_service(move |stream: InputRequestStream| {
+            spawn_input_fidl_handler(switchboard_client.clone(), stream);
         });
     }
 

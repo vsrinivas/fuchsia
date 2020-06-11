@@ -3,5 +3,7 @@
 // found in the LICENSE file.
 
 pub use self::common::{monitor_media_buttons, InputMonitor, InputMonitorHandle, InputType};
-
+pub use self::input_fidl_handler::spawn_input_fidl_handler;
 pub mod common;
+pub mod input_controller;
+mod input_fidl_handler;

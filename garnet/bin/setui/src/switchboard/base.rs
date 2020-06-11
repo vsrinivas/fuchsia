@@ -72,6 +72,7 @@ pub enum SettingType {
     Device,
     Display,
     DoNotDisturb,
+    Input,
     Intl,
     LightSensor,
     NightMode,
@@ -90,6 +91,7 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
         SettingType::Device,
         SettingType::Display,
         SettingType::DoNotDisturb,
+        SettingType::Input,
         SettingType::Intl,
         SettingType::LightSensor,
         SettingType::NightMode,
@@ -133,6 +135,9 @@ pub enum SettingRequest {
 
     // Audio requests.
     SetVolume(Vec<AudioStream>),
+
+    // Audio in requests.
+    SetMicMute(bool),
 
     // Display requests.
     SetBrightness(f32),
@@ -196,6 +201,16 @@ pub struct AudioStream {
     pub source: AudioSettingSource,
     pub user_volume_level: f32,
     pub user_volume_muted: bool,
+}
+
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+pub struct InputInfo {
+    pub microphone: Microphone,
+}
+
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct Microphone {
+    pub muted: bool,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
@@ -330,6 +345,7 @@ pub enum SettingResponse {
     Device(DeviceInfo),
     LightSensor(LightData),
     DoNotDisturb(DoNotDisturbInfo),
+    Input(InputInfo),
     Intl(IntlInfo),
     NightMode(NightModeInfo),
     Privacy(PrivacyInfo),
@@ -349,6 +365,7 @@ impl SettingResponse {
             SettingResponse::Device(info) => ("Device", format!("{:?}", info)),
             SettingResponse::LightSensor(info) => ("LightSensor", format!("{:?}", info)),
             SettingResponse::DoNotDisturb(info) => ("DoNotDisturb", format!("{:?}", info)),
+            SettingResponse::Input(info) => ("Input", format!("{:?}", info)),
             SettingResponse::Intl(info) => ("Intl", format!("{:?}", info)),
             SettingResponse::NightMode(info) => ("NightMode", format!("{:?}", info)),
             SettingResponse::Privacy(info) => ("Privacy", format!("{:?}", info)),
