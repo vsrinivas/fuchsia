@@ -60,5 +60,7 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToStartTargetMsg), Log: SwarmingOutputType})
 	// For fxbug.dev/51441.
 	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.ReadConfigFileErrorMsg), Log: SwarmingOutputType})
+	// For fxbug.dev/43355
+	ret = append(ret, stringInLogCheck{String: "Timed out loading dynamic linker from fuchsia.ldsvc.Loader", Log: SwarmingOutputType})
 	return ret
 }
