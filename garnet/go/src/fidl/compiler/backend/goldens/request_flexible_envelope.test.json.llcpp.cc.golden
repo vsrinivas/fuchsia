@@ -38,13 +38,13 @@ void ::llcpp::fidl::test::json::FlexibleFoo::SizeAndOffsetAssertionHelper() {
 namespace {
 
 [[maybe_unused]] constexpr uint64_t
-    kProtocol_RequestStrictResponseFlexible_GenOrdinal = 0x72b1a46e5e2af282lu;
+    kProtocol_RequestStrictResponseFlexible_Ordinal = 8264567585134801538lu;
 extern "C" const fidl_type_t
     fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
 extern "C" const fidl_type_t
     fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
 [[maybe_unused]] constexpr uint64_t
-    kProtocol_RequestFlexibleResponseStrict_GenOrdinal = 0x42a34ad5c4a1d952lu;
+    kProtocol_RequestFlexibleResponseStrict_Ordinal = 4801763909694511442lu;
 extern "C" const fidl_type_t
     fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
 extern "C" const fidl_type_t
@@ -479,7 +479,7 @@ zx_status_t Protocol::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kProtocol_RequestStrictResponseFlexible_GenOrdinal: {
+    case kProtocol_RequestStrictResponseFlexible_Ordinal: {
       auto result =
           ::fidl::DecodeAs<RequestStrictResponseFlexibleResponse>(msg);
       if (result.status != ZX_OK) {
@@ -490,7 +490,7 @@ zx_status_t Protocol::ClientImpl::Dispatch(
           ->OnReply(std::move(result.message));
       break;
     }
-    case kProtocol_RequestFlexibleResponseStrict_GenOrdinal: {
+    case kProtocol_RequestFlexibleResponseStrict_Ordinal: {
       auto result =
           ::fidl::DecodeAs<RequestFlexibleResponseStrictResponse>(msg);
       if (result.status != ZX_OK) {
@@ -529,7 +529,7 @@ bool Protocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kProtocol_RequestStrictResponseFlexible_GenOrdinal: {
+    case kProtocol_RequestStrictResponseFlexible_Ordinal: {
       auto result = ::fidl::DecodeAs<RequestStrictResponseFlexibleRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -541,7 +541,7 @@ bool Protocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
           Interface::RequestStrictResponseFlexibleCompleter::Sync(txn));
       return true;
     }
-    case kProtocol_RequestFlexibleResponseStrict_GenOrdinal: {
+    case kProtocol_RequestFlexibleResponseStrict_Ordinal: {
       auto result = ::fidl::DecodeAs<RequestFlexibleResponseStrictRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -676,7 +676,7 @@ void Protocol::SetTransactionHeaderFor::RequestStrictResponseFlexibleRequest(
         Protocol::RequestStrictResponseFlexibleRequest>& _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kProtocol_RequestStrictResponseFlexible_GenOrdinal);
+                       kProtocol_RequestStrictResponseFlexible_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Protocol::SetTransactionHeaderFor::RequestStrictResponseFlexibleRequest(
@@ -686,14 +686,14 @@ void Protocol::SetTransactionHeaderFor::RequestStrictResponseFlexibleRequest(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid,
-                       kProtocol_RequestStrictResponseFlexible_GenOrdinal);
+                       kProtocol_RequestStrictResponseFlexible_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Protocol::SetTransactionHeaderFor::RequestStrictResponseFlexibleResponse(
     const ::fidl::DecodedMessage<
         Protocol::RequestStrictResponseFlexibleResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kProtocol_RequestStrictResponseFlexible_GenOrdinal);
+                       kProtocol_RequestStrictResponseFlexible_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Protocol::SetTransactionHeaderFor::RequestStrictResponseFlexibleResponse(
@@ -701,8 +701,7 @@ void Protocol::SetTransactionHeaderFor::RequestStrictResponseFlexibleResponse(
         Protocol::RequestStrictResponseFlexibleResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0,
-                       kProtocol_RequestStrictResponseFlexible_GenOrdinal);
+  fidl_init_txn_header(hdr, 0, kProtocol_RequestStrictResponseFlexible_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -711,7 +710,7 @@ void Protocol::SetTransactionHeaderFor::RequestFlexibleResponseStrictRequest(
         Protocol::RequestFlexibleResponseStrictRequest>& _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kProtocol_RequestFlexibleResponseStrict_GenOrdinal);
+                       kProtocol_RequestFlexibleResponseStrict_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Protocol::SetTransactionHeaderFor::RequestFlexibleResponseStrictRequest(
@@ -721,14 +720,14 @@ void Protocol::SetTransactionHeaderFor::RequestFlexibleResponseStrictRequest(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid,
-                       kProtocol_RequestFlexibleResponseStrict_GenOrdinal);
+                       kProtocol_RequestFlexibleResponseStrict_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Protocol::SetTransactionHeaderFor::RequestFlexibleResponseStrictResponse(
     const ::fidl::DecodedMessage<
         Protocol::RequestFlexibleResponseStrictResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kProtocol_RequestFlexibleResponseStrict_GenOrdinal);
+                       kProtocol_RequestFlexibleResponseStrict_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Protocol::SetTransactionHeaderFor::RequestFlexibleResponseStrictResponse(
@@ -736,8 +735,7 @@ void Protocol::SetTransactionHeaderFor::RequestFlexibleResponseStrictResponse(
         Protocol::RequestFlexibleResponseStrictResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0,
-                       kProtocol_RequestFlexibleResponseStrict_GenOrdinal);
+  fidl_init_txn_header(hdr, 0, kProtocol_RequestFlexibleResponseStrict_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 

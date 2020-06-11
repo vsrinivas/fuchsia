@@ -126,15 +126,15 @@ void ::llcpp::fidl::test::json::OlderSimpleUnion::
 namespace {
 
 [[maybe_unused]] constexpr uint64_t
-    kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal =
-        0x728fedeed6ef99dalu;
+    kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal =
+        8255078252057434586lu;
 extern "C" const fidl_type_t
     fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
 extern "C" const fidl_type_t
     fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 [[maybe_unused]] constexpr uint64_t
-    kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal =
-        0xfd2ba0109faffe3lu;
+    kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal =
+        1140178169303334883lu;
 extern "C" const fidl_type_t
     fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
 extern "C" const fidl_type_t
@@ -544,7 +544,7 @@ zx_status_t TestProtocol::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal: {
+    case kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal: {
       auto result = ::fidl::DecodeAs<
           StrictXUnionHenceResponseMayBeStackAllocatedResponse>(msg);
       if (result.status != ZX_OK) {
@@ -556,7 +556,7 @@ zx_status_t TestProtocol::ClientImpl::Dispatch(
           ->OnReply(std::move(result.message));
       break;
     }
-    case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal: {
+    case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal: {
       auto result = ::fidl::DecodeAs<
           FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(msg);
       if (result.status != ZX_OK) {
@@ -597,7 +597,7 @@ bool TestProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal: {
+    case kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal: {
       auto result =
           ::fidl::DecodeAs<StrictXUnionHenceResponseMayBeStackAllocatedRequest>(
               msg);
@@ -610,7 +610,7 @@ bool TestProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
               Sync(txn));
       return true;
     }
-    case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal: {
+    case kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal: {
       auto result = ::fidl::DecodeAs<
           FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>(msg);
       if (result.status != ZX_OK) {
@@ -778,7 +778,7 @@ void TestProtocol::SetTransactionHeaderFor::
         zx_txid_t _txid) {
   fidl_init_txn_header(
       &_msg.message()->_hdr, _txid,
-      kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal);
+      kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestProtocol::SetTransactionHeaderFor::
@@ -791,7 +791,7 @@ void TestProtocol::SetTransactionHeaderFor::
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(
       hdr, _txid,
-      kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal);
+      kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestProtocol::SetTransactionHeaderFor::
@@ -801,7 +801,7 @@ void TestProtocol::SetTransactionHeaderFor::
             _msg) {
   fidl_init_txn_header(
       &_msg.message()->_hdr, 0,
-      kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal);
+      kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestProtocol::SetTransactionHeaderFor::
@@ -813,7 +813,7 @@ void TestProtocol::SetTransactionHeaderFor::
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(
       hdr, 0,
-      kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal);
+      kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -825,7 +825,7 @@ void TestProtocol::SetTransactionHeaderFor::
         zx_txid_t _txid) {
   fidl_init_txn_header(
       &_msg.message()->_hdr, _txid,
-      kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
+      kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestProtocol::SetTransactionHeaderFor::
@@ -838,7 +838,7 @@ void TestProtocol::SetTransactionHeaderFor::
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(
       hdr, _txid,
-      kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
+      kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestProtocol::SetTransactionHeaderFor::
@@ -848,7 +848,7 @@ void TestProtocol::SetTransactionHeaderFor::
                 FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>& _msg) {
   fidl_init_txn_header(
       &_msg.message()->_hdr, 0,
-      kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
+      kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestProtocol::SetTransactionHeaderFor::
@@ -860,7 +860,7 @@ void TestProtocol::SetTransactionHeaderFor::
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(
       hdr, 0,
-      kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
+      kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 auto ::llcpp::fidl::test::json::NewerSimpleUnion::which() const -> Tag {

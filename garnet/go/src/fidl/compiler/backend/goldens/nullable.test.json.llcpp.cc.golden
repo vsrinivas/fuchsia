@@ -12,8 +12,8 @@ namespace nullable {
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kSimpleProtocol_Add_GenOrdinal =
-    0x113010d7832f175dlu;
+[[maybe_unused]] constexpr uint64_t kSimpleProtocol_Add_Ordinal =
+    1238508415331800925lu;
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
 
@@ -214,7 +214,7 @@ zx_status_t SimpleProtocol::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kSimpleProtocol_Add_GenOrdinal: {
+    case kSimpleProtocol_Add_Ordinal: {
       auto result = ::fidl::DecodeAs<AddResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
@@ -252,7 +252,7 @@ bool SimpleProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kSimpleProtocol_Add_GenOrdinal: {
+    case kSimpleProtocol_Add_Ordinal: {
       auto result = ::fidl::DecodeAs<AddRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -326,7 +326,7 @@ void SimpleProtocol::SetTransactionHeaderFor::AddRequest(
     const ::fidl::DecodedMessage<SimpleProtocol::AddRequest>& _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kSimpleProtocol_Add_GenOrdinal);
+                       kSimpleProtocol_Add_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void SimpleProtocol::SetTransactionHeaderFor::AddRequest(
@@ -334,20 +334,19 @@ void SimpleProtocol::SetTransactionHeaderFor::AddRequest(
     zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kSimpleProtocol_Add_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kSimpleProtocol_Add_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void SimpleProtocol::SetTransactionHeaderFor::AddResponse(
     const ::fidl::DecodedMessage<SimpleProtocol::AddResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kSimpleProtocol_Add_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSimpleProtocol_Add_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void SimpleProtocol::SetTransactionHeaderFor::AddResponse(
     const ::fidl::EncodedMessage<SimpleProtocol::AddResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kSimpleProtocol_Add_GenOrdinal);
+  fidl_init_txn_header(hdr, 0, kSimpleProtocol_Add_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 

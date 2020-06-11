@@ -20,7 +20,7 @@ using superSyncPtr = ::fidl::SynchronousInterfacePtr<super>;
 class super_SyncProxy;
 using superHandle = ::fidl::InterfaceHandle<super>;
 namespace internal {
-constexpr uint64_t ksuper_foo_GenOrdinal = 0x4f6c089228ba7c92lu;
+constexpr uint64_t ksuper_foo_Ordinal = 5722958650322615442lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -36,7 +36,7 @@ using subSyncPtr = ::fidl::SynchronousInterfacePtr<sub>;
 class sub_SyncProxy;
 using subHandle = ::fidl::InterfaceHandle<sub>;
 namespace internal {
-constexpr uint64_t ksub_foo_GenOrdinal = 0x4f6c089228ba7c92lu;
+constexpr uint64_t ksub_foo_Ordinal = 5722958650322615442lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -83,7 +83,7 @@ class super_RequestDecoder {
     }
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
-      case internal::ksuper_foo_GenOrdinal: {
+      case internal::ksuper_foo_Ordinal: {
         foo(::fidl::DecodeAs<::std::string>(&request_decoder, 16));
         break;
       }
@@ -124,7 +124,7 @@ class super_ResponseDecoder {
     }
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
-      case internal::ksuper_foo_GenOrdinal: {
+      case internal::ksuper_foo_Ordinal: {
         foo(::fidl::DecodeAs<int64_t>(&response_decoder, 16));
         break;
       }
@@ -232,7 +232,7 @@ class sub_RequestDecoder {
     }
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
-      case internal::ksub_foo_GenOrdinal: {
+      case internal::ksub_foo_Ordinal: {
         foo(::fidl::DecodeAs<::std::string>(&request_decoder, 16));
         break;
       }
@@ -273,7 +273,7 @@ class sub_ResponseDecoder {
     }
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
-      case internal::ksub_foo_GenOrdinal: {
+      case internal::ksub_foo_Ordinal: {
         foo(::fidl::DecodeAs<int64_t>(&response_decoder, 16));
         break;
       }

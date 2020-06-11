@@ -383,10 +383,10 @@ Protocol::~Protocol() = default;
 const fidl_type_t* Protocol_RequestDecoder::GetType(uint64_t ordinal,
                                                     bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal:
+    case internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
       *out_needs_response = true;
       return &fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
-    case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal:
+    case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
       *out_needs_response = true;
       return &fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
     default:
@@ -397,9 +397,9 @@ const fidl_type_t* Protocol_RequestDecoder::GetType(uint64_t ordinal,
 
 const fidl_type_t* Protocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
-    case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal:
+    case internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
       return &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
-    case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal:
+    case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
       return &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
     default:
       return nullptr;
@@ -461,7 +461,7 @@ Protocol_RequestStrictResponseFlexible_ResponseHandler(
 void Protocol_Proxy::RequestStrictResponseFlexible(
     StrictFoo s, RequestStrictResponseFlexibleCallback callback) {
   ::fidl::Encoder _encoder(
-      internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal);
+      internal::kProtocol_RequestStrictResponseFlexible_Ordinal);
   controller_->Send(
       &fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable,
       Protocol_RequestEncoder::RequestStrictResponseFlexible(&_encoder, &s),
@@ -501,7 +501,7 @@ Protocol_RequestFlexibleResponseStrict_ResponseHandler(
 void Protocol_Proxy::RequestFlexibleResponseStrict(
     FlexibleFoo s, RequestFlexibleResponseStrictCallback callback) {
   ::fidl::Encoder _encoder(
-      internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal);
+      internal::kProtocol_RequestFlexibleResponseStrict_Ordinal);
   controller_->Send(
       &fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable,
       Protocol_RequestEncoder::RequestFlexibleResponseStrict(&_encoder, &s),
@@ -525,7 +525,7 @@ class Protocol_RequestStrictResponseFlexible_Responder final {
 
   void operator()(FlexibleFoo f) {
     ::fidl::Encoder _encoder(
-        internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal);
+        internal::kProtocol_RequestStrictResponseFlexible_Ordinal);
     response_.Send(
         &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable,
         Protocol_ResponseEncoder::RequestStrictResponseFlexible(&_encoder, &f));
@@ -543,7 +543,7 @@ class Protocol_RequestFlexibleResponseStrict_Responder final {
 
   void operator()(StrictFoo f) {
     ::fidl::Encoder _encoder(
-        internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal);
+        internal::kProtocol_RequestFlexibleResponseStrict_Ordinal);
     response_.Send(
         &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable,
         Protocol_ResponseEncoder::RequestFlexibleResponseStrict(&_encoder, &f));
@@ -581,7 +581,7 @@ zx_status_t Protocol_Stub::Dispatch_(
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal: {
+    case internal::kProtocol_RequestStrictResponseFlexible_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->RequestStrictResponseFlexible(
           ::fidl::DecodeAs<StrictFoo>(&decoder, 16),
@@ -589,7 +589,7 @@ zx_status_t Protocol_Stub::Dispatch_(
               std::move(response)));
       break;
     }
-    case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal: {
+    case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->RequestFlexibleResponseStrict(
           ::fidl::DecodeAs<FlexibleFoo>(&decoder, 16),
@@ -613,7 +613,7 @@ Protocol_SyncProxy::~Protocol_SyncProxy() = default;
 zx_status_t Protocol_SyncProxy::RequestStrictResponseFlexible(
     StrictFoo s, FlexibleFoo* out_f) {
   ::fidl::Encoder _encoder(
-      internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal);
+      internal::kProtocol_RequestStrictResponseFlexible_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(
@@ -630,7 +630,7 @@ zx_status_t Protocol_SyncProxy::RequestStrictResponseFlexible(
 zx_status_t Protocol_SyncProxy::RequestFlexibleResponseStrict(
     FlexibleFoo s, StrictFoo* out_f) {
   ::fidl::Encoder _encoder(
-      internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal);
+      internal::kProtocol_RequestFlexibleResponseStrict_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(

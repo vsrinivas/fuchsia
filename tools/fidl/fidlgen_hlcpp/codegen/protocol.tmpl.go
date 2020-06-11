@@ -22,9 +22,7 @@ using {{ .Name }}Handle = ::fidl::InterfaceHandle<{{ .Name }}>;
 namespace internal {
 
 {{- range .Methods }}
-  {{- range .Ordinals.Reads }}
-constexpr uint64_t {{ .Name }} = {{ .Ordinal }}lu;
-  {{- end }}
+constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal }}lu;
 {{- end }}
 
 }  // namespace
@@ -145,9 +143,7 @@ class {{ .RequestDecoderName }} {
     switch (request.ordinal()) {
       {{- range .Methods }}
         {{- if .HasRequest }}
-          {{- range .Ordinals.Reads }}
-      case internal::{{ .Name }}:
-          {{- end }}
+      case internal::{{ .OrdinalName }}:
       {
         {{ .Name }}(
           {{- range $index, $param := .Request -}}
@@ -208,9 +204,7 @@ class {{ .ResponseDecoderName }} {
     switch (response.ordinal()) {
       {{- range .Methods }}
         {{- if .HasResponse }}
-          {{- range .Ordinals.Reads }}
-      case internal::{{ .Name }}:
-          {{- end }}
+      case internal::{{ .OrdinalName }}:
       {
         {{ .Name }}(
           {{- range $index, $param := .Response -}}
@@ -346,9 +340,7 @@ const fidl_type_t* {{ .RequestDecoderName }}::GetType(uint64_t ordinal, bool* ou
   switch (ordinal) {
     {{- range .Methods }}
       {{- if .HasRequest }}
-          {{- range .Ordinals.Reads }}
-    case internal::{{ .Name }}:
-          {{- end }}
+    case internal::{{ .OrdinalName }}:
         {{- if .HasResponse }}
       *out_needs_response = true;
         {{- else }}
@@ -367,9 +359,7 @@ const fidl_type_t* {{ .ResponseDecoderName }}::GetType(uint64_t ordinal) {
   switch (ordinal) {
     {{- range .Methods }}
       {{- if .HasResponse }}
-          {{- range .Ordinals.Reads }}
-    case internal::{{ .Name }}:
-          {{- end }}
+    case internal::{{ .OrdinalName }}:
       return &{{ .ResponseTypeName }};
       {{- end }}
     {{- end }}
@@ -395,9 +385,7 @@ zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::Message message) {
     {{- range .Methods }}
       {{- if not .HasRequest }}
         {{- if .HasResponse }}
-          {{- range .Ordinals.Reads }}
-    case internal::{{ .Name }}:
-          {{- end }}
+    case internal::{{ .OrdinalName }}:
     {
       if (!{{ .Name }}) {
         status = ZX_OK;
@@ -464,7 +452,7 @@ namespace {
 }  // namespace
 {{- end }}
 void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
-  ::fidl::Encoder _encoder(internal::{{ .Ordinals.Write.Name }});
+  ::fidl::Encoder _encoder(internal::{{ .OrdinalName }});
   controller_->Send(&{{ .RequestTypeName }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .Request -}}
     , &{{ $param.Name }}
@@ -497,7 +485,7 @@ class {{ .ResponderType }} final {
       : response_(std::move(response)) {}
 
   void operator()({{ template "Params" .Response }}) {
-    ::fidl::Encoder _encoder(internal::{{ .Ordinals.Write.Name }});
+    ::fidl::Encoder _encoder(internal::{{ .OrdinalName }});
     response_.Send(&{{ .ResponseTypeName }}, {{ $.ResponseEncoderName }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .Response -}}
     , &{{ $param.Name }}
@@ -540,9 +528,7 @@ zx_status_t {{ .StubName }}::Dispatch_(
   switch (ordinal) {
     {{- range .Methods }}
       {{- if .HasRequest }}
-        {{- range .Ordinals.Reads }}
-    case internal::{{ .Name }}:
-        {{- end }}
+    case internal::{{ .OrdinalName }}:
     {
         {{- if .Request }}
       ::fidl::Decoder decoder(std::move(message));
@@ -571,7 +557,7 @@ zx_status_t {{ .StubName }}::Dispatch_(
   {{- if not .HasRequest }}
     {{- if .HasResponse }}
 void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
-  ::fidl::Encoder _encoder(internal::{{ .Ordinals.Write.Name }});
+  ::fidl::Encoder _encoder(internal::{{ .OrdinalName }});
   sender_()->Send(&{{ .ResponseTypeName }}, {{ $.ResponseEncoderName }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .Response -}}
     , &{{ $param.Name }}
@@ -591,7 +577,7 @@ void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
   {{- if .HasRequest }}
 
 zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }} {
-  ::fidl::Encoder _encoder(internal::{{ .Ordinals.Write.Name }});
+  ::fidl::Encoder _encoder(internal::{{ .OrdinalName }});
     {{- if .HasResponse }}
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();

@@ -10,8 +10,8 @@ namespace example {
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kExampleProtocol_Method_GenOrdinal =
-    0x1b489f95492fd90elu;
+[[maybe_unused]] constexpr uint64_t kExampleProtocol_Method_Ordinal =
+    1965996700874037518lu;
 extern "C" const fidl_type_t example_ExampleProtocolMethodRequestTable;
 extern "C" const fidl_type_t example_ExampleProtocolMethodResponseTable;
 
@@ -150,7 +150,7 @@ bool ExampleProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kExampleProtocol_Method_GenOrdinal: {
+    case kExampleProtocol_Method_Ordinal: {
       auto result = ::fidl::DecodeAs<MethodRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -181,7 +181,7 @@ void ExampleProtocol::SetTransactionHeaderFor::MethodRequest(
     const ::fidl::DecodedMessage<ExampleProtocol::MethodRequest>& _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kExampleProtocol_Method_GenOrdinal);
+                       kExampleProtocol_Method_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ExampleProtocol::SetTransactionHeaderFor::MethodRequest(
@@ -189,7 +189,7 @@ void ExampleProtocol::SetTransactionHeaderFor::MethodRequest(
     zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kExampleProtocol_Method_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kExampleProtocol_Method_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 auto ::llcpp::example::ExampleXUnion::which() const -> Tag {

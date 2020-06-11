@@ -10,8 +10,7 @@ namespace top {
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kTop_GetFoo_GenOrdinal =
-    0x6ae8d19bc98f3d92lu;
+[[maybe_unused]] constexpr uint64_t kTop_GetFoo_Ordinal = 7703637629648977298lu;
 extern "C" const fidl_type_t top_TopGetFooRequestTable;
 extern "C" const fidl_type_t top_TopGetFooResponseTable;
 
@@ -169,7 +168,7 @@ zx_status_t Top::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kTop_GetFoo_GenOrdinal: {
+    case kTop_GetFoo_Ordinal: {
       auto result = ::fidl::DecodeAs<GetFooResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
@@ -207,7 +206,7 @@ bool Top::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kTop_GetFoo_GenOrdinal: {
+    case kTop_GetFoo_Ordinal: {
       auto result = ::fidl::DecodeAs<GetFooRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -276,26 +275,26 @@ void Top::Interface::GetFooCompleterBase::Reply(
 
 void Top::SetTransactionHeaderFor::GetFooRequest(
     const ::fidl::DecodedMessage<Top::GetFooRequest>& _msg, zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kTop_GetFoo_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kTop_GetFoo_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Top::SetTransactionHeaderFor::GetFooRequest(
     const ::fidl::EncodedMessage<Top::GetFooRequest>& _msg, zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kTop_GetFoo_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kTop_GetFoo_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Top::SetTransactionHeaderFor::GetFooResponse(
     const ::fidl::DecodedMessage<Top::GetFooResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTop_GetFoo_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTop_GetFoo_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Top::SetTransactionHeaderFor::GetFooResponse(
     const ::fidl::EncodedMessage<Top::GetFooResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kTop_GetFoo_GenOrdinal);
+  fidl_init_txn_header(hdr, 0, kTop_GetFoo_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 

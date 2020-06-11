@@ -20,7 +20,7 @@ using ParentSyncPtr = ::fidl::SynchronousInterfacePtr<Parent>;
 class Parent_SyncProxy;
 using ParentHandle = ::fidl::InterfaceHandle<Parent>;
 namespace internal {
-constexpr uint64_t kParent_First_GenOrdinal = 0x239f8fdea8de880clu;
+constexpr uint64_t kParent_First_Ordinal = 2566928499103139852lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -36,8 +36,8 @@ using ChildSyncPtr = ::fidl::SynchronousInterfacePtr<Child>;
 class Child_SyncProxy;
 using ChildHandle = ::fidl::InterfaceHandle<Child>;
 namespace internal {
-constexpr uint64_t kChild_First_GenOrdinal = 0x239f8fdea8de880clu;
-constexpr uint64_t kChild_Second_GenOrdinal = 0x24799ea8916d88aflu;
+constexpr uint64_t kChild_First_Ordinal = 2566928499103139852lu;
+constexpr uint64_t kChild_Second_Ordinal = 2628306304378964143lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -84,7 +84,7 @@ class Parent_RequestDecoder {
     }
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
-      case internal::kParent_First_GenOrdinal: {
+      case internal::kParent_First_Ordinal: {
         First(::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(
             &request_decoder, 16));
         break;
@@ -232,12 +232,12 @@ class Child_RequestDecoder {
     }
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
-      case internal::kChild_First_GenOrdinal: {
+      case internal::kChild_First_Ordinal: {
         First(::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(
             &request_decoder, 16));
         break;
       }
-      case internal::kChild_Second_GenOrdinal: {
+      case internal::kChild_Second_Ordinal: {
         Second(::fidl::DecodeAs<::fidl::InterfaceRequest<Parent>>(
             &request_decoder, 16));
         break;

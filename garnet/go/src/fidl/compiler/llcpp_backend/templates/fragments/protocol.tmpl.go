@@ -489,10 +489,8 @@ namespace {
 {{ $protocol := . -}}
 
 {{- range .Methods }}
-  {{- range .Ordinals.Reads }}
 [[maybe_unused]]
-constexpr uint64_t {{ .Name }} = {{ .Ordinal }}lu;
-  {{- end }}
+constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal }}lu;
 extern "C" const fidl_type_t {{ .RequestTypeName }};
 extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{- end }}

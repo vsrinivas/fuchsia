@@ -25,8 +25,8 @@ using InterfaceSyncPtr = ::fidl::SynchronousInterfacePtr<Interface>;
 class Interface_SyncProxy;
 using InterfaceHandle = ::fidl::InterfaceHandle<Interface>;
 namespace internal {
-constexpr uint64_t kInterface_Method_GenOrdinal = 0x60e700e002995ef8lu;
-constexpr uint64_t kInterface_OnEvent_GenOrdinal = 0x914c226136244edlu;
+constexpr uint64_t kInterface_Method_Ordinal = 6982550709377523448lu;
+constexpr uint64_t kInterface_OnEvent_Ordinal = 654361314665317613lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -345,7 +345,7 @@ class Interface_RequestDecoder {
     }
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
-      case internal::kInterface_Method_GenOrdinal: {
+      case internal::kInterface_Method_Ordinal: {
         Method();
         break;
       }
@@ -385,7 +385,7 @@ class Interface_ResponseDecoder {
     }
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
-      case internal::kInterface_OnEvent_GenOrdinal: {
+      case internal::kInterface_OnEvent_Ordinal: {
         OnEvent();
         break;
       }

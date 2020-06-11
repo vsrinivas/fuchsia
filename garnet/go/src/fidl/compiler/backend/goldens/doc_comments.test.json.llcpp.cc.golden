@@ -18,12 +18,12 @@ void ::llcpp::test::name::Union::SizeAndOffsetAssertionHelper() {
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kInterface_Method_GenOrdinal =
-    0x60e700e002995ef8lu;
+[[maybe_unused]] constexpr uint64_t kInterface_Method_Ordinal =
+    6982550709377523448lu;
 extern "C" const fidl_type_t test_name_InterfaceMethodRequestTable;
 extern "C" const fidl_type_t test_name_InterfaceMethodResponseTable;
-[[maybe_unused]] constexpr uint64_t kInterface_OnEvent_GenOrdinal =
-    0x914c226136244edlu;
+[[maybe_unused]] constexpr uint64_t kInterface_OnEvent_Ordinal =
+    654361314665317613lu;
 extern "C" const fidl_type_t test_name_InterfaceOnEventRequestTable;
 extern "C" const fidl_type_t test_name_InterfaceOnEventEventTable;
 
@@ -87,7 +87,7 @@ zx_status_t Interface::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kInterface_OnEvent_GenOrdinal: {
+    case kInterface_OnEvent_Ordinal: {
       auto result = ::fidl::DecodeAs<OnEventResponse>(msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -175,7 +175,7 @@ zx_status_t Interface::Call::HandleEvents(::zx::unowned_channel client_end,
     return status;
   }
   switch (hdr->ordinal) {
-    case kInterface_OnEvent_GenOrdinal: {
+    case kInterface_OnEvent_Ordinal: {
       auto result = ::fidl::DecodeAs<OnEventResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -203,7 +203,7 @@ bool Interface::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kInterface_Method_GenOrdinal: {
+    case kInterface_Method_Ordinal: {
       auto result = ::fidl::DecodeAs<MethodRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -250,8 +250,7 @@ zx_status_t Interface::SendOnEventEvent(::zx::unowned_channel _chan) {
 void Interface::SetTransactionHeaderFor::MethodRequest(
     const ::fidl::DecodedMessage<Interface::MethodRequest>& _msg,
     zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kInterface_Method_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kInterface_Method_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Interface::SetTransactionHeaderFor::MethodRequest(
@@ -259,20 +258,20 @@ void Interface::SetTransactionHeaderFor::MethodRequest(
     zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kInterface_Method_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kInterface_Method_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Interface::SetTransactionHeaderFor::OnEventResponse(
     const ::fidl::DecodedMessage<Interface::OnEventResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kInterface_OnEvent_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kInterface_OnEvent_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Interface::SetTransactionHeaderFor::OnEventResponse(
     const ::fidl::EncodedMessage<Interface::OnEventResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kInterface_OnEvent_GenOrdinal);
+  fidl_init_txn_header(hdr, 0, kInterface_OnEvent_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 

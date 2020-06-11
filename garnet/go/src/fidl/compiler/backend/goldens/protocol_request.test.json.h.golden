@@ -19,10 +19,10 @@ using ParentSyncPtr = ::fidl::SynchronousInterfacePtr<Parent>;
 class Parent_SyncProxy;
 using ParentHandle = ::fidl::InterfaceHandle<Parent>;
 namespace internal {
-constexpr uint64_t kParent_GetChild_GenOrdinal = 0x57e26ed694158086lu;
-constexpr uint64_t kParent_GetChildRequest_GenOrdinal = 0x5ea0990a698a80lu;
-constexpr uint64_t kParent_TakeChild_GenOrdinal = 0x6a9827d18871f87dlu;
-constexpr uint64_t kParent_TakeChildRequest_GenOrdinal = 0x6c4a70e2a2126637lu;
+constexpr uint64_t kParent_GetChild_Ordinal = 6332745893922832518lu;
+constexpr uint64_t kParent_GetChildRequest_Ordinal = 26635226975931008lu;
+constexpr uint64_t kParent_TakeChild_Ordinal = 7680932945371199613lu;
+constexpr uint64_t kParent_TakeChildRequest_Ordinal = 7803173423056840247lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -106,20 +106,20 @@ class Parent_RequestDecoder {
     }
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
-      case internal::kParent_GetChild_GenOrdinal: {
+      case internal::kParent_GetChild_Ordinal: {
         GetChild();
         break;
       }
-      case internal::kParent_GetChildRequest_GenOrdinal: {
+      case internal::kParent_GetChildRequest_Ordinal: {
         GetChildRequest();
         break;
       }
-      case internal::kParent_TakeChild_GenOrdinal: {
+      case internal::kParent_TakeChild_Ordinal: {
         TakeChild(::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(
             &request_decoder, 16));
         break;
       }
-      case internal::kParent_TakeChildRequest_GenOrdinal: {
+      case internal::kParent_TakeChildRequest_Ordinal: {
         TakeChildRequest(::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(
             &request_decoder, 16));
         break;
@@ -171,12 +171,12 @@ class Parent_ResponseDecoder {
     }
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
-      case internal::kParent_GetChild_GenOrdinal: {
+      case internal::kParent_GetChild_Ordinal: {
         GetChild(::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(
             &response_decoder, 16));
         break;
       }
-      case internal::kParent_GetChildRequest_GenOrdinal: {
+      case internal::kParent_GetChildRequest_Ordinal: {
         GetChildRequest(::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(
             &response_decoder, 16));
         break;

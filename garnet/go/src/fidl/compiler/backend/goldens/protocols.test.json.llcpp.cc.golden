@@ -31,16 +31,16 @@ void ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kTransitional_Request_GenOrdinal =
-    0x74cf6772aaa991e2lu;
+[[maybe_unused]] constexpr uint64_t kTransitional_Request_Ordinal =
+    8417059970765918690lu;
 extern "C" const fidl_type_t test_name_TransitionalRequestRequestTable;
 extern "C" const fidl_type_t test_name_TransitionalRequestResponseTable;
-[[maybe_unused]] constexpr uint64_t kTransitional_OneWay_GenOrdinal =
-    0x41bb88b33c2ecd62lu;
+[[maybe_unused]] constexpr uint64_t kTransitional_OneWay_Ordinal =
+    4736529736500432226lu;
 extern "C" const fidl_type_t test_name_TransitionalOneWayRequestTable;
 extern "C" const fidl_type_t test_name_TransitionalOneWayResponseTable;
-[[maybe_unused]] constexpr uint64_t kTransitional_Event_GenOrdinal =
-    0x1834fa04375da92clu;
+[[maybe_unused]] constexpr uint64_t kTransitional_Event_Ordinal =
+    1744293851714922796lu;
 extern "C" const fidl_type_t test_name_TransitionalEventRequestTable;
 extern "C" const fidl_type_t test_name_TransitionalEventEventTable;
 
@@ -347,7 +347,7 @@ zx_status_t Transitional::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kTransitional_Request_GenOrdinal: {
+    case kTransitional_Request_Ordinal: {
       auto result = ::fidl::DecodeAs<RequestResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
@@ -357,7 +357,7 @@ zx_status_t Transitional::ClientImpl::Dispatch(
           std::move(result.message));
       break;
     }
-    case kTransitional_Event_GenOrdinal: {
+    case kTransitional_Event_Ordinal: {
       auto result = ::fidl::DecodeAs<EventResponse>(msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -450,7 +450,7 @@ zx_status_t Transitional::Call::HandleEvents(
     return status;
   }
   switch (hdr->ordinal) {
-    case kTransitional_Event_GenOrdinal: {
+    case kTransitional_Event_Ordinal: {
       auto result = ::fidl::DecodeAs<EventResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -479,7 +479,7 @@ bool Transitional::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kTransitional_Request_GenOrdinal: {
+    case kTransitional_Request_Ordinal: {
       auto result = ::fidl::DecodeAs<RequestRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -490,7 +490,7 @@ bool Transitional::TryDispatch(Interface* impl, fidl_msg_t* msg,
                     Interface::RequestCompleter::Sync(txn));
       return true;
     }
-    case kTransitional_OneWay_GenOrdinal: {
+    case kTransitional_OneWay_Ordinal: {
       auto result = ::fidl::DecodeAs<OneWayRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -608,7 +608,7 @@ void Transitional::SetTransactionHeaderFor::RequestRequest(
     const ::fidl::DecodedMessage<Transitional::RequestRequest>& _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kTransitional_Request_GenOrdinal);
+                       kTransitional_Request_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Transitional::SetTransactionHeaderFor::RequestRequest(
@@ -616,20 +616,19 @@ void Transitional::SetTransactionHeaderFor::RequestRequest(
     zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kTransitional_Request_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kTransitional_Request_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Transitional::SetTransactionHeaderFor::RequestResponse(
     const ::fidl::DecodedMessage<Transitional::RequestResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kTransitional_Request_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTransitional_Request_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Transitional::SetTransactionHeaderFor::RequestResponse(
     const ::fidl::EncodedMessage<Transitional::RequestResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kTransitional_Request_GenOrdinal);
+  fidl_init_txn_header(hdr, 0, kTransitional_Request_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -637,7 +636,7 @@ void Transitional::SetTransactionHeaderFor::OneWayRequest(
     const ::fidl::DecodedMessage<Transitional::OneWayRequest>& _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kTransitional_OneWay_GenOrdinal);
+                       kTransitional_OneWay_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Transitional::SetTransactionHeaderFor::OneWayRequest(
@@ -645,40 +644,39 @@ void Transitional::SetTransactionHeaderFor::OneWayRequest(
     zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kTransitional_OneWay_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kTransitional_OneWay_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Transitional::SetTransactionHeaderFor::EventResponse(
     const ::fidl::DecodedMessage<Transitional::EventResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kTransitional_Event_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTransitional_Event_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Transitional::SetTransactionHeaderFor::EventResponse(
     const ::fidl::EncodedMessage<Transitional::EventResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kTransitional_Event_GenOrdinal);
+  fidl_init_txn_header(hdr, 0, kTransitional_Event_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kChannelProtocol_MethodA_GenOrdinal =
-    0x1b1e059b3f02bffclu;
+[[maybe_unused]] constexpr uint64_t kChannelProtocol_MethodA_Ordinal =
+    1954005452660588540lu;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodARequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodAResponseTable;
-[[maybe_unused]] constexpr uint64_t kChannelProtocol_EventA_GenOrdinal =
-    0x2558b206a254d8a0lu;
+[[maybe_unused]] constexpr uint64_t kChannelProtocol_EventA_Ordinal =
+    2691096518916888736lu;
 extern "C" const fidl_type_t test_name_ChannelProtocolEventARequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolEventAEventTable;
-[[maybe_unused]] constexpr uint64_t kChannelProtocol_MethodB_GenOrdinal =
-    0x5db17a61464744a3lu;
+[[maybe_unused]] constexpr uint64_t kChannelProtocol_MethodB_Ordinal =
+    6751311874614576291lu;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodBRequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodBResponseTable;
-[[maybe_unused]] constexpr uint64_t kChannelProtocol_MutateSocket_GenOrdinal =
-    0x36caa6fff7569577lu;
+[[maybe_unused]] constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal =
+    3948151641640179063lu;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 
@@ -1200,7 +1198,7 @@ zx_status_t ChannelProtocol::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kChannelProtocol_EventA_GenOrdinal: {
+    case kChannelProtocol_EventA_Ordinal: {
       auto result = ::fidl::DecodeAs<EventAResponse>(msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -1214,7 +1212,7 @@ zx_status_t ChannelProtocol::ClientImpl::Dispatch(
       }
       break;
     }
-    case kChannelProtocol_MethodB_GenOrdinal: {
+    case kChannelProtocol_MethodB_Ordinal: {
       auto result = ::fidl::DecodeAs<MethodBResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
@@ -1224,7 +1222,7 @@ zx_status_t ChannelProtocol::ClientImpl::Dispatch(
           std::move(result.message));
       break;
     }
-    case kChannelProtocol_MutateSocket_GenOrdinal: {
+    case kChannelProtocol_MutateSocket_Ordinal: {
       auto result = ::fidl::DecodeAs<MutateSocketResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
@@ -1313,7 +1311,7 @@ zx_status_t ChannelProtocol::Call::HandleEvents(
     return status;
   }
   switch (hdr->ordinal) {
-    case kChannelProtocol_EventA_GenOrdinal: {
+    case kChannelProtocol_EventA_Ordinal: {
       auto result = ::fidl::DecodeAs<EventAResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -1342,7 +1340,7 @@ bool ChannelProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kChannelProtocol_MethodA_GenOrdinal: {
+    case kChannelProtocol_MethodA_Ordinal: {
       auto result = ::fidl::DecodeAs<MethodARequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1353,7 +1351,7 @@ bool ChannelProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                     Interface::MethodACompleter::Sync(txn));
       return true;
     }
-    case kChannelProtocol_MethodB_GenOrdinal: {
+    case kChannelProtocol_MethodB_Ordinal: {
       auto result = ::fidl::DecodeAs<MethodBRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1364,7 +1362,7 @@ bool ChannelProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
                     Interface::MethodBCompleter::Sync(txn));
       return true;
     }
-    case kChannelProtocol_MutateSocket_GenOrdinal: {
+    case kChannelProtocol_MutateSocket_Ordinal: {
       auto result = ::fidl::DecodeAs<MutateSocketRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1532,7 +1530,7 @@ void ChannelProtocol::SetTransactionHeaderFor::MethodARequest(
     const ::fidl::DecodedMessage<ChannelProtocol::MethodARequest>& _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kChannelProtocol_MethodA_GenOrdinal);
+                       kChannelProtocol_MethodA_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ChannelProtocol::SetTransactionHeaderFor::MethodARequest(
@@ -1540,21 +1538,21 @@ void ChannelProtocol::SetTransactionHeaderFor::MethodARequest(
     zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kChannelProtocol_MethodA_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kChannelProtocol_MethodA_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ChannelProtocol::SetTransactionHeaderFor::EventAResponse(
     const ::fidl::DecodedMessage<ChannelProtocol::EventAResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kChannelProtocol_EventA_GenOrdinal);
+                       kChannelProtocol_EventA_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ChannelProtocol::SetTransactionHeaderFor::EventAResponse(
     const ::fidl::EncodedMessage<ChannelProtocol::EventAResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kChannelProtocol_EventA_GenOrdinal);
+  fidl_init_txn_header(hdr, 0, kChannelProtocol_EventA_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -1562,7 +1560,7 @@ void ChannelProtocol::SetTransactionHeaderFor::MethodBRequest(
     const ::fidl::DecodedMessage<ChannelProtocol::MethodBRequest>& _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kChannelProtocol_MethodB_GenOrdinal);
+                       kChannelProtocol_MethodB_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ChannelProtocol::SetTransactionHeaderFor::MethodBRequest(
@@ -1570,20 +1568,20 @@ void ChannelProtocol::SetTransactionHeaderFor::MethodBRequest(
     zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kChannelProtocol_MethodB_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kChannelProtocol_MethodB_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ChannelProtocol::SetTransactionHeaderFor::MethodBResponse(
     const ::fidl::DecodedMessage<ChannelProtocol::MethodBResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kChannelProtocol_MethodB_GenOrdinal);
+                       kChannelProtocol_MethodB_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ChannelProtocol::SetTransactionHeaderFor::MethodBResponse(
     const ::fidl::EncodedMessage<ChannelProtocol::MethodBResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kChannelProtocol_MethodB_GenOrdinal);
+  fidl_init_txn_header(hdr, 0, kChannelProtocol_MethodB_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -1591,7 +1589,7 @@ void ChannelProtocol::SetTransactionHeaderFor::MutateSocketRequest(
     const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketRequest>& _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kChannelProtocol_MutateSocket_GenOrdinal);
+                       kChannelProtocol_MutateSocket_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ChannelProtocol::SetTransactionHeaderFor::MutateSocketRequest(
@@ -1599,77 +1597,77 @@ void ChannelProtocol::SetTransactionHeaderFor::MutateSocketRequest(
     zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kChannelProtocol_MutateSocket_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kChannelProtocol_MutateSocket_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ChannelProtocol::SetTransactionHeaderFor::MutateSocketResponse(
     const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kChannelProtocol_MutateSocket_GenOrdinal);
+                       kChannelProtocol_MutateSocket_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ChannelProtocol::SetTransactionHeaderFor::MutateSocketResponse(
     const ::fidl::EncodedMessage<ChannelProtocol::MutateSocketResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kChannelProtocol_MutateSocket_GenOrdinal);
+  fidl_init_txn_header(hdr, 0, kChannelProtocol_MutateSocket_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
 
 [[maybe_unused]] constexpr uint64_t
-    kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal =
-        0x3931f96bc77fba8lu;
+    kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =
+        257584335957785512lu;
 extern "C" const fidl_type_t
     test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
 extern "C" const fidl_type_t
     test_name_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
-    kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal =
-        0x706ec7bd335005f9lu;
+    kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal =
+        8101632395109729785lu;
 extern "C" const fidl_type_t
     test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t
     test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
-    kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal =
-        0x4625ad5934067a48lu;
+    kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal =
+        5054636755429784136lu;
 extern "C" const fidl_type_t
     test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
 extern "C" const fidl_type_t
     test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
-    kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal =
-        0x46e5095902913025lu;
+    kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal =
+        5108499630221504549lu;
 extern "C" const fidl_type_t
     test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 extern "C" const fidl_type_t
     test_name_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
-    kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal =
-        0x180c481d4a15967lu;
+    kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal =
+        108302452954061159lu;
 extern "C" const fidl_type_t
     test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t
     test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
-    kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal =
-        0x553860267eceec0lu;
+    kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal =
+        383797738148261568lu;
 extern "C" const fidl_type_t
     test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 extern "C" const fidl_type_t
     test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 [[maybe_unused]] constexpr uint64_t
-    kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal =
-        0x42e90e9a86944b3lu;
+    kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal =
+        301337558307652787lu;
 extern "C" const fidl_type_t
     test_name_WithAndWithoutRequestResponseOnEmptyResponseRequestTable;
 extern "C" const fidl_type_t
     test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
 [[maybe_unused]] constexpr uint64_t
-    kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal =
-        0x2a9767b3ae6c2b09lu;
+    kWithAndWithoutRequestResponse_OnWithResponse_Ordinal =
+        3069035692499413769lu;
 extern "C" const fidl_type_t
     test_name_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 extern "C" const fidl_type_t
@@ -2596,7 +2594,7 @@ zx_status_t WithAndWithoutRequestResponse::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal: {
+    case kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal: {
       auto result = ::fidl::DecodeAs<NoRequestEmptyResponseResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
@@ -2605,7 +2603,7 @@ zx_status_t WithAndWithoutRequestResponse::ClientImpl::Dispatch(
       static_cast<NoRequestEmptyResponseResponseContext*>(context)->OnReply();
       break;
     }
-    case kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal: {
+    case kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal: {
       auto result = ::fidl::DecodeAs<NoRequestWithResponseResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
@@ -2615,7 +2613,7 @@ zx_status_t WithAndWithoutRequestResponse::ClientImpl::Dispatch(
           std::move(result.message));
       break;
     }
-    case kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal: {
+    case kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal: {
       auto result = ::fidl::DecodeAs<WithRequestEmptyResponseResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
@@ -2624,7 +2622,7 @@ zx_status_t WithAndWithoutRequestResponse::ClientImpl::Dispatch(
       static_cast<WithRequestEmptyResponseResponseContext*>(context)->OnReply();
       break;
     }
-    case kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal: {
+    case kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal: {
       auto result = ::fidl::DecodeAs<WithRequestWithResponseResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
@@ -2634,7 +2632,7 @@ zx_status_t WithAndWithoutRequestResponse::ClientImpl::Dispatch(
           std::move(result.message));
       break;
     }
-    case kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal: {
+    case kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
       auto result = ::fidl::DecodeAs<OnEmptyResponseResponse>(msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -2643,7 +2641,7 @@ zx_status_t WithAndWithoutRequestResponse::ClientImpl::Dispatch(
       handlers_.on_empty_response();
       break;
     }
-    case kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal: {
+    case kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
       auto result = ::fidl::DecodeAs<OnWithResponseResponse>(msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -2747,14 +2745,14 @@ zx_status_t WithAndWithoutRequestResponse::Call::HandleEvents(
     return status;
   }
   switch (hdr->ordinal) {
-    case kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal: {
+    case kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
       auto result = ::fidl::DecodeAs<OnEmptyResponseResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
       }
       return handlers.on_empty_response();
     }
-    case kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal: {
+    case kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
       auto result = ::fidl::DecodeAs<OnWithResponseResponse>(&msg);
       if (result.status != ZX_OK) {
         return result.status;
@@ -2784,7 +2782,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl,
     return true;
   }
   switch (hdr->ordinal) {
-    case kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal: {
+    case kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal: {
       auto result = ::fidl::DecodeAs<NoRequestNoResponseRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2794,7 +2792,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl,
           Interface::NoRequestNoResponseCompleter::Sync(txn));
       return true;
     }
-    case kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal: {
+    case kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal: {
       auto result = ::fidl::DecodeAs<NoRequestEmptyResponseRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2804,7 +2802,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl,
           Interface::NoRequestEmptyResponseCompleter::Sync(txn));
       return true;
     }
-    case kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal: {
+    case kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal: {
       auto result = ::fidl::DecodeAs<NoRequestWithResponseRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2814,7 +2812,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl,
           Interface::NoRequestWithResponseCompleter::Sync(txn));
       return true;
     }
-    case kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal: {
+    case kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal: {
       auto result = ::fidl::DecodeAs<WithRequestNoResponseRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2826,7 +2824,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl,
           Interface::WithRequestNoResponseCompleter::Sync(txn));
       return true;
     }
-    case kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal: {
+    case kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal: {
       auto result = ::fidl::DecodeAs<WithRequestEmptyResponseRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -2838,7 +2836,7 @@ bool WithAndWithoutRequestResponse::TryDispatch(Interface* impl,
           Interface::WithRequestEmptyResponseCompleter::Sync(txn));
       return true;
     }
-    case kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal: {
+    case kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal: {
       auto result = ::fidl::DecodeAs<WithRequestWithResponseRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -3104,7 +3102,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
         zx_txid_t _txid) {
   fidl_init_txn_header(
       &_msg.message()->_hdr, _txid,
-      kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal);
+      kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3115,8 +3113,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(
-      hdr, _txid,
-      kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal);
+      hdr, _txid, kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -3127,7 +3124,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
         zx_txid_t _txid) {
   fidl_init_txn_header(
       &_msg.message()->_hdr, _txid,
-      kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal);
+      kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3139,7 +3136,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(
       hdr, _txid,
-      kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal);
+      kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3149,7 +3146,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
             _msg) {
   fidl_init_txn_header(
       &_msg.message()->_hdr, 0,
-      kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal);
+      kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3160,7 +3157,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(
-      hdr, 0, kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal);
+      hdr, 0, kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -3171,7 +3168,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
         zx_txid_t _txid) {
   fidl_init_txn_header(
       &_msg.message()->_hdr, _txid,
-      kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal);
+      kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3182,8 +3179,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(
-      hdr, _txid,
-      kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal);
+      hdr, _txid, kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3193,7 +3189,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
             _msg) {
   fidl_init_txn_header(
       &_msg.message()->_hdr, 0,
-      kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal);
+      kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3204,7 +3200,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(
-      hdr, 0, kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal);
+      hdr, 0, kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -3215,7 +3211,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
         zx_txid_t _txid) {
   fidl_init_txn_header(
       &_msg.message()->_hdr, _txid,
-      kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal);
+      kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3226,8 +3222,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(
-      hdr, _txid,
-      kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal);
+      hdr, _txid, kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -3239,7 +3234,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
         zx_txid_t _txid) {
   fidl_init_txn_header(
       &_msg.message()->_hdr, _txid,
-      kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal);
+      kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3252,7 +3247,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(
       hdr, _txid,
-      kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal);
+      kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3262,7 +3257,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
             _msg) {
   fidl_init_txn_header(
       &_msg.message()->_hdr, 0,
-      kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal);
+      kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3273,8 +3268,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(
-      hdr, 0,
-      kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal);
+      hdr, 0, kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -3286,7 +3280,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
         zx_txid_t _txid) {
   fidl_init_txn_header(
       &_msg.message()->_hdr, _txid,
-      kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal);
+      kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3299,7 +3293,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(
       hdr, _txid,
-      kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal);
+      kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3309,7 +3303,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
             _msg) {
   fidl_init_txn_header(
       &_msg.message()->_hdr, 0,
-      kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal);
+      kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3320,8 +3314,7 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(
-      hdr, 0,
-      kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal);
+      hdr, 0, kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -3329,9 +3322,8 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
     OnEmptyResponseResponse(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::OnEmptyResponseResponse>& _msg) {
-  fidl_init_txn_header(
-      &_msg.message()->_hdr, 0,
-      kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0,
+                       kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3340,8 +3332,8 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
             WithAndWithoutRequestResponse::OnEmptyResponseResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(
-      hdr, 0, kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal);
+  fidl_init_txn_header(hdr, 0,
+                       kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -3349,9 +3341,8 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
     OnWithResponseResponse(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::OnWithResponseResponse>& _msg) {
-  fidl_init_txn_header(
-      &_msg.message()->_hdr, 0,
-      kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0,
+                       kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
@@ -3360,8 +3351,8 @@ void WithAndWithoutRequestResponse::SetTransactionHeaderFor::
             WithAndWithoutRequestResponse::OnWithResponseResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(
-      hdr, 0, kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal);
+  fidl_init_txn_header(hdr, 0,
+                       kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -3377,20 +3368,20 @@ void ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t
-    kWithErrorSyntax_ResponseAsStruct_GenOrdinal = 0x592157d505db2bcflu;
+[[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_Ordinal =
+    6422511116044938191lu;
 extern "C" const fidl_type_t
     test_name_WithErrorSyntaxResponseAsStructRequestTable;
 extern "C" const fidl_type_t
     test_name_WithErrorSyntaxResponseAsStructResponseTable;
-[[maybe_unused]] constexpr uint64_t
-    kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal = 0x20cf80ad7d9b60belu;
+[[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal =
+    2364249812017832126lu;
 extern "C" const fidl_type_t
     test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
 extern "C" const fidl_type_t
     test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
-[[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_GenOrdinal =
-    0x3fcd36560f812e7flu;
+[[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal =
+    4597390537870356095lu;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumRequestTable;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 
@@ -3912,7 +3903,7 @@ zx_status_t WithErrorSyntax::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kWithErrorSyntax_ResponseAsStruct_GenOrdinal: {
+    case kWithErrorSyntax_ResponseAsStruct_Ordinal: {
       auto result = ::fidl::DecodeAs<ResponseAsStructResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
@@ -3922,7 +3913,7 @@ zx_status_t WithErrorSyntax::ClientImpl::Dispatch(
           std::move(result.message));
       break;
     }
-    case kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal: {
+    case kWithErrorSyntax_ErrorAsPrimitive_Ordinal: {
       auto result = ::fidl::DecodeAs<ErrorAsPrimitiveResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
@@ -3932,7 +3923,7 @@ zx_status_t WithErrorSyntax::ClientImpl::Dispatch(
           std::move(result.message));
       break;
     }
-    case kWithErrorSyntax_ErrorAsEnum_GenOrdinal: {
+    case kWithErrorSyntax_ErrorAsEnum_Ordinal: {
       auto result = ::fidl::DecodeAs<ErrorAsEnumResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
@@ -3970,7 +3961,7 @@ bool WithErrorSyntax::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kWithErrorSyntax_ResponseAsStruct_GenOrdinal: {
+    case kWithErrorSyntax_ResponseAsStruct_Ordinal: {
       auto result = ::fidl::DecodeAs<ResponseAsStructRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -3979,7 +3970,7 @@ bool WithErrorSyntax::TryDispatch(Interface* impl, fidl_msg_t* msg,
       impl->ResponseAsStruct(Interface::ResponseAsStructCompleter::Sync(txn));
       return true;
     }
-    case kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal: {
+    case kWithErrorSyntax_ErrorAsPrimitive_Ordinal: {
       auto result = ::fidl::DecodeAs<ErrorAsPrimitiveRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -3988,7 +3979,7 @@ bool WithErrorSyntax::TryDispatch(Interface* impl, fidl_msg_t* msg,
       impl->ErrorAsPrimitive(Interface::ErrorAsPrimitiveCompleter::Sync(txn));
       return true;
     }
-    case kWithErrorSyntax_ErrorAsEnum_GenOrdinal: {
+    case kWithErrorSyntax_ErrorAsEnum_Ordinal: {
       auto result = ::fidl::DecodeAs<ErrorAsEnumRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -4225,7 +4216,7 @@ void WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructRequest(
         _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kWithErrorSyntax_ResponseAsStruct_GenOrdinal);
+                       kWithErrorSyntax_ResponseAsStruct_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructRequest(
@@ -4234,15 +4225,14 @@ void WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructRequest(
     zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid,
-                       kWithErrorSyntax_ResponseAsStruct_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kWithErrorSyntax_ResponseAsStruct_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructResponse(
     const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructResponse>&
         _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kWithErrorSyntax_ResponseAsStruct_GenOrdinal);
+                       kWithErrorSyntax_ResponseAsStruct_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructResponse(
@@ -4250,7 +4240,7 @@ void WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructResponse(
         _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kWithErrorSyntax_ResponseAsStruct_GenOrdinal);
+  fidl_init_txn_header(hdr, 0, kWithErrorSyntax_ResponseAsStruct_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -4259,7 +4249,7 @@ void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveRequest(
         _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal);
+                       kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveRequest(
@@ -4268,15 +4258,14 @@ void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveRequest(
     zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid,
-                       kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveResponse(
     const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>&
         _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal);
+                       kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveResponse(
@@ -4284,7 +4273,7 @@ void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveResponse(
         _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal);
+  fidl_init_txn_header(hdr, 0, kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
@@ -4292,7 +4281,7 @@ void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumRequest(
     const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumRequest>& _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kWithErrorSyntax_ErrorAsEnum_GenOrdinal);
+                       kWithErrorSyntax_ErrorAsEnum_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumRequest(
@@ -4300,20 +4289,20 @@ void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumRequest(
     zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kWithErrorSyntax_ErrorAsEnum_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kWithErrorSyntax_ErrorAsEnum_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumResponse(
     const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0,
-                       kWithErrorSyntax_ErrorAsEnum_GenOrdinal);
+                       kWithErrorSyntax_ErrorAsEnum_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumResponse(
     const ::fidl::EncodedMessage<WithErrorSyntax::ErrorAsEnumResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kWithErrorSyntax_ErrorAsEnum_GenOrdinal);
+  fidl_init_txn_header(hdr, 0, kWithErrorSyntax_ErrorAsEnum_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 

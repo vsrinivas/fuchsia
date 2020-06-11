@@ -90,9 +90,7 @@ zx_status_t {{ .Name }}::Call::HandleEvents(::zx::unowned_channel client_end, {{
   switch (hdr->ordinal) {
   {{- range .Methods }}
     {{- if not .HasRequest }}
-      {{- range .Ordinals.Reads }}
-    case {{ .Name }}:
-      {{- end }}
+    case {{ .OrdinalName }}:
     {
       auto result = ::fidl::DecodeAs<{{ .Name }}Response>(&msg);
       if (result.status != ZX_OK) {

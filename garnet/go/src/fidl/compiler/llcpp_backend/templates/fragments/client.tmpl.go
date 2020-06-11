@@ -94,9 +94,7 @@ zx_status_t {{ .Name }}::ClientImpl::Dispatch(
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
   {{- range FilterMethodsWithoutResps .Methods }}
-    {{- range .Ordinals.Reads }}
-    case {{ .Name }}:
-    {{- end }}
+    case {{ .OrdinalName }}:
     {
       auto result = ::fidl::DecodeAs<{{ .Name }}Response>(msg);
       if (result.status != ZX_OK) {

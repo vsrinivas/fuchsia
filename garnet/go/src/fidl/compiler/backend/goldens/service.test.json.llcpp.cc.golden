@@ -11,8 +11,8 @@ namespace name {
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kSecondProtocol_MethodOnSecond_GenOrdinal =
-    0x5785f9c1f2aece21lu;
+[[maybe_unused]] constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal =
+    6306721464597794337lu;
 extern "C" const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable;
 extern "C" const fidl_type_t
     test_name_SecondProtocolMethodOnSecondResponseTable;
@@ -95,7 +95,7 @@ bool SecondProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kSecondProtocol_MethodOnSecond_GenOrdinal: {
+    case kSecondProtocol_MethodOnSecond_Ordinal: {
       auto result = ::fidl::DecodeAs<MethodOnSecondRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -124,7 +124,7 @@ void SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(
     const ::fidl::DecodedMessage<SecondProtocol::MethodOnSecondRequest>& _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kSecondProtocol_MethodOnSecond_GenOrdinal);
+                       kSecondProtocol_MethodOnSecond_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(
@@ -132,14 +132,14 @@ void SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(
     zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kSecondProtocol_MethodOnSecond_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kSecondProtocol_MethodOnSecond_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kFirstProtocol_MethodOnFirst_GenOrdinal =
-    0x580cbd0d43ccbe3blu;
+[[maybe_unused]] constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal =
+    6344653839727902267lu;
 extern "C" const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable;
 extern "C" const fidl_type_t test_name_FirstProtocolMethodOnFirstResponseTable;
 
@@ -221,7 +221,7 @@ bool FirstProtocol::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kFirstProtocol_MethodOnFirst_GenOrdinal: {
+    case kFirstProtocol_MethodOnFirst_Ordinal: {
       auto result = ::fidl::DecodeAs<MethodOnFirstRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -250,7 +250,7 @@ void FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(
     const ::fidl::DecodedMessage<FirstProtocol::MethodOnFirstRequest>& _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
-                       kFirstProtocol_MethodOnFirst_GenOrdinal);
+                       kFirstProtocol_MethodOnFirst_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(
@@ -258,7 +258,7 @@ void FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(
     zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kFirstProtocol_MethodOnFirst_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kFirstProtocol_MethodOnFirst_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 

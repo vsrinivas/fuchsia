@@ -252,9 +252,11 @@ type ServiceMember struct {
 // TODO: There are common fields between Request and Response; consider factoring them out.
 type Method struct {
 	types.Attributes
-	types.Ordinals
 	Name                 string
 	NameInLowerSnakeCase string
+	Ordinal              uint64
+	// The name of a constant that defines the ordinal value.
+	OrdinalName          string
 	HasRequest           bool
 	Request              []Parameter
 	RequestSize          int
@@ -887,14 +889,11 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 		}
 
 		m := Method{
-			Attributes: v.Attributes,
-			Ordinals: types.NewOrdinalsStep7(
-				v,
-				fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
-				fmt.Sprintf("k%s_%s_GenOrdinal", r.Name, v.Name),
-			),
+			Attributes:           v.Attributes,
 			Name:                 name,
 			NameInLowerSnakeCase: common.ToSnakeCase(name),
+			Ordinal:              v.Ordinal,
+			OrdinalName:          fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
 			HasRequest:           v.HasRequest,
 			Request:              c.compileParameterArray(v.Request),
 			RequestSize:          v.RequestTypeShapeV1.InlineSize,

@@ -21,7 +21,7 @@ using TopSyncPtr = ::fidl::SynchronousInterfacePtr<Top>;
 class Top_SyncProxy;
 using TopHandle = ::fidl::InterfaceHandle<Top>;
 namespace internal {
-constexpr uint64_t kTop_GetFoo_GenOrdinal = 0x6ae8d19bc98f3d92lu;
+constexpr uint64_t kTop_GetFoo_Ordinal = 7703637629648977298lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -67,7 +67,7 @@ class Top_RequestDecoder {
     }
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
-      case internal::kTop_GetFoo_GenOrdinal: {
+      case internal::kTop_GetFoo_Ordinal: {
         GetFoo();
         break;
       }
@@ -108,7 +108,7 @@ class Top_ResponseDecoder {
     }
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
-      case internal::kTop_GetFoo_GenOrdinal: {
+      case internal::kTop_GetFoo_Ordinal: {
         GetFoo(::fidl::DecodeAs<::bottom::Foo>(&response_decoder, 16));
         break;
       }

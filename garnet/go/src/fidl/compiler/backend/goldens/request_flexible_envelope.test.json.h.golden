@@ -22,10 +22,10 @@ using ProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<Protocol>;
 class Protocol_SyncProxy;
 using ProtocolHandle = ::fidl::InterfaceHandle<Protocol>;
 namespace internal {
-constexpr uint64_t kProtocol_RequestStrictResponseFlexible_GenOrdinal =
-    0x72b1a46e5e2af282lu;
-constexpr uint64_t kProtocol_RequestFlexibleResponseStrict_GenOrdinal =
-    0x42a34ad5c4a1d952lu;
+constexpr uint64_t kProtocol_RequestStrictResponseFlexible_Ordinal =
+    8264567585134801538lu;
+constexpr uint64_t kProtocol_RequestFlexibleResponseStrict_Ordinal =
+    4801763909694511442lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -271,12 +271,12 @@ class Protocol_RequestDecoder {
     }
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
-      case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal: {
+      case internal::kProtocol_RequestStrictResponseFlexible_Ordinal: {
         RequestStrictResponseFlexible(
             ::fidl::DecodeAs<StrictFoo>(&request_decoder, 16));
         break;
       }
-      case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal: {
+      case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal: {
         RequestFlexibleResponseStrict(
             ::fidl::DecodeAs<FlexibleFoo>(&request_decoder, 16));
         break;
@@ -326,12 +326,12 @@ class Protocol_ResponseDecoder {
     }
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
-      case internal::kProtocol_RequestStrictResponseFlexible_GenOrdinal: {
+      case internal::kProtocol_RequestStrictResponseFlexible_Ordinal: {
         RequestStrictResponseFlexible(
             ::fidl::DecodeAs<FlexibleFoo>(&response_decoder, 16));
         break;
       }
-      case internal::kProtocol_RequestFlexibleResponseStrict_GenOrdinal: {
+      case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal: {
         RequestFlexibleResponseStrict(
             ::fidl::DecodeAs<StrictFoo>(&response_decoder, 16));
         break;

@@ -31,9 +31,7 @@ bool {{ .Name }}::TryDispatch{{ template "SyncServerDispatchMethodSignature" }} 
   switch (hdr->ordinal) {
   {{- range .Methods }}
     {{- if .HasRequest }}
-      {{- range .Ordinals.Reads }}
-    case {{ .Name }}:
-      {{- end }}
+    case {{ .OrdinalName }}:
     {
       auto result = ::fidl::DecodeAs<{{ .Name }}Request>(msg);
       if (result.status != ZX_OK) {

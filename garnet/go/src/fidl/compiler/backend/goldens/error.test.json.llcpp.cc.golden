@@ -21,8 +21,7 @@ void ::llcpp::fidl::test::json::Example_foo_Result::
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kExample_foo_GenOrdinal =
-    0xbaf4e613e45f29blu;
+[[maybe_unused]] constexpr uint64_t kExample_foo_Ordinal = 841977834905137819lu;
 extern "C" const fidl_type_t fidl_test_json_ExamplefooRequestTable;
 extern "C" const fidl_type_t fidl_test_json_ExamplefooResponseTable;
 
@@ -213,7 +212,7 @@ zx_status_t Example::ClientImpl::Dispatch(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kExample_foo_GenOrdinal: {
+    case kExample_foo_Ordinal: {
       auto result = ::fidl::DecodeAs<fooResponse>(msg);
       if (result.status != ZX_OK) {
         context->OnError();
@@ -251,7 +250,7 @@ bool Example::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kExample_foo_GenOrdinal: {
+    case kExample_foo_Ordinal: {
       auto result = ::fidl::DecodeAs<fooRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -342,26 +341,26 @@ void Example::Interface::fooCompleterBase::Reply(
 
 void Example::SetTransactionHeaderFor::fooRequest(
     const ::fidl::DecodedMessage<Example::fooRequest>& _msg, zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kExample_foo_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kExample_foo_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Example::SetTransactionHeaderFor::fooRequest(
     const ::fidl::EncodedMessage<Example::fooRequest>& _msg, zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kExample_foo_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kExample_foo_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Example::SetTransactionHeaderFor::fooResponse(
     const ::fidl::DecodedMessage<Example::fooResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kExample_foo_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kExample_foo_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Example::SetTransactionHeaderFor::fooResponse(
     const ::fidl::EncodedMessage<Example::fooResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, 0, kExample_foo_GenOrdinal);
+  fidl_init_txn_header(hdr, 0, kExample_foo_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 

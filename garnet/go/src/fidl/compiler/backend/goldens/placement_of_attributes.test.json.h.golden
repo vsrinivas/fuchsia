@@ -20,7 +20,7 @@ using ExampleProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<ExampleProtocol>;
 class ExampleProtocol_SyncProxy;
 using ExampleProtocolHandle = ::fidl::InterfaceHandle<ExampleProtocol>;
 namespace internal {
-constexpr uint64_t kExampleProtocol_Method_GenOrdinal = 0x1b489f95492fd90elu;
+constexpr uint64_t kExampleProtocol_Method_Ordinal = 1965996700874037518lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -138,7 +138,7 @@ class ExampleProtocol_RequestDecoder {
     }
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
-      case internal::kExampleProtocol_Method_GenOrdinal: {
+      case internal::kExampleProtocol_Method_Ordinal: {
         Method(::fidl::DecodeAs<::exampleusing::Empty>(&request_decoder, 16));
         break;
       }

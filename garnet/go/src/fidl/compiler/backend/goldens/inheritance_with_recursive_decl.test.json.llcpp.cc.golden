@@ -12,8 +12,8 @@ namespace json {
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kParent_First_GenOrdinal =
-    0x239f8fdea8de880clu;
+[[maybe_unused]] constexpr uint64_t kParent_First_Ordinal =
+    2566928499103139852lu;
 extern "C" const fidl_type_t fidl_test_json_ParentFirstRequestTable;
 extern "C" const fidl_type_t fidl_test_json_ParentFirstResponseTable;
 
@@ -150,7 +150,7 @@ bool Parent::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kParent_First_GenOrdinal: {
+    case kParent_First_Ordinal: {
       auto result = ::fidl::DecodeAs<FirstRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -179,25 +179,25 @@ bool Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
 
 void Parent::SetTransactionHeaderFor::FirstRequest(
     const ::fidl::DecodedMessage<Parent::FirstRequest>& _msg, zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kParent_First_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kParent_First_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Parent::SetTransactionHeaderFor::FirstRequest(
     const ::fidl::EncodedMessage<Parent::FirstRequest>& _msg, zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kParent_First_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kParent_First_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
 
-[[maybe_unused]] constexpr uint64_t kChild_First_GenOrdinal =
-    0x239f8fdea8de880clu;
+[[maybe_unused]] constexpr uint64_t kChild_First_Ordinal =
+    2566928499103139852lu;
 extern "C" const fidl_type_t fidl_test_json_ChildFirstRequestTable;
 extern "C" const fidl_type_t fidl_test_json_ChildFirstResponseTable;
-[[maybe_unused]] constexpr uint64_t kChild_Second_GenOrdinal =
-    0x24799ea8916d88aflu;
+[[maybe_unused]] constexpr uint64_t kChild_Second_Ordinal =
+    2628306304378964143lu;
 extern "C" const fidl_type_t fidl_test_json_ChildSecondRequestTable;
 extern "C" const fidl_type_t fidl_test_json_ChildSecondResponseTable;
 
@@ -446,7 +446,7 @@ bool Child::TryDispatch(Interface* impl, fidl_msg_t* msg,
     return true;
   }
   switch (hdr->ordinal) {
-    case kChild_First_GenOrdinal: {
+    case kChild_First_Ordinal: {
       auto result = ::fidl::DecodeAs<FirstRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -457,7 +457,7 @@ bool Child::TryDispatch(Interface* impl, fidl_msg_t* msg,
                   Interface::FirstCompleter::Sync(txn));
       return true;
     }
-    case kChild_Second_GenOrdinal: {
+    case kChild_Second_Ordinal: {
       auto result = ::fidl::DecodeAs<SecondRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
@@ -486,27 +486,27 @@ bool Child::Dispatch(Interface* impl, fidl_msg_t* msg,
 
 void Child::SetTransactionHeaderFor::FirstRequest(
     const ::fidl::DecodedMessage<Child::FirstRequest>& _msg, zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kChild_First_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kChild_First_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Child::SetTransactionHeaderFor::FirstRequest(
     const ::fidl::EncodedMessage<Child::FirstRequest>& _msg, zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kChild_First_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kChild_First_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Child::SetTransactionHeaderFor::SecondRequest(
     const ::fidl::DecodedMessage<Child::SecondRequest>& _msg, zx_txid_t _txid) {
-  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kChild_Second_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, _txid, kChild_Second_Ordinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Child::SetTransactionHeaderFor::SecondRequest(
     const ::fidl::EncodedMessage<Child::SecondRequest>& _msg, zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
-  fidl_init_txn_header(hdr, _txid, kChild_Second_GenOrdinal);
+  fidl_init_txn_header(hdr, _txid, kChild_Second_Ordinal);
   hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 

@@ -35,11 +35,11 @@ class TestProtocol_SyncProxy;
 using TestProtocolHandle = ::fidl::InterfaceHandle<TestProtocol>;
 namespace internal {
 constexpr uint64_t
-    kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal =
-        0x728fedeed6ef99dalu;
+    kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal =
+        8255078252057434586lu;
 constexpr uint64_t
-    kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal =
-        0xfd2ba0109faffe3lu;
+    kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal =
+        1140178169303334883lu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
@@ -1189,12 +1189,12 @@ class TestProtocol_RequestDecoder {
     ::fidl::Decoder request_decoder(std::move(request));
     switch (request.ordinal()) {
       case internal::
-          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal: {
+          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal: {
         StrictXUnionHenceResponseMayBeStackAllocated();
         break;
       }
       case internal::
-          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal: {
+          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal: {
         FlexibleXUnionHenceResponseMustBeHeapAllocated();
         break;
       }
@@ -1244,13 +1244,13 @@ class TestProtocol_ResponseDecoder {
     ::fidl::Decoder response_decoder(std::move(response));
     switch (response.ordinal()) {
       case internal::
-          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal: {
+          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal: {
         StrictXUnionHenceResponseMayBeStackAllocated(
             ::fidl::DecodeAs<StrictBoundedXUnion>(&response_decoder, 16));
         break;
       }
       case internal::
-          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal: {
+          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal: {
         FlexibleXUnionHenceResponseMustBeHeapAllocated(
             ::fidl::DecodeAs<OlderSimpleUnion>(&response_decoder, 16));
         break;

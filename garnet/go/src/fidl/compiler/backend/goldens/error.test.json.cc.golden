@@ -212,7 +212,7 @@ Example::~Example() = default;
 const fidl_type_t* Example_RequestDecoder::GetType(uint64_t ordinal,
                                                    bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kExample_foo_GenOrdinal:
+    case internal::kExample_foo_Ordinal:
       *out_needs_response = true;
       return &fidl_test_json_ExamplefooRequestTable;
     default:
@@ -223,7 +223,7 @@ const fidl_type_t* Example_RequestDecoder::GetType(uint64_t ordinal,
 
 const fidl_type_t* Example_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
-    case internal::kExample_foo_GenOrdinal:
+    case internal::kExample_foo_Ordinal:
       return &fidl_test_json_ExamplefooResponseTable;
     default:
       return nullptr;
@@ -276,7 +276,7 @@ Example_foo_ResponseHandler(Example::fooCallback callback) {
 
 }  // namespace
 void Example_Proxy::foo(::std::string s, fooCallback callback) {
-  ::fidl::Encoder _encoder(internal::kExample_foo_GenOrdinal);
+  ::fidl::Encoder _encoder(internal::kExample_foo_Ordinal);
   controller_->Send(&fidl_test_json_ExamplefooRequestTable,
                     Example_RequestEncoder::foo(&_encoder, &s),
                     Example_foo_ResponseHandler(std::move(callback)));
@@ -294,7 +294,7 @@ class Example_foo_Responder final {
       : response_(std::move(response)) {}
 
   void operator()(Example_foo_Result result) {
-    ::fidl::Encoder _encoder(internal::kExample_foo_GenOrdinal);
+    ::fidl::Encoder _encoder(internal::kExample_foo_Ordinal);
     response_.Send(&fidl_test_json_ExamplefooResponseTable,
                    Example_ResponseEncoder::foo(&_encoder, &result));
   }
@@ -331,7 +331,7 @@ zx_status_t Example_Stub::Dispatch_(
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kExample_foo_GenOrdinal: {
+    case internal::kExample_foo_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->foo(::fidl::DecodeAs<::std::string>(&decoder, 16),
                  Example_foo_Responder(std::move(response)));
@@ -352,7 +352,7 @@ Example_SyncProxy::~Example_SyncProxy() = default;
 
 zx_status_t Example_SyncProxy::foo(::std::string s,
                                    Example_foo_Result* out_result) {
-  ::fidl::Encoder _encoder(internal::kExample_foo_GenOrdinal);
+  ::fidl::Encoder _encoder(internal::kExample_foo_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ =
