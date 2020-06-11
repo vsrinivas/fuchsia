@@ -16,7 +16,7 @@ group("components") {
 }
 
 executable("bin") {
-  output_name = "app"
+  output_name = "application"
 
   sources = [ "hello_world.cc" ]
 
@@ -24,7 +24,7 @@ executable("bin") {
 }
 
 executable("bin2") {
-  output_name = "app2"
+  output_name = "application2"
 
   sources = [ "hello_world2.cc" ]
 
@@ -39,10 +39,10 @@ package("component_hello_world") {
 
   binaries = [
     {
-      name = "app"
+      name = "application"
     },
     {
-      name = "app2"
+      name = "application2"
     },
   ]
 

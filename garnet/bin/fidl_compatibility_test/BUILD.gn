@@ -47,7 +47,11 @@ template("hlcpp_compatibility_test_server") {
 
     testonly = true
 
-    binary = executable_name
+    binaries = [
+      {
+        name = executable_name
+      },
+    ]
   }
 }
 
@@ -129,7 +133,11 @@ package("fidl_compatibility_test_server_llcpp") {
 
   testonly = true
 
-  binary = "compatibility_test_server_llcpp"
+  binaries = [
+    {
+      name = "compatibility_test_server_llcpp"
+    },
+  ]
 }
 
 package("fidl_compatibility_test_server_rust") {
@@ -144,7 +152,11 @@ package("fidl_compatibility_test_server_rust") {
 
   testonly = true
 
-  binary = "compatibility_test_server_rust"
+  binaries = [
+    {
+      name = "compatibility_test_server_rust"
+    },
+  ]
 }
 
 test_package("fidl_compatibility_test") {

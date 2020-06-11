@@ -26,8 +26,11 @@ executable("bin") {
 package("transparency_benchmark") {
   deps = [ ":bin" ]
 
-  binary = "transparency_benchmark"
-
+  binaries = [
+    {
+      name = "transparency_benchmark"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/transparency_benchmark.cmx")

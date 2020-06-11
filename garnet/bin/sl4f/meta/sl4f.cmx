@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/sl4f"
     },
     "sandbox": {
         "dev": [
@@ -50,12 +50,12 @@
             "fuchsia.net.stack.Stack",
             "fuchsia.netstack.Netstack",
             "fuchsia.paver.Paver",
-            "fuchsia.recovery.FactoryReset",
             "fuchsia.pkg.RepositoryManager",
             "fuchsia.posix.socket.Provider",
             "fuchsia.power.BatteryManager",
             "fuchsia.power.test.BatterySimulator",
             "fuchsia.process.Launcher",
+            "fuchsia.recovery.FactoryReset",
             "fuchsia.settings.Intl",
             "fuchsia.settings.Setup",
             "fuchsia.sys.Launcher",

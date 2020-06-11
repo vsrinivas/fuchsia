@@ -26,8 +26,12 @@ go_library("echo_client_go_lib") {
 package("echo_client_go") {
   deps = [ ":echo_client_go_bin" ]
 
-  binary = "echo_client_go"
-
+  binaries = [
+    {
+      name = "echo_client_go"
+      dest = "echo_client"
+    },
+  ]
   meta = [
     {
       path = rebase_path("../meta/echo_client.cmx")

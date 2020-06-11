@@ -56,8 +56,11 @@ rustc_library("lib") {
 package("vsock_service") {
   deps = [ ":bin" ]
 
-  binary = "vsock_service"
-
+  binaries = [
+    {
+      name = "vsock_service"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/vsock_service.cmx")

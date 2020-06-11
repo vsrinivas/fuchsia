@@ -21,8 +21,11 @@ rustc_binary("bin") {
 package("network_settings_server") {
   deps = [ ":bin" ]
 
-  binary = "network_settings_server"
-
+  binaries = [
+    {
+      name = "network_settings_server"
+    },
+  ]
   resources = [
     {
       path = rebase_path("resources/index.html")

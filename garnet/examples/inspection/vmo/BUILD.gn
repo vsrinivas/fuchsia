@@ -26,8 +26,11 @@ rustc_binary("bin") {
 package("inspect_vmo_example") {
   deps = [ ":bin" ]
 
-  binary = "inspect_vmo_example"
-
+  binaries = [
+    {
+      name = "inspect_vmo_example"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/inspect_vmo_example.cmx")

@@ -19,8 +19,11 @@ rustc_binary("bin") {
 package("example_http_server") {
   deps = [ ":bin" ]
 
-  binary = "example_http_server"
-
+  binaries = [
+    {
+      name = "example_http_server"
+    },
+  ]
   resources = [
     {
       path = rebase_path("public/index.html")

@@ -1,5 +1,5 @@
 {
     "program": {
-        "binary": "bin/app2"
+        "binary": "bin/application2"
     }
 }

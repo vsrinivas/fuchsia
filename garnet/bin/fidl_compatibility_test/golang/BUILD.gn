@@ -50,11 +50,15 @@ template("go_fidl_compatibility_test") {
   package(package_target) {
     testonly = true
     deps = [ ":$binary_target" ]
-    binary = binary_output
     meta = [
       {
         path = cmx_path
         dest = "${target_name}.cmx"
+      },
+    ]
+    binaries = [
+      {
+        name = binary_output
       },
     ]
   }

@@ -41,8 +41,11 @@ executable("bin") {
 package("timezone") {
   deps = [ ":bin" ]
 
-  binary = "timezone"
-
+  binaries = [
+    {
+      name = "timezone"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/timezone.cmx")

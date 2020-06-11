@@ -69,8 +69,11 @@ executable("bin") {
 package("http") {
   deps = [ ":bin" ]
 
-  binary = "http"
-
+  binaries = [
+    {
+      name = "http"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/http.cmx")

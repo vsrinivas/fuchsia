@@ -58,8 +58,11 @@ executable("bin") {
 package("trace_manager") {
   deps = [ ":bin" ]
 
-  binary = "trace_manager"
-
+  binaries = [
+    {
+      name = "trace_manager"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/trace_manager.cmx")

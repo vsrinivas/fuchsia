@@ -49,8 +49,11 @@ rustc_library("lib") {
 package("setui_client") {
   deps = [ ":bin" ]
 
-  binary = "setui_client"
-
+  binaries = [
+    {
+      name = "setui_client"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/setui_client.cmx")

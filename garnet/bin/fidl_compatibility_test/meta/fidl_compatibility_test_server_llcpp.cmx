@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/compatibility_test_server_llcpp"
     },
     "sandbox": {
         "services": [

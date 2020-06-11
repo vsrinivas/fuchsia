@@ -36,8 +36,12 @@ executable("bin") {
 package("echo_client_cpp") {
   deps = [ ":bin" ]
 
-  binary = "echo_client_cpp"
-
+  binaries = [
+    {
+      name = "echo_client_cpp"
+      dest = "echo_client"
+    },
+  ]
   meta = [
     {
       path = rebase_path("../meta/echo_client.cmx")

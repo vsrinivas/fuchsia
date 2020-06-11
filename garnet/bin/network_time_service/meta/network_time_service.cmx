@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/network_time_service"
     },
     "sandbox": {
         "dev": [

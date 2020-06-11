@@ -1,5 +1,5 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/network_settings_server"
     }
 }

@@ -13,8 +13,11 @@ executable("bin") {
 package("glob") {
   deps = [ ":bin" ]
 
-  binary = "glob"
-
+  binaries = [
+    {
+      name = "glob"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/glob.cmx")

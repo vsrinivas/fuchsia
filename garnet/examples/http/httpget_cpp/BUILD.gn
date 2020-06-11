@@ -30,5 +30,9 @@ package("httpget_cpp") {
 
   deps = [ ":bin" ]
 
-  binary = "httpget_cpp"
+  binaries = [
+    {
+      name = "httpget_cpp"
+    },
+  ]
 }

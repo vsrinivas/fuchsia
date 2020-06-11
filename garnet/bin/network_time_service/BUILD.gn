@@ -47,8 +47,11 @@ package("network_time_service") {
     },
   ]
 
-  binary = "network_time_service"
-
+  binaries = [
+    {
+      name = "network_time_service"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/network_time_service.cmx")

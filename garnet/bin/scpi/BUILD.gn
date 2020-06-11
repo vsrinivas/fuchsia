@@ -59,7 +59,11 @@ package("scpi") {
     },
   ]
 
-  binary = "scpi"
+  binaries = [
+    {
+      name = "scpi"
+    },
+  ]
 }
 
 unittest_package("scpi_server_tests") {

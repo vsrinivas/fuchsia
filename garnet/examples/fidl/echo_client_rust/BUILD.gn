@@ -24,8 +24,12 @@ rustc_binary("echo_client_rust_bin") {
 package("echo_client_rust") {
   deps = [ ":echo_client_rust_bin" ]
 
-  binary = "echo_client_rust"
-
+  binaries = [
+    {
+      name = "echo_client_rust"
+      dest = "echo_client"
+    },
+  ]
   meta = [
     {
       path = rebase_path("../meta/echo_client.cmx")

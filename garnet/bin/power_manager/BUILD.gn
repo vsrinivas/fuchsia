@@ -74,8 +74,11 @@ rustc_binary("bin") {
 package("power_manager") {
   deps = [ ":bin" ]
 
-  binary = "power_manager"
-
+  binaries = [
+    {
+      name = "power_manager"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/power_manager.cmx")

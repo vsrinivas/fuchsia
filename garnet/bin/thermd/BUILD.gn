@@ -73,8 +73,11 @@ package("thermd") {
 
   deps = [ ":bin" ]
 
-  binary = "thermd"
-
+  binaries = [
+    {
+      name = "thermd"
+    },
+  ]
   meta = [
     {
       path = rebase_path(manifest_path)

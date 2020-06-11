@@ -161,7 +161,11 @@ package("sl4f") {
 
   deps = [ ":bin" ]
 
-  binary = "sl4f"
+  binaries = [
+    {
+      name = "sl4f"
+    },
+  ]
 }
 
 test_package("sl4f-service-tests") {

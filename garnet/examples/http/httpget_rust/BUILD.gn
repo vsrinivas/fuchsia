@@ -32,5 +32,9 @@ package("httpget_rust") {
 
   deps = [ ":bin" ]
 
-  binary = "httpget_rust"
+  binaries = [
+    {
+      name = "httpget_rust"
+    },
+  ]
 }
