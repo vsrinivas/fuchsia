@@ -26,6 +26,9 @@ class ManagedEnvironment : public fuchsia::netemul::environment::ManagedEnvironm
   using LaunchService = fuchsia::netemul::environment::LaunchService;
   using FManagedEnvironment = fuchsia::netemul::environment::ManagedEnvironment;
   using Ptr = std::unique_ptr<ManagedEnvironment>;
+
+  ~ManagedEnvironment();
+
   static Ptr CreateRoot(const fuchsia::sys::EnvironmentPtr& parent,
                         const SandboxEnv::Ptr& sandbox_env, Options options);
 
@@ -65,7 +68,6 @@ class ManagedEnvironment : public fuchsia::netemul::environment::ManagedEnvironm
               const ManagedEnvironment* managed_parent = nullptr);
 
   SandboxEnv::Ptr sandbox_env_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
   std::unique_ptr<LogListener> log_listener_;
   std::unique_ptr<ManagedLoggerCollection> loggers_;
   std::unique_ptr<ManagedLauncher> launcher_;
@@ -75,6 +77,7 @@ class ManagedEnvironment : public fuchsia::netemul::environment::ManagedEnvironm
   std::vector<LaunchService> service_config_;
   VirtualDevices virtual_devices_;
   std::vector<fidl::InterfaceRequest<FManagedEnvironment>> pending_requests_;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
   bool ready_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ManagedEnvironment);

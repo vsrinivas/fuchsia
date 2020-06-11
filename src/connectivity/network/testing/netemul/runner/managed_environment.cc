@@ -25,6 +25,16 @@ static const char* kLogServiceNoKLogOption = "--disable-klog";
 using sys::testing::EnclosingEnvironment;
 using sys::testing::EnvironmentServices;
 
+ManagedEnvironment::~ManagedEnvironment() {
+  // The environment should be torn down before anything its child components may depend on
+  // (i.e. loggers, virtual devices, etc.).
+  //
+  // Tearing down the loggers before we tear down the environment may cause a rust component
+  // to panic when it tries to write to stdout/stderr after their sockets have been closed
+  // (https://github.com/rust-lang/rust/blob/f6072ca/src/libstd/io/stdio.rs#L878).
+  env_ = nullptr;
+}
+
 ManagedEnvironment::Ptr ManagedEnvironment::CreateRoot(const fuchsia::sys::EnvironmentPtr& parent,
                                                        const SandboxEnv::Ptr& sandbox_env,
                                                        Options options) {
