@@ -19,6 +19,7 @@ pub mod mouse_handler;
 pub mod shortcut_handler;
 pub mod touch_handler;
 
+pub mod focus_listening;
 pub mod input_pipeline;
 
 pub use utils::Position;

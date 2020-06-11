@@ -69,6 +69,7 @@
             "fuchsia.timezone.Timezone",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.brightness.Control",
+            "fuchsia.ui.focus.FocusChainListenerRegistry",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input2.Keyboard",
             "fuchsia.ui.lifecycle.LifecycleController",

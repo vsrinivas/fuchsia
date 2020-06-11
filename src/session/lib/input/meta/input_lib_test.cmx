@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/input_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

@@ -78,6 +78,7 @@
                 "/svc/fuchsia.timezone.Timezone",
                 "/svc/fuchsia.tracing.provider.Registry",
                 "/svc/fuchsia.ui.brightness.Control",
+                "/svc/fuchsia.ui.focus.FocusChainListenerRegistry",
                 "/svc/fuchsia.ui.input.ImeService",
                 "/svc/fuchsia.ui.input2.Keyboard",
                 "/svc/fuchsia.ui.lifecycle.LifecycleController", // to kill scenic if restarting
