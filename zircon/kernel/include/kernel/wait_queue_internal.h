@@ -147,7 +147,7 @@ void WaitQueueCollection::ForeachThread(const Callable& visit_thread) TA_REQ(thr
       }
 
       // If next is not the new queue head, stop.
-      if (!list_in_list(&next->wait_queue_state_.wait_queue_heads_node_)) {
+      if (!next->wait_queue_state_.IsHead()) {
         break;
       }
 

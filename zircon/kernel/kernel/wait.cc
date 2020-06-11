@@ -170,7 +170,7 @@ void WaitQueueCollection::Remove(Thread* thread) {
   // Either way, the count goes down one.
   --private_count_;
 
-  if (!list_in_list(&thread->wait_queue_state_.wait_queue_heads_node_)) {
+  if (!thread->wait_queue_state_.IsHead()) {
     // We're just in a queue, not a head.
     list_delete(&thread->wait_queue_state_.queue_node_);
   } else {

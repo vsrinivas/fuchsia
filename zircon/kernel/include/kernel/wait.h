@@ -44,6 +44,7 @@ struct WaitQueueState {
   WaitQueueState(const WaitQueueState&) = delete;
   WaitQueueState& operator=(const WaitQueueState&) = delete;
 
+  bool IsHead() const { return list_in_list(&wait_queue_heads_node_); }
   bool InWaitQueue() const { return list_in_list(&queue_node_); }
 
   struct list_node queue_node_;
