@@ -78,7 +78,7 @@ zx_library("fidl-llcpp") {
     "lib/fidl/llcpp/decoded_message.h",
     "lib/fidl/llcpp/encoded_message.h",
     "lib/fidl/llcpp/linearization_buffer.h",
-    "lib/fidl/llcpp/linearized.h",
+    "lib/fidl/llcpp/linearized_and_encoded.h",
     "lib/fidl/llcpp/aligned.h",
     "lib/fidl/llcpp/response_storage.h",
     "lib/fidl/llcpp/sync_call.h",

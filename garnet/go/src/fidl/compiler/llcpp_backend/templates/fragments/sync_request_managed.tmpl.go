@@ -44,23 +44,23 @@ const SyncRequestManaged = `
   {{- end }}
   {{- template "FillRequestStructMembers" .Request -}}
 
-  auto _linearized = ::fidl::internal::Linearized<{{ .Name }}Request>(&_request);
-  auto& _linearize_result = _linearized.result();
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
+  auto _encoded = ::fidl::internal::LinearizedAndEncoded<{{ .Name }}Request>(&_request);
+  auto& _encode_result = _encoded.result();
+  if (_encode_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_result));
     return;
   }
-  ::fidl::DecodedMessage<{{ .Name }}Request> _decoded_request = std::move(_linearize_result.message);
+  ::fidl::EncodedMessage<{{ .Name }}Request> _encoded_request = std::move(_encode_result.message);
 
   {{- if .HasResponse }}
   Super::SetResult(
       {{ .LLProps.ProtocolName }}::InPlace::{{ .Name }}(std::move(_client_end)
-      {{- if .Request }}, std::move(_decoded_request){{ end -}}
+      {{- if .Request }}, std::move(_encoded_request){{ end -}}
       , Super::response_buffer()));
   {{- else }}
   Super::operator=(
       {{ .LLProps.ProtocolName }}::InPlace::{{ .Name }}(std::move(_client_end)
-      {{- if .Request }}, std::move(_decoded_request){{ end -}}
+      {{- if .Request }}, std::move(_encoded_request){{ end -}}
   ));
   {{- end }}
 }

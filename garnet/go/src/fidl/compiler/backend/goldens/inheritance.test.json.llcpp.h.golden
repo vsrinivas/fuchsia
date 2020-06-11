@@ -11,7 +11,7 @@
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
-#include <lib/fidl/llcpp/linearized.h>
+#include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -199,6 +199,11 @@ class super final {
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<fooRequest> params,
         ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<fooResponse> foo(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<fooRequest> params,
+        ::fidl::BytePart response_buffer);
   };
 
   struct AsyncEventHandlers;
@@ -262,8 +267,13 @@ class super final {
     static void fooRequest(
         const ::fidl::DecodedMessage<super::fooRequest>& _msg,
         zx_txid_t _txid = 0);
+    static void fooRequest(
+        const ::fidl::EncodedMessage<super::fooRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void fooResponse(
         const ::fidl::DecodedMessage<super::fooResponse>& _msg);
+    static void fooResponse(
+        const ::fidl::EncodedMessage<super::fooResponse>& _msg);
   };
 };
 
@@ -429,6 +439,11 @@ class sub final {
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<fooRequest> params,
         ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<fooResponse> foo(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<fooRequest> params,
+        ::fidl::BytePart response_buffer);
   };
 
   struct AsyncEventHandlers;
@@ -491,8 +506,12 @@ class sub final {
    public:
     static void fooRequest(const ::fidl::DecodedMessage<sub::fooRequest>& _msg,
                            zx_txid_t _txid = 0);
+    static void fooRequest(const ::fidl::EncodedMessage<sub::fooRequest>& _msg,
+                           zx_txid_t _txid = 0);
     static void fooResponse(
         const ::fidl::DecodedMessage<sub::fooResponse>& _msg);
+    static void fooResponse(
+        const ::fidl::EncodedMessage<sub::fooResponse>& _msg);
   };
 };
 

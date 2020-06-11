@@ -7,7 +7,7 @@
 
 #include <lib/fidl/llcpp/aligned.h>
 #include <lib/fidl/llcpp/coding.h>
-#include <lib/fidl/llcpp/linearized.h>
+#include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
@@ -22,18 +22,48 @@ namespace llcpp_conformance_utils {
 bool ComparePayload(const uint8_t* actual, size_t actual_size, const uint8_t* expected,
                     size_t expected_size);
 
+template <typename FidlType>
+struct LinearizedResult {
+  ::fidl::internal::LinearizeBuffer<FidlType> buffer;
+  ::fidl::DecodedMessage<FidlType> message;
+  zx_status_t status;
+};
+
+// Linearizes by encoding and then decoding into a linearized form.
+// fidl::Linearize is being removed in favor of fidl::LinearizeAndEncode,
+// so it is no longer possible to directly linearize arbitrary values.
+template <typename FidlType>
+LinearizedResult<FidlType> LinearizeForTest(FidlType* value) {
+  LinearizedResult<FidlType> result;
+  auto encode_result = fidl::LinearizeAndEncode(value, result.buffer.buffer());
+  if (encode_result.status != ZX_OK || encode_result.error != nullptr) {
+    result.status = encode_result.status;
+    std::cout << "LinearizeAndEncode in LinearizeForTest failed ("
+              << zx_status_get_string(encode_result.status) << ")" << encode_result.error
+              << std::endl;
+    return result;
+  }
+  auto decode_result = fidl::Decode(std::move(encode_result.message));
+  if (decode_result.status != ZX_OK || decode_result.error != nullptr) {
+    result.status = decode_result.status;
+    std::cout << "Decode in LinearizeForTest failed (" << zx_status_get_string(decode_result.status)
+              << ")" << decode_result.error << std::endl;
+    return result;
+  }
+  result.status = ZX_OK;
+  result.message = std::move(decode_result.message);
+  return result;
+}
+
 // Verifies that |value| encodes to |bytes|.
 // Note: This is destructive to |value| - a new value must be created with each call.
 template <typename FidlType>
-bool LinearizeThenEncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes) {
+bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   fidl::aligned<FidlType> aligned_value = std::move(*value);
-  auto linearized = fidl::internal::Linearized<FidlType>(&aligned_value.value);
-  auto& linearize_result = linearized.result();
-  if (linearize_result.status != ZX_OK || linearize_result.error != nullptr) {
-    std::cout << "Linearization failed (" << zx_status_get_string(linearize_result.status)
-              << "): " << linearize_result.error << std::endl;
+  auto linearize_result = LinearizeForTest<FidlType>(&aligned_value.value);
+  if (linearize_result.status != ZX_OK) {
     return false;
   }
 
@@ -47,41 +77,10 @@ bool LinearizeThenEncodeSuccess(FidlType* value, const std::vector<uint8_t>& byt
                         encode_result.message.bytes().actual(), &bytes[0], bytes.size());
 }
 
-// Verifies that |value| fails to encode, with the expected error code.
-// Note: This is destructive to |value| - a new value must be created with each call.
-template <typename FidlType>
-bool LinearizeThenEncodeFailure(FidlType* value, zx_status_t expected_error_code) {
-  static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
-
-  fidl::aligned<FidlType> aligned_value = std::move(*value);
-  auto linearized = fidl::internal::Linearized<FidlType>(&aligned_value.value);
-  auto& linearize_result = linearized.result();
-  if (linearize_result.status != ZX_OK && linearize_result.status != expected_error_code) {
-    std::cout << "Linearization failed with error code "
-              << zx_status_get_string(linearize_result.status) << " (" << linearize_result.error
-              << "), but expected error code " << zx_status_get_string(expected_error_code)
-              << std::endl;
-    return false;
-  }
-
-  auto encode_result = fidl::Encode(std::move(linearize_result.message));
-  if (encode_result.status == ZX_OK) {
-    std::cout << "Encoding unexpectedly succeeded" << std::endl;
-    return false;
-  }
-  if (encode_result.status != expected_error_code) {
-    std::cout << "Encoding failed with error code " << zx_status_get_string(encode_result.status)
-              << " (" << encode_result.error << "), but expected error code "
-              << zx_status_get_string(expected_error_code) << std::endl;
-    return false;
-  }
-  return true;
-}
-
 // Verifies that |value| encodes to |bytes|.
 // Note: This is destructive to |value| - a new value must be created with each call.
 template <typename FidlType>
-bool CombinedLinearizeAndEncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes) {
+bool LinearizeAndEncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   ::fidl::internal::LinearizeBuffer<FidlType> buffer;
@@ -98,7 +97,7 @@ bool CombinedLinearizeAndEncodeSuccess(FidlType* value, const std::vector<uint8_
 // Verifies that |value| fails to encode, with the expected error code.
 // Note: This is destructive to |value| - a new value must be created with each call.
 template <typename FidlType>
-bool CombinedLinearizeAndEncodeFailure(FidlType* value, zx_status_t expected_error_code) {
+bool LinearizeAndEncodeFailure(FidlType* value, zx_status_t expected_error_code) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   ::fidl::internal::LinearizeBuffer<FidlType> buffer;

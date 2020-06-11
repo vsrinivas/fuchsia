@@ -11,7 +11,7 @@
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
-#include <lib/fidl/llcpp/linearized.h>
+#include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -752,9 +752,18 @@ class Transitional final {
         ::fidl::DecodedMessage<RequestRequest> params,
         ::fidl::BytePart response_buffer);
 
+    static ::fidl::DecodeResult<RequestResponse> Request(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<RequestRequest> params,
+        ::fidl::BytePart response_buffer);
+
     static ::fidl::internal::StatusAndError OneWay(
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<OneWayRequest> params);
+
+    static ::fidl::internal::StatusAndError OneWay(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<OneWayRequest> params);
   };
 
   struct AsyncEventHandlers;
@@ -837,13 +846,23 @@ class Transitional final {
     static void RequestRequest(
         const ::fidl::DecodedMessage<Transitional::RequestRequest>& _msg,
         zx_txid_t _txid = 0);
+    static void RequestRequest(
+        const ::fidl::EncodedMessage<Transitional::RequestRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void RequestResponse(
         const ::fidl::DecodedMessage<Transitional::RequestResponse>& _msg);
+    static void RequestResponse(
+        const ::fidl::EncodedMessage<Transitional::RequestResponse>& _msg);
     static void OneWayRequest(
         const ::fidl::DecodedMessage<Transitional::OneWayRequest>& _msg,
         zx_txid_t _txid = 0);
+    static void OneWayRequest(
+        const ::fidl::EncodedMessage<Transitional::OneWayRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void EventResponse(
         const ::fidl::DecodedMessage<Transitional::EventResponse>& _msg);
+    static void EventResponse(
+        const ::fidl::EncodedMessage<Transitional::EventResponse>& _msg);
   };
 };
 
@@ -1228,14 +1247,28 @@ class ChannelProtocol final {
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<MethodARequest> params);
 
+    static ::fidl::internal::StatusAndError MethodA(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<MethodARequest> params);
+
     static ::fidl::DecodeResult<MethodBResponse> MethodB(
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<MethodBRequest> params,
         ::fidl::BytePart response_buffer);
 
+    static ::fidl::DecodeResult<MethodBResponse> MethodB(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<MethodBRequest> params,
+        ::fidl::BytePart response_buffer);
+
     static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<MutateSocketRequest> params,
+        ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<MutateSocketRequest> params,
         ::fidl::BytePart response_buffer);
   };
 
@@ -1335,19 +1368,36 @@ class ChannelProtocol final {
     static void MethodARequest(
         const ::fidl::DecodedMessage<ChannelProtocol::MethodARequest>& _msg,
         zx_txid_t _txid = 0);
+    static void MethodARequest(
+        const ::fidl::EncodedMessage<ChannelProtocol::MethodARequest>& _msg,
+        zx_txid_t _txid = 0);
     static void EventAResponse(
         const ::fidl::DecodedMessage<ChannelProtocol::EventAResponse>& _msg);
+    static void EventAResponse(
+        const ::fidl::EncodedMessage<ChannelProtocol::EventAResponse>& _msg);
     static void MethodBRequest(
         const ::fidl::DecodedMessage<ChannelProtocol::MethodBRequest>& _msg,
         zx_txid_t _txid = 0);
+    static void MethodBRequest(
+        const ::fidl::EncodedMessage<ChannelProtocol::MethodBRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void MethodBResponse(
         const ::fidl::DecodedMessage<ChannelProtocol::MethodBResponse>& _msg);
+    static void MethodBResponse(
+        const ::fidl::EncodedMessage<ChannelProtocol::MethodBResponse>& _msg);
     static void MutateSocketRequest(
         const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketRequest>&
             _msg,
         zx_txid_t _txid = 0);
+    static void MutateSocketRequest(
+        const ::fidl::EncodedMessage<ChannelProtocol::MutateSocketRequest>&
+            _msg,
+        zx_txid_t _txid = 0);
     static void MutateSocketResponse(
         const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketResponse>&
+            _msg);
+    static void MutateSocketResponse(
+        const ::fidl::EncodedMessage<ChannelProtocol::MutateSocketResponse>&
             _msg);
   };
 };
@@ -1963,16 +2013,32 @@ class WithAndWithoutRequestResponse final {
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<WithRequestNoResponseRequest> params);
 
+    static ::fidl::internal::StatusAndError WithRequestNoResponse(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<WithRequestNoResponseRequest> params);
+
     static ::fidl::DecodeResult<WithRequestEmptyResponseResponse>
     WithRequestEmptyResponse(
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params,
         ::fidl::BytePart response_buffer);
 
+    static ::fidl::DecodeResult<WithRequestEmptyResponseResponse>
+    WithRequestEmptyResponse(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<WithRequestEmptyResponseRequest> params,
+        ::fidl::BytePart response_buffer);
+
     static ::fidl::DecodeResult<WithRequestWithResponseResponse>
     WithRequestWithResponse(
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<WithRequestWithResponseRequest> params,
+        ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<WithRequestWithResponseResponse>
+    WithRequestWithResponse(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<WithRequestWithResponseRequest> params,
         ::fidl::BytePart response_buffer);
   };
 
@@ -2116,24 +2182,48 @@ class WithAndWithoutRequestResponse final {
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::NoRequestNoResponseRequest>& _msg,
         zx_txid_t _txid = 0);
+    static void NoRequestNoResponseRequest(
+        const ::fidl::EncodedMessage<
+            WithAndWithoutRequestResponse::NoRequestNoResponseRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void NoRequestEmptyResponseRequest(
         const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest>& _msg,
+        zx_txid_t _txid = 0);
+    static void NoRequestEmptyResponseRequest(
+        const ::fidl::EncodedMessage<
             WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest>& _msg,
         zx_txid_t _txid = 0);
     static void NoRequestEmptyResponseResponse(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>&
             _msg);
+    static void NoRequestEmptyResponseResponse(
+        const ::fidl::EncodedMessage<
+            WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>&
+            _msg);
     static void NoRequestWithResponseRequest(
         const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::NoRequestWithResponseRequest>& _msg,
+        zx_txid_t _txid = 0);
+    static void NoRequestWithResponseRequest(
+        const ::fidl::EncodedMessage<
             WithAndWithoutRequestResponse::NoRequestWithResponseRequest>& _msg,
         zx_txid_t _txid = 0);
     static void NoRequestWithResponseResponse(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::NoRequestWithResponseResponse>&
             _msg);
+    static void NoRequestWithResponseResponse(
+        const ::fidl::EncodedMessage<
+            WithAndWithoutRequestResponse::NoRequestWithResponseResponse>&
+            _msg);
     static void WithRequestNoResponseRequest(
         const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::WithRequestNoResponseRequest>& _msg,
+        zx_txid_t _txid = 0);
+    static void WithRequestNoResponseRequest(
+        const ::fidl::EncodedMessage<
             WithAndWithoutRequestResponse::WithRequestNoResponseRequest>& _msg,
         zx_txid_t _txid = 0);
     static void WithRequestEmptyResponseRequest(
@@ -2141,8 +2231,17 @@ class WithAndWithoutRequestResponse final {
             WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest>&
             _msg,
         zx_txid_t _txid = 0);
+    static void WithRequestEmptyResponseRequest(
+        const ::fidl::EncodedMessage<
+            WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest>&
+            _msg,
+        zx_txid_t _txid = 0);
     static void WithRequestEmptyResponseResponse(
         const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>&
+            _msg);
+    static void WithRequestEmptyResponseResponse(
+        const ::fidl::EncodedMessage<
             WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>&
             _msg);
     static void WithRequestWithResponseRequest(
@@ -2150,15 +2249,30 @@ class WithAndWithoutRequestResponse final {
             WithAndWithoutRequestResponse::WithRequestWithResponseRequest>&
             _msg,
         zx_txid_t _txid = 0);
+    static void WithRequestWithResponseRequest(
+        const ::fidl::EncodedMessage<
+            WithAndWithoutRequestResponse::WithRequestWithResponseRequest>&
+            _msg,
+        zx_txid_t _txid = 0);
     static void WithRequestWithResponseResponse(
         const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::WithRequestWithResponseResponse>&
+            _msg);
+    static void WithRequestWithResponseResponse(
+        const ::fidl::EncodedMessage<
             WithAndWithoutRequestResponse::WithRequestWithResponseResponse>&
             _msg);
     static void OnEmptyResponseResponse(
         const ::fidl::DecodedMessage<
             WithAndWithoutRequestResponse::OnEmptyResponseResponse>& _msg);
+    static void OnEmptyResponseResponse(
+        const ::fidl::EncodedMessage<
+            WithAndWithoutRequestResponse::OnEmptyResponseResponse>& _msg);
     static void OnWithResponseResponse(
         const ::fidl::DecodedMessage<
+            WithAndWithoutRequestResponse::OnWithResponseResponse>& _msg);
+    static void OnWithResponseResponse(
+        const ::fidl::EncodedMessage<
             WithAndWithoutRequestResponse::OnWithResponseResponse>& _msg);
   };
 };
@@ -2590,21 +2704,41 @@ class WithErrorSyntax final {
         const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructRequest>&
             _msg,
         zx_txid_t _txid = 0);
+    static void ResponseAsStructRequest(
+        const ::fidl::EncodedMessage<WithErrorSyntax::ResponseAsStructRequest>&
+            _msg,
+        zx_txid_t _txid = 0);
     static void ResponseAsStructResponse(
         const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructResponse>&
+            _msg);
+    static void ResponseAsStructResponse(
+        const ::fidl::EncodedMessage<WithErrorSyntax::ResponseAsStructResponse>&
             _msg);
     static void ErrorAsPrimitiveRequest(
         const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveRequest>&
             _msg,
         zx_txid_t _txid = 0);
+    static void ErrorAsPrimitiveRequest(
+        const ::fidl::EncodedMessage<WithErrorSyntax::ErrorAsPrimitiveRequest>&
+            _msg,
+        zx_txid_t _txid = 0);
     static void ErrorAsPrimitiveResponse(
         const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>&
+            _msg);
+    static void ErrorAsPrimitiveResponse(
+        const ::fidl::EncodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>&
             _msg);
     static void ErrorAsEnumRequest(
         const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumRequest>& _msg,
         zx_txid_t _txid = 0);
+    static void ErrorAsEnumRequest(
+        const ::fidl::EncodedMessage<WithErrorSyntax::ErrorAsEnumRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void ErrorAsEnumResponse(
         const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumResponse>&
+            _msg);
+    static void ErrorAsEnumResponse(
+        const ::fidl::EncodedMessage<WithErrorSyntax::ErrorAsEnumResponse>&
             _msg);
   };
 };

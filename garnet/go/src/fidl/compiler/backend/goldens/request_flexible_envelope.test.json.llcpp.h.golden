@@ -11,7 +11,7 @@
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
-#include <lib/fidl/llcpp/linearized.h>
+#include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -550,10 +550,22 @@ class Protocol final {
         ::fidl::DecodedMessage<RequestStrictResponseFlexibleRequest> params,
         ::fidl::BytePart response_buffer);
 
+    static ::fidl::DecodeResult<RequestStrictResponseFlexibleResponse>
+    RequestStrictResponseFlexible(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<RequestStrictResponseFlexibleRequest> params,
+        ::fidl::BytePart response_buffer);
+
     static ::fidl::DecodeResult<RequestFlexibleResponseStrictResponse>
     RequestFlexibleResponseStrict(
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<RequestFlexibleResponseStrictRequest> params,
+        ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<RequestFlexibleResponseStrictResponse>
+    RequestFlexibleResponseStrict(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<RequestFlexibleResponseStrictRequest> params,
         ::fidl::BytePart response_buffer);
   };
 
@@ -644,15 +656,29 @@ class Protocol final {
         const ::fidl::DecodedMessage<
             Protocol::RequestStrictResponseFlexibleRequest>& _msg,
         zx_txid_t _txid = 0);
+    static void RequestStrictResponseFlexibleRequest(
+        const ::fidl::EncodedMessage<
+            Protocol::RequestStrictResponseFlexibleRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void RequestStrictResponseFlexibleResponse(
         const ::fidl::DecodedMessage<
+            Protocol::RequestStrictResponseFlexibleResponse>& _msg);
+    static void RequestStrictResponseFlexibleResponse(
+        const ::fidl::EncodedMessage<
             Protocol::RequestStrictResponseFlexibleResponse>& _msg);
     static void RequestFlexibleResponseStrictRequest(
         const ::fidl::DecodedMessage<
             Protocol::RequestFlexibleResponseStrictRequest>& _msg,
         zx_txid_t _txid = 0);
+    static void RequestFlexibleResponseStrictRequest(
+        const ::fidl::EncodedMessage<
+            Protocol::RequestFlexibleResponseStrictRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void RequestFlexibleResponseStrictResponse(
         const ::fidl::DecodedMessage<
+            Protocol::RequestFlexibleResponseStrictResponse>& _msg);
+    static void RequestFlexibleResponseStrictResponse(
+        const ::fidl::EncodedMessage<
             Protocol::RequestFlexibleResponseStrictResponse>& _msg);
   };
 };

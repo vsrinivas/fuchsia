@@ -23,14 +23,15 @@ Top::ResultOf::GetFoo_Impl<Top::GetFooResponse>::GetFoo_Impl(
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(GetFooRequest)]{};
   auto& _request = *reinterpret_cast<GetFooRequest*>(_request_buffer);
-  auto _linearized = ::fidl::internal::Linearized<GetFooRequest>(&_request);
-  auto& _linearize_result = _linearized.result();
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
+  auto _encoded =
+      ::fidl::internal::LinearizedAndEncoded<GetFooRequest>(&_request);
+  auto& _encode_result = _encoded.result();
+  if (_encode_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_result));
     return;
   }
-  ::fidl::DecodedMessage<GetFooRequest> _decoded_request =
-      std::move(_linearize_result.message);
+  ::fidl::EncodedMessage<GetFooRequest> _encoded_request =
+      std::move(_encode_result.message);
   Super::SetResult(
       Top::InPlace::GetFoo(std::move(_client_end), Super::response_buffer()));
 }
@@ -50,8 +51,14 @@ Top::UnownedResultOf::GetFoo_Impl<Top::GetFooResponse>::GetFoo_Impl(
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetFooRequest::PrimarySize);
   _request_buffer.set_actual(sizeof(GetFooRequest));
-  ::fidl::DecodedMessage<GetFooRequest> _decoded_request(
-      std::move(_request_buffer));
+  ::fidl::DecodedMessage<GetFooRequest> _msg(std::move(_request_buffer));
+  auto _encode_result = ::fidl::Encode<GetFooRequest>(std::move(_msg));
+  if (_encode_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_result));
+    return;
+  }
+  ::fidl::EncodedMessage<GetFooRequest> _encoded_request =
+      std::move(_encode_result.message);
   Super::SetResult(Top::InPlace::GetFoo(std::move(_client_end),
                                         std::move(_response_buffer)));
 }
@@ -74,16 +81,10 @@ Top::UnownedResultOf::GetFoo Top::Call::GetFoo(
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<GetFooRequest> params(std::move(_request_buffer));
+  ::fidl::EncodedMessage<GetFooRequest> params(std::move(_request_buffer));
   Top::SetTransactionHeaderFor::GetFooRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Top::GetFooResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
   auto _call_result = ::fidl::Call<GetFooRequest, GetFooResponse>(
-      std::move(_client_end), std::move(_encode_request_result.message),
-      std::move(response_buffer));
+      std::move(_client_end), std::move(params), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Top::GetFooResponse>::FromFailure(
         std::move(_call_result));
@@ -138,11 +139,10 @@ Top::UnownedResultOf::GetFoo Top::ClientImpl::GetFoo_Sync(
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFooRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetFooRequest::PrimarySize);
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   _request_buffer.set_actual(sizeof(GetFooRequest));
   ::fidl::DecodedMessage<GetFooRequest> _decoded_request(
       std::move(_request_buffer));
-
-  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   SetTransactionHeaderFor::GetFooRequest(_decoded_request, _context->Txid());
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
   if (_encode_request_result.status != ZX_OK) {
@@ -241,13 +241,14 @@ void Top::Interface::GetFooCompleterBase::Reply(::llcpp::bottom::Foo foo) {
           reinterpret_cast<uint8_t*>(&_response), GetFooResponse::PrimarySize,
           GetFooResponse::PrimarySize)));
   _response.foo = std::move(foo);
-  auto _linearized = ::fidl::internal::Linearized<GetFooResponse>(&_response);
-  auto& _linearize_result = _linearized.result();
-  if (_linearize_result.status != ZX_OK) {
+  auto _encoded =
+      ::fidl::internal::LinearizedAndEncoded<GetFooResponse>(&_response);
+  auto& _encode_result = _encoded.result();
+  if (_encode_result.status != ZX_OK) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
+  CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
 void Top::Interface::GetFooCompleterBase::Reply(::fidl::BytePart _buffer,
@@ -278,10 +279,24 @@ void Top::SetTransactionHeaderFor::GetFooRequest(
   fidl_init_txn_header(&_msg.message()->_hdr, _txid, kTop_GetFoo_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
+void Top::SetTransactionHeaderFor::GetFooRequest(
+    const ::fidl::EncodedMessage<Top::GetFooRequest>& _msg, zx_txid_t _txid) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
+  fidl_init_txn_header(hdr, _txid, kTop_GetFoo_GenOrdinal);
+  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
 void Top::SetTransactionHeaderFor::GetFooResponse(
     const ::fidl::DecodedMessage<Top::GetFooResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTop_GetFoo_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void Top::SetTransactionHeaderFor::GetFooResponse(
+    const ::fidl::EncodedMessage<Top::GetFooResponse>& _msg) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
+  fidl_init_txn_header(hdr, 0, kTop_GetFoo_GenOrdinal);
+  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace top

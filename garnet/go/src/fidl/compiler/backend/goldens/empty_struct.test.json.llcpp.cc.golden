@@ -36,16 +36,17 @@ EmptyProtocol::ResultOf::Send_Impl::Send_Impl(
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendRequest)]{};
   auto& _request = *reinterpret_cast<SendRequest*>(_request_buffer);
   _request.e = std::move(e);
-  auto _linearized = ::fidl::internal::Linearized<SendRequest>(&_request);
-  auto& _linearize_result = _linearized.result();
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
+  auto _encoded =
+      ::fidl::internal::LinearizedAndEncoded<SendRequest>(&_request);
+  auto& _encode_result = _encoded.result();
+  if (_encode_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_result));
     return;
   }
-  ::fidl::DecodedMessage<SendRequest> _decoded_request =
-      std::move(_linearize_result.message);
+  ::fidl::EncodedMessage<SendRequest> _encoded_request =
+      std::move(_encode_result.message);
   Super::operator=(EmptyProtocol::InPlace::Send(std::move(_client_end),
-                                                std::move(_decoded_request)));
+                                                std::move(_encoded_request)));
 }
 
 EmptyProtocol::ResultOf::Send EmptyProtocol::SyncClient::Send(
@@ -70,10 +71,16 @@ EmptyProtocol::UnownedResultOf::Send_Impl::Send_Impl(
   auto& _request = *reinterpret_cast<SendRequest*>(_request_buffer.data());
   _request.e = std::move(e);
   _request_buffer.set_actual(sizeof(SendRequest));
-  ::fidl::DecodedMessage<SendRequest> _decoded_request(
-      std::move(_request_buffer));
+  ::fidl::DecodedMessage<SendRequest> _msg(std::move(_request_buffer));
+  auto _encode_result = ::fidl::Encode<SendRequest>(std::move(_msg));
+  if (_encode_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_result));
+    return;
+  }
+  ::fidl::EncodedMessage<SendRequest> _encoded_request =
+      std::move(_encode_result.message);
   Super::operator=(EmptyProtocol::InPlace::Send(std::move(_client_end),
-                                                std::move(_decoded_request)));
+                                                std::move(_encoded_request)));
 }
 
 EmptyProtocol::UnownedResultOf::Send EmptyProtocol::SyncClient::Send(
@@ -92,14 +99,21 @@ EmptyProtocol::UnownedResultOf::Send EmptyProtocol::Call::Send(
 ::fidl::internal::StatusAndError EmptyProtocol::InPlace::Send(
     ::zx::unowned_channel _client_end,
     ::fidl::DecodedMessage<SendRequest> params) {
-  EmptyProtocol::SetTransactionHeaderFor::SendRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
         std::move(_encode_request_result));
   }
-  zx_status_t _write_status = ::fidl::Write(
-      std::move(_client_end), std::move(_encode_request_result.message));
+  return Send(std::move(_client_end),
+              std::move(_encode_request_result.message));
+}
+
+::fidl::internal::StatusAndError EmptyProtocol::InPlace::Send(
+    ::zx::unowned_channel _client_end,
+    ::fidl::EncodedMessage<SendRequest> params) {
+  EmptyProtocol::SetTransactionHeaderFor::SendRequest(params);
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(params));
   if (_write_status != ZX_OK) {
     return ::fidl::internal::StatusAndError(_write_status,
                                             ::fidl::kErrorWriteFailed);
@@ -118,17 +132,17 @@ EmptyProtocol::ResultOf::SendAndReceive_Impl<
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(SendAndReceiveRequest)]{};
   auto& _request = *reinterpret_cast<SendAndReceiveRequest*>(_request_buffer);
   _request.e = std::move(e);
-  auto _linearized =
-      ::fidl::internal::Linearized<SendAndReceiveRequest>(&_request);
-  auto& _linearize_result = _linearized.result();
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
+  auto _encoded =
+      ::fidl::internal::LinearizedAndEncoded<SendAndReceiveRequest>(&_request);
+  auto& _encode_result = _encoded.result();
+  if (_encode_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_result));
     return;
   }
-  ::fidl::DecodedMessage<SendAndReceiveRequest> _decoded_request =
-      std::move(_linearize_result.message);
+  ::fidl::EncodedMessage<SendAndReceiveRequest> _encoded_request =
+      std::move(_encode_result.message);
   Super::SetResult(EmptyProtocol::InPlace::SendAndReceive(
-      std::move(_client_end), std::move(_decoded_request),
+      std::move(_client_end), std::move(_encoded_request),
       Super::response_buffer()));
 }
 
@@ -160,10 +174,17 @@ EmptyProtocol::UnownedResultOf::SendAndReceive_Impl<
       *reinterpret_cast<SendAndReceiveRequest*>(_request_buffer.data());
   _request.e = std::move(e);
   _request_buffer.set_actual(sizeof(SendAndReceiveRequest));
-  ::fidl::DecodedMessage<SendAndReceiveRequest> _decoded_request(
+  ::fidl::DecodedMessage<SendAndReceiveRequest> _msg(
       std::move(_request_buffer));
+  auto _encode_result = ::fidl::Encode<SendAndReceiveRequest>(std::move(_msg));
+  if (_encode_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_result));
+    return;
+  }
+  ::fidl::EncodedMessage<SendAndReceiveRequest> _encoded_request =
+      std::move(_encode_result.message);
   Super::SetResult(EmptyProtocol::InPlace::SendAndReceive(
-      std::move(_client_end), std::move(_decoded_request),
+      std::move(_client_end), std::move(_encoded_request),
       std::move(_response_buffer)));
 }
 
@@ -191,15 +212,25 @@ EmptyProtocol::InPlace::SendAndReceive(
     ::zx::unowned_channel _client_end,
     ::fidl::DecodedMessage<SendAndReceiveRequest> params,
     ::fidl::BytePart response_buffer) {
-  EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<EmptyProtocol::SendAndReceiveResponse>::
         FromFailure(std::move(_encode_request_result));
   }
+  return SendAndReceive(std::move(_client_end),
+                        std::move(_encode_request_result.message),
+                        std::move(response_buffer));
+}
+
+::fidl::DecodeResult<EmptyProtocol::SendAndReceiveResponse>
+EmptyProtocol::InPlace::SendAndReceive(
+    ::zx::unowned_channel _client_end,
+    ::fidl::EncodedMessage<SendAndReceiveRequest> params,
+    ::fidl::BytePart response_buffer) {
+  EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveRequest(params);
   auto _call_result =
       ::fidl::Call<SendAndReceiveRequest, SendAndReceiveResponse>(
-          std::move(_client_end), std::move(_encode_request_result.message),
+          std::move(_client_end), std::move(params),
           std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<EmptyProtocol::SendAndReceiveResponse>::
@@ -292,11 +323,10 @@ EmptyProtocol::ClientImpl::SendAndReceive_Sync(
   auto& _request =
       *reinterpret_cast<SendAndReceiveRequest*>(_request_buffer.data());
   _request.e = std::move(e);
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   _request_buffer.set_actual(sizeof(SendAndReceiveRequest));
   ::fidl::DecodedMessage<SendAndReceiveRequest> _decoded_request(
       std::move(_request_buffer));
-
-  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   SetTransactionHeaderFor::SendAndReceiveRequest(_decoded_request,
                                                  _context->Txid());
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
@@ -504,13 +534,14 @@ zx_status_t EmptyProtocol::SendReceiveEvent(
           reinterpret_cast<uint8_t*>(&_response), ReceiveResponse::PrimarySize,
           ReceiveResponse::PrimarySize)));
   _response.e = std::move(e);
-  auto _linearized = ::fidl::internal::Linearized<ReceiveResponse>(&_response);
-  auto& _linearize_result = _linearized.result();
-  if (_linearize_result.status != ZX_OK) {
-    return _linearize_result.status;
+  auto _encoded =
+      ::fidl::internal::LinearizedAndEncoded<ReceiveResponse>(&_response);
+  auto& _encode_result = _encoded.result();
+  if (_encode_result.status != ZX_OK) {
+    return _encode_result.status;
   }
   return ::fidl::Write(::zx::unowned_channel(_chan),
-                       std::move(_linearize_result.message));
+                       std::move(_encode_result.message));
 }
 
 zx_status_t EmptyProtocol::SendReceiveEvent(
@@ -551,14 +582,15 @@ void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
                            SendAndReceiveResponse::PrimarySize,
                            SendAndReceiveResponse::PrimarySize)));
   _response.e = std::move(e);
-  auto _linearized =
-      ::fidl::internal::Linearized<SendAndReceiveResponse>(&_response);
-  auto& _linearize_result = _linearized.result();
-  if (_linearize_result.status != ZX_OK) {
+  auto _encoded =
+      ::fidl::internal::LinearizedAndEncoded<SendAndReceiveResponse>(
+          &_response);
+  auto& _encode_result = _encoded.result();
+  if (_encode_result.status != ZX_OK) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
+  CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
 void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
@@ -592,12 +624,27 @@ void EmptyProtocol::SetTransactionHeaderFor::SendRequest(
                        kEmptyProtocol_Send_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
+void EmptyProtocol::SetTransactionHeaderFor::SendRequest(
+    const ::fidl::EncodedMessage<EmptyProtocol::SendRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
+  fidl_init_txn_header(hdr, _txid, kEmptyProtocol_Send_GenOrdinal);
+  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
 
 void EmptyProtocol::SetTransactionHeaderFor::ReceiveResponse(
     const ::fidl::DecodedMessage<EmptyProtocol::ReceiveResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0,
                        kEmptyProtocol_Receive_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void EmptyProtocol::SetTransactionHeaderFor::ReceiveResponse(
+    const ::fidl::EncodedMessage<EmptyProtocol::ReceiveResponse>& _msg) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
+  fidl_init_txn_header(hdr, 0, kEmptyProtocol_Receive_GenOrdinal);
+  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveRequest(
@@ -607,11 +654,26 @@ void EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveRequest(
                        kEmptyProtocol_SendAndReceive_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
+void EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveRequest(
+    const ::fidl::EncodedMessage<EmptyProtocol::SendAndReceiveRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
+  fidl_init_txn_header(hdr, _txid, kEmptyProtocol_SendAndReceive_GenOrdinal);
+  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
 void EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveResponse(
     const ::fidl::DecodedMessage<EmptyProtocol::SendAndReceiveResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0,
                        kEmptyProtocol_SendAndReceive_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveResponse(
+    const ::fidl::EncodedMessage<EmptyProtocol::SendAndReceiveResponse>& _msg) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
+  fidl_init_txn_header(hdr, 0, kEmptyProtocol_SendAndReceive_GenOrdinal);
+  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace json

@@ -11,7 +11,7 @@
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
-#include <lib/fidl/llcpp/linearized.h>
+#include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -412,6 +412,11 @@ class SimpleProtocol final {
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<AddRequest> params,
         ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<AddResponse> Add(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<AddRequest> params,
+        ::fidl::BytePart response_buffer);
   };
 
   struct AsyncEventHandlers;
@@ -475,8 +480,13 @@ class SimpleProtocol final {
     static void AddRequest(
         const ::fidl::DecodedMessage<SimpleProtocol::AddRequest>& _msg,
         zx_txid_t _txid = 0);
+    static void AddRequest(
+        const ::fidl::EncodedMessage<SimpleProtocol::AddRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void AddResponse(
         const ::fidl::DecodedMessage<SimpleProtocol::AddResponse>& _msg);
+    static void AddResponse(
+        const ::fidl::EncodedMessage<SimpleProtocol::AddResponse>& _msg);
   };
 };
 

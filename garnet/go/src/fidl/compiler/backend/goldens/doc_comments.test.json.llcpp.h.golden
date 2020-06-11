@@ -11,7 +11,7 @@
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
-#include <lib/fidl/llcpp/linearized.h>
+#include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -519,6 +519,7 @@ class Interface final {
     // method comment #1
     //
     // method comment #3
+
     static ::fidl::internal::StatusAndError Method(
         ::zx::unowned_channel _client_end);
   };
@@ -578,8 +579,13 @@ class Interface final {
     static void MethodRequest(
         const ::fidl::DecodedMessage<Interface::MethodRequest>& _msg,
         zx_txid_t _txid = 0);
+    static void MethodRequest(
+        const ::fidl::EncodedMessage<Interface::MethodRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void OnEventResponse(
         const ::fidl::DecodedMessage<Interface::OnEventResponse>& _msg);
+    static void OnEventResponse(
+        const ::fidl::EncodedMessage<Interface::OnEventResponse>& _msg);
   };
 };
 

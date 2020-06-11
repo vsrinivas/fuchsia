@@ -23,10 +23,8 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
   // Encode the value.
   fidl::aligned<FidlType> aligned_value = builder();
-  auto linearized = fidl::internal::Linearized<FidlType>(&aligned_value.value);
-  auto& linearize_result = linearized.result();
-  ZX_ASSERT(linearize_result.status == ZX_OK && linearize_result.error == nullptr);
-  auto encode_result = fidl::Encode(std::move(linearize_result.message));
+  ::fidl::internal::LinearizeBuffer<FidlType> buf;
+  auto encode_result = ::fidl::LinearizeAndEncode<FidlType>(&aligned_value.value, buf.buffer());
   ZX_ASSERT(encode_result.status == ZX_OK && encode_result.error == nullptr);
   const fidl::BytePart& bytes = encode_result.message.bytes();
 

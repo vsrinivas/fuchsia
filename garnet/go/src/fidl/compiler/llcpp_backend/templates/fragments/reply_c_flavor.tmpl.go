@@ -26,13 +26,13 @@ void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ templa
   {{- template "SetTransactionHeaderForResponse" . }}
   {{- template "FillResponseStructMembers" .Response -}}
 
-  auto _linearized = ::fidl::internal::Linearized<{{ .Name }}Response>(&_response);
-  auto& _linearize_result = _linearized.result();
-  if (_linearize_result.status != ZX_OK) {
+  auto _encoded = ::fidl::internal::LinearizedAndEncoded<{{ .Name }}Response>(&_response);
+  auto& _encode_result = _encoded.result();
+  if (_encode_result.status != ZX_OK) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
+  CompleterBase::SendReply(std::move(_encode_result.message));
 }
 {{- end }}
 

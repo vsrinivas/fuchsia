@@ -633,10 +633,10 @@ void InPlaceConsumeDirectories() {
   fidl::Buffer<gen::DirEntTestInterface::ConsumeDirectoriesResponse> response_buffer;
   gen::DirEntTestInterface::ConsumeDirectoriesRequest request = {};
   request.dirents = golden_dirents();
-  auto linearize_result = fidl::Linearize(&request, request_buffer.view());
-  ASSERT_OK(linearize_result.status);
+  auto encode_result = fidl::LinearizeAndEncode(&request, request_buffer.view());
+  ASSERT_OK(encode_result.status);
   ASSERT_OK(gen::DirEntTestInterface::InPlace::ConsumeDirectories(
-                zx::unowned_channel(client.channel()), std::move(linearize_result.message),
+                zx::unowned_channel(client.channel()), std::move(encode_result.message),
                 response_buffer.view())
                 .status);
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
@@ -696,10 +696,10 @@ void InPlaceOneWayDirents() {
     gen::DirEntTestInterface::OneWayDirentsRequest request = {};
     request.dirents = golden_dirents();
     request.ep = std::move(server_ep);
-    auto linearize_result = fidl::Linearize(&request, buffer.view());
-    ASSERT_OK(linearize_result.status);
+    auto encode_result = fidl::LinearizeAndEncode(&request, buffer.view());
+    ASSERT_OK(encode_result.status);
     ASSERT_OK(gen::DirEntTestInterface::InPlace::OneWayDirents(
-                  zx::unowned_channel(client.channel()), std::move(linearize_result.message))
+                  zx::unowned_channel(client.channel()), std::move(encode_result.message))
                   .status());
     zx_signals_t signals = 0;
     client_ep.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &signals);

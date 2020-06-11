@@ -298,11 +298,18 @@ class {{ .Name }} final {
       {{- range .DocComments }}
     //{{ . }}
       {{- end }}
+    {{ if .Request }}
     static {{ if .HasResponse -}}
     ::fidl::DecodeResult<{{ .Name }}Response>
     {{- else -}}
     ::fidl::internal::StatusAndError
-    {{- end }} {{ template "StaticCallSyncRequestInPlaceMethodSignature" . }};
+    {{- end }} {{ template "StaticCallSyncRequestInPlaceMethodSignatureDecodedMessage" . }};
+    {{ end }}
+    static {{ if .HasResponse -}}
+    ::fidl::DecodeResult<{{ .Name }}Response>
+    {{- else -}}
+    ::fidl::internal::StatusAndError
+    {{- end }} {{ template "StaticCallSyncRequestInPlaceMethodSignatureEncodedMessage" . }};
 {{ "" }}
     {{- end }}
   };
@@ -415,10 +422,12 @@ class {{ .Name }} final {
    public:
   {{- range .Methods }}
     {{- if .HasRequest }}
-    static void {{ template "SetTransactionHeaderForRequestMethodDeclarationSignature" . }};
+    static void {{ template "SetTransactionHeaderForRequestMethodDeclarationSignatureDecodedMessage" . }};
+    static void {{ template "SetTransactionHeaderForRequestMethodDeclarationSignatureEncodedMessage" . }};
     {{- end }}
     {{- if .HasResponse }}
-    static void {{ template "SetTransactionHeaderForResponseMethodSignature" . }};
+    static void {{ template "SetTransactionHeaderForResponseMethodSignatureDecodedMessage" . }};
+    static void {{ template "SetTransactionHeaderForResponseMethodSignatureEncodedMessage" . }};
     {{- end }}
   {{- end }}
   };

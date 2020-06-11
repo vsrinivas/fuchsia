@@ -11,7 +11,7 @@
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
-#include <lib/fidl/llcpp/linearized.h>
+#include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -166,6 +166,10 @@ class Parent final {
     static ::fidl::internal::StatusAndError First(
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<FirstRequest> params);
+
+    static ::fidl::internal::StatusAndError First(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<FirstRequest> params);
   };
 
   struct AsyncEventHandlers;
@@ -218,6 +222,9 @@ class Parent final {
    public:
     static void FirstRequest(
         const ::fidl::DecodedMessage<Parent::FirstRequest>& _msg,
+        zx_txid_t _txid = 0);
+    static void FirstRequest(
+        const ::fidl::EncodedMessage<Parent::FirstRequest>& _msg,
         zx_txid_t _txid = 0);
   };
 };
@@ -424,9 +431,17 @@ class Child final {
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<FirstRequest> params);
 
+    static ::fidl::internal::StatusAndError First(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<FirstRequest> params);
+
     static ::fidl::internal::StatusAndError Second(
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<SecondRequest> params);
+
+    static ::fidl::internal::StatusAndError Second(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<SecondRequest> params);
   };
 
   struct AsyncEventHandlers;
@@ -485,8 +500,14 @@ class Child final {
     static void FirstRequest(
         const ::fidl::DecodedMessage<Child::FirstRequest>& _msg,
         zx_txid_t _txid = 0);
+    static void FirstRequest(
+        const ::fidl::EncodedMessage<Child::FirstRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void SecondRequest(
         const ::fidl::DecodedMessage<Child::SecondRequest>& _msg,
+        zx_txid_t _txid = 0);
+    static void SecondRequest(
+        const ::fidl::EncodedMessage<Child::SecondRequest>& _msg,
         zx_txid_t _txid = 0);
   };
 };

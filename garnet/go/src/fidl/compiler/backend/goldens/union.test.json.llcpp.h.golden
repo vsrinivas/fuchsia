@@ -11,7 +11,7 @@
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
-#include <lib/fidl/llcpp/linearized.h>
+#include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -2761,8 +2761,17 @@ class TestProtocol final {
             TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedRequest>&
             _msg,
         zx_txid_t _txid = 0);
+    static void StrictXUnionHenceResponseMayBeStackAllocatedRequest(
+        const ::fidl::EncodedMessage<
+            TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedRequest>&
+            _msg,
+        zx_txid_t _txid = 0);
     static void StrictXUnionHenceResponseMayBeStackAllocatedResponse(
         const ::fidl::DecodedMessage<
+            TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedResponse>&
+            _msg);
+    static void StrictXUnionHenceResponseMayBeStackAllocatedResponse(
+        const ::fidl::EncodedMessage<
             TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedResponse>&
             _msg);
     static void FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(
@@ -2770,8 +2779,17 @@ class TestProtocol final {
             TestProtocol::
                 FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>& _msg,
         zx_txid_t _txid = 0);
+    static void FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(
+        const ::fidl::EncodedMessage<
+            TestProtocol::
+                FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(
         const ::fidl::DecodedMessage<
+            TestProtocol::
+                FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>& _msg);
+    static void FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(
+        const ::fidl::EncodedMessage<
             TestProtocol::
                 FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>& _msg);
   };

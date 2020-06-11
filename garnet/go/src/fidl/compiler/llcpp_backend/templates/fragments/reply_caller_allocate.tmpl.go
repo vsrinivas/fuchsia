@@ -25,12 +25,12 @@ void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ templa
   {{- template "FillResponseStructMembers" .Response -}}
 
   {{- if .LLProps.LinearizeResponse }}
-  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
-  if (_linearize_result.status != ZX_OK) {
+  auto _encode_result = ::fidl::LinearizeAndEncode<{{ .Name }}Response>(&_response, std::move(_buffer));
+  if (_encode_result.status != ZX_OK) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  CompleterBase::SendReply(std::move(_linearize_result.message));
+  CompleterBase::SendReply(std::move(_encode_result.message));
   {{- else }}
   _buffer.set_actual(sizeof({{ .Name }}Response));
   CompleterBase::SendReply(::fidl::DecodedMessage<{{ .Name }}Response>(std::move(_buffer)));

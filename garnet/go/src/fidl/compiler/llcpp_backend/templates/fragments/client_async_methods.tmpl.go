@@ -53,24 +53,24 @@ const ClientAsyncMethods = `
   {{- end }}
   {{- template "FillRequestStructMembers" .Request -}}
 
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   {{- if .LLProps.LinearizeRequest }}
-  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    return std::move(_linearize_result);
+  auto _encode_request_result = ::fidl::LinearizeAndEncode<{{ .Name }}Request>(&_request, std::move(_request_buffer));
+  if (_encode_request_result.status != ZX_OK) {
+    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
+    return std::move(_encode_request_result);
   }
-  ::fidl::DecodedMessage<{{ .Name }}Request> _decoded_request = std::move(_linearize_result.message);
+  SetTransactionHeaderFor::{{ .Name }}Request(_encode_request_result.message, _context->Txid());
   {{- else }}
   _request_buffer.set_actual(sizeof({{ .Name }}Request));
   ::fidl::DecodedMessage<{{ .Name }}Request> _decoded_request(std::move(_request_buffer));
-  {{- end }}
-
-  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   SetTransactionHeaderFor::{{ .Name }}Request(_decoded_request, _context->Txid());
   auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
   if (_encode_request_result.status != ZX_OK) {
     ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
     return ::fidl::DecodeResult<{{ .Name }}Response>::FromFailure(std::move(_encode_request_result));
   }
+  {{- end }}
 
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     zx_status_t _write_status =

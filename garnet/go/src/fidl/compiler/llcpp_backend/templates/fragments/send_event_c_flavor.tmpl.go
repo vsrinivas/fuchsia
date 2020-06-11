@@ -26,12 +26,12 @@ zx_status_t {{ .LLProps.ProtocolName }}::{{ template "SendEventCFlavorMethodSign
   {{- template "SetTransactionHeaderForResponse" . }}
   {{- template "FillResponseStructMembers" .Response -}}
 
-  auto _linearized = ::fidl::internal::Linearized<{{ .Name }}Response>(&_response);
-  auto& _linearize_result = _linearized.result();
-  if (_linearize_result.status != ZX_OK) {
-    return _linearize_result.status;
+  auto _encoded = ::fidl::internal::LinearizedAndEncoded<{{ .Name }}Response>(&_response);
+  auto& _encode_result = _encoded.result();
+  if (_encode_result.status != ZX_OK) {
+    return _encode_result.status;
   }
-  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(_linearize_result.message));
+  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(_encode_result.message));
 }
 {{- end }}
 `

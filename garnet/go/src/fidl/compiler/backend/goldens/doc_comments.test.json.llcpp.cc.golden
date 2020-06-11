@@ -35,14 +35,15 @@ Interface::ResultOf::Method_Impl::Method_Impl(
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodRequest)]{};
   auto& _request = *reinterpret_cast<MethodRequest*>(_request_buffer);
-  auto _linearized = ::fidl::internal::Linearized<MethodRequest>(&_request);
-  auto& _linearize_result = _linearized.result();
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
+  auto _encoded =
+      ::fidl::internal::LinearizedAndEncoded<MethodRequest>(&_request);
+  auto& _encode_result = _encoded.result();
+  if (_encode_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_result));
     return;
   }
-  ::fidl::DecodedMessage<MethodRequest> _decoded_request =
-      std::move(_linearize_result.message);
+  ::fidl::EncodedMessage<MethodRequest> _encoded_request =
+      std::move(_encode_result.message);
   Super::operator=(Interface::InPlace::Method(std::move(_client_end)));
 }
 
@@ -61,15 +62,10 @@ Interface::ResultOf::Method Interface::Call::Method(
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<MethodRequest> params(std::move(_request_buffer));
+  ::fidl::EncodedMessage<MethodRequest> params(std::move(_request_buffer));
   Interface::SetTransactionHeaderFor::MethodRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::internal::StatusAndError::FromFailure(
-        std::move(_encode_request_result));
-  }
-  zx_status_t _write_status = ::fidl::Write(
-      std::move(_client_end), std::move(_encode_request_result.message));
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(params));
   if (_write_status != ZX_OK) {
     return ::fidl::internal::StatusAndError(_write_status,
                                             ::fidl::kErrorWriteFailed);
@@ -241,13 +237,14 @@ zx_status_t Interface::SendOnEventEvent(::zx::unowned_channel _chan) {
       ::fidl::DecodedMessage<OnEventResponse>(::fidl::BytePart(
           reinterpret_cast<uint8_t*>(&_response), OnEventResponse::PrimarySize,
           OnEventResponse::PrimarySize)));
-  auto _linearized = ::fidl::internal::Linearized<OnEventResponse>(&_response);
-  auto& _linearize_result = _linearized.result();
-  if (_linearize_result.status != ZX_OK) {
-    return _linearize_result.status;
+  auto _encoded =
+      ::fidl::internal::LinearizedAndEncoded<OnEventResponse>(&_response);
+  auto& _encode_result = _encoded.result();
+  if (_encode_result.status != ZX_OK) {
+    return _encode_result.status;
   }
   return ::fidl::Write(::zx::unowned_channel(_chan),
-                       std::move(_linearize_result.message));
+                       std::move(_encode_result.message));
 }
 
 void Interface::SetTransactionHeaderFor::MethodRequest(
@@ -257,11 +254,26 @@ void Interface::SetTransactionHeaderFor::MethodRequest(
                        kInterface_Method_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
+void Interface::SetTransactionHeaderFor::MethodRequest(
+    const ::fidl::EncodedMessage<Interface::MethodRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
+  fidl_init_txn_header(hdr, _txid, kInterface_Method_GenOrdinal);
+  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
 
 void Interface::SetTransactionHeaderFor::OnEventResponse(
     const ::fidl::DecodedMessage<Interface::OnEventResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kInterface_OnEvent_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void Interface::SetTransactionHeaderFor::OnEventResponse(
+    const ::fidl::EncodedMessage<Interface::OnEventResponse>& _msg) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
+  fidl_init_txn_header(hdr, 0, kInterface_OnEvent_GenOrdinal);
+  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace name

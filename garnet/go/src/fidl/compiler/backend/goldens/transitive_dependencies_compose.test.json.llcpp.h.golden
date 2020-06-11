@@ -12,7 +12,7 @@
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
-#include <lib/fidl/llcpp/linearized.h>
+#include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -234,8 +234,13 @@ class Top final {
     static void GetFooRequest(
         const ::fidl::DecodedMessage<Top::GetFooRequest>& _msg,
         zx_txid_t _txid = 0);
+    static void GetFooRequest(
+        const ::fidl::EncodedMessage<Top::GetFooRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void GetFooResponse(
         const ::fidl::DecodedMessage<Top::GetFooResponse>& _msg);
+    static void GetFooResponse(
+        const ::fidl::EncodedMessage<Top::GetFooResponse>& _msg);
   };
 };
 

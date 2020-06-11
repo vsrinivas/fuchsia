@@ -11,7 +11,7 @@
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
-#include <lib/fidl/llcpp/linearized.h>
+#include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -330,9 +330,18 @@ class EmptyProtocol final {
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<SendRequest> params);
 
+    static ::fidl::internal::StatusAndError Send(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<SendRequest> params);
+
     static ::fidl::DecodeResult<SendAndReceiveResponse> SendAndReceive(
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<SendAndReceiveRequest> params,
+        ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<SendAndReceiveResponse> SendAndReceive(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<SendAndReceiveRequest> params,
         ::fidl::BytePart response_buffer);
   };
 
@@ -417,14 +426,26 @@ class EmptyProtocol final {
     static void SendRequest(
         const ::fidl::DecodedMessage<EmptyProtocol::SendRequest>& _msg,
         zx_txid_t _txid = 0);
+    static void SendRequest(
+        const ::fidl::EncodedMessage<EmptyProtocol::SendRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void ReceiveResponse(
         const ::fidl::DecodedMessage<EmptyProtocol::ReceiveResponse>& _msg);
+    static void ReceiveResponse(
+        const ::fidl::EncodedMessage<EmptyProtocol::ReceiveResponse>& _msg);
     static void SendAndReceiveRequest(
         const ::fidl::DecodedMessage<EmptyProtocol::SendAndReceiveRequest>&
             _msg,
         zx_txid_t _txid = 0);
+    static void SendAndReceiveRequest(
+        const ::fidl::EncodedMessage<EmptyProtocol::SendAndReceiveRequest>&
+            _msg,
+        zx_txid_t _txid = 0);
     static void SendAndReceiveResponse(
         const ::fidl::DecodedMessage<EmptyProtocol::SendAndReceiveResponse>&
+            _msg);
+    static void SendAndReceiveResponse(
+        const ::fidl::EncodedMessage<EmptyProtocol::SendAndReceiveResponse>&
             _msg);
   };
 };

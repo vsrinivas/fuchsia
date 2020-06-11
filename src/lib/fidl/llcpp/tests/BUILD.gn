@@ -78,7 +78,7 @@ executable("fidl_llcpp_types_test_bin") {
   sources = [
     "bits_test.cc",
     "flexible_test.cc",
-    "linearized_test.cc",
+    "linearized_and_encoded_test.cc",
     "protocol_test.cc",
     "table_test.cc",
     "test_utils.cc",

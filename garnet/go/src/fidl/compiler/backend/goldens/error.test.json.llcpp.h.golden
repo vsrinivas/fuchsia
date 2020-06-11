@@ -11,7 +11,7 @@
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
-#include <lib/fidl/llcpp/linearized.h>
+#include <lib/fidl/llcpp/linearized_and_encoded.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -328,6 +328,11 @@ class Example final {
         ::zx::unowned_channel _client_end,
         ::fidl::DecodedMessage<fooRequest> params,
         ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<fooResponse> foo(
+        ::zx::unowned_channel _client_end,
+        ::fidl::EncodedMessage<fooRequest> params,
+        ::fidl::BytePart response_buffer);
   };
 
   struct AsyncEventHandlers;
@@ -395,8 +400,13 @@ class Example final {
     static void fooRequest(
         const ::fidl::DecodedMessage<Example::fooRequest>& _msg,
         zx_txid_t _txid = 0);
+    static void fooRequest(
+        const ::fidl::EncodedMessage<Example::fooRequest>& _msg,
+        zx_txid_t _txid = 0);
     static void fooResponse(
         const ::fidl::DecodedMessage<Example::fooResponse>& _msg);
+    static void fooResponse(
+        const ::fidl::EncodedMessage<Example::fooResponse>& _msg);
   };
 };
 

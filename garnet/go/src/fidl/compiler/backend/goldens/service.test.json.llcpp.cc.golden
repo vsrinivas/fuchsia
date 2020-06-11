@@ -25,15 +25,15 @@ SecondProtocol::ResultOf::MethodOnSecond_Impl::MethodOnSecond_Impl(
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodOnSecondRequest)]{};
   auto& _request = *reinterpret_cast<MethodOnSecondRequest*>(_request_buffer);
-  auto _linearized =
-      ::fidl::internal::Linearized<MethodOnSecondRequest>(&_request);
-  auto& _linearize_result = _linearized.result();
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
+  auto _encoded =
+      ::fidl::internal::LinearizedAndEncoded<MethodOnSecondRequest>(&_request);
+  auto& _encode_result = _encoded.result();
+  if (_encode_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_result));
     return;
   }
-  ::fidl::DecodedMessage<MethodOnSecondRequest> _decoded_request =
-      std::move(_linearize_result.message);
+  ::fidl::EncodedMessage<MethodOnSecondRequest> _encoded_request =
+      std::move(_encode_result.message);
   Super::operator=(
       SecondProtocol::InPlace::MethodOnSecond(std::move(_client_end)));
 }
@@ -54,16 +54,11 @@ SecondProtocol::ResultOf::MethodOnSecond SecondProtocol::Call::MethodOnSecond(
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<MethodOnSecondRequest> params(
+  ::fidl::EncodedMessage<MethodOnSecondRequest> params(
       std::move(_request_buffer));
   SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::internal::StatusAndError::FromFailure(
-        std::move(_encode_request_result));
-  }
-  zx_status_t _write_status = ::fidl::Write(
-      std::move(_client_end), std::move(_encode_request_result.message));
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(params));
   if (_write_status != ZX_OK) {
     return ::fidl::internal::StatusAndError(_write_status,
                                             ::fidl::kErrorWriteFailed);
@@ -132,6 +127,14 @@ void SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(
                        kSecondProtocol_MethodOnSecond_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
+void SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(
+    const ::fidl::EncodedMessage<SecondProtocol::MethodOnSecondRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
+  fidl_init_txn_header(hdr, _txid, kSecondProtocol_MethodOnSecond_GenOrdinal);
+  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
 
 namespace {
 
@@ -148,15 +151,15 @@ FirstProtocol::ResultOf::MethodOnFirst_Impl::MethodOnFirst_Impl(
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _request_buffer[sizeof(MethodOnFirstRequest)]{};
   auto& _request = *reinterpret_cast<MethodOnFirstRequest*>(_request_buffer);
-  auto _linearized =
-      ::fidl::internal::Linearized<MethodOnFirstRequest>(&_request);
-  auto& _linearize_result = _linearized.result();
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
+  auto _encoded =
+      ::fidl::internal::LinearizedAndEncoded<MethodOnFirstRequest>(&_request);
+  auto& _encode_result = _encoded.result();
+  if (_encode_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_encode_result));
     return;
   }
-  ::fidl::DecodedMessage<MethodOnFirstRequest> _decoded_request =
-      std::move(_linearize_result.message);
+  ::fidl::EncodedMessage<MethodOnFirstRequest> _encoded_request =
+      std::move(_encode_result.message);
   Super::operator=(
       FirstProtocol::InPlace::MethodOnFirst(std::move(_client_end)));
 }
@@ -177,16 +180,11 @@ FirstProtocol::ResultOf::MethodOnFirst FirstProtocol::Call::MethodOnFirst(
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<MethodOnFirstRequest> params(
+  ::fidl::EncodedMessage<MethodOnFirstRequest> params(
       std::move(_request_buffer));
   FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::internal::StatusAndError::FromFailure(
-        std::move(_encode_request_result));
-  }
-  zx_status_t _write_status = ::fidl::Write(
-      std::move(_client_end), std::move(_encode_request_result.message));
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(params));
   if (_write_status != ZX_OK) {
     return ::fidl::internal::StatusAndError(_write_status,
                                             ::fidl::kErrorWriteFailed);
@@ -254,6 +252,14 @@ void FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kFirstProtocol_MethodOnFirst_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(
+    const ::fidl::EncodedMessage<FirstProtocol::MethodOnFirstRequest>& _msg,
+    zx_txid_t _txid) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
+  fidl_init_txn_header(hdr, _txid, kFirstProtocol_MethodOnFirst_GenOrdinal);
+  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace name

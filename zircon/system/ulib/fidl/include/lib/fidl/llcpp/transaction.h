@@ -140,7 +140,14 @@ class CompleterBase {
       Close(ZX_ERR_INTERNAL);
       return;
     }
-    SendReply(encode_result.message.ToAnyMessage());
+    SendReply(std::move(encode_result.message));
+  }
+
+  // Write |encoded_msg| as the reply.
+  template <typename FidlType>
+  void SendReply(EncodedMessage<FidlType> encoded_msg) {
+    static_assert(IsFidlMessage<FidlType>::value, "FIDL transactional message type required");
+    SendReply(encoded_msg.ToAnyMessage());
   }
 
   // Move the contents of |transaction_| to heap and return it.
@@ -154,12 +161,16 @@ class CompleterBase {
       ZX_ASSERT_MSG(!lock_.test_and_set(std::memory_order_acquire),
                     "Completer accessed from multiple threads concurrently.");
     }
-    ~ScopedLock() { if (!released_) lock_.clear(std::memory_order_release); }
+    ~ScopedLock() {
+      if (!released_)
+        lock_.clear(std::memory_order_release);
+    }
     void release() {
       ZX_ASSERT_MSG(!released_, "Cannot release ScopedLock twice.");
       released_ = true;
       lock_.clear(std::memory_order_release);
     }
+
    private:
     std::atomic_flag& lock_;
     bool released_ = false;

@@ -31,10 +31,8 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     state->NextStep();  // End: Setup. Begin: Encode.
 
     {
-      auto linearized = fidl::internal::Linearized<FidlType>(&aligned_value.value);
-      auto& linearize_result = linearized.result();
-      ZX_ASSERT(linearize_result.status == ZX_OK && linearize_result.error == nullptr);
-      auto encode_result = fidl::Encode(std::move(linearize_result.message));
+      auto encoded = ::fidl::internal::LinearizedAndEncoded<FidlType>(&aligned_value.value);
+      auto& encode_result = encoded.result();
       ZX_ASSERT(encode_result.status == ZX_OK && encode_result.error == nullptr);
     }
 
