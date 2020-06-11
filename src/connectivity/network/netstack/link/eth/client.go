@@ -212,9 +212,9 @@ func (c *Client) write(pkts stack.PacketBufferList) (int, *tcpip.Error) {
 	})
 }
 
-func (c *Client) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
+func (c *Client) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	var pkts stack.PacketBufferList
-	pkts.PushBack(&pkt)
+	pkts.PushBack(pkt)
 	_, err := c.write(pkts)
 	return err
 }
@@ -262,7 +262,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 		if err := c.handler.RxLoop(func(entry *FifoEntry) {
 			// Process inbound packet.
 			var emptyLinkAddress tcpip.LinkAddress
-			dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, 0, stack.PacketBuffer{
+			dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, 0, &stack.PacketBuffer{
 				Data: append(buffer.View(nil), c.iob.BufferFromEntry(*entry)...).ToVectorisedView(),
 			})
 

@@ -69,7 +69,7 @@ type endpoint struct {
 	dispatcher stack.NetworkDispatcher
 	remote     []*endpoint
 	// onWritePacket returns the packet to send or nil if no packets should be sent.
-	onWritePacket func(stack.PacketBuffer) *stack.PacketBuffer
+	onWritePacket func(*stack.PacketBuffer) *stack.PacketBuffer
 
 	stack.LinkEndpoint
 }
@@ -101,13 +101,13 @@ func (e *endpoint) IsAttached() bool {
 	return e.dispatcher != nil
 }
 
-func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
+func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	if fn := e.onWritePacket; fn != nil {
 		p := fn(pkt)
 		if p == nil {
 			return nil
 		}
-		pkt = *p
+		pkt = p
 	}
 	for _, remote := range e.remote {
 		if !remote.IsAttached() {
@@ -159,12 +159,12 @@ func newZeroJitterClient(s *stack.Stack, nicid tcpip.NICID, linkAddr tcpip.LinkA
 func TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP(t *testing.T) {
 	sent := make(chan struct{}, 1)
 	e := endpoint{
-		onWritePacket: func(b stack.PacketBuffer) *stack.PacketBuffer {
+		onWritePacket: func(b *stack.PacketBuffer) *stack.PacketBuffer {
 			select {
 			case sent <- struct{}{}:
 			default:
 			}
-			return &b
+			return b
 		},
 	}
 	s := createTestStack()
@@ -225,14 +225,14 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 	}
 	cond := sync.Cond{L: &mu.Mutex}
 	serverLinkEP := endpoint{
-		onWritePacket: func(b stack.PacketBuffer) *stack.PacketBuffer {
+		onWritePacket: func(b *stack.PacketBuffer) *stack.PacketBuffer {
 			mu.Lock()
 			mu.buffered++
 			for mu.buffered < len(clientLinkEPs) {
 				cond.Wait()
 			}
 			mu.Unlock()
-			return &b
+			return b
 		},
 	}
 	serverStack := createTestStack()
@@ -396,7 +396,7 @@ func TestDHCP(t *testing.T) {
 	}
 }
 
-func mustMsgType(t *testing.T, b stack.PacketBuffer) dhcpMsgType {
+func mustMsgType(t *testing.T, b *stack.PacketBuffer) dhcpMsgType {
 	t.Helper()
 
 	h := hdr(b.Data.ToView())
@@ -446,7 +446,7 @@ func TestDelayRetransmission(t *testing.T) {
 			defer cancel()
 
 			_, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
-			serverEP.onWritePacket = func(b stack.PacketBuffer) *stack.PacketBuffer {
+			serverEP.onWritePacket = func(b *stack.PacketBuffer) *stack.PacketBuffer {
 				func() {
 					switch mustMsgType(t, b) {
 					case dhcpOFFER:
@@ -468,7 +468,7 @@ func TestDelayRetransmission(t *testing.T) {
 					// notice it has been timed out.
 					time.Sleep(10 * time.Millisecond)
 				}()
-				return &b
+				return b
 			}
 
 			info := c.Info()
@@ -632,20 +632,20 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 			}
 
 			requestSent := make(chan struct{})
-			clientEP.onWritePacket = func(b stack.PacketBuffer) *stack.PacketBuffer {
+			clientEP.onWritePacket = func(b *stack.PacketBuffer) *stack.PacketBuffer {
 				defer signal(ctx, requestSent)
 
-				return &b
+				return b
 			}
 
 			unblockResponse := make(chan struct{})
 			var dropServerPackets bool
-			serverEP.onWritePacket = func(b stack.PacketBuffer) *stack.PacketBuffer {
+			serverEP.onWritePacket = func(b *stack.PacketBuffer) *stack.PacketBuffer {
 				waitForSignal(ctx, unblockResponse)
 				if dropServerPackets {
 					return nil
 				}
-				return &b
+				return b
 			}
 
 			var wg sync.WaitGroup
@@ -715,11 +715,12 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 // with DHCP message type set to `msgType` specified in the argument.
 // This function does not make a deep copy of packet buffer passed in except
 // for the part it has to modify.
-func mustCloneWithNewMsgType(t *testing.T, b stack.PacketBuffer, msgType dhcpMsgType) stack.PacketBuffer {
+func mustCloneWithNewMsgType(t *testing.T, b *stack.PacketBuffer, msgType dhcpMsgType) *stack.PacketBuffer {
 	t.Helper()
 
-	// Create a deep copy of the DHCP header from `b`, so we don't mutate the original.
-	h := hdr(append([]byte(nil), b.Data.ToView()...))
+	b = b.Clone()
+
+	h := hdr(b.Data.ToView())
 	opts, err := h.options()
 	if err != nil {
 		t.Fatalf("failed to get options from header: %s", err)
@@ -756,22 +757,22 @@ func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
 	}
 
 	requestSent := make(chan struct{})
-	clientEP.onWritePacket = func(b stack.PacketBuffer) *stack.PacketBuffer {
+	clientEP.onWritePacket = func(b *stack.PacketBuffer) *stack.PacketBuffer {
 		defer signal(ctx, requestSent)
-		return &b
+		return b
 	}
 
 	unblockResponse := make(chan struct{})
 	responseSent := make(chan struct{})
 	var serverShouldDecline bool
-	serverEP.onWritePacket = func(b stack.PacketBuffer) *stack.PacketBuffer {
+	serverEP.onWritePacket = func(b *stack.PacketBuffer) *stack.PacketBuffer {
 		defer signal(ctx, responseSent)
 		waitForSignal(ctx, unblockResponse)
 
 		if serverShouldDecline {
 			b = mustCloneWithNewMsgType(t, b, dhcpDECLINE)
 		}
-		return &b
+		return b
 	}
 
 	var wg sync.WaitGroup

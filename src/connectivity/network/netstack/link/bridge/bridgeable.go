@@ -58,7 +58,7 @@ func (e *BridgeableEndpoint) Dispatcher() stack.NetworkDispatcher {
 	return d
 }
 
-func (e *BridgeableEndpoint) DeliverNetworkPacket(src, dst tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
+func (e *BridgeableEndpoint) DeliverNetworkPacket(src, dst tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
 	e.mu.RLock()
 	d := e.mu.dispatcher
 	b := e.mu.bridge

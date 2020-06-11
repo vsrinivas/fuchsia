@@ -35,14 +35,14 @@ import (
 type DeliverNetworkPacketArgs struct {
 	SrcLinkAddr, DstLinkAddr tcpip.LinkAddress
 	Protocol                 tcpip.NetworkProtocolNumber
-	Pkt                      stack.PacketBuffer
+	Pkt                      *stack.PacketBuffer
 }
 
 type dispatcherChan chan DeliverNetworkPacketArgs
 
 var _ stack.NetworkDispatcher = (*dispatcherChan)(nil)
 
-func (ch *dispatcherChan) DeliverNetworkPacket(srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
+func (ch *dispatcherChan) DeliverNetworkPacket(srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
 	*ch <- DeliverNetworkPacketArgs{
 		SrcLinkAddr: srcLinkAddr,
 		DstLinkAddr: dstLinkAddr,
@@ -57,6 +57,18 @@ func vectorizedViewComparer(x, y buffer.VectorisedView) bool {
 
 func prependableComparer(x, y buffer.Prependable) bool {
 	return bytes.Equal(x.View(), y.View())
+}
+
+func packetBufferCmpOptions() []cmp.Option {
+	return []cmp.Option{
+		cmp.Comparer(prependableComparer),
+		cmp.Comparer(vectorizedViewComparer),
+		// Ignore `noCopy` marker.
+		//
+		// https://github.com/google/gvisor/blob/2d3b9d1/pkg/tcpip/stack/packet_buffer.go#L27
+		cmpopts.IgnoreTypes(struct{}{}),
+		cmpopts.IgnoreUnexported(stack.PacketBufferEntry{}),
+	}
 }
 
 const TunMtu uint32 = 2048
@@ -274,7 +286,7 @@ func TestWritePacket(t *testing.T) {
 	},
 		nil,
 		protocol,
-		stack.PacketBuffer{
+		&stack.PacketBuffer{
 			Data:   buffer.View(pktBody).ToVectorisedView(),
 			Header: hdr,
 		},
@@ -377,10 +389,10 @@ func TestReceivePacket(t *testing.T) {
 			SrcLinkAddr: tcpip.LinkAddress(otherMac.Octets[:]),
 			DstLinkAddr: tcpip.LinkAddress(tunMac.Octets[:]),
 			Protocol:    protocol,
-			Pkt: stack.PacketBuffer{
+			Pkt: &stack.PacketBuffer{
 				Data: buffer.View(pktPayload[:extra]).ToVectorisedView(),
 			},
-		}, cmp.Comparer(vectorizedViewComparer), cmp.Comparer(prependableComparer), cmpopts.IgnoreUnexported(stack.PacketBufferEntry{})); diff != "" {
+		}, packetBufferCmpOptions()...); diff != "" {
 			t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
 		}
 	}
@@ -623,7 +635,7 @@ func TestPairExchangePackets(t *testing.T) {
 		}
 	}
 
-	makeTestPacket := func(prefix byte, index uint32) stack.PacketBuffer {
+	makeTestPacket := func(prefix byte, index uint32) *stack.PacketBuffer {
 		// Use randomized buffer lengths so resetting descriptors is exercised
 		// and verified.
 		const baseLength = uint32(5)
@@ -635,7 +647,7 @@ func TestPairExchangePackets(t *testing.T) {
 		for i := baseLength; i < bufferLength; i++ {
 			view[i] = byte(rng.Uint32())
 		}
-		return stack.PacketBuffer{
+		return &stack.PacketBuffer{
 			Data: view.ToVectorisedView(),
 		}
 	}
@@ -654,7 +666,7 @@ func TestPairExchangePackets(t *testing.T) {
 		if diff := cmp.Diff(pkt, DeliverNetworkPacketArgs{
 			Protocol: header.IPv4ProtocolNumber,
 			Pkt:      makeTestPacket(prefix, index),
-		}, cmp.Comparer(vectorizedViewComparer), cmp.Comparer(prependableComparer), cmpopts.IgnoreUnexported(stack.PacketBufferEntry{})); diff != "" {
+		}, packetBufferCmpOptions()...); diff != "" {
 			t.Fatalf("delivered network packet mismatch (prefix=%d, index=%d) (-want +got):\n%s", prefix, index, diff)
 		}
 	}

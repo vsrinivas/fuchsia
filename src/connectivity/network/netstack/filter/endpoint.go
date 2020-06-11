@@ -49,7 +49,7 @@ func (e *Endpoint) IsEnabled() bool {
 }
 
 // DeliverNetworkPacket implements stack.NetworkDispatcher.
-func (e *Endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
+func (e *Endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
 	if atomic.LoadUint32(&e.enabled) == 0 {
 		e.dispatcher.DeliverNetworkPacket(dstLinkAddr, srcLinkAddr, protocol, pkt)
 		return
@@ -62,7 +62,7 @@ func (e *Endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddre
 	//
 	// TODO(50424): Support using a buffer.VectorisedView when parsing packets
 	// so we don't need to create a single view here.
-	packetbuffer.EnsurePopulatedHeader(&pkt, 0)
+	packetbuffer.EnsurePopulatedHeader(pkt, 0)
 	if e.filter.Run(Incoming, protocol, pkt.Header, pkt.Data) != Pass {
 		return
 	}
@@ -77,7 +77,7 @@ func (e *Endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 }
 
 // WritePacket implements stack.LinkEndpoint.
-func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
+func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	if atomic.LoadUint32(&e.enabled) == 0 {
 		return e.LinkEndpoint.WritePacket(r, gso, protocol, pkt)
 	}
@@ -87,7 +87,7 @@ func (e *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.Ne
 	//
 	// TODO(50424): Support using a buffer.VectorisedView when parsing packets
 	// so we don't need to create a single view here.
-	packetbuffer.EnsurePopulatedHeader(&pkt, int(e.LinkEndpoint.MaxHeaderLength()))
+	packetbuffer.EnsurePopulatedHeader(pkt, e.LinkEndpoint.MaxHeaderLength())
 	if e.filter.Run(Outgoing, protocol, pkt.Header, pkt.Data) == Pass {
 		return e.LinkEndpoint.WritePacket(r, gso, protocol, pkt)
 	}
@@ -108,7 +108,7 @@ func (e *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.Packe
 		//
 		// TODO(50424): Support using a buffer.VectorisedView when parsing packets
 		// so we don't need to create a single view here.
-		packetbuffer.EnsurePopulatedHeader(pkt, int(e.LinkEndpoint.MaxHeaderLength()))
+		packetbuffer.EnsurePopulatedHeader(pkt, e.LinkEndpoint.MaxHeaderLength())
 		if e.filter.Run(Outgoing, protocol, pkt.Header, pkt.Data) == Pass {
 			filtered.PushBack(pkt)
 		}

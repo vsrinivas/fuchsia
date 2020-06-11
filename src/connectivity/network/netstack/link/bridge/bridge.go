@@ -3,6 +3,7 @@
 package bridge
 
 import (
+	"fmt"
 	"hash/fnv"
 	"math"
 	"sort"
@@ -176,9 +177,9 @@ func (ep *Endpoint) LinkAddress() tcpip.LinkAddress {
 	return ep.linkAddress
 }
 
-func (ep *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
+func (ep *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	for _, l := range ep.links {
-		if err := l.WritePacket(r, gso, protocol, pkt); err != nil {
+		if err := l.WritePacket(r, gso, protocol, pkt.Clone()); err != nil {
 			return err
 		}
 	}
@@ -229,7 +230,7 @@ func (ep *Endpoint) IsAttached() bool {
 //
 // Endpoint does not implement stack.NetworkEndpoint.DeliverNetworkPacket because we need
 // to know which BridgeableEndpoint the packet was delivered from to prevent packet loops.
-func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
+func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
 	// Is the destination link address a multicast/broadcast?
 	//
 	// If the least significant bit of the first octet is 1, then the address is a
@@ -275,10 +276,16 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 	r := stack.Route{LocalLinkAddress: srcLinkAddr, RemoteLinkAddress: dstLinkAddr, NetProto: protocol}
 
 	// The contract of WritePacket differs from that of DeliverNetworkPacket.
-	// WritePacket expects Header to contain enough bytes for the LinkEndpoint's
-	// headers, whereas DeliverNetworkPacket only expects Data to be populated.
+	//
+	// See (*stack.NIC).forwardPacket for details.
 	outPkt := pkt.Clone()
-	outPkt.Header = buffer.NewPrependable(int(ep.MaxHeaderLength()))
+	outPkt.Header = buffer.NewPrependable(int(ep.MaxHeaderLength()) + len(outPkt.NetworkHeader) + len(outPkt.TransportHeader))
+	if n := copy(outPkt.Header.Prepend(len(outPkt.TransportHeader)), outPkt.TransportHeader); n != len(outPkt.TransportHeader) {
+		panic(fmt.Sprintf("copied %d bytes, expected %d", n, len(outPkt.TransportHeader)))
+	}
+	if n := copy(outPkt.Header.Prepend(len(outPkt.NetworkHeader)), outPkt.NetworkHeader); n != len(outPkt.NetworkHeader) {
+		panic(fmt.Sprintf("copied %d bytes, expected %d", n, len(outPkt.NetworkHeader)))
+	}
 
 	// TODO(NET-690): Learn which destinations are on which links and restrict transmission, like a bridge.
 	for _, l := range ep.links {

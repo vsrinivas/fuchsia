@@ -2,6 +2,7 @@ package bridge_test
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -28,12 +29,14 @@ const (
 	linkAddr2 = tcpip.LinkAddress("\x02\x03\x04\x05\x06\x08")
 	linkAddr3 = tcpip.LinkAddress("\x02\x03\x04\x05\x06\x09")
 	linkAddr4 = tcpip.LinkAddress("\x02\x03\x04\x05\x06\x0a")
+	linkAddr5 = tcpip.LinkAddress("\x02\x03\x04\x05\x06\x0b")
+	linkAddr6 = tcpip.LinkAddress("\x02\x03\x04\x05\x06\x0c")
 )
 
 var (
-	timeoutReceiveReady    error = fmt.Errorf("receiveready")
-	timeoutSendReady       error = fmt.Errorf("sendready")
-	timeoutPayloadReceived error = fmt.Errorf("payloadreceived")
+	timeoutReceiveReady    = errors.New("receiveready")
+	timeoutSendReady       = errors.New("sendready")
+	timeoutPayloadReceived = errors.New("payloadreceived")
 )
 
 type endpointWithAttributes struct {
@@ -128,11 +131,11 @@ func TestEndpoint_Wait(t *testing.T) {
 var _ stack.NetworkDispatcher = (*testNetworkDispatcher)(nil)
 
 type testNetworkDispatcher struct {
-	pkt   stack.PacketBuffer
+	pkt   *stack.PacketBuffer
 	count int
 }
 
-func (t *testNetworkDispatcher) DeliverNetworkPacket(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
+func (t *testNetworkDispatcher) DeliverNetworkPacket(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
 	t.count++
 	t.pkt = pkt
 }
@@ -140,14 +143,14 @@ func (t *testNetworkDispatcher) DeliverNetworkPacket(_, _ tcpip.LinkAddress, _ t
 type channelEndpoint struct {
 	stack.LinkEndpoint
 	linkAddr tcpip.LinkAddress
-	c        chan stack.PacketBuffer
+	c        chan *stack.PacketBuffer
 }
 
 func (e *channelEndpoint) LinkAddress() tcpip.LinkAddress {
 	return e.linkAddr
 }
 
-func (e *channelEndpoint) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
+func (e *channelEndpoint) WritePacket(_ *stack.Route, _ *stack.GSO, _ tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	select {
 	case e.c <- packetbuffer.OutboundToInbound(pkt):
 	default:
@@ -161,7 +164,7 @@ func (e *channelEndpoint) WritePackets(_ *stack.Route, _ *stack.GSO, pkts stack.
 	i := 0
 	for pkt := pkts.Front(); pkt != nil; i, pkt = i+1, pkt.Next() {
 		select {
-		case e.c <- packetbuffer.OutboundToInbound(*pkt):
+		case e.c <- packetbuffer.OutboundToInbound(pkt):
 		default:
 			return i, tcpip.ErrWouldBlock
 		}
@@ -170,12 +173,12 @@ func (e *channelEndpoint) WritePackets(_ *stack.Route, _ *stack.GSO, pkts stack.
 	return i, nil
 }
 
-func (e *channelEndpoint) getPacket() (stack.PacketBuffer, bool) {
+func (e *channelEndpoint) getPacket() *stack.PacketBuffer {
 	select {
 	case pkt := <-e.c:
-		return pkt, true
+		return pkt
 	default:
-		return stack.PacketBuffer{}, false
+		return nil
 	}
 }
 
@@ -183,7 +186,7 @@ func makeChannelEndpoint(linkAddr tcpip.LinkAddress, size int) channelEndpoint {
 	return channelEndpoint{
 		LinkEndpoint: loopback.New(),
 		linkAddr:     linkAddr,
-		c:            make(chan stack.PacketBuffer, size),
+		c:            make(chan *stack.PacketBuffer, size),
 	}
 }
 
@@ -203,20 +206,20 @@ func TestBridgeWritePackets(t *testing.T) {
 	t.Run("WritePacket", func(t *testing.T) {
 		// The bridge and channel endpoints do not care about the route, GSO
 		// or network protocol number when writing packets.
-		err := bridgeEP.WritePacket(nil /* route */, nil /* gso */, 0 /* protocol */, stack.PacketBuffer{
+		err := bridgeEP.WritePacket(nil /* route */, nil /* gso */, 0 /* protocol */, &stack.PacketBuffer{
 			Data: buffer.View(data[0]).ToVectorisedView(),
 		})
 		if err != nil {
 			t.Errorf("bridgeEP.WritePacket(nil, nil, 0, _): %s", err)
 		}
 
-		if pkt, hasPkt := ep1.getPacket(); !hasPkt {
+		if pkt := ep1.getPacket(); pkt == nil {
 			t.Error("expected a packet on ep1")
 		} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[0]) {
 			t.Errorf("got ep1 data = %x, want = %x", got, data[0])
 		}
 
-		if pkt, hasPkt := ep2.getPacket(); !hasPkt {
+		if pkt := ep2.getPacket(); pkt == nil {
 			t.Error("expected a packet on ep2")
 		} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[0]) {
 			t.Errorf("got ep2 data = %x, want = %x", got, data[0])
@@ -243,13 +246,13 @@ func TestBridgeWritePackets(t *testing.T) {
 			}
 
 			for j := 0; j < i; j++ {
-				if pkt, hasPkt := ep1.getPacket(); !hasPkt {
+				if pkt := ep1.getPacket(); pkt == nil {
 					t.Errorf("(j=%d) expected a packet on ep1", j)
 				} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[j]) {
 					t.Errorf("(j=%d) got ep1 data = %x, want = %x", j, got, data[j])
 				}
 
-				if pkt, hasPkt := ep2.getPacket(); !hasPkt {
+				if pkt := ep2.getPacket(); pkt == nil {
 					t.Errorf("(j=%d) expected a packet on ep2", j)
 				} else if got := pkt.Data.ToView(); !bytes.Equal(got, data[j]) {
 					t.Errorf("(j=%d) got ep2 data = %x, want = %x", j, got, data[j])
@@ -375,16 +378,15 @@ func TestBridgeRouting(t *testing.T) {
 						t.Fatalf("unrecognized rxEPKind = %d", subtest.rxEP)
 					}
 
-					bridgeEP.DeliverNetworkPacketToBridge(rxEP, linkAddr3, test.dstAddr, 0, pkt)
+					bridgeEP.DeliverNetworkPacketToBridge(rxEP, linkAddr3, test.dstAddr, 0, &pkt)
 
-					pkt, hasPkt := ep1.getPacket()
-					if subtest.ep1ShouldGetPacket {
-						if !hasPkt {
+					if pkt := ep1.getPacket(); subtest.ep1ShouldGetPacket {
+						if pkt == nil {
 							t.Error("expected a packet on ep1")
 						} else if got := pkt.Data.ToView(); !bytes.Equal(got, data) {
 							t.Errorf("got ep1 data = %x, want = %x", got, data)
 						}
-					} else if hasPkt {
+					} else if pkt != nil {
 						t.Errorf("ep1 unexpectedly got a packet = %+v", pkt)
 					}
 
@@ -399,14 +401,13 @@ func TestBridgeRouting(t *testing.T) {
 						t.Errorf("got nd1.count = %d, want = 0", nd1.count)
 					}
 
-					pkt, hasPkt = ep2.getPacket()
-					if subtest.ep2ShouldGetPacket {
-						if !hasPkt {
+					if pkt := ep2.getPacket(); subtest.ep2ShouldGetPacket {
+						if pkt == nil {
 							t.Error("expected a packet on ep2")
 						} else if got := pkt.Data.ToView(); !bytes.Equal(got, data) {
 							t.Errorf("got ep2 data = %x, want = %x", got, data)
 						}
-					} else if hasPkt {
+					} else if pkt != nil {
 						t.Errorf("ep2 unexpectedly got a packet = %+v", pkt)
 					}
 
@@ -451,12 +452,15 @@ func TestBridge(t *testing.T) {
 			// in TCP/IP packets.
 			const payload = "hello"
 
-			/* Connection diagram:
-			 s1ep <----> ep1         ep2 <----> s2ep
-										^--bridge1--^
-			*/
+			// Connection diagram:
+			//
+			// <---> ep1 <--pipe--> ep2 <--bridge--> ep3 <--pipe--> ep4
+			//
+			// Included are several additional endpoints to ensure bridging N > 2
+			// endpoints works.
 			ep1, ep2 := pipe(linkAddr1, linkAddr2)
 			ep3, ep4 := pipe(linkAddr3, linkAddr4)
+			ep5, ep6 := pipe(linkAddr5, linkAddr6)
 			s1addr := tcpip.Address(bytes.Repeat([]byte{1}, testCase.addressSize))
 			s1subnet := util.PointSubnet(s1addr)
 			s1, err := makeStackWithEndpoint(ep1, testCase.protocol, s1addr)
@@ -466,8 +470,12 @@ func TestBridge(t *testing.T) {
 
 			baddr := tcpip.Address(bytes.Repeat([]byte{2}, testCase.addressSize))
 			bsubnet := util.PointSubnet(baddr)
-			sb, b, err := makeStackWithBridgedEndpoints(ep2, ep3, testCase.protocol, baddr)
-			if err != nil {
+			sb, b := makeStackWithBridgedEndpoints(t, testCase.protocol, baddr, ep5, ep2, ep3)
+
+			const ep2nicid = 2
+
+			// It's over 9000!
+			if err := sb.CreateNIC(9001, ep6); err != nil {
 				t.Fatal(err)
 			}
 
@@ -487,10 +495,10 @@ func TestBridge(t *testing.T) {
 			// that constituent links are still routable.
 			bcaddr := tcpip.Address(bytes.Repeat([]byte{4}, testCase.addressSize))
 			bcsubnet := util.PointSubnet(bcaddr)
-			if err := sb.AddAddress(1, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
+			if err := sb.AddAddress(ep2nicid, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
 				t.Fatal(fmt.Errorf("AddAddress failed: %s", err))
 			}
-			if err := sb.AddAddress(1, testCase.protocol.Number(), bcaddr); err != nil {
+			if err := sb.AddAddress(ep2nicid, testCase.protocol.Number(), bcaddr); err != nil {
 				t.Fatal(fmt.Errorf("AddAddress failed: %s", err))
 			}
 
@@ -512,7 +520,7 @@ func TestBridge(t *testing.T) {
 			sb.SetRouteTable([]tcpip.Route{
 				{
 					Destination: s1subnet,
-					NIC:         1,
+					NIC:         ep2nicid,
 				},
 			})
 
@@ -535,7 +543,7 @@ func TestBridge(t *testing.T) {
 				"s1": s1, "s2": s2, "sb": sb,
 			}
 
-			ep2.onWritePacket = func(pkt stack.PacketBuffer) {
+			ep2.onWritePacket = func(pkt *stack.PacketBuffer) {
 				for i, view := range pkt.Data.Views() {
 					if bytes.Contains(view, []byte(payload)) {
 						t.Errorf("did not expect payload %x to be sent back to ep1 in view %d: %x", payload, i, view)
@@ -695,7 +703,7 @@ func TestBridgeableEndpointDetach(t *testing.T) {
 		t.Fatal("bep1.IsAttached() = false, want = true")
 	}
 
-	bep1.DeliverNetworkPacket(linkAddr1, linkAddr2, header.IPv4ProtocolNumber, stack.PacketBuffer{})
+	bep1.DeliverNetworkPacket(linkAddr1, linkAddr2, header.IPv4ProtocolNumber, &stack.PacketBuffer{})
 	if disp.count != 1 {
 		t.Fatalf("got disp.count = %d, want = 1", disp.count)
 	}
@@ -708,7 +716,7 @@ func TestBridgeableEndpointDetach(t *testing.T) {
 		t.Fatal("bep1.IsAttached() = true, want = false")
 	}
 
-	bep1.DeliverNetworkPacket(linkAddr1, linkAddr2, header.IPv4ProtocolNumber, stack.PacketBuffer{})
+	bep1.DeliverNetworkPacket(linkAddr1, linkAddr2, header.IPv4ProtocolNumber, &stack.PacketBuffer{})
 	if disp.count != 1 {
 		t.Fatalf("got disp.count = %d, want = 1", disp.count)
 	}
@@ -734,10 +742,10 @@ type endpoint struct {
 	linkAddr      tcpip.LinkAddress
 	dispatcher    stack.NetworkDispatcher
 	linked        *endpoint
-	onWritePacket func(stack.PacketBuffer)
+	onWritePacket func(*stack.PacketBuffer)
 }
 
-func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
+func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	if e.linked == nil {
 		panic(fmt.Sprintf("ep %+v has not been linked to another endpoint; create endpoints with `pipe()`", e))
 	}
@@ -815,14 +823,13 @@ func makeStackWithEndpoint(ep stack.LinkEndpoint, protocol stack.NetworkProtocol
 	return s, nil
 }
 
-func makeStackWithBridgedEndpoints(ep1, ep2 stack.LinkEndpoint, protocol stack.NetworkProtocol, baddr tcpip.Address) (*stack.Stack, *bridge.Endpoint, error) {
+func makeStackWithBridgedEndpoints(t *testing.T, protocol stack.NetworkProtocol, baddr tcpip.Address, eps ...stack.LinkEndpoint) (*stack.Stack, *bridge.Endpoint) {
+	t.Helper()
 	if testing.Verbose() {
-		ep1 = sniffer.New(ep1)
-		ep2 = sniffer.New(ep2)
+		for i := range eps {
+			eps[i] = sniffer.New(eps[i])
+		}
 	}
-
-	bep1 := bridge.NewEndpoint(ep1)
-	bep2 := bridge.NewEndpoint(ep2)
 
 	stk := stack.New(stack.Options{
 		NetworkProtocols: []stack.NetworkProtocol{
@@ -834,29 +841,32 @@ func makeStackWithBridgedEndpoints(ep1, ep2 stack.LinkEndpoint, protocol stack.N
 		},
 	})
 
-	if err := stk.CreateNIC(1, bep1); err != nil {
-		return nil, nil, fmt.Errorf("CreateNIC failed: %s", err)
+	beps := make([]*bridge.BridgeableEndpoint, len(eps))
+	for i, ep := range eps {
+		bep := bridge.NewEndpoint(ep)
+		if err := stk.CreateNIC(tcpip.NICID(i+1), bep); err != nil {
+			t.Fatalf("CreateNIC failed: %s", err)
+		}
+		beps[i] = bep
 	}
-	if err := stk.CreateNIC(2, bep2); err != nil {
-		return nil, nil, fmt.Errorf("CreateNIC failed: %s", err)
-	}
-	bridgeEP := bridge.New([]*bridge.BridgeableEndpoint{bep1, bep2})
+
+	bridgeEP := bridge.New(beps)
 	var bridgeLinkEP stack.LinkEndpoint = bridgeEP
 	if testing.Verbose() {
 		bridgeLinkEP = sniffer.New(bridgeLinkEP)
 	}
-	bID := tcpip.NICID(3)
+	bID := tcpip.NICID(len(beps) + 1)
 	if err := stk.CreateNIC(bID, bridgeLinkEP); err != nil {
-		return nil, nil, fmt.Errorf("CreateNIC failed: %s", err)
+		t.Fatalf("CreateNIC failed: %s", err)
 	}
 	if err := stk.AddAddress(bID, protocol.Number(), baddr); err != nil {
-		return nil, nil, fmt.Errorf("AddAddress failed: %s", err)
+		t.Fatalf("AddAddress failed: %s", err)
 	}
 	if err := stk.AddAddress(bID, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
-		return nil, nil, fmt.Errorf("AddAddress failed: %s", err)
+		t.Fatalf("AddAddress failed: %s", err)
 	}
 
-	return stk, bridgeEP, nil
+	return stk, bridgeEP
 }
 
 func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, protocol stack.NetworkProtocol, addr tcpip.Address, payload string) ([]byte, error) {

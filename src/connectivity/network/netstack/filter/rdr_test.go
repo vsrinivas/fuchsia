@@ -10,6 +10,7 @@ import (
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
@@ -41,17 +42,29 @@ func createTestStackRouterRDR(t *testing.T) (*stack.Stack, *syncEndpoint, *syncE
 
 	var linkEP1 syncEndpoint
 	nic1 := tcpip.NICID(testRouterNICID1)
-	filtered1 := NewEndpoint(f, &linkEP1)
-	if err := s.CreateNIC(nic1, filtered1); err != nil {
-		t.Fatalf("CreateNIC error: %s", err)
+	{
+		var linkEP stack.LinkEndpoint = &linkEP1
+		if testing.Verbose() {
+			linkEP = sniffer.New(linkEP)
+		}
+		linkEP = NewEndpoint(f, linkEP)
+		if err := s.CreateNIC(nic1, linkEP); err != nil {
+			t.Fatalf("CreateNIC error: %s", err)
+		}
 	}
 	s.AddAddress(nic1, header.IPv4ProtocolNumber, testRouterNICAddr1)
 
 	var linkEP2 syncEndpoint
 	nic2 := tcpip.NICID(testRouterNICID2)
-	filtered2 := NewEndpoint(f, &linkEP2)
-	if err := s.CreateNIC(nic2, filtered2); err != nil {
-		t.Fatalf("CreateNIC error: %s", err)
+	{
+		var linkEP stack.LinkEndpoint = &linkEP2
+		if testing.Verbose() {
+			linkEP = sniffer.New(linkEP)
+		}
+		linkEP = NewEndpoint(f, linkEP)
+		if err := s.CreateNIC(nic2, linkEP); err != nil {
+			t.Fatalf("CreateNIC error: %s", err)
+		}
 	}
 	s.AddAddress(nic2, header.IPv4ProtocolNumber, testRouterNICAddr2)
 

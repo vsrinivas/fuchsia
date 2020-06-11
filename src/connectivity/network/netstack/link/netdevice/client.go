@@ -185,9 +185,9 @@ func (c *Client) write(pkts stack.PacketBufferList, protocol tcpip.NetworkProtoc
 	})
 }
 
-func (c *Client) WritePacket(_ *stack.Route, _ *stack.GSO, proto tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
+func (c *Client) WritePacket(_ *stack.Route, _ *stack.GSO, proto tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	var pkts stack.PacketBufferList
-	pkts.PushBack(&pkt)
+	pkts.PushBack(pkt)
 	_, err := c.write(pkts, proto)
 	return err
 }
@@ -265,7 +265,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				protocolNumber = header.IPv6ProtocolNumber
 			}
 
-			dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, protocolNumber, stack.PacketBuffer{
+			dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, protocolNumber, &stack.PacketBuffer{
 				Data: view.ToVectorisedView(),
 			})
 

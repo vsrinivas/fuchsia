@@ -40,7 +40,7 @@ func (e *endpoint) makeEthernetFields(r *stack.Route, protocol tcpip.NetworkProt
 	return hdr
 }
 
-func (e *endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) *tcpip.Error {
+func (e *endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	fields := e.makeEthernetFields(r, protocol)
 	h := pkt.Header.Prepend(header.EthernetMinimumSize)
 	header.Ethernet(h).Encode(&fields)
@@ -63,7 +63,7 @@ func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 	e.LinkEndpoint.Attach(e)
 }
 
-func (e *endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
+func (e *endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
 	ethBytes, ok := pkt.Data.PullUp(header.EthernetMinimumSize)
 	if !ok {
 		// TODO(42949): record this in statistics.

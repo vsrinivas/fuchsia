@@ -34,14 +34,14 @@ import (
 type DeliverNetworkPacketArgs struct {
 	SrcLinkAddr, DstLinkAddr tcpip.LinkAddress
 	Protocol                 tcpip.NetworkProtocolNumber
-	Pkt                      stack.PacketBuffer
+	Pkt                      *stack.PacketBuffer
 }
 
 type dispatcherChan chan DeliverNetworkPacketArgs
 
 var _ stack.NetworkDispatcher = (*dispatcherChan)(nil)
 
-func (ch *dispatcherChan) DeliverNetworkPacket(srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBuffer) {
+func (ch *dispatcherChan) DeliverNetworkPacket(srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
 	*ch <- DeliverNetworkPacketArgs{
 		SrcLinkAddr: srcLinkAddr,
 		DstLinkAddr: dstLinkAddr,
@@ -105,6 +105,10 @@ func TestEndpoint(t *testing.T) {
 	const maxDepth = eth_gen.FifoMaxSize / uint(unsafe.Sizeof(eth_gen.FifoEntry{}))
 
 	packetBufferCmpOptions := []cmp.Option{
+		// Ignore `noCopy` marker.
+		//
+		// https://github.com/google/gvisor/blob/2d3b9d1/pkg/tcpip/stack/packet_buffer.go#L27
+		cmpopts.IgnoreTypes(struct{}{}),
 		cmpopts.IgnoreTypes(stack.PacketBufferEntry{}),
 		cmp.Comparer(func(x, y buffer.Prependable) bool {
 			return bytes.Equal(x.View(), y.View())
@@ -310,22 +314,23 @@ func TestEndpoint(t *testing.T) {
 				LocalLinkAddress:  localLinkAddress,
 				RemoteLinkAddress: remoteLinkAddress,
 			}
-			pb := stack.PacketBuffer{
-				Data:   buffer.View(body).ToVectorisedView(),
-				Header: hdr,
-			}
 			want := DeliverNetworkPacketArgs{
 				SrcLinkAddr: localLinkAddress,
 				DstLinkAddr: remoteLinkAddress,
 				Protocol:    protocol,
-				Pkt: stack.PacketBuffer{
+				Pkt: &stack.PacketBuffer{
 					Data: buffer.View(packetHeader + body).ToVectorisedView(),
 				},
 			}
 
+			data := buffer.View(body).ToVectorisedView()
+
 			t.Run("WritePacket", func(t *testing.T) {
 				for i := 0; i < int(depth)*10; i++ {
-					if err := endpoint.WritePacket(&route, nil, protocol, pb); err != nil {
+					if err := endpoint.WritePacket(&route, nil, protocol, &stack.PacketBuffer{
+						Data:   data,
+						Header: hdr,
+					}); err != nil {
 						t.Fatal(err)
 					}
 
@@ -338,7 +343,7 @@ func TestEndpoint(t *testing.T) {
 							SrcLinkAddr: h.SourceAddress(),
 							DstLinkAddr: h.DestinationAddress(),
 							Protocol:    h.Type(),
-							Pkt: stack.PacketBuffer{
+							Pkt: &stack.PacketBuffer{
 								Data: buffer.View(b[header.EthernetMinimumSize:]).ToVectorisedView(),
 							},
 						}, packetBufferCmpOptions...); diff != "" {
@@ -423,7 +428,7 @@ func TestEndpoint(t *testing.T) {
 							SrcLinkAddr: localLinkAddress,
 							DstLinkAddr: remoteLinkAddress,
 							Protocol:    protocol,
-							Pkt: stack.PacketBuffer{
+							Pkt: &stack.PacketBuffer{
 								Data: buffer.View(payload[:extra]).ToVectorisedView(),
 							},
 						}, args, packetBufferCmpOptions...); diff != "" {

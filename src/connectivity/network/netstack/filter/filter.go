@@ -359,7 +359,12 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 	srcPort := tcp.SourcePort()
 	dstPort := tcp.DestinationPort()
 
-	if s, err := f.states.findStateTCP(dir, netProto, header.TCPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, payloadLength, transportHeader); s != nil {
+	s, err := f.states.findStateTCP(dir, netProto, header.TCPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, payloadLength, transportHeader)
+	if err != nil {
+		syslog.WarnTf(tag, "%s", err)
+		return Drop
+	}
+	if s != nil {
 		if chatty {
 			syslog.VLogTf(syslog.TraceVerbosity, tag, "tcp state found: %v", s)
 		}
@@ -385,9 +390,6 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 		}
 
 		return Pass
-	} else if err != nil {
-		syslog.VLogTf(syslog.DebugVerbosity, tag, "%v", err)
-		return Drop
 	}
 
 	var nat *NAT
@@ -420,10 +422,10 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			newAddr = nat.newSrcAddr
 			// Reserve a new port.
 			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
-			var e *tcpip.Error
-			newPort, e = f.portManager.ReservePort(netProtos, header.TCPProtocolNumber, newAddr, 0, ports.Flags{}, nicID)
-			if e != nil {
-				syslog.VLogTf(syslog.DebugVerbosity, tag, "ReservePort: %v", e)
+			var err *tcpip.Error
+			newPort, err = f.portManager.ReservePort(netProtos, header.TCPProtocolNumber, newAddr, 0, ports.Flags{}, nicID)
+			if err != nil {
+				syslog.WarnTf(tag, "ReservePort: %s", err)
 				return Drop
 			}
 			// Rewrite srcAddr and srcPort in the packet.

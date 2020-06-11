@@ -19,33 +19,32 @@ import (
 // WritePacket treats Header and Data as disjoint buffers; DeliverNetworkPacket
 // expects Data to contain the full packet, including any Header bytes if they
 // are present.
-func OutboundToInbound(pkt stack.PacketBuffer) stack.PacketBuffer {
-	if hdr := pkt.Header.View(); len(hdr) > 0 {
-		pkt.Data = buffer.NewVectorisedView(len(hdr)+pkt.Data.Size(), append([]buffer.View{hdr}, pkt.Data.Views()...))
-		pkt.Header = buffer.Prependable{}
+func OutboundToInbound(pkt *stack.PacketBuffer) *stack.PacketBuffer {
+	views := make([]buffer.View, 1, 1+len(pkt.Data.Views()))
+	views[0] = pkt.Header.View()
+	views = append(views, pkt.Data.Views()...)
+
+	return &stack.PacketBuffer{
+		Data: buffer.NewVectorisedView(len(views[0])+pkt.Data.Size(), views),
 	}
-	return pkt
 }
 
-// EnsurePopulatedHeader ensures a packet buffer has a populated Header field.
-//
-// If the Header is unused, the packet buffer's Data will will be copied to
-// Header while leaving maxLinkHeaderLen bytes available. Otherwise, the packet
-// buffer will not be modified.
-func EnsurePopulatedHeader(pkt *stack.PacketBuffer, maxLinkHeaderLen int) {
-	if pkt.Header.UsedLength() != 0 {
+// EnsurePopulatedHeader smashes pkt.Data into pkt.Header, leaving
+// maxLinkHeaderLen space in reserve.
+func EnsurePopulatedHeader(pkt *stack.PacketBuffer, maxLinkHeaderLen uint16) {
+	if pkt.Data.Size() == 0 {
 		return
 	}
-
-	dataView := pkt.Data.ToView()
-	if maxLinkHeaderLen == 0 {
-		pkt.Header = buffer.NewPrependableFromView(dataView)
-	} else {
-		dataSize := len(dataView)
-		pkt.Header = buffer.NewPrependable(maxLinkHeaderLen + dataSize)
-		if n := copy(pkt.Header.Prepend(dataSize), dataView); n != dataSize {
-			panic(fmt.Sprintf("copied %d bytes, expected %d bytes", n, dataSize))
+	hdr := pkt.Header
+	pkt.Header = buffer.NewPrependable(hdr.UsedLength() + pkt.Data.Size() + int(maxLinkHeaderLen))
+	for i := len(pkt.Data.Views()); i != 0; i-- {
+		view := pkt.Data.Views()[i-1]
+		if n := copy(pkt.Header.Prepend(len(view)), view); n != len(view) {
+			panic(fmt.Sprintf("copied %d bytes, expected %d bytes", n, len(view)))
 		}
+	}
+	if n := copy(pkt.Header.Prepend(hdr.UsedLength()), hdr.View()); n != hdr.UsedLength() {
+		panic(fmt.Sprintf("copied %d bytes, expected %d bytes", n, hdr.UsedLength()))
 	}
 	pkt.Data = buffer.VectorisedView{}
 }
