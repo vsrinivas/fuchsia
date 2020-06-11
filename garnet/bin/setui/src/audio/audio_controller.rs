@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use crate::input::{InputMonitor, InputMonitorHandle, InputType};
 use crate::registry::base::State;
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
@@ -12,15 +13,11 @@ use {
         create_default_modified_timestamps, default_audio_info, ModifiedTimestamps,
         StreamVolumeControl,
     },
-    crate::input::monitor_media_buttons,
     crate::internal::common::now,
     crate::switchboard::base::*,
     anyhow::Error,
-    fidl_fuchsia_ui_input::MediaButtonsEvent,
-    fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
-    futures::StreamExt,
     std::collections::HashMap,
     std::sync::Arc,
 };
@@ -37,79 +34,13 @@ fn get_streams_array_from_map(
     streams
 }
 
-type InputMonitorHandle = Arc<Mutex<InputMonitor>>;
-type MediaButtonEventSender = futures::channel::mpsc::UnboundedSender<MediaButtonsEvent>;
-
-struct InputMonitor {
-    client: ClientProxy<AudioInfo>,
-    service_connected: bool,
-    input_tx: MediaButtonEventSender,
-    mic_mute_state: bool,
-    volume_button_event: i8,
-}
-
-impl InputMonitor {
-    fn create(client: ClientProxy<AudioInfo>) -> InputMonitorHandle {
-        let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
-        let default_audio_settings = default_audio_info();
-        let monitor_handle = Arc::new(Mutex::new(Self {
-            client: client,
-            service_connected: false,
-            input_tx: input_tx,
-            mic_mute_state: default_audio_settings.input.mic_mute,
-            volume_button_event: 0,
-        }));
-
-        let monitor_handle_clone = monitor_handle.clone();
-        fasync::spawn(async move {
-            monitor_handle_clone.lock().await.ensure_monitor().await;
-
-            while let Some(event) = input_rx.next().await {
-                monitor_handle_clone.lock().await.process_event(event).await;
-            }
-        });
-
-        monitor_handle
-    }
-
-    pub fn get_mute_state(&self) -> bool {
-        self.mic_mute_state
-    }
-
-    async fn process_event(&mut self, event: MediaButtonsEvent) {
-        if let Some(mic_mute) = event.mic_mute {
-            if self.mic_mute_state != mic_mute {
-                self.mic_mute_state = mic_mute;
-                self.client.notify().await;
-            }
-        }
-        if let Some(volume) = event.volume {
-            self.volume_button_event = volume;
-            self.client.notify().await;
-        }
-    }
-
-    async fn ensure_monitor(&mut self) {
-        if self.service_connected {
-            return;
-        }
-
-        self.service_connected = monitor_media_buttons(
-            self.client.get_service_context().await.clone(),
-            self.input_tx.clone(),
-        )
-        .await
-        .is_ok();
-    }
-}
-
 type VolumeControllerHandle = Arc<Mutex<VolumeController>>;
 
 pub struct VolumeController {
     client: ClientProxy<AudioInfo>,
     audio_service_connected: bool,
     stream_volume_controls: HashMap<AudioStreamType, StreamVolumeControl>,
-    input_monitor: InputMonitorHandle,
+    input_monitor: InputMonitorHandle<AudioInfo>,
     modified_timestamps: ModifiedTimestamps,
 }
 
@@ -119,7 +50,10 @@ impl VolumeController {
             client: client.clone(),
             stream_volume_controls: HashMap::new(),
             audio_service_connected: false,
-            input_monitor: InputMonitor::create(client.clone()),
+            input_monitor: InputMonitor::create(
+                client.clone(),
+                vec![InputType::Microphone, InputType::VolumeButtons],
+            ),
             modified_timestamps: create_default_modified_timestamps(),
         }));
 
