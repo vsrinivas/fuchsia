@@ -84,6 +84,9 @@ pub struct ArchiveAccessorStats {
     pub global_inspect_batch_iterator_connections_opened: Arc<fuchsia_inspect::UintProperty>,
     /// Property tracking number of closing connections to any inspect batch iterator instance.
     pub global_inspect_batch_iterator_connections_closed: Arc<fuchsia_inspect::UintProperty>,
+    /// Property tracking number of times a future to retrieve diagnostics data for a component
+    /// timed out.
+    pub global_component_timeouts_count: Arc<fuchsia_inspect::UintProperty>,
 }
 
 impl ArchiveAccessorStats {
@@ -107,6 +110,8 @@ impl ArchiveAccessorStats {
         let global_inspect_batch_iterator_connections_closed = Arc::new(
             archive_accessor_node.create_uint("inspect_batch_iterator_connections_closed", 0),
         );
+        let global_component_timeouts_count =
+            Arc::new(archive_accessor_node.create_uint("component_timeouts_count", 0));
 
         ArchiveAccessorStats {
             archive_accessor_node,
@@ -117,6 +122,7 @@ impl ArchiveAccessorStats {
             global_inspect_reader_servers_destroyed,
             global_inspect_batch_iterator_connections_opened,
             global_inspect_batch_iterator_connections_closed,
+            global_component_timeouts_count,
         }
     }
 }
@@ -135,6 +141,9 @@ pub struct InspectReaderServerStats {
     pub global_inspect_batch_iterator_connections_opened: Arc<fuchsia_inspect::UintProperty>,
     /// Property tracking number of closing connections to any inspect batch iterator instance.
     pub global_inspect_batch_iterator_connections_closed: Arc<fuchsia_inspect::UintProperty>,
+    /// Property tracking number of times a future to retrieve diagnostics data for a component
+    /// timed out.
+    pub global_component_timeouts_count: Arc<fuchsia_inspect::UintProperty>,
 
     /// Property tracking number of requests to the BatchIterator instance this struct is tracking.
     pub batch_iterator_get_next_requests: fuchsia_inspect::UintProperty,
@@ -170,6 +179,9 @@ impl InspectReaderServerStats {
                 .clone(),
             global_inspect_batch_iterator_connections_closed: archive_accessor_stats
                 .global_inspect_batch_iterator_connections_closed
+                .clone(),
+            global_component_timeouts_count: archive_accessor_stats
+                .global_component_timeouts_count
                 .clone(),
             batch_iterator_get_next_requests,
             batch_iterator_get_next_responses,

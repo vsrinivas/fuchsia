@@ -15,9 +15,10 @@ use {
     fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_diagnostics::{self, BatchIteratorMarker, BatchIteratorRequestStream, Selector},
     fidl_fuchsia_mem, fuchsia_async as fasync,
+    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_inspect::{reader::PartialNodeHierarchy, NumericProperty},
     fuchsia_inspect_node_hierarchy::{InspectHierarchyMatcher, NodeHierarchy},
-    fuchsia_zircon::{self as zx, HandleBased},
+    fuchsia_zircon::{self as zx, DurationNum, HandleBased},
     futures::future::join_all,
     futures::stream::FusedStream,
     futures::{TryFutureExt, TryStreamExt},
@@ -35,6 +36,10 @@ use {
 // TODO(4601): Make this product-configurable.
 // TODO(4601): Consider configuring batch sizes by bytes, not by hierarchy count.
 static IN_MEMORY_SNAPSHOT_LIMIT: usize = 64;
+
+// Number of seconds to wait for a single component to have its diagnostics data "pumped".
+// This involves diagnostics directory traversal, contents extraction, and snapshotting.
+pub static PER_COMPONENT_ASYNC_TIMEOUT_SECONDS: i64 = 10;
 
 /// Packet containing a node hierarchy and all the metadata needed to
 /// populate a diagnostics schema for that node hierarchy.
@@ -197,15 +202,12 @@ impl ReaderServer {
                                 errors: node_hierarchy_data.errors,
                                 hierarchy: filtered_hierarchy_opt,
                             },
-                            Err(e) => {
-                                eprintln!("Archivist failed to filter a node hierarchy: {:?}", e);
-                                NodeHierarchyData {
-                                    filename: node_hierarchy_data.filename,
-                                    timestamp: node_hierarchy_data.timestamp,
-                                    errors: vec![formatter::Error { message: format!("{:?}", e) }],
-                                    hierarchy: None,
-                                }
-                            }
+                            Err(e) => NodeHierarchyData {
+                                filename: node_hierarchy_data.filename,
+                                timestamp: node_hierarchy_data.timestamp,
+                                errors: vec![formatter::Error { message: format!("{:?}", e) }],
+                                hierarchy: None,
+                            },
                         }
                     }
                     None => NodeHierarchyData {
@@ -241,9 +243,32 @@ impl ReaderServer {
     /// to a PopulatedInspectDataContainer will still succeed.
     async fn pump_inspect_data(
         inspect_batch: Vec<UnpopulatedInspectDataContainer>,
-    ) -> Vec<Result<PopulatedInspectDataContainer, Error>> {
-        join_all(inspect_batch.into_iter().map(move |inspect_data_packet| {
-            PopulatedInspectDataContainer::try_from(inspect_data_packet)
+        inspect_component_timeout_property: Arc<fuchsia_inspect::UintProperty>,
+    ) -> Vec<PopulatedInspectDataContainer> {
+        join_all(inspect_batch.into_iter().map(move |inspect_data_packet, | {
+            let attempted_relative_moniker = inspect_data_packet.relative_moniker.clone();
+            let attempted_inspect_matcher = inspect_data_packet.inspect_matcher.clone();
+            let cloned_property = inspect_component_timeout_property.clone();
+            PopulatedInspectDataContainer::from(inspect_data_packet).on_timeout(
+                PER_COMPONENT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(),
+                move || {
+                    cloned_property.add(1);
+                    let no_success_snapshot_data = vec![SnapshotData::failed(
+                        formatter::Error {
+                            message: format!(
+                                "Exceeded per-component time limit for fetching diagnostics data: {:?}",
+                                attempted_relative_moniker
+                            ),
+                        },
+                        "NO_FILE_SUCCEEDED".to_string(),
+                    )];
+                    PopulatedInspectDataContainer {
+                        relative_moniker: attempted_relative_moniker,
+                        snapshots: no_success_snapshot_data,
+                        inspect_matcher: attempted_inspect_matcher,
+                    }
+                },
+            )
         }))
         .await
     }
@@ -258,7 +283,7 @@ impl ReaderServer {
     //             that makes it clear to clients that snapshotting failed.
     pub fn filter_snapshots(
         configured_selectors: &Option<Vec<Arc<Selector>>>,
-        pumped_inspect_data_results: Vec<Result<PopulatedInspectDataContainer, Error>>,
+        pumped_inspect_data_results: Vec<PopulatedInspectDataContainer>,
     ) -> Vec<(Moniker, NodeHierarchyData)> {
         // In case we encounter multiple PopulatedDataContainers with the same moniker we don't
         // want to do the component selector filtering again, so store the results in a map.
@@ -270,80 +295,63 @@ impl ReaderServer {
         // inspect hierarchy is then added to an accumulator as a HierarchyData to be converted
         // into a JSON string and returned.
         pumped_inspect_data_results.into_iter().fold(Vec::new(), |mut acc, pumped_data| {
-            match pumped_data {
-                Ok(PopulatedInspectDataContainer {
-                    relative_moniker,
-                    snapshots,
-                    inspect_matcher,
-                }) => {
-                    let sanitized_moniker = relative_moniker
-                        .iter()
-                        .map(|s| selectors::sanitize_string_for_selectors(s))
-                        .collect::<Vec<String>>()
-                        .join("/");
+            let sanitized_moniker = pumped_data
+                .relative_moniker
+                .iter()
+                .map(|s| selectors::sanitize_string_for_selectors(s))
+                .collect::<Vec<String>>()
+                .join("/");
 
-                    // We know that if configured_selectors is some, there is atleast one entry
-                    // since the server validates the stream parameters and an empty
-                    // configured_selectors vector is an error.
-                    if configured_selectors.is_some() {
-                        let configured_matchers = client_selector_matches
-                            .entry(sanitized_moniker.clone())
-                            .or_insert_with(|| {
-                                let matching_selectors =
-                                    selectors::match_component_moniker_against_selectors(
-                                        &relative_moniker,
-                                        // Safe unwrap since we verify it is Some above.
-                                        configured_selectors.as_ref().unwrap(),
-                                    )
-                                    .unwrap_or_else(|err| {
-                                        error!(
-                                        "Failed to evaluate client selectors for: {:?} Error: {:?}",
-                                        relative_moniker, err
-                                    );
-                                        Vec::new()
-                                    });
-
-                                if matching_selectors.is_empty() {
-                                    None
-                                } else {
-                                    match (&matching_selectors).try_into() {
-                                        Ok(hierarchy_matcher) => Some(hierarchy_matcher),
-                                        Err(e) => {
-                                            error!("Failed to create hierarchy matcher: {:?}", e);
-                                            None
-                                        }
-                                    }
-                                }
+            if let Some(configured_selectors) = configured_selectors {
+                let configured_matchers =
+                    client_selector_matches.entry(sanitized_moniker.clone()).or_insert_with(|| {
+                        let matching_selectors =
+                            selectors::match_component_moniker_against_selectors(
+                                &pumped_data.relative_moniker,
+                                configured_selectors,
+                            )
+                            .unwrap_or_else(|err| {
+                                error!(
+                                    "Failed to evaluate client selectors for: {:?} Error: {:?}",
+                                    pumped_data.relative_moniker, err
+                                );
+                                Vec::new()
                             });
 
-                        // If there were configured matchers and none of them matched
-                        // this component, then we should return early since there is no data to
-                        // extract.
-                        if configured_matchers.is_none() {
-                            return acc;
+                        if matching_selectors.is_empty() {
+                            None
+                        } else {
+                            match (&matching_selectors).try_into() {
+                                Ok(hierarchy_matcher) => Some(hierarchy_matcher),
+                                Err(e) => {
+                                    error!("Failed to create hierarchy matcher: {:?}", e);
+                                    None
+                                }
+                            }
                         }
-                    };
+                    });
 
-                    let mut filtered_hierarchy_data_with_moniker: Vec<(String, NodeHierarchyData)> =
-                        ReaderServer::filter_single_components_snapshots(
-                            sanitized_moniker.clone(),
-                            snapshots,
-                            inspect_matcher,
-                            &client_selector_matches,
-                        )
-                        .into_iter()
-                        .map(|filtered_hierarchy_data| {
-                            (sanitized_moniker.clone(), filtered_hierarchy_data)
-                        })
-                        .collect();
-
-                    acc.append(&mut filtered_hierarchy_data_with_moniker);
-                    acc
+                // If there were configured matchers and none of them matched
+                // this component, then we should return early since there is no data to
+                // extract.
+                if configured_matchers.is_none() {
+                    return acc;
                 }
-                // TODO(36761): What does it mean for IO to fail on a
-                // subset of directory data collections?
-                Err(_) => acc,
             }
+
+            let mut filtered_hierarchy_data_with_moniker: Vec<(String, NodeHierarchyData)> =
+                ReaderServer::filter_single_components_snapshots(
+                    sanitized_moniker.clone(),
+                    pumped_data.snapshots,
+                    pumped_data.inspect_matcher,
+                    &client_selector_matches,
+                )
+                .into_iter()
+                .map(|filtered_hierarchy_data| (sanitized_moniker.clone(), filtered_hierarchy_data))
+                .collect();
+
+            acc.append(&mut filtered_hierarchy_data_with_moniker);
+            acc
         })
     }
 
@@ -477,8 +485,11 @@ impl ReaderServer {
 
                     // Asynchronously populate data containers with snapshots of relevant
                     // inspect hierarchies.
-                    let pumped_inspect_data_results =
-                        ReaderServer::pump_inspect_data(snapshot_batch).await;
+                    let pumped_inspect_data_results = ReaderServer::pump_inspect_data(
+                        snapshot_batch,
+                        self.inspect_reader_server_stats.global_component_timeouts_count.clone(),
+                    )
+                    .await;
 
                     // Apply selector filtering to all snapshot inspect hierarchies in the batch
                     let batch_hierarchy_data = ReaderServer::filter_snapshots(
@@ -903,7 +914,8 @@ mod tests {
         archive_accessor_connections_opened: 0u64,
         archive_accessor_connections_closed: 0u64,
         inspect_reader_servers_constructed: 0u64,
-        inspect_reader_servers_destroyed: 0u64,
+            inspect_reader_servers_destroyed: 0u64,
+            component_timeouts_count: 0u64,
         stream_diagnostics_requests: 0u64,
         inspect_batch_iterator_connections_opened: 0u64,
         inspect_batch_iterator_connections_closed: 0u64,
@@ -951,7 +963,8 @@ mod tests {
             archive_accessor_connections_closed: 0u64,
             inspect_reader_servers_constructed: 1u64,
             inspect_reader_servers_destroyed: 0u64,
-            stream_diagnostics_requests: 0u64,
+                stream_diagnostics_requests: 0u64,
+                component_timeouts_count: 0u64,
             inspect_batch_iterator_connections_opened: 1u64,
             inspect_batch_iterator_connections_closed: 0u64,
             batch_iterator_connection0: {
@@ -973,7 +986,8 @@ mod tests {
         archive_accessor_connections_closed: 0u64,
         inspect_reader_servers_constructed: 1u64,
         inspect_reader_servers_destroyed: 1u64,
-        stream_diagnostics_requests: 0u64,
+            stream_diagnostics_requests: 0u64,
+                            component_timeouts_count: 0u64,
         inspect_batch_iterator_connections_opened: 1u64,
         inspect_batch_iterator_connections_closed: 1u64,
         batch_iterator_connection0: {
@@ -999,7 +1013,8 @@ mod tests {
             archive_accessor_connections_closed: 0u64,
             inspect_reader_servers_constructed: 2u64,
             inspect_reader_servers_destroyed: 1u64,
-            stream_diagnostics_requests: 0u64,
+                stream_diagnostics_requests: 0u64,
+                component_timeouts_count: 0u64,
             inspect_batch_iterator_connections_opened: 2u64,
             inspect_batch_iterator_connections_closed: 1u64,
             batch_iterator_connection0: {
@@ -1027,7 +1042,8 @@ mod tests {
         inspect_reader_servers_destroyed: 2u64,
         stream_diagnostics_requests: 0u64,
         inspect_batch_iterator_connections_opened: 2u64,
-        inspect_batch_iterator_connections_closed: 2u64,
+            inspect_batch_iterator_connections_closed: 2u64,
+            component_timeouts_count: 0u64,
         batch_iterator_connection0: {
             batch_iterator_terminal_responses: 1u64,
             batch_iterator_get_next_responses: 2u64,

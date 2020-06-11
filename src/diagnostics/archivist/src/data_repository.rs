@@ -285,7 +285,7 @@ pub struct SnapshotData {
 
 impl SnapshotData {
     // Constructs packet that timestamps and packages inspect snapshot for exfiltration.
-    fn successful(snapshot: ReadSnapshot, filename: String) -> SnapshotData {
+    pub fn successful(snapshot: ReadSnapshot, filename: String) -> SnapshotData {
         SnapshotData {
             filename,
             timestamp: fasync::Time::now().into_zx(),
@@ -295,7 +295,7 @@ impl SnapshotData {
     }
 
     // Constructs packet that timestamps and packages inspect snapshot failure for exfiltration.
-    fn failed(error: formatter::Error, filename: String) -> SnapshotData {
+    pub fn failed(error: formatter::Error, filename: String) -> SnapshotData {
         SnapshotData {
             filename,
             timestamp: fasync::Time::now().into_zx(),
@@ -324,9 +324,9 @@ pub struct PopulatedInspectDataContainer {
 }
 
 impl PopulatedInspectDataContainer {
-    pub async fn try_from(
+    pub async fn from(
         unpopulated: UnpopulatedInspectDataContainer,
-    ) -> Result<PopulatedInspectDataContainer, Error> {
+    ) -> PopulatedInspectDataContainer {
         let mut collector = InspectDataCollector::new();
 
         match collector.populate_data_map(&unpopulated.component_diagnostics_proxy).await {
@@ -394,18 +394,45 @@ impl PopulatedInspectDataContainer {
                     snapshots_data_opt = Some(acc);
                 }
                 match snapshots_data_opt {
-                    Some(snapshots) => Ok(PopulatedInspectDataContainer {
+                    Some(snapshots) => PopulatedInspectDataContainer {
                         relative_moniker: unpopulated.relative_moniker,
                         snapshots: snapshots,
                         inspect_matcher: unpopulated.inspect_matcher,
-                    }),
-                    None => Err(format_err!(
-                        "Failed to parse snapshots for: {:?}.",
-                        unpopulated.relative_moniker
-                    )),
+                    },
+                    None => {
+                        let no_success_snapshot_data = vec![SnapshotData::failed(
+                            formatter::Error {
+                                message: format!(
+                                    "Failed to extract any inspect data for {:?}",
+                                    unpopulated.relative_moniker
+                                ),
+                            },
+                            "NO_FILE_SUCCEEDED".to_string(),
+                        )];
+                        PopulatedInspectDataContainer {
+                            relative_moniker: unpopulated.relative_moniker,
+                            snapshots: no_success_snapshot_data,
+                            inspect_matcher: unpopulated.inspect_matcher,
+                        }
+                    }
                 }
             }
-            Err(e) => Err(e),
+            Err(e) => {
+                let no_success_snapshot_data = vec![SnapshotData::failed(
+                    formatter::Error {
+                        message: format!(
+                            "Encountered error traversing diagnostics dir for {:?}: {:?}",
+                            unpopulated.relative_moniker, e
+                        ),
+                    },
+                    "NO_FILE_SUCCEEDED".to_string(),
+                )];
+                PopulatedInspectDataContainer {
+                    relative_moniker: unpopulated.relative_moniker,
+                    snapshots: no_success_snapshot_data,
+                    inspect_matcher: unpopulated.inspect_matcher,
+                }
+            }
         }
     }
 }
