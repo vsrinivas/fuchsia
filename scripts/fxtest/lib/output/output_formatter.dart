@@ -235,11 +235,11 @@ abstract class OutputFormatter {
 class StandardOutputFormatter extends OutputFormatter {
   StandardOutputFormatter({
     @required bool hasRealTimeOutput,
+    @required Stylizer wrapWith,
     bool simpleOutput = true,
     Duration slowTestThreshold,
     OutputBuffer buffer,
     bool isVerbose,
-    Stylizer wrapWith,
   }) : super(
           isVerbose: isVerbose,
           hasRealTimeOutput: hasRealTimeOutput,
@@ -408,6 +408,7 @@ class FileFormatter extends StandardOutputFormatter {
           hasRealTimeOutput: true,
           slowTestThreshold: null,
           simpleOutput: true,
+          wrapWith: (v, _, {forScript}) => v,
           buffer: OutputBuffer.fileIO(path: path),
         );
 
