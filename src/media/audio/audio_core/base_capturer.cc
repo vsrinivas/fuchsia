@@ -185,7 +185,7 @@ void BaseCapturer::GetStreamType(GetStreamTypeCallback cbk) {
 void BaseCapturer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   TRACE_DURATION("audio", "BaseCapturer::AddPayloadBuffer");
   if (id != 0) {
-    FX_LOGS(ERROR) << "Only buffer ID 0 is currently supported.";
+    FX_LOGS(WARNING) << "Only buffer ID 0 is currently supported.";
     BeginShutdown();
     return;
   }
@@ -275,15 +275,36 @@ void BaseCapturer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
 
 void BaseCapturer::RemovePayloadBuffer(uint32_t id) {
   TRACE_DURATION("audio", "BaseCapturer::RemovePayloadBuffer");
-  FX_LOGS(ERROR) << "RemovePayloadBuffer is not currently supported.";
+  FX_LOGS(WARNING) << "RemovePayloadBuffer is not currently supported.";
   BeginShutdown();
+}
+
+// Are we actively capturing: either OperatingAsync, or OperatingSync with pending capture buffers
+bool BaseCapturer::IsOperating() {
+  State state = state_.load();
+  switch (state) {
+    // If OperatingAsync, we are actively generating capture packets
+    case State::OperatingAsync:
+    case State::AsyncStopping:
+    case State::AsyncStoppingCallbackPending:
+      return true;
+
+    // If OperatingSync, then a pending capture buffer means one or more CaptureAt() is pending.
+    // Else, CaptureAt has never been called or has completed: no capture operation is active.
+    case State::OperatingSync:
+      return has_pending_capture_buffers();
+
+    // Otherwise, the capturer is still being initialized or is being shutdown
+    default:
+      return false;
+  }
 }
 
 void BaseCapturer::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_frames,
                              uint32_t num_frames, CaptureAtCallback cbk) {
   TRACE_DURATION("audio", "BaseCapturer::CaptureAt");
   if (payload_buffer_id != 0) {
-    FX_LOGS(ERROR) << "payload_buffer_id must be 0 for now.";
+    FX_LOGS(WARNING) << "payload_buffer_id must be 0 for now.";
     return;
   }
 
@@ -294,8 +315,8 @@ void BaseCapturer::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_frames,
   // synchronous mode.
   State state = state_.load();
   if (state != State::OperatingSync) {
-    FX_LOGS(ERROR) << "CaptureAt called while not operating in sync mode "
-                   << "(state = " << static_cast<uint32_t>(state) << ")";
+    FX_LOGS(WARNING) << "CaptureAt called while not operating in sync mode "
+                     << "(state = " << static_cast<uint32_t>(state) << ")";
     return;
   }
 
@@ -303,9 +324,9 @@ void BaseCapturer::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_frames,
   // have at least some payloads in them.
   uint64_t buffer_end = static_cast<uint64_t>(offset_frames) + num_frames;
   if (!num_frames || (buffer_end > payload_buf_frames_)) {
-    FX_LOGS(ERROR) << "Bad buffer range submitted. "
-                   << " offset " << offset_frames << " length " << num_frames
-                   << ". Shared buffer is " << payload_buf_frames_ << " frames long.";
+    FX_LOGS(WARNING) << "Bad buffer range submitted. "
+                     << " offset " << offset_frames << " length " << num_frames
+                     << ". Shared buffer is " << payload_buf_frames_ << " frames long.";
     return;
   }
 
@@ -338,7 +359,7 @@ void BaseCapturer::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_frames,
 void BaseCapturer::ReleasePacket(fuchsia::media::StreamPacket packet) {
   TRACE_DURATION("audio", "BaseCapturer::ReleasePacket");
   // TODO(43507): Implement.
-  FX_LOGS(ERROR) << "ReleasePacket not implemented yet.";
+  FX_LOGS(WARNING) << "ReleasePacket not implemented yet.";
 }
 
 void BaseCapturer::DiscardAllPacketsNoReply() {
@@ -348,12 +369,12 @@ void BaseCapturer::DiscardAllPacketsNoReply() {
 
 void BaseCapturer::DiscardAllPackets(DiscardAllPacketsCallback cbk) {
   TRACE_DURATION("audio", "BaseCapturer::DiscardAllPackets");
-  // It is illegal to call Flush unless we are currently operating in
+  // It is illegal to call DiscardAllPackets unless we are currently operating in
   // synchronous mode.
   State state = state_.load();
   if (state != State::OperatingSync) {
-    FX_LOGS(ERROR) << "Flush called while not operating in sync mode "
-                   << "(state = " << static_cast<uint32_t>(state) << ")";
+    FX_LOGS(WARNING) << "DiscardAllPackets called while not operating in sync mode "
+                     << "(state = " << static_cast<uint32_t>(state) << ")";
     BeginShutdown();
     return;
   }
@@ -390,8 +411,8 @@ void BaseCapturer::StartAsyncCapture(uint32_t frames_per_packet) {
   // To enter Async mode, we must be in Synchronous mode and not have pending buffers in flight.
   State state = state_.load();
   if (state != State::OperatingSync) {
-    FX_LOGS(ERROR) << "Bad state while attempting to enter async capture mode "
-                   << "(state = " << static_cast<uint32_t>(state) << ")";
+    FX_LOGS(WARNING) << "Bad state while attempting to enter async capture mode "
+                     << "(state = " << static_cast<uint32_t>(state) << ")";
     return;
   }
 
@@ -402,7 +423,8 @@ void BaseCapturer::StartAsyncCapture(uint32_t frames_per_packet) {
   }
 
   if (!queues_empty) {
-    FX_LOGS(ERROR) << "Attempted to enter async capture mode with capture buffers still in flight.";
+    FX_LOGS(WARNING)
+        << "Attempted to enter async capture mode with capture buffers still in flight.";
     return;
   }
 
@@ -411,13 +433,13 @@ void BaseCapturer::StartAsyncCapture(uint32_t frames_per_packet) {
   // Currently our minimum frames-per-packet is 1, which is absurdly low.
   // TODO(13344): Decide on a proper minimum packet size, document it, and enforce the limit here.
   if (frames_per_packet == 0) {
-    FX_LOGS(ERROR) << "Frames per packet may not be zero.";
+    FX_LOGS(WARNING) << "Frames per packet may not be zero.";
     return;
   }
 
   FX_DCHECK(payload_buf_frames_ > 0);
   if (frames_per_packet > (payload_buf_frames_ / 2)) {
-    FX_LOGS(ERROR)
+    FX_LOGS(WARNING)
         << "There must be enough room in the shared payload buffer (" << payload_buf_frames_
         << " frames) to fit at least two packets of the requested number of frames per packet ("
         << frames_per_packet << " frames).";
@@ -453,8 +475,8 @@ void BaseCapturer::StopAsyncCapture(StopAsyncCaptureCallback cbk) {
   }
 
   if (state != State::OperatingAsync) {
-    FX_LOGS(ERROR) << "Bad state while attempting to stop async capture mode "
-                   << "(state = " << static_cast<uint32_t>(state) << ")";
+    FX_LOGS(WARNING) << "Bad state while attempting to stop async capture mode "
+                     << "(state = " << static_cast<uint32_t>(state) << ")";
     BeginShutdown();
     return;
   }

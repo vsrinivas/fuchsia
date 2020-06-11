@@ -5,6 +5,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/zx/clock.h>
 
+#include "lib/media/audio/cpp/types.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/lib/logging/logging.h"
@@ -18,9 +19,40 @@ namespace media::audio::test {
 // This set of tests verifies asynchronous usage of AudioCapturer.
 class AudioCapturerTest : public HermeticAudioTest {
  protected:
-  void SetUp() override;
-  void TearDown() override;
-  void SetNegativeExpectations() override;
+  void SetUp() override {
+    HermeticAudioTest::SetUp();
+
+    audio_core_->CreateAudioCapturer(false, audio_capturer_.NewRequest());
+    audio_capturer_.set_error_handler(ErrorHandler());
+  }
+
+  void TearDown() override {
+    gain_control_.Unbind();
+
+    EXPECT_EQ(bound_capturer_expected_, audio_capturer_.is_bound());
+    audio_capturer_.Unbind();
+
+    HermeticAudioTest::TearDown();
+  }
+
+  void SetNegativeExpectations() override {
+    HermeticAudioTest::SetNegativeExpectations();
+    bound_capturer_expected_ = false;
+  }
+
+  void SetFormat() {
+    audio_capturer_->SetPcmStreamType(
+        media::CreateAudioStreamType(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 16000));
+  }
+
+  void SetUpPayloadBuffer() {
+    zx::vmo audio_capturer_vmo;
+
+    auto status = zx::vmo::create(16000 * sizeof(int16_t), 0, &audio_capturer_vmo);
+    ASSERT_EQ(status, ZX_OK) << "Failed to create payload buffer";
+
+    audio_capturer_->AddPayloadBuffer(0, std::move(audio_capturer_vmo));
+  }
 
   fuchsia::media::AudioCapturerPtr audio_capturer_;
   fuchsia::media::audio::GainControlPtr gain_control_;
@@ -30,39 +62,28 @@ class AudioCapturerTest : public HermeticAudioTest {
 
 class AudioCapturerClockTest : public AudioCapturerTest {
  protected:
-  zx::clock GetAndValidateReferenceClock();
+  // The clock received from GetRefClock is read-only, but the original can still be adjusted.
+  static constexpr auto kClockRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
+
+  zx::clock GetAndValidateReferenceClock() {
+    zx::clock clock;
+
+    audio_capturer_->GetReferenceClock(CompletionCallback(
+        [&clock](zx::clock received_clock) { clock = std::move(received_clock); }));
+
+    ExpectCallback();
+    EXPECT_TRUE(clock.is_valid());
+
+    return clock;
+  }
 };
-
-//
-// AudioCapturerTest implementation
-//
-void AudioCapturerTest::SetUp() {
-  HermeticAudioTest::SetUp();
-
-  audio_core_->CreateAudioCapturer(false, audio_capturer_.NewRequest());
-  audio_capturer_.set_error_handler(ErrorHandler());
-}
-
-void AudioCapturerTest::TearDown() {
-  gain_control_.Unbind();
-
-  EXPECT_EQ(bound_capturer_expected_, audio_capturer_.is_bound());
-  audio_capturer_.Unbind();
-
-  HermeticAudioTest::TearDown();
-}
-
-void AudioCapturerTest::SetNegativeExpectations() {
-  HermeticAudioTest::SetNegativeExpectations();
-  bound_capturer_expected_ = false;
-}
 
 //
 // Test cases
 //
 // AudioCapturer implements the base classes StreamBufferSet and StreamSource.
 
-// StreamBufferSet validation
+// StreamBufferSet methods
 //
 
 // TODO(mpuryear): test AddPayloadBuffer(uint32 id, handle<vmo> payload_buffer);
@@ -74,7 +95,7 @@ void AudioCapturerTest::SetNegativeExpectations() {
 // TODO(mpuryear): apply same tests to AudioRenderer and AudioCapturer
 // (although their implementations within AudioCore differ somewhat).
 
-// StreamSource validation
+// StreamSource methods
 //
 
 // TODO(mpuryear): test -> OnPacketProduced(StreamPacket packet);
@@ -86,27 +107,135 @@ void AudioCapturerTest::SetNegativeExpectations() {
 // TODO(mpuryear): test ReleasePacket(StreamPacket packet);
 // Also negative testing: malformed or non-submitted packet, before started
 
-// It is an error to call DiscardAllPackets in any of the following conditions:
-// 1) when "waiting for VMO" (before AddPayloadBuffer has been called),
-// 2) when capturing in Async mode (or during the process of stopping Async),
-// 3) while the capture stream is being closed.
-// This test case verifies the scenario #1 above.
-// TODO(mpuryear): test sequence of pkt return, during Async capture.
-//
-TEST_F(AudioCapturerTest, DiscardAllWithNone) {
+// DiscardAllPackets waits to deliver its completion callback until all packets have returned.
+TEST_F(AudioCapturerTest, DiscardAll_ReturnsAfterAllPackets) {
+  SetFormat();
+  SetUpPayloadBuffer();
+
+  auto callbacks = 0u;
+  audio_capturer_->CaptureAt(
+      0, 0, 4000, [&callbacks](fuchsia::media::StreamPacket) { EXPECT_EQ(0u, callbacks++); });
+  audio_capturer_->CaptureAt(
+      0, 4000, 4000, [&callbacks](fuchsia::media::StreamPacket) { EXPECT_EQ(1u, callbacks++); });
+  audio_capturer_->CaptureAt(
+      0, 8000, 4000, [&callbacks](fuchsia::media::StreamPacket) { EXPECT_EQ(2u, callbacks++); });
+  audio_capturer_->CaptureAt(
+      0, 12000, 4000, [&callbacks](fuchsia::media::StreamPacket) { EXPECT_EQ(3u, callbacks++); });
+
+  // Packets should complete in strict order, with DiscardAllPackets' completion afterward.
+  audio_capturer_->DiscardAllPackets(
+      CompletionCallback([&callbacks]() { EXPECT_EQ(4u, callbacks); }));
+  ExpectCallback();
+}
+
+TEST_F(AudioCapturerTest, DiscardAll_WithNoVmoShouldDisconnect) {
+  SetFormat();
+
   audio_capturer_->DiscardAllPackets(CompletionCallback());
-
   ExpectDisconnect();
 }
 
-// TODO(mpuryear): DiscardAllPacketsNoReply() when started, post-stop
-TEST_F(AudioCapturerTest, DiscardAllNoReplyWithNone) {
+// DiscardAllPackets should fail, if async capture is active
+TEST_F(AudioCapturerTest, DiscardAll_DuringAsyncCaptureShouldDisconnect) {
+  SetFormat();
+  SetUpPayloadBuffer();
+
+  audio_capturer_.events().OnPacketProduced =
+      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_->StartAsyncCapture(1600);
+  ExpectCallback();
+
+  audio_capturer_->DiscardAllPackets(CompletionCallback());
+  ExpectDisconnect();
+}
+
+// DiscardAllPackets should fail, if async capture is in the process of stopping
+TEST_F(AudioCapturerTest, DISABLED_DiscardAll_AsyncCaptureStoppingShouldDisconnect) {
+  SetFormat();
+  SetUpPayloadBuffer();
+
+  audio_capturer_.events().OnPacketProduced =
+      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_->StartAsyncCapture(1600);
+  ExpectCallback();
+
+  audio_capturer_->StopAsyncCaptureNoReply();
+  audio_capturer_->DiscardAllPackets(CompletionCallback());
+  ExpectDisconnect();
+}
+
+// DiscardAllPackets should succeed, if async capture is completely stopped
+TEST_F(AudioCapturerTest, DiscardAll_AfterAsyncCapture) {
+  SetFormat();
+  SetUpPayloadBuffer();
+
+  audio_capturer_.events().OnPacketProduced =
+      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_->StartAsyncCapture(1600);
+  ExpectCallback();
+
+  audio_capturer_->StopAsyncCapture(CompletionCallback());
+  ExpectCallback();
+
+  audio_capturer_->DiscardAllPackets(CompletionCallback());
+  ExpectCallback();
+}
+
+// TODO(mpuryear): DiscardAllPacketsNoReply() post-stop
+TEST_F(AudioCapturerTest, DiscardAllNoReply_WithNoVmoShouldDisconnect) {
+  SetFormat();
+
   audio_capturer_->DiscardAllPacketsNoReply();
-
   ExpectDisconnect();
 }
 
-// AudioCapturer validation
+// DiscardAllPacketsNoReply should fail, if async capture is active
+TEST_F(AudioCapturerTest, DiscardAllNoReply_DuringAsyncCaptureShouldDisconnect) {
+  SetFormat();
+  SetUpPayloadBuffer();
+
+  audio_capturer_.events().OnPacketProduced =
+      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_->StartAsyncCapture(1600);
+  ExpectCallback();
+
+  audio_capturer_->DiscardAllPacketsNoReply();
+  ExpectDisconnect();
+}
+
+// DiscardAllPacketsNoReply should fail, if async capture is in the process of stopping
+TEST_F(AudioCapturerTest, DISABLED_DiscardAllNoReply_AsyncCaptureStoppingShouldDisconnect) {
+  SetFormat();
+  SetUpPayloadBuffer();
+
+  audio_capturer_.events().OnPacketProduced =
+      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_->StartAsyncCapture(1600);
+  ExpectCallback();
+
+  audio_capturer_->StopAsyncCaptureNoReply();
+  audio_capturer_->DiscardAllPacketsNoReply();
+  ExpectDisconnect();
+}
+
+// DiscardAllPacketsNoReply should succeed, if async capture is completely stopped
+TEST_F(AudioCapturerTest, DiscardAllNoReply_AfterAsyncCapture) {
+  SetFormat();
+  SetUpPayloadBuffer();
+
+  audio_capturer_.events().OnPacketProduced =
+      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_->StartAsyncCapture(1600);
+  ExpectCallback();
+
+  audio_capturer_->StopAsyncCapture(CompletionCallback());
+  ExpectCallback();
+
+  audio_capturer_->DiscardAllPacketsNoReply();
+  RunLoopUntilIdle();
+}
+
+// AudioCapturer methods
 //
 
 // TODO(mpuryear): test SetPcmStreamType(AudioStreamType stream_type);
@@ -122,16 +251,14 @@ TEST_F(AudioCapturerTest, DiscardAllNoReplyWithNone) {
 // Also when already started, before format set, before packets submitted
 // Also negative testing: 0/tiny/huge num frames (bigger than packet)
 
-TEST_F(AudioCapturerTest, StopWhenStoppedCausesDisconnect) {
+TEST_F(AudioCapturerTest, Stop_WhenStoppedShouldDisconnect) {
   audio_capturer_->StopAsyncCapture(CompletionCallback());
-
   ExpectDisconnect();
 }
 // Also test before format set, before packets submitted
 
-TEST_F(AudioCapturerTest, StopNoReplyWhenStoppedCausesDisconnect) {
+TEST_F(AudioCapturerTest, StopNoReply_WhenStoppedShouldDisconnect) {
   audio_capturer_->StopAsyncCaptureNoReply();
-
   ExpectDisconnect();
 }
 // Also before format set, before packets submitted
@@ -205,20 +332,11 @@ TEST_F(AudioCapturerTest, BindGainControlNull) {
 // TODO(mpuryear): test GetStreamType() -> (StreamType stream_type);
 // Also negative testing: before format set
 
-zx::clock AudioCapturerClockTest::GetAndValidateReferenceClock() {
-  zx::clock clock;
-
-  audio_capturer_->GetReferenceClock(CompletionCallback(
-      [&clock](zx::clock received_clock) { clock = std::move(received_clock); }));
-
-  ExpectCallback();
-  EXPECT_TRUE(clock.is_valid());
-
-  return clock;
-}
+//
+// Validation of AudioCapturer reference clock methods
 
 // Accept the default clock that is returned if we set no clock
-TEST_F(AudioCapturerClockTest, DefaultReferenceClock) {
+TEST_F(AudioCapturerClockTest, SetRefClock_Default) {
   zx::clock ref_clock = GetAndValidateReferenceClock();
 
   clock::testing::VerifyReadOnlyRights(ref_clock);
@@ -229,7 +347,7 @@ TEST_F(AudioCapturerClockTest, DefaultReferenceClock) {
 }
 
 // Set a null clock; representing selecting the AudioCore-generated optimal clock.
-TEST_F(AudioCapturerClockTest, OptimalReferenceClock) {
+TEST_F(AudioCapturerClockTest, SetRefClock_Optimal) {
   audio_capturer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
   zx::clock optimal_clock = GetAndValidateReferenceClock();
 
@@ -240,10 +358,8 @@ TEST_F(AudioCapturerClockTest, OptimalReferenceClock) {
   clock::testing::VerifyCannotBeRateAdjusted(optimal_clock);
 }
 
-constexpr auto kClockRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
-// Set a recognizable custom reference clock -- should be what we receive from GetReferenceClock.
-// Also, the clock received from GetRefClock is read-only, but the original can still be adjusted.
-TEST_F(AudioCapturerClockTest, CustomReferenceClock) {
+TEST_F(AudioCapturerClockTest, SetRefClock_Custom) {
+  // Set a recognizable custom reference clock -- should be what we receive from GetReferenceClock.
   zx::clock dupe_clock, orig_clock = clock::testing::CreateForSamenessTest();
   ASSERT_EQ(orig_clock.duplicate(kClockRights, &dupe_clock), ZX_OK);
 
@@ -265,7 +381,7 @@ TEST_F(AudioCapturerClockTest, CustomReferenceClock) {
 
 // inadequate ZX_RIGHTS -- if no TRANSFER, the SetReferenceClock silently does nothing.
 // The reference clock should remain the unique recognizable reference clock from before the call.
-TEST_F(AudioCapturerClockTest, CustomReferenceClock_NoTransferRightShouldCauseNoChange) {
+TEST_F(AudioCapturerClockTest, SetRefClock_CustomNoTransferNoChange) {
   // First create a unique custom clock that we will recognize...
   zx::clock dupe_clock, orig_clock = clock::testing::CreateForSamenessTest();
   ASSERT_EQ(orig_clock.duplicate(kClockRights, &dupe_clock), ZX_OK);
@@ -293,7 +409,7 @@ TEST_F(AudioCapturerClockTest, CustomReferenceClock_NoTransferRightShouldCauseNo
 }
 
 // inadequate ZX_RIGHTS -- no DUPLICATE should cause GetReferenceClock to fail.
-TEST_F(AudioCapturerClockTest, CustomReferenceClock_NoDuplicateRightShouldDisconnect) {
+TEST_F(AudioCapturerClockTest, SetRefClock_CustomNoDuplicateShouldDisconnect) {
   zx::clock dupe_clock, orig_clock = clock::testing::CreateForSamenessTest();
   ASSERT_EQ(orig_clock.duplicate(kClockRights & ~ZX_RIGHT_DUPLICATE, &dupe_clock), ZX_OK);
 
@@ -303,7 +419,7 @@ TEST_F(AudioCapturerClockTest, CustomReferenceClock_NoDuplicateRightShouldDiscon
 }
 
 // inadequate ZX_RIGHTS -- no READ should cause GetReferenceClock to fail.
-TEST_F(AudioCapturerClockTest, CustomReferenceClock_NoReadRightShouldDisconnect) {
+TEST_F(AudioCapturerClockTest, SetRefClock_CustomNoReadShouldDisconnect) {
   zx::clock dupe_clock, orig_clock = clock::testing::CreateForSamenessTest();
   ASSERT_EQ(orig_clock.duplicate(kClockRights & ~ZX_RIGHT_READ, &dupe_clock), ZX_OK);
 
@@ -313,13 +429,89 @@ TEST_F(AudioCapturerClockTest, CustomReferenceClock_NoReadRightShouldDisconnect)
 }
 
 // If client-submitted clock has ZX_RIGHT_WRITE, this should be removed upon GetReferenceClock
-TEST_F(AudioCapturerClockTest, CustomReferenceClock_GetReferenceClockRemovesWriteRight) {
+TEST_F(AudioCapturerClockTest, GetRefClock_RemovesWriteRight) {
   auto orig_clock = clock::AdjustableCloneOfMonotonic();
   audio_capturer_->SetReferenceClock(std::move(orig_clock));
 
   zx::clock received_clock = GetAndValidateReferenceClock();
-  EXPECT_TRUE(received_clock.is_valid());
   clock::testing::VerifyReadOnlyRights(received_clock);
+}
+
+// Setting the reference clock at any time before capture starts should succeed
+TEST_F(AudioCapturerClockTest, SetRefClock_BeforeCapture) {
+  SetFormat();
+  audio_capturer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
+  GetAndValidateReferenceClock();
+
+  SetUpPayloadBuffer();
+  audio_capturer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
+  GetAndValidateReferenceClock();
+}
+
+// Setting the reference clock should fail, if at least one capture packet is active
+TEST_F(AudioCapturerClockTest, SetRefClock_DuringCaptureShouldDisconnect) {
+  SetFormat();
+  SetUpPayloadBuffer();
+
+  audio_capturer_->CaptureAt(0, 0, 8000, [](fuchsia::media::StreamPacket) { FAIL(); });
+  audio_capturer_->SetReferenceClock(clock::CloneOfMonotonic());
+  ExpectDisconnect();
+}
+
+// Setting the reference clock should succeed, after all active capture packets have returned
+TEST_F(AudioCapturerClockTest, SetRefClock_AfterCapture) {
+  SetFormat();
+  SetUpPayloadBuffer();
+
+  audio_capturer_->CaptureAt(0, 0, 8000, CompletionCallback([](fuchsia::media::StreamPacket) {}));
+  ExpectCallback();
+
+  audio_capturer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
+  GetAndValidateReferenceClock();
+}
+
+// Setting the reference clock should succeed, after the cancellation has completed
+TEST_F(AudioCapturerClockTest, SetRefClock_CaptureCancelled) {
+  SetFormat();
+  SetUpPayloadBuffer();
+
+  audio_capturer_->CaptureAt(0, 0, 8000, [](fuchsia::media::StreamPacket) {});
+  audio_capturer_->DiscardAllPackets(CompletionCallback());
+  ExpectCallback();
+
+  audio_capturer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
+  GetAndValidateReferenceClock();
+}
+
+// Setting the reference clock should fail, if at least one capture packet is active
+TEST_F(AudioCapturerClockTest, SetRefClock_DuringAsyncCaptureShouldDisconnect) {
+  SetFormat();
+  SetUpPayloadBuffer();
+
+  audio_capturer_.events().OnPacketProduced =
+      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_->StartAsyncCapture(1600);
+  ExpectCallback();
+
+  audio_capturer_->SetReferenceClock(clock::CloneOfMonotonic());
+  ExpectDisconnect();
+}
+
+// Setting the reference clock should succeed, after all active capture packets have returned
+TEST_F(AudioCapturerClockTest, SetRefClock_AfterAsyncCapture) {
+  SetFormat();
+  SetUpPayloadBuffer();
+
+  audio_capturer_.events().OnPacketProduced =
+      CompletionCallback([](fuchsia::media::StreamPacket) {});
+  audio_capturer_->StartAsyncCapture(1600);
+  ExpectCallback();
+
+  audio_capturer_->StopAsyncCapture(CompletionCallback());
+  ExpectCallback();
+
+  audio_capturer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
+  GetAndValidateReferenceClock();
 }
 
 }  // namespace media::audio::test

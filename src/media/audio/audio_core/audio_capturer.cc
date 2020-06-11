@@ -85,6 +85,11 @@ void AudioCapturer::SetReferenceClock(zx::clock ref_clock) {
 
   auto cleanup = fit::defer([this]() { BeginShutdown(); });
 
+  if (IsOperating()) {
+    FX_LOGS(WARNING) << "Cannot set reference clock while operating!";
+    return;
+  }
+
   zx_status_t status;
   if (!ref_clock.is_valid()) {
     status = audio::clock::DuplicateClock(optimal_clock(), &ref_clock);
@@ -114,14 +119,14 @@ void AudioCapturer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type
   // If our shared buffer has been assigned, we are operating and our mode can no longer be changed.
   State state = capture_state();
   if (state != State::WaitingForVmo) {
-    FX_LOGS(ERROR) << "Cannot change capture mode while operating!"
-                   << "(state = " << static_cast<uint32_t>(state) << ")";
+    FX_LOGS(WARNING) << "Cannot change format after payload buffer has been added"
+                     << "(state = " << static_cast<uint32_t>(state) << ")";
     return;
   }
 
   auto format_result = Format::Create(stream_type);
   if (format_result.is_error()) {
-    FX_LOGS(ERROR) << "AudioCapturer: PcmStreamType is invalid";
+    FX_LOGS(WARNING) << "AudioCapturer: PcmStreamType is invalid";
     return;
   }
 
@@ -208,7 +213,7 @@ void AudioCapturer::SetGain(float gain_db) {
   // Before setting stream_gain_db_, we should always perform this range check.
   if ((gain_db < fuchsia::media::audio::MUTED_GAIN_DB) ||
       (gain_db > fuchsia::media::audio::MAX_GAIN_DB) || isnan(gain_db)) {
-    FX_LOGS(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
+    FX_LOGS(WARNING) << "SetGain(" << gain_db << " dB) out of range.";
     BeginShutdown();
     return;
   }

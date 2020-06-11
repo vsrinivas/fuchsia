@@ -48,7 +48,7 @@ bool AudioRenderer::GetStreamMute() const { return mute_; }
 void AudioRenderer::SetUsage(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioRenderer::SetUsage");
   if (format_) {
-    FX_LOGS(ERROR) << "SetUsage called after SetPcmStreamType.";
+    FX_LOGS(WARNING) << "SetUsage called after SetPcmStreamType.";
     context().route_graph().RemoveRenderer(*this);
     return;
   }
@@ -63,6 +63,12 @@ void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
   AUD_VLOG_OBJ(TRACE, this);
 
   auto cleanup = fit::defer([this]() { context().route_graph().RemoveRenderer(*this); });
+
+  // We cannot change the clock while packets are in flight.
+  if (IsOperating()) {
+    FX_LOGS(WARNING) << "Attempted to set reference clock while in operational mode.";
+    return;
+  }
 
   zx_status_t status;
   if (!ref_clock.is_valid()) {
@@ -87,19 +93,19 @@ void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
 
 void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) {
   TRACE_DURATION("audio", "AudioRenderer::SetPcmStreamType");
-  auto cleanup = fit::defer([this]() { context().route_graph().RemoveRenderer(*this); });
-
   AUD_VLOG_OBJ(TRACE, this);
+
+  auto cleanup = fit::defer([this]() { context().route_graph().RemoveRenderer(*this); });
 
   // We cannot change the format while we are currently operational
   if (IsOperating()) {
-    FX_LOGS(ERROR) << "Attempted to set format while in operational mode.";
+    FX_LOGS(WARNING) << "Attempted to set format while in operational mode.";
     return;
   }
 
   auto format_result = Format::Create(stream_type);
   if (format_result.is_error()) {
-    FX_LOGS(ERROR) << "AudioRenderer: PcmStreamType is invalid";
+    FX_LOGS(WARNING) << "AudioRenderer: PcmStreamType is invalid";
     return;
   }
   format_ = {format_result.take_value()};
@@ -168,7 +174,7 @@ void AudioRenderer::SetGain(float gain_db) {
   // Anywhere we set stream_gain_db_, we should perform this range check.
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
-    FX_LOGS(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
+    FX_LOGS(WARNING) << "SetGain(" << gain_db << " dB) out of range.";
     context().route_graph().RemoveRenderer(*this);
     return;
   }
@@ -195,7 +201,7 @@ void AudioRenderer::SetGainWithRamp(float gain_db, int64_t duration_ns,
 
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
-    FX_LOGS(ERROR) << "SetGainWithRamp(" << gain_db << " dB) out of range.";
+    FX_LOGS(WARNING) << "SetGainWithRamp(" << gain_db << " dB) out of range.";
     context().route_graph().RemoveRenderer(*this);
     return;
   }

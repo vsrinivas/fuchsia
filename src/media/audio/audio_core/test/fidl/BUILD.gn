@@ -31,6 +31,7 @@ executable("audio_fidl_tests_bin") {
   deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.virtualaudio",
+    "//sdk/lib/media/audio/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/clock:clone_mono",
     "//src/media/audio/lib/clock/testing",

@@ -116,7 +116,7 @@ TEST_F(AudioRendererTest, AddPayloadBuffer) {
 // TODO(tjdetwiler): This is out of spec but there are currently clients that
 // rely on this behavior. This test should be updated to fail once all clients
 // are fixed.
-TEST_F(AudioRendererTest, AddPayloadBufferDuplicateId) {
+TEST_F(AudioRendererTest, AddPayloadBuffer_DuplicateId) {
   CreateAndAddPayloadBuffer(0);
   CreateAndAddPayloadBuffer(0);
 
@@ -124,7 +124,7 @@ TEST_F(AudioRendererTest, AddPayloadBufferDuplicateId) {
 }
 
 // It is invalid to add a payload buffer while there are queued packets.
-TEST_F(AudioRendererTest, AddPayloadBufferWhileOperationalCausesDisconnect) {
+TEST_F(AudioRendererTest, AddPayloadBuffer_WhileOperationalShouldDisconnect) {
   // Configure with one buffer and a valid stream type.
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
@@ -158,14 +158,14 @@ TEST_F(AudioRendererTest, RemovePayloadBuffer) {
 
 // Test RemovePayloadBuffer with an invalid ID (does not have a corresponding
 // AddPayloadBuffer).
-TEST_F(AudioRendererTest, RemovePayloadBufferInvalidBufferIdCausesDisconnect) {
+TEST_F(AudioRendererTest, RemovePayloadBuffer_InvalidBufferIdShouldDisconnect) {
   audio_renderer_->RemovePayloadBuffer(0);
 
   ExpectDisconnect();
 }
 
 // It is invalid to remove a payload buffer while there are queued packets.
-TEST_F(AudioRendererTest, RemovePayloadBufferWhileOperationalCausesDisconnect) {
+TEST_F(AudioRendererTest, RemovePayloadBuffer_WhileOperationalShouldDisconnect) {
   // Configure with one buffer and a valid stream type.
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
@@ -212,7 +212,7 @@ TEST_F(AudioRendererTest, SendPacket) {
   EXPECT_TRUE(callback_received);
 }
 
-TEST_F(AudioRendererTest, SendPacketInvokesCallbacksInOrder) {
+TEST_F(AudioRendererTest, SendPacket_InvokesCallbacksInOrder) {
   // Configure with one buffer and a valid stream type.
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
@@ -240,7 +240,7 @@ TEST_F(AudioRendererTest, SendPacketInvokesCallbacksInOrder) {
   EXPECT_EQ(4u, callback_count);
 }
 
-TEST_F(AudioRendererTest, SendTooManyPacketsDisconnects) {
+TEST_F(AudioRendererTest, SendPackets_TooManyShouldDisconnect) {
   // Configure with one buffer and a valid stream type.
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
@@ -284,7 +284,7 @@ TEST_F(AudioRendererTest, SendPacketNoReply) {
   AssertConnectedAndDiscardAllPackets();
 }
 
-TEST_F(AudioRendererTest, SendPacketNoReplyInvalidPayloadBufferIdCausesDisconnect) {
+TEST_F(AudioRendererTest, SendPacketNoReply_InvalidPayloadBufferIdShouldDisconnect) {
   // Configure with one buffer and a valid stream type.
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
@@ -301,7 +301,7 @@ TEST_F(AudioRendererTest, SendPacketNoReplyInvalidPayloadBufferIdCausesDisconnec
 
 // It is invalid to SendPacket before the stream type has been configured
 // (SetPcmStreamType).
-TEST_F(AudioRendererTest, SendPacketBeforeSetPcmStreamTypeCausesDisconnect) {
+TEST_F(AudioRendererTest, SendPacketNoReply_BeforeSetPcmStreamTypeShouldDisconnect) {
   // Add a payload buffer but no stream type.
   CreateAndAddPayloadBuffer(0);
 
@@ -317,7 +317,7 @@ TEST_F(AudioRendererTest, SendPacketBeforeSetPcmStreamTypeCausesDisconnect) {
 }
 
 // SendPacket with a |payload_size| that is invalid.
-TEST_F(AudioRendererTest, SendPacketNoReplyInvalidPayloadBufferSizeCausesDisconnect) {
+TEST_F(AudioRendererTest, SendPacketNoReply_InvalidPayloadBufferSizeShouldDisconnect) {
   // Configure with one buffer and a valid stream type.
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
@@ -332,7 +332,7 @@ TEST_F(AudioRendererTest, SendPacketNoReplyInvalidPayloadBufferSizeCausesDisconn
   ExpectDisconnect();
 }
 
-TEST_F(AudioRendererTest, SendPacketNoReplyBufferOutOfBoundsCausesDisconnect) {
+TEST_F(AudioRendererTest, SendPacketNoReply_BufferOutOfBoundsShouldDisconnect) {
   // Configure with one buffer and a valid stream type.
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
@@ -348,7 +348,7 @@ TEST_F(AudioRendererTest, SendPacketNoReplyBufferOutOfBoundsCausesDisconnect) {
   ExpectDisconnect();
 }
 
-TEST_F(AudioRendererTest, SendPacketNoReplyBufferOverrunCausesDisconnect) {
+TEST_F(AudioRendererTest, SendPacketNoReply_BufferOverrunShouldDisconnect) {
   // Configure with one buffer and a valid stream type.
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
@@ -367,9 +367,7 @@ TEST_F(AudioRendererTest, SendPacketNoReplyBufferOverrunCausesDisconnect) {
 // TODO(mpuryear): test EndOfStream();
 // Also proper sequence of callbacks/completions
 
-// TODO(mpuryear): test DiscardAllPackets() -> ();
-// Also when no packets, when started
-TEST_F(AudioRendererTest, DiscardAllPacketsBeforeConfiguredDoesntComputeTimeline) {
+TEST_F(AudioRendererTest, DiscardAllPackets_BeforeConfiguredDoesntComputeTimeline) {
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
 
@@ -414,6 +412,30 @@ TEST_F(AudioRendererTest, DiscardAllPacketsBeforeConfiguredDoesntComputeTimeline
   } else {
     EXPECT_EQ(pause_media_time, 0);
   }
+}
+
+// DiscardAllPackets waits to deliver its completion callback until all packets have returned.
+TEST_F(AudioRendererTest, DiscardAllPackets_ReturnsAfterAllPackets) {
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+  AssertConnectedAndDiscardAllPackets();
+
+  // Even if one packet completes almost immediately, the others will still be outstanding.
+  fuchsia::media::StreamPacket packet1, packet2, packet3;
+  packet1.payload_buffer_id = packet2.payload_buffer_id = packet3.payload_buffer_id = 0;
+  packet1.payload_offset = packet2.payload_offset = packet3.payload_offset = 0;
+  packet1.payload_size = packet2.payload_size = packet3.payload_size = kDefaultPayloadBufferSize;
+
+  auto callbacks = 0u;
+  audio_renderer_->SendPacket(std::move(packet1), [&callbacks]() { EXPECT_EQ(0u, callbacks++); });
+  audio_renderer_->SendPacket(std::move(packet2), [&callbacks]() { EXPECT_EQ(1u, callbacks++); });
+  audio_renderer_->SendPacket(std::move(packet3), [&callbacks]() { EXPECT_EQ(2u, callbacks++); });
+  audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
+
+  // Packets must complete in order, with the DiscardAllPackets completion afterward.
+  audio_renderer_->DiscardAllPackets(
+      CompletionCallback([&callbacks]() { EXPECT_EQ(3u, callbacks); }));
+  ExpectCallback();
 }
 
 // TODO(mpuryear): test DiscardAllPacketsNoReply();
@@ -623,7 +645,7 @@ TEST_F(AudioRendererTest, BindGainControl) {
 }
 
 // Before setting format, Play should not succeed.
-TEST_F(AudioRendererTest, PlayWithoutFormat) {
+TEST_F(AudioRendererTest, Play_WithoutFormatShouldDisconnect) {
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
@@ -641,7 +663,7 @@ TEST_F(AudioRendererTest, PlayWithoutFormat) {
 }
 
 // After setting format but before submitting buffers, Play should not succeed.
-TEST_F(AudioRendererTest, PlayWithoutBuffers) {
+TEST_F(AudioRendererTest, Play_WithoutBuffersShouldDisconnect) {
   fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 1;
@@ -665,7 +687,7 @@ TEST_F(AudioRendererTest, PlayWithoutBuffers) {
 }
 
 // Before setting format, PlayNoReply should cause a Disconnect.
-TEST_F(AudioRendererTest, PlayNoReplyWithoutFormat) {
+TEST_F(AudioRendererTest, PlayNoReply_WithoutFormatShouldDisconnect) {
   audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
 
   // Disconnect callback should be received.
@@ -673,7 +695,7 @@ TEST_F(AudioRendererTest, PlayNoReplyWithoutFormat) {
 }
 
 // Before setting format, Pause should not succeed.
-TEST_F(AudioRendererTest, PauseWithoutFormat) {
+TEST_F(AudioRendererTest, PauseWithoutFormatShouldDisconnect) {
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
@@ -690,7 +712,7 @@ TEST_F(AudioRendererTest, PauseWithoutFormat) {
 }
 
 // After setting format but before submitting buffers, Pause should not succeed.
-TEST_F(AudioRendererTest, PauseWithoutBuffers) {
+TEST_F(AudioRendererTest, Pause_WithoutBuffersShouldDisconnect) {
   fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 1;
@@ -713,14 +735,14 @@ TEST_F(AudioRendererTest, PauseWithoutBuffers) {
 }
 
 // Before setting format, PauseNoReply should cause a Disconnect.
-TEST_F(AudioRendererTest, PauseNoReplyWithoutFormat) {
+TEST_F(AudioRendererTest, PauseNoReply_WithoutFormatShouldDisconnect) {
   audio_renderer_->PauseNoReply();
 
   // Disconnect callback should be received.
   ExpectDisconnect();
 }
 
-TEST_F(AudioRendererTest, SetUsageAfterSetPcmStreamTypeCausesDisconnect) {
+TEST_F(AudioRendererTest, SetUsage_AfterSetPcmStreamTypeShouldDisconnect) {
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
   AssertConnectedAndDiscardAllPackets();
@@ -742,8 +764,12 @@ zx::clock AudioRendererClockTest::GetAndValidateReferenceClock() {
   return clock;
 }
 
+//
+// AudioRenderer reference clock methods
+//
+
 // Accept the default clock that is returned if we set no clock
-TEST_F(AudioRendererClockTest, DefaultReferenceClock) {
+TEST_F(AudioRendererClockTest, SetRefClock_Default) {
   zx::clock ref_clock = GetAndValidateReferenceClock();
 
   clock::testing::VerifyReadOnlyRights(ref_clock);
@@ -754,7 +780,7 @@ TEST_F(AudioRendererClockTest, DefaultReferenceClock) {
 }
 
 // Set a null clock; representing selecting the AudioCore-generated optimal clock.
-TEST_F(AudioRendererClockTest, OptimalReferenceClock) {
+TEST_F(AudioRendererClockTest, SetRefClock_Optimal) {
   audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
   zx::clock optimal_clock = GetAndValidateReferenceClock();
 
@@ -768,7 +794,7 @@ TEST_F(AudioRendererClockTest, OptimalReferenceClock) {
 constexpr auto kClockRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
 // Set a recognizable custom reference clock -- should be what we receive from GetReferenceClock.
 // Also, the clock received from GetRefClock is read-only, but the original can still be adjusted.
-TEST_F(AudioRendererClockTest, CustomReferenceClock) {
+TEST_F(AudioRendererClockTest, SetRefClock_Custom) {
   zx::clock dupe_clock, orig_clock = clock::testing::CreateForSamenessTest();
   ASSERT_EQ(orig_clock.duplicate(kClockRights, &dupe_clock), ZX_OK);
 
@@ -790,7 +816,7 @@ TEST_F(AudioRendererClockTest, CustomReferenceClock) {
 
 // inadequate ZX_RIGHTS -- if no TRANSFER, the SetReferenceClock silently does nothing.
 // The reference clock should remain the unique recognizable reference clock from before the call.
-TEST_F(AudioRendererClockTest, CustomReferenceClock_NoTransferRightShouldCauseNoChange) {
+TEST_F(AudioRendererClockTest, SetRefClock_NoTransferNoChange) {
   // First create a unique custom clock that we will recognize...
   zx::clock dupe_clock, orig_clock = clock::testing::CreateForSamenessTest();
   ASSERT_EQ(orig_clock.duplicate(kClockRights, &dupe_clock), ZX_OK);
@@ -818,33 +844,87 @@ TEST_F(AudioRendererClockTest, CustomReferenceClock_NoTransferRightShouldCauseNo
 }
 
 // inadequate ZX_RIGHTS -- no DUPLICATE should cause GetReferenceClock to fail.
-TEST_F(AudioRendererClockTest, CustomReferenceClock_NoDuplicateRightShouldDisconnect) {
+TEST_F(AudioRendererClockTest, SetRefClock_NoDuplicateShouldDisconnect) {
   zx::clock dupe_clock, orig_clock = clock::testing::CreateForSamenessTest();
   ASSERT_EQ(orig_clock.duplicate(kClockRights & ~ZX_RIGHT_DUPLICATE, &dupe_clock), ZX_OK);
 
   audio_renderer_->SetReferenceClock(std::move(dupe_clock));
-
   ExpectDisconnect();
 }
 
 // inadequate ZX_RIGHTS -- no READ should cause GetReferenceClock to fail.
-TEST_F(AudioRendererClockTest, CustomReferenceClock_NoReadRightShouldDisconnect) {
+TEST_F(AudioRendererClockTest, SetRefClock_NoReadShouldDisconnect) {
   zx::clock dupe_clock, orig_clock = clock::testing::CreateForSamenessTest();
   ASSERT_EQ(orig_clock.duplicate(kClockRights & ~ZX_RIGHT_READ, &dupe_clock), ZX_OK);
 
   audio_renderer_->SetReferenceClock(std::move(dupe_clock));
-
   ExpectDisconnect();
 }
 
 // If client-submitted clock has ZX_RIGHT_WRITE, this should be removed upon GetReferenceClock
-TEST_F(AudioRendererClockTest, CustomReferenceClock_GetRefClkRemovesWriteRight) {
+TEST_F(AudioRendererClockTest, GetRefClock_RemovesWriteRight) {
   auto orig_clock = clock::AdjustableCloneOfMonotonic();
   audio_renderer_->SetReferenceClock(std::move(orig_clock));
 
   zx::clock received_clock = GetAndValidateReferenceClock();
-  EXPECT_TRUE(received_clock.is_valid());
   clock::testing::VerifyReadOnlyRights(received_clock);
+}
+
+// Setting the reference clock at any time before packet submittal should succeed
+TEST_F(AudioRendererClockTest, SetRefClock_NoPacket) {
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
+  GetAndValidateReferenceClock();
+
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+  audio_renderer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
+  GetAndValidateReferenceClock();
+
+  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
+                        CompletionCallback([](int64_t, int64_t) {}));
+  ExpectCallback();
+
+  // We are now playing, but there are no active packets.
+  audio_renderer_->SetReferenceClock(clock::CloneOfMonotonic());
+  GetAndValidateReferenceClock();
+}
+
+// Setting the reference clock should fail, if at least one render packet is active
+TEST_F(AudioRendererClockTest, SetRefClock_PacketActiveShouldDisconnect) {
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+  AssertConnectedAndDiscardAllPackets();
+
+  // Even if one packet completes almost immediately, the other will still be outstanding.
+  fuchsia::media::StreamPacket packet, packet2;
+  packet.payload_buffer_id = packet2.payload_buffer_id = 0;
+  packet.payload_offset = packet2.payload_offset = 0;
+  packet.payload_size = packet2.payload_size = kDefaultPayloadBufferSize;
+  audio_renderer_->SendPacketNoReply(std::move(packet));
+  audio_renderer_->SendPacketNoReply(std::move(packet2));
+
+  audio_renderer_->SetReferenceClock(clock::CloneOfMonotonic());
+  ExpectDisconnect();
+}
+
+// Setting the reference clock should succeed, after all active render packets have returned
+TEST_F(AudioRendererClockTest, SetRefClock_AfterPacket) {
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+  AssertConnectedAndDiscardAllPackets();
+
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = kValidPayloadSize;
+  audio_renderer_->SendPacket(std::move(packet), CompletionCallback());
+  audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
+
+  // Wait for the packet completion; now there are no active packets.
+  ExpectCallback();
+
+  audio_renderer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
+  GetAndValidateReferenceClock();
 }
 
 }  // namespace media::audio::test

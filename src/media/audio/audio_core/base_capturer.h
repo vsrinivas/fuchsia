@@ -110,6 +110,7 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
     std::lock_guard<std::mutex> pending_lock(pending_lock_);
     return !pending_capture_buffers_.is_empty();
   }
+  bool IsOperating();
 
   void UpdateFormat(Format format) FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
