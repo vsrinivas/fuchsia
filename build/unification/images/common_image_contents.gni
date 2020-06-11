@@ -224,7 +224,7 @@ common_image_contents = [
   "//zircon/system/uapp/psutils:vmaps",
   "//zircon/system/uapp/psutils:vmos",
   "//src/bringup/bin/run-vc",
-  "//zircon/system/uapp/runtests",
+  "//src/testing/runtests",
   "//zircon/system/uapp/spawn",
   "//zircon/system/uapp/storage-metrics",
   "//zircon/system/uapp/syscall-check",
