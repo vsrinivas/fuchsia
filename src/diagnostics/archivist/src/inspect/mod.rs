@@ -245,7 +245,7 @@ impl ReaderServer {
         inspect_batch: Vec<UnpopulatedInspectDataContainer>,
         inspect_component_timeout_property: Arc<fuchsia_inspect::UintProperty>,
     ) -> Vec<PopulatedInspectDataContainer> {
-        join_all(inspect_batch.into_iter().map(move |inspect_data_packet, | {
+        join_all(inspect_batch.into_iter().map(move |inspect_data_packet| {
             let attempted_relative_moniker = inspect_data_packet.relative_moniker.clone();
             let attempted_inspect_matcher = inspect_data_packet.inspect_matcher.clone();
             let cloned_property = inspect_component_timeout_property.clone();
@@ -253,13 +253,13 @@ impl ReaderServer {
                 PER_COMPONENT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(),
                 move || {
                     cloned_property.add(1);
+                    let error_string = format!(
+                        "Exceeded per-component time limit for fetching diagnostics data: {:?}",
+                        attempted_relative_moniker
+                    );
+                    error!("{}", error_string);
                     let no_success_snapshot_data = vec![SnapshotData::failed(
-                        formatter::Error {
-                            message: format!(
-                                "Exceeded per-component time limit for fetching diagnostics data: {:?}",
-                                attempted_relative_moniker
-                            ),
-                        },
+                        formatter::Error { message: error_string },
                         "NO_FILE_SUCCEEDED".to_string(),
                     )];
                     PopulatedInspectDataContainer {
