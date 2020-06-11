@@ -11,7 +11,7 @@
 #include <fvm-host/container.h>
 #include <fvm/sparse-reader.h>
 #include <minfs/host.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 // NOTES ABOUT DISABLED TESTS
 //
@@ -24,6 +24,8 @@
 //
 // TODO(bug 38188) fix the disabled tests.
 
+namespace {
+
 constexpr uint64_t kBytesPerMB = 1ull << 20;
 
 constexpr uint64_t kDefaultSliceSize = kBytesPerMB / 2;
@@ -32,42 +34,37 @@ constexpr uint64_t kContainerSize = 128 * kBytesPerMB;
 
 constexpr size_t kMaxPartitions = 6;
 
-static char test_dir[PATH_MAX];
-static char sparse_path[PATH_MAX];
-static char sparse_lz4_path[PATH_MAX];
-static char fvm_path[PATH_MAX];
-
 static constexpr char kEmptyString[] = "";
 
 static constexpr uint32_t kDefaultNumDirs = 10;
 static constexpr uint32_t kDefaultNumFiles = 10;
 static constexpr uint32_t kDefaultMaxSize = 16385;
 
-typedef enum {
-  MINFS,
-  BLOBFS,
-} fs_type_t;
+enum class FsType {
+  kMinFs,
+  kBlobFs,
+};
 
-typedef enum {
-  DATA,
-  DATA_UNSAFE,
-  SYSTEM,
-  BLOBSTORE,
-  DEFAULT,
-} guid_type_t;
+enum class GuidType {
+  kData,
+  kDataUnsafe,
+  kSystem,
+  kBlobStore,
+  kDefault,
+};
 
-typedef enum {
-  SPARSE,          // Sparse container
-  SPARSE_LZ4,      // Sparse container compressed with LZ4
-  SPARSE_ZXCRYPT,  // Sparse container to be stored on a zxcrypt volume
-  FVM,             // Explicitly created FVM container
-  FVM_NEW,         // FVM container created on FvmContainer::Create
-  FVM_OFFSET,      // FVM container created at an offset within a file
-} container_t;
+enum class ContainerType {
+  kSparse,         // Sparse container.
+  kSparseLZ4,      // Sparse container compressed with LZ4.
+  kSparseZxCrypt,  // Sparse container to be stored on a zxcrypt volume.
+  kFvm,            // Explicitly created FVM container.
+  kFvmNew,         // FVM container created on FvmContainer::Create.
+  kFvmOffset,      // FVM container created at an offset within a file.
+};
 
-typedef struct {
-  fs_type_t fs_type;
-  guid_type_t guid_type;
+struct Partition {
+  FsType fs_type;
+  GuidType guid_type;
   char path[PATH_MAX];
   bool created = false;
   FvmReservation reserve;
@@ -75,9 +72,9 @@ typedef struct {
 
   const char* FsTypeName() {
     switch (fs_type) {
-      case MINFS:
+      case FsType::kMinFs:
         return kMinfsName;
-      case BLOBFS:
+      case FsType::kBlobFs:
         return kBlobfsName;
       default:
         return kEmptyString;
@@ -86,15 +83,15 @@ typedef struct {
 
   const char* GuidTypeName() {
     switch (guid_type) {
-      case DATA:
+      case GuidType::kData:
         return kDataTypeName;
-      case DATA_UNSAFE:
+      case GuidType::kDataUnsafe:
         return kDataUnsafeTypeName;
-      case SYSTEM:
+      case GuidType::kSystem:
         return kSystemTypeName;
-      case BLOBSTORE:
+      case GuidType::kBlobStore:
         return kBlobTypeName;
-      case DEFAULT:
+      case GuidType::kDefault:
         return kDefaultTypeName;
       default:
         return kEmptyString;
@@ -102,583 +99,576 @@ typedef struct {
   }
 
   void GeneratePath(char* dir) { sprintf(path, "%s%s_%s.bin", dir, FsTypeName(), GuidTypeName()); }
-} partition_t;
+};
 
-static partition_t partitions[kMaxPartitions];
-static uint32_t partition_count;
-
-bool CreateFile(const char* path, size_t size) {
-  BEGIN_HELPER;
-  int r = open(path, O_RDWR | O_CREAT | O_EXCL, 0755);
-  ASSERT_GE(r, 0, "Unable to create path");
-  ASSERT_EQ(ftruncate(r, size), 0, "Unable to truncate disk");
-  ASSERT_EQ(close(r), 0, "Unable to close disk");
-  END_HELPER;
+size_t ComputeRequiredDataSize(const std::unique_ptr<FvmContainer>& container) {
+  // Make use of the CalculateDiskSize() method to compute the required data size.
+  // The required data size is one that does not include the header size and extended part.
+  size_t minimal_disk_size = container->CalculateDiskSize();
+  size_t minimal_metadata_size = fvm::MetadataSize(minimal_disk_size, kDefaultSliceSize);
+  return minimal_disk_size - 2 * minimal_metadata_size;
 }
 
-bool CreateMinfs(const char* path) {
-  BEGIN_HELPER;
-  unittest_printf("Creating Minfs partition: %s\n", path);
-  ASSERT_TRUE(CreateFile(path, kPartitionSize));
-  ASSERT_EQ(emu_mkfs(path), 0, "Unable to run mkfs");
-  END_HELPER;
-}
+class FvmHostTest : public zxtest::Test {
+ public:
+  void SetUp() override {
+    // Generate test directory.
+    srand(static_cast<unsigned int>(time(0)));
+    GenerateDirectory("/tmp/", 20, test_dir);
+    ASSERT_EQ(0, mkdir(test_dir, 0755));
 
-bool CreateBlobfs(const char* path) {
-  BEGIN_HELPER;
-  unittest_printf("Creating Blobfs partition: %s\n", path);
-  int r = open(path, O_RDWR | O_CREAT | O_EXCL, 0755);
-  ASSERT_GE(r, 0, "Unable to create path");
-  ASSERT_EQ(ftruncate(r, kPartitionSize), 0, "Unable to truncate disk");
-  uint64_t block_count;
-  ASSERT_EQ(blobfs::GetBlockCount(r, &block_count), ZX_OK, "Cannot find end of underlying device");
-  ASSERT_EQ(blobfs::Mkfs(r, block_count), ZX_OK, "Failed to make blobfs partition");
-  ASSERT_EQ(close(r), 0, "Unable to close disk\n");
-  END_HELPER;
-}
+    // Generate partition paths
+    partition_count = 0;
+    GeneratePartitionPath(FsType::kMinFs, GuidType::kData);
+    GeneratePartitionPath(FsType::kMinFs, GuidType::kDataUnsafe);
+    GeneratePartitionPath(FsType::kMinFs, GuidType::kSystem);
+    GeneratePartitionPath(FsType::kMinFs, GuidType::kDefault);
+    GeneratePartitionPath(FsType::kBlobFs, GuidType::kBlobStore);
+    GeneratePartitionPath(FsType::kBlobFs, GuidType::kDefault);
+    ASSERT_EQ(partition_count, kMaxPartitions);
 
-// Adds all create partitions to |container|. If enable_data is false, the DATA partition is
-// skipped. This is to avoid discrepancies in disk size calculation due to zxcrypt not being
-// implemented on host.
-// Stores success or failure of each AddPartition in part->status.
-// TODO(planders): Once we are able to create zxcrypt'd FVM images on host, remove enable_data flag.
-void AddPartitionsReserve(Container* container, bool enable_data) {
-  // Randomize order in which partitions are added to container.
-  uint32_t order[partition_count];
+    // Generate container paths
+    sprintf(sparse_path, "%ssparse.bin", test_dir);
+    sprintf(sparse_lz4_path, "%ssparse.bin.lz4", test_dir);
+    sprintf(fvm_path, "%sfvm.bin", test_dir);
 
-  for (unsigned i = 0; i < partition_count; i++) {
-    order[i] = i;
+    // Create and populate partitions
+    CreatePartitions();
+    PopulatePartitions(kDefaultNumDirs, kDefaultNumFiles, kDefaultMaxSize);
   }
 
-  uint32_t remaining = partition_count;
-  while (remaining) {
-    unsigned index = rand() % remaining;
+  void TearDown() override {
+    DestroyPartitions();
 
-    if (index != remaining - 1) {
-      unsigned temp = order[remaining - 1];
-      order[remaining - 1] = order[index];
-      order[index] = temp;
+    DIR* dir = opendir(test_dir);
+    ASSERT_TRUE(dir);
+
+    struct dirent* de;
+    while ((de = readdir(dir)) != NULL) {
+      if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, ".."))
+        continue;
+
+      ASSERT_EQ(0, unlinkat(dirfd(dir), de->d_name, 0));
     }
 
-    remaining--;
+    EXPECT_EQ(0, closedir(dir));
+    ASSERT_EQ(0, rmdir(test_dir));
   }
 
-  for (unsigned i = 0; i < partition_count; i++) {
-    partition_t* part = &partitions[order[i]];
-
-    if (!enable_data && !strcmp(part->GuidTypeName(), kDataTypeName)) {
-      unittest_printf("Skipping addition of partition %s\n", part->path);
-      continue;
-    }
-
-    if (part->created) {
-      unittest_printf("Adding partition to container: %s\n", part->path);
-      part->status = container->AddPartition(part->path, part->GuidTypeName(), &part->reserve);
-    }
-  }
-}
-
-// Adds all created partitions to |container|. Asserts on failures.
-bool AddPartitions(Container* container, bool enable_data, bool should_pass) {
-  BEGIN_HELPER;
-  AddPartitionsReserve(container, enable_data);
-  for (unsigned i = 0; i < partition_count; i++) {
-    partition_t* part = &partitions[i];
-    if (part->created) {
-      bool added = part->status == ZX_OK;
-      bool reserved = part->reserve.Approved();
-      if ((added && reserved) != should_pass) {
-        fprintf(stderr, "Failed to add partition %d\n", added);
-        part->reserve.Dump(stderr);
+ protected:
+  void CreatePartitions() {
+    for (unsigned i = 0; i < partition_count; i++) {
+      Partition* part = &partitions[i];
+      switch (part->fs_type) {
+        case FsType::kMinFs:
+          CreateMinfs(part->path);
+          break;
+        case FsType::kBlobFs:
+          CreateBlobfs(part->path);
+          break;
+        default:
+          ASSERT_TRUE(false);  // Unknown file system type.
       }
-      ASSERT_EQ(added && reserved, should_pass);
+
+      part->created = true;
     }
   }
 
-  END_HELPER;
-}
-
-// Creates a sparse container and adds partitions to it. When should_pass is false,
-// the function surfaces the error in adding partition to caller without asserting.
-bool CreateSparse(uint32_t flags, size_t slice_size, bool should_pass, bool enable_data = true,
-                  uint64_t max_disk_size = 0) {
-  BEGIN_HELPER;
-
-  const char* path = ((flags & fvm::kSparseFlagLz4) != 0) ? sparse_lz4_path : sparse_path;
-  unittest_printf("Creating sparse container: %s\n", path);
-  std::unique_ptr<SparseContainer> sparseContainer;
-  ASSERT_EQ(SparseContainer::CreateNew(path, slice_size, flags, max_disk_size, &sparseContainer),
-            ZX_OK, "Failed to initialize sparse container");
-  ASSERT_TRUE(AddPartitions(sparseContainer.get(), enable_data, should_pass));
-  if (should_pass) {
-    ASSERT_EQ(sparseContainer->Commit(), ZX_OK, "Failed to write to sparse file");
-    if (max_disk_size > 0) {
-      ASSERT_EQ(sparseContainer->MaximumDiskSize(), max_disk_size);
-    }
-    uint64_t data_size = 0, inode_count = 0, used_size = 0;
-    if ((flags & fvm::kSparseFlagLz4) == 0) {
-      ASSERT_EQ(sparseContainer->UsedSize(&used_size), ZX_OK);
-      ASSERT_NE(used_size, 0);
-      ASSERT_EQ(sparseContainer->UsedDataSize(&data_size), ZX_OK);
-      ASSERT_NE(data_size, 0);
-      ASSERT_GT(used_size, data_size);
-      ASSERT_EQ(sparseContainer->UsedInodes(&inode_count), ZX_OK);
-      ASSERT_NE(inode_count, 0);
-    } else {
-      ASSERT_NE(sparseContainer->UsedSize(&used_size), ZX_OK);
-      ASSERT_NE(sparseContainer->UsedDataSize(&data_size), ZX_OK);
-      ASSERT_NE(sparseContainer->UsedInodes(&inode_count), ZX_OK);
+  // Adds all created partitions to |container|. Asserts on failures.
+  void AddPartitions(Container* container, bool enable_data, bool should_pass) {
+    AddPartitionsReserve(container, enable_data);
+    for (unsigned i = 0; i < partition_count; i++) {
+      Partition* part = &partitions[i];
+      if (part->created) {
+        bool added = part->status == ZX_OK;
+        bool reserved = part->reserve.Approved();
+        if ((added && reserved) != should_pass) {
+          part->reserve.Dump(stderr);
+        }
+        ASSERT_EQ(added && reserved, should_pass);
+      }
     }
   }
-  END_HELPER;
-}
 
-bool CreateSparseEnsure(uint32_t flags, size_t slice_size, bool enable_data = true) {
-  BEGIN_HELPER;
-  ASSERT_TRUE(CreateSparse(flags, slice_size, true, enable_data));
-  END_HELPER;
-}
-bool StatFile(const char* path, off_t* length) {
-  BEGIN_HELPER;
-  fbl::unique_fd fd(open(path, O_RDWR, 0755));
-  ASSERT_TRUE(fd, "Unable to open file");
-  struct stat s;
-  ASSERT_EQ(fstat(fd.get(), &s), 0, "Unable to stat file");
-  *length = s.st_size;
-  END_HELPER;
-}
-
-bool ReportContainer(const char* path, off_t offset) {
-  BEGIN_HELPER;
-  std::unique_ptr<Container> container;
-  ASSERT_EQ(Container::Create(path, offset, 0, &container), ZX_OK,
-            "Failed to initialize container");
-  ASSERT_EQ(container->Verify(), ZX_OK, "File check failed\n");
-  END_HELPER;
-}
-
-bool ReportSparse(uint32_t flags) {
-  BEGIN_HELPER;
-  if ((flags & fvm::kSparseFlagLz4) != 0) {
-    unittest_printf("Decompressing sparse file\n");
-    std::unique_ptr<SparseContainer> compressedContainer;
-    ASSERT_EQ(SparseContainer::CreateExisting(sparse_lz4_path, &compressedContainer), ZX_OK);
-    ASSERT_EQ(compressedContainer->Decompress(sparse_path), ZX_OK);
+  void DestroyPartitions() {
+    for (unsigned i = 0; i < partition_count; i++) {
+      Partition* part = &partitions[i];
+      if (part->created) {
+        EXPECT_EQ(0, unlink(part->path));
+        part->created = false;
+        // Reset reservations for next iteration of the test.
+        part->reserve = FvmReservation({}, {}, {});
+      }
+    }
   }
 
-  ASSERT_TRUE(ReportContainer(sparse_path, 0));
+  void GeneratePartitionPath(FsType fs_type, GuidType guid_type) {
+    ASSERT_LT(partition_count, kMaxPartitions);
 
-  // Check that the calculated disk size passes inspection, but any size lower doesn't.
-  std::unique_ptr<SparseContainer> container;
-  ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &container), ZX_OK);
+    // Make sure we have not already created a partition with the same fs/guid type combo.
+    for (unsigned i = 0; i < partition_count; i++) {
+      Partition* part = &partitions[i];
+      ASSERT_FALSE(part->fs_type == fs_type && part->guid_type == guid_type);
+    }
 
-  size_t expected_size = container->CalculateDiskSize();
-  ASSERT_EQ(container->CheckDiskSize(expected_size), ZX_OK);
-  ASSERT_NE(container->CheckDiskSize(expected_size - 1), ZX_OK);
-  END_HELPER;
-}
-
-// Creates a fvm container and adds partitions to it. When should succeed is false,
-// the function surfaces the error in adding partition to caller without asserting.
-bool CreateFvm(bool create_before, off_t offset, size_t slice_size, bool should_pass,
-               bool enable_data = true,
-               FvmContainer::ResizeImageFileToFitOption resize_image_file_to_fit =
-                   FvmContainer::ResizeImageFileToFitOption::NO) {
-  BEGIN_HELPER;
-  unittest_printf("Creating fvm container: %s\n", fvm_path);
-
-  off_t length = 0;
-  if (create_before) {
-    ASSERT_TRUE(CreateFile(fvm_path, kContainerSize));
-    ASSERT_TRUE(StatFile(fvm_path, &length));
+    Partition* part = &partitions[partition_count++];
+    part->fs_type = fs_type;
+    part->guid_type = guid_type;
+    part->GeneratePath(test_dir);
   }
 
-  std::unique_ptr<FvmContainer> fvmContainer;
-  ASSERT_EQ(FvmContainer::CreateNew(fvm_path, slice_size, offset, length - offset, &fvmContainer),
-            ZX_OK, "Failed to initialize fvm container");
-  ASSERT_TRUE(AddPartitions(fvmContainer.get(), enable_data, should_pass));
-  if (should_pass) {
-    fvmContainer->SetResizeImageFileToFit(resize_image_file_to_fit);
-    ASSERT_EQ(fvmContainer->Commit(), ZX_OK, "Failed to write to fvm file");
-  }
-  END_HELPER;
-}
+  void GenerateData(size_t len, std::unique_ptr<uint8_t[]>* out) {
+    // Fill a test buffer with data
+    fbl::AllocChecker ac;
+    std::unique_ptr<uint8_t[]> data(new (&ac) uint8_t[len]);
+    ASSERT_TRUE(ac.check());
 
-bool CreateFvmEnsure(bool create_before, off_t offset, size_t slice_size, bool enable_data = true) {
-  BEGIN_HELPER;
-  ASSERT_TRUE(CreateFvm(create_before, offset, slice_size, true, enable_data));
-  END_HELPER;
-}
+    for (unsigned n = 0; n < len; n++) {
+      data[n] = static_cast<uint8_t>(rand());
+    }
 
-bool ExtendFvm(off_t length) {
-  BEGIN_HELPER;
-  std::unique_ptr<Container> container;
-  ASSERT_EQ(ZX_OK, Container::Create(fvm_path, 0, 0, &container),
-            "Failed to initialize fvm container");
-  ASSERT_EQ(static_cast<FvmContainer*>(container.get())->Extend(length), ZX_OK,
-            "Failed to write to fvm file");
-  off_t current_length;
-  ASSERT_TRUE(StatFile(fvm_path, &current_length));
-  ASSERT_EQ(current_length, length);
-  END_HELPER;
-}
-
-bool ReportFvm(off_t offset = 0) {
-  BEGIN_HELPER;
-  ASSERT_TRUE(ReportContainer(fvm_path, offset));
-  END_HELPER;
-}
-
-void GenerateFilename(const char* dir, size_t len, char* out) {
-  char filename[len + 1];
-
-  for (unsigned i = 0; i < len; i++) {
-    filename[i] = 'a' + rand() % 26;
+    *out = std::move(data);
   }
 
-  filename[len] = 0;
-  strcpy(out, dir);
-  strcat(out, filename);
-}
+  void AddDirectoryMinfs(const char* path) { ASSERT_EQ(0, emu_mkdir(path, 0755)); }
 
-void GenerateDirectory(const char* dir, size_t len, char* out) {
-  GenerateFilename(dir, len, out);
-  strcat(out, "/");
-}
+  void AddFileMinfs(const char* path, size_t size) {
+    int fd = emu_open(path, O_RDWR | O_CREAT, 0644);
+    ASSERT_GT(fd, 0);
+    std::unique_ptr<uint8_t[]> data;
+    GenerateData(size, &data);
 
-bool GenerateData(size_t len, std::unique_ptr<uint8_t[]>* out) {
-  BEGIN_HELPER;
-  // Fill a test buffer with data
-  fbl::AllocChecker ac;
-  std::unique_ptr<uint8_t[]> data(new (&ac) uint8_t[len]);
-  ASSERT_TRUE(ac.check());
-
-  for (unsigned n = 0; n < len; n++) {
-    data[n] = static_cast<uint8_t>(rand());
+    ssize_t result = emu_write(fd, data.get(), size);
+    ASSERT_GE(result, 0);
+    ASSERT_EQ(size, static_cast<size_t>(result));
+    ASSERT_EQ(0, emu_close(fd));
   }
 
-  *out = std::move(data);
-  END_HELPER;
-}
+  void PopulateMinfs(const char* path, size_t ndirs, size_t nfiles, size_t max_size) {
+    ASSERT_EQ(0, emu_mount(path));
+    fbl::Vector<fbl::String> paths;
+    paths.push_back(fbl::String("::"));
+    size_t total_size = 0;
 
-bool AddDirectoryMinfs(const char* path) {
-  BEGIN_HELPER;
-  ASSERT_EQ(emu_mkdir(path, 0755), 0);
-  END_HELPER;
-}
+    for (size_t i = 0; i < ndirs; i++) {
+      const char* base_dir = paths[rand() % paths.size()].data();
+      char new_dir[PATH_MAX];
+      GenerateDirectory(base_dir, 10, new_dir);
+      AddDirectoryMinfs(new_dir);
+      paths.push_back(fbl::String(new_dir));
+    }
 
-bool AddFileMinfs(const char* path, size_t size) {
-  BEGIN_HELPER;
-  int fd = emu_open(path, O_RDWR | O_CREAT, 0644);
-  ASSERT_GT(fd, 0);
-  std::unique_ptr<uint8_t[]> data;
-  ASSERT_TRUE(GenerateData(size, &data));
-  ssize_t result = emu_write(fd, data.get(), size);
-  ASSERT_GE(result, 0, "Failed to write data to file");
-  ASSERT_EQ(static_cast<size_t>(result), size, "Failed to write data to file");
-  ASSERT_EQ(emu_close(fd), 0);
-  END_HELPER;
-}
+    for (size_t i = 0; i < nfiles; i++) {
+      const char* base_dir = paths[rand() % paths.size()].data();
+      size_t size = 1 + (rand() % max_size);
+      total_size += size;
+      char new_file[PATH_MAX];
+      GenerateFilename(base_dir, 10, new_file);
+      AddFileMinfs(new_file, size);
+    }
 
-bool PopulateMinfs(const char* path, size_t ndirs, size_t nfiles, size_t max_size) {
-  BEGIN_HELPER;
-  ASSERT_EQ(emu_mount(path), 0, "Unable to run mount");
-  fbl::Vector<fbl::String> paths;
-  paths.push_back(fbl::String("::"));
-  size_t total_size = 0;
+    uint64_t used_data, used_inodes, used_size;
+    ASSERT_EQ(0, emu_get_used_resources(path, &used_data, &used_inodes, &used_size));
 
-  for (unsigned i = 0; i < ndirs; i++) {
-    const char* base_dir = paths[rand() % paths.size()].data();
-    char new_dir[PATH_MAX];
-    GenerateDirectory(base_dir, 10, new_dir);
-    AddDirectoryMinfs(new_dir);
-    paths.push_back(fbl::String(new_dir));
+    // Used data should be greater than or equal to total size of the data we added
+    ASSERT_GE(used_data, total_size);
+
+    // Some fs use inodes for internal structures (including root directory).
+    // So used_nodes should be gt total files+directories created.
+    ASSERT_GE(used_inodes, nfiles + ndirs);
+
+    // Used size should be always greater than used data.
+    ASSERT_GT(used_size, used_data);
   }
 
-  for (unsigned i = 0; i < nfiles; i++) {
-    const char* base_dir = paths[rand() % paths.size()].data();
-    size_t size = 1 + (rand() % max_size);
-    total_size += size;
+  void AddFileBlobfs(blobfs::Blobfs* bs, size_t size) {
     char new_file[PATH_MAX];
-    GenerateFilename(base_dir, 10, new_file);
-    AddFileMinfs(new_file, size);
+    GenerateFilename(test_dir, 10, new_file);
+
+    fbl::unique_fd datafd(open(new_file, O_RDWR | O_CREAT | O_EXCL, 0755));
+    ASSERT_TRUE(datafd);
+
+    std::unique_ptr<uint8_t[]> data;
+    GenerateData(size, &data);
+
+    ssize_t result = write(datafd.get(), data.get(), size);
+    ASSERT_GE(result, 0);
+    ASSERT_EQ(static_cast<size_t>(result), size);
+    ASSERT_OK(blobfs::blobfs_add_blob(bs, nullptr, datafd.get()));
+    ASSERT_EQ(0, unlink(new_file));
   }
-  uint64_t used_data, used_inodes, used_size;
-  ASSERT_EQ(emu_get_used_resources(path, &used_data, &used_inodes, &used_size), 0);
 
-  // Used data should be greater than or equal to total size of the data we added
-  ASSERT_GE(used_data, total_size);
+  void PopulateBlobfs(const char* path, size_t nfiles, size_t max_size) {
+    fbl::unique_fd blobfd(open(path, O_RDWR, 0755));
+    ASSERT_TRUE(blobfd);
 
-  // Some fs use inodes for internal structures (including root directory).
-  // So used_nodes should be gt total files+directories created.
-  ASSERT_GE(used_inodes, nfiles + ndirs);
+    std::unique_ptr<blobfs::Blobfs> bs;
+    ASSERT_OK(blobfs::blobfs_create(&bs, blobfd.duplicate()));
 
-  // Used size should be always greater than used data.
-  ASSERT_GT(used_size, used_data);
-
-  END_HELPER;
-}
-
-bool AddFileBlobfs(blobfs::Blobfs* bs, size_t size) {
-  BEGIN_HELPER;
-  char new_file[PATH_MAX];
-  GenerateFilename(test_dir, 10, new_file);
-
-  fbl::unique_fd datafd(open(new_file, O_RDWR | O_CREAT | O_EXCL, 0755));
-  ASSERT_TRUE(datafd, "Unable to create new file");
-  std::unique_ptr<uint8_t[]> data;
-  ASSERT_TRUE(GenerateData(size, &data));
-  ssize_t result = write(datafd.get(), data.get(), size);
-  ASSERT_GE(result, 0, "Failed to write data to file");
-  ASSERT_EQ(static_cast<size_t>(result), size, "Failed to write data to file");
-  ASSERT_EQ(blobfs::blobfs_add_blob(bs, nullptr, datafd.get()), ZX_OK, "Failed to add blob");
-  ASSERT_EQ(unlink(new_file), 0);
-  END_HELPER;
-}
-
-bool PopulateBlobfs(const char* path, size_t nfiles, size_t max_size) {
-  BEGIN_HELPER;
-  fbl::unique_fd blobfd(open(path, O_RDWR, 0755));
-  ASSERT_TRUE(blobfd, "Unable to open blobfs path");
-  std::unique_ptr<blobfs::Blobfs> bs;
-  ASSERT_EQ(blobfs::blobfs_create(&bs, blobfd.duplicate()), ZX_OK, "Failed to create blobfs");
-  size_t total_size = 0;
-  for (unsigned i = 0; i < nfiles; i++) {
-    size_t size = 1 + (rand() % max_size);
-    ASSERT_TRUE(AddFileBlobfs(bs.get(), size));
-    total_size += size;
-  }
-  uint64_t used_data, used_inodes, used_size;
-
-  // Used data should be greater than or equal to total size of the data we added
-  ASSERT_EQ(blobfs::UsedDataSize(blobfd, &used_data), ZX_OK);
-  ASSERT_GE(used_data, total_size);
-
-  // Blobfs uses inodes for internal structures (including file extents).
-  // So used_nodes should be greater than or equal to total files+directories created.
-  ASSERT_EQ(blobfs::UsedInodes(blobfd, &used_inodes), ZX_OK);
-  ASSERT_GE(used_inodes, nfiles);
-
-  // Used size should be always greater than used data.
-  ASSERT_EQ(blobfs::UsedSize(blobfd, &used_size), ZX_OK);
-  ASSERT_GE(used_size, used_data);
-  END_HELPER;
-}
-
-bool PopulatePartitions(size_t ndirs, size_t nfiles, size_t max_size) {
-  BEGIN_HELPER;
-
-  for (unsigned i = 0; i < partition_count; i++) {
-    partition_t* part = &partitions[i];
-    unittest_printf("Populating partition: %s\n", part->path);
-
-    if (!part->created) {
-      continue;
+    size_t total_size = 0;
+    for (unsigned i = 0; i < nfiles; i++) {
+      size_t size = 1 + (rand() % max_size);
+      AddFileBlobfs(bs.get(), size);
+      total_size += size;
     }
+    uint64_t used_data, used_inodes, used_size;
 
-    switch (part->fs_type) {
-      case MINFS:
-        ASSERT_TRUE(PopulateMinfs(part->path, ndirs, nfiles, max_size));
+    // Used data should be greater than or equal to total size of the data we added
+    ASSERT_OK(blobfs::UsedDataSize(blobfd, &used_data));
+    ASSERT_GE(used_data, total_size);
+
+    // Blobfs uses inodes for internal structures (including file extents).
+    // So used_nodes should be greater than or equal to total files+directories created.
+    ASSERT_OK(blobfs::UsedInodes(blobfd, &used_inodes));
+    ASSERT_GE(used_inodes, nfiles);
+
+    // Used size should be always greater than used data.
+    ASSERT_OK(blobfs::UsedSize(blobfd, &used_size));
+    ASSERT_GE(used_size, used_data);
+  }
+
+  void PopulatePartitions(size_t ndirs, size_t nfiles, size_t max_size) {
+    for (unsigned i = 0; i < partition_count; i++) {
+      Partition* part = &partitions[i];
+      if (!part->created)
+        continue;
+
+      switch (part->fs_type) {
+        case FsType::kMinFs:
+          PopulateMinfs(part->path, ndirs, nfiles, max_size);
+          break;
+        case FsType::kBlobFs:
+          PopulateBlobfs(part->path, nfiles, max_size);
+          break;
+        default:
+          ASSERT_TRUE(false);
+      }
+    }
+  }
+
+  void DestroySparse(uint32_t flags) {
+    if ((flags & fvm::kSparseFlagLz4) != 0) {
+      ASSERT_EQ(0, unlink(sparse_lz4_path));
+    } else {
+      ASSERT_EQ(0, unlink(sparse_path));
+    }
+  }
+
+  void DestroyFvm() { ASSERT_EQ(0, unlink(fvm_path)); }
+
+  void GetSparseInfo(ContainerType type, uint32_t* out_flags, char** out_path) {
+    switch (type) {
+      case ContainerType::kSparse: {
+        *out_flags = 0;
+        *out_path = sparse_path;
         break;
-      case BLOBFS:
-        ASSERT_TRUE(PopulateBlobfs(part->path, nfiles, max_size));
+      }
+      case ContainerType::kSparseLZ4: {
+        *out_flags = fvm::kSparseFlagLz4;
+        *out_path = sparse_lz4_path;
         break;
+      }
+      case ContainerType::kSparseZxCrypt: {
+        *out_flags = fvm::kSparseFlagZxcrypt;
+        *out_path = sparse_path;
+        break;
+      }
       default:
-        fprintf(stderr, "Unknown file system type");
         ASSERT_TRUE(false);
     }
   }
 
-  END_HELPER;
-}
-
-bool DestroySparse(uint32_t flags) {
-  BEGIN_HELPER;
-  if ((flags & fvm::kSparseFlagLz4) != 0) {
-    unittest_printf("Destroying compressed sparse container: %s\n", sparse_lz4_path);
-    ASSERT_EQ(unlink(sparse_lz4_path), 0, "Failed to unlink path");
-  } else {
-    unittest_printf("Destroying sparse container: %s\n", sparse_path);
-    ASSERT_EQ(unlink(sparse_path), 0, "Failed to unlink path");
-  }
-  END_HELPER;
-}
-
-bool DestroyFvm() {
-  BEGIN_HELPER;
-  unittest_printf("Destroying fvm container: %s\n", fvm_path);
-  ASSERT_EQ(unlink(fvm_path), 0, "Failed to unlink path");
-  END_HELPER;
-}
-
-bool DestroyPartitions() {
-  BEGIN_HELPER;
-
-  for (unsigned i = 0; i < partition_count; i++) {
-    partition_t* part = &partitions[i];
-    if (part->created) {
-      unittest_printf("Destroying partition: %s\n", part->path);
-      ASSERT_EQ(unlink(part->path), 0, "Failed to unlink path");
-      part->created = false;
-      // Reset reservations for next iteration of the test.
-      part->reserve = FvmReservation({}, {}, {});
+  void CreateReportDestroy(ContainerType type, size_t slice_size, bool test_success = true,
+                           std::optional<uint64_t> data_size = {},
+                           std::optional<uint64_t> inodes_count = {},
+                           std::optional<uint64_t> limit = {}) {
+    for (unsigned i = 0; i < partition_count; i++) {
+      Partition* part = &partitions[i];
+      part->reserve = FvmReservation(inodes_count, data_size, limit);
     }
-  }
-
-  END_HELPER;
-}
-
-// Creates all partitions defined in Setup().
-bool CreatePartitions() {
-  BEGIN_HELPER;
-
-  for (unsigned i = 0; i < partition_count; i++) {
-    partition_t* part = &partitions[i];
-
-    unittest_printf("Creating partition %s\n", part->path);
-
-    switch (part->fs_type) {
-      case MINFS:
-        ASSERT_TRUE(CreateMinfs(part->path));
+    switch (type) {
+      case ContainerType::kSparse:
+        __FALLTHROUGH;
+      case ContainerType::kSparseLZ4:
+        __FALLTHROUGH;
+      case ContainerType::kSparseZxCrypt: {
+        uint32_t flags;
+        char* path;
+        GetSparseInfo(type, &flags, &path);
+        CreateSparse(flags, slice_size, test_success);
+        if (test_success) {
+          ReportSparse(flags);
+        }
+        DestroySparse(flags);
         break;
-      case BLOBFS:
-        ASSERT_TRUE(CreateBlobfs(part->path));
+      }
+      case ContainerType::kFvm: {
+        CreateFvm(true, 0, slice_size, test_success);
+        if (test_success) {
+          ReportFvm();
+          ExtendFvm(kContainerSize * 2);
+          ReportFvm();
+        }
+        DestroyFvm();
         break;
-      default:
-        fprintf(stderr, "Unknown file system type\n");
+      }
+      case ContainerType::kFvmNew: {
+        CreateFvm(false, 0, slice_size, test_success);
+        if (test_success) {
+          ReportFvm();
+          ExtendFvm(kContainerSize * 2);
+          ReportFvm();
+        }
+        DestroyFvm();
+        break;
+      }
+      case ContainerType::kFvmOffset: {
+        CreateFvm(true, kDefaultSliceSize, slice_size, test_success);
+        if (test_success) {
+          ReportFvm(kDefaultSliceSize);
+        }
+        DestroyFvm();
+        break;
+      }
+      default: {
         ASSERT_TRUE(false);
+      }
     }
-
-    part->created = true;
   }
 
-  END_HELPER;
-}
-
-bool GetSparseInfo(container_t type, uint32_t* out_flags, char** out_path) {
-  BEGIN_HELPER;
-  switch (type) {
-    case SPARSE: {
-      *out_flags = 0;
-      *out_path = sparse_path;
-      break;
-    }
-    case SPARSE_LZ4: {
-      *out_flags = fvm::kSparseFlagLz4;
-      *out_path = sparse_lz4_path;
-      break;
-    }
-    case SPARSE_ZXCRYPT: {
-      *out_flags = fvm::kSparseFlagZxcrypt;
-      *out_path = sparse_path;
-      break;
-    }
-    default:
-      ASSERT_TRUE(false);
+  void CreateFile(const char* path, size_t size) {
+    int r = open(path, O_RDWR | O_CREAT | O_EXCL, 0755);
+    ASSERT_GE(r, 0);
+    ASSERT_EQ(0, ftruncate(r, size));
+    ASSERT_EQ(0, close(r));
   }
-  END_HELPER;
-}
 
-bool CreateReportDestroy(container_t type, size_t slice_size, bool test_success = true,
-                         std::optional<uint64_t> data_size = {},
-                         std::optional<uint64_t> inodes_count = {},
-                         std::optional<uint64_t> limit = {}) {
-  BEGIN_HELPER;
-  for (unsigned i = 0; i < partition_count; i++) {
-    partition_t* part = &partitions[i];
-    part->reserve = FvmReservation(inodes_count, data_size, limit);
+  void CreateMinfs(const char* path) {
+    CreateFile(path, kPartitionSize);
+    ASSERT_EQ(0, emu_mkfs(path));
   }
-  switch (type) {
-    case SPARSE:
-      __FALLTHROUGH;
-    case SPARSE_LZ4:
-      __FALLTHROUGH;
-    case SPARSE_ZXCRYPT: {
-      uint32_t flags;
-      char* path;
-      ASSERT_TRUE(GetSparseInfo(type, &flags, &path));
-      ASSERT_TRUE(CreateSparse(flags, slice_size, test_success));
-      if (test_success) {
-        ASSERT_TRUE(ReportSparse(flags));
-      }
-      ASSERT_TRUE(DestroySparse(flags));
-      break;
+
+  void CreateBlobfs(const char* path) {
+    int r = open(path, O_RDWR | O_CREAT | O_EXCL, 0755);
+    ASSERT_GE(r, 0);
+    ASSERT_EQ(0, ftruncate(r, kPartitionSize));
+
+    uint64_t block_count;
+    ASSERT_OK(blobfs::GetBlockCount(r, &block_count));
+    ASSERT_OK(blobfs::Mkfs(r, block_count));
+    ASSERT_EQ(0, close(r));
+  }
+
+  // Adds all create partitions to |container|. If enable_data is false, the DATA partition is
+  // skipped. This is to avoid discrepancies in disk size calculation due to zxcrypt not being
+  // implemented on host.
+  // Stores success or failure of each AddPartition in part->status.
+  // TODO(planders): Once we are able to create zxcrypt'd FVM images on host, remove enable_data
+  // flag.
+  void AddPartitionsReserve(Container* container, bool enable_data) {
+    // Randomize order in which partitions are added to container.
+    uint32_t order[partition_count];
+
+    for (unsigned i = 0; i < partition_count; i++) {
+      order[i] = i;
     }
-    case FVM: {
-      ASSERT_TRUE(CreateFvm(true, 0, slice_size, test_success));
-      if (test_success) {
-        ASSERT_TRUE(ReportFvm());
-        ASSERT_TRUE(ExtendFvm(kContainerSize * 2));
-        ASSERT_TRUE(ReportFvm());
+
+    uint32_t remaining = partition_count;
+    while (remaining) {
+      unsigned index = rand() % remaining;
+
+      if (index != remaining - 1) {
+        unsigned temp = order[remaining - 1];
+        order[remaining - 1] = order[index];
+        order[index] = temp;
       }
-      ASSERT_TRUE(DestroyFvm());
-      break;
+
+      remaining--;
     }
-    case FVM_NEW: {
-      ASSERT_TRUE(CreateFvm(false, 0, slice_size, test_success));
-      if (test_success) {
-        ASSERT_TRUE(ReportFvm());
-        ASSERT_TRUE(ExtendFvm(kContainerSize * 2));
-        ASSERT_TRUE(ReportFvm());
+
+    for (unsigned i = 0; i < partition_count; i++) {
+      Partition* part = &partitions[order[i]];
+
+      if (!enable_data && !strcmp(part->GuidTypeName(), kDataTypeName)) {
+        continue;
       }
-      ASSERT_TRUE(DestroyFvm());
-      break;
-    }
-    case FVM_OFFSET: {
-      ASSERT_TRUE(CreateFvm(true, kDefaultSliceSize, slice_size, test_success));
-      if (test_success) {
-        ASSERT_TRUE(ReportFvm(kDefaultSliceSize));
+
+      if (part->created) {
+        part->status = container->AddPartition(part->path, part->GuidTypeName(), &part->reserve);
       }
-      ASSERT_TRUE(DestroyFvm());
-      break;
-    }
-    default: {
-      ASSERT_TRUE(false);
     }
   }
-  END_HELPER;
-}
 
-template <container_t ContainerType, size_t SliceSize>
-bool TestPartitions() {
-  BEGIN_TEST;
-  ASSERT_TRUE(CreateReportDestroy(ContainerType, SliceSize));
-  END_TEST;
-}
+  // Creates a sparse container and adds partitions to it. When should_pass is false,
+  // the function surfaces the error in adding partition to caller without asserting.
+  void CreateSparse(uint32_t flags, size_t slice_size, bool should_pass, bool enable_data = true,
+                    uint64_t max_disk_size = 0) {
+    const char* path = ((flags & fvm::kSparseFlagLz4) != 0) ? sparse_lz4_path : sparse_path;
 
-template <container_t ContainerType, size_t SliceSize, bool test_success, uint64_t data,
-          uint64_t inodes, uint64_t size_limit>
-bool TestPartitionsFailures() {
-  BEGIN_TEST;
-  std::optional<uint64_t> odata = data == 0 ? std::optional<uint64_t>{} : data;
-  std::optional<uint64_t> osize_limit = size_limit == 0 ? std::optional<uint64_t>{} : size_limit;
-  std::optional<uint64_t> oinodes = inodes == 0 ? std::optional<uint64_t>{} : inodes;
+    std::unique_ptr<SparseContainer> sparseContainer;
+    ASSERT_OK(SparseContainer::CreateNew(path, slice_size, flags, max_disk_size, &sparseContainer));
+    AddPartitions(sparseContainer.get(), enable_data, should_pass);
+    if (should_pass) {
+      ASSERT_OK(sparseContainer->Commit());
+      if (max_disk_size > 0) {
+        ASSERT_EQ(sparseContainer->MaximumDiskSize(), max_disk_size);
+      }
 
-  ASSERT_TRUE(
-      CreateReportDestroy(ContainerType, SliceSize, test_success, odata, oinodes, osize_limit));
-  END_TEST;
-}
+      uint64_t data_size = 0, inode_count = 0, used_size = 0;
+      if ((flags & fvm::kSparseFlagLz4) == 0) {
+        ASSERT_OK(sparseContainer->UsedSize(&used_size));
+        ASSERT_NE(used_size, 0);
+        ASSERT_OK(sparseContainer->UsedDataSize(&data_size));
+        ASSERT_NE(data_size, 0);
+        ASSERT_GT(used_size, data_size);
+        ASSERT_OK(sparseContainer->UsedInodes(&inode_count));
+        ASSERT_NE(inode_count, 0);
+      } else {
+        ASSERT_NOT_OK(sparseContainer->UsedSize(&used_size));
+        ASSERT_NOT_OK(sparseContainer->UsedDataSize(&data_size));
+        ASSERT_NOT_OK(sparseContainer->UsedInodes(&inode_count));
+      }
+    }
+  }
 
-bool VerifyFvmSize(size_t expected_size) {
-  BEGIN_HELPER;
-  std::unique_ptr<FvmContainer> fvmContainer;
-  ASSERT_EQ(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer), ZX_OK);
-  size_t calculated_size = fvmContainer->CalculateDiskSize();
-  size_t actual_size = fvmContainer->GetDiskSize();
+  void CreateSparseEnsure(uint32_t flags, size_t slice_size, bool enable_data = true) {
+    CreateSparse(flags, slice_size, true, enable_data);
+  }
+
+  void StatFile(const char* path, off_t* length) {
+    fbl::unique_fd fd(open(path, O_RDWR, 0755));
+    ASSERT_TRUE(fd);
+
+    struct stat s;
+    ASSERT_EQ(0, fstat(fd.get(), &s));
+    *length = s.st_size;
+  }
+
+  void ReportContainer(const char* path, off_t offset) {
+    std::unique_ptr<Container> container;
+    ASSERT_OK(Container::Create(path, offset, 0, &container));
+    ASSERT_OK(container->Verify());
+  }
+
+  void ReportSparse(uint32_t flags) {
+    if ((flags & fvm::kSparseFlagLz4) != 0) {
+      std::unique_ptr<SparseContainer> compressedContainer;
+      ASSERT_OK(SparseContainer::CreateExisting(sparse_lz4_path, &compressedContainer));
+      ASSERT_OK(compressedContainer->Decompress(sparse_path));
+    }
+
+    ReportContainer(sparse_path, 0);
+
+    // Check that the calculated disk size passes inspection, but any size lower doesn't.
+    std::unique_ptr<SparseContainer> container;
+    ASSERT_OK(SparseContainer::CreateExisting(sparse_path, &container));
+
+    size_t expected_size = container->CalculateDiskSize();
+    ASSERT_OK(container->CheckDiskSize(expected_size));
+    ASSERT_NOT_OK(container->CheckDiskSize(expected_size - 1));
+  }
+
+  // Creates a fvm container and adds partitions to it. When should succeed is false,
+  // the function surfaces the error in adding partition to caller without asserting.
+  void CreateFvm(bool create_before, off_t offset, size_t slice_size, bool should_pass,
+                 bool enable_data = true,
+                 FvmContainer::ResizeImageFileToFitOption resize_image_file_to_fit =
+                     FvmContainer::ResizeImageFileToFitOption::NO) {
+    off_t length = 0;
+    if (create_before) {
+      CreateFile(fvm_path, kContainerSize);
+      StatFile(fvm_path, &length);
+    }
+
+    std::unique_ptr<FvmContainer> fvmContainer;
+    ASSERT_OK(
+        FvmContainer::CreateNew(fvm_path, slice_size, offset, length - offset, &fvmContainer));
+    AddPartitions(fvmContainer.get(), enable_data, should_pass);
+    if (should_pass) {
+      fvmContainer->SetResizeImageFileToFit(resize_image_file_to_fit);
+      ASSERT_OK(fvmContainer->Commit());
+    }
+  }
+
+  void CreateFvmEnsure(bool create_before, off_t offset, size_t slice_size,
+                       bool enable_data = true) {
+    CreateFvm(create_before, offset, slice_size, true, enable_data);
+  }
+
+  void ExtendFvm(off_t length) {
+    std::unique_ptr<Container> container;
+    ASSERT_OK(Container::Create(fvm_path, 0, 0, &container));
+    ASSERT_OK(static_cast<FvmContainer*>(container.get())->Extend(length));
+    off_t current_length;
+    StatFile(fvm_path, &current_length);
+    ASSERT_EQ(current_length, length);
+  }
+
+  void ReportFvm(off_t offset = 0) { ReportContainer(fvm_path, offset); }
+
+  void GenerateFilename(const char* dir, size_t len, char* out) {
+    char filename[len + 1];
+
+    for (unsigned i = 0; i < len; i++) {
+      filename[i] = 'a' + rand() % 26;
+    }
+
+    filename[len] = 0;
+    strcpy(out, dir);
+    strcat(out, filename);
+  }
+
+  void GenerateDirectory(const char* dir, size_t len, char* out) {
+    GenerateFilename(dir, len, out);
+    strcat(out, "/");
+  }
+
+  void TestPartitionsFailures(ContainerType container_type, size_t slice_size, bool test_success,
+                              uint64_t data, uint64_t inodes, uint64_t size_limit) {
+    std::optional<uint64_t> odata = data == 0 ? std::optional<uint64_t>{} : data;
+    std::optional<uint64_t> osize_limit = size_limit == 0 ? std::optional<uint64_t>{} : size_limit;
+    std::optional<uint64_t> oinodes = inodes == 0 ? std::optional<uint64_t>{} : inodes;
+
+    CreateReportDestroy(container_type, slice_size, test_success, odata, oinodes, osize_limit);
+  }
+
+  void RunReservationTestForAllTypes(size_t slice_size, bool test_success, uint64_t data,
+                                     uint64_t inodes, uint64_t limit) {
+    TestPartitionsFailures(ContainerType::kSparse, slice_size, test_success, data, inodes, limit);
+    TestPartitionsFailures(ContainerType::kSparseLZ4, slice_size, test_success, data, inodes,
+                           limit);
+    TestPartitionsFailures(ContainerType::kFvm, slice_size, test_success, data, inodes, limit);
+    TestPartitionsFailures(ContainerType::kFvmNew, slice_size, test_success, data, inodes, limit);
+    TestPartitionsFailures(ContainerType::kFvmOffset, slice_size, test_success, data, inodes,
+                           limit);
+  }
+
+  char test_dir[PATH_MAX];
+  char sparse_path[PATH_MAX];
+  char sparse_lz4_path[PATH_MAX];
+  char fvm_path[PATH_MAX];
+
+  Partition partitions[kMaxPartitions] = {};
+  uint32_t partition_count = 0;
+};
+
+#if 0  // TODO(bug 38188)
+void VerifyFvmSize(size_t expected_size) {
+  std::unique_ptr<FvmContainer> fvm_container;
+  ASSERT_EQ(FvmContainer::CreateExisting(fvm_path, 0, &fvm_container), ZX_OK);
+  size_t calculated_size = fvm_container->CalculateDiskSize();
+  size_t actual_size = fvm_container->GetDiskSize();
 
   ASSERT_EQ(calculated_size, actual_size);
   ASSERT_EQ(actual_size, expected_size);
-  END_HELPER;
 }
 
-template <container_t ContainerType, size_t SliceSize>
-bool TestDiskSizeCalculation() {
-  BEGIN_TEST;
+void TestDiskSizeCalculation(ContainerType container_type, size_t slice_size) {
   uint32_t flags;
   char* path;
-  ASSERT_TRUE(GetSparseInfo(ContainerType, &flags, &path));
-  ASSERT_TRUE(CreateSparseEnsure(flags, SliceSize, false /* enable_data */));
-  ASSERT_TRUE(ReportSparse(flags));
+  GetSparseInfo(container_type, &flags, &path);
+  ASSERT_TRUE(CreateSparseEnsure(flags, slice_size, false /* enable_data */));
+  ReportSparse(flags);
 
   std::unique_ptr<SparseContainer> sparseContainer;
   ASSERT_EQ(SparseContainer::CreateExisting(path, &sparseContainer), ZX_OK);
@@ -688,25 +678,25 @@ bool TestDiskSizeCalculation() {
   ASSERT_NE(sparseContainer->CheckDiskSize(expected_size - 1), ZX_OK);
 
   // Create an FVM using the same partitions and verify its size matches expected.
-  ASSERT_TRUE(CreateFvmEnsure(false, 0, SliceSize, false /* enable_data */));
-  ASSERT_TRUE(VerifyFvmSize(expected_size));
-  ASSERT_TRUE(DestroyFvm());
+  ASSERT_TRUE(CreateFvmEnsure(false, 0, slice_size, false /* enable_data */));
+  VerifyFvmSize(expected_size);
+  DestroyFvm();
 
   // Create an FVM by paving the sparse file and verify its size matches expected.
   std::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
   ASSERT_EQ(fvm::host::UniqueFdWrapper::Open(fvm_path, O_RDWR | O_CREAT | O_EXCL, 0644, &wrapper),
             ZX_OK);
   ASSERT_EQ(sparseContainer->Pave(std::move(wrapper), 0, 0), ZX_OK);
-  ASSERT_TRUE(VerifyFvmSize(expected_size));
-  ASSERT_TRUE(DestroyFvm());
+  VerifyFvmSize(expected_size);
+  DestroyFvm();
 
-  ASSERT_TRUE(DestroySparse(flags));
-  END_TEST;
+  DestroySparse(flags);
 }
+#endif
 
 // Test to ensure that compression will fail if the buffer is too small.
-bool TestCompressorBufferTooSmall() {
-  BEGIN_TEST;
+#if 0  // TODO(bug 38188)
+TEST_F(FvmHostTest, TestCompressorBufferTooSmall) {
   auto result = CompressionContext::Create();
   ASSERT_TRUE(result.is_ok());
   CompressionContext compression = std::move(result.take_ok_result().value);
@@ -726,9 +716,8 @@ bool TestCompressorBufferTooSmall() {
   // Clean up if possible but don't expect that this can necessarily
   // succeed after a failed Compress call.
   compression.Finish();
-
-  END_TEST;
 }
+#endif
 
 enum class PaveSizeType {
   kSmall,  // Allocate disk space for paving smaller than what is required.
@@ -741,14 +730,222 @@ enum class PaveCreateType {
   kOffset,  // Create FVM at an offset within the file.
 };
 
+// Paving an FVM with a data partition will fail since we zxcrypt is not currently implemented on
+// host.
+// TODO(planders): Once we are able to create zxcrypt'd FVM images on host, remove this test.
+TEST_F(FvmHostTest, TestPaveZxcryptFail) {
+  CreateSparseEnsure(0, kDefaultSliceSize);
+  std::unique_ptr<SparseContainer> sparseContainer;
+  ASSERT_OK(SparseContainer::CreateExisting(sparse_path, &sparseContainer));
+
+  std::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
+  ASSERT_OK(fvm::host::UniqueFdWrapper::Open(fvm_path, O_RDWR | O_CREAT, 0644, &wrapper));
+  ASSERT_NOT_OK(sparseContainer->Pave(std::move(wrapper), 0, 0));
+  DestroySparse(0);
+  ASSERT_EQ(unlink(fvm_path), 0);
+}
+
+TEST_F(FvmHostTest, TestCreateWithResizeImageFileToFit) {
+  size_t offset = 4096;
+  CreateFvm(true, offset, kDefaultSliceSize, true /* should_pass */, true,
+            FvmContainer::ResizeImageFileToFitOption::YES);
+
+  std::unique_ptr<FvmContainer> container;
+  ASSERT_OK(FvmContainer::CreateExisting(fvm_path, offset, &container));
+  auto required_data_size = ComputeRequiredDataSize(container);
+  size_t expected_size =
+      offset + required_data_size + 2 * fvm::MetadataSize(kContainerSize, kDefaultSliceSize);
+  off_t current_size;
+  StatFile(fvm_path, &current_size);
+  ASSERT_EQ(static_cast<size_t>(current_size), expected_size);
+  DestroyFvm();
+}
+
+TEST_F(FvmHostTest, TestExtendWithResizeImageFileToFit) {
+  CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true);
+
+  std::unique_ptr<FvmContainer> container;
+  ASSERT_OK(FvmContainer::CreateExisting(fvm_path, 0, &container));
+  container->SetResizeImageFileToFit(FvmContainer::ResizeImageFileToFitOption::YES);
+  ASSERT_OK(container->Extend(kContainerSize * 2));
+  auto required_data_size = ComputeRequiredDataSize(container);
+  size_t expected_size =
+      required_data_size + 2 * fvm::MetadataSize(2 * kContainerSize, kDefaultSliceSize);
+
+  off_t current_size;
+  StatFile(fvm_path, &current_size);
+  ASSERT_EQ(static_cast<size_t>(current_size), expected_size);
+  DestroyFvm();
+}
+
+TEST_F(FvmHostTest, ExtendToSmallerThanCurrentSizeSucceedWithLowerBoundLength) {
+  CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true);
+  std::unique_ptr<FvmContainer> container;
+  ASSERT_OK(FvmContainer::CreateExisting(fvm_path, 0, &container),
+            "Failed to initialize fvm container");
+  container->SetExtendLengthType(FvmContainer::ExtendLengthType::LOWER_BOUND);
+  ASSERT_OK(container->Extend(kContainerSize - 1));
+  DestroyFvm();
+}
+
+// Test extend with values that ensure the FVM metadata size will increase.
+#if 0  // TODO(bug 38188)
+constexpr size_t CalculateExtendedContainerSize(const size_t initial_container_size,
+                                                const size_t extended_container_size) {
+  const size_t initial_metadata_size = fvm::MetadataSize(initial_container_size, kDefaultSliceSize);
+  const size_t extended_metadata_size =
+      fvm::MetadataSize(extended_container_size, kDefaultSliceSize);
+
+  if (extended_metadata_size == initial_metadata_size) {
+    return CalculateExtendedContainerSize(initial_container_size, extended_container_size * 2);
+  }
+
+  return extended_container_size;
+}
+
+TEST_F(FvmHostTest, TestExtendChangesMetadataSize) {
+  CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */);
+  size_t extended_container_size = CalculateExtendedContainerSize(kContainerSize, kContainerSize);
+  ASSERT_GT(fvm::MetadataSize(extended_container_size, kDefaultSliceSize),
+            fvm::MetadataSize(kContainerSize, kDefaultSliceSize));
+  ExtendFvm(extended_container_size);
+  ReportFvm();
+  DestroyFvm();
+}
+#endif
+
+// Attempts to create a SparseContainer from an existing sparse image when one does not exist.
+TEST_F(FvmHostTest, CreateExistingSparseFails) {
+  std::unique_ptr<SparseContainer> sparseContainer;
+  ASSERT_NOT_OK(SparseContainer::CreateExisting(sparse_path, &sparseContainer));
+}
+
+TEST_F(FvmHostTest, CreateExistingFvmFails) {
+  std::unique_ptr<FvmContainer> fvmContainer;
+  ASSERT_NOT_OK(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer));
+}
+
+// Attempts to re-create a sparse image at the same path with a different slice size, verifying
+// that the slice size is updated.
+TEST_F(FvmHostTest, RecreateSparseWithDifferentSliceSize) {
+  std::unique_ptr<SparseContainer> sparseContainer;
+
+  CreateSparse(0, 8192, true);
+  ASSERT_OK(SparseContainer::CreateExisting(sparse_path, &sparseContainer));
+  ASSERT_EQ(sparseContainer->SliceSize(), 8192);
+
+  CreateSparse(0, kDefaultSliceSize, true);
+  ASSERT_OK(SparseContainer::CreateExisting(sparse_path, &sparseContainer));
+  ASSERT_EQ(sparseContainer->SliceSize(), kDefaultSliceSize);
+
+  DestroySparse(0);
+}
+
+TEST_F(FvmHostTest, RecreateFvmWithDifferentSliceSize) {
+  std::unique_ptr<FvmContainer> fvmContainer;
+
+  // Create FVM with the larger slice size first, since this will result in a larger container
+  // size. Newly created FVM's will use the current container size if it already exists, so
+  // creation of this container will fail if a smaller one already exists.
+  // This is not an issue with the sparse test since the container is created from scratch every
+  // time.
+  CreateFvm(false, 0, kDefaultSliceSize, true);
+  ASSERT_OK(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer));
+  ASSERT_EQ(fvmContainer->SliceSize(), kDefaultSliceSize);
+
+  CreateFvm(false, 0, 8192, true);
+  ASSERT_OK(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer));
+  ASSERT_EQ(fvmContainer->SliceSize(), 8192);
+
+  DestroyFvm();
+}
+
+#if 0  // TODO(bug 38188)
+TEST_F(FvmHostTest, TestCreatePreallocatedSparseImage) {
+  constexpr uint64_t kMaxSize = 35ull << 30;
+  CreateSparse(0, kDefaultSliceSize, true, true, kMaxSize);
+  std::unique_ptr<SparseContainer> sparse_container;
+  ASSERT_OK(SparseContainer::CreateExisting(sparse_path, &sparse_container));
+
+  std::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
+  ASSERT_OK(fvm::host::UniqueFdWrapper::Open(sparse_path, O_RDWR | O_CREAT, 0644, &wrapper));
+  ASSERT_OK(sparse_container->Pave(std::move(wrapper), 0, 0));
+  ASSERT_EQ(sparse_container->MaximumDiskSize(), kMaxSize);
+  DestroySparse(0);
+}
+#endif
+
+#if 0  // TODO(bug 38188)
+TEST_F(FvmHostTest, TestCreatePreallocatedSparseImageExceedMaxSize) {
+  constexpr uint64_t kMaxSize = sizeof(fvm::Header);
+  CreateSparse(0, kDefaultSliceSize, true, true, kMaxSize);
+  DestroySparse(0);
+}
+#endif
+
+#if 0  // TODO(bug 38188)
+TEST_F(FvmHostTest, TestPavePreallocatedSparseImage) {
+  constexpr uint64_t kMaxSize = kContainerSize;
+  CreateSparse(0, kDefaultSliceSize, true /* should_pass */, false /* enable_data */, kMaxSize);
+  std::unique_ptr<SparseContainer> sparse_container;
+  ASSERT_OK(SparseContainer::CreateExisting(sparse_path, &sparse_container));
+
+  std::unique_ptr<fvm::host::UniqueFdWrapper> pave_wrapper;
+  ASSERT_OK(fvm::host::UniqueFdWrapper::Open(fvm_path, O_RDWR | O_CREAT, 0644, &pave_wrapper));
+  pave_wrapper->Truncate(kMaxSize);
+
+  ASSERT_OK(sparse_container->Pave(std::move(pave_wrapper), 0, 0));
+  ASSERT_EQ(sparse_container->MaximumDiskSize(), kMaxSize);
+  DestroySparse(0);
+
+  std::unique_ptr<FvmContainer> fvmContainer;
+  ASSERT_OK(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer));
+
+  // The amount of space needed by the FVM should be smaller than its max disk size.
+  // kMaxSize == actual disk size > minimum disk size
+  ASSERT_EQ(fvmContainer->GetDiskSize(), kMaxSize);
+  ASSERT_GT(fvmContainer->GetDiskSize(), fvmContainer->CalculateDiskSize());
+
+  DestroyFvm();
+}
+#endif
+
+#if 0  // TODO(bug 38188)
+void TestPartitions(ContainerType container_type, size_t slice_size) {
+  CreateReportDestroy(container_type, slice_size);
+}
+
+TEST_F(FvmHostTest, Partitions) {
+  // When this is fixed re-enabled, we don't need all these combinations of formats and sizes and
+  // having this many tests slows things down. Evaluate some reasonable combinations of parameters
+  // that give reasonable coverate.
+  TestPartitions(ContainerType::kSparse, 8192);
+  TestPartitions(ContainerType::kSparseLZ4, 8192);
+  TestPartitions(FVM, 8192);
+  TestPartitions(ContainerType::kFvmNew, 8192);
+  TestPartitions(ContainerType::kFvmOffset, 8192);
+  TestDiskSizeCalculation(ContainerType::kSparse, 8192);
+  TestDiskSizeCalculation(ContainerType::kSparseLZ4, 8192);
+
+  TestPartitions(ContainerType::kSparse, kDefaultSliceSize);
+  TestPartitions(ContainerType::kSparseLZ4, kDefaultSliceSize);
+  TestPartitions(FVM, kDefaultSliceSize);
+  TestPartitions(ContainerType::kFvmNew, kDefaultSliceSize);
+  TestPartitions(ContainerType::kFvmOffset, kDefaultSliceSize);
+  TestDiskSizeCalculation(ContainerType::kSparse, kDefaultSliceSize);
+  TestDiskSizeCalculation(ContainerType::kSparseLZ4, kDefaultSliceSize);
+}
+#endif
+
+#if 0  // TODO(bug 38188)
 // Creates a file at |fvm_path| to which an FVM is intended to be paved from an existing sparse
 // file. The size of the file will depend on the |expected_size|, as well as the |create_type| and
 // |size_type| options.
+//
 // The intended offset and allocated size for the paved FVM will be returned as |out_pave_offset|
 // and |out_pave_size| respectively.
-bool CreatePaveFile(PaveCreateType create_type, PaveSizeType size_type, size_t expected_size,
+void CreatePaveFile(PaveCreateType create_type, PaveSizeType size_type, size_t expected_size,
                     size_t* out_pave_offset, size_t* out_pave_size) {
-  BEGIN_HELPER;
   *out_pave_offset = 0;
   *out_pave_size = 0;
 
@@ -778,19 +975,14 @@ bool CreatePaveFile(PaveCreateType create_type, PaveSizeType size_type, size_t e
   fbl::unique_fd fd(open(fvm_path, O_CREAT | O_EXCL | O_WRONLY, 0644));
   ASSERT_TRUE(fd);
   ASSERT_EQ(ftruncate(fd.get(), disk_size), 0);
-
-  END_HELPER;
 }
 
-template <PaveCreateType CreateType, PaveSizeType SizeType, container_t ContainerType,
-          size_t SliceSize>
-bool TestPave() {
-  BEGIN_TEST;
-
+void TestPave(PaveCreateType CreateType, PaveSizeType SizeType, ContainerType container_type,
+              size_t slice_size) {
   uint32_t sparse_flags;
   char* src_path;
-  ASSERT_TRUE(GetSparseInfo(ContainerType, &sparse_flags, &src_path));
-  ASSERT_TRUE(CreateSparseEnsure(sparse_flags, SliceSize, false /* enable_data */));
+  GetSparseInfo(container_type, &sparse_flags, &src_path);
+  CreateSparseEnsure(sparse_flags, slice_size, false /* enable_data */);
 
   size_t pave_offset = 0;
   size_t pave_size = 0;
@@ -798,7 +990,7 @@ bool TestPave() {
   std::unique_ptr<SparseContainer> sparseContainer;
   ASSERT_EQ(SparseContainer::CreateExisting(src_path, &sparseContainer), ZX_OK);
   size_t expected_size = sparseContainer->CalculateDiskSize();
-  ASSERT_TRUE(CreatePaveFile(CreateType, SizeType, expected_size, &pave_offset, &pave_size));
+  CreatePaveFile(CreateType, SizeType, expected_size, &pave_offset, &pave_size);
 
   std::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
   ASSERT_EQ(fvm::host::UniqueFdWrapper::Open(fvm_path, O_RDWR | O_CREAT, 0644, &wrapper), ZX_OK);
@@ -807,382 +999,88 @@ bool TestPave() {
     ASSERT_NE(sparseContainer->Pave(std::move(wrapper), pave_offset, pave_size), ZX_OK);
   } else {
     ASSERT_EQ(sparseContainer->Pave(std::move(wrapper), pave_offset, pave_size), ZX_OK);
-    ASSERT_TRUE(ReportFvm(pave_offset));
+    ReportFvm(pave_offset);
   }
 
-  ASSERT_TRUE(DestroyFvm());
-  ASSERT_TRUE(DestroySparse(sparse_flags));
-
-  END_TEST;
-}
-
-// Paving an FVM with a data partition will fail since we zxcrypt is not currently implemented on
-// host.
-// TODO(planders): Once we are able to create zxcrypt'd FVM images on host, remove this test.
-bool TestPaveZxcryptFail() {
-  BEGIN_TEST;
-  ASSERT_TRUE(CreateSparseEnsure(0, kDefaultSliceSize));
-  std::unique_ptr<SparseContainer> sparseContainer;
-  ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &sparseContainer), ZX_OK);
-
-  std::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
-  ASSERT_EQ(fvm::host::UniqueFdWrapper::Open(fvm_path, O_RDWR | O_CREAT, 0644, &wrapper), ZX_OK);
-  ASSERT_NE(sparseContainer->Pave(std::move(wrapper), 0, 0), ZX_OK);
-  ASSERT_TRUE(DestroySparse(0));
-  ASSERT_EQ(unlink(fvm_path), 0);
-  END_TEST;
-}
-
-size_t ComputeRequiredDataSize(const std::unique_ptr<FvmContainer>& container) {
-  // Make use of the CalculateDiskSize() method to compute the required data size.
-  // The required data size is one that does not include the header size and extended part.
-  size_t minimal_disk_size = container->CalculateDiskSize();
-  size_t minimal_metadata_size = fvm::MetadataSize(minimal_disk_size, kDefaultSliceSize);
-  return minimal_disk_size - 2 * minimal_metadata_size;
-}
-
-bool TestCreateWithResizeImageFileToFit() {
-  BEGIN_TEST;
-  size_t offset = 4096;
-  ASSERT_TRUE(CreateFvm(true, offset, kDefaultSliceSize, true /* should_pass */, true,
-                        FvmContainer::ResizeImageFileToFitOption::YES));
-  std::unique_ptr<FvmContainer> container;
-  ASSERT_EQ(ZX_OK, FvmContainer::CreateExisting(fvm_path, offset, &container),
-            "Failed to initialize fvm container");
-  auto required_data_size = ComputeRequiredDataSize(container);
-  size_t expected_size =
-      offset + required_data_size + 2 * fvm::MetadataSize(kContainerSize, kDefaultSliceSize);
-  off_t current_size;
-  ASSERT_TRUE(StatFile(fvm_path, &current_size));
-  ASSERT_EQ(static_cast<size_t>(current_size), expected_size);
   DestroyFvm();
-  END_TEST;
+  DestroySparse(sparse_flags);
 }
 
-bool TestExtendWithResizeImageFileToFit() {
-  BEGIN_TEST;
-  ASSERT_TRUE(CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true));
-  std::unique_ptr<FvmContainer> container;
-  ASSERT_EQ(ZX_OK, FvmContainer::CreateExisting(fvm_path, 0, &container),
-            "Failed to initialize fvm container");
-  container->SetResizeImageFileToFit(FvmContainer::ResizeImageFileToFitOption::YES);
-  ASSERT_EQ(container->Extend(kContainerSize * 2), ZX_OK);
-  auto required_data_size = ComputeRequiredDataSize(container);
-  size_t expected_size =
-      required_data_size + 2 * fvm::MetadataSize(2 * kContainerSize, kDefaultSliceSize);
-  off_t current_size;
-  ASSERT_TRUE(StatFile(fvm_path, &current_size));
-  ASSERT_EQ(static_cast<size_t>(current_size), expected_size);
-  DestroyFvm();
-  END_TEST;
+TEST_F(FvmHostTest, Pave) {
+  // When this is fixed re-enabled, we don't need all these combinations of formats and sizes and
+  // having this many tests slows things down. Find some reasonable combinations of parameters
+  // (maybe ~4 different ones?) that give reasonable coverate
+  TestPave(PaveCreateType::kBefore, PaveSizeType::kSmall, ContainerType::kSparse, 8192);
+  TestPave(PaveCreateType::kBefore, PaveSizeType::kSmall, ContainerType::kSparseLZ4, 8192);
+  TestPave(PaveCreateType::kBefore, PaveSizeType::kExact, ContainerType::kSparse, 8192);
+  TestPave(PaveCreateType::kBefore, PaveSizeType::kExact, ContainerType::kSparseLZ4, 8192);
+  TestPave(PaveCreateType::kBefore, PaveSizeType::kLarge, ContainerType::kSparse, 8192);
+  TestPave(PaveCreateType::kBefore, PaveSizeType::kLarge, ContainerType::kSparseLZ4, 8192);
+
+  TestPave(PaveCreateType::kOffset, PaveSizeType::kSmall, ContainerType::kSparse, 8192);
+  TestPave(PaveCreateType::kOffset, PaveSizeType::kSmall, ContainerType::kSparseLZ4, 8192);
+  TestPave(PaveCreateType::kOffset, PaveSizeType::kExact, ContainerType::kSparse, 8192);
+  TestPave(PaveCreateType::kOffset, PaveSizeType::kExact, ContainerType::kSparseLZ4, 8192);
+  TestPave(PaveCreateType::kOffset, PaveSizeType::kLarge, ContainerType::kSparse, 8192);
+  TestPave(PaveCreateType::kOffset, PaveSizeType::kLarge, ContainerType::kSparseLZ4, 8192);
+
+  TestPave(PaveCreateType::kBefore, PaveSizeType::kSmall, ContainerType::kSparse,
+           kDefaultSliceSize);
+  TestPave(PaveCreateType::kBefore, PaveSizeType::kSmall, ContainerType::kSparseLZ4,
+           kDefaultSliceSize);
+  TestPave(PaveCreateType::kBefore, PaveSizeType::kExact, ContainerType::kSparse,
+           kDefaultSliceSize);
+  TestPave(PaveCreateType::kBefore, PaveSizeType::kExact, ContainerType::kSparseLZ4,
+           kDefaultSliceSize);
+  TestPave(PaveCreateType::kBefore, PaveSizeType::kLarge, ContainerType::kSparse,
+           kDefaultSliceSize);
+  TestPave(PaveCreateType::kBefore, PaveSizeType::kLarge, ContainerType::kSparseLZ4,
+           kDefaultSliceSize);
+
+  TestPave(PaveCreateType::kOffset, PaveSizeType::kSmall, ContainerType::kSparse,
+           kDefaultSliceSize);
+  TestPave(PaveCreateType::kOffset, PaveSizeType::kSmall, ContainerType::kSparseLZ4,
+           kDefaultSliceSize);
+  TestPave(PaveCreateType::kOffset, PaveSizeType::kExact, ContainerType::kSparse,
+           kDefaultSliceSize);
+  TestPave(PaveCreateType::kOffset, PaveSizeType::kExact, ContainerType::kSparseLZ4,
+           kDefaultSliceSize);
+  TestPave(PaveCreateType::kOffset, PaveSizeType::kLarge, ContainerType::kSparse,
+           kDefaultSliceSize);
+  TestPave(PaveCreateType::kOffset, PaveSizeType::kLarge, ContainerType::kSparseLZ4,
+           kDefaultSliceSize);
 }
-
-bool ExtendToSmallerThanCurrentSizeSucceedWithLowerBoundLength() {
-  BEGIN_TEST;
-  ASSERT_TRUE(CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */, true));
-  std::unique_ptr<FvmContainer> container;
-  ASSERT_EQ(ZX_OK, FvmContainer::CreateExisting(fvm_path, 0, &container),
-            "Failed to initialize fvm container");
-  container->SetExtendLengthType(FvmContainer::ExtendLengthType::LOWER_BOUND);
-  ASSERT_EQ(container->Extend(kContainerSize - 1), ZX_OK);
-  DestroyFvm();
-  END_TEST;
-}
-
-constexpr size_t CalculateExtendedContainerSize(const size_t initial_container_size,
-                                                const size_t extended_container_size) {
-  const size_t initial_metadata_size = fvm::MetadataSize(initial_container_size, kDefaultSliceSize);
-  const size_t extended_metadata_size =
-      fvm::MetadataSize(extended_container_size, kDefaultSliceSize);
-
-  if (extended_metadata_size == initial_metadata_size) {
-    return CalculateExtendedContainerSize(initial_container_size, extended_container_size * 2);
-  }
-
-  return extended_container_size;
-}
-
-// Test extend with values that ensure the FVM metadata size will increase.
-bool TestExtendChangesMetadataSize() {
-  BEGIN_TEST;
-  ASSERT_TRUE(CreateFvm(true, 0, kDefaultSliceSize, true /* should_pass */));
-  size_t extended_container_size = CalculateExtendedContainerSize(kContainerSize, kContainerSize);
-  ASSERT_GT(fvm::MetadataSize(extended_container_size, kDefaultSliceSize),
-            fvm::MetadataSize(kContainerSize, kDefaultSliceSize));
-  ASSERT_TRUE(ExtendFvm(extended_container_size));
-  ASSERT_TRUE(ReportFvm());
-  ASSERT_TRUE(DestroyFvm());
-  END_TEST;
-}
-
-// Attempts to create a SparseContainer from an existing sparse image when one does not exist.
-bool CreateExistingSparseFails() {
-  BEGIN_TEST;
-  std::unique_ptr<SparseContainer> sparseContainer;
-  ASSERT_NE(SparseContainer::CreateExisting(sparse_path, &sparseContainer), ZX_OK);
-  END_TEST;
-}
-
-bool CreateExistingFvmFails() {
-  BEGIN_TEST;
-  std::unique_ptr<FvmContainer> fvmContainer;
-  ASSERT_NE(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer), ZX_OK);
-  END_TEST;
-}
-
-// Attempts to re-create a sparse image at the same path with a different slice size, verifying
-// that the slice size is updated.
-bool RecreateSparseWithDifferentSliceSize() {
-  BEGIN_TEST;
-  std::unique_ptr<SparseContainer> sparseContainer;
-
-  ASSERT_TRUE(CreateSparse(0, 8192, true));
-  ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &sparseContainer), ZX_OK);
-  ASSERT_EQ(sparseContainer->SliceSize(), 8192);
-
-  ASSERT_TRUE(CreateSparse(0, kDefaultSliceSize, true));
-  ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &sparseContainer), ZX_OK);
-  ASSERT_EQ(sparseContainer->SliceSize(), kDefaultSliceSize);
-
-  ASSERT_TRUE(DestroySparse(0));
-  END_TEST;
-}
-
-bool RecreateFvmWithDifferentSliceSize() {
-  BEGIN_TEST;
-  std::unique_ptr<FvmContainer> fvmContainer;
-
-  // Create FVM with the larger slice size first, since this will result in a larger container
-  // size. Newly created FVM's will use the current container size if it already exists, so
-  // creation of this container will fail if a smaller one already exists.
-  // This is not an issue with the sparse test since the container is created from scratch every
-  // time.
-  ASSERT_TRUE(CreateFvm(false, 0, kDefaultSliceSize, true));
-  ASSERT_EQ(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer), ZX_OK);
-  ASSERT_EQ(fvmContainer->SliceSize(), kDefaultSliceSize);
-
-  ASSERT_TRUE(CreateFvm(false, 0, 8192, true));
-  ASSERT_EQ(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer), ZX_OK);
-  ASSERT_EQ(fvmContainer->SliceSize(), 8192);
-
-  ASSERT_TRUE(DestroyFvm());
-  END_TEST;
-}
-
-bool TestCreatePreallocatedSparseImage() {
-  BEGIN_TEST;
-  constexpr uint64_t kMaxSize = 35ull << 30;
-  ASSERT_TRUE(CreateSparse(0, kDefaultSliceSize, true, true, kMaxSize));
-  std::unique_ptr<SparseContainer> sparse_container;
-  ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &sparse_container), ZX_OK);
-
-  std::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
-  ASSERT_EQ(fvm::host::UniqueFdWrapper::Open(sparse_path, O_RDWR | O_CREAT, 0644, &wrapper), ZX_OK);
-  ASSERT_NE(sparse_container->Pave(std::move(wrapper), 0, 0), ZX_OK);
-  ASSERT_EQ(sparse_container->MaximumDiskSize(), kMaxSize);
-  ASSERT_TRUE(DestroySparse(0));
-  END_TEST;
-}
-
-bool TestCreatePreallocatedSparseImageExceedMaxSize() {
-  BEGIN_TEST;
-  constexpr uint64_t kMaxSize = sizeof(fvm::Header);
-  ASSERT_FALSE(CreateSparse(0, kDefaultSliceSize, true, true, kMaxSize));
-  ASSERT_TRUE(DestroySparse(0));
-  END_TEST;
-}
-
-bool TestPavePreallocatedSparseImage() {
-  BEGIN_TEST;
-  constexpr uint64_t kMaxSize = kContainerSize;
-  ASSERT_TRUE(CreateSparse(0, kDefaultSliceSize, true /* should_pass */, false /* enable_data */,
-                           kMaxSize));
-  std::unique_ptr<SparseContainer> sparse_container;
-  ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &sparse_container), ZX_OK);
-
-  std::unique_ptr<fvm::host::UniqueFdWrapper> pave_wrapper;
-  ASSERT_EQ(fvm::host::UniqueFdWrapper::Open(fvm_path, O_RDWR | O_CREAT, 0644, &pave_wrapper),
-            ZX_OK);
-  pave_wrapper->Truncate(kMaxSize);
-
-  ASSERT_EQ(sparse_container->Pave(std::move(pave_wrapper), 0, 0), ZX_OK);
-  ASSERT_EQ(sparse_container->MaximumDiskSize(), kMaxSize);
-  ASSERT_TRUE(DestroySparse(0));
-
-  std::unique_ptr<FvmContainer> fvmContainer;
-  ASSERT_EQ(FvmContainer::CreateExisting(fvm_path, 0, &fvmContainer), ZX_OK);
-
-  // The amount of space needed by the FVM should be smaller than its max disk size.
-  // kMaxSize == actual disk size > minimum disk size
-  ASSERT_EQ(fvmContainer->GetDiskSize(), kMaxSize);
-  ASSERT_GT(fvmContainer->GetDiskSize(), fvmContainer->CalculateDiskSize());
-
-  ASSERT_TRUE(DestroyFvm());
-  END_TEST;
-}
-
-bool GeneratePartitionPath(fs_type_t fs_type, guid_type_t guid_type) {
-  BEGIN_HELPER;
-  ASSERT_LT(partition_count, kMaxPartitions);
-
-  // Make sure we have not already created a partition with the same fs/guid type combo.
-  for (unsigned i = 0; i < partition_count; i++) {
-    partition_t* part = &partitions[i];
-    if (part->fs_type == fs_type && part->guid_type == guid_type) {
-      fprintf(stderr, "Partition %s already exists!\n", part->path);
-      ASSERT_TRUE(false);
-    }
-  }
-
-  partition_t* part = &partitions[partition_count++];
-  part->fs_type = fs_type;
-  part->guid_type = guid_type;
-  part->GeneratePath(test_dir);
-  unittest_printf("Generated partition path %s\n", part->path);
-  END_HELPER;
-}
-
-bool Setup(uint32_t num_dirs, uint32_t num_files, uint32_t max_size) {
-  BEGIN_HELPER;
-  // Generate test directory
-  srand(static_cast<unsigned int>(time(0)));
-  GenerateDirectory("/tmp/", 20, test_dir);
-  ASSERT_EQ(mkdir(test_dir, 0755), 0, "Failed to create test path");
-  unittest_printf("Created test path %s\n", test_dir);
-
-  // Generate partition paths
-  partition_count = 0;
-  ASSERT_TRUE(GeneratePartitionPath(MINFS, DATA));
-  ASSERT_TRUE(GeneratePartitionPath(MINFS, DATA_UNSAFE));
-  ASSERT_TRUE(GeneratePartitionPath(MINFS, SYSTEM));
-  ASSERT_TRUE(GeneratePartitionPath(MINFS, DEFAULT));
-  ASSERT_TRUE(GeneratePartitionPath(BLOBFS, BLOBSTORE));
-  ASSERT_TRUE(GeneratePartitionPath(BLOBFS, DEFAULT));
-  ASSERT_EQ(partition_count, kMaxPartitions);
-
-  // Generate container paths
-  sprintf(sparse_path, "%ssparse.bin", test_dir);
-  sprintf(sparse_lz4_path, "%ssparse.bin.lz4", test_dir);
-  sprintf(fvm_path, "%sfvm.bin", test_dir);
-
-  // Create and populate partitions
-  ASSERT_TRUE(CreatePartitions());
-  ASSERT_TRUE(PopulatePartitions(num_dirs, num_files, max_size));
-  END_HELPER;
-}
-
-bool Cleanup() {
-  BEGIN_HELPER;
-  ASSERT_TRUE(DestroyPartitions());
-
-  DIR* dir = opendir(test_dir);
-  if (!dir) {
-    fprintf(stderr, "Couldn't open test directory\n");
-    return -1;
-  }
-
-  struct dirent* de;
-  while ((de = readdir(dir)) != NULL) {
-    if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
-      continue;
-    }
-
-    unittest_printf("Destroying leftover file %s\n", de->d_name);
-    ASSERT_EQ(unlinkat(dirfd(dir), de->d_name, 0), 0);
-  }
-
-  closedir(dir);
-  unittest_printf("Destroying test path: %s\n", test_dir);
-  ASSERT_EQ(rmdir(test_dir), 0, "Failed to remove test path");
-  END_HELPER;
-}
-
-#define RUN_FOR_ALL_TYPES(slice_size)                            \
-  RUN_TEST_MEDIUM((TestPartitions<SPARSE, slice_size>))          \
-  RUN_TEST_MEDIUM((TestPartitions<SPARSE_LZ4, slice_size>))      \
-  RUN_TEST_MEDIUM((TestPartitions<FVM, slice_size>))             \
-  RUN_TEST_MEDIUM((TestPartitions<FVM_NEW, slice_size>))         \
-  RUN_TEST_MEDIUM((TestPartitions<FVM_OFFSET, slice_size>))      \
-  RUN_TEST_MEDIUM((TestDiskSizeCalculation<SPARSE, slice_size>)) \
-  RUN_TEST_MEDIUM((TestDiskSizeCalculation<SPARSE_LZ4, slice_size>))
-
-#define RUN_RESERVATION_TEST_FOR_ALL_TYPES(slice_size, should_pass, data, inodes, limit)           \
-  RUN_TEST_MEDIUM((TestPartitionsFailures<SPARSE, slice_size, should_pass, data, inodes, limit>))  \
-  RUN_TEST_MEDIUM(                                                                                 \
-      (TestPartitionsFailures<SPARSE_LZ4, slice_size, should_pass, data, inodes, limit>))          \
-  RUN_TEST_MEDIUM((TestPartitionsFailures<FVM, slice_size, should_pass, data, inodes, limit>))     \
-  RUN_TEST_MEDIUM((TestPartitionsFailures<FVM_NEW, slice_size, should_pass, data, inodes, limit>)) \
-  RUN_TEST_MEDIUM(                                                                                 \
-      (TestPartitionsFailures<FVM_OFFSET, slice_size, should_pass, data, inodes, limit>))
-
-#define RUN_ALL_SPARSE(create_type, size_type, slice_size)                \
-  RUN_TEST_MEDIUM((TestPave<create_type, size_type, SPARSE, slice_size>)) \
-  RUN_TEST_MEDIUM((TestPave<create_type, size_type, SPARSE_LZ4, slice_size>))
-
-#define RUN_ALL_PAVE(slice_size)                                            \
-  RUN_ALL_SPARSE(PaveCreateType::kBefore, PaveSizeType::kSmall, slice_size) \
-  RUN_ALL_SPARSE(PaveCreateType::kBefore, PaveSizeType::kExact, slice_size) \
-  RUN_ALL_SPARSE(PaveCreateType::kBefore, PaveSizeType::kLarge, slice_size) \
-  RUN_ALL_SPARSE(PaveCreateType::kOffset, PaveSizeType::kSmall, slice_size) \
-  RUN_ALL_SPARSE(PaveCreateType::kOffset, PaveSizeType::kExact, slice_size) \
-  RUN_ALL_SPARSE(PaveCreateType::kOffset, PaveSizeType::kLarge, slice_size)
-
-// TODO(planders): add tests for FVM on GPT (with offset)
-BEGIN_TEST_CASE(fvm_host_tests)
-#if 0  // TODO(bug 38188)
-RUN_FOR_ALL_TYPES(8192)
-RUN_FOR_ALL_TYPES(kDefaultSliceSize)
-RUN_TEST_MEDIUM(TestCompressorBufferTooSmall)
-RUN_ALL_PAVE(8192)
-RUN_ALL_PAVE(kDefaultSliceSize)
 #endif
-
-RUN_TEST_MEDIUM(TestPaveZxcryptFail)
-RUN_TEST_MEDIUM(TestCreateWithResizeImageFileToFit)
-RUN_TEST_MEDIUM(TestExtendWithResizeImageFileToFit)
-RUN_TEST_MEDIUM(ExtendToSmallerThanCurrentSizeSucceedWithLowerBoundLength)
-#if 0  // TODO(bug 38188)
-RUN_TEST_MEDIUM(TestExtendChangesMetadataSize)
-#endif
-RUN_TEST_MEDIUM(CreateExistingSparseFails)
-RUN_TEST_MEDIUM(CreateExistingFvmFails)
-RUN_TEST_MEDIUM(RecreateSparseWithDifferentSliceSize);
-RUN_TEST_MEDIUM(RecreateFvmWithDifferentSliceSize);
 
 // Too small total limit for inodes. Expect failure
-RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, false, 1, 0, 10)
+TEST_F(FvmHostTest, TooSmallInodeLimit) { RunReservationTestForAllTypes(8192, false, 1, 0, 10); }
 
 // Too small total limit for 100 bytes of data
-RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, false, 0, 1000, 999)
+TEST_F(FvmHostTest, TooSmallTotalLimit) {
+  RunReservationTestForAllTypes(8192, false, 0, 1000, 999);
+}
 
 // Too small limit for data + inodes
-RUN_RESERVATION_TEST_FOR_ALL_TYPES(kDefaultSliceSize, false, 200, 10, 1000)
+TEST_F(FvmHostTest, TooSmallDataLimit) {
+  RunReservationTestForAllTypes(kDefaultSliceSize, false, 200, 10, 1000);
+}
 
 #if 0  // TODO(bug 38188)
 // Limitless capacity for 10 inodes and 100 bytes
-RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, true, 10, 100, 0)
+TEST_F(FvmHostTest, LimitlessCapacity) {
+  RunReservationTestForAllTypes(8192, true, 10, 100, 0);
+}
 
 // Creating large total_bytes partition leads to increased test run time.
 // Keep the total_bytes within certain limit.
-RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, true, 100, 10, 300 * 1024 * 1024)
+TEST_F(FvmHostTest, LargeSize) {
+  RunReservationTestForAllTypes(8192, true, 100, 10, 300 * 1024 * 1024);
+}
 
 // Limitless capacity for 10k inodes and 10k bytes of data
-RUN_RESERVATION_TEST_FOR_ALL_TYPES(kDefaultSliceSize, true, 10000, 1024 * 10, 0)
-
-RUN_TEST_MEDIUM(TestCreatePreallocatedSparseImage)
-RUN_TEST_MEDIUM(TestCreatePreallocatedSparseImageExceedMaxSize)
-RUN_TEST_MEDIUM(TestPavePreallocatedSparseImage)
+TEST_F(FvmHostTest, LotsOfInodes) {
+  RunReservationTestForAllTypes(kDefaultSliceSize, true, 10000, 1024 * 10, 0);
+}
 #endif
 
-END_TEST_CASE(fvm_host_tests)
-
-int main(int argc, char** argv) {
-  if (!Setup(kDefaultNumDirs, kDefaultNumFiles, kDefaultMaxSize)) {
-    return -1;
-  }
-  int result = unittest_run_all_tests(argc, argv) ? 0 : -1;
-  if (!Cleanup()) {
-    return -1;
-  }
-  return result;
-}
+}  // namespace
