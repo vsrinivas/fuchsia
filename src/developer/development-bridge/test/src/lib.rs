@@ -137,11 +137,12 @@ async fn run_tests<W: Write>(
         return Ok(());
     }
     writeln!(writer, "Running tests...")?;
-    let (remote, test_fut) =
-        run_tests_and_collect(suite_proxy, sender, invocations).remote_handle();
-    hoist::spawn(remote);
-    let successful_completion = collect_events(writer, recv).await;
-    test_fut.await.map_err(|e| format_err!("Error running test: {}", e))?;
+    let (successful_completion, ()) = futures::future::try_join(
+        collect_events(writer, recv).map(Ok),
+        run_tests_and_collect(suite_proxy, sender, invocations),
+    )
+    .await
+    .context("running test")?;
 
     if !successful_completion {
         return Err(anyhow!("Test run finished prematurely. Something went wrong."));
