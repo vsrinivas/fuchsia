@@ -173,20 +173,17 @@ impl VmoImage {
         duration!("gfx", "VmoImage::clear");
 
         let coherency_domain = self.coherency_domain;
-        let slice = self.as_mut_slice();
-        let len = clear_color.len();
 
-        assert_eq!(slice.len() % len, 0);
+        let (data, len) = Arc::get_mut(&mut self.mapping).unwrap().as_ptr_len();
+        let buffer = unsafe { slice::from_raw_parts_mut(data as *mut [u8; 4], len / 4) };
 
-        for i in 0..slice.len() / len {
-            slice[i * len..(i + 1) * len].copy_from_slice(&clear_color);
-        }
+        mold::clear_buffer(buffer, clear_color);
 
         if coherency_domain == CoherencyDomain::Ram {
             unsafe {
                 sys::zx_cache_flush(
-                    slice.as_ptr() as *const u8,
-                    slice.len(),
+                    buffer.as_ptr() as *const u8,
+                    buffer.len() * 4,
                     sys::ZX_CACHE_FLUSH_DATA,
                 );
             }

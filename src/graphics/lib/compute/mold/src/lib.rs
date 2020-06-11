@@ -8,6 +8,7 @@ mod layer;
 mod path;
 mod point;
 mod segment;
+mod utils;
 
 const PIXEL_WIDTH: i32 = 16;
 
@@ -16,5 +17,6 @@ pub use composition::Composition;
 pub use layer::{Layer, LayerId};
 pub use path::Path;
 pub use point::Point;
+pub use utils::clear_buffer;
 
 pub use surpass::painter::{BlendMode, Fill, FillRule, Style};
