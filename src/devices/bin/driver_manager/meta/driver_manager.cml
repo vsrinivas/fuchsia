@@ -2,6 +2,7 @@
     program: {
         binary: "bin/driver_manager",
         lifecycle: { stop_event: "notify" },
+        main_process_critical: "true",
     },
     use: [
         { runner: "elf" },

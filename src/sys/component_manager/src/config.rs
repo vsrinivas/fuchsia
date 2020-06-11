@@ -47,6 +47,14 @@ pub struct JobPolicyAllowlists {
     /// This is equivalent to the v1 'deprecated-ambient-replace-as-executable' feature.
     #[serde(deserialize_with = "absolute_monikers_from_strings")]
     ambient_mark_vmo_exec: Vec<AbsoluteMoniker>,
+
+    /// Absolute monikers for components allowed to have their original process marked as critical
+    /// to component_manager's job.
+    ///
+    /// Components must request this critical marking by including "main_process_critical: true" in
+    /// their manifest's program object and must be using the ELF runner.
+    #[serde(deserialize_with = "absolute_monikers_from_strings")]
+    main_process_critical: Vec<AbsoluteMoniker>,
 }
 
 fn absolute_monikers_from_strings<'de, D>(deserializer: D) -> Result<Vec<AbsoluteMoniker>, D::Error>
@@ -130,14 +138,24 @@ impl ScopedPolicyChecker {
         ScopedPolicyChecker { config, moniker }
     }
 
-    // This interface is super simple for now since there's only one allowlist. In the future we'll
-    // probably want a different interface than an individual function per policy item.
+    // This interface is super simple for now since there's only two allowlists. In the future
+    // we'll probably want a different interface than an individual function per policy item.
+
     pub fn ambient_mark_vmo_exec_allowed(&self) -> Result<(), PolicyError> {
         let config = self.config.upgrade().ok_or(PolicyError::PolicyUnavailable)?;
         if config.security_policy.job_policy.ambient_mark_vmo_exec.contains(&self.moniker) {
             Ok(())
         } else {
             Err(PolicyError::job_policy_disallowed("ambient_mark_vmo_exec", &self.moniker))
+        }
+    }
+
+    pub fn main_process_critical_allowed(&self) -> Result<(), PolicyError> {
+        let config = self.config.upgrade().ok_or(PolicyError::PolicyUnavailable)?;
+        if config.security_policy.job_policy.main_process_critical.contains(&self.moniker) {
+            Ok(())
+        } else {
+            Err(PolicyError::job_policy_disallowed("main_process_critical", &self.moniker))
         }
     }
 }
@@ -206,6 +224,7 @@ mod tests {
                 security_policy: SecurityPolicy {
                     job_policy: JobPolicyAllowlists {
                         ambient_mark_vmo_exec: vec![AbsoluteMoniker::from(vec!["foo:0"])],
+                        main_process_critical: vec![],
                     }
                 },
                 ..Default::default()
@@ -218,6 +237,45 @@ mod tests {
                         ambient_mark_vmo_exec: vec![
                             AbsoluteMoniker::root(),
                             AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),
+                        ],
+                        main_process_critical: vec![
+                        ],
+                    }
+                },
+                ..Default::default()
+            }
+        ),
+        valid_5 => (r#"{ security_policy: { job_policy: { main_process_critical: ["/", "/foo/bar"] } } }"#,
+            RuntimeConfig {
+                security_policy: SecurityPolicy {
+                    job_policy: JobPolicyAllowlists {
+                        ambient_mark_vmo_exec: vec![],
+                        main_process_critical: vec![
+                            AbsoluteMoniker::root(),
+                            AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),
+                        ],
+                    }
+                },
+                ..Default::default()
+            }
+        ),
+        valid_6 => (r#"{
+                security_policy: {
+                    job_policy: {
+                        ambient_mark_vmo_exec: ["/", "/foo/bar"],
+                        main_process_critical: ["/something/important"]
+                    }
+                }
+            }"#,
+            RuntimeConfig {
+                security_policy: SecurityPolicy {
+                    job_policy: JobPolicyAllowlists {
+                        ambient_mark_vmo_exec: vec![
+                            AbsoluteMoniker::root(),
+                            AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),
+                        ],
+                        main_process_critical: vec![
+                            AbsoluteMoniker::from(vec!["something:0", "important:0"]),
                         ],
                     }
                 },
@@ -312,11 +370,29 @@ mod tests {
                 );
             };
         }
+        macro_rules! assert_critical_allowed_matches {
+            ($config:expr, $moniker:expr, $expected:pat) => {
+                let result = ScopedPolicyChecker::new($config.clone(), $moniker.clone())
+                    .main_process_critical_allowed();
+                assert_matches!(result, $expected);
+            };
+        }
+        macro_rules! assert_critical_disallowed {
+            ($config:expr, $moniker:expr) => {
+                assert_critical_allowed_matches!(
+                    $config,
+                    $moniker,
+                    Err(PolicyError::JobPolicyDisallowed { .. })
+                );
+            };
+        }
 
         let strong_config = Arc::new(RuntimeConfig::default());
         let config = Arc::downgrade(&strong_config);
         assert_vmex_disallowed!(config, AbsoluteMoniker::root());
         assert_vmex_disallowed!(config, AbsoluteMoniker::from(vec!["foo:0"]));
+        assert_critical_disallowed!(config, AbsoluteMoniker::root());
+        assert_critical_disallowed!(config, AbsoluteMoniker::from(vec!["foo:0"]));
 
         let allowed1 = AbsoluteMoniker::from(vec!["foo:0", "bar:0"]);
         let allowed2 = AbsoluteMoniker::from(vec!["baz:0", "fiz:0"]);
@@ -324,6 +400,7 @@ mod tests {
             security_policy: SecurityPolicy {
                 job_policy: JobPolicyAllowlists {
                     ambient_mark_vmo_exec: vec![allowed1.clone(), allowed2.clone()],
+                    main_process_critical: vec![allowed1.clone(), allowed2.clone()],
                 },
             },
             ..Default::default()
@@ -335,8 +412,17 @@ mod tests {
         assert_vmex_disallowed!(config, allowed1.parent().unwrap());
         assert_vmex_disallowed!(config, allowed1.child(ChildMoniker::from("baz:0")));
 
+        assert_critical_allowed_matches!(config, allowed1, Ok(()));
+        assert_critical_allowed_matches!(config, allowed2, Ok(()));
+        assert_critical_disallowed!(config, AbsoluteMoniker::root());
+        assert_critical_disallowed!(config, allowed1.parent().unwrap());
+        assert_critical_disallowed!(config, allowed1.child(ChildMoniker::from("baz:0")));
+
         drop(strong_config);
         assert_vmex_allowed_matches!(config, allowed1, Err(PolicyError::PolicyUnavailable));
         assert_vmex_allowed_matches!(config, allowed2, Err(PolicyError::PolicyUnavailable));
+
+        assert_critical_allowed_matches!(config, allowed1, Err(PolicyError::PolicyUnavailable));
+        assert_critical_allowed_matches!(config, allowed2, Err(PolicyError::PolicyUnavailable));
     }
 }

@@ -4,6 +4,11 @@
             ambient_mark_vmo_exec: [
                 "/core/appmgr",
             ],
+            main_process_critical: [
+                "/bootstrap/driver_manager",
+                "/bootstrap/fshost",
+                "/core/appmgr",
+            ],
         }
     }
 }

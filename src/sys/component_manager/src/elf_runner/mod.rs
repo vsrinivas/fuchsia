@@ -78,6 +78,12 @@ pub enum ElfRunnerError {
         #[source]
         err: ClonableError,
     },
+    #[error("failed to mark main process as critical for component with url \"{}\": {}", url, err)]
+    ComponentCriticalMarkingError {
+        url: String,
+        #[source]
+        err: ClonableError,
+    },
     #[error("failed to add runtime/elf directory for component with url \"{}\"", url)]
     ComponentElfDirectoryError { url: String },
     #[error("program key \"{}\" invalid for component with url \"{}\"", key, url)]
@@ -125,6 +131,13 @@ impl ElfRunnerError {
         err: impl Into<Error>,
     ) -> ElfRunnerError {
         ElfRunnerError::ComponentJobDuplicationError { url: url.into(), err: err.into().into() }
+    }
+
+    pub fn component_critical_marking_error(
+        url: impl Into<String>,
+        err: impl Into<Error>,
+    ) -> ElfRunnerError {
+        ElfRunnerError::ComponentCriticalMarkingError { url: url.into(), err: err.into().into() }
     }
 
     pub fn component_elf_directory_error(url: impl Into<String>) -> ElfRunnerError {
@@ -374,6 +387,17 @@ impl ElfRunner {
             resolved_url.clone(),
             format_err!("failed to launch component, no process"),
         ))?;
+        if program_config.main_process_critical {
+            job_default()
+                .set_critical(zx::JobCriticalOptions::RETCODE_NONZERO, &process)
+                .map_err(|s| {
+                    ElfRunnerError::component_critical_marking_error(
+                        resolved_url.clone(),
+                        format_err!("failed to mark process as critical: {}", s),
+                    )
+                })
+                .expect("failed to set process as critical");
+        }
         let process_koid = process
             .get_koid()
             .map_err(|e| ElfRunnerError::component_process_id_error(resolved_url.clone(), e))?
@@ -389,6 +413,7 @@ impl ElfRunner {
 struct ElfProgramConfig {
     notify_lifecycle_stop: bool,
     ambient_mark_vmo_exec: bool,
+    main_process_critical: bool,
 }
 
 impl ElfProgramConfig {
@@ -429,7 +454,22 @@ impl ElfProgramConfig {
             checker.ambient_mark_vmo_exec_allowed()?;
         }
 
-        Ok(ElfProgramConfig { notify_lifecycle_stop, ambient_mark_vmo_exec })
+        const CRITICAL_KEY: &str = "main_process_critical";
+        let main_process_critical = match Self::find(program, CRITICAL_KEY) {
+            Some(fdata::DictionaryValue::Str(str_val)) => match &str_val[..] {
+                "true" => Ok(true),
+                "false" => Ok(false),
+                _ => Err(()),
+            },
+            Some(_) => Err(()),
+            None => Ok(false),
+        }
+        .map_err(|_| ElfRunnerError::program_dictionary_error(CRITICAL_KEY, url))?;
+        if main_process_critical {
+            checker.main_process_critical_allowed()?;
+        }
+
+        Ok(ElfProgramConfig { notify_lifecycle_stop, ambient_mark_vmo_exec, main_process_critical })
     }
 
     fn find<'a>(dict: &'a fdata::Dictionary, key: &str) -> Option<&'a fdata::DictionaryValue> {
@@ -968,8 +1008,25 @@ mod tests {
         start_info
     }
 
+    // Modify the standard test StartInfo to add a main_process_critical request
+    fn hello_world_startinfo_main_process_critical(
+        runtime_dir: Option<ServerEnd<DirectoryMarker>>,
+    ) -> fcrunner::ComponentStartInfo {
+        let mut start_info = hello_world_startinfo(runtime_dir);
+        start_info.program.as_mut().map(|dict| {
+            dict.entries.as_mut().map(|ent| {
+                ent.push(fdata::DictionaryEntry {
+                    key: "main_process_critical".to_string(),
+                    value: Some(Box::new(fdata::DictionaryValue::Str("true".to_string()))),
+                });
+                ent
+            })
+        });
+        start_info
+    }
+
     #[fasync::run_singlethreaded(test)]
-    async fn security_policy_denied() -> Result<(), Error> {
+    async fn vmex_security_policy_denied() -> Result<(), Error> {
         let start_info = hello_world_startinfo_mark_vmo_exec(None);
 
         // Config does not allowlist any monikers to have access to the job policy.
@@ -998,7 +1055,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn security_policy_allowed() -> Result<(), Error> {
+    async fn vmex_security_policy_allowed() -> Result<(), Error> {
         let (runtime_dir_client, runtime_dir_server) = zx::Channel::create()?;
         let start_info =
             hello_world_startinfo_mark_vmo_exec(Some(ServerEnd::new(runtime_dir_server)));
@@ -1028,6 +1085,35 @@ mod tests {
         // Component controller should get shutdown normally; no ACCESS_DENIED epitaph.
         controller.kill().expect("kill failed");
         assert_matches!(controller.take_event_stream().try_next().await, Ok(None));
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn critical_security_policy_denied() -> Result<(), Error> {
+        let start_info = hello_world_startinfo_main_process_critical(None);
+
+        // Config does not allowlist any monikers to be marked as critical
+        let config = Arc::new(RuntimeConfig::default());
+        let args = Arguments {
+            use_builtin_process_launcher: should_use_builtin_process_launcher(),
+            ..Default::default()
+        };
+        let runner = Arc::new(ElfRunner::new(&args));
+        let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
+            Arc::downgrade(&config),
+            AbsoluteMoniker::root(),
+        ));
+        let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
+            .expect("could not create component controller endpoints");
+
+        // Attempting to start the component should fail, which we detect by looking for an
+        // ACCESS_DENIED epitaph on the ComponentController's event stream.
+        runner.start(start_info, server_controller).await;
+        assert_matches!(
+            controller.take_event_stream().try_next().await,
+            Err(fidl::Error::ClientChannelClosed(zx::Status::ACCESS_DENIED))
+        );
 
         Ok(())
     }
