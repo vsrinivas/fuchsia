@@ -8,6 +8,14 @@ group("tests") {
   ]
 }
 
+group("large_tests") {
+  testonly = true
+  deps = [
+    ":large-fs-tests",
+    "//src/lib/isolated_devmgr/v2_component",
+  ]
+}
+
 executable("fs_tests") {
   testonly = true
   sources = [
@@ -52,6 +60,52 @@ test_package("fs-tests") {
   v2_tests = [
     {
       name = "fs_tests"
+    },
+  ]
+}
+
+executable("large_fs_tests") {
+  testonly = true
+  sources = [
+    "fs_test.cc",
+    "fs_test_fixture.cc",
+    "max_file.cc",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/isolated_devmgr/v2_component",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/block-client",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fs-management",
+    "//zircon/system/ulib/fvm",
+    "//zircon/system/ulib/memfs",
+    "//zircon/system/ulib/minfs",
+  ]
+}
+
+test_package("large-fs-tests") {
+  deps = [
+    ":large_fs_tests",
+    "//src/sys/test_runners/gtest",
+    "//zircon/system/uapp/minfs",
+  ]
+  binaries = [
+    {
+      name = "large_fs_tests"
+    },
+    {
+      name = "minfs"
+    },
+  ]
+  v2_tests = [
+    {
+      name = "large_fs_tests"
     },
   ]
 }

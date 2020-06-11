@@ -4,47 +4,43 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/syscalls.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
-#include <zircon/syscalls.h>
 
-#include "filesystems.h"
-#include "misc.h"
+#include "fs_test_fixture.h"
 
-#define MB (1 << 20)
-#define PRINT_SIZE (MB * 100)
-
+namespace fs_test {
 namespace {
 
-enum MountType {
-  DoRemount,
-  DontRemount,
+using ParamType = std::tuple<TestFileSystemOptions, /*remount=*/bool>;
+
+constexpr int kMb = 1 << 20;
+constexpr int kPrintSize = 100 * kMb;
+
+class MaxFileTest : public BaseFileSystemTest, public testing::WithParamInterface<ParamType> {
+ public:
+  MaxFileTest() : BaseFileSystemTest(std::get<0>(GetParam())) {}
+
+  bool ShouldRemount() const { return std::get<1>(GetParam()); }
 };
 
-// Test writing as much as we can to a file until we run
-// out of space
-template <MountType mt>
-bool test_maxfile(void) {
-  BEGIN_TEST;
-
-  if (!test_info->can_be_mounted && mt == DoRemount) {
-    fprintf(stderr, "Filesystem cannot be mounted; cannot remount\n");
-    return true;
-  }
-
+// Test writing as much as we can to a file until we run out of space.
+TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
   // TODO(ZX-1735): We avoid making files that consume more than half
   // of physical memory. When we can page out files, this restriction
   // should be removed.
   const size_t physmem = zx_system_get_physmem();
   const size_t max_cap = physmem / 2;
 
-  fbl::unique_fd fd(open("::bigfile", O_CREAT | O_RDWR, 0644));
+  fbl::unique_fd fd(open(GetPath("bigfile").c_str(), O_CREAT | O_RDWR, 0644));
   ASSERT_TRUE(fd);
   char data_a[8192];
   char data_b[8192];
@@ -68,85 +64,76 @@ bool test_maxfile(void) {
   const char* data = data_a;
   for (;;) {
     if (sz >= max_cap) {
-      fprintf(stderr, "Approaching physical memory capacity: %zd bytes\n", sz);
+      FX_LOGS(INFO) << "Approaching physical memory capacity: " << sz << " bytes";
       r = 0;
       break;
     }
 
     if ((r = write(fd.get(), data, sizeof(data_a))) < 0) {
-      fprintf(stderr, "bigfile received error: %s\n", strerror(errno));
+      FX_LOGS(INFO) << "bigfile received error: " << strerror(errno);
       if ((errno == EFBIG) || (errno == ENOSPC)) {
         // Either the file should be too big (EFBIG) or the file should
         // consume the whole volume (ENOSPC).
-        fprintf(stderr, "(This was an expected error)\n");
+        FX_LOGS(INFO) << "(This was an expected error)";
         r = 0;
       }
       break;
     }
-    if ((sz + r) % PRINT_SIZE < (sz % PRINT_SIZE)) {
-      fprintf(stderr, "wrote %lu MB\n", (sz + r) / MB);
+    if ((sz + r) % kPrintSize < (sz % kPrintSize)) {
+      FX_LOGS(INFO) << "wrote " << (sz + r) / kMb << " MB";
     }
     sz += r;
-    ASSERT_EQ(r, sizeof(data_a));
+    ASSERT_EQ(r, static_cast<ssize_t>(sizeof(data_a)));
 
     // Rotate which data buffer we use
     data = rotate(data);
   }
-  ASSERT_EQ(r, 0, "Saw an unexpected error from write");
-  fprintf(stderr, "wrote %lu bytes\n", sz);
+  ASSERT_EQ(r, 0) << "Saw an unexpected error from write";
+  FX_LOGS(INFO) << "wrote " << sz << " bytes";
 
   struct stat buf;
-  ASSERT_EQ(fstat(fd.get(), &buf), 0, "Couldn't stat max file");
-  ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz), "Unexpected max file size");
+  ASSERT_EQ(fstat(fd.get(), &buf), 0);
+  ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz));
 
   // Try closing, re-opening, and verifying the file
   ASSERT_EQ(close(fd.release()), 0);
-  if (mt == DoRemount) {
-    ASSERT_TRUE(check_remount(), "Could not remount filesystem");
+  if (ShouldRemount()) {
+    EXPECT_EQ(fs().Unmount().status_value(), 0);
+    EXPECT_EQ(fs().Mount().status_value(), 0);
   }
-  fd.reset(open("::bigfile", O_RDWR, 0644));
+  fd.reset(open(GetPath("bigfile").c_str(), O_RDWR, 0644));
   ASSERT_TRUE(fd);
-  ASSERT_EQ(fstat(fd.get(), &buf), 0, "Couldn't stat max file");
-  ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz), "Unexpected max file size");
+  ASSERT_EQ(fstat(fd.get(), &buf), 0);
+  ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz));
   char readbuf[8192];
   size_t bytes_read = 0;
   data = data_a;
   while (bytes_read < sz) {
     r = read(fd.get(), readbuf, sizeof(readbuf));
     ASSERT_EQ(r, static_cast<ssize_t>(fbl::min(sz - bytes_read, sizeof(readbuf))));
-    ASSERT_EQ(memcmp(readbuf, data, r), 0, "File failed to verify");
+    ASSERT_EQ(memcmp(readbuf, data, r), 0);
     data = rotate(data);
     bytes_read += r;
   }
 
   ASSERT_EQ(bytes_read, sz);
 
-  ASSERT_EQ(unlink("::bigfile"), 0);
+  ASSERT_EQ(unlink(GetPath("bigfile").c_str()), 0);
   ASSERT_EQ(close(fd.release()), 0);
-  END_TEST;
 }
 
-// Test writing to two files, in alternation, until we run out
-// of space. For trivial (sequential) block allocation policies,
-// this will create two large files with non-contiguous block
+// Test writing to two files, in alternation, until we run out of space. For trivial (sequential)
+// block allocation policies, this will create two large files with non-contiguous block
 // allocations.
-template <MountType mt>
-bool TestZippedMaxfiles(void) {
-  BEGIN_TEST;
-
-  if (!test_info->can_be_mounted && mt == DoRemount) {
-    fprintf(stderr, "Filesystem cannot be mounted; cannot remount\n");
-    return true;
-  }
-
+TEST_P(MaxFileTest, ReadAfterNonContiguousWritesSuceeds) {
   // TODO(ZX-1735): We avoid making files that consume more than half
   // of physical memory. When we can page out files, this restriction
   // should be removed.
   const size_t physmem = zx_system_get_physmem();
   const size_t max_cap = physmem / 4;
 
-  fbl::unique_fd fda(open("::bigfile-A", O_CREAT | O_RDWR, 0644));
-  fbl::unique_fd fdb(open("::bigfile-B", O_CREAT | O_RDWR, 0644));
+  fbl::unique_fd fda(open(GetPath("bigfile-A").c_str(), O_CREAT | O_RDWR, 0644));
+  fbl::unique_fd fdb(open(GetPath("bigfile-B").c_str(), O_CREAT | O_RDWR, 0644));
   ASSERT_TRUE(fda);
   ASSERT_TRUE(fdb);
   char data_a[8192];
@@ -162,46 +149,47 @@ bool TestZippedMaxfiles(void) {
   const char* data = data_a;
   for (;;) {
     if (*sz >= max_cap) {
-      fprintf(stderr, "Approaching physical memory capacity: %zd bytes\n", *sz);
+      FX_LOGS(INFO) << "Approaching physical memory capacity: " << *sz << " bytes";
       r = 0;
       break;
     }
 
     if ((r = write(fd, data, sizeof(data_a))) <= 0) {
-      fprintf(stderr, "bigfile received error: %s\n", strerror(errno));
+      FX_LOGS(INFO) << "bigfile received error: " << strerror(errno);
       // Either the file should be too big (EFBIG) or the file should
       // consume the whole volume (ENOSPC).
       ASSERT_TRUE(errno == EFBIG || errno == ENOSPC);
-      fprintf(stderr, "(This was an expected error)\n");
+      FX_LOGS(INFO) << "(This was an expected error)";
       break;
     }
-    if ((*sz + r) % PRINT_SIZE < (*sz % PRINT_SIZE)) {
-      fprintf(stderr, "wrote %lu MB\n", (*sz + r) / MB);
+    if ((*sz + r) % kPrintSize < (*sz % kPrintSize)) {
+      FX_LOGS(INFO) << "wrote " << (*sz + r) / kMb << " MB";
     }
     *sz += r;
-    ASSERT_EQ(r, sizeof(data_a));
+    ASSERT_EQ(r, static_cast<ssize_t>(sizeof(data_a)));
 
     fd = (fd == fda.get()) ? fdb.get() : fda.get();
     data = (data == data_a) ? data_b : data_a;
     sz = (sz == &sz_a) ? &sz_b : &sz_a;
   }
-  fprintf(stderr, "wrote %lu bytes (to A)\n", sz_a);
-  fprintf(stderr, "wrote %lu bytes (to B)\n", sz_b);
+  FX_LOGS(INFO) << "wrote " << sz_a << " bytes (to A)";
+  FX_LOGS(INFO) << "wrote " << sz_b << " bytes (to B)";
 
   struct stat buf;
-  ASSERT_EQ(fstat(fda.get(), &buf), 0, "Couldn't stat max file");
-  ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz_a), "Unexpected max file size");
-  ASSERT_EQ(fstat(fdb.get(), &buf), 0, "Couldn't stat max file");
-  ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz_b), "Unexpected max file size");
+  ASSERT_EQ(fstat(fda.get(), &buf), 0);
+  ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz_a));
+  ASSERT_EQ(fstat(fdb.get(), &buf), 0);
+  ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz_b));
 
   // Try closing, re-opening, and verifying the file
   ASSERT_EQ(close(fda.release()), 0);
   ASSERT_EQ(close(fdb.release()), 0);
-  if (mt == DoRemount) {
-    ASSERT_TRUE(check_remount(), "Could not remount filesystem");
+  if (ShouldRemount()) {
+    EXPECT_EQ(fs().Unmount().status_value(), 0);
+    EXPECT_EQ(fs().Mount().status_value(), 0);
   }
-  fda.reset(open("::bigfile-A", O_RDWR, 0644));
-  fdb.reset(open("::bigfile-B", O_RDWR, 0644));
+  fda.reset(open(GetPath("bigfile-A").c_str(), O_RDWR, 0644));
+  fdb.reset(open(GetPath("bigfile-B").c_str(), O_RDWR, 0644));
   ASSERT_TRUE(fda);
   ASSERT_TRUE(fdb);
 
@@ -216,7 +204,7 @@ bool TestZippedMaxfiles(void) {
   while (*bytes_read < *sz) {
     r = read(fd, readbuf, sizeof(readbuf));
     ASSERT_EQ(r, static_cast<ssize_t>(fbl::min(*sz - *bytes_read, sizeof(readbuf))));
-    ASSERT_EQ(memcmp(readbuf, data, r), 0, "File failed to verify");
+    ASSERT_EQ(memcmp(readbuf, data, r), 0);
     *bytes_read += r;
 
     fd = (fd == fda.get()) ? fdb.get() : fda.get();
@@ -228,26 +216,36 @@ bool TestZippedMaxfiles(void) {
   ASSERT_EQ(bytes_read_a, sz_a);
   ASSERT_EQ(bytes_read_b, sz_b);
 
-  ASSERT_EQ(unlink("::bigfile-A"), 0);
-  ASSERT_EQ(unlink("::bigfile-B"), 0);
+  ASSERT_EQ(unlink(GetPath("bigfile-A").c_str()), 0);
+  ASSERT_EQ(unlink(GetPath("bigfile-B").c_str()), 0);
   ASSERT_EQ(close(fda.release()), 0);
   ASSERT_EQ(close(fdb.release()), 0);
-
-  END_TEST;
 }
 
-// Disk must be at least this large to exceed the maximum transaction limit during delayed data
-// allocation on non-FVM-backed Minfs partitions.
-const test_disk_t disk = {
-    .block_count = 1LLU << 20,
-    .block_size = 1LLU << 9,
-    .slice_size = 1LLU << 23,
-};
+std::string GetParamDescription(const testing::TestParamInfo<ParamType>& param) {
+  std::stringstream s;
+  s << std::get<0>(param.param) << (std::get<1>(param.param) ? "WithRemount" : "WithoutRemount");
+  return s.str();
+}
+
+std::vector<ParamType> GetTestCombinations() {
+  std::vector<ParamType> test_combinations;
+  for (TestFileSystemOptions options : AllTestFileSystems()) {
+    // Use a larger ram-disk than the default so that the maximum transaction limit is exceeded for
+    // during delayed data allocation on non-FVM-backed Minfs partitions.
+    options.device_block_size = 512;
+    options.device_block_count = 1'048'576;
+    options.fvm_slice_size = 8'388'608;
+    test_combinations.push_back(ParamType{options, false});
+    if (options.file_system->GetTraits().can_unmount) {
+      test_combinations.push_back(ParamType{options, true});
+    }
+  }
+  return test_combinations;
+}
+
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MaxFileTest, testing::ValuesIn(GetTestCombinations()),
+                         GetParamDescription);
 
 }  // namespace
-
-RUN_FOR_ALL_FILESYSTEMS_SIZE(maxfile_tests, disk,
-                             RUN_TEST_LARGE((test_maxfile<DontRemount>))
-                                 RUN_TEST_LARGE((test_maxfile<DoRemount>))
-                                     RUN_TEST_LARGE((TestZippedMaxfiles<DontRemount>))
-                                         RUN_TEST_LARGE((TestZippedMaxfiles<DoRemount>)))
+}  // namespace fs_test

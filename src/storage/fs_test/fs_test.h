@@ -34,8 +34,13 @@ std::vector<TestFileSystemOptions> AllTestFileSystems();
 // A file system instance is a specific instance created for test purposes.
 class FileSystemInstance {
  public:
+  FileSystemInstance() = default;
+  FileSystemInstance(const FileSystemInstance&) = delete;
+  FileSystemInstance& operator =(const FileSystemInstance&) = delete;
   virtual ~FileSystemInstance() = default;
+
   virtual zx::status<> Mount(const std::string& mount_path) = 0;
+  virtual zx::status<> Unmount(const std::string& mount_path) = 0;
   virtual zx::status<> Fsck() = 0;
 
  protected:
@@ -48,8 +53,13 @@ class FileSystemInstance {
 // instances of FileSystemInstance subclasses.
 class FileSystem {
  public:
+  struct Traits {
+    bool can_unmount = false;
+  };
+
   virtual zx::status<std::unique_ptr<FileSystemInstance>> Make(
       const TestFileSystemOptions& options) const = 0;
+  virtual const Traits& GetTraits() const = 0;
 
  protected:
   // A wrapper around fs-management that can be used by subclasses if they so wish.
@@ -71,6 +81,12 @@ class MinfsFileSystem : public FileSystemImpl<MinfsFileSystem> {
  public:
   zx::status<std::unique_ptr<FileSystemInstance>> Make(
       const TestFileSystemOptions& options) const override;
+  const Traits& GetTraits() const override {
+    static Traits traits{
+      .can_unmount = true
+    };
+    return traits;
+  }
 };
 
 // Support for Memfs.
@@ -78,6 +94,12 @@ class MemfsFileSystem : public FileSystemImpl<MemfsFileSystem> {
  public:
   zx::status<std::unique_ptr<FileSystemInstance>> Make(
       const TestFileSystemOptions& options) const override;
+  const Traits& GetTraits() const override {
+    static Traits traits{
+      .can_unmount = false
+    };
+    return traits;
+  }
 };
 
 // Helper that creates a test file system with the given options and will clean-up upon destruction.

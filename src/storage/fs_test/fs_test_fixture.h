@@ -11,6 +11,24 @@
 
 namespace fs_test {
 
+class BaseFileSystemTest : public testing::Test {
+ public:
+  BaseFileSystemTest(const TestFileSystemOptions& options)
+      : fs_(TestFileSystem::Create(options).value()) {}
+  ~BaseFileSystemTest();
+
+  std::string GetPath(std::string_view relative_path) const {
+    std::string path = fs_.mount_path() + "/";
+    path.append(relative_path);
+    return path;
+  }
+
+  TestFileSystem& fs() { return fs_; }
+
+ protected:
+  TestFileSystem fs_;
+};
+
 // Example:
 //
 // #include "fs_test_fixture.h"
@@ -23,22 +41,10 @@ namespace fs_test {
 //                          testing::ValuesIn(AllTestFileSystems()),
 //                          testing::PrintToStringParamName());
 
-class FileSystemTest : public testing::Test,
+class FileSystemTest : public BaseFileSystemTest,
                        public testing::WithParamInterface<TestFileSystemOptions> {
  public:
-  FileSystemTest() : fs_(TestFileSystem::Create(GetParam()).value()) {}
-  ~FileSystemTest();
-
-  std::string GetPath(std::string_view relative_path) const {
-    std::string path = fs_.mount_path() + "/";
-    path.append(relative_path);
-    return path;
-  }
-
-  TestFileSystem& fs() { return fs_; }
-
- protected:
-  TestFileSystem fs_;
+  FileSystemTest() : BaseFileSystemTest(GetParam()) {}
 };
 
 }  // namespace fs_test

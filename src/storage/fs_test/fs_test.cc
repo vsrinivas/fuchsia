@@ -118,6 +118,10 @@ class MinfsInstance : public FileSystemInstance {
     return FileSystemInstance::Mount(device_path_, mount_path, DISK_FORMAT_MINFS);
   }
 
+  zx::status<> Unmount(const std::string& mount_path) override {
+    return zx::make_status(umount(mount_path.c_str()));
+  }
+
   zx::status<> Fsck() override {
     fsck_options_t options{
         .verbose = false,
@@ -167,10 +171,22 @@ class MemfsInstance : public FileSystemInstance {
   }
 
   zx::status<> Mount(const std::string& mount_path) override {
+    if (!root_) {
+      // Already mounted.
+      return zx::error(ZX_ERR_BAD_STATE);
+    }
     auto status = zx::make_status(mount_root_handle(root_.release(), mount_path.c_str()));
     if (status.is_error())
       FX_LOGS(ERROR) << "Unable to mount: " << status.status_string();
     return status;
+  }
+
+  zx::status<> Unmount(const std::string& mount_path) override {
+    // We can't use fs-management here because it also shuts down the file system, which we don't
+    // want to do because then we wouldn't be able to remount. O_ADMIN and O_NOREMOTE are not
+    // available in the SDK, which makes detaching the remote mount ourselves difficult.  So, for
+    // now, just do nothing; we don't really need to test this.
+    return zx::ok();
   }
 
   zx::status<> Fsck() override { return zx::ok(); }
@@ -178,7 +194,7 @@ class MemfsInstance : public FileSystemInstance {
  private:
   async::Loop loop_;
   memfs_filesystem_t* fs_ = nullptr;
-  zx::channel root_;  // Only valid when not mounted.
+  zx::channel root_;  // Not valid after mounted.
 };
 
 zx::status<std::unique_ptr<FileSystemInstance>> MemfsFileSystem::Make(
@@ -233,7 +249,10 @@ zx::status<> TestFileSystem::Mount() {
 }
 
 zx::status<> TestFileSystem::Unmount() {
-  zx::status<> status = zx::make_status(umount(mount_path_.c_str()));
+  if (!file_system_) {
+    return zx::ok();
+  }
+  auto status = file_system_->Unmount(mount_path_.c_str());
   if (status.is_ok()) {
     mounted_ = false;
   }
