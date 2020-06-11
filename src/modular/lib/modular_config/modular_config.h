@@ -53,9 +53,6 @@ class ModularConfigReader {
   // Returns the parsed `sessionmgr` section of the config.
   fuchsia::modular::session::SessionmgrConfig GetSessionmgrConfig() const;
 
-  // Returns a SessionmgrConfig with all default values
-  fuchsia::modular::session::SessionmgrConfig GetDefaultSessionmgrConfig() const;
-
   // Returns the given configuration as a JSON formatted string.
   static std::string GetConfigAsString(
       fuchsia::modular::session::BasemgrConfig* basemgr_config,

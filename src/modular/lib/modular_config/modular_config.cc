@@ -135,13 +135,6 @@ fuchsia::modular::session::SessionmgrConfig ModularConfigReader::GetSessionmgrCo
   return result;
 }
 
-fuchsia::modular::session::SessionmgrConfig ModularConfigReader::GetDefaultSessionmgrConfig()
-    const {
-  fuchsia::modular::session::SessionmgrConfig sessionmgr_config;
-  XdrRead("{}", &sessionmgr_config, XdrSessionmgrConfig);
-  return sessionmgr_config;
-}
-
 // static
 std::string ModularConfigReader::GetConfigAsString(
     fuchsia::modular::session::BasemgrConfig* basemgr_config,

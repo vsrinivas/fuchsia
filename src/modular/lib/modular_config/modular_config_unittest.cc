@@ -160,7 +160,7 @@ TEST_F(ModularConfigReaderTest, GetConfigAsString) {
 
   modular::ModularConfigReader second_reader(server_after_read.OpenAt("."));
 
-  // Verify that the second reader has the same same config values as the original |config_contents|
+  // Verify that the second reader has the same config values as the original |config_contents|
   basemgr_config = second_reader.GetBasemgrConfig();
   EXPECT_EQ(base_shell_url, basemgr_config.base_shell().app_config().url());
   EXPECT_TRUE(basemgr_config.base_shell().keep_alive_after_login());

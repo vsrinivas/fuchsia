@@ -17,10 +17,8 @@
 
 namespace modular {
 
-// Tests that default values are set correctly for BasemgrConfig when reading
-// an empty JSON and that JSON values are set correctly when BasemgrConfig
-// contains no values.
-TEST(ModularConfigXdr, BasemgrDefaultValues) {
+// Tests that default JSON values are set correctly when BasemgrConfig contains no values.
+TEST(ModularConfigXdr, BasemgrWriteDefaultValues) {
   static constexpr auto kExpectedJson = R"({
       "enable_cobalt": true,
       "use_session_shell_for_story_shell_factory": false,
@@ -50,7 +48,10 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
   XdrWrite(&write_config_json_doc, &write_config, XdrBasemgrConfig);
 
   EXPECT_EQ(expected_json_doc, write_config_json_doc);
+}
 
+// Tests that default values are set correctly for BasemgrConfig when reading an empty config.
+TEST(ModularConfigXdr, BasemgrReadDefaultValues) {
   // Deserialize an empty JSON document into BasemgrConfig.
   rapidjson::Document read_json_doc;
   read_json_doc.SetObject();
@@ -84,10 +85,8 @@ TEST(ModularConfigXdr, BasemgrDefaultValues) {
             read_config.story_shell().app_config().url());
 }
 
-// Tests that default values are set correctly for SessionmgrConfig when reading
-// an empty JSON and that JSON values are set correctly when SessionmgrConfig
-// contains no values.
-TEST(ModularConfigXdr, SessionmgrDefaultValues) {
+// Tests that default JSON values are set correctly when SessionmgrConfig contains no values.
+TEST(ModularConfigXdr, SessionmgrWriteDefaultValues) {
   static constexpr auto kExpectedJson = R"({
       "enable_cobalt": true,
       "startup_agents": null,
@@ -105,7 +104,10 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
   XdrWrite(&write_config_json_doc, &write_config, XdrSessionmgrConfig);
 
   EXPECT_EQ(expected_json_doc, write_config_json_doc);
+}
 
+// Tests that default values are set correctly for SessionmgrConfig when reading an empty config.
+TEST(ModularConfigXdr, SessionmgrReadDefaultValues) {
   // Deserialize an empty JSON document into SessionmgrConfig.
   rapidjson::Document read_json_doc;
   read_json_doc.SetObject();
