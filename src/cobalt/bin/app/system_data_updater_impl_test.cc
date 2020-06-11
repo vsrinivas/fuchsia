@@ -10,6 +10,7 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <fstream>
+
 #include "fuchsia/cobalt/cpp/fidl.h"
 
 namespace cobalt {
@@ -17,9 +18,9 @@ namespace cobalt {
 using encoder::SystemData;
 using fidl::VectorPtr;
 using fuchsia::cobalt::ExperimentPtr;
+using fuchsia::cobalt::SoftwareDistributionInfo;
 using fuchsia::cobalt::Status;
 using fuchsia::cobalt::SystemDataUpdaterPtr;
-using fuchsia::cobalt::SoftwareDistributionInfo;
 
 class CobaltAppForTest {
  public:
@@ -72,9 +73,7 @@ class SystemDataUpdaterImplTests : public gtest::TestLoopFixture {
     return cobalt_app_->system_make_data().system_profile().channel();
   }
 
-  const std::string& realm() {
-    return cobalt_app_->system_make_data().system_profile().realm();
-  }
+  const std::string& realm() { return cobalt_app_->system_make_data().system_profile().realm(); }
 
   std::vector<fuchsia::cobalt::Experiment> ExperimentVectorWithIdAndArmId(int64_t experiment_id,
                                                                           int64_t arm_id) {
@@ -155,13 +154,15 @@ TEST_F(SystemDataUpdaterImplTests, SetSoftwareDistributionInfo) {
   EXPECT_EQ(channel(), "<unset>");
   EXPECT_EQ(realm(), "<unset>");
 
-  system_data_updater->SetSoftwareDistributionInfo(SoftwareDistributionInfo(), [](Status s) {});
+  SoftwareDistributionInfo info = SoftwareDistributionInfo();
+  info.set_current_realm("");
+  system_data_updater->SetSoftwareDistributionInfo(std::move(info), [](Status s) {});
   RunLoopUntilIdle();
 
-  EXPECT_EQ(channel(), "<unknown>");
+  EXPECT_EQ(channel(), "<unset>");
   EXPECT_EQ(realm(), "<unknown>");
 
-  SoftwareDistributionInfo info = SoftwareDistributionInfo();
+  info = SoftwareDistributionInfo();
   info.set_current_realm("dogfood");
   info.set_current_channel("fishfood_release");
   system_data_updater->SetSoftwareDistributionInfo(std::move(info), [](Status s) {});
@@ -169,11 +170,22 @@ TEST_F(SystemDataUpdaterImplTests, SetSoftwareDistributionInfo) {
 
   EXPECT_EQ(channel(), "fishfood_release");
   EXPECT_EQ(realm(), "dogfood");
+
+  // Set one software distribution field without overriding the other.
+  info = SoftwareDistributionInfo();
+  info.set_current_channel("test_channel");
+  system_data_updater->SetSoftwareDistributionInfo(std::move(info), [](Status s) {});
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(channel(), "test_channel");
+  EXPECT_EQ(realm(), "dogfood");
 }
 
 namespace {
 
-std::unique_ptr<SystemData> make_data() { return std::make_unique<SystemData>("test", "test", ReleaseStage::DEBUG); }
+std::unique_ptr<SystemData> make_data() {
+  return std::make_unique<SystemData>("test", "test", ReleaseStage::DEBUG);
+}
 
 std::unique_ptr<SystemDataUpdaterImpl> make_updater(SystemData* data) {
   return std::make_unique<SystemDataUpdaterImpl>(data, "/tmp/test_");

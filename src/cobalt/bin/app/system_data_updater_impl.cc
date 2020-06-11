@@ -38,11 +38,11 @@ void SystemDataUpdaterImpl::SetExperimentState(std::vector<fuchsia::cobalt::Expe
 
 void SystemDataUpdaterImpl::RestoreData() {
   auto d = Restore(kChannelCacheFilenameSuffix);
-  if (d != "") {
+  if (!d.empty()) {
     system_data_->SetChannel(d);
   }
   d = Restore(kRealmCacheFilenameSuffix);
-  if (d != "") {
+  if (!d.empty()) {
     system_data_->SetRealm(d);
   }
 }
@@ -63,6 +63,9 @@ std::string SystemDataUpdaterImpl::Restore(const std::string& suffix) {
 }
 
 void SystemDataUpdaterImpl::Persist(const std::string& suffix, const std::string& value) {
+  if (value.empty()) {
+    return;
+  }
   FX_LOGS(INFO) << "Writing `" << value << "` to `" << cache_file_name_prefix_ << suffix << "`";
   std::ofstream c(cache_file_name_prefix_ + suffix);
   c << value;
@@ -77,9 +80,7 @@ void SystemDataUpdaterImpl::DeleteData(const std::string& suffix) {
 
 void SystemDataUpdaterImpl::SetChannel(std::string current_channel, SetChannelCallback callback) {
   fuchsia::cobalt::SoftwareDistributionInfo current_info;
-  if (current_channel != "") {
-    current_info.set_current_channel(std::move(current_channel));
-  }
+  current_info.set_current_channel(std::move(current_channel));
   SetSoftwareDistributionInfo(std::move(current_info),
                               [&callback](Status status) { callback(status); });
 }
@@ -87,23 +88,24 @@ void SystemDataUpdaterImpl::SetChannel(std::string current_channel, SetChannelCa
 void SystemDataUpdaterImpl::SetSoftwareDistributionInfo(
     fuchsia::cobalt::SoftwareDistributionInfo current_info,
     SetSoftwareDistributionInfoCallback callback) {
-  std::string realm = "<unknown>";
-  std::string channel = "<unknown>";
+  system_data::SoftwareDistributionInfo info;
+
   if (current_info.has_current_realm()) {
-    realm = current_info.current_realm();
+    auto realm = current_info.current_realm();
     Persist(kRealmCacheFilenameSuffix, realm);
+    FX_LOGS(INFO) << "Setting realm to `" << realm << "`";
+    info.realm = realm;
   }
 
   if (current_info.has_current_channel()) {
-    channel = current_info.current_channel();
+    auto channel = current_info.current_channel();
     Persist(kChannelCacheFilenameSuffix, channel);
+    FX_LOGS(INFO) << "Setting channel to `" << channel << "`";
+    info.channel = channel;
   }
 
-  FX_LOGS(INFO) << "Setting realm to `" << realm << "`";
-  FX_LOGS(INFO) << "Setting channel to `" << channel << "`";
-  system_data_->SetRealm(realm);
-  system_data_->SetChannel(channel);
+  system_data_->SetSoftwareDistributionInfo(info);
   callback(Status::OK);
-}
+}  // namespace cobalt
 
 }  // namespace cobalt
