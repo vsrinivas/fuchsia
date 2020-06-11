@@ -9,8 +9,6 @@ import 'package:args/args.dart';
 import 'package:blobstats/blobstats.dart';
 
 ArgResults argResults;
-const lz4Compression = 'lz4-compression';
-const zstdCompression = 'zstd-compression';
 const humanReadable = 'human-readable';
 const output = 'output';
 const image = 'image';
@@ -20,10 +18,6 @@ Future main(List<String> args) async {
     ..addFlag('help', help: 'give this help')
     ..addOption(output, abbr: 'o', help: 'Directory to output report to')
     ..addOption(image, help: 'The image for which to show the stats')
-    ..addFlag(lz4Compression,
-        abbr: 'l', defaultsTo: false, help: 'Use (lz4) compressed size')
-    ..addFlag(zstdCompression,
-        abbr: 'z', defaultsTo: false, help: 'Use (zstd) compressed size')
     ..addFlag(humanReadable,
         abbr: 'h',
         defaultsTo: false,
@@ -53,9 +47,7 @@ Future main(List<String> args) async {
   if (argResults[image] != null) {
     prefix = '${argResults[image]}_';
   }
-  await stats.addManifest('${prefix}obj/build/images', 'blob.manifest',
-      lz4Compression: argResults[lz4Compression],
-      zstdCompression: argResults[zstdCompression]);
+  await stats.addManifest('${prefix}obj/build/images', 'blob.manifest');
   await stats.addBlobSizes('${prefix}blobs.json');
   await stats.computePackagesInParallel(Platform.numberOfProcessors);
   stats

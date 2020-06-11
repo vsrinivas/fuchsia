@@ -25,8 +25,7 @@ class BlobStats {
   BlobStats(this.buildDir, this.outputDir, this.suffix,
       {this.humanReadable = false});
 
-  Future addManifest(String dir, String name,
-      {bool lz4Compression = false, bool zstdCompression = false}) async {
+  Future addManifest(String dir, String name) async {
     var lines = await File(p.join(buildDir.path, dir, name)).readAsLines();
     for (var line in lines) {
       var parts = line.split('=');
