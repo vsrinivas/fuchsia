@@ -210,9 +210,17 @@ func (d *Distribution) Create(params Params) *Instance {
 	args = append(args, "-initrd", params.ZBI)
 	args = d.appendCommonQemuArgs(params, args)
 	args = append(args, "-append", getCommonKernelCmdline(params))
-	return &Instance{
+	fmt.Printf("Running %s %s\n", path, args)
+	i := &Instance{
 		cmd: exec.Command(path, args...),
 	}
+
+	// QEMU looks in the cwd for some specially named files, in particular
+	// multiboot.bin, so avoid picking those up accidentally. See
+	// https://fxbug.dev/53751.
+	i.cmd.Dir = "/"
+
+	return i
 }
 
 // Creates and runs an instance of QEMU that runs a single command and results
@@ -314,9 +322,14 @@ dm poweroff
 	cmdline += " zircon.autorun.boot=/boot/bin/sh+/boot/runcmds"
 	args = append(args, "-append", cmdline)
 
+	fmt.Printf("Running non-interactive %s %s\n", path, args)
 	cmd = exec.Command(path, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	// QEMU looks in the cwd for some specially named files, in particular
+	// multiboot.bin, so avoid picking those up accidentally. See
+	// https://fxbug.dev/53751.
+	cmd.Dir = "/"
 	if err = cmd.Start(); err != nil {
 		return "", "", err
 	}
