@@ -10,23 +10,28 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
+#include <optional>
 
 #include "test-metadata.h"
 
 class TestCompatibilityHookDriverChild;
-using DeviceType = ddk::Device<TestCompatibilityHookDriverChild, ddk::UnbindableDeprecated>;
+using DeviceType = ddk::Device<TestCompatibilityHookDriverChild, ddk::UnbindableNew>;
 class TestCompatibilityHookDriverChild : public DeviceType {
  public:
   TestCompatibilityHookDriverChild(zx_device_t* parent) : DeviceType(parent) {}
   static zx_status_t Create(void* ctx, zx_device_t* device);
   zx_status_t Bind();
-  void DdkUnbindDeprecated() {
+  void DdkUnbindNew(ddk::UnbindTxn txn) {
     if (test_metadata_.remove_in_unbind) {
-      DdkRemoveDeprecated();
+      txn.Reply();
+    } else {
+      txn_ = std::move(txn);
     }
   }
   void DdkRelease() { delete this; }
   struct compatibility_test_metadata test_metadata_ = {};
+
+  std::optional<ddk::UnbindTxn> txn_;
 };
 
 zx_status_t TestCompatibilityHookDriverChild::Bind() {
