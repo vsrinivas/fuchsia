@@ -12,22 +12,36 @@ declare_args() {
 
   # The list of environment names to include in "basic_envs".
   basic_env_names = [ "emu" ]
+
+  # Whether to use AEMU instead of QEMU as the default emulator environment.
+  use_aemu_as_default = false
 }
 
 _all_named_envs = []
 
 ### Individual test environments ###
 
-emu_env = {
+aemu_env = {
   dimensions = {
-    # May actually run on QEMU and / or FEMU.
+    device_type = "AEMU"
+  }
+}
+_all_named_envs += [
+  {
+    name = "aemu"
+    env = aemu_env
+  },
+]
+
+qemu_env = {
+  dimensions = {
     device_type = "QEMU"
   }
 }
 _all_named_envs += [
   {
-    name = "emu"
-    env = emu_env
+    name = "qemu"
+    env = qemu_env
   },
 ]
 
@@ -116,6 +130,20 @@ if (host_os == "linux") {
 }
 
 ### Select environment lists ###
+
+# Allow selection of AEMU as the default EMU.
+emu_env = qemu_env
+if (use_aemu_as_default && target_cpu == "x64") {
+  emu_env = {
+  }
+  emu_env = aemu_env
+}
+_all_named_envs += [
+  {
+    name = "emu"
+    env = emu_env
+  },
+]
 
 # Tests that fail on a NUC in ASan but otherwise want to run on a NUC should
 # use this.
