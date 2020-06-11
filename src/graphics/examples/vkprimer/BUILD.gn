@@ -10,8 +10,11 @@ import("//src/lib/vulkan/layers.gni")
 package("vkprimer") {
   testonly = true
 
-  binary = "vkprimer"
-
+  binaries = [
+    {
+      name = "vkprimer"
+    },
+  ]
   deps = [ ":bin" ]
 
   resources = [

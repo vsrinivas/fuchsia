@@ -1,13 +1,13 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/vulkan_loader"
     },
     "sandbox": {
-        "system": [
-            "lib"
-        ],
         "services": [
             "fuchsia.logger.LogSink"
+        ],
+        "system": [
+            "lib"
         ]
     }
 }

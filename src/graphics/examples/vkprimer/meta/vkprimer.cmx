@@ -3,7 +3,7 @@
         "args": [
             "-offscreen"
         ],
-        "binary": "bin/app"
+        "binary": "bin/vkprimer"
     },
     "sandbox": {
         "dev": [

@@ -37,6 +37,4 @@ package("goldfish_benchmark") {
       dest = "goldfish_benchmark.cmx"
     },
   ]
-
-  binary = "goldfish_benchmark"
 }

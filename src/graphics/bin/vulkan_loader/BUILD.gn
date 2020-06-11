@@ -24,8 +24,11 @@ executable("bin") {
 package("vulkan_loader") {
   deps = [ ":bin" ]
 
-  binary = "vulkan_loader"
-
+  binaries = [
+    {
+      name = "vulkan_loader"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/vulkan_loader.cmx")

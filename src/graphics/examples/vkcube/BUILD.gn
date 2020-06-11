@@ -11,8 +11,11 @@ package("vkcube-on-scenic") {
   testonly = true
 
   deps = [ ":vkcube-on-scenic-executable" ]
-  binary = "vkcube-on-scenic"
-
+  binaries = [
+    {
+      name = "vkcube-on-scenic"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/vkcube-on-scenic.cmx")
@@ -37,8 +40,11 @@ package("vkcube-on-fb") {
   testonly = true
 
   deps = [ ":vkcube-on-fb-executable" ]
-  binary = "vkcube-on-fb"
-
+  binaries = [
+    {
+      name = "vkcube-on-fb"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/vkcube-on-fb.cmx")
@@ -63,8 +69,11 @@ package("vkcube-skip-present") {
   testonly = true
 
   deps = [ ":vkcube-skip-present-executable" ]
-  binary = "vkcube-skip-present"
-
+  binaries = [
+    {
+      name = "vkcube-skip-present"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/vkcube-skip-present.cmx")
