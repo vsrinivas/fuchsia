@@ -3,107 +3,102 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <threads.h>
 #include <unistd.h>
+
+#include <thread>
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
-#include <lib/fdio/limits.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 
-#include "filesystems.h"
-#include "misc.h"
+#include "src/storage/fs_test/fs_test_fixture.h"
 
+namespace fs_test {
 namespace {
 
-bool test_append() {
-  BEGIN_TEST;
-
+TEST_P(FileSystemTest, Append) {
   char buf[4096];
   const char* hello = "Hello, ";
   const char* world = "World!\n";
   struct stat st;
 
-  fbl::unique_fd fd(open("::alpha", O_RDWR | O_CREAT, 0644));
+  const std::string alpha = GetPath("alpha");
+  fbl::unique_fd fd(open(alpha.c_str(), O_RDWR | O_CREAT, 0644));
   ASSERT_TRUE(fd);
 
   // Write "hello"
   ASSERT_EQ(strlen(hello), strlen(world));
-  ASSERT_STREAM_ALL(write, fd.get(), hello, strlen(hello));
+  ASSERT_EQ(write(fd.get(), hello, strlen(hello)), static_cast<ssize_t>(strlen(hello)));
   ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
-  ASSERT_STREAM_ALL(read, fd.get(), buf, strlen(hello));
+  ASSERT_EQ(read(fd.get(), buf, strlen(hello)), static_cast<ssize_t>(strlen(hello)));
   ASSERT_EQ(strncmp(buf, hello, strlen(hello)), 0);
 
   // At the start of the file, write "world"
   ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
-  ASSERT_STREAM_ALL(write, fd.get(), world, strlen(world));
+  ASSERT_EQ(write(fd.get(), world, strlen(world)), static_cast<ssize_t>(strlen(world)));
   ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
-  ASSERT_STREAM_ALL(read, fd.get(), buf, strlen(world));
+  ASSERT_EQ(read(fd.get(), buf, strlen(world)), static_cast<ssize_t>(strlen(world)));
 
   // Ensure that the file contains "world", but not "hello"
   ASSERT_EQ(strncmp(buf, world, strlen(world)), 0);
-  ASSERT_EQ(stat("::alpha", &st), 0);
+  ASSERT_EQ(stat(alpha.c_str(), &st), 0);
   ASSERT_EQ(st.st_size, (off_t)strlen(world));
-  ASSERT_EQ(unlink("::alpha"), 0);
+  ASSERT_EQ(unlink(alpha.c_str()), 0);
   ASSERT_EQ(close(fd.release()), 0);
 
-  fd.reset(open("::alpha", O_RDWR | O_CREAT | O_APPEND, 0644));
+  fd.reset(open(alpha.c_str(), O_RDWR | O_CREAT | O_APPEND, 0644));
   ASSERT_TRUE(fd);
 
   // Write "hello"
   ASSERT_EQ(strlen(hello), strlen(world));
-  ASSERT_STREAM_ALL(write, fd.get(), hello, strlen(hello));
+  ASSERT_EQ(write(fd.get(), hello, strlen(hello)), static_cast<ssize_t>(strlen(hello)));
   ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
-  ASSERT_STREAM_ALL(read, fd.get(), buf, strlen(hello));
+  ASSERT_EQ(read(fd.get(), buf, strlen(hello)), static_cast<ssize_t>(strlen(hello)));
   ASSERT_EQ(strncmp(buf, hello, strlen(hello)), 0);
 
   // At the start of the file, write "world"
   ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
-  ASSERT_STREAM_ALL(write, fd.get(), world, strlen(world));
+  ASSERT_EQ(write(fd.get(), world, strlen(world)), static_cast<ssize_t>(strlen(hello)));
   ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
-  ASSERT_STREAM_ALL(read, fd.get(), buf, strlen(hello) + strlen(world));
+  ASSERT_EQ(read(fd.get(), buf, strlen(hello) + strlen(world)),
+            static_cast<ssize_t>(strlen(hello) + strlen(world)));
 
   // Ensure that the file contains both "hello" and "world"
   ASSERT_EQ(strncmp(buf, hello, strlen(hello)), 0);
   ASSERT_EQ(strncmp(buf + strlen(hello), world, strlen(world)), 0);
-  ASSERT_EQ(stat("::alpha", &st), 0);
+  ASSERT_EQ(stat(alpha.c_str(), &st), 0);
   ASSERT_EQ(st.st_size, (off_t)(strlen(hello) + strlen(world)));
-  ASSERT_EQ(unlink("::alpha"), 0);
+  ASSERT_EQ(unlink(alpha.c_str()), 0);
   ASSERT_EQ(close(fd.release()), 0);
-
-  END_TEST;
 }
 
-bool TestAppendOnClone() {
-  BEGIN_TEST;
-
+TEST_P(FileSystemTest, AppendOnClone) {
   enum AppendState {
     Append,
     NoAppend,
   };
 
   auto verify_append = [](fbl::unique_fd& fd, AppendState appendState) {
-    BEGIN_HELPER;
-
     // Ensure we have a file of non-zero size.
     char buf[32];
     memset(buf, 'a', sizeof(buf));
     ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
-    ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), sizeof(buf));
+    ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), static_cast<ssize_t>(sizeof(buf)));
     struct stat st;
     ASSERT_EQ(fstat(fd.get(), &st), 0);
     off_t size = st.st_size;
 
     // Write at the 'start' of the file.
     ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
-    ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), sizeof(buf));
+    ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), static_cast<ssize_t>(sizeof(buf)));
     ASSERT_EQ(fstat(fd.get(), &st), 0);
 
     switch (appendState) {
@@ -122,113 +117,116 @@ bool TestAppendOnClone() {
       default:
         ASSERT_TRUE(false);
     }
-    END_HELPER;
   };
 
-  fbl::unique_fd fd(open("::append_clone", O_RDWR | O_CREAT | O_APPEND));
+  const std::string append_clone = GetPath("append_clone");
+  fbl::unique_fd fd(open(append_clone.c_str(), O_RDWR | O_CREAT | O_APPEND));
   ASSERT_TRUE(fd);
   // Verify the file was originally opened as append.
-  ASSERT_TRUE(verify_append(fd, Append));
+  ASSERT_NO_FATAL_FAILURE(verify_append(fd, Append));
 
   // Verify we can toggle append off and back on.
   ASSERT_EQ(fcntl(fd.get(), F_SETFL, 0), 0);
-  ASSERT_TRUE(verify_append(fd, NoAppend));
+  ASSERT_NO_FATAL_FAILURE(verify_append(fd, NoAppend));
   ASSERT_EQ(fcntl(fd.get(), F_SETFL, O_APPEND), 0);
-  ASSERT_TRUE(verify_append(fd, Append));
+  ASSERT_NO_FATAL_FAILURE(verify_append(fd, Append));
 
   // Verify that cloning the fd doesn't lose the APPEND flag.
   zx_handle_t handle = ZX_HANDLE_INVALID;
-  ASSERT_EQ(ZX_OK, fdio_fd_clone(fd.get(), &handle), "fdio_fd_clone failed");
+  ASSERT_EQ(fdio_fd_clone(fd.get(), &handle), ZX_OK);
 
   int raw_fd = -1;
   ASSERT_EQ(fdio_fd_create(handle, &raw_fd), ZX_OK);
   fbl::unique_fd cloned_fd(raw_fd);
-  ASSERT_TRUE(verify_append(cloned_fd, Append));
+  ASSERT_NO_FATAL_FAILURE(verify_append(cloned_fd, Append));
 
-  ASSERT_EQ(unlink("::append_clone"), 0);
-  END_TEST;
+  ASSERT_EQ(unlink(append_clone.c_str()), 0);
 }
 
-template <size_t kNumThreads>
-bool TestAppendAtomic() {
-  BEGIN_TEST;
+using ParamType = std::tuple<TestFileSystemOptions, /*thread_count=*/int>;
 
-  constexpr size_t kWriteLength = 32;
-  constexpr size_t kNumWrites = 128;
+class AppendAtomicTest : public BaseFileSystemTest, public testing::WithParamInterface<ParamType> {
+ public:
+  AppendAtomicTest() : BaseFileSystemTest(std::get<0>(GetParam())) {}
+
+  int thread_count() const { return std::get<1>(GetParam()); }
+};
+
+TEST_P(AppendAtomicTest, MultiThreadedTest) {
+  constexpr int kWriteLength = 32;
+  constexpr int kNumWrites = 128;
+  const std::string append_atomic = GetPath("append-atomic");
 
   // Create a group of threads which all append 'i' to a file.
   // At the end of this test, we should see:
-  // - A file of length kWriteLength * kNumWrites * kNumThreads.
+  // - A file of length kWriteLength * kNumWrites * thread_count().
   // - kWriteLength * kNumWrites of the character 'i' for all
-  // values of i in the range [0, kNumThreads).
+  // values of i in the range [0, thread_count()).
   // - Those 'i's should be grouped in units of kWriteLength.
-  thrd_t threads[kNumThreads];
-  for (size_t i = 0; i < kNumThreads; i++) {
-    ASSERT_EQ(thrd_create(
-                  &threads[i],
-                  [](void* arg) {
-                    size_t i = reinterpret_cast<size_t>(arg);
-                    fbl::unique_fd fd(open("::append-atomic", O_WRONLY | O_CREAT | O_APPEND));
-                    if (!fd) {
-                      return -1;
-                    }
+  std::thread threads[thread_count()];
+  for (int i = 0; i < thread_count(); i++) {
+    threads[i] = std::thread([&append_atomic, i]() {
+      fbl::unique_fd fd(open(append_atomic.c_str(), O_WRONLY | O_CREAT | O_APPEND));
+      if (!fd) {
+        return -1;
+      }
 
-                    char buf[kWriteLength];
-                    memset(buf, static_cast<int>(i), sizeof(buf));
+      char buf[kWriteLength];
+      memset(buf, static_cast<int>(i), sizeof(buf));
 
-                    for (size_t j = 0; j < kNumWrites; j++) {
-                      if (write(fd.get(), buf, sizeof(buf)) != sizeof(buf)) {
-                        return -1;
-                      }
-                    }
+      for (size_t j = 0; j < kNumWrites; j++) {
+        if (write(fd.get(), buf, sizeof(buf)) != sizeof(buf)) {
+          return -1;
+        }
+      }
 
-                    return close(fd.release());
-                  },
-                  reinterpret_cast<void*>(i)),
-              thrd_success);
+      return close(fd.release());
+    });
   }
 
-  for (size_t i = 0; i < kNumThreads; i++) {
-    int rc;
-    ASSERT_EQ(thrd_join(threads[i], &rc), thrd_success);
-    ASSERT_EQ(rc, 0);
+  for (std::thread& thread : threads) {
+    thread.join();
   }
 
   // Verify the contents of the file
-  fbl::unique_fd fd(open("::append-atomic", O_RDONLY));
-  ASSERT_GT(fd.get(), 0, "Can't reopen file for verification");
+  fbl::unique_fd fd(open(append_atomic.c_str(), O_RDONLY));
+  ASSERT_GE(fd.get(), 0) << "Can't reopen file for verification";
   struct stat st;
   ASSERT_EQ(fstat(fd.get(), &st), 0);
-  ASSERT_EQ(st.st_size, kWriteLength * kNumWrites * kNumThreads);
+  ASSERT_EQ(st.st_size, static_cast<off_t>(kWriteLength * kNumWrites * thread_count()));
 
-  char buf[kWriteLength * kNumWrites * kNumThreads];
-  ASSERT_EQ(read(fd.get(), buf, sizeof(buf)), sizeof(buf));
+  char buf[kWriteLength * kNumWrites * thread_count()];
+  ASSERT_EQ(read(fd.get(), buf, sizeof(buf)), static_cast<ssize_t>(sizeof(buf)));
 
-  size_t counts[kNumThreads]{};
+  std::vector<int> counts(thread_count());
   for (size_t i = 0; i < sizeof(buf); i += kWriteLength) {
     size_t val = static_cast<size_t>(buf[i]);
-    ASSERT_LE(val, sizeof(counts), "Read unexpected value from file");
+    ASSERT_LE(val, counts.size()) << "Read unexpected value from file";
     counts[val]++;
     char tmp[kWriteLength];
     memset(tmp, buf[i], sizeof(tmp));
 
-    ASSERT_EQ(memcmp(&buf[i], tmp, sizeof(tmp)), 0, "Non-atomic Append Detected");
+    ASSERT_EQ(memcmp(&buf[i], tmp, sizeof(tmp)), 0) << "Non-atomic Append Detected";
   }
 
-  for (size_t i = 0; i < fbl::count_of(counts); i++) {
-    ASSERT_EQ(counts[i], kNumWrites, "Unexpected number of writes from a thread");
+  for (size_t i = 0; i < counts.size(); i++) {
+    ASSERT_EQ(counts[i], kNumWrites) << "Unexpected number of writes from a thread";
   }
 
   ASSERT_EQ(close(fd.release()), 0);
-  ASSERT_EQ(unlink("::append-atomic"), 0);
-  END_TEST;
+  ASSERT_EQ(unlink(append_atomic.c_str()), 0);
 }
 
-}  // namespace
+std::string GetParamDescription(const testing::TestParamInfo<ParamType>& param) {
+  std::stringstream s;
+  s << std::get<0>(param.param) << "WithThreadCount" << std::get<1>(param.param);
+  return s.str();
+}
 
-RUN_FOR_ALL_FILESYSTEMS(append_tests,
-                        RUN_TEST_MEDIUM(test_append) RUN_TEST_MEDIUM(TestAppendOnClone)
-                            RUN_TEST_MEDIUM((TestAppendAtomic<1>))
-                                RUN_TEST_MEDIUM((TestAppendAtomic<2>))
-                                    RUN_TEST_MEDIUM((TestAppendAtomic<5>))
-                                        RUN_TEST_MEDIUM((TestAppendAtomic<10>)))
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, AppendAtomicTest,
+                         testing::Combine(testing::ValuesIn(AllTestFileSystems()),
+                                          testing::Values(1, 2, 5, 10)),
+                         GetParamDescription);
+
+}  // namespace
+}  // namespace fs_test

@@ -20,6 +20,7 @@ executable("fs_tests") {
   testonly = true
   sources = [
     "access.cc",
+    "append.cc",
     "fs_test.cc",
     "fs_test_fixture.cc",
     "overflow.cc",
