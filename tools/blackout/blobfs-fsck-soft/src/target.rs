@@ -142,65 +142,44 @@ mod tests {
         // failure modes for the next test, which checks that a load was actually generated.
 
         // 1<<16 blocks with a block size 512 bytes is ~33MB
-        println!("creating ramdisk");
-        let ramdisk = RamdiskClient::create(512, 1 << 16).expect("failed to make ramdisk");
-        let device_path = ramdisk.get_path();
+        let ramdisk = RamdiskClient::builder(512, 1 << 16).isolated_dev_root().build().unwrap();
+        let device = ramdisk.open().unwrap();
+        let mut blobfs = Blobfs::from_channel(device).unwrap();
+        setup(&mut blobfs).unwrap();
 
-        println!("creating blobfs manager");
-        let mut blobfs = Blobfs::new(device_path).expect("failed to create blobfs manager");
-
-        println!("setting up blobfs");
-        setup(&mut blobfs).expect("failed to set up blobfs");
-
-        println!("running generator"); // with a "random" seed
-        let process = test_spawn(&mut blobfs, 1234, 0).expect("failed to run process");
-
+        let process = test_spawn(&mut blobfs, 1234, 0).unwrap();
         std::thread::sleep(std::time::Duration::from_secs(1));
-
-        println!("killing generator");
-        process.kill().expect("failed to kill blobfs-load-generator process");
+        process.kill().unwrap();
 
         // test_spawn mounts the blobfs partition; unmount it before we verify
-        blobfs.unmount().expect("failed to unmount blobfs");
-
-        println!("running verification on device");
-        verify(&mut blobfs).expect("failed to verify blobfs partition");
+        blobfs.unmount().unwrap();
+        verify(&mut blobfs).unwrap();
     }
 
     #[test]
     fn generator_generated_load() {
-        println!("creating ramdisk");
-        let ramdisk = RamdiskClient::create(512, 1 << 16).expect("failed to make ramdisk");
-        let device_path = ramdisk.get_path();
+        let ramdisk = RamdiskClient::builder(512, 1 << 16).isolated_dev_root().build().unwrap();
+        let device = ramdisk.open().unwrap();
+        let mut blobfs = Blobfs::from_channel(device).unwrap();
+        setup(&mut blobfs).unwrap();
 
-        println!("creating blobfs manager");
-        let mut blobfs = Blobfs::new(device_path).expect("failed to create blobfs manager");
-
-        println!("setting up blobfs");
-        setup(&mut blobfs).expect("failed to set up blobfs");
-
-        println!("running generator"); // with a "random" seed
-        let process = test_spawn(&mut blobfs, 4321, 1000).expect("failed to run process");
-
+        let process = test_spawn(&mut blobfs, 4321, 1000).unwrap();
         let _signals = process
             .into_inner()
             .wait_handle(zx::Signals::PROCESS_TERMINATED, zx::Time::INFINITE)
-            .expect("failed to wait for blobfs load generator process");
+            .unwrap();
 
-        println!("remounting blobfs");
         // let mount_point = "/test-blobfs-root";
-        blobfs.unmount().expect("failed to unmount blobfs the first time");
+        blobfs.unmount().unwrap();
         // TODO(36143): re-enable this part of the test once it's deflaked
         // blobfs.mount(mount_point).expect("failed to mount blobfs");
 
-        // println!("confirming there is at least one file in blobfs");
         // let mut dir = std::fs::read_dir(mount_point).expect("failed to read blobfs directory");
 
         // let entry = dir.next().expect("no files in blobfs").expect("failed to get directory entry");
         // let typ = entry.file_type().expect("failed to get file type");
         // assert!(typ.is_file());
 
-        // println!("unmounting blobfs");
         // blobfs.unmount().expect("failed to unmount blobfs the second time");
     }
 }

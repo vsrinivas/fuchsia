@@ -83,6 +83,7 @@ test_package("blobfs-fsck-soft-target-test") {
   deps = [
     ":blobfs-fsck-soft-target-bin_test",
     ":blobfs.manifest",
+    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
     "//zircon/system/ulib/blobfs/test:blobfs-load-generator",
   ]
   binaries = [
