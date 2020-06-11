@@ -152,6 +152,7 @@ void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
 
   flushed_ = true;
   SetEndOfStreamPts(Packet::kNoPts);
+  UpdateLastRenderedPts(Packet::kNoPts);
   input_packet_request_outstanding_ = false;
 
   // Doing this here just to be safe. In theory, we should be tracking this value correctly

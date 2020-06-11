@@ -337,7 +337,6 @@ std::list<std::unique_ptr<FakeSysmem::Expectations>> MediaPlayerTests::BearSysme
 
 // Play a synthetic WAV file from beginning to end.
 TEST_F(MediaPlayerTests, PlayWav) {
-  fake_audio_.renderer().DumpPackets();
   fake_audio_.renderer().ExpectPackets({{0, 4096, 0x20c39d1e31991800},
                                         {1024, 4096, 0xeaf137125d313800},
                                         {2048, 4096, 0x6162095671991800},
@@ -467,12 +466,66 @@ TEST_F(MediaPlayerTests, PlayWavRetainPackets) {
   // Wait a bit.
   commands_.Sleep(zx::sec(2));
 
-  // We should not be at end-of-stream in spite of waiting long enough, because the pipeline
-  // has been stalled by the renderer retaining packets.
-  EXPECT_FALSE(commands_.at_end_of_stream());
+  commands_.Invoke([this]() {
+    // We should not be at end-of-stream in spite of waiting long enough, because the pipeline
+    // has been stalled by the renderer retaining packets.
+    EXPECT_FALSE(commands_.at_end_of_stream());
 
-  // Retire packets.
-  fake_audio_.renderer().SetRetainPackets(false);
+    // Retire packets.
+    fake_audio_.renderer().SetRetainPackets(false);
+  });
+
+  QuitOnEndOfStream();
+
+  Execute();
+  EXPECT_TRUE(fake_audio_.renderer().expected());
+}
+
+// Play a short synthetic WAV file from beginning to end, retaining packets. This
+// tests the ability of the player to handle the case in which the audio
+// renderer not retiring packets, but all of the audio content fits into the
+// payload VMO.
+TEST_F(MediaPlayerTests, PlayShortWavRetainPackets) {
+  fake_audio_.renderer().SetRetainPackets(true);
+  fake_audio_.renderer().ExpectPackets({{0, 4096, 0x20c39d1e31991800},
+                                        {1024, 4096, 0xeaf137125d313800},
+                                        {2048, 4096, 0x6162095671991800},
+                                        {3072, 4096, 0x36e551c7dd41f800},
+                                        {4096, 4096, 0x23dcbf6fb1991800},
+                                        {5120, 4096, 0xee0a5963dd313800},
+                                        {6144, 4096, 0x647b2ba7f1991800},
+                                        {7168, 4096, 0x39fe74195d41f800},
+                                        {8192, 4096, 0xb3de76b931991800},
+                                        {9216, 4096, 0x7e0c10ad5d313800},
+                                        {10240, 4096, 0xf47ce2f171991800},
+                                        {11264, 4096, 0xca002b62dd41f800},
+                                        {12288, 4096, 0xb6f7990ab1991800},
+                                        {13312, 4096, 0x812532fedd313800},
+                                        {14336, 4096, 0xf7960542f1991800},
+                                        {15360, 4052, 0x7308a9824acbd5ea}});
+
+  fuchsia::media::playback::SeekingReaderPtr fake_reader_ptr;
+  fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader> reader_request =
+      fake_reader_ptr.NewRequest();
+  fake_reader_.Bind(std::move(reader_request));
+
+  fuchsia::media::playback::SourcePtr source;
+  player_->CreateReaderSource(std::move(fake_reader_ptr), source.NewRequest());
+  player_->SetSource(std::move(source));
+
+  commands_.Play();
+
+  // Wait a bit.
+  commands_.Sleep(zx::sec(2));
+
+  commands_.Invoke([this]() {
+    // We should not be at end-of-stream in spite of waiting long enough, because the pipeline
+    // has been stalled by the renderer retaining packets.
+    EXPECT_FALSE(commands_.at_end_of_stream());
+
+    // Retire packets.
+    fake_audio_.renderer().SetRetainPackets(false);
+  });
 
   QuitOnEndOfStream();
 
@@ -827,12 +880,14 @@ TEST_F(MediaPlayerTests, PlayBearRetainAudioPackets) {
   // Wait a bit.
   commands_.Sleep(zx::sec(2));
 
-  // We should not be at end-of-stream in spite of waiting long enough, because the pipeline
-  // has been stalled by the renderer retaining packets.
-  EXPECT_FALSE(commands_.at_end_of_stream());
+  commands_.Invoke([this]() {
+    // We should not be at end-of-stream in spite of waiting long enough, because the pipeline
+    // has been stalled by the renderer retaining packets.
+    EXPECT_FALSE(commands_.at_end_of_stream());
 
-  // Retire packets.
-  fake_audio_.renderer().SetRetainPackets(false);
+    // Retire packets.
+    fake_audio_.renderer().SetRetainPackets(false);
+  });
 
   QuitOnEndOfStream();
 

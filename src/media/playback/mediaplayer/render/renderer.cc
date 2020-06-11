@@ -75,7 +75,8 @@ void Renderer::SetTimelineFunction(media::TimelineFunction timeline_function,
 }
 
 bool Renderer::end_of_stream() const {
-  return end_of_stream_pts_ != Packet::kNoPts && last_rendered_pts_ >= end_of_stream_pts_;
+  return end_of_stream_pts_ != Packet::kNoPts && last_rendered_pts_ != Packet::kNoPts &&
+         last_rendered_pts_ >= end_of_stream_pts_;
 }
 
 void Renderer::NotifyUpdate() {

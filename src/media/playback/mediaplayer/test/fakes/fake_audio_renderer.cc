@@ -232,7 +232,7 @@ void FakeAudioRenderer::MaybeScheduleRetirement() {
   async::PostTaskForTime(
       dispatcher_,
       [this]() {
-        if (!progressing() || packet_queue_.empty()) {
+        if (retain_packets_ || !progressing() || packet_queue_.empty()) {
           return;
         }
 
