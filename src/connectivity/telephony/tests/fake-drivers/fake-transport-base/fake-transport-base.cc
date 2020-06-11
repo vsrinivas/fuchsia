@@ -138,7 +138,7 @@ void Device::Unbind() {
   zxlogf(INFO, "tel-fake-transport: unbind(): joining thread");
   fake_ctrl_thread_.join();
 
-  device_remove_deprecated(tel_dev_);
+  device_unbind_reply(tel_dev_);
   return;
 }
 
