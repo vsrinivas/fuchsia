@@ -1,12 +1,16 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 package lib
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 )
 
+// Config values are populated from the the json file at the default or user-specified path
 type Config struct {
 	FilesRegex          []string        `json:"filesRegex,omitempty"`
 	SkipDirsRegex       []string        `json:"skipDirsRegex"`
@@ -17,21 +21,26 @@ type Config struct {
 	OutputFilePrefix    string          `json:"outputFilePrefix"`
 	OutputFileExtension string          `json:"outputFileExtension"`
 	Product             string          `json:"product"`
-	LicenseFilesInTree  []string        `json:"licenseFilesInTree"`
+	SingleLicenseFiles  []string        `json:"singleLicenseFiles"`
 	LicensePatternDir   string          `json:"licensePatternDir"`
-	BaseDir             string          `json:"BaseDir"`
+	BaseDir             string          `json:"baseDir"`
+	Target              string          `json:"target"`
+	LogLevel            string          `json:"logLevel"`
 }
 
-func (config *Config) Init(configJson *string) {
+// Init populates Config object with values found in the json config file
+func (config *Config) Init(configJson *string) error {
 	jsonFile, err := os.Open(*configJson)
-	if err != nil {
-		panic(err)
-	}
 	defer jsonFile.Close()
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-	err = json.Unmarshal(byteValue, &config)
 	if err != nil {
-		fmt.Println(err)
-		panic("error: config")
+		return err
 	}
+	byteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal(byteValue, &config); err != nil {
+		return err
+	}
+	return nil
 }

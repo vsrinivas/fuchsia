@@ -1,61 +1,105 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 package lib
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
 )
 
-type License struct {
-	pattern  *regexp.Regexp
-	matches  []Match
-	category string
-}
-
+// Licenses is an object that facilitates operations on each License object in bulk
 type Licenses struct {
-	licenses []License
+	licenses []*License
 }
 
-func LicenseWorker(path string) *[]byte {
-	licensePatternFile, _ := os.Open(path)
+// NewLicenses returns a Licenses object with each license pattern loaded from the .lic folder location specified in Config
+func NewLicenses(root string) (*Licenses, error) {
+	licenses := Licenses{}
+	if err := licenses.Init(root); err != nil {
+		fmt.Println("error initializing licenses")
+		return nil, err
+	}
+	return &licenses, nil
+}
+
+// LicenseWorker reads an aassociated .lic file into memory to be used as a License
+func LicenseWorker(path string) ([]byte, error) {
+	licensePatternFile, err := os.Open(path)
 	defer licensePatternFile.Close()
+	if err != nil {
+		return nil, err
+	}
 	bytes, err := ioutil.ReadAll(licensePatternFile)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &bytes
+	return bytes, err
 }
 
-func (licenses *Licenses) Init(root string) {
+// Init loads all Licenses specified in the .lic directory as defined in Config
+func (licenses *Licenses) Init(root string) error {
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
-		bytes := LicenseWorker(path)
-		str := string(*bytes)
-		fmt.Println(str)
-		fmt.Println(root)
-		licenses.add(License{
+		bytes, err := LicenseWorker(path)
+		if err != nil {
+			return err
+		}
+		str := string(bytes)
+		licenses.add(&License{
 			pattern:  regexp.MustCompile(str),
 			category: info.Name(),
 		})
 		return nil
 	})
 	if err != nil {
-		panic(err)
+		return err
 	}
 	if len(licenses.licenses) == 0 {
-		panic("no licenses")
+		return errors.New("no licenses")
 	}
+	return nil
 }
 
-func (licenses *Licenses) add(license License) {
+func (licenses *Licenses) add(license *License) {
 	licenses.licenses = append(licenses.licenses, license)
 }
 
-type Match struct {
-	value []byte
-	files []string
+// MatchFile returns true if any License matches input data
+func (licenses *Licenses) MatchFile(data []byte, count int, path string, metrics *Metrics) bool {
+	is_matched := false
+	// TODO async regex pattern matching
+	var wg sync.WaitGroup
+	wg.Add(len(licenses.licenses))
+	var sm sync.Map
+	for i, license := range licenses.licenses {
+		go license.LicenseFindMatch(i, data, &sm, &wg)
+	}
+	wg.Wait()
+	for i, license := range licenses.licenses {
+		result, found := sm.Load(i)
+		if !found {
+			fmt.Printf("No result found for key %d\n", i)
+			continue
+		}
+		if matched := result.([]byte); matched != nil {
+			is_matched = true
+			metrics.num_licensed++
+			if len(license.matches) == 0 {
+				license.matches = append(license.matches, Match{
+					value: matched})
+			}
+			license.matches[0].files = append(license.matches[0].files, path)
+			fmt.Printf("  - %s\n", matched)
+		}
+	}
+	return is_matched
 }

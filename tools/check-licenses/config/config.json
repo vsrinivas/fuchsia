@@ -21,6 +21,7 @@
     "gyp": true,
     "gypi": true,
     "h": true,
+    "hh": true,
     "html": true,
     "in": true,
     "inc": true,
@@ -37,12 +38,14 @@
   "outputFilePrefix": "NOTICE",
   "outputFileExtension": "txt",
   "product": "astro",
-  "licenseFilesInTree": [
-    "LICENSE*",
-    "README*",
-    "NOTICE*"
+  "singleLicenseFiles": [
+    "LICENSE",
+    "README",
+    "NOTICE"
   ],
   "goldenLicenses": "golden",
   "licensePatternDir": "tools/check-licenses/golden/",
-  "baseDir": "."
+  "baseDir": "tools/check-licenses/test",
+  "target": "all",
+  "logLevel": "verbose"
 }

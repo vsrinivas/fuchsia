@@ -1,133 +1,49 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 package lib
 
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"text/template"
 
 	"go.fuchsia.dev/fuchsia/scripts/check-licenses/templates"
 )
 
-type Metrics struct {
-	num_licensed   uint
-	num_unlicensed uint
+// Walk gathers all Licenses then checks for a match within each filtered file
+func Walk(config *Config) error {
+	metrics := new(Metrics)
+	file_tree := NewFileTree(config, metrics)
+	licenses, err := NewLicenses(config.LicensePatternDir)
+	if err != nil {
+		return err
+	}
+	for path := range FileIterator(file_tree) { // file, not singleLicenseFile
+		processFile(path, metrics, licenses, config, file_tree)
+	}
+	file, err := createOutputFile(config)
+	if err != nil {
+		return err
+	}
+	saveToOutputFile(file, licenses, config, metrics)
+	return nil
 }
 
-func Walk(config *Config) error {
-	root := config.BaseDir
-	metrics := new(Metrics)
-	licenses := NewLicenses(config.LicensePatternDir)
-	my_file, my_file_err := os.Create(config.OutputFilePrefix + "." + config.OutputFileExtension)
-	var license_file_tree LicenseFileTree
-	license_file_tree.Init()
-	if my_file_err != nil {
-		fmt.Printf("file error")
-	}
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
-			return err
-		}
-		// TODO regex instead of exact match
-		if info.IsDir() {
-			for _, skipDir := range config.SkipDirsRegex {
-				if info.Name() == skipDir {
-					fmt.Printf("skipping a dir without errors: %+v \n", info.Name())
-					return filepath.SkipDir
-				}
-			}
-			var matchingFiles []string
-			for _, licenseFileInTree := range config.LicenseFilesInTree {
-				folder_licenses, folder_licenses_err := filepath.Glob(path + "/" + licenseFileInTree + "*")
-				if folder_licenses_err != nil {
-					fmt.Println("Error")
-				}
-				if folder_licenses != nil {
-					fmt.Println(" + folder_licenses:")
-					fmt.Println(folder_licenses)
-					matchingFiles = append(matchingFiles, folder_licenses...)
-				}
-			}
-			license_file_tree.upsert(path, matchingFiles)
-			// TODO add license files to licenses (*Licenses) object, deriving type
-			return nil
-		} else {
-			for _, skipFile := range config.SkipFilesRegex {
-				if info.Name() == skipFile {
-					fmt.Printf("skipping a file without errors: %+v \n", info.Name())
-					return nil
-				}
-			}
-		}
+func createOutputFile(config *Config) (*os.File, error) {
+	return os.Create(config.OutputFilePrefix + "." + config.OutputFileExtension)
+}
 
-		extension := filepath.Ext(path)
-		if len(extension) == 0 {
-			return nil
-		}
-		if _, found := config.TextExtensions[extension[1:]]; !found {
-			return nil
-		}
-
-		fmt.Printf("visited file or dir: %q\n", path)
-		file, open_err := os.Open(path)
-		if open_err != nil {
-			fmt.Printf("error opening: %v\n", open_err)
-		}
-		defer file.Close()
-		data := make([]byte, config.MaxReadSize)
-		count, open_err := file.Read(data)
-		if open_err != nil {
-			fmt.Printf("error reading: %v\n", open_err)
-		}
-
-		is_matched := false
-		// TODO async regex pattern matching
-		for i, license := range licenses.licenses {
-			matched := license.pattern.Find(data[:count])
-			if matched != nil {
-				is_matched = true
-				metrics.num_licensed++
-				// TODO licenses.licenses[i] could probably be a pointer instead
-				if len(licenses.licenses[i].matches) == 0 {
-					licenses.licenses[i].matches = append(licenses.licenses[i].matches, Match{})
-				}
-				licenses.licenses[i].matches[0].value = matched
-				licenses.licenses[i].matches[0].files = append(licenses.licenses[i].matches[0].files, path)
-				fmt.Printf("  - %s\n", matched)
-				break
-			}
-		}
-
-		// TODO only check for project level license if file doesn't have a license
-		project := license_file_tree.getProjectLicense(path)
-		if !is_matched {
-			if project == nil {
-				metrics.num_unlicensed++
-				fmt.Printf("Unmatched file: %s\n", path)
-			} else {
-				// TODO derive one of the project licenses
-			}
-		}
-
-		// TODO if no license match, use nearest matching LICENSE file
-		return nil
-	})
-
-	if err != nil {
-		fmt.Printf("error walking the path %q: %v\n", root, err)
-		return nil
-	}
-
-	// TODO modularize used and unused licenses
+func saveToOutputFile(file *os.File, licenses *Licenses, config *Config, metrics *Metrics) error {
 	var unused []*License
 	var used []*License
 	for i := range licenses.licenses {
 		license := licenses.licenses[i]
 		if len(license.matches) == 0 {
-			unused = append(unused, &license)
+			unused = append(unused, license)
 		} else {
-			used = append(used, &license)
+			used = append(used, license)
 		}
 	}
 
@@ -147,11 +63,12 @@ func Walk(config *Config) error {
 	case "htm":
 		templateStr = templates.TemplateHtml
 	default:
-		panic("no template found")
+		fmt.Println("error: no template found")
 	}
 	tmpl := template.Must(template.New("name").Funcs(template.FuncMap{
-		"getPattern": func(license *License) string { return (*license).pattern.String() },
-		"getText":    func(license *License) string { return string((*license).matches[0].value) },
+		"getPattern":  func(license *License) string { return (*license).pattern.String() },
+		"getText":     func(license *License) string { return string((*license).matches[0].value) },
+		"getCategory": func(license *License) string { return string((*license).category) },
 		"getFiles": func(license *License) *[]string {
 			var files []string
 			for _, match := range license.matches {
@@ -162,16 +79,73 @@ func Walk(config *Config) error {
 			return &files
 		},
 	}).Parse(templateStr))
-	tmpl_err := tmpl.Execute(my_file, object)
-	if tmpl_err != nil {
-		panic(err)
+	if err := tmpl.Execute(file, object); err != nil {
+		return err
+	}
+	fmt.Println("Metrics:")
+	fmt.Printf("num_licensed: %d\n", metrics.num_licensed)
+	fmt.Printf("num_unlicensed: %d\n", metrics.num_unlicensed)
+	fmt.Printf("num_with_project_license %d\n", metrics.num_with_project_license)
+	fmt.Printf("num_extensions_excluded: %d\n", metrics.num_extensions_excluded)
+	fmt.Printf("num_single_license_files: %d\n", metrics.num_single_license_files)
+	fmt.Printf("num_non_single_license_files %d\n", metrics.num_non_single_license_files)
+	return nil
+}
+
+// FileIterator returns each regular file path from the in memory FileTree
+func FileIterator(file_tree *FileTree) <-chan string {
+	ch := make(chan string)
+	go func() {
+		var curr *FileTree
+		var q []*FileTree
+		q = append(q, file_tree)
+		var pos int
+		for {
+			if len(q) == 0 {
+				break
+			}
+			pos = len(q) - 1
+			curr = q[pos]
+			q = q[:pos]
+			base := curr.getPath()
+			for _, file := range curr.files {
+				ch <- base + file
+			}
+			for _, child := range curr.children {
+				q = append(q, child)
+			}
+		}
+		close(ch)
+	}()
+	return ch
+}
+
+func processFile(path string, metrics *Metrics, licenses *Licenses, config *Config, file_tree *FileTree) {
+	fmt.Printf("visited file or dir: %q\n", path)
+	file, err := os.Open(path)
+	if err != nil {
+		fmt.Printf("error opening: %v\n", err)
+	}
+	defer file.Close()
+	data := make([]byte, config.MaxReadSize)
+	count, err := file.Read(data)
+	if err != nil {
+		fmt.Printf("error reading: %v\n", err)
+	}
+	is_matched := licenses.MatchFile(data, count, path, metrics)
+	if !is_matched {
+		project := file_tree.getProjectLicense(path)
+		if project == nil {
+			metrics.num_unlicensed++
+			fmt.Printf("File license: missing. Project license: missing. path: %s\n", path)
+		} else {
+			// TODO derive one of the project licenses
+			metrics.num_with_project_license++
+			fmt.Printf("File license: missing. Project license: exists. path: %s\n", path)
+		}
 	}
 
-	fmt.Printf(
-		"Metrics:\nNumber licensed: %d\nNumber unlicensed: %d\n",
-		metrics.num_licensed,
-		metrics.num_unlicensed)
-	return nil
+	// TODO if no license match, use nearest matching LICENSE file
 }
 
 // TODO tools/zedmon/client/pubspec.yaml" error reading: EOF
