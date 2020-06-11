@@ -230,10 +230,16 @@ class TestsConfig {
 
   /// Wrapper around io.ansi.wrapWith which first honors config flags.
   String wrapWith(String value, Iterable<ansi.AnsiCode> codes,
-          {bool forScript = false}) =>
-      flags.simpleOutput
-          ? value
-          : ansi.wrapWith(value, codes, forScript: forScript);
+      {bool forScript = false}) {
+    // TODO(fxb/53267): Remove the override once terminal detection works inside
+    // tmux.
+    if (flags.simpleOutput) {
+      return value;
+    }
+
+    return ansi.overrideAnsiOutput(
+        true, () => ansi.wrapWith(value, codes, forScript: forScript));
+  }
 
   /// Environment variables to pass to the spawned process that runs our test.
   Map<String, String> get environment => flags.e2e

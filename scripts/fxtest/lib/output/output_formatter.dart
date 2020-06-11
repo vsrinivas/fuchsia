@@ -351,6 +351,7 @@ class InfoFormatter extends OutputFormatter {
           hasRealTimeOutput: false,
           slowTestThreshold: Duration(seconds: 0),
           isVerbose: false,
+          wrapWith: (value, _, {forScript}) => value,
         );
 
   @override
