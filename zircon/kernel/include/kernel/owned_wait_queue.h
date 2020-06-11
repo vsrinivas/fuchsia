@@ -58,16 +58,11 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   // wake or requeue the thread.
   class Hook {
    public:
-    // A set of 4 actions which may be taken when considering whether or not
+    // A set of 3 actions which may be taken when considering whether or not
     // to wake or requeue a thread.  If no user supplied Hook is provided
     // for a given operation, the default behavior will be to return
     // Action::SelectAndKeepGoing.
     enum class Action {
-      // Do not wake or requeue this thread, do not declare it to be the
-      // owner of anything.  Simply move on to the next thread (if
-      // possible).
-      Skip,
-
       // Do not wake or requeue this thread and stop considering threads.
       Stop,
 
@@ -75,10 +70,6 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
       // to consider more threads (if any).  Do not assign this thread to
       // be the owner.
       SelectAndKeepGoing,
-
-      // Select this thread to be either woken or requeued, then stop
-      // considering threads.  Do not assign this thread to be the owner.
-      SelectAndStop,
 
       // Select this thread to be either woken or requeued, assign it to
       // to be the owner of the queue, then stop considering more threads.

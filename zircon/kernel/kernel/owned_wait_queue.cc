@@ -483,11 +483,6 @@ bool OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, Thread** out_new_o
     using Action = Hook::Action;
     Action action = on_thread_wake_hook(t);
 
-    // If the user wants to skip this thread, just move on to the next.
-    if (action == Action::Skip) {
-      return true;
-    }
-
     if (action == Action::Stop) {
       return false;
     }
@@ -505,19 +500,14 @@ bool OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, Thread** out_new_o
       return (woken < wake_count);
     }
 
-    // No matter what the user chose at this point, we are going to stop
-    // after this.  If the user requested that we assign ownership to the
-    // thread we just woke, make sure that we have not woken any other
-    // threads, and return a pointer to the thread who is to become the new
-    // owner if there are still threads waiting in the queue.
-    if (action == Action::SelectAndAssignOwner) {
-      DEBUG_ASSERT(woken == 1);
-      if (!IsEmpty()) {
-        *out_new_owner = t;
-      }
-    } else {
-      // SelectAndStop is the only remaining valid option.
-      DEBUG_ASSERT(action == Action::SelectAndStop);
+    // No matter what the user chose at this point, we are going to stop after
+    // this. Make sure that we have not woken any other threads, and return a
+    // pointer to the thread who is to become the new owner if there are still
+    // threads waiting in the queue.
+    DEBUG_ASSERT(action == Action::SelectAndAssignOwner);
+    DEBUG_ASSERT(woken == 1);
+    if (!IsEmpty()) {
+      *out_new_owner = t;
     }
 
     return false;
@@ -637,11 +627,6 @@ bool OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue
       // It is illegal to ask for a requeue operation to assign ownership.
       DEBUG_ASSERT(action != Action::SelectAndAssignOwner);
 
-      // If the user wants to skip this thread, just move on to the next.
-      if (action == Action::Skip) {
-        return true;
-      }
-
       if (action == Action::Stop) {
         return false;
       }
@@ -649,11 +634,6 @@ bool OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue
       // Actually move the thread from this to the requeue_target.
       WaitQueue::MoveThread(this, requeue_target, t);
       ++requeued;
-
-      // Are we done?
-      if (action == Action::SelectAndStop) {
-        return false;
-      }
 
       // SelectAndKeepGoing is the only legal choice left.
       DEBUG_ASSERT(action == Action::SelectAndKeepGoing);
