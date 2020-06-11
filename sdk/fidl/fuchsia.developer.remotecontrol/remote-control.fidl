@@ -11,6 +11,7 @@ using fuchsia.test.manager as test_manager;
 using zx;
 
 const uint16 MAX_NUM_MATCHES = 250;
+const uint16 MAX_CONNECT_MATCHES = 5;
 
 enum RebootType {
     // Standard reboot.
@@ -32,9 +33,12 @@ protocol RemoteControl {
         request<test_manager.SuiteController> controller) -> ()
         error test_manager.LaunchError;
 
+    // Connects a channel to a service, given a selector and a channel iff the selector
+    // matches exactly one service on the system.
+    // If successful, returns information about the service connected to.
     Connect(
         diagnostics.Selector selector,
-        zx.handle:CHANNEL service_chan) -> ()
+        zx.handle:CHANNEL service_chan) -> (ServiceMatch match)
         error ConnectError;
 
     Select(diagnostics.Selector selector)
