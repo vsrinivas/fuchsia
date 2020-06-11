@@ -254,7 +254,7 @@ class Device(object):
            for an example.
         """
         if not self.cli.isdir(host_dst):
-            raise ValueError(host_dst + ' is not a directory')
+            self.cli.error('No such directory: {}'.format(host_dst))
 
         device_srcs = []
         for device_src in args:
@@ -275,7 +275,9 @@ class Device(object):
         for host_src in args:
             host_srcs += self.cli.glob(host_src)
 
-        if host_srcs:
-            cmd = ['scp'] + self.ssh_opts() + host_srcs + [device_dst]
-            self.cli.create_process(cmd).check_call()
+        if not host_srcs:
+            self.cli.error('No matching files: "{}".'.format(' '.join(args)))
+
+        cmd = ['scp'] + self.ssh_opts() + host_srcs + [device_dst]
+        self.cli.create_process(cmd).check_call()
         return host_srcs

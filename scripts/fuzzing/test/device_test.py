@@ -190,8 +190,9 @@ class DeviceTest(TestCase):
         remote_path = 'remote-path'
 
         # Fails due to missing pathname.
-        with self.assertRaises(ValueError):
-            self.device.fetch(local_path, remote_path)
+        self.assertError(
+            lambda: self.device.fetch(local_path, remote_path),
+            'ERROR: No such directory: test_fetch')
 
         self.cli.mkdir(local_path)
         self.device.fetch(local_path, remote_path)
@@ -205,18 +206,29 @@ class DeviceTest(TestCase):
         local_path = 'test_store'
         remote_path = 'remote-path'
 
+        # Globs must resolve
+        self.assertError(
+            lambda: self.device.store(
+                remote_path, os.path.join(local_path, '*')),
+            'ERROR: No matching files: "test_store/*".')
+
+        # Local path must exist
         foo = os.path.join(local_path, 'foo')
+        self.assertError(
+            lambda: self.device.store(remote_path, foo),
+            'ERROR: No matching files: "test_store/foo".')
+
+        # Valid
         self.cli.touch(foo)
         self.device.store(remote_path, foo)
         self.assertScpTo(foo, remote_path)
 
+        # Valid globs
         bar = os.path.join(local_path, 'bar')
         baz = os.path.join(local_path, 'baz')
         self.cli.touch(bar)
         self.cli.touch(baz)
-        self.assertEqual(
-            self.device.store(remote_path, os.path.join(local_path, '*')),
-            [bar, baz, foo])
+        self.device.store(remote_path, os.path.join(local_path, '*'))
         self.assertScpTo(bar, baz, foo, remote_path)
 
 

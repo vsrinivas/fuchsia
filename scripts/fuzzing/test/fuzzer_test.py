@@ -12,19 +12,6 @@ from test_case import TestCase
 
 class FuzzerTest(TestCase):
 
-    def test_measure_corpus(self):
-        fuzzer = self.create_fuzzer('check', 'fake-package1/fake-target1')
-        pathname = fuzzer.data_path('corpus')
-        cmd = ['ls', '-l', fuzzer.data_path('corpus')]
-        self.set_outputs(
-            cmd, [
-                '-rw-r--r-- 1 0 0 1796 Mar 19 17:25 feac37187e77ff60222325cf2829e2273e04f2ea',
-                '-rw-r--r-- 1 0 0  124 Mar 18 22:02 ff415bddb30e9904bccbbd21fb5d4aa9bae9e5a5',
-            ],
-            ssh=True)
-        sizes = fuzzer.measure_corpus()
-        self.assertEqual(sizes, (2, 1796 + 124))
-
     def test_list_artifacts(self):
         fuzzer = self.create_fuzzer('check', 'fake-package1/fake-target1')
         artifacts = ['crash-deadbeef', 'leak-deadfa11', 'oom-feedface']
@@ -85,7 +72,7 @@ class FuzzerTest(TestCase):
                 '-artifact_prefix=data/',
                 '-dict=pkg/data/fake-target2/dictionary',
                 '-jobs=1',
-                'data/corpus/',
+                'data/corpus',
             ])
 
     def test_start_already_running(self):
@@ -101,7 +88,7 @@ class FuzzerTest(TestCase):
             ['--foreground'], [
                 '-artifact_prefix=data/',
                 '-dict=pkg/data/fake-target2/dictionary',
-                'data/corpus/',
+                'data/corpus',
             ])
 
     def test_start_debug(self):
@@ -115,7 +102,7 @@ class FuzzerTest(TestCase):
                 '-handle_ill=0',
                 '-handle_segv=0',
                 '-jobs=1',
-                'data/corpus/',
+                'data/corpus',
             ])
 
     def test_start_with_options(self):
@@ -126,7 +113,7 @@ class FuzzerTest(TestCase):
                 '-jobs=1',
                 '-option1=\'bar baz\'',
                 '-option2=foo',
-                'data/corpus/',
+                'data/corpus',
             ])
 
     def test_start_with_bad_option(self):
@@ -142,7 +129,7 @@ class FuzzerTest(TestCase):
                 '-dict=pkg/data/fake-target2/dictionary',
                 '-jobs=1',
                 '-option2=foo',
-                'data/corpus/',
+                'data/corpus',
                 '--',
                 '-option1=bar',
             ])
@@ -157,7 +144,7 @@ class FuzzerTest(TestCase):
             '-artifact_prefix=data/',
             '-dict=pkg/data/fake-target2/dictionary',
             '-jobs=1',
-            'data/corpus/',
+            'data/corpus',
         ]
         process = self.get_process(cmd, ssh=True)
         process.duration = 20
@@ -174,7 +161,7 @@ class FuzzerTest(TestCase):
         fuzzer = self.create_fuzzer('start', 'fake-package1/fake-target2')
 
         # Make the log file appear after 15 "seconds".
-        cmd = ['ls', '-l', fuzzer.data_path('fuzz-*.log')]
+        cmd = ['ls', '-l', self.data_abspath('fuzz-*.log')]
         process = self.get_process(cmd, ssh=True)
         process.schedule(
             start=15, output='-rw-r--r-- 1 0 0 0 Dec 25 00:00 fuzz-0.log')
@@ -186,7 +173,7 @@ class FuzzerTest(TestCase):
             '-artifact_prefix=data/',
             '-dict=pkg/data/fake-target2/dictionary',
             '-jobs=1',
-            'data/corpus/',
+            'data/corpus',
         ]
         process = self.get_process(cmd, ssh=True)
         process.duration = 20
@@ -352,8 +339,8 @@ MS: 1 SomeMutation; base unit: foo
         self.assertGreaterEqual(self.cli.elapsed, 15)
 
         # Verify we grabbed the logs and symbolized them.
-        self.assertScpFrom(fuzzer.data_path('fuzz-*.log'), fuzzer.output)
-        cmd = ['rm', '-f', fuzzer.data_path('fuzz-*.log')]
+        self.assertScpFrom(self.data_abspath('fuzz-*.log'), fuzzer.output)
+        cmd = ['rm', '-f', self.data_abspath('fuzz-*.log')]
         self.assertSsh(*cmd)
 
         cmd = [
@@ -404,8 +391,13 @@ MS: 1 SomeMutation; base unit: foo
         #  Valid
         fuzzer.repro()
         self.assertSsh(
-            'run', fuzzer.url(), '-artifact_prefix=data/',
-            'data/crash-deadbeef', 'data/crash-deadfa11', 'data/oom-feedface')
+            'run',
+            fuzzer.url(),
+            '-artifact_prefix=data/',
+            'data/crash-deadbeef',
+            'data/crash-deadfa11',
+            'data/oom-feedface',
+        )
 
 
 if __name__ == '__main__':

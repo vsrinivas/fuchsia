@@ -161,6 +161,9 @@ class FakeCLI(CommandLineInterface):
             del self._files[pathname]
         self.create_process(['rm', '-rf', pathname])
 
+    def _mkdtemp(self):
+        return 'temp_dir'
+
     # Other routines
 
     def getenv(self, name):

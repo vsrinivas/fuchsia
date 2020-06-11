@@ -125,6 +125,10 @@ class TestCase(unittest.TestCase):
 
         return pid
 
+    def data_abspath(self, relpath):
+        """Returns the absolute path for a fuzzer-namespaced data path."""
+        return self.fuzzer.ns.abspath(self.fuzzer.ns.data(relpath))
+
     # Unit test assertions
 
     def assertLogged(self, *logs):

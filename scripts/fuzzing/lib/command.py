@@ -57,7 +57,7 @@ def check_fuzzer(args, factory):
         if not args.name and not fuzzer.is_running():
             continue
         status = 'RUNNING' if fuzzer.is_running() else 'STOPPED'
-        num, size = fuzzer.measure_corpus()
+        num, size = fuzzer.corpus.measure()
         artifacts = fuzzer.list_artifacts()
         factory.cli.echo(
             '{}: {}'.format(fuzzer, status),

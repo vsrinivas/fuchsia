@@ -4,11 +4,13 @@
 # found in the LICENSE file.
 
 import datetime
-import errno
 import os
 import re
 import subprocess
-import time
+
+from corpus import Corpus
+from dictionary import Dictionary
+from namespace import Namespace
 
 
 class Fuzzer(object):
@@ -57,9 +59,11 @@ class Fuzzer(object):
         self._subprocess_args = []
         self._debug = False
         self._foreground = False
+        self._ns = Namespace(self)
+        self._corpus = Corpus(self)
+        self._dictionary = Dictionary(self)
         self._output = self.host.fxpath(
             'local', '{}_{}'.format(package, executable))
-        self._dictionary = 'pkg/data/{}/dictionary'.format(executable)
         self._logbase = None
 
     def __str__(self):
@@ -118,6 +122,18 @@ class Fuzzer(object):
         self._subprocess_args = subprocess_args
 
     @property
+    def ns(self):
+        return self._ns
+
+    @property
+    def corpus(self):
+        return self._corpus
+
+    @property
+    def dictionary(self):
+        return self._dictionary
+
+    @property
     def output(self):
         """Path under which to write the results of fuzzing."""
         return self._output
@@ -150,16 +166,6 @@ class Fuzzer(object):
         for key, val in vars(Fuzzer).items():
             if key in items and isinstance(val, property):
                 setattr(self, key, items[key])
-
-    def data_path(self, relpath=''):
-        """Canonicalizes the location of mutable data for this fuzzer."""
-        return '/data/r/sys/fuchsia.com:{}:0#meta:{}.cmx/{}'.format(
-            self.package, self.executable, relpath)
-
-    def measure_corpus(self):
-        """Returns the number of corpus elements and corpus size as a pair."""
-        sizes = self.device.ls(self.data_path('corpus'))
-        return (len(sizes), sum(sizes.values()))
 
     def list_artifacts(self):
         """Returns a list of test unit artifacts in the output directory."""
@@ -213,16 +219,21 @@ class Fuzzer(object):
             return proc
 
         # Wait for either the fuzzer to start and open its log, or exit.
-        logs = self._logs(self.data_path())
-        while proc.poll() == None and not self.device.ls(logs):
+        logs = self._logs()
+        while proc.poll() == None and not self.ns.ls(logs):
             self.cli.sleep(0.5)
         if proc.returncode:
             self.cli.error('{} failed to start.'.format(self))
         return proc
 
-    def _logs(self, pathname):
+    def _logs(self, pathname=None):
         """Returns a wildcarded path to the logs under pathname."""
-        return os.path.join(pathname, 'fuzz-*.log')
+        if pathname:
+            assert self.cli.isdir(pathname), 'No such directory: {}'.format(
+                pathname)
+            return os.path.join(pathname, 'fuzz-*.log')
+        else:
+            return self.ns.data('fuzz-*.log')
 
     def logfile(self, job_num):
         """Returns the path to the symbolized log for a fuzzing job."""
@@ -253,12 +264,17 @@ class Fuzzer(object):
         The fuzzer's process ID. May be 0 if the fuzzer stops immediately.
     """
         self.require_stopped()
-        self.device.remove(self._logs(self.data_path()))
-        self.cli.mkdir(self._output)
 
-        self.device.mkdir(self.data_path('corpus'))
-        self._options['dict'] = self._dictionary
-        self._libfuzzer_inputs = ['data/corpus/']
+        # Add dictionary
+        self._options['dict'] = self.dictionary.nspath
+
+        # Add corpus
+        self._libfuzzer_inputs = self.corpus.inputs
+
+        # Prep output
+        logs = self._logs()
+        self.ns.remove(logs)
+        self.cli.mkdir(self._output)
 
         # When running in the foreground, interpret the output as coming from
         # fuzzing job 0. This makes the rest of the plumbing look the same.
@@ -291,7 +307,7 @@ class Fuzzer(object):
         artifacts = []
         pid_pattern = re.compile(r'^==([0-9]+)==')
         mut_pattern = re.compile(r'^MS: [0-9]*')  # Fuzzer::DumpCurrentUnit
-        art_pattern = re.compile(r'Test unit written to data/(\S*)')
+        art_pattern = re.compile(r'Test unit written to (data/\S*)')
         for line in iter(fd_in.readline, ''):
             pid_match = pid_pattern.search(line)
             mut_match = mut_pattern.search(line)
@@ -312,8 +328,7 @@ class Fuzzer(object):
             fd_out.write(line)
             if echo:
                 self.cli.echo(line.strip())
-        for artifact in artifacts:
-            self.device.fetch(self.output, self.data_path(artifact))
+        self.ns.fetch(self.output, *artifacts)
         return sym != None
 
     def monitor(self):
@@ -326,9 +341,9 @@ class Fuzzer(object):
         while self.is_running(refresh=True):
             self.cli.sleep(2)
 
-        logs = self._logs(self.data_path())
-        self.device.fetch(self._output, logs)
-        self.device.remove(logs)
+        logs = self._logs()
+        self.ns.fetch(self.output, logs)
+        self.ns.remove(logs)
 
         logs = self._logs(self.output)
         logs = self.cli.glob(logs)
@@ -359,13 +374,8 @@ class Fuzzer(object):
 
         # Device.store will glob patterns like 'crash-*'.
         self.require_stopped()
-        inputs = self.device.store(self.data_path(), *self._libfuzzer_inputs)
-        if not inputs:
-            inputs = ' '.join(self._libfuzzer_inputs)
-            self.cli.error('No matching files: "{}".'.format(inputs))
-        self._libfuzzer_inputs = [
-            os.path.join('data', os.path.basename(name)) for name in inputs
-        ]
+        self._libfuzzer_inputs = self.ns.store(
+            self.ns.data(), *self._libfuzzer_inputs)
 
         # Default to repro-ing in the foreground
         self.foreground = True

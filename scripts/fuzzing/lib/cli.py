@@ -161,6 +161,12 @@ class CommandLineInterface(object):
         else:
             os.remove(pathname)
 
+    def _mkdtemp(self):
+        return tempfile.mkdtemp()
+
+    def temp_dir(self):
+        return _TemporaryDirectory(self)
+
     # Other routines.
 
     def getenv(self, name):
@@ -173,3 +179,22 @@ class CommandLineInterface(object):
     def sleep(self, duration):
         if duration > 0:
             time.sleep(duration)
+
+
+class _TemporaryDirectory(object):
+    """A temporary directory that can be used with "with"."""
+
+    def __init__(self, cli):
+        self._cli = cli
+        self._pathname = None
+
+    @property
+    def pathname(self):
+        return self._pathname
+
+    def __enter__(self):
+        self._pathname = self._cli._mkdtemp()
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self._cli.remove(self._pathname)

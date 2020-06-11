@@ -20,9 +20,11 @@ class ArgsTest(TestCase):
             self.assertEqual(args[key], val)
 
     def assertParseFails(self, args, msg):
-        with self.assertRaises(SystemExit):
-            self.parse_args(*args)
-        self.assertLogged('ERROR: {}'.format(msg), '       Try "fx fuzz help".')
+        self.assertError(
+            lambda: self.parse_args(*args),
+            'ERROR: {}'.format(msg),
+            '       Try "fx fuzz help".',
+        )
 
     def assertParseHelp(self, args, log):
         with self.assertRaises(SystemExit):
