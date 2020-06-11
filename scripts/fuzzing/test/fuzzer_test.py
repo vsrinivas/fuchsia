@@ -27,22 +27,11 @@ class FuzzerTest(TestCase):
 
     def test_list_artifacts(self):
         fuzzer = self.create_fuzzer('check', 'fake-package1/fake-target1')
-        cmd = ['ls', '-l', fuzzer.data_path()]
-        self.set_outputs(
-            cmd, [
-                'drw-r--r-- 2 0 0 13552 Mar 20 01:40 corpus',
-                '-rw-r--r-- 1 0 0   918 Mar 20 01:40 fuzz-0.log',
-                '-rw-r--r-- 1 0 0  1337 Mar 20 01:40 crash-deadbeef',
-                '-rw-r--r-- 1 0 0  1729 Mar 20 01:40 leak-deadfa11',
-                '-rw-r--r-- 1 0 0 31415 Mar 20 01:40 oom-feedface',
-            ],
-            ssh=True)
-        artifacts = fuzzer.list_artifacts()
-        self.assertEqual(len(artifacts), 3)
-        self.assertIn('crash-deadbeef', artifacts)
-        self.assertIn('leak-deadfa11', artifacts)
-        self.assertIn('oom-feedface', artifacts)
-        self.assertNotIn('fuzz-0.log', artifacts)
+        artifacts = ['crash-deadbeef', 'leak-deadfa11', 'oom-feedface']
+        artifacts = [os.path.join(fuzzer.output, a) for a in artifacts]
+        for artifact in artifacts:
+            self.cli.touch(artifact)
+        self.assertEqual(fuzzer.list_artifacts(), artifacts)
 
     def test_is_running(self):
         fuzzer1 = self.create_fuzzer('check', 'fake-package1/fake-target1')
@@ -51,33 +40,32 @@ class FuzzerTest(TestCase):
         self.assertFalse(fuzzer1.is_running())
         self.assertFalse(fuzzer2.is_running())
 
-        self.set_running(fuzzer1.package, fuzzer1.executable)
+        self.set_running(fuzzer1.package, fuzzer1.executable, duration=5)
         self.assertTrue(fuzzer1.is_running())
         self.assertFalse(fuzzer2.is_running())
 
-        self.set_running(fuzzer2.package, fuzzer2.executable)
+        self.set_running(fuzzer2.package, fuzzer2.executable, duration=5)
         self.assertTrue(fuzzer1.is_running())
         self.assertTrue(fuzzer2.is_running())
 
         # Results are cached until refresh
-        self.stop_all(refresh=False)
+        self.cli.sleep(5)
         self.assertTrue(fuzzer1.is_running())
         self.assertTrue(fuzzer2.is_running())
 
-        self.stop_all(refresh=True)
-        self.assertFalse(fuzzer1.is_running())
-        self.assertFalse(fuzzer2.is_running())
+        self.assertFalse(fuzzer1.is_running(refresh=True))
+        self.assertFalse(fuzzer2.is_running(refresh=True))
 
     def test_require_stopped(self):
         fuzzer = self.create_fuzzer('start', 'fake-package1/fake-target1')
         fuzzer.require_stopped()
-        self.set_running(fuzzer.package, fuzzer.executable)
-        with self.assertRaises(SystemExit):
-            fuzzer.require_stopped()
-        self.assertLogged(
-            'ERROR: fake-package1/fake-target1 is running and must be stopped first.',
+
+        self.set_running(fuzzer.package, fuzzer.executable, duration=10)
+        self.assertError(
+            lambda: fuzzer.require_stopped(),
+            'ERROR: fake-package1/fake-target1 is running and must be stopped first.'
         )
-        self.stop_all()
+        self.cli.sleep(10)
         fuzzer.require_stopped()
 
     # Helper to test Fuzzer.start with different options and arguments. The
@@ -99,6 +87,14 @@ class FuzzerTest(TestCase):
                 '-jobs=1',
                 'data/corpus/',
             ])
+
+    def test_start_already_running(self):
+        fuzzer = self.create_fuzzer('start', 'fake-package1/fake-target1')
+        self.set_running(fuzzer.package, fuzzer.executable)
+        self.assertError(
+            lambda: fuzzer.start(),
+            'ERROR: fake-package1/fake-target1 is running and must be stopped first.'
+        )
 
     def test_start_foreground(self):
         self.start_helper(
@@ -134,8 +130,10 @@ class FuzzerTest(TestCase):
             ])
 
     def test_start_with_bad_option(self):
-        with self.assertRaises(SystemExit):
-            self.start_helper(['-option2=foo', '-option1'], None)
+        self.assertError(
+            lambda: self.start_helper(['-option2=foo', '-option1'], None),
+            'ERROR: Unrecognized option: -option1',
+            '       Try "fx fuzz help".')
 
     def test_start_with_passthrough(self):
         self.start_helper(
@@ -148,6 +146,55 @@ class FuzzerTest(TestCase):
                 '--',
                 '-option1=bar',
             ])
+
+    def test_start_failure(self):
+        fuzzer = self.create_fuzzer('start', 'fake-package1/fake-target2')
+
+        # Make the fuzzer fail after 20 seconds.
+        cmd = [
+            'run',
+            fuzzer.url(),
+            '-artifact_prefix=data/',
+            '-dict=pkg/data/fake-target2/dictionary',
+            '-jobs=1',
+            'data/corpus/',
+        ]
+        process = self.get_process(cmd, ssh=True)
+        process.duration = 20
+        process.succeeds = False
+
+        # Start the fuzzer
+        self.assertError(
+            lambda: fuzzer.start(),
+            'ERROR: fake-package1/fake-target2 failed to start.')
+        self.assertSsh(*cmd)
+        self.assertEqual(self.cli.elapsed, 20)
+
+    def test_start_slow_resolve(self):
+        fuzzer = self.create_fuzzer('start', 'fake-package1/fake-target2')
+
+        # Make the log file appear after 15 "seconds".
+        cmd = ['ls', '-l', fuzzer.data_path('fuzz-*.log')]
+        process = self.get_process(cmd, ssh=True)
+        process.schedule(
+            start=15, output='-rw-r--r-- 1 0 0 0 Dec 25 00:00 fuzz-0.log')
+
+        # Make the fuzzer finish after 20 seconds.
+        cmd = [
+            'run',
+            fuzzer.url(),
+            '-artifact_prefix=data/',
+            '-dict=pkg/data/fake-target2/dictionary',
+            '-jobs=1',
+            'data/corpus/',
+        ]
+        process = self.get_process(cmd, ssh=True)
+        process.duration = 20
+
+        # Start the fuzzer
+        fuzzer.start()
+        self.assertSsh(*cmd)
+        self.assertEqual(self.cli.elapsed, 15)
 
     # Helper to test Fuzzer.symbolize with different logs.
     def symbolize_helper(self, log_in, log_out, job_num=0, echo=False):
@@ -162,7 +209,7 @@ class FuzzerTest(TestCase):
             cmd, [
                 '[000001.234567][123][456][klog] INFO: Symbolized line 1',
                 '[000001.234568][123][456][klog] INFO: Symbolized line 2',
-                '[000001.234569][123][456][klog] INFO: Symbolized line 3', ''
+                '[000001.234569][123][456][klog] INFO: Symbolized line 3',
             ])
         self.cli.mkdir(fuzzer._output)
         with self.cli.open('unsymbolized', 'w+') as unsymbolized:
@@ -173,7 +220,7 @@ class FuzzerTest(TestCase):
         # and the symbolizer will not be invoked.
         if log_in != log_out:
             self.assertRan(*cmd)
-        with self.cli.open(fuzzer._logfile(job_num)) as symbolized:
+        with self.cli.open(fuzzer.logfile(job_num)) as symbolized:
             self.assertEqual(symbolized.read(), log_out)
 
     def test_symbolize_log_no_mutation_sequence(self):
@@ -288,6 +335,35 @@ MS: 1 SomeMutation; base unit: foo
             'MS: 1 SomeMutation; base unit: foo',
         )
 
+    def test_monitor(self):
+        fuzzer = self.create_fuzzer('start', 'fake-package1/fake-target2')
+        self.set_running(fuzzer.package, fuzzer.executable, duration=15)
+
+        # Make the file that scp grabs
+        self.cli.mkdir(fuzzer.output)
+
+        with self.cli.open(os.path.join(fuzzer.output, 'fuzz-0.log'),
+                           'w') as log:
+            log.write('==67890== ERROR: libFuzzer: deadly signal\n')
+            log.write('MS: 1 SomeMutation; base unit: foo\n')
+
+        # Monitor the fuzzer until it exits
+        fuzzer.monitor()
+        self.assertGreaterEqual(self.cli.elapsed, 15)
+
+        # Verify we grabbed the logs and symbolized them.
+        self.assertScpFrom(fuzzer.data_path('fuzz-*.log'), fuzzer.output)
+        cmd = ['rm', '-f', fuzzer.data_path('fuzz-*.log')]
+        self.assertSsh(*cmd)
+
+        cmd = [
+            self.host.symbolizer_exec, '-llvm-symbolizer',
+            self.host.llvm_symbolizer
+        ]
+        for build_id_dir in self.host.build_id_dirs:
+            cmd += ['-build-id-dir', build_id_dir]
+        self.assertRan(*cmd)
+
     def test_stop(self):
         # Stopping when stopped has no effect
         fuzzer = self.create_fuzzer('stop', 'fake-package1/fake-target2')
@@ -308,18 +384,24 @@ MS: 1 SomeMutation; base unit: foo
             'crash-*',
             'oom-feedface',
         )
-        with self.assertRaises(SystemExit):
-            fuzzer.repro()
-        self.assertEqual(
-            fuzzer.device.host.cli.log, [
-                'ERROR: No matching files: "crash-*".',
-            ])
 
-        # Valid
+        # Invalid units
+        self.assertError(
+            lambda: fuzzer.repro(),
+            'ERROR: No matching files: "crash-* oom-feedface".')
+
+        # Valid units, but already running
         self.cli.touch('crash-deadbeef')
         self.cli.touch('crash-deadfa11')
         self.cli.touch('oom-feedface')
+        self.set_running(fuzzer.package, fuzzer.executable, duration=60)
+        self.assertError(
+            lambda: fuzzer.repro(),
+            'ERROR: fake-package1/fake-target2 is running and must be stopped first.'
+        )
+        self.cli.sleep(60)
 
+        #  Valid
         fuzzer.repro()
         self.assertSsh(
             'run', fuzzer.url(), '-artifact_prefix=data/',

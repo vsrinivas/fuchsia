@@ -54,16 +54,14 @@ class FakeCLI(CommandLineInterface):
     @property
     def selection(self):
         """Pre-selected option for a future call to choose()."""
-        if not self._selection:
-            raise RuntimeError('Unexpected call to choose()')
+        assert self._selection, 'Unexpected call to choose()'
         selection = self._selection
         self._selection = None
         return selection
 
     @selection.setter
     def selection(self, selection):
-        if self._selection:
-            raise RuntimeError('Missing call to choose()')
+        assert not self._selection, 'Missing call to choose()'
         self._selection = selection
 
     @property
@@ -180,9 +178,10 @@ class FakeCLI(CommandLineInterface):
         cmd = ' '.join(args)
         process = self._processes.get(cmd, None)
         if not process:
-            process = FakeProcess(args, **kwargs)
+            process = FakeProcess(self, args, **kwargs)
             self._processes[cmd] = process
         return process
 
     def sleep(self, duration):
-        self._elapsed += duration
+        if duration > 0:
+            self._elapsed += duration

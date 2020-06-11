@@ -151,16 +151,6 @@ class Device(object):
 
         return p
 
-    def _cs_url(self, package, executable):
-        """Returns the Fuchsia URL for a packaged executable."""
-        return (
-            'fuchsia-pkg://fuchsia.com/{}#meta/{}'.format(
-                package, self._cs_cmx(executable)))
-
-    def _cs_cmx(self, executable):
-        """Returns the component manifest name for an executable."""
-        return ('{}.cmx'.format(executable))
-
     def getpid(self, package, executable, refresh=False):
         """Returns a process ID for a packaged executable if running, or -1.
 
@@ -222,11 +212,11 @@ class Device(object):
             cmd = ['rm', '-f', pathname]
         self.ssh(cmd).check_call()
 
-    def dump_log(self, args):
+    def dump_log(self, *args):
         """Retrieve a syslog from the device."""
-        p = self.ssh(
-            ['log_listener', '--dump_logs', 'yes', '--pretty', 'no'] + args)
-        return p.check_output()
+        cmd = ['log_listener', '--dump_logs', 'yes', '--pretty', 'no'
+              ] + list(args)
+        return self.ssh(cmd).check_output()
 
     def guess_pid(self):
         """Tries to guess the fuzzer process ID from the device syslog.
@@ -239,21 +229,24 @@ class Device(object):
           The PID of the process suspected to be the fuzzer, or -1 if no
           suitable candidate was found.
         """
-        out = self.dump_log(['--only', 'reset,Fuzzer,Sanitizer'])
+        out = self.dump_log('--only', 'reset,Fuzzer,Sanitizer')
         pid = -1
-        for line in out.split('\n'):
-            # Log lines are like '[timestamp][pid][tid][name] data'
-            parts = line.split('][')
-            if len(parts) > 2:
-                pid = int(parts[1])
+        if out:
+            for line in out.split('\n'):
+                # Log lines are like '[timestamp][pid][tid][name] data'
+                parts = line.split('][')
+                if len(parts) > 2:
+                    pid = int(parts[1])
         return pid
 
-    def _rpath(self, pathname):
+    def scp_rpath(self, pathname):
         """Returns an scp-style pathname argument for a remote path."""
         return '[{}]:{}'.format(self.addr, pathname)
 
-    def fetch(self, data_src, host_dst):
-        """Copies `data_src` on the target to `host_dst` on the host.
+    def fetch(self, host_dst, *args):
+        """Copies files on the device to a directory on the host.
+
+           The host directory is given by the first argument.
 
            This does not retry, even if the fetch is racing the file creation.
            In this case, the correct approach is to use some other signal to
@@ -262,14 +255,27 @@ class Device(object):
         """
         if not self.cli.isdir(host_dst):
             raise ValueError(host_dst + ' is not a directory')
-        cmd = ['scp'] + self.ssh_opts() + [self._rpath(data_src), host_dst]
+
+        device_srcs = []
+        for device_src in args:
+            device_srcs.append(self.scp_rpath(device_src))
+
+        cmd = ['scp'] + self.ssh_opts() + device_srcs + [host_dst]
         self.cli.create_process(cmd).check_call()
 
-    def store(self, host_src, data_dst):
-        """Copies `host_src` on the host to `data_dst` on the target."""
-        self.mkdir(data_dst)
-        srcs = self.cli.glob(host_src)
-        if srcs:
-            cmd = ['scp'] + self.ssh_opts() + srcs + [self._rpath(data_dst)]
+    def store(self, device_dst, *args):
+        """Copies files on the host to a directory on the device.
+
+           The device directory is given by the first argument.
+        """
+        self.mkdir(device_dst)
+        device_dst = self.scp_rpath(device_dst)
+
+        host_srcs = []
+        for host_src in args:
+            host_srcs += self.cli.glob(host_src)
+
+        if host_srcs:
+            cmd = ['scp'] + self.ssh_opts() + host_srcs + [device_dst]
             self.cli.create_process(cmd).check_call()
-        return srcs
+        return host_srcs

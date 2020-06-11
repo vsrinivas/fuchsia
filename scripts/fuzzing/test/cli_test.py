@@ -20,12 +20,20 @@ class NonHermeticTestCase(unittest.TestCase):
 
     def setUp(self):
         super(NonHermeticTestCase, self).setUp()
-        self._cli = CommandLineInterface(out=CommandLineInterface.DEVNULL)
+        self._err = StringIO()
+        self._cli = CommandLineInterface(out=self._err)
         self._temp_dir = tempfile.mkdtemp()
 
     @property
     def cli(self):
         return self._cli
+
+    @property
+    def errors(self):
+        self._err.seek(0)
+        errors = self._err.read().strip()
+        self._err.seek(0)
+        return errors
 
     @property
     def temp_dir(self):
@@ -65,11 +73,15 @@ class HermeticTestCase(unittest.TestCase):
         process.succeeds = False
 
         process = self.cli.create_process(['echo foo'])
-        process.stdout.write('foo\n')
+        process.schedule(start=0, output='foo')
 
     @property
     def cli(self):
         return self._cli
+
+    @property
+    def errors(self):
+        return '\n'.join(self.cli.log)
 
     @property
     def temp_dir(self):
@@ -120,6 +132,8 @@ class CommandLineInterfaceTestCase(object):
         pathname = os.path.join(self.temp_dir, 'test_open')
         with self.assertRaises(SystemExit):
             opened = self.cli.open(pathname)
+        self.assertEqual(
+            self.errors, 'ERROR: Failed to open {}.'.format(pathname))
 
         opened = self.cli.open(pathname, missing_ok=True)
         self.assertFalse(opened)
@@ -134,6 +148,9 @@ class CommandLineInterfaceTestCase(object):
         pathname = os.path.join(self.temp_dir, 'test_readfile')
         with self.assertRaises(SystemExit):
             self.cli.readfile(pathname)
+        self.assertEqual(
+            self.errors, 'ERROR: Failed to open {}.'.format(pathname))
+
         self.assertFalse(self.cli.readfile(pathname, missing_ok=True))
         self.writefile(pathname, 'data')
         self.assertEqual(self.cli.readfile(pathname), 'data')
@@ -210,14 +227,14 @@ class FakeCommandLineInterfaceTest(HermeticTestCase,
         prompt = 'Pick your favorite animal'
         choices = ['cat', 'dog', 'bear']
 
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(AssertionError):
             self.cli.choose(prompt, choices)
 
         self.cli.selection = 3
         choice = self.cli.choose(prompt, choices)
         self.assertEqual(choice, 'bear')
 
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(AssertionError):
             self.cli.choose(prompt, choices)
 
 

@@ -162,13 +162,11 @@ class Fuzzer(object):
         return (len(sizes), sum(sizes.values()))
 
     def list_artifacts(self):
-        """Returns a list of test unit artifacts, i.e. fuzzing crashes."""
+        """Returns a list of test unit artifacts in the output directory."""
         artifacts = []
-        lines = self.device.ls(self.data_path())
-        for file, _ in lines.iteritems():
-            for prefix in Fuzzer.ARTIFACT_PREFIXES:
-                if file.startswith(prefix):
-                    artifacts.append(file)
+        for prefix in Fuzzer.ARTIFACT_PREFIXES:
+            artifacts += self.cli.glob(
+                os.path.join(self.output, '{}-*'.format(prefix)))
         return artifacts
 
     def is_running(self, refresh=False):
@@ -180,9 +178,9 @@ class Fuzzer(object):
             self.package, self.executable, refresh=refresh)
         return self._pid > 0
 
-    def require_stopped(self, refresh=False):
+    def require_stopped(self):
         """Raise an exception if the fuzzer is running."""
-        if self.is_running(refresh=refresh):
+        if self.is_running(refresh=True):
             self.cli.error(
                 '{} is running and must be stopped first.'.format(self))
 
@@ -219,14 +217,14 @@ class Fuzzer(object):
         while proc.poll() == None and not self.device.ls(logs):
             self.cli.sleep(0.5)
         if proc.returncode:
-            self.cli.error('{} failed to start.'.format(fuzzer))
+            self.cli.error('{} failed to start.'.format(self))
         return proc
 
     def _logs(self, pathname):
         """Returns a wildcarded path to the logs under pathname."""
         return os.path.join(pathname, 'fuzz-*.log')
 
-    def _logfile(self, job_num):
+    def logfile(self, job_num):
         """Returns the path to the symbolized log for a fuzzing job."""
         if not self._logbase:
             now = datetime.datetime.now().replace(microsecond=0)
@@ -280,7 +278,7 @@ class Fuzzer(object):
           job_num:      The job number of the corresponding fuzzing job.
           echo:         If true, display text being written to fd_out.
         """
-        filename_out = self._logfile(job_num)
+        filename_out = self.logfile(job_num)
         with self.cli.open(filename_out, 'w') as fd_out:
             return self._symbolize_log_impl(fd_in, fd_out, echo)
         self.cli.link(
@@ -304,7 +302,7 @@ class Fuzzer(object):
                 if pid <= 0:
                     pid = self.device.guess_pid()
                 if not sym:
-                    raw = self.device.dump_log(['--pid', str(pid)])
+                    raw = self.device.dump_log('--pid', str(pid))
                     sym = self.host.symbolize(raw)
                     fd_out.write(sym)
                     if echo:
@@ -315,7 +313,7 @@ class Fuzzer(object):
             if echo:
                 self.cli.echo(line.strip())
         for artifact in artifacts:
-            self.device.fetch(self.data_path(artifact), self.output)
+            self.device.fetch(self.output, self.data_path(artifact))
         return sym != None
 
     def monitor(self):
@@ -329,7 +327,7 @@ class Fuzzer(object):
             self.cli.sleep(2)
 
         logs = self._logs(self.data_path())
-        self.device.fetch(logs, self._output)
+        self.device.fetch(self._output, logs)
         self.device.remove(logs)
 
         logs = self._logs(self.output)
@@ -359,16 +357,15 @@ class Fuzzer(object):
         if not self._libfuzzer_inputs:
             self.cli.error('No units provided.', 'Try "fx fuzz help".')
 
-        namespaced = []
-        for pattern in self._libfuzzer_inputs:
-            # Device.store will glob patterns like 'crash-*'.
-            inputs = self.device.store(pattern, self.data_path())
-            if not inputs:
-                self.device.host.cli.error(
-                    'No matching files: "{}".'.format(pattern))
-            for name in inputs:
-                namespaced.append(os.path.join('data', os.path.basename(name)))
-        self._libfuzzer_inputs = namespaced
+        # Device.store will glob patterns like 'crash-*'.
+        self.require_stopped()
+        inputs = self.device.store(self.data_path(), *self._libfuzzer_inputs)
+        if not inputs:
+            inputs = ' '.join(self._libfuzzer_inputs)
+            self.cli.error('No matching files: "{}".'.format(inputs))
+        self._libfuzzer_inputs = [
+            os.path.join('data', os.path.basename(name)) for name in inputs
+        ]
 
         # Default to repro-ing in the foreground
         self.foreground = True

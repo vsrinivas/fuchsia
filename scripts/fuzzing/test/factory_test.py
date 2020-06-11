@@ -18,9 +18,8 @@ class FactoryTest(TestCase):
         # Use a non-existent directory to simulate an unconfigured $FUCHSIA_DIR
         factory = Factory(cli=self.cli)
         build_dir = self.host.build_dir
-        with self.assertRaises(SystemExit):
-            host = factory.create_host()
-        self.assertLogged(
+        self.assertError(
+            lambda: factory.create_host(),
             'ERROR: Failed to read build directory from fuchsia_dir/.fx-build-dir.',
             '       Have you run "fx set ... --fuzz-with <sanitizer>"?')
 
@@ -28,11 +27,11 @@ class FactoryTest(TestCase):
         fx_build_dir = os.path.join(self.host.fuchsia_dir, '.fx-build-dir')
         with self.cli.open(fx_build_dir, 'w') as opened:
             opened.write(build_dir + '\n')
-        with self.assertRaises(SystemExit):
-            host = factory.create_host()
-        self.assertLogged(
+        self.assertError(
+            lambda: factory.create_host(),
             'ERROR: Failed to read fuzzers from fuchsia_dir/build_dir/fuzzers.json.',
-            '       Have you run "fx set ... --fuzz-with <sanitizer>"?')
+            '       Have you run "fx set ... --fuzz-with <sanitizer>"?',
+        )
 
         # Minimally valid
         fuzzers_json = os.path.join(build_dir, 'fuzzers.json')
@@ -80,11 +79,12 @@ class FactoryTest(TestCase):
         self.cli.mkdir('output')
 
         # No match
-        with self.assertRaises(SystemExit):
-            args = self.parse_args('check', 'no/match')
-            fuzzer = factory.create_fuzzer(args, device=self.device)
-        self.assertLogged(
-            'ERROR: No matching fuzzers found.', '       Try "fx fuzz list".')
+        args = self.parse_args('check', 'no/match')
+        self.assertError(
+            lambda: factory.create_fuzzer(args, device=self.device),
+            'ERROR: No matching fuzzers found.',
+            '       Try "fx fuzz list".',
+        )
 
         # Multiple matches
         self.cli.selection = 1

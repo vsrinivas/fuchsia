@@ -65,19 +65,19 @@ class Process(object):
 
     def check_call(self):
         """Analogous to subprocess.check_call."""
-        cmd = self.args
         rc = self.call()
         if rc != 0:
+            cmd = ' '.join(self.args)
             raise subprocess.CalledProcessError(rc, cmd)
         return rc
 
     def check_output(self):
         """Analogous to subprocess.check_output."""
-        cmd = self.args
         self._stdout = subprocess.PIPE
         p = self.popen()
         out, _ = p.communicate()
         rc = p.returncode
         if rc != 0:
+            cmd = ' '.join(self.args)
             raise subprocess.CalledProcessError(rc, cmd, output=out)
         return out

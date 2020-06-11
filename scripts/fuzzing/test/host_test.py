@@ -123,9 +123,8 @@ class HostTest(TestCase):
         self.assertEqual(self.host.find_device(device_name), addrs[0])
 
         # No results from 'fx device-finder list'
-        with self.assertRaises(SystemExit):
-            self.host.find_device(None)
-        self.assertLogged(
+        self.assertError(
+            lambda: self.host.find_device(None),
             'ERROR: Unable to find device.', '       Try "fx set-device".')
 
         # Multiple results from `fx device-finder list`
@@ -133,11 +132,11 @@ class HostTest(TestCase):
             self.host.fxpath('.jiri_root', 'bin', 'fx'), 'device-finder', 'list'
         ]
         self.set_outputs(cmd, addrs)
-        with self.assertRaises(SystemExit):
-            self.host.find_device(None)
-        self.assertLogged(
+        self.assertError(
+            lambda: self.host.find_device(None),
             'ERROR: Multiple devices found.', '       Try "fx set-device".')
 
+        # Reset output
         self.set_outputs(cmd, addrs[:1])
         self.assertEqual(self.host.find_device(None), addrs[0])
 
@@ -161,7 +160,7 @@ class HostTest(TestCase):
             ])
         symbolized = self.host.symbolize('\n'.join(stacktrace))
         self.assertRan(*cmd)
-        self.assertEqual(self.get_inputs(cmd), stacktrace)
+        self.assertInputs(cmd, stacktrace)
         self.assertEqual(
             symbolized.strip().split('\n'), [
                 'Symbolized line 1',

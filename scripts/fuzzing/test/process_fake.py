@@ -17,9 +17,18 @@ class FakeProcess(Process):
        commands. Other fakes can additionally add canned responses.
     """
 
-    def __init__(self, args, **kwargs):
-        self._popen = FakeProcess.Popen()
+    def __init__(self, cli, args, **kwargs):
+        self._cli = cli
+        self._popen = FakeProcess.Popen(cli)
         super(FakeProcess, self).__init__(args)
+
+    @property
+    def duration(self):
+        return self._popen._duration
+
+    @duration.setter
+    def duration(self, duration):
+        self._popen._duration = float(duration)
 
     @property
     def succeeds(self):
@@ -30,34 +39,26 @@ class FakeProcess(Process):
         self._popen._succeeds = succeeds
 
     @property
-    def stdin(self):
-        return self._popen.stdin
+    def inputs(self):
+        self._popen._stdin.seek(0)
+        return self._popen._stdin.read().split('\n')
 
-    @stdin.setter
-    def stdin(self, stdin):
-        pass
+    def schedule(self, output, start=None, end=None):
+        """Sets the output and/or error to be returned later.
 
-    @property
-    def stdout(self):
-        return self._popen.stdout
+        The output will appear in the stdout of the process between the start
+        and end times. If start is None, it behaves as if start is now. If end
+        is None, the output is not removed once it is added.
+        """
+        if not start:
+            start = self._cli.elapsed
+        self._popen._outputs.append((output, start, end))
 
-    @stdout.setter
-    def stdout(self, stdout):
-        pass
-
-    @property
-    def stderr(self):
-        return self._popen.stderr
-
-    @stderr.setter
-    def stderr(self, stderr):
-        pass
+    def clear(self):
+        self._popen._outputs = []
 
     def popen(self):
-        assert not self._popen._running, 'popen() called twice: {}'.format(
-            self.args)
-        self._popen._running = True
-        self.stdin.truncate(0)
+        self._popen._start()
         return self._popen
 
     class Popen(object):
@@ -66,10 +67,14 @@ class FakeProcess(Process):
         Unlike a real subprocess.Popen, this object always buffers stdio.
         """
 
-        def __init__(self):
-            self._running = False
+        def __init__(self, cli):
+            self._cli = cli
+            self._duration = 0.0
+            self._completion = None
             self._succeeds = True
             self._returncode = None
+
+            self._outputs = []
             self._stdin = StringIO()
             self._stdout = StringIO()
             self._stderr = StringIO()
@@ -90,6 +95,12 @@ class FakeProcess(Process):
         def returncode(self):
             return self._returncode
 
+        def _start(self):
+            assert not self._completion, 'popen() called twice'
+            self._completion = self._cli.elapsed + self._duration
+            self._returncode = None
+            self._stdin.truncate(0)
+
         def communicate(self, inputs=None):
             """Like subprocess.Popen.communicate().
 
@@ -103,13 +114,30 @@ class FakeProcess(Process):
             return (self._stdout.read(), self._stderr.read())
 
         def poll(self):
-            if self._running:
+            """Like subprocess.Popen.poll().
+
+            This method will update the object's stdout and stderr according to
+            the schedule and the elapsed time. It will set the returncode once
+            its specified duration has elapsed.
+            """
+            now = self._cli.elapsed
+            if not self.returncode and self._completion <= now:
+                self._stdout.truncate(0)
+                for output, start, end in self._outputs:
+                    if now < start:
+                        continue
+                    if end and end <= now:
+                        continue
+                    self._stdout.write(output)
+                    self._stdout.write('\n')
+                self._stdout.flush()
                 self._returncode = 0 if self._succeeds else 1
-                self._running = False
-            return self._returncode
+                self._completion = None
+            return self.returncode
 
         def wait(self):
+            self._cli.sleep(self._completion - self._cli.elapsed)
             return self.poll()
 
         def kill(self):
-            self._running = False
+            self._completion = None

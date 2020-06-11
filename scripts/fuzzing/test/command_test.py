@@ -100,12 +100,22 @@ class CommandTest(TestCase):
         )
 
         # No name, some running
+        self.set_running('fake-package1', 'fake-target1')
         self.set_running('fake-package1', 'fake-target2')
+        self.set_running('fake-package1', 'fake-target3')
         args = self.parse_args('check')
         command.check_fuzzer(args, self.factory)
         self.assertLogged(
+            'fake-package1/fake-target1: RUNNING',
+            '    Output path:  fuchsia_dir/local/fake-package1_fake-target1',
+            '    Corpus size:  0 inputs / 0 bytes',
+            '    Artifacts:    0',
             'fake-package1/fake-target2: RUNNING',
             '    Output path:  fuchsia_dir/local/fake-package1_fake-target2',
+            '    Corpus size:  0 inputs / 0 bytes',
+            '    Artifacts:    0',
+            'fake-package1/fake-target3: RUNNING',
+            '    Output path:  fuchsia_dir/local/fake-package1_fake-target3',
             '    Corpus size:  0 inputs / 0 bytes',
             '    Artifacts:    0',
         )
@@ -121,12 +131,11 @@ class CommandTest(TestCase):
         )
 
         # Name provided, not running
-        self.stop_all()
-        args = self.parse_args('check', 'fake-package1/fake-target2')
+        args = self.parse_args('check', 'fake-package2/fake-target1')
         command.check_fuzzer(args, self.factory)
         self.assertLogged(
-            'fake-package1/fake-target2: STOPPED',
-            '    Output path:  fuchsia_dir/local/fake-package1_fake-target2',
+            'fake-package2/fake-target1: STOPPED',
+            '    Output path:  fuchsia_dir/local/fake-package2_fake-target1',
             '    Corpus size:  0 inputs / 0 bytes',
             '    Artifacts:    0',
         )

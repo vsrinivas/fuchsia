@@ -87,38 +87,44 @@ class DeviceTest(TestCase):
         self.assertSsh(*cmd)
 
     def test_getpid(self):
-        cmd = ['cs']
-        self.set_outputs(
-            cmd, [
-                '  http.cmx[20963]: fuchsia-pkg://fuchsia.com/http#meta/http.cmx',
-                '  fake-target1.cmx[7412221]: fuchsia-pkg://fuchsia.com/fake-package1#meta/fake-target1.cmx',
-                '  fake-target2.cmx[7412222]: fuchsia-pkg://fuchsia.com/fake-package1#meta/fake-target2.cmx',
-                '  an-extremely-verbose-target-name.cmx[7412223]: fuchsia-pkg://fuchsia.com/fake-package2#meta/an-extremely-verbose-target-name.cmx',
-            ],
-            ssh=True)
-
-        # First request invokes "cs".
-        self.assertEqual(
-            self.device.getpid(
-                'fake-package2', 'an-extremely-verbose-target-name'), 7412223)
-        self.assertSsh(*cmd)
+        http_pid = self.set_running('http', 'http')
+        target1_pid = self.set_running(
+            'fake-package1', 'fake-target1', duration=10)
+        target2_pid = self.set_running(
+            'fake-package1', 'fake-target2', duration=10)
+        long_pid = self.set_running(
+            'fake-package2', 'an-extremely-verbose-target-name')
 
         # PIDs are retrieved for all packaged executables.
+        self.assertEqual(self.device.getpid('http', 'http'), http_pid)
         self.assertEqual(
-            self.device.getpid('fake-package1', 'fake-target2'), 7412222)
+            self.device.getpid('fake-package1', 'fake-target1'), target1_pid)
         self.assertEqual(
-            self.device.getpid('fake-package1', 'fake-target1'), 7412221)
-        self.assertEqual(self.device.getpid('http', 'http'), 20963)
+            self.device.getpid('fake-package1', 'fake-target2'), target2_pid)
+        self.assertEqual(
+            self.device.getpid(
+                'fake-package2', 'an-extremely-verbose-target-name'), long_pid)
 
         # PIDs are cached until refresh.
-        self.set_outputs(cmd, [], ssh=True)
+        self.cli.sleep(10)
+        self.assertEqual(self.device.getpid('http', 'http'), http_pid)
         self.assertEqual(
-            self.device.getpid('fake-package1', 'fake-target1'), 7412221)
+            self.device.getpid('fake-package1', 'fake-target1'), target1_pid)
         self.assertEqual(
-            self.device.getpid('fake-package1', 'fake-target1', refresh=True),
-            -1)
+            self.device.getpid('fake-package1', 'fake-target2'), target2_pid)
+        self.assertEqual(
+            self.device.getpid(
+                'fake-package2', 'an-extremely-verbose-target-name'), long_pid)
+
+        self.assertEqual(
+            self.device.getpid('http', 'http', refresh=True), http_pid)
+        self.assertEqual(
+            self.device.getpid('fake-package1', 'fake-target1'), -1)
         self.assertEqual(
             self.device.getpid('fake-package1', 'fake-target2'), -1)
+        self.assertEqual(
+            self.device.getpid(
+                'fake-package2', 'an-extremely-verbose-target-name'), long_pid)
 
     def test_ls(self):
         corpus_dir = 'path-to-some-corpus'
@@ -134,13 +140,50 @@ class DeviceTest(TestCase):
         self.assertEqual(
             files['feac37187e77ff60222325cf2829e2273e04f2ea'], 1796)
 
-    def test_rm(self):
+    def test_mkdir(self):
+        corpus_dir = 'path-to-some-corpus'
+        cmd = ['mkdir', '-p', corpus_dir]
+        self.device.mkdir(corpus_dir)
+        self.assertSsh(*cmd)
+
+    def test_remove(self):
         some_file = 'path-to-some-file'
-        some_dir = 'path-to-some-directory'
+        cmd = ['rm', '-f', some_file]
         self.device.remove(some_file)
+        self.assertSsh(*cmd)
+
+        some_dir = 'path-to-some-directory'
+        cmd = ['rm', '-rf', some_dir]
         self.device.remove(some_dir, recursive=True)
-        self.assertSsh('rm -f path-to-some-file')
-        self.assertSsh('rm -rf path-to-some-directory')
+        self.assertSsh(*cmd)
+
+    def test_dump_log(self):
+        cmd = [
+            'log_listener', '--dump_logs', 'yes', '--pretty', 'no', '--some',
+            'other-arg'
+        ]
+        self.device.dump_log('--some', 'other-arg')
+        self.assertSsh(*cmd)
+
+    def test_guess_pid(self):
+        cmd = [
+            'log_listener', '--dump_logs', 'yes', '--pretty', 'no', '--only',
+            'reset,Fuzzer,Sanitizer'
+        ]
+        self.assertEqual(self.device.guess_pid(), -1)
+        self.assertSsh(*cmd)
+
+        # Log lines are like '[timestamp][pid][tid][name] data'
+        self.set_outputs(
+            cmd, [
+                '[ignored][31415][ignored][ignored] ignored',
+                '[ignored][92653][ignored][ignored] ignored',
+                '[malformed][58979]',
+            ],
+            ssh=True)
+
+        # Should find last well-formed line
+        self.assertEqual(self.device.guess_pid(), 92653)
 
     def test_fetch(self):
         local_path = 'test_fetch'
@@ -148,14 +191,14 @@ class DeviceTest(TestCase):
 
         # Fails due to missing pathname.
         with self.assertRaises(ValueError):
-            self.device.fetch(remote_path, local_path)
+            self.device.fetch(local_path, remote_path)
 
         self.cli.mkdir(local_path)
-        self.device.fetch(remote_path, local_path)
+        self.device.fetch(local_path, remote_path)
         self.assertScpFrom(remote_path, local_path)
 
-        corpus_dir = os.path.join(remote_path, '*')
-        self.device.fetch(corpus_dir, local_path)
+        corpus_dir = remote_path + '/*'
+        self.device.fetch(local_path, corpus_dir)
         self.assertScpFrom(corpus_dir, local_path)
 
     def test_store(self):
@@ -164,7 +207,7 @@ class DeviceTest(TestCase):
 
         foo = os.path.join(local_path, 'foo')
         self.cli.touch(foo)
-        self.device.store(foo, remote_path)
+        self.device.store(remote_path, foo)
         self.assertScpTo(foo, remote_path)
 
         bar = os.path.join(local_path, 'bar')
@@ -172,7 +215,7 @@ class DeviceTest(TestCase):
         self.cli.touch(bar)
         self.cli.touch(baz)
         self.assertEqual(
-            self.device.store(os.path.join(local_path, '*'), remote_path),
+            self.device.store(remote_path, os.path.join(local_path, '*')),
             [bar, baz, foo])
         self.assertScpTo(bar, baz, foo, remote_path)
 

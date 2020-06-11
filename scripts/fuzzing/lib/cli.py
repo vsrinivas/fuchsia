@@ -171,4 +171,5 @@ class CommandLineInterface(object):
         return Process(args, **kwargs)
 
     def sleep(self, duration):
-        time.sleep(duration)
+        if duration > 0:
+            time.sleep(duration)
