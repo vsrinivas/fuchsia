@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_input;
 use fidl_fuchsia_ui_input2::Key;
 
 /// Standard [USB HID] usages.
@@ -245,6 +246,16 @@ pub fn key_to_hid_usage(key: Key) -> u32 {
     }
 }
 
+/// Converts a [`Key`] to the corresponding USB HID code.
+///
+/// Note: This is only needed while keyboard input is transitioned away from Scenic.
+///
+/// # Parameters
+/// - `key`: The key to convert to its HID equivalent.
+pub fn input3_key_to_hid_usage(key: fidl_fuchsia_input::Key) -> u32 {
+    fidl_fuchsia_input::Key::into_primitive(key) & 0xFFFF
+}
+
 /// Returns true if the `key` is considered to be a modifier key.
 ///
 /// # Parameters
@@ -263,5 +274,43 @@ pub fn is_modifier(key: Key) -> bool {
         | Key::CapsLock
         | Key::ScrollLock => true,
         _ => false,
+    }
+}
+
+/// Returns true if the `key` is considered to be a modifier key.
+///
+/// # Parameters
+/// - `key`: The key to check.
+pub fn is_modifier3(key: fidl_fuchsia_input::Key) -> bool {
+    match key {
+        fidl_fuchsia_input::Key::NumLock
+        | fidl_fuchsia_input::Key::CapsLock
+        | fidl_fuchsia_input::Key::ScrollLock => true,
+        _ => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn input3_key_to_hid() {
+        assert_eq!(input3_key_to_hid_usage(fidl_fuchsia_input::Key::A), 0x4);
+        assert_eq!(input3_key_to_hid_usage(fidl_fuchsia_input::Key::Key1), 0x1e);
+        assert_eq!(input3_key_to_hid_usage(fidl_fuchsia_input::Key::Enter), 0x28);
+        assert_eq!(input3_key_to_hid_usage(fidl_fuchsia_input::Key::F1), 0x3a);
+        assert_eq!(input3_key_to_hid_usage(fidl_fuchsia_input::Key::PrintScreen), 0x46);
+        assert_eq!(input3_key_to_hid_usage(fidl_fuchsia_input::Key::Keypad1), 0x59);
+    }
+
+    #[test]
+    fn input3_key_is_modifier() {
+        assert!(is_modifier3(fidl_fuchsia_input::Key::NumLock));
+        assert!(is_modifier3(fidl_fuchsia_input::Key::CapsLock));
+        assert!(is_modifier3(fidl_fuchsia_input::Key::ScrollLock));
+        assert!(!is_modifier3(fidl_fuchsia_input::Key::LeftShift));
+        assert!(!is_modifier3(fidl_fuchsia_input::Key::LeftMeta));
+        assert!(!is_modifier3(fidl_fuchsia_input::Key::LeftCtrl));
     }
 }
