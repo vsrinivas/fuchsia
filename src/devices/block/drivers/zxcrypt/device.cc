@@ -103,13 +103,11 @@ zx_off_t Device::DdkGetSize() {
 
 // TODO(aarongreen): See ZX-1138.  Currently, there's no good way to trigger
 // this on demand.
-void Device::DdkUnbindDeprecated() {
+void Device::DdkUnbindNew(ddk::UnbindTxn txn) {
   LOG_ENTRY();
-  // We call |DdkRemove| exactly once after |Init| completes successfully, which is the only place
-  // |active_| becomes true.
-  if (active_.exchange(false)) {
-    DdkRemoveDeprecated();
-  }
+  bool was_active = active_.exchange(false);
+  ZX_ASSERT(was_active);
+  txn.Reply();
 }
 
 void Device::DdkRelease() {

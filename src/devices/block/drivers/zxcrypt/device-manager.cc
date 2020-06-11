@@ -64,14 +64,11 @@ zx_status_t DeviceManager::Bind() {
   return ZX_OK;
 }
 
-void DeviceManager::DdkUnbindDeprecated() {
+void DeviceManager::DdkUnbindNew(ddk::UnbindTxn txn) {
   fbl::AutoLock lock(&mtx_);
-  if (state_ == kBinding) {
-    state_ = kUnbinding;
-  } else if (state_ == kSealed || state_ == kUnsealed || state_ == kShredded) {
-    state_ = kRemoved;
-    DdkRemoveDeprecated();
-  }
+  ZX_ASSERT(state_ == kSealed || state_ == kUnsealed || state_ == kShredded);
+  state_ = kRemoved;
+  txn.Reply();
 }
 
 void DeviceManager::DdkRelease() { delete this; }

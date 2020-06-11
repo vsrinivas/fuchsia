@@ -35,7 +35,7 @@ namespace zxcrypt {
 // See ddk::Device in ddktl/device.h
 class Device;
 using DeviceType =
-    ddk::Device<Device, ddk::GetProtocolable, ddk::GetSizable, ddk::UnbindableDeprecated>;
+    ddk::Device<Device, ddk::GetProtocolable, ddk::GetSizable, ddk::UnbindableNew>;
 
 // |zxcrypt::Device| is an encrypted block device filter driver.  It is created by
 // |zxcrypt::DeviceManager::Unseal| and transparently encrypts writes to/decrypts reads from a
@@ -60,7 +60,7 @@ class Device final : public DeviceType,
   // ddk::Device methods; see ddktl/device.h
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   zx_off_t DdkGetSize();
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // ddk::BlockProtocol methods; see ddktl/protocol/block.h
