@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path"
 	"strings"
-	"syscall"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
 	botanistconstants "go.fuchsia.dev/fuchsia/tools/botanist/constants"
@@ -50,7 +49,7 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	// For fxbug.dev/52719.
 	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToReconnectMsg), Log: SwarmingOutputType})
 	// For fxbug.dev/43188.
-	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("/dev/net/tun (qemu): %s", syscall.EBUSY.Error()), Log: SwarmingOutputType})
+	ret = append(ret, stringInLogCheck{String: "/dev/net/tun (qemu): Device or resource busy", Log: SwarmingOutputType})
 	// For fxbug.dev/53101.
 	ret = append(ret, stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToStartTargetMsg), Log: SwarmingOutputType})
 	// For fxbug.dev/51441.
