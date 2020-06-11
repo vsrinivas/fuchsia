@@ -144,17 +144,17 @@ void WaitQueueCollection::Insert(Thread* thread) {
     const int pri = thread->scheduler_state_.effective_priority();
 
     // Walk through the sorted list of wait queue heads.
-    Thread* temp;
-    list_for_every_entry (&private_heads_, temp, Thread, wait_queue_state_.wait_queue_heads_node_) {
-      if (pri > temp->scheduler_state_.effective_priority()) {
+    Thread* head;
+    list_for_every_entry (&private_heads_, head, Thread, wait_queue_state_.wait_queue_heads_node_) {
+      if (pri > head->scheduler_state_.effective_priority()) {
         // Insert ourself here as a new queue head.
         list_initialize(&thread->wait_queue_state_.queue_node_);
-        list_add_before(&temp->wait_queue_state_.wait_queue_heads_node_,
+        list_add_before(&head->wait_queue_state_.wait_queue_heads_node_,
                         &thread->wait_queue_state_.wait_queue_heads_node_);
         return;
-      } else if (temp->scheduler_state_.effective_priority() == pri) {
+      } else if (head->scheduler_state_.effective_priority() == pri) {
         // Same priority, add ourself to the tail of this queue.
-        list_add_tail(&temp->wait_queue_state_.queue_node_, &thread->wait_queue_state_.queue_node_);
+        list_add_tail(&head->wait_queue_state_.queue_node_, &thread->wait_queue_state_.queue_node_);
         list_clear_node(&thread->wait_queue_state_.wait_queue_heads_node_);
         return;
       }
@@ -196,31 +196,31 @@ void WaitQueueCollection::Remove(Thread* thread) {
 
 void WaitQueueCollection::Validate() const {
   // Validate that the queue is sorted properly
-  Thread* last = nullptr;
-  Thread* temp;
-  list_for_every_entry (&private_heads_, temp, Thread, wait_queue_state_.wait_queue_heads_node_) {
-    DEBUG_ASSERT(temp->magic_ == THREAD_MAGIC);
+  Thread* last_head = nullptr;
+  Thread* head;
+  list_for_every_entry (&private_heads_, head, Thread, wait_queue_state_.wait_queue_heads_node_) {
+    DEBUG_ASSERT(head->magic_ == THREAD_MAGIC);
 
-    // Validate that the queue is sorted high to low priority.
-    if (last) {
-      DEBUG_ASSERT_MSG(
-          last->scheduler_state_.effective_priority() > temp->scheduler_state_.effective_priority(),
-          "%p:%d  %p:%d", last, last->scheduler_state_.effective_priority(), temp,
-          temp->scheduler_state_.effective_priority());
+    // Validate that the queue heads are sorted high to low priority.
+    if (last_head) {
+      DEBUG_ASSERT_MSG(last_head->scheduler_state_.effective_priority() >
+                           head->scheduler_state_.effective_priority(),
+                       "%p:%d  %p:%d", last_head, last_head->scheduler_state_.effective_priority(),
+                       head, head->scheduler_state_.effective_priority());
     }
 
     // Walk any threads linked to this head, validating that they're the same priority.
-    Thread* temp2;
-    list_for_every_entry (&temp->wait_queue_state_.queue_node_, temp2, Thread,
+    Thread* thread;
+    list_for_every_entry (&head->wait_queue_state_.queue_node_, thread, Thread,
                           wait_queue_state_.queue_node_) {
-      DEBUG_ASSERT(temp2->magic_ == THREAD_MAGIC);
-      DEBUG_ASSERT_MSG(temp->scheduler_state_.effective_priority() ==
-                           temp2->scheduler_state_.effective_priority(),
-                       "%p:%d  %p:%d", temp, temp->scheduler_state_.effective_priority(), temp2,
-                       temp2->scheduler_state_.effective_priority());
+      DEBUG_ASSERT(thread->magic_ == THREAD_MAGIC);
+      DEBUG_ASSERT_MSG(head->scheduler_state_.effective_priority() ==
+                           thread->scheduler_state_.effective_priority(),
+                       "%p:%d  %p:%d", head, head->scheduler_state_.effective_priority(), thread,
+                       thread->scheduler_state_.effective_priority());
     }
 
-    last = temp;
+    last_head = head;
   }
 }
 
