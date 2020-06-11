@@ -192,7 +192,7 @@ fn validate_tree_selector(tree_selector: &TreeSelector) -> Result<(), Error> {
 ///    1) Require a present component_moniker field.
 ///    2) Require that all entries within the component_moniker vector are valid per
 ///       Selectors::validate_node_path specification.
-fn validate_component_selector(component_selector: &ComponentSelector) -> Result<(), Error> {
+pub fn validate_component_selector(component_selector: &ComponentSelector) -> Result<(), Error> {
     match &component_selector.moniker_segments {
         Some(moniker) => {
             if moniker.is_empty() {
@@ -286,7 +286,7 @@ pub fn tokenize_string(untokenized_selector: &str, delimiter: char) -> Result<Ve
 }
 
 /// Converts an unparsed component selector string into a ComponentSelector.
-fn parse_component_selector(
+pub fn parse_component_selector(
     unparsed_component_selector: &String,
 ) -> Result<ComponentSelector, Error> {
     if unparsed_component_selector.is_empty() {

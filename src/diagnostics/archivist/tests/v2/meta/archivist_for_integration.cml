@@ -9,7 +9,12 @@
     },
     use: [
         { runner: "elf" },
-        { protocol: "/svc/fuchsia.sys2.EventSource" },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.sys2.EventSource",
+            ],
+        },
         {
             directory: "/config/data",
             rights: [ "r*" ],

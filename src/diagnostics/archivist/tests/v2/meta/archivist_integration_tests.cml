@@ -24,7 +24,10 @@
         {
             protocol: "/svc/fuchsia.logger.LogSink",
             from: "realm",
-            to: [ "#driver" ],
+            to: [
+                "#archivist",
+                "#driver",
+            ],
         },
         {
             protocol: "/svc/fuchsia.sys2.EventSource",

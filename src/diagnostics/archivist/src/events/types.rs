@@ -8,13 +8,13 @@ use {
     fidl_fuchsia_inspect::TreeProxy,
     fidl_fuchsia_inspect_deprecated::InspectProxy,
     fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_sys2::{self as fsys, ComponentDescriptor, Event},
     fidl_fuchsia_sys_internal::SourceIdentity,
+    fidl_table_validation::*,
     fuchsia_zircon as zx,
     futures::{channel::mpsc, stream::BoxStream},
     io_util,
     std::{
-        collections::HashMap,
         convert::TryFrom,
         ops::{Deref, DerefMut},
     },
@@ -58,15 +58,6 @@ impl Into<String> for RealmPath {
     }
 }
 
-#[derive(Debug)]
-pub struct InspectReaderData {
-    /// The identifier of this component
-    pub component_id: ComponentIdentifier,
-
-    /// Proxy to the inspect data host.
-    pub data_directory_proxy: Option<DirectoryProxy>,
-}
-
 /// Represents the ID of a component.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ComponentIdentifier {
@@ -85,6 +76,12 @@ impl ComponentIdentifier {
                 moniker.0
             }
             Self::Moniker(moniker) => {
+                // Synthesis of root of hierarchy yields a `.` moniker,
+                // treating it as an empty moniker works for our data
+                // repository.
+                if moniker == "." {
+                    return Vec::new();
+                }
                 // Transforms moniker strings such as "a:0/b:0/coll:dynamic_child:1/c:0 into
                 // a/b/coll:dynamic_child/c
                 // 2.. to remove the `.`, always present as this is a relative moniker.
@@ -110,6 +107,10 @@ impl ComponentIdentifier {
                 key
             }
             Self::Moniker(moniker) => {
+                if moniker == "." {
+                    return Vec::new();
+                }
+
                 // Transforms moniker strings such as "a:0/b:0/coll:dynamic_child:1/c:0 into
                 // [a, 0, b, 0, coll:dynamic_child, c]
                 // 1.. to remove the `./`, always present as this is a relative moniker.
@@ -130,22 +131,20 @@ impl ComponentIdentifier {
     }
 }
 
-impl TryFrom<SourceIdentity> for ComponentIdentifier {
+impl TryFrom<SourceIdentity> for EventMetadata {
     type Error = anyhow::Error;
-
-    fn try_from(component: SourceIdentity) -> Result<Self, Self::Error> {
-        if component.component_name.is_some()
-            && component.instance_id.is_some()
-            && component.realm_path.is_some()
-        {
-            Ok(ComponentIdentifier::Legacy(LegacyIdentifier {
-                component_name: component.component_name.unwrap(),
-                instance_id: component.instance_id.unwrap(),
-                realm_path: RealmPath(component.realm_path.unwrap()),
-            }))
-        } else {
-            Err(format_err!("Missing fields in SourceIdentity"))
-        }
+    fn try_from(component: SourceIdentity) -> Result<Self, Error> {
+        let component: ValidatedSourceIdentity = ValidatedSourceIdentity::try_from(component)?;
+        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+            component_name: component.component_name,
+            instance_id: component.instance_id,
+            realm_path: RealmPath(component.realm_path),
+        });
+        Ok(EventMetadata {
+            component_id,
+            component_url: Some(component.component_url),
+            timestamp: zx::Time::get(zx::ClockId::Monotonic),
+        })
     }
 }
 
@@ -163,6 +162,39 @@ impl ToString for ComponentIdentifier {
     }
 }
 
+#[derive(Debug, Clone, ValidFidlTable, PartialEq)]
+#[fidl_table_src(SourceIdentity)]
+pub struct ValidatedSourceIdentity {
+    pub realm_path: Vec<String>,
+    pub component_url: String,
+    pub component_name: String,
+    pub instance_id: String,
+}
+
+#[derive(Debug, ValidFidlTable)]
+#[fidl_table_src(ComponentDescriptor)]
+pub struct ValidatedComponentDescriptor {
+    pub component_url: String,
+    pub moniker: String,
+}
+
+#[derive(Debug, ValidFidlTable)]
+#[fidl_table_src(Event)]
+pub struct ValidatedEvent {
+    /// Event type corresponding to the event
+    pub event_type: fsys::EventType,
+
+    /// Information about the component for which this event was generated.
+    pub descriptor: ValidatedComponentDescriptor,
+
+    /// Optional payload for some event types
+    #[fidl_field_type(optional)]
+    pub event_result: Option<fsys::EventResult>,
+
+    /// Time when the event occurred.
+    pub timestamp: i64,
+}
+
 /// The ID of a component as used in components V1.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LegacyIdentifier {
@@ -176,13 +208,49 @@ pub struct LegacyIdentifier {
     pub realm_path: RealmPath,
 }
 
-/// Represents the data associated with a component event.
-#[derive(Debug)]
-pub struct ComponentEventData {
+/// Represents the shared data associated with
+/// all component events.
+#[derive(Debug, PartialEq, Clone)]
+pub struct EventMetadata {
     pub component_id: ComponentIdentifier,
 
-    /// Extra data about this event (to be stored in extra files in the archive).
-    pub component_data_map: Option<HashMap<String, InspectData>>,
+    pub component_url: Option<String>,
+
+    pub timestamp: zx::Time,
+}
+
+/// Represents the diagnostics data associated
+/// with a component being observed starting.
+#[derive(Debug, PartialEq)]
+pub struct StartEvent {
+    pub metadata: EventMetadata,
+}
+
+/// Represents the diagnostics data associated
+/// with a component being observed running.
+#[derive(Debug, PartialEq)]
+pub struct RunningEvent {
+    pub metadata: EventMetadata,
+
+    pub component_start_time: zx::Time,
+}
+
+/// Represents the diagnostics data associated
+/// with a component being observed stopping.
+#[derive(Debug, PartialEq)]
+pub struct StopEvent {
+    pub metadata: EventMetadata,
+}
+
+/// Represents the diagnostics data associated
+/// with a new Diagnostics Directory being
+/// made available.
+#[derive(Debug)]
+pub struct DiagnosticsReadyEvent {
+    pub metadata: EventMetadata,
+
+    /// Proxy to the inspect data host.
+    pub directory: Option<DirectoryProxy>,
 }
 
 pub type ComponentEventChannel = mpsc::Sender<ComponentEvent>;
@@ -194,13 +262,16 @@ pub type ComponentEventStream = BoxStream<'static, ComponentEvent>;
 #[derive(Debug)]
 pub enum ComponentEvent {
     /// We observed the component starting.
-    Start(ComponentEventData),
+    Start(StartEvent),
+
+    /// We observed the component already started.
+    Running(RunningEvent),
 
     /// We observed the component stopping.
-    Stop(ComponentEventData),
+    Stop(StopEvent),
 
     /// We observed the creation of a new `out` directory.
-    DiagnosticsReady(InspectReaderData),
+    DiagnosticsReady(DiagnosticsReadyEvent),
 }
 
 /// Data associated with a component.
@@ -229,63 +300,86 @@ pub enum InspectData {
     DeprecatedFidl(InspectProxy),
 }
 
-impl TryFrom<fsys::Event> for ComponentEvent {
+impl TryFrom<Event> for ComponentEvent {
     type Error = anyhow::Error;
 
-    fn try_from(event: fsys::Event) -> Result<ComponentEvent, Error> {
-        let target_moniker = event
-            .descriptor
-            .and_then(|descriptor| descriptor.moniker)
-            .ok_or(format_err!("No moniker present"))?;
+    fn try_from(event: Event) -> Result<ComponentEvent, Error> {
+        let event: ValidatedEvent = ValidatedEvent::try_from(event)?;
+
+        let shared_data = EventMetadata {
+            component_id: ComponentIdentifier::Moniker(event.descriptor.moniker.clone()),
+            component_url: Some(event.descriptor.component_url.clone()),
+            timestamp: zx::Time::from_nanos(event.timestamp),
+        };
+
         match event.event_type {
-            Some(fsys::EventType::Started) | Some(fsys::EventType::Running) => {
-                let data = ComponentEventData {
-                    component_id: ComponentIdentifier::Moniker(target_moniker),
-                    component_data_map: None,
-                };
-                Ok(ComponentEvent::Start(data))
+            fsys::EventType::Started => {
+                let start_event = StartEvent { metadata: shared_data };
+                Ok(ComponentEvent::Start(start_event))
             }
-            Some(fsys::EventType::Stopped) => {
-                let data = ComponentEventData {
-                    component_id: ComponentIdentifier::Moniker(target_moniker),
-                    component_data_map: None,
-                };
-                Ok(ComponentEvent::Stop(data))
+            fsys::EventType::Stopped => {
+                let stop_event = StopEvent { metadata: shared_data };
+                Ok(ComponentEvent::Stop(stop_event))
             }
-            Some(fsys::EventType::CapabilityReady) => {
-                if let Some(node_proxy) = event
-                    .event_result
-                    .and_then(|result| {
-                        match result {
-                            fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(
-                                payload,
-                            )) => Some(payload),
-                            fsys::EventResult::Error(_) => {
-                                // TODO: result.error carries information about errors that happened
-                                // in component_manager. We should dump those in diagnostics.
-                                None
-                            }
-                            _ => None,
-                        }
-                    })
-                    .and_then(|capability_ready| {
-                        if capability_ready.path == Some("/diagnostics".to_string()) {
-                            capability_ready.node
-                        } else {
-                            None
-                        }
-                    })
-                {
-                    let data = InspectReaderData {
-                        component_id: ComponentIdentifier::Moniker(target_moniker),
-                        data_directory_proxy: io_util::node_to_directory(node_proxy.into_proxy()?)
-                            .ok(),
-                    };
-                    return Ok(ComponentEvent::DiagnosticsReady(data));
-                }
-                Err(format_err!("Missing diagnostics directory in CapabilityReady payload"))
+            fsys::EventType::CapabilityReady | fsys::EventType::Running => {
+                construct_payload_holding_component_event(event, shared_data)
             }
             _ => Err(format_err!("Unexpected type: {:?}", event.event_type)),
+        }
+    }
+}
+
+fn construct_payload_holding_component_event(
+    event: ValidatedEvent,
+    shared_data: EventMetadata,
+) -> Result<ComponentEvent, Error> {
+    match event.event_result {
+        Some(result) => {
+            match result {
+                fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(
+                    capability_ready,
+                )) => {
+                    if capability_ready.path == Some("/diagnostics".to_string()) {
+                        match capability_ready.node {
+                            Some(node) => {
+                                let diagnostics_ready_event = DiagnosticsReadyEvent {
+                                    metadata: shared_data,
+                                    directory: io_util::node_to_directory(node.into_proxy()?).ok(),
+                                };
+                                Ok(ComponentEvent::DiagnosticsReady(diagnostics_ready_event))
+                            }
+                            None => Err(format_err!(
+                                "Missing diagnostics directory in CapabilityReady payload"
+                            )),
+                        }
+                    } else {
+                        Err(format_err!(
+                            "DiagnosticsReady event didn't encode a diagnostics directory."
+                        ))
+                    }
+                }
+                fsys::EventResult::Payload(fsys::EventPayload::Running(payload)) => {
+                    match payload.started_timestamp {
+                        Some(timestamp) => {
+                            let existing_data = RunningEvent {
+                                metadata: shared_data,
+                                component_start_time: zx::Time::from_nanos(timestamp),
+                            };
+                            Ok(ComponentEvent::Running(existing_data))
+                        }
+                        None => Err(format_err!("Running event didn't encode start timestamp.")),
+                    }
+                }
+                fsys::EventResult::Error(e) => {
+                    // TODO(53903): result.error carries information about errors that happened
+                    // in component_manager. We should dump those in diagnostics.
+                    Err(format_err!("Payload containing event encountered an error: {:?}", e))
+                }
+                _ => Err(format_err!("Encountered an unknown payload containing event")),
+            }
+        }
+        None => {
+            Err(format_err!("Cannot extract payload from an event missing results: {:?}", event))
         }
     }
 }
@@ -302,24 +396,20 @@ impl PartialEq for ComponentEvent {
             (ComponentEvent::DiagnosticsReady(a), ComponentEvent::DiagnosticsReady(b)) => {
                 return a == b;
             }
+            (ComponentEvent::Running(a), ComponentEvent::Running(b)) => {
+                return a == b;
+            }
             _ => false,
         }
     }
 }
 
-impl PartialEq for ComponentEventData {
-    /// Check ComponentEventData for equality.
-    ///
-    /// We implement this manually so that we can avoid requiring equality comparison on
-    /// `component_data_map`.
+// Requires a custom partial_eq due to the presence of a directory proxy.
+// Two events with the same metadata and different directory proxies
+// will be considered the same.
+impl PartialEq for DiagnosticsReadyEvent {
     fn eq(&self, other: &Self) -> bool {
-        self.component_id == other.component_id
-    }
-}
-
-impl PartialEq for InspectReaderData {
-    fn eq(&self, other: &Self) -> bool {
-        self.component_id == other.component_id
+        self.metadata == other.metadata
     }
 }
 
@@ -340,5 +430,9 @@ mod tests {
         let identifier = ComponentIdentifier::Moniker("./a:0/coll:comp:1/b:0".into());
         assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a", "coll:comp", "b"]);
         assert_eq!(identifier.unique_key(), vec!["a", "0", "coll:comp", "1", "b", "0"]);
+
+        let identifier = ComponentIdentifier::Moniker(".".into());
+        assert!(identifier.relative_moniker_for_selectors().is_empty());
+        assert!(identifier.unique_key().is_empty());
     }
 }

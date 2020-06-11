@@ -15,10 +15,7 @@ use {
     files_async,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree},
-    fuchsia_inspect_node_hierarchy::{
-        trie::{self, TrieIterableNode},
-        InspectHierarchyMatcher, NodeHierarchy,
-    },
+    fuchsia_inspect_node_hierarchy::{trie, InspectHierarchyMatcher, NodeHierarchy},
     fuchsia_zircon::{self as zx, DurationNum},
     futures::future::BoxFuture,
     futures::stream::StreamExt,
@@ -50,6 +47,19 @@ pub struct DiagnosticsArtifactsContainer {
     /// If absent, this is interpereted as a component existing, but not
     /// hosting diagnostics data.
     pub inspect_artifacts_container: Option<InspectArtifactsContainer>,
+
+    pub lifecycle_artifacts_container: Option<LifecycleArtifactsContainer>,
+}
+
+pub struct LifecycleArtifactsContainer {
+    // The time when the Start|Existing event that
+    // caused the instantiation of the LifecycleArtifactsContainer
+    // was created.
+    pub event_creation_time: zx::Time,
+    // Optional time when the component who the instantiating lifecycle
+    // event was about was started. If None, it is the same as the
+    // event_creation_time.
+    pub component_start_time: Option<zx::Time>,
 }
 
 pub struct InspectArtifactsContainer {
@@ -474,29 +484,76 @@ impl DiagnosticsDataRepository {
         self.data_directories.remove(component_id.unique_key());
     }
 
-    pub fn add_new_component(&mut self, identifier: ComponentIdentifier) -> Result<(), Error> {
+    pub fn add_new_component(
+        &mut self,
+        identifier: ComponentIdentifier,
+        event_creation_time: zx::Time,
+        component_start_time: Option<zx::Time>,
+    ) -> Result<(), Error> {
         let relative_moniker = identifier.relative_moniker_for_selectors();
 
-        // The component events stream might contain duplicated events for a component starting and a
-        // component existing, due to races in the synthesis and live-emission. We need to make sure we don't
-        // track duplicate component entries.
-        if self.contains(&identifier, &relative_moniker) {
-            return Ok(());
-        }
+        let lifecycle_artifact_container = LifecycleArtifactsContainer {
+            event_creation_time: event_creation_time,
+            component_start_time: component_start_time,
+        };
 
         let key = identifier.unique_key();
 
-        // We know from the above `contains` check that the diagnostics data container
-        // for this component hasn't been initialized. We are safe to just instaniate
-        // without any ordering checking here.
-        self.data_directories.insert(
-            key,
-            DiagnosticsArtifactsContainer {
-                relative_moniker: relative_moniker,
-                inspect_artifacts_container: None,
-            },
-        );
+        let diag_repo_entry_opt = self.data_directories.get_mut(key.clone());
+        match diag_repo_entry_opt {
+            Some(diag_repo_entry) => {
+                let diag_repo_entry_values: &mut [DiagnosticsArtifactsContainer] =
+                    diag_repo_entry.get_values_mut();
 
+                match &mut diag_repo_entry_values[..] {
+                    [] => {
+                        // An entry with no values implies that the somehow we observed the
+                        // creation of a component lower in the topology before observing this
+                        // one. If this is the case, just instantiate as though it's our first
+                        // time encountering this moniker segment.
+                        self.data_directories.insert(
+                            key,
+                            DiagnosticsArtifactsContainer {
+                                relative_moniker: relative_moniker,
+                                lifecycle_artifacts_container: Some(lifecycle_artifact_container),
+                                inspect_artifacts_container: None,
+                            },
+                        )
+                    }
+                    [existing_diagnostics_artifact_container] => {
+                        // Races may occur between seeing diagnostics ready and seeing
+                        // creation lifecycle events. Handle this here.
+                        // TODO(52047): Remove once caching handles ordering issues.
+                        if existing_diagnostics_artifact_container
+                            .lifecycle_artifacts_container
+                            .is_none()
+                        {
+                            existing_diagnostics_artifact_container.lifecycle_artifacts_container =
+                                Some(lifecycle_artifact_container);
+                        }
+                    }
+                    _ => {
+                        return Err(format_err!(
+                            concat!(
+                                "Encountered a diagnostics data repository node with more",
+                                "than one artifact container, moniker: {:?}."
+                            ),
+                            key
+                        ));
+                    }
+                }
+            }
+            // This case is expected to be the most common case. We've seen a creation
+            // lifecycle event and it promotes the instantiation of a new data repository entry.
+            None => self.data_directories.insert(
+                key,
+                DiagnosticsArtifactsContainer {
+                    relative_moniker: relative_moniker,
+                    lifecycle_artifacts_container: Some(lifecycle_artifact_container),
+                    inspect_artifacts_container: None,
+                },
+            ),
+        }
         Ok(())
     }
 
@@ -568,6 +625,7 @@ impl DiagnosticsDataRepository {
                             key,
                             DiagnosticsArtifactsContainer {
                                 relative_moniker: relative_moniker,
+                                lifecycle_artifacts_container: None,
                                 inspect_artifacts_container: Some(inspect_container),
                             },
                         )
@@ -606,6 +664,7 @@ impl DiagnosticsDataRepository {
                 key,
                 DiagnosticsArtifactsContainer {
                     relative_moniker: relative_moniker,
+                    lifecycle_artifacts_container: None,
                     inspect_artifacts_container: Some(inspect_container),
                 },
             ),
@@ -642,22 +701,6 @@ impl DiagnosticsDataRepository {
                 }
             })
             .collect();
-    }
-
-    fn contains(
-        &mut self,
-        component_id: &ComponentIdentifier,
-        relative_moniker: &[String],
-    ) -> bool {
-        self.data_directories
-            .get(component_id.unique_key())
-            .map(|trie_node| {
-                trie_node
-                    .get_values()
-                    .iter()
-                    .any(|container| container.relative_moniker == relative_moniker)
-            })
-            .unwrap_or(false)
     }
 }
 
@@ -883,7 +926,9 @@ mod tests {
             component_name: "foo.cmx".into(),
         });
 
-        data_repo.add_new_component(component_id.clone()).expect("instantiated new component.");
+        data_repo
+            .add_new_component(component_id.clone(), zx::Time::from_nanos(0), None)
+            .expect("instantiated new component.");
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
@@ -907,9 +952,57 @@ mod tests {
             component_name: "foo.cmx".into(),
         });
 
-        data_repo.add_new_component(component_id.clone()).expect("instantiated new component.");
-        let duplicate_new_component_insertion = data_repo.add_new_component(component_id.clone());
+        data_repo
+            .add_new_component(component_id.clone(), zx::Time::from_nanos(0), None)
+            .expect("instantiated new component.");
+
+        let duplicate_new_component_insertion = data_repo.add_new_component(
+            component_id.clone(),
+            zx::Time::from_nanos(1),
+            Some(zx::Time::from_nanos(0)),
+        );
+
         assert!(duplicate_new_component_insertion.is_ok());
+
+        let key = component_id.unique_key();
+        let repo_values = data_repo.data_directories.get(key.clone()).unwrap().get_values();
+        assert_eq!(repo_values.len(), 1);
+        let entry = &repo_values[0];
+        assert!(entry.lifecycle_artifacts_container.is_some());
+        let lifecycle_container = entry.lifecycle_artifacts_container.as_ref().unwrap();
+        assert!(lifecycle_container.component_start_time.is_none());
+        assert_eq!(entry.relative_moniker, component_id.relative_moniker_for_selectors());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn running_components_provide_start_time() {
+        let mut data_repo = DiagnosticsDataRepository::new(None);
+        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let instance_id = "1234".to_string();
+
+        let component_id = ComponentIdentifier::Legacy(LegacyIdentifier {
+            instance_id,
+            realm_path,
+            component_name: "foo.cmx".into(),
+        });
+
+        let component_insertion = data_repo.add_new_component(
+            component_id.clone(),
+            zx::Time::from_nanos(1),
+            Some(zx::Time::from_nanos(0)),
+        );
+
+        assert!(component_insertion.is_ok());
+
+        let key = component_id.unique_key();
+        let repo_values = data_repo.data_directories.get(key.clone()).unwrap().get_values();
+        assert_eq!(repo_values.len(), 1);
+        let entry = &repo_values[0];
+        assert!(entry.lifecycle_artifacts_container.is_some());
+        let lifecycle_container = entry.lifecycle_artifacts_container.as_ref().unwrap();
+        assert!(lifecycle_container.component_start_time.is_some());
+        assert_eq!(lifecycle_container.component_start_time.unwrap().into_nanos(), 0);
+        assert_eq!(entry.relative_moniker, component_id.relative_moniker_for_selectors());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -928,7 +1021,8 @@ mod tests {
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
         data_repo.add_inspect_artifacts(component_id.clone(), proxy).expect("add to repo");
 
-        let false_new_component_result = data_repo.add_new_component(component_id.clone());
+        let false_new_component_result =
+            data_repo.add_new_component(component_id.clone(), zx::Time::from_nanos(0), None);
         assert!(false_new_component_result.is_ok());
 
         // We shouldn't have overwritten the entry. There should still be an inspect
@@ -937,6 +1031,7 @@ mod tests {
         assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
         let entry = &data_repo.data_directories.get(key.clone()).unwrap().get_values()[0];
         assert!(entry.inspect_artifacts_container.is_some());
+        assert!(entry.lifecycle_artifacts_container.is_some());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -951,7 +1046,10 @@ mod tests {
             component_name: "foo.cmx".into(),
         });
 
-        data_repo.add_new_component(component_id.clone()).expect("insertion will succeed.");
+        data_repo
+            .add_new_component(component_id.clone(), zx::Time::from_nanos(0), None)
+            .expect("insertion will succeed.");
+
         let key = component_id.unique_key();
         assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
 
@@ -960,6 +1058,7 @@ mod tests {
         mutable_values.push(DiagnosticsArtifactsContainer {
             relative_moniker: component_id.relative_moniker_for_selectors(),
             inspect_artifacts_container: None,
+            lifecycle_artifacts_container: None,
         });
 
         let (proxy, _) =

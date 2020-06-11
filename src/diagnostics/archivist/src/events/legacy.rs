@@ -74,24 +74,21 @@ impl EventListenerServer {
     }
 
     async fn handle_on_start(&mut self, component: SourceIdentity) -> Result<(), Error> {
-        if let Ok(component_id) = component.try_into() {
-            self.send_event(ComponentEvent::Start(ComponentEventData {
-                component_id,
-                component_data_map: None,
-            }))
-            .await;
-        }
+        let metadata: EventMetadata = component.try_into()?;
+
+        let start_event = StartEvent { metadata };
+
+        self.send_event(ComponentEvent::Start(start_event)).await;
+
         Ok(())
     }
 
     async fn handle_on_stop(&mut self, component: SourceIdentity) -> Result<(), Error> {
-        if let Ok(component_id) = component.try_into() {
-            self.send_event(ComponentEvent::Stop(ComponentEventData {
-                component_id,
-                component_data_map: None,
-            }))
-            .await;
-        }
+        let metadata: EventMetadata = component.try_into()?;
+
+        let stop_event = StopEvent { metadata };
+
+        self.send_event(ComponentEvent::Stop(stop_event)).await;
         Ok(())
     }
 
@@ -100,13 +97,13 @@ impl EventListenerServer {
         component: SourceIdentity,
         directory: fidl::endpoints::ClientEnd<DirectoryMarker>,
     ) -> Result<(), Error> {
-        if let Ok(component_id) = component.try_into() {
-            self.send_event(ComponentEvent::DiagnosticsReady(InspectReaderData {
-                component_id,
-                data_directory_proxy: directory.into_proxy().ok(),
-            }))
-            .await;
-        }
+        let metadata: EventMetadata = component.try_into()?;
+
+        let diagnostics_ready_event_data =
+            DiagnosticsReadyEvent { metadata, directory: directory.into_proxy().ok() };
+
+        self.send_event(ComponentEvent::DiagnosticsReady(diagnostics_ready_event_data)).await;
+
         Ok(())
     }
 
@@ -122,13 +119,19 @@ impl EventListenerServer {
 mod tests {
     use {
         super::*,
+        crate::events::core::tests::*,
         fidl_fuchsia_io::DirectoryMarker,
         fidl_fuchsia_sys_internal::{
             ComponentEventProviderMarker, ComponentEventProviderRequest, SourceIdentity,
         },
-        fuchsia_async as fasync,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{channel::oneshot, StreamExt, TryStreamExt},
+        lazy_static::lazy_static,
     };
+
+    lazy_static! {
+        static ref MOCK_URL: String = "NO-OP URL".to_string();
+    }
 
     #[derive(Clone)]
     struct ClonableSourceIdentity {
@@ -141,22 +144,23 @@ mod tests {
         fn into(self) -> SourceIdentity {
             SourceIdentity {
                 realm_path: Some(self.realm_path),
-                component_url: None,
+                component_url: Some(MOCK_URL.clone()),
                 component_name: Some(self.component_name),
                 instance_id: Some(self.instance_id),
             }
         }
     }
 
-    impl Into<ComponentEventData> for ClonableSourceIdentity {
-        fn into(self) -> ComponentEventData {
-            ComponentEventData {
+    impl Into<EventMetadata> for ClonableSourceIdentity {
+        fn into(self) -> EventMetadata {
+            EventMetadata {
                 component_id: ComponentIdentifier::Legacy(LegacyIdentifier {
                     component_name: self.component_name,
                     instance_id: self.instance_id,
                     realm_path: RealmPath(self.realm_path),
                 }),
-                component_data_map: None,
+                component_url: Some(MOCK_URL.clone()),
+                timestamp: zx::Time::from_nanos(0),
             }
         }
     }
@@ -186,13 +190,20 @@ mod tests {
         listener.on_stop(identity.clone().into()).expect("failed to send event 3");
 
         let event = event_stream.next().await.unwrap();
-        assert_eq!(event, ComponentEvent::Start(identity.clone().into()));
+        let expected_event =
+            ComponentEvent::Start(StartEvent { metadata: identity.clone().into() });
+        compare_events_ignore_timestamp_and_payload(&event, &expected_event);
 
         let event = event_stream.next().await.unwrap();
         match event {
-            ComponentEvent::DiagnosticsReady(InspectReaderData {
-                component_id: ComponentIdentifier::Legacy(identifier),
-                data_directory_proxy: Some(_),
+            ComponentEvent::DiagnosticsReady(DiagnosticsReadyEvent {
+                metadata:
+                    EventMetadata {
+                        component_id: ComponentIdentifier::Legacy(identifier),
+                        component_url: _,
+                        timestamp: _,
+                    },
+                directory: Some(_),
             }) => {
                 assert_eq!(identifier.realm_path, RealmPath(identity.realm_path.clone()));
                 assert_eq!(identifier.component_name, identity.component_name);
@@ -202,7 +213,10 @@ mod tests {
         }
 
         let event = event_stream.next().await.unwrap();
-        assert_eq!(event, ComponentEvent::Stop(identity.clone().into()));
+        compare_events_ignore_timestamp_and_payload(
+            &event,
+            &ComponentEvent::Stop(StopEvent { metadata: identity.clone().into() }),
+        );
     }
 
     fn spawn_fake_component_event_provider() -> (

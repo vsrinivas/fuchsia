@@ -26,11 +26,11 @@ use {
 pub struct ArchiveAccessor {
     // The inspect repository containing read-only inspect data shared across
     // all inspect reader instances.
-    inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
+    diagnostics_repo: Arc<RwLock<DiagnosticsDataRepository>>,
     archive_accessor_stats: Arc<diagnostics::ArchiveAccessorStats>,
 }
 
-fn validate_and_parse_selectors(
+fn validate_and_parse_inspect_selectors(
     selector_args: Vec<SelectorArgument>,
 ) -> Result<Vec<Selector>, Error> {
     if selector_args.is_empty() {
@@ -41,12 +41,12 @@ fn validate_and_parse_selectors(
         .map(|selector_arg| match selector_arg {
             SelectorArgument::StructuredSelector(x) => match selectors::validate_selector(&x) {
                 Ok(_) => Ok(x),
-                Err(e) => Err(format_err!("Error validating selector for archive accessor: {}", e)),
+                Err(e) => Err(format_err!("Error validating selector for inspect reading: {}", e)),
             },
             SelectorArgument::RawSelector(x) => selectors::parse_selector(&x).map_err(|e| {
-                format_err!("Error parsing component selector string for archive accessor: {}", e)
+                format_err!("Error parsing selector string for inspect reading: {}", e)
             }),
-            _ => Err(format_err!("Unrecognozed SelectorArgument type")),
+            _ => Err(format_err!("Unrecognized SelectorArgument type")),
         })
         .collect()
 }
@@ -56,10 +56,10 @@ impl ArchiveAccessor {
     /// parameter determines which static configurations scope/restrict the visibility of inspect
     /// data accessed by readers spawned by this accessor.
     pub fn new(
-        inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
+        diagnostics_repo: Arc<RwLock<DiagnosticsDataRepository>>,
         archive_accessor_stats: Arc<diagnostics::ArchiveAccessorStats>,
     ) -> Self {
-        ArchiveAccessor { inspect_repo, archive_accessor_stats }
+        ArchiveAccessor { diagnostics_repo, archive_accessor_stats }
     }
 
     fn handle_stream_inspect(
@@ -86,10 +86,10 @@ impl ArchiveAccessor {
             }
             (Some(stream_mode), Some(format), Some(selector_config)) => match selector_config {
                 ClientSelectorConfiguration::Selectors(selectors) => {
-                    match validate_and_parse_selectors(selectors) {
+                    match validate_and_parse_inspect_selectors(selectors) {
                         Ok(selectors) => {
                             let inspect_reader_server = inspect::ReaderServer::new(
-                                self.inspect_repo.clone(),
+                                self.diagnostics_repo.clone(),
                                 Some(selectors),
                                 inspect_reader_server_stats,
                             );
@@ -119,7 +119,7 @@ impl ArchiveAccessor {
                 }
                 ClientSelectorConfiguration::SelectAll(_) => {
                     let inspect_reader_server = inspect::ReaderServer::new(
-                        self.inspect_repo.clone(),
+                        self.diagnostics_repo.clone(),
                         None,
                         inspect_reader_server_stats,
                     );

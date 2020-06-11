@@ -16,6 +16,7 @@ pub struct EventStream {
     node: inspect::Node,
     components_started: inspect::UintProperty,
     components_stopped: inspect::UintProperty,
+    components_seen_running: inspect::UintProperty,
     diagnostics_directories_seen: inspect::UintProperty,
     component_log_node: BoundedListNode,
 }
@@ -24,6 +25,7 @@ impl EventStream {
     /// Creates a new event listener.
     pub fn new(node: inspect::Node) -> Self {
         let components_started = node.create_uint("components_started", 0);
+        let components_seen_running = node.create_uint("components_seen_running", 0);
         let components_stopped = node.create_uint("components_stopped", 0);
         let diagnostics_directories_seen = node.create_uint("diagnostics_directories_seen", 0);
         let component_log_node = BoundedListNode::new(node.create_child("recent_events"), 50);
@@ -32,6 +34,7 @@ impl EventStream {
             node,
             components_started,
             components_stopped,
+            components_seen_running,
             diagnostics_directories_seen,
             component_log_node,
         }
@@ -64,17 +67,21 @@ impl EventStream {
 
     fn log_event(&mut self, event: &ComponentEvent) {
         match event {
-            ComponentEvent::Start(data) => {
+            ComponentEvent::Start(start) => {
                 self.components_started.add(1);
-                self.log_inspect("START", &data.component_id);
+                self.log_inspect("START", &start.metadata.component_id);
             }
-            ComponentEvent::Stop(data) => {
+            ComponentEvent::Stop(stop) => {
                 self.components_stopped.add(1);
-                self.log_inspect("STOP", &data.component_id);
+                self.log_inspect("STOP", &stop.metadata.component_id);
             }
-            ComponentEvent::DiagnosticsReady(data) => {
+            ComponentEvent::Running(running) => {
+                self.components_seen_running.add(1);
+                self.log_inspect("RUNNING", &running.metadata.component_id);
+            }
+            ComponentEvent::DiagnosticsReady(diagnostics_ready) => {
                 self.diagnostics_directories_seen.add(1);
-                self.log_inspect("DIAGNOSTICS_DIR_READY", &data.component_id);
+                self.log_inspect("DIAGNOSTICS_DIR_READY", &diagnostics_ready.metadata.component_id);
             }
         }
     }
@@ -95,6 +102,7 @@ mod tests {
         async_trait::async_trait,
         fuchsia_async as fasync,
         fuchsia_inspect::{self as inspect, assert_inspect_tree},
+        fuchsia_zircon as zx,
         futures::SinkExt,
         lazy_static::lazy_static,
     };
@@ -109,6 +117,7 @@ mod tests {
             instance_id: "12345".to_string(),
             realm_path: RealmPath(vec!["a".to_string(), "b".to_string()]),
         });
+        static ref LEGACY_URL: String = "NO-OP URL".to_string();
         static ref MONIKER_ID: ComponentIdentifier =
             ComponentIdentifier::Moniker("a:0/b:1".to_string());
     }
@@ -116,25 +125,25 @@ mod tests {
     #[async_trait]
     impl EventSource for FakeEventSource {
         async fn listen(&self, mut sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
+            let shared_data = EventMetadata {
+                component_id: MONIKER_ID.clone(),
+                component_url: Some(LEGACY_URL.clone()),
+                timestamp: zx::Time::get(zx::ClockId::Monotonic),
+            };
+
             sender
-                .send(ComponentEvent::Start(ComponentEventData {
-                    component_id: MONIKER_ID.clone(),
-                    component_data_map: None,
-                }))
+                .send(ComponentEvent::Start(StartEvent { metadata: shared_data.clone() }))
                 .await
                 .expect("send start");
             sender
-                .send(ComponentEvent::DiagnosticsReady(InspectReaderData {
-                    component_id: MONIKER_ID.clone(),
-                    data_directory_proxy: None,
+                .send(ComponentEvent::DiagnosticsReady(DiagnosticsReadyEvent {
+                    metadata: shared_data.clone(),
+                    directory: None,
                 }))
                 .await
                 .expect("send diagnostics ready");
             sender
-                .send(ComponentEvent::Stop(ComponentEventData {
-                    component_id: MONIKER_ID.clone(),
-                    component_data_map: None,
-                }))
+                .send(ComponentEvent::Stop(StopEvent { metadata: shared_data.clone() }))
                 .await
                 .expect("send stop");
             Ok(())
@@ -144,25 +153,25 @@ mod tests {
     #[async_trait]
     impl EventSource for FakeLegacyProvider {
         async fn listen(&self, mut sender: mpsc::Sender<ComponentEvent>) -> Result<(), Error> {
+            let shared_data = EventMetadata {
+                component_id: LEGACY_ID.clone(),
+                component_url: Some(LEGACY_URL.clone()),
+                timestamp: zx::Time::get(zx::ClockId::Monotonic),
+            };
+
             sender
-                .send(ComponentEvent::Start(ComponentEventData {
-                    component_id: LEGACY_ID.clone(),
-                    component_data_map: None,
-                }))
+                .send(ComponentEvent::Start(StartEvent { metadata: shared_data.clone() }))
                 .await
                 .expect("send start");
             sender
-                .send(ComponentEvent::DiagnosticsReady(InspectReaderData {
-                    component_id: LEGACY_ID.clone(),
-                    data_directory_proxy: None,
+                .send(ComponentEvent::DiagnosticsReady(DiagnosticsReadyEvent {
+                    metadata: shared_data.clone(),
+                    directory: None,
                 }))
                 .await
                 .expect("send diagnostics ready");
             sender
-                .send(ComponentEvent::Stop(ComponentEventData {
-                    component_id: LEGACY_ID.clone(),
-                    component_data_map: None,
-                }))
+                .send(ComponentEvent::Stop(StopEvent { metadata: shared_data.clone() }))
                 .await
                 .expect("send stop");
             Ok(())
@@ -180,10 +189,10 @@ mod tests {
         for i in 0..3 {
             let event = stream.next().await.expect("received event");
             match (i, &event) {
-                (0, ComponentEvent::Start(ComponentEventData { component_id, .. }))
-                | (1, ComponentEvent::DiagnosticsReady(InspectReaderData { component_id, .. }))
-                | (2, ComponentEvent::Stop(ComponentEventData { component_id, .. })) => {
-                    assert_eq!(component_id, expected_id);
+                (0, ComponentEvent::Start(StartEvent { metadata, .. }))
+                | (1, ComponentEvent::DiagnosticsReady(DiagnosticsReadyEvent { metadata, .. }))
+                | (2, ComponentEvent::Stop(StopEvent { metadata, .. })) => {
+                    assert_eq!(metadata.component_id, *expected_id);
                 }
                 _ => panic!("unexpected event: {:?}", event),
             }
@@ -216,6 +225,7 @@ mod tests {
                 },
                 components_started: 2u64,
                 components_stopped: 2u64,
+                components_seen_running: 0u64,
                 diagnostics_directories_seen: 2u64,
                 recent_events: {
                     "0": {

@@ -74,12 +74,13 @@ impl EventStreamServer {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use {
         super::*,
         crate::events::types::*,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_io::NodeMarker,
+        fuchsia_zircon as zx,
         futures::{future::RemoteHandle, FutureExt, StreamExt},
     };
 
@@ -98,6 +99,7 @@ mod tests {
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
                 }),
+                timestamp: Some(zx::Time::get(zx::ClockId::Monotonic).into_nanos()),
                 ..fsys::Event::empty()
             })
             .expect("send started event ok");
@@ -110,6 +112,10 @@ mod tests {
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
                 }),
+                event_result: Some(fsys::EventResult::Payload(fsys::EventPayload::Running(
+                    fsys::RunningPayload { started_timestamp: Some(0) },
+                ))),
+                timestamp: Some(zx::Time::get(zx::ClockId::Monotonic).into_nanos()),
                 ..fsys::Event::empty()
             })
             .expect("send running event ok");
@@ -129,6 +135,7 @@ mod tests {
                         node: Some(node),
                     }),
                 )),
+                timestamp: Some(zx::Time::get(zx::ClockId::Monotonic).into_nanos()),
                 ..fsys::Event::empty()
             })
             .expect("send diagnostics ready event ok");
@@ -141,51 +148,83 @@ mod tests {
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
                 }),
+                timestamp: Some(zx::Time::get(zx::ClockId::Monotonic).into_nanos()),
                 ..fsys::Event::empty()
             })
             .expect("send stopped event ok");
 
         let expected_component_id = ComponentIdentifier::Moniker("./foo:0/bar:0".to_string());
 
+        let shared_data = EventMetadata {
+            component_id: expected_component_id.clone(),
+            component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
+            timestamp: zx::Time::get(zx::ClockId::Monotonic),
+        };
         // Assert the first received event was a Start event.
         let event = event_stream.next().await.unwrap();
-        assert_eq!(
-            event,
-            ComponentEvent::Start(ComponentEventData {
-                component_id: expected_component_id.clone(),
-                component_data_map: None
-            })
+        compare_events_ignore_timestamp_and_payload(
+            &event,
+            &ComponentEvent::Start(StartEvent { metadata: shared_data.clone() }),
         );
 
         // Assert the second received event was a Running event.
         let event = event_stream.next().await.unwrap();
-        assert_eq!(
-            event,
-            ComponentEvent::Start(ComponentEventData {
-                component_id: expected_component_id.clone(),
-                component_data_map: None
-            })
+        compare_events_ignore_timestamp_and_payload(
+            &event,
+            &ComponentEvent::Running(RunningEvent {
+                metadata: shared_data.clone(),
+                component_start_time: zx::Time::from_nanos(0),
+            }),
         );
 
         // Assert the third received event was a CapabilityReady event for diagnostics.
         let event = event_stream.next().await.unwrap();
         match event {
-            ComponentEvent::DiagnosticsReady(InspectReaderData {
-                component_id,
-                data_directory_proxy: Some(_),
-            }) => assert_eq!(component_id, expected_component_id),
+            ComponentEvent::DiagnosticsReady(DiagnosticsReadyEvent {
+                metadata,
+                directory: Some(_),
+            }) => assert_eq!(metadata.component_id, expected_component_id),
             _ => assert!(false),
         }
 
         // Assert the fourth received event was a Stop event.
         let event = event_stream.next().await.unwrap();
-        assert_eq!(
-            event,
-            ComponentEvent::Stop(ComponentEventData {
-                component_id: expected_component_id.clone(),
-                component_data_map: None
-            })
+        compare_events_ignore_timestamp_and_payload(
+            &event,
+            &ComponentEvent::Stop(StopEvent { metadata: shared_data.clone() }),
         );
+    }
+
+    pub fn compare_events_ignore_timestamp_and_payload(
+        event1: &ComponentEvent,
+        event2: &ComponentEvent,
+    ) {
+        let metadata_comparator = |x: &EventMetadata, y: &EventMetadata| {
+            assert_eq!(x.component_id, y.component_id);
+            assert_eq!(x.component_url, y.component_url);
+        };
+
+        // Need to explicitly check every case despite the logic being the same since rust
+        // requires multi-case match arms to have variable bindings be the same type in every
+        // case. This isn't doable in our polymorphic event enums.
+        match (event1, event2) {
+            (ComponentEvent::Start(x), ComponentEvent::Start(y)) => {
+                metadata_comparator(&x.metadata, &y.metadata)
+            }
+            (ComponentEvent::Stop(x), ComponentEvent::Stop(y)) => {
+                metadata_comparator(&x.metadata, &y.metadata)
+            }
+            (ComponentEvent::Running(x), ComponentEvent::Running(y)) => {
+                metadata_comparator(&x.metadata, &y.metadata)
+            }
+            (ComponentEvent::DiagnosticsReady(x), ComponentEvent::DiagnosticsReady(y)) => {
+                metadata_comparator(&x.metadata, &y.metadata)
+            }
+            _ => panic!(
+                "Events are not equal, they are different enumerations: {:?}, {:?}",
+                event1, event2
+            ),
+        }
     }
 
     fn spawn_fake_event_source(

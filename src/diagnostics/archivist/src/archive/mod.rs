@@ -8,8 +8,8 @@ use {
         data_repository::DiagnosticsDataRepository,
         diagnostics,
         events::types::{
-            ComponentEvent, ComponentEventData, ComponentEventStream, ComponentIdentifier,
-            InspectData, InspectReaderData,
+            ComponentEvent, ComponentEventStream, ComponentIdentifier, DiagnosticsReadyEvent,
+            EventMetadata,
         },
     },
     anyhow::{format_err, Error},
@@ -601,17 +601,16 @@ impl ArchivistState {
 
 fn populate_inspect_repo(
     state: &Arc<Mutex<ArchivistState>>,
-    inspect_reader_data: InspectReaderData,
+    diagnostics_ready_data: DiagnosticsReadyEvent,
 ) -> Result<(), Error> {
-    // The InspectReaderData should always contain a directory_proxy. Its existence
+    // The DiagnosticsReadyEvent should always contain a directory_proxy. Its existence
     // as an Option is only to support mock objects for equality in tests.
-    let inspect_directory_proxy = inspect_reader_data.data_directory_proxy.unwrap();
+    let diagnostics_directory_proxy = diagnostics_ready_data.directory.unwrap();
 
-    state
-        .lock()
-        .inspect_repository
-        .write()
-        .add_inspect_artifacts(inspect_reader_data.component_id, inspect_directory_proxy)
+    state.lock().inspect_repository.write().add_inspect_artifacts(
+        diagnostics_ready_data.metadata.component_id,
+        diagnostics_directory_proxy,
+    )
 }
 
 fn remove_from_inspect_repo(
@@ -626,19 +625,38 @@ async fn process_event(
     event: ComponentEvent,
 ) -> Result<(), Error> {
     match event {
-        ComponentEvent::Start(data) => archive_event(&state, "START", data).await,
-        ComponentEvent::Stop(data) => {
-            remove_from_inspect_repo(&state, &data.component_id);
-            archive_event(&state, "STOP", data).await
+        ComponentEvent::Start(start) => {
+            archive_event(&state, "START", start.metadata.clone()).await?;
+            state.lock().inspect_repository.write().add_new_component(
+                start.metadata.component_id,
+                start.metadata.timestamp,
+                None,
+            )
         }
-        ComponentEvent::DiagnosticsReady(data) => populate_inspect_repo(&state, data),
+        ComponentEvent::Running(running) => {
+            archive_event(&state, "RUNNING", running.metadata.clone()).await?;
+            state.lock().inspect_repository.write().add_new_component(
+                running.metadata.component_id,
+                running.metadata.timestamp,
+                Some(running.component_start_time),
+            )
+        }
+        ComponentEvent::Stop(stop) => {
+            // TODO(53939): Get inspect data from repository before removing
+            // for post-mortem inspection.
+            remove_from_inspect_repo(&state, &stop.metadata.component_id);
+            archive_event(&state, "STOP", stop.metadata).await
+        }
+        ComponentEvent::DiagnosticsReady(diagnostics_ready) => {
+            populate_inspect_repo(&state, diagnostics_ready)
+        }
     }
 }
 
 async fn archive_event(
     state: &Arc<Mutex<ArchivistState>>,
-    event_name: &str,
-    event_data: ComponentEventData,
+    _event_name: &str,
+    _event_data: EventMetadata,
 ) -> Result<(), Error> {
     let mut state = state.lock();
     let ArchivistState { writer, log_node, configuration, .. } = &mut *state;
@@ -652,39 +670,40 @@ async fn archive_event(
     let max_archive_size_bytes = configuration.max_archive_size_bytes;
     let max_event_group_size_bytes = configuration.max_event_group_size_bytes;
 
-    let mut log = writer.get_log().new_event(event_name, event_data.component_id);
+    // TODO(53939): Get inspect data from repository before removing
+    // for post-mortem inspection.
+    //let log = writer.get_log().new_event(event_name, event_data.component_id);
+    // if let Some(data_map) = event_data.component_data_map {
+    //     for (path, object) in data_map {
+    //         match object {
+    //             InspectData::Empty
+    //             | InspectData::DeprecatedFidl(_)
+    //             | InspectData::Tree(_, None) => {}
+    //             InspectData::Vmo(vmo) | InspectData::Tree(_, Some(vmo)) => {
+    //                 let mut contents = vec![0u8; vmo.get_size()? as usize];
+    //                 vmo.read(&mut contents[..], 0)?;
 
-    if let Some(data_map) = event_data.component_data_map {
-        for (path, object) in data_map {
-            match object {
-                InspectData::Empty
-                | InspectData::DeprecatedFidl(_)
-                | InspectData::Tree(_, None) => {}
-                InspectData::Vmo(vmo) | InspectData::Tree(_, Some(vmo)) => {
-                    let mut contents = vec![0u8; vmo.get_size()? as usize];
-                    vmo.read(&mut contents[..], 0)?;
+    //                 // Truncate the bytes down to the last non-zero 4096-byte page of data.
+    //                 // TODO(CF-830): Handle truncation of VMOs without reading the whole thing.
+    //                 let mut last_nonzero = 0;
+    //                 for (i, v) in contents.iter().enumerate() {
+    //                     if *v != 0 {
+    //                         last_nonzero = i;
+    //                     }
+    //                 }
+    //                 if last_nonzero % 4096 != 0 {
+    //                     last_nonzero = last_nonzero + 4096 - last_nonzero % 4096;
+    //                 }
+    //                 contents.resize(last_nonzero, 0);
 
-                    // Truncate the bytes down to the last non-zero 4096-byte page of data.
-                    // TODO(CF-830): Handle truncation of VMOs without reading the whole thing.
-                    let mut last_nonzero = 0;
-                    for (i, v) in contents.iter().enumerate() {
-                        if *v != 0 {
-                            last_nonzero = i;
-                        }
-                    }
-                    if last_nonzero % 4096 != 0 {
-                        last_nonzero = last_nonzero + 4096 - last_nonzero % 4096;
-                    }
-                    contents.resize(last_nonzero, 0);
-
-                    log = log.add_event_file(path, &contents);
-                }
-                InspectData::File(contents) => {
-                    log = log.add_event_file(path, &contents);
-                }
-            }
-        }
-    }
+    //                 log = log.add_event_file(path, &contents);
+    //             }
+    //             InspectData::File(contents) => {
+    //                 log = log.add_event_file(path, &contents);
+    //             }
+    //         }
+    //     }
+    // }
 
     let current_group_stats = writer.get_log().get_stats();
 
