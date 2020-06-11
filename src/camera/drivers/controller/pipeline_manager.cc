@@ -362,18 +362,21 @@ void PipelineManager::Shutdown() {
     return;
   }
 
-  global_shutdown_requested_ = true;
-
   // First stop streaming all active streams.
   StopStreaming();
 
-  // Instantiate shutdown of all active streams.
+  // Instantiate the shutdown of all active streams before transitioning
+  // the state to "global_shutdown_requested".
   auto output_node_info_copy = output_nodes_info_;
   for (auto output_node_info : output_node_info_copy) {
     if (!HasStreamType(stream_shutdown_requested_, output_node_info.first)) {
       OnClientStreamDisconnect(output_node_info.first);
     }
   }
+
+  // Transition the state to ensure that no new tasks
+  // are posted on the task queue.
+  global_shutdown_requested_ = true;
 }
 
 void PipelineManager::SetupTaskWaiter() {

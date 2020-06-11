@@ -92,6 +92,10 @@ class PipelineManager {
   // to call SerializedTaskComplete() to signal completion
   // of the task.
   void PostTaskOnSerializedTaskQueue(fit::closure task) {
+    if (global_shutdown_requested_) {
+      FX_LOGS(DEBUG) << "Global shutdown requested, ignoring posted task on serialized task queue";
+      return;
+    }
     serialized_task_queue_.emplace(std::move(task));
     serialized_tasks_event_.signal(0u, kSerialzedTaskQueued);
   }

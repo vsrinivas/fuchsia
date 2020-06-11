@@ -874,6 +874,32 @@ TEST_F(ControllerProtocolTest, TestPipelineManagerShutdown) {
   EXPECT_EQ(nullptr, pipeline_manager_->downscaled_resolution_stream());
 }
 
+TEST_F(ControllerProtocolTest, TestStreamShutdownAfterPipelineShutdown) {
+  fuchsia::camera2::StreamPtr stream_ds;
+  fuchsia::camera2::StreamPtr stream_fr;
+
+  auto stream_type_ds = kStreamTypeDS | kStreamTypeML;
+  auto stream_type_fr = kStreamTypeFR | kStreamTypeML;
+
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type_fr, stream_fr));
+  ASSERT_EQ(ZX_OK, SetupStream(SherlockConfigs::MONITORING, stream_type_ds, stream_ds));
+
+  // Start streaming.
+  async::PostTask(dispatcher(), [&stream_fr]() { stream_fr->Start(); });
+  async::PostTask(dispatcher(), [&stream_ds]() { stream_ds->Start(); });
+  RunLoopUntilIdle();
+
+  async::PostTask(dispatcher(), [this]() { pipeline_manager_->Shutdown(); });
+  async::PostTask(dispatcher(), [&stream_fr]() { stream_fr.Unbind(); });
+  RunLoopUntilIdle();
+
+  zx_signals_t pending;
+  event_.wait_one(kPipelineManagerSignalExitDone, zx::time::infinite(), &pending);
+
+  EXPECT_EQ(nullptr, pipeline_manager_->full_resolution_stream());
+  EXPECT_EQ(nullptr, pipeline_manager_->downscaled_resolution_stream());
+}
+
 TEST_F(ControllerProtocolTest, TestCropRectChange) {
   auto stream_type = kStreamTypeVideo;
   fuchsia::camera2::StreamPtr stream;
