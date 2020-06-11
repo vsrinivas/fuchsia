@@ -11,8 +11,6 @@ namespace {
 
 std::string ToString(const RebootReason reboot_reason) {
   switch (reboot_reason) {
-    case RebootReason::kNotSet:
-      return "RebootReason::kNotSet";
     case RebootReason::kNotParseable:
       return "RebootReason::kNotParseable";
     case RebootReason::kGenericGraceful:
@@ -31,17 +29,38 @@ std::string ToString(const RebootReason reboot_reason) {
       return "RebootReason::kSoftwareWatchdogTimeout";
     case RebootReason::kBrownout:
       return "RebootReason::kBrownout";
+    case RebootReason::kUserRequest:
+      return "RebootReason::kUserRequest";
+    case RebootReason::kSystemUpdate:
+      return "RebootReason::kSystemUpdate";
+    case RebootReason::kHighTemperature:
+      return "RebootReason::kHighTemperature";
+    case RebootReason::kSessionFailure:
+      return "RebootReason::kSessionFailure";
   }
 }
 
 }  // namespace
 
 std::optional<bool> OptionallyGraceful(const RebootReason reboot_reason) {
-  if (reboot_reason == RebootReason::kNotSet || reboot_reason == RebootReason::kNotParseable) {
-    return std::nullopt;
+  switch (reboot_reason) {
+    case RebootReason::kGenericGraceful:
+    case RebootReason::kUserRequest:
+    case RebootReason::kSystemUpdate:
+    case RebootReason::kHighTemperature:
+    case RebootReason::kSessionFailure:
+      return true;
+    case RebootReason::kCold:
+    case RebootReason::kSpontaneous:
+    case RebootReason::kKernelPanic:
+    case RebootReason::kOOM:
+    case RebootReason::kHardwareWatchdogTimeout:
+    case RebootReason::kSoftwareWatchdogTimeout:
+    case RebootReason::kBrownout:
+      return false;
+    case RebootReason::kNotParseable:
+      return std::nullopt;
   }
-
-  return reboot_reason == RebootReason::kGenericGraceful;
 }
 
 cobalt::LegacyRebootReason ToCobaltLegacyRebootReason(const RebootReason reboot_reason) {
@@ -50,6 +69,10 @@ cobalt::LegacyRebootReason ToCobaltLegacyRebootReason(const RebootReason reboot_
       // TODO(50946): Stop assuming a kernel panic if the file can't be parsed.
       return cobalt::LegacyRebootReason::kKernelPanic;
     case RebootReason::kGenericGraceful:
+    case RebootReason::kUserRequest:
+    case RebootReason::kSystemUpdate:
+    case RebootReason::kHighTemperature:
+    case RebootReason::kSessionFailure:
       return cobalt::LegacyRebootReason::kClean;
     case RebootReason::kCold:
       return cobalt::LegacyRebootReason::kCold;
@@ -65,9 +88,6 @@ cobalt::LegacyRebootReason ToCobaltLegacyRebootReason(const RebootReason reboot_
       return cobalt::LegacyRebootReason::kSoftwareWatchdog;
     case RebootReason::kBrownout:
       return cobalt::LegacyRebootReason::kBrownout;
-    case RebootReason::kNotSet:
-      FX_LOGS(FATAL) << "Not expecting a Cobalt reboot reason for " << ToString(reboot_reason);
-      return cobalt::LegacyRebootReason::kKernelPanic;
   }
 }
 
@@ -77,6 +97,14 @@ cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reboot_reason) {
       return cobalt::LastRebootReason::kUnknown;
     case RebootReason::kGenericGraceful:
       return cobalt::LastRebootReason::kGenericGraceful;
+    case RebootReason::kUserRequest:
+      return cobalt::LastRebootReason::kUserRequest;
+    case RebootReason::kSystemUpdate:
+      return cobalt::LastRebootReason::kSystemUpdate;
+    case RebootReason::kHighTemperature:
+      return cobalt::LastRebootReason::kHighTemperature;
+    case RebootReason::kSessionFailure:
+      return cobalt::LastRebootReason::kSessionFailure;
     case RebootReason::kCold:
       return cobalt::LastRebootReason::kCold;
     case RebootReason::kSpontaneous:
@@ -91,9 +119,6 @@ cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reboot_reason) {
       return cobalt::LastRebootReason::kSoftwareWatchdogTimeout;
     case RebootReason::kBrownout:
       return cobalt::LastRebootReason::kBrownout;
-    case RebootReason::kNotSet:
-      FX_LOGS(FATAL) << "Not expecting a Cobalt last reboot reason for " << ToString(reboot_reason);
-      return cobalt::LastRebootReason::kUnknown;
   }
 }
 
@@ -114,8 +139,11 @@ std::string ToCrashSignature(const RebootReason reboot_reason) {
       return "fuchsia-sw-watchdog-timeout";
     case RebootReason::kBrownout:
       return "fuchsia-brownout";
-    case RebootReason::kNotSet:
     case RebootReason::kGenericGraceful:
+    case RebootReason::kUserRequest:
+    case RebootReason::kSystemUpdate:
+    case RebootReason::kHighTemperature:
+    case RebootReason::kSessionFailure:
     case RebootReason::kCold:
       FX_LOGS(FATAL) << "Not expecting a crash for reboot reason " << ToString(reboot_reason);
       return "FATAL ERROR";
@@ -135,8 +163,11 @@ std::string ToCrashProgramName(const RebootReason reboot_reason) {
     case RebootReason::kOOM:
     case RebootReason::kSoftwareWatchdogTimeout:
       return "system";
-    case RebootReason::kNotSet:
     case RebootReason::kGenericGraceful:
+    case RebootReason::kUserRequest:
+    case RebootReason::kSystemUpdate:
+    case RebootReason::kHighTemperature:
+    case RebootReason::kSessionFailure:
     case RebootReason::kCold:
       FX_LOGS(FATAL) << "Not expecting a program name request for reboot reason "
                      << ToString(reboot_reason);
@@ -149,6 +180,14 @@ std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(
   switch (reboot_reason) {
     case RebootReason::kGenericGraceful:
       return std::nullopt;
+    case RebootReason::kUserRequest:
+      return fuchsia::feedback::RebootReason::USER_REQUEST;
+    case RebootReason::kSystemUpdate:
+      return fuchsia::feedback::RebootReason::SYSTEM_UPDATE;
+    case RebootReason::kHighTemperature:
+      return fuchsia::feedback::RebootReason::HIGH_TEMPERATURE;
+    case RebootReason::kSessionFailure:
+      return fuchsia::feedback::RebootReason::SESSION_FAILURE;
     case RebootReason::kCold:
       return fuchsia::feedback::RebootReason::COLD;
     case RebootReason::kSpontaneous:
@@ -163,8 +202,6 @@ std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(
       return fuchsia::feedback::RebootReason::SOFTWARE_WATCHDOG_TIMEOUT;
     case RebootReason::kBrownout:
       return fuchsia::feedback::RebootReason::BROWNOUT;
-    case RebootReason::kNotSet:
-      FX_LOGS(FATAL) << "Not expecting a Feedback reboot reason for " << ToString(reboot_reason);
     case RebootReason::kNotParseable:
       return std::nullopt;
   }

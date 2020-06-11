@@ -37,15 +37,23 @@ using testing::UnorderedElementsAreArray;
 
 constexpr char kHasReportedOnPath[] = "/tmp/has_reported_on_reboot_log.txt";
 
-struct TestParam {
+struct UngracefulRebootTestParam {
   std::string test_name;
-  std::string input_reboot_log;
+  std::string zircon_reboot_log;
   std::string output_crash_signature;
   std::optional<zx::duration> output_uptime;
   cobalt::LegacyRebootReason output_reboot_reason;
   cobalt::LastRebootReason output_last_reboot_reason;
 };
 
+struct GracefulRebootTestParam {
+  std::string test_name;
+  std::optional<std::string> graceful_reboot_log;
+  cobalt::LegacyRebootReason output_reboot_reason;
+  cobalt::LastRebootReason output_last_reboot_reason;
+};
+
+template <typename TestParam>
 class ReporterTest : public UnitTestFixture,
                      public CobaltTestFixture,
                      public testing::WithParamInterface<TestParam> {
@@ -63,12 +71,17 @@ class ReporterTest : public UnitTestFixture,
     }
   }
 
-  void WriteRebootLogContents(const std::string& contents) {
-    FX_CHECK(tmp_dir_.NewTempFileWithData(contents, &reboot_log_path_));
+  void WriteZirconRebootLogContents(const std::string& contents) {
+    FX_CHECK(tmp_dir_.NewTempFileWithData(contents, &zircon_reboot_log_path_));
   }
 
-  void ReportLog() {
-    const auto reboot_log = RebootLog::ParseRebootLog(reboot_log_path_);
+  void WriteGracefulRebootLogContents(const std::string& contents) {
+    FX_CHECK(tmp_dir_.NewTempFileWithData(contents, &graceful_reboot_log_path_));
+  }
+
+  void ReportOnRebootLog() {
+    const auto reboot_log =
+        RebootLog::ParseRebootLog(zircon_reboot_log_path_, graceful_reboot_log_path_);
     ReportOn(reboot_log);
   }
 
@@ -78,7 +91,8 @@ class ReporterTest : public UnitTestFixture,
     RunLoopUntilIdle();
   }
 
-  std::string reboot_log_path_;
+  std::string zircon_reboot_log_path_;
+  std::string graceful_reboot_log_path_;
   std::unique_ptr<stubs::CrashReporterBase> crash_reporter_server_;
 
  private:
@@ -86,7 +100,9 @@ class ReporterTest : public UnitTestFixture,
   files::ScopedTempDir tmp_dir_;
 };
 
-TEST_F(ReporterTest, Succeed_WellFormedRebootLog) {
+using GenericReporterTest = ReporterTest<UngracefulRebootTestParam /*does not matter*/>;
+
+TEST_F(GenericReporterTest, Succeed_WellFormedRebootLog) {
   const zx::duration uptime = zx::msec(74715002);
   const RebootLog reboot_log(RebootReason::kKernelPanic,
                              "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002",
@@ -110,7 +126,7 @@ TEST_F(ReporterTest, Succeed_WellFormedRebootLog) {
   EXPECT_TRUE(files::IsFile(kHasReportedOnPath));
 }
 
-TEST_F(ReporterTest, Succeed_NoUptime) {
+TEST_F(GenericReporterTest, Succeed_NoUptime) {
   const RebootLog reboot_log(RebootReason::kKernelPanic, "ZIRCON REBOOT REASON (KERNEL PANIC)\n",
                              std::nullopt);
 
@@ -131,7 +147,7 @@ TEST_F(ReporterTest, Succeed_NoUptime) {
               }));
 }
 
-TEST_F(ReporterTest, Succeed_NoCrashReportFiledCleanReboot) {
+TEST_F(GenericReporterTest, Succeed_NoCrashReportFiledCleanReboot) {
   const zx::duration uptime = zx::msec(74715002);
   const RebootLog reboot_log(RebootReason::kGenericGraceful,
                              "ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n74715002", uptime);
@@ -148,7 +164,7 @@ TEST_F(ReporterTest, Succeed_NoCrashReportFiledCleanReboot) {
               }));
 }
 
-TEST_F(ReporterTest, Succeed_NoCrashReportFiledColdReboot) {
+TEST_F(GenericReporterTest, Succeed_NoCrashReportFiledColdReboot) {
   const RebootLog reboot_log(RebootReason::kCold, std::nullopt, std::nullopt);
 
   SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterNoFileExpected>());
@@ -163,7 +179,7 @@ TEST_F(ReporterTest, Succeed_NoCrashReportFiledColdReboot) {
               }));
 }
 
-TEST_F(ReporterTest, Fail_CrashReporterFailsToFile) {
+TEST_F(GenericReporterTest, Fail_CrashReporterFailsToFile) {
   const zx::duration uptime = zx::msec(74715002);
   const RebootLog reboot_log(RebootReason::kKernelPanic,
                              "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002",
@@ -180,7 +196,7 @@ TEST_F(ReporterTest, Fail_CrashReporterFailsToFile) {
               }));
 }
 
-TEST_F(ReporterTest, Succeed_DoesNothingIfAlreadyReportedOn) {
+TEST_F(GenericReporterTest, Succeed_DoesNothingIfAlreadyReportedOn) {
   ASSERT_TRUE(files::WriteFile(kHasReportedOnPath, /*data=*/"", /*size=*/0));
 
   const RebootLog reboot_log(RebootReason::kKernelPanic,
@@ -195,8 +211,10 @@ TEST_F(ReporterTest, Succeed_DoesNothingIfAlreadyReportedOn) {
   EXPECT_THAT(ReceivedCobaltEvents(), IsEmpty());
 }
 
-INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, ReporterTest,
-                         ::testing::ValuesIn(std::vector<TestParam>({
+using UngracefulReporterTest = ReporterTest<UngracefulRebootTestParam>;
+
+INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, UngracefulReporterTest,
+                         ::testing::ValuesIn(std::vector<UngracefulRebootTestParam>({
                              {
                                  "KernelPanic",
                                  "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n65487494",
@@ -246,26 +264,98 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, ReporterTest,
                                  cobalt::LastRebootReason::kBrownout,
                              },
                          })),
-                         [](const testing::TestParamInfo<TestParam>& info) {
+                         [](const testing::TestParamInfo<UngracefulRebootTestParam>& info) {
                            return info.param.test_name;
                          });
 
-TEST_P(ReporterTest, Succeed) {
+TEST_P(UngracefulReporterTest, Succeed) {
   const auto param = GetParam();
 
-  WriteRebootLogContents(param.input_reboot_log);
+  WriteZirconRebootLogContents(param.zircon_reboot_log);
   SetUpCrashReporterServer(
       std::make_unique<stubs::CrashReporter>(stubs::CrashReporter::Expectations{
           .crash_signature = param.output_crash_signature,
-          .reboot_log = param.input_reboot_log,
+          .reboot_log = param.zircon_reboot_log,
           .uptime = param.output_uptime,
       }));
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  ReportLog();
+  ReportOnRebootLog();
 
   const zx::duration expected_uptime =
       (param.output_uptime.has_value()) ? param.output_uptime.value() : zx::usec(0);
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(param.output_reboot_reason),
+                  cobalt::Event(param.output_last_reboot_reason, expected_uptime.to_usecs()),
+              }));
+}
+
+using GracefulReporterTest = ReporterTest<GracefulRebootTestParam>;
+
+INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, GracefulReporterTest,
+                         ::testing::ValuesIn(std::vector<GracefulRebootTestParam>({
+                             {
+                                 "UserRequest",
+                                 "USER REQUEST",
+                                 cobalt::LegacyRebootReason::kClean,
+                                 cobalt::LastRebootReason::kUserRequest,
+                             },
+                             {
+                                 "SystemUpdate",
+                                 "SYSTEM UPDATE",
+                                 cobalt::LegacyRebootReason::kClean,
+                                 cobalt::LastRebootReason::kSystemUpdate,
+                             },
+                             {
+                                 "HighTemperature",
+                                 "HIGH TEMPERATURE",
+                                 cobalt::LegacyRebootReason::kClean,
+                                 cobalt::LastRebootReason::kHighTemperature,
+                             },
+                             {
+                                 "SessionFailure",
+                                 "SESSION FAILURE",
+                                 cobalt::LegacyRebootReason::kClean,
+                                 cobalt::LastRebootReason::kSessionFailure,
+                             },
+                             {
+                                 "NotSupported",
+                                 "NOT SUPPORTED",
+                                 cobalt::LegacyRebootReason::kClean,
+                                 cobalt::LastRebootReason::kGenericGraceful,
+                             },
+                             {
+                                 "kNotParseable",
+                                 "NOT PARSEABLE",
+                                 cobalt::LegacyRebootReason::kClean,
+                                 cobalt::LastRebootReason::kGenericGraceful,
+                             },
+                             {
+                                 "None",
+                                 std::nullopt,
+                                 cobalt::LegacyRebootReason::kClean,
+                                 cobalt::LastRebootReason::kGenericGraceful,
+                             },
+                         })),
+                         [](const testing::TestParamInfo<GracefulRebootTestParam>& info) {
+                           return info.param.test_name;
+                         });
+
+TEST_P(GracefulReporterTest, Succeed) {
+  const auto param = GetParam();
+
+  WriteZirconRebootLogContents("ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n65487494");
+  if (param.graceful_reboot_log.has_value()) {
+    WriteGracefulRebootLogContents(param.graceful_reboot_log.value());
+  }
+
+  SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterNoFileExpected>());
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
+
+  ReportOnRebootLog();
+
+  const zx::duration expected_uptime = zx::msec(65487494);
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
                   cobalt::Event(param.output_reboot_reason),

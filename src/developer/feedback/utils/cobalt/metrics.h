@@ -87,6 +87,10 @@ enum class LastRebootReason {
       cobalt_registry::LastRebootUptimeMetricDimensionReason::HardwareWatchdogTimeout,
   kSoftwareWatchdogTimeout =
       cobalt_registry::LastRebootUptimeMetricDimensionReason::SoftwareWatchdogTimeout,
+  kUserRequest = cobalt_registry::LastRebootUptimeMetricDimensionReason::UserRequest,
+  kSystemUpdate = cobalt_registry::LastRebootUptimeMetricDimensionReason::SystemUpdate,
+  kHighTemperature = cobalt_registry::LastRebootUptimeMetricDimensionReason::HighTemperature,
+  kSessionFailure = cobalt_registry::LastRebootUptimeMetricDimensionReason::SessionFailure,
 };
 
 enum class RebootReasonWriteResult {

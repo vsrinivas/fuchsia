@@ -104,8 +104,10 @@ executable("reboot_log_unittest") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/developer/feedback/last_reboot:reboot_log",
+    "//src/developer/feedback/last_reboot:reboot_watcher",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
     "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/googletest:gmock",

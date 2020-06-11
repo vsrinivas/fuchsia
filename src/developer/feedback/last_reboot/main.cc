@@ -15,6 +15,43 @@
 #include <string>
 
 #include "src/developer/feedback/last_reboot/main_service.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+
+namespace {
+
+constexpr char kTmpGracefulRebootReason[] = "/tmp/graceful_reboot_reason.txt";
+constexpr char kCacheGracefulRebootReason[] = "/cache/graceful_reboot_reason.txt";
+
+void MoveGracefulRebootReason() {
+  if (files::IsFile(kTmpGracefulRebootReason)) {
+    FX_LOGS(INFO)
+        << "The graceful reboot reason has been moved in a previous instance of the component";
+    return;
+  }
+
+  if (!files::IsFile(kCacheGracefulRebootReason)) {
+    return;
+  }
+
+  std::string content;
+  if (!files::ReadFileToString(kCacheGracefulRebootReason, &content)) {
+    FX_LOGS(ERROR) << "Failed to read graceful reboot reason from " << kCacheGracefulRebootReason;
+    return;
+  }
+
+  if (!files::WriteFile(kTmpGracefulRebootReason, content.c_str(), content.size())) {
+    FX_LOGS(ERROR) << "Failed to write graceful reboot reason to " << kTmpGracefulRebootReason;
+    return;
+  }
+
+  if (!files::DeletePath(kCacheGracefulRebootReason, /*recursive=*/true)) {
+    FX_LOGS(ERROR) << "Failed to delete " << kCacheGracefulRebootReason;
+    return;
+  }
+}
+
+}  // namespace
 
 int main(int argc, char** argv) {
   syslog::SetTags({"feedback"});
@@ -24,12 +61,15 @@ int main(int argc, char** argv) {
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
 
+  MoveGracefulRebootReason();
+
   feedback::MainService main_service(feedback::MainService::Config{
       .dispatcher = loop.dispatcher(),
       .services = context->svc(),
       .root_node = &(inspector->root()),
-      .reboot_log = feedback::RebootLog::ParseRebootLog("/boot/log/last-panic.txt"),
-      .graceful_reboot_reason_write_path = "/cache/graceful_reboot_reason.txt",
+      .reboot_log =
+          feedback::RebootLog::ParseRebootLog("/boot/log/last-panic.txt", kTmpGracefulRebootReason),
+      .graceful_reboot_reason_write_path = kCacheGracefulRebootReason,
   });
 
   // fuchsia.feedback.LastRebootInfoProvider

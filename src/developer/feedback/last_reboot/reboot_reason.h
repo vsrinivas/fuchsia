@@ -19,8 +19,6 @@ namespace feedback {
 // These values should not be used to understand why a device has rebooted outside of this
 // component.
 enum class RebootReason {
-  // Default value to encode when the reboot reason hasn't been set.
-  kNotSet,
   // We could not make a reboot reason out of the reboot log.
   kNotParseable,
   kGenericGraceful,
@@ -32,6 +30,10 @@ enum class RebootReason {
   kHardwareWatchdogTimeout,
   kSoftwareWatchdogTimeout,
   kBrownout,
+  kUserRequest,
+  kSystemUpdate,
+  kHighTemperature,
+  kSessionFailure,
 };
 
 std::optional<bool> OptionallyGraceful(RebootReason reboot_reason);

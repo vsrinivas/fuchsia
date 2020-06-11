@@ -14,7 +14,7 @@
 namespace feedback {
 namespace {
 
-TEST(RebootResonTest, NotParseable) {
+TEST(RebootReasonTest, NotParseable) {
   EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kNotParseable),
             cobalt::LegacyRebootReason::kKernelPanic);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kNotParseable),
@@ -24,21 +24,13 @@ TEST(RebootResonTest, NotParseable) {
   EXPECT_EQ(ToFidlRebootReason(RebootReason::kNotParseable), std::nullopt);
 }
 
-TEST(RebootResonTest, Clean) {
-  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kGenericGraceful),
-            cobalt::LegacyRebootReason::kClean);
-  EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kGenericGraceful),
-            cobalt::LastRebootReason::kGenericGraceful);
-  EXPECT_EQ(ToFidlRebootReason(RebootReason::kGenericGraceful), std::nullopt);
-}
-
-TEST(RebootResonTest, Cold) {
+TEST(RebootReasonTest, Cold) {
   EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kCold), cobalt::LegacyRebootReason::kCold);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kCold), cobalt::LastRebootReason::kCold);
   EXPECT_EQ(ToFidlRebootReason(RebootReason::kCold), fuchsia::feedback::RebootReason::COLD);
 }
 
-TEST(RebootResonTest, Spontaneous) {
+TEST(RebootReasonTest, Spontaneous) {
   EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kSpontaneous),
             cobalt::LegacyRebootReason::kUnknown);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kSpontaneous),
@@ -49,7 +41,7 @@ TEST(RebootResonTest, Spontaneous) {
             fuchsia::feedback::RebootReason::BRIEF_POWER_LOSS);
 }
 
-TEST(RebootResonTest, KernelPanic) {
+TEST(RebootReasonTest, KernelPanic) {
   EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kKernelPanic),
             cobalt::LegacyRebootReason::kKernelPanic);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kKernelPanic),
@@ -60,7 +52,7 @@ TEST(RebootResonTest, KernelPanic) {
             fuchsia::feedback::RebootReason::KERNEL_PANIC);
 }
 
-TEST(RebootResonTest, OOM) {
+TEST(RebootReasonTest, OOM) {
   EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kOOM), cobalt::LegacyRebootReason::kOOM);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kOOM),
             cobalt::LastRebootReason::kSystemOutOfMemory);
@@ -70,7 +62,7 @@ TEST(RebootResonTest, OOM) {
             fuchsia::feedback::RebootReason::SYSTEM_OUT_OF_MEMORY);
 }
 
-TEST(RebootResonTest, HardwareWatchdogTimeout) {
+TEST(RebootReasonTest, HardwareWatchdogTimeout) {
   EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kHardwareWatchdogTimeout),
             cobalt::LegacyRebootReason::kHardwareWatchdog);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kHardwareWatchdogTimeout),
@@ -82,7 +74,7 @@ TEST(RebootResonTest, HardwareWatchdogTimeout) {
             fuchsia::feedback::RebootReason::HARDWARE_WATCHDOG_TIMEOUT);
 }
 
-TEST(RebootResonTest, SoftwareWatchdogTimeout) {
+TEST(RebootReasonTest, SoftwareWatchdogTimeout) {
   EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kSoftwareWatchdogTimeout),
             cobalt::LegacyRebootReason::kSoftwareWatchdog);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kSoftwareWatchdogTimeout),
@@ -94,13 +86,57 @@ TEST(RebootResonTest, SoftwareWatchdogTimeout) {
             fuchsia::feedback::RebootReason::SOFTWARE_WATCHDOG_TIMEOUT);
 }
 
-TEST(RebootResonTest, Brownout) {
+TEST(RebootReasonTest, Brownout) {
   EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kBrownout),
             cobalt::LegacyRebootReason::kBrownout);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kBrownout), cobalt::LastRebootReason::kBrownout);
   EXPECT_EQ(ToCrashSignature(RebootReason::kBrownout), "fuchsia-brownout");
   EXPECT_EQ(ToCrashProgramName(RebootReason::kBrownout), "device");
   EXPECT_EQ(ToFidlRebootReason(RebootReason::kBrownout), fuchsia::feedback::RebootReason::BROWNOUT);
+}
+
+TEST(RebootReasonTest, GenericGraceful) {
+  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kGenericGraceful),
+            cobalt::LegacyRebootReason::kClean);
+  EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kGenericGraceful),
+            cobalt::LastRebootReason::kGenericGraceful);
+  EXPECT_EQ(ToFidlRebootReason(RebootReason::kGenericGraceful), std::nullopt);
+}
+
+TEST(RebootReasonTest, UserRequest) {
+  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kUserRequest),
+            cobalt::LegacyRebootReason::kClean);
+  EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kUserRequest),
+            cobalt::LastRebootReason::kUserRequest);
+  EXPECT_EQ(ToFidlRebootReason(RebootReason::kUserRequest),
+            fuchsia::feedback::RebootReason::USER_REQUEST);
+}
+
+TEST(RebootReasonTest, SystemUpdate) {
+  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kSystemUpdate),
+            cobalt::LegacyRebootReason::kClean);
+  EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kSystemUpdate),
+            cobalt::LastRebootReason::kSystemUpdate);
+  EXPECT_EQ(ToFidlRebootReason(RebootReason::kSystemUpdate),
+            fuchsia::feedback::RebootReason::SYSTEM_UPDATE);
+}
+
+TEST(RebootReasonTest, HighTemperature) {
+  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kHighTemperature),
+            cobalt::LegacyRebootReason::kClean);
+  EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kHighTemperature),
+            cobalt::LastRebootReason::kHighTemperature);
+  EXPECT_EQ(ToFidlRebootReason(RebootReason::kHighTemperature),
+            fuchsia::feedback::RebootReason::HIGH_TEMPERATURE);
+}
+
+TEST(RebootReasonTest, SessionFailure) {
+  EXPECT_EQ(ToCobaltLegacyRebootReason(RebootReason::kSessionFailure),
+            cobalt::LegacyRebootReason::kClean);
+  EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kSessionFailure),
+            cobalt::LastRebootReason::kSessionFailure);
+  EXPECT_EQ(ToFidlRebootReason(RebootReason::kSessionFailure),
+            fuchsia::feedback::RebootReason::SESSION_FAILURE);
 }
 
 }  // namespace
