@@ -62,9 +62,8 @@ class MagmaSystemDevice {
 
   void DumpStatus(uint32_t dump_type) { msd_device_dump_status(msd_dev(), dump_type); }
 
-  magma::Status Query(uint32_t id, uint64_t* value_out) {
-    return msd_device_query(msd_dev(), id, value_out);
-  }
+  magma::Status Query(uint32_t id, uint64_t* value_out);
+
   magma::Status QueryReturnsBuffer(uint32_t id, uint32_t* buffer_out) {
     return msd_device_query_returns_buffer(msd_dev(), id, buffer_out);
   }

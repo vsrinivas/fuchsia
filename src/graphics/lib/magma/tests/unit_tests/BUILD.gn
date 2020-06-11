@@ -122,6 +122,9 @@ source_set("magma_platform_tests") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
+  if (is_fuchsia) {
+    deps += [ "$magma_build_root/src/magma_util/platform/zircon:connection" ]
+  }
 }
 
 # Requires hardware

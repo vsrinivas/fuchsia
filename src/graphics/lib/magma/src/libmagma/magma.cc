@@ -310,8 +310,9 @@ void magma_execute_command_buffer_with_resources(magma_connection_t connection, 
 void magma_execute_immediate_commands2(magma_connection_t connection, uint32_t context_id,
                                        uint64_t command_count,
                                        magma_inline_command_buffer* command_buffers) {
+  uint64_t messages_sent;
   magma::PlatformConnectionClient::cast(connection)
-      ->ExecuteImmediateCommands(context_id, command_count, command_buffers);
+      ->ExecuteImmediateCommands(context_id, command_count, command_buffers, &messages_sent);
 }
 
 magma_status_t magma_create_semaphore(magma_connection_t connection,

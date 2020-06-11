@@ -5,13 +5,17 @@
 #include <poll.h>
 
 #include <chrono>
+#include <mutex>
 #include <thread>
 
 #include <gtest/gtest.h>
 
 #include "platform_connection.h"
 #include "platform_connection_client.h"
-#ifdef __linux__
+
+#if defined(__Fuchsia__)
+#include "zircon/zircon_platform_connection_client.h"  // nogncheck
+#elif defined(__linux__)
 #include "linux/linux_platform_connection_client.h"  // nogncheck
 #endif
 
@@ -24,98 +28,227 @@ static inline int page_size() { return sysconf(_SC_PAGESIZE); }
 
 }  // namespace
 
+// Included by TestPlatformConnection; validates that each test checks for flow control.
+// Since flow control values are written by the server (IPC) thread and read by the main
+// test thread, we lock the shared data mutex to ensure safety of memory accesses.
+namespace magma {
+class FlowControlChecker {
+ public:
+  FlowControlChecker(std::shared_ptr<magma::PlatformConnection> connection,
+                     std::shared_ptr<magma::PlatformConnectionClient> client_connection)
+      : connection_(connection), client_connection_(client_connection) {}
+
+  ~FlowControlChecker() {
+    if (!flow_control_skipped_) {
+      EXPECT_TRUE(flow_control_checked_);
+    }
+  }
+
+  void Init(std::mutex& mutex) {
+    std::unique_lock<std::mutex> lock(mutex);
+    std::tie(messages_consumed_start_, bytes_imported_start_) = connection_->GetFlowControlCounts();
+    std::tie(messages_inflight_start_, bytes_inflight_start_) =
+        client_connection_->GetFlowControlCounts();
+  }
+
+  void Release() {
+    connection_.reset();
+    client_connection_.reset();
+  }
+
+  void Check(uint64_t messages, uint64_t bytes, std::mutex& mutex) {
+    std::unique_lock<std::mutex> lock(mutex);
+    auto [messages_consumed, bytes_imported] = connection_->GetFlowControlCounts();
+    EXPECT_EQ(messages_consumed_start_ + messages, messages_consumed);
+    EXPECT_EQ(bytes_imported_start_ + bytes, bytes_imported);
+
+    auto [messages_inflight, bytes_inflight] = client_connection_->GetFlowControlCounts();
+    EXPECT_EQ(messages_inflight_start_ + messages, messages_inflight);
+    EXPECT_EQ(bytes_inflight_start_ + bytes, bytes_inflight);
+    flow_control_checked_ = true;
+  }
+
+  void Skip() {
+    flow_control_skipped_ = true;
+    Release();
+  }
+
+  std::shared_ptr<magma::PlatformConnection> connection_;
+  std::shared_ptr<magma::PlatformConnectionClient> client_connection_;
+  bool flow_control_checked_ = false;
+  bool flow_control_skipped_ = false;
+  // Server
+  uint64_t messages_consumed_start_ = 0;
+  uint64_t bytes_imported_start_ = 0;
+  // Client
+  uint64_t messages_inflight_start_ = 0;
+  uint64_t bytes_inflight_start_ = 0;
+};
+}  // namespace magma
+
+struct SharedData {
+  // This mutex is useed to ensure safety of multi-threaded updates.
+  std::mutex mutex;
+  uint64_t test_buffer_id = 0xcafecafecafecafe;
+  uint32_t test_context_id = 0xdeadbeef;
+  uint64_t test_semaphore_id = ~0u;
+  bool got_null_notification = false;
+  magma_status_t test_error = 0x12345678;
+  bool test_complete = false;
+  std::unique_ptr<magma::PlatformSemaphore> test_semaphore;
+  std::vector<magma_system_exec_resource> test_resources = {
+      {.buffer_id = 10, .offset = 11, .length = 12}, {.buffer_id = 13, .offset = 14, .length = 15}};
+  std::vector<uint64_t> test_semaphores = {{1000, 1001, 1010, 1011, 1012}};
+  magma_system_command_buffer test_command_buffer = {
+      .num_resources = 2,
+      .wait_semaphore_count = 2,
+      .signal_semaphore_count = 3,
+  };
+  std::unique_ptr<magma::PlatformHandle> test_access_token;
+  bool can_access_performance_counters;
+};
+
+static SharedData shared_data;
+
+// Most tests here execute the client commands in the test thread context,
+// with a separate server thread processing the commands.
 class TestPlatformConnection {
  public:
-  static std::unique_ptr<TestPlatformConnection> Create();
+  // Defaults should avoid tests hitting flow control
+  static std::unique_ptr<TestPlatformConnection> Create(uint64_t max_inflight_messages = 1000u,
+                                                        uint64_t max_inflight_bytes = 1000000u);
 
-  TestPlatformConnection(std::unique_ptr<magma::PlatformConnectionClient> client_connection,
+  TestPlatformConnection(std::shared_ptr<magma::PlatformConnectionClient> client_connection,
                          std::thread ipc_thread,
                          std::shared_ptr<magma::PlatformConnection> connection)
-      : client_connection_(std::move(client_connection)),
+      : client_connection_(client_connection),
         ipc_thread_(std::move(ipc_thread)),
-        connection_(std::move(connection)) {}
+        connection_(connection),
+        flow_control_checker_(connection, client_connection) {}
 
   ~TestPlatformConnection() {
+    flow_control_checker_.Release();
     client_connection_.reset();
     connection_.reset();
     if (ipc_thread_.joinable())
       ipc_thread_.join();
-    EXPECT_TRUE(test_complete);
+
+    EXPECT_TRUE(shared_data.test_complete);
   }
 
+  // Should be called after any shared data initialization.
+  void FlowControlInit() { flow_control_checker_.Init(shared_data.mutex); }
+
+  // Should be called before test checks for shared data writes.
+  void FlowControlCheck(uint64_t messages, uint64_t bytes) {
+    flow_control_checker_.Check(messages, bytes, shared_data.mutex);
+  }
+
+  void FlowControlCheckOneMessage() { FlowControlCheck(1, 0); }
+  void FlowControlSkip() { flow_control_checker_.Skip(); }
+
   void TestImportBuffer() {
-    auto buf = magma::PlatformBuffer::Create(1, "test");
-    test_buffer_id = buf->id();
+    auto buf = magma::PlatformBuffer::Create(page_size() * 3, "test");
+    shared_data.test_buffer_id = buf->id();
+    FlowControlInit();
+
     EXPECT_EQ(client_connection_->ImportBuffer(buf.get()), 0);
     EXPECT_EQ(client_connection_->GetError(), 0);
+    FlowControlCheck(1, buf->size());
   }
+
   void TestReleaseBuffer() {
     auto buf = magma::PlatformBuffer::Create(1, "test");
-    test_buffer_id = buf->id();
+    shared_data.test_buffer_id = buf->id();
+    FlowControlInit();
+
     EXPECT_EQ(client_connection_->ImportBuffer(buf.get()), 0);
-    EXPECT_EQ(client_connection_->ReleaseBuffer(test_buffer_id), 0);
+    EXPECT_EQ(client_connection_->ReleaseBuffer(shared_data.test_buffer_id), 0);
     EXPECT_EQ(client_connection_->GetError(), 0);
+    FlowControlCheck(2, buf->size());
   }
 
   void TestImportObject() {
     auto semaphore = magma::PlatformSemaphore::Create();
     ASSERT_TRUE(semaphore);
-    test_semaphore_id = semaphore->id();
+    shared_data.test_semaphore_id = semaphore->id();
+    FlowControlInit();
+
     uint32_t handle;
     EXPECT_TRUE(semaphore->duplicate_handle(&handle));
     EXPECT_EQ(client_connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE), 0);
     EXPECT_EQ(client_connection_->GetError(), 0);
+    FlowControlCheckOneMessage();
   }
+
   void TestReleaseObject() {
     auto semaphore = magma::PlatformSemaphore::Create();
     ASSERT_TRUE(semaphore);
-    test_semaphore_id = semaphore->id();
+    shared_data.test_semaphore_id = semaphore->id();
+    FlowControlInit();
+
     uint32_t handle;
     EXPECT_TRUE(semaphore->duplicate_handle(&handle));
     EXPECT_EQ(client_connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE), 0);
-    EXPECT_EQ(
-        client_connection_->ReleaseObject(test_semaphore_id, magma::PlatformObject::SEMAPHORE), 0);
+    EXPECT_EQ(client_connection_->ReleaseObject(shared_data.test_semaphore_id,
+                                                magma::PlatformObject::SEMAPHORE),
+              0);
     EXPECT_EQ(client_connection_->GetError(), 0);
+    FlowControlCheck(2, 0);
   }
 
   void TestCreateContext() {
+    FlowControlInit();
     uint32_t context_id;
     client_connection_->CreateContext(&context_id);
     EXPECT_EQ(client_connection_->GetError(), 0);
-    EXPECT_EQ(test_context_id, context_id);
+    FlowControlCheckOneMessage();
+    EXPECT_EQ(shared_data.test_context_id, context_id);
   }
+
   void TestDestroyContext() {
-    client_connection_->DestroyContext(test_context_id);
+    FlowControlInit();
+    client_connection_->DestroyContext(shared_data.test_context_id);
     EXPECT_EQ(client_connection_->GetError(), 0);
+    FlowControlCheckOneMessage();
   }
 
   void TestExecuteCommandBufferWithResources() {
-    ASSERT_EQ(TestPlatformConnection::test_command_buffer.num_resources,
-              TestPlatformConnection::test_resources.size());
-    ASSERT_EQ(TestPlatformConnection::test_command_buffer.wait_semaphore_count +
-                  TestPlatformConnection::test_command_buffer.signal_semaphore_count,
-              TestPlatformConnection::test_semaphores.size());
+    ASSERT_EQ(shared_data.test_command_buffer.num_resources, shared_data.test_resources.size());
+    ASSERT_EQ(shared_data.test_command_buffer.wait_semaphore_count +
+                  shared_data.test_command_buffer.signal_semaphore_count,
+              shared_data.test_semaphores.size());
+    FlowControlInit();
+
     client_connection_->ExecuteCommandBufferWithResources(
-        test_context_id, &test_command_buffer, test_resources.data(), test_semaphores.data());
+        shared_data.test_context_id, &shared_data.test_command_buffer,
+        shared_data.test_resources.data(), shared_data.test_semaphores.data());
     EXPECT_EQ(client_connection_->GetError(), 0);
+    FlowControlCheckOneMessage();
   }
 
   void TestGetError() {
+    FlowControlSkip();
     EXPECT_EQ(client_connection_->GetError(), 0);
-    test_complete = true;
+    shared_data.test_complete = true;
   }
 
   void TestMapUnmapBuffer() {
     auto buf = magma::PlatformBuffer::Create(1, "test");
-    test_buffer_id = buf->id();
+    shared_data.test_buffer_id = buf->id();
+    FlowControlInit();
+
     EXPECT_EQ(client_connection_->ImportBuffer(buf.get()), 0);
     EXPECT_EQ(client_connection_->MapBufferGpu(buf->id(), page_size() * 1000, 1u, 2u, 5), 0);
     EXPECT_EQ(client_connection_->UnmapBufferGpu(buf->id(), page_size() * 1000), 0);
     EXPECT_EQ(client_connection_->CommitBuffer(buf->id(), 1000, 2000), 0);
     EXPECT_EQ(client_connection_->GetError(), 0);
+    FlowControlCheck(4, buf->size());
   }
 
   void TestNotificationChannel() {
+    FlowControlSkip();
+
     constexpr uint64_t kFiveSecondsInNs = 5000000000;
     magma_status_t status = client_connection_->WaitNotificationChannel(kFiveSecondsInNs);
     ASSERT_EQ(MAGMA_STATUS_OK, status);
@@ -143,7 +276,7 @@ class TestPlatformConnection {
     connection_->ShutdownEvent()->Signal();
     connection_.reset();
     ipc_thread_.join();
-    EXPECT_TRUE(got_null_notification);
+    EXPECT_TRUE(shared_data.got_null_notification);
 
     // Poll should still terminate early.
     status = client_connection_->WaitNotificationChannel(kFiveSecondsInNs);
@@ -152,7 +285,7 @@ class TestPlatformConnection {
     status =
         client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data), &out_data_size);
     EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, status);
-    test_complete = true;
+    shared_data.test_complete = true;
   }
 
   void TestExecuteImmediateCommands() {
@@ -165,12 +298,18 @@ class TestPlatformConnection {
       commands[i].semaphore_count = 3;
       commands[i].semaphore_ids = semaphore_ids;
     }
+    FlowControlInit();
 
-    client_connection_->ExecuteImmediateCommands(test_context_id, kImmediateCommandCount, commands);
+    uint64_t messages_sent = 0;
+    client_connection_->ExecuteImmediateCommands(shared_data.test_context_id,
+                                                 kImmediateCommandCount, commands, &messages_sent);
     EXPECT_EQ(client_connection_->GetError(), 0);
+    FlowControlCheck(messages_sent, 0);
   }
 
   void TestMultipleGetError() {
+    FlowControlSkip();
+
     std::vector<std::thread> threads;
     for (uint32_t i = 0; i < 1000; i++) {
       threads.push_back(
@@ -180,15 +319,21 @@ class TestPlatformConnection {
     for (auto& thread : threads) {
       thread.join();
     }
-    test_complete = true;
+    shared_data.test_complete = true;
   }
 
   void TestEnablePerformanceCounters() {
+    FlowControlSkip();
+
     bool enabled = false;
     EXPECT_EQ(MAGMA_STATUS_OK, client_connection_->IsPerformanceCounterAccessEnabled(&enabled));
     EXPECT_FALSE(enabled);
 
-    can_access_performance_counters = true;
+    {
+      std::unique_lock<std::mutex> lock(shared_data.mutex);
+      shared_data.can_access_performance_counters = true;
+    }
+
     EXPECT_EQ(MAGMA_STATUS_OK, client_connection_->IsPerformanceCounterAccessEnabled(&enabled));
     EXPECT_TRUE(enabled);
 
@@ -199,86 +344,65 @@ class TestPlatformConnection {
               client_connection_->AccessPerformanceCounters(magma::PlatformHandle::Create(handle)));
 
     EXPECT_EQ(client_connection_->GetError(), 0);
-    EXPECT_EQ(test_access_token->GetId(), semaphore->id());
+    {
+      std::unique_lock<std::mutex> lock(shared_data.mutex);
+      EXPECT_EQ(shared_data.test_access_token->GetId(), semaphore->id());
+    }
   }
-
-  static uint64_t test_buffer_id;
-  static uint32_t test_context_id;
-  static uint64_t test_semaphore_id;
-  static bool got_null_notification;
-  static magma_status_t test_error;
-  static bool test_complete;
-  static std::unique_ptr<magma::PlatformSemaphore> test_semaphore;
-  static std::vector<magma_system_exec_resource> test_resources;
-  static std::vector<uint64_t> test_semaphores;
-  static magma_system_command_buffer test_command_buffer;
-  static std::unique_ptr<magma::PlatformHandle> test_access_token;
-  static bool can_access_performance_counters;
 
  private:
   static void IpcThreadFunc(std::shared_ptr<magma::PlatformConnection> connection) {
     magma::PlatformConnection::RunLoop(connection);
   }
 
-  std::unique_ptr<magma::PlatformConnectionClient> client_connection_;
+  std::shared_ptr<magma::PlatformConnectionClient> client_connection_;
   std::thread ipc_thread_;
   std::shared_ptr<magma::PlatformConnection> connection_;
+  magma::FlowControlChecker flow_control_checker_;
 };
-
-uint64_t TestPlatformConnection::test_buffer_id;
-uint64_t TestPlatformConnection::test_semaphore_id;
-uint32_t TestPlatformConnection::test_context_id;
-magma_status_t TestPlatformConnection::test_error;
-bool TestPlatformConnection::test_complete;
-std::unique_ptr<magma::PlatformSemaphore> TestPlatformConnection::test_semaphore;
-bool TestPlatformConnection::got_null_notification;
-std::vector<magma_system_exec_resource> TestPlatformConnection::test_resources = {
-    {.buffer_id = 10, .offset = 11, .length = 12}, {.buffer_id = 13, .offset = 14, .length = 15}};
-std::vector<uint64_t> TestPlatformConnection::test_semaphores = {{1000, 1001, 1010, 1011, 1012}};
-magma_system_command_buffer TestPlatformConnection::test_command_buffer = {
-    .num_resources = 2,
-    .wait_semaphore_count = 2,
-    .signal_semaphore_count = 3,
-};
-std::unique_ptr<magma::PlatformHandle> TestPlatformConnection::test_access_token;
-bool TestPlatformConnection::can_access_performance_counters;
 
 class TestDelegate : public magma::PlatformConnection::Delegate {
  public:
   bool ImportBuffer(uint32_t handle, uint64_t* buffer_id_out) override {
+    std::unique_lock<std::mutex> lock(shared_data.mutex);
     auto buf = magma::PlatformBuffer::Import(handle);
-    EXPECT_EQ(buf->id(), TestPlatformConnection::test_buffer_id);
-    TestPlatformConnection::test_complete = true;
+    EXPECT_EQ(buf->id(), shared_data.test_buffer_id);
+    shared_data.test_complete = true;
     return true;
   }
   bool ReleaseBuffer(uint64_t buffer_id) override {
-    EXPECT_EQ(buffer_id, TestPlatformConnection::test_buffer_id);
-    TestPlatformConnection::test_complete = true;
+    std::unique_lock<std::mutex> lock(shared_data.mutex);
+    EXPECT_EQ(buffer_id, shared_data.test_buffer_id);
+    shared_data.test_complete = true;
     return true;
   }
 
   bool ImportObject(uint32_t handle, magma::PlatformObject::Type object_type) override {
+    std::unique_lock<std::mutex> lock(shared_data.mutex);
     auto semaphore = magma::PlatformSemaphore::Import(handle);
     if (!semaphore)
       return false;
-    EXPECT_EQ(semaphore->id(), TestPlatformConnection::test_semaphore_id);
-    TestPlatformConnection::test_complete = true;
+    EXPECT_EQ(semaphore->id(), shared_data.test_semaphore_id);
+    shared_data.test_complete = true;
     return true;
   }
   bool ReleaseObject(uint64_t object_id, magma::PlatformObject::Type object_type) override {
-    EXPECT_EQ(object_id, TestPlatformConnection::test_semaphore_id);
-    TestPlatformConnection::test_complete = true;
+    std::unique_lock<std::mutex> lock(shared_data.mutex);
+    EXPECT_EQ(object_id, shared_data.test_semaphore_id);
+    shared_data.test_complete = true;
     return true;
   }
 
   bool CreateContext(uint32_t context_id) override {
-    TestPlatformConnection::test_context_id = context_id;
-    TestPlatformConnection::test_complete = true;
+    std::unique_lock<std::mutex> lock(shared_data.mutex);
+    shared_data.test_context_id = context_id;
+    shared_data.test_complete = true;
     return true;
   }
   bool DestroyContext(uint32_t context_id) override {
-    EXPECT_EQ(context_id, TestPlatformConnection::test_context_id);
-    TestPlatformConnection::test_complete = true;
+    std::unique_lock<std::mutex> lock(shared_data.mutex);
+    EXPECT_EQ(context_id, shared_data.test_context_id);
+    shared_data.test_complete = true;
     return true;
   }
 
@@ -286,22 +410,23 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
       uint32_t context_id, std::unique_ptr<magma_system_command_buffer> command_buffer,
       std::vector<magma_system_exec_resource> resources,
       std::vector<uint64_t> semaphores) override {
-    EXPECT_EQ(context_id, TestPlatformConnection::test_context_id);
-    EXPECT_EQ(0, memcmp(command_buffer.get(), &TestPlatformConnection::test_command_buffer,
+    std::unique_lock<std::mutex> lock(shared_data.mutex);
+    EXPECT_EQ(context_id, shared_data.test_context_id);
+    EXPECT_EQ(0, memcmp(command_buffer.get(), &shared_data.test_command_buffer,
                         sizeof(magma_system_command_buffer)));
-    EXPECT_EQ(0, memcmp(resources.data(), TestPlatformConnection::test_resources.data(),
-                        TestPlatformConnection::test_resources.size() *
-                            sizeof(TestPlatformConnection::test_resources[0])));
-    EXPECT_EQ(0, memcmp(semaphores.data(), TestPlatformConnection::test_semaphores.data(),
-                        TestPlatformConnection::test_semaphores.size() *
-                            sizeof(TestPlatformConnection::test_semaphores[0])));
-    TestPlatformConnection::test_complete = true;
+    EXPECT_EQ(0, memcmp(resources.data(), shared_data.test_resources.data(),
+                        shared_data.test_resources.size() * sizeof(shared_data.test_resources[0])));
+    EXPECT_EQ(0,
+              memcmp(semaphores.data(), shared_data.test_semaphores.data(),
+                     shared_data.test_semaphores.size() * sizeof(shared_data.test_semaphores[0])));
+    shared_data.test_complete = true;
     return MAGMA_STATUS_OK;
   }
 
   bool MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
                     uint64_t flags) override {
-    EXPECT_EQ(TestPlatformConnection::test_buffer_id, buffer_id);
+    std::unique_lock<std::mutex> lock(shared_data.mutex);
+    EXPECT_EQ(shared_data.test_buffer_id, buffer_id);
     EXPECT_EQ(page_size() * 1000lu, gpu_va);
     EXPECT_EQ(1u, page_offset);
     EXPECT_EQ(2u, page_count);
@@ -310,13 +435,15 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
   }
 
   bool UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) override {
-    EXPECT_EQ(TestPlatformConnection::test_buffer_id, buffer_id);
+    std::unique_lock<std::mutex> lock(shared_data.mutex);
+    EXPECT_EQ(shared_data.test_buffer_id, buffer_id);
     EXPECT_EQ(page_size() * 1000lu, gpu_va);
     return true;
   }
 
   bool CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count) override {
-    EXPECT_EQ(TestPlatformConnection::test_buffer_id, buffer_id);
+    std::unique_lock<std::mutex> lock(shared_data.mutex);
+    EXPECT_EQ(shared_data.test_buffer_id, buffer_id);
     EXPECT_EQ(1000lu, page_offset);
     EXPECT_EQ(2000lu, page_count);
     return true;
@@ -325,9 +452,10 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
   void SetNotificationCallback(msd_connection_notification_callback_t callback,
                                void* token) override {
     if (!token) {
+      std::unique_lock<std::mutex> lock(shared_data.mutex);
       // This doesn't count as test complete because it should happen in every test when the
       // server shuts down.
-      TestPlatformConnection::got_null_notification = true;
+      shared_data.got_null_notification = true;
     } else {
       uint32_t data = 5;
       msd_notification_t n = {.type = MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND};
@@ -340,6 +468,7 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
   magma::Status ExecuteImmediateCommands(uint32_t context_id, uint64_t commands_size,
                                          void* commands, uint64_t semaphore_count,
                                          uint64_t* semaphores) override {
+    std::unique_lock<std::mutex> lock(shared_data.mutex);
     EXPECT_GE(2048u, commands_size);
     uint8_t received_bytes[2048] = {};
     EXPECT_EQ(0, memcmp(received_bytes, commands, commands_size));
@@ -352,7 +481,7 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
       semaphores += 3;
     }
     immediate_commands_bytes_executed_ += commands_size;
-    TestPlatformConnection::test_complete =
+    shared_data.test_complete =
         immediate_commands_bytes_executed_ == kImmediateCommandSize * kImmediateCommandCount;
 
     // Also check thread name
@@ -362,27 +491,25 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
   }
 
   magma::Status AccessPerformanceCounters(std::unique_ptr<magma::PlatformHandle> event) override {
-    TestPlatformConnection::test_access_token = std::move(event);
-    TestPlatformConnection::test_complete = true;
+    std::unique_lock<std::mutex> lock(shared_data.mutex);
+    shared_data.test_access_token = std::move(event);
+    shared_data.test_complete = true;
     return MAGMA_STATUS_OK;
   }
+
   bool IsPerformanceCounterAccessEnabled() override {
-    return TestPlatformConnection::can_access_performance_counters;
+    std::unique_lock<std::mutex> lock(shared_data.mutex);
+    return shared_data.can_access_performance_counters;
   }
 
   uint64_t immediate_commands_bytes_executed_ = 0;
 };
 
-std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create() {
-  test_buffer_id = 0xcafecafecafecafe;
-  test_semaphore_id = ~0u;
-  test_context_id = 0xdeadbeef;
-  test_error = 0x12345678;
-  test_complete = false;
-  got_null_notification = false;
+std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create(
+    uint64_t max_inflight_messages, uint64_t max_inflight_bytes) {
   auto delegate = std::make_unique<TestDelegate>();
 
-  std::unique_ptr<magma::PlatformConnectionClient> client_connection;
+  std::shared_ptr<magma::PlatformConnectionClient> client_connection;
 #ifdef __linux__
   // Using in-process connection
   client_connection = std::make_unique<magma::LinuxPlatformConnectionClient>(delegate.get());
@@ -395,7 +522,8 @@ std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create() {
 
   if (!client_connection) {
     client_connection = magma::PlatformConnectionClient::Create(
-        connection->GetClientEndpoint(), connection->GetClientNotificationEndpoint());
+        connection->GetClientEndpoint(), connection->GetClientNotificationEndpoint(),
+        max_inflight_messages, max_inflight_bytes);
   }
 
   if (!client_connection)
@@ -483,4 +611,93 @@ TEST(PlatformConnection, EnablePerformanceCounters) {
   auto Test = TestPlatformConnection::Create();
   ASSERT_NE(Test, nullptr);
   Test->TestEnablePerformanceCounters();
+}
+
+TEST(PlatformConnection, PrimaryWrapperFlowControlWithoutBytes) {
+#ifdef __Fuchsia__
+  constexpr uint64_t kMaxMessages = 10;
+  constexpr uint64_t kMaxBytes = 10;
+  {
+    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    auto [wait, count, bytes] = wrapper.ShouldWait(0);
+    EXPECT_FALSE(wait);
+    EXPECT_EQ(1u, count);
+    EXPECT_EQ(0u, bytes);
+  }
+  {
+    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    constexpr uint64_t kStartMessages = 9;
+    wrapper.set_for_test(kStartMessages, 0);
+    auto [wait, count, bytes] = wrapper.ShouldWait(0);
+    EXPECT_FALSE(wait);
+    EXPECT_EQ(kStartMessages + 1, count);
+    EXPECT_EQ(0u, bytes);
+  }
+  {
+    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    constexpr uint64_t kStartMessages = 10;
+    wrapper.set_for_test(kStartMessages, 0);
+    auto [wait, count, bytes] = wrapper.ShouldWait(0);
+    EXPECT_TRUE(wait);
+    EXPECT_EQ(kStartMessages + 1, count);
+    EXPECT_EQ(0u, bytes);
+  }
+#else
+  GTEST_SKIP();
+#endif
+}
+
+TEST(PlatformConnection, PrimaryWrapperFlowControlWithBytes) {
+#ifdef __Fuchsia__
+  constexpr uint64_t kMaxMessages = 10;
+  constexpr uint64_t kMaxBytes = 10;
+  {
+    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    constexpr uint64_t kNewBytes = 5;
+    auto [wait, count, bytes] = wrapper.ShouldWait(kNewBytes);
+    EXPECT_FALSE(wait);
+    EXPECT_EQ(1u, count);
+    EXPECT_EQ(kNewBytes, bytes);
+  }
+  {
+    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    constexpr uint64_t kNewBytes = 15;
+    auto [wait, count, bytes] = wrapper.ShouldWait(kNewBytes);
+    EXPECT_FALSE(wait);  // Limit exceeded ok, we can pass a single message of any size
+    EXPECT_EQ(1u, count);
+    EXPECT_EQ(kNewBytes, bytes);
+  }
+  {
+    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    constexpr uint64_t kStartBytes = 4;
+    constexpr uint64_t kNewBytes = 10;
+    wrapper.set_for_test(0, kStartBytes);
+    auto [wait, count, bytes] = wrapper.ShouldWait(kNewBytes);
+    EXPECT_FALSE(wait);  // Limit exceeded ok, we're at less than half byte limit
+    EXPECT_EQ(1u, count);
+    EXPECT_EQ(kStartBytes + kNewBytes, bytes);
+  }
+  {
+    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    constexpr uint64_t kStartBytes = 5;
+    constexpr uint64_t kNewBytes = 5;
+    wrapper.set_for_test(0, 5);
+    auto [wait, count, bytes] = wrapper.ShouldWait(kNewBytes);
+    EXPECT_FALSE(wait);
+    EXPECT_EQ(1u, count);
+    EXPECT_EQ(kStartBytes + kNewBytes, bytes);
+  }
+  {
+    magma::PrimaryWrapper wrapper(zx::channel(ZX_HANDLE_INVALID), kMaxMessages, kMaxBytes);
+    constexpr uint64_t kStartBytes = 5;
+    constexpr uint64_t kNewBytes = 6;
+    wrapper.set_for_test(0, kStartBytes);
+    auto [wait, count, bytes] = wrapper.ShouldWait(kNewBytes);
+    EXPECT_TRUE(wait);
+    EXPECT_EQ(1u, count);
+    EXPECT_EQ(kStartBytes + kNewBytes, bytes);
+  }
+#else
+  GTEST_SKIP();
+#endif
 }

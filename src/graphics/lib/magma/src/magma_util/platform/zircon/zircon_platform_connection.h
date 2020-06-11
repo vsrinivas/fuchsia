@@ -143,10 +143,17 @@ class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Int
   void IsPerformanceCounterAccessEnabled(
       IsPerformanceCounterAccessEnabledCompleter::Sync completer) override;
 
+  void EnableFlowControl(EnableFlowControlCompleter::Sync _completer) override;
+
+  std::pair<uint64_t, uint64_t> GetFlowControlCounts() override {
+    return {messages_consumed_, bytes_imported_};
+  }
+
   void SetError(magma_status_t error) {
     if (!error_)
       error_ = DRET_MSG(error, "ZirconPlatformConnection encountered dispatcher error");
   }
+  void FlowControl(uint64_t size = 0);
 
   std::unique_ptr<Delegate> delegate_;
   zx::channel client_endpoint_;
@@ -155,6 +162,14 @@ class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Int
   zx::channel client_notification_endpoint_;
   async::Loop async_loop_;
   AsyncWait async_wait_shutdown_;
+
+  // Flow control
+  bool flow_control_enabled_ = false;
+  zx_handle_t server_endpoint_unowned_;
+  uint64_t messages_consumed_ = 0;
+  uint64_t bytes_imported_ = 0;
+
+  friend class FlowControlChecker;
 };
 
 }  // namespace magma

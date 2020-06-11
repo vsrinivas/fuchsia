@@ -20,6 +20,8 @@ extern "C" {
 #define MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED 2
 #define MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED 3
 #define MAGMA_QUERY_MINIMUM_MAPPABLE_ADDRESS 4
+/// Upper 32bits: max inflight messages, lower 32bits: max inflight memory (MB)
+#define MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS 5
 
 // All vendor-specific queries IDs that can be passed to magma_query must be >=
 // MAGMA_QUERY_VENDOR_PARAM_0.

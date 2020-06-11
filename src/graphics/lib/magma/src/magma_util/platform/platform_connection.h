@@ -23,6 +23,12 @@ namespace magma {
 
 class PlatformConnection {
  public:
+  // Allows for the temporary limit of 3500 messages in the channel,
+  // and also constrains the maximum amount of IPC memory.
+  static constexpr uint32_t kMaxInflightMessages = 1000;
+  static constexpr uint32_t kMaxInflightMemoryMB = 100;
+  static constexpr uint32_t kMaxInflightBytes = kMaxInflightMemoryMB * 1024 * 1024;
+
   class Delegate {
    public:
     virtual ~Delegate() {}
@@ -75,6 +81,9 @@ class PlatformConnection {
   // handles a single request, returns false if anything has put it into an illegal state
   // or if the remote has closed
   virtual bool HandleRequest() = 0;
+
+  // Returns: messages consumed, bytes imported
+  virtual std::pair<uint64_t, uint64_t> GetFlowControlCounts() = 0;
 
   std::shared_ptr<magma::PlatformEvent> ShutdownEvent() { return shutdown_event_; }
 

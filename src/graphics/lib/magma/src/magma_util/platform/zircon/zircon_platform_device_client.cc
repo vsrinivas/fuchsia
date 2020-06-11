@@ -21,7 +21,18 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
                                         &device_handle, &device_notification_handle);
     if (status != ZX_OK)
       return DRETP(nullptr, "magma_DeviceConnect failed: %d", status);
-    return magma::PlatformConnectionClient::Create(device_handle, device_notification_handle);
+
+    uint64_t value = 0;
+
+#if defined(__x86_64__)  // TODO(fxb/12989) - enable for ARM platforms
+    if (!Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, &value))
+      return DRETP(nullptr, "Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS) failed");
+#endif
+
+    uint64_t max_inflight_messages = magma::upper_32_bits(value);
+    uint64_t max_inflight_bytes = magma::lower_32_bits(value) * 1024 * 1024;
+    return magma::PlatformConnectionClient::Create(device_handle, device_notification_handle,
+                                                   max_inflight_messages, max_inflight_bytes);
   }
 
   bool Query(uint64_t query_id, uint64_t* result_out) {

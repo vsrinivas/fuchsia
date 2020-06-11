@@ -14,6 +14,9 @@ bool ZirconPlatformConnection::Bind(zx::channel server_endpoint) {
         static_cast<ZirconPlatformConnection*>(interface)->async_loop()->Quit();
       };
 
+  // TODO(fxb/48671): don't store an unowned handle
+  server_endpoint_unowned_ = server_endpoint.get();
+
   llcpp::fuchsia::gpu::magma::Primary::Interface* interface = this;
   zx_status_t status = fidl::Bind(async_loop()->dispatcher(), std::move(server_endpoint), interface,
                                   std::move(channel_closed_callback));
@@ -77,18 +80,55 @@ bool ZirconPlatformConnection::AsyncTaskHandler(async_dispatcher_t* dispatcher, 
   return DRETF(false, "Unhandled notification type: %d", task->notification.type);
 }
 
+void ZirconPlatformConnection::EnableFlowControl(EnableFlowControlCompleter::Sync _completer) {
+  flow_control_enabled_ = true;
+}
+
+void ZirconPlatformConnection::FlowControl(uint64_t size) {
+  if (!flow_control_enabled_)
+    return;
+
+  messages_consumed_ += 1;
+  bytes_imported_ += size;
+
+  if (messages_consumed_ >= kMaxInflightMessages / 2) {
+    zx_status_t status = llcpp::fuchsia::gpu::magma::Primary::SendOnNotifyMessagesConsumedEvent(
+        zx::unowned_channel(server_endpoint_unowned_), messages_consumed_);
+    if (status == ZX_OK) {
+      messages_consumed_ = 0;
+    } else if (status != ZX_ERR_PEER_CLOSED) {
+      DMESSAGE("SendOnNotifyMessagesConsumedEvent failed: %d", status);
+    }
+  }
+
+  if (bytes_imported_ >= kMaxInflightBytes / 2) {
+    zx_status_t status = llcpp::fuchsia::gpu::magma::Primary::SendOnNotifyMemoryImportedEvent(
+        zx::unowned_channel(server_endpoint_unowned_), bytes_imported_);
+    if (status == ZX_OK) {
+      bytes_imported_ = 0;
+    } else if (status != ZX_ERR_PEER_CLOSED) {
+      DMESSAGE("SendOnNotifyMemoryImportedEvent failed: %d", status);
+    }
+  }
+}
+
 void ZirconPlatformConnection::ImportBuffer(::zx::vmo buffer,
                                             ImportBufferCompleter::Sync _completer) {
   DLOG("ZirconPlatformConnection - ImportBuffer");
+  uint64_t size = 0;
+  buffer.get_size(&size);
+  FlowControl(size);
+
   uint64_t buffer_id;
-  if (!delegate_->ImportBuffer(buffer.release(), &buffer_id)) {
+  if (!delegate_->ImportBuffer(buffer.release(), &buffer_id))
     SetError(MAGMA_STATUS_INVALID_ARGS);
-  }
 }
 
 void ZirconPlatformConnection::ReleaseBuffer(uint64_t buffer_id,
                                              ReleaseBufferCompleter::Sync _completer) {
   DLOG("ZirconPlatformConnection: ReleaseBuffer");
+  FlowControl();
+
   if (!delegate_->ReleaseBuffer(buffer_id))
     SetError(MAGMA_STATUS_INVALID_ARGS);
 }
@@ -96,6 +136,8 @@ void ZirconPlatformConnection::ReleaseBuffer(uint64_t buffer_id,
 void ZirconPlatformConnection::ImportObject(zx::handle handle, uint32_t object_type,
                                             ImportObjectCompleter::Sync _completer) {
   DLOG("ZirconPlatformConnection: ImportObject");
+  FlowControl();
+
   if (!delegate_->ImportObject(handle.release(), static_cast<PlatformObject::Type>(object_type)))
     SetError(MAGMA_STATUS_INVALID_ARGS);
 }
@@ -103,6 +145,8 @@ void ZirconPlatformConnection::ImportObject(zx::handle handle, uint32_t object_t
 void ZirconPlatformConnection::ReleaseObject(uint64_t object_id, uint32_t object_type,
                                              ReleaseObjectCompleter::Sync _completer) {
   DLOG("ZirconPlatformConnection: ReleaseObject");
+  FlowControl();
+
   if (!delegate_->ReleaseObject(object_id, static_cast<PlatformObject::Type>(object_type)))
     SetError(MAGMA_STATUS_INVALID_ARGS);
 }
@@ -110,6 +154,8 @@ void ZirconPlatformConnection::ReleaseObject(uint64_t object_id, uint32_t object
 void ZirconPlatformConnection::CreateContext(uint32_t context_id,
                                              CreateContextCompleter::Sync _completer) {
   DLOG("ZirconPlatformConnection: CreateContext");
+  FlowControl();
+
   if (!delegate_->CreateContext(context_id))
     SetError(MAGMA_STATUS_INTERNAL_ERROR);
 }
@@ -117,6 +163,8 @@ void ZirconPlatformConnection::CreateContext(uint32_t context_id,
 void ZirconPlatformConnection::DestroyContext(uint32_t context_id,
                                               DestroyContextCompleter::Sync _completer) {
   DLOG("ZirconPlatformConnection: DestroyContext");
+  FlowControl();
+
   if (!delegate_->DestroyContext(context_id))
     SetError(MAGMA_STATUS_INTERNAL_ERROR);
 }
@@ -126,6 +174,8 @@ void ZirconPlatformConnection::ExecuteCommandBufferWithResources(
     ::fidl::VectorView<llcpp::fuchsia::gpu::magma::Resource> fidl_resources,
     ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores,
     ExecuteCommandBufferWithResourcesCompleter::Sync _completer) {
+  FlowControl();
+
   auto command_buffer = std::make_unique<magma_system_command_buffer>();
   *command_buffer = {
       .batch_buffer_resource_index = fidl_command_buffer.batch_buffer_resource_index,
@@ -169,6 +219,8 @@ void ZirconPlatformConnection::ExecuteImmediateCommands(
     ::fidl::VectorView<uint64_t> semaphore_vec,
     ExecuteImmediateCommandsCompleter::Sync _completer) {
   DLOG("ZirconPlatformConnection: ExecuteImmediateCommands");
+  FlowControl();
+
   magma::Status status = delegate_->ExecuteImmediateCommands(
       context_id, command_data_vec.count(), command_data_vec.mutable_data(), semaphore_vec.count(),
       semaphore_vec.mutable_data());
@@ -188,6 +240,8 @@ void ZirconPlatformConnection::MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
                                             uint64_t flags,
                                             MapBufferGpuCompleter::Sync _completer) {
   DLOG("ZirconPlatformConnection: MapBufferGpuFIDL");
+  FlowControl();
+
   if (!delegate_->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, flags))
     SetError(MAGMA_STATUS_INVALID_ARGS);
 }
@@ -195,6 +249,8 @@ void ZirconPlatformConnection::MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
 void ZirconPlatformConnection::UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
                                               UnmapBufferGpuCompleter::Sync _completer) {
   DLOG("ZirconPlatformConnection: UnmapBufferGpuFIDL");
+  FlowControl();
+
   if (!delegate_->UnmapBufferGpu(buffer_id, gpu_va))
     SetError(MAGMA_STATUS_INVALID_ARGS);
 }
@@ -203,6 +259,8 @@ void ZirconPlatformConnection::CommitBuffer(uint64_t buffer_id, uint64_t page_of
                                             uint64_t page_count,
                                             CommitBufferCompleter::Sync _completer) {
   DLOG("ZirconPlatformConnection: CommitBufferFIDL");
+  FlowControl();
+
   if (!delegate_->CommitBuffer(buffer_id, page_offset, page_count))
     SetError(MAGMA_STATUS_INVALID_ARGS);
 }
@@ -210,6 +268,8 @@ void ZirconPlatformConnection::CommitBuffer(uint64_t buffer_id, uint64_t page_of
 void ZirconPlatformConnection::AccessPerformanceCounters(
     zx::event event, AccessPerformanceCountersCompleter::Sync completer) {
   DLOG("ZirconPlatformConnection:::AccessPerformanceCounters");
+  FlowControl();
+
   magma::Status status =
       delegate_->AccessPerformanceCounters(magma::PlatformHandle::Create(event.release()));
   if (!status) {

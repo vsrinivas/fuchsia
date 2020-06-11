@@ -144,9 +144,12 @@ source_set("device") {
 source_set("connection_client") {
   configs += [ "..:platform_include_config" ]
 
-  sources = [ "zircon_platform_connection_client.cc" ]
+  sources = [
+    "zircon_platform_connection_client.cc",
+    "zircon_platform_connection_client.h",
+  ]
 
-  deps = [
+  public_deps = [
     ":handle",
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util:macros",

@@ -32,3 +32,13 @@ TEST(MagmaSystemDevice, GetDeviceId) {
   EXPECT_TRUE(device->Query(MAGMA_QUERY_DEVICE_ID, &value));
   EXPECT_EQ(value, test_id);
 }
+
+TEST(MagmaSystemDevice, MaximumInflightMessages) {
+  auto msd_dev = new MsdMockDevice_GetDeviceId(0 /* device_id*/);
+  auto device = MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev));
+
+  uint64_t value;
+  EXPECT_TRUE(device->Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, &value));
+  EXPECT_EQ(1000u, value >> 32);
+  EXPECT_EQ(100u, static_cast<uint32_t>(value));
+}

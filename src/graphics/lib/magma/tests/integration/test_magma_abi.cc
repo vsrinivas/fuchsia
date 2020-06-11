@@ -746,7 +746,7 @@ class TestConnection {
     // We don't care about the value of |is_supported|, just that the query returns ok.
   }
 
-  #if defined(__Fuchsia__)
+#if defined(__Fuchsia__)
   void CheckAccessWithInvalidToken(magma_status_t expected_result) {
     FakePerfCountAccessServer server;
     async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
@@ -761,8 +761,8 @@ class TestConnection {
     EXPECT_EQ(expected_result,
               magma_connection_access_performance_counters(connection_, client_endpoint.release()));
   }
-  #endif
-  
+#endif
+
   void EnablePerformanceCounters() {
 #if !defined(__Fuchsia__)
     GTEST_SKIP();
@@ -962,6 +962,25 @@ TEST(MagmaAbi, ExecuteCommandBufferWithResources) {
 
 TEST(MagmaAbi, ExecuteCommandBufferNoResources) {
   TestConnectionWithContext().ExecuteCommandBufferNoResources();
+}
+
+TEST(MagmaAbi, FlowControl) {
+#if !defined(__x86_64__)  // TODO(fxb/12989) - enable for ARM platforms
+  GTEST_SKIP();
+#endif
+
+  if (TestConnection::is_virtmagma())
+    GTEST_SKIP();
+
+  // Each call to Buffer is 2 messages.
+  // Without flow control, this will trigger a policy exception (too many channel messages)
+  // or an OOM.
+  constexpr uint32_t kIterations = 10000 / 2;
+
+  TestConnection test_connection;
+  for (uint32_t i = 0; i < kIterations; i++) {
+    test_connection.Buffer();
+  }
 }
 
 TEST(MagmaAbiPerf, ExecuteCommandBufferWithResources) {

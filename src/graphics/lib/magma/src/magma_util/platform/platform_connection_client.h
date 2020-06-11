@@ -22,7 +22,9 @@ class PlatformConnectionClient : public magma_connection {
   virtual ~PlatformConnectionClient() {}
 
   static std::unique_ptr<PlatformConnectionClient> Create(uint32_t device_handle,
-                                                          uint32_t device_notification_handle);
+                                                          uint32_t device_notification_handle,
+                                                          uint64_t max_inflight_messages,
+                                                          uint64_t max_inflight_bytes);
 
   // Imports a buffer for use in the system driver
   virtual magma_status_t ImportBuffer(PlatformBuffer* buffer) = 0;
@@ -60,7 +62,9 @@ class PlatformConnectionClient : public magma_connection {
                                                  magma_system_exec_resource* resources,
                                                  uint64_t* semaphores) = 0;
   virtual void ExecuteImmediateCommands(uint32_t context_id, uint64_t command_count,
-                                        magma_inline_command_buffer* command_buffers) = 0;
+                                        magma_inline_command_buffer* command_buffers,
+                                        uint64_t* messages_sent_out) = 0;
+
   virtual magma_status_t AccessPerformanceCounters(
       std::unique_ptr<magma::PlatformHandle> handle) = 0;
   virtual magma_status_t IsPerformanceCounterAccessEnabled(bool* enabled_out) = 0;
@@ -74,6 +78,9 @@ class PlatformConnectionClient : public magma_connection {
     DASSERT(connection->magic_ == kMagic);
     return static_cast<PlatformConnectionClient*>(connection);
   }
+
+  // Returns: inflight messages, inflight memory
+  virtual std::pair<uint64_t, uint64_t> GetFlowControlCounts() = 0;
 
  protected:
   PlatformConnectionClient() { magic_ = kMagic; }

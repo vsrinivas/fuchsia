@@ -77,3 +77,14 @@ void MagmaSystemDevice::Shutdown() {
 
   (void)elapsed;
 }
+
+magma::Status MagmaSystemDevice::Query(uint32_t id, uint64_t* value_out) {
+  switch (id) {
+    case MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS:
+      *value_out = magma::PlatformConnection::kMaxInflightMessages;
+      *value_out <<= 32;
+      *value_out |= magma::PlatformConnection::kMaxInflightMemoryMB;
+      return MAGMA_STATUS_OK;
+  }
+  return msd_device_query(msd_dev(), id, value_out);
+}

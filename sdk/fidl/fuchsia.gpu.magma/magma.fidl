@@ -6,6 +6,16 @@ library fuchsia.gpu.magma;
 
 using zx;
 
+enum QueryId {
+    VENDOR_ID = 0;
+    DEVICE_ID = 1;
+    IS_TEST_RESTART_SUPPORTED = 2;
+    IS_TOTAL_TIME_SUPPORTED = 3;
+    MINIMUM_MAPPABLE_ADDRESS = 4;
+    /// Upper 32bits: max inflight messages, lower 32bits: max inflight memory (MB)
+    MAXIMUM_INFLIGHT_PARAMS = 5;
+};
+
 [ForDeprecatedCBindings]
 protocol Device {
     /// Get a parameter.
@@ -97,6 +107,27 @@ protocol Primary {
 
     /// Returns true if any AccessPerformanceCounters message has succeeded.
     IsPerformanceCounterAccessEnabled() -> (bool enabled);
+
+    /// Enables the events OnNotifyMessagesConsumed and OnNotifyMemoryImported.
+    EnableFlowControl();
+
+    /// Indicates the given number of messages were consumed by the server.
+    /// The caller should limit the number of inflight messages:
+    /// (messages sent - server consumed) <= Max (see QueryId::MAXIMUM_INFLIGHT_PARAMS).
+    /// Messages are actually consumed by the server as quickly as possible, however this event
+    /// is sent by the server only when the consumed count reaches half the maximum.
+    -> OnNotifyMessagesConsumed(uint64 count);
+
+    /// Indicates the given number of buffer memory bytes were imported by the server.
+    /// The caller should limit the amount of memory from inflight ImportBuffer messages:
+    /// (bytes sent - server imported) <= Max (see QueryId::MAXIMUM_INFLIGHT_PARAMS).
+    /// This is a soft limit designed to prevent excessive memory consumption, but for large
+    /// messages the client may exceed the limit.
+    /// Memory is imported by the server as quickly as possible, however this event
+    /// is sent only when the consumed byte count reaches half the maximum; therefore,
+    /// if the client's count of inflight bytes is less than max/2, the client should send the
+    /// ImportBuffer message regardless of its size.
+    -> OnNotifyMemoryImported(uint64 bytes);
 };
 
 /// This protocol is implemented by ZX_PROTOCOL_GPU_PERFORMANCE_COUNTERS devices.
