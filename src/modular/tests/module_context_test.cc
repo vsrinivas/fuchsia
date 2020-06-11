@@ -71,63 +71,10 @@ class TestModule : public modular_testing::FakeModule {
   }
 };
 
-// Test that ModuleContext.AddModuleToStory() starts child modules and that
-// calling it multiple times for the same child has different behavior if the
-// Intent specifies the same handler, versus if it specifies a different
-// handler.
-TEST_F(ModuleContextTest, AddModuleToStory) {
-  modular_testing::TestHarnessBuilder builder;
-
-  TestModule parent_module("parent_module");
-  TestModule child_module1("child_module1");
-  TestModule child_module2("child_module2");
-  builder.InterceptComponent(parent_module.BuildInterceptOptions());
-  builder.InterceptComponent(child_module1.BuildInterceptOptions());
-  builder.InterceptComponent(child_module2.BuildInterceptOptions());
-
-  StartSession(std::move(builder));
-  modular_testing::AddModToStory(test_harness(), "storyname", "modname",
-                                 {.action = "action", .handler = parent_module.url()});
-  RunLoopUntil([&] { return parent_module.is_running(); });
-
-  // Add a single child module.
-  parent_module.module_context()->AddModuleToStory(
-      "childmodname", {.action = "action", .handler = child_module1.url()},
-      child_module1.controller.NewRequest(),
-      /*surface_relation=*/nullptr, [&](fuchsia::modular::StartModuleStatus status) {
-        ASSERT_EQ(status, fuchsia::modular::StartModuleStatus::SUCCESS);
-      });
-  RunLoopUntil([&] { return child_module1.is_running(); });
-
-  // Add the same module again but with a different Intent action.
-  bool child_module1_destroyed{false};
-  child_module1.on_destroy = [&] { child_module1_destroyed = true; };
-  parent_module.module_context()->AddModuleToStory(
-      "childmodname", {.action = "action2", .handler = child_module1.url()},
-      child_module1.controller.NewRequest(),
-      /*surface_relation=*/nullptr, [&](fuchsia::modular::StartModuleStatus status) {
-        ASSERT_EQ(status, fuchsia::modular::StartModuleStatus::SUCCESS);
-      });
-  RunLoopUntil([&] { return child_module1.is_running(); });
-  // At no time should the child module have been destroyed.
-  EXPECT_EQ(child_module1_destroyed, false);
-
-  // This time change the handler. Expect the first module to be shut down,
-  // and the second to run in its place.
-  parent_module.module_context()->AddModuleToStory(
-      "childmodname", {.action = "action", .handler = child_module2.url()},
-      child_module2.controller.NewRequest(),
-      /*surface_relation=*/nullptr, [&](fuchsia::modular::StartModuleStatus status) {
-        ASSERT_EQ(status, fuchsia::modular::StartModuleStatus::SUCCESS);
-      });
-  RunLoopUntil([&] { return child_module2.is_running(); });
-  EXPECT_FALSE(child_module1.is_running());
-}
-
 class TestStoryWatcher : fuchsia::modular::StoryWatcher {
  public:
-  TestStoryWatcher(fit::function<void(fuchsia::modular::StoryState)> on_state_change) : binding_(this), on_state_change_(std::move(on_state_change))
-   {}
+  TestStoryWatcher(fit::function<void(fuchsia::modular::StoryState)> on_state_change)
+      : binding_(this), on_state_change_(std::move(on_state_change)) {}
   ~TestStoryWatcher() override = default;
 
   // Registers itself as a watcher on the given story. Only one story at a time
@@ -138,9 +85,7 @@ class TestStoryWatcher : fuchsia::modular::StoryWatcher {
 
  private:
   // |fuchsia::modular::StoryWatcher|
-  void OnStateChange(fuchsia::modular::StoryState state) override {
-    on_state_change_(state);
-  }
+  void OnStateChange(fuchsia::modular::StoryState state) override { on_state_change_(state); }
   void OnModuleAdded(fuchsia::modular::ModuleData /*module_data*/) override {}
   void OnModuleFocused(std::vector<std::string> /*module_path*/) override {}
 
@@ -153,7 +98,7 @@ class TestStoryWatcher : fuchsia::modular::StoryWatcher {
 // story (if the story is restarted, it is not relaunched).
 TEST_F(ModuleContextTest, RemoveSelfFromStory) {
   TestModule module1("module1");
-  
+
   modular_testing::TestHarnessBuilder builder;
   builder.InterceptComponent(module1.BuildInterceptOptions());
 

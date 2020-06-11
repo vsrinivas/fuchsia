@@ -24,9 +24,9 @@ ModuleContextImpl::ModuleContextImpl(
     : module_data_(module_data),
       story_controller_impl_(info.story_controller_impl),
       session_environment_(info.session_environment),
-      component_context_impl_(
-          info.component_context_info,
-          EncodeModulePath(module_data_->module_path()), module_data_->module_url()) {
+      component_context_impl_(info.component_context_info,
+                              EncodeModulePath(module_data_->module_path()),
+                              module_data_->module_url()) {
   info.component_context_info.agent_runner->PublishAgentServices(
       component_context_impl_.component_instance_id(), &service_provider_impl_);
   service_provider_impl_.AddService<fuchsia::modular::ComponentContext>(
@@ -51,36 +51,6 @@ ModuleContextImpl::ModuleContextImpl(
 }
 
 ModuleContextImpl::~ModuleContextImpl() {}
-
-void ModuleContextImpl::EmbedModule(
-    std::string name, fuchsia::modular::Intent intent,
-    fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller,
-    fuchsia::ui::views::ViewToken view_token, EmbedModuleCallback callback) {
-  AddModParams params;
-  params.parent_mod_path = module_data_->module_path();
-  params.mod_name = name;
-  params.intent = std::move(intent);
-  params.module_source = fuchsia::modular::ModuleSource::INTERNAL;
-  params.surface_relation = nullptr;
-  params.is_embedded = true;
-  story_controller_impl_->EmbedModule(std::move(params), std::move(module_controller),
-                                      std::move(view_token), std::move(callback));
-}
-
-void ModuleContextImpl::AddModuleToStory(
-    std::string name, fuchsia::modular::Intent intent,
-    fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller,
-    fuchsia::modular::SurfaceRelationPtr surface_relation, AddModuleToStoryCallback callback) {
-  AddModParams params;
-  params.parent_mod_path = module_data_->module_path();
-  params.mod_name = name;
-  params.intent = std::move(intent);
-  params.module_source = fuchsia::modular::ModuleSource::INTERNAL;
-  params.surface_relation = std::move(surface_relation);
-  params.is_embedded = false;
-  story_controller_impl_->AddModuleToStory(std::move(params), std::move(module_controller),
-                                           std::move(callback));
-}
 
 void ModuleContextImpl::RemoveSelfFromStory() {
   story_controller_impl_->RemoveModuleFromStory(module_data_->module_path());

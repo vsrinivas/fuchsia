@@ -34,18 +34,6 @@ class IntentsTest : public modular_testing::TestHarnessFixture {
     return intent;
   }
 
-  // Starts a second module by calling AddModuleToStory() using the
-  // ModuleContext of the original module. The intent is expected to be handled
-  // by the original module if the modules' intent handlers match.
-  void AddModuleToStory(fuchsia::modular::ModuleContext* const module_context,
-                        fuchsia::modular::Intent intent,
-                        fidl::InterfaceRequest<fuchsia::modular::ModuleController> request,
-                        bool* started) {
-    module_context->AddModuleToStory(
-        kModuleName, std::move(intent), std::move(request), nullptr,
-        [started](const fuchsia::modular::StartModuleStatus) mutable { *started = true; });
-  }
-
   modular_testing::FakeModule test_module_;
   modular_testing::TestHarnessBuilder builder_;
 };

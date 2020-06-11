@@ -235,9 +235,8 @@ class StoryControllerImpl::TeardownModuleCall : public Operation<> {
     future->Then([this, flow] {
       auto* const running_mod_info = story_controller_impl_->FindRunningModInfo(module_path_);
       FX_CHECK(running_mod_info != nullptr) << ModulePathToSurfaceID(module_path_);
-      running_mod_info->module_controller_impl->Teardown([flow, this] {
-        story_controller_impl_->EraseRunningModInfo(module_path_);
-      });
+      running_mod_info->module_controller_impl->Teardown(
+          [flow, this] { story_controller_impl_->EraseRunningModInfo(module_path_); });
     });
   }
 
@@ -736,7 +735,7 @@ class StoryControllerImpl::DefocusCall : public Operation<> {
 // An operation that first performs module resolution with the provided
 // fuchsia::modular::Intent and subsequently starts the most appropriate
 // resolved module in the story shell.
-class StoryControllerImpl::AddIntentCall : public Operation<fuchsia::modular::StartModuleStatus> {
+class StoryControllerImpl::AddIntentCall : public Operation<> {
  public:
   AddIntentCall(
       StoryControllerImpl* const story_controller_impl, AddModParams add_mod_params,
@@ -750,13 +749,12 @@ class StoryControllerImpl::AddIntentCall : public Operation<fuchsia::modular::St
 
  private:
   void Run() override {
-    FlowToken flow{this, &start_module_status_};
+    FlowToken flow{this};
     AddAddModOperation(
         &operation_queue_, story_controller_impl_->story_storage_, std::move(add_mod_params_),
         [this, flow](fuchsia::modular::ExecuteResult result,
                      fuchsia::modular::ModuleData module_data) {
           if (result.status == fuchsia::modular::ExecuteStatus::NO_MODULES_FOUND) {
-            start_module_status_ = fuchsia::modular::StartModuleStatus::NO_MODULES_FOUND;
             return;
           }
           if (result.status != fuchsia::modular::ExecuteStatus::OK) {
@@ -793,8 +791,6 @@ class StoryControllerImpl::AddIntentCall : public Operation<fuchsia::modular::St
             }));
       }
     }
-
-    start_module_status_ = fuchsia::modular::StartModuleStatus::SUCCESS;
   }
 
   OperationQueue operation_queue_;
@@ -808,9 +804,6 @@ class StoryControllerImpl::AddIntentCall : public Operation<fuchsia::modular::St
 
   // Created by AddModuleFromResult, and ultimately written to story state.
   fuchsia::modular::ModuleData module_data_;
-
-  fuchsia::modular::StartModuleStatus start_module_status_{
-      fuchsia::modular::StartModuleStatus::NO_MODULES_FOUND};
 };
 
 class StoryControllerImpl::StartCall : public Operation<> {
@@ -925,25 +918,6 @@ void StoryControllerImpl::DeleteModule(const std::vector<std::string>& module_pa
 }
 
 fidl::StringPtr StoryControllerImpl::GetStoryId() const { return story_observer_->model().name(); }
-
-void StoryControllerImpl::EmbedModule(
-    AddModParams add_mod_params,
-    fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller_request,
-    fuchsia::ui::views::ViewToken view_token,
-    fit::function<void(fuchsia::modular::StartModuleStatus)> callback) {
-  operation_queue_.Add(std::make_unique<AddIntentCall>(this, std::move(add_mod_params),
-                                                       std::move(module_controller_request),
-                                                       std::move(view_token), std::move(callback)));
-}
-
-void StoryControllerImpl::AddModuleToStory(
-    AddModParams add_mod_params,
-    fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller_request,
-    fit::function<void(fuchsia::modular::StartModuleStatus)> callback) {
-  operation_queue_.Add(std::make_unique<AddIntentCall>(
-      this, std::move(add_mod_params), std::move(module_controller_request),
-      /*view_token=*/std::nullopt, std::move(callback)));
-}
 
 void StoryControllerImpl::ProcessPendingStoryShellViews() {
   // NOTE(mesch): As it stands, this machinery to send modules in traversal

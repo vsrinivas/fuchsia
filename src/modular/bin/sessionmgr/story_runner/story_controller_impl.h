@@ -80,19 +80,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // Called by ModuleContextImpl.
   fidl::StringPtr GetStoryId() const;
 
-  // Called by ModuleContextImpl.
-  void EmbedModule(
-      AddModParams add_mod_params,
-      fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller_request,
-      fuchsia::ui::views::ViewToken view_token,
-      fit::function<void(fuchsia::modular::StartModuleStatus)> callback);
-
-  // Called by ModuleContextImpl.
-  void AddModuleToStory(
-      AddModParams add_mod_params,
-      fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller_request,
-      fit::function<void(fuchsia::modular::StartModuleStatus)> callback);
-
   // Stops the module at |module_path| in response to a call to
   // |ModuleContext.RemoveSelfFromStory|.
   void RemoveModuleFromStory(const std::vector<std::string>& module_path);

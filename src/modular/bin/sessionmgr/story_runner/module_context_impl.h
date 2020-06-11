@@ -48,18 +48,6 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
 
  private:
   // |fuchsia::modular::ModuleContext|
-  void EmbedModule(std::string name, fuchsia::modular::Intent intent,
-                   fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller,
-                   fuchsia::ui::views::ViewToken view_token, EmbedModuleCallback callback) override;
-
-  // |fuchsia::modular::ModuleContext|
-  void AddModuleToStory(
-      std::string name, fuchsia::modular::Intent intent,
-      fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller,
-      fuchsia::modular::SurfaceRelationPtr surface_relation,
-      AddModuleToStoryCallback callback) override;
-
-  // |fuchsia::modular::ModuleContext|
   void RemoveSelfFromStory() override;
 
   // Identifies the module by its path, holds the URL of the running module, and
