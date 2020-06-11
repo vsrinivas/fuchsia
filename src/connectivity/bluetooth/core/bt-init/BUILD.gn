@@ -35,8 +35,11 @@ rustc_binary("bin") {
 package("bt-init") {
   deps = [ ":bin" ]
 
-  binary = "bt_init"
-
+  binaries = [
+    {
+      name = "bt_init"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/bt-init.cmx")

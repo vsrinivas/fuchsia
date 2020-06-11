@@ -36,8 +36,12 @@ rustc_binary("bin") {
 package("overnet-echo") {
   deps = [ ":bin" ]
 
-  binary = "overnet_echo"
-
+  binaries = [
+    {
+      name = "overnet_echo"
+      dest = "overnet_example"
+    },
+  ]
   meta = [
     {
       path = rebase_path("../meta/overnet_example.cmx")

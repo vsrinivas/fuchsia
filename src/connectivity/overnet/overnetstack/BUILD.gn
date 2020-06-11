@@ -33,8 +33,11 @@ rustc_binary("bin") {
 package("overnetstack") {
   deps = [ ":bin" ]
 
-  binary = "overnetstack"
-
+  binaries = [
+    {
+      name = "overnetstack"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/overnetstack.cmx")
@@ -64,8 +67,11 @@ package("overnetstack") {
 package("overnetstack-with-udp") {
   deps = [ ":bin" ]
 
-  binary = "overnetstack"
-
+  binaries = [
+    {
+      name = "overnetstack"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/overnetstack-with-udp.cmx")

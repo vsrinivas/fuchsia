@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/wlan_ap_smoke_test"
     },
     "sandbox": {
         "services": [

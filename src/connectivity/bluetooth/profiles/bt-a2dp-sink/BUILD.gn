@@ -74,8 +74,11 @@ package("bt-a2dp-sink") {
     ":bt_a2dp_sink_metrics",
   ]
 
-  binary = "bt_a2dp_sink"
-
+  binaries = [
+    {
+      name = "bt_a2dp_sink"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/bt-a2dp-sink.cmx")

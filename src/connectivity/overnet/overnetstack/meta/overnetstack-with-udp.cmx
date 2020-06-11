@@ -5,7 +5,7 @@
             "--mdns-connect",
             "--mdns-publish"
         ],
-        "binary": "bin/app"
+        "binary": "bin/overnetstack"
     },
     "sandbox": {
         "services": [

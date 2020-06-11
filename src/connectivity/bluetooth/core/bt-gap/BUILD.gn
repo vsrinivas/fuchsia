@@ -51,8 +51,11 @@ rustc_binary("bin") {
 package("bt-gap") {
   deps = [ ":bin" ]
 
-  binary = "bt_gap"
-
+  binaries = [
+    {
+      name = "bt_gap"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/bt-gap.cmx")

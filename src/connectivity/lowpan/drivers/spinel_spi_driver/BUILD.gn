@@ -29,8 +29,11 @@ rustc_binary("bin") {
 package("spinel_spi_driver") {
   deps = [ ":bin" ]
 
-  binary = "spinel_spi_driver"
-
+  binaries = [
+    {
+      name = "spinel_spi_driver"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/spinel_spi_driver.cmx")

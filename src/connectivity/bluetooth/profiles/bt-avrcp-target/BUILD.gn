@@ -38,8 +38,11 @@ rustc_binary("bin") {
 package("bt-avrcp-target") {
   deps = [ ":bin" ]
 
-  binary = "bt_avrcp_target"
-
+  binaries = [
+    {
+      name = "bt_avrcp_target"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/bt-avrcp-target.cmx")

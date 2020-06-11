@@ -54,8 +54,11 @@ rustc_binary("bin") {
 package("bt-a2dp-source") {
   deps = [ ":bin" ]
 
-  binary = "bt_a2dp_source"
-
+  binaries = [
+    {
+      name = "bt_a2dp_source"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/bt-a2dp-source.cmx")

@@ -39,8 +39,11 @@ rustc_binary("bin") {
 package("lowpan-spinel-driver") {
   deps = [ ":bin" ]
 
-  binary = "lowpan_spinel_driver"
-
+  binaries = [
+    {
+      name = "lowpan_spinel_driver"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/lowpan-spinel-driver.cmx")

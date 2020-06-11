@@ -74,8 +74,11 @@ package("wlanstack") {
     ":wlan_metrics_registry",
   ]
 
-  binary = "wlanstack"
-
+  binaries = [
+    {
+      name = "wlanstack"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/wlanstack.cmx")

@@ -7,7 +7,7 @@
             "--config_data",
             "empty.json"
         ],
-        "binary": "bin/app"
+        "binary": "bin/netcfg"
     },
     "sandbox": {
         "dev": [

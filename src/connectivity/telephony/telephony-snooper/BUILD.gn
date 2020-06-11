@@ -32,7 +32,6 @@ rustc_binary("bin") {
 package("telephony-snooper") {
   deps = [ ":bin" ]
 
-  binary = "telephony_snooper"
   binaries = [
     {
       name = "telephony_snooper"

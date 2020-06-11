@@ -35,8 +35,11 @@ rustc_binary("bin") {
 package("wlan-ap-smoke-test") {
   deps = [ ":bin" ]
 
-  binary = "wlan_ap_smoke_test"
-
+  binaries = [
+    {
+      name = "wlan_ap_smoke_test"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/wlan-ap-smoke-test.cmx")

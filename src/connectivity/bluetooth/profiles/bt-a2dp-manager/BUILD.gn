@@ -33,8 +33,11 @@ rustc_binary("bin") {
 package("bt-a2dp-manager") {
   deps = [ ":bin" ]
 
-  binary = "bt_a2dp_manager"
-
+  binaries = [
+    {
+      name = "bt_a2dp_manager"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/bt-a2dp-manager.cmx")

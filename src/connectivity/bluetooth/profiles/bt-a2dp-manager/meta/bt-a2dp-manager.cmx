@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/bt_a2dp_manager"
     },
     "sandbox": {
         "services": [

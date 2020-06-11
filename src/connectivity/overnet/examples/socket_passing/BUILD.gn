@@ -35,8 +35,12 @@ rustc_binary("bin") {
 package("overnet-socket-passing") {
   deps = [ ":bin" ]
 
-  binary = "overnet_socket_passing"
-
+  binaries = [
+    {
+      name = "overnet_socket_passing"
+      dest = "overnet_example"
+    },
+  ]
   meta = [
     {
       path = rebase_path("../meta/overnet_example.cmx")

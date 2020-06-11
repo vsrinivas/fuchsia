@@ -37,8 +37,6 @@ rustc_binary("bin") {
 package("lowpanservice") {
   deps = [ ":bin" ]
 
-  binary = "lowpanservice"
-
   binaries = [
     {
       name = "lowpanservice"

@@ -34,7 +34,6 @@ rustc_binary("bin") {
 }
 
 package("lowpanctl") {
-  binary = "lowpanctl"
   meta = [
     {
       path = rebase_path("meta/lowpanctl.cmx")

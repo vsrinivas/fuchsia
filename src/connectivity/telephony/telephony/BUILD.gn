@@ -37,8 +37,11 @@ rustc_binary("bin") {
 package("telephony") {
   deps = [ ":bin" ]
 
-  binary = "telephony"
-
+  binaries = [
+    {
+      name = "telephony"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/telephony.cmx")

@@ -41,8 +41,11 @@ package("netemul_runner") {
 
   deps = [ ":bin" ]
 
-  binary = "netemul_runner"
-
+  binaries = [
+    {
+      name = "netemul_runner"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/netemul_runner.cmx")

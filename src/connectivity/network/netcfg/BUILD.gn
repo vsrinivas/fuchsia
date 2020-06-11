@@ -58,8 +58,11 @@ rustc_binary("bin") {
 package("netcfg") {
   deps = [ ":bin" ]
 
-  binary = "netcfg"
-
+  binaries = [
+    {
+      name = "netcfg"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/netcfg.cmx")

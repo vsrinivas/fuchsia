@@ -42,8 +42,11 @@ rustc_binary("bin") {
 package("bt-snoop") {
   deps = [ ":bin" ]
 
-  binary = "bt_snoop"
-
+  binaries = [
+    {
+      name = "bt_snoop"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/bt-snoop.cmx")

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/wlan_stress_test"
     },
     "sandbox": {
         "services": [
