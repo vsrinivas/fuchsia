@@ -17,6 +17,7 @@
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 
 namespace accessibility_test {
+namespace {
 
 using AccessibilityPointerEvent = fuchsia::ui::input::accessibility::PointerEvent;
 using Phase = fuchsia::ui::input::PointerEventPhase;
@@ -193,4 +194,5 @@ TEST_F(OneFingerDragRecognizerTest, Defeat) {
   EXPECT_FALSE(gesture_complete_callback_called_);
 }
 
+}  // namespace
 }  // namespace accessibility_test

@@ -27,6 +27,7 @@
 #include "src/ui/a11y/lib/view/view_manager.h"
 
 namespace accessibility_test {
+namespace {
 
 class MockSemanticTreeService : public a11y::SemanticTreeService {
   void EnableSemanticsUpdates(bool enabled) { enabled_ = enabled; }
@@ -150,4 +151,5 @@ TEST_F(ViewWrapperTest, HighlightAndClear) {
   EXPECT_FALSE(updated_highlight_bounding_box.has_value());
 }
 
+}  // namespace
 }  // namespace accessibility_test

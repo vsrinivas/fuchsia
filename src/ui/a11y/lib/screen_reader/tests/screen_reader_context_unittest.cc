@@ -12,6 +12,8 @@
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"
 
 namespace accessibility_test {
+namespace {
+
 class ScreenReaderContextTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
@@ -40,4 +42,5 @@ TEST_F(ScreenReaderContextTest, GetA11yFocusManager) {
   ASSERT_EQ(a11y_focus_manager_ptr_, screen_reader_context_->GetA11yFocusManager());
 }
 
+}  // namespace
 }  // namespace accessibility_test

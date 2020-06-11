@@ -15,6 +15,7 @@
 #include <gtest/gtest.h>
 
 namespace accessibility_test {
+namespace {
 
 // clang-format off
 const std::array<float, 9> kIdentityMatrix = {
@@ -200,4 +201,5 @@ TEST_F(ColorTransformManagerTest, SetColorCorrectionAndInversion) {
   EXPECT_TRUE(color_transform_handler_.hasPostOffset(kProtanomalyAndInversionPostOffset));
 }
 
-};  // namespace accessibility_test
+}  // namespace
+}  // namespace accessibility_test

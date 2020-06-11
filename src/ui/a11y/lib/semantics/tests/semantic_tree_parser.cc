@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 namespace accessibility_test {
+
 bool SemanticTreeParser::ParseSemanticTree(
     const std::string &file_path,
     std::vector<fuchsia::accessibility::semantics::Node> *semantic_tree) {
@@ -32,4 +33,5 @@ bool SemanticTreeParser::ParseSemanticTree(
 
   return true;
 }
+
 }  // namespace accessibility_test

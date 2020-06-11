@@ -26,6 +26,7 @@
 #include "src/ui/a11y/lib/view/view_manager.h"
 
 namespace accessibility_test {
+namespace {
 
 class MockSemanticTreeServiceFactory : public a11y::SemanticTreeServiceFactory {
  public:
@@ -92,4 +93,5 @@ TEST_F(ViewSemanticsTest, TestEnableSemantics) {
   EXPECT_TRUE(semantic_tree_service_factory_->service()->UpdatesEnabled());
 }
 
+}  // namespace
 }  // namespace accessibility_test

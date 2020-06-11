@@ -38,6 +38,7 @@ test_package("a11y_lib_tests") {
     "gesture_manager/tests",
     "magnifier/tests",
     "screen_reader/focus/tests",
+    "screen_reader/i18n/tests",
     "screen_reader/tests",
     "semantics/tests:unit",
     "tts/tests",
@@ -98,6 +99,10 @@ test_package("a11y_lib_tests") {
     },
     {
       name = "magnifier_tests"
+      environments = basic_envs
+    },
+    {
+      name = "i18n_tests"
       environments = basic_envs
     },
     {

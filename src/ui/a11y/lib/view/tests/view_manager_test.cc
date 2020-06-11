@@ -28,6 +28,7 @@
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 
 namespace accessibility_test {
+namespace {
 
 using fuchsia::accessibility::semantics::Attributes;
 using fuchsia::accessibility::semantics::Node;
@@ -373,4 +374,5 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDrawHighlightWithAnnotationsDisable
   EXPECT_FALSE(maybe_highlight.has_value());
 }
 
+}  // namespace
 }  // namespace accessibility_test

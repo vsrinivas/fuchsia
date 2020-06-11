@@ -16,6 +16,7 @@
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace accessibility_test {
+namespace {
 
 class A11yFocusManagerTest : public gtest::RealLoopFixture {
  public:
@@ -103,4 +104,5 @@ TEST_F(A11yFocusManagerTest, ListensToFocusChainUpdates) {
   CheckViewInFocus(view_ref_helper, a11y::A11yFocusManager::kRootNodeId);
 }
 
+}  // namespace
 }  // namespace accessibility_test

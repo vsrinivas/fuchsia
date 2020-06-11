@@ -3,7 +3,16 @@
 # found in the LICENSE file.
 
 source_set("i18n") {
-  sources = [ "messages.h" ]
+  sources = [
+    "message_formatter.cc",
+    "message_formatter.h",
+    "messages.h",
+  ]
 
-  deps = [ "//sdk/lib/sys/cpp" ]
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/intl/lookup/cpp:lib",
+    "//third_party/icu",
+  ]
 }

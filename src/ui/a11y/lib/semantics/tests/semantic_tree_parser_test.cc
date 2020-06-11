@@ -10,6 +10,8 @@
 #include <vector>
 
 namespace accessibility_test {
+namespace {
+
 using fuchsia::accessibility::semantics::Node;
 
 const std::string kFileNotExistPath = "/some/random/path";
@@ -42,4 +44,5 @@ TEST_F(SemanticTreeParserTest, ParsingFailed) {
   ASSERT_TRUE(nodes.size() == 0);
 }
 
+}  // namespace
 }  // namespace accessibility_test
