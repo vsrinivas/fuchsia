@@ -116,7 +116,17 @@ class PipelineManager {
   // to check the serialized task queue and drains it.
   void SetupTaskWaiter();
 
+  // Signals the completion of a serialized task.
   void SerializedTaskComplete();
+
+  // Posts a task on the serialized task queue.
+  // Note: The serialized task posted to the queue needs
+  // to call SerializedTaskComplete() to signal completion
+  // of the task.
+  void PostTaskOnSerializedTaskQueue(fit::closure task) {
+    serialized_task_queue_.emplace(std::move(task));
+    serialized_tasks_event_.signal(0u, kSerialzedTaskQueued);
+  }
 
   ProcessNode* FindStream(fuchsia::camera2::CameraStreamType stream) const {
     auto stream_entry = streams_.find(stream);

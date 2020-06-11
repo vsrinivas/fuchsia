@@ -196,10 +196,9 @@ zx_status_t PipelineManager::AppendToExistingGraph(
 }
 void PipelineManager::ConfigureStreamPipeline(
     StreamCreationData info, fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
-  serialized_task_queue_.emplace(
+  PostTaskOnSerializedTaskQueue(
       [this, info = std::move(info), stream = std::move(stream)]() mutable {
         zx_status_t status = ZX_OK;
-
         auto cleanup = fbl::MakeAutoCall([this, &stream, &status]() {
           SerializedTaskComplete();
           if (status != ZX_OK) {
@@ -230,7 +229,6 @@ void PipelineManager::ConfigureStreamPipeline(
         }
         streams_[info.node.input_stream_type] = std::move(result.value());
       });
-  serialized_tasks_event_.signal(0u, kSerialzedTaskQueued);
 }
 
 static void RemoveStreamType(std::vector<fuchsia::camera2::CameraStreamType>& streams,
@@ -346,11 +344,11 @@ PipelineManager::FindGraphHead(fuchsia::camera2::CameraStreamType stream_type) {
 
 void PipelineManager::OnClientStreamDisconnect(
     fuchsia::camera2::CameraStreamType stream_to_disconnect) {
-  stream_shutdown_requested_.push_back(stream_to_disconnect);
-
-  serialized_task_queue_.emplace([this, stream_to_disconnect]() {
+  PostTaskOnSerializedTaskQueue([this, stream_to_disconnect]() {
     TRACE_DURATION("camera", "PipelineManager::OnClientStreamDisconnect", "stream_type",
                    static_cast<uint32_t>(stream_to_disconnect));
+    stream_shutdown_requested_.push_back(stream_to_disconnect);
+
     auto result = FindGraphHead(stream_to_disconnect);
     if (result.is_error()) {
       FX_PLOGS(ERROR, result.error()) << "Failed to FindGraphHead";
@@ -359,8 +357,6 @@ void PipelineManager::OnClientStreamDisconnect(
 
     DisconnectStream(result.value().first, result.value().second, stream_to_disconnect);
   });
-
-  serialized_tasks_event_.signal(0u, kSerialzedTaskQueued);
 }
 
 void PipelineManager::StopStreaming() {
