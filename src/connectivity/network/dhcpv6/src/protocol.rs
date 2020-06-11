@@ -165,8 +165,7 @@ mod checked {
         ///
         /// [RFC 1035]: https://tools.ietf.org/html/rfc1035
         pub(crate) fn from_string(s: String) -> Result<Self, ProtocolError> {
-            let builder =
-                DomainBuilder::from_str(&s).map_err(|err| ProtocolError::DomainParseError(err))?;
+            let builder = DomainBuilder::from_str(&s).map_err(ProtocolError::DomainParseError)?;
             Ok(Domain { domain: s, builder })
         }
 
@@ -287,7 +286,7 @@ impl<'a> RecordsImpl<'a> for Dhcpv6OptionsImpl {
                 while opt_val.len() > 0 {
                     domains.push(checked::Domain::from_string(
                         Domain::parse(&mut opt_val, None)
-                            .map_err(|err| ProtocolError::DomainParseError(err))?
+                            .map_err(ProtocolError::DomainParseError)?
                             .to_string(),
                     )?);
                 }
