@@ -10,6 +10,7 @@ pub mod audio;
 pub mod device;
 pub mod display;
 pub mod do_not_disturb;
+pub mod input;
 pub mod intl;
 pub mod night_mode;
 pub mod privacy;
@@ -71,6 +72,12 @@ pub enum SettingClient {
 
         #[structopt(short = "n", long = "night_mode_dnd")]
         night_mode_dnd: Option<bool>,
+    },
+
+    #[structopt(name = "input")]
+    Input {
+        #[structopt(short = "m", long = "mic_muted")]
+        mic_muted: Option<bool>,
     },
 
     #[structopt(name = "intl")]
@@ -297,6 +304,12 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
                 audio::command(audio_service, stream, source, level, volume_muted, input_muted)
                     .await?;
             println!("Audio: {}", output);
+        }
+        SettingClient::Input { mic_muted } => {
+            let input_service = connect_to_service::<fidl_fuchsia_settings::InputMarker>()
+                .context("Failed to connect to input service")?;
+            let output = input::command(input_service, mic_muted).await?;
+            println!("Input: {}", output);
         }
         SettingClient::Setup { configuration_interfaces } => {
             let setup_service = connect_to_service::<fidl_fuchsia_settings::SetupMarker>()

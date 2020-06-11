@@ -15,6 +15,7 @@ use {
     setui_client_lib::device,
     setui_client_lib::display,
     setui_client_lib::do_not_disturb,
+    setui_client_lib::input,
     setui_client_lib::intl,
     setui_client_lib::night_mode,
     setui_client_lib::privacy,
@@ -30,6 +31,7 @@ enum Services {
     Device(DeviceRequestStream),
     Display(DisplayRequestStream),
     DoNotDisturb(DoNotDisturbRequestStream),
+    Input(InputRequestStream),
     Intl(IntlRequestStream),
     NightMode(NightModeRequestStream),
     Privacy(PrivacyRequestStream),
@@ -150,6 +152,13 @@ async fn main() -> Result<(), Error> {
 
     println!("  client calls watch light sensor");
     validate_light_sensor().await?;
+
+    println!("input service tests");
+    println!("  client calls input watch");
+    validate_input(None).await?;
+
+    println!("  client calls set input");
+    validate_input(Some(false)).await?;
 
     println!("do not disturb service tests");
     println!("  client calls dnd watch");
@@ -581,6 +590,45 @@ async fn validate_audio(expected: &'static ExpectedStreamSettingsStruct) -> Resu
         expected.input_muted,
     )
     .await?;
+    Ok(())
+}
+
+async fn validate_input(expected_mic_muted: Option<bool>) -> Result<(), Error> {
+    let env = create_service!(Services::Input,
+        InputRequest::Set { settings, responder } => {
+            if let Some(Microphone { muted }) = settings.microphone {
+                assert_eq!(expected_mic_muted, muted);
+                responder.send(&mut (Ok(())))?;
+            }
+        },
+        InputRequest::Watch { responder } => {
+            responder.send(InputDeviceSettings {
+                microphone: Some(Microphone {
+                    muted: expected_mic_muted,
+                })
+            })?;
+        }
+    );
+
+    let input_service =
+        env.connect_to_service::<InputMarker>().context("Failed to connect to input service")?;
+
+    let output = input::command(input_service, expected_mic_muted).await?;
+    if expected_mic_muted.is_none() {
+        assert_eq!(
+            output,
+            format!(
+                "{:#?}",
+                InputDeviceSettings { microphone: Some(Microphone { muted: expected_mic_muted }) }
+            )
+        );
+    } else {
+        assert_eq!(
+            output,
+            format!("Successfully set mic mute to {}\n", expected_mic_muted.unwrap())
+        );
+    }
+
     Ok(())
 }
 
