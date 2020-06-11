@@ -89,6 +89,9 @@ class Bind {
   // Sets an optional size that the ddk should return for the parent device.
   void SetSize(zx_off_t size);
 
+  // Returns the status that the init txn was replied to with.
+  std::optional<zx_status_t> init_reply() { return init_reply_; }
+
   static Bind* Instance() { return instance_; }
 
   zx::channel& FidlClient() { return fidl_.local(); }
@@ -196,13 +199,19 @@ class Bind {
 
   UnbindOp* unbind_op_ = nullptr;
   void* op_ctx_ = nullptr;
+  // True if the unbind hook should be called. The unbind will not be started
+  // until the device init hook has completed.
+  std::atomic_bool unbind_requested_ = false;
   // Whether |unbind_thread| has been created.
-  std::atomic<bool> unbind_started_ = false;
+  std::atomic_bool unbind_started_ = false;
   bool unbind_thread_joined_ = false;
   // Thread for calling the unbind hook.
   thrd_t unbind_thread_;
 
  private:
+  // Spawns a thread to call the unbind hook if it exists and has not already been called,
+  // else sets |remove_called_| as true.
+  void StartUnbindIfNeeded();
   // Joins with |unbind_thread_| if it has been created and not yet joined.
   void JoinUnbindThread();
 };
