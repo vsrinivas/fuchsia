@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_MLG_DRIVERS_USB_HARRIET_USB_HARRIET_H_
-#define SRC_DEVICES_MLG_DRIVERS_USB_HARRIET_USB_HARRIET_H_
+#ifndef SRC_DEVICES_ML_DRIVERS_USB_HARRIET_USB_HARRIET_H_
+#define SRC_DEVICES_ML_DRIVERS_USB_HARRIET_USB_HARRIET_H_
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -33,4 +33,4 @@ class Harriet : public HarrietBase, public ddk::EmptyProtocol<ZX_PROTOCOL_MLG> {
 
 }  // namespace usb_harriet
 
-#endif  // SRC_DEVICES_MLG_DRIVERS_USB_HARRIET_USB_HARRIET_H_
+#endif  // SRC_DEVICES_ML_DRIVERS_USB_HARRIET_USB_HARRIET_H_

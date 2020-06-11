@@ -25,6 +25,7 @@ group("tests") {
     "i2c:tests",
     "lib:tests",
     "light-sensor:tests",
+    "ml:tests",
     "nand:tests",
     "power:tests",
     "pwm:tests",
