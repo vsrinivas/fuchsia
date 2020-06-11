@@ -50,8 +50,11 @@ rustc_binary("bin") {
 package("kms") {
   deps = [ ":bin" ]
 
-  binary = "kms"
-
+  binaries = [
+    {
+      name = "kms"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/key_manager.cmx")
