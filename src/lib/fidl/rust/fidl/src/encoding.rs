@@ -372,7 +372,6 @@ impl<'a> Decoder<'a> {
         if next_out_of_line > buf.len() {
             return Err(Error::OutOfRange);
         }
-
         let mut decoder = Decoder {
             depth: 0,
             offset: 0,
@@ -383,12 +382,6 @@ impl<'a> Decoder<'a> {
             context,
         };
         value.decode(&mut decoder)?;
-        if decoder.next_out_of_line < decoder.buf.len() {
-            return Err(Error::ExtraBytes);
-        }
-        if decoder.handles.len() != 0 {
-            return Err(Error::ExtraHandles);
-        }
         debug_assert!(
             decoder.offset == inline_size,
             "Inline part of the buffer was not completely consumed. Most likely, this indicates a \
@@ -400,15 +393,27 @@ impl<'a> Decoder<'a> {
             inline_size,
             decoder.buf,
         );
-        for i in decoder.offset..next_out_of_line {
-            if decoder.buf[i] != 0 {
-                return Err(Error::NonZeroPadding {
-                    padding_start: decoder.offset,
-                    non_zero_pos: i,
-                });
+
+        // Put this in a non-polymorphic helper function to reduce binary bloat.
+        fn post_decoding(decoder: &Decoder, next_out_of_line: usize) -> Result<()> {
+            if decoder.next_out_of_line < decoder.buf.len() {
+                return Err(Error::ExtraBytes);
             }
+            if decoder.handles.len() != 0 {
+                return Err(Error::ExtraHandles);
+            }
+            for i in decoder.offset..next_out_of_line {
+                if decoder.buf[i] != 0 {
+                    return Err(Error::NonZeroPadding {
+                        padding_start: decoder.offset,
+                        non_zero_pos: i,
+                    });
+                }
+            }
+            Ok(())
         }
-        Ok(())
+
+        post_decoding(&decoder, next_out_of_line)
     }
 
     /// Returns the next offset for reading and increases `offset` by `len`.
