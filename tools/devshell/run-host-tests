@@ -13,8 +13,6 @@
 ##   https://fuchsia.dev/fuchsia-src/development/testing/running_tests_as_components#running_tests\n
 ##
 ## Builds and runs the given host tests.
-## With "-z" passed, only Zircon tests will be run - and
-## without it only tests from Garnet and above.
 ## Test runner flags can typically be --gtest_filter=TestSuiteName.TestName
 ## to restrict to a particular test or set of tests.
 
@@ -30,7 +28,6 @@ TEST_NAMES=()
 function main {
   while [[ -n "$1" ]]; do
     case "$1" in
-      -z) ZIRCON=1 ;;
       # break at bare double dash
       # allow passing args to runtests
       --) shift
@@ -41,26 +38,14 @@ function main {
     shift
   done
 
-  if [[ $ZIRCON -eq 1 ]]; then
-    host_test_dir="${ZIRCON_BUILDROOT}/host_tests"
-    fx-command-run build "-v"
-    runtests_cmd=("${ZIRCON_TOOLS_DIR}/runtests")
 
-    if [[ -n "$TEST_NAMES" ]]; then
-      # Comma-separated list of host test names to filter by.
-      IFS="," runtests_cmd+=("-t" "${TEST_NAMES[@]}")
-    fi
-    # remaining arguments after -- are passed to test runner
-    "${runtests_cmd[@]}" "${host_test_dir}" -- "$@"
-  else
-    "${FUCHSIA_DIR}/tools/devshell/contrib/exec-host-tests"\
-      "--manifest" "${FUCHSIA_BUILD_DIR}/tests.json"\
-      "--names" "${TEST_NAMES[@]}"\
-      "--build-dir" "${FUCHSIA_BUILD_DIR}"\
-      "--ninja" "${PREBUILT_NINJA}" \
-      "--"\
-      "$@"
-  fi
+"${FUCHSIA_DIR}/tools/devshell/contrib/exec-host-tests"\
+    "--manifest" "${FUCHSIA_BUILD_DIR}/tests.json"\
+    "--names" "${TEST_NAMES[@]}"\
+    "--build-dir" "${FUCHSIA_BUILD_DIR}"\
+    "--ninja" "${PREBUILT_NINJA}" \
+    "--"\
+    "$@"
 }
 
 main "$@"

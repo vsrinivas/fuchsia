@@ -110,7 +110,7 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   From Fuchsia target device:
 
   ```
-  runtests -t gfx_apptests,gfx_unittests,escher_unittests,input_unittests,a11y_manager_apptests
+  runtests --names gfx_apptests,gfx_unittests,escher_unittests,input_unittests,a11y_manager_apptests
   ```
 
 * Run a specific test binary:
@@ -126,7 +126,7 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   From Fuchsia target device:
 
   ```
-  runtests -t gfx_unittests
+  runtests --names gfx_unittests
   ```
 
 * Run a single test within a component:
@@ -144,7 +144,7 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   From Fuchsia target device:
 
   ```
-  runtests -t gfx_unittests -- --gtest_filter=HostImageTest.FindResource
+  runtests --names gfx_unittests -- --gtest_filter=HostImageTest.FindResource
   ```
 
   See more documentation about the [glob pattern for the filter arg](https://github.com/google/googletest/blob/master/googletest/docs/advanced.md).
@@ -208,7 +208,7 @@ Then, start an emulator:
 Then, in the QEMU or EMU shell:
 
 ```
-runtests -t gfx_apptests,gfx_unittests,escher_unittests,input_unittests,a11y_manager_apptests
+runtests --names gfx_apptests,gfx_unittests,escher_unittests,input_unittests,a11y_manager_apptests
 ```
 
 ### Host tests

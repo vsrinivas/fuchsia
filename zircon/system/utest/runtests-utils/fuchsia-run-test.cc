@@ -147,9 +147,9 @@ bool RunAllTestsPublishData() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "run-all-tests-output-1");
   EXPECT_EQ(0, MkDirAll(output_dir));
 
-  const char* const argv[] = {"./runtests", "--output", output_dir.c_str(), test_containing_dir.c_str()};
+  const char* const argv[] = {"./runtests", "--all", "--output", output_dir.c_str()};
   TestStopwatch stopwatch;
-  EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(4, argv, {}, &stopwatch, ""));
+  EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(4, argv, {test_containing_dir.c_str()}, &stopwatch, ""));
 
   // Prepare the expected output.
   fbl::String test_output_rel_path;

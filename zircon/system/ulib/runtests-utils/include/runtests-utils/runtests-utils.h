@@ -188,9 +188,6 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
 // Returns true iff |s| is a fuchsia-pkg URI.
 bool IsFuchsiaPkgURI(const char* s);
 
-// Copies everything that looks like a fuchsia-pkg URI from |inputs| to |outputs|.
-void CopyFuchsiaPkgURIs(const fbl::Vector<fbl::String>& inputs, fbl::Vector<fbl::String>* outputs);
-
 }  // namespace runtests
 
 #endif  // RUNTESTS_UTILS_RUNTESTS_UTILS_H_

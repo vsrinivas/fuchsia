@@ -68,9 +68,9 @@ function main {
     exit 3
   fi
   # concatenate all package_urls found in a comma-separated list
-  local package_urls="$(sed -n 's/^package_url: \(.*\)/\1/p' <<< "${test_specs}" | paste -sd ',' -)"
+  local package_urls=( $(sed -n 's/^package_url: \(.*\)/\1/p' <<< "${test_specs}") )
 
-  if [[ -z "${package_urls}" ]]; then
+  if [[ ${#package_urls[@]} -eq 0 ]]; then
     fx-error "Test spec for \"${target}\" doesn't have a Fuchsia component URI. " \
       "Try running it using \`fx test ${target}\` instead."
     exit 3
@@ -92,7 +92,7 @@ function main {
     return 2
   fi
 
-  fx-command-run shell runtests -t "${package_urls}" "$@" 2>&1 \
+  fx-command-run shell runtests "${package_urls[@]}" "$@" 2>&1 \
     | fx-command-run symbolize
 }
 

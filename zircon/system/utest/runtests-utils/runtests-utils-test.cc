@@ -32,32 +32,6 @@ namespace {
 
 static constexpr size_t kOneMegabyte = 1 << 20;
 
-bool CopyFuchsiaPkgURIsWithInput() {
-  BEGIN_TEST;
-
-  fbl::Vector<fbl::String> input;
-  input.push_back("fuchsia-pkg://foo/bar");
-  input.push_back("not-a-uri");
-  fbl::Vector<fbl::String> output;
-  CopyFuchsiaPkgURIs(input, &output);
-  EXPECT_EQ(1, output.size());
-  EXPECT_STR_EQ(input[0].c_str(), output[0].c_str());
-
-  END_TEST;
-}
-
-bool CopyFuchsiaPkgURIsNoInput() {
-  BEGIN_TEST;
-
-  fbl::Vector<fbl::String> input;
-  input.push_back("not-a-uri");
-  fbl::Vector<fbl::String> output;
-  CopyFuchsiaPkgURIs(input, &output);
-  EXPECT_EQ(0, output.size());
-
-  END_TEST;
-}
-
 bool ParseTestNamesEmptyStr() {
   BEGIN_TEST;
 
@@ -567,8 +541,8 @@ bool DiscoverAndRunTestsBasicPass() {
   // The build templates assemble two tests, a.sh and b.sh, in the
   // runtestsbasicpass/ subdirectory.
   const fbl::String script_dir = packaged_script_dir();
-  const fbl::String test_script_dir = JoinPath(script_dir, "runtestsbasicpass");
-  const char* const argv[] = {"./runtests", test_script_dir.c_str()};
+  const fbl::String test_script = JoinPath(script_dir, "runtestsbasicpass/a.sh");
+  const char* const argv[] = {"./runtests", test_script.c_str()};
   TestStopwatch stopwatch;
   EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(2, argv, {}, &stopwatch, ""));
 
@@ -581,26 +555,15 @@ bool DiscoverAndRunTestsBasicFail() {
   // The build templates assemble two tests, test-basic-succeed.sh and
   // test-basic-fail.sh, in the runtestsbasicfail/ subdirectory.
   const fbl::String script_dir = packaged_script_dir();
-  const fbl::String test_script_dir = JoinPath(script_dir, "runtestsbasicfail");
-  const char* const argv[] = {"./runtests", test_script_dir.c_str()};
+  const fbl::String test_script = JoinPath(script_dir, "runtestsbasicfail/test-basic-fail.sh");
+  const char* const argv[] = {"./runtests", test_script.c_str()};
   TestStopwatch stopwatch;
   EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(2, argv, {}, &stopwatch, ""));
 
   END_TEST;
 }
 
-bool DiscoverAndRunTestsFallsBackToDefaultDirs() {
-  BEGIN_TEST;
-
-  PackagedScriptFile test_script("succeed-with-echo.sh");
-  const char* const argv[] = {"./runtests"};
-  TestStopwatch stopwatch;
-  EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(1, argv, {test_script.path()}, &stopwatch, ""));
-
-  END_TEST;
-}
-
-bool DiscoverAndRunTestsFailsWithNoTestGlobsOrDefaultDirs() {
+bool DiscoverAndRunTestsFailsWithNoTestOrDefaultDirs() {
   BEGIN_TEST;
 
   ScopedTestDir test_dir;
@@ -624,7 +587,7 @@ bool DiscoverAndRunTestsFailsWithBadArgs() {
   END_TEST;
 }
 
-bool DiscoverAndRunTestsWithGlobs() {
+bool DiscoverAndRunTestsWithDefaultGlobs() {
   BEGIN_TEST;
 
   // There are three scripts generated in a directory by the build templates:
@@ -637,9 +600,9 @@ bool DiscoverAndRunTestsWithGlobs() {
   fbl::String all_scripts_dir = packaged_script_dir();
   fbl::String script_dir = JoinPath(all_scripts_dir, "testglobs");
   fbl::String glob = JoinPath(script_dir, "A/*/C");
-  const char* const argv[] = {"./runtests", script_dir.c_str(), glob.c_str()};
+  const char* const argv[] = {"./runtests", "--all"};
   TestStopwatch stopwatch;
-  EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(3, argv, {}, &stopwatch, ""));
+  EXPECT_EQ(EXIT_SUCCESS, DiscoverAndRunTests(2, argv, {script_dir.c_str(), glob.c_str()}, &stopwatch, ""));
 
   END_TEST;
 }
@@ -659,9 +622,9 @@ bool DiscoverAndRunTestsWithOutput() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "run-all-tests-output-1");
   EXPECT_EQ(0, MkDirAll(output_dir));
 
-  const char* const argv[] = {"./runtests", "--output", output_dir.c_str(), script_dir.c_str()};
+  const char* const argv[] = {"./runtests", "--all", "--output", output_dir.c_str()};
   TestStopwatch stopwatch;
-  EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(4, argv, {}, &stopwatch, ""));
+  EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(4, argv, {script_dir.c_str()}, &stopwatch, ""));
 
   // Prepare the expected output.
   fbl::String success_output_rel_path;
@@ -733,9 +696,9 @@ bool DiscoverAndRunTestsWithSyslogOutput() {
   const fbl::String output_dir = JoinPath(test_dir.path(), "run-all-tests-output-2");
   EXPECT_EQ(0, MkDirAll(output_dir));
 
-  const char* const argv[] = {"./runtests", "--output", output_dir.c_str(), script_dir.c_str()};
+  const char* const argv[] = {"./runtests", "--all", "--output", output_dir.c_str()};
   TestStopwatch stopwatch;
-  EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(4, argv, {}, &stopwatch, "syslog.txt"));
+  EXPECT_EQ(EXIT_FAILURE, DiscoverAndRunTests(4, argv, {script_dir.c_str()}, &stopwatch, "syslog.txt"));
 
   // Prepare the expected output.
   fbl::String success_output_rel_path;
@@ -773,11 +736,6 @@ bool DiscoverAndRunTestsWithSyslogOutput() {
 
   END_TEST;
 }
-
-BEGIN_TEST_CASE(CopyFuchsiaPkgURIs)
-RUN_TEST(CopyFuchsiaPkgURIsWithInput)
-RUN_TEST(CopyFuchsiaPkgURIsNoInput)
-END_TEST_CASE(CopyFuchsiaPkgURIs)
 
 BEGIN_TEST_CASE(ParseTestNames)
 RUN_TEST(ParseTestNamesEmptyStr)
@@ -837,10 +795,9 @@ END_TEST_CASE(RunTests)
 BEGIN_TEST_CASE(DiscoverAndRunTests)
 RUN_TEST_MEDIUM(DiscoverAndRunTestsBasicPass)
 RUN_TEST_MEDIUM(DiscoverAndRunTestsBasicFail)
-RUN_TEST_MEDIUM(DiscoverAndRunTestsFallsBackToDefaultDirs)
-RUN_TEST_MEDIUM(DiscoverAndRunTestsFailsWithNoTestGlobsOrDefaultDirs)
+RUN_TEST_MEDIUM(DiscoverAndRunTestsFailsWithNoTestOrDefaultDirs)
 RUN_TEST_MEDIUM(DiscoverAndRunTestsFailsWithBadArgs)
-RUN_TEST_MEDIUM(DiscoverAndRunTestsWithGlobs)
+RUN_TEST_MEDIUM(DiscoverAndRunTestsWithDefaultGlobs)
 RUN_TEST_MEDIUM(DiscoverAndRunTestsWithOutput)
 RUN_TEST_MEDIUM(DiscoverAndRunTestsWithSyslogOutput)
 END_TEST_CASE(DiscoverAndRunTests)

@@ -33,33 +33,24 @@ constexpr char kOutputFileName[] = "stdout-and-stderr.txt";
 constexpr char kIgnoreDirName[] = "helper";
 
 int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
-  bool test_dirs_required = default_test_dirs.is_empty();
   fprintf(stderr,
           "Usage: %s [-S|-s] [-M|-m] [-L|-l] [--all]                \n"
-          "    [--name|-t test names] [--output|-o directory]       \n"
-          "    [directory globs ...]                                \n"
+          "    [--names|-n test names] [--output|-o directory]      \n"
+          "    [test paths or URLs ...]                             \n"
           "    [-- [-args -to -the -test -bins]]                    \n"
           "                                                         \n"
-          "The %s [directory globs...] is a list of                 \n"
-          "globs which match directories containing tests to run,   \n"
-          "non-recursively. Note that non-directories captured by   \n"
-          "a glob will be silently ignored.                         \n"
-          "                                                         \n"
-          "After directory globs, `--` can be followed by any       \n"
-          "number of arguments to pass to the binaries under        \n"
+          "After tests, `--` can be followed by any                 \n"
+          "number of arguments to pass to all of the binaries under \n"
           "test.                                                    \n"
           "                                                         \n"
           "After test is run, a signature of [runtests][PASSED]     \n"
-          "or [runtests][FAILED] will be printed                    \n",
-          name, test_dirs_required ? "required" : "optional");
-  if (!test_dirs_required) {
-    fprintf(stderr,
-            "If --all or --name is passed, or if no directory       \n"
-            "globs are specified, tests will be run from the default\n"
-            "globs:                                                 \n");
-    for (const auto& test_dir : default_test_dirs) {
-      fprintf(stderr, "\t%s\n", test_dir.c_str());
-    }
+          "or [runtests][FAILED] will be printed                    \n"
+          "                                                         \n"
+          "If --all or --names|-n is passed, tests will be run from \n"
+          "the default globs:                                       \n",
+          name);
+  for (const auto& test_dir : default_test_dirs) {
+    fprintf(stderr, "\t%s\n", test_dir.c_str());
   }
   fprintf(stderr,
           "                                                         \n"
@@ -74,13 +65,12 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
           "       -l: Turn OFF Large tests                    [1]   \n"
           "       -i: Per-test timeout in seconds.            [2]   \n"
           "       -r: Repeat the test suite this many times         \n"
-          "   --name: Filter tests found in the default directory   \n"
+          "  --names: Filter tests found in the default directory   \n"
           "           globs by these basenames. Also accepts        \n"
           "           fuchsia-pkg URIs, which are run regardless    \n"
           "           of directory globs. (accepts a                \n"
           "           comma-separated list)                         \n"
-          "       -t: Same as --name, except it will filter among   \n"
-          "           provided test dir globs                       \n"
+          "       -n: Same as --names.                              \n"
           " --output: Write test output to a directory        [3]   \n"
           "       -o: Same as --output.                             \n"
           "    --all: Run tests found in the default directory      \n"
@@ -110,9 +100,10 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
                         const fbl::Vector<fbl::String>& default_test_dirs, Stopwatch* stopwatch,
                         const fbl::StringPiece syslog_file_name) {
   unsigned int test_types = TEST_DEFAULT;
+  bool use_default_globs = false;
   fbl::Vector<fbl::String> basename_whitelist;
-  fbl::Vector<fbl::String> test_dir_globs;
   fbl::Vector<fbl::String> test_args;
+  fbl::Vector<fbl::String> test_paths;
   const char* output_dir = nullptr;
   unsigned int timeout_seconds = 0;
   int repeat = 1;
@@ -137,13 +128,11 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
       break;
     }
 
-    if (arg == "--all" || arg == "--name") {
-      for (const fbl::String& glob : default_test_dirs) {
-        test_dir_globs.push_back(glob);
-      }
-      if (arg == "--name") {
+    if (arg == "--all" || arg == "--names" || arg == "-n") {
+      use_default_globs = true;
+      if (arg == "--names" || arg == "-n") {
         if (optind > argc) {
-          fprintf(stderr, "Missing argument for --name\n");
+          fprintf(stderr, "Missing argument for %s\n", arg.c_str());
           return EXIT_FAILURE;
         }
         ParseTestNames(argv[optind++], &basename_whitelist);
@@ -151,17 +140,17 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
       continue;
     }
 
-    if (arg == "--output") {
+    if (arg == "--output" || arg == "-o") {
       if (optind > argc) {
-        fprintf(stderr, "Missing argument for --output\n");
+        fprintf(stderr, "Missing argument for %s\n", arg.c_str());
         return EXIT_FAILURE;
       }
       output_dir = argv[optind++];
       continue;
     }
 
-    if (arg.length() < 2 || arg.data()[0] != '-') {
-      test_dir_globs.push_back(std::move(arg));
+    if (arg.data()[0] != '-') {
+      test_paths.push_back(std::move(arg));
       continue;
     }
 
@@ -186,22 +175,6 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
         break;
       case 'h':
         return Usage(argv[0], default_test_dirs);
-      // TODO(fxbug.dev/53344): deprecate in favour of --name.
-      case 't':
-        if (optind > argc) {
-          fprintf(stderr, "Missing argument for -t\n");
-          return EXIT_FAILURE;
-        }
-        ParseTestNames(argv[optind++], &basename_whitelist);
-        break;
-      // TODO(fxbug.dev/53344): deprecate in favour of --output.
-      case 'o':
-        if (optind > argc) {
-          fprintf(stderr, "Missing argument for -o\n");
-          return EXIT_FAILURE;
-        }
-        output_dir = argv[optind++];
-        break;
       case 'r': {
         if (optind > argc) {
           fprintf(stderr, "Missing argument for -r\n");
@@ -251,19 +224,17 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
     return EXIT_FAILURE;
   }
 
-  fbl::Vector<fbl::String> test_paths;
-  const auto* test_dir_globs_or_default =
-      test_dir_globs.is_empty() ? &default_test_dirs : &test_dir_globs;
-  if (!test_dir_globs_or_default->is_empty()) {
-    const int err = DiscoverTestsInDirGlobs(*test_dir_globs_or_default, kIgnoreDirName,
+  if (use_default_globs) {
+    const int err = DiscoverTestsInDirGlobs(default_test_dirs, kIgnoreDirName,
                                             basename_whitelist, &test_paths);
     if (err) {
       fprintf(stderr, "Failed to find tests in dirs: %s\n", strerror(err));
       return EXIT_FAILURE;
     }
-    CopyFuchsiaPkgURIs(basename_whitelist, &test_paths);
-  } else {
-    fprintf(stderr, "Test directory globs or default test directories must be specified.");
+  }
+  
+  if (test_paths.is_empty()) {
+    fprintf(stderr, "No tests found or specified.\n");
     return EXIT_FAILURE;
   }
 

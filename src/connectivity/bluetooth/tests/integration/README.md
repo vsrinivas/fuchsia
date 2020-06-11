@@ -44,7 +44,7 @@ Run from your development host via the `fx` tool:
 
 Run directly in a shell on the fuchsia target:
 ```
-  $ runtests -t bt-integration-tests
+  $ runtests --names bt-integration-tests
 ```
 
 ### Run on QEMU

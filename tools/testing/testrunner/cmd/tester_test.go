@@ -244,7 +244,7 @@ func TestSetCommand(t *testing.T) {
 					Path:       "/path/to/test",
 					PackageURL: "fuchsia-pkg://example.com/test.cmx",
 				}},
-			expected: []string{"runtests", "-t", "fuchsia-pkg://example.com/test.cmx", "-o", "REMOTE_DIR"},
+			expected: []string{"runtests", "--output", "REMOTE_DIR", "fuchsia-pkg://example.com/test.cmx"},
 		},
 		{
 			name:        "use runtests path",
@@ -253,7 +253,7 @@ func TestSetCommand(t *testing.T) {
 				Test: build.Test{
 					Path: "/path/to/test",
 				}},
-			expected: []string{"runtests", "-t", "test", "/path/to", "-o", "REMOTE_DIR"},
+			expected: []string{"runtests", "--output", "REMOTE_DIR", "/path/to/test"},
 		},
 		{
 			name:        "use runtests timeout",
@@ -263,7 +263,7 @@ func TestSetCommand(t *testing.T) {
 					Path: "/path/to/test",
 				}},
 			timeout:  time.Second,
-			expected: []string{"runtests", "-t", "test", "/path/to", "-o", "REMOTE_DIR", "-i", "1"},
+			expected: []string{"runtests", "--output", "REMOTE_DIR", "-i", "1", "/path/to/test"},
 		},
 		{
 			name:        "system path",

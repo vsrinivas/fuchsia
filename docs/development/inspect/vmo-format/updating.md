@@ -51,7 +51,7 @@ fx build && fx pave -1
   ```
 1. Run tests.
   ```
-fx shell runtests -t inspect-test
+fx shell runtests --names inspect-test
   ```
 
 ### Bitfield updates {#bitfield-updates}

@@ -115,13 +115,13 @@ btf::expect-mock-args() {
   local expected=("$@")
   local actual=("${BT_MOCK_ARGS[@]:1}")  # ignore the first arg, the mocked command
   if [[ ${#actual[@]} -ne ${#expected[@]} ]]; then
-    btf::_fail 1 "Unexpected arguments to ${tool}. Expected: '${expected[*]}'  Actual: '${actual[*]}'"
+    btf::_fail 1 "Unexpected number of arguments to ${tool}.\n  Expected ${#expected[@]}: ${expected[*]}\n  Actual ${#actual[@]}: ${actual[*]}"
     return
   fi
   for (( i=0; i<"${#expected[@]}"; i++ )); do
     if [[ "${expected[$i]}" != "_ANY_" ]];  then
       if [[ "${actual[$i]}" != "${expected[$i]}" ]]; then
-        btf::_fail 1 "Unexpected arguments to ${tool}. Expected: '${expected[*]}'  Actual: '${actual[*]}'"
+        btf::_fail 1 "Unexpected arguments to ${tool}.\n  Expected: ${expected[*]}\n  Actual: ${actual[*]}"
         return
       fi
     fi

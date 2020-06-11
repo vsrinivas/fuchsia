@@ -88,7 +88,7 @@ graphics_compute_gtest_main_target = "//src/lib/fxl/test:gtest_main"
 #    case they are launched like regular executables, i.e. they inherit the
 #    environment of their caller (which will normally be the shell).
 #
-#  - Test components can also be launched with the "runtests -t <name>" shell
+#  - Test components can also be launched with the "runtests --names <name>" shell
 #    command. Compared to "run", the latter will first create a new hermetic
 #    Fuchsia process to run the test program inside, decoupled from the
 #    caller.

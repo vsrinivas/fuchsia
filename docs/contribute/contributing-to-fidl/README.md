@@ -219,7 +219,7 @@ target, or `/system` when you the `core.x64` target.
 ```sh
 fx set bringup.x64 --with-base //garnet/packages/tests:zircon   # optionally append "--variant asan"
 fx build
-fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test
+fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+--names+fidl-test
 ```
 
 To regenerate the `fidlc` JSON goldens:
@@ -326,7 +326,7 @@ There is one test that must be run separately as a zbi test, which is the
 `fidl-test`:
 
 ```
-fx qemu -kN -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test
+fx qemu -kN -c zircon.autorun.boot=/boot/bin/runtests+--names+fidl-test
 ```
 
 When the test completes, you're running in the QEMU emulator.
@@ -340,7 +340,7 @@ Tab 1> fx set core.x64 --with-base //garnet/packages/tests:zircon
 Tab 1> fx build && fx qemu -kN
 
 Tab 2> fx shell
-Tab 2(shell)> runtests -t fidl-test
+Tab 2(shell)> runtests --names fidl-test
 ```
 
 ### Compatibility Test
@@ -412,10 +412,10 @@ The following requires: `fx set bringup.x64 --with-base //garnet/packages/tests:
 
 | Name                      | Test Command                                                                                                  | Directories Covered     |
 |---------------------------|---------------------------------------------------------------------------------------------------------------|-------------------------|
-| fidlc host test           | `$FUCHSIA_DIR/out/default/host_x64/exe.unstripped/fidl-compiler`  | zircon/system/host/fidl |
-| fidl c runtime test       | `fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test`                                             | zircon/system/ulib/fidl |
-| fidl c runtime test       | `fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-simple-test`                                      | zircon/system/ulib/fidl |
-| fidl c-llcpp interop test | `fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-llcpp-interop-test`                               | zircon/system/ulib/fidl |
+| fidlc host test           | `$FUCHSIA_DIR/out/default/host_x64/exe.unstripped/fidl-compiler`                                              | zircon/system/host/fidl |
+| fidl c runtime test       | `fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+--names+fidl-test`                                      | zircon/system/ulib/fidl |
+| fidl c runtime test       | `fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+--names+fidl-simple-test`                               | zircon/system/ulib/fidl |
+| fidl c-llcpp interop test | `fx qemu -k -c zircon.autorun.boot=/boot/bin/runtests+--names+fidl-llcpp-interop-test`                        | zircon/system/ulib/fidl |
 
 ### All Benchmarks
 

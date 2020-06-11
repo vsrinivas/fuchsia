@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
         break;
       case 'h':
       default:
-        printf("Usage: runtests -t backlight-test [-- <options>]\n\n");
+        printf("Usage: runtests --names backlight-test [-- <options>]\n\n");
         printf(
             "  Valid options are:\n"
             "  -d : By default the test runs without any delays between brightness changes.\n"

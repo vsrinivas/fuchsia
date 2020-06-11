@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"path"
 	"strings"
 	"time"
 
@@ -266,15 +265,14 @@ func setCommand(test *testsharder.Test, useRuntests bool, remoteOutputDir string
 	}
 
 	if useRuntests {
-		if test.PackageURL != "" {
-			test.Command = []string{runtestsName, "-t", test.PackageURL, "-o", remoteOutputDir}
-		} else {
-			name := path.Base(test.Path)
-			dir := path.Dir(test.Path)
-			test.Command = []string{runtestsName, "-t", name, dir, "-o", remoteOutputDir}
-		}
+		test.Command = []string{runtestsName, "--output", remoteOutputDir}
 		if timeout > 0 {
 			test.Command = append(test.Command, "-i", fmt.Sprintf("%d", int64(timeout.Seconds())))
+		}
+		if test.PackageURL != "" {
+			test.Command = append(test.Command, test.PackageURL)
+		} else {
+			test.Command = append(test.Command, test.Path)
 		}
 	} else if test.PackageURL != "" {
 		if strings.HasSuffix(test.PackageURL, componentV2Suffix) {

@@ -159,7 +159,7 @@ Inspect:
 
  1. virtcon scrolling correctly
  2. visual output of the display-test uapp
- 3. visual output from runtests -t scenic_tests
+ 3. visual output from runtests --names scenic_tests
  4. Disconnect and reconnect a display, verify that outputs are stable
 
 #### Automated

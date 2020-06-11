@@ -379,11 +379,4 @@ bool IsFuchsiaPkgURI(const char* s) {
   return 0 == strncmp(s, prefix, prefix_len);
 }
 
-void CopyFuchsiaPkgURIs(const fbl::Vector<fbl::String>& inputs, fbl::Vector<fbl::String>* outputs) {
-  for (const fbl::String& input : inputs) {
-    if (IsFuchsiaPkgURI(input.c_str())) {
-      outputs->push_back(input);
-    }
-  }
-}
 }  // namespace runtests

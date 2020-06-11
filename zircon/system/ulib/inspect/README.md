@@ -46,5 +46,5 @@ To include them, you must pass `--with-base //garnet/packages/tests:zircon`
 to `fx set` and re-pave your device.
 
 ```
-$ fx shell runtests -t inspect-test
+$ fx shell runtests --names inspect-test
 ```

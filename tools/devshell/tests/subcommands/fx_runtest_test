@@ -61,8 +61,8 @@ EOF
 # Test if "fx run-test" executes "fx shell runtests" properly when
 # the name passed results in multiple test packages.
 TEST_multiple_tests() {
-  local component1_url="fuchsia-pkg://fuchsia.com/example_package#meta/example_component_1.cmx",
-  local component2_url="fuchsia-pkg://fuchsia.com/example_package#meta/example_component_2.cmx",
+  local component1_url="fuchsia-pkg://fuchsia.com/example_package#meta/example_component_1.cmx"
+  local component2_url="fuchsia-pkg://fuchsia.com/example_package#meta/example_component_2.cmx"
   cat > "${BT_TEMP_DIR}/tools/devshell/test.mock_stdout" <<EOF
 command: fx shell run-test-component ${component1_url}
 cpu: arm64
@@ -84,7 +84,7 @@ EOF
   ${fx} run-test example_package >${out} 2>&1
   # check if "fx shell" was executed properly for runtests syntax
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" \
-    "runtests" "-t" "${component1_url},${component2_url}"
+    "runtests" "${component1_url}" "${component2_url}"
 }
 
 BT_RUN_TESTS "$@"
