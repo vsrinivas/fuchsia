@@ -56,42 +56,10 @@ class PipelineManager {
   void ConfigureStreamPipeline(StreamCreationData info,
                                fidl::InterfaceRequest<fuchsia::camera2::Stream> stream);
 
-  // Creates the stream pipeline graph and appends it to the input node (|parent_node|).
-  // Args:
-  // |internal_node| : Internal node of the node where this new graph needs to append.
-  // |parent_node| : Pointer to the node to which  we need to append this new graph.
-  // Returns:
-  // |OutputNode*| : Pointer to the ouput node.
-  fit::result<OutputNode*, zx_status_t> CreateGraph(StreamCreationData* info,
-                                                    const InternalConfigNode& internal_node,
-                                                    ProcessNode* parent_node);
-
-  zx_status_t AppendToExistingGraph(StreamCreationData* info, ProcessNode* graph_node,
-                                    fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
-
   // Disconnects the stream.
   // This is called when the stream channel receives a ZX_ERR_PEER_CLOSE message.
   // |stream_to_be_disconnected| : Stream type of the stream to be disconnected.
   void OnClientStreamDisconnect(fuchsia::camera2::CameraStreamType stream_to_be_disconnected);
-
-  // Helper function to find out which portion of the graph
-  // needs to be disconnected and shut down.
-  void DisconnectStream(ProcessNode* graph_head,
-                        fuchsia::camera2::CameraStreamType input_stream_type,
-                        fuchsia::camera2::CameraStreamType stream_to_disconnect);
-
-  // Frees up the nodes after the stream pipeline has been shutdown
-  // when |stream_to_disconnect| stream is disconnected.
-  // After a stream has shutdown, we have to check again to see what part of the
-  // graph needs to be freed up because there is a possibility where while a portion
-  // of graph is waiting to be shut down, another request for disconnection came in for
-  // same |input_stream_type|.
-  void DeleteGraphForDisconnectedStream(ProcessNode* graph_head,
-                                        fuchsia::camera2::CameraStreamType stream_to_disconnect);
-
-  fit::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t> FindNodeToAttachNewStream(
-      StreamCreationData* info, const InternalConfigNode& current_internal_node,
-      ProcessNode* graph_head);
 
   ProcessNode* full_resolution_stream() const {
     return FindStream(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
@@ -128,6 +96,35 @@ class PipelineManager {
     serialized_tasks_event_.signal(0u, kSerialzedTaskQueued);
   }
 
+  // Frees up the nodes after the stream pipeline has been shutdown
+  // when |stream_to_disconnect| stream is disconnected.
+  // After a stream has shutdown, we have to check again to see what part of the
+  // graph needs to be freed up because there is a possibility where while a portion
+  // of graph is waiting to be shut down, another request for disconnection came in for
+  // same |input_stream_type|.
+  void DeleteGraphForDisconnectedStream(ProcessNode* graph_head,
+                                        fuchsia::camera2::CameraStreamType stream_to_disconnect);
+
+  // Creates the stream pipeline graph and appends it to the input node (|parent_node|).
+  // Args:
+  // |internal_node| : Internal node of the node where this new graph needs to append.
+  // |parent_node| : Pointer to the node to which  we need to append this new graph.
+  // Returns:
+  // |OutputNode*| : Pointer to the ouput node.
+  fit::result<OutputNode*, zx_status_t> CreateGraph(StreamCreationData* info,
+                                                    const InternalConfigNode& internal_node,
+                                                    ProcessNode* parent_node);
+
+  fit::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t> FindNodeToAttachNewStream(
+      StreamCreationData* info, const InternalConfigNode& current_internal_node,
+      ProcessNode* graph_head);
+
+  // Helper function to find out which portion of the graph
+  // needs to be disconnected and shut down.
+  void DisconnectStream(ProcessNode* graph_head,
+                        fuchsia::camera2::CameraStreamType input_stream_type,
+                        fuchsia::camera2::CameraStreamType stream_to_disconnect);
+
   ProcessNode* FindStream(fuchsia::camera2::CameraStreamType stream) const {
     auto stream_entry = streams_.find(stream);
     if (stream_entry != streams_.end()) {
@@ -135,9 +132,6 @@ class PipelineManager {
     }
     return nullptr;
   }
-
-  fit::result<std::unique_ptr<InputNode>, zx_status_t> ConfigureStreamPipelineHelper(
-      StreamCreationData* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
 
   bool global_shutdown_requested_ = false;
   const zx::event& shutdown_event_;

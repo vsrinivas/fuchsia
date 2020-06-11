@@ -75,38 +75,6 @@ fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
   return result;
 }
 
-fit::result<std::unique_ptr<InputNode>, zx_status_t> PipelineManager::ConfigureStreamPipelineHelper(
-    StreamCreationData* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
-  // Configure Input node
-  auto input_result =
-      camera::InputNode::CreateInputNode(info, memory_allocator_, dispatcher_, isp_);
-  if (input_result.is_error()) {
-    FX_PLOGST(ERROR, kTag, input_result.error()) << "Failed to ConfigureInputNode";
-    return input_result;
-  }
-
-  auto input_processing_node = std::move(input_result.value());
-  ProcessNode* input_node = input_processing_node.get();
-
-  auto output_node_result = CreateGraph(info, info->node, input_node);
-  if (output_node_result.is_error()) {
-    FX_PLOGST(ERROR, kTag, output_node_result.error()) << "Failed to CreateGraph";
-    return fit::error(output_node_result.error());
-  }
-
-  auto* output_node = output_node_result.value();
-  auto stream_configured = info->stream_type();
-
-  auto status = output_node->Attach(stream.TakeChannel(), [this, stream_configured]() {
-    OnClientStreamDisconnect(stream_configured);
-  });
-  if (status != ZX_OK) {
-    FX_PLOGST(ERROR, kTag, status) << "Failed to bind output stream";
-    return fit::error(status);
-  }
-  return fit::ok(std::move(input_processing_node));
-}
-
 fit::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t>
 PipelineManager::FindNodeToAttachNewStream(StreamCreationData* info,
                                            const InternalConfigNode& current_internal_node,
@@ -142,58 +110,6 @@ PipelineManager::FindNodeToAttachNewStream(StreamCreationData* info,
   return fit::error(ZX_ERR_INTERNAL);
 }
 
-zx_status_t PipelineManager::AppendToExistingGraph(
-    StreamCreationData* info, ProcessNode* graph_head,
-    fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
-  auto result = FindNodeToAttachNewStream(info, info->node, graph_head);
-  if (result.is_error()) {
-    FX_PLOGS(ERROR, result.error()) << "Failed FindNodeToAttachNewStream";
-    return result.error();
-  }
-
-  // If the next node is an output node, we currently do not support
-  // this. Currently we expect that the clients would request for streams in a fixed order.
-  // TODO(42241): Remove this check when 42241 is fixed.
-  const auto* next_node_internal = GetNextNodeInPipeline(info->stream_type(), result.value().first);
-  if (!next_node_internal) {
-    FX_LOGS(ERROR) << "Failed to get next node";
-    return ZX_ERR_INTERNAL;
-  }
-
-  if (next_node_internal->type == NodeType::kOutputStream) {
-    FX_LOGS(WARNING)
-        << "Cannot create this stream due to unexpected ordering of stream create requests";
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  auto* node_to_be_appended = result.value().second;
-  auto output_node_result = CreateGraph(info, result.value().first, node_to_be_appended);
-  if (output_node_result.is_error()) {
-    FX_PLOGS(ERROR, output_node_result.error()) << "Failed to CreateGraph";
-    return output_node_result.error();
-  }
-
-  auto* output_node = output_node_result.value();
-  auto stream_configured = info->stream_type();
-  auto status = output_node->Attach(stream.TakeChannel(), [this, stream_configured]() {
-    FX_LOGS(DEBUG) << "Stream client disconnected";
-    OnClientStreamDisconnect(stream_configured);
-  });
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to bind output stream";
-    return status;
-  }
-
-  // Push this new requested stream to all pre-existing nodes |configured_streams| vector
-  auto requested_stream_type = info->stream_type();
-  auto* current_node = node_to_be_appended;
-  while (current_node) {
-    current_node->configured_streams().push_back(requested_stream_type);
-    current_node = current_node->parent_node();
-  }
-
-  return status;
-}
 void PipelineManager::ConfigureStreamPipeline(
     StreamCreationData info, fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
   PostTaskOnSerializedTaskQueue(
@@ -206,28 +122,91 @@ void PipelineManager::ConfigureStreamPipeline(
           }
         });
 
+        ProcessNode* graph_node_to_be_appended = nullptr;
+        camera::InternalConfigNode internal_graph_node_to_be_appended;
+        std::unique_ptr<camera::ProcessNode> graph_head;
+
         auto* input_node = FindStream(info.node.input_stream_type);
         if (input_node) {
-          // If the same stream is requested again, we return failure.
+          // If the same stream is requested again, return an error.
           if (HasStreamType(input_node->configured_streams(),
                             info.stream_config.properties.stream_type())) {
             status = ZX_ERR_ALREADY_BOUND;
             return;
           }
-          // We will now append the requested stream to the existing graph.
-          status = AppendToExistingGraph(&info, input_node, stream);
-          if (status != ZX_OK) {
-            FX_PLOGST(DEBUG, kTag, status) << "AppendToExistingGraph failed";
+          // Find the node at which the new graph needs to be appended.
+          auto result = FindNodeToAttachNewStream(&info, info.node, input_node);
+          if (result.is_error()) {
+            FX_PLOGS(ERROR, result.error()) << "Failed FindNodeToAttachNewStream";
+            status = result.error();
             return;
           }
+
+          // If the next node is an output node, it is currently not supported.
+          // Currently the expectation is that the clients will request streams in a fixed
+          // order.
+          // TODO(42241): Remove this check when 42241 is fixed.
+          const auto* next_node_internal =
+              GetNextNodeInPipeline(info.stream_type(), result.value().first);
+          if (!next_node_internal) {
+            FX_LOGS(ERROR) << "Failed to get next node";
+            status = ZX_ERR_INTERNAL;
+            return;
+          }
+
+          if (next_node_internal->type == NodeType::kOutputStream) {
+            FX_LOGS(WARNING)
+                << "Cannot create this stream due to unexpected ordering of stream create requests";
+            status = ZX_ERR_NOT_SUPPORTED;
+            return;
+          }
+
+          graph_node_to_be_appended = result.value().second;
+          internal_graph_node_to_be_appended = result.value().first;
+        } else {
+          auto input_result =
+              camera::InputNode::CreateInputNode(&info, memory_allocator_, dispatcher_, isp_);
+          if (input_result.is_error()) {
+            FX_PLOGST(ERROR, kTag, input_result.error()) << "Failed to ConfigureInputNode";
+            status = input_result.error();
+            return;
+          }
+
+          graph_head = std::move(input_result.value());
+          graph_node_to_be_appended = graph_head.get();
+          internal_graph_node_to_be_appended = info.node;
+        }
+
+        auto output_node_result =
+            CreateGraph(&info, internal_graph_node_to_be_appended, graph_node_to_be_appended);
+        if (output_node_result.is_error()) {
+          FX_PLOGST(ERROR, kTag, output_node_result.error()) << "Failed to CreateGraph";
+          status = output_node_result.error();
           return;
         }
-        auto result = ConfigureStreamPipelineHelper(&info, stream);
-        if (result.is_error()) {
-          status = result.error();
+
+        auto* output_node = output_node_result.value();
+        auto stream_configured = info.stream_type();
+        status = output_node->Attach(stream.TakeChannel(), [this, stream_configured]() {
+          FX_LOGS(DEBUG) << "Stream client disconnected";
+          OnClientStreamDisconnect(stream_configured);
+        });
+        if (status != ZX_OK) {
+          FX_PLOGS(ERROR, status) << "Failed to bind output stream";
           return;
         }
-        streams_[info.node.input_stream_type] = std::move(result.value());
+
+        if (input_node) {
+          // Push this new requested stream to all pre-existing nodes |configured_streams| vector.
+          auto requested_stream_type = info.stream_type();
+          auto* current_node = graph_node_to_be_appended;
+          while (current_node) {
+            current_node->configured_streams().push_back(requested_stream_type);
+            current_node = current_node->parent_node();
+          }
+        } else {
+          streams_[info.node.input_stream_type] = std::move(graph_head);
+        }
       });
 }
 
