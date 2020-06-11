@@ -4,7 +4,7 @@
 
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use anyhow::Error;
-use fidl_fuchsia_hardware_power_statecontrol::{AdminMarker, AdminProxy, SystemPowerState};
+use fidl_fuchsia_hardware_power_statecontrol::{AdminMarker, AdminProxy, RebootReason};
 use fuchsia_component as app;
 use fuchsia_syslog::macros::{fx_log_err, fx_log_info};
 
@@ -35,7 +35,7 @@ impl HardwarePowerStatecontrolFacade {
     pub async fn suspend_reboot(&self) -> Result<(), Error> {
         let tag = "HardwarePowerStatecontrolFacade::suspend_reboot";
         fx_log_info!("Executing Suspend: REBOOT");
-        if let Err(err) = self.get_admin_proxy()?.suspend(SystemPowerState::Reboot).await? {
+        if let Err(err) = self.get_admin_proxy()?.reboot(RebootReason::UserRequest).await? {
             fx_err_and_bail!(
                 &with_line!(tag),
                 format_err!("Failed to change power control state: {:?}", err)
@@ -49,9 +49,7 @@ impl HardwarePowerStatecontrolFacade {
         let tag = "HardwarePowerStatecontrolFacade::suspend_reboot_bootloader";
         fx_log_info!("Executing Suspend: REBOOT_BOOTLOADER");
 
-        if let Err(err) =
-            self.get_admin_proxy()?.suspend(SystemPowerState::RebootBootloader).await?
-        {
+        if let Err(err) = self.get_admin_proxy()?.reboot_to_bootloader().await? {
             fx_err_and_bail!(
                 &with_line!(tag),
                 format_err!("Failed to change power control state: {:?}", err)
@@ -64,7 +62,7 @@ impl HardwarePowerStatecontrolFacade {
     pub async fn suspend_reboot_recovery(&self) -> Result<(), Error> {
         let tag = "HardwarePowerStatecontrolFacade::suspend_reboot_recovery";
         fx_log_info!("Executing Suspend: REBOOT_RECOVERY");
-        if let Err(err) = self.get_admin_proxy()?.suspend(SystemPowerState::RebootRecovery).await? {
+        if let Err(err) = self.get_admin_proxy()?.reboot_to_recovery().await? {
             fx_err_and_bail!(
                 &with_line!(tag),
                 format_err!("Failed to change power control state: {:?}", err)
@@ -78,7 +76,7 @@ impl HardwarePowerStatecontrolFacade {
         let tag = "HardwarePowerStatecontrolFacade::suspend_poweroff";
         fx_log_info!("Executing Suspend: POWEROFF");
 
-        if let Err(err) = self.get_admin_proxy()?.suspend(SystemPowerState::Poweroff).await? {
+        if let Err(err) = self.get_admin_proxy()?.poweroff().await? {
             fx_err_and_bail!(
                 &with_line!(tag),
                 format_err!("Failed to change power control state: {:?}", err)
@@ -92,7 +90,7 @@ impl HardwarePowerStatecontrolFacade {
         let tag = "HardwarePowerStatecontrolFacade::suspend_mexec";
         fx_log_info!("Executing Suspend: MEXEC");
 
-        if let Err(err) = self.get_admin_proxy()?.suspend(SystemPowerState::Mexec).await? {
+        if let Err(err) = self.get_admin_proxy()?.mexec().await? {
             fx_err_and_bail!(
                 &with_line!(tag),
                 format_err!("Failed to change power control state: {:?}", err)
@@ -105,7 +103,7 @@ impl HardwarePowerStatecontrolFacade {
     pub async fn suspend_ram(&self) -> Result<(), Error> {
         let tag = "HardwarePowerStatecontrolFacade::suspend_ram";
         fx_log_info!("Executing Suspend: SUSPEND_RAM");
-        if let Err(err) = self.get_admin_proxy()?.suspend(SystemPowerState::SuspendRam).await? {
+        if let Err(err) = self.get_admin_proxy()?.suspend_to_ram().await? {
             fx_err_and_bail!(
                 &with_line!(tag),
                 format_err!("Failed to change power control state: {:?}", err)
