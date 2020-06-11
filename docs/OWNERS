@@ -1,9 +1,17 @@
-# The docs don't have an "owner" per se, but there are volunteer CL reviewers
-# listed here:
+
+# The docs team and trusted reviewers can approve doc CLs.
+# 
+# Docs team:
+nickvander@google.com
+kyol@google.com
+jaredb@google.com
+kadolor@google.com
+mkearney@google.com
+
+# Trusted reviewers:
 abarth@google.com
 pylaligand@google.com
-nickvander@google.com
 mangini@google.com
-*
+wilkinsonclay@google.com
 
-# COMPONENT: DeveloperExperience
+# COMPONENT: DeveloperExperience>Fuchsiadev_Docs
