@@ -31,7 +31,7 @@ group("sys") {
   testonly = true
   public_deps = [
     "//src/devices/bin/driver_manager",
-    "//src/sys/component_manager",
+    "//src/sys/component_manager:component-manager",
   ]
 }
 

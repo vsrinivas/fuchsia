@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("hello_world_bin") {
   source_root = "src/hello_world.rs"
@@ -27,7 +28,7 @@ rustc_binary("echo_args_bin") {
   deps = [ "//src/lib/syslog/rust:syslog" ]
 }
 
-rustc_binary("lifecycle") {
+rustc_binary("lifecycle_bin") {
   source_root = "src/lifecycle.rs"
   name = "lifecycle"
   edition = "2018"
@@ -39,7 +40,7 @@ rustc_binary("lifecycle") {
   ]
 }
 
-rustc_binary("lifecycle_full") {
+rustc_binary("lifecycle_full_bin") {
   source_root = "src/lifecycle_full.rs"
   name = "lifecycle_full"
   edition = "2018"
@@ -55,65 +56,49 @@ rustc_binary("lifecycle_full") {
   ]
 }
 
-package("components_basic_example") {
+fuchsia_component("hello-world") {
+  deps = [ ":hello_world_bin" ]
+  manifest = "meta/hello_world.cml"
+}
+
+fuchsia_component("ls-root-pkg") {
+  deps = [ ":ls_root_pkg_bin" ]
+  manifest = "meta/ls_root_pkg.cml"
+}
+
+fuchsia_component("echo-args") {
+  deps = [ ":echo_args_bin" ]
+  manifest = "meta/echo_args.cml"
+}
+
+fuchsia_component("lifecycle") {
+  deps = [ ":lifecycle_bin" ]
+  manifest = "meta/lifecycle.cml"
+}
+
+fuchsia_component("lifecycle-full") {
+  deps = [ ":lifecycle_full_bin" ]
+  manifest = "meta/lifecycle_full.cml"
+}
+
+fuchsia_package("components-basic-example") {
   deps = [
-    ":echo_args_bin",
-    ":hello_world_bin",
+    ":echo-args",
+    ":hello-world",
     ":lifecycle",
-    ":lifecycle_full",
-    ":ls_root_pkg_bin",
-  ]
-
-  binaries = [
-    {
-      name = "hello_world"
-    },
-    {
-      name = "ls_root_pkg"
-    },
-    {
-      name = "echo_args"
-    },
-    {
-      name = "lifecycle"
-    },
-    {
-      name = "lifecycle_full"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/hello_world.cml")
-      dest = "hello_world.cm"
-    },
-    {
-      path = rebase_path("meta/ls_root_pkg.cml")
-      dest = "ls_root_pkg.cm"
-    },
-    {
-      path = rebase_path("meta/echo_args.cml")
-      dest = "echo_args.cm"
-    },
-    {
-      path = rebase_path("meta/lifecycle.cml")
-      dest = "lifecycle.cm"
-    },
-    {
-      path = rebase_path("meta/lifecycle_full.cml")
-      dest = "lifecycle_full.cm"
-    },
+    ":lifecycle-full",
+    ":ls-root-pkg",
   ]
 }
 
-test_package("hello-world-tests") {
+fuchsia_component("hello-world-test") {
+  testonly = true
   deps = [ ":hello_world_bin_test" ]
-  v2_tests = [
-    {
-      name = "hello_world_bin_test"
-      environments = basic_envs
-    },
-  ]
+  manifest = "meta/hello_world_bin_test.cml"
+}
+
+fuchsia_test_package("hello-world-tests") {
+  test_components = [ ":hello-world-test" ]
 }
 
 group("tests") {

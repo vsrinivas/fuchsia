@@ -1,8 +1,0 @@
-{
-    program: {
-        binary: "bin/hello_world",
-    },
-    use: [
-        { runner: "elf" },
-    ],
-}

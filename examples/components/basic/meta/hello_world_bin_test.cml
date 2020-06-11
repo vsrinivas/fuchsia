@@ -1,6 +1,6 @@
 {
     program: {
-        binary: "test/hello_world_bin_test",
+        binary: "bin/hello_world_bin_test",
     },
     use: [
         { runner: "rust_test_runner" },

@@ -119,7 +119,7 @@ mod tests {
     };
 
     // Simulate a fake bootfs Directory service that only contains a single directory
-    // ("packages/hello_world"), using our own package directory (hosted by the real pkgfs) as the
+    // ("packages/hello-world"), using our own package directory (hosted by the real pkgfs) as the
     // contents.
     // TODO(fxb/37534): This is implemented by manually handling the Directory.Open and forwarding
     // to the test's real package directory because Rust vfs does not yet support
@@ -159,10 +159,10 @@ mod tests {
             // The test URLs used below have "packages/" as the first path component
             assert_eq!("packages", path_iter.next().unwrap().to_str().unwrap());
 
-            // We're simulating a package server that only contains the "hello_world"
+            // We're simulating a package server that only contains the "hello-world"
             // package. This returns rather than asserts so that we can attempt to resolve
             // other packages.
-            if path_iter.next().unwrap().to_str().unwrap() != "hello_world" {
+            if path_iter.next().unwrap().to_str().unwrap() != "hello-world" {
                 return;
             }
 
@@ -185,8 +185,7 @@ mod tests {
     async fn hello_world_test() -> Result<(), Error> {
         let resolver = FuchsiaBootResolver::new_from_directory(FakeBootfs::new());
 
-        let url =
-            "fuchsia-boot:///packages/hello_world#meta/component_manager_tests_hello_world.cm";
+        let url = "fuchsia-boot:///packages/hello-world#meta/hello-world.cm";
         let component = resolver.resolve_async(url).await?;
 
         // Check that both the returned component manifest and the component manifest in
@@ -202,9 +201,14 @@ mod tests {
         };
         let expected_decl = ComponentDecl {
             program: Some(program),
-            uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
-                source_name: Some("elf".to_string()),
-            })]),
+            uses: Some(vec![
+                fsys::UseDecl::Runner(fsys::UseRunnerDecl { source_name: Some("elf".to_string()) }),
+                fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
+                    source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                    source_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
+                    target_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
+                }),
+            ]),
             exposes: None,
             offers: None,
             facets: None,
@@ -218,10 +222,10 @@ mod tests {
         assert_eq!(decl.unwrap(), expected_decl);
 
         let fsys::Package { package_url, package_dir } = package.unwrap();
-        assert_eq!(package_url.unwrap(), "fuchsia-boot:///packages/hello_world");
+        assert_eq!(package_url.unwrap(), "fuchsia-boot:///packages/hello-world");
 
         let dir_proxy = package_dir.unwrap().into_proxy().unwrap();
-        let path = Path::new("meta/component_manager_tests_hello_world.cm");
+        let path = Path::new("meta/hello-world.cm");
         let file_proxy = io_util::open_file(&dir_proxy, path, fio::OPEN_RIGHT_READABLE)
             .expect("could not open cm");
         let cm_contents = io_util::read_file(&file_proxy).await.expect("could not read cm");

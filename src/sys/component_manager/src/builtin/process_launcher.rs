@@ -360,8 +360,8 @@ mod tests {
         // names change and get updated properly.
         let bin = std::env::args().next();
         match bin.as_ref().map(String::as_ref) {
-            Some("/pkg/test/component_manager_tests") => true,
-            Some("/pkg/test/component_manager_boot_env_tests") => false,
+            Some("/pkg/bin/component_manager_test") => true,
+            Some("/pkg/bin/component_manager_boot_env_test") => false,
             _ => panic!("Unexpected test binary name {:?}", bin),
         }
     }

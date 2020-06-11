@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/component_manager_tests"
+        "binary": "bin/component_manager_test"
     },
     "sandbox": {
         "features": [

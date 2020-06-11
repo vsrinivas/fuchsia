@@ -178,8 +178,8 @@ mod tests {
             ("bin/hello_world", false),
             // Should not be able to access bin/hello_world
             ("../bin/hello_world", false),
-            // Should not be able to access meta/component_manager_tests_hello_world.cm
-            ("../meta/component_manager_tests_hello_world.cm", false),
+            // Should not be able to access meta/hello_world.cm
+            ("../meta/hello_world.cm", false),
         ] {
             let (res, o_vmo) = loader_proxy.load_object(obj_name).await?;
             if should_succeed {

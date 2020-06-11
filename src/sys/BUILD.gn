@@ -6,7 +6,7 @@ group("sys") {
   testonly = true
   deps = [
     "cmc:cmc($host_toolchain)",
-    "component_manager",
+    "component_manager:component-manager",
     "component_test_runner",
     "core",
     "pkg",

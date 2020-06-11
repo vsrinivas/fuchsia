@@ -14,7 +14,7 @@ group("tests") {
     # Disabled for now until io.test.fidl changes.
     #":fdio_test",
     ":io_fidl_conformance_tests",
-    "//src/sys/component_manager",
+    "//src/sys/component_manager:component-manager",
   ]
 }
 

@@ -16,7 +16,7 @@ group("examples") {
     "rolldice",
     "rust",
     "speech",
-    "//examples/components/basic:components_basic_example",
+    "//examples/components/basic:components-basic-example",
     "//examples/components/basic:tests",
     "//examples/components/routing:components-routing-example",
     "//examples/components/routing_failed:components-routing-failed-example",
@@ -31,5 +31,6 @@ group("tests") {
     "isolated_cache:tests",
     "rolldice:rolldice-tests",
     "rust:tests",
+    "//examples/components/basic:tests",
   ]
 }

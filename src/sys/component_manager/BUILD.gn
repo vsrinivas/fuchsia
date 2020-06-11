@@ -8,19 +8,9 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
-rustc_library("lib") {
-  name = "component_manager_lib"
-  with_unit_tests = true
-  edition = "2018"
-
-  # Only for internal use.
-  visibility = [
-    "//src/session/*",
-    "//src/sys/component_manager/*",
-    "//src/sys/component_manager_for_test/*",
-  ]
-
+template("component_manager") {
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
@@ -80,22 +70,64 @@ rustc_library("lib") {
     # separate integration test targets.
     "//garnet/examples/fidl/services:echo-rustc",
   ]
-
   non_rust_deps = [
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+  is_test = false
+  if (defined(invoker.is_test)) {
+    is_test = invoker.is_test
+  }
 
-  # Test-only deps. Prefer adding deps used only in tests here instead of
-  # above, which has the benefit of keeping unneeded deps out of the production
-  # binary and allows depending on 'testonly' targets.
-  test_deps = [
-    "//src/lib/process_builder:test-util-fidl-rustc",
-    "//src/sys/lib/directory_broker",
-  ]
+  if (is_test) {
+    rustc_test(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "non_rust_deps",
+                             ])
 
-  # TODO(47215): Fix the leaks and remove this.
-  non_rust_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+      edition = "2018"
+
+      # Test-only deps. Prefer adding deps used only in tests here instead of
+      # above, which has the benefit of keeping unneeded deps out of the production
+      # binary and allows depending on 'testonly' targets.
+      deps += [
+        "//src/lib/process_builder:test-util-fidl-rustc",
+        "//src/sys/lib/directory_broker",
+      ]
+
+      # TODO(46841): Fix the leaks and remove this.
+      non_rust_deps +=
+          [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+    }
+  } else {
+    rustc_library(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "non_rust_deps",
+                             ])
+      name = "component_manager_lib"
+      edition = "2018"
+
+      # Only for internal use.
+      visibility = [
+        "//src/session/*",
+        "//src/sys/component_manager/*",
+        "//src/sys/component_manager_for_test/*",
+      ]
+    }
+  }
+}
+
+component_manager("lib") {
+}
+component_manager("component_manager_test") {
+  is_test = true
+}
+component_manager("component_manager_boot_env_test") {
+  is_test = true
 }
 
 rustc_binary("bin") {
@@ -148,76 +180,51 @@ bootfs_manifest("component_manager_bootfs.manifest") {
 # Note that this package and the component it contains wrap component_manager
 # as a v1 Component for interactive testing purposes through the shell. This
 # will eventually go away.
-package("component_manager") {
+fuchsia_component("component-manager-cmp") {
   deps = [ ":bin" ]
-  binaries = [
-    {
-      name = "component_manager"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/component_manager.cmx")
-      dest = "component_manager.cmx"
-    },
-  ]
+  component_name = "component_manager"
+  manifest = "meta/component_manager.cmx"
 }
 
-test_package("component_manager_tests") {
+fuchsia_package("component-manager") {
+  deps = [ ":component-manager-cmp" ]
+}
+
+fuchsia_component("component-manager-tests-cmp") {
+  testonly = true
   deps = [
-    ":lib_test",
-    "//examples/components/basic:hello_world_bin",
-    "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin",
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    ":component_manager_test",
+    "//src/lib/process_builder:test_util",
+  ]
+  component_name = "component_manager_tests"
+  manifest = "meta/component_manager_tests.cmx"
+}
+
+resource("component_manager_tests_invalid_manifest") {
+  sources = [ "meta/component_manager_tests_invalid.cm" ]
+  outputs = [ "meta/{{source_file_part}}" ]
+}
+
+fuchsia_component("component-manager-boot-env-tests-cmp") {
+  testonly = true
+  deps = [
+    ":component_manager_boot_env_test",
     "//src/lib/process_builder:root_job_test_runner",
     "//src/lib/process_builder:test_util",
   ]
+  component_name = "component_manager_boot_env_tests"
+  manifest = "meta/component_manager_boot_env_tests.cmx"
+}
 
-  tests = [
-    {
-      name = "component_manager_lib_lib_test"
-      dest = "component_manager_tests"
-      environments = basic_envs
-    },
-    {
-      name = "component_manager_lib_lib_test"
-      dest = "component_manager_boot_env_tests"
-      environments = basic_envs
-    },
+fuchsia_test_package("component-manager-tests") {
+  test_components = [
+    ":component-manager-tests-cmp",
+    ":component-manager-boot-env-tests-cmp",
   ]
-
-  resources = [
-    {
-      path = rebase_path("meta/component_manager_tests_invalid.cm")
-      dest = "component_manager_tests_invalid.cm"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/component_manager_tests_hello_world.cml")
-      dest = "component_manager_tests_hello_world.cm"
-    },
-    {
-      path = rebase_path("//garnet/examples/fidl/meta/echo_server.cmx")
-      dest = "echo_server_rust.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "hello_world"
-    },
-    {
-      name = "process_builder_test_util"
-    },
-    {
-      name = "root_job_test_runner"
-    },
-    {
-      name = "echo_server_rust"
-      dest = "bin/echo_server"
-    },
+  deps = [
+    ":component_manager_tests_invalid_manifest",
+    "//examples/components/basic:hello-world",
+    "//garnet/examples/fidl/echo_server_rust:echo-server-rust-cmp",
   ]
 }
 
@@ -225,8 +232,8 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":component_manager",
-    ":component_manager_tests",
+    ":component-manager",
+    ":component-manager-tests",
     "src/elf_runner/tests",
     "tests",
   ]

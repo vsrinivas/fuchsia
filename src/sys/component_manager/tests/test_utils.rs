@@ -24,7 +24,7 @@ use {
 /// A fuchsia system is expected to have Component Manager v2 at this URL for
 /// BlackBoxTest::default to work correctly.
 pub static COMPONENT_MANAGER_URL: &str =
-    "fuchsia-pkg://fuchsia.com/component_manager#meta/component_manager.cmx";
+    "fuchsia-pkg://fuchsia.com/component-manager#meta/component_manager.cmx";
 
 /// This structure contains all elements responsible for a black-box test
 /// of Component Manager v2. If this object is dropped, the component manager

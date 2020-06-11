@@ -129,8 +129,8 @@ mod tests {
         fn load_url(&self, package_url: &str) -> Option<Package> {
             let (dir_c, dir_s) = zx::Channel::create().unwrap();
             let parsed_url = PkgUrl::parse(&package_url).expect("bad url");
-            // Simulate a package server that only contains the "hello_world" package.
-            if parsed_url.name().unwrap() != "hello_world" {
+            // Simulate a package server that only contains the "hello-world" package.
+            if parsed_url.name().unwrap() != "hello-world" {
                 return None;
             }
 
@@ -153,8 +153,7 @@ mod tests {
     async fn resolve_test() {
         let loader = MockLoader::start();
         let resolver = FuchsiaPkgResolver::new(loader);
-        let url = "fuchsia-pkg://fuchsia.com/hello_world#\
-                   meta/component_manager_tests_hello_world.cm";
+        let url = "fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm";
         let component = resolver.resolve_async(url).await.expect("resolve failed");
 
         // Check that both the returned component manifest and the component manifest in
@@ -171,9 +170,14 @@ mod tests {
         };
         let expected_decl = fsys::ComponentDecl {
             program: Some(program),
-            uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
-                source_name: Some("elf".to_string()),
-            })]),
+            uses: Some(vec![
+                fsys::UseDecl::Runner(fsys::UseRunnerDecl { source_name: Some("elf".to_string()) }),
+                fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
+                    source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                    source_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
+                    target_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
+                }),
+            ]),
             exposes: None,
             offers: None,
             facets: None,
@@ -187,10 +191,10 @@ mod tests {
         assert_eq!(decl.unwrap(), expected_decl);
 
         let fsys::Package { package_url, package_dir } = package.unwrap();
-        assert_eq!(package_url.unwrap(), "fuchsia-pkg://fuchsia.com/hello_world");
+        assert_eq!(package_url.unwrap(), "fuchsia-pkg://fuchsia.com/hello-world");
 
         let dir_proxy = package_dir.unwrap().into_proxy().unwrap();
-        let path = Path::new("meta/component_manager_tests_hello_world.cm");
+        let path = Path::new("meta/hello-world.cm");
         let file_proxy = io_util::open_file(&dir_proxy, path, fio::OPEN_RIGHT_READABLE)
             .expect("could not open cm");
         let cm_contents = io_util::read_file(&file_proxy).await.expect("could not read cm");
@@ -225,28 +229,27 @@ mod tests {
         let resolver = FuchsiaPkgResolver::new(loader);
         test_resolve_error!(
             resolver,
-            "fuchsia-pkg:///hello_world#meta/component_manager_tests_hello_world.cm",
+            "fuchsia-pkg:///hello-world#meta/hello-world.cm",
             UrlParseError
         );
         test_resolve_error!(
             resolver,
-            "fuchsia-pkg://fuchsia.com/hello_world",
+            "fuchsia-pkg://fuchsia.com/hello-world",
             UrlMissingResourceError
         );
         test_resolve_error!(
             resolver,
-            "fuchsia-pkg://fuchsia.com/goodbye_world#\
-             meta/component_manager_tests_hello_world.cm",
+            "fuchsia-pkg://fuchsia.com/goodbye-world#meta/hello-world.cm",
             ComponentNotAvailable
         );
         test_resolve_error!(
             resolver,
-            "fuchsia-pkg://fuchsia.com/hello_world#meta/does_not_exist.cm",
+            "fuchsia-pkg://fuchsia.com/hello-world#meta/does_not_exist.cm",
             ManifestNotAvailable
         );
         test_resolve_error!(
             resolver,
-            "fuchsia-pkg://fuchsia.com/hello_world#data/component_manager_tests_invalid.cm",
+            "fuchsia-pkg://fuchsia.com/hello-world#meta/component_manager_tests_invalid.cm",
             ManifestInvalid
         );
     }

@@ -51,8 +51,6 @@ group("deprecated_package_underscore") {
 
   # Do not add new entries to this list.
   visibility += [
-    "//examples/components/basic:components_basic_example",
-    "//examples/components/routing:components_routing_example",
     "//examples/criterion_bench:criterion_bench",
     "//examples/dotmatrix_display:dotmatrix_display",
     "//examples/fidl/echo_client/cpp:echo_client",
@@ -142,7 +140,6 @@ group("deprecated_package_underscore") {
     "//garnet/examples/fidl/echo_server_cpp:echo_server_cpp_tests",
     "//garnet/examples/fidl/echo_server_go:echo_server_go",
     "//garnet/examples/fidl/echo_server_llcpp:echo_server_llcpp",
-    "//garnet/examples/fidl/echo_server_rust:echo_server_rust",
     "//garnet/examples/http/example_http_server:example_http_server",
     "//garnet/examples/http/httpget_cpp:httpget_cpp",
     "//garnet/examples/http/httpget_rust:httpget_rust",
@@ -620,8 +617,6 @@ group("deprecated_package_underscore") {
     "//src/sys/component_manager/tests:component_manager_panic_test",
     "//src/sys/component_manager/tests:elf_runner_test",
     "//src/sys/component_manager/tests:shutdown_integration_test",
-    "//src/sys/component_manager:component_manager",
-    "//src/sys/component_manager:component_manager_tests",
     "//src/sys/component_manager_for_test/tests:component_manager_for_test_integration_test",
     "//src/sys/component_manager_for_test:component_manager_for_test_pkg",
     "//src/sys/component_test_runner:component_test_runner",

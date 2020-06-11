@@ -228,10 +228,10 @@ mod tests {
             // "packages/" should always be the first path component used by the resolver.
             assert_eq!("packages", path_iter.next().unwrap().to_str().unwrap());
 
-            // We're simulating a package server that only contains the "hello_world"
+            // We're simulating a package server that only contains the "hello-world"
             // package. This returns rather than asserts so that we can attempt to resolve
             // other packages.
-            if path_iter.next().unwrap().to_str().unwrap() != "hello_world" {
+            if path_iter.next().unwrap().to_str().unwrap() != "hello-world" {
                 return;
             }
 
@@ -296,8 +296,7 @@ mod tests {
     async fn resolve_test() {
         let (sender, receiver) = oneshot::channel();
         let resolver = FuchsiaPkgResolver::new(receiver);
-        let url = "fuchsia-pkg://fuchsia.com/hello_world#\
-                   meta/component_manager_tests_hello_world.cm";
+        let url = "fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm";
 
         // Resolve before model is sent through channel should fail.
         assert_model_not_available(resolver.resolve_async(url).await);
@@ -323,9 +322,14 @@ mod tests {
                     ))),
                 }]),
             }),
-            uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
-                source_name: Some("elf".to_string()),
-            })]),
+            uses: Some(vec![
+                fsys::UseDecl::Runner(fsys::UseRunnerDecl { source_name: Some("elf".to_string()) }),
+                fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
+                    source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                    source_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
+                    target_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
+                }),
+            ]),
             exposes: None,
             offers: None,
             facets: None,
@@ -339,10 +343,10 @@ mod tests {
         assert_eq!(decl.unwrap(), expected_decl);
 
         let fsys::Package { package_url, package_dir } = package.unwrap();
-        assert_eq!(package_url.unwrap(), "fuchsia-pkg://fuchsia.com/hello_world");
+        assert_eq!(package_url.unwrap(), "fuchsia-pkg://fuchsia.com/hello-world");
 
         let dir_proxy = package_dir.unwrap().into_proxy().unwrap();
-        let path = Path::new("meta/component_manager_tests_hello_world.cm");
+        let path = Path::new("meta/hello-world.cm");
         let file_proxy = io_util::open_file(&dir_proxy, path, fio::OPEN_RIGHT_READABLE)
             .expect("could not open cm");
         let cm_contents = io_util::read_file(&file_proxy).await.expect("could not read cm");
@@ -362,8 +366,7 @@ mod tests {
     async fn resolve_model_unavailable() {
         let (sender, receiver) = oneshot::channel();
         let resolver = FuchsiaPkgResolver::new(receiver);
-        let url = "fuchsia-pkg://fuchsia.com/hello_world#\
-                meta/component_manager_tests_hello_world.cm";
+        let url = "fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm";
         sender.send(Weak::new()).map_err(|_| "failed to send").unwrap();
         assert_model_not_available(resolver.resolve_async(url).await);
     }
@@ -391,28 +394,27 @@ mod tests {
         };
         test_resolve_error!(
             resolver,
-            "fuchsia-pkg:///hello_world#meta/component_manager_tests_hello_world.cm",
+            "fuchsia-pkg:///hello-world#meta/hello-world.cm",
             UrlParseError
         );
         test_resolve_error!(
             resolver,
-            "fuchsia-pkg://fuchsia.com/hello_world",
+            "fuchsia-pkg://fuchsia.com/hello-world",
             UrlMissingResourceError
         );
         test_resolve_error!(
             resolver,
-            "fuchsia-pkg://fuchsia.com/goodbye_world#\
-             meta/component_manager_tests_hello_world.cm",
+            "fuchsia-pkg://fuchsia.com/goodbye-world#meta/hello-world.cm",
             ManifestNotAvailable
         );
         test_resolve_error!(
             resolver,
-            "fuchsia-pkg://fuchsia.com/hello_world#meta/does_not_exist.cm",
+            "fuchsia-pkg://fuchsia.com/hello-world#meta/does_not_exist.cm",
             ManifestNotAvailable
         );
         test_resolve_error!(
             resolver,
-            "fuchsia-pkg://fuchsia.com/hello_world#data/component_manager_tests_invalid.cm",
+            "fuchsia-pkg://fuchsia.com/hello-world#meta/component_manager_tests_invalid.cm",
             ManifestInvalid
         );
     }

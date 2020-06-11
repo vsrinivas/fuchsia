@@ -91,7 +91,7 @@ package("elf_runner_lifecycle_test") {
     ":lifecycle_timeout",
     ":lifecycle_timeout_unresponsive",
     ":unresponsive_component",
-    "//examples/components/basic:lifecycle_full",
+    "//examples/components/basic:lifecycle_full_bin",
   ]
 
   binaries = [
@@ -118,7 +118,7 @@ package("elf_runner_lifecycle_test") {
   meta = [
     {
       path = rebase_path("//examples/components/basic/meta/lifecycle_full.cml")
-      dest = "lifecycle_full.cm"
+      dest = "lifecycle-full.cm"
     },
     {
       path = rebase_path("meta/lifecycle.cml")
