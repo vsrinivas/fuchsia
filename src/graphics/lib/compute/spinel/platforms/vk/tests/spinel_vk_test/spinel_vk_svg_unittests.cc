@@ -133,11 +133,14 @@ param const params[] = {
     .surface   = { 1024, 300 },
     .checksums = {
       { 0xFD0B4012, {
-          { param::INTEL,  {}                    },  // all intel
-          { param::AMD,    { param::AMD_V1807B } } } // AMD/V1807B (Mesa)
+          { param::ARM,    {}                    }, // all arm
+          { param::INTEL,  {}                    }, // all intel
+          { param::AMD,    { param::AMD_V1807B } }  // AMD/V1807B (Mesa)
+        }
       },
       { 0xFCF529FC, {
-          { param::NVIDIA, {}                    } } // all nvidia
+          { param::NVIDIA, {}                    }  // all nvidia
+        }
       },
     },
     .test = std::make_shared<test>(
@@ -195,10 +198,13 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0xEE9E0BBE, {
-          { param::INTEL,  {}                    } } // all intel
+          { param::ARM,    {}                    }, // all arm
+          { param::INTEL,  {}                    }  // all intel
+        }
       },
       { 0xEE9805B8, {
-          { param::NVIDIA, {}                    } } // all nvidia
+          { param::NVIDIA, {}                    }  // all nvidia
+        }
       },
     },
     .test = std::make_shared<test>(
@@ -220,10 +226,13 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0xBEFA6C49, {
-          { param::INTEL,  {}                    } } // all intel
+          { param::ARM,    {}                    }, // all arm
+          { param::INTEL,  {}                    }  // all intel
+        }
       },
       { 0xBED44623, {
-          { param::NVIDIA, {}                    } } // all nvidia
+          { param::NVIDIA, {}                    }  // all nvidia
+        }
       },
     },
     .test = std::make_shared<test>(
@@ -248,10 +257,13 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0xF994CF80, {
-          { param::INTEL,  {}                    } } // all intel
+          { param::ARM,    {}                    }, // all arm
+          { param::INTEL,  {}                    }  // all intel
+        }
       },
       { 0xF8AFC987, {
-          { param::NVIDIA, {}                    } } // all nvidia
+          { param::NVIDIA, {}                    }  // all nvidia
+        }
       },
     },
     .test = std::make_shared<test>(
@@ -309,11 +321,17 @@ param const params[] = {
     .name        = "rational_cubics",
     .surface     = { 1024, 1024 },
     .checksums = {
+      { 0xB7841DF8, {
+          { param::ARM,    {}                    }  // all arm
+        }
+      },
       { 0xB783FDD8, {
-          { param::INTEL,  {}                    } } // all intel
+          { param::INTEL,  {}                    }  // all intel
+        }
       },
       { 0xB69EC4A9, {
-          { param::NVIDIA, {}                    } } // all nvidia
+          { param::NVIDIA, {}                    }  // all nvidia
+        }
       },
     },
     .test = std::make_shared<test>(
@@ -372,10 +390,13 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0xE86BA68F, {
-          { param::INTEL,  {}                    } } // all intel
+          { param::ARM,    {}                    }, // all arm
+          { param::INTEL,  {}                    }  // all intel
+        }
       },
       { 0xE8458069, {
-          { param::NVIDIA, {}                    } } // all nvidia
+          { param::NVIDIA, {}                    }  // all nvidia
+        }
       },
     },
     .test = std::make_shared<test>(
@@ -393,10 +414,13 @@ param const params[] = {
 
     .checksums = {
       { 0xCB49AF86, {
-          { param::INTEL,  {}                    } } // all intel
+          { param::ARM,    {}                    }, // all arm
+          { param::INTEL,  {}                    }  // all intel
+        }
       },
       { 0xCAFA6037, {
-          { param::NVIDIA, {}                    } } // all nvidia
+          { param::NVIDIA, {}                    }  // all nvidia
+        }
       },
     },
     .test = std::make_shared<test>(
@@ -412,11 +436,17 @@ param const params[] = {
     .name        = "arcs",
     .surface     = { 1024, 512 },
     .checksums = {
+      { 0xC2E4C4A9, {
+          { param::ARM,    {}                    }  // all arm
+        }
+      },
       { 0xC2E4C3A9, {
-          { param::INTEL,  {}                    } } // all intel
+          { param::INTEL,  {}                    }  // all intel
+        }
       },
       { 0xC26C3E22, {
-          { param::NVIDIA, {}                    } } // all nvidia
+          { param::NVIDIA, {}                    }  // all nvidia
+        }
       },
     },
     .test = std::make_shared<test>(

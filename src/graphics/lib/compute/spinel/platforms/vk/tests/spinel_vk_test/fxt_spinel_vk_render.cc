@@ -614,11 +614,15 @@ void ::spinel::vk::test::PrintTo(const param_spinel_vk_render & render, std::ost
       << std::endl;
 
   *os << "checksums:        "
+      << std::showbase
       << std::hex
-      << ::testing::PrintToString(render.checksums) // FIXME(allanmac): hex output would be preferable
-      << std::endl;
+      << std::uppercase;
+  // dump checksum maps in uppercase hex
+  ::testing::internal::UniversalTersePrint(render.checksums, os);
+  *os << std::endl;
 
-  *os << "-----------------" << std::endl;
+  *os << "-----------------"
+      << std::endl;
   // clang-format off
 }
 

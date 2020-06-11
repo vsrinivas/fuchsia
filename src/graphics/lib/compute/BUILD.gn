@@ -5,7 +5,8 @@
 import("gn/build_rules.gni")
 
 # Ensure that host tests are always rebuilt with device ones on Linux hosts.
-_build_host_tests = is_fuchsia && host_os == "linux"
+_build_host_tests =
+    is_fuchsia && target_cpu == "x64" && host_os == "linux"  # b/48603
 
 group("compute") {
   deps = [

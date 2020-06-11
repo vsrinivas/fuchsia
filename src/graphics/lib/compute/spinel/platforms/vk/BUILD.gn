@@ -11,16 +11,6 @@ config("spinel_vk_public_config") {
 
 static_library("vk") {
   output_name = "spinel_vk"
-  public = [
-    #
-    # FIXME(allanmac): I do not want to make allocator_device.h public
-    # but there is an interaction between the friend=[] directive and
-    # the host/device toolchain that appeared in a recent version of the
-    # build tools.  FWIW, the plan is to move the allocator helpers out
-    # of Spinel which will solve this issue in another way.
-    #
-    "allocator_device.h",
-  ]
   include_dirs = [ "${graphics_compute_dir}/spinel" ]
   sources = [
     "allocator_device.c",
@@ -98,12 +88,12 @@ static_library("vk_find_target") {
     "$root_gen_dir/src/graphics/lib/compute/spinel/platforms/vk",
     ".",  # Necessary for the spn_target.h includes in the source file.
   ]
-
-  # Spinel targets.
   deps = [
     "targets/vendors/amd/gcn3:generate",
+    "targets/vendors/arm/bifrost8:generate",
     "targets/vendors/intel/gen8:generate",
     "targets/vendors/nvidia/sm50:generate",
   ]
+
   public_configs = [ ":spinel_vk_ext_public_config" ]
 }

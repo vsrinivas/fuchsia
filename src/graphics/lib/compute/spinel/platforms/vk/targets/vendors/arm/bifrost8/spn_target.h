@@ -6,26 +6,25 @@
 #define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGETS_VENDORS_ARM_BIFROST8_SPN_TARGET_H_
 
 //
-//
-//
-
-#include "target_config.h"
-
-//
 // clang-format off
 //
 
-#undef  SPN_TARGET_VENDOR
-#undef  SPN_TARGET_ARCH
-
-#define SPN_TARGET_VENDOR  arm
-#define SPN_TARGET_ARCH    bifrost8
+#undef  SPN_TARGET_NAME
+#define SPN_TARGET_NAME  spn_arm_bifrost8
 
 //
 // clang-format on
 //
 
-#include "target_config_name.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern struct spn_vk_target const * const SPN_TARGET_NAME;
+
+#ifdef __cplusplus
+}
+#endif
 
 //
 //

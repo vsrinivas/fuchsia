@@ -6,46 +6,97 @@
 //
 //
 
+#include "hs_config.h"
+#include "spn_config.h"
+
+//
+//
+//
+
+#include "spn_target.h"
+
+//
+//
+//
+
+#include "vk_target.h"
+
+//
+//
+//
+
 #include <vulkan/vulkan_core.h>
-
-//
-//
-//
-
-#include "config.h"
-#include "name.h"
 
 //
 // clang-format off
 //
 
-#define SPN_TARGET_EXTENT_PDRW         (SPN_TARGET_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-#define SPN_TARGET_EXTENT_TDRW         (SPN_TARGET_ALLOC_TEMP_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-#define SPN_TARGET_EXTENT_PHW1G_TDR1S  (SPN_TARGET_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-#define SPN_TARGET_EXTENT_PHW1G_TDRNS  (SPN_TARGET_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-#define SPN_TARGET_EXTENT_PHWN_PDRN    (SPN_TARGET_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) // bad
-#define SPN_TARGET_EXTENT_IMAGE        0
-
-//
-//
-//
-
-struct spn_target_image const SPN_TARGET_IMAGE_NAME =
+static struct spn_vk_target const target =
 {
   .config = {
+
+    //
+    //
+    //
+    .queueing                             = SPN_VK_TARGET_QUEUEING_SIMPLE,
+
+    .extensions.named = {
+      .KHR_shader_float16_int8            = 1,
+    },
+
+    .features.named = {
+
+    },
+
+    .structures.named = {
+      .ShaderFloat16Int8FeaturesKHR = {
+        .shaderFloat16                    = 1,
+      },
+    },
+
+    //
+    //
+    //
     .allocator = {
       .host = {
         .perm = {
           .alignment        = 16,      // 16 byte alignment
         }
+      },
+      .device = {
+        .drw = {
+          .properties       = (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+          .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
+                               VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT  |
+                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT     |
+                               VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+        },
+        .hw_dr = {
+          .properties       = (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+          .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
+                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+        },
+        .hrw_dr = {
+          .properties       = (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
+          .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+        },
+        .hr_dw = {
+          .properties       = (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
+          .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
+                               VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+        },
+        .temp = {
+          .subbufs          = 256,      // 256 subbufs
+          .size             = 32 << 20, // 32 MBytes
+        }
       }
     },
-
-    .fence_pool = {
-      .size                 = 2,       // ~16-256 "in-flight" submits
-    },
-
-    .subgroup_size_log2     = SPN_DEVICE_SUBGROUP_SIZE_LOG2,
 
     .tile = {
       .width_log2           = SPN_DEVICE_TILE_WIDTH_LOG2,
@@ -55,108 +106,96 @@ struct spn_target_image const SPN_TARGET_IMAGE_NAME =
     .block_pool = {
       .block_dwords_log2    = SPN_DEVICE_BLOCK_POOL_BLOCK_DWORDS_LOG2,
       .subblock_dwords_log2 = SPN_DEVICE_BLOCK_POOL_SUBBLOCK_DWORDS_LOG2,
-      .ids_per_workgroup    = SPN_DEVICE_BLOCK_POOL_INIT_BP_IDS_PER_WORKGROUP
+      .ids_per_invocation   = SPN_DEVICE_BLOCK_POOL_INIT_BP_IDS_PER_INVOCATION
     },
 
     .path_builder = {
-      .ring_size            = 16834,
-      .eager_size           = 4096
-    },
-
-    .raster_builder = {
-      .vk = {
-        .rings = {
-          .h                = 0,   // FIXME -- replace with extent type
-          .d                = 0
-        }
-      },
       .size = {
-        .ring               = 8192,
-        .eager              = 1024,
-        .cohort             = SPN_DEVICE_RASTERS_ALLOC_METAS_SIZE, // FIXME -- change name
-        .cmds               = 1 << 18,
-        .ttrks              = 1 << 20
+        .dispatches         = 32,
+        .ring               = 16384,
+        .eager              = 4096
       }
     },
 
-    .styling = {
-      .vk = {
-        .h                  = 0,   // FIXME -- replace with extent type
-        .d                  = 0
+    .raster_builder = {
+      .size = {
+        .dispatches         = 32,
+        .ring               = 8192,
+        .eager              = 1024,
+        .cohort             = SPN_DEVICE_RASTERIZE_COHORT_SIZE,
+        .cmds               = 1 << 18,
+        .ttrks              = 1 << 20
+      },
+      .fills_scan = {
+        .rows               = SPN_DEVICE_FILLS_SCAN_ROWS
       }
     },
 
     .composition = {
-      .vk = {
-        .rings = {
-          .h                = 0,   // FIXME -- replace with extent type
-          .d                = 1
-        }
-      },
       .size = {
+        .dispatches         = 32,
         .ring               = 8192,
         .eager              = 1024,
-        .cmds               = 1 << 18,
         .ttcks              = 1 << 20,
         .rasters            = 1 << 17
+      }
+    },
+
+    .reclaim = {
+      .size = {
+        .dispatches         = 32,
+        .paths              = 16384,
+        .rasters            = 16384,
+        .eager              = 1024
       }
     },
 
     //
     // capture target-specific number of sets and extent sizes
     //
+#define SPN_DS_WAG_COUNT  64
+
     .ds = {
+      .status = {
+        .sets = 1
+      },
       .block_pool = {
         .sets = 1
       },
       .paths_copy = {
-        .sets = 1
+        .sets = SPN_DS_WAG_COUNT
       },
       .rasterize = {
-        .sets = 1
+        .sets = SPN_DS_WAG_COUNT
       },
-      .rasterize_post = {
-        .sets = 1
+      .ttrks = {
+        .sets = SPN_DS_WAG_COUNT
+      },
+      .raster_ids = {
+        .sets = SPN_DS_WAG_COUNT
       },
       .ttcks = {
-        .sets = 1
+        .sets = SPN_DS_WAG_COUNT
       },
       .place = {
-        .sets = 1
+        .sets = SPN_DS_WAG_COUNT
       },
       .styling = {
-        .sets = 1
+        .sets = SPN_DS_WAG_COUNT
       },
       .surface = {
-        .sets = 1
+        .sets = SPN_DS_WAG_COUNT
+      },
+      .reclaim = {
+        .sets = SPN_DS_WAG_COUNT
       }
     },
 
-
     //
-    // capture target-specific extent types
-    //
-#undef  SPN_TARGET_DESC_TYPE_STORAGE_BUFFER
-#define SPN_TARGET_DESC_TYPE_STORAGE_BUFFER(_ds_id,_d_idx,_d_ext,_d_id) ._d_id = _d_ext,
-
-#undef  SPN_TARGET_DESC_TYPE_STORAGE_IMAGE
-#define SPN_TARGET_DESC_TYPE_STORAGE_IMAGE(_ds_id,_d_idx,_d_ext,_d_id)  ._d_id = _d_ext,
-
-#undef  SPN_TARGET_DS_EXPAND_X
-#define SPN_TARGET_DS_EXPAND_X(_ds_idx,_ds_id,_ds)      \
-    .ds_extents._ds_id.props = {                        \
-      _ds                                               \
-    },
-
-    SPN_TARGET_DS_EXPAND()
-
-    //
-    // capture target-specific pipeline push constant sizes
+    // Initialize pipeline-specific parameters
     //
     .p = {
-      .push_sizes = {
-#include "targets/push.inl"
-      }
+#include "target_pipelines.inl"
     }
   },
 
@@ -164,89 +203,10 @@ struct spn_target_image const SPN_TARGET_IMAGE_NAME =
   // FILL IN REST OF SPINEL CONFIG STRUCT FROM OPENCL
   //
   .modules = {
-#if defined( _MSC_VER ) && !defined( __clang__ )
-#include "targets/modules.inl"
-#else
-#include "block_pool_init.len.xxd"
-    ,
-#include "block_pool_init.spv.xxd"
-    ,
-#include "fills_dispatch.len.xxd"
-    ,
-#include "fills_dispatch.spv.xxd"
-    ,
-#include "fills_expand.len.xxd"
-    ,
-#include "fills_expand.spv.xxd"
-    ,
-#include "fills_scan.len.xxd"
-    ,
-#include "fills_scan.spv.xxd"
-    ,
-#include "paths_alloc.len.xxd"
-    ,
-#include "paths_alloc.spv.xxd"
-    ,
-#include "paths_copy.len.xxd"
-    ,
-#include "paths_copy.spv.xxd"
-    ,
-#include "paths_reclaim.len.xxd"
-    ,
-#include "paths_reclaim.spv.xxd"
-    ,
-#include "place.len.xxd"
-    ,
-#include "place.spv.xxd"
-    ,
-#include "rasterize_line.len.xxd"
-    ,
-#include "rasterize_line.spv.xxd"
-    ,
-#include "rasterize_quad.len.xxd"
-    ,
-#include "rasterize_quad.spv.xxd"
-    ,
-#include "rasterize_cubic.len.xxd"
-    ,
-#include "rasterize_cubic.spv.xxd"
-    ,
-#include "rasterize_rat_quad.len.xxd"
-    ,
-#include "rasterize_rat_quad.spv.xxd"
-    ,
-#include "rasterize_rat_cubic.len.xxd"
-    ,
-#include "rasterize_rat_cubic.spv.xxd"
-    ,
-#include "rasters_alloc.len.xxd"
-    ,
-#include "rasters_alloc.spv.xxd"
-    ,
-#include "rasters_prefix.len.xxd"
-    ,
-#include "rasters_prefix.spv.xxd"
-    ,
-#include "rasters_reclaim.len.xxd"
-    ,
-#include "rasters_reclaim.spv.xxd"
-    ,
-#include "render.len.xxd"
-    ,
-#include "render.spv.xxd"
-    ,
-#include "segment_ttck.len.xxd"
-    ,
-#include "segment_ttck.spv.xxd"
-    ,
-#include "segment_ttrk.len.xxd"
-    ,
-#include "segment_ttrk.spv.xxd"
-    ,
-#endif
+#include "spn_modules.inl"
 
-#ifdef SPN_TARGET_IMAGE_DUMP
-    0,0,0,0
+#ifdef SPN_DUMP
+    0
 #endif
   }
 };
@@ -255,7 +215,9 @@ struct spn_target_image const SPN_TARGET_IMAGE_NAME =
 // clang-format on
 //
 
-#include "targets/dump.inl"
+struct spn_vk_target const * const SPN_TARGET_NAME = &target;
+
+#include "target_modules_dump.inl"
 
 //
 //
