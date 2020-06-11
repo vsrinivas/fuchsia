@@ -62,6 +62,7 @@
                 "/svc/fuchsia.settings.Device",
                 "/svc/fuchsia.settings.Display",
                 "/svc/fuchsia.settings.DoNotDisturb",
+                "/svc/fuchsia.settings.Input",
                 "/svc/fuchsia.settings.Intl",
                 "/svc/fuchsia.settings.NightMode",
                 "/svc/fuchsia.settings.Privacy",
