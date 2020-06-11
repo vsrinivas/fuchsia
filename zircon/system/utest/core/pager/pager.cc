@@ -10,6 +10,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/iommu.h>
 
+#include <iterator>
 #include <memory>
 #include <vector>
 
@@ -245,7 +246,7 @@ void BulkOddSupplyTestInner(bool check_vmar, bool use_src_offset) {
   // Interesting supply lengths that will exercise splice logic.
   constexpr uint64_t kSupplyLengths[] = {2, 3, 5, 7, 37, 5, 13, 23};
   uint64_t sum = 0;
-  for (unsigned i = 0; i < fbl::count_of(kSupplyLengths); i++) {
+  for (unsigned i = 0; i < std::size(kSupplyLengths); i++) {
     sum += kSupplyLengths[i];
   }
 
@@ -253,7 +254,7 @@ void BulkOddSupplyTestInner(bool check_vmar, bool use_src_offset) {
   ASSERT_TRUE(pager.CreateVmo(sum, &vmo));
 
   uint64_t page_idx = 0;
-  for (unsigned supply_idx = 0; supply_idx < fbl::count_of(kSupplyLengths); supply_idx++) {
+  for (unsigned supply_idx = 0; supply_idx < std::size(kSupplyLengths); supply_idx++) {
     uint64_t supply_len = kSupplyLengths[supply_idx];
     uint64_t offset = page_idx;
 
@@ -1184,7 +1185,7 @@ TEST(Pager, OverlapCommitSupplyTest) {
   ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
 
   std::unique_ptr<TestThread> tsA[kNumPages / kCommitLenA];
-  for (unsigned i = 0; i < fbl::count_of(tsA); i++) {
+  for (unsigned i = 0; i < std::size(tsA); i++) {
     tsA[i] = std::make_unique<TestThread>(
         [vmo, i]() -> bool { return vmo->Commit(i * kCommitLenA, kCommitLenA); });
 
@@ -1193,7 +1194,7 @@ TEST(Pager, OverlapCommitSupplyTest) {
   }
 
   std::unique_ptr<TestThread> tsB[kNumPages / kCommitLenB];
-  for (unsigned i = 0; i < fbl::count_of(tsB); i++) {
+  for (unsigned i = 0; i < std::size(tsB); i++) {
     tsB[i] = std::make_unique<TestThread>(
         [vmo, i]() -> bool { return vmo->Commit(i * kCommitLenB, kCommitLenB); });
 
@@ -1205,10 +1206,10 @@ TEST(Pager, OverlapCommitSupplyTest) {
     ASSERT_TRUE(pager.SupplyPages(vmo, i * kSupplyLen, kSupplyLen));
   }
 
-  for (unsigned i = 0; i < fbl::count_of(tsA); i++) {
+  for (unsigned i = 0; i < std::size(tsA); i++) {
     ASSERT_TRUE(tsA[i]->Wait());
   }
-  for (unsigned i = 0; i < fbl::count_of(tsB); i++) {
+  for (unsigned i = 0; i < std::size(tsB); i++) {
     ASSERT_TRUE(tsB[i]->Wait());
   }
 }

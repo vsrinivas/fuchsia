@@ -25,6 +25,7 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/threads.h>
 
+#include <iterator>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -215,7 +216,7 @@ static springboard_t* setup_test_child(zx_handle_t job, const char* arg, zx_hand
       test_child_path,
       arg,
   };
-  int argc = fbl::count_of(argv);
+  int argc = std::size(argv);
   zx_handle_t handles[1] = {their_channel};
   uint32_t handle_ids[1] = {PA_USER0};
   *out_channel = our_channel;
@@ -426,7 +427,7 @@ static const struct {
 };
 
 static void __NO_RETURN trigger_exception(const char* excp_name) {
-  for (size_t i = 0; i < fbl::count_of(exceptions); ++i) {
+  for (size_t i = 0; i < std::size(exceptions); ++i) {
     if (strcmp(excp_name, exceptions[i].name) == 0) {
       exceptions[i].trigger_function();
     }
@@ -441,7 +442,7 @@ static void __NO_RETURN test_child_trigger(const char* excp_name) {
 }
 
 TEST(ExceptionTest, Trigger) {
-  for (size_t i = 0; i < fbl::count_of(exceptions); ++i) {
+  for (size_t i = 0; i < std::size(exceptions); ++i) {
     zx_excp_type_t excp_type = exceptions[i].type;
     const char* excp_name = exceptions[i].name;
     zx::process child;
@@ -499,7 +500,7 @@ TEST(ExceptionTest, ExitClosingExcpHandle) {
       test_child_path,
       exit_closing_excp_handle_child_name,
   };
-  int argc = fbl::count_of(argv);
+  int argc = std::size(argv);
 
   springboard_t* sb = tu_launch_init(zx_job_default(), exit_closing_excp_handle_child_name, argc,
                                      argv, 0, NULL, 0, NULL, NULL);

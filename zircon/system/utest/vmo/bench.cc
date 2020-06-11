@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-#include <limits.h>
-#include <inttypes.h>
-#include <sys/types.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include "bench.h"
 
+#include <inttypes.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-#include <fbl/algorithm.h>
 
-#include "bench.h"
+#include <iterator>
+
+#include <fbl/algorithm.h>
 
 static zx_ticks_t ns_to_ticks(zx_time_t ns) {
   __uint128_t temp = (__uint128_t)ns * zx_ticks_per_second() / ZX_SEC(1);
@@ -63,14 +65,14 @@ int vmo_run_benchmark() {
     }
   });
 
-  printf("\ttook %" PRIu64 " nsecs to create %zu vmos of size %zu\n", t, fbl::count_of(vmos), size);
+  printf("\ttook %" PRIu64 " nsecs to create %zu vmos of size %zu\n", t, std::size(vmos), size);
 
   t = time_it([&]() {
     for (auto &vmo : vmos) {
       zx_handle_close(vmo);
     }
   });
-  printf("\ttook %" PRIu64 " nsecs to delete %zu vmos of size %zu\n", t, fbl::count_of(vmos), size);
+  printf("\ttook %" PRIu64 " nsecs to delete %zu vmos of size %zu\n", t, std::size(vmos), size);
 
   // create a vmo and demand fault it in
   zx_handle_t vmo;

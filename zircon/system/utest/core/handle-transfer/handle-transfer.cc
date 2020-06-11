@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/channel.h>
+#include <lib/zx/thread.h>
 #include <stdio.h>
 #include <threads.h>
 #include <time.h>
-
-#include <lib/zx/channel.h>
-#include <lib/zx/thread.h>
 #include <zircon/threads.h>
+
+#include <iterator>
+
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -47,7 +49,7 @@ TEST(HandleTransferTest, OverChannelThenRead) {
 
   ASSERT_OK(a_client.write(0u, &kMessage[2], 1u, nullptr, 0u));
 
-  for (size_t i = 0; i < fbl::count_of(kMessage); ++i) {
+  for (size_t i = 0; i < std::size(kMessage); ++i) {
     char incoming_byte;
     num_bytes = 1u;
     num_handles = 0u;

@@ -20,6 +20,8 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
@@ -121,8 +123,8 @@ bool setup_inferior(const char* name, springboard_t** out_sb, zx_handle_t* out_i
   uint32_t handle_ids[1] = {PA_USER0};
 
   unittest_printf("Creating process \"%s\"\n", name);
-  springboard_t* sb = tu_launch_init(zx_job_default(), name, fbl::count_of(argv), argv, 0, NULL,
-                                     fbl::count_of(handles), handles, handle_ids);
+  springboard_t* sb = tu_launch_init(zx_job_default(), name, std::size(argv), argv, 0, NULL,
+                                     std::size(handles), handles, handle_ids);
 
   // Note: |inferior| is a borrowed handle here.
   zx_handle_t inferior = springboard_get_process_handle(sb);

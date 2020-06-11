@@ -4,8 +4,6 @@
 
 #include <dirent.h>
 #include <errno.h>
-#include <fbl/algorithm.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
@@ -17,10 +15,14 @@
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
-#include <zxtest/zxtest.h>
 
+#include <iterator>
 #include <string>
 #include <vector>
+
+#include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -44,7 +46,7 @@ void CreateNamespaceHelper(fdio_ns_t** out) {
   // Create new ns
   fdio_ns_t* ns;
   ASSERT_OK(fdio_ns_create(&ns));
-  for (unsigned n = 0; n < fbl::count_of(NS); n++) {
+  for (unsigned n = 0; n < std::size(NS); n++) {
     fbl::unique_fd fd(open(NS[n].remote, O_RDONLY | O_DIRECTORY));
     ASSERT_GT(fd.get(), 0);
     ASSERT_OK(fdio_ns_bind_fd(ns, NS[n].local, fd.get()));
@@ -170,8 +172,8 @@ TEST(NamespaceTest, Export) {
   ASSERT_OK(fdio_ns_export(ns, &flat));
 
   // Validate the contents match the initialized mapping.
-  ASSERT_EQ(flat->count, fbl::count_of(NS));
-  for (unsigned n = 0; n < fbl::count_of(NS); n++) {
+  ASSERT_EQ(flat->count, std::size(NS));
+  for (unsigned n = 0; n < std::size(NS); n++) {
     ASSERT_STR_EQ(flat->path[n], NS[n].local);
   }
 

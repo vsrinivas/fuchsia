@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <lib/fzl/memory-probe.h>
+#include <lib/zircon-internal/align.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/vmar.h>
@@ -12,7 +13,6 @@
 #include <stdalign.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#include <lib/zircon-internal/align.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
@@ -20,12 +20,12 @@
 
 #include <atomic>
 #include <climits>
+#include <iterator>
 #include <limits>
 #include <thread>
 
 #include <fbl/algorithm.h>
 #include <zxtest/zxtest.h>
-
 
 // These tests focus on the semantics of the VMARs themselves.  For heavier
 // testing of the mapping permissions, see the VMO tests.
@@ -878,7 +878,7 @@ TEST(Vmar, RightsDropTest) {
       {ZX_RIGHT_READ | ZX_RIGHT_WRITE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE},
       {ZX_RIGHT_READ | ZX_RIGHT_EXECUTE, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE},
   };
-  for (size_t i = 0; i < fbl::count_of(test_rights); ++i) {
+  for (size_t i = 0; i < std::size(test_rights); ++i) {
     uint32_t right = test_rights[i][0];
     uint32_t perm = test_rights[i][1];
 
@@ -929,7 +929,7 @@ TEST(Vmar, ProtectTest) {
       {ZX_RIGHT_READ | ZX_RIGHT_WRITE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE},
       {ZX_RIGHT_READ | ZX_RIGHT_EXECUTE, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE},
   };
-  for (size_t i = 0; i < fbl::count_of(test_rights); ++i) {
+  for (size_t i = 0; i < std::size(test_rights); ++i) {
     uint32_t right = test_rights[i][0];
     zx_vm_option_t perm = test_rights[i][1];
 
@@ -984,7 +984,7 @@ TEST(Vmar, NestedRegionPermsTest) {
       {ZX_VM_CAN_MAP_EXECUTE, ZX_VM_PERM_EXECUTE},
   };
 
-  for (size_t i = 0; i < fbl::count_of(test_perm); ++i) {
+  for (size_t i = 0; i < std::size(test_perm); ++i) {
     const zx_vm_option_t excluded_alloc_perm = test_perm[i][0];
     const zx_vm_option_t excluded_map_perm = test_perm[i][1];
 
@@ -1638,63 +1638,59 @@ TEST(Vmar, RangeOpCommitVmoPages) {
   // Create a VMAR to guarantee some pages remain unmapped.
   zx_vaddr_t vmar_base = 0u;
   zx_handle_t vmar = ZX_HANDLE_INVALID;
-  ASSERT_EQ(zx_vmar_allocate(
-      zx_vmar_root_self(),
-      ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
-      0, kVmoSize, &vmar, &vmar_base), ZX_OK);
+  ASSERT_EQ(zx_vmar_allocate(zx_vmar_root_self(),
+                             ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0,
+                             kVmoSize, &vmar, &vmar_base),
+            ZX_OK);
 
   zx_vaddr_t mapping_addr = 0u;
   // Map one writable page to the VMO.
-  ASSERT_EQ(zx_vmar_map(vmar,
-                        ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                        0, vmo, 0, PAGE_SIZE*2, &mapping_addr),
+  ASSERT_EQ(zx_vmar_map(vmar, ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0,
+                        PAGE_SIZE * 2, &mapping_addr),
             ZX_OK);
   ASSERT_EQ(vmar_base, mapping_addr);
 
   // Map second page to a different part of the VMO.
-  ASSERT_EQ(zx_vmar_map(vmar,
-                        ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                        PAGE_SIZE*2, vmo, PAGE_SIZE*3, PAGE_SIZE, &mapping_addr),
+  ASSERT_EQ(zx_vmar_map(vmar, ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, PAGE_SIZE * 2,
+                        vmo, PAGE_SIZE * 3, PAGE_SIZE, &mapping_addr),
             ZX_OK);
 
   // Map fourth page read-only.
-  ASSERT_EQ(zx_vmar_map(vmar, ZX_VM_SPECIFIC | ZX_VM_PERM_READ,
-                        PAGE_SIZE*4, vmo, PAGE_SIZE, PAGE_SIZE, &mapping_addr),
+  ASSERT_EQ(zx_vmar_map(vmar, ZX_VM_SPECIFIC | ZX_VM_PERM_READ, PAGE_SIZE * 4, vmo, PAGE_SIZE,
+                        PAGE_SIZE, &mapping_addr),
             ZX_OK);
 
   // Verify decommit of only part of a mapping.
-  std::atomic_uint8_t* target =
-      reinterpret_cast<std::atomic_uint8_t*>(vmar_base);
+  std::atomic_uint8_t* target = reinterpret_cast<std::atomic_uint8_t*>(vmar_base);
   target[0].store(5);
-  EXPECT_EQ(zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT, vmar_base, PAGE_SIZE,
-                             nullptr, 0u),
-            ZX_OK);
+  EXPECT_EQ(zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT, vmar_base, PAGE_SIZE, nullptr, 0u), ZX_OK);
   EXPECT_EQ(target[0].load(), 0u);
   target[PAGE_SIZE].store(7);
-  EXPECT_EQ(zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT, vmar_base+PAGE_SIZE,
-                             PAGE_SIZE, nullptr, 0u),
-            ZX_OK);
+  EXPECT_EQ(
+      zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT, vmar_base + PAGE_SIZE, PAGE_SIZE, nullptr, 0u),
+      ZX_OK);
   EXPECT_EQ(target[PAGE_SIZE].load(), 0u);
 
   // Verify decommit across two adjacent mappings.
   target[PAGE_SIZE].store(5);
-  target[PAGE_SIZE*2].store(6);
-  EXPECT_EQ(target[PAGE_SIZE*4].load(), 5u);
-  EXPECT_EQ(zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT, vmar_base+PAGE_SIZE,
-                             PAGE_SIZE*2, nullptr, 0u),
-            ZX_OK);
+  target[PAGE_SIZE * 2].store(6);
+  EXPECT_EQ(target[PAGE_SIZE * 4].load(), 5u);
+  EXPECT_EQ(
+      zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT, vmar_base + PAGE_SIZE, PAGE_SIZE * 2, nullptr, 0u),
+      ZX_OK);
   EXPECT_EQ(target[PAGE_SIZE].load(), 0u);
-  EXPECT_EQ(target[PAGE_SIZE*2].load(), 0u);
-  EXPECT_EQ(target[PAGE_SIZE*4].load(), 0u);
+  EXPECT_EQ(target[PAGE_SIZE * 2].load(), 0u);
+  EXPECT_EQ(target[PAGE_SIZE * 4].load(), 0u);
 
   // Verify decommit including an unmapped region fails.
-  EXPECT_EQ(zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT,
-                             vmar_base + PAGE_SIZE, PAGE_SIZE*3, nullptr, 0u), ZX_ERR_BAD_STATE);
+  EXPECT_EQ(
+      zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT, vmar_base + PAGE_SIZE, PAGE_SIZE * 3, nullptr, 0u),
+      ZX_ERR_BAD_STATE);
 
   // Decommit of a non-writable mapping succeeds if the mapping can be made
   // writable by the caller, i.e. it was created with a writable VMO handle.
-  EXPECT_EQ(zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT,
-                             vmar_base + (PAGE_SIZE*4), PAGE_SIZE, nullptr, 0u),
+  EXPECT_EQ(zx_vmar_op_range(vmar, ZX_VMO_OP_DECOMMIT, vmar_base + (PAGE_SIZE * 4), PAGE_SIZE,
+                             nullptr, 0u),
             ZX_OK);
 
   // Decommit of a non-writable mapping fails if the caller cannot make the
@@ -1702,11 +1698,11 @@ TEST(Vmar, RangeOpCommitVmoPages) {
   zx_handle_t readonly_vmo = ZX_HANDLE_INVALID;
   ASSERT_EQ(zx_handle_duplicate(vmo, ZX_RIGHT_MAP | ZX_RIGHT_READ, &readonly_vmo), ZX_OK);
   zx_vaddr_t readonly_mapping_addr = 0u;
-  ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, readonly_vmo,
-                        0, PAGE_SIZE, &readonly_mapping_addr),
+  ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, readonly_vmo, 0, PAGE_SIZE,
+                        &readonly_mapping_addr),
             ZX_OK);
-  EXPECT_EQ(zx_vmar_op_range(zx_vmar_root_self(), ZX_VMO_OP_DECOMMIT,
-                             readonly_mapping_addr, PAGE_SIZE, nullptr, 0u),
+  EXPECT_EQ(zx_vmar_op_range(zx_vmar_root_self(), ZX_VMO_OP_DECOMMIT, readonly_mapping_addr,
+                             PAGE_SIZE, nullptr, 0u),
             ZX_ERR_ACCESS_DENIED);
   EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), readonly_mapping_addr, PAGE_SIZE), ZX_OK);
   EXPECT_EQ(zx_handle_close(readonly_vmo), ZX_OK);

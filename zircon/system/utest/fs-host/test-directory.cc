@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "util.h"
+#include <iterator>
 
 #include <fbl/algorithm.h>
+
+#include "util.h"
 
 bool check_dir_contents(const char* dirname, expected_dirent_t* edirents, size_t len) {
   BEGIN_HELPER;
@@ -62,7 +64,7 @@ bool TestDirectoryReaddir(void) {
   expected_dirent_t empty_dir[] = {
       {false, ".", DT_DIR},
   };
-  ASSERT_TRUE(check_dir_contents("::a", empty_dir, fbl::count_of(empty_dir)));
+  ASSERT_TRUE(check_dir_contents("::a", empty_dir, std::size(empty_dir)));
 
   ASSERT_EQ(emu_mkdir("::a/dir1", 0755), 0);
   int fd = emu_open("::a/file1", O_RDWR | O_CREAT | O_EXCL, 0644);
@@ -78,7 +80,7 @@ bool TestDirectoryReaddir(void) {
       {false, ".", DT_DIR},     {false, "dir1", DT_DIR},  {false, "dir2", DT_DIR},
       {false, "file1", DT_REG}, {false, "file2", DT_REG},
   };
-  ASSERT_TRUE(check_dir_contents("::a", filled_dir, fbl::count_of(filled_dir)));
+  ASSERT_TRUE(check_dir_contents("::a", filled_dir, std::size(filled_dir)));
   ASSERT_EQ(run_fsck(), 0);
   END_TEST;
 }

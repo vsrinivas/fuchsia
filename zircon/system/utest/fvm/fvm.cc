@@ -39,6 +39,7 @@
 #include <zircon/syscalls.h>
 
 #include <climits>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <new>
@@ -1200,11 +1201,11 @@ TEST_F(FvmTest, TestVPartitionQuery) {
       ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
   size_t actual_ranges_count;
   ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(partition_channel->get(), start_slices,
-                                                            fbl::count_of(start_slices), &status,
+                                                            std::size(start_slices), &status,
                                                             ranges, &actual_ranges_count),
             ZX_OK);
   ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(actual_ranges_count, fbl::count_of(start_slices));
+  ASSERT_EQ(actual_ranges_count, std::size(start_slices));
   ASSERT_TRUE(ranges[0].allocated);
   ASSERT_EQ(ranges[0].count, 10);
   ASSERT_FALSE(ranges[1].allocated);
@@ -1228,11 +1229,11 @@ TEST_F(FvmTest, TestVPartitionQuery) {
 
   // Check partition query response again after extend
   ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(partition_channel->get(), start_slices,
-                                                            fbl::count_of(start_slices), &status,
+                                                            std::size(start_slices), &status,
                                                             ranges, &actual_ranges_count),
             ZX_OK);
   ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(actual_ranges_count, fbl::count_of(start_slices));
+  ASSERT_EQ(actual_ranges_count, std::size(start_slices));
   ASSERT_TRUE(ranges[0].allocated);
   ASSERT_EQ(ranges[0].count, 30);
   ASSERT_TRUE(ranges[1].allocated);
@@ -1248,7 +1249,7 @@ TEST_F(FvmTest, TestVPartitionQuery) {
 
   start_slices[0] = volume_info.vslice_count + 1;
   ASSERT_EQ(fuchsia_hardware_block_volume_VolumeQuerySlices(partition_channel->get(), start_slices,
-                                                            fbl::count_of(start_slices), &status,
+                                                            std::size(start_slices), &status,
                                                             ranges, &actual_ranges_count),
             ZX_OK);
   ASSERT_EQ(status, ZX_ERR_OUT_OF_RANGE);
@@ -1441,7 +1442,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
       {fbl::unique_fd(), GUID_TEST_SYS_VALUE, "sys", request.slice_count},
   };
 
-  for (size_t i = 0; i < fbl::count_of(vparts); i++) {
+  for (size_t i = 0; i < std::size(vparts); i++) {
     strcpy(request.name, vparts[i].name);
     memcpy(request.type, vparts[i].guid, BLOCK_GUID_LEN);
     vparts[i].fd.reset(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));
@@ -1588,7 +1589,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousVirtual) {
       {fbl::unique_fd(), GUID_TEST_SYS_VALUE, "sys", request.slice_count, request.slice_count},
   };
 
-  for (size_t i = 0; i < fbl::count_of(vparts); i++) {
+  for (size_t i = 0; i < std::size(vparts); i++) {
     strcpy(request.name, vparts[i].name);
     memcpy(request.type, vparts[i].guid, BLOCK_GUID_LEN);
     vparts[i].fd.reset(fvm_allocate_partition_with_devfs(devfs_root().get(), fd.get(), &request));

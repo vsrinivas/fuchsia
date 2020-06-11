@@ -12,6 +12,7 @@
 
 #include <atomic>
 #include <cstdio>
+#include <iterator>
 #include <string>
 #include <thread>
 
@@ -326,7 +327,7 @@ TEST(PortTest, CancelEventKey) {
   // Notice repeated key below.
   const uint64_t keys[] = {128u, 13u, 7u, 13u};
 
-  for (uint32_t ix = 0; ix != fbl::count_of(keys); ++ix) {
+  for (uint32_t ix = 0; ix != std::size(keys); ++ix) {
     ASSERT_OK(event.wait_async(port, keys[ix], ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE));
   }
 
@@ -367,8 +368,8 @@ TEST(PortTest, CancelEventKeyAfter) {
   ASSERT_OK(zx::port::create(0u, &port));
 
   const uint64_t keys[] = {128u, 3u, 3u};
-  zx::event ev[fbl::count_of(keys)];
-  for (uint32_t ix = 0; ix != fbl::count_of(keys); ++ix) {
+  zx::event ev[std::size(keys)];
+  for (uint32_t ix = 0; ix != std::size(keys); ++ix) {
     ASSERT_OK(zx::event::create(0u, &ev[ix]));
     ASSERT_OK(ev[ix].wait_async(port, keys[ix], ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE));
   }
@@ -569,7 +570,7 @@ TEST(PortStressTest, WaitSignalCancel) {
       }
 
       constexpr uint32_t kSleeps[] = {0, 10, 2, 0, 15, 0};
-      auto duration = kSleeps[count++ % fbl::count_of(kSleeps)];
+      auto duration = kSleeps[count++ % std::size(kSleeps)];
       if (duration > 0) {
         zx::nanosleep(zx::deadline_after(zx::nsec(duration)));
       }

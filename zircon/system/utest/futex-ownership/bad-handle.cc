@@ -12,6 +12,8 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls/policy.h>
 
+#include <iterator>
+
 #include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
@@ -88,7 +90,7 @@ void LaunchTestCase(const char* test_case, zx_info_process_t* proc_info) {
                                     .action = ZX_POL_ACTION_ALLOW_EXCEPTION,
                                     .flags = ZX_POL_OVERRIDE_DENY}};
   ASSERT_OK(job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, policy,
-                           static_cast<uint32_t>(fbl::count_of(policy))));
+                           static_cast<uint32_t>(std::size(policy))));
 
   // Make sure that we have a program name and have not already started.
   ASSERT_NOT_NULL(ExternalThread::ProgramName());

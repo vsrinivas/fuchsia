@@ -17,6 +17,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <utility>
@@ -63,15 +64,15 @@ bool LaunchHelper(const char* argv[]) {
                            .flags = ZX_POL_OVERRIDE_DENY},
   };
   status =
-      test_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy, fbl::count_of(policy));
+      test_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy, std::size(policy));
   ASSERT_EQ(status, ZX_OK);
 
   fds[1].release();  // To avoid double close since fdio_spawn_etc() closes it.
   zx::process process;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   status = fdio_spawn_etc(test_job.get(), FDIO_SPAWN_CLONE_ALL, argv[0], argv, nullptr,
-                          fbl::count_of(fdio_actions), fdio_actions,
-                          process.reset_and_get_address(), err_msg);
+                          std::size(fdio_actions), fdio_actions, process.reset_and_get_address(),
+                          err_msg);
   ASSERT_EQ(status, ZX_OK);
   // Pipe through output.
   char buf[1024];

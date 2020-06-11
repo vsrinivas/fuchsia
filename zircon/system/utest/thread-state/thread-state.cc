@@ -21,6 +21,8 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
@@ -323,7 +325,7 @@ static void msg_loop(zx_handle_t channel) {
 
   while (!my_done_tests) {
     Message msg;
-    msg.num_handles = static_cast<uint32_t>(fbl::count_of(msg.handles));
+    msg.num_handles = static_cast<uint32_t>(std::size(msg.handles));
     if (!recv_msg(channel, &msg)) {
       unittest_printf("ERROR: while receiving msg\n");
       return;
@@ -386,7 +388,7 @@ static springboard_t* setup_test_child(zx_handle_t job, const char* arg, zx_hand
       arg,
       verbosity_string,
   };
-  int argc = fbl::count_of(argv);
+  int argc = std::size(argv);
   zx_handle_t handles[1] = {their_channel};
   uint32_t handle_ids[1] = {PA_USER0};
   *out_channel = our_channel;

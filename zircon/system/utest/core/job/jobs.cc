@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <zircon/syscalls/policy.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <mini-process/mini-process.h>
 #include <zxtest/zxtest.h>
@@ -103,15 +105,15 @@ TEST(JobTest, PolicyBasicOverrideDenyTest) {
   };
 
   // Set policy that does not allow overrides. Setting the exact same policy succeeds.
-  ASSERT_OK(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, policy,
-                                 fbl::count_of(policy)));
-  ASSERT_OK(job_child.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC_V2, policy,
-                                 fbl::count_of(policy)));
+  ASSERT_OK(
+      job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, policy, std::size(policy)));
+  ASSERT_OK(
+      job_child.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC_V2, policy, std::size(policy)));
 
   // Changing a set policy should fail.
   policy[0].action = ZX_POL_ACTION_ALLOW;
   ASSERT_STATUS(
-      job_child.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC_V2, policy, fbl::count_of(policy)),
+      job_child.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC_V2, policy, std::size(policy)),
       ZX_ERR_ALREADY_EXISTS);
 }
 
@@ -126,13 +128,13 @@ TEST(JobTest, PolicyBasicOverrideAllowTest) {
   };
 
   // Set policy that does not allow overrides. Setting the exact same policy succeeds.
-  ASSERT_OK(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, policy,
-                                 fbl::count_of(policy)));
+  ASSERT_OK(
+      job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, policy, std::size(policy)));
 
   // Changing a set policy should succeed.
   policy[0].action = ZX_POL_ACTION_ALLOW;
-  ASSERT_OK(job_child.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC_V2, policy,
-                                 fbl::count_of(policy)));
+  ASSERT_OK(
+      job_child.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC_V2, policy, std::size(policy)));
 }
 
 TEST(JobTest, PolicyTimerSlackInvalidOptionsTest) {

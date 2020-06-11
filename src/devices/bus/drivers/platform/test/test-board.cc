@@ -10,6 +10,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include <iterator>
 #include <memory>
 
 #include <ddk/binding.h>
@@ -114,8 +115,8 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, 3),
   };
   device_fragment_part_t power_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(power_match), power_match},
+      {std::size(root_match), root_match},
+      {std::size(power_match), power_match},
   };
   const zx_bind_inst_t gpio_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
@@ -153,42 +154,39 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       BI_MATCH_IF(EQ, BIND_PWM_ID, 0),
   };
   device_fragment_part_t gpio_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(gpio_match), gpio_match},
+      {std::size(root_match), root_match},
+      {std::size(gpio_match), gpio_match},
   };
   device_fragment_part_t clock_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(clock_match), clock_match},
+      {std::size(root_match), root_match},
+      {std::size(clock_match), clock_match},
   };
   device_fragment_part_t i2c_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(i2c_match), i2c_match},
+      {std::size(root_match), root_match},
+      {std::size(i2c_match), i2c_match},
   };
   device_fragment_part_t child4_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(child2_match), child2_match},
-      {fbl::count_of(child4_match), child4_match},
+      {std::size(root_match), root_match},
+      {std::size(child2_match), child2_match},
+      {std::size(child4_match), child4_match},
   };
   device_fragment_part_t codec_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(codec_match), codec_match},
+      {std::size(root_match), root_match},
+      {std::size(codec_match), codec_match},
   };
   device_fragment_part_t spi_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(spi_match), spi_match},
+      {std::size(root_match), root_match},
+      {std::size(spi_match), spi_match},
   };
   device_fragment_part_t pwm_fragment[] = {
-      {fbl::count_of(root_match), root_match},
-      {fbl::count_of(pwm_match), pwm_match},
+      {std::size(root_match), root_match},
+      {std::size(pwm_match), pwm_match},
   };
 
   device_fragment_t composite[] = {
-      {fbl::count_of(gpio_fragment), gpio_fragment},
-      {fbl::count_of(clock_fragment), clock_fragment},
-      {fbl::count_of(i2c_fragment), i2c_fragment},
-      {fbl::count_of(power_fragment), power_fragment},
-      {fbl::count_of(child4_fragment), child4_fragment},
-      {fbl::count_of(codec_fragment), codec_fragment},
+      {std::size(gpio_fragment), gpio_fragment},     {std::size(clock_fragment), clock_fragment},
+      {std::size(i2c_fragment), i2c_fragment},       {std::size(power_fragment), power_fragment},
+      {std::size(child4_fragment), child4_fragment}, {std::size(codec_fragment), codec_fragment},
   };
 
   struct composite_test_metadata metadata_1 = {
@@ -219,19 +217,17 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   pdev.pid = PDEV_PID_PBUS_TEST;
   pdev.did = PDEV_DID_TEST_COMPOSITE_1;
   pdev.metadata_list = test_metadata_1;
-  pdev.metadata_count = fbl::count_of(test_metadata_1);
+  pdev.metadata_count = std::size(test_metadata_1);
 
-  status = pbus_composite_device_add(&pbus, &pdev, composite, fbl::count_of(composite), UINT32_MAX);
+  status = pbus_composite_device_add(&pbus, &pdev, composite, std::size(composite), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d", status);
   }
 
   device_fragment_t composite2[] = {
-      {fbl::count_of(clock_fragment), clock_fragment},
-      {fbl::count_of(power_fragment), power_fragment},
-      {fbl::count_of(child4_fragment), child4_fragment},
-      {fbl::count_of(spi_fragment), spi_fragment},
-      {fbl::count_of(pwm_fragment), pwm_fragment},
+      {std::size(clock_fragment), clock_fragment},   {std::size(power_fragment), power_fragment},
+      {std::size(child4_fragment), child4_fragment}, {std::size(spi_fragment), spi_fragment},
+      {std::size(pwm_fragment), pwm_fragment},
   };
 
   pbus_dev_t pdev2 = {};
@@ -240,10 +236,9 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   pdev2.pid = PDEV_PID_PBUS_TEST;
   pdev2.did = PDEV_DID_TEST_COMPOSITE_2;
   pdev2.metadata_list = test_metadata_2;
-  pdev2.metadata_count = fbl::count_of(test_metadata_2);
+  pdev2.metadata_count = std::size(test_metadata_2);
 
-  status =
-      pbus_composite_device_add(&pbus, &pdev2, composite2, fbl::count_of(composite2), UINT32_MAX);
+  status = pbus_composite_device_add(&pbus, &pdev2, composite2, std::size(composite2), UINT32_MAX);
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d", status);

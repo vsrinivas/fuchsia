@@ -8,6 +8,7 @@
 #include <threads.h>
 
 #include <atomic>
+#include <iterator>
 #include <utility>
 
 #include <fbl/function.h>
@@ -524,7 +525,7 @@ bool TestEventWithInlineEverything() {
     auto context = trace::TraceContext::Acquire();
 
     trace_context_write_instant_event_record(context.get(), zx_ticks_get(), &thread, &cat, &name,
-                                             TRACE_SCOPE_GLOBAL, args, fbl::count_of(args));
+                                             TRACE_SCOPE_GLOBAL, args, std::size(args));
   }
 
   ASSERT_RECORDS(

@@ -3,6 +3,10 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,12 +15,10 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
-#include <lib/fdio/limits.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 
 #include "filesystems.h"
 #include "misc.h"
@@ -215,7 +217,7 @@ bool TestAppendAtomic() {
     ASSERT_EQ(memcmp(&buf[i], tmp, sizeof(tmp)), 0, "Non-atomic Append Detected");
   }
 
-  for (size_t i = 0; i < fbl::count_of(counts); i++) {
+  for (size_t i = 0; i < std::size(counts); i++) {
     ASSERT_EQ(counts[i], kNumWrites, "Unexpected number of writes from a thread");
   }
 

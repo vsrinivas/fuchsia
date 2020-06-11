@@ -9,6 +9,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <iterator>
 #include <limits>
 
 #include <fbl/auto_call.h>
@@ -443,7 +444,7 @@ static void WakeOwnershipTest() {
     //    woken (at which point, there should be no owner as there are no
     //    waiters).
     //
-    for (uint32_t i = 0; i < fbl::count_of(WAITERS); ++i) {
+    for (uint32_t i = 0; i < std::size(WAITERS); ++i) {
       if (!pass) {
         // Wake a thread.
         res = do_op::wake(the_futex, 1u);
@@ -477,7 +478,7 @@ static void WakeOwnershipTest() {
       // Now check to be sure that ownership was updated properly.  It
       // should be INVALID if this is pass 0, or if we just woke up the
       // last thread.
-      zx_koid_t expected_koid = (!pass || ((i + 1) == fbl::count_of(WAITERS)))
+      zx_koid_t expected_koid = (!pass || ((i + 1) == std::size(WAITERS)))
                                     ? ZX_KOID_INVALID
                                     : woken_waiter->thread.koid();
 

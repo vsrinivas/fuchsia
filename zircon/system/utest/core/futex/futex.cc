@@ -3,27 +3,28 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/suspend_token.h>
+#include <lib/zx/thread.h>
 #include <sched.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/syscalls.h>
+#include <zircon/threads.h>
+#include <zircon/time.h>
+#include <zircon/types.h>
 
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <iterator>
 #include <limits>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/futex.h>
-#include <lib/zx/clock.h>
-#include <lib/zx/suspend_token.h>
-#include <lib/zx/thread.h>
-#include <zircon/syscalls.h>
-#include <zircon/threads.h>
-#include <zircon/time.h>
-#include <zircon/types.h>
 #include <zxtest/zxtest.h>
 
 namespace futex {
@@ -287,12 +288,11 @@ TEST(FutexTest, WakeupLimit) {
   // Test that exactly |kWakeCount| threads wake up from the queue.  We do not know
   // which threads are going to wake up, just that two threads are going to
   // wake up.
-  ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, fbl::count_of(threads), 2));
+  ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, std::size(threads), 2));
 
   // Clean up: Wake the remaining threads so that they can exit.
   ASSERT_OK(zx_futex_wake(&futex_value, kThreadWakeAllCount));
-  ASSERT_NO_FATAL_FAILURES(
-      AssertWokeThreadCount(threads, fbl::count_of(threads), fbl::count_of(threads)));
+  ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, std::size(threads), std::size(threads)));
 
   for (auto& t : threads) {
     ASSERT_OK(t.wait_result());

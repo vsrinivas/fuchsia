@@ -10,6 +10,7 @@
 #include <zircon/syscalls.h>
 
 #include <cstddef>
+#include <iterator>
 #include <memory>
 #include <new>
 
@@ -61,7 +62,7 @@ bool EncodeErrorTest() {
   const char* error = nullptr;
   uint32_t actual_handles;
   auto status = fidl_encode(&nonnullable_handle_message_type, &message, kMessageSize, handles,
-                            fbl::count_of(handles), &actual_handles, &error);
+                            std::size(handles), &actual_handles, &error);
 
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
   ASSERT_NONNULL(error);
@@ -121,7 +122,7 @@ bool EncodeWithNullOutActualHandlesTest() {
 
   const char* error = nullptr;
   auto status = fidl_encode(&nonnullable_handle_message_type, &message, kMessageSize, handles,
-                            fbl::count_of(handles), nullptr, &error);
+                            std::size(handles), nullptr, &error);
 
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
   ASSERT_NONNULL(error);
@@ -168,7 +169,7 @@ bool DecodeErrorTest() {
   const char* out_error = nullptr;
   zx_handle_t handles[] = {eventpair_b.release(), eventpair_y.release()};
   auto status = fidl_decode(&fidl_test_coding_SmallerTableOfStructWithHandleTable, buffer, buf_size,
-                            handles, fbl::count_of(handles), &out_error);
+                            handles, std::size(handles), &out_error);
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
   ASSERT_NONNULL(out_error);
 

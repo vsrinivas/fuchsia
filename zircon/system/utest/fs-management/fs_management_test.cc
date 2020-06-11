@@ -23,6 +23,7 @@
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
+#include <iterator>
 #include <utility>
 
 #include <fbl/string.h>
@@ -641,7 +642,7 @@ void GetPartitionSliceCount(const zx::unowned_channel& channel, size_t* out_coun
         ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
     size_t actual_ranges_count;
     ASSERT_OK(fuchsia_hardware_block_volume_VolumeQuerySlices(channel->get(), start_slices,
-                                                              fbl::count_of(start_slices), &status,
+                                                              std::size(start_slices), &status,
                                                               ranges, &actual_ranges_count));
     ASSERT_OK(status);
     ASSERT_EQ(1, actual_ranges_count);

@@ -15,6 +15,8 @@
 #include <unistd.h>
 #include <zircon/status.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <fbl/span.h>
 #include <fbl/string.h>
@@ -149,7 +151,7 @@ TEST_F(DeviceEnumerationTest, QemuArm64Test) {
       "sys/pci/00:00.0",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, Vim2Test) {
@@ -188,7 +190,7 @@ TEST_F(DeviceEnumerationTest, Vim2Test) {
       "aml-video",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, Vim3Test) {
@@ -203,7 +205,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "dwmac/Designware MAC/ethernet",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, AstroTest) {
@@ -262,14 +264,14 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "sys/platform/05:03:24/ram",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 
   static const char* kTouchscreenDevicePaths[] = {
       "gt92xx-touch/gt92xx HidDevice/hid-device-000",
       "ft3x27-touch/focaltouch HidDevice/hid-device-000",
   };
   ASSERT_NO_FATAL_FAILURES(
-      WaitForOne(fbl::Span(kTouchscreenDevicePaths, fbl::count_of(kTouchscreenDevicePaths))));
+      WaitForOne(fbl::Span(kTouchscreenDevicePaths, std::size(kTouchscreenDevicePaths))));
 }
 
 TEST_F(DeviceEnumerationTest, NelsonTest) {
@@ -338,7 +340,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, CleoTest) {
@@ -389,7 +391,7 @@ TEST_F(DeviceEnumerationTest, CleoTest) {
       "sys/platform/00:00:f/fallback-rtc",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, SherlockTest) {
@@ -452,7 +454,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sys/platform/05:04:24/ram",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, Mt8167sRefTest) {
@@ -500,7 +502,7 @@ TEST_F(DeviceEnumerationTest, Mt8167sRefTest) {
       "sys/platform/00:00:f/fallback-rtc",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, Msm8x53SomTest) {
@@ -511,7 +513,7 @@ TEST_F(DeviceEnumerationTest, Msm8x53SomTest) {
                                        "sys/platform/13:01:4/msm-clk",
                                        "sys/platform/13:01:5/msm8x53-power"};
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, As370Test) {
@@ -544,7 +546,7 @@ TEST_F(DeviceEnumerationTest, As370Test) {
       "class/thermal/000",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
   EXPECT_EQ(zx_system_get_num_cpus(), 4);
 }
 
@@ -583,7 +585,7 @@ TEST_F(DeviceEnumerationTest, Vs680EvkTest) {
       "composite-pd-vcpu/power-0",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
   EXPECT_EQ(zx_system_get_num_cpus(), 4);
 }
 
@@ -620,7 +622,7 @@ TEST_F(DeviceEnumerationTest, VisaliaTest) {
       "as370-touch/cy8cmbr3108",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
   EXPECT_EQ(zx_system_get_num_cpus(), 4);
 }
 
@@ -634,7 +636,7 @@ TEST_F(DeviceEnumerationTest, Hikey960Test) {
       "dwc3/dwc3/usb-peripheral",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, NocturneTest) {
@@ -652,7 +654,7 @@ TEST_F(DeviceEnumerationTest, NocturneTest) {
       "sys/pci/00:15.0/i2c-bus-9d60/000a/i2c-hid/hid-device-000",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, C18Test) {
@@ -675,7 +677,7 @@ TEST_F(DeviceEnumerationTest, C18Test) {
       "sys/platform/0d:00:e/mtk-spi-2/spi/spi-2-0",
   };
 
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 }  // namespace

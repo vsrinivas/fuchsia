@@ -12,6 +12,8 @@
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_fd.h>
@@ -54,7 +56,7 @@ bool TestOffsetOperations() {
 
   constexpr size_t kBufferSize = PAGE_SIZE;
   uint8_t expected[kBufferSize];
-  for (size_t i = 0; i < fbl::count_of(expected); i++) {
+  for (size_t i = 0; i < std::size(expected); i++) {
     expected[i] = static_cast<uint8_t>(rand());
   }
 
@@ -136,7 +138,9 @@ bool TestMaxFileSize() {
 
 }  // namespace
 
+// clang-format off
 RUN_FOR_ALL_FILESYSTEMS(rw_tests,
                         RUN_TEST_MEDIUM(TestZeroLengthOperations)
                         RUN_TEST_MEDIUM(TestOffsetOperations)
                         RUN_TEST_MEDIUM(TestMaxFileSize))
+// clang-format on

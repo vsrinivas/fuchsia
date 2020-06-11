@@ -16,6 +16,8 @@
 #include <unistd.h>
 #include <zircon/compiler.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 
@@ -118,12 +120,12 @@ bool TestRenameWithChildren() {
       {false, "dir2", DT_DIR},
       {false, "file", DT_REG},
   };
-  ASSERT_TRUE(check_dir_contents("::dir", dir_contents, fbl::count_of(dir_contents)), "");
+  ASSERT_TRUE(check_dir_contents("::dir", dir_contents, std::size(dir_contents)), "");
   expected_dirent_t dir2_contents[] = {
       {false, ".", DT_DIR},
       {false, "subdir", DT_DIR},
   };
-  ASSERT_TRUE(check_dir_contents("::dir/dir2", dir2_contents, fbl::count_of(dir2_contents)), "");
+  ASSERT_TRUE(check_dir_contents("::dir/dir2", dir2_contents, std::size(dir2_contents)), "");
 
   // Check the our file data has lasted (without re-opening)
   ASSERT_TRUE(check_file_contents(fd, (uint8_t*)file_contents, strlen(file_contents)), "");
@@ -165,7 +167,7 @@ bool TestRenameAbsoluteRelative() {
       {false, ".", DT_DIR},
       {false, "foo", DT_DIR},
   };
-  ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents_foo, fbl::count_of(dir_contents_foo)), "");
+  ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents_foo, std::size(dir_contents_foo)), "");
 
   // Rename "foo" to "bar" using mixed paths
   ASSERT_EQ(rename("::working_dir/foo", "bar"), 0, "Could not rename foo to bar");
@@ -173,11 +175,11 @@ bool TestRenameAbsoluteRelative() {
       {false, ".", DT_DIR},
       {false, "bar", DT_DIR},
   };
-  ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents_bar, fbl::count_of(dir_contents_bar)), "");
+  ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents_bar, std::size(dir_contents_bar)), "");
 
   // Rename "bar" back to "foo" using mixed paths in the other direction
   ASSERT_EQ(rename("bar", "::working_dir/foo"), 0, "Could not rename bar to foo");
-  ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents_foo, fbl::count_of(dir_contents_foo)), "");
+  ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents_foo, std::size(dir_contents_foo)), "");
 
   ASSERT_EQ(rmdir("::working_dir/foo"), 0, "");
 
@@ -209,12 +211,12 @@ bool TestRenameAt() {
   expected_dirent_t empty_contents[] = {
       {false, ".", DT_DIR},
   };
-  ASSERT_TRUE(check_dir_contents("::foo", empty_contents, fbl::count_of(empty_contents)), "");
+  ASSERT_TRUE(check_dir_contents("::foo", empty_contents, std::size(empty_contents)), "");
   expected_dirent_t contains_zab[] = {
       {false, ".", DT_DIR},
       {false, "zab", DT_DIR},
   };
-  ASSERT_TRUE(check_dir_contents("::bar", contains_zab, fbl::count_of(contains_zab)), "");
+  ASSERT_TRUE(check_dir_contents("::bar", contains_zab, std::size(contains_zab)), "");
 
   // Alternate case of renameat, where an absolute path ignores
   // the file descriptor.
@@ -225,13 +227,13 @@ bool TestRenameAt() {
       {false, ".", DT_DIR},
       {false, "baz", DT_DIR},
   };
-  ASSERT_TRUE(check_dir_contents("::foo", contains_baz, fbl::count_of(contains_baz)), "");
-  ASSERT_TRUE(check_dir_contents("::bar", empty_contents, fbl::count_of(empty_contents)), "");
+  ASSERT_TRUE(check_dir_contents("::foo", contains_baz, std::size(contains_baz)), "");
+  ASSERT_TRUE(check_dir_contents("::bar", empty_contents, std::size(empty_contents)), "");
 
   // The 'absolute-path-ignores-fd' case should also work with invalid fds.
   ASSERT_EQ(renameat(-1, "::foo/baz", -1, "::bar/baz"), 0, "");
-  ASSERT_TRUE(check_dir_contents("::foo", empty_contents, fbl::count_of(empty_contents)), "");
-  ASSERT_TRUE(check_dir_contents("::bar", contains_baz, fbl::count_of(contains_baz)), "");
+  ASSERT_TRUE(check_dir_contents("::foo", empty_contents, std::size(empty_contents)), "");
+  ASSERT_TRUE(check_dir_contents("::bar", contains_baz, std::size(contains_baz)), "");
 
   // However, relative paths should not be allowed with invalid fds.
   ASSERT_EQ(renameat(-1, "baz", foofd, "baz"), -1, "");

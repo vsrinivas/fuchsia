@@ -13,8 +13,9 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
 #include <zircon/compiler.h>
+
+#include <iterator>
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
@@ -120,7 +121,7 @@ bool TestDirectoryCoalesceHelper(const int* unlink_order) {
       "::coalesce/aaaaaaaa", "::coalesce/bbbbbbbb", "::coalesce/cccccccc",
       "::coalesce/dddddddd", "::coalesce/eeeeeeee",
   };
-  int num_files = fbl::count_of(files);
+  int num_files = std::size(files);
 
   // Allocate a bunch of files in a directory
   ASSERT_EQ(mkdir("::coalesce", 0755), 0);
@@ -270,7 +271,7 @@ bool TestDirectoryReaddir(void) {
   expected_dirent_t empty_dir[] = {
       {false, ".", DT_DIR},
   };
-  ASSERT_TRUE(check_dir_contents("::a", empty_dir, fbl::count_of(empty_dir)));
+  ASSERT_TRUE(check_dir_contents("::a", empty_dir, std::size(empty_dir)));
 
   ASSERT_EQ(mkdir("::a/dir1", 0755), 0);
   fbl::unique_fd fd(open("::a/file1", O_RDWR | O_CREAT | O_EXCL, 0644));
@@ -286,7 +287,7 @@ bool TestDirectoryReaddir(void) {
       {false, ".", DT_DIR},     {false, "dir1", DT_DIR},  {false, "dir2", DT_DIR},
       {false, "file1", DT_REG}, {false, "file2", DT_REG},
   };
-  ASSERT_TRUE(check_dir_contents("::a", filled_dir, fbl::count_of(filled_dir)));
+  ASSERT_TRUE(check_dir_contents("::a", filled_dir, std::size(filled_dir)));
 
   ASSERT_EQ(rmdir("::a/dir2"), 0);
   ASSERT_EQ(unlink("::a/file2"), 0);
@@ -295,11 +296,11 @@ bool TestDirectoryReaddir(void) {
       {false, "dir1", DT_DIR},
       {false, "file1", DT_REG},
   };
-  ASSERT_TRUE(check_dir_contents("::a", partial_dir, fbl::count_of(partial_dir)));
+  ASSERT_TRUE(check_dir_contents("::a", partial_dir, std::size(partial_dir)));
 
   ASSERT_EQ(rmdir("::a/dir1"), 0);
   ASSERT_EQ(unlink("::a/file1"), 0);
-  ASSERT_TRUE(check_dir_contents("::a", empty_dir, fbl::count_of(empty_dir)));
+  ASSERT_TRUE(check_dir_contents("::a", empty_dir, std::size(empty_dir)));
   ASSERT_EQ(unlink("::a"), 0);
 
   END_TEST;
@@ -385,8 +386,8 @@ bool TestDirectoryRewind(void) {
 
   // We should be able to repeatedly access the directory without
   // re-opening it.
-  ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
-  ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
+  ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, std::size(empty_dir)));
+  ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, std::size(empty_dir)));
 
   ASSERT_EQ(mkdirat(dirfd(dir), "b", 0755), 0);
   ASSERT_EQ(mkdirat(dirfd(dir), "c", 0755), 0);
@@ -398,14 +399,14 @@ bool TestDirectoryRewind(void) {
       {false, "b", DT_DIR},
       {false, "c", DT_DIR},
   };
-  ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents, fbl::count_of(dir_contents)));
-  ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents, fbl::count_of(dir_contents)));
+  ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents, std::size(dir_contents)));
+  ASSERT_TRUE(fcheck_dir_contents(dir, dir_contents, std::size(dir_contents)));
 
   ASSERT_EQ(rmdir("::a/b"), 0);
   ASSERT_EQ(rmdir("::a/c"), 0);
 
-  ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
-  ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
+  ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, std::size(empty_dir)));
+  ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, std::size(empty_dir)));
 
   ASSERT_EQ(closedir(dir), 0);
   ASSERT_EQ(rmdir("::a"), 0);
@@ -427,7 +428,7 @@ bool TestDirectoryAfterRmdir(void) {
   // We can make and delete subdirectories, since "::dir" exists...
   ASSERT_EQ(mkdir("::dir/subdir", 0755), 0);
   ASSERT_EQ(rmdir("::dir/subdir"), 0);
-  ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
+  ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, std::size(empty_dir)));
 
   // Remove the directory. It's still open, so it should appear empty.
   ASSERT_EQ(rmdir("::dir"), 0);
@@ -474,6 +475,7 @@ bool TestRenameIntoUnlinkedDirectoryFails() {
   END_TEST;
 }
 
+// clang-format off
 RUN_FOR_ALL_FILESYSTEMS(
     directory_tests,
     RUN_TEST_MEDIUM(TestDirectoryCoalesce)
@@ -491,3 +493,4 @@ RUN_FOR_ALL_FILESYSTEMS(
 #if 0
     RUN_TEST_LARGE(TestDirectoryMax)
 #endif
+// clang-format on

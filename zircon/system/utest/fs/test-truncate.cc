@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
+#include <iterator>
 #include <memory>
 
 #include <fbl/algorithm.h>
@@ -265,7 +266,7 @@ bool TestTruncatePartialBlockSparse(void) {
       kBlockSize * kDirectBlocks + kBlockSize * kDirectPerIndirect * kIndirectBlocks + kBlockSize,
   };
 
-  for (size_t i = 0; i < fbl::count_of(write_offsets); i++) {
+  for (size_t i = 0; i < std::size(write_offsets); i++) {
     off_t write_off = write_offsets[i];
     fbl::unique_fd fd(open("::truncate-sparse", O_CREAT | O_RDWR));
     ASSERT_TRUE(fd);

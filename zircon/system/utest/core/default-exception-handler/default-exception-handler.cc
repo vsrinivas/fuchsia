@@ -12,6 +12,8 @@
 #include <lib/zx/vmar.h>
 #include <zircon/syscalls/policy.h>
 
+#include <iterator>
+
 #include <mini-process/mini-process.h>
 #include <zxtest/zxtest.h>
 
@@ -97,7 +99,7 @@ TEST(DefaultExceptionHandlerTest, UnhandledPolicyException) {
   zx_policy_basic_v2_t policy[] = {
       {ZX_POL_NEW_ANY, ZX_POL_ACTION_ALLOW_EXCEPTION, ZX_POL_OVERRIDE_DENY}};
   ASSERT_OK(job.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC_V2, policy,
-                           static_cast<uint32_t>(fbl::count_of(policy))));
+                           static_cast<uint32_t>(std::size(policy))));
 
   // Tell the process to create an event.  See that it's killed because the exception is unhandled.
   int64_t exit_code = 0;

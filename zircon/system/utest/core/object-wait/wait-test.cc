@@ -7,6 +7,7 @@
 #include <lib/zx/thread.h>
 #include <zircon/types.h>
 
+#include <iterator>
 #include <thread>
 
 #include <fbl/algorithm.h>
@@ -97,7 +98,7 @@ TEST(ObjectWaitManyTest, TooManyObjects) {
         .handle = MakeEvent().release(), .waitfor = ZX_EVENT_SIGNALED, .pending = 0u};
   }
 
-  ASSERT_EQ(zx::thread::wait_many(items, fbl::count_of(items), zx::time::infinite()),
+  ASSERT_EQ(zx::thread::wait_many(items, std::size(items), zx::time::infinite()),
             ZX_ERR_OUT_OF_RANGE);
 
   for (auto& item : items) {
@@ -115,7 +116,7 @@ TEST(ObjectWaitManyTest, InvalidHandle) {
 
   ASSERT_OK(zx_handle_close(items[1].handle));
 
-  ASSERT_EQ(zx::thread::wait_many(items, fbl::count_of(items), zx::time::infinite()),
+  ASSERT_EQ(zx::thread::wait_many(items, std::size(items), zx::time::infinite()),
             ZX_ERR_BAD_HANDLE);
 
   items[1].handle = MakeEvent().release();
@@ -133,13 +134,13 @@ TEST(ObjectWaitManyTest, WaitForEventsSignaled) {
   }
   // Signal some.
   zx_signals_t to_signal[8] = {0u, 0u, ZX_EVENT_SIGNALED, 0u, 0u, ZX_EVENT_SIGNALED, 0u, 0u};
-  for (size_t ix = 0; ix != fbl::count_of(to_signal); ++ix) {
+  for (size_t ix = 0; ix != std::size(to_signal); ++ix) {
     if (to_signal[ix]) {
       ASSERT_OK(zx_object_signal(items[ix].handle, 0u, to_signal[ix]));
     }
   }
-  ASSERT_OK(zx::thread::wait_many(items, fbl::count_of(items), zx::time::infinite()));
-  for (size_t ix = 0; ix != fbl::count_of(to_signal); ++ix) {
+  ASSERT_OK(zx::thread::wait_many(items, std::size(items), zx::time::infinite()));
+  for (size_t ix = 0; ix != std::size(to_signal); ++ix) {
     ASSERT_EQ(items[ix].pending, to_signal[ix]);
     ASSERT_OK(zx_handle_close(items[ix].handle));
   }
@@ -155,18 +156,18 @@ TEST(ObjectWaitManyTest, WaitForEventsThenSignal) {
   zx_signals_t to_signal[8] = {0u, ZX_EVENT_SIGNALED, 0u, 0u, 0u, 0u, ZX_EVENT_SIGNALED, 0u};
   std::thread thread([&] {
     ASSERT_OK(WaitForState(main_thread, ZX_THREAD_STATE_BLOCKED_WAIT_MANY));
-    for (size_t ix = 0; ix != fbl::count_of(to_signal); ++ix) {
+    for (size_t ix = 0; ix != std::size(to_signal); ++ix) {
       if (to_signal[ix]) {
         ASSERT_OK(zx_object_signal(items[ix].handle, 0u, to_signal[ix]));
       }
     }
   });
 
-  ASSERT_OK(zx::thread::wait_many(items, fbl::count_of(items), zx::time::infinite()));
+  ASSERT_OK(zx::thread::wait_many(items, std::size(items), zx::time::infinite()));
   thread.join();
 
   int signal_count = 0;
-  for (size_t ix = 0; ix != fbl::count_of(to_signal); ++ix) {
+  for (size_t ix = 0; ix != std::size(to_signal); ++ix) {
     signal_count += (items[ix].pending == ZX_EVENT_SIGNALED) ? 1 : 0;
     ASSERT_OK(zx_handle_close(items[ix].handle));
   }
@@ -205,7 +206,7 @@ TEST(ObjectWaitManyTest, TransientSignalsNotReturned) {
   });
 
   // Wait for the signals.
-  ASSERT_OK(zx::thread::wait_many(items, fbl::count_of(items), zx::time::infinite()));
+  ASSERT_OK(zx::thread::wait_many(items, std::size(items), zx::time::infinite()));
   thread.join();
 
   // The transient USER_SIGNAL_1 signal on objects 0 and 2 should not be set.

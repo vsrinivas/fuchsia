@@ -21,6 +21,8 @@
 #include <zircon/syscalls/policy.h>
 #include <zircon/syscalls/port.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <mini-process/mini-process.h>
 #include <zxtest/zxtest.h>
@@ -70,23 +72,23 @@ TEST(JobPolicyTest, AbsThenRel) {
 
   auto job = MakeJob();
   ASSERT_OK(job.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC, policy,
-                           static_cast<uint32_t>(fbl::count_of(policy))));
+                           static_cast<uint32_t>(std::size(policy))));
 
   // A contradictory policy should fail.
   policy[0].policy = ZX_POL_ACTION_DENY_EXCEPTION;
   ASSERT_EQ(job.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC, policy,
-                           static_cast<uint32_t>(fbl::count_of(policy))),
+                           static_cast<uint32_t>(std::size(policy))),
             ZX_ERR_ALREADY_EXISTS);
 
   // The same again will succeed.
   policy[0].policy = ZX_POL_ACTION_KILL;
   ASSERT_OK(job.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC, policy,
-                           static_cast<uint32_t>(fbl::count_of(policy))));
+                           static_cast<uint32_t>(std::size(policy))));
 
   // A contradictory relative policy will succeed, but is a no-op
   policy[0].policy = ZX_POL_ACTION_ALLOW;
   ASSERT_OK(job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, policy,
-                           static_cast<uint32_t>(fbl::count_of(policy))));
+                           static_cast<uint32_t>(std::size(policy))));
 
   zx_policy_basic_v1_t more[] = {{ZX_POL_NEW_CHANNEL, ZX_POL_ACTION_ALLOW_EXCEPTION},
                                  {ZX_POL_NEW_FIFO, ZX_POL_ACTION_DENY}};
@@ -94,7 +96,7 @@ TEST(JobPolicyTest, AbsThenRel) {
   // An additional absolute policy that doesn't contradict existing
   // policy can be added.
   ASSERT_OK(job.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC, more,
-                           static_cast<uint32_t>(fbl::count_of(more))));
+                           static_cast<uint32_t>(std::size(more))));
 }
 
 void InvalidCalls(uint32_t options, uint32_t flags) {
@@ -123,10 +125,10 @@ void InvalidCalls(uint32_t options, uint32_t flags) {
     // Too many.
     auto job = MakeJob();
     zx_policy_basic_v2_t policy[16]{};
-    for (unsigned i = 0; i < fbl::count_of(policy); ++i) {
+    for (unsigned i = 0; i < std::size(policy); ++i) {
       policy[i] = {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL, flags};
     }
-    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC_V2, policy, fbl::count_of(policy)),
+    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC_V2, policy, std::size(policy)),
               ZX_ERR_OUT_OF_RANGE);
 
     EXPECT_OK(job.set_policy(options, ZX_JOB_POL_BASIC_V2, policy, 1u));
@@ -137,7 +139,7 @@ void InvalidCalls(uint32_t options, uint32_t flags) {
     auto job = MakeJob();
     zx_policy_basic_v2_t policy[] = {{100001u, ZX_POL_ACTION_KILL, flags}};
     EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC_V2, policy,
-                             static_cast<uint32_t>(fbl::count_of(policy))),
+                             static_cast<uint32_t>(std::size(policy))),
               ZX_ERR_INVALID_ARGS);
 
     zx_policy_basic_v2_t good_policy[] = {{ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL, flags}};
@@ -149,7 +151,7 @@ void InvalidCalls(uint32_t options, uint32_t flags) {
     auto job = MakeJob();
     zx_policy_basic_v2_t policy[] = {{ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL + 1, flags}};
     EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC_V2, policy,
-                             static_cast<uint32_t>(fbl::count_of(policy))),
+                             static_cast<uint32_t>(std::size(policy))),
               ZX_ERR_NOT_SUPPORTED);
 
     zx_policy_basic_v2_t good_policy[] = {{ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL, flags}};
@@ -215,81 +217,81 @@ void CheckInvokingPolicy(zx_policy_basic_v1_t* pol, uint32_t pol_count, uint32_t
 
 TEST(JobPolicyTest, EnforceDenyEvent) {
   zx_policy_basic_v1_t policy[] = {{ZX_POL_NEW_EVENT, ZX_POL_ACTION_DENY}};
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT,
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)), MINIP_CMD_CREATE_EVENT,
                       ZX_ERR_ACCESS_DENIED);
 }
 
 TEST(JobPolicyTest, EnforceDenyProfile) {
   zx_policy_basic_v1_t policy[] = {{ZX_POL_NEW_PROFILE, ZX_POL_ACTION_DENY}};
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
-                      MINIP_CMD_CREATE_PROFILE, ZX_ERR_ACCESS_DENIED);
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)), MINIP_CMD_CREATE_PROFILE,
+                      ZX_ERR_ACCESS_DENIED);
 }
 
 TEST(JobPolicyTest, EnforceDenyChannel) {
   zx_policy_basic_v1_t policy[] = {{ZX_POL_NEW_CHANNEL, ZX_POL_ACTION_DENY}};
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
-                      MINIP_CMD_CREATE_CHANNEL, ZX_ERR_ACCESS_DENIED);
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)), MINIP_CMD_CREATE_CHANNEL,
+                      ZX_ERR_ACCESS_DENIED);
 }
 
 TEST(JobPolicyTest, EnforceDenyPagerVmo) {
   zx_policy_basic_v1_t policy[] = {{ZX_POL_NEW_VMO, ZX_POL_ACTION_DENY}};
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
-                      MINIP_CMD_CREATE_PAGER_VMO, ZX_ERR_ACCESS_DENIED);
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)), MINIP_CMD_CREATE_PAGER_VMO,
+                      ZX_ERR_ACCESS_DENIED);
 }
 
 TEST(JobPolicyTest, EnforceDenyVmoContiguous) {
   zx_policy_basic_v1_t policy[] = {{ZX_POL_NEW_VMO, ZX_POL_ACTION_DENY}};
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)),
                       MINIP_CMD_CREATE_VMO_CONTIGUOUS, ZX_ERR_ACCESS_DENIED);
 }
 
 TEST(JobPolicyTest, EnforceDenyVmoPhysical) {
   zx_policy_basic_v1_t policy[] = {{ZX_POL_NEW_VMO, ZX_POL_ACTION_DENY}};
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)),
                       MINIP_CMD_CREATE_VMO_PHYSICAL, ZX_ERR_ACCESS_DENIED);
 }
 
 TEST(JobPolicyTest, EnforceDenyAmbientExecutable) {
   zx_policy_basic_v1_t policy[] = {{ZX_POL_AMBIENT_MARK_VMO_EXEC, ZX_POL_ACTION_DENY}};
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)),
                       MINIP_CMD_ATTEMPT_AMBIENT_EXECUTABLE, ZX_ERR_ACCESS_DENIED);
 }
 
 TEST(JobPolicyTest, TestAllowAmbientExecutable) {
   zx_policy_basic_v1_t policy[] = {{ZX_POL_AMBIENT_MARK_VMO_EXEC, ZX_POL_ACTION_ALLOW}};
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)),
                       MINIP_CMD_ATTEMPT_AMBIENT_EXECUTABLE, ZX_OK);
 }
 
 TEST(JobPolicyTest, EnforceDenyAny) {
   zx_policy_basic_v1_t policy[] = {{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY}};
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT,
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)), MINIP_CMD_CREATE_EVENT,
                       ZX_ERR_ACCESS_DENIED);
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
-                      MINIP_CMD_CREATE_PROFILE, ZX_ERR_ACCESS_DENIED);
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
-                      MINIP_CMD_CREATE_CHANNEL, ZX_ERR_ACCESS_DENIED);
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)), MINIP_CMD_CREATE_PROFILE,
+                      ZX_ERR_ACCESS_DENIED);
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)), MINIP_CMD_CREATE_CHANNEL,
+                      ZX_ERR_ACCESS_DENIED);
 }
 
 TEST(JobPolicyTest, EnforceKillEvent) {
   zx_policy_basic_v1_t policy[] = {{ZX_POL_NEW_EVENT, ZX_POL_ACTION_KILL}};
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT,
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)), MINIP_CMD_CREATE_EVENT,
                       ZX_ERR_PEER_CLOSED);
 }
 
 TEST(JobPolicyTest, EnforceAllowAny) {
   zx_policy_basic_v1_t policy[] = {{ZX_POL_NEW_ANY, ZX_POL_ACTION_ALLOW}};
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT,
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)), MINIP_CMD_CREATE_EVENT,
                       ZX_OK);
 }
 
 TEST(JobPolicyTest, EnforceDenyButEvent) {
   zx_policy_basic_v1_t policy[] = {{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY},
                                    {ZX_POL_NEW_EVENT, ZX_POL_ACTION_ALLOW}};
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT,
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)), MINIP_CMD_CREATE_EVENT,
                       ZX_OK);
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
-                      MINIP_CMD_CREATE_CHANNEL, ZX_ERR_ACCESS_DENIED);
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)), MINIP_CMD_CREATE_CHANNEL,
+                      ZX_ERR_ACCESS_DENIED);
 }
 
 void get_koid(zx_handle_t handle, zx_koid_t* koid) {
@@ -425,7 +427,7 @@ TEST(JobPolicyTest, TestExceptionOnNewEventAndDeny) {
   zx_policy_basic_v1_t policy[] = {
       {ZX_POL_NEW_EVENT, ZX_POL_ACTION_DENY_EXCEPTION},
   };
-  CheckInvokingPolicyWithException(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+  CheckInvokingPolicyWithException(policy, static_cast<uint32_t>(std::size(policy)),
                                    MINIP_CMD_CREATE_EVENT, ZX_ERR_ACCESS_DENIED);
 }
 
@@ -433,7 +435,7 @@ TEST(JobPolicyTest, TestExceptionOnNewEventButAllow) {
   zx_policy_basic_v1_t policy[] = {
       {ZX_POL_NEW_EVENT, ZX_POL_ACTION_ALLOW_EXCEPTION},
   };
-  CheckInvokingPolicyWithException(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+  CheckInvokingPolicyWithException(policy, static_cast<uint32_t>(std::size(policy)),
                                    MINIP_CMD_CREATE_EVENT, ZX_OK);
 }
 
@@ -441,7 +443,7 @@ TEST(JobPolicyTest, TestExceptionOnNewProfileAndDeny) {
   zx_policy_basic_v1_t policy[] = {
       {ZX_POL_NEW_PROFILE, ZX_POL_ACTION_DENY_EXCEPTION},
   };
-  CheckInvokingPolicyWithException(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+  CheckInvokingPolicyWithException(policy, static_cast<uint32_t>(std::size(policy)),
                                    MINIP_CMD_CREATE_PROFILE, ZX_ERR_ACCESS_DENIED);
 }
 
@@ -453,9 +455,9 @@ TEST(JobPolicyTest, TestErrorOnBadHandle) {
     zx_policy_basic_v1_t policy[] = {
         {ZX_POL_BAD_HANDLE, action},
     };
-    CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+    CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)),
                         MINIP_CMD_USE_BAD_HANDLE_CLOSED, ZX_ERR_BAD_HANDLE);
-    CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+    CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)),
                         MINIP_CMD_USE_BAD_HANDLE_TRANSFERRED, ZX_ERR_BAD_HANDLE);
   }
 }
@@ -466,9 +468,9 @@ TEST(JobPolicyTest, TestExceptionOnBadHandle) {
   uint32_t actions[] = {ZX_POL_ACTION_ALLOW_EXCEPTION, ZX_POL_ACTION_DENY_EXCEPTION};
   for (uint32_t action : actions) {
     zx_policy_basic_v1_t policy[] = {{ZX_POL_BAD_HANDLE, action}};
-    CheckInvokingPolicyWithException(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+    CheckInvokingPolicyWithException(policy, static_cast<uint32_t>(std::size(policy)),
                                      MINIP_CMD_USE_BAD_HANDLE_CLOSED, ZX_ERR_BAD_HANDLE);
-    CheckInvokingPolicyWithException(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+    CheckInvokingPolicyWithException(policy, static_cast<uint32_t>(std::size(policy)),
                                      MINIP_CMD_USE_BAD_HANDLE_TRANSFERRED, ZX_ERR_BAD_HANDLE);
   }
 }
@@ -476,7 +478,7 @@ TEST(JobPolicyTest, TestExceptionOnBadHandle) {
 // The one exception for ZX_POL_BAD_HANDLE is zx_object_info( ZX_INFO_HANDLE_VALID).
 TEST(JobPolicyTest, TestGetInfoOnBadHandle) {
   zx_policy_basic_v1_t policy[] = {{ZX_POL_BAD_HANDLE, ZX_POL_ACTION_DENY_EXCEPTION}};
-  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)),
                       MINIP_CMD_VALIDATE_CLOSED_HANDLE, ZX_ERR_BAD_HANDLE);
 }
 
