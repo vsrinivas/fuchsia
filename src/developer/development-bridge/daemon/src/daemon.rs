@@ -281,9 +281,8 @@ mod test {
     use fidl::endpoints::create_proxy;
     use fidl_fuchsia_developer_bridge as bridge;
     use fidl_fuchsia_developer_bridge::DaemonMarker;
-    use fidl_fuchsia_developer_remotecontrol::{
-        RemoteControlMarker, RemoteControlProxy, RemoteControlRequest,
-    };
+    use fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy};
+    use fidl_fuchsia_overnet_protocol::NodeId;
     use futures::channel::mpsc;
 
     struct TestHookFakeRCS {
@@ -372,13 +371,9 @@ mod test {
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
         spawn(async move {
-            while let Ok(Some(req)) = stream.try_next().await {
-                match req {
-                    RemoteControlRequest::StartComponent { responder, .. } => {
-                        let _ = responder.send(&mut Ok(())).context("sending ok response");
-                    }
-                    _ => assert!(false),
-                }
+            while let Ok(_) = stream.try_next().await {
+                // No requests should be made to the target RCS.
+                assert!(false);
             }
         });
 

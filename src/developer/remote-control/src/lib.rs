@@ -3,19 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::component_control::ComponentController,
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_device as fdevice,
     fidl_fuchsia_diagnostics::Selector,
     fidl_fuchsia_io as io, fidl_fuchsia_net as fnet, fidl_fuchsia_net_stack as fnetstack,
-    fidl_fuchsia_test_manager as ftest_manager,
-    fuchsia_component::client::{launcher, AppBuilder},
-    fuchsia_zircon as zx,
+    fidl_fuchsia_test_manager as ftest_manager, fuchsia_zircon as zx,
     futures::prelude::*,
     std::rc::Rc,
 };
 
-mod component_control;
 mod service_discovery;
 
 const HUB_ROOT: &str = "/discovery_root";
@@ -49,23 +45,6 @@ impl RemoteControlService {
     ) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await.context("next RemoteControl request")? {
             match request {
-                rcs::RemoteControlRequest::StartComponent {
-                    component_url,
-                    args,
-                    component_stdout: stdout,
-                    component_stderr: stderr,
-                    controller,
-                    responder,
-                } => {
-                    let mut response = self.clone().spawn_component_async(
-                        &component_url,
-                        args,
-                        stdout,
-                        stderr,
-                        controller,
-                    );
-                    responder.send(&mut response).context("sending StartComponent response")?;
-                }
                 rcs::RemoteControlRequest::IdentifyHost { responder } => {
                     self.clone().identify_host(responder).await?;
                 }
@@ -179,47 +158,6 @@ impl RemoteControlService {
         .await
     }
 
-    pub fn spawn_component_async(
-        self: &Rc<Self>,
-        component_name: &str,
-        argv: Vec<String>,
-        stdout: fidl::Socket,
-        stderr: fidl::Socket,
-        server_end: fidl::endpoints::ServerEnd<
-            fidl_fuchsia_developer_remotecontrol::ComponentControllerMarker,
-        >,
-    ) -> Result<(), rcs::ComponentControlError> {
-        log::info!("Attempting to start component '{}' with argv {:?}...", component_name, argv);
-        let launcher = launcher().expect("Failed to open launcher service");
-        let app = match AppBuilder::new(component_name)
-            .stdout(stdout)
-            .stderr(stderr)
-            .args(argv)
-            .spawn(&launcher)
-        {
-            Ok(app) => app,
-            Err(e) => {
-                log::error!("{}", e);
-                return Err(rcs::ComponentControlError::ComponentControlFailure);
-            }
-        };
-
-        let (stream, control_handle) = match server_end.into_stream_and_control_handle() {
-            Ok((stream, control_handle)) => (stream, control_handle),
-            Err(e) => {
-                log::error!("{}", e);
-                return Err(rcs::ComponentControlError::ControllerSetupFailure);
-            }
-        };
-        let controller = ComponentController::new(app, stream, control_handle);
-
-        hoist::spawn(async move {
-            controller.serve().await.unwrap();
-        });
-
-        return Ok(());
-    }
-
     pub async fn identify_host(
         self: &Rc<Self>,
         responder: rcs::RemoteControlIdentifyHostResponder,
@@ -288,18 +226,13 @@ impl RemoteControlService {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl::endpoints::create_proxy, fidl_fuchsia_developer_remotecontrol as rcs,
+        super::*, fidl_fuchsia_developer_remotecontrol as rcs,
         fidl_fuchsia_hardware_ethernet::MacAddress, fidl_fuchsia_io::NodeMarker,
         fuchsia_async as fasync, fuchsia_zircon as zx, selectors::parse_selector,
         service_discovery::PathEntry, std::path::PathBuf,
     };
 
     const NODENAME: &'static str = "thumb-set-human-shred";
-
-    // This is the exit code zircon will return when a component is killed.
-    const EXIT_CODE_KILLED: i64 = -1024;
-    // This is the exit code zircon will return for an non-existent package.
-    const EXIT_CODE_START_FAILED: i64 = -1;
 
     const IPV4_ADDR: [u8; 4] = [127, 0, 0, 1];
     const IPV6_ADDR: [u8; 16] = [127, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6];
@@ -382,32 +315,6 @@ mod tests {
         proxy
     }
 
-    async fn verify_exit_code(proxy: rcs::ComponentControllerProxy, expected_exit_code: i64) {
-        let events: Vec<_> = proxy.take_event_stream().collect::<Vec<_>>().await;
-
-        assert_eq!(events.len(), 1);
-
-        let event = events[0].as_ref().unwrap();
-        match event {
-            rcs::ComponentControllerEvent::OnTerminated { exit_code } => {
-                assert_eq!(*exit_code, expected_exit_code);
-            }
-        };
-    }
-
-    fn verify_socket_content(s: fidl::Socket, expected: &str) {
-        let mut value = Vec::new();
-
-        let mut remaining = s.outstanding_read_bytes().or::<usize>(Ok(0usize)).unwrap();
-        while remaining > 0 {
-            let mut buf = [0u8; 128];
-            let n = s.read(&mut buf).or::<usize>(Ok(0usize)).unwrap();
-            value.extend_from_slice(&buf[..n]);
-            remaining = s.outstanding_read_bytes().or::<usize>(Ok(0)).unwrap();
-        }
-        assert_eq!(std::str::from_utf8(&value).unwrap(), expected);
-    }
-
     fn make_rcs() -> Rc<RemoteControlService> {
         Rc::new(RemoteControlService::new_with_proxies(
             setup_fake_netstack_service(),
@@ -426,87 +333,6 @@ mod tests {
         });
 
         return rcs_proxy;
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_spawn_hello_world() -> Result<(), Error> {
-        let rcs_proxy = setup_rcs_proxy();
-        let (proxy, server_end) = create_proxy::<rcs::ComponentControllerMarker>()?;
-        let (sout, cout) =
-            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
-        let (serr, cerr) =
-            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
-
-        let _ = rcs_proxy
-            .start_component(
-                "fuchsia-pkg://fuchsia.com/remote-control#meta/spawn_hello_world.cm",
-                &mut std::iter::empty::<_>(),
-                sout,
-                serr,
-                server_end,
-            )
-            .await
-            .unwrap()
-            .unwrap();
-
-        verify_exit_code(proxy, 0).await;
-        verify_socket_content(cout, "Hello, world!");
-        verify_socket_content(cerr, "Hello, stderr!");
-
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_spawn_and_kill() -> Result<(), Error> {
-        let rcs_proxy = setup_rcs_proxy();
-        let (proxy, server_end) = create_proxy::<rcs::ComponentControllerMarker>()?;
-        let (sout, cout) =
-            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
-        let (serr, cerr) =
-            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
-
-        let _ = rcs_proxy
-            .start_component(
-                "fuchsia-pkg://fuchsia.com/remote-control#meta/spawn_and_kill.cm",
-                &mut std::iter::empty::<_>(),
-                sout,
-                serr,
-                server_end,
-            )
-            .and_then(|_| proxy.kill())
-            .await?;
-
-        verify_exit_code(proxy, EXIT_CODE_KILLED).await;
-        verify_socket_content(cout, "");
-        verify_socket_content(cerr, "");
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_start_non_existent_package() -> Result<(), Error> {
-        let rcs_proxy = setup_rcs_proxy();
-        let (proxy, server_end) = create_proxy::<rcs::ComponentControllerMarker>()?;
-        let (sout, cout) =
-            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
-        let (serr, cerr) =
-            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
-
-        let _start_response = rcs_proxy
-            .start_component(
-                "fuchsia-pkg://fuchsia.com/remote-control#meta/non_existent.cm",
-                &mut std::iter::empty::<_>(),
-                sout,
-                serr,
-                server_end,
-            )
-            .await
-            .unwrap()
-            .unwrap();
-
-        verify_exit_code(proxy, EXIT_CODE_START_FAILED).await;
-        verify_socket_content(cout, "");
-        verify_socket_content(cerr, "");
-        Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
