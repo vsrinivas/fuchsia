@@ -126,12 +126,6 @@ impl Context {
 /// Encoding state
 #[derive(Debug)]
 pub struct Encoder<'a> {
-    /// Offset at which to write new objects.
-    offset: usize,
-
-    /// The out of line depth.
-    depth: usize,
-
     /// Buffer to write output data into.
     ///
     /// New chunks of out-of-line data should be appended to the end of the `Vec`.
@@ -185,28 +179,11 @@ impl<'a> Encoder<'a> {
             buf.truncate(0);
             buf.resize(inline_size, 0);
             handles.truncate(0);
-            Encoder { offset: 0, depth: 0, buf, handles, context }
+            Encoder { buf, handles, context }
         }
 
         let mut encoder = prepare_for_encoding(context, buf, handles, x.inline_size(context));
-        x.encode(&mut encoder)
-    }
-
-    /// Returns the next offset for writing and increases `offset` by `len`.
-    pub fn next_offset(&mut self, len: usize) -> usize {
-        let cur_offset = self.offset;
-        self.offset += len;
-        cur_offset
-    }
-
-    /// Adds specified number of zero bytes as padding.  Effectively, just increases `offset` by
-    /// `len`.
-    pub fn padding(&mut self, len: usize) -> Result<()> {
-        if self.offset + len > self.buf.len() {
-            return Err(Error::OutOfRange);
-        }
-        self.offset += len;
-        Ok(())
+        x.encode(&mut encoder, 0, 0)
     }
 
     /// Returns the inline alignment of an object of type `Target` for this encoder.
@@ -219,57 +196,24 @@ impl<'a> Encoder<'a> {
         <Target as Layout>::inline_size(&self.context)
     }
 
-    /// Adds as many zero bytes as padding as necessary to make sure that the
-    /// `target` object size is equal to `inline_size_of::<Target>()`.
-    /// `start_pos` is the position in the `encoder` buffer of where the
-    /// encoding started. See `Encoder::offset`.
-    pub fn tail_padding<Target: Encodable>(&mut self, start_pos: usize) -> Result<()> {
-        self.tail_padding_inner(self.inline_size_of::<Target>(), start_pos)
-    }
-
-    fn tail_padding_inner(&mut self, target_inline_size: usize, start_pos: usize) -> Result<()> {
-        debug_assert!(start_pos <= self.offset);
-        self.padding(target_inline_size - (self.offset - start_pos))
-    }
-
-    /// Runs the provided closure at at the next recursion depth level,
-    /// erroring if the maximum recursion limit has been reached.
-    pub fn with_increased_recursion_depth<F, R>(&mut self, f: F) -> Result<R>
+    /// Extends buf by `len` bytes and calls the provided closure to write
+    /// out-of-line data, with `offset` set to the start of the new region.
+    pub fn write_out_of_line<F>(&mut self, len: usize, recursion_depth: usize, f: F) -> Result<()>
     where
-        F: FnOnce(&mut Encoder<'_>) -> Result<R>,
+        F: FnOnce(&mut Encoder<'_>, usize, usize) -> Result<()>,
     {
-        self.depth += 1;
-        if self.depth > MAX_RECURSION {
-            return Err(Error::MaxRecursionDepth);
-        }
-        let res = f(self)?;
-        self.depth -= 1;
-        Ok(res)
+        let new_offset = self.buf.len();
+        let new_depth = recursion_depth + 1;
+        Self::check_recursion_depth(new_depth)?;
+        self.buf_reserve(len);
+        f(self, new_offset, new_depth)
     }
 
-    /// Runs the provided closure inside an encoder modified
-    /// to write the data out-of-line.
-    ///
-    /// Once the closure has completed, this function resets the offset
-    /// to where it was at the beginning of the call.
-    pub fn write_out_of_line<F>(&mut self, len: usize, f: F) -> Result<()>
-    where
-        F: FnOnce(&mut Encoder<'_>) -> Result<()>,
-    {
-        let old_offset = self.offset;
-        self.offset = self.buf.len();
-        // Create space for the new data
-        self.reserve_out_of_line(len);
-        self.with_increased_recursion_depth(|encoder| f(encoder))?;
-        self.offset = old_offset;
-        Ok(())
-    }
-
-    fn reserve_out_of_line(&mut self, len: usize) {
+    fn buf_reserve(&mut self, len: usize) {
         let old_len = self.buf.len();
-        let new_len = self.offset + round_up_to_align(len, 8);
+        let new_len = old_len + round_up_to_align(len, 8);
         // Special case to ensure we use memset when extending length within capacity.
-        if new_len > old_len && new_len <= self.buf.capacity() {
+        if new_len <= self.buf.capacity() {
             let ptr = self.buf.as_mut_ptr();
             // Safety:
             // - The `set_len` call is safe because new_len <= capacity.
@@ -297,6 +241,14 @@ impl<'a> Encoder<'a> {
         } else {
             self.buf.resize(new_len, 0);
         }
+    }
+
+    /// Validate that the recursion depth is within the limit.
+    pub fn check_recursion_depth(recursion_depth: usize) -> Result<()> {
+        if recursion_depth > MAX_RECURSION {
+            return Err(Error::MaxRecursionDepth);
+        }
+        Ok(())
     }
 
     /// Append bytes to the very end (out-of-line) of the buffer.
@@ -598,11 +550,20 @@ impl<T: Layout> LayoutObject for T {
 /// no implementations of `Encodable` for enclosing types such as
 /// `Vec<&dyn Encodable>`, and similarly for references, arrays, tuples, etc.
 pub trait Encodable: LayoutObject {
-    /// Encode the object into the buffer.
-    /// Any handles stored in the object are swapped for `Handle::INVALID`.
-    /// Calls to this function should ensure that `encoder.offset` is a multiple of `Layout::inline_size`.
-    /// Successful calls to this function should increase `encoder.offset` by `Layout::inline_size`.
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()>;
+    /// Encode the object into the buffer. Any handles stored in the object are
+    /// swapped for `Handle::INVALID`. Callers should ensure that `offset` is a
+    /// multiple of `Layout::inline_align`, and that `encoder.buf` has room for
+    /// writing `Layout::inline_size` bytes at `offset`.
+    ///
+    /// Implementations that encode out-of-line objects should pass
+    /// `recursion_depth` to `Encoder::write_out_of_line`, or manually call
+    /// `Encoder::check_recursion_depth(recursion_depth + 1)`.
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()>;
 }
 
 assert_obj_safe!(Encodable);
@@ -667,9 +628,15 @@ macro_rules! impl_slice_encoding_by_copy {
         }
 
         impl Encodable for &[$prim_ty] {
-            fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-                (self.len() as u64).encode(encoder)?;
-                ALLOC_PRESENT_U64.encode(encoder)?;
+            fn encode(
+                &mut self,
+                encoder: &mut Encoder<'_>,
+                offset: usize,
+                recursion_depth: usize,
+            ) -> Result<()> {
+                (self.len() as u64).encode(encoder, offset, recursion_depth)?;
+                ALLOC_PRESENT_U64.encode(encoder, offset + 8, recursion_depth)?;
+                Encoder::check_recursion_depth(recursion_depth + 1)?;
                 if self.len() == 0 {
                     return Ok(());
                 }
@@ -699,10 +666,15 @@ macro_rules! impl_slice_encoding_by_copy {
         }
 
         impl Encodable for Option<&[$prim_ty]> {
-            fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
+            fn encode(
+                &mut self,
+                encoder: &mut Encoder<'_>,
+                offset: usize,
+                recursion_depth: usize,
+            ) -> Result<()> {
                 match self {
-                    None => encode_absent_vector(encoder),
-                    Some(slice) => slice.encode(encoder),
+                    None => encode_absent_vector(encoder, offset, recursion_depth),
+                    Some(slice) => slice.encode(encoder, offset, recursion_depth),
                 }
             }
         }
@@ -716,10 +688,8 @@ macro_rules! impl_codable_num { ($($prim_ty:ty,)*) => { $(
     }
 
     impl Encodable for $prim_ty {
-        fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-            let size = mem::size_of::<Self>();
-            let offset = encoder.next_offset(size);
-            encoder.buf[offset..offset+size].copy_from_slice(&self.to_le_bytes());
+        fn encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, _recursion_depth: usize) -> Result<()> {
+            encoder.buf[offset..offset+mem::size_of::<Self>()].copy_from_slice(&self.to_le_bytes());
             Ok(())
         }
     }
@@ -747,8 +717,12 @@ impl_codable_num!(u16, u32, u64, i16, i32, i64, f32, f64,);
 impl_layout!(bool, align: 1, size: 1);
 
 impl Encodable for bool {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        let offset = encoder.next_offset(1);
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        _recursion_depth: usize,
+    ) -> Result<()> {
         encoder.buf[offset] = if *self { 1 } else { 0 };
         Ok(())
     }
@@ -773,8 +747,12 @@ impl_layout!(u8, align: 1, size: 1);
 impl_slice_encoding_by_copy!(u8);
 
 impl Encodable for u8 {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        let offset = encoder.next_offset(1);
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        _recursion_depth: usize,
+    ) -> Result<()> {
         encoder.buf[offset] = *self;
         Ok(())
     }
@@ -795,8 +773,12 @@ impl_layout!(i8, align: 1, size: 1);
 impl_slice_encoding_by_copy!(i8);
 
 impl Encodable for i8 {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        let offset = encoder.next_offset(1);
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        _recursion_depth: usize,
+    ) -> Result<()> {
         encoder.buf[offset] = *self as u8;
         Ok(())
     }
@@ -813,9 +795,15 @@ impl Decodable for i8 {
     }
 }
 
-fn encode_array<T: Encodable>(encoder: &mut Encoder<'_>, slice: &mut [T]) -> Result<()> {
-    for item in slice {
-        item.encode(encoder)?;
+fn encode_array<T: Encodable>(
+    encoder: &mut Encoder<'_>,
+    slice: &mut [T],
+    offset: usize,
+    recursion_depth: usize,
+) -> Result<()> {
+    let stride = encoder.inline_size_of::<T>();
+    for (i, item) in slice.iter_mut().enumerate() {
+        item.encode(encoder, offset + i * stride, recursion_depth)?;
     }
     Ok(())
 }
@@ -834,8 +822,8 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
     }
 
     impl<T: Encodable> Encodable for [T; $len] {
-        fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-            encode_array(encoder, self)
+        fn encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, recursion_depth: usize) -> Result<()> {
+            encode_array(encoder, self, offset, recursion_depth)
         }
     }
 
@@ -872,30 +860,40 @@ impl_codable_for_fixed_array!(64,);
 // Hack for FIDL library fuchsia.net
 impl_codable_for_fixed_array!(256,);
 
-fn encode_byte_slice(encoder: &mut Encoder<'_>, slice_opt: Option<&[u8]>) -> Result<()> {
+fn encode_byte_slice(
+    encoder: &mut Encoder<'_>,
+    offset: usize,
+    recursion_depth: usize,
+    slice_opt: Option<&[u8]>,
+) -> Result<()> {
     match slice_opt {
-        None => encode_absent_vector(encoder),
+        None => encode_absent_vector(encoder, offset, recursion_depth),
         Some(slice) => {
-            encoder.with_increased_recursion_depth(|encoder| {
-                // Two u64: (len, present)
-                (slice.len() as u64).encode(encoder)?;
-                ALLOC_PRESENT_U64.encode(encoder)?;
-                encoder.append_bytes(slice);
-                Ok(())
-            })
+            // Two u64: (len, present)
+            (slice.len() as u64).encode(encoder, offset, recursion_depth)?;
+            ALLOC_PRESENT_U64.encode(encoder, offset + 8, recursion_depth)?;
+            Encoder::check_recursion_depth(recursion_depth + 1)?;
+            encoder.append_bytes(slice);
+            Ok(())
         }
     }
 }
 
 /// Encode an missing vector-like component.
-pub fn encode_absent_vector(encoder: &mut Encoder<'_>) -> Result<()> {
-    0u64.encode(encoder)?;
-    ALLOC_ABSENT_U64.encode(encoder)
+pub fn encode_absent_vector(
+    encoder: &mut Encoder<'_>,
+    offset: usize,
+    recursion_depth: usize,
+) -> Result<()> {
+    0u64.encode(encoder, offset, recursion_depth)?;
+    ALLOC_ABSENT_U64.encode(encoder, offset + 8, recursion_depth)
 }
 
 /// Encode an optional iterator over encodable elements into a FIDL vector-like representation.
 pub fn encode_encodable_iter<Iter, T>(
     encoder: &mut Encoder<'_>,
+    offset: usize,
+    recursion_depth: usize,
     iter_opt: Option<Iter>,
 ) -> Result<()>
 where
@@ -903,21 +901,26 @@ where
     T: Encodable,
 {
     match iter_opt {
-        None => encode_absent_vector(encoder),
+        None => encode_absent_vector(encoder, offset, recursion_depth),
         Some(iter) => {
             // Two u64: (len, present)
-            (iter.len() as u64).encode(encoder)?;
-            ALLOC_PRESENT_U64.encode(encoder)?;
+            (iter.len() as u64).encode(encoder, offset, recursion_depth)?;
+            ALLOC_PRESENT_U64.encode(encoder, offset + 8, recursion_depth)?;
             if iter.len() == 0 {
                 return Ok(());
             }
             let bytes_len = iter.len() * encoder.inline_size_of::<T>();
-            encoder.write_out_of_line(bytes_len, |encoder| {
-                for mut item in iter {
-                    item.encode(encoder)?;
-                }
-                Ok(())
-            })
+            encoder.write_out_of_line(
+                bytes_len,
+                recursion_depth,
+                |encoder, offset, recursion_depth| {
+                    let stride = encoder.inline_size_of::<T>();
+                    for (i, mut item) in iter.enumerate() {
+                        item.encode(encoder, offset + stride * i, recursion_depth)?;
+                    }
+                    Ok(())
+                },
+            )
         }
     }
 }
@@ -981,16 +984,26 @@ fn decode_vec<T: Decodable>(decoder: &mut Decoder<'_>, vec: &mut Vec<T>) -> Resu
 impl_layout!(&str, align: 8, size: 16);
 
 impl Encodable for &str {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        encode_byte_slice(encoder, Some(self.as_bytes()))
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        encode_byte_slice(encoder, offset, recursion_depth, Some(self.as_bytes()))
     }
 }
 
 impl_layout!(String, align: 8, size: 16);
 
 impl Encodable for String {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        encode_byte_slice(encoder, Some(self.as_bytes()))
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        encode_byte_slice(encoder, offset, recursion_depth, Some(self.as_bytes()))
     }
 }
 
@@ -1011,16 +1024,26 @@ impl Decodable for String {
 impl_layout!(Option<&str>, align: 8, size: 16);
 
 impl Encodable for Option<&str> {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        encode_byte_slice(encoder, self.as_ref().map(|x| x.as_bytes()))
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        encode_byte_slice(encoder, offset, recursion_depth, self.as_ref().map(|x| x.as_bytes()))
     }
 }
 
 impl_layout!(Option<String>, align: 8, size: 16);
 
 impl Encodable for Option<String> {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        encode_byte_slice(encoder, self.as_ref().map(|x| x.as_bytes()))
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        encode_byte_slice(encoder, offset, recursion_depth, self.as_ref().map(|x| x.as_bytes()))
     }
 }
 
@@ -1045,16 +1068,26 @@ impl Decodable for Option<String> {
 impl_layout_forall_T!(&mut dyn ExactSizeIterator<Item = T>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for &mut dyn ExactSizeIterator<Item = T> {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        encode_encodable_iter(encoder, Some(self))
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        encode_encodable_iter(encoder, offset, recursion_depth, Some(self))
     }
 }
 
 impl_layout_forall_T!(Vec<T>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Vec<T> {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        encode_encodable_iter(encoder, Some(self.iter_mut()))
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        encode_encodable_iter(encoder, offset, recursion_depth, Some(self.iter_mut()))
     }
 }
 
@@ -1075,16 +1108,26 @@ impl<T: Decodable> Decodable for Vec<T> {
 impl_layout_forall_T!(Option<&mut dyn ExactSizeIterator<Item = T>>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Option<&mut dyn ExactSizeIterator<Item = T>> {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        encode_encodable_iter(encoder, self.as_mut().map(|x| &mut **x))
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        encode_encodable_iter(encoder, offset, recursion_depth, self.as_mut().map(|x| &mut **x))
     }
 }
 
 impl_layout_forall_T!(Option<Vec<T>>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Option<Vec<T>> {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        encode_encodable_iter(encoder, self.as_mut().map(|x| x.iter_mut()))
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        encode_encodable_iter(encoder, offset, recursion_depth, self.as_mut().map(|x| x.iter_mut()))
     }
 }
 
@@ -1106,17 +1149,21 @@ impl<T: Decodable> Decodable for Option<Vec<T>> {
     }
 }
 
-/// A shorthand macro for calling `Encodable::encode()` on a type
-/// without importing the `Encodable` trait.
+/// An shorthand macro for calling `Encodable::encode()` from generated code
+// with full parameters, without importing the `Encodable` trait.
+// This is intended to be used only by generated code.
+#[doc(hidden)]
 #[macro_export]
 macro_rules! fidl_encode {
-    ($val:expr, $encoder:expr) => {
-        $crate::encoding::Encodable::encode($val, $encoder)
+    ($val:expr, $encoder:expr, $offset:expr, $recursion_depth:expr) => {
+        $crate::encoding::Encodable::encode($val, $encoder, $offset, $recursion_depth)
     };
 }
 
 /// A shorthand macro for calling `Decodable::decode()` on a type
 /// without importing the `Decodable` trait.
+// This is intended to be used only by generated code.
+#[doc(hidden)]
 #[macro_export]
 macro_rules! fidl_decode {
     ($val:expr, $decoder:expr) => {
@@ -1174,10 +1221,10 @@ macro_rules! fidl_bits {
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>)
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize)
                 -> ::std::result::Result<(), $crate::Error>
             {
-                $crate::fidl_encode!(&mut self.bits, encoder)
+                $crate::fidl_encode!(&mut self.bits, encoder, offset, recursion_depth)
             }
         }
 
@@ -1259,10 +1306,10 @@ macro_rules! fidl_enum {
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>)
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize)
                 -> ::std::result::Result<(), $crate::Error>
             {
-                $crate::fidl_encode!(&mut (*self as $prim_ty), encoder)
+                $crate::fidl_encode!(&mut (*self as $prim_ty), encoder, offset, recursion_depth)
             }
         }
 
@@ -1291,8 +1338,13 @@ macro_rules! fidl_enum {
 impl_layout!(Handle, align: 4, size: 4);
 
 impl Encodable for Handle {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        ALLOC_PRESENT_U32.encode(encoder)?;
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        ALLOC_PRESENT_U32.encode(encoder, offset, recursion_depth)?;
         let handle = take_handle(self);
         encoder.handles.push(handle);
         Ok(())
@@ -1319,10 +1371,15 @@ impl Decodable for Handle {
 impl_layout!(Option<Handle>, align: 4, size: 4);
 
 impl Encodable for Option<Handle> {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
         match self {
-            Some(handle) => handle.encode(encoder),
-            None => ALLOC_ABSENT_U32.encode(encoder),
+            Some(handle) => handle.encode(encoder, offset, recursion_depth),
+            None => ALLOC_ABSENT_U32.encode(encoder, offset, recursion_depth),
         }
     }
 }
@@ -1360,11 +1417,11 @@ macro_rules! handle_based_codable {
         }
 
         impl<$($($generic,)*)*> $crate::encoding::Encodable for $ty<$($($generic,)*)*> {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>)
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize)
                 -> $crate::Result<()>
             {
                 let mut handle = $crate::encoding::take_handle(self);
-                $crate::fidl_encode!(&mut handle, encoder)
+                $crate::fidl_encode!(&mut handle, encoder, offset, recursion_depth)
             }
         }
 
@@ -1388,12 +1445,12 @@ macro_rules! handle_based_codable {
         }
 
         impl<$($($generic,)*)*> $crate::encoding::Encodable for Option<$ty<$($($generic,)*)*>> {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>)
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize)
                 -> $crate::Result<()>
             {
                 match self {
-                    Some(handle) => $crate::fidl_encode!(handle, encoder),
-                    None => $crate::fidl_encode!(&mut $crate::encoding::ALLOC_ABSENT_U32, encoder),
+                    Some(handle) => $crate::fidl_encode!(handle, encoder, offset, recursion_depth),
+                    None => $crate::fidl_encode!(&mut $crate::encoding::ALLOC_ABSENT_U32, encoder, offset, recursion_depth),
                 }
             }
         }
@@ -1420,11 +1477,15 @@ impl Layout for zx_status::Status {
 }
 
 impl Encodable for zx_status::Status {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        _recursion_depth: usize,
+    ) -> Result<()> {
         type Raw = zx_status::zx_status_t;
-        let size = mem::size_of::<Raw>();
-        let offset = encoder.next_offset(size);
-        encoder.buf[offset..offset + size].copy_from_slice(&self.into_raw().to_le_bytes());
+        encoder.buf[offset..offset + mem::size_of::<Raw>()]
+            .copy_from_slice(&self.into_raw().to_le_bytes());
         Ok(())
     }
 }
@@ -1464,8 +1525,13 @@ impl Layout for EpitaphBody {
 }
 
 impl Encodable for EpitaphBody {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        self.error.encode(encoder)
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        self.error.encode(encoder, offset, recursion_depth)
     }
 }
 
@@ -1519,28 +1585,30 @@ impl<T: Autonull> Layout for Option<&mut T> {
 }
 
 impl<T: Autonull> Encodable for Option<&mut T> {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
         if T::naturally_nullable(encoder.context) {
             match self {
-                Some(x) => x.encode(encoder),
-                None => {
-                    let size = encoder.inline_size_of::<T>();
-                    let offset = encoder.next_offset(size);
-                    for i in offset..offset + size {
-                        encoder.buf[i] = 0;
-                    }
-                    Ok(())
-                }
+                Some(x) => x.encode(encoder, offset, recursion_depth),
+                None => Ok(()),
             }
         } else {
             match self {
                 Some(x) => {
-                    ALLOC_PRESENT_U64.encode(encoder)?;
-                    encoder.write_out_of_line(encoder.inline_size_of::<T>(), |encoder| {
-                        x.encode(encoder)
-                    })
+                    ALLOC_PRESENT_U64.encode(encoder, offset, recursion_depth)?;
+                    encoder.write_out_of_line(
+                        encoder.inline_size_of::<T>(),
+                        recursion_depth,
+                        |encoder, offset, recursion_depth| {
+                            x.encode(encoder, offset, recursion_depth)
+                        },
+                    )
                 }
-                None => ALLOC_ABSENT_U64.encode(encoder),
+                None => ALLOC_ABSENT_U64.encode(encoder, offset, recursion_depth),
             }
         }
     }
@@ -1556,8 +1624,13 @@ impl<T: Autonull> Layout for Option<Box<T>> {
 }
 
 impl<T: Autonull> Encodable for Option<Box<T>> {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        self.as_deref_mut().encode(encoder)
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        self.as_deref_mut().encode(encoder, offset, recursion_depth)
     }
 }
 
@@ -1628,18 +1701,10 @@ macro_rules! fidl_struct {
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
-                let mut cur_offset = 0;
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
                 $(
-                    // Skip to the start of the next field
-                    let member_offset = $member_offset_v1;
-                    encoder.padding(member_offset - cur_offset)?;
-                    cur_offset = member_offset;
-                    $crate::fidl_encode!(&mut self.$member_name, encoder)?;
-                    cur_offset += encoder.inline_size_of::<$member_ty>();
+                    $crate::fidl_encode!(&mut self.$member_name, encoder, offset + $member_offset_v1, recursion_depth)?;
                 )*
-                // Skip to the end of the struct's size
-                encoder.padding(encoder.inline_size_of::<Self>() - cur_offset)?;
                 Ok(())
             }
         }
@@ -1692,8 +1757,8 @@ macro_rules! fidl_empty_struct {
         }
 
         impl $crate::encoding::Encodable for $name {
-          fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
-              $crate::fidl_encode!(&mut 0u8, encoder)
+          fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+              $crate::fidl_encode!(&mut 0u8, encoder, offset, recursion_depth)
           }
         }
 
@@ -1722,34 +1787,35 @@ macro_rules! fidl_empty_struct {
 pub fn encode_in_envelope(
     val: &mut Option<&mut dyn Encodable>,
     encoder: &mut Encoder<'_>,
+    offset: usize,
+    recursion_depth: usize,
 ) -> Result<()> {
     // u32 num_bytes
     // u32 num_handles
     // 64-bit presence indicator
 
-    // Record the offset of the number of bytes handles in the envelope,
-    // so that we can come back to it after writing the bytes and handles
-    // (until which point we don't know how many handles will be written).
-    let envelope_offset = encoder.offset;
-    0u32.encode(encoder)?; // num_bytes
-    0u32.encode(encoder)?; // num_handles
-
     match val {
         Some(x) => {
-            ALLOC_PRESENT_U64.encode(encoder)?;
+            // Start at offset 8 because we write the first 8 bytes (number of bytes and number
+            // number of handles, both u32) at the end.
+            ALLOC_PRESENT_U64.encode(encoder, offset + 8, recursion_depth)?;
             let bytes_before = encoder.buf.len();
             let handles_before = encoder.handles.len();
-            encoder.write_out_of_line(x.inline_size(encoder.context), |e| x.encode(e))?;
+            encoder.write_out_of_line(
+                x.inline_size(encoder.context),
+                recursion_depth,
+                |e, offset, recursion_depth| x.encode(e, offset, recursion_depth),
+            )?;
             let mut bytes_written = (encoder.buf.len() - bytes_before) as u32;
             let mut handles_written = (encoder.handles.len() - handles_before) as u32;
-            // Back up and overwrite the `0s` for num_bytes and num_handles
-            let after_offset = encoder.offset;
-            encoder.offset = envelope_offset;
-            bytes_written.encode(encoder)?;
-            handles_written.encode(encoder)?;
-            encoder.offset = after_offset;
+            bytes_written.encode(encoder, offset, recursion_depth)?;
+            handles_written.encode(encoder, offset + 4, recursion_depth)?;
         }
-        None => ALLOC_ABSENT_U64.encode(encoder)?,
+        None => {
+            0u32.encode(encoder, offset, recursion_depth)?; // num_bytes
+            0u32.encode(encoder, offset + 4, recursion_depth)?; // num_handles
+            ALLOC_ABSENT_U64.encode(encoder, offset + 8, recursion_depth)?;
+        }
     }
     Ok(())
 }
@@ -1813,7 +1879,7 @@ macro_rules! fidl_table {
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
                 let members: &mut [(u64, Option<&mut dyn $crate::encoding::Encodable>)] = &mut [$(
                     ($ordinal, self.$member_name.as_mut().map(|x| x as &mut dyn $crate::encoding::Encodable)),
                 )*];
@@ -1829,23 +1895,14 @@ macro_rules! fidl_table {
 
                 // Vector header
                 let max_ordinal = members.last().map(|v| v.0).unwrap_or(0);
-                (max_ordinal as u64).encode(encoder)?;
-                $crate::encoding::ALLOC_PRESENT_U64.encode(encoder)?;
-                let bytes_len = (max_ordinal as usize) * 16; // 16 = ENVELOPE_INLINE_SIZE
-                encoder.write_out_of_line(bytes_len, |encoder| {
-                        let mut next_ordinal_to_write = 1;
-                        for (ordinal, encodable) in members.iter_mut() {
-                            let ordinal = *ordinal;
-                            if ordinal < next_ordinal_to_write || ordinal > max_ordinal {
-                                panic!("ordinals out of order in fidl_table! declaration");
-                            }
-                            while ordinal > next_ordinal_to_write {
-                                // Fill in envelopes for missing ordinals.
-                                $crate::encoding::encode_in_envelope(&mut None, encoder)?;
-                                next_ordinal_to_write += 1;
-                            }
-                            $crate::encoding::encode_in_envelope(encodable, encoder)?;
-                            next_ordinal_to_write += 1;
+                (max_ordinal as u64).encode(encoder, offset, recursion_depth)?;
+                $crate::encoding::ALLOC_PRESENT_U64.encode(encoder, offset + 8, recursion_depth)?;
+                let bytes_len = (max_ordinal as usize) * 16;
+                encoder.write_out_of_line(bytes_len, recursion_depth, |encoder, offset, recursion_depth| {
+                    // Write at offset+(ordinal-1)*16, since ordinals are one-based and envelopes are 16 bytes.
+                    // An empty envelope is all zeros, so we don't need to write anything for empty/reserved
+                        for (ref ordinal, encodable) in members.iter_mut() {
+                            $crate::encoding::encode_in_envelope(encodable, encoder, offset + (*ordinal as usize - 1) * 16, recursion_depth)?;
                         }
                         Ok(())
                 })
@@ -1975,24 +2032,29 @@ where
     O: Encodable,
     E: Encodable,
 {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
         match self {
             Ok(val) => {
                 // Encode success ordinal
-                1u64.encode(encoder)?;
+                1u64.encode(encoder, offset, recursion_depth)?;
                 // If the inline size is 0, meaning the type is (),
                 // encode a zero byte instead because () in this context
                 // means an empty struct, not an absent payload.
                 if encoder.inline_size_of::<O>() == 0 {
-                    encode_in_envelope(&mut Some(&mut 0u8), encoder)
+                    encode_in_envelope(&mut Some(&mut 0u8), encoder, offset + 8, recursion_depth)
                 } else {
-                    encode_in_envelope(&mut Some(val), encoder)
+                    encode_in_envelope(&mut Some(val), encoder, offset + 8, recursion_depth)
                 }
             }
             Err(val) => {
                 // Encode error ordinal
-                2u64.encode(encoder)?;
-                encode_in_envelope(&mut Some(val), encoder)
+                2u64.encode(encoder, offset, recursion_depth)?;
+                encode_in_envelope(&mut Some(val), encoder, offset + 8, recursion_depth)
             }
         }
     }
@@ -2114,29 +2176,28 @@ macro_rules! fidl_xunion {
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
                 let mut ordinal = self.ordinal();
                 // Encode ordinal
-                $crate::fidl_encode!(&mut ordinal, encoder)?;
+                $crate::fidl_encode!(&mut ordinal, encoder, offset, recursion_depth)?;
                 match self {
                     $(
-                        $name::$member_name ( val ) => $crate::encoding::encode_in_envelope(&mut Some(val), encoder),
+                        $name::$member_name ( val ) => $crate::encoding::encode_in_envelope(&mut Some(val), encoder, offset+8, recursion_depth),
                     )*
                     $(
                         $name::$unknown_name { ordinal: _, bytes, handles } => {
-                            encoder.with_increased_recursion_depth(|encoder| {
-                                // Throw the raw data from the unrecognized variant
-                                // back onto the wire. This will allow correct proxies even in
-                                // the event that they don't yet recognize this union variant.
-                                $crate::fidl_encode!(&mut (bytes.len() as u32), encoder)?;
-                                $crate::fidl_encode!(&mut (handles.len() as u32), encoder)?;
-                                $crate::fidl_encode!(
-                                    &mut $crate::encoding::ALLOC_PRESENT_U64, encoder
-                                )?;
-                                encoder.append_bytes(bytes);
-                                encoder.append_handles(handles);
-                                Ok(())
-                            })
+                            // Throw the raw data from the unrecognized variant
+                            // back onto the wire. This will allow correct proxies even in
+                            // the event that they don't yet recognize this union variant.
+                            $crate::fidl_encode!(&mut (bytes.len() as u32), encoder, offset + 8, recursion_depth)?;
+                            $crate::fidl_encode!(&mut (handles.len() as u32), encoder, offset + 12, recursion_depth)?;
+                            $crate::fidl_encode!(
+                                &mut $crate::encoding::ALLOC_PRESENT_U64, encoder, offset + 16, recursion_depth
+                            )?;
+                            $crate::encoding::Encoder::check_recursion_depth(recursion_depth + 1)?;
+                            encoder.append_bytes(bytes);
+                            encoder.append_handles(handles);
+                            Ok(())
                         },
                     )?
                 }
@@ -2344,9 +2405,18 @@ impl<T: Layout> Layout for TransactionMessage<'_, T> {
 }
 
 impl<T: Encodable> Encodable for TransactionMessage<'_, T> {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        self.header.encode(encoder)?;
-        (*self.body).encode(encoder)?;
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        self.header.encode(encoder, offset, recursion_depth)?;
+        (*self.body).encode(
+            encoder,
+            offset + encoder.inline_size_of::<TransactionHeader>(),
+            recursion_depth,
+        )?;
         Ok(())
     }
 }
@@ -2453,9 +2523,18 @@ impl<T: Layout> Layout for PersistentMessage<'_, T> {
 }
 
 impl<T: Encodable> Encodable for PersistentMessage<'_, T> {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        self.header.encode(encoder)?;
-        (*self.body).encode(encoder)?;
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        self.header.encode(encoder, offset, recursion_depth)?;
+        (*self.body).encode(
+            encoder,
+            offset + encoder.inline_size_of::<PersistentHeader>(),
+            recursion_depth,
+        )?;
         Ok(())
     }
 }
@@ -2584,21 +2663,20 @@ macro_rules! tuple_impls {
             where $typ: Encodable,
                   $( $ntyp: Encodable,)*
         {
-            fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
+            fn encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, recursion_depth: usize) -> Result<()> {
+                // Tuples are encoded like structs.
+                // $idx is always 0 for the first element.
+                self.$idx.encode(encoder, offset, recursion_depth)?;
                 let mut cur_offset = 0;
-                self.$idx.encode(encoder)?;
                 cur_offset += encoder.inline_size_of::<$typ>();
                 $(
                     // Skip to the start of the next field
                     let member_offset =
                         round_up_to_align(cur_offset, encoder.inline_align_of::<$ntyp>());
-                    encoder.padding(member_offset - cur_offset)?;
-                    cur_offset = member_offset;
-                    self.$nidx.encode(encoder)?;
-                    cur_offset += encoder.inline_size_of::<$ntyp>();
+                    self.$nidx.encode(encoder, offset + member_offset, recursion_depth)?;
+                    cur_offset = member_offset + encoder.inline_size_of::<$ntyp>();
                 )*
-                // Skip to the end of the struct's size
-                encoder.padding(encoder.inline_size_of::<Self>() - cur_offset)?;
+                let _unused = cur_offset; // avoid unused warnings.
                 Ok(())
             }
         }
@@ -2666,7 +2744,12 @@ tuple_impls!(
 impl_layout!((), align: 1, size: 0);
 
 impl Encodable for () {
-    fn encode(&mut self, _: &mut Encoder<'_>) -> Result<()> {
+    fn encode(
+        &mut self,
+        _: &mut Encoder<'_>,
+        _offset: usize,
+        _recursion_depth: usize,
+    ) -> Result<()> {
         Ok(())
     }
 }
@@ -2690,8 +2773,13 @@ impl<T: Layout> Layout for &mut T {
 }
 
 impl<T: Encodable> Encodable for &mut T {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        (&mut **self).encode(encoder)
+    fn encode(
+        &mut self,
+        encoder: &mut Encoder<'_>,
+        offset: usize,
+        recursion_depth: usize,
+    ) -> Result<()> {
+        (&mut **self).encode(encoder, offset, recursion_depth)
     }
 }
 
