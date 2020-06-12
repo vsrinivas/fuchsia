@@ -8,6 +8,7 @@ package repo
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"testing"
@@ -22,7 +23,7 @@ func (sh *mockShell) writerAt(installPath string) (io.WriteCloser, error) {
 	return sh.writer, nil
 }
 
-func (sh *mockShell) run(cmd string) error {
+func (sh *mockShell) run(_ context.Context, cmd string) error {
 	sh.cmds = append(sh.cmds, cmd)
 	return nil
 }
@@ -42,6 +43,8 @@ func (w *mockWriteCloser) Close() error {
 }
 
 func TestAddFromConfig(t *testing.T) {
+	ctx := context.Background()
+
 	cfg := &Config{
 		URL: "fuchsia-pkg://example.com",
 		RootKeys: []KeyConfig{
@@ -60,13 +63,13 @@ func TestAddFromConfig(t *testing.T) {
 	installPath := "/path/on/remote/filesystem"
 
 	// This first call should fail, as the mirror does not specify a URL.
-	if err := addFromConfig(cfg, sh, installPath); err == nil {
+	if err := addFromConfig(ctx, cfg, sh, installPath); err == nil {
 		t.Errorf("succeeded when we should have failed; mirrors need URLs")
 	}
 
 	// Set the mirror URL and try again.
 	cfg.Mirrors[0].URL = "https://example.com/repo"
-	if err := addFromConfig(cfg, sh, installPath); err != nil {
+	if err := addFromConfig(ctx, cfg, sh, installPath); err != nil {
 		t.Fatalf("failed to configure: %v", err)
 	}
 

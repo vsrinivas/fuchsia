@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -20,6 +19,7 @@ import (
 	tuf_data "github.com/flynn/go-tuf/data"
 	"github.com/pkg/sftp"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 
 	"golang.org/x/crypto/ssh"
@@ -38,23 +38,23 @@ const (
 
 // AddFromConfig writes the given config to the given remote install path and
 // adds it as an update source.
-func AddFromConfig(client *ssh.Client, config *Config) error {
+func AddFromConfig(ctx context.Context, client *ssh.Client, config *Config) error {
 	sh, err := newRemoteShell(client)
 	if err != nil {
 		return err
 	}
 	defer func() {
 		if err := sh.sftpClient.Remove(defaultInstallPath); err != nil {
-			log.Printf("error: failed to remove %q: %v", defaultInstallPath, err)
+			logger.Errorf(ctx, "failed to remove %q: %v", defaultInstallPath, err)
 		}
 		if err := sh.sftpClient.Close(); err != nil {
-			log.Printf("error: failed to close SFTP client: %v", err)
+			logger.Errorf(ctx, "failed to close SFTP client: %v", err)
 		}
 	}()
-	return addFromConfig(config, sh, defaultInstallPath)
+	return addFromConfig(ctx, config, sh, defaultInstallPath)
 }
 
-func addFromConfig(config *Config, sh shell, installPath string) error {
+func addFromConfig(ctx context.Context, config *Config, sh shell, installPath string) error {
 	for i := range config.Mirrors {
 		mirror := &config.Mirrors[i]
 		if mirror.URL == "" {
@@ -74,8 +74,8 @@ func addFromConfig(config *Config, sh shell, installPath string) error {
 	if _, err := w.Write(b); err != nil {
 		return err
 	}
-	log.Printf("successfully wrote repo config to %q:\n%s\n", installPath, b)
-	return sh.run(repoAddCmd(installPath))
+	logger.Debugf(ctx, "successfully wrote repo config to %q:\n%s\n", installPath, b)
+	return sh.run(ctx, repoAddCmd(installPath))
 }
 
 func repoAddCmd(file string) string {
@@ -84,7 +84,7 @@ func repoAddCmd(file string) string {
 
 type shell interface {
 	writerAt(string) (io.WriteCloser, error)
-	run(string) error
+	run(context.Context, string) error
 }
 
 type remoteShell struct {
@@ -107,7 +107,7 @@ func (sh remoteShell) writerAt(remote string) (io.WriteCloser, error) {
 	return sh.sftpClient.Create(remote)
 }
 
-func (sh remoteShell) run(cmd string) error {
+func (sh remoteShell) run(ctx context.Context, cmd string) error {
 	session, err := sh.sshClient.NewSession()
 	if err != nil {
 		return err
@@ -115,26 +115,26 @@ func (sh remoteShell) run(cmd string) error {
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
 	defer session.Close()
-	log.Print("running command: ", cmd)
+	logger.Debugf(ctx, "running command: %v", cmd)
 	return session.Run(cmd)
 }
 
 // GetRootKeysInsecurely returns the list of public key config objects from a package
 // repository. Note this is an insecure method, as it leaves the caller open to a
 // man-in-the-middle attack.
-func GetRootKeysInsecurely(repoURL string) ([]KeyConfig, error) {
-	root, err := getRepoRoot(repoURL)
+func GetRootKeysInsecurely(ctx context.Context, repoURL string) ([]KeyConfig, error) {
+	root, err := getRepoRoot(ctx, repoURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch %s: %v", rootJSON, err)
 	}
 	return GetRootKeys(root)
 }
 
-func getRepoRoot(repoURL string) (*tuf_data.Root, error) {
+func getRepoRoot(ctx context.Context, repoURL string) (*tuf_data.Root, error) {
 	url := fmt.Sprintf("%s/%s", repoURL, rootJSON)
 	var resp *http.Response
 	b := retry.WithMaxAttempts(retry.NewExponentialBackoff(backoffFloor, backoffCeiling, backoffMultiplier), 5)
-	err := retry.Retry(context.Background(), b, func() error {
+	err := retry.Retry(ctx, b, func() error {
 		var err error
 		resp, err = http.Get(url)
 		return err
@@ -149,7 +149,7 @@ func getRepoRoot(repoURL string) (*tuf_data.Root, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to dump %s response: %w", rootJSON, err)
 		}
-		log.Printf("%s response dump: %s", rootJSON, dump)
+		logger.Debugf(ctx, "%s response dump: %s", rootJSON, dump)
 		return nil, fmt.Errorf("received a non-200 %s response: %d", rootJSON, resp.StatusCode)
 	}
 

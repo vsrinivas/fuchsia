@@ -16,6 +16,7 @@ go_library("repo") {
     deps += [
       "//third_party/golibs:github.com/pkg/sftp",
       "//third_party/golibs:golang.org/x/crypto",
+      "//tools/lib/logger",
       "//tools/lib/retry",
     ]
   }

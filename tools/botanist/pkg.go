@@ -50,7 +50,7 @@ func AddPackageRepository(ctx context.Context, client *ssh.Client, config *ssh.C
 		logger.Infof(ctx, "remote-scoped package blob address: %s\n", rScopedBlobURL)
 	}
 
-	keys, err := repo.GetRootKeysInsecurely(lScopedRepoURL)
+	keys, err := repo.GetRootKeysInsecurely(ctx, lScopedRepoURL)
 	if err != nil {
 		return fmt.Errorf("failed to derive root keys: %w", err)
 	}
@@ -66,7 +66,7 @@ func AddPackageRepository(ctx context.Context, client *ssh.Client, config *ssh.C
 		},
 	}
 
-	return repo.AddFromConfig(client, cfg)
+	return repo.AddFromConfig(ctx, client, cfg)
 }
 
 func localScopedLocalHost(laddr string) string {
