@@ -204,15 +204,19 @@ func (c *Conn) Run(ctx context.Context, command []string, stdout io.Writer, stde
 			return err
 		}
 		var log string
+		var level logger.LogLevel
 		switch e := err.(type) {
 		case *ssh.ExitError:
 			log = fmt.Sprintf("ssh command failed with exit code %d", e.ExitStatus())
+			level = logger.DebugLevel
 		case *ssh.ExitMissingError:
 			log = "ssh command failed with no exit code"
+			level = logger.DebugLevel
 		default:
-			log = fmt.Sprintf("ssh command failed with error %q", e.Error())
+			log = fmt.Sprintf("ssh command failed with error: %v", err)
+			level = logger.ErrorLevel
 		}
-		logger.Errorf(ctx, "%s: %v", log, command)
+		logger.Logf(ctx, level, "%s: %v", log, command)
 		return err
 	}
 	logger.Debugf(ctx, "successfully ran over ssh: %v", command)
@@ -313,7 +317,7 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 				select {
 				case <-c.shuttingDown:
 				default:
-					logger.Errorf(
+					logger.Debugf(
 						ctx,
 						"error sending keepalive to %s, disconnecting: %s",
 						c.addr,
@@ -326,7 +330,7 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 
 		case <-timeout():
 			timeoutDuration := time.Since(sendTime)
-			logger.Errorf(ctx, "ssh keepalive timed out after %.3f, disconnecting", timeoutDuration.Seconds())
+			logger.Debugf(ctx, "ssh keepalive timed out after %.3fs, disconnecting", timeoutDuration.Seconds())
 			c.disconnect()
 			return
 		}
