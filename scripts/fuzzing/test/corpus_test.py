@@ -12,33 +12,40 @@ from test_case import TestCaseWithFuzzer
 
 class CorpusTest(TestCaseWithFuzzer):
 
-    @property
-    def corpus(self):
-        return self.fuzzer.corpus
+    def test_find_on_device(self):
+        data = self.ns.data('corpus')
+        resource = self.ns.resource('corpus')
+
+        self.corpus.find_on_device()
+        self.assertEqual(self.corpus.nspaths, [data])
+
+        self.touch_on_device(self.ns.resource_abspath('corpus/deadbeef'))
+        self.corpus.find_on_device()
+        self.assertEqual(self.corpus.nspaths, [data, resource])
 
     def test_add_from_host(self):
         # Invalid directory
-        relpath = 'relpath'
+        local_path = 'corpus_dir'
         self.assertError(
-            lambda: self.corpus.add_from_host(relpath),
-            'No such directory: {}'.format(relpath))
+            lambda: self.corpus.add_from_host(local_path),
+            'No such directory: {}'.format(local_path))
+        self.host.mkdir(local_path)
 
         # Fuzzer is running
-        self.host.mkdir(relpath)
-        corpus_element = os.path.join(relpath, 'element')
+        corpus_element = os.path.join(local_path, 'element')
         self.host.touch(corpus_element)
-
         self.set_running(
             self.fuzzer.package, self.fuzzer.executable, duration=10)
         self.assertError(
-            lambda: self.corpus.add_from_host(relpath),
+            lambda: self.corpus.add_from_host(local_path),
             'fake-package1/fake-target1 is running and must be stopped first.')
         self.host.sleep(10)
 
         # Valid
-        added = self.corpus.add_from_host(relpath)
+        added = self.corpus.add_from_host(local_path)
         self.assertEqual(len(added), 1)
-        self.assertScpTo(corpus_element, self.data_abspath('corpus'))
+        self.assertScpTo(
+            corpus_element, self.ns.data_abspath(self.corpus.nspaths[0]))
 
     def test_add_from_gcs(self):
         # Note: this takes advantage of the fact that the FakeCLI always returns
@@ -59,18 +66,14 @@ class CorpusTest(TestCaseWithFuzzer):
             added = self.corpus.add_from_gcs(gcs_url)
             self.assertEqual(len(added), 1)
             self.assertRan(*cmd)
-            self.assertScpTo(corpus_element, self.data_abspath('corpus'))
+            self.assertScpTo(
+                corpus_element, self.ns.data_abspath(self.corpus.nspaths[0]))
 
     def test_measure(self):
-        cmd = ['ls', '-l', self.ns.abspath(self.ns.data('corpus'))]
-        self.set_outputs(
-            cmd, [
-                '-rw-r--r-- 1 0 0 1796 Mar 19 17:25 foo',
-                '-rw-r--r-- 1 0 0  124 Mar 18 22:02 bar',
-            ],
-            ssh=True)
+        self.touch_on_device(self.ns.data_abspath('corpus/deadbeef'), size=1000)
+        self.touch_on_device(self.ns.data_abspath('corpus/feedface'), size=729)
         sizes = self.corpus.measure()
-        self.assertEqual(sizes, (2, 1796 + 124))
+        self.assertEqual(sizes, (2, 1 + 1728))
 
 
 if __name__ == '__main__':

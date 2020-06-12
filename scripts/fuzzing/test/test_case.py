@@ -149,6 +149,24 @@ class TestCaseWithFactory(TestCaseWithIO):
         self.device.getpid(package, executable, refresh)
         return pid
 
+    def touch_on_device(self, pathname, size=1000):
+        """Prepares the 'ls' response for a file and its parent directory."""
+        parts = pathname.split('/')
+        dirname = '/'.join(parts[:-1])
+        output = '-rw-r--r-- 1 0 0 {} Dec 25 12:34 {}'.format(size, parts[-1])
+        self.set_outputs(['ls', '-l', dirname], [output], reset=False, ssh=True)
+        self.set_outputs(
+            ['ls', '-l', pathname], [output], reset=False, ssh=True)
+
+    def symbolize_cmd(self):
+        cmd = [
+            self.buildenv.symbolizer_exec, '-llvm-symbolizer',
+            self.buildenv.llvm_symbolizer
+        ]
+        for build_id_dir in self.buildenv.build_id_dirs:
+            cmd += ['-build-id-dir', build_id_dir]
+        return cmd
+
     # Unit test assertions
 
     def assertLogged(self, *logs):
@@ -166,10 +184,6 @@ class TestCaseWithFactory(TestCaseWithIO):
     def assertRan(self, *args):
         """Asserts a previous call was made to host.create_process."""
         self.assertIn(' '.join(args), self.host.processes.keys())
-
-    def assertInputs(self, args, inputs):
-        process = self.get_process(args)
-        self.assertEqual(process.inputs, inputs)
 
     def assertScpTo(self, *args):
         """Asserts a previous call was made to device.scp with args."""
@@ -196,15 +210,30 @@ class TestCaseWithFuzzer(TestCaseWithFactory):
     def setUp(self):
         super(TestCaseWithFuzzer, self).setUp()
         self.create_fuzzer('check', 'fake-package1/fake-target1')
+        self.resolve_fuzzer()
+
+    def resolve_fuzzer(self):
+        cmd = ['pkgctl', 'pkg-status', self.fuzzer.package_url]
+        merkle = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+        package_path = '/pkgfs/versions/{}'.format(merkle)
+        self.set_outputs(
+            cmd, [
+                'Package in registered TUF repo: yes (merkle={})'.format(
+                    merkle),
+                'Package on disk: yes (path={})'.format(package_path)
+            ],
+            ssh=True)
 
     # Unit test context.
 
     @property
+    def corpus(self):
+        return self.fuzzer.corpus
+
+    @property
+    def dictionary(self):
+        return self.fuzzer.dictionary
+
+    @property
     def ns(self):
         return self.fuzzer.ns
-
-    # Unit test utilities
-
-    def data_abspath(self, relpath):
-        """Returns the absolute path for a fuzzer-namespaced data path."""
-        return self.fuzzer.ns.abspath(self.fuzzer.ns.data(relpath))

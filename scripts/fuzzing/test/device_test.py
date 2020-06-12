@@ -75,6 +75,18 @@ class DeviceTest(TestCaseWithFactory):
         with self.assertRaises(ValueError):
             device.ssh_verbosity = -1
 
+    def test_reachable(self):
+        cmd = ['true']
+        self.assertTrue(self.device.reachable)
+        self.assertSsh(*cmd)
+
+    def test_unreachable(self):
+        cmd = ['true']
+        process = self.get_process(cmd, ssh=True)
+        process.succeeds = False
+        self.assertFalse(self.device.reachable)
+        self.assertSsh(*cmd)
+
     def test_configure(self):
         device = Device(self.buildenv, '::1')
         device.configure()
@@ -136,12 +148,13 @@ class DeviceTest(TestCaseWithFactory):
     def test_ls(self):
         corpus_dir = 'path-to-some-corpus'
         cmd = ['ls', '-l', corpus_dir]
-        self.set_outputs(
-            cmd, [
-                '-rw-r--r-- 1 0 0 1796 Mar 19 17:25 feac37187e77ff60222325cf2829e2273e04f2ea',
-                '-rw-r--r-- 1 0 0  124 Mar 18 22:02 ff415bddb30e9904bccbbd21fb5d4aa9bae9e5a5',
-            ],
-            ssh=True)
+
+        self.touch_on_device(
+            '{}/feac37187e77ff60222325cf2829e2273e04f2ea'.format(corpus_dir),
+            size=1796)
+        self.touch_on_device(
+            '{}/ff415bddb30e9904bccbbd21fb5d4aa9bae9e5a5'.format(corpus_dir),
+            size=124)
         files = self.device.ls(corpus_dir)
         self.assertSsh(*cmd)
         self.assertEqual(

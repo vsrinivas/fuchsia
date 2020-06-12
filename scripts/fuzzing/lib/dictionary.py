@@ -21,7 +21,7 @@ class Dictionary(object):
 
     def __init__(self, fuzzer):
         self._fuzzer = fuzzer
-        self._nspath = self.ns.resource('dictionary')
+        self._nspath = None
 
     @property
     def fuzzer(self):
@@ -41,7 +41,15 @@ class Dictionary(object):
     @property
     def nspath(self):
         """Path to dictionary in the namespace."""
+        if not self._nspath:
+            self.find_on_device()
         return self._nspath
+
+    def find_on_device(self):
+        resource = self.ns.resource('dictionary')
+        files = self.ns.ls(resource)
+        if self.ns.ls(resource):
+            self._nspath = resource
 
     def replace(self, pathname):
         if not self.host.isfile(pathname):

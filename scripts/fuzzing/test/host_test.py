@@ -127,6 +127,21 @@ class HermeticTestCase(TestCaseWithIO):
 class HostTestCase(object):
     """Defines a set of tests without a TestCase."""
 
+    def test_trace(self):
+        # Tracing is off by default.
+        self.host.trace('Testing...')
+        self.assertOut()
+
+        # Tracing can be enabled
+        self.host.tracing = True
+        self.host.trace('Check one...')
+        self.assertOut('+ Check one...')
+
+        # It can be disabled again
+        self.host.tracing = False
+        self.host.trace('Check two...')
+        self.assertOut()
+
     def test_echo(self):
         self.host.echo('Hello world')
         self.assertOut('Hello world')

@@ -78,7 +78,7 @@ class ArgsTest(TestCaseWithFactory):
         self.assertParseHelp(
             ['help', 'list'], [
                 '',
-                'Usage: fx fuzz list [NAME]',
+                'Usage: fx fuzz list [OPTIONS] [NAME]',
                 '',
                 'Lists fuzzers matching NAME if provided, or all fuzzers.',
                 '',
@@ -86,6 +86,9 @@ class ArgsTest(TestCaseWithFactory):
                 '  NAME                Fuzzer name to match.  This can be part of the package',
                 '                      and/or target name, e.g. "foo", "bar", and "foo/bar" all',
                 '                      match "foo_package/bar_target".',
+                '',
+                'Options:',
+                '  -v,--verbose        Display additional output.',
                 '',
             ])
         self.assertParse(['list'], command=command.list_fuzzers, name=None)
@@ -110,6 +113,7 @@ class ArgsTest(TestCaseWithFactory):
                 '  -g,--debug          Disable exception handling so a debugger can be attached',
                 '  -f,--foreground     Display fuzzer output.',
                 '  -o,--output OUTPUT  Path under which to store results.',
+                '  -v,--verbose        Display additional output.',
                 '',
                 'Additional options and/or arguments are passed through to libFuzzer.',
                 'See https://llvm.org/docs/LibFuzzer.html for details.',
@@ -219,7 +223,7 @@ class ArgsTest(TestCaseWithFactory):
         self.assertParseHelp(
             ['help', 'check'], [
                 '',
-                'Usage: fx fuzz check [NAME]',
+                'Usage: fx fuzz check [OPTIONS] [NAME]',
                 '',
                 'Reports status for the fuzzer matching NAME if provided, or for all running',
                 'fuzzers. Status includes execution state, corpus size, and number of artifacts.',
@@ -228,6 +232,9 @@ class ArgsTest(TestCaseWithFactory):
                 '  NAME                Fuzzer name to match.  This can be part of the package',
                 '                      and/or target name, e.g. "foo", "bar", and "foo/bar" all',
                 '                      match "foo_package/bar_target".',
+                '',
+                'Options:',
+                '  -v,--verbose        Display additional output.',
                 '',
             ])
         self.assertParse(['check'], command=command.check_fuzzer, name=None)
@@ -239,7 +246,7 @@ class ArgsTest(TestCaseWithFactory):
         self.assertParseHelp(
             ['help', 'stop'], [
                 '',
-                'Usage: fx fuzz stop NAME',
+                'Usage: fx fuzz stop [OPTIONS] NAME',
                 '',
                 'Stops the named fuzzer.',
                 '',
@@ -247,6 +254,9 @@ class ArgsTest(TestCaseWithFactory):
                 '  NAME                Fuzzer name to match.  This can be part of the package',
                 '                      and/or target name, e.g. "foo", "bar", and "foo/bar" all',
                 '                      match "foo_package/bar_target".',
+                '',
+                'Options:',
+                '  -v,--verbose        Display additional output.',
                 '',
             ])
         self.assertParseFails(['stop'], 'Too few arguments.')
@@ -280,6 +290,7 @@ class ArgsTest(TestCaseWithFactory):
                 'Options:',
                 '  -g,--debug          Disable exception handling so a debugger can be attached',
                 '  -o,--output OUTPUT  Path under which to store results.',
+                '  -v,--verbose        Display additional output.',
                 '',
                 'Additional options and/or arguments are passed through to libFuzzer.',
                 'See https://llvm.org/docs/LibFuzzer.html for details.',
@@ -404,6 +415,7 @@ class ArgsTest(TestCaseWithFactory):
                 '  -d,--dict DICT      Path to a fuzzer dictionary. Replaces the package default.',
                 '  -l,--local          Exclude corpus elements from Clusterfuzz.',
                 '  -o,--output OUTPUT  Path under which to store results.',
+                '  -v,--verbose        Display additional output.',
                 '',
                 'Additional options and/or arguments are passed through to libFuzzer.',
                 'See https://llvm.org/docs/LibFuzzer.html for details.',

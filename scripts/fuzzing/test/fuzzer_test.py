@@ -12,13 +12,58 @@ from test_case import TestCaseWithFuzzer
 
 class FuzzerTest(TestCaseWithFuzzer):
 
+    def test_is_resolved(self):
+        # The default package is automatically resolved; use another.
+        self.create_fuzzer('fake-package2/fake-target1')
+
+        cmd = ['pkgctl', 'pkg-status', self.fuzzer.package_url]
+        self.assertFalse(self.fuzzer.is_resolved())
+        self.assertSsh(*cmd)
+
+        self.resolve_fuzzer()
+        self.assertTrue(self.fuzzer.is_resolved())
+        self.assertSsh(*cmd)
+
+    def test_resolve(self):
+        # The default package is automatically resolved; use another.
+        self.create_fuzzer('fake-package2/fake-target1')
+        status_cmd = ['pkgctl', 'pkg-status', self.fuzzer.package_url]
+        resolve_cmd = ['pkgctl', 'resolve', self.fuzzer.package_url]
+
+        # Resolution failure
+        self.assertError(
+            lambda: self.fuzzer.resolve(),
+            'Failed to resolve package: fake-package2')
+        self.assertSsh(*status_cmd)
+        self.assertSsh(*resolve_cmd)
+
+        # This is a little tricky: to test this, the first call to
+        # 'pkgctl pkg-status' should fail, but the second, after a call to
+        # 'pkgctl resolve', should succeed.
+        package_path = '/pkgfs/versions/deadbeef'
+
+        self.set_outputs(
+            status_cmd, ['Package on disk: no'], end=10.0, ssh=True)
+        self.set_outputs(
+            status_cmd, ['Package on disk: yes (path={})'.format(package_path)],
+            start=10.0,
+            reset=False,
+            ssh=True)
+
+        process = self.get_process(resolve_cmd, ssh=True)
+        process.duration = 10.0
+
+        self.fuzzer.resolve()
+        self.assertSsh(*status_cmd)
+        self.assertSsh(*resolve_cmd)
+        self.assertEqual(self.fuzzer.package_path, package_path)
+
     def test_list_artifacts(self):
-        fuzzer = self.create_fuzzer('check', 'fake-package1/fake-target1')
         artifacts = ['crash-deadbeef', 'leak-deadfa11', 'oom-feedface']
-        artifacts = [os.path.join(fuzzer.output, a) for a in artifacts]
+        artifacts = [os.path.join(self.fuzzer.output, a) for a in artifacts]
         for artifact in artifacts:
             self.host.touch(artifact)
-        self.assertEqual(fuzzer.list_artifacts(), artifacts)
+        self.assertEqual(self.fuzzer.list_artifacts(), artifacts)
 
     def test_is_running(self):
         fuzzer1 = self.create_fuzzer('check', 'fake-package1/fake-target1')
@@ -44,102 +89,117 @@ class FuzzerTest(TestCaseWithFuzzer):
         self.assertFalse(fuzzer2.is_running(refresh=True))
 
     def test_require_stopped(self):
-        fuzzer = self.create_fuzzer('start', 'fake-package1/fake-target1')
-        fuzzer.require_stopped()
+        self.fuzzer.require_stopped()
 
-        self.set_running(fuzzer.package, fuzzer.executable, duration=10)
+        self.set_running(
+            self.fuzzer.package, self.fuzzer.executable, duration=10)
         self.assertError(
-            lambda: fuzzer.require_stopped(),
+            lambda: self.fuzzer.require_stopped(),
             'fake-package1/fake-target1 is running and must be stopped first.')
         self.host.sleep(10)
-        fuzzer.require_stopped()
-
-    # Helper to test Fuzzer.start with different options and arguments. The
-    # expected options and arguments to be passed to libFuzzer are given by
-    # extra_args. If the helper is expected to raise an exception, leave
-    # `expected` empty and have the caller handle the exception.
-    def start_helper(self, extra_args, expected):
-        fuzzer = self.create_fuzzer(
-            'start', 'fake-package1/fake-target2', *extra_args)
-        fuzzer.start()
-        if expected:
-            self.assertSsh('run', fuzzer.url(), *expected)
+        self.fuzzer.require_stopped()
 
     def test_start(self):
-        self.start_helper(
-            [], [
-                '-artifact_prefix=data/',
-                '-dict=pkg/data/fake-target2/dictionary',
-                '-jobs=1',
-                'data/corpus',
-            ])
+        self.fuzzer.start()
+        self.assertSsh(
+            'run',
+            self.fuzzer.executable_url,
+            '-artifact_prefix=data/',
+            '-jobs=1',
+            'data/corpus',
+        )
+
+    def test_start_with_dictionary(self):
+        self.touch_on_device(self.ns.resource_abspath('dictionary'))
+        self.fuzzer.start()
+        self.assertSsh(
+            'run',
+            self.fuzzer.executable_url,
+            '-artifact_prefix=data/',
+            '-dict=pkg/data/fake-target1/dictionary',
+            '-jobs=1',
+            'data/corpus',
+        )
+
+    def test_start_with_seed_corpus(self):
+        self.touch_on_device(self.ns.resource_abspath('corpus/deadbeef'))
+        self.touch_on_device(self.ns.resource_abspath('corpus/feedface'))
+        self.fuzzer.start()
+        self.assertSsh(
+            'run',
+            self.fuzzer.executable_url,
+            '-artifact_prefix=data/',
+            '-jobs=1',
+            'data/corpus',
+            'pkg/data/fake-target1/corpus',
+        )
 
     def test_start_already_running(self):
-        fuzzer = self.create_fuzzer('start', 'fake-package1/fake-target1')
-        self.set_running(fuzzer.package, fuzzer.executable)
+        self.create_fuzzer('start', 'fake-package1/fake-target1')
+        self.set_running(self.fuzzer.package, self.fuzzer.executable)
         self.assertError(
-            lambda: fuzzer.start(),
+            lambda: self.fuzzer.start(),
             'fake-package1/fake-target1 is running and must be stopped first.')
 
     def test_start_foreground(self):
-        self.start_helper(
-            ['--foreground'], [
-                '-artifact_prefix=data/',
-                '-dict=pkg/data/fake-target2/dictionary',
-                'data/corpus',
-            ])
+        self.create_fuzzer('start', str(self.fuzzer), '--foreground')
+        self.fuzzer.start()
+        self.assertSsh(
+            'run',
+            self.fuzzer.executable_url,
+            '-artifact_prefix=data/',
+            'data/corpus',
+        )
 
     def test_start_debug(self):
-        self.start_helper(
-            ['--debug'], [
-                '-artifact_prefix=data/',
-                '-dict=pkg/data/fake-target2/dictionary',
-                '-handle_abrt=0',
-                '-handle_bus=0',
-                '-handle_fpe=0',
-                '-handle_ill=0',
-                '-handle_segv=0',
-                '-jobs=1',
-                'data/corpus',
-            ])
+        self.create_fuzzer('start', str(self.fuzzer), '--debug')
+        self.fuzzer.start()
+        self.assertSsh(
+            'run',
+            self.fuzzer.executable_url,
+            '-artifact_prefix=data/',
+            '-handle_abrt=0',
+            '-handle_bus=0',
+            '-handle_fpe=0',
+            '-handle_ill=0',
+            '-handle_segv=0',
+            '-jobs=1',
+            'data/corpus',
+        )
 
     def test_start_with_options(self):
-        self.start_helper(
-            ['-option2=foo', '-option1=\'bar baz\''], [
-                '-artifact_prefix=data/',
-                '-dict=pkg/data/fake-target2/dictionary',
-                '-jobs=1',
-                '-option1=\'bar baz\'',
-                '-option2=foo',
-                'data/corpus',
-            ])
-
-    def test_start_with_bad_option(self):
-        self.assertError(
-            lambda: self.start_helper(['-option2=foo', '-option1'], None),
-            'Unrecognized option: -option1', 'Try "fx fuzz help".')
+        self.create_fuzzer(
+            'start', str(self.fuzzer), '-option2=foo', '-option1=\'bar baz\'')
+        self.fuzzer.start()
+        self.assertSsh(
+            'run',
+            self.fuzzer.executable_url,
+            '-artifact_prefix=data/',
+            '-jobs=1',
+            '-option1=\'bar baz\'',
+            '-option2=foo',
+            'data/corpus',
+        )
 
     def test_start_with_passthrough(self):
-        self.start_helper(
-            ['-option2=foo', '--', '-option1=bar'], [
-                '-artifact_prefix=data/',
-                '-dict=pkg/data/fake-target2/dictionary',
-                '-jobs=1',
-                '-option2=foo',
-                'data/corpus',
-                '--',
-                '-option1=bar',
-            ])
+        self.create_fuzzer('start', str(self.fuzzer), '--', '-option1=bar')
+        self.fuzzer.start()
+        self.assertSsh(
+            'run',
+            self.fuzzer.executable_url,
+            '-artifact_prefix=data/',
+            '-jobs=1',
+            'data/corpus',
+            '--',
+            '-option1=bar',
+        )
 
     def test_start_failure(self):
-        fuzzer = self.create_fuzzer('start', 'fake-package1/fake-target2')
-
         # Make the fuzzer fail after 20 seconds.
         cmd = [
             'run',
-            fuzzer.url(),
+            self.fuzzer.executable_url,
             '-artifact_prefix=data/',
-            '-dict=pkg/data/fake-target2/dictionary',
             '-jobs=1',
             'data/corpus',
         ]
@@ -149,26 +209,24 @@ class FuzzerTest(TestCaseWithFuzzer):
 
         # Start the fuzzer
         self.assertError(
-            lambda: fuzzer.start(),
-            'fake-package1/fake-target2 failed to start.')
+            lambda: self.fuzzer.start(),
+            'fake-package1/fake-target1 failed to start.')
         self.assertSsh(*cmd)
         self.assertEqual(self.host.elapsed, 20)
 
-    def test_start_slow_resolve(self):
-        fuzzer = self.create_fuzzer('start', 'fake-package1/fake-target2')
-
+    def test_start_slow(self):
         # Make the log file appear after 15 "seconds".
-        cmd = ['ls', '-l', self.data_abspath('fuzz-*.log')]
-        process = self.get_process(cmd, ssh=True)
-        process.schedule(
-            start=15, output='-rw-r--r-- 1 0 0 0 Dec 25 00:00 fuzz-0.log')
+        cmd = ['ls', '-l', self.ns.data_abspath('fuzz-*.log')]
+        self.set_outputs(
+            cmd, ['-rw-r--r-- 1 0 0 0 Dec 25 00:00 fuzz-0.log'],
+            start=15,
+            ssh=True)
 
         # Make the fuzzer finish after 20 seconds.
         cmd = [
             'run',
-            fuzzer.url(),
+            self.fuzzer.executable_url,
             '-artifact_prefix=data/',
-            '-dict=pkg/data/fake-target2/dictionary',
             '-jobs=1',
             'data/corpus',
         ]
@@ -176,193 +234,158 @@ class FuzzerTest(TestCaseWithFuzzer):
         process.duration = 20
 
         # Start the fuzzer
-        fuzzer.start()
+        self.fuzzer.start()
         self.assertSsh(*cmd)
         self.assertEqual(self.host.elapsed, 15)
 
     # Helper to test Fuzzer.symbolize with different logs.
-    def symbolize_helper(self, log_in, log_out, job_num=0, echo=False):
-        fuzzer = self.create_fuzzer('start', 'fake-package1/fake-target2')
-        cmd = [
-            self.buildenv.symbolizer_exec, '-llvm-symbolizer',
-            self.buildenv.llvm_symbolizer
-        ]
-        for build_id_dir in self.buildenv.build_id_dirs:
-            cmd += ['-build-id-dir', build_id_dir]
-        self.set_outputs(
-            cmd, [
-                '[000001.234567][123][456][klog] INFO: Symbolized line 1',
-                '[000001.234568][123][456][klog] INFO: Symbolized line 2',
-                '[000001.234569][123][456][klog] INFO: Symbolized line 3',
-            ])
-        self.host.mkdir(fuzzer._output)
+    MUTATION_SEQUENCE = 'MS: 1 SomeMutation; base unit: foo'
+    SYMBOLIZER_OUTPUT = '[[symbolizer output]]'
+
+    def symbolize_helper(self, inputs, job_num=0, echo=False):
+        # Prime the sumbolization commnad
+        has_mututation_seq = FuzzerTest.MUTATION_SEQUENCE in inputs
+        if has_mututation_seq:
+            cmd = self.symbolize_cmd()
+            self.set_outputs(cmd, [FuzzerTest.SYMBOLIZER_OUTPUT])
+
+        # Ensure the output directory exists, but the log file doesn't
+        self.host.mkdir(self.fuzzer._output)
+        self.assertFalse(
+            self.host.isfile(
+                os.path.join(self.fuzzer.output, 'fuzz-latest.log')))
+
+        # Create the input log and symbolize it
         with self.host.open('unsymbolized', 'w+') as unsymbolized:
-            unsymbolized.write(log_in)
+            for line in inputs:
+                unsymbolized.write(line)
+                unsymbolized.write('\n')
+            unsymbolized.flush()
             unsymbolized.seek(0)
-            fuzzer.symbolize_log(unsymbolized, job_num, echo=echo)
-        # If log_in does not contain a mutation sequence, it will match log_out
-        # and the symbolizer will not be invoked.
-        if log_in != log_out:
+            self.assertEqual(
+                has_mututation_seq,
+                self.fuzzer.symbolize_log(unsymbolized, job_num, echo=echo))
+
+        # The log file and a symlink should be created.
+        self.assertTrue(self.host.isfile(self.fuzzer.logfile(job_num)))
+        self.assertTrue(
+            self.host.isfile(
+                os.path.join(self.fuzzer.output, 'fuzz-latest.log')))
+
+        # Symbolizer output is only inserted if a mutation sequence was present
+        if has_mututation_seq:
             self.assertRan(*cmd)
-        with self.host.open(fuzzer.logfile(job_num)) as symbolized:
-            self.assertEqual(symbolized.read(), log_out)
+            i = inputs.index(FuzzerTest.MUTATION_SEQUENCE)
+            outputs = list(inputs[:i])
+            outputs.append(FuzzerTest.SYMBOLIZER_OUTPUT)
+            outputs += list(inputs[i:])
+        else:
+            outputs = list(inputs)
+        with self.host.open(self.fuzzer.logfile(job_num)) as symbolized:
+            self.assertEqual(symbolized.read().strip().split('\n'), outputs)
 
     def test_symbolize_log_no_mutation_sequence(self):
-        self.symbolize_helper(
-            """
-A line
-Another line
-Yet another line
-""", """
-A line
-Another line
-Yet another line
-""")
+        self.symbolize_helper([
+            'A line',
+            'Another line',
+            'Yet another line',
+        ])
 
     def test_symbolize_log_no_process_id(self):
         self.symbolize_helper(
-            """
-A line
-Another line
-MS: 1 SomeMutation; base unit: foo
-Yet another line
-artifact_prefix='data/'; Test unit written to data/crash-aaaa
-""", """
-A line
-Another line
-Symbolized line 1
-Symbolized line 2
-Symbolized line 3
-MS: 1 SomeMutation; base unit: foo
-Yet another line
-artifact_prefix='data/'; Test unit written to data/crash-aaaa
-""")
+            [
+                'A line',
+                'Another line',
+                FuzzerTest.MUTATION_SEQUENCE,
+                'Yet another line',
+                'artifact_prefix=\'data/\'; Test unit written to data/crash-aaaa',
+            ])
 
     def test_symbolize_log_pid_from_stacktrace(self):
         self.symbolize_helper(
-            """
-A line
-Another line
-==12345== INFO: libfuzzer stack trace:
-MS: 1 SomeMutation; base unit: foo
-Yet another line
-artifact_prefix='data/'; Test unit written to data/crash-bbbb
-""", """
-A line
-Another line
-==12345== INFO: libfuzzer stack trace:
-Symbolized line 1
-Symbolized line 2
-Symbolized line 3
-MS: 1 SomeMutation; base unit: foo
-Yet another line
-artifact_prefix='data/'; Test unit written to data/crash-bbbb
-""")
+            [
+                'A line',
+                'Another line',
+                '==12345== INFO: libfuzzer stack trace:',
+                FuzzerTest.MUTATION_SEQUENCE,
+                'Yet another line',
+                'artifact_prefix=\'data/\'; Test unit written to data/crash-bbbb',
+            ])
 
     def test_symbolize_log_pid_from_deadly_signal(self):
         self.symbolize_helper(
-            """
-A line
-Another line
-==67890== ERROR: libFuzzer: deadly signal
-MS: 1 SomeMutation; base unit: foo
-Yet another line
-artifact_prefix='data/'; Test unit written to data/crash-cccc
-""", """
-A line
-Another line
-==67890== ERROR: libFuzzer: deadly signal
-Symbolized line 1
-Symbolized line 2
-Symbolized line 3
-MS: 1 SomeMutation; base unit: foo
-Yet another line
-artifact_prefix='data/'; Test unit written to data/crash-cccc
-""")
+            [
+                'A line',
+                'Another line',
+                '==67890== libFuzzer: deadly signal',
+                FuzzerTest.MUTATION_SEQUENCE,
+                'Yet another line',
+                'artifact_prefix=\'data/\'; Test unit written to data/crash-cccc',
+            ])
 
     def test_symbolize_log_with_job_num(self):
         self.symbolize_helper(
-            """
-==67890== ERROR: libFuzzer: deadly signal
-MS: 1 SomeMutation; base unit: foo
-""",
-            """
-==67890== ERROR: libFuzzer: deadly signal
-Symbolized line 1
-Symbolized line 2
-Symbolized line 3
-MS: 1 SomeMutation; base unit: foo
-""",
+            [
+                '==67890== libFuzzer: deadly signal',
+                FuzzerTest.MUTATION_SEQUENCE,
+            ],
             job_num=13)
 
     def test_symbolize_log_with_echo(self):
         self.symbolize_helper(
-            """
-==67890== ERROR: libFuzzer: deadly signal
-MS: 1 SomeMutation; base unit: foo
-""",
-            """
-==67890== ERROR: libFuzzer: deadly signal
-Symbolized line 1
-Symbolized line 2
-Symbolized line 3
-MS: 1 SomeMutation; base unit: foo
-""",
+            [
+                '==67890== libFuzzer: deadly signal',
+                FuzzerTest.MUTATION_SEQUENCE,
+            ],
             echo=True)
 
         self.assertLogged(
-            '',
-            '==67890== ERROR: libFuzzer: deadly signal',
-            'Symbolized line 1',
-            'Symbolized line 2',
-            'Symbolized line 3',
-            'MS: 1 SomeMutation; base unit: foo',
+            '==67890== libFuzzer: deadly signal',
+            FuzzerTest.SYMBOLIZER_OUTPUT,
+            FuzzerTest.MUTATION_SEQUENCE,
         )
 
     def test_monitor(self):
-        fuzzer = self.create_fuzzer('start', 'fake-package1/fake-target2')
-        self.set_running(fuzzer.package, fuzzer.executable, duration=15)
+        self.create_fuzzer('start', 'fake-package1/fake-target2')
+        self.set_running(
+            self.fuzzer.package, self.fuzzer.executable, duration=15)
 
         # Make the file that scp grabs
-        self.host.mkdir(fuzzer.output)
+        self.host.mkdir(self.fuzzer.output)
 
-        logname = os.path.join(fuzzer.output, 'fuzz-0.log')
+        logname = os.path.join(self.fuzzer.output, 'fuzz-0.log')
         with self.host.open(logname, 'w') as log:
             log.write('==67890== libFuzzer: deadly signal\n')
             log.write('MS: 1 SomeMutation; base unit: foo\n')
 
         # Monitor the fuzzer until it exits
-        fuzzer.monitor()
+        self.fuzzer.monitor()
         self.assertGreaterEqual(self.host.elapsed, 15)
 
         # Verify we grabbed the logs and symbolized them.
-        self.assertScpFrom(self.data_abspath('fuzz-*.log'), fuzzer.output)
-        cmd = ['rm', '-f', self.data_abspath('fuzz-*.log')]
+        self.assertScpFrom(
+            self.ns.data_abspath('fuzz-*.log'), self.fuzzer.output)
+        cmd = ['rm', '-f', self.ns.data_abspath('fuzz-*.log')]
         self.assertSsh(*cmd)
 
-        cmd = [
-            self.buildenv.symbolizer_exec, '-llvm-symbolizer',
-            self.buildenv.llvm_symbolizer
-        ]
-        for build_id_dir in self.buildenv.build_id_dirs:
-            cmd += ['-build-id-dir', build_id_dir]
+        cmd = self.symbolize_cmd()
         self.assertRan(*cmd)
 
     def test_stop(self):
         # Stopping when stopped has no effect
-        fuzzer = self.create_fuzzer('stop', 'fake-package1/fake-target2')
-        self.assertFalse(fuzzer.is_running())
-        fuzzer.stop()
-        self.assertFalse(fuzzer.is_running())
+        self.create_fuzzer('stop', 'fake-package1/fake-target2')
+        self.assertFalse(self.fuzzer.is_running())
+        self.fuzzer.stop()
+        self.assertFalse(self.fuzzer.is_running())
 
-        self.set_running(fuzzer.package, fuzzer.executable)
-        pid = self.device.getpid(fuzzer.package, fuzzer.executable)
-        fuzzer.stop()
+        self.set_running(self.fuzzer.package, self.fuzzer.executable)
+        pid = self.device.getpid(self.fuzzer.package, self.fuzzer.executable)
+        self.fuzzer.stop()
         self.assertSsh('kill', str(pid))
 
     def test_repro(self):
         # Globs should work, but only if they match files
-        fuzzer = self.create_fuzzer(
+        self.create_fuzzer(
             'repro',
             'package1/target2',
             'crash-*',
@@ -371,24 +394,25 @@ MS: 1 SomeMutation; base unit: foo
 
         # Invalid units
         self.assertError(
-            lambda: fuzzer.repro(),
+            lambda: self.fuzzer.repro(),
             'No matching files: "crash-* oom-feedface".')
 
         # Valid units, but already running
         self.host.touch('crash-deadbeef')
         self.host.touch('crash-deadfa11')
         self.host.touch('oom-feedface')
-        self.set_running(fuzzer.package, fuzzer.executable, duration=60)
+        self.set_running(
+            self.fuzzer.package, self.fuzzer.executable, duration=60)
         self.assertError(
-            lambda: fuzzer.repro(),
+            lambda: self.fuzzer.repro(),
             'fake-package1/fake-target2 is running and must be stopped first.')
         self.host.sleep(60)
 
         #  Valid
-        fuzzer.repro()
+        self.fuzzer.repro()
         self.assertSsh(
             'run',
-            fuzzer.url(),
+            self.fuzzer.executable_url,
             '-artifact_prefix=data/',
             'data/crash-deadbeef',
             'data/crash-deadfa11',
@@ -396,37 +420,32 @@ MS: 1 SomeMutation; base unit: foo
         )
 
     def test_analyze(self):
-        fuzzer = self.create_fuzzer('analyze', 'fake-package1/fake-target2')
-
-        self.set_running(fuzzer.package, fuzzer.executable, duration=10)
+        self.set_running(
+            self.fuzzer.package, self.fuzzer.executable, duration=10)
         with self.assertRaises(SystemExit):
-            fuzzer.analyze()
+            self.fuzzer.analyze()
         self.host.sleep(10)
 
-        # Make the log file appear right away
-        cmd = [
-            'ls', '-l',
-            self.fuzzer.ns.abspath(self.fuzzer.ns.data('fuzz-*.log'))
-        ]
-        self.set_outputs(
-            cmd, ['-rw-r--r-- 1 0 0 0 Dec 25 00:00 fuzz-0.log'], ssh=True)
+        # Make the log file appear right away. 'touch_on_device' is a bit of a
+        # misleading name here, all it really does is prepare a canned response
+        # to an 'ls' command over SSH. This uses the wildcarded log pattern,
+        # since that is what is passed to `ls` when the fuzzer is starting.
+        self.touch_on_device(self.ns.data_abspath('fuzz-*.log'))
 
         # Make the fuzzer run for 60 "seconds".
         cmd = [
             'run',
-            fuzzer.url(),
+            self.fuzzer.executable_url,
             '-artifact_prefix=data/',
-            '-dict=pkg/data/fake-target2/dictionary',
             '-jobs=1',
             '-max_total_time=60',
             '-print_coverage=1',
             'data/corpus',
-            'pkg/data/fake-target2/corpus',
         ]
         process = self.get_process(cmd, ssh=True)
         process.duration = 60
 
-        fuzzer.analyze()
+        self.fuzzer.analyze()
         self.assertSsh(*cmd)
 
         # Round to the nearest microsecond

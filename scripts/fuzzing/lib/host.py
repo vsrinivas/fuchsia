@@ -25,9 +25,9 @@ class Host(object):
     # Convenience file descriptor for silencing subprocess output
     DEVNULL = open(os.devnull, 'w')
 
-    def __init__(self, tracing=False):
+    def __init__(self):
         self._platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
-        self._tracing = tracing
+        self._tracing = False
 
     @property
     def platform(self):
@@ -44,9 +44,10 @@ class Host(object):
 
     # I/O routines
 
-    def trace(self, *lines, **kwargs):
+    def trace(self, message):
         if self._tracing:
-            self.echo(['+ {}'.format(line) for line in lines], **kwargs)
+            # Always use the "real" stdout.
+            self.echo('+ {}'.format(message))
 
     def echo(self, *args, **kwargs):
         """Print an informational message from a list of strings.
@@ -63,7 +64,7 @@ class Host(object):
         for line in args:
             fd.write(line)
             fd.write(end)
-            fd.flush()
+        fd.flush()
 
     def error(self, *lines, **kwargs):
         """Print an error message and exit."""
@@ -163,6 +164,7 @@ class Host(object):
         os.symlink(pathname, linkname)
 
     def remove(self, pathname):
+        self.trace('removing: {}'.format(pathname))
         if self.isdir(pathname):
             shutil.rmtree(pathname)
         else:
@@ -185,6 +187,7 @@ class Host(object):
 
     def sleep(self, duration):
         if duration > 0:
+            self.trace('sleeping: {}'.format(duration))
             time.sleep(duration)
 
 

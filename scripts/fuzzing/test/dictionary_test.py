@@ -16,16 +16,35 @@ class DictionaryTest(TestCaseWithFuzzer):
     def dictionary(self):
         return self.fuzzer.dictionary
 
+    def test_find_on_device(self):
+        resource = self.ns.resource('dictionary')
+
+        self.dictionary.find_on_device()
+        self.assertFalse(self.dictionary.nspath)
+
+        self.touch_on_device(self.ns.resource_abspath('dictionary'))
+        self.dictionary.find_on_device()
+        self.assertEqual(self.dictionary.nspath, resource)
+
     def test_replace(self):
+        resource = self.ns.resource('dictionary')
+
+        self.touch_on_device(self.ns.resource_abspath('dictionary'))
+        self.assertEqual(self.dictionary.nspath, resource)
+
+        # Missing local replacement
         local_dict = 'local_dict'
         self.assertError(
             lambda: self.dictionary.replace(local_dict),
             'No such file: {}'.format(local_dict))
         self.host.touch(local_dict)
-        self.assertEqual(self.dictionary.nspath, self.ns.resource('dictionary'))
+
+        # Valid
+        relpath = local_dict
+        self.assertEqual(self.dictionary.nspath, resource)
         self.dictionary.replace(local_dict)
-        self.assertEqual(self.dictionary.nspath, self.ns.data(local_dict))
-        self.assertScpTo(local_dict, self.data_abspath(local_dict))
+        self.assertEqual(self.dictionary.nspath, self.ns.data(relpath))
+        self.assertScpTo(local_dict, self.ns.data_abspath(relpath))
 
 
 if __name__ == '__main__':

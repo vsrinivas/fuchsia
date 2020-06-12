@@ -21,6 +21,7 @@ class Corpus(object):
 
     def __init__(self, fuzzer):
         self._fuzzer = fuzzer
+        self._nspaths = None
 
     @property
     def fuzzer(self):
@@ -38,15 +39,23 @@ class Corpus(object):
         return self.fuzzer.ns
 
     @property
-    def nspath(self):
-        """Path in namespace where the working corpus is stored."""
-        return self.ns.data('corpus')
+    def nspaths(self):
+        """List of paths to where the corpus is stored on device.
 
-    @property
-    def inputs(self):
-        """List of paths that should be passed as inputs to libFuzzer."""
-        self.ns.mkdir(self.nspath)
-        return [self.nspath]
+        The first element is the mutable corpus.
+        """
+        if not self._nspaths:
+            self.find_on_device()
+        return self._nspaths
+
+    def find_on_device(self):
+        data = self.ns.data('corpus')
+        resource = self.ns.resource('corpus')
+        self.ns.mkdir(data)
+        if self.ns.ls(resource):
+            self._nspaths = [data, resource]
+        else:
+            self._nspaths = [data]
 
     def add_from_host(self, pathname):
         """Copies elements from a host directory to the corpus on a device."""
@@ -54,7 +63,7 @@ class Corpus(object):
         if not self.host.isdir(pathname):
             self.host.error('No such directory: {}'.format(pathname))
         pathname = os.path.join(pathname, '*')
-        return self.ns.store(self.nspath, pathname)
+        return self.ns.store(self.nspaths[0], pathname)
 
     def add_from_gcs(self, gcs_url):
         """Copies corpus elements from a GCS bucket to this corpus."""
@@ -73,5 +82,10 @@ class Corpus(object):
 
     def measure(self):
         """Returns the number of corpus elements and corpus size as a pair."""
-        sizes = self.ns.ls(self.nspath)
-        return (len(sizes), sum(sizes.values()))
+        total_num = 0
+        total_size = 0
+        for nspath in self.nspaths:
+            sizes = self.ns.ls(nspath)
+            total_num += len(sizes)
+            total_size += sum(sizes.values())
+        return (total_num, total_size)

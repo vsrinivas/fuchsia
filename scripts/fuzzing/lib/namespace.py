@@ -47,35 +47,65 @@ class Namespace(object):
     @property
     def host(self):
         """Alias for fuzzer.host."""
-        return self._fuzzer.host
+        return self.fuzzer.host
 
-    def abspath(self, data_path):
-        if data_path.startswith(self.data()):
-            relpath = data_path[len(self.data()):]
-            return '/data/r/sys/fuchsia.com:{}:0#meta:{}.cmx/{}'.format(
-                self.fuzzer.package, self.fuzzer.executable, relpath)
+    # Unit test utilities
+
+    def data_abspath(self, relpath):
+        base = '/data/r/sys/fuchsia.com:{}:0#meta:{}.cmx'.format(
+            self.fuzzer.package, self.fuzzer.executable)
+        if relpath.startswith(base):
+            return relpath
+        elif relpath.startswith('/'):
+            self.host.error('Not a data path: {}'.format(relpath))
+        elif relpath.startswith(self.data()):
+            relpath = relpath[len(self.data()):]
+        return '{}/{}'.format(base, relpath)
+
+    def resource_abspath(self, relpath):
+        base = '{}/data/{}'.format(
+            self.fuzzer.package_path, self.fuzzer.executable)
+        if relpath.startswith(base):
+            return relpath
+        elif relpath.startswith('/'):
+            self.host.error('Not a resource path: {}'.format(relpath))
+        elif relpath.startswith(self.resource()):
+            relpath = relpath[len(self.resource()):]
+        return '{}/{}'.format(base, relpath)
+
+    def abspath(self, nspath):
+        if nspath.startswith(self.data()):
+            return self.data_abspath(nspath)
+        elif nspath.startswith(self.resource()):
+            return self.resource_abspath(nspath)
         else:
-            self.host.error('Not a data path: {}'.format(data_path))
+            self.host.error('Not a data or resource path: {}'.format(nspath))
 
     def data(self, relpath=''):
         """Returns a namespace path to package data."""
-        return 'data/{}'.format(relpath)
+        base = 'data'
+        if relpath.startswith('base/'):
+            return relpath
+        return '{}/{}'.format(base, relpath)
 
     def resource(self, relpath=''):
         """Returns a namespace path to package resources."""
-        return 'pkg/data/{}/{}'.format(self.fuzzer.executable, relpath)
+        base = 'pkg/data/{}'.format(self.fuzzer.executable)
+        if relpath.startswith(base):
+            return relpath
+        return '{}/{}'.format(base, relpath)
 
-    def ls(self, data_path=''):
+    def ls(self, nspath):
         """Lists a directory in the namespace."""
-        return self.device.ls(self.abspath(data_path))
+        return self.device.ls(self.abspath(nspath))
 
     def mkdir(self, data_path):
         """Makes a directory in the namespace."""
-        self.device.mkdir(self.abspath(data_path))
+        self.device.mkdir(self.data_abspath(data_path))
 
     def remove(self, data_path, recursive=False):
         """Removes files or directories from the namespace."""
-        return self.device.remove(self.abspath(data_path), recursive)
+        return self.device.remove(self.data_abspath(data_path), recursive)
 
     def fetch(self, pathname, *args):
         """Copies from the namespace to the path given by the first argument."""
@@ -84,6 +114,7 @@ class Namespace(object):
 
     def store(self, data_path, *args):
         """Copies to the namespace path given by the first argument."""
-        pathnames = self.device.store(self.abspath(data_path), *args)
+        abspath = self.data_abspath(data_path)
+        pathnames = self.device.store(abspath, *args)
         relpaths = [os.path.basename(pathname) for pathname in pathnames]
         return [self.data(relpath) for relpath in relpaths]

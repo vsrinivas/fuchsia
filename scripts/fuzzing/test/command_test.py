@@ -9,10 +9,10 @@ import unittest
 
 import test_env
 import lib.command as command
-from test_case import TestCaseWithFactory
+from test_case import TestCaseWithFuzzer
 
 
-class CommandTest(TestCaseWithFactory):
+class CommandTest(TestCaseWithFuzzer):
 
     # Unit tests
 
@@ -100,45 +100,58 @@ class CommandTest(TestCaseWithFactory):
             'Include \'name\' to check specific fuzzers.',
         )
 
+        # Name provided, not installed
+        args = self.parse_args('check', 'fake-package2/fake-target1')
+        command.check_fuzzer(args, self.factory)
+        self.assertLogged(
+            'fake-package2/fake-target1: NOT INSTALLED',
+            '',
+        )
+
         # No name, some running
         self.set_running('fake-package1', 'fake-target1')
-        self.set_running('fake-package1', 'fake-target2')
         self.set_running('fake-package1', 'fake-target3')
         args = self.parse_args('check')
         command.check_fuzzer(args, self.factory)
         self.assertLogged(
             'fake-package1/fake-target1: RUNNING',
-            '    Output path:  fuchsia_dir/local/fake-package1_fake-target1',
             '    Corpus size:  0 inputs / 0 bytes',
-            '    Artifacts:    0',
-            'fake-package1/fake-target2: RUNNING',
-            '    Output path:  fuchsia_dir/local/fake-package1_fake-target2',
-            '    Corpus size:  0 inputs / 0 bytes',
-            '    Artifacts:    0',
+            '',
             'fake-package1/fake-target3: RUNNING',
-            '    Output path:  fuchsia_dir/local/fake-package1_fake-target3',
             '    Corpus size:  0 inputs / 0 bytes',
-            '    Artifacts:    0',
+            '',
         )
 
         # Name provided, running
-        args = self.parse_args('check', 'fake-package1/fake-target2')
+        args = self.parse_args('check', 'fake-package1/fake-target3')
         command.check_fuzzer(args, self.factory)
         self.assertLogged(
-            'fake-package1/fake-target2: RUNNING',
-            '    Output path:  fuchsia_dir/local/fake-package1_fake-target2',
+            'fake-package1/fake-target3: RUNNING',
             '    Corpus size:  0 inputs / 0 bytes',
-            '    Artifacts:    0',
+            '',
         )
 
         # Name provided, not running
-        args = self.parse_args('check', 'fake-package2/fake-target1')
+        args = self.parse_args('check', 'fake-package1/fake-target2')
         command.check_fuzzer(args, self.factory)
         self.assertLogged(
-            'fake-package2/fake-target1: STOPPED',
-            '    Output path:  fuchsia_dir/local/fake-package2_fake-target1',
+            'fake-package1/fake-target2: STOPPED',
             '    Corpus size:  0 inputs / 0 bytes',
-            '    Artifacts:    0',
+            '',
+        )
+
+        # Add some artifacts
+        fuzzer = self.create_fuzzer('fake-package1/fake-target2')
+        self.host.touch(os.path.join(fuzzer.output, 'crash-deadbeef'))
+        self.host.touch(os.path.join(fuzzer.output, 'leak-feedface'))
+        command.check_fuzzer(args, self.factory)
+        self.assertLogged(
+            'fake-package1/fake-target2: STOPPED',
+            '    Corpus size:  0 inputs / 0 bytes',
+            '    Artifacts:',
+            '        {}/crash-deadbeef'.format(fuzzer.output),
+            '        {}/leak-feedface'.format(fuzzer.output),
+            '',
         )
 
     def test_stop_fuzzer(self):
@@ -208,11 +221,11 @@ class CommandTest(TestCaseWithFactory):
             cmd = ['gsutil', '-m', 'cp', gcs_url + '/*', temp_dir.pathname]
             self.assertRan(*cmd)
 
-        abspath = self.fuzzer.ns.abspath(self.fuzzer.corpus.nspath)
+        abspath = self.ns.data_abspath(self.corpus.nspaths[0])
         self.assertScpTo(bar, foo, abspath)
         self.assertScpTo(baz, abspath)
         self.assertEqual(
-            self.fuzzer.dictionary.nspath, self.fuzzer.ns.data(local_dict))
+            self.dictionary.nspath, self.fuzzer.ns.data(local_dict))
 
 
 if __name__ == '__main__':

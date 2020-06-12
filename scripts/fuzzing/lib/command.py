@@ -53,22 +53,29 @@ def start_fuzzer(args, factory):
 def check_fuzzer(args, factory):
     """Implementation of "fx fuzz check"."""
     device = factory.create_device()
-    status = None
+    blank = True
     for package, executable in device.buildenv.fuzzers(args.name):
         fuzzer = Fuzzer(device, package, executable)
         if not args.name and not fuzzer.is_running():
             continue
-        status = 'RUNNING' if fuzzer.is_running() else 'STOPPED'
-        num, size = fuzzer.corpus.measure()
+        if not fuzzer.is_resolved():
+            factory.host.echo('{}: NOT INSTALLED'.format(fuzzer))
+        elif fuzzer.is_running():
+            factory.host.echo('{}: RUNNING'.format(fuzzer))
+        else:
+            factory.host.echo('{}: STOPPED'.format(fuzzer))
+        if fuzzer.is_resolved():
+            num, size = fuzzer.corpus.measure()
+            factory.host.echo(
+                '    Corpus size:  {} inputs / {} bytes'.format(num, size))
         artifacts = fuzzer.list_artifacts()
-        factory.host.echo(
-            '{}: {}'.format(fuzzer, status),
-            '    Output path:  {}'.format(fuzzer.output),
-            '    Corpus size:  {} inputs / {} bytes'.format(num, size),
-            '    Artifacts:    {}'.format(len(artifacts)))
-        for artifact in artifacts:
-            factory.host.echo('        {}'.format(artifact))
-    if not status:
+        if artifacts:
+            factory.host.echo('    Artifacts:')
+            for artifact in artifacts:
+                factory.host.echo('        {}'.format(artifact))
+        factory.host.echo('')
+        blank = False
+    if blank:
         factory.host.echo(
             'No fuzzers are running.',
             'Include \'name\' to check specific fuzzers.')

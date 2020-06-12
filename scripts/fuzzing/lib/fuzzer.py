@@ -51,23 +51,27 @@ class Fuzzer(object):
         'handle_segv', 'handle_bus', 'handle_ill', 'handle_fpe', 'handle_abrt'
     ]
 
+    # Wildcard pattern for fuzzer logs.
+    LOG_PATTERN = 'fuzz-*.log'
+
     def __init__(self, device, package, executable):
         assert device, 'Fuzzer device not set.'
         assert package, 'Fuzzer package name not set.'
         assert executable, 'Fuzzer executable name not set.'
         self._device = device
         self._package = package
+        self._package_path = None
         self._executable = executable
+        self._ns = Namespace(self)
+        self._corpus = Corpus(self)
+        self._dictionary = Dictionary(self)
         self._pid = None
-        self._options = {'artifact_prefix': 'data/'}
+        self._options = {'artifact_prefix': self.ns.data()}
         self._libfuzzer_opts = {}
         self._libfuzzer_inputs = []
         self._subprocess_args = []
         self._debug = False
         self._foreground = False
-        self._ns = Namespace(self)
-        self._corpus = Corpus(self)
-        self._dictionary = Dictionary(self)
         self._output = self.buildenv.path(
             'local', '{}_{}'.format(package, executable))
         self._logbase = None
@@ -96,9 +100,23 @@ class Fuzzer(object):
         return self._package
 
     @property
+    def package_url(self):
+        return 'fuchsia-pkg://fuchsia.com/{}'.format(self.package)
+
+    @property
+    def package_path(self):
+        if not self._package_path:
+            self.resolve()
+        return self._package_path
+
+    @property
     def executable(self):
         """The GN fuzzers name (or output_name)."""
         return self._executable
+
+    @property
+    def executable_url(self):
+        return '{}#meta/{}.cmx'.format(self.package_url, self.executable)
 
     @property
     def libfuzzer_opts(self):
@@ -173,6 +191,28 @@ class Fuzzer(object):
             if key in items and isinstance(val, property):
                 setattr(self, key, items[key])
 
+    def is_resolved(self):
+        if not self.device.reachable:
+            return False
+        if self._package_path:
+            return True
+        cmd = ['pkgctl', 'pkg-status', self.package_url]
+        out = self.device.ssh(cmd).check_output()
+        match = re.search(r'Package on disk: yes \(path=(.*)\)', str(out))
+        if not match:
+            return False
+        self._package_path = match.group(1)
+        return True
+
+    def resolve(self):
+        if self.is_resolved():
+            return
+        cmd = ['pkgctl', 'resolve', self.package_url]
+        self.device.ssh(cmd).check_call()
+        if self.is_resolved():
+            return
+        self.host.error('Failed to resolve package: {}'.format(self.package))
+
     def list_artifacts(self):
         """Returns a list of test unit artifacts in the output directory."""
         artifacts = []
@@ -196,10 +236,6 @@ class Fuzzer(object):
             self.host.error(
                 '{} is running and must be stopped first.'.format(self))
 
-    def url(self):
-        return 'fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx' % (
-            self.package, self.executable)
-
     def _launch(self):
         """Launches and returns a running fuzzer process."""
         if not self.foreground:
@@ -208,7 +244,7 @@ class Fuzzer(object):
             if self.debug:
                 self._options[option] = '0'
         self._options.update(self._libfuzzer_opts)
-        fuzz_cmd = ['run', self.url()]
+        fuzz_cmd = ['run', self.executable_url]
         for key, value in sorted(self._options.iteritems()):
             fuzz_cmd.append('-{}={}'.format(key, value))
         fuzz_cmd += self._libfuzzer_inputs
@@ -226,21 +262,12 @@ class Fuzzer(object):
             return proc
 
         # Wait for either the fuzzer to start and open its log, or exit.
-        logs = self._logs()
+        logs = self.ns.data(Fuzzer.LOG_PATTERN)
         while proc.poll() == None and not self.ns.ls(logs):
             self.host.sleep(0.5)
         if proc.returncode:
             self.host.error('{} failed to start.'.format(self))
         return proc
-
-    def _logs(self, pathname=None):
-        """Returns a wildcarded path to the logs under pathname."""
-        if pathname:
-            assert self.host.isdir(pathname), 'No such directory: {}'.format(
-                pathname)
-            return os.path.join(pathname, 'fuzz-*.log')
-        else:
-            return self.ns.data('fuzz-*.log')
 
     def logfile(self, job_num):
         """Returns the path to the symbolized log for a fuzzing job."""
@@ -268,18 +295,19 @@ class Fuzzer(object):
       See also: https://llvm.org/docs/LibFuzzer.html#running
 
       Returns:
-        The fuzzer's process ID. May be 0 if the fuzzer stops immediately.
+        The fuzzer's process.
     """
         self.require_stopped()
 
         # Add dictionary
-        self._options['dict'] = self.dictionary.nspath
+        if self.dictionary.nspath:
+            self._options['dict'] = self.dictionary.nspath
 
         # Add corpus
-        self._libfuzzer_inputs = self.corpus.inputs
+        self._libfuzzer_inputs = self.corpus.nspaths
 
         # Prep output
-        logs = self._logs()
+        logs = self.ns.data(Fuzzer.LOG_PATTERN)
         self.ns.remove(logs)
 
         # When running in the foreground, interpret the output as coming from
@@ -288,6 +316,7 @@ class Fuzzer(object):
         if self.foreground:
             self.symbolize_log(proc.stderr, 0, echo=True)
             proc.wait()
+        return proc
 
     def symbolize_log(self, fd_in, job_num, echo=False):
         """Constructs a symbolized fuzzer log from a device.
@@ -302,9 +331,10 @@ class Fuzzer(object):
         """
         filename_out = self.logfile(job_num)
         with self.host.open(filename_out, 'w') as fd_out:
-            return self._symbolize_log_impl(fd_in, fd_out, echo)
+            found = self._symbolize_log_impl(fd_in, fd_out, echo)
         self.host.link(
             filename_out, os.path.join(self.output, 'fuzz-latest.log'))
+        return found
 
     def _symbolize_log_impl(self, fd_in, fd_out, echo):
         """Implementation of symbolize_log that takes file-like objects."""
@@ -347,12 +377,11 @@ class Fuzzer(object):
         while self.is_running(refresh=True):
             self.host.sleep(2)
 
-        logs = self._logs()
+        logs = self.ns.data(Fuzzer.LOG_PATTERN)
         self.ns.fetch(self.output, logs)
         self.ns.remove(logs)
 
-        logs = self._logs(self.output)
-        logs = self.host.glob(logs)
+        logs = self.host.glob(os.path.join(self.output, Fuzzer.LOG_PATTERN))
         for job_num, log in enumerate(logs):
             with self.host.open(log) as fd_in:
                 self.symbolize_log(fd_in, job_num, echo=False)
@@ -388,19 +417,12 @@ class Fuzzer(object):
 
     def analyze(self):
         """Collects coverage data for a finite amount of time."""
-        self.require_stopped()
-
-        # Add dictionary
-        self._options['dict'] = self.dictionary.nspath
-
-        # Add corpus
-        self._libfuzzer_inputs = self.corpus.inputs
 
         # Run in the background for 1 minute, then print results.
         self._options['max_total_time'] = '60'
         self._options['print_coverage'] = '1'
         self.foreground = False
-        proc = self._launch()
+        proc = self.start()
 
         self.host.echo('Analyzing fuzzer...')
         delay = float(self._options['max_total_time']) / 79

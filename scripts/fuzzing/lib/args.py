@@ -88,6 +88,7 @@ class ArgParser(argparse.ArgumentParser):
         list_parser.description = [
             'Lists fuzzers matching NAME if provided, or all fuzzers.'
         ]
+        list_parser._add_verbose_flag()
         list_parser._add_name_argument(required=False)
         list_parser.set_defaults(command=command.list_fuzzers)
 
@@ -100,6 +101,7 @@ class ArgParser(argparse.ArgumentParser):
             '-f', '--foreground', help=['Display fuzzer output.'])
         start_parser._add_flag('-m', '--monitor')
         start_parser._add_output_option()
+        start_parser._add_verbose_flag()
         start_parser._add_name_argument(required=True)
         start_parser._add_libfuzzer_extras()
         start_parser.set_defaults(command=command.start_fuzzer)
@@ -111,6 +113,7 @@ class ArgParser(argparse.ArgumentParser):
             'fuzzers. Status includes execution state, corpus size, and number of artifacts.',
         ]
         check_parser.help = 'Check on the status of one or more fuzzers.'
+        check_parser._add_verbose_flag()
         check_parser._add_name_argument(required=False)
         check_parser.set_defaults(command=command.check_fuzzer)
 
@@ -118,6 +121,7 @@ class ArgParser(argparse.ArgumentParser):
         stop_parser = self._add_parser('stop')
         stop_parser.description = ['Stops the named fuzzer.']
         stop_parser.help = 'Stop a specific fuzzer.'
+        stop_parser._add_verbose_flag()
         stop_parser._add_name_argument(required=True)
         stop_parser.set_defaults(command=command.stop_fuzzer)
 
@@ -129,6 +133,7 @@ class ArgParser(argparse.ArgumentParser):
         repro_parser.help = 'Reproduce fuzzer findings by replaying test units.'
         repro_parser._add_debug_flag()
         repro_parser._add_output_option()
+        repro_parser._add_verbose_flag()
         repro_parser._add_name_argument(required=True)
         repro_parser._add_argument(
             'libfuzzer_inputs',
@@ -163,6 +168,7 @@ class ArgParser(argparse.ArgumentParser):
         analyze_parser._add_flag(
             '-l', '--local', help=['Exclude corpus elements from Clusterfuzz.'])
         analyze_parser._add_output_option()
+        analyze_parser._add_verbose_flag()
         analyze_parser._add_name_argument(required=True)
         analyze_parser._add_libfuzzer_extras()
         analyze_parser.set_defaults(command=command.analyze_fuzzer)
@@ -273,6 +279,10 @@ class ArgParser(argparse.ArgumentParser):
             unique=True,
             help=['Path under which to store results.'])
 
+    def _add_verbose_flag(self):
+        """Adds a "--verbose" flag."""
+        self._add_flag('-v', '--verbose', help=['Display additional output.'])
+
     def _add_libfuzzer_extras(self):
         """Adds liFuzzer options and subprocess arguments.
 
@@ -363,6 +373,9 @@ class ArgParser(argparse.ArgumentParser):
         if self._has_libfuzzer_extras:
             args.libfuzzer_opts = libfuzzer_opts
             args.subprocess_args = subprocess_args
+
+        # Set verbosity.
+        self.host.tracing = getattr(args, 'verbose', False)
 
         # Include a reference to the Factory
         args.factory = self.factory

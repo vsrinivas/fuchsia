@@ -100,4 +100,4 @@ class FakeFactory(Factory):
     def create_fuzzer(self, args, device=None):
         self._fuzzer = super(FakeFactory, self).create_fuzzer(
             args, device=device)
-        return self._fuzzer
+        return self.fuzzer

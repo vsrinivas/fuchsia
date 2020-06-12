@@ -41,30 +41,6 @@ class FakeHost(Host):
         return self._processes
 
     @property
-    def log(self):
-        """Saves messages printed by echo, error, or choose.
-
-           NOTE! Reading this attribute clears it (allowing it to be easily
-           reused multiple times in a single test).
-        """
-        log = self._log
-        self._log = []
-        return log
-
-    @property
-    def selection(self):
-        """Pre-selected option for a future call to choose()."""
-        assert self._selection, 'Unexpected call to choose()'
-        selection = self._selection
-        self._selection = None
-        return selection
-
-    @selection.setter
-    def selection(self, selection):
-        assert not self._selection, 'Missing call to choose()'
-        self._selection = selection
-
-    @property
     def elapsed(self):
         return self._elapsed
 
@@ -112,6 +88,7 @@ class FakeHost(Host):
 
     def open(self, pathname, mode='r', on_error=None, missing_ok=False):
         """Opens a fake file for reading and/or writing."""
+        self.trace(' opening: {}'.format(pathname))
         pathname = self._dereference(pathname)
         assert pathname not in self._dirs, 'Directory exists: {}'.format(
             pathname)
@@ -133,6 +110,7 @@ class FakeHost(Host):
 
     def mkdir(self, pathname):
         """Fake implementation overriding BuildEnv.mkdir."""
+        self.trace('creating: {}'.format(pathname))
         pathname = self._dereference(pathname)
         assert pathname not in self._files, 'File exists: {}'.format(pathname)
         self._dirs.add(pathname)
@@ -140,10 +118,13 @@ class FakeHost(Host):
 
     def link(self, pathname, linkname):
         """Fake implementation overriding BuildEnv.link."""
+        self.trace(' linking: {}'.format(linkname))
+        self.trace('      to: {}'.format(pathname))
         self._links[linkname] = pathname
         self.create_process(['ln', '-s', pathname, linkname])
 
     def remove(self, pathname):
+        self.trace('removing: {}'.format(pathname))
         pathname = self._dereference(pathname)
         if pathname in self._dirs:
             self._dirs.remove(pathname)
@@ -178,6 +159,7 @@ class FakeHost(Host):
         methods under test that create them and use those responses.
         """
         cmd = ' '.join(args)
+        self.trace(' running: {}'.format(cmd))
         process = self._processes.get(cmd, None)
         if not process:
             process = FakeProcess(self, args, **kwargs)
@@ -185,5 +167,7 @@ class FakeHost(Host):
         return process
 
     def sleep(self, duration):
-        if duration > 0:
-            self._elapsed += duration
+        if duration < 0:
+            return
+        self.trace('sleeping: {}'.format(duration))
+        self._elapsed += duration

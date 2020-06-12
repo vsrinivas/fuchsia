@@ -35,6 +35,7 @@ class Device(object):
         self._ssh_options = {}
         self._ssh_config_options = []
         self._ssh_verbosity = 0
+        self._reachable = None
         self._pids = None
 
     @property
@@ -105,6 +106,13 @@ class Device(object):
             raise ValueError('Invalid ssh_verbosity: {}'.format(ssh_verbosity))
         self._ssh_verbosity = ssh_verbosity
 
+    @property
+    def reachable(self):
+        """Indicates if the device is reachable via SSH."""
+        if self._reachable == None:
+            self._reachable = self.ssh(['true']).call() == 0
+        return self._reachable
+
     def configure(self):
         """Sets the defaults for this device."""
         self.ssh_config = self.buildenv.path(
@@ -168,6 +176,8 @@ class Device(object):
            like Fuzzer.monitor(), "refresh" can be set to True to re0run the SSH
            command.
         """
+        if not self.reachable:
+            return -1
         if self._pids == None or refresh:
             self._pids = {}
             out = self.ssh(['cs']).check_output()
@@ -185,11 +195,11 @@ class Device(object):
                 self._pids[nametuple] = pid
         return self._pids.get((package, executable), -1)
 
-    def ls(self, path):
+    def ls(self, pathname):
         """Returns a map of file names to sizes for the given path."""
         results = {}
         try:
-            out = self.ssh(['ls', '-l', path]).check_output()
+            out = self.ssh(['ls', '-l', pathname]).check_output()
             for line in str(out).split('\n'):
                 # Line ~= '-rw-r--r-- 1 0 0 8192 Mar 18 22:02 some-name'
                 parts = line.split()

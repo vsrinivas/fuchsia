@@ -164,12 +164,7 @@ class BuildEnvTest(TestCaseWithFactory):
             'another line',
             'yet another line',
         ]
-        cmd = [
-            self.buildenv.symbolizer_exec, '-llvm-symbolizer',
-            self.buildenv.llvm_symbolizer
-        ]
-        for build_id_dir in self.buildenv.build_id_dirs:
-            cmd += ['-build-id-dir', build_id_dir]
+        cmd = self.symbolize_cmd()
         self.set_outputs(
             cmd, [
                 '[000001.234567][123][456][klog] INFO: Symbolized line 1',
@@ -177,8 +172,10 @@ class BuildEnvTest(TestCaseWithFactory):
                 '[000001.234569][123][456][klog] INFO: Symbolized line 3'
             ])
         symbolized = self.buildenv.symbolize('\n'.join(stacktrace))
+
         self.assertRan(*cmd)
-        self.assertInputs(cmd, stacktrace)
+        process = self.get_process(cmd)
+        self.assertEqual(process.inputs, stacktrace)
         self.assertEqual(
             symbolized.strip().split('\n'), [
                 'Symbolized line 1',
