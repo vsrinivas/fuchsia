@@ -15,12 +15,13 @@ namespace {
 
 TEST(DriverHostTest, MkDevpath) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fbl::RefPtr<zx_driver> drv;
+  ASSERT_OK(zx_driver::Create("test", &drv));
 
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, &dev));
-
   constexpr char device_name[] = "device-name";
-  strlcpy(dev->name, device_name, sizeof(dev->name));
+
+  ASSERT_OK(zx_device::Create(&ctx, device_name, drv.get(), &dev));
 
   const char* result = mkdevpath(nullptr, nullptr, 0);
   EXPECT_STR_EQ("", result);

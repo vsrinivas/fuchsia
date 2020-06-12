@@ -47,7 +47,7 @@ void ProxyIostate::HandleRpc(std::unique_ptr<ProxyIostate> conn, async_dispatche
     return handle_destroy();
   }
   if (signal->observed & ZX_CHANNEL_READABLE) {
-    zx_status_t r = conn->dev->ops->rxrpc(conn->dev->ctx, wait->object());
+    zx_status_t r = conn->dev->ops()->rxrpc(conn->dev->ctx, wait->object());
     if (r != ZX_OK) {
       FX_VLOGF(1, "proxy-rpc", "RPC callback failed, IO state %p, device %p: %s", conn.get(),
                conn->dev.get(), zx_status_get_string(r));
@@ -61,7 +61,7 @@ void ProxyIostate::HandleRpc(std::unique_ptr<ProxyIostate> conn, async_dispatche
     return handle_destroy();
   }
   LOGF(WARNING, "Unexpected signal state %#08x for device %p '%s'", signal->observed,
-       conn->dev.get(), conn->dev->name);
+       conn->dev.get(), conn->dev->name());
   BeginWait(std::move(conn), dispatcher);
 }
 

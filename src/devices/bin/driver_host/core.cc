@@ -159,7 +159,7 @@ void DriverHostContext::DeviceDestroy(zx_device_t* dev) {
   static unsigned dead_count = 0;
 
   // ensure any ops will be fatal
-  dev->ops = &device_invalid_ops;
+  dev->set_ops(&device_invalid_ops);
 
   dev->magic = 0xdeaddeaddeaddead;
 
@@ -170,7 +170,7 @@ void DriverHostContext::DeviceDestroy(zx_device_t* dev) {
   // ensure all pointers are invalid
   dev->ctx = nullptr;
   dev->driver = nullptr;
-  dev->parent.reset();
+  dev->set_parent(nullptr);
   dev->conn.store(nullptr);
   {
     fbl::AutoLock guard(&dev->proxy_ios_lock);
@@ -204,8 +204,8 @@ void DriverHostContext::FinalizeDyingDevices() {
   // while under the DM lock to avoid an enumerator starting to mutate
   // things before we're done detaching them.
   for (auto& dev : list) {
-    if (dev.parent) {
-      dev.parent->children.erase(dev);
+    if (dev.parent()) {
+      dev.parent()->remove_child(dev);
     }
   }
 
@@ -214,10 +214,10 @@ void DriverHostContext::FinalizeDyingDevices() {
   zx_device* dev;
   while ((dev = list.pop_front()) != nullptr) {
     // invoke release op
-    if (dev->flags & DEV_FLAG_ADDED) {
-      if (dev->parent) {
+    if (dev->flags() & DEV_FLAG_ADDED) {
+      if (dev->parent()) {
         api_lock_.Release();
-        dev->parent->ChildPreReleaseOp(dev->ctx);
+        dev->parent()->ChildPreReleaseOp(dev->ctx);
         api_lock_.Acquire();
       }
       api_lock_.Release();
@@ -225,29 +225,29 @@ void DriverHostContext::FinalizeDyingDevices() {
       api_lock_.Acquire();
     }
 
-    if (dev->parent) {
+    if (dev->parent()) {
       // When all the children are gone, complete the pending unbind request.
-      if ((!(dev->parent->flags & DEV_FLAG_DEAD)) && dev->parent->children.is_empty()) {
-        if (auto unbind_children = dev->parent->take_unbind_children_conn(); unbind_children) {
+      if ((!(dev->parent()->flags() & DEV_FLAG_DEAD)) && dev->parent()->children().is_empty()) {
+        if (auto unbind_children = dev->parent()->take_unbind_children_conn(); unbind_children) {
           unbind_children(ZX_OK);
         }
       }
       // If the parent wants rebinding when its children are gone,
       // And the parent is not dead, And this was the last child...
-      if ((dev->parent->flags & DEV_FLAG_WANTS_REBIND) && (!(dev->parent->flags & DEV_FLAG_DEAD)) &&
-          dev->parent->children.is_empty()) {
+      if ((dev->parent()->flags() & DEV_FLAG_WANTS_REBIND) &&
+          (!(dev->parent()->flags() & DEV_FLAG_DEAD)) && dev->parent()->children().is_empty()) {
         // Clear the wants rebind flag and request the rebind
-        dev->parent->flags &= (~DEV_FLAG_WANTS_REBIND);
-        std::string drv = dev->parent->get_rebind_drv_name().value_or("");
-        zx_status_t status = DeviceBind(dev->parent, drv.c_str());
+        dev->parent()->unset_flag(DEV_FLAG_WANTS_REBIND);
+        std::string drv = dev->parent()->get_rebind_drv_name().value_or("");
+        zx_status_t status = DeviceBind(dev->parent(), drv.c_str());
         if (status != ZX_OK) {
-          if (auto rebind = dev->parent->take_rebind_conn(); rebind) {
+          if (auto rebind = dev->parent()->take_rebind_conn(); rebind) {
             rebind(status);
           }
         }
       }
 
-      dev->parent.reset();
+      dev->set_parent(nullptr);
     }
 
     // destroy/deallocate the device
@@ -260,7 +260,7 @@ zx_status_t DriverHostContext::DeviceValidate(const fbl::RefPtr<zx_device_t>& de
     LOGF(ERROR, "Invalid device");
     return ZX_ERR_INVALID_ARGS;
   }
-  if (dev->flags & DEV_FLAG_ADDED) {
+  if (dev->flags() & DEV_FLAG_ADDED) {
     LOGD(ERROR, dev, "Already added device %p", dev.get());
     return ZX_ERR_BAD_STATE;
   }
@@ -268,20 +268,20 @@ zx_status_t DriverHostContext::DeviceValidate(const fbl::RefPtr<zx_device_t>& de
     LOGD(ERROR, dev, "Invalid signature for device %p: %#lx", dev.get(), dev->magic);
     return ZX_ERR_BAD_STATE;
   }
-  if (dev->ops == nullptr) {
+  if (dev->ops() == nullptr) {
     LOGD(ERROR, dev, "Invalid ops for device %p", dev.get());
     return ZX_ERR_INVALID_ARGS;
   }
-  if ((dev->protocol_id == ZX_PROTOCOL_MISC_PARENT) || (dev->protocol_id == ZX_PROTOCOL_ROOT)) {
-    LOGD(ERROR, dev, "Invalid protocol for device %p: %#x", dev.get(), dev->protocol_id);
+  if ((dev->protocol_id() == ZX_PROTOCOL_MISC_PARENT) || (dev->protocol_id() == ZX_PROTOCOL_ROOT)) {
+    LOGD(ERROR, dev, "Invalid protocol for device %p: %#x", dev.get(), dev->protocol_id());
     // These protocols is only allowed for the special
     // singleton misc or root parent devices.
     return ZX_ERR_INVALID_ARGS;
   }
   // devices which do not declare a primary protocol
   // are implied to be misc devices
-  if (dev->protocol_id == 0) {
-    dev->protocol_id = ZX_PROTOCOL_MISC;
+  if (dev->protocol_id() == 0) {
+    dev->set_protocol_id(ZX_PROTOCOL_MISC);
   }
 
   return ZX_OK;
@@ -381,33 +381,26 @@ zx_status_t DriverHostContext::DeviceCreate(zx_driver_t* drv, const char* name, 
     LOGF(ERROR, "Cannot find driver");
     return ZX_ERR_INVALID_ARGS;
   }
+  std::string device_name;
+  if (name == nullptr) {
+    LOGF(WARNING, "Invalid name for device");
+    device_name = "invalid";
+  } else {
+    device_name = std::string(name);
+  }
 
   fbl::RefPtr<zx_device> dev;
-  zx_status_t status = zx_device::Create(this, &dev);
+  zx_status_t status = zx_device::Create(this, device_name, drv, &dev);
   if (status != ZX_OK) {
     return status;
   }
 
-  dev->ops = ops;
-  dev->driver = drv;
-
   if (name == nullptr) {
-    LOGF(WARNING, "Invalid name for device %p", dev.get());
-    name = "invalid";
     dev->magic = 0;
   }
 
-  size_t len = strlen(name);
-  // TODO(teisenbe): I think this is overly aggresive, and could be changed
-  // to |len > ZX_DEVICE_NAME_MAX| and |len = ZX_DEVICE_NAME_MAX|.
-  if (len >= ZX_DEVICE_NAME_MAX) {
-    LOGF(WARNING, "Name too large for device %p: %s", dev.get(), name);
-    len = ZX_DEVICE_NAME_MAX - 1;
-    dev->magic = 0;
-  }
+  dev->set_ops(ops);
 
-  memcpy(dev->name, name, len);
-  dev->name[len] = 0;
   // TODO(teisenbe): Why do we default to dev.get() here?  Why not just
   // nullptr
   dev->ctx = ctx ? ctx : dev.get();
@@ -421,7 +414,7 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
                                          const char* proxy_args, zx::channel client_remote) {
   auto mark_dead = fbl::MakeAutoCall([&dev]() {
     if (dev) {
-      dev->flags |= DEV_FLAG_DEAD;
+      dev->set_flag(DEV_FLAG_DEAD);
     }
   });
 
@@ -433,7 +426,7 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
     LOGD(ERROR, dev, "Cannot add device %p to invalid parent", dev.get());
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (parent->flags & DEV_FLAG_DEAD) {
+  if (parent->flags() & DEV_FLAG_DEAD) {
     LOGD(ERROR, dev, "Cannot add device %p to dead parent %p", dev.get(), parent.get());
     return ZX_ERR_BAD_STATE;
   }
@@ -465,16 +458,16 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
     return status;
   }
 
-  dev->flags |= DEV_FLAG_BUSY;
+  dev->set_flag(DEV_FLAG_BUSY);
 
   // proxy devices are created through this handshake process
   if (creation_ctx) {
-    if (dev->flags & DEV_FLAG_INVISIBLE) {
+    if (dev->flags() & DEV_FLAG_INVISIBLE) {
       LOGD(ERROR, dev, "Driver attempted to create invisible device in create()");
       return ZX_ERR_INVALID_ARGS;
     }
-    dev->flags |= DEV_FLAG_ADDED;
-    dev->flags &= (~DEV_FLAG_BUSY);
+    dev->set_flag(DEV_FLAG_ADDED);
+    dev->unset_flag(DEV_FLAG_BUSY);
     dev->rpc = zx::unowned_channel(creation_ctx->device_controller_rpc);
     dev->coordinator_rpc = zx::unowned_channel(creation_ctx->coordinator_rpc);
     creation_ctx->child = dev;
@@ -482,29 +475,29 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
     return ZX_OK;
   }
 
-  dev->parent = parent;
+  dev->set_parent(parent);
 
   // attach to our parent
-  parent->children.push_back(dev.get());
+  parent->add_child(dev.get());
 
-  if (!(dev->flags & DEV_FLAG_INSTANCE)) {
+  if (!(dev->flags() & DEV_FLAG_INSTANCE)) {
     // Add always consumes the handle
     status = DriverManagerAdd(parent, dev, proxy_args, props, prop_count, std::move(client_remote));
     if (status < 0) {
       LOGD(ERROR, dev, "Failed to add device %p to driver_manager: %s", dev.get(),
            zx_status_get_string(status));
-      dev->parent->children.erase(*dev);
-      dev->parent.reset();
+      dev->parent()->remove_child(*dev);
+      dev->set_parent(nullptr);
 
       // since we are under the lock the whole time, we added the node
       // to the tail and then we peeled it back off the tail when we
       // failed, we don't need to interact with the enum lock mechanism
-      dev->flags &= (~DEV_FLAG_BUSY);
+      dev->unset_flag(DEV_FLAG_BUSY);
       return status;
     }
   }
-  dev->flags |= DEV_FLAG_ADDED;
-  dev->flags &= (~DEV_FLAG_BUSY);
+  dev->set_flag(DEV_FLAG_ADDED);
+  dev->unset_flag(DEV_FLAG_BUSY);
 
   // record this device in the bind context if there is one
   if (bind_ctx && (bind_ctx->child == nullptr)) {
@@ -515,12 +508,12 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
 }
 
 zx_status_t DriverHostContext::DeviceInit(const fbl::RefPtr<zx_device_t>& dev) {
-  if (dev->flags & DEV_FLAG_INITIALIZING) {
+  if (dev->flags() & DEV_FLAG_INITIALIZING) {
     return ZX_ERR_BAD_STATE;
   }
   // Call dev's init op.
-  if (dev->ops->init) {
-    dev->flags |= DEV_FLAG_INITIALIZING;
+  if (dev->ops()->init) {
+    dev->set_flag(DEV_FLAG_INITIALIZING);
     api_lock_.Release();
     dev->InitOp();
     api_lock_.Acquire();
@@ -532,8 +525,8 @@ zx_status_t DriverHostContext::DeviceInit(const fbl::RefPtr<zx_device_t>& dev) {
 
 void DriverHostContext::DeviceInitReply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
                                         const device_init_reply_args_t* args) {
-  if (!(dev->flags & DEV_FLAG_INITIALIZING)) {
-    LOGD(FATAL, dev, "Device %p cannot reply to init (flags %#x)", dev.get(), dev->flags);
+  if (!(dev->flags() & DEV_FLAG_INITIALIZING)) {
+    LOGD(FATAL, dev, "Device %p cannot reply to init (flags %#x)", dev.get(), dev->flags());
   }
   if (status == ZX_OK) {
     if (args && args->power_states && args->power_state_count != 0) {
@@ -546,25 +539,25 @@ void DriverHostContext::DeviceInitReply(const fbl::RefPtr<zx_device_t>& dev, zx_
 
   if (dev->init_cb == nullptr) {
     LOGD(FATAL, dev, "Device %p cannot reply to init, no callback set (flags %#x)", dev.get(),
-         dev->flags);
+         dev->flags());
   }
 
   dev->init_cb(status);
   // Device is no longer invisible.
-  dev->flags &= ~(DEV_FLAG_INVISIBLE);
+  dev->unset_flag(DEV_FLAG_INVISIBLE);
   // If all children completed intializing,
   // complete pending bind and rebind connections.
   bool complete_bind_rebind = true;
-  for (auto& child : dev->parent->children) {
-    if (child.flags & DEV_FLAG_INVISIBLE) {
+  for (auto& child : dev->parent()->children()) {
+    if (child.flags() & DEV_FLAG_INVISIBLE) {
       complete_bind_rebind = false;
     }
   }
-  if (complete_bind_rebind && dev->parent->complete_bind_rebind_after_init()) {
-    if (auto bind_conn = dev->parent->take_bind_conn(); bind_conn) {
+  if (complete_bind_rebind && dev->parent()->complete_bind_rebind_after_init()) {
+    if (auto bind_conn = dev->parent()->take_bind_conn(); bind_conn) {
       bind_conn(status);
     }
-    if (auto rebind_conn = dev->parent->take_rebind_conn(); rebind_conn) {
+    if (auto rebind_conn = dev->parent()->take_rebind_conn(); rebind_conn) {
       rebind_conn(status);
     }
   }
@@ -572,7 +565,7 @@ void DriverHostContext::DeviceInitReply(const fbl::RefPtr<zx_device_t>& dev, zx_
 
 zx_status_t DriverHostContext::DeviceRemoveDeprecated(const fbl::RefPtr<zx_device_t>& dev) {
   // This removal is in response to the unbind hook.
-  if (dev->flags & DEV_FLAG_UNBOUND) {
+  if (dev->flags() & DEV_FLAG_UNBOUND) {
     DeviceUnbindReply(dev);
     return ZX_OK;
   }
@@ -580,18 +573,18 @@ zx_status_t DriverHostContext::DeviceRemoveDeprecated(const fbl::RefPtr<zx_devic
 }
 
 zx_status_t DriverHostContext::DeviceRemove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) {
-  if (dev->flags & REMOVAL_BAD_FLAGS) {
+  if (dev->flags() & REMOVAL_BAD_FLAGS) {
     LOGD(ERROR, dev, "Cannot remove device %p: %s", dev.get(),
-         internal::removal_problem(dev->flags));
+         internal::removal_problem(dev->flags()));
     return ZX_ERR_INVALID_ARGS;
   }
-  if (dev->flags & DEV_FLAG_INVISIBLE) {
+  if (dev->flags() & DEV_FLAG_INVISIBLE) {
     // We failed during init and the device is being removed. Complete the pending
     // bind/rebind conn of parent if any.
-    if (auto bind_conn = dev->parent->take_bind_conn(); bind_conn) {
+    if (auto bind_conn = dev->parent()->take_bind_conn(); bind_conn) {
       bind_conn(ZX_ERR_IO);
     }
-    if (auto rebind_conn = dev->parent->take_rebind_conn(); rebind_conn) {
+    if (auto rebind_conn = dev->parent()->take_rebind_conn(); rebind_conn) {
       rebind_conn(ZX_ERR_IO);
     }
   }
@@ -608,17 +601,17 @@ zx_status_t DriverHostContext::DeviceCompleteRemoval(const fbl::RefPtr<zx_device
   auto dev_add_ref = fbl::ImportFromRawPtr(dev.get());
   DriverManagerRemove(std::move(dev_add_ref));
 
-  dev->flags |= DEV_FLAG_DEAD;
+  dev->set_flag(DEV_FLAG_DEAD);
   return ZX_OK;
 }
 
 zx_status_t DriverHostContext::DeviceUnbind(const fbl::RefPtr<zx_device_t>& dev) {
   enum_lock_acquire();
 
-  if (!(dev->flags & DEV_FLAG_UNBOUND)) {
-    dev->flags |= DEV_FLAG_UNBOUND;
+  if (!(dev->flags() & DEV_FLAG_UNBOUND)) {
+    dev->set_flag(DEV_FLAG_UNBOUND);
     // Call dev's unbind op.
-    if (dev->ops->unbind) {
+    if (dev->ops()->unbind) {
       VLOGD(1, dev, "Device %p is being unbound", dev.get());
       api_lock_.Release();
       dev->UnbindOp();
@@ -634,13 +627,13 @@ zx_status_t DriverHostContext::DeviceUnbind(const fbl::RefPtr<zx_device_t>& dev)
 }
 
 void DriverHostContext::DeviceUnbindReply(const fbl::RefPtr<zx_device_t>& dev) {
-  if (dev->flags & REMOVAL_BAD_FLAGS) {
+  if (dev->flags() & REMOVAL_BAD_FLAGS) {
     LOGD(FATAL, dev, "Device %p cannot reply to unbind, bad flags: %s", dev.get(),
-         internal::removal_problem(dev->flags));
+         internal::removal_problem(dev->flags()));
   }
-  if (!(dev->flags & DEV_FLAG_UNBOUND)) {
+  if (!(dev->flags() & DEV_FLAG_UNBOUND)) {
     LOGD(FATAL, dev, "Device %p cannot reply to unbind, not in unbinding state (flags %#x)",
-         dev.get(), dev->flags);
+         dev.get(), dev->flags());
   }
   if (dev->vnode->inflight_transactions() > 0) {
     LOGD(FATAL, dev, "Device %p cannot reply to unbind, has %zu outstanding transactions",
@@ -653,7 +646,7 @@ void DriverHostContext::DeviceUnbindReply(const fbl::RefPtr<zx_device_t>& dev) {
     dev->unbind_cb(ZX_OK);
   } else {
     LOGD(FATAL, dev, "Device %p cannot reply to unbind, no callback set (flags %#x)", dev.get(),
-         dev->flags);
+         dev->flags());
   }
 }
 
@@ -689,9 +682,9 @@ void DriverHostContext::DeviceResumeReply(const fbl::RefPtr<zx_device_t>& dev, z
 }
 
 zx_status_t DriverHostContext::DeviceRebind(const fbl::RefPtr<zx_device_t>& dev) {
-  if (!dev->children.is_empty() || dev->has_composite()) {
+  if (!dev->children().is_empty() || dev->has_composite()) {
     // note that we want to be rebound when our children are all gone
-    dev->flags |= DEV_FLAG_WANTS_REBIND;
+    dev->set_flag(DEV_FLAG_WANTS_REBIND);
     // request that any existing children go away
     ScheduleUnbindChildren(dev);
   } else {
@@ -703,7 +696,7 @@ zx_status_t DriverHostContext::DeviceRebind(const fbl::RefPtr<zx_device_t>& dev)
 
 zx_status_t DriverHostContext::DeviceOpen(const fbl::RefPtr<zx_device_t>& dev,
                                           fbl::RefPtr<zx_device_t>* out, uint32_t flags) {
-  if (dev->flags & DEV_FLAG_DEAD) {
+  if (dev->flags() & DEV_FLAG_DEAD) {
     LOGD(ERROR, dev, "Cannot open device %p, device is dead", dev.get());
     return ZX_ERR_BAD_STATE;
   }
@@ -723,7 +716,7 @@ zx_status_t DriverHostContext::DeviceOpen(const fbl::RefPtr<zx_device_t>& dev,
     // Claim the reference from open
     new_ref = fbl::ImportFromRawPtr(opened_dev);
 
-    if (!(opened_dev->flags & DEV_FLAG_INSTANCE)) {
+    if (!(opened_dev->flags() & DEV_FLAG_INSTANCE)) {
       LOGD(FATAL, new_ref, "Cannot open device %p, bad state %#x", opened_dev, flags);
     }
   }
@@ -740,13 +733,13 @@ zx_status_t DriverHostContext::DeviceClose(fbl::RefPtr<zx_device_t> dev, uint32_
 
 void DriverHostContext::DeviceSystemSuspend(const fbl::RefPtr<zx_device>& dev, uint32_t flags) {
   if (dev->auto_suspend_configured()) {
-    dev->ops->configure_auto_suspend(dev->ctx, false,
-                                     fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0);
-    LOGF(INFO, "System suspend overriding auto suspend for device %p '%s'", dev.get(), dev->name);
+    dev->ops()->configure_auto_suspend(dev->ctx, false,
+                                       fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0);
+    LOGF(INFO, "System suspend overriding auto suspend for device %p '%s'", dev.get(), dev->name());
   }
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   // If new suspend hook is implemented, prefer that.
-  if (dev->ops->suspend) {
+  if (dev->ops()->suspend) {
     llcpp::fuchsia::device::SystemPowerStateInfo new_state_info;
     uint8_t suspend_reason = DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
 
@@ -756,8 +749,8 @@ void DriverHostContext::DeviceSystemSuspend(const fbl::RefPtr<zx_device>& dev, u
       enum_lock_acquire();
       {
         api_lock_.Release();
-        dev->ops->suspend(dev->ctx, static_cast<uint8_t>(new_state_info.dev_state),
-                          new_state_info.wakeup_enable, suspend_reason);
+        dev->ops()->suspend(dev->ctx, static_cast<uint8_t>(new_state_info.dev_state),
+                            new_state_info.wakeup_enable, suspend_reason);
         api_lock_.Acquire();
       }
       enum_lock_release();
@@ -776,21 +769,21 @@ void DriverHostContext::DeviceSystemSuspend(const fbl::RefPtr<zx_device>& dev, u
 void DriverHostContext::DeviceSystemResume(const fbl::RefPtr<zx_device>& dev,
                                            uint32_t target_system_state) {
   if (dev->auto_suspend_configured()) {
-    dev->ops->configure_auto_suspend(dev->ctx, false,
-                                     fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0);
-    LOGF(INFO, "System resume overriding auto suspend for device %p '%s'", dev.get(), dev->name);
+    dev->ops()->configure_auto_suspend(dev->ctx, false,
+                                       fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0);
+    LOGF(INFO, "System resume overriding auto suspend for device %p '%s'", dev.get(), dev->name());
   }
 
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   // If new resume hook is implemented, prefer that.
-  if (dev->ops->resume) {
+  if (dev->ops()->resume) {
     enum_lock_acquire();
     {
       api_lock_.Release();
       auto& sys_power_states = dev->GetSystemPowerStateMapping();
       uint32_t requested_perf_state =
           internal::get_perf_state(dev, sys_power_states[target_system_state].performance_state);
-      dev->ops->resume(dev->ctx, requested_perf_state);
+      dev->ops()->resume(dev->ctx, requested_perf_state);
       api_lock_.Acquire();
     }
     enum_lock_release();
@@ -808,7 +801,7 @@ void DriverHostContext::DeviceSystemResume(const fbl::RefPtr<zx_device>& dev,
 void DriverHostContext::DeviceSuspendNew(const fbl::RefPtr<zx_device>& dev,
                                          DevicePowerState requested_state) {
   if (dev->auto_suspend_configured()) {
-    LOGF(INFO, "Failed to suspend device %p '%s', auto suspend is enabled", dev.get(), dev->name);
+    LOGF(INFO, "Failed to suspend device %p '%s', auto suspend is enabled", dev.get(), dev->name());
     dev->suspend_cb(ZX_ERR_NOT_SUPPORTED,
                     static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0));
     return;
@@ -819,9 +812,9 @@ void DriverHostContext::DeviceSuspendNew(const fbl::RefPtr<zx_device>& dev,
     return;
   }
 
-  if (dev->ops->suspend) {
-    dev->ops->suspend(dev->ctx, static_cast<uint8_t>(requested_state),
-                      DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND, false /* wake_configured */);
+  if (dev->ops()->suspend) {
+    dev->ops()->suspend(dev->ctx, static_cast<uint8_t>(requested_state),
+                        DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND, false /* wake_configured */);
     return;
   }
   dev->suspend_cb(ZX_ERR_NOT_SUPPORTED,
@@ -834,8 +827,8 @@ zx_status_t DriverHostContext::DeviceSetPerformanceState(const fbl::RefPtr<zx_de
   if (!(dev->IsPerformanceStateSupported(requested_state))) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (dev->ops->set_performance_state) {
-    zx_status_t status = dev->ops->set_performance_state(dev->ctx, requested_state, out_state);
+  if (dev->ops()->set_performance_state) {
+    zx_status_t status = dev->ops()->set_performance_state(dev->ctx, requested_state, out_state);
     if (!(dev->IsPerformanceStateSupported(*out_state))) {
       LOGD(FATAL, dev,
            "Device %p 'set_performance_state' hook returned an unsupported performance state",
@@ -849,17 +842,17 @@ zx_status_t DriverHostContext::DeviceSetPerformanceState(const fbl::RefPtr<zx_de
 
 void DriverHostContext::DeviceResumeNew(const fbl::RefPtr<zx_device>& dev) {
   if (dev->auto_suspend_configured()) {
-    LOGF(INFO, "Failed to resume device %p '%s', auto suspend is enabled", dev.get(), dev->name);
+    LOGF(INFO, "Failed to resume device %p '%s', auto suspend is enabled", dev.get(), dev->name());
     dev->resume_cb(ZX_ERR_NOT_SUPPORTED,
                    static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0),
                    llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);
     return;
   }
   // If new resume hook is implemented, prefer that.
-  if (dev->ops->resume) {
+  if (dev->ops()->resume) {
     uint32_t requested_perf_state =
         internal::get_perf_state(dev, llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);
-    dev->ops->resume(dev->ctx, requested_perf_state);
+    dev->ops()->resume(dev->ctx, requested_perf_state);
     return;
   }
   dev->resume_cb(ZX_ERR_NOT_SUPPORTED,
@@ -873,9 +866,9 @@ zx_status_t DriverHostContext::DeviceConfigureAutoSuspend(const fbl::RefPtr<zx_d
   if (enable && !(dev->IsPowerStateSupported(requested_state))) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (dev->ops->configure_auto_suspend) {
+  if (dev->ops()->configure_auto_suspend) {
     zx_status_t status =
-        dev->ops->configure_auto_suspend(dev->ctx, enable, static_cast<uint8_t>(requested_state));
+        dev->ops()->configure_auto_suspend(dev->ctx, enable, static_cast<uint8_t>(requested_state));
     if (status != ZX_OK) {
       return status;
     }

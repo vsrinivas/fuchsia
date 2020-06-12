@@ -74,6 +74,7 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
                         CreateDeviceStubCompleter::Sync completer) override;
 
   DriverHostContext* const driver_host_context_;
+  fbl::RefPtr<zx_driver> proxy_driver_;
 };
 
 }  // namespace internal

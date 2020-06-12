@@ -114,93 +114,94 @@ struct zx_device
 
   // |ctx| must outlive |*out_dev|.  This is managed in the full binary by creating
   // the DriverHostContext in main() (having essentially a static lifetime).
-  static zx_status_t Create(DriverHostContext* ctx, fbl::RefPtr<zx_device>* out_dev);
+  static zx_status_t Create(DriverHostContext* ctx, std::string name, zx_driver_t* driver,
+                            fbl::RefPtr<zx_device>* out_dev);
 
   void CloseAllConnections();
 
   void InitOp() {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("init", &trace_label));
-    Dispatch(ops->init);
+    Dispatch(ops_->init);
   }
 
   zx_status_t OpenOp(zx_device_t** dev_out, uint32_t flags) {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("open", &trace_label));
-    return Dispatch(ops->open, ZX_OK, dev_out, flags);
+    return Dispatch(ops_->open, ZX_OK, dev_out, flags);
   }
 
   zx_status_t CloseOp(uint32_t flags) {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("close", &trace_label));
-    return Dispatch(ops->close, ZX_OK, flags);
+    return Dispatch(ops_->close, ZX_OK, flags);
   }
 
   void UnbindOp() {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("unbind", &trace_label));
-    Dispatch(ops->unbind);
+    Dispatch(ops_->unbind);
   }
 
   void ReleaseOp() {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("release", &trace_label));
-    Dispatch(ops->release);
+    Dispatch(ops_->release);
   }
 
   void SuspendNewOp(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason) {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("suspend", &trace_label));
-    Dispatch(ops->suspend, requested_state, enable_wake, suspend_reason);
+    Dispatch(ops_->suspend, requested_state, enable_wake, suspend_reason);
   }
 
   zx_status_t SetPerformanceStateOp(uint32_t requested_state, uint32_t* out_state) {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks",
                    get_trace_label("set_performance_state", &trace_label));
-    return Dispatch(ops->set_performance_state, ZX_ERR_NOT_SUPPORTED, requested_state, out_state);
+    return Dispatch(ops_->set_performance_state, ZX_ERR_NOT_SUPPORTED, requested_state, out_state);
   }
 
   zx_status_t ConfigureAutoSuspendOp(bool enable, uint8_t requested_state) {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("conf_auto_suspend", &trace_label));
-    return Dispatch(ops->configure_auto_suspend, ZX_ERR_NOT_SUPPORTED, enable, requested_state);
+    return Dispatch(ops_->configure_auto_suspend, ZX_ERR_NOT_SUPPORTED, enable, requested_state);
   }
 
   void ResumeNewOp(uint32_t requested_state) {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("resume", &trace_label));
-    Dispatch(ops->resume, requested_state);
+    Dispatch(ops_->resume, requested_state);
   }
 
   zx_status_t ReadOp(void* buf, size_t count, zx_off_t off, size_t* actual) {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("read", &trace_label));
-    return Dispatch(ops->read, ZX_ERR_NOT_SUPPORTED, buf, count, off, actual);
+    return Dispatch(ops_->read, ZX_ERR_NOT_SUPPORTED, buf, count, off, actual);
   }
 
   zx_status_t WriteOp(const void* buf, size_t count, zx_off_t off, size_t* actual) {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("write", &trace_label));
-    return Dispatch(ops->write, ZX_ERR_NOT_SUPPORTED, buf, count, off, actual);
+    return Dispatch(ops_->write, ZX_ERR_NOT_SUPPORTED, buf, count, off, actual);
   }
 
   zx_off_t GetSizeOp() {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("get_size", &trace_label));
-    return Dispatch(ops->get_size, 0lu);
+    return Dispatch(ops_->get_size, 0lu);
   }
 
   zx_status_t MessageOp(fidl_msg_t* msg, fidl_txn_t* txn) {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("message", &trace_label));
-    return Dispatch(ops->message, ZX_ERR_NOT_SUPPORTED, msg, txn);
+    return Dispatch(ops_->message, ZX_ERR_NOT_SUPPORTED, msg, txn);
   }
 
   void ChildPreReleaseOp(void* child_ctx) {
     TraceLabelBuffer trace_label;
     TRACE_DURATION("driver_host:driver-hooks", get_trace_label("child_pre_release", &trace_label));
-    Dispatch(ops->child_pre_release, child_ctx);
+    Dispatch(ops_->child_pre_release, child_ctx);
   }
 
   void set_bind_conn(fit::callback<void(zx_status_t)>);
@@ -226,12 +227,15 @@ struct zx_device
 
   uintptr_t magic = DEV_MAGIC;
 
-  const zx_protocol_device_t* ops = nullptr;
-
   // reserved for driver use; will not be touched by devmgr
   void* ctx = nullptr;
 
-  uint32_t flags = 0;
+  const zx_protocol_device_t* ops() const { return ops_; }
+  void set_ops(const zx_protocol_device_t* ops) { ops_ = ops; }
+
+  uint32_t flags() const { return flags_; }
+  void set_flag(uint32_t flag) { flags_ |= flag; }
+  void unset_flag(uint32_t flag) { flags_ &= ~flag; }
 
   zx::eventpair event;
   zx::eventpair local_event;
@@ -255,17 +259,19 @@ struct zx_device
 
   // most devices implement a single
   // protocol beyond the base device protocol
-  uint32_t protocol_id = 0;
+  uint32_t protocol_id() const { return protocol_id_; }
+  void set_protocol_id(uint32_t protocol_id) { protocol_id_ = protocol_id; }
   void* protocol_ops = nullptr;
 
   // driver that has published this device
   zx_driver_t* driver = nullptr;
 
-  // parent in the device tree
-  fbl::RefPtr<zx_device_t> parent;
+  const fbl::RefPtr<zx_device_t>& parent() { return parent_; }
+  void set_parent(fbl::RefPtr<zx_device_t> parent) { parent_ = parent; }
 
-  // list of this device's children in the device tree
-  fbl::TaggedDoublyLinkedList<zx_device*, ChildrenListTag> children;
+  void add_child(zx_device* child) { children_.push_back(child); }
+  void remove_child(zx_device& child) { children_.erase(child); }
+  const fbl::TaggedDoublyLinkedList<zx_device*, ChildrenListTag>& children() { return children_; }
 
   // This is an atomic so that the connection's async loop can inspect this
   // value to determine if an expected shutdown is happening.  See comments in
@@ -277,7 +283,7 @@ struct zx_device
   fbl::Mutex proxy_ios_lock;
   ProxyIostate* proxy_ios TA_GUARDED(proxy_ios_lock) = nullptr;
 
-  char name[ZX_DEVICE_NAME_MAX + 1] = {};
+  const char* name() const { return name_; }
 
   // Trait structure for the local ID map
   struct LocalIdKeyTraits {
@@ -338,7 +344,9 @@ struct zx_device
   void set_complete_bind_rebind_after_init(bool value) { complete_bind_rebind_after_init_ = value; }
 
  private:
-  explicit zx_device(DriverHostContext* ctx);
+  explicit zx_device(DriverHostContext* ctx, std::string name, zx_driver_t* driver);
+
+  char name_[ZX_DEVICE_NAME_MAX + 1] = {};
 
   // The fuchsia.Device.Manager.Coordinator protocol
   zx::channel coordinator_rpc_;
@@ -365,7 +373,7 @@ struct zx_device
   template <size_t N>
   const char* get_trace_label(const char* label, fbl::StringBuffer<N>* out) const {
     out->Clear();
-    out->AppendPrintf("%s:%s", this->name, label);
+    out->AppendPrintf("%s:%s", this->name(), label);
     return out->data();
   }
 
@@ -376,6 +384,18 @@ struct zx_device
   // Identifier assigned by devmgr that can be used to assemble composite
   // devices.
   uint64_t local_id_ = 0;
+
+  uint32_t flags_ = 0;
+
+  const zx_protocol_device_t* ops_ = nullptr;
+
+  uint32_t protocol_id_ = 0;
+
+  // parent in the device tree
+  fbl::RefPtr<zx_device_t> parent_;
+
+  // list of this device's children in the device tree
+  fbl::TaggedDoublyLinkedList<zx_device*, ChildrenListTag> children_;
 
   fbl::Mutex bind_conn_lock_;
 

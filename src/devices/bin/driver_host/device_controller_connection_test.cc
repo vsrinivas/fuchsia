@@ -23,8 +23,11 @@ namespace {
 TEST(DeviceControllerConnectionTestCase, Creation) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
+  fbl::RefPtr<zx_driver> drv;
+  ASSERT_OK(zx_driver::Create("test", &drv));
+
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, &dev));
+  ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
 
   zx::channel device_local, device_remote;
   ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
@@ -46,8 +49,11 @@ TEST(DeviceControllerConnectionTestCase, Creation) {
 TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
+  fbl::RefPtr<zx_driver> drv;
+  ASSERT_OK(zx_driver::Create("test", &drv));
+
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, &dev));
+  ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
 
   zx::channel device_local, device_remote;
   ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
@@ -132,8 +138,11 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
 TEST(DeviceControllerConnectionTestCase, PeerClosed) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
+  fbl::RefPtr<zx_driver> drv;
+  ASSERT_OK(zx_driver::Create("test", &drv));
+
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, &dev));
+  ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
 
   zx::channel device_local, device_remote;
   ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
@@ -160,8 +169,11 @@ TEST(DeviceControllerConnectionTestCase, PeerClosed) {
 TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
+  fbl::RefPtr<zx_driver> drv;
+  ASSERT_OK(zx_driver::Create("test", &drv));
+
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, &dev));
+  ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
 
   zx::channel device_local, device_remote;
   ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
@@ -178,9 +190,9 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
 
     void Unbind(UnbindCompleter::Sync completer) {
       fbl::RefPtr<zx_device> dev = this->dev();
-      // Set dev->flags so that we can check that the unbind hook is called in
+      // Set dev->flags() so that we can check that the unbind hook is called in
       // the test.
-      dev->flags = DEV_FLAG_DEAD;
+      dev->set_flag(DEV_FLAG_DEAD);
       llcpp::fuchsia::device::manager::DeviceController_Unbind_Result result;
       fidl::aligned<llcpp::fuchsia::device::manager::DeviceController_Unbind_Response> response;
       result.set_response(fidl::unowned_ptr(&response));
@@ -218,7 +230,7 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
 
   synchronous_call_thread.join();
   ASSERT_EQ(SUCCESS, thread_status);
-  ASSERT_EQ(my_dev->flags, DEV_FLAG_DEAD);
+  ASSERT_EQ(my_dev->flags(), DEV_FLAG_DEAD);
 }
 
 }  // namespace

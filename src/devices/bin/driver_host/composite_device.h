@@ -19,6 +19,9 @@ typedef fbl::Array<fbl::RefPtr<zx_device>> CompositeFragments;
 zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& device,
                                       CompositeFragments&& fragments);
 
+// Returns a zx_driver instance for composite devices
+fbl::RefPtr<zx_driver> GetCompositeDriver();
+
 // These objects are state shared by all fragments of the composite device that
 // enables one of them (the first to try) to begin teardown of the composite
 // device.  This is used for implementing unbind.

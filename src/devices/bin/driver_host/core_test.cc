@@ -141,6 +141,7 @@ class CoreTest : public zxtest::Test {
   CoreTest() : ctx_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     ctx_.loop().StartThread("driver_host-test-loop");
     internal::RegisterContextForApi(&ctx_);
+    ASSERT_OK(zx_driver::Create("core-test", &drv_));
   }
 
   ~CoreTest() { internal::RegisterContextForApi(nullptr); }
@@ -174,22 +175,23 @@ class CoreTest : public zxtest::Test {
   }
 
   DriverHostContext ctx_;
+  fbl::RefPtr<zx_driver> drv_;
   FakeCoordinator coordinator_;
 };
 
 TEST_F(CoreTest, RebindNoChildren) {
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx_, &dev));
+  ASSERT_OK(zx_device::Create(&ctx_, "test", drv_.get(), &dev));
 
   zx_protocol_device_t ops = {};
-  dev->ops = &ops;
+  dev->set_ops(&ops);
 
   ASSERT_NO_FATAL_FAILURES(Connect(dev));
 
   EXPECT_EQ(device_rebind(dev.get()), ZX_OK);
   EXPECT_EQ(coordinator_.bind_count(), 1);
 
-  dev->flags |= DEV_FLAG_DEAD;
+  dev->set_flag(DEV_FLAG_DEAD);
 }
 
 TEST_F(CoreTest, RebindHasOneChild) {
@@ -200,25 +202,25 @@ TEST_F(CoreTest, RebindHasOneChild) {
     zx_protocol_device_t ops = {};
     ops.unbind = [](void* ctx) { *static_cast<uint32_t*>(ctx) += 1; };
 
-    ASSERT_OK(zx_device::Create(&ctx_, &parent));
+    ASSERT_OK(zx_device::Create(&ctx_, "parent", drv_.get(), &parent));
     ASSERT_NO_FATAL_FAILURES(Connect(parent));
-    parent->ops = &ops;
+    parent->set_ops(&ops);
     parent->ctx = &unbind_count;
     {
       fbl::RefPtr<zx_device> child;
-      ASSERT_OK(zx_device::Create(&ctx_, &child));
+      ASSERT_OK(zx_device::Create(&ctx_, "child", drv_.get(), &child));
       ASSERT_NO_FATAL_FAILURES(Connect(child));
-      child->ops = &ops;
+      child->set_ops(&ops);
       child->ctx = &unbind_count;
-      parent->children.push_back(child.get());
-      child->parent = parent;
+      parent->add_child(child.get());
+      child->set_parent(parent);
 
       EXPECT_EQ(device_rebind(parent.get()), ZX_OK);
       EXPECT_EQ(coordinator_.bind_count(), 0);
       ASSERT_NO_FATAL_FAILURES(UnbindDevice(child));
       EXPECT_EQ(unbind_count, 1);
 
-      child->flags |= DEV_FLAG_DEAD;
+      child->set_flag(DEV_FLAG_DEAD);
     }
 
     ctx_.loop().Quit();
@@ -227,7 +229,7 @@ TEST_F(CoreTest, RebindHasOneChild) {
     ASSERT_OK(ctx_.loop().RunUntilIdle());
     EXPECT_EQ(coordinator_.bind_count(), 1);
 
-    parent->flags |= DEV_FLAG_DEAD;
+    parent->set_flag(DEV_FLAG_DEAD);
   }
   // Join the thread running in the background, then run the rest of the tasks locally.
 }
@@ -240,19 +242,19 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
     zx_protocol_device_t ops = {};
     ops.unbind = [](void* ctx) { *static_cast<uint32_t*>(ctx) += 1; };
 
-    ASSERT_OK(zx_device::Create(&ctx_, &parent));
+    ASSERT_OK(zx_device::Create(&ctx_, "parent", drv_.get(), &parent));
     ASSERT_NO_FATAL_FAILURES(Connect(parent));
-    parent->ops = &ops;
+    parent->set_ops(&ops);
     parent->ctx = &unbind_count;
     {
       std::array<fbl::RefPtr<zx_device>, 5> children;
       for (auto& child : children) {
-        ASSERT_OK(zx_device::Create(&ctx_, &child));
+        ASSERT_OK(zx_device::Create(&ctx_, "child", drv_.get(), &child));
         ASSERT_NO_FATAL_FAILURES(Connect(child));
-        child->ops = &ops;
+        child->set_ops(&ops);
         child->ctx = &unbind_count;
-        parent->children.push_back(child.get());
-        child->parent = parent;
+        parent->add_child(child.get());
+        child->set_parent(parent);
       }
 
       EXPECT_EQ(device_rebind(parent.get()), ZX_OK);
@@ -265,7 +267,7 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
       EXPECT_EQ(unbind_count, children.size());
 
       for (auto& child : children) {
-        child->flags |= DEV_FLAG_DEAD;
+        child->set_flag(DEV_FLAG_DEAD);
       }
     }
     // Join the thread running in the background, then run the rest of the tasks locally.
@@ -275,7 +277,7 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
     ctx_.loop().RunUntilIdle();
     EXPECT_EQ(coordinator_.bind_count(), 1);
 
-    parent->flags |= DEV_FLAG_DEAD;
+    parent->set_flag(DEV_FLAG_DEAD);
   }
 }
 

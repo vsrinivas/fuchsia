@@ -14,10 +14,24 @@
 #include "driver_host.h"
 #include "log.h"
 
-zx_device::zx_device(DriverHostContext* ctx) : driver_host_context_(ctx) {}
+zx_device::zx_device(DriverHostContext* ctx, std::string name, zx_driver_t* drv)
+    : driver(drv), driver_host_context_(ctx) {
+  size_t len = name.length();
+  // TODO(teisenbe): I think this is overly aggresive, and could be changed
+  // to |len > ZX_DEVICE_NAME_MAX| and |len = ZX_DEVICE_NAME_MAX|.
+  if (len >= ZX_DEVICE_NAME_MAX) {
+    LOGF(WARNING, "Name too large for device %p: %s", this, name.c_str());
+    len = ZX_DEVICE_NAME_MAX - 1;
+    magic = 0;
+  }
 
-zx_status_t zx_device::Create(DriverHostContext* ctx, fbl::RefPtr<zx_device>* out_dev) {
-  *out_dev = fbl::AdoptRef(new zx_device(ctx));
+  memcpy(name_, name.data(), len);
+  name_[len] = '\0';
+}
+
+zx_status_t zx_device::Create(DriverHostContext* ctx, std::string name, zx_driver_t* driver,
+                              fbl::RefPtr<zx_device>* out_dev) {
+  *out_dev = fbl::AdoptRef(new zx_device(ctx, name, driver));
   (*out_dev)->vnode = fbl::MakeRefCounted<DevfsVnode>(*out_dev);
   return ZX_OK;
 }
@@ -147,8 +161,8 @@ zx_status_t zx_device::SetPerformanceStates(
 }
 
 void zx_device::CloseAllConnections() {
-  for (auto& child : children) {
-    if (child.flags & DEV_FLAG_INSTANCE) {
+  for (auto& child : children_) {
+    if (child.flags_ & DEV_FLAG_INSTANCE) {
       child.CloseAllConnections();
     }
   }
@@ -195,11 +209,11 @@ void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
     }
   });
 
-  if (this->flags & DEV_FLAG_INSTANCE) {
+  if (this->flags_ & DEV_FLAG_INSTANCE) {
     // these don't get removed, so mark dead state here
-    this->flags |= DEV_FLAG_DEAD;
+    this->set_flag(DEV_FLAG_DEAD);
   }
-  if (this->flags & DEV_FLAG_BUSY) {
+  if (this->flags() & DEV_FLAG_BUSY) {
     // this can happen if creation fails
     // the caller to device_add() will free it
     LOGD(WARNING, fbl::RefPtr(this), "Not releasing device %p, it is busy", this);
@@ -207,10 +221,10 @@ void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
   }
   VLOGD(1, fbl::RefPtr(this), "Releasing device %p", this);
 
-  if (!(this->flags & DEV_FLAG_DEAD)) {
+  if (!(this->flags() & DEV_FLAG_DEAD)) {
     LOGD(WARNING, fbl::RefPtr(this), "Releasing device %p which is not yet dead", this);
   }
-  if (!this->children.is_empty()) {
+  if (!this->children().is_empty()) {
     LOGD(WARNING, fbl::RefPtr(this), "Releasing device %p which still has children", this);
   }
 
@@ -252,10 +266,10 @@ fbl::RefPtr<zx_device> zx_device::GetDeviceFromLocalId(uint64_t local_id) {
 }
 
 bool zx_device::Unbound() {
-  if (flags & DEV_FLAG_INSTANCE) {
-    return parent->Unbound();
+  if (flags_ & DEV_FLAG_INSTANCE) {
+    return parent_->Unbound();
   }
-  return flags & DEV_FLAG_UNBOUND;
+  return flags_ & DEV_FLAG_UNBOUND;
 }
 
 bool zx_device::has_composite() { return !!composite_; }

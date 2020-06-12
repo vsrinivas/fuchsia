@@ -68,17 +68,17 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
       return r;
     }
     if (args->proto_id) {
-      dev->protocol_id = args->proto_id;
+      dev->set_protocol_id(args->proto_id);
       dev->protocol_ops = args->proto_ops;
     }
     if (args->flags & DEVICE_ADD_NON_BINDABLE) {
-      dev->flags |= DEV_FLAG_UNBINDABLE;
+      dev->set_flag(DEV_FLAG_UNBINDABLE);
     }
     if (args->flags & DEVICE_ADD_INVISIBLE) {
-      dev->flags |= DEV_FLAG_INVISIBLE;
+      dev->set_flag(DEV_FLAG_INVISIBLE);
     }
     if (args->flags & DEVICE_ADD_ALLOW_MULTI_COMPOSITE) {
-      dev->flags |= DEV_FLAG_ALLOW_MULTI_COMPOSITE;
+      dev->set_flag(DEV_FLAG_ALLOW_MULTI_COMPOSITE);
     }
 
     if (!args->power_states) {
@@ -98,7 +98,7 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     if (args->performance_states && (args->performance_state_count != 0)) {
       r = dev->SetPerformanceStates(args->performance_states, args->performance_state_count);
     } else {
-      device_performance_state_info_t perf_power_states[1];
+      device_performance_state_info_t perf_power_states[1] = {};
       perf_power_states[0].state_id = fuchsia_device_DEVICE_PERFORMANCE_STATE_P0;
       r = dev->SetPerformanceStates(perf_power_states, 1);
     }
@@ -130,7 +130,7 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
       r = api_ctx->DeviceAdd(dev, parent_ref, args->props, args->prop_count, args->proxy_args,
                              std::move(client_remote));
     } else if (args->flags & DEVICE_ADD_INSTANCE) {
-      dev->flags |= DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE;
+      dev->set_flag(DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE);
       r = api_ctx->DeviceAdd(dev, parent_ref, nullptr, 0, nullptr,
                              zx::channel() /* client_remote */);
     } else {
@@ -234,11 +234,11 @@ __EXPORT zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t c
   return internal::get_scheduler_deadline_profile(capacity, deadline, period, name, out_profile);
 }
 
-__EXPORT const char* device_get_name(zx_device_t* dev) { return dev->name; }
+__EXPORT const char* device_get_name(zx_device_t* dev) { return dev->name(); }
 
 __EXPORT zx_device_t* device_get_parent(zx_device_t* dev) {
   // The caller should not hold on to this past the lifetime of |dev|.
-  return dev->parent.get();
+  return dev->parent().get();
 }
 
 struct GenericProtocol {
@@ -248,10 +248,10 @@ struct GenericProtocol {
 
 __EXPORT zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_id, void* out) {
   auto proto = static_cast<GenericProtocol*>(out);
-  if (dev->ops->get_protocol) {
-    return dev->ops->get_protocol(dev->ctx, proto_id, out);
+  if (dev->ops()->get_protocol) {
+    return dev->ops()->get_protocol(dev->ctx, proto_id, out);
   }
-  if ((proto_id == dev->protocol_id) && (dev->protocol_ops != nullptr)) {
+  if ((proto_id == dev->protocol_id()) && (dev->protocol_ops != nullptr)) {
     proto->ops = dev->protocol_ops;
     proto->ctx = dev->ctx;
     return ZX_OK;
@@ -261,16 +261,16 @@ __EXPORT zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_
 
 __EXPORT zx_status_t device_open_protocol_session_multibindable(const zx_device_t* dev,
                                                                 uint32_t proto_id, void* out) {
-  if (dev->ops->open_protocol_session_multibindable) {
-    return dev->ops->open_protocol_session_multibindable(dev->ctx, proto_id, out);
+  if (dev->ops()->open_protocol_session_multibindable) {
+    return dev->ops()->open_protocol_session_multibindable(dev->ctx, proto_id, out);
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 __EXPORT zx_status_t device_close_protocol_session_multibindable(const zx_device_t* dev,
                                                                  void* proto) {
-  if (dev->ops->close_protocol_session_multibindable) {
-    return dev->ops->close_protocol_session_multibindable(dev->ctx, proto);
+  if (dev->ops()->close_protocol_session_multibindable) {
+    return dev->ops()->close_protocol_session_multibindable(dev->ctx, proto);
   }
   return ZX_ERR_NOT_SUPPORTED;
 }

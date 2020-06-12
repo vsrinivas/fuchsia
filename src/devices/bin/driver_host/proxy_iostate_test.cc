@@ -17,9 +17,11 @@ namespace {
 
 TEST(ProxyIostateTestCase, Creation) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fbl::RefPtr<zx_driver> drv;
+  ASSERT_OK(zx_driver::Create("test", &drv));
 
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, &dev));
+  ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
 
   zx::channel proxy_local, proxy_remote;
   ASSERT_OK(zx::channel::create(0, &proxy_local, &proxy_remote));
@@ -43,9 +45,11 @@ TEST(ProxyIostateTestCase, Creation) {
 // present, and we're running with ASAN, this will crash 100% of the time.
 TEST(ProxyIostateTestCase, ChannelCloseThenCancel) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fbl::RefPtr<zx_driver> drv;
+  ASSERT_OK(zx_driver::Create("test", &drv));
 
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&ctx, &dev));
+  ASSERT_OK(zx_device::Create(&ctx, "test", drv.get(), &dev));
 
   zx::channel proxy_local, proxy_remote;
   ASSERT_OK(zx::channel::create(0, &proxy_local, &proxy_remote));

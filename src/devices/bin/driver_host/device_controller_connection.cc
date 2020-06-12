@@ -34,9 +34,9 @@ void BindReply(const fbl::RefPtr<zx_device_t>& dev,
   completer.Reply(status, std::move(test_output));
 
   bool complete_bind = true;
-  for (auto& child : dev->children) {
-    if ((child.flags & DEV_FLAG_INVISIBLE) || child.ops->init) {
-      // Driver has initializatin to do.
+  for (auto& child : dev->children()) {
+    if ((child.flags() & DEV_FLAG_INVISIBLE) || child.ops()->init) {
+      // Driver has initialization to do.
       complete_bind = false;
     }
   }
@@ -115,7 +115,7 @@ void DeviceControllerConnection::Resume(uint32_t target_system_state,
 void DeviceControllerConnection::ConnectProxy(::zx::channel shadow,
                                               ConnectProxyCompleter::Sync _completer) {
   VLOGD(1, dev(), "Connected to proxy for device %p", dev().get());
-  dev()->ops->rxrpc(dev()->ctx, ZX_HANDLE_INVALID);
+  dev()->ops()->rxrpc(dev()->ctx, ZX_HANDLE_INVALID);
   // Ignore any errors in the creation for now?
   // TODO(teisenbe): Investigate if this is the right thing
   ProxyIostate::Create(dev(), std::move(shadow), driver_host_context_->loop().dispatcher());
@@ -130,7 +130,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
   LOGD(INFO, dev, "Binding driver '%.*s'", static_cast<int>(driver_path.size()),
        driver_path.data());
   fbl::RefPtr<zx_driver_t> drv;
-  if (dev->flags & DEV_FLAG_DEAD) {
+  if (dev->flags() & DEV_FLAG_DEAD) {
     LOGD(ERROR, dev, "Cannot bind to removed device");
     BindReply(dev, std::move(completer), ZX_ERR_IO_NOT_PRESENT);
     return;
@@ -195,10 +195,10 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {
                             trace = std::move(trace)](zx_status_t status) mutable {
     llcpp::fuchsia::device::manager::DeviceController_Unbind_Result result;
     fidl::aligned<llcpp::fuchsia::device::manager::DeviceController_Unbind_Response> response;
-    if (status != ZX_OK && dev->parent) {
+    if (status != ZX_OK && dev->parent()) {
       // If unbind returns an error, and if client is waiting for unbind to complete,
       // inform the client.
-      if (auto unbind_children_conn = dev->parent->take_unbind_children_conn();
+      if (auto unbind_children_conn = dev->parent()->take_unbind_children_conn();
           unbind_children_conn) {
         unbind_children_conn(status);
       }

@@ -30,7 +30,7 @@ zx_status_t DevfsVnode::Close() {
   // If this vnode is for an instance device, drop its reference on close to break
   // the reference cycle.  This is handled for non-instance devices during the device
   // remove path.
-  if (dev_->flags & DEV_FLAG_INSTANCE) {
+  if (dev_->flags() & DEV_FLAG_INSTANCE) {
     dev_->vnode.reset();
   }
   return status;
@@ -186,7 +186,7 @@ void DevfsVnode::GetDriverName(GetDriverNameCompleter::Sync completer) {
 }
 
 void DevfsVnode::GetDeviceName(GetDeviceNameCompleter::Sync completer) {
-  completer.Reply({dev_->name, strlen(dev_->name)});
+  completer.Reply(fidl::unowned_str(dev_->name(), strlen(dev_->name())));
 }
 
 void DevfsVnode::GetTopologicalPath(GetTopologicalPathCompleter::Sync completer) {
@@ -241,9 +241,8 @@ void DevfsVnode::RunCompatibilityTests(int64_t hook_wait_time,
                                        RunCompatibilityTestsCompleter::Sync completer) {
   zx_status_t status = device_run_compatibility_tests(dev_, hook_wait_time);
   if (status == ZX_OK) {
-    dev_->PushTestCompatibilityConn([completer = completer.ToAsync()](zx_status_t status) mutable {
-      completer.Reply(status);
-    });
+    dev_->PushTestCompatibilityConn(
+        [completer = completer.ToAsync()](zx_status_t status) mutable { completer.Reply(status); });
   } else {
     completer.Reply(status);
   }

@@ -58,6 +58,8 @@ class CompositeDeviceInstance {
   CompositeFragments fragments_;
 };
 
+}  // namespace
+
 // Get the placeholder driver structure for the composite driver
 fbl::RefPtr<zx_driver> GetCompositeDriver() {
   static fbl::Mutex lock;
@@ -73,8 +75,6 @@ fbl::RefPtr<zx_driver> GetCompositeDriver() {
   }
   return composite;
 }
-
-}  // namespace
 
 zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
                                       CompositeFragments&& fragments) {
@@ -103,11 +103,6 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
     return ops;
   }();
 
-  auto driver = GetCompositeDriver();
-  if (driver == nullptr) {
-    return ZX_ERR_INTERNAL;
-  }
-
   auto composite = fbl::MakeRefCounted<CompositeDevice>(dev);
 
   std::unique_ptr<CompositeDeviceInstance> new_device;
@@ -120,13 +115,12 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
     fragment->set_composite(composite);
   }
 
-  dev->protocol_id = ZX_PROTOCOL_COMPOSITE;
+  dev->set_protocol_id(ZX_PROTOCOL_COMPOSITE);
   dev->protocol_ops = &composite_ops;
-  dev->driver = driver.get();
-  dev->ops = &composite_device_ops;
+  dev->set_ops(&composite_device_ops);
   dev->ctx = new_device.release();
   // Flag that when this is cleaned up, we should run its release hook.
-  dev->flags |= DEV_FLAG_ADDED;
+  dev->set_flag(DEV_FLAG_ADDED);
   return ZX_OK;
 }
 

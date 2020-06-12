@@ -114,14 +114,14 @@ const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* const path, siz
   while (itr_dev && end > path) {
     *(--end) = sep;
 
-    size_t len = strlen(itr_dev->name);
+    size_t len = strlen(itr_dev->name());
     if (len > static_cast<size_t>(end - path)) {
       break;
     }
     end -= len;
-    memcpy(end, itr_dev->name, len);
+    memcpy(end, itr_dev->name(), len);
     sep = '/';
-    itr_dev = itr_dev->parent;
+    itr_dev = itr_dev->parent();
   }
 
   // If devpath is longer than |max|, add an ellipsis.
@@ -191,10 +191,10 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
                                                 const char* proxy_args,
                                                 const zx_device_prop_t* props, uint32_t prop_count,
                                                 zx::channel client_remote) {
-  bool add_invisible = child->flags & DEV_FLAG_INVISIBLE;
+  bool add_invisible = child->flags() & DEV_FLAG_INVISIBLE;
   fuchsia::device::manager::AddDeviceConfig add_device_config;
 
-  if (child->flags & DEV_FLAG_ALLOW_MULTI_COMPOSITE) {
+  if (child->flags() & DEV_FLAG_ALLOW_MULTI_COMPOSITE) {
     add_device_config |= fuchsia::device::manager::AddDeviceConfig::ALLOW_MULTI_COMPOSITE;
   }
 
@@ -233,16 +233,16 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
     auto response = fuchsia::device::manager::Coordinator::Call::AddDeviceInvisible(
         zx::unowned_channel(rpc.get()), std::move(coordinator_remote),
         std::move(device_controller_remote), ::fidl::unowned_vec(props_list),
-        ::fidl::unowned_str(child->name, strlen(child->name)), child->protocol_id,
+        ::fidl::unowned_str(child->name(), strlen(child->name())), child->protocol_id(),
         ::fidl::unowned_str(child->driver->libname()),
-        ::fidl::unowned_str(proxy_args, proxy_args_len), child->ops->init /* has_init */,
+        ::fidl::unowned_str(proxy_args, proxy_args_len), child->ops()->init /* has_init */,
         std::move(client_remote));
     status = response.status();
     if (status == ZX_OK) {
       if (response.Unwrap()->result.is_response()) {
         device_id = response.Unwrap()->result.response().local_device_id;
         // Mark child as invisible until the init function is replied.
-        child->flags |= DEV_FLAG_INVISIBLE;
+        child->set_flag(DEV_FLAG_INVISIBLE);
       } else {
         call_status = response.Unwrap()->result.err();
       }
@@ -251,10 +251,10 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
     auto response = fuchsia::device::manager::Coordinator::Call::AddDevice(
         zx::unowned_channel(rpc.get()), std::move(coordinator_remote),
         std::move(device_controller_remote), ::fidl::unowned_vec(props_list),
-        ::fidl::unowned_str(child->name, strlen(child->name)), child->protocol_id,
+        ::fidl::unowned_str(child->name(), strlen(child->name())), child->protocol_id(),
         ::fidl::unowned_str(child->driver->libname()),
         ::fidl::unowned_str(proxy_args, proxy_args_len), add_device_config,
-        child->ops->init /* has_init */, std::move(client_remote));
+        child->ops()->init /* has_init */, std::move(client_remote));
     status = response.status();
     if (status == ZX_OK) {
       if (response.Unwrap()->result.is_response()) {
@@ -459,15 +459,12 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
 
   // Create a dummy parent device for use in this call to Create
   fbl::RefPtr<zx_device> parent;
-  r = zx_device::Create(driver_host_context_, &parent);
+  r = zx_device::Create(driver_host_context_, "device_create dummy", drv.get(), &parent);
   if (r != ZX_OK) {
     LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(r));
     return;
   }
   // magic cookie for device create handshake
-  char dummy_name[sizeof(parent->name)] = "device_create dummy";
-  memcpy(&parent->name, &dummy_name, sizeof(parent->name));
-
   CreationContext creation_context = {
       .parent = std::move(parent),
       .child = nullptr,
@@ -482,7 +479,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
   // message is spurious in this case, since the dummy parent never
   // actually begins its device lifecycle.  This flag is ordinarily
   // set by device_remove().
-  creation_context.parent->flags |= DEV_FLAG_DEAD;
+  creation_context.parent->set_flag(DEV_FLAG_DEAD);
 
   if (r != ZX_OK) {
     LOGF(ERROR, "Failed to create driver: %s", zx_status_get_string(r));
@@ -529,7 +526,7 @@ void DevhostControllerConnection::CreateCompositeDevice(
     for (size_t i = 0; i < fragments.count(); ++i) {
       uint64_t local_id = fragments.data()[i];
       fbl::RefPtr<zx_device_t> dev = zx_device::GetDeviceFromLocalId(local_id);
-      if (dev == nullptr || (dev->flags & DEV_FLAG_DEAD)) {
+      if (dev == nullptr || (dev->flags() & DEV_FLAG_DEAD)) {
         completer.Reply(ZX_ERR_NOT_FOUND);
         return;
       }
@@ -537,15 +534,20 @@ void DevhostControllerConnection::CreateCompositeDevice(
     }
   }
 
+  auto driver = GetCompositeDriver();
+  if (driver == nullptr) {
+    completer.Reply(ZX_ERR_INTERNAL);
+    return;
+  }
+
   fbl::RefPtr<zx_device_t> dev;
-  zx_status_t status = zx_device::Create(driver_host_context_, &dev);
+  static_assert(fuchsia_device_manager_DEVICE_NAME_MAX + 1 >= sizeof(dev->name()));
+  zx_status_t status = zx_device::Create(driver_host_context_,
+                                         std::string(name.data(), name.size()), driver.get(), &dev);
   if (status != ZX_OK) {
     completer.Reply(status);
     return;
   }
-  static_assert(fuchsia_device_manager_DEVICE_NAME_MAX + 1 >= sizeof(dev->name));
-  memcpy(dev->name, name.data(), name.size());
-  dev->name[name.size()] = 0;
   dev->set_local_id(local_device_id);
 
   std::unique_ptr<DeviceControllerConnection> newconn;
@@ -563,7 +565,7 @@ void DevhostControllerConnection::CreateCompositeDevice(
     return;
   }
 
-  VLOGF(1, "Created composite device %p '%s'", dev.get(), dev->name);
+  VLOGF(1, "Created composite device %p '%s'", dev.get(), dev->name());
   status = DeviceControllerConnection::BeginWait(std::move(newconn),
                                                  driver_host_context_->loop().dispatcher());
   if (status != ZX_OK) {
@@ -577,16 +579,25 @@ void DevhostControllerConnection::CreateDeviceStub(zx::channel coordinator_rpc,
                                                    zx::channel device_controller_rpc,
                                                    uint32_t protocol_id, uint64_t local_device_id,
                                                    CreateDeviceStubCompleter::Sync completer) {
+  // This method is used for creating driverless proxies in case of misc, root, test devices.
+  // Since there are no proxy drivers backing the device, a dummy proxy driver will be used for
+  // device creation.
+  if (!proxy_driver_) {
+    auto status = zx_driver::Create("proxy", &proxy_driver_);
+    if (status != ZX_OK) {
+      return;
+    }
+  }
+
   fbl::RefPtr<zx_device_t> dev;
-  zx_status_t r = zx_device::Create(driver_host_context_, &dev);
-  // TODO: dev->ops and other lifecycle bits
+  zx_status_t r = zx_device::Create(driver_host_context_, "proxy", proxy_driver_.get(), &dev);
+  // TODO: dev->ops() and other lifecycle bits
   // no name means a dummy proxy device
   if (r != ZX_OK) {
     return;
   }
-  strcpy(dev->name, "proxy");
-  dev->protocol_id = protocol_id;
-  dev->ops = &kDeviceDefaultOps;
+  dev->set_protocol_id(protocol_id);
+  dev->set_ops(&kDeviceDefaultOps);
   dev->set_local_id(local_device_id);
 
   std::unique_ptr<DeviceControllerConnection> newconn;
@@ -596,7 +607,7 @@ void DevhostControllerConnection::CreateDeviceStub(zx::channel coordinator_rpc,
   if (r != ZX_OK) {
     return;
   }
-  VLOGF(1, "Created device stub %p '%s'", dev.get(), dev->name);
+  VLOGF(1, "Created device stub %p '%s'", dev.get(), dev->name());
   r = DeviceControllerConnection::BeginWait(std::move(newconn),
                                             driver_host_context_->loop().dispatcher());
   if (r != ZX_OK) {
@@ -734,7 +745,7 @@ int main(int argc, char** argv) {
 
 void DriverHostContext::MakeVisible(const fbl::RefPtr<zx_device_t>& dev,
                                     const device_make_visible_args_t* args) {
-  ZX_ASSERT_MSG(!dev->ops->init,
+  ZX_ASSERT_MSG(!dev->ops()->init,
                 "Cannot call device_make_visible if init hook is implemented."
                 "The device will automatically be made visible once the init hook is replied to.");
   const zx::channel& rpc = *dev->coordinator_rpc;
@@ -761,24 +772,24 @@ void DriverHostContext::MakeVisible(const fbl::RefPtr<zx_device_t>& dev,
     }
   }
   log_rpc_result(dev, "make-visible", status, call_status);
-  dev->flags &= ~(DEV_FLAG_INVISIBLE);
+  dev->unset_flag(DEV_FLAG_INVISIBLE);
 
   // Reply to any pending bind/rebind requests, if all
   // the children are initialized.
   bool reply_bind_rebind = true;
-  for (auto& child : dev->parent->children) {
-    if (child.flags & DEV_FLAG_INVISIBLE) {
+  for (auto& child : dev->parent()->children()) {
+    if (child.flags() & DEV_FLAG_INVISIBLE) {
       reply_bind_rebind = false;
     }
   }
-  if (!reply_bind_rebind || !dev->parent->complete_bind_rebind_after_init()) {
+  if (!reply_bind_rebind || !dev->parent()->complete_bind_rebind_after_init()) {
     return;
   }
   status = (status == ZX_OK) ? call_status : status;
-  if (auto bind_conn = dev->parent->take_bind_conn(); bind_conn) {
+  if (auto bind_conn = dev->parent()->take_bind_conn(); bind_conn) {
     bind_conn(status);
   }
-  if (auto rebind_conn = dev->parent->take_rebind_conn(); rebind_conn) {
+  if (auto rebind_conn = dev->parent()->take_rebind_conn(); rebind_conn) {
     rebind_conn(status);
   }
 }
@@ -807,7 +818,7 @@ zx_status_t DriverHostContext::ScheduleUnbindChildren(const fbl::RefPtr<zx_devic
 zx_status_t DriverHostContext::GetTopoPath(const fbl::RefPtr<zx_device_t>& dev, char* path,
                                            size_t max, size_t* actual) {
   fbl::RefPtr<zx_device_t> remote_dev = dev;
-  if (dev->flags & DEV_FLAG_INSTANCE) {
+  if (dev->flags() & DEV_FLAG_INSTANCE) {
     // Instances cannot be opened a second time. If dev represents an instance, return the path
     // to its parent, prefixed with an '@'.
     if (max < 1) {
@@ -816,7 +827,7 @@ zx_status_t DriverHostContext::GetTopoPath(const fbl::RefPtr<zx_device_t>& dev, 
     path[0] = '@';
     path++;
     max--;
-    remote_dev = dev->parent;
+    remote_dev = dev->parent();
   }
 
   const zx::channel& rpc = *remote_dev->coordinator_rpc;
@@ -851,7 +862,7 @@ zx_status_t DriverHostContext::GetTopoPath(const fbl::RefPtr<zx_device_t>& dev, 
   *actual += 1;
 
   // Account for the prefixed '@' we may have added above.
-  if (dev->flags & DEV_FLAG_INSTANCE) {
+  if (dev->flags() & DEV_FLAG_INSTANCE) {
     *actual += 1;
   }
   return ZX_OK;
