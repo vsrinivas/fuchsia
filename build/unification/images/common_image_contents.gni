@@ -195,7 +195,7 @@ common_image_contents = [
   "//zircon/system/core/svchost",
   "//zircon/system/core/sysinfo",
   "//src/storage/bin/blobfs",
-  "//zircon/system/uapp/crasher",
+  "//src/developer/feedback/bin/crasher",
   "//zircon/system/uapp/dd",
   "//zircon/system/uapp/df",
   "//zircon/system/uapp/dlog",
