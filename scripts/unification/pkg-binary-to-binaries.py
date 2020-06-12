@@ -73,6 +73,7 @@ def main():
     # First off, build a list of manifest files we expect to see given the
     # changes made to build files.
     expected_manifest_paths = []
+    matched_manifest_paths = []
     for build_file, binaries in sorted(build_changes.iteritems()):
         base_dir = os.path.dirname(build_file)
         for binary in binaries:
@@ -80,6 +81,7 @@ def main():
             if manifest in manifest_paths:
                 # We found a manifest exactly where we expected it: great!
                 manifest_paths.remove(manifest)
+                matched_manifest_paths.append(manifest)
                 continue
             if '_' in binary:
                 # Since '_' is technically not allowed in package URIs, some
@@ -89,12 +91,16 @@ def main():
                     binary.replace('_', '-') + '.cmx')
                 if alternate_manifest in manifest_paths:
                     manifest_paths.remove(alternate_manifest)
+                    matched_manifest_paths.append(alternate_manifest)
                     continue
             expected_manifest_paths.append(manifest)
     print('-----------------------------')
     print(
         'After exact matches: %d references, %d manifest files unmatched' %
         (len(expected_manifest_paths), len(manifest_paths)))
+    print('Matches:')
+    for path in matched_manifest_paths:
+        print(path)
     print('')
 
     # Second step is to look at manifests with the same file name as what we
