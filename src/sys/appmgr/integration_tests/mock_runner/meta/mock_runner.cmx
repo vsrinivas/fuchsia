@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/appmgr_mock_runner"
     },
     "sandbox": {
         "services": [

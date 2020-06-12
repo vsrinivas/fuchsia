@@ -41,8 +41,11 @@ rustc_binary("bin") {
 package("device_settings_manager") {
   deps = [ ":bin" ]
 
-  binary = "device_settings_manager"
-
+  binaries = [
+    {
+      name = "device_settings_manager"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/device_settings_manager.cmx")

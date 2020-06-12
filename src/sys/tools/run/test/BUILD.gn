@@ -76,7 +76,11 @@ package("run_test_exiter") {
 
   deps = [ ":exiter_bin" ]
 
-  binary = "run_test_exiter"
+  binaries = [
+    {
+      name = "run_test_exiter"
+    },
+  ]
 }
 
 test_package("run_tests") {

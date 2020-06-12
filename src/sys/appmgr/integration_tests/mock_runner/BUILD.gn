@@ -59,5 +59,9 @@ package("appmgr_mock_runner") {
     },
   ]
 
-  binary = "appmgr_mock_runner"
+  binaries = [
+    {
+      name = "appmgr_mock_runner"
+    },
+  ]
 }

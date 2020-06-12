@@ -54,8 +54,11 @@ package("pkg") {
   package_name = "stash"
   deps = [ ":bin" ]
 
-  binary = "stash"
-
+  binaries = [
+    {
+      name = "stash"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/stash.cmx")

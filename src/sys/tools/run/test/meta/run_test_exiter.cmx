@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/run_test_exiter"
     },
     "sandbox": {
         "services": [

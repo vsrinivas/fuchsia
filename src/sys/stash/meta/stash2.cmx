@@ -5,7 +5,7 @@
             "--backing_file",
             "/data/stash2.store"
         ],
-        "binary": "bin/app"
+        "binary": "bin/stash"
     },
     "sandbox": {
         "features": [

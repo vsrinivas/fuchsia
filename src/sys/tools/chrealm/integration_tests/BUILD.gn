@@ -58,8 +58,11 @@ executable("get_message_client_bin") {
 package("chrealm_test_get_message") {
   deps = [ ":get_message_client_bin" ]
 
-  binary = "get_message_client"
-
+  binaries = [
+    {
+      name = "get_message_client"
+    },
+  ]
   meta = [
     {
       path = rebase_path("chrealm_test_get_message.cmx")
