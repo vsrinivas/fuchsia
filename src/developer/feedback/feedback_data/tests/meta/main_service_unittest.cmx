@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/main_service_unittest"
+        "binary": "bin/main_service_unittest_exe"
     },
     "sandbox": {
         "features": [

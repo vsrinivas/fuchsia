@@ -2,63 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
-
-###############################################################################
-# GROUPS
-###############################################################################
-group("tests") {
-  testonly = true
-
-  public_deps = [ ":last-reboot-tests" ]
-}
-
-###############################################################################
-# PACKAGES
-###############################################################################
-# TODO(53656): switch to fuchsia_test_package once we figure out how to have a
-# different name for the binary on the host and on the target.
-test_package("last-reboot-tests") {
-  tests = [
-    {
-      name = "last_reboot_info_provider_unittest"
-    },
-    {
-      # Binary name on the host. We prefix it with "last_reboot" to reduce collisions.
-      name = "last_reboot_main_service_unittest"
-
-      # Component and binary name on the target. Confined to the package so no risk of collisions.
-      dest = "main_service_unittest"
-    },
-    {
-      name = "reboot_log_unittest"
-    },
-    {
-      name = "reboot_reason_unittest"
-    },
-    {
-      name = "reboot_watcher_unittest"
-    },
-    {
-      name = "reporter_unittest"
-    },
-  ]
-
-  deps = [
-    ":last_reboot_info_provider_unittest",
-    ":main_service_unittest",
-    ":reboot_log_unittest",
-    ":reboot_reason_unittest",
-    ":reboot_watcher_unittest",
-    ":reporter_unittest",
-  ]
-}
+import("//src/sys/build/components.gni")
 
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
-executable("last_reboot_info_provider_unittest") {
+executable("last_reboot_info_provider_unittest_exe") {
   testonly = true
+
+  # "last_reboot_info_provider_unittest" is also used by feedback-data.
+  output_dir = target_out_dir
 
   sources = [ "last_reboot_info_provider_unittest.cc" ]
 
@@ -73,10 +26,12 @@ executable("last_reboot_info_provider_unittest") {
   ]
 }
 
-executable("main_service_unittest") {
+executable("main_service_unittest_exe") {
   testonly = true
 
-  output_name = "last_reboot_main_service_unittest"
+  # "main_service_unittest" is rather generic for the default_output_dir that
+  # is set to root_out_dir so instead we write the binary to target_out_dir.
+  output_dir = target_out_dir
 
   sources = [ "main_service_unittest.cc" ]
 
@@ -96,7 +51,7 @@ executable("main_service_unittest") {
   ]
 }
 
-executable("reboot_log_unittest") {
+executable("reboot_log_unittest_exe") {
   testonly = true
 
   sources = [ "reboot_log_unittest.cc" ]
@@ -116,7 +71,7 @@ executable("reboot_log_unittest") {
   ]
 }
 
-executable("reboot_reason_unittest") {
+executable("reboot_reason_unittest_exe") {
   testonly = true
 
   sources = [ "reboot_reason_unittest.cc" ]
@@ -131,7 +86,7 @@ executable("reboot_reason_unittest") {
   ]
 }
 
-executable("reboot_watcher_unittest") {
+executable("reboot_watcher_unittest_exe") {
   testonly = true
 
   sources = [ "reboot_watcher_unittest.cc" ]
@@ -151,7 +106,7 @@ executable("reboot_watcher_unittest") {
   ]
 }
 
-executable("reporter_unittest") {
+executable("reporter_unittest_exe") {
   testonly = true
 
   sources = [ "reporter_unittest.cc" ]
@@ -171,4 +126,78 @@ executable("reporter_unittest") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
   ]
+}
+
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_component("last_reboot_info_provider_unittest") {
+  testonly = true
+
+  manifest = "meta/last_reboot_info_provider_unittest.cmx"
+
+  deps = [ ":last_reboot_info_provider_unittest_exe" ]
+}
+
+fuchsia_component("main_service_unittest") {
+  testonly = true
+
+  manifest = "meta/main_service_unittest.cmx"
+
+  deps = [ ":main_service_unittest_exe" ]
+}
+
+fuchsia_component("reboot_log_unittest") {
+  testonly = true
+
+  manifest = "meta/reboot_log_unittest.cmx"
+
+  deps = [ ":reboot_log_unittest_exe" ]
+}
+
+fuchsia_component("reboot_reason_unittest") {
+  testonly = true
+
+  manifest = "meta/reboot_reason_unittest.cmx"
+
+  deps = [ ":reboot_reason_unittest_exe" ]
+}
+
+fuchsia_component("reboot_watcher_unittest") {
+  testonly = true
+
+  manifest = "meta/reboot_watcher_unittest.cmx"
+
+  deps = [ ":reboot_watcher_unittest_exe" ]
+}
+
+fuchsia_component("reporter_unittest") {
+  testonly = true
+
+  manifest = "meta/reporter_unittest.cmx"
+
+  deps = [ ":reporter_unittest_exe" ]
+}
+
+###############################################################################
+# PACKAGES
+###############################################################################
+fuchsia_test_package("last-reboot-tests") {
+  test_components = [
+    ":last_reboot_info_provider_unittest",
+    ":main_service_unittest",
+    ":reboot_log_unittest",
+    ":reboot_reason_unittest",
+    ":reboot_watcher_unittest",
+    ":reporter_unittest",
+  ]
+}
+
+###############################################################################
+# GROUPS
+###############################################################################
+group("tests") {
+  testonly = true
+
+  deps = [ ":last-reboot-tests" ]
 }

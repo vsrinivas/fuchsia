@@ -1,5 +1,5 @@
 {
     "program": {
-        "binary": "test/reboot_reason_unittest"
+        "binary": "bin/reboot_reason_unittest_exe"
     }
 }

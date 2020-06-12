@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/reboot_log_unittest"
+        "binary": "bin/reboot_log_unittest_exe"
     },
     "sandbox": {
         "features": [

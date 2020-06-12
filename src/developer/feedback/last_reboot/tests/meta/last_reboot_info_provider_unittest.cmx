@@ -1,5 +1,5 @@
 {
     "program": {
-        "binary": "test/last_reboot_info_provider_unittest"
+        "binary": "bin/last_reboot_info_provider_unittest_exe"
     }
 }

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/device_id_provider_unittest"
+        "binary": "bin/device_id_provider_unittest_exe"
     },
     "sandbox": {
         "features": [

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/reporter_unittest"
+        "binary": "bin/reporter_unittest_exe"
     },
     "sandbox": {
         "features": [

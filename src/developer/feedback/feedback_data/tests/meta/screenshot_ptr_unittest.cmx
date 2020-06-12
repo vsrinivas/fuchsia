@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/screenshot_ptr_unittest"
+        "binary": "bin/screenshot_ptr_unittest_exe"
     },
     "sandbox": {
         "services": [

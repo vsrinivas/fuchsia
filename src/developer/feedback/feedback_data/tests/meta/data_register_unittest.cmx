@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/data_register_unittest"
+        "binary": "bin/data_register_unittest_exe"
     },
     "sandbox": {
         "services": [

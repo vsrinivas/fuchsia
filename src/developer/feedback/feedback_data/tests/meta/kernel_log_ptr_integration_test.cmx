@@ -8,7 +8,7 @@
         }
     },
     "program": {
-        "binary": "test/kernel_log_ptr_integration_test"
+        "binary": "bin/kernel_log_ptr_integration_test_exe"
     },
     "sandbox": {
         "services": [

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/inspect_ptr_unittest"
+        "binary": "bin/inspect_ptr_unittest_exe"
     },
     "sandbox": {
         "services": [

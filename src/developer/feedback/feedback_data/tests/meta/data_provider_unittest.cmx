@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "test/data_provider_unittest"
+        "binary": "bin/data_provider_unittest_exe"
     },
     "sandbox": {
         "features": [

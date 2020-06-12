@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/board_info_provider_unittest"
+        "binary": "bin/board_info_provider_unittest_exe"
     },
     "sandbox": {
         "services": [

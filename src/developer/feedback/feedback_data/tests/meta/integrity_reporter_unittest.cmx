@@ -1,5 +1,5 @@
 {
     "program": {
-        "binary": "test/integrity_reporter_unittest"
+        "binary": "bin/integrity_reporter_unittest_exe"
     }
 }

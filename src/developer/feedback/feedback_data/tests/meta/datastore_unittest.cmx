@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "test/datastore_unittest"
+        "binary": "bin/datastore_unittest_exe"
     },
     "sandbox": {
         "features": [

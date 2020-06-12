@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/system_log_recorder_unittest"
+        "binary": "bin/system_log_recorder_unittest_exe"
     },
     "sandbox": {
         "features": [

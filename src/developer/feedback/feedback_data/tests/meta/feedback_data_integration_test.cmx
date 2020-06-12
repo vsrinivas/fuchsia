@@ -29,7 +29,7 @@
         }
     },
     "program": {
-        "binary": "test/feedback_data_integration_test"
+        "binary": "bin/feedback_data_integration_test_exe"
     },
     "sandbox": {
         "features": [

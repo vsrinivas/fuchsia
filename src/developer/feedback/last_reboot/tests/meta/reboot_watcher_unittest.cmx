@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/reboot_watcher_unittest"
+        "binary": "bin/reboot_watcher_unittest_exe"
     },
     "sandbox": {
         "features": [

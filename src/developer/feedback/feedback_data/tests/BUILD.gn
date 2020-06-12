@@ -3,194 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 import("//src/hwinfo/hwinfo_config.gni")
-
-###############################################################################
-# GROUPS
-###############################################################################
-group("tests") {
-  testonly = true
-
-  public_deps = [
-    ":fake_hwinfo_board_config",
-    ":fake_hwinfo_product_config",
-    ":feedback-data-tests",
-
-    # Packages for the components that we are injecting in the integration tests.
-    "//garnet/bin/sysmem_connector",
-    "//src/cobalt/bin/testing/mock_cobalt",
-    "//src/developer/feedback/feedback_data:feedback_agent",
-    "//src/developer/feedback/testing/fakes:fake-last-reboot-info-provider",
-    "//src/diagnostics/archivist",
-    "//src/graphics/bin/vulkan_loader",
-    "//src/hwinfo:tests",
-    "//src/sys/pkg/bin/system-update-checker",
-  ]
-}
-
-###############################################################################
-# PACKAGES
-###############################################################################
-# TODO(53656): switch to fuchsia_test_package once we figure out how to have a
-# different name for the binary on the host and on the target.
-test_package("feedback-data-tests") {
-  tests = [
-    {
-      name = "board_info_provider_unittest"
-    },
-    {
-      name = "channel_provider_unittest"
-    },
-    {
-      # Binary name on the host. We prefix it with "data_provider" to reduce collisions.
-      name = "data_provider_config_unittest"
-
-      # Component and binary name on the target. Confined to the package so no risk of collisions.
-      dest = "config_unittest"
-    },
-    {
-      name = "data_provider_unittest"
-    },
-    {
-      name = "data_register_unittest"
-    },
-    {
-      name = "datastore_unittest"
-    },
-    {
-      name = "device_id_provider_unittest"
-    },
-    {
-      name = "feedback_data_integration_test"
-
-      # We need to also test on real devices as we talk to a real Scenic service.
-      environments = basic_envs
-    },
-    {
-      # Binary name on the host. We prefix it with "feedback_data" to reduce collisions.
-      name = "feedback_data_main_service_unittest"
-
-      # Component and binary name on the target. Confined to the package so no risk of collisions.
-      dest = "main_service_unittest"
-    },
-    {
-      name = "inspect_ptr_unittest"
-    },
-    {
-      name = "integrity_reporter_unittest"
-    },
-    {
-      name = "kernel_log_ptr_integration_test"
-    },
-    {
-      # Binary name on the host. We prefix it with "feedback_data" to reduce collisions.
-      name = "feedback_data_last_reboot_info_provider_unittest"
-
-      # Component and binary name on the target. Confined to the package so no risk of collisions.
-      dest = "last_reboot_info_provider_unittest"
-    },
-    {
-      name = "product_info_provider_unittest"
-    },
-    {
-      name = "screenshot_ptr_unittest"
-    },
-    {
-      name = "system_log_ptr_unittest"
-    },
-    {
-      name = "system_log_recorder_unittest"
-    },
-  ]
-
-  binaries = [
-    # needed for feedback_data_integration_test
-    {
-      name = "inspect_exe"
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/inspect_test_app.cmx"
-      dest = "inspect_test_app.cmx"
-    },
-  ]
-
-  resources = [
-    # needed for data_provider_unittest
-    {
-      path = "//src/developer/feedback/testing/resources/checkerboard_100.png"
-      dest = "checkerboard_100.png"
-    },
-
-    # needed for config_unittest
-    {
-      path = "configs/valid.json"
-      dest = "valid_config.json"
-    },
-
-    # needed for config_unittest
-    {
-      path = "configs/valid_empty_list.json"
-      dest = "valid_config_empty_list.json"
-    },
-
-    # needed for config_unittest
-    {
-      path = "configs/bad_schema_duplicated_attachment_key.json"
-      dest = "bad_schema_duplicated_attachment_key_config.json"
-    },
-
-    # needed for config_unittest
-    {
-      path = "configs/bad_schema_spurious_field.json"
-      dest = "bad_schema_spurious_field_config.json"
-    },
-
-    # needed for config_unittest
-    {
-      path = "configs/bad_schema_missing_required_field.json"
-      dest = "bad_schema_missing_required_field_config.json"
-    },
-
-    # needed for main_service_unittest
-    {
-      path = "configs/main_service_unittest.json"
-
-      # main_service.cc expects a config at /pkg/data/config.json
-      dest = "config.json"
-    },
-  ]
-
-  deps = [
-    ":board_info_provider_unittest",
-    ":channel_provider_unittest",
-    ":config_unittest",
-    ":data_provider_unittest",
-    ":data_register_unittest",
-    ":datastore_unittest",
-    ":device_id_provider_unittest",
-    ":feedback_data_integration_test",
-    ":inspect_exe",
-    ":inspect_ptr_unittest",
-    ":integrity_reporter_unittest",
-    ":kernel_log_ptr_integration_test",
-    ":last_reboot_info_provider_unittest",
-    ":main_service_unittest",
-    ":product_info_provider_unittest",
-    ":screenshot_ptr_unittest",
-    ":system_log_ptr_unittest",
-    ":system_log_recorder_unittest",
-  ]
-}
+import("//src/sys/build/components.gni")
 
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
-executable("board_info_provider_unittest") {
+executable("board_info_provider_unittest_exe") {
   testonly = true
 
   sources = [ "board_info_provider_unittest.cc" ]
@@ -211,7 +30,7 @@ executable("board_info_provider_unittest") {
   ]
 }
 
-executable("channel_provider_unittest") {
+executable("channel_provider_unittest_exe") {
   testonly = true
 
   sources = [ "channel_provider_unittest.cc" ]
@@ -234,10 +53,12 @@ executable("channel_provider_unittest") {
   ]
 }
 
-executable("config_unittest") {
+executable("config_unittest_exe") {
   testonly = true
 
-  output_name = "data_provider_config_unittest"
+  # "config_unittest" is rather generic for the default_output_dir that is set
+  # to root_out_dir so instead we write the binary to target_out_dir.
+  output_dir = target_out_dir
 
   sources = [ "config_unittest.cc" ]
 
@@ -250,7 +71,7 @@ executable("config_unittest") {
   ]
 }
 
-executable("data_provider_unittest") {
+executable("data_provider_unittest_exe") {
   testonly = true
 
   sources = [ "data_provider_unittest.cc" ]
@@ -285,7 +106,7 @@ executable("data_provider_unittest") {
   ]
 }
 
-executable("data_register_unittest") {
+executable("data_register_unittest_exe") {
   testonly = true
 
   sources = [ "data_register_unittest.cc" ]
@@ -300,7 +121,7 @@ executable("data_register_unittest") {
   ]
 }
 
-executable("datastore_unittest") {
+executable("datastore_unittest_exe") {
   testonly = true
 
   sources = [ "datastore_unittest.cc" ]
@@ -337,7 +158,7 @@ executable("datastore_unittest") {
   ]
 }
 
-executable("device_id_provider_unittest") {
+executable("device_id_provider_unittest_exe") {
   testonly = true
 
   sources = [ "device_id_provider_unittest.cc" ]
@@ -354,7 +175,7 @@ executable("device_id_provider_unittest") {
   ]
 }
 
-executable("feedback_data_integration_test") {
+executable("feedback_data_integration_test_exe") {
   testonly = true
 
   sources = [ "feedback_data_integration_test.cc" ]
@@ -390,10 +211,12 @@ executable("feedback_data_integration_test") {
   ]
 }
 
-executable("main_service_unittest") {
+executable("main_service_unittest_exe") {
   testonly = true
 
-  output_name = "feedback_data_main_service_unittest"
+  # "main_service_unittest" is rather generic for the default_output_dir that
+  # is set to root_out_dir so instead we write the binary to target_out_dir.
+  output_dir = target_out_dir
 
   sources = [ "main_service_unittest.cc" ]
 
@@ -425,7 +248,7 @@ executable("inspect_exe") {
   ]
 }
 
-executable("inspect_ptr_unittest") {
+executable("inspect_ptr_unittest_exe") {
   testonly = true
 
   sources = [ "inspect_ptr_unittest.cc" ]
@@ -444,7 +267,7 @@ executable("inspect_ptr_unittest") {
   ]
 }
 
-executable("integrity_reporter_unittest") {
+executable("integrity_reporter_unittest_exe") {
   testonly = true
 
   sources = [ "integrity_reporter_unittest.cc" ]
@@ -463,7 +286,7 @@ executable("integrity_reporter_unittest") {
   ]
 }
 
-executable("kernel_log_ptr_integration_test") {
+executable("kernel_log_ptr_integration_test_exe") {
   testonly = true
 
   sources = [ "kernel_log_ptr_integration_test.cc" ]
@@ -482,10 +305,11 @@ executable("kernel_log_ptr_integration_test") {
   ]
 }
 
-executable("last_reboot_info_provider_unittest") {
+executable("last_reboot_info_provider_unittest_exe") {
   testonly = true
 
-  output_name = "feedback_data_last_reboot_info_provider_unittest"
+  # "last_reboot_info_provider_unittest" is also used by last-reboot.
+  output_dir = target_out_dir
 
   sources = [ "last_reboot_info_provider_unittest.cc" ]
 
@@ -506,7 +330,7 @@ executable("last_reboot_info_provider_unittest") {
   ]
 }
 
-executable("product_info_provider_unittest") {
+executable("product_info_provider_unittest_exe") {
   testonly = true
 
   sources = [ "product_info_provider_unittest.cc" ]
@@ -528,7 +352,7 @@ executable("product_info_provider_unittest") {
   ]
 }
 
-executable("screenshot_ptr_unittest") {
+executable("screenshot_ptr_unittest_exe") {
   testonly = true
 
   sources = [ "screenshot_ptr_unittest.cc" ]
@@ -547,7 +371,7 @@ executable("screenshot_ptr_unittest") {
   ]
 }
 
-executable("system_log_ptr_unittest") {
+executable("system_log_ptr_unittest_exe") {
   testonly = true
 
   sources = [ "system_log_ptr_unittest.cc" ]
@@ -570,7 +394,7 @@ executable("system_log_ptr_unittest") {
   ]
 }
 
-executable("system_log_recorder_unittest") {
+executable("system_log_recorder_unittest_exe") {
   testonly = true
 
   sources = [ "system_log_recorder_unittest.cc" ]
@@ -608,6 +432,35 @@ source_set("zx_object_util") {
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]
+}
+
+###############################################################################
+# RESOURCES
+###############################################################################
+resource("main_service_unittest_config") {
+  sources = [ "configs/main_service_unittest.json" ]
+
+  # main_service.cc expects a config at /pkg/data/config.json
+  outputs = [ "data/config.json" ]
+}
+
+resource("test_configs") {
+  sources = [
+    "configs/bad_schema_duplicated_attachment_key.json",
+    "configs/bad_schema_missing_required_field.json",
+    "configs/bad_schema_spurious_field.json",
+    "configs/valid.json",
+    "configs/valid_empty_list.json",
+  ]
+
+  outputs = [ "data/configs/{{source_file_part}}" ]
+}
+
+resource("test_image") {
+  sources =
+      [ "//src/developer/feedback/testing/resources/checkerboard_100.png" ]
+
+  outputs = [ "data/checkerboard_100.png" ]
 }
 
 ###############################################################################
@@ -649,4 +502,213 @@ config_data("fake_hwinfo_factory_config") {
   sources = [ "configs/hwinfo_factory_config.json" ]
 
   outputs = [ "fuchsia.factory.MiscFactoryStoreProvider.config" ]
+}
+
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_component("board_info_provider_unittest") {
+  testonly = true
+
+  manifest = "meta/board_info_provider_unittest.cmx"
+
+  deps = [ ":board_info_provider_unittest_exe" ]
+}
+
+fuchsia_component("channel_provider_unittest") {
+  testonly = true
+
+  manifest = "meta/channel_provider_unittest.cmx"
+
+  deps = [ ":channel_provider_unittest_exe" ]
+}
+
+fuchsia_component("config_unittest") {
+  testonly = true
+
+  manifest = "meta/config_unittest.cmx"
+
+  deps = [
+    ":config_unittest_exe",
+    ":test_configs",
+  ]
+}
+
+fuchsia_component("data_provider_unittest") {
+  testonly = true
+
+  manifest = "meta/data_provider_unittest.cmx"
+
+  deps = [
+    ":data_provider_unittest_exe",
+    ":test_image",
+  ]
+}
+
+fuchsia_component("data_register_unittest") {
+  testonly = true
+
+  manifest = "meta/data_register_unittest.cmx"
+
+  deps = [ ":data_register_unittest_exe" ]
+}
+
+fuchsia_component("datastore_unittest") {
+  testonly = true
+
+  manifest = "meta/datastore_unittest.cmx"
+
+  deps = [ ":datastore_unittest_exe" ]
+}
+
+fuchsia_component("device_id_provider_unittest") {
+  testonly = true
+
+  manifest = "meta/device_id_provider_unittest.cmx"
+
+  deps = [ ":device_id_provider_unittest_exe" ]
+}
+
+fuchsia_component("feedback_data_integration_test") {
+  testonly = true
+
+  manifest = "meta/feedback_data_integration_test.cmx"
+
+  deps = [ ":feedback_data_integration_test_exe" ]
+}
+
+fuchsia_component("inspect_ptr_unittest") {
+  testonly = true
+
+  manifest = "meta/inspect_ptr_unittest.cmx"
+
+  deps = [ ":inspect_ptr_unittest_exe" ]
+}
+
+fuchsia_component("inspect_test_app") {
+  testonly = true
+
+  manifest = "meta/inspect_test_app.cmx"
+
+  deps = [ ":inspect_exe" ]
+}
+
+fuchsia_component("integrity_reporter_unittest") {
+  testonly = true
+
+  manifest = "meta/integrity_reporter_unittest.cmx"
+
+  deps = [ ":integrity_reporter_unittest_exe" ]
+}
+
+fuchsia_component("kernel_log_ptr_integration_test") {
+  testonly = true
+
+  manifest = "meta/kernel_log_ptr_integration_test.cmx"
+
+  deps = [ ":kernel_log_ptr_integration_test_exe" ]
+}
+
+fuchsia_component("last_reboot_info_provider_unittest") {
+  testonly = true
+
+  manifest = "meta/last_reboot_info_provider_unittest.cmx"
+
+  deps = [ ":last_reboot_info_provider_unittest_exe" ]
+}
+
+fuchsia_component("main_service_unittest") {
+  testonly = true
+
+  manifest = "meta/main_service_unittest.cmx"
+
+  deps = [
+    ":main_service_unittest_config",
+    ":main_service_unittest_exe",
+  ]
+}
+
+fuchsia_component("product_info_provider_unittest") {
+  testonly = true
+
+  manifest = "meta/product_info_provider_unittest.cmx"
+
+  deps = [ ":product_info_provider_unittest_exe" ]
+}
+
+fuchsia_component("screenshot_ptr_unittest") {
+  testonly = true
+
+  manifest = "meta/screenshot_ptr_unittest.cmx"
+
+  deps = [ ":screenshot_ptr_unittest_exe" ]
+}
+
+fuchsia_component("system_log_ptr_unittest") {
+  testonly = true
+
+  manifest = "meta/system_log_ptr_unittest.cmx"
+
+  deps = [ ":system_log_ptr_unittest_exe" ]
+}
+
+fuchsia_component("system_log_recorder_unittest") {
+  testonly = true
+
+  manifest = "meta/system_log_recorder_unittest.cmx"
+
+  deps = [ ":system_log_recorder_unittest_exe" ]
+}
+
+###############################################################################
+# PACKAGES
+###############################################################################
+fuchsia_test_package("feedback-data-tests") {
+  test_components = [
+    ":board_info_provider_unittest",
+    ":channel_provider_unittest",
+    ":config_unittest",
+    ":data_provider_unittest",
+    ":data_register_unittest",
+    ":datastore_unittest",
+    ":device_id_provider_unittest",
+    ":feedback_data_integration_test",
+    ":inspect_ptr_unittest",
+    ":integrity_reporter_unittest",
+    ":kernel_log_ptr_integration_test",
+    ":last_reboot_info_provider_unittest",
+    ":main_service_unittest",
+    ":product_info_provider_unittest",
+    ":screenshot_ptr_unittest",
+    ":system_log_ptr_unittest",
+    ":system_log_recorder_unittest",
+  ]
+
+  deps = [
+    # needed for feedback_data_integration_test
+    ":inspect_test_app",
+  ]
+}
+
+###############################################################################
+# GROUPS
+###############################################################################
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":fake_hwinfo_board_config",
+    ":fake_hwinfo_product_config",
+    ":feedback-data-tests",
+
+    # Packages for the components that we are injecting in the integration tests.
+    "//garnet/bin/sysmem_connector",
+    "//src/cobalt/bin/testing/mock_cobalt",
+    "//src/developer/feedback/feedback_data:feedback_agent",
+    "//src/developer/feedback/testing/fakes:fake-last-reboot-info-provider",
+    "//src/diagnostics/archivist",
+    "//src/graphics/bin/vulkan_loader",
+    "//src/hwinfo:tests",
+    "//src/sys/pkg/bin/system-update-checker",
+  ]
 }
