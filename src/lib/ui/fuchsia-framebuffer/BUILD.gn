@@ -60,8 +60,7 @@ package("fb_box_rs") {
 
   binaries = [
     {
-      name = "app"
-      source = "box"
+      name = "box"
     },
   ]
 

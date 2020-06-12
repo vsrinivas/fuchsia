@@ -67,8 +67,11 @@ rustc_binary("fuchsia_component_test_middle_bin") {
 package("fuchsia_component_test_middle") {
   deps = [ ":fuchsia_component_test_middle_bin" ]
 
-  binary = "fuchsia_component_test_middle"
-
+  binaries = [
+    {
+      name = "fuchsia_component_test_middle"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/fuchsia_component_test_middle.cmx")
@@ -97,8 +100,11 @@ rustc_binary("fuchsia_component_test_middle_sibling_bin") {
 package("fuchsia_component_test_middle_sibling") {
   deps = [ ":fuchsia_component_test_middle_sibling_bin" ]
 
-  binary = "fuchsia_component_test_middle_sibling"
-
+  binaries = [
+    {
+      name = "fuchsia_component_test_middle_sibling"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/fuchsia_component_test_middle_sibling.cmx")
@@ -125,8 +131,11 @@ rustc_binary("fuchsia_component_test_inner_bin") {
 package("fuchsia_component_test_inner") {
   deps = [ ":fuchsia_component_test_inner_bin" ]
 
-  binary = "fuchsia_component_test_inner"
-
+  binaries = [
+    {
+      name = "fuchsia_component_test_inner"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/fuchsia_component_test_inner.cmx")

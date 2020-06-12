@@ -95,7 +95,7 @@ package("button-rs") {
 
   binaries = [
     {
-      name = "app"
+      name = "carnelian_example"
       source = "button_example"
     },
   ]
@@ -137,7 +137,7 @@ package("clockface-rs") {
 
   binaries = [
     {
-      name = "app"
+      name = "carnelian_example"
       source = "clockface"
     },
   ]
@@ -190,7 +190,7 @@ package("infinite-scroll-rs") {
 
   binaries = [
     {
-      name = "app"
+      name = "carnelian_example"
       source = "infinite_scroll"
     },
   ]
@@ -256,7 +256,7 @@ package("ink-rs") {
 
   binaries = [
     {
-      name = "app"
+      name = "carnelian_example"
       source = "ink"
     },
   ]
@@ -299,7 +299,7 @@ package("shapes-rs") {
 
   binaries = [
     {
-      name = "app"
+      name = "carnelian_example"
       source = "shapes"
     },
   ]
@@ -342,7 +342,7 @@ package("spinning-square-rs") {
 
   binaries = [
     {
-      name = "app"
+      name = "carnelian_example"
       source = "spinning_square"
     },
   ]
@@ -380,7 +380,7 @@ package("gamma-rs") {
 
   binaries = [
     {
-      name = "app"
+      name = "carnelian_example"
       source = "gamma"
     },
   ]
@@ -423,7 +423,7 @@ package("png-rs") {
 
   binaries = [
     {
-      name = "app"
+      name = "carnelian_example"
       source = "png"
     },
   ]
@@ -480,7 +480,7 @@ package("svg-rs") {
 
   binaries = [
     {
-      name = "app"
+      name = "carnelian_example"
       source = "svg"
     },
   ]
