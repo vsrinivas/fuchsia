@@ -38,17 +38,6 @@ const (
 	totalConnectTimeout = 2 * time.Minute
 
 	sshUser = "fuchsia"
-
-	// A conventionally used global request name for checking the status of a client
-	// connection to an OpenSSH server.
-	keepaliveOpenSSH = "keepalive@openssh.com"
-
-	// Interval between keepalive pings.
-	keepaliveInterval = 1 * time.Second
-
-	// Close the client if we don't receive a keepalive response within this
-	// amount of time.
-	keepaliveTimeout = keepaliveInterval + 5*time.Second
 )
 
 var (
@@ -208,7 +197,7 @@ func network(address net.Addr) (string, error) {
 // pings (with response timeouts) to ensure that the client is still connected.
 // If a ping fails, it will close the client and exit.
 func keepalive(ctx context.Context, conn net.Conn, client *ssh.Client) {
-	ticker := time.NewTicker(keepaliveInterval)
+	ticker := time.NewTicker(defaultKeepaliveInterval)
 	defer ticker.Stop()
 	for range ticker.C {
 		if err := emitKeepalive(conn, client); err != nil {
@@ -223,6 +212,6 @@ func keepalive(ctx context.Context, conn net.Conn, client *ssh.Client) {
 }
 
 func emitKeepalive(conn net.Conn, client *ssh.Client) error {
-	conn.SetDeadline(time.Now().Add(keepaliveTimeout))
+	conn.SetDeadline(time.Now().Add(defaultKeepaliveTimeout))
 	return CheckConnection(client)
 }

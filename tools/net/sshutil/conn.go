@@ -26,7 +26,11 @@ const (
 
 	// Cancel the connection if a we don't receive a response to a keepalive
 	// ping within this amount of time.
-	defaultKeepaliveTimeout = defaultKeepaliveInterval + 15*time.Second
+	defaultKeepaliveTimeout = defaultKeepaliveInterval + 5*time.Second
+
+	// A conventionally used global request name for checking the status of a client
+	// connection to an OpenSSH server.
+	keepaliveOpenSSH = "keepalive@openssh.com"
 )
 
 // Conn is a wrapper around ssh that supports keepalive and auto-reconnection.
@@ -297,7 +301,7 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 			// name to distinguish ourselves from the server-side
 			// keepalive name to ease debugging. If we get any
 			// error, reconnect to the server.
-			_, _, err := client.SendRequest("keepalive@fuchsia.com", true, nil)
+			_, _, err := client.SendRequest(keepaliveOpenSSH, true, nil)
 			ch <- err
 		}()
 
