@@ -203,7 +203,7 @@ common_image_contents = [
   "//src/storage/bin/mkfs:mkfs",
   "//src/storage/bin/mount:mount",
   "//src/storage/bin/umount:umount",
-  "//zircon/system/uapp/ihda",
+  "//src/media/audio/bin/ihda",
   "//src/zircon/bin/kcounter",
   "//zircon/system/uapp/kstress",
   "//src/zircon/bin/ktrace",
