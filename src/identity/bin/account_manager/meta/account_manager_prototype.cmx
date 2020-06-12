@@ -3,7 +3,7 @@
         "args": [
             "--prototype-account-transfer"
         ],
-        "binary": "bin/app"
+        "binary": "bin/account_manager"
     },
     "sandbox": {
         "features": [

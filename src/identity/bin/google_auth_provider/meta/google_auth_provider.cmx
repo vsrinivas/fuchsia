@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/google_auth_provider"
     },
     "sandbox": {
         "services": [

@@ -29,8 +29,11 @@ rustc_binary("bin") {
 package("dev_authenticator") {
   deps = [ ":bin" ]
 
-  binary = "dev_authenticator"
-
+  binaries = [
+    {
+      name = "dev_authenticator"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/dev_authenticator_always_succeed.cmx")

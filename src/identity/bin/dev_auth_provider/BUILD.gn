@@ -32,8 +32,11 @@ rustc_binary("bin") {
 package("dev_auth_provider") {
   deps = [ ":bin" ]
 
-  binary = "dev_auth_provider"
-
+  binaries = [
+    {
+      name = "dev_auth_provider"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/dev_auth_provider.cmx")

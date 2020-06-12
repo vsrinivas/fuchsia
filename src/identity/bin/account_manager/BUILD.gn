@@ -54,8 +54,11 @@ rustc_binary("bin") {
 package("account_manager") {
   deps = [ ":bin" ]
 
-  binary = "account_manager"
-
+  binaries = [
+    {
+      name = "account_manager"
+    },
+  ]
   meta = [
     {
       if (prototype_account_transfer) {

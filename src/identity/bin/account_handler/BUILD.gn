@@ -51,8 +51,11 @@ rustc_binary("bin") {
 package("account_handler") {
   deps = [ ":bin" ]
 
-  binary = "account_handler"
-
+  binaries = [
+    {
+      name = "account_handler"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/account_handler.cmx")

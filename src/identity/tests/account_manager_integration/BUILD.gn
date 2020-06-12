@@ -62,8 +62,11 @@ package("account_manager_prototype") {
   # prototype enabled.
   deps = [ "//src/identity/bin/account_manager:bin" ]
 
-  binary = "account_manager"
-
+  binaries = [
+    {
+      name = "account_manager"
+    },
+  ]
   meta = [
     {
       path = rebase_path(

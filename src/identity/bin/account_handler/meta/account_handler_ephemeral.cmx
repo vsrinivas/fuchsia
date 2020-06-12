@@ -3,7 +3,7 @@
         "args": [
             "--ephemeral"
         ],
-        "binary": "bin/app"
+        "binary": "bin/account_handler"
     },
     "sandbox": {
         "services": [

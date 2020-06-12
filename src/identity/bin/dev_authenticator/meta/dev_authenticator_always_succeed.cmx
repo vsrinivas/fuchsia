@@ -4,7 +4,7 @@
             "--mode",
             "ALWAYS_SUCCEED"
         ],
-        "binary": "bin/app"
+        "binary": "bin/dev_authenticator"
     },
     "sandbox": {
         "services": [
