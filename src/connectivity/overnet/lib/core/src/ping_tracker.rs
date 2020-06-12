@@ -233,6 +233,8 @@ async fn ping_pong(state: Arc<Mutex<State>>) -> Result<(), Error> {
 /// Schedule pings when they need to be scheduled, provide an estimation of round trip time
 pub struct PingTracker(Arc<Mutex<State>>);
 
+pub struct PingSender<'a>(PollMutex<'a, State>);
+
 fn square(a: i64) -> Option<i64> {
     a.checked_mul(a)
 }
@@ -269,8 +271,27 @@ impl PingTracker {
         ping_pong(self.0.clone())
     }
 
-    pub fn poll_send_ping_pong(&self, ctx: &mut Context<'_>) -> (Option<u64>, Option<Pong>) {
-        let mut state = match Pin::new(&mut self.0.lock()).poll(ctx) {
+    /// Upon receiving a pong: return a set of operations that need to be scheduled
+    pub async fn got_pong(&self, pong: Pong) {
+        let mut state = self.0.lock().await;
+        state.received_pong = Some((pong, Instant::now()));
+        state.on_received_pong.take().map(|w| w.wake());
+    }
+
+    pub async fn got_ping(&self, ping: u64) {
+        let mut state = self.0.lock().await;
+        state.send_pong = Some((ping, Instant::now()));
+        state.on_send_ping_pong.take().map(|w| w.wake());
+    }
+}
+
+impl<'a> PingSender<'a> {
+    pub fn new(tracker: &'a PingTracker) -> Self {
+        Self(PollMutex::new(&*tracker.0))
+    }
+
+    pub fn poll(&mut self, ctx: &mut Context<'_>) -> (Option<u64>, Option<Pong>) {
+        let mut state = match self.0.poll(ctx) {
             Poll::Pending => return (None, None),
             Poll::Ready(x) => x,
         };
@@ -297,19 +318,6 @@ impl PingTracker {
         }
         (ping, pong)
     }
-
-    /// Upon receiving a pong: return a set of operations that need to be scheduled
-    pub async fn got_pong(&self, pong: Pong) {
-        let mut state = self.0.lock().await;
-        state.received_pong = Some((pong, Instant::now()));
-        state.on_received_pong.take().map(|w| w.wake());
-    }
-
-    pub async fn got_ping(&self, ping: u64) {
-        let mut state = self.0.lock().await;
-        state.send_pong = Some((ping, Instant::now()));
-        state.on_send_ping_pong.take().map(|w| w.wake());
-    }
 }
 
 #[cfg(test)]
@@ -327,24 +335,27 @@ mod test {
             let _pt_run = Task::spawn(async move {
                 pt_run.await.unwrap();
             });
-            log::trace!("published_mean_updates: send ping");
             loop {
-                let (ping, pong) = pt.poll_send_ping_pong(&mut Context::from_waker(&noop_waker()));
+                log::info!("published_mean_updates: send ping");
+                let mut ping_sender = PingSender::new(&pt);
+                let (ping, pong) = ping_sender.poll(&mut Context::from_waker(&noop_waker()));
                 assert_eq!(pong, None);
                 if ping.is_none() {
+                    log::info!("published_mean_updates: got none for ping, retry");
+                    drop(ping_sender);
                     futures::pending!();
                     continue;
                 }
                 assert_eq!(ping, Some(1));
                 break;
             }
-            log::trace!("published_mean_updates: wait for second observation");
+            log::info!("published_mean_updates: wait for second observation");
             assert_eq!(rtt_obs.next().await, Some(None));
-            log::trace!("published_mean_updates: sleep some");
+            log::info!("published_mean_updates: sleep some");
             wait_for(Duration::from_secs(1)).await;
-            log::trace!("published_mean_updates: publish pong");
+            log::info!("published_mean_updates: publish pong");
             pt.got_pong(Pong { id: 1, queue_time: 100 }).await;
-            log::trace!("published_mean_updates: wait for third observation");
+            log::info!("published_mean_updates: wait for third observation");
             let next = rtt_obs.next().await;
             assert_ne!(next, None);
             assert_ne!(next, Some(None));

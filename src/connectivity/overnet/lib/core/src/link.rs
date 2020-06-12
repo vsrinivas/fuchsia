@@ -10,7 +10,7 @@ use crate::{
     labels::{Endpoint, NodeId, NodeLinkId},
     link_frame_label::{LinkFrameLabel, RoutingTarget, LINK_FRAME_LABEL_MAX_SIZE},
     peer::Peer,
-    ping_tracker::PingTracker,
+    ping_tracker::{PingSender, PingTracker},
     router::Router,
     runtime::Task,
 };
@@ -349,7 +349,8 @@ impl LinkSender {
     ///          Err(e) to indicate error
     pub async fn next_send(&self, frame: &mut [u8]) -> Result<Option<usize>, Error> {
         let mut lock = PollMutex::new(&self.routing.gatherer);
-        poll_fn(|ctx| self.poll_next_send(ctx, frame, &mut lock)).await
+        let mut ping_sender = PingSender::new(&self.runner.ping_tracker);
+        poll_fn(|ctx| self.poll_next_send(ctx, frame, &mut lock, &mut ping_sender)).await
     }
 
     fn poll_next_packet(
@@ -431,11 +432,11 @@ impl LinkSender {
         ctx: &mut Context<'_>,
         frame: &mut [u8],
         lock: &mut PollMutex<'_, PacketGatherer>,
+        ping_sender: &mut PingSender<'_>,
     ) -> Poll<Result<Option<usize>, Error>> {
-        let runner = &*self.runner;
         let routing = &*self.routing;
         let g = ready!(lock.poll(ctx));
-        let (ping, pong) = runner.ping_tracker.poll_send_ping_pong(ctx);
+        let (ping, pong) = ping_sender.poll(ctx);
         let max_packet_len = frame.len() - LINK_FRAME_LABEL_MAX_SIZE;
         match self.poll_next_packet(ctx, &mut frame[..max_packet_len], g) {
             Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
