@@ -197,7 +197,7 @@ common_image_contents = [
   "//src/storage/bin/blobfs",
   "//src/developer/feedback/bin/crasher",
   "//zircon/system/uapp/dd",
-  "//zircon/system/uapp/df",
+  "//src/storage/bin/df",
   "//zircon/system/uapp/dlog",
   "//zircon/system/uapp/fs-fsck:fsck",
   "//zircon/system/uapp/fs-mkfs:mkfs",
