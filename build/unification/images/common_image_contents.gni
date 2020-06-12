@@ -201,7 +201,7 @@ common_image_contents = [
   "//src/diagnostics/dlog",
   "//src/storage/bin/fsck:fsck",
   "//src/storage/bin/mkfs:mkfs",
-  "//zircon/system/uapp/fs-mount:mount",
+  "//src/storage/bin/mount:mount",
   "//zircon/system/uapp/fs-umount:umount",
   "//zircon/system/uapp/ihda",
   "//src/zircon/bin/kcounter",
