@@ -5,11 +5,11 @@
 library fuchsia.minfs;
 
 using zx;
-using fuchsia.storage.metrics as metrics;
+using fuchsia.storage.metrics;
 
 /// Describes metrics about the running Minfs instance.
 struct Metrics {
-    metrics.FsMetrics fs_metrics;
+    fuchsia.storage.metrics.FsMetrics fs_metrics;
 
     /// Minfs initializes entire VMOs at once.
     /// The following fields track this information.

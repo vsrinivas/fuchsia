@@ -6,7 +6,7 @@ library fuchsia.router.config;
 
 using fuchsia.net;
 
-using port = uint16;
+using port_number = uint16;
 
 /// Security features define the features enabled or disabled on the router.
 /// For example, NAT, firewall, passthough for common protocols that need it.
@@ -26,8 +26,8 @@ table SecurityFeatures {
 };
 
 struct PortRange {
-    port from;
-    port to;
+    port_number from;
+    port_number to;
 };
 
 enum Protocol {
@@ -75,7 +75,7 @@ struct PortForwardingRule {
     // LAN address where forwarded packets will be sent.
     fuchsia.net.IpAddress target_address;
     // Port on the LAN target address where forwarded packets will be sent.
-    port target_port;
+    port_number target_port;
     Protocol protocol;
 };
 
@@ -91,7 +91,7 @@ struct PortTriggerRule {
     bool enabled;
     vector<PortRange> incoming_ports;
     Protocol protocol;
-    port trigger_port;
+    port_number trigger_port;
 };
 
 /// IPv6 firewall pinholes create a hole in the IPv6 firewall.
@@ -114,7 +114,6 @@ struct DmzHost {
     fuchsia.net.Ipv4Address lan_addr;
 };
 
-
 enum AclAction {
     /// Allows traffic to pass.
     PERMIT = 1;
@@ -135,8 +134,8 @@ enum AclType {
 table SystemAcl {
     1: Id element;
     2: FlowSelector selector;
-    3: port ingress_port;
-    4: port egress_port;
+    3: port_number ingress_port;
+    4: port_number egress_port;
     5: AclType acl_type;
     6: AclAction acl_action;
 };
