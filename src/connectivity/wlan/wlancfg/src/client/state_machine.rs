@@ -369,14 +369,15 @@ async fn connecting_state(
                 let code = connected.map_err({
                     |e| ExitReason(Err(format_err!("failed to send connect to sme: {:?}", e)))
                 })?;
+                // Notify the saved networks manager
+                common_options.saved_networks_manager.record_connect_result(
+                    options.connect_request.network.clone().into(),
+                    &options.connect_request.credential,
+                    code
+                );
                 match code {
                     fidl_sme::ConnectResultCode::Success => {
                         info!("Successfully connected to network");
-                        // Notify the saved networks manager
-                        common_options.saved_networks_manager.record_connect_success(
-                            options.connect_request.network.clone().into(),
-                            &options.connect_request.credential
-                        );
                         send_listener_state_update(
                             &common_options.update_sender,
                             ClientNetworkState {
@@ -391,7 +392,6 @@ async fn connecting_state(
                     },
                     fidl_sme::ConnectResultCode::BadCredentials => {
                         info!("Failed to connect, bad credentials, will not retry");
-                        // TODO(53545): notify save networks manager
                         send_listener_state_update(
                             &common_options.update_sender,
                             ClientNetworkState {
@@ -404,7 +404,6 @@ async fn connecting_state(
                     },
                     other => {
                         info!("Failed to connect: {:?}", other);
-                        // TODO(53545): notify save networks manager
                         // Check if the limit for connection attempts to this network has been
                         // exceeded.
                         let new_attempt_count = options.attempt_counter + 1;
@@ -591,10 +590,14 @@ async fn connected_state(
 mod tests {
     use {
         super::*,
-        crate::util::{listener, logger::set_logger_for_test},
+        crate::{
+            config_management::network_config::{self, FailureReason},
+            util::{listener, logger::set_logger_for_test},
+        },
         fidl::endpoints::create_proxy,
         fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_zircon,
         futures::{stream::StreamFuture, task::Poll, Future},
+        std::time::SystemTime,
         wlan_common::assert_variant,
     };
 
@@ -1047,26 +1050,60 @@ mod tests {
     #[test]
     fn connecting_state_fails_to_connect_at_max_retries() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        // Don't use test_values() because of issue with KnownEssStore
+        set_logger_for_test();
+        let (update_sender, mut update_receiver) = mpsc::unbounded();
+        let (sme_proxy, sme_server) =
+            create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
+        let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
+        let stash_id = "connecting_state_fails_to_connect_at_max_retries";
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks_manager = Arc::new(
+            exec.run_singlethreaded(SavedNetworksManager::new_with_stash_or_paths(
+                stash_id, path, tmp_path,
+            ))
+            .expect("Failed to create saved networks manager"),
+        );
+        let (_client_req_sender, client_req_stream) = mpsc::channel(1);
+        let (iface_manager_sender, _iface_manager_stream) = mpsc::channel(1);
+        let common_options = CommonStateOptions {
+            iface_id: 20,
+            iface_manager_sender: iface_manager_sender,
+            proxy: sme_proxy,
+            req_stream: client_req_stream.fuse(),
+            update_sender: update_sender,
+            saved_networks_manager: saved_networks_manager.clone(),
+        };
 
         let next_network_ssid = "bar";
-        let connect_request = ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: next_network_ssid.as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa2,
-            },
-            credential: Credential::None,
+        let next_security_type = types::SecurityType::None;
+        let next_credential = Credential::None;
+        let next_network_identifier = types::NetworkIdentifier {
+            ssid: next_network_ssid.as_bytes().to_vec(),
+            type_: next_security_type,
         };
+        let config_net_id =
+            network_config::NetworkIdentifier::from(next_network_identifier.clone());
+        // save network to check that failed connect is recorded
+        saved_networks_manager
+            .store(config_net_id.clone(), next_credential.clone())
+            .expect("Failed to save network");
+        let before_recording = SystemTime::now();
+
+        let connect_request =
+            ConnectRequest { network: next_network_identifier, credential: next_credential };
         let (connect_sender, mut connect_receiver) = oneshot::channel();
         let connecting_options = ConnectingOptions {
             connect_responder: Some(connect_sender),
             connect_request: connect_request.clone(),
             attempt_counter: MAX_CONNECTION_ATTEMPTS - 1,
         };
-        let initial_state = connecting_state(test_values.common_options, connecting_options);
+        let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
         pin_mut!(fut);
-        let sme_fut = test_values.sme_req_stream.into_future();
+        let sme_fut = sme_req_stream.into_future();
         pin_mut!(sme_fut);
 
         // Run the state machine
@@ -1100,14 +1137,14 @@ mod tests {
             networks: vec![ClientNetworkState {
                 id: fidl_policy::NetworkIdentifier {
                     ssid: String::from(next_network_ssid).into_bytes(),
-                    type_: fidl_policy::SecurityType::Wpa2,
+                    type_: next_security_type,
                 },
                 state: fidl_policy::ConnectionState::Failed,
                 status: Some(fidl_policy::DisconnectStatus::ConnectionFailed),
             }],
         };
         assert_variant!(
-            test_values.update_receiver.try_next(),
+            update_receiver.try_next(),
             Ok(Some(listener::Message::NotifyListeners(updates))) => {
             assert_eq!(updates, client_state_update);
         });
@@ -1116,38 +1153,76 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // Ensure no further updates were sent to listeners
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
-            Poll::Pending
-        );
+        assert_variant!(exec.run_until_stalled(&mut update_receiver.into_future()), Poll::Pending);
 
         // Ensure no further requests were sent to the SME
         assert_variant!(poll_sme_req(&mut exec, &mut sme_fut), Poll::Pending);
+
+        // Check that failure was recorded in SavedNetworksManager
+        let mut configs = saved_networks_manager.lookup(config_net_id);
+        let network_config = configs.pop().expect("Failed to get saved network");
+        let mut failures = network_config.perf_stats.failure_list.get_recent(before_recording);
+        let connect_failure = failures.pop().expect("Saved network is missing failure reason");
+        assert_eq!(connect_failure.reason, FailureReason::GeneralFailure);
     }
 
     #[test]
     fn connecting_state_fails_to_connect_with_bad_credentials() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        // Don't use test_values() because of issue with KnownEssStore
+        set_logger_for_test();
+        let (update_sender, mut update_receiver) = mpsc::unbounded();
+        let (sme_proxy, sme_server) =
+            create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
+        let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
+        let stash_id = "connecting_state_fails_to_connect_with_bad_credentials";
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks_manager = Arc::new(
+            exec.run_singlethreaded(SavedNetworksManager::new_with_stash_or_paths(
+                stash_id, path, tmp_path,
+            ))
+            .expect("Failed to create saved networks manager"),
+        );
+        let (_client_req_sender, client_req_stream) = mpsc::channel(1);
+        let (iface_manager_sender, _iface_manager_stream) = mpsc::channel(1);
+        let common_options = CommonStateOptions {
+            iface_id: 20,
+            iface_manager_sender: iface_manager_sender,
+            proxy: sme_proxy,
+            req_stream: client_req_stream.fuse(),
+            update_sender: update_sender,
+            saved_networks_manager: saved_networks_manager.clone(),
+        };
 
         let next_network_ssid = "bar";
-        let connect_request = ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: next_network_ssid.as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa2,
-            },
-            credential: Credential::None,
+        let next_network_identifier = types::NetworkIdentifier {
+            ssid: next_network_ssid.as_bytes().to_vec(),
+            type_: types::SecurityType::Wpa2,
         };
+        let config_net_id =
+            network_config::NetworkIdentifier::from(next_network_identifier.clone());
+        let next_credential = Credential::Password("password".as_bytes().to_vec());
+        // save network to check that failed connect is recorded
+        let saved_networks_manager = common_options.saved_networks_manager.clone();
+        saved_networks_manager
+            .store(config_net_id.clone(), next_credential.clone())
+            .expect("Failed to save network");
+        let before_recording = SystemTime::now();
+
+        let connect_request =
+            ConnectRequest { network: next_network_identifier, credential: next_credential };
         let (connect_sender, mut connect_receiver) = oneshot::channel();
         let connecting_options = ConnectingOptions {
             connect_responder: Some(connect_sender),
             connect_request: connect_request.clone(),
             attempt_counter: MAX_CONNECTION_ATTEMPTS - 1,
         };
-        let initial_state = connecting_state(test_values.common_options, connecting_options);
+        let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
         pin_mut!(fut);
-        let sme_fut = test_values.sme_req_stream.into_future();
+        let sme_fut = sme_req_stream.into_future();
         pin_mut!(sme_fut);
 
         // Run the state machine
@@ -1188,7 +1263,7 @@ mod tests {
             }],
         };
         assert_variant!(
-            test_values.update_receiver.try_next(),
+            update_receiver.try_next(),
             Ok(Some(listener::Message::NotifyListeners(updates))) => {
             assert_eq!(updates, client_state_update);
         });
@@ -1197,13 +1272,17 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // Ensure no further updates were sent to listeners
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
-            Poll::Pending
-        );
+        assert_variant!(exec.run_until_stalled(&mut update_receiver.into_future()), Poll::Pending);
 
         // Ensure no further requests were sent to the SME
         assert_variant!(poll_sme_req(&mut exec, &mut sme_fut), Poll::Pending);
+
+        // Check that failure was recorded in SavedNetworksManager
+        let mut configs = saved_networks_manager.lookup(config_net_id);
+        let network_config = configs.pop().expect("Failed to get saved network");
+        let mut failures = network_config.perf_stats.failure_list.get_recent(before_recording);
+        let connect_failure = failures.pop().expect("Saved network is missing failure reason");
+        assert_eq!(connect_failure.reason, FailureReason::BadCredentials);
     }
 
     #[test]

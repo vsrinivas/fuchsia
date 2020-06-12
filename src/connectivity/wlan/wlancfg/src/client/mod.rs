@@ -435,10 +435,10 @@ async fn handle_sme_connect_response(
             use fidl_policy::ConnectionState as policy_state;
             use fidl_policy::DisconnectStatus as policy_dc_status;
             use fidl_sme::ConnectResultCode as sme_code;
-            // If we were successful, record it and await disconnection
+            saved_networks.record_connect_result(id.clone(), &credential, code);
+            // If we were successful, await disconnection
             if code == sme_code::Success {
                 info!("connection request successful to: {:?}", String::from_utf8_lossy(&id.ssid));
-                saved_networks.record_connect_success(id.clone(), &credential);
                 client.lock().await.current_connection = Some((id.clone(), credential.clone()));
                 if let Err(e) = internal_msg_sink
                     .unbounded_send(InternalMsg::NewDisconnectWatcher(id.clone(), credential))

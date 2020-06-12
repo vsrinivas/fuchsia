@@ -5,12 +5,14 @@
 use {
     super::{
         network_config::{
-            Credential, NetworkConfig, NetworkConfigError, NetworkIdentifier, SecurityType,
+            Credential, FailureReason, NetworkConfig, NetworkConfigError, NetworkIdentifier,
+            SecurityType,
         },
         stash::Stash,
     },
     crate::legacy::known_ess_store::{self, EssJsonRead, KnownEss, KnownEssStore},
     anyhow::format_err,
+    fidl_fuchsia_wlan_sme as fidl_sme,
     log::{error, info},
     parking_lot::Mutex,
     std::{
@@ -254,18 +256,36 @@ impl SavedNetworksManager {
         Ok(())
     }
 
-    /// Update a saved network that after connecting to it. If a network with these identifiers
-    /// has not been connected to before, this will not save it and return an error.
-    pub fn record_connect_success(&self, id: NetworkIdentifier, credential: &Credential) {
+    /// Update the specified saved network with the result of an attempted connect.  If the
+    /// specified network is not saved, this function does not save it.
+    pub fn record_connect_result(
+        &self,
+        id: NetworkIdentifier,
+        credential: &Credential,
+        connect_result: fidl_sme::ConnectResultCode,
+    ) {
         if let Some(networks) = self.saved_networks.lock().get_mut(&id) {
             for network in networks.iter_mut() {
                 if &network.credential == credential {
-                    if !network.has_ever_connected {
-                        network.has_ever_connected = true;
-                        // Update persistent storage since a config has changed.
-                        self.stash.lock().write(&id, &networks).unwrap_or_else(|_| {
-                            info!("Failed recording successful connect in persistent storage");
-                        });
+                    match connect_result {
+                        fidl_sme::ConnectResultCode::Success => {
+                            if !network.has_ever_connected {
+                                network.has_ever_connected = true;
+                                // Update persistent storage since a config has changed.
+                                self.stash.lock().write(&id, &networks).unwrap_or_else(|_| {
+                                    info!(
+                                        "Failed recording successful connect in persistent storage"
+                                    );
+                                });
+                            }
+                        }
+                        fidl_sme::ConnectResultCode::BadCredentials => {
+                            network.perf_stats.failure_list.add(FailureReason::BadCredentials);
+                        }
+                        fidl_sme::ConnectResultCode::Failed => {
+                            network.perf_stats.failure_list.add(FailureReason::GeneralFailure);
+                        }
+                        fidl_sme::ConnectResultCode::Canceled => {}
                     }
                     return;
                 }
@@ -274,7 +294,7 @@ impl SavedNetworksManager {
 
         // Will not reach here if we find the saved network with matching SSID and credential.
         info!(
-            "Failed finding network ({},{:?}) to record success.",
+            "Failed finding network ({},{:?}) to record result of connect attempt.",
             String::from_utf8_lossy(&id.ssid),
             id.security_type
         );
@@ -318,7 +338,7 @@ mod tests {
         super::*,
         crate::config_management::PerformanceStats,
         fuchsia_async as fasync,
-        std::{io::Write, mem},
+        std::{io::Write, mem, time::SystemTime},
         tempfile::TempDir,
     };
 
@@ -497,8 +517,12 @@ mod tests {
         let network_id = NetworkIdentifier::new("bar", SecurityType::Wpa2);
         let credential = Credential::Password(b"password".to_vec());
 
-        // If connect and network hasn't been saved, we should give an error and not save network.
-        saved_networks.record_connect_success(network_id.clone(), &credential);
+        // If connect and network hasn't been saved, we should not save the network.
+        saved_networks.record_connect_result(
+            network_id.clone(),
+            &credential,
+            fidl_sme::ConnectResultCode::Success,
+        );
         assert!(saved_networks.lookup(network_id.clone()).is_empty());
         assert_eq!(0, saved_networks.known_network_count());
 
@@ -508,13 +532,92 @@ mod tests {
         let config = network_config("bar", "password");
         assert_eq!(vec![config], saved_networks.lookup(network_id.clone()));
 
-        saved_networks.record_connect_success(network_id.clone(), &credential);
+        saved_networks.record_connect_result(
+            network_id.clone(),
+            &credential,
+            fidl_sme::ConnectResultCode::Success,
+        );
 
-        // The network should be saved with the connection recorded
+        // The network should be saved with the connection recorded.
         let mut config = network_config("bar", "password");
         config.has_ever_connected = true;
         assert_eq!(vec![config], saved_networks.lookup(network_id));
         assert_eq!(1, saved_networks.known_network_count());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_record_connect_failure() {
+        let stash_id = "test_record_connect_failure";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let network_id = NetworkIdentifier::new("foo", SecurityType::None);
+        let credential = Credential::None;
+        let before_recording = SystemTime::now();
+
+        // Verify that recording connect result does not save the network.
+        saved_networks.record_connect_result(
+            network_id.clone(),
+            &credential,
+            fidl_sme::ConnectResultCode::Failed,
+        );
+        assert!(saved_networks.lookup(network_id.clone()).is_empty());
+        assert_eq!(0, saved_networks.known_network_count());
+
+        // Record that the connect failed.
+        saved_networks.store(network_id.clone(), credential.clone()).expect("Failed save network");
+        saved_networks.record_connect_result(
+            network_id.clone(),
+            &credential,
+            fidl_sme::ConnectResultCode::BadCredentials,
+        );
+
+        // Check that the failure was recorded correctly.
+        assert_eq!(1, saved_networks.known_network_count());
+        let saved_config =
+            saved_networks.lookup(network_id).pop().expect("Failed to get saved network config");
+        let mut connect_failures =
+            saved_config.perf_stats.failure_list.get_recent(before_recording);
+        assert_eq!(1, connect_failures.len());
+        let connect_failure = connect_failures.pop().expect("Failed to get a connect failure");
+        assert_eq!(FailureReason::BadCredentials, connect_failure.reason);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_record_connect_cancelled_ignored() {
+        let stash_id = "test_record_connect_failure";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let network_id = NetworkIdentifier::new("foo", SecurityType::None);
+        let credential = Credential::None;
+        let before_recording = SystemTime::now();
+
+        // Verify that recording connect result does not save the network.
+        saved_networks.record_connect_result(
+            network_id.clone(),
+            &credential,
+            fidl_sme::ConnectResultCode::Canceled,
+        );
+        assert!(saved_networks.lookup(network_id.clone()).is_empty());
+        assert_eq!(0, saved_networks.known_network_count());
+
+        // Record that the connect was canceled.
+        saved_networks.store(network_id.clone(), credential.clone()).expect("Failed save network");
+        saved_networks.record_connect_result(
+            network_id.clone(),
+            &credential,
+            fidl_sme::ConnectResultCode::Canceled,
+        );
+
+        // Check that there are no failures recorded for this saved network.
+        assert_eq!(1, saved_networks.known_network_count());
+        let saved_config =
+            saved_networks.lookup(network_id).pop().expect("Failed to get saved network config");
+        let connect_failures = saved_config.perf_stats.failure_list.get_recent(before_recording);
+        assert_eq!(0, connect_failures.len());
     }
 
     #[test]

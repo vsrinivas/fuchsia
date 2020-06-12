@@ -192,9 +192,10 @@ async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, an
 
     for ((ssid, security), credential) in network_by_ssid {
         if connect_to_known_network(&services.sme, ssid.clone(), credential.clone()).await? {
-            services.saved_networks.record_connect_success(
+            services.saved_networks.record_connect_result(
                 NetworkIdentifier::new(ssid.clone(), security),
                 &credential,
+                fidl_sme::ConnectResultCode::Success,
             );
             return Ok(Some(ssid));
         }
@@ -253,7 +254,7 @@ async fn manual_connect_state(
                          .unwrap_or_else(
                             |e| error!("Failed to store network config: {:?}", e));
                     services.saved_networks
-                        .record_connect_success(network_id, &credential);
+                        .record_connect_result(network_id, &credential, fidl_sme::ConnectResultCode::Success);
                     connected_state(services, next_req).into_state()
                 },
                 other => {
