@@ -26,6 +26,10 @@
             startup: "eager",
         },
         {
+            name: "shutdown_shim",
+            url: "fuchsia-boot:///#meta/shutdown-shim.cm",
+        },
+        {
             name: "sysinfo",
             url: "fuchsia-boot:///#meta/sysinfo.cm",
         },
@@ -84,6 +88,7 @@
                 "#fshost",
                 "#ptysvc",
                 "#pwrbtn-monitor",
+                "#shutdown_shim",
                 "#sysinfo",
             ],
         },
@@ -189,6 +194,18 @@
             from: "#sysinfo",
             to: [ "#driver_manager" ],
             dependency: "weak_for_migration",
+        },
+
+        // Things shutdown_shim needs to work
+        {
+            protocol: [ "/svc/fuchsia.sys2.SystemController" ],
+            from: "realm",
+            to: [ "#shutdown_shim" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.device.manager.SystemStateTransition" ],
+            from: "#driver_manager",
+            to: [ "#shutdown_shim" ],
         },
 
         // Non-zircon services for svchost

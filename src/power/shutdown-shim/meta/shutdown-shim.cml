@@ -1,0 +1,22 @@
+{
+    program: {
+        binary: "bin/shutdown-shim",
+    },
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [
+                "/svc/fuchsia.boot.WriteOnlyLog",
+                "/svc/fuchsia.device.manager.SystemStateTransition",
+                "/svc/fuchsia.hardware.power.statecontrol.Admin",
+                "/svc/fuchsia.sys2.SystemController",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.hardware.power.statecontrol.Admin",
+            from: "self",
+        },
+    ],
+}

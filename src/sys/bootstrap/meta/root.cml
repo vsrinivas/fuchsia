@@ -54,6 +54,7 @@
             protocol: [
                 "/svc/fuchsia.boot.Items",
                 "/svc/fuchsia.security.resource.Vmex",
+                "/svc/fuchsia.sys2.SystemController",
             ],
             from: "realm",
             to: [ "#bootstrap" ],

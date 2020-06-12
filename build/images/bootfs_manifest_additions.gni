@@ -11,6 +11,7 @@ import("//build/product.gni")
 default_bootfs_labels = [
   "//src/devices/bin/driver_manager:driver_manager.manifest",
   "//src/devices:devices.manifest",
+  "//src/power/shutdown-shim:shutdown-shim.manifest",
   "//src/sys/bootstrap:root_manifests.manifest",
   "//src/sys/component_manager:component_manager_bootfs.manifest",
 ]
