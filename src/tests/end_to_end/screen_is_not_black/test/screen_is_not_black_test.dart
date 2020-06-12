@@ -170,8 +170,12 @@ void main(List<String> args) {
 
   // Records all results under 'node'.  The content of 'node' is assumed to
   // consist only of timestamps.
+  //
+  // The optional renaming parameter is used to rename the final data point,
+  // and thereby aggregate several metrics into one.
   List<sl4f.TestCaseResults> recordAll(String programName, String nodeName,
-      dynamic root, String renamedMetrics, Duration reboot) {
+      dynamic root, String renamedMetrics, Duration reboot,
+      {Map<Pattern, String> renaming}) {
     final node = root[nodeName];
     if (node == null) {
       return [];
@@ -180,8 +184,14 @@ void main(List<String> args) {
     node.forEach((metric, measuredNanos) {
       final Duration vd = Duration(microseconds: measuredNanos ~/ 1e3);
       final Duration record = vd - reboot;
-      result.add(sl4f.TestCaseResults('$renamedMetrics/$programName/$metric',
-          sl4f.Unit.milliseconds, [record.inMilliseconds.toDouble()]));
+      var metricName = '$renamedMetrics/$programName/$metric';
+      void replace(pattern, replacement) {
+        metricName = metricName.replaceFirst(pattern, replacement);
+      }
+
+      renaming?.forEach(replace);
+      result.add(sl4f.TestCaseResults(metricName, sl4f.Unit.milliseconds,
+          [record.inMilliseconds.toDouble()]));
     });
     return result;
   }
@@ -227,6 +237,9 @@ void main(List<String> args) {
             rootNode,
             'Durations',
             uptime.sinceEpoch(),
+            renaming: {
+              RegExp(r'\/session-[0-9]+'): '/session-NNN',
+            },
           ));
     }
 
@@ -264,9 +277,10 @@ void main(List<String> args) {
         try {
           final screen = await scenicDriver.takeScreenshot(dumpName: 'screen');
           if (!_isAllBlack(screen)) {
-            print('Saw a screen that is not black.');
-            await Future.delayed(_maxTestRuntime - rebootDuration,
-                () => exportTimings('fuchsia.boot', rebootDuration));
+            final pause = _maxTestRuntime - rebootDuration;
+            print('Saw a screen that is not black; waiting for $pause now.');
+            await Future.delayed(
+                pause, () => exportTimings('fuchsia.boot', rebootDuration));
             return;
           }
         } on sl4f.JsonRpcException {
