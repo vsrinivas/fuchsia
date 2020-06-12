@@ -82,13 +82,3 @@ if (build_libvulkan_vsl_gc != []) {
     }
   }
 }
-
-test_package("msd_vsl_gc_nonhardware_tests") {
-  deps = [ "//src/graphics/drivers/msd-vsl-gc:tests" ]
-
-  tests = [
-    {
-      name = "msd_vsl_gc_nonhardware_tests"
-    },
-  ]
-}

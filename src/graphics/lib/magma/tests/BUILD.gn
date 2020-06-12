@@ -24,11 +24,12 @@ group("tests") {
     "//garnet/packages/prod:vulkan",
     "//src/graphics/drivers/msd-img-rgx/tests/integration:msd_img_rgx_integration_tests",
     "//src/graphics/drivers/msd-img-rgx/tests/unit_tests:msd_img_rgx_nonhardware_tests",
+    "//src/graphics/drivers/msd-vsl-gc/tests/integration",
+    "//src/graphics/drivers/msd-vsl-gc/tests/unit_tests:msd-vsl-gc-nonhardware-tests",
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:magma-dev",
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd_arm_mali_nonhardware_tests",
     "//src/graphics/lib/magma/gnbuild/magma-img-rgx:magma-vulkan-no-hardware",
-    "//src/graphics/lib/magma/gnbuild/magma-vsl-gc:msd_vsl_gc_nonhardware_tests",
   ]
   if (target_cpu == "x64") {
     public_deps += [
@@ -124,8 +125,7 @@ test_package("magma-abi-conformance-tests-vsi") {
       name = "magma_abi_conformance_tests"
       manifest = "meta/magma-abi-conformance-tests-vsi.cmx"
 
-      # TODO(fxb/52079): enable for sherlock
-      environments = []
+      environments = [ sherlock_env ]
     },
   ]
 }

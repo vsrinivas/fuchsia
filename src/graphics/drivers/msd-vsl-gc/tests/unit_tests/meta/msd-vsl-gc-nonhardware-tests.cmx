@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/msd_vsl_gc_nonhardware_tests"
+        "binary": "test/msd-vsl-gc-nonhardware-tests"
     },
     "sandbox": {
         "features": [

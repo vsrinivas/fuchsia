@@ -2,9 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test/test_package.gni")
+
 executable("nonhardware_tests") {
   testonly = true
-  output_name = "msd_vsl_gc_nonhardware_tests"
+  output_name = "msd-vsl-gc-nonhardware-tests"
 
   sources = [
     "test_address_space.cc",
@@ -50,5 +52,15 @@ source_set("hardware_tests") {
     "//src/graphics/lib/magma/src/magma_util:mapped_batch",
     "//src/graphics/lib/magma/tests/helper:platform_device_helper",
     "//third_party/googletest:gtest",
+  ]
+}
+
+test_package("msd-vsl-gc-nonhardware-tests") {
+  deps = [ ":nonhardware_tests" ]
+
+  tests = [
+    {
+      name = "msd-vsl-gc-nonhardware-tests"
+    },
   ]
 }
