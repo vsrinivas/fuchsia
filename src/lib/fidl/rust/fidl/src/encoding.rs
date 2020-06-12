@@ -17,6 +17,8 @@ use {
 
 thread_local!(static CODING_BUF: RefCell<MessageBuf> = RefCell::new(MessageBuf::new()));
 
+const MIN_TLS_CODING_BUF_SIZE: usize = 512;
+
 /// Acquire a mutable reference to the thread-local encoding buffers.
 ///
 /// This function may not be called recursively.
@@ -24,6 +26,9 @@ pub fn with_tls_coding_bufs<R>(f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) ->
     CODING_BUF.with(|buf| {
         let mut buf = buf.borrow_mut();
         let (bytes, handles) = buf.split_mut();
+        if bytes.capacity() == 0 {
+            bytes.reserve(MIN_TLS_CODING_BUF_SIZE);
+        }
         let res = f(bytes, handles);
         buf.clear();
         res
