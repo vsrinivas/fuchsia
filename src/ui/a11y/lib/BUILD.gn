@@ -43,6 +43,7 @@ test_package("a11y_lib_tests") {
     "semantics/tests:unit",
     "tts/tests",
     "view/tests",
+    "//src/ui/a11y/lib/screen_reader/i18n:resources",
   ]
   resources = [
     # needed for semantics_test
@@ -69,6 +70,12 @@ test_package("a11y_lib_tests") {
     {
       path = "semantics/tests/testdata/semantic_tree_not_parseable.json"
       dest = "semantic_tree_not_parseable.json"
+    },
+
+    # Needed by screen_reader/i18n tests.
+    {
+      path = rebase_path("$target_gen_dir/screen_reader/i18n/en/l10n.json")
+      dest = "assets/locales/en/l10n.json"
     },
   ]
 

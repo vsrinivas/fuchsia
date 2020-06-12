@@ -2,6 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/intl/intl_strings.gni")
+
+group("resources") {
+  public_deps = [
+    ":fuchsia.intl.l10n",
+    ":l10n",
+    ":l10n_l10n_assets",
+  ]
+}
+
 source_set("i18n") {
   sources = [
     "message_formatter.cc",
@@ -15,4 +25,30 @@ source_set("i18n") {
     "//src/lib/intl/lookup/cpp:lib",
     "//third_party/icu",
   ]
+}
+
+intl_strings("l10n") {
+  source = "strings.xml"
+  source_locale = "en"
+  output_locales = [
+    "ar-XB",
+    "da",
+    "de",
+    "de-CH",
+    "en",
+    "en-GB",
+    "en-XA",
+    "en-XC",
+    "es",
+    "es-419",
+    "fr",
+    "fr-CA",
+    "it",
+    "ja",
+    "ko",
+    "nb",
+    "nl",
+    "no",
+  ]
+  library = "fuchsia.intl.l10n"
 }

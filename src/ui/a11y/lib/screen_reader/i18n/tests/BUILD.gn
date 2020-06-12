@@ -10,7 +10,10 @@ group("tests") {
 executable("i18n_tests") {
   testonly = true
 
-  sources = [ "message_formatter_unittest.cc" ]
+  sources = [
+    "message_formatter_unittest.cc",
+    "message_ids_unittest.cc",
+  ]
 
   deps = [
     "//garnet/public/lib/gtest",
@@ -19,5 +22,6 @@ executable("i18n_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/intl/lookup/cpp:lib",
     "//src/ui/a11y/lib/screen_reader/i18n:i18n",
+    "//src/ui/a11y/lib/screen_reader/i18n:resources",
   ]
 }
