@@ -4,17 +4,13 @@
 
 library zx;
 
-using ObjType = uint32;
-
-// TODO(scottmg): ZX_OBJ_TYPE_xyz here.
-
 using HandleOp = uint32;
 
 // TODO(scottmg): ZX_HANDLE_OP_xyz here.
 
 struct HandleInfo {
     handle handle;
-    ObjType type;
+    obj_type type;
     rights rights;
     uint32 unused;
 };
@@ -31,7 +27,7 @@ struct ChannelCallArgs {
 struct HandleDisposition {
     HandleOp operation;
     handle handle;
-    ObjType type;
+    obj_type type;
     rights rights;
     status result;
 };

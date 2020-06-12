@@ -4,23 +4,23 @@
 
 library zx;
 
-enum Clock : uint32 {
+enum clock : uint32 {
     MONOTONIC = 0;
     UTC = 1;
     THREAD = 2;
 };
 
-[Transport = "Syscall"]
-protocol clock {
+[Transport = "Syscall", NoProtocolPrefix]
+protocol clockfuncs {
     /// Acquire the current time.
-    clock_get(Clock clock_id) -> (status status, time out);
+    clock_get(clock clock_id) -> (status status, time out);
 
     /// Acquire the current monotonic time.
     [vdsocall]
     clock_get_monotonic() -> (time time);
 
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    clock_adjust(handle:RESOURCE handle, Clock clock_id, int64 offset) -> (status status);
+    clock_adjust(handle:RESOURCE handle, clock clock_id, int64 offset) -> (status status);
 
     // Read clock monotonic, but demand that the read be performed using a
     // syscall, instead of a vdso call.

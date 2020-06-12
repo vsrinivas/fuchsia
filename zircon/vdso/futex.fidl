@@ -11,8 +11,8 @@ using Futex = int32;
 // TODO(scottmg): The futex is unusual in that by virtue of being an int,
 // sometimes it's passed by pointer, and sometimes by value.
 
-[Transport = "Syscall"]
-protocol futex {
+[Transport = "Syscall", NoProtocolPrefix]
+protocol futexfuncs {
     /// Wait on a futex.
     /// Rights: None.
     [blocking]

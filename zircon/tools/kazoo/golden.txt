@@ -68,8 +68,6 @@ typedef uint32_t zx_stream_seek_origin_t;
 #define ZX_STREAM_SEEK_ORIGIN_CURRENT ((zx_stream_seek_origin_t)0x1u)
 #define ZX_STREAM_SEEK_ORIGIN_END ((zx_stream_seek_origin_t)0x2u)
 
-typedef uint32_t zx_obj_type_t;
-
 typedef uint32_t zx_handle_op_t;
 
 typedef int32_t zx_futex_t;
