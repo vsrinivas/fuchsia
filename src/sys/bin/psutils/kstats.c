@@ -32,8 +32,8 @@ static zx_status_t gueststats(zx_handle_t root_resource, zx_duration_t delay) {
   zx_info_guest_stats_t stats[MAX_CPUS];
 
   size_t actual, avail;
-  zx_status_t err =
-     zx_object_get_info(root_resource, ZX_INFO_GUEST_STATS, &stats, sizeof(stats), &actual, &avail);
+  zx_status_t err = zx_object_get_info(root_resource, ZX_INFO_GUEST_STATS, &stats, sizeof(stats),
+                                       &actual, &avail);
   if (err != ZX_OK) {
     fprintf(stderr, "ZX_INFO_GUEST_STATS returns %d (%s)\n", err, zx_status_get_string(err));
     return err;
@@ -68,9 +68,7 @@ static zx_status_t gueststats(zx_handle_t root_resource, zx_duration_t delay) {
         " %7lu"
         " %7lu"
         "\n",
-        i,
-        stats[i].vm_entries- old_stats[i].vm_entries,
-        stats[i].vm_exits - old_stats[i].vm_exits,
+        i, stats[i].vm_entries - old_stats[i].vm_entries, stats[i].vm_exits - old_stats[i].vm_exits,
         stats[i].instruction_aborts - old_stats[i].instruction_aborts,
         stats[i].data_aborts - old_stats[i].data_aborts,
         stats[i].wfi_wfe_instructions - old_stats[i].wfi_wfe_instructions,
@@ -103,9 +101,7 @@ static zx_status_t gueststats(zx_handle_t root_resource, zx_duration_t delay) {
         " %6lu"
         " %8lu %3lu"
         " %6lu %5lu %5lu %4lu %4lu %6lu\n",
-        i,
-        stats[i].vm_entries- old_stats[i].vm_entries,
-        stats[i].vm_exits - old_stats[i].vm_exits,
+        i, stats[i].vm_entries - old_stats[i].vm_entries, stats[i].vm_exits - old_stats[i].vm_exits,
         stats[i].interrupts - old_stats[i].interrupts,
         stats[i].interrupt_windows - old_stats[i].interrupt_windows,
         stats[i].ept_violations - old_stats[i].ept_violations,
@@ -222,16 +218,15 @@ static zx_status_t cpuload(zx_handle_t root_resource, zx_duration_t delay) {
     }
     const double busypercent = (double)busy_time / delay;
 
-    static const char kBar[] =   "||||||||||||||||||||";
+    static const char kBar[] = "||||||||||||||||||||";
     static const int kBarLength = sizeof(kBar);
 
     static const char* default_color = "\033[0;0m";
     static const char* cpu_num_color = "\033[1;34m";
     const char* color = busypercent < .9 ? "\033[1;34m" : "\033[1;31m";
 
-    printf("%s%2zu%s-[%s%-20.*s%s] ",
-           cpu_num_color, i, default_color,
-           color, (int)(busypercent * kBarLength), kBar, default_color);
+    printf("%s%2zu%s-[%s%-20.*s%s] ", cpu_num_color, i, default_color, color,
+           (int)(busypercent * kBarLength), kBar, default_color);
     if ((i % 4) == 3) {
       printf("\n");
     }

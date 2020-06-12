@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_SYS_BIN_PSUTILS_VMO_UTILS_H_
+#define SRC_SYS_BIN_PSUTILS_VMO_UTILS_H_
 
 #include <zircon/compiler.h>
 #include <zircon/syscalls/object.h>
@@ -16,3 +17,5 @@ zx_status_t get_vmos(zx_handle_t process, zx_info_vmo_t** out_vmos, size_t* out_
                      size_t* out_avail);
 
 __END_CDECLS
+
+#endif  // SRC_SYS_BIN_PSUTILS_VMO_UTILS_H_

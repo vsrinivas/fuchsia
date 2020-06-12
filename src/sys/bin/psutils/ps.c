@@ -13,7 +13,6 @@
 #include <zircon/syscalls/object.h>
 
 #include <pretty/sizes.h>
-
 #include <task-utils/get.h>
 #include <task-utils/walker.h>
 

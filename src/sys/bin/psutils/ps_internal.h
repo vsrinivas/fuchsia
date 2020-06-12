@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_PSUTILS_PS_INTERNAL_H_
-#define ZIRCON_SYSTEM_UAPP_PSUTILS_PS_INTERNAL_H_
+#ifndef SRC_SYS_BIN_PSUTILS_PS_INTERNAL_H_
+#define SRC_SYS_BIN_PSUTILS_PS_INTERNAL_H_
 
 #include <stdio.h>
 #include <zircon/types.h>
@@ -51,4 +51,4 @@ zx_status_t show_all_jobs(const ps_options_t* options);
 // Print to stdout all jobs/processes/threads under the given job.
 zx_status_t show_job_tree(zx_handle_t target_job, const ps_options_t* options);
 
-#endif  // ZIRCON_SYSTEM_UAPP_PSUTILS_PS_INTERNAL_H_
+#endif  // SRC_SYS_BIN_PSUTILS_PS_INTERNAL_H_

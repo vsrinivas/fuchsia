@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_PSUTILS_HANDLES_INTERNAL_H_
-#define ZIRCON_SYSTEM_UAPP_PSUTILS_HANDLES_INTERNAL_H_
+#ifndef SRC_SYS_BIN_PSUTILS_HANDLES_INTERNAL_H_
+#define SRC_SYS_BIN_PSUTILS_HANDLES_INTERNAL_H_
 
+#include <stdint.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
-#include <stdint.h>
 
 #include <vector>
 
@@ -40,4 +40,4 @@ Filter operator~(const Filter& rhs);
 
 size_t print_handles(FILE* f, const std::vector<zx_info_handle_extended_t>& handles, Filter filter);
 
-#endif  // ZIRCON_SYSTEM_UAPP_PSUTILS_HANDLES_INTERNAL_H_
+#endif  // SRC_SYS_BIN_PSUTILS_HANDLES_INTERNAL_H_

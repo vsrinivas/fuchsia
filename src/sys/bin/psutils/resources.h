@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_SYS_BIN_PSUTILS_RESOURCES_H_
+#define SRC_SYS_BIN_PSUTILS_RESOURCES_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -15,3 +16,5 @@ __BEGIN_CDECLS
 zx_status_t get_root_resource(zx_handle_t* root_resource);
 
 __END_CDECLS
+
+#endif  // SRC_SYS_BIN_PSUTILS_RESOURCES_H_
