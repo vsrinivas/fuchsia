@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    bt_a2dp::{codec::MediaCodecConfig, media_task::*},
+    bt_a2dp::{codec::MediaCodecConfig, inspect::DataStreamInspect, media_task::*},
     bt_avdtp::MediaStream,
     fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
     fuchsia_async as fasync,
@@ -13,8 +13,10 @@ use {
     fuchsia_trace as trace,
     futures::{
         future::{AbortHandle, Abortable},
+        lock::Mutex,
         AsyncWriteExt, TryStreamExt,
     },
+    std::sync::Arc,
 };
 
 use crate::encoding::{EncodedStream, RtpPacketBuilder};
@@ -36,6 +38,7 @@ impl MediaTaskBuilder for SourceTaskBuilder {
         &self,
         peer_id: &PeerId,
         codec_config: &MediaCodecConfig,
+        data_stream_inspect: DataStreamInspect,
     ) -> Result<Box<dyn MediaTask>, Error> {
         // all sinks must support these options
         let pcm_format = PcmFormat {
@@ -55,6 +58,7 @@ impl MediaTaskBuilder for SourceTaskBuilder {
             self.source_type,
             peer_id.clone(),
             codec_config,
+            data_stream_inspect,
         )))
     }
 }
@@ -81,6 +85,8 @@ struct ConfiguredSourceTask {
     codec_config: MediaCodecConfig,
     /// Handle used to stop the streaming task when stopped.
     stop_sender: Option<AbortHandle>,
+    /// Data Stream inspect object for tracking total bytes / current transfer speed.
+    data_stream_inspect: Arc<Mutex<DataStreamInspect>>,
 }
 
 impl ConfiguredSourceTask {
@@ -90,6 +96,7 @@ impl ConfiguredSourceTask {
         codec_config: MediaCodecConfig,
         mut encoded_stream: EncodedStream,
         mut media_stream: MediaStream,
+        data_stream_inspect: Arc<Mutex<DataStreamInspect>>,
     ) -> Result<(), Error> {
         let frames_per_encoded = codec_config.pcm_frames_per_encoded_frame() as u32;
         let mut packet_builder = RtpPacketBuilder::new(
@@ -109,6 +116,9 @@ impl ConfiguredSourceTask {
             trace::duration_begin!("bt-a2dp-source", "Media:PacketSent");
             if let Err(e) = media_stream.write(&packet).await {
                 fx_log_info!("Failed sending packet to peer: {}", e);
+                let _ = data_stream_inspect.try_lock().map(|mut l| {
+                    l.record_transferred(packet.len(), fasync::Time::now());
+                });
                 trace::duration_end!("bt-a2dp-source", "Media:PacketSent");
                 return Ok(());
             }
@@ -124,6 +134,7 @@ impl ConfiguredSourceTask {
         source_type: sources::AudioSourceType,
         peer_id: PeerId,
         codec_config: &MediaCodecConfig,
+        data_stream_inspect: DataStreamInspect,
     ) -> Self {
         Self {
             pcm_format,
@@ -131,6 +142,7 @@ impl ConfiguredSourceTask {
             peer_id,
             codec_config: codec_config.clone(),
             stop_sender: None,
+            data_stream_inspect: Arc::new(Mutex::new(data_stream_inspect)),
         }
     }
 }
@@ -144,7 +156,10 @@ impl MediaTask for ConfiguredSourceTask {
             sources::build_stream(&self.peer_id, self.pcm_format.clone(), self.source_type)?;
         let encoded_stream =
             EncodedStream::build(self.pcm_format.clone(), source_stream, &self.codec_config)?;
-        let stream_fut = Self::stream_task(self.codec_config.clone(), encoded_stream, stream);
+        let inspect = self.data_stream_inspect.clone();
+        let stream_fut =
+            Self::stream_task(self.codec_config.clone(), encoded_stream, stream, inspect);
+        let _ = self.data_stream_inspect.try_lock().map(|mut l| l.start());
         let (stop_handle, stop_registration) = AbortHandle::new_pair();
         let stream_fut = Abortable::new(stream_fut, stop_registration);
         fasync::spawn(async move {

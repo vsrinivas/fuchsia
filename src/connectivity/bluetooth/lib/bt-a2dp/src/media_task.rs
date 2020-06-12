@@ -9,6 +9,7 @@ use {
 };
 
 use crate::codec::MediaCodecConfig;
+use crate::inspect::DataStreamInspect;
 
 /// MediaTasks are configured with information about the media codec when either peer in a
 /// conversation configures a stream endpoint.  When successfully configured, a handle is provided
@@ -24,6 +25,7 @@ pub trait MediaTaskBuilder {
         &self,
         peer_id: &PeerId,
         codec_config: &MediaCodecConfig,
+        data_stream_inspect: DataStreamInspect,
     ) -> Result<Box<dyn MediaTask>, Error>;
 }
 
@@ -110,6 +112,7 @@ pub mod tests {
             &self,
             peer_id: &PeerId,
             codec_config: &MediaCodecConfig,
+            _data_stream_inspect: DataStreamInspect,
         ) -> Result<Box<dyn MediaTask>, Error> {
             let task = TestMediaTask {
                 peer_id: peer_id.clone(),

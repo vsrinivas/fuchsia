@@ -8,10 +8,13 @@ use {
         StreamEndpointId,
     },
     fuchsia_bluetooth::types::PeerId,
+    fuchsia_inspect::{self as inspect, Property},
+    fuchsia_inspect_derive::{AttachError, Inspect, WithInspect},
     std::{collections::HashMap, convert::TryFrom, fmt, sync::Arc},
 };
 
 use crate::codec::MediaCodecConfig;
+use crate::inspect::DataStreamInspect;
 use crate::media_task::{MediaTask, MediaTaskBuilder};
 
 pub struct Stream {
@@ -23,6 +26,8 @@ pub struct Stream {
     /// The peer associated with thie endpoint, if it is configured.
     /// Used during reconfiguration for MediaTask recreation.
     peer_id: Option<PeerId>,
+    /// Inspect Node for this stream
+    inspect: fuchsia_inspect::Node,
 }
 
 impl fmt::Debug for Stream {
@@ -32,6 +37,20 @@ impl fmt::Debug for Stream {
             .field("peer_id", &self.peer_id)
             .field("has media_task", &self.media_task.is_some())
             .finish()
+    }
+}
+
+impl Inspect for &mut Stream {
+    // Set up the StreamEndpoint to update the state
+    // The MediaTask node will be created when the media task is started.
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect = parent.create_child(name);
+
+        let endpoint_state_prop = self.inspect.create_string("endpoint_state", "");
+        let callback =
+            move |stream: &StreamEndpoint| endpoint_state_prop.set(&format!("{:?}", stream));
+        self.endpoint_mut().set_update_callback(Some(Box::new(callback)));
+        Ok(())
     }
 }
 
@@ -45,6 +64,7 @@ impl Stream {
             media_task_builder: Arc::new(Box::new(media_task_builder)),
             media_task: None,
             peer_id: None,
+            inspect: Default::default(),
         }
     }
 
@@ -54,6 +74,7 @@ impl Stream {
             media_task_builder: self.media_task_builder.clone(),
             media_task: None,
             peer_id: None,
+            inspect: Default::default(),
         }
     }
 
@@ -89,7 +110,10 @@ impl Stream {
         if !self.requested_config_is_supported(&requested) {
             return None;
         }
-        self.media_task_builder.configure(peer_id, &requested).ok()
+        match DataStreamInspect::default().with_inspect(&self.inspect, "media_stream") {
+            Err(_) => None,
+            Ok(inspect) => self.media_task_builder.configure(peer_id, &requested, inspect).ok(),
+        }
     }
 
     pub fn configure(
@@ -174,43 +198,58 @@ fn find_codec_capability(capabilities: &[ServiceCapability]) -> Option<&ServiceC
     capabilities.iter().find(|cap| cap.category() == ServiceCategory::MediaCodec)
 }
 
-pub struct Streams(HashMap<StreamEndpointId, Stream>);
+#[derive(Default)]
+pub struct Streams {
+    streams: HashMap<StreamEndpointId, Stream>,
+    inspect_node: fuchsia_inspect::Node,
+}
 
 impl Streams {
-    /// A new empty set of streams.
+    /// A new empty set of streams, initially detached from the inspect tree.
     pub fn new() -> Self {
-        Self(HashMap::new())
+        Self::default()
     }
 
     /// Makes a copy of this set of streams, but with all streams copied with their states set to
     /// idle.
     pub fn as_new(&self) -> Self {
-        let mut new_map = HashMap::new();
-        for (id, stream) in self.0.iter() {
-            new_map.insert(id.clone(), stream.as_new());
+        let mut streams = HashMap::new();
+        for (id, stream) in self.streams.iter() {
+            streams.insert(id.clone(), stream.as_new());
         }
-        Self(new_map)
+        Self { streams, ..Default::default() }
     }
 
     /// Inserts a stream, indexing it by the local endpoint id.
     /// It replaces any other stream with the same endpoint id.
     pub fn insert(&mut self, stream: Stream) {
-        self.0.insert(stream.endpoint().local_id().clone(), stream);
+        self.streams.insert(stream.endpoint().local_id().clone(), stream);
     }
 
     /// Retrieves a reference to the Stream referenced by `id`, if the stream exists,
     pub fn get(&mut self, id: &StreamEndpointId) -> Option<&Stream> {
-        self.0.get(id)
+        self.streams.get(id)
     }
 
     /// Retrieves a mutable reference to the Stream referenced by `id`, if the stream exists,
     pub fn get_mut(&mut self, id: &StreamEndpointId) -> Option<&mut Stream> {
-        self.0.get_mut(id)
+        self.streams.get_mut(id)
     }
 
     /// Returns a vector of information on all the contained streams.
     pub fn information(&self) -> Vec<avdtp::StreamInformation> {
-        self.0.values().map(|x| x.endpoint().information()).collect()
+        self.streams.values().map(|x| x.endpoint().information()).collect()
+    }
+}
+
+impl Inspect for &mut Streams {
+    // Attach self to `parent`
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect_node = parent.create_child(name);
+        for stream in self.streams.values_mut() {
+            stream.iattach(parent, inspect::unique_name("stream_"))?;
+        }
+        Ok(())
     }
 }
 
