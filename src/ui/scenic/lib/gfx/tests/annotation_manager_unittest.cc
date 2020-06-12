@@ -288,6 +288,94 @@ TEST_F(AnnotationManagerTest, InvalidAndNonExistentViewRef) {
   }
 }
 
+TEST_F(AnnotationManagerTest, DelayCreateIfNotFound) {
+  // Consider the following Resource Graph:
+  //
+  //                                  Scene
+  //                                    |
+  //                               EntityNode
+  //                                    |
+  //                                    v
+  //                                ViewHolder1
+  //                                 .`    |
+  //                               .`      v
+  //                            View1 ==> ViewNode1
+  //                              ||
+  //                              V
+  //                           Annotation
+  //                           ViewHolder
+  //
+  // If we send a Annotation ViewHolder create request before View1 is
+  // actually created, the request should be deferred until View1
+  // exists. The AnnotationHandler and the request should be still
+  // alive during this period.
+
+  // Create Views.
+  auto [view1_token, view_holder1_token] = scenic::ViewTokenPair::New();
+  auto [view1_ctrl_ref, view1_ref] = scenic::ViewRefPair::New();
+  fuchsia::ui::views::ViewRef view1_ref_for_creation;
+  view1_ref.Clone(&view1_ref_for_creation);
+
+  auto session_view1 = CreateAndRegisterSession();
+  CommandContext cmds = CreateCommandContext();
+
+  // Create ViewHolder1 and attach it to scene.
+  Apply(scenic::NewCreateViewHolderCmd(kViewHolder1Id, std::move(view_holder1_token), "holder 1"));
+  Apply(scenic::NewAddChildCmd(kEntityNodeId, kViewHolder1Id));
+
+  // Try creating Annotation ViewHolder for View1.
+  auto [annotation_view_token, annotation_view_holder_token] = scenic::ViewTokenPair::New();
+  fuchsia::ui::views::ViewRef view1_ref_for_lookup;
+  view1_ref.Clone(&view1_ref_for_lookup);
+
+  bool created = false;
+  bool handler_removed = false;
+  constexpr AnnotationHandlerId kAnnotationHandlerId = 0;
+  annotation_manager()->RegisterHandler(kAnnotationHandlerId,
+                                        [&handler_removed](auto) { handler_removed = true; });
+  annotation_manager()->RequestCreate(kAnnotationHandlerId, std::move(view1_ref_for_lookup),
+                                      std::move(annotation_view_holder_token),
+                                      [&created]() { created = true; });
+
+  // If the View doesn't exist in ViewTree yet, the Annotation View creation
+  // request is defered until View is created, but the handler (and the
+  // request) should be still alive.
+  annotation_manager()->FulfillCreateRequests();
+  ASSERT_FALSE(created);
+  EXPECT_FALSE(handler_removed);
+
+  // Now we create View1.
+  session_view1->ApplyCommand(
+      &cmds, scenic::NewCreateViewCmd(kView1Id, std::move(view1_token), std::move(view1_ctrl_ref),
+                                      std::move(view1_ref_for_creation), "view 1"));
+  StageAndUpdateViewTree(scene_graph());
+
+  // Lookup View1 in the ResourceMap of Sessions to verify that
+  // it is not created yet successfully.
+  ViewPtr view1_ptr = session_view1->resources()->FindResource<View>(kView1Id);
+  EXPECT_TRUE(view1_ptr && view1_ptr->GetViewNode());
+
+  EXPECT_EQ(view1_ptr->annotation_view_holders().size(), 0U);
+  EXPECT_EQ(view1_ptr->GetViewNode()->children().size(), 0U);
+
+  // Try fulfilling the request again after View1 is created. This time it
+  // should succeed.
+  EXPECT_FALSE(created);
+  EXPECT_FALSE(handler_removed);
+  annotation_manager()->FulfillCreateRequests();
+  ASSERT_TRUE(created);
+  EXPECT_FALSE(handler_removed);
+
+  EXPECT_EQ(view1_ptr->annotation_view_holders().size(), 1U);
+
+  fxl::WeakPtr<ViewHolder> annotation_view_holder_weak_ptr =
+      (*view1_ptr->annotation_view_holders().begin())->GetWeakPtr();
+  EXPECT_EQ(view1_ptr->GetViewNode()->children().size(), 1U);
+  EXPECT_EQ(view1_ptr->GetViewNode()->children().front().get(),
+            annotation_view_holder_weak_ptr.get());
+  EXPECT_EQ(annotation_view_holder_weak_ptr->parent(), view1_ptr->GetViewNode());
+}
+
 TEST_F(AnnotationManagerTest, LinkerTest_AnnotationViewCreatedFirst) {
   // Consider the following Resource Graph:
   //

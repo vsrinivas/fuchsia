@@ -109,7 +109,7 @@ void AnnotationManager::FulfillCreateRequests() {
     for (auto& request : state.requests) {
       zx_koid_t main_view_koid = utils::ExtractKoid(request.main_view);
       zx_status_t status = scene_graph_->view_tree().AddAnnotationViewHolder(
-          main_view_koid, std::move(request.annotation_view_holder));
+          main_view_koid, request.annotation_view_holder);
 
       if (status == ZX_OK) {
         request.fulfilled = true;
