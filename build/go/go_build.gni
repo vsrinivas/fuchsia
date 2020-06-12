@@ -401,6 +401,23 @@ template("go_build") {
             }
           },
         ]
+
+        # Used by the distribution_manifest template.
+        if (is_fuchsia) {
+          distribution_entries = [
+            {
+              source = rebase_path(output_path, root_build_dir)
+              if (use_strip) {
+                source = rebase_path(stripped_output_path, root_build_dir)
+              }
+              destination = "bin/$output_name"
+              if (is_test) {
+                destination = "test/$output_name"
+              }
+              label = get_label_info(":$target_name", "label_with_toolchain")
+            },
+          ]
+        }
       }
     }
 
