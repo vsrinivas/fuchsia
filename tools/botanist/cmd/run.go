@@ -185,9 +185,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	if t0.Serial() != nil {
 		defer t0.Serial().Close()
 
-		sOpts := serial.ServerOptions{
-			WriteBufferSize: botanist.SerialLogBufferSize,
-		}
+		sOpts := serial.ServerOptions{}
 		if r.serialLogFile != "" {
 			serialLog, err := os.Create(r.serialLogFile)
 			if err != nil {
@@ -204,7 +202,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		defer l.Close()
 		eg.Go(func() error {
 			if err := s.Run(ctx, l); err != nil && ctx.Err() == nil {
 				return fmt.Errorf("serial server error: %w", err)

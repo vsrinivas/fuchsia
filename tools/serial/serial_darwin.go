@@ -9,6 +9,6 @@ import (
 	"io"
 )
 
-func open(name string, baudRate int, timeoutSecs int) (io.ReadWriteCloser, error) {
+func open(name string, baudRate int) (io.ReadWriteCloser, error) {
 	return nil, errors.New("not supported")
 }

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"unsafe"
+	"syscall"
 
 	"golang.org/x/sys/unix"
 )
@@ -46,39 +46,67 @@ var supportedBaudRates = map[int]uint32{
 	4000000: unix.B4000000,
 }
 
-func open(name string, baudRate int, timeoutSecs int) (io.ReadWriteCloser, error) {
+// cfmakeraw makes a termios configuration that is similar to the configuration
+// produced by glibc's cfmakeraw, which is to turn off all input and output
+// processing, and configure in non-canonical mode - aka "just give me the data
+// stream"
+func cfmakeraw(t *unix.Termios) {
+	t.Iflag &^= unix.IGNBRK | unix.BRKINT | unix.PARMRK | unix.ISTRIP | unix.INLCR | unix.IGNCR | unix.ICRNL | unix.IXON
+	t.Oflag &^= unix.OPOST
+	t.Lflag &^= unix.ECHO | unix.ECHONL | unix.ICANON | unix.ISIG | unix.IEXTEN
+	t.Cflag &^= unix.CSIZE | unix.PARENB
+	t.Cflag |= unix.CS8
+}
+
+func open(name string, baudRate int) (io.ReadWriteCloser, error) {
 	rate, ok := supportedBaudRates[baudRate]
 	if !ok {
 		return nil, fmt.Errorf("unsupported baud rate: %d", baudRate)
 	}
-	if timeoutSecs < 0 || (timeoutSecs*10) > (1<<8) {
-		return nil, fmt.Errorf("timeout must be between 0 and 25, got: %d", timeoutSecs)
-	}
+	// open non-blocking to avoid waiting for carrier detect
 	f, err := os.OpenFile(name, unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0666)
 	if err != nil {
 		return nil, err
 	}
-	t := unix.Termios{
-		Iflag:  unix.IGNPAR,
-		Cflag:  unix.CREAD | unix.CLOCAL | unix.CS8 | rate,
-		Ispeed: rate,
-		Ospeed: rate,
-	}
-	t.Cc[unix.VTIME] = uint8(timeoutSecs * 10)
-	_, _, errno := unix.Syscall6(
-		unix.SYS_IOCTL,
-		uintptr(f.Fd()),
-		uintptr(unix.TCSETS),
-		uintptr(unsafe.Pointer(&t)),
-		0,
-		0,
-		0,
-	)
-	if errno != 0 {
-		return nil, errno
-	}
-	if err := unix.SetNonblock(int(f.Fd()), false); err != nil {
+	// we actually want blocking semantics downstream, so unset that. note: use
+	// syscall, not unix, because we're going to call Read/Write and may need the
+	// runtime poller to know we've done this.
+	if err := syscall.SetNonblock(int(f.Fd()), false); err != nil {
+		f.Close()
 		return nil, err
 	}
+
+	t := unix.Termios{}
+
+	// start with a raw mode configuration, that is non-canonical mode, post
+	// processing off, no line end processing, etc.
+	cfmakeraw(&t)
+
+	// ignore framing and parity errors
+	t.Iflag |= unix.IGNPAR
+
+	// enable receiver, and ignore modem control lines
+	t.Cflag |= unix.CREAD | unix.CLOCAL
+
+	// one stop bit
+	t.Cflag &^= unix.CSTOPB
+
+	// disable hardware flow control (currently generally not connected)
+	t.Cflag &^= unix.CRTSCTS
+
+	// do not delay reads and do not return 0 reads
+	t.Cc[unix.VTIME] = 0
+	// return 1 or more characters as soon as they are ready
+	t.Cc[unix.VMIN] = 1
+
+	// set baud rate
+	t.Ispeed = rate
+	t.Ospeed = rate
+
+	if err := unix.IoctlSetTermios(int(f.Fd()), unix.TCSETA, &t); err != nil {
+		f.Close()
+		return nil, err
+	}
+
 	return f, nil
 }

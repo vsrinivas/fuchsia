@@ -5,22 +5,275 @@
 package serial
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/hex"
-	"fmt"
 	"io"
+	"log"
+
+	"io/ioutil"
 	"net"
 	"os"
-	"path/filepath"
-	"syscall"
 	"testing"
 )
 
-const (
-	writeBufferSize = 1024
-)
+func TestServerDrainsSerial(t *testing.T) {
+	serial, device := serialAndDevice()
+
+	s := NewServer(serial, ServerOptions{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	var serverErr error
+	serverDone := make(chan struct{})
+	go func() {
+		l, _ := testListener(t)
+		serverErr = s.Run(ctx, l)
+		close(serverDone)
+	}()
+
+	// copy 1mb of random output to the server, if there were general IO problems
+	// we'd likely block at around 64kb, this should shake out any common issues
+	// with the normal copy pipeline
+	_, err := io.CopyN(device, rand.Reader, 1024*1024)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cancel()
+	<-serverDone
+	if serverErr != nil {
+		t.Fatalf("unexpected server error: %s", serverErr)
+	}
+}
+
+func TestServerAuxOutput(t *testing.T) {
+	serial, device := serialAndDevice()
+
+	aux, err := ioutil.TempFile("", "test-serial-aux")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux})
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	var serverErr error
+	serverDone := make(chan struct{})
+	go func() {
+		l, _ := testListener(t)
+		serverErr = s.Run(ctx, l)
+		close(serverDone)
+	}()
+
+	buf := make([]byte, 1024*1024)
+	_, err = io.ReadFull(rand.Reader, buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, err := device.Write(buf)
+	if err != nil || n != len(buf) {
+		t.Fatalf("device write short or error: %s (%d/%d)", err, n, len(buf))
+	}
+
+	cancel()
+	<-serverDone
+	if serverErr != nil {
+		t.Fatalf("unexpected server error: %s", serverErr)
+	}
+	if _, err := aux.Seek(0, io.SeekStart); err != nil {
+		t.Fatal(err)
+	}
+	gotBuf, err := ioutil.ReadAll(aux)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(gotBuf, buf) {
+		t.Fatalf("got\n%x\nwant\n%x", gotBuf, buf)
+	}
+}
+
+func TestServerSocketOutput(t *testing.T) {
+	serial, device := serialAndDevice()
+
+	aux, err := ioutil.TempFile("", "test-serial-aux")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux, Logger: log.New(os.Stdout, "test-serial", log.LstdFlags)})
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	l, sockPath := testListener(t)
+
+	var serverErr error
+	serverDone := make(chan struct{})
+	go func() {
+		serverErr = s.Run(ctx, l)
+		close(serverDone)
+	}()
+
+	c, err := net.DialUnix("unix", nil, &net.UnixAddr{Net: "unix", Name: sockPath})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A device writes things to serial, eventually writing a completion match the
+	// reader was looking for
+	go func() {
+		for i := 0; i < 10000; i++ {
+			if _, err := io.WriteString(device, "hello world\n"); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, err := io.WriteString(device, "MAGIC!\n"); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	// a client is tailing the log and tells the server it's done when it reads the magic:
+	bio := bufio.NewReader(c)
+	for {
+		l, err := bio.ReadString('\n')
+		if err != nil {
+			t.Fatal(err)
+		}
+		if l == "MAGIC!\n" {
+			break
+		}
+	}
+
+	cancel()
+	<-serverDone
+	if serverErr != nil {
+		t.Fatalf("unexpected server error: %s", serverErr)
+	}
+}
+
+func TestServerSerialWrites(t *testing.T) {
+	serial, device := serialAndDevice()
+
+	aux, err := ioutil.TempFile("", "test-serial-aux")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux, Logger: log.New(os.Stdout, "test-serial", log.LstdFlags)})
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	l, sockPath := testListener(t)
+
+	var serverErr error
+	serverDone := make(chan struct{})
+	go func() {
+		serverErr = s.Run(ctx, l)
+		close(serverDone)
+	}()
+
+	c, err := net.DialUnix("unix", nil, &net.UnixAddr{Net: "unix", Name: sockPath})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var expectedCount = 10000
+	// A test driver writes things to conn
+	go func() {
+		for i := 0; i < expectedCount-1; i++ {
+			if _, err := io.WriteString(c, "hello world\n"); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, err := io.WriteString(c, "MAGIC!\n"); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	var count int
+	// a device is receiving the input from the conn
+	bio := bufio.NewReader(device)
+	for {
+		count++
+		l, err := bio.ReadString('\n')
+		if err != nil {
+			t.Fatal(err)
+		}
+		if l == "MAGIC!\n" {
+			break
+		}
+	}
+
+	cancel()
+	<-serverDone
+	if serverErr != nil {
+		t.Fatalf("unexpected server error: %s", serverErr)
+	}
+
+	if expectedCount != count {
+		t.Fatalf("got %d, want %d", count, expectedCount)
+	}
+}
+
+func TestServerSerialClosing(t *testing.T) {
+	serial, _ := serialAndDevice()
+
+	aux, err := ioutil.TempFile("", "test-serial-aux")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux, Logger: log.New(os.Stdout, "test-serial", log.LstdFlags)})
+
+	ctx := context.Background()
+
+	l, sockPath := testListener(t)
+
+	var serverErr error
+	serverDone := make(chan struct{})
+	go func() {
+		serverErr = s.Run(ctx, l)
+		close(serverDone)
+	}()
+
+	c, err := net.DialUnix("unix", nil, &net.UnixAddr{Net: "unix", Name: sockPath})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// serial goes away, say someone pulls the plug
+	serial.Close()
+
+	// the connection should get closed
+	io.Copy(ioutil.Discard, c)
+
+	// the server should exit cleanly
+	<-serverDone
+	// and it returns the underlying io error
+	if serverErr == nil {
+		t.Fatalf("server failed to return expected error")
+	}
+}
+
+func TestisErrNetClosing(t *testing.T) {
+	// see golang issue 4373, this is the sad story from upstream, and the pattern
+	// we follow is similar to that of the net/http and net/http2 package. There's
+	// a variable stashed away in internal/poll, but it's not actually exported to
+	// us for comparison.
+
+	l, err := net.ListenUnix("unix", &net.UnixAddr{Net: "unix", Name: "foo.sock"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Close()
+	_, err = l.Accept()
+
+	if !isErrNetClosing(err) {
+		t.Fatalf("expected a wrapped errnetclosing, got: %#v", err)
+	}
+}
 
 // Creates a "serial connection" in terms of its host- and device-side
 // descriptors. They are implemented with synchronous in-memory pipes, so
@@ -34,149 +287,21 @@ func serialAndDevice() (io.ReadWriteCloser, io.ReadWriteCloser) {
 	return serial, device
 }
 
-func socketPath() string {
-	// We randomly construct a socket path that is highly improbable to collide with anything.
-	randBytes := make([]byte, 16)
-	rand.Read(randBytes)
-	return filepath.Join(os.TempDir(), "serial"+hex.EncodeToString(randBytes)+".sock")
-}
+func testListener(t *testing.T) (net.Listener, string) {
+	t.Helper()
 
-func TestServer(t *testing.T) {
-	serial, device := serialAndDevice()
-
-	defer func() {
-		serial.Close()
-		device.Close()
-	}()
-
-	s := NewServer(serial, ServerOptions{
-		WriteBufferSize: writeBufferSize,
-	})
-
-	path := socketPath()
-	addr := &net.UnixAddr{Name: path, Net: "unix"}
-	l, err := net.ListenUnix("unix", addr)
+	f, err := ioutil.TempFile("", "test-serial-listener")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	// Run the server in the main routine and the tests in a separate routine so
-	// that we can actually test the shutdown functionality of the server (by the
-	// termination of this program).
-	go testServer(t, s, device, path, nil, cancel)
-	if err := s.Run(ctx, l); err != nil {
-		t.Fatalf("server encountered shutdown error: %v", err)
-	}
-}
-
-func TestServerWithAuxOutput(t *testing.T) {
-	serial, device := serialAndDevice()
-	auxOutputReader, auxOutput := io.Pipe()
-
-	defer func() {
-		serial.Close()
-		device.Close()
-		auxOutput.Close()
-		auxOutputReader.Close()
-	}()
-
-	s := NewServer(serial, ServerOptions{
-		WriteBufferSize: writeBufferSize,
-		AuxiliaryOutput: auxOutput,
-	})
-
-	path := socketPath()
-	addr := &net.UnixAddr{Name: path, Net: "unix"}
-	l, err := net.ListenUnix("unix", addr)
+	f.Close()
+	os.Remove(f.Name())
+	l, err := net.ListenUnix("unix", &net.UnixAddr{Name: f.Name(), Net: "unix"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	// Run the server in the main routine and the tests in a separate routine so
-	// that we can actually test the shutdown functionality of the server (by the
-	// termination of this program).
-	go testServer(t, s, device, path, auxOutputReader, cancel)
-	if err := s.Run(ctx, l); err != nil {
-		t.Fatalf("server encountered shutdown error: %v", err)
-	}
-}
-
-func testServer(t *testing.T, s *Server, device io.ReadWriter, socketPath string, auxOutputReader io.Reader, cancel context.CancelFunc) {
-	t.Helper()
-
-	var socket net.Conn
-	for {
-		var err error
-		socket, err = net.Dial("unix", socketPath)
-		if err != nil {
-			t.Logf("failed to open client socket connection: %v", err)
-			continue
-		}
-		break
-	}
-	defer socket.Close()
-
-	//
-	// X -> device -> serial -> socket -> Y
-	//
-	// Make the device "write to serial" on its side. This should unblock the
-	// reads being made from serial on the host side and forwarded to the
-	// socket. Reads from the socket are in turn blocking, so we should be able
-	// to reliably verify that X == Y.
-	//
-	t.Run("writes to serial can be read from socket", func(t *testing.T) {
-		input := []byte("written to serial!")
-		if _, err := device.Write(input); err != nil {
-			t.Fatalf("failed to write to device: %v", err)
-		}
-
-		if auxOutputReader != nil {
-			// Read first from the auxiliary output, as the teeing logic from serial should
-			// block until we read from the other end of the pipe.
-			readAndCheckBytes(t, auxOutputReader, "teed output", input)
-		}
-		readAndCheckBytes(t, socket, "socket", input)
-	})
-
-	//
-	// X -> socket -> serial -> device -> Y
-	//
-	// Have the device "read from serial" on its side after bytes have been
-	// written to the socket. This read will block until the bytes have been
-	// forwarded from the server socket to serial on the host side, which will
-	// in turn unblock the initial read. This is all to say that this case too
-	// should be a reliable verification that X == Y.
-	//
-	t.Run("writes to socket can be read from serial", func(t *testing.T) {
-		input := []byte("written to the socket!")
-		if _, err := socket.Write(input); err != nil {
-			t.Fatalf("failed to write to socket: %v", err)
-		}
-		readAndCheckBytes(t, device, "serial", input)
-	})
-
-	t.Run("server shuts down", func(t *testing.T) {
-		cancel()
-	})
-}
-
-func readAndCheckBytes(t *testing.T, r io.Reader, readerName string, expected []byte) {
-	t.Helper()
-	p := make([]byte, writeBufferSize)
-	n, err := r.Read(p)
-	if (err != nil && err != io.EOF) || n == 0 {
-		t.Fatalf("failed to read from %s: %v", readerName, err)
-	}
-	actual := p[0:n]
-	if bytes.Compare(expected, actual) != 0 {
-		t.Errorf("unexpected bytes read from %s:\nexpected: %q\nactual: %q", readerName, expected, actual)
-	}
+	l.SetUnlinkOnClose(true)
+	return l, f.Name()
 }
 
 type joinedPipeEnds struct {
@@ -198,82 +323,4 @@ func (pe *joinedPipeEnds) Close() error {
 		return err
 	}
 	return pe.w.Close()
-}
-
-func TestErrorSanitization(t *testing.T) {
-	compare := func(actual, expected error) {
-		if actual != expected {
-			t.Errorf("expected: %v\nactual: %v", expected, actual)
-		}
-	}
-
-	t.Run("context canceled -> nil", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel()
-		compare(sanitizeError(ctx, fmt.Errorf("real error")), nil)
-	})
-
-	testCases := []struct {
-		name     string
-		input    error
-		expected error
-	}{
-		{
-			name:     "nil -> nil",
-			input:    nil,
-			expected: nil,
-		},
-		{
-			name: "EPIPE read -> nil",
-			input: &net.OpError{
-				Err: &os.SyscallError{
-					Syscall: "read",
-					Err:     syscall.EPIPE,
-				},
-			},
-			expected: nil,
-		},
-		{
-			name: "EPIPE write -> nil",
-			input: &net.OpError{
-				Err: &os.SyscallError{
-					Syscall: "write",
-					Err:     syscall.EPIPE,
-				},
-			},
-			expected: nil,
-		},
-		{
-			name: "ECONNRESET read -> nil",
-			input: &net.OpError{
-				Err: &os.SyscallError{
-					Syscall: "read",
-					Err:     syscall.ECONNRESET,
-				},
-			},
-			expected: nil,
-		},
-		{
-			name: "ECONNRESET write -> nil",
-			input: &net.OpError{
-				Err: &os.SyscallError{
-					Syscall: "write",
-					Err:     syscall.ECONNRESET,
-				},
-			},
-			expected: nil,
-		},
-		{
-			name:     "other error -> itself",
-			input:    os.ErrNotExist,
-			expected: os.ErrNotExist,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			actual := sanitizeError(context.Background(), tc.input)
-			compare(actual, tc.expected)
-		})
-	}
 }

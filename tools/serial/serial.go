@@ -10,16 +10,15 @@ import (
 )
 
 const (
-	defaultBaudRate    = 115200
-	defaultTimeoutSecs = 10
+	defaultBaudRate = 115200
 )
 
 // Open opens a new serial port using defaults.
 func Open(name string) (io.ReadWriteCloser, error) {
-	return OpenWithOptions(name, defaultBaudRate, defaultTimeoutSecs)
+	return OpenWithOptions(name, defaultBaudRate)
 }
 
 // OpenWithOptions opens a new serial port with the given name and baud rate.
-func OpenWithOptions(name string, baudRate int, timeoutSecs int) (io.ReadWriteCloser, error) {
-	return open(name, baudRate, timeoutSecs)
+func OpenWithOptions(name string, baudRate int) (io.ReadWriteCloser, error) {
+	return open(name, baudRate)
 }

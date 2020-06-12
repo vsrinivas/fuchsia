@@ -5,160 +5,177 @@
 package serial
 
 import (
+	"bufio"
 	"context"
-	"fmt"
+	"errors"
 	"io"
+	"io/ioutil"
+	"log"
 	"net"
 	"os"
-	"syscall"
-
-	"go.fuchsia.dev/fuchsia/tools/lib/ring"
+	"time"
 )
+
+// ErrNetClosing comes from the stdlib, but is not exported by the stdlib, see
+// https://golang.org/issues/4373. There is a test to assert this is still a
+// sound match for the behavior we're matching against.
+var ErrNetClosing = errors.New("use of closed network connection")
+
+func isErrNetClosing(err error) bool {
+	if e, ok := err.(*net.OpError); ok {
+		return e.Err.Error() == ErrNetClosing.Error()
+	}
+	return false
+}
 
 // Server proxies all i/o to/from a serial port via another io.ReadWriter.
 // Start and Stop may be pairwise called any number of times.
 type Server struct {
-	serial          io.ReadWriter
-	opts            ServerOptions
-	done            chan struct{}
-	writeBufferSize int
+	ServerOptions
+	serial io.ReadWriteCloser
 }
 
 // ServerOptions provide options that parametrize the server's behavior.
 type ServerOptions struct {
-	// WriteBufferSize is the size of the write buffer of the socket connection
-	// that is to be established.
-	WriteBufferSize int
+	// Logger if set to a non-nil value will receive log output for internal
+	// errors that are incidental to program logic, but may be relevant for
+	// diagnosis of general behaviors, such as errors in IO with the unix socket
+	// clients.
+	Logger *log.Logger
 
-	// AuxiliaryOutput is an optional serial output sink.
-	AuxiliaryOutput io.Writer
+	// AuxiliaryOutput is an optional serial output sink. It will be closed before
+	// server.Run returns. It is dup'd for each incoming socket.
+	AuxiliaryOutput *os.File
 }
 
 // NewServer returns a new server that lives atop the given 'serial' port.
-func NewServer(serial io.ReadWriter, opts ServerOptions) *Server {
-	if opts.WriteBufferSize <= 0 {
-		panic(fmt.Sprintf("serial server: needs a positive write buffer to initialize: %d <= 0", opts.WriteBufferSize))
+func NewServer(serial io.ReadWriteCloser, opts ServerOptions) *Server {
+	s := &Server{
+		ServerOptions: opts,
+		serial:        serial,
 	}
-	return &Server{
-		serial: serial,
-		opts:   opts,
-		done:   make(chan struct{}, 1),
-	}
+	return s
 }
 
 // Run begins the server and blocks until the context signals done or an error
-// is encountered. While running, all serial i/o is forwarded to and from the
-// first connection accepted by the listener.
+// is encountered reading from serial. While running, all serial i/o is
+// forwarded to and from the any connection accepted by the listener.
+// The listener is closed by the time Run returns.
 func (s *Server) Run(ctx context.Context, listener net.Listener) error {
-	errs := make(chan error)
+	ctx, cancel := context.WithCancel(ctx)
 
-	// The data below flows as
-	//
-	// serial -> ring buffer -> conn
-	//        -> aux output
-	//
-	// and back as
-	//
-	// conn -> serial
-	//
-	// We use an intermediate ring buffer so as not to block on writes to
-	// the connection (as would happen in the case of a socket, for example):
-	// this which would prevent timely writes to the auxiliary output.
-
-	// serial -> (ring buffer, aux output)
-	rb := ring.NewBuffer(s.opts.WriteBufferSize)
-	go func() {
-		var teedSerial io.Reader = s.serial
-		if s.opts.AuxiliaryOutput != nil {
-			teedSerial = io.TeeReader(s.serial, s.opts.AuxiliaryOutput)
+	if s.AuxiliaryOutput == nil {
+		f, err := ioutil.TempFile("", "tools-serial-aux-output")
+		if err != nil {
+			return err
 		}
-		for {
-			if _, err := io.Copy(rb, teedSerial); err != nil {
-				errs <- fmt.Errorf("failed to read from serial: %v", err)
-			}
-		}
-	}()
+		s.AuxiliaryOutput = f
+		defer os.Remove(s.AuxiliaryOutput.Name())
+	}
 
 	go func() {
-		// We allow consecutive connections, but only one at a given time.
-		// When a client connection is closed, copying to/from the socket
-		// will hit syscall errors (which will be swallowed) and we begin
-		// a new iteration.
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
-				errs <- err
-				return
-			}
-			defer conn.Close()
-
-			// net.Conn does not feature a SetWriteBuffer method, but all of its
-			// main net implementations do.
-			wbs, ok := conn.(writeBufferSetter)
-			if ok {
-				if err := wbs.SetWriteBuffer(s.opts.WriteBufferSize); err != nil {
-					errs <- err
+				// if the listener was closed, we don't care.
+				if isErrNetClosing(err) {
 					return
 				}
+				s.logf("error: serial: accept: %s", err)
+				return
 			}
 
-			// conn -> serial
+			// Start a loop that reads whole lines from conn, and writes whole lines
+			// to the serial port. This is not complete, it would be better to have a
+			// proper line discipline for the serial port, however there are multiple
+			// writers to the port, this being one of them. We can best-effort
+			// non-conflicting writes by at least attempting to write lines as an
+			// atomic unit, though this is still fallible.
 			go func() {
+				b := bufio.NewReader(conn)
 				for {
-					if _, err := io.Copy(s.serial, conn); sanitizeError(ctx, err) != nil {
-						errs <- fmt.Errorf("failed to read from the connection: %v", err)
+					l, err := b.ReadString('\n')
+					if err != nil {
+						s.logf("error: serial: conn read: %s", err)
+						return
+					}
+					_, err = io.WriteString(s.serial, l)
+					if err != nil {
+						s.logf("error: serial: write: %s", err)
+						return
 					}
 				}
 			}()
 
-			// ring buffer -> conn
-			for {
-				if _, err := io.Copy(conn, rb); sanitizeError(ctx, err) != nil {
-					errs <- fmt.Errorf("failed to copy data to the connection: %v", err)
+			go func() {
+				defer conn.Close()
+
+				f, err := os.Open(s.AuxiliaryOutput.Name())
+				if err != nil {
+					s.logf("error: serial: %s", err)
 				}
+				defer f.Close()
+
+				_, err = f.Seek(0, io.SeekStart)
+				if err != nil {
+					s.logf("error: serial: seek: %s", err)
+					return
+				}
+
+				// keep copying until conn is closed
+				for {
+					// files on unix always return readable, even if select'd so
+					// there's no great strategy for "tailing". It's possible to relax
+					// some of this to a stat loop to check for appends, and/or to use
+					// filesystem watcher APIs, but in this context, this rate is both
+					// easy enough on CPU and fast enough for keeping up with serial.
+					select {
+					case <-ctx.Done():
+						return
+					case <-time.After(50 * time.Millisecond):
+						_, err := io.Copy(conn, f)
+						// io.Copy returns nil on io.EOF, which is useful here, as that's the
+						// case where we read the end of the file
+						if err == nil {
+							continue
+						}
+						return
+					}
+				}
+			}()
+		}
+	}()
+
+	errs := make(chan error)
+	go func() {
+		for {
+			_, err := io.Copy(s.AuxiliaryOutput, s.serial)
+			if err != nil {
+				errs <- err
+				return
 			}
 		}
 	}()
 
+	var err error
 	select {
 	case <-ctx.Done():
-		return nil
-	case err := <-errs:
-		return err
-	}
-}
-
-func sanitizeError(ctx context.Context, err error) error {
-	// If the context has been canceled, no need to report any error as we
-	// would already be tearing down the server as a result.
-	if err == nil || ctx.Err() != nil {
-		return nil
+		// close the serial port and wait for the copy goroutine to finish, so that
+		// we are confident that auxoutput has received all of the data up to the
+		// close.
+		s.serial.Close()
+		<-errs
+	case err = <-errs:
+		s.serial.Close()
+		cancel()
 	}
 
-	oe, ok := err.(*net.OpError)
-	if !ok {
-		return err
-	}
-	se, ok := oe.Err.(*os.SyscallError)
-	if !ok {
-		return err
-	}
-
-	// Errors resulting from a closed socket connection are fine and would be
-	// spurious to report. Assuming that this is to be used on a
-	// POSIX-compliant host, we ignore read and write errors that result from
-	// such a case.
-	//
-	// POSIX documentation:
-	// https://pubs.opengroup.org/onlinepubs/9699919799/functions/recv.html
-	// https://pubs.opengroup.org/onlinepubs/9699919799/functions/send.html
-	if (se.Syscall == "read" || se.Syscall == "write") && (se.Err == syscall.ECONNRESET || se.Err == syscall.EPIPE) {
-		return nil
-	}
-
+	listener.Close()
 	return err
 }
 
-type writeBufferSetter interface {
-	SetWriteBuffer(int) error
+func (s *Server) logf(format string, args ...interface{}) {
+	if s.Logger != nil {
+		s.Logger.Printf(format, args...)
+	}
 }

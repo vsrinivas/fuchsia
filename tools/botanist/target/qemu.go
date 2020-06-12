@@ -5,6 +5,7 @@
 package target
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -22,11 +23,9 @@ import (
 	"github.com/creack/pty"
 
 	bootserver "go.fuchsia.dev/fuchsia/tools/bootserver/lib"
-	botanist "go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
-	"go.fuchsia.dev/fuchsia/tools/lib/ring"
 	"go.fuchsia.dev/fuchsia/tools/qemu"
 )
 
@@ -107,7 +106,7 @@ type QEMUTarget struct {
 	c       chan error
 	process *os.Process
 	serial  io.ReadWriteCloser
-	pts     *os.File
+	ptm     *os.File
 }
 
 // EMUCommandBuilder defines the common set of functions used to build up an
@@ -129,28 +128,20 @@ type EMUCommandBuilder interface {
 // NewQEMUTarget returns a new QEMU target with a given configuration.
 func NewQEMUTarget(config QEMUConfig, opts Options) (*QEMUTarget, error) {
 	var serial io.ReadWriteCloser
-	var pts *os.File
+	var ptm *os.File
 	if config.Serial {
 		// We can run QEMU 'in a terminal' by creating a pseudoterminal slave and
 		// attaching it as the process' std(in|out|err) streams. Running it in a
 		// terminal - and redirecting serial to stdio - allows us to use the
 		// associated pseudoterminal master as the 'serial device' for the
 		// instance.
-		var ptm *os.File
+		var pts *os.File
 		var err error
 		ptm, pts, err = pty.Open()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create ptm/pts pair: %w", err)
 		}
-
-		// We should be streaming serial's output to stdout even if nothing is
-		// actively reading from it.
-		stdoutBuf := ring.NewBuffer(botanist.SerialLogBufferSize)
-		go io.Copy(io.MultiWriter(stdoutBuf, os.Stdout), ptm)
-		serial = struct {
-			io.Reader
-			io.WriteCloser
-		}{stdoutBuf, ptm}
+		serial = pts
 	}
 
 	qemuTarget, ok := qemuTargetMapping[config.Target]
@@ -167,7 +158,7 @@ func NewQEMUTarget(config QEMUConfig, opts Options) (*QEMUTarget, error) {
 		opts:    opts,
 		c:       make(chan error),
 		serial:  serial,
-		pts:     pts,
+		ptm:    ptm,
 	}, nil
 }
 
@@ -333,23 +324,22 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 
 	// TODO(fxbug.dev/43188): We temporarily capture the tail of all stdout and
 	// stderr to search for a particular error signature.
-	outputSink := ring.NewBuffer(1024)
-
+	var outputSink bytes.Buffer
 	cmd := &exec.Cmd{
 		Path:   invocation[0],
 		Args:   invocation,
 		Dir:    workdir,
-		Stdout: io.MultiWriter(os.Stdout, outputSink),
-		Stderr: io.MultiWriter(os.Stderr, outputSink),
+		Stdout: io.MultiWriter(os.Stdout, &outputSink),
+		Stderr: io.MultiWriter(os.Stderr, &outputSink),
 	}
-	if t.pts != nil {
-		cmd.Stdin = t.pts
-		cmd.Stdout = io.MultiWriter(t.pts, outputSink)
-		cmd.Stderr = io.MultiWriter(t.pts, outputSink)
+	if t.ptm != nil {
+		cmd.Stdin = t.ptm
+		cmd.Stdout = io.MultiWriter(t.ptm, &outputSink, os.Stdout)
+		cmd.Stderr = io.MultiWriter(t.ptm, &outputSink, os.Stderr)
 		cmd.SysProcAttr = &syscall.SysProcAttr{
 			Setctty: true,
 			Setsid:  true,
-			Ctty:    int(t.pts.Fd()),
+			Ctty:    int(t.ptm.Fd()),
 		}
 	}
 	logger.Debugf(ctx, "QEMU invocation:\n%s", strings.Join(invocation, " "))
@@ -362,7 +352,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	go func() {
 		err := cmd.Wait()
 		if err != nil {
-			checkForEBUSY(ctx, outputSink)
+			checkForEBUSY(ctx, &outputSink)
 			err = fmt.Errorf("QEMU invocation error: %w", err)
 		}
 		t.c <- err
@@ -372,22 +362,21 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 }
 
 // checkForEBUSY runs an lsof on /dev/net/tun if QEMU startup failed due to an EBUSY.
-func checkForEBUSY(ctx context.Context, output io.Reader) {
-	content, err := ioutil.ReadAll(output)
+func checkForEBUSY(ctx context.Context, buffer *bytes.Buffer) {
+	content, err := buffer.ReadString('\n')
 	if err != nil {
-		logger.Errorf(ctx, "failed to read stdout + stderr: %v", err)
-		return
-	} else if !strings.Contains(string(content), syscall.EBUSY.Error()) {
 		return
 	}
-	logger.Debugf(ctx, "fxbug.dev/43188: QEMU startup failed with an EBUSY: %#v\n contact rudymathu@ for triage", err)
+	if strings.Contains(strings.ToLower(content), syscall.EBUSY.Error()) {
+		logger.Debugf(ctx, "fxbug.dev/43188: QEMU startup failed with an EBUSY, contact rudymathu@ for triage")
 
-	// This command prints out all processes using /dev/net/tun.
-	cmd := exec.Command("lsof", "+c", "0", "/dev/net/tun")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		logger.Errorf(ctx, "running lsof failed: %v", err)
+		// This command prints out all processes using /dev/net/tun.
+		cmd := exec.Command("lsof", "+c", "0", "/dev/net/tun")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			logger.Errorf(ctx, "running lsof failed: %v", err)
+		}
 	}
 }
 
