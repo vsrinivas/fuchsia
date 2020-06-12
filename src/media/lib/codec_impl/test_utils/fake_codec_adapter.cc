@@ -104,6 +104,14 @@ FakeCodecAdapter::CoreCodecGetBufferCollectionConstraints(
   return result;
 }
 
+std::optional<fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>
+FakeCodecAdapter::CoreCodecGetAuxBufferCollectionConstraints(CodecPort port) {
+  if (aux_buffer_collection_constraints_[port]) {
+    return fidl::Clone(*aux_buffer_collection_constraints_[port]);
+  }
+  return std::nullopt;
+}
+
 void FakeCodecAdapter::CoreCodecSetBufferCollectionInfo(
     CodecPort port, const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
   // nothing to do here
@@ -216,4 +224,9 @@ void FakeCodecAdapter::CoreCodecMidStreamOutputBufferReConfigFinish() {
 void FakeCodecAdapter::SetBufferCollectionConstraints(
     CodecPort port, fuchsia::sysmem::BufferCollectionConstraints constraints) {
   buffer_collection_constraints_[port] = std::move(constraints);
+}
+
+void FakeCodecAdapter::SetAuxBufferCollectionConstraints(
+    CodecPort port, fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers constraints) {
+  aux_buffer_collection_constraints_[port] = std::move(constraints);
 }

@@ -5,6 +5,7 @@
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/media/codec_impl/codec_impl.h>
 #include <lib/media/codec_impl/codec_port.h>
+#include <lib/media/codec_impl/log.h>
 #include <zircon/assert.h>
 
 #include <fbl/algorithm.h>
@@ -36,10 +37,43 @@ void BarrierAfterFlush() {
 #endif
 }
 
+uint8_t* MapVmoRange(CodecPort port, const CodecVmoRange& vmo_range) {
+  // Map the VMO in the local address space.
+  uintptr_t tmp;
+  zx_vm_option_t flags = ZX_VM_PERM_READ;
+  if (port == kOutputPort) {
+    flags |= ZX_VM_PERM_WRITE;
+  }
+
+  // We must page-align the mapping (since HW can only map at page granularity).  This means the
+  // mapping may include up to ZX_PAGE_SIZE - 1 bytes before vmo_usable_start, and up to
+  // ZX_PAGE_SIZE - 1 bytes after vmo_usable_start + vmo_usable_size.  The usage of the mapping is
+  // expected to stay within CodecBuffer::base() to CodecBuffer::base() + vmo_usable_size.
+  uint64_t vmo_offset = fbl::round_down(vmo_range.offset(), ZX_PAGE_SIZE);
+  size_t len = fbl::round_up(vmo_range.offset() + vmo_range.size(), ZX_PAGE_SIZE) - vmo_offset;
+  zx_status_t res = zx::vmar::root_self()->map(0, vmo_range.vmo(), vmo_offset, len, flags, &tmp);
+  if (res != ZX_OK) {
+    LOG(ERROR, "Failed to map %zu byte buffer vmo (res %d)", vmo_range.size(), res);
+    return nullptr;
+  }
+  return reinterpret_cast<uint8_t*>(tmp + (vmo_range.offset() % ZX_PAGE_SIZE));
+}
+
+zx_status_t Unmap(const uint8_t* buffer_base, size_t size) {
+  uintptr_t unmap_address = fbl::round_down(reinterpret_cast<uintptr_t>(buffer_base), ZX_PAGE_SIZE);
+  size_t unmap_len =
+      fbl::round_up(reinterpret_cast<uintptr_t>(buffer_base + size), ZX_PAGE_SIZE) - unmap_address;
+  return zx::vmar::root_self()->unmap(unmap_address, unmap_len);
+}
+
 }  // namespace
 
-CodecBuffer::CodecBuffer(CodecImpl* parent, Info buffer_info, CodecVmoRange vmo_range)
-    : parent_(parent), buffer_info_(std::move(buffer_info)), vmo_range_(std::move(vmo_range)) {
+CodecBuffer::CodecBuffer(CodecImpl* parent, Info buffer_info, CodecVmoRange vmo_range,
+                         std::optional<CodecVmoRange> aux_vmo_range)
+    : parent_(parent),
+      buffer_info_(std::move(buffer_info)),
+      vmo_range_(std::move(vmo_range)),
+      aux_vmo_range_(std::move(aux_vmo_range)) {
   // nothing else to do here
 }
 
@@ -47,10 +81,7 @@ CodecBuffer::~CodecBuffer() {
   zx_status_t status;
   if (is_mapped_) {
     ZX_DEBUG_ASSERT(buffer_base_);
-    uintptr_t unmap_address = fbl::round_down(reinterpret_cast<uintptr_t>(base()), ZX_PAGE_SIZE);
-    size_t unmap_len =
-        fbl::round_up(reinterpret_cast<uintptr_t>(base() + size()), ZX_PAGE_SIZE) - unmap_address;
-    status = zx::vmar::root_self()->unmap(unmap_address, unmap_len);
+    zx_status_t status = Unmap(buffer_base_, size());
     if (status != ZX_OK) {
       parent_->FailFatalLocked("CodecBuffer::~CodecBuffer() failed to unmap() Buffer - status: %d",
                                status);
@@ -64,29 +95,33 @@ CodecBuffer::~CodecBuffer() {
       parent_->FailFatalLocked("CodecBuffer::~CodecBuffer() failed unpin() - status: %d", status);
     }
   }
+  if (aux_buffer_base_) {
+    zx_status_t status = Unmap(aux_buffer_base_, aux_size());
+    if (status != ZX_OK) {
+      parent_->FailFatalLocked(
+          "CodecBuffer::~CodecBuffer() failed to unmap() Aux Buffer - status: %d", status);
+    }
+  }
 }
 
 bool CodecBuffer::Map() {
   ZX_DEBUG_ASSERT(!buffer_info_.is_secure);
-  // Map the VMO in the local address space.
-  uintptr_t tmp;
-  zx_vm_option_t flags = ZX_VM_PERM_READ;
-  if (buffer_info_.port == kOutputPort) {
-    flags |= ZX_VM_PERM_WRITE;
-  }
-  // We must page-align the mapping (since HW can only map at page granularity).  This means the
-  // mapping may include up to ZX_PAGE_SIZE - 1 bytes before vmo_usable_start, and up to
-  // ZX_PAGE_SIZE - 1 bytes after vmo_usable_start + vmo_usable_size.  The usage of the mapping is
-  // expected to stay within CodecBuffer::base() to CodecBuffer::base() + vmo_usable_size.
-  uint64_t vmo_offset = fbl::round_down(offset(), ZX_PAGE_SIZE);
-  size_t len = fbl::round_up(offset() + size(), ZX_PAGE_SIZE) - vmo_offset;
-  zx_status_t res = zx::vmar::root_self()->map(0, vmo(), vmo_offset, len, flags, &tmp);
-  if (res != ZX_OK) {
-    printf("Failed to map %zu byte buffer vmo (res %d)\n", size(), res);
+  auto buffer_base = MapVmoRange(port(), vmo_range_);
+  if (!buffer_base) {
     return false;
   }
-  buffer_base_ = reinterpret_cast<uint8_t*>(tmp + (offset() % ZX_PAGE_SIZE));
+  buffer_base_ = buffer_base;
   is_mapped_ = true;
+  return is_mapped_;
+}
+
+bool CodecBuffer::MapAuxBuffer() {
+  ZX_DEBUG_ASSERT(has_aux_buffer());
+  auto aux_buffer_base = MapVmoRange(port(), *aux_vmo_range_);
+  if (!aux_buffer_base) {
+    return false;
+  }
+  aux_buffer_base_ = aux_buffer_base;
   return true;
 }
 
@@ -115,6 +150,26 @@ size_t CodecBuffer::size() const { return vmo_range_.size(); }
 const zx::vmo& CodecBuffer::vmo() const { return vmo_range_.vmo(); }
 
 uint64_t CodecBuffer::offset() const { return vmo_range_.offset(); }
+
+uint8_t* CodecBuffer::aux_base() const {
+  ZX_DEBUG_ASSERT(aux_buffer_base_ && "Shouldn't be using if aux_buffer was not mapped.");
+  return aux_buffer_base_;
+}
+
+const zx::vmo& CodecBuffer::aux_vmo() const {
+  ZX_DEBUG_ASSERT(has_aux_buffer());
+  return aux_vmo_range_->vmo();
+}
+
+uint64_t CodecBuffer::aux_offset() const {
+  ZX_DEBUG_ASSERT(has_aux_buffer());
+  return aux_vmo_range_->offset();
+}
+
+size_t CodecBuffer::aux_size() const {
+  ZX_DEBUG_ASSERT(has_aux_buffer());
+  return aux_vmo_range_->size();
+}
 
 void CodecBuffer::SetVideoFrame(std::weak_ptr<VideoFrame> video_frame) const {
   video_frame_ = video_frame;

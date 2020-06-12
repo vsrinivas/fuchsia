@@ -10,6 +10,7 @@
 #include <lib/media/codec_impl/codec_vmo_range.h>
 
 #include <memory>
+#include <optional>
 
 #include <fbl/macros.h>
 
@@ -46,6 +47,7 @@ class CodecBuffer {
   CodecPort port() const { return buffer_info_.port; }
 
   bool is_secure() const { return buffer_info_.is_secure; }
+
   // The vaddr of the start of the mapped VMO for this buffer.
   //
   // This will return nullptr if there's no VMO mapping because CPU access isn't
@@ -63,6 +65,14 @@ class CodecBuffer {
   const zx::vmo& vmo() const;
 
   uint64_t offset() const;
+
+  bool has_aux_buffer() const { return aux_vmo_range_.has_value(); }
+  // The rest of the aux_* functions should not be called if the CodecBuffer does not have an
+  // aux_buffer.
+  uint8_t* aux_base() const;
+  const zx::vmo& aux_vmo() const;
+  uint64_t aux_offset() const;
+  size_t aux_size() const;
 
   // The use of weak_ptr<> here is to emphasize that we don't need shared_ptr<>
   // to keep the VideoFrame(s) alive.  We'd use a raw pointer here if it weren't
@@ -95,12 +105,15 @@ class CodecBuffer {
     bool is_secure;
   };
 
-  CodecBuffer(CodecImpl* parent, Info buffer_info, CodecVmoRange vmo_range);
+  CodecBuffer(CodecImpl* parent, Info buffer_info, CodecVmoRange vmo_range,
+              std::optional<CodecVmoRange> = std::nullopt);
   ~CodecBuffer();
 
   // Maps a page-aligned portion of the VMO including vmo_usable_start to vmo_usable_start +
   // vmo_usable_size.
   bool Map();
+
+  bool MapAuxBuffer();
 
   // FakeMap() exists because most CodecAdapter(s) expect to have a CodecBuffer::base() and "data"
   // vaddr(s) within the buffer, even when buffers are secure.  IIUC, mapping to secure buffer +
@@ -131,6 +144,7 @@ class CodecBuffer {
 
   // This msg still has the live vmo_handle.
   CodecVmoRange vmo_range_;
+  std::optional<CodecVmoRange> aux_vmo_range_;
 
   // Mutable only in the sense that it's set later than the constructor.  The
   // association does not switch to a different VideoFrame once set.
@@ -139,6 +153,8 @@ class CodecBuffer {
   // This accounts for vmo_usable_start.  The content bytes are not part of
   // a Buffer instance from a const-ness point of view.
   uint8_t* buffer_base_ = nullptr;
+  uint8_t* aux_buffer_base_ = nullptr;
+
   // This remains false if fake_map_addr is passed to Map().  Not to be exposed to clients of
   // CodecBuffer.
   bool is_mapped_ = false;
