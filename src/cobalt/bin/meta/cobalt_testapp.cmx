@@ -15,7 +15,7 @@
         }
     },
     "program": {
-        "binary": "test/disabled/cobalt_testapp_no_environment"
+        "binary": "bin/cobalt_testapp"
     },
     "sandbox": {
         "services": [

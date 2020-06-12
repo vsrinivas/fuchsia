@@ -6,7 +6,7 @@ group("cobalt") {
   testonly = true
   deps = [
     ":tests",
-    "bin",
+    "bin:tests",
   ]
 }
 
