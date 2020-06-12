@@ -2,18 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// Used because we use `futures::select!`.
+//
+// From https://docs.rs/futures/0.3.1/futures/macro.select.html:
+//   Note that select! relies on proc-macro-hack, and may require to set the compiler's
+//   recursion limit very high, e.g. #![recursion_limit="1024"].
+#![recursion_limit = "512"]
+
 use {
-    anyhow::{format_err, Error},
     fidl_fuchsia_test_manager::HarnessMarker,
-    fuchsia_async as fasync,
-    fuchsia_async::TimeoutExt,
-    fuchsia_zircon as zx,
-    futures::{channel::mpsc, future::abortable, prelude::*},
+    fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::{channel::mpsc, prelude::*},
     std::collections::HashSet,
     std::fmt,
     std::io::Write,
-    std::sync::atomic::{AtomicBool, Ordering},
-    std::sync::Arc,
     test_executor::TestEvent,
 };
 
@@ -58,37 +60,23 @@ pub struct RunResult {
 pub async fn run_test<W: Write>(
     url: String,
     writer: &mut W,
-    timeout: Option<u32>,
-    test_filter: Option<String>,
-) -> Result<RunResult, Error> {
+    timeout: Option<std::num::NonZeroU32>,
+    test_filter: Option<&str>,
+) -> Result<RunResult, anyhow::Error> {
+    let mut timeout = match timeout {
+        Some(timeout) => futures::future::Either::Left(
+            fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(
+                timeout.get().into(),
+            )))
+            .map(|()| Err(())),
+        ),
+        None => futures::future::Either::Right(futures::future::ready(Ok(()))),
+    }
+    .fuse();
+
     let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()?;
 
     let (sender, mut recv) = mpsc::channel(1);
-
-    let (remote, test_fut) =
-        test_executor::run_v2_test_component(harness, url, sender, test_filter).remote_handle();
-
-    let timed_out = Arc::new(AtomicBool::new(false));
-    let timed_out_clone = timed_out.clone();
-    match timeout {
-        Some(timeout) => {
-            if timeout > 0 {
-                let (remote, abort_handle) = abortable(remote);
-                let timeout = fasync::Time::after(zx::Duration::from_seconds(timeout as _));
-                let timeout_fut = remote
-                    .on_timeout(timeout, move || {
-                        abort_handle.abort();
-                        timed_out_clone.store(true, Ordering::SeqCst);
-                        Ok(())
-                    })
-                    .map(drop);
-                fasync::spawn(timeout_fut);
-            } else {
-                return Err(format_err!("timeout should be more than zero"));
-            }
-        }
-        None => fasync::spawn(remote),
-    }
 
     let mut outcome = Outcome::Passed;
 
@@ -98,68 +86,83 @@ pub async fn run_test<W: Write>(
 
     let mut successful_completion = false;
 
-    while let Some(test_event) = recv.next().await {
-        match test_event {
-            TestEvent::TestCaseStarted { test_case_name } => {
-                if test_cases_executed.contains(&test_case_name) {
-                    return Err(format_err!("test case: '{}' started twice", test_case_name));
-                }
-                writeln!(writer, "[RUNNING]\t{}", test_case_name).expect("Cannot write logs");
-                test_cases_in_progress.insert(test_case_name.clone());
-                test_cases_executed.insert(test_case_name);
-            }
-            TestEvent::TestCaseFinished { test_case_name, result } => {
-                if !test_cases_in_progress.contains(&test_case_name) {
-                    return Err(format_err!(
-                        "test case: '{}' was never started, still got a finish event",
-                        test_case_name
-                    ));
-                }
-                test_cases_in_progress.remove(&test_case_name);
-                let result_str = match result {
-                    test_executor::TestResult::Passed => {
-                        test_cases_passed.insert(test_case_name.clone());
-                        "PASSED".to_string()
-                    }
-                    test_executor::TestResult::Failed => {
-                        if outcome == Outcome::Passed {
-                            outcome = Outcome::Failed;
-                        }
-                        "FAILED".to_string()
-                    }
-                    test_executor::TestResult::Skipped => "SKIPPED".to_string(),
-                    test_executor::TestResult::Error => {
-                        outcome = Outcome::Error;
-                        "ERROR".to_string()
-                    }
-                };
-                writeln!(writer, "[{}]\t{}", result_str, test_case_name)
-                    .expect("Cannot write logs");
-            }
-            TestEvent::LogMessage { test_case_name, msg } => {
-                if !test_cases_executed.contains(&test_case_name) {
-                    return Err(format_err!(
-                        "test case: '{}' was never started, still got a log",
-                        test_case_name
-                    ));
-                }
-                let msgs = msg.trim().split("\n");
-                for msg in msgs {
-                    writeln!(writer, "[{}]\t{}", test_case_name, msg).expect("Cannot write logs");
-                }
-            }
-            TestEvent::Finish => {
-                successful_completion = true;
-                break;
-            }
-        }
-    }
+    let test_fut = test_executor::run_v2_test_component(harness, url, sender, test_filter).fuse();
+    futures::pin_mut!(test_fut);
 
-    let timed_out = timed_out.load(Ordering::SeqCst);
-    if timed_out {
-        outcome = Outcome::Timedout;
-    } else {
-        test_fut.await?;
+    loop {
+        futures::select! {
+            timeout_res = timeout => {
+                match timeout_res {
+                    Ok(()) => {}, // No timeout specified.
+                    Err(()) => {
+                        outcome = Outcome::Timedout;
+                        break
+                    },
+                }
+            },
+            test_res = test_fut => {
+                let () = test_res?;
+            },
+            test_event = recv.next() => {
+                if let Some(test_event) = test_event {
+                    match test_event {
+                        TestEvent::TestCaseStarted { test_case_name } => {
+                            if test_cases_executed.contains(&test_case_name) {
+                                return Err(anyhow::anyhow!("test case: '{}' started twice", test_case_name));
+                            }
+                            writeln!(writer, "[RUNNING]\t{}", test_case_name).expect("Cannot write logs");
+                            test_cases_in_progress.insert(test_case_name.clone());
+                            test_cases_executed.insert(test_case_name);
+                        }
+                        TestEvent::TestCaseFinished { test_case_name, result } => {
+                            if !test_cases_in_progress.contains(&test_case_name) {
+                                return Err(anyhow::anyhow!(
+                                    "test case: '{}' was never started, still got a finish event",
+                                    test_case_name
+                                ));
+                            }
+                            test_cases_in_progress.remove(&test_case_name);
+                            let result_str = match result {
+                                test_executor::TestResult::Passed => {
+                                    test_cases_passed.insert(test_case_name.clone());
+                                    "PASSED"
+                                }
+                                test_executor::TestResult::Failed => {
+                                    if outcome == Outcome::Passed {
+                                        outcome = Outcome::Failed;
+                                    }
+                                    "FAILED"
+                                }
+                                test_executor::TestResult::Skipped => "SKIPPED",
+                                test_executor::TestResult::Error => {
+                                    outcome = Outcome::Error;
+                                    "ERROR"
+                                }
+                            };
+                            writeln!(writer, "[{}]\t{}", result_str, test_case_name)
+                                .expect("Cannot write logs");
+                        }
+                        TestEvent::LogMessage { test_case_name, msg } => {
+                            if !test_cases_executed.contains(&test_case_name) {
+                                return Err(anyhow::anyhow!(
+                                    "test case: '{}' was never started, still got a log",
+                                    test_case_name
+                                ));
+                            }
+                            let msgs = msg.trim().split("\n");
+                            for msg in msgs {
+                                writeln!(writer, "[{}]\t{}", test_case_name, msg).expect("Cannot write logs");
+                            }
+                        }
+                        TestEvent::Finish => {
+                            successful_completion = true;
+                            break;
+                        }
+                    }
+                }
+            },
+            complete => { break },
+        }
     }
 
     let mut test_cases_in_progress: Vec<String> = test_cases_in_progress.into_iter().collect();
@@ -185,9 +188,9 @@ pub async fn run_test<W: Write>(
     test_cases_passed.sort();
 
     Ok(RunResult {
-        outcome: outcome,
+        outcome,
         executed: test_cases_executed,
         passed: test_cases_passed,
-        successful_completion: successful_completion,
+        successful_completion,
     })
 }

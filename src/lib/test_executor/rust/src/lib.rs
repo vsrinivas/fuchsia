@@ -5,7 +5,7 @@
 //! This crate runs and collects results from a test which implements fuchsia.test.Suite protocol.
 
 use {
-    anyhow::{format_err, Context as _},
+    anyhow::Context as _,
     fidl::handle::AsHandleRef,
     fidl_fuchsia_test::{
         CaseListenerRequest::Finished,
@@ -149,11 +149,7 @@ impl TestCaseProcessor {
         mut log_fut: Option<BoxFuture<'static, Result<(), anyhow::Error>>>,
         mut sender: mpsc::Sender<TestEvent>,
     ) -> Result<(), anyhow::Error> {
-        while let Some(result) = listener
-            .try_next()
-            .await
-            .map_err(|e| format_err!("Error waiting for listener: {}", e))?
-        {
+        while let Some(result) = listener.try_next().await.context("waiting for listener")? {
             match result {
                 Finished { result, control_handle: _ } => {
                     // get all logs before sending finish event.
@@ -202,15 +198,8 @@ impl TestCaseProcessor {
         };
 
         let f = async move {
-            while let Some(log) = ls
-                .try_next()
-                .await
-                .map_err(|e| format_err!("Error while reading log msg: {}", e))?
-            {
-                sender
-                    .send(TestEvent::log_message(&name, &log))
-                    .map_err(|e| format_err!("Error while sending log msg: {}", e))
-                    .await?
+            while let Some(log) = ls.try_next().await.context("reading log msg")? {
+                sender.send(TestEvent::log_message(&name, &log)).await.context("sending log msg")?
             }
             Ok(())
         };
@@ -233,30 +222,22 @@ impl TestCaseProcessor {
 pub async fn run_and_collect_results(
     suite: fidl_fuchsia_test::SuiteProxy,
     sender: mpsc::Sender<TestEvent>,
-    test_filter: Option<String>,
+    test_filter: Option<&str>,
 ) -> Result<(), anyhow::Error> {
     debug!("enumerating tests");
     let (case_iterator, server_end) = fidl::endpoints::create_proxy()?;
-    suite
-        .get_tests(server_end)
-        .map_err(|e| format_err!("Error getting test cases: {}", suite_error(e)))?;
+    let () = suite.get_tests(server_end).map_err(suite_error).context("getting test cases")?;
 
     let mut invocations = Vec::<Invocation>::new();
-    let pattern = {
-        if let Some(ref filter) = test_filter {
-            Some(
-                glob::Pattern::new(filter)
-                    .map_err(|e| format_err!("Bad test filter pattern: {}", e))?,
-            )
-        } else {
-            None
-        }
-    };
+    let pattern = test_filter
+        .map(|filter| {
+            glob::Pattern::new(filter)
+                .map_err(|e| anyhow::anyhow!("Bad test filter pattern: {}", e))
+        })
+        .transpose()?;
     loop {
-        let cases = case_iterator
-            .get_next()
-            .await
-            .map_err(|e| format_err!("Error getting test cases: {}", suite_error(e)))?;
+        let cases =
+            case_iterator.get_next().await.map_err(suite_error).context("getting test cases")?;
         if cases.is_empty() {
             break;
         }
@@ -287,15 +268,12 @@ pub async fn run_and_collect_results_for_invocations(
         if chunk.is_empty() {
             break;
         }
-        successful_completion &= run_invocations(&suite, chunk, &mut sender)
-            .await
-            .map_err(move |e| format_err!("Error running test cases: {}", e))?;
+        successful_completion &=
+            run_invocations(&suite, chunk, &mut sender).await.context("running test cases")?;
     }
     if successful_completion {
-        sender
-            .send(TestEvent::test_finished())
-            .await
-            .map_err(move |e| format_err!("Error while sending TestFinished event: {}", e))?;
+        let () =
+            sender.send(TestEvent::test_finished()).await.context("sending TestFinished event")?;
     }
     Ok(())
 }
@@ -308,7 +286,7 @@ async fn run_invocations(
 ) -> Result<bool, anyhow::Error> {
     let (run_listener_client, mut run_listener) =
         fidl::endpoints::create_request_stream::<fidl_fuchsia_test::RunListenerMarker>()
-            .map_err(|e| format_err!("Error creating request stream: {}", e))?;
+            .context("creating request stream")?;
     suite.run(
         &mut invocations.into_iter().map(|i| i.into()),
         fidl_fuchsia_test::RunOptions {},
@@ -318,14 +296,11 @@ async fn run_invocations(
     let mut test_case_processors = Vec::new();
     let mut successful_completion = false;
 
-    while let Some(result_event) = run_listener
-        .try_next()
-        .await
-        .map_err(|e| format_err!("Error waiting for listener: {}", e))?
-    {
+    while let Some(result_event) = run_listener.try_next().await.context("waiting for listener")? {
         match result_event {
             OnTestCaseStarted { invocation, primary_log, listener, control_handle: _ } => {
-                let name = invocation.name.ok_or(format_err!("cannot find name in invocation"))?;
+                let name =
+                    invocation.name.ok_or(anyhow::anyhow!("cannot find name in invocation"))?;
                 sender.send(TestEvent::test_case_started(&name)).await?;
                 let test_case_processor = TestCaseProcessor::new(
                     name,
@@ -358,19 +333,19 @@ pub async fn run_v1_test_component(
     sender: mpsc::Sender<TestEvent>,
 ) -> Result<(), anyhow::Error> {
     if !test_url.ends_with(".cmx") {
-        return Err(format_err!(
+        return Err(anyhow::anyhow!(
             "Tried to run a component as a v1 test that doesn't have a .cmx extension"
         ));
     }
 
     debug!("launching test component {}", test_url);
     let app = fuchsia_component::client::launch(&launcher, test_url.clone(), None)
-        .map_err(|e| format_err!("Not able to launch v1 test:{}: {}", test_url, e))?;
+        .with_context(|| format!("Not able to launch v1 test:{}", test_url))?;
 
     debug!("connecting to test service");
     let suite = app
         .connect_to_service::<fidl_fuchsia_test::SuiteMarker>()
-        .map_err(|e| format_err!("Error connecting to test service: {}", e))?;
+        .context("connecting to service")?;
 
     run_and_collect_results(suite, sender, None).await?;
 
@@ -382,10 +357,10 @@ pub async fn run_v2_test_component(
     harness: HarnessProxy,
     test_url: String,
     sender: mpsc::Sender<TestEvent>,
-    test_filter: Option<String>,
+    test_filter: Option<&str>,
 ) -> Result<(), anyhow::Error> {
     if !test_url.ends_with(".cm") {
-        return Err(format_err!(
+        return Err(anyhow::anyhow!(
             "Tried to run a component as a v2 test that doesn't have a .cm extension"
         ));
     }
@@ -394,15 +369,15 @@ pub async fn run_v2_test_component(
     let (_controller_proxy, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
 
     debug!("Launching test component `{}`", test_url);
-    harness
+    let () = harness
         .launch_suite(&test_url, LaunchOptions {}, suite_server_end, controller_server_end)
         .await
         .context("launch_test call failed")?
-        .map_err(|e| format_err!("error launching test: {:?}", e))?;
+        .map_err(|e: fidl_fuchsia_test_manager::LaunchError| {
+            anyhow::anyhow!("error launching test: {:?}", e)
+        })?;
 
-    run_and_collect_results(suite_proxy, sender, test_filter).await?;
-
-    Ok(())
+    run_and_collect_results(suite_proxy, sender, test_filter).await
 }
 
 fn suite_error(err: fidl::Error) -> anyhow::Error {
@@ -410,12 +385,12 @@ fn suite_error(err: fidl::Error) -> anyhow::Error {
         // Could get `ClientWrite` or `ClientChannelClosed` error depending on whether the request
         // was sent before or after the channel was closed.
         fidl::Error::ClientWrite(zx_status::Status::PEER_CLOSED)
-        | fidl::Error::ClientChannelClosed(_) => format_err!(
+        | fidl::Error::ClientChannelClosed(_) => anyhow::anyhow!(
             "The test protocol was closed. This may mean `fuchsia.test.Suite` was not \
             configured correctly. Refer to \
             //docs/development/components/troubleshooting.md#troubleshoot-test"
         ),
-        _ => format_err!("{}", err),
+        err => err.into(),
     }
 }
 

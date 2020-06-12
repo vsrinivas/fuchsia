@@ -102,7 +102,7 @@ async fn launch_and_test_with_filter() {
     let mut output: Vec<u8> = vec![];
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example_v2.cm"
-            .to_string(), &mut output, None, Some("*Test3".to_string())
+            .to_string(), &mut output, None, Some("*Test3")
     )
     .await
     .expect("Running test should not fail");
@@ -312,7 +312,7 @@ async fn test_timeout() {
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm"
             .to_string(),
         &mut output,
-        Some(1),
+        std::num::NonZeroU32::new(1),
         None,
     )
     .await
@@ -325,27 +325,13 @@ async fn test_timeout() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_zero_timeout() {
-    let mut output: Vec<u8> = vec![];
-    run_test(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm"
-            .to_string(),
-        &mut output,
-        Some(0),
-        None,
-    )
-    .await
-    .expect_err("this function should have failed with timeout error");
-}
-
-#[fuchsia_async::run_singlethreaded(test)]
 async fn test_passes_with_large_timeout() {
     let mut output: Vec<u8> = vec![];
     let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm"
             .to_string(),
         &mut output,
-        Some(600), //make timeout 10 minutes.
+        std::num::NonZeroU32::new(600), // make timeout 10 minutes.
         None,
     )
     .await

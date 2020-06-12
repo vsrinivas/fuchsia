@@ -9,7 +9,6 @@ use {
     fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
     fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::LaunchOptions,
-    fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_component::client::connect_to_protocol_at_dir,
     futures::{channel::mpsc, prelude::*},
@@ -54,12 +53,12 @@ async fn run_test(test_url: &str) -> Result<Vec<TestEvent>, Error> {
 
     let (sender, recv) = mpsc::channel(1);
 
-    let (remote, test_fut) =
-        test_executor::run_and_collect_results(suite_proxy, sender, None).remote_handle();
-
-    fasync::spawn(remote);
-
-    let events = recv.collect::<Vec<_>>().await;
+    let (events, ()) = futures::future::try_join(
+        recv.collect::<Vec<_>>().map(Ok),
+        test_executor::run_and_collect_results(suite_proxy, sender, None),
+    )
+    .await
+    .context("running test")?;
 
     let mut test_events = vec![];
 
@@ -83,7 +82,6 @@ async fn run_test(test_url: &str) -> Result<Vec<TestEvent>, Error> {
         };
     }
 
-    test_fut.await.map_err(|e| format_err!("Error running test: {}", e))?;
     Ok(test_events)
 }
 

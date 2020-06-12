@@ -62,12 +62,12 @@ async fn run_test(test_url: &str) -> Result<HashSet<TestEvent>, Error> {
 
     let (sender, recv) = mpsc::channel(1);
 
-    let (remote, test_fut) =
-        test_executor::run_and_collect_results(suite_proxy, sender, None).remote_handle();
-
-    fasync::spawn(remote);
-
-    let events = recv.collect::<Vec<_>>().await;
+    let (events, ()) = futures::future::try_join(
+        recv.collect::<Vec<_>>().map(Ok),
+        test_executor::run_and_collect_results(suite_proxy, sender, None),
+    )
+    .await
+    .context("running test")?;
 
     let mut set = HashSet::new();
 
@@ -91,7 +91,6 @@ async fn run_test(test_url: &str) -> Result<HashSet<TestEvent>, Error> {
         };
     }
 
-    test_fut.await.map_err(|e| format_err!("Error running test: {}", e))?;
     Ok(set)
 }
 

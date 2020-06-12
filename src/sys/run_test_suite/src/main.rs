@@ -22,39 +22,43 @@ struct Args {
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
-    let args: Args = argh::from_env();
+    let Args { timeout, test_url, test_filter } = argh::from_env();
 
-    println!("\nRunning test '{}'", args.test_url);
+    println!("\nRunning test '{}'", &test_url);
 
     let mut stdout = io::stdout();
-    let result = run_test_suite_lib::run_test(
-        args.test_url.clone(),
-        &mut stdout,
-        args.timeout,
-        args.test_filter.clone(),
-    )
-    .await;
-    if result.is_err() {
-        let err = result.unwrap_err();
-        println!("Test suite encountered error trying to run tests: {:?}", err);
-        std::process::exit(1);
+    let run_test_suite_lib::RunResult { outcome, executed, passed, successful_completion } =
+        match run_test_suite_lib::run_test(
+            test_url.clone(),
+            &mut stdout,
+            timeout.and_then(std::num::NonZeroU32::new),
+            test_filter.as_ref().map(String::as_str),
+        )
+        .await
+        {
+            Ok(run_result) => run_result,
+            Err(err) => {
+                println!("Test suite encountered error trying to run tests: {:?}", err);
+                std::process::exit(1);
+            }
+        };
+
+    println!("{} out of {} tests passed...", passed.len(), executed.len());
+    println!("{} completed with result: {}", &test_url, outcome);
+
+    if !successful_completion {
+        println!("{} did not complete successfully.", &test_url);
     }
 
-    let run_result = result.unwrap();
-
-    println!("\n{} out of {} tests passed...", run_result.passed.len(), run_result.executed.len());
-    println!("{} completed with result: {}", &args.test_url, run_result.outcome);
-    if run_result.outcome == run_test_suite_lib::Outcome::Timedout {
-        std::process::exit(-fuchsia_zircon::Status::TIMED_OUT.into_raw());
+    match outcome {
+        run_test_suite_lib::Outcome::Passed => {}
+        run_test_suite_lib::Outcome::Timedout => {
+            std::process::exit(-fuchsia_zircon::Status::TIMED_OUT.into_raw());
+        }
+        run_test_suite_lib::Outcome::Failed
+        | run_test_suite_lib::Outcome::Inconclusive
+        | run_test_suite_lib::Outcome::Error => {
+            std::process::exit(1);
+        }
     }
-
-    if !run_result.successful_completion {
-        println!("{} did not complete successfully.", &args.test_url);
-        std::process::exit(1);
-    }
-
-    if run_result.outcome == run_test_suite_lib::Outcome::Passed {
-        std::process::exit(0);
-    }
-    std::process::exit(1);
 }
