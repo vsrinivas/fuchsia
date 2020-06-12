@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_KCOUNTER_KCOUNTER_CMDLINE_H_
-#define ZIRCON_SYSTEM_UAPP_KCOUNTER_KCOUNTER_CMDLINE_H_
+#ifndef SRC_ZIRCON_BIN_KCOUNTER_KCOUNTER_CMDLINE_H_
+#define SRC_ZIRCON_BIN_KCOUNTER_KCOUNTER_CMDLINE_H_
 
 #include <stdio.h>
 
@@ -23,4 +23,4 @@ void kcounter_usage(const char* myname, FILE* into);
 bool kcounter_parse_cmdline(int argc, const char* const argv[], FILE* err,
                             KcounterCmdline* cmdline);
 
-#endif  // ZIRCON_SYSTEM_UAPP_KCOUNTER_KCOUNTER_CMDLINE_H_
+#endif  // SRC_ZIRCON_BIN_KCOUNTER_KCOUNTER_CMDLINE_H_

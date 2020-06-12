@@ -206,7 +206,7 @@ common_image_contents = [
   "//zircon/system/uapp/ihda",
   "//src/zircon/bin/kcounter",
   "//zircon/system/uapp/kstress",
-  "//zircon/system/uapp/ktrace",
+  "//src/zircon/bin/ktrace",
   "//src/zircon/bin/loadgen",
   "//zircon/system/uapp/lz4",
   "//zircon/system/uapp/minfs",

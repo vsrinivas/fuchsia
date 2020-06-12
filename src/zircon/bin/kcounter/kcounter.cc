@@ -2,21 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cinttypes>
-#include <cstdio>
-#include <cstring>
 #include <errno.h>
-#include <fbl/array.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <lib/counter-vmo-abi.h>
 #include <lib/fdio/io.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
-#include <utility>
 #include <zircon/compiler.h>
 #include <zircon/status.h>
+
+#include <cinttypes>
+#include <cstdio>
+#include <cstring>
+#include <utility>
+
+#include <fbl/array.h>
+#include <fbl/unique_fd.h>
 
 #include "kcounter_cmdline.h"
 
@@ -174,17 +176,20 @@ int main(int argc, char** argv) {
         } else {
           if (!cmdline.terse) {
             printf("%s =%s", entry.name,
-                   !cmdline.verbose ? " "
-                                    : entry.type == counters::Type::kMin
-                                          ? " min("
-                                          : entry.type == counters::Type::kMax ? " max(" : " ");
+                   !cmdline.verbose                     ? " "
+                   : entry.type == counters::Type::kMin ? " min("
+                   : entry.type == counters::Type::kMax ? " max("
+                                                        : " ");
           }
           int64_t value = 0;
           for (uint64_t cpu = 0; cpu < desc->max_cpus; ++cpu) {
             const int64_t cpu_value = arena[(cpu * desc->num_counters()) + i];
             if (cmdline.verbose) {
               printf("%s%" PRId64,
-                     cpu == 0 ? "" : entry.type == counters::Type::kSum ? " + " : ", ", cpu_value);
+                     cpu == 0                             ? ""
+                     : entry.type == counters::Type::kSum ? " + "
+                                                          : ", ",
+                     cpu_value);
             }
             switch (entry.type) {
               case counters::Type::kSum:
