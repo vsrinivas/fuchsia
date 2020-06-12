@@ -13,17 +13,18 @@
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
 
-extern crate fuchsia_syslog as syslog;
 #[macro_use]
 extern crate log;
-use argh::FromArgs;
 
 mod eventloop;
 mod fidl_worker;
 mod oir_worker;
 mod overnet_worker;
 
-use crate::eventloop::EventLoop;
+use {
+    anyhow::Context as _, argh::FromArgs, fuchsia_async as fasync, fuchsia_syslog as fsyslog,
+    futures::FutureExt as _,
+};
 
 #[derive(FromArgs, Debug)]
 /// Options for network_manager
@@ -41,17 +42,20 @@ pub(crate) struct Opt {
     severity: Option<i32>,
 }
 
-fn main() -> Result<(), anyhow::Error> {
-    let options: Opt = argh::from_env();
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), anyhow::Error> {
+    let Opt { dev_path: _, severity } = argh::from_env();
 
-    syslog::init().expect("failed to initialize logger");
-    fuchsia_syslog::set_severity(options.severity.unwrap_or(fuchsia_syslog::levels::INFO));
+    let () = fsyslog::init_with_tags(&["network-manager"]).context("initializing logger")?;
+    let () = fsyslog::set_severity(severity.unwrap_or(fuchsia_syslog::levels::INFO));
 
-    info!("Starting Network Manager!");
-    let mut executor = fuchsia_async::Executor::new()?;
+    let eventloop = eventloop::EventLoop::new().context("creating event loop")?;
 
-    let eventloop = EventLoop::new()?;
-    let r = executor.run_singlethreaded(eventloop.run());
-    warn!("Network Manager ended: {:?}", r);
-    r
+    info!("starting");
+    eventloop
+        .run()
+        .inspect(|result| {
+            warn!("exiting: {:?}", result);
+        })
+        .await
 }
