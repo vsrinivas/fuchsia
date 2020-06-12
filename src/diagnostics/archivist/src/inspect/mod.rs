@@ -283,7 +283,7 @@ impl ReaderServer {
     //             that makes it clear to clients that snapshotting failed.
     pub fn filter_snapshots(
         configured_selectors: &Option<Vec<Arc<Selector>>>,
-        pumped_inspect_data_results: Vec<PopulatedInspectDataContainer>,
+        pumped_inspect_data: Vec<PopulatedInspectDataContainer>,
     ) -> Vec<(Moniker, NodeHierarchyData)> {
         // In case we encounter multiple PopulatedDataContainers with the same moniker we don't
         // want to do the component selector filtering again, so store the results in a map.
@@ -294,7 +294,7 @@ impl ReaderServer {
         // and filtering it using the provided selector regular expressions. Each filtered
         // inspect hierarchy is then added to an accumulator as a HierarchyData to be converted
         // into a JSON string and returned.
-        pumped_inspect_data_results.into_iter().fold(Vec::new(), |mut acc, pumped_data| {
+        pumped_inspect_data.into_iter().fold(Vec::new(), |mut acc, pumped_data| {
             let sanitized_moniker = pumped_data
                 .relative_moniker
                 .iter()
@@ -451,6 +451,39 @@ impl ReaderServer {
         Ok(())
     }
 
+    // Checks a data container for constraints the system places, and if the container is
+    // in violation, replaces the container with an error container.
+    // Known violations:
+    //      TODO(53795): Relax this violation to support diagnostics sources of any count.
+    //   1) Hosting more than 64 sources of diagnostics data.
+    fn sanitize_populated_data_container(
+        container: PopulatedInspectDataContainer,
+    ) -> PopulatedInspectDataContainer {
+        // Convert VMOs that contain too many snapshots to be sent into
+        // an error schema explaining what wat went wrong.
+        if container.snapshots.len() > IN_MEMORY_SNAPSHOT_LIMIT {
+            let no_success_snapshot_data = vec![SnapshotData::failed(
+                formatter::Error {
+                    message: format!(
+                        concat!(
+                            "Platform cannot exfiltrate >64 diagnostics",
+                            " sources per component.: {:?}, see fxb/53795 for details."
+                        ),
+                        container.relative_moniker.clone()
+                    ),
+                },
+                "NO_FILE_SUCCEEDED".to_string(),
+            )];
+            PopulatedInspectDataContainer {
+                relative_moniker: container.relative_moniker,
+                snapshots: no_success_snapshot_data,
+                inspect_matcher: container.inspect_matcher,
+            }
+        } else {
+            container
+        }
+    }
+
     /// Takes a BatchIterator server channel and starts serving snapshotted
     /// Inspect hierarchies to clients as vectors of FormattedContent. The hierarchies
     /// are served in batches of `IN_MEMORY_SNAPSHOT_LIMIT` at a time, and snapshots of
@@ -474,43 +507,90 @@ impl ReaderServer {
         let mut inspect_repo_iter = inspect_repo_data.into_iter();
         let mut iter = 0;
         let max = (inspect_repo_length - 1 / IN_MEMORY_SNAPSHOT_LIMIT) + 1;
+        let mut overflow_bucket: Vec<PopulatedInspectDataContainer> = Vec::new();
+
         while let Some(req) = stream.try_next().await? {
             match req {
                 fidl_fuchsia_diagnostics::BatchIteratorRequest::GetNext { responder } => {
                     self.inspect_reader_server_stats.batch_iterator_get_next_requests.add(1);
-                    let snapshot_batch: Vec<UnpopulatedInspectDataContainer> =
-                        (&mut inspect_repo_iter).take(IN_MEMORY_SNAPSHOT_LIMIT).collect();
+                    loop {
+                        // Only retrieve new data from the repository if the overflow bucket
+                        // is empty.
+                        let pumped_inspect_data = if overflow_bucket.is_empty() {
+                            let snapshot_batch: Vec<UnpopulatedInspectDataContainer> =
+                                (&mut inspect_repo_iter).take(IN_MEMORY_SNAPSHOT_LIMIT).collect();
 
-                    iter = iter + 1;
+                            iter = iter + 1;
 
-                    // Asynchronously populate data containers with snapshots of relevant
-                    // inspect hierarchies.
-                    let pumped_inspect_data_results = ReaderServer::pump_inspect_data(
-                        snapshot_batch,
-                        self.inspect_reader_server_stats.global_component_timeouts_count.clone(),
-                    )
-                    .await;
+                            // Asynchronously populate data containers with snapshots
+                            // of relevant inspect hierarchies.
+                            ReaderServer::pump_inspect_data(
+                                snapshot_batch,
+                                self.inspect_reader_server_stats
+                                    .global_component_timeouts_count
+                                    .clone(),
+                            )
+                            .await
+                        } else {
+                            std::mem::take(&mut overflow_bucket)
+                        };
 
-                    // Apply selector filtering to all snapshot inspect hierarchies in the batch
-                    let batch_hierarchy_data = ReaderServer::filter_snapshots(
-                        &self.configured_selectors,
-                        pumped_inspect_data_results,
-                    );
+                        let mut current_batch = Vec::new();
+                        let mut snapshot_count = 0;
+                        for populated_data_container in pumped_inspect_data {
+                            let populated_data_container =
+                                ReaderServer::sanitize_populated_data_container(
+                                    populated_data_container,
+                                );
+                            let snapshots_in_container = populated_data_container.snapshots.len();
 
-                    let formatted_content: Vec<
-                        Result<fidl_fuchsia_diagnostics::FormattedContent, Error>,
-                    > = ReaderServer::format_hierarchies(format, batch_hierarchy_data);
+                            if (snapshot_count + snapshots_in_container) > IN_MEMORY_SNAPSHOT_LIMIT
+                            {
+                                overflow_bucket.push(populated_data_container);
+                            } else {
+                                current_batch.push(populated_data_container);
+                                snapshot_count += snapshots_in_container;
+                            }
+                        }
 
-                    let filtered_results: Vec<fidl_fuchsia_diagnostics::FormattedContent> =
-                        formatted_content.into_iter().filter_map(Result::ok).collect();
+                        if current_batch.is_empty() {
+                            // Either nothing remains in the repository, or the
+                            // only remaining things have more than 64 data sources.
+                            self.inspect_reader_server_stats
+                                .batch_iterator_terminal_responses
+                                .add(1);
+                            self.inspect_reader_server_stats
+                                .batch_iterator_get_next_responses
+                                .add(1);
+                            responder.send(&mut Ok(Vec::new()))?;
+                            return Ok(());
+                        }
 
-                    // terminal responses can be sent from the snapshot if the repo is empty or fully filtered!
-                    if filtered_results.is_empty() {
-                        self.inspect_reader_server_stats.batch_iterator_terminal_responses.add(1);
+                        // Apply selector filtering to all snapshot inspect hierarchies in
+                        // the batch
+                        let batch_hierarchy_data = ReaderServer::filter_snapshots(
+                            &self.configured_selectors,
+                            current_batch,
+                        );
+
+                        let formatted_content: Vec<
+                            Result<fidl_fuchsia_diagnostics::FormattedContent, Error>,
+                        > = ReaderServer::format_hierarchies(format, batch_hierarchy_data);
+
+                        let filtered_results: Vec<fidl_fuchsia_diagnostics::FormattedContent> =
+                            formatted_content.into_iter().filter_map(Result::ok).collect();
+
+                        // We had data in the current_batch but it all got filtered away.
+                        // We shouldn't send the terminal batch since we don't know if the
+                        // repository is empty! We should try again from the top.
+                        if filtered_results.is_empty() {
+                            continue;
+                        }
+
+                        self.inspect_reader_server_stats.batch_iterator_get_next_responses.add(1);
+                        responder.send(&mut Ok(filtered_results))?;
+                        break;
                     }
-
-                    self.inspect_reader_server_stats.batch_iterator_get_next_responses.add(1);
-                    responder.send(&mut Ok(filtered_results))?;
                 }
             }
 
@@ -863,6 +943,138 @@ mod tests {
         assert_eq!(inspect_repo.data_directories.get(key).unwrap().get_values().len(), 1);
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn canonical_inspect_reader_stress_test() {
+        // Test that 3 directories, each with 33 vmos, has snapshots served over 3 batches
+        // each of which contains the 33 vmos of one component.
+        stress_test_diagnostics_repository(vec![33, 33, 33], vec![33, 33, 33]).await;
+
+        // The 64 entry vmo is served by itself, and the 63 vmo and 1 vmo directories are combined.
+        stress_test_diagnostics_repository(vec![64, 63, 1], vec![64, 64]).await;
+
+        // 64 1vmo components are sent in one batch.
+        stress_test_diagnostics_repository([1usize; 64].to_vec(), vec![64]).await;
+
+        // A 65+ vmo component will manifest as an error schema.
+        // TODO(53795): Support streaming arbitrary diagnostics source counts from
+        // components using mpsc pipelines.
+        stress_test_diagnostics_repository(vec![65], vec![1]).await;
+
+        // An errorful component doesn't halt iteration.
+        stress_test_diagnostics_repository(vec![64, 65, 64, 64], vec![64, 1, 64, 64]).await;
+
+        // An errorful component can be merged into a batch where it may fit.
+        stress_test_diagnostics_repository(vec![63, 65], vec![64]).await;
+    }
+
+    async fn stress_test_diagnostics_repository(
+        directory_vmo_counts: Vec<usize>,
+        expected_batch_results: Vec<usize>,
+    ) {
+        let path = PathBuf::from("/stress_test_root_directory");
+
+        let dir_name_and_filecount: Vec<(String, usize)> = directory_vmo_counts
+            .into_iter()
+            .enumerate()
+            .map(|(index, filecount)| (format!("diagnostics_{}", index), filecount))
+            .collect();
+
+        // Make a ServiceFs that will host inspect vmos under each
+        // of the new diagnostics directories.
+        let mut fs = ServiceFs::new();
+
+        let inspector = inspector_for_reader_test();
+
+        for (directory_name, filecount) in dir_name_and_filecount.clone() {
+            for i in 0..filecount {
+                let vmo = inspector
+                    .duplicate_vmo()
+                    .ok_or(format_err!("Failed to duplicate VMO"))
+                    .unwrap();
+
+                let size = vmo.get_size().unwrap();
+                fs.dir(directory_name.clone()).add_vmo_file_at(
+                    format!("root_{}.inspect", i),
+                    vmo,
+                    0, /* vmo offset */
+                    size,
+                );
+            }
+        }
+        let (h0, h1) = zx::Channel::create().unwrap();
+        fs.serve_connection(h1).unwrap();
+
+        // We bind the root of the FS that hosts our 3 test dirs to
+        // stress_test_root_dir. Now each directory can be found at
+        // stress_test_root_dir/diagnostics_<i>
+        let ns = fdio::Namespace::installed().unwrap();
+        ns.bind(path.to_str().unwrap(), h0).unwrap();
+
+        fasync::spawn(fs.collect());
+
+        let (done0, done1) = zx::Channel::create().unwrap();
+
+        let cloned_path = path.clone();
+        // Run the actual test in a separate thread so that it does not block on FS operations.
+        // Use signalling on a zx::Channel to indicate that the test is done.
+        std::thread::spawn(move || {
+            let done = done1;
+            let mut executor = fasync::Executor::new().unwrap();
+
+            executor.run_singlethreaded(async {
+                let id_and_directory_proxy =
+                    join_all(dir_name_and_filecount.iter().map(|(dir, _)| {
+                        let new_async_clone = cloned_path.clone();
+                        async move {
+                            let full_path = new_async_clone.join(dir);
+                            let proxy = InspectDataCollector::find_directory_proxy(&full_path)
+                                .await
+                                .unwrap();
+                            let unique_cid = ComponentIdentifier::Legacy(LegacyIdentifier {
+                                instance_id: "1234".into(),
+                                realm_path: vec![].into(),
+                                component_name: format!("component_{}.cmx", dir).into(),
+                            });
+                            (unique_cid, proxy)
+                        }
+                    }))
+                    .await;
+
+                let inspect_repo = Arc::new(RwLock::new(DiagnosticsDataRepository::new(None)));
+
+                for (cid, proxy) in id_and_directory_proxy {
+                    inspect_repo.write().add_inspect_artifacts(cid.clone(), proxy).unwrap();
+                }
+
+                let inspector = Inspector::new();
+                let root = inspector.root();
+                let test_archive_accessor_node = root.create_child("test_archive_accessor_node");
+
+                let test_accessor_stats =
+                    Arc::new(diagnostics::ArchiveAccessorStats::new(test_archive_accessor_node));
+                let test_batch_iterator_stats1 = Arc::new(
+                    diagnostics::InspectReaderServerStats::new(test_accessor_stats.clone()),
+                );
+
+                let reader_server = ReaderServer::new(
+                    inspect_repo.clone(),
+                    None,
+                    test_batch_iterator_stats1.clone(),
+                );
+                let _result_json = read_snapshot_verify_batch_count_and_batch_size(
+                    reader_server,
+                    expected_batch_results,
+                )
+                .await;
+
+                done.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).expect("signalling peer");
+            });
+        });
+
+        fasync::OnSignals::new(&done0, zx::Signals::USER_0).await.unwrap();
+        ns.unbind(path.to_str().unwrap()).unwrap();
+    }
+
     fn inspector_for_reader_test() -> Inspector {
         let inspector = Inspector::new();
         let root = inspector.root();
@@ -1122,6 +1334,57 @@ mod tests {
             if next_batch.is_empty() {
                 break;
             }
+            for formatted_content in next_batch {
+                match formatted_content {
+                    fidl_fuchsia_diagnostics::FormattedContent::Json(data) => {
+                        let mut buf = vec![0; data.size as usize];
+                        data.vmo.read(&mut buf, 0).expect("reading vmo");
+                        let hierarchy_string = std::str::from_utf8(&buf).unwrap();
+                        result_vec.push(hierarchy_string.to_string());
+                    }
+                    _ => panic!("test only produces json formatted data"),
+                }
+            }
+        }
+        let result_string = format!("[{}]", result_vec.join(","));
+        serde_json::from_str(&result_string)
+            .expect(&format!("unit tests shouldn't be creating malformed json: {}", result_string))
+    }
+
+    async fn read_snapshot_verify_batch_count_and_batch_size(
+        reader_server: ReaderServer,
+        mut expected_batch_sizes: Vec<usize>,
+    ) -> serde_json::Value {
+        let (consumer, batch_iterator): (
+            _,
+            ServerEnd<fidl_fuchsia_diagnostics::BatchIteratorMarker>,
+        ) = create_proxy().unwrap();
+
+        fasync::spawn(async move {
+            reader_server
+                .stream_inspect(
+                    fidl_fuchsia_diagnostics::StreamMode::Snapshot,
+                    fidl_fuchsia_diagnostics::Format::Json,
+                    batch_iterator,
+                )
+                .unwrap();
+        });
+
+        let mut result_vec: Vec<String> = Vec::new();
+        let mut batch_counts = Vec::new();
+        loop {
+            let next_batch: Vec<fidl_fuchsia_diagnostics::FormattedContent> =
+                consumer.get_next().await.unwrap().unwrap();
+
+            if next_batch.is_empty() {
+                expected_batch_sizes.sort();
+                batch_counts.sort();
+                assert_eq!(expected_batch_sizes, batch_counts);
+                break;
+            }
+
+            batch_counts.push(next_batch.len());
+
             for formatted_content in next_batch {
                 match formatted_content {
                     fidl_fuchsia_diagnostics::FormattedContent::Json(data) => {
