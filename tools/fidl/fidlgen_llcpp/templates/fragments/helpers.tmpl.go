@@ -37,12 +37,10 @@ const Helpers = `
 {{- $protocol_name := .LLProps.ProtocolName -}}
 void {{ $protocol_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForRequestMethodDefinitionSignatureDecodedMessage" . }} {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid, {{ .OrdinalName }});
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void {{ $protocol_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForRequestMethodDefinitionSignatureEncodedMessage" . }} {
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, {{ .OrdinalName }});
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 {{- end }}
 
@@ -59,12 +57,10 @@ void {{ $protocol_name }}::SetTransactionHeaderFor::{{ template "SetTransactionH
 {{- $protocol_name := .LLProps.ProtocolName -}}
 void {{ $protocol_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForResponseMethodSignatureDecodedMessage" . }} {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, {{ .OrdinalName }});
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void {{ $protocol_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForResponseMethodSignatureEncodedMessage" . }} {
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, 0, {{ .OrdinalName }});
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 {{- end }}
 `

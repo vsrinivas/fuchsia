@@ -307,26 +307,22 @@ void super::Interface::fooCompleterBase::Reply(
 void super::SetTransactionHeaderFor::fooRequest(
     const ::fidl::DecodedMessage<super::fooRequest>& _msg, zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid, ksuper_foo_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void super::SetTransactionHeaderFor::fooRequest(
     const ::fidl::EncodedMessage<super::fooRequest>& _msg, zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, ksuper_foo_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void super::SetTransactionHeaderFor::fooResponse(
     const ::fidl::DecodedMessage<super::fooResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, ksuper_foo_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void super::SetTransactionHeaderFor::fooResponse(
     const ::fidl::EncodedMessage<super::fooResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, 0, ksuper_foo_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -624,26 +620,22 @@ void sub::Interface::fooCompleterBase::Reply(
 void sub::SetTransactionHeaderFor::fooRequest(
     const ::fidl::DecodedMessage<sub::fooRequest>& _msg, zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid, ksub_foo_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void sub::SetTransactionHeaderFor::fooRequest(
     const ::fidl::EncodedMessage<sub::fooRequest>& _msg, zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, ksub_foo_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void sub::SetTransactionHeaderFor::fooResponse(
     const ::fidl::DecodedMessage<sub::fooResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, ksub_foo_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void sub::SetTransactionHeaderFor::fooResponse(
     const ::fidl::EncodedMessage<sub::fooResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, 0, ksub_foo_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace json

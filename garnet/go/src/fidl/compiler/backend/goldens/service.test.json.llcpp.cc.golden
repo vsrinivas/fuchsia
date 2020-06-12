@@ -125,7 +125,6 @@ void SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kSecondProtocol_MethodOnSecond_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(
     const ::fidl::EncodedMessage<SecondProtocol::MethodOnSecondRequest>& _msg,
@@ -133,7 +132,6 @@ void SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kSecondProtocol_MethodOnSecond_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -251,7 +249,6 @@ void FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kFirstProtocol_MethodOnFirst_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(
     const ::fidl::EncodedMessage<FirstProtocol::MethodOnFirstRequest>& _msg,
@@ -259,7 +256,6 @@ void FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kFirstProtocol_MethodOnFirst_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace name

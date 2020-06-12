@@ -182,7 +182,6 @@ void ExampleProtocol::SetTransactionHeaderFor::MethodRequest(
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kExampleProtocol_Method_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ExampleProtocol::SetTransactionHeaderFor::MethodRequest(
     const ::fidl::EncodedMessage<ExampleProtocol::MethodRequest>& _msg,
@@ -190,7 +189,6 @@ void ExampleProtocol::SetTransactionHeaderFor::MethodRequest(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kExampleProtocol_Method_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 auto ::llcpp::example::ExampleXUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());

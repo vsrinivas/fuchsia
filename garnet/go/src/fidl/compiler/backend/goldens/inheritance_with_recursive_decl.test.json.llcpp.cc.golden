@@ -180,14 +180,12 @@ bool Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
 void Parent::SetTransactionHeaderFor::FirstRequest(
     const ::fidl::DecodedMessage<Parent::FirstRequest>& _msg, zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid, kParent_First_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Parent::SetTransactionHeaderFor::FirstRequest(
     const ::fidl::EncodedMessage<Parent::FirstRequest>& _msg, zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kParent_First_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -487,27 +485,23 @@ bool Child::Dispatch(Interface* impl, fidl_msg_t* msg,
 void Child::SetTransactionHeaderFor::FirstRequest(
     const ::fidl::DecodedMessage<Child::FirstRequest>& _msg, zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid, kChild_First_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Child::SetTransactionHeaderFor::FirstRequest(
     const ::fidl::EncodedMessage<Child::FirstRequest>& _msg, zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kChild_First_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Child::SetTransactionHeaderFor::SecondRequest(
     const ::fidl::DecodedMessage<Child::SecondRequest>& _msg, zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid, kChild_Second_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Child::SetTransactionHeaderFor::SecondRequest(
     const ::fidl::EncodedMessage<Child::SecondRequest>& _msg, zx_txid_t _txid) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kChild_Second_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace json

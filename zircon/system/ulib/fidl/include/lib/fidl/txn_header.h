@@ -7,8 +7,6 @@
 
 #include <zircon/fidl.h>
 
-#define FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG (1 << 0)
-
 __BEGIN_CDECLS
 
 // TODO(38643): make this inline

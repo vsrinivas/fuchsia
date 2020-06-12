@@ -765,7 +765,6 @@ void Parent::SetTransactionHeaderFor::GetChildRequest(
     const ::fidl::DecodedMessage<Parent::GetChildRequest>& _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid, kParent_GetChild_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Parent::SetTransactionHeaderFor::GetChildRequest(
     const ::fidl::EncodedMessage<Parent::GetChildRequest>& _msg,
@@ -773,19 +772,16 @@ void Parent::SetTransactionHeaderFor::GetChildRequest(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kParent_GetChild_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Parent::SetTransactionHeaderFor::GetChildResponse(
     const ::fidl::DecodedMessage<Parent::GetChildResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kParent_GetChild_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Parent::SetTransactionHeaderFor::GetChildResponse(
     const ::fidl::EncodedMessage<Parent::GetChildResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, 0, kParent_GetChild_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Parent::SetTransactionHeaderFor::GetChildRequestRequest(
@@ -793,7 +789,6 @@ void Parent::SetTransactionHeaderFor::GetChildRequestRequest(
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kParent_GetChildRequest_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Parent::SetTransactionHeaderFor::GetChildRequestRequest(
     const ::fidl::EncodedMessage<Parent::GetChildRequestRequest>& _msg,
@@ -801,27 +796,23 @@ void Parent::SetTransactionHeaderFor::GetChildRequestRequest(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kParent_GetChildRequest_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Parent::SetTransactionHeaderFor::GetChildRequestResponse(
     const ::fidl::DecodedMessage<Parent::GetChildRequestResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0,
                        kParent_GetChildRequest_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Parent::SetTransactionHeaderFor::GetChildRequestResponse(
     const ::fidl::EncodedMessage<Parent::GetChildRequestResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, 0, kParent_GetChildRequest_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Parent::SetTransactionHeaderFor::TakeChildRequest(
     const ::fidl::DecodedMessage<Parent::TakeChildRequest>& _msg,
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid, kParent_TakeChild_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Parent::SetTransactionHeaderFor::TakeChildRequest(
     const ::fidl::EncodedMessage<Parent::TakeChildRequest>& _msg,
@@ -829,7 +820,6 @@ void Parent::SetTransactionHeaderFor::TakeChildRequest(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kParent_TakeChild_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Parent::SetTransactionHeaderFor::TakeChildRequestRequest(
@@ -837,7 +827,6 @@ void Parent::SetTransactionHeaderFor::TakeChildRequestRequest(
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kParent_TakeChildRequest_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Parent::SetTransactionHeaderFor::TakeChildRequestRequest(
     const ::fidl::EncodedMessage<Parent::TakeChildRequestRequest>& _msg,
@@ -845,7 +834,6 @@ void Parent::SetTransactionHeaderFor::TakeChildRequestRequest(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kParent_TakeChildRequest_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {}  // namespace

@@ -327,7 +327,6 @@ void SimpleProtocol::SetTransactionHeaderFor::AddRequest(
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kSimpleProtocol_Add_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void SimpleProtocol::SetTransactionHeaderFor::AddRequest(
     const ::fidl::EncodedMessage<SimpleProtocol::AddRequest>& _msg,
@@ -335,19 +334,16 @@ void SimpleProtocol::SetTransactionHeaderFor::AddRequest(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kSimpleProtocol_Add_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void SimpleProtocol::SetTransactionHeaderFor::AddResponse(
     const ::fidl::DecodedMessage<SimpleProtocol::AddResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kSimpleProtocol_Add_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void SimpleProtocol::SetTransactionHeaderFor::AddResponse(
     const ::fidl::EncodedMessage<SimpleProtocol::AddResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, 0, kSimpleProtocol_Add_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ::llcpp::fidl::test::nullable::SimpleUnion::

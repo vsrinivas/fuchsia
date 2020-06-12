@@ -104,7 +104,7 @@ JSValue LoadLibraryFromString(JSContext* ctx, JSValueConst this_val, int argc, J
 // argv[2] = Object.
 JSValue EncodeRequest(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   const uint8_t kFidlMagic = 1;
-  const uint8_t kFlags[3] = {FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG, 0, 0};
+  const uint8_t kFlags[3] = {0, 0, 0};
 
   if (argc != 3) {
     return JS_ThrowSyntaxError(ctx,

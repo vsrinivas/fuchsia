@@ -530,7 +530,6 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
       memset(&msg, 0, sizeof(msg));
       fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeOnOpenGenOrdinal);
 
-      msg.primary.hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
       msg.primary.s = ZX_OK;
 
       SetNodeInfoAsDirectory(&msg.primary.node_info);
@@ -788,7 +787,6 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
       DescribeMsg msg;
       memset(&msg, 0, sizeof(msg));
       fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeDescribeOrdinal);
-      msg.primary.hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
       SetNodeInfoAsDirectory(&msg.primary.node_info);
 
       fidl_msg_t raw_msg = {

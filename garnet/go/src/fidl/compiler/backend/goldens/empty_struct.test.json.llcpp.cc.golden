@@ -622,7 +622,6 @@ void EmptyProtocol::SetTransactionHeaderFor::SendRequest(
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kEmptyProtocol_Send_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void EmptyProtocol::SetTransactionHeaderFor::SendRequest(
     const ::fidl::EncodedMessage<EmptyProtocol::SendRequest>& _msg,
@@ -630,21 +629,18 @@ void EmptyProtocol::SetTransactionHeaderFor::SendRequest(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kEmptyProtocol_Send_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void EmptyProtocol::SetTransactionHeaderFor::ReceiveResponse(
     const ::fidl::DecodedMessage<EmptyProtocol::ReceiveResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0,
                        kEmptyProtocol_Receive_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void EmptyProtocol::SetTransactionHeaderFor::ReceiveResponse(
     const ::fidl::EncodedMessage<EmptyProtocol::ReceiveResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, 0, kEmptyProtocol_Receive_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveRequest(
@@ -652,7 +648,6 @@ void EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveRequest(
     zx_txid_t _txid) {
   fidl_init_txn_header(&_msg.message()->_hdr, _txid,
                        kEmptyProtocol_SendAndReceive_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveRequest(
     const ::fidl::EncodedMessage<EmptyProtocol::SendAndReceiveRequest>& _msg,
@@ -660,20 +655,17 @@ void EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveRequest(
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, _txid, kEmptyProtocol_SendAndReceive_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveResponse(
     const ::fidl::DecodedMessage<EmptyProtocol::SendAndReceiveResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0,
                        kEmptyProtocol_SendAndReceive_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void EmptyProtocol::SetTransactionHeaderFor::SendAndReceiveResponse(
     const ::fidl::EncodedMessage<EmptyProtocol::SendAndReceiveResponse>& _msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(_msg.bytes().data());
   fidl_init_txn_header(hdr, 0, kEmptyProtocol_SendAndReceive_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace json

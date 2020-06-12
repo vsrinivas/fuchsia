@@ -779,7 +779,6 @@ void TestProtocol::SetTransactionHeaderFor::
   fidl_init_txn_header(
       &_msg.message()->_hdr, _txid,
       kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestProtocol::SetTransactionHeaderFor::
     StrictXUnionHenceResponseMayBeStackAllocatedRequest(
@@ -792,7 +791,6 @@ void TestProtocol::SetTransactionHeaderFor::
   fidl_init_txn_header(
       hdr, _txid,
       kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestProtocol::SetTransactionHeaderFor::
     StrictXUnionHenceResponseMayBeStackAllocatedResponse(
@@ -802,7 +800,6 @@ void TestProtocol::SetTransactionHeaderFor::
   fidl_init_txn_header(
       &_msg.message()->_hdr, 0,
       kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestProtocol::SetTransactionHeaderFor::
     StrictXUnionHenceResponseMayBeStackAllocatedResponse(
@@ -814,7 +811,6 @@ void TestProtocol::SetTransactionHeaderFor::
   fidl_init_txn_header(
       hdr, 0,
       kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void TestProtocol::SetTransactionHeaderFor::
@@ -826,7 +822,6 @@ void TestProtocol::SetTransactionHeaderFor::
   fidl_init_txn_header(
       &_msg.message()->_hdr, _txid,
       kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestProtocol::SetTransactionHeaderFor::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(
@@ -839,7 +834,6 @@ void TestProtocol::SetTransactionHeaderFor::
   fidl_init_txn_header(
       hdr, _txid,
       kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestProtocol::SetTransactionHeaderFor::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(
@@ -849,7 +843,6 @@ void TestProtocol::SetTransactionHeaderFor::
   fidl_init_txn_header(
       &_msg.message()->_hdr, 0,
       kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
-  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestProtocol::SetTransactionHeaderFor::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(
@@ -861,7 +854,6 @@ void TestProtocol::SetTransactionHeaderFor::
   fidl_init_txn_header(
       hdr, 0,
       kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
-  hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 auto ::llcpp::fidl::test::json::NewerSimpleUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
