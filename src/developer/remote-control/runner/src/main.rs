@@ -110,7 +110,10 @@ mod test {
                 match req {
                     Some(RemoteControlRequest::IdentifyHost { responder }) => {
                         let _ = responder
-                            .send(&mut Ok(IdentifyHostResponse { addresses: Some(vec![]) }))
+                            .send(&mut Ok(IdentifyHostResponse {
+                                nodename: Some("".to_string()),
+                                addresses: Some(vec![]),
+                            }))
                             .unwrap();
                     }
                     _ => assert!(false),

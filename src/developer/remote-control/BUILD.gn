@@ -21,7 +21,10 @@ group("remote-control") {
 group("tests") {
   testonly = true
 
-  deps = [ ":remote-control-lib-tests" ]
+  deps = [
+    ":remote-control-lib-tests",
+    "//src/developer/remote-control/runner:tests",
+  ]
 }
 
 rustc_library("lib") {
@@ -116,11 +119,16 @@ package("pkg") {
   deps = [
     ":bin",
     "//build/validate:non_production_tag",
+    "//src/developer/remote-control/runner",
   ]
 
   binaries = [
     {
       name = "remote_control_bin"
+    },
+    {
+      name = "remote_control_runner"
+      shell = true
     },
   ]
 
@@ -129,5 +137,15 @@ package("pkg") {
       path = rebase_path("meta/remote-control.cml")
       dest = "remote-control.cm"
     },
+    {
+      path = rebase_path("runner/meta/remote-control-runner.cmx")
+      dest = "remote-control-runner.cmx"
+    },
   ]
+}
+
+# This group is included in core base. Only add dependencies to this
+# if they belong in base.
+group("runtime") {
+  deps = [ ":pkg" ]
 }

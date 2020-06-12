@@ -35,3 +35,6 @@ catapult_converter
 # fonts contains a v2 component, which goes directly to pkgfs.
 # We should move this to base: fxb/48944
 fonts
+
+# remote-control is a v2 component that is cached (not in base)
+remote-control

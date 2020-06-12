@@ -64,6 +64,16 @@ group("ffx") {
   ]
 }
 
+group("runtime") {
+  deps = [
+    # The tool
+    ":host",
+
+    # Target-side dependencies
+    "//src/developer/remote-control:runtime",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [
