@@ -1,0 +1,14 @@
+{
+    program: {
+        binary: "bin/exit_on_command",
+    },
+    use: [
+        { runner: "elf" },
+    ],
+    expose: [
+        {
+            protocol: "/svc/test.policy.ExitController",
+            from: "self",
+        },
+    ],
+}

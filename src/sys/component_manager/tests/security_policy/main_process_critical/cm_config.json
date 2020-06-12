@@ -1,0 +1,9 @@
+{
+    security_policy: {
+        job_policy: {
+            main_process_critical: [
+                "/policy_allowed",
+            ],
+        }
+    }
+}

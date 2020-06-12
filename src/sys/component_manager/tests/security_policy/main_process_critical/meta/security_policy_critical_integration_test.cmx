@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/security_policy_integration_test"
+        "binary": "test/security_policy_critical_integration_test"
     },
     "sandbox": {
         "features": [

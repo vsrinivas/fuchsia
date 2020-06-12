@@ -1,0 +1,28 @@
+{
+    children: [
+        // Three children which are all identical except for their identity
+        // (monikers) plus the fact that #policy_not_requested does not ask for
+        // main_process_critical. The security policy used alongside this test
+        // has #policy_allowed alone allowlisted.
+        {
+            name: "policy_allowed",
+            url: "fuchsia-pkg://fuchsia.com/security-policy-critical-integration-test#meta/exit_on_command.cm",
+        },
+        {
+            name: "policy_denied",
+            url: "fuchsia-pkg://fuchsia.com/security-policy-critical-integration-test#meta/exit_on_command.cm",
+        },
+        {
+            name: "policy_not_requested",
+            url: "fuchsia-pkg://fuchsia.com/security-policy-critical-integration-test#meta/exit_on_command_no_request.cm",
+        },
+    ],
+    expose: [
+        // Expose the root realm's Realm protocol so that the test logic can
+        // bind to specific children.
+        {
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+}
