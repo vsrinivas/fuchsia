@@ -14,7 +14,11 @@ group("manual_player") {
 
 package("tennis_manual_player") {
   deps = [ ":tennis_manual_player_bin" ]
-  binary = "tennis_manual_player"
+  binaries = [
+    {
+      name = "tennis_manual_player"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/tennis_manual_player.cmx")

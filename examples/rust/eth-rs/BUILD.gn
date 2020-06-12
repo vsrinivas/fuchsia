@@ -21,8 +21,11 @@ rustc_binary("bin") {
 package("eth-rs") {
   deps = [ ":bin" ]
 
-  binary = "eth_rs"
-
+  binaries = [
+    {
+      name = "eth_rs"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/eth-rs.cmx")

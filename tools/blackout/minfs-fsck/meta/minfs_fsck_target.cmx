@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/minfs_fsck_target_bin"
     },
     "sandbox": {
         "dev": [

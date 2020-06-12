@@ -14,5 +14,9 @@ package("crust-shared") {
 
   deps = [ "c:bin" ]
 
-  binary = "crust-shared"
+  binaries = [
+    {
+      name = "crust-shared"
+    },
+  ]
 }

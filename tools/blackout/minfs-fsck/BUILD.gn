@@ -47,7 +47,11 @@ package("minfs-fsck-target") {
     ":minfs-fsck-target-bin",
     ":minfs.manifest",
   ]
-  binary = "minfs_fsck_target_bin"
+  binaries = [
+    {
+      name = "minfs_fsck_target_bin"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/minfs_fsck_target.cmx")

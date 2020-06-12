@@ -41,8 +41,11 @@ package("pkg") {
 
   deps = [ ":bin" ]
 
-  binary = "inspect_example_rs"
-
+  binaries = [
+    {
+      name = "inspect_example_rs"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/inspect-rs.cmx")

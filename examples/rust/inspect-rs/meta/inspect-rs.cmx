@@ -1,5 +1,5 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/inspect_example_rs"
     }
 }

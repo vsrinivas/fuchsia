@@ -23,8 +23,11 @@ group("tennis") {
 package("tennis_service") {
   deps = [ ":tennis_service_bin" ]
 
-  binary = "tennis_service"
-
+  binaries = [
+    {
+      name = "tennis_service"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/tennis_service.cmx")
@@ -55,8 +58,11 @@ rustc_binary("tennis_service_bin") {
 package("tennis_viewer") {
   deps = [ ":tennis_viewer_bin" ]
 
-  binary = "tennis_viewer"
-
+  binaries = [
+    {
+      name = "tennis_viewer"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/tennis_viewer.cmx")
@@ -88,8 +94,11 @@ rustc_binary("tennis_viewer_bin") {
 package("tennis_rust5_ai") {
   deps = [ ":tennis_rust5_ai_bin" ]
 
-  binary = "tennis_rust5_ai"
-
+  binaries = [
+    {
+      name = "tennis_rust5_ai"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/tennis_rust5_ai.cmx")
