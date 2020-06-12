@@ -8,12 +8,18 @@ use {
         client::types,
         config_management::{Credential, SavedNetworksManager},
     },
-    log::{trace, warn},
+    log::{error, trace, warn},
     std::{
+        cmp::Ordering,
         collections::HashMap,
+        convert::TryInto,
         sync::{Arc, Mutex, MutexGuard},
+        time::{Duration, SystemTime},
     },
 };
+
+#[cfg(test)] // TODO: remove in Kevin's CL (7 total in this file)
+const RECENT_FAILURE_WINDOW: Duration = Duration::from_secs(60 * 5); // 5 minutes
 
 #[allow(dead_code)] // TODO: remove in Kevin's CL (7 total in this file)
 pub struct NetworkSelector {
@@ -32,6 +38,7 @@ struct InternalNetworkData {
     has_ever_connected: bool,
     rssi: Option<i8>,
     compatible: bool,
+    recent_failure_count: u8,
 }
 
 impl NetworkSelector {
@@ -54,7 +61,21 @@ impl NetworkSelector {
     fn load_saved_networks(&self) -> HashMap<types::NetworkIdentifier, InternalNetworkData> {
         let mut networks: HashMap<types::NetworkIdentifier, InternalNetworkData> = HashMap::new();
         for saved_network in self.saved_network_manager.get_networks().iter() {
-            trace!("Adding saved network to hashmap");
+            let recent_failure_count = saved_network
+                .perf_stats
+                .failure_list
+                .get_recent(SystemTime::now() - RECENT_FAILURE_WINDOW)
+                .len()
+                .try_into()
+                .unwrap_or_else(|e| {
+                    error!("Failed to convert failure count: {:?}", e);
+                    u8::MAX
+                });
+
+            trace!(
+                "Adding saved network to hashmap{}",
+                if recent_failure_count > 0 { " with some failures" } else { "" }
+            );
             networks.insert(
                 types::NetworkIdentifier {
                     ssid: saved_network.ssid.clone(),
@@ -63,6 +84,7 @@ impl NetworkSelector {
                 InternalNetworkData {
                     credential: saved_network.credential.clone(),
                     has_ever_connected: saved_network.has_ever_connected,
+                    recent_failure_count: recent_failure_count,
                     rssi: None,
                     compatible: false,
                 },
@@ -100,6 +122,11 @@ impl NetworkSelector {
     }
 
     #[cfg(test)] // TODO: remove in Kevin's CL (7 total in this file)
+    /// Select the best available network, based on the current saved networks and the most
+    /// recent scan results provided to this module.
+    /// Only networks that are both saved and visible in the most recent scan results are eligible
+    /// for consideration. Among those, the "best" network based on compatibility and quality (e.g.
+    /// RSSI, recent failures) is selected.
     pub fn get_best_network(
         &self,
         ignore_list: &Vec<types::NetworkIdentifier>,
@@ -143,11 +170,18 @@ fn find_best_network(
             true
         })
         .max_by(|(_, data_a), (_, data_b)| {
-            // Sort by RSSI
+            // If only one network has failures, prefer the other one
+            if data_a.recent_failure_count > 0 && data_b.recent_failure_count == 0 {
+                return Ordering::Less;
+            }
+            if data_a.recent_failure_count == 0 && data_b.recent_failure_count > 0 {
+                return Ordering::Greater;
+            }
+
+            // Both networks have failures, sort by RSSI
             let rssi_a = data_a.rssi.unwrap();
             let rssi_b = data_b.rssi.unwrap();
             rssi_a.partial_cmp(&rssi_b).unwrap()
-            // TODO(53999): add in some weighing for network denials
         })
         .map(|(id, data)| (id.clone(), data.credential.clone()))
 }
@@ -214,6 +248,13 @@ mod tests {
             fidl_sme::ConnectResultCode::Success,
         );
 
+        // mark the second one as having a failure
+        test_values.saved_network_manager.record_connect_result(
+            test_id_2.clone().into(),
+            &credential_2.clone(),
+            fidl_sme::ConnectResultCode::BadCredentials,
+        );
+
         // check these networks were loaded
         let mut expected_hashmap = HashMap::new();
         expected_hashmap.insert(
@@ -223,6 +264,7 @@ mod tests {
                 has_ever_connected: true,
                 rssi: None,
                 compatible: false,
+                recent_failure_count: 0,
             },
         );
         expected_hashmap.insert(
@@ -232,6 +274,7 @@ mod tests {
                 has_ever_connected: false,
                 rssi: None,
                 compatible: false,
+                recent_failure_count: 1,
             },
         );
         let networks = network_selector.load_saved_networks();
@@ -330,6 +373,7 @@ mod tests {
                 has_ever_connected: true,
                 rssi: None,
                 compatible: false,
+                recent_failure_count: 0,
             },
         );
         saved_networks.insert(
@@ -339,6 +383,7 @@ mod tests {
                 has_ever_connected: false,
                 rssi: None,
                 compatible: false,
+                recent_failure_count: 0,
             },
         );
 
@@ -390,6 +435,7 @@ mod tests {
                 has_ever_connected: true,
                 rssi: Some(-10),  // strongest RSSI of all the bss
                 compatible: true, // compatible
+                recent_failure_count: 0,
             },
         );
         expected_result.insert(
@@ -399,6 +445,7 @@ mod tests {
                 has_ever_connected: false,
                 rssi: Some(-15),
                 compatible: false, // DisallowedNotSupported
+                recent_failure_count: 0,
             },
         );
 
@@ -428,6 +475,7 @@ mod tests {
                 has_ever_connected: true,
                 rssi: Some(-10),
                 compatible: true,
+                recent_failure_count: 0,
             },
         );
         networks.insert(
@@ -437,6 +485,7 @@ mod tests {
                 has_ever_connected: true,
                 rssi: Some(-15),
                 compatible: true,
+                recent_failure_count: 0,
             },
         );
 
@@ -454,6 +503,7 @@ mod tests {
                 has_ever_connected: true,
                 rssi: Some(-5),
                 compatible: true,
+                recent_failure_count: 0,
             },
         );
 
@@ -461,6 +511,84 @@ mod tests {
         assert_eq!(
             find_best_network(&networks, &vec![]).unwrap(),
             (test_id_2.clone(), credential_2.clone())
+        );
+    }
+
+    #[test]
+    fn find_best_network_sorts_by_failure_count() {
+        // build network hashmap
+        let mut networks = HashMap::new();
+        let test_id_1 = types::NetworkIdentifier {
+            ssid: "foo".as_bytes().to_vec(),
+            type_: types::SecurityType::Wpa3,
+        };
+        let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
+        let test_id_2 = types::NetworkIdentifier {
+            ssid: "bar".as_bytes().to_vec(),
+            type_: types::SecurityType::Wpa,
+        };
+        let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
+        networks.insert(
+            test_id_1.clone(),
+            InternalNetworkData {
+                credential: credential_1.clone(),
+                has_ever_connected: true,
+                rssi: Some(-10),
+                compatible: true,
+                recent_failure_count: 0,
+            },
+        );
+        networks.insert(
+            test_id_2.clone(),
+            InternalNetworkData {
+                credential: credential_2.clone(),
+                has_ever_connected: true,
+                rssi: Some(-15),
+                compatible: true,
+                recent_failure_count: 0,
+            },
+        );
+
+        // stronger network returned
+        assert_eq!(
+            find_best_network(&networks, &vec![]).unwrap(),
+            (test_id_1.clone(), credential_1.clone())
+        );
+
+        // mark the stronger network as having a failure
+        networks.insert(
+            test_id_1.clone(),
+            InternalNetworkData {
+                credential: credential_1.clone(),
+                has_ever_connected: true,
+                rssi: Some(-10),
+                compatible: true,
+                recent_failure_count: 2,
+            },
+        );
+
+        // weaker network (with no failures) returned
+        assert_eq!(
+            find_best_network(&networks, &vec![]).unwrap(),
+            (test_id_2.clone(), credential_2.clone())
+        );
+
+        // give them both the same number of failures
+        networks.insert(
+            test_id_2.clone(),
+            InternalNetworkData {
+                credential: credential_2.clone(),
+                has_ever_connected: true,
+                rssi: Some(-15),
+                compatible: true,
+                recent_failure_count: 1,
+            },
+        );
+
+        // stronger network returned
+        assert_eq!(
+            find_best_network(&networks, &vec![]).unwrap(),
+            (test_id_1.clone(), credential_1.clone())
         );
     }
 
@@ -485,6 +613,7 @@ mod tests {
                 has_ever_connected: true,
                 rssi: Some(1),
                 compatible: true,
+                recent_failure_count: 0,
             },
         );
         networks.insert(
@@ -494,6 +623,7 @@ mod tests {
                 has_ever_connected: true,
                 rssi: Some(2),
                 compatible: true,
+                recent_failure_count: 0,
             },
         );
 
@@ -511,6 +641,7 @@ mod tests {
                 has_ever_connected: true,
                 rssi: Some(2),
                 compatible: false,
+                recent_failure_count: 0,
             },
         );
 
@@ -542,6 +673,7 @@ mod tests {
                 has_ever_connected: true,
                 rssi: None, // No RSSI
                 compatible: true,
+                recent_failure_count: 0,
             },
         );
         networks.insert(
@@ -551,6 +683,7 @@ mod tests {
                 has_ever_connected: true,
                 rssi: None, // No RSSI
                 compatible: true,
+                recent_failure_count: 0,
             },
         );
 
@@ -565,6 +698,7 @@ mod tests {
                 has_ever_connected: true,
                 rssi: Some(20),
                 compatible: true,
+                recent_failure_count: 0,
             },
         );
         assert_eq!(
@@ -594,6 +728,7 @@ mod tests {
                 has_ever_connected: true,
                 rssi: Some(1),
                 compatible: true,
+                recent_failure_count: 0,
             },
         );
         networks.insert(
@@ -603,6 +738,7 @@ mod tests {
                 has_ever_connected: true,
                 rssi: Some(2),
                 compatible: true,
+                recent_failure_count: 0,
             },
         );
 

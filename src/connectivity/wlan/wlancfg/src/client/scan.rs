@@ -34,6 +34,9 @@ impl From<&fidl_sme::BssInfo> for types::Bss {
 /// Handles incoming scan requests by creating a new SME scan request.
 /// For the output_iterator, returns scan results and/or errors.
 /// On successful scan, also provides scan results to successful_scan_observer().
+/// In practice, the successful_scan_observer defined in this module should be used as the
+/// successful_scan_observer argument to this function. See the documentation on that function
+/// to better understand its purpose.
 pub async fn perform_scan<F, G, Fut>(
     client: ClientPtr,
     output_iterator: fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>,
@@ -104,10 +107,10 @@ fn clone_sme_bss_info(bss: &fidl_sme::BssInfo) -> fidl_sme::BssInfo {
     }
 }
 
-/// This function generates a function which accepts scan results and distributes them to
-/// several "observers". When a successful scan takes place, the scan results should be provided
-/// to these "observers", who will use the scan results for several purposes, e.g. determining
-/// network quality.
+/// This function accepts scan results and distributes them to several "observers".  These
+/// "observers" will use the scan results for several purposes, e.g. determining
+/// network quality. As of initial implementation, there are two observers included in this
+/// function: the emergency location sensor, and the Network Selector module.
 pub async fn successful_scan_observer(
     scan_results: Vec<types::ScanResult>,
     network_selector_updater: Arc<impl ScanResultUpdate>,

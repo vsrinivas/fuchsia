@@ -80,7 +80,7 @@ impl ConnectFailureList {
 
     /// This function will be used when Network Denial reasons are used to select a network.
     /// Returns a list of the denials that happened at or after given system time.
-    #[allow(dead_code)]
+    #[cfg(test)] // TODO: remove in Kevin's CL
     pub fn get_recent(&self, earliest_time: SystemTime) -> Vec<ConnectFailure> {
         self.0.iter().skip_while(|denial| denial.time < earliest_time).cloned().collect()
     }
