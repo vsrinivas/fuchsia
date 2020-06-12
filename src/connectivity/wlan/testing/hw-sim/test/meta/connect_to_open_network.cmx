@@ -5,7 +5,7 @@
                 "fuchsia.stash.SecureStore": "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx",
                 "fuchsia.wlan.device.service.DeviceService": [
                     "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx",
-                    "--isolated_devmgr"
+                    "--isolated-devmgr"
                 ],
                 "fuchsia.wlan.devmgr.IsolatedDevmgr": [
                     "fuchsia-pkg://fuchsia.com/wlan_devmgr#meta/wlan_devmgr.cmx"

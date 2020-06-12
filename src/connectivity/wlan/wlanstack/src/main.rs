@@ -21,6 +21,7 @@ mod watchable_map;
 mod watcher_service;
 
 use anyhow::Error;
+use argh::FromArgs;
 use fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream;
 use fuchsia_async as fasync;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
@@ -30,7 +31,6 @@ use futures::future::{try_join, try_join4};
 use futures::prelude::*;
 use log::info;
 use std::sync::Arc;
-use structopt::StructOpt;
 use wlan_sme;
 
 use crate::device::{IfaceDevice, IfaceMap, PhyDevice, PhyMap};
@@ -44,17 +44,17 @@ static LOGGER: logger::Logger = logger::Logger;
 
 /// Configuration for wlanstack service.
 /// This configuration is a super set of individual component configurations such as SME.
-#[derive(StructOpt, Clone, Debug, Default)]
+#[derive(FromArgs, Clone, Debug, Default)]
 pub struct ServiceCfg {
-    /// |true| if WEP should be supported by the service instance.
-    #[structopt(long = "wep_supported")]
+    /// if WEP should be supported by the service instance.
+    #[argh(switch)]
     pub wep_supported: bool,
-    /// |true| if legacy WPA1 should be supported by the service instance.
-    #[structopt(long = "wpa1_supported")]
+    /// if legacy WPA1 should be supported by the service instance.
+    #[argh(switch)]
     pub wpa1_supported: bool,
-    /// |true| if devices are spawned in an isolated devmgr and device_watcher should watch devices
+    /// if devices are spawned in an isolated devmgr and device_watcher should watch devices
     /// in the isolated devmgr (for wlan-hw-sim based tests)
-    #[structopt(long = "isolated_devmgr")]
+    #[argh(switch)]
     pub isolated_devmgr: bool,
 }
 
@@ -70,7 +70,7 @@ async fn main() -> Result<(), Error> {
     log::set_max_level(MAX_LOG_LEVEL);
 
     info!("Starting");
-    let cfg = ServiceCfg::from_args();
+    let cfg: ServiceCfg = argh::from_env();
     info!("{:?}", cfg);
     let mut fs = ServiceFs::new_local();
     let inspector = Inspector::new_with_size(inspect::VMO_SIZE_BYTES);
@@ -153,23 +153,23 @@ mod tests {
 
     #[test]
     fn parse_svc_cfg_wep() {
-        let cfg = ServiceCfg::from_iter(vec!["bin/app", "--wep_supported"].iter());
+        let cfg = ServiceCfg::from_args(&["bin/app"], &["--wep-supported"]).unwrap();
         assert!(cfg.wep_supported);
     }
 
     #[test]
     fn parse_svc_cfg_default() {
-        let cfg = ServiceCfg::from_iter(vec!["bin/app"].iter());
+        let cfg = ServiceCfg::from_args(&["bin/app"], &[]).unwrap();
         assert!(!cfg.wep_supported);
     }
 
     #[test]
     fn svc_to_sme_cfg() {
-        let svc_cfg = ServiceCfg::from_iter(vec!["bin/app"].iter());
+        let svc_cfg = ServiceCfg::from_args(&["bin/app"], &[]).unwrap();
         let sme_cfg: wlan_sme::Config = svc_cfg.into();
         assert!(!sme_cfg.wep_supported);
 
-        let svc_cfg = ServiceCfg::from_iter(vec!["bin/app", "--wep_supported"].iter());
+        let svc_cfg = ServiceCfg::from_args(&["bin/app"], &["--wep-supported"]).unwrap();
         let sme_cfg: wlan_sme::Config = svc_cfg.into();
         assert!(sme_cfg.wep_supported);
     }

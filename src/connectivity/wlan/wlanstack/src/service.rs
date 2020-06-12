@@ -465,7 +465,6 @@ mod tests {
     use futures::future::BoxFuture;
     use futures::task::Poll;
     use pin_utils::pin_mut;
-    use structopt::StructOpt;
     use wlan_common::{
         assert_variant,
         channel::{Cbw, Phy},
@@ -1148,7 +1147,7 @@ mod tests {
         let (ifaces, iface_events) = device::IfaceMap::new();
 
         let iface_counter = Arc::new(IfaceCounter::new());
-        let cfg = ServiceCfg::from_args();
+        let cfg: ServiceCfg = argh::from_env();
         let phys = Arc::new(phys);
         let ifaces = Arc::new(ifaces);
         let (watcher_service, watcher_fut) =
