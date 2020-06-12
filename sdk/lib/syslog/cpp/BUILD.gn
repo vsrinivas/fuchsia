@@ -23,10 +23,12 @@ sdk_source_set("cpp") {
     "macros.h",
   ]
 
+  public_deps = [ "//zircon/public/lib/fit" ]
+
   if (is_fuchsia) {
     sources += [ "logging_backend_fuchsia.cc" ]
     libs = [ "zircon" ]
-    public_deps = [
+    public_deps += [
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/syslog",
     ]

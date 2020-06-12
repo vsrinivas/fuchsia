@@ -263,5 +263,43 @@ TEST_F(LoggingFixture, PlogT) {
 }
 #endif  // defined(__Fuchsia__)
 
+TEST_F(LoggingFixture, SLog) {
+  LogSettings new_settings;
+  EXPECT_EQ(LOG_INFO, new_settings.min_log_level);
+  files::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
+  SetLogSettings(new_settings);
+
+  int line1 = __LINE__ + 1;
+  FX_SLOG(ERROR)("tag", "String log");
+
+  int line2 = __LINE__ + 1;
+  FX_SLOG(ERROR)("tag", 42);
+
+  int line3 = __LINE__ + 1;
+  FX_SLOG(ERROR)("tag", {42, "string"});
+
+  int line4 = __LINE__ + 1;
+  FX_SLOG(ERROR)("tag", {"first"_k = 42, "second"_k = "string"});
+
+  int line5 = __LINE__ + 1;
+  FX_SLOG(ERROR)("String log");
+
+  std::string log;
+  ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
+
+  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
+                                      std::to_string(line1) + ")] tag: String log"));
+  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
+                                      std::to_string(line2) + ")] tag: 42"));
+  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
+                                      std::to_string(line3) + ")] tag: [42, \"string\"]"));
+  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
+                                      std::to_string(line4) +
+                                      ")] tag: {\"first\": 42, \"second\": \"string\"}"));
+  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
+                                      std::to_string(line5) + ")] String log"));
+}
+
 }  // namespace
 }  // namespace syslog

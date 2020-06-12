@@ -60,6 +60,51 @@ const char* StripPath(const char* path) {
 
 }  // namespace
 
+std::string LogValue::ToString(bool quote_if_string) const {
+  if (fit::holds_alternative<std::nullptr_t>(value_)) {
+    return "";
+  } else if (fit::holds_alternative<std::string>(value_)) {
+    auto& str = fit::get<std::string>(value_);
+    if (!quote_if_string) {
+      return str;
+    } else {
+      return "\"" + str + "\"";
+    }
+  } else if (fit::holds_alternative<int64_t>(value_)) {
+    return std::to_string(fit::get<int64_t>(value_));
+  } else if (fit::holds_alternative<std::vector<LogValue>>(value_)) {
+    auto& list = fit::get<std::vector<LogValue>>(value_);
+    std::string ret = "[";
+
+    for (const auto& item : list) {
+      if (ret.size() > 1) {
+        ret += ", ";
+      }
+
+      ret += item.ToString(true);
+    }
+
+    return ret + "]";
+  } else {
+    auto& obj = fit::get<std::vector<LogField>>(value_);
+    std::string ret = "{";
+
+    for (const auto& field : obj) {
+      if (ret.size() > 1) {
+        ret += ", ";
+      }
+
+      ret += field.ToString();
+    }
+
+    return ret + "}";
+  }
+}
+
+std::string LogField::ToString() const { return "\"" + key_ + "\": " + value_.ToString(true); }
+
+LogKey operator"" _k(const char* k, unsigned long sz) { return LogKey(std::string(k, sz)); }
+
 LogMessage::LogMessage(LogSeverity severity, const char* file, int line, const char* condition,
                        const char* tag
 #if defined(__Fuchsia__)

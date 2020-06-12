@@ -10,12 +10,83 @@
 #include <zircon/types.h>
 #endif
 
+#include <lib/fit/variant.h>
 #include <lib/syslog/cpp/log_level.h>
 
 #include <limits>
 #include <sstream>
+#include <vector>
 
 namespace syslog {
+
+class LogValue;
+class LogField;
+
+template <typename T>
+LogValue ToLogValue(T);
+
+class LogValue {
+ public:
+  LogValue(std::nullptr_t n) : value_(n) {}
+  LogValue(std::initializer_list<LogValue> list) : value_(list) {}
+  LogValue(std::initializer_list<LogField> obj) : value_(obj) {}
+  LogValue(std::string msg) : value_(msg) {}
+  LogValue(int i) : value_(i) {}
+  template <typename T>
+  LogValue(T t) : LogValue(std::move(ToLogValue(t))) {}
+
+  std::string ToString(bool quote_if_string = false) const;
+
+  operator bool() const { return !fit::holds_alternative<std::nullptr_t>(value_); }
+
+ private:
+  fit::variant<std::nullptr_t, std::string, int64_t, std::vector<LogValue>, std::vector<LogField>>
+      value_;
+};
+
+class LogField {
+ public:
+  LogField(std::string key, LogValue value) : key_(std::move(key)), value_(std::move(value)) {}
+
+  std::string ToString() const;
+
+ private:
+  std::string key_;
+  LogValue value_;
+};
+
+class LogKey {
+ public:
+  LogKey(std::string key) : key_(std::move(key)) {}
+
+  LogField operator=(LogValue&& message) const { return LogField(key_, std::move(message)); }
+
+ private:
+  std::string key_;
+};
+
+LogKey operator"" _k(const char* k, unsigned long sz);
+
+template <>
+inline LogValue ToLogValue(std::nullptr_t msg) {
+  return ToLogValue(msg);
+}
+
+inline LogValue ToLogValue(std::string msg) { return LogValue(std::move(msg)); }
+
+template <>
+inline LogValue ToLogValue(const char* msg) {
+  return ToLogValue(std::string(msg));
+}
+
+template <>
+inline LogValue ToLogValue(int foo) {
+  return ToLogValue(foo);
+}
+
+inline LogValue ToLogValue(std::initializer_list<LogValue> list) { return LogValue(list); }
+
+inline LogValue ToLogValue(std::initializer_list<LogField> obj) { return LogValue(obj); }
 
 class LogMessageVoidify {
  public:
@@ -63,6 +134,14 @@ int GetVlogVerbosity();
 bool ShouldCreateLogMessage(LogSeverity severity);
 
 }  // namespace syslog
+
+#define FX_SLOG(severity)                                                                    \
+  !FX_LOG_IS_ON(severity) ? (void)0 : ([](const char* tag, ::syslog::LogValue v = nullptr) { \
+    if (v)                                                                                   \
+      FX_LOGS(severity) << tag << ": " << v.ToString();                                      \
+    else                                                                                     \
+      FX_LOGS(severity) << tag;                                                              \
+  })
 
 #define FX_LOG_STREAM(severity, tag) \
   ::syslog::LogMessage(::syslog::LOG_##severity, __FILE__, __LINE__, nullptr, tag).stream()
