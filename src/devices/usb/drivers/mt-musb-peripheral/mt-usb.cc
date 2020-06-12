@@ -648,9 +648,10 @@ int MtUsb::IrqThread() {
   }
 }
 
-void MtUsb::DdkUnbindDeprecated() {
+void MtUsb::DdkUnbindNew(ddk::UnbindTxn txn) {
   irq_.destroy();
   thrd_join(irq_thread_, nullptr);
+  txn.Reply();
 }
 
 void MtUsb::DdkRelease() { delete this; }
