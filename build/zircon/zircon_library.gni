@@ -313,10 +313,10 @@ template("zircon_library") {
     }
     if (library == "fs-management") {
       data_deps += [
+        "//src/storage/bin/blobfs",
+        "//zircon/system/uapp/minfs",
         "//zircon/third_party/uapp/fsck-msdosfs",
         "//zircon/third_party/uapp/mkfs-msdosfs",
-        "//zircon/system/uapp/blobfs",
-        "//zircon/system/uapp/minfs",
       ]
     }
 

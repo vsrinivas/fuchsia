@@ -61,7 +61,7 @@ if (is_fuchsia) {
     configs += [ "//build/config:Wno-unused-function" ]
 
     data_deps = [
-      "//zircon/system/uapp/blobfs",
+      "//src/storage/bin/blobfs",
       "//zircon/system/uapp/minfs",
       "//zircon/third_party/uapp/fsck-msdosfs",
       "//zircon/third_party/uapp/mkfs-msdosfs",

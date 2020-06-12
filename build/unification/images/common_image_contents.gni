@@ -194,7 +194,7 @@ common_image_contents = [
   "//zircon/system/core/pwrbtn-monitor",
   "//zircon/system/core/svchost",
   "//zircon/system/core/sysinfo",
-  "//zircon/system/uapp/blobfs",
+  "//src/storage/bin/blobfs",
   "//zircon/system/uapp/crasher",
   "//zircon/system/uapp/dd",
   "//zircon/system/uapp/df",

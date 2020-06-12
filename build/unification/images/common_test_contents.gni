@@ -69,7 +69,7 @@ common_test_contents = [
   "//zircon/system/core/netsvc:netsvc-test",
   "//zircon/system/core/ptysvc:ptysvc-test",
   "//zircon/system/core/svchost:crashsvc-test",
-  "//zircon/system/uapp/blobfs",
+  "//src/storage/bin/blobfs",
   "//zircon/system/uapp/minfs",
   "//zircon/system/ulib/blobfs/test:blobfs-integration",
   "//zircon/system/ulib/blobfs/test:blobfs-integration-paged",
