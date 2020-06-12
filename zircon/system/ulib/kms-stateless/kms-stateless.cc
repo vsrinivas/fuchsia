@@ -5,10 +5,13 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <filesystem>
 #include <memory>
 
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 #include <ramdevice-client/ramdisk.h>
 
 #include "keysafe/keysafe.h"
@@ -156,14 +159,38 @@ zx_status_t WatchTee(int dirfd, int event, const char* filename, void* cookie) {
   }
 }
 
+// Wait for a tee devices to exist.
+bool WaitForTeeDevices() {
+  const auto status = wait_for_device(kDeviceClass, ZX_SEC(5));
+  if (status == ZX_OK) {
+    return true;
+  } else if (status != ZX_ERR_NOT_SUPPORTED) {
+    // If the status is ZX_ERR_NOT_SUPPORTED then fallback to the polling method
+    // below. We see this inside of a component.
+    return false;
+  }
+
+  // For 5 seconds we will poll the directory until it has devices in it.
+  const zx::time start = zx::clock::get_monotonic();
+  while (zx::clock::get_monotonic() - start < zx::sec(5)) {
+    if (std::filesystem::is_empty(kDeviceClass)) {
+      zx::nanosleep(zx::deadline_after(zx::msec(10)));
+    } else {
+      return true;
+    }
+  }
+  return false;
+}
+
 }  // namespace
 
 zx_status_t GetHardwareDerivedKey(GetHardwareDerivedKeyCallback callback,
                                   uint8_t key_info[kExpectedKeyInfoSize]) {
-  if (wait_for_device(kDeviceClass, ZX_SEC(5)) != ZX_OK) {
+  if (!WaitForTeeDevices()) {
     fprintf(stderr, "Error waiting for tee device directory!\n");
     return ZX_ERR_IO;
   }
+
   fbl::unique_fd dirfd(open(kDeviceClass, O_RDONLY));
   if (!dirfd.is_valid()) {
     fprintf(stderr, "Failed to open tee device directory!\n");
