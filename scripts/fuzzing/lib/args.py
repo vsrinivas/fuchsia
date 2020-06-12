@@ -8,7 +8,7 @@ import re
 import sys
 
 import command
-from cli import CommandLineInterface
+from host import Host
 
 # This file contains the arguments parsing for "fx fuzz".
 
@@ -19,16 +19,12 @@ class ArgParser(argparse.ArgumentParser):
     argparse adds a lot of benefit, but its help and usage messages don't fit
     well with the style of other "fx" utilities. As a result, this class
     overrides the error() and exit() methods to suppress printing those
-    messages. As an added bonus, the incorporation of CommandLineInterface
+    messages. As an added bonus, the incorporation of Host
     makes it possible to test these conditions.
 
-    Note that argparse's add_subparsers() method returns an action that can
-    be used to add subparsers _of the same class_. This implies that this
-    class must be able to function both as the top-level, dispatching parser
-    as well as a subcommand subparser.
-
     Attributes:
-        cli:           A CommandLineInterface object used to print errors.
+        factory:    The factory used to create this and other objects.
+        host:       Alias for factory.host
     """
 
     # These are used in parse_args() to identify and extract libFuzzer arguments.
@@ -59,9 +55,9 @@ class ArgParser(argparse.ArgumentParser):
         self._factory = factory
 
     @property
-    def cli(self):
-        """Alias for factory.cli."""
-        return self.factory.cli
+    def host(self):
+        """Alias for factory.host."""
+        return self.factory.host
 
     def add_parsers(self):
         """Configure a top-level parser with subparsers.
@@ -313,9 +309,9 @@ class ArgParser(argparse.ArgumentParser):
         if subcommand != 'help':
             return args
         if not args.subcommand:
-            self.cli.echo(*self.generate_help())
+            self.host.echo(*self.generate_help())
         elif args.subcommand in self._parsers:
-            self.cli.echo(*self._parsers[args.subcommand].generate_help())
+            self.host.echo(*self._parsers[args.subcommand].generate_help())
         else:
             self.error('Unrecognized subcommand: "{}".'.format(args.subcommand))
         self.exit()
@@ -426,7 +422,7 @@ class ArgParser(argparse.ArgumentParser):
 
     def exit(self, status=0, message=None):
         if message:
-            self.cli.error(message, 'Try "fx fuzz help".')
+            self.host.error(message, 'Try "fx fuzz help".')
         sys.exit(status)
 
     def error(self, message):

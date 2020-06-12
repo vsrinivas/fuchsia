@@ -45,9 +45,9 @@ class Namespace(object):
         return self.fuzzer.device
 
     @property
-    def cli(self):
-        """Alias for fuzzer.cli."""
-        return self._fuzzer.cli
+    def host(self):
+        """Alias for fuzzer.host."""
+        return self._fuzzer.host
 
     def abspath(self, data_path):
         if data_path.startswith(self.data()):
@@ -55,7 +55,7 @@ class Namespace(object):
             return '/data/r/sys/fuchsia.com:{}:0#meta:{}.cmx/{}'.format(
                 self.fuzzer.package, self.fuzzer.executable, relpath)
         else:
-            self.cli.error('Not a data path: {}'.format(data_path))
+            self.host.error('Not a data path: {}'.format(data_path))
 
     def data(self, relpath=''):
         """Returns a namespace path to package data."""

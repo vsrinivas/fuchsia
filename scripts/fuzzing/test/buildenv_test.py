@@ -16,31 +16,31 @@ class BuildEnvTest(TestCaseWithFactory):
 
     def test_fuchsia_dir(self):
         self.assertError(
-            lambda: BuildEnv(self.cli, None), 'FUCHSIA_DIR not set.',
+            lambda: BuildEnv(self.host, None), 'FUCHSIA_DIR not set.',
             'Have you sourced "scripts/fx-env.sh"?')
 
     def test_configure(self):
         # Fails due to missing paths
         fuchsia_dir = 'test_configure'
-        buildenv = BuildEnv(self.cli, fuchsia_dir)
+        buildenv = BuildEnv(self.host, fuchsia_dir)
         build_dir = os.path.join(fuchsia_dir, 'build_dir')
-        self.cli.mkdir(build_dir)
+        self.host.mkdir(build_dir)
 
         # No $FUCHSIA_DIR/out/default/host_x64/symbolize
         symbolizer_exec = os.path.join(build_dir, 'host_x64', 'symbolize')
         self.assertError(
             lambda: buildenv.configure(build_dir),
             'Invalid symbolizer executable: {}'.format(symbolizer_exec))
-        self.cli.touch(symbolizer_exec)
+        self.host.touch(symbolizer_exec)
 
         # No $FUCHSIA_DIR/out/default/host_x64/symbolize
         clang_dir = os.path.join(
-            fuchsia_dir, 'prebuilt', 'third_party', 'clang', self.cli.platform)
+            fuchsia_dir, 'prebuilt', 'third_party', 'clang', self.host.platform)
         llvm_symbolizer = os.path.join(clang_dir, 'bin', 'llvm-symbolizer')
         self.assertError(
             lambda: buildenv.configure(build_dir),
             'Invalid LLVM symbolizer: {}'.format(llvm_symbolizer))
-        self.cli.touch(llvm_symbolizer)
+        self.host.touch(llvm_symbolizer)
 
         # No $FUCHSIA_DIR/.../.build-id
         build_id_dirs = [
@@ -53,11 +53,11 @@ class BuildEnvTest(TestCaseWithFactory):
                 lambda: buildenv.configure(build_dir),
                 'Invalid build ID directory: {}'.format(build_id_dir),
             )
-            self.cli.mkdir(build_id_dir)
+            self.host.mkdir(build_id_dir)
 
         buildenv.configure(build_dir)
         clang_dir = os.path.join(
-            'prebuilt', 'third_party', 'clang', self.cli.platform)
+            'prebuilt', 'third_party', 'clang', self.host.platform)
 
         self.assertEqual(buildenv.build_dir, buildenv.path(build_dir))
         self.assertEqual(
@@ -93,7 +93,7 @@ class BuildEnvTest(TestCaseWithFactory):
         ]
 
         fuzzers_json = buildenv.path(buildenv.build_dir, 'fuzzers.json')
-        with self.cli.open(fuzzers_json, 'w') as opened:
+        with self.host.open(fuzzers_json, 'w') as opened:
             json.dump(data, opened)
 
         buildenv.read_fuzzers(fuzzers_json)
@@ -116,7 +116,7 @@ class BuildEnvTest(TestCaseWithFactory):
             self.buildenv.fuzzers('a/b/c')
 
     def test_path(self):
-        fuchsia_dir = self.cli.getenv('FUCHSIA_DIR')
+        fuchsia_dir = self.host.getenv('FUCHSIA_DIR')
         self.assertEqual(
             self.buildenv.path('bar', 'baz'),
             os.path.join(fuchsia_dir, 'bar', 'baz'))

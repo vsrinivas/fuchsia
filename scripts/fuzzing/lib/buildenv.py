@@ -27,13 +27,13 @@ class BuildEnv(object):
       gsutil:           Path to the Google Cloud Storage utility.
   """
 
-    def __init__(self, cli, fuchsia_dir):
-        assert cli, 'CLI not set.'
+    def __init__(self, host, fuchsia_dir):
+        assert host, 'Host not set.'
         if not fuchsia_dir:
-            cli.error(
+            host.error(
                 'FUCHSIA_DIR not set.', 'Have you sourced "scripts/fx-env.sh"?')
         self._fuchsia_dir = fuchsia_dir
-        self._cli = cli
+        self._host = host
         self._build_dir = None
         self._symbolizer_exec = None
         self._llvm_symbolizer = None
@@ -46,8 +46,8 @@ class BuildEnv(object):
         return self._fuchsia_dir
 
     @property
-    def cli(self):
-        return self._cli
+    def host(self):
+        return self._host
 
     @property
     def build_dir(self):
@@ -61,8 +61,8 @@ class BuildEnv(object):
 
     @symbolizer_exec.setter
     def symbolizer_exec(self, symbolizer_exec):
-        if not self.cli.isfile(symbolizer_exec):
-            self.cli.error(
+        if not self.host.isfile(symbolizer_exec):
+            self.host.error(
                 'Invalid symbolizer executable: {}'.format(symbolizer_exec))
         self._symbolizer_exec = symbolizer_exec
 
@@ -73,8 +73,8 @@ class BuildEnv(object):
 
     @llvm_symbolizer.setter
     def llvm_symbolizer(self, llvm_symbolizer):
-        if not self.cli.isfile(llvm_symbolizer):
-            self.cli.error(
+        if not self.host.isfile(llvm_symbolizer):
+            self.host.error(
                 'Invalid LLVM symbolizer: {}'.format(llvm_symbolizer))
         self._llvm_symbolizer = llvm_symbolizer
 
@@ -86,8 +86,8 @@ class BuildEnv(object):
     @build_id_dirs.setter
     def build_id_dirs(self, build_id_dirs):
         for build_id_dir in build_id_dirs:
-            if not self.cli.isdir(build_id_dir):
-                self.cli.error(
+            if not self.host.isdir(build_id_dir):
+                self.host.error(
                     'Invalid build ID directory: {}'.format(build_id_dir))
         self._build_id_dirs = build_id_dirs
 
@@ -98,15 +98,15 @@ class BuildEnv(object):
                 self._gsutil = self.create_process(['which',
                                                     'gsutil']).check_output()
             except subprocess.CalledProcessError:
-                self.cli.error(
+                self.host.error(
                     'Unable to find gsutil.',
                     'Try installing the Google Cloud SDK.')
         return self._gsutil
 
     @gsutil.setter
     def gsutil(self, gsutil):
-        if not self.cli.isfile(gsutil):
-            self.cli.error('Invalid GS utility: {}'.format(gsutil))
+        if not self.host.isfile(gsutil):
+            self.host.error('Invalid GS utility: {}'.format(gsutil))
         self._gsutil = gsutil
 
     # Initialization routines
@@ -115,7 +115,7 @@ class BuildEnv(object):
         """Sets multiple properties based on the given build directory."""
         self._build_dir = self.path(build_dir)
         clang_dir = os.path.join(
-            'prebuilt', 'third_party', 'clang', self.cli.platform)
+            'prebuilt', 'third_party', 'clang', self.host.platform)
         self.symbolizer_exec = self.path(build_dir, 'host_x64', 'symbolize')
         self.llvm_symbolizer = self.path(clang_dir, 'bin', 'llvm-symbolizer')
         self.build_id_dirs = [
@@ -129,7 +129,7 @@ class BuildEnv(object):
 
     def read_fuzzers(self, pathname):
         """Parses the available fuzzers from an fuzzers.json pathname."""
-        with self.cli.open(pathname, on_error=[
+        with self.host.open(pathname, on_error=[
                 'Failed to read fuzzers from {}.'.format(pathname),
                 'Have you run "fx set ... --fuzz-with <sanitizer>"?'
         ]) as opened:
@@ -187,12 +187,12 @@ class BuildEnv(object):
             cmd += ['resolve', '-device-limit', '1', device_name]
         else:
             cmd += ['list']
-        addrs = self.cli.create_process(cmd).check_output().strip()
+        addrs = self.host.create_process(cmd).check_output().strip()
         if not addrs:
-            self.cli.error('Unable to find device.', 'Try "fx set-device".')
+            self.host.error('Unable to find device.', 'Try "fx set-device".')
         addrs = addrs.split('\n')
         if len(addrs) != 1:
-            self.cli.error('Multiple devices found.', 'Try "fx set-device".')
+            self.host.error('Multiple devices found.', 'Try "fx set-device".')
         return addrs[0]
 
     def symbolize(self, raw):
@@ -207,11 +207,11 @@ class BuildEnv(object):
         cmd = [self.symbolizer_exec, '-llvm-symbolizer', self.llvm_symbolizer]
         for build_id_dir in self.build_id_dirs:
             cmd += ['-build-id-dir', build_id_dir]
-        p = self.cli.create_process(cmd)
-        p.stdin = subprocess.PIPE
-        p.stdout = subprocess.PIPE
-        proc = p.popen()
-        out, _ = proc.communicate(raw)
-        if proc.returncode != 0:
+        process = self.host.create_process(cmd)
+        process.stdin = subprocess.PIPE
+        process.stdout = subprocess.PIPE
+        popened = process.popen()
+        out, _ = popened.communicate(raw)
+        if popened.returncode != 0:
             out = ''
         return re.sub(r'[0-9\[\]\.]*\[klog\] INFO: ', '', out)

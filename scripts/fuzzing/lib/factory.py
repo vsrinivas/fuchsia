@@ -6,7 +6,7 @@
 import errno
 
 from args import ArgParser
-from cli import CommandLineInterface
+from host import Host
 from buildenv import BuildEnv
 from device import Device
 from fuzzer import Fuzzer
@@ -15,24 +15,25 @@ from fuzzer import Fuzzer
 class Factory(object):
     """Facility for creating associated objects.
 
-       The factory can create CommandLineInterfaces, BuildEnvs, Devices, and
-       Fuzzers. More importantly, it can construct them with references to
-       each other, i.e. a Factory-constructed Fuzzer automatically gets a
-       reference to a Factory-constructed Device, which has a reference to a
-       Factory-constructed BuildEnv.
+    The factory can create Hosts, BuildEnvs, Devices, and
+    Fuzzers. More importantly, it can construct them with references to
+    each other, i.e. a Factory-constructed Fuzzer automatically gets a
+    reference to a Factory-constructed Device, which has a reference to a
+    Factory-constructed BuildEnv.
 
-       Attributes:
-         cli:       Command line interface object for user interactions.
+    Attributes:
+        host:   System interface object for user interactions.
     """
 
-    def __init__(self, cli=None):
-        if not cli:
-            cli = CommandLineInterface()
-        self._cli = cli
+    def __init__(self, host=None):
+        if not host:
+            host = Host()
+        self._host = host
 
     @property
-    def cli(self):
-        return self._cli
+    def host(self):
+        """System interface object for user interactions."""
+        return self._host
 
     def create_parser(self):
         """Returns an argument parser."""
@@ -44,13 +45,13 @@ class Factory(object):
     def create_buildenv(self, fuchsia_dir=None):
         """Constructs a BuildEnv from a local build directory."""
         if not fuchsia_dir:
-            fuchsia_dir = self.cli.getenv('FUCHSIA_DIR')
+            fuchsia_dir = self.host.getenv('FUCHSIA_DIR')
         if not fuchsia_dir:
-            self.cli.error(
+            self.host.error(
                 'FUCHSIA_DIR not set.', 'Have you sourced "scripts/fx-env.sh"?')
-        buildenv = BuildEnv(self.cli, fuchsia_dir)
+        buildenv = BuildEnv(self.host, fuchsia_dir)
         pathname = buildenv.path('.fx-build-dir')
-        build_dir = self.cli.readfile(
+        build_dir = self.host.readfile(
             pathname,
             on_error=[
                 'Failed to read build directory from {}.'.format(pathname),
@@ -65,7 +66,7 @@ class Factory(object):
         if not buildenv:
             buildenv = self.create_buildenv()
         pathname = '{}.device'.format(buildenv.build_dir)
-        device_name = self.cli.readfile(pathname, missing_ok=True)
+        device_name = self.host.readfile(pathname, missing_ok=True)
         addr = buildenv.find_device(device_name)
         device = Device(buildenv, addr)
         device.configure()
@@ -75,12 +76,12 @@ class Factory(object):
         """Matches a fuzzer name pattern to a fuzzer."""
         matches = buildenv.fuzzers(name)
         if not matches:
-            self.cli.error('No matching fuzzers found.', 'Try "fx fuzz list".')
+            self.host.error('No matching fuzzers found.', 'Try "fx fuzz list".')
         if len(matches) > 1:
             choices = ["/".join(m) for m in matches]
-            self.cli.echo('More than one match found.')
+            self.host.echo('More than one match found.')
             prompt = 'Please pick one from the list:'
-            return self.cli.choose(prompt, choices).split('/')
+            return self.host.choose(prompt, choices).split('/')
         else:
             return matches[0]
 

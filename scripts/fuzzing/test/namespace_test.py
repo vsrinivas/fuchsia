@@ -85,7 +85,7 @@ class NamespaceTest(TestCaseWithFuzzer):
             'No such directory: {}'.format(local_path))
 
         # Must be data path(s)
-        self.cli.mkdir(local_path)
+        self.host.mkdir(local_path)
         self.assertError(
             lambda: self.ns.fetch(local_path, relpath1, data_path2),
             'Not a data path: {}'.format(relpath1))
@@ -116,7 +116,7 @@ class NamespaceTest(TestCaseWithFuzzer):
             'No matching files: "test_store/foo".')
 
         # Must be data path(s)
-        self.cli.touch(foo)
+        self.host.touch(foo)
         self.assertError(
             lambda: self.ns.store(relpath, foo),
             'Not a data path: {}'.format(relpath))
@@ -128,8 +128,8 @@ class NamespaceTest(TestCaseWithFuzzer):
         # Valid globs
         bar = os.path.join(local_path, 'bar')
         baz = os.path.join(local_path, 'baz')
-        self.cli.touch(bar)
-        self.cli.touch(baz)
+        self.host.touch(bar)
+        self.host.touch(baz)
         datas = self.ns.store(data_path, os.path.join(local_path, '*'))
         self.assertScpTo(bar, baz, foo, abspath)
         relpaths = [os.path.basename(pathname) for pathname in [bar, baz, foo]]

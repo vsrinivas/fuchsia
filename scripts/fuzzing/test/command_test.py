@@ -43,7 +43,7 @@ class CommandTest(TestCaseWithFactory):
     def test_start_fuzzer(self):
         # In the foreground
         output = 'output'
-        self.cli.mkdir(output)
+        self.host.mkdir(output)
         args = self.parse_args(
             'start',
             '--foreground',
@@ -155,7 +155,7 @@ class CommandTest(TestCaseWithFactory):
 
     def test_repro_units(self):
         unit = 'crash-deadbeef'
-        self.cli.touch(unit)
+        self.host.touch(unit)
         args = self.parse_args('repro', 'fake-package1/fake-target3', unit)
         command.repro_units(args, self.factory)
 
@@ -164,7 +164,7 @@ class CommandTest(TestCaseWithFactory):
         command.analyze_fuzzer(args, self.factory)
 
         # We shouldn't have copied anything
-        self.assertFalse([cmd for cmd in self.cli.processes if 'gs' in cmd])
+        self.assertFalse([cmd for cmd in self.host.processes if 'gs' in cmd])
 
         # Invalid corpus
         corpus1 = 'corpus1'
@@ -179,32 +179,32 @@ class CommandTest(TestCaseWithFactory):
             lambda: command.analyze_fuzzer(args, self.factory),
             'No such directory: {}'.format(corpus1))
 
-        self.cli.mkdir(corpus1)
+        self.host.mkdir(corpus1)
         foo = os.path.join(corpus1, 'foo')
         bar = os.path.join(corpus1, 'bar')
-        self.cli.touch(foo)
-        self.cli.touch(bar)
+        self.host.touch(foo)
+        self.host.touch(bar)
         self.assertError(
             lambda: command.analyze_fuzzer(args, self.factory),
             'No such directory: {}'.format(corpus2))
 
         # Invalid dictionary
-        self.cli.mkdir(corpus2)
+        self.host.mkdir(corpus2)
         baz = os.path.join(corpus2, 'baz')
-        self.cli.touch(baz)
+        self.host.touch(baz)
         self.assertError(
             lambda: command.analyze_fuzzer(args, self.factory),
             'No such file: {}'.format(local_dict))
 
-        self.cli.touch(local_dict)
-        with self.cli.temp_dir() as temp_dir:
+        self.host.touch(local_dict)
+        with self.host.temp_dir() as temp_dir:
             # Make it appear as if something was retrieved from GCS.
             qux = os.path.join(temp_dir.pathname, 'qux')
-            self.cli.touch(qux)
+            self.host.touch(qux)
         command.analyze_fuzzer(args, self.factory)
         gcs_url = 'gs://corpus.internal.clusterfuzz.com/libFuzzer/fuchsia_{}-{}'.format(
             package, executable)
-        with self.cli.temp_dir() as temp_dir:
+        with self.host.temp_dir() as temp_dir:
             cmd = ['gsutil', '-m', 'cp', gcs_url + '/*', temp_dir.pathname]
             self.assertRan(*cmd)
 

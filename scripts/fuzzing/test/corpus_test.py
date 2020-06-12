@@ -24,15 +24,16 @@ class CorpusTest(TestCaseWithFuzzer):
             'No such directory: {}'.format(relpath))
 
         # Fuzzer is running
-        self.cli.mkdir(relpath)
+        self.host.mkdir(relpath)
         corpus_element = os.path.join(relpath, 'element')
-        self.cli.touch(corpus_element)
+        self.host.touch(corpus_element)
+
         self.set_running(
             self.fuzzer.package, self.fuzzer.executable, duration=10)
         self.assertError(
             lambda: self.corpus.add_from_host(relpath),
             'fake-package1/fake-target1 is running and must be stopped first.')
-        self.cli.sleep(10)
+        self.host.sleep(10)
 
         # Valid
         added = self.corpus.add_from_host(relpath)
@@ -42,7 +43,7 @@ class CorpusTest(TestCaseWithFuzzer):
     def test_add_from_gcs(self):
         # Note: this takes advantage of the fact that the FakeCLI always returns
         # the same name for temp_dir().
-        with self.cli.temp_dir() as temp_dir:
+        with self.host.temp_dir() as temp_dir:
             gcs_url = 'gs://bucket'
             cmd = ['gsutil', '-m', 'cp', gcs_url + '/*', temp_dir.pathname]
             process = self.get_process(cmd)
@@ -54,7 +55,7 @@ class CorpusTest(TestCaseWithFuzzer):
 
             process.succeeds = True
             corpus_element = os.path.join(temp_dir.pathname, 'element')
-            self.cli.touch(corpus_element)
+            self.host.touch(corpus_element)
             added = self.corpus.add_from_gcs(gcs_url)
             self.assertEqual(len(added), 1)
             self.assertRan(*cmd)

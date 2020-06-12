@@ -13,23 +13,23 @@ import unittest
 from StringIO import StringIO
 
 import test_env
-from lib.cli import CommandLineInterface
-from cli_fake import FakeCLI
+from lib.host import Host
+from host_fake import FakeHost
 from test_case import TestCaseWithIO
-""" Test the real and fake implementations of the CommandLineInterface.
+""" Test the real and fake implementations of the Host.
 
 The structure of these tests is organized into 5 classes:
 
-  NonHermeticTestCase       CommandLineInterfaceTestCase       HermeticTestCase
-        ^                          ^      ^                              ^
-        |                          |      |                              |
-        +-CommandLineInterfaceTest-+      +-FakeCommandLineInterfaceTest-+
+  NonHermeticTestCase       HostTestCase       HermeticTestCase
+                  ^          ^      ^              ^
+                  |          |      |              |
+                  +-HostTest-+      +-FakeHostTest-+
 
 NonHermeticTestCase is a TestCase that provides real-system utility functions.
 HermeticTestCase is a TestCase that provides faked utility functions.
-CommandLineInterfaceTestCase defines a set of tests without a TestCase.
-CommandLineInterfaceTest creates tests for CommandLineInterface.
-FakeCommandLineInterfaceTest creates tests for FakeCLI.
+HostTestCase defines a set of tests without a TestCase.
+HostTest creates tests for Host.
+FakeHostTest creates tests for FakeHost.
 """
 
 
@@ -40,7 +40,7 @@ class NonHermeticTestCase(TestCaseWithIO):
 
     def setUp(self):
         super(NonHermeticTestCase, self).setUp()
-        self._cli = CommandLineInterface()
+        self._host = Host()
         self._temp_dir = tempfile.mkdtemp()
 
     def tearDown(self):
@@ -51,8 +51,8 @@ class NonHermeticTestCase(TestCaseWithIO):
     # Unit test context
 
     @property
-    def cli(self):
-        return self._cli
+    def host(self):
+        return self._host
 
     @property
     def temp_dir(self):
@@ -86,19 +86,19 @@ class HermeticTestCase(TestCaseWithIO):
 
     def setUp(self):
         super(HermeticTestCase, self).setUp()
-        self._cli = FakeCLI()
+        self._host = FakeHost()
 
-        process = self.cli.create_process(['false'])
+        process = self.host.create_process(['false'])
         process.succeeds = False
 
-        process = self.cli.create_process(['echo foo'])
+        process = self.host.create_process(['echo foo'])
         process.schedule(start=0, output='foo')
 
     # Unit test context
 
     @property
-    def cli(self):
-        return self._cli
+    def host(self):
+        return self._host
 
     @property
     def temp_dir(self):
@@ -107,33 +107,33 @@ class HermeticTestCase(TestCaseWithIO):
     # Unit test utilities
 
     def isfile(self, pathname):
-        return self.cli.isfile(pathname)
+        return self.host.isfile(pathname)
 
     def isdir(self, pathname):
-        return self.cli.isdir(pathname)
+        return self.host.isdir(pathname)
 
     def mkdir(self, pathname):
-        self.cli.mkdir(pathname)
+        self.host.mkdir(pathname)
 
     def readfile(self, pathname):
-        return self.cli.readfile(pathname)
+        return self.host.readfile(pathname)
 
     def writefile(self, pathname, contents=None):
-        with self.cli.open(pathname, 'w') as opened:
+        with self.host.open(pathname, 'w') as opened:
             if contents:
                 opened.write(contents)
 
 
-class CommandLineInterfaceTestCase(object):
+class HostTestCase(object):
     """Defines a set of tests without a TestCase."""
 
     def test_echo(self):
-        self.cli.echo('Hello world')
+        self.host.echo('Hello world')
         self.assertOut('Hello world')
 
     def test_error(self):
         with self.assertRaises(SystemExit):
-            self.cli.error('Hello world')
+            self.host.error('Hello world')
         self.assertErr('ERROR: Hello world')
 
     def test_choose(self):
@@ -141,65 +141,65 @@ class CommandLineInterfaceTestCase(object):
         choices = ['cat', 'dog', 'bear']
 
         self.set_input('3')
-        choice = self.cli.choose(prompt, choices)
+        choice = self.host.choose(prompt, choices)
         self.assertEqual(choice, 'bear')
 
     def test_isdir(self):
         pathname = os.path.join(self.temp_dir, 'test_isdir')
-        self.assertFalse(self.cli.isdir(pathname))
+        self.assertFalse(self.host.isdir(pathname))
         self.mkdir(pathname)
-        self.assertTrue(self.cli.isdir(pathname))
+        self.assertTrue(self.host.isdir(pathname))
 
     def test_isfile(self):
         pathname = os.path.join(self.temp_dir, 'test_isfile')
-        self.assertFalse(self.cli.isfile(pathname))
+        self.assertFalse(self.host.isfile(pathname))
         self.writefile(pathname)
-        self.assertTrue(self.cli.isfile(pathname))
+        self.assertTrue(self.host.isfile(pathname))
 
     def test_glob(self):
         foo = os.path.join(self.temp_dir, 'foo')
         bar = os.path.join(self.temp_dir, 'bar')
         self.writefile(foo)
         self.writefile(bar)
-        files = self.cli.glob(os.path.join(self.temp_dir, '*'))
+        files = self.host.glob(os.path.join(self.temp_dir, '*'))
         self.assertIn(foo, files)
         self.assertIn(bar, files)
 
     def test_open(self):
         pathname = os.path.join(self.temp_dir, 'test_open')
         with self.assertRaises(SystemExit):
-            opened = self.cli.open(pathname)
+            opened = self.host.open(pathname)
         self.assertErr('ERROR: Failed to open {}.'.format(pathname))
 
-        opened = self.cli.open(pathname, missing_ok=True)
+        opened = self.host.open(pathname, missing_ok=True)
         self.assertFalse(opened)
 
-        with self.cli.open(pathname, mode='w') as opened:
+        with self.host.open(pathname, mode='w') as opened:
             pass
 
-        with self.cli.open(pathname) as opened:
+        with self.host.open(pathname) as opened:
             pass
 
     def test_readfile(self):
         pathname = os.path.join(self.temp_dir, 'test_readfile')
         with self.assertRaises(SystemExit):
-            self.cli.readfile(pathname)
+            self.host.readfile(pathname)
         self.assertErr('ERROR: Failed to open {}.'.format(pathname))
 
-        self.assertFalse(self.cli.readfile(pathname, missing_ok=True))
+        self.assertFalse(self.host.readfile(pathname, missing_ok=True))
         self.writefile(pathname, 'data')
-        self.assertEqual(self.cli.readfile(pathname), 'data')
+        self.assertEqual(self.host.readfile(pathname), 'data')
 
     def test_touch(self):
         pathname = os.path.join(self.temp_dir, 'test_touch')
         self.assertFalse(self.isfile(pathname))
-        self.cli.touch(pathname)
+        self.host.touch(pathname)
         self.assertTrue(self.isfile(pathname))
 
     def test_mkdir(self):
         pathname = os.path.join(self.temp_dir, 'test', 'mkdir')
         self.assertFalse(self.isdir(pathname))
-        self.cli.mkdir(pathname)
+        self.host.mkdir(pathname)
         self.assertTrue(self.isdir(pathname))
 
     def test_link(self):
@@ -211,12 +211,12 @@ class CommandLineInterfaceTestCase(object):
         bar = os.path.join(self.temp_dir, 'bar')
         self.writefile(bar, 'bar')
 
-        self.cli.link(foo, link)
+        self.host.link(foo, link)
         self.writefile(link, 'baz')
         self.assertEqual(self.readfile(foo), 'baz')
         self.assertEqual(self.readfile(bar), 'bar')
 
-        self.cli.link(bar, link)
+        self.host.link(bar, link)
         self.writefile(link, 'qux')
         self.assertEqual(self.readfile(foo), 'baz')
         self.assertEqual(self.readfile(bar), 'qux')
@@ -225,35 +225,33 @@ class CommandLineInterfaceTestCase(object):
         pathname = os.path.join(self.temp_dir, 'test_remove')
         self.mkdir(pathname)
         self.assertTrue(self.isdir(pathname))
-        self.cli.remove(pathname)
+        self.host.remove(pathname)
         self.assertFalse(self.isdir(pathname))
 
         self.writefile(pathname)
         self.assertTrue(self.isfile(pathname))
-        self.cli.remove(pathname)
+        self.host.remove(pathname)
         self.assertFalse(self.isfile(pathname))
 
     def test_temp_dir(self):
-        with self.cli.temp_dir() as temp_dir:
+        with self.host.temp_dir() as temp_dir:
             self.assertTrue(self.isdir(temp_dir.pathname))
 
     def test_create_process(self):
-        self.cli.create_process(['true']).call()
+        self.host.create_process(['true']).call()
         with self.assertRaises(subprocess.CalledProcessError):
-            self.cli.create_process(['false']).check_call()
-        output = self.cli.create_process(['echo', 'foo']).check_output()
+            self.host.create_process(['false']).check_call()
+        output = self.host.create_process(['echo', 'foo']).check_output()
         self.assertEqual(output, 'foo\n')
 
 
-class CommandLineInterfaceTest(NonHermeticTestCase,
-                               CommandLineInterfaceTestCase):
-    """Creates tests for CommandLineInterface."""
+class HostTest(NonHermeticTestCase, HostTestCase):
+    """Creates tests for Host."""
     pass
 
 
-class FakeCommandLineInterfaceTest(HermeticTestCase,
-                                   CommandLineInterfaceTestCase):
-    """Creates tests for FakeCLI."""
+class FakeHostTest(HermeticTestCase, HostTestCase):
+    """Creates tests for FakeHost."""
     pass
 
 

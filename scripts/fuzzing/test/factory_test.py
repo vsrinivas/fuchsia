@@ -16,14 +16,14 @@ class FactoryTest(TestCaseWithFactory):
 
     def test_create_buildenv(self):
         # Clear $FUCHSIA_DIR
-        factory = Factory(cli=self.cli)
+        factory = Factory(host=self.host)
         fuchsia_dir = self.buildenv.fuchsia_dir
-        self.cli.setenv('FUCHSIA_DIR', None)
+        self.host.setenv('FUCHSIA_DIR', None)
         self.assertError(
             lambda: factory.create_buildenv(), 'FUCHSIA_DIR not set.',
             'Have you sourced "scripts/fx-env.sh"?')
-        self.cli.mkdir(fuchsia_dir)
-        self.cli.setenv('FUCHSIA_DIR', fuchsia_dir)
+        self.host.mkdir(fuchsia_dir)
+        self.host.setenv('FUCHSIA_DIR', fuchsia_dir)
 
         # Use an empty directory to simulate an unconfigured $FUCHSIA_DIR
         build_dir = self.buildenv.build_dir
@@ -32,7 +32,7 @@ class FactoryTest(TestCaseWithFactory):
             lambda: factory.create_buildenv(),
             'Failed to read build directory from {}.'.format(fx_build_dir),
             'Have you run "fx set ... --fuzz-with <sanitizer>"?')
-        with self.cli.open(fx_build_dir, 'w') as opened:
+        with self.host.open(fx_build_dir, 'w') as opened:
             opened.write(self.buildenv.build_dir + '\n')
 
         # No $FUCHSIA_DIR/out/default/fuzzer.json
@@ -44,14 +44,14 @@ class FactoryTest(TestCaseWithFactory):
         )
 
         # Minimally valid
-        with self.cli.open(fuzzers_json, 'w') as opened:
+        with self.host.open(fuzzers_json, 'w') as opened:
             json.dump([], opened)
         buildenv = factory.create_buildenv()
         self.assertEqual(buildenv.build_dir, buildenv.path(build_dir))
         self.assertEqual(buildenv.fuzzers(), [])
 
     def test_create_device(self):
-        factory = Factory(cli=self.cli)
+        factory = Factory(host=self.host)
         build_dir = self.buildenv.build_dir
 
         # No $FUCHSIA_DIR/out/default.device
@@ -61,7 +61,7 @@ class FactoryTest(TestCaseWithFactory):
             'list'
         ]
         self.set_outputs(cmd, [device_addr])
-        self.cli.touch(self.buildenv.path(build_dir, 'ssh-keys', 'ssh_config'))
+        self.host.touch(self.buildenv.path(build_dir, 'ssh-keys', 'ssh_config'))
         device = factory.create_device(buildenv=self.buildenv)
         self.assertEqual(device.addr, device_addr)
 
@@ -69,7 +69,7 @@ class FactoryTest(TestCaseWithFactory):
         device_file = self.buildenv.path('{}.device'.format(build_dir))
         device_name = 'device_name'
         device_addr = '::2'
-        with self.cli.open(device_file, 'w') as opened:
+        with self.host.open(device_file, 'w') as opened:
             opened.write(device_name + '\n')
         cmd = [
             self.buildenv.path('.jiri_root', 'bin', 'fx'), 'device-finder',
@@ -80,13 +80,13 @@ class FactoryTest(TestCaseWithFactory):
         self.assertEqual(device.addr, device_addr)
 
     def test_create_fuzzer(self):
-        factory = Factory(cli=self.cli)
+        factory = Factory(host=self.host)
 
-        self.cli.mkdir(
+        self.host.mkdir(
             os.path.join('fuchsia_dir', 'local', 'fake-package2_fake-target1'))
-        self.cli.mkdir(
+        self.host.mkdir(
             os.path.join('fuchsia_dir', 'local', 'fake-package2_fake-target11'))
-        self.cli.mkdir('output')
+        self.host.mkdir('output')
 
         # No match
         args = self.parse_args('check', 'no/match')

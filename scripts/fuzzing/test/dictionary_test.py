@@ -21,7 +21,7 @@ class DictionaryTest(TestCaseWithFuzzer):
         self.assertError(
             lambda: self.dictionary.replace(local_dict),
             'No such file: {}'.format(local_dict))
-        self.cli.touch(local_dict)
+        self.host.touch(local_dict)
         self.assertEqual(self.dictionary.nspath, self.ns.resource('dictionary'))
         self.dictionary.replace(local_dict)
         self.assertEqual(self.dictionary.nspath, self.ns.data(local_dict))

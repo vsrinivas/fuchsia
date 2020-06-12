@@ -28,9 +28,9 @@ class Corpus(object):
         return self._fuzzer
 
     @property
-    def cli(self):
-        """Alias for fuzzer.cli."""
-        return self.fuzzer.cli
+    def host(self):
+        """Alias for fuzzer.host."""
+        return self.fuzzer.host
 
     @property
     def ns(self):
@@ -51,8 +51,8 @@ class Corpus(object):
     def add_from_host(self, pathname):
         """Copies elements from a host directory to the corpus on a device."""
         self.fuzzer.require_stopped()
-        if not self.cli.isdir(pathname):
-            self.cli.error('No such directory: {}'.format(pathname))
+        if not self.host.isdir(pathname):
+            self.host.error('No such directory: {}'.format(pathname))
         pathname = os.path.join(pathname, '*')
         return self.ns.store(self.nspath, pathname)
 
@@ -60,12 +60,12 @@ class Corpus(object):
         """Copies corpus elements from a GCS bucket to this corpus."""
         if not gcs_url.endswith('*'):
             gcs_url += '/*'
-        with self.cli.temp_dir() as temp_dir:
+        with self.host.temp_dir() as temp_dir:
             cmd = ['gsutil', '-m', 'cp', gcs_url, temp_dir.pathname]
             try:
-                self.cli.create_process(cmd).check_call()
+                self.host.create_process(cmd).check_call()
             except subprocess.CalledProcessError:
-                self.cli.error(
+                self.host.error(
                     'Failed to download corpus from GCS.',
                     'You can skip downloading from GCS with the "--local" flag.'
                 )

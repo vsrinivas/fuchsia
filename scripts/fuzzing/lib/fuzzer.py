@@ -26,17 +26,17 @@ class Fuzzer(object):
     specific command line arguments to libFuzzer to be abstracted.
 
     Attributes:
-      device:           The associated Device object.
-      buildenv:         Alias for device.buildenv.
-      cli:              Alias for device.buildenv.cli.
-      package:          The GN fuzzers_package name (or package_name).
-      executable:       The GN fuzzers name (or output_name).
-      libfuzzer_opts:   "-key=val" options to pass to libFuzzer
-      libfuzzer_inputs: Additional files and directories to pass to libFuzzer
-      subprocess_args:  Additional arguments to pass to the fuzzer process.
-      output:           Path under which to write the results of fuzzing.
-      foreground:       Flag indicating whether to echo output.
-      debug:            Flag indicating whether to allow a debugger to attach.
+        device:             The associated Device object.
+        buildenv:           Alias for device.buildenv.
+        host:               Alias for device.buildenv.host.
+        package:            The GN fuzzers_package name (or package_name).
+        executable:         The GN fuzzers name (or output_name).
+        libfuzzer_opts:     "-key=val" options to pass to libFuzzer
+        libfuzzer_inputs:   Files and directories to pass to libFuzzer.
+        subprocess_args:    Arguments to pass to the fuzzer process.
+        output:             Path under which the results of fuzzing are written.
+        foreground:         Flag indicating whether to echo output.
+        debug:              Flag indicating whether to allow debugging.
   """
 
     # Matches the prefixes in libFuzzer passed to |Fuzzer::DumpCurrentUnit| or
@@ -86,9 +86,9 @@ class Fuzzer(object):
         return self.device.buildenv
 
     @property
-    def cli(self):
-        """Alias for device.buildenv.cli."""
-        return self.device.buildenv.cli
+    def host(self):
+        """Alias for device.buildenv.host."""
+        return self.device.buildenv.host
 
     @property
     def package(self):
@@ -146,7 +146,7 @@ class Fuzzer(object):
 
     @output.setter
     def output(self, output):
-        if not output or not self.cli.isdir(output):
+        if not output or not self.host.isdir(output):
             raise ValueError('Invalid output directory: {}'.format(output))
         self._output = output
 
@@ -177,7 +177,7 @@ class Fuzzer(object):
         """Returns a list of test unit artifacts in the output directory."""
         artifacts = []
         for prefix in Fuzzer.ARTIFACT_PREFIXES:
-            artifacts += self.cli.glob(
+            artifacts += self.host.glob(
                 os.path.join(self.output, '{}-*'.format(prefix)))
         return artifacts
 
@@ -193,7 +193,7 @@ class Fuzzer(object):
     def require_stopped(self):
         """Raise an exception if the fuzzer is running."""
         if self.is_running(refresh=True):
-            self.cli.error(
+            self.host.error(
                 '{} is running and must be stopped first.'.format(self))
 
     def url(self):
@@ -217,7 +217,7 @@ class Fuzzer(object):
             fuzz_cmd += self._subprocess_args
 
         # Start the process
-        self.cli.mkdir(self.output)
+        self.host.mkdir(self.output)
         cmd = self.device.ssh(fuzz_cmd)
         if self.foreground:
             cmd.stderr = subprocess.PIPE
@@ -228,15 +228,15 @@ class Fuzzer(object):
         # Wait for either the fuzzer to start and open its log, or exit.
         logs = self._logs()
         while proc.poll() == None and not self.ns.ls(logs):
-            self.cli.sleep(0.5)
+            self.host.sleep(0.5)
         if proc.returncode:
-            self.cli.error('{} failed to start.'.format(self))
+            self.host.error('{} failed to start.'.format(self))
         return proc
 
     def _logs(self, pathname=None):
         """Returns a wildcarded path to the logs under pathname."""
         if pathname:
-            assert self.cli.isdir(pathname), 'No such directory: {}'.format(
+            assert self.host.isdir(pathname), 'No such directory: {}'.format(
                 pathname)
             return os.path.join(pathname, 'fuzz-*.log')
         else:
@@ -301,9 +301,9 @@ class Fuzzer(object):
           echo:         If true, display text being written to fd_out.
         """
         filename_out = self.logfile(job_num)
-        with self.cli.open(filename_out, 'w') as fd_out:
+        with self.host.open(filename_out, 'w') as fd_out:
             return self._symbolize_log_impl(fd_in, fd_out, echo)
-        self.cli.link(
+        self.host.link(
             filename_out, os.path.join(self.output, 'fuzz-latest.log'))
 
     def _symbolize_log_impl(self, fd_in, fd_out, echo):
@@ -328,12 +328,12 @@ class Fuzzer(object):
                     sym = self.buildenv.symbolize(raw)
                     fd_out.write(sym)
                     if echo:
-                        self.cli.echo(sym.strip())
+                        self.host.echo(sym.strip())
             if art_match:
                 artifacts.append(art_match.group(1))
             fd_out.write(line)
             if echo:
-                self.cli.echo(line.strip())
+                self.host.echo(line.strip())
         self.ns.fetch(self.output, *artifacts)
         return sym != None
 
@@ -345,18 +345,18 @@ class Fuzzer(object):
         any referenced test artifacts, e.g. crashes.
         """
         while self.is_running(refresh=True):
-            self.cli.sleep(2)
+            self.host.sleep(2)
 
         logs = self._logs()
         self.ns.fetch(self.output, logs)
         self.ns.remove(logs)
 
         logs = self._logs(self.output)
-        logs = self.cli.glob(logs)
+        logs = self.host.glob(logs)
         for job_num, log in enumerate(logs):
-            with self.cli.open(log) as fd_in:
+            with self.host.open(log) as fd_in:
                 self.symbolize_log(fd_in, job_num, echo=False)
-            self.cli.remove(log)
+            self.host.remove(log)
 
     def stop(self):
         """Stops any processes with a matching component manifest on the device."""
@@ -375,7 +375,7 @@ class Fuzzer(object):
         See also: https://llvm.org/docs/LibFuzzer.html#options
         """
         if not self._libfuzzer_inputs:
-            self.cli.error('No units provided.', 'Try "fx fuzz help".')
+            self.host.error('No units provided.', 'Try "fx fuzz help".')
 
         # Device.store will glob patterns like 'crash-*'.
         self.require_stopped()
@@ -402,11 +402,11 @@ class Fuzzer(object):
         self.foreground = False
         proc = self._launch()
 
-        self.cli.echo('Analyzing fuzzer...')
+        self.host.echo('Analyzing fuzzer...')
         delay = float(self._options['max_total_time']) / 79
         for i in range(79):
-            self.cli.echo('\r[' + ('#' * i).ljust(78) + ']', end='')
-            self.cli.sleep(delay)
-        self.cli.echo('')
+            self.host.echo('\r[' + ('#' * i).ljust(78) + ']', end='')
+            self.host.sleep(delay)
+        self.host.echo('')
         proc.wait()
         self.monitor()

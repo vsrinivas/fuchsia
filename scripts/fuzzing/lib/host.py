@@ -14,15 +14,12 @@ import time
 from process import Process
 
 
-class CommandLineInterface(object):
-    """Represent the command line interface to the host system.
+class Host(object):
+    """Represent the platform-specific interface to the host system.
 
-       This object can be used directly, or as a context manager. When used as
-       the latter, it provides a temporary directory that it automatically
-       cleans up on exit.
-
-       Attributes:
-         tempdir:   A temporary directory that will be removed on context exit.
+    Attributes:
+        platform:   The name of the current operating system.
+        tracing:    Indicates if additional output is enabled.
     """
 
     # Convenience file descriptor for silencing subprocess output
@@ -194,8 +191,8 @@ class CommandLineInterface(object):
 class _TemporaryDirectory(object):
     """A temporary directory that can be used with "with"."""
 
-    def __init__(self, cli):
-        self._cli = cli
+    def __init__(self, host):
+        self._host = host
         self._pathname = None
 
     @property
@@ -203,8 +200,8 @@ class _TemporaryDirectory(object):
         return self._pathname
 
     def __enter__(self):
-        self._pathname = self._cli._mkdtemp()
+        self._pathname = self._host._mkdtemp()
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self._cli.remove(self._pathname)
+        self._host.remove(self._pathname)

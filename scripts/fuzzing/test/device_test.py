@@ -24,7 +24,7 @@ class DeviceTest(TestCaseWithFactory):
         with self.assertRaises(ValueError):
             device.ssh_config = 'no_such_config'
         ssh_config = 'ssh_config'
-        self.cli.touch(ssh_config)
+        self.host.touch(ssh_config)
         device.ssh_config = ssh_config
         self.assertEqual(['-F', ssh_config], device.ssh_opts())
 
@@ -35,7 +35,7 @@ class DeviceTest(TestCaseWithFactory):
         with self.assertRaises(ValueError):
             device.ssh_identity = 'no_such_identity'
         ssh_identity = 'ssh_identity'
-        self.cli.touch(ssh_identity)
+        self.host.touch(ssh_identity)
         device.ssh_identity = ssh_identity
         self.assertEqual(['-i', ssh_identity], device.ssh_opts())
 
@@ -113,7 +113,7 @@ class DeviceTest(TestCaseWithFactory):
                 'fake-package2', 'an-extremely-verbose-target-name'), long_pid)
 
         # PIDs are cached until refresh.
-        self.cli.sleep(10)
+        self.host.sleep(10)
         self.assertEqual(self.device.getpid('http', 'http'), http_pid)
         self.assertEqual(
             self.device.getpid('fake-package1', 'fake-target1'), target1_pid)
@@ -201,7 +201,7 @@ class DeviceTest(TestCaseWithFactory):
             lambda: self.device.fetch(local_path, remote_path),
             'No such directory: test_fetch')
 
-        self.cli.mkdir(local_path)
+        self.host.mkdir(local_path)
         self.device.fetch(local_path, remote_path)
         self.assertScpFrom(remote_path, local_path)
 
@@ -226,15 +226,15 @@ class DeviceTest(TestCaseWithFactory):
             'No matching files: "test_store/foo".')
 
         # Valid
-        self.cli.touch(foo)
+        self.host.touch(foo)
         self.device.store(remote_path, foo)
         self.assertScpTo(foo, remote_path)
 
         # Valid globs
         bar = os.path.join(local_path, 'bar')
         baz = os.path.join(local_path, 'baz')
-        self.cli.touch(bar)
-        self.cli.touch(baz)
+        self.host.touch(bar)
+        self.host.touch(baz)
         self.device.store(remote_path, os.path.join(local_path, '*'))
         self.assertScpTo(bar, baz, foo, remote_path)
 

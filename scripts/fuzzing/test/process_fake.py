@@ -17,9 +17,9 @@ class FakeProcess(Process):
        commands. Other fakes can additionally add canned responses.
     """
 
-    def __init__(self, cli, args, **kwargs):
-        self._cli = cli
-        self._popen = FakeProcess.Popen(cli)
+    def __init__(self, host, args, **kwargs):
+        self._host = host
+        self._popen = FakeProcess.Popen(host)
         super(FakeProcess, self).__init__(args)
 
     @property
@@ -51,7 +51,7 @@ class FakeProcess(Process):
         is None, the output is not removed once it is added.
         """
         if not start:
-            start = self._cli.elapsed
+            start = self._host.elapsed
         self._popen._outputs.append((output, start, end))
 
     def clear(self):
@@ -67,8 +67,8 @@ class FakeProcess(Process):
         Unlike a real subprocess.Popen, this object always buffers stdio.
         """
 
-        def __init__(self, cli):
-            self._cli = cli
+        def __init__(self, host):
+            self._host = host
             self._duration = 0.0
             self._completion = None
             self._succeeds = True
@@ -97,7 +97,7 @@ class FakeProcess(Process):
 
         def _start(self):
             assert not self._completion, 'popen() called twice'
-            self._completion = self._cli.elapsed + self._duration
+            self._completion = self._host.elapsed + self._duration
             self._returncode = None
             self._stdin.truncate(0)
 
@@ -120,7 +120,7 @@ class FakeProcess(Process):
             the schedule and the elapsed time. It will set the returncode once
             its specified duration has elapsed.
             """
-            now = self._cli.elapsed
+            now = self._host.elapsed
             if not self.returncode and self._completion <= now:
                 self._stdout.truncate(0)
                 for output, start, end in self._outputs:
@@ -137,7 +137,7 @@ class FakeProcess(Process):
 
         def wait(self):
             if self._completion:
-                self._cli.sleep(self._completion - self._cli.elapsed)
+                self._host.sleep(self._completion - self._host.elapsed)
             return self.poll()
 
         def kill(self):

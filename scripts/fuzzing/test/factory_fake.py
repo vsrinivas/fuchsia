@@ -7,7 +7,7 @@ import sys
 
 import test_env
 from lib.factory import Factory
-from cli_fake import FakeCLI
+from host_fake import FakeHost
 from lib.buildenv import BuildEnv
 from lib.device import Device
 
@@ -26,8 +26,7 @@ class FakeFactory(Factory):
     """
 
     def __init__(self):
-        super(FakeFactory, self).__init__()
-        self._cli = FakeCLI()
+        super(FakeFactory, self).__init__(host=FakeHost())
         self._parser = None
         self._buildenv = None
         self._device = None
@@ -66,23 +65,23 @@ class FakeFactory(Factory):
 
     def create_buildenv(self):
         """Returns the factory's build environment, creating it if needed."""
-        fuchsia_dir = self.cli.getenv('FUCHSIA_DIR')
-        self.cli.mkdir(fuchsia_dir)
-        buildenv = BuildEnv(self.cli, fuchsia_dir)
+        fuchsia_dir = self.host.getenv('FUCHSIA_DIR')
+        self.host.mkdir(fuchsia_dir)
+        buildenv = BuildEnv(self.host, fuchsia_dir)
         build_dir = 'build_dir'
-        self.cli.mkdir(buildenv.path(build_dir))
-        self.cli.touch(buildenv.path(build_dir, 'host_x64', 'symbolize'))
-        self.cli.touch(
+        self.host.mkdir(buildenv.path(build_dir))
+        self.host.touch(buildenv.path(build_dir, 'host_x64', 'symbolize'))
+        self.host.touch(
             buildenv.path(
-                'prebuilt', 'third_party', 'clang', self.cli.platform, 'bin',
+                'prebuilt', 'third_party', 'clang', self.host.platform, 'bin',
                 'llvm-symbolizer'))
-        self.cli.mkdir(
+        self.host.mkdir(
             buildenv.path(
-                'prebuilt', 'third_party', 'clang', self.cli.platform, 'lib',
+                'prebuilt', 'third_party', 'clang', self.host.platform, 'lib',
                 'debug', '.build-id'))
-        self.cli.mkdir(buildenv.path(build_dir, '.build-id'))
-        self.cli.mkdir(buildenv.path(build_dir + '.zircon', '.build-id'))
-        self.cli.touch(buildenv.path(build_dir, 'ssh-keys', 'ssh_config'))
+        self.host.mkdir(buildenv.path(build_dir, '.build-id'))
+        self.host.mkdir(buildenv.path(build_dir + '.zircon', '.build-id'))
+        self.host.touch(buildenv.path(build_dir, 'ssh-keys', 'ssh_config'))
         buildenv.configure(build_dir)
         buildenv.add_fuzzer('fake-package1', 'fake-target1')
         buildenv.add_fuzzer('fake-package1', 'fake-target2')

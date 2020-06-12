@@ -8,7 +8,7 @@ import subprocess
 import time
 
 from buildenv import BuildEnv
-from cli import CommandLineInterface
+from host import Host
 
 
 class Device(object):
@@ -43,9 +43,9 @@ class Device(object):
         return self._buildenv
 
     @property
-    def cli(self):
-        """Alias for buildenv.cli."""
-        return self.buildenv.cli
+    def host(self):
+        """Alias for buildenv.host."""
+        return self.buildenv.host
 
     @property
     def addr(self):
@@ -68,7 +68,7 @@ class Device(object):
 
     @ssh_config.setter
     def ssh_config(self, ssh_config):
-        if not self.cli.isfile(ssh_config):
+        if not self.host.isfile(ssh_config):
             raise ValueError(
                 'Invalid SSH configuration file: {}'.format(ssh_config))
         self._ssh_options['F'] = ssh_config
@@ -80,7 +80,7 @@ class Device(object):
 
     @ssh_identity.setter
     def ssh_identity(self, ssh_identity):
-        if not self.cli.isfile(ssh_identity):
+        if not self.host.isfile(ssh_identity):
             raise ValueError(
                 'Invalid SSH identity file: {}'.format(ssh_identity))
         self._ssh_options['i'] = ssh_identity
@@ -143,13 +143,13 @@ class Device(object):
       A Process object.
     """
         args = ['ssh'] + self.ssh_opts() + [self.addr] + args
-        p = self.cli.create_process(args, **kwargs)
+        process = self.host.create_process(args, **kwargs)
 
         # Explicitly prevent the subprocess from inheriting our stdin
-        if not p.stdin:
-            p.stdin = CommandLineInterface.DEVNULL
+        if not process.stdin:
+            process.stdin = Host.DEVNULL
 
-        return p
+        return process
 
     def getpid(self, package, executable, refresh=False):
         """Returns a process ID for a packaged executable if running, or -1.
@@ -253,15 +253,15 @@ class Device(object):
            determine when the file(s) should be fetched. See Fuzzer._launch()
            for an example.
         """
-        if not self.cli.isdir(host_dst):
-            self.cli.error('No such directory: {}'.format(host_dst))
+        if not self.host.isdir(host_dst):
+            self.host.error('No such directory: {}'.format(host_dst))
 
         device_srcs = []
         for device_src in args:
             device_srcs.append(self.scp_rpath(device_src))
 
         cmd = ['scp'] + self.ssh_opts() + device_srcs + [host_dst]
-        self.cli.create_process(cmd).check_call()
+        self.host.create_process(cmd).check_call()
 
     def store(self, device_dst, *args):
         """Copies files on the host to a directory on the device.
@@ -273,11 +273,11 @@ class Device(object):
 
         host_srcs = []
         for host_src in args:
-            host_srcs += self.cli.glob(host_src)
+            host_srcs += self.host.glob(host_src)
 
         if not host_srcs:
-            self.cli.error('No matching files: "{}".'.format(' '.join(args)))
+            self.host.error('No matching files: "{}".'.format(' '.join(args)))
 
         cmd = ['scp'] + self.ssh_opts() + host_srcs + [device_dst]
-        self.cli.create_process(cmd).check_call()
+        self.host.create_process(cmd).check_call()
         return host_srcs

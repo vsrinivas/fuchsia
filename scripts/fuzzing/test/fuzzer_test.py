@@ -17,7 +17,7 @@ class FuzzerTest(TestCaseWithFuzzer):
         artifacts = ['crash-deadbeef', 'leak-deadfa11', 'oom-feedface']
         artifacts = [os.path.join(fuzzer.output, a) for a in artifacts]
         for artifact in artifacts:
-            self.cli.touch(artifact)
+            self.host.touch(artifact)
         self.assertEqual(fuzzer.list_artifacts(), artifacts)
 
     def test_is_running(self):
@@ -36,7 +36,7 @@ class FuzzerTest(TestCaseWithFuzzer):
         self.assertTrue(fuzzer2.is_running())
 
         # Results are cached until refresh
-        self.cli.sleep(5)
+        self.host.sleep(5)
         self.assertTrue(fuzzer1.is_running())
         self.assertTrue(fuzzer2.is_running())
 
@@ -51,7 +51,7 @@ class FuzzerTest(TestCaseWithFuzzer):
         self.assertError(
             lambda: fuzzer.require_stopped(),
             'fake-package1/fake-target1 is running and must be stopped first.')
-        self.cli.sleep(10)
+        self.host.sleep(10)
         fuzzer.require_stopped()
 
     # Helper to test Fuzzer.start with different options and arguments. The
@@ -152,7 +152,7 @@ class FuzzerTest(TestCaseWithFuzzer):
             lambda: fuzzer.start(),
             'fake-package1/fake-target2 failed to start.')
         self.assertSsh(*cmd)
-        self.assertEqual(self.cli.elapsed, 20)
+        self.assertEqual(self.host.elapsed, 20)
 
     def test_start_slow_resolve(self):
         fuzzer = self.create_fuzzer('start', 'fake-package1/fake-target2')
@@ -178,7 +178,7 @@ class FuzzerTest(TestCaseWithFuzzer):
         # Start the fuzzer
         fuzzer.start()
         self.assertSsh(*cmd)
-        self.assertEqual(self.cli.elapsed, 15)
+        self.assertEqual(self.host.elapsed, 15)
 
     # Helper to test Fuzzer.symbolize with different logs.
     def symbolize_helper(self, log_in, log_out, job_num=0, echo=False):
@@ -195,8 +195,8 @@ class FuzzerTest(TestCaseWithFuzzer):
                 '[000001.234568][123][456][klog] INFO: Symbolized line 2',
                 '[000001.234569][123][456][klog] INFO: Symbolized line 3',
             ])
-        self.cli.mkdir(fuzzer._output)
-        with self.cli.open('unsymbolized', 'w+') as unsymbolized:
+        self.host.mkdir(fuzzer._output)
+        with self.host.open('unsymbolized', 'w+') as unsymbolized:
             unsymbolized.write(log_in)
             unsymbolized.seek(0)
             fuzzer.symbolize_log(unsymbolized, job_num, echo=echo)
@@ -204,7 +204,7 @@ class FuzzerTest(TestCaseWithFuzzer):
         # and the symbolizer will not be invoked.
         if log_in != log_out:
             self.assertRan(*cmd)
-        with self.cli.open(fuzzer.logfile(job_num)) as symbolized:
+        with self.host.open(fuzzer.logfile(job_num)) as symbolized:
             self.assertEqual(symbolized.read(), log_out)
 
     def test_symbolize_log_no_mutation_sequence(self):
@@ -324,16 +324,16 @@ MS: 1 SomeMutation; base unit: foo
         self.set_running(fuzzer.package, fuzzer.executable, duration=15)
 
         # Make the file that scp grabs
-        self.cli.mkdir(fuzzer.output)
+        self.host.mkdir(fuzzer.output)
 
-        with self.cli.open(os.path.join(fuzzer.output, 'fuzz-0.log'),
-                           'w') as log:
+        logname = os.path.join(fuzzer.output, 'fuzz-0.log')
+        with self.host.open(logname, 'w') as log:
             log.write('==67890== libFuzzer: deadly signal\n')
             log.write('MS: 1 SomeMutation; base unit: foo\n')
 
         # Monitor the fuzzer until it exits
         fuzzer.monitor()
-        self.assertGreaterEqual(self.cli.elapsed, 15)
+        self.assertGreaterEqual(self.host.elapsed, 15)
 
         # Verify we grabbed the logs and symbolized them.
         self.assertScpFrom(self.data_abspath('fuzz-*.log'), fuzzer.output)
@@ -375,14 +375,14 @@ MS: 1 SomeMutation; base unit: foo
             'No matching files: "crash-* oom-feedface".')
 
         # Valid units, but already running
-        self.cli.touch('crash-deadbeef')
-        self.cli.touch('crash-deadfa11')
-        self.cli.touch('oom-feedface')
+        self.host.touch('crash-deadbeef')
+        self.host.touch('crash-deadfa11')
+        self.host.touch('oom-feedface')
         self.set_running(fuzzer.package, fuzzer.executable, duration=60)
         self.assertError(
             lambda: fuzzer.repro(),
             'fake-package1/fake-target2 is running and must be stopped first.')
-        self.cli.sleep(60)
+        self.host.sleep(60)
 
         #  Valid
         fuzzer.repro()
@@ -401,7 +401,7 @@ MS: 1 SomeMutation; base unit: foo
         self.set_running(fuzzer.package, fuzzer.executable, duration=10)
         with self.assertRaises(SystemExit):
             fuzzer.analyze()
-        self.cli.sleep(10)
+        self.host.sleep(10)
 
         # Make the log file appear right away
         cmd = [
@@ -430,7 +430,7 @@ MS: 1 SomeMutation; base unit: foo
         self.assertSsh(*cmd)
 
         # Round to the nearest microsecond
-        self.assertEqual(round(self.cli.elapsed, 6), 70)
+        self.assertEqual(round(self.host.elapsed, 6), 70)
 
 
 if __name__ == '__main__':

@@ -9,12 +9,12 @@ import subprocess
 from StringIO import StringIO
 
 import test_env
-from lib.cli import CommandLineInterface
+from lib.host import Host
 from process_fake import FakeProcess
 
 
-class FakeCLI(CommandLineInterface):
-    """Fake command line interface that avoids interacting with the system.
+class FakeHost(Host):
+    """Fake host that avoids interacting with the real system.
 
        Attributes:
          history:       List of commands whose execution has been faked.
@@ -25,7 +25,7 @@ class FakeCLI(CommandLineInterface):
     ENVVARS = {'FUCHSIA_DIR': 'fuchsia_dir'}
 
     def __init__(self):
-        super(FakeCLI, self).__init__()
+        super(FakeHost, self).__init__()
         self._log = []
         self._selection = None
         self._dirs = set()
@@ -119,7 +119,7 @@ class FakeCLI(CommandLineInterface):
         if pathname in self._files:
             file = self._files[pathname]
         elif mode != 'r' and mode != 'r+':
-            file = FakeCLI.File()
+            file = FakeHost.File()
             self._files[pathname] = file
         elif missing_ok:
             return None
@@ -163,7 +163,7 @@ class FakeCLI(CommandLineInterface):
         if name in self._envvars:
             return self._envvars[name]
         else:
-            return FakeCLI.ENVVARS.get(name, None)
+            return FakeHost.ENVVARS.get(name, None)
 
     def setenv(self, name, value):
         """Fake of implementation of setenv."""

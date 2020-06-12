@@ -18,22 +18,22 @@ def list_fuzzers(args, factory):
     buildenv = factory.create_buildenv()
     fuzzers = buildenv.fuzzers(args.name)
     if len(fuzzers) == 0:
-        factory.cli.echo('No matching fuzzers.')
+        factory.host.echo('No matching fuzzers.')
     else:
-        factory.cli.echo('Found {} matching fuzzers:'.format(len(fuzzers)))
+        factory.host.echo('Found {} matching fuzzers:'.format(len(fuzzers)))
         for package, executable in fuzzers:
-            factory.cli.echo('  {}/{}'.format(package, executable))
+            factory.host.echo('  {}/{}'.format(package, executable))
 
 
 def start_fuzzer(args, factory):
     """Implementation of "fx fuzz start"."""
     fuzzer = factory.create_fuzzer(args)
     if not args.monitor:
-        factory.cli.echo(
+        factory.host.echo(
             'Starting {}.'.format(fuzzer),
             'Outputs will be written to: {}'.format(fuzzer.output))
         if not args.foreground:
-            factory.cli.echo(
+            factory.host.echo(
                 'Check status with "fx fuzz check {}".'.format(fuzzer),
                 'Stop manually with "fx fuzz stop {}".'.format(fuzzer))
         fuzzer.start()
@@ -42,10 +42,10 @@ def start_fuzzer(args, factory):
             if fuzzer.output:
                 cmd += ['--output', fuzzer.output]
             cmd.append(str(fuzzer))
-            factory.cli.create_process(cmd).popen()
+            factory.host.create_process(cmd).popen()
     else:
         fuzzer.monitor()
-        factory.cli.echo(
+        factory.host.echo(
             '{} has stopped.'.format(fuzzer),
             'Output written to: {}.'.format(fuzzer.output))
 
@@ -61,15 +61,15 @@ def check_fuzzer(args, factory):
         status = 'RUNNING' if fuzzer.is_running() else 'STOPPED'
         num, size = fuzzer.corpus.measure()
         artifacts = fuzzer.list_artifacts()
-        factory.cli.echo(
+        factory.host.echo(
             '{}: {}'.format(fuzzer, status),
             '    Output path:  {}'.format(fuzzer.output),
             '    Corpus size:  {} inputs / {} bytes'.format(num, size),
             '    Artifacts:    {}'.format(len(artifacts)))
         for artifact in artifacts:
-            factory.cli.echo('        {}'.format(artifact))
+            factory.host.echo('        {}'.format(artifact))
     if not status:
-        factory.cli.echo(
+        factory.host.echo(
             'No fuzzers are running.',
             'Include \'name\' to check specific fuzzers.')
 
@@ -78,10 +78,10 @@ def stop_fuzzer(args, factory):
     """Implementation of "fx fuzz stop"."""
     fuzzer = factory.create_fuzzer(args)
     if fuzzer.is_running():
-        factory.cli.echo('Stopping {}.'.format(fuzzer))
+        factory.host.echo('Stopping {}.'.format(fuzzer))
         fuzzer.stop()
     else:
-        factory.cli.echo('{} is already stopped.'.format(fuzzer))
+        factory.host.echo('{} is already stopped.'.format(fuzzer))
 
 
 def repro_units(args, factory):
