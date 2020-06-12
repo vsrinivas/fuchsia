@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("core-display") {
+  output_name = "core-display-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "core-display-test.cc" ]
   deps = [
@@ -40,8 +41,7 @@ unittest_package("core-display-package") {
 
   tests = [
     {
-      name = "core-display"
-      dest = "core-display-test"
+      name = "core-display-test"
     },
   ]
 }

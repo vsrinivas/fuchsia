@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("chromeos-disk-setup") {
+  output_name = "chromeos-disk-setup-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "chromeos-disk-setup.cc" ]
   deps = [
@@ -42,8 +43,7 @@ unittest_package("chromeos-disk-setup-package") {
 
   tests = [
     {
-      name = "chromeos-disk-setup"
-      dest = "chromeos-disk-setup-test"
+      name = "chromeos-disk-setup-test"
     },
   ]
 }

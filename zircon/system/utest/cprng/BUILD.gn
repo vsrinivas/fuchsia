@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("cprng") {
+  output_name = "cprng-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "cprng.c" ]
   deps = [
@@ -30,8 +31,7 @@ unittest_package("cprng-package") {
 
   tests = [
     {
-      name = "cprng"
-      dest = "cprng-test"
+      name = "cprng-test"
     },
   ]
 }

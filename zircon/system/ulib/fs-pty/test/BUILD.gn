@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("libfs-pty-test") {
+  output_name = "libfs-pty-test-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -50,8 +51,7 @@ unittest_package("libfs-pty-test-package") {
 
   tests = [
     {
-      name = "libfs-pty-test"
-      dest = "libfs-pty-test-test"
+      name = "libfs-pty-test-test"
     },
   ]
 }

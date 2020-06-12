@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("namespace") {
+  output_name = "namespace-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "namespace-test.cc" ]
   deps = [
@@ -35,8 +36,7 @@ unittest_package("namespace-package") {
 
   tests = [
     {
-      name = "namespace"
-      dest = "namespace-test"
+      name = "namespace-test"
     },
   ]
 }

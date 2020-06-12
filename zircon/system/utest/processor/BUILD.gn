@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("processor") {
+  output_name = "processor-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "processor.c" ]
   deps = [
@@ -30,8 +31,7 @@ unittest_package("processor-package") {
 
   tests = [
     {
-      name = "processor"
-      dest = "processor-test"
+      name = "processor-test"
     },
   ]
 }

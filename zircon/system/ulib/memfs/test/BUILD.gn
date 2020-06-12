@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("memfs-tests") {
+  output_name = "memfs-tests-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -48,8 +49,7 @@ unittest_package("memfs-tests-package") {
 
   tests = [
     {
-      name = "memfs-tests"
-      dest = "memfs-tests-test"
+      name = "memfs-tests-test"
     },
   ]
 }

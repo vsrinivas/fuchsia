@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("property") {
+  output_name = "property-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "property.cc" ]
   deps = [
@@ -31,8 +32,7 @@ unittest_package("property-package") {
 
   tests = [
     {
-      name = "property"
-      dest = "property-test"
+      name = "property-test"
     },
   ]
 }

@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("thread-state") {
+  output_name = "thread-state-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "thread-state.cc" ]
   deps = [
@@ -33,8 +34,7 @@ unittest_package("thread-state-package") {
 
   tests = [
     {
-      name = "thread-state"
-      dest = "thread-state-test"
+      name = "thread-state-test"
     },
   ]
 }

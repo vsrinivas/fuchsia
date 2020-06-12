@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("service-proxy-dir") {
+  output_name = "service-proxy-dir-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -57,8 +58,7 @@ unittest_package("service-proxy-dir-package") {
 
   tests = [
     {
-      name = "service-proxy-dir"
-      dest = "service-proxy-dir-test"
+      name = "service-proxy-dir-test"
     },
   ]
 }

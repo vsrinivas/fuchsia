@@ -18,6 +18,7 @@ import("//build/test/test_package.gni")
 # As of this writing, the best way to get this test on your system is to add //bundles/bringup:tests
 # to the base packages in your build. The binary ends up in /boot/test/sys/debugger-test
 test("debugger") {
+  output_name = "debugger-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "crash-and-recover.cc",
@@ -63,8 +64,7 @@ unittest_package("debugger-package") {
 
   tests = [
     {
-      name = "debugger"
-      dest = "debugger-test"
+      name = "debugger-test"
     },
   ]
 }

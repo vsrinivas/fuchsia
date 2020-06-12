@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("ddk-unittest") {
+  output_name = "ddk-unittest-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -45,8 +46,7 @@ unittest_package("ddk-unittest-package") {
 
   tests = [
     {
-      name = "ddk-unittest"
-      dest = "ddk-unittest-test"
+      name = "ddk-unittest-test"
     },
   ]
 }

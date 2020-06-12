@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("rtc-lib") {
+  output_name = "rtc-lib-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "rtc.cc" ]
   deps = [
@@ -34,8 +35,7 @@ unittest_package("rtc-lib-package") {
 
   tests = [
     {
-      name = "rtc-lib"
-      dest = "rtc-lib-test"
+      name = "rtc-lib-test"
     },
   ]
 }

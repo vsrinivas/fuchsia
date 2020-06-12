@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("qsort") {
+  output_name = "qsort-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "qsort.c" ]
   deps = [
@@ -30,8 +31,7 @@ unittest_package("qsort-package") {
 
   tests = [
     {
-      name = "qsort"
-      dest = "qsort-test"
+      name = "qsort-test"
     },
   ]
 }

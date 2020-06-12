@@ -15,6 +15,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("inspector") {
+  output_name = "inspector-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "print_debug_info.cc" ]
 
@@ -35,8 +36,7 @@ unittest_package("inspector-package") {
 
   tests = [
     {
-      name = "inspector"
-      dest = "inspector-test"
+      name = "inspector-test"
     },
   ]
 }

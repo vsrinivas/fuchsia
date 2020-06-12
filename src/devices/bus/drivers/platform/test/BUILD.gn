@@ -17,6 +17,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("platform-bus") {
+  output_name = "platform-bus-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
@@ -256,8 +257,7 @@ unittest_package("platform-bus-package") {
 
   tests = [
     {
-      name = "platform-bus"
-      dest = "platform-bus-test"
+      name = "platform-bus-test"
     },
   ]
 }

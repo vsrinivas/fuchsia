@@ -24,6 +24,7 @@ group("test") {
 }
 
 test("fzl-zxtest") {
+  output_name = "fzl-zxtest-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "pinned-vmo-tests.cc",
@@ -48,6 +49,7 @@ test("fzl-zxtest") {
 }
 
 test("fzl") {
+  output_name = "fzl-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "fzl-test.cc",
@@ -84,8 +86,7 @@ unittest_package("fzl-package") {
 
   tests = [
     {
-      name = "fzl"
-      dest = "fzl-test"
+      name = "fzl-test"
     },
   ]
 }
@@ -96,8 +97,7 @@ unittest_package("fzl-zxtest-package") {
 
   tests = [
     {
-      name = "fzl-zxtest"
-      dest = "fzl-zxtest-test"
+      name = "fzl-zxtest-test"
     },
   ]
 }

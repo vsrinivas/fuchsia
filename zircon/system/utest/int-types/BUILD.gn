@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("int-types") {
+  output_name = "int-types-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "int-types.c",
@@ -46,8 +47,7 @@ unittest_package("int-types-package") {
 
   tests = [
     {
-      name = "int-types"
-      dest = "int-types-test"
+      name = "int-types-test"
     },
   ]
 }

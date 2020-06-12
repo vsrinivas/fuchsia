@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("timers") {
+  output_name = "timers-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -40,8 +41,7 @@ unittest_package("timers-package") {
 
   tests = [
     {
-      name = "timers"
-      dest = "timers-test"
+      name = "timers-test"
     },
   ]
 }

@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("policy") {
+  output_name = "policy-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -41,8 +42,7 @@ unittest_package("policy-package") {
 
   tests = [
     {
-      name = "policy"
-      dest = "policy-test"
+      name = "policy-test"
     },
   ]
 }

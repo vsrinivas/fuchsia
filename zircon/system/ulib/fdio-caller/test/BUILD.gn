@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("fdio-caller") {
+  output_name = "fdio-caller-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -50,8 +51,7 @@ unittest_package("fdio-caller-package") {
 
   tests = [
     {
-      name = "fdio-caller"
-      dest = "fdio-caller-test"
+      name = "fdio-caller-test"
     },
   ]
 }

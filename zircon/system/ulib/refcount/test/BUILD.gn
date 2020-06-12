@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("refcount-test") {
+  output_name = "refcount-test-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -46,8 +47,7 @@ unittest_package("refcount-test-package") {
 
   tests = [
     {
-      name = "refcount-test"
-      dest = "refcount-test-test"
+      name = "refcount-test-test"
     },
   ]
 }

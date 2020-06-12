@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("smbios-test") {
+  output_name = "smbios-test-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -44,8 +45,7 @@ unittest_package("smbios-test-package") {
 
   tests = [
     {
-      name = "smbios-test"
-      dest = "smbios-test-test"
+      name = "smbios-test-test"
     },
   ]
 }

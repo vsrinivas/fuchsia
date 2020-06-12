@@ -16,7 +16,8 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
 
-executable("fvm") {
+test("fvm") {
+  output_name = "fvm-test"
   sources = [ "fvm.cc" ]
   configs += [ "//build/unification/config:zircon-migrated" ]
   fdio_config = [ "//build/config/fuchsia:fdio_config" ]
@@ -67,7 +68,8 @@ executable("fvm") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-executable("fvm-integration") {
+test("fvm-integration") {
+  output_name = "fvm-integration-test"
   sources = [ "resize-tests.cc" ]
   configs += [ "//build/unification/config:zircon-migrated" ]
   fdio_config = [ "//build/config/fuchsia:fdio_config" ]
@@ -97,12 +99,10 @@ test_package("fvm-tests") {
 
   tests = [
     {
-      name = "fvm"
-      dest = "fvm-test"
+      name = "fvm-test"
     },
     {
-      name = "fvm-integration"
-      dest = "fvm-integration-test"
+      name = "fvm-integration-test"
     },
   ]
 }

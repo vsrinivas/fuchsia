@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("launchpad") {
+  output_name = "launchpad-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "launchpad.cc" ]
   deps = [
@@ -40,8 +41,7 @@ unittest_package("launchpad-package") {
 
   tests = [
     {
-      name = "launchpad"
-      dest = "launchpad-test"
+      name = "launchpad-test"
     },
   ]
 }

@@ -17,6 +17,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("fidl-utils") {
+  output_name = "fidl-utils-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -46,8 +47,7 @@ unittest_package("fidl-utils-package") {
 
   tests = [
     {
-      name = "fidl-utils"
-      dest = "fidl-utils-test"
+      name = "fidl-utils-test"
     },
   ]
 }

@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("ethernet") {
+  output_name = "ethernet-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ethernet.cc" ]
   deps = [
@@ -38,8 +39,7 @@ unittest_package("ethernet-package") {
 
   tests = [
     {
-      name = "ethernet"
-      dest = "ethernet-test"
+      name = "ethernet-test"
     },
   ]
 }

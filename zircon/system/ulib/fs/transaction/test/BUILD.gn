@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("fs-transaction") {
+  output_name = "fs-transaction-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -50,8 +51,7 @@ unittest_package("fs-transaction-package") {
 
   tests = [
     {
-      name = "fs-transaction"
-      dest = "fs-transaction-test"
+      name = "fs-transaction-test"
     },
   ]
 }

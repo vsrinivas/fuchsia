@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("vdso-base") {
+  output_name = "vdso-base-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "vdso-base.c" ]
   deps = [
@@ -31,8 +32,7 @@ unittest_package("vdso-base-package") {
 
   tests = [
     {
-      name = "vdso-base"
-      dest = "vdso-base-test"
+      name = "vdso-base-test"
     },
   ]
 }

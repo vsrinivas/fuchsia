@@ -25,6 +25,7 @@ group("test") {
 }
 
 test("hid-parser") {
+  output_name = "hid-parser-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "hid-descriptor-test.cc",
@@ -60,8 +61,7 @@ unittest_package("hid-parser-package") {
 
   tests = [
     {
-      name = "hid-parser"
-      dest = "hid-parser-test"
+      name = "hid-parser-test"
     },
   ]
 }

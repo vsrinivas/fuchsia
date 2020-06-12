@@ -85,6 +85,7 @@ unittest_package("mtk-thermal-test-package") {
 }
 
 test("mtk-thermal-integration-test") {
+  output_name = "mtk-thermal-integration-test-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "mtk-thermal-integration-test.cc" ]
   deps = [
@@ -104,7 +105,7 @@ unittest_package("mtk-thermal-integration-test-package") {
 
   tests = [
     {
-      name = "mtk-thermal-integration-test"
+      name = "mtk-thermal-integration-test-test"
       environments = basic_envs
     },
   ]

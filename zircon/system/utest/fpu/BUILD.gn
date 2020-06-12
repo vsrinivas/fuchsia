@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("fpu") {
+  output_name = "fpu-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "fputest.c" ]
   deps = [
@@ -30,8 +31,7 @@ unittest_package("fpu-package") {
 
   tests = [
     {
-      name = "fpu"
-      dest = "fpu-test"
+      name = "fpu-test"
     },
   ]
 }

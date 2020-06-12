@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("sysconf") {
+  output_name = "sysconf-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "sysconf.cc" ]
   deps = [
@@ -30,8 +31,7 @@ unittest_package("sysconf-package") {
 
   tests = [
     {
-      name = "sysconf"
-      dest = "sysconf-test"
+      name = "sysconf-test"
     },
   ]
 }

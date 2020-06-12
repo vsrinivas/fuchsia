@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("dlopen-indirect-deps") {
+  output_name = "dlopen-indirect-deps-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "dlopen-indirect-deps.c" ]
   deps = [
@@ -71,8 +72,7 @@ unittest_package("dlopen-indirect-deps-package") {
 
   tests = [
     {
-      name = "dlopen-indirect-deps"
-      dest = "dlopen-indirect-deps-test"
+      name = "dlopen-indirect-deps-test"
     },
   ]
 }

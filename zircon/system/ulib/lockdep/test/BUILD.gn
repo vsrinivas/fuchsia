@@ -20,6 +20,7 @@ config("unused") {
 }
 
 test("lockdep-test") {
+  output_name = "lockdep-test-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -50,8 +51,7 @@ unittest_package("lockdep-test-package") {
 
   tests = [
     {
-      name = "lockdep-test"
-      dest = "lockdep-test-test"
+      name = "lockdep-test-test"
     },
   ]
 }

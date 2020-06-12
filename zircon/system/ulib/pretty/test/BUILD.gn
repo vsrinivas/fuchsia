@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("pretty-test") {
+  output_name = "pretty-test-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -44,8 +45,7 @@ unittest_package("pretty-test-package") {
 
   tests = [
     {
-      name = "pretty-test"
-      dest = "pretty-test-test"
+      name = "pretty-test-test"
     },
   ]
 }

@@ -21,6 +21,7 @@ group("integration") {
 }
 
 test("zxtest-integration") {
+  output_name = "zxtest-integration-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -59,8 +60,7 @@ unittest_package("zxtest-integration-package") {
 
   tests = [
     {
-      name = "zxtest-integration"
-      dest = "zxtest-integration-test"
+      name = "zxtest-integration-test"
     },
   ]
 }

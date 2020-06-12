@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("loader-service") {
+  output_name = "loader-service-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "unit-test.cc" ]
 
@@ -41,8 +42,7 @@ unittest_package("loader-service-package") {
 
   tests = [
     {
-      name = "loader-service"
-      dest = "loader-service-test"
+      name = "loader-service-test"
     },
   ]
 }

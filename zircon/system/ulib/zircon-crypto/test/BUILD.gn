@@ -25,6 +25,7 @@ group("test") {
 }
 
 test("zircon-crypto") {
+  output_name = "zircon-crypto-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -66,8 +67,7 @@ unittest_package("zircon-crypto-package") {
 
   tests = [
     {
-      name = "zircon-crypto"
-      dest = "zircon-crypto-test"
+      name = "zircon-crypto-test"
     },
   ]
 }

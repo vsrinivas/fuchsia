@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("intel-hda-utils-test") {
+  output_name = "intel-hda-utils-test-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -51,8 +52,7 @@ unittest_package("intel-hda-utils-test-package") {
 
   tests = [
     {
-      name = "intel-hda-utils-test"
-      dest = "intel-hda-utils-test-test"
+      name = "intel-hda-utils-test-test"
     },
   ]
 }

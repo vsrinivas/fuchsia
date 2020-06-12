@@ -19,6 +19,7 @@ source_set("shared") {
 }
 
 test("ftl") {
+  output_name = "ftl-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -45,6 +46,7 @@ test("ftl") {
 }
 
 test("ftl-integration") {
+  output_name = "ftl-integration-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -91,8 +93,7 @@ unittest_package("ftl-integration-package") {
 
   tests = [
     {
-      name = "ftl-integration"
-      dest = "ftl-integration-test"
+      name = "ftl-integration-test"
     },
   ]
 }
@@ -103,8 +104,7 @@ unittest_package("ftl-package") {
 
   tests = [
     {
-      name = "ftl"
-      dest = "ftl-test"
+      name = "ftl-test"
     },
   ]
 }

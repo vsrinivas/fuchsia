@@ -39,7 +39,6 @@ unittest_package("sysmem-make-tracking-test-package") {
   tests = [
     {
       name = "sysmem-make-tracking-test"
-      dest = "sysmem-make-tracking-test"
     },
   ]
 }

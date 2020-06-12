@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("posixio") {
+  output_name = "posixio-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
@@ -30,8 +31,7 @@ unittest_package("posixio-package") {
 
   tests = [
     {
-      name = "posixio"
-      dest = "posixio-test"
+      name = "posixio-test"
     },
   ]
 }

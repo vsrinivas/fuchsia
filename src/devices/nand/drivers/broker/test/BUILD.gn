@@ -30,6 +30,7 @@ source_set("common") {
 }
 
 test("nand-broker") {
+  output_name = "nand-broker-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -44,6 +45,7 @@ test("nand-broker") {
 }
 
 test("nandpart-broker") {
+  output_name = "nandpart-broker-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -63,8 +65,7 @@ unittest_package("nand-broker-package") {
 
   tests = [
     {
-      name = "nand-broker"
-      dest = "nand-broker-test"
+      name = "nand-broker-test"
     },
   ]
 }
@@ -75,8 +76,7 @@ unittest_package("nandpart-broker-package") {
 
   tests = [
     {
-      name = "nandpart-broker"
-      dest = "nandpart-broker-test"
+      name = "nandpart-broker-test"
     },
   ]
 }

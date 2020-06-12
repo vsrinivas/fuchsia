@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("exit") {
+  output_name = "exit-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "exit.c" ]
   deps = [
@@ -31,8 +32,7 @@ unittest_package("exit-package") {
 
   tests = [
     {
-      name = "exit"
-      dest = "exit-test"
+      name = "exit-test"
     },
   ]
 }

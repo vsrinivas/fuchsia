@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("closure-queue") {
+  output_name = "closure-queue-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "closure-queue-test.cc" ]
   deps = [
@@ -33,8 +34,7 @@ unittest_package("closure-queue-package") {
 
   tests = [
     {
-      name = "closure-queue"
-      dest = "closure-queue-test"
+      name = "closure-queue-test"
     },
   ]
 }

@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("region-alloc") {
+  output_name = "region-alloc-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "region-alloc-c-api.c",
@@ -40,8 +41,7 @@ unittest_package("region-alloc-package") {
 
   tests = [
     {
-      name = "region-alloc"
-      dest = "region-alloc-test"
+      name = "region-alloc-test"
     },
   ]
 }

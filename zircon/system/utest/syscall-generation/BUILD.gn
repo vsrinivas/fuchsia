@@ -6,6 +6,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("syscall-generation") {
+  output_name = "syscall-generation-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "syscall-generation.cc" ]
   deps = [
@@ -20,8 +21,7 @@ unittest_package("syscall-generation-package") {
 
   tests = [
     {
-      name = "syscall-generation"
-      dest = "syscall-generation-test"
+      name = "syscall-generation-test"
     },
   ]
 }

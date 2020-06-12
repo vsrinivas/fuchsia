@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("test-exceptions") {
+  output_name = "test-exceptions-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "exception-catcher-test.cc" ]
   deps = [
@@ -37,8 +38,7 @@ unittest_package("test-exceptions-package") {
 
   tests = [
     {
-      name = "test-exceptions"
-      dest = "test-exceptions-test"
+      name = "test-exceptions-test"
     },
   ]
 }

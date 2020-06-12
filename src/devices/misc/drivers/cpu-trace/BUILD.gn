@@ -65,6 +65,7 @@ group("tests") {
 }
 
 test("perf-mon-tests") {
+  output_name = "perf-mon-tests-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "tests/perf-mon-tests.cc" ]
   deps = [
@@ -86,8 +87,7 @@ unittest_package("perf-mon-tests-package") {
 
   tests = [
     {
-      name = "perf-mon-tests"
-      dest = "perf-mon-tests-test"
+      name = "perf-mon-tests-test"
     },
   ]
 }

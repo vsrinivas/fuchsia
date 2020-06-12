@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("async-loop") {
+  output_name = "async-loop-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -45,8 +46,7 @@ unittest_package("async-loop-package") {
 
   tests = [
     {
-      name = "async-loop"
-      dest = "async-loop-test"
+      name = "async-loop-test"
     },
   ]
 }

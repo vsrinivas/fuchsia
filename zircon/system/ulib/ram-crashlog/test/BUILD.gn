@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("ram-crashlog") {
+  output_name = "ram-crashlog-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -40,8 +41,7 @@ unittest_package("ram-crashlog-package") {
 
   tests = [
     {
-      name = "ram-crashlog"
-      dest = "ram-crashlog-test"
+      name = "ram-crashlog-test"
     },
   ]
 }

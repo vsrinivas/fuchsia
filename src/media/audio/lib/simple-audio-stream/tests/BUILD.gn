@@ -6,6 +6,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("sa-unittest") {
+  output_name = "sa-unittest-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -42,8 +43,7 @@ unittest_package("sa-unittest-package") {
 
   tests = [
     {
-      name = "sa-unittest"
-      dest = "sa-unittest-test"
+      name = "sa-unittest-test"
     },
   ]
 }

@@ -6,6 +6,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("fvm-driver-unittests") {
+  output_name = "fvm-driver-unittests-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "block-device-test.cc",
@@ -25,8 +26,7 @@ unittest_package("fvm-driver-unittests-package") {
 
   tests = [
     {
-      name = "fvm-driver-unittests"
-      dest = "fvm-driver-unittests-test"
+      name = "fvm-driver-unittests-test"
     },
   ]
 }

@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("kernel-mexec-test") {
+  output_name = "kernel-mexec-test-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -53,8 +54,7 @@ unittest_package("kernel-mexec-test-package") {
 
   tests = [
     {
-      name = "kernel-mexec-test"
-      dest = "kernel-mexec-test-test"
+      name = "kernel-mexec-test-test"
     },
   ]
 }

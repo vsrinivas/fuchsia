@@ -6,6 +6,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("fvm-driver-integration") {
+  output_name = "fvm-driver-integration-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "volume_manager_api_test.cc" ]
   include_dirs = [ ".." ]
@@ -27,8 +28,7 @@ unittest_package("fvm-driver-integration-package") {
 
   tests = [
     {
-      name = "fvm-driver-integration"
-      dest = "fvm-driver-integration-test"
+      name = "fvm-driver-integration-test"
     },
   ]
 }

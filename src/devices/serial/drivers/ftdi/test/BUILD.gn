@@ -6,6 +6,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("ftdi-i2c-test") {
+  output_name = "ftdi-i2c-test-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ftdi-i2c-test.cc" ]
   include_dirs = [ ".." ]
@@ -58,8 +59,7 @@ unittest_package("ftdi-i2c-test-package") {
 
   tests = [
     {
-      name = "ftdi-i2c-test"
-      dest = "ftdi-i2c-test-test"
+      name = "ftdi-i2c-test-test"
     },
   ]
 }

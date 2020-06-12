@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("blobfs-bench") {
+  output_name = "blobfs-bench-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -64,8 +65,7 @@ unittest_package("blobfs-bench-package") {
 
   tests = [
     {
-      name = "blobfs-bench"
-      dest = "blobfs-bench-test"
+      name = "blobfs-bench-test"
     },
   ]
 }

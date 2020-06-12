@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("mmio-ptr-unittest") {
+  output_name = "mmio-ptr-unittest-test"
   testonly = true
   sources = [ "mmio-ptr-unittest.cc" ]
   deps = [
@@ -36,8 +37,7 @@ unittest_package("mmio-ptr-unittest-package") {
   deps = [ ":mmio-ptr-unittest" ]
   tests = [
     {
-      name = "mmio-ptr-unittest"
-      dest = "mmio-ptr-unittest-test"
+      name = "mmio-ptr-unittest-test"
     },
   ]
 }

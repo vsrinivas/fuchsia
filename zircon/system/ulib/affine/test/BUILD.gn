@@ -26,6 +26,7 @@ group("test") {
 }
 
 test("affine") {
+  output_name = "affine-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -63,8 +64,7 @@ unittest_package("affine-package") {
 
   tests = [
     {
-      name = "affine"
-      dest = "affine-test"
+      name = "affine-test"
     },
   ]
 }

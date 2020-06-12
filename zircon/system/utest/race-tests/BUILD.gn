@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("race-tests") {
+  output_name = "race-tests-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "race-tests.cc" ]
   deps = [
@@ -31,8 +32,7 @@ unittest_package("race-tests-package") {
 
   tests = [
     {
-      name = "race-tests"
-      dest = "race-tests-test"
+      name = "race-tests-test"
     },
   ]
 }

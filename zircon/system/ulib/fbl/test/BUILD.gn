@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("fbl") {
+  output_name = "fbl-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -101,8 +102,7 @@ unittest_package("fbl-package") {
 
   tests = [
     {
-      name = "fbl"
-      dest = "fbl-test"
+      name = "fbl-test"
     },
   ]
 }

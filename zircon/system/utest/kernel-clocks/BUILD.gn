@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("kernel-clocks") {
+  output_name = "kernel-clocks-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "kernel-clocks.cc" ]
   deps = [
@@ -36,8 +37,7 @@ unittest_package("kernel-clocks-package") {
 
   tests = [
     {
-      name = "kernel-clocks"
-      dest = "kernel-clocks-test"
+      name = "kernel-clocks-test"
     },
   ]
 }

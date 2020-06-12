@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("ctor") {
+  output_name = "ctor-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ctor.cc" ]
   deps = [
@@ -41,8 +42,7 @@ unittest_package("ctor-package") {
 
   tests = [
     {
-      name = "ctor"
-      dest = "ctor-test"
+      name = "ctor-test"
     },
   ]
 }

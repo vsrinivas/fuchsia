@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("sysmem-version-test") {
+  output_name = "sysmem-version-test-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "sysmem-version-test.cc" ]
   deps = [
@@ -37,7 +38,7 @@ unittest_package("sysmem-version-test-package") {
 
   tests = [
     {
-      name = "sysmem-version-test"
+      name = "sysmem-version-test-test"
       dest = "sysmem-version-test"
     },
   ]

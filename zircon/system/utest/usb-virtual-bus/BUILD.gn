@@ -49,6 +49,7 @@ test("usb-virtual-bus-ums") {
 }
 
 test("usb-virtual-bus-hid") {
+  output_name = "usb-virtual-bus-hid-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-hid-test.cc" ]
   deps = [
@@ -67,6 +68,7 @@ test("usb-virtual-bus-hid") {
 }
 
 test("usb-virtual-bus-ftdi") {
+  output_name = "usb-virtual-bus-ftdi-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ftdi-test.cc" ]
   deps = [
@@ -83,6 +85,7 @@ test("usb-virtual-bus-ftdi") {
 }
 
 test("usb-virtual-bus-cdc-acm") {
+  output_name = "usb-virtual-bus-cdc-acm-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-cdc-acm-test.cc" ]
   deps = [
@@ -99,6 +102,7 @@ test("usb-virtual-bus-cdc-acm") {
 }
 
 test("usb-virtual-bus-test") {
+  output_name = "usb-virtual-bus-test-test"
   sources = [ "usb-virtual-bus-test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
@@ -118,6 +122,7 @@ test("usb-virtual-bus-test") {
 }
 
 test("usb-virtual-bus-cdc-ecm") {
+  output_name = "usb-virtual-bus-cdc-ecm-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-cdc-ecm-test.cc" ]
   deps = [
@@ -143,8 +148,7 @@ unittest_package("usb-virtual-bus-cdc-acm-package") {
 
   tests = [
     {
-      name = "usb-virtual-bus-cdc-acm"
-      dest = "usb-virtual-bus-cdc-acm-test"
+      name = "usb-virtual-bus-cdc-acm-test"
     },
   ]
 }
@@ -155,8 +159,7 @@ unittest_package("usb-virtual-bus-cdc-ecm-package") {
 
   tests = [
     {
-      name = "usb-virtual-bus-cdc-ecm"
-      dest = "usb-virtual-bus-cdc-ecm-test"
+      name = "usb-virtual-bus-cdc-ecm-test"
     },
   ]
 }
@@ -167,8 +170,7 @@ unittest_package("usb-virtual-bus-test-package") {
 
   tests = [
     {
-      name = "usb-virtual-bus-test"
-      dest = "usb-virtual-bus-test-test"
+      name = "usb-virtual-bus-test-test"
     },
   ]
 }
@@ -179,8 +181,7 @@ unittest_package("usb-virtual-bus-ftdi-package") {
 
   tests = [
     {
-      name = "usb-virtual-bus-ftdi"
-      dest = "usb-virtual-bus-ftdi-test"
+      name = "usb-virtual-bus-ftdi-test"
     },
   ]
 }
@@ -191,8 +192,7 @@ unittest_package("usb-virtual-bus-hid-package") {
 
   tests = [
     {
-      name = "usb-virtual-bus-hid"
-      dest = "usb-virtual-bus-hid-test"
+      name = "usb-virtual-bus-hid-test"
     },
   ]
 }

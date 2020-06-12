@@ -37,6 +37,7 @@ driver_module("virtio_gpu") {
 }
 
 test("virtio-gpu-test") {
+  output_name = "virtio-gpu-test-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -67,8 +68,7 @@ unittest_package("virtio-gpu-test-package") {
 
   tests = [
     {
-      name = "virtio-gpu-test"
-      dest = "virtio-gpu-test-test"
+      name = "virtio-gpu-test-test"
     },
   ]
 }

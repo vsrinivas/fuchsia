@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("devcoordinator-namespace") {
+  output_name = "devcoordinator-namespace-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -41,8 +42,7 @@ unittest_package("devcoordinator-namespace-package") {
 
   tests = [
     {
-      name = "devcoordinator-namespace"
-      dest = "devcoordinator-namespace-test"
+      name = "devcoordinator-namespace-test"
     },
   ]
 }

@@ -92,6 +92,7 @@ source_set("in-memory-logger-test") {
 }
 
 test("cobalt-client-unit") {
+  output_name = "cobalt-client-unit-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -118,8 +119,7 @@ unittest_package("cobalt-client-unit-package") {
 
   tests = [
     {
-      name = "cobalt-client-unit"
-      dest = "cobalt-client-unit-test"
+      name = "cobalt-client-unit-test"
     },
   ]
 }

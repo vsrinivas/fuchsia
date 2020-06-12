@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("cleanup") {
+  output_name = "cleanup-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "cleanup.cc" ]
   deps = [
@@ -31,8 +32,7 @@ unittest_package("cleanup-package") {
 
   tests = [
     {
-      name = "cleanup"
-      dest = "cleanup-test"
+      name = "cleanup-test"
     },
   ]
 }

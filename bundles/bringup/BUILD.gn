@@ -5,7 +5,7 @@
 group("tests") {
   testonly = true
   deps = [
-    "//src/bringup/tests/bootfs_test",
+    "//src/bringup/tests/bootfs_test",  # This is a package.
     "//src/connectivity/ethernet/tests/ethernet:ethernet-package",
     "//src/devices/block/drivers/ftl/test:ftl-integration-package",
     "//src/devices/block/drivers/ftl/test:ftl-package",
@@ -34,7 +34,7 @@ group("tests") {
     "//src/media/audio/lib/simple-audio-stream/tests:sa-unittest-package",
     "//src/security/zxcrypt/tests:zxcrypt-package",
     "//src/ui/input/tests/hid:hid-package",
-    "//zircon/system/core/sysinfo:sysinfo-test",
+    "//zircon/system/core/sysinfo:sysinfo-test",  # This is a package.
     "//zircon/system/ulib/abs_clock/test:abs-clock-test-package",
     "//zircon/system/ulib/affine/test:affine-package",
     "//zircon/system/ulib/async-loop/test:async-loop-package",
@@ -84,7 +84,7 @@ group("tests") {
     "//zircon/system/ulib/smbios/test:smbios-test-package",
     "//zircon/system/ulib/syslog/test:syslog-package",
     "//zircon/system/ulib/syslog/test:syslog-static-package",
-    "//zircon/system/ulib/sysmem-make-tracking/test:sysmem-make-tracking-test",
+    "//zircon/system/ulib/sysmem-make-tracking/test:sysmem-make-tracking-test-package",
     "//zircon/system/ulib/sysmem-version/test:sysmem-version-test-package",
     "//zircon/system/ulib/test-exceptions/test:test-exceptions-package",
     "//zircon/system/ulib/test-utils/test:test-utils-package",
@@ -115,7 +115,7 @@ group("tests") {
     "//zircon/system/utest/exit:exit-package",
     "//zircon/system/utest/fidl-utils:fidl-utils-package",
     "//zircon/system/utest/fpu:fpu-package",
-    "//zircon/system/utest/fvm:fvm-tests",
+    "//zircon/system/utest/fvm:fvm-tests",  # This is a package.
     "//zircon/system/utest/getentropy:getentropy-package",
     "//zircon/system/utest/handle-alias:handle-alias-package",
     "//zircon/system/utest/inspector:inspector-package",

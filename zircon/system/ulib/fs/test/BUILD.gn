@@ -25,6 +25,7 @@ assert(!defined(zx) || zx != "/",
 import("//build/test.gni")
 
 test("fs-vnode") {
+  output_name = "fs-vnode-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -72,6 +73,7 @@ test("fs-vnode") {
 }
 
 test("fs-connection") {
+  output_name = "fs-connection-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -115,8 +117,7 @@ unittest_package("fs-connection-package") {
 
   tests = [
     {
-      name = "fs-connection"
-      dest = "fs-connection-test"
+      name = "fs-connection-test"
     },
   ]
 }
@@ -127,8 +128,7 @@ unittest_package("fs-vnode-package") {
 
   tests = [
     {
-      name = "fs-vnode"
-      dest = "fs-vnode-test"
+      name = "fs-vnode-test"
     },
   ]
 }

@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("framebuffer-test") {
+  output_name = "framebuffer-test-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -45,8 +46,7 @@ unittest_package("framebuffer-test-package") {
 
   tests = [
     {
-      name = "framebuffer-test"
-      dest = "framebuffer-test-test"
+      name = "framebuffer-test-test"
     },
   ]
 }

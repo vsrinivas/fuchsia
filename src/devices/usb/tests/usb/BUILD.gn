@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("usb") {
+  output_name = "usb-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-test.c" ]
   deps = [
@@ -31,8 +32,7 @@ unittest_package("usb-package") {
 
   tests = [
     {
-      name = "usb"
-      dest = "usb-test"
+      name = "usb-test"
     },
   ]
 }

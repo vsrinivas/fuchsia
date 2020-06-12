@@ -16,6 +16,7 @@ import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
 #                    and loads pci_test.so
 # pci_test.so: A zxtest driver to test the PCI protocol
 test("pci-unit") {
+  output_name = "pci-unit-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -38,6 +39,8 @@ test("pci-unit") {
 }
 
 test("pci-driver") {
+  output_name = "pci-driver-test"
+
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # TODO(44278): Remove when converting this file to proper GN build idioms.
   if (is_fuchsia) {
@@ -80,8 +83,7 @@ test_package("pci-driver-package") {
   extra = [ "$target_gen_dir/devmgr.manifest" ]
   tests = [
     {
-      name = "pci-driver"
-      dest = "pci-driver-test"
+      name = "pci-driver-test"
     },
   ]
 }
@@ -143,8 +145,7 @@ unittest_package("pci-unit-package") {
 
   tests = [
     {
-      name = "pci-unit"
-      dest = "pci-unit-test"
+      name = "pci-unit-test"
     },
   ]
 }

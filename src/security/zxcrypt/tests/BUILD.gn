@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("zxcrypt") {
+  output_name = "zxcrypt-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -64,8 +65,7 @@ unittest_package("zxcrypt-package") {
 
   tests = [
     {
-      name = "zxcrypt"
-      dest = "zxcrypt-test"
+      name = "zxcrypt-test"
     },
   ]
 }

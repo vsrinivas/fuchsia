@@ -24,6 +24,7 @@ group("psutils") {
 }
 
 test("ps") {
+  output_name = "ps-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ps_test.c" ]
   deps = [
@@ -36,6 +37,7 @@ test("ps") {
 }
 
 test("handles") {
+  output_name = "handles-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "handles_test.cc" ]
   deps = [
@@ -53,8 +55,7 @@ unittest_package("ps-package") {
 
   tests = [
     {
-      name = "ps"
-      dest = "ps-test"
+      name = "ps-test"
     },
   ]
 }
@@ -65,8 +66,7 @@ unittest_package("handles-package") {
 
   tests = [
     {
-      name = "handles"
-      dest = "handles-test"
+      name = "handles-test"
     },
   ]
 }

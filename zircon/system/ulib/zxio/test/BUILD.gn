@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("zxio") {
+  output_name = "zxio-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "c-compilation-test.c",
@@ -62,8 +63,7 @@ unittest_package("zxio-package") {
 
   tests = [
     {
-      name = "zxio"
-      dest = "zxio-test"
+      name = "zxio-test"
     },
   ]
 }

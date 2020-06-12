@@ -26,6 +26,7 @@ group("test") {
 }
 
 test("bootfs-test") {
+  output_name = "bootfs-test-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -60,8 +61,7 @@ unittest_package("bootfs-test-package") {
 
   tests = [
     {
-      name = "bootfs-test"
-      dest = "bootfs-test-test"
+      name = "bootfs-test-test"
     },
   ]
 }

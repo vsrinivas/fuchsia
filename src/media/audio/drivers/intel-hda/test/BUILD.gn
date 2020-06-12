@@ -32,12 +32,14 @@ source_set("test_libs") {
 }
 
 test("intel-hda-test") {
+  output_name = "intel-hda-test-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "intel_hda_test.cc" ]
   deps = [ ":test_libs" ]
 }
 
 test("pixelbook-eve-test") {
+  output_name = "pixelbook-eve-test-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "pixelbook_eve_test.cc" ]
   deps = [ ":test_libs" ]
@@ -49,8 +51,7 @@ unittest_package("intel-hda-test-package") {
 
   tests = [
     {
-      name = "intel-hda-test"
-      dest = "intel-hda-test-test"
+      name = "intel-hda-test-test"
     },
   ]
 }
@@ -61,8 +62,7 @@ unittest_package("pixelbook-eve-test-package") {
 
   tests = [
     {
-      name = "pixelbook-eve-test"
-      dest = "pixelbook-eve-test-test"
+      name = "pixelbook-eve-test-test"
     },
   ]
 }

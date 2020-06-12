@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("hid") {
+  output_name = "hid-driver-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "hid-driver.cc" ]
   deps = [
@@ -39,8 +40,7 @@ unittest_package("hid-package") {
 
   tests = [
     {
-      name = "hid"
-      dest = "hid-test"
+      name = "hid-driver-test"
     },
   ]
 }

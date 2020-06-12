@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("gpt-unit") {
+  output_name = "gpt-unit-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
@@ -57,8 +58,7 @@ unittest_package("gpt-unit-package") {
 
   tests = [
     {
-      name = "gpt-unit"
-      dest = "gpt-unit-test"
+      name = "gpt-unit-test"
     },
   ]
 }

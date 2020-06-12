@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("device-enumeration") {
+  output_name = "device-enumeration-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
@@ -38,8 +39,7 @@ unittest_package("device-enumeration-package") {
 
   tests = [
     {
-      name = "device-enumeration"
-      dest = "device-enumeration-test"
+      name = "device-enumeration-test"
     },
   ]
 }

@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("exception") {
+  output_name = "exception-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "exception.cc",
@@ -36,8 +37,7 @@ unittest_package("exception-package") {
 
   tests = [
     {
-      name = "exception"
-      dest = "exception-test"
+      name = "exception-test"
     },
   ]
 }

@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("logger-unit") {
+  output_name = "logger-unit-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -40,8 +41,7 @@ unittest_package("logger-unit-package") {
 
   tests = [
     {
-      name = "logger-unit"
-      dest = "logger-unit-test"
+      name = "logger-unit-test"
     },
   ]
 }

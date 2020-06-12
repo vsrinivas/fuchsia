@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("handle-alias") {
+  output_name = "handle-alias-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "handle-alias.c" ]
   deps = [
@@ -31,8 +32,7 @@ unittest_package("handle-alias-package") {
 
   tests = [
     {
-      name = "handle-alias"
-      dest = "handle-alias-test"
+      name = "handle-alias-test"
     },
   ]
 }

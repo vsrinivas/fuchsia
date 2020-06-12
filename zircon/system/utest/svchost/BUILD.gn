@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("svchost") {
+  output_name = "svchost-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
@@ -34,8 +35,7 @@ unittest_package("svchost-package") {
 
   tests = [
     {
-      name = "svchost"
-      dest = "svchost-test"
+      name = "svchost-test"
     },
   ]
 }

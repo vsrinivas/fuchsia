@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("mipidsi") {
+  output_name = "mipidsi-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -47,8 +48,7 @@ unittest_package("mipidsi-package") {
 
   tests = [
     {
-      name = "mipidsi"
-      dest = "mipidsi-test"
+      name = "mipidsi-test"
     },
   ]
 }

@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("pty") {
+  output_name = "pty-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "pty-test.cc" ]
   deps = [
@@ -34,8 +35,7 @@ unittest_package("pty-package") {
 
   tests = [
     {
-      name = "pty"
-      dest = "pty-test"
+      name = "pty-test"
     },
   ]
 }

@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("stdio-test") {
+  output_name = "stdio-test-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "stdio.c",
@@ -45,8 +46,7 @@ unittest_package("stdio-test-package") {
 
   tests = [
     {
-      name = "stdio-test"
-      dest = "stdio-test-test"
+      name = "stdio-test-test"
     },
   ]
   binaries = [

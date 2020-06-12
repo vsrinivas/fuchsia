@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("image-format-test") {
+  output_name = "image-format-test-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "image-format-test.cc" ]
   deps = [
@@ -39,8 +40,7 @@ unittest_package("image-format-test-package") {
 
   tests = [
     {
-      name = "image-format-test"
-      dest = "image-format-test-test"
+      name = "image-format-test-test"
     },
   ]
 }

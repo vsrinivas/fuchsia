@@ -11,6 +11,7 @@ group("test") {
 }
 
 test("scsilib-disk-test") {
+  output_name = "scsilib-disk-test-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -43,8 +44,7 @@ unittest_package("scsilib-disk-test-package") {
 
   tests = [
     {
-      name = "scsilib-disk-test"
-      dest = "scsilib-disk-test-test"
+      name = "scsilib-disk-test-test"
     },
   ]
 }

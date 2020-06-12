@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("miscsvc") {
+  output_name = "miscsvc-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
@@ -32,8 +33,7 @@ unittest_package("miscsvc-package") {
 
   tests = [
     {
-      name = "miscsvc"
-      dest = "miscsvc-test"
+      name = "miscsvc-test"
     },
   ]
 }

@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("test-utils") {
+  output_name = "test-utils-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test-utils-test.cc" ]
   deps = [
@@ -37,8 +38,7 @@ unittest_package("test-utils-package") {
 
   tests = [
     {
-      name = "test-utils"
-      dest = "test-utils-test"
+      name = "test-utils-test"
     },
   ]
 }

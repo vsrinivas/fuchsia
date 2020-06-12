@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("thread-safe-deleter") {
+  output_name = "thread-safe-deleter-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "thread-safe-deleter-test.cc" ]
   deps = [
@@ -34,8 +35,7 @@ unittest_package("thread-safe-deleter-package") {
 
   tests = [
     {
-      name = "thread-safe-deleter"
-      dest = "thread-safe-deleter-test"
+      name = "thread-safe-deleter-test"
     },
   ]
 }

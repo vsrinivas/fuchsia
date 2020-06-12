@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("entropy") {
+  output_name = "entropy-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "entropy.cc" ]
   deps = [
@@ -32,8 +33,7 @@ unittest_package("entropy-package") {
 
   tests = [
     {
-      name = "entropy"
-      dest = "entropy-test"
+      name = "entropy-test"
     },
   ]
 }

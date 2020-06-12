@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("simplehid") {
+  output_name = "simplehid-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -54,8 +55,7 @@ unittest_package("simplehid-package") {
 
   tests = [
     {
-      name = "simplehid"
-      dest = "simplehid-test"
+      name = "simplehid-test"
     },
   ]
 }

@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("events") {
+  output_name = "events-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "events.c" ]
   deps = [
@@ -31,8 +32,7 @@ unittest_package("events-package") {
 
   tests = [
     {
-      name = "events"
-      dest = "events-test"
+      name = "events-test"
     },
   ]
 }

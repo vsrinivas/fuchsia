@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("ramdisk") {
+  output_name = "ramdisk-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ramdisk.cc" ]
   deps = [
@@ -43,8 +44,7 @@ unittest_package("ramdisk-package") {
 
   tests = [
     {
-      name = "ramdisk"
-      dest = "ramdisk-test"
+      name = "ramdisk-test"
     },
   ]
 }

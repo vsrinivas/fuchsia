@@ -16,6 +16,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test("kernel-unittests") {
+  output_name = "kernel-unittests-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "kernel-unittests.cc" ]
   deps = [
@@ -32,8 +33,7 @@ unittest_package("kernel-unittests-package") {
 
   tests = [
     {
-      name = "kernel-unittests"
-      dest = "kernel-unittests-test"
+      name = "kernel-unittests-test"
     },
   ]
 }

@@ -21,6 +21,7 @@ group("test") {
 }
 
 test("backtrace-request") {
+  output_name = "backtrace-request-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "backtrace-request-test.cc" ]
   deps = [
@@ -37,8 +38,7 @@ unittest_package("backtrace-request-package") {
 
   tests = [
     {
-      name = "backtrace-request"
-      dest = "backtrace-request-test"
+      name = "backtrace-request-test"
     },
   ]
 }
@@ -48,6 +48,7 @@ unittest_package("backtrace-request-package") {
 # Related unittests exist alongside the backtrace and crashsvc code, but
 # this verifies that the pieces are working together correctly.
 test("backtrace-request-integration") {
+  output_name = "backtrace-request-integration-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "backtrace-request-integration-test.cc" ]
   deps = [
@@ -63,8 +64,7 @@ unittest_package("backtrace-request-integration-package") {
 
   tests = [
     {
-      name = "backtrace-request-integration"
-      dest = "backtrace-request-integration-test"
+      name = "backtrace-request-integration-test"
     },
   ]
 }

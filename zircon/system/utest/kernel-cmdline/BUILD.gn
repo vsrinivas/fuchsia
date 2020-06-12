@@ -26,6 +26,7 @@ group("test") {
 }
 
 test("kernel-cmdline") {
+  output_name = "kernel-cmdline-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -58,8 +59,7 @@ unittest_package("kernel-cmdline-package") {
 
   tests = [
     {
-      name = "kernel-cmdline"
-      dest = "kernel-cmdline-test"
+      name = "kernel-cmdline-test"
     },
   ]
 }

@@ -23,6 +23,7 @@ driver_module("isolateddevmgr-test") {
 }
 
 test("isolateddevmgr") {
+  output_name = "isolateddevmgr-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test.cc" ]
   deps = [
@@ -44,8 +45,7 @@ unittest_package("isolateddevmgr-package") {
 
   tests = [
     {
-      name = "isolateddevmgr"
-      dest = "isolateddevmgr-test"
+      name = "isolateddevmgr-test"
     },
   ]
 }
