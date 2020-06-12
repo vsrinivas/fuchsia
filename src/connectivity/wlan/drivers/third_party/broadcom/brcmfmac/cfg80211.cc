@@ -2816,7 +2816,7 @@ zx_status_t brcmf_if_start(net_device* ndev, const wlanif_impl_ifc_protocol_t* i
   BRCMF_DBG(WLANIF, "Starting wlanif interface");
   ndev->if_proto = *ifc;
   brcmf_netdev_open(ndev);
-  ndev->flags = IFF_UP;
+  ndev->is_up = true;
 
   ZX_DEBUG_ASSERT(out_sme_channel != nullptr);
   *out_sme_channel = ndev->sme_channel.release();

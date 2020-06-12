@@ -233,20 +233,17 @@ void brcmf_txfinalize(struct brcmf_if* ifp, const struct ethhdr* eh, bool succes
 void brcmf_netif_rx(struct brcmf_if* ifp, const void* data, size_t size);
 void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on);
 
-// Used in net_device.flags to indicate interface is up.
-#define IFF_UP 1
-
 struct net_device {
   bool initialized_for_ap;
   bool scan_busy;
   bool multicast_promisc;
+  bool is_up;
   uint64_t scan_txn_id;
   uint32_t scan_num_results;
   wlanif_impl_ifc_protocol_t if_proto;
   uint8_t dev_addr[ETH_ALEN];
   char name[123];
   void* priv;
-  uint32_t flags;
   struct {
     int tx_dropped;
     int tx_packets;

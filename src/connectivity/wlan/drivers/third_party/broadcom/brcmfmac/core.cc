@@ -171,14 +171,24 @@ static void brcmf_set_multicast_list(struct brcmf_if* ifp) {
               brcmf_fil_get_errstr(fw_err));
   }
 
-  /*Finally, pick up the PROMISC flag */
-  cmd_value = (ndev->flags & IFF_PROMISC) ? true : false;
+  /* Promiscuous mode is currently unsupported */
+  cmd_value = false;
   err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_PROMISC, cmd_value, &fw_err);
   if (err != ZX_OK) {
     BRCMF_ERR("Setting BRCMF_C_SET_PROMISC failed, %s, fw err %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
   }
-  brcmf_configure_arp_nd_offload(ifp, !cmd_value);
+
+  /* In general, the configuration of ARP offloading is interface-dependent (enabled for client
+   * and disabled for AP). The code below is intended to override the default setting in the
+   * specific case where promiscuous mode is enabled. In that case, we want to disable ARP
+   * offloading so those packets are sent to the interface. See issue 52305 for context.  We could
+   * remove these lines of code since promiscuous mode is currently unsupported, but we should
+   * probably leave them in so the problem doesn't pop up again if/when support is added.
+   */
+  if (cmd_value) {
+    brcmf_configure_arp_nd_offload(ifp, false);
+  }
 }
 
 static void brcmf_set_multicast_list_worker(WorkItem* work) {
@@ -295,7 +305,7 @@ void brcmf_netif_rx(struct brcmf_if* ifp, const void* data, size_t size) {
     ifp->ndev->stats.multicast++;
   }
 
-  if (!(ifp->ndev->flags & IFF_UP)) {
+  if (!(ifp->ndev->is_up)) {
     return;
   }
 

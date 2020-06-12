@@ -315,7 +315,8 @@ void ArpTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   assoc_complete_ = true;
 }
 
-// Verify that an ARP frame received by an AP interface is dropped by default.
+// Verify that an ARP frame received by an AP interface is not offloaded, even after multicast
+// promiscuous mode is enabled.
 TEST_F(ArpTest, SoftApArpOffload) {
   Init();
   ASSERT_EQ(SimTest::CreateInterface(WLAN_INFO_MAC_ROLE_AP, sme_protocol_, &sim_ifc_, kOurMac),
@@ -332,8 +333,8 @@ TEST_F(ArpTest, SoftApArpOffload) {
 
   ScheduleSetMulticastPromisc(true, zx::sec(5));
 
-  // Send an ARP frame that we expect to be offloaded
-  ScheduleArpFrameTx(zx::sec(6), false);
+  // Send an ARP frame that we expect to be received
+  ScheduleArpFrameTx(zx::sec(6), true);
   ScheduleNonArpFrameTx(zx::sec(7));
 
   // Stop AP and remove interface
@@ -341,8 +342,8 @@ TEST_F(ArpTest, SoftApArpOffload) {
 
   env_->Run();
 
-  // Verify that one ARP frame was offloaded
-  EXPECT_EQ(arp_frames_received_, 1U);
+  // Verify that no ARP frames were offloaded
+  EXPECT_EQ(arp_frames_received_, 2U);
 
   // Verify that no non-ARP frames were suppressed
   EXPECT_EQ(non_arp_frames_received_, 2U);
