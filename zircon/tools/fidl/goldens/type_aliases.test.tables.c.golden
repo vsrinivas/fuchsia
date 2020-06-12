@@ -25,7 +25,7 @@ static const struct FidlCodedHandle HandlehandlenullableTable = {.tag=kFidlTypeH
 
 
 static const struct FidlStructField Fields29example_ExampleOfUseOfAliases[] = {
-    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table), .offset=0u, .padding=4u},
+    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=4u},
     /*FidlStructField*/{.type=(fidl_type_t*)(&Vector5nonnullable27String4294967295nonnullableTable), .offset=8u, .padding=0u},
     /*FidlStructField*/{.type=(fidl_type_t*)(&Vector5nonnullable6uint32Table), .offset=24u, .padding=0u},
     /*FidlStructField*/{.type=(fidl_type_t*)(&Vector4294967295nonnullable27String4294967295nonnullableTable), .offset=40u, .padding=0u},

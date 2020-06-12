@@ -13,7 +13,7 @@ static const struct FidlCodedHandle HandlevmononnullableTable = {.tag=kFidlTypeH
 
 static const struct FidlCodedVector Vector4294967295nonnullable20HandlevmononnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&HandlevmononnullableTable), .max_count=4294967295u, .element_size=4u, .nullable=kFidlNullability_Nonnullable};
 
-static const struct FidlCodedArray Array20_20HandlevmononnullableTable = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&HandlevmononnullableTable), .array_size=20u, .element_size=4u};
+static const struct FidlCodedArray Array20_20HandlevmononnullableTable __attribute__((unused)) = {.tag=kFidlTypeArray, .element=(fidl_type_t*)(&HandlevmononnullableTable), .array_size=20u, .element_size=4u};
 
 static const struct FidlCodedVector Vector4294967295nonnullable30Array20_20HandlevmononnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Array20_20HandlevmononnullableTable), .max_count=4294967295u, .element_size=20u, .nullable=kFidlNullability_Nonnullable};
 

@@ -11,6 +11,32 @@ struct SomeStruct {
     int32 bar;
 };
 
+// Tested in StructWithSomeFieldsRemoved.
+// All fields in this struct don't have actions in coding tables.
+struct StructWithAllFieldsRemovedFromCodingTables {
+    int8 a;
+    int8 b;
+    int16 c;
+};
+
+// Tested in StructWithSomeFieldsRemoved.
+struct StructWithPadding {
+    int8 a;
+    int64 c;
+};
+
+// Some fields in this struct should be removed from coding tables because
+// they have no action and the walker can skip over them.
+struct StructWithSomeFieldsRemovedFromCodingTables {
+    StructWithPadding padding_struct; // not removed
+    int8 foo; // removed
+    // 3 bytes padding.
+    array<StructWithAllFieldsRemovedFromCodingTables>:1 arr; // removed
+    array<bool>:1 bool_array; // not removed
+    // 1 byte padding.
+    uint16 bar; // removed
+};
+
 flexible union MyXUnion {
     1: bool foo;
     2: int32 bar;
@@ -60,6 +86,7 @@ struct NumberCollision {
 // for request message types, by defining dummy methods which take a single desired argument.
 protocol Coding {
     SomeStruct(SomeStruct s);
+    StructWithSomeFieldsRemovedFromCodingTables(StructWithSomeFieldsRemovedFromCodingTables s);
 
     // Various trickery to avoid directly refering a xunion/table inline,
     // which is not supported in the C bindings.

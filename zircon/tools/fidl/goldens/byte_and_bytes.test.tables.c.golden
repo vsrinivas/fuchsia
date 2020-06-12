@@ -14,7 +14,7 @@ static const struct FidlCodedVector Vector1024nullable5uint8Table = {.tag=kFidlT
 
 
 static const struct FidlStructField Fields20example_ByteAndBytes[] = {
-    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kUint8Table), .offset=0u, .padding=7u},
+    /*FidlStructField*/{.type=NULL, .padding_offset=1u, .padding=7u},
     /*FidlStructField*/{.type=(fidl_type_t*)(&Vector4294967295nonnullable5uint8Table), .offset=8u, .padding=0u},
     /*FidlStructField*/{.type=(fidl_type_t*)(&Vector1024nonnullable5uint8Table), .offset=24u, .padding=0u},
     /*FidlStructField*/{.type=(fidl_type_t*)(&Vector1024nullable5uint8Table), .offset=40u, .padding=0u}

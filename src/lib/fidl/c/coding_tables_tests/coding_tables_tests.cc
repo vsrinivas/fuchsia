@@ -22,13 +22,40 @@ TEST(SomeStruct, CodingTable) {
   const FidlCodedStruct& some_struct_table = some_struct_type.coded_struct();
   ASSERT_STR_EQ("fidl.test.example.codingtables/SomeStruct", some_struct_table.name);
   // Every field (including primitives without padding) has a coding table generated for it.
-  ASSERT_EQ(2, some_struct_table.field_count);
+  ASSERT_EQ(1, some_struct_table.field_count);
   ASSERT_EQ(&fidl_internal_kBoolTable, some_struct_table.fields[0].type);
-  ASSERT_EQ(&fidl_internal_kInt32Table, some_struct_table.fields[1].type);
   ASSERT_EQ(0, some_struct_table.fields[0].offset);
   ASSERT_EQ(3, some_struct_table.fields[0].padding);
-  ASSERT_EQ(4, some_struct_table.fields[1].offset);
-  ASSERT_EQ(0, some_struct_table.fields[1].padding);
+}
+
+TEST(StructWithSomeFieldsRemoved, CodingTable) {
+  const fidl_type& request_type =
+      fidl_test_example_codingtables_CodingStructWithSomeFieldsRemovedFromCodingTablesRequestTable;
+  ASSERT_EQ(kFidlTypeStruct, request_type.type_tag());
+
+  const fidl_type& type = *request_type.coded_struct().fields[0].type;
+  ASSERT_EQ(kFidlTypeStruct, type.type_tag());
+  const FidlCodedStruct& coded_struct = type.coded_struct();
+  ASSERT_STR_EQ("fidl.test.example.codingtables/StructWithSomeFieldsRemovedFromCodingTables",
+                coded_struct.name);
+
+  ASSERT_EQ(4, coded_struct.field_count);
+
+  ASSERT_NOT_NULL(coded_struct.fields[0].type);
+  ASSERT_EQ(0, coded_struct.fields[0].padding_offset);
+  ASSERT_EQ(0, coded_struct.fields[0].padding);
+
+  ASSERT_NULL(coded_struct.fields[1].type);
+  ASSERT_EQ(17, coded_struct.fields[1].padding_offset);
+  ASSERT_EQ(1, coded_struct.fields[1].padding);
+
+  ASSERT_EQ(&fidl_internal_kBoolTable, coded_struct.fields[2].type->coded_array().element);
+  ASSERT_EQ(22, coded_struct.fields[2].offset);
+  ASSERT_EQ(1, coded_struct.fields[2].padding);
+
+  ASSERT_NULL(coded_struct.fields[3].type);
+  ASSERT_EQ(26, coded_struct.fields[3].padding_offset);
+  ASSERT_EQ(6, coded_struct.fields[3].padding);
 }
 
 TEST(MyXUnion, CodingTableWhenNullable) {
@@ -213,7 +240,7 @@ TEST(NumberCollision, CodingTable) {
   ASSERT_EQ(kFidlTypeStruct, number_collision_type.type_tag());
   const FidlCodedStruct& number_collision_table = number_collision_type.coded_struct();
   ASSERT_STR_EQ("fidl.test.example.codingtables/NumberCollision", number_collision_table.name);
-  ASSERT_EQ(6, number_collision_table.field_count);
+  ASSERT_EQ(5, number_collision_table.field_count);
 }
 
 TEST(ForeignXUnions, CodingTable) {

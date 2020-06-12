@@ -8,25 +8,25 @@ extern const struct FidlCodedStruct fidl_test_json_EmptyTable;
 
 extern const struct FidlCodedStruct fidl_test_json_EmptyProtocolSendRequestTable;
 static const struct FidlStructField Fields39fidl_test_json_EmptyProtocolSendRequest[] = {
-    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_test_json_EmptyTable), .offset=16u, .padding=7u}
+    /*FidlStructField*/{.type=NULL, .padding_offset=17u, .padding=7u}
 };
 const struct FidlCodedStruct fidl_test_json_EmptyProtocolSendRequestTable = {.tag=kFidlTypeStruct, .fields=Fields39fidl_test_json_EmptyProtocolSendRequest, .field_count=1u, .size=24u, .name="fidl.test.json/EmptyProtocolSendRequest"};
 
 extern const struct FidlCodedStruct fidl_test_json_EmptyProtocolReceiveEventTable;
 static const struct FidlStructField Fields40fidl_test_json_EmptyProtocolReceiveEvent[] = {
-    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_test_json_EmptyTable), .offset=16u, .padding=7u}
+    /*FidlStructField*/{.type=NULL, .padding_offset=17u, .padding=7u}
 };
 const struct FidlCodedStruct fidl_test_json_EmptyProtocolReceiveEventTable = {.tag=kFidlTypeStruct, .fields=Fields40fidl_test_json_EmptyProtocolReceiveEvent, .field_count=1u, .size=24u, .name="fidl.test.json/EmptyProtocolReceiveEvent"};
 
 extern const struct FidlCodedStruct fidl_test_json_EmptyProtocolSendAndReceiveRequestTable;
 static const struct FidlStructField Fields49fidl_test_json_EmptyProtocolSendAndReceiveRequest[] = {
-    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_test_json_EmptyTable), .offset=16u, .padding=7u}
+    /*FidlStructField*/{.type=NULL, .padding_offset=17u, .padding=7u}
 };
 const struct FidlCodedStruct fidl_test_json_EmptyProtocolSendAndReceiveRequestTable = {.tag=kFidlTypeStruct, .fields=Fields49fidl_test_json_EmptyProtocolSendAndReceiveRequest, .field_count=1u, .size=24u, .name="fidl.test.json/EmptyProtocolSendAndReceiveRequest"};
 
 extern const struct FidlCodedStruct fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
 static const struct FidlStructField Fields50fidl_test_json_EmptyProtocolSendAndReceiveResponse[] = {
-    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_test_json_EmptyTable), .offset=16u, .padding=7u}
+    /*FidlStructField*/{.type=NULL, .padding_offset=17u, .padding=7u}
 };
 const struct FidlCodedStruct fidl_test_json_EmptyProtocolSendAndReceiveResponseTable = {.tag=kFidlTypeStruct, .fields=Fields50fidl_test_json_EmptyProtocolSendAndReceiveResponse, .field_count=1u, .size=24u, .name="fidl.test.json/EmptyProtocolSendAndReceiveResponse"};
 

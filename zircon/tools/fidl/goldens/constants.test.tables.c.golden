@@ -24,11 +24,10 @@ const struct FidlCodedBits values_BitsTypeTable = {.tag=kFidlTypeBits, .underlyi
 const struct FidlCodedBits values_BitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .mask=8ul, .name="values/Bits"};
 
 static const struct FidlStructField Fields13values_Struct[] = {
-    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=0u, .padding=0u},
     /*FidlStructField*/{.type=(fidl_type_t*)(&String4294967295nonnullableTable), .offset=8u, .padding=0u},
     /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kBoolTable), .offset=24u, .padding=3u},
     /*FidlStructField*/{.type=(fidl_type_t*)(&values_EnumTable), .offset=28u, .padding=0u},
     /*FidlStructField*/{.type=(fidl_type_t*)(&values_BitsTable), .offset=32u, .padding=4u}
 };
-const struct FidlCodedStruct values_StructTable = {.tag=kFidlTypeStruct, .fields=Fields13values_Struct, .field_count=5u, .size=40u, .name="values/Struct"};
+const struct FidlCodedStruct values_StructTable = {.tag=kFidlTypeStruct, .fields=Fields13values_Struct, .field_count=4u, .size=40u, .name="values/Struct"};
 

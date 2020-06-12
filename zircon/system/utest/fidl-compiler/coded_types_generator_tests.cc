@@ -31,14 +31,14 @@ struct Arrays {
 
   auto type0 = gen.coded_types().at(0).get();
   EXPECT_STR_EQ("uint8", type0->coded_name.c_str());
-  EXPECT_TRUE(type0->coding_needed);
+  EXPECT_TRUE(type0->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type0->kind);
   auto type0_primitive = static_cast<const fidl::coded::PrimitiveType*>(type0);
   EXPECT_EQ(fidl::types::PrimitiveSubtype::kUint8, type0_primitive->subtype);
 
   auto type1 = gen.coded_types().at(1).get();
   EXPECT_STR_EQ("Array7_5uint8", type1->coded_name.c_str());
-  EXPECT_TRUE(type1->coding_needed);
+  EXPECT_TRUE(type1->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type1->kind);
   auto type1_array = static_cast<const fidl::coded::ArrayType*>(type1);
   EXPECT_EQ(1, type1_array->element_size);
@@ -46,7 +46,7 @@ struct Arrays {
 
   auto type2 = gen.coded_types().at(2).get();
   EXPECT_STR_EQ("Array77_13Array7_5uint8", type2->coded_name.c_str());
-  EXPECT_TRUE(type2->coding_needed);
+  EXPECT_TRUE(type2->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type2->kind);
   auto type2_array = static_cast<const fidl::coded::ArrayType*>(type2);
   EXPECT_EQ(7 * 1, type2_array->element_size);
@@ -54,7 +54,7 @@ struct Arrays {
 
   auto type3 = gen.coded_types().at(3).get();
   EXPECT_STR_EQ("Array1001_23Array77_13Array7_5uint8", type3->coded_name.c_str());
-  EXPECT_TRUE(type3->coding_needed);
+  EXPECT_TRUE(type3->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type3->kind);
   auto type3_array = static_cast<const fidl::coded::ArrayType*>(type3);
   EXPECT_EQ(11 * 7 * 1, type3_array->element_size);
@@ -84,7 +84,7 @@ struct Vectors {
   auto type_some_struct = gen.CodedTypeFor(name_some_struct);
   ASSERT_NONNULL(type_some_struct);
   EXPECT_STR_EQ("example_SomeStruct", type_some_struct->coded_name.c_str());
-  EXPECT_TRUE(type_some_struct->coding_needed);
+  EXPECT_TRUE(type_some_struct->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type_some_struct->kind);
   auto type_some_struct_struct = static_cast<const fidl::coded::StructType*>(type_some_struct);
   ASSERT_EQ(0, type_some_struct_struct->fields.size());
@@ -96,7 +96,7 @@ struct Vectors {
 
   auto type0 = gen.coded_types().at(0).get();
   EXPECT_STR_EQ("Vector10nonnullable18example_SomeStruct", type0->coded_name.c_str());
-  EXPECT_TRUE(type0->coding_needed);
+  EXPECT_TRUE(type0->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kVector, type0->kind);
   auto type0_vector = static_cast<const fidl::coded::VectorType*>(type0);
   EXPECT_EQ(type_some_struct, type0_vector->element_type);
@@ -107,7 +107,7 @@ struct Vectors {
   auto type1 = gen.coded_types().at(1).get();
   EXPECT_STR_EQ("Vector20nonnullable39Vector10nonnullable18example_SomeStruct",
                 type1->coded_name.c_str());
-  EXPECT_TRUE(type1->coding_needed);
+  EXPECT_TRUE(type1->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kVector, type1->kind);
   auto type1_vector = static_cast<const fidl::coded::VectorType*>(type1);
   EXPECT_EQ(type0, type1_vector->element_type);
@@ -138,7 +138,7 @@ protocol UseOfProtocol {
 
   auto type0 = gen.coded_types().at(0).get();
   EXPECT_STR_EQ("Protocol20example_SomeProtocolnonnullable", type0->coded_name.c_str());
-  EXPECT_TRUE(type0->coding_needed);
+  EXPECT_TRUE(type0->is_coding_needed);
   EXPECT_EQ(4, type0->size);
   ASSERT_EQ(fidl::coded::Type::Kind::kProtocolHandle, type0->kind);
   auto type0_ihandle = static_cast<const fidl::coded::ProtocolHandleType*>(type0);
@@ -146,7 +146,7 @@ protocol UseOfProtocol {
 
   auto type1 = gen.coded_types().at(1).get();
   EXPECT_STR_EQ("example_UseOfProtocolCallRequest", type1->coded_name.c_str());
-  EXPECT_TRUE(type1->coding_needed);
+  EXPECT_TRUE(type1->is_coding_needed);
   EXPECT_EQ(24, type1->size);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
   auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
@@ -180,7 +180,7 @@ protocol UseOfRequestOfProtocol {
 
   auto type0 = gen.coded_types().at(0).get();
   EXPECT_STR_EQ("Request20example_SomeProtocolnonnullable", type0->coded_name.c_str());
-  EXPECT_TRUE(type0->coding_needed);
+  EXPECT_TRUE(type0->is_coding_needed);
   EXPECT_EQ(4, type0->size);
   ASSERT_EQ(fidl::coded::Type::Kind::kRequestHandle, type0->kind);
   auto type0_ihandle = static_cast<const fidl::coded::RequestHandleType*>(type0);
@@ -188,7 +188,7 @@ protocol UseOfRequestOfProtocol {
 
   auto type1 = gen.coded_types().at(1).get();
   EXPECT_STR_EQ("example_UseOfRequestOfProtocolCallRequest", type1->coded_name.c_str());
-  EXPECT_TRUE(type1->coding_needed);
+  EXPECT_TRUE(type1->is_coding_needed);
   EXPECT_EQ(24, type1->size);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
   auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
@@ -224,21 +224,21 @@ union MyXUnion {
 
   auto type0 = gen.coded_types().at(0).get();
   ASSERT_STR_EQ("example_MyXUnionNullableRef", type0->coded_name.c_str());
-  ASSERT_TRUE(type0->coding_needed);
+  ASSERT_TRUE(type0->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type0->kind);
   auto nullable_xunion = static_cast<const fidl::coded::XUnionType*>(type0);
   ASSERT_EQ(fidl::types::Nullability::kNullable, nullable_xunion->nullability);
 
   auto type1 = gen.coded_types().at(1).get();
   ASSERT_STR_EQ("bool", type1->coded_name.c_str());
-  ASSERT_TRUE(type1->coding_needed);
+  ASSERT_TRUE(type1->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
   auto type2_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
   ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
 
   auto type2 = gen.coded_types().at(2).get();
   ASSERT_STR_EQ("int32", type2->coded_name.c_str());
-  ASSERT_TRUE(type2->coding_needed);
+  ASSERT_TRUE(type2->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type2->kind);
   auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type2);
   ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
@@ -247,7 +247,7 @@ union MyXUnion {
   auto type = gen.CodedTypeFor(name);
   ASSERT_NONNULL(type);
   ASSERT_STR_EQ("example_MyXUnion", type->coded_name.c_str());
-  ASSERT_TRUE(type->coding_needed);
+  ASSERT_TRUE(type->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type->kind);
   auto coded_xunion = static_cast<const fidl::coded::XUnionType*>(type);
   ASSERT_EQ(2, coded_xunion->fields.size());
@@ -300,21 +300,21 @@ struct Wrapper2 {
 
   auto type0 = gen.coded_types().at(0).get();
   ASSERT_STR_EQ("example_MyXUnionNullableRef", type0->coded_name.c_str());
-  ASSERT_TRUE(type0->coding_needed);
+  ASSERT_TRUE(type0->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type0->kind);
   auto nullable_xunion = static_cast<const fidl::coded::XUnionType*>(type0);
   ASSERT_EQ(fidl::types::Nullability::kNullable, nullable_xunion->nullability);
 
   auto type1 = gen.coded_types().at(1).get();
   ASSERT_STR_EQ("bool", type1->coded_name.c_str());
-  ASSERT_TRUE(type1->coding_needed);
+  ASSERT_TRUE(type1->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
   auto type2_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
   ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
 
   auto type2 = gen.coded_types().at(2).get();
   ASSERT_STR_EQ("int32", type2->coded_name.c_str());
-  ASSERT_TRUE(type2->coding_needed);
+  ASSERT_TRUE(type2->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type2->kind);
   auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type2);
   ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
@@ -431,16 +431,16 @@ struct Complex {
 
   auto type0 = gen.coded_types().at(0).get();
   EXPECT_STR_EQ("int32", type0->coded_name.c_str());
-  EXPECT_TRUE(type0->coding_needed);
+  EXPECT_TRUE(type0->is_coding_needed);
   auto type1 = gen.coded_types().at(1).get();
   EXPECT_STR_EQ("bool", type1->coded_name.c_str());
-  EXPECT_TRUE(type1->coding_needed);
+  EXPECT_TRUE(type1->is_coding_needed);
   auto type2 = gen.coded_types().at(2).get();
   EXPECT_STR_EQ("int64", type2->coded_name.c_str());
-  EXPECT_TRUE(type2->coding_needed);
+  EXPECT_TRUE(type2->is_coding_needed);
   auto type3 = gen.coded_types().at(3).get();
   EXPECT_STR_EQ("int16", type3->coded_name.c_str());
-  EXPECT_TRUE(type3->coding_needed);
+  EXPECT_TRUE(type3->is_coding_needed);
 
   auto name_bool_and_int32 = fidl::flat::Name::Key(library.library(), "BoolAndInt32");
   auto type_bool_and_int32 = gen.CodedTypeFor(name_bool_and_int32);
@@ -448,32 +448,23 @@ struct Complex {
   EXPECT_STR_EQ("example_BoolAndInt32", type_bool_and_int32->coded_name.c_str());
   auto type_bool_and_int32_struct =
       static_cast<const fidl::coded::StructType*>(type_bool_and_int32);
-  ASSERT_EQ(type_bool_and_int32_struct->fields.size(), 2);
+  ASSERT_EQ(type_bool_and_int32_struct->fields.size(), 1);
   EXPECT_EQ(type_bool_and_int32_struct->fields[0].type->kind, fidl::coded::Type::Kind::kPrimitive);
   EXPECT_EQ(type_bool_and_int32_struct->fields[0].offset, 0);
   EXPECT_EQ(type_bool_and_int32_struct->fields[0].padding, 3);
-  EXPECT_EQ(type_bool_and_int32_struct->fields[1].type->kind, fidl::coded::Type::Kind::kPrimitive);
-  EXPECT_EQ(type_bool_and_int32_struct->fields[1].offset, 4);
-  EXPECT_EQ(type_bool_and_int32_struct->fields[1].padding, 0);
 
   auto name_complex = fidl::flat::Name::Key(library.library(), "Complex");
   auto type_complex = gen.CodedTypeFor(name_complex);
   ASSERT_NONNULL(type_complex);
   EXPECT_STR_EQ("example_Complex", type_complex->coded_name.c_str());
   auto type_complex_struct = static_cast<const fidl::coded::StructType*>(type_complex);
-  ASSERT_EQ(type_complex_struct->fields.size(), 4);
+  ASSERT_EQ(type_complex_struct->fields.size(), 2);
   EXPECT_EQ(type_complex_struct->fields[0].type->kind, fidl::coded::Type::Kind::kPrimitive);
-  EXPECT_EQ(type_complex_struct->fields[0].offset, 0);
-  EXPECT_EQ(type_complex_struct->fields[0].padding, 0);
-  EXPECT_EQ(type_complex_struct->fields[1].type->kind, fidl::coded::Type::Kind::kPrimitive);
-  EXPECT_EQ(type_complex_struct->fields[1].offset, 4);
-  EXPECT_EQ(type_complex_struct->fields[1].padding, 3);
-  EXPECT_EQ(type_complex_struct->fields[2].type->kind, fidl::coded::Type::Kind::kPrimitive);
-  EXPECT_EQ(type_complex_struct->fields[2].offset, 8);
-  EXPECT_EQ(type_complex_struct->fields[2].padding, 0);
-  EXPECT_EQ(type_complex_struct->fields[3].type->kind, fidl::coded::Type::Kind::kPrimitive);
-  EXPECT_EQ(type_complex_struct->fields[3].offset, 16);
-  EXPECT_EQ(type_complex_struct->fields[3].padding, 6);
+  EXPECT_EQ(type_complex_struct->fields[0].offset, 4);
+  EXPECT_EQ(type_complex_struct->fields[0].padding, 3);
+  EXPECT_EQ(type_complex_struct->fields[1].type, nullptr);
+  EXPECT_EQ(type_complex_struct->fields[1].offset, 16);
+  EXPECT_EQ(type_complex_struct->fields[1].padding, 6);
   END_TEST;
 }
 
@@ -498,21 +489,21 @@ table MyTable {
   // This bool is used in the coding table of the MyTable table.
   auto type0 = gen.coded_types().at(0).get();
   EXPECT_STR_EQ("bool", type0->coded_name.c_str());
-  EXPECT_TRUE(type0->coding_needed);
+  EXPECT_TRUE(type0->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type0->kind);
   auto type0_primitive = static_cast<const fidl::coded::PrimitiveType*>(type0);
   EXPECT_EQ(fidl::types::PrimitiveSubtype::kBool, type0_primitive->subtype);
 
   auto type1 = gen.coded_types().at(1).get();
   EXPECT_STR_EQ("int32", type1->coded_name.c_str());
-  EXPECT_TRUE(type1->coding_needed);
+  EXPECT_TRUE(type1->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
   auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
   EXPECT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
 
   auto type3 = gen.coded_types().at(2).get();
   EXPECT_STR_EQ("Array42_4bool", type3->coded_name.c_str());
-  EXPECT_TRUE(type3->coding_needed);
+  EXPECT_TRUE(type3->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kArray, type3->kind);
   auto type3_array = static_cast<const fidl::coded::ArrayType*>(type3);
   EXPECT_EQ(42, type3_array->size);
@@ -525,7 +516,7 @@ table MyTable {
   auto type_table = gen.CodedTypeFor(name_table);
   ASSERT_NONNULL(type_table);
   EXPECT_STR_EQ("example_MyTable", type_table->coded_name.c_str());
-  EXPECT_TRUE(type_table->coding_needed);
+  EXPECT_TRUE(type_table->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kTable, type_table->kind);
   auto type_table_table = static_cast<const fidl::coded::TableType*>(type_table);
   EXPECT_EQ(3, type_table_table->fields.size());
@@ -565,7 +556,7 @@ bits MyBits : uint8 {
   auto type_bits = gen.CodedTypeFor(name_bits);
   ASSERT_NONNULL(type_bits);
   EXPECT_STR_EQ("example_MyBits", type_bits->coded_name.c_str());
-  EXPECT_TRUE(type_bits->coding_needed);
+  EXPECT_TRUE(type_bits->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kBits, type_bits->kind);
   auto type_bits_bits = static_cast<const fidl::coded::BitsType*>(type_bits);
   EXPECT_EQ(fidl::types::PrimitiveSubtype::kUint8, type_bits_bits->subtype);
@@ -595,7 +586,7 @@ enum MyEnum : uint16 {
   auto type_enum = gen.CodedTypeFor(name_enum);
   ASSERT_NONNULL(type_enum);
   EXPECT_STR_EQ("example_MyEnum", type_enum->coded_name.c_str());
-  EXPECT_TRUE(type_enum->coding_needed);
+  EXPECT_TRUE(type_enum->is_coding_needed);
 
   ASSERT_EQ(fidl::coded::Type::Kind::kEnum, type_enum->kind);
   auto type_enum_enum = static_cast<const fidl::coded::EnumType*>(type_enum);
@@ -630,7 +621,7 @@ union MyUnion {
   auto type = gen.CodedTypeFor(name);
   ASSERT_NONNULL(type);
   EXPECT_STR_EQ("example_MyUnion", type->coded_name.c_str());
-  EXPECT_TRUE(type->coding_needed);
+  EXPECT_TRUE(type->is_coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type->kind);
 
   auto coded_union = static_cast<const fidl::coded::XUnionType*>(type);
@@ -687,14 +678,14 @@ struct MyStruct {
     ASSERT_EQ(fidl::coded::Type::Kind::kStruct, coded_type->kind);
     auto coded_struct_type = static_cast<const fidl::coded::StructType*>(coded_type);
 
-    ASSERT_EQ(10, coded_struct_type->fields.size());
+    ASSERT_EQ(6, coded_struct_type->fields.size());
 
-    EXPECT_EQ(1, coded_struct_type->fields[1].field_num);
-    EXPECT_EQ(3, coded_struct_type->fields[3].field_num);
-    EXPECT_EQ(4, coded_struct_type->fields[4].field_num);
-    EXPECT_EQ(6, coded_struct_type->fields[6].field_num);
-    EXPECT_EQ(7, coded_struct_type->fields[7].field_num);
-    EXPECT_EQ(8, coded_struct_type->fields[8].field_num);
+    EXPECT_EQ(1, coded_struct_type->fields[0].field_num);
+    EXPECT_EQ(3, coded_struct_type->fields[1].field_num);
+    EXPECT_EQ(4, coded_struct_type->fields[2].field_num);
+    EXPECT_EQ(6, coded_struct_type->fields[3].field_num);
+    EXPECT_EQ(7, coded_struct_type->fields[4].field_num);
+    EXPECT_EQ(8, coded_struct_type->fields[5].field_num);
   }
 
   END_TEST;
@@ -753,25 +744,25 @@ protocol MyProtocol {
 
     const auto& request_message_type = coded_protocol_type->messages_after_compile[0];
     ASSERT_NONNULL(request_message_type);
-    ASSERT_EQ(10, request_message_type->fields.size());
+    ASSERT_EQ(6, request_message_type->fields.size());
 
-    EXPECT_EQ(1, request_message_type->fields[1].field_num);
-    EXPECT_EQ(3, request_message_type->fields[3].field_num);
-    EXPECT_EQ(4, request_message_type->fields[4].field_num);
-    EXPECT_EQ(6, request_message_type->fields[6].field_num);
-    EXPECT_EQ(7, request_message_type->fields[7].field_num);
-    EXPECT_EQ(8, request_message_type->fields[8].field_num);
+    EXPECT_EQ(1, request_message_type->fields[0].field_num);
+    EXPECT_EQ(3, request_message_type->fields[1].field_num);
+    EXPECT_EQ(4, request_message_type->fields[2].field_num);
+    EXPECT_EQ(6, request_message_type->fields[3].field_num);
+    EXPECT_EQ(7, request_message_type->fields[4].field_num);
+    EXPECT_EQ(8, request_message_type->fields[5].field_num);
 
     const auto& response_message_type = coded_protocol_type->messages_after_compile[1];
     ASSERT_NONNULL(response_message_type);
-    ASSERT_EQ(10, response_message_type->fields.size());
+    ASSERT_EQ(6, response_message_type->fields.size());
 
-    EXPECT_EQ(1, response_message_type->fields[1].field_num);
-    EXPECT_EQ(2, response_message_type->fields[2].field_num);
-    EXPECT_EQ(3, response_message_type->fields[3].field_num);
-    EXPECT_EQ(5, response_message_type->fields[5].field_num);
-    EXPECT_EQ(6, response_message_type->fields[6].field_num);
-    EXPECT_EQ(8, response_message_type->fields[8].field_num);
+    EXPECT_EQ(1, response_message_type->fields[0].field_num);
+    EXPECT_EQ(2, response_message_type->fields[1].field_num);
+    EXPECT_EQ(3, response_message_type->fields[2].field_num);
+    EXPECT_EQ(5, response_message_type->fields[3].field_num);
+    EXPECT_EQ(6, response_message_type->fields[4].field_num);
+    EXPECT_EQ(8, response_message_type->fields[5].field_num);
   }
 
   END_TEST;

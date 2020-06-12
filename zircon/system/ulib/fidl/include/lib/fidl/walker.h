@@ -344,14 +344,22 @@ Result Walker<VisitorImpl>::WalkStruct(const FidlCodedStruct* coded_struct,
                                        OutOfLineDepth depth) {
   for (uint32_t i = 0; i < coded_struct->field_count; i++) {
     const FidlStructField& field = coded_struct->fields[i];
-    Position field_position = position + field.offset;
-    if (field.padding > 0) {
-      Position padding_position = field_position + TypeSize(field.type);
-      auto status = visitor_->VisitInternalPadding(padding_position, field.padding);
+    if (field.type) {
+      // Field has a value.
+      Position field_position = position + field.offset;
+      if (field.padding > 0) {
+        Position padding_position = field_position + TypeSize(field.type);
+        auto status = visitor_->VisitInternalPadding(padding_position, field.padding);
+        FIDL_STATUS_GUARD(status);
+      }
+      Result result = WalkInternal(field.type, field_position, depth);
+      FIDL_RESULT_GUARD(result);
+    } else if (field.padding > 0) {
+      // Field entry is a padding marker, not an actual field.
+      // The field offset is effectively the padding marker.
+      auto status = visitor_->VisitInternalPadding(position + field.padding_offset, field.padding);
       FIDL_STATUS_GUARD(status);
     }
-    Result result = WalkInternal(field.type, field_position, depth);
-    FIDL_RESULT_GUARD(result);
   }
   return Result::kContinue;
 }

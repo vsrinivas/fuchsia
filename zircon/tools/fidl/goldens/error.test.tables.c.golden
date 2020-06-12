@@ -23,10 +23,7 @@ static const struct FidlStructField Fields33fidl_test_json_ExamplefooResponse[] 
 const struct FidlCodedStruct fidl_test_json_ExamplefooResponseTable = {.tag=kFidlTypeStruct, .fields=Fields33fidl_test_json_ExamplefooResponse, .field_count=1u, .size=40u, .name="fidl.test.json/ExamplefooResponse"};
 
 
-static const struct FidlStructField Fields35fidl_test_json_Example_foo_Response[] = {
-    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=0u, .padding=0u}
-};
-const struct FidlCodedStruct fidl_test_json_Example_foo_ResponseTable = {.tag=kFidlTypeStruct, .fields=Fields35fidl_test_json_Example_foo_Response, .field_count=1u, .size=8u, .name="fidl.test.json/Example_foo_Response"};
+const struct FidlCodedStruct fidl_test_json_Example_foo_ResponseTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=8u, .name="fidl.test.json/Example_foo_Response"};
 
 static const struct FidlXUnionField Fields33fidl_test_json_Example_foo_Result[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_test_json_Example_foo_ResponseTable), .ordinal=1u},

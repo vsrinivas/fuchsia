@@ -68,7 +68,10 @@ static inline bool FidlAddOutOfLine(uint32_t offset, uint32_t size, uint32_t* ou
 
 struct FidlStructField {
   const fidl_type_t* type;
-  uint32_t offset;
+  union {
+    uint32_t offset;
+    uint32_t padding_offset;
+  };
   uint8_t padding;
 
 #ifdef __cplusplus

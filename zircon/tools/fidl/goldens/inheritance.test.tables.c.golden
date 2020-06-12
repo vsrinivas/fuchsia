@@ -14,10 +14,7 @@ static const struct FidlStructField Fields30fidl_test_json_superfooRequest[] = {
 const struct FidlCodedStruct fidl_test_json_superfooRequestTable = {.tag=kFidlTypeStruct, .fields=Fields30fidl_test_json_superfooRequest, .field_count=1u, .size=32u, .name="fidl.test.json/superfooRequest"};
 
 extern const struct FidlCodedStruct fidl_test_json_superfooResponseTable;
-static const struct FidlStructField Fields31fidl_test_json_superfooResponse[] = {
-    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=16u, .padding=0u}
-};
-const struct FidlCodedStruct fidl_test_json_superfooResponseTable = {.tag=kFidlTypeStruct, .fields=Fields31fidl_test_json_superfooResponse, .field_count=1u, .size=24u, .name="fidl.test.json/superfooResponse"};
+const struct FidlCodedStruct fidl_test_json_superfooResponseTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=24u, .name="fidl.test.json/superfooResponse"};
 
 extern const struct FidlCodedStruct fidl_test_json_subfooRequestTable;
 static const struct FidlStructField Fields28fidl_test_json_subfooRequest[] = {
@@ -26,9 +23,6 @@ static const struct FidlStructField Fields28fidl_test_json_subfooRequest[] = {
 const struct FidlCodedStruct fidl_test_json_subfooRequestTable = {.tag=kFidlTypeStruct, .fields=Fields28fidl_test_json_subfooRequest, .field_count=1u, .size=32u, .name="fidl.test.json/subfooRequest"};
 
 extern const struct FidlCodedStruct fidl_test_json_subfooResponseTable;
-static const struct FidlStructField Fields29fidl_test_json_subfooResponse[] = {
-    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .offset=16u, .padding=0u}
-};
-const struct FidlCodedStruct fidl_test_json_subfooResponseTable = {.tag=kFidlTypeStruct, .fields=Fields29fidl_test_json_subfooResponse, .field_count=1u, .size=24u, .name="fidl.test.json/subfooResponse"};
+const struct FidlCodedStruct fidl_test_json_subfooResponseTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=24u, .name="fidl.test.json/subfooResponse"};
 
 

@@ -167,8 +167,7 @@ void TablesGenerator::Generate(const coded::EnumType& enum_type) {
 
   Emit(&tables_file_, "const struct FidlCodedEnum ");
   Emit(&tables_file_, NameTable(enum_type.coded_name));
-  Emit(&tables_file_,
-       " = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_");
+  Emit(&tables_file_, " = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_");
   Emit(&tables_file_, PrimitiveSubtypeToString(enum_type.subtype));
   Emit(&tables_file_, ", .validate=&" + validator_func + ", .name=\"");
   Emit(&tables_file_, enum_type.qname);
@@ -178,8 +177,7 @@ void TablesGenerator::Generate(const coded::EnumType& enum_type) {
 void TablesGenerator::Generate(const coded::BitsType& bits_type) {
   Emit(&tables_file_, "const struct FidlCodedBits ");
   Emit(&tables_file_, NameTable(bits_type.coded_name));
-  Emit(&tables_file_,
-       " = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_");
+  Emit(&tables_file_, " = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_");
   Emit(&tables_file_, PrimitiveSubtypeToString(bits_type.subtype));
   Emit(&tables_file_, ", .mask=");
   Emit(&tables_file_, bits_type.mask);
@@ -263,8 +261,7 @@ void TablesGenerator::Generate(const coded::XUnionType& xunion_type) {
 void TablesGenerator::Generate(const coded::StructPointerType& pointer) {
   Emit(&tables_file_, "static const struct FidlCodedStructPointer ");
   Emit(&tables_file_, NameTable(pointer.coded_name));
-  Emit(&tables_file_,
-       " = {.tag=kFidlTypeStructPointer, .struct_type=");
+  Emit(&tables_file_, " = {.tag=kFidlTypeStructPointer, .struct_type=");
   Generate(pointer.element_type, CastToFidlType::kNoCast);
   Emit(&tables_file_, "};\n");
 }
@@ -331,7 +328,8 @@ void TablesGenerator::Generate(const coded::ProtocolHandleType& protocol_type) {
 void TablesGenerator::Generate(const coded::ArrayType& array_type) {
   Emit(&tables_file_, "static const struct FidlCodedArray ");
   Emit(&tables_file_, NameTable(array_type.coded_name));
-  Emit(&tables_file_, " = {.tag=kFidlTypeArray, .element=");
+  // Array defs can be unused when they only appear in structs where the field is optimized out.
+  Emit(&tables_file_, " __attribute__((unused)) = {.tag=kFidlTypeArray, .element=");
   Generate(array_type.element_type);
   Emit(&tables_file_, ", .array_size=");
   Emit(&tables_file_, array_type.size);
@@ -365,7 +363,7 @@ void TablesGenerator::Generate(const coded::VectorType& vector_type) {
 }
 
 void TablesGenerator::Generate(const coded::Type* type, CastToFidlType cast_to_fidl_type) {
-  if (type && type->coding_needed) {
+  if (type && type->is_coding_needed) {
     if (cast_to_fidl_type == CastToFidlType::kCast) {
       Emit(&tables_file_, "(fidl_type_t*)(&");
     } else {
@@ -503,7 +501,7 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
   // These are composed in an ad-hoc way in FIDL source, hence we generate "static" coding tables
   // local to the translation unit.
   for (const auto& coded_type : coded_types_generator->coded_types()) {
-    if (!coded_type->coding_needed)
+    if (!coded_type->is_coding_needed)
       continue;
 
     switch (coded_type->kind) {

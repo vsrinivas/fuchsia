@@ -16,7 +16,7 @@ std::vector<const coded::Type*> CodedTypesGenerator::AllCodedTypes() const {
 
   for (const auto& coded_type : coded_types_) {
     assert(coded_type.get());
-    if (!coded_type->coding_needed)
+    if (!coded_type->is_coding_needed)
       continue;
 
     coded_types.push_back(coded_type.get());
@@ -214,24 +214,28 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
               coded_protocol->messages_during_compile[i++];
           std::vector<coded::StructField>& request_fields = coded_message->fields;
           uint32_t field_num = 0;
+          bool is_noop = true;
           for (const auto& parameter : message.members) {
             std::string parameter_name =
                 coded_message->coded_name + "_" + std::string(parameter.name.data());
             auto coded_parameter_type = CompileType(
                 parameter.type_ctor->type, coded::CodingContext::kOutsideEnvelope, wire_format);
-            if (coded_parameter_type->coding_needed) {
+            if (!coded_parameter_type->is_noop) {
               request_fields.emplace_back(
                   coded_parameter_type, parameter.typeshape(wire_format).InlineSize(),
                   parameter.fieldshape(wire_format).Offset(),
                   parameter.fieldshape(wire_format).Padding(), coded_message.get(), field_num);
-            } else {
+              is_noop = false;
+            } else if (parameter.fieldshape(wire_format).Padding() != 0) {
               request_fields.emplace_back(nullptr, parameter.typeshape(wire_format).InlineSize(),
                                           parameter.fieldshape(wire_format).Offset(),
                                           parameter.fieldshape(wire_format).Padding(),
                                           coded_message.get(), field_num);
+              is_noop = false;
             }
             field_num++;
           }
+          coded_message->is_noop = is_noop;
           // We move the coded_message to coded_types_ so that we'll generate tables for the
           // message in the proper order.
           coded_types_.push_back(std::move(coded_message));
@@ -257,23 +261,27 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
           static_cast<coded::StructType*>(named_coded_types_[decl->name].get());
       std::vector<coded::StructField>& struct_fields = coded_struct->fields;
       uint32_t field_num = 0;
+      bool is_noop = true;
       for (const auto& member : struct_decl->members) {
         std::string member_name = coded_struct->coded_name + "_" + std::string(member.name.data());
         auto coded_member_type = CompileType(member.type_ctor->type,
                                              coded::CodingContext::kOutsideEnvelope, wire_format);
-        if (coded_member_type->coding_needed) {
+        if (!coded_member_type->is_noop) {
           struct_fields.emplace_back(coded_member_type, member.typeshape(wire_format).InlineSize(),
                                      member.fieldshape(wire_format).Offset(),
                                      member.fieldshape(wire_format).Padding(), coded_struct,
                                      field_num);
-        } else {
+          is_noop = false;
+        } else if (member.fieldshape(wire_format).Padding() != 0) {
           struct_fields.emplace_back(nullptr, member.typeshape(wire_format).InlineSize(),
                                      member.fieldshape(wire_format).Offset(),
                                      member.fieldshape(wire_format).Padding(), coded_struct,
                                      field_num);
+          is_noop = false;
         }
         field_num++;
       }
+      coded_struct->is_noop = is_noop;
       break;
     }
     case flat::Decl::Kind::kUnion: {
