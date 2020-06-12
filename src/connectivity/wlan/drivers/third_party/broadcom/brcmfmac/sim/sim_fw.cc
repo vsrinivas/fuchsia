@@ -990,8 +990,9 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
 
     SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx, nullptr,
                       BRCMF_EVENT_MSG_LINK);
+    // Send the SSID event after a delay
     SendEventToDriver(0, nullptr, BRCMF_E_SET_SSID, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx,
-                      nullptr, 0, 0, assoc_state_.opts->bssid);
+                      nullptr, 0, 0, assoc_state_.opts->bssid, kSsidEventDelay);
   } else {
     AssocHandleFailure();
   }
@@ -1996,7 +1997,7 @@ void SimFirmware::EscanResultSeen(const ScanResult& result_in) {
                     scan_state_.ifidx);
 }
 
-std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateEventBuffer(
+std::shared_ptr<std::vector<uint8_t>> SimFirmware::CreateEventBuffer(
     size_t requested_size, brcmf_event_msg_be** msg_out_be, size_t* payload_offset_out) {
   size_t total_size = sizeof(brcmf_event) + requested_size;
   size_t event_data_offset;
@@ -2038,15 +2039,17 @@ std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateEventBuffer(
 }
 
 void SimFirmware::SendEventToDriver(size_t payload_size,
-                                    std::unique_ptr<std::vector<uint8_t>> buffer_in,
+                                    std::shared_ptr<std::vector<uint8_t>> buffer_in,
                                     uint32_t event_type, uint32_t status, uint16_t ifidx,
                                     char* ifname, uint16_t flags, uint32_t reason,
-                                    std::optional<common::MacAddr> addr) {
+                                    std::optional<common::MacAddr> addr,
+                                    std::optional<zx::duration> delay) {
   brcmf_event_msg_be* msg_be;
   size_t payload_offset;
   // Assert if ifidx is not valid
   if (event_type != BRCMF_E_IF)
     ZX_ASSERT(ifidx < kMaxIfSupported && iface_tbl_[ifidx].allocated);
+
   auto buf = CreateEventBuffer(payload_size, &msg_be, &payload_offset);
   msg_be->flags = htobe16(flags);
   msg_be->event_type = htobe32(event_type);
@@ -2067,7 +2070,15 @@ void SimFirmware::SendEventToDriver(size_t payload_size,
     memcpy(&buf_data[payload_offset], buffer_in->data(), payload_size);
   }
 
-  brcmf_sim_rx_event(simdev_, std::move(buf));
+  if (delay && delay->get() > 0) {
+    // Setup the callback and return.
+    auto callback = std::make_unique<std::function<void()>>();
+    *callback = std::bind(&brcmf_sim_rx_event, simdev_, buf);
+    hw_.RequestCallback(std::move(callback), delay.value());
+    return;
+  } else {
+    brcmf_sim_rx_event(simdev_, std::move(buf));
+  }
 }
 
 void SimFirmware::SendFrameToDriver(uint16_t ifidx, size_t payload_size,

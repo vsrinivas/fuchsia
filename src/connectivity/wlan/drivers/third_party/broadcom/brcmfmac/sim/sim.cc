@@ -142,7 +142,7 @@ zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_
 // draw a line between memory owned by the simulator and memory owned by the driver, with this file
 // being the only thing that straddles that boundary.
 zx_status_t brcmf_sim_create_netbuf(brcmf_simdev* simdev,
-                                    std::unique_ptr<std::vector<uint8_t>> buffer,
+                                    std::shared_ptr<std::vector<uint8_t>> buffer,
                                     brcmf_netbuf** netbuf_out) {
   uint32_t packet_len = buffer->size();
   if (packet_len < ETH_HLEN) {
@@ -157,7 +157,7 @@ zx_status_t brcmf_sim_create_netbuf(brcmf_simdev* simdev,
 }
 
 // Handle a simulator event
-void brcmf_sim_rx_event(brcmf_simdev* simdev, std::unique_ptr<std::vector<uint8_t>> buffer) {
+void brcmf_sim_rx_event(brcmf_simdev* simdev, std::shared_ptr<std::vector<uint8_t>> buffer) {
   brcmf_netbuf* netbuf = nullptr;
   zx_status_t status = brcmf_sim_create_netbuf(simdev, std::move(buffer), &netbuf);
   if (status == ZX_OK) {
@@ -166,7 +166,7 @@ void brcmf_sim_rx_event(brcmf_simdev* simdev, std::unique_ptr<std::vector<uint8_
 }
 
 // Handle a simulator frame
-void brmcf_sim_rx_frame(brcmf_simdev* simdev, std::unique_ptr<std::vector<uint8_t>> buffer) {
+void brmcf_sim_rx_frame(brcmf_simdev* simdev, std::shared_ptr<std::vector<uint8_t>> buffer) {
   brcmf_netbuf* netbuf = nullptr;
   zx_status_t status = brcmf_sim_create_netbuf(simdev, std::move(buffer), &netbuf);
   if (status == ZX_OK) {

@@ -999,7 +999,8 @@ static zx_status_t brcmf_set_pmk(struct brcmf_if* ifp, const uint8_t* pmk_data, 
   return err;
 }
 
-static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
+static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t reason,
+                                  uint16_t event_reason) {
   struct net_device* ndev = vif->wdev.netdev;
   wlanif_deauth_indication_t ind;
 
@@ -1009,13 +1010,16 @@ static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t reaso
   BRCMF_DBG(WLANIF,
             "Link Down: Sending deauth indication to SME. address: " MAC_FMT_STR
             ",  "
-            "reason: %" PRIu16 "\n",
+            "reason: %" PRIu16 "",
             MAC_FMT_ARGS(ind.peer_sta_address), ind.reason_code);
+  BRCMF_DBG(CONN, "Link Down: address: " MAC_FMT_STR ", SME reason: %d Event reason: %d",
+            MAC_FMT_ARGS(ind.peer_sta_address), ind.reason_code, event_reason);
 
   wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &ind);
 }
 
-static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
+static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason,
+                            uint16_t event_reason) {
   struct brcmf_cfg80211_info* cfg = vif->ifp->drvr->config;
   zx_status_t err = ZX_OK;
 
@@ -1030,10 +1034,11 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
                 brcmf_fil_get_errstr(fwerr));
     }
     if (vif->wdev.iftype == WLAN_INFO_MAC_ROLE_CLIENT) {
-      cfg80211_disconnected(vif, reason);
+      cfg80211_disconnected(vif, reason, event_reason);
     }
   }
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state);
+  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &vif->sme_state);
   brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status);
   brcmf_btcoex_set_mode(vif, BRCMF_BTCOEX_ENABLED, 0);
   if (vif->profile.use_fwsup != BRCMF_PROFILE_FWSUP_NONE) {
@@ -4040,7 +4045,7 @@ static zx_status_t brcmf_notify_ap_started(struct brcmf_if* ifp, const struct br
 }
 
 static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struct net_device* ndev,
-                                          const struct brcmf_event_msg* e, bool completed) {
+                                          bool completed) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
   BRCMF_DBG(TRACE, "Enter");
@@ -4154,28 +4159,7 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
   BRCMF_DBG(CONN, "event %s (%u), reason %d flags 0x%x\n",
             brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(event)), event, reason,
             e->flags);
-  if (event == BRCMF_E_LINK) {
-    if (!(e->flags & BRCMF_EVENT_MSG_LINK)) {
-      BRCMF_DBG(CONN, "AP mode link down\n");
-      sync_completion_signal(&cfg->vif_disabled);
-      return ZX_OK;
-    } else {
-      BRCMF_DBG(CONN, "AP mode link up\n");
-      struct brcmf_if* ifp = ndev_to_if(ndev);
-
-      // Indicate status only if AP is in start pending state (could have been cleared if
-      // a stop request comes in before this event is received).
-      if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING,
-                                            &ifp->vif->sme_state)) {
-        // confirm AP Start
-        brcmf_if_start_conf(ndev, WLAN_START_RESULT_SUCCESS);
-        // Set AP_CREATED
-        brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
-        // Update channel (in case it changed because of client IF).
-        brcmf_notify_channel_switch(ifp, e, data);
-      }
-    }
-  } else if (event == BRCMF_E_DISASSOC_IND) {
+  if (event == BRCMF_E_DISASSOC_IND) {
     // Client has disassociated
     wlanif_disassoc_indication_t disassoc_ind_params;
     memset(&disassoc_ind_params, 0, sizeof(disassoc_ind_params));
@@ -4248,6 +4232,97 @@ static zx_status_t brcmf_process_auth_ind_event(struct brcmf_if* ifp,
   return ZX_OK;
 }
 
+static void brcmf_indicate_no_network(struct brcmf_if* ifp) {
+  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
+  struct net_device* ndev = ifp->ndev;
+
+  BRCMF_DBG(CONN, "No network\n");
+  brcmf_bss_connect_done(cfg, ndev, false);
+  brcmf_disconnect_done(cfg);
+}
+
+static zx_status_t brcmf_indicate_client_connect(struct brcmf_if* ifp,
+                                                 const struct brcmf_event_msg* e, void* data) {
+  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
+  struct net_device* ndev = ifp->ndev;
+  zx_status_t err = ZX_OK;
+
+  BRCMF_DBG(TRACE, "Enter\n");
+  BRCMF_DBG(CONN, "Connect Event %d, status %d reason %d auth %d flags 0x%x\n", e->event_code,
+            e->status, e->reason, e->auth_type, e->flags);
+  BRCMF_DBG(CONN, "Linkup\n");
+  brcmf_bss_connect_done(cfg, ndev, true);
+  brcmf_net_setcarrier(ifp, true);
+
+  BRCMF_DBG(TRACE, "Exit\n");
+  return err;
+}
+
+static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
+                                                    const struct brcmf_event_msg* e, void* data) {
+  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
+  struct net_device* ndev = ifp->ndev;
+  zx_status_t err = ZX_OK;
+
+  BRCMF_DBG(TRACE, "Enter\n");
+  // TODO(karthikrish) : Move this to CONN level for production code
+  BRCMF_INFO("Link Down Event: State: %s evt: %d flg: 0x%x rsn: %d sts: %d rssi: %d snr: %d\n",
+             brcmf_get_client_connect_state_string(ifp), e->event_code, e->flags, e->reason,
+             e->status, ndev->last_known_rssi_dbm, ndev->last_known_snr_db);
+  brcmf_bss_connect_done(cfg, ndev, false);
+  brcmf_disconnect_done(cfg);
+  brcmf_link_down(ifp->vif, brcmf_map_fw_linkdown_reason(e), e->reason);
+  brcmf_init_prof(ndev_to_prof(ndev));
+  if (ndev != cfg_to_ndev(cfg)) {
+    sync_completion_signal(&cfg->vif_disabled);
+  }
+  brcmf_net_setcarrier(ifp, false);
+  BRCMF_DBG(TRACE, "Exit\n");
+  return err;
+}
+
+static zx_status_t brcmf_process_link_event(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
+                                            void* data) {
+  BRCMF_DBG(CONN, "event %s (%u), reason %d flags 0x%x\n",
+            brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(e->event_code)), e->event_code,
+            e->reason, e->flags);
+  if (brcmf_is_apmode(ifp->vif)) {
+    struct net_device* ndev = ifp->ndev;
+    struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
+
+    // TODO(karthikrish): Confirm with vendor if flags is indeed a bitmask.
+    if (!(e->flags & BRCMF_EVENT_MSG_LINK)) {
+      BRCMF_DBG(CONN, "AP mode link down\n");
+      sync_completion_signal(&cfg->vif_disabled);
+      return ZX_OK;
+    } else {
+      BRCMF_DBG(CONN, "AP mode link up\n");
+      struct brcmf_if* ifp = ndev_to_if(ndev);
+
+      // Indicate status only if AP is in start pending state (could have been cleared if
+      // a stop request comes in before this event is received).
+      if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING,
+                                            &ifp->vif->sme_state)) {
+        // confirm AP Start
+        brcmf_if_start_conf(ndev, WLAN_START_RESULT_SUCCESS);
+        // Set AP_CREATED
+        brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
+        // Update channel (in case it changed because of client IF).
+        brcmf_notify_channel_switch(ifp, e, data);
+      }
+    }
+  } else {
+    if (e->status == BRCMF_E_STATUS_SUCCESS && (e->flags & BRCMF_EVENT_MSG_LINK)) {
+      return brcmf_indicate_client_connect(ifp, e, data);
+    } else if (!(e->flags & BRCMF_EVENT_MSG_LINK)) {
+      return brcmf_indicate_client_disconnect(ifp, e, data);
+    } else if (e->status == BRCMF_E_STATUS_NO_NETWORKS) {
+      brcmf_indicate_no_network(ifp);
+    }
+  }
+  return ZX_OK;
+}
+
 static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
                                                const struct brcmf_event_msg* e, void* data) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
@@ -4266,13 +4341,13 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
     err = brcmf_notify_connect_status_ap(cfg, ndev, e, data);
   } else if (brcmf_is_linkup(ifp->vif, e)) {
     BRCMF_DBG(CONN, "Linkup\n");
-    brcmf_bss_connect_done(cfg, ndev, e, true);
+    brcmf_bss_connect_done(cfg, ndev, true);
     brcmf_net_setcarrier(ifp, true);
   } else if (brcmf_is_link_going_down(ndev, e)) {
     BRCMF_DBG(CONN, "Linkdown\n");
-    brcmf_bss_connect_done(cfg, ndev, e, false);
+    brcmf_bss_connect_done(cfg, ndev, false);
     brcmf_disconnect_done(cfg);
-    brcmf_link_down(ifp->vif, brcmf_map_fw_linkdown_reason(e));
+    brcmf_link_down(ifp->vif, brcmf_map_fw_linkdown_reason(e), e->reason);
     brcmf_init_prof(ndev_to_prof(ndev));
     if (ndev != cfg_to_ndev(cfg)) {
       sync_completion_signal(&cfg->vif_disabled);
@@ -4280,7 +4355,7 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
     brcmf_net_setcarrier(ifp, false);
   } else if (brcmf_is_nonetwork(cfg, e)) {
     BRCMF_DBG(CONN, "No network\n");
-    brcmf_bss_connect_done(cfg, ndev, e, false);
+    brcmf_bss_connect_done(cfg, ndev, false);
     brcmf_disconnect_done(cfg);
   }
 
@@ -4298,7 +4373,7 @@ static zx_status_t brcmf_notify_roaming_status(struct brcmf_if* ifp,
     if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
       BRCMF_ERR("Received roaming notification - unsupported\n");
     } else {
-      brcmf_bss_connect_done(cfg, ifp->ndev, e, true);
+      brcmf_bss_connect_done(cfg, ifp->ndev, true);
       brcmf_net_setcarrier(ifp, true);
     }
   }
@@ -4385,7 +4460,7 @@ static void brcmf_init_conf(struct brcmf_cfg80211_conf* conf) {
 }
 
 static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
-  brcmf_fweh_register(cfg->pub, BRCMF_E_LINK, brcmf_notify_connect_status);
+  brcmf_fweh_register(cfg->pub, BRCMF_E_LINK, brcmf_process_link_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_AUTH_IND, brcmf_process_auth_ind_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH_IND, brcmf_notify_connect_status);
   brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH, brcmf_notify_connect_status);
@@ -4655,7 +4730,7 @@ static zx_status_t __brcmf_cfg80211_down(struct brcmf_if* ifp) {
    * from AP to save power
    */
   if (check_vif_up(ifp->vif)) {
-    brcmf_link_down(ifp->vif, WLAN_DEAUTH_REASON_UNSPECIFIED);
+    brcmf_link_down(ifp->vif, WLAN_DEAUTH_REASON_UNSPECIFIED, 0);
 
     /* Make sure WPA_Supplicant receives all the event
        generated due to DISASSOC call to the fw to keep

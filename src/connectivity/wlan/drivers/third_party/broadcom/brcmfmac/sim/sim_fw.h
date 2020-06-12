@@ -46,6 +46,8 @@ constexpr zx::duration kAuthTimeout = zx::sec(1);
 constexpr zx::duration kBeaconTimeout = zx::sec(5);
 // Delay between receiving start AP request and sending E_LINK event
 constexpr zx::duration kStartAPConfDelay = zx::msec(10);
+// Delay between events E_LINK and E_SSID.
+constexpr zx::duration kSsidEventDelay = zx::msec(100);
 
 class SimFirmware {
   class BcdcResponse {
@@ -344,15 +346,16 @@ class SimFirmware {
 
   void StopSoftAP(uint16_t ifidx);
   // Allocate a buffer for an event (brcmf_event)
-  std::unique_ptr<std::vector<uint8_t>> CreateEventBuffer(size_t requested_size,
+  std::shared_ptr<std::vector<uint8_t>> CreateEventBuffer(size_t requested_size,
                                                           brcmf_event_msg_be** msg_be,
                                                           size_t* offset_out);
 
   // Wrap the buffer in an event and send back to the driver over the bus
-  void SendEventToDriver(size_t payload_size, std::unique_ptr<std::vector<uint8_t>> buffer_in,
+  void SendEventToDriver(size_t payload_size, std::shared_ptr<std::vector<uint8_t>> buffer_in,
                          uint32_t event_type, uint32_t status, uint16_t ifidx,
                          char* ifname = nullptr, uint16_t flags = 0, uint32_t reason = 0,
-                         std::optional<common::MacAddr> addr = {});
+                         std::optional<common::MacAddr> addr = {},
+                         std::optional<zx::duration> delay = {});
 
   // Send received frame over the bus to the driver
   void SendFrameToDriver(uint16_t ifidx, size_t payload_size, const std::vector<uint8_t>& buffer_in,

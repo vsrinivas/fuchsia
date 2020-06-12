@@ -156,6 +156,7 @@ source_set("core") {
     "chipcommon.h",
     "common.h",
     "core.h",
+    "debug.h",
     "defs.h",
     "device.h",
     "firmware.h",

@@ -285,11 +285,11 @@ void AssocTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   if (start_disassoc_) {
     auto callback = std::make_unique<std::function<void()>>();
     *callback = std::bind(&AssocTest::StartDisassoc, this);
-    env_->ScheduleNotification(std::move(callback), zx::msec(100));
+    env_->ScheduleNotification(std::move(callback), zx::msec(200));
   } else if (start_deauth_) {
     auto callback = std::make_unique<std::function<void()>>();
     *callback = std::bind(&AssocTest::StartDeauth, this);
-    env_->ScheduleNotification(std::move(callback), zx::msec(100));
+    env_->ScheduleNotification(std::move(callback), zx::msec(200));
   }
 }
 

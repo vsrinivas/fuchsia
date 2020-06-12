@@ -36,9 +36,9 @@ zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_
                                ::wlan::simulation::Environment* env);
 
 // Pass an event to the driver from the simulated firmware
-void brcmf_sim_rx_event(brcmf_simdev* simdev, std::unique_ptr<std::vector<uint8_t>> buffer);
+void brcmf_sim_rx_event(brcmf_simdev* simdev, std::shared_ptr<std::vector<uint8_t>> buffer);
 // Pass a frame to the driver from the simulated firmware
-void brmcf_sim_rx_frame(brcmf_simdev* simdev, std::unique_ptr<std::vector<uint8_t>> buffer);
+void brmcf_sim_rx_frame(brcmf_simdev* simdev, std::shared_ptr<std::vector<uint8_t>> buffer);
 // Simulator cleanup
 void brcmf_sim_exit(brcmf_bus* bus);
 

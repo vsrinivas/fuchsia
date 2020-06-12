@@ -58,6 +58,8 @@ class SimHardware : public simulation::StationIfc {
   // Operations that are forwarded to the environment
   void Tx(const simulation::SimFrame& frame);
 
+  zx::time GetTime() { return env_->GetTime(); }
+
  private:
   bool rx_enabled_ = false;
   wlan_channel_t channel_;

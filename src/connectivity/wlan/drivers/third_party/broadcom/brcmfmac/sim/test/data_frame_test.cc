@@ -5,6 +5,7 @@
 #include <ddk/protocol/wlanif.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
@@ -156,6 +157,7 @@ class DataFrameTest : public SimTest {
 
   // number of status query responses received
   size_t status_query_rsp_count_ = 0;
+  bool assoc_check_for_eapol_rx_ = false;
 
  private:
   // StationIfc overrides
@@ -308,6 +310,9 @@ void DataFrameTest::OnEapolInd(const wlanif_eapol_indication_t* ind) {
   std::memcpy(resp.data(), ind->data_list, ind->data_count);
 
   data_context_.received_data.push_back(std::move(resp));
+  if (assoc_check_for_eapol_rx_) {
+    ASSERT_EQ(assoc_context_.assoc_resp_count, 1U);
+  }
   eapol_ind_count++;
 }
 
@@ -342,6 +347,7 @@ void DataFrameTest::ScheduleStatsQuery(zx::duration when) {
 
 void DataFrameTest::StartAssoc() {
   // Send join request
+  BRCMF_DBG(SIM, "Start assoc: @ %lu\n", env_->GetTime().get());
   wlanif_join_req join_req = {};
   std::memcpy(join_req.selected_bss.bssid, assoc_context_.bssid.byte, ETH_ALEN);
   join_req.selected_bss.ssid.len = assoc_context_.ssid.len;
@@ -408,18 +414,21 @@ void DataFrameTest::ScheduleClientTx(common::MacAddr dstAddr, common::MacAddr sr
 }
 
 void DataFrameTest::ClientAuth() {
+  BRCMF_DBG(SIM, "ClientAuth: @ %lu\n", env_->GetTime().get());
   simulation::SimAuthFrame auth_req_frame(kClientMacAddress, kApBssid, 1,
                                           simulation::AUTH_TYPE_OPEN, WLAN_STATUS_CODE_SUCCESS);
   env_->Tx(auth_req_frame, kDefaultTxInfo, this);
 }
 
 void DataFrameTest::ClientAssoc() {
+  BRCMF_DBG(SIM, "ClientAssoc: @ %lu\n", env_->GetTime().get());
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddress, kApBssid, kApSsid);
   env_->Tx(assoc_req_frame, kDefaultTxInfo, this);
 }
 
 void DataFrameTest::ClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr,
                              std::vector<uint8_t>& ethFrame) {
+  BRCMF_DBG(SIM, "ClientTx: @ %lu\n", env_->GetTime().get());
   simulation::SimQosDataFrame dataFrame(true, false, kApBssid, srcAddr, dstAddr, 0, ethFrame);
   env_->Tx(dataFrame, kDefaultTxInfo, this);
 }
@@ -643,6 +652,43 @@ TEST_F(DataFrameTest, RxEapolFrame) {
   EXPECT_EQ(eapol_ind_count, 1U);
   ASSERT_EQ(data_context_.received_data.size(), data_context_.expected_received_data.size());
   EXPECT_EQ(data_context_.received_data.front(), data_context_.expected_received_data.front());
+}
+
+TEST_F(DataFrameTest, RxEapolFrameAfterAssoc) {
+  // Create our device instance
+  Init();
+
+  zx::duration delay = zx::msec(10);
+
+  // Start a fake AP
+  simulation::FakeAp ap(env_.get(), kApBssid, kApSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+  aps_.push_back(&ap);
+
+  // Assoc driver with fake AP
+  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  ScheduleCall(&DataFrameTest::StartAssoc, delay);
+
+  // Want test to associate with fake AP
+  delay = delay + zx::msec(10);
+  ScheduleCall(&DataFrameTest::ClientAuth, delay);
+  delay = delay + zx::msec(10);
+  ScheduleCall(&DataFrameTest::ClientAssoc, delay);
+
+  // Want to send packet from test to driver
+  data_context_.expected_received_data.push_back(kSampleEapol);
+  auto frame = CreateEthernetFrame(ifc_mac_, kClientMacAddress, htobe16(ETH_P_PAE), kSampleEapol);
+
+  // Send the packet before the SSID event is sent from SIM FW
+  delay = delay + kSsidEventDelay / 2;
+  ScheduleClientTx(ifc_mac_, kClientMacAddress, frame, delay);
+  assoc_check_for_eapol_rx_ = true;
+  // Run
+  env_->Run();
+
+  // Confirm that the driver received that packet
+  EXPECT_EQ(assoc_context_.assoc_resp_count, 1U);
+  EXPECT_EQ(eapol_ind_count, 1U);
 }
 
 }  // namespace wlan::brcmfmac
