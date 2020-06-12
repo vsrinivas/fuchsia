@@ -239,7 +239,6 @@ group("tests") {
   deps = [
     ":service-tests",
     ":sl4f-tests",
-    "tests",
   ]
 }
 
