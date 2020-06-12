@@ -37,6 +37,7 @@ test("kernel-cmdline") {
   }
   sources = [ "kernel_cmdline_test.cc" ]
   deps = [
+    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/kcmdline",
     "//zircon/public/lib/zxtest",
@@ -45,7 +46,10 @@ test("kernel-cmdline") {
 
 fuzzer("kernel-cmdline-fuzzer") {
   sources = [ "kernel_cmdline_fuzztest.cc" ]
-  deps = [ "//zircon/public/lib/kcmdline" ]
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/kcmdline",
+  ]
 }
 
 unittest_package("kernel-cmdline-package") {

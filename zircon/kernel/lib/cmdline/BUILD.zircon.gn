@@ -8,6 +8,7 @@ zx_library("cmdline") {
   sdk = "source"
   sdk_name = "kcmdline"
   sdk_headers = [ "lib/cmdline.h" ]
+
   # For use only in the kernel and its own unit tests.
   visibility = [
     "$zx/kernel/*",
@@ -17,4 +18,5 @@ zx_library("cmdline") {
   kernel = true
   static = true
   sources = [ "cmdline.cc" ]
+  deps = [ "$zx/system/ulib/fbl" ]
 }
