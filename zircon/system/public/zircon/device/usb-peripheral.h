@@ -13,6 +13,9 @@
 // USB Product ID for Zircon CDC Ethernet Function.
 #define GOOGLE_USB_CDC_PID 0xA020
 
+// USB Product ID for Zircon RNDIS Ethernet Function.
+#define GOOGLE_USB_RNDIS_PID 0xA024
+
 // USB Product ID for Zircon USB Mass Storage Function.
 #define GOOGLE_USB_UMS_PID 0xA021
 

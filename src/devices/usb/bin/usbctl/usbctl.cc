@@ -30,6 +30,7 @@
 
 #define MANUFACTURER_STRING "Zircon"
 #define CDC_PRODUCT_STRING "CDC Ethernet"
+#define RNDIS_PRODUCT_STRING "RNDIS Ethernet"
 #define UMS_PRODUCT_STRING "USB Mass Storage"
 #define TEST_PRODUCT_STRING "USB Function Test"
 #define CDC_TEST_PRODUCT_STRING "CDC Ethernet & USB Function Test"
@@ -50,6 +51,14 @@ const peripheral::FunctionDescriptor ums_function_descs[] = {
         .interface_class = USB_CLASS_MSC,
         .interface_subclass = USB_SUBCLASS_MSC_SCSI,
         .interface_protocol = USB_PROTOCOL_MSC_BULK_ONLY,
+    },
+};
+
+const peripheral::FunctionDescriptor rndis_function_descs[] = {
+    {
+        .interface_class = USB_CLASS_MISC,
+        .interface_subclass = USB_SUBCLASS_MSC_RNDIS,
+        .interface_protocol = USB_PROTOCOL_MSC_RNDIS_ETHERNET,
     },
 };
 
@@ -84,7 +93,7 @@ typedef struct {
 
 static const usb_config_t cdc_function = {
     .descs = cdc_function_descs,
-    .descs_count = countof(cdc_function_descs),
+    .descs_count = std::size(cdc_function_descs),
     .product_string = CDC_PRODUCT_STRING,
     .vid = GOOGLE_USB_VID,
     .pid = GOOGLE_USB_CDC_PID,
@@ -92,15 +101,23 @@ static const usb_config_t cdc_function = {
 
 static const usb_config_t ums_function = {
     .descs = ums_function_descs,
-    .descs_count = countof(ums_function_descs),
+    .descs_count = std::size(ums_function_descs),
     .product_string = UMS_PRODUCT_STRING,
     .vid = GOOGLE_USB_VID,
     .pid = GOOGLE_USB_UMS_PID,
 };
 
+static const usb_config_t rndis_function = {
+    .descs = rndis_function_descs,
+    .descs_count = std::size(rndis_function_descs),
+    .product_string = RNDIS_PRODUCT_STRING,
+    .vid = GOOGLE_USB_VID,
+    .pid = GOOGLE_USB_RNDIS_PID,
+};
+
 static const usb_config_t test_function = {
     .descs = test_function_descs,
-    .descs_count = countof(test_function_descs),
+    .descs_count = std::size(test_function_descs),
     .product_string = TEST_PRODUCT_STRING,
     .vid = GOOGLE_USB_VID,
     .pid = GOOGLE_USB_FUNCTION_TEST_PID,
@@ -108,7 +125,7 @@ static const usb_config_t test_function = {
 
 static const usb_config_t cdc_test_function = {
     .descs = cdc_test_function_descs,
-    .descs_count = countof(cdc_test_function_descs),
+    .descs_count = std::size(cdc_test_function_descs),
     .product_string = CDC_TEST_PRODUCT_STRING,
     .vid = GOOGLE_USB_VID,
     .pid = GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID,
@@ -219,6 +236,15 @@ static int cdc_command(zx_handle_t svc, int argc, const char* argv[]) {
   return status == ZX_OK ? 0 : -1;
 }
 
+static int rndis_command(zx_handle_t svc, int argc, const char* argv[]) {
+  zx_status_t status = device_clear_functions(svc);
+  if (status == ZX_OK) {
+    status = device_init(svc, &rndis_function);
+  }
+
+  return status == ZX_OK ? 0 : -1;
+}
+
 static int test_command(zx_handle_t svc, int argc, const char* argv[]) {
   zx_status_t status = device_clear_functions(svc);
   if (status == ZX_OK) {
@@ -246,6 +272,7 @@ typedef struct {
 static usbctl_command_t commands[] = {
     {"init-ums", ums_command, "init-ums - initializes the USB Mass Storage function"},
     {"init-cdc", cdc_command, "init-cdc - initializes the CDC Ethernet function"},
+    {"init-rndis", rndis_command, "init-rndis - initializes the RNDIS Ethernet function"},
     {"init-test", test_command, "init-test - initializes the USB Peripheral Test function"},
     {"init-cdc-test", cdc_test_command,
      "init-cdc-test - initializes CDC plus Test Function composite device"},
