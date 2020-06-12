@@ -9,9 +9,15 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
 
+#include "src/camera/bin/camera-gym/moving_window.h"
+
 namespace camera {
 
 constexpr zx::duration kDemoTime = zx::sec(10);
+
+// Ratio controls how often ROI is moved.
+// (1 = every frame, 2 = every other frame, etc)
+constexpr uint32_t kRegionOfInterestFramesPerMoveRatio = 1;
 
 // Sets the error handler on the provided interface to log an error and abort the process.
 template <class T>
@@ -198,6 +204,23 @@ void StreamCycler::OnNextFrame(uint32_t stream_index, fuchsia::camera3::FrameInf
     frame_info.release_fence.reset();
   }
   auto& stream = stream_infos_[stream_index].stream;
+
+  // Set the region of interest if appropriate.
+  ZX_ASSERT(configurations_.size() > current_config_index_);
+  auto& current_configuration = configurations_[current_config_index_];
+  ZX_ASSERT(current_configuration.streams.size() > stream_index);
+  auto& current_stream = current_configuration.streams[stream_index];
+  if (current_stream.supports_crop_region) {
+    const uint32_t limit = kRegionOfInterestFramesPerMoveRatio;
+    static uint32_t count = 0;
+    ++count;
+    if (count >= limit) {
+      count = 0;
+      auto region = std::make_unique<fuchsia::math::RectF>(moving_window_.NextWindow());
+      stream->SetCropRegion(std::move(region));
+    }
+  }
+
   stream->GetNextFrame([this, stream_index](fuchsia::camera3::FrameInfo frame_info) {
     OnNextFrame(stream_index, std::move(frame_info));
   });

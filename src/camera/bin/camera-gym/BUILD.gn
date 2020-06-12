@@ -18,12 +18,15 @@ executable("bin") {
     "lifecycle_impl.cc",
     "lifecycle_impl.h",
     "main.cc",
+    "moving_window.cc",
+    "moving_window.h",
     "stream_cycler.cc",
     "stream_cycler.h",
   ]
 
   deps = [
     "//sdk/fidl/fuchsia.camera3",
+    "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.app",

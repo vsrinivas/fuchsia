@@ -11,6 +11,8 @@
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
 
+#include "src/camera/bin/camera-gym/moving_window.h"
+
 namespace camera {
 
 // This class is responsible for exercising the camera APIs to cycle between the various streams and
@@ -77,6 +79,9 @@ class StreamCycler {
   RemoveCollectionHandler remove_collection_handler_;
   ShowBufferHandler show_buffer_handler_;
   MuteStateHandler mute_state_handler_;
+
+  // Track the moving region of interest
+  MovingWindow moving_window_;
 
   // stream_infos_ uses the same index as the corresponding stream index in configurations_.
   struct StreamInfo {
