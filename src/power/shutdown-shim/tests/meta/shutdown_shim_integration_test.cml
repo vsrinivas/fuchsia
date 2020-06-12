@@ -1,0 +1,115 @@
+{
+    program: {
+        binary: "bin/shutdown_shim_mock_services",
+    },
+    children: [
+        {
+            name: "test-driver",
+            url: "fuchsia-pkg://fuchsia.com/shutdown-shim-integration-test#meta/test-driver.cm",
+        },
+    ],
+    collections: [
+        // These collections all contain different environments the
+        // shutdown-shim could find itself in. These integration tests create a
+        // new shim in each collection, feed it input, and see which mock
+        // services it accesses to perform its job.
+        {
+            // In this collection statecontrol.Admin is present and functioning
+            // correctly
+            name: "shutdown-shim-statecontrol-present",
+            durability: "transient",
+        },
+        {
+            // In this collection statecontrol.Admin is present but the provider
+            // of it does not respond to requests (requests hang forever)
+            name: "shutdown-shim-statecontrol-missing",
+            durability: "transient",
+        },
+        {
+            // In this collection statecontrol.Admin is not available at all,
+            // and connection attempts to it result in a routing failure
+            name: "shutdown-shim-statecontrol-not-present",
+            durability: "transient",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fuchsia.logger.LogSink" },
+        {
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            runner: "rust_test_runner",
+            from: "realm",
+            to: [ "#test-driver" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.test.shutdownshim.Tests" ],
+            from: "self",
+            to: [ "#test-driver" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            from: "realm",
+            to: [ "#test-driver" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.boot.WriteOnlyLog" ],
+            from: "realm",
+            to: [
+                "#shutdown-shim-statecontrol-missing",
+                "#shutdown-shim-statecontrol-not-present",
+                "#shutdown-shim-statecontrol-present",
+            ],
+        },
+
+        // #shutdown-shim-statecontrol-present gets the correct versions of
+        // everything
+        {
+            protocol: [
+                "/svc/fuchsia.device.manager.SystemStateTransition",
+                "/svc/fuchsia.hardware.power.statecontrol.Admin",
+                "/svc/fuchsia.sys2.SystemController",
+            ],
+            from: "self",
+            to: [ "#shutdown-shim-statecontrol-present" ],
+        },
+
+        // #shutdown-shim-statecontrol-missing gets everything, but statecontrol
+        // is black holed
+        {
+            protocol: [
+                "/svc/fuchsia.device.manager.SystemStateTransition",
+                "/svc/fuchsia.sys2.SystemController",
+            ],
+            from: "self",
+            to: [ "#shutdown-shim-statecontrol-missing" ],
+        },
+        {
+            protocol: "/black_hole/svc/fuchsia.hardware.power.statecontrol.Admin",
+            from: "self",
+            as: "/svc/fuchsia.hardware.power.statecontrol.Admin",
+            to: [ "#shutdown-shim-statecontrol-missing" ],
+        },
+
+        // #shutdown-shim-statecontrol-not-present gets no statecontrol at all,
+        // but everything else is present
+        {
+            protocol: [
+                "/svc/fuchsia.device.manager.SystemStateTransition",
+                "/svc/fuchsia.sys2.SystemController",
+            ],
+            from: "self",
+            to: [ "#shutdown-shim-statecontrol-not-present" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "#test-driver",
+        },
+    ],
+}

@@ -19,5 +19,6 @@ group("tests") {
     "battery-manager",
     "battery-manager:tests",
     "battery-manager/battery-cli:tests",
+    "shutdown-shim/tests",
   ]
 }
