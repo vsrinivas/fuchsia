@@ -26,8 +26,6 @@ if (host_toolchain == current_toolchain) {
       "//src/developer/development-bridge/discovery:ffx_select",
       "//src/developer/development-bridge/plugins/config:ffx_config_plugin",
       "//src/developer/development-bridge/plugins/echo:ffx_echo",
-
-      # "//src/developer/development-bridge/discovery:ffx_discovery",
       "//src/developer/development-bridge/run-component:ffx_run_component",
       "//src/developer/development-bridge/test:ffx_test",
     ]
