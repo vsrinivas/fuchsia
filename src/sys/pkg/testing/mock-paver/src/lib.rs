@@ -33,6 +33,7 @@ pub enum PaverEvent {
     WriteAsset { configuration: paver::Configuration, asset: paver::Asset, payload: Vec<u8> },
     WriteFirmware { firmware_type: String, payload: Vec<u8> },
     QueryActiveConfiguration,
+    SetActiveConfigurationHealthy,
     SetConfigurationActive { configuration: paver::Configuration },
     SetConfigurationUnbootable { configuration: paver::Configuration },
     BootManagerFlush,
@@ -224,6 +225,12 @@ impl MockPaverService {
                         Err(status.into_raw())
                     };
                     responder.send(&mut result).expect("paver response to send");
+                }
+                paver::BootManagerRequest::SetActiveConfigurationHealthy { responder } => {
+                    let event = PaverEvent::SetActiveConfigurationHealthy;
+                    let status = (*self.call_hook)(&event);
+                    self.push_event(event);
+                    responder.send(status.into_raw()).expect("paver response to send");
                 }
                 paver::BootManagerRequest::SetConfigurationActive { configuration, responder } => {
                     let event = PaverEvent::SetConfigurationActive { configuration };
