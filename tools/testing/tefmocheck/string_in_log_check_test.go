@@ -10,7 +10,8 @@ import (
 
 func TestStringInLogCheck(t *testing.T) {
 	const killerString = "KILLER STRING"
-	c := stringInLogCheck{String: killerString, Log: SerialLogType}
+	const exceptString = "Don't die!"
+	c := stringInLogCheck{String: killerString, ExceptString: exceptString, Log: SerialLogType}
 	gotName := c.Name()
 	wantName := "string_in_log/serial_log/KILLER_STRING"
 	if gotName != wantName {
@@ -28,5 +29,11 @@ func TestStringInLogCheck(t *testing.T) {
 	}
 	if c.Check(&shouldNotMatch) {
 		t.Errorf("c.Check(%q) returned true, expected false", string(shouldNotMatch.SerialLog))
+	}
+	exceptShouldNotMatch := TestingOutputs{
+		SerialLog: []byte(killerString + exceptString),
+	}
+	if c.Check(&shouldNotMatch) {
+		t.Errorf("c.Check(%q) returned true, expected false", string(exceptShouldNotMatch.SerialLog))
 	}
 }
