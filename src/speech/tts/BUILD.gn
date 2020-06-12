@@ -37,8 +37,11 @@ executable("bin") {
 package("tts_service") {
   deps = [ ":bin" ]
 
-  binary = "tts_service"
-
+  binaries = [
+    {
+      name = "tts_service"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/tts_service.cmx")
