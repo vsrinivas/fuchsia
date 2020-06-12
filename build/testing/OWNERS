@@ -1,2 +1,6 @@
 garymm@google.com
 shayba@google.com
+
+# TODO(51418): Remove after AEMU is generally available and all existing
+# tests work.
+per-file aemu.gni=*
