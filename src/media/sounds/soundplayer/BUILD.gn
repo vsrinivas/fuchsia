@@ -11,8 +11,11 @@ import("//build/testing/environments.gni")
 package("soundplayer") {
   deps = [ ":bin" ]
 
-  binary = "soundplayer"
-
+  binaries = [
+    {
+      name = "soundplayer"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/soundplayer.cmx")

@@ -32,8 +32,11 @@ rustc_binary("example_player_bin") {
 package("example_player") {
   deps = [ ":example_player_bin" ]
 
-  binary = "example_player"
-
+  binaries = [
+    {
+      name = "example_player"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/example_player.cmx")

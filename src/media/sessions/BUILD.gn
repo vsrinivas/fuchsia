@@ -75,8 +75,11 @@ test_package("mediasession_tests") {
 package("mediasession") {
   deps = [ ":bin" ]
 
-  binary = "mediasession"
-
+  binaries = [
+    {
+      name = "mediasession"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/mediasession.cmx")
