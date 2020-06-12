@@ -105,8 +105,11 @@ package("pkg") {
 
   deps = [ ":font_provider" ]
 
-  binary = "font_provider"
-
+  binaries = [
+    {
+      name = "font_provider"
+    },
+  ]
   meta = [
     # TODO: Remove fonts.cmx once external clients aren't using it.
     {

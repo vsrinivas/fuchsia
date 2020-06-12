@@ -4,7 +4,7 @@
             "--font-manifest",
             "/config/data/downstream_test_fonts.font_manifest.json"
         ],
-        "binary": "bin/app"
+        "binary": "bin/font_provider"
     },
     "sandbox": {
         "features": [

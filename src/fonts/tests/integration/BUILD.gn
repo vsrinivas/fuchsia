@@ -137,7 +137,6 @@ test_package("font_provider_integration_tests") {
     },
     {
       name = "font_provider"
-      dest = "app"
     },
   ]
 
