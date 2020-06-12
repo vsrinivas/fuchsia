@@ -3,6 +3,7 @@
 #include <lib/fidl/internal.h>
 
 
+extern const struct FidlCodedEnum zx_obj_typeTable;
 extern const struct FidlCodedStruct fidl_test_nullable_StructWithNullableVectorTable;
 extern const struct FidlCodedStruct fidl_test_nullable_StructWithNullableUnionTable;
 extern const struct FidlCodedStruct fidl_test_nullable_StructWithNullableStructTable;

@@ -2,12 +2,26 @@ library example;
 
 using someotherlibrary;
 
+// This is not a reference to library zx to avoid complexity in the test data.
+// A local handle is defined here that contains subtypes that this test cares
+// about.
+enum obj_type : uint32 {
+    NONE = 0;
+    CHANNEL = 4;
+};
+
+resource handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
 using u32 = uint32;
 using vec_at_most_five = vector:5;
 using vec_of_strings = vector<string>;
 using vec_of_strings_at_most_5 = vector<string>:5;
 using vec_at_most_5 = vector:5;
-using channel = handle<channel>;
+using channel = handle:CHANNEL;
 using client_end = channel;
 
 struct ExampleOfUseOfAliases {

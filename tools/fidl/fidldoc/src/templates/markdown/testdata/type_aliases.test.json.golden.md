@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### ExampleOfUseOfAliases {#ExampleOfUseOfAliases}
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#13)*
+*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#27)*
 
 
 
@@ -88,6 +88,26 @@
 
 
 
+## **ENUMS**
+
+### obj_type {#obj_type}
+Type: <code>uint32</code>
+
+*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#8)*
+
+
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+            <td><code>NONE</code></td>
+            <td><code>0</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>CHANNEL</code></td>
+            <td><code>4</code></td>
+            <td></td>
+        </tr></table>
+
 
 
 
@@ -102,37 +122,37 @@
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="u32">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#5">u32</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#19">u32</a></td>
             <td>
                 <code>uint32</code></td>
             <td></td>
         </tr><tr id="vec_at_most_five">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#6">vec_at_most_five</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#20">vec_at_most_five</a></td>
             <td>
                 <code>example/vector</code></td>
             <td></td>
         </tr><tr id="vec_of_strings">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#7">vec_of_strings</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#21">vec_of_strings</a></td>
             <td>
                 <code>vector</code></td>
             <td></td>
         </tr><tr id="vec_of_strings_at_most_5">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#8">vec_of_strings_at_most_5</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#22">vec_of_strings_at_most_5</a></td>
             <td>
                 <code>vector</code></td>
             <td></td>
         </tr><tr id="vec_at_most_5">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#9">vec_at_most_5</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#23">vec_at_most_5</a></td>
             <td>
                 <code>example/vector</code></td>
             <td></td>
         </tr><tr id="channel">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#10">channel</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#24">channel</a></td>
             <td>
                 <code>handle</code></td>
             <td></td>
         </tr><tr id="client_end">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#11">client_end</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/example.test.fidl#25">client_end</a></td>
             <td>
                 <code>handle</code></td>
             <td></td>

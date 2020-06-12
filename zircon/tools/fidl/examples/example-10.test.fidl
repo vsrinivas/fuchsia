@@ -4,11 +4,13 @@
 
 library fidl.examples.example10;
 
+using zx;
+
 [Discoverable]
 protocol Thing {
     one_function(string s, bool b) -> ();
     [Selector = "Furshlugginer"]
     two_function(string s, bool b);
     three_function(string s, request<Thing> r);
-    four_function(string s, request<Thing> r) -> (handle<channel> r);
+    four_function(string s, request<Thing> r) -> (zx.handle:CHANNEL r);
 };

@@ -34,6 +34,7 @@ while read -r src_path; do
         --json "../goldens/${json_name}" \
         --tables "../goldens/${coding_tables_name}" \
         --experimental enable_handle_rights \
+        --files "../../../vdso/zx_common.fidl" \
         --files "${src_name}"
 done < <(find . -maxdepth 1 -name '*.fidl')
 
@@ -53,6 +54,7 @@ while read -r lib_path; do
         --json "../../goldens/${json_name}" \
         --tables "../../goldens/${coding_tables_name}" \
         --experimental enable_handle_rights \
+        --files "../../../../vdso/zx_common.fidl" \
         $( awk '{print "--files " $0}' < order.txt | tr '\n' ' ' )
 done < <(find "${EXAMPLE_DIR}" -maxdepth 1 ! -path "${EXAMPLE_DIR}" -type d)
 

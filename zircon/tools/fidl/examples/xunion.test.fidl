@@ -4,6 +4,8 @@
 
 library fidl.examples.xunion;
 
+using zx;
+
 table t {
     1: string s;
 };
@@ -15,6 +17,6 @@ flexible union xu {
     4: vector<int64> v;
     5: array<int32>:5 a;
     6: handle h;
-    7: handle<channel> c;
-    8: handle<event> e;
+    7: zx.handle:CHANNEL c;
+    8: zx.handle:EVENT e;
 };

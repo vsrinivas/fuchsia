@@ -1,5 +1,19 @@
 library test.name;
 
+// This is not a reference to library zx to avoid complexity in the test data.
+// A local handle is defined here that contains subtypes that this test cares
+// about.
+enum obj_type : uint32 {
+    NONE = 0;
+    SOCKET = 14;
+};
+
+resource handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
 protocol WithAndWithoutRequestResponse {
     NoRequestNoResponse();
     NoRequestEmptyResponse() -> ();
@@ -27,7 +41,7 @@ protocol ChannelProtocol {
     MethodA(int64 a, int64 b);
     -> EventA(int64 a, int64 b);
     MethodB(int64 a, int64 b) -> (int64 result);
-    MutateSocket(handle<socket> a) -> (handle<socket> b);
+    MutateSocket(handle:SOCKET a) -> (handle:SOCKET b);
 };
 
 protocol Transitional {

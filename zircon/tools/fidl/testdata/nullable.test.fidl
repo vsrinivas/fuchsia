@@ -1,5 +1,7 @@
 library fidl.test.nullable;
 
+using zx;
+
 struct StructWithNullableString {
     string? val;
 };
@@ -9,7 +11,7 @@ struct StructWithNullableVector {
 };
 
 struct StructWithNullableHandle {
-    handle<vmo>? val;
+    zx.handle:VMO? val;
 };
 
 protocol SimpleProtocol {

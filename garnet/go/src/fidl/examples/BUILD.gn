@@ -46,6 +46,7 @@ fidl_example("example-4") {
 }
 fidl_example("example-5") {
   nick = "example5"
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 fidl_example("example-6") {
   nick = "example6"
@@ -58,6 +59,7 @@ fidl_example("example-8") {
 }
 fidl_example("example-9") {
   nick = "example9"
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 fidl_example("protocol-ordinals") {
   nick = "ordinals"
@@ -68,8 +70,10 @@ fidl_example("tables") {
 fidl_example("test") {
 }
 fidl_example("types") {
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 fidl_example("xunion") {
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 fidl("point") {

@@ -1,19 +1,33 @@
 library test.name;
 
+// This is not a reference to library zx to avoid complexity in the test data.
+// A local handle is defined here that contains subtypes that this test cares
+// about.
+enum obj_type : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
 table TableWithHandle {
-    1: handle<vmo> h;
+    1: handle:VMO h;
 };
 
 flexible union UnionWithHandle {
-    1: handle<vmo> h;
+    1: handle:VMO h;
 };
 
 struct HandlesInTypes {
-    handle<vmo> normal_handle;
+    handle:VMO normal_handle;
 
-    vector<handle<vmo>> handle_in_vec;
-    array<handle<vmo>>:5 handle_in_array;
-    vector<array<handle<vmo>>:5> handle_in_mixed_vec_array;
+    vector<handle:VMO> handle_in_vec;
+    array<handle:VMO>:5 handle_in_array;
+    vector<array<handle:VMO>:5> handle_in_mixed_vec_array;
 
     TableWithHandle table_with_handle;
     UnionWithHandle union_with_handle;

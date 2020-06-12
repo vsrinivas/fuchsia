@@ -1,7 +1,31 @@
 {
   "version": "0.0.1",
   "name": "fidl.test.nullable",
-  "library_dependencies": [],
+  "library_dependencies": [
+    {
+      "name": "zx",
+      "declarations": {
+        "zx/CHANNEL_MAX_MSG_BYTES": "const",
+        "zx/CHANNEL_MAX_MSG_HANDLES": "const",
+        "zx/MAX_NAME_LEN": "const",
+        "zx/MAX_CPUS": "const",
+        "zx/obj_type": "enum",
+        "zx/handle": "experimental_resource",
+        "zx/status": "type_alias",
+        "zx/time": "type_alias",
+        "zx/duration": "type_alias",
+        "zx/ticks": "type_alias",
+        "zx/koid": "type_alias",
+        "zx/vaddr": "type_alias",
+        "zx/paddr": "type_alias",
+        "zx/paddr32": "type_alias",
+        "zx/gpaddr": "type_alias",
+        "zx/off": "type_alias",
+        "zx/procarg": "type_alias",
+        "zx/signals": "type_alias"
+      }
+    }
+  ],
   "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [],
@@ -11,7 +35,7 @@
       "name": "fidl.test.nullable/SimpleProtocol",
       "location": {
         "filename": "nullable.test.fidl",
-        "line": 15,
+        "line": 17,
         "column": 10,
         "length": 14
       },
@@ -22,7 +46,7 @@
           "name": "Add",
           "location": {
             "filename": "nullable.test.fidl",
-            "line": 16,
+            "line": 18,
             "column": 5,
             "length": 3
           },
@@ -36,7 +60,7 @@
               "name": "a",
               "location": {
                 "filename": "nullable.test.fidl",
-                "line": 16,
+                "line": 18,
                 "column": 15,
                 "length": 1
               },
@@ -53,7 +77,7 @@
               "name": "b",
               "location": {
                 "filename": "nullable.test.fidl",
-                "line": 16,
+                "line": 18,
                 "column": 24,
                 "length": 1
               },
@@ -84,7 +108,7 @@
               "name": "sum",
               "location": {
                 "filename": "nullable.test.fidl",
-                "line": 16,
+                "line": 18,
                 "column": 37,
                 "length": 3
               },
@@ -116,7 +140,7 @@
       "name": "fidl.test.nullable/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "nullable.test.fidl",
-        "line": 16,
+        "line": 18,
         "column": 8,
         "length": 18
       },
@@ -130,7 +154,7 @@
           "name": "a",
           "location": {
             "filename": "nullable.test.fidl",
-            "line": 16,
+            "line": 18,
             "column": 15,
             "length": 1
           },
@@ -147,7 +171,7 @@
           "name": "b",
           "location": {
             "filename": "nullable.test.fidl",
-            "line": 16,
+            "line": 18,
             "column": 24,
             "length": 1
           },
@@ -172,7 +196,7 @@
       "name": "fidl.test.nullable/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "nullable.test.fidl",
-        "line": 16,
+        "line": 18,
         "column": 30,
         "length": 11
       },
@@ -186,7 +210,7 @@
           "name": "sum",
           "location": {
             "filename": "nullable.test.fidl",
-            "line": 16,
+            "line": 18,
             "column": 37,
             "length": 3
           },
@@ -211,7 +235,7 @@
       "name": "fidl.test.nullable/StructWithNullableString",
       "location": {
         "filename": "nullable.test.fidl",
-        "line": 3,
+        "line": 5,
         "column": 8,
         "length": 24
       },
@@ -225,7 +249,7 @@
           "name": "val",
           "location": {
             "filename": "nullable.test.fidl",
-            "line": 4,
+            "line": 6,
             "column": 13,
             "length": 3
           },
@@ -250,7 +274,7 @@
       "name": "fidl.test.nullable/StructWithNullableVector",
       "location": {
         "filename": "nullable.test.fidl",
-        "line": 7,
+        "line": 9,
         "column": 8,
         "length": 24
       },
@@ -268,7 +292,7 @@
           "name": "val",
           "location": {
             "filename": "nullable.test.fidl",
-            "line": 8,
+            "line": 10,
             "column": 20,
             "length": 3
           },
@@ -293,7 +317,7 @@
       "name": "fidl.test.nullable/StructWithNullableHandle",
       "location": {
         "filename": "nullable.test.fidl",
-        "line": 11,
+        "line": 13,
         "column": 8,
         "length": 24
       },
@@ -309,8 +333,8 @@
           "name": "val",
           "location": {
             "filename": "nullable.test.fidl",
-            "line": 12,
-            "column": 18,
+            "line": 14,
+            "column": 20,
             "length": 3
           },
           "field_shape_v1": {
@@ -334,7 +358,7 @@
       "name": "fidl.test.nullable/StructWithNullableProtocol",
       "location": {
         "filename": "nullable.test.fidl",
-        "line": 19,
+        "line": 21,
         "column": 8,
         "length": 26
       },
@@ -349,7 +373,7 @@
           "name": "val",
           "location": {
             "filename": "nullable.test.fidl",
-            "line": 20,
+            "line": 22,
             "column": 21,
             "length": 3
           },
@@ -374,7 +398,7 @@
       "name": "fidl.test.nullable/StructWithNullableRequest",
       "location": {
         "filename": "nullable.test.fidl",
-        "line": 23,
+        "line": 25,
         "column": 8,
         "length": 25
       },
@@ -389,7 +413,7 @@
           "name": "val",
           "location": {
             "filename": "nullable.test.fidl",
-            "line": 24,
+            "line": 26,
             "column": 30,
             "length": 3
           },
@@ -414,7 +438,7 @@
       "name": "fidl.test.nullable/Int32Wrapper",
       "location": {
         "filename": "nullable.test.fidl",
-        "line": 27,
+        "line": 29,
         "column": 8,
         "length": 12
       },
@@ -428,7 +452,7 @@
           "name": "val",
           "location": {
             "filename": "nullable.test.fidl",
-            "line": 28,
+            "line": 30,
             "column": 11,
             "length": 3
           },
@@ -453,7 +477,7 @@
       "name": "fidl.test.nullable/StructWithNullableStruct",
       "location": {
         "filename": "nullable.test.fidl",
-        "line": 31,
+        "line": 33,
         "column": 8,
         "length": 24
       },
@@ -468,7 +492,7 @@
           "name": "val",
           "location": {
             "filename": "nullable.test.fidl",
-            "line": 32,
+            "line": 34,
             "column": 19,
             "length": 3
           },
@@ -493,7 +517,7 @@
       "name": "fidl.test.nullable/StructWithNullableUnion",
       "location": {
         "filename": "nullable.test.fidl",
-        "line": 40,
+        "line": 42,
         "column": 8,
         "length": 23
       },
@@ -508,7 +532,7 @@
           "name": "val",
           "location": {
             "filename": "nullable.test.fidl",
-            "line": 41,
+            "line": 43,
             "column": 18,
             "length": 3
           },
@@ -536,7 +560,7 @@
       "name": "fidl.test.nullable/SimpleUnion",
       "location": {
         "filename": "nullable.test.fidl",
-        "line": 35,
+        "line": 37,
         "column": 7,
         "length": 11
       },
@@ -551,7 +575,7 @@
           },
           "location": {
             "filename": "nullable.test.fidl",
-            "line": 36,
+            "line": 38,
             "column": 14,
             "length": 1
           }
@@ -566,7 +590,7 @@
           },
           "location": {
             "filename": "nullable.test.fidl",
-            "line": 37,
+            "line": 39,
             "column": 16,
             "length": 1
           }

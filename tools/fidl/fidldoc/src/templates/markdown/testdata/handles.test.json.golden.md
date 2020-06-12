@@ -6,7 +6,7 @@
 ## **PROTOCOLS**
 
 ## SomeProtocol {#SomeProtocol}
-*Defined in [fidl.test.handles/handles.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#3)*
+*Defined in [fidl.test.handles/handles.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#45)*
 
 
 
@@ -14,7 +14,7 @@
 ## **STRUCTS**
 
 ### Handles {#Handles}
-*Defined in [fidl.test.handles/handles.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#10)*
+*Defined in [fidl.test.handles/handles.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#52)*
 
 
 
@@ -255,6 +255,138 @@
 
 
 
+## **ENUMS**
+
+### obj_type {#obj_type}
+Type: <code>uint32</code>
+
+*Defined in [fidl.test.handles/handles.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#6)*
+
+
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+            <td><code>NONE</code></td>
+            <td><code>0</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>PROCESS</code></td>
+            <td><code>1</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>THREAD</code></td>
+            <td><code>2</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>VMO</code></td>
+            <td><code>3</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>CHANNEL</code></td>
+            <td><code>4</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>EVENT</code></td>
+            <td><code>5</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>PORT</code></td>
+            <td><code>6</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>INTERRUPT</code></td>
+            <td><code>9</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>PCI_DEVICE</code></td>
+            <td><code>11</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>LOG</code></td>
+            <td><code>12</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>SOCKET</code></td>
+            <td><code>14</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>RESOURCE</code></td>
+            <td><code>15</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>EVENTPAIR</code></td>
+            <td><code>16</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>JOB</code></td>
+            <td><code>17</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>VMAR</code></td>
+            <td><code>18</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>FIFO</code></td>
+            <td><code>19</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>GUEST</code></td>
+            <td><code>20</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>VCPU</code></td>
+            <td><code>21</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>TIMER</code></td>
+            <td><code>22</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>IOMMU</code></td>
+            <td><code>23</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>BTI</code></td>
+            <td><code>24</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>PROFILE</code></td>
+            <td><code>25</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>PMT</code></td>
+            <td><code>26</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>SUSPEND_TOKEN</code></td>
+            <td><code>27</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>PAGER</code></td>
+            <td><code>28</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>EXCEPTION</code></td>
+            <td><code>29</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>CLOCK</code></td>
+            <td><code>30</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>STREAM</code></td>
+            <td><code>31</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>MSI_ALLOCATION</code></td>
+            <td><code>32</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>MSI_INTERRUPT</code></td>
+            <td><code>33</code></td>
+            <td></td>
+        </tr></table>
+
 
 
 
@@ -269,17 +401,17 @@
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="aliased_plain_handle">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#6">aliased_plain_handle</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#48">aliased_plain_handle</a></td>
             <td>
                 <code>handle</code></td>
             <td></td>
         </tr><tr id="aliased_subtype_handle">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#7">aliased_subtype_handle</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#49">aliased_subtype_handle</a></td>
             <td>
                 <code>handle</code></td>
             <td></td>
         </tr><tr id="aliased_rights_handle">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#8">aliased_rights_handle</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/handles.test.fidl#50">aliased_rights_handle</a></td>
             <td>
                 <code>handle</code></td>
             <td></td>

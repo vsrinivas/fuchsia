@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### HandlesInTypes {#HandlesInTypes}
-*Defined in [test.name/handles_in_types.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/handles_in_types.test.fidl#11)*
+*Defined in [test.name/handles_in_types.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/handles_in_types.test.fidl#25)*
 
 
 
@@ -60,6 +60,26 @@
 
 
 
+## **ENUMS**
+
+### obj_type {#obj_type}
+Type: <code>uint32</code>
+
+*Defined in [test.name/handles_in_types.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/handles_in_types.test.fidl#6)*
+
+
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr>
+            <td><code>NONE</code></td>
+            <td><code>0</code></td>
+            <td></td>
+        </tr><tr>
+            <td><code>VMO</code></td>
+            <td><code>3</code></td>
+            <td></td>
+        </tr></table>
+
 
 
 ## **TABLES**
@@ -67,7 +87,7 @@
 ### TableWithHandle {#TableWithHandle}
 
 
-*Defined in [test.name/handles_in_types.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/handles_in_types.test.fidl#3)*
+*Defined in [test.name/handles_in_types.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/handles_in_types.test.fidl#17)*
 
 
 
@@ -87,7 +107,7 @@
 ## **UNIONS**
 
 ### UnionWithHandle {#UnionWithHandle}
-*Defined in [test.name/handles_in_types.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/handles_in_types.test.fidl#7)*
+*Defined in [test.name/handles_in_types.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/handles_in_types.test.fidl#21)*
 
 
 <table>

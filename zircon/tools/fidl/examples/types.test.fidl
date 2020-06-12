@@ -4,6 +4,8 @@
 
 library fidl.examples.types;
 
+using zx;
+
 struct this_is_a_struct {
     string s;
 };
@@ -238,44 +240,44 @@ struct vectors {
 [Awesome]
 struct handles {
     handle handle_handle;
-    handle<process> process_handle;
-    handle<thread> thread_handle;
-    handle<vmo> vmo_handle;
-    handle<channel> channel_handle;
-    handle<event> event_handle;
-    handle<port> port_handle;
-    handle<interrupt> interrupt_handle;
-    handle<debuglog> debuglog_handle;
-    handle<socket> socket_handle;
-    handle<resource> resource_handle;
-    handle<eventpair> eventpair_handle;
-    handle<job> job_handle;
-    handle<vmar> vmar_handle;
-    handle<fifo> fifo_handle;
-    handle<guest> guest_handle;
-    handle<timer> timer_handle;
-    handle<bti> bti_handle;
-    handle<profile> profile_handle;
+    zx.handle:PROCESS process_handle;
+    zx.handle:THREAD thread_handle;
+    zx.handle:VMO vmo_handle;
+    zx.handle:CHANNEL channel_handle;
+    zx.handle:EVENT event_handle;
+    zx.handle:PORT port_handle;
+    zx.handle:INTERRUPT interrupt_handle;
+    zx.handle:LOG debuglog_handle;
+    zx.handle:SOCKET socket_handle;
+    zx.handle:RESOURCE resource_handle;
+    zx.handle:EVENTPAIR eventpair_handle;
+    zx.handle:JOB job_handle;
+    zx.handle:VMAR vmar_handle;
+    zx.handle:FIFO fifo_handle;
+    zx.handle:GUEST guest_handle;
+    zx.handle:TIMER timer_handle;
+    zx.handle:BTI bti_handle;
+    zx.handle:PROFILE profile_handle;
 
     handle? nullable_handle_handle;
-    handle<process>? nullable_process_handle;
-    handle<thread>? nullable_thread_handle;
-    handle<vmo>? nullable_vmo_handle;
-    handle<channel>? nullable_channel_handle;
-    handle<event>? nullable_event_handle;
-    handle<port>? nullable_port_handle;
-    handle<interrupt>? nullable_interrupt_handle;
-    handle<debuglog>? nullable_debuglog_handle;
-    handle<socket>? nullable_socket_handle;
-    handle<resource>? nullable_resource_handle;
-    handle<eventpair>? nullable_eventpair_handle;
-    handle<job>? nullable_job_handle;
-    handle<vmar>? nullable_vmar_handle;
-    handle<fifo>? nullable_fifo_handle;
-    handle<guest>? nullable_guest_handle;
-    handle<timer>? nullable_timer_handle;
-    handle<bti>? nullable_bti_handle;
-    handle<profile>? nullable_profile_handle;
+    zx.handle:PROCESS? nullable_process_handle;
+    zx.handle:THREAD? nullable_thread_handle;
+    zx.handle:VMO? nullable_vmo_handle;
+    zx.handle:CHANNEL? nullable_channel_handle;
+    zx.handle:EVENT? nullable_event_handle;
+    zx.handle:PORT? nullable_port_handle;
+    zx.handle:INTERRUPT? nullable_interrupt_handle;
+    zx.handle:LOG? nullable_debuglog_handle;
+    zx.handle:SOCKET? nullable_socket_handle;
+    zx.handle:RESOURCE? nullable_resource_handle;
+    zx.handle:EVENTPAIR? nullable_eventpair_handle;
+    zx.handle:JOB? nullable_job_handle;
+    zx.handle:VMAR? nullable_vmar_handle;
+    zx.handle:FIFO? nullable_fifo_handle;
+    zx.handle:GUEST? nullable_guest_handle;
+    zx.handle:TIMER? nullable_timer_handle;
+    zx.handle:BTI? nullable_bti_handle;
+    zx.handle:PROFILE? nullable_profile_handle;
 };
 
 const uint32 strings_size = 32;

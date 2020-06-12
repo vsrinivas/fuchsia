@@ -5,6 +5,8 @@
 // This is the library
 library test;
 
+using zx;
+
 /// we do not aggregate attributes, but they should not be
 /// lost either
 ///
@@ -74,15 +76,15 @@ union MyUnion {
 /// lines
 struct Foo {
     request<Iface>? nullable_request;
-    vector<handle<channel>> monoid;
-    vector<handle<channel>> drahvin;
+    vector<zx.handle:CHANNEL> monoid;
+    vector<zx.handle:CHANNEL> drahvin;
 };
 
 /// Cool new service
 // align me too
 service SomeService {
     [ShouldNotCareAboutTypeAtParsingStage]
-    vector<handle<channel>> drahvin;
+    vector<zx.handle:CHANNEL> drahvin;
 };
 
 table Table1 {
@@ -116,7 +118,7 @@ protocol PCol
         -> (int i);
 
     [Awesome]
-    Analyze(handle<process> process, handle<thread> thread)
+    Analyze(zx.handle:PROCESS process, zx.handle:THREAD thread)
         -> ();
 
     // Figure it out.

@@ -4,6 +4,8 @@
 
 library fidl.examples.example5;
 
+using zx;
+
 struct Point {
     uint64 x;
 };
@@ -33,5 +35,5 @@ protocol Thing {
     one_function(string s, bool b) -> ();
     two_function(string s, bool b);
     three_function(string s, request<Thing> r);
-    four_function(string s, request<Thing> r) -> (handle<channel> r);
+    four_function(string s, request<Thing> r) -> (zx.handle:CHANNEL r);
 };

@@ -6,10 +6,61 @@
   "const_declarations": [],
   "enum_declarations": [
     {
+      "name": "test.name/obj_type",
+      "location": {
+        "filename": "protocols.test.fidl",
+        "line": 6,
+        "column": 6,
+        "length": 8
+      },
+      "type": "uint32",
+      "members": [
+        {
+          "name": "NONE",
+          "location": {
+            "filename": "protocols.test.fidl",
+            "line": 7,
+            "column": 5,
+            "length": 4
+          },
+          "value": {
+            "kind": "literal",
+            "value": "0",
+            "expression": "0",
+            "literal": {
+              "kind": "numeric",
+              "value": "0",
+              "expression": "0"
+            }
+          }
+        },
+        {
+          "name": "SOCKET",
+          "location": {
+            "filename": "protocols.test.fidl",
+            "line": 8,
+            "column": 5,
+            "length": 6
+          },
+          "value": {
+            "kind": "literal",
+            "value": "14",
+            "expression": "14",
+            "literal": {
+              "kind": "numeric",
+              "value": "14",
+              "expression": "14"
+            }
+          }
+        }
+      ],
+      "strict": true
+    },
+    {
       "name": "test.name/ErrorEnun",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 14,
+        "line": 28,
         "column": 6,
         "length": 9
       },
@@ -19,7 +70,7 @@
           "name": "ERR_FOO",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 15,
+            "line": 29,
             "column": 5,
             "length": 7
           },
@@ -38,7 +89,7 @@
           "name": "ERR_BAR",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 16,
+            "line": 30,
             "column": 5,
             "length": 7
           },
@@ -57,13 +108,43 @@
       "strict": true
     }
   ],
-  "experimental_resource_declarations": [],
+  "experimental_resource_declarations": [
+    {
+      "name": "test.name/handle",
+      "location": {
+        "filename": "protocols.test.fidl",
+        "line": 11,
+        "column": 10,
+        "length": 6
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "properties": [
+        {
+          "name": "subtype",
+          "location": {
+            "filename": "protocols.test.fidl",
+            "line": 13,
+            "column": 18,
+            "length": 7
+          },
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.name/obj_type",
+            "nullable": false
+          }
+        }
+      ]
+    }
+  ],
   "interface_declarations": [
     {
       "name": "test.name/WithAndWithoutRequestResponse",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 3,
+        "line": 17,
         "column": 10,
         "length": 29
       },
@@ -74,7 +155,7 @@
           "name": "NoRequestNoResponse",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 4,
+            "line": 18,
             "column": 5,
             "length": 19
           },
@@ -99,7 +180,7 @@
           "name": "NoRequestEmptyResponse",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 5,
+            "line": 19,
             "column": 5,
             "length": 22
           },
@@ -135,7 +216,7 @@
           "name": "NoRequestWithResponse",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 6,
+            "line": 20,
             "column": 5,
             "length": 21
           },
@@ -161,7 +242,7 @@
               "name": "ret",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 6,
+                "line": 20,
                 "column": 40,
                 "length": 3
               },
@@ -190,7 +271,7 @@
           "name": "WithRequestNoResponse",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 7,
+            "line": 21,
             "column": 5,
             "length": 21
           },
@@ -204,7 +285,7 @@
               "name": "arg",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 7,
+                "line": 21,
                 "column": 34,
                 "length": 3
               },
@@ -234,7 +315,7 @@
           "name": "WithRequestEmptyResponse",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 8,
+            "line": 22,
             "column": 5,
             "length": 24
           },
@@ -248,7 +329,7 @@
               "name": "arg",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 8,
+                "line": 22,
                 "column": 37,
                 "length": 3
               },
@@ -289,7 +370,7 @@
           "name": "WithRequestWithResponse",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 9,
+            "line": 23,
             "column": 5,
             "length": 23
           },
@@ -303,7 +384,7 @@
               "name": "arg",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 9,
+                "line": 23,
                 "column": 36,
                 "length": 3
               },
@@ -334,7 +415,7 @@
               "name": "ret",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 9,
+                "line": 23,
                 "column": 52,
                 "length": 3
               },
@@ -363,7 +444,7 @@
           "name": "OnEmptyResponse",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 10,
+            "line": 24,
             "column": 8,
             "length": 15
           },
@@ -388,7 +469,7 @@
           "name": "OnWithResponse",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 11,
+            "line": 25,
             "column": 8,
             "length": 14
           },
@@ -403,7 +484,7 @@
               "name": "ret",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 11,
+                "line": 25,
                 "column": 30,
                 "length": 3
               },
@@ -432,7 +513,7 @@
       "name": "test.name/WithErrorSyntax",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 19,
+        "line": 33,
         "column": 10,
         "length": 15
       },
@@ -443,7 +524,7 @@
           "name": "ResponseAsStruct",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 20,
+            "line": 34,
             "column": 5,
             "length": 16
           },
@@ -499,7 +580,7 @@
           "name": "ErrorAsPrimitive",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 21,
+            "line": 35,
             "column": 5,
             "length": 16
           },
@@ -555,7 +636,7 @@
           "name": "ErrorAsEnum",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 22,
+            "line": 36,
             "column": 5,
             "length": 11
           },
@@ -611,7 +692,7 @@
       "name": "test.name/ChannelProtocol",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 26,
+        "line": 40,
         "column": 10,
         "length": 15
       },
@@ -628,7 +709,7 @@
           "name": "MethodA",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 27,
+            "line": 41,
             "column": 5,
             "length": 7
           },
@@ -642,7 +723,7 @@
               "name": "a",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 27,
+                "line": 41,
                 "column": 19,
                 "length": 1
               },
@@ -659,7 +740,7 @@
               "name": "b",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 27,
+                "line": 41,
                 "column": 28,
                 "length": 1
               },
@@ -689,7 +770,7 @@
           "name": "EventA",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 28,
+            "line": 42,
             "column": 8,
             "length": 6
           },
@@ -704,7 +785,7 @@
               "name": "a",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 28,
+                "line": 42,
                 "column": 21,
                 "length": 1
               },
@@ -721,7 +802,7 @@
               "name": "b",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 28,
+                "line": 42,
                 "column": 30,
                 "length": 1
               },
@@ -750,7 +831,7 @@
           "name": "MethodB",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 29,
+            "line": 43,
             "column": 5,
             "length": 7
           },
@@ -764,7 +845,7 @@
               "name": "a",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 29,
+                "line": 43,
                 "column": 19,
                 "length": 1
               },
@@ -781,7 +862,7 @@
               "name": "b",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 29,
+                "line": 43,
                 "column": 28,
                 "length": 1
               },
@@ -812,7 +893,7 @@
               "name": "result",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 29,
+                "line": 43,
                 "column": 41,
                 "length": 6
               },
@@ -841,7 +922,7 @@
           "name": "MutateSocket",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 30,
+            "line": 44,
             "column": 5,
             "length": 12
           },
@@ -857,8 +938,8 @@
               "name": "a",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 30,
-                "column": 33,
+                "line": 44,
+                "column": 32,
                 "length": 1
               },
               "field_shape_v1": {
@@ -890,8 +971,8 @@
               "name": "b",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 30,
-                "column": 55,
+                "line": 44,
+                "column": 53,
                 "length": 1
               },
               "field_shape_v1": {
@@ -919,7 +1000,7 @@
       "name": "test.name/Transitional",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 33,
+        "line": 47,
         "column": 10,
         "length": 12
       },
@@ -930,7 +1011,7 @@
           "name": "Request",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 35,
+            "line": 49,
             "column": 5,
             "length": 7
           },
@@ -950,7 +1031,7 @@
               "name": "x",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 35,
+                "line": 49,
                 "column": 19,
                 "length": 1
               },
@@ -981,7 +1062,7 @@
               "name": "y",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 35,
+                "line": 49,
                 "column": 32,
                 "length": 1
               },
@@ -1010,7 +1091,7 @@
           "name": "OneWay",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 38,
+            "line": 52,
             "column": 5,
             "length": 6
           },
@@ -1030,7 +1111,7 @@
               "name": "x",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 38,
+                "line": 52,
                 "column": 18,
                 "length": 1
               },
@@ -1060,7 +1141,7 @@
           "name": "Event",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 41,
+            "line": 55,
             "column": 8,
             "length": 5
           },
@@ -1081,7 +1162,7 @@
               "name": "x",
               "location": {
                 "filename": "protocols.test.fidl",
-                "line": 41,
+                "line": 55,
                 "column": 20,
                 "length": 1
               },
@@ -1113,7 +1194,7 @@
       "name": "test.name/SomeLongAnonymousPrefix4",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 6,
+        "line": 20,
         "column": 32,
         "length": 12
       },
@@ -1127,7 +1208,7 @@
           "name": "ret",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 6,
+            "line": 20,
             "column": 40,
             "length": 3
           },
@@ -1152,7 +1233,7 @@
       "name": "test.name/SomeLongAnonymousPrefix5",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 7,
+        "line": 21,
         "column": 26,
         "length": 12
       },
@@ -1166,7 +1247,7 @@
           "name": "arg",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 7,
+            "line": 21,
             "column": 34,
             "length": 3
           },
@@ -1191,7 +1272,7 @@
       "name": "test.name/SomeLongAnonymousPrefix6",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 8,
+        "line": 22,
         "column": 29,
         "length": 12
       },
@@ -1205,7 +1286,7 @@
           "name": "arg",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 8,
+            "line": 22,
             "column": 37,
             "length": 3
           },
@@ -1230,7 +1311,7 @@
       "name": "test.name/SomeLongAnonymousPrefix8",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 9,
+        "line": 23,
         "column": 28,
         "length": 12
       },
@@ -1244,7 +1325,7 @@
           "name": "arg",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 9,
+            "line": 23,
             "column": 36,
             "length": 3
           },
@@ -1269,7 +1350,7 @@
       "name": "test.name/SomeLongAnonymousPrefix9",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 9,
+        "line": 23,
         "column": 44,
         "length": 12
       },
@@ -1283,7 +1364,7 @@
           "name": "ret",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 9,
+            "line": 23,
             "column": 52,
             "length": 3
           },
@@ -1308,7 +1389,7 @@
       "name": "test.name/SomeLongAnonymousPrefix11",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 11,
+        "line": 25,
         "column": 22,
         "length": 12
       },
@@ -1322,7 +1403,7 @@
           "name": "ret",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 11,
+            "line": 25,
             "column": 30,
             "length": 3
           },
@@ -1347,7 +1428,7 @@
       "name": "test.name/WithErrorSyntax_ResponseAsStruct_Response",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 20,
+        "line": 34,
         "column": 27,
         "length": 27
       },
@@ -1361,7 +1442,7 @@
           "name": "a",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 20,
+            "line": 34,
             "column": 34,
             "length": 1
           },
@@ -1378,7 +1459,7 @@
           "name": "b",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 20,
+            "line": 34,
             "column": 43,
             "length": 1
           },
@@ -1395,7 +1476,7 @@
           "name": "c",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 20,
+            "line": 34,
             "column": 52,
             "length": 1
           },
@@ -1420,7 +1501,7 @@
       "name": "test.name/SomeLongAnonymousPrefix13",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 20,
+        "line": 34,
         "column": 27,
         "length": 27
       },
@@ -1460,7 +1541,7 @@
       "name": "test.name/WithErrorSyntax_ErrorAsPrimitive_Response",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 21,
+        "line": 35,
         "column": 27,
         "length": 2
       },
@@ -1481,7 +1562,7 @@
       "name": "test.name/SomeLongAnonymousPrefix15",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 21,
+        "line": 35,
         "column": 27,
         "length": 2
       },
@@ -1521,7 +1602,7 @@
       "name": "test.name/WithErrorSyntax_ErrorAsEnum_Response",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 22,
+        "line": 36,
         "column": 22,
         "length": 2
       },
@@ -1542,7 +1623,7 @@
       "name": "test.name/SomeLongAnonymousPrefix17",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 22,
+        "line": 36,
         "column": 22,
         "length": 2
       },
@@ -1582,7 +1663,7 @@
       "name": "test.name/SomeLongAnonymousPrefix18",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 27,
+        "line": 41,
         "column": 12,
         "length": 18
       },
@@ -1596,7 +1677,7 @@
           "name": "a",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 27,
+            "line": 41,
             "column": 19,
             "length": 1
           },
@@ -1613,7 +1694,7 @@
           "name": "b",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 27,
+            "line": 41,
             "column": 28,
             "length": 1
           },
@@ -1638,7 +1719,7 @@
       "name": "test.name/SomeLongAnonymousPrefix19",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 28,
+        "line": 42,
         "column": 14,
         "length": 18
       },
@@ -1652,7 +1733,7 @@
           "name": "a",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 28,
+            "line": 42,
             "column": 21,
             "length": 1
           },
@@ -1669,7 +1750,7 @@
           "name": "b",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 28,
+            "line": 42,
             "column": 30,
             "length": 1
           },
@@ -1694,7 +1775,7 @@
       "name": "test.name/SomeLongAnonymousPrefix20",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 29,
+        "line": 43,
         "column": 12,
         "length": 18
       },
@@ -1708,7 +1789,7 @@
           "name": "a",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 29,
+            "line": 43,
             "column": 19,
             "length": 1
           },
@@ -1725,7 +1806,7 @@
           "name": "b",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 29,
+            "line": 43,
             "column": 28,
             "length": 1
           },
@@ -1750,7 +1831,7 @@
       "name": "test.name/SomeLongAnonymousPrefix21",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 29,
+        "line": 43,
         "column": 34,
         "length": 14
       },
@@ -1764,7 +1845,7 @@
           "name": "result",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 29,
+            "line": 43,
             "column": 41,
             "length": 6
           },
@@ -1789,9 +1870,9 @@
       "name": "test.name/SomeLongAnonymousPrefix22",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 30,
+        "line": 44,
         "column": 17,
-        "length": 18
+        "length": 17
       },
       "anonymous": true,
       "members": [
@@ -1805,8 +1886,8 @@
           "name": "a",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 30,
-            "column": 33,
+            "line": 44,
+            "column": 32,
             "length": 1
           },
           "field_shape_v1": {
@@ -1830,9 +1911,9 @@
       "name": "test.name/SomeLongAnonymousPrefix23",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 30,
-        "column": 39,
-        "length": 18
+        "line": 44,
+        "column": 38,
+        "length": 17
       },
       "anonymous": true,
       "members": [
@@ -1846,8 +1927,8 @@
           "name": "b",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 30,
-            "column": 55,
+            "line": 44,
+            "column": 53,
             "length": 1
           },
           "field_shape_v1": {
@@ -1871,7 +1952,7 @@
       "name": "test.name/SomeLongAnonymousPrefix24",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 35,
+        "line": 49,
         "column": 12,
         "length": 9
       },
@@ -1885,7 +1966,7 @@
           "name": "x",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 35,
+            "line": 49,
             "column": 19,
             "length": 1
           },
@@ -1910,7 +1991,7 @@
       "name": "test.name/SomeLongAnonymousPrefix25",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 35,
+        "line": 49,
         "column": 25,
         "length": 9
       },
@@ -1924,7 +2005,7 @@
           "name": "y",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 35,
+            "line": 49,
             "column": 32,
             "length": 1
           },
@@ -1949,7 +2030,7 @@
       "name": "test.name/SomeLongAnonymousPrefix26",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 38,
+        "line": 52,
         "column": 11,
         "length": 9
       },
@@ -1963,7 +2044,7 @@
           "name": "x",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 38,
+            "line": 52,
             "column": 18,
             "length": 1
           },
@@ -1988,7 +2069,7 @@
       "name": "test.name/SomeLongAnonymousPrefix27",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 41,
+        "line": 55,
         "column": 13,
         "length": 9
       },
@@ -2002,7 +2083,7 @@
           "name": "x",
           "location": {
             "filename": "protocols.test.fidl",
-            "line": 41,
+            "line": 55,
             "column": 20,
             "length": 1
           },
@@ -2030,7 +2111,7 @@
       "name": "test.name/WithErrorSyntax_ResponseAsStruct_Result",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 20,
+        "line": 34,
         "column": 27,
         "length": 27
       },
@@ -2089,7 +2170,7 @@
       "name": "test.name/WithErrorSyntax_ErrorAsPrimitive_Result",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 21,
+        "line": 35,
         "column": 27,
         "length": 2
       },
@@ -2148,7 +2229,7 @@
       "name": "test.name/WithErrorSyntax_ErrorAsEnum_Result",
       "location": {
         "filename": "protocols.test.fidl",
-        "line": 22,
+        "line": 36,
         "column": 22,
         "length": 2
       },
@@ -2207,6 +2288,8 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
+    "test.name/obj_type",
+    "test.name/handle",
     "test.name/WithErrorSyntax_ResponseAsStruct_Response",
     "test.name/WithErrorSyntax_ResponseAsStruct_Result",
     "test.name/WithErrorSyntax_ErrorAsPrimitive_Response",
@@ -2220,7 +2303,9 @@
     "test.name/WithErrorSyntax"
   ],
   "declarations": {
+    "test.name/obj_type": "enum",
     "test.name/ErrorEnun": "enum",
+    "test.name/handle": "experimental_resource",
     "test.name/WithAndWithoutRequestResponse": "interface",
     "test.name/WithErrorSyntax": "interface",
     "test.name/ChannelProtocol": "interface",
