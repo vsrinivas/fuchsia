@@ -11,6 +11,7 @@ BT_FILE_DEPS=(
   "scripts/fx"
   "tools/devshell/set"
   "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
   "tools/devshell/lib/vars.sh"
   "tools/devshell/tests/subcommands/data/fx_set_test/myproduct.gni"
   "tools/devshell/tests/subcommands/data/fx_set_test/myboard.gni"

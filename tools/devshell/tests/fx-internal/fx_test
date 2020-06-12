@@ -9,6 +9,7 @@ BT_FILE_DEPS=(
   "scripts/fx-help.awk"
   "tools/devshell/vendor"
   "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
   "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/prebuilt.sh"
 )

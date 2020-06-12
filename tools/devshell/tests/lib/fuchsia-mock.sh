@@ -25,6 +25,7 @@ btf::setup_fx() {
   BT_ASSERT_FILE_EXISTS "${_FX}"
   BT_ASSERT_FILE_EXISTS "${_FUCHSIA_DIR}/tools/devshell/lib/vars.sh"
   BT_ASSERT_FILE_EXISTS "${_FUCHSIA_DIR}/tools/devshell/lib/prebuilt.sh"
+  BT_ASSERT_FILE_EXISTS "${_FUCHSIA_DIR}/tools/devshell/lib/fx-optional-features.sh"
 
   # Fake a build directory with the minimal content so that fx work
   mkdir -p "${_FUCHSIA_BUILD_DIR}" "${_FUCHSIA_BUILD_DIR}/${_HOST_OUT_DIR}" \

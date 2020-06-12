@@ -8,6 +8,7 @@ readonly SERVE_UPDATES_PORT=8083
 BT_FILE_DEPS=(
   "out/default/host_x64/pm"
   "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
   "tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.cmx"
   "tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.json"
   "tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.manifest"

@@ -122,6 +122,32 @@ FUCHSIA_OUT_DIR      - (deprecated) "$FUCHSIA_DIR/out"
 users should not rely on them - only the above list are to be preserved
 (unless marked deprecated).
 
+## Optional features
+
+`fx` supports the definition of optional features that are enabled by default
+and can be disabled by the user for the duration of a single `fx` invocation.
+
+These features can be used during the transition phase of Large Scale Changes
+that span across multiple commands. The potentially disruptive changes can be
+guarded behind an optional feature, so that users can be quickly unblocked by
+disabling the feature themselves.
+
+Features have unique labels and shell commands can check if the given feature is
+enabled by using the `is_feature_enabled` method in
+[//tools/devshell/lib/fx-optional-features.sh](lib/fx-optional-features.sh).
+
+By default all optional features are enabled. If the user explicitly calls
+`fx --disable=FEATURE ...`, the feature is considered disabled for the duration
+of that call.
+
+When the flag `--disable=<FEATURE>` is used in a `fx` call, `fx` exports an
+environmental variable named `FUCHSIA_DISABLED_<FEATURE>`, so all commands
+by default inherit it. Shell commands can verify if a feature is enabled by
+using the helper methods in [fx-optional-features.sh](lib/fx-optional-features.sh),
+but non-shell commands, like Dart, can directly check for the value of the
+environmental variable. If `FUCHSIA_DISABLED_<FEATURE>` is set to "1",
+"FEATURE" is disabled, otherwise it is enabled.
+
 ## Documenting subcommands
 
 As many `fx` subcommands delegate to sub-programs passing on flags directly
