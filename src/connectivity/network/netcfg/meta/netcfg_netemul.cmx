@@ -1,10 +1,10 @@
 {
     "program": {
         "args": [
-            "--min_severity",
+            "--min-severity",
             "DEBUG",
             "--netemul",
-            "--config_data",
+            "--config-data",
             "empty.json"
         ],
         "binary": "bin/netcfg"

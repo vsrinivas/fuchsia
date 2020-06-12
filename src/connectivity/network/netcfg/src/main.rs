@@ -28,6 +28,7 @@ use fuchsia_vfs_watcher as fvfs_watcher;
 use fuchsia_zircon::{self as zx, DurationNum as _};
 
 use anyhow::Context as _;
+use argh::FromArgs;
 use dns_server_watcher::{
     DnsServerWatcherEvent, DnsServers, DnsServersUpdateSource, DEFAULT_DNS_PORT,
 };
@@ -36,7 +37,6 @@ use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
 use log::{debug, error, info, trace, warn};
 use net_declare::fidl_ip_v4;
 use serde::Deserialize;
-use structopt::StructOpt;
 
 mod matchers;
 
@@ -133,23 +133,21 @@ impl FromStr for LogLevel {
     }
 }
 
-/// Options.
-#[derive(StructOpt, Debug)]
-#[structopt(
-    name = "Network Configuration tool",
-    about = "Configures network components in response to events."
-)]
+/// Network Configuration tool.
+///
+/// Configures network components in response to events.
+#[derive(FromArgs, Debug)]
 struct Opt {
-    /// Should netemul specific configurations be used?
-    #[structopt(short, long)]
+    /// should netemul specific configurations be used?
+    #[argh(switch, short = 'n')]
     netemul: bool,
 
-    /// The minimum severity for logs.
-    #[structopt(short, long, default_value = "INFO")]
+    /// minimum severity for logs.
+    #[argh(option, short = 'm', default = "LogLevel::Info")]
     min_severity: LogLevel,
 
-    /// The config file to use
-    #[structopt(short, long, default_value = "default.json")]
+    /// config file to use
+    #[argh(option, short = 'c', default = "\"default.json\".to_string()")]
     config_data: String,
 }
 
@@ -905,7 +903,7 @@ impl<'a> NetCfg<'a> {
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), anyhow::Error> {
-    let opt = Opt::from_args();
+    let opt: Opt = argh::from_env();
 
     fsyslog::init_with_tags(&["netcfg"])?;
     fsyslog::set_severity(opt.min_severity.into());
