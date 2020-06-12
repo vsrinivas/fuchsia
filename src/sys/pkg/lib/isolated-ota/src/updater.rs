@@ -353,12 +353,6 @@ pub mod tests {
     #[fasync::run_singlethreaded(test)]
     pub async fn test_updater() -> Result<(), Error> {
         let data = "hello world!".as_bytes();
-        let hook = |p: &PaverEvent| {
-            if let PaverEvent::QueryActiveConfiguration = p {
-                return zx::Status::NOT_SUPPORTED;
-            }
-            zx::Status::OK
-        };
         let test_package = PackageBuilder::new("test_package")
             .add_resource_at("bin/hello", "this is a test".as_bytes())
             .add_resource_at("data/file", "this is a file".as_bytes())
@@ -368,7 +362,10 @@ pub mod tests {
             .context("Building test_package")?;
         let updater = UpdaterBuilder::new()
             .await
-            .paver(|p| p.call_hook(hook))
+            .paver(|p| {
+                // Emulate ABR not being supported
+                p.boot_manager_close_with_epitaph(zx::Status::NOT_SUPPORTED)
+            })
             .add_package(test_package)
             .add_image("zbi.signed", &data)
             .add_image("fuchsia.vbmeta", &data)
@@ -390,7 +387,6 @@ pub mod tests {
         assert_eq!(
             result.paver_events,
             vec![
-                PaverEvent::QueryActiveConfiguration,
                 PaverEvent::WriteAsset {
                     configuration: Configuration::A,
                     asset: Asset::Kernel,
@@ -412,8 +408,6 @@ pub mod tests {
                     payload: data.to_vec()
                 },
                 PaverEvent::DataSinkFlush,
-                PaverEvent::QueryActiveConfiguration,
-                PaverEvent::SetConfigurationActive { configuration: Configuration::A },
             ]
         );
 
