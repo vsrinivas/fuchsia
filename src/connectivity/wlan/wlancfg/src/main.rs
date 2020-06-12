@@ -12,7 +12,10 @@ mod mode_management;
 mod util;
 
 use {
-    crate::{config_management::SavedNetworksManager, mode_management::phy_manager::PhyManager},
+    crate::{
+        client::network_selection::NetworkSelector, config_management::SavedNetworksManager,
+        mode_management::phy_manager::PhyManager,
+    },
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
@@ -30,6 +33,7 @@ async fn serve_fidl(
     legacy_client_ref: legacy::shim::ClientRef,
     configurator: legacy::deprecated_configuration::DeprecatedConfigurator,
     saved_networks: Arc<SavedNetworksManager>,
+    network_selector: Arc<NetworkSelector>,
 ) -> Result<Void, Error> {
     let mut fs = ServiceFs::new();
     let (client_sender, listener_msgs) = mpsc::unbounded();
@@ -56,6 +60,7 @@ async fn serve_fidl(
                 client_ref.clone(),
                 client_sender1.clone(),
                 Arc::clone(&saved_networks_clone),
+                Arc::clone(&network_selector),
                 reqs,
             )
         })
@@ -105,6 +110,7 @@ fn main() -> Result<(), Error> {
 
     let phy_manager = Arc::new(Mutex::new(PhyManager::new(wlan_svc.clone())));
     let saved_networks = Arc::new(executor.run_singlethreaded(SavedNetworksManager::new())?);
+    let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
     let legacy_client = legacy::shim::ClientRef::new();
     let client = Arc::new(Mutex::new(client::Client::new_empty()));
     let ap = access_point::AccessPoint::new_empty(phy_manager.clone(), wlan_svc.clone());
@@ -116,6 +122,7 @@ fn main() -> Result<(), Error> {
         legacy_client.clone(),
         configurator,
         Arc::clone(&saved_networks),
+        network_selector,
     );
 
     let (watcher_proxy, watcher_server_end) = fidl::endpoints::create_proxy()?;

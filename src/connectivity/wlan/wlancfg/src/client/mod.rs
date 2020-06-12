@@ -30,10 +30,12 @@ use {
         stream::{FuturesOrdered, FuturesUnordered},
     },
     log::{error, info},
-    scan::{get_successful_scan_observers, perform_scan},
+    network_selection::NetworkSelector,
+    scan::{perform_scan, successful_scan_observer},
     std::{convert::TryFrom, sync::Arc},
 };
 
+pub mod network_selection;
 mod scan;
 pub mod state_machine;
 pub mod types;
@@ -152,9 +154,16 @@ pub fn spawn_provider_server(
     client: ClientPtr,
     update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
+    network_selector: Arc<NetworkSelector>,
     requests: fidl_policy::ClientProviderRequestStream,
 ) {
-    fasync::spawn(serve_provider_requests(client, update_sender, saved_networks, requests));
+    fasync::spawn(serve_provider_requests(
+        client,
+        update_sender,
+        saved_networks,
+        network_selector,
+        requests,
+    ));
 }
 
 pub fn spawn_listener_server(
@@ -171,6 +180,7 @@ async fn serve_provider_requests(
     client: ClientPtr,
     update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
+    network_selector: Arc<NetworkSelector>,
     mut requests: fidl_policy::ClientProviderRequestStream,
 ) {
     let (internal_messages_sink, mut internal_messages_stream) = mpsc::unbounded();
@@ -213,7 +223,7 @@ async fn serve_provider_requests(
                 InternalMsg::NewPendingScanRequest(output_iterator) => {
                     pending_scans.push(perform_scan(
                         Arc::clone(&client),
-                        output_iterator, get_successful_scan_observers));
+                        output_iterator, successful_scan_observer, Arc::clone(&network_selector)));
                 }
                 InternalMsg::NewDisconnectWatcher(network_id, credential) => {
                     pending_disconnect_monitors.push(wait_for_disconnection(Arc::clone(&client), update_sender.clone(), network_id, credential));
@@ -735,6 +745,7 @@ mod tests {
 
     struct TestValues {
         saved_networks: SavedNetworksPtr,
+        network_selector: Arc<NetworkSelector>,
         provider: fidl_policy::ClientProviderProxy,
         requests: fidl_policy::ClientProviderRequestStream,
         client: ClientPtr,
@@ -748,6 +759,7 @@ mod tests {
     // test will have a unique persistent store behind it.
     fn test_setup(stash_id: impl AsRef<str>, exec: &mut fasync::Executor) -> TestValues {
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
+        let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
@@ -756,6 +768,7 @@ mod tests {
         set_logger_for_test();
         TestValues {
             saved_networks,
+            network_selector,
             provider,
             requests,
             client,
@@ -773,6 +786,7 @@ mod tests {
             test_values.client,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            Arc::clone(&test_values.network_selector),
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -815,6 +829,7 @@ mod tests {
             test_values.client,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            Arc::clone(&test_values.network_selector),
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -859,6 +874,7 @@ mod tests {
             test_values.client,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            Arc::clone(&test_values.network_selector),
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -904,6 +920,7 @@ mod tests {
             test_values.client,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            Arc::clone(&test_values.network_selector),
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -949,6 +966,7 @@ mod tests {
             Arc::clone(&test_values.client),
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            Arc::clone(&test_values.network_selector),
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -1052,6 +1070,7 @@ mod tests {
             Arc::clone(&test_values.client),
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            Arc::clone(&test_values.network_selector),
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -1149,6 +1168,7 @@ mod tests {
             Arc::clone(&test_values.client),
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            Arc::clone(&test_values.network_selector),
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -1251,6 +1271,7 @@ mod tests {
             test_values.client,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            Arc::clone(&test_values.network_selector),
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -1293,6 +1314,7 @@ mod tests {
             test_values.client,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            Arc::clone(&test_values.network_selector),
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -1423,6 +1445,7 @@ mod tests {
             test_values.client,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            Arc::clone(&test_values.network_selector),
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -1493,6 +1516,7 @@ mod tests {
         let saved_networks = Arc::new(
             exec.run_singlethreaded(saved_networks_fut).expect("Failed to create a KnownEssStore"),
         );
+        let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1500,8 +1524,13 @@ mod tests {
 
         let (client, _sme_stream) = exec.run_singlethreaded(create_client());
         let (update_sender, mut listener_updates) = mpsc::unbounded();
-        let serve_fut =
-            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
+        let serve_fut = serve_provider_requests(
+            client,
+            update_sender,
+            Arc::clone(&saved_networks),
+            network_selector,
+            requests,
+        );
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -1556,6 +1585,7 @@ mod tests {
                 .expect("Failed to create a KnownEssStore"),
         );
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
+        let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1563,8 +1593,13 @@ mod tests {
 
         let (client, _sme_stream) = exec.run_singlethreaded(create_client());
         let (update_sender, mut listener_updates) = mpsc::unbounded();
-        let serve_fut =
-            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
+        let serve_fut = serve_provider_requests(
+            client,
+            update_sender,
+            Arc::clone(&saved_networks),
+            network_selector,
+            requests,
+        );
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -1631,6 +1666,7 @@ mod tests {
             exec.run_singlethreaded(&mut saved_networks_fut)
                 .expect("Failed to create a KnownEssStore"),
         );
+        let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
@@ -1641,6 +1677,7 @@ mod tests {
             Arc::clone(&client),
             update_sender,
             Arc::clone(&saved_networks),
+            network_selector,
             requests,
         );
         pin_mut!(serve_fut);
@@ -1847,6 +1884,7 @@ mod tests {
             ))
             .expect("Failed to create a KnownEssStore"),
         );
+        let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1855,8 +1893,13 @@ mod tests {
         let (client, _sme_stream) = exec.run_singlethreaded(create_client());
         let (update_sender, _listener_updates) = mpsc::unbounded();
 
-        let serve_fut =
-            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
+        let serve_fut = serve_provider_requests(
+            client,
+            update_sender,
+            Arc::clone(&saved_networks),
+            network_selector,
+            requests,
+        );
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -1917,6 +1960,7 @@ mod tests {
             test_values.client,
             test_values.update_sender,
             test_values.saved_networks,
+            test_values.network_selector,
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -1968,6 +2012,7 @@ mod tests {
             test_values.client,
             test_values.update_sender,
             test_values.saved_networks,
+            test_values.network_selector,
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -2042,6 +2087,7 @@ mod tests {
             test_values.client,
             test_values.update_sender,
             test_values.saved_networks,
+            test_values.network_selector,
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -2079,6 +2125,7 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let stash_id = "no_client_interface";
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
+        let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -2086,7 +2133,13 @@ mod tests {
 
         let client = Arc::new(Mutex::new(Client::new_empty()));
         let (update_sender, _listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
+        let serve_fut = serve_provider_requests(
+            client,
+            update_sender,
+            saved_networks,
+            network_selector,
+            requests,
+        );
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
