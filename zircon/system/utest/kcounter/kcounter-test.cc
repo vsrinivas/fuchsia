@@ -13,7 +13,6 @@
 #include <lib/zx/vmo.h>
 #include <unistd.h>
 #include <zxtest/zxtest.h>
-#include "../../uapp/kcounter/kcounter_cmdline.h"
 
 #include <algorithm>
 #include <cinttypes>
@@ -21,6 +20,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <utility>
+
+#include "src/zircon/bin/kcounter/kcounter_cmdline.h"
 
 namespace {
 
