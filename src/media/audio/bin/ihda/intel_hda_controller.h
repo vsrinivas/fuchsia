@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_CONTROLLER_H_
-#define ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_CONTROLLER_H_
+#ifndef SRC_MEDIA_AUDIO_BIN_IHDA_INTEL_HDA_CONTROLLER_H_
+#define SRC_MEDIA_AUDIO_BIN_IHDA_INTEL_HDA_CONTROLLER_H_
 
 #include <memory>
 
@@ -52,4 +52,4 @@ class IntelHDAController : public fbl::WAVLTreeContainable<std::unique_ptr<Intel
 }  // namespace intel_hda
 }  // namespace audio
 
-#endif  // ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_CONTROLLER_H_
+#endif  // SRC_MEDIA_AUDIO_BIN_IHDA_INTEL_HDA_CONTROLLER_H_

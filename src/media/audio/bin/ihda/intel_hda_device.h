@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_DEVICE_H_
-#define ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_DEVICE_H_
+#ifndef SRC_MEDIA_AUDIO_BIN_IHDA_INTEL_HDA_DEVICE_H_
+#define SRC_MEDIA_AUDIO_BIN_IHDA_INTEL_HDA_DEVICE_H_
 
 #include <stdint.h>
 
@@ -26,4 +26,4 @@ zx_status_t ProbeIntelHdaDevice(ZirconDevice* device, IntelHDADevice* result);
 }  // namespace intel_hda
 }  // namespace audio
 
-#endif  // ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_DEVICE_H_
+#endif  // SRC_MEDIA_AUDIO_BIN_IHDA_INTEL_HDA_DEVICE_H_

@@ -7,8 +7,8 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/intel/hda/c/fidl.h>
-#include <lib/fdio/io.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/io.h>
 #include <stdio.h>
 #include <zircon/device/intel-hda.h>
 

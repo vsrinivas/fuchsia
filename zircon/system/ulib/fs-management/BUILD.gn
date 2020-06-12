@@ -62,7 +62,7 @@ if (is_fuchsia) {
 
     data_deps = [
       "//src/storage/bin/blobfs",
-      "//zircon/system/uapp/minfs",
+      "//src/storage/bin/minfs",
       "//zircon/third_party/uapp/fsck-msdosfs",
       "//zircon/third_party/uapp/mkfs-msdosfs",
     ]

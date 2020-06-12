@@ -47,8 +47,8 @@ executable("fs_tests") {
 test_package("fs-tests") {
   deps = [
     ":fs_tests",
+    "//src/storage/bin/minfs",
     "//src/sys/test_runners/gtest",
-    "//zircon/system/uapp/minfs",
   ]
   binaries = [
     {
@@ -93,8 +93,8 @@ executable("large_fs_tests") {
 test_package("large-fs-tests") {
   deps = [
     ":large_fs_tests",
+    "//src/storage/bin/minfs",
     "//src/sys/test_runners/gtest",
-    "//zircon/system/uapp/minfs",
   ]
   binaries = [
     {

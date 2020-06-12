@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_IHDA_CODEC_STATE_H_
-#define ZIRCON_SYSTEM_UAPP_IHDA_CODEC_STATE_H_
+#ifndef SRC_MEDIA_AUDIO_BIN_IHDA_CODEC_STATE_H_
+#define SRC_MEDIA_AUDIO_BIN_IHDA_CODEC_STATE_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -245,4 +245,4 @@ struct CodecState {
 }  // namespace intel_hda
 }  // namespace audio
 
-#endif  // ZIRCON_SYSTEM_UAPP_IHDA_CODEC_STATE_H_
+#endif  // SRC_MEDIA_AUDIO_BIN_IHDA_CODEC_STATE_H_
