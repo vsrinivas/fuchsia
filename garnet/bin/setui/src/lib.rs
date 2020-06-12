@@ -27,6 +27,8 @@ use {
     crate::inspect::inspect_broker::InspectBroker,
     crate::intl::intl_controller::IntlController,
     crate::intl::intl_fidl_handler::spawn_intl_fidl_handler,
+    crate::light::light_controller::LightController,
+    crate::light::light_fidl_handler::spawn_light_fidl_handler,
     crate::night_mode::night_mode_controller::NightModeController,
     crate::night_mode::spawn_night_mode_fidl_handler,
     crate::power::power_controller::PowerController,
@@ -49,6 +51,7 @@ use {
         SettingType, SetupInfo, SystemInfo,
     },
     crate::switchboard::intl_types::IntlInfo,
+    crate::switchboard::light_types::LightInfo,
     crate::switchboard::switchboard_impl::SwitchboardBuilder,
     crate::system::spawn_setui_fidl_handler,
     crate::system::spawn_system_fidl_handler,
@@ -82,6 +85,7 @@ mod input;
 mod inspect;
 mod internal;
 mod intl;
+mod light;
 mod night_mode;
 mod power;
 mod privacy;
@@ -316,6 +320,12 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             SettingType::Display,
             DataHandler::<DisplayInfo, DisplayController>::spawn
         );
+        // Light
+        register_handler!(
+            factory_handle,
+            SettingType::Light,
+            DataHandler::<LightInfo, LightController>::spawn
+        );
         // Light sensor
         register_handler!(
             factory_handle,
@@ -467,6 +477,13 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         let switchboard_client = switchboard_client.clone();
         service_dir.add_fidl_service(move |stream: IntlRequestStream| {
             spawn_intl_fidl_handler(switchboard_client.clone(), stream);
+        });
+    }
+
+    if components.contains(&SettingType::Light) {
+        let switchboard_client = switchboard_client.clone();
+        service_dir.add_fidl_service(move |stream: LightRequestStream| {
+            spawn_light_fidl_handler(switchboard_client.clone(), stream);
         });
     }
 

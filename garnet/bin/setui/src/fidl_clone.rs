@@ -136,6 +136,17 @@ impl FIDLClone for CaptionsSettings {
     }
 }
 
+impl FIDLClone for CaptionFontStyle {
+    fn clone(&self) -> Self {
+        let mut style = CaptionFontStyle::empty();
+        style.family = self.family;
+        style.color = self.color;
+        style.relative_size = self.relative_size;
+        style.char_edge_style = self.char_edge_style;
+        style
+    }
+}
+
 impl FIDLClone for fidl_fuchsia_settings::IntlSettings {
     fn clone(&self) -> Self {
         let mut settings = fidl_fuchsia_settings::IntlSettings::empty();
@@ -153,14 +164,33 @@ impl FIDLClone for fidl_fuchsia_settings::IntlSettings {
     }
 }
 
-impl FIDLClone for CaptionFontStyle {
+impl FIDLClone for LightGroup {
     fn clone(&self) -> Self {
-        let mut style = CaptionFontStyle::empty();
-        style.family = self.family;
-        style.color = self.color;
-        style.relative_size = self.relative_size;
-        style.char_edge_style = self.char_edge_style;
-        style
+        LightGroup {
+            name: self.name.clone(),
+            enabled: self.enabled,
+            type_: self.type_,
+            lights: self
+                .lights
+                .as_ref()
+                .map(|l| l.iter().map(LightState::clone).collect::<Vec<_>>()),
+        }
+    }
+}
+
+impl FIDLClone for LightState {
+    fn clone(&self) -> Self {
+        LightState { value: self.value.as_ref().map(LightValue::clone) }
+    }
+}
+
+impl FIDLClone for LightValue {
+    fn clone(&self) -> Self {
+        match self {
+            LightValue::On(value) => LightValue::On(value.clone()),
+            LightValue::Brightness(value) => LightValue::Brightness(value.clone()),
+            LightValue::Color(value) => LightValue::Color(value.clone()),
+        }
     }
 }
 

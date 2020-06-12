@@ -15,6 +15,7 @@ use thiserror::Error;
 use crate::audio::ModifiedTimestamps;
 use crate::switchboard::accessibility_types::AccessibilityInfo;
 use crate::switchboard::intl_types::IntlInfo;
+use crate::switchboard::light_types::{LightInfo, LightState};
 use bitflags::bitflags;
 
 pub type SwitchboardHandle = Arc<Mutex<dyn Switchboard + Send + Sync>>;
@@ -74,6 +75,7 @@ pub enum SettingType {
     DoNotDisturb,
     Input,
     Intl,
+    Light,
     LightSensor,
     NightMode,
     Power,
@@ -93,6 +95,7 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
         SettingType::DoNotDisturb,
         SettingType::Input,
         SettingType::Intl,
+        SettingType::Light,
         SettingType::LightSensor,
         SettingType::NightMode,
         SettingType::Power,
@@ -149,6 +152,9 @@ pub enum SettingRequest {
 
     // Intl requests.
     SetIntlInfo(IntlInfo),
+
+    // Light requests.
+    SetLightGroupValue(String, Vec<LightState>),
 
     // Night mode requests.
     SetNightModeInfo(NightModeInfo),
@@ -343,6 +349,7 @@ pub enum SettingResponse {
     /// Response to a request to get current brightness state.AccessibilityEncoder
     Brightness(DisplayInfo),
     Device(DeviceInfo),
+    Light(LightInfo),
     LightSensor(LightData),
     DoNotDisturb(DoNotDisturbInfo),
     Input(InputInfo),
@@ -363,6 +370,7 @@ impl SettingResponse {
             SettingResponse::Audio(info) => ("Audio", format!("{:?}", info)),
             SettingResponse::Brightness(info) => ("Brightness", format!("{:?}", info)),
             SettingResponse::Device(info) => ("Device", format!("{:?}", info)),
+            SettingResponse::Light(info) => ("Light", format!("{:?}", info)),
             SettingResponse::LightSensor(info) => ("LightSensor", format!("{:?}", info)),
             SettingResponse::DoNotDisturb(info) => ("DoNotDisturb", format!("{:?}", info)),
             SettingResponse::Input(info) => ("Input", format!("{:?}", info)),
