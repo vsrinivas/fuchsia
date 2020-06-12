@@ -23,7 +23,7 @@ class CompositeDeviceInstance {
   static zx_status_t Create(fbl::RefPtr<zx_device> zxdev, CompositeFragments&& fragments,
                             std::unique_ptr<CompositeDeviceInstance>* device) {
     // Leak a reference to the zxdev here.  It will be cleaned up by the
-    // device_remove() in Unbind().
+    // device_unbind_reply() in Unbind().
     auto dev = std::make_unique<CompositeDeviceInstance>(fbl::ExportToRawPtr(&zxdev),
                                                          std::move(fragments));
     *device = std::move(dev);
@@ -48,7 +48,7 @@ class CompositeDeviceInstance {
       fragment->take_composite();
     }
     fragments_.reset();
-    device_remove_deprecated(zxdev_);
+    device_unbind_reply(zxdev_);
   }
 
   const CompositeFragments& fragments() { return fragments_; }
