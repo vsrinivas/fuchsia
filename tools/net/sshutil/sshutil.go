@@ -54,6 +54,10 @@ const (
 var (
 	// ConnectionError is an all-purpose error indicating the a client had become unresponsive.
 	ConnectionError = errors.New("SSH connection error")
+
+	// defaultConnectBackoff is the connection backoff for clients returned by
+	// Connect() and ConnectToNode().
+	defaultConnectBackoff = retry.WithMaxDuration(&retry.ZeroBackoff{}, totalConnectTimeout)
 )
 
 // GeneratePrivateKey generates a private SSH key.
@@ -93,8 +97,7 @@ func ConnectDeprecated(ctx context.Context, raddr net.Addr, config *ssh.ClientCo
 	var client *ssh.Client
 	// TODO: figure out optimal backoff time and number of retries
 	startTime := time.Now()
-	backoff := retry.WithMaxDuration(&retry.ZeroBackoff{}, totalConnectTimeout)
-	if err := retry.Retry(ctx, backoff, func() error {
+	if err := retry.Retry(ctx, defaultConnectBackoff, func() error {
 		var err error
 		client, err = dialWithTimeout(ctx, network, raddr.String(), config, connectAttemptTimeout)
 		return err

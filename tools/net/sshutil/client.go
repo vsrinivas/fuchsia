@@ -64,9 +64,16 @@ func (c *Client) RegisterDisconnectListener(ch chan struct{}) {
 	conn.RegisterDisconnectListener(ch)
 }
 
-// Reconnect will disconnect the client from the server if connected, then
-// reconnect to the server.
+// Reconnect will disconnect and then reconnect the client, using the client's
+// `connectBackoff` to determine the retry strategy.
 func (c *Client) Reconnect(ctx context.Context) error {
+	return c.ReconnectWithBackoff(ctx, c.connectBackoff)
+}
+
+// ReconnectWithBackoff will disconnect the client from the server if connected,
+// then reconnect to the server, with a retry strategy based on the given
+// backoff.
+func (c *Client) ReconnectWithBackoff(ctx context.Context, backoff retry.Backoff) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -76,7 +83,7 @@ func (c *Client) Reconnect(ctx context.Context) error {
 		c.connected = false
 	}
 
-	conn, err := newConn(ctx, c.addr, c.config, c.connectBackoff)
+	conn, err := newConn(ctx, c.addr, c.config, backoff)
 	if err != nil {
 		return err
 	}
