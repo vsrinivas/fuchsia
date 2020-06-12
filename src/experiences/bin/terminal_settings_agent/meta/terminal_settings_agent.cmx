@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/terminal_settings_agent"
     },
     "sandbox": {
         "features": [

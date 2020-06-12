@@ -42,7 +42,11 @@ package("terminal_settings_agent") {
 
   deps = [ ":bin" ]
 
-  binary = "terminal_settings_agent"
+  binaries = [
+    {
+      name = "terminal_settings_agent"
+    },
+  ]
 }
 
 test_package("terminal_settings_agent_tests") {
