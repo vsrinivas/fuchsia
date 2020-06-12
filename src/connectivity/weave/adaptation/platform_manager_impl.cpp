@@ -49,6 +49,7 @@ void PlatformManagerImpl::_PostEvent(const WeaveDeviceEvent *event) {
 void PlatformManagerImpl::ShutdownWeaveStack(void) {
   Internal::GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>::_ShutdownWeaveStack();
   ConfigurationMgrImpl().SetDelegate(nullptr);
+  context_.reset();
 }
 
 }  // namespace DeviceLayer

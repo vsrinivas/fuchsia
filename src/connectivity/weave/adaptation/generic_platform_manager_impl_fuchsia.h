@@ -7,6 +7,8 @@
 #include <mutex>
 
 #include <Weave/DeviceLayer/internal/GenericPlatformManagerImpl.h>
+#include <Weave/Profiles/service-directory/ServiceDirectory.h>
+#include <Weave/Profiles/device-control/DeviceControl.h>
 
 namespace nl {
 namespace Weave {
@@ -47,6 +49,8 @@ class GenericPlatformManagerImpl_Fuchsia : public GenericPlatformManagerImpl<Imp
  public:
   System::Layer& GetSystemLayer();
   nl::Inet::InetLayer& GetInetLayer();
+  nl::Weave::Profiles::ServiceDirectory::WeaveServiceManager& GetServiceDirectoryManager();
+  nl::Weave::Profiles::DeviceControl::DeviceControlDelegate& GetDeviceControl();
 };
 
 // Instruct the compiler to instantiate the template only when explicitly told to do so.

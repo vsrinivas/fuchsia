@@ -1,0 +1,8 @@
+{
+    "vendor-id" : 5050,
+    "product-id" : 60209,
+    "firmware-revision" : "prerelease-1",
+    "pairing-code" : "PAIRDUMMY123",
+    "device-id-path" : "test_device_id",
+    "mfr-device-cert-path": "test_mfr_cert"
+}

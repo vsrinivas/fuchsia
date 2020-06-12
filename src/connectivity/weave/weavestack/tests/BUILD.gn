@@ -37,12 +37,18 @@ executable("unittests") {
 
   testonly = true
 
-  sources = [ "app_test.cc" ]
+  sources = [
+    "app_test.cc",
+    "stack_impl_test.cc",
+    "stack_utils_test.cc",
+  ]
 
   public_deps = [
+    "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
     "//src/connectivity/weave/weavestack:lib",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -52,5 +58,8 @@ executable("unittests") {
 
 config_data("config") {
   for_pkg = "weavestack_unittests"
-  sources = [ "testdata/default_environment.json" ]
+  sources = [
+    "testdata/default_environment.json",
+    "testdata/device_info.json",
+  ]
 }

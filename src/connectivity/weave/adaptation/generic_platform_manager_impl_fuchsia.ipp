@@ -199,6 +199,20 @@ nl::Inet::InetLayer& GenericPlatformManagerImpl_Fuchsia<ImplClass>::GetInetLayer
 }
 
 template<class ImplClass>
+nl::Weave::Profiles::ServiceDirectory::WeaveServiceManager&
+GenericPlatformManagerImpl_Fuchsia<ImplClass>::GetServiceDirectoryManager()
+{
+  return Internal::ServiceDirectoryMgr;
+}
+
+template<class ImplClass>
+nl::Weave::Profiles::DeviceControl::DeviceControlDelegate&
+GenericPlatformManagerImpl_Fuchsia<ImplClass>::GetDeviceControl()
+{
+  return DeviceControlSvr();
+}
+
+template<class ImplClass>
 void GenericPlatformManagerImpl_Fuchsia<ImplClass>::_ShutdownWeaveStack(void)
 {
   EchoSvr().Shutdown();

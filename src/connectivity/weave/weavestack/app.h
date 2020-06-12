@@ -9,10 +9,13 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
+#include <memory>
 #include <src/lib/fsl/tasks/fd_waiter.h>
 #include <sys/select.h>
 #include <vector>
 #include <Weave/Core/WeaveError.h>
+
+#include "fidl/stack_impl.h"
 
 namespace weavestack {
 
@@ -45,6 +48,7 @@ class App {
   async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
   bool initialized_ = false;
   std::unique_ptr<async::TaskClosure> sleep_task_;
+  std::unique_ptr<StackImpl> stack_impl_;
 };
 
 }  // namespace weavestack
