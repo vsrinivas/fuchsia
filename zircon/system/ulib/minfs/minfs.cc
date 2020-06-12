@@ -568,19 +568,19 @@ void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
   if (!data_operations.is_empty() && !metadata_operations.is_empty()) {
     journal_->schedule_task(
         journal_->WriteData(std::move(data_operations))
-        .and_then(journal_->WriteMetadata(std::move(metadata_operations)))
-        .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
-        .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
+            .and_then(journal_->WriteMetadata(std::move(metadata_operations)))
+            .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
+            .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
   } else if (!metadata_operations.is_empty()) {
     journal_->schedule_task(
         journal_->WriteMetadata(std::move(metadata_operations))
-        .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
-        .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
+            .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
+            .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
   } else if (!data_operations.is_empty()) {
     journal_->schedule_task(
         journal_->WriteData(std::move(data_operations))
-        .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
-        .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
+            .inspect(ReleaseObject(transaction->RemovePinnedVnodes()))
+            .inspect(ReleaseObject(transaction->block_reservation().TakePendingDeallocations())));
   }
 #else
   bc_->RunRequests(transaction->TakeOperations());
@@ -594,7 +594,7 @@ void Minfs::FsckAtEndOfTransaction(zx_status_t status) {
     {
       std::unique_ptr<Bcache> bcache;
       ZX_ASSERT(Bcache::Create(bc_->device(), bc_->Maxblk(), &bcache) == ZX_OK);
-      ZX_ASSERT(Fsck(std::move(bcache), FsckOptions{ .read_only = true }, &bcache) == ZX_OK);
+      ZX_ASSERT(Fsck(std::move(bcache), FsckOptions{.read_only = true}, &bcache) == ZX_OK);
     }
     bc_->Resume();
   }
@@ -1015,12 +1015,11 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
   fs::BufferedOperationsBuilder builder;
 
   // Block Bitmap allocator initialization.
-  AllocatorFvmMetadata block_allocator_fvm = AllocatorFvmMetadata(
-      sb.get(), SuperblockAllocatorAccess::Blocks());
-  AllocatorMetadata block_allocator_meta =
-      AllocatorMetadata(info.dat_block, abm_start_block, (info.flags & kMinfsFlagFVM) != 0,
-                        std::move(block_allocator_fvm),
-                        sb.get(), SuperblockAllocatorAccess::Blocks());
+  AllocatorFvmMetadata block_allocator_fvm =
+      AllocatorFvmMetadata(sb.get(), SuperblockAllocatorAccess::Blocks());
+  AllocatorMetadata block_allocator_meta = AllocatorMetadata(
+      info.dat_block, abm_start_block, (info.flags & kMinfsFlagFVM) != 0,
+      std::move(block_allocator_fvm), sb.get(), SuperblockAllocatorAccess::Blocks());
 
   std::unique_ptr<PersistentStorage> storage(
 #ifdef __Fuchsia__
@@ -1038,12 +1037,11 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
   }
 
   // Inode Bitmap allocator initialization.
-  AllocatorFvmMetadata inode_allocator_fvm = AllocatorFvmMetadata(
-      sb.get(), SuperblockAllocatorAccess::Inodes());
-  AllocatorMetadata inode_allocator_meta =
-      AllocatorMetadata(ino_start_block, ibm_start_block, (info.flags & kMinfsFlagFVM) != 0,
-                        std::move(inode_allocator_fvm), sb.get(),
-                        SuperblockAllocatorAccess::Inodes());
+  AllocatorFvmMetadata inode_allocator_fvm =
+      AllocatorFvmMetadata(sb.get(), SuperblockAllocatorAccess::Inodes());
+  AllocatorMetadata inode_allocator_meta = AllocatorMetadata(
+      ino_start_block, ibm_start_block, (info.flags & kMinfsFlagFVM) != 0,
+      std::move(inode_allocator_fvm), sb.get(), SuperblockAllocatorAccess::Inodes());
 
   std::unique_ptr<InodeManager> inodes;
 #ifdef __Fuchsia__
@@ -1072,9 +1070,9 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
     return status;
   }
 
-  *out_minfs = std::unique_ptr<Minfs>(
-      new Minfs(std::move(bc), std::move(sb), std::move(block_allocator), std::move(inodes), id,
-                mount_options));
+  *out_minfs =
+      std::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
+                                       std::move(inodes), id, mount_options));
 #else
   *out_minfs =
       std::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
@@ -1254,7 +1252,7 @@ zx_status_t Minfs::InitializeJournal(fs::JournalSuperblock journal_superblock) {
   journal_ = std::make_unique<fs::Journal>(GetMutableBcache(), std::move(journal_superblock),
                                            std::move(journal_buffer), std::move(writeback_buffer),
                                            JournalStartBlock(sb_->Info()),
-                                           fs::Journal::Options{ .sequence_data_writes = false });
+                                           fs::Journal::Options{.sequence_data_writes = false});
   return ZX_OK;
 }
 
