@@ -37,8 +37,11 @@ rustc_binary("bin") {
 package("battery-manager") {
   deps = [ ":bin" ]
 
-  binary = "battery_manager"
-
+  binaries = [
+    {
+      name = "battery_manager"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/battery_manager.cmx")
