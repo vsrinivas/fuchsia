@@ -29,5 +29,9 @@ package("io_conformance_harness_rustvfs") {
     },
   ]
   testonly = true
-  binary = "io_conformance_harness_rustvfs"
+  binaries = [
+    {
+      name = "io_conformance_harness_rustvfs"
+    },
+  ]
 }
