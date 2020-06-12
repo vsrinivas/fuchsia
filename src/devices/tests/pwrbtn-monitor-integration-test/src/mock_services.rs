@@ -72,27 +72,25 @@ async fn main() -> Result<(), Error> {
             async move {
                 fx_log_info!("new connection to {}", statecontrol::AdminMarker::NAME);
                 match stream.try_next().await? {
-                    Some(statecontrol::AdminRequest::Suspend { state, responder }) => {
-                        if state == statecontrol::SystemPowerState::Poweroff {
-                            // If we respond to pwrbtn-monitor it will go back to check the signals
-                            // on the event we gave it, see that ZX_USER_SIGNAL_0 is still set, and
-                            // call this again, and thus be stuck in a loop until the test is torn
-                            // down. This isn't useful, and generates quite a bit of log noise at
-                            // the end of the test. To avoid this, we need to clear the signal on
-                            // the event.
-                            event_for_test_protocol
-                                .signal_handle(zx::Signals::USER_0, zx::Signals::NONE)?;
+                    Some(statecontrol::AdminRequest::Poweroff { responder }) => {
+                        // If we respond to pwrbtn-monitor it will go back to check the signals
+                        // on the event we gave it, see that ZX_USER_SIGNAL_0 is still set, and
+                        // call this again, and thus be stuck in a loop until the test is torn
+                        // down. This isn't useful, and generates quite a bit of log noise at
+                        // the end of the test. To avoid this, we need to clear the signal on
+                        // the event.
+                        event_for_test_protocol
+                            .signal_handle(zx::Signals::USER_0, zx::Signals::NONE)?;
 
-                            responder.send(&mut Ok(()))?;
+                        responder.send(&mut Ok(()))?;
 
-                            if let Some(send_test_result) = send_test_result {
-                                send_test_result.send(()).expect("failed to send test completion");
-                            }
-                        } else {
-                            panic!("unexpected value sent to Suspend: {:?}", state);
+                        if let Some(send_test_result) = send_test_result {
+                            send_test_result.send(()).expect("failed to send test completion");
                         }
                     }
-                    _ => (),
+                    _ => {
+                        panic!("only expecting calls to Poweroff");
+                    }
                 }
                 Ok(())
             }

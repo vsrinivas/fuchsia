@@ -164,7 +164,7 @@ zx_status_t send_poweroff() {
   }
 
   auto admin_client = power_fidl::statecontrol::Admin::SyncClient(std::move(channel_local));
-  auto resp = admin_client.Suspend(power_fidl::statecontrol::SystemPowerState::POWEROFF);
+  auto resp = admin_client.Poweroff();
 
   if (resp.status() != ZX_OK) {
     printf("pwrbtn-monitor: Call to %s failed: ret: %s, %s\n", service.c_str(),
