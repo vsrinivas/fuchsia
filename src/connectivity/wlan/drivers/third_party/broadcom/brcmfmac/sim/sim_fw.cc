@@ -16,6 +16,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_fw.h"
 
+#include <arpa/inet.h>
 #include <zircon/assert.h>
 
 #include <cstddef>
@@ -211,6 +212,13 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       }
       break;
     }
+    case BRCMF_C_SET_PROMISC:
+      // Set promiscuous mode
+      if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(uint32_t))) == ZX_OK) {
+        value = *(reinterpret_cast<uint32_t*>(data));
+        ZX_ASSERT_MSG(!value, "Promiscuous mode not supported in simulator");
+      }
+    break;
     case BRCMF_C_SET_SCAN_PASSIVE_TIME:
       if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(default_passive_time_))) == ZX_OK) {
         default_passive_time_ = *(reinterpret_cast<uint32_t*>(data));
@@ -1260,6 +1268,28 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
     return HandleBssCfgSet(ifidx, name + bsscfg_prefix_len, value, value_len);
   }
 
+  if (!std::strcmp(name, "arp_ol")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_IO;
+    }
+    if (!iface_tbl_[ifidx].allocated) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    iface_tbl_[ifidx].arp_ol = *(static_cast<const uint32_t*>(value));
+    return ZX_OK;
+  }
+
+  if (!std::strcmp(name, "arpoe")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_IO;
+    }
+    if (!iface_tbl_[ifidx].allocated) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    iface_tbl_[ifidx].arpoe = *(static_cast<const uint32_t*>(value));
+    return ZX_OK;
+  }
+
   if (!std::strcmp(name, "country")) {
     auto cc_req = static_cast<const brcmf_fil_country_le*>(value);
     country_code_ = *cc_req;
@@ -1376,7 +1406,24 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
     memset(value_out, 0, value_len);
     return status;
   }
-  if (!std::strcmp(name, "ver")) {
+
+  if (!std::strcmp(name, "arp_ol")) {
+    if (!iface_tbl_[ifidx].allocated) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    memcpy(value_out, &iface_tbl_[ifidx].arp_ol, sizeof(uint32_t));
+  } else if (!std::strcmp(name, "arpoe")) {
+    if (value_len < sizeof(uint32_t)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (!iface_tbl_[ifidx].allocated) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    memcpy(value_out, &iface_tbl_[ifidx].arpoe, sizeof(uint32_t));
+  } else if (!std::strcmp(name, "ver")) {
     if (value_len >= (strlen(kFirmwareVer) + 1)) {
       strlcpy(static_cast<char*>(value_out), kFirmwareVer, value_len);
     } else {
@@ -1707,6 +1754,37 @@ void SimFirmware::RxMgmtFrame(std::shared_ptr<const simulation::SimManagementFra
   }
 }
 
+bool SimFirmware::OffloadArpFrame(int16_t ifidx,
+                                  std::shared_ptr<const simulation::SimDataFrame> data_frame) {
+  // Feature is disabled for this interface
+  if (iface_tbl_[ifidx].arpoe == 0) {
+    return false;
+  }
+
+  if (data_frame->payload_.size() < (sizeof(ethhdr) + sizeof(ether_arp))) {
+    return false;
+  }
+
+  auto eth_hdr = reinterpret_cast<const ethhdr*>(data_frame->payload_.data());
+  if (ntohs(eth_hdr->h_proto) != ETH_P_ARP) {
+    return false;
+  }
+
+  auto arp_hdr = reinterpret_cast<const ether_arp*>(&data_frame->payload_.data()[sizeof(eth_hdr)]);
+  uint16_t ar_op = ntohs(arp_hdr->ea_hdr.ar_op);
+  uint32_t arp_ol = iface_tbl_[ifidx].arp_ol;
+
+  if (ar_op == ARPOP_REQUEST) {
+    // TODO: Actually construct the ARP reply, which would require us to sniff for IP addresses.
+    // For now, not forwarding the packet to the host is enough.
+    return (arp_ol & BRCMF_ARP_OL_AGENT) && (arp_ol & BRCMF_ARP_OL_PEER_AUTO_REPLY);
+  }
+
+  // TODO: Add support for ARP offloading of other commands
+  ZX_ASSERT_MSG(0, "Support for ARP offloading (op = %d) unimplemented", ar_op);
+  return false;
+}
+
 void SimFirmware::RxDataFrame(std::shared_ptr<const simulation::SimDataFrame> data_frame,
                               std::shared_ptr<const simulation::WlanRxInfo> info) {
   bool is_broadcast = (data_frame->addr1_ == common::kBcastMac);
@@ -1715,6 +1793,8 @@ void SimFirmware::RxDataFrame(std::shared_ptr<const simulation::SimDataFrame> da
     if (!iface_tbl_[idx].allocated)
       continue;
     if (!(is_broadcast || (data_frame->addr1_ == iface_tbl_[idx].mac_addr)))
+      continue;
+    if (OffloadArpFrame(idx, data_frame))
       continue;
     SendFrameToDriver(idx, data_frame->payload_.size(), data_frame->payload_, info);
   }

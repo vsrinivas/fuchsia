@@ -238,6 +238,8 @@ class SimFirmware {
    * iface_id - the iface id allocated by SIM FW - in this case always the array index of the table
    * ap_mode - is the iface in SoftAP(true) or Client(false) mode
    * ap_config - SoftAP specific config (set when interface is configured as SoftAP)
+   * arpoe - is ARP offloading enabled on this interface
+   * arp_ol - in what mode is ARP offloading operating (see BRCMF_ARP_OL_* flags)
    */
 
   typedef struct sim_iface_entry {
@@ -253,6 +255,8 @@ class SimFirmware {
     uint32_t tlv = 0;
     bool ap_mode;
     ApConfig ap_config;
+    uint32_t arpoe = 0;
+    uint32_t arp_ol = 0;
   } sim_iface_entry_t;
 
   // This value is specific to firmware, and drives some behavior (notably the interpretation
@@ -311,15 +315,19 @@ class SimFirmware {
   void RestartBeaconWatchdog();
   void DisableBeaconWatchdog();
   void HandleBeaconTimeout();
+
   // Handlers for events from hardware
   void Rx(std::shared_ptr<const simulation::SimFrame> frame,
           std::shared_ptr<const simulation::WlanRxInfo> info);
+
+  // Perform in-firmware ARP processing, if enabled. Returns a value indicating if the frame was
+  // completely offloaded (and doesn't need to be passed to the driver).
+  bool OffloadArpFrame(int16_t ifidx, std::shared_ptr<const simulation::SimDataFrame> data_frame);
 
   void RxMgmtFrame(std::shared_ptr<const simulation::SimManagementFrame> mgmt_frame,
                    std::shared_ptr<const simulation::WlanRxInfo> info);
   void RxDataFrame(std::shared_ptr<const simulation::SimDataFrame> data_frame,
                    std::shared_ptr<const simulation::WlanRxInfo> info);
-
   void RxBeacon(const wlan_channel_t& channel,
                 std::shared_ptr<const simulation::SimBeaconFrame> frame);
   void RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFrame> frame);
@@ -329,6 +337,7 @@ class SimFirmware {
                    std::shared_ptr<const simulation::SimProbeRespFrame> frame,
                    double signal_strength);
   void RxAuthResp(std::shared_ptr<const simulation::SimAuthFrame> frame);
+
   // Handler for channel switch.
   void ConductChannelSwitch(const wlan_channel_t& dst_channel, uint8_t mode);
   void RxDeauthReq(std::shared_ptr<const simulation::SimDeauthFrame> frame);
