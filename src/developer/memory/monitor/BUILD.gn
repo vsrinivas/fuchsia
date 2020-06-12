@@ -73,7 +73,11 @@ executable("bin") {
 package("monitor") {
   package_name = "memory_monitor"
   deps = [ ":bin" ]
-  binary = "memory_monitor"
+  binaries = [
+    {
+      name = "memory_monitor"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/memory_monitor.cmx")

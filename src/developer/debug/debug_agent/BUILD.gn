@@ -134,7 +134,11 @@ package("debug_agent") {
     },
   ]
 
-  binary = "debug_agent"
+  binaries = [
+    {
+      name = "debug_agent"
+    },
+  ]
 }
 
 # Common functionality used by tests.
