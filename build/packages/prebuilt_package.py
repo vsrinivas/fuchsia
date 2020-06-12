@@ -31,6 +31,12 @@ def main():
 
     extract(args.pm_tool, args.archive, args.workdir)
 
+    with open(os.path.join(args.workdir, 'package_manifest.json')) as f:
+        manifest = json.load(f)
+        if manifest.get('package').get('name') != args.name:
+            sys.stderr.write('Prebuilt package name {} does not match the name contained within {}\n'.format(args.name, args.archive))
+            return 1
+
     with open(args.system_rsp, 'w') as f:
         f.truncate(0)
 
