@@ -28,10 +28,8 @@ class CommandLineInterface(object):
     # Convenience file descriptor for silencing subprocess output
     DEVNULL = open(os.devnull, 'w')
 
-    def __init__(self, fd_out=None, fd_err=None, tracing=False):
+    def __init__(self, tracing=False):
         self._platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
-        self._fd_out = fd_out if fd_out else sys.stdout
-        self._fd_err = fd_err if fd_err else sys.stdout
         self._tracing = tracing
 
     @property
@@ -62,7 +60,7 @@ class CommandLineInterface(object):
         """
         if not args:
             args = ['']
-        fd = kwargs.pop('fd', self._fd_out)
+        fd = kwargs.pop('fd', sys.stdout)
         end = kwargs.pop('end', '\n')
         assert not kwargs, 'Unexpected keyword arguments: {}'.format(kwargs)
         for line in args:
@@ -73,7 +71,7 @@ class CommandLineInterface(object):
     def error(self, *lines, **kwargs):
         """Print an error message and exit."""
         assert lines, 'Fatal error without error message.'
-        fd = kwargs.pop('fd', self._fd_err)
+        fd = kwargs.pop('fd', sys.stderr)
         status = kwargs.pop('status', 1)
         assert not kwargs, 'Unexpected keyword arguments: {}'.format(kwargs)
         self.echo('ERROR: {}'.format(lines[0]), fd=fd)
@@ -86,12 +84,11 @@ class CommandLineInterface(object):
         self.echo(prompt)
         for i, choice in enumerate(choices, 1):
             self.echo("  {}) {}".format(i, choice))
-
-        prompt = "Choose 1-{}: ".format(len(choices))
         choice = preselected
         while not choice:
+            self.echo("Choose 1-{}: ".format(len(choices)), end='')
             try:
-                choice = choices[int(raw_input(prompt)) - 1]
+                choice = choices[int(raw_input()) - 1]
             except ValueError, IndexError:
                 self.echo("Invalid selection.")
         return choice

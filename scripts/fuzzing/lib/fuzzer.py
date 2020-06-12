@@ -27,10 +27,10 @@ class Fuzzer(object):
 
     Attributes:
       device:           The associated Device object.
-      host:             Alias for host.
-      cli:              Alias for cli.
+      buildenv:         Alias for device.buildenv.
+      cli:              Alias for device.buildenv.cli.
       package:          The GN fuzzers_package name (or package_name).
-      executable:       The GN fuzzers name  (or output_name).
+      executable:       The GN fuzzers name (or output_name).
       libfuzzer_opts:   "-key=val" options to pass to libFuzzer
       libfuzzer_inputs: Additional files and directories to pass to libFuzzer
       subprocess_args:  Additional arguments to pass to the fuzzer process.
@@ -68,7 +68,7 @@ class Fuzzer(object):
         self._ns = Namespace(self)
         self._corpus = Corpus(self)
         self._dictionary = Dictionary(self)
-        self._output = self.host.fxpath(
+        self._output = self.buildenv.path(
             'local', '{}_{}'.format(package, executable))
         self._logbase = None
 
@@ -81,14 +81,14 @@ class Fuzzer(object):
         return self._device
 
     @property
-    def host(self):
-        """Alias for device.host."""
-        return self.device.host
+    def buildenv(self):
+        """Alias for device.buildenv."""
+        return self.device.buildenv
 
     @property
     def cli(self):
-        """Alias for device.host.cli."""
-        return self.device.host.cli
+        """Alias for device.buildenv.cli."""
+        return self.device.buildenv.cli
 
     @property
     def package(self):
@@ -325,7 +325,7 @@ class Fuzzer(object):
                     pid = self.device.guess_pid()
                 if not sym:
                     raw = self.device.dump_log('--pid', str(pid))
-                    sym = self.host.symbolize(raw)
+                    sym = self.buildenv.symbolize(raw)
                     fd_out.write(sym)
                     if echo:
                         self.cli.echo(sym.strip())
@@ -366,15 +366,14 @@ class Fuzzer(object):
     def repro(self):
         """Runs the fuzzer with test input artifacts.
 
-      Executes a command like:
-      run fuchsia-pkg://fuchsia.com/<package>#meta/<executable>.cmx \
+        Executes a command like:
+        run fuchsia-pkg://fuchsia.com/<package>#meta/<executable>.cmx \
         -artifact_prefix=data -jobs=1 data/<artifact>...
 
-      If host artifact paths are specified, they will be copied to the device
-      instance and used.
+        The specified artifacts will be copied to the device instance and used.
 
-      See also: https://llvm.org/docs/LibFuzzer.html#options
-    """
+        See also: https://llvm.org/docs/LibFuzzer.html#options
+        """
         if not self._libfuzzer_inputs:
             self.cli.error('No units provided.', 'Try "fx fuzz help".')
 

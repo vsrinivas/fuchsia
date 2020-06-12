@@ -7,18 +7,18 @@ import re
 import subprocess
 import time
 
-from host import Host
+from buildenv import BuildEnv
 from cli import CommandLineInterface
 
 
 class Device(object):
-    """Represents a Fuchsia device attached to a host.
+    """Represents a Fuchsia device running a specific build.
 
        This class abstracts the details of remotely running commands and
        transferring data to and from the device.
 
        Attributes:
-         host:             The associated Host object for this device.
+         buildenv:         The associated BuildEnv object for this device.
          addr:             The device's IPv6 address.
          port:             TCP port number that sshd is listening on.
          ssh_config:       Path to an SSH configuration file.
@@ -27,10 +27,10 @@ class Device(object):
          ssh_verbosity:    How verbose SSH processes are, from 0 to 3.
     """
 
-    def __init__(self, host, addr):
-        assert host, 'Device host not set.'
+    def __init__(self, buildenv, addr):
+        assert buildenv, 'Build environment for device not set.'
         assert addr, 'Device address not set.'
-        self._host = host
+        self._buildenv = buildenv
         self._addr = addr
         self._ssh_options = {}
         self._ssh_config_options = []
@@ -38,14 +38,14 @@ class Device(object):
         self._pids = None
 
     @property
-    def host(self):
-        """The associated Host object for this device."""
-        return self._host
+    def buildenv(self):
+        """The associated BuildEnv object for this device."""
+        return self._buildenv
 
     @property
     def cli(self):
-        """Alias for host.cli."""
-        return self.host.cli
+        """Alias for buildenv.cli."""
+        return self.buildenv.cli
 
     @property
     def addr(self):
@@ -107,8 +107,8 @@ class Device(object):
 
     def configure(self):
         """Sets the defaults for this device."""
-        self.ssh_config = self.host.fxpath(
-            self.host.build_dir, 'ssh-keys', 'ssh_config')
+        self.ssh_config = self.buildenv.path(
+            self.buildenv.build_dir, 'ssh-keys', 'ssh_config')
 
     def ssh_opts(self):
         """Returns the SSH executable and options."""

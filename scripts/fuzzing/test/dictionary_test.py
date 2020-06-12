@@ -7,10 +7,10 @@ import os
 import unittest
 
 import test_env
-from test_case import FuzzerTestCase
+from test_case import TestCaseWithFuzzer
 
 
-class DictionaryTest(FuzzerTestCase):
+class DictionaryTest(TestCaseWithFuzzer):
 
     @property
     def dictionary(self):

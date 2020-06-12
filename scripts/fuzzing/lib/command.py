@@ -15,8 +15,8 @@ from fuzzer import Fuzzer
 
 def list_fuzzers(args, factory):
     """Implementation of "fx fuzz list"."""
-    host = factory.create_host()
-    fuzzers = host.fuzzers(args.name)
+    buildenv = factory.create_buildenv()
+    fuzzers = buildenv.fuzzers(args.name)
     if len(fuzzers) == 0:
         factory.cli.echo('No matching fuzzers.')
     else:
@@ -54,7 +54,7 @@ def check_fuzzer(args, factory):
     """Implementation of "fx fuzz check"."""
     device = factory.create_device()
     status = None
-    for package, executable in device.host.fuzzers(args.name):
+    for package, executable in device.buildenv.fuzzers(args.name):
         fuzzer = Fuzzer(device, package, executable)
         if not args.name and not fuzzer.is_running():
             continue

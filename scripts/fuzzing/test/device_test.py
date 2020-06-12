@@ -9,16 +9,18 @@ import subprocess
 
 import test_env
 from lib.device import Device
-from test_case import TestCase
+from test_case import TestCaseWithFactory
 
 
-class DeviceTest(TestCase):
+class DeviceTest(TestCaseWithFactory):
 
     # These tests don't use a factory-created Device.
     # This to avoid having the factory add SSH options.
 
     def test_ssh_config(self):
-        device = Device(self.host, '::1')
+        device = Device(self.buildenv, '::1')
+        self.assertFalse(device.ssh_config)
+
         with self.assertRaises(ValueError):
             device.ssh_config = 'no_such_config'
         ssh_config = 'ssh_config'
@@ -27,7 +29,9 @@ class DeviceTest(TestCase):
         self.assertEqual(['-F', ssh_config], device.ssh_opts())
 
     def test_ssh_identity(self):
-        device = Device(self.host, '::1')
+        device = Device(self.buildenv, '::1')
+        self.assertFalse(device.ssh_identity)
+
         with self.assertRaises(ValueError):
             device.ssh_identity = 'no_such_identity'
         ssh_identity = 'ssh_identity'
@@ -36,7 +40,9 @@ class DeviceTest(TestCase):
         self.assertEqual(['-i', ssh_identity], device.ssh_opts())
 
     def test_ssh_option(self):
-        device = Device(self.host, '::1')
+        device = Device(self.buildenv, '::1')
+        self.assertEqual(device.ssh_options, [])
+
         device.ssh_options = ['StrictHostKeyChecking no']
         device.ssh_options.append('UserKnownHostsFile=/dev/null')
         self.assertEqual(
@@ -48,7 +54,7 @@ class DeviceTest(TestCase):
             ], device.ssh_opts())
 
     def test_ssh_verbosity(self):
-        device = Device(self.host, '::1')
+        device = Device(self.buildenv, '::1')
         self.assertEqual(device.ssh_verbosity, 0)
 
         with self.assertRaises(ValueError):
@@ -70,11 +76,12 @@ class DeviceTest(TestCase):
             device.ssh_verbosity = -1
 
     def test_configure(self):
-        device = Device(self.host, '::1')
+        device = Device(self.buildenv, '::1')
         device.configure()
         self.assertEqual(
             device.ssh_config,
-            self.host.fxpath(self.host.build_dir, 'ssh-keys', 'ssh_config'))
+            self.buildenv.path(
+                self.buildenv.build_dir, 'ssh-keys', 'ssh_config'))
         self.assertFalse(device.ssh_identity)
         self.assertFalse(device.ssh_options)
         self.assertFalse(device.ssh_verbosity)

@@ -7,6 +7,7 @@ import errno
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from StringIO import StringIO
@@ -14,30 +15,50 @@ from StringIO import StringIO
 import test_env
 from lib.cli import CommandLineInterface
 from cli_fake import FakeCLI
+from test_case import TestCaseWithIO
+""" Test the real and fake implementations of the CommandLineInterface.
+
+The structure of these tests is organized into 5 classes:
+
+  NonHermeticTestCase       CommandLineInterfaceTestCase       HermeticTestCase
+        ^                          ^      ^                              ^
+        |                          |      |                              |
+        +-CommandLineInterfaceTest-+      +-FakeCommandLineInterfaceTest-+
+
+NonHermeticTestCase is a TestCase that provides real-system utility functions.
+HermeticTestCase is a TestCase that provides faked utility functions.
+CommandLineInterfaceTestCase defines a set of tests without a TestCase.
+CommandLineInterfaceTest creates tests for CommandLineInterface.
+FakeCommandLineInterfaceTest creates tests for FakeCLI.
+"""
 
 
-class NonHermeticTestCase(unittest.TestCase):
+class NonHermeticTestCase(TestCaseWithIO):
+    """TestCase that provides real-system utility functions."""
+
+    # Unit test "constructor" and "destructor"
 
     def setUp(self):
         super(NonHermeticTestCase, self).setUp()
-        self._err = StringIO()
-        self._cli = CommandLineInterface(fd_err=self._err)
+        self._cli = CommandLineInterface()
         self._temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self._temp_dir)
+        self._temp_dir = None
+        super(NonHermeticTestCase, self).tearDown()
+
+    # Unit test context
 
     @property
     def cli(self):
         return self._cli
 
     @property
-    def errors(self):
-        self._err.seek(0)
-        errors = self._err.read().strip()
-        self._err.seek(0)
-        return errors
-
-    @property
     def temp_dir(self):
         return self._temp_dir
+
+    # Unit test utilities
 
     def isfile(self, pathname):
         return os.path.isfile(pathname)
@@ -57,13 +78,11 @@ class NonHermeticTestCase(unittest.TestCase):
             if contents:
                 opened.write(contents)
 
-    def tearDown(self):
-        shutil.rmtree(self._temp_dir)
-        self._temp_dir = None
-        super(NonHermeticTestCase, self).tearDown()
 
+class HermeticTestCase(TestCaseWithIO):
+    """TestCase that provides faked utility functions."""
 
-class HermeticTestCase(unittest.TestCase):
+    # Unit test "constructor"
 
     def setUp(self):
         super(HermeticTestCase, self).setUp()
@@ -75,17 +94,17 @@ class HermeticTestCase(unittest.TestCase):
         process = self.cli.create_process(['echo foo'])
         process.schedule(start=0, output='foo')
 
+    # Unit test context
+
     @property
     def cli(self):
         return self._cli
 
     @property
-    def errors(self):
-        return '\n'.join(self.cli.log)
-
-    @property
     def temp_dir(self):
         return 'temp_dir'
+
+    # Unit test utilities
 
     def isfile(self, pathname):
         return self.cli.isfile(pathname)
@@ -106,6 +125,24 @@ class HermeticTestCase(unittest.TestCase):
 
 
 class CommandLineInterfaceTestCase(object):
+    """Defines a set of tests without a TestCase."""
+
+    def test_echo(self):
+        self.cli.echo('Hello world')
+        self.assertOut('Hello world')
+
+    def test_error(self):
+        with self.assertRaises(SystemExit):
+            self.cli.error('Hello world')
+        self.assertErr('ERROR: Hello world')
+
+    def test_choose(self):
+        prompt = 'Pick your favorite animal'
+        choices = ['cat', 'dog', 'bear']
+
+        self.set_input('3')
+        choice = self.cli.choose(prompt, choices)
+        self.assertEqual(choice, 'bear')
 
     def test_isdir(self):
         pathname = os.path.join(self.temp_dir, 'test_isdir')
@@ -132,8 +169,7 @@ class CommandLineInterfaceTestCase(object):
         pathname = os.path.join(self.temp_dir, 'test_open')
         with self.assertRaises(SystemExit):
             opened = self.cli.open(pathname)
-        self.assertEqual(
-            self.errors, 'ERROR: Failed to open {}.'.format(pathname))
+        self.assertErr('ERROR: Failed to open {}.'.format(pathname))
 
         opened = self.cli.open(pathname, missing_ok=True)
         self.assertFalse(opened)
@@ -148,8 +184,7 @@ class CommandLineInterfaceTestCase(object):
         pathname = os.path.join(self.temp_dir, 'test_readfile')
         with self.assertRaises(SystemExit):
             self.cli.readfile(pathname)
-        self.assertEqual(
-            self.errors, 'ERROR: Failed to open {}.'.format(pathname))
+        self.assertErr('ERROR: Failed to open {}.'.format(pathname))
 
         self.assertFalse(self.cli.readfile(pathname, missing_ok=True))
         self.writefile(pathname, 'data')
@@ -212,34 +247,14 @@ class CommandLineInterfaceTestCase(object):
 
 class CommandLineInterfaceTest(NonHermeticTestCase,
                                CommandLineInterfaceTestCase):
+    """Creates tests for CommandLineInterface."""
     pass
 
 
 class FakeCommandLineInterfaceTest(HermeticTestCase,
                                    CommandLineInterfaceTestCase):
-
-    def test_echo(self):
-        self.cli.echo('Hello world')
-        self.assertEqual(self.cli.log, ['Hello world'])
-
-    def test_error(self):
-        with self.assertRaises(SystemExit):
-            self.cli.error('Hello world')
-        self.assertEqual(self.cli.log, ['ERROR: Hello world'])
-
-    def test_choose(self):
-        prompt = 'Pick your favorite animal'
-        choices = ['cat', 'dog', 'bear']
-
-        with self.assertRaises(AssertionError):
-            self.cli.choose(prompt, choices)
-
-        self.cli.selection = 3
-        choice = self.cli.choose(prompt, choices)
-        self.assertEqual(choice, 'bear')
-
-        with self.assertRaises(AssertionError):
-            self.cli.choose(prompt, choices)
+    """Creates tests for FakeCLI."""
+    pass
 
 
 if __name__ == '__main__':

@@ -68,16 +68,6 @@ class FakeCLI(CommandLineInterface):
     def elapsed(self):
         return self._elapsed
 
-    # Fake I/O routines
-
-    def echo(self, *args, **kwargs):
-        for line in args:
-            self._log += line.split('\n')
-
-    def choose(self, prompt, choices):
-        choice = choices[self.selection - 1]
-        return super(FakeCLI, self).choose(prompt, choices, choice)
-
     # Fake filesystem routines
 
     def _dereference(self, pathname):
@@ -86,15 +76,15 @@ class FakeCLI(CommandLineInterface):
         return pathname
 
     def isdir(self, pathname):
-        """Fake implmentation overriding Host.isdir."""
+        """Fake implementation overriding CLI.isdir."""
         return self._dereference(pathname) in self._dirs
 
     def isfile(self, pathname):
-        """Fake implmentation overriding Host.isfile."""
+        """Fake implementation overriding CLI.isfile."""
         return self._dereference(pathname) in self._files
 
     def glob(self, pattern):
-        """Fake implementation overriding Host.glob."""
+        """Fake implementation overriding CLI.glob."""
         return sorted(fnmatch.filter(self._files, pattern))
 
     class File(StringIO):
@@ -142,14 +132,14 @@ class FakeCLI(CommandLineInterface):
         return file
 
     def mkdir(self, pathname):
-        """Fake implementation overriding Host.mkdir."""
+        """Fake implementation overriding BuildEnv.mkdir."""
         pathname = self._dereference(pathname)
         assert pathname not in self._files, 'File exists: {}'.format(pathname)
         self._dirs.add(pathname)
         self.create_process(['mkdir', '-p', pathname])
 
     def link(self, pathname, linkname):
-        """Fake implementation overriding Host.link."""
+        """Fake implementation overriding BuildEnv.link."""
         self._links[linkname] = pathname
         self.create_process(['ln', '-s', pathname, linkname])
 

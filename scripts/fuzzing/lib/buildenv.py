@@ -12,18 +12,19 @@ import subprocess
 from process import Process
 
 
-class Host(object):
-    """Represents a local system with a build of Fuchsia.
+class BuildEnv(object):
+    """Represents a local build environment for Fuchsia.
 
-    This class abstracts the details of various repository, tool, and build
-    paths, as well as details about the host architecture and platform.
+    This class abstracts various repository, tool, and build details.
 
     Attributes:
-      cli:              The associated CommandLineInterface object.
+      fuchsia_dir:      Path to Fuchsia source checkout.
+      cli:              Associated CLI object.
       build_dir:        Path to the Fuchsia build output.
       symbolizer_exec:  Path to the Fuchsia symbolizer executable.
       llvm_symbolizer:  Path to the LLVM/Clang symbolizer library.
       build_id_dirs:    List of paths to symbolizer debug symbols.
+      gsutil:           Path to the Google Cloud Storage utility.
   """
 
     def __init__(self, cli, fuchsia_dir):
@@ -41,12 +42,12 @@ class Host(object):
         self._fuzzers = []
 
     @property
-    def cli(self):
-        return self._cli
-
-    @property
     def fuchsia_dir(self):
         return self._fuchsia_dir
+
+    @property
+    def cli(self):
+        return self._cli
 
     @property
     def build_dir(self):
@@ -61,7 +62,7 @@ class Host(object):
     @symbolizer_exec.setter
     def symbolizer_exec(self, symbolizer_exec):
         if not self.cli.isfile(symbolizer_exec):
-            raise ValueError(
+            self.cli.error(
                 'Invalid symbolizer executable: {}'.format(symbolizer_exec))
         self._symbolizer_exec = symbolizer_exec
 
@@ -73,7 +74,7 @@ class Host(object):
     @llvm_symbolizer.setter
     def llvm_symbolizer(self, llvm_symbolizer):
         if not self.cli.isfile(llvm_symbolizer):
-            raise ValueError(
+            self.cli.error(
                 'Invalid LLVM symbolizer: {}'.format(llvm_symbolizer))
         self._llvm_symbolizer = llvm_symbolizer
 
@@ -86,7 +87,7 @@ class Host(object):
     def build_id_dirs(self, build_id_dirs):
         for build_id_dir in build_id_dirs:
             if not self.cli.isdir(build_id_dir):
-                raise ValueError(
+                self.cli.error(
                     'Invalid build ID directory: {}'.format(build_id_dir))
         self._build_id_dirs = build_id_dirs
 
@@ -105,23 +106,26 @@ class Host(object):
     @gsutil.setter
     def gsutil(self, gsutil):
         if not self.cli.isfile(gsutil):
-            raise ValueError('Invalid GS utility: {}'.format(gsutil))
+            self.cli.error('Invalid GS utility: {}'.format(gsutil))
         self._gsutil = gsutil
 
     # Initialization routines
 
     def configure(self, build_dir):
         """Sets multiple properties based on the given build directory."""
-        self._build_dir = self.fxpath(build_dir)
+        self._build_dir = self.path(build_dir)
         clang_dir = os.path.join(
             'prebuilt', 'third_party', 'clang', self.cli.platform)
-        self.symbolizer_exec = self.fxpath(build_dir, 'host_x64', 'symbolize')
-        self.llvm_symbolizer = self.fxpath(clang_dir, 'bin', 'llvm-symbolizer')
+        self.symbolizer_exec = self.path(build_dir, 'host_x64', 'symbolize')
+        self.llvm_symbolizer = self.path(clang_dir, 'bin', 'llvm-symbolizer')
         self.build_id_dirs = [
-            self.fxpath(clang_dir, 'lib', 'debug', '.build-id'),
-            self.fxpath(build_dir, '.build-id'),
-            self.fxpath(build_dir + '.zircon', '.build-id'),
+            self.path(clang_dir, 'lib', 'debug', '.build-id'),
+            self.path(build_dir, '.build-id'),
+            self.path(build_dir + '.zircon', '.build-id'),
         ]
+
+    def add_fuzzer(self, package, executable):
+        self._fuzzers.append((package, executable))
 
     def read_fuzzers(self, pathname):
         """Parses the available fuzzers from an fuzzers.json pathname."""
@@ -169,18 +173,16 @@ class Host(object):
 
     # Other routines
 
-    def fxpath(self, *segments):
+    def path(self, *segments):
+        """Returns absolute path to a path in the build environment."""
         joined = os.path.join(*segments)
         if not joined.startswith(self.fuchsia_dir):
             joined = os.path.join(self.fuchsia_dir, joined)
         return joined
 
-    def find_device(self, device_name=None, device_file=None):
+    def find_device(self, device_name=None):
         """Returns the IPv6 address for a device."""
-        assert (not device_name or not device_file)
-        if not device_name and device_file:
-            device_name = device_file.read().strip()
-        cmd = [self.fxpath('.jiri_root', 'bin', 'fx'), 'device-finder']
+        cmd = [self.path('.jiri_root', 'bin', 'fx'), 'device-finder']
         if device_name:
             cmd += ['resolve', '-device-limit', '1', device_name]
         else:

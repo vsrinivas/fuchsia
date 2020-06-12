@@ -9,10 +9,10 @@ import unittest
 
 import test_env
 import lib.command as command
-from test_case import TestCase
+from test_case import TestCaseWithFactory
 
 
-class CommandTest(TestCase):
+class CommandTest(TestCaseWithFactory):
 
     # Unit tests
 
@@ -213,7 +213,6 @@ class CommandTest(TestCase):
         self.assertScpTo(baz, abspath)
         self.assertEqual(
             self.fuzzer.dictionary.nspath, self.fuzzer.ns.data(local_dict))
-        self.assertEqual(self.cli.log[0], 'Analyzing fuzzer...')
 
 
 if __name__ == '__main__':

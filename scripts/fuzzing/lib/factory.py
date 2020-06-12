@@ -7,7 +7,7 @@ import errno
 
 from args import ArgParser
 from cli import CommandLineInterface
-from host import Host
+from buildenv import BuildEnv
 from device import Device
 from fuzzer import Fuzzer
 
@@ -15,11 +15,11 @@ from fuzzer import Fuzzer
 class Factory(object):
     """Facility for creating associated objects.
 
-       The factory can create CommandLineInterfaces, Hosts, Devices, and
+       The factory can create CommandLineInterfaces, BuildEnvs, Devices, and
        Fuzzers. More importantly, it can construct them with references to
        each other, i.e. a Factory-constructed Fuzzer automatically gets a
        reference to a Factory-constructed Device, which has a reference to a
-       Factory-constructed Host.
+       Factory-constructed BuildEnv.
 
        Attributes:
          cli:       Command line interface object for user interactions.
@@ -41,39 +41,39 @@ class Factory(object):
         parser.add_parsers()
         return parser
 
-    def create_host(self, fuchsia_dir=None):
-        """Constructs a Host from a local build directory."""
+    def create_buildenv(self, fuchsia_dir=None):
+        """Constructs a BuildEnv from a local build directory."""
         if not fuchsia_dir:
             fuchsia_dir = self.cli.getenv('FUCHSIA_DIR')
         if not fuchsia_dir:
             self.cli.error(
                 'FUCHSIA_DIR not set.', 'Have you sourced "scripts/fx-env.sh"?')
-        host = Host(self.cli, fuchsia_dir)
-        pathname = host.fxpath('.fx-build-dir')
+        buildenv = BuildEnv(self.cli, fuchsia_dir)
+        pathname = buildenv.path('.fx-build-dir')
         build_dir = self.cli.readfile(
             pathname,
             on_error=[
                 'Failed to read build directory from {}.'.format(pathname),
                 'Have you run "fx set ... --fuzz-with <sanitizer>"?'
             ])
-        host.configure(build_dir)
-        host.read_fuzzers(host.fxpath(build_dir, 'fuzzers.json'))
-        return host
+        buildenv.configure(build_dir)
+        buildenv.read_fuzzers(buildenv.path(build_dir, 'fuzzers.json'))
+        return buildenv
 
-    def create_device(self, host=None):
+    def create_device(self, buildenv=None):
         """Constructs a Device from the build environment"""
-        if not host:
-            host = self.create_host()
-        pathname = '{}.device'.format(host.build_dir)
+        if not buildenv:
+            buildenv = self.create_buildenv()
+        pathname = '{}.device'.format(buildenv.build_dir)
         device_name = self.cli.readfile(pathname, missing_ok=True)
-        addr = host.find_device(device_name)
-        device = Device(host, addr)
+        addr = buildenv.find_device(device_name)
+        device = Device(buildenv, addr)
         device.configure()
         return device
 
-    def _resolve_fuzzer(self, host, name):
+    def _resolve_fuzzer(self, buildenv, name):
         """Matches a fuzzer name pattern to a fuzzer."""
-        matches = host.fuzzers(name)
+        matches = buildenv.fuzzers(name)
         if not matches:
             self.cli.error('No matching fuzzers found.', 'Try "fx fuzz list".')
         if len(matches) > 1:
@@ -90,7 +90,7 @@ class Factory(object):
         if not device:
             device = self.create_device()
 
-        package, executable = self._resolve_fuzzer(device.host, args.name)
+        package, executable = self._resolve_fuzzer(device.buildenv, args.name)
         fuzzer = Fuzzer(device, package, executable)
 
         keys = [

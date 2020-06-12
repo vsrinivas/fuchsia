@@ -7,10 +7,10 @@ import os
 import unittest
 
 import test_env
-from test_case import FuzzerTestCase
+from test_case import TestCaseWithFuzzer
 
 
-class FuzzerTest(FuzzerTestCase):
+class FuzzerTest(TestCaseWithFuzzer):
 
     def test_list_artifacts(self):
         fuzzer = self.create_fuzzer('check', 'fake-package1/fake-target1')
@@ -184,10 +184,10 @@ class FuzzerTest(FuzzerTestCase):
     def symbolize_helper(self, log_in, log_out, job_num=0, echo=False):
         fuzzer = self.create_fuzzer('start', 'fake-package1/fake-target2')
         cmd = [
-            self.host.symbolizer_exec, '-llvm-symbolizer',
-            self.host.llvm_symbolizer
+            self.buildenv.symbolizer_exec, '-llvm-symbolizer',
+            self.buildenv.llvm_symbolizer
         ]
-        for build_id_dir in self.host.build_id_dirs:
+        for build_id_dir in self.buildenv.build_id_dirs:
             cmd += ['-build-id-dir', build_id_dir]
         self.set_outputs(
             cmd, [
@@ -341,10 +341,10 @@ MS: 1 SomeMutation; base unit: foo
         self.assertSsh(*cmd)
 
         cmd = [
-            self.host.symbolizer_exec, '-llvm-symbolizer',
-            self.host.llvm_symbolizer
+            self.buildenv.symbolizer_exec, '-llvm-symbolizer',
+            self.buildenv.llvm_symbolizer
         ]
-        for build_id_dir in self.host.build_id_dirs:
+        for build_id_dir in self.buildenv.build_id_dirs:
             cmd += ['-build-id-dir', build_id_dir]
         self.assertRan(*cmd)
 

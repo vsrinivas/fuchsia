@@ -7,10 +7,10 @@ import unittest
 
 import test_env
 import lib.command as command
-from test_case import TestCase
+from test_case import TestCaseWithFactory
 
 
-class ArgsTest(TestCase):
+class ArgsTest(TestCaseWithFactory):
 
     # Unit test assertions
 
