@@ -38,6 +38,7 @@ per-file set-relay=tamird@google.com
 per-file setup-usb-ethernet=cjn@google.com
 per-file smoke-test=shayba@google.com
 per-file sniff=porce@google.com
+per-file sync-from-stem=scottmg@google.com
 per-file triage=cphoenix@google.com
 per-file triage=crjohns@google.com
 per-file unarchive-package=dangyi@google.com

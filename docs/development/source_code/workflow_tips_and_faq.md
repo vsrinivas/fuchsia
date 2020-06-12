@@ -319,6 +319,17 @@ $ fx use out/core.vim2
 A: You'll need to `jiri update` against a *jiri snapshot file*, an XML file that
 captures the state of each repo tracked by jiri.
 
+### Q: How can I get a build that works for a particular fuchsia.git commit?
+
+A: `fx sync-from-stem` will do this. It uses `jiri` under the hood. However,
+instead of syncing fuchsia.git and dependencies to match the current integration
+repo, it instead finds the integration commit that matches *currently checked
+out* fuchsia.git, and syncs integration and dependencies to match that
+fuchsia.git commit.
+
+Put another way, fuchsia.git will be untouched, and everything else is synced to
+match. This can be useful to bisect within fuchsia.git.
+
 ### Q: I'm building on Mac, how to do I stop getting spammed with 'incoming network connection' notifications?
 
 A: You'll want to run `fx setup-macos`, which registers all the relevant Fuchsia
