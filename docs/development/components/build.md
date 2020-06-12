@@ -751,6 +751,8 @@ templates. These unsupported features include:
 *   Legacy `drivers` (deprecated global `/driver` directory)
 *   Legacy `loadable_modules` and `libraries` (deprecated global `/lib`
     directory)
+*   Marking a test as disabled. Instead, change the test source code to mark it
+    as disabled, or comment out the disabled test component from the build file.
 
 [cml-format]: /docs/concepts/components/component_manifests.md
 [cmx-format]: /docs/concepts/storage/component_manifest.md
