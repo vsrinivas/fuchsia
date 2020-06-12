@@ -10,12 +10,16 @@ driver_module("rndis") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "rndishost.cc" ]
+  sources = [
+    "rndis_host.cc",
+    "rndis_host.h",
+  ]
   deps = [
     "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.composite",
     "//sdk/banjo/ddk.protocol.usb.request",
+    "//src/connectivity/ethernet/lib/rndis",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",

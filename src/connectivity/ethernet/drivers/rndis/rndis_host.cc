@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "rndishost.h"
+#include "rndis_host.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -434,8 +434,8 @@ zx_status_t RndisHost::QueryDevice(uint32_t oid, void* info_buffer_out,
   // info_buffer_offset and info_buffer_length determine where the query result is in the response
   // buffer. Check that the length of the result matches what we expect.
   if (query_cmplt->info_buffer_length != expected_info_buffer_length) {
-    zxlogf(ERROR, "rndishost expected info buffer of size %zu, got %u",
-           expected_info_buffer_length, query_cmplt->info_buffer_length);
+    zxlogf(ERROR, "rndishost expected info buffer of size %zu, got %u", expected_info_buffer_length,
+           query_cmplt->info_buffer_length);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -704,6 +704,6 @@ static zx_driver_ops_t rndis_driver_ops = []() {
 ZIRCON_DRIVER_BEGIN(rndishost, rndis_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
     BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_WIRELESS),
-    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, RNDIS_SUBCLASS),
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, RNDIS_PROTOCOL),
+    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_WIRELESS_MISC),
+    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_WIRELESS_MISC_RNDIS),
 ZIRCON_DRIVER_END(rndishost)
