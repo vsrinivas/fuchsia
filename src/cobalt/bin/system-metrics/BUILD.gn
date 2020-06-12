@@ -76,7 +76,12 @@ package("cobalt_system_metrics") {
     },
   ]
 
-  binary = "cobalt_system_metrics_bin"
+  binaries = [
+    {
+      name = "cobalt_system_metrics_bin"
+      dest = "cobalt_system_metrics"
+    },
+  ]
 }
 
 executable("cobalt_system_metrics_unittests") {

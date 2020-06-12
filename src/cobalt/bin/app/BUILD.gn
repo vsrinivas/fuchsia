@@ -123,8 +123,11 @@ config_data("userdebug_config") {
 package("cobalt") {
   deps = [ ":app" ]
 
-  binary = "cobalt"
-
+  binaries = [
+    {
+      name = "cobalt"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/cobalt.cmx")

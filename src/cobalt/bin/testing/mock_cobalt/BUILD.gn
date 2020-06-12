@@ -30,8 +30,11 @@ rustc_binary("bin") {
 package("mock_cobalt") {
   deps = [ ":bin" ]
 
-  binary = "mock_cobalt"
-
+  binaries = [
+    {
+      name = "mock_cobalt"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/mock_cobalt.cmx")
