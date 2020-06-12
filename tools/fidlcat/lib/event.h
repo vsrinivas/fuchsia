@@ -16,21 +16,18 @@
 
 namespace fidlcat {
 
+class Location;
 class Syscall;
 class SyscallDecoder;
+class SyscallDisplayDispatcher;
 
 // Printer which allows us to print the infered data for handles.
 class FidlcatPrinter : public fidl_codec::PrettyPrinter {
  public:
-  FidlcatPrinter(const Inference& inference, uint64_t process_id, bool dump_messages,
-                 bool pretty_print, std::ostream& os, const fidl_codec::Colors& colors,
-                 std::string_view line_header, int max_line_size, bool header_on_every_line,
-                 int tabulations = 0)
-      : PrettyPrinter(os, colors, pretty_print, line_header, max_line_size, header_on_every_line,
-                      tabulations),
-        inference_(inference),
-        process_id_(process_id),
-        dump_messages_(dump_messages) {}
+  FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, uint64_t process_id, std::ostream& os,
+                 std::string_view line_header, int tabulations = 0);
+
+  bool display_stack_frame() const { return display_stack_frame_; }
 
   bool DumpMessages() const override { return dump_messages_; }
 
@@ -43,10 +40,12 @@ class FidlcatPrinter : public fidl_codec::PrettyPrinter {
   void DisplayOutline(
       const std::vector<std::unique_ptr<fidl_codec::StructMember>>& members,
       const std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>>& values);
+  void DisplayStackFrame(const std::vector<Location>& stack_frame);
 
  private:
   const Inference& inference_;
   const uint64_t process_id_;
+  const bool display_stack_frame_;
   const bool dump_messages_;
 };
 
@@ -86,16 +85,49 @@ class Thread {
   const zx_koid_t koid_;
 };
 
+// Defines a location in the source (used by stack frames).
+class Location {
+ public:
+  Location(const std::string& path, uint32_t line, uint32_t column, uint64_t address,
+           const std::string& symbol)
+      : path_(path), line_(line), column_(column), address_(address), symbol_(symbol) {}
+
+  const std::string& path() const { return path_; }
+  uint32_t line() const { return line_; }
+  uint32_t column() const { return column_; }
+  uint64_t address() const { return address_; }
+  const std::string& symbol() const { return symbol_; }
+
+ private:
+  const std::string path_;
+  const uint32_t line_;
+  const uint32_t column_;
+  const uint64_t address_;
+  const std::string symbol_;
+};
+
 class Event {
  public:
-  explicit Event(int64_t timestamp, const Thread* thread, const Syscall* syscall)
-      : timestamp_(timestamp), thread_(thread), syscall_(syscall) {}
+  Event(int64_t timestamp, const Thread* thread) : timestamp_(timestamp), thread_(thread) {}
 
   // Timestamp in nanoseconds.
   int64_t timestamp() const { return timestamp_; }
 
   const Thread* thread() const { return thread_; }
+
+ private:
+  const int64_t timestamp_;
+  const Thread* const thread_;
+};
+
+// Base class for events related to a syscall.
+class SyscallEvent : public Event {
+ public:
+  SyscallEvent(int64_t timestamp, const Thread* thread, const Syscall* syscall)
+      : Event(timestamp, thread), syscall_(syscall) {}
+
   const Syscall* syscall() const { return syscall_; }
+
   const std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>>&
   inline_fields() const {
     return inline_fields_;
@@ -123,33 +155,51 @@ class Event {
   const fidl_codec::FidlMessageValue* GetMessage() const;
 
  private:
-  int64_t timestamp_;
-  const Thread* const thread_;
   const Syscall* const syscall_;
   std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>> inline_fields_;
   std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>> outline_fields_;
 };
 
-// Event which represent the arguments of a syscall (When the syscall is called).
-class InvokedEvent : public Event {
+// Event that represents the arguments of a syscall (When the syscall is called).
+class InvokedEvent : public SyscallEvent {
  public:
   InvokedEvent(int64_t timestamp, const Thread* thread, const Syscall* syscall)
-      : Event(timestamp, thread, syscall) {}
+      : SyscallEvent(timestamp, thread, syscall) {}
+
+  const std::vector<Location>& stack_frame() const { return stack_frame_; }
+  std::vector<Location>& stack_frame() { return stack_frame_; }
 
   void PrettyPrint(FidlcatPrinter& printer) const;
+
+ public:
+  std::vector<Location> stack_frame_;
 };
 
 // Event that represents the return value and out parameters when a syscall returns.
-class OutputEvent : public Event {
+class OutputEvent : public SyscallEvent {
  public:
   OutputEvent(int64_t timestamp, const Thread* thread, const Syscall* syscall,
               int64_t returned_value)
-      : Event(timestamp, thread, syscall), returned_value_(returned_value) {}
+      : SyscallEvent(timestamp, thread, syscall), returned_value_(returned_value) {}
 
   void PrettyPrint(FidlcatPrinter& printer) const;
 
  private:
   int64_t returned_value_;
+};
+
+// Event that represents an exception.
+class ExceptionEvent : public Event {
+ public:
+  ExceptionEvent(int64_t timestamp, const Thread* thread) : Event(timestamp, thread) {}
+
+  const std::vector<Location>& stack_frame() const { return stack_frame_; }
+  std::vector<Location>& stack_frame() { return stack_frame_; }
+
+  void PrettyPrint(FidlcatPrinter& printer) const;
+
+ private:
+  std::vector<Location> stack_frame_;
 };
 
 }  // namespace fidlcat

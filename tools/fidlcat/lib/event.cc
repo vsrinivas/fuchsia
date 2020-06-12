@@ -8,6 +8,17 @@
 
 namespace fidlcat {
 
+FidlcatPrinter::FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, uint64_t process_id,
+                               std::ostream& os, std::string_view line_header, int tabulations)
+    : PrettyPrinter(os, dispatcher->colors(),
+                    dispatcher->message_decoder_dispatcher().display_options().pretty_print,
+                    line_header, dispatcher->columns(), dispatcher->with_process_info(),
+                    tabulations),
+      inference_(dispatcher->inference()),
+      process_id_(process_id),
+      display_stack_frame_(dispatcher->decode_options().stack_level != kNoStack),
+      dump_messages_(dispatcher->dump_messages()) {}
+
 void FidlcatPrinter::DisplayHandle(const zx_handle_info_t& handle) {
   fidl_codec::DisplayHandle(handle, *this);
   const fidl_codec::semantic::HandleDescription* known_handle =
@@ -95,6 +106,27 @@ void FidlcatPrinter::DisplayOutline(
   }
 }
 
+void FidlcatPrinter::DisplayStackFrame(const std::vector<Location>& stack_frame) {
+  bool save_header_on_every_line = header_on_every_line();
+  // We want a header on every stack frame line.
+  set_header_on_every_line(true);
+  for (const auto& location : stack_frame) {
+    *this << fidl_codec::YellowBackground << "at " << fidl_codec::Red;
+    if (!location.path().empty()) {
+      *this << location.path() << fidl_codec::ResetColor << fidl_codec::YellowBackground << ':'
+            << fidl_codec::Blue << location.line() << ':' << location.column()
+            << fidl_codec::ResetColor;
+    } else {
+      *this << std::hex << location.address() << fidl_codec::ResetColor << std::dec;
+    }
+    if (!location.symbol().empty()) {
+      *this << ' ' << location.symbol();
+    }
+    *this << '\n';
+  }
+  set_header_on_every_line(save_header_on_every_line);
+}
+
 void Process::LoadHandleInfo(Inference* inference) {
   zxdb::Process* zxdb_process = zxdb_process_.get();
   if (zxdb_process == nullptr) {
@@ -140,7 +172,7 @@ void Process::LoadHandleInfo(Inference* inference) {
       });
 }
 
-bool Event::NeedsToLoadHandleInfo(zx_koid_t pid, Inference* inference) {
+bool SyscallEvent::NeedsToLoadHandleInfo(zx_koid_t pid, Inference* inference) {
   for (const auto& field : inline_fields_) {
     if (field.second->NeedsToLoadHandleInfo(pid, inference)) {
       return true;
@@ -154,7 +186,7 @@ bool Event::NeedsToLoadHandleInfo(zx_koid_t pid, Inference* inference) {
   return false;
 }
 
-const fidl_codec::FidlMessageValue* Event::GetMessage() const {
+const fidl_codec::FidlMessageValue* SyscallEvent::GetMessage() const {
   if (outline_fields_.size() == 0) {
     return nullptr;
   }
@@ -162,6 +194,9 @@ const fidl_codec::FidlMessageValue* Event::GetMessage() const {
 }
 
 void InvokedEvent::PrettyPrint(FidlcatPrinter& printer) const {
+  if (printer.display_stack_frame()) {
+    printer.DisplayStackFrame(stack_frame_);
+  }
   printer << syscall()->name();
   printer.DisplayInline(syscall()->input_inline_members(), inline_fields());
   printer << '\n';
@@ -180,6 +215,11 @@ void OutputEvent::PrettyPrint(FidlcatPrinter& printer) const {
   }
   printer << '\n';
   printer.DisplayOutline(syscall()->output_outline_members(), outline_fields());
+}
+
+void ExceptionEvent::PrettyPrint(FidlcatPrinter& printer) const {
+  printer.DisplayStackFrame(stack_frame_);
+  printer << fidl_codec::Red << "thread stopped on exception" << fidl_codec::ResetColor << '\n';
 }
 
 }  // namespace fidlcat

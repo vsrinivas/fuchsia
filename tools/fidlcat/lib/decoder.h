@@ -14,6 +14,8 @@
 
 namespace fidlcat {
 
+class Location;
+
 class DecoderError {
  public:
   enum class Type { kNone, kCantReadMemory, kUnknownArchitecture };
@@ -39,6 +41,10 @@ class DecoderError {
 
 void DisplayStackFrame(const std::vector<zxdb::Location>& caller_locations,
                        fidl_codec::PrettyPrinter& printer);
+
+// Copies the stack frame into fidlcat data.
+void CopyStackFrame(const std::vector<zxdb::Location>& caller_locations,
+                    std::vector<Location>* locations);
 
 }  // namespace fidlcat
 

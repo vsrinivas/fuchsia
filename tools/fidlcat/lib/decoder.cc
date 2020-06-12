@@ -19,6 +19,7 @@
 #include "src/developer/debug/zxdb/client/step_thread_controller.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
+#include "tools/fidlcat/lib/event.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
 
 namespace fidlcat {
@@ -82,7 +83,8 @@ void DisplayStackFrame(const std::vector<zxdb::Location>& caller_locations,
           separator = "/";
         }
         printer << fidl_codec::ResetColor << fidl_codec::YellowBackground << ':' << fidl_codec::Blue
-                << location.file_line().line() << fidl_codec::ResetColor;
+                << location.file_line().line() << ':' << location.column()
+                << fidl_codec::ResetColor;
       } else {
         printer << std::hex << location.address() << fidl_codec::ResetColor << std::dec;
       }
@@ -93,6 +95,33 @@ void DisplayStackFrame(const std::vector<zxdb::Location>& caller_locations,
     }
   }
   printer.set_header_on_every_line(header_on_every_line);
+}
+
+void CopyStackFrame(const std::vector<zxdb::Location>& caller_locations,
+                    std::vector<Location>* locations) {
+  for (const auto& location : caller_locations) {
+    if (location.is_valid()) {
+      std::string path;
+      uint32_t line = 0;
+      uint32_t column = 0;
+      if (location.is_symbolized()) {
+        std::vector<std::string_view> file = CleanPath(location.file_line());
+        // Copies the optimized path.
+        const char* separator = "";
+        for (const auto& item : file) {
+          path += separator;
+          path += item;
+          separator = "/";
+        }
+        line = location.file_line().line();
+        column = location.column();
+      }
+      std::string empty_symbol;
+      const zxdb::LazySymbol& symbol = location.symbol();
+      locations->emplace_back(path, line, column, location.address(),
+                              symbol.is_valid() ? symbol.Get()->GetFullName() : empty_symbol);
+    }
+  }
 }
 
 }  // namespace fidlcat

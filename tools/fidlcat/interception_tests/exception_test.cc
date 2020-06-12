@@ -19,22 +19,22 @@ namespace fidlcat {
 DISPLAY_EXCEPTION_TEST(DisplayExceptionPageFault, debug_ipc::ExceptionType::kPageFault,
                        "\n"
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[103m"
-                       "at \x1B[31mfidlcat/main.cc\x1B[0m\x1B[103m:\x1B[34m10\x1B[0m\n"
+                       "at \x1B[31mfidlcat/main.cc\x1B[0m\x1B[103m:\x1B[34m10:2\x1B[0m\n"
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[103m"
-                       "at \x1B[31mfidlcat/foo.cc\x1B[0m\x1B[103m:\x1B[34m50\x1B[0m\n"
+                       "at \x1B[31mfidlcat/foo.cc\x1B[0m\x1B[103m:\x1B[34m50:4\x1B[0m\n"
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[103m"
-                       "at \x1B[31mfidlcat/foo.cc\x1B[0m\x1B[103m:\x1B[34m25\x1B[0m\n"
+                       "at \x1B[31mfidlcat/foo.cc\x1B[0m\x1B[103m:\x1B[34m25:8\x1B[0m\n"
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[31m"
                        "thread stopped on exception\x1B[0m\n");
 
 DISPLAY_EXCEPTION_TEST(DisplayExceptionGeneral, debug_ipc::ExceptionType::kGeneral,
                        "\n"
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[103m"
-                       "at \x1B[31mfidlcat/main.cc\x1B[0m\x1B[103m:\x1B[34m10\x1B[0m\n"
+                       "at \x1B[31mfidlcat/main.cc\x1B[0m\x1B[103m:\x1B[34m10:2\x1B[0m\n"
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[103m"
-                       "at \x1B[31mfidlcat/foo.cc\x1B[0m\x1B[103m:\x1B[34m50\x1B[0m\n"
+                       "at \x1B[31mfidlcat/foo.cc\x1B[0m\x1B[103m:\x1B[34m50:4\x1B[0m\n"
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[103m"
-                       "at \x1B[31mfidlcat/foo.cc\x1B[0m\x1B[103m:\x1B[34m25\x1B[0m\n"
+                       "at \x1B[31mfidlcat/foo.cc\x1B[0m\x1B[103m:\x1B[34m25:8\x1B[0m\n"
                        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m \x1B[31m"
                        "thread stopped on exception\x1B[0m\n");
 

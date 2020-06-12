@@ -61,20 +61,31 @@ void ExceptionDecoder::Destroy() {
 
 void ExceptionDisplay::ExceptionDecoded(ExceptionDecoder* decoder) {
   os_ << '\n';
+  int64_t timestamp = time(nullptr);
+  const Thread* thread = dispatcher_->SearchThread(decoder->thread_id());
+  if (thread == nullptr) {
+    Process* process = dispatcher_->SearchProcess(decoder->process_id());
+    if (process == nullptr) {
+      zxdb::Thread* zxdb_thread = decoder->get_thread();
+      if (zxdb_thread == nullptr) {
+        decoder->Destroy();
+        return;
+      }
+      process = dispatcher_->CreateProcess(decoder->process_name(), decoder->process_id(),
+                                           zxdb_thread->GetProcess()->GetWeakPtr());
+    }
+    thread = dispatcher_->CreateThread(decoder->thread_id(), process);
+  }
+  auto event = std::make_unique<ExceptionEvent>(timestamp << 32, thread);
+  CopyStackFrame(decoder->caller_locations(), &event->stack_frame());
 
   const fidl_codec::Colors& colors = dispatcher_->colors();
   std::string line_header = decoder->process_name() + ' ' + colors.red +
                             std::to_string(decoder->process_id()) + colors.reset + ':' +
                             colors.red + std::to_string(decoder->thread_id()) + colors.reset + ' ';
-  FidlcatPrinter printer(dispatcher_->inference(), decoder->process_id(),
-                         dispatcher_->dump_messages(),
-                         dispatcher_->message_decoder_dispatcher().display_options().pretty_print,
-                         os_, dispatcher_->colors(), line_header, dispatcher_->columns(), true);
+  FidlcatPrinter printer(dispatcher_, decoder->process_id(), os_, line_header);
 
-  // Display caller locations.
-  DisplayStackFrame(decoder->caller_locations(), printer);
-
-  printer << fidl_codec::Red << "thread stopped on exception" << fidl_codec::ResetColor << '\n';
+  event->PrettyPrint(printer);
 
   // Now our job is done, we can destroy the object.
   decoder->Destroy();

@@ -331,6 +331,9 @@ void SyscallDecoder::DecodeInputs() {
         ++outline_member;
       }
     }
+    if (dispatcher_->needs_stack_frame()) {
+      CopyStackFrame(caller_locations(), &invoked_event_->stack_frame());
+    }
     if (dispatcher_->with_handle_info() &&
         invoked_event_->NeedsToLoadHandleInfo(process_id_, &dispatcher_->inference())) {
       thread->process()->LoadHandleInfo(&dispatcher_->inference());
@@ -512,21 +515,18 @@ void SyscallDisplay::DisplayInputs(SyscallDecoder* decoder) {
   }
   os_ << '\n';
 
-  FidlcatPrinter printer(
-      dispatcher_->inference(), decoder->process_id(), dispatcher_->dump_messages(),
-      dispatcher_->message_decoder_dispatcher().display_options().pretty_print, os_,
-      dispatcher_->colors(), line_header, dispatcher_->columns(), dispatcher_->with_process_info());
-
-  if (dispatcher_->decode_options().stack_level != kNoStack) {
-    // Display caller locations.
-    DisplayStackFrame(decoder->caller_locations(), printer);
-  }
+  FidlcatPrinter printer(dispatcher_, decoder->process_id(), os_, line_header);
 
   const InvokedEvent* invoked_event = decoder->invoked_event();
   if (invoked_event != nullptr) {
     // We have been able to create values from the syscall => print them.
     invoked_event->PrettyPrint(printer);
   } else {
+    if (dispatcher_->decode_options().stack_level != kNoStack) {
+      // Display caller locations.
+      DisplayStackFrame(decoder->caller_locations(), printer);
+    }
+
     // This code will be deleted when we will be able to have the two step printing for all the
     // syscalls.
     //
@@ -596,11 +596,7 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
                     std::to_string(decoder->process_id()) + colors.reset + ':' + colors.red +
                     std::to_string(decoder->thread_id()) + colors.reset + ' ';
     }
-    FidlcatPrinter printer(dispatcher_->inference(), decoder->process_id(),
-                           dispatcher_->dump_messages(),
-                           dispatcher_->message_decoder_dispatcher().display_options().pretty_print,
-                           os_, dispatcher_->colors(), line_header, dispatcher_->columns(),
-                           dispatcher_->with_process_info());
+    FidlcatPrinter printer(dispatcher_, decoder->process_id(), os_, line_header);
     const OutputEvent* output_event = decoder->output_event();
     if (output_event != nullptr) {
       // We have been able to create values from the syscall => print them.

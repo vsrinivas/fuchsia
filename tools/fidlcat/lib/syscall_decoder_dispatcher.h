@@ -1538,6 +1538,9 @@ class SyscallDecoderDispatcher {
         !decode_options.exclude_message_filters.empty()) {
       has_filter_ = true;
     }
+    if (decode_options.stack_level != kNoStack) {
+      needs_stack_frame_ = true;
+    }
   }
   virtual ~SyscallDecoderDispatcher() = default;
 
@@ -1557,6 +1560,8 @@ class SyscallDecoderDispatcher {
   void set_display_started() { display_started_ = true; }
 
   bool has_filter() const { return has_filter_; }
+
+  bool needs_stack_frame() const { return needs_stack_frame_; }
 
   Syscall* SearchSyscall(const std::string& name) const {
     auto result = syscalls_.find(name);
@@ -1733,6 +1738,9 @@ class SyscallDecoderDispatcher {
 
   // True if we are filtering messages.
   bool has_filter_ = false;
+
+  // True if we need the stack frame.
+  bool needs_stack_frame_ = false;
 };
 
 class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
