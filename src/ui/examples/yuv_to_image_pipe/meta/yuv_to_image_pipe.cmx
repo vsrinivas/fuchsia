@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/yuv_to_image_pipe"
     },
     "sandbox": {
         "services": [

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/shadertoy_service"
     },
     "sandbox": {
         "features": [

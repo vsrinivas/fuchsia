@@ -295,5 +295,9 @@ package("mock_pose_buffer_provider") {
 
   deps = [ ":mock_pose_buffer_provider_cc" ]
 
-  binary = "mock_pose_buffer_provider"
+  binaries = [
+    {
+      name = "mock_pose_buffer_provider"
+    },
+  ]
 }

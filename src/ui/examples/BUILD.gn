@@ -27,8 +27,11 @@ group("examples") {
 package("bouncing_ball") {
   deps = [ "bouncing_ball" ]
 
-  binary = "bouncing_ball"
-
+  binaries = [
+    {
+      name = "bouncing_ball"
+    },
+  ]
   meta = [
     {
       path = rebase_path("bouncing_ball/meta/bouncing_ball.cmx")
@@ -67,8 +70,11 @@ package("embedder") {
 package("direct_input") {
   deps = [ "lab/direct_input" ]
 
-  binary = "direct_input"
-
+  binaries = [
+    {
+      name = "direct_input"
+    },
+  ]
   meta = [
     {
       path = rebase_path("lab/direct_input/meta/direct_input.cmx")
@@ -80,8 +86,11 @@ package("direct_input") {
 package("direct_input_child") {
   deps = [ "lab/direct_input/child" ]
 
-  binary = "direct_input_child"
-
+  binaries = [
+    {
+      name = "direct_input_child"
+    },
+  ]
   meta = [
     {
       path = rebase_path("lab/direct_input/meta/direct_input.cmx")
@@ -93,8 +102,11 @@ package("direct_input_child") {
 package("pose_buffer_presenter") {
   deps = [ "lab/pose_buffer_presenter" ]
 
-  binary = "pose_buffer_presenter"
-
+  binaries = [
+    {
+      name = "pose_buffer_presenter"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/pose_buffer_presenter.cmx")
@@ -110,8 +122,12 @@ package("pose_buffer_presenter") {
 package("scenic_dev_app") {
   deps = [ "lab/scenic_dev_app" ]
 
-  binary = "scenic_dev_app"
-
+  binaries = [
+    {
+      name = "scenic_dev_app"
+      dest = "ui_example"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
@@ -123,8 +139,11 @@ package("scenic_dev_app") {
 package("shadertoy_client") {
   deps = [ "shadertoy/client" ]
 
-  binary = "shadertoy_client"
-
+  binaries = [
+    {
+      name = "shadertoy_client"
+    },
+  ]
   meta = [
     {
       path = rebase_path("shadertoy/client/meta/shadertoy_client.cmx")
@@ -136,8 +155,11 @@ package("shadertoy_client") {
 package("shadertoy_service") {
   deps = [ "shadertoy/service" ]
 
-  binary = "shadertoy_service"
-
+  binaries = [
+    {
+      name = "shadertoy_service"
+    },
+  ]
   meta = [
     {
       path = rebase_path("shadertoy/service/meta/shadertoy_service.cmx")
@@ -153,8 +175,12 @@ package("shadertoy_service") {
 package("simplest_app") {
   deps = [ "simplest_app" ]
 
-  binary = "simplest_app"
-
+  binaries = [
+    {
+      name = "simplest_app"
+      dest = "ui_example"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
@@ -171,8 +197,12 @@ package("simplest_embedder") {
     "simplest_embedder",
   ]
 
-  binary = "simplest_embedder"
-
+  binaries = [
+    {
+      name = "simplest_embedder"
+      dest = "ui_example"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
@@ -184,8 +214,12 @@ package("simplest_embedder") {
 package("spinning_square_view") {
   deps = [ "spinning_square" ]
 
-  binary = "spinning_square_view"
-
+  binaries = [
+    {
+      name = "spinning_square_view"
+      dest = "ui_example"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
@@ -197,8 +231,12 @@ package("spinning_square_view") {
 package("standalone_app") {
   deps = [ "standalone_app" ]
 
-  binary = "standalone_app"
-
+  binaries = [
+    {
+      name = "standalone_app"
+      dest = "ui_example"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
@@ -210,8 +248,12 @@ package("standalone_app") {
 package("tile_view") {
   deps = [ "tile" ]
 
-  binary = "tile_view"
-
+  binaries = [
+    {
+      name = "tile_view"
+      dest = "ui_example"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/ui_example.cmx")
@@ -223,8 +265,11 @@ package("tile_view") {
 package("yuv_to_image_pipe") {
   deps = [ "yuv_to_image_pipe" ]
 
-  binary = "yuv_to_image_pipe"
-
+  binaries = [
+    {
+      name = "yuv_to_image_pipe"
+    },
+  ]
   meta = [
     {
       path = rebase_path("yuv_to_image_pipe/meta/yuv_to_image_pipe.cmx")

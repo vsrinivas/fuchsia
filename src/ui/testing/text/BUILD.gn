@@ -38,8 +38,11 @@ package("text_test_suite") {
 
   deps = [ ":test_suite" ]
 
-  binary = "text_test_suite"
-
+  binaries = [
+    {
+      name = "text_test_suite"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/test_suite.cmx")

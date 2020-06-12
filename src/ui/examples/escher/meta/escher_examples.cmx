@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/escher_examples"
     },
     "sandbox": {
         "dev": [

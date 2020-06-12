@@ -54,8 +54,11 @@ package("tiles") {
     },
   ]
 
-  binary = "tiles"
-
+  binaries = [
+    {
+      name = "tiles"
+    },
+  ]
   deps = [ ":bin" ]
 }
 

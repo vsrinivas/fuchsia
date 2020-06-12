@@ -3,7 +3,7 @@
         "args": [
             "coordinate_test_view"
         ],
-        "binary": "bin/app"
+        "binary": "bin/test_views_app"
     },
     "sandbox": {
         "services": [

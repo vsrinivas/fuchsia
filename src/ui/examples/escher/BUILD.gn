@@ -20,8 +20,12 @@ group("escher") {
 package("escher_waterfall") {
   deps = [ "waterfall" ]
 
-  binary = "waterfall"
-
+  binaries = [
+    {
+      name = "waterfall"
+      dest = "escher_examples"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/escher_examples.cmx")
@@ -42,8 +46,12 @@ package("escher_waterfall") {
 package("escher_rainfall") {
   deps = [ "rainfall" ]
 
-  binary = "rainfall"
-
+  binaries = [
+    {
+      name = "rainfall"
+      dest = "escher_examples"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/escher_examples.cmx")
