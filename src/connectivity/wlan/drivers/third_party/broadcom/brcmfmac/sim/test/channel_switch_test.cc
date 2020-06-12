@@ -53,7 +53,7 @@ class ChannelSwitchTest : public SimTest {
   size_t assoc_resp_count_ = 0;
 
   // This is the interface we will use for our single client interface
-  std::unique_ptr<SimInterface> client_ifc_;
+  SimInterface client_ifc_;
   std::list<simulation::FakeAp*> aps_;
 
   // All new channel numbers for channel switch received in wlanif
@@ -126,13 +126,13 @@ void ChannelSwitchTest::StartScan() {
       .max_channel_time = kDwellTimeMs,
       .num_ssids = 0,
   };
-  client_ifc_->if_impl_ops_->start_scan(client_ifc_->if_impl_ctx_, &req);
+  client_ifc_.if_impl_ops_->start_scan(client_ifc_.if_impl_ctx_, &req);
 }
 
 // Create our device instance and hook up the callbacks
 void ChannelSwitchTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT, sme_protocol_, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
   ScheduleCall(&ChannelSwitchTest::Finish, kTestDuration);
 }
 
@@ -149,14 +149,14 @@ void ChannelSwitchTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
   std::memcpy(auth_req.peer_sta_address, kDefaultBssid.byte, ETH_ALEN);
   auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
   auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
-  client_ifc_->if_impl_ops_->auth_req(client_ifc_->if_impl_ctx_, &auth_req);
+  client_ifc_.if_impl_ops_->auth_req(client_ifc_.if_impl_ctx_, &auth_req);
 }
 
 void ChannelSwitchTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   // Send assoc request
   wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
   memcpy(assoc_req.peer_sta_address, kDefaultBssid.byte, ETH_ALEN);
-  client_ifc_->if_impl_ops_->assoc_req(client_ifc_->if_impl_ctx_, &assoc_req);
+  client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
 }
 
 void ChannelSwitchTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
@@ -176,7 +176,7 @@ void ChannelSwitchTest::StartAssoc() {
   join_req.selected_bss.ssid.len = kDefaultSsid.len;
   memcpy(join_req.selected_bss.ssid.data, kDefaultSsid.ssid, WLAN_MAX_SSID_LEN);
   join_req.selected_bss.chan = kDefaultChannel;
-  client_ifc_->if_impl_ops_->join_req(client_ifc_->if_impl_ctx_, &join_req);
+  client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
 
 void ChannelSwitchTest::ScheduleCall(void (ChannelSwitchTest::*fn)(), zx::duration when) {

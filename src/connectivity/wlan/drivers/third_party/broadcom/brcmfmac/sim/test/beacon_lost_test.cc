@@ -64,7 +64,7 @@ class BeaconLostTest : public SimTest {
   };
 
   // This is the interface we will use for our single client interface
-  std::unique_ptr<SimInterface> client_ifc_;
+  SimInterface client_ifc_;
 
   AssocContext context_;
 
@@ -143,7 +143,7 @@ void BeaconLostTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
 // Create our device instance and hook up the callbacks
 void BeaconLostTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT, sme_protocol_, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
   context_.assoc_resp_count = 0;
   context_.deauth_ind_count = 0;
   ScheduleCall(&BeaconLostTest::Finish, kTestDuration);
@@ -163,14 +163,14 @@ void BeaconLostTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
   std::memcpy(auth_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
   auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
   auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
-  client_ifc_->if_impl_ops_->auth_req(client_ifc_->if_impl_ctx_, &auth_req);
+  client_ifc_.if_impl_ops_->auth_req(client_ifc_.if_impl_ctx_, &auth_req);
 }
 
 void BeaconLostTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   // Send assoc request
   wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
   memcpy(assoc_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
-  client_ifc_->if_impl_ops_->assoc_req(client_ifc_->if_impl_ctx_, &assoc_req);
+  client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
 }
 
 void BeaconLostTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
@@ -191,7 +191,7 @@ void BeaconLostTest::StartAssoc() {
   join_req.selected_bss.ssid.len = context_.ssid.len;
   memcpy(join_req.selected_bss.ssid.data, context_.ssid.ssid, WLAN_MAX_SSID_LEN);
   join_req.selected_bss.chan = context_.tx_info.channel;
-  client_ifc_->if_impl_ops_->join_req(client_ifc_->if_impl_ctx_, &join_req);
+  client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
 
 void BeaconLostTest::ScheduleCall(void (BeaconLostTest::*fn)(), zx::duration when) {

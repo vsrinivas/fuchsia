@@ -46,7 +46,7 @@ class PassiveScanTest : public SimTest {
 
  private:
   // This is the interface we will use for our single client interface
-  std::unique_ptr<SimInterface> client_ifc_;
+  SimInterface client_ifc_;
 
   // All simulated APs
   std::list<std::unique_ptr<ApInfo>> aps_;
@@ -73,7 +73,7 @@ wlanif_impl_ifc_protocol_ops_t PassiveScanTest::sme_ops_ = {
 
 void PassiveScanTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT, sme_protocol_, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
 }
 
 // Create a new AP with the specified parameters, and tell it to start beaconing
@@ -89,7 +89,7 @@ void PassiveScanTest::EndSimulation() {
   for (auto ap_info = aps_.begin(); ap_info != aps_.end(); ap_info++) {
     (*ap_info)->ap_.DisableBeacon();
   }
-  zx_status_t status = device_->WlanphyImplDestroyIface(client_ifc_->iface_id_);
+  zx_status_t status = device_->WlanphyImplDestroyIface(client_ifc_.iface_id_);
   EXPECT_EQ(status, ZX_OK);
 }
 
@@ -105,7 +105,7 @@ void PassiveScanTest::StartScan() {
       .max_channel_time = kDwellTimeMs,
       .num_ssids = 0,
   };
-  client_ifc_->if_impl_ops_->start_scan(client_ifc_->if_impl_ctx_, &req);
+  client_ifc_.if_impl_ops_->start_scan(client_ifc_.if_impl_ctx_, &req);
   scan_state_ = RUNNING;
 }
 

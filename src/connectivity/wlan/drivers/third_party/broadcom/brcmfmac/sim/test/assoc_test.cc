@@ -103,7 +103,7 @@ class AssocTest : public SimTest {
   };
 
   // This is the interface we will use for our single client interface
-  std::unique_ptr<SimInterface> client_ifc_;
+  SimInterface client_ifc_;
 
   AssocContext context_;
 
@@ -233,7 +233,7 @@ void AssocTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
 // Create our device instance and hook up the callbacks
 void AssocTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT, sme_protocol_, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
   context_.assoc_resp_count = 0;
   context_.disassoc_conf_count = 0;
   context_.deauth_ind_count = 0;
@@ -253,7 +253,7 @@ void AssocTest::Finish() {
 void AssocTest::DisassocFromAp() {
   uint8_t mac_buf[ETH_ALEN];
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr my_mac(mac_buf);
 
   // Disassoc the STA
@@ -268,14 +268,14 @@ void AssocTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
   std::memcpy(auth_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
   auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
   auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
-  client_ifc_->if_impl_ops_->auth_req(client_ifc_->if_impl_ctx_, &auth_req);
+  client_ifc_.if_impl_ops_->auth_req(client_ifc_.if_impl_ctx_, &auth_req);
 }
 
 void AssocTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   // Send assoc request
   wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
   memcpy(assoc_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
-  client_ifc_->if_impl_ops_->assoc_req(client_ifc_->if_impl_ctx_, &assoc_req);
+  client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
 }
 
 void AssocTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
@@ -316,7 +316,7 @@ void AssocTest::StartAssoc() {
   join_req.selected_bss.ssid.len = context_.ssid.len;
   memcpy(join_req.selected_bss.ssid.data, context_.ssid.ssid, WLAN_MAX_SSID_LEN);
   join_req.selected_bss.chan = context_.tx_info.channel;
-  client_ifc_->if_impl_ops_->join_req(client_ifc_->if_impl_ctx_, &join_req);
+  client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
 
 // Verify that we get a signal report when associated.
@@ -349,7 +349,7 @@ void AssocTest::ScheduleCall(void (AssocTest::*fn)(), zx::duration when) {
 
 void AssocTest::AssocErrorInject() {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, client_ifc_->iface_id_);
+  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, client_ifc_.iface_id_);
 }
 
 void AssocTest::StartDisassoc() {
@@ -378,21 +378,21 @@ void AssocTest::DisassocClient(const common::MacAddr& mac_addr) {
   wlanif_disassoc_req disassoc_req = {};
 
   std::memcpy(disassoc_req.peer_sta_address, mac_addr.byte, ETH_ALEN);
-  client_ifc_->if_impl_ops_->disassoc_req(client_ifc_->if_impl_ctx_, &disassoc_req);
+  client_ifc_.if_impl_ops_->disassoc_req(client_ifc_.if_impl_ctx_, &disassoc_req);
 }
 
 void AssocTest::DeauthClient() {
   wlanif_deauth_req_t deauth_req = {};
 
   std::memcpy(deauth_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
-  client_ifc_->if_impl_ops_->deauth_req(client_ifc_->if_impl_ctx_, &deauth_req);
+  client_ifc_.if_impl_ops_->deauth_req(client_ifc_.if_impl_ctx_, &deauth_req);
 }
 
 void AssocTest::DeauthFromAp() {
   // Figure out our own MAC
   uint8_t mac_buf[ETH_ALEN];
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr my_mac(mac_buf);
 
   // Send a Deauth to our STA
@@ -404,7 +404,7 @@ void AssocTest::TxFakeDisassocReq() {
   // Figure out our own MAC
   uint8_t mac_buf[ETH_ALEN];
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr my_mac(mac_buf);
 
   // Send a Disassoc Req to our STA (which is not associated)
@@ -581,7 +581,7 @@ TEST_F(AssocTest, ApRejectedRequest) {
 
   uint32_t max_assoc_retries = 0;
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "assoc_retry_max", &max_assoc_retries,
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "assoc_retry_max", &max_assoc_retries,
                          sizeof(max_assoc_retries));
   ASSERT_NE(max_assoc_retries, 0U);
   // We should have gotten a rejection from the fake AP
@@ -616,7 +616,7 @@ void AssocTest::SendBadResp() {
   // Figure out our own MAC
   uint8_t mac_buf[ETH_ALEN];
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr my_mac(mac_buf);
 
   // Send a response from the wrong bss
@@ -665,7 +665,7 @@ void AssocTest::SendMultipleResp() {
   // Figure out our own MAC
   uint8_t mac_buf[ETH_ALEN];
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr my_mac(mac_buf);
   simulation::SimAssocRespFrame multiple_resp_frame(context_.bssid, my_mac,
                                                     WLAN_ASSOC_RESULT_SUCCESS);
@@ -677,7 +677,7 @@ void AssocTest::SendMultipleResp() {
 void AssocTest::SendOpenAuthResp() {
   uint8_t mac_buf[ETH_ALEN];
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr my_mac(mac_buf);
   simulation::SimAuthFrame auth_resp(context_.bssid, my_mac, 2, simulation::AUTH_TYPE_OPEN,
                                      WLAN_AUTH_RESULT_SUCCESS);
@@ -725,7 +725,7 @@ TEST_F(AssocTest, AssocWhileScanning) {
       .max_channel_time = 100,
       .num_ssids = 0,
   };
-  client_ifc_->if_impl_ops_->start_scan(client_ifc_->if_impl_ctx_, &scan_req);
+  client_ifc_.if_impl_ops_->start_scan(client_ifc_.if_impl_ctx_, &scan_req);
 
   env_->Run();
 
@@ -896,14 +896,14 @@ TEST_F(AssocTest, AssocMaxRetries) {
 
   uint32_t max_assoc_retries = 5;
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsSet(client_ifc_->iface_id_, "assoc_retry_max", &max_assoc_retries,
+  sim->sim_fw->IovarsSet(client_ifc_.iface_id_, "assoc_retry_max", &max_assoc_retries,
                          sizeof(max_assoc_retries));
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
   env_->Run();
 
   uint32_t assoc_retries;
-  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "assoc_retry_max", &assoc_retries,
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "assoc_retry_max", &assoc_retries,
                          sizeof(max_assoc_retries));
   ASSERT_EQ(max_assoc_retries, assoc_retries);
   // Should have received as many rejections as the configured # of retries.
@@ -929,7 +929,7 @@ TEST_F(AssocTest, AssocMaxRetriesWhenTimedout) {
 
   uint32_t max_assoc_retries = 5;
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsSet(client_ifc_->iface_id_, "assoc_retry_max", &max_assoc_retries,
+  sim->sim_fw->IovarsSet(client_ifc_.iface_id_, "assoc_retry_max", &max_assoc_retries,
                          sizeof(max_assoc_retries));
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
@@ -955,14 +955,14 @@ TEST_F(AssocTest, AssocNoRetries) {
 
   uint32_t max_assoc_retries = 0;
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsSet(client_ifc_->iface_id_, "assoc_retry_max", &max_assoc_retries,
+  sim->sim_fw->IovarsSet(client_ifc_.iface_id_, "assoc_retry_max", &max_assoc_retries,
                          sizeof(max_assoc_retries));
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
   env_->Run();
 
   uint32_t assoc_retries;
-  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "assoc_retry_max", &assoc_retries,
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "assoc_retry_max", &assoc_retries,
                          sizeof(max_assoc_retries));
   ASSERT_EQ(max_assoc_retries, assoc_retries);
   // We should have gotten a rejection from the fake AP

@@ -40,7 +40,7 @@ const ether_arp kSampleArpReq = {.ea_hdr = {.ar_hrd = htons(ETH_P_802_3),
                                  .arp_tha = THEIR_MAC,
                                  .arp_tpa = {100, 101, 102, 103}};
 
-const std::vector<uint8_t> kDummyData = { 0, 1, 2, 3, 4 };
+const std::vector<uint8_t> kDummyData = {0, 1, 2, 3, 4};
 
 class ArpTest : public SimTest {
  public:
@@ -94,7 +94,7 @@ class ArpTest : public SimTest {
   void OnAssocInd(const wlanif_assoc_ind_t* ind);
 
   std::vector<uint8_t> ethFrame;
-  std::unique_ptr<SimInterface> sim_ifc_;
+  SimInterface sim_ifc_;
   bool assoc_ind_recv_ = false;
 
   // Have we completed associating our client interface with a fake AP?
@@ -108,7 +108,7 @@ wlanif_impl_ifc_protocol_ops_t ArpTest::sme_ops_ = {
     .join_conf =
         [](void* ctx, const wlanif_join_confirm_t* resp) {
           static_cast<ArpTest*>(ctx)->OnJoinConf(resp);
-         },
+        },
     .auth_conf =
         [](void* ctx, const wlanif_auth_confirm_t* resp) {
           static_cast<ArpTest*>(ctx)->OnAuthConf(resp);
@@ -120,10 +120,8 @@ wlanif_impl_ifc_protocol_ops_t ArpTest::sme_ops_ = {
         [](void* ctx, const wlanif_assoc_confirm_t* resp) {
           static_cast<ArpTest*>(ctx)->OnAssocConf(resp);
         },
-    .assoc_ind =
-        [](void* ctx, const wlanif_assoc_ind_t* ind) {
-          static_cast<ArpTest*>(ctx)->OnAssocInd(ind);
-        },
+    .assoc_ind = [](void* ctx,
+                    const wlanif_assoc_ind_t* ind) { static_cast<ArpTest*>(ctx)->OnAssocInd(ind); },
     .disassoc_conf = [](void* ctx, const wlanif_disassoc_confirm_t* resp) {},
     .disassoc_ind = [](void* ctx, const wlanif_disassoc_indication_t* ind) {},
     .start_conf =
@@ -178,13 +176,13 @@ zx_status_t ArpTest::StartSoftAP() {
       .channel = kDefaultCh,
       .rsne_len = 0,
   };
-  sim_ifc_->if_impl_ops_->start_req(sim_ifc_->if_impl_ctx_, &start_req);
+  sim_ifc_.if_impl_ops_->start_req(sim_ifc_.if_impl_ctx_, &start_req);
   return ZX_OK;
 }
 
 zx_status_t ArpTest::SetMulticastPromisc(bool enable) {
-  wlanif_impl_protocol_ops_t* ops = sim_ifc_->if_impl_ops_;
-  void* ctx = sim_ifc_->if_impl_ctx_;
+  wlanif_impl_protocol_ops_t* ops = sim_ifc_.if_impl_ops_;
+  void* ctx = sim_ifc_.if_impl_ctx_;
   return ops->set_multicast_promisc(ctx, enable);
 }
 
@@ -198,7 +196,7 @@ zx_status_t ArpTest::StopSoftAP() {
   wlanif_stop_req_t stop_req{
       .ssid = {.len = 6, .data = "Sim_AP"},
   };
-  sim_ifc_->if_impl_ops_->stop_req(sim_ifc_->if_impl_ctx_, &stop_req);
+  sim_ifc_.if_impl_ops_->stop_req(sim_ifc_.if_impl_ctx_, &stop_req);
   return ZX_OK;
 }
 
@@ -219,13 +217,13 @@ void ArpTest::VerifyAssoc() {
   // the number of clients
   ASSERT_EQ(assoc_ind_recv_, true);
   brcmf_simdev* sim = device_->GetSim();
-  uint16_t num_clients = sim->sim_fw->GetNumClients(sim_ifc_->iface_id_);
+  uint16_t num_clients = sim->sim_fw->GetNumClients(sim_ifc_.iface_id_);
   ASSERT_EQ(num_clients, 1U);
 }
 
 void ArpTest::CleanupApInterface() {
   StopSoftAP();
-  ASSERT_EQ(device_->WlanphyImplDestroyIface(sim_ifc_->iface_id_), ZX_OK);
+  ASSERT_EQ(device_->WlanphyImplDestroyIface(sim_ifc_.iface_id_), ZX_OK);
 }
 
 void ArpTest::ScheduleTx(const common::MacAddr& dstAddr, const common::MacAddr& srcAddr,
@@ -280,7 +278,7 @@ void ArpTest::ScheduleArpFrameTx(zx::duration when, bool expect_rx) {
 
 void ArpTest::ScheduleNonArpFrameTx(zx::duration when) {
   std::vector<uint8_t> frame_bytes =
-    CreateEthernetFrame(kOurMac, kTheirMac, 0, kDummyData.data(), kDummyData.size());
+      CreateEthernetFrame(kOurMac, kTheirMac, 0, kDummyData.data(), kDummyData.size());
   ScheduleTx(kOurMac, kTheirMac, frame_bytes, when);
 }
 
@@ -292,7 +290,7 @@ void ArpTest::StartAssoc() {
   memcpy(join_req.selected_bss.ssid.data, kDefaultSsid.ssid, WLAN_MAX_SSID_LEN);
   join_req.selected_bss.chan = kDefaultChannel;
   join_req.selected_bss.bss_type = WLAN_BSS_TYPE_ANY_BSS;
-  sim_ifc_->if_impl_ops_->join_req(sim_ifc_->if_impl_ctx_, &join_req);
+  sim_ifc_.if_impl_ops_->join_req(sim_ifc_.if_impl_ctx_, &join_req);
 }
 
 void ArpTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
@@ -301,25 +299,23 @@ void ArpTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
   std::memcpy(auth_req.peer_sta_address, kTheirMac.byte, ETH_ALEN);
   auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
   auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
-  sim_ifc_->if_impl_ops_->auth_req(sim_ifc_->if_impl_ctx_, &auth_req);
+  sim_ifc_.if_impl_ops_->auth_req(sim_ifc_.if_impl_ctx_, &auth_req);
 }
 
 void ArpTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   // Send assoc request
   wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
   memcpy(assoc_req.peer_sta_address, kTheirMac.byte, ETH_ALEN);
-  sim_ifc_->if_impl_ops_->assoc_req(sim_ifc_->if_impl_ctx_, &assoc_req);
+  sim_ifc_.if_impl_ops_->assoc_req(sim_ifc_.if_impl_ctx_, &assoc_req);
 }
 
-void ArpTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
-  assoc_complete_ = true;
-}
+void ArpTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) { assoc_complete_ = true; }
 
 // Verify that an ARP frame received by an AP interface is not offloaded, even after multicast
 // promiscuous mode is enabled.
 TEST_F(ArpTest, SoftApArpOffload) {
   Init();
-  ASSERT_EQ(SimTest::CreateInterface(WLAN_INFO_MAC_ROLE_AP, sme_protocol_, &sim_ifc_, kOurMac),
+  ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_AP, &sim_ifc_, &sme_protocol_, kOurMac),
             ZX_OK);
   EXPECT_EQ(StartSoftAP(), ZX_OK);
 
@@ -353,7 +349,7 @@ TEST_F(ArpTest, SoftApArpOffload) {
 // the multicast promiscuous setting.
 TEST_F(ArpTest, ClientArpOffload) {
   Init();
-  ASSERT_EQ(SimTest::CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT, sme_protocol_, &sim_ifc_, kOurMac),
+  ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &sim_ifc_, &sme_protocol_, kOurMac),
             ZX_OK);
 
   // Start a fake AP

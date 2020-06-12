@@ -61,7 +61,7 @@ class ScanTest : public SimTest {
 
  private:
   // This is the interface we will use for our single client interface
-  std::unique_ptr<SimInterface> client_ifc_;
+  SimInterface client_ifc_;
 
   // Our simulated AP
   std::unique_ptr<ApInfo> ap_info_;
@@ -88,7 +88,7 @@ wlanif_impl_ifc_protocol_ops_t ScanTest::sme_ops_ = {
 
 void ScanTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT, sme_protocol_, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
 }
 
 // Create a new AP with the specified parameters, and tell it to start beaconing
@@ -101,7 +101,7 @@ void ScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid
 // Called when simulation time has run out. Takes down all fake APs and the simulated DUT.
 void ScanTest::EndSimulation() {
   ap_info_->ap_.DisableBeacon();
-  zx_status_t status = device_->WlanphyImplDestroyIface(client_ifc_->iface_id_);
+  zx_status_t status = device_->WlanphyImplDestroyIface(client_ifc_.iface_id_);
   EXPECT_EQ(status, ZX_OK);
   // TODO - check status. brcmfmac doesn't support destroying an interface yet.
 }
@@ -118,7 +118,7 @@ void ScanTest::StartScan() {
       .max_channel_time = kDwellTimeMs,
       .num_ssids = 0,
   };
-  client_ifc_->if_impl_ops_->start_scan(client_ifc_->if_impl_ctx_, &req);
+  client_ifc_.if_impl_ops_->start_scan(client_ifc_.if_impl_ctx_, &req);
   scan_state_ = RUNNING;
   scans_remaining_--;
 }

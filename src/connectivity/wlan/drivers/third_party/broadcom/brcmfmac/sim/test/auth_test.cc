@@ -56,7 +56,7 @@ class AuthTest : public SimTest {
   void SecErrorInject();
 
   // This is the interface we will use for our single client interface
-  std::unique_ptr<SimInterface> client_ifc_;
+  SimInterface client_ifc_;
 
   SimFirmware* sim_fw_;
   uint32_t wsec_;
@@ -135,14 +135,14 @@ wlanif_impl_ifc_protocol_ops_t AuthTest::sme_ops_ = {
 
 void AuthTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT, sme_protocol_, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
   sim_fw_ = device_->GetSim()->sim_fw.get();
   ap_.EnableBeacon(zx::msec(100));
   ScheduleEvent(&AuthTest::StopBeacon, kTestDuration);
 }
 
 void AuthTest::Destroy() {
-  zx_status_t status = device_->WlanphyImplDestroyIface(client_ifc_->iface_id_);
+  zx_status_t status = device_->WlanphyImplDestroyIface(client_ifc_.iface_id_);
   EXPECT_EQ(status, ZX_OK);
 }
 
@@ -162,7 +162,7 @@ void AuthTest::VerifyAuthFrames() {
 
 void AuthTest::SecErrorInject() {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->err_inj_.AddErrInjIovar("wsec", ZX_ERR_IO, client_ifc_->iface_id_);
+  sim->sim_fw->err_inj_.AddErrInjIovar("wsec", ZX_ERR_IO, client_ifc_.iface_id_);
 }
 
 wlanif_set_keys_req AuthTest::CreateKeyReq(const uint8_t key[WLAN_MAX_KEY_LEN],
@@ -185,7 +185,7 @@ void AuthTest::StartAuth() {
   join_req.selected_bss.ssid.len = kDefaultSsid.len;
   memcpy(join_req.selected_bss.ssid.data, kDefaultSsid.ssid, WLAN_MAX_SSID_LEN);
   join_req.selected_bss.chan = kDefaultChannel;
-  client_ifc_->if_impl_ops_->join_req(client_ifc_->if_impl_ctx_, &join_req);
+  client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
 
 void AuthTest::StopBeacon() { ap_.DisableBeacon(); }
@@ -202,8 +202,8 @@ void AuthTest::OnScanResult(const wlanif_scan_result_t* result) {
 }
 
 void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
-  sim_fw_->IovarsGet(client_ifc_->iface_id_, "wsec", &wsec_, sizeof(wsec_));
-  sim_fw_->IovarsGet(client_ifc_->iface_id_, "wpa_auth", &wpa_auth_, sizeof(wpa_auth_));
+  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wsec", &wsec_, sizeof(wsec_));
+  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wpa_auth", &wpa_auth_, sizeof(wpa_auth_));
   EXPECT_EQ(wsec_, (uint32_t)0);
   EXPECT_EQ(wpa_auth_, (uint32_t)0);
 
@@ -216,7 +216,7 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
     case SEC_TYPE_WEP_SHARED104: {
       wlanif_set_keys_req set_keys_req =
           CreateKeyReq(&test_key13[0], kWEP104KeyLen, WPA_CIPHER_WEP_104);
-      client_ifc_->if_impl_ops_->set_keys_req(client_ifc_->if_impl_ctx_, &set_keys_req);
+      client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req);
       auth_req.auth_type = WLAN_AUTH_TYPE_SHARED_KEY;
       break;
     }
@@ -224,7 +224,7 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
     case SEC_TYPE_WEP_SHARED40: {
       wlanif_set_keys_req set_keys_req =
           CreateKeyReq(&test_key5[0], kWEP40KeyLen, WPA_CIPHER_WEP_40);
-      client_ifc_->if_impl_ops_->set_keys_req(client_ifc_->if_impl_ctx_, &set_keys_req);
+      client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req);
       auth_req.auth_type = WLAN_AUTH_TYPE_SHARED_KEY;
       break;
     }
@@ -232,7 +232,7 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
     case SEC_TYPE_WEP_OPEN: {
       wlanif_set_keys_req set_keys_req =
           CreateKeyReq(&test_key5[0], kWEP40KeyLen, WPA_CIPHER_WEP_40);
-      client_ifc_->if_impl_ops_->set_keys_req(client_ifc_->if_impl_ctx_, &set_keys_req);
+      client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req);
       auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
       break;
     }
@@ -246,7 +246,7 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
     default:
       return;
   }
-  client_ifc_->if_impl_ops_->auth_req(client_ifc_->if_impl_ctx_, &auth_req);
+  client_ifc_.if_impl_ops_->auth_req(client_ifc_.if_impl_ctx_, &auth_req);
 }
 
 void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
@@ -254,9 +254,9 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   if (auth_status_ != WLAN_AUTH_RESULT_SUCCESS) {
     return;
   }
-  sim_fw_->IovarsGet(client_ifc_->iface_id_, "wsec_key", &wsec_key_, sizeof(wsec_key_));
-  sim_fw_->IovarsGet(client_ifc_->iface_id_, "auth", &auth_, sizeof(auth_));
-  sim_fw_->IovarsGet(client_ifc_->iface_id_, "wsec", &wsec_, sizeof(wsec_));
+  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wsec_key", &wsec_key_, sizeof(wsec_key_));
+  sim_fw_->IovarsGet(client_ifc_.iface_id_, "auth", &auth_, sizeof(auth_));
+  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wsec", &wsec_, sizeof(wsec_));
 
   if (sec_type_ != SEC_TYPE_WPA1 && sec_type_ != SEC_TYPE_WPA2) {
     EXPECT_EQ(wsec_key_.flags, (uint32_t)BRCMF_PRIMARY_KEY);
@@ -378,7 +378,7 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   }
 
   memcpy(assoc_req.peer_sta_address, kDefaultBssid.byte, ETH_ALEN);
-  client_ifc_->if_impl_ops_->assoc_req(client_ifc_->if_impl_ctx_, &assoc_req);
+  client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
 }
 
 void AuthTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
@@ -387,8 +387,8 @@ void AuthTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   if (assoc_status_ != WLAN_ASSOC_RESULT_SUCCESS) {
     return;
   }
-  sim_fw_->IovarsGet(client_ifc_->iface_id_, "wsec", &wsec_, sizeof(wsec_));
-  sim_fw_->IovarsGet(client_ifc_->iface_id_, "wpa_auth", &wpa_auth_, sizeof(wpa_auth_));
+  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wsec", &wsec_, sizeof(wsec_));
+  sim_fw_->IovarsGet(client_ifc_.iface_id_, "wpa_auth", &wpa_auth_, sizeof(wpa_auth_));
 
   if (sec_type_ == SEC_TYPE_WPA1) {
     // The wsec iovar is set after sending assoc_req to driver.
@@ -461,7 +461,7 @@ TEST_F(AuthTest, AuthFail) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_OPEN});
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->err_inj_.AddErrInjIovar("auth", ZX_ERR_IO, client_ifc_->iface_id_);
+  sim->sim_fw->err_inj_.AddErrInjIovar("auth", ZX_ERR_IO, client_ifc_.iface_id_);
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
   env_->Run();
@@ -485,7 +485,7 @@ TEST_F(AuthTest, IgnoreTest) {
   uint32_t max_retries = 0;
 
   brcmf_simdev* sim = device_->GetSim();
-  EXPECT_EQ(ZX_OK, sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "assoc_retry_max", &max_retries,
+  EXPECT_EQ(ZX_OK, sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "assoc_retry_max", &max_retries,
                                           sizeof(max_retries)));
 
   for (uint32_t i = 0; i < max_retries + 1; i++) {
@@ -517,7 +517,7 @@ TEST_F(AuthTest, WPA1Fail) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA1});
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->err_inj_.AddErrInjIovar("wpaie", ZX_ERR_IO, client_ifc_->iface_id_);
+  sim->sim_fw->err_inj_.AddErrInjIovar("wpaie", ZX_ERR_IO, client_ifc_.iface_id_);
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
   env_->Run();
@@ -570,7 +570,7 @@ TEST_F(AuthTest, WrongSecTypeAuthFail) {
   uint32_t max_retries = 0;
 
   brcmf_simdev* sim = device_->GetSim();
-  EXPECT_EQ(ZX_OK, sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "assoc_retry_max", &max_retries,
+  EXPECT_EQ(ZX_OK, sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "assoc_retry_max", &max_retries,
                                           sizeof(max_retries)));
 
   for (uint32_t i = 0; i < max_retries + 1; i++) {

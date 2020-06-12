@@ -53,7 +53,7 @@ class CreateSoftAPTest : public SimTest {
   // SME callbacks
   static wlanif_impl_ifc_protocol_ops_t sme_ops_;
   wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
-  std::unique_ptr<SimInterface> softap_ifc_;
+  SimInterface softap_ifc_;
   bool auth_ind_recv_ = false;
   bool assoc_ind_recv_ = false;
   bool deauth_ind_recv_ = false;
@@ -106,7 +106,7 @@ void CreateSoftAPTest::Init() { ASSERT_EQ(SimTest::Init(), ZX_OK); }
 void CreateSoftAPTest::CreateInterface() {
   zx_status_t status;
 
-  status = SimTest::CreateInterface(WLAN_INFO_MAC_ROLE_AP, sme_protocol_, &softap_ifc_);
+  status = SimTest::StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_, &sme_protocol_);
   ASSERT_EQ(status, ZX_OK);
 }
 
@@ -114,7 +114,7 @@ void CreateSoftAPTest::DeleteInterface() {
   uint32_t iface_id;
   zx_status_t status;
 
-  iface_id = softap_ifc_->iface_id_;
+  iface_id = softap_ifc_.iface_id_;
   status = device_->WlanphyImplDestroyIface(iface_id);
   ASSERT_EQ(status, ZX_OK);
 }
@@ -178,12 +178,12 @@ zx_status_t CreateSoftAPTest::StartSoftAP() {
   if (sec_enabled_ == true) {
     start_req.rsne_len = CreateRsneIe(start_req.rsne);
   }
-  softap_ifc_->if_impl_ops_->start_req(softap_ifc_->if_impl_ctx_, &start_req);
+  softap_ifc_.if_impl_ops_->start_req(softap_ifc_.if_impl_ctx_, &start_req);
 
   // Retrieve wsec from SIM FW to check if it is set appropriately
   brcmf_simdev* sim = device_->GetSim();
   int32_t wsec;
-  sim->sim_fw->IovarsGet(softap_ifc_->iface_id_, "wsec", &wsec, sizeof(wsec));
+  sim->sim_fw->IovarsGet(softap_ifc_.iface_id_, "wsec", &wsec, sizeof(wsec));
   if (sec_enabled_ == true)
     EXPECT_NE(wsec, 0);
   else
@@ -193,14 +193,14 @@ zx_status_t CreateSoftAPTest::StartSoftAP() {
 
 void CreateSoftAPTest::InjectStartAPError() {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_ERR_IO, softap_ifc_->iface_id_);
+  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_ERR_IO, softap_ifc_.iface_id_);
 }
 
 zx_status_t CreateSoftAPTest::StopSoftAP() {
   wlanif_stop_req_t stop_req{
       .ssid = {.len = 6, .data = "Sim_AP"},
   };
-  softap_ifc_->if_impl_ops_->stop_req(softap_ifc_->if_impl_ctx_, &stop_req);
+  softap_ifc_.if_impl_ops_->stop_req(softap_ifc_.if_impl_ctx_, &stop_req);
   return ZX_OK;
 }
 
@@ -231,7 +231,7 @@ void CreateSoftAPTest::TxAssocReq() {
   // Get the mac address of the SoftAP
   uint8_t mac_buf[ETH_ALEN];
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(softap_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
+  sim->sim_fw->IovarsGet(softap_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr soft_ap_mac(mac_buf);
   const common::MacAddr mac(kFakeMac);
   simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac, kDefaultSsid);
@@ -242,7 +242,7 @@ void CreateSoftAPTest::TxDisassocReq() {
   // Get the mac address of the SoftAP
   uint8_t mac_buf[ETH_ALEN];
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(softap_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
+  sim->sim_fw->IovarsGet(softap_ifc_.iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr soft_ap_mac(mac_buf);
   const common::MacAddr mac(kFakeMac);
   // Associate with the SoftAP
@@ -301,7 +301,7 @@ void CreateSoftAPTest::VerifyAssoc() {
   ASSERT_EQ(assoc_ind_recv_, true);
   ASSERT_EQ(auth_ind_recv_, true);
   brcmf_simdev* sim = device_->GetSim();
-  uint16_t num_clients = sim->sim_fw->GetNumClients(softap_ifc_->iface_id_);
+  uint16_t num_clients = sim->sim_fw->GetNumClients(softap_ifc_.iface_id_);
   ASSERT_EQ(num_clients, 1U);
 }
 
@@ -321,7 +321,7 @@ void CreateSoftAPTest::VerifyDisassoc() {
   ASSERT_EQ(disassoc_ind_recv_, true);
   ASSERT_EQ(deauth_ind_recv_, true);
   brcmf_simdev* sim = device_->GetSim();
-  uint16_t num_clients = sim->sim_fw->GetNumClients(softap_ifc_->iface_id_);
+  uint16_t num_clients = sim->sim_fw->GetNumClients(softap_ifc_.iface_id_);
   ASSERT_EQ(num_clients, 0);
 }
 

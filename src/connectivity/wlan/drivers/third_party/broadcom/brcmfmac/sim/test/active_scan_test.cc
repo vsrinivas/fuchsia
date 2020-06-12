@@ -55,7 +55,7 @@ class ActiveScanTest : public SimTest {
           std::shared_ptr<const simulation::WlanRxInfo> info) override;
 
   // This is the interface we will use for our single client interface
-  std::unique_ptr<SimInterface> client_ifc_;
+  SimInterface client_ifc_;
 
   // All simulated APs
   std::list<std::unique_ptr<ApInfo>> aps_;
@@ -83,7 +83,7 @@ wlanif_impl_ifc_protocol_ops_t ActiveScanTest::sme_ops_ = {
 
 void ActiveScanTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
-  ASSERT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT, sme_protocol_, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
 }
 
 void ActiveScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
@@ -96,7 +96,7 @@ void ActiveScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t
 
 // Tell the DUT to run a scan
 void ActiveScanTest::StartScan(const wlanif_scan_req_t* req) {
-  client_ifc_->if_impl_ops_->start_scan(client_ifc_->if_impl_ctx_, req);
+  client_ifc_.if_impl_ops_->start_scan(client_ifc_.if_impl_ctx_, req);
 }
 
 // Called when simulation time has run out. Takes down all fake APs and the simulated DUT.
@@ -104,7 +104,7 @@ void ActiveScanTest::EndSimulation() {
   for (auto ap_info = aps_.begin(); ap_info != aps_.end(); ap_info++) {
     (*ap_info)->ap_.DisableBeacon();
   }
-  zx_status_t status = device_->WlanphyImplDestroyIface(client_ifc_->iface_id_);
+  zx_status_t status = device_->WlanphyImplDestroyIface(client_ifc_.iface_id_);
   EXPECT_EQ(status, ZX_OK);
 }
 
@@ -112,13 +112,13 @@ void ActiveScanTest::EndSimulation() {
 // the driver.
 void ActiveScanTest::GetFirmwareMac() {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", sim_fw_mac_.byte, ETH_ALEN);
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", sim_fw_mac_.byte, ETH_ALEN);
 }
 
 void ActiveScanTest::GetFirwarePfnMac() {
   brcmf_simdev* sim = device_->GetSim();
   if (!sim_fw_pfn_mac_)
-    sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "pfn_macaddr", sim_fw_pfn_mac_->byte, ETH_ALEN);
+    sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "pfn_macaddr", sim_fw_pfn_mac_->byte, ETH_ALEN);
 }
 
 void ActiveScanTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,

@@ -141,7 +141,7 @@ class DataFrameTest : public SimTest {
   size_t eapol_ind_count;
 
   // This is the interface we will use for our single client interface
-  std::unique_ptr<SimInterface> client_ifc_;
+  SimInterface client_ifc_;
 
   // The MAC address of our client interface
   common::MacAddr ifc_mac_;
@@ -238,11 +238,11 @@ void DataFrameTest::Init() {
   eapol_ind_count = 0;
 
   // Bring up the interface
-  ASSERT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT, sme_protocol_, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
 
   // Figure out the interface's mac address
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", ifc_mac_.byte, ETH_ALEN);
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "cur_etheraddr", ifc_mac_.byte, ETH_ALEN);
 
   // Schedule a time to terminate execution. Simulation runs until no more events are scheduled,
   // and since we have a beaconing fake AP, that means forever if we don't stop it.
@@ -282,14 +282,14 @@ void DataFrameTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
   std::memcpy(auth_req.peer_sta_address, assoc_context_.bssid.byte, ETH_ALEN);
   auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
   auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
-  client_ifc_->if_impl_ops_->auth_req(client_ifc_->if_impl_ctx_, &auth_req);
+  client_ifc_.if_impl_ops_->auth_req(client_ifc_.if_impl_ctx_, &auth_req);
 }
 
 void DataFrameTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   // Send assoc request
   wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
   memcpy(assoc_req.peer_sta_address, assoc_context_.bssid.byte, ETH_ALEN);
-  client_ifc_->if_impl_ops_->assoc_req(client_ifc_->if_impl_ctx_, &assoc_req);
+  client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
 }
 
 void DataFrameTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
@@ -331,7 +331,7 @@ void DataFrameTest::OnStatsQueryResp(const wlanif_stats_query_response_t* resp) 
 }
 
 void DataFrameTest::SendStatsQuery() {
-  client_ifc_->if_impl_ops_->stats_query_req(client_ifc_->if_impl_ctx_);
+  client_ifc_.if_impl_ops_->stats_query_req(client_ifc_.if_impl_ctx_);
 }
 
 void DataFrameTest::ScheduleStatsQuery(zx::duration when) {
@@ -348,7 +348,7 @@ void DataFrameTest::StartAssoc() {
   memcpy(join_req.selected_bss.ssid.data, assoc_context_.ssid.ssid, WLAN_MAX_SSID_LEN);
   join_req.selected_bss.chan = assoc_context_.channel;
   join_req.selected_bss.bss_type = WLAN_BSS_TYPE_ANY_BSS;
-  client_ifc_->if_impl_ops_->join_req(client_ifc_->if_impl_ctx_, &join_req);
+  client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
 
 void DataFrameTest::ScheduleTx(std::vector<uint8_t>& ethFrame, zx::duration when) {
@@ -386,8 +386,8 @@ void DataFrameTest::Tx(std::vector<uint8_t>& ethFrame) {
   netbuf->data_size = ethFrame.size();
 
   // Send it
-  client_ifc_->if_impl_ops_->data_queue_tx(client_ifc_->if_impl_ctx_, 0, netbuf, TxComplete,
-                                           &data_context_);
+  client_ifc_.if_impl_ops_->data_queue_tx(client_ifc_.if_impl_ctx_, 0, netbuf, TxComplete,
+                                          &data_context_);
 }
 
 void DataFrameTest::TxEapolRequest(common::MacAddr dstAddr, common::MacAddr srcAddr,
@@ -397,7 +397,7 @@ void DataFrameTest::TxEapolRequest(common::MacAddr dstAddr, common::MacAddr srcA
   memcpy(eapol_req.src_addr, srcAddr.byte, WLAN_ETH_ALEN);
   eapol_req.data_list = eapol.data();
   eapol_req.data_count = eapol.size();
-  client_ifc_->if_impl_ops_->eapol_req(client_ifc_->if_impl_ctx_, &eapol_req);
+  client_ifc_.if_impl_ops_->eapol_req(client_ifc_.if_impl_ctx_, &eapol_req);
 }
 
 void DataFrameTest::ScheduleClientTx(common::MacAddr dstAddr, common::MacAddr srcAddr,

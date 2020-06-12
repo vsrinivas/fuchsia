@@ -18,7 +18,7 @@ class IovarTest : public SimTest {
   static constexpr zx::duration kTestDuration = zx::sec(100);
   IovarTest() = default;
   // This is the interface we will use for our single client interface
-  std::unique_ptr<SimInterface> client_ifc_;
+  SimInterface client_ifc_;
 
   void Init();
   void Finish();
@@ -40,14 +40,14 @@ class IovarTest : public SimTest {
 zx_status_t IovarTest::CreateInterface(wlan_info_mac_role_t role,
                                        std::optional<common::MacAddr> mac_addr) {
   EXPECT_EQ(role, WLAN_INFO_MAC_ROLE_CLIENT);
-  return SimTest::CreateInterface(role, sme_protocol_, &client_ifc_, mac_addr);
+  return SimTest::StartInterface(role, &client_ifc_, &sme_protocol_, mac_addr);
 }
 
 void IovarTest::DeleteInterface() {
   uint32_t iface_id;
   zx_status_t status;
 
-  iface_id = client_ifc_->iface_id_;
+  iface_id = client_ifc_.iface_id_;
   status = device_->WlanphyImplDestroyIface(iface_id);
   ASSERT_EQ(status, ZX_OK);
 }
@@ -61,14 +61,14 @@ void IovarTest::Finish() {}
 
 zx_status_t IovarTest::IovarGet(char* buf, uint32_t buf_len) {
   brcmf_simdev* sim = device_->GetSim();
-  return brcmf_send_cmd_to_firmware(sim->drvr, client_ifc_->iface_id_, BRCMF_C_GET_VAR, buf,
-                                    buf_len, false);
+  return brcmf_send_cmd_to_firmware(sim->drvr, client_ifc_.iface_id_, BRCMF_C_GET_VAR, buf, buf_len,
+                                    false);
 }
 
 zx_status_t IovarTest::IovarSet(char* buf, uint32_t buf_len) {
   brcmf_simdev* sim = device_->GetSim();
-  return brcmf_send_cmd_to_firmware(sim->drvr, client_ifc_->iface_id_, BRCMF_C_SET_VAR, buf,
-                                    buf_len, true);
+  return brcmf_send_cmd_to_firmware(sim->drvr, client_ifc_.iface_id_, BRCMF_C_SET_VAR, buf, buf_len,
+                                    true);
 }
 
 TEST_F(IovarTest, CheckIovarGet) {
@@ -84,7 +84,7 @@ TEST_F(IovarTest, CheckIovarGet) {
   // Get the value through the public iovar interface and compare
   brcmf_simdev* sim = device_->GetSim();
   uint32_t cur_val;
-  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "mpc", &cur_val, sizeof(cur_val));
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "mpc", &cur_val, sizeof(cur_val));
   EXPECT_EQ(cur_val, read_val);
 }
 
@@ -95,7 +95,7 @@ TEST_F(IovarTest, CheckIovarSet) {
   brcmf_simdev* sim = device_->GetSim();
   // Get the current value of mpc through the public interface
   uint32_t cur_val;
-  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "mpc", &cur_val, sizeof(cur_val));
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "mpc", &cur_val, sizeof(cur_val));
   // Change the value and set it through the factory iovar interface
   uint32_t new_val = cur_val ? 0 : 1;
   char buf[32];
@@ -106,7 +106,7 @@ TEST_F(IovarTest, CheckIovarSet) {
   zx_status_t status = IovarSet(buf, strlen(buf) + 1 + sizeof(uint32_t));
   EXPECT_EQ(status, ZX_OK);
   // Get the value again through the public iovar interface and compare
-  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "mpc", &cur_val, sizeof(cur_val));
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "mpc", &cur_val, sizeof(cur_val));
   printf("new value of mpc is: %d\n", cur_val);
   EXPECT_EQ(cur_val, new_val);
 }

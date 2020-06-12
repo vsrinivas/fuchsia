@@ -106,8 +106,8 @@ class DynamicIfTest : public SimTest {
   // SME callbacks
   static wlanif_impl_ifc_protocol_ops_t sme_ops_;
   wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
-  std::unique_ptr<SimInterface> client_ifc_;
-  std::unique_ptr<SimInterface> softap_ifc_;
+  SimInterface client_ifc_;
+  SimInterface softap_ifc_;
 
   // Event handlers
   void OnJoinConf(const wlanif_join_confirm_t* resp);
@@ -164,9 +164,9 @@ wlanif_impl_ifc_protocol_ops_t DynamicIfTest::sme_ops_ = {
 zx_status_t DynamicIfTest::CreateInterface(wlan_info_mac_role_t role,
                                            std::optional<common::MacAddr> mac_addr) {
   if (role == WLAN_INFO_MAC_ROLE_CLIENT) {
-    return SimTest::CreateInterface(role, sme_protocol_, &client_ifc_, mac_addr);
+    return SimTest::StartInterface(role, &client_ifc_, &sme_protocol_, mac_addr);
   } else {
-    return SimTest::CreateInterface(role, sme_protocol_, &softap_ifc_, mac_addr);
+    return SimTest::StartInterface(role, &softap_ifc_, &sme_protocol_, mac_addr);
   }
 }
 
@@ -175,9 +175,9 @@ void DynamicIfTest::DeleteInterface(wlan_info_mac_role_t role) {
   zx_status_t status;
 
   if (role == WLAN_INFO_MAC_ROLE_CLIENT)
-    iface_id = client_ifc_->iface_id_;
+    iface_id = client_ifc_.iface_id_;
   else
-    iface_id = softap_ifc_->iface_id_;
+    iface_id = softap_ifc_.iface_id_;
   status = device_->WlanphyImplDestroyIface(iface_id);
   ASSERT_EQ(status, ZX_OK);
 }
@@ -198,7 +198,7 @@ void DynamicIfTest::StartSoftAP() {
       .dtim_period = 100,
       .channel = kDefaultCh,
   };
-  softap_ifc_->if_impl_ops_->start_req(softap_ifc_->if_impl_ctx_, &start_req);
+  softap_ifc_.if_impl_ops_->start_req(softap_ifc_.if_impl_ctx_, &start_req);
 }
 
 void DynamicIfTest::ChannelCheck() {
@@ -252,14 +252,14 @@ void DynamicIfTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
   std::memcpy(auth_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
   auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
   auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
-  client_ifc_->if_impl_ops_->auth_req(client_ifc_->if_impl_ctx_, &auth_req);
+  client_ifc_.if_impl_ops_->auth_req(client_ifc_.if_impl_ctx_, &auth_req);
 }
 
 void DynamicIfTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   // Send assoc request
   wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
   memcpy(assoc_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
-  client_ifc_->if_impl_ops_->assoc_req(client_ifc_->if_impl_ctx_, &assoc_req);
+  client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
 }
 
 void DynamicIfTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
@@ -275,7 +275,7 @@ void DynamicIfTest::StartAssoc() {
   join_req.selected_bss.ssid.len = context_.ssid.len;
   memcpy(join_req.selected_bss.ssid.data, context_.ssid.ssid, WLAN_MAX_SSID_LEN);
   join_req.selected_bss.chan = context_.channel;
-  client_ifc_->if_impl_ops_->join_req(client_ifc_->if_impl_ctx_, &join_req);
+  client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
 
 void DynamicIfTest::ScheduleCall(void (DynamicIfTest::*fn)(), zx::duration when) {
@@ -318,14 +318,14 @@ void DynamicIfTest::VerifyAssocWithSoftAP() {
   ASSERT_EQ(assoc_ind_recv_, true);
   ASSERT_EQ(auth_ind_recv_, true);
   brcmf_simdev* sim = device_->GetSim();
-  uint16_t num_clients = sim->sim_fw->GetNumClients(softap_ifc_->iface_id_);
+  uint16_t num_clients = sim->sim_fw->GetNumClients(softap_ifc_.iface_id_);
   ASSERT_EQ(num_clients, 1U);
 }
 
 void DynamicIfTest::SetChanspec(bool is_ap_iface, uint16_t* chanspec, zx_status_t expect_result) {
   brcmf_simdev* sim = device_->GetSim();
   zx_status_t err =
-      sim->sim_fw->IovarsSet(is_ap_iface ? softap_ifc_->iface_id_ : client_ifc_->iface_id_,
+      sim->sim_fw->IovarsSet(is_ap_iface ? softap_ifc_.iface_id_ : client_ifc_.iface_id_,
                              "chanspec", chanspec, sizeof(uint16_t));
   EXPECT_EQ(err, expect_result);
 }
@@ -334,7 +334,7 @@ uint16_t DynamicIfTest::GetChanspec(bool is_ap_iface, zx_status_t expect_result)
   brcmf_simdev* sim = device_->GetSim();
   uint16_t chanspec;
   zx_status_t err =
-      sim->sim_fw->IovarsGet(is_ap_iface ? softap_ifc_->iface_id_ : client_ifc_->iface_id_,
+      sim->sim_fw->IovarsGet(is_ap_iface ? softap_ifc_.iface_id_ : client_ifc_.iface_id_,
                              "chanspec", &chanspec, sizeof(uint16_t));
   EXPECT_EQ(err, expect_result);
   return chanspec;
@@ -343,7 +343,7 @@ uint16_t DynamicIfTest::GetChanspec(bool is_ap_iface, zx_status_t expect_result)
 void DynamicIfTest::GetMacAddr(uint8_t mac_out[ETH_ALEN], bool is_ap) {
   brcmf_simdev* sim = device_->GetSim();
   if (is_ap) {
-    sim->sim_fw->IovarsGet(softap_ifc_->iface_id_, "cur_etheraddr", mac_out, ETH_ALEN);
+    sim->sim_fw->IovarsGet(softap_ifc_.iface_id_, "cur_etheraddr", mac_out, ETH_ALEN);
   } else {
     // If it's client iface, we directly use ifidx 0.
     sim->sim_fw->IovarsGet(0, "cur_etheraddr", mac_out, ETH_ALEN);

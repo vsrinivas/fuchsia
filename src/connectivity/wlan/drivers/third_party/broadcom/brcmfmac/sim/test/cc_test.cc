@@ -26,7 +26,7 @@ class CountryCodeTest : public SimTest {
   // SME callbacks
   static wlanif_impl_ifc_protocol_ops_t sme_ops_;
   wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
-  std::unique_ptr<SimInterface> client_ifc_;
+  SimInterface client_ifc_;
 };
 
 wlanif_impl_ifc_protocol_ops_t CountryCodeTest::sme_ops_ = {};
@@ -36,7 +36,7 @@ void CountryCodeTest::Init() { ASSERT_EQ(SimTest::Init(), ZX_OK); }
 void CountryCodeTest::CreateInterface() {
   zx_status_t status;
 
-  status = SimTest::CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT, sme_protocol_, &client_ifc_);
+  status = SimTest::StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_);
   ASSERT_EQ(status, ZX_OK);
 }
 
@@ -44,7 +44,7 @@ void CountryCodeTest::DeleteInterface() {
   uint32_t iface_id;
   zx_status_t status;
 
-  iface_id = client_ifc_->iface_id_;
+  iface_id = client_ifc_.iface_id_;
   status = device_->WlanphyImplDestroyIface(iface_id);
   ASSERT_EQ(status, ZX_OK);
 }
@@ -61,7 +61,7 @@ zx_status_t CountryCodeTest::ClearCountryCode() { return device_->WlanphyImplCle
 // state of the country code setting by bypassing the interfaces.
 void CountryCodeTest::GetCountryCodeFromFirmware(brcmf_fil_country_le* ccode) {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "country", ccode, sizeof(brcmf_fil_country_le));
+  sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "country", ccode, sizeof(brcmf_fil_country_le));
 }
 
 TEST_F(CountryCodeTest, SetDefault) {
