@@ -7,7 +7,7 @@
 
 #include <zxtest/zxtest.h>
 
-#include "../../uapp/psutils/ps_internal.h"
+#include "src/sys/bin/psutils/ps_internal.h"
 
 // Last character koid of deepest entry was getting dropped, see
 // https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=7014#c48.

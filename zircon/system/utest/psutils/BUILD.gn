@@ -27,10 +27,10 @@ test("ps") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ps_test.c" ]
   deps = [
+    "//src/sys/bin/psutils:ps_internal",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/uapp/psutils:ps_internal",
     "//zircon/system/ulib/task-utils",
   ]
 }
@@ -39,10 +39,10 @@ test("handles") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "handles_test.cc" ]
   deps = [
+    "//src/sys/bin/psutils:handles_internal",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/uapp/psutils:handles_internal",
     "//zircon/system/ulib/task-utils",
   ]
 }

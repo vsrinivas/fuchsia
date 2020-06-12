@@ -7,7 +7,7 @@
 
 #include <zxtest/zxtest.h>
 
-#include "../../uapp/psutils/handles-internal.h"
+#include "src/sys/bin/psutils/handles-internal.h"
 
 namespace {
 
