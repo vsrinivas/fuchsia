@@ -227,7 +227,7 @@ common_image_contents = [
   "//src/testing/runtests",
   "//src/storage/bin/storage-metrics",
   "//zircon/system/uapp/syscall-check",
-  "//zircon/system/uapp/tee-test",
+  "//src/devices/bin/tee-test",
   "//zircon/system/uapp/trace-benchmark",
   "//zircon/system/uapp/trace-example",
   "//zircon/system/uapp/waitfor",

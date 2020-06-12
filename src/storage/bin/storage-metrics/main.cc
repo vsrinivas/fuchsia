@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <fbl/string_buffer.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
@@ -13,17 +11,20 @@
 #include <fuchsia/storage/metrics/c/fidl.h>
 #include <getopt.h>
 #include <lib/fdio/cpp/caller.h>
-#include <minfs/metrics.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <storage-metrics/block-metrics.h>
-#include <storage-metrics/fs-metrics.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
 #include <utility>
+
+#include <fbl/string_buffer.h>
+#include <fbl/unique_fd.h>
+#include <minfs/metrics.h>
+#include <storage-metrics/block-metrics.h>
+#include <storage-metrics/fs-metrics.h>
 
 namespace {
 
