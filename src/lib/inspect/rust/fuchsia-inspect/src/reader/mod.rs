@@ -19,8 +19,7 @@ use {
 pub use {
     crate::reader::readable_tree::ReadableTree,
     fuchsia_inspect_node_hierarchy::{
-        ArrayBucket, ArrayFormat, ArrayValue, LinkNodeDisposition, LinkValue, NodeHierarchy,
-        Property,
+        ArrayContent, ArrayFormat, Bucket, LinkNodeDisposition, LinkValue, NodeHierarchy, Property,
     },
 };
 
@@ -359,7 +358,7 @@ impl<'a> ScanResult<'a> {
                     .collect::<Vec<i64>>();
                 parent.partial_hierarchy.properties.push(Property::IntArray(
                     name,
-                    ArrayValue::new(values, block.array_format().unwrap()),
+                    ArrayContent::new(values, block.array_format().unwrap())?,
                 ));
             }
             BlockType::UintValue => {
@@ -368,7 +367,7 @@ impl<'a> ScanResult<'a> {
                     .collect::<Vec<u64>>();
                 parent.partial_hierarchy.properties.push(Property::UintArray(
                     name,
-                    ArrayValue::new(values, block.array_format().unwrap()),
+                    ArrayContent::new(values, block.array_format().unwrap())?,
                 ));
             }
             BlockType::DoubleValue => {
@@ -377,7 +376,7 @@ impl<'a> ScanResult<'a> {
                     .collect::<Vec<f64>>();
                 parent.partial_hierarchy.properties.push(Property::DoubleArray(
                     name,
-                    ArrayValue::new(values, block.array_format().unwrap()),
+                    ArrayContent::new(values, block.array_format().unwrap())?,
                 ));
             }
             _ => return Err(format_err!("Unexpected array entry type format")),
@@ -504,11 +503,24 @@ mod tests {
                 "property-double": -3.4,
                 "property-bool": true,
                 "property-string": string_data,
-                "property-int-array": vec![1i64, 2, 1, 1, 1, 1, 1],
+                "property-int-array": vec![
+                    Bucket { floor: i64::MIN, upper: 1, count: 1 },
+                    Bucket { floor: 1, upper: 3, count: 1 },
+                    Bucket { floor: 3, upper: 5, count: 1 },
+                    Bucket { floor: 5, upper: 7, count: 1 },
+                    Bucket { floor: 7, upper: i64::MAX, count: 1 }
+                ],
                 "child-1-1": {
                     "property-int": -9i64,
                     "property-bytes": bytes_data,
-                    "property-uint-array": vec![1u64, 1, 2, 0, 1, 1, 2, 0, 0],
+                    "property-uint-array": vec![
+                        Bucket { floor: 0, upper: 1, count: 0 },
+                        Bucket { floor: 1, upper: 2, count: 1 },
+                        Bucket { floor: 2, upper: 3, count: 1 },
+                        Bucket { floor: 3, upper: 5, count: 2 },
+                        Bucket { floor: 5, upper: 9, count: 0 },
+                        Bucket { floor: 9, upper: u64::MAX, count: 0 },
+                    ],
                 }
             },
             "child-2": {

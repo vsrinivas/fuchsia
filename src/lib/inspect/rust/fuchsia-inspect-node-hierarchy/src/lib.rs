@@ -359,97 +359,102 @@ pub enum Property<Key = String> {
     Bool(Key, bool),
 
     /// The value is a double array.
-    DoubleArray(Key, ArrayValue<f64>),
+    DoubleArray(Key, ArrayContent<f64>),
 
     /// The value is an integer array.
-    IntArray(Key, ArrayValue<i64>),
+    IntArray(Key, ArrayContent<i64>),
 
     /// The value is an unsigned integer array.
-    UintArray(Key, ArrayValue<u64>),
+    UintArray(Key, ArrayContent<u64>),
 }
 
 #[allow(missing_docs)]
 #[derive(Debug, PartialEq, Clone)]
-pub struct ArrayValue<T> {
-    pub format: ArrayFormat,
-    pub values: Vec<T>,
-}
-
-#[allow(missing_docs)]
-#[derive(Debug, PartialEq)]
-pub struct ArrayBucket<T> {
+pub struct Bucket<T> {
     pub floor: T,
     pub upper: T,
     pub count: T,
 }
 
-impl<T> ArrayBucket<T> {
+impl<T> Bucket<T> {
     fn new(floor: T, upper: T, count: T) -> Self {
         Self { floor, upper, count }
     }
 }
 
-impl<T: Add<Output = T> + AddAssign + Copy + MulAssign + Bounded> ArrayValue<T> {
-    #[allow(missing_docs)]
-    pub fn new(values: Vec<T>, format: ArrayFormat) -> Self {
-        Self { format, values }
-    }
+/// Represents the content of a NodeHierarchy array property: a regular array or a
+/// linear/exponential histogram.
+#[derive(Debug, PartialEq, Clone)]
+pub enum ArrayContent<T> {
+    /// The contents of an array.
+    Values(Vec<T>),
 
-    #[allow(missing_docs)]
-    pub fn buckets(&self) -> Option<Vec<ArrayBucket<T>>> {
-        match self.format {
-            ArrayFormat::Default => None,
-            ArrayFormat::LinearHistogram => self.buckets_for_linear_hist(),
-            ArrayFormat::ExponentialHistogram => self.buckets_for_exp_hist(),
+    /// The contents of a histogram.
+    Buckets(Vec<Bucket<T>>),
+}
+
+impl<T: Add<Output = T> + AddAssign + Copy + MulAssign + Bounded> ArrayContent<T> {
+    /// Creates a new ArrayContent parsing the `values` based on the given `format`.
+    pub fn new(values: Vec<T>, format: ArrayFormat) -> Result<Self, Error> {
+        match format {
+            ArrayFormat::Default => Ok(Self::Values(values)),
+            ArrayFormat::LinearHistogram => {
+                let buckets = Self::buckets_for_linear_hist(values)?;
+                Ok(Self::Buckets(buckets))
+            }
+            ArrayFormat::ExponentialHistogram => {
+                let buckets = Self::buckets_for_exp_hist(values)?;
+                Ok(Self::Buckets(buckets))
+            }
         }
     }
 
-    fn buckets_for_linear_hist(&self) -> Option<Vec<ArrayBucket<T>>> {
+    fn buckets_for_linear_hist(values: Vec<T>) -> Result<Vec<Bucket<T>>, Error> {
         // Check that the minimum required values are available:
-        // floor, stepsize, underflow, bucket 0, underflow
-        if self.values.len() < 5 {
-            return None;
+        // floor, stepsize, underflow, bucket 0, overflow
+        if values.len() < 5 {
+            return Err(format_err!(
+                "Arrays for linear histograms should contain at least 5 elements"
+            ));
         }
-        let mut floor = self.values[0];
-        let step_size = self.values[1];
+        let mut floor = values[0];
+        let step_size = values[1];
 
         let mut result = Vec::new();
-        result.push(ArrayBucket::new(T::min_value(), floor, self.values[2]));
-        for i in 3..self.values.len() - 1 {
-            result.push(ArrayBucket::new(floor, floor + step_size, self.values[i]));
+        result.push(Bucket::new(T::min_value(), floor, values[2]));
+        for i in 3..values.len() - 1 {
+            result.push(Bucket::new(floor, floor + step_size, values[i]));
             floor += step_size;
         }
-        result.push(ArrayBucket::new(floor, T::max_value(), self.values[self.values.len() - 1]));
-        Some(result)
+        result.push(Bucket::new(floor, T::max_value(), values[values.len() - 1]));
+        Ok(result)
     }
 
-    fn buckets_for_exp_hist(&self) -> Option<Vec<ArrayBucket<T>>> {
+    fn buckets_for_exp_hist(values: Vec<T>) -> Result<Vec<Bucket<T>>, Error> {
         // Check that the minimum required values are available:
         // floor, initial step, step multiplier, underflow, bucket 0, underflow
-        if self.values.len() < 6 {
-            return None;
+        if values.len() < 6 {
+            return Err(format_err!(
+                "Arrays for exponential histograms should contain at least 6 elements"
+            ));
         }
-        let floor = self.values[0];
-        let initial_step = self.values[1];
-        let step_multiplier = self.values[2];
+        let floor = values[0];
+        let initial_step = values[1];
+        let step_multiplier = values[2];
 
-        let mut result = vec![ArrayBucket::new(T::min_value(), floor, self.values[3])];
+        let mut result = vec![Bucket::new(T::min_value(), floor, values[3])];
 
         let mut offset = initial_step;
         let mut current_floor = floor;
-        for i in 4..self.values.len() - 1 {
+        for i in 4..values.len() - 1 {
             let upper = floor + offset;
-            result.push(ArrayBucket::new(current_floor, upper, self.values[i]));
+            result.push(Bucket::new(current_floor, upper, values[i]));
             offset *= step_multiplier;
             current_floor = upper;
         }
 
-        result.push(ArrayBucket::new(
-            current_floor,
-            T::max_value(),
-            self.values[self.values.len() - 1],
-        ));
-        Some(result)
+        result.push(Bucket::new(current_floor, T::max_value(), values[values.len() - 1]));
+        Ok(result)
     }
 }
 
@@ -716,8 +721,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use selectors;
+    use {super::*, matches::assert_matches, selectors};
 
     fn validate_hierarchy_iteration(
         mut results_vec: Vec<(Vec<String>, Option<Property>)>,
@@ -752,7 +756,7 @@ mod tests {
                 Property::Int("int-root".to_string(), 3),
                 Property::DoubleArray(
                     "property-double-array".to_string(),
-                    ArrayValue::new(double_array_data.clone(), ArrayFormat::Default),
+                    ArrayContent::Values(double_array_data.clone()),
                 ),
             ],
             vec![NodeHierarchy::new(
@@ -763,7 +767,8 @@ mod tests {
                     Property::String("property-string".to_string(), string_data.clone()),
                     Property::IntArray(
                         "property-int-array".to_string(),
-                        ArrayValue::new(vec![1, 2, 1, 1, 1, 1, 1], ArrayFormat::LinearHistogram),
+                        ArrayContent::new(vec![1, 2, 1, 1, 1, 1, 1], ArrayFormat::LinearHistogram)
+                            .unwrap(),
                     ),
                 ],
                 vec![NodeHierarchy::new(
@@ -773,10 +778,11 @@ mod tests {
                         Property::Bytes("property-bytes".to_string(), bytes_data.clone()),
                         Property::UintArray(
                             "property-uint-array".to_string(),
-                            ArrayValue::new(
+                            ArrayContent::new(
                                 vec![1, 1, 2, 0, 1, 1, 2, 0, 0],
                                 ArrayFormat::ExponentialHistogram,
-                            ),
+                            )
+                            .unwrap(),
                         ),
                     ],
                     vec![],
@@ -789,10 +795,11 @@ mod tests {
                 vec!["root".to_string(), "child-1".to_string(), "child-1-1".to_string()],
                 Some(Property::UintArray(
                     "property-uint-array".to_string(),
-                    ArrayValue::new(
+                    ArrayContent::new(
                         vec![1, 1, 2, 0, 1, 1, 2, 0, 0],
                         ArrayFormat::ExponentialHistogram,
-                    ),
+                    )
+                    .unwrap(),
                 )),
             ),
             (
@@ -807,7 +814,8 @@ mod tests {
                 vec!["root".to_string(), "child-1".to_string()],
                 Some(Property::IntArray(
                     "property-int-array".to_string(),
-                    ArrayValue::new(vec![1, 2, 1, 1, 1, 1, 1], ArrayFormat::LinearHistogram),
+                    ArrayContent::new(vec![1, 2, 1, 1, 1, 1, 1], ArrayFormat::LinearHistogram)
+                        .unwrap(),
                 )),
             ),
             (
@@ -826,7 +834,7 @@ mod tests {
                 vec!["root".to_string()],
                 Some(Property::DoubleArray(
                     "property-double-array".to_string(),
-                    ArrayValue::new(double_array_data, ArrayFormat::Default),
+                    ArrayContent::Values(double_array_data),
                 )),
             ),
             (vec!["root".to_string()], Some(Property::Int("int-root".to_string(), 3))),
@@ -884,35 +892,47 @@ mod tests {
     #[test]
     fn array_value() {
         let values = vec![1, 2, 5, 7, 9, 11, 13];
-        let array = ArrayValue::<u64>::new(values.clone(), ArrayFormat::Default);
-        assert!(array.buckets().is_none());
+        let array = ArrayContent::<u64>::new(values.clone(), ArrayFormat::Default);
+        assert_matches!(array, Ok(ArrayContent::Values(vals)) if vals == values);
     }
 
     #[test]
     fn linear_histogram_array_value() {
         let values = vec![1, 2, 5, 7, 9, 11, 13];
-        let int_array = ArrayValue::<i64>::new(values.clone(), ArrayFormat::LinearHistogram);
-        assert_eq!(int_array.values, values);
-        let buckets = int_array.buckets().unwrap();
-        assert_eq!(buckets.len(), 5);
-        assert_eq!(buckets[0], ArrayBucket { floor: std::i64::MIN, upper: 1, count: 5 });
-        assert_eq!(buckets[1], ArrayBucket { floor: 1, upper: 3, count: 7 });
-        assert_eq!(buckets[2], ArrayBucket { floor: 3, upper: 5, count: 9 });
-        assert_eq!(buckets[3], ArrayBucket { floor: 5, upper: 7, count: 11 });
-        assert_eq!(buckets[4], ArrayBucket { floor: 7, upper: std::i64::MAX, count: 13 });
+        let array = ArrayContent::<i64>::new(values, ArrayFormat::LinearHistogram);
+        assert_matches!(array, Ok(ArrayContent::Buckets(buckets)) if buckets == vec![
+            Bucket { floor: std::i64::MIN, upper: 1, count: 5 },
+            Bucket { floor: 1, upper: 3, count: 7 },
+            Bucket { floor: 3, upper: 5, count: 9 },
+            Bucket { floor: 5, upper: 7, count: 11 },
+            Bucket { floor: 7, upper: std::i64::MAX, count: 13 },
+        ]);
     }
 
     #[test]
     fn exponential_histogram_array_value() {
         let values = vec![1.0, 2.0, 5.0, 7.0, 9.0, 11.0, 15.0];
-        let array = ArrayValue::<f64>::new(values.clone(), ArrayFormat::ExponentialHistogram);
-        assert_eq!(array.values, values);
-        let buckets = array.buckets().unwrap();
-        assert_eq!(buckets.len(), 4);
-        assert_eq!(buckets[0], ArrayBucket { floor: std::f64::MIN, upper: 1.0, count: 7.0 });
-        assert_eq!(buckets[1], ArrayBucket { floor: 1.0, upper: 3.0, count: 9.0 });
-        assert_eq!(buckets[2], ArrayBucket { floor: 3.0, upper: 11.0, count: 11.0 });
-        assert_eq!(buckets[3], ArrayBucket { floor: 11.0, upper: std::f64::MAX, count: 15.0 });
+        let array = ArrayContent::<f64>::new(values, ArrayFormat::ExponentialHistogram);
+        assert_matches!(array, Ok(ArrayContent::Buckets(buckets)) if buckets == vec![
+                Bucket { floor: std::f64::MIN, upper: 1.0, count: 7.0 },
+                Bucket { floor: 1.0, upper: 3.0, count: 9.0 },
+                Bucket { floor: 3.0, upper: 11.0, count: 11.0 },
+                Bucket { floor: 11.0, upper: std::f64::MAX, count: 15.0 },
+        ]);
+    }
+
+    #[test]
+    fn exponential_histogram_buckets() {
+        let values = vec![0, 2, 4, 0, 1, 2, 3, 4, 5];
+        let array = ArrayContent::new(values, ArrayFormat::ExponentialHistogram);
+        assert_matches!(array, Ok(ArrayContent::Buckets(buckets)) if buckets == vec![
+                Bucket { floor: i64::min_value(), upper: 0, count: 0 },
+                Bucket { floor: 0, upper: 2, count: 1 },
+                Bucket { floor: 2, upper: 8, count: 2 },
+                Bucket { floor: 8, upper: 32, count: 3 },
+                Bucket { floor: 32, upper: 128, count: 4 },
+                Bucket { floor: 128, upper: i64::max_value(), count: 5 },
+        ]);
     }
 
     #[test]
@@ -1016,19 +1036,6 @@ mod tests {
             ],
         );
         assert_eq!(sorted_hierarchy, hierarchy);
-    }
-
-    #[test]
-    fn exponential_histogram_buckets() {
-        let values = vec![0, 2, 4, 0, 1, 2, 3, 4, 5];
-        let buckets = ArrayValue::new(values, ArrayFormat::ExponentialHistogram).buckets().unwrap();
-        assert_eq!(buckets.len(), 6);
-        assert_eq!(buckets[0], ArrayBucket { floor: i64::min_value(), upper: 0, count: 0 });
-        assert_eq!(buckets[1], ArrayBucket { floor: 0, upper: 2, count: 1 });
-        assert_eq!(buckets[2], ArrayBucket { floor: 2, upper: 8, count: 2 });
-        assert_eq!(buckets[3], ArrayBucket { floor: 8, upper: 32, count: 3 });
-        assert_eq!(buckets[4], ArrayBucket { floor: 32, upper: 128, count: 4 });
-        assert_eq!(buckets[5], ArrayBucket { floor: 128, upper: i64::max_value(), count: 5 });
     }
 
     fn parse_selectors_and_filter_hierarchy(

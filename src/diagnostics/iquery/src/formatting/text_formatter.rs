@@ -10,7 +10,7 @@ use {
         result::IqueryResult,
     },
     anyhow::{format_err, Error},
-    fuchsia_inspect::reader::{ArrayValue, NodeHierarchy, Property},
+    fuchsia_inspect::reader::{ArrayContent, NodeHierarchy, Property},
     nom::HexDisplay,
     num_traits::Bounded,
     std::{
@@ -181,11 +181,13 @@ impl TextFormatter {
         &self,
         value_indent: &str,
         name: &str,
-        array: &ArrayValue<T>,
+        array: &ArrayContent<T>,
     ) -> String {
-        let content = match array.buckets() {
-            None => array.values.iter().map(|x| x.to_string()).collect::<Vec<String>>(),
-            Some(buckets) => buckets
+        let content = match array {
+            ArrayContent::Values(values) => {
+                values.iter().map(|x| x.to_string()).collect::<Vec<String>>()
+            }
+            ArrayContent::Buckets(buckets) => buckets
                 .iter()
                 .map(|bucket| {
                     format!(

@@ -11,7 +11,9 @@ use {
     anyhow::{bail, format_err, Error},
     base64, difference,
     fuchsia_inspect::{self, format::block::ArrayFormat},
-    fuchsia_inspect_node_hierarchy::{LinkNodeDisposition, NodeHierarchy, Property as iProperty},
+    fuchsia_inspect_node_hierarchy::{
+        ArrayContent, LinkNodeDisposition, NodeHierarchy, Property as iProperty,
+    },
     num_derive::{FromPrimitive, ToPrimitive},
     std::{
         self,
@@ -116,7 +118,11 @@ fn handle_array(values: Vec<String>, format: ArrayFormat) -> Payload {
     }
 }
 
-impl Payload {
+trait ToGeneric {
+    fn to_generic(self) -> Payload;
+}
+
+impl ToGeneric for Payload {
     /// Convert this payload into a generic representation that is compatible with JSON.
     fn to_generic(self) -> Self {
         match self {
@@ -131,6 +137,17 @@ impl Payload {
                 Payload::Link { disposition, parsed_data: parsed_data.clone_generic() }
             }
             val => val,
+        }
+    }
+}
+
+impl<T: std::fmt::Display> ToGeneric for ArrayContent<T> {
+    fn to_generic(self) -> Payload {
+        match self {
+            ArrayContent::Values(values) => Payload::GenericArray(to_string_array(values)),
+            ArrayContent::Buckets(buckets) => Payload::GenericHistogram(to_string_array(
+                buckets.into_iter().map(|bucket| bucket.count).collect(),
+            )),
         }
     }
 }
@@ -1158,15 +1175,9 @@ impl From<NodeHierarchy> for Data {
                     iProperty::Uint(n, v) => (n, Payload::Uint(v).to_generic()),
                     iProperty::Double(n, v) => (n, Payload::Double(v).to_generic()),
                     iProperty::Bool(n, v) => (n, Payload::Bool(v).to_generic()),
-                    iProperty::IntArray(n, v) => {
-                        (n, Payload::IntArray(v.values, v.format).to_generic())
-                    }
-                    iProperty::UintArray(n, v) => {
-                        (n, Payload::UintArray(v.values, v.format).to_generic())
-                    }
-                    iProperty::DoubleArray(n, v) => {
-                        (n, Payload::DoubleArray(v.values, v.format).to_generic())
-                    }
+                    iProperty::IntArray(n, content) => (n, content.to_generic()),
+                    iProperty::UintArray(n, content) => (n, content.to_generic()),
+                    iProperty::DoubleArray(n, content) => (n, content.to_generic()),
                 };
 
                 properties.insert(prop_id, Property { name, id: prop_id, parent: id, payload });
@@ -1191,7 +1202,7 @@ mod tests {
         fidl_test_inspect_validate::{Number, NumberType, ROOT_ID},
         fuchsia_inspect::{
             format::block_type::BlockType,
-            reader::{ArrayFormat, ArrayValue as iArrayValue},
+            reader::{ArrayContent as iArrayContent, ArrayFormat},
         },
     };
 
@@ -1245,51 +1256,60 @@ mod tests {
                     properties: vec![
                         iProperty::UintArray(
                             "uint_a".to_string(),
-                            iArrayValue::new(vec![1, 2], ArrayFormat::Default),
+                            iArrayContent::Values(vec![1, 2]),
                         ),
                         iProperty::IntArray(
                             "int_a".to_string(),
-                            iArrayValue::new(vec![-1i64, -2i64], ArrayFormat::Default),
+                            iArrayContent::Values(vec![-1i64, -2i64]),
                         ),
                         iProperty::DoubleArray(
                             "double_a".to_string(),
-                            iArrayValue::new(vec![0.5, 1.0], ArrayFormat::Default),
+                            iArrayContent::Values(vec![0.5, 1.0]),
                         ),
                         iProperty::UintArray(
                             "uint_lh".to_string(),
-                            iArrayValue::new(vec![1, 1, 1, 2, 3], ArrayFormat::LinearHistogram),
+                            iArrayContent::new(vec![1, 1, 1, 2, 3], ArrayFormat::LinearHistogram)
+                                .unwrap(),
                         ),
                         iProperty::IntArray(
                             "int_lh".to_string(),
-                            iArrayValue::new(vec![-1i64, 1, 1, 2, 3], ArrayFormat::LinearHistogram),
+                            iArrayContent::new(
+                                vec![-1i64, 1, 1, 2, 3],
+                                ArrayFormat::LinearHistogram,
+                            )
+                            .unwrap(),
                         ),
                         iProperty::DoubleArray(
                             "double_lh".to_string(),
-                            iArrayValue::new(
+                            iArrayContent::new(
                                 vec![0.5, 0.5, 1.0, 2.0, 3.0],
                                 ArrayFormat::LinearHistogram,
-                            ),
+                            )
+                            .unwrap(),
                         ),
                         iProperty::UintArray(
                             "uint_eh".to_string(),
-                            iArrayValue::new(
+                            iArrayContent::new(
                                 vec![1, 1, 2, 1, 2, 3],
                                 ArrayFormat::ExponentialHistogram,
-                            ),
+                            )
+                            .unwrap(),
                         ),
                         iProperty::IntArray(
                             "int_eh".to_string(),
-                            iArrayValue::new(
+                            iArrayContent::new(
                                 vec![-1i64, 1, 2, 1, 2, 3],
                                 ArrayFormat::ExponentialHistogram,
-                            ),
+                            )
+                            .unwrap(),
                         ),
                         iProperty::DoubleArray(
                             "double_eh".to_string(),
-                            iArrayValue::new(
+                            iArrayContent::new(
                                 vec![0.5, 0.5, 2.0, 1.0, 2.0, 3.0],
                                 ArrayFormat::ExponentialHistogram,
-                            ),
+                            )
+                            .unwrap(),
                         ),
                     ],
                     children: vec![],

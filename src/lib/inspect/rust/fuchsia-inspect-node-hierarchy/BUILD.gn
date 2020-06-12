@@ -16,6 +16,7 @@ rustc_library("fuchsia-inspect-node-hierarchy") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:base64",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:paste",

@@ -1078,7 +1078,7 @@ pub mod tests {
     use crate::test::mock_node::{create_dummy_node, create_mock_node, MessageMatcher};
     use crate::{msg_eq, msg_ok_return};
     use fidl_fuchsia_cobalt::{CobaltEvent, Event, EventPayload};
-    use inspect::assert_inspect_tree;
+    use inspect::testing::{assert_inspect_tree, HistogramAssertion};
 
     pub fn get_sample_interval(thermal_policy: &ThermalPolicy) -> Seconds {
         thermal_policy.config.policy_params.controller_params.sample_interval
@@ -1390,67 +1390,35 @@ pub mod tests {
         // Causes Inspect to receive throttle_end_time
         let _ = node.update_thermal_load(throttle_end_time, ThermalLoad(0)).await;
 
-        // TODO(fxb/49483): The `assert_inspect_tree!` macro really needs better support for testing
-        // histogram correctness. Since that doesn't exist today, the only option is to recreate the
-        // histogram property in the format that assert_inspect_tree expects. This requires
-        // knowledge of the underlying Inspect histogram implementation, which is bad but it's our
-        // only option at this time.
-        fn create_hist_vec<T>(params: LinearHistogramParams<T>, data: Vec<T>) -> Vec<T>
-        where
-            T: std::convert::From<u32>
-                + std::ops::AddAssign
-                + std::ops::Sub<Output = T>
-                + std::ops::Div<Output = T>
-                + std::cmp::PartialOrd
-                + std::clone::Clone
-                + core::marker::Copy,
-        {
-            // The inspect histogram adds four extra buckets:
-            //  - [0]: floor
-            //  - [1]: step_size
-            //  - [2]: underflow bucket
-            //  - [-1]: overflow bucket
-            let mut hist_vec: Vec<T> = vec![T::from(0); params.buckets + 4];
-            hist_vec[0] = params.floor;
-            hist_vec[1] = params.step_size;
+        let mut expected_thermal_load_hist = HistogramAssertion::linear(LinearHistogramParams {
+            floor: 0u64,
+            step_size: 1,
+            buckets: 100,
+        });
+        expected_thermal_load_hist.insert_values(vec![thermal_load.0.into()]);
 
-            // Populate the histogram using the supplied data
-            for v in data.into_iter() {
-                // Index selection copied from the Inspect implementation:
-                // https://fuchsia.googlesource.com/fuchsia/+/ca376a675e18428aa31f2c2b78a4cfe2cf1c69a2/src/lib/inspect/rust/fuchsia-inspect/src/lib.rs#999
-                let index = {
-                    let mut current_floor = params.floor;
-                    let mut _idx = 2;
-                    while v >= current_floor && _idx < params.buckets - 1 {
-                        current_floor += params.step_size;
-                        _idx += 1;
-                    }
-                    _idx as usize
-                };
-                hist_vec[index] += T::from(1);
-            }
-            hist_vec
-        }
+        let mut expected_available_power_hist = HistogramAssertion::linear(LinearHistogramParams {
+            floor: 0.0,
+            step_size: 0.1,
+            buckets: 100,
+        });
+        expected_available_power_hist.insert_values(vec![throttle_available_power.0]);
 
-        let expected_thermal_load_hist = create_hist_vec::<u64>(
-            LinearHistogramParams { floor: 0, step_size: 1, buckets: 100 },
-            vec![thermal_load.0.into()],
-        );
+        let mut expected_cpu_1_power_usage_hist =
+            HistogramAssertion::linear(LinearHistogramParams {
+                floor: 0.0,
+                step_size: 0.1,
+                buckets: 100,
+            });
+        expected_cpu_1_power_usage_hist.insert_values(vec![throttle_cpu1_power_used.0]);
 
-        let expected_available_power_hist = create_hist_vec::<f64>(
-            LinearHistogramParams { floor: 0.0, step_size: 0.1, buckets: 100 },
-            vec![throttle_available_power.0],
-        );
-
-        let expected_cpu_1_power_usage_hist = create_hist_vec::<f64>(
-            LinearHistogramParams { floor: 0.0, step_size: 0.1, buckets: 100 },
-            vec![throttle_cpu1_power_used.0],
-        );
-
-        let expected_cpu_2_power_usage_hist = create_hist_vec::<f64>(
-            LinearHistogramParams { floor: 0.0, step_size: 0.1, buckets: 100 },
-            vec![throttle_cpu2_power_used.0],
-        );
+        let mut expected_cpu_2_power_usage_hist =
+            HistogramAssertion::linear(LinearHistogramParams {
+                floor: 0.0,
+                step_size: 0.1,
+                buckets: 100,
+            });
+        expected_cpu_2_power_usage_hist.insert_values(vec![throttle_cpu2_power_used.0]);
 
         assert_inspect_tree!(
             inspector,

@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        serialization::HierarchyDeserializer, ArrayFormat, ArrayValue, NodeHierarchy, Property,
-    },
+    crate::{serialization::HierarchyDeserializer, ArrayContent, Bucket, NodeHierarchy, Property},
     anyhow::{bail, format_err, Error},
     lazy_static::lazy_static,
     paste,
@@ -89,266 +87,72 @@ lazy_static! {
         vec![&*COUNT_KEY, &*FLOOR_KEY, &*UPPER_BOUND_KEY];
 }
 
-macro_rules! parse_array_fns {
-    ($type:ty) => {
-        paste::item! {
-            /// Traverse an assumed numerical vector asserting that all serde
-            /// values in the array are convertable to the $type numerical value.
-            fn [<is_ $type _vec>](vec: &Vec<serde_json::Value>) -> bool
-            {
-                vec.iter().all(|num| num.[<is_ $type>]())
-            }
-
-            /// Traverse every histogram bucket and validate that all of its numerical
-            /// values fit within the $type type.
-            fn [<is_ $type _histogram>](vec: &Vec<serde_json::Value>) -> Result<bool, Error>
-            {
-                for bucket in vec {
-                    let count_value =
-                        sanitize_value(bucket.get(&*COUNT_KEY)
-                                       .ok_or(format_err!(
-                                           "All histogram buckets need `count` key."))?);
-
-                    let floor_value =
-                        sanitize_value(bucket.get(&*FLOOR_KEY)
-                                       .ok_or(format_err!(
-                                           "All histogram buckets need `floor` key."))?);
-
-                    let upper_value =
-                        sanitize_value(bucket.get(&*UPPER_BOUND_KEY)
-                                       .ok_or(format_err!(
-                                           "All histogram buckets need `upper_bound` key."))?);
-
-                    if (!count_value.[<is_ $type>]()) {
-                        return Ok(false);
-                    }
-
-                    if (!floor_value.[<is_ $type>]()) {
-                        return Ok(false);
-                    }
-
-                    if (!upper_value.[<is_ $type>]()) {
-                        return Ok(false);
-                    }
+macro_rules! check_array_type_fns {
+    ($($type:ty),*) => {
+        $(
+            paste::item! {
+                fn [<get_histogram_ $type _key>](
+                    object: &serde_json::Map<String, serde_json::Value>, key: &str
+                ) -> Result<$type, Error> {
+                    object.get(key)
+                        .map(|value| sanitize_value(value))
+                        .and_then(|value| {
+                            if value.[<is_ $type>]() {
+                                value.[<as_ $type>]()
+                            } else {
+                                None
+                            }
+                        })
+                        .ok_or(format_err!("All buckets should have a `{}`", key))
                 }
 
-                Ok(true)
-            }
-
-            /// Converts a vector of serde Number values into a vector of $type
-            /// numerical values.
-            fn [<transform_numerical_ $type _vec>](vec: &Vec<serde_json::Value>)
-                                                   -> Result<Vec<$type>, Error>
-            {
-                vec.iter().map(|serde_num| {
-                    serde_num.
-                        [<as_ $type>]()
-                        .ok_or(format_err!("All types in an inspect array must be
- mapable to the same data type."))
-                })
-                    .collect::<Result<Vec<$type>, Error>>()
-            }
-
-            /// Extracts the first floor value of a histogram, which is equal to the first
-            /// floor of a non-underflow bucket.
-            fn [<extract_ $type _floor>](histogram: &Vec<serde_json::Value>, index: usize)
-                                         -> Result<$type, Error> {
-                if index == 0 {
-                    return Err(format_err!("Getting a floor from an underflow bucket is meaningless."));
-                }
-                // The first legitimate floor is the upper bound of the underflow bucket.
-                histogram.get(index)
-                    .ok_or(format_err!("We've already validated the size of this histogram.."))?
-                    .get(&*FLOOR_KEY)
-                    .ok_or(format_err!("All histogram buckets need `upper_bound` key."))?
-                    .[<as_ $type>]()
-                    .ok_or(format_err!("Since this histogram already passed verification for
- this type, the only way this could occur is if the first legitimate floor is a string encoding
- of infinity, which is a verification error in Inspect."))
-            }
-
-            /// Computes the step size multiplier for the histogram. The histogram must
-            /// have atleast 4 buckets in order to analyze a bucket size relationship between
-            /// two non-overflow and non-underflow buckets.
-            fn [<extract_ $type _step_multiplier>](histogram: &Vec<serde_json::Value>)
-                                         -> Result<$type, Error> {
-                if histogram.len() < 4 {
-                    return Err(format_err!("Getting a step multiplier with only 1 non-overflow bucket is meaningless."));
-                }
-                // Get the upper bound of the first and second non-overflow bucket. We cannot use floors
-                // and we cannot use relative bucket size because the algorithm used to generate histograms
-                // is only consistent in floor growth and step size growth for values which are solutions
-                // to the equation
-                // floor + (initial_step * step_multiplier) - initial_step / initial_step == step_multiplier
-                let first_upper = histogram.get(1)
-                    .ok_or(format_err!("We've already validated the size of this histogram.."))?
-                    .get(&*UPPER_BOUND_KEY)
-                    .ok_or(format_err!("All histogram buckets need `upper_bound` key."))?
-                    .[<as_ $type>]()
-                    .ok_or(format_err!("Since this histogram already passed verification for
- this type, the only way this could occur is if the first legitimate floor is a string encoding
- of infinity, which is a verification error in Inspect."))?;
-
-                let second_upper = histogram.get(2)
-                    .ok_or(format_err!("We've already validated the size of this histogram.."))?
-                    .get(&*UPPER_BOUND_KEY)
-                    .ok_or(format_err!("All histogram buckets need `upper_bound` key."))?
-                    .[<as_ $type>]()
-                    .ok_or(format_err!("Since this histogram already passed verification for
- this type, the only way this could occur is if the first legitimate floor is a string encoding
- of infinity, which is a verification error in Inspect."))?;
-
-                // Shift values by 1 to avoid division by 0. We will only ever have to shift
-                // up to twice.
-                Ok(if (first_upper == 0 as $type) || second_upper == 0 as $type {
-                    let shifted_first = first_upper + 1 as $type;
-                    let shifted_second = second_upper + 1 as $type;
-                    if (shifted_first == 0 as $type) || shifted_second == 0 as $type {
-                        shifted_second + 1 as $type / shifted_first + 1 as $type
-                    } else {
-                        shifted_second / shifted_first
-                    }
-                } else {
-                    second_upper / first_upper
-                })
-            }
-
-
-            /// Take a bucket and compute the distance between the upper
-            /// bound and the floor. If the provided index is the first or last
-            /// bucket in the histogram, this is an error since step sizes for
-            /// overflow buckets are meaningless.
-            fn [<extract_ $type _step_size>](histogram: &Vec<serde_json::Value>, index: usize)
-                                             -> Result<$type, Error> {
-
-                if index == 0 || index == histogram.len()-1 {
-                    return Err(format_err!("Cannot extract step sizes from overflow buckets."))
+                /// Converts a vector of serde Object values into a vector of Buckets.
+                fn [<parse_ $type _buckets>](vec: &Vec<serde_json::Value>)
+                    -> Result<Vec<Bucket<$type>>, Error>
+                {
+                    vec.iter().map(|value| {
+                        let object = value.as_object().ok_or(
+                            format_err!("Each bucket should be an object"))?;
+                        if object.len() != 3 {
+                            return Err(format_err!("Each bucket should have 3 entries"))?;
+                        }
+                        let count = [<get_histogram_ $type _key>](object, &*COUNT_KEY)?;
+                        let floor = [<get_histogram_ $type _key>](object, &*FLOOR_KEY)?;
+                        let upper = [<get_histogram_ $type _key>](object, &*UPPER_BOUND_KEY)?;
+                        Ok(Bucket { floor, count, upper })
+                    })
+                    .collect::<Result<Vec<_>, Error>>()
                 }
 
-                let non_edge_bucket = histogram.get(index)
-                    .ok_or(format_err!("The JSON serializer requires that histograms have
-enough data to encode 3 buckets, or one non overflow bucket, so this shouldn't happen."))?;
-
-                let legitimate_upper_bound = non_edge_bucket
-                    .get(&*UPPER_BOUND_KEY)
-                    .ok_or(format_err!("All histogram buckets need `upper_bound` key."))?
-                    .[<as_ $type>]()
-                    .ok_or(format_err!("Since this histogram already passed verification for
-this type, the only way this could occur is if there exists a string encoding of infinity
-present as a upper bound in a non-overflow bucket. This is a verification error in Inspect."))?;
-
-                let legitimate_floor_bound = non_edge_bucket
-                    .get(&*FLOOR_KEY)
-                    .ok_or(format_err!("All histogram buckets need `floor ` key."))?
-                    .[<as_ $type>]()
-                    .ok_or(format_err!("Since this histogram already passed verification for
-this type, the only way this could occur is if there exists a string encoding of infinity
-present as a floor in a non-overflow bucket. This is a verification error in Inspect."))?;
-
-                Ok(legitimate_upper_bound - legitimate_floor_bound)
-            }
-
-            /// Iterates over histogram buckets and extracts the count keys into their own
-            /// vector, typed as $type.
-            fn [<extract_ $type _counts>](histogram: &Vec<serde_json::Value>)
-                                          -> Result<Vec<$type>, Error> {
-                    histogram.into_iter().map(|serde_val| {
-                        serde_val
-                            .get(&*COUNT_KEY)
-                            .and_then(|val| val.[<as_ $type>]())
-                            .ok_or(format_err!("Since this histogram already passed verification
- for this type, the only way this could occur is if there exists a string encoding of infinity
-present as a count. This is a verification error in Inspect."))
-                    }).collect()
-            }
-
-            /// Converts a list of histogram buckets into an Inspect ArrayValue representing
-            /// the histogram.
-            ///
-            /// Assumes that the histogram will be atleast 3 buckets long, since the
-            /// library which serializes to JSON requires that the serialized bucket
-            /// contain atleast enough entries to create 3 buckets.
-            ///
-            /// NOTE: If there are less than 4 buckets, this is a lossy deserialization, since
-            ///       we do not have two non-edge buckets to check step size growth against.
-            ///       We conservatively assume that the histogram is linear.
-            fn [<parse_ $type _histogram>](histogram: &Vec<serde_json::Value>)
-                                           -> Result<ArrayValue<$type>, Error> {
-                // Get the first floor from bucket 1 since bucket 0 is an underflow
-                // bucket whose floor is nonsensical.
-                let first_floor = [<extract_ $type _floor>](histogram, 1)?;
-
-                let first_step_size = [<extract_ $type _step_size>](histogram, 1)?;
-
-                let counts_vec = [<extract_ $type _counts>](histogram)?;
-
-                // If a histogram has less than 4 buckets, then we cannot deduce if
-                // it is linear or exponential, since there aren't two non-overflow
-                // buckets to analyze step size growth against. In this case, lossily
-                // convert to a linear histogram.
-                if histogram.len() < 4 {
-                    // [floor, step]
-                    let configuring_bits =
-                        vec![first_floor, first_step_size];
-
-                    return Ok(ArrayValue::new(
-                        [configuring_bits, counts_vec].concat(),
-                        ArrayFormat::LinearHistogram
-                    ))
+                /// Converts a vector of serde Number values into a vector of $type
+                /// numerical values.
+                fn [<parse_ $type _vec>](vec: &Vec<serde_json::Value>) -> Result<Vec<$type>, Error>
+                {
+                    vec.iter().map(|serde_num| {
+                        if serde_num.[<is_ $type>]() {
+                            serde_num.[<as_ $type>]()
+                        } else {
+                            None
+                        }
+                    })
+                    .map(|maybe_num| maybe_num.ok_or(
+                        format_err!("All types in an inspect array must be mapable \
+                                    to the same data type.")))
+                    .collect::<Result<Vec<_>, Error>>()
                 }
-
-                let step_multiplier = [<extract_ $type _step_multiplier>](histogram)?;
-
-                if step_multiplier == 1 as $type {
-                    // [floor, step]
-                    let configuring_bits =
-                        vec![first_floor, first_step_size];
-
-                    return Ok(ArrayValue::new(
-                        [configuring_bits, counts_vec].concat(),
-                        ArrayFormat::LinearHistogram
-                    ));
-                }
-
-                // [floor, step, multiplier]
-                let configuring_bits =
-                    vec![first_floor, first_step_size, step_multiplier];
-
-                Ok(ArrayValue::new(
-                    [configuring_bits, counts_vec].concat(),
-                    ArrayFormat::ExponentialHistogram
-                ))
             }
-        }
+        )*
     };
 }
 
 // Generates the following methods:
-// fn is_f64_array()
-// fn is_f64_histogram()
-// fn transform_numerical_f64_vec()
-// fn extract_f64_step_size()
-// fn extract_f64_counts()
-// fn parse_f64_histogram()
-parse_array_fns!(f64);
-
-// fn Generates the following methods:
-// fn is_u64_array()
-// fn is_u64_histogram()
-// fn transform_numerical_u64_vec()
-// fn extract_u64_step_size()
-// fn extract_u64_counts()
-// fn parse_u64_histogram()
-parse_array_fns!(u64);
-
-// fn Generates the following methods:
-// fn is_i64_array()
-// fn is_i64_histogram()
-// fn transform_numerical_i64_vec()
-// fn extract_i64_step_size()
-// fn extract_i64_counts()
-// fn parse_i64_histogram()
-parse_array_fns!(i64);
+// fn parse_f64_buckets()
+// fn parse_f64_vec()
+// fn parse_u64_buckets()
+// fn parse_u64_vec()
+// fn parse_i64_buckets()
+// fn parse_i64_vec()
+check_array_type_fns!(f64, u64, i64);
 
 fn is_negative_infinity(val: &serde_json::Value) -> bool {
     val.is_string() && (val.as_str().unwrap() == "-Infinity")
@@ -405,7 +209,7 @@ fn fetch_object_histogram(contents: &Map<String, Value>) -> Option<&Vec<serde_js
     None
 }
 
-/// Parses a JSON representation of an Inspect histogram into its ArrayValue form.
+/// Parses a JSON representation of an Inspect histogram into its Array form.
 fn parse_histogram<Key>(
     name: Key,
     histogram: &Vec<serde_json::Value>,
@@ -421,16 +225,16 @@ ormed."
         );
     }
 
-    if is_f64_histogram(histogram)? {
-        return Ok(Property::DoubleArray(name, parse_f64_histogram(histogram)?));
+    if let Ok(buckets) = parse_f64_buckets(histogram) {
+        return Ok(Property::DoubleArray(name, ArrayContent::Buckets(buckets)));
     }
 
-    if is_i64_histogram(histogram)? {
-        return Ok(Property::IntArray(name, parse_i64_histogram(histogram)?));
+    if let Ok(buckets) = parse_i64_buckets(histogram) {
+        return Ok(Property::IntArray(name, ArrayContent::Buckets(buckets)));
     }
 
-    if is_u64_histogram(histogram)? {
-        return Ok(Property::UintArray(name, parse_u64_histogram(histogram)?));
+    if let Ok(buckets) = parse_u64_buckets(histogram) {
+        return Ok(Property::UintArray(name, ArrayContent::Buckets(buckets)));
     }
 
     return Err(format_err!(
@@ -439,32 +243,21 @@ ormed."
     ));
 }
 
-/// Parses a JSON array into its numerical Inspect ArrayValue.
+// Parses a JSON array into its numerical Inspect Array.
 fn parse_array<Key>(name: Key, vec: &Vec<serde_json::Value>) -> Result<Property<Key>, Error>
 where
     Key: Debug,
 {
-    let array_format = ArrayFormat::Default;
-
-    if is_f64_vec(vec) {
-        return Ok(Property::DoubleArray(
-            name,
-            ArrayValue::new(transform_numerical_f64_vec(vec)?, array_format),
-        ));
+    if let Ok(values) = parse_f64_vec(vec) {
+        return Ok(Property::DoubleArray(name, ArrayContent::Values(values)));
     }
 
-    if is_i64_vec(vec) {
-        return Ok(Property::IntArray(
-            name,
-            ArrayValue::new(transform_numerical_i64_vec(vec)?, array_format),
-        ));
+    if let Ok(values) = parse_i64_vec(vec) {
+        return Ok(Property::IntArray(name, ArrayContent::Values(values)));
     }
 
-    if is_u64_vec(vec) {
-        return Ok(Property::UintArray(
-            name,
-            ArrayValue::new(transform_numerical_u64_vec(vec)?, array_format),
-        ));
+    if let Ok(values) = parse_u64_vec(vec) {
+        return Ok(Property::UintArray(name, ArrayContent::Values(values)));
     }
 
     return Err(format_err!("Arrays must be one of i64, u64, or f64. Property name: {:?}", name));
@@ -535,7 +328,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, crate::ArrayFormat};
 
     #[test]
     fn serialize_json() {
@@ -581,6 +374,43 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn test_exp_histogram() -> Result<(), Error> {
+        let mut hierarchy = NodeHierarchy::new(
+            "root".to_string(),
+            vec![Property::UintArray(
+                "histogram".to_string(),
+                ArrayContent::new(
+                    vec![1000, 1000, 2, 1, 2, 3, 4, 5, 6],
+                    ArrayFormat::ExponentialHistogram,
+                )
+                .unwrap(),
+            )],
+            vec![],
+        );
+        let expected_json = serde_json::json!({
+            "root": {
+                "histogram": {
+                    "buckets": [
+                        {"count": 1, "floor": 0, "upper_bound": 1000},
+                        {"count": 2, "floor": 1000, "upper_bound": 2000},
+                        {"count": 3, "floor": 2000, "upper_bound": 3000},
+                        {"count": 4, "floor": 3000, "upper_bound": 5000},
+                        {"count": 5, "floor": 5000, "upper_bound": 9000},
+                        {"count": 6, "floor": 9000, "upper_bound": u64::MAX}
+                    ]
+                }
+            }
+        });
+        let result_json = serde_json::json!(hierarchy);
+        assert_eq!(result_json, expected_json);
+        let mut parsed_hierarchy = RawJsonNodeHierarchySerializer::deserialize(result_json)?;
+        parsed_hierarchy.sort();
+        hierarchy.sort();
+        assert_eq!(hierarchy, parsed_hierarchy);
+        Ok(())
+    }
+
     // Creates a hierarchy that isn't lossy due to its unambigious values.
     fn get_unambigious_deserializable_hierarchy() -> NodeHierarchy {
         NodeHierarchy::new(
@@ -588,7 +418,7 @@ mod tests {
             vec![
                 Property::UintArray(
                     "array".to_string(),
-                    ArrayValue::new(vec![0, 2, std::u64::MAX], ArrayFormat::Default),
+                    ArrayContent::Values(vec![0, 2, std::u64::MAX]),
                 ),
                 Property::Bool("bool_true".to_string(), true),
                 Property::Bool("bool_false".to_string(), false),
@@ -600,10 +430,11 @@ mod tests {
                         Property::Double("double".to_string(), 2.5),
                         Property::DoubleArray(
                             "histogram".to_string(),
-                            ArrayValue::new(
+                            ArrayContent::new(
                                 vec![0.0, 2.0, 4.0, 1.0, 3.0, 4.0, 7.0],
                                 ArrayFormat::ExponentialHistogram,
-                            ),
+                            )
+                            .unwrap(),
                         ),
                     ],
                     vec![],
@@ -615,7 +446,8 @@ mod tests {
                         Property::String("string".to_string(), "some value".to_string()),
                         Property::IntArray(
                             "histogram".to_string(),
-                            ArrayValue::new(vec![0, 2, 4, 1, 3], ArrayFormat::LinearHistogram),
+                            ArrayContent::new(vec![0, 2, 4, 1, 3], ArrayFormat::LinearHistogram)
+                                .unwrap(),
                         ),
                     ],
                     vec![],
@@ -628,10 +460,7 @@ mod tests {
         NodeHierarchy::new(
             "root",
             vec![
-                Property::UintArray(
-                    "array".to_string(),
-                    ArrayValue::new(vec![0, 2, 4], ArrayFormat::Default),
-                ),
+                Property::UintArray("array".to_string(), ArrayContent::Values(vec![0, 2, 4])),
                 Property::Bool("bool_true".to_string(), true),
                 Property::Bool("bool_false".to_string(), false),
             ],
@@ -642,10 +471,11 @@ mod tests {
                         Property::Double("double".to_string(), 2.5),
                         Property::DoubleArray(
                             "histogram".to_string(),
-                            ArrayValue::new(
+                            ArrayContent::new(
                                 vec![0.0, 2.0, 4.0, 1.0, 3.0, 4.0],
                                 ArrayFormat::ExponentialHistogram,
-                            ),
+                            )
+                            .unwrap(),
                         ),
                         Property::Bytes("bytes".to_string(), vec![5u8, 0xf1, 0xab]),
                     ],
@@ -658,7 +488,8 @@ mod tests {
                         Property::String("string".to_string(), "some value".to_string()),
                         Property::IntArray(
                             "histogram".to_string(),
-                            ArrayValue::new(vec![0, 2, 4, 1, 3], ArrayFormat::LinearHistogram),
+                            ArrayContent::new(vec![0, 2, 4, 1, 3], ArrayFormat::LinearHistogram)
+                                .unwrap(),
                         ),
                     ],
                     vec![],

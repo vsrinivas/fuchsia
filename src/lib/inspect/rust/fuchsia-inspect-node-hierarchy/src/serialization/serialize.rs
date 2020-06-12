@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{ArrayBucket, ArrayValue, NodeHierarchy, Property},
+    crate::{ArrayContent, Bucket, NodeHierarchy, Property},
     base64,
     serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer},
 };
@@ -63,17 +63,17 @@ where
 macro_rules! impl_serialize_for_array_value {
     ($($type:ty,)*) => {
         $(
-            impl Serialize for ArrayValue<$type> {
+            impl Serialize for ArrayContent<$type> {
                 fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-                    match self.buckets() {
-                        Some(buckets) => {
+                    match self {
+                        ArrayContent::Buckets(buckets) => {
                             let mut s = serializer.serialize_map(Some(1))?;
                             s.serialize_entry("buckets", &buckets)?;
                             s.end()
                         }
-                        None => {
-                            let mut s = serializer.serialize_seq(Some(self.values.len()))?;
-                            for value in self.values.iter() {
+                        ArrayContent::Values(values) => {
+                            let mut s = serializer.serialize_seq(Some(values.len()))?;
+                            for value in values {
                                 s.serialize_element(&value)?;
                             }
                             s.end()
@@ -88,7 +88,7 @@ macro_rules! impl_serialize_for_array_value {
 macro_rules! impl_serialize_for_array_bucket {
     ($($type:ty,)*) => {
         $(
-            impl Serialize for ArrayBucket<$type> {
+            impl Serialize for Bucket<$type> {
                 fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
                     let mut s = serializer.serialize_map(Some(3))?;
                     s.serialize_entry("count", &self.count)?;
@@ -101,7 +101,7 @@ macro_rules! impl_serialize_for_array_bucket {
     }
 }
 
-impl<'a> Serialize for ArrayBucket<f64> {
+impl<'a> Serialize for Bucket<f64> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut s = serializer.serialize_map(Some(3))?;
         let parts = [("count", self.count), ("floor", self.floor), ("upper_bound", self.upper)];

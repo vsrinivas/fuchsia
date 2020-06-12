@@ -76,7 +76,7 @@ impl Serialize for SerializableHierarchyData {
 mod tests {
     use {
         super::*,
-        crate::{ArrayFormat, ArrayValue, Property},
+        crate::{ArrayContent, ArrayFormat, Property},
     };
 
     #[test]
@@ -127,7 +127,7 @@ mod tests {
                 "root",
                 vec![Property::UintArray(
                     "array".to_string(),
-                    ArrayValue::new(vec![0, 2, 4], ArrayFormat::Default),
+                    ArrayContent::new(vec![0, 2, 4], ArrayFormat::Default).unwrap(),
                 )],
                 vec![
                     NodeHierarchy::new(
@@ -136,10 +136,11 @@ mod tests {
                             Property::Double("double".to_string(), 2.5),
                             Property::DoubleArray(
                                 "histogram".to_string(),
-                                ArrayValue::new(
+                                ArrayContent::new(
                                     vec![0.0, 2.0, 4.0, 1.0, 3.0, 4.0],
                                     ArrayFormat::ExponentialHistogram,
-                                ),
+                                )
+                                .unwrap(),
                             ),
                         ],
                         vec![],
@@ -151,7 +152,11 @@ mod tests {
                             Property::String("string".to_string(), "some value".to_string()),
                             Property::IntArray(
                                 "histogram".to_string(),
-                                ArrayValue::new(vec![0, 2, 4, 1, 3], ArrayFormat::LinearHistogram),
+                                ArrayContent::new(
+                                    vec![0, 2, 4, 1, 3],
+                                    ArrayFormat::LinearHistogram,
+                                )
+                                .unwrap(),
                             ),
                         ],
                         vec![],

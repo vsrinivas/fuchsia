@@ -5,7 +5,9 @@
 pub use crate::{
     assert_inspect_tree,
     testing::{
-        macros::{AnyProperty, NodeHierarchyGetter, PropertyAssertion, TreeAssertion},
+        macros::{
+            AnyProperty, HistogramAssertion, NodeHierarchyGetter, PropertyAssertion, TreeAssertion,
+        },
         reader::{ComponentSelector, InspectDataFetcher},
     },
     tree_assertion,

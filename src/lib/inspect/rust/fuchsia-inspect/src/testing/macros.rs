@@ -4,13 +4,19 @@
 
 use {
     crate::{
+        constants,
         reader::{self, PartialNodeHierarchy},
-        Inspector,
+        ExponentialHistogramParams, Inspector, LinearHistogramParams,
     },
     anyhow::{bail, format_err, Error},
-    fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property},
+    fuchsia_inspect_node_hierarchy::{ArrayContent, ArrayFormat, Bucket, NodeHierarchy, Property},
     futures,
-    std::{borrow::Cow, collections::HashSet},
+    num_traits::One,
+    std::{
+        borrow::Cow,
+        collections::HashSet,
+        ops::{Add, AddAssign, MulAssign},
+    },
 };
 
 /// Macro to simplify creating `TreeAssertion`s. Commonly used indirectly through the second
@@ -384,7 +390,8 @@ macro_rules! impl_property_assertion {
                     if let Property::$prop_variant(_key, value, ..) = actual {
                         eq_or_bail!(self, value);
                     } else {
-                        return Err(format_err!("expected {}, found {}", stringify!($prop_variant), property_type_name(actual)));
+                        return Err(format_err!("expected {}, found {}",
+                            stringify!($prop_variant), property_type_name(actual)));
                     }
                     Ok(())
                 }
@@ -393,15 +400,66 @@ macro_rules! impl_property_assertion {
     }
 }
 
-macro_rules! impl_array_property_assertion {
+macro_rules! impl_array_properties_assertion {
     ($prop_variant:ident, $($ty:ty),+) => {
         $(
-            impl PropertyAssertion for $ty {
+            /// Asserts primitive arrays
+            impl PropertyAssertion for Vec<$ty> {
                 fn run(&self, actual: &Property) -> Result<(), Error> {
                     if let Property::$prop_variant(_key, value, ..) = actual {
-                        eq_or_bail!(self, &value.values);
+                        match &value {
+                            ArrayContent::Values(values) => eq_or_bail!(self, values),
+                            _ => {
+                                return Err(format_err!(
+                                    "expected a {} array, got a histogram",
+                                    stringify!($prop_variant)
+                                ));
+                            }
+                        }
                     } else {
-                        return Err(format_err!("expected {}, found {}", stringify!($prop_variant), property_type_name(actual)));
+                        return Err(format_err!("expected {}, found {}",
+                            stringify!($prop_variant), property_type_name(actual)));
+                    }
+                    Ok(())
+                }
+            }
+
+            /// Asserts an array of buckets
+            impl PropertyAssertion for Vec<Bucket<$ty>> {
+                fn run(&self, actual: &Property) -> Result<(), Error> {
+                    if let Property::$prop_variant(_key, value, ..) = actual {
+                        match &value {
+                            ArrayContent::Buckets(buckets) => eq_or_bail!(self, buckets),
+                            _ => {
+                                return Err(format_err!(
+                                    "expected a {} array, got a histogram",
+                                    stringify!($prop_variant)
+                                ));
+                            }
+                        }
+                    } else {
+                        return Err(format_err!("expected {}, found {}",
+                            stringify!($prop_variant), property_type_name(actual)));
+                    }
+                    Ok(())
+                }
+            }
+
+            /// Asserts a histogram.
+            impl PropertyAssertion for HistogramAssertion<$ty> {
+                fn run(&self, actual: &Property) -> Result<(), Error> {
+                    if let Property::$prop_variant(_key, value, ..) = actual {
+                        let expected_content = ArrayContent::new(
+                                self.values.clone(), self.format.clone())
+                            .map_err(|e| {
+                                format_err!(
+                                    "failed to load array content for expected assertion {}: {:?}",
+                                    stringify!($prop_variant), e)
+                            })?;
+                        eq_or_bail!(&expected_content, value);
+                    } else {
+                        return Err(format_err!("expected {}, found {}",
+                            stringify!($prop_variant), property_type_name(actual)));
                     }
                     Ok(())
                 }
@@ -430,9 +488,9 @@ impl_property_assertion!(Uint, u64);
 impl_property_assertion!(Int, i64);
 impl_property_assertion!(Double, f64);
 impl_property_assertion!(Bool, bool);
-impl_array_property_assertion!(DoubleArray, Vec<f64>);
-impl_array_property_assertion!(IntArray, Vec<i64>);
-impl_array_property_assertion!(UintArray, Vec<u64>);
+impl_array_properties_assertion!(DoubleArray, f64);
+impl_array_properties_assertion!(IntArray, i64);
+impl_array_properties_assertion!(UintArray, u64);
 
 /// A PropertyAssertion that always passes
 pub struct AnyProperty;
@@ -443,12 +501,89 @@ impl PropertyAssertion for AnyProperty {
     }
 }
 
+pub struct HistogramAssertion<T> {
+    format: ArrayFormat,
+    values: Vec<T>,
+}
+
+impl<T: MulAssign + AddAssign + PartialOrd + Add<Output = T> + Copy + Default + One>
+    HistogramAssertion<T>
+{
+    pub fn linear(params: LinearHistogramParams<T>) -> Self {
+        let mut values =
+            vec![T::default(); params.buckets + constants::LINEAR_HISTOGRAM_EXTRA_SLOTS];
+        values[0] = params.floor;
+        values[1] = params.step_size;
+        Self { format: ArrayFormat::LinearHistogram, values }
+    }
+
+    pub fn exponential(params: ExponentialHistogramParams<T>) -> Self {
+        let mut values =
+            vec![T::default(); params.buckets + constants::EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS];
+        values[0] = params.floor;
+        values[1] = params.initial_step;
+        values[2] = params.step_multiplier;
+        Self { format: ArrayFormat::ExponentialHistogram, values }
+    }
+
+    pub fn insert_values(&mut self, values: Vec<T>) {
+        match self.format {
+            ArrayFormat::ExponentialHistogram => {
+                for value in values {
+                    self.insert_exp(value);
+                }
+            }
+            ArrayFormat::LinearHistogram => {
+                for value in values {
+                    self.insert_linear(value);
+                }
+            }
+            ArrayFormat::Default => {
+                unreachable!("can't construct a histogram assertion for arrays");
+            }
+        }
+    }
+
+    fn insert_linear(&mut self, value: T) {
+        let value_index = {
+            let mut current_floor = self.values[0];
+            let step_size = self.values[1];
+            // Start in the underflow index.
+            let mut index = constants::LINEAR_HISTOGRAM_EXTRA_SLOTS - 2;
+            while value >= current_floor && index < self.values.len() - 1 {
+                current_floor += step_size;
+                index += 1;
+            }
+            index as usize
+        };
+        self.values[value_index] += T::one();
+    }
+
+    fn insert_exp(&mut self, value: T) {
+        let value_index = {
+            let floor = self.values[0];
+            let mut current_floor = self.values[0];
+            let mut offset = self.values[1];
+            let step_multiplier = self.values[2];
+            // Start in the underflow index.
+            let mut index = constants::EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS - 2;
+            while value >= current_floor && index < self.values.len() - 1 {
+                current_floor = floor + offset;
+                offset *= step_multiplier;
+                index += 1;
+            }
+            index as usize
+        };
+        self.values[value_index] += T::one();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*,
         crate::LinkNodeDisposition,
-        fuchsia_inspect_node_hierarchy::{ArrayFormat, ArrayValue, LinkValue},
+        fuchsia_inspect_node_hierarchy::{ArrayFormat, LinkValue},
     };
 
     #[test]
@@ -621,17 +756,11 @@ mod tests {
         let node_hierarchy = NodeHierarchy::new(
             "key",
             vec![
-                Property::UintArray(
-                    "@uints".to_string(),
-                    ArrayValue::new(vec![1, 2, 3], ArrayFormat::Default),
-                ),
-                Property::IntArray(
-                    "@ints".to_string(),
-                    ArrayValue::new(vec![-2, -4, 0], ArrayFormat::Default),
-                ),
+                Property::UintArray("@uints".to_string(), ArrayContent::Values(vec![1, 2, 3])),
+                Property::IntArray("@ints".to_string(), ArrayContent::Values(vec![-2, -4, 0])),
                 Property::DoubleArray(
                     "@doubles".to_string(),
-                    ArrayValue::new(vec![1.3, 2.5, -3.6], ArrayFormat::Default),
+                    ArrayContent::Values(vec![1.3, 2.5, -3.6]),
                 ),
             ],
             vec![],
@@ -650,41 +779,77 @@ mod tests {
             vec![
                 Property::UintArray(
                     "@linear-uints".to_string(),
-                    ArrayValue::new(vec![1, 2, 3, 4, 5], ArrayFormat::LinearHistogram),
+                    ArrayContent::new(vec![1, 2, 3, 4, 5], ArrayFormat::LinearHistogram).unwrap(),
                 ),
                 Property::IntArray(
                     "@linear-ints".to_string(),
-                    ArrayValue::new(vec![6, 7, 8, 9], ArrayFormat::LinearHistogram),
+                    ArrayContent::new(vec![6, 7, 8, 9, 10], ArrayFormat::LinearHistogram).unwrap(),
                 ),
                 Property::DoubleArray(
                     "@linear-doubles".to_string(),
-                    ArrayValue::new(vec![1.0, 2.0, 4.0, 5.0], ArrayFormat::LinearHistogram),
+                    ArrayContent::new(vec![1.0, 2.0, 4.0, 5.0, 6.0], ArrayFormat::LinearHistogram)
+                        .unwrap(),
                 ),
                 Property::UintArray(
                     "@exp-uints".to_string(),
-                    ArrayValue::new(vec![2, 4, 6, 8, 10], ArrayFormat::ExponentialHistogram),
+                    ArrayContent::new(vec![2, 4, 6, 8, 10, 12], ArrayFormat::ExponentialHistogram)
+                        .unwrap(),
                 ),
                 Property::IntArray(
                     "@exp-ints".to_string(),
-                    ArrayValue::new(vec![1, 3, 5, 7, 9], ArrayFormat::ExponentialHistogram),
+                    ArrayContent::new(vec![1, 3, 5, 7, 9, 11], ArrayFormat::ExponentialHistogram)
+                        .unwrap(),
                 ),
                 Property::DoubleArray(
                     "@exp-doubles".to_string(),
-                    ArrayValue::new(
-                        vec![1.0, 2.0, 3.0, 4.0, 5.0],
+                    ArrayContent::new(
+                        vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
                         ArrayFormat::ExponentialHistogram,
-                    ),
+                    )
+                    .unwrap(),
                 ),
             ],
             vec![],
         );
+        let mut linear_assertion = HistogramAssertion::linear(LinearHistogramParams {
+            floor: 1u64,
+            step_size: 2,
+            buckets: 1,
+        });
+        linear_assertion.insert_values(vec![0, 0, 0, 2, 2, 2, 2, 4, 4, 4, 4, 4]);
+        let mut exponential_assertion =
+            HistogramAssertion::exponential(ExponentialHistogramParams {
+                floor: 1.0,
+                initial_step: 2.0,
+                step_multiplier: 3.0,
+                buckets: 1,
+            });
+        exponential_assertion.insert_values(vec![
+            -3.1, -2.2, -1.3, 0.0, 1.1, 1.2, 2.5, 2.8, 2.0, 3.1, 4.2, 5.3, 6.4, 7.5, 8.6,
+        ]);
         assert_inspect_tree!(node_hierarchy, key: {
-            "@linear-uints": vec![1u64, 2, 3, 4, 5],
-            "@linear-ints": vec![6i64, 7, 8, 9],
-            "@linear-doubles": vec![1.0, 2.0, 4.0, 5.0],
-            "@exp-uints": vec![2u64, 4, 6, 8, 10],
-            "@exp-ints": vec![1i64, 3, 5, 7, 9],
-            "@exp-doubles": vec![1.0, 2.0, 3.0, 4.0, 5.0]
+            "@linear-uints": linear_assertion,
+            "@linear-ints": vec![
+                Bucket { floor: i64::MIN, upper: 6, count: 8 },
+                Bucket { floor: 6, upper: 13, count: 9 },
+                Bucket { floor: 13, upper: i64::MAX, count: 10 }
+            ],
+            "@linear-doubles": vec![
+                Bucket { floor: f64::MIN, upper: 1.0, count: 4.0 },
+                Bucket { floor: 1.0, upper: 3.0, count: 5.0 },
+                Bucket { floor: 3.0, upper: f64::MAX, count: 6.0 }
+            ],
+            "@exp-uints": vec![
+                Bucket { floor: 0, upper: 2, count: 8 },
+                Bucket { floor: 2, upper: 6, count: 10 },
+                Bucket { floor: 6, upper: u64::MAX, count: 12 }
+            ],
+            "@exp-ints": vec![
+                Bucket { floor: i64::MIN, upper: 1, count: 7 },
+                Bucket { floor: 1, upper: 4, count: 9 },
+                Bucket { floor: 4, upper: i64::MAX, count: 11 }
+            ],
+            "@exp-doubles": exponential_assertion,
         });
     }
 
