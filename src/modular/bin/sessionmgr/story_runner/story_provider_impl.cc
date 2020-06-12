@@ -51,27 +51,22 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
 
     auto i = story_runtime_containers_->find(story_id_.value_or(""));
     if (i == story_runtime_containers_->end()) {
-      FX_LOGS(WARNING) << "I was told to teardown story " << story_id_ << ", but I can't find it.";
+      FX_LOGS(WARNING) << "I was told to stop story " << story_id_ << ", but I can't find it.";
       return;
     }
 
     FX_DCHECK(i->second.controller_impl != nullptr);
-    i->second.controller_impl->StopBulk(bulk_, [this, flow] { CleanupRuntime(flow); });
-  }
-
-  void CleanupRuntime(FlowToken flow) {
-    // Here we delete the instance from whose operation a result callback was
-    // received. Thus we must assume that the callback returns to a method of
-    // the instance. If we delete the instance right here, |this| would be
-    // deleted not just for the remainder of this function here, but also for
-    // the remainder of all functions above us in the callstack, including
-    // functions that run as methods of other objects owned by |this| or
-    // provided to |this|. To avoid such problems, the delete is invoked
-    // through the run loop.
-    //
-    // TODO(thatguy); Understand the above comment, and rewrite it.
-    async::PostTask(async_get_default_dispatcher(),
-                    [this, flow] { story_runtime_containers_->erase(story_id_.value_or("")); });
+    i->second.controller_impl->StopBulk(bulk_, [weak_ptr = GetWeakPtr(), this, flow] {
+      // Ensure |story_runtime_containers_| has not been destroyed.
+      //
+      // This operation and its parent |StoryProviderImpl| may be destroyed before this
+      // callback executes, for example when |StoryProviderImpl.Teardown| times out.
+      // When this happens, `operation_queue_` and this operation are destroyed before
+      // |story_runtime_containers_|, invalidating |weak_ptr|.
+      if (!weak_ptr)
+        return;
+      story_runtime_containers_->erase(story_id_.value_or(""));
+    });
   }
 
  private:
