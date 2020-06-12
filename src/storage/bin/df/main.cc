@@ -5,6 +5,8 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <stdalign.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -13,13 +15,11 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#include <fbl/unique_fd.h>
-#include <fuchsia/io/c/fidl.h>
-#include <lib/fdio/cpp/caller.h>
 #include <zircon/device/vfs.h>
 
 #include <utility>
+
+#include <fbl/unique_fd.h>
 
 int usage(void) {
   fprintf(stderr, "usage: df [ <option>* ] [paths]\n");

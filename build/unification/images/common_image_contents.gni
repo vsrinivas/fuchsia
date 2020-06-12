@@ -198,7 +198,7 @@ common_image_contents = [
   "//src/developer/feedback/bin/crasher",
   "//zircon/system/uapp/dd",
   "//src/storage/bin/df",
-  "//zircon/system/uapp/dlog",
+  "//src/diagnostics/dlog",
   "//zircon/system/uapp/fs-fsck:fsck",
   "//zircon/system/uapp/fs-mkfs:mkfs",
   "//zircon/system/uapp/fs-mount:mount",
