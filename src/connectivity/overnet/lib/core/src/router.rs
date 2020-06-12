@@ -1615,6 +1615,10 @@ mod tests {
                 let mut buf = [0u8; 1024];
                 loop {
                     let n = c.read(&mut buf).await.unwrap();
+                    if n == 0 {
+                        log::info!("initial_greeting_packet: socket closed");
+                        return;
+                    }
                     deframer_writer.write(&buf[..n]).await.unwrap();
                 }
             });
