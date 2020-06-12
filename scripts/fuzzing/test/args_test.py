@@ -47,6 +47,7 @@ class ArgsTest(TestCase):
             '  repro               Reproduce fuzzer findings by replaying test units.',
             '  start               Start a specific fuzzer.',
             '  stop                Stop a specific fuzzer.',
+            '  unittest            Run the unittests for this tool.',
             '',
             'See "fx fuzz help [SUBCOMMAND]" for details on each subcommand.',
             'See also "fx help fuzz" for global "fx" options.',
@@ -542,6 +543,17 @@ class ArgsTest(TestCase):
             name='name',
             libfuzzer_opts={'output': 'foo'},
             subprocess_args=['--sub', '-sub=val'])
+
+    def test_unittest_parser(self):
+        self.assertParseHelp(
+            ['help', 'unittest'], [
+                '',
+                'Usage: fx fuzz unittest',
+                '',
+                'Run the unittests for this tool. This runs all tests from all test cases. To run',
+                'a single test, use "python <path/to/test.py> <test_name>" instead.',
+                '',
+            ])
 
 
 if __name__ == '__main__':

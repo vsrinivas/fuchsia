@@ -171,6 +171,14 @@ class ArgParser(argparse.ArgumentParser):
         analyze_parser._add_libfuzzer_extras()
         analyze_parser.set_defaults(command=command.analyze_fuzzer)
 
+        unittest_parser = self._add_parser('unittest', action)
+        unittest_parser.description = [
+            'Run the unittests for this tool. This runs all tests from all test cases. To run',
+            'a single test, use "python <path/to/test.py> <test_name>" instead.'
+        ]
+        unittest_parser.help = 'Run the unittests for this tool.'
+        unittest_parser.set_defaults(command=command.run_unittests)
+
         self.epilog = [
             'See "fx fuzz help [SUBCOMMAND]" for details on each subcommand.',
             'See also "fx help fuzz" for global "fx" options.',

@@ -3,7 +3,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import os
 import sys
+import unittest
 
 from fuzzer import Fuzzer
 
@@ -102,3 +104,11 @@ def analyze_fuzzer(args, factory):
             fuzzer.package, fuzzer.executable)
         fuzzer.corpus.add_from_gcs(gcs_url)
     fuzzer.analyze()
+
+
+def run_unittests(args, factory):
+    """Runs unittests under the test directory."""
+    lib_dir = os.path.dirname(os.path.abspath(__file__))
+    test_dir = os.path.join(os.path.dirname(lib_dir), 'test')
+    tests = unittest.defaultTestLoader.discover(test_dir, pattern='*_test.py')
+    unittest.runner.TextTestRunner().run(tests)
