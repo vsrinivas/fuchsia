@@ -110,6 +110,7 @@ template("ffx_plugin") {
       "//src/developer/development-bridge:ffx_lib_args",
       "//src/developer/development-bridge:ffx_lib_sub_command",
       "//src/developer/development-bridge/config:lib",
+      "//src/diagnostics/lib/selectors",
       "//src/lib/fidl/rust/fidl",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",

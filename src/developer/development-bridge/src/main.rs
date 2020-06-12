@@ -65,7 +65,7 @@ async fn get_remote_proxy() -> Result<RemoteControlProxy, Error> {
     let _result = daemon_proxy
         .get_remote_control(remote_server_end)
         .await
-        .context("launch_test call failed")
+        .context("get_remote_control call failed")
         .map_err(|e| format_err!("error getting remote: {:?}", e))?;
     Ok(remote_proxy)
 }

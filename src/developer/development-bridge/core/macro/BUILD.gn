@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_macro.gni")
 
 if (host_toolchain == current_toolchain) {
@@ -11,9 +12,29 @@ if (host_toolchain == current_toolchain) {
     edition = "2018"
 
     deps = [
+      ":ffx_core_impl",
+      "//third_party/rust_crates:syn",
+    ]
+  }
+
+  #Implementation needs to be seperate for unit tests.
+  rustc_library("ffx_core_impl") {
+    version = "0.1.0"
+    edition = "2018"
+    with_unit_tests = true
+
+    source_root = "src/impl.rs"
+    deps = [
+      "//src/diagnostics/lib/selectors",
+      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:proc-macro2",
       "//third_party/rust_crates:quote",
       "//third_party/rust_crates:syn",
     ]
   }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":ffx_core_impl_test($host_toolchain)" ]
 }

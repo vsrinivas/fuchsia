@@ -7,8 +7,8 @@ use {
     ffx_core::ffx_plugin,
     ffx_test_args::TestCommand,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_test::{CaseIteratorMarker, Invocation, SuiteProxy},
+    fidl_fuchsia_test_manager as ftest_manager,
     futures::{channel::mpsc, FutureExt, StreamExt},
     regex::Regex,
     std::io::{stdout, Write},
@@ -17,18 +17,21 @@ use {
     },
 };
 
-#[ffx_plugin()]
-pub async fn test(remote_proxy: RemoteControlProxy, cmd: TestCommand) -> Result<(), Error> {
+#[ffx_plugin(ftest_manager::HarnessProxy = "core/appmgr:out:fuchsia.test.manager.Harness")]
+pub async fn test(
+    harness_proxy: ftest_manager::HarnessProxy,
+    cmd: TestCommand,
+) -> Result<(), Error> {
     let writer = Box::new(stdout());
     if cmd.list {
-        get_tests(remote_proxy, writer, &cmd.url).await
+        get_tests(harness_proxy, writer, &cmd.url).await
     } else {
-        run_tests(remote_proxy, writer, &cmd.url, &cmd.tests).await
+        run_tests(harness_proxy, writer, &cmd.url, &cmd.tests).await
     }
 }
 
 async fn get_tests<W: Write>(
-    remote_proxy: RemoteControlProxy,
+    harness_proxy: ftest_manager::HarnessProxy,
     mut write: W,
     suite_url: &String,
 ) -> Result<(), Error> {
@@ -38,10 +41,15 @@ async fn get_tests<W: Write>(
 
     log::info!("launching test suite {}", suite_url);
 
-    let _result = remote_proxy
-        .launch_suite(&suite_url, suite_server_end, controller_server_end)
+    let _result = harness_proxy
+        .launch_suite(
+            &suite_url,
+            ftest_manager::LaunchOptions {},
+            suite_server_end,
+            controller_server_end,
+        )
         .await
-        .context("launch_test call failed")?
+        .context("launch_suite call failed")?
         .map_err(|e| format_err!("error launching test: {:?}", e))?;
 
     let (case_iterator, test_server_end) = create_proxy::<CaseIteratorMarker>()?;
@@ -95,7 +103,7 @@ async fn get_invocations(
 }
 
 async fn run_tests<W: Write>(
-    remote_proxy: RemoteControlProxy,
+    harness_proxy: ftest_manager::HarnessProxy,
     mut write: W,
     suite_url: &String,
     tests: &Option<String>,
@@ -118,8 +126,13 @@ async fn run_tests<W: Write>(
     log::info!("launching test suite {}", suite_url);
     writeln!(writer, "*** Launching {} ***", suite_url)?;
 
-    let _result = remote_proxy
-        .launch_suite(&suite_url, suite_server_end, controller_server_end)
+    let _result = harness_proxy
+        .launch_suite(
+            &suite_url,
+            ftest_manager::LaunchOptions {},
+            suite_server_end,
+            controller_server_end,
+        )
         .await
         .context("launch_test call failed")?
         .map_err(|e| format_err!("error launching test: {:?}", e))?;
@@ -192,30 +205,30 @@ async fn collect_events<W: Write>(writer: &mut W, mut recv: mpsc::Receiver<TestE
 
 ////////////////////////////////////////////////////////////////////////////////
 // tests
-
 #[cfg(test)]
 mod test {
     use {
         super::*,
-        fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlRequest},
         fidl_fuchsia_test::{
             Case, CaseIteratorRequest, CaseIteratorRequestStream, CaseListenerMarker, Result_,
             Status, SuiteRequest, SuiteRequestStream,
         },
+        fidl_fuchsia_test_manager::{HarnessMarker, HarnessProxy, HarnessRequest},
         futures::TryStreamExt,
         std::io::BufWriter,
     };
 
-    fn setup_fake_remote_service_with_tests(num_tests: usize) -> RemoteControlProxy {
+    fn setup_fake_harness_service_with_tests(num_tests: usize) -> HarnessProxy {
         let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<HarnessMarker>().unwrap();
 
         hoist::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    RemoteControlRequest::LaunchSuite {
+                    HarnessRequest::LaunchSuite {
                         test_url: _,
                         suite,
+                        options: _,
                         controller: _,
                         responder,
                     } => {
@@ -223,7 +236,6 @@ mod test {
                         spawn_fake_suite_server(suite_request_stream, num_tests);
                         let _ = responder.send(&mut Ok(()));
                     }
-                    _ => panic!("Unexpected request {:?}", req),
                 }
             }
         });
@@ -292,9 +304,10 @@ mod test {
         let test = Regex::new(r"Test [0-9+]").expect("test regex");
         hoist::run(async move {
             let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            let remote_proxy = setup_fake_remote_service_with_tests(num_tests);
-            let _response =
-                get_tests(remote_proxy, writer, &url).await.expect("getting tests should not fail");
+            let harness_proxy = setup_fake_harness_service_with_tests(num_tests);
+            let _response = get_tests(harness_proxy, writer, &url)
+                .await
+                .expect("getting tests should not fail");
             assert_eq!(num_tests, test.find_iter(&output).count());
         });
     }
@@ -308,8 +321,8 @@ mod test {
         let url = "fuchsia-pkg://fuchsia.com/dummy-package#meta/echo_test_realm.cm".to_string();
         hoist::run(async move {
             let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            let remote_proxy = setup_fake_remote_service_with_tests(num_tests);
-            let _response = run_tests(remote_proxy, writer, &url, &selector)
+            let harness_proxy = setup_fake_harness_service_with_tests(num_tests);
+            let _response = run_tests(harness_proxy, writer, &url, &selector)
                 .await
                 .expect("run tests should not fail");
             let test_running = Regex::new(r"RUNNING").expect("test regex");
@@ -343,8 +356,8 @@ mod test {
         let num_tests = 1;
         hoist::run(async move {
             let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            let remote_proxy = setup_fake_remote_service_with_tests(num_tests);
-            let response = run_tests(remote_proxy, &mut writer, &url, &selector).await;
+            let harness_proxy = setup_fake_harness_service_with_tests(num_tests);
+            let response = run_tests(harness_proxy, &mut writer, &url, &selector).await;
             assert!(response.is_err());
         });
         Ok(())

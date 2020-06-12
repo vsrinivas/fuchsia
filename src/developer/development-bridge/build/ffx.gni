@@ -66,6 +66,7 @@ template("ffx") {
              ":" + output_name + "_bin_test($host_toolchain)",
              ":" + suite_name + "_tests($host_toolchain)",
              "config:tests($host_toolchain)",
+             "core:tests($host_toolchain)",
            ]
   }
 }
