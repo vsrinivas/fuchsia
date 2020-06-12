@@ -57,8 +57,11 @@ fidl("fuchsia.camera.test") {
 package("camera_device_watcher") {
   deps = [ ":bin" ]
 
-  binary = "device_watcher"
-
+  binaries = [
+    {
+      name = "device_watcher"
+    },
+  ]
   meta = [
     {
       path = "${target_name}.cmx"

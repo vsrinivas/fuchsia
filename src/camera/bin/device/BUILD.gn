@@ -55,8 +55,11 @@ executable("bin") {
 package("camera_device") {
   deps = [ ":bin" ]
 
-  binary = "device"
-
+  binaries = [
+    {
+      name = "device"
+    },
+  ]
   meta = [
     {
       path = "${target_name}.cmx"
