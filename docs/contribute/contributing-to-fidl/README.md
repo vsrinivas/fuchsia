@@ -237,13 +237,13 @@ time the JSON IR is changed in any way, otherwise the `json_generator_tests` fai
 Build:
 
 ```sh
-fx build garnet/go/src/fidl
+fx build tools/fidl
 ```
 
 Run:
 
 ```sh
-$FUCHSIA_DIR/out/default/host_x64/fidlgen
+$FUCHSIA_DIR/out/default/host_x64/fidlgen_{llcpp, hlcpp, rust, go}
 ```
 
 Some example tests you can run:
