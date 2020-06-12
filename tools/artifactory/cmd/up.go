@@ -32,7 +32,7 @@ import (
 
 const (
 	// The size in bytes at which files will be read and written to GCS.
-	chunkSize = 8 * 1024 * 1024
+	chunkSize = 100 * 1024 * 1024
 
 	// Relative path within the build directory to the repo produced by a build.
 	repoSubpath = "amber-files"
@@ -63,6 +63,9 @@ const (
 	// Constants for upload retries.
 	uploadRetryBackoff = 1 * time.Second
 	maxUploadAttempts  = 4
+
+	// Timeout for every file upload.
+	perFileUploadTimeout = 8 * time.Minute
 )
 
 type upCommand struct {
@@ -335,7 +338,10 @@ func (h *hasher) Write(p []byte) (int, error) {
 
 func (s *cloudSink) write(ctx context.Context, name string, reader io.Reader, compress bool, metadata map[string]string) error {
 	obj := s.bucket.Object(name)
-	sw := obj.If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
+	// Setting timeouts to fail fast on hung connections.
+	tctx, cancel := context.WithTimeout(ctx, perFileUploadTimeout)
+	defer cancel()
+	sw := obj.If(storage.Conditions{DoesNotExist: true}).NewWriter(tctx)
 	sw.ChunkSize = chunkSize
 	sw.ContentType = "application/octet-stream"
 	if compress {
