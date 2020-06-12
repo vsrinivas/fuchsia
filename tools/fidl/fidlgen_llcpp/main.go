@@ -14,7 +14,7 @@ import (
 
 	"fidl/compiler/backend/cpp"
 	"fidl/compiler/backend/types"
-	"fidl/compiler/llcpp_backend/codegen"
+	"fidlgen_llcpp/codegen"
 )
 
 type flagsDef struct {

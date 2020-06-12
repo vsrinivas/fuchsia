@@ -5,7 +5,6 @@
 group("tools") {
   testonly = true
   public_deps = [
-    "//garnet/go/src/fidl",
     "//garnet/go/src/fidlmerge:host",
     "//garnet/packages/prod:cmdutils",
     "//garnet/packages/prod:debug_agent",

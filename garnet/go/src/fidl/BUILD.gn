@@ -14,31 +14,11 @@ go_library("fidl_lib") {
   deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }
 
-go_binary("fidlgen_llcpp") {
-  gopackage = "fidl/compiler/llcpp_backend"
-
-  sdk_category = "partner"
-
-  deps = [ ":fidl_lib" ]
-}
-
-install_host_tools("fidl") {
-  deps = [ ":fidlgen_llcpp" ]
-  outputs = [ "fidlgen_llcpp" ]
-}
-
 if (is_host) {
   go_library("fidlgen_test_lib") {
     testonly = true
     deps = [ ":fidl_lib" ]
     non_go_deps = [ "compiler/backend/goldens" ]
-  }
-
-  go_test("fidlgen_llcpp_test") {
-    gopackages = [ "fidl/compiler/llcpp_backend/codegen" ]
-
-    deps = [ ":fidlgen_test_lib" ]
-    non_go_deps = [ ":clang_format" ]
   }
 
   host_test_data("clang_format") {

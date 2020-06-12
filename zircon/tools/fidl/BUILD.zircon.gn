@@ -170,6 +170,6 @@ template("fidlgen_executable") {
 }
 
 fidlgen_executable("fidlgen_llcpp") {
-  go_path = "$zx/../garnet/go"
+  go_path = "$zx/../tools/fidl/fidlgen_llcpp"
   go_package = "fidl/compiler/llcpp_backend"
 }

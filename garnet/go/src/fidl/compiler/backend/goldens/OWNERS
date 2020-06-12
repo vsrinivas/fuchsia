@@ -2,6 +2,5 @@ bprosnitz@google.com
 fcz@google.com
 include /src/testing/fuzzing/OWNERS
 mkember@google.com
-yifeit@google.com
 
 # COMPONENT: FIDL>Testing

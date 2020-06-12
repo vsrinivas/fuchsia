@@ -11,7 +11,7 @@ FIDLGEN_DIR = 'garnet/go/src/fidl/compiler'
 FIDLGEN_DART_DIR = 'topaz/bin/fidlgen_dart'
 FIDLGEN_GO_DIR = 'tools/fidl/fidlgen_go'
 FIDLGEN_BACKEND_DIRS = [
-    'garnet/go/src/fidl/compiler/llcpp_backend',
+    'tools/fidl/fidlgen_llcpp',
     FIDLGEN_GO_DIR,
     'tools/fidl/fidlgen_hlcpp',
     'tools/fidl/fidlgen_libfuzzer',

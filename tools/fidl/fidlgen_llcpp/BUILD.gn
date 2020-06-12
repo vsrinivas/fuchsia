@@ -1,0 +1,39 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/host.gni")
+import("//build/testing/host_test_data.gni")
+
+go_library("lib") {
+  name = "fidlgen_llcpp"
+}
+
+go_binary("fidlgen_llcpp") {
+  gopackage = "fidlgen_llcpp"
+
+  deps = [
+    ":lib",
+    "//garnet/go/src/fidl:fidl_lib",
+  ]
+}
+
+install_host_tools("host") {
+  deps = [ ":fidlgen_llcpp" ]
+  outputs = [ "fidlgen_llcpp" ]
+}
+
+if (is_host) {
+  go_test("fidlgen_llcpp_test") {
+    gopackages = [ "fidlgen_llcpp/codegen" ]
+
+    deps = [
+      ":lib",
+      "//garnet/go/src/fidl:fidlgen_test_lib",
+    ]
+    non_go_deps = [ "//garnet/go/src/fidl:clang_format" ]
+  }
+}

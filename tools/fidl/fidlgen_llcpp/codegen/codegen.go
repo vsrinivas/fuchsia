@@ -11,8 +11,8 @@ import (
 	"text/template"
 
 	"fidl/compiler/backend/cpp"
-	"fidl/compiler/llcpp_backend/templates/files"
-	"fidl/compiler/llcpp_backend/templates/fragments"
+	"fidlgen_llcpp/templates/files"
+	"fidlgen_llcpp/templates/fragments"
 )
 
 type Generator struct {

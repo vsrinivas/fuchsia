@@ -25,7 +25,6 @@ group("all") {
   public_deps = [
     ":bluetooth",
     ":scenic",
-    "//garnet/go/src/fidl",
     "//garnet/go/src/fidlmerge:host",
     "//src/graphics/lib/magma:magma-tools",
   ]

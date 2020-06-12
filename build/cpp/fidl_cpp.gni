@@ -126,7 +126,7 @@ template("fidl_llcpp_codegen") {
 
     visibility = [ ":$main_target_name" ]
 
-    tool = "//garnet/go/src/fidl:fidlgen_llcpp"
+    tool = "//tools/fidl/fidlgen_llcpp"
 
     inputs = [ json_representation ]
 

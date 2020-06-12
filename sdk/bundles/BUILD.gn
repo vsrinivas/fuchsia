@@ -6,7 +6,6 @@
 group("tools") {
   testonly = true
   public_deps = [
-    "//garnet/go/src/fidl",
     "//garnet/go/src/fidlmerge:host",
     "//garnet/packages/prod:cmdutils",
     "//garnet/packages/prod:debug_agent",
@@ -41,8 +40,8 @@ group("tools") {
     "//third_party/curl",
     "//third_party/iperf",
     "//third_party/openssh-portable:openssh-tools",
-    "//tools/fidl/gidl:host",
     "//tools/check-licenses:host($host_toolchain)",
+    "//tools/fidl/gidl:host",
     "//tools/whereiscl:host($host_toolchain)",
 
     # We don't include the AOT flutter tools due to ABI stability.

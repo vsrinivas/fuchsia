@@ -47,8 +47,6 @@ allowed_deps = [
     # Tools
     '//tools',
     # Will move to //tools or //sdk:
-    '//garnet/go/src/fidl:fidlgen(//build/toolchain:host_x64)',
-    '//garnet/go/src/fidl:fidlgen_llcpp(//build/toolchain:host_x64)',
     '//garnet/go/src/fidlmerge:fidlmerge(//build/toolchain:host_x64)',
     '//garnet/go/src/pm:pm_bin(//build/toolchain:host_x64)',
     '//topaz/bin/fidlgen_dart:fidlgen_dart(//build/toolchain:host_x64)',
@@ -158,7 +156,8 @@ def main():
         'Set to see all dependency issues')
     args = parser.parse_args()
 
-    gn_binary = os.path.join(fuchsia_root, 'prebuilt', 'third_party', 'gn', HOST_PLATFORM, 'gn')
+    gn_binary = os.path.join(
+        fuchsia_root, 'prebuilt', 'third_party', 'gn', HOST_PLATFORM, 'gn')
     targets = extract_build_graph(
         gn_binary, os.path.join(fuchsia_root, args.out))
 
