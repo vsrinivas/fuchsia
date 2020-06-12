@@ -156,9 +156,21 @@ impl DeprecatedOptions {
                 std::process::exit(0);
             } else if flag_str.starts_with("--dir") {
                 let values = flag_str.split("=").collect::<Vec<&str>>();
+                if values.len() != 2 {
+                    return Err(OptionsReadError::ParseError(format!(
+                        "Invalid option: {}",
+                        flag_str
+                    )));
+                }
                 self.global.dir = Some(values[1].to_string());
             } else if flag_str.starts_with("--format") {
                 let values = flag_str.split("=").collect::<Vec<&str>>();
+                if values.len() != 2 {
+                    return Err(OptionsReadError::ParseError(format!(
+                        "Invalid option: {}",
+                        flag_str
+                    )));
+                }
                 match values[1] {
                     "json" => self.formatting.format = Format::Json,
                     "text" => self.formatting.format = Format::Text,
