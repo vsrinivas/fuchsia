@@ -116,7 +116,8 @@ impl VolumeRelay {
         let mut staged_volume = Some(current_volume);
 
         let mut last_onchanged = None;
-        let mut hanging_onchanged = None;
+        let mut hanging_onchanged: Option<avrcp::AbsoluteVolumeHandlerOnVolumeChangedResponder> =
+            None;
         let mut hanging_setvolumes = Vec::new();
 
         let setvolume_timeout = Fuse::terminated();
@@ -152,6 +153,15 @@ impl VolumeRelay {
                             }
                         },
                         avrcp::AbsoluteVolumeHandlerRequest::OnVolumeChanged { responder } => {
+                            // There can be a stale responder if a peer issues a request and
+                            // disconnects before receiving the changed response. In the event
+                            // that a responder already exists in `hanging_onchanged`, respond
+                            // with the current volume to clear the pending request.
+                            // It is likely that the remote peer has already disconnected, so the
+                            // response `current_volume` isn't meaningful.
+                            if let Some(resp) = hanging_onchanged.take() {
+                                let _ = resp.send(current_volume);
+                            }
                             hanging_onchanged = Some(responder);
                         },
                         avrcp::AbsoluteVolumeHandlerRequest::GetCurrentVolume { responder } => {
@@ -264,7 +274,7 @@ mod tests {
         endpoints::create_proxy_and_stream::<settings::AudioMarker>()
     }
 
-    /// Builds all of the Proxies and request strreams involved with setting up a Volume Relay
+    /// Builds all of the Proxies and request streams involved with setting up a Volume Relay
     /// test.
     fn setup_volume_relay() -> Result<
         (
@@ -316,7 +326,7 @@ mod tests {
     }
 
     /// Confirms the setup of the Volume relay, which includes the registration of a volume
-    /// handler proxy with the AVRCP client, and the iniitial volume setting request to the Media
+    /// handler proxy with the AVRCP client, and the initial volume setting request to the Media
     /// system.
     fn finish_relay_setup<T: Future>(
         mut relay_fut: &mut Pin<&mut T>,
@@ -386,7 +396,7 @@ mod tests {
         let mut current_volume_fut = volume_client.get_current_volume();
         match exec.run_until_stalled(&mut current_volume_fut) {
             Poll::Ready(Err(_e)) => {}
-            x => panic!("Expected voulme to be disconnected, but got {:?} from watch_info", x),
+            x => panic!("Expected volume to be disconnected, but got {:?} from watch_info", x),
         };
         Ok(())
     }
@@ -433,7 +443,7 @@ mod tests {
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_pending());
 
-        // Whan a new volume happens as a result, it's returned.
+        // When a new volume happens as a result, it's returned.
         respond_to_audio_watch(watch_responder, NEW_MEDIA_VOLUME);
 
         let res = exec.run_until_stalled(&mut relay_fut);
@@ -525,7 +535,7 @@ mod tests {
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_pending());
 
-        // Volume get should return immediately with the initial volume (0.8 -> 100)
+        // The OnVolumeChanged request should return immediately the first time.
         match exec.run_until_stalled(&mut volume_hanging_fut) {
             Poll::Ready(Ok(vol)) => {
                 assert_eq!(INITIAL_AVRCP_VOLUME, vol);
@@ -541,7 +551,7 @@ mod tests {
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_pending());
 
-        // Volume get should return immediately with the initial volume (0.8 -> 100)
+        // The next OnVolumeChanged request shouldn't resolve because the volume hasn't changed.
         match exec.run_until_stalled(&mut volume_hanging_fut) {
             Poll::Pending => {}
             x => {
@@ -552,13 +562,99 @@ mod tests {
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_pending());
 
-        // Whan a new volume happens as a result, it's returned.
+        // When a new volume happens as a result, it's returned.
         respond_to_audio_watch(watch_responder, NEW_MEDIA_VOLUME);
 
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_pending());
 
         match exec.run_until_stalled(&mut volume_hanging_fut) {
+            Poll::Ready(Ok(vol)) => assert_eq!(vol, NEW_AVRCP_VOLUME),
+            x => panic!(
+                "Expected on_volume_changed to be responded to after change but got: {:?}",
+                x
+            ),
+        };
+
+        let _watch_responder = expect_audio_watch(&mut exec, &mut settings_requests);
+
+        Ok(())
+    }
+
+    /// Tests the behavior of the AbsoluteVolumeHandler when a remote peer
+    /// disconnects. This is simulated by obtaining multiple clones of the
+    /// AbsoluteVolumeHandlerProxy and dropping one.
+    /// The expected behavior is the Absolute Volume Relay should not crash, and should
+    /// attempt to resolve any "stale" OnVolumeChanged request, and store the next.
+    #[test]
+    fn test_volume_changes_with_peer_disconnection() -> Result<(), Error> {
+        let mut exec = fasync::Executor::new().expect("executor needed");
+        let (mut settings_requests, avrcp_requests, _stop_sender, relay_fut) =
+            setup_volume_relay()?;
+
+        pin_mut!(relay_fut);
+
+        let res = exec.run_until_stalled(&mut relay_fut);
+        assert!(res.is_pending());
+
+        // Setup the relay and make two copies of the `volume_client`.
+        let (volume_client, watch_responder) =
+            finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests, &mut settings_requests);
+        let volume_client2 = volume_client.clone();
+
+        let peer1_volume_hanging_fut = volume_client.on_volume_changed();
+        pin_mut!(peer1_volume_hanging_fut);
+
+        let res = exec.run_until_stalled(&mut relay_fut);
+        assert!(res.is_pending());
+
+        // The OnVolumeChanged request should return immediately the first time.
+        match exec.run_until_stalled(&mut peer1_volume_hanging_fut) {
+            Poll::Ready(Ok(vol)) => {
+                assert_eq!(INITIAL_AVRCP_VOLUME, vol);
+            }
+            x => {
+                panic!("Expected on_volume_changed to be finished the first time, but got {:?}", x)
+            }
+        };
+
+        // Make another OnVolumeChanged request for Peer 1.
+        let peer1_volume_hanging_fut = volume_client.on_volume_changed();
+        pin_mut!(peer1_volume_hanging_fut);
+
+        let res = exec.run_until_stalled(&mut relay_fut);
+        assert!(res.is_pending());
+
+        // The next OnVolumeChanged request shouldn't resolve because the volume hasn't changed.
+        match exec.run_until_stalled(&mut peer1_volume_hanging_fut) {
+            Poll::Pending => {}
+            x => {
+                panic!("Expected on_volume_changed to be hanging the second time, but got {:?}", x)
+            }
+        };
+
+        let res = exec.run_until_stalled(&mut relay_fut);
+        assert!(res.is_pending());
+
+        // Simulate a disconnection of a peer by dropping the AbsoluteVolumeProxy. This is
+        // appropriate because AVRCP gives a cloned Proxy to each new connected peer, and
+        // will drop it upon disconnection.
+        // There will still be an outstanding "stale" responder stored by the Volume Relay.
+        drop(volume_client);
+
+        let peer2_volume_hanging_fut = volume_client2.on_volume_changed();
+        pin_mut!(peer2_volume_hanging_fut);
+        let res = exec.run_until_stalled(&mut relay_fut);
+        assert!(res.is_pending()); // This should fail right now.
+
+        // Respond with a new volume.
+        respond_to_audio_watch(watch_responder, NEW_MEDIA_VOLUME);
+
+        let res = exec.run_until_stalled(&mut relay_fut);
+        assert!(res.is_pending());
+
+        // Any subsequent updates should work as normal.
+        match exec.run_until_stalled(&mut peer2_volume_hanging_fut) {
             Poll::Ready(Ok(vol)) => assert_eq!(vol, NEW_AVRCP_VOLUME),
             x => panic!(
                 "Expected on_volume_changed to be responded to after change but got: {:?}",
