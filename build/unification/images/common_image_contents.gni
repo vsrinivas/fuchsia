@@ -258,7 +258,7 @@ if (target_cpu == "arm64") {
     "//src/devices/usb/drivers/xhci:xhci-x86",
     "//src/graphics/display/drivers/intel-i915",
     "//src/ui/input/drivers/pc-ps2",
-    "//zircon/system/uapp/acpidump",
+    "//src/devices/bin/acpidump",
   ]
 }
 

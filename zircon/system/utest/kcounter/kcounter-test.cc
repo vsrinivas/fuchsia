@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <fbl/array.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <lib/counter-vmo-abi.h>
@@ -12,7 +10,6 @@
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
-#include <zxtest/zxtest.h>
 
 #include <algorithm>
 #include <cinttypes>
@@ -20,6 +17,10 @@
 #include <cstdlib>
 #include <cstring>
 #include <utility>
+
+#include <fbl/array.h>
+#include <fbl/unique_fd.h>
+#include <zxtest/zxtest.h>
 
 #include "src/zircon/bin/kcounter/kcounter_cmdline.h"
 

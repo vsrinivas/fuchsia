@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UAPP_ACPIDUMP_ACPIDUMP_H_
-#define ZIRCON_SYSTEM_UAPP_ACPIDUMP_ACPIDUMP_H_
+#ifndef SRC_DEVICES_BIN_ACPIDUMP_ACPIDUMP_H_
+#define SRC_DEVICES_BIN_ACPIDUMP_ACPIDUMP_H_
 
 #include <optional>
 #include <string>
@@ -41,4 +41,4 @@ int Main(int argc, const char** argv);
 
 }  // namespace acpidump
 
-#endif  // ZIRCON_SYSTEM_UAPP_ACPIDUMP_ACPIDUMP_H_
+#endif  // SRC_DEVICES_BIN_ACPIDUMP_ACPIDUMP_H_

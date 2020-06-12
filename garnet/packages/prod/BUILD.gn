@@ -8,7 +8,7 @@
 group("acpidump") {
   testonly = true
   if (target_cpu == "x64") {
-    public_deps = [ "//zircon/system/uapp/acpidump" ]
+    public_deps = [ "//src/devices/bin/acpidump" ]
   }
 }
 

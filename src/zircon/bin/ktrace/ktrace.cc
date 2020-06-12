@@ -4,17 +4,17 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/tracing/kernel/c/fidl.h>
+#include <lib/fdio/fdio.h>
+#include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/status.h>
 
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <fuchsia/tracing/kernel/c/fidl.h>
-#include <lib/fdio/fdio.h>
-#include <lib/zx/channel.h>
-#include <zircon/status.h>
 
 static const char kDevicePath[] = "/dev/misc/ktrace";
 
