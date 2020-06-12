@@ -145,8 +145,11 @@ package("linux_runner") {
     ":extras",
   ]
 
-  binary = "linux_runner"
-
+  binaries = [
+    {
+      name = "linux_runner"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/linux_runner.cmx")

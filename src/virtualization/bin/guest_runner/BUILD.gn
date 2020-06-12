@@ -33,8 +33,11 @@ executable("bin") {
 }
 
 package("guest_runner") {
-  binary = "guest_runner"
-
+  binaries = [
+    {
+      name = "guest_runner"
+    },
+  ]
   deps = [ ":bin" ]
 
   meta = [

@@ -282,8 +282,11 @@ executable("guest_discovery_service_bin") {
 package("guest_discovery_service") {
   deps = [ ":guest_discovery_service_bin" ]
 
-  binary = "guest_discovery_service"
-
+  binaries = [
+    {
+      name = "guest_discovery_service"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/guest_discovery_service.cmx")

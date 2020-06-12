@@ -54,7 +54,11 @@ executable("virtio_balloon_bin") {
 }
 
 package("virtio_balloon") {
-  binary = "virtio_balloon"
+  binaries = [
+    {
+      name = "virtio_balloon"
+    },
+  ]
   deps = [ ":virtio_balloon_bin" ]
   meta = [
     {
@@ -94,7 +98,11 @@ executable("virtio_block_bin") {
 }
 
 package("virtio_block") {
-  binary = "virtio_block"
+  binaries = [
+    {
+      name = "virtio_block"
+    },
+  ]
   deps = [ ":virtio_block_bin" ]
   meta = [
     {
@@ -113,7 +121,11 @@ executable("virtio_console_bin") {
 }
 
 package("virtio_console") {
-  binary = "virtio_console"
+  binaries = [
+    {
+      name = "virtio_console"
+    },
+  ]
   deps = [ ":virtio_console_bin" ]
   meta = [
     {
@@ -132,7 +144,11 @@ executable("virtio_input_bin") {
 }
 
 package("virtio_input") {
-  binary = "virtio_input"
+  binaries = [
+    {
+      name = "virtio_input"
+    },
+  ]
   deps = [ ":virtio_input_bin" ]
   meta = [
     {
@@ -166,7 +182,11 @@ executable("virtio_gpu_bin") {
 }
 
 package("virtio_gpu") {
-  binary = "virtio_gpu"
+  binaries = [
+    {
+      name = "virtio_gpu"
+    },
+  ]
   deps = [ ":virtio_gpu_bin" ]
   meta = [
     {
@@ -216,7 +236,11 @@ executable("virtio_magma_bin_mock_system") {
 }
 
 package("virtio_magma") {
-  binary = "virtio_magma"
+  binaries = [
+    {
+      name = "virtio_magma"
+    },
+  ]
   deps = [
     ":virtio_magma_bin",
     "//third_party/mesa/src/intel/vulkan:vulkan_intel(//build/toolchain:linux_x64-shared)",
@@ -240,7 +264,12 @@ package("virtio_magma") {
 
 package("virtio_magma_mock_system") {
   testonly = true
-  binary = "virtio_magma_mock_system"
+  binaries = [
+    {
+      name = "virtio_magma_mock_system"
+      dest = "virtio_magma"
+    },
+  ]
   deps = [ ":virtio_magma_bin_mock_system" ]
 
   meta = [
@@ -269,7 +298,11 @@ executable("virtio_net_bin") {
 }
 
 package("virtio_net") {
-  binary = "virtio_net"
+  binaries = [
+    {
+      name = "virtio_net"
+    },
+  ]
   deps = [ ":virtio_net_bin" ]
   meta = [
     {
@@ -288,7 +321,11 @@ executable("virtio_rng_bin") {
 }
 
 package("virtio_rng") {
-  binary = "virtio_rng"
+  binaries = [
+    {
+      name = "virtio_rng"
+    },
+  ]
   deps = [ ":virtio_rng_bin" ]
   meta = [
     {
@@ -311,7 +348,11 @@ executable("virtio_wl_bin") {
 }
 
 package("virtio_wl") {
-  binary = "virtio_wl"
+  binaries = [
+    {
+      name = "virtio_wl"
+    },
+  ]
   deps = [ ":virtio_wl_bin" ]
 
   meta = [

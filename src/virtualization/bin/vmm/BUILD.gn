@@ -153,8 +153,11 @@ executable("bin") {
 }
 
 package("vmm") {
-  binary = "vmm"
-
+  binaries = [
+    {
+      name = "vmm"
+    },
+  ]
   deps = [ ":bin" ]
 
   meta = [

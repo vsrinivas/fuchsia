@@ -51,8 +51,11 @@ executable("bin") {
 }
 
 package("guest_manager") {
-  binary = "guest_manager"
-
+  binaries = [
+    {
+      name = "guest_manager"
+    },
+  ]
   deps = [ ":bin" ]
   meta = [
     {

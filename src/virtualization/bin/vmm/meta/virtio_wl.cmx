@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/virtio_wl"
     },
     "sandbox": {
         "services": [
