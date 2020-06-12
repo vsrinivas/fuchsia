@@ -1083,4 +1083,28 @@ TEST_F(SyncClientBufferedTest, AbrWearLevelingDefaultToFirstPage) {
   ASSERT_NO_FATAL_FAILURES(VerifyAbrMetaDataPage(abr_data, 0x1, VerifyAbrPageMagic::OFF));
 }
 
+TEST_F(SyncClientBufferedTest, ValidateAbrMetadataInStorageFail) {
+  std::optional<sysconfig::SyncClient> client;
+  ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
+  sysconfig::SyncClientAbrWearLeveling astro_client(*std::move(client));
+  auto memory = static_cast<uint8_t*>(device_->mapper().start()) + 4 * kBlockSize;
+  auto header = WriteHeaderSupportingAbrWearLeveling(memory);
+
+  size_t abr_part_size;
+  ASSERT_OK(astro_client.GetPartitionSize(PartitionType::kABRMetadata, &abr_part_size));
+  const size_t num_pages = header.abr_metadata.size / kPageSize;
+  // Verify that abr read validation can detect error wherever the latest abr page is.
+  for (uint8_t i = 0; i < num_pages; i++) {
+    zx::vmo vmo;
+    // Fill the payload with value |i+1|.
+    ASSERT_NO_FATAL_FAILURES(CreatePayload(abr_part_size, &vmo, i + 1));
+    ASSERT_OK(astro_client.WritePartition(PartitionType::kABRMetadata, vmo, 0));
+    ASSERT_OK(astro_client.Flush());
+
+    abr_metadata_ext abr_data;
+    memset(abr_data.abr_data, i, sizeof(abr_data.abr_data));
+    ASSERT_NOT_OK(astro_client.ValidateAbrMetadataInStorage(&abr_data));
+  }
+}
+
 }  // namespace

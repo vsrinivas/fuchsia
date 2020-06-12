@@ -200,13 +200,14 @@ class SyncClientAbrWearLeveling : public SyncClientBuffered {
   // For test purpose
   uint32_t GetEraseCount() const { return erase_count_; }
 
+  zx_status_t ValidateAbrMetadataInStorage(const abr_metadata_ext* expected);
+
  private:
   bool IsOnlyAbrMetadataModified();
   zx_status_t ReadLatestAbrMetadataFromStorage(const zx::vmo& vmo, zx_off_t vmo_offset);
+  zx_status_t FindLatestAbrMetadataFromStorage(abr_metadata_ext* out);
   zx_status_t FlushAppendAbrMetadata(const sysconfig_header* header);
   zx_status_t FlushReset(const sysconfig_header* header);
-  zx_status_t ValidateAbrMetadataInStorage(const abr_metadata_ext* expected);
-  zx_status_t InitializeAbrReadMapper(const sysconfig_header& header);
   // For test purpose
   uint32_t erase_count_;
 };

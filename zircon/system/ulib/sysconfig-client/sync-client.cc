@@ -734,7 +734,13 @@ bool SyncClientAbrWearLeveling::IsOnlyAbrMetadataModified() {
 zx_status_t SyncClientAbrWearLeveling::ReadLatestAbrMetadataFromStorage(const zx::vmo& vmo,
                                                                         zx_off_t vmo_offset) {
   abr_metadata_ext latest;
+  if (auto status = FindLatestAbrMetadataFromStorage(&latest); status != ZX_OK) {
+    return status;
+  }
+  return vmo.write(&latest, vmo_offset, sizeof(abr_metadata_ext));
+}
 
+zx_status_t SyncClientAbrWearLeveling::FindLatestAbrMetadataFromStorage(abr_metadata_ext* out) {
   zx_status_t status_get_header;
   auto header = client_.GetHeader(&status_get_header);
   if (header == nullptr) {
@@ -744,17 +750,17 @@ zx_status_t SyncClientAbrWearLeveling::ReadLatestAbrMetadataFromStorage(const zx
   if (auto status = client_.LoadFromStorage(); status != ZX_OK) {
     return status;
   }
-
   auto abr_start =
       static_cast<uint8_t*>(client_.read_mapper_.start()) + header->abr_metadata.offset;
 
+  ZX_ASSERT(out != nullptr);
   if (layout_support_wear_leveling(header, kAstroPageSize)) {
-    find_latest_abr_metadata_page(header, abr_start, kAstroPageSize, &latest);
+    find_latest_abr_metadata_page(header, abr_start, kAstroPageSize, out);
   } else {
-    memcpy(&latest, abr_start, sizeof(abr_metadata_ext));
+    memcpy(out, abr_start, sizeof(abr_metadata_ext));
   }
 
-  return vmo.write(&latest, vmo_offset, sizeof(abr_metadata_ext));
+  return ZX_OK;
 }
 
 zx_status_t SyncClientAbrWearLeveling::Flush() {
@@ -783,6 +789,16 @@ zx_status_t SyncClientAbrWearLeveling::Flush() {
 
   InvalidateCache();
   return ZX_OK;
+}
+
+zx_status_t SyncClientAbrWearLeveling::ValidateAbrMetadataInStorage(
+    const abr_metadata_ext* expected) {
+  abr_metadata_ext latest;
+  if (auto status = FindLatestAbrMetadataFromStorage(&latest); status != ZX_OK) {
+    fprintf(stderr, "Failed while reading abr data from storage for validation.\n");
+    return status;
+  }
+  return memcmp(&latest, expected, sizeof(abr_metadata_ext)) ? ZX_ERR_IO_DATA_INTEGRITY : ZX_OK;
 }
 
 zx_status_t SyncClientAbrWearLeveling::FlushAppendAbrMetadata(const sysconfig_header* header) {
@@ -819,6 +835,17 @@ zx_status_t SyncClientAbrWearLeveling::FlushAppendAbrMetadata(const sysconfig_he
                                                    header->abr_metadata.offset);
       status != ZX_OK) {
     fprintf(stderr, "Failed to append abr metadata to persistent storage. %s\n",
+            zx_status_get_string(status));
+    return status;
+  }
+
+  // find_empty_page_for_wear_leveling() check page emptiness by verifying that all bytes are
+  // 0xff. However this may not always be safe as a page that has been deliberately written all 0xff
+  // may not be available to write. Thus to be safe, here we double-check that the data can be read
+  // back correctly. Returns error if validation fails. This will lead Flush() to fall back to
+  // FlushReset().
+  if (auto status = ValidateAbrMetadataInStorage(&abr_data); status != ZX_OK) {
+    fprintf(stderr, "Validation failed for abr metadata ext write. %s\n",
             zx_status_get_string(status));
     return status;
   }
