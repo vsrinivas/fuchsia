@@ -211,7 +211,7 @@ common_image_contents = [
   "//zircon/system/uapp/lz4",
   "//src/storage/bin/minfs",
   "//zircon/system/uapp/mutex_pi_exerciser",
-  "//zircon/system/uapp/ping",
+  "//src/connectivity/network/bin/ping",
   "//zircon/system/uapp/psutils:handles",
   "//zircon/system/uapp/psutils:kill",
   "//zircon/system/uapp/psutils:killall",
