@@ -99,6 +99,16 @@ class Project(object):
                 return dep
         return target
 
+    def expand_source_set(self, target):
+        """Returns a list of dependencies if the target is a source_set.
+
+        Returns dependencies as a list of strings if the target is a
+        source_set, or None otherwise.
+        """
+        meta = self.targets[target]
+        if meta["type"] == "source_set":
+            return meta["deps"]
+
 
 def write_toml_file(fout, metadata, project, target, lookup):
     root_path = project.build_settings["root_path"]
@@ -162,10 +172,21 @@ def write_toml_file(fout, metadata, project, target, lookup):
     fout.write("\n")
 
     # collect all dependencies
-    deps = []
-    for dep in metadata["deps"]:
+    deps = metadata["deps"]
+    while deps:
+        dep = deps.pop()
         # handle proc macro shims:
         dep = project.dereference_group(dep)
+
+        # If a dependency points to a source set, expand it into a list
+        # of its deps, and append them to the deps list. Finally, continue
+        # to the next item, since a source set itself is not considered a
+        # dependency for our purposes.
+        expanded_deps = project.expand_source_set(dep)
+        if expanded_deps:
+            deps.extend(expanded_deps)
+            continue
+
         # this is a third-party dependency
         # TODO remove this when all things use GN. temporary hack?
         if "third_party/rust_crates:" in dep:
