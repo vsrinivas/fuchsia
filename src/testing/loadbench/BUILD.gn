@@ -45,8 +45,11 @@ executable("bin") {
 package("loadbench") {
   deps = [ ":bin" ]
 
-  binary = "loadbench"
-
+  binaries = [
+    {
+      name = "loadbench"
+    },
+  ]
   meta = [
     {
       path = rebase_path("meta/loadbench.cmx")
