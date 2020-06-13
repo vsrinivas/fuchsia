@@ -8,6 +8,8 @@ template("blobfs_large_integration_test") {
   test_case_sources = invoker.sources
   test_target_name = "blobfs-large-integration-${target_name}"
   test(test_target_name) {
+    output_name = "$test_target_name-test"
+
     # Dependent manifests unfortunately cannot be marked as `testonly`.
     # TODO(44278): Remove when converting this file to proper GN build idioms.
     testonly = false
@@ -40,6 +42,8 @@ template("blobfs_large_integration_test") {
 
   paged_target_name = "${test_target_name}-paged"
   test(paged_target_name) {
+    output_name = "$paged_target_name-test"
+
     # Dependent manifests unfortunately cannot be marked as `testonly`.
     # TODO(44278): Remove when converting this file to proper GN build idioms.
     testonly = false

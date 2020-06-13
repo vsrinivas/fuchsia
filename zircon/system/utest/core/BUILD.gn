@@ -75,7 +75,7 @@ unified_only = [
 # Build each test as a standalone binary meant to be run by runtests.
 foreach(test_name, core_tests) {
   test(test_name) {
-    output_dir = "$root_out_dir/zircon-migrated/core"
+    output_name = "core-$test_name"
 
     # Dependent manifests unfortunately cannot be marked as `testonly`.
     # TODO(44278): Remove when converting this file to proper GN build idioms.
@@ -101,6 +101,8 @@ foreach(test_name, core_tests) {
 # some of the tests require the root resource handle or no system
 # services whatsoever.
 test("standalone") {
+  output_name = "core-standalone-test"
+
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # TODO(44278): Remove when converting this file to proper GN build idioms.
   if (is_fuchsia) {
@@ -126,7 +128,7 @@ migrated_zbi_test("core-tests") {
   assert(current_cpu != "")
 
   args = [
-    "userboot=test/core/standalone-test",
+    "userboot=test/core-standalone-test",
     "kernel.enable-debugging-syscalls=true",
   ]
 
@@ -154,7 +156,7 @@ if (current_cpu == "x64") {
   # Make that into a bootable ZBI with just the kernel.
   migrated_zbi_test("core-tests-hpet") {
     args = [
-      "userboot=test/core/standalone-test",
+      "userboot=test/core-standalone-test",
       "kernel.wallclock=hpet",
       "kernel.enable-debugging-syscalls=true",
     ]
