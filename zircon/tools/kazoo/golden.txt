@@ -80,7 +80,7 @@ typedef int64_t zx_time_t;
 
 typedef int64_t zx_duration_t;
 
-typedef uint64_t zx_ticks_t;
+typedef int64_t zx_ticks_t;
 
 typedef uint64_t zx_koid_t;
 

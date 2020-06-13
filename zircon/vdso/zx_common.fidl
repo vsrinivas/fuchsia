@@ -23,7 +23,7 @@ using time = int64;
 using duration = int64;
 
 // zx_ticks_t: a duration in hardware ticks.
-using ticks = uint64;
+using ticks = int64;
 
 // zx_koid_t: global kernel object id.
 using koid = uint64;
