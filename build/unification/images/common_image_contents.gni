@@ -210,7 +210,7 @@ common_image_contents = [
   "//src/zircon/bin/loadgen",
   "//zircon/system/uapp/lz4",
   "//src/storage/bin/minfs",
-  "//zircon/system/uapp/mutex_pi_exerciser",
+  "//src/zircon/testing/mutex_pi_exerciser",
   "//src/connectivity/network/bin/ping",
   "//src/sys/bin/psutils:handles",
   "//src/sys/bin/psutils:kill",

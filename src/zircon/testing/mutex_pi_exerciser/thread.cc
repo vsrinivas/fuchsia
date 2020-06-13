@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
+#include "thread.h"
+
 #include <fuchsia/scheduler/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
@@ -11,7 +11,9 @@
 #include <zircon/assert.h>
 #include <zircon/threads.h>
 
-#include "thread.h"
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+
 #include "utils.h"
 
 // Static storage for Thread::

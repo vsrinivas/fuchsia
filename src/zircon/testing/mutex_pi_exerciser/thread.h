@@ -2,19 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_ZIRCON_TESTING_MUTEX_PI_EXERCISER_THREAD_H_
+#define SRC_ZIRCON_TESTING_MUTEX_PI_EXERCISER_THREAD_H_
 
-#include <array>
-#include <fbl/function.h>
-#include <fbl/macros.h>
-#include <fbl/mutex.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <threads.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
+
+#include <array>
+
+#include <fbl/function.h>
+#include <fbl/macros.h>
+#include <fbl/mutex.h>
 
 #include "event.h"
 
@@ -68,3 +71,5 @@ class Thread {
   Event barrier_;
   std::atomic<State> state_{State::INIT};
 };
+
+#endif  // SRC_ZIRCON_TESTING_MUTEX_PI_EXERCISER_THREAD_H_

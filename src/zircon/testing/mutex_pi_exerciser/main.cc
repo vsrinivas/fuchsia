@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <array>
 #include <lib/sync/condition.h>
 #include <lib/sync/mutex.h>
-#include <pthread.h>
-#include <vector>
-#include <zircon/assert.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <pthread.h>
+#include <zircon/assert.h>
 #include <zircon/types.h>
+
+#include <array>
+#include <vector>
 
 #include "event.h"
 #include "thread.h"
