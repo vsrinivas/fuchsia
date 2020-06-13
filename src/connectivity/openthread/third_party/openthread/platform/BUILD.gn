@@ -8,6 +8,7 @@ source_set("platform") {
   sources = [
     "alarm.cc",
     "entropy.cc",
+    "fuchsia_platform_alarm.cc",
     "logging.cc",
     "main.cc",
     "radio_spinel.cc",

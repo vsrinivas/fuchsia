@@ -27,7 +27,10 @@ executable("unittests") {
 
   testonly = true
 
-  sources = [ "settings_test.cc" ]
+  sources = [
+    "fuchsia_platform_alarm_tests.cc",
+    "settings_test.cc",
+  ]
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
