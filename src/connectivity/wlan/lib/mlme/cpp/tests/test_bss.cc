@@ -300,7 +300,7 @@ std::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid) {
 
   packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -334,7 +334,7 @@ std::unique_ptr<Packet> CreateProbeRequest() {
 
   packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -361,7 +361,7 @@ std::unique_ptr<Packet> CreateAuthReqFrame(common::MacAddr client_addr) {
 
   packet->set_len(w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -390,7 +390,7 @@ std::unique_ptr<Packet> CreateAuthRespFrame(AuthAlgorithm auth_algo) {
 
   packet->set_len(w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -415,7 +415,7 @@ std::unique_ptr<Packet> CreateDeauthFrame(common::MacAddr client_addr) {
 
   packet->set_len(w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -457,7 +457,7 @@ std::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr,
 
   packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -506,7 +506,7 @@ std::unique_ptr<Packet> CreateAssocRespFrame(const wlan_assoc_ctx_t& ap_assoc_ct
 
   packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -531,7 +531,7 @@ std::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr) {
 
   packet->set_len(w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -566,7 +566,7 @@ std::unique_ptr<Packet> CreateDataFrame(fbl::Span<const uint8_t> payload) {
 
   packet->set_len(w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -619,7 +619,7 @@ std::unique_ptr<Packet> CreateAmsduDataFramePacket(
 
   packet->set_len(w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -644,7 +644,7 @@ DataFrame<> CreateNullDataFrame() {
 
   packet->set_len(w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return DataFrame<>(std::move(packet));

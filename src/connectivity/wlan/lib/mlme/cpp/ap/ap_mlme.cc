@@ -146,9 +146,14 @@ zx_status_t ApMlme::HandleFramePacket(std::unique_ptr<Packet> pkt) {
       }
       break;
     }
-    case Packet::Peer::kWlan:
+    case Packet::Peer::kWlan: {
+      const wlan_rx_info_t* rx_info = nullptr;
+      if (pkt->has_ctrl_data<wlan_rx_info_t>()) {
+        rx_info = pkt->ctrl_data<wlan_rx_info_t>();
+      }
       return ap_sta_handle_mac_frame(rust_ap_.get(),
-                                     wlan_span_t{.data = pkt->data(), .size = pkt->len()}, false);
+                                     wlan_span_t{.data = pkt->data(), .size = pkt->len()}, rx_info);
+    }
     default:
       errorf("unknown Packet peer: %u\n", pkt->peer());
       break;

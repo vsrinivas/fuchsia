@@ -25,7 +25,9 @@ fn packet_forwarder<'a>(
     move |event| {
         if let WlantapPhyEvent::Tx { args } = event {
             let frame = &args.packet.data;
-            peer_phy.rx(0, frame, &mut create_rx_info(&CHANNEL, 0)).expect(context);
+            peer_phy
+                .rx(0, frame, &mut create_rx_info(&WLANCFG_DEFAULT_AP_CHANNEL, 0))
+                .expect(context);
         }
     }
 }
@@ -44,7 +46,7 @@ async fn intiate_connect(
 
     let status = wlancfg_svc.status().await.expect("getting final client status");
     let is_secure = true;
-    assert_associated_state(status, &AP_MAC_ADDR, SSID, &CHANNEL, is_secure);
+    assert_associated_state(status, &AP_MAC_ADDR, SSID, &WLANCFG_DEFAULT_AP_CHANNEL, is_secure);
 
     sender.send(()).expect("done connecting, sending message to the other future");
 }
@@ -69,10 +71,17 @@ async fn verify_client_connects_to_ap(
         "connecting to AP",
         |event| match event {
             WlantapPhyEvent::SetChannel { args } => {
-                if args.chan.primary == CHANNEL.primary {
+                if args.chan.primary == WLANCFG_DEFAULT_AP_CHANNEL.primary {
                     // TODO(35337): use beacon frame from configure_beacon
-                    send_beacon(&CHANNEL, &AP_MAC_ADDR, SSID, &Wpa2Personal, &client_proxy, 0)
-                        .expect("sending beacon");
+                    send_beacon(
+                        &WLANCFG_DEFAULT_AP_CHANNEL,
+                        &AP_MAC_ADDR,
+                        SSID,
+                        &Wpa2Personal,
+                        &client_proxy,
+                        0,
+                    )
+                    .expect("sending beacon");
                 }
             }
             evt => packet_forwarder(&ap_proxy, "frame client -> ap")(evt),

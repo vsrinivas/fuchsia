@@ -41,6 +41,8 @@ pub const CLIENT_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
 pub const AP_MAC_ADDR: mac::Bssid = mac::Bssid([0x70, 0xf1, 0x1c, 0x05, 0x2d, 0x7f]);
 pub const ETH_DST_MAC: [u8; 6] = [0x65, 0x74, 0x68, 0x64, 0x73, 0x74];
 pub const CHANNEL: WlanChan = WlanChan { primary: 1, secondary80: 0, cbw: Cbw::Cbw20 };
+pub const WLANCFG_DEFAULT_AP_CHANNEL: WlanChan =
+    WlanChan { primary: 11, secondary80: 0, cbw: Cbw::Cbw20 };
 
 pub fn default_wlantap_config_client() -> WlantapPhyConfig {
     wlantap_config_client(format!("wlantap-client"), CLIENT_MAC_ADDR)

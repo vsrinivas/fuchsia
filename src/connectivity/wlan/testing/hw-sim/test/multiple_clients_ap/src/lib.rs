@@ -87,8 +87,8 @@ async fn multiple_clients_ap() {
             EventHandlerBuilder::new()
                 .on_tx(
                     Sequence::start()
-                        .then(Rx::send(&client1_proxy, CHANNEL))
-                        .then(Rx::send(&client2_proxy, CHANNEL)),
+                        .then(Rx::send(&client1_proxy, WLANCFG_DEFAULT_AP_CHANNEL))
+                        .then(Rx::send(&client2_proxy, WLANCFG_DEFAULT_AP_CHANNEL)),
                 )
                 .build(),
             future::join(client1_confirm_receiver, client2_confirm_receiver)
@@ -101,7 +101,8 @@ async fn multiple_clients_ap() {
     let mut client1_connect_req = ConnectRequest {
         ssid: SSID.to_vec(),
         credential: Credential::None(fidl_sme::Empty {}),
-        radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, CHANNEL.primary).to_fidl(),
+        radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, WLANCFG_DEFAULT_AP_CHANNEL.primary)
+            .to_fidl(),
         deprecated_scan_type: fidl_common::ScanType::Passive,
     };
     let client1_connect_fut = connect(&client1_sme, &mut client1_connect_req);
@@ -112,12 +113,15 @@ async fn multiple_clients_ap() {
             "connecting to AP",
             EventHandlerBuilder::new()
                 .on_set_channel(
-                    Beacon::send_on_primary_channel(CHANNEL.primary, &client1_proxy)
-                        .bssid(AP_MAC_ADDR)
-                        .ssid(SSID.to_vec())
-                        .protection(Open),
+                    Beacon::send_on_primary_channel(
+                        WLANCFG_DEFAULT_AP_CHANNEL.primary,
+                        &client1_proxy,
+                    )
+                    .bssid(AP_MAC_ADDR)
+                    .ssid(SSID.to_vec())
+                    .protection(Open),
                 )
-                .on_tx(Rx::send(&ap_proxy, CHANNEL))
+                .on_tx(Rx::send(&ap_proxy, WLANCFG_DEFAULT_AP_CHANNEL))
                 .build(),
             client1_connect_fut.and_then(|()| {
                 client1_confirm_sender.send(()).expect("sending confirmation");
@@ -131,7 +135,8 @@ async fn multiple_clients_ap() {
     let mut client2_connect_req = ConnectRequest {
         ssid: SSID.to_vec(),
         credential: Credential::None(fidl_sme::Empty {}),
-        radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, CHANNEL.primary).to_fidl(),
+        radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, WLANCFG_DEFAULT_AP_CHANNEL.primary)
+            .to_fidl(),
         deprecated_scan_type: fidl_common::ScanType::Passive,
     };
     let client2_connect_fut = connect(&client2_sme, &mut client2_connect_req);
@@ -142,12 +147,15 @@ async fn multiple_clients_ap() {
             "connecting to AP",
             EventHandlerBuilder::new()
                 .on_set_channel(
-                    Beacon::send_on_primary_channel(CHANNEL.primary, &client2_proxy)
-                        .bssid(AP_MAC_ADDR)
-                        .ssid(SSID.to_vec())
-                        .protection(Open),
+                    Beacon::send_on_primary_channel(
+                        WLANCFG_DEFAULT_AP_CHANNEL.primary,
+                        &client2_proxy,
+                    )
+                    .bssid(AP_MAC_ADDR)
+                    .ssid(SSID.to_vec())
+                    .protection(Open),
                 )
-                .on_tx(Rx::send(&ap_proxy, CHANNEL))
+                .on_tx(Rx::send(&ap_proxy, WLANCFG_DEFAULT_AP_CHANNEL))
                 .build(),
             client2_connect_fut.and_then(|()| {
                 client2_confirm_sender.send(()).expect("sending confirmation");

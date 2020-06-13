@@ -49,9 +49,11 @@ pub extern "C" fn ap_sta_handle_mlme_msg(sta: &mut Ap, bytes: CSpan<'_>) -> i32 
 pub extern "C" fn ap_sta_handle_mac_frame(
     sta: &mut Ap,
     frame: CSpan<'_>,
-    body_aligned: bool,
+    rx_info: *const banjo_wlan_mac::WlanRxInfo,
 ) -> i32 {
-    sta.handle_mac_frame::<&[u8]>(frame.into(), body_aligned);
+    // unsafe is ok because we checked rx_info is not a nullptr.
+    let rx_info = if !rx_info.is_null() { Some(unsafe { *rx_info }) } else { None };
+    sta.handle_mac_frame::<&[u8]>(frame.into(), rx_info);
     zx::sys::ZX_OK
 }
 
