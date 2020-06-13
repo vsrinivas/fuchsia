@@ -1,5 +1,5 @@
 {
     "program": {
-        "binary": "bin/echo_server_go"
+        "binary": "bin/echo_server"
     }
 }

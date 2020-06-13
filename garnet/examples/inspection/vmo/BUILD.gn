@@ -31,7 +31,6 @@ package("inspect_vmo_example") {
       name = "inspect_vmo_example"
     },
   ]
-
   meta = [
     {
       path = rebase_path("meta/inspect_vmo_example.cmx")

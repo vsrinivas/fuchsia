@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "data/log_validator_dart_puppet"
+        "binary": "bin/log_validator_dart_puppet"
     },
     "sandbox": {
         "services": [

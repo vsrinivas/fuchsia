@@ -7,7 +7,6 @@ import("//build/images/manifest.gni")
 import("//build/testing/test_spec.gni")
 import("//src/sys/cmc/build/cml.gni")
 import("//src/sys/cmc/build/cmx.gni")
-import("//src/sys/cmc/build/validate_component_manifest_references.gni")
 import("//src/sys/component_index/component_index.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
@@ -563,33 +562,13 @@ template("package") {
     # metadata archive.
     manifest = "${pkg_target_name}.manifest"
     generate_manifest(manifest) {
-      visibility = [ ":*" ]
+      visibility = [ ":" + pkg_target_name ]
       sources = manifest_sources + [ pkg_meta_output ]
       args =
           manifest_args + [ "--entry=meta/package=" +
                             rebase_path(pkg_meta_output, "", target_out_dir) ]
       deps = pkg.deps + [ ":$pkg_meta_generated" ]
       public_deps = pkg.public_deps
-    }
-    manifest_file = get_target_outputs(":$manifest")
-    manifest_file = manifest_file[0]
-
-    # Validate component manifests against package manifest
-    foreach(meta, pkg.meta) {
-      validate_target = pkg_target_name + "_validate_manifests_" +
-                        get_path_info(meta.dest, "file")
-      validate_component_manifest_references(validate_target) {
-        forward_variables_from(pkg,
-                               [
-                                 "deps",
-                                 "testonly",
-                               ])
-        visibility = [ ":*" ]
-        deps += [ ":$manifest" ]
-        package_manifest = manifest_file
-        component_manifest = meta.path
-      }
-      pkg.deps += [ ":$validate_target" ]
     }
 
     # Next generate a sealed package file.
