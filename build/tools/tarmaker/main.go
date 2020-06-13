@@ -1,4 +1,3 @@
-///bin/true ; exec /usr/bin/env go run "$0" "$@"
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -8,7 +7,6 @@ package main
 import (
 	"archive/tar"
 	"bufio"
-	"compress/gzip"
 	"flag"
 	"fmt"
 	"io"
@@ -66,9 +64,9 @@ func createTar(archive string, mappings map[string]string) error {
 	}
 	defer file.Close()
 
-	gw := gzip.NewWriter(file)
-	defer gw.Close()
-	tw := tar.NewWriter(gw)
+	w := NewWriter(file)
+	defer w.Close()
+	tw := tar.NewWriter(w)
 	defer tw.Close()
 
 	for dest, src := range mappings {

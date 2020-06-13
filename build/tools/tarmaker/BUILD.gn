@@ -4,15 +4,25 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
 
 go_library("lib") {
   name = "go.fuchsia.dev/fuchsia/build/tools/tarmaker"
 
-  sources = [ "main.go" ]
+  sources = [
+    "main.go",
+    "pargzip.go",
+  ]
 }
 
 go_binary("tarmaker") {
   gopackage = "go.fuchsia.dev/fuchsia/build/tools/tarmaker"
+
+  deps = [ ":lib" ]
+}
+
+go_test("tarmaker_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/build/tools/tarmaker" ]
 
   deps = [ ":lib" ]
 }
