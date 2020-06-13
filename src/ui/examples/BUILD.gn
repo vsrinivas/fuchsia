@@ -93,7 +93,7 @@ package("direct_input_child") {
   ]
   meta = [
     {
-      path = rebase_path("lab/direct_input/meta/direct_input.cmx")
+      path = rebase_path("lab/direct_input/meta/direct_input_child.cmx")
       dest = "direct_input_child.cmx"
     },
   ]
