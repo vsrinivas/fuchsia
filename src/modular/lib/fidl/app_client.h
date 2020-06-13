@@ -64,8 +64,8 @@ class AppClientBase : public AsyncHolderBase {
   void ImplReset() override;
 
   // Service specific parts of the termination sequence.
-  virtual void ServiceTerminate(fit::function<void()> done);
-  virtual void ServiceUnbind();
+  virtual void LifecycleServiceTerminate(fit::function<void()> done);
+  virtual void UnbindLlifecycleService();
 
   fuchsia::sys::ComponentControllerPtr component_controller_;
   component::Services services_;
@@ -73,8 +73,9 @@ class AppClientBase : public AsyncHolderBase {
   FXL_DISALLOW_COPY_AND_ASSIGN(AppClientBase);
 };
 
-// A generic client that does the standard termination sequence. For a service
-// with another termination sequence, another implementation could be created.
+// An implementation of AppClientBase that:
+// a) Acquires a FIDL InterfacePtr to <Service> from the component's published services.
+// b) Calls <Service>.Terminate() to initiate graceful teardown.
 template <class Service>
 class AppClient : public AppClientBase {
  public:
@@ -84,29 +85,29 @@ class AppClient : public AppClientBase {
             fuchsia::sys::FlatNamespacePtr flat_namespace = nullptr)
       : AppClientBase(launcher, std::move(config), std::move(data_origin),
                       std::move(additional_services), std::move(flat_namespace)) {
-    services().ConnectToService(service_.NewRequest());
+    services().ConnectToService(lifecycle_service_.NewRequest());
   }
   ~AppClient() override = default;
 
-  fidl::InterfacePtr<Service>& primary_service() { return service_; }
+  fidl::InterfacePtr<Service>& lifecycle_service() { return lifecycle_service_; }
 
  private:
-  void ServiceTerminate(fit::function<void()> done) override {
+  void LifecycleServiceTerminate(fit::function<void()> done) override {
     // The service is expected to acknowledge the Terminate() request by
     // closing its connection within the timeout set in Teardown().
-    service_.set_error_handler([done = std::move(done)](zx_status_t status) { done(); });
-    service_->Terminate();
+    lifecycle_service_.set_error_handler([done = std::move(done)](zx_status_t status) { done(); });
+    lifecycle_service_->Terminate();
   }
 
-  void ServiceUnbind() override { service_.Unbind(); }
+  void UnbindLlifecycleService() override { lifecycle_service_.Unbind(); }
 
-  fidl::InterfacePtr<Service> service_;
+  fidl::InterfacePtr<Service> lifecycle_service_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AppClient);
 };
 
 template <>
-void AppClient<fuchsia::modular::Lifecycle>::ServiceTerminate(fit::function<void()> done);
+void AppClient<fuchsia::modular::Lifecycle>::LifecycleServiceTerminate(fit::function<void()> done);
 
 }  // namespace modular
 

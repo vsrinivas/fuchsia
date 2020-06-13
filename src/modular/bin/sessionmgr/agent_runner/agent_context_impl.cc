@@ -121,9 +121,9 @@ class AgentContextImpl::InitializeCall : public Operation<> {
     });
 
     // We only want to use fuchsia::modular::Lifecycle if it exists.
-    agent_context_impl_->app_client_->primary_service().set_error_handler(
+    agent_context_impl_->app_client_->lifecycle_service().set_error_handler(
         [agent_context_impl = agent_context_impl_](zx_status_t status) {
-          agent_context_impl->app_client_->primary_service().Unbind();
+          agent_context_impl->app_client_->lifecycle_service().Unbind();
         });
 
     // When the agent component dies, clean up.
@@ -170,7 +170,7 @@ class AgentContextImpl::StopCall : public Operation<bool> {
     }
 
     // If there's no fuchsia::modular::Lifecycle binding, it's not possible to teardown gracefully.
-    if (!agent_context_impl_->app_client_->primary_service().is_bound()) {
+    if (!agent_context_impl_->app_client_->lifecycle_service().is_bound()) {
       Stop(flow);
     } else {
       Teardown(flow);

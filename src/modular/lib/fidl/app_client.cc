@@ -76,11 +76,13 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
 
 AppClientBase::~AppClientBase() = default;
 
-void AppClientBase::ImplTeardown(fit::function<void()> done) { ServiceTerminate(std::move(done)); }
+void AppClientBase::ImplTeardown(fit::function<void()> done) {
+  LifecycleServiceTerminate(std::move(done));
+}
 
 void AppClientBase::ImplReset() {
   component_controller_.Unbind();
-  ServiceUnbind();
+  UnbindLlifecycleService();
 }
 
 void AppClientBase::SetAppErrorHandler(fit::function<void()> error_handler) {
@@ -88,15 +90,15 @@ void AppClientBase::SetAppErrorHandler(fit::function<void()> error_handler) {
       [error_handler = std::move(error_handler)](zx_status_t status) { error_handler(); });
 }
 
-void AppClientBase::ServiceTerminate(fit::function<void()> /* done */) {}
+void AppClientBase::LifecycleServiceTerminate(fit::function<void()> /* done */) {}
 
-void AppClientBase::ServiceUnbind() {}
+void AppClientBase::UnbindLlifecycleService() {}
 
 template <>
-void AppClient<fuchsia::modular::Lifecycle>::ServiceTerminate(fit::function<void()> done) {
-  if (primary_service()) {
-  SetAppErrorHandler(std::move(done));
-    primary_service()->Terminate();
+void AppClient<fuchsia::modular::Lifecycle>::LifecycleServiceTerminate(fit::function<void()> done) {
+  if (lifecycle_service()) {
+    SetAppErrorHandler(std::move(done));
+    lifecycle_service()->Terminate();
   } else {
     // If the lifecycle channel is already closed, the component has no way to receive
     // a terminate signal, so don't bother waiting.
