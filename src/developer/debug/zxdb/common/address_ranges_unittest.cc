@@ -21,9 +21,11 @@ TEST(AddressRanges, NonCanonical) {
   AddressRanges a(AddressRanges::kNonCanonical, {});
   EXPECT_TRUE(a.empty());
   EXPECT_EQ("{}", a.ToString());
+  EXPECT_EQ(AddressRange(), a.GetExtent());
 
   AddressRanges b(AddressRanges::kNonCanonical, {AddressRange(0, 0)});
   EXPECT_TRUE(b.empty());
+  EXPECT_EQ(AddressRange(0, 0), b.GetExtent());
 
   // Enclosed inputs.
   AddressRanges c(
@@ -32,6 +34,7 @@ TEST(AddressRanges, NonCanonical) {
   ASSERT_EQ(1u, c.size());
   EXPECT_EQ(AddressRange(0x100, 0x200), c[0]);
   EXPECT_EQ("{[0x100, 0x200)}", c.ToString());
+  EXPECT_EQ(AddressRange(0x100, 0x200), c.GetExtent());
 
   // Overlapping inputs.
   AddressRanges d(AddressRanges::kNonCanonical,
@@ -49,6 +52,7 @@ TEST(AddressRanges, NonCanonical) {
   ASSERT_EQ(2u, e.size());
   EXPECT_EQ(AddressRange(0x100, 0x400), e[0]);
   EXPECT_EQ(AddressRange(0x500, 0x600), e[1]);
+  EXPECT_EQ(AddressRange(0x100, 0x600), e.GetExtent());
 }
 
 TEST(AddressRanges, InRange) {

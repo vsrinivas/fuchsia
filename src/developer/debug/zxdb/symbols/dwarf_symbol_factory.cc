@@ -61,14 +61,14 @@ AddressRanges GetCodeRanges(const llvm::DWARFDie& die) {
   return AddressRanges(AddressRanges::kNonCanonical, std::move(code_ranges));
 }
 
-// Extracts a FileLine if possible from the given input. If the optional values aren't present,
-// returns an empty FileLine.
+// Extracts a FileLine if possible from the given input. If the optional values aren't present, or
+// are empty, returns an empty FileLine.
 FileLine MakeFileLine(llvm::DWARFUnit* unit, const llvm::Optional<std::string>& file,
                       const llvm::Optional<uint64_t>& line) {
   std::string compilation_dir;
   if (unit->getCompilationDir())
     compilation_dir = unit->getCompilationDir();
-  if (file && line)
+  if (file && !file->empty() && line && *line > 0)
     return FileLine(*file, compilation_dir, static_cast<int>(*line));
   return FileLine();
 }
@@ -756,6 +756,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeLexicalBlock(const llvm::DWARFDie&
       case llvm::dwarf::DW_TAG_variable:
         variables.push_back(MakeLazy(child));
         break;
+      case llvm::dwarf::DW_TAG_inlined_subroutine:
       case llvm::dwarf::DW_TAG_lexical_block:
         inner_blocks.push_back(MakeLazy(child));
         break;

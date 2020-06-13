@@ -28,7 +28,8 @@ bool operator<(const FileLine& a, const FileLine& b) {
 }
 
 bool operator==(const FileLine& a, const FileLine& b) {
-  return a.line() == b.line() && a.file() == b.file() && a.comp_dir() == b.comp_dir();
+  // See comment above decl, the compilation directory is deliberately omitted.
+  return a.line() == b.line() && a.file() == b.file();
 }
 
 bool operator!=(const FileLine& a, const FileLine& b) { return !operator==(a, b); }

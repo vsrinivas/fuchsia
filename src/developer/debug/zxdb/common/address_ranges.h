@@ -13,11 +13,11 @@
 
 namespace zxdb {
 
-// A set of address ranges. It exposes a read-only vector-like interface
-// along with some helper functions to test for inclusion.
+// A set of address ranges. It exposes a read-only vector-like interface along with some helper
+// functions to test for inclusion.
 //
-// The ranges in the structure are always stored in canonical form: sorted by
-// the begin address, non-overlapping, no empty ranges.
+// The ranges in the structure are always stored in canonical form: sorted by the begin address,
+// non-overlapping, no empty ranges.
 class AddressRanges {
  public:
   using RangeVector = std::vector<AddressRange>;
@@ -25,9 +25,8 @@ class AddressRanges {
   using const_iterator = RangeVector::const_iterator;
   using const_reverse_iterator = RangeVector::const_reverse_iterator;
 
-  // Indicates the type of input. Canonical input is a set of sorted,
-  // non-overlapping ranges. Non-canonical input can be anything. Non-canonical
-  // input will be sorted and un-overlapped.
+  // Indicates the type of input. Canonical input is a set of sorted, non-overlapping ranges.
+  // Non-canonical input can be anything. Non-canonical input will be sorted and un-overlapped.
   enum Format { kCanonical, kNonCanonical };
 
   // Creates an empty set of ranges.
@@ -74,12 +73,15 @@ class AddressRanges {
   const_reverse_iterator rend() const noexcept { return ranges_.rend(); }
   const_reverse_iterator crend() const noexcept { return ranges_.crend(); }
 
-  // Returns the individual subrange that includes the given address if one
-  // exists.
+  // Returns the individual subrange that includes the given address if one exists.
   std::optional<AddressRange> GetRangeContaining(uint64_t addr) const;
 
   // Returns true if the address is included in any of the ranges.
   bool InRange(uint64_t addr) const;
+
+  // Returns the range covering all sub ranges. If there are no sub-ranges, the result will be an
+  // empty range.
+  AddressRange GetExtent() const;
 
   // Returns a string representing this set of ranges for debugging purposes.
   std::string ToString() const;

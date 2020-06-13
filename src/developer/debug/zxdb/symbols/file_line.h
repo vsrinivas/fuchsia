@@ -36,6 +36,8 @@ class FileLine {
   //
   // Because the meaning of this is impossible to know in advance, it's split out so the outer
   // code can interpret the file based on settings or by trying to find the file in different ways.
+  //
+  // This is considered ancillary data and is not considered part of equality (see operator below).
   const std::string& comp_dir() const { return comp_dir_; }
 
   int line() const { return line_; }
@@ -49,6 +51,9 @@ class FileLine {
 // Comparison function for use in set and map.
 bool operator<(const FileLine& a, const FileLine& b);
 
+// These compare only the file and line number, not the compilation directory. The compilation
+// directory is less consistently available (as of this writing it's not exposed by the line table),
+// so using it for equality will result in incorrect behavior in some cases.
 bool operator==(const FileLine& a, const FileLine& b);
 bool operator!=(const FileLine& a, const FileLine& b);
 

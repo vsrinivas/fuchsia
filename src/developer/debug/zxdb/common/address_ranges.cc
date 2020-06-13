@@ -36,6 +36,12 @@ std::optional<AddressRange> AddressRanges::GetRangeContaining(uint64_t addr) con
 
 bool AddressRanges::InRange(uint64_t addr) const { return !!GetRangeContaining(addr); }
 
+AddressRange AddressRanges::GetExtent() const {
+  if (empty())
+    return AddressRange();
+  return AddressRange(front().begin(), back().end());
+}
+
 std::string AddressRanges::ToString() const {
   std::string result("{");
   for (size_t i = 0; i < ranges_.size(); i++) {

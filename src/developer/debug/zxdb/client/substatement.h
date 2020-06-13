@@ -28,6 +28,9 @@ struct SubstatementCall {
 
   // Set for inline calls. Null for real function calls.
   fxl::RefPtr<Function> inline_call;
+
+  // Calls are sorted by their call address.
+  bool operator<(const SubstatementCall& other) const { return call_addr < other.call_addr; }
 };
 
 // Extracts all calls present in the line of code on the given address. Calls both before and after
@@ -44,12 +47,13 @@ struct SubstatementCall {
 void GetSubstatementCallsForLine(Process* process, const Location& loc,
                                  fit::function<void(const Err&, std::vector<SubstatementCall>)> cb);
 
-// Extracts all calls for the given memory region. This assumes the memory region starts at an
-// instruction boundary.
+// Extracts all physical function calls (not inlines) for the given memory region in the given
+// ranges list. This assumes the memory region starts at an instruction boundary. The ranges list
+// can contain many entries and can be discontiguous as long as the memory dump covers them.
 std::vector<SubstatementCall> GetSubstatementCallsForMemory(const ArchInfo* arch_info,
                                                             const ProcessSymbols* symbols,
                                                             const Location& loc,
-                                                            const AddressRange& range,
+                                                            const AddressRanges& ranges,
                                                             const MemoryDump& mem);
 
 }  // namespace zxdb

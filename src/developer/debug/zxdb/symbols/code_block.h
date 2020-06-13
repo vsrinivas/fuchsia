@@ -50,7 +50,7 @@ class CodeBlock : public Symbol {
   // Returns empty AddressRange if there are no code ranges.
   AddressRange GetFullRange(const SymbolContext& symbol_context) const;
 
-  // The lexical blocks that are children of this one.
+  // The code blocks (lexical blocks and inlines) that are children of this one.
   const std::vector<LazySymbol>& inner_blocks() const { return inner_blocks_; }
   void set_inner_blocks(std::vector<LazySymbol> ib) { inner_blocks_ = std::move(ib); }
 
