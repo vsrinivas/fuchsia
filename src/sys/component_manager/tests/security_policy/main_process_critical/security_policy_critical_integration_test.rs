@@ -37,7 +37,6 @@ async fn verify_main_process_critical_default_denied() -> Result<(), Error> {
     let on_signal_fut =
         fasync::OnSignals::new(&exit_controller_channel, zx::Signals::CHANNEL_PEER_CLOSED);
     on_signal_fut.await.context("failed to wait for exposed dir handle to become readable")?;
-    assert!(exit_controller_channel.is_closed(), "exit_controller should be closed by now");
 
     // component_manager should still be running. Observe this by not seeing component_manager exit
     // within COMPONENT_MANAGER_DEATH_TIMEOUT seconds.
@@ -76,7 +75,6 @@ async fn verify_main_process_critical_nonzero_flag_used() -> Result<(), Error> {
     let on_signal_fut =
         fasync::OnSignals::new(&exit_controller_channel, zx::Signals::CHANNEL_PEER_CLOSED);
     on_signal_fut.await.context("failed to wait for exposed dir handle to become readable")?;
-    assert!(exit_controller_channel.is_closed(), "exit_controller should be closed by now");
 
     // component_manager should still be running. The critical marking will not kill
     // component_manager's job in this case because the critical component exited with a 0 return
@@ -117,7 +115,6 @@ async fn verify_main_process_critical_allowed() -> Result<(), Error> {
     let on_signal_fut =
         fasync::OnSignals::new(&exit_controller_channel, zx::Signals::CHANNEL_PEER_CLOSED);
     on_signal_fut.await.context("failed to wait for exposed dir handle to become readable")?;
-    assert!(exit_controller_channel.is_closed(), "exit_controller should be closed by now");
 
     // component_manager should be killed too as a result of the critical marking.
     let exit_status = test.component_manager_app.wait().await?;
