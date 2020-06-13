@@ -7,6 +7,7 @@
 #include <zircon/boot/bootfs.h>
 
 #include <cstdint>
+#include <iterator>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -125,7 +126,7 @@ TEST(ParserTestCase, ParseSuccess) {
       },
   };
   zx::vmo vmo;
-  ASSERT_NO_FAILURES(CreateBootfs(entries, fbl::count_of(entries), &vmo));
+  ASSERT_NO_FAILURES(CreateBootfs(entries, std::size(entries), &vmo));
 
   bootfs::Parser parser;
   ASSERT_OK(parser.Init(zx::unowned_vmo(vmo)));
@@ -133,14 +134,14 @@ TEST(ParserTestCase, ParseSuccess) {
   const zbi_bootfs_dirent_t* parsed_entries[3];
   size_t seen = 0;
   EXPECT_OK(parser.Parse([&entries, &parsed_entries, &seen](const zbi_bootfs_dirent_t* entry) {
-    if (seen >= fbl::count_of(entries)) {
+    if (seen >= std::size(entries)) {
       return ZX_ERR_BAD_STATE;
     }
     parsed_entries[seen] = entry;
     ++seen;
     return ZX_OK;
   }));
-  ASSERT_EQ(seen, fbl::count_of(entries));
+  ASSERT_EQ(seen, std::size(entries));
 
   for (size_t i = 0; i < seen; ++i) {
     const auto& real_entry = entries[i];

@@ -21,6 +21,7 @@
 #include <zircon/syscalls/resource.h>
 #include <zircon/syscalls/system.h>
 
+#include <iterator>
 #include <memory>
 #include <sstream>
 #include <thread>
@@ -243,7 +244,7 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
   }
   launchpad_set_args(lp, argc, argv);
 
-  ZX_ASSERT(count <= fbl::count_of(nametable));
+  ZX_ASSERT(count <= std::size(nametable));
   launchpad_set_nametable(lp, count, nametable);
 
   // Set up the environment table for launchpad.

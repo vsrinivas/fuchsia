@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <array>
+#include <iterator>
 
 #include <block-client/cpp/fake-device.h>
 #include <fvm/format.h>
@@ -143,7 +144,7 @@ TEST(FakeBlockDeviceTest, FifoTransactionWriteThenFlush) {
   requests[1].length = 0;
   requests[1].vmo_offset = 0;
   requests[1].dev_offset = 0;
-  EXPECT_OK(device->FifoTransaction(requests, fbl::count_of(requests)));
+  EXPECT_OK(device->FifoTransaction(requests, std::size(requests)));
 
   char dst[kVmoBlocks * kBlockSizeDefault];
   static_assert(sizeof(src) == sizeof(dst), "Mismatched input/output buffer size");
@@ -188,7 +189,7 @@ TEST(FakeBlockDeviceTest, FifoTransactionFlushThenWrite) {
   requests[1].vmo_offset = 0;
   requests[1].dev_offset = 0;
 
-  EXPECT_OK(device->FifoTransaction(requests, fbl::count_of(requests)));
+  EXPECT_OK(device->FifoTransaction(requests, std::size(requests)));
 
   char dst[kVmoBlocks * kBlockSizeDefault];
   static_assert(sizeof(src) == sizeof(dst), "Mismatched input/output buffer size");

@@ -4,6 +4,7 @@
 
 #include <inttypes.h>
 
+#include <iterator>
 #include <memory>
 #include <utility>
 
@@ -87,7 +88,7 @@ fbl::String BufferHeaderReader::Validate(const trace_buffer_header& header, size
     }
   }
 
-  for (size_t i = 0; i < fbl::count_of(header.rolling_data_end); ++i) {
+  for (size_t i = 0; i < std::size(header.rolling_data_end); ++i) {
     auto data_end = header.rolling_data_end[i];
     if (data_end > rolling_buffer_size || (data_end & 7) != 0) {
       return fbl::StringPrintf("bad data end for buffer %zu: 0x%" PRIx64, i, data_end);

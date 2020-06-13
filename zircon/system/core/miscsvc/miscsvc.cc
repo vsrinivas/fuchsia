@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/kcounter/provider.h>
 #include <lib/paver/provider.h>
 #include <lib/svc/outgoing.h>
 #include <zircon/status.h>
+
+#include <iterator>
+
+#include <fbl/algorithm.h>
 
 // An instance of a zx_service_provider_t.
 //
@@ -100,7 +103,7 @@ int main(int argc, char** argv) {
       {.provider = kcounter_get_service_provider(), .ctx = nullptr},
   };
 
-  for (size_t i = 0; i < fbl::count_of(service_providers); ++i) {
+  for (size_t i = 0; i < std::size(service_providers); ++i) {
     status = provider_load(&service_providers[i], dispatcher, outgoing.svc_dir());
     if (status != ZX_OK) {
       fprintf(stderr, "miscsvc: error: Failed to load service provider %zu: %d (%s).\n", i, status,
@@ -111,7 +114,7 @@ int main(int argc, char** argv) {
 
   status = loop.Run();
 
-  for (size_t i = 0; i < fbl::count_of(service_providers); ++i) {
+  for (size_t i = 0; i < std::size(service_providers); ++i) {
     provider_release(&service_providers[i]);
   }
 

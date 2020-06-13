@@ -5,6 +5,7 @@
 #include <math.h>
 
 #include <algorithm>
+#include <iterator>
 
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -741,7 +742,7 @@ TEST(WavlTreeTest, BalanceAndInvariants) {
     ASSERT_TRUE(ac.check(), "Failed to allocate replacement objects!");
   }
 
-  for (size_t seed_ndx = 0; seed_ndx < fbl::count_of(seeds); ++seed_ndx) {
+  for (size_t seed_ndx = 0; seed_ndx < std::size(seeds); ++seed_ndx) {
     auto seed = seeds[seed_ndx];
 
     // Seed the RNG and reset the observer stats.

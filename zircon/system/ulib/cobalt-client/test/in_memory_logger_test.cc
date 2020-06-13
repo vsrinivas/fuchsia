@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iterator>
+
 #include <cobalt-client/cpp/in_memory_logger.h>
-
 #include <zxtest/zxtest.h>
-
 namespace cobalt_client {
 namespace {
 using HistogramBucket = InMemoryLogger::HistogramBucket;
@@ -74,12 +74,12 @@ TEST(InMemoryLoggerTest, LogHistogramOnce) {
   metric_info.metric_id = kMetricId;
   InMemoryLogger logger;
 
-  ASSERT_TRUE(logger.Log(metric_info, kHistBuckets, fbl::count_of(kHistBuckets)));
+  ASSERT_TRUE(logger.Log(metric_info, kHistBuckets, std::size(kHistBuckets)));
 
   ASSERT_NE(logger.histograms().find(metric_info), logger.histograms().end(),
             "Failed to persist count.");
   const auto& histograms = logger.histograms().at(metric_info);
-  ASSERT_EQ(histograms.size(), fbl::count_of(kHistBuckets));
+  ASSERT_EQ(histograms.size(), std::size(kHistBuckets));
   for (const auto bucket : kHistBuckets) {
     EXPECT_EQ(histograms.at(bucket.index), static_cast<Histogram<1>::Count>(bucket.count));
   }
@@ -93,8 +93,8 @@ TEST(InMemoryLoggerTest, LogMultipleHistograms) {
   metric_info_2.metric_id = kMetric2Id;
   InMemoryLogger logger;
 
-  ASSERT_TRUE(logger.Log(metric_info, kHistBuckets, fbl::count_of(kHistBuckets)));
-  ASSERT_TRUE(logger.Log(metric_info_2, kHistBuckets2, fbl::count_of(kHistBuckets2)));
+  ASSERT_TRUE(logger.Log(metric_info, kHistBuckets, std::size(kHistBuckets)));
+  ASSERT_TRUE(logger.Log(metric_info_2, kHistBuckets2, std::size(kHistBuckets2)));
 
   ASSERT_NE(logger.histograms().find(metric_info), logger.histograms().end(),
             "Failed to persist count.");
@@ -103,7 +103,7 @@ TEST(InMemoryLoggerTest, LogMultipleHistograms) {
   ASSERT_EQ(logger.histograms().size(), 2);
   {
     const auto& histograms = logger.histograms().at(metric_info);
-    ASSERT_EQ(histograms.size(), fbl::count_of(kHistBuckets));
+    ASSERT_EQ(histograms.size(), std::size(kHistBuckets));
     for (const auto bucket : kHistBuckets) {
       EXPECT_EQ(histograms.at(bucket.index), static_cast<Histogram<1>::Count>(bucket.count));
     }
@@ -111,7 +111,7 @@ TEST(InMemoryLoggerTest, LogMultipleHistograms) {
 
   {
     const auto& histograms = logger.histograms().at(metric_info_2);
-    ASSERT_EQ(histograms.size(), fbl::count_of(kHistBuckets));
+    ASSERT_EQ(histograms.size(), std::size(kHistBuckets));
     for (const auto bucket : kHistBuckets2) {
       EXPECT_EQ(histograms.at(bucket.index), static_cast<Histogram<1>::Count>(bucket.count));
     }
@@ -123,15 +123,15 @@ TEST(InMemoryLoggerTest, LogHistogramMultipleTimesAccumulates) {
   metric_info.metric_id = kMetricId;
   InMemoryLogger logger;
 
-  ASSERT_TRUE(logger.Log(metric_info, kHistBuckets, fbl::count_of(kHistBuckets)));
-  ASSERT_TRUE(logger.Log(metric_info, kHistBuckets, fbl::count_of(kHistBuckets)));
-  ASSERT_TRUE(logger.Log(metric_info, kHistBuckets, fbl::count_of(kHistBuckets)));
+  ASSERT_TRUE(logger.Log(metric_info, kHistBuckets, std::size(kHistBuckets)));
+  ASSERT_TRUE(logger.Log(metric_info, kHistBuckets, std::size(kHistBuckets)));
+  ASSERT_TRUE(logger.Log(metric_info, kHistBuckets, std::size(kHistBuckets)));
 
   ASSERT_NE(logger.histograms().find(metric_info), logger.histograms().end(),
             "Failed to persist count.");
 
   const auto& histograms = logger.histograms().at(metric_info);
-  ASSERT_EQ(histograms.size(), fbl::count_of(kHistBuckets));
+  ASSERT_EQ(histograms.size(), std::size(kHistBuckets));
   for (const auto bucket : kHistBuckets) {
     EXPECT_EQ(histograms.at(bucket.index), 3 * static_cast<Histogram<1>::Count>(bucket.count));
   }

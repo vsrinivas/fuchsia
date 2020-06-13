@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
@@ -37,6 +39,6 @@ const CategorySpec kCommonCategories[] = {
 #undef DEF_SAMPLE
 };
 
-const size_t kNumCommonCategories = fbl::count_of(kCommonCategories);
+const size_t kNumCommonCategories = std::size(kCommonCategories);
 
 }  // namespace cpuperf_provider

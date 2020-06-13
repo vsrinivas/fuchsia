@@ -6,12 +6,14 @@
 // UEFI.  It can be found at http://www.uefi.org/pnp_id_list
 //
 // If new entries are to be added, the table *must* remain sorted in order of
+#include <iterator>
 // ascending EISA vendor ID.
 
-#include <fbl/algorithm.h>
 #include <zircon/assert.h>
 
 #include <algorithm>
+
+#include <fbl/algorithm.h>
 
 #include "eisa_vid_lut.h"
 
@@ -2464,7 +2466,7 @@ __BEGIN_CDECLS
 
 const char* lookup_eisa_vid(uint32_t eisa_vid) {
   const LutEntry* first = EISA_VID_LUT;
-  const LutEntry* last = EISA_VID_LUT + fbl::count_of(EISA_VID_LUT);
+  const LutEntry* last = EISA_VID_LUT + std::size(EISA_VID_LUT);
   const LutEntry* found =
       std::lower_bound(first, last, eisa_vid,
                        [](const LutEntry& entry, uint32_t id) -> bool { return entry.id < id; });

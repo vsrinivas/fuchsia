@@ -4,8 +4,6 @@
 
 // TODO: 44323
 
-#include <fs/test/posix/tests.h>
-
 #include <assert.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -17,11 +15,13 @@
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
+#include <iterator>
 #include <memory>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_fd.h>
+#include <fs/test/posix/tests.h>
 #include <zxtest/zxtest.h>
 
 namespace posix_tests {
@@ -234,7 +234,7 @@ void TestTruncatePartialBlockSparse(FilesystemTest* ops, CloseUnlinkOrder order)
 
   char path[PATH_MAX];
   ASSERT_LT(snprintf(path, sizeof(path), "%s/%s", ops->mount_path(), __func__), sizeof(path));
-  for (size_t i = 0; i < fbl::count_of(write_offsets); i++) {
+  for (size_t i = 0; i < std::size(write_offsets); i++) {
     off_t write_off = write_offsets[i];
     fbl::unique_fd fd(open(path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd);

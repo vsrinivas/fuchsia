@@ -4,13 +4,14 @@
 
 #include <lib/fzl/vmar-manager.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <unittest/unittest.h>
 #include <zircon/limits.h>
 #include <zircon/rights.h>
 
-#include <fbl/algorithm.h>
-
+#include <iterator>
 #include <utility>
+
+#include <fbl/algorithm.h>
+#include <unittest/unittest.h>
 
 #include "vmo-probe.h"
 
@@ -42,7 +43,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
   RefPtr<VmarManager> managers[2];
   RefPtr<VmarManager> target_vmar;
 
-  ASSERT_LE(vmar_levels, fbl::count_of(managers));
+  ASSERT_LE(vmar_levels, std::size(managers));
   size_t vmar_size = kSubVmarTestSize;
   for (uint32_t i = 0; i < vmar_levels; ++i) {
     managers[i] = VmarManager::Create(vmar_size, i ? managers[i - 1] : nullptr);
@@ -109,11 +110,11 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
 
   for (uint32_t pass = 0; pass < 2; ++pass) {
     {
-      VmoMapper mappers[fbl::count_of(kVmoTests)];
-      zx::vmo vmo_handles[fbl::count_of(kVmoTests)];
+      VmoMapper mappers[std::size(kVmoTests)];
+      zx::vmo vmo_handles[std::size(kVmoTests)];
       zx_status_t res;
 
-      for (size_t i = 0; i < fbl::count_of(kVmoTests); ++i) {
+      for (size_t i = 0; i < std::size(kVmoTests); ++i) {
         auto& t = kVmoTests[i];
 
         for (uint32_t create_map_pass = 0; create_map_pass < 2; ++create_map_pass) {

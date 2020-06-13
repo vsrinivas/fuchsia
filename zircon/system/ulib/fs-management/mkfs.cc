@@ -16,6 +16,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <iterator>
 #include <new>
 
 #include <fbl/algorithm.h>
@@ -66,7 +67,7 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
 zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const mkfs_options_t* options) {
   const std::string tool_path = fs_management::GetBinaryPath("mkfs-msdosfs");
   const char* argv[] = {tool_path.c_str(), device_path, nullptr};
-  return cb(fbl::count_of(argv) - 1, argv, NULL, NULL, 0);
+  return cb(std::size(argv) - 1, argv, NULL, NULL, 0);
 }
 
 }  // namespace

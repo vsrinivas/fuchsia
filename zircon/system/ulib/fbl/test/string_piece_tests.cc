@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iterator>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -171,7 +172,7 @@ TEST(StringPieceTest, CompareTest) {
 }
 
 constexpr char kFakeStringData[] = "hello";
-constexpr size_t kFakeStringLength = fbl::count_of(kFakeStringData);
+constexpr size_t kFakeStringLength = std::size(kFakeStringData);
 
 struct SimpleFakeString {
   const char* data() const { return kFakeStringData; }

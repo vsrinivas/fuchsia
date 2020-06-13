@@ -7,6 +7,7 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
+#include <iterator>
 #include <utility>
 
 #include <ddktl/protocol/intelhda/codec.h>
@@ -37,8 +38,7 @@ zx_protocol_device_t IntelHDACodecDriverBase::CODEC_DEVICE_THUNKS = []() {
   zx_protocol_device_t ops = {};
   ops.version = DEVICE_OPS_VERSION;
   ops.release = [](void* ctx) { DEV(ctx)->DeviceRelease(); };
-  ops.suspend = [](void* ctx, uint8_t requested_state, bool enable_wake,
-                       uint8_t suspend_reason) {
+  ops.suspend = [](void* ctx, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason) {
     uint8_t out_state;
     zx_status_t status =
         DEV(ctx)->Suspend(requested_state, enable_wake, suspend_reason, &out_state);
@@ -454,7 +454,7 @@ void IntelHDACodecDriverBase::ReleaseUnsolTag(uint32_t stream_id, uint8_t tag) {
 
   ZX_DEBUG_ASSERT(mask != 0);
   ZX_DEBUG_ASSERT(!(free_unsol_tags_ & mask));
-  ZX_DEBUG_ASSERT(tag < fbl::count_of(unsol_tag_to_stream_id_map_));
+  ZX_DEBUG_ASSERT(tag < std::size(unsol_tag_to_stream_id_map_));
   ZX_DEBUG_ASSERT(unsol_tag_to_stream_id_map_[tag] == stream_id);
 
   free_unsol_tags_ |= mask;
@@ -463,7 +463,7 @@ void IntelHDACodecDriverBase::ReleaseUnsolTag(uint32_t stream_id, uint8_t tag) {
 void IntelHDACodecDriverBase::ReleaseAllUnsolTags(uint32_t stream_id) {
   fbl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
 
-  for (uint32_t tmp = 0u; tmp < fbl::count_of(unsol_tag_to_stream_id_map_); ++tmp) {
+  for (uint32_t tmp = 0u; tmp < std::size(unsol_tag_to_stream_id_map_); ++tmp) {
     uint64_t mask = uint64_t(1u) << tmp;
     if (!(free_unsol_tags_ & mask) && (unsol_tag_to_stream_id_map_[tmp] == stream_id)) {
       free_unsol_tags_ |= mask;
@@ -480,7 +480,7 @@ zx_status_t IntelHDACodecDriverBase::MapUnsolTagToStreamId(uint8_t tag, uint32_t
   if ((!mask) || (free_unsol_tags_ & mask))
     return ZX_ERR_NOT_FOUND;
 
-  ZX_DEBUG_ASSERT(tag < fbl::count_of(unsol_tag_to_stream_id_map_));
+  ZX_DEBUG_ASSERT(tag < std::size(unsol_tag_to_stream_id_map_));
   *out_stream_id = unsol_tag_to_stream_id_map_[tag];
   return ZX_OK;
 }

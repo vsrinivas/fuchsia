@@ -64,11 +64,6 @@ constexpr const L round_down(const T& val_, const U& multiple_) {
   return val == 0 ? 0 : is_pow2<L>(multiple) ? val & ~(multiple - 1) : (val / multiple) * multiple;
 }
 
-template <typename T, size_t N>
-constexpr size_t count_of(T const (&)[N]) {
-  return N;
-}
-
 }  // namespace fbl
 
 #endif  // FBL_ALGORITHM_H_

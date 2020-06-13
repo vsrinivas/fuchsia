@@ -4,10 +4,12 @@
 
 #include <endian.h>
 #include <stdio.h>
-#include <utf_conversion/utf_conversion.h>
-#include <zxtest/zxtest.h>
+
+#include <iterator>
 
 #include <fbl/algorithm.h>
+#include <utf_conversion/utf_conversion.h>
+#include <zxtest/zxtest.h>
 
 #if (BYTE_ORDER == BIG_ENDIAN)
 static constexpr uint32_t HOST_ENDIAN_FLAG = UTF_CONVERT_FLAG_FORCE_BIG_ENDIAN;
@@ -150,7 +152,7 @@ TEST(UTF16To8TestCase, PairedSurrogates) {
     snprintf(case_id, sizeof(case_id), "case id [0x%04hx : 0x%04hx]", v.src[0], v.src[1]);
     ::memset(actual, 0xAB, sizeof(actual));
 
-    res = utf16_to_utf8(v.src, fbl::count_of(v.src), actual, &encoded_len);
+    res = utf16_to_utf8(v.src, std::size(v.src), actual, &encoded_len);
     ASSERT_OK(res, "%s", case_id);
     ASSERT_UTF8_EQ(v.expected, sizeof(v.expected), actual, sizeof(actual), encoded_len, case_id);
   }
@@ -222,7 +224,7 @@ TEST(UTF16To8TestCase, BufferLengths) {
     ::memset(actual, 0xAB, sizeof(actual));
 
     ASSERT_LE(encoded_len, sizeof(actual), "%s", case_id);
-    res = utf16_to_utf8(src, fbl::count_of(src), actual, &encoded_len);
+    res = utf16_to_utf8(src, std::size(src), actual, &encoded_len);
 
     ASSERT_OK(res, "%s", case_id);
     ASSERT_EQ(sizeof(expected), encoded_len, "%s", case_id);
@@ -258,7 +260,7 @@ TEST(UTF16To8TestCase, EndiannessAndBom) {
   const uint8_t bom_encoded[] = {0xEF, 0xBB, 0xBF, 'T', 'e', 's', 't'};
   const uint8_t bom_encoded_inverted[] = {0xEF, 0xBF, 0xBE, 0xE5, 0x90, 0x80, 0xE6, 0x94,
                                           0x80, 0xE7, 0x8C, 0x80, 0xE7, 0x90, 0x80};
-  uint8_t actual[fbl::count_of(bom_encoded_inverted)];
+  uint8_t actual[std::size(bom_encoded_inverted)];
 
 #define EXPECT(e) \
   { e, sizeof(e) }
@@ -293,10 +295,11 @@ TEST(UTF16To8TestCase, EndiannessAndBom) {
       ::memset(actual, 0xAB, sizeof(actual));
       snprintf(case_id, sizeof(case_id), "case id [%s BOM, %s endian]",
                (e.flags & UTF_CONVERT_FLAG_DISCARD_BOM) ? "discard" : "encode",
-               (e.flags & HOST_ENDIAN_FLAG) ? "host"
-                                            : (e.flags & INVERT_ENDIAN_FLAG) ? "invert" : "detect");
+               (e.flags & HOST_ENDIAN_FLAG)     ? "host"
+               : (e.flags & INVERT_ENDIAN_FLAG) ? "invert"
+                                                : "detect");
 
-      res = utf16_to_utf8(s.src, fbl::count_of(s.src), actual, &enc_len, e.flags);
+      res = utf16_to_utf8(s.src, std::size(s.src), actual, &enc_len, e.flags);
       ASSERT_OK(res, "%s", case_id);
 
       if (s.host_order) {

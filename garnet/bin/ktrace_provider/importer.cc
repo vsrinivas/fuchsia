@@ -9,6 +9,8 @@
 #include <lib/zx/clock.h>
 #include <zircon/syscalls.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
 
@@ -618,7 +620,7 @@ bool Importer::HandlePageFault(trace_ticks_t event_time, trace_cpu_number_t cpu_
         trace_make_arg(flags_name_ref_, trace_make_uint32_arg_value(flags))};
     trace_context_write_instant_event_record(context_, event_time, &thread_ref, &irq_category_ref_,
                                              &page_fault_name_ref_, TRACE_SCOPE_THREAD, args,
-                                             fbl::count_of(args));
+                                             std::size(args));
   }
   return true;
 }
@@ -681,7 +683,7 @@ bool Importer::HandleInheritPriority(trace_ticks_t event_time, uint32_t id, uint
 
   trace_context_write_duration_event_record(context_, start_time, end_time, &thread_ref,
                                             &sched_category_ref_, &inherit_prio_name_ref_, args,
-                                            fbl::count_of(args));
+                                            std::size(args));
 
   auto trace_thunk = ((flags & KTRACE_FLAGS_INHERIT_PRIORITY_FINAL_EVT) != 0)
                          ? trace_context_write_flow_end_event_record
@@ -705,7 +707,7 @@ bool Importer::HandleFutexWait(trace_ticks_t event_time, uint64_t futex_id, uint
 
   trace_context_write_duration_event_record(context_, event_time, end_time, &thread_ref,
                                             &sched_category_ref_, &futex_wait_name_ref_, args,
-                                            fbl::count_of(args));
+                                            std::size(args));
 
   return true;
 }
@@ -722,7 +724,7 @@ bool Importer::HandleFutexWoke(trace_ticks_t event_time, uint64_t futex_id, zx_s
 
   trace_context_write_duration_event_record(context_, event_time, end_time, &thread_ref,
                                             &sched_category_ref_, &futex_woke_name_ref_, args,
-                                            fbl::count_of(args));
+                                            std::size(args));
 
   return true;
 }
@@ -745,7 +747,7 @@ bool Importer::HandleFutexWake(trace_ticks_t event_time, uint64_t futex_id, uint
 
   trace_context_write_duration_event_record(context_, event_time, end_time, &thread_ref,
                                             &sched_category_ref_, &futex_wake_name_ref_, args,
-                                            fbl::count_of(args));
+                                            std::size(args));
 
   return true;
 }
@@ -767,7 +769,7 @@ bool Importer::HandleFutexRequeue(trace_ticks_t event_time, uint64_t futex_id,
 
   trace_context_write_duration_event_record(context_, event_time, end_time, &thread_ref,
                                             &sched_category_ref_, &futex_requeue_name_ref_, args,
-                                            fbl::count_of(args));
+                                            std::size(args));
 
   return true;
 }
@@ -811,7 +813,7 @@ bool Importer::HandleKernelMutexEvent(trace_ticks_t event_time, uint32_t which_e
 
   trace_context_write_duration_event_record(context_, event_time, end_time, &thread_ref,
                                             &sched_category_ref_, event_name, args,
-                                            fbl::count_of(args));
+                                            std::size(args));
 
   return true;
 }
@@ -878,7 +880,7 @@ bool Importer::HandleChannelWrite(trace_ticks_t event_time, zx_koid_t thread, zx
       trace_make_arg(num_handles_name_ref_, trace_make_uint32_arg_value(num_handles))};
   trace_context_write_flow_begin_event_record(context_, event_time, &thread_ref,
                                               &channel_category_ref_, &channel_write_name_ref_,
-                                              counter, args, fbl::count_of(args));
+                                              counter, args, std::size(args));
   return true;
 }
 
@@ -896,7 +898,7 @@ bool Importer::HandleChannelRead(trace_ticks_t event_time, zx_koid_t thread, zx_
       trace_make_arg(num_handles_name_ref_, trace_make_uint32_arg_value(num_handles))};
   trace_context_write_flow_end_event_record(context_, event_time, &thread_ref,
                                             &channel_category_ref_, &channel_read_name_ref_,
-                                            counter, args, fbl::count_of(args));
+                                            counter, args, std::size(args));
   return true;
 }
 
@@ -944,8 +946,7 @@ bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t 
   trace_arg_t args[] = {trace_make_arg(arg0_name_ref_, trace_make_uint32_arg_value(arg0)),
                         trace_make_arg(arg1_name_ref_, trace_make_uint32_arg_value(arg1))};
   trace_context_write_instant_event_record(context_, event_time, &thread_ref, &probe_category_ref_,
-                                           &name_ref, TRACE_SCOPE_THREAD, args,
-                                           fbl::count_of(args));
+                                           &name_ref, TRACE_SCOPE_THREAD, args, std::size(args));
   return true;
 }
 
@@ -956,8 +957,7 @@ bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t 
   trace_arg_t args[] = {trace_make_arg(arg0_name_ref_, trace_make_uint64_arg_value(arg0)),
                         trace_make_arg(arg1_name_ref_, trace_make_uint64_arg_value(arg1))};
   trace_context_write_instant_event_record(context_, event_time, &thread_ref, &probe_category_ref_,
-                                           &name_ref, TRACE_SCOPE_THREAD, args,
-                                           fbl::count_of(args));
+                                           &name_ref, TRACE_SCOPE_THREAD, args, std::size(args));
   return true;
 }
 
@@ -985,8 +985,7 @@ bool Importer::HandleVcpuExit(trace_ticks_t event_time, zx_koid_t thread, uint32
   trace_thread_ref_t thread_ref = GetThreadRef(thread);
   trace_string_ref_t name_ref = GetNameRef(vcpu_exit_meta_, "exit", exit);
   trace_context_write_duration_event_record(context_, duration.begin, event_time, &thread_ref,
-                                            &vcpu_category_ref_, &name_ref, args,
-                                            fbl::count_of(args));
+                                            &vcpu_category_ref_, &name_ref, args, std::size(args));
 
   duration.valid = false;
   return true;
@@ -1028,7 +1027,7 @@ bool Importer::HandleDurationBegin(trace_ticks_t event_time, zx_koid_t thread,
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
   trace_string_ref_t category_ref = GetCategoryForGroup(group);
   trace_context_write_duration_begin_event_record(context_, event_time, &thread_ref, &category_ref,
-                                                  &name_ref, args, fbl::count_of(args));
+                                                  &name_ref, args, std::size(args));
 
   return true;
 }
@@ -1052,7 +1051,7 @@ bool Importer::HandleDurationEnd(trace_ticks_t event_time, zx_koid_t thread, uin
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
   trace_string_ref_t category_ref = GetCategoryForGroup(group);
   trace_context_write_duration_end_event_record(context_, event_time, &thread_ref, &category_ref,
-                                                &name_ref, args, fbl::count_of(args));
+                                                &name_ref, args, std::size(args));
 
   return true;
 }
@@ -1087,7 +1086,7 @@ bool Importer::HandleCounter(trace_ticks_t event_time, zx_koid_t thread, uint32_
   trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", event_name_id);
   trace_string_ref_t category_ref = GetCategoryForGroup(group);
   trace_context_write_counter_event_record(context_, event_time, &thread_ref, &category_ref,
-                                           &name_ref, counter_id, args, fbl::count_of(args));
+                                           &name_ref, counter_id, args, std::size(args));
 
   return true;
 }

@@ -8,6 +8,7 @@
 #include <lib/trace-engine/buffer_internal.h>
 #include <zircon/assert.h>
 
+#include <iterator>
 #include <memory>
 
 #include <fbl/string.h>
@@ -31,7 +32,7 @@ class BufferHeaderReader {
                             std::unique_ptr<BufferHeaderReader>* out_reader);
 
   static int GetBufferNumber(uint32_t wrapped_count) {
-    static_assert(fbl::count_of(trace_buffer_header{}.rolling_data_end) == 2, "");
+    static_assert(std::size(trace_buffer_header{}.rolling_data_end) == 2, "");
     return wrapped_count & 1;
   }
 
@@ -50,7 +51,7 @@ class BufferHeaderReader {
   uint64_t durable_data_end() const { return header_->durable_data_end; }
 
   uint64_t rolling_data_end(int buffer_number) const {
-    // static_assert(fbl::count_of(header_->rolling_data_end) == 2, "");
+    // static_assert(std::size(header_->rolling_data_end) == 2, "");
     ZX_DEBUG_ASSERT(buffer_number >= 0 && buffer_number <= 1);
     return header_->rolling_data_end[buffer_number];
   }
@@ -69,7 +70,7 @@ class BufferHeaderReader {
 
   // Return the offset of rolling buffer |buffer_number|.
   uint64_t GetRollingBufferOffset(int buffer_number) const {
-    // static_assert(fbl::count_of(header_->rolling_data_end) == 2, "");
+    // static_assert(std::size(header_->rolling_data_end) == 2, "");
     ZX_DEBUG_ASSERT(buffer_number >= 0 && buffer_number <= 1);
     auto offset = sizeof(trace_buffer_header) + durable_buffer_size();
     if (buffer_number == 1) {

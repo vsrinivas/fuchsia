@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 
+#include <iterator>
 #include <vector>
 
 #include <fbl/algorithm.h>
@@ -91,7 +92,7 @@ TEST(ZirconUserPanicTestCase, StderrOutputAndProcessTerminates) {
   zx::process proc;
   zx_status_t status = fdio_spawn_etc(
       ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO, process_bin, args.data(),
-      nullptr, fbl::count_of(actions), actions, proc.reset_and_get_address(), err_msg);
+      nullptr, std::size(actions), actions, proc.reset_and_get_address(), err_msg);
   ASSERT_OK(status);
 
   // Close our handle to the other end of the pipe so it closes, so we don't

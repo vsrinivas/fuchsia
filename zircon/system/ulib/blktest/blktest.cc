@@ -20,6 +20,7 @@
 #include <zircon/syscalls.h>
 
 #include <climits>
+#include <iterator>
 #include <limits>
 #include <memory>
 
@@ -230,7 +231,7 @@ bool blkdev_test_fifo_basic(void) {
 
   fifo_client_t* client;
   ASSERT_EQ(block_fifo_create_client(fifo.release(), &client), ZX_OK, "");
-  ASSERT_EQ(block_fifo_txn(client, &requests[0], fbl::count_of(requests)), ZX_OK, "");
+  ASSERT_EQ(block_fifo_txn(client, &requests[0], std::size(requests)), ZX_OK, "");
 
   // Empty the vmo, then read the info we just wrote to the disk
   std::unique_ptr<uint8_t[]> out(new uint8_t[vmo_size]());
@@ -238,7 +239,7 @@ bool blkdev_test_fifo_basic(void) {
   ASSERT_EQ(vmo.write(out.get(), 0, vmo_size), ZX_OK, "");
   requests[0].opcode = BLOCKIO_READ;
   requests[1].opcode = BLOCKIO_READ;
-  ASSERT_EQ(block_fifo_txn(client, &requests[0], fbl::count_of(requests)), ZX_OK, "");
+  ASSERT_EQ(block_fifo_txn(client, &requests[0], std::size(requests)), ZX_OK, "");
   ASSERT_EQ(vmo.read(out.get(), 0, vmo_size), ZX_OK, "");
   ASSERT_EQ(memcmp(buf.get(), out.get(), blk_size * 3), 0, "Read data not equal to written data");
 

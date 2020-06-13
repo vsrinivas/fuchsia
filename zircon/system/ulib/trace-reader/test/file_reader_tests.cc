@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <iterator>
 #include <memory>
 #include <utility>
 
@@ -32,13 +33,13 @@ TEST(TraceFileReader, Records) {
 
   uint64_t thread_record[3]{};
   ThreadRecordFields::Type::Set(thread_record[0], static_cast<uint64_t>(RecordType::kThread));
-  ThreadRecordFields::RecordSize::Set(thread_record[0], fbl::count_of(thread_record));
+  ThreadRecordFields::RecordSize::Set(thread_record[0], std::size(thread_record));
   ThreadRecordFields::ThreadIndex::Set(thread_record[0], kThreadIndex);
   thread_record[1] = kProcessKoid;
   thread_record[2] = kThreadKoid;
 
-  ASSERT_EQ(fwrite(&thread_record[0], sizeof(thread_record[0]), fbl::count_of(thread_record), f),
-            fbl::count_of(thread_record));
+  ASSERT_EQ(fwrite(&thread_record[0], sizeof(thread_record[0]), std::size(thread_record), f),
+            std::size(thread_record));
   ASSERT_EQ(fclose(f), 0);
 
   std::unique_ptr<trace::FileReader> reader;

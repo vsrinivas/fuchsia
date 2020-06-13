@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <iterator>
 #include <memory>
 
 #include <fbl/algorithm.h>
@@ -367,7 +368,7 @@ void timing_iterator::Advance() {
   }
 
   if (state_ == kStds) {
-    while (++state_index_ < fbl::count_of(edid_->base_edid_->standard_timings)) {
+    while (++state_index_ < std::size(edid_->base_edid_->standard_timings)) {
       const StandardTimingDescriptor* desc = edid_->base_edid_->standard_timings + state_index_;
       if (desc->byte1 == 0x01 && desc->byte2 == 0x01) {
         continue;
@@ -404,7 +405,7 @@ Edid::descriptor_iterator& Edid::descriptor_iterator::operator++() {
   if (block_idx_ == 0) {
     descriptor_idx_++;
 
-    if (descriptor_idx_ < fbl::count_of(edid_->base_edid_->detailed_descriptors)) {
+    if (descriptor_idx_ < std::size(edid_->base_edid_->detailed_descriptors)) {
       descriptor_ = edid_->base_edid_->detailed_descriptors + descriptor_idx_;
       if (descriptor_->timing.pixel_clock_10khz != 0 || descriptor_->monitor.type != 0x10) {
         return *this;

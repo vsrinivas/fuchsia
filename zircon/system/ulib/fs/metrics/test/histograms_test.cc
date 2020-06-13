@@ -6,6 +6,7 @@
 #include <lib/zx/time.h>
 #include <unistd.h>
 
+#include <iterator>
 #include <limits>
 #include <set>
 #include <vector>
@@ -39,9 +40,8 @@ const std::vector<EventOptions>& GetOptionsSets() {
   constexpr bool kSuccess[] = {true, false};
 
   static std::vector<EventOptions> option_set;
-  option_set.reserve(fbl::count_of(kBlockCounts) * fbl::count_of(kNodeDepths) *
-                     fbl::count_of(kNodeDegrees) * fbl::count_of(kBuffered) *
-                     fbl::count_of(kSuccess));
+  option_set.reserve(std::size(kBlockCounts) * std::size(kNodeDepths) * std::size(kNodeDegrees) *
+                     std::size(kBuffered) * std::size(kSuccess));
 
   for (auto block_count : kBlockCounts) {
     for (auto node_depth : kNodeDepths) {

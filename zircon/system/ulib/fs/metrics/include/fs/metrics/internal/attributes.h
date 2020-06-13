@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <iterator>
 #include <string>
 #include <type_traits>
 
@@ -60,7 +61,7 @@ struct NumericAttribute {
   // The number of dimensions is defined by the list of upperbounds provided
   // by the implementing class. An extra overflow bucket is added. The first bucket
   // contains everything from [-inf, upperbound).
-  static constexpr uint64_t kSize = fbl::count_of(Attribute::kBuckets) + 1;
+  static constexpr uint64_t kSize = std::size(Attribute::kBuckets) + 1;
 
   // Performs linear search over an array to find the |Attribute::kBuckets| bucket
   // that is containing the smallest value bigger than |value|.

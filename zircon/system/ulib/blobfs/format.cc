@@ -4,6 +4,7 @@
 
 #include <lib/cksum.h>
 
+#include <iterator>
 #include <utility>
 
 #include <blobfs/common.h>
@@ -199,7 +200,7 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
   requests[3].vmo_offset = FsToDeviceBlocks(superblock_blocks + blockmap_blocks + nodemap_blocks);
   requests[3].dev_offset = FsToDeviceBlocks(JournalStartBlock(superblock));
 
-  return device->FifoTransaction(requests, fbl::count_of(requests));
+  return device->FifoTransaction(requests, std::size(requests));
 }
 
 }  // namespace

@@ -4,6 +4,8 @@
 
 #include <stddef.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/inline_array.h>
@@ -44,7 +46,7 @@ TEST(InlineArrayTest, inline_test) {
 TEST(InlineArrayTest, non_inline_test) {
   static const size_t test_sizes[] = {4u, 5u, 6u, 10u, 100u, 1000u};
 
-  for (size_t i = 0u; i < fbl::count_of(test_sizes); i++) {
+  for (size_t i = 0u; i < std::size(test_sizes); i++) {
     size_t sz = test_sizes[i];
 
     TestType::ResetRunCounts();

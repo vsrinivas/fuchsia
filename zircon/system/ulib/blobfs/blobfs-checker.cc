@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 
+#include <iterator>
 #include <utility>
 
 #include <fs/trace.h>
@@ -182,19 +183,19 @@ zx_status_t CheckFvmConsistency(const Superblock* info, BlockDevice* device, boo
   fuchsia_hardware_block_volume_VsliceRange
       ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
   size_t actual_ranges_count;
-  status = device->VolumeQuerySlices(start_slices, fbl::count_of(start_slices), ranges,
+  status = device->VolumeQuerySlices(start_slices, std::size(start_slices), ranges,
                                      &actual_ranges_count);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Cannot query slices, status: %s\n", zx_status_get_string(status));
     return status;
   }
 
-  if (actual_ranges_count != fbl::count_of(start_slices)) {
+  if (actual_ranges_count != std::size(start_slices)) {
     FS_TRACE_ERROR("blobfs: Missing slice\n");
     return ZX_ERR_BAD_STATE;
   }
 
-  for (size_t i = 0; i < fbl::count_of(start_slices); i++) {
+  for (size_t i = 0; i < std::size(start_slices); i++) {
     size_t blobfs_count = expected_count[i];
     size_t fvm_count = ranges[i].count;
 

@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <vector>
 
 #include <third_party/zlib/contrib/iostream3/zfstream.h>
@@ -21,7 +22,7 @@ namespace {
 
 const char kLittleEndianMagicRecord[8] = {0x10, 0x00, 0x04, 0x46, 0x78, 0x54, 0x16, 0x00};
 
-constexpr size_t kMagicSize = fbl::count_of(kLittleEndianMagicRecord);
+constexpr size_t kMagicSize = std::size(kLittleEndianMagicRecord);
 constexpr uint64_t kMagicRecord = 0x0016547846040010;
 
 bool CompareMagic(const char* magic1, const char* magic2) {

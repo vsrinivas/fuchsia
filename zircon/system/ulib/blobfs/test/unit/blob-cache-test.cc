@@ -4,6 +4,8 @@
 
 #include "blob-cache.h"
 
+#include <iterator>
+
 #include <zxtest/zxtest.h>
 
 #include "cache-node.h"
@@ -251,7 +253,7 @@ TEST(BlobCacheTest, ForAllOpenNodes) {
 
   // Add a bunch of open nodes to the cache.
   fbl::RefPtr<TestNode> open_nodes[10];
-  for (size_t i = 0; i < fbl::count_of(open_nodes); i++) {
+  for (size_t i = 0; i < std::size(open_nodes); i++) {
     open_nodes[i] = fbl::AdoptRef(new TestNode(GenerateDigest(i), &cache));
     ASSERT_OK(cache.Add(open_nodes[i]));
   }
@@ -270,8 +272,8 @@ TEST(BlobCacheTest, ForAllOpenNodes) {
   // which aren't open aren't visible.
   size_t node_index = 0;
   cache.ForAllOpenNodes([&open_nodes, &node_index](fbl::RefPtr<CacheNode> node) {
-    ZX_ASSERT(node_index < fbl::count_of(open_nodes));
-    for (size_t i = 0; i < fbl::count_of(open_nodes); i++) {
+    ZX_ASSERT(node_index < std::size(open_nodes));
+    for (size_t i = 0; i < std::size(open_nodes); i++) {
       // We should be able to find this node in the set of open nodes -- but only once.
       if (open_nodes[i] && open_nodes[i].get() == node.get()) {
         open_nodes[i] = nullptr;
@@ -281,7 +283,7 @@ TEST(BlobCacheTest, ForAllOpenNodes) {
     }
     ZX_ASSERT_MSG(false, "Found open node not contained in expected open set");
   });
-  ASSERT_EQ(fbl::count_of(open_nodes), node_index);
+  ASSERT_EQ(std::size(open_nodes), node_index);
 }
 
 TEST(BlobCacheTest, CachePolicyEvictImmediately) {

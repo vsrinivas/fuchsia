@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fvm/client.h>
-
+#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <stdlib.h>
+#include <zircon/device/block.h>
+
+#include <iterator>
 
 #include <fbl/algorithm.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <zircon/device/block.h>
+#include <fvm/client.h>
 
 namespace fvm {
 
@@ -21,9 +22,9 @@ zx_status_t ResetAllSlices(const zx::unowned_channel& channel) {
         ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
     size_t actual_ranges_count;
     zx_status_t io_status, status;
-    io_status = fuchsia_hardware_block_volume_VolumeQuerySlices(
-        channel->get(), vslice_start, fbl::count_of(vslice_start), &status, ranges,
-        &actual_ranges_count);
+    io_status = fuchsia_hardware_block_volume_VolumeQuerySlices(channel->get(), vslice_start,
+                                                                std::size(vslice_start), &status,
+                                                                ranges, &actual_ranges_count);
     if (io_status != ZX_OK) {
       return io_status;
     }
@@ -62,8 +63,8 @@ zx_status_t ResetAllSlices2(block_client::BlockDevice* device) {
     fuchsia_hardware_block_volume_VsliceRange
         ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
     size_t actual_ranges_count;
-    zx_status_t status = device->VolumeQuerySlices(vslice_start, fbl::count_of(vslice_start),
-                                                   ranges, &actual_ranges_count);
+    zx_status_t status = device->VolumeQuerySlices(vslice_start, std::size(vslice_start), ranges,
+                                                   &actual_ranges_count);
     if (status == ZX_ERR_OUT_OF_RANGE) {
       return ZX_OK;
     }

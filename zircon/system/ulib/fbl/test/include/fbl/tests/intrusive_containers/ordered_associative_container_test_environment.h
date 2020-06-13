@@ -5,6 +5,8 @@
 #ifndef FBL_TESTS_INTRUSIVE_CONTAINERS_ORDERED_ASSOCIATIVE_CONTAINER_TEST_ENVIRONMENT_H_
 #define FBL_TESTS_INTRUSIVE_CONTAINERS_ORDERED_ASSOCIATIVE_CONTAINER_TEST_ENVIRONMENT_H_
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <fbl/tests/intrusive_containers/associative_container_test_environment.h>
 #include <zxtest/zxtest.h>
@@ -158,7 +160,7 @@ class OrderedAssociativeContainerTestEnvironment
         ASSERT_NOT_NULL(tmp);
         KeyType tmp_key = KeyTraits::GetKey(*tmp);
 
-        for (size_t k = 0; k < fbl::count_of(tests); ++k) {
+        for (size_t k = 0; k < std::size(tests); ++k) {
           auto& test = tests[k];
 
           if (BoundTraits::BoundedBy(test.key, tmp_key) &&
@@ -168,7 +170,7 @@ class OrderedAssociativeContainerTestEnvironment
       }
 
       // Now perform the same searchs using upper_bound/lower_bound.
-      for (size_t k = 0; k < fbl::count_of(tests); ++k) {
+      for (size_t k = 0; k < std::size(tests); ++k) {
         auto& test = tests[k];
         auto iter = BoundTraits::Search(container(), test.key);
 

@@ -6,6 +6,8 @@
 
 #include <lib/trace-engine/instrumentation.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <gtest/gtest.h>
 #include <trace-test-utils/fixture.h>
@@ -266,7 +268,7 @@ TEST_F(TestImporter, ContextSwitch) {
 
   fbl::Vector<trace::Record> records;
   ASSERT_TRUE(StopTracingAndImportRecords(&records));
-  ASSERT_EQ(records.size(), fbl::count_of(expected));
+  ASSERT_EQ(records.size(), std::size(expected));
   for (size_t i = 0; i < records.size(); ++i) {
     CompareRecord(records[i], expected[i]);
   }
@@ -323,7 +325,7 @@ TEST_F(TestImporter, InheritPriority) {
 
   fbl::Vector<trace::Record> records;
   ASSERT_TRUE(StopTracingAndImportRecords(&records));
-  ASSERT_EQ(records.size(), fbl::count_of(expected));
+  ASSERT_EQ(records.size(), std::size(expected));
   for (size_t i = 0; i < records.size(); ++i) {
     CompareRecord(records[i], expected[i]);
   }
@@ -475,7 +477,7 @@ TEST_F(TestImporter, FutexRecords) {
 
   fbl::Vector<trace::Record> records;
   ASSERT_TRUE(StopTracingAndImportRecords(&records));
-  ASSERT_EQ(records.size(), fbl::count_of(expected));
+  ASSERT_EQ(records.size(), std::size(expected));
   for (size_t i = 0; i < records.size(); ++i) {
     CompareRecord(records[i], expected[i]);
   }
@@ -539,7 +541,7 @@ TEST_F(TestImporter, KernelMutexRecords) {
 
   fbl::Vector<trace::Record> records;
   ASSERT_TRUE(StopTracingAndImportRecords(&records));
-  ASSERT_EQ(records.size(), fbl::count_of(expected));
+  ASSERT_EQ(records.size(), std::size(expected));
   for (size_t i = 0; i < records.size(); ++i) {
     CompareRecord(records[i], expected[i]);
   }
@@ -588,7 +590,7 @@ TEST_F(TestImporter, Counter) {
 
   fbl::Vector<trace::Record> records;
   ASSERT_TRUE(StopTracingAndImportRecords(&records));
-  ASSERT_EQ(records.size(), fbl::count_of(expected));
+  ASSERT_EQ(records.size(), std::size(expected));
   for (size_t i = 0; i < records.size(); ++i) {
     CompareRecord(records[i], expected[i]);
   }

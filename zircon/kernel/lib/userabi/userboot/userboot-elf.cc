@@ -13,6 +13,8 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <iterator>
+
 #include <elfload/elfload.h>
 #include <fbl/algorithm.h>
 
@@ -127,7 +129,7 @@ static void stuff_loader_bootstrap(zx_handle_t log, zx_handle_t proc, zx_handle_
         "zx_channel_create failed");
 
   zx_status_t status =
-      zx_channel_write(to_child, 0, &msg, sizeof(msg), handles, fbl::count_of(handles));
+      zx_channel_write(to_child, 0, &msg, sizeof(msg), handles, std::size(handles));
   check(log, status, "zx_channel_write of loader bootstrap message failed");
 }
 

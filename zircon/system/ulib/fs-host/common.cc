@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "fs-host/common.h"
+
 #include <assert.h>
 #include <getopt.h>
 #include <inttypes.h>
@@ -9,10 +11,10 @@
 #include <limits.h>
 #include <sys/stat.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-
-#include "fs-host/common.h"
 
 #define MIN_ARGS 3
 
@@ -94,7 +96,7 @@ zx_status_t FsCreator::Usage() {
 
   // Display all valid pre-command options.
   bool first = true;
-  for (unsigned n = 0; n < fbl::count_of(OPTS); n++) {
+  for (unsigned n = 0; n < std::size(OPTS); n++) {
     if (IsOptionValid(OPTS[n].option)) {
       fprintf(stderr, "%-8s -%c|--%-8s ", first ? "options:" : "", OPTS[n].name[0], OPTS[n].name);
 
@@ -111,7 +113,7 @@ zx_status_t FsCreator::Usage() {
 
   // Display all valid commands.
   first = true;
-  for (unsigned n = 0; n < fbl::count_of(CMDS); n++) {
+  for (unsigned n = 0; n < std::size(CMDS); n++) {
     if (IsCommandValid(CMDS[n].command)) {
       fprintf(stderr, "%9s %-10s %s\n", first ? "commands:" : "", CMDS[n].name, CMDS[n].help);
       first = false;
@@ -121,7 +123,7 @@ zx_status_t FsCreator::Usage() {
 
   // Display all valid '--' arguments.
   fprintf(stderr, "arguments (valid for create, one or more required for add):\n");
-  for (unsigned n = 0; n < fbl::count_of(ARGS); n++) {
+  for (unsigned n = 0; n < std::size(ARGS); n++) {
     if (IsArgumentValid(ARGS[n].argument)) {
       fprintf(stderr, "\t%-10s <path>\n", ARGS[n].name);
     }
@@ -221,8 +223,8 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
   while (true) {
     // Set up options struct for pre-device option processing.
     unsigned index = 0;
-    struct option opts[fbl::count_of(OPTS) + 1];
-    for (unsigned n = 0; n < fbl::count_of(OPTS); n++) {
+    struct option opts[std::size(OPTS) + 1];
+    for (unsigned n = 0; n < std::size(OPTS); n++) {
       if (IsOptionValid(OPTS[n].option)) {
         opts[index].name = OPTS[n].name;
         opts[index].has_arg = strlen(OPTS[n].argument) ? required_argument : no_argument;

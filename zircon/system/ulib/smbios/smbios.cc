@@ -8,6 +8,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 
 namespace {
@@ -118,7 +120,7 @@ void StringTable::Dump() const {
 }
 
 bool EntryPoint2_1::IsValid() const {
-  if (memcmp(anchor_string, SMBIOS2_ANCHOR, fbl::count_of(anchor_string))) {
+  if (memcmp(anchor_string, SMBIOS2_ANCHOR, std::size(anchor_string))) {
     printf("smbios: bad anchor %4s\n", anchor_string);
     return false;
   }
@@ -145,7 +147,7 @@ bool EntryPoint2_1::IsValid() const {
   }
 
   if (memcmp(intermediate_anchor_string, SMBIOS2_INTERMEDIATE_ANCHOR,
-             fbl::count_of(intermediate_anchor_string))) {
+             std::size(intermediate_anchor_string))) {
     printf("smbios: bad intermediate anchor %5s\n", intermediate_anchor_string);
     return false;
   }

@@ -13,8 +13,10 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
 #include <zircon/compiler.h>
+
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 
@@ -25,11 +27,11 @@
 bool TestUnlinkSimple() {
   BEGIN_TEST;
   const char* const paths[] = {"::abc", "::def", "::ghi", "::jkl", "::mnopqrstuvxyz"};
-  for (size_t i = 0; i < fbl::count_of(paths); i++) {
+  for (size_t i = 0; i < std::size(paths); i++) {
     fbl::unique_fd fd(open(paths[i], O_RDWR | O_CREAT | O_EXCL, 0644));
     ASSERT_TRUE(fd);
   }
-  for (size_t i = 0; i < fbl::count_of(paths); i++) {
+  for (size_t i = 0; i < std::size(paths); i++) {
     ASSERT_EQ(unlink(paths[i]), 0);
   }
   END_TEST;
@@ -151,9 +153,11 @@ bool TestUnlinkLargeSparseFileAfterClose() {
   END_TEST;
 }
 
+// clang-format off
 RUN_FOR_ALL_FILESYSTEMS(unlink_tests,
                         RUN_TEST_MEDIUM(TestUnlinkSimple)
                         RUN_TEST_MEDIUM(TestUnlinkUseAfterwards)
                         RUN_TEST_MEDIUM(TestUnlinkOpenElsewhere)
                         RUN_TEST_MEDIUM(TestRemove)
                         RUN_TEST_MEDIUM(TestUnlinkLargeSparseFileAfterClose))
+// clang-format on

@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 #include <climits>
+#include <iterator>
 #include <limits>
 
 #include <hwreg/bitfields.h>
@@ -676,7 +677,7 @@ TEST(RegisterTestCase, Print) {
       EXPECT_STR_EQ(expected[call_count], buf, "mismatch");
       call_count++;
     });
-    EXPECT_EQ(fbl::count_of(expected), call_count);
+    EXPECT_EQ(std::size(expected), call_count);
   }
 
   class TestReg2 : public hwreg::RegisterBase<TestReg2, uint32_t, hwreg::EnablePrinter> {
@@ -699,7 +700,7 @@ TEST(RegisterTestCase, Print) {
       EXPECT_STR_EQ(expected[call_count], buf, "mismatch");
       call_count++;
     });
-    EXPECT_EQ(fbl::count_of(expected), call_count);
+    EXPECT_EQ(std::size(expected), call_count);
   }
 }
 

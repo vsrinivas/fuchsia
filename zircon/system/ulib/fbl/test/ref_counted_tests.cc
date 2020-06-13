@@ -4,6 +4,8 @@
 
 #include <pthread.h>
 
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_counted.h>
@@ -71,14 +73,14 @@ void ref_counted_test() {
     void* arg = reinterpret_cast<void*>(ptr.get());
 
     pthread_t threads[5];
-    for (size_t i = 0u; i < fbl::count_of(threads); ++i) {
+    for (size_t i = 0u; i < std::size(threads); ++i) {
       int res = pthread_create(&threads[i], NULL, &inc_and_dec<EnableAdoptionValidator>, arg);
       ASSERT_LE(0, res, "Failed to create inc_and_dec thread!");
     }
 
     inc_and_dec<EnableAdoptionValidator>(arg);
 
-    for (size_t i = 0u; i < fbl::count_of(threads); ++i)
+    for (size_t i = 0u; i < std::size(threads); ++i)
       pthread_join(threads[i], NULL);
 
     EXPECT_FALSE(destroyed, "should not be destroyed after inc/dec pairs");

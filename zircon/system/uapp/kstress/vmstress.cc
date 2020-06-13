@@ -30,6 +30,7 @@
 
 #include <array>
 #include <atomic>
+#include <iterator>
 #include <memory>
 #include <shared_mutex>
 
@@ -399,7 +400,7 @@ zx_status_t SingleVmoTestInstance::Start() {
     return static_cast<SingleVmoTestInstance*>(arg)->pager_thread();
   };
 
-  for (uint32_t i = 0; i < fbl::count_of(threads_); i++) {
+  for (uint32_t i = 0; i < std::size(threads_); i++) {
     // vmo threads need to come first, since the pager workers need to reference
     // the vmo worker thread handles.
     bool is_vmo_worker = i < kNumVmoThreads || !use_pager_;
@@ -475,7 +476,7 @@ zx_status_t SingleVmoTestInstance::Stop() {
     }
   }
 
-  for (unsigned i = 0; i < fbl::count_of(threads_); i++) {
+  for (unsigned i = 0; i < std::size(threads_); i++) {
     thrd_join(threads_[i], nullptr);
   }
 

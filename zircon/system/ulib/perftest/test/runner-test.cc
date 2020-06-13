@@ -5,6 +5,7 @@
 #include <zircon/assert.h>
 
 #include <algorithm>
+#include <iterator>
 #include <string>
 #include <utility>
 #include <vector>
@@ -371,7 +372,7 @@ TEST(PerfTestRunner, TestParsingCommandArgs) {
                         "--enable-tracing",
                         "--startup-delay=456"};
   perftest::internal::CommandArgs args;
-  perftest::internal::ParseCommandArgs(fbl::count_of(argv), const_cast<char**>(argv), &args);
+  perftest::internal::ParseCommandArgs(std::size(argv), const_cast<char**>(argv), &args);
   EXPECT_EQ(args.run_count, 123);
   EXPECT_STR_EQ(args.output_filename, "dest_file");
   EXPECT_STR_EQ(args.filter_regex, "some_regex");

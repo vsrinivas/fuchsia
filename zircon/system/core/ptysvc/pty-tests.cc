@@ -9,6 +9,8 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 
+#include <iterator>
+
 #include <fs/managed_vfs.h>
 #include <fs/vfs_types.h>
 #include <zxtest/zxtest.h>
@@ -88,11 +90,10 @@ zx::eventpair GetEvent(Connection* conn) {
 
 void WriteCtrlC(Connection* conn) {
   uint8_t data[] = {0x03};
-  auto result =
-      conn->Write(fidl::VectorView<uint8_t>{fidl::unowned_ptr(data), fbl::count_of(data)});
+  auto result = conn->Write(fidl::VectorView<uint8_t>{fidl::unowned_ptr(data), std::size(data)});
   ASSERT_OK(result.status());
   ASSERT_OK(result->s);
-  ASSERT_EQ(result->actual, fbl::count_of(data));
+  ASSERT_EQ(result->actual, std::size(data));
 }
 
 // Make sure the server connections describe appropriately
@@ -208,7 +209,7 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
     {
       uint8_t data[16] = {};
       auto result =
-          server.Write(fidl::VectorView<uint8_t>{fidl::unowned_ptr(data), fbl::count_of(data)});
+          server.Write(fidl::VectorView<uint8_t>{fidl::unowned_ptr(data), std::size(data)});
       ASSERT_OK(result.status());
       ASSERT_STATUS(result->s, ZX_ERR_PEER_CLOSED);
     }
@@ -289,7 +290,7 @@ TEST_F(PtyTestCase, ClientFull0ByteServerWrite) {
   // Fill up FIFO
   while (true) {
     uint8_t buf[256] = {};
-    auto result = server.Write({fidl::unowned_ptr(buf), fbl::count_of(buf)});
+    auto result = server.Write({fidl::unowned_ptr(buf), std::size(buf)});
     ASSERT_OK(result.status());
     if (result->s == ZX_ERR_SHOULD_WAIT) {
       break;
@@ -631,11 +632,11 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
 
   uint8_t kTestData[] = u8"hello world";
   {
-    auto result = server.Write(
-        fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestData), fbl::count_of(kTestData)});
+    auto result =
+        server.Write(fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestData), std::size(kTestData)});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
-    ASSERT_EQ(result->actual, fbl::count_of(kTestData));
+    ASSERT_EQ(result->actual, std::size(kTestData));
   }
 
   server.mutable_channel()->reset();
@@ -660,11 +661,11 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
   // Attempts to drain the buffer should succeed
   {
     // Request more bytes than are present
-    auto result = client.Read(fbl::count_of(kTestData) + 10);
+    auto result = client.Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
-    ASSERT_EQ(result->data.count(), fbl::count_of(kTestData));
-    ASSERT_BYTES_EQ(result->data.data(), kTestData, fbl::count_of(kTestData));
+    ASSERT_EQ(result->data.count(), std::size(kTestData));
+    ASSERT_BYTES_EQ(result->data.data(), kTestData, std::size(kTestData));
   }
 
   // Attempts to read the empty buffer should fail with ZX_ERR_PEER_CLOSED
@@ -677,8 +678,7 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
   // Attempts to write should fail with ZX_ERR_PEER_CLOSED
   {
     uint8_t data[16] = {};
-    auto result =
-        client.Write(fidl::VectorView<uint8_t>{fidl::unowned_ptr(data), fbl::count_of(data)});
+    auto result = client.Write(fidl::VectorView<uint8_t>{fidl::unowned_ptr(data), std::size(data)});
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->s, ZX_ERR_PEER_CLOSED);
   }
@@ -695,22 +695,22 @@ TEST_F(PtyTestCase, ServerReadClientCooked) {
   uint8_t kTestData[] = u8"hello\x03 world\ntest message\n";
   const uint8_t kExpectedReadback[] = u8"hello\x03 world\r\ntest message\r\n";
   {
-    auto result = client.Write(
-        fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestData), fbl::count_of(kTestData)});
+    auto result =
+        client.Write(fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestData), std::size(kTestData)});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
-    ASSERT_EQ(result->actual, fbl::count_of(kTestData));
+    ASSERT_EQ(result->actual, std::size(kTestData));
   }
 
   zx::eventpair event = GetEvent(&server);
   ASSERT_OK(event.wait_one(::llcpp::fuchsia::device::DEVICE_SIGNAL_READABLE, zx::time::infinite(),
                            nullptr));
   {
-    auto result = server.Read(fbl::count_of(kExpectedReadback) + 10);
+    auto result = server.Read(std::size(kExpectedReadback) + 10);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
-    ASSERT_EQ(result->data.count(), fbl::count_of(kExpectedReadback));
-    ASSERT_BYTES_EQ(result->data.data(), kExpectedReadback, fbl::count_of(kExpectedReadback));
+    ASSERT_EQ(result->data.count(), std::size(kExpectedReadback));
+    ASSERT_BYTES_EQ(result->data.data(), kExpectedReadback, std::size(kExpectedReadback));
   }
   // Nothing left to read
   ASSERT_STATUS(
@@ -730,24 +730,24 @@ TEST_F(PtyTestCase, ServerWriteClientCooked) {
   // We expect to read this back, but without the trailing nul
   const uint8_t kExpectedReadbackWithNul[] = u8"hello world\ntest";
   {
-    auto result = server.Write(
-        fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestData), fbl::count_of(kTestData)});
+    auto result =
+        server.Write(fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestData), std::size(kTestData)});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     // We expect to see the written count to include the ^C
-    ASSERT_EQ(result->actual, fbl::count_of(kExpectedReadbackWithNul) - 1 + 1);
+    ASSERT_EQ(result->actual, std::size(kExpectedReadbackWithNul) - 1 + 1);
   }
 
   zx::eventpair event = GetEvent(&client);
   ASSERT_OK(event.wait_one(::llcpp::fuchsia::device::DEVICE_SIGNAL_READABLE, zx::time::infinite(),
                            nullptr));
   {
-    auto result = client.Read(fbl::count_of(kExpectedReadbackWithNul) + 10);
+    auto result = client.Read(std::size(kExpectedReadbackWithNul) + 10);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
-    ASSERT_EQ(result->data.count(), fbl::count_of(kExpectedReadbackWithNul) - 1);
+    ASSERT_EQ(result->data.count(), std::size(kExpectedReadbackWithNul) - 1);
     ASSERT_BYTES_EQ(result->data.data(), kExpectedReadbackWithNul,
-                    fbl::count_of(kExpectedReadbackWithNul) - 1);
+                    std::size(kExpectedReadbackWithNul) - 1);
   }
   // Nothing left to read
   ASSERT_STATUS(
@@ -770,22 +770,22 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
   // In raw mode, client writes should be untouched.
   uint8_t kTestData[] = u8"hello\x03 world\ntest message\n";
   {
-    auto result = client.Write(
-        fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestData), fbl::count_of(kTestData)});
+    auto result =
+        client.Write(fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestData), std::size(kTestData)});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
-    ASSERT_EQ(result->actual, fbl::count_of(kTestData));
+    ASSERT_EQ(result->actual, std::size(kTestData));
   }
 
   zx::eventpair event = GetEvent(&server);
   ASSERT_OK(event.wait_one(::llcpp::fuchsia::device::DEVICE_SIGNAL_READABLE, zx::time::infinite(),
                            nullptr));
   {
-    auto result = server.Read(fbl::count_of(kTestData) + 10);
+    auto result = server.Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
-    ASSERT_EQ(result->data.count(), fbl::count_of(kTestData));
-    ASSERT_BYTES_EQ(result->data.data(), kTestData, fbl::count_of(kTestData));
+    ASSERT_EQ(result->data.count(), std::size(kTestData));
+    ASSERT_BYTES_EQ(result->data.data(), kTestData, std::size(kTestData));
   }
   // Nothing left to read
   ASSERT_STATUS(
@@ -810,22 +810,22 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
   // In raw mode, server writes should be untouched.
   uint8_t kTestData[] = u8"hello world\ntest\x03 message\n";
   {
-    auto result = server.Write(
-        fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestData), fbl::count_of(kTestData)});
+    auto result =
+        server.Write(fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestData), std::size(kTestData)});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
-    ASSERT_EQ(result->actual, fbl::count_of(kTestData));
+    ASSERT_EQ(result->actual, std::size(kTestData));
   }
 
   zx::eventpair event = GetEvent(&client);
   ASSERT_OK(event.wait_one(::llcpp::fuchsia::device::DEVICE_SIGNAL_READABLE, zx::time::infinite(),
                            nullptr));
   {
-    auto result = client.Read(fbl::count_of(kTestData) + 10);
+    auto result = client.Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
-    ASSERT_EQ(result->data.count(), fbl::count_of(kTestData));
-    ASSERT_BYTES_EQ(result->data.data(), kTestData, fbl::count_of(kTestData));
+    ASSERT_EQ(result->data.count(), std::size(kTestData));
+    ASSERT_BYTES_EQ(result->data.data(), kTestData, std::size(kTestData));
   }
   // Nothing left to read
   ASSERT_STATUS(
@@ -854,7 +854,7 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
   while (server_event.wait_one(::llcpp::fuchsia::device::DEVICE_SIGNAL_WRITABLE, zx::time{},
                                nullptr) == ZX_OK) {
     auto result = server.Write(
-        fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestString), fbl::count_of(kTestString) - 1});
+        fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestString), std::size(kTestString) - 1});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_GT(result->actual, 0);
@@ -864,7 +864,7 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
   // Trying to write when full gets SHOULD_WAIT
   {
     auto result = server.Write(
-        fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestString), fbl::count_of(kTestString) - 1});
+        fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestString), std::size(kTestString) - 1});
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->s, ZX_ERR_SHOULD_WAIT);
   }
@@ -874,11 +874,11 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
   while (total_read < total_written) {
     ASSERT_OK(client_event.wait_one(::llcpp::fuchsia::device::DEVICE_SIGNAL_READABLE, zx::time{},
                                     nullptr));
-    auto result = client.Read(fbl::count_of(kTestString) - 1);
+    auto result = client.Read(std::size(kTestString) - 1);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->data.count(),
-              fbl::min(fbl::count_of(kTestString) - 1, total_written - total_read));
+              fbl::min(std::size(kTestString) - 1, total_written - total_read));
     ASSERT_BYTES_EQ(result->data.data(), kTestString, result->data.count());
     total_read += result->data.count();
   }
@@ -901,7 +901,7 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
   while (client_event.wait_one(::llcpp::fuchsia::device::DEVICE_SIGNAL_WRITABLE, zx::time{},
                                nullptr) == ZX_OK) {
     auto result = client.Write(
-        fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestString), fbl::count_of(kTestString) - 1});
+        fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestString), std::size(kTestString) - 1});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_GT(result->actual, 0);
@@ -911,7 +911,7 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
   // Trying to write when full gets SHOULD_WAIT
   {
     auto result = client.Write(
-        fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestString), fbl::count_of(kTestString) - 1});
+        fidl::VectorView<uint8_t>{fidl::unowned_ptr(kTestString), std::size(kTestString) - 1});
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->s, ZX_ERR_SHOULD_WAIT);
   }
@@ -921,11 +921,11 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
   while (total_read < total_written) {
     ASSERT_OK(server_event.wait_one(::llcpp::fuchsia::device::DEVICE_SIGNAL_READABLE, zx::time{},
                                     nullptr));
-    auto result = server.Read(fbl::count_of(kTestString) - 1);
+    auto result = server.Read(std::size(kTestString) - 1);
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->data.count(),
-              fbl::min(fbl::count_of(kTestString) - 1, total_written - total_read));
+              fbl::min(std::size(kTestString) - 1, total_written - total_read));
     ASSERT_BYTES_EQ(result->data.data(), kTestString, result->data.count());
     total_read += result->data.count();
   }

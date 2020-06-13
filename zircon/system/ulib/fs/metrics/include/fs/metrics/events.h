@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_METRICS_EVENTS_H_
+#define FS_METRICS_EVENTS_H_
 
 #include <cstdint>
+#include <iterator>
 
 #include <fbl/algorithm.h>
 
@@ -58,15 +60,17 @@ constexpr Event kVnodeEvents[] = {
 };
 
 // Number of different metric types recorded at Vnode level.
-constexpr uint64_t kVnodeEventCount = fbl::count_of(kVnodeEvents);
+constexpr uint64_t kVnodeEventCount = std::size(kVnodeEvents);
 
 // Collection of FsManager events.
 constexpr Event kFsManagerEvents[] = {Event::kDataCorruption};
 
 // Number of different metric types recorded at Fs Manager level.
-constexpr uint64_t kFsManagerEventCount = fbl::count_of(kFsManagerEvents);
+constexpr uint64_t kFsManagerEventCount = std::size(kFsManagerEvents);
 
 // Total number of events in the registry.
 constexpr uint64_t kEventCount = kVnodeEventCount + kFsManagerEventCount;
 
 }  // namespace fs_metrics
+
+#endif  // FS_METRICS_EVENTS_H_

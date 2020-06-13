@@ -14,6 +14,7 @@
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
+#include <iterator>
 #include <memory>
 
 #include <fbl/algorithm.h>
@@ -40,7 +41,7 @@ bool TestPersistSimple(void) {
   const char* const paths[] = {
       "::abc", "::def/", "::def/def_subdir/", "::def/def_subdir/def_subfile",
       "::ghi", "::jkl",  "::mnopqrstuvxyz"};
-  for (size_t i = 0; i < fbl::count_of(paths); i++) {
+  for (size_t i = 0; i < std::size(paths); i++) {
     if (is_directory(paths[i])) {
       ASSERT_EQ(mkdir(paths[i], 0644), 0);
     } else {
@@ -52,7 +53,7 @@ bool TestPersistSimple(void) {
   ASSERT_TRUE(check_remount(), "Could not remount filesystem");
 
   // The files should still exist when we remount
-  for (ssize_t i = fbl::count_of(paths) - 1; i >= 0; i--) {
+  for (ssize_t i = std::size(paths) - 1; i >= 0; i--) {
     if (is_directory(paths[i])) {
       ASSERT_EQ(rmdir(paths[i]), 0);
     } else {
@@ -63,7 +64,7 @@ bool TestPersistSimple(void) {
   ASSERT_TRUE(check_remount(), "Could not remount filesystem");
 
   // But they should stay deleted!
-  for (ssize_t i = fbl::count_of(paths) - 1; i >= 0; i--) {
+  for (ssize_t i = std::size(paths) - 1; i >= 0; i--) {
     if (is_directory(paths[i])) {
       ASSERT_EQ(rmdir(paths[i]), -1);
     } else {
@@ -103,11 +104,11 @@ bool TestPersistWithData(void) {
       "::def",
       "::and-another-file-filled-with-data",
   };
-  std::unique_ptr<uint8_t[]> buffers[fbl::count_of(files)];
+  std::unique_ptr<uint8_t[]> buffers[std::size(files)];
   unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
   unittest_printf("Persistent data test using seed: %u\n", seed);
   fbl::AllocChecker ac;
-  for (size_t i = 0; i < fbl::count_of(files); i++) {
+  for (size_t i = 0; i < std::size(files); i++) {
     buffers[i].reset(new (&ac) uint8_t[BufferSize]);
     ASSERT_TRUE(ac.check());
 
@@ -123,7 +124,7 @@ bool TestPersistWithData(void) {
   ASSERT_TRUE(check_remount(), "Could not remount filesystem");
 
   // Read files
-  for (size_t i = 0; i < fbl::count_of(files); i++) {
+  for (size_t i = 0; i < std::size(files); i++) {
     std::unique_ptr<uint8_t[]> rbuf(new (&ac) uint8_t[BufferSize]);
     ASSERT_TRUE(ac.check());
     fbl::unique_fd fd(open(files[i], O_RDONLY, 0644));
@@ -143,7 +144,7 @@ bool TestPersistWithData(void) {
   ASSERT_TRUE(check_remount(), "Could not remount filesystem");
 
   // Delete all files
-  for (size_t i = 0; i < fbl::count_of(files); i++) {
+  for (size_t i = 0; i < std::size(files); i++) {
     ASSERT_EQ(unlink(files[i]), 0);
   }
 

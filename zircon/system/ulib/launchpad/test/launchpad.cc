@@ -19,6 +19,8 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
+#include <iterator>
+
 #include <elfload/elfload.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
@@ -93,7 +95,7 @@ void RunOneArgumentSizeTest(size_t size) {
   memset(&big[2], 'x', size);
   big[2 + size] = '\0';
   const char* const argv[] = {"/boot/bin/sh", "-c", big};
-  EXPECT_OK(launchpad_set_args(lp, fbl::count_of(argv), argv));
+  EXPECT_OK(launchpad_set_args(lp, std::size(argv), argv));
   free(big);
 
   EXPECT_OK(launchpad_load_from_file(lp, argv[0]));

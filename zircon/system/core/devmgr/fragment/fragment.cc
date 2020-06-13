@@ -10,6 +10,7 @@
 #include <zircon/errors.h>
 
 #include <atomic>
+#include <iterator>
 #include <memory>
 
 #include <ddk/debug.h>
@@ -851,7 +852,7 @@ zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
   uint32_t req_handle_count;
 
   auto status = zx_channel_read(raw_channel, 0, &req_buf, req_handles_raw, sizeof(req_buf),
-                                fbl::count_of(req_handles_raw), &actual, &req_handle_count);
+                                std::size(req_handles_raw), &actual, &req_handle_count);
   if (status != ZX_OK) {
     zxlogf(ERROR, "platform_dev_rxrpc: zx_channel_read failed %d", status);
     return status;

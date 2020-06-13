@@ -5,6 +5,7 @@
 #ifndef FBL_TESTS_INTRUSIVE_CONTAINERS_SEQUENCE_CONTAINER_TEST_ENVIRONMENT_H_
 #define FBL_TESTS_INTRUSIVE_CONTAINERS_SEQUENCE_CONTAINER_TEST_ENVIRONMENT_H_
 
+#include <iterator>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -597,7 +598,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
     // Splice into end of empty target list.
     target.splice(target.end(), container());
     static const size_t expected_1[] = {0, 1};
-    ASSERT_NO_FATAL_FAILURES(BidirectionalEquals(target, expected_1, fbl::count_of(expected_1)));
+    ASSERT_NO_FATAL_FAILURES(BidirectionalEquals(target, expected_1, std::size(expected_1)));
     EXPECT_EQ(0u, Size(container()));
 
     // Populate the source list again.
@@ -607,7 +608,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
     // Splice into end of non-empty target list.
     target.splice(target.end(), container());
     static const size_t expected_2[] = {0, 1, 2, 3};
-    ASSERT_NO_FATAL_FAILURES(BidirectionalEquals(target, expected_2, fbl::count_of(expected_2)));
+    ASSERT_NO_FATAL_FAILURES(BidirectionalEquals(target, expected_2, std::size(expected_2)));
     EXPECT_EQ(0u, Size(container()));
 
     // Populate the source list again.
@@ -617,7 +618,7 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
     // Splice into start of non-empty target list.
     target.splice(target.begin(), container());
     static const size_t expected_3[] = {4, 5, 0, 1, 2, 3};
-    ASSERT_NO_FATAL_FAILURES(BidirectionalEquals(target, expected_3, fbl::count_of(expected_3)));
+    ASSERT_NO_FATAL_FAILURES(BidirectionalEquals(target, expected_3, std::size(expected_3)));
     EXPECT_EQ(0u, Size(container()));
 
     // Populate the source list again.
@@ -627,12 +628,12 @@ class SequenceContainerTestEnvironment : public TestEnvironment<TestEnvTraits> {
     // Splice into second element of non-empty target list.
     target.splice(++target.begin(), container());
     static const size_t expected_4[] = {4, 6, 7, 5, 0, 1, 2, 3};
-    ASSERT_NO_FATAL_FAILURES(BidirectionalEquals(target, expected_4, fbl::count_of(expected_4)));
+    ASSERT_NO_FATAL_FAILURES(BidirectionalEquals(target, expected_4, std::size(expected_4)));
     EXPECT_EQ(0u, Size(container()));
 
     // Splice empty source into end of non-empty target list.
     target.splice(target.end(), container());
-    ASSERT_NO_FATAL_FAILURES(BidirectionalEquals(target, expected_4, fbl::count_of(expected_4)));
+    ASSERT_NO_FATAL_FAILURES(BidirectionalEquals(target, expected_4, std::size(expected_4)));
     EXPECT_EQ(0u, Size(container()));
 
     // No objects should have been deleted yet.

@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+#include <iterator>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -69,7 +70,7 @@ TEST(RegionAllocCppApiTestCase, RegionPools) {
   EXPECT_NULL(pool.get());
 
   // Add some regions to our allocator.
-  for (size_t i = 0; i < fbl::count_of(GOOD_REGIONS); ++i) {
+  for (size_t i = 0; i < std::size(GOOD_REGIONS); ++i) {
     EXPECT_OK(alloc.AddRegion(GOOD_REGIONS[i]));
   }
 
@@ -94,7 +95,7 @@ TEST(RegionAllocCppApiTestCase, RegionPools) {
 
   // Attempt (and fail) to add some bad regions (regions which overlap,
   // regions which wrap the address space)
-  for (size_t i = 0; i < fbl::count_of(BAD_REGIONS); ++i) {
+  for (size_t i = 0; i < std::size(BAD_REGIONS); ++i) {
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, alloc.AddRegion(BAD_REGIONS[i]));
   }
 
@@ -138,15 +139,15 @@ void AllocBySizeHelper(TestFlavor flavor) {
                             : nullptr);
 
   // Add our test regions.
-  for (size_t i = 0; i < fbl::count_of(ALLOC_BY_SIZE_REGIONS); ++i) {
+  for (size_t i = 0; i < std::size(ALLOC_BY_SIZE_REGIONS); ++i) {
     ASSERT_OK(alloc.AddRegion(ALLOC_BY_SIZE_REGIONS[i]));
   }
 
   // Run the alloc by size tests.  Hold onto the regions it allocates so they
   // don't automatically get returned to the pool.
-  RegionAllocator::Region::UPtr regions[fbl::count_of(ALLOC_BY_SIZE_TESTS)];
+  RegionAllocator::Region::UPtr regions[std::size(ALLOC_BY_SIZE_TESTS)];
 
-  for (size_t i = 0; i < fbl::count_of(ALLOC_BY_SIZE_TESTS); ++i) {
+  for (size_t i = 0; i < std::size(ALLOC_BY_SIZE_TESTS); ++i) {
     const alloc_by_size_alloc_test_t* TEST = ALLOC_BY_SIZE_TESTS + i;
     zx_status_t res = alloc.GetRegion(TEST->size, TEST->align, regions[i]);
 
@@ -166,7 +167,7 @@ void AllocBySizeHelper(TestFlavor flavor) {
     // the allocation should have come from the test region we
     // expect and be aligned in the way we asked.
     if ((res == ZX_OK) && (TEST->res == ZX_OK)) {
-      ASSERT_LT(TEST->region, fbl::count_of(ALLOC_BY_SIZE_TESTS));
+      ASSERT_LT(TEST->region, std::size(ALLOC_BY_SIZE_TESTS));
       EXPECT_TRUE(region_contains_region(ALLOC_BY_SIZE_REGIONS + TEST->region, regions[i].get()));
       EXPECT_EQ(0u, regions[i]->base & (TEST->align - 1));
     }
@@ -193,15 +194,15 @@ void AllocSpecificHelper(TestFlavor flavor) {
                             : nullptr);
 
   // Add our test regions.
-  for (size_t i = 0; i < fbl::count_of(ALLOC_SPECIFIC_REGIONS); ++i) {
+  for (size_t i = 0; i < std::size(ALLOC_SPECIFIC_REGIONS); ++i) {
     ASSERT_OK(alloc.AddRegion(ALLOC_SPECIFIC_REGIONS[i]));
   }
 
   // Run the alloc specific tests.  Hold onto the regions it allocates so they
   // don't automatically get returned to the pool.
-  RegionAllocator::Region::UPtr regions[fbl::count_of(ALLOC_SPECIFIC_TESTS)];
+  RegionAllocator::Region::UPtr regions[std::size(ALLOC_SPECIFIC_TESTS)];
 
-  for (size_t i = 0; i < fbl::count_of(ALLOC_SPECIFIC_TESTS); ++i) {
+  for (size_t i = 0; i < std::size(ALLOC_SPECIFIC_TESTS); ++i) {
     const alloc_specific_alloc_test_t* TEST = ALLOC_SPECIFIC_TESTS + i;
     zx_status_t res = alloc.GetRegion(TEST->req, regions[i]);
 
@@ -240,7 +241,7 @@ void AddOverlapHelper(TestFlavor flavor) {
                             : nullptr);
 
   // Add each of the regions specified by the test and check the expected results.
-  for (size_t i = 0; i < fbl::count_of(ADD_OVERLAP_TESTS); ++i) {
+  for (size_t i = 0; i < std::size(ADD_OVERLAP_TESTS); ++i) {
     const alloc_add_overlap_test_t* TEST = ADD_OVERLAP_TESTS + i;
 
     zx_status_t res = alloc.AddRegion(TEST->reg, TEST->ovl);
@@ -266,7 +267,7 @@ void SubtractHelper(TestFlavor flavor) {
                             : nullptr);
 
   // Run the test sequence, adding and subtracting regions and verifying the results.
-  for (size_t i = 0; i < fbl::count_of(SUBTRACT_TESTS); ++i) {
+  for (size_t i = 0; i < std::size(SUBTRACT_TESTS); ++i) {
     const alloc_subtract_test_t* TEST = SUBTRACT_TESTS + i;
 
     zx_status_t res;
@@ -302,7 +303,7 @@ void AllocatedWalkHelper(TestFlavor flavor) {
       {.base = 0x60000000, .size = 1 << 20}, {.base = 0x70000000, .size = 1 << 20},
       {.base = 0x80000000, .size = 1 << 20}, {.base = 0x90000000, .size = 1 << 20},
   };
-  constexpr size_t r_cnt = fbl::count_of(test_regions);
+  constexpr size_t r_cnt = std::size(test_regions);
 
   EXPECT_OK(alloc.AddRegion({.base = 0, .size = UINT64_MAX}));
 

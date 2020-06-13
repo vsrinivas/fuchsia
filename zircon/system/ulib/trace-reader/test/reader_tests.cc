@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <trace-reader/reader.h>
+#include "reader_tests.h"
 
 #include <stdint.h>
 
-#include <fbl/algorithm.h>
-#include <fbl/vector.h>
-#include <zxtest/zxtest.h>
-
+#include <iterator>
 #include <utility>
 
-#include "reader_tests.h"
+#include <fbl/algorithm.h>
+#include <fbl/vector.h>
+#include <trace-reader/reader.h>
+#include <zxtest/zxtest.h>
 
 namespace trace {
 namespace {
@@ -70,8 +70,8 @@ TEST(TraceReader, NonEmptyChunk) {
   };
   memcpy(kData + 6, "Hello World!----", 16);
 
-  trace::Chunk chunk(kData, fbl::count_of(kData));
-  EXPECT_EQ(fbl::count_of(kData), chunk.remaining_words());
+  trace::Chunk chunk(kData, std::size(kData));
+  EXPECT_EQ(std::size(kData), chunk.remaining_words());
 
   EXPECT_TRUE(chunk.ReadUint64(&value));
   EXPECT_EQ(0, value);
