@@ -15,15 +15,16 @@ use futures::future::{self, FutureExt as _};
 use futures::stream::{self, StreamExt as _};
 use net_declare::fidl_ip_v4;
 use net_types::ip as net_types_ip;
-use netstack_testing_macros::variants_test;
 
 use crate::environments::*;
 use crate::*;
 
-/// Test that the network manager discovers a newly added device and it adds the device
+/// Test that NetCfg discovers a newly added device and it adds the device
 /// to the Netstack.
-#[variants_test]
-async fn test_oir<M: Manager>(name: &str) -> Result {
+// TODO(54025): Enable this test for NetworkManager.
+#[fasync::run_singlethreaded(test)]
+async fn test_oir() -> Result {
+    let name = "test_oir";
     let sandbox = TestSandbox::new().context("create sandbox")?;
     // Create an environment with the LookupAdmin service as NetCfg tries to configure
     // it. NetCfg will fail if it can't send the LookupAdmin a request.
@@ -33,8 +34,9 @@ async fn test_oir<M: Manager>(name: &str) -> Result {
 
     // Start the network manager.
     let launcher = environment.get_launcher().context("get launcher")?;
-    let mut netmgr = fuchsia_component::client::launch(&launcher, M::PKG_URL.to_string(), None)
-        .context("launch the network manager")?;
+    let mut netmgr =
+        fuchsia_component::client::launch(&launcher, NetCfg::PKG_URL.to_string(), None)
+            .context("launch the network manager")?;
 
     // Add a device to the environment.
     let endpoint = sandbox.create_endpoint::<Ethernet, _>(name).await.context("create endpoint")?;
@@ -50,7 +52,8 @@ async fn test_oir<M: Manager>(name: &str) -> Result {
         .try_filter_map(|netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
             future::ok(interfaces.into_iter().find_map(
                 |netstack::NetInterface { id, features, .. }| {
-                    if features & eth::INFO_FEATURE_LOOPBACK != 0 {
+                    // Ignore the loopback device.
+                    if features & eth::INFO_FEATURE_LOOPBACK == 0 {
                         Some(id)
                     } else {
                         None
