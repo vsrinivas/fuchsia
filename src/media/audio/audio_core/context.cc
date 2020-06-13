@@ -46,7 +46,7 @@ class ContextImpl : public Context {
             fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)),
         usage_gain_reporter_(this),
         effects_controller_(*this),
-        audio_tuner_() {
+        audio_tuner_(*this) {
     FX_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
 
     zx_status_t res = device_manager_.Init();

@@ -10,15 +10,20 @@
 
 #include <unordered_map>
 
+#include "src/media/audio/audio_core/context.h"
+#include "src/media/audio/audio_core/device_config.h"
+
 namespace media::audio {
 
 class AudioTunerImpl : public fuchsia::media::tuning::AudioTuner {
  public:
+  explicit AudioTunerImpl(Context& context) : context_(context) {}
+
   fidl::InterfaceRequestHandler<fuchsia::media::tuning::AudioTuner> GetFidlRequestHandler();
 
   // |fuchsia::media::tuning::AudioTuner|
   void GetAvailableAudioEffects(GetAvailableAudioEffectsCallback callback) final;
-  void GetAudioDeviceProfile(std::string device_id, GetAudioDeviceProfileCallback callback) final{};
+  void GetAudioDeviceProfile(std::string device_id, GetAudioDeviceProfileCallback callback) final;
   void GetDefaultAudioDeviceProfile(std::string device_id,
                                     GetDefaultAudioDeviceProfileCallback callback) final{};
   void SetAudioDeviceProfile(std::string device_id,
@@ -30,8 +35,9 @@ class AudioTunerImpl : public fuchsia::media::tuning::AudioTuner {
                             SetAudioEffectConfigCallback callback) final{};
 
  private:
-  fidl::BindingSet<fuchsia::media::tuning::AudioTuner, AudioTunerImpl*> bindings_;
+  const Context& context_;
   std::vector<fuchsia::media::tuning::AudioEffectType> available_effects_;
+  fidl::BindingSet<fuchsia::media::tuning::AudioTuner, AudioTunerImpl*> bindings_;
 };
 
 }  // namespace media::audio
