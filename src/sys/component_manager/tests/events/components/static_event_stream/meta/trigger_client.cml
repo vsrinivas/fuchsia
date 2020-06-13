@@ -1,0 +1,10 @@
+{
+    program: {
+        binary: "bin/static_event_stream_trigger_client",
+    },
+    use: [
+        { runner: "elf" },
+        { protocol: "/svc/fidl.examples.routing.echo.Echo" },
+        { protocol: "/svc/fidl.test.components.Trigger" },
+    ],
+}

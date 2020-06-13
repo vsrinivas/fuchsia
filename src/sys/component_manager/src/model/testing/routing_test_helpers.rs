@@ -404,6 +404,17 @@ impl RoutingTest {
         }
     }
 
+    pub async fn bind_and_get_namespace(&self, moniker: AbsoluteMoniker) -> Arc<ManagedNamespace> {
+        let component_name = self.bind_instance(&moniker).await.unwrap();
+        let component_resolved_url = Self::resolved_url(&component_name);
+        let namespace = self
+            .mock_runner
+            .get_namespace(&component_resolved_url)
+            .expect("could not find namespace");
+        Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
+        namespace
+    }
+
     /// Checks using a capability from a component's exposed directory.
     pub async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse) {
         match check {
@@ -641,7 +652,7 @@ impl RoutingTest {
 pub mod capability_util {
     use {
         super::*, crate::model::events::source_factory::EVENT_SOURCE_SYNC_SERVICE_PATH,
-        cm_rust::NativeIntoFidl, fidl::endpoints::ServiceMarker,
+        anyhow::format_err, cm_rust::NativeIntoFidl, fidl::endpoints::ServiceMarker,
         fidl_fuchsia_sys2::BlockingEventSourceMarker, std::path::PathBuf,
     };
 
@@ -779,7 +790,7 @@ pub mod capability_util {
         assert_eq!("hippos can be stored here".to_string(), res.expect("failed to read file"));
     }
 
-    async fn connect_to_svc_in_namespace<T: ServiceMarker>(
+    pub async fn connect_to_svc_in_namespace<T: ServiceMarker>(
         namespace: &ManagedNamespace,
         path: &CapabilityPath,
     ) -> T::Proxy {
@@ -805,28 +816,37 @@ pub mod capability_util {
         expected_res: ExpectedResult,
         events: Vec<CapabilityName>,
     ) {
+        let res = subscribe_to_events(namespace, &EVENT_SOURCE_SYNC_SERVICE_PATH, events).await;
+        match (res, expected_res) {
+            (Err(e), ExpectedResult::Ok) => {
+                panic!("unexpected failure {}", e);
+            }
+            (Ok(_), ExpectedResult::Err) | (Ok(_), ExpectedResult::ErrWithNoEpitaph) => {
+                panic!("unexpected success");
+            }
+            _ => {}
+        }
+    }
+
+    pub async fn subscribe_to_events(
+        namespace: &ManagedNamespace,
+        event_source_path: &CapabilityPath,
+        events: Vec<CapabilityName>,
+    ) -> Result<fsys::EventStreamRequestStream, anyhow::Error> {
         let event_source_proxy = connect_to_svc_in_namespace::<BlockingEventSourceMarker>(
             namespace,
-            &*EVENT_SOURCE_SYNC_SERVICE_PATH,
+            &*event_source_path,
         )
         .await;
         let event_names: Vec<String> = events.into_iter().map(|event| event.to_string()).collect();
-        let (client_end, _stream) =
-            fidl::endpoints::create_request_stream::<fsys::EventStreamMarker>()
-                .expect("create client");
-        let res = event_source_proxy
+        let (client_end, stream) =
+            fidl::endpoints::create_request_stream::<fsys::EventStreamMarker>()?;
+        event_source_proxy
             .subscribe(&mut event_names.iter().map(|e| e.as_ref()), client_end)
-            .await
-            .expect("failed to use service");
-        event_source_proxy.start_component_tree().await.expect("failed to start component tree");
-        match expected_res {
-            ExpectedResult::Ok => {
-                res.expect("unexpected failure");
-            }
-            ExpectedResult::Err | ExpectedResult::ErrWithNoEpitaph => {
-                res.expect_err("unexpected success");
-            }
-        }
+            .await?
+            .map_err(|error| format_err!("Unable to subscribe to event stream: {:?}", error))?;
+        event_source_proxy.start_component_tree().await?;
+        Ok(stream)
     }
 
     /// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service

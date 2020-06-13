@@ -359,3 +359,29 @@ async fn synthesis_test() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn static_event_stream_capability_requested_test() -> Result<(), Error> {
+    let test = BlackBoxTest::default(
+        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/trigger_realm.cm",
+    )
+    .await?;
+
+    let event_source = test.connect_to_event_source().await?;
+
+    let (capability, mut echo_rx) = EchoCapability::new();
+    let injector = event_source.install_injector(capability).await?;
+
+    event_source.start_component_tree().await?;
+
+    // Wait to receive the start trigger that echo_reporter recieved. This
+    // indicates to `echo_reporter` that it should start collecting `CapabilityRouted`
+    // events.
+    let start_trigger_echo = echo_rx.next().await.unwrap();
+    assert_eq!(start_trigger_echo.message, "Start trigger");
+    start_trigger_echo.resume();
+
+    injector.abort();
+
+    Ok(())
+}

@@ -9,23 +9,28 @@ use {
         framework::REALM_SERVICE,
         model::{
             error::ModelError,
-            events::source_factory::EVENT_SOURCE_SYNC_SERVICE_PATH,
+            events::source_factory::{EVENT_SOURCE_SERVICE_PATH, EVENT_SOURCE_SYNC_SERVICE_PATH},
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             moniker::AbsoluteMoniker,
+            resolver::ResolverError,
             rights,
             routing::{self, RoutingError},
-            testing::{routing_test_helpers::*, test_helpers::*},
+            testing::{
+                routing_test_helpers::capability_util::connect_to_svc_in_namespace,
+                routing_test_helpers::*, test_helpers::*,
+            },
         },
     },
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::*,
     fidl::endpoints::ServerEnd,
+    fidl_fidl_examples_echo::{self as echo},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon as zx,
-    futures::{join, lock::Mutex, TryStreamExt},
+    futures::{join, lock::Mutex, StreamExt, TryStreamExt},
     log::*,
     maplit::hashmap,
     matches::assert_matches,
@@ -268,6 +273,100 @@ async fn use_from_parent() {
     )
     .await;
     test.check_open_file(vec!["b:0"].into(), "/svc/device".try_into().unwrap()).await
+}
+
+///   a
+///    \
+///     b
+///
+/// a: offers service /svc/foo from self as /svc/bar
+/// b: uses service /svc/bar as /svc/hippo
+///
+/// This test verifies that the parent, if subscribed to the CapabilityRequested event will receive
+/// if when the child connects to /svc/hippo.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn capability_requested_event_at_parent() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Self_,
+                    source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                    target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Realm,
+                    source_path: EVENT_SOURCE_SERVICE_PATH.clone(),
+                    target_path: EVENT_SOURCE_SERVICE_PATH.clone(),
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
+                    source_name: "capability_requested".into(),
+                    target_name: "capability_requested".into(),
+                    filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/svc/foo".to_string())}),
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Realm,
+                    source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+
+    let namespace_root = test.bind_and_get_namespace(AbsoluteMoniker::root()).await;
+    let mut event_stream = capability_util::subscribe_to_events(
+        &namespace_root,
+        &EVENT_SOURCE_SERVICE_PATH,
+        vec!["capability_requested".into()],
+    )
+    .await
+    .unwrap();
+
+    let namespace_b = test.bind_and_get_namespace(vec!["b:0"].into()).await;
+    let _echo_proxy = connect_to_svc_in_namespace::<echo::EchoMarker>(
+        &namespace_b,
+        &"/svc/hippo".try_into().unwrap(),
+    )
+    .await;
+    let event = match event_stream.next().await {
+        Some(Ok(fsys::EventStreamRequest::OnEvent { event, .. })) => event,
+        _ => panic!("Event not found"),
+    };
+
+    // 'a' is the target and 'a' is receiving the event so the relative moniker
+    // is '.'.
+    assert_matches!(&event,
+        fsys::Event {
+            descriptor: Some(fsys::ComponentDescriptor {
+            moniker: Some(moniker), .. }), ..
+        } if *moniker == ".".to_string() );
+
+    assert_matches!(&event,
+        fsys::Event {
+            descriptor: Some(fsys::ComponentDescriptor {
+            component_url: Some(component_url), .. }), ..
+        } if *component_url == "test:///a".to_string() );
+
+    assert_matches!(&event,
+        fsys::Event {
+            event_result: Some(
+                fsys::EventResult::Payload(
+                        fsys::EventPayload::CapabilityRequested(
+                            fsys::CapabilityRequestedPayload { path: Some(path), .. }))), ..}
+
+    if *path == "/svc/foo".to_string()
+    );
 }
 
 ///   a
@@ -2615,7 +2714,7 @@ async fn invalid_offer_from_component_manager() {
 ///    \
 ///     b
 ///
-/// b: uses framework event "started"
+/// b: uses framework events "started", and "capability_requested"
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_event_from_framework() {
     let components = vec![
@@ -2642,6 +2741,12 @@ async fn use_event_from_framework() {
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
                     source: UseSource::Framework,
+                    source_name: "capability_requested".into(),
+                    target_name: "capability_requested".into(),
+                    filter: None,
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
                     source_name: "started".into(),
                     target_name: "started".into(),
                     filter: None,
@@ -2658,9 +2763,67 @@ async fn use_event_from_framework() {
     let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
-        CheckUse::Event { names: vec!["started".into()], expected_res: ExpectedResult::Ok },
+        CheckUse::Event {
+            names: vec!["capability_requested".into(), "started".into()],
+            expected_res: ExpectedResult::Ok,
+        },
     )
     .await;
+}
+
+///   a
+///    \
+///     b
+///
+/// a; attempts to offer event "capability_requested" to b.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn cannot_offer_capability_requested_event() {
+    let components = vec![(
+        "a",
+        ComponentDeclBuilder::new()
+            .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                source: OfferServiceSource::Realm,
+                source_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                target_path: EVENT_SOURCE_SYNC_SERVICE_PATH.clone(),
+                target: OfferTarget::Child("b".to_string()),
+                dependency_type: DependencyType::Strong,
+            }))
+            .offer(OfferDecl::Event(OfferEventDecl {
+                source: OfferEventSource::Framework,
+                source_name: "capability_requested".into(),
+                target_name: "capability_requested_on_a".into(),
+                target: OfferTarget::Child("b".to_string()),
+                filter: None,
+            }))
+            .add_lazy_child("b")
+            .build(),
+    )];
+    let test = RoutingTest::new("a", components).await;
+    assert_matches!(
+        test.bind_instance(&vec!["a:0", "b:0"].into()).await,
+        Err(ModelError::ResolverError { err: ResolverError::ManifestInvalid { .. } })
+    );
+}
+
+/// a; attempts to use event "capability_requested" from realm and fails.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn cannot_use_capability_requested_event_from_realm() {
+    let components = vec![(
+        "a",
+        ComponentDeclBuilder::new()
+            .use_(UseDecl::Event(UseEventDecl {
+                source: UseSource::Realm,
+                source_name: "capability_requested".into(),
+                target_name: "capability_requested_from_parent".into(),
+                filter: None,
+            }))
+            .build(),
+    )];
+    let test = RoutingTest::new("a", components).await;
+    assert_matches!(
+        test.bind_instance(&vec!["a:0"].into()).await,
+        Err(ModelError::ResolverError { err: ResolverError::ManifestInvalid { .. } })
+    );
 }
 
 ///   a

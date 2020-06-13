@@ -71,7 +71,7 @@ pub async fn serve_event_source_sync(
 }
 
 /// Serves EventStream FIDL requests received over the provided stream.
-async fn serve_event_stream(
+pub async fn serve_event_stream(
     mut event_stream: EventStream,
     client_end: ClientEnd<fsys::EventStreamMarker>,
 ) -> Result<(), fidl::Error> {
@@ -80,7 +80,7 @@ async fn serve_event_stream(
         trace::duration!("component_manager", "events:fidl_get_next");
         // Create the basic Event FIDL object.
         // This will begin serving the Handler protocol asynchronously.
-        let event_fidl_object = create_event_fidl_object(event)?;
+        let event_fidl_object = create_event_fidl_object(event).await?;
 
         if let Err(e) = listener.on_event(event_fidl_object) {
             // It's not an error for the client to drop the listener.
@@ -93,16 +93,17 @@ async fn serve_event_stream(
     Ok(())
 }
 
-fn maybe_create_event_result(
+async fn maybe_create_event_result(
     scope: &AbsoluteMoniker,
     event_result: &EventResult,
 ) -> Result<Option<fsys::EventResult>, fidl::Error> {
     match event_result {
         Ok(EventPayload::CapabilityReady { path, node, .. }) => {
-            Ok(Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(
-                create_capability_ready_payload(path.to_string(), node)?,
-            ))))
+            Ok(Some(create_capability_ready_payload(path.to_string(), node)?))
         }
+        Ok(EventPayload::CapabilityRequested { path, capability }) => Ok(Some(
+            create_capability_requested_payload(path.to_string(), capability.clone()).await,
+        )),
         Ok(EventPayload::CapabilityRouted { source, capability_provider, .. }) => {
             Ok(maybe_create_capability_routed_payload(scope, source, capability_provider.clone()))
         }
@@ -117,6 +118,16 @@ fn maybe_create_event_result(
         }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
             error_payload: Some(fsys::EventErrorPayload::CapabilityReady(
                 fsys::CapabilityReadyError { path: Some(path.to_string()) },
+            )),
+            description: Some(format!("{}", source)),
+            ..fsys::EventError::empty()
+        }))),
+        Err(EventError {
+            source,
+            event_error_payload: EventErrorPayload::CapabilityRequested { path },
+        }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
+            error_payload: Some(fsys::EventErrorPayload::CapabilityRequested(
+                fsys::CapabilityRequestedError { path: Some(path.to_string()) },
             )),
             description: Some(format!("{}", source)),
             ..fsys::EventError::empty()
@@ -142,7 +153,7 @@ fn maybe_create_event_result(
 fn create_capability_ready_payload(
     path: String,
     node: &NodeProxy,
-) -> Result<fsys::CapabilityReadyPayload, fidl::Error> {
+) -> Result<fsys::EventResult, fidl::Error> {
     let node = {
         let (node_clone, server_end) = fidl::endpoints::create_proxy()?;
         node.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end)?;
@@ -154,7 +165,34 @@ fn create_capability_ready_payload(
         Some(node_client_end)
     };
 
-    Ok(fsys::CapabilityReadyPayload { path: Some(path), node })
+    let payload = fsys::CapabilityReadyPayload { path: Some(path), node };
+    Ok(fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(payload)))
+}
+
+async fn create_capability_requested_payload(
+    path: String,
+    capability: Arc<Mutex<Option<zx::Channel>>>,
+) -> fsys::EventResult {
+    let capability = capability.lock().await.take();
+    match capability {
+        Some(capability) => {
+            let payload =
+                fsys::CapabilityRequestedPayload { path: Some(path), capability: Some(capability) };
+            fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(payload))
+        }
+        None => {
+            // This can happen if a hook takes the capability prior to the events system.
+            let payload =
+                fsys::EventErrorPayload::CapabilityRequested(fsys::CapabilityRequestedError {
+                    path: Some(path),
+                });
+            fsys::EventResult::Error(fsys::EventError {
+                error_payload: Some(payload),
+                description: Some("Capability unavailable".to_string()),
+                ..fsys::EventError::empty()
+            })
+        }
+    }
 }
 
 fn maybe_create_capability_routed_payload(
@@ -194,7 +232,7 @@ fn maybe_create_capability_routed_payload(
 
 /// Creates the basic FIDL Event object containing the event type, target_realm
 /// and basic handler for resumption.
-fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Error> {
+async fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Error> {
     let event_type = Some(event.event.event_type().into());
     let timestamp = Some(event.event.timestamp.into_nanos());
     let target_relative_moniker =
@@ -203,7 +241,7 @@ fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Error> {
         moniker: Some(target_relative_moniker.to_string()),
         component_url: Some(event.event.component_url.clone()),
     });
-    let event_result = maybe_create_event_result(&event.scope_moniker, &event.event.result)?;
+    let event_result = maybe_create_event_result(&event.scope_moniker, &event.event.result).await?;
     let handler = maybe_serve_handler_async(event);
     Ok(fsys::Event { event_type, descriptor, handler, event_result, timestamp })
 }

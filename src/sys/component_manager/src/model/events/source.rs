@@ -36,7 +36,7 @@ pub struct EventSource {
     /// The component model, needed to route events.
     model: Weak<Model>,
 
-    /// A shared reference to the event registry used to subscribe and dispatche events.
+    /// A shared reference to the event registry used to subscribe and dispatch events.
     registry: Weak<EventRegistry>,
 
     /// Used for `BlockingEventSource.StartComponentTree`.
@@ -53,26 +53,22 @@ impl EventSource {
     pub async fn new(
         model: Weak<Model>,
         options: SubscriptionOptions,
-        registry: &Arc<EventRegistry>,
+        registry: Weak<EventRegistry>,
     ) -> Result<Self, ModelError> {
         // TODO(fxb/48245): this shouldn't be done for any EventSource. Only for tests.
         let resolve_instance_event_stream =
             Arc::new(Mutex::new(if options.sync_mode == SyncMode::Async {
                 None
             } else {
+                let registry = registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
                 Some(registry.subscribe(&options, vec![EventType::Resolved.into()]).await?)
             }));
-        Ok(Self {
-            registry: Arc::downgrade(&registry),
-            model,
-            options,
-            resolve_instance_event_stream,
-        })
+        Ok(Self { registry, model, options, resolve_instance_event_stream })
     }
 
     pub async fn new_for_debug(
         model: Weak<Model>,
-        registry: &Arc<EventRegistry>,
+        registry: Weak<EventRegistry>,
         sync_mode: SyncMode,
     ) -> Result<Self, ModelError> {
         Self::new(model, SubscriptionOptions::new(SubscriptionType::Debug, sync_mode), registry)

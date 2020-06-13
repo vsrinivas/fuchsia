@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::Error, clonable_error::ClonableError, cm_rust::CapabilityName, thiserror::Error};
+use {
+    crate::model::hooks::EventType, anyhow::Error, clonable_error::ClonableError,
+    cm_rust::CapabilityName, thiserror::Error,
+};
 
 #[derive(Debug, Error, Clone)]
 pub enum EventsError {
@@ -23,6 +26,9 @@ pub enum EventsError {
         #[source]
         err: ClonableError,
     },
+
+    #[error("Cannot transfer event: {}", event_type)]
+    CannotTransfer { event_type: EventType },
 }
 
 impl EventsError {
@@ -32,5 +38,9 @@ impl EventsError {
 
     pub fn synthesis_failed(err: impl Into<Error>) -> Self {
         Self::SynthesisFailed { err: err.into().into() }
+    }
+
+    pub fn cannot_transfer(event_type: EventType) -> Self {
+        Self::CannotTransfer { event_type }
     }
 }

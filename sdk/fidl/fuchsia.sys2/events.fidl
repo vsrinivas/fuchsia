@@ -23,40 +23,44 @@ enum EventType {
     /// A capability exposed to the framework by a component is available.
     CAPABILITY_READY = 1;
 
+    /// A capability provided by this component has been requested. The event
+    /// payload carries the request channel.
+    CAPABILITY_REQUESTED = 2;
+
     /// A capability is being requested by a component and its routing
     /// has also been determined.
     /// The event propagation system is used to supply the capability being requested.
-    CAPABILITY_ROUTED = 2;
+    CAPABILITY_ROUTED = 3;
 
     /// An instance was destroyed successfully. The instance is stopped and no longer
     /// exists in the parent's realm.
-    DESTROYED = 3;
+    DESTROYED = 4;
 
     /// A component instance was discovered. This is the first stage in the lifecycle
     /// of components. Dispatched for dynamic children when they're created, for static
     /// children when their parent is resolved, and for the root when the component manager
     /// starts.
-    DISCOVERED = 4;
+    DISCOVERED = 5;
 
     /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
     /// The instance still exists in the parent's realm but will soon be removed.
     /// TODO(fxb/39417): Ensure the instance is stopped before this event.
-    MARKED_FOR_DESTRUCTION = 5;
+    MARKED_FOR_DESTRUCTION = 6;
 
     /// An instance's declaration was resolved successfully for the first time.
-    RESOLVED = 6;
+    RESOLVED = 7;
 
     /// This instance has started, according to component manager. However, if this is an
     /// executable component, the runner has further work to do to launch the component.
-    STARTED = 7;
+    STARTED = 8;
 
     /// An instance was stopped successfully.
     /// This event must occur before Destroyed.
-    STOPPED = 8;
+    STOPPED = 9;
 
     /// If requested, this event is dispatched on subscription and indicates
     /// that the instance has already started and is still running.
-    RUNNING = 9;
+    RUNNING = 10;
 };
 
 /// Describes the source of a routed capability.
@@ -116,17 +120,28 @@ flexible union EventErrorPayload {
     /// Payload for CapabilityReady events
     1: CapabilityReadyError capability_ready;
 
+    /// Payload for CapabilityRequested events
+    2.: CapabilityRequestedError capability_requested;
+
     /// Payload for CapabilityRouted events
-    2: CapabilityRoutedError capability_routed;
+    3: CapabilityRoutedError capability_routed;
 
     /// Payload for Running events
-    3: RunningError running;
+    4: RunningError running;
 };
 
 /// Error payload for CapabilityReady events
 table CapabilityReadyError {
     /// The path of the capability.
     1: string:fuchsia.component.MAX_PATH_LENGTH path;
+};
+
+/// Error payload for CapabilityRequested events
+table CapabilityRequestedError {
+    /// Identifier of capability being requested.
+    /// For a path-based capability, this is the path.
+    /// For a runner capability, this is the name.
+    1: string:MAX_CAPABILITY_ID_LENGTH path;
 };
 
 /// Error payload for CapabilityRouted events
@@ -148,11 +163,14 @@ flexible union EventPayload {
     /// Payload for CapabilityReady events
     1: CapabilityReadyPayload capability_ready;
 
+    /// Payload for CapabilityRequested events
+    2: CapabilityRequestedPayload capability_requested;
+
     /// Payload for CapabilityRouted events
-    2: CapabilityRoutedPayload capability_routed;
+    3: CapabilityRoutedPayload capability_routed;
 
     /// Payload for Running events
-    3: RunningPayload running;
+    4: RunningPayload running;
 };
 
 /// Payload for CapabilityReady events
@@ -162,6 +180,16 @@ table CapabilityReadyPayload {
 
     /// Channel to the node exposed by the event source at `path`.
     2: fuchsia.io.Node node;
+};
+
+/// Payload for CapabilityRequested events
+table CapabilityRequestedPayload {
+    /// The path of the capability.
+    1: string:fuchsia.component.MAX_PATH_LENGTH path;
+
+    /// A handle to the server end of the channel to host
+    /// capability.
+    2: handle<channel> capability;
 };
 
 /// Payload for CapabilityRouted events
@@ -242,6 +270,7 @@ protocol BlockingEventSource {
 
 /// Listener for events on the component hierarchy. The server won't wait for the client
 /// to handle the request before sending more events.
+[Discoverable]
 protocol EventStream {
     OnEvent(Event event);
 };

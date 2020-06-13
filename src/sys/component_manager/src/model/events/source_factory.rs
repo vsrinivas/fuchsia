@@ -11,7 +11,6 @@ use {
                 event::SyncMode,
                 registry::{EventRegistry, SubscriptionOptions, SubscriptionType},
                 source::EventSource,
-                synthesizer::EventSynthesisProvider,
             },
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
@@ -37,84 +36,41 @@ lazy_static! {
 }
 
 /// Allows to create `EventSource`s and tracks all the created ones.
-pub struct EventSourceFactoryBuilder {
-    /// The event registry. It subscribes to all events happening in the system and
-    /// routes them to subscribers.
-    event_registry: EventRegistry,
-
+pub struct EventSourceFactory {
     /// The component model, needed to route events.
     model: Weak<Model>,
-}
-
-impl EventSourceFactoryBuilder {
-    /// Creates a new `EventSourceFactory` builder.
-    pub fn new(model: Weak<Model>) -> Self {
-        Self { event_registry: EventRegistry::new(model.clone()), model }
-    }
-
-    /// Register a provider for an synthesized event.
-    pub fn with_synthesis_provider(
-        mut self,
-        event: EventType,
-        provider: Arc<dyn EventSynthesisProvider>,
-    ) -> Self {
-        self.event_registry.register_synthesis_provider(event, provider);
-        self
-    }
-
-    /// Creates a new event source factory.
-    pub fn build(self) -> EventSourceFactory {
-        EventSourceFactory {
-            event_source_registry: Mutex::new(HashMap::new()),
-            event_registry: Arc::new(self.event_registry),
-            model: self.model,
-        }
-    }
-}
-
-/// Allows to create `EventSource`s and tracks all the created ones.
-pub struct EventSourceFactory {
-    /// Tracks the event source used by each component ideantified with the given `moniker`.
-    event_source_registry: Mutex<HashMap<AbsoluteMoniker, EventSource>>,
 
     /// The event registry. It subscribes to all events happening in the system and
     /// routes them to subscribers.
     // TODO(fxb/48512): instead of using a global registry integrate more with the hooks model.
-    event_registry: Arc<EventRegistry>,
+    event_registry: Weak<EventRegistry>,
 
-    /// The component model, needed to route events.
-    model: Weak<Model>,
+    /// Tracks the event source used by each component identified with the given `moniker`.
+    event_source_registry: Mutex<HashMap<AbsoluteMoniker, EventSource>>,
 }
 
 impl EventSourceFactory {
-    /// Creates a new event source factory.
-    pub fn new(model: Weak<Model>) -> Self {
-        Self {
-            event_source_registry: Mutex::new(HashMap::new()),
-            event_registry: Arc::new(EventRegistry::new(model.clone())),
-            model,
-        }
+    pub fn new(model: Weak<Model>, event_registry: Weak<EventRegistry>) -> Self {
+        Self { model, event_registry, event_source_registry: Mutex::new(HashMap::new()) }
     }
 
     /// Creates the subscription to the required events.
     /// `CapabilityReady` used to track events and associate them with the component that needs them
     /// as well as the scoped that will be allowed. Also the EventSource protocol capability.
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
-        let mut hooks = self.event_registry.hooks();
-        hooks.append(&mut vec![
+        vec![
             // This hook provides the EventSource capability to components in the tree
             HooksRegistration::new(
                 "EventSourceFactory",
                 vec![EventType::CapabilityRouted, EventType::Destroyed, EventType::Resolved],
                 Arc::downgrade(self) as Weak<dyn Hook>,
             ),
-        ]);
-        hooks
+        ]
     }
 
     /// Creates a debug event source.
     pub async fn create_for_debug(&self, sync_mode: SyncMode) -> Result<EventSource, ModelError> {
-        EventSource::new_for_debug(self.model.clone(), &self.event_registry, sync_mode).await
+        EventSource::new_for_debug(self.model.clone(), self.event_registry.clone(), sync_mode).await
     }
 
     /// Creates a `EventSource` for the given `target_moniker`.
@@ -126,7 +82,7 @@ impl EventSourceFactory {
         EventSource::new(
             self.model.clone(),
             SubscriptionOptions::new(SubscriptionType::Normal(target_moniker), sync_mode),
-            &self.event_registry,
+            self.event_registry.clone(),
         )
         .await
     }
@@ -194,11 +150,6 @@ impl EventSourceFactory {
     async fn has_event_source(&self, abs_moniker: &AbsoluteMoniker) -> bool {
         let event_source_registry = self.event_source_registry.lock().await;
         event_source_registry.contains_key(abs_moniker)
-    }
-
-    #[cfg(test)]
-    pub fn registry(&self) -> Arc<EventRegistry> {
-        self.event_registry.clone()
     }
 }
 
@@ -311,7 +262,11 @@ mod tests {
                 ),
             }))
         };
-        let event_source_factory = Arc::new(EventSourceFactory::new(Arc::downgrade(&model)));
+        let event_registry = Arc::new(EventRegistry::new(Arc::downgrade(&model)));
+        let event_source_factory = Arc::new(EventSourceFactory::new(
+            Arc::downgrade(&model),
+            Arc::downgrade(&event_registry),
+        ));
 
         let hooks = Hooks::new(None);
         hooks.install(event_source_factory.hooks()).await;
@@ -336,7 +291,11 @@ mod tests {
                 root_environment: Environment::new_root(RunnerRegistry::default(), resolver),
             }))
         };
-        let event_source_factory = Arc::new(EventSourceFactory::new(Arc::downgrade(&model)));
+        let event_registry = Arc::new(EventRegistry::new(Arc::downgrade(&model)));
+        let event_source_factory = Arc::new(EventSourceFactory::new(
+            Arc::downgrade(&model),
+            Arc::downgrade(&event_registry),
+        ));
 
         let target: AbsoluteMoniker = vec!["a:0"].into();
         let scope: AbsoluteMoniker = vec!["b:0"].into();

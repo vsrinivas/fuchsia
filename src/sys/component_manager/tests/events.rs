@@ -30,6 +30,7 @@ pub enum Ordering {
 fn event_name(event_type: &fsys::EventType) -> String {
     match event_type {
         fsys::EventType::CapabilityReady => "capability_ready",
+        fsys::EventType::CapabilityRequested => "capability_requested",
         fsys::EventType::CapabilityRouted => "capability_routed",
         fsys::EventType::Destroyed => "destroyed",
         fsys::EventType::Discovered => "discovered",
@@ -780,9 +781,15 @@ pub struct EventError {
 ///   * data -> If a payload contains data items, describe the additional params:
 ///     * name -> FIDL name for the data item
 ///     * ty -> Rust type for the data item
-///   * protocol -> If a payload contains protocols, describe the additional params:
+///   * client_protocols -> If a payload contains client-side protocols, describe
+///     the additional params:
 ///     * name -> FIDL name for the protocol
 ///     * ty -> Rust type for the protocol proxy
+///   * server_protocols -> If a payload contains server-side protocols, describe
+///     the additional params:
+///     * name -> FIDL name for the protocol
+// TODO(fxb/53937): This marco is getting complicated. Consider replacing it
+//                  with a procedural macro.
 macro_rules! create_event {
     (@build from-fidl-shared $event_type:ident $event:ident $result:ident) => {{
         // Event type in event must match what is expected
@@ -826,7 +833,8 @@ macro_rules! create_event {
     (@build with-payload-success-case $payload:ident {
         event_type: $event_type:ident,
         payload: $($data_name:ident, $data_ty:ty)*,
-        protocols: $($protocol_name:ident, $protocol_ty:ty)*
+        client_protocols: $($client_protocol_name:ident, $client_protocol_ty:ty)*,
+        server_protocols: $($server_protocol_name:ident)*,
     }) => {{
         let payload = match $payload {
             fsys::EventPayload::$event_type(payload) => Ok(payload),
@@ -842,13 +850,23 @@ macro_rules! create_event {
 
         // Extract the additional protocols from the Payload object.
         $(
-            let $protocol_name: $protocol_ty = payload.$protocol_name.ok_or(
-                format_err!("Missing $protocol_name from $event_type object")
+            let $client_protocol_name: $client_protocol_ty = payload.$client_protocol_name.ok_or(
+                format_err!("Missing $client_protocol_name from $event_type object")
             )?.into_proxy()?;
+        )*
+        $(
+            let $server_protocol_name: Option<zx::Channel> =
+                Some(payload.$server_protocol_name.ok_or(
+                    format_err!("Missing $server_protocol_name from $event_type object")
+                )?);
         )*
 
         let payload = paste::expr! {
-             [<$event_type Payload>] { $($data_name,)* $($protocol_name,)* }
+             [<$event_type Payload>] {
+                 $($data_name,)*
+                 $($client_protocol_name,)*
+                 $($server_protocol_name,)*
+             }
         };
 
         Ok(Ok(payload))
@@ -865,10 +883,15 @@ macro_rules! create_event {
                     ty: $data_ty:ty,
                 }
             )*},
-            protocols: {$(
+            client_protocols: {$(
                 {
-                    name: $protocol_name:ident,
-                    ty: $protocol_ty:ty,
+                    name: $client_protocol_name:ident,
+                    ty: $client_protocol_ty:ty,
+                }
+            )*},
+            server_protocols: {$(
+                {
+                    name: $server_protocol_name:ident,
                 }
             )*},
         },
@@ -883,7 +906,8 @@ macro_rules! create_event {
     ) => {
         paste::item! {
             pub struct [<$event_type Payload>] {
-                $(pub $protocol_name: $protocol_ty,)*
+                $(pub $client_protocol_name: $client_protocol_ty,)*
+                $(pub $server_protocol_name: Option<zx::Channel>,)*
                 $(pub $data_name: $data_ty,)*
             }
 
@@ -904,6 +928,19 @@ macro_rules! create_event {
                 pub fn unwrap_payload<'a>(&'a self) -> &'a [<$event_type Payload>] {
                     self.result.as_ref().unwrap()
                 }
+
+                $(
+                    pub fn [<take_ $server_protocol_name>]<T: ServiceMarker>(&mut self)
+                            -> Option<T::RequestStream> {
+                        self.result.as_mut()
+                            .ok()
+                            .and_then(|payload| payload.$server_protocol_name.take())
+                            .and_then(|channel| {
+                                let server_end = ServerEnd::<T>::new(channel);
+                                server_end.into_stream().ok()
+                            })
+                    }
+                )*
             }
 
             impl Event for $event_type {
@@ -916,7 +953,8 @@ macro_rules! create_event {
                             create_event!(@build with-payload-success-case payload {
                                 event_type: $event_type,
                                 payload: $($data_name, $data_ty)*,
-                                protocols: $($protocol_name, $protocol_ty)*
+                                client_protocols: $($client_protocol_name, $client_protocol_ty)*,
+                                server_protocols: $($server_protocol_name)*,
                             })
                         },
                         Some(fsys::EventResult::Error(err)) => {
@@ -1010,7 +1048,8 @@ create_event!(
                 ty: i64,
             }
         },
-        protocols: {},
+        client_protocols: {},
+        server_protocols: {},
     },
     error_payload: {
         {
@@ -1029,10 +1068,35 @@ create_event!(
                 ty: String,
             }
         },
-        protocols: {
+        client_protocols: {
             {
                 name: node,
                 ty: fio::NodeProxy,
+            }
+        },
+        server_protocols: {},
+    },
+    error_payload: {
+        {
+            name: path,
+            ty: String,
+        }
+    }
+);
+create_event!(
+    event_type: CapabilityRequested,
+    event_name: capability_requested,
+    payload: {
+        data: {
+            {
+                name: path,
+                ty: String,
+            }
+        },
+        client_protocols: {},
+        server_protocols: {
+            {
+                name: capability,
             }
         },
     },
@@ -1057,12 +1121,13 @@ create_event!(
                 ty: String,
             }
         },
-        protocols: {
+        client_protocols: {
             {
                 name: routing_protocol,
                 ty: fsys::RoutingProtocolProxy,
             }
         },
+        server_protocols: {},
     },
     error_payload: {
         {

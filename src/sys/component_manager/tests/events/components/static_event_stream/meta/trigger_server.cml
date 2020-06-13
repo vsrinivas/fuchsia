@@ -1,0 +1,56 @@
+{
+    program: {
+        binary: "bin/static_event_stream_trigger_server",
+    },
+    children: [
+        {
+            name: "echo_server",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/echo_server.cm",
+            startup: "lazy",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [ "/svc/fuchsia.sys2.BlockingEventSource" ],
+        },
+        {
+            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+        },
+        {
+            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            from: "framework",
+        },
+        {
+            event: [
+                "capability_routed",
+                "resolved",
+                "started",
+            ],
+            from: "framework",
+        },
+        {
+            event: [ "capability_requested" ],
+            from: "framework",
+            filter: { path: "/svc/fidl.test.components.Trigger" },
+        },
+        {
+            event_stream: [ "capability_requested" ],
+            as: "/svc/fuchsia.sys2.EventStream",
+        },
+        {
+            event_stream: [ "capability_requested" ],
+            as: "/svc/second_stream",
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fidl.test.components.Trigger",
+            from: "self",
+        },
+        {
+            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            from: "#echo_server",
+        },
+    ],
+}

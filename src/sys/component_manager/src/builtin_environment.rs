@@ -26,9 +26,8 @@ use {
             error::ModelError,
             event_logger::EventLogger,
             events::{
-                event::SyncMode,
-                running_provider::RunningProvider,
-                source_factory::{EventSourceFactory, EventSourceFactoryBuilder},
+                event::SyncMode, registry::EventRegistry, running_provider::RunningProvider,
+                source_factory::EventSourceFactory, stream_provider::EventStreamProvider,
             },
             hooks::EventType,
             hub::Hub,
@@ -235,9 +234,11 @@ pub struct BuiltinEnvironment {
     pub realm_capability_host: Arc<RealmCapabilityHost>,
     pub hub: Arc<Hub>,
     pub builtin_runners: Vec<Arc<BuiltinRunner>>,
+    pub event_registry: Arc<EventRegistry>,
     pub event_source_factory: Arc<EventSourceFactory>,
     pub stop_notifier: Arc<RootRealmStopNotifier>,
     pub capability_ready_notifier: Arc<CapabilityReadyNotifier>,
+    pub event_stream_provider: Arc<EventStreamProvider>,
     pub event_logger: Option<Arc<EventLogger>>,
     is_debug: bool,
 }
@@ -360,17 +361,29 @@ impl BuiltinEnvironment {
             Arc::new(CapabilityReadyNotifier::new(Arc::downgrade(&model)));
         model.root_realm.hooks.install(capability_ready_notifier.hooks()).await;
 
+        // Set up the event registry.
+        let event_registry = {
+            let mut event_registry = EventRegistry::new(Arc::downgrade(&model));
+            event_registry.register_synthesis_provider(
+                EventType::CapabilityReady,
+                capability_ready_notifier.clone(),
+            );
+            event_registry
+                .register_synthesis_provider(EventType::Running, Arc::new(RunningProvider::new()));
+            Arc::new(event_registry)
+        };
+        model.root_realm.hooks.install(event_registry.hooks()).await;
+
         // Set up the event source factory.
-        let event_source_factory = Arc::new(
-            EventSourceFactoryBuilder::new(Arc::downgrade(&model))
-                .with_synthesis_provider(
-                    EventType::CapabilityReady,
-                    capability_ready_notifier.clone(),
-                )
-                .with_synthesis_provider(EventType::Running, Arc::new(RunningProvider::new()))
-                .build(),
-        );
+        let event_source_factory = Arc::new(EventSourceFactory::new(
+            Arc::downgrade(&model),
+            Arc::downgrade(&event_registry),
+        ));
         model.root_realm.hooks.install(event_source_factory.hooks()).await;
+
+        let event_stream_provider =
+            Arc::new(EventStreamProvider::new(Arc::downgrade(&event_registry)));
+        model.root_realm.hooks.install(event_stream_provider.hooks()).await;
 
         let event_logger = if args.debug {
             let event_logger = Arc::new(EventLogger::new());
@@ -397,9 +410,11 @@ impl BuiltinEnvironment {
             realm_capability_host,
             hub,
             builtin_runners,
+            event_registry,
             event_source_factory,
             stop_notifier,
             capability_ready_notifier,
+            event_stream_provider,
             event_logger,
             is_debug: args.debug,
         })

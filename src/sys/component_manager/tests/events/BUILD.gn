@@ -76,6 +76,8 @@ test_package("events_integration_test") {
     "components:resolved_error_reporter_bin",
     "components:stub_component_bin",
     "components:synthesis_reporter_bin",
+    "components:trigger_client_bin",
+    "components:trigger_server_bin",
     "//examples/components/routing/echo_server",
   ]
 
@@ -161,6 +163,21 @@ test_package("events_integration_test") {
       path = rebase_path("components/synthesis/meta/reporter.cml")
       dest = "synthesis_reporter.cm"
     },
+    {
+      path =
+          rebase_path("components/static_event_stream/meta/trigger_client.cml")
+      dest = "static_event_stream_trigger_client.cm"
+    },
+    {
+      path =
+          rebase_path("components/static_event_stream/meta/trigger_realm.cml")
+      dest = "trigger_realm.cm"
+    },
+    {
+      path =
+          rebase_path("components/static_event_stream/meta/trigger_server.cml")
+      dest = "static_event_stream_trigger_server.cm"
+    },
   ]
 
   binaries = [
@@ -211,6 +228,12 @@ test_package("events_integration_test") {
     },
     {
       name = "synthesis_reporter"
+    },
+    {
+      name = "static_event_stream_trigger_client"
+    },
+    {
+      name = "static_event_stream_trigger_server"
     },
   ]
 

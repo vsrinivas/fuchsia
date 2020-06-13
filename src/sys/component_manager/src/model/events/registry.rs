@@ -129,6 +129,7 @@ impl EventRegistry {
             ),
         ]
     }
+
     /// Register a provider for an synthesized event.
     pub fn register_synthesis_provider(
         &mut self,
@@ -168,16 +169,16 @@ impl EventRegistry {
             }
         };
 
-        self.subscribe_with_routed_events(&options.sync_mode, events).await
+        self.subscribe_with_routed_events(&options, events).await
     }
 
     pub async fn subscribe_with_routed_events(
         &self,
-        sync_mode: &SyncMode,
+        options: &SubscriptionOptions,
         events: Vec<RoutedEvent>,
     ) -> Result<EventStream, ModelError> {
         // TODO(fxb/48510): get rid of this channel and use FIDL directly.
-        let mut event_stream = EventStream::new();
+        let mut event_stream = EventStream::new(options.clone());
 
         let mut dispatcher_map = self.dispatcher_map.lock().await;
         for event in &events {
@@ -186,8 +187,7 @@ impl EventRegistry {
                 .all(|e| e.to_string() != event.source_name.str())
             {
                 let dispatchers = dispatcher_map.entry(event.source_name.clone()).or_insert(vec![]);
-                let dispatcher =
-                    event_stream.create_dispatcher(sync_mode.clone(), event.scopes.clone());
+                let dispatcher = event_stream.create_dispatcher(event.scopes.clone());
                 dispatchers.push(dispatcher);
             }
         }
@@ -197,6 +197,7 @@ impl EventRegistry {
 
         Ok(event_stream)
     }
+
     // TODO(fxb/48510): get rid of this
     /// Sends the event to all dispatchers and waits to be unblocked by all
     async fn dispatch(&self, event: &ComponentEvent) -> Result<(), ModelError> {
@@ -228,7 +229,7 @@ impl EventRegistry {
 
         let mut responder_channels = vec![];
         for dispatcher in dispatchers {
-            let result = dispatcher.dispatch(event.clone()).await;
+            let result = dispatcher.dispatch(event).await;
             match result {
                 Ok(Some(responder_channel)) => {
                     // A future can be canceled if the EventStream was dropped after
@@ -327,8 +328,7 @@ impl EventRegistry {
 #[async_trait]
 impl Hook for EventRegistry {
     async fn on(self: Arc<Self>, event: &ComponentEvent) -> Result<(), ModelError> {
-        self.dispatch(event).await?;
-        Ok(())
+        self.dispatch(event).await
     }
 }
 
@@ -344,8 +344,25 @@ mod tests {
                 testing::test_helpers::{TestModelResult, *},
             },
         },
+        fuchsia_zircon as zx,
         matches::assert_matches,
     };
+
+    async fn dispatch_capability_requested_event(
+        registry: &EventRegistry,
+    ) -> Result<(), ModelError> {
+        let (_, capability_server_end) = zx::Channel::create().unwrap();
+        let capability_server_end = Arc::new(Mutex::new(Some(capability_server_end)));
+        let event = ComponentEvent::new_for_test(
+            AbsoluteMoniker::root(),
+            "fuchsia-pkg://root",
+            Ok(EventPayload::CapabilityRequested {
+                path: "/svc/foo".to_string(),
+                capability: capability_server_end,
+            }),
+        );
+        registry.dispatch(&event).await
+    }
 
     async fn dispatch_fake_event(registry: &EventRegistry) -> Result<(), ModelError> {
         let event = ComponentEvent::new_for_test(
@@ -448,6 +465,58 @@ mod tests {
             Err(EventError {
                 source: ModelError::InstanceNotFound { .. },
                 event_error_payload: EventErrorPayload::Resolved,
+            })
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn capability_requested_over_two_event_streams() {
+        let TestModelResult { model, .. } =
+            new_test_model("root", Vec::new(), RuntimeConfig::default()).await;
+        let event_registry = EventRegistry::new(Arc::downgrade(&model));
+
+        assert_eq!(
+            0,
+            event_registry.dispatchers_per_event_type(EventType::CapabilityRequested).await
+        );
+
+        let options = SubscriptionOptions::new(SubscriptionType::Debug, SyncMode::Async);
+
+        let mut event_stream_a = event_registry
+            .subscribe(&options, vec![EventType::CapabilityRequested.into()])
+            .await
+            .expect("subscribe succeeds");
+
+        assert_eq!(
+            1,
+            event_registry.dispatchers_per_event_type(EventType::CapabilityRequested).await
+        );
+
+        let mut event_stream_b = event_registry
+            .subscribe(&options, vec![EventType::CapabilityRequested.into()])
+            .await
+            .expect("subscribe succeeds");
+
+        assert_eq!(
+            2,
+            event_registry.dispatchers_per_event_type(EventType::CapabilityRequested).await
+        );
+
+        dispatch_capability_requested_event(&event_registry).await.unwrap();
+
+        let event_a = event_stream_a.next().await.map(|e| e.event).unwrap();
+
+        // Verify that we received a valid CapabilityRequested event.
+        assert_matches!(event_a.result, Ok(EventPayload::CapabilityRequested { .. }));
+
+        let event_b = event_stream_b.next().await.map(|e| e.event).unwrap();
+
+        // Verify that we received the event error.
+        assert_matches!(
+            event_b.result,
+            Err(EventError {
+                event_error_payload: EventErrorPayload::CapabilityRequested { .. },
+                ..
             })
         );
     }

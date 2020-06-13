@@ -199,9 +199,8 @@ mod tests {
         crate::model::{
             events::{
                 dispatcher::ScopeMetadata,
-                event::SyncMode,
                 filter::EventFilter,
-                registry::{EventRegistry, RoutedEvent},
+                registry::{EventRegistry, RoutedEvent, SubscriptionOptions},
                 stream::EventStream,
             },
             hooks::{EventError, EventErrorPayload, EventPayload, EventType},
@@ -223,7 +222,7 @@ mod tests {
         test.bind_instance(&vec!["c:0"].into()).await.expect("bind instance c success");
         test.bind_instance(&vec!["c:0", "e:0"].into()).await.expect("bind instance d success");
 
-        let registry = test.builtin_environment.event_source_factory.registry();
+        let registry = test.builtin_environment.event_registry.clone();
         let mut event_stream = create_stream(
             &registry,
             vec![AbsoluteMoniker::root()],
@@ -288,7 +287,7 @@ mod tests {
         test.bind_instance(&vec!["c:0", "f:0"].into()).await.expect("bind instance f success");
 
         // Subscribing with scopes /c, /c/e and /c/e/h
-        let registry = test.builtin_environment.event_source_factory.registry();
+        let registry = test.builtin_environment.event_registry.clone();
         let mut event_stream = create_stream(
             &registry,
             vec![vec!["c:0"].into(), vec!["c:0", "e:0"].into(), vec!["c:0", "e:0", "h:0"].into()],
@@ -332,7 +331,7 @@ mod tests {
         test.bind_instance(&vec!["c:0", "f:0"].into()).await.expect("bind instance g success");
 
         // Subscribing with scopes /c, /c/e and c/f/i
-        let registry = test.builtin_environment.event_source_factory.registry();
+        let registry = test.builtin_environment.event_registry.clone();
         let mut event_stream = create_stream(
             &registry,
             vec![vec!["c:0"].into(), vec!["c:0", "e:0"].into(), vec!["c:0", "f:0", "i:0"].into()],
@@ -377,7 +376,7 @@ mod tests {
             .await
             .expect("bind instance g success");
 
-        let registry = test.builtin_environment.event_source_factory.registry();
+        let registry = test.builtin_environment.event_registry.clone();
         // TODO: bind components
         let mut event_stream = create_stream(
             &registry,
@@ -437,7 +436,7 @@ mod tests {
             .map(|event| RoutedEvent { source_name: event.into(), scopes: scopes.clone() })
             .collect();
         registry
-            .subscribe_with_routed_events(&SyncMode::Async, events)
+            .subscribe_with_routed_events(&SubscriptionOptions::default(), events)
             .await
             .expect("subscribe to event stream")
     }

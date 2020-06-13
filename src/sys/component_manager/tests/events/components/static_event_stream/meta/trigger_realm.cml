@@ -1,0 +1,33 @@
+{
+    // Two children: a server and client. "trigger_clietn" has "eager" startup so it
+    // will be started along with the realm.
+    children: [
+        {
+            name: "trigger_server",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/static_event_stream_trigger_server.cm",
+            startup: "eager",
+        },
+        {
+            name: "trigger_client",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/static_event_stream_trigger_client.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "/svc/fuchsia.sys2.BlockingEventSource" ],
+            from: "realm",
+            to: [ "#trigger_server" ],
+        },
+        {
+            protocol: "/svc/fidl.examples.routing.echo.Echo",
+            from: "#trigger_server",
+            to: [ "#trigger_client" ],
+        },
+        {
+            protocol: "/svc/fidl.test.components.Trigger",
+            from: "#trigger_server",
+            to: [ "#trigger_client" ],
+        },
+    ],
+}

@@ -117,6 +117,7 @@ pub fn format_cml(buffer: String, filename: Option<String>) -> Result<Vec<u8>, E
                     "runner",
                     "storage",
                     "event",
+                    "event_stream",
                     "from",
                     "as",
                     "to",

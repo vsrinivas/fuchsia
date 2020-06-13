@@ -7,6 +7,7 @@ use {
         capability::{CapabilityProvider, CapabilitySource},
         model::{
             error::ModelError,
+            events::error::EventsError,
             moniker::AbsoluteMoniker,
             realm::{BindReason, Realm, Runtime},
         },
@@ -43,6 +44,13 @@ macro_rules! events {
                 $(#[$description])*
                 $name,
             )*
+        }
+
+        /// Transfers any move-only state out of self into a new event that is otherwise
+        /// a clone.
+        #[async_trait]
+        pub trait TransferEvent {
+            async fn transfer(&self) -> Self;
         }
 
         impl fmt::Display for EventType {
@@ -141,6 +149,10 @@ impl EventType {
 events!([
     /// A capability exposed to the framework by a component is available.
     (CapabilityReady, capability_ready),
+    /// After a CapabilityProvider has been selected through the CapabilityRouted event,
+    /// the CapabilityRequested event is dispatched with the ServerEnd of the channel
+    /// for the capability.
+    (CapabilityRequested, capability_requested),
     /// A capability is being requested by a component and requires routing.
     /// The event propagation system is used to supply the capability being requested.
     (CapabilityRouted, capability_routed),
@@ -188,6 +200,7 @@ impl EventError {
 pub enum EventErrorPayload {
     // Keep the events listed below in alphabetical order!
     CapabilityReady { path: String },
+    CapabilityRequested { path: String },
     CapabilityRouted,
     Destroyed,
     Discovered,
@@ -210,6 +223,9 @@ impl fmt::Debug for EventErrorPayload {
         formatter.field("type", &self.event_type());
         match self {
             EventErrorPayload::CapabilityReady { path } => formatter.field("path", &path).finish(),
+            EventErrorPayload::CapabilityRequested { path } => {
+                formatter.field("path", &path).finish()
+            }
             EventErrorPayload::CapabilityRouted
             | EventErrorPayload::Destroyed
             | EventErrorPayload::Discovered
@@ -257,6 +273,10 @@ pub enum EventPayload {
     CapabilityReady {
         path: String,
         node: NodeProxy,
+    },
+    CapabilityRequested {
+        path: String,
+        capability: Arc<Mutex<Option<zx::Channel>>>,
     },
     CapabilityRouted {
         source: CapabilitySource,
@@ -313,7 +333,12 @@ impl fmt::Debug for EventPayload {
         let mut formatter = fmt.debug_struct("EventPayload");
         formatter.field("type", &self.event_type());
         match self {
-            EventPayload::CapabilityReady { path, .. } => formatter.field("path", &path).finish(),
+            EventPayload::CapabilityReady { path, .. } => {
+                formatter.field("path", &path.as_str()).finish()
+            }
+            EventPayload::CapabilityRequested { path, .. } => {
+                formatter.field("path", &path).finish()
+            }
             EventPayload::CapabilityRouted { source: capability, .. } => {
                 formatter.field("capability", &capability).finish()
             }
@@ -413,9 +438,46 @@ impl HasEventType for Result<EventPayload, EventError> {
     }
 }
 
+#[async_trait]
+impl TransferEvent for Result<EventPayload, EventError> {
+    async fn transfer(&self) -> Self {
+        match self {
+            Ok(EventPayload::CapabilityRequested { path, capability }) => {
+                let capability = capability.lock().await.take();
+                match capability {
+                    Some(capability) => Ok(EventPayload::CapabilityRequested {
+                        path: path.to_string(),
+                        capability: Arc::new(Mutex::new(Some(capability))),
+                    }),
+                    None => Err(EventError {
+                        source: EventsError::cannot_transfer(EventType::CapabilityRequested).into(),
+                        event_error_payload: EventErrorPayload::CapabilityRequested {
+                            path: path.to_string(),
+                        },
+                    }),
+                }
+            }
+            result => result.clone(),
+        }
+    }
+}
+
 impl HasEventType for Event {
     fn event_type(&self) -> EventType {
         self.result.event_type()
+    }
+}
+
+#[async_trait]
+impl TransferEvent for Event {
+    async fn transfer(&self) -> Self {
+        Self {
+            id: self.id,
+            target_moniker: self.target_moniker.clone(),
+            component_url: self.component_url.clone(),
+            result: self.result.transfer().await,
+            timestamp: self.timestamp,
+        }
     }
 }
 
@@ -425,8 +487,11 @@ impl fmt::Display for Event {
             Ok(payload) => {
                 let payload = match payload {
                     EventPayload::CapabilityReady { path, .. } => format!("serving {}", path),
+                    EventPayload::CapabilityRequested { path, .. } => {
+                        format!("requested {}", path.to_string())
+                    }
                     EventPayload::CapabilityRouted { source, .. } => {
-                        format!("requested {}", source.to_string())
+                        format!("routed {}", source.to_string())
                     }
                     EventPayload::Started { bind_reason, .. } => {
                         format!("because {}", bind_reason.to_string())
@@ -773,5 +838,51 @@ mod tests {
         assert_eq!(log(vec!["[CallCounter] Err: resolved",]), event_log.get().await);
 
         assert_matches!(call_counter.last_error().await, Some(ModelError::InstanceNotFound { .. }));
+    }
+
+    // This test verifies that the payload of the CapabilityRequested event will be transferred.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn capability_requested_transfer() {
+        let (_, capability_server_end) = zx::Channel::create().unwrap();
+        let capability_server_end = Arc::new(Mutex::new(Some(capability_server_end)));
+        let event = Event::new_for_test(
+            AbsoluteMoniker::root(),
+            "fuchsia-pkg://root",
+            Ok(EventPayload::CapabilityRequested {
+                path: "/svc/foo".to_string(),
+                capability: capability_server_end,
+            }),
+        );
+
+        // Verify the transferred event carries the capability.
+        let transferred_event = event.transfer().await;
+        match transferred_event.result {
+            Ok(EventPayload::CapabilityRequested { capability, .. }) => {
+                let capability = capability.lock().await;
+                assert!(capability.is_some());
+            }
+            _ => panic!("Event type unexpected"),
+        }
+
+        // Verify that the original event no longer carries the capability.
+        match &event.result {
+            Ok(EventPayload::CapabilityRequested { capability, .. }) => {
+                let capability = capability.lock().await;
+                assert!(capability.is_none());
+            }
+            _ => panic!("Event type unexpected"),
+        }
+
+        // Transferring the original event again should produce an error event.
+        let second_transferred_event = event.transfer().await;
+        match second_transferred_event.result {
+            Err(EventError {
+                event_error_payload: EventErrorPayload::CapabilityRequested { path },
+                ..
+            }) => {
+                assert_eq!("/svc/foo".to_string(), path);
+            }
+            _ => panic!("Event type unexpected"),
+        }
     }
 }

@@ -158,6 +158,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
+        let capability = Arc::new(Mutex::new(Some(channel::take_channel(server_end))));
         // Start the source component, if necessary
         let path = self.path.to_path_buf().attach(relative_path);
         let source_realm = self
@@ -168,7 +169,30 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
                 path: self.path.clone(),
             })
             .await?;
-        source_realm.open_outgoing(flags, open_mode, path, server_end).await?;
+
+        let event = Event::new(
+            &source_realm,
+            Ok(EventPayload::CapabilityRequested {
+                path: path.as_path().display().to_string(),
+                capability: capability.clone(),
+            }),
+        );
+        source_realm.hooks.dispatch(&event).await?;
+
+        // If the capability transported through the event above wasn't transferred
+        // out, then we can open the capability through the realm's outgoing directory.
+        // If some hook consumes the capability, then we don't bother looking in the outgoing
+        // directory.
+        let capability = capability.lock().await.take();
+        if let Some(mut server_end_for_event) = capability {
+            if let Err(e) =
+                source_realm.open_outgoing(flags, open_mode, path, &mut server_end_for_event).await
+            {
+                // Pass back the channel to propagate the epitaph.
+                *server_end = channel::take_channel(&mut server_end_for_event);
+                return Err(e);
+            }
+        }
         Ok(())
     }
 }
