@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
 
   GpioFunc func;
   uint8_t write_value, out_value;
-  uint32_t in_flag;
+  ::llcpp::fuchsia::hardware::gpio::GpioFlags in_flag;
   if (ParseArgs(argc, argv, &func, &write_value, &in_flag, &out_value)) {
     return -1;
   }

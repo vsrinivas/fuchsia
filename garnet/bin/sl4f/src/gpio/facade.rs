@@ -4,6 +4,7 @@
 
 use crate::common_utils::common::find_file;
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
+use crate::gpio::types::SerializableGpioFlags;
 use anyhow::Error;
 use fidl_fuchsia_hardware_gpio::{GpioMarker, GpioProxy};
 use fuchsia_syslog::macros::*;
@@ -55,9 +56,9 @@ impl GpioFacade {
         }
     }
 
-    pub async fn config_in(&self, pin: u32, flags: u32) -> Result<(), Error> {
+    pub async fn config_in(&self, pin: u32, flags: SerializableGpioFlags) -> Result<(), Error> {
         let tag = "gpiofacade::config_in";
-        match self.get_proxy(pin)?.config_in(flags).await? {
+        match self.get_proxy(pin)?.config_in(Into::into(flags)).await? {
             Ok(_) => Ok(()),
             Err(e) => fx_err_and_bail!(
                 &with_line!(tag),
@@ -120,10 +121,15 @@ mod tests {
             self
         }
 
-        fn expect_config_in(self, _pin: u32, flag: u32, res: Result<(), i32>) -> Self {
+        fn expect_config_in(
+            self,
+            _pin: u32,
+            flag: SerializableGpioFlags,
+            res: Result<(), i32>,
+        ) -> Self {
             self.push(move |req| match req {
                 GpioRequest::ConfigIn { flags, responder } => {
-                    assert_eq!(flag, flags);
+                    assert_eq!(flag, Into::into(flags));
                     responder.send(&mut res.map(Into::into)).unwrap()
                 }
                 req => panic!("unexpected request: {:?}", req),
@@ -175,9 +181,11 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn config_in_ok() {
-        let (facade, gpio) = MockGpioBuilder::new().expect_config_in(0, 200, Ok(())).build();
+        let (facade, gpio) = MockGpioBuilder::new()
+            .expect_config_in(0, SerializableGpioFlags::PullUp, Ok(()))
+            .build();
         let test = async move {
-            assert_matches!(facade.config_in(0, 200).await, Ok(_));
+            assert_matches!(facade.config_in(0, SerializableGpioFlags::PullUp).await, Ok(_));
         };
 
         join!(gpio, test);

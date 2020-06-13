@@ -3,13 +3,44 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
+use fidl_fuchsia_hardware_gpio::GpioFlags;
 use serde::Deserialize;
 use std::convert::TryFrom;
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+pub enum SerializableGpioFlags {
+    PullDown,
+    PullUp,
+    NoPull,
+    PullMask,
+}
+
+impl From<GpioFlags> for SerializableGpioFlags {
+    fn from(x: GpioFlags) -> Self {
+        match x {
+            GpioFlags::PullDown => SerializableGpioFlags::PullDown,
+            GpioFlags::PullUp => SerializableGpioFlags::PullUp,
+            GpioFlags::NoPull => SerializableGpioFlags::NoPull,
+            GpioFlags::PullMask => SerializableGpioFlags::PullMask,
+        }
+    }
+}
+
+impl From<SerializableGpioFlags> for GpioFlags {
+    fn from(x: SerializableGpioFlags) -> Self {
+        match x {
+            SerializableGpioFlags::PullDown => GpioFlags::PullDown,
+            SerializableGpioFlags::PullUp => GpioFlags::PullUp,
+            SerializableGpioFlags::NoPull => GpioFlags::NoPull,
+            SerializableGpioFlags::PullMask => GpioFlags::PullMask,
+        }
+    }
+}
 
 #[derive(Deserialize, Debug)]
 pub struct ConfigInRequest {
     pub pin: u32,
-    pub flags: u32,
+    pub flags: SerializableGpioFlags,
 }
 
 #[derive(Deserialize, Debug)]

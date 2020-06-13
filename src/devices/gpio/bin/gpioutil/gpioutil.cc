@@ -36,16 +36,17 @@ zx::status<> GetStatus(const T& result) {
   return zx::ok();
 }
 
-int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value, uint32_t* in_flag,
-              uint8_t* out_value) {
+int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
+              ::llcpp::fuchsia::hardware::gpio::GpioFlags* in_flag, uint8_t* out_value) {
   if (argc < 3) {
     usage(argv[0]);
     return -1;
   }
 
   *write_value = 0;
-  *in_flag = 0;
+  *in_flag = ::llcpp::fuchsia::hardware::gpio::GpioFlags::NO_PULL;
   *out_value = 0;
+  unsigned long flag = 0;
   switch (argv[2][0]) {
     case 'r':
       *func = Read;
@@ -66,7 +67,12 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value, uint3
         usage(argv[0]);
         return -1;
       }
-      *in_flag = static_cast<uint32_t>(std::stoul(argv[3]));
+      flag = std::stoul(argv[3]);
+      if (flag > 3) {
+        usage(argv[0]);
+        return -1;
+      }
+      *in_flag = static_cast<::llcpp::fuchsia::hardware::gpio::GpioFlags>(flag);
       break;
     case 'o':
       *func = ConfigOut;
@@ -86,7 +92,8 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value, uint3
 }
 
 int ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient client, GpioFunc func,
-               uint8_t write_value, uint32_t in_flag, uint8_t out_value) {
+               uint8_t write_value, ::llcpp::fuchsia::hardware::gpio::GpioFlags in_flag,
+               uint8_t out_value) {
   switch (func) {
     case Read: {
       zx::status<uint8_t> result =

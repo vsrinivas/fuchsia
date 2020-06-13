@@ -19,10 +19,11 @@ template <typename T>
 zx::status<> GetStatus(const T& result);
 
 // Parse the command line arguments in |argv|
-int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value, uint32_t* in_flag,
-              uint8_t* out_value);
+int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
+              ::llcpp::fuchsia::hardware::gpio::GpioFlags* in_flag, uint8_t* out_value);
 
 int ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient client, GpioFunc func,
-               uint8_t write_value, uint32_t in_flag, uint8_t out_value);
+               uint8_t write_value, ::llcpp::fuchsia::hardware::gpio::GpioFlags in_flag,
+               uint8_t out_value);
 
 #endif  // SRC_DEVICES_GPIO_BIN_GPIOUTIL_GPIOUTIL_H_

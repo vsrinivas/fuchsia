@@ -6,9 +6,17 @@ library fuchsia.hardware.gpio;
 
 using zx;
 
+/// Flags for `ConfigIn`.
+enum GpioFlags : uint32 {
+    PULL_DOWN = 0x0;
+    PULL_UP = 0x1;
+    NO_PULL = 0x2;
+    PULL_MASK = 0x3;
+};
+
 protocol Gpio {
     /// Configures a GPIO for input.
-    ConfigIn(uint32 flags) -> () error zx.status;
+    ConfigIn(GpioFlags flags) -> () error zx.status;
 
     /// Configures a GPIO for output.
     ConfigOut(uint8 initial_value) -> () error zx.status;
