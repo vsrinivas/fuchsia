@@ -233,6 +233,23 @@ void Syscall::ComputeTypes() {
   }
 }
 
+SyscallDecoderDispatcher::SyscallDecoderDispatcher(const DecodeOptions& decode_options)
+    : decode_options_(decode_options) {
+  Populate();
+  ComputeTypes();
+  if (!decode_options.trigger_filters.empty()) {
+    // We have at least one trigger => wait for a message satisfying the trigger before displaying
+    // any syscall.
+    display_started_ = false;
+  }
+  if (!decode_options.message_filters.empty() || !decode_options.exclude_message_filters.empty()) {
+    has_filter_ = true;
+  }
+  if (decode_options.stack_level != kNoStack) {
+    needs_stack_frame_ = true;
+  }
+}
+
 void SyscallDecoderDispatcher::DecodeSyscall(InterceptingThreadObserver* thread_observer,
                                              zxdb::Thread* thread, Syscall* syscall) {
   uint64_t thread_id = thread->GetKoid();
@@ -365,6 +382,108 @@ void SyscallDisplayDispatcher::StopMonitoring(zx_koid_t koid) {
   os_ << colors().green << "\nStop monitoring process with koid ";
   os_ << colors().red << koid << colors().reset << '\n';
   SyscallDecoderDispatcher::StopMonitoring(koid);
+}
+
+void SyscallDisplayDispatcher::AddInvokedEvent(std::shared_ptr<InvokedEvent> invoked_event) {
+  if (!display_started()) {
+    // The user specified a trigger. Check if this is a message which satisfies one of the triggers.
+    const fidl_codec::FidlMessageValue* message = invoked_event->GetMessage();
+    if ((message == nullptr) ||
+        !decode_options().IsTrigger(message->method()->fully_qualified_name())) {
+      return;
+    }
+    // We found a trigger => allow the display.
+    set_display_started();
+  }
+  if (has_filter() && invoked_event->syscall()->has_fidl_message()) {
+    // We have filters and this is a syscalls with a FIDL message.
+    // Only display the syscall if the message satifies the conditions.
+    const fidl_codec::FidlMessageValue* message = invoked_event->GetMessage();
+    if ((message == nullptr) ||
+        !decode_options().SatisfiesMessageFilters(message->method()->fully_qualified_name())) {
+      return;
+    }
+  }
+  invoked_event->set_displayed();
+  DisplayInvokedEvent(invoked_event.get());
+}
+
+void SyscallDisplayDispatcher::DisplayInvokedEvent(const InvokedEvent* invoked_event) {
+  std::string line_header = invoked_event->thread()->process()->name() + ' ' + colors().red +
+                            std::to_string(invoked_event->thread()->process()->koid()) +
+                            colors().reset + ':' + colors().red +
+                            std::to_string(invoked_event->thread()->koid()) + colors().reset + ' ';
+  if (with_process_info()) {
+    os_ << line_header;
+  }
+  os_ << '\n';
+
+  FidlcatPrinter printer(this, invoked_event->thread()->process()->koid(), os_, line_header);
+
+  // We have been able to create values from the syscall => print them.
+  invoked_event->PrettyPrint(printer);
+  last_displayed_syscall_ = nullptr;
+  last_displayed_event_ = invoked_event;
+}
+
+void SyscallDisplayDispatcher::AddOutputEvent(std::shared_ptr<OutputEvent> output_event) {
+  if (!output_event->invoked_event()->displayed()) {
+    // The display of the syscall wasn't allowed by the input arguments. Check if the output
+    // arguments allows its display.
+    if (!display_started()) {
+      // The user specified a trigger. Check if this is a message which satisfies one of the
+      // triggers.
+      const fidl_codec::FidlMessageValue* message = output_event->GetMessage();
+      if ((message == nullptr) ||
+          !decode_options().IsTrigger(message->method()->fully_qualified_name())) {
+        return;
+      }
+      set_display_started();
+    }
+    if (has_filter() && output_event->syscall()->has_fidl_message()) {
+      // We have filters and this is a syscalls with a FIDL message.
+      // Only display the syscall if the message satifies the conditions.
+      const fidl_codec::FidlMessageValue* message = output_event->GetMessage();
+      if ((message == nullptr) ||
+          !decode_options().SatisfiesMessageFilters(message->method()->fully_qualified_name())) {
+        return;
+      }
+    }
+    // We can display the syscall but the inputs have not been displayed => display the inputs
+    // before displaying the outputs.
+    DisplayInvokedEvent(output_event->invoked_event());
+  }
+  if (output_event->syscall()->return_type() != SyscallReturnType::kNoReturn) {
+    if (last_displayed_event_ != output_event->invoked_event()) {
+      // Add a blank line to tell the user that this display is not linked to the
+      // previous displayed lines.
+      os_ << "\n";
+    }
+    std::string line_header;
+    if (with_process_info() || (last_displayed_event_ != output_event->invoked_event())) {
+      line_header = output_event->thread()->process()->name() + ' ' + colors().red +
+                    std::to_string(output_event->thread()->process()->koid()) + colors().reset +
+                    ':' + colors().red + std::to_string(output_event->thread()->koid()) +
+                    colors().reset + ' ';
+    }
+    FidlcatPrinter printer(this, output_event->thread()->process()->koid(), os_, line_header);
+    // We have been able to create values from the syscall => print them.
+    output_event->PrettyPrint(printer);
+
+    last_displayed_syscall_ = nullptr;
+    last_displayed_event_ = output_event.get();
+  }
+}
+
+void SyscallDisplayDispatcher::AddExceptionEvent(std::shared_ptr<ExceptionEvent> exception_event) {
+  os_ << '\n';
+
+  std::string line_header =
+      exception_event->thread()->process()->name() + ' ' + colors().red +
+      std::to_string(exception_event->thread()->process()->koid()) + colors().reset + ':' +
+      colors().red + std::to_string(exception_event->thread()->koid()) + colors().reset + ' ';
+  FidlcatPrinter printer(this, exception_event->thread()->process()->koid(), os_, line_header);
+  exception_event->PrettyPrint(printer);
 }
 
 std::unique_ptr<SyscallDecoder> SyscallCompareDispatcher::CreateDecoder(

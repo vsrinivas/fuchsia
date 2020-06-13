@@ -135,8 +135,6 @@ class SyscallDecoder {
   uint64_t return_address() const { return return_address_; }
   uint64_t syscall_return_value() const { return syscall_return_value_; }
   int pending_request_count() const { return pending_request_count_; }
-  const InvokedEvent* invoked_event() const { return invoked_event_.get(); }
-  const OutputEvent* output_event() const { return output_event_.get(); }
   const fidl_codec::semantic::MethodSemantic* semantic() const { return semantic_; }
   void set_semantic(const fidl_codec::semantic::MethodSemantic* semantic) { semantic_ = semantic; }
   const fidl_codec::StructValue* decoded_request() const { return decoded_request_; }
@@ -228,11 +226,8 @@ class SyscallDecoder {
   // reached, it calls LoadSyscallReturnValue.
   bool StepToReturnAddress();
 
-  // Decodes the inputs and generates invoked_event_.
+  // Decodes the inputs, generates the invoked event if possible and uses the inputs.
   void DecodeInputs();
-
-  // Uses the inputs (for example to display them).
-  void UseInputs();
 
   // Reads the returned value of the syscall. Then calls LoadOutputs.
   void LoadSyscallReturnValue();
@@ -249,12 +244,8 @@ class SyscallDecoder {
   // parallel.
   void LoadOutputs();
 
-  // Decodes the outputs and generates the output_event_.
+  // Decodes the outputs, generates the outputevent if possible and uses the outputs.
   void DecodeOutputs();
-
-  // Uses the outputs (for example to display them).
-  // Then, it calls Destroy.
-  void UseOutputs();
 
   // Destroys this object and remove it from the |syscall_decoders_| list in the
   // SyscallDecoderDispatcher. This function is called when the syscall display
@@ -280,13 +271,12 @@ class SyscallDecoder {
   bool input_arguments_loaded_ = false;
   bool aborted_ = false;
   DecoderError error_;
-  // All the decoded message (a request and/or a response). This is only available after the
-  // syscall have been printed. It is used to try to infer some information from the message.
-  std::unique_ptr<InvokedEvent> invoked_event_;
-  std::unique_ptr<OutputEvent> output_event_;
   const fidl_codec::semantic::MethodSemantic* semantic_ = nullptr;
   const fidl_codec::StructValue* decoded_request_ = nullptr;
   const fidl_codec::StructValue* decoded_response_ = nullptr;
+  // Keeps a reference on the events.
+  std::shared_ptr<InvokedEvent> invoked_event_;
+  std::shared_ptr<OutputEvent> output_event_;
 };
 
 class SyscallDisplay : public SyscallUse {

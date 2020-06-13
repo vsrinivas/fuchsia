@@ -1525,23 +1525,7 @@ class Syscall {
 // SyscallDecoder object which will handle the decoding of one syscall.
 class SyscallDecoderDispatcher {
  public:
-  explicit SyscallDecoderDispatcher(const DecodeOptions& decode_options)
-      : decode_options_(decode_options) {
-    Populate();
-    ComputeTypes();
-    if (!decode_options.trigger_filters.empty()) {
-      // We have at least one trigger => wait for a message satisfying the trigger before displaying
-      // any syscall.
-      display_started_ = false;
-    }
-    if (!decode_options.message_filters.empty() ||
-        !decode_options.exclude_message_filters.empty()) {
-      has_filter_ = true;
-    }
-    if (decode_options.stack_level != kNoStack) {
-      needs_stack_frame_ = true;
-    }
-  }
+  explicit SyscallDecoderDispatcher(const DecodeOptions& decode_options);
   virtual ~SyscallDecoderDispatcher() = default;
 
   const DecodeOptions& decode_options() const { return decode_options_; }
@@ -1648,6 +1632,15 @@ class SyscallDecoderDispatcher {
 
   // Called when a process is no longer monitored.
   virtual void StopMonitoring(zx_koid_t koid);
+
+  // Adds an invoked event.
+  virtual void AddInvokedEvent(std::shared_ptr<InvokedEvent> invoked_event) {}
+
+  // Adds an output event.
+  virtual void AddOutputEvent(std::shared_ptr<OutputEvent> output_event) {}
+
+  // Adds an exception event.
+  virtual void AddExceptionEvent(std::shared_ptr<ExceptionEvent> exception_event) {}
 
  private:
   // Feeds syscalls_ with all the syscalls we can decode.
@@ -1767,6 +1760,8 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
     last_displayed_syscall_ = last_displayed_syscall;
   }
 
+  void clear_last_displayed_event() { last_displayed_event_ = nullptr; }
+
   bool dump_messages() const { return dump_messages_; }
 
   fidl_codec::MessageDecoderDispatcher* MessageDecoderDispatcher() override {
@@ -1792,11 +1787,22 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
 
   void StopMonitoring(zx_koid_t koid) override;
 
+  void AddInvokedEvent(std::shared_ptr<InvokedEvent> invoked_event) override;
+
+  // Displays an invoked event.
+  void DisplayInvokedEvent(const InvokedEvent* invoked_event);
+
+  void AddOutputEvent(std::shared_ptr<OutputEvent> output_event) override;
+
+  void AddExceptionEvent(std::shared_ptr<ExceptionEvent> exception_event) override;
+
  private:
   // Class which can decode a FIDL message.
   fidl_codec::MessageDecoderDispatcher message_decoder_dispatcher_;
   // The last syscall we displayed the inputs on the stream.
   const SyscallDisplay* last_displayed_syscall_ = nullptr;
+  // The last event we displayed.
+  const Event* last_displayed_event_ = nullptr;
   // The stream which will receive the syscall decodings.
   std::ostream& os_;
   // True if we always display the binary dump of the messages.

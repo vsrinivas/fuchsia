@@ -315,7 +315,7 @@ void SyscallDecoder::DecodeInputs() {
     // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
     // print the syscall.
     int64_t timestamp = time(nullptr);
-    invoked_event_ = std::make_unique<InvokedEvent>(timestamp << 32, fidlcat_thread_, syscall_);
+    invoked_event_ = std::make_shared<InvokedEvent>(timestamp << 32, fidlcat_thread_, syscall_);
     auto inline_member = syscall_->input_inline_members().begin();
     auto outline_member = syscall_->input_outline_members().begin();
     for (const auto& input : syscall_->inputs()) {
@@ -346,15 +346,17 @@ void SyscallDecoder::DecodeInputs() {
       fidlcat_thread_->process()->LoadHandleInfo(&dispatcher_->inference());
     }
   }
-  UseInputs();
-}
-
-void SyscallDecoder::UseInputs() {
   // Eventually calls the code before displaying the input (which may invalidate
   // the display).
   if ((syscall_->inputs_decoded_action() == nullptr) ||
       (dispatcher_->*(syscall_->inputs_decoded_action()))(this)) {
-    use_->SyscallInputsDecoded(this);
+    if (invoked_event_ != nullptr) {
+      // If we have been able to generate an invoked event, directly call the dispatcher.
+      dispatcher_->AddInvokedEvent(invoked_event_);
+    } else {
+      // Invoked event is not yet available for this syscall.
+      use_->SyscallInputsDecoded(this);
+    }
   }
 
   if (syscall_->return_type() == SyscallReturnType::kNoReturn) {
@@ -419,8 +421,8 @@ void SyscallDecoder::DecodeOutputs() {
     // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
     // print the syscall.
     int64_t timestamp = time(nullptr);
-    output_event_ = std::make_unique<OutputEvent>(timestamp << 32, fidlcat_thread_, syscall_,
-                                                  syscall_return_value_);
+    output_event_ = std::make_shared<OutputEvent>(timestamp << 32, fidlcat_thread_, syscall_,
+                                                  syscall_return_value_, invoked_event_);
     auto inline_member = syscall_->output_inline_members().begin();
     auto outline_member = syscall_->output_outline_members().begin();
     for (const auto& output : syscall_->outputs()) {
@@ -450,11 +452,13 @@ void SyscallDecoder::DecodeOutputs() {
       fidlcat_thread_->process()->LoadHandleInfo(&dispatcher_->inference());
     }
   }
-  UseOutputs();
-}
-
-void SyscallDecoder::UseOutputs() {
-  use_->SyscallOutputsDecoded(this);
+  if (output_event_ != nullptr) {
+    // If we have been able to generate an invoked event, directly call the dispatcher.
+    dispatcher_->AddOutputEvent(output_event_);
+  } else {
+    // Output event is not yet available for this syscall.
+    use_->SyscallOutputsDecoded(this);
+  }
 
   // Now our job is done, we can destroy the object.
   Destroy();
@@ -473,32 +477,16 @@ void SyscallDecoder::Destroy() {
 
 void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
   if (!dispatcher_->display_started()) {
-    // The user specified a trigger. Check if this is a message which satisfies one of the triggers.
-    if (decoder->invoked_event() == nullptr) {
-      return;
-    }
-    const fidl_codec::FidlMessageValue* message = decoder->invoked_event()->GetMessage();
-    if ((message == nullptr) ||
-        !dispatcher_->decode_options().IsTrigger(message->method()->fully_qualified_name())) {
-      return;
-    }
-    // We found a trigger => allow the display.
-    dispatcher_->set_display_started();
-  }
-  if (dispatcher_->has_filter() && decoder->syscall()->has_fidl_message()) {
-    // We have filters and this is a syscalls with a FIDL message.
-    // Only display the syscall if the message satifies the conditions.
-    const fidl_codec::FidlMessageValue* message = decoder->invoked_event()->GetMessage();
-    if ((message == nullptr) || !dispatcher_->decode_options().SatisfiesMessageFilters(
-                                    message->method()->fully_qualified_name())) {
-      return;
-    }
+    // The display is not started. Only events can trigger it. We don't have an event so, we have
+    // nothing to display.
+    return;
   }
   displayed_ = true;
   DisplayInputs(decoder);
 }
 
 void SyscallDisplay::DisplayInputs(SyscallDecoder* decoder) {
+  // This code will be deleted when we will be able to generate events for all the syscalls.
   const fidl_codec::Colors& colors = dispatcher_->colors();
   std::string line_header = decoder->fidlcat_thread()->process()->name() + ' ' + colors.red +
                             std::to_string(decoder->fidlcat_thread()->process()->koid()) +
@@ -512,71 +500,38 @@ void SyscallDisplay::DisplayInputs(SyscallDecoder* decoder) {
   FidlcatPrinter printer(dispatcher_, decoder->fidlcat_thread()->process()->koid(), os_,
                          line_header);
 
-  const InvokedEvent* invoked_event = decoder->invoked_event();
-  if (invoked_event != nullptr) {
-    // We have been able to create values from the syscall => print them.
-    invoked_event->PrettyPrint(printer);
-  } else {
-    if (dispatcher_->decode_options().stack_level != kNoStack) {
-      // Display caller locations.
-      DisplayStackFrame(decoder->caller_locations(), printer);
-    }
+  if (dispatcher_->decode_options().stack_level != kNoStack) {
+    // Display caller locations.
+    DisplayStackFrame(decoder->caller_locations(), printer);
+  }
 
-    // This code will be deleted when we will be able to have the two step printing for all the
-    // syscalls.
-    //
-    // Displays the header and the inline input arguments.
-    printer << decoder->syscall()->name() << '(';
-    const char* separator = "";
+  // Displays the header and the inline input arguments.
+  printer << decoder->syscall()->name() << '(';
+  const char* separator = "";
+  for (const auto& input : decoder->syscall()->inputs()) {
+    if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
+      separator = input->DisplayInline(decoder, Stage::kEntry, separator, printer);
+    }
+  }
+  printer << ")\n";
+
+  {
+    fidl_codec::Indent indent(printer);
+    // Displays the outline input arguments.
     for (const auto& input : decoder->syscall()->inputs()) {
       if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
-        separator = input->DisplayInline(decoder, Stage::kEntry, separator, printer);
-      }
-    }
-    printer << ")\n";
-
-    {
-      fidl_codec::Indent indent(printer);
-      // Displays the outline input arguments.
-      for (const auto& input : decoder->syscall()->inputs()) {
-        if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
-          input->DisplayOutline(decoder, Stage::kEntry, printer);
-        }
+        input->DisplayOutline(decoder, Stage::kEntry, printer);
       }
     }
   }
   dispatcher_->set_last_displayed_syscall(this);
+  dispatcher_->clear_last_displayed_event();
 }
 
 void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
+  // This code will be deleted when we will be able to generate events for all the syscalls.
   if (!displayed_) {
-    // The display of the syscall wasn't allowed by the input arguments. Check if the output
-    // arguments allows its display.
-    if (!dispatcher_->display_started()) {
-      // The user specified a trigger. Check if this is a message which satisfies one of the
-      // triggers.
-      if (decoder->output_event() == nullptr) {
-        return;
-      }
-      const fidl_codec::FidlMessageValue* message = decoder->output_event()->GetMessage();
-      if ((message == nullptr) ||
-          !dispatcher_->decode_options().IsTrigger(message->method()->fully_qualified_name())) {
-        return;
-      }
-      dispatcher_->set_display_started();
-    }
-    if (dispatcher_->has_filter() && decoder->syscall()->has_fidl_message()) {
-      // We have filters and this is a syscalls with a FIDL message.
-      // Only display the syscall if the message satifies the conditions.
-      const fidl_codec::FidlMessageValue* message = decoder->output_event()->GetMessage();
-      if ((message == nullptr) || !dispatcher_->decode_options().SatisfiesMessageFilters(
-                                      message->method()->fully_qualified_name())) {
-        return;
-      }
-    }
-    // We can display the syscall but the inputs have not been displayed => display the inputs
-    // before displaying the outputs.
-    DisplayInputs(decoder);
+    return;
   }
   if (decoder->syscall()->return_type() != SyscallReturnType::kNoReturn) {
     if (dispatcher_->last_displayed_syscall() != this) {
@@ -594,66 +549,58 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
     }
     FidlcatPrinter printer(dispatcher_, decoder->fidlcat_thread()->process()->koid(), os_,
                            line_header);
-    const OutputEvent* output_event = decoder->output_event();
-    if (output_event != nullptr) {
-      // We have been able to create values from the syscall => print them.
-      output_event->PrettyPrint(printer);
-    } else {
-      // This code will be deleted when we will be able to have the two step printing for all the
-      // syscalls.
-      //
-      // Displays the returned value.
-      printer << "  -> ";
-      switch (decoder->syscall()->return_type()) {
-        case SyscallReturnType::kNoReturn:
-        case SyscallReturnType::kVoid:
-          break;
-        case SyscallReturnType::kStatus:
-          StatusName(static_cast<zx_status_t>(decoder->syscall_return_value()), printer);
-          break;
-        case SyscallReturnType::kTicks:
-          printer << fidl_codec::Green << "ticks" << fidl_codec::ResetColor << ": "
-                  << fidl_codec::Blue << static_cast<uint64_t>(decoder->syscall_return_value())
-                  << fidl_codec::ResetColor;
-          break;
-        case SyscallReturnType::kTime:
-          printer << fidl_codec::Green << "time" << fidl_codec::ResetColor << ": "
-                  << DisplayTime(static_cast<zx_time_t>(decoder->syscall_return_value()));
-          break;
-        case SyscallReturnType::kUint32:
-          printer << fidl_codec::Blue << static_cast<uint32_t>(decoder->syscall_return_value())
-                  << fidl_codec::ResetColor;
-          break;
-        case SyscallReturnType::kUint64:
-          printer << fidl_codec::Blue << static_cast<uint64_t>(decoder->syscall_return_value())
-                  << fidl_codec::ResetColor;
-          break;
+    // Displays the returned value.
+    printer << "  -> ";
+    switch (decoder->syscall()->return_type()) {
+      case SyscallReturnType::kNoReturn:
+      case SyscallReturnType::kVoid:
+        break;
+      case SyscallReturnType::kStatus:
+        StatusName(static_cast<zx_status_t>(decoder->syscall_return_value()), printer);
+        break;
+      case SyscallReturnType::kTicks:
+        printer << fidl_codec::Green << "ticks" << fidl_codec::ResetColor << ": "
+                << fidl_codec::Blue << static_cast<uint64_t>(decoder->syscall_return_value())
+                << fidl_codec::ResetColor;
+        break;
+      case SyscallReturnType::kTime:
+        printer << fidl_codec::Green << "time" << fidl_codec::ResetColor << ": "
+                << DisplayTime(static_cast<zx_time_t>(decoder->syscall_return_value()));
+        break;
+      case SyscallReturnType::kUint32:
+        printer << fidl_codec::Blue << static_cast<uint32_t>(decoder->syscall_return_value())
+                << fidl_codec::ResetColor;
+        break;
+      case SyscallReturnType::kUint64:
+        printer << fidl_codec::Blue << static_cast<uint64_t>(decoder->syscall_return_value())
+                << fidl_codec::ResetColor;
+        break;
+    }
+    // And the inline output arguments (if any).
+    const char* separator = " (";
+    for (const auto& output : decoder->syscall()->outputs()) {
+      if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
+          output->ConditionsAreTrue(decoder, Stage::kExit)) {
+        separator = output->DisplayInline(decoder, Stage::kExit, separator, printer);
       }
-      // And the inline output arguments (if any).
-      const char* separator = " (";
+    }
+    if (std::string(" (") != separator) {
+      printer << ')';
+    }
+    printer << '\n';
+    {
+      fidl_codec::MultiIndent indent(printer, 2);
+      // Displays the outline output arguments.
       for (const auto& output : decoder->syscall()->outputs()) {
         if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
             output->ConditionsAreTrue(decoder, Stage::kExit)) {
-          separator = output->DisplayInline(decoder, Stage::kExit, separator, printer);
-        }
-      }
-      if (std::string(" (") != separator) {
-        printer << ')';
-      }
-      printer << '\n';
-      {
-        fidl_codec::MultiIndent indent(printer, 2);
-        // Displays the outline output arguments.
-        for (const auto& output : decoder->syscall()->outputs()) {
-          if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
-              output->ConditionsAreTrue(decoder, Stage::kExit)) {
-            output->DisplayOutline(decoder, Stage::kExit, printer);
-          }
+          output->DisplayOutline(decoder, Stage::kExit, printer);
         }
       }
     }
 
     dispatcher_->set_last_displayed_syscall(this);
+    dispatcher_->clear_last_displayed_event();
   }
 }
 

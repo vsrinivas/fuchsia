@@ -139,22 +139,33 @@ class InvokedEvent : public SyscallEvent {
   const std::vector<Location>& stack_frame() const { return stack_frame_; }
   std::vector<Location>& stack_frame() { return stack_frame_; }
 
+  bool displayed() const { return displayed_; }
+  void set_displayed() { displayed_ = true; }
+
   void PrettyPrint(FidlcatPrinter& printer) const;
 
  public:
   std::vector<Location> stack_frame_;
+  bool displayed_ = false;
 };
 
 // Event that represents the return value and out parameters when a syscall returns.
 class OutputEvent : public SyscallEvent {
  public:
-  OutputEvent(int64_t timestamp, Thread* thread, const Syscall* syscall, int64_t returned_value)
-      : SyscallEvent(timestamp, thread, syscall), returned_value_(returned_value) {}
+  OutputEvent(int64_t timestamp, Thread* thread, const Syscall* syscall, int64_t returned_value,
+              std::shared_ptr<InvokedEvent> invoked_event)
+      : SyscallEvent(timestamp, thread, syscall),
+        returned_value_(returned_value),
+        invoked_event_(std::move(invoked_event)) {}
+
+  const InvokedEvent* invoked_event() const { return invoked_event_.get(); }
 
   void PrettyPrint(FidlcatPrinter& printer) const;
 
  private:
-  int64_t returned_value_;
+  const int64_t returned_value_;
+  // The event which describes the input arguments for this syscall output event.
+  std::shared_ptr<InvokedEvent> invoked_event_;
 };
 
 // Event that represents an exception.
