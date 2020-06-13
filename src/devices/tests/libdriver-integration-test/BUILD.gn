@@ -4,11 +4,12 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/images/manifest.gni")
+import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
 
-executable("tests") {
+test("tests") {
   testonly = true
 
   output_name = "libdriver-integration-test"

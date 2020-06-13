@@ -17,10 +17,10 @@ import("//build/test/test_package.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":id_allocator" ]
+  deps = [ ":id_allocator-test" ]
 }
 
-test("id_allocator") {
+test("id_allocator-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "id_allocator.cc" ]
   deps = [
@@ -33,12 +33,11 @@ test("id_allocator") {
 
 unittest_package("id-allocator-package") {
   package_name = "id-allocator"
-  deps = [ ":id_allocator" ]
+  deps = [ ":id_allocator-test" ]
 
   tests = [
     {
-      name = "id_allocator"
-      dest = "id_allocator-test"
+      name = "id_allocator-test"
     },
   ]
 }

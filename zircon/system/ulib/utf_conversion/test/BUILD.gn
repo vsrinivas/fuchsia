@@ -19,12 +19,12 @@ import("//build/fuzzing/fuzzer.gni")
 group("test") {
   testonly = true
   deps = [
-    ":utf_conversion",
     ":utf_conversion-fuzzer",
+    ":utf_conversion-test",
   ]
 }
 
-test("utf_conversion") {
+test("utf_conversion-test") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -51,12 +51,11 @@ fuzzer("utf_conversion-fuzzer") {
 
 unittest_package("utf-conversion-package") {
   package_name = "utf-conversion"
-  deps = [ ":utf_conversion" ]
+  deps = [ ":utf_conversion-test" ]
 
   tests = [
     {
-      name = "utf_conversion"
-      dest = "utf_conversion-test"
+      name = "utf_conversion-test"
     },
   ]
 }

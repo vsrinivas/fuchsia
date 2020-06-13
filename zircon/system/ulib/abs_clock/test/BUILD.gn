@@ -48,7 +48,6 @@ unittest_package("abs-clock-test-package") {
   tests = [
     {
       name = "abs_clock_test"
-      dest = "abs_clock_test-test"
     },
   ]
 }

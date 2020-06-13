@@ -16,7 +16,7 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
-test("ddktl") {
+test("ddktl-test") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   sources = [
     "device-tests.cc",
@@ -40,12 +40,11 @@ test("ddktl") {
 
 unittest_package("ddktl-unittest-package") {
   package_name = "ddktl"
-  deps = [ ":ddktl" ]
+  deps = [ ":ddktl-test" ]
 
   tests = [
     {
-      name = "ddktl"
-      dest = "ddktl-test"
+      name = "ddktl-test"
     },
   ]
 }
