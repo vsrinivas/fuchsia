@@ -3,13 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{mode_management::phy_manager::PhyManagerApi, util::listener},
+    crate::{mode_management::iface_manager::IfaceManagerApi, util::listener},
     anyhow::{format_err, Error},
-    fidl::endpoints::create_proxy,
     fidl::epitaph::ChannelEpitaphExt,
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device_service,
-    fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
+    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
         future::BoxFuture,
@@ -19,34 +17,23 @@ use {
         stream::{FuturesUnordered, StreamExt, TryStreamExt},
         FutureExt, TryFutureExt,
     },
-    log::{error, info},
-    parking_lot::Mutex,
+    log::{error, info, warn},
     std::sync::Arc,
+    wlan_common::{
+        channel::{Cbw, Phy},
+        RadioConfig,
+    },
 };
 
 pub mod state_machine;
 pub mod types;
 
-#[derive(Debug)]
-struct AccessPointInner {
-    proxy: Option<fidl_sme::ApSmeProxy>,
-}
-
-impl From<fidl_sme::ApSmeProxy> for AccessPointInner {
-    fn from(proxy: fidl_sme::ApSmeProxy) -> Self {
-        Self { proxy: Some(proxy) }
-    }
-}
-
 // Wrapper around an AP interface allowing a watcher to set the underlying SME and the policy API
 // servicing routines to utilize the SME.
 #[derive(Clone)]
 pub(crate) struct AccessPoint {
-    inner: Arc<Mutex<AccessPointInner>>,
-    phy_manager: Arc<FutureMutex<dyn PhyManagerApi + Send>>,
-    device_service: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
-    update_sender: Option<listener::ApListenerMessageSender>,
-    iface_id: Arc<Mutex<Option<u16>>>,
+    iface_manager: Arc<FutureMutex<dyn IfaceManagerApi + Send>>,
+    update_sender: listener::ApListenerMessageSender,
 }
 
 // This number was chosen arbitrarily.
@@ -57,59 +44,25 @@ type ApRequests = fidl::endpoints::ServerEnd<fidl_policy::AccessPointControllerM
 impl AccessPoint {
     /// Creates a new, empty AccessPoint. The returned AccessPoint effectively represents the state
     /// in which no AP interface is available.
-    pub fn new_empty(
-        phy_manager: Arc<FutureMutex<dyn PhyManagerApi + Send>>,
-        device_service: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
+    pub fn new(
+        iface_manager: Arc<FutureMutex<dyn IfaceManagerApi + Send>>,
+        update_sender: listener::ApListenerMessageSender,
     ) -> Self {
-        Self {
-            inner: Arc::new(Mutex::new(AccessPointInner { proxy: None })),
-            phy_manager,
-            device_service,
-            update_sender: None,
-            iface_id: Arc::new(Mutex::new(None)),
-        }
-    }
-
-    /// Set the SME when a new AP interface is created.
-    fn set_sme(&mut self, new_proxy: fidl_sme::ApSmeProxy) {
-        self.inner.lock().proxy = Some(new_proxy);
-    }
-
-    /// Allows the policy service to set the update sender when starting the AP service.
-    pub fn set_update_sender(&mut self, update_sender: listener::ApListenerMessageSender) {
-        self.update_sender = Some(update_sender);
-    }
-
-    /// Accesses the AP interface's SME.
-    /// Returns None if no AP interface is available.
-    fn access_sme(&self) -> Option<fidl_sme::ApSmeProxy> {
-        self.inner.lock().proxy.clone()
+        Self { iface_manager, update_sender }
     }
 
     fn send_listener_message(&self, message: listener::ApMessage) -> Result<(), Error> {
-        match self.update_sender.as_ref() {
-            Some(update_sender) => update_sender
-                .clone()
-                .unbounded_send(message)
-                .or_else(|e| Err(format_err!("failed to send state update: {}", e))),
-            None => Err(format_err!("no update sender is available")),
-        }
-    }
-
-    fn set_iface_id(&mut self, iface_id: Option<u16>) {
-        let mut inner_iface_id = self.iface_id.lock();
-        *inner_iface_id = iface_id;
-    }
-
-    fn access_iface_id(&mut self) -> Option<u16> {
-        self.iface_id.lock().clone()
+        self.update_sender
+            .clone()
+            .unbounded_send(message)
+            .or_else(|e| Err(format_err!("failed to send state update: {}", e)))
     }
 
     /// Serves the AccessPointProvider protocol.  Only one caller is allowed to interact with an
     /// AccessPointController.  This routine ensures that one active user has access at a time.
     /// Additional requests are terminated immediately.
     pub async fn serve_provider_requests(
-        mut self,
+        self,
         mut requests: fidl_policy::AccessPointProviderRequestStream,
     ) {
         let mut pending_response_queue =
@@ -149,9 +102,6 @@ impl AccessPoint {
                     Ok(Response::StartResponse(result)) => {
                         self.handle_sme_start_response(result)
                     },
-                    Ok(Response::StopResponse(result)) => {
-                        self.handle_sme_stop_response(result).await
-                    },
                     Err(e) => error!("error while processing AP requests: {}", e)
                 }
             }
@@ -188,50 +138,9 @@ impl AccessPoint {
         serve_fut.await;
     }
 
-    /// Creates an AP SME proxy from a given interface ID.
-    async fn create_ap_sme(&mut self) -> Result<fidl_sme::ApSmeProxy, Error> {
-        // Begin listening for new WLAN device updates.
-        let (watcher_proxy, watcher_server_end) = fidl::endpoints::create_proxy()?;
-        self.device_service.watch_devices(watcher_server_end)?;
-        let mut event_stream = watcher_proxy.take_event_stream();
-
-        // If the PhyManager has a PHY that can operate as an AP, request an AP interface from it
-        // and create an AP SME proxy.
-        let mut phy_manager = self.phy_manager.lock().await;
-        let iface_id = match phy_manager.create_or_get_ap_iface().await? {
-            Some(iface_id) => iface_id,
-            None => return Err(format_err!("no available PHYs can function as APs")),
-        };
-
-        // Wait until and OnIfaceAdded update with the desired interface ID is seen.  This update
-        // indicates that the interface is ready and that clients can proceed with acquiring an SME
-        // proxy.
-        while let Some(event) = event_stream.try_next().await? {
-            match event {
-                fidl_fuchsia_wlan_device_service::DeviceWatcherEvent::OnIfaceAdded {
-                    iface_id: new_iface_id,
-                } => {
-                    if new_iface_id == iface_id {
-                        break;
-                    }
-                }
-                _ => continue,
-            }
-        }
-
-        let (sme, remote) = create_proxy()?;
-        let status = self.device_service.get_ap_sme(iface_id, remote).await?;
-        zx::ok(status)?;
-        drop(phy_manager);
-
-        self.set_sme(sme.clone());
-        self.set_iface_id(Some(iface_id));
-        Ok(sme)
-    }
-
     /// Handles all requests of the AccessPointController.
     async fn handle_ap_requests(
-        &mut self,
+        &self,
         mut internal_msg_sink: mpsc::Sender<BoxFuture<'static, Result<Response, Error>>>,
         requests: ApRequests,
     ) -> Result<(), fidl::Error> {
@@ -245,82 +154,80 @@ impl AccessPoint {
                     band,
                     responder,
                 } => {
-                    let sme = match self.access_sme() {
-                        Some(sme) => sme,
-                        None => match self.create_ap_sme().await {
-                            Ok(sme) => sme,
-                            Err(e) => {
-                                error!("could not start AP: {}", e);
-                                responder
-                                    .send(fidl_common::RequestStatus::RejectedIncompatibleMode)?;
-                                continue;
-                            }
-                        },
-                    };
-
-                    let mut ap_config = match derive_ap_config(&config, band) {
+                    let ap_config = match derive_ap_config(&config, mode, band) {
                         Ok(config) => config,
                         Err(e) => {
-                            error!("Could not start AP: {}", e);
+                            info!("StartAccessPoint could not derive AP config: {}", e);
                             responder.send(fidl_common::RequestStatus::RejectedNotSupported)?;
                             continue;
                         }
                     };
 
-                    // The AP will not take a new configuration on start unless it is stopped.
-                    // Issue an initial stop command before attempting to start the AP.
-                    match sme.stop().await {
-                        Ok(()) => {
-                            let fut = sme.start(&mut ap_config).map(move |result| {
-                                Ok(Response::StartResponse(StartParameters {
-                                    config,
-                                    mode,
-                                    band,
-                                    result,
-                                }))
-                            });
-                            if let Err(e) = internal_msg_sink.send(fut.boxed()).await {
-                                error!("Failed to send internal message: {:?}", e)
-                            }
-                            responder.send(fidl_common::RequestStatus::Acknowledged)?;
-                        }
+                    let mut iface_manager = self.iface_manager.lock().await;
+                    let receiver = match iface_manager.start_ap(ap_config.clone()).await {
+                        Ok(receiver) => receiver,
                         Err(e) => {
-                            error!("could not stop AP before starting: {}", e);
-                            responder.send(fidl_common::RequestStatus::RejectedIncompatibleMode)?;
-                        }
-                    }
-                }
-                fidl_policy::AccessPointControllerRequest::StopAccessPoint {
-                    config,
-                    responder,
-                } => {
-                    let sme = match self.access_sme() {
-                        Some(sme) => sme,
-                        None => {
+                            info!("failed to start AP: {}", e);
                             responder.send(fidl_common::RequestStatus::RejectedIncompatibleMode)?;
                             continue;
                         }
                     };
 
-                    let fut = sme.stop().map(move |result| {
-                        Ok(Response::StopResponse(StopParameters { config: Some(config), result }))
-                    });
+                    let fut = async move {
+                        let result = receiver.await?;
+                        Ok(Response::StartResponse(StartParameters {
+                            config: ap_config,
+                            result: Ok(result),
+                        }))
+                    };
                     if let Err(e) = internal_msg_sink.send(fut.boxed()).await {
                         error!("Failed to send internal message: {:?}", e)
                     }
                     responder.send(fidl_common::RequestStatus::Acknowledged)?;
                 }
-                fidl_policy::AccessPointControllerRequest::StopAllAccessPoints { .. } => {
-                    let sme = match self.access_sme() {
-                        Some(sme) => sme,
-                        None => continue,
+                fidl_policy::AccessPointControllerRequest::StopAccessPoint {
+                    config,
+                    responder,
+                } => {
+                    let ssid = match config.id {
+                        Some(id) => id.ssid,
+                        None => {
+                            warn!("received disconnect request with no SSID specified");
+                            responder.send(fidl_common::RequestStatus::RejectedNotSupported)?;
+                            continue;
+                        }
+                    };
+                    let credential = match config.credential {
+                        Some(fidl_policy::Credential::Password(password)) => password,
+                        Some(fidl_policy::Credential::Psk(psk)) => psk,
+                        Some(fidl_policy::Credential::None(fidl_policy::Empty)) => vec![],
+                        // The compiler insists that the unknown credential variant be handled.
+                        Some(_) => vec![],
+                        None => {
+                            warn!("received disconnect request with no credential specified");
+                            responder.send(fidl_common::RequestStatus::RejectedNotSupported)?;
+                            continue;
+                        }
                     };
 
-                    let fut = sme.stop().map(move |result| {
-                        Ok(Response::StopResponse(StopParameters { config: None, result }))
-                    });
-                    if let Err(e) = internal_msg_sink.send(fut.boxed()).await {
-                        error!("Failed to send internal message: {:?}", e)
+                    let mut iface_manager = self.iface_manager.lock().await;
+                    match iface_manager.stop_ap(ssid, credential).await {
+                        Ok(()) => {
+                            responder.send(fidl_common::RequestStatus::Acknowledged)?;
+                        }
+                        Err(e) => {
+                            error!("failed to stop AP: {}", e);
+                            responder.send(fidl_common::RequestStatus::RejectedIncompatibleMode)?;
+                        }
+                    }
+                }
+                fidl_policy::AccessPointControllerRequest::StopAllAccessPoints { .. } => {
+                    let mut iface_manager = self.iface_manager.lock().await;
+                    match iface_manager.stop_all_aps().await {
+                        Ok(()) => {}
+                        Err(e) => {
+                            info!("could not cleanly stop all APs: {}", e);
+                        }
                     }
                 }
             }
@@ -337,64 +244,22 @@ impl AccessPoint {
     }
 
     fn handle_sme_start_response(&self, result: StartParameters) {
-        let state = match result.result {
+        match result.result {
             Ok(result_code) => match result_code {
                 fidl_sme::StartApResultCode::Success
-                | fidl_sme::StartApResultCode::AlreadyStarted => types::OperatingState::Active,
+                | fidl_sme::StartApResultCode::AlreadyStarted => {}
                 ref state => {
-                    error!("AP did not start: {:?}", state);
-                    types::OperatingState::Failed
+                    let ssid_as_str = match std::str::from_utf8(&result.config.ssid) {
+                        Ok(ssid) => ssid,
+                        Err(_) => "",
+                    };
+                    error!("AP {} did not start: {:?}", ssid_as_str, state);
                 }
             },
             Err(e) => {
                 error!("Failed to communicate with AP SME: {}", e);
-                types::OperatingState::Failed
             }
         };
-        let update = listener::ApStatesUpdate {
-            access_points: vec![listener::ApStateUpdate::new(
-                state,
-                types::ConnectivityMode::from(result.mode),
-                types::OperatingBand::from(result.band),
-            )],
-        };
-        match self.send_listener_message(listener::Message::NotifyListeners(update)) {
-            Ok(()) => {}
-            Err(e) => error!("Failed to send AP start update: {}", e),
-        }
-    }
-
-    async fn handle_sme_stop_response(&mut self, result: StopParameters) {
-        if let Some(iface_id) = self.access_iface_id() {
-            let mut phy_manager = self.phy_manager.lock().await;
-            if let Err(e) = phy_manager.destroy_ap_iface(iface_id).await {
-                error!("failed to delete AP iface: {}", e);
-            } else {
-                drop(phy_manager);
-                self.inner.lock().proxy = None;
-                self.set_iface_id(None);
-            }
-        }
-
-        let update = listener::ApStatesUpdate {
-            access_points: match result.result {
-                Ok(()) => vec![],
-                Err(e) => {
-                    error!("Failed to stop AP: {}", e);
-                    vec![listener::ApStateUpdate {
-                        state: types::OperatingState::Failed,
-                        mode: None,
-                        band: None,
-                        frequency: None,
-                        clients: None,
-                    }]
-                }
-            },
-        };
-        match self.send_listener_message(listener::Message::NotifyListeners(update)) {
-            Ok(()) => {}
-            Err(e) => error!("Failed to send AP stop update: {}", e),
-        }
     }
 
     /// Handle inbound requests to register an additional AccessPointStateUpdates listener.
@@ -426,32 +291,24 @@ fn reject_provider_request(
 
 // The NetworkConfigs will be used in the future to aggregate state in crate::util::listener.
 struct StartParameters {
-    #[allow(unused)]
-    config: fidl_policy::NetworkConfig,
-    mode: fidl_policy::ConnectivityMode,
-    band: fidl_policy::OperatingBand,
-    result: Result<fidl_sme::StartApResultCode, fidl::Error>,
-}
-struct StopParameters {
-    #[allow(unused)]
-    config: Option<fidl_policy::NetworkConfig>,
-    result: Result<(), fidl::Error>,
+    config: state_machine::ApConfig,
+    result: Result<fidl_sme::StartApResultCode, Error>,
 }
 
 enum Response {
     StartResponse(StartParameters),
-    StopResponse(StopParameters),
 }
 
 fn derive_ap_config(
     config: &fidl_policy::NetworkConfig,
+    mode: fidl_policy::ConnectivityMode,
     band: fidl_policy::OperatingBand,
-) -> Result<fidl_sme::ApConfig, Error> {
+) -> Result<state_machine::ApConfig, Error> {
     let ssid = match config.id.as_ref() {
         Some(id) => id.ssid.to_vec(),
         None => return Err(format_err!("Missing SSID")),
     };
-    let password = match config.credential.as_ref() {
+    let credential = match config.credential.as_ref() {
         Some(credential) => match credential {
             fidl_policy::Credential::None(fidl_policy::Empty) => b"".to_vec(),
             fidl_policy::Credential::Password(bytes) => bytes.to_vec(),
@@ -462,21 +319,23 @@ fn derive_ap_config(
         },
         None => b"".to_vec(),
     };
+
+    // TODO(fxb/54033): Improve the channel selection algorithm.
     let channel = match band {
         fidl_policy::OperatingBand::Any => 11,
         fidl_policy::OperatingBand::Only24Ghz => 11,
         fidl_policy::OperatingBand::Only5Ghz => 36,
     };
-    let radio_cfg = fidl_sme::RadioConfig {
-        override_phy: true,
-        phy: fidl_common::Phy::Ht,
-        override_cbw: true,
-        cbw: fidl_common::Cbw::Cbw20,
-        override_primary_chan: true,
-        primary_chan: channel,
-    };
 
-    Ok(fidl_sme::ApConfig { ssid, password, radio_cfg })
+    let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, channel);
+
+    Ok(state_machine::ApConfig {
+        ssid,
+        credential,
+        radio_config,
+        mode: types::ConnectivityMode::from(mode),
+        band: types::OperatingBand::from(band),
+    })
 }
 
 /// Logs incoming AccessPointController requests.
@@ -501,71 +360,98 @@ fn log_ap_request(request: &fidl_policy::AccessPointControllerRequest) {
 mod tests {
     use {
         super::*,
-        crate::{mode_management::phy_manager::PhyManagerError, util::logger::set_logger_for_test},
+        crate::{client::state_machine as client_fsm, util::logger::set_logger_for_test},
         async_trait::async_trait,
-        fidl::endpoints::{create_proxy, create_request_stream, RequestStream},
+        fidl::endpoints::{create_proxy, create_request_stream},
         fuchsia_async as fasync,
-        futures::task::Poll,
+        futures::{channel::oneshot, task::Poll},
         pin_utils::pin_mut,
         wlan_common::assert_variant,
     };
 
-    const TEST_AP_IFACE_ID: u16 = 1;
-
     #[derive(Debug)]
-    struct FakePhyManager {
-        ap_iface: Option<u16>,
+    struct FakeIfaceManager {
+        pub start_response: fidl_fuchsia_wlan_sme::StartApResultCode,
+        pub start_succeeds: bool,
+        pub stop_succeeds: bool,
     }
 
-    impl FakePhyManager {
-        fn new() -> Self {
-            FakePhyManager { ap_iface: Some(TEST_AP_IFACE_ID) }
-        }
-
-        fn set_iface(&mut self, ap_iface: Option<u16>) {
-            self.ap_iface = ap_iface;
+    impl FakeIfaceManager {
+        pub fn new() -> Self {
+            FakeIfaceManager {
+                start_response: fidl_fuchsia_wlan_sme::StartApResultCode::Success,
+                start_succeeds: true,
+                stop_succeeds: true,
+            }
         }
     }
 
     #[async_trait]
-    impl PhyManagerApi for FakePhyManager {
-        async fn add_phy(&mut self, _phy_id: u16) -> Result<(), PhyManagerError> {
+    impl IfaceManagerApi for FakeIfaceManager {
+        async fn disconnect(
+            &mut self,
+            _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+        ) -> Result<(), Error> {
             Ok(())
         }
 
-        fn remove_phy(&mut self, _phy_id: u16) {}
-
-        async fn on_iface_added(&mut self, _iface_id: u16) -> Result<(), PhyManagerError> {
-            Ok(())
+        async fn connect(
+            &mut self,
+            _connect_req: client_fsm::ConnectRequest,
+        ) -> Result<oneshot::Receiver<()>, Error> {
+            Err(format_err!("connect is not implemented for FakeIfaceManager"))
         }
 
-        fn on_iface_removed(&mut self, _iface_id: u16) {}
+        fn record_idle_client(&mut self, _iface_id: u16) {}
 
-        async fn create_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
-            Ok(())
+        fn has_idle_client(&self) -> bool {
+            true
         }
 
-        async fn destroy_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
-            Ok(())
+        async fn scan(
+            &mut self,
+            _timeout: u8,
+            _scan_type: fidl_fuchsia_wlan_common::ScanType,
+        ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
+            Err(format_err!("scan is not implemented for FakeIfaceManager"))
         }
 
-        fn get_client(&mut self) -> Option<u16> {
-            None
+        async fn stop_client_connections(&mut self) -> Result<(), Error> {
+            Err(format_err!("stop_client_connections is not implemented for FakeIfaceManager"))
         }
 
-        async fn create_or_get_ap_iface(&mut self) -> Result<Option<u16>, PhyManagerError> {
-            Ok(self.ap_iface)
+        async fn start_client_connections(&mut self) -> Result<(), Error> {
+            Err(format_err!("start_client_connections is not implemented for FakeIfaceManager"))
         }
 
-        async fn destroy_ap_iface(&mut self, _iface_id: u16) -> Result<(), PhyManagerError> {
-            Ok(())
+        async fn start_ap(
+            &mut self,
+            _config: state_machine::ApConfig,
+        ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error> {
+            if self.start_succeeds {
+                let (sender, receiver) = oneshot::channel();
+                let _ = sender.send(self.start_response);
+                Ok(receiver)
+            } else {
+                Err(format_err!("start_ap was configured to fail"))
+            }
         }
 
-        async fn destroy_all_ap_ifaces(&mut self) -> Result<(), PhyManagerError> {
-            Ok(())
+        async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
+            if self.stop_succeeds {
+                Ok(())
+            } else {
+                Err(format_err!("stop was instructed to fail"))
+            }
         }
 
-        fn suggest_ap_mac(&mut self, _mac: eui48::MacAddress) {}
+        async fn stop_all_aps(&mut self) -> Result<(), Error> {
+            if self.stop_succeeds {
+                Ok(())
+            } else {
+                Err(format_err!("stop was instructed to fail"))
+            }
+        }
     }
 
     /// Requests a new AccessPointController from the given AccessPointProvider.
@@ -582,27 +468,11 @@ mod tests {
         (controller, update_stream)
     }
 
-    /// Creates an AccessPoint wrapper.
-    fn create_ap(
-        phy_manager: Arc<FutureMutex<dyn PhyManagerApi + Send>>,
-        device_service_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
-    ) -> (AccessPoint, fidl_sme::ApSmeRequestStream) {
-        let (ap_sme, remote) =
-            create_proxy::<fidl_sme::ApSmeMarker>().expect("error creating proxy");
-        let mut ap = AccessPoint::new_empty(phy_manager, device_service_proxy);
-        ap.set_sme(ap_sme);
-        (ap, remote.into_stream().expect("failed to create stream"))
-    }
-
     struct TestValues {
         provider: fidl_policy::AccessPointProviderProxy,
         requests: fidl_policy::AccessPointProviderRequestStream,
-        device_service_stream: fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
-        sender: mpsc::UnboundedSender<listener::ApMessage>,
-        receiver: mpsc::UnboundedReceiver<listener::ApMessage>,
         ap: AccessPoint,
-        sme_stream: fidl_sme::ApSmeRequestStream,
-        phy_manager: Arc<FutureMutex<FakePhyManager>>,
+        iface_manager: Arc<FutureMutex<FakeIfaceManager>>,
     }
 
     /// Setup channels and proxies needed for the tests to use use the AP Provider and
@@ -612,29 +482,12 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let mut phy_manager = FakePhyManager::new();
-        phy_manager.set_iface(Some(TEST_AP_IFACE_ID));
-        let phy_manager = Arc::new(FutureMutex::new(phy_manager));
-
-        let (device_service_proxy, device_service_requests) =
-            create_proxy::<fidl_fuchsia_wlan_device_service::DeviceServiceMarker>()
-                .expect("failed to create SeviceService proxy");
-        let device_service_stream =
-            device_service_requests.into_stream().expect("failed to create stream");
-
-        let (ap, sme_stream) = create_ap(phy_manager.clone(), device_service_proxy);
-        let (sender, receiver) = mpsc::unbounded();
+        let iface_manager = FakeIfaceManager::new();
+        let iface_manager = Arc::new(FutureMutex::new(iface_manager));
+        let (sender, _) = mpsc::unbounded();
+        let ap = AccessPoint::new(iface_manager.clone(), sender);
         set_logger_for_test();
-        TestValues {
-            provider,
-            requests,
-            device_service_stream,
-            sender,
-            receiver,
-            ap,
-            sme_stream,
-            phy_manager,
-        }
+        TestValues { provider, requests, ap, iface_manager }
     }
 
     /// Tests the case where StartAccessPoint is called and there is a valid interface to service
@@ -642,8 +495,7 @@ mod tests {
     #[test]
     fn test_start_access_point_with_iface_succeeds() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
-        test_values.ap.set_update_sender(test_values.sender);
+        let test_values = test_setup();
         let serve_fut = test_values.ap.serve_provider_requests(test_values.requests);
         pin_mut!(serve_fut);
 
@@ -653,12 +505,6 @@ mod tests {
         // Request a new controller.
         let (controller, _) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Clear the initial state upate.
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(_))
-        );
 
         // Issue StartAP request.
         let network_id = fidl_policy::NetworkIdentifier {
@@ -672,40 +518,12 @@ mod tests {
             controller.start_access_point(network_config, connectivity_mode, operating_band);
         pin_mut!(start_fut);
 
-        // Process start request and the initial request to stop.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ApSmeRequest::Stop { responder}))) => {
-                assert!(responder.send().is_ok());
-            }
-        );
-
         // Process start request and verify start response.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
             exec.run_until_stalled(&mut start_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
         );
-
-        // Verify that the SME received the start request and send back a response
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ApSmeRequest::Start { config: _, responder}))) => {
-                assert!(responder.send(fidl_sme::StartApResultCode::Success).is_ok());
-            }
-        );
-
-        // Run the service so that it gets the response and sends an update
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Verify that the listener sees the udpate
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-
-        assert_eq!(summary.access_points[0].state, types::OperatingState::Active);
     }
 
     /// Tests the case where StartAccessPoint is called and there is a valid interface to service
@@ -713,8 +531,7 @@ mod tests {
     #[test]
     fn test_start_access_point_with_iface_fails() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
-        test_values.ap.set_update_sender(test_values.sender);
+        let test_values = test_setup();
         let serve_fut = test_values.ap.serve_provider_requests(test_values.requests);
         pin_mut!(serve_fut);
 
@@ -725,11 +542,16 @@ mod tests {
         let (controller, _) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        // Clear the initial state upate.
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(_))
-        );
+        // Set the StartAp response.
+        {
+            let iface_manager_fut = test_values.iface_manager.lock();
+            pin_mut!(iface_manager_fut);
+            let mut iface_manager = assert_variant!(
+                exec.run_until_stalled(&mut iface_manager_fut),
+                Poll::Ready(iface_manager) => { iface_manager }
+            );
+            iface_manager.start_response = fidl_sme::StartApResultCode::InternalError;
+        }
 
         // Issue StartAP request.
         let network_id = fidl_policy::NetworkIdentifier {
@@ -743,40 +565,12 @@ mod tests {
             controller.start_access_point(network_config, connectivity_mode, operating_band);
         pin_mut!(start_fut);
 
-        // Process start request and the initial request to stop.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ApSmeRequest::Stop { responder}))) => {
-                assert!(responder.send().is_ok());
-            }
-        );
-
-        // Verify the start response.
+        // Verify the start response is successful despite the AP's failure to start.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
             exec.run_until_stalled(&mut start_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
         );
-
-        // Verify that the SME received the start request and send back a response
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ApSmeRequest::Start { config: _, responder}))) => {
-                assert!(responder.send(fidl_sme::StartApResultCode::InternalError).is_ok());
-            }
-        );
-
-        // Run the service so that it gets the response and sends an update
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Verify that the listener sees the udpate
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-
-        assert_eq!(summary.access_points[0].state, types::OperatingState::Failed);
     }
 
     /// Tests the case where there are no interfaces available to handle a StartAccessPoint
@@ -784,22 +578,19 @@ mod tests {
     #[test]
     fn test_start_access_point_no_iface() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
+        let test_values = test_setup();
 
-        // Set up the AccessPoint so that there is no SME.
+        // Set the IfaceManager to fail when asked to start an AP.
         {
-            test_values.ap.inner.lock().proxy = None;
+            let iface_manager_fut = test_values.iface_manager.lock();
+            pin_mut!(iface_manager_fut);
+            let mut iface_manager = assert_variant!(
+                exec.run_until_stalled(&mut iface_manager_fut),
+                Poll::Ready(iface_manager) => { iface_manager }
+            );
+            iface_manager.start_succeeds = false;
         }
 
-        // Setup the PhyManager so that there are no available AP ifaces.
-        {
-            let mut fut = test_values.phy_manager.lock();
-            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(mut phy_manager) => {
-                phy_manager.set_iface(None);
-            });
-        }
-
-        test_values.ap.set_update_sender(test_values.sender);
         let serve_fut = test_values.ap.serve_provider_requests(test_values.requests);
         pin_mut!(serve_fut);
 
@@ -811,9 +602,9 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Issue StartAP request.
-        let network_config = fidl_policy::NetworkConfig { id: None, credential: None };
         let connectivity_mode = fidl_policy::ConnectivityMode::LocalOnly;
         let operating_band = fidl_policy::OperatingBand::Any;
+        let network_config = fidl_policy::NetworkConfig { id: None, credential: None };
         let start_fut =
             controller.start_access_point(network_config, connectivity_mode, operating_band);
         pin_mut!(start_fut);
@@ -822,117 +613,8 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
             exec.run_until_stalled(&mut start_fut),
-            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedIncompatibleMode))
+            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedNotSupported))
         );
-    }
-
-    /// Tests the case where the AccessPoint initially does not have an interface but is able to
-    /// create one.
-    #[test]
-    fn test_start_access_point_create_iface() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
-
-        // Set up the AccessPoint so that there is no SME.
-        {
-            test_values.ap.inner.lock().proxy = None;
-        }
-
-        test_values.ap.set_update_sender(test_values.sender);
-        let serve_fut = test_values.ap.serve_provider_requests(test_values.requests);
-        pin_mut!(serve_fut);
-
-        // No request has been sent yet. Future should be idle.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Request a new controller.
-        let (controller, _) = request_controller(&test_values.provider);
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Clear the initial state upate.
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(_))
-        );
-
-        // Issue StartAP request.
-        let network_id = fidl_policy::NetworkIdentifier {
-            ssid: b"test".to_vec(),
-            type_: fidl_policy::SecurityType::None,
-        };
-        let network_config = fidl_policy::NetworkConfig { id: Some(network_id), credential: None };
-        let connectivity_mode = fidl_policy::ConnectivityMode::LocalOnly;
-        let operating_band = fidl_policy::OperatingBand::Any;
-        let start_fut =
-            controller.start_access_point(network_config, connectivity_mode, operating_band);
-        pin_mut!(start_fut);
-
-        // Process start request.  The FakePhyManager will indicate that there is an available
-        // iface that can function as an AP.  The service will then wait to be notified that the
-        // iface has been created.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Send back a response notifying that the iface has been created.
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.device_service_stream.next()),
-            Poll::Ready(Some(Ok(
-                fidl_fuchsia_wlan_device_service::DeviceServiceRequest::WatchDevices{ watcher, control_handle: _ }
-            ))) => {
-                let stream = watcher.into_stream().unwrap();
-                let handle = stream.control_handle();
-                assert!(handle.send_on_iface_added(TEST_AP_IFACE_ID).is_ok());
-            }
-        );
-
-        // Wait for a request and then send back an SME proxy.
-        let mut sme_remote_end: fidl_fuchsia_wlan_sme::ApSmeRequestStream;
-
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.device_service_stream.next()),
-            Poll::Ready(Some(Ok(
-                fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetApSme { iface_id, sme, responder }
-            ))) => {
-                assert_eq!(iface_id, TEST_AP_IFACE_ID);
-                sme_remote_end = sme.into_stream().unwrap();
-                assert!(responder.send(zx::Status::OK.into_raw()).is_ok());
-            }
-        );
-
-        // Verify the SME's request to initially stop the AP.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut sme_remote_end.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ApSmeRequest::Stop { responder }))) => {
-                assert!(responder.send().is_ok());
-            }
-        );
-
-        // Verify that the caller got back an acknowledgement.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut start_fut),
-            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
-        );
-
-        // Verify the SME's request to start the AP.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut sme_remote_end.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ApSmeRequest::Start { config: _, responder}))) => {
-                assert!(responder.send(fidl_sme::StartApResultCode::Success).is_ok());
-            }
-        );
-
-        // Verify that the listener sees the state update.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-
-        assert_eq!(summary.access_points[0].state, types::OperatingState::Active);
     }
 
     /// Tests the case where StopAccessPoint is called and there is a valid interface to handle the
@@ -940,8 +622,7 @@ mod tests {
     #[test]
     fn test_stop_access_point_with_iface_succeeds() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
-        test_values.ap.set_update_sender(test_values.sender);
+        let test_values = test_setup();
         let serve_fut = test_values.ap.serve_provider_requests(test_values.requests);
         pin_mut!(serve_fut);
 
@@ -952,14 +633,14 @@ mod tests {
         let (controller, _) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        // Clear the initial state upate.
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(_))
-        );
-
         // Issue StopAP request.
-        let network_config = fidl_policy::NetworkConfig { id: None, credential: None };
+        let network_id = fidl_policy::NetworkIdentifier {
+            ssid: b"test".to_vec(),
+            type_: fidl_policy::SecurityType::None,
+        };
+        let credential = fidl_policy::Credential::None(fidl_policy::Empty);
+        let network_config =
+            fidl_policy::NetworkConfig { id: Some(network_id), credential: Some(credential) };
         let stop_fut = controller.stop_access_point(network_config);
         pin_mut!(stop_fut);
 
@@ -969,25 +650,6 @@ mod tests {
             exec.run_until_stalled(&mut stop_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
         );
-
-        // Verify that the SME received the stop request and send back a response
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ApSmeRequest::Stop { responder}))) => {
-                assert!(responder.send().is_ok());
-            }
-        );
-
-        // Run the service so that it gets the response and sends an update
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Verify that the listener sees the udpate
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-
-        assert_eq!(summary.access_points.len(), 0);
     }
 
     /// Tests the case where StopAccessPoint is called and there is a valid interface to service
@@ -995,8 +657,7 @@ mod tests {
     #[test]
     fn test_stop_access_point_with_iface_fails() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
-        test_values.ap.set_update_sender(test_values.sender);
+        let test_values = test_setup();
         let serve_fut = test_values.ap.serve_provider_requests(test_values.requests);
         pin_mut!(serve_fut);
 
@@ -1007,64 +668,25 @@ mod tests {
         let (controller, _) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        // Clear the initial state upate.
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(_))
-        );
-
-        // Drop the serving end of the SME proxy.
-        drop(test_values.sme_stream);
-
-        // Issue StopAP request.
-        let network_config = fidl_policy::NetworkConfig { id: None, credential: None };
-        let stop_fut = controller.stop_access_point(network_config);
-        pin_mut!(stop_fut);
-
-        // Process stop request and verify stop response.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut stop_fut),
-            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
-        );
-
-        // Run the service so that it gets the response and sends an update
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Verify that the listener sees the udpate
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-
-        assert_eq!(summary.access_points[0].state, types::OperatingState::Failed);
-    }
-
-    /// Tests the case where StopAccessPoint is called, but there are no interfaces to service the
-    /// request.
-    #[test]
-    fn test_stop_access_point_no_iface() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
-
-        // Set up the AccessPoint so that there is no SME.
+        // Set the StopAp response.
         {
-            test_values.ap.inner.lock().proxy = None;
+            let iface_manager_fut = test_values.iface_manager.lock();
+            pin_mut!(iface_manager_fut);
+            let mut iface_manager = assert_variant!(
+                exec.run_until_stalled(&mut iface_manager_fut),
+                Poll::Ready(iface_manager) => { iface_manager }
+            );
+            iface_manager.stop_succeeds = false;
         }
 
-        test_values.ap.set_update_sender(test_values.sender);
-        let serve_fut = test_values.ap.serve_provider_requests(test_values.requests);
-        pin_mut!(serve_fut);
-
-        // No request has been sent yet. Future should be idle.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Request a new controller.
-        let (controller, _) = request_controller(&test_values.provider);
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
         // Issue StopAP request.
-        let network_config = fidl_policy::NetworkConfig { id: None, credential: None };
+        let network_id = fidl_policy::NetworkIdentifier {
+            ssid: b"test".to_vec(),
+            type_: fidl_policy::SecurityType::None,
+        };
+        let credential = fidl_policy::Credential::None(fidl_policy::Empty);
+        let network_config =
+            fidl_policy::NetworkConfig { id: Some(network_id), credential: Some(credential) };
         let stop_fut = controller.stop_access_point(network_config);
         pin_mut!(stop_fut);
 
@@ -1081,8 +703,7 @@ mod tests {
     #[test]
     fn test_stop_all_access_points_succeeds() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
-        test_values.ap.set_update_sender(test_values.sender);
+        let test_values = test_setup();
         let serve_fut = test_values.ap.serve_provider_requests(test_values.requests);
         pin_mut!(serve_fut);
 
@@ -1093,33 +714,12 @@ mod tests {
         let (controller, _) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        // Clear the initial state upate.
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(_))
-        );
-
         // Issue StopAllAps request.
         let stop_result = controller.stop_all_access_points();
         assert!(stop_result.is_ok());
 
-        // Verify that the SME received the stop request and send back a response
+        // Verify that the service is still running.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ApSmeRequest::Stop { responder}))) => {
-                assert!(responder.send().is_ok());
-            }
-        );
-
-        // Verify that the listener sees the udpate
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-
-        assert_eq!(summary.access_points.len(), 0);
     }
 
     /// Tests the case where StopAccessPoints is called and there is a valid interface to handle
@@ -1127,46 +727,40 @@ mod tests {
     #[test]
     fn test_stop_all_access_points_fails() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
-        test_values.ap.set_update_sender(test_values.sender);
+        let test_values = test_setup();
         let serve_fut = test_values.ap.serve_provider_requests(test_values.requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        // Drop the serving end of the SME proxy.
-        drop(test_values.sme_stream);
+        // Set the StopAp response.
+        {
+            let iface_manager_fut = test_values.iface_manager.lock();
+            pin_mut!(iface_manager_fut);
+            let mut iface_manager = assert_variant!(
+                exec.run_until_stalled(&mut iface_manager_fut),
+                Poll::Ready(iface_manager) => { iface_manager }
+            );
+            iface_manager.stop_succeeds = false;
+        }
 
         // Request a new controller.
         let (controller, _) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        // Clear the initial state upate.
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(_))
-        );
-
         // Issue StopAllAps request.
         let stop_result = controller.stop_all_access_points();
         assert!(stop_result.is_ok());
 
-        // Verify that the listener sees the udpate
+        // Verify that the service is still running despite the call to stop failing.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.receiver.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-
-        assert_eq!(summary.access_points[0].state, types::OperatingState::Failed);
     }
 
     #[test]
     fn test_multiple_api_clients() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
-        test_values.ap.set_update_sender(test_values.sender);
+        let test_values = test_setup();
         let serve_fut = test_values.ap.serve_provider_requests(test_values.requests);
         pin_mut!(serve_fut);
 

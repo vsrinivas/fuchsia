@@ -83,7 +83,7 @@ async fn monitor_client_connectivity(
 }
 
 async fn serve_fidl(
-    mut ap: access_point::AccessPoint,
+    ap: access_point::AccessPoint,
     configurator: legacy::deprecated_configuration::DeprecatedConfigurator,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     legacy_client_ref: shim::IfaceRef,
@@ -91,7 +91,6 @@ async fn serve_fidl(
     network_selector: Arc<NetworkSelector>,
     client_sender: util::listener::ClientListenerMessageSender,
     client_listener_msgs: mpsc::UnboundedReceiver<util::listener::ClientListenerMessage>,
-    ap_sender: util::listener::ApListenerMessageSender,
     ap_listener_msgs: mpsc::UnboundedReceiver<util::listener::ApMessage>,
     client_events: mpsc::Receiver<client_fsm::ClientStateMachineNotification>,
 ) -> Result<Void, Error> {
@@ -99,7 +98,6 @@ async fn serve_fidl(
     let client_sender1 = client_sender.clone();
     let client_sender2 = client_sender.clone();
 
-    ap.set_update_sender(ap_sender);
     let second_ap = ap.clone();
 
     let saved_networks_clone = saved_networks.clone();
@@ -187,7 +185,6 @@ fn main() -> Result<(), Error> {
     let saved_networks = Arc::new(executor.run_singlethreaded(SavedNetworksManager::new())?);
     let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
     let phy_manager = Arc::new(Mutex::new(PhyManager::new(wlan_svc.clone())));
-    let ap = access_point::AccessPoint::new_empty(phy_manager.clone(), wlan_svc.clone());
     let configurator =
         legacy::deprecated_configuration::DeprecatedConfigurator::new(phy_manager.clone());
 
@@ -214,6 +211,7 @@ fn main() -> Result<(), Error> {
         iface_manager.clone(),
     );
 
+    let ap = access_point::AccessPoint::new(iface_manager.clone(), ap_sender);
     let fidl_fut = serve_fidl(
         ap,
         configurator,
@@ -223,7 +221,6 @@ fn main() -> Result<(), Error> {
         network_selector,
         client_sender,
         client_receiver,
-        ap_sender,
         ap_receiver,
         client_event_receiver,
     );
