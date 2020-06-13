@@ -1588,7 +1588,7 @@ class SyscallDecoderDispatcher {
     return returned_value;
   }
 
-  const Thread* SearchThread(zx_koid_t koid) const {
+  Thread* SearchThread(zx_koid_t koid) const {
     auto thread = threads_.find(koid);
     if (thread == threads_.end()) {
       return nullptr;
@@ -1596,7 +1596,7 @@ class SyscallDecoderDispatcher {
     return thread->second.get();
   }
 
-  const Thread* CreateThread(zx_koid_t koid, Process* process) {
+  Thread* CreateThread(zx_koid_t koid, Process* process) {
     FX_DCHECK(threads_.find(koid) == threads_.end());
     auto thread = std::make_unique<Thread>(process, koid);
     auto returned_value = thread.get();

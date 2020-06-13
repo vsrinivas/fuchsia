@@ -62,7 +62,7 @@ void ExceptionDecoder::Destroy() {
 void ExceptionDisplay::ExceptionDecoded(ExceptionDecoder* decoder) {
   os_ << '\n';
   int64_t timestamp = time(nullptr);
-  const Thread* thread = dispatcher_->SearchThread(decoder->thread_id());
+  Thread* thread = dispatcher_->SearchThread(decoder->thread_id());
   if (thread == nullptr) {
     Process* process = dispatcher_->SearchProcess(decoder->process_id());
     if (process == nullptr) {

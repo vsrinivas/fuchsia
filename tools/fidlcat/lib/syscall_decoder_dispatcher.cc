@@ -148,9 +148,10 @@ std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandle::GenerateValue(Sysca
   }
   fidl_codec::DecodedMessage message;
   std::stringstream error_stream;
-  message.DecodeMessage(decoder->dispatcher()->MessageDecoderDispatcher(), decoder->process_id(),
-                        handle_value, bytes_value, num_bytes_value, handle_infos_value,
-                        num_handles_value, type(), error_stream);
+  message.DecodeMessage(decoder->dispatcher()->MessageDecoderDispatcher(),
+                        decoder->fidlcat_thread()->process()->koid(), handle_value, bytes_value,
+                        num_bytes_value, handle_infos_value, num_handles_value, type(),
+                        error_stream);
   auto result = std::make_unique<fidl_codec::FidlMessageValue>(
       &message, error_stream.str(), bytes_value, num_bytes_value, handle_infos_value,
       num_handles_value);
@@ -181,9 +182,10 @@ std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandleInfo::GenerateValue(
   uint32_t num_handles_value = num_handles()->Value(decoder, stage);
   fidl_codec::DecodedMessage message;
   std::stringstream error_stream;
-  message.DecodeMessage(decoder->dispatcher()->MessageDecoderDispatcher(), decoder->process_id(),
-                        handle_value, bytes_value, num_bytes_value, handle_infos_value,
-                        num_handles_value, type(), error_stream);
+  message.DecodeMessage(decoder->dispatcher()->MessageDecoderDispatcher(),
+                        decoder->fidlcat_thread()->process()->koid(), handle_value, bytes_value,
+                        num_bytes_value, handle_infos_value, num_handles_value, type(),
+                        error_stream);
   auto result = std::make_unique<fidl_codec::FidlMessageValue>(
       &message, error_stream.str(), bytes_value, num_bytes_value, handle_infos_value,
       num_handles_value);
@@ -269,7 +271,7 @@ void SyscallDecoderDispatcher::DeleteDecoder(SyscallDecoder* decoder) {
       thread->Continue();
     }
   }
-  syscall_decoders_.erase(decoder->thread_id());
+  syscall_decoders_.erase(decoder->fidlcat_thread()->koid());
 }
 
 void SyscallDecoderDispatcher::DeleteDecoder(ExceptionDecoder* decoder) {
@@ -294,7 +296,7 @@ void SyscallDecoderDispatcher::ProcessMonitored(std::string_view name, zx_koid_t
 
 void SyscallDecoderDispatcher::StopMonitoring(zx_koid_t koid) {
   for (const auto& decoder : syscall_decoders_) {
-    if (decoder.second->process_id() == koid) {
+    if (decoder.second->fidlcat_thread()->process()->koid() == koid) {
       decoder.second->set_aborted();
     }
   }

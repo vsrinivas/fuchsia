@@ -124,24 +124,13 @@ class SyscallDecoderBuffer {
 class SyscallDecoder {
  public:
   SyscallDecoder(SyscallDecoderDispatcher* dispatcher, InterceptingThreadObserver* thread_observer,
-                 zxdb::Thread* thread, const Syscall* syscall, std::unique_ptr<SyscallUse> use)
-      : dispatcher_(dispatcher),
-        thread_observer_(thread_observer),
-        weak_thread_(thread->GetWeakPtr()),
-        process_name_(thread->GetProcess()->GetName()),
-        process_id_(thread->GetProcess()->GetKoid()),
-        thread_id_(thread->GetKoid()),
-        arch_(thread->session()->arch()),
-        syscall_(syscall),
-        use_(std::move(use)) {}
+                 zxdb::Thread* thread, const Syscall* syscall, std::unique_ptr<SyscallUse> use);
 
   SyscallDecoderDispatcher* dispatcher() const { return dispatcher_; }
   zxdb::Thread* get_thread() const { return weak_thread_.get(); }
-  const std::string& process_name() const { return process_name_; }
-  uint64_t process_id() const { return process_id_; }
-  uint64_t thread_id() const { return thread_id_; }
-  const Syscall* syscall() const { return syscall_; }
   debug_ipc::Arch arch() const { return arch_; }
+  const Syscall* syscall() const { return syscall_; }
+  Thread* fidlcat_thread() const { return fidlcat_thread_; }
   const std::vector<zxdb::Location>& caller_locations() const { return caller_locations_; }
   uint64_t return_address() const { return return_address_; }
   uint64_t syscall_return_value() const { return syscall_return_value_; }
@@ -277,11 +266,9 @@ class SyscallDecoder {
   SyscallDecoderDispatcher* const dispatcher_;
   InterceptingThreadObserver* const thread_observer_;
   const fxl::WeakPtr<zxdb::Thread> weak_thread_;
-  const std::string process_name_;
-  const uint64_t process_id_;
-  const uint64_t thread_id_;
   const debug_ipc::Arch arch_;
   const Syscall* const syscall_;
+  Thread* fidlcat_thread_;
   std::unique_ptr<SyscallUse> use_;
   std::vector<zxdb::Location> caller_locations_;
   uint64_t entry_sp_ = 0;

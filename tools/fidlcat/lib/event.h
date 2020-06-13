@@ -78,22 +78,22 @@ class Location {
 
 class Event {
  public:
-  Event(int64_t timestamp, const Thread* thread) : timestamp_(timestamp), thread_(thread) {}
+  Event(int64_t timestamp, Thread* thread) : timestamp_(timestamp), thread_(thread) {}
 
   // Timestamp in nanoseconds.
   int64_t timestamp() const { return timestamp_; }
 
-  const Thread* thread() const { return thread_; }
+  Thread* thread() const { return thread_; }
 
  private:
   const int64_t timestamp_;
-  const Thread* const thread_;
+  Thread* const thread_;
 };
 
 // Base class for events related to a syscall.
 class SyscallEvent : public Event {
  public:
-  SyscallEvent(int64_t timestamp, const Thread* thread, const Syscall* syscall)
+  SyscallEvent(int64_t timestamp, Thread* thread, const Syscall* syscall)
       : Event(timestamp, thread), syscall_(syscall) {}
 
   const Syscall* syscall() const { return syscall_; }
@@ -133,7 +133,7 @@ class SyscallEvent : public Event {
 // Event that represents the arguments of a syscall (When the syscall is called).
 class InvokedEvent : public SyscallEvent {
  public:
-  InvokedEvent(int64_t timestamp, const Thread* thread, const Syscall* syscall)
+  InvokedEvent(int64_t timestamp, Thread* thread, const Syscall* syscall)
       : SyscallEvent(timestamp, thread, syscall) {}
 
   const std::vector<Location>& stack_frame() const { return stack_frame_; }
@@ -148,8 +148,7 @@ class InvokedEvent : public SyscallEvent {
 // Event that represents the return value and out parameters when a syscall returns.
 class OutputEvent : public SyscallEvent {
  public:
-  OutputEvent(int64_t timestamp, const Thread* thread, const Syscall* syscall,
-              int64_t returned_value)
+  OutputEvent(int64_t timestamp, Thread* thread, const Syscall* syscall, int64_t returned_value)
       : SyscallEvent(timestamp, thread, syscall), returned_value_(returned_value) {}
 
   void PrettyPrint(FidlcatPrinter& printer) const;
@@ -161,7 +160,7 @@ class OutputEvent : public SyscallEvent {
 // Event that represents an exception.
 class ExceptionEvent : public Event {
  public:
-  ExceptionEvent(int64_t timestamp, const Thread* thread) : Event(timestamp, thread) {}
+  ExceptionEvent(int64_t timestamp, Thread* thread) : Event(timestamp, thread) {}
 
   const std::vector<Location>& stack_frame() const { return stack_frame_; }
   std::vector<Location>& stack_frame() { return stack_frame_; }

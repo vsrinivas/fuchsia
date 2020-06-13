@@ -66,6 +66,27 @@ void SyscallUse::SyscallDecodingError(const DecoderError& error, SyscallDecoder*
   decoder->Destroy();
 }
 
+SyscallDecoder::SyscallDecoder(SyscallDecoderDispatcher* dispatcher,
+                               InterceptingThreadObserver* thread_observer, zxdb::Thread* thread,
+                               const Syscall* syscall, std::unique_ptr<SyscallUse> use)
+    : dispatcher_(dispatcher),
+      thread_observer_(thread_observer),
+      weak_thread_(thread->GetWeakPtr()),
+      arch_(thread->session()->arch()),
+      syscall_(syscall),
+      use_(std::move(use)) {
+  fidlcat_thread_ = dispatcher_->SearchThread(thread->GetKoid());
+  if (fidlcat_thread_ == nullptr) {
+    Process* fidlcat_process = dispatcher_->SearchProcess(thread->GetProcess()->GetKoid());
+    if (fidlcat_process == nullptr) {
+      fidlcat_process = dispatcher_->CreateProcess(thread->GetProcess()->GetName(),
+                                                   thread->GetProcess()->GetKoid(),
+                                                   thread->GetProcess()->GetWeakPtr());
+    }
+    fidlcat_thread_ = dispatcher_->CreateThread(thread->GetKoid(), fidlcat_process);
+  }
+}
+
 void SyscallDecoder::LoadMemory(uint64_t address, size_t size, std::vector<uint8_t>* destination) {
   if (address == 0) {
     // Null pointer => don't load anything.
@@ -277,7 +298,7 @@ bool SyscallDecoder::StepToReturnAddress() {
   }
 
   if (syscall_->return_type() != SyscallReturnType::kNoReturn) {
-    thread_observer_->Register(thread_id(), this);
+    thread_observer_->Register(fidlcat_thread()->koid(), this);
     thread_observer_->AddExitBreakpoint(thread, syscall_->name(), return_address_);
   }
 
@@ -294,22 +315,7 @@ void SyscallDecoder::DecodeInputs() {
     // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
     // print the syscall.
     int64_t timestamp = time(nullptr);
-    const Thread* thread = dispatcher_->SearchThread(thread_id_);
-    if (thread == nullptr) {
-      Process* process = dispatcher_->SearchProcess(process_id_);
-      if (process == nullptr) {
-        zxdb::Thread* zxdb_thread = weak_thread_.get();
-        if (zxdb_thread == nullptr) {
-          aborted_ = true;
-          Destroy();
-          return;
-        }
-        process = dispatcher_->CreateProcess(process_name_, process_id_,
-                                             zxdb_thread->GetProcess()->GetWeakPtr());
-      }
-      thread = dispatcher_->CreateThread(thread_id_, process);
-    }
-    invoked_event_ = std::make_unique<InvokedEvent>(timestamp << 32, thread, syscall_);
+    invoked_event_ = std::make_unique<InvokedEvent>(timestamp << 32, fidlcat_thread_, syscall_);
     auto inline_member = syscall_->input_inline_members().begin();
     auto outline_member = syscall_->input_outline_members().begin();
     for (const auto& input : syscall_->inputs()) {
@@ -335,8 +341,9 @@ void SyscallDecoder::DecodeInputs() {
       CopyStackFrame(caller_locations(), &invoked_event_->stack_frame());
     }
     if (dispatcher_->with_handle_info() &&
-        invoked_event_->NeedsToLoadHandleInfo(process_id_, &dispatcher_->inference())) {
-      thread->process()->LoadHandleInfo(&dispatcher_->inference());
+        invoked_event_->NeedsToLoadHandleInfo(fidlcat_thread()->process()->koid(),
+                                              &dispatcher_->inference())) {
+      fidlcat_thread_->process()->LoadHandleInfo(&dispatcher_->inference());
     }
   }
   UseInputs();
@@ -412,23 +419,8 @@ void SyscallDecoder::DecodeOutputs() {
     // The long term goal is that zxdb gives the timestamp. Currently we only create one when we
     // print the syscall.
     int64_t timestamp = time(nullptr);
-    const Thread* thread = dispatcher_->SearchThread(thread_id_);
-    if (thread == nullptr) {
-      Process* process = dispatcher_->SearchProcess(process_id_);
-      if (process == nullptr) {
-        zxdb::Thread* zxdb_thread = weak_thread_.get();
-        if (zxdb_thread == nullptr) {
-          aborted_ = true;
-          Destroy();
-          return;
-        }
-        process = dispatcher_->CreateProcess(process_name_, process_id_,
-                                             zxdb_thread->GetProcess()->GetWeakPtr());
-      }
-      thread = dispatcher_->CreateThread(thread_id_, process);
-    }
-    output_event_ =
-        std::make_unique<OutputEvent>(timestamp << 32, thread, syscall_, syscall_return_value_);
+    output_event_ = std::make_unique<OutputEvent>(timestamp << 32, fidlcat_thread_, syscall_,
+                                                  syscall_return_value_);
     auto inline_member = syscall_->output_inline_members().begin();
     auto outline_member = syscall_->output_outline_members().begin();
     for (const auto& output : syscall_->outputs()) {
@@ -453,8 +445,9 @@ void SyscallDecoder::DecodeOutputs() {
       }
     }
     if (dispatcher_->with_handle_info() &&
-        output_event_->NeedsToLoadHandleInfo(process_id_, &dispatcher_->inference())) {
-      thread->process()->LoadHandleInfo(&dispatcher_->inference());
+        output_event_->NeedsToLoadHandleInfo(fidlcat_thread()->process()->koid(),
+                                             &dispatcher_->inference())) {
+      fidlcat_thread_->process()->LoadHandleInfo(&dispatcher_->inference());
     }
   }
   UseOutputs();
@@ -507,15 +500,17 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
 
 void SyscallDisplay::DisplayInputs(SyscallDecoder* decoder) {
   const fidl_codec::Colors& colors = dispatcher_->colors();
-  std::string line_header = decoder->process_name() + ' ' + colors.red +
-                            std::to_string(decoder->process_id()) + colors.reset + ':' +
-                            colors.red + std::to_string(decoder->thread_id()) + colors.reset + ' ';
+  std::string line_header = decoder->fidlcat_thread()->process()->name() + ' ' + colors.red +
+                            std::to_string(decoder->fidlcat_thread()->process()->koid()) +
+                            colors.reset + ':' + colors.red +
+                            std::to_string(decoder->fidlcat_thread()->koid()) + colors.reset + ' ';
   if (dispatcher_->with_process_info()) {
     os_ << line_header;
   }
   os_ << '\n';
 
-  FidlcatPrinter printer(dispatcher_, decoder->process_id(), os_, line_header);
+  FidlcatPrinter printer(dispatcher_, decoder->fidlcat_thread()->process()->koid(), os_,
+                         line_header);
 
   const InvokedEvent* invoked_event = decoder->invoked_event();
   if (invoked_event != nullptr) {
@@ -592,11 +587,13 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
     std::string line_header;
     if (dispatcher_->with_process_info() || (dispatcher_->last_displayed_syscall() != this)) {
       const fidl_codec::Colors& colors = dispatcher_->colors();
-      line_header = decoder->process_name() + ' ' + colors.red +
-                    std::to_string(decoder->process_id()) + colors.reset + ':' + colors.red +
-                    std::to_string(decoder->thread_id()) + colors.reset + ' ';
+      line_header = decoder->fidlcat_thread()->process()->name() + ' ' + colors.red +
+                    std::to_string(decoder->fidlcat_thread()->process()->koid()) + colors.reset +
+                    ':' + colors.red + std::to_string(decoder->fidlcat_thread()->koid()) +
+                    colors.reset + ' ';
     }
-    FidlcatPrinter printer(dispatcher_, decoder->process_id(), os_, line_header);
+    FidlcatPrinter printer(dispatcher_, decoder->fidlcat_thread()->process()->koid(), os_,
+                           line_header);
     const OutputEvent* output_event = decoder->output_event();
     if (output_event != nullptr) {
       // We have been able to create values from the syscall => print them.
@@ -666,10 +663,10 @@ void SyscallDisplay::SyscallDecodingError(const DecoderError& error, SyscallDeco
   for (;;) {
     size_t end = message.find('\n', pos);
     const fidl_codec::Colors& colors = dispatcher_->colors();
-    os_ << decoder->process_name() << ' ' << colors.red << decoder->process_id() << colors.reset
-        << ':' << colors.red << decoder->thread_id() << colors.reset << ' '
-        << decoder->syscall()->name() << ": " << colors.red << error.message().substr(pos, end)
-        << colors.reset << '\n';
+    os_ << decoder->fidlcat_thread()->process()->name() << ' ' << colors.red
+        << decoder->fidlcat_thread()->process()->koid() << colors.reset << ':' << colors.red
+        << decoder->fidlcat_thread()->koid() << colors.reset << ' ' << decoder->syscall()->name()
+        << ": " << colors.red << error.message().substr(pos, end) << colors.reset << '\n';
     if (end == std::string::npos) {
       break;
     }
@@ -683,8 +680,9 @@ void SyscallCompare::SyscallInputsDecoded(SyscallDecoder* decoder) {
   os_.clear();
   os_.str("");
   SyscallDisplay::SyscallInputsDecoded(decoder);
-  comparator_->CompareInput(os_.str(), decoder->process_name(), decoder->process_id(),
-                            decoder->thread_id());
+  comparator_->CompareInput(os_.str(), decoder->fidlcat_thread()->process()->name(),
+                            decoder->fidlcat_thread()->process()->koid(),
+                            decoder->fidlcat_thread()->koid());
 }
 
 void SyscallCompare::SyscallOutputsDecoded(SyscallDecoder* decoder) {
@@ -692,8 +690,9 @@ void SyscallCompare::SyscallOutputsDecoded(SyscallDecoder* decoder) {
   os_.str("");
   SyscallDisplay::SyscallOutputsDecoded(decoder);
   if (decoder->syscall()->return_type() != SyscallReturnType::kNoReturn) {
-    comparator_->CompareOutput(os_.str(), decoder->process_name(), decoder->process_id(),
-                               decoder->thread_id());
+    comparator_->CompareOutput(os_.str(), decoder->fidlcat_thread()->process()->name(),
+                               decoder->fidlcat_thread()->process()->koid(),
+                               decoder->fidlcat_thread()->koid());
   }
 }
 

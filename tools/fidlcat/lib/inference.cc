@@ -35,14 +35,15 @@ void Inference::ExtractHandles(SyscallDecoder* decoder) {
       uint32_t type = PA_HND_TYPE(handle_info[handle]);
       switch (type) {
         case PA_FD:
-          AddHandleDescription(decoder->process_id(), handles[handle], "fd",
+          AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), handles[handle], "fd",
                                PA_HND_ARG(handle_info[handle]));
           break;
         case PA_DIRECTORY_REQUEST:
-          AddHandleDescription(decoder->process_id(), handles[handle], "directory-request", "/");
+          AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), handles[handle],
+                               "directory-request", "/");
           break;
         default:
-          AddHandleDescription(decoder->process_id(), handles[handle], type);
+          AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), handles[handle], type);
           break;
       }
     }
@@ -75,7 +76,7 @@ void Inference::LibcExtensionsInit(SyscallDecoder* decoder) {
       switch (type) {
         case PA_NS_DIR: {
           uint32_t index = PA_HND_ARG(handle_info[handle]);
-          AddHandleDescription(decoder->process_id(), handles[handle], "dir",
+          AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), handles[handle], "dir",
                                (index < name_count)
                                    ? reinterpret_cast<const char*>(
                                          decoder->BufferContent(Stage::kEntry, names[index]))
@@ -83,14 +84,15 @@ void Inference::LibcExtensionsInit(SyscallDecoder* decoder) {
           break;
         }
         case PA_FD:
-          AddHandleDescription(decoder->process_id(), handles[handle], "fd",
+          AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), handles[handle], "fd",
                                PA_HND_ARG(handle_info[handle]));
           break;
         case PA_DIRECTORY_REQUEST:
-          AddHandleDescription(decoder->process_id(), handles[handle], "directory-request", "/");
+          AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), handles[handle],
+                               "directory-request", "/");
           break;
         default:
-          AddHandleDescription(decoder->process_id(), handles[handle], type);
+          AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), handles[handle], type);
           break;
       }
     }
@@ -105,9 +107,9 @@ void Inference::InferMessage(SyscallDecoder* decoder,
   constexpr int kHandle = 0;
   zx_handle_t handle = decoder->ArgumentValue(kHandle);
   if (handle != ZX_HANDLE_INVALID) {
-    fidl_codec::semantic::SemanticContext context(this, decoder->process_id(), handle, context_type,
-                                                  decoder->decoded_request(),
-                                                  decoder->decoded_response());
+    fidl_codec::semantic::SemanticContext context(
+        this, decoder->fidlcat_thread()->process()->koid(), handle, context_type,
+        decoder->decoded_request(), decoder->decoded_response());
     decoder->semantic()->ExecuteAssignments(&context);
   }
 }
@@ -120,10 +122,12 @@ void Inference::ZxChannelCreate(SyscallDecoder* decoder) {
   if ((out0 != nullptr) && (*out0 != ZX_HANDLE_INVALID) && (out1 != nullptr) &&
       (*out1 != ZX_HANDLE_INVALID)) {
     // Provides the minimal semantic for both handles (that is they are channels).
-    AddHandleDescription(decoder->process_id(), *out0, "channel", next_channel_++);
-    AddHandleDescription(decoder->process_id(), *out1, "channel", next_channel_++);
+    AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), *out0, "channel",
+                         next_channel_++);
+    AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), *out1, "channel",
+                         next_channel_++);
     // Links the two channels.
-    AddLinkedHandles(decoder->process_id(), *out0, *out1);
+    AddLinkedHandles(decoder->fidlcat_thread()->process()->koid(), *out0, *out1);
   }
 }
 
@@ -132,7 +136,7 @@ void Inference::ZxPortCreate(SyscallDecoder* decoder) {
   zx_handle_t* out = reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kExit, kOut));
   if ((out != nullptr) && (*out != ZX_HANDLE_INVALID)) {
     // Provides the minimal semantic for the handle (that is it's a port).
-    AddHandleDescription(decoder->process_id(), *out, "port", next_port_++);
+    AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), *out, "port", next_port_++);
   }
 }
 
@@ -141,7 +145,8 @@ void Inference::ZxTimerCreate(SyscallDecoder* decoder) {
   zx_handle_t* out = reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kExit, kOut));
   if ((out != nullptr) && (*out != ZX_HANDLE_INVALID)) {
     // Provides the minimal semantic for the handle (that is it's a timer).
-    AddHandleDescription(decoder->process_id(), *out, "timer", next_timer_++);
+    AddHandleDescription(decoder->fidlcat_thread()->process()->koid(), *out, "timer",
+                         next_timer_++);
   }
 }
 
