@@ -1,17 +1,17 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 use {
     crate::{
-        config_management::SavedNetworksManager,
-        legacy::client::{self, ClientApi},
+        client::state_machine as client_fsm,
+        config_management::{Credential, NetworkIdentifier, SavedNetworksManager, SecurityType},
+        mode_management::iface_manager::IfaceManagerApi,
     },
-    fidl::{self, endpoints::create_proxy},
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device_service as wlan_service,
+    fidl, fidl_fuchsia_wlan_common as fidl_common,
+    fidl_fuchsia_wlan_device_service as wlan_service, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_service as legacy, fidl_fuchsia_wlan_sme as fidl_sme,
-    fidl_fuchsia_wlan_stats as fidl_wlan_stats, fuchsia_zircon as zx,
-    futures::{channel::oneshot, prelude::*},
+    fidl_fuchsia_wlan_stats as fidl_wlan_stats, fuchsia_async, fuchsia_zircon as zx,
+    futures::{lock::Mutex as FutureMutex, prelude::*, select},
     itertools::Itertools,
     log::{error, info},
     std::{
@@ -22,28 +22,25 @@ use {
 };
 
 #[derive(Clone)]
-pub struct Client {
+pub(crate) struct Iface {
     pub service: wlan_service::DeviceServiceProxy,
-    pub client: client::Client,
+    pub iface_manager: Arc<FutureMutex<dyn IfaceManagerApi + Send>>,
     pub sme: fidl_sme::ClientSmeProxy,
     pub iface_id: u16,
 }
 
 #[derive(Clone)]
-pub struct ClientRef(Arc<Mutex<Option<Client>>>);
-
-impl ClientRef {
+pub(crate) struct IfaceRef(Arc<Mutex<Option<Iface>>>);
+impl IfaceRef {
     pub fn new() -> Self {
-        ClientRef(Arc::new(Mutex::new(None)))
+        IfaceRef(Arc::new(Mutex::new(None)))
     }
-
-    pub fn set_if_empty(&self, client: Client) {
+    pub fn set_if_empty(&self, iface: Iface) {
         let mut c = self.0.lock().unwrap();
         if c.is_none() {
-            *c = Some(client);
+            *c = Some(iface);
         }
     }
-
     pub fn remove_if_matching(&self, iface_id: u16) {
         let mut c = self.0.lock().unwrap();
         let same_id = match *c {
@@ -54,8 +51,7 @@ impl ClientRef {
             *c = None;
         }
     }
-
-    pub fn get(&self) -> Result<Client, legacy::Error> {
+    pub fn get(&self) -> Result<Iface, legacy::Error> {
         self.0.lock().unwrap().clone().ok_or_else(|| legacy::Error {
             code: legacy::ErrCode::NotFound,
             description: "No wireless interface found".to_string(),
@@ -65,39 +61,39 @@ impl ClientRef {
 
 const MAX_CONCURRENT_WLAN_REQUESTS: usize = 1000;
 
-pub async fn serve_legacy(
+pub(crate) async fn serve_legacy(
     requests: legacy::WlanRequestStream,
-    client: ClientRef,
+    iface: IfaceRef,
     saved_networks: Arc<SavedNetworksManager>,
 ) -> Result<(), fidl::Error> {
     requests
         .try_for_each_concurrent(MAX_CONCURRENT_WLAN_REQUESTS, |req| {
-            handle_request(&client, req, Arc::clone(&saved_networks))
+            handle_request(iface.clone(), req, Arc::clone(&saved_networks))
         })
         .await
 }
 
 async fn handle_request(
-    client: &ClientRef,
+    iface: IfaceRef,
     req: legacy::WlanRequest,
     saved_networks: Arc<SavedNetworksManager>,
 ) -> Result<(), fidl::Error> {
     match req {
         legacy::WlanRequest::Scan { req, responder } => {
             info!("Received a Scan request from legacy WLAN API.");
-            let mut r = scan(client, req).await;
+            let mut r = scan(iface, req).await;
             responder.send(&mut r)
         }
         legacy::WlanRequest::Connect { req, responder } => {
-            let mut r = connect(&client, req).await;
+            let mut r = connect(iface, saved_networks, req).await;
             responder.send(&mut r)
         }
         legacy::WlanRequest::Disconnect { responder } => {
-            let mut r = disconnect(client.clone()).await;
+            let mut r = disconnect(iface.clone()).await;
             responder.send(&mut r)
         }
         legacy::WlanRequest::Status { responder } => {
-            let mut r = status(&client).await;
+            let mut r = status(&iface).await;
             responder.send(&mut r)
         }
         legacy::WlanRequest::StartBss { responder, .. } => {
@@ -109,7 +105,7 @@ async fn handle_request(
             responder.send(&mut not_supported())
         }
         legacy::WlanRequest::Stats { responder } => {
-            let mut r = stats(client).await;
+            let mut r = stats(&iface).await;
             responder.send(&mut r)
         }
         legacy::WlanRequest::ClearSavedNetworks { responder } => {
@@ -151,14 +147,17 @@ pub fn get_best_bss<'a>(bss_list: &'a Vec<fidl_sme::BssInfo>) -> Option<&'a fidl
     bss_list.iter().max_by(|x, y| compare_bss(x, y))
 }
 
-async fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy::ScanResult {
+async fn scan(iface: IfaceRef, legacy_req: legacy::ScanRequest) -> legacy::ScanResult {
     let r = async move {
-        let client = client.get()?;
-        let scan_txn = start_scan_txn(&client, legacy_req).map_err(|e| {
-            error!("Failed to start a scan transaction: {}", e);
-            internal_error()
-        })?;
-
+        let iface = iface.get()?;
+        let mut iface_manager = iface.iface_manager.lock().await;
+        let scan_txn = iface_manager
+            .scan(legacy_req.timeout, fidl_common::ScanType::Passive)
+            .map_err(|e| {
+                error!("Failed to start a scan transaction: {}", e);
+                internal_error()
+            })
+            .await?;
         let mut evt_stream = scan_txn.take_event_stream();
         let mut aps = vec![];
         let mut done = false;
@@ -204,19 +203,6 @@ async fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy::Sc
     }
 }
 
-fn start_scan_txn(
-    client: &Client,
-    legacy_req: legacy::ScanRequest,
-) -> Result<fidl_sme::ScanTransactionProxy, fidl::Error> {
-    let (scan_txn, remote) = create_proxy()?;
-    let mut req = fidl_sme::ScanRequest {
-        timeout: legacy_req.timeout,
-        scan_type: fidl_common::ScanType::Passive,
-    };
-    client.sme.scan(&mut req, remote)?;
-    Ok(scan_txn)
-}
-
 fn convert_scan_err(error: fidl_sme::ScanError) -> legacy::Error {
     legacy::Error {
         code: match error.code {
@@ -242,64 +228,103 @@ fn convert_bss_info(bss: &fidl_sme::BssInfo) -> legacy::Ap {
     }
 }
 
-fn connect(
-    client: &ClientRef,
-    legacy_req: legacy::ConnectConfig,
-) -> impl Future<Output = legacy::Error> {
-    future::ready(client.get())
-        .and_then(move |client| {
-            let (responder, receiver) = oneshot::channel();
-            let req = client::ConnectRequest {
-                ssid: legacy_req.ssid.as_bytes().to_vec(),
-                password: legacy_req.pass_phrase.as_bytes().to_vec(),
-                responder,
-            };
-            future::ready(client.client.connect(req).map_err(|e| {
-                error!("Failed to start a connect transaction: {}", e);
-                internal_error()
-            }))
-            .and_then(move |()| {
-                receiver.map_err(|_e| {
-                    error!("Did not receive a connect result");
-                    internal_error()
-                })
-            })
-        })
-        .map_ok(convert_connect_result)
-        .unwrap_or_else(|e| e)
+fn legacy_config_to_network_id(legacy_req: &legacy::ConnectConfig) -> NetworkIdentifier {
+    let security_type = match legacy_req.pass_phrase.len() {
+        0 => SecurityType::None,
+        _ => SecurityType::Wpa2,
+    };
+    let ssid = legacy_req.ssid.clone().as_bytes().to_vec();
+
+    NetworkIdentifier::new(ssid, security_type)
 }
 
-async fn disconnect(client: ClientRef) -> legacy::Error {
-    let client = match client.get() {
+fn legacy_config_to_policy_credential(legacy_req: &legacy::ConnectConfig) -> Credential {
+    match legacy_req.pass_phrase.len() {
+        0 => Credential::None,
+        _ => Credential::Password(legacy_req.pass_phrase.clone().as_bytes().to_vec()),
+    }
+}
+
+async fn connect(
+    iface: IfaceRef,
+    saved_networks: Arc<SavedNetworksManager>,
+    legacy_req: legacy::ConnectConfig,
+) -> legacy::Error {
+    let network_id = legacy_config_to_network_id(&legacy_req);
+    let credential = legacy_config_to_policy_credential(&legacy_req);
+    match saved_networks.store(network_id.clone(), credential.clone()) {
+        Ok(()) => {}
+        Err(e) => {
+            error!("failed to store connect config: {:?}", e);
+            return internal_error();
+        }
+    }
+
+    let iface = match iface.get() {
         Ok(c) => c,
         Err(e) => return e,
     };
-    let (responder, receiver) = oneshot::channel();
-    if let Err(e) = client.client.disconnect(responder) {
-        error!("Failed to enqueue a disconnect command: {}", e);
-        return internal_error();
-    }
-    match receiver.await {
-        Ok(()) => success(),
-        Err(_) => error_message("Request was canceled"),
-    }
-}
 
-fn convert_connect_result(code: fidl_sme::ConnectResultCode) -> legacy::Error {
-    match code {
-        fidl_sme::ConnectResultCode::Success => success(),
-        fidl_sme::ConnectResultCode::Canceled => error_message("Request was canceled"),
-        fidl_sme::ConnectResultCode::BadCredentials => {
-            error_message("Failed to join; bad credentials")
+    let connect_req = client_fsm::ConnectRequest {
+        network: fidl_policy::NetworkIdentifier::from(network_id),
+        credential,
+    };
+
+    // Get the state machine to begin connecting to the desired network.
+    let mut iface_manager = iface.iface_manager.lock().await;
+    match iface_manager.connect(connect_req).await {
+        Ok(receiver) => match receiver.await {
+            Ok(()) => {}
+            Err(e) => return error_message(&format!("connect failed: {}", e)),
+        },
+        Err(e) => return error_message(&e.to_string()),
+    }
+    drop(iface_manager);
+
+    // Poll the interface and wait for it to connect.  Time out after 20 seconds.
+    let timeout = zx::Duration::from_seconds(20);
+    let mut timer = fuchsia_async::Interval::new(timeout);
+    let mut status_fut = iface.sme.status();
+    loop {
+        select! {
+            result = status_fut => {
+                match result {
+                    Ok(status) => {
+                        if status.connected_to.is_some() {
+                            return success();
+                        }
+                        status_fut = iface.sme.clone().status();
+                    },
+                    Err(e) => {
+                        return error_message(&format!("failed query connection status: {}", e));
+                    }
+                };
+            },
+            () = timer.select_next_some() => return internal_error(),
         }
-        fidl_sme::ConnectResultCode::Failed => error_message("Failed to join"),
     }
 }
 
-fn status(client: &ClientRef) -> impl Future<Output = legacy::WlanStatus> {
-    future::ready(client.get())
-        .and_then(|client| {
-            client.sme.status().map_err(|e| {
+async fn disconnect(iface: IfaceRef) -> legacy::Error {
+    let iface = match iface.get() {
+        Ok(c) => c,
+        Err(e) => return e,
+    };
+    let mut iface_manager = iface.iface_manager.lock().await;
+    match iface_manager.stop_client_connections().await {
+        Ok(()) => {}
+        Err(e) => return error_message(&e.to_string()),
+    }
+    match iface_manager.start_client_connections().await {
+        Ok(()) => success(),
+        Err(e) => error_message(&e.to_string()),
+    }
+}
+
+fn status(iface: &IfaceRef) -> impl Future<Output = legacy::WlanStatus> {
+    future::ready(iface.get())
+        .and_then(|iface| {
+            iface.sme.status().map_err(|e| {
                 error!("Failed to query status: {}", e);
                 internal_error()
             })
@@ -327,10 +352,10 @@ fn convert_state(status: &fidl_sme::ClientStatusResponse) -> legacy::State {
     }
 }
 
-fn stats(client: &ClientRef) -> impl Future<Output = legacy::WlanStats> {
-    future::ready(client.get())
-        .and_then(|client| {
-            client.service.get_iface_stats(client.iface_id).map_err(|e| {
+fn stats(iface: &IfaceRef) -> impl Future<Output = legacy::WlanStats> {
+    future::ready(iface.get())
+        .and_then(|iface| {
+            iface.service.get_iface_stats(iface.iface_id).map_err(|e| {
                 error!("Failed to query statistics: {}", e);
                 internal_error()
             })
@@ -397,9 +422,11 @@ fn empty_counter() -> fidl_wlan_stats::Counter {
 mod tests {
     use {
         super::*,
-        crate::config_management::{Credential, NetworkIdentifier, SecurityType},
+        crate::{access_point::state_machine as ap_fsm, util::logger::set_logger_for_test},
+        async_trait::async_trait,
+        fidl::endpoints::create_proxy,
         fuchsia_async as fasync,
-        futures::task::Poll,
+        futures::{channel::oneshot, lock::Mutex as FutureMutex, stream::StreamFuture, task::Poll},
         pin_utils::pin_mut,
         tempfile::TempDir,
         wlan_common::assert_variant,
@@ -480,6 +507,7 @@ mod tests {
             compatible,
         }
     }
+
     #[test]
     fn clear_saved_networks_request() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
@@ -500,7 +528,7 @@ mod tests {
         let requests = requests.into_stream().expect("failed to create stream");
 
         // Begin handling legacy requests.
-        let fut = serve_legacy(requests, ClientRef::new(), Arc::clone(&saved_networks))
+        let fut = serve_legacy(requests, IfaceRef::new(), Arc::clone(&saved_networks))
             .unwrap_or_else(|e| panic!("failed to serve legacy requests: {}", e));
         fasync::spawn(fut);
 
@@ -519,5 +547,514 @@ mod tests {
 
         // There should be no networks saved.
         assert_eq!(0, saved_networks.known_network_count());
+    }
+
+    pub static TEST_SSID: &str = "test_ssid";
+    pub static TEST_PASSWORD: &str = "test_password";
+    pub static TEST_BSSID: &str = "00:11:22:33:44:55";
+    const TEST_SCAN_INTERVAL: u8 = 0;
+
+    fn poll_sme_req(
+        exec: &mut fasync::Executor,
+        next_sme_req: &mut StreamFuture<fidl_sme::ClientSmeRequestStream>,
+    ) -> Poll<fidl_sme::ClientSmeRequest> {
+        exec.run_until_stalled(next_sme_req).map(|(req, stream)| {
+            *next_sme_req = stream.into_future();
+            req.expect("did not expect the SME request stream to end")
+                .expect("error polling SME request stream")
+        })
+    }
+
+    struct FakeIfaceManager {
+        pub sme_proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
+        pub connect_succeeds: bool,
+        pub disconnect_succeeds: bool,
+        pub scan_succeeds: bool,
+    }
+
+    impl FakeIfaceManager {
+        pub fn new(
+            proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
+            connect_succeeds: bool,
+            disconnect_succeeds: bool,
+            scan_succeeds: bool,
+        ) -> Self {
+            FakeIfaceManager {
+                sme_proxy: proxy,
+                connect_succeeds,
+                disconnect_succeeds,
+                scan_succeeds,
+            }
+        }
+    }
+
+    #[async_trait]
+    impl IfaceManagerApi for FakeIfaceManager {
+        async fn disconnect(
+            &mut self,
+            _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+        ) -> Result<(), anyhow::Error> {
+            if !self.disconnect_succeeds {
+                return Err(anyhow::format_err!("failing to disconnect"));
+            }
+            Ok(())
+        }
+
+        async fn connect(
+            &mut self,
+            _connect_req: client_fsm::ConnectRequest,
+        ) -> Result<oneshot::Receiver<()>, anyhow::Error> {
+            if !self.connect_succeeds {
+                return Err(anyhow::format_err!("failing to connect"));
+            }
+
+            let (responder, receiver) = oneshot::channel();
+            let _ = responder.send(());
+            Ok(receiver)
+        }
+
+        fn record_idle_client(&mut self, _iface_id: u16) {}
+
+        fn has_idle_client(&self) -> bool {
+            true
+        }
+
+        async fn scan(
+            &mut self,
+            timeout: u8,
+            scan_type: fidl_fuchsia_wlan_common::ScanType,
+        ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, anyhow::Error> {
+            if !self.scan_succeeds {
+                return Err(anyhow::format_err!("failing to scan"));
+            }
+
+            let (local, remote) = fidl::endpoints::create_proxy()?;
+            let mut request =
+                fidl_fuchsia_wlan_sme::ScanRequest { timeout: timeout, scan_type: scan_type };
+            let _ = self.sme_proxy.scan(&mut request, remote);
+            Ok(local)
+        }
+
+        async fn stop_client_connections(&mut self) -> Result<(), anyhow::Error> {
+            if !self.disconnect_succeeds {
+                return Err(anyhow::format_err!("failing to disconnect"));
+            }
+            Ok(())
+        }
+
+        async fn start_client_connections(&mut self) -> Result<(), anyhow::Error> {
+            Ok(())
+        }
+
+        async fn start_ap(
+            &mut self,
+            _config: ap_fsm::ApConfig,
+        ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, anyhow::Error>
+        {
+            let (_, receiver) = oneshot::channel();
+            Ok(receiver)
+        }
+
+        async fn stop_ap(
+            &mut self,
+            _ssid: Vec<u8>,
+            _password: Vec<u8>,
+        ) -> Result<(), anyhow::Error> {
+            Ok(())
+        }
+
+        async fn stop_all_aps(&mut self) -> Result<(), anyhow::Error> {
+            Ok(())
+        }
+    }
+
+    struct TestValues {
+        iface: IfaceRef,
+        _dev_svc_stream: wlan_service::DeviceServiceRequestStream,
+        sme_stream: fidl_sme::ClientSmeRequestStream,
+        _temp_dir: TempDir,
+        saved_networks: Arc<SavedNetworksManager>,
+        legacy_proxy: legacy::WlanProxy,
+        legacy_stream: legacy::WlanRequestStream,
+    }
+
+    fn test_setup(
+        exec: &mut fasync::Executor,
+        stash_id: &str,
+        connect_succeeds: bool,
+        disconnect_succeeds: bool,
+        scan_succeeds: bool,
+    ) -> TestValues {
+        set_logger_for_test();
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("temp.json");
+
+        let saved_networks = Arc::new(
+            exec.run_singlethreaded(SavedNetworksManager::new_with_stash_or_paths(
+                stash_id, path, tmp_path,
+            ))
+            .expect("Failed to make saved networks manager"),
+        );
+
+        let (sme_proxy, sme_server) =
+            create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
+        let sme_stream = sme_server.into_stream().expect("failed to create SME stream");
+        let (dev_svc_proxy, dev_svc_server) = create_proxy::<wlan_service::DeviceServiceMarker>()
+            .expect("failed to create an sme channel");
+        let _dev_svc_stream =
+            dev_svc_server.into_stream().expect("failed to create device service stream");
+
+        let (legacy_proxy, requests) =
+            create_proxy::<legacy::WlanMarker>().expect("failed to create WlanRequest proxy");
+        let legacy_stream = requests.into_stream().expect("failed to create legacy request stream");
+
+        let iface_manager = Arc::new(FutureMutex::new(FakeIfaceManager::new(
+            sme_proxy.clone(),
+            connect_succeeds,
+            disconnect_succeeds,
+            scan_succeeds,
+        )));
+        let iface = IfaceRef(Arc::new(Mutex::new(Some(Iface {
+            service: dev_svc_proxy,
+            iface_manager,
+            sme: sme_proxy.clone(),
+            iface_id: 0,
+        }))));
+
+        TestValues {
+            iface,
+            _dev_svc_stream,
+            sme_stream,
+            _temp_dir: temp_dir,
+            saved_networks,
+            legacy_proxy,
+            legacy_stream,
+        }
+    }
+
+    #[test]
+    fn connect_succeeds() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec, "connect_succeeds", true, true, true);
+
+        // Start the legacy service.
+        let serve_fut =
+            serve_legacy(test_values.legacy_stream, test_values.iface, test_values.saved_networks);
+        pin_mut!(serve_fut);
+
+        // Make a connect request.
+        let mut config = legacy::ConnectConfig {
+            ssid: TEST_SSID.to_string(),
+            pass_phrase: TEST_PASSWORD.to_string(),
+            scan_interval: TEST_SCAN_INTERVAL,
+            bssid: TEST_BSSID.to_string(),
+        };
+        let connect_fut = test_values.legacy_proxy.connect(&mut config);
+        pin_mut!(connect_fut);
+        assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Pending);
+
+        // Progress the service.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Wait for a status request and send back a notification that the client is connected.
+        let sme_fut = test_values.sme_stream.into_future();
+        pin_mut!(sme_fut);
+        let sme_response = poll_sme_req(&mut exec, &mut sme_fut);
+        assert_variant!(
+            sme_response,
+            Poll::Ready(fidl_sme::ClientSmeRequest::Status{ responder }) => {
+                responder.send(&mut fidl_sme::ClientStatusResponse{
+                    connecting_to_ssid: vec![],
+                    connected_to: Some(Box::new(fidl_sme::BssInfo{
+                        bssid: [0, 0, 0, 0, 0, 0],
+                        ssid: TEST_SSID.as_bytes().to_vec(),
+                        rx_dbm: i8::MAX,
+                        snr_db: i8::MAX,
+                        channel: u8::MAX,
+                        protection: fidl_sme::Protection::Unknown,
+                        compatible: true,
+                    }))
+                }).expect("could not send sme response");
+            }
+        );
+
+        // Run the connect future to completion
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut connect_fut),
+            Poll::Ready(Ok(legacy::Error {
+                code: legacy::ErrCode::Ok,
+                ..
+            }))
+        );
+    }
+
+    #[test]
+    fn connect_timeout() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec, "connect_timeout", true, true, true);
+
+        // Start the legacy service.
+        let serve_fut =
+            serve_legacy(test_values.legacy_stream, test_values.iface, test_values.saved_networks);
+        pin_mut!(serve_fut);
+
+        // Make a connect request.
+        let mut config = legacy::ConnectConfig {
+            ssid: TEST_SSID.to_string(),
+            pass_phrase: TEST_PASSWORD.to_string(),
+            scan_interval: TEST_SCAN_INTERVAL,
+            bssid: TEST_BSSID.to_string(),
+        };
+        let connect_fut = test_values.legacy_proxy.connect(&mut config);
+        pin_mut!(connect_fut);
+        assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Pending);
+
+        // Progress the service.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Run into the timeout.
+        assert_variant!(exec.wake_next_timer(), Some(_));
+
+        // Run the connect future to completion
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut connect_fut),
+            Poll::Ready(Ok(legacy::Error {
+                code: legacy::ErrCode::Internal,
+                ..
+            }))
+        );
+    }
+
+    #[test]
+    fn connect_fails() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec, "connect_fails", false, true, true);
+
+        // Start the legacy service.
+        let serve_fut =
+            serve_legacy(test_values.legacy_stream, test_values.iface, test_values.saved_networks);
+        pin_mut!(serve_fut);
+
+        // Make a connect request.
+        let mut config = legacy::ConnectConfig {
+            ssid: TEST_SSID.to_string(),
+            pass_phrase: TEST_PASSWORD.to_string(),
+            scan_interval: TEST_SCAN_INTERVAL,
+            bssid: TEST_BSSID.to_string(),
+        };
+        let connect_fut = test_values.legacy_proxy.connect(&mut config);
+        pin_mut!(connect_fut);
+        assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Pending);
+
+        // Progress the service.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Run the connect future to completion
+        assert_variant!(
+            exec.run_until_stalled(&mut connect_fut),
+            Poll::Ready(Ok(legacy::Error {
+                code: legacy::ErrCode::Internal,
+                ..
+            }))
+        );
+    }
+
+    #[test]
+    fn disconnect_succeeds() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec, "disconnect_succeeds", true, true, true);
+
+        // Start the legacy service.
+        let serve_fut =
+            serve_legacy(test_values.legacy_stream, test_values.iface, test_values.saved_networks);
+        pin_mut!(serve_fut);
+
+        // Make a disconnect request.
+        let disconnect_fut = test_values.legacy_proxy.disconnect();
+        pin_mut!(disconnect_fut);
+        assert_variant!(exec.run_until_stalled(&mut disconnect_fut), Poll::Pending);
+
+        // Progress the service.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Run the disconnect future to completion
+        assert_variant!(
+            exec.run_until_stalled(&mut disconnect_fut),
+            Poll::Ready(Ok(legacy::Error {
+                code: legacy::ErrCode::Ok,
+                ..
+            }))
+        );
+    }
+
+    #[test]
+    fn disconnect_fails() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec, "disconnect_fails", true, false, true);
+
+        // Start the legacy service.
+        let serve_fut =
+            serve_legacy(test_values.legacy_stream, test_values.iface, test_values.saved_networks);
+        pin_mut!(serve_fut);
+
+        // Make a disconnect request.
+        let disconnect_fut = test_values.legacy_proxy.disconnect();
+        pin_mut!(disconnect_fut);
+        assert_variant!(exec.run_until_stalled(&mut disconnect_fut), Poll::Pending);
+
+        // Progress the service.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Run the disconnect future to completion
+        assert_variant!(
+            exec.run_until_stalled(&mut disconnect_fut),
+            Poll::Ready(Ok(legacy::Error {
+                code: legacy::ErrCode::Internal,
+                ..
+            }))
+        );
+    }
+
+    #[test]
+    fn scan_succeeds() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec, "scan_succeeds", true, true, true);
+
+        // Start the legacy service.
+        let serve_fut =
+            serve_legacy(test_values.legacy_stream, test_values.iface, test_values.saved_networks);
+        pin_mut!(serve_fut);
+
+        // Make a scan request.
+        let mut scan_request = legacy::ScanRequest { timeout: TEST_SCAN_INTERVAL };
+        let scan_fut = test_values.legacy_proxy.scan(&mut scan_request);
+        pin_mut!(scan_fut);
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Run the service.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Check the SME stream for a scan request and send a result and a finished message.
+        let sme_fut = test_values.sme_stream.into_future();
+        pin_mut!(sme_fut);
+        let sme_response = poll_sme_req(&mut exec, &mut sme_fut);
+        let scan_result = fidl_sme::BssInfo {
+            bssid: [0; 6],
+            ssid: TEST_SSID.as_bytes().to_vec(),
+            rx_dbm: i8::MAX,
+            snr_db: i8::MAX,
+            channel: u8::MAX,
+            protection: fidl_sme::Protection::Unknown,
+            compatible: true,
+        };
+        assert_variant!(
+            sme_response,
+            Poll::Ready(fidl_sme::ClientSmeRequest::Scan{ txn, .. }) => {
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                let mut result = vec![scan_result.clone()];
+                ctrl.send_on_result(&mut result.iter_mut()).expect("could not send scan result");
+                ctrl.send_on_finished()
+                    .expect("failed to send scan data");
+            }
+        );
+
+        // Run the service.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Run the scan future to completion
+        let expected_ap = convert_bss_info(&scan_result);
+        assert_variant!(
+            exec.run_until_stalled(&mut scan_fut),
+            Poll::Ready(Ok(legacy::ScanResult {
+                error: legacy::Error{ code: legacy::ErrCode::Ok, .. },
+                aps: Some(aps)
+            })) => {
+                assert_eq!(aps.len(), 1);
+                assert_eq!(aps[0], expected_ap);
+            }
+        );
+    }
+
+    #[test]
+    fn scan_start_fails() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec, "scan_start_fails", true, true, false);
+
+        // Start the legacy service.
+        let serve_fut =
+            serve_legacy(test_values.legacy_stream, test_values.iface, test_values.saved_networks);
+        pin_mut!(serve_fut);
+
+        // Make a scan request.
+        let mut scan_request = legacy::ScanRequest { timeout: TEST_SCAN_INTERVAL };
+        let scan_fut = test_values.legacy_proxy.scan(&mut scan_request);
+        pin_mut!(scan_fut);
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Run the service.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Run the scan future to completion
+        assert_variant!(
+            exec.run_until_stalled(&mut scan_fut),
+            Poll::Ready(Ok(legacy::ScanResult {
+                error: legacy::Error{ code: legacy::ErrCode::Internal, .. },
+                aps: None,
+            }))
+        );
+    }
+
+    #[test]
+    fn scan_results_fail() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec, "scan_results_fail", true, true, true);
+
+        // Start the legacy service.
+        let serve_fut =
+            serve_legacy(test_values.legacy_stream, test_values.iface, test_values.saved_networks);
+        pin_mut!(serve_fut);
+
+        // Make a scan request.
+        let mut scan_request = legacy::ScanRequest { timeout: TEST_SCAN_INTERVAL };
+        let scan_fut = test_values.legacy_proxy.scan(&mut scan_request);
+        pin_mut!(scan_fut);
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Run the service.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Check the SME stream for a scan request and send an error.
+        let sme_fut = test_values.sme_stream.into_future();
+        pin_mut!(sme_fut);
+        let sme_response = poll_sme_req(&mut exec, &mut sme_fut);
+        assert_variant!(
+            sme_response,
+            Poll::Ready(fidl_sme::ClientSmeRequest::Scan{ txn, .. }) => {
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+
+                let mut error = fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::NotSupported,
+                    message: "".to_string(),
+                };
+                ctrl.send_on_error(&mut error).expect("could not send scan error");
+            }
+        );
+
+        // Run the service.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Run the scan future to completion
+        assert_variant!(
+            exec.run_until_stalled(&mut scan_fut),
+            Poll::Ready(Ok(legacy::ScanResult {
+                error: legacy::Error{ code: legacy::ErrCode::NotSupported, .. },
+                aps: None,
+            }))
+        );
     }
 }

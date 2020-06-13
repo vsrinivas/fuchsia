@@ -106,7 +106,6 @@ pub(crate) struct IfaceManager {
 }
 
 impl IfaceManager {
-    #[cfg(test)]
     pub fn new(
         phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
         client_update_sender: listener::ClientListenerMessageSender,

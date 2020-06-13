@@ -80,7 +80,6 @@ impl ConnectFailureList {
 
     /// This function will be used when Network Denial reasons are used to select a network.
     /// Returns a list of the denials that happened at or after given system time.
-    #[cfg(test)] // TODO: remove in Kevin's CL
     pub fn get_recent(&self, earliest_time: SystemTime) -> Vec<ConnectFailure> {
         self.0.iter().skip_while(|denial| denial.time < earliest_time).cloned().collect()
     }
@@ -255,6 +254,16 @@ impl From<fidl_policy::NetworkIdentifier> for NetworkIdentifier {
 impl From<NetworkIdentifier> for fidl_policy::NetworkIdentifier {
     fn from(id: NetworkIdentifier) -> Self {
         fidl_policy::NetworkIdentifier { ssid: id.ssid, type_: id.security_type.into() }
+    }
+}
+
+impl From<NetworkConfig> for fidl_policy::NetworkConfig {
+    fn from(config: NetworkConfig) -> Self {
+        let network_id = NetworkIdentifier::new(config.ssid, config.security_type);
+        fidl_policy::NetworkConfig {
+            id: Some(fidl_policy::NetworkIdentifier::from(network_id)),
+            credential: Some(fidl_policy::Credential::from(config.credential)),
+        }
     }
 }
 

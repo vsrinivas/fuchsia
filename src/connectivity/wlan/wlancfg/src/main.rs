@@ -13,51 +13,116 @@ mod util;
 
 use {
     crate::{
-        client::network_selection::NetworkSelector, config_management::SavedNetworksManager,
-        mode_management::phy_manager::PhyManager,
+        client::{
+            connect_to_best_network, handle_client_state_machine_event,
+            network_selection::NetworkSelector, scan_for_network_selector,
+            state_machine as client_fsm,
+        },
+        config_management::SavedNetworksManager,
+        legacy::{device, shim},
+        mode_management::{
+            iface_manager::{IfaceManager, IfaceManagerApi},
+            phy_manager::PhyManager,
+        },
     },
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
-    fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
+    fidl_fuchsia_wlan_policy as fidl_policy,
+    fuchsia_async::{self as fasync, DurationExt},
     fuchsia_component::server::ServiceFs,
-    futures::{channel::mpsc, future::try_join, lock::Mutex, prelude::*, select, TryFutureExt},
+    fuchsia_zircon::prelude::*,
+    futures::{
+        self, channel::mpsc, future::try_join, lock::Mutex, prelude::*, select, TryFutureExt,
+    },
     log::error,
     pin_utils::pin_mut,
     std::sync::Arc,
     void::Void,
 };
 
+// Value taken from legacy state machine.
+const AUTO_CONNECT_RETRY_SECONDS: i64 = 10;
+
+async fn monitor_client_events(
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    selector: Arc<NetworkSelector>,
+    mut client_events: mpsc::Receiver<client_fsm::ClientStateMachineNotification>,
+) {
+    loop {
+        match client_events.next().await {
+            Some(event) => {
+                handle_client_state_machine_event(
+                    event,
+                    Arc::clone(&iface_manager),
+                    Arc::clone(&selector),
+                )
+                .await;
+            }
+            None => break,
+        }
+    }
+}
+
+async fn monitor_client_connectivity(
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    selector: Arc<NetworkSelector>,
+) {
+    loop {
+        fasync::Timer::new(AUTO_CONNECT_RETRY_SECONDS.seconds().after_now()).await;
+
+        let temp_iface_manager = iface_manager.clone();
+        let temp_iface_manager = temp_iface_manager.lock().await;
+        if temp_iface_manager.has_idle_client() {
+            drop(temp_iface_manager);
+            scan_for_network_selector(iface_manager.clone(), selector.clone()).await;
+
+            // TODO(fxb/54046): Centralize the calls that reconnect a disconnected client.
+            connect_to_best_network(iface_manager.clone(), selector.clone()).await;
+        }
+    }
+}
+
 async fn serve_fidl(
-    client_ref: client::ClientPtr,
     mut ap: access_point::AccessPoint,
-    legacy_client_ref: legacy::shim::ClientRef,
     configurator: legacy::deprecated_configuration::DeprecatedConfigurator,
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    legacy_client_ref: shim::IfaceRef,
     saved_networks: Arc<SavedNetworksManager>,
     network_selector: Arc<NetworkSelector>,
+    client_sender: util::listener::ClientListenerMessageSender,
+    client_listener_msgs: mpsc::UnboundedReceiver<util::listener::ClientListenerMessage>,
+    ap_sender: util::listener::ApListenerMessageSender,
+    ap_listener_msgs: mpsc::UnboundedReceiver<util::listener::ApMessage>,
+    client_events: mpsc::Receiver<client_fsm::ClientStateMachineNotification>,
 ) -> Result<Void, Error> {
     let mut fs = ServiceFs::new();
-    let (client_sender, listener_msgs) = mpsc::unbounded();
     let client_sender1 = client_sender.clone();
     let client_sender2 = client_sender.clone();
 
-    let (ap_sender, ap_listener_msgs) = mpsc::unbounded();
     ap.set_update_sender(ap_sender);
     let second_ap = ap.clone();
 
-    let saved_networks_clone = Arc::clone(&saved_networks);
+    let saved_networks_clone = saved_networks.clone();
+
+    let cloned_iface_manager = iface_manager.clone();
+    let cloned_selector = network_selector.clone();
+
+    // TODO(sakuma): Once the legacy API is deprecated, the interface manager should default to
+    // stopped.
+    {
+        let mut iface_manager = iface_manager.lock().await;
+        iface_manager.start_client_connections().await?;
+    }
+
     fs.dir("svc")
         .add_fidl_service(|stream| {
-            let fut = legacy::shim::serve_legacy(
-                stream,
-                legacy_client_ref.clone(),
-                Arc::clone(&saved_networks),
-            )
-            .unwrap_or_else(|e| error!("error serving legacy wlan API: {}", e));
+            let fut = shim::serve_legacy(stream, legacy_client_ref.clone(), saved_networks.clone())
+                .unwrap_or_else(|e| error!("error serving legacy wlan API: {}", e));
             fasync::spawn(fut)
         })
         .add_fidl_service(move |reqs| {
             client::spawn_provider_server(
-                client_ref.clone(),
+                iface_manager.clone(),
                 client_sender1.clone(),
                 Arc::clone(&saved_networks_clone),
                 Arc::clone(&network_selector),
@@ -80,7 +145,7 @@ async fn serve_fidl(
         fidl_policy::ClientStateUpdatesProxy,
         fidl_policy::ClientStateSummary,
         util::listener::ClientStateUpdate,
-    >(listener_msgs)
+    >(client_listener_msgs)
     .fuse();
     pin_mut!(serve_client_policy_listeners);
 
@@ -92,8 +157,19 @@ async fn serve_fidl(
     .fuse();
     pin_mut!(serve_ap_policy_listeners);
 
+    let client_event_monitor =
+        monitor_client_events(cloned_iface_manager.clone(), cloned_selector.clone(), client_events)
+            .fuse();
+    pin_mut!(client_event_monitor);
+
+    let client_connectivity_monitor =
+        monitor_client_connectivity(cloned_iface_manager.clone(), cloned_selector.clone()).fuse();
+    pin_mut!(client_connectivity_monitor);
+
     loop {
         select! {
+            _ = client_connectivity_monitor => (),
+            _ = client_event_monitor => (),
             _ = service_fut => (),
             _ = serve_client_policy_listeners => (),
             _ = serve_ap_policy_listeners => (),
@@ -108,31 +184,53 @@ fn main() -> Result<(), Error> {
     let wlan_svc = fuchsia_component::client::connect_to_service::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
 
-    let phy_manager = Arc::new(Mutex::new(PhyManager::new(wlan_svc.clone())));
     let saved_networks = Arc::new(executor.run_singlethreaded(SavedNetworksManager::new())?);
     let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
-    let legacy_client = legacy::shim::ClientRef::new();
-    let client = Arc::new(Mutex::new(client::Client::new_empty()));
+    let phy_manager = Arc::new(Mutex::new(PhyManager::new(wlan_svc.clone())));
     let ap = access_point::AccessPoint::new_empty(phy_manager.clone(), wlan_svc.clone());
     let configurator =
         legacy::deprecated_configuration::DeprecatedConfigurator::new(phy_manager.clone());
-    let fidl_fut = serve_fidl(
-        client.clone(),
-        ap,
-        legacy_client.clone(),
-        configurator,
-        Arc::clone(&saved_networks),
-        network_selector,
-    );
 
     let (watcher_proxy, watcher_server_end) = fidl::endpoints::create_proxy()?;
     wlan_svc.watch_devices(watcher_server_end)?;
-    let listener = legacy::device::Listener::new(wlan_svc, legacy_client, phy_manager, client);
+
+    let (client_sender, client_receiver) = mpsc::unbounded();
+    let (ap_sender, ap_receiver) = mpsc::unbounded();
+    let (client_event_sender, client_event_receiver) = mpsc::channel(0);
+    let iface_manager = Arc::new(Mutex::new(IfaceManager::new(
+        phy_manager.clone(),
+        client_sender.clone(),
+        ap_sender.clone(),
+        wlan_svc.clone(),
+        saved_networks.clone(),
+        client_event_sender,
+    )));
+
+    let legacy_client = shim::IfaceRef::new();
+    let listener = device::Listener::new(
+        wlan_svc.clone(),
+        legacy_client.clone(),
+        phy_manager.clone(),
+        iface_manager.clone(),
+    );
+
+    let fidl_fut = serve_fidl(
+        ap,
+        configurator,
+        iface_manager.clone(),
+        legacy_client,
+        saved_networks.clone(),
+        network_selector,
+        client_sender,
+        client_receiver,
+        ap_sender,
+        ap_receiver,
+        client_event_receiver,
+    );
+
     let fut = watcher_proxy
         .take_event_stream()
-        .try_for_each(|evt| {
-            legacy::device::handle_event(&listener, evt, Arc::clone(&saved_networks)).map(Ok)
-        })
+        .try_for_each(|evt| device::handle_event(&listener, evt).map(Ok))
         .err_into()
         .and_then(|_| future::ready(Err(format_err!("Device watcher future exited unexpectedly"))));
 

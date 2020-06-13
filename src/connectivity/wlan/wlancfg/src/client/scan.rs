@@ -5,20 +5,22 @@
 //! Manages Scan requests for the Client Policy API.
 use {
     crate::{
-        client::{network_selection::ScanResultUpdate, types, ClientPtr},
+        client::{network_selection::ScanResultUpdate, types},
+        mode_management::iface_manager::IfaceManagerApi,
         util::sme_conversion::security_from_sme_protection,
     },
-    anyhow::{format_err, Context, Error},
-    fidl_fuchsia_location_sensor as fidl_location_sensor, fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_sme as fidl_sme,
+    anyhow::{format_err, Error},
+    fidl_fuchsia_location_sensor as fidl_location_sensor, fidl_fuchsia_wlan_policy as fidl_policy,
+    fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_component::client::connect_to_service,
-    futures::{future::join, prelude::*},
+    futures::{future::join, lock::Mutex, prelude::*},
     log::{debug, error, info},
     std::{collections::HashMap, sync::Arc},
 };
 
 // Arbitrary count of networks (ssid/security pairs) to output per request
 const OUTPUT_CHUNK_NETWORK_COUNT: usize = 5;
+const SCAN_TIMEOUT_SECONDS: u8 = 10;
 
 impl From<&fidl_sme::BssInfo> for types::Bss {
     fn from(bss: &fidl_sme::BssInfo) -> types::Bss {
@@ -37,8 +39,8 @@ impl From<&fidl_sme::BssInfo> for types::Bss {
 /// In practice, the successful_scan_observer defined in this module should be used as the
 /// successful_scan_observer argument to this function. See the documentation on that function
 /// to better understand its purpose.
-pub async fn perform_scan<F, G, Fut>(
-    client: ClientPtr,
+pub(crate) async fn perform_scan<F, G, Fut>(
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     output_iterator: fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>,
     successful_scan_observer: F,
     successful_scan_observer_params: G,
@@ -46,52 +48,56 @@ pub async fn perform_scan<F, G, Fut>(
     F: FnOnce(Vec<types::ScanResult>, G) -> Fut,
     Fut: Future<Output = ()>,
 {
-    match request_sme_scan(client).await {
-        Ok(txn) => {
-            info!("Sent scan request to SME successfully");
-            let mut stream = txn.take_event_stream();
-            let mut scanned_networks = vec![];
-            while let Some(Ok(event)) = stream.next().await {
-                match event {
-                    fidl_sme::ScanTransactionEvent::OnResult { aps: new_aps } => {
-                        debug!("Received scan results from SME");
-                        scanned_networks.extend(new_aps);
-                    }
-                    fidl_sme::ScanTransactionEvent::OnFinished {} => {
-                        info!("Finished getting scan results from SME");
-                        let scan_results = convert_scan_info(&scanned_networks);
-
-                        // Send the results to the original requester
-                        let requester_fut = send_scan_results(output_iterator, &scan_results)
-                            .unwrap_or_else(|e| {
-                                error!("Failed to send scan results to requester: {:?}", e);
-                            });
-
-                        // Send the results to all consumers of the successful scan results
-                        let observers_fut = successful_scan_observer(
-                            scan_results.clone(),
-                            successful_scan_observer_params,
-                        );
-
-                        join(requester_fut, observers_fut).await;
-                        return;
-                    }
-                    fidl_sme::ScanTransactionEvent::OnError { error } => {
-                        error!("Scan error from SME: {:?}", error);
-                        send_scan_error(output_iterator, fidl_policy::ScanErrorCode::GeneralError)
-                            .await
-                            .unwrap_or_else(|e| error!("Failed to send scan results: {}", e));
-                        return;
-                    }
-                };
+    let txn = {
+        let mut iface_manager = iface_manager.lock().await;
+        match iface_manager
+            .scan(SCAN_TIMEOUT_SECONDS, fidl_fuchsia_wlan_common::ScanType::Passive)
+            .await
+        {
+            Ok(txn) => txn,
+            Err(error) => {
+                error!("Failed to scan: {:?}", error);
+                send_scan_error(output_iterator, fidl_policy::ScanErrorCode::GeneralError)
+                    .await
+                    .unwrap_or_else(|e| error!("Failed to send scan results: {}", e));
+                return;
             }
         }
-        Err(error) => {
-            error!("Failed to send scan request to SME: {:?}", error);
-            send_scan_error(output_iterator, fidl_policy::ScanErrorCode::GeneralError)
-                .await
-                .unwrap_or_else(|e| error!("Failed to send scan results: {}", e));
-        }
+    };
+    info!("Sent scan request to SME successfully");
+    let mut stream = txn.take_event_stream();
+    let mut scanned_networks = vec![];
+    while let Some(Ok(event)) = stream.next().await {
+        match event {
+            fidl_sme::ScanTransactionEvent::OnResult { aps: new_aps } => {
+                debug!("Received scan results from SME");
+                scanned_networks.extend(new_aps);
+            }
+            fidl_sme::ScanTransactionEvent::OnFinished {} => {
+                info!("Finished getting scan results from SME");
+                let scan_results = convert_scan_info(&scanned_networks);
+
+                // Send the results to the original requester
+                let requester_fut = send_scan_results(output_iterator, &scan_results)
+                    .unwrap_or_else(|e| {
+                        error!("Failed to send scan results to requester: {:?}", e);
+                    });
+
+                // Send the results to all consumers of the successful scan results
+                let observers_fut =
+                    successful_scan_observer(scan_results.clone(), successful_scan_observer_params);
+
+                join(requester_fut, observers_fut).await;
+                return;
+            }
+            fidl_sme::ScanTransactionEvent::OnError { error } => {
+                error!("Scan error from SME: {:?}", error);
+                send_scan_error(output_iterator, fidl_policy::ScanErrorCode::GeneralError)
+                    .await
+                    .unwrap_or_else(|e| error!("Failed to send scan results: {}", e));
+                return;
+            }
+        };
     }
 }
 
@@ -235,40 +241,136 @@ async fn send_scan_error(
     Ok(())
 }
 
-/// Attempts to issue a new scan request to the currently active SME.
-async fn request_sme_scan(client: ClientPtr) -> Result<fidl_sme::ScanTransactionProxy, Error> {
-    let client = client.lock().await;
-    let client_sme =
-        client.access_sme().ok_or_else(|| format_err!("no active client interface"))?;
-
-    let mut request =
-        fidl_sme::ScanRequest { timeout: 5, scan_type: fidl_common::ScanType::Passive };
-    let (local, remote) =
-        fidl::endpoints::create_proxy().context(format!("failed to create sme proxy"))?;
-    client_sme.scan(&mut request, remote).context(format!("failed to connect to sme"))?;
-    Ok(local)
-}
-
 #[cfg(test)]
 mod tests {
     use {
-        super::{super::Client, *},
-        crate::util::logger::set_logger_for_test,
+        super::*,
+        crate::{
+            access_point::state_machine as ap_fsm, client::state_machine as client_fsm,
+            config_management::Credential, util::logger::set_logger_for_test,
+        },
+        anyhow::Error,
+        async_trait::async_trait,
         fidl::endpoints::create_proxy,
-        fuchsia_async as fasync,
-        futures::{lock::Mutex, task::Poll},
+        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
+        futures::{channel::oneshot, lock::Mutex, task::Poll},
         pin_utils::pin_mut,
         std::sync::Arc,
         wlan_common::assert_variant,
     };
 
+    /// convert from policy fidl Credential to sme fidl Credential
+    pub fn sme_credential_from_policy(cred: &Credential) -> fidl_sme::Credential {
+        match cred {
+            Credential::Password(pwd) => fidl_sme::Credential::Password(pwd.clone()),
+            Credential::Psk(psk) => fidl_sme::Credential::Psk(psk.clone()),
+            Credential::None => fidl_sme::Credential::None(fidl_sme::Empty {}),
+        }
+    }
+
+    struct FakeIfaceManager {
+        pub sme_proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
+        pub connect_response: Result<(), ()>,
+        pub client_connections_enabled: bool,
+    }
+
+    impl FakeIfaceManager {
+        pub fn new(proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy) -> Self {
+            FakeIfaceManager {
+                sme_proxy: proxy,
+                connect_response: Ok(()),
+                client_connections_enabled: false,
+            }
+        }
+    }
+
+    #[async_trait]
+    impl IfaceManagerApi for FakeIfaceManager {
+        async fn disconnect(
+            &mut self,
+            _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn connect(
+            &mut self,
+            connect_req: client_fsm::ConnectRequest,
+        ) -> Result<oneshot::Receiver<()>, Error> {
+            let credential = sme_credential_from_policy(&connect_req.credential);
+            let mut req = fidl_sme::ConnectRequest {
+                ssid: connect_req.network.ssid,
+                credential,
+                radio_cfg: fidl_sme::RadioConfig {
+                    override_phy: false,
+                    phy: fidl_common::Phy::Ht,
+                    override_cbw: false,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    override_primary_chan: false,
+                    primary_chan: 0,
+                },
+                deprecated_scan_type: fidl_common::ScanType::Passive,
+            };
+            self.sme_proxy.connect(&mut req, None)?;
+
+            let (responder, receiver) = oneshot::channel();
+            let _ = responder.send(());
+            Ok(receiver)
+        }
+
+        fn record_idle_client(&mut self, _iface_id: u16) {}
+
+        fn has_idle_client(&self) -> bool {
+            true
+        }
+
+        async fn scan(
+            &mut self,
+            timeout: u8,
+            scan_type: fidl_fuchsia_wlan_common::ScanType,
+        ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
+            let (local, remote) = fidl::endpoints::create_proxy()?;
+            let mut request =
+                fidl_fuchsia_wlan_sme::ScanRequest { timeout: timeout, scan_type: scan_type };
+            let _ = self.sme_proxy.scan(&mut request, remote);
+            Ok(local)
+        }
+
+        async fn stop_client_connections(&mut self) -> Result<(), Error> {
+            self.client_connections_enabled = false;
+            Ok(())
+        }
+
+        async fn start_client_connections(&mut self) -> Result<(), Error> {
+            self.client_connections_enabled = true;
+            Ok(())
+        }
+
+        async fn start_ap(
+            &mut self,
+            _config: ap_fsm::ApConfig,
+        ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error> {
+            let (_, receiver) = oneshot::channel();
+            Ok(receiver)
+        }
+
+        async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn stop_all_aps(&mut self) -> Result<(), Error> {
+            Ok(())
+        }
+    }
+
     /// Creates a Client wrapper.
-    async fn create_client() -> (ClientPtr, fidl_sme::ClientSmeRequestStream) {
+    async fn create_iface_manager(
+    ) -> (Arc<Mutex<FakeIfaceManager>>, fidl_sme::ClientSmeRequestStream) {
         set_logger_for_test();
         let (client_sme, remote) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("error creating proxy");
-        let client = Arc::new(Mutex::new(Client::from(client_sme)));
-        (client, remote.into_stream().expect("failed to create stream"))
+        let iface_manager = Arc::new(Mutex::new(FakeIfaceManager::new(client_sme)));
+        (iface_manager, remote.into_stream().expect("failed to create stream"))
     }
 
     struct MockNetworkSelection {}
@@ -376,7 +478,7 @@ mod tests {
     #[test]
     fn basic_scan() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (client, mut sme_stream) = exec.run_singlethreaded(create_client());
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
 
         // Issue request to scan.
         let (iter, iter_server) =
@@ -423,7 +525,7 @@ mod tests {
     #[test]
     fn scan_iterator_never_polled() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (client, mut sme_stream) = exec.run_singlethreaded(create_client());
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
 
         // Issue request to scan.
         let (_iter, iter_server) =
@@ -472,7 +574,7 @@ mod tests {
     #[test]
     fn scan_iterator_shut_down() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (client, mut sme_stream) = exec.run_singlethreaded(create_client());
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
 
         // Issue request to scan.
         let (iter, iter_server) =
@@ -498,7 +600,7 @@ mod tests {
     #[test]
     fn scan_error() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (client, mut sme_stream) = exec.run_singlethreaded(create_client());
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
 
         // Issue request to scan.
         let (iter, iter_server) =
@@ -544,7 +646,7 @@ mod tests {
     #[test]
     fn overlapping_scans() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (client, mut sme_stream) = exec.run_singlethreaded(create_client());
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
         let (input_aps, output_aps) = create_scan_ap_data();
 
         // Create two sets of endpoints
@@ -627,7 +729,7 @@ mod tests {
     #[test]
     fn send_successful_scans_to_observers() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (client, mut sme_stream) = exec.run_singlethreaded(create_client());
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
 
         // Create two sets of endpoints
         let (iter0, iter_server0) =
@@ -700,7 +802,7 @@ mod tests {
     #[test]
     fn scan_error_not_sent_to_observers() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (client, mut sme_stream) = exec.run_singlethreaded(create_client());
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
 
         // Create endpoint
         let (iter, iter_server) =
@@ -757,7 +859,6 @@ mod tests {
     fn scan_observer_sends_to_location_sensor() {
         set_logger_for_test();
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-
         let (aps, _) = create_scan_ap_data();
         let fut =
             successful_scan_observer(convert_scan_info(&aps), Arc::new(MockNetworkSelection {}));

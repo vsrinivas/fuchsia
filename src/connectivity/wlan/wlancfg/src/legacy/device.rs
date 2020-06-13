@@ -4,16 +4,14 @@
 
 use {
     crate::{
-        client,
-        config_management::SavedNetworksManager,
-        legacy::{client as legacy_client, shim},
+        legacy::shim, mode_management::iface_manager::IfaceManagerApi,
         mode_management::phy_manager::PhyManagerApi,
     },
     anyhow::format_err,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_wlan_device as wlan,
     fidl_fuchsia_wlan_device_service::{DeviceServiceProxy, DeviceWatcherEvent},
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::info,
     std::sync::Arc,
@@ -21,16 +19,12 @@ use {
 
 pub(crate) struct Listener {
     proxy: DeviceServiceProxy,
-    legacy_client: shim::ClientRef,
+    legacy_client: shim::IfaceRef,
     phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
-    client: client::ClientPtr,
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
 }
 
-pub(crate) async fn handle_event(
-    listener: &Listener,
-    evt: DeviceWatcherEvent,
-    saved_networks: Arc<SavedNetworksManager>,
-) {
+pub(crate) async fn handle_event(listener: &Listener, evt: DeviceWatcherEvent) {
     info!("got event: {:?}", evt);
     match evt {
         DeviceWatcherEvent::OnPhyAdded { phy_id } => {
@@ -44,12 +38,23 @@ pub(crate) async fn handle_event(
         DeviceWatcherEvent::OnIfaceAdded { iface_id } => {
             let mut phy_manager = listener.phy_manager.lock().await;
             match phy_manager.on_iface_added(iface_id).await {
-                Ok(()) => match on_iface_added(listener, iface_id, saved_networks).await {
+                Ok(()) => match on_iface_added_legacy(listener, iface_id).await {
                     Ok(()) => {}
                     Err(e) => info!("error adding new iface {}: {}", iface_id, e),
                 },
                 Err(e) => info!("error adding new iface {}: {}", iface_id, e),
             }
+
+            // Drop the PhyManager lock after using it.  The IfaceManager will need to lock the
+            // resource as part of the connect operation.
+            drop(phy_manager);
+
+            // TODO(49988): Develop a new means of automatically connecting to networks.
+            // For now, when a new interface is discovered, make a call to start client
+            // connections.  This will ensure that there is a client state machine available to
+            // provide the legacy, autoconnect behavior.
+            let mut iface_manager = listener.iface_manager.lock().await;
+            let _ = iface_manager.start_client_connections().await;
         }
         DeviceWatcherEvent::OnIfaceRemoved { iface_id } => {
             let mut phy_manager = listener.phy_manager.lock().await;
@@ -82,11 +87,8 @@ async fn on_phy_added(listener: &Listener, phy_id: u16) {
     }
 }
 
-async fn on_iface_added(
-    listener: &Listener,
-    iface_id: u16,
-    saved_networks: Arc<SavedNetworksManager>,
-) -> Result<(), anyhow::Error> {
+/// Configured the interface that is used to service the legacy WLAN API.
+async fn on_iface_added_legacy(listener: &Listener, iface_id: u16) -> Result<(), anyhow::Error> {
     let (status, response) = listener.proxy.query_iface(iface_id).await?;
     match status {
         fuchsia_zircon::sys::ZX_OK => {}
@@ -104,7 +106,6 @@ async fn on_iface_added(
     match response.role {
         wlan::MacRole::Client => {
             let legacy_client = listener.legacy_client.clone();
-            let client = listener.client.clone();
             let (sme, remote) = create_proxy()
                 .map_err(|e| format_err!("Failed to create a FIDL channel: {}", e))?;
 
@@ -116,11 +117,13 @@ async fn on_iface_added(
             zx::Status::ok(status)
                 .map_err(|e| format_err!("GetClientSme returned an error: {}", e))?;
 
-            let (c, fut) = legacy_client::new_client(iface_id, sme.clone(), saved_networks);
-            fasync::spawn(fut);
-            let lc = shim::Client { service, client: c, sme: sme.clone(), iface_id };
+            let lc = shim::Iface {
+                service,
+                iface_manager: listener.iface_manager.clone(),
+                sme: sme.clone(),
+                iface_id,
+            };
             legacy_client.set_if_empty(lc);
-            client.lock().await.set_sme(sme);
         }
         // The AP service make direct use of the PhyManager to get interfaces.
         wlan::MacRole::Ap => {}
@@ -128,6 +131,7 @@ async fn on_iface_added(
             return Err(format_err!("Unexpectedly observed a mesh iface: {}", iface_id))
         }
     }
+
     info!("new iface {} added successfully", iface_id);
     Ok(())
 }
@@ -135,10 +139,10 @@ async fn on_iface_added(
 impl Listener {
     pub fn new(
         proxy: DeviceServiceProxy,
-        legacy_client: shim::ClientRef,
+        legacy_client: shim::IfaceRef,
         phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
-        client: client::ClientPtr,
+        iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     ) -> Self {
-        Listener { proxy, legacy_client, phy_manager, client }
+        Listener { proxy, legacy_client, phy_manager, iface_manager }
     }
 }

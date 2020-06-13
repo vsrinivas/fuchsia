@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[allow(unused)] // TODO: remove in Kevin's CL (7 total in this file)
 use {
     crate::{
         client::types,
@@ -18,10 +17,8 @@ use {
     },
 };
 
-#[cfg(test)] // TODO: remove in Kevin's CL (7 total in this file)
 const RECENT_FAILURE_WINDOW: Duration = Duration::from_secs(60 * 5); // 5 minutes
 
-#[allow(dead_code)] // TODO: remove in Kevin's CL (7 total in this file)
 pub struct NetworkSelector {
     saved_network_manager: Arc<SavedNetworksManager>,
     latest_scan_results: Mutex<Vec<types::ScanResult>>,
@@ -31,7 +28,6 @@ pub trait ScanResultUpdate: Sync + Send {
     fn update_scan_results(&self, scan_results: Vec<types::ScanResult>) -> ();
 }
 
-#[cfg(test)] // TODO: remove in Kevin's CL (7 total in this file)
 #[derive(Debug, PartialEq)]
 struct InternalNetworkData {
     credential: Credential,
@@ -56,7 +52,6 @@ impl NetworkSelector {
         }
     }
 
-    #[cfg(test)] // TODO: remove in Kevin's CL (7 total in this file)
     /// Insert all saved networks into a hashmap with this module's internal data representation
     fn load_saved_networks(&self) -> HashMap<types::NetworkIdentifier, InternalNetworkData> {
         let mut networks: HashMap<types::NetworkIdentifier, InternalNetworkData> = HashMap::new();
@@ -93,7 +88,6 @@ impl NetworkSelector {
         networks
     }
 
-    #[cfg(test)] // TODO: remove in Kevin's CL (7 total in this file)
     /// Augment the networks hash map with data from scan results
     fn augment_networks_with_scan_data(
         &self,
@@ -121,7 +115,6 @@ impl NetworkSelector {
         networks
     }
 
-    #[cfg(test)] // TODO: remove in Kevin's CL (7 total in this file)
     /// Select the best available network, based on the current saved networks and the most
     /// recent scan results provided to this module.
     /// Only networks that are both saved and visible in the most recent scan results are eligible
@@ -143,7 +136,6 @@ impl ScanResultUpdate for NetworkSelector {
     }
 }
 
-#[cfg(test)] // TODO: remove in Kevin's CL (7 total in this file)
 /// Find the best network in the given hashmap
 fn find_best_network(
     networks: &HashMap<types::NetworkIdentifier, InternalNetworkData>,

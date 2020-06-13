@@ -3,35 +3,27 @@
 // found in the LICENSE file.
 
 //! Serves Client policy services.
-//! Note: This implementation is still under development.
-//!       Only connect requests will cause the underlying SME to attempt to connect to a given
-//!       network.
-//!       Unfortunately, there is currently no way to send an Epitaph in Rust. Thus, inbound
-//!       controller and listener requests are simply dropped, causing the underlying channel to
-//!       get closed.
 use {
     crate::{
+        client::state_machine as client_fsm,
         config_management::{
             Credential, NetworkConfigError, NetworkIdentifier, SaveError, SavedNetworksManager,
         },
-        util::{fuse_pending::FusePending, listener},
+        mode_management::iface_manager::IfaceManagerApi,
+        util::listener,
     },
     anyhow::{format_err, Error},
     fidl::epitaph::ChannelEpitaphExt,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
-    fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_async::{self as fasync, DurationExt},
-    fuchsia_zircon::{self as zx, prelude::*},
+    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
-        channel::mpsc,
+        channel::{mpsc, oneshot},
         lock::Mutex,
         prelude::*,
         select,
-        stream::{FuturesOrdered, FuturesUnordered},
+        stream::FuturesUnordered,
     },
-    log::{error, info},
-    network_selection::NetworkSelector,
-    scan::{perform_scan, successful_scan_observer},
+    log::{error, info, warn},
     std::{convert::TryFrom, sync::Arc},
 };
 
@@ -44,68 +36,6 @@ pub mod types;
 /// in get_saved_networks. This depends on the maximum size of a FIDL NetworkConfig, so it may
 /// need to change if a FIDL NetworkConfig or FIDL Credential changes.
 const MAX_CONFIGS_PER_RESPONSE: usize = 100;
-
-/// Wrapper around a Client interface, granting access to the Client SME.
-/// A Client might not always be available, for example, if no Client interface was created yet.
-#[derive(Debug)]
-pub struct Client {
-    proxy: Option<fidl_sme::ClientSmeProxy>,
-    current_connection: Option<(NetworkIdentifier, Credential)>,
-}
-
-impl Client {
-    /// Creates a new, empty Client. The returned Client effectively represents the state in which
-    /// no client interface is available.
-    pub fn new_empty() -> Self {
-        Self { proxy: None, current_connection: None }
-    }
-
-    pub fn set_sme(&mut self, proxy: fidl_sme::ClientSmeProxy) {
-        self.proxy = Some(proxy);
-    }
-
-    /// Accesses the Client interface's SME.
-    /// Returns None if no Client interface is available.
-    fn access_sme(&self) -> Option<&fidl_sme::ClientSmeProxy> {
-        self.proxy.as_ref()
-    }
-
-    /// Disconnect from the specified network if we are currently connected to it.
-    async fn disconnect_from(
-        &mut self,
-        network: (NetworkIdentifier, Credential),
-        update_sender: listener::ClientListenerMessageSender,
-    ) {
-        if self.current_connection.as_ref() != Some(&network) {
-            return;
-        }
-        if let Some(client_sme) = self.access_sme() {
-            client_sme.disconnect().await.unwrap_or_else(|e| {
-                info!("Error disconnecting from network: {}", e);
-                return;
-            });
-            self.current_connection = None;
-            let update = listener::ClientStateUpdate {
-                state: None,
-                networks: vec![listener::ClientNetworkState {
-                    id: network.0.into(),
-                    state: fidl_policy::ConnectionState::Disconnected,
-                    status: Some(fidl_policy::DisconnectStatus::ConnectionStopped),
-                }],
-            };
-            if let Err(e) = update_sender.unbounded_send(listener::Message::NotifyListeners(update))
-            {
-                error!("failed to send disconnect update to listener: {:?}", e);
-            };
-        }
-    }
-}
-
-impl From<fidl_sme::ClientSmeProxy> for Client {
-    fn from(proxy: fidl_sme::ClientSmeProxy) -> Self {
-        Self { proxy: Some(proxy), current_connection: None }
-    }
-}
 
 #[derive(Debug)]
 struct RequestError {
@@ -129,17 +59,9 @@ impl RequestError {
 
 #[derive(Debug)]
 enum InternalMsg {
-    /// Sent when a new connection request was issued. Holds the NetworkIdentifier, credential
-    /// used to connect, and Transaction which the connection result will be reported through.
-    NewPendingConnectRequest(
-        fidl_policy::NetworkIdentifier,
-        Credential,
-        fidl_sme::ConnectTransactionProxy,
-    ),
     /// Sent when a new scan request was issued. Holds the output iterator through which the
     /// scan results will be reported.
     NewPendingScanRequest(fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>),
-    NewDisconnectWatcher(NetworkIdentifier, Credential),
 }
 type InternalMsgSink = mpsc::UnboundedSender<InternalMsg>;
 
@@ -148,17 +70,16 @@ const MAX_CONCURRENT_LISTENERS: usize = 1000;
 
 type ClientRequests = fidl::endpoints::ServerEnd<fidl_policy::ClientControllerMarker>;
 type SavedNetworksPtr = Arc<SavedNetworksManager>;
-pub type ClientPtr = Arc<Mutex<Client>>;
 
-pub fn spawn_provider_server(
-    client: ClientPtr,
+pub(crate) fn spawn_provider_server(
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
-    network_selector: Arc<NetworkSelector>,
+    network_selector: Arc<network_selection::NetworkSelector>,
     requests: fidl_policy::ClientProviderRequestStream,
 ) {
     fasync::spawn(serve_provider_requests(
-        client,
+        iface_manager,
         update_sender,
         saved_networks,
         network_selector,
@@ -177,17 +98,15 @@ pub fn spawn_listener_server(
 /// Only one ClientController can be active. Additional requests to register ClientControllers
 /// will result in their channel being immediately closed.
 async fn serve_provider_requests(
-    client: ClientPtr,
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
-    network_selector: Arc<NetworkSelector>,
+    network_selector: Arc<network_selection::NetworkSelector>,
     mut requests: fidl_policy::ClientProviderRequestStream,
 ) {
     let (internal_messages_sink, mut internal_messages_stream) = mpsc::unbounded();
     let mut pending_scans = FuturesUnordered::new();
     let mut controller_reqs = FuturesUnordered::new();
-    let mut pending_con_reqs = FusePending(FuturesOrdered::new());
-    let mut pending_disconnect_monitors = FuturesUnordered::new();
 
     loop {
         select! {
@@ -200,7 +119,7 @@ async fn serve_provider_requests(
                 // request.
                 if controller_reqs.is_empty() {
                     let fut = handle_provider_request(
-                        Arc::clone(&client),
+                        Arc::clone(&iface_manager),
                         internal_messages_sink.clone(),
                         update_sender.clone(),
                         Arc::clone(&saved_networks),
@@ -215,35 +134,25 @@ async fn serve_provider_requests(
             },
             // Progress internal messages.
             msg = internal_messages_stream.select_next_some() => match msg {
-                InternalMsg::NewPendingConnectRequest(id, cred, txn) => {
-                    let connect_result_fut = txn.take_event_stream().into_future()
-                        .map(|(first, _next)| (id, cred, first));
-                    pending_con_reqs.push(connect_result_fut);
-                }
+                // TODO(fxb/53779): Flatten out the handling of futures.
                 InternalMsg::NewPendingScanRequest(output_iterator) => {
-                    pending_scans.push(perform_scan(
-                        Arc::clone(&client),
-                        output_iterator, successful_scan_observer, Arc::clone(&network_selector)));
-                }
-                InternalMsg::NewDisconnectWatcher(network_id, credential) => {
-                    pending_disconnect_monitors.push(wait_for_disconnection(Arc::clone(&client), update_sender.clone(), network_id, credential));
+                    pending_scans.push(scan::perform_scan(
+                        Arc::clone(&iface_manager),
+                        output_iterator, scan::successful_scan_observer, Arc::clone(&network_selector)));
                 }
             },
             // Progress scans.
-            () = pending_scans.select_next_some() => (),
-            // Progress disconnect monitors.
-            () = pending_disconnect_monitors.select_next_some() => (),
-            // Pending connect request finished.
-            resp = pending_con_reqs.select_next_some() => if let (id, cred, Some(Ok(txn))) = resp {
-                handle_sme_connect_response(
-                    update_sender.clone(),
-                    internal_messages_sink.clone(),
-                    id.into(),
-                    cred,
-                    txn,
-                    Arc::clone(&saved_networks),
-                    Arc::clone(&client)
-                ).await;
+            () = pending_scans.select_next_some() => {
+                // Upon receiving notification of a complete scan, check and see if the interface
+                // manager has any interfaces that are not currently connected.  If any are
+                // disconnected, attempt to reconnect now that the network selector has been
+                // updated with fresh scan results.
+                let temp_iface_manager = iface_manager.clone();
+                let temp_iface_manager = temp_iface_manager.lock().await;
+                if temp_iface_manager.has_idle_client() {
+                    drop(temp_iface_manager);
+                    connect_to_best_network(iface_manager.clone(), network_selector.clone()).await;
+                }
             },
         }
     }
@@ -264,7 +173,7 @@ async fn serve_listener_requests(
 
 /// Handle inbound requests to acquire a new ClientController.
 async fn handle_provider_request(
-    client: ClientPtr,
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     internal_msg_sink: InternalMsgSink,
     update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
@@ -272,15 +181,9 @@ async fn handle_provider_request(
 ) -> Result<(), fidl::Error> {
     match req {
         fidl_policy::ClientProviderRequest::GetController { requests, updates, .. } => {
-            register_listener(update_sender.clone(), updates.into_proxy()?);
-            handle_client_requests(
-                client,
-                internal_msg_sink,
-                update_sender,
-                saved_networks,
-                requests,
-            )
-            .await?;
+            register_listener(update_sender, updates.into_proxy()?);
+            handle_client_requests(iface_manager, internal_msg_sink, saved_networks, requests)
+                .await?;
             Ok(())
         }
     }
@@ -306,9 +209,8 @@ fn log_client_request(request: &fidl_policy::ClientControllerRequest) {
 
 /// Handles all incoming requests from a ClientController.
 async fn handle_client_requests(
-    client: ClientPtr,
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     internal_msg_sink: InternalMsgSink,
-    update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
     requests: ClientRequests,
 ) -> Result<(), fidl::Error> {
@@ -318,30 +220,39 @@ async fn handle_client_requests(
         match request {
             fidl_policy::ClientControllerRequest::Connect { id, responder, .. } => {
                 match handle_client_request_connect(
-                    update_sender.clone(),
-                    Arc::clone(&client),
+                    Arc::clone(&iface_manager),
                     Arc::clone(&saved_networks),
                     &id,
                 )
                 .await
                 {
-                    Ok((cred, txn)) => {
-                        responder.send(fidl_common::RequestStatus::Acknowledged)?;
-                        let _ignored = internal_msg_sink
-                            .unbounded_send(InternalMsg::NewPendingConnectRequest(id, cred, txn));
+                    Ok(receiver) => {
+                        let response = match receiver.await {
+                            Ok(()) => fidl_common::RequestStatus::Acknowledged,
+                            Err(_) => fidl_common::RequestStatus::RejectedIncompatibleMode,
+                        };
+                        responder.send(response)?;
                     }
                     Err(error) => {
-                        error!("error while connection attempt: {}", error.cause);
-                        responder.send(error.status)?;
+                        error!("could not connect: {:?}", error);
+                        responder.send(fidl_common::RequestStatus::RejectedIncompatibleMode)?;
                     }
                 }
             }
             fidl_policy::ClientControllerRequest::StartClientConnections { responder } => {
-                let status = handle_client_request_start_connections();
+                let mut iface_manager = iface_manager.lock().await;
+                let status = match iface_manager.start_client_connections().await {
+                    Ok(()) => fidl_common::RequestStatus::Acknowledged,
+                    Err(_) => fidl_common::RequestStatus::RejectedIncompatibleMode,
+                };
                 responder.send(status)?;
             }
             fidl_policy::ClientControllerRequest::StopClientConnections { responder } => {
-                let status = handle_client_request_stop_connections();
+                let mut iface_manager = iface_manager.lock().await;
+                let status = match iface_manager.stop_client_connections().await {
+                    Ok(()) => fidl_common::RequestStatus::Acknowledged,
+                    Err(_) => fidl_common::RequestStatus::RejectedIncompatibleMode,
+                };
                 responder.send(status)?;
             }
             fidl_policy::ClientControllerRequest::ScanForNetworks { iterator, .. } => {
@@ -353,27 +264,28 @@ async fn handle_client_requests(
             }
             fidl_policy::ClientControllerRequest::SaveNetwork { config, responder } => {
                 // If there is an error saving the network, log it and convert to a FIDL value.
-                let mut response =
-                    handle_client_request_save_network(Arc::clone(&saved_networks), config)
-                        .map_err(|e| {
-                            error!("Failed to save network: {:?}", e);
-                            fidl_policy::NetworkConfigChangeError::from(e)
-                        });
-                responder.send(&mut response)?;
-            }
-            fidl_policy::ClientControllerRequest::RemoveNetwork { config, responder } => {
-                let mut response = handle_client_request_remove_network(
+                let mut response = handle_client_request_save_network(
                     Arc::clone(&saved_networks),
                     config,
-                    Arc::clone(&client),
-                    update_sender.clone(),
+                    Arc::clone(&iface_manager),
                 )
                 .await
                 .map_err(|e| {
-                    error!("Error removing network: {:?}", e);
-                    SaveError::GeneralError
+                    error!("Failed to save network: {:?}", e);
+                    fidl_policy::NetworkConfigChangeError::from(e)
                 });
                 responder.send(&mut response)?;
+            }
+            fidl_policy::ClientControllerRequest::RemoveNetwork { config, responder } => {
+                let mut err = handle_client_request_remove_network(
+                    Arc::clone(&saved_networks),
+                    config,
+                    iface_manager.clone(),
+                )
+                .map_err(|_| SaveError::GeneralError)
+                .await;
+
+                responder.send(&mut err)?;
             }
             fidl_policy::ClientControllerRequest::GetSavedNetworks { iterator, .. } => {
                 handle_client_request_get_networks(Arc::clone(&saved_networks), iterator).await?;
@@ -383,114 +295,13 @@ async fn handle_client_requests(
     Ok(())
 }
 
-const DISCONNECTION_MONITOR_SECONDS: i64 = 10;
-async fn wait_for_disconnection(
-    client: ClientPtr,
-    update_sender: listener::ClientListenerMessageSender,
-    network: NetworkIdentifier,
-    credential: Credential,
-) {
-    // Loop until we're no longer connected to the network
-    loop {
-        fuchsia_async::Timer::new(DISCONNECTION_MONITOR_SECONDS.seconds().after_now()).await;
-        let client = client.lock().await;
-
-        // Stop watching for a disconnect if a disconnect or change has already been triggered from
-        // the policy layer. current_connection is changed by anything that changes connection
-        // state in this layer.
-        if client.current_connection != Some((network.clone(), credential.clone())) {
-            return;
-        }
-
-        let status_fut = match client.access_sme().map(|sme| sme.status()) {
-            Some(status_fut) => status_fut,
-            _ => break,
-        };
-        if let Ok(status) = status_fut.await {
-            if let Some(current_network) = status.connected_to {
-                if current_network.ssid == network.ssid {
-                    continue;
-                }
-            }
-        };
-        break;
-    }
-
-    // Send a notification
-    info!("Disconnected from network, sending notification to listeners");
-    let update = listener::ClientStateUpdate {
-        state: None,
-        networks: vec![listener::ClientNetworkState {
-            id: network.into(),
-            state: fidl_policy::ConnectionState::Disconnected,
-            status: None,
-        }],
-    };
-    if let Err(e) = update_sender.unbounded_send(listener::Message::NotifyListeners(update)) {
-        error!("failed to send update to listener: {:?}", e);
-    };
-}
-
-async fn handle_sme_connect_response(
-    update_sender: listener::ClientListenerMessageSender,
-    internal_msg_sink: InternalMsgSink,
-    id: NetworkIdentifier,
-    credential: Credential,
-    txn_event: fidl_sme::ConnectTransactionEvent,
-    saved_networks: SavedNetworksPtr,
-    client: ClientPtr,
-) {
-    match txn_event {
-        fidl_sme::ConnectTransactionEvent::OnFinished { code } => {
-            use fidl_policy::ConnectionState as policy_state;
-            use fidl_policy::DisconnectStatus as policy_dc_status;
-            use fidl_sme::ConnectResultCode as sme_code;
-            saved_networks.record_connect_result(id.clone(), &credential, code);
-            // If we were successful, await disconnection
-            if code == sme_code::Success {
-                info!("connection request successful to: {:?}", String::from_utf8_lossy(&id.ssid));
-                client.lock().await.current_connection = Some((id.clone(), credential.clone()));
-                if let Err(e) = internal_msg_sink
-                    .unbounded_send(InternalMsg::NewDisconnectWatcher(id.clone(), credential))
-                {
-                    error!("failed to queue disconnect watcher: {:?}", e);
-                };
-            }
-            // Send an update to listeners
-            let update = listener::ClientStateUpdate {
-                state: None,
-                networks: vec![listener::ClientNetworkState {
-                    id: id.into(),
-                    state: match code {
-                        sme_code::Success => policy_state::Connected,
-                        sme_code::Canceled => policy_state::Disconnected,
-                        sme_code::Failed => policy_state::Failed,
-                        sme_code::BadCredentials => policy_state::Failed,
-                    },
-                    status: match code {
-                        sme_code::Success => None,
-                        sme_code::Canceled => Some(policy_dc_status::ConnectionStopped),
-                        sme_code::Failed => Some(policy_dc_status::ConnectionFailed),
-                        sme_code::BadCredentials => Some(policy_dc_status::CredentialsFailed),
-                    },
-                }],
-            };
-            if let Err(e) = update_sender.unbounded_send(listener::Message::NotifyListeners(update))
-            {
-                error!("failed to send update to listener: {:?}", e);
-            };
-        }
-    }
-}
-
 /// Attempts to issue a new connect request to the currently active Client.
 /// The network's configuration must have been stored before issuing a connect request.
 async fn handle_client_request_connect(
-    update_sender: listener::ClientListenerMessageSender,
-    client: ClientPtr,
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     saved_networks: SavedNetworksPtr,
     network: &fidl_policy::NetworkIdentifier,
-) -> Result<(Credential, fidl_sme::ConnectTransactionProxy), RequestError> {
+) -> Result<oneshot::Receiver<()>, RequestError> {
     let network_config = saved_networks
         .lookup(NetworkIdentifier::new(network.ssid.clone(), network.type_.into()))
         .pop()
@@ -501,67 +312,32 @@ async fn handle_client_request_connect(
             ))
         })?;
 
-    // TODO(hahnr): Discuss whether every request should verify the existence of a Client, or
-    // whether that should be handled by either, closing the currently active controller if a
-    // client interface is brought down and not supporting controller requests if no client
-    // interface is active.
-    let client = client.lock().await;
-    let client_sme = client
-        .access_sme()
-        .ok_or_else(|| RequestError::new().with_cause(format_err!("no active client interface")))?;
-
-    let credential = sme_credential_from_policy(&network_config.credential);
-    let mut request = fidl_sme::ConnectRequest {
-        ssid: network.ssid.to_vec(),
-        credential,
-        radio_cfg: fidl_sme::RadioConfig {
-            override_phy: false,
-            phy: fidl_common::Phy::Vht,
-            override_cbw: false,
-            cbw: fidl_common::Cbw::Cbw80,
-            override_primary_chan: false,
-            primary_chan: 0,
-        },
-        deprecated_scan_type: fidl_common::ScanType::Passive,
+    let network_id = fidl_policy::NetworkIdentifier {
+        ssid: network_config.ssid,
+        type_: fidl_policy::SecurityType::from(network_config.security_type),
     };
-    let (local, remote) = fidl::endpoints::create_proxy().map_err(|e| {
-        RequestError::new().with_cause(format_err!("failed to create proxy: {:?}", e))
-    })?;
-    client_sme.connect(&mut request, Some(remote)).map_err(|e| {
-        RequestError::new().with_cause(format_err!("failed to connect to sme: {:?}", e))
-    })?;
-
-    let update = listener::ClientStateUpdate {
-        state: None,
-        networks: vec![listener::ClientNetworkState {
-            id: network.clone(),
-            state: fidl_policy::ConnectionState::Connecting,
-            status: None,
-        }],
-    };
-    if let Err(e) = update_sender.unbounded_send(listener::Message::NotifyListeners(update)) {
-        error!("failed to send update to listener: {:?}", e);
+    let connect_req = client_fsm::ConnectRequest {
+        network: network_id,
+        credential: network_config.credential.clone(),
     };
 
-    Ok((network_config.credential, local))
-}
-
-/// This is not yet implemented and just returns that request is not supported
-fn handle_client_request_start_connections() -> fidl_common::RequestStatus {
-    fidl_common::RequestStatus::RejectedNotSupported
-}
-
-/// This is not yet implemented and just returns that the request is not supported
-fn handle_client_request_stop_connections() -> fidl_common::RequestStatus {
-    fidl_common::RequestStatus::RejectedNotSupported
+    let mut iface_manager = iface_manager.lock().await;
+    match iface_manager.connect(connect_req).await {
+        Ok(receiver) => Ok(receiver),
+        Err(e) => Err(RequestError {
+            cause: e,
+            status: fidl_common::RequestStatus::RejectedIncompatibleMode,
+        }),
+    }
 }
 
 /// This function handles requests to save a network by saving the network and sending back to the
 /// controller whether or not we successfully saved the network. There could be a FIDL error in
 /// sending the response.
-fn handle_client_request_save_network(
+async fn handle_client_request_save_network(
     saved_networks: SavedNetworksPtr,
     network_config: fidl_policy::NetworkConfig,
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
 ) -> Result<(), NetworkConfigError> {
     // The FIDL network config fields are defined as Options, and we consider it an error if either
     // field is missing (ie None) here.
@@ -569,18 +345,25 @@ fn handle_client_request_save_network(
     let credential = Credential::try_from(
         network_config.credential.ok_or_else(|| NetworkConfigError::ConfigMissingCredential)?,
     )?;
-    saved_networks.store(NetworkIdentifier::from(net_id), credential)?;
+    saved_networks.store(NetworkIdentifier::from(net_id.clone()), credential.clone())?;
+
+    // Attempt to connect to the new network if there is an idle client interface.
+    let connect_req = client_fsm::ConnectRequest { network: net_id, credential: credential };
+    let mut iface_manager = iface_manager.lock().await;
+
+    if iface_manager.has_idle_client() {
+        let _ = iface_manager.connect(connect_req).await;
+    }
+
     Ok(())
 }
 
 /// Will remove the specified network and respond to the remove network request with a network
-/// config change error if an error occurs while trying to remove the network. If the network
-/// config is successfully removed and currently connected, we will disconnect.
+/// config change error if an error occurs while trying to remove the network.
 async fn handle_client_request_remove_network(
     saved_networks: SavedNetworksPtr,
     network_config: fidl_policy::NetworkConfig,
-    client: ClientPtr,
-    update_sender: listener::ClientListenerMessageSender,
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
 ) -> Result<(), NetworkConfigError> {
     // The FIDL network config fields are defined as Options, and we consider it an error if either
     // field is missing (ie None) here.
@@ -592,8 +375,11 @@ async fn handle_client_request_remove_network(
     )?;
     saved_networks.remove(net_id.clone(), credential.clone())?;
 
-    // If we are currently connected to this network, disconnect from it
-    client.lock().await.disconnect_from((net_id, credential), update_sender).await;
+    match iface_manager.lock().await.disconnect(fidl_policy::NetworkIdentifier::from(net_id)).await
+    {
+        Ok(()) => {}
+        Err(e) => error!("failed to disconnect from network: {}", e),
+    }
     Ok(())
 }
 
@@ -657,6 +443,65 @@ async fn handle_listener_request(
     }
 }
 
+/// Attempts to connect a client to the best available known network.
+pub(crate) async fn connect_to_best_network(
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    selector: Arc<network_selection::NetworkSelector>,
+) {
+    let mut iface_manager = iface_manager.lock().await;
+    // See if any known networks are in range and connect if one is.
+    if let Some((network_id, credential)) = selector.get_best_network(&vec![]) {
+        let connect_req =
+            client_fsm::ConnectRequest { network: network_id, credential: credential };
+
+        if let Err(e) = iface_manager.connect(connect_req).await {
+            warn!("failed to reconnect iface: {:?}", e);
+        }
+    } else {
+        warn!("no recommended networks available");
+    }
+}
+
+/// Perform a scan to seed the network selector with up-to-date information.
+pub(crate) async fn scan_for_network_selector(
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    selector: Arc<network_selection::NetworkSelector>,
+) {
+    // Drop the requesting side of the transaction because the scan results are not actually needed
+    // in this function, just in the network selector.
+    let (_, server_end) = match fidl::endpoints::create_proxy() {
+        Ok((proxy, server_end)) => (proxy, server_end),
+        Err(e) => {
+            warn!("auto-connect will not be attempted: {:?}", e);
+            return;
+        }
+    };
+    scan::perform_scan(iface_manager, server_end, scan::successful_scan_observer, selector).await;
+}
+
+/// Handle events from client state machines.
+pub(crate) async fn handle_client_state_machine_event(
+    event: client_fsm::ClientStateMachineNotification,
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    selector: Arc<network_selection::NetworkSelector>,
+) {
+    match event {
+        client_fsm::ClientStateMachineNotification::Idle { iface_id } => {
+            // Record the idle interface.
+            let temp_iface_manager = iface_manager.clone();
+            let mut temp_iface_manager = temp_iface_manager.lock().await;
+            temp_iface_manager.record_idle_client(iface_id);
+            drop(temp_iface_manager);
+
+            // See what networks are available and attempt a reconnect.
+            scan_for_network_selector(iface_manager.clone(), selector.clone()).await;
+
+            // TODO(fxb/54046): Centralize the calls that reconnect a disconnected client.
+            connect_to_best_network(iface_manager, selector).await;
+        }
+    }
+}
+
 /// Registers a new update listener.
 /// The client's current state will be send to the newly added listener immediately.
 fn register_listener(
@@ -683,18 +528,122 @@ mod tests {
     use {
         super::*,
         crate::{
-            config_management::{NetworkConfig, SavedNetworksManager, SecurityType, PSK_BYTE_LEN},
+            access_point::state_machine as ap_fsm,
+            client::{network_selection::ScanResultUpdate, sme_credential_from_policy},
+            config_management::{Credential, NetworkConfig, SecurityType, PSK_BYTE_LEN},
+            mode_management::iface_manager::IfaceManagerApi,
             util::logger::set_logger_for_test,
         },
-        fidl::{
-            endpoints::{create_proxy, create_request_stream},
-            Error,
-        },
-        futures::{channel::mpsc, task::Poll},
+        async_trait::async_trait,
+        fidl::endpoints::{create_proxy, create_request_stream},
+        futures::{channel::mpsc, lock::Mutex, task::Poll},
         pin_utils::pin_mut,
         tempfile::TempDir,
         wlan_common::assert_variant,
     };
+
+    struct FakeIfaceManager {
+        pub sme_proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
+        pub connect_succeeds: bool,
+        pub client_connections_enabled: bool,
+        pub disconnected_ifaces: Vec<u16>,
+    }
+
+    impl FakeIfaceManager {
+        pub fn new(proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy) -> Self {
+            FakeIfaceManager {
+                sme_proxy: proxy,
+                connect_succeeds: true,
+                client_connections_enabled: false,
+                disconnected_ifaces: Vec::new(),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl IfaceManagerApi for FakeIfaceManager {
+        async fn disconnect(
+            &mut self,
+            _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn connect(
+            &mut self,
+            connect_req: client_fsm::ConnectRequest,
+        ) -> Result<oneshot::Receiver<()>, Error> {
+            let _ = self.disconnected_ifaces.pop();
+            let mut req = fidl_sme::ConnectRequest {
+                ssid: connect_req.network.ssid,
+                credential: sme_credential_from_policy(&connect_req.credential),
+                radio_cfg: fidl_sme::RadioConfig {
+                    override_phy: false,
+                    phy: fidl_common::Phy::Ht,
+                    override_cbw: false,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    override_primary_chan: false,
+                    primary_chan: 0,
+                },
+                deprecated_scan_type: fidl_common::ScanType::Passive,
+            };
+            self.sme_proxy.connect(&mut req, None)?;
+
+            let (responder, receiver) = oneshot::channel();
+
+            // Drop the responder in the failing case.
+            if self.connect_succeeds {
+                let _ = responder.send(());
+            }
+            Ok(receiver)
+        }
+
+        fn record_idle_client(&mut self, iface_id: u16) {
+            self.disconnected_ifaces.push(iface_id)
+        }
+
+        fn has_idle_client(&self) -> bool {
+            !self.disconnected_ifaces.is_empty()
+        }
+
+        async fn scan(
+            &mut self,
+            timeout: u8,
+            scan_type: fidl_fuchsia_wlan_common::ScanType,
+        ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
+            let (local, remote) = fidl::endpoints::create_proxy()?;
+            let mut request =
+                fidl_fuchsia_wlan_sme::ScanRequest { timeout: timeout, scan_type: scan_type };
+            let _ = self.sme_proxy.scan(&mut request, remote);
+            Ok(local)
+        }
+
+        async fn stop_client_connections(&mut self) -> Result<(), Error> {
+            self.client_connections_enabled = false;
+            Ok(())
+        }
+
+        async fn start_client_connections(&mut self) -> Result<(), Error> {
+            self.client_connections_enabled = true;
+            Ok(())
+        }
+
+        async fn start_ap(
+            &mut self,
+            _config: ap_fsm::ApConfig,
+        ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error> {
+            let (_, receiver) = oneshot::channel();
+            Ok(receiver)
+        }
+
+        async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn stop_all_aps(&mut self) -> Result<(), Error> {
+            Ok(())
+        }
+    }
 
     /// Creates an ESS Store holding entries for protected and unprotected networks.
     async fn create_network_store(stash_id: impl AsRef<str>) -> SavedNetworksPtr {
@@ -735,20 +684,12 @@ mod tests {
         (controller, update_stream)
     }
 
-    /// Creates a Client wrapper.
-    async fn create_client() -> (ClientPtr, fidl_sme::ClientSmeRequestStream) {
-        let (client_sme, remote) =
-            create_proxy::<fidl_sme::ClientSmeMarker>().expect("error creating proxy");
-        let client = Arc::new(Mutex::new(Client::from(client_sme)));
-        (client, remote.into_stream().expect("failed to create stream"))
-    }
-
     struct TestValues {
         saved_networks: SavedNetworksPtr,
-        network_selector: Arc<NetworkSelector>,
+        network_selector: Arc<network_selection::NetworkSelector>,
         provider: fidl_policy::ClientProviderProxy,
         requests: fidl_policy::ClientProviderRequestStream,
-        client: ClientPtr,
+        iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
         sme_stream: fidl_sme::ClientSmeRequestStream,
         update_sender: mpsc::UnboundedSender<listener::ClientListenerMessage>,
         listener_updates: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
@@ -757,21 +698,34 @@ mod tests {
     // setup channels and proxies needed for the tests to use use the Client Provider and
     // Client Controller APIs in tests. The stash id should be the test name so that each
     // test will have a unique persistent store behind it.
-    fn test_setup(stash_id: impl AsRef<str>, exec: &mut fasync::Executor) -> TestValues {
+    fn test_setup(
+        stash_id: impl AsRef<str>,
+        exec: &mut fasync::Executor,
+        connect_succeeds: bool,
+    ) -> TestValues {
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
-        let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
+        let network_selector =
+            Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
-        let (client, sme_stream) = exec.run_singlethreaded(create_client());
+
+        let (proxy, server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
+            .expect("failed to create ClientSmeProxy");
+        let mut iface_manager = FakeIfaceManager::new(proxy.clone());
+        iface_manager.connect_succeeds = connect_succeeds;
+        let iface_manager = Arc::new(Mutex::new(iface_manager));
+        let sme_stream = server.into_stream().expect("failed to create ClientSmeRequestStream");
+
         let (update_sender, listener_updates) = mpsc::unbounded();
+
         set_logger_for_test();
         TestValues {
             saved_networks,
             network_selector,
             provider,
             requests,
-            client,
+            iface_manager,
             sme_stream,
             update_sender,
             listener_updates,
@@ -781,9 +735,9 @@ mod tests {
     #[test]
     fn connect_request_unknown_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup("connect_request_unknown_network", &mut exec);
+        let test_values = test_setup("connect_request_unknown_network", &mut exec, true);
         let serve_fut = serve_provider_requests(
-            test_values.client,
+            test_values.iface_manager,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
@@ -807,9 +761,10 @@ mod tests {
 
         // Process connect request and verify connect response.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
-            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedNotSupported))
+            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedIncompatibleMode))
         );
 
         // unknown network should not have been saved by saved networks manager
@@ -824,9 +779,9 @@ mod tests {
     fn connect_request_open_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
-        let mut test_values = test_setup("connect_request_open_network", &mut exec);
+        let mut test_values = test_setup("connect_request_open_network", &mut exec, true);
         let serve_fut = serve_provider_requests(
-            test_values.client,
+            test_values.iface_manager,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
@@ -850,6 +805,8 @@ mod tests {
 
         // Process connect request and verify connect response.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Verify that the connect call is acknowledged.
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
@@ -869,9 +826,10 @@ mod tests {
     #[test]
     fn connect_request_protected_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("connect_request_protected_network", &mut exec);
+
+        let mut test_values = test_setup("connect_request_open_network", &mut exec, true);
         let serve_fut = serve_provider_requests(
-            test_values.client,
+            test_values.iface_manager,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
@@ -895,6 +853,8 @@ mod tests {
 
         // Process connect request and verify connect response.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Verify that the connect call is acknowledged.
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
@@ -915,9 +875,10 @@ mod tests {
     #[test]
     fn connect_request_protected_psk_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("connect_request_protected_psk_network", &mut exec);
+
+        let mut test_values = test_setup("connect_request_open_network", &mut exec, true);
         let serve_fut = serve_provider_requests(
-            test_values.client,
+            test_values.iface_manager,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
@@ -941,6 +902,8 @@ mod tests {
 
         // Process connect request and verify connect response.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Verify that the connect call is acknowledged.
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
@@ -961,9 +924,9 @@ mod tests {
     #[test]
     fn connect_request_success() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("connect_request_success", &mut exec);
+        let mut test_values = test_setup("connect_request_success", &mut exec, true);
         let serve_fut = serve_provider_requests(
-            Arc::clone(&test_values.client),
+            test_values.iface_manager,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
@@ -992,82 +955,14 @@ mod tests {
         // Process connect request and verify connect response.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
-
-        // Verify status update.
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-        let expected_summary = listener::ClientStateUpdate {
-            state: None,
-            networks: vec![listener::ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
-                    ssid: b"foobar".to_vec(),
-                    type_: fidl_policy::SecurityType::None,
-                },
-                state: fidl_policy::ConnectionState::Connecting,
-                status: None,
-            }],
-        };
-        assert_eq!(summary, expected_summary);
-
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
-                txn, ..
-            }))) => {
-                // Send connection response.
-                let (_stream, ctrl) = txn.expect("connect txn unused")
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_finished(fidl_sme::ConnectResultCode::Success)
-                    .expect("failed to send connection completion");
-            }
-        );
-
-        // Process SME result.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Verify status update.
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-        let expected_summary = listener::ClientStateUpdate {
-            state: None,
-            networks: vec![listener::ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
-                    ssid: b"foobar".to_vec(),
-                    type_: fidl_policy::SecurityType::None,
-                },
-                state: fidl_policy::ConnectionState::Connected,
-                status: None,
-            }],
-        };
-        assert_eq!(summary, expected_summary);
-
-        // saved network config should reflect that it has connected successfully
-        let network_id = NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::None);
-        let credential = Credential::None;
-        let cfg = get_config(
-            Arc::clone(&test_values.saved_networks),
-            network_id.clone(),
-            credential.clone(),
-        );
-        assert_variant!(cfg, Some(cfg) => {
-            assert!(cfg.has_ever_connected)
-        });
-        // Verify current_connection of the client is set when we connect.
-        assert_variant!(exec.run_until_stalled(&mut test_values.client.lock()), Poll::Ready(client) => {
-            assert_eq!(client.current_connection, Some((network_id, credential)));
-        });
     }
 
     #[test]
     fn connect_request_failure() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("connect_request_failure", &mut exec);
+        let mut test_values = test_setup("connect_request_failure", &mut exec, false);
         let serve_fut = serve_provider_requests(
-            Arc::clone(&test_values.client),
+            test_values.iface_manager,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
@@ -1096,76 +991,14 @@ mod tests {
         // Process connect request and verify connect response.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
-
-        // Verify status update.
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-        let expected_summary = listener::ClientStateUpdate {
-            state: None,
-            networks: vec![listener::ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
-                    ssid: b"foobar".to_vec(),
-                    type_: fidl_policy::SecurityType::None,
-                },
-                state: fidl_policy::ConnectionState::Connecting,
-                status: None,
-            }],
-        };
-        assert_eq!(summary, expected_summary);
-
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
-                txn, ..
-            }))) => {
-                // Send failed connection response.
-                let (_stream, ctrl) = txn.expect("connect txn unused")
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_finished(fidl_sme::ConnectResultCode::Failed)
-                    .expect("failed to send connection completion");
-            }
-        );
-
-        // Process SME result.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Verify status update.
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-        let expected_summary = listener::ClientStateUpdate {
-            state: None,
-            networks: vec![listener::ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
-                    ssid: b"foobar".to_vec(),
-                    type_: fidl_policy::SecurityType::None,
-                },
-                state: fidl_policy::ConnectionState::Failed,
-                status: Some(fidl_policy::DisconnectStatus::ConnectionFailed),
-            }],
-        };
-        assert_eq!(summary, expected_summary);
-
-        // Verify network config reflects that we still have not connected successfully
-        let cfg = get_config(
-            test_values.saved_networks,
-            NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::None),
-            Credential::None,
-        );
-        assert_variant!(cfg, Some(cfg) => {
-            assert_eq!(false, cfg.has_ever_connected);
-        });
     }
 
     #[test]
     fn connect_request_bad_password() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("connect_request_bad_password", &mut exec);
+        let mut test_values = test_setup("connect_request_bad_password", &mut exec, false);
         let serve_fut = serve_provider_requests(
-            Arc::clone(&test_values.client),
+            test_values.iface_manager,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
@@ -1194,81 +1027,14 @@ mod tests {
         // Process connect request and verify connect response.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
-
-        // Verify status update.
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-        let expected_summary = listener::ClientStateUpdate {
-            state: None,
-            networks: vec![listener::ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
-                    ssid: b"foobar".to_vec(),
-                    type_: fidl_policy::SecurityType::None,
-                },
-                state: fidl_policy::ConnectionState::Connecting,
-                status: None,
-            }],
-        };
-        assert_eq!(summary, expected_summary);
-
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
-                txn, ..
-            }))) => {
-                // Send failed connection response.
-                let (_stream, ctrl) = txn.expect("connect txn unused")
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_finished(fidl_sme::ConnectResultCode::BadCredentials)
-                    .expect("failed to send connection completion");
-            }
-        );
-
-        // Process SME result.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Verify status update.
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-        let expected_summary = listener::ClientStateUpdate {
-            state: None,
-            networks: vec![listener::ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
-                    ssid: b"foobar".to_vec(),
-                    type_: fidl_policy::SecurityType::None,
-                },
-                state: fidl_policy::ConnectionState::Failed,
-                status: Some(fidl_policy::DisconnectStatus::CredentialsFailed),
-            }],
-        };
-        assert_eq!(summary, expected_summary);
-
-        // Verify network config reflects that we still have not connected successfully
-        let cfg = get_config(
-            test_values.saved_networks,
-            NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::None),
-            Credential::None,
-        );
-        assert_variant!(cfg, Some(cfg) => {
-            assert_eq!(false, cfg.has_ever_connected);
-        });
-
-        // Current connection shouldn't change if we didn't connect
-        assert_variant!(exec.run_until_stalled(&mut test_values.client.lock()), Poll::Ready(client) => {
-            assert!(client.current_connection.is_none());
-        });
     }
 
     #[test]
-    fn start_and_stop_client_connections_should_fail() {
+    fn start_and_stop_client_connections() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup("start_and_stop_client_connections_should_fail", &mut exec);
+        let test_values = test_setup("start_and_stop_client_connections", &mut exec, true);
         let serve_fut = serve_provider_requests(
-            test_values.client,
+            test_values.iface_manager,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
@@ -1287,151 +1053,45 @@ mod tests {
         let start_fut = controller.start_client_connections();
         pin_mut!(start_fut);
 
-        // Request should be rejected.
+        // Request should be acknowledged.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
             exec.run_until_stalled(&mut start_fut),
-            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedNotSupported))
+            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
         );
 
-        // Issue request to stop client connections.
-        let stop_fut = controller.stop_client_connections();
-        pin_mut!(stop_fut);
-
-        // Request should be rejected.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut stop_fut),
-            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedNotSupported))
-        );
-    }
-
-    #[test]
-    fn disconnect_update() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("disconnect_update", &mut exec);
-        let serve_fut = serve_provider_requests(
-            test_values.client,
-            test_values.update_sender,
-            Arc::clone(&test_values.saved_networks),
-            Arc::clone(&test_values.network_selector),
-            test_values.requests,
-        );
-        pin_mut!(serve_fut);
-
-        // No request has been sent yet. Future should be idle.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Request a new controller.
-        let (controller, _update_stream) = request_controller(&test_values.provider);
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(_)
-        );
-
-        // Issue connect request.
+        // Perform a connect operation.
         let connect_fut = controller.connect(&mut fidl_policy::NetworkIdentifier {
-            ssid: b"foobar".to_vec(),
-            type_: fidl_policy::SecurityType::None,
+            ssid: b"foobar-protected".to_vec(),
+            type_: fidl_policy::SecurityType::Wpa2,
         });
         pin_mut!(connect_fut);
 
         // Process connect request and verify connect response.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
 
-        // Verify status update.
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-        let expected_summary = listener::ClientStateUpdate {
-            state: None,
-            networks: vec![listener::ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
-                    ssid: b"foobar".to_vec(),
-                    type_: fidl_policy::SecurityType::None,
-                },
-                state: fidl_policy::ConnectionState::Connecting,
-                status: None,
-            }],
-        };
-        assert_eq!(summary, expected_summary);
-
+        // Verify that the connect call is acknowledged.
         assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
-                txn, ..
-            }))) => {
-                // Send connection response.
-                let (_stream, ctrl) = txn.expect("connect txn unused")
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_finished(fidl_sme::ConnectResultCode::Success)
-                    .expect("failed to send connection completion");
-            }
+            exec.run_until_stalled(&mut connect_fut),
+            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
         );
 
-        // Process SME result.
+        // The client state machine will immediately query for status.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        // Verify status update.
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-        let expected_summary = listener::ClientStateUpdate {
-            state: None,
-            networks: vec![listener::ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
-                    ssid: b"foobar".to_vec(),
-                    type_: fidl_policy::SecurityType::None,
-                },
-                state: fidl_policy::ConnectionState::Connected,
-                status: None,
-            }],
-        };
-        assert_eq!(summary, expected_summary);
+        // Issue request to stop client connections.
+        let stop_fut = controller.stop_client_connections();
+        pin_mut!(stop_fut);
 
-        // Wake up the disconnect monitor timer and send SME status request.
-        exec.wake_next_timer();
+        // Run the serve future until it stalls and expect the client to disconnect
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        // Expect a status request from the disconnect monitor to the SME.
+        // Request should be acknowledged.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Status {
-                responder, ..
-            }))) => {
-                // Send status response.
-                let mut resp = fidl_sme::ClientStatusResponse{
-                    connected_to: None,
-                    connecting_to_ssid: vec![]
-                };
-                responder.send(&mut resp).expect("failed to send status update");
-            }
+            exec.run_until_stalled(&mut stop_fut),
+            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
         );
-
-        // Process SME result.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Verify status update.
-        let summary = assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
-        );
-        let expected_summary = listener::ClientStateUpdate {
-            state: None,
-            networks: vec![listener::ClientNetworkState {
-                id: fidl_policy::NetworkIdentifier {
-                    ssid: b"foobar".to_vec(),
-                    type_: fidl_policy::SecurityType::None,
-                },
-                state: fidl_policy::ConnectionState::Disconnected,
-                status: None,
-            }],
-        };
-        assert_eq!(summary, expected_summary);
     }
 
     /// End-to-end test of the scan function, verifying that an incoming
@@ -1440,9 +1100,9 @@ mod tests {
     #[test]
     fn scan_end_to_end() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup(line!().to_string(), &mut exec);
+        let mut test_values = test_setup("scan_request_sent_to_sme", &mut exec, true);
         let serve_fut = serve_provider_requests(
-            test_values.client,
+            test_values.iface_manager,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
@@ -1456,51 +1116,24 @@ mod tests {
         // Request a new controller.
         let (controller, _update_stream) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(_)
-        );
 
-        // Create a set of endpoints.
-        let (iter, server) =
-            fidl::endpoints::create_proxy::<fidl_policy::ScanResultIteratorMarker>()
-                .expect("failed to create iterator");
-        let mut output_iter_fut = iter.get_next();
-
-        // Issue request to scan.
+        // Issue a scan request.
+        let (_iter, server) = fidl::endpoints::create_proxy().expect("failed to create iterator");
         controller.scan_for_networks(server).expect("Failed to call scan for networks");
 
-        // Request a chunk of scan results. Progress until waiting on response from server side of
-        // the iterator.
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
-        // Progress sever side forward so that it will respond to the iterator get next request.
+        // Process connect request and verify connect response.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        // Check that a scan request was sent to the sme and send back results
+        // Check that a scan request was sent to the sme
         assert_variant!(
             exec.run_until_stalled(&mut test_values.sme_stream.next()),
             Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                txn, ..
+                req, ..
             }))) => {
-                // Send the first AP
-                let (_stream, ctrl) = txn
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_result(&mut vec![].into_iter())
-                    .expect("failed to send scan data");
-                // Send the end of data
-                ctrl.send_on_finished()
-                    .expect("failed to send scan data");
+                assert_eq!(10, req.timeout);
+                assert_eq!(fidl_common::ScanType::Passive, req.scan_type);
             }
         );
-
-        // Process SME result.
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // The iterator should have scan results.
-        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
-            let results = result.expect("Failed to get next scan results").unwrap();
-            assert_eq!(results.len(), 0);
-        });
     }
 
     #[test]
@@ -1516,22 +1149,101 @@ mod tests {
         let saved_networks = Arc::new(
             exec.run_singlethreaded(saved_networks_fut).expect("Failed to create a KnownEssStore"),
         );
-        let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
+        let network_selector =
+            Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let (client, _sme_stream) = exec.run_singlethreaded(create_client());
+        let test_values = test_setup("save_network_test", &mut exec, true);
         let (update_sender, mut listener_updates) = mpsc::unbounded();
         let serve_fut = serve_provider_requests(
-            client,
+            test_values.iface_manager,
             update_sender,
             Arc::clone(&saved_networks),
             network_selector,
             requests,
         );
         pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut listener_updates.next()), Poll::Ready(_));
+
+        // Save some network
+        let network_id = fidl_policy::NetworkIdentifier {
+            ssid: b"foo".to_vec(),
+            type_: fidl_policy::SecurityType::None,
+        };
+        let network_config = fidl_policy::NetworkConfig {
+            id: Some(network_id.clone()),
+            credential: Some(fidl_policy::Credential::None(fidl_policy::Empty)),
+        };
+        let mut save_fut = controller.save_network(network_config);
+
+        // Run server_provider forward so that it will process the save network request
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Check that the the response says we succeeded.
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(result) => {
+            let save_result = result.expect("Failed to get save network response");
+            assert_eq!(save_result, Ok(()));
+        });
+
+        // Check that the value was actually saved in the saved networks manager.
+        let target_id = NetworkIdentifier::from(network_id);
+        let target_config = NetworkConfig::new(target_id.clone(), Credential::None, false, false)
+            .expect("Failed to create network config");
+        assert_eq!(saved_networks.lookup(target_id), vec![target_config]);
+    }
+
+    #[test]
+    fn save_network_with_disconnected_iface() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let stash_id = "save_network_with_disconnected_iface";
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks_fut =
+            SavedNetworksManager::new_with_stash_or_paths(stash_id, path, tmp_path);
+        pin_mut!(saved_networks_fut);
+        let saved_networks = Arc::new(
+            exec.run_singlethreaded(saved_networks_fut).expect("Failed to create a KnownEssStore"),
+        );
+        let network_selector =
+            Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
+
+        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
+            .expect("failed to create ClientProvider proxy");
+        let requests = requests.into_stream().expect("failed to create stream");
+
+        let test_values = test_setup("save_network_test", &mut exec, true);
+        let (update_sender, mut listener_updates) = mpsc::unbounded();
+        let serve_fut = serve_provider_requests(
+            test_values.iface_manager.clone(),
+            update_sender,
+            Arc::clone(&saved_networks),
+            network_selector,
+            requests,
+        );
+        pin_mut!(serve_fut);
+
+        // Setup the IfaceManager so that it has a disconnected iface.
+        {
+            let iface_manager = test_values.iface_manager.clone();
+            let iface_manager_fut = iface_manager.lock();
+            pin_mut!(iface_manager_fut);
+            let mut iface_manager = match exec.run_until_stalled(&mut iface_manager_fut) {
+                Poll::Ready(iface_manager) => iface_manager,
+                Poll::Pending => panic!("expected to acquire iface_manager lock"),
+            };
+            iface_manager.record_idle_client(0);
+        }
 
         // No request has been sent yet. Future should be idle.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
@@ -1585,16 +1297,17 @@ mod tests {
                 .expect("Failed to create a KnownEssStore"),
         );
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
-        let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
+        let network_selector =
+            Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let (client, _sme_stream) = exec.run_singlethreaded(create_client());
+        let test_values = test_setup("save_bad_network_test", &mut exec, true);
         let (update_sender, mut listener_updates) = mpsc::unbounded();
         let serve_fut = serve_provider_requests(
-            client,
+            test_values.iface_manager,
             update_sender,
             Arc::clone(&saved_networks),
             network_selector,
@@ -1666,15 +1379,23 @@ mod tests {
             exec.run_singlethreaded(&mut saved_networks_fut)
                 .expect("Failed to create a KnownEssStore"),
         );
-        let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
+        let network_selector =
+            Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let (client, mut sme_stream) = exec.run_singlethreaded(create_client());
         let (update_sender, mut listener_updates) = mpsc::unbounded();
+
+        // Create a fake IfaceManager to handle client requests.
+        let (proxy, _server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
+            .expect("failed to create ClientSmeProxy");
+        let mut iface_manager = FakeIfaceManager::new(proxy.clone());
+        iface_manager.connect_succeeds = true;
+        let iface_manager = Arc::new(Mutex::new(iface_manager));
+
         let serve_fut = serve_provider_requests(
-            Arc::clone(&client),
+            iface_manager,
             update_sender,
             Arc::clone(&saved_networks),
             network_selector,
@@ -1695,7 +1416,7 @@ mod tests {
         saved_networks.store(network_id.clone(), credential.clone()).expect("failed to store");
 
         // If testing a connected network, first connect to it in order to test that we will
-        // disconnect and that disconnect watcher will stop checking for disconnects.
+        // disconnect.
         if is_connected {
             let connect_fut =
                 controller.connect(&mut fidl_policy::NetworkIdentifier::from(network_id.clone()));
@@ -1704,18 +1425,6 @@ mod tests {
             // Process connect request and verify connect response.
             assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
             assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
-            process_connect(&mut exec, &mut sme_stream);
-            // Process SME result.
-            assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-            // Get listener update (for connecting and connect) so it isn't in front of the disconnect update later.
-            assert_variant!(
-                exec.run_until_stalled(&mut listener_updates.next()),
-                Poll::Ready(Some(listener::Message::NotifyListeners(_)))
-            );
-            assert_variant!(
-                exec.run_until_stalled(&mut listener_updates.next()),
-                Poll::Ready(Some(listener::Message::NotifyListeners(_)))
-            );
         }
 
         // Request to remove some network
@@ -1727,82 +1436,8 @@ mod tests {
 
         // Run server_provider forward so that it will process the remove request
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // If we have connected to a network, we expect a disconnect request and must proccess it.
-        if is_connected {
-            assert_variant!(
-                exec.run_until_stalled(&mut sme_stream.next()),
-                Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Disconnect{responder}))) => {
-                    responder.send().expect("Failed to send disconnect completion");
-                }
-            );
-            assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-            assert_variant!(exec.run_until_stalled(&mut remove_fut), Poll::Ready(Ok(Ok(()))));
-            assert_variant!(
-                exec.run_until_stalled(&mut listener_updates.next()),
-                Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => {
-                    assert_eq!(summary, listener::ClientStateUpdate{state: None, networks: vec![
-                        listener::ClientNetworkState {
-                            id: network_id.clone().into(),
-                            state: fidl_policy::ConnectionState::Disconnected,
-                            status: Some(fidl_policy::DisconnectStatus::ConnectionStopped),
-                        }
-                    ]});
-                }
-            );
-
-            // Check that the disconnect watcher exits without checking for disconnects
-            exec.wake_next_timer();
-            assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-            assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
-
-            // Check that we don't try to disconnect again if we save and remove again.
-            saved_networks
-                .store(network_id.clone(), credential.clone())
-                .expect("Failed to save network");
-            let network_config = fidl_policy::NetworkConfig {
-                id: Some(fidl_policy::NetworkIdentifier::from(network_id.clone())),
-                credential: Some(fidl_policy::Credential::from(credential)),
-            };
-            remove_fut = controller.remove_network(network_config);
-            // Run server_provider forward so that it will process the remove request
-            assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-            assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
-        }
-
         assert_variant!(exec.run_until_stalled(&mut remove_fut), Poll::Ready(Ok(Ok(()))));
         assert!(saved_networks.lookup(network_id).is_empty());
-    }
-
-    fn process_connect(
-        exec: &mut fasync::Executor,
-        sme_stream: &mut fidl_sme::ClientSmeRequestStream,
-    ) {
-        assert_variant!(
-            exec.run_until_stalled(&mut sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
-                txn, ..
-            }))) => {
-                // Send connection response.
-                let (_stream, ctrl) = txn.expect("connect txn unused")
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_finished(fidl_sme::ConnectResultCode::Success)
-                    .expect("failed to send connection completion");
-            }
-        );
-    }
-
-    #[test]
-    fn get_saved_networks_empty() {
-        let saved_networks = vec![];
-        let expected_configs = vec![];
-        let expected_num_sends = 0;
-        test_get_saved_networks(
-            "get_saved_networks_empty",
-            saved_networks,
-            expected_configs,
-            expected_num_sends,
-        );
     }
 
     #[test]
@@ -1869,7 +1504,7 @@ mod tests {
     /// expected_num_sends: number of chunks of results we expect to get from get_saved_networks.
     ///     This is not counting the empty vector that signifies no more results.
     fn test_get_saved_networks(
-        test_id: impl AsRef<str>,
+        test_id: impl AsRef<str> + Copy,
         saved_configs: Vec<(NetworkIdentifier, Credential)>,
         expected_configs: Vec<fidl_policy::NetworkConfig>,
         expected_num_sends: usize,
@@ -1884,17 +1519,18 @@ mod tests {
             ))
             .expect("Failed to create a KnownEssStore"),
         );
-        let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
+        let network_selector =
+            Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let (client, _sme_stream) = exec.run_singlethreaded(create_client());
+        let unused_stash = (*test_id.as_ref()).chars().rev().collect::<String>();
+        let test_values = test_setup(&unused_stash, &mut exec, true);
         let (update_sender, _listener_updates) = mpsc::unbounded();
-
         let serve_fut = serve_provider_requests(
-            client,
+            test_values.iface_manager,
             update_sender,
             Arc::clone(&saved_networks),
             network_selector,
@@ -1955,9 +1591,9 @@ mod tests {
     #[test]
     fn register_update_listener() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("register_update_listener", &mut exec);
+        let mut test_values = test_setup("register_update_listener", &mut exec, true);
         let serve_fut = serve_provider_requests(
-            test_values.client,
+            test_values.iface_manager,
             test_values.update_sender,
             test_values.saved_networks,
             test_values.network_selector,
@@ -2007,9 +1643,9 @@ mod tests {
     #[test]
     fn multiple_controllers_write_attempt() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup("multiple_controllers_write_attempt", &mut exec);
+        let test_values = test_setup("multiple_controllers_write_attempt", &mut exec, true);
         let serve_fut = serve_provider_requests(
-            test_values.client,
+            test_values.iface_manager,
             test_values.update_sender,
             test_values.saved_networks,
             test_values.network_selector,
@@ -2037,6 +1673,7 @@ mod tests {
 
         // Process connect request from first controller. Verify success.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
@@ -2053,7 +1690,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
-            Poll::Ready(Err(Error::ClientChannelClosed(zx::Status::ALREADY_BOUND)))
+            Poll::Ready(Err(fidl::Error::ClientChannelClosed(zx::Status::ALREADY_BOUND)))
         );
 
         // Drop first controller. A new controller can now take control.
@@ -2073,6 +1710,7 @@ mod tests {
 
         // Process connect request from third controller. Verify success.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
@@ -2082,11 +1720,11 @@ mod tests {
     #[test]
     fn multiple_controllers_epitaph() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup("multiple_controllers_epitaph", &mut exec);
+        let test_values = test_setup("multiple_controllers_epitaph", &mut exec, true);
         let serve_fut = serve_provider_requests(
-            test_values.client,
+            test_values.iface_manager,
             test_values.update_sender,
-            test_values.saved_networks,
+            test_values.saved_networks.clone(),
             test_values.network_selector,
             test_values.requests,
         );
@@ -2120,21 +1758,78 @@ mod tests {
         assert!(chan.is_closed());
     }
 
+    struct FakeIfaceManagerNoIfaces {}
+
+    #[async_trait]
+    impl IfaceManagerApi for FakeIfaceManagerNoIfaces {
+        async fn disconnect(
+            &mut self,
+            _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+        ) -> Result<(), Error> {
+            Err(format_err!("No ifaces"))
+        }
+
+        async fn connect(
+            &mut self,
+            _connect_req: client_fsm::ConnectRequest,
+        ) -> Result<oneshot::Receiver<()>, Error> {
+            Err(format_err!("No ifaces"))
+        }
+
+        fn record_idle_client(&mut self, _iface_id: u16) {}
+
+        fn has_idle_client(&self) -> bool {
+            true
+        }
+
+        async fn scan(
+            &mut self,
+            _timeout: u8,
+            _scan_type: fidl_fuchsia_wlan_common::ScanType,
+        ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
+            Err(format_err!("No ifaces"))
+        }
+
+        async fn stop_client_connections(&mut self) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn start_client_connections(&mut self) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn start_ap(
+            &mut self,
+            _config: ap_fsm::ApConfig,
+        ) -> Result<oneshot::Receiver<fidl_fuchsia_wlan_sme::StartApResultCode>, Error> {
+            let (_, receiver) = oneshot::channel();
+            Ok(receiver)
+        }
+
+        async fn stop_ap(&mut self, _ssid: Vec<u8>, _password: Vec<u8>) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn stop_all_aps(&mut self) -> Result<(), Error> {
+            Ok(())
+        }
+    }
+
     #[test]
     fn no_client_interface() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let stash_id = "no_client_interface";
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
-        let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
+        let network_selector =
+            Arc::new(network_selection::NetworkSelector::new(Arc::clone(&saved_networks)));
+        let iface_manager = Arc::new(Mutex::new(FakeIfaceManagerNoIfaces {}));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
-
-        let client = Arc::new(Mutex::new(Client::new_empty()));
         let (update_sender, _listener_updates) = mpsc::unbounded();
         let serve_fut = serve_provider_requests(
-            client,
+            iface_manager,
             update_sender,
             saved_networks,
             network_selector,
@@ -2160,7 +1855,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
-            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedNotSupported))
+            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedIncompatibleMode))
         );
     }
 
@@ -2222,5 +1917,90 @@ mod tests {
                 Credential::Password(b"not-saved".to_vec())
             )
         );
+    }
+
+    /// Tests the case where there is a saved network when a disconnect event is observed.  In this
+    /// case, a reconnect should be attempted.
+    #[test]
+    fn test_connect_to_best_network() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup("test_client_event_with_saved_network", &mut exec, true);
+
+        // Setup the IfaceManager so that it has a disconnected iface.
+        {
+            let iface_manager = test_values.iface_manager.clone();
+            let iface_manager_fut = iface_manager.lock();
+            pin_mut!(iface_manager_fut);
+            let mut iface_manager = match exec.run_until_stalled(&mut iface_manager_fut) {
+                Poll::Ready(iface_manager) => iface_manager,
+                Poll::Pending => panic!("expected to acquire iface_manager lock"),
+            };
+            iface_manager.record_idle_client(0);
+        }
+
+        // Record some results to show that we have previously connected to this network and that
+        // we have seen it in a scan result.
+        let network_id = NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::None);
+        let credential = Credential::None;
+        test_values.saved_networks.record_connect_result(
+            network_id,
+            &credential,
+            fidl_sme::ConnectResultCode::Success,
+        );
+
+        let selector =
+            Arc::new(network_selection::NetworkSelector::new(test_values.saved_networks));
+        selector.update_scan_results(vec![types::ScanResult {
+            id: types::NetworkIdentifier {
+                ssid: b"foobar".to_vec(),
+                type_: types::SecurityType::None,
+            },
+            entries: vec![types::Bss {
+                bssid: [0, 1, 2, 3, 4, 5],
+                rssi: -20,
+                frequency: 2400,
+                timestamp_nanos: 0,
+            }],
+            compatibility: types::Compatibility::Supported,
+        }]);
+
+        let fut = connect_to_best_network(test_values.iface_manager, selector);
+        pin_mut!(fut);
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {..})))
+        )
+    }
+
+    /// Tests the case where there is no saved network when a disconnect event is observed.  In
+    /// this case, the interface ID should be pushed onto the vector of disconnected interfaces.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_connect_to_best_network_no_networks() {
+        set_logger_for_test();
+
+        let stash_id = "test_client_event_no_saved_network";
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = Arc::new(
+            SavedNetworksManager::new_with_stash_or_paths(stash_id, path, tmp_path)
+                .await
+                .expect("Failed to create a KnownEssStore"),
+        );
+
+        let (sme_proxy, _sme_server_end) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
+            .expect("failed to create ClientSmeProxy");
+        let iface_manager = Arc::new(Mutex::new(FakeIfaceManager::new(sme_proxy)));
+
+        {
+            let iface_manager = iface_manager.clone();
+            let iface_manager = iface_manager.lock().await;
+            assert!(!iface_manager.has_idle_client());
+        }
+
+        let selector = Arc::new(network_selection::NetworkSelector::new(saved_networks));
+        connect_to_best_network(iface_manager.clone(), selector).await;
     }
 }
