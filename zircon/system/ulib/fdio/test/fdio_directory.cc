@@ -74,8 +74,8 @@ TEST(DirectoryTest, OpenFD) {
 
   {
     fbl::unique_fd fd;
-    std::string test_path = new_path("test");
-    ASSERT_OK(fdio_open_fd(test_path.c_str(), kReadFlags, fd.reset_and_get_address()));
+    std::string test_sys_path = new_path("test/sys");
+    ASSERT_OK(fdio_open_fd(test_sys_path.c_str(), kReadFlags, fd.reset_and_get_address()));
     ASSERT_TRUE(fd.is_valid());
 
     fbl::unique_fd fd2;

@@ -30,7 +30,6 @@ group("mexec") {
 # A test binary that returns success unconditionally. This binary running at
 # all indicates that the system booted sufficiently to run a userspace process.
 test("zbi-child") {
-  output_name = "zbi-child-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -50,7 +49,7 @@ test("zbi-child") {
 migrated_zbi_test("zbi-child-image") {
   assert(current_cpu != "")
 
-  args = [ "userboot=test/zbi-child-test" ]
+  args = [ "userboot=test/core/zbi-child-test" ]
   deps = [
     ":zbi-child",
     "//build/unification/zbi:kernel",
@@ -70,7 +69,6 @@ resource("zbi-child-image-resource") {
 
 # Simple binary that mexecs into the child binary.
 test("zbi-parent") {
-  output_name = "zbi-parent-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -97,7 +95,7 @@ test("zbi-parent") {
 migrated_zbi_test("zbi-parent-image") {
   assert(current_cpu != "")
   args = [
-    "bootsvc.next=test/zbi-parent-test",
+    "bootsvc.next=test/core/zbi-parent-test",
     "kernel.enable-debugging-syscalls=true",  # Enables mexec.
     "kernel.mexec-force-high-ramdisk=true",  # Force the child to put the RD in
                                              # high memory

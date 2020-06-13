@@ -15,7 +15,8 @@ int main() {
   //
   // |BLOBFS_LARGE_INTEGRATION_TEST_EXECUTABLE| is set by the build environment, allowing for
   // multiple large integration test targets to be invoked with the pager enabled.
-  const char* argv[] = {"/boot/test/" BLOBFS_LARGE_INTEGRATION_TEST_EXECUTABLE, "--pager", nullptr};
+  const char* argv[] = {"/boot/test/fs/" BLOBFS_LARGE_INTEGRATION_TEST_EXECUTABLE, "--pager",
+                        nullptr};
 
   return Execute(argv);
 }

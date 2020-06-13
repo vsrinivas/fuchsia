@@ -43,11 +43,10 @@ template("test") {
   }
 
   executable(target_name) {
+    # TODO(3367): remove `test_group` once all ZN tests are using test packages
+    # instead.
     original_target_name = target_name
     forward_variables_from(invoker, "*", [ "test_group" ])
-
-    # TODO(53965): remove references to this attribute.
-    not_needed(invoker, [ "test_group" ])
 
     # TODO(44278): always force `testonly` once all ZN tests are moved to
     # packages.
@@ -61,8 +60,11 @@ template("test") {
     if (!defined(output_dir)) {
       output_dir = root_out_dir
     }
-    if (!defined(output_name)) {
+    if (defined(output_name)) {
+      _manifest_output_name = output_name
+    } else {
       output_name = target_name
+      _manifest_output_name = "$target_name-test"
     }
     if (!defined(output_extension)) {
       output_extension = ""
@@ -71,15 +73,21 @@ template("test") {
     _output_name = output_name
     if (output_extension != "") {
       _output_name += ".$output_extension"
+      _manifest_output_name += ".$output_extension"
     }
     _output_file = rebase_path("$output_dir/$_output_name", root_build_dir)
+    if (defined(invoker.test_group)) {
+      _test_group = invoker.test_group
+    } else {
+      _test_group = "sys"
+    }
 
     metadata = {
       # Used by the distribution_manifest template.
       distribution_entries = [
         {
           source = _output_file
-          destination = "test/$_output_name"
+          destination = "test/$_test_group/$_manifest_output_name"
           label =
               get_label_info(":$original_target_name", "label_with_toolchain")
         },

@@ -362,7 +362,7 @@ template("package") {
       }
 
       if (bootfs_only) {
-        dest = "test/$dest"
+        dest = "test/sys/$dest"
         path = "/boot/$dest"
       } else {
         url = "fuchsia-pkg://fuchsia.com"

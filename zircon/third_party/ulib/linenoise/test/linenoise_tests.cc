@@ -61,7 +61,7 @@ std::unique_ptr<MultiprocessInfo> RunChild(const char* child_main) {
   if (root_dir == nullptr) {
     root_dir = "";
   }
-  std::string command = std::string(root_dir) + "/test/linenoise-test";
+  std::string command = std::string(root_dir) + "/test/sys/linenoise-test-test";
   std::vector<const char*> argv;
   argv.push_back(command.c_str());
   argv.push_back(kRunChildFlag);
@@ -88,8 +88,8 @@ int64_t JoinChild(std::unique_ptr<MultiprocessInfo> info) {
   return proc_info.return_code;
 }
 
-std::map<std::string, int (*)()>& GetChildMainFunctionMap() {
-  static auto* map = new std::map<std::string, int (*)()>();
+std::map<std::string, int(*)()>& GetChildMainFunctionMap() {
+  static auto* map = new std::map<std::string, int(*)()>();
   return *map;
 }
 

@@ -17,7 +17,6 @@ constexpr char kSyslogFileName[] = "syslog.txt";
 
 const char* kDefaultTestDirs[] = {
     // zircon builds place everything in ramdisks so tests are located in /boot
-    "/boot/test",
     "/boot/test/c",
     "/boot/test/core",
     "/boot/test/libc",
