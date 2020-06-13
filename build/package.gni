@@ -35,11 +35,6 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #       dest (required)
 #         [path] Location the resource will be placed within `meta/`.
 #
-#   binary (optional, *DEPRECATED*)
-#     [string] The path to the primary binary for the package, relative to
-#     `$root_out_dir`. The binary will be placed in the assembled package at
-#     `bin/app` and will be executed by default when running the package.
-#
 #   binaries (optional)
 #     [list of scopes] Defines the binaries in the package. A binary is
 #     typically produced by the build system and is placed in the `bin/`
@@ -178,7 +173,6 @@ template("package") {
           invoker,
           [
             "binaries",
-            "binary",
             "data_deps",
             "deprecated_system_image",  # TODO(bwb) remove after soft-transition
             "__deprecated_system_image",
@@ -252,9 +246,6 @@ template("package") {
       assert(
           pkg.meta == [],
           "$pkg_desc __deprecated_system_image (likely from driver_package) incompatible with meta")
-      assert(
-          !defined(pkg.binary),
-          "$pkg_desc __deprecated_system_image (likely from driver_package) incompatible with binary")
 
       # Only appmgr can contribute binaries to /system/bin.
       assert(pkg.binaries == [] || pkg.package_name == "appmgr",
@@ -266,14 +257,6 @@ template("package") {
              "$pkg_desc drivers requires __deprecated_system_image")
       assert(pkg.libraries == [],
              "$pkg_desc libraries requires __deprecated_system_image")
-      if (defined(pkg.binary)) {
-        pkg.binaries += [
-          {
-            name = "app"
-            source = pkg.binary
-          },
-        ]
-      }
     }
 
     formatted_manifest = []
