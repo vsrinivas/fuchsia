@@ -14,7 +14,7 @@ class FuzzerTest(TestCaseWithFuzzer):
 
     def test_is_resolved(self):
         # The default package is automatically resolved; use another.
-        self.create_fuzzer('fake-package2/fake-target1')
+        self.create_fuzzer('fake-package2/fake-target1', resolve=False)
 
         cmd = ['pkgctl', 'pkg-status', self.fuzzer.package_url]
         self.assertFalse(self.fuzzer.is_resolved())
@@ -26,7 +26,7 @@ class FuzzerTest(TestCaseWithFuzzer):
 
     def test_resolve(self):
         # The default package is automatically resolved; use another.
-        self.create_fuzzer('fake-package2/fake-target1')
+        self.create_fuzzer('fake-package2/fake-target1', resolve=False)
         status_cmd = ['pkgctl', 'pkg-status', self.fuzzer.package_url]
         resolve_cmd = ['pkgctl', 'resolve', self.fuzzer.package_url]
 
@@ -195,7 +195,33 @@ class FuzzerTest(TestCaseWithFuzzer):
         )
 
     def test_start_failure(self):
-        # Make the fuzzer fail after 20 seconds.
+        # Make the fuzzer fail after 15 "seconds".
+        cmd = [
+            'run',
+            self.fuzzer.executable_url,
+            '-artifact_prefix=data/',
+            '-jobs=1',
+            'data/corpus',
+        ]
+        process = self.get_process(cmd, ssh=True)
+        process.duration = 15
+        process.succeeds = False
+
+        # Make the log appear after 20 "seconds".
+        self.create_log(start=20)
+
+        # The fuzzer should fail before the log appears.
+        self.assertError(
+            lambda: self.fuzzer.start(),
+            'fake-package1/fake-target1 failed to start.')
+        self.assertSsh(*cmd)
+        self.assertEqual(self.host.elapsed, 15)
+
+    def test_start_slow(self):
+        # Make the log file appear after 15 "seconds".
+        self.create_log(start=15)
+
+        # Make the fuzzer fail after 20 "seconds".
         cmd = [
             'run',
             self.fuzzer.executable_url,
@@ -207,33 +233,7 @@ class FuzzerTest(TestCaseWithFuzzer):
         process.duration = 20
         process.succeeds = False
 
-        # Start the fuzzer
-        self.assertError(
-            lambda: self.fuzzer.start(),
-            'fake-package1/fake-target1 failed to start.')
-        self.assertSsh(*cmd)
-        self.assertEqual(self.host.elapsed, 20)
-
-    def test_start_slow(self):
-        # Make the log file appear after 15 "seconds".
-        cmd = ['ls', '-l', self.ns.data_abspath('fuzz-*.log')]
-        self.set_outputs(
-            cmd, ['-rw-r--r-- 1 0 0 0 Dec 25 00:00 fuzz-0.log'],
-            start=15,
-            ssh=True)
-
-        # Make the fuzzer finish after 20 seconds.
-        cmd = [
-            'run',
-            self.fuzzer.executable_url,
-            '-artifact_prefix=data/',
-            '-jobs=1',
-            'data/corpus',
-        ]
-        process = self.get_process(cmd, ssh=True)
-        process.duration = 20
-
-        # Start the fuzzer
+        # The log should appear before the fuzzer fails.
         self.fuzzer.start()
         self.assertSsh(*cmd)
         self.assertEqual(self.host.elapsed, 15)

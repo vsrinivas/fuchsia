@@ -21,6 +21,11 @@ class NamespaceTest(TestCaseWithFuzzer):
         self.assertEqual(
             self.ns.resource('dictionary'), 'pkg/data/fake-target1/dictionary')
 
+    def test_base_abspath(self):
+        self.assertEqual(
+            self.ns.base_abspath('bin/fake-target1'),
+            '/pkgfs/packages/fake-package1/0/bin/fake-target1')
+
     def test_data_abspath(self):
         relpath = 'foo'
         data = self.ns.data(relpath)

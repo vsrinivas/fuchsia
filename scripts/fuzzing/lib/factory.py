@@ -38,7 +38,7 @@ class Factory(object):
     def create_parser(self):
         """Returns an argument parser."""
         parser = ArgParser()
-        parser.factory = self
+        parser.host = self.host
         parser.add_parsers()
         return parser
 

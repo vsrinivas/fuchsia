@@ -25,13 +25,34 @@ class Host(object):
     # Convenience file descriptor for silencing subprocess output
     DEVNULL = open(os.devnull, 'w')
 
+    # Used to pass tracing flag to tests in subprocesses.
+    TRACE_ENVVAR = 'FX_FUZZ_TRACE'
+
     def __init__(self):
         self._platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
+        self._fd_out = sys.stdout
+        self._fd_err = sys.stderr
         self._tracing = False
 
     @property
     def platform(self):
         return self._platform
+
+    @property
+    def fd_out(self):
+        return self._fd_out
+
+    @fd_out.setter
+    def fd_out(self, fd_out):
+        self._fd_out = fd_out
+
+    @property
+    def fd_err(self):
+        return self._fd_err
+
+    @fd_out.setter
+    def fd_err(self, fd_err):
+        self._fd_err = fd_err
 
     @property
     def tracing(self):
@@ -45,9 +66,9 @@ class Host(object):
     # I/O routines
 
     def trace(self, message):
+        """Prints execution details to stdout."""
         if self._tracing:
-            # Always use the "real" stdout.
-            self.echo('+ {}'.format(message))
+            print('+ {}'.format(message))
 
     def echo(self, *args, **kwargs):
         """Print an informational message from a list of strings.
@@ -58,7 +79,7 @@ class Host(object):
         """
         if not args:
             args = ['']
-        fd = kwargs.pop('fd', sys.stdout)
+        fd = kwargs.pop('fd', self._fd_out)
         end = kwargs.pop('end', '\n')
         assert not kwargs, 'Unexpected keyword arguments: {}'.format(kwargs)
         for line in args:
@@ -69,7 +90,7 @@ class Host(object):
     def error(self, *lines, **kwargs):
         """Print an error message and exit."""
         assert lines, 'Fatal error without error message.'
-        fd = kwargs.pop('fd', sys.stderr)
+        fd = kwargs.pop('fd', self._fd_err)
         status = kwargs.pop('status', 1)
         assert not kwargs, 'Unexpected keyword arguments: {}'.format(kwargs)
         self.echo('ERROR: {}'.format(lines[0]), fd=fd)

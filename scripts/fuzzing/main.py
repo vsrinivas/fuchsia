@@ -13,6 +13,7 @@ def main():
     factory = Factory()
     parser = factory.create_parser()
     args = parser.parse_args()
+    factory.host.tracing = args.verbose
     args.command(args, factory)
 
 

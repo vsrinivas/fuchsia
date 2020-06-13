@@ -5,6 +5,7 @@
 
 import errno
 import fnmatch
+import os
 import subprocess
 from StringIO import StringIO
 
@@ -34,6 +35,10 @@ class FakeHost(Host):
         self._envvars = {}
         self._processes = {}
         self._elapsed = 0.0
+        self.tracing |= os.getenv(Host.TRACE_ENVVAR) == '1'
+        if self.tracing:
+            # Makes the output a bit prettier...
+            print('')
 
     @property
     def processes(self):

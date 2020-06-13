@@ -10,10 +10,7 @@ import subprocess
 
 from corpus import Corpus
 from dictionary import Dictionary
-from namespace import Namespace
-
-from corpus import Corpus
-from dictionary import Dictionary
+from host import Host
 from namespace import Namespace
 
 
@@ -196,6 +193,14 @@ class Fuzzer(object):
             return False
         if self._package_path:
             return True
+
+        # Check if fuzzer built using '--with-base'.
+        base_cmx = self.ns.base_abspath('meta/{}.cmx'.format(self.executable))
+        if self.device.isfile(base_cmx):
+            self._package_path = self.ns.base_abspath()
+            return True
+
+        # Check if fuzzer built using '--with'.
         cmd = ['pkgctl', 'pkg-status', self.package_url]
         out = self.device.ssh(cmd).check_output()
         match = re.search(r'Package on disk: yes \(path=(.*)\)', str(out))
@@ -208,7 +213,7 @@ class Fuzzer(object):
         if self.is_resolved():
             return
         cmd = ['pkgctl', 'resolve', self.package_url]
-        self.device.ssh(cmd).check_call()
+        self.device.ssh(cmd, stdout=Host.DEVNULL).check_call()
         if self.is_resolved():
             return
         self.host.error('Failed to resolve package: {}'.format(self.package))
@@ -265,7 +270,7 @@ class Fuzzer(object):
         logs = self.ns.data(Fuzzer.LOG_PATTERN)
         while proc.poll() == None and not self.ns.ls(logs):
             self.host.sleep(0.5)
-        if proc.returncode:
+        if not self.ns.ls(logs):
             self.host.error('{} failed to start.'.format(self))
         return proc
 

@@ -42,6 +42,7 @@ class ArgsTest(TestCaseWithFactory):
             'Subcommands:',
             '  analyze             Report coverage info for a given corpus and/or dictionary.',
             '  check               Check on the status of one or more fuzzers.',
+            '  e2etest             Run the end-to-end test for this tool.',
             '  help                Print this message and exit.',
             '  list                List available fuzzers in the current build.',
             '  repro               Reproduce fuzzer findings by replaying test units.',
@@ -560,10 +561,33 @@ class ArgsTest(TestCaseWithFactory):
         self.assertParseHelp(
             ['help', 'unittest'], [
                 '',
-                'Usage: fx fuzz unittest',
+                'Usage: fx fuzz unittest [OPTIONS]',
                 '',
                 'Run the unittests for this tool. This runs all tests from all test cases. To run',
                 'a single test, use "python <path/to/test.py> <test_name>" instead.',
+                '',
+                'Options:',
+                '  -v,--verbose        Display additional output.',
+                '',
+            ])
+
+    def test_e2e_test_parser(self):
+        self.assertParseHelp(
+            ['help', 'e2etest'], [
+                '',
+                'Usage: fx fuzz e2etest [OPTIONS] NAME',
+                '',
+                'Run the end-to-end test for this tool using the named fuzzer. This requires the',
+                'fuzzer to have already been built and deployed to a running device.',
+                '',
+                'Arguments:',
+                '  NAME                Fuzzer name to match.  This can be part of the package',
+                '                      and/or target name, e.g. "foo", "bar", and "foo/bar" all',
+                '                      match "foo_package/bar_target".',
+                '',
+                'Options:',
+                '  -l,--local          Exclude corpus elements from Clusterfuzz.',
+                '  -v,--verbose        Display additional output.',
                 '',
             ])
 

@@ -23,8 +23,7 @@ class ArgParser(argparse.ArgumentParser):
     makes it possible to test these conditions.
 
     Attributes:
-        factory:    The factory used to create this and other objects.
-        host:       Alias for factory.host
+        host:       The host object representing the current system.
     """
 
     # These are used in parse_args() to identify and extract libFuzzer arguments.
@@ -45,19 +44,14 @@ class ArgParser(argparse.ArgumentParser):
         self._has_libfuzzer_extras = False
 
     @property
-    def factory(self):
-        """Returns the factory that created this object."""
-        assert self._factory, 'Factory not set.'
-        return self._factory
-
-    @factory.setter
-    def factory(self, factory):
-        self._factory = factory
-
-    @property
     def host(self):
-        """Alias for factory.host."""
-        return self.factory.host
+        """The system interface for user interactions."""
+        assert self._host, 'Host not set.'
+        return self._host
+
+    @host.setter
+    def host(self, host):
+        self._host = host
 
     def add_parsers(self):
         """Configure a top-level parser with subparsers.
@@ -178,8 +172,21 @@ class ArgParser(argparse.ArgumentParser):
             'Run the unittests for this tool. This runs all tests from all test cases. To run',
             'a single test, use "python <path/to/test.py> <test_name>" instead.'
         ]
+        unittest_parser._add_verbose_flag()
         unittest_parser.help = 'Run the unittests for this tool.'
         unittest_parser.set_defaults(command=command.run_unittests)
+
+        e2e_test_parser = self._add_parser('e2etest')
+        e2e_test_parser.description = [
+            'Run the end-to-end test for this tool using the named fuzzer. This requires the',
+            'fuzzer to have already been built and deployed to a running device.'
+        ]
+        e2e_test_parser._add_flag(
+            '-l', '--local', help=['Exclude corpus elements from Clusterfuzz.'])
+        e2e_test_parser._add_verbose_flag()
+        e2e_test_parser._add_name_argument(required=True)
+        e2e_test_parser.help = 'Run the end-to-end test for this tool.'
+        e2e_test_parser.set_defaults(command=command.run_e2e_test)
 
         self.epilog = [
             'See "fx fuzz help [SUBCOMMAND]" for details on each subcommand.',
@@ -191,7 +198,7 @@ class ArgParser(argparse.ArgumentParser):
     def _add_parser(self, subcommand):
         """Return a subparser for a specific subcommand."""
         parser = ArgParser(prog=subcommand)
-        parser.factory = self.factory
+        parser.host = self.host
         self._parsers[subcommand] = parser
         return parser
 
@@ -315,6 +322,7 @@ class ArgParser(argparse.ArgumentParser):
         else:
             subcommand = args[0]
             args = args[1:]
+        self.host.trace('fx fuzz {}'.format(' '.join(args)))
         args = self._parsers[subcommand].parse_args(args)
         if subcommand != 'help':
             return args
@@ -374,11 +382,6 @@ class ArgParser(argparse.ArgumentParser):
             args.libfuzzer_opts = libfuzzer_opts
             args.subprocess_args = subprocess_args
 
-        # Set verbosity.
-        self.host.tracing = getattr(args, 'verbose', False)
-
-        # Include a reference to the Factory
-        args.factory = self.factory
         return args
 
     def generate_help(self):

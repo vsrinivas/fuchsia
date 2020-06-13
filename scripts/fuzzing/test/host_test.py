@@ -41,6 +41,8 @@ class NonHermeticTestCase(TestCaseWithIO):
     def setUp(self):
         super(NonHermeticTestCase, self).setUp()
         self._host = Host()
+        self._host.fd_out = self._stdout
+        self._host.fd_err = self._stderr
         self._temp_dir = tempfile.mkdtemp()
 
     def tearDown(self):
@@ -87,6 +89,8 @@ class HermeticTestCase(TestCaseWithIO):
     def setUp(self):
         super(HermeticTestCase, self).setUp()
         self._host = FakeHost()
+        self._host.fd_out = self._stdout
+        self._host.fd_err = self._stderr
 
         process = self.host.create_process(['false'])
         process.succeeds = False
@@ -128,28 +132,30 @@ class HostTestCase(object):
     """Defines a set of tests without a TestCase."""
 
     def test_trace(self):
-        # Tracing is off by default.
-        self.host.trace('Testing...')
-        self.assertOut()
+        sys.stdout = self._stdout
+        original = self.host.tracing
+        try:
+            # Tracing can be enabled
+            self.host.tracing = True
+            self.host.trace('Check one...')
+            self.assertOut(['+ Check one...'])
 
-        # Tracing can be enabled
-        self.host.tracing = True
-        self.host.trace('Check one...')
-        self.assertOut('+ Check one...')
-
-        # It can be disabled again
-        self.host.tracing = False
-        self.host.trace('Check two...')
-        self.assertOut()
+            # It can be disabled again
+            self.host.tracing = False
+            self.host.trace('Check two...')
+            self.assertOut([])
+        finally:
+            sys.stdout = sys.__stdout__
+            self.host.tracing = original
 
     def test_echo(self):
         self.host.echo('Hello world')
-        self.assertOut('Hello world')
+        self.assertOut(['Hello world'])
 
     def test_error(self):
         with self.assertRaises(SystemExit):
             self.host.error('Hello world')
-        self.assertErr('ERROR: Hello world')
+        self.assertErr(['ERROR: Hello world'])
 
     def test_choose(self):
         prompt = 'Pick your favorite animal'
@@ -184,7 +190,7 @@ class HostTestCase(object):
         pathname = os.path.join(self.temp_dir, 'test_open')
         with self.assertRaises(SystemExit):
             opened = self.host.open(pathname)
-        self.assertErr('ERROR: Failed to open {}.'.format(pathname))
+        self.assertErr(['ERROR: Failed to open {}.'.format(pathname)])
 
         opened = self.host.open(pathname, missing_ok=True)
         self.assertFalse(opened)
@@ -199,7 +205,7 @@ class HostTestCase(object):
         pathname = os.path.join(self.temp_dir, 'test_readfile')
         with self.assertRaises(SystemExit):
             self.host.readfile(pathname)
-        self.assertErr('ERROR: Failed to open {}.'.format(pathname))
+        self.assertErr(['ERROR: Failed to open {}.'.format(pathname)])
 
         self.assertFalse(self.host.readfile(pathname, missing_ok=True))
         self.writefile(pathname, 'data')

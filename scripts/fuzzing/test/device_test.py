@@ -145,6 +145,28 @@ class DeviceTest(TestCaseWithFactory):
             self.device.getpid(
                 'fake-package2', 'an-extremely-verbose-target-name'), long_pid)
 
+    def test_isfile(self):
+        some_file = 'path-to-some-file'
+        cmd = ['test', '-f', some_file]
+        process = self.get_process(cmd, ssh=True)
+        process.succeeds = False
+        self.assertFalse(self.device.isfile(some_file))
+        self.assertSsh(*cmd)
+        process.succeeds = True
+        self.assertTrue(self.device.isfile(some_file))
+        self.assertSsh(*cmd)
+
+    def test_isdir(self):
+        some_dir = 'path-to-some-directory'
+        cmd = ['test', '-d', some_dir]
+        process = self.get_process(cmd, ssh=True)
+        process.succeeds = False
+        self.assertFalse(self.device.isdir(some_dir))
+        self.assertSsh(*cmd)
+        process.succeeds = True
+        self.assertTrue(self.device.isdir(some_dir))
+        self.assertSsh(*cmd)
+
     def test_ls(self):
         corpus_dir = 'path-to-some-corpus'
         cmd = ['ls', '-l', corpus_dir]

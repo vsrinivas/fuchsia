@@ -195,6 +195,14 @@ class Device(object):
                 self._pids[nametuple] = pid
         return self._pids.get((package, executable), -1)
 
+    def isfile(self, pathname):
+        """Returns true for files that exist on the device."""
+        return self.ssh(['test', '-f', pathname]).call() == 0
+
+    def isdir(self, pathname):
+        """Returns true for directories that exist on the device."""
+        return self.ssh(['test', '-d', pathname]).call() == 0
+
     def ls(self, pathname):
         """Returns a map of file names to sizes for the given path."""
         results = {}

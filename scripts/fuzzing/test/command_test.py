@@ -41,31 +41,26 @@ class CommandTest(TestCaseWithFuzzer):
         )
 
     def test_start_fuzzer(self):
+        name = str(self.fuzzer)
+
         # In the foreground
         output = 'output'
         self.host.mkdir(output)
-        args = self.parse_args(
-            'start',
-            '--foreground',
-            '--output',
-            output,
-            'fake-package1/fake-target1',
-        )
+        args = self.parse_args('start', '-f', '-o', output, name)
         command.start_fuzzer(args, self.factory)
         self.assertLogged(
-            'Starting fake-package1/fake-target1.',
-            'Outputs will be written to: output',
+            'Starting {}.'.format(self.fuzzer),
+            'Outputs will be written to: {}'.format(output),
         )
 
         # In the background
-        args = self.parse_args(
-            'start', '--output', output, 'fake-package1/fake-target1')
+        args = self.parse_args('start', '-o', output, name)
         command.start_fuzzer(args, self.factory)
         self.assertLogged(
-            'Starting fake-package1/fake-target1.',
-            'Outputs will be written to: output',
-            'Check status with "fx fuzz check fake-package1/fake-target1".',
-            'Stop manually with "fx fuzz stop fake-package1/fake-target1".',
+            'Starting {}.'.format(self.fuzzer),
+            'Outputs will be written to: {}'.format(output),
+            'Check status with "fx fuzz check {}".'.format(self.fuzzer),
+            'Stop manually with "fx fuzz stop {}".'.format(self.fuzzer),
         )
         cmd = [
             'python',
@@ -74,21 +69,15 @@ class CommandTest(TestCaseWithFuzzer):
             '--monitor',
             '--output',
             output,
-            'fake-package1/fake-target1',
+            name,
         ]
         self.assertRan(*cmd)
 
-        args = self.parse_args(
-            'start',
-            '--monitor',
-            '--output',
-            output,
-            'fake-package1/fake-target1',
-        )
+        args = self.parse_args('start', '-m', '-o', output, name)
         command.start_fuzzer(args, self.factory)
         self.assertLogged(
-            'fake-package1/fake-target1 has stopped.',
-            'Output written to: output.',
+            '{} has stopped.'.format(self.fuzzer),
+            'Output written to: {}.'.format(output),
         )
 
     def test_check_fuzzer(self):
@@ -101,6 +90,7 @@ class CommandTest(TestCaseWithFuzzer):
         )
 
         # Name provided, not installed
+        fuzzer = self.create_fuzzer('fake-package2/fake-target1', resolve=False)
         args = self.parse_args('check', 'fake-package2/fake-target1')
         command.check_fuzzer(args, self.factory)
         self.assertLogged(
@@ -156,24 +146,24 @@ class CommandTest(TestCaseWithFuzzer):
 
     def test_stop_fuzzer(self):
         # Not running
-        args = self.parse_args('stop', 'fake-package1/fake-target3')
+        args = self.parse_args('stop', str(self.fuzzer))
         command.stop_fuzzer(args, self.factory)
-        self.assertLogged('fake-package1/fake-target3 is already stopped.')
+        self.assertLogged('{} is already stopped.'.format(self.fuzzer))
 
         # Running
-        self.set_running('fake-package1', 'fake-target3')
-        args = self.parse_args('stop', 'fake-package1/fake-target3')
+        self.set_running(self.fuzzer.package, self.fuzzer.executable)
+        args = self.parse_args('stop', str(self.fuzzer))
         command.stop_fuzzer(args, self.factory)
-        self.assertLogged('Stopping fake-package1/fake-target3.')
+        self.assertLogged('Stopping {}.'.format(self.fuzzer))
 
     def test_repro_units(self):
         unit = 'crash-deadbeef'
         self.host.touch(unit)
-        args = self.parse_args('repro', 'fake-package1/fake-target3', unit)
+        args = self.parse_args('repro', str(self.fuzzer), unit)
         command.repro_units(args, self.factory)
 
     def test_analyze_fuzzer(self):
-        args = self.parse_args('analyze', '-l', 'fake-package1/fake-target3')
+        args = self.parse_args('analyze', '-l', str(self.fuzzer))
         command.analyze_fuzzer(args, self.factory)
 
         # We shouldn't have copied anything
@@ -183,11 +173,9 @@ class CommandTest(TestCaseWithFuzzer):
         corpus1 = 'corpus1'
         corpus2 = 'corpus2'
         local_dict = 'local_dict'
-        package = 'fake-package1'
-        executable = 'fake-target3'
         args = self.parse_args(
             'analyze', '-c', corpus1, '-c', corpus2, '-d', local_dict,
-            '{}/{}'.format(package, executable))
+            '{}/{}'.format(self.fuzzer.package, self.fuzzer.executable))
         self.assertError(
             lambda: command.analyze_fuzzer(args, self.factory),
             'No such directory: {}'.format(corpus1))
@@ -216,7 +204,7 @@ class CommandTest(TestCaseWithFuzzer):
             self.host.touch(qux)
         command.analyze_fuzzer(args, self.factory)
         gcs_url = 'gs://corpus.internal.clusterfuzz.com/libFuzzer/fuchsia_{}-{}'.format(
-            package, executable)
+            self.fuzzer.package, self.fuzzer.executable)
         with self.host.temp_dir() as temp_dir:
             cmd = ['gsutil', '-m', 'cp', gcs_url + '/*', temp_dir.pathname]
             self.assertRan(*cmd)

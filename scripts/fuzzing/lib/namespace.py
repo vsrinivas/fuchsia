@@ -51,7 +51,13 @@ class Namespace(object):
 
     # Unit test utilities
 
+    def base_abspath(self, relpath=''):
+        """Absolute package path when package is included in the base image."""
+        base = '/pkgfs/packages/{}/0'.format(self.fuzzer.package)
+        return '{}/{}'.format(base, relpath) if relpath else base
+
     def data_abspath(self, relpath):
+        """Absolute path to mutable data."""
         base = '/data/r/sys/fuchsia.com:{}:0#meta:{}.cmx'.format(
             self.fuzzer.package, self.fuzzer.executable)
         if relpath.startswith(base):
@@ -63,6 +69,7 @@ class Namespace(object):
         return '{}/{}'.format(base, relpath)
 
     def resource_abspath(self, relpath):
+        """Absolute path to a package resource."""
         base = '{}/data/{}'.format(
             self.fuzzer.package_path, self.fuzzer.executable)
         if relpath.startswith(base):
