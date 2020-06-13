@@ -332,10 +332,9 @@ void Flatland::RemoveChild(TransformId parent_transform_id, TransformId child_tr
 
 void Flatland::SetRootTransform(TransformId transform_id) {
   pending_operations_.push_back([=]() {
-    transform_graph_.ClearChildren(local_root_);
-
     // SetRootTransform(0) is special -- it only clears the existing root transform.
     if (transform_id == kInvalidId) {
+      transform_graph_.ClearChildren(local_root_);
       return true;
     }
 
@@ -344,6 +343,8 @@ void Flatland::SetRootTransform(TransformId transform_id) {
       FX_LOGS(ERROR) << "SetRootTransform failed, transform_id " << transform_id << " not found";
       return false;
     }
+
+    transform_graph_.ClearChildren(local_root_);
 
     bool added = transform_graph_.AddChild(local_root_, global_kv->second);
     FX_DCHECK(added);

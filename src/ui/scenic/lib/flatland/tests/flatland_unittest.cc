@@ -544,6 +544,21 @@ TEST_F(FlatlandTest, SetRootTransform) {
   flatland.SetRootTransform(kId1);
   PRESENT(flatland, true);
 
+  // Setting the root to a non-existent transform does not clear the root. Verify this using the
+  // global topology data.
+  auto data = ProcessMainLoop(flatland.GetRoot());
+  EXPECT_EQ(data.topology_data.topology_vector.size(), 2ul);
+
+  flatland.SetRootTransform(kIdNotCreated);
+  PRESENT(flatland, false);
+
+  // The previous Present() fails, so we Present() again to ensure the UberStruct is updated,
+  // even though we expect no changes.
+  PRESENT(flatland, true);
+
+  data = ProcessMainLoop(flatland.GetRoot());
+  EXPECT_EQ(data.topology_data.topology_vector.size(), 2ul);
+
   // Releasing the root is allowed.
   flatland.ReleaseTransform(kId1);
   PRESENT(flatland, true);
