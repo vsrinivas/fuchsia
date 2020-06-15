@@ -10,8 +10,8 @@
 # TODO(nmulcahey): File bugs.
 aemu_known_failures = [
   "fuchsia-pkg://fuchsia.com/escher_tests#meta/escher_examples_test.cmx",
+  "fuchsia-pkg://fuchsia.com/escher_tests#meta/escher_renderer_tests.cmx",
   "fuchsia-pkg://fuchsia.com/escher_tests#meta/escher_unittests.cmx",
-  "fuchsia-pkg://fuchsia.com/fuchsia-pkg-testing-tests#meta/fuchsia-pkg-testing-tests.cmx",
   "fuchsia-pkg://fuchsia.com/scenic_tests#meta/flatland_renderer_unittests.cmx",
   "fuchsia-pkg://fuchsia.com/scenic_tests#meta/gfx_unittests.cmx",
 ]
