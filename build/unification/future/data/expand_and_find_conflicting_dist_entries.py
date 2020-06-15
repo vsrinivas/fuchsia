@@ -14,6 +14,24 @@ import sys
 Entry = collections.namedtuple('Entry', ['source', 'destination', 'label'])
 
 
+def expand(items):
+    '''Reads metadata produced by GN and expands file references found within
+       that metadata.
+       See distribution_manifest.gni for a description of the metadata format.
+       '''
+    entries = []
+    for item in items:
+        if 'source' in item:
+            entries.append(item)
+        elif 'file' in item:
+            with open(item['file'], 'r') as data_file:
+                data = json.load(data_file)
+            for entry in data:
+                entry['label'] = item['label']
+                entries.append(entry)
+    return [Entry(**e) for e in entries]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -23,14 +41,22 @@ def main():
     args = parser.parse_args()
 
     with open(args.input, 'r') as input_file:
-        entries = json.load(input_file)
+        contents = json.load(input_file)
 
-    entries = [Entry(**e) for e in entries]
+    entries = expand(contents)
     entries_by_dest = {
         d: set(e for e in entries if e.destination == d) for d in set(
             e.destination for e in entries)
     }
     conflicts = {d: e for d, e in entries_by_dest.iteritems() if len(e) > 1}
+    # Only report a conflict if the source files differ.
+    # TODO(45680): remove this additional filtering when dependency trees are
+    # cleaned up and //build/package.gni has gone the way of the dodo.
+    conflicts = {
+        d: e
+        for d, e in conflicts.iteritems()
+        if len(set(entry.source for entry in e)) >= 2
+    }
     if conflicts:
         for destination in conflicts:
             print('Conflicts for path ' + destination + ':')

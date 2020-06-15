@@ -70,6 +70,15 @@ template("distribution_manifest") {
       #   - `destination`: path of the file within a container;
       #   - `label`: GN label of the target which produced the entry.
       "distribution_entries",
+
+      # A list of scopes representing data files listing distributable objects.
+      # Each scope must contain the following two values:
+      #   - `file`: path to the data file;
+      #   - `label`: GN label of the target which produced the data file.
+      # Each file must contain a JSON array of objects with exactly two
+      # attributes matching `source` and `destination` as defined in
+      # `distribution_entries` above.
+      "distribution_entries_files",
     ]
     walk_keys = [ "distribution_entries_barrier" ]
 
@@ -87,7 +96,7 @@ template("distribution_manifest") {
                              "visibility",
                            ])
 
-    script = "//build/unification/future/data/find_conflicting_dist_entries.py"
+    script = "//build/unification/future/data/expand_and_find_conflicting_dist_entries.py"
 
     inputs = [ intermediate_file ]
     outputs = [ manifest_file ]
