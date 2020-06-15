@@ -184,7 +184,7 @@ void MergeIntl(const fuchsia::settings::IntlSettings& intl_settings,
     new_profile_data->set_language_tags(locale_ids);
   } else {
     FX_LOGS(WARNING)
-        << "fuchsia.setui returned locale settings with no locales; this is not a valid "
+        << "fuchsia.settings.Intl returned locale settings with no locales; this is not a valid "
            "fuchsia.intl.Profile; not touching the current language settings and proceeding.";
   }
   if (intl_settings.has_hour_cycle()) {
