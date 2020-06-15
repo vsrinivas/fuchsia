@@ -23,8 +23,7 @@ std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> GetParser() {
   auto parser = std::make_unique<cmdline::ArgsParser<CommandLineArgs>>();
   parser->AddSwitch("duration", 'd', "Test duration in seconds.",
                     &CommandLineArgs::test_duration_seconds);
-  parser->AddSwitch("fvm-path", 'f', "Path to Fuchsia Volume Manager.",
-                    &CommandLineArgs::fvm_path);
+  parser->AddSwitch("fvm-path", 'f', "Path to Fuchsia Volume Manager.", &CommandLineArgs::fvm_path);
   parser->AddSwitch("help", 'h', "Show this help.", &CommandLineArgs::help);
   parser->AddSwitch("verbose", 'v', "Show verbose logging.", &CommandLineArgs::verbose);
   parser->AddSwitch("memory", 'm', "Amount of memory to test in megabytes.",
@@ -94,10 +93,11 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
     subcommand = StressTest::kMemory;
   } else {
     return fitx::error(
-        fxl::StringPrintf("Unknown subcommand or option: '%s'.", std::string(first_arg).data()).c_str());
+        fxl::StringPrintf("Unknown subcommand or option: '%s'.", std::string(first_arg).data())
+            .c_str());
   }
 
-  fbl::Span other_args = args.subspan(1); // Strip first element.
+  fbl::Span other_args = args.subspan(1);  // Strip first element.
 
   std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> parser = GetParser();
   std::vector<std::string> params;
@@ -142,7 +142,7 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
   }
 
   // Ensure no more parameters were given.
-  if (params.size() > 0) {
+  if (!params.empty()) {
     return fitx::error(fxl::StringPrintf("Unknown option: '%s'.", params[1].c_str()).c_str());
   }
 

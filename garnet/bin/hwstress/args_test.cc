@@ -47,9 +47,10 @@ TEST(Args, ParseDuration) {
 TEST(Args, ParseFlash) {
   // Flash subcommand given with FVM path provided
   EXPECT_EQ(ParseArgs({{"hwstress", "flash", "-f", "/path"}})->subcommand, StressTest::kFlash);
-  EXPECT_EQ(ParseArgs({{"hwstress", "flash", "--fvm-path", "/path"}})->subcommand, StressTest::kFlash);
-  EXPECT_TRUE(ParseArgs({{"hwstress", "flash", "-f", "/path/to/fvm"}})->fvm_path.compare("/path/to/fvm") == 0);
-  EXPECT_TRUE(ParseArgs({{"hwstress", "flash", "--fvm-path", "/fvm/path"}})->fvm_path.compare("/fvm/path") == 0);
+  EXPECT_EQ(ParseArgs({{"hwstress", "flash", "--fvm-path", "/path"}})->subcommand,
+            StressTest::kFlash);
+  EXPECT_EQ(ParseArgs({{"hwstress", "flash", "-f", "/path/to/fvm"}})->fvm_path, "/path/to/fvm");
+  EXPECT_EQ(ParseArgs({{"hwstress", "flash", "--fvm-path", "/fvm/path"}})->fvm_path, "/fvm/path");
 
   // Flash subcommand given without FVM path
   EXPECT_TRUE(ParseArgs({{"hwstress", "flash"}}).is_error());
