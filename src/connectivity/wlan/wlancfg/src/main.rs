@@ -34,7 +34,7 @@ use {
     futures::{
         self, channel::mpsc, future::try_join, lock::Mutex, prelude::*, select, TryFutureExt,
     },
-    log::error,
+    log::{error, info},
     pin_utils::pin_mut,
     std::sync::Arc,
     void::Void,
@@ -74,6 +74,7 @@ async fn monitor_client_connectivity(
         let temp_iface_manager = temp_iface_manager.lock().await;
         if temp_iface_manager.has_idle_client() {
             drop(temp_iface_manager);
+            info!("Detected idle interface, scanning to allow automatic reconnect");
             scan_for_network_selector(iface_manager.clone(), selector.clone()).await;
 
             // TODO(fxb/54046): Centralize the calls that reconnect a disconnected client.

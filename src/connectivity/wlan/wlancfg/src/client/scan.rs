@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_component::client::connect_to_service,
     futures::{future::join, lock::Mutex, prelude::*},
-    log::{debug, error, info},
+    log::{debug, error, info, warn},
     std::{collections::HashMap, sync::Arc},
 };
 
@@ -64,7 +64,7 @@ pub(crate) async fn perform_scan<F, G, Fut>(
             }
         }
     };
-    info!("Sent scan request to SME successfully");
+    debug!("Sent scan request to SME successfully");
     let mut stream = txn.take_event_stream();
     let mut scanned_networks = vec![];
     while let Some(Ok(event)) = stream.next().await {
@@ -74,7 +74,7 @@ pub(crate) async fn perform_scan<F, G, Fut>(
                 scanned_networks.extend(new_aps);
             }
             fidl_sme::ScanTransactionEvent::OnFinished {} => {
-                info!("Finished getting scan results from SME");
+                debug!("Finished getting scan results from SME");
                 let scan_results = convert_scan_info(&scanned_networks);
 
                 // Send the results to the original requester
@@ -143,7 +143,7 @@ pub async fn successful_scan_observer(
     // Filter out any errors and just log a message.
     // No error recovery, we'll just try again next time a scan result comes in.
     if let Err(e) = send_to_location_sensor(&scan_results).await {
-        error!("Failed to send scan results to location sensor: {:?}", e)
+        warn!("Failed to send scan results to location sensor: {:?}", e)
     } else {
         debug!("Updated location sensor")
     };
@@ -166,7 +166,7 @@ fn convert_scan_info(scanned_networks: &[fidl_sme::BssInfo]) -> Vec<types::ScanR
                 .push(clone_sme_bss_info(&bss));
         } else {
             // TODO(mnck): log a metric here
-            error!("Unknown security type: {:?}", bss.protection);
+            debug!("Unknown security type present in scan results: {:?}", bss.protection);
         }
     }
     let mut scan_results: Vec<types::ScanResult> = bss_by_network

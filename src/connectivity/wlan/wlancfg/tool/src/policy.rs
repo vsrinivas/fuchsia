@@ -356,10 +356,10 @@ pub async fn handle_listen(
             let ssid = std::str::from_utf8(&id.ssid).unwrap();
             match net_state.state.unwrap() {
                 wlan_policy::ConnectionState::Failed => {
-                    println!("{:32}: connection failed", ssid);
+                    println!("{:32}: connection failed - {:?}", ssid, net_state.status);
                 }
                 wlan_policy::ConnectionState::Disconnected => {
-                    println!("{:32}: connection failed", ssid);
+                    println!("{:32}: connection disconnected - {:?}", ssid, net_state.status);
                 }
                 wlan_policy::ConnectionState::Connecting => {
                     println!("{:32}: connecting", ssid);

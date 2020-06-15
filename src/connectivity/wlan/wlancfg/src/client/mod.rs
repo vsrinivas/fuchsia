@@ -151,6 +151,7 @@ async fn serve_provider_requests(
                 let temp_iface_manager = temp_iface_manager.lock().await;
                 if temp_iface_manager.has_idle_client() {
                     drop(temp_iface_manager);
+                    info!("Detected idle interface, attempting connection with new scan results");
                     connect_to_best_network(iface_manager.clone(), network_selector.clone()).await;
                 }
             },
@@ -352,6 +353,7 @@ async fn handle_client_request_save_network(
     let mut iface_manager = iface_manager.lock().await;
 
     if iface_manager.has_idle_client() {
+        info!("Idle interface available, will attempt connection to new saved network");
         let _ = iface_manager.connect(connect_req).await;
     }
 
@@ -451,6 +453,7 @@ pub(crate) async fn connect_to_best_network(
     let mut iface_manager = iface_manager.lock().await;
     // See if any known networks are in range and connect if one is.
     if let Some((network_id, credential)) = selector.get_best_network(&vec![]) {
+        info!("Saved network automatically selected for connection");
         let connect_req =
             client_fsm::ConnectRequest { network: network_id, credential: credential };
 
@@ -458,7 +461,7 @@ pub(crate) async fn connect_to_best_network(
             warn!("failed to reconnect iface: {:?}", e);
         }
     } else {
-        warn!("no recommended networks available");
+        warn!("No saved networks available to connect");
     }
 }
 
@@ -494,6 +497,7 @@ pub(crate) async fn handle_client_state_machine_event(
             drop(temp_iface_manager);
 
             // See what networks are available and attempt a reconnect.
+            info!("Received notification of idle interface, will attempt to reconnect");
             scan_for_network_selector(iface_manager.clone(), selector.clone()).await;
 
             // TODO(fxb/54046): Centralize the calls that reconnect a disconnected client.
