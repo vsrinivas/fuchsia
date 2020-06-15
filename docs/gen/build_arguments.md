@@ -1599,7 +1599,7 @@ From //src/connectivity/network/netcfg/BUILD.gn:12
 
 **Current value (from the default):** `[]`
 
-From //zircon/system/core/netsvc/BUILD.gn:18
+From //src/bringup/bin/netsvc/BUILD.gn:18
 
 ### omaha_app_id
 Default app id will always return no update.

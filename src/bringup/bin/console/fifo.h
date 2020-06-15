@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_BRINGUP_BIN_CONSOLE_FIFO_H_
+#define SRC_BRINGUP_BIN_CONSOLE_FIFO_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/eventpair.h>
@@ -47,3 +48,5 @@ class Fifo {
 
   zx::eventpair event_;
 };
+
+#endif  // SRC_BRINGUP_BIN_CONSOLE_FIFO_H_

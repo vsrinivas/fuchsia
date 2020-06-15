@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_BRINGUP_BIN_CONSOLE_CONSOLE_H_
+#define SRC_BRINGUP_BIN_CONSOLE_CONSOLE_H_
 
 #include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -59,3 +60,5 @@ class Console : public fbl::RefCounted<Console> {
   TxSink tx_sink_;
   std::thread rx_thread_;
 };
+
+#endif  // SRC_BRINGUP_BIN_CONSOLE_CONSOLE_H_

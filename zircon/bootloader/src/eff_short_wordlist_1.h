@@ -2,7 +2,7 @@
 #define ZIRCON_BOOTLOADER_SRC_EFF_SHORT_WORDLIST_1_H_
 
 // This list must be consistent with
-// //zircon/system/core/netsvc/eff_short_wordlist_1.h
+// //src/bringup/bin/netsvc/eff_short_wordlist_1.h
 const char dictionary[1296][6] = {
     "acid",  "acorn", "acre",  "acts",  "afar",  "affix", "aged",  "agent", "agile", "aging",
     "agony", "ahead", "aide",  "aids",  "aim",   "ajar",  "alarm", "alias", "alibi", "alien",
