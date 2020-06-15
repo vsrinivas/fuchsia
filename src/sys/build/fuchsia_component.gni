@@ -120,5 +120,8 @@ template("fuchsia_component") {
     sources = get_target_outputs(":${invoker.target_name}")
     outputs = [ "meta/$manifest_name" ]
     visibility = [ ":*" ]
+    metadata = {
+      component_manifests = [ rebase_path(sources[0], root_build_dir) ]
+    }
   }
 }

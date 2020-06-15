@@ -4,6 +4,7 @@
 
 import("//build/unification/future/data/fini_manifest.gni")
 import("//build/unification/zbi/generated_resource.gni")
+import("//src/sys/cmc/build/validate_component_manifest_references.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
 # Defines a Fuchsia package.
@@ -78,8 +79,9 @@ template("fuchsia_package") {
   }
 
   # Generate package manifest
-  manifest_target = "${target_name}_manifest"
-  fini_manifest(manifest_target) {
+  package_manifest_target = "${target_name}_manifest"
+  package_manifest_file = "$target_out_dir/${target_name}_manifest"
+  fini_manifest(package_manifest_target) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -90,7 +92,34 @@ template("fuchsia_package") {
     }
     deps += [ ":$meta_package_target" ]
     visibility = [ ":*" ]
-    outputs = [ "$target_gen_dir/${target_name}_manifest" ]
+    outputs = [ package_manifest_file ]
+  }
+
+  # Validate component manifests against package manifest
+  component_manifests_target = "${target_name}_component_manifests"
+  component_manifests_rspfile =
+      "$target_out_dir/${target_name}_component_manifests"
+  generated_file(component_manifests_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    visibility = [ ":*" ]
+    data_keys = [ "component_manifests" ]
+    outputs = [ component_manifests_rspfile ]
+  }
+
+  validate_target = "${target_name}_validate_manifests"
+  validate_component_manifest_references(validate_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [
+      ":$component_manifests_target",
+      ":$package_manifest_target",
+    ]
+    visibility = [ ":*" ]
+    package_manifest = package_manifest_file
+    component_manifests_rspfile = component_manifests_rspfile
   }
 
   # Build package
@@ -100,6 +129,7 @@ template("fuchsia_package") {
                              "testonly",
                              "visibility",
                            ])
-    manifest = ":$manifest_target"
+    manifest = ":$package_manifest_target"
+    deps = [ ":$validate_target" ]
   }
 }
