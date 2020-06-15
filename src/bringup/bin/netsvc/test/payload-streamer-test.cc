@@ -4,11 +4,13 @@
 
 #include "payload-streamer.h"
 
-#include <optional>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+
+#include <optional>
+
 #include <zxtest/zxtest.h>
+
 #include "zircon/errors.h"
 
 class PayloadStreamerTest : public zxtest::Test {

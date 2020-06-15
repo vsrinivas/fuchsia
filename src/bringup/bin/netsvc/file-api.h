@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_BRINGUP_BIN_NETSVC_FILE_API_H_
+#define SRC_BRINGUP_BIN_NETSVC_FILE_API_H_
+
+#include <zircon/boot/netboot.h>
 
 #include <tftp/tftp.h>
-#include <zircon/boot/netboot.h>
 
 #include "netcp.h"
 #include "paver.h"
@@ -88,3 +90,5 @@ class FileApi : public FileApiInterface {
 };
 
 }  // namespace netsvc
+
+#endif  // SRC_BRINGUP_BIN_NETSVC_FILE_API_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_NETSVC_ARGS_H_
-#define ZIRCON_SYSTEM_CORE_NETSVC_ARGS_H_
+#ifndef SRC_BRINGUP_BIN_NETSVC_ARGS_H_
+#define SRC_BRINGUP_BIN_NETSVC_ARGS_H_
 
 // Parse the command line arguments in |argv|, returning the presence of boolean flags
 //
@@ -34,4 +34,4 @@ int parse_device_name_provider_args(int argc, char** argv, const char** error,
                                     const char** interface, const char** nodename,
                                     const char** ethdir);
 
-#endif  // ZIRCON_SYSTEM_CORE_NETSVC_ARGS_H_
+#endif  // SRC_BRINGUP_BIN_NETSVC_ARGS_H_

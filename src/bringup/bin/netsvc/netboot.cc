@@ -7,27 +7,27 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/kernel/c/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <threads.h>
 #include <unistd.h>
-
-#include <fuchsia/device/manager/c/fidl.h>
-#include <fuchsia/kernel/c/fidl.h>
-#include <inet6/inet6.h>
-#include <inet6/netifc.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include "netsvc.h"
+#include <inet6/inet6.h>
+#include <inet6/netifc.h>
+
 #include "netcp.h"
+#include "netsvc.h"
 #include "paver.h"
 #include "zbi.h"
 

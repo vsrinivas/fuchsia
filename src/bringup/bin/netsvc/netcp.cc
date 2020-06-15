@@ -12,14 +12,12 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#include <inet6/inet6.h>
-#include <inet6/netifc.h>
-
+#include <zircon/boot/netboot.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include <zircon/boot/netboot.h>
+#include <inet6/inet6.h>
+#include <inet6/netifc.h>
 
 namespace {
 

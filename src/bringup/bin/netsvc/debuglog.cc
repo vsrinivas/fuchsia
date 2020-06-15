@@ -7,9 +7,8 @@
 #include <inttypes.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/debuglog.h>
-#include <string.h>
 #include <stdio.h>
-
+#include <string.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>

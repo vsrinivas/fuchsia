@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_BRINGUP_BIN_NETSVC_NETBOOT_H_
+#define SRC_BRINGUP_BIN_NETSVC_NETBOOT_H_
 
 #include <inet6/inet6.h>
 
@@ -12,3 +13,5 @@ void netboot_recv(void* data, size_t len, bool is_mcast, const ip6_addr_t* daddr
                   const ip6_addr_t* saddr, uint16_t sport);
 
 extern "C" void netboot_run_cmd(const char* cmd);
+
+#endif  // SRC_BRINGUP_BIN_NETSVC_NETBOOT_H_

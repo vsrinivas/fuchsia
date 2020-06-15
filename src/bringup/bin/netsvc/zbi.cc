@@ -4,9 +4,10 @@
 
 #include "zbi.h"
 
-#include <libzbi/zbi-zx.h>
 #include <stdio.h>
 #include <zircon/status.h>
+
+#include <libzbi/zbi-zx.h>
 
 zx_status_t netboot_prepare_zbi(zx_handle_t nbkernel_vmo, zx_handle_t nbbootdata_vmo,
                                 const uint8_t* cmdline, uint32_t cmdline_size,

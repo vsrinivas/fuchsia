@@ -187,7 +187,7 @@ common_image_contents = [
   "//src/bringup/bin/console",
   "//zircon/system/core/devmgr/fragment",
   "//zircon/system/core/devmgr/fragment:fragment.proxy",
-  "//zircon/system/core/miscsvc",
+  "//src/bringup/bin/miscsvc",
   "//src/bringup/bin/netsvc:device-name-provider",
   "//src/bringup/bin/netsvc",
   "//zircon/system/core/ptysvc",

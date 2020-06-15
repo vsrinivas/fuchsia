@@ -1,8 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_CORE_NETSVC_TEST_PAVER_TEST_COMMON_H_
-#define ZIRCON_SYSTEM_CORE_NETSVC_TEST_PAVER_TEST_COMMON_H_
+#ifndef SRC_BRINGUP_BIN_NETSVC_TEST_PAVER_TEST_COMMON_H_
+#define SRC_BRINGUP_BIN_NETSVC_TEST_PAVER_TEST_COMMON_H_
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/paver/llcpp/fidl.h>
@@ -423,4 +423,4 @@ class PaverTest : public zxtest::Test {
   netsvc::Paver paver_;
 };
 
-#endif  // ZIRCON_SYSTEM_CORE_NETSVC_TEST_PAVER_TEST_COMMON_H_
+#endif  // SRC_BRINGUP_BIN_NETSVC_TEST_PAVER_TEST_COMMON_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_BRINGUP_BIN_NETSVC_TFTP_H_
+#define SRC_BRINGUP_BIN_NETSVC_TFTP_H_
 
 #include <inet6/inet6.h>
 
@@ -17,3 +18,5 @@ void tftp_timeout_expired();
 
 bool tftp_has_pending();
 void tftp_send_next();
+
+#endif  // SRC_BRINGUP_BIN_NETSVC_TFTP_H_

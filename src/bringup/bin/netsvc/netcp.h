@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <optional>
+#ifndef SRC_BRINGUP_BIN_NETSVC_NETCP_H_
+#define SRC_BRINGUP_BIN_NETSVC_NETCP_H_
 
 #include <sys/types.h>
 #include <zircon/types.h>
+
+#include <optional>
 
 int netcp_open(const char* filename, uint32_t arg, size_t* file_size);
 
@@ -65,3 +66,5 @@ class NetCopy : public NetCopyInterface {
 };
 
 }  // namespace netsvc
+
+#endif  // SRC_BRINGUP_BIN_NETSVC_NETCP_H_

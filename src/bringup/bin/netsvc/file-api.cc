@@ -6,11 +6,11 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/fdio/fdio.h>
 #include <stdio.h>
+#include <zircon/boot/netboot.h>
 
 #include <fbl/unique_fd.h>
-#include <lib/fdio/fdio.h>
-#include <zircon/boot/netboot.h>
 
 #include "board-info.h"
 #include "netboot.h"

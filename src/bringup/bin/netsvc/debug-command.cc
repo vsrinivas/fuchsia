@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "netboot.h"
-
-#include <stdio.h>
-
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <lib/zx/debuglog.h>
+#include <stdio.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+
+#include "netboot.h"
 
 static void run_program(const char* progname, const char** argv, zx_handle_t h) {
   zx::debuglog logger;
