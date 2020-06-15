@@ -200,10 +200,11 @@ protocol AudioRenderer {
     /// for this particular AudioRenderer, and 2) the real-world system reference
     /// timeline. To communicate how to translate between timelines, the Play()
     /// callback provides an equivalent timestamp in each time domain. The first
-    /// value ('reference_time') is given in terms of the local system clock; the
-    /// second value ('media_time') is what media instant exactly corresponds to
-    /// that local time. Restated, the frame at 'media_time' in the audio stream
-    /// should be presented at system local time 'reference_time'.
+    /// value ('reference_time') is given in terms of this renderer's reference
+    /// clock; the second value ('media_time') is what media instant exactly
+    /// corresponds to that local time. Restated, the frame at 'media_time' in
+    /// the audio stream should be presented at 'reference_time' according to
+    /// the reference clock.
     ///
     /// Note: on calling this API, media_time immediately starts advancing. It is
     /// possible (if uncommon) for a caller to specify a system time that is
