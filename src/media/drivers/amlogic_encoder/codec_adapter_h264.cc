@@ -12,7 +12,7 @@
 #include "src/media/drivers/amlogic_encoder/macros.h"
 
 constexpr uint32_t kOutputBufferMinSizeBytes = 500 * 1024;
-constexpr uint32_t kOutputBufferMaxSizeBytes = 0; // unbounded
+constexpr uint32_t kOutputBufferMaxSizeBytes = 0;  // unbounded
 constexpr uint32_t kOutputMinBufferCountForCamping = 2;
 constexpr uint32_t kOutputMaxBufferCount = 0;  // unbounded
 constexpr uint32_t kInputMinBufferCountForCamping = 2;

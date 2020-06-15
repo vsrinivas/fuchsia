@@ -1106,8 +1106,8 @@ void DeviceCtx::Config(bool idr) {
   }
   p_pic_qp = i_pic_qp;
 
-  HcodecEncCbrTableAddr::Get().FromValue(cbr_info_->phys_base());
-  HcodecEncCbrMbSizeAddr::Get().FromValue(cbr_info_->phys_base() + kCbrTableSize);
+  HcodecEncCbrTableAddr::Get().FromValue(cbr_info_->phys_base()).WriteTo(&dosbus_);
+  HcodecEncCbrMbSizeAddr::Get().FromValue(cbr_info_->phys_base() + kCbrTableSize).WriteTo(&dosbus_);
 
   HcodecEncCbrCtl::Get()
       .FromValue(0)

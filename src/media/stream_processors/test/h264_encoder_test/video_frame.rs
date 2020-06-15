@@ -24,7 +24,7 @@ impl VideoFrame {
         let width = format.bytes_per_row as usize;
         let height = format.coded_height as usize;
         let frame_size = width * height * 3usize / 2usize;
-        let mut data = vec![0; frame_size];
+        let mut data = vec![128; frame_size];
 
         // generate checkerboard
         const NUM_BLOCKS: usize = 8usize;
@@ -40,12 +40,10 @@ impl VideoFrame {
                 if x % block_size == 0 {
                     x_on = !x_on;
                 }
-                let (luma, u, v) = if x_on { (255, 128, 128) } else { (0, 128, 128) };
+                let luma = if x_on { 255 } else { 0 };
                 let y_s = (y + step) % height;
                 let x_s = (x + step) % width;
                 data[y_s * width + x_s] = luma;
-                data[height * width + (y_s / 2) * width + (x_s / 2) * 2] = u;
-                data[height * width + (y_s / 2) * width + (x_s / 2) * 2 + 1] = v;
             }
         }
 
