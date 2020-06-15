@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -229,7 +230,7 @@ void do_slab_test(typename Traits::AllocatorType& allocator, size_t test_allocs)
   for (size_t i = 0; i < test_allocs; ++i) {
     typename Traits::PtrType ptr;
 
-    EXPECT_EQ(fbl::min(i, MAX_ALLOCS), TestBase::allocated_obj_count());
+    EXPECT_EQ(std::min(i, MAX_ALLOCS), TestBase::allocated_obj_count());
     res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckObjCount(
         allocator, TestBase::allocated_obj_count());
     EXPECT_TRUE(res);
@@ -260,7 +261,7 @@ void do_slab_test(typename Traits::AllocatorType& allocator, size_t test_allocs)
       ASSERT_NULL(ptr, "Allocation succeeded when it should not have!");
     }
 
-    EXPECT_EQ(fbl::min(i + 1, MAX_ALLOCS), TestBase::allocated_obj_count());
+    EXPECT_EQ(std::min(i + 1, MAX_ALLOCS), TestBase::allocated_obj_count());
     res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckObjCount(
         allocator, TestBase::allocated_obj_count());
     EXPECT_TRUE(res);
@@ -276,7 +277,7 @@ void do_slab_test(typename Traits::AllocatorType& allocator, size_t test_allocs)
     auto ptr = ref_list.pop_back();
 
     ASSERT_NOT_NULL(ptr, "nullptr in ref list!  This should be impossible.");
-    EXPECT_EQ(fbl::min(test_allocs, MAX_ALLOCS) - i, TestBase::allocated_obj_count());
+    EXPECT_EQ(std::min(test_allocs, MAX_ALLOCS) - i, TestBase::allocated_obj_count());
     res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckObjCount(
         allocator, TestBase::allocated_obj_count());
     EXPECT_TRUE(res);
@@ -311,7 +312,7 @@ void do_slab_test(typename Traits::AllocatorType& allocator, size_t test_allocs)
     EXPECT_TRUE(res);
   }
 
-  EXPECT_EQ(fbl::min(test_allocs, MAX_ALLOCS), i);
+  EXPECT_EQ(std::min(test_allocs, MAX_ALLOCS), i);
   res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckObjCount(allocator, 0);
   EXPECT_TRUE(res);
   res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::CheckMaxObjCount(allocator, i % 2);
@@ -455,7 +456,7 @@ void do_static_slab_test(size_t test_allocs) {
   for (size_t i = 0; i < test_allocs; ++i) {
     typename Traits::PtrType ptr;
 
-    EXPECT_EQ(fbl::min(i, MAX_ALLOCS), TestBase::allocated_obj_count());
+    EXPECT_EQ(std::min(i, MAX_ALLOCS), TestBase::allocated_obj_count());
     res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckObjCount(
         TestBase::allocated_obj_count());
     EXPECT_TRUE(res);
@@ -486,7 +487,7 @@ void do_static_slab_test(size_t test_allocs) {
       ASSERT_NULL(ptr, "Allocation succeeded when it should not have!");
     }
 
-    EXPECT_EQ(fbl::min(i + 1, MAX_ALLOCS), TestBase::allocated_obj_count());
+    EXPECT_EQ(std::min(i + 1, MAX_ALLOCS), TestBase::allocated_obj_count());
     res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckObjCount(
         TestBase::allocated_obj_count());
     EXPECT_TRUE(res);
@@ -502,7 +503,7 @@ void do_static_slab_test(size_t test_allocs) {
     auto ptr = ref_list.pop_back();
 
     ASSERT_NOT_NULL(ptr, "nullptr in ref list!  This should be impossible.");
-    EXPECT_EQ(fbl::min(test_allocs, MAX_ALLOCS) - i, TestBase::allocated_obj_count());
+    EXPECT_EQ(std::min(test_allocs, MAX_ALLOCS) - i, TestBase::allocated_obj_count());
     res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckObjCount(
         TestBase::allocated_obj_count());
     EXPECT_TRUE(res);
@@ -534,7 +535,7 @@ void do_static_slab_test(size_t test_allocs) {
     EXPECT_TRUE(res);
   }
 
-  EXPECT_EQ(fbl::min(test_allocs, MAX_ALLOCS), i);
+  EXPECT_EQ(std::min(test_allocs, MAX_ALLOCS), i);
   res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckObjCount(0);
   EXPECT_TRUE(res);
   res = ObjCounterHelper<AllocatorType, ENB_OBJ_COUNT>::StaticCheckMaxObjCount(i % 2);

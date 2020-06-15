@@ -4,6 +4,8 @@
 
 #include <errno.h>
 
+#include <algorithm>
+
 #include <fbl/algorithm.h>
 
 #include "util.h"
@@ -73,7 +75,7 @@ bool test_maxfile(void) {
   data = data_a;
   while (bytes_read < sz) {
     r = emu_read(fd, readbuf, sizeof(readbuf));
-    ASSERT_EQ(r, fbl::min(sz - bytes_read, static_cast<ssize_t>(sizeof(readbuf))));
+    ASSERT_EQ(r, std::min(sz - bytes_read, static_cast<ssize_t>(sizeof(readbuf))));
     ASSERT_EQ(memcmp(readbuf, data, r), 0, "File failed to verify");
     data = rotate(data);
     bytes_read += r;

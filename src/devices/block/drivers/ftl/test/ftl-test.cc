@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include <algorithm>
 #include <array>
 
 #include <fbl/algorithm.h>
@@ -258,7 +259,7 @@ void FtlTest::SingleLoop(PageCount write_size) {
 
   // Write every page in the volume once.
   for (uint32_t page = 0; page < ftl_.num_pages();) {
-    uint32_t count = fbl::min(ftl_.num_pages() - page, write_size);
+    uint32_t count = std::min(ftl_.num_pages() - page, write_size);
     PrepareBuffer(page, count);
 
     ASSERT_OK(volume_->Write(page, count, page_buffer_.data()));
@@ -302,7 +303,7 @@ void FtlTest::PrepareBuffer(uint32_t page_num, uint32_t write_size) {
 
 void FtlTest::CheckVolume(uint32_t write_size, uint32_t total_pages) {
   for (uint32_t page = 0; page < total_pages;) {
-    uint32_t count = fbl::min(total_pages - page, write_size);
+    uint32_t count = std::min(total_pages - page, write_size);
     ASSERT_OK(volume_->Read(page, count, page_buffer_.data()), "page %u", page);
 
     // Verify each page independently.

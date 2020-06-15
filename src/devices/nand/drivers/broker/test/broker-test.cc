@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <new>
 
 #include <fbl/algorithm.h>
@@ -246,7 +247,7 @@ bool NandDevice::ValidateNandDevice() {
   }
   if (num_blocks_ != parent_->Info().num_blocks) {
     // Not using the whole device, don't need to test all limits.
-    num_blocks_ = fbl::min(num_blocks_, kMinNumBlocks);
+    num_blocks_ = std::min(num_blocks_, kMinNumBlocks);
     full_device_ = false;
   }
   return true;

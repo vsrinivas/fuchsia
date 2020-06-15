@@ -6,6 +6,7 @@
 #include <string.h>
 #include <zircon/device/audio.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <audio-utils/audio-output.h>
@@ -79,7 +80,7 @@ zx_status_t AudioOutput::Play(AudioSource& source) {
     // order to handle a ring discontinuity
     for (uint32_t i = 0; i < 2; ++i) {
       uint32_t space = (rb_sz_ + rd - wr - 1) % rb_sz_;
-      uint32_t todo = fbl::min(space, rb_sz_ - wr);
+      uint32_t todo = std::min(space, rb_sz_ - wr);
       ZX_DEBUG_ASSERT(space < rb_sz_);
 
       if (!todo)
@@ -92,7 +93,7 @@ zx_status_t AudioOutput::Play(AudioSource& source) {
         wr += todo;
       } else {
         uint32_t done;
-        res = source.GetFrames(buf + wr, fbl::min(space, rb_sz_ - wr), &done);
+        res = source.GetFrames(buf + wr, std::min(space, rb_sz_ - wr), &done);
         if (res != ZX_OK) {
           printf("Error packing frames (res %d)\n", res);
           break;

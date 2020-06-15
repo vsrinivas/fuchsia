@@ -6,6 +6,8 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <algorithm>
+
 #include <digest/digest.h>
 #include <digest/hash-list.h>
 
@@ -20,7 +22,7 @@ zx_status_t HashListBase::Align(size_t *data_off, size_t *buf_len) const {
     return ZX_ERR_OUT_OF_RANGE;
   }
   *data_off = node_digest_.PrevAligned(*data_off);
-  *buf_len = fbl::min(node_digest_.NextAligned(buf_end), data_len_) - *data_off;
+  *buf_len = std::min(node_digest_.NextAligned(buf_end), data_len_) - *data_off;
   return ZX_OK;
 }
 
@@ -43,7 +45,7 @@ size_t HashListBase::GetListOffset(size_t data_off) const {
 }
 
 size_t HashListBase::GetListLength() const {
-  return fbl::max(GetListOffset(node_digest_.NextAligned(data_len_)), GetDigestSize());
+  return std::max(GetListOffset(node_digest_.NextAligned(data_len_)), GetDigestSize());
 }
 
 bool HashListBase::IsValidRange(size_t data_off, size_t buf_len) {

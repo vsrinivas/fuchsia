@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <bitmap/raw-bitmap.h>
-#include <bitmap/storage.h>
-
 #include <limits.h>
 #include <stddef.h>
+#include <zircon/types.h>
 
+#include <algorithm>
+
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
-#include <zircon/types.h>
 
 namespace bitmap {
 namespace {
@@ -80,7 +81,7 @@ zx_status_t RawBitmapBase::Shrink(size_t size) {
 }
 
 bool RawBitmapBase::Scan(size_t bitoff, size_t bitmax, bool is_set, size_t* out) const {
-  bitmax = fbl::min(bitmax, size_);
+  bitmax = std::min(bitmax, size_);
   if (bitoff >= bitmax) {
     return true;
   }
@@ -101,7 +102,7 @@ bool RawBitmapBase::Scan(size_t bitoff, size_t bitmax, bool is_set, size_t* out)
 }
 
 bool RawBitmapBase::ReverseScan(size_t bitoff, size_t bitmax, bool is_set, size_t* out) const {
-  bitmax = fbl::min(bitmax, size_);
+  bitmax = std::min(bitmax, size_);
   if (bitoff >= bitmax) {
     return true;
   }

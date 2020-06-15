@@ -12,6 +12,8 @@
 #include <sys/stat.h>
 #include <zircon/device/vfs.h>
 
+#include <algorithm>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
@@ -152,7 +154,7 @@ void VnodeFile::ZeroTail(size_t start, size_t end) {
     memset(buf, 0, ppage_size);
     ZX_ASSERT(vmo_.write(buf, start, ppage_size) == ZX_OK);
   }
-  end = fbl::min(fbl::round_up(end, kPageSize), kMemfsMaxFileSize);
+  end = std::min(fbl::round_up(end, kPageSize), kMemfsMaxFileSize);
   uint64_t decommit_offset = fbl::round_up(start, kPageSize);
   uint64_t decommit_length = end - decommit_offset;
 

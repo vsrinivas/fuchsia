@@ -6,6 +6,7 @@
 #include <string.h>
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -55,7 +56,7 @@ void IntelHDAController::SnapshotRIRB() {
     /* Intel HDA ring buffers are strange, see comments in
      * intel_hda_codec_send_cmd. */
     unsigned int tmp_rd = (rirb_rd_ptr_ + 1) & rirb_mask_;
-    unsigned int todo = fbl::min(pending, (rirb_entry_count_ - tmp_rd));
+    unsigned int todo = std::min(pending, (rirb_entry_count_ - tmp_rd));
 
     memcpy(rirb_snapshot_ + rirb_snapshot_cnt_, rirb_ + tmp_rd, sizeof(rirb_snapshot_[0]) * todo);
 

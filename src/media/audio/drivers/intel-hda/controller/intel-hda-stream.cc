@@ -8,6 +8,7 @@
 #include <string.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <limits>
 #include <utility>
 
@@ -502,7 +503,7 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
     ZX_DEBUG_ASSERT(region_offset < r.size);
     uint32_t amt_left = rb_size - amt_done;
     uint32_t region_left = static_cast<uint32_t>(r.size) - region_offset;
-    uint32_t todo = fbl::min(amt_left, region_left);
+    uint32_t todo = std::min(amt_left, region_left);
 
     ZX_DEBUG_ASSERT(region_left >= DMA_ALIGN);
     bdl()[entry].flags = 0;
@@ -516,9 +517,9 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
         ++irqs_inserted;
 
         if (ipos <= amt_done) {
-          todo = fbl::min(todo, DMA_ALIGN);
+          todo = std::min(todo, DMA_ALIGN);
         } else {
-          todo = fbl::min(todo, ipos - amt_done);
+          todo = std::min(todo, ipos - amt_done);
         }
       }
     }

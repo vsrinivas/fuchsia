@@ -6,6 +6,7 @@
 
 #include <assert.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <fbl/algorithm.h>
@@ -351,7 +352,7 @@ zx_status_t AmlRawNand::AmlGetECCCorrections(int ecc_pages, uint32_t nand_page,
       continue;
     }
     stats.ecc_corrected += info->ecc.eccerr_cnt;
-    bitflips = fbl::max(static_cast<uint8_t>(bitflips), static_cast<uint8_t>(info->ecc.eccerr_cnt));
+    bitflips = std::max(static_cast<uint8_t>(bitflips), static_cast<uint8_t>(info->ecc.eccerr_cnt));
   }
   *ecc_corrected = bitflips;
   return ZX_OK;
@@ -594,8 +595,8 @@ zx_status_t AmlRawNand::RawNandWritePageHwecc(const void* data, size_t data_size
     // Writing the wrong OOB bytes will brick the device, raise an error if
     // the caller tried to provide their own here.
     if (oob != nullptr) {
-      zxlogf(ERROR, "%s: Cannot write provided OOB, page %u requires specific OOB bytes",
-             __func__, nand_page);
+      zxlogf(ERROR, "%s: Cannot write provided OOB, page %u requires specific OOB bytes", __func__,
+             nand_page);
       return ZX_ERR_INVALID_ARGS;
     }
 
@@ -643,8 +644,8 @@ zx_status_t AmlRawNand::RawNandEraseBlock(uint32_t nand_page) {
 
   // nandblock has to be erasesize_ aligned.
   if (nand_page % erasesize_pages_) {
-    zxlogf(ERROR, "%s: NAND block %u must be a erasesize_pages (%u) multiple", __func__,
-           nand_page, erasesize_pages_);
+    zxlogf(ERROR, "%s: NAND block %u must be a erasesize_pages (%u) multiple", __func__, nand_page,
+           erasesize_pages_);
     return ZX_ERR_INVALID_ARGS;
   }
   onfi_->OnfiCommand(NAND_CMD_ERASE1, -1, nand_page, static_cast<uint32_t>(chipsize_), chip_delay_,
@@ -679,8 +680,8 @@ zx_status_t AmlRawNand::AmlGetFlashType() {
            nand_dev_id, id_data[0], id_data[1]);
   }
 
-  zxlogf(INFO, "%s: manufacturer_id = %x, device_ide = %x, extended_id = %x", __func__,
-         nand_maf_id, nand_dev_id, id_data[3]);
+  zxlogf(INFO, "%s: manufacturer_id = %x, device_ide = %x, extended_id = %x", __func__, nand_maf_id,
+         nand_dev_id, id_data[3]);
   nand_chip = onfi_->FindNandChipTable(nand_maf_id, nand_dev_id);
   if (nand_chip == nullptr) {
     zxlogf(ERROR,

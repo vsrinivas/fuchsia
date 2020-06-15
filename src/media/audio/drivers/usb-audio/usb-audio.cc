@@ -6,6 +6,7 @@
 
 #include <string.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <fbl/algorithm.h>
@@ -29,7 +30,7 @@ fbl::Array<uint8_t> FetchStringDescriptor(const usb_protocol_t& usb, uint8_t des
     return fbl::Array<uint8_t>();
   }
 
-  buflen = fbl::min(buflen, sizeof(str_buf));
+  buflen = std::min(buflen, sizeof(str_buf));
 
   fbl::AllocChecker ac;
   std::unique_ptr<uint8_t[]> mem(new (&ac) uint8_t[buflen + 1]);

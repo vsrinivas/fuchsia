@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <atomic>
 
 #include <fbl/algorithm.h>
@@ -94,7 +95,7 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
   if (tag != NULL) {
     size_t len = strlen(tag);
     if (len > 0) {
-      size_t write_len = fbl::min(len, static_cast<size_t>(FX_LOG_MAX_TAG_LEN - 1));
+      size_t write_len = std::min(len, static_cast<size_t>(FX_LOG_MAX_TAG_LEN - 1));
       ZX_DEBUG_ASSERT(write_len < 128);
       packet.data[pos++] = static_cast<char>(write_len);
       memcpy(packet.data + pos, tag, write_len);
@@ -108,7 +109,7 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
   int count = 0;
   size_t msg_pos = pos;
   if (!perform_format) {
-    size_t write_len = fbl::min(strlen(msg), static_cast<size_t>(n - 1));
+    size_t write_len = std::min(strlen(msg), static_cast<size_t>(n - 1));
     memcpy(packet.data + pos, msg, write_len);
     pos += write_len;
     packet.data[pos] = 0;
@@ -163,7 +164,7 @@ zx_status_t fx_logger::VLogWriteToFd(int fd, fx_log_severity_t severity, const c
       if (!tagstr_.empty()) {
         buf.Append(", ");
       }
-      buf.Append(tag, fbl::min(len, static_cast<size_t>(FX_LOG_MAX_TAG_LEN - 1)));
+      buf.Append(tag, std::min(len, static_cast<size_t>(FX_LOG_MAX_TAG_LEN - 1)));
     }
   }
   buf.Append("]");

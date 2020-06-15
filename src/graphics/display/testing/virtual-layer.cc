@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <zircon/pixelformat.h>
 
+#include <algorithm>
 #include <iterator>
 
 #include <fbl/algorithm.h>
@@ -38,10 +39,10 @@ static uint32_t get_fg_color() {
 // Checks if two rectangles intersect, and if so, returns their intersection.
 static bool compute_intersection(const fhd::Frame& a, const fhd::Frame& b,
                                  fhd::Frame* intersection) {
-  uint32_t left = fbl::max(a.x_pos, b.x_pos);
-  uint32_t right = fbl::min(a.x_pos + a.width, b.x_pos + b.width);
-  uint32_t top = fbl::max(a.y_pos, b.y_pos);
-  uint32_t bottom = fbl::min(a.y_pos + a.height, b.y_pos + b.height);
+  uint32_t left = std::max(a.x_pos, b.x_pos);
+  uint32_t right = std::min(a.x_pos + a.width, b.x_pos + b.width);
+  uint32_t top = std::max(a.y_pos, b.y_pos);
+  uint32_t bottom = std::min(a.y_pos + a.height, b.y_pos + b.height);
 
   if (left >= right || top >= bottom) {
     return false;
@@ -76,9 +77,9 @@ VirtualLayer::VirtualLayer(const fbl::Vector<Display>& displays, bool tiled) {
     if (tiled) {
       width_ += d->mode().horizontal_resolution;
     } else {
-      width_ = fbl::max(width_, d->mode().horizontal_resolution);
+      width_ = std::max(width_, d->mode().horizontal_resolution);
     }
-    height_ = fbl::max(height_, d->mode().vertical_resolution);
+    height_ = std::max(height_, d->mode().vertical_resolution);
   }
 }
 

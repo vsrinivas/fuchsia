@@ -8,6 +8,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <iterator>
 
 #include <fbl/algorithm.h>
@@ -270,7 +271,7 @@ zx_status_t EntryPoint2_1::WalkStructs(uintptr_t struct_table_virt, StructWalkCa
     }
     StringTable st;
     zx_status_t status =
-        st.Init(hdr, fbl::max(table_end - curr_addr, static_cast<size_t>(max_struct_size)));
+        st.Init(hdr, std::max(table_end - curr_addr, static_cast<size_t>(max_struct_size)));
     if (status != ZX_OK) {
       return status;
     }

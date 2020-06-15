@@ -7,6 +7,8 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
+#include <algorithm>
+
 #include <digest/node-digest.h>
 #include <fbl/algorithm.h>
 
@@ -24,7 +26,7 @@ zx_status_t NodeDigest::Reset(size_t data_off, size_t data_len) {
   if (data_len < data_off || !IsAligned(data_off)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  to_append_ = fbl::min(data_len - data_off, node_size_);
+  to_append_ = std::min(data_len - data_off, node_size_);
   pad_len_ = node_size_ - to_append_;
   digest_.Init();
   uint64_t locality = id_ ^ data_off;
@@ -39,7 +41,7 @@ zx_status_t NodeDigest::Reset(size_t data_off, size_t data_len) {
 }
 
 size_t NodeDigest::Append(const void* buf, size_t buf_len) {
-  size_t len = fbl::min(buf_len, to_append_);
+  size_t len = std::min(buf_len, to_append_);
   if (len == 0) {
     return 0;
   }

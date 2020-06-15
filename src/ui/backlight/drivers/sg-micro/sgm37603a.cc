@@ -4,6 +4,7 @@
 
 #include "sgm37603a.h"
 
+#include <algorithm>
 #include <memory>
 
 #include <ddk/binding.h>
@@ -181,8 +182,8 @@ zx_status_t Sgm37603a::SetBacklightState(bool power, double brightness) {
     }
   }
 
-  brightness = fbl::max(brightness, 0.0);
-  brightness = fbl::min(brightness, 1.0);
+  brightness = std::max(brightness, 0.0);
+  brightness = std::min(brightness, 1.0);
 
   uint16_t brightness_value = static_cast<uint16_t>(brightness * kMaxBrightnessRegValue);
   const uint8_t brightness_regs[][2] = {

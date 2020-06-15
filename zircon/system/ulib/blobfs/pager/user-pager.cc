@@ -9,6 +9,7 @@
 #include <limits.h>
 #include <zircon/status.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <blobfs/format.h>
@@ -70,7 +71,7 @@ UserPager::ReadRange UserPager::GetBlockAlignedReadRange(const UserPagerInfo& in
                                                          uint64_t length) {
   ZX_DEBUG_ASSERT(offset < info.data_length_bytes);
   // Clamp the range to the size of the blob.
-  length = fbl::min(length, info.data_length_bytes - offset);
+  length = std::min(length, info.data_length_bytes - offset);
 
   // Align to the block size for verification. (In practice this means alignment to 8k).
   zx_status_t status = info.verifier->Align(&offset, &length);
@@ -101,8 +102,8 @@ UserPager::ReadRange UserPager::GetBlockAlignedExtendedRange(const UserPagerInfo
   constexpr uint64_t kReadAheadClusterSize = (32 * (1 << 10));
 
   size_t read_ahead_offset = offset;
-  size_t read_ahead_length = fbl::max(kReadAheadClusterSize, length);
-  read_ahead_length = fbl::min(read_ahead_length, info.data_length_bytes - read_ahead_offset);
+  size_t read_ahead_length = std::max(kReadAheadClusterSize, length);
+  read_ahead_length = std::min(read_ahead_length, info.data_length_bytes - read_ahead_offset);
 
   // Align to the block size for verification. (In practice this means alignment to 8k).
   return GetBlockAlignedReadRange(info, read_ahead_offset, read_ahead_length);

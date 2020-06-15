@@ -12,6 +12,8 @@
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
+
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 
@@ -110,7 +112,7 @@ TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
   data = data_a;
   while (bytes_read < sz) {
     r = read(fd.get(), readbuf, sizeof(readbuf));
-    ASSERT_EQ(r, static_cast<ssize_t>(fbl::min(sz - bytes_read, sizeof(readbuf))));
+    ASSERT_EQ(r, static_cast<ssize_t>(std::min(sz - bytes_read, sizeof(readbuf))));
     ASSERT_EQ(memcmp(readbuf, data, r), 0);
     data = rotate(data);
     bytes_read += r;
@@ -203,7 +205,7 @@ TEST_P(MaxFileTest, ReadAfterNonContiguousWritesSuceeds) {
   size_t* bytes_read = &bytes_read_a;
   while (*bytes_read < *sz) {
     r = read(fd, readbuf, sizeof(readbuf));
-    ASSERT_EQ(r, static_cast<ssize_t>(fbl::min(*sz - *bytes_read, sizeof(readbuf))));
+    ASSERT_EQ(r, static_cast<ssize_t>(std::min(*sz - *bytes_read, sizeof(readbuf))));
     ASSERT_EQ(memcmp(readbuf, data, r), 0);
     *bytes_read += r;
 

@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/log/log.h>
+#include <lib/log/log_writer.h>
+#include <stdio.h>
+
+#include <algorithm>
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <lib/log/log.h>
-#include <lib/log/log_writer.h>
-#include <memory>
-#include <stdio.h>
 
 namespace {
 
@@ -54,7 +57,7 @@ void log_write_message_helper(log_level_t level, size_t num_tags, const char** t
       tags_ptr,
       num_tags,
       message,
-      fbl::min(message_len, (size_t)LOG_MAX_MESSAGE_SIZE),
+      std::min(message_len, (size_t)LOG_MAX_MESSAGE_SIZE),
   };
   cfg->log_writer->ops->v1.write(cfg->log_writer, &msg);
 }

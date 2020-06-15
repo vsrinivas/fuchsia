@@ -875,11 +875,11 @@ int main(int argc, const char* argv[]) {
     }
     // Width is the larger of disp_width/2, display_height/2, but we also need
     // to make sure that it's less than the smaller display dimension.
-    uint32_t width = fbl::min(
-        fbl::max(displays[0].mode().vertical_resolution / 2,
+    uint32_t width = std::min(
+        std::max(displays[0].mode().vertical_resolution / 2,
                  displays[0].mode().horizontal_resolution / 2),
-        fbl::min(displays[0].mode().vertical_resolution, displays[0].mode().horizontal_resolution));
-    uint32_t height = fbl::min(displays[0].mode().vertical_resolution / 2,
+        std::min(displays[0].mode().vertical_resolution, displays[0].mode().horizontal_resolution));
+    uint32_t height = std::min(displays[0].mode().vertical_resolution / 2,
                                displays[0].mode().horizontal_resolution / 2);
     layer3->SetImageDimens(width * 2, height);
     layer3->SetDestFrame(width, height);

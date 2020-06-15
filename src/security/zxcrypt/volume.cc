@@ -3,12 +3,7 @@
 // found in the LICENSE file.
 
 #include <arpa/inet.h>
-#include <crypto/bytes.h>
-#include <crypto/cipher.h>
-#include <crypto/hkdf.h>
-#include <crypto/secret.h>
 #include <errno.h>
-#include <fbl/algorithm.h>
 #include <inttypes.h>
 #include <lib/zircon-internal/debug.h>
 #include <stddef.h>
@@ -18,6 +13,14 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
+
+#include <algorithm>
+
+#include <crypto/bytes.h>
+#include <crypto/cipher.h>
+#include <crypto/hkdf.h>
+#include <crypto/secret.h>
+#include <fbl/algorithm.h>
 #include <zxcrypt/volume.h>
 
 #define ZXDEBUG 0
@@ -187,7 +190,7 @@ zx_status_t Volume::Init() {
         };
         // Otherwise, allocate it
         uint64_t extend_start_slice = i + 1;
-        uint64_t extend_length = fbl::min(required - i, range);
+        uint64_t extend_length = std::min(required - i, range);
 
         if ((rc = DoBlockFvmExtend(extend_start_slice, extend_length)) != ZX_OK) {
           xprintf("failed to extend FVM partition: %s\n", zx_status_get_string(rc));

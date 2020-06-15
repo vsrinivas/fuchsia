@@ -9,6 +9,7 @@
 #include <string.h>
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <iterator>
 
 #include <ddk/driver.h>
@@ -1221,8 +1222,8 @@ bool DpDisplay::SetBacklightBrightness(double val) {
     return true;
   }
 
-  backlight_brightness_ = fbl::max(val, controller()->igd_opregion().GetMinBacklightBrightness());
-  backlight_brightness_ = fbl::min(backlight_brightness_, 1.0);
+  backlight_brightness_ = std::max(val, controller()->igd_opregion().GetMinBacklightBrightness());
+  backlight_brightness_ = std::min(backlight_brightness_, 1.0);
 
   if (backlight_aux_brightness_) {
     uint16_t percent = static_cast<uint16_t>(0xffff * backlight_brightness_ + .5);
@@ -1317,8 +1318,8 @@ namespace FidlBacklight = llcpp::fuchsia::hardware::backlight;
 zx_status_t DpDisplay::SetBacklightState(bool power, double brightness) {
   SetBacklightOn(power);
 
-  brightness = fbl::max(brightness, 0.0);
-  brightness = fbl::min(brightness, 1.0);
+  brightness = std::max(brightness, 0.0);
+  brightness = std::min(brightness, 1.0);
 
   double range = 1.0f - controller()->igd_opregion().GetMinBacklightBrightness();
   if (!SetBacklightBrightness((range * brightness) +

@@ -14,6 +14,7 @@
 #include <zircon/device/vfs.h>
 #include <zircon/time.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <fbl/algorithm.h>
@@ -64,7 +65,7 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
   const uint32_t max_direct_blocks =
       kMinfsDirect + (kMinfsDirectPerIndirect * fs_->Limits().GetMaximumMetaDataBlocks());
   const uint32_t max_writeback_blocks = static_cast<blk_t>(fs_->WritebackCapacity() / 2);
-  const uint32_t max_blocks = fbl::min(max_direct_blocks, max_writeback_blocks);
+  const uint32_t max_blocks = std::min(max_direct_blocks, max_writeback_blocks);
 
   fbl::Array<blk_t> allocated_blocks(new blk_t[max_blocks], max_blocks);
 

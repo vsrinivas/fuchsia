@@ -10,6 +10,8 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
+#include <algorithm>
+
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
 #include <blobfs/common.h>
@@ -39,8 +41,7 @@ Allocator::~Allocator() = default;
 InodePtr Allocator::GetNode(uint32_t node_index) {
   ZX_DEBUG_ASSERT(node_index < node_map_.size() / kBlobfsInodeSize);
   node_map_grow_mutex_.lock_shared();
-  return InodePtr(&reinterpret_cast<Inode*>(node_map_.start())[node_index],
-                  InodePtrDeleter(this));
+  return InodePtr(&reinterpret_cast<Inode*>(node_map_.start())[node_index], InodePtrDeleter(this));
 }
 
 bool Allocator::CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
@@ -78,8 +79,8 @@ zx_status_t Allocator::ResetFromStorage(fs::ReadTxn txn) {
     return status;
   }
 
-  status = space_manager_->BlockAttachVmo(node_map_.vmo(),
-                                          &node_map_vmoid.GetReference(space_manager_));
+  status =
+      space_manager_->BlockAttachVmo(node_map_.vmo(), &node_map_vmoid.GetReference(space_manager_));
   if (status != ZX_OK) {
     return status;
   }
@@ -109,7 +110,7 @@ zx_status_t Allocator::ReserveBlocks(uint64_t num_blocks,
     // If we have run out of blocks, attempt to add block slices via FVM.
     // The new 'hint' is the first location we could try to find blocks
     // after merely extending the allocation maps.
-    uint64_t hint = block_map_.size() - fbl::min(num_blocks, block_map_.size());
+    uint64_t hint = block_map_.size() - std::min(num_blocks, block_map_.size());
 
     ZX_DEBUG_ASSERT(actual_blocks < num_blocks);
     num_blocks -= actual_blocks;
@@ -281,7 +282,7 @@ bool Allocator::FindUnallocatedExtent(uint64_t start, uint64_t block_length, uin
   bool restart = false;
   // Constraint: No contiguous run which can extend beyond the block
   // bitmap.
-  block_length = fbl::min(block_length, block_map_.size() - start);
+  block_length = std::min(block_length, block_map_.size() - start);
   uint64_t first_already_allocated;
   if (!block_map_.Scan(start, start + block_length, false, &first_already_allocated)) {
     // Part of [start, start + block_length) is already allocated.
@@ -413,7 +414,7 @@ zx_status_t Allocator::FindBlocks(uint64_t start, uint64_t num_blocks,
     }
     // Constraint: No contiguous run longer than the maximum permitted
     // extent.
-    uint64_t block_length = fbl::min(remaining_blocks, kBlockCountMax);
+    uint64_t block_length = std::min(remaining_blocks, kBlockCountMax);
 
     bool restart_search = FindUnallocatedExtent(start, block_length, &start, &block_length);
     if (restart_search) {
@@ -506,8 +507,6 @@ zx_status_t Allocator::GrowNodeMap(size_t size) {
   return node_map_.Grow(size);
 }
 
-void Allocator::DropInodePtr() {
-  node_map_grow_mutex_.unlock_shared();
-}
+void Allocator::DropInodePtr() { node_map_grow_mutex_.unlock_shared(); }
 
 }  // namespace blobfs

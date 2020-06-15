@@ -13,6 +13,8 @@
 #include <zircon/process.h>
 #include <zircon/threads.h>
 
+#include <algorithm>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/protocol/sdio.h>
@@ -296,16 +298,14 @@ zx_status_t SdioControllerDevice::SdioDisableFn(uint8_t fn_idx) {
   }
 
   if ((st = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_IOEx_EN_FUNC_ADDR, 0, &ioex_reg)) != ZX_OK) {
-    zxlogf(ERROR, "sdio_disable_function: Error reading IOEx reg. func: %d status: %d", fn_idx,
-           st);
+    zxlogf(ERROR, "sdio_disable_function: Error reading IOEx reg. func: %d status: %d", fn_idx, st);
     return st;
   }
 
   ioex_reg = static_cast<uint8_t>(ioex_reg & ~(1 << fn_idx));
   st = SdioDoRwByteLocked(true, 0, SDIO_CIA_CCCR_IOEx_EN_FUNC_ADDR, ioex_reg, nullptr);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "sdio_disable_function: Error writing IOEx reg. func: %d status:%d", fn_idx,
-           st);
+    zxlogf(ERROR, "sdio_disable_function: Error writing IOEx reg. func: %d status:%d", fn_idx, st);
     return st;
   }
 
@@ -331,8 +331,8 @@ zx_status_t SdioControllerDevice::SdioEnableFnIntr(uint8_t fn_idx) {
   uint8_t intr_byte;
   st = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_IEN_INTR_EN_ADDR, 0, &intr_byte);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "sdio_enable_interrupt: Failed to enable interrupt for fn: %d status: %d",
-           fn_idx, st);
+    zxlogf(ERROR, "sdio_enable_interrupt: Failed to enable interrupt for fn: %d status: %d", fn_idx,
+           st);
     return st;
   }
 
@@ -343,8 +343,8 @@ zx_status_t SdioControllerDevice::SdioEnableFnIntr(uint8_t fn_idx) {
 
   st = SdioDoRwByteLocked(true, 0, SDIO_CIA_CCCR_IEN_INTR_EN_ADDR, intr_byte, nullptr);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "sdio_enable_interrupt: Failed to enable interrupt for fn: %d status: %d",
-           fn_idx, st);
+    zxlogf(ERROR, "sdio_enable_interrupt: Failed to enable interrupt for fn: %d status: %d", fn_idx,
+           st);
     return st;
   }
 
@@ -467,7 +467,7 @@ zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn
   }
 
   const uint64_t max_host_transfer_size =
-      fbl::max(1ul, use_dma ? sdmmc_.host_info().max_transfer_size
+      std::max(1ul, use_dma ? sdmmc_.host_info().max_transfer_size
                             : sdmmc_.host_info().max_transfer_size_non_dma);
   const uint32_t func_blk_size = funcs_[fn_idx].cur_blk_size;
 
@@ -507,7 +507,7 @@ zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn
     if (mbs) {
       // multiblock is supported, determine max number of blocks per cmd
       num_blocks =
-          fbl::min(fbl::min(SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD, max_host_blocks), rem_blocks);
+          std::min(std::min(SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD, max_host_blocks), rem_blocks);
     }
     st = sdmmc_.SdioIoRwExtended(hw_info_.caps, txn->write, fn_idx, addr, txn->incr, num_blocks,
                                  func_blk_size, use_dma, buf, dma_vmo, buf_offset + data_processed);
@@ -816,7 +816,7 @@ zx_status_t SdioControllerDevice::ParseFuncExtTuple(uint8_t fn_idx, const SdioFu
     func->hw_info.max_blk_size =
         SdioReadTupleBody(tup.tuple_body, SDIO_CIS_TPL_FUNCE_FUNC0_MAX_BLK_SIZE_LOC, 2);
     func->hw_info.max_blk_size = static_cast<uint32_t>(
-        fbl::min<uint64_t>(sdmmc_.host_info().max_transfer_size, func->hw_info.max_blk_size));
+        std::min<uint64_t>(sdmmc_.host_info().max_transfer_size, func->hw_info.max_blk_size));
     uint8_t speed_val = GetBitsU8(tup.tuple_body[3], SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_VAL_MASK,
                                   SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_VAL_LOC);
     uint8_t speed_unit = GetBitsU8(tup.tuple_body[3], SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_UNIT_MASK,

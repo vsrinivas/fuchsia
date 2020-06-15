@@ -149,7 +149,7 @@ zx_status_t GeneratedSource::GetFramesInternal(void* buffer, uint32_t buf_space,
   ZX_DEBUG_ASSERT(frames_produced_ < frames_to_produce_);
 
   uint64_t todo =
-      fbl::min<uint64_t>(frames_to_produce_ - frames_produced_, buf_space / frame_size_);
+      std::min<uint64_t>(frames_to_produce_ - frames_produced_, buf_space / frame_size_);
   double pos = pos_scalar_ * static_cast<double>(frames_produced_);
   auto buf = reinterpret_cast<SampleType*>(buffer);
 

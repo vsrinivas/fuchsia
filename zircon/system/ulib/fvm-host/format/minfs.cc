@@ -4,6 +4,7 @@
 
 #include <lib/cksum.h>
 
+#include <algorithm>
 #include <utility>
 
 #include <fvm/fvm-sparse.h>
@@ -108,7 +109,7 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
   //                 entries. Make sure to account for this case (or verify that the journal is
   //                 resolved prior to extension).
   minfs::TransactionLimits limits(fvm_info_);
-  integrity_blocks = fbl::max(integrity_blocks, limits.GetRecommendedIntegrityBlocks());
+  integrity_blocks = std::max(integrity_blocks, limits.GetRecommendedIntegrityBlocks());
   fvm_info_.integrity_slices =
       safemath::checked_cast<uint32_t>((integrity_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
   fvm_info_.dat_slices =

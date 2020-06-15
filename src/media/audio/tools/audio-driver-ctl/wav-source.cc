@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <zircon/assert.h>
 
+#include <algorithm>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 
@@ -165,7 +167,7 @@ zx_status_t WAVSource::GetFrames(void* buffer, uint32_t buf_space, uint32_t* out
   } else {
     ZX_DEBUG_ASSERT(payload_played_ < payload_len_);
   }
-  uint32_t todo = fbl::min(buf_space, payload_len_ - payload_played_);
+  uint32_t todo = std::min(buf_space, payload_len_ - payload_played_);
   zx_status_t res = Read(buffer, todo);
   if (res == ZX_OK) {
     payload_played_ += todo;

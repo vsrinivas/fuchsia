@@ -13,6 +13,7 @@
 #include <lib/zx/socket.h>
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cstdlib>
 #include <cstring>
@@ -139,14 +140,14 @@ void LoggerWriter::Write(const log_message* message) {
       break;
     }
     pos += write_tag(message->static_tags[i], packet.data + pos,
-                     fbl::min(kDataSize - pos, (long unsigned int)LOG_MAX_TAG_LEN));
+                     std::min(kDataSize - pos, (long unsigned int)LOG_MAX_TAG_LEN));
   }
   for (size_t i = 0; i < message->num_dynamic_tags; i++) {
     if (++tag_counter > LOG_MAX_TAGS) {
       break;
     }
     pos += write_tag(message->dynamic_tags[i], packet.data + pos,
-                     fbl::min(kDataSize - pos, (long unsigned int)LOG_MAX_TAG_LEN));
+                     std::min(kDataSize - pos, (long unsigned int)LOG_MAX_TAG_LEN));
   }
 
   packet.data[pos++] = 0;

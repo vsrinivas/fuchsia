@@ -8,6 +8,7 @@
 #include <lib/zx/pager.h>
 #include <limits.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <memory>
@@ -65,7 +66,7 @@ class MockBlob {
     fbl::Array<char> buf(new char[length], length);
     ASSERT_OK(vmo_.read(buf.get(), offset, length));
 
-    length = fbl::min(length, data_size_ - offset);
+    length = std::min(length, data_size_ - offset);
     if (length > 0) {
       fbl::Array<char> comp(new char[length], length);
       memset(comp.get(), identifier_, length);

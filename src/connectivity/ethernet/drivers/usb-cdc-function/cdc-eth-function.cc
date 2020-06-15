@@ -16,6 +16,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -530,7 +531,7 @@ static void cdc_tx_complete(void* ctx, usb_request_t* req) {
 static size_t cdc_get_descriptors_size(void* ctx) { return sizeof(descriptors); }
 
 static void cdc_get_descriptors(void* ctx, void* buffer, size_t buffer_size, size_t* out_actual) {
-  const size_t length = fbl::min(sizeof(descriptors), buffer_size);
+  const size_t length = std::min(sizeof(descriptors), buffer_size);
   memcpy(buffer, &descriptors, length);
   *out_actual = length;
 }

@@ -10,6 +10,7 @@
 #include <string.h>
 #include <zircon/hw/usb.h>
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -56,7 +57,7 @@ std::optional<TestRequest> TestRequest::Create(const fuchsia_hardware_usb_tester
   // We need to allocate a usb request buffer that covers all the scatter gather entries.
   for (uint64_t i = 0; i < sg_list.len; ++i) {
     auto& entry = sg_list.entries[i];
-    buffer_size = fbl::max(buffer_size, entry.offset + entry.length);
+    buffer_size = std::max(buffer_size, entry.offset + entry.length);
   }
   usb_request_t* usb_req;
   zx_status_t status = usb_request_alloc(&usb_req, buffer_size, ep_address, req_size);
@@ -255,7 +256,7 @@ zx_status_t TestRequest::GetDataUnscattered(fbl::Array<uint8_t>* out_data) {
     size_t total_copied = 0;
     for (size_t i = 0; i < Get()->sg_count; ++i) {
       const auto& entry = Get()->sg_list[i];
-      size_t len_to_copy = fbl::min(len - total_copied, entry.length);
+      size_t len_to_copy = std::min(len - total_copied, entry.length);
       memcpy(buf.data() + total_copied, req_data + entry.offset, len_to_copy);
       total_copied += len_to_copy;
     }
@@ -398,7 +399,7 @@ zx_status_t UsbTester::IsochLoopback(const fuchsia_hardware_usb_tester_IsochTest
                                      fuchsia_hardware_usb_tester_IsochResult* result) {
   IsochLoopbackIntf* intf = &isoch_loopback_intf_;
   uint16_t packet_size =
-      fbl::min(params->packet_size, fbl::min(intf->in_max_packet, intf->out_max_packet));
+      std::min(params->packet_size, std::min(intf->in_max_packet, intf->out_max_packet));
   if (packet_size < params->packet_size) {
     zxlogf(ERROR, "requested packet size %u, using max packet size %u", params->packet_size,
            packet_size);

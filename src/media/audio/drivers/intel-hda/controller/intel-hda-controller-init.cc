@@ -7,6 +7,7 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include <algorithm>
 #include <utility>
 
 #include <hw/arch_ops.h>
@@ -421,7 +422,7 @@ zx_status_t IntelHDAController::SetupCommandBuffer() {
   rirb_mask_ = rirb_entry_count_ - 1u;
   corb_max_in_flight_ =
       rirb_mask_ > RIRB_RESERVED_RESPONSE_SLOTS ? rirb_mask_ - RIRB_RESERVED_RESPONSE_SLOTS : 1;
-  corb_max_in_flight_ = fbl::min(corb_max_in_flight_, corb_mask_);
+  corb_max_in_flight_ = std::min(corb_max_in_flight_, corb_mask_);
 
   // Program the base address registers for the TX/RX ring buffers, and set up
   // the virtual pointers to the ring buffer entries.

@@ -4,6 +4,7 @@
 
 #include "vim-spdif-audio-stream.h"
 
+#include <algorithm>
 #include <iterator>
 #include <limits>
 #include <numeric>
@@ -330,7 +331,7 @@ zx_status_t Vim2SpdifAudioStream::CreateFormatList() {
     if (range.max_channels < 2) {
       continue;
     }
-    range.max_channels = fbl::min<uint8_t>(range.max_channels, 2);
+    range.max_channels = std::min<uint8_t>(range.max_channels, 2);
 
     constexpr uint32_t MIN_SUPPORTED_RATE = 32000;
     constexpr uint32_t MAX_SUPPORTED_RATE = 192000;
@@ -339,8 +340,8 @@ zx_status_t Vim2SpdifAudioStream::CreateFormatList() {
         range.min_frames_per_second > MAX_SUPPORTED_RATE) {
       continue;
     }
-    range.max_frames_per_second = fbl::min(MAX_SUPPORTED_RATE, range.max_frames_per_second);
-    range.min_frames_per_second = fbl::max(MIN_SUPPORTED_RATE, range.min_frames_per_second);
+    range.max_frames_per_second = std::min(MAX_SUPPORTED_RATE, range.max_frames_per_second);
+    range.min_frames_per_second = std::max(MIN_SUPPORTED_RATE, range.min_frames_per_second);
 
     fbl::AllocChecker ac;
     supported_formats_.push_back(range, &ac);

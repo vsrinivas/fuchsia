@@ -11,6 +11,7 @@
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <limits>
 #include <new>
 #include <utility>
@@ -334,7 +335,7 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
         msg->Op()->command = OpcodeToCommand(request->opcode);
       }
 
-      uint32_t length = fbl::min(len_remaining, max_xfer);
+      uint32_t length = std::min(len_remaining, max_xfer);
       len_remaining -= length;
 
       // Only set the "AFTER" barrier on the last sub-txn.

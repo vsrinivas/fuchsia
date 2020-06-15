@@ -10,6 +10,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
 
+#include <algorithm>
 #include <utility>
 
 #include <ddk/debug.h>
@@ -135,7 +136,7 @@ void Device::BlockImplQuery(block_info_t* out_info, size_t* out_op_size) {
   info_.block_protocol.Query(out_info, out_op_size);
   out_info->block_count -= info_.reserved_blocks;
   // Cap largest transaction to a quarter of the VMO buffer.
-  out_info->max_transfer_size = fbl::min(Volume::kBufferSize / 4, out_info->max_transfer_size);
+  out_info->max_transfer_size = std::min(Volume::kBufferSize / 4, out_info->max_transfer_size);
   *out_op_size = info_.op_size;
 }
 

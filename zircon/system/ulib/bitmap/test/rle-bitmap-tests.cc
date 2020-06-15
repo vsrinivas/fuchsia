@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
 #include <memory>
 
 #include <bitmap/rle-bitmap.h>
@@ -254,7 +255,7 @@ TEST(RleBitmapTests, SplitRanges) {
       EXPECT_EQ(bitlen, 1U, "bitlen");
     } else {
       size_t offset = 4 * index - 2;
-      size_t len = fbl::min(size_t(3), kMaxVal - offset);
+      size_t len = std::min(size_t(3), kMaxVal - offset);
       EXPECT_EQ(bitoff, offset, "bitoff");
       EXPECT_EQ(bitlen, len, "bitlen");
     }
@@ -366,8 +367,8 @@ static void CheckOverlap(size_t bitoff1, size_t bitmax1, size_t bitoff2, size_t 
   EXPECT_LE(bitmax2, max_val);
 
   RleBitmap bitmap;
-  size_t min_off = fbl::min(bitoff1, bitoff2);
-  size_t max_max = fbl::max(bitmax1, bitmax2);
+  size_t min_off = std::min(bitoff1, bitoff2);
+  size_t max_max = std::max(bitmax1, bitmax2);
   EXPECT_EQ(bitmap.Set(bitoff1, bitmax1), ZX_OK);
   EXPECT_EQ(bitmap.Set(bitoff2, bitmax2), ZX_OK);
   VerifyRange(bitmap, min_off, max_max, min_val, max_val);

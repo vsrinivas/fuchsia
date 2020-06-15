@@ -526,7 +526,7 @@ void FxProcessor::ProduceOutputPackets(fuchsia::media::StreamPacket* out_pkt1,
   // Create the actual output packet(s) based on the amt of data we need to
   // send and the current position of the write pointer in the output ring
   // buffer.
-  uint32_t pkt1_frames = fbl::min<uint32_t>(output_space, todo);
+  uint32_t pkt1_frames = std::min<uint32_t>(output_space, todo);
   out_pkt1->pts = output_buf_wp_ + lead_time_frames_;
   out_pkt1->payload_offset = output_start * input_->frame_sz();
   out_pkt1->payload_size = pkt1_frames * input_->frame_sz();
@@ -582,7 +582,7 @@ void FxProcessor::ApplyEffect(int16_t* src, uint32_t src_offset, uint32_t src_rb
 
     uint32_t src_space = src_rb_size - src_offset;
     uint32_t dst_space = dst_rb_size - dst_offset;
-    uint32_t todo = fbl::min(fbl::min(frames, src_space), dst_space);
+    uint32_t todo = std::min(std::min(frames, src_space), dst_space);
 
     // TODO(johngro): Either add fbl::invoke to fbl, or use std::invoke
     // here when we switch to C++17. The syntax for invoking a pointer to

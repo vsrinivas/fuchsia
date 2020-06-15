@@ -9,6 +9,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <algorithm>
+
 #include <fbl/algorithm.h>
 #include <perftest/perftest.h>
 
@@ -24,8 +26,8 @@ constexpr size_t kSize = MB(1);
 
 struct Helper {
   Helper() {
-    ASSERT_OK(zx::vmar::root_self()->allocate2(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_SPECIFIC, 0, GB(1),
-                                               &vmar, &vmar_base));
+    ASSERT_OK(zx::vmar::root_self()->allocate2(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_SPECIFIC, 0,
+                                               GB(1), &vmar, &vmar_base));
 
     ASSERT_OK(zx::vmo::create(MB(4), 0, &vmo));
   }
@@ -52,7 +54,7 @@ zx_status_t Helper::MapInChunks(size_t chunk_size, size_t length, bool force_int
 
   for (size_t offset = 0; offset < length; offset += chunk_size) {
     uintptr_t addr;
-    size_t len = fbl::min(chunk_size, length - offset);
+    size_t len = std::min(chunk_size, length - offset);
     status = vmar.map(offset, vmo, 0, len, flags, &addr);
     if (status != ZX_OK) {
       return status;

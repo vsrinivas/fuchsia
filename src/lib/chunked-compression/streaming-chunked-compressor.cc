@@ -124,10 +124,10 @@ Status StreamingChunkedCompressor::Update(const void* input, size_t len) {
     const size_t bytes_left = len - consumed;
 
     const size_t current_frame_start = fbl::round_down(input_offset_, params_.chunk_size);
-    const size_t current_frame_end = fbl::min(current_frame_start + params_.chunk_size, input_len_);
+    const size_t current_frame_end = std::min(current_frame_start + params_.chunk_size, input_len_);
     const size_t bytes_left_in_current_frame = current_frame_end - input_offset_;
 
-    const size_t bytes_to_consume = fbl::min(bytes_left, bytes_left_in_current_frame);
+    const size_t bytes_to_consume = std::min(bytes_left, bytes_left_in_current_frame);
 
     Status status = AppendToFrame(static_cast<const uint8_t*>(input) + consumed, bytes_to_consume);
     if (status != kStatusOk) {
@@ -164,7 +164,7 @@ Status StreamingChunkedCompressor::StartFrame() {
 
   // Since we know the data size in advance we can optimize compression by hinting the size
   // to zstd. This will make the entire chunk be written as a single data frame
-  size_t next_chunk_size = fbl::min(params_.chunk_size, input_len_ - input_offset_);
+  size_t next_chunk_size = std::min(params_.chunk_size, input_len_ - input_offset_);
   size_t r = ZSTD_CCtx_reset(context_->inner_, ZSTD_reset_session_only);
   if (ZSTD_isError(r)) {
     return kStatusErrInternal;
@@ -202,7 +202,7 @@ Status StreamingChunkedCompressor::EndFrame(size_t uncompressed_frame_start,
 
 Status StreamingChunkedCompressor::AppendToFrame(const void* data, size_t len) {
   const size_t current_frame_start = fbl::round_down(input_offset_, params_.chunk_size);
-  const size_t current_frame_end = fbl::min(current_frame_start + params_.chunk_size, input_len_);
+  const size_t current_frame_end = std::min(current_frame_start + params_.chunk_size, input_len_);
 
   const size_t bytes_left_in_current_frame = current_frame_end - input_offset_;
   ZX_DEBUG_ASSERT(len <= bytes_left_in_current_frame);

@@ -4,6 +4,8 @@
 
 #include <string.h>
 
+#include <algorithm>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <region-alloc/region-alloc.h>
@@ -526,7 +528,7 @@ void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap)
 
     uint64_t before_end = (before->base + before->size);  // exclusive end
     if (allow_overlap ? (before_end >= region->base) : (before_end == region->base)) {
-      region_end = fbl::max(region_end, before_end);
+      region_end = std::max(region_end, before_end);
       region->base = before->base;
 
       auto removed = avail_regions_by_base_.erase(before);
@@ -545,7 +547,7 @@ void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap)
     }
 
     uint64_t after_end = (after->base + after->size);
-    region_end = fbl::max(region_end, after_end);
+    region_end = std::max(region_end, after_end);
 
     auto remove_me = after++;
     auto removed = avail_regions_by_base_.erase(remove_me);

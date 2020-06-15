@@ -4,6 +4,7 @@
 
 #include "iterator/allocated-extent-iterator.h"
 
+#include <algorithm>
 #include <memory>
 
 #include <zxtest/zxtest.h>
@@ -322,7 +323,7 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
       uint32_t actual_length;
       uint64_t actual_start;
       ASSERT_OK(iter.Next(static_cast<uint32_t>(request_size), &actual_length, &actual_start));
-      ASSERT_EQ(fbl::min(request_size, kAllocatedBlocks - blocks_seen), actual_length);
+      ASSERT_EQ(std::min(request_size, kAllocatedBlocks - blocks_seen), actual_length);
       ASSERT_EQ(allocated_extents[0].Start() + blocks_seen, actual_start);
       request_size++;
       blocks_seen += actual_length;

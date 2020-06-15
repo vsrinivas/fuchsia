@@ -2,31 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
 #include <limits>
 
 #include <fbl/algorithm.h>
 #include <zxtest/zxtest.h>
 
 namespace {
-
-// TODO(vtl): We use this because EXPECT_EQ() doesn't work well with functions that return a
-// reference.
-template <typename T>
-T val(const T& x) {
-  return x;
-}
-
-TEST(AlgorithmTest, Min) {
-  EXPECT_EQ(val(fbl::min(1, 2)), 1);
-  EXPECT_EQ(val(fbl::min(2.1, 1.1)), 1.1);
-  EXPECT_EQ(val(fbl::min(1u, 1u)), 1u);
-}
-
-TEST(AlgorithmTest, Max) {
-  EXPECT_EQ(val(fbl::max(1, 2)), 2);
-  EXPECT_EQ(val(fbl::max(2.1, 1.1)), 2.1);
-  EXPECT_EQ(val(fbl::max(1u, 1u)), 1u);
-}
 
 TEST(AlgorithmTest, RoundUp) {
   EXPECT_EQ(fbl::round_up(0u, 1u), 0u);

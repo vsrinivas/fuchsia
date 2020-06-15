@@ -20,6 +20,7 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <limits>
 
 #include <audio-utils/audio-device-stream.h>
@@ -172,7 +173,7 @@ zx_status_t AudioDeviceStream::GetSupportedFormats(
       return ZX_ERR_INTERNAL;
     }
 
-    uint32_t todo = fbl::min(static_cast<uint32_t>(expected_formats - processed_formats),
+    uint32_t todo = std::min(static_cast<uint32_t>(expected_formats - processed_formats),
                              AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
     size_t min_size = MIN_RESP_SIZE + (todo * sizeof(audio_stream_format_range_t));
     if (rxed < min_size) {
@@ -419,7 +420,7 @@ zx_status_t AudioDeviceStream::PlugMonitor(float duration, PlugMonitorCallback* 
       if (now >= deadline)
         break;
 
-      zx_time_t next_wake = fbl::min(deadline, zx_time_add_duration(now, ZX_MSEC(100u)));
+      zx_time_t next_wake = std::min(deadline, zx_time_add_duration(now, ZX_MSEC(100u)));
 
       zx_signals_t sigs;
       zx_status_t res = stream_ch_.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time(next_wake), &sigs);

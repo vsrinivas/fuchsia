@@ -38,6 +38,7 @@
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <climits>
 #include <iterator>
 #include <limits>
@@ -1541,7 +1542,7 @@ TEST_F(FvmTest, TestSliceAccessNonContiguousPhysical) {
             while (sub_off < len) {
               vc->CheckRead(vb.get(), vmo_off + sub_off, dev_off + sub_off, sub_len);
               sub_off += sub_len;
-              sub_len = fbl::min(kSliceSize, len - sub_off);
+              sub_len = std::min(kSliceSize, len - sub_off);
             }
           }
         }

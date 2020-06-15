@@ -15,6 +15,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <atomic>
 #include <limits>
 #include <memory>
@@ -145,7 +146,7 @@ zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off, size_t le
   sync_completion_reset(&cookie.signal);
 
   for (size_t i = 0; i < num_data_txns; i++) {
-    size_t length = fbl::min(len_remaining, max_transfer);
+    size_t length = std::min(len_remaining, max_transfer);
     len_remaining -= length;
 
     block_op_t* bop = reinterpret_cast<block_op_t*>(buffer.data() + (block_op_size_ * i));
@@ -404,7 +405,7 @@ zx_status_t VPartitionManager::FindFreeVPartEntryLocked(size_t* out) const {
 }
 
 zx_status_t VPartitionManager::FindFreeSliceLocked(size_t* out, size_t hint) const {
-  hint = fbl::max(hint, 1lu);
+  hint = std::max(hint, 1lu);
   for (size_t i = hint; i <= format_info_.slice_count(); i++) {
     if (GetSliceEntryLocked(i)->IsFree()) {
       *out = i;

@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <fbl/algorithm.h>
@@ -764,7 +765,7 @@ static bool test_tftp_receive_wrq_oack(const size_t file_size, const uint16_t* b
     // Since pending is true, call for a second data packet to transmit
     // Updated the read offset and change a few bytes
     td.expected.block = 2;
-    size_t second_block_size = fbl::min<size_t>(file_size - block_size, block_size);
+    size_t second_block_size = std::min<size_t>(file_size - block_size, block_size);
     td.expected.offset = block_size;
     td.expected.data[0] = 'X';
     if (second_block_size > 0) {

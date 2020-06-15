@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <string.h>
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -381,7 +382,7 @@ zx_status_t MinfsCreator::Fsck() {
   if ((status = GenerateBcache(&bc)) != ZX_OK) {
     return status;
   }
-  return minfs::Fsck(std::move(bc), minfs::FsckOptions{ .repair = true });
+  return minfs::Fsck(std::move(bc), minfs::FsckOptions{.repair = true});
 }
 
 zx_status_t MinfsCreator::UsedDataSize() {
@@ -648,17 +649,17 @@ zx_status_t MinfsCreator::ProcessBlocks(off_t file_size) {
   uint32_t remaining = ToU32((file_size + minfs::kMinfsBlockSize - 1) / minfs::kMinfsBlockSize);
 
   // Add direct blocks to the total.
-  uint32_t direct_blocks = fbl::min(remaining, minfs::kMinfsDirect);
+  uint32_t direct_blocks = std::min(remaining, minfs::kMinfsDirect);
   total_blocks += direct_blocks;
   remaining -= direct_blocks;
 
   if (remaining) {
     // If more blocks remain, calculate how many indirect blocks we need.
     uint32_t indirect_blocks =
-        fbl::min((remaining + minfs::kMinfsDirectPerIndirect + 1) / minfs::kMinfsDirectPerIndirect,
+        std::min((remaining + minfs::kMinfsDirectPerIndirect + 1) / minfs::kMinfsDirectPerIndirect,
                  minfs::kMinfsIndirect);
 
-    direct_blocks = fbl::min(remaining, indirect_blocks * minfs::kMinfsDirectPerIndirect);
+    direct_blocks = std::min(remaining, indirect_blocks * minfs::kMinfsDirectPerIndirect);
 
     // Add blocks to the total, and update remaining.
     total_blocks += indirect_blocks + direct_blocks;
@@ -667,16 +668,16 @@ zx_status_t MinfsCreator::ProcessBlocks(off_t file_size) {
     if (remaining) {
       // If blocks remain past the indirect block range, calculate required doubly indirect
       // and indirect blocks.
-      uint32_t dindirect_blocks = fbl::min(
+      uint32_t dindirect_blocks = std::min(
           (remaining + minfs::kMinfsDirectPerDindirect + 1) / minfs::kMinfsDirectPerDindirect,
           minfs::kMinfsDoublyIndirect);
 
-      indirect_blocks = fbl::min(
+      indirect_blocks = std::min(
           (remaining + minfs::kMinfsDirectPerIndirect + 1) / minfs::kMinfsDirectPerIndirect,
           minfs::kMinfsDirectPerIndirect * minfs::kMinfsDoublyIndirect);
 
       direct_blocks =
-          fbl::min(remaining, minfs::kMinfsDoublyIndirect * minfs::kMinfsDirectPerDindirect);
+          std::min(remaining, minfs::kMinfsDoublyIndirect * minfs::kMinfsDirectPerDindirect);
 
       // Add blocks to the total, and update remaining.
       total_blocks += dindirect_blocks + indirect_blocks + direct_blocks;

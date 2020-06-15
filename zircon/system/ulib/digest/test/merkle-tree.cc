@@ -6,6 +6,8 @@
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
+#include <algorithm>
+
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <zxtest/zxtest.h>
@@ -78,8 +80,8 @@ void MaxDataAndTree(std::unique_ptr<uint8_t[]> *out_data, std::unique_ptr<uint8_
   size_t data_len = 0;
   size_t tree_len = 0;
   for (size_t i = 0; i < kNumTreeParams; ++i) {
-    data_len = fbl::max(data_len, kTreeParams[i].data_len);
-    tree_len = fbl::max(tree_len, kTreeParams[i].tree_len);
+    data_len = std::max(data_len, kTreeParams[i].data_len);
+    tree_len = std::max(tree_len, kTreeParams[i].tree_len);
   }
   fbl::AllocChecker ac;
   ASSERT_NE(data_len, 0);
@@ -179,7 +181,7 @@ TEST(MerkleTree, Verify) {
     for (size_t data_off = 0; data_off < data_len; data_off += kNodeSize) {
       // Unaligned ( +2 doesn't line up with any node boundarys or data ends in kTreeParams)
       uint8_t *buf = &data[data_off];
-      size_t buf_len = fbl::min(data_len - data_off, kNodeSize);
+      size_t buf_len = std::min(data_len - data_off, kNodeSize);
       EXPECT_STATUS(verifier.Verify(buf, buf_len + 2, data_off), ZX_ERR_INVALID_ARGS);
       // Verify each node
       EXPECT_OK(verifier.Verify(buf, buf_len, data_off));

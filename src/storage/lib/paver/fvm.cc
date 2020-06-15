@@ -19,6 +19,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <block-client/cpp/client.h>
@@ -162,7 +163,7 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
     while (bytes_left > 0) {
       size_t actual;
       zx_status_t status = reader->ReadData(reinterpret_cast<uint8_t*>(mapper.start()),
-                                            fbl::min(bytes_left, vmo_cap), &actual);
+                                            std::min(bytes_left, vmo_cap), &actual);
       if (status != ZX_OK) {
         ERROR("Error reading partition data: %s\n", zx_status_get_string(status));
         return status;
@@ -205,7 +206,7 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
       memset(mapper.start(), 0, vmo_cap);
     }
     while (bytes_left > 0) {
-      uint64_t length = fbl::min(bytes_left, vmo_cap) / block_size;
+      uint64_t length = std::min(bytes_left, vmo_cap) / block_size;
       if (length > UINT32_MAX) {
         ERROR("Error writing trailing zeroes: Too large(%lu)\n", length);
         return ZX_ERR_OUT_OF_RANGE;
@@ -394,7 +395,7 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
 
   // |Create| guarantees at least |reserved| + 1 slices are allocated.  If the first extent had a
   // single slice, we're done.
-  size_t allocated = fbl::max(reserved + 1, ext->slice_count);
+  size_t allocated = std::max(reserved + 1, ext->slice_count);
   size_t needed = reserved + ext->slice_count;
   if (allocated >= needed) {
     return ZX_OK;

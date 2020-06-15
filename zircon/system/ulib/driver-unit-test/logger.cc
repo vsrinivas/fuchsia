@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/driver-unit-test/logger.h>
-
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
 #include <fuchsia/driver/test/c/fidl.h>
+#include <lib/driver-unit-test/logger.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_builder.h>
 #include <lib/fidl/txn_header.h>
+
+#include <algorithm>
+
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 #include <zxtest/base/test-case.h>
 
 namespace driver_unit_test {
@@ -35,7 +37,7 @@ zx_status_t Logger::SendLogMessage(const char* log_msg) {
     return ZX_ERR_BAD_STATE;
   }
   size_t log_msg_size =
-      fbl::min(strlen(log_msg), static_cast<size_t>(fuchsia_driver_test_LOG_MESSAGE_MAX));
+      std::min(strlen(log_msg), static_cast<size_t>(fuchsia_driver_test_LOG_MESSAGE_MAX));
 
   uint32_t len = static_cast<uint32_t>(sizeof(fuchsia_driver_test_LoggerLogMessageRequest) +
                                        FIDL_ALIGN(log_msg_size));
@@ -62,7 +64,7 @@ zx_status_t Logger::SendLogMessage(const char* log_msg) {
 }
 
 zx_status_t Logger::SendLogTestCase() {
-  size_t test_name_size = fbl::min(strlen(test_case_name_.c_str()),
+  size_t test_name_size = std::min(strlen(test_case_name_.c_str()),
                                    static_cast<size_t>(fuchsia_driver_test_TEST_CASE_NAME_MAX));
 
   uint32_t len = static_cast<uint32_t>(sizeof(fuchsia_driver_test_LoggerLogTestCaseRequest) +

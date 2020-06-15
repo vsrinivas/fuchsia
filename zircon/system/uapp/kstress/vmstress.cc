@@ -28,6 +28,7 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <iterator>
@@ -175,7 +176,7 @@ int SingleVmoTestInstance::vmo_thread() {
   // a range appropriate to read into the local buffer above
   auto rand_vmo_range = [this, &rng](uint64_t* out_offset, uint64_t* out_size) {
     *out_offset = uniform_rand(vmo_size_, rng);
-    *out_size = fbl::min(uniform_rand(vmo_size_, rng), vmo_size_ - *out_offset);
+    *out_size = std::min(uniform_rand(vmo_size_, rng), vmo_size_ - *out_offset);
   };
   auto rand_buffer_range = [this, &rng](uint64_t* out_offset, uint64_t* out_size) {
     *out_size = uniform_rand(buf_size, rng);
@@ -303,7 +304,7 @@ int SingleVmoTestInstance::pager_thread() {
       case 0 ... 4:  // supply a random range of pages
       {
         off = uniform_rand(vmo_page_count, rng);
-        size = fbl::min(uniform_rand(vmo_page_count, rng), vmo_page_count - off);
+        size = std::min(uniform_rand(vmo_page_count, rng), vmo_page_count - off);
         supply_pages(off * PAGE_SIZE, size * PAGE_SIZE);
         break;
       }

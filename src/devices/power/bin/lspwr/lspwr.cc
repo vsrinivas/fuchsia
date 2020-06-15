@@ -3,21 +3,24 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
-#include <fbl/algorithm.h>
-#include <fbl/string_buffer.h>
-#include <fbl/vector.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/power/c/fidl.h>
-#include <lib/fdio/unsafe.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/unsafe.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <algorithm>
+
+#include <fbl/algorithm.h>
+#include <fbl/string_buffer.h>
+#include <fbl/vector.h>
 
 typedef struct {
   int type;
@@ -39,7 +42,7 @@ zx_status_t get_source_info(zx_handle_t channel, struct fuchsia_hardware_power_S
 
   // If either fails return the error we see (0 is success, errors are negative)
   status = fuchsia_hardware_power_SourceGetPowerInfo(channel, &op_status, info);
-  zx_status_t result = fbl::min(status, op_status);
+  zx_status_t result = std::min(status, op_status);
   if (result != ZX_OK) {
     fprintf(stderr, "SourceGetPowerInfo failed (transport: %d, operation: %d)\n", status,
             op_status);

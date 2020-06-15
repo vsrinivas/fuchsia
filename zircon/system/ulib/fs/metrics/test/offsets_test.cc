@@ -4,6 +4,7 @@
 
 #include <lib/inspect/cpp/inspect.h>
 
+#include <algorithm>
 #include <set>
 #include <string>
 #include <string_view>
@@ -59,7 +60,7 @@ struct Attribute2 : NumericAttribute<Attribute2, uint64_t> {
 struct Attribute3 {
   static constexpr size_t kSize = 30;
   static constexpr size_t OffsetOf(const std::string_view value) {
-    return fbl::min(value.length(), static_cast<size_t>(29));
+    return std::min(value.length(), static_cast<size_t>(29));
   }
   static constexpr std::string Data::*kAttributeValue = &Data::attr3;
 

@@ -8,6 +8,7 @@
 #include <fuchsia/mem/c/fidl.h>
 #include <lib/zx/vmo.h>
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 
@@ -121,7 +122,7 @@ zx_status_t FlashProgrammer::EEPROMSlaveWrite(uint8_t eeprom_slave_addr, const z
     // so make sure the buffer is padded with zeros.
     memset(write_buf, 0, kVendorReqMaxSize);
     size_t req_write_len =
-        fbl::min(len_to_write - total_written, static_cast<size_t>(kVendorReqMaxSize));
+        std::min(len_to_write - total_written, static_cast<size_t>(kVendorReqMaxSize));
 
     zx_status_t status = fw_vmo.read(write_buf, vmo_offset, req_write_len);
     if (status != ZX_OK) {
@@ -196,7 +197,7 @@ zx_status_t FlashProgrammer::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {
   uint8_t eeprom_slave_addr = 0;
   while (vmo_offset < fw_size) {
     // Write up to the EEPROM size.
-    size_t len_to_write = fbl::min(fw_size - vmo_offset, static_cast<size_t>(eeprom_size));
+    size_t len_to_write = std::min(fw_size - vmo_offset, static_cast<size_t>(eeprom_size));
     // TODO(jocelyndang): different handling needs to be done for 128K EEPROMs.
     if (len_to_write > std::numeric_limits<uint16_t>::max()) {
       return ZX_ERR_NOT_SUPPORTED;

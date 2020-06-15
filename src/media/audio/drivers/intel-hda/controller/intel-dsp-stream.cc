@@ -6,6 +6,7 @@
 
 #include <zircon/device/audio.h>
 
+#include <algorithm>
 #include <utility>
 
 #include <audio-proto-utils/format-utils.h>
@@ -382,7 +383,7 @@ void IntelDspStream::OnGetStringLocked(const audio_proto::GetStringReq& req,
                      requested_string ? requested_string : "<unassigned>");
   ZX_DEBUG_ASSERT(res >= 0);
   out_resp->result = ZX_OK;
-  out_resp->strlen = fbl::min<uint32_t>(res, sizeof(out_resp->str) - 1);
+  out_resp->strlen = std::min<uint32_t>(res, sizeof(out_resp->str) - 1);
   out_resp->id = req.id;
 }
 

@@ -12,6 +12,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <utility>
 
 #include <ddk/metadata.h>
@@ -43,7 +44,7 @@ static_assert(ZBI_PARTITION_NAME_LEN == fuchsia_hardware_nand_NAME_LEN, "bad fid
 static_assert(ZBI_PARTITION_GUID_LEN == fuchsia_hardware_nand_GUID_LEN, "bad fidl guid");
 
 uint32_t GetNumPartitions(const fuchsia_hardware_nand_RamNandInfo& info) {
-  return fbl::min(info.partition_map.partition_count, fuchsia_hardware_nand_MAX_PARTITIONS);
+  return std::min(info.partition_map.partition_count, fuchsia_hardware_nand_MAX_PARTITIONS);
 }
 
 void ExtractNandConfig(const fuchsia_hardware_nand_RamNandInfo& info, nand_config_t* config) {

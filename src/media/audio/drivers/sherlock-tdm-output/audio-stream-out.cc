@@ -7,6 +7,7 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/clock.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <ddk/binding.h>
@@ -253,9 +254,9 @@ zx_status_t SherlockAudioStreamOut::Init() {
   float max_gain = codecs_[0]->GetMaxGain();
   float gain_step = codecs_[0]->GetGainStep();
   for (size_t i = 1; i < codecs_.size(); ++i) {
-    min_gain = fbl::max(min_gain, codecs_[i]->GetMinGain());
-    max_gain = fbl::min(max_gain, codecs_[i]->GetMaxGain());
-    gain_step = fbl::max(gain_step, codecs_[i]->GetGainStep());
+    min_gain = std::max(min_gain, codecs_[i]->GetMinGain());
+    max_gain = std::min(max_gain, codecs_[i]->GetMaxGain());
+    gain_step = std::max(gain_step, codecs_[i]->GetGainStep());
     status = codecs_[i]->SetGain(gain);
     if (status != ZX_OK) {
       return status;

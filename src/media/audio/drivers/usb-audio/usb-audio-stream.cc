@@ -12,6 +12,7 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <utility>
@@ -408,7 +409,7 @@ zx_status_t UsbAudioStream::OnGetStreamFormatsLocked(dispatcher::Channel* channe
     size_t todo, payload_sz, __UNUSED to_send;
     zx_status_t res;
 
-    todo = fbl::min<size_t>(formats.size() - formats_sent,
+    todo = std::min<size_t>(formats.size() - formats_sent,
                             AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
     payload_sz = sizeof(resp.format_ranges[0]) * todo;
     to_send = offsetof(audio_proto::StreamGetFmtsResp, format_ranges) + payload_sz;
@@ -695,7 +696,7 @@ zx_status_t UsbAudioStream::OnGetStringLocked(dispatcher::Channel* channel,
     resp.result = ZX_ERR_NOT_FOUND;
     resp.strlen = 0;
   } else {
-    size_t todo = fbl::min<size_t>(sizeof(resp.str), str->size());
+    size_t todo = std::min<size_t>(sizeof(resp.str), str->size());
     ZX_DEBUG_ASSERT(todo <= std::numeric_limits<uint32_t>::max());
 
     ::memset(resp.str, 0, sizeof(resp.str));
@@ -1091,7 +1092,7 @@ void UsbAudioStream::QueueRequestLocked() {
     uint32_t avail = ring_buffer_size_ - ring_buffer_offset_;
     ZX_DEBUG_ASSERT(ring_buffer_offset_ < ring_buffer_size_);
     ZX_DEBUG_ASSERT((avail % frame_size_) == 0);
-    uint32_t amt = fbl::min(avail, todo);
+    uint32_t amt = std::min(avail, todo);
 
     const uint8_t* src = reinterpret_cast<uint8_t*>(ring_buffer_virt_) + ring_buffer_offset_;
     usb_request_copy_to(req, src, amt, 0);
@@ -1125,7 +1126,7 @@ void UsbAudioStream::CompleteRequestLocked(usb_request_t* req) {
     ZX_DEBUG_ASSERT(ring_buffer_offset_ < ring_buffer_size_);
     ZX_DEBUG_ASSERT((avail % frame_size_) == 0);
 
-    uint32_t amt = fbl::min(avail, todo);
+    uint32_t amt = std::min(avail, todo);
     uint8_t* dst = reinterpret_cast<uint8_t*>(ring_buffer_virt_) + ring_buffer_offset_;
 
     if (req->response.status == ZX_OK) {

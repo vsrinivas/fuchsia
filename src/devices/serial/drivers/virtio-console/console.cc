@@ -10,6 +10,7 @@
 #include <lib/zx/vmar.h>
 #include <string.h>
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -246,7 +247,7 @@ void ConsoleDevice::IrqRingUpdate() {
       TransferDescriptor* trans = port0_receive_buffer_.PhysicalToDescriptor(desc->addr);
 
       trans->processed_len = 0;
-      trans->used_len = fbl::min(trans->total_len, remain);
+      trans->used_len = std::min(trans->total_len, remain);
       remain -= trans->used_len;
       port0_receive_descriptors_.Add(trans);
 
@@ -299,7 +300,7 @@ zx_status_t ConsoleDevice::Read(void* buf, size_t count, size_t* actual) {
     return ZX_ERR_SHOULD_WAIT;
   }
 
-  uint32_t len = fbl::min(static_cast<uint32_t>(count), desc->used_len - desc->processed_len);
+  uint32_t len = std::min(static_cast<uint32_t>(count), desc->used_len - desc->processed_len);
   memcpy(buf, desc->virt + desc->processed_len, len);
   desc->processed_len += len;
   *actual += len;
@@ -330,7 +331,7 @@ zx_status_t ConsoleDevice::Write(const void* buf, size_t count, size_t* actual) 
     return ZX_ERR_SHOULD_WAIT;
   }
 
-  uint32_t len = fbl::min(static_cast<uint32_t>(count), desc->total_len);
+  uint32_t len = std::min(static_cast<uint32_t>(count), desc->total_len);
   memcpy(desc->virt, buf, len);
   desc->used_len = len;
   *actual += len;

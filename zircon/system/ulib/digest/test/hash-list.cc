@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <algorithm>
+
 #include <digest/digest.h>
 #include <digest/hash-list.h>
 #include <digest/node-digest.h>
@@ -182,8 +184,8 @@ TEST(HashListVerifier, Verify) {
 
     // Flipped byte causes failure (but only in affected nodes)
     size_t before = fbl::round_down(i, kNodeSize);
-    size_t after = fbl::min(fbl::round_up(i + 1, kNodeSize), sizeof(buf));
-    size_t affected = fbl::min(kNodeSize, sizeof(buf) - before);
+    size_t after = std::min(fbl::round_up(i + 1, kNodeSize), sizeof(buf));
+    size_t affected = std::min(kNodeSize, sizeof(buf) - before);
     size_t trailing = sizeof(buf) - after;
     size_t k = i + (rand() % affected);
     buf[k] ^= 0xFF;

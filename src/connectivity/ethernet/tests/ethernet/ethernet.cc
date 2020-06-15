@@ -28,6 +28,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <array>
 #include <functional>
 #include <memory>
@@ -320,7 +321,7 @@ class EthernetClient {
   zx_status_t Register(zx::channel svc, const char* name, uint32_t nbufs, uint16_t bufsize) {
     svc_ = std::move(svc);
     zx_status_t call_status = ZX_OK;
-    size_t name_len = fbl::min<size_t>(strlen(name), fuchsia_hardware_ethernet_MAX_CLIENT_NAME_LEN);
+    size_t name_len = std::min<size_t>(strlen(name), fuchsia_hardware_ethernet_MAX_CLIENT_NAME_LEN);
     zx_status_t status =
         fuchsia_hardware_ethernet_DeviceSetClientName(svc_.get(), name, name_len, &call_status);
     if (status != ZX_OK || call_status != ZX_OK) {

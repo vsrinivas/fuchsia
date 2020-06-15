@@ -21,6 +21,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <limits>
 
 #include <ddk/protocol/display/controller.h>
@@ -258,8 +259,8 @@ void Image::Render(int32_t prev_step, int32_t step_num) {
     } else {
       uint32_t prev = interpolate(height_, prev_step, kRenderPeriod);
       uint32_t cur = interpolate(height_, step_num, kRenderPeriod);
-      start = fbl::min(cur, prev);
-      end = fbl::max(cur, prev);
+      start = std::min(cur, prev);
+      end = std::max(cur, prev);
       draw_stripe = cur > prev;
     }
 

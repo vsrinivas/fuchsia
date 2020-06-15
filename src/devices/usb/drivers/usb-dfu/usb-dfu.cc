@@ -9,6 +9,8 @@
 #include <lib/zx/vmo.h>
 #include <zircon/hw/usb/dfu.h>
 
+#include <algorithm>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -172,7 +174,7 @@ zx_status_t Dfu::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {
 
   size_t len_to_write;
   do {
-    len_to_write = fbl::min(fw_size - vmo_offset, static_cast<size_t>(func_desc_.wTransferSize));
+    len_to_write = std::min(fw_size - vmo_offset, static_cast<size_t>(func_desc_.wTransferSize));
     zxlogf(DEBUG, "fetching block %u, offset %lu len %lu", block_num, vmo_offset, len_to_write);
     zx_status_t status = fw_vmo.read(write_buf, vmo_offset, len_to_write);
     if (status != ZX_OK) {

@@ -6,6 +6,7 @@
 
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <cinttypes>
 #include <memory>
 #include <utility>
@@ -61,7 +62,7 @@ void Buffer::Write(uint8_t* data, size_t length) {
 }
 
 void Buffer::Read(uint8_t* target, size_t length, size_t* actual) {
-  size_t cp_sz = fbl::min(length, info_.size);
+  size_t cp_sz = std::min(length, info_.size);
 
   if (cp_sz > 0) {
     memcpy(target, data_.get() + info_.offset, cp_sz);
@@ -272,7 +273,7 @@ zx_status_t SparseReader::ReadData(uint8_t* data, size_t length, size_t* actual)
       in_.info()->offset = 0;
 
       // Copy newly decompressed data from outbuf
-      size_t cp = fbl::min(length - total_size, static_cast<size_t>(out_.size()));
+      size_t cp = std::min(length - total_size, static_cast<size_t>(out_.size()));
       out_.Read(data + total_size, cp, &cp);
       total_size += cp;
       to_read_ = next;

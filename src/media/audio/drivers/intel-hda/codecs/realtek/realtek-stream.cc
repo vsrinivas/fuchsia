@@ -6,6 +6,7 @@
 
 #include <lib/zx/clock.h>
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -428,7 +429,7 @@ void RealtekStream::OnGetStringLocked(const audio_proto::GetStringReq& req,
                      requested_string ? requested_string : "<unassigned>");
   ZX_DEBUG_ASSERT(res >= 0);
   out_resp->result = ZX_OK;
-  out_resp->strlen = fbl::min<uint32_t>(res, sizeof(out_resp->str) - 1);
+  out_resp->strlen = std::min<uint32_t>(res, sizeof(out_resp->str) - 1);
   out_resp->id = req.id;
 }
 
@@ -717,7 +718,7 @@ zx_status_t RealtekStream::ProcessConverterAmpCaps(const Command& cmd, const Cod
   conv_.min_gain = conv_.amp_caps.min_gain_db();
   conv_.max_gain = conv_.amp_caps.max_gain_db();
 
-  return UpdateConverterGainLocked(fbl::max(props_.default_conv_gain, conv_.min_gain));
+  return UpdateConverterGainLocked(std::max(props_.default_conv_gain, conv_.min_gain));
 }
 
 zx_status_t RealtekStream::ProcessConverterSampleSizeRate(const Command& cmd,

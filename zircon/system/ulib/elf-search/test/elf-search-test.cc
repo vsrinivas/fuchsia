@@ -14,6 +14,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
 
+#include <algorithm>
 #include <iterator>
 #include <string>
 
@@ -86,7 +87,7 @@ struct Module {
 void MakeELF(Module* mod) {
   size_t size = 0;
   for (const auto& phdr : mod->phdrs) {
-    size = fbl::max(size, phdr.p_offset + phdr.p_filesz);
+    size = std::max(size, phdr.p_offset + phdr.p_filesz);
   }
   ASSERT_OK(zx::vmo::create(size, 0, &mod->vmo));
   EXPECT_OK(mod->vmo.set_property(ZX_PROP_NAME, mod->name.data(), mod->name.size()));

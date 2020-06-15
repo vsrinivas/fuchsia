@@ -6,6 +6,7 @@
 
 #include "allocator.h"
 
+#include <algorithm>
 #include <memory>
 
 #include <fbl/array.h>
@@ -27,9 +28,7 @@ class FakeStorage : public AllocatorStorage {
   ~FakeStorage() {}
 
 #ifdef __Fuchsia__
-  zx_status_t AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) final {
-    return ZX_OK;
-  }
+  zx_status_t AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) final { return ZX_OK; }
 #endif
 
   void Load(fs::BufferedOperationsBuilder* builder, storage::BlockBuffer* data) final {}
@@ -272,7 +271,7 @@ TEST(AllocatorTest, AllocateSwap) {
     ASSERT_NO_FATAL_FAILURES(PerformAllocate(allocate_count, &reservation, &indices));
 
     // Swap as many of the allocated elements as possible.
-    size_t swap_count = fbl::min(reservation.GetReserved(), allocate_count);
+    size_t swap_count = std::min(reservation.GetReserved(), allocate_count);
     ASSERT_GT(swap_count, 0);
     ASSERT_NO_FATAL_FAILURES(PerformSwap(swap_count, &reservation, &indices));
 

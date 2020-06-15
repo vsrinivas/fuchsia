@@ -18,6 +18,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <iterator>
 #include <memory>
 #include <utility>
@@ -1350,10 +1351,10 @@ bool Controller::CheckDisplayLimits(const display_config_t** display_configs, si
       uint32_t src_width, src_height;
       get_posttransform_width(*config->layer_list[i], &src_width, &src_height);
 
-      double downscale = fbl::max(1.0, 1.0 * src_height / primary->dest_frame.height) *
-                         fbl::max(1.0, 1.0 * src_width / primary->dest_frame.width);
+      double downscale = std::max(1.0, 1.0 * src_height / primary->dest_frame.height) *
+                         std::max(1.0, 1.0 * src_width / primary->dest_frame.width);
       double plane_ratio = 1.0 / downscale;
-      min_plane_ratio = fbl::min(plane_ratio, min_plane_ratio);
+      min_plane_ratio = std::min(plane_ratio, min_plane_ratio);
     }
 
     max_pipe_pixel_rate =

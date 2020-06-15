@@ -4,8 +4,8 @@
 
 #include "fvm-host/sparse-paver.h"
 
+#include <algorithm>
 #include <memory>
-
 zx_status_t SparsePaver::Create(std::unique_ptr<fvm::host::FileWrapper> wrapper, size_t slice_size,
                                 size_t disk_offset, size_t disk_size,
                                 std::unique_ptr<SparsePaver>* out) {
@@ -140,7 +140,7 @@ zx_status_t SparsePaver::WriteSlice(size_t* bytes_left, fvm::SparseReader* reade
     return ZX_ERR_INVALID_ARGS;
   }
 
-  size_t read_length = fbl::min(slice_size, *bytes_left);
+  size_t read_length = std::min(slice_size, *bytes_left);
 
   if (read_length > 0) {
     size_t bytes_read = 0;

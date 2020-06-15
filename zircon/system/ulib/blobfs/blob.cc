@@ -16,6 +16,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -330,7 +331,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     return ZX_ERR_BAD_STATE;
   }
 
-  size_t to_write = fbl::min(len, inode_.blob_size - write_info_->bytes_written);
+  size_t to_write = std::min(len, inode_.blob_size - write_info_->bytes_written);
   size_t offset = write_info_->bytes_written;
 
   zx_status_t status;

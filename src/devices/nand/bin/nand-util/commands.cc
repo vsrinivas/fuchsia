@@ -8,6 +8,7 @@
 #include <lib/cksum.h>
 #include <stdio.h>
 
+#include <algorithm>
 #include <new>
 
 #include <fbl/algorithm.h>
@@ -42,7 +43,7 @@ bool FindBadBlocks(const NandBroker& nand) {
 
 bool ReadCheck(const NandBroker& nand, uint32_t first_block, uint32_t count) {
   constexpr int kNumReads = 10;
-  uint32_t last_block = fbl::min(nand.Info().num_blocks, first_block + count);
+  uint32_t last_block = std::min(nand.Info().num_blocks, first_block + count);
   size_t size = (nand.Info().page_size + nand.Info().oob_size) * nand.Info().pages_per_block;
   for (uint32_t block = first_block; block < last_block; block++) {
     uint32_t first_crc;
@@ -107,7 +108,7 @@ bool Save(const NandBroker& nand, uint32_t first_block, uint32_t count, const ch
   uint32_t oob_size = count * block_oob_size;
   std::unique_ptr<uint8_t[]> oob(new uint8_t[oob_size]);
 
-  uint32_t last_block = fbl::min(nand.Info().num_blocks, first_block + count);
+  uint32_t last_block = std::min(nand.Info().num_blocks, first_block + count);
   size_t data_size = nand.Info().page_size * nand.Info().pages_per_block;
   for (uint32_t block = first_block; block < last_block; block++) {
     const uint32_t start = block * nand.Info().pages_per_block;
@@ -137,7 +138,7 @@ bool Save(const NandBroker& nand, uint32_t first_block, uint32_t count, const ch
 }
 
 bool Erase(const NandBroker& nand, uint32_t first_block, uint32_t count) {
-  uint32_t last_block = fbl::min(nand.Info().num_blocks, first_block + count);
+  uint32_t last_block = std::min(nand.Info().num_blocks, first_block + count);
   for (uint32_t block = first_block; block < last_block; block++) {
     if (!nand.ftl() || !nand.ftl()->IsBadBlock(block)) {
       // Ignore failures, move on to the next one.

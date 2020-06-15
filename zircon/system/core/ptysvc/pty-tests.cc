@@ -9,6 +9,7 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 
+#include <algorithm>
 #include <iterator>
 
 #include <fs/managed_vfs.h>
@@ -904,7 +905,7 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->data.count(),
-              fbl::min(std::size(kTestString) - 1, total_written - total_read));
+              std::min(std::size(kTestString) - 1, total_written - total_read));
     ASSERT_BYTES_EQ(result->data.data(), kTestString, result->data.count());
     total_read += result->data.count();
   }
@@ -951,7 +952,7 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->data.count(),
-              fbl::min(std::size(kTestString) - 1, total_written - total_read));
+              std::min(std::size(kTestString) - 1, total_written - total_read));
     ASSERT_BYTES_EQ(result->data.data(), kTestString, result->data.count());
     total_read += result->data.count();
   }

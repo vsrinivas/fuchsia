@@ -9,6 +9,7 @@
 #include <lib/zx/vmar.h>
 #include <zircon/device/audio.h>
 
+#include <algorithm>
 #include <limits>
 #include <utility>
 
@@ -166,17 +167,16 @@ void GaussPdmInputStream::GetChannel(GetChannelCompleter::Sync completer) {
   completer.Close(ZX_ERR_INTERNAL);
 }
 
-#define HREQ(_cmd, _payload, _handler, _allow_noack, ...)                    \
-  case _cmd:                                                                 \
-    if (req_size != sizeof(req._payload)) {                                  \
-      zxlogf(ERROR, "Bad " #_cmd " response length (%u != %zu)", req_size, \
-             sizeof(req._payload));                                          \
-      return ZX_ERR_INVALID_ARGS;                                            \
-    }                                                                        \
-    if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {                \
-      zxlogf(ERROR, "NO_ACK flag not allowed for " #_cmd "");              \
-      return ZX_ERR_INVALID_ARGS;                                            \
-    }                                                                        \
+#define HREQ(_cmd, _payload, _handler, _allow_noack, ...)                                         \
+  case _cmd:                                                                                      \
+    if (req_size != sizeof(req._payload)) {                                                       \
+      zxlogf(ERROR, "Bad " #_cmd " response length (%u != %zu)", req_size, sizeof(req._payload)); \
+      return ZX_ERR_INVALID_ARGS;                                                                 \
+    }                                                                                             \
+    if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {                                     \
+      zxlogf(ERROR, "NO_ACK flag not allowed for " #_cmd "");                                     \
+      return ZX_ERR_INVALID_ARGS;                                                                 \
+    }                                                                                             \
     return _handler(channel, req._payload, ##__VA_ARGS__);
 zx_status_t GaussPdmInputStream::ProcessStreamChannel(dispatcher::Channel* channel,
                                                       bool privileged) {
@@ -287,7 +287,7 @@ zx_status_t GaussPdmInputStream::OnGetStreamFormats(dispatcher::Channel* channel
     uint16_t todo, payload_sz;
     zx_status_t res;
 
-    todo = fbl::min<uint16_t>(static_cast<uint16_t>(supported_formats_.size() - formats_sent),
+    todo = std::min<uint16_t>(static_cast<uint16_t>(supported_formats_.size() - formats_sent),
                               AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
     payload_sz = static_cast<uint16_t>(sizeof(resp.format_ranges[0]) * todo);
 
@@ -522,7 +522,7 @@ zx_status_t GaussPdmInputStream::OnGetString(dispatcher::Channel* channel,
     int res = snprintf(reinterpret_cast<char*>(resp.str), sizeof(resp.str), "%s", str);
     ZX_DEBUG_ASSERT(res >= 0);
     resp.result = ZX_OK;
-    resp.strlen = fbl::min<uint32_t>(res, sizeof(resp.str) - 1);
+    resp.strlen = std::min<uint32_t>(res, sizeof(resp.str) - 1);
   }
 
   return channel->Write(&resp, sizeof(resp));

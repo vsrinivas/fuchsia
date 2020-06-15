@@ -17,6 +17,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 
+#include <algorithm>
 #include <iterator>
 
 #include <ddk/binding.h>
@@ -303,7 +304,7 @@ zx_status_t FtDevice::Read(uint8_t addr, uint8_t* buf, size_t len) {
   // TODO(bradenkell): Remove this workaround when transfers of more than 8 bytes are supported on
   // the MT8167.
   while (len > 0) {
-    size_t readlen = fbl::min(len, kMaxI2cTransferLength);
+    size_t readlen = std::min(len, kMaxI2cTransferLength);
 
     zx_status_t status = i2c_write_read_sync(&i2c_, &addr, 1, buf, readlen);
     if (status != ZX_OK) {

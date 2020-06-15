@@ -533,7 +533,7 @@ void MediaApp::Play() {
     // We can only send down as many packets as will concurrently fit into our payload buffer.
     // The rest will be sent, one at a time, from a previous packet's completion callback.
     uint32_t num_packets_to_prime =
-        fbl::min<uint64_t>(total_num_mapped_payloads_, num_packets_to_send_);
+        std::min<uint64_t>(total_num_mapped_payloads_, num_packets_to_send_);
     for (uint32_t packet_num = 0; packet_num < num_packets_to_prime; ++packet_num) {
       SendPacket();
     }

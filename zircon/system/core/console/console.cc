@@ -15,6 +15,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <thread>
 
 #include <fbl/algorithm.h>
@@ -45,7 +46,7 @@ Console::~Console() { rx_thread_.join(); }
 
 zx_status_t Console::Read(void* data, size_t len, size_t* out_actual) {
   // Don't try to read more than the FIFO can hold.
-  uint64_t to_read = fbl::min<uint64_t>(len, Fifo::kFifoSize);
+  uint64_t to_read = std::min<uint64_t>(len, Fifo::kFifoSize);
   return rx_fifo_.Read(reinterpret_cast<uint8_t*>(data), to_read, out_actual);
 }
 
@@ -56,7 +57,7 @@ zx_status_t Console::Write(const void* data, size_t len, size_t* out_actual) {
   const uint8_t* ptr = reinterpret_cast<const uint8_t*>(data);
   size_t count = len;
   while (count > 0) {
-    size_t xfer = fbl::min(count, kMaxWriteSize);
+    size_t xfer = std::min(count, kMaxWriteSize);
     if ((status = tx_sink_(ptr, xfer)) != ZX_OK) {
       break;
     }

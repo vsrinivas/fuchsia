@@ -171,7 +171,7 @@ static void FixupStringRequest(audio_stream_cmd_get_string_resp_t* resp, zx_stat
   // UTF8.  Go over the string and replace unprintable characters with
   // something else.  Also replace embedded nulls with a space.  Finally,
   // ensure that the string is null terminated.
-  uint32_t len = fbl::min<uint32_t>(sizeof(resp->str) - 1, resp->strlen);
+  uint32_t len = std::min<uint32_t>(sizeof(resp->str) - 1, resp->strlen);
   uint32_t i;
   for (i = 0; i < len; ++i) {
     if (resp->str[i] == 0) {
@@ -448,7 +448,7 @@ int main(int argc, const char** argv) {
           return -1;
         }
         arg++;
-        duration = fbl::max(duration, MIN_PLUG_MONITOR_DURATION);
+        duration = std::max(duration, MIN_PLUG_MONITOR_DURATION);
       }
       break;
 
@@ -478,9 +478,9 @@ int main(int argc, const char** argv) {
           }
           arg++;
         }
-        duration = fbl::max(duration, MIN_PLAY_DURATION);
-        amplitude = fbl::min(amplitude, MAX_PLAY_AMPLITUDE);
-        amplitude = fbl::max(amplitude, MIN_PLAY_AMPLITUDE);
+        duration = std::max(duration, MIN_PLAY_DURATION);
+        amplitude = std::min(amplitude, MAX_PLAY_AMPLITUDE);
+        amplitude = std::max(amplitude, MIN_PLAY_AMPLITUDE);
       }
       break;
 

@@ -8,6 +8,8 @@
 #include <string.h>
 #include <zircon/compiler.h>
 
+#include <algorithm>
+
 #include <fbl/algorithm.h>
 
 static inline void invalidate(textcon_t* tc, int x, int y, int w, int h) {
@@ -108,7 +110,7 @@ static void erase_chars(textcon_t* tc, int arg) {
   if (arg < 0) {
     arg = 0;
   }
-  int x_erase_end = fbl::min(tc->x + arg, tc->w);
+  int x_erase_end = std::min(tc->x + arg, tc->w);
 
   vc_char_t* dst = dataxy(tc, tc->x, tc->y);
   vc_char_t* src = dataxy(tc, x_erase_end, tc->y);

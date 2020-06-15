@@ -9,6 +9,7 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
+#include <algorithm>
 #include <atomic>
 #include <type_traits>
 
@@ -265,9 +266,9 @@ class LockClassState {
         LoopNode* related_node = &Get(id)->loop_node_;
         if (related_node->index <= generation) {
           Connect(related_node);
-          node->least = fbl::min(node->least, related_node->least);
+          node->least = std::min(node->least, related_node->least);
         } else if (related_node->next != nullptr) {
-          node->least = fbl::min(node->least, related_node->index);
+          node->least = std::min(node->least, related_node->index);
         }
       }
 

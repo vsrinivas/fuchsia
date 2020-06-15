@@ -4,6 +4,8 @@
 
 #include <zircon/assert.h>
 
+#include <algorithm>
+
 #include <fbl/algorithm.h>
 #include <fs/journal/format.h>
 #include <minfs/transaction_limits.h>
@@ -37,7 +39,7 @@ zx_status_t GetRequiredBlockCount(size_t offset, size_t length, blk_t* num_req_b
 
   if (last_direct >= kMinfsDirect) {
     // If direct blocks go into indirect range, adjust the indices accordingly.
-    first_direct = fbl::max(first_direct, kMinfsDirect) - kMinfsDirect;
+    first_direct = std::max(first_direct, kMinfsDirect) - kMinfsDirect;
     last_direct -= kMinfsDirect;
 
     // Calculate indirect blocks containing first and last direct blocks, and add to total.
@@ -47,7 +49,7 @@ zx_status_t GetRequiredBlockCount(size_t offset, size_t length, blk_t* num_req_b
 
     if (last_indirect >= kMinfsIndirect) {
       // If indirect blocks go into doubly indirect range, adjust the indices accordingly.
-      first_indirect = fbl::max(first_indirect, kMinfsIndirect) - kMinfsIndirect;
+      first_indirect = std::max(first_indirect, kMinfsIndirect) - kMinfsIndirect;
       last_indirect -= kMinfsIndirect;
 
       // Calculate doubly indirect blocks containing first/last indirect blocks,
@@ -89,7 +91,7 @@ void TransactionLimits::CalculateDataBlocks() {
   blk_t direct_blocks = (fbl::round_up(kMaxWriteBytes, kMinfsBlockSize) / kMinfsBlockSize) + 1;
   blk_t max_indirect_blocks = max_data_blocks_ - direct_blocks;
 
-  max_meta_data_blocks_ = fbl::max(max_directory_blocks, max_indirect_blocks);
+  max_meta_data_blocks_ = std::max(max_directory_blocks, max_indirect_blocks);
 }
 
 void TransactionLimits::CalculateIntegrityBlocks(blk_t block_bitmap_blocks) {
@@ -113,7 +115,7 @@ void TransactionLimits::CalculateIntegrityBlocks(blk_t block_bitmap_blocks) {
   ZX_ASSERT(GetRequiredBlockCount(0, kMinfsMaxDirectorySize, &maximum_directory_blocks) == ZX_OK);
   blk_t maximum_indirect_blocks = kMinfsIndirect + kMinfsDoublyIndirect * kMinfsDirectPerIndirect;
   blk_t revocation_blocks =
-      fbl::round_up(fbl::max(maximum_directory_blocks, maximum_indirect_blocks),
+      fbl::round_up(std::max(maximum_directory_blocks, maximum_indirect_blocks),
                     kMinfsDirectPerIndirect) /
       kMinfsDirectPerIndirect;
 
@@ -121,7 +123,7 @@ void TransactionLimits::CalculateIntegrityBlocks(blk_t block_bitmap_blocks) {
 
   max_entry_blocks_ = header_blocks + revocation_blocks + max_entry_data_blocks_ + commit_blocks;
   min_integrity_blocks_ = max_entry_blocks_ + kJournalMetadataBlocks + kBackupSuperblockBlocks;
-  rec_integrity_blocks_ = fbl::max(min_integrity_blocks_, kDefaultJournalBlocks);
+  rec_integrity_blocks_ = std::max(min_integrity_blocks_, kDefaultJournalBlocks);
 }
 
 }  // namespace minfs

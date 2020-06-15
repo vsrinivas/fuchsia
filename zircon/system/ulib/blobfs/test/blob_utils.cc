@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
+
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/algorithm.h>
@@ -87,13 +89,13 @@ void GenerateRealisticBlob(const std::string& mount_path, size_t data_size,
       [](char* data, size_t length) {
         // TODO(jfsulliv): Use explicit seed
         int nonce = rand();
-        size_t nonce_size = fbl::min(sizeof(nonce), length);
+        size_t nonce_size = std::min(sizeof(nonce), length);
         memcpy(data, &nonce, nonce_size);
         data += nonce_size;
         length -= nonce_size;
 
         while (length > 0) {
-          size_t to_copy = fbl::min(template_data.size(), length);
+          size_t to_copy = std::min(template_data.size(), length);
           memcpy(data, template_data.get(), to_copy);
           data += to_copy;
           length -= to_copy;

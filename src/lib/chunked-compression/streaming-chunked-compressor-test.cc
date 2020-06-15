@@ -4,6 +4,8 @@
 
 #include <zircon/assert.h>
 
+#include <algorithm>
+
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <src/lib/chunked-compression/streaming-chunked-compressor.h>
@@ -297,7 +299,7 @@ TEST(StreamingChunkedCompressorTest, Compress_MaxSeekTableEntries) {
   fbl::Array<uint8_t> buf(new uint8_t[8192ul], 8192ul);
   memset(buf.get(), 0x00, buf.size());
 
-  CompressionParams params = { .chunk_size = 8192ul };
+  CompressionParams params = {.chunk_size = 8192ul};
   StreamingChunkedCompressor compressor(params);
 
   size_t output_len = compressor.ComputeOutputSizeLimit(len);
@@ -307,7 +309,7 @@ TEST(StreamingChunkedCompressorTest, Compress_MaxSeekTableEntries) {
 
   size_t consumed = 0;
   while (consumed < len) {
-    size_t to_consume = fbl::min(buf.size(), len - consumed);
+    size_t to_consume = std::min(buf.size(), len - consumed);
     ASSERT_EQ(compressor.Update(buf.get(), to_consume), kStatusOk);
     consumed += to_consume;
   }

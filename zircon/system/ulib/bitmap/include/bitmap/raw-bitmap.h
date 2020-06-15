@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <bitmap/bitmap.h>
+#ifndef BITMAP_RAW_BITMAP_H_
+#define BITMAP_RAW_BITMAP_H_
 
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
-#include <fbl/algorithm.h>
-#include <fbl/macros.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
+
+#include <algorithm>
+
+#include <bitmap/bitmap.h>
+#include <fbl/algorithm.h>
+#include <fbl/macros.h>
 
 namespace bitmap {
 namespace internal {
@@ -127,7 +129,7 @@ class RawBitmapGeneric final : public RawBitmapBase {
     size_ = size;
 
     // Clear the partial bits not included in the new "size_t"s.
-    Clear(old_size, fbl::min(old_len * kBits, size_));
+    Clear(old_size, std::min(old_len * kBits, size_));
     return ZX_OK;
   }
 
@@ -166,3 +168,5 @@ class RawBitmapGeneric final : public RawBitmapBase {
 };
 
 }  // namespace bitmap
+
+#endif  // BITMAP_RAW_BITMAP_H_

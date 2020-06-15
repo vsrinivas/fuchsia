@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_DSI_H_
 
 // TOP MIPI_DSI AML Registers
+#include <algorithm>
 #define MIPI_DSI_TOP_SW_RESET (0x00 << 2)
 #define MIPI_DSI_TOP_CLK_CNTL (0x01 << 2)
 #define MIPI_DSI_TOP_CNTL (0x02 << 2)
@@ -134,7 +135,7 @@
 
 // Time that the transmitter drives the flipped differential state after last
 // payload data bit of a HS transmission burst  max(n*8*ui, 60+n*4*ui) <n = 1>
-#define DPHY_TIME_HS_TRAIL(ui) (fbl::max((8 * ui), (60 * UI_X_100 + 4 * ui)))
+#define DPHY_TIME_HS_TRAIL(ui) (std::max((8 * ui), (60 * UI_X_100 + 4 * ui)))
 
 // >100us
 #define DPHY_TIME_INIT (110 * UI_X_100 * 1000)

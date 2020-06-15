@@ -305,7 +305,7 @@ TEST_F(BlobfsTestWithFvm, ExtendFailure) {
   size_t metadata_size = fvm::MetadataSize(environment_->disk_size(), kTestFvmSliceSize);
   uint32_t metadata_blocks = static_cast<uint32_t>(metadata_size / ramdisk->page_size());
   uint32_t metadata_failures = 16;
-  uint32_t increment = metadata_blocks / fbl::min(metadata_failures, metadata_blocks);
+  uint32_t increment = metadata_blocks / std::min(metadata_failures, metadata_blocks);
 
   // Round down the metadata block count so we don't miss testing the transaction immediately
   // after the metadata write succeeds.

@@ -14,6 +14,8 @@
 #include <zircon/threads.h>
 #include <zircon/types.h>
 
+#include <algorithm>
+
 #include <bits/limits.h>
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -735,7 +737,7 @@ AmlSdEmmc::TuneWindow AmlSdEmmc::TuneDelayParam(fbl::Span<const uint8_t> tuning_
   TuneWindow best_window, current_window;
   uint32_t first_size = 0;
 
-  char tuning_results[fbl::max(AmlSdEmmcClock::kMaxClkDiv, AmlSdEmmcClock::kMaxDelay) + 2];
+  char tuning_results[std::max(AmlSdEmmcClock::kMaxClkDiv, AmlSdEmmcClock::kMaxDelay) + 2];
 
   for (uint32_t param = 0; param <= param_max; param++) {
     set_param(param);

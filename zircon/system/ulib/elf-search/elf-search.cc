@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <elf-search.h>
-
 #include <assert.h>
+#include <elf-search.h>
 #include <elf.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -17,6 +16,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
+#include <algorithm>
 #include <optional>
 
 namespace {
@@ -80,7 +80,7 @@ class ProcessMemReader {
     size_t i = 0;
     do {
       if (i >= limit) {
-        str[i-1] = '\0';
+        str[i - 1] = '\0';
         break;
       }
       zx_status_t status = Read(vaddr + i, &ch);
@@ -101,7 +101,7 @@ class ProcessMemReader {
 
   zx_status_t ReadBytes(uintptr_t vaddr, uint8_t* mem, size_t size) {
     if (vaddr >= window_start_ && vaddr - window_start_ < window_size_) {
-      size_t from_window_size = fbl::min(size, window_size_ - (vaddr - window_start_));
+      size_t from_window_size = std::min(size, window_size_ - (vaddr - window_start_));
       memcpy(mem, window_ + (vaddr - window_start_), from_window_size);
       vaddr += from_window_size;
       mem += from_window_size;
@@ -116,7 +116,7 @@ class ProcessMemReader {
       }
       window_start_ = vaddr;
       window_size_ = actual;
-      size_t bytes_read = fbl::min(actual, size);
+      size_t bytes_read = std::min(actual, size);
       memcpy(mem, window_, bytes_read);
       vaddr += bytes_read;
       mem += bytes_read;
@@ -196,8 +196,8 @@ zx_status_t ForEachModule(const zx::process& process, ModuleAction action) {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  status = process.get_info(ZX_INFO_PROCESS_MAPS, maps.data(), avail * sizeof(zx_info_maps), &actual,
-                            &avail);
+  status = process.get_info(ZX_INFO_PROCESS_MAPS, maps.data(), avail * sizeof(zx_info_maps),
+                            &actual, &avail);
   if (status != ZX_OK) {
     return status;
   }

@@ -10,6 +10,7 @@
 #include <lib/sysmem-version/sysmem-version.h>
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <map>
 #include <set>
 
@@ -929,7 +930,7 @@ bool ImageFormatMinimumRowBytes(const llcpp::fuchsia::sysmem2::ImageFormatConstr
       constraints.has_bytes_per_row_divisor() ? constraints.bytes_per_row_divisor() : 1;
   // This code should match the code in garnet/public/rust/fuchsia-framebuffer/src/sysmem.rs.
   *minimum_row_bytes_out = fbl::round_up(
-      fbl::max(ImageFormatStrideBytesPerWidthPixel(constraints.pixel_format()) * width,
+      std::max(ImageFormatStrideBytesPerWidthPixel(constraints.pixel_format()) * width,
                constraints_min_bytes_per_row),
       constraints_bytes_per_row_divisor);
   if (constraints.has_max_bytes_per_row() &&

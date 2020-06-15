@@ -14,6 +14,7 @@
 #include <sys/param.h>
 #include <zircon/compiler.h>
 
+#include <algorithm>
 #include <utility>
 
 #include <ddk/debug.h>
@@ -289,7 +290,7 @@ zx_status_t ScsiDevice::WorkerThread() {
     fbl::AutoLock lock(&lock_);
     // virtio-scsi has a 16-bit max_target field, but the encoding we use limits us to one byte
     // target identifiers.
-    max_target = fbl::min(config_.max_target, static_cast<uint16_t>(UINT8_MAX - 1));
+    max_target = std::min(config_.max_target, static_cast<uint16_t>(UINT8_MAX - 1));
     max_lun = config_.max_lun;
     max_sectors = config_.max_sectors;
   }
@@ -328,11 +329,11 @@ zx_status_t ScsiDevice::WorkerThread() {
         status = TargetMaxXferSize(target, lun, max_xfer_size_sectors);
         if (status == ZX_OK) {
           // smaller of controller and target max_xfer_sizes
-          max_xfer_size_sectors = fbl::min(max_xfer_size_sectors, max_sectors);
+          max_xfer_size_sectors = std::min(max_xfer_size_sectors, max_sectors);
           // and the 512K clamp
-          max_xfer_size_sectors = fbl::min(max_xfer_size_sectors, SCSI_MAX_XFER_SIZE);
+          max_xfer_size_sectors = std::min(max_xfer_size_sectors, SCSI_MAX_XFER_SIZE);
         } else {
-          max_xfer_size_sectors = fbl::min(max_sectors, SCSI_MAX_XFER_SIZE);
+          max_xfer_size_sectors = std::min(max_sectors, SCSI_MAX_XFER_SIZE);
         }
         zxlogf(INFO, "Virtio SCSI %u:%u Max Xfer Size %ukb", target, lun,
                max_xfer_size_sectors * 2);
@@ -404,7 +405,7 @@ zx_status_t ScsiDevice::Init() {
       return err;
     }
     request_buffers_size_ =
-        (SCSI_SECTOR_SIZE * fbl::min(config_.max_sectors, SCSI_MAX_XFER_SIZE)) +
+        (SCSI_SECTOR_SIZE * std::min(config_.max_sectors, SCSI_MAX_XFER_SIZE)) +
         (sizeof(struct virtio_scsi_req_cmd) + sizeof(struct virtio_scsi_resp_cmd));
     for (int i = 0; i < MAX_IOS; i++) {
       auto status = io_buffer_init(&scsi_io_slot_table_[i].request_buffer, bti().get(),

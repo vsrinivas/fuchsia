@@ -5,8 +5,6 @@
 #include "intel_firmware_loader.h"
 
 #include <endian.h>
-#include <fbl/string_printf.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -20,8 +18,12 @@
 #include <unistd.h>
 #include <zircon/status.h>
 
+#include <algorithm>
 #include <iostream>
 #include <limits>
+
+#include <fbl/string_printf.h>
+#include <fbl/unique_fd.h>
 
 #include "bt_intel.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -101,7 +103,7 @@ bool SecureSend(CommandChannel* channel, uint8_t type, const BufferView& bytes) 
   size_t left = bytes.size();
   bool abort = false;
   while (left > 0 && !abort) {
-    size_t frag_len = fbl::min(left, kMaxSecureSendArgLen);
+    size_t frag_len = std::min(left, kMaxSecureSendArgLen);
     auto cmd = ::bt::hci::CommandPacket::New(kSecureSend, frag_len + 1);
     auto data = cmd->mutable_view()->mutable_payload_data();
     data[0] = type;

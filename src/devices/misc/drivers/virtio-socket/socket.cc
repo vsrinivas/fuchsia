@@ -15,6 +15,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <ddk/debug.h>
@@ -1083,7 +1084,7 @@ zx_status_t SocketDevice::Connection::DoSocketTx(bool force_credit_request, TxIo
     size_t read_raw;
     status = data_.read(
         0, data,
-        fbl::min(static_cast<uint32_t>(kFrameSize - sizeof(virtio_vsock_hdr_t)), peer_free),
+        std::min(static_cast<uint32_t>(kFrameSize - sizeof(virtio_vsock_hdr_t)), peer_free),
         &read_raw);
     uint32_t read = static_cast<uint32_t>(read_raw);
     if (status == ZX_OK) {
@@ -1171,12 +1172,12 @@ void SocketDevice::Connection::VmoWalker::Release() {
 
 uint64_t SocketDevice::Connection::VmoWalker::NextChunkLen(uint64_t max) {
   // First constrain max by the remaining transfer
-  uint64_t next_len = fbl::min(max, transfer_length_);
+  uint64_t next_len = std::min(max, transfer_length_);
   // Determine the end of the current contiguity region
   uint64_t contiguity_area_end = fbl::round_up(transfer_offset_ + 1, contiguity_);
   uint64_t max_in_contiguity = contiguity_area_end - transfer_offset_;
   // Take the minimum of our transfer and the contiguity
-  return fbl::min(next_len, max_in_contiguity);
+  return std::min(next_len, max_in_contiguity);
 }
 
 zx_paddr_t SocketDevice::Connection::VmoWalker::Consume(uint64_t len) {

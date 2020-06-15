@@ -9,10 +9,12 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/syscalls.h>
+
+#include <algorithm>
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
-#include <zircon/syscalls.h>
 
 #include "filesystems.h"
 #include "misc.h"
@@ -113,7 +115,7 @@ bool test_maxfile(void) {
   data = data_a;
   while (bytes_read < sz) {
     r = read(fd.get(), readbuf, sizeof(readbuf));
-    ASSERT_EQ(r, static_cast<ssize_t>(fbl::min(sz - bytes_read, sizeof(readbuf))));
+    ASSERT_EQ(r, static_cast<ssize_t>(std::min(sz - bytes_read, sizeof(readbuf))));
     ASSERT_EQ(memcmp(readbuf, data, r), 0, "File failed to verify");
     data = rotate(data);
     bytes_read += r;
@@ -215,7 +217,7 @@ bool TestZippedMaxfiles(void) {
   size_t* bytes_read = &bytes_read_a;
   while (*bytes_read < *sz) {
     r = read(fd, readbuf, sizeof(readbuf));
-    ASSERT_EQ(r, static_cast<ssize_t>(fbl::min(*sz - *bytes_read, sizeof(readbuf))));
+    ASSERT_EQ(r, static_cast<ssize_t>(std::min(*sz - *bytes_read, sizeof(readbuf))));
     ASSERT_EQ(memcmp(readbuf, data, r), 0, "File failed to verify");
     *bytes_read += r;
 

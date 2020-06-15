@@ -10,6 +10,7 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <blobfs/common.h>
@@ -281,7 +282,7 @@ zx_status_t BlobLoader::InitForDecompression(
   // (The header should never be bigger than the size of the scratch VMO.)
   ZX_DEBUG_ASSERT(scratch_vmo_.size() % kBlobfsBlockSize == 0);
   uint32_t num_data_blocks = static_cast<uint32_t>(scratch_vmo_.size()) / kBlobfsBlockSize;
-  num_data_blocks = fbl::min(num_data_blocks, inode.block_count - merkle_blocks);
+  num_data_blocks = std::min(num_data_blocks, inode.block_count - merkle_blocks);
   if (num_data_blocks == 0) {
     FS_TRACE_ERROR("blobfs: No data blocks; corrupted inode?\n");
     return ZX_ERR_BAD_STATE;

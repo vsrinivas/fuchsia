@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <bitmap/rle-bitmap.h>
-
 #include <stddef.h>
-
 #include <zircon/errors.h>
 #include <zircon/types.h>
+
+#include <algorithm>
+#include <utility>
+
+#include <bitmap/rle-bitmap.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-
-#include <utility>
 
 namespace bitmap {
 
@@ -58,8 +58,8 @@ zx_status_t RleBitmap::Find(bool is_set, size_t bitoff, size_t bitmax, size_t ru
       return ZX_ERR_NO_RESOURCES;
     }
 
-    size_t elem_min = fbl::max(bitoff, elem.bitoff);  // Minimum valid bit within elem.
-    size_t elem_max = fbl::min(bitmax, elem.end());   // Maximum valid bit within elem.
+    size_t elem_min = std::max(bitoff, elem.bitoff);  // Minimum valid bit within elem.
+    size_t elem_max = std::min(bitmax, elem.end());   // Maximum valid bit within elem.
 
     if (is_set && elem_max > elem_min && elem_max - elem_min >= run_len) {
       // This element contains at least |run_len| bits
@@ -195,7 +195,7 @@ zx_status_t RleBitmap::SetInternal(size_t bitoff, size_t bitmax, FreeList* free_
       break;
     }
 
-    max = fbl::max(max, itr->bitoff + itr->bitlen);
+    max = std::max(max, itr->bitoff + itr->bitlen);
     num_bits_ += max - elem.bitoff - itr->bitlen - elem.bitlen;
     elem.bitlen = max - elem.bitoff;
     auto to_erase = itr;

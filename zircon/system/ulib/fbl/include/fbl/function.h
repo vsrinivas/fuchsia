@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <memory>
 #include <new>
 #include <utility>
@@ -204,7 +205,7 @@ class Function<inline_callable_size, require_inline, Result(Args...)> {
   static constexpr size_t heap_target_size =
       sizeof(HeapFunctionTarget<FakeCallable, Result, Args...>);
   static constexpr size_t target_size =
-      require_inline ? inline_target_size : fbl::max(inline_target_size, heap_target_size);
+      require_inline ? inline_target_size : std::max(inline_target_size, heap_target_size);
   using TargetHolder = FunctionTargetHolder<target_size, Result, Args...>;
 
  public:

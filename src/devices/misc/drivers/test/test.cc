@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <algorithm>
+
 #include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
@@ -159,7 +161,7 @@ zx_status_t TestRootDevice::CreateDevice(const fbl::StringPiece& name, zx::chann
 
   char devname[ZX_DEVICE_NAME_MAX + 1] = {};
   if (name.size() > 0) {
-    memcpy(devname, name.data(), fbl::min(sizeof(devname) - 1, name.size()));
+    memcpy(devname, name.data(), std::min(sizeof(devname) - 1, name.size()));
   } else {
     strncpy(devname, "testdev", sizeof(devname) - 1);
   }

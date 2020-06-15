@@ -4,6 +4,7 @@
 
 #include "usb-audio-stream-interface.h"
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -143,7 +144,7 @@ zx_status_t UsbAudioStreamInterface::AddInterface(DescriptorListMemory::Iterator
       ep_attr_ = format->ep_attr();
     }
 
-    max_req_size_ = fbl::max(max_req_size_, format->max_req_size());
+    max_req_size_ = std::max(max_req_size_, format->max_req_size());
     formats_.push_back(std::move(format));
   } else {
     if (idle_hdr_ == nullptr) {

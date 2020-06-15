@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <algorithm>
 #include <memory>
 
 #include <ddk/debug.h>
@@ -252,7 +253,7 @@ zx_status_t UsbVideoStream::TryFormatLocked(uint8_t format_index, uint8_t frame_
       // If the size of a payload is greater than the max usb request size,
       // we will have to split it up in multiple requests.
       send_req_size_ =
-          fbl::min(usb_get_max_transfer_size(&usb_, usb_ep_addr_),
+          std::min(usb_get_max_transfer_size(&usb_, usb_ep_addr_),
                    static_cast<uint64_t>(negotiation_result_.dwMaxPayloadTransferSize));
       break;
     }

@@ -11,6 +11,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
+#include <algorithm>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
@@ -104,7 +106,7 @@ int Tcs3400Device::Thread() {
   zx_time_t irq_rearm_timeout = ZX_TIME_INFINITE;
   while (1) {
     zx_port_packet_t packet;
-    zx_time_t timeout = fbl::min(poll_timeout, irq_rearm_timeout);
+    zx_time_t timeout = std::min(poll_timeout, irq_rearm_timeout);
     zx_status_t status = port_.wait(zx::time(timeout), &packet);
     if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
       zxlogf(ERROR, "Tcs3400Device::Thread: port wait failed: %d", status);

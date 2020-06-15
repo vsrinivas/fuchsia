@@ -10,6 +10,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
+
 #include <fbl/algorithm.h>
 
 #include "logging.h"
@@ -96,7 +98,7 @@ void VendorHci::SendVendorReset() const {
 bool VendorHci::SendSecureSend(uint8_t type, const bt::BufferView& bytes) const {
   size_t left = bytes.size();
   while (left > 0) {
-    size_t frag_len = fbl::min(left, kMaxSecureSendArgLen);
+    size_t frag_len = std::min(left, kMaxSecureSendArgLen);
     auto cmd = CommandPacket::New(kSecureSend, frag_len + 1);
     auto data = cmd->mutable_view()->mutable_payload_data();
     data[0] = type;

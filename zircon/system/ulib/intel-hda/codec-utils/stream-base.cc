@@ -4,6 +4,7 @@
 
 #include <string.h>
 
+#include <algorithm>
 #include <limits>
 #include <utility>
 
@@ -386,7 +387,7 @@ zx_status_t IntelHDAStreamBase::DoGetStreamFormatsLocked(dispatcher::Channel* ch
     size_t todo, payload_sz, __UNUSED to_send;
     zx_status_t res;
 
-    todo = fbl::min<size_t>(supported_formats_.size() - formats_sent,
+    todo = std::min<size_t>(supported_formats_.size() - formats_sent,
                             AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
     payload_sz = sizeof(resp.format_ranges[0]) * todo;
     to_send = offsetof(audio_proto::StreamGetFmtsResp, format_ranges) + payload_sz;
@@ -835,7 +836,7 @@ void IntelHDAStreamBase::OnGetStringLocked(const audio_proto::GetStringReq& req,
       int res =
           snprintf(reinterpret_cast<char*>(out_resp->str), sizeof(out_resp->str), "<unknown>");
       ZX_DEBUG_ASSERT(res >= 0);  // there should be no way for snprintf to fail here.
-      out_resp->strlen = fbl::min<uint32_t>(res, sizeof(out_resp->str) - 1);
+      out_resp->strlen = std::min<uint32_t>(res, sizeof(out_resp->str) - 1);
       out_resp->result = ZX_OK;
       break;
     }

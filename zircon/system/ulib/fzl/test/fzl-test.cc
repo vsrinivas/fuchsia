@@ -3,16 +3,17 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <lib/fzl/fifo.h>
+#include <lib/fzl/time.h>
 #include <stdio.h>
 #include <unistd.h>
-
-#include <lib/fzl/time.h>
-#include <lib/fzl/fifo.h>
-#include <fbl/algorithm.h>
-#include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <utility>
+
+#include <fbl/algorithm.h>
+#include <unittest/unittest.h>
 
 namespace {
 
@@ -22,7 +23,7 @@ bool AlmostEqual(T t0, T t1, T e) {
 
   char buf[128];
   snprintf(buf, sizeof(buf), "%zu != %zu (within error of %zu)", t0, t1, e);
-  ASSERT_TRUE(fbl::min(t0, t1) + e >= fbl::max(t0, t1), buf);
+  ASSERT_TRUE(std::min(t0, t1) + e >= std::max(t0, t1), buf);
 
   END_HELPER;
 }
@@ -72,8 +73,8 @@ bool TimeTest() {
   //
   // Where we add one to the ratio to "round up to the nearest integer ratio" while
   // doing the conversion.
-  zx::ticks tick_loss = fbl::max(zx::ticks(1 + (tps.get() / nps.get())), zx::ticks(1));
-  zx::duration duration_loss = fbl::max(zx::duration(1 + (nps.get() / tps.get())), zx::duration(1));
+  zx::ticks tick_loss = std::max(zx::ticks(1 + (tps.get() / nps.get())), zx::ticks(1));
+  zx::duration duration_loss = std::max(zx::duration(1 + (nps.get() / tps.get())), zx::duration(1));
 
   ASSERT_TRUE(TickConverter(zx::ticks(0), zx::ticks(0)));
   ASSERT_TRUE(TickConverter(zx::ticks(50), tick_loss));

@@ -36,8 +36,8 @@ zx_status_t Lp8556Device::GetBacklightState(bool* power, double* brightness) {
 }
 
 zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
-  brightness = fbl::max(brightness, 0.0);
-  brightness = fbl::min(brightness, 1.0);
+  brightness = std::max(brightness, 0.0);
+  brightness = std::min(brightness, 1.0);
 
   if (brightness != brightness_) {
     uint16_t brightness_reg_value = static_cast<uint16_t>(brightness * kBrightnessRegMaxValue);

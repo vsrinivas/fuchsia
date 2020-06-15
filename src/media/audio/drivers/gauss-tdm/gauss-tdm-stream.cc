@@ -8,6 +8,7 @@
 #include <string.h>
 #include <zircon/device/audio.h>
 
+#include <algorithm>
 #include <iterator>
 #include <limits>
 #include <utility>
@@ -363,7 +364,7 @@ zx_status_t TdmOutputStream::OnGetStreamFormatsLocked(
     uint16_t todo, payload_sz;
     zx_status_t res;
 
-    todo = fbl::min<uint16_t>(static_cast<uint16_t>(supported_formats_.size() - formats_sent),
+    todo = std::min<uint16_t>(static_cast<uint16_t>(supported_formats_.size() - formats_sent),
                               AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
     payload_sz = static_cast<uint16_t>(sizeof(resp.format_ranges[0]) * todo);
 
@@ -560,7 +561,7 @@ zx_status_t TdmOutputStream::OnGetStringLocked(dispatcher::Channel* channel,
     int res = snprintf(reinterpret_cast<char*>(resp.str), sizeof(resp.str), "%s", str);
     ZX_DEBUG_ASSERT(res >= 0);
     resp.result = ZX_OK;
-    resp.strlen = fbl::min<uint32_t>(res, sizeof(resp.str) - 1);
+    resp.strlen = std::min<uint32_t>(res, sizeof(resp.str) - 1);
   }
 
   return channel->Write(&resp, sizeof(resp));
