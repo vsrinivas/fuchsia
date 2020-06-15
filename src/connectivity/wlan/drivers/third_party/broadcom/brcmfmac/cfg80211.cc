@@ -1673,6 +1673,10 @@ static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
   }
 
   if (memcmp(peer_sta_address, profile->bssid, ETH_ALEN)) {
+    BRCMF_ERR(
+        "peer_sta_address is not matching bssid in brcmf_cfg80211_profile. "
+        "peer_sta_address:" MAC_FMT_STR ", bssid in profile:" MAC_FMT_STR "",
+        MAC_FMT_ARGS(peer_sta_address), MAC_FMT_ARGS(profile->bssid));
     status = ZX_ERR_INVALID_ARGS;
     goto done;
   }
@@ -2887,13 +2891,14 @@ void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req) {
 // have the negotiated RSNE.
 void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
+  struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
   const uint8_t* bssid = req->selected_bss.bssid;
 
   BRCMF_DBG(WLANIF, "Join request from SME. ssid: %.*s, bssid: " MAC_FMT_STR "",
             req->selected_bss.ssid.len, req->selected_bss.ssid.data, MAC_FMT_ARGS(bssid));
 
   memcpy(&ifp->bss, &req->selected_bss, sizeof(ifp->bss));
-
+  memcpy(profile->bssid, bssid, ETH_ALEN);
   wlanif_join_confirm_t result;
   result.result_code = WLAN_JOIN_RESULT_SUCCESS;
 
