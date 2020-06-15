@@ -42,6 +42,6 @@ zx_library("launchpad") {
     # Instead of launchpad, use fdio_spawn or fuchsia.process.Launcher.
     ":*",
     "test:*",
-    "//zircon/system/core/bootsvc:*",
+    "//src/bringup/bin/bootsvc:*",
   ]
 }

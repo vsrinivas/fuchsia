@@ -105,7 +105,7 @@ migrated_zbi_test("zbi-parent-image") {
   deps = [
     ":zbi-parent",
     "//build/unification/zbi:kernel",
-    "//zircon/system/core/bootsvc",
+    "//src/bringup/bin/bootsvc",
   ]
 
   assert_no_deps = [ "//zircon/system/dev/*" ]

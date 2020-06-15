@@ -63,7 +63,7 @@ common_test_contents = [
   "//src/ui/backlight/drivers/sg-micro:sgm37603a-test",
   "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test",
   "//src/ui/backlight/tests:backlight-test",
-  "//zircon/system/core/bootsvc/test:bootsvc-unit-test",
+  "//src/bringup/bin/bootsvc/test:bootsvc-unit-test",
   "//zircon/system/core/console:console-test",
   "//zircon/system/core/netsvc:netsvc-stress-test",
   "//zircon/system/core/netsvc:netsvc-test",

@@ -183,7 +183,7 @@ common_image_contents = [
   "//src/ui/input/drivers/usb-hid",
   "//src/ui/input/drivers/usb-hid",
   "//src/ui/light/drivers/aml-light",
-  "//zircon/system/core/bootsvc:bin",
+  "//src/bringup/bin/bootsvc:bin",
   "//zircon/system/core/console",
   "//zircon/system/core/devmgr/fragment",
   "//zircon/system/core/devmgr/fragment:fragment.proxy",
