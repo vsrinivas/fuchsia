@@ -92,35 +92,41 @@ static fx_log_severity_t log_min_severity(const char* name, const char* flag) {
 zx_status_t log_rpc_result(const fbl::RefPtr<zx_device_t>& dev, const char* opname,
                            zx_status_t status, zx_status_t call_status = ZX_OK) {
   if (status != ZX_OK) {
-    LOGD(ERROR, dev, "Failed %s RPC: %s", opname, zx_status_get_string(status));
+    LOGD(ERROR, *dev, "Failed %s RPC: %s", opname, zx_status_get_string(status));
     return status;
   }
   if (call_status != ZX_OK && call_status != ZX_ERR_NOT_FOUND) {
-    LOGD(ERROR, dev, "Failed %s: %s", opname, zx_status_get_string(call_status));
+    LOGD(ERROR, *dev, "Failed %s: %s", opname, zx_status_get_string(call_status));
   }
   return call_status;
 }
 
 }  // namespace
 
-const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* const path, size_t max) {
-  if (!dev || max == 0) {
+const char* mkdevpath(const zx_device_t& dev, char* const path, size_t max) {
+  if (max == 0) {
     return "";
   }
   char* end = path + max;
   char sep = 0;
 
-  fbl::RefPtr<zx_device> itr_dev(dev);
-  while (itr_dev && end > path) {
+  auto append_name = [&end, &path, &sep](const zx_device_t& dev) {
     *(--end) = sep;
 
-    size_t len = strlen(itr_dev->name());
+    size_t len = strlen(dev.name());
     if (len > static_cast<size_t>(end - path)) {
-      break;
+      return;
     }
     end -= len;
-    memcpy(end, itr_dev->name(), len);
+    memcpy(end, dev.name(), len);
     sep = '/';
+  };
+
+  append_name(dev);
+
+  fbl::RefPtr<zx_device> itr_dev = dev.parent();
+  while (itr_dev && end > path) {
+    append_name(*itr_dev);
     itr_dev = itr_dev->parent();
   }
 
@@ -279,10 +285,10 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
 zx_status_t DriverHostContext::DriverManagerRemove(fbl::RefPtr<zx_device_t> dev) {
   DeviceControllerConnection* conn = dev->conn.load();
   if (conn == nullptr) {
-    LOGD(ERROR, dev, "Invalid device controller connection");
+    LOGD(ERROR, *dev, "Invalid device controller connection");
     return ZX_ERR_INTERNAL;
   }
-  VLOGD(1, dev, "Removing device %p", dev.get());
+  VLOGD(1, *dev, "Removing device %p", dev.get());
 
   // This must be done before the RemoveDevice message is sent to
   // driver_manager, since driver_manager will close the channel in response.
@@ -761,7 +767,7 @@ void DriverHostContext::MakeVisible(const fbl::RefPtr<zx_device_t>& dev,
   }
 
   // TODO(teisenbe): Handle failures here...
-  VLOGD(1, dev, "make-visible");
+  VLOGD(1, *dev, "make-visible");
   auto response =
       fuchsia::device::manager::Coordinator::Call::MakeVisible(zx::unowned_channel(rpc.get()));
   zx_status_t status = response.status();
@@ -798,7 +804,7 @@ zx_status_t DriverHostContext::ScheduleRemove(const fbl::RefPtr<zx_device_t>& de
                                               bool unbind_self) {
   const zx::channel& rpc = *dev->coordinator_rpc;
   ZX_ASSERT(rpc.is_valid());
-  VLOGD(1, dev, "schedule-remove");
+  VLOGD(1, *dev, "schedule-remove");
   auto resp = fuchsia::device::manager::Coordinator::Call::ScheduleRemove(
       zx::unowned_channel(rpc.get()), unbind_self);
   log_rpc_result(dev, "schedule-remove", resp.status());
@@ -808,7 +814,7 @@ zx_status_t DriverHostContext::ScheduleRemove(const fbl::RefPtr<zx_device_t>& de
 zx_status_t DriverHostContext::ScheduleUnbindChildren(const fbl::RefPtr<zx_device_t>& dev) {
   const zx::channel& rpc = *dev->coordinator_rpc;
   ZX_ASSERT(rpc.is_valid());
-  VLOGD(1, dev, "schedule-unbind-children");
+  VLOGD(1, *dev, "schedule-unbind-children");
   auto resp = fuchsia::device::manager::Coordinator::Call::ScheduleUnbindChildren(
       zx::unowned_channel(rpc.get()));
   log_rpc_result(dev, "schedule-unbind-children", resp.status());
@@ -835,7 +841,7 @@ zx_status_t DriverHostContext::GetTopoPath(const fbl::RefPtr<zx_device_t>& dev, 
     return ZX_ERR_IO_REFUSED;
   }
 
-  VLOGD(1, remote_dev, "get-topo-path");
+  VLOGD(1, *remote_dev, "get-topo-path");
   auto response = fuchsia::device::manager::Coordinator::Call::GetTopologicalPath(
       zx::unowned_channel(rpc.get()));
   zx_status_t status = response.status();
@@ -874,7 +880,7 @@ zx_status_t DriverHostContext::DeviceBind(const fbl::RefPtr<zx_device_t>& dev,
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
-  VLOGD(1, dev, "bind-device");
+  VLOGD(1, *dev, "bind-device");
   auto driver_path = ::fidl::unowned_str(drv_libname, strlen(drv_libname));
   auto response = fuchsia::device::manager::Coordinator::Call::BindDevice(
       zx::unowned_channel(rpc.get()), std::move(driver_path));
@@ -897,7 +903,7 @@ zx_status_t DriverHostContext::DeviceRunCompatibilityTests(const fbl::RefPtr<zx_
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
-  VLOGD(1, dev, "run-compatibility-test");
+  VLOGD(1, *dev, "run-compatibility-test");
   auto response = fuchsia::device::manager::Coordinator::Call::RunCompatibilityTests(
       zx::unowned_channel(rpc.get()), hook_wait_time);
   zx_status_t status = response.status();
@@ -923,7 +929,7 @@ zx_status_t DriverHostContext::LoadFirmware(const fbl::RefPtr<zx_device_t>& dev,
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
-  VLOGD(1, dev, "load-firmware");
+  VLOGD(1, *dev, "load-firmware");
   auto str_path = ::fidl::unowned_str(path, strlen(path));
   auto response = fuchsia::device::manager::Coordinator::Call::LoadFirmware(
       zx::unowned_channel(rpc.get()), std::move(str_path));
@@ -958,7 +964,7 @@ zx_status_t DriverHostContext::GetMetadata(const fbl::RefPtr<zx_device_t>& dev, 
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
-  VLOGD(1, dev, "get-metadata");
+  VLOGD(1, *dev, "get-metadata");
   auto response = fuchsia::device::manager::Coordinator::Call::GetMetadata(
       zx::unowned_channel(rpc.get()), type);
   zx_status_t status = response.status();
@@ -986,7 +992,7 @@ zx_status_t DriverHostContext::GetMetadataSize(const fbl::RefPtr<zx_device_t>& d
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
-  VLOGD(1, dev, "get-metadata-size");
+  VLOGD(1, *dev, "get-metadata-size");
   auto response = fuchsia::device::manager::Coordinator::Call::GetMetadataSize(
       zx::unowned_channel(rpc.get()), type);
   zx_status_t status = response.status();
@@ -1010,7 +1016,7 @@ zx_status_t DriverHostContext::AddMetadata(const fbl::RefPtr<zx_device_t>& dev, 
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
-  VLOGD(1, dev, "add-metadata");
+  VLOGD(1, *dev, "add-metadata");
   auto response = fuchsia::device::manager::Coordinator::Call::AddMetadata(
       zx::unowned_channel(rpc.get()), type,
       ::fidl::VectorView(fidl::unowned_ptr(reinterpret_cast<uint8_t*>(const_cast<void*>(data))),
@@ -1033,7 +1039,7 @@ zx_status_t DriverHostContext::PublishMetadata(const fbl::RefPtr<zx_device_t>& d
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
   }
-  VLOGD(1, dev, "publish-metadata");
+  VLOGD(1, *dev, "publish-metadata");
   auto response = fuchsia::device::manager::Coordinator::Call::PublishMetadata(
       zx::unowned_channel(rpc.get()), ::fidl::unowned_str(path, strlen(path)), type,
       ::fidl::VectorView(fidl::unowned_ptr(reinterpret_cast<uint8_t*>(const_cast<void*>(data))),
@@ -1058,7 +1064,7 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
     return ZX_ERR_IO_REFUSED;
   }
 
-  VLOGD(1, dev, "create-composite");
+  VLOGD(1, *dev, "create-composite");
   std::vector<fuchsia::device::manager::DeviceFragment> compvec = {};
   for (size_t i = 0; i < comp_desc->fragments_count; i++) {
     ::fidl::Array<fuchsia::device::manager::DeviceFragmentPart,

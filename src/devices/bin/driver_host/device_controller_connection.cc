@@ -114,7 +114,7 @@ void DeviceControllerConnection::Resume(uint32_t target_system_state,
 
 void DeviceControllerConnection::ConnectProxy(::zx::channel shadow,
                                               ConnectProxyCompleter::Sync _completer) {
-  VLOGD(1, dev(), "Connected to proxy for device %p", dev().get());
+  VLOGD(1, *dev(), "Connected to proxy for device %p", dev().get());
   dev()->ops()->rxrpc(dev()->ctx, ZX_HANDLE_INVALID);
   // Ignore any errors in the creation for now?
   // TODO(teisenbe): Investigate if this is the right thing
@@ -127,18 +127,18 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
   std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
 
   // TODO: api lock integration
-  LOGD(INFO, dev, "Binding driver '%.*s'", static_cast<int>(driver_path.size()),
+  LOGD(INFO, *dev, "Binding driver '%.*s'", static_cast<int>(driver_path.size()),
        driver_path.data());
   fbl::RefPtr<zx_driver_t> drv;
   if (dev->flags() & DEV_FLAG_DEAD) {
-    LOGD(ERROR, dev, "Cannot bind to removed device");
+    LOGD(ERROR, *dev, "Cannot bind to removed device");
     BindReply(dev, std::move(completer), ZX_ERR_IO_NOT_PRESENT);
     return;
   }
 
   zx_status_t r = driver_host_context_->FindDriver(driver_path, std::move(driver), &drv);
   if (r != ZX_OK) {
-    LOGD(ERROR, dev, "Failed to load driver '%.*s': %s", static_cast<int>(driver_path.size()),
+    LOGD(ERROR, *dev, "Failed to load driver '%.*s': %s", static_cast<int>(driver_path.size()),
          driver_path.data(), zx_status_get_string(r));
     BindReply(dev, std::move(completer), r);
     return;
@@ -169,10 +169,10 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
     r = drv->BindOp(&bind_ctx, dev);
 
     if (r != ZX_OK) {
-      LOGD(ERROR, dev, "Failed to bind driver '%.*s': %s", static_cast<int>(driver_path.size()),
+      LOGD(ERROR, *dev, "Failed to bind driver '%.*s': %s", static_cast<int>(driver_path.size()),
            driver_path.data(), zx_status_get_string(r));
     } else if (bind_ctx.child == nullptr) {
-      LOGD(WARNING, dev, "Driver '%.*s' did not add a child device in bind()",
+      LOGD(WARNING, *dev, "Driver '%.*s' did not add a child device in bind()",
            static_cast<int>(driver_path.size()), driver_path.data());
     }
     BindReply(dev, std::move(completer), r, std::move(test_output));
@@ -180,7 +180,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
   }
 
   if (!drv->has_create_op()) {
-    LOGD(ERROR, dev, "Neither create() nor bind() are implemented for driver '%.*s'",
+    LOGD(ERROR, *dev, "Neither create() nor bind() are implemented for driver '%.*s'",
          static_cast<int>(driver_path.size()), driver_path.data());
   }
   BindReply(dev, std::move(completer), ZX_ERR_NOT_SUPPORTED, std::move(test_output));
@@ -258,7 +258,7 @@ zx_status_t DeviceControllerConnection::Create(DriverHostContext* ctx, fbl::RefP
 void DeviceControllerConnection::Open(uint32_t flags, uint32_t mode, ::fidl::StringView path,
                                       ::zx::channel object, OpenCompleter::Sync completer) {
   if (path.size() != 1 && path.data()[0] != '.') {
-    LOGD(ERROR, dev(), "Attempt to open path '%.*s'", static_cast<int>(path.size()), path.data());
+    LOGD(ERROR, *dev(), "Attempt to open path '%.*s'", static_cast<int>(path.size()), path.data());
   }
   driver_host_context_->DeviceConnect(this->dev(), flags, std::move(object));
 }
@@ -268,7 +268,7 @@ void DeviceControllerConnection::HandleRpc(std::unique_ptr<DeviceControllerConne
                                            zx_status_t status, const zx_packet_signal_t* signal) {
   const auto& dev = conn->dev_;
   if (status != ZX_OK) {
-    LOGD(ERROR, dev, "Failed to wait for device controller connection: %s",
+    LOGD(ERROR, *dev, "Failed to wait for device controller connection: %s",
          zx_status_get_string(status));
     return;
   }
@@ -284,7 +284,7 @@ void DeviceControllerConnection::HandleRpc(std::unique_ptr<DeviceControllerConne
         __UNUSED auto r = conn.release();
         return;
       }
-      LOGD(FATAL, dev, "Failed to handle RPC for device %p: %s", dev.get(),
+      LOGD(FATAL, *dev, "Failed to handle RPC for device %p: %s", dev.get(),
            zx_status_get_string(r));
     }
     BeginWait(std::move(conn), dispatcher);
@@ -304,10 +304,10 @@ void DeviceControllerConnection::HandleRpc(std::unique_ptr<DeviceControllerConne
 
     // This is expected in test environments where driver_manager has terminated.
     // TODO(fxb/52627): Support graceful termination.
-    LOGD(WARNING, dev, "driver_manager disconnected from device %p", dev.get());
+    LOGD(WARNING, *dev, "driver_manager disconnected from device %p", dev.get());
     exit(1);
   }
-  LOGD(WARNING, dev, "Unexpected signal state %#08x for device %p", signal->observed, dev.get());
+  LOGD(WARNING, *dev, "Unexpected signal state %#08x for device %p", signal->observed, dev.get());
   BeginWait(std::move(conn), dispatcher);
 }
 
@@ -337,7 +337,7 @@ zx_status_t DeviceControllerConnection::HandleRead() {
   auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
   uint64_t ordinal = hdr->ordinal;
   if (ordinal == fuchsia_io_DirectoryOpenOrdinal) {
-    VLOGD(1, dev(), "Opening device %p", dev().get());
+    VLOGD(1, *dev(), "Opening device %p", dev().get());
     zx::unowned_channel conn = channel();
     DevmgrFidlTxn txn(std::move(conn), hdr->txid);
     fuchsia::io::Directory::Dispatch(this, &fidl_msg, &txn);

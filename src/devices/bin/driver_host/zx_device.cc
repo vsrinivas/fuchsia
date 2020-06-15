@@ -216,16 +216,16 @@ void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
   if (this->flags() & DEV_FLAG_BUSY) {
     // this can happen if creation fails
     // the caller to device_add() will free it
-    LOGD(WARNING, fbl::RefPtr(this), "Not releasing device %p, it is busy", this);
+    LOGD(WARNING, *this, "Not releasing device %p, it is busy", this);
     return;
   }
-  VLOGD(1, fbl::RefPtr(this), "Releasing device %p", this);
+  VLOGD(1, *this, "Releasing device %p", this);
 
   if (!(this->flags() & DEV_FLAG_DEAD)) {
-    LOGD(WARNING, fbl::RefPtr(this), "Releasing device %p which is not yet dead", this);
+    LOGD(WARNING, *this, "Releasing device %p which is not yet dead", this);
   }
   if (!this->children().is_empty()) {
-    LOGD(WARNING, fbl::RefPtr(this), "Releasing device %p which still has children", this);
+    LOGD(WARNING, *this, "Releasing device %p which still has children", this);
   }
 
   composite_.reset();

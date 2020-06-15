@@ -261,19 +261,19 @@ zx_status_t DriverHostContext::DeviceValidate(const fbl::RefPtr<zx_device_t>& de
     return ZX_ERR_INVALID_ARGS;
   }
   if (dev->flags() & DEV_FLAG_ADDED) {
-    LOGD(ERROR, dev, "Already added device %p", dev.get());
+    LOGD(ERROR, *dev, "Already added device %p", dev.get());
     return ZX_ERR_BAD_STATE;
   }
   if (dev->magic != DEV_MAGIC) {
-    LOGD(ERROR, dev, "Invalid signature for device %p: %#lx", dev.get(), dev->magic);
+    LOGD(ERROR, *dev, "Invalid signature for device %p: %#lx", dev.get(), dev->magic);
     return ZX_ERR_BAD_STATE;
   }
   if (dev->ops() == nullptr) {
-    LOGD(ERROR, dev, "Invalid ops for device %p", dev.get());
+    LOGD(ERROR, *dev, "Invalid ops for device %p", dev.get());
     return ZX_ERR_INVALID_ARGS;
   }
   if ((dev->protocol_id() == ZX_PROTOCOL_MISC_PARENT) || (dev->protocol_id() == ZX_PROTOCOL_ROOT)) {
-    LOGD(ERROR, dev, "Invalid protocol for device %p: %#x", dev.get(), dev->protocol_id());
+    LOGD(ERROR, *dev, "Invalid protocol for device %p: %#x", dev.get(), dev->protocol_id());
     // These protocols is only allowed for the special
     // singleton misc or root parent devices.
     return ZX_ERR_INVALID_ARGS;
@@ -423,11 +423,11 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
     return status;
   }
   if (parent == nullptr) {
-    LOGD(ERROR, dev, "Cannot add device %p to invalid parent", dev.get());
+    LOGD(ERROR, *dev, "Cannot add device %p to invalid parent", dev.get());
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (parent->flags() & DEV_FLAG_DEAD) {
-    LOGD(ERROR, dev, "Cannot add device %p to dead parent %p", dev.get(), parent.get());
+    LOGD(ERROR, *dev, "Cannot add device %p to dead parent %p", dev.get(), parent.get());
     return ZX_ERR_BAD_STATE;
   }
 
@@ -446,11 +446,11 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
     creation_ctx = internal::g_creation_context;
     // create() must create only one child
     if (creation_ctx->child != nullptr) {
-      LOGD(ERROR, dev, "Driver attempted to create multiple proxy devices");
+      LOGD(ERROR, *dev, "Driver attempted to create multiple proxy devices");
       return ZX_ERR_BAD_STATE;
     }
   }
-  VLOGD(1, dev, "Adding device %p (parent %p)", dev.get(), parent.get());
+  VLOGD(1, *dev, "Adding device %p (parent %p)", dev.get(), parent.get());
 
   // Don't create an event handle if we alredy have one
   if (!dev->event.is_valid() &&
@@ -463,7 +463,7 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
   // proxy devices are created through this handshake process
   if (creation_ctx) {
     if (dev->flags() & DEV_FLAG_INVISIBLE) {
-      LOGD(ERROR, dev, "Driver attempted to create invisible device in create()");
+      LOGD(ERROR, *dev, "Driver attempted to create invisible device in create()");
       return ZX_ERR_INVALID_ARGS;
     }
     dev->set_flag(DEV_FLAG_ADDED);
@@ -484,7 +484,7 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
     // Add always consumes the handle
     status = DriverManagerAdd(parent, dev, proxy_args, props, prop_count, std::move(client_remote));
     if (status < 0) {
-      LOGD(ERROR, dev, "Failed to add device %p to driver_manager: %s", dev.get(),
+      LOGD(ERROR, *dev, "Failed to add device %p to driver_manager: %s", dev.get(),
            zx_status_get_string(status));
       dev->parent()->remove_child(*dev);
       dev->set_parent(nullptr);
@@ -526,7 +526,7 @@ zx_status_t DriverHostContext::DeviceInit(const fbl::RefPtr<zx_device_t>& dev) {
 void DriverHostContext::DeviceInitReply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
                                         const device_init_reply_args_t* args) {
   if (!(dev->flags() & DEV_FLAG_INITIALIZING)) {
-    LOGD(FATAL, dev, "Device %p cannot reply to init (flags %#x)", dev.get(), dev->flags());
+    LOGD(FATAL, *dev, "Device %p cannot reply to init (flags %#x)", dev.get(), dev->flags());
   }
   if (status == ZX_OK) {
     if (args && args->power_states && args->power_state_count != 0) {
@@ -538,7 +538,7 @@ void DriverHostContext::DeviceInitReply(const fbl::RefPtr<zx_device_t>& dev, zx_
   }
 
   if (dev->init_cb == nullptr) {
-    LOGD(FATAL, dev, "Device %p cannot reply to init, no callback set (flags %#x)", dev.get(),
+    LOGD(FATAL, *dev, "Device %p cannot reply to init, no callback set (flags %#x)", dev.get(),
          dev->flags());
   }
 
@@ -574,7 +574,7 @@ zx_status_t DriverHostContext::DeviceRemoveDeprecated(const fbl::RefPtr<zx_devic
 
 zx_status_t DriverHostContext::DeviceRemove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) {
   if (dev->flags() & REMOVAL_BAD_FLAGS) {
-    LOGD(ERROR, dev, "Cannot remove device %p: %s", dev.get(),
+    LOGD(ERROR, *dev, "Cannot remove device %p: %s", dev.get(),
          internal::removal_problem(dev->flags()));
     return ZX_ERR_INVALID_ARGS;
   }
@@ -588,14 +588,14 @@ zx_status_t DriverHostContext::DeviceRemove(const fbl::RefPtr<zx_device_t>& dev,
       rebind_conn(ZX_ERR_IO);
     }
   }
-  VLOGD(1, dev, "Device %p is being scheduled for removal", dev.get());
+  VLOGD(1, *dev, "Device %p is being scheduled for removal", dev.get());
   // Ask the devcoordinator to schedule the removal of this device and its children.
   ScheduleRemove(dev, unbind_self);
   return ZX_OK;
 }
 
 zx_status_t DriverHostContext::DeviceCompleteRemoval(const fbl::RefPtr<zx_device_t>& dev) {
-  VLOGD(1, dev, "Device %p is being removed (removal requested)", dev.get());
+  VLOGD(1, *dev, "Device %p is being removed (removal requested)", dev.get());
 
   // This recovers the leaked reference that happened in device_add_from_driver().
   auto dev_add_ref = fbl::ImportFromRawPtr(dev.get());
@@ -612,7 +612,7 @@ zx_status_t DriverHostContext::DeviceUnbind(const fbl::RefPtr<zx_device_t>& dev)
     dev->set_flag(DEV_FLAG_UNBOUND);
     // Call dev's unbind op.
     if (dev->ops()->unbind) {
-      VLOGD(1, dev, "Device %p is being unbound", dev.get());
+      VLOGD(1, *dev, "Device %p is being unbound", dev.get());
       api_lock_.Release();
       dev->UnbindOp();
       api_lock_.Acquire();
@@ -628,24 +628,24 @@ zx_status_t DriverHostContext::DeviceUnbind(const fbl::RefPtr<zx_device_t>& dev)
 
 void DriverHostContext::DeviceUnbindReply(const fbl::RefPtr<zx_device_t>& dev) {
   if (dev->flags() & REMOVAL_BAD_FLAGS) {
-    LOGD(FATAL, dev, "Device %p cannot reply to unbind, bad flags: %s", dev.get(),
+    LOGD(FATAL, *dev, "Device %p cannot reply to unbind, bad flags: %s", dev.get(),
          internal::removal_problem(dev->flags()));
   }
   if (!(dev->flags() & DEV_FLAG_UNBOUND)) {
-    LOGD(FATAL, dev, "Device %p cannot reply to unbind, not in unbinding state (flags %#x)",
+    LOGD(FATAL, *dev, "Device %p cannot reply to unbind, not in unbinding state (flags %#x)",
          dev.get(), dev->flags());
   }
   if (dev->vnode->inflight_transactions() > 0) {
-    LOGD(FATAL, dev, "Device %p cannot reply to unbind, has %zu outstanding transactions",
+    LOGD(FATAL, *dev, "Device %p cannot reply to unbind, has %zu outstanding transactions",
          dev.get(), dev->vnode->inflight_transactions());
   }
 
-  VLOGD(1, dev, "Device %p unbind completed", dev.get());
+  VLOGD(1, *dev, "Device %p unbind completed", dev.get());
   if (dev->unbind_cb) {
     dev->CloseAllConnections();
     dev->unbind_cb(ZX_OK);
   } else {
-    LOGD(FATAL, dev, "Device %p cannot reply to unbind, no callback set (flags %#x)", dev.get(),
+    LOGD(FATAL, *dev, "Device %p cannot reply to unbind, no callback set (flags %#x)", dev.get(),
          dev->flags());
   }
 }
@@ -657,14 +657,14 @@ void DriverHostContext::DeviceSuspendReply(const fbl::RefPtr<zx_device_t>& dev, 
   // 2. When we wrap the txn in Transaction.
   // 3. When we make the suspend txn asynchronous using ToAsync()
   if (dev->vnode->inflight_transactions() > 3) {
-    LOGD(FATAL, dev, "Device %p cannot reply to suspend, has %zu outstanding transactions",
+    LOGD(FATAL, *dev, "Device %p cannot reply to suspend, has %zu outstanding transactions",
          dev.get(), dev->vnode->inflight_transactions());
   }
 
   if (dev->suspend_cb) {
     dev->suspend_cb(status, out_state);
   } else {
-    LOGD(FATAL, dev, "Device %p cannot reply to suspend, no callback set", dev.get());
+    LOGD(FATAL, *dev, "Device %p cannot reply to suspend, no callback set", dev.get());
   }
 }
 
@@ -677,7 +677,7 @@ void DriverHostContext::DeviceResumeReply(const fbl::RefPtr<zx_device_t>& dev, z
     }
     dev->resume_cb(status, out_power_state, out_perf_state);
   } else {
-    LOGD(FATAL, dev, "Device %p cannot reply to resume, no callback set", dev.get());
+    LOGD(FATAL, *dev, "Device %p cannot reply to resume, no callback set", dev.get());
   }
 }
 
@@ -697,7 +697,7 @@ zx_status_t DriverHostContext::DeviceRebind(const fbl::RefPtr<zx_device_t>& dev)
 zx_status_t DriverHostContext::DeviceOpen(const fbl::RefPtr<zx_device_t>& dev,
                                           fbl::RefPtr<zx_device_t>* out, uint32_t flags) {
   if (dev->flags() & DEV_FLAG_DEAD) {
-    LOGD(ERROR, dev, "Cannot open device %p, device is dead", dev.get());
+    LOGD(ERROR, *dev, "Cannot open device %p, device is dead", dev.get());
     return ZX_ERR_BAD_STATE;
   }
   fbl::RefPtr<zx_device_t> new_ref(dev);
@@ -717,7 +717,7 @@ zx_status_t DriverHostContext::DeviceOpen(const fbl::RefPtr<zx_device_t>& dev,
     new_ref = fbl::ImportFromRawPtr(opened_dev);
 
     if (!(opened_dev->flags() & DEV_FLAG_INSTANCE)) {
-      LOGD(FATAL, new_ref, "Cannot open device %p, bad state %#x", opened_dev, flags);
+      LOGD(FATAL, *new_ref, "Cannot open device %p, bad state %#x", opened_dev, flags);
     }
   }
   *out = std::move(new_ref);
@@ -830,7 +830,7 @@ zx_status_t DriverHostContext::DeviceSetPerformanceState(const fbl::RefPtr<zx_de
   if (dev->ops()->set_performance_state) {
     zx_status_t status = dev->ops()->set_performance_state(dev->ctx, requested_state, out_state);
     if (!(dev->IsPerformanceStateSupported(*out_state))) {
-      LOGD(FATAL, dev,
+      LOGD(FATAL, *dev,
            "Device %p 'set_performance_state' hook returned an unsupported performance state",
            dev.get());
     }

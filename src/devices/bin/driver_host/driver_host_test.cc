@@ -23,26 +23,23 @@ TEST(DriverHostTest, MkDevpath) {
 
   ASSERT_OK(zx_device::Create(&ctx, device_name, drv.get(), &dev));
 
-  const char* result = mkdevpath(nullptr, nullptr, 0);
-  EXPECT_STR_EQ("", result);
-
-  result = mkdevpath(dev, nullptr, 0);
+  auto result = mkdevpath(*dev, nullptr, 0);
   EXPECT_STR_EQ("", result);
 
   std::vector<char> buf;
-  result = mkdevpath(dev, buf.data(), buf.size());
+  result = mkdevpath(*dev, buf.data(), buf.size());
   EXPECT_STR_EQ("", result);
 
   buf.resize(sizeof(device_name));
-  result = mkdevpath(dev, buf.data(), buf.size());
+  result = mkdevpath(*dev, buf.data(), buf.size());
   EXPECT_STR_EQ(device_name, result);
 
   buf.resize(sizeof(device_name) * 2);
-  result = mkdevpath(dev, buf.data(), buf.size());
+  result = mkdevpath(*dev, buf.data(), buf.size());
   EXPECT_STR_EQ(device_name, result);
 
   buf.resize(sizeof(device_name) / 2);
-  result = mkdevpath(dev, buf.data(), buf.size());
+  result = mkdevpath(*dev, buf.data(), buf.size());
   EXPECT_STR_EQ("...", result);
 }
 

@@ -81,6 +81,6 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
 
 // Construct a string describing the path of |dev| relative to its most
 // distant ancestor in this driver_host.
-const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max);
+const char* mkdevpath(const zx_device_t& dev, char* path, size_t max);
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST_DEVHOST_H_

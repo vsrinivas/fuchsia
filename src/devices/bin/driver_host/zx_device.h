@@ -266,7 +266,7 @@ struct zx_device
   // driver that has published this device
   zx_driver_t* driver = nullptr;
 
-  const fbl::RefPtr<zx_device_t>& parent() { return parent_; }
+  const fbl::RefPtr<zx_device_t>& parent() const { return parent_; }
   void set_parent(fbl::RefPtr<zx_device_t> parent) { parent_ = parent; }
 
   void add_child(zx_device* child) { children_.push_back(child); }
