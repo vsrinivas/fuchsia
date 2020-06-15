@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 static bool wait(zx_handle_t event, zx_handle_t quit_event) {
   zx_status_t ms;
@@ -68,9 +68,7 @@ static int thread_fn_2(void* arg) {
   return 0;
 }
 
-static bool basic_test(void) {
-  BEGIN_TEST;
-
+TEST(EventTests, basic_test) {
   zx_handle_t events[3];
   ASSERT_EQ(zx_event_create(0u, &events[0]), 0, "Error during event create");
   ASSERT_EQ(zx_event_create(0u, &events[1]), 0, "Error during event create");
@@ -95,7 +93,6 @@ static bool basic_test(void) {
   ASSERT_GE(zx_handle_close(events[0]), 0, "Error during event-0 close");
   ASSERT_GE(zx_handle_close(events[1]), 0, "Error during event-1 close");
   ASSERT_GE(zx_handle_close(events[2]), 0, "Error during event-2 close");
-  END_TEST;
 }
 
 static int thread_fn_3(void* arg) {
@@ -120,9 +117,7 @@ static int thread_fn_4(void* arg) {
   return 0;
 }
 
-static bool user_signals_test(void) {
-  BEGIN_TEST;
-
+TEST(EventTests, user_signals_test) {
   zx_handle_t events[3];
   ASSERT_GE(zx_event_create(0U, &events[0]), 0, "Error during event create");
   ASSERT_GE(zx_event_create(0U, &events[1]), 0, "Error during event create");
@@ -147,7 +142,6 @@ static bool user_signals_test(void) {
   ASSERT_GE(zx_handle_close(events[0]), 0, "Error during event-0 close");
   ASSERT_GE(zx_handle_close(events[1]), 0, "Error during event-1 close");
   ASSERT_GE(zx_handle_close(events[2]), 0, "Error during event-2 close");
-  END_TEST;
 }
 
 static int thread_fn_closer(void* arg) {
@@ -159,9 +153,7 @@ static int thread_fn_closer(void* arg) {
   return rc;
 }
 
-static bool wait_signals_test(void) {
-  BEGIN_TEST;
-
+TEST(EventTests, wait_signals_test) {
   zx_handle_t events[3];
   ASSERT_EQ(zx_event_create(0U, &events[0]), 0, "Error during event create");
   ASSERT_EQ(zx_event_create(0U, &events[1]), 0, "Error during event create");
@@ -229,12 +221,9 @@ static bool wait_signals_test(void) {
 
   ASSERT_GE(zx_handle_close(events[0]), 0, "Error during event-0 close");
   ASSERT_GE(zx_handle_close(events[2]), 0, "Error during event-2 close");
-
-  END_TEST;
 }
 
-static bool reset_test(void) {
-  BEGIN_TEST;
+TEST(EventTests, reset_test) {
   zx_handle_t event;
   ASSERT_EQ(zx_event_create(0U, &event), 0, "Error during event creation");
   ASSERT_GE(zx_object_signal(event, 0u, ZX_EVENT_SIGNALED), 0, "Error during event signal");
@@ -245,13 +234,9 @@ static bool reset_test(void) {
   ASSERT_EQ(status, ZX_ERR_TIMED_OUT, "wait should have timeout");
 
   ASSERT_EQ(zx_handle_close(event), ZX_OK, "error during handle close");
-
-  END_TEST;
 }
 
-static bool wait_many_failures_test(void) {
-  BEGIN_TEST;
-
+TEST(EventTests, wait_many_failures_test) {
   ASSERT_EQ(zx_object_wait_many(NULL, 0, zx_deadline_after(1)), ZX_ERR_TIMED_OUT,
             "wait_many on zero handles should have timed out");
 
@@ -274,14 +259,4 @@ static bool wait_many_failures_test(void) {
   // having a Waiter), 2. a handle having an I/O port bound.
 
   ASSERT_EQ(zx_handle_close(handles[0]), ZX_OK, "Error during handle close");
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(event_tests)
-RUN_TEST(basic_test)
-RUN_TEST(user_signals_test)
-RUN_TEST(wait_signals_test)
-RUN_TEST(reset_test)
-RUN_TEST(wait_many_failures_test)
-END_TEST_CASE(event_tests)

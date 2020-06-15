@@ -6,35 +6,25 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-static bool stat_empty_test() {
-  BEGIN_TEST;
-
+TEST(PosixioTest, stat_empty_test) {
   struct stat s;
   int rc = stat("", &s);
   int err = errno;
   ASSERT_EQ(rc, -1);
   ASSERT_EQ(err, ENOENT);
-
-  END_TEST;
 }
 
-static bool lstat_empty_test() {
-  BEGIN_TEST;
-
+TEST(PosixioTest, lstat_empty_test) {
   struct stat s;
   int rc = lstat("", &s);
   int err = errno;
   ASSERT_EQ(rc, -1);
   ASSERT_EQ(err, ENOENT);
-
-  END_TEST;
 }
 
-static bool open_empty_test() {
-  BEGIN_TEST;
-
+TEST(PosixioTest, open_empty_test) {
   const int oflags[] = {
       O_EXEC, O_RDONLY, O_RDWR, O_SEARCH, O_WRONLY,
   };
@@ -88,12 +78,4 @@ static bool open_empty_test() {
       }
     }
   }
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(posixio_test)
-RUN_TEST(stat_empty_test)
-RUN_TEST(lstat_empty_test)
-RUN_TEST(open_empty_test)
-END_TEST_CASE(posixio_test)

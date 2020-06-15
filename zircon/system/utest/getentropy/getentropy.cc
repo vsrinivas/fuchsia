@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <errno.h>
 #include <sys/random.h>
 
-#include <errno.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-bool getentropy_valid() {
-  BEGIN_TEST;
-
+TEST(GetentropyTests, getentropy_valid) {
   char buf[16];
 
   errno = 0;
@@ -18,17 +16,13 @@ bool getentropy_valid() {
 
   EXPECT_EQ(result, 0);
   EXPECT_EQ(err, 0);
-
-  END_TEST;
 }
 
-bool getentropy_too_big() {
-  BEGIN_TEST;
-
+TEST(GetentropyTests, getentropy_too_big) {
   const size_t size = 1024 * 1024 * 1024;
 
   char* buf = static_cast<char*>(malloc(size));
-  EXPECT_NONNULL(buf);
+  EXPECT_NOT_NULL(buf);
 
   errno = 0;
   int result = getentropy(buf, size);
@@ -38,11 +32,4 @@ bool getentropy_too_big() {
   EXPECT_EQ(err, EIO);
 
   free(buf);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(getentropy_tests)
-RUN_TEST(getentropy_valid);
-RUN_TEST(getentropy_too_big);
-END_TEST_CASE(getentropy_tests)

@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <unistd.h>
-
 #include <fuchsia/kernel/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
-#include <unittest/unittest.h>
+#include <unistd.h>
 #include <zircon/syscalls.h>
+
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -35,9 +35,7 @@ zx_status_t connect_to_service(const char* service, zx_handle_t* channel) {
 }
 
 // Ask the kernel to run its unit tests.
-bool run_kernel_unittests() {
-  BEGIN_TEST;
-
+TEST(KernelUnittests, run_kernel_unittests) {
   constexpr char command[] = "ut all";
 
   zx_handle_t channel;
@@ -50,12 +48,6 @@ bool run_kernel_unittests() {
   zx_handle_close(channel);
   ASSERT_EQ(status, ZX_OK);
   ASSERT_EQ(call_status, ZX_OK);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(kernel_unittests)
-RUN_TEST(run_kernel_unittests)
-END_TEST_CASE(kernel_unittests)

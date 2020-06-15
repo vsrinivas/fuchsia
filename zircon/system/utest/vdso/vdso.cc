@@ -2,18 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <elfload/elfload.h>
-#include <fbl/array.h>
 #include <lib/zx/process.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
-#include <new>
 #include <string.h>
-#include <unittest/unittest.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+
+#include <new>
+
+#include <elfload/elfload.h>
+#include <fbl/array.h>
+#include <zxtest/zxtest.h>
 
 static const zx::vmo vdso_vmo{zx_take_startup_handle(PA_HND(PA_VMO_VDSO, 0))};
 
@@ -69,9 +71,7 @@ class ScratchPad {
   uintptr_t vdso_code_size_ = 0;
 };
 
-bool vdso_map_twice_test() {
-  BEGIN_TEST;
-
+TEST(VdsoTests, vdso_map_twice_test) {
   ScratchPad scratch(__func__);
 
   // Load the vDSO once.  That's on me.
@@ -79,13 +79,9 @@ bool vdso_map_twice_test() {
 
   // Load the vDSO twice.  Can't get loaded again.
   EXPECT_EQ(scratch.load_vdso(), ZX_ERR_ACCESS_DENIED, "load vDSO second time");
-
-  END_TEST;
 }
 
-bool vdso_map_change_test() {
-  BEGIN_TEST;
-
+TEST(VdsoTests, vdso_map_change_test) {
   ScratchPad scratch(__func__);
 
   // Load the vDSO and hold onto the sub-VMAR.
@@ -124,13 +120,9 @@ bool vdso_map_change_test() {
 
   // Implicit unmapping by destroying a containing VMAR is forbidden.
   EXPECT_EQ(vdso_vmar.destroy(), ZX_ERR_ACCESS_DENIED, "zx_vmar_destroy to unmap vDSO");
-
-  END_TEST;
 }
 
-bool vdso_map_code_wrong_test() {
-  BEGIN_TEST;
-
+TEST(VdsoTests, vdso_map_code_wrong_test) {
   ScratchPad scratch(__func__);
 
   ASSERT_EQ(scratch.compute_vdso_sizes(), ZX_OK, "cannot read vDSO program headers");
@@ -149,12 +141,4 @@ bool vdso_map_code_wrong_test() {
                                       ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE, &addr),
               ZX_ERR_ACCESS_DENIED, "executable mapping of subset of vDSO code");
   }
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(vdso_tests)
-RUN_TEST(vdso_map_twice_test);
-RUN_TEST(vdso_map_code_wrong_test);
-RUN_TEST(vdso_map_change_test);
-END_TEST_CASE(vdso_tests)

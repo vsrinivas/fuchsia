@@ -5,17 +5,17 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/pty/c/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/zx/time.h>
 #include <poll.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <zircon/status.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 // returns an int to avoid sign errors from ASSERT_*()
 static int fd_signals(const fbl::unique_fd& fd, uint32_t wait_for_any, zx::time deadline) {
@@ -111,9 +111,7 @@ static zx_status_t open_client(int fd, uint32_t client_id, int* out_fd) {
   return fcntl(*out_fd, F_SETFL, O_NONBLOCK);
 }
 
-static bool pty_test(void) {
-  BEGIN_TEST;
-
+TEST(PtyTests, pty_test) {
   // Connect to the PTY service.  We have to do this dance rather than just
   // using open() because open() uses the DESCRIBE flag internally, and the
   // plumbing of the PTY service through svchost causes the DESCRIBE to get
@@ -303,13 +301,9 @@ static bool pty_test(void) {
 
   ps_io.reset();
   ps.reset();
-
-  END_TEST;
 }
 
-bool not_a_pty_test(void) {
-  BEGIN_TEST;
-
+TEST(PtyTests, not_a_pty_test) {
   fbl::unique_fd root_dir(open("/", O_DIRECTORY | O_RDONLY));
   ASSERT_EQ(bool(root_dir), true, "");
 
@@ -323,11 +317,4 @@ bool not_a_pty_test(void) {
             ZX_ERR_BAD_HANDLE, "");
 
   io.reset();
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(pty_tests)
-RUN_TEST(pty_test)
-RUN_TEST(not_a_pty_test)
-END_TEST_CASE(pty_tests)

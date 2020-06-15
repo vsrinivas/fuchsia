@@ -8,7 +8,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 extern void thread_entry(uintptr_t arg);
 
@@ -42,8 +42,7 @@ zx_status_t raw_thread_create(void (*thread_entry)(uintptr_t arg), uintptr_t arg
   return ZX_OK;
 }
 
-bool tis_test(void) {
-  BEGIN_TEST;
+TEST(TisTests, tis_test) {
   uintptr_t arg = 0x1234567890abcdef;
   zx_handle_t handle = ZX_HANDLE_INVALID;
   zx_status_t status = raw_thread_create(thread_entry, arg, &handle);
@@ -51,9 +50,4 @@ bool tis_test(void) {
 
   status = zx_object_wait_one(handle, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL);
   ASSERT_GE(status, 0, "Error while thread wait");
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(tis_tests)
-RUN_TEST(tis_test)
-END_TEST_CASE(tis_tests)

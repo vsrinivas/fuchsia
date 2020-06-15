@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #define THREAD_COUNT 8
 #define ITER 1000000
@@ -29,7 +29,7 @@ static int float_thread(void* arg) {
   unsigned int i, j;
   double a[16];
 
-  unittest_printf("float_thread arg %f, running %u iterations\n", *val, ITER);
+  printf("float_thread arg %f, running %u iterations\n", *val, ITER);
   usleep(500000);
 
   /* do a bunch of work with floating point to test context switching */
@@ -49,17 +49,15 @@ static int float_thread(void* arg) {
   return 0;
 }
 
-bool fpu_test(void) {
-  BEGIN_TEST;
-
-  unittest_printf("welcome to floating point test\n");
+TEST(FpuTests, fpu_test) {
+  printf("welcome to floating point test\n");
 
   /* test lazy fpu load on separate thread */
   thrd_t t[THREAD_COUNT];
   double val[countof(t)];
   char name[ZX_MAX_NAME_LEN];
 
-  unittest_printf("creating %zu floating point threads\n", countof(t));
+  printf("creating %zu floating point threads\n", countof(t));
   for (unsigned int i = 0; i < countof(t); i++) {
     val[i] = i;
     snprintf(name, sizeof(name), "fpu thread %u", i);
@@ -71,15 +69,10 @@ bool fpu_test(void) {
     void* v = &val[i];
     uint64_t int64_val = *(uint64_t*)v;
 
-    unittest_printf("float thread %u returns val %f %#" PRIx64 ", expected %#" PRIx64 "\n", i,
-                    val[i], int64_val, expected[i]);
+    printf("float thread %u returns val %f %#" PRIx64 ", expected %#" PRIx64 "\n", i, val[i],
+           int64_val, expected[i]);
     EXPECT_EQ(int64_val, expected[i], "Value does not match as expected");
   }
 
-  unittest_printf("floating point test done\n");
-  END_TEST;
+  printf("floating point test done\n");
 }
-
-BEGIN_TEST_CASE(fpu_tests)
-RUN_TEST(fpu_test);
-END_TEST_CASE(fpu_tests)
