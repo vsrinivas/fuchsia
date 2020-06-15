@@ -934,6 +934,14 @@ static void brcmf_fws_rssi_indicate(struct brcmf_if* ifp, int8_t rssi) {
   // Note that using an unsigned int8 to set the value of index ensures that -128
   // is handled as well.
   if (ifp->ndev && (rssi <= 0)) {
+    // To workaround a bug in firmware, use the last value if the current reading
+    // is zero.
+    // TODO(karthikrish) Remove this workaround once the issue is fixed in firmware
+    if (rssi == 0) {
+      rssi = ifp->ndev->stats.last_signal_rssi;
+    } else {
+      ifp->ndev->stats.last_signal_rssi = rssi;
+    }
     uint8_t idx = -rssi;
     ifp->ndev->stats.rssi_buckets[idx]++;
   }
@@ -1783,19 +1791,17 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
       continue;
     }
     len = signal_data[FWS_TLV_LEN_OFFSET];
-    data = signal_data + FWS_TLV_LEN_SIZE;
-
-    err = brcmf_fws_get_tlv_len(fws, static_cast<brcmf_fws_tlv_type>(type), &tlv_len);
-    BRCMF_DBG(HDRS, "tlv type=%s (%d), len=%d (%d:%d)",
-              brcmf_fws_get_tlv_name(static_cast<brcmf_fws_tlv_type>(type)), type, len, err,
-              tlv_len);
+    data = signal_data + FWS_TLV_DATA_OFFSET;
 
     /* abort parsing when length invalid */
     if (data_len < len + FWS_TLV_LEN_SIZE) {
       break;
     }
-
     err = brcmf_fws_get_tlv_len(fws, static_cast<brcmf_fws_tlv_type>(type), &tlv_len);
+    BRCMF_DBG(HDRS, "tlv type=%s (%d), len=%d (%d:%d)",
+              brcmf_fws_get_tlv_name(static_cast<brcmf_fws_tlv_type>(type)), type, len, err,
+              tlv_len);
+
     if (err != ZX_OK || len < tlv_len) {
       break;
     }

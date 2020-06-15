@@ -43,6 +43,9 @@ class SimErrorInjector {
   void DelErrInjIovar(const char* iovar);
   bool CheckIfErrInjIovarEnabled(const char* iovar, zx_status_t* ret_status, uint16_t ifidx);
 
+  void SetSignalErrInj(bool enable);
+  bool HandleRxFrameErrorInjection(uint8_t* buffer);
+
  private:
   struct ErrInjCmd {
     std::optional<uint16_t> ifidx;
@@ -65,6 +68,8 @@ class SimErrorInjector {
   };
   std::list<ErrInjCmd> cmds_;
   std::list<ErrInjIovar> iovars_;
+  // If set to true this flag injects error (sets rssi to 0) in the rssi signal
+  bool enable_rssi_sig_err_ = false;
 };
 
 }  // namespace wlan::brcmfmac

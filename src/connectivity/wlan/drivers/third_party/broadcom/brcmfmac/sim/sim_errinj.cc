@@ -18,7 +18,9 @@
 
 #include <cstring>
 
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwsignal.h"
 
 namespace wlan::brcmfmac {
 
@@ -116,6 +118,38 @@ bool SimErrorInjector::CheckIfErrInjIovarEnabled(const char* iovar, zx_status_t*
     }
   }
   BRCMF_DBG(SIMERRINJ, "iovar: %s ifidx: %d not found", iovar, ifidx);
+  return false;
+}
+
+void SimErrorInjector::SetSignalErrInj(bool enable) { enable_rssi_sig_err_ = enable; }
+
+// Rx frame related error injection. Currently, supports only rssi signal error injection.
+bool SimErrorInjector::HandleRxFrameErrorInjection(uint8_t* buffer) {
+  // This could potentially become a switch statement if we need to other types of
+  // error injection into the Rx frame.
+  if (enable_rssi_sig_err_ == false)
+    return false;
+
+  // This routine sets the rssi value (if signal is enabled) to zero.
+  auto header = reinterpret_cast<brcmf_proto_bcdc_header*>(buffer);
+  size_t header_offset = sizeof(brcmf_proto_bcdc_header);
+  if (header->data_offset) {
+    // data offset is in words
+    uint8_t data_offset_bytes = header->data_offset << 2;
+    uint8_t signal_size_bytes = FWS_TLV_TYPE_SIZE + FWS_TLV_LEN_SIZE + FWS_RSSI_DATA_LEN;
+    if (data_offset_bytes < signal_size_bytes) {
+      // Signal data not valid
+      return false;
+    }
+
+    // If the signal is RSSI, set the rssi value to 0
+    if (buffer[header_offset + FWS_TLV_TYPE_OFFSET] == BRCMF_FWS_TYPE_RSSI &&
+        buffer[header_offset + FWS_TLV_LEN_OFFSET] == FWS_RSSI_DATA_LEN) {
+      buffer[header_offset + FWS_TLV_DATA_OFFSET] = 0;
+      // indicate that the rssi signal was modified.
+      return true;
+    }
+  }
   return false;
 }
 }  // namespace wlan::brcmfmac

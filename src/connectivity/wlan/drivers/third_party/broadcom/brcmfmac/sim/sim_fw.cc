@@ -218,7 +218,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
         value = *(reinterpret_cast<uint32_t*>(data));
         ZX_ASSERT_MSG(!value, "Promiscuous mode not supported in simulator");
       }
-    break;
+      break;
     case BRCMF_C_SET_SCAN_PASSIVE_TIME:
       if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(default_passive_time_))) == ZX_OK) {
         default_passive_time_ = *(reinterpret_cast<uint32_t*>(data));
@@ -2086,14 +2086,17 @@ void SimFirmware::SendFrameToDriver(uint16_t ifidx, size_t payload_size,
                                     std::shared_ptr<const simulation::WlanRxInfo> info) {
   size_t header_offset;
   size_t signal_size_bytes = 0;
+  size_t signal_filler_bytes = 0;
 
   // If signalling is enabled (for now only RSSI) ensure space is reserved for it
   if (iface_tbl_[ifidx].tlv & BRCMF_FWS_FLAGS_RSSI_SIGNALS) {
     signal_size_bytes = FWS_TLV_TYPE_SIZE + FWS_TLV_LEN_SIZE + FWS_RSSI_DATA_LEN;
+    signal_filler_bytes = sizeof(uint32_t) - (signal_size_bytes % sizeof(uint32_t));
+    signal_size_bytes += signal_filler_bytes;
   }
   auto signal_size_words = signal_size_bytes >> 2;
-  auto buf = CreateBcdcBuffer(ifidx, payload_size + signal_size_bytes, signal_size_words,
-                              &header_offset);
+  auto buf =
+      CreateBcdcBuffer(ifidx, payload_size + signal_size_bytes, signal_size_words, &header_offset);
 
   if (payload_size != 0) {
     ZX_ASSERT(!buffer_in.empty());
@@ -2102,15 +2105,24 @@ void SimFirmware::SendFrameToDriver(uint16_t ifidx, size_t payload_size,
       // TLV type
       buf_data[header_offset + FWS_TLV_TYPE_OFFSET] = BRCMF_FWS_TYPE_RSSI;
       // TLV Length
-      auto len = reinterpret_cast<uint16_t*>(&buf_data[header_offset + FWS_TLV_LEN_OFFSET]);
-      *len = FWS_RSSI_DATA_LEN;
+      buf_data[header_offset + FWS_TLV_LEN_OFFSET] = FWS_RSSI_DATA_LEN;
       // TLV value
       buf_data[header_offset + FWS_TLV_DATA_OFFSET] = info->signal_strength;
+
       header_offset += FWS_TLV_DATA_OFFSET + FWS_RSSI_DATA_LEN;
+      // since RSSI signal is only 3 bytes, pad it with the end of signal type.
+      if (signal_filler_bytes) {
+        for (uint8_t i = 0; i < signal_filler_bytes; i++) {
+          buf_data[header_offset + i] = BRCMF_FWS_TYPE_FILLER;
+        }
+        header_offset += signal_filler_bytes;
+      }
     }
     memcpy(&buf_data[header_offset], buffer_in.data(), payload_size);
   }
 
+  // Handle any Rx frame related error injection (if enabled).
+  err_inj_.HandleRxFrameErrorInjection(buf->data());
   brmcf_sim_rx_frame(simdev_, std::move(buf));
 }
 

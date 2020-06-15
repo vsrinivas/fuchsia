@@ -28,6 +28,7 @@
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sta-ifc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_wifi.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"

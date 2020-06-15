@@ -1556,6 +1556,7 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
   }
   cfg->signal_report_timer->Stop();
   ndev->stats = {};
+  ifp->ndev->stats.last_signal_rssi = 0;
 
   BRCMF_DBG(TRACE, "Exit");
 }
