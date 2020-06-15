@@ -69,6 +69,7 @@ AudioTunerImpl::GetFidlRequestHandler() {
 }
 
 void AudioTunerImpl::GetAvailableAudioEffects(GetAvailableAudioEffectsCallback callback) {
+  std::vector<fuchsia::media::tuning::AudioEffectType> available_effects;
   for (auto& file : std::filesystem::directory_iterator("/pkg/lib")) {
     if (file.is_directory()) {
       continue;
@@ -90,10 +91,10 @@ void AudioTunerImpl::GetAvailableAudioEffects(GetAvailableAudioEffectsCallback c
 
       fuchsia::media::tuning::AudioEffectType effect = {.module_name = lib_name.string(),
                                                         .effect_name = desc.name};
-      available_effects_.push_back(effect);
+      available_effects.push_back(effect);
     }
   }
-  callback(available_effects_);
+  callback(std::move(available_effects));
 }
 
 void AudioTunerImpl::GetAudioDeviceProfile(std::string device_id,

@@ -36,7 +36,6 @@ class AudioTunerImpl : public fuchsia::media::tuning::AudioTuner {
 
  private:
   const Context& context_;
-  std::vector<fuchsia::media::tuning::AudioEffectType> available_effects_;
   fidl::BindingSet<fuchsia::media::tuning::AudioTuner, AudioTunerImpl*> bindings_;
 };
 
