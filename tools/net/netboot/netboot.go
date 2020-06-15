@@ -130,6 +130,10 @@ func bindNetbootPort() (*net.UDPConn, error) {
 	var conn *net.UDPConn
 	// https://fuchsia.googlesource.com/fuchsia/+/0e30059/zircon/tools/netprotocol/netprotocol.c#59
 	for i := clientPortStart; i <= clientPortEnd; i++ {
+		// Don't use the debugPort which is used by loglistener.
+		if i == debugPort {
+			continue
+		}
 		conn, err = net.ListenUDP("udp6", &net.UDPAddr{IP: net.IPv6zero, Port: i})
 		if err == nil {
 			break
