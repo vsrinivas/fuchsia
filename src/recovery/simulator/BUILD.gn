@@ -11,26 +11,47 @@ group("tests") {
   deps = []
 
   if (host_os == "linux") {
-    deps += [ ":recovery_simulator_tests($host_toolchain)" ]
+    deps += [
+      ":recovery_simulator_boot_test($host_toolchain)",
+      ":recovery_simulator_serial_test($host_toolchain)",
+    ]
   }
 }
 
 if (is_linux) {
-  go_library("lib") {
+  go_library("recovery_simulator_support_lib") {
     testonly = true
 
-    name = "go.fuchsia.dev/fuchsia/src/recovery/simulator"
+    name = "go.fuchsia.dev/fuchsia/src/recovery/simulator/support"
+    source_dir = "//src/recovery/simulator/support"
 
     deps = [ "//src/testing/qemu" ]
   }
 
-  go_test("recovery_simulator_tests") {
-    # Disable the go-level timeout for this test. This timeout does not provide any
-    # value for this test and causes flakes when running an ASAN build in QEMU.
-    # See fxb/38507 for additional discussion.
-    timeout = "0"
-    gopackages = [ "go.fuchsia.dev/fuchsia/src/recovery/simulator" ]
-    deps = [ ":lib" ]
-    non_go_deps = [ "//build/images/recovery:test_data($host_toolchain)" ]
+  # These take >5m (the infra timeout) if they're all in one binary, so they
+  # need to be split into multiple binaries.
+  template("split_go_test") {
+    split_name = invoker.target_name
+    go_library(target_name) {
+      testonly = true
+      name = "go.fuchsia.dev/fuchsia/src/recovery/simulator/$split_name"
+      source_dir = "//src/recovery/simulator/$split_name"
+      deps = [
+        ":recovery_simulator_support_lib",
+        "//src/testing/qemu",
+      ]
+    }
+
+    go_test("recovery_simulator_${split_name}") {
+      gopackages =
+          [ "go.fuchsia.dev/fuchsia/src/recovery/simulator/$split_name" ]
+      deps = [ ":$split_name" ]
+      non_go_deps = [ "//build/images/recovery:test_data($host_toolchain)" ]
+    }
+  }
+
+  split_go_test("boot_test") {
+  }
+  split_go_test("serial_test") {
   }
 }
