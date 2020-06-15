@@ -140,6 +140,7 @@ migrated_zbi_test("core-tests") {
   ]
 
   device_types = [
+    "AEMU",
     "Astro",
     "QEMU",
     "Intel NUC Kit NUC7i5DNHE",
