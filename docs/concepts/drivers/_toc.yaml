@@ -44,5 +44,7 @@ toc:
   path: /docs/concepts/drivers/advanced.md
 - title: "Driver stack performance"
   path: /docs/concepts/drivers/driver_stack_performance.md
+- title: "Fuchsia input drivers"
+  path: /docs/concepts/drivers/input.md
 - title: "Reference"
   path: /docs/concepts/drivers/reference.md
