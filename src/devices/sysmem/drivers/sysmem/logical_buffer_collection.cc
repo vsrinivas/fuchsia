@@ -429,8 +429,8 @@ LogicalBufferCollection::~LogicalBufferCollection() {
   }
   parent_device_->RemoveLogicalBufferCollection(this);
 
-  // LOG(INFO, "~LogicalBufferCollection allocator_.needed_buffer_size(): %zu\n",
-  //    allocator_.inner_allocator().needed_buffer_size());
+  // LOG(INFO, "~LogicalBufferCollection allocator_.debug_needed_buffer_size(): %zu\n",
+  //    allocator_.inner_allocator().debug_needed_buffer_size());
 }
 
 void LogicalBufferCollection::Fail(const char* format, ...) {

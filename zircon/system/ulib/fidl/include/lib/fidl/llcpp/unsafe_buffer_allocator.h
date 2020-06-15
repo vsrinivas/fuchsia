@@ -56,7 +56,15 @@ class UnsafeBufferAllocator final : public Allocator {
 
     next_object_ = buf_;
     last_destructor_metadata_ = reinterpret_cast<DestructorMetadata*>(buf_ + NBytes);
+    debug_needed_buffer_size_ = 0;
   }
+
+  // In debug, returns how large an NBytes value would be needed to fit everything allocated via
+  // this allocator so far.  In release, returns 0.
+  //
+  // This value can be larger than the total size allocated via fidl::Allocator::make<>(), because
+  // this value also accounts for internal dtor tracking overhead and any FIDL_ALIGNMENT padding.
+  size_t debug_needed_buffer_size() { return debug_needed_buffer_size_; }
 
  private:
   // buf_ grows from both ends of the buffer
@@ -70,6 +78,10 @@ class UnsafeBufferAllocator final : public Allocator {
   // last_destructor_metadata_ contains the address of the last destructor metadata entry
   // (or the end of buf_ if there is no destructor metadata entry).
   DestructorMetadata* last_destructor_metadata_;
+
+  // In debug, the needed NBytes value to fit everything that's been allocated so far.  In release,
+  // this value isn't updated so remains 0.
+  size_t debug_needed_buffer_size_ = 0;
 
   struct DestructorMetadata {
     uint32_t offset;
@@ -103,6 +115,13 @@ class UnsafeBufferAllocator final : public Allocator {
            "fidl::UnsafeBufferAllocator expects a count that can fit within uint32_t");
     size_t block_size = FIDL_ALIGN(obj_size * count);
     void* block = next_object_;
+
+#if DEBUG_ASSERT_IMPLEMENTED
+    if (dtor != trivial_destructor) {
+      debug_needed_buffer_size_ += sizeof(DestructorMetadata);
+    }
+    debug_needed_buffer_size_ += block_size;
+#endif
 
     if (!can_allocate(block_size, dtor)) {
       // When UnsafeBufferAllocator is not wrapped with FailoverHeapAllocator, this requests that

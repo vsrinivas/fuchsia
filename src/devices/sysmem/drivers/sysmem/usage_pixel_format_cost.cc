@@ -560,8 +560,8 @@ const std::list<const UsagePixelFormatCostEntry> kGeneric_Cost_Entries = [] {
       // .cost
       1000.0L,
   });
-  // LOG(INFO, "usage_pixel_format_cost.cc - allocator.needed_buffer_size(): %zu",
-  //    allocator.inner_allocator().needed_buffer_size());
+  // LOG(INFO, "usage_pixel_format_cost.cc - allocator.debug_needed_buffer_size(): %zu",
+  //    allocator.inner_allocator().debug_needed_buffer_size());
   return result;
 }();
 
