@@ -65,18 +65,16 @@ void DefaultPrinter::Print(const ram_metrics::BandwidthInfo& info) const {
     }
     // We discard read-only and write-only counters as they are not supported
     // by current hardware.
-    double bandwidth_rw =
-        CounterToBandwidthMBs(info.channels[ix].readwrite_cycles, info.frequency,
-                              device_info_.default_cycles_to_measure, info.bytes_per_cycle);
+    double bandwidth_rw = CounterToBandwidthMBs(info.channels[ix].readwrite_cycles, info.frequency,
+                                                cycles_to_measure_, info.bytes_per_cycle);
     total_bandwidth_rw += bandwidth_rw;
     fprintf(file_, "%s (rw) \t\t %g\n", row.c_str(), bandwidth_rw);
     ++ix;
   }
   // Use total read-write cycles if supported.
   if (info.total.readwrite_cycles) {
-    total_bandwidth_rw =
-        CounterToBandwidthMBs(info.total.readwrite_cycles, info.frequency,
-                              device_info_.default_cycles_to_measure, info.bytes_per_cycle);
+    total_bandwidth_rw = CounterToBandwidthMBs(info.total.readwrite_cycles, info.frequency,
+                                               cycles_to_measure_, info.bytes_per_cycle);
   }
   fprintf(file_, "total (rw) \t\t %g\n", total_bandwidth_rw);
 }
@@ -109,9 +107,8 @@ void CsvPrinter::Print(const ram_metrics::BandwidthInfo& info) const {
       continue;
     }
 
-    double bandwidth_rw =
-        CounterToBandwidthMBs(info.channels[ix].readwrite_cycles, info.frequency,
-                              device_info_.default_cycles_to_measure, info.bytes_per_cycle);
+    double bandwidth_rw = CounterToBandwidthMBs(info.channels[ix].readwrite_cycles, info.frequency,
+                                                cycles_to_measure_, info.bytes_per_cycle);
     fprintf(file_, "%g%s", bandwidth_rw, (ix < row_count - 1) ? "," : "\n");
     ix++;
   }

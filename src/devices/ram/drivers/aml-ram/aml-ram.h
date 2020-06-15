@@ -60,7 +60,7 @@ constexpr uint32_t MEMBW_SP[MEMBW_MAX_CHANNELS] = {(0x0022 << 2), (0x0024 << 2),
 constexpr uint32_t MEMBW_PLL_CNTL = (0x0300 << 2);
 
 constexpr uint64_t kMinimumCycleCount = 1024 * 512;
-constexpr uint64_t kMaximumCycleCount = 1024 * 1024 * 256;
+constexpr uint64_t kMaximumCycleCount = 0xffffffff;
 
 class AmlRam;
 using DeviceType = ddk::Device<AmlRam, ddk::Suspendable, ddk::Messageable>;

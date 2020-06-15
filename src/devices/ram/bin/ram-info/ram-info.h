@@ -28,10 +28,10 @@ struct RamDeviceInfo {
 
 class Printer {
  public:
-  Printer(FILE* file, const RamDeviceInfo& device_info)
+  Printer(FILE* file, uint64_t cycles_to_measure)
       : file_(file),
         rows_(::llcpp::fuchsia::hardware::ram::metrics::MAX_COUNT_CHANNELS),
-        device_info_(device_info) {}
+        cycles_to_measure_(cycles_to_measure) {}
   virtual ~Printer() = default;
 
   void AddChannelName(size_t channel_index, const std::string& name) {
@@ -43,18 +43,18 @@ class Printer {
  protected:
   FILE* const file_;
   std::vector<std::string> rows_;
-  const RamDeviceInfo device_info_;
+  const uint64_t cycles_to_measure_;
 };
 
 class DefaultPrinter : public Printer {
  public:
-  DefaultPrinter(FILE* file, const RamDeviceInfo& device_info) : Printer(file, device_info) {}
+  DefaultPrinter(FILE* file, uint64_t cycles_to_measure) : Printer(file, cycles_to_measure) {}
   void Print(const ::llcpp::fuchsia::hardware::ram::metrics::BandwidthInfo& info) const override;
 };
 
 class CsvPrinter : public Printer {
  public:
-  CsvPrinter(FILE* file, const RamDeviceInfo& device_info) : Printer(file, device_info) {}
+  CsvPrinter(FILE* file, uint64_t cycles_to_measure) : Printer(file, cycles_to_measure) {}
   void Print(const ::llcpp::fuchsia::hardware::ram::metrics::BandwidthInfo& info) const override;
 };
 

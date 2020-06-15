@@ -139,6 +139,15 @@ TEST_F(AmlRamDeviceTest, MalformedRequests) {
     EXPECT_EQ(info->result.err(), ZX_ERR_INVALID_ARGS);
   }
 
+  // Invalid cycles (too high).
+  {
+    ram_metrics::BandwidthMeasurementConfig config = {(0x100000000ull), {1, 0, 0, 0, 0, 0}};
+    auto info = client.MeasureBandwidth(config);
+    ASSERT_TRUE(info.ok());
+    ASSERT_TRUE(info->result.is_err());
+    EXPECT_EQ(info->result.err(), ZX_ERR_INVALID_ARGS);
+  }
+
   // Invalid channel (above channel 3).
   {
     ram_metrics::BandwidthMeasurementConfig config = {(1024 * 1024 * 10), {0, 0, 0, 0, 1}};

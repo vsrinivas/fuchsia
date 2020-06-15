@@ -32,20 +32,21 @@ class FakeRamDevice : public ::llcpp::fuchsia::hardware::ram::metrics::Device::I
       return;
     }
 
-    EXPECT_EQ(config.cycles_to_measure, 1024);
+    EXPECT_EQ(config.cycles_to_measure % 1024, 0);
+    auto mul = config.cycles_to_measure / 1024;
 
     ram_metrics::BandwidthInfo info = {};
     info.timestamp = zx::msec(1234).to_nsecs();
     info.frequency = 256 * 1024 * 1024;
     info.bytes_per_cycle = 1;
-    info.channels[0].readwrite_cycles = 10;
-    info.channels[1].readwrite_cycles = 20;
-    info.channels[2].readwrite_cycles = 30;
-    info.channels[3].readwrite_cycles = 40;
-    info.channels[4].readwrite_cycles = 50;
-    info.channels[5].readwrite_cycles = 60;
-    info.channels[6].readwrite_cycles = 70;
-    info.channels[7].readwrite_cycles = 80;
+    info.channels[0].readwrite_cycles = 10 * mul;
+    info.channels[1].readwrite_cycles = 20 * mul;
+    info.channels[2].readwrite_cycles = 30 * mul;
+    info.channels[3].readwrite_cycles = 40 * mul;
+    info.channels[4].readwrite_cycles = 50 * mul;
+    info.channels[5].readwrite_cycles = 60 * mul;
+    info.channels[6].readwrite_cycles = 70 * mul;
+    info.channels[7].readwrite_cycles = 80 * mul;
 
     completer.ReplySuccess(info);
   }
@@ -78,15 +79,13 @@ class RamInfoTest : public zxtest::Test {
 };
 
 TEST_F(RamInfoTest, Errors) {
-  constexpr RamDeviceInfo kDeviceInfo = {
-      .default_cycles_to_measure = 1024,
-  };
+  constexpr uint64_t kCyclesToMeasure = 1024;
 
   char output_buffer[512];
   FILE* output_file = fmemopen(output_buffer, sizeof(output_buffer), "w");
   ASSERT_NOT_NULL(output_file);
 
-  DefaultPrinter printer(output_file, kDeviceInfo);
+  DefaultPrinter printer(output_file, kCyclesToMeasure);
   printer.AddChannelName(0, "channel0");
 
   fake_device_.set_close();
@@ -99,22 +98,20 @@ TEST_F(RamInfoTest, Errors) {
 }
 
 TEST_F(RamInfoTest, DefaultPrinter) {
-  constexpr RamDeviceInfo kDeviceInfo = {
-      .default_cycles_to_measure = 1024,
-  };
+  constexpr uint64_t kCyclesToMeasure = 1024;
 
   char output_buffer[512];
   FILE* output_file = fmemopen(output_buffer, sizeof(output_buffer), "w");
   ASSERT_NOT_NULL(output_file);
 
-  DefaultPrinter printer(output_file, kDeviceInfo);
+  DefaultPrinter printer(output_file, kCyclesToMeasure);
   printer.AddChannelName(0, "channel0");
   printer.AddChannelName(1, "channel1");
   printer.AddChannelName(2, "channel2");
   printer.AddChannelName(3, "channel3");
 
   ram_metrics::BandwidthMeasurementConfig config = {};
-  config.cycles_to_measure = 1024;
+  config.cycles_to_measure = kCyclesToMeasure;
 
   EXPECT_OK(MeasureBandwith(&printer, std::move(client_), config));
   fclose(output_file);
@@ -130,22 +127,20 @@ TEST_F(RamInfoTest, DefaultPrinter) {
 }
 
 TEST_F(RamInfoTest, CsvPrinter) {
-  constexpr RamDeviceInfo kDeviceInfo = {
-      .default_cycles_to_measure = 1024,
-  };
+  constexpr uint64_t kCyclesToMeasure = 1024;
 
   char output_buffer[512];
   FILE* output_file = fmemopen(output_buffer, sizeof(output_buffer), "w");
   ASSERT_NOT_NULL(output_file);
 
-  CsvPrinter printer(output_file, kDeviceInfo);
+  CsvPrinter printer(output_file, kCyclesToMeasure);
   printer.AddChannelName(0, "channel0");
   printer.AddChannelName(1, "channel1");
   printer.AddChannelName(2, "channel2");
   printer.AddChannelName(3, "channel3");
 
   ram_metrics::BandwidthMeasurementConfig config = {};
-  config.cycles_to_measure = 1024;
+  config.cycles_to_measure = kCyclesToMeasure;
 
   EXPECT_OK(MeasureBandwith(&printer, std::move(client_), config));
   fclose(output_file);
@@ -191,6 +186,35 @@ TEST_F(RamInfoTest, ParseChannelString) {
 
   result = ParseChannelString("z");
   EXPECT_FALSE(result.is_ok());
+}
+
+TEST_F(RamInfoTest, CyclesToMeasure) {
+  constexpr uint64_t kCyclesToMeasure = 1024 * 20;
+
+  char output_buffer[512];
+  FILE* output_file = fmemopen(output_buffer, sizeof(output_buffer), "w");
+  ASSERT_NOT_NULL(output_file);
+
+  DefaultPrinter printer(output_file, kCyclesToMeasure);
+  printer.AddChannelName(0, "channel0");
+  printer.AddChannelName(1, "channel1");
+  printer.AddChannelName(2, "channel2");
+  printer.AddChannelName(3, "channel3");
+
+  ram_metrics::BandwidthMeasurementConfig config = {};
+  config.cycles_to_measure = kCyclesToMeasure;
+
+  EXPECT_OK(MeasureBandwith(&printer, std::move(client_), config));
+  fclose(output_file);
+
+  constexpr char kExpectedOutput[] =
+      "channel \t\t usage (MB/s)  time: 1234 ms\n"
+      "channel0 (rw) \t\t 2.5\n"
+      "channel1 (rw) \t\t 5\n"
+      "channel2 (rw) \t\t 7.5\n"
+      "channel3 (rw) \t\t 10\n"
+      "total (rw) \t\t 25\n";
+  EXPECT_BYTES_EQ(output_buffer, kExpectedOutput, strlen(kExpectedOutput));
 }
 
 }  // namespace ram_info
