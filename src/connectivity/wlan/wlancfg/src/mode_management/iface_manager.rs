@@ -17,7 +17,6 @@ use {
     futures::{
         channel::{mpsc, oneshot},
         lock::Mutex,
-        SinkExt,
     },
     log::error,
     std::sync::Arc,
@@ -384,7 +383,11 @@ impl IfaceManagerApi for IfaceManager {
             state: Some(fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsDisabled),
             networks: vec![],
         };
-        let _ = self.client_update_sender.send(listener::Message::NotifyListeners(update));
+        if let Err(e) =
+            self.client_update_sender.unbounded_send(listener::Message::NotifyListeners(update))
+        {
+            error!("Failed to send state update: {:?}", e)
+        };
 
         // Tell the PhyManager to stop all client connections.
         let mut phy_manager = self.phy_manager.lock().await;
@@ -403,7 +406,12 @@ impl IfaceManagerApi for IfaceManager {
                     state: Some(fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsEnabled),
                     networks: vec![],
                 };
-                let _ = self.client_update_sender.send(listener::Message::NotifyListeners(update));
+                if let Err(e) = self
+                    .client_update_sender
+                    .unbounded_send(listener::Message::NotifyListeners(update))
+                {
+                    error!("Failed to send state update: {:?}", e)
+                };
             }
             phy_manager_error => {
                 return Err(format_err!(
@@ -1239,7 +1247,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec, "stop_disconnected_client");
+        let mut test_values = test_setup(&mut exec, "stop_disconnected_client");
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         // Create a PhyManager with a single, known client iface.
@@ -1259,6 +1267,17 @@ mod tests {
 
         // Ensure that no client interfaces are accounted for.
         assert!(iface_manager.clients.is_empty());
+
+        // Ensure an update was sent
+        let client_state_update = listener::ClientStateUpdate {
+            state: Some(fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsDisabled),
+            networks: vec![],
+        };
+        assert_variant!(
+            test_values.client_update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert_eq!(updates, client_state_update);
+        });
     }
 
     /// Call stop_client_connections when the only available client is unconfigured.
@@ -1462,7 +1481,7 @@ mod tests {
     #[test]
     fn test_start_clients_succeeds() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec, "start_client_connections_succeeds");
+        let mut test_values = test_setup(&mut exec, "start_client_connections_succeeds");
 
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(test_values.device_service_proxy.clone());
@@ -1480,6 +1499,17 @@ mod tests {
         // Ensure stop_client_connections returns immediately and is successful.
         pin_mut!(start_fut);
         assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Ready(Ok(_)));
+
+        // Ensure an update was sent
+        let client_state_update = listener::ClientStateUpdate {
+            state: Some(fidl_fuchsia_wlan_policy::WlanClientState::ConnectionsEnabled),
+            networks: vec![],
+        };
+        assert_variant!(
+            test_values.client_update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert_eq!(updates, client_state_update);
+        });
     }
 
     /// Tests the case where starting client connections fails.

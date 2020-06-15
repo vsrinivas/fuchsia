@@ -315,6 +315,7 @@ pub async fn handle_get_saved_networks(
 pub async fn handle_listen(
     mut server_stream: wlan_policy::ClientStateUpdatesRequestStream,
 ) -> Result<(), Error> {
+    let mut last_known_connection_state = None;
     while let Some(update_request) = server_stream.try_next().await? {
         let update = update_request.into_on_client_state_update();
         let (update, responder) = match update {
@@ -324,15 +325,22 @@ pub async fn handle_listen(
         let _ = responder.send();
 
         match update.state {
-            Some(state) => match state {
-                wlan_policy::WlanClientState::ConnectionsEnabled => {
-                    println!("Client connections are enabled");
-                }
-                wlan_policy::WlanClientState::ConnectionsDisabled => {
-                    println!("Client connections are disabled");
-                }
-            },
-            None => {}
+            Some(state) => {
+                if last_known_connection_state != Some(state) {
+                    last_known_connection_state = Some(state);
+                    match state {
+                        wlan_policy::WlanClientState::ConnectionsEnabled => {
+                            println!("Client connections are enabled");
+                        }
+                        wlan_policy::WlanClientState::ConnectionsDisabled => {
+                            println!("Client connections are disabled");
+                        }
+                    }
+                };
+            }
+            None => {
+                println!("Unexpected client connection state 'None'");
+            }
         }
 
         let networks = match update.networks {
