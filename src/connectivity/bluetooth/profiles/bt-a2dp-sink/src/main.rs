@@ -29,11 +29,13 @@ use {
     fuchsia_trace::{self as trace},
     fuchsia_zircon as zx,
     futures::{
+        self,
         channel::mpsc::{self as mpsc, Receiver, Sender},
         select, FutureExt, StreamExt, TryStreamExt,
     },
     parking_lot::Mutex,
     std::{collections::hash_map, collections::HashMap, convert::TryFrom, sync::Arc},
+    thiserror::Error,
 };
 
 use crate::connected_peers::ConnectedPeers;
@@ -128,11 +130,14 @@ impl Stream {
         let codec_config = self.configuration().ok_or(avdtp::Error::InvalidState)?;
         let transport = self.endpoint.take_transport().ok_or(avdtp::Error::InvalidState)?;
 
-        fuchsia_async::spawn_local(decode_media_stream(
+        // TODO(42976) get real media session id
+        let session_id = DEFAULT_SESSION_ID;
+
+        let config_clone = codec_config.clone();
+        fuchsia_async::spawn_local(media_stream_task(
             transport,
-            codec_config,
-            // TODO(42976) get real media session id
-            DEFAULT_SESSION_ID,
+            Box::new(move || player::Player::new(session_id, codec_config.clone())),
+            config_clone,
             receive,
             inspect,
             cobalt_sender,
@@ -188,7 +193,7 @@ impl Streams {
         // TODO(BT-533): detect codecs, add streams for each codec
         // SBC is required
         let sbc_config = MediaCodecConfig::min_sbc();
-        if let Err(e) = player::Player::new(DEFAULT_SESSION_ID, sbc_config).await {
+        if let Err(e) = player::Player::test_playable(&sbc_config).await {
             fx_log_warn!("Can't play required SBC audio: {}", e);
             return Err(e);
         }
@@ -297,42 +302,81 @@ impl Streams {
     }
 }
 
+#[derive(Error, Debug)]
+enum StreamingError {
+    /// The media stream ended.
+    #[error("Media stream ended")]
+    MediaStreamEnd,
+    /// The media stream returned an error. The error is provided.
+    #[error("Media stream error: {:?}", _0)]
+    MediaStreamError(avdtp::Error),
+    /// The Media Player closed unexpectedly.
+    #[error("Player closed unexpectedlky")]
+    PlayerClosed,
+}
+
+/// Wrapper function for media streaming that handles creation of the Player and the media stream
+/// metrics reporting
+async fn media_stream_task(
+    mut stream: (impl futures::Stream<Item = avdtp::Result<Vec<u8>>> + std::marker::Unpin),
+    player_gen: Box<dyn Fn() -> Result<player::Player, Error>>,
+    codec_config: MediaCodecConfig,
+    mut end_signal: Receiver<()>,
+    mut inspect: StreamingInspectData,
+    cobalt_sender: CobaltSender,
+) {
+    let start_time = zx::Time::get(zx::ClockId::Monotonic);
+    loop {
+        let mut player = match player_gen() {
+            Ok(v) => v,
+            Err(e) => {
+                fx_log_info!("Can't setup player: {:?}", e);
+                break;
+            }
+        };
+        // Get the first status from the player to confirm it is setup.
+        if let player::PlayerEvent::Closed = player.next_event().await {
+            fx_log_info!("Player failed during startup");
+            break;
+        }
+
+        match decode_media_stream(&mut stream, player, &mut end_signal, &mut inspect).await {
+            Ok(()) => return,
+            Err(StreamingError::PlayerClosed) => fx_log_info!("Player closed, rebuilding.."),
+            Err(e) => {
+                fx_log_info!("Unrecoverable streaming error: {:?}", e);
+                break;
+            }
+        };
+    }
+    let end_time = zx::Time::get(zx::ClockId::Monotonic);
+
+    report_stream_metrics(
+        cobalt_sender,
+        &codec_config.codec_type(),
+        (end_time - start_time).into_seconds(),
+    );
+}
+
 /// Decodes a media stream by starting a Player and transferring media stream packets from AVDTP
 /// to the player.  Restarts the player on player errors.
 /// Ends when signaled from `end_signal`, or when the media transport stream is closed.
 async fn decode_media_stream(
-    mut stream: avdtp::MediaStream,
-    codec_config: MediaCodecConfig,
-    session_id: u64,
-    mut end_signal: Receiver<()>,
-    mut inspect: StreamingInspectData,
-    cobalt_sender: CobaltSender,
-) -> () {
-    let mut player = match player::Player::new(session_id, codec_config.clone()).await {
-        Ok(v) => v,
-        Err(e) => {
-            fx_log_info!("Can't setup player for Media: {:?}", e);
-            return;
-        }
-    };
-
+    stream: &mut (impl futures::Stream<Item = avdtp::Result<Vec<u8>>> + std::marker::Unpin),
+    mut player: player::Player,
+    end_signal: &mut Receiver<()>,
+    mut inspect: &mut StreamingInspectData,
+) -> Result<(), StreamingError> {
     trace::instant!("bt-a2dp-sink", "Media:Start", trace::Scope::Thread);
 
     let mut packet_count: u64 = 0;
-    let start_time = zx::Time::get(zx::ClockId::Monotonic);
     inspect.stream_started();
     loop {
         select! {
             stream_packet = stream.next().fuse() => {
                 let pkt = match stream_packet {
-                    None => {
-                        fx_log_info!("Media transport closed");
-                        break;
-                    },
-                    Some(Err(e)) => {
-                        fx_log_info!("Error in media stream: {:?}", e);
-                        break;
-                    }
+                    None => return Err(StreamingError::MediaStreamEnd),
+                    Some(Err(e)) => return Err(StreamingError::MediaStreamError(e)),
                     Some(Ok(packet)) => packet,
                 };
 
@@ -353,17 +397,7 @@ async fn decode_media_stream(
             },
             player_event = player.next_event().fuse() => {
                 match player_event {
-                    player::PlayerEvent::Closed => {
-                        fx_log_info!("Rebuilding Player");
-                        // The player died somehow? Attempt to rebuild the player.
-                        player = match player::Player::new(session_id, codec_config.clone()).await {
-                            Ok(v) => v,
-                            Err(e) => {
-                                fx_log_info!("Can't rebuild player: {:?}", e);
-                                break;
-                            }
-                        };
-                    },
+                    player::PlayerEvent::Closed => return Err(StreamingError::PlayerClosed),
                     player::PlayerEvent::Status(s) => {
                         fx_vlog!(1, "PlayerEvent Status happened: {:?}", s);
                     },
@@ -378,14 +412,8 @@ async fn decode_media_stream(
             }
         }
     }
-    let end_time = zx::Time::get(zx::ClockId::Monotonic);
-
-    report_stream_metrics(
-        cobalt_sender,
-        &codec_config.codec_type(),
-        (end_time - start_time).into_seconds(),
-    );
     trace::instant!("bt-a2dp-sink", "Media:Stop", trace::Scope::Thread);
+    Ok(())
 }
 
 fn report_stream_metrics(
@@ -631,8 +659,12 @@ mod tests {
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_bredr::Channel;
     use fidl_fuchsia_cobalt::{CobaltEvent, EventPayload};
-    use fidl_fuchsia_media::{AUDIO_ENCODING_AAC, AUDIO_ENCODING_SBC};
+    use fidl_fuchsia_media::{
+        AudioConsumerRequest, AudioConsumerStatus, SessionAudioConsumerFactoryMarker,
+        StreamSinkRequest, AUDIO_ENCODING_AAC, AUDIO_ENCODING_SBC,
+    };
     use fuchsia_bluetooth::types::PeerId;
+    use fuchsia_inspect;
     use futures::channel::mpsc;
     use futures::{pin_mut, task::Poll, StreamExt};
     use matches::assert_matches;
@@ -994,5 +1026,248 @@ mod tests {
             Poll::Pending => {}
         };
         run_to_stalled(&mut exec);
+    }
+
+    fn setup_media_stream_test() -> (fasync::Executor, MediaCodecConfig, StreamingInspectData) {
+        let exec = fasync::Executor::new().expect("executor should build");
+        let sbc_config = MediaCodecConfig::min_sbc();
+        let inspector = inspect::component::inspector();
+        let root = inspector.root();
+        let inspect = StreamingInspectData::new(root.create_child("stream"));
+        (exec, sbc_config, inspect)
+    }
+
+    #[test]
+    fn decode_media_stream_empty() {
+        let (mut exec, sbc_config, mut inspect) = setup_media_stream_test();
+        let (player, _sink_requests, _consumer_requests, _vmo) =
+            player::tests::setup_player(&mut exec, sbc_config);
+        let (_send, mut receive) = mpsc::channel(1);
+
+        let mut empty_stream = futures::stream::empty();
+
+        let decode_fut = decode_media_stream(&mut empty_stream, player, &mut receive, &mut inspect);
+        pin_mut!(decode_fut);
+
+        match exec.run_until_stalled(&mut decode_fut) {
+            Poll::Ready(Err(StreamingError::MediaStreamEnd)) => {}
+            x => panic!("Expected decoding to end when media stream ended, got {:?}", x),
+        };
+    }
+
+    #[test]
+    fn decode_media_stream_error() {
+        let (mut exec, sbc_config, mut inspect) = setup_media_stream_test();
+        let (player, _sink_requests, _consumer_requests, _vmo) =
+            player::tests::setup_player(&mut exec, sbc_config);
+        let (_send, mut receive) = mpsc::channel(1);
+
+        let mut error_stream =
+            futures::stream::poll_fn(|_| -> Poll<Option<avdtp::Result<Vec<u8>>>> {
+                Poll::Ready(Some(Err(avdtp::Error::PeerDisconnected)))
+            });
+
+        let decode_fut = decode_media_stream(&mut error_stream, player, &mut receive, &mut inspect);
+        pin_mut!(decode_fut);
+
+        match exec.run_until_stalled(&mut decode_fut) {
+            Poll::Ready(Err(StreamingError::MediaStreamError(avdtp::Error::PeerDisconnected))) => {}
+            x => panic!("Expected decoding to end with included error, got {:?}", x),
+        };
+    }
+
+    #[test]
+    fn decode_media_player_closed() {
+        let (mut exec, sbc_config, mut inspect) = setup_media_stream_test();
+        let (player, mut sink_requests, mut consumer_requests, _vmo) =
+            player::tests::setup_player(&mut exec, sbc_config);
+        let (_send, mut receive) = mpsc::channel(1);
+
+        let mut pending_stream = futures::stream::pending();
+
+        let decode_fut =
+            decode_media_stream(&mut pending_stream, player, &mut receive, &mut inspect);
+        pin_mut!(decode_fut);
+
+        match exec.run_until_stalled(&mut decode_fut) {
+            Poll::Pending => {}
+            x => panic!("Expected pending immediately after with no input but got {:?}", x),
+        };
+        let responder = match exec.run_until_stalled(&mut consumer_requests.select_next_some()) {
+            Poll::Ready(Ok(AudioConsumerRequest::WatchStatus { responder, .. })) => responder,
+            x => panic!("Expected a watch status request from the player setup, but got {:?}", x),
+        };
+        drop(responder);
+        drop(consumer_requests);
+        loop {
+            match exec.run_until_stalled(&mut sink_requests.select_next_some()) {
+                Poll::Pending => {}
+                x => fx_log_info!("Got sink request: {:?}", x),
+            };
+            match exec.run_until_stalled(&mut decode_fut) {
+                Poll::Ready(Err(StreamingError::PlayerClosed)) => break,
+                Poll::Pending => {}
+                x => panic!("Expected decoding to end when player closed, got {:?}", x),
+            };
+        }
+    }
+
+    #[test]
+    fn media_stream_task_reopens_player() {
+        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+
+        let (audio_consumer_factory_proxy, mut audio_consumer_factory_request_stream) =
+            create_proxy_and_stream::<SessionAudioConsumerFactoryMarker>()
+                .expect("proxy pair creation");
+
+        let sbc_config = MediaCodecConfig::min_sbc();
+
+        let (cobalt_sender, _) = fake_cobalt_sender();
+        let (_send, receive) = mpsc::channel(1);
+        let inspector = inspect::component::inspector();
+        let root = inspector.root();
+        let inspect = StreamingInspectData::new(root.create_child("stream"));
+        let pending_stream = futures::stream::pending();
+        let config_clone = sbc_config.clone();
+        let codec_type = config_clone.codec_type().clone();
+
+        let media_stream_fut = media_stream_task(
+            pending_stream,
+            Box::new(move || {
+                player::Player::from_proxy(
+                    DEFAULT_SESSION_ID,
+                    sbc_config.clone(),
+                    audio_consumer_factory_proxy.clone(),
+                )
+            }),
+            config_clone,
+            receive,
+            inspect,
+            cobalt_sender,
+        );
+        pin_mut!(media_stream_fut);
+
+        assert!(exec.run_until_stalled(&mut media_stream_fut).is_pending());
+
+        let (_sink_request_stream, mut audio_consumer_request_stream, _sink_vmo) =
+            player::tests::expect_player_setup(
+                &mut exec,
+                &mut audio_consumer_factory_request_stream,
+                codec_type.clone(),
+                DEFAULT_SESSION_ID,
+            );
+        player::tests::respond_event_status(
+            &mut exec,
+            &mut audio_consumer_request_stream,
+            AudioConsumerStatus {
+                min_lead_time: Some(50),
+                max_lead_time: Some(500),
+                error: None,
+                presentation_timeline: None,
+            },
+        );
+
+        drop(audio_consumer_request_stream);
+
+        assert!(exec.run_until_stalled(&mut media_stream_fut).is_pending());
+
+        // Should set up the player again after it closes.
+        let (_sink_request_stream, audio_consumer_request_stream, _sink_vmo) =
+            player::tests::expect_player_setup(
+                &mut exec,
+                &mut audio_consumer_factory_request_stream,
+                codec_type,
+                DEFAULT_SESSION_ID,
+            );
+
+        // This time we don't respond to the event status, so the player failed immediately after
+        // trying to be rebuilt and we end.
+        drop(audio_consumer_request_stream);
+
+        assert!(exec.run_until_stalled(&mut media_stream_fut).is_ready());
+    }
+
+    #[test]
+    fn decode_media_stream_stats_and_ends() {
+        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let sbc_config = MediaCodecConfig::min_sbc();
+        let (mut player, mut sink_requests, _consumer_requests, _vmo) =
+            player::tests::setup_player(&mut exec, sbc_config);
+        let (mut end_send, mut receive) = mpsc::channel(1);
+        let inspector = inspect::component::inspector();
+        let root = inspector.root();
+        let mut inspect = StreamingInspectData::new(root.create_child("stream"));
+
+        exec.set_fake_time(fasync::Time::from_nanos(5_678900000));
+
+        let (mut media_sender, mut media_receiver) = mpsc::channel(1);
+
+        player.play().unwrap_or_else(|e| fx_log_info!("Problem playing: {:}", e));
+
+        let decode_fut =
+            decode_media_stream(&mut media_receiver, player, &mut receive, &mut inspect);
+        pin_mut!(decode_fut);
+
+        match exec.run_until_stalled(&mut decode_fut) {
+            Poll::Pending => {}
+            x => panic!("Expected pending immediately after with no input but got {:?}", x),
+        };
+
+        fuchsia_inspect::assert_inspect_tree!(inspector, root: {
+        stream: {
+            stream_started_at: "5.678",
+            rx_bytes_per_second_current: 0 as u64,
+            rx_seconds: 0 as u64,
+            rx_bytes: 0 as u64,
+        }});
+
+        // raw rtp header with sequence number of 1 followed by 1 sbc frame
+        let raw = vec![
+            128, 96, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0x9c, 0xb1, 0x20, 0x3b, 0x80, 0x00, 0x00,
+            0x11, 0x7f, 0xfa, 0xab, 0xef, 0x7f, 0xfa, 0xab, 0xef, 0x80, 0x4a, 0xab, 0xaf, 0x80,
+            0xf2, 0xab, 0xcf, 0x83, 0x8a, 0xac, 0x32, 0x8a, 0x78, 0x8a, 0x53, 0x90, 0xdc, 0xad,
+            0x49, 0x96, 0xba, 0xaa, 0xe6, 0x9c, 0xa2, 0xab, 0xac, 0xa2, 0x72, 0xa9, 0x2d, 0xa8,
+            0x9a, 0xab, 0x75, 0xae, 0x82, 0xad, 0x49, 0xb4, 0x6a, 0xad, 0xb1, 0xba, 0x52, 0xa9,
+            0xa8, 0xc0, 0x32, 0xad, 0x11, 0xc6, 0x5a, 0xab, 0x3a,
+        ];
+
+        media_sender.try_send(Ok(raw)).expect("should be able to send into stream");
+
+        exec.set_fake_time(fasync::Time::from_nanos(6_778900000));
+        exec.wake_expired_timers();
+
+        loop {
+            match exec.run_until_stalled(&mut decode_fut) {
+                Poll::Pending => {}
+                x => panic!("Expected pending immediately after with no input but got {:?}", x),
+            };
+            // Should (eventually) get a packet send to the sink
+            match exec.run_until_stalled(&mut sink_requests.select_next_some()) {
+                Poll::Ready(Ok(StreamSinkRequest::SendPacketNoReply { .. })) => break,
+                Poll::Pending => {}
+                x => panic!("Expected to receive a packet from sending data.. got {:?}", x),
+            };
+        }
+
+        match exec.run_until_stalled(&mut decode_fut) {
+            Poll::Pending => {}
+            x => panic!("Expected pending immediately after with no input but got {:?}", x),
+        };
+
+        // After the update interval, we should have updated the rx stats.
+        fuchsia_inspect::assert_inspect_tree!(inspector, root: {
+        stream: {
+            stream_started_at: "5.678",
+            rx_bytes_per_second_current: 85 as u64,
+            rx_seconds: 1 as u64,
+            rx_bytes: 85 as u64,
+        }});
+
+        end_send.try_send(()).expect("should have been able to send end signal");
+
+        match exec.run_until_stalled(&mut decode_fut) {
+            Poll::Ready(Ok(())) => {}
+            x => panic!("Expected decoding to end with Ok, got {:?}", x),
+        };
     }
 }

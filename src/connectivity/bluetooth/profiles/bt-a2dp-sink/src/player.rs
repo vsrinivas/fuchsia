@@ -48,6 +48,7 @@ pub struct Player {
     tx_count: u64,
 }
 
+#[derive(Debug)]
 pub enum PlayerEvent {
     Closed,
     Status(AudioConsumerStatus),
@@ -145,16 +146,16 @@ impl SbcHeader {
 impl Player {
     /// Attempt to make a new player that decodes and plays frames encoded in the
     /// `codec`
-    pub async fn new(session_id: u64, codec_config: MediaCodecConfig) -> Result<Player, Error> {
+    pub fn new(session_id: u64, codec_config: MediaCodecConfig) -> Result<Player, Error> {
         let audio_consumer_factory =
             fuchsia_component::client::connect_to_service::<SessionAudioConsumerFactoryMarker>()
                 .context("Failed to connect to audio consumer factory")?;
-        Self::from_proxy(session_id, codec_config, audio_consumer_factory).await
+        Self::from_proxy(session_id, codec_config, audio_consumer_factory)
     }
 
     /// Build a AudioConsumer given a SessionAudioConsumerFactoryProxy.
     /// Used in tests.
-    async fn from_proxy(
+    pub(crate) fn from_proxy(
         session_id: u64,
         codec_config: MediaCodecConfig,
         audio_consumer_factory: SessionAudioConsumerFactoryProxy,
@@ -205,7 +206,7 @@ impl Player {
         let watch_status_stream =
             HangingGetStream::new(Box::new(move || Some(audio_consumer_clone.watch_status())));
 
-        let mut player = Player {
+        Ok(Player {
             buffer,
             buffer_len: DEFAULT_BUFFER_LEN,
             codec_config,
@@ -219,16 +220,27 @@ impl Player {
             decoder,
             decoded_stream,
             tx_count: 0,
-        };
+        })
+    }
+
+    /// Test that a given codec `config` is playable.
+    /// If an error occurs, playing audio via any Player with the same `codec_config` is likely to
+    /// fail.
+    ///
+    /// It also tests that a decoder can be found if the AudioConsumer provided by the system
+    /// cannot decode the compressed format as specified in the `config`.
+    /// Communicates with the current default AudioConsumer.
+    pub async fn test_playable(config: &MediaCodecConfig) -> Result<(), Error> {
+        let audio_consumer_factory =
+            fuchsia_component::client::connect_to_service::<SessionAudioConsumerFactoryMarker>()
+                .context("Failed to connect to audio consumer factory")?;
+        let mut player = Self::from_proxy(0, config.clone(), audio_consumer_factory)?;
 
         // wait for initial event
-        let evt = player.next_event().await;
-        match evt {
-            PlayerEvent::Closed => return Err(format_err!("AudioConsumer closed")),
-            PlayerEvent::Status(_status) => (),
-        };
-
-        Ok(player)
+        match player.next_event().await {
+            PlayerEvent::Closed => Err(format_err!("AudioConsumer closed")),
+            PlayerEvent::Status(_status) => Ok(()),
+        }
     }
 
     /// Given a buffer with an SBC frame at the start, find the length of the
@@ -391,7 +403,7 @@ impl Drop for Player {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use futures::future::{self, Either};
     use matches::assert_matches;
@@ -400,7 +412,7 @@ mod tests {
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_media::{
             AudioConsumerRequest, AudioConsumerRequestStream, SessionAudioConsumerFactoryRequest,
-            StreamSinkRequest, StreamSinkRequestStream,
+            SessionAudioConsumerFactoryRequestStream, StreamSinkRequest, StreamSinkRequestStream,
         },
         fuchsia_async as fasync,
         futures::{pin_mut, task::Poll},
@@ -436,31 +448,12 @@ mod tests {
         assert_eq!(HEADER2_FRAMELEN, Player::find_sbc_frame_len(&header2).unwrap());
     }
 
-    /// Runs through the setup sequence of a AudioConsumer, returning the audio consumer,
-    /// StreamSinkRequestStream and AudioConsumerRequestStream that it is communicating with, and
-    /// the VMO payload buffer that was provided to the AudioConsumer.
-    fn setup_player(
+    pub(crate) fn expect_player_setup(
         exec: &mut fasync::Executor,
-        codec_config: MediaCodecConfig,
-    ) -> (Player, StreamSinkRequestStream, AudioConsumerRequestStream, zx::Vmo) {
-        const TEST_SESSION_ID: u64 = 1;
-        let codec_type = codec_config.codec_type().clone();
-
-        let (audio_consumer_factory_proxy, mut audio_consumer_factory_request_stream) =
-            create_proxy_and_stream::<SessionAudioConsumerFactoryMarker>()
-                .expect("proxy pair creation");
-
-        let mut player_new_fut = Box::pin(Player::from_proxy(
-            TEST_SESSION_ID,
-            codec_config,
-            audio_consumer_factory_proxy,
-        ));
-
-        // player creation is done in stages, waiting for the below source/sink
-        // objects to be created. Just run the creation up until the first
-        // blocking point.
-        assert!(exec.run_until_stalled(&mut player_new_fut).is_pending());
-
+        audio_consumer_factory_request_stream: &mut SessionAudioConsumerFactoryRequestStream,
+        codec_type: MediaCodecType,
+        expected_session_id: u64,
+    ) -> (StreamSinkRequestStream, AudioConsumerRequestStream, zx::Vmo) {
         let complete =
             exec.run_until_stalled(&mut audio_consumer_factory_request_stream.select_next_some());
         let audio_consumer_create_req = match complete {
@@ -476,11 +469,10 @@ mod tests {
             } => (audio_consumer_request, session_id),
         };
 
-        assert_eq!(session_id, TEST_SESSION_ID);
+        assert_eq!(session_id, expected_session_id);
 
-        let mut audio_consumer_request_stream = audio_consumer_create_request
-            .into_stream()
-            .expect("a audio consumer stream to be created from the request");
+        let mut audio_consumer_request_stream =
+            audio_consumer_create_request.into_stream().expect("audio consumer stream");
 
         let complete =
             exec.run_until_stalled(&mut audio_consumer_request_stream.select_next_some());
@@ -513,6 +505,14 @@ mod tests {
             .into_stream()
             .expect("a sink request stream to be created from the request");
 
+        (sink_request_stream, audio_consumer_request_stream, sink_vmo)
+    }
+
+    pub(crate) fn respond_event_status(
+        exec: &mut fasync::Executor,
+        audio_consumer_request_stream: &mut AudioConsumerRequestStream,
+        status: AudioConsumerStatus,
+    ) {
         let complete =
             exec.run_until_stalled(&mut audio_consumer_request_stream.select_next_some());
         let audio_consumer_req = match complete {
@@ -525,18 +525,60 @@ mod tests {
             _ => panic!("should be WatchStatus"),
         };
 
-        let status = AudioConsumerStatus {
-            min_lead_time: Some(50),
-            max_lead_time: Some(500),
-            error: None,
-            presentation_timeline: None,
-        };
         watch_status_responder.send(status).expect("watch status sent");
+    }
 
-        let player = match exec.run_until_stalled(&mut player_new_fut) {
-            Poll::Ready(Ok(player)) => player,
-            _ => panic!("player should be done"),
-        };
+    /// Runs through the setup sequence of a AudioConsumer, returning the audio consumer,
+    /// StreamSinkRequestStream and AudioConsumerRequestStream that it is communicating with, and
+    /// the VMO payload buffer that was provided to the AudioConsumer.
+    pub(crate) fn setup_player(
+        mut exec: &mut fasync::Executor,
+        codec_config: MediaCodecConfig,
+    ) -> (Player, StreamSinkRequestStream, AudioConsumerRequestStream, zx::Vmo) {
+        const TEST_SESSION_ID: u64 = 1;
+        let codec_type = codec_config.codec_type().clone();
+
+        let (audio_consumer_factory_proxy, mut audio_consumer_factory_request_stream) =
+            create_proxy_and_stream::<SessionAudioConsumerFactoryMarker>()
+                .expect("proxy pair creation");
+
+        let mut player =
+            Player::from_proxy(TEST_SESSION_ID, codec_config, audio_consumer_factory_proxy)
+                .expect("player to build");
+
+        let (sink_request_stream, mut audio_consumer_request_stream, sink_vmo) =
+            expect_player_setup(
+                &mut exec,
+                &mut audio_consumer_factory_request_stream,
+                codec_type,
+                TEST_SESSION_ID,
+            );
+
+        {
+            let player_next_event_fut = player.next_event();
+            pin_mut!(player_next_event_fut);
+
+            // player creation is done in stages, waiting for the below source/sink
+            // objects to be created. Just run the creation up until the first
+            // blocking point.
+            assert!(exec.run_until_stalled(&mut player_next_event_fut).is_pending());
+
+            respond_event_status(
+                &mut exec,
+                &mut audio_consumer_request_stream,
+                AudioConsumerStatus {
+                    min_lead_time: Some(50),
+                    max_lead_time: Some(500),
+                    error: None,
+                    presentation_timeline: None,
+                },
+            );
+
+            match exec.run_until_stalled(&mut player_next_event_fut) {
+                Poll::Ready(PlayerEvent::Status(_s)) => {}
+                x => panic!("Player should be ready with status but got {:?}", x),
+            };
+        }
 
         (player, sink_request_stream, audio_consumer_request_stream, sink_vmo)
     }
@@ -556,6 +598,35 @@ mod tests {
     fn test_player_setup() {
         let mut exec = fasync::Executor::new().expect("executor should build");
         setup_player(&mut exec, build_config(&MediaCodecType::AUDIO_AAC));
+    }
+
+    #[test]
+    fn test_player_closed() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+        let (mut player, _sink_request_stream, mut audio_consumer_request_stream, _sink_vmo) =
+            setup_player(&mut exec, build_config(&MediaCodecType::AUDIO_AAC));
+        let player_next_event_fut = player.next_event();
+        pin_mut!(player_next_event_fut);
+
+        // player creation is done in stages, waiting for the below source/sink
+        // objects to be created. Just run the creation up until the first
+        // blocking point.
+        assert!(exec.run_until_stalled(&mut player_next_event_fut).is_pending());
+
+        let complete =
+            exec.run_until_stalled(&mut audio_consumer_request_stream.select_next_some());
+        let watch_status_responder = match complete {
+            Poll::Ready(Ok(AudioConsumerRequest::WatchStatus { responder, .. })) => responder,
+            x => panic!("expected audio consumer WatchStatus request but got {:?}", x),
+        };
+
+        drop(watch_status_responder);
+        drop(audio_consumer_request_stream);
+
+        match exec.run_until_stalled(&mut player_next_event_fut) {
+            Poll::Ready(PlayerEvent::Closed) => {}
+            x => panic!("Expected player to be closed, got {:?}", x),
+        };
     }
 
     #[test]

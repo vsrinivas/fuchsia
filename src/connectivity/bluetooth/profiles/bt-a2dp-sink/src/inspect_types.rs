@@ -4,7 +4,7 @@
 //! Types used to manage data that will be exposed through the Inspect API
 
 use {
-    bt_avdtp as avdtp, fuchsia_async as fasync,
+    bt_avdtp as avdtp, fuchsia_async as fasync, fuchsia_async,
     fuchsia_bluetooth::inspect::DebugExt,
     fuchsia_inspect::{self as inspect, NumericProperty, Property},
     fuchsia_inspect_contrib::nodes::NodeExt,
@@ -45,7 +45,9 @@ impl StreamingInspectData {
         if let Some(prop) = &self.stream_start {
             prop.update();
         } else {
-            self.stream_start = Some(self.inspect.create_time("stream_started_at"))
+            self.stream_start = Some(
+                self.inspect.create_time_at("stream_started_at", fuchsia_async::Time::now().into()),
+            )
         }
     }
 
