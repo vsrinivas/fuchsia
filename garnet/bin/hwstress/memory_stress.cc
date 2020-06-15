@@ -5,6 +5,7 @@
 #include "memory_stress.h"
 
 #include <endian.h>
+#include <fuchsia/kernel/cpp/fidl.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
@@ -13,12 +14,14 @@
 #include <zircon/syscalls.h>
 
 #include <random>
+#include <string>
 #include <thread>
 
 #include <fbl/span.h>
 
 #include "compiler.h"
 #include "memory_range.h"
+#include "memory_stats.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "status.h"
 #include "temperature_sensor.h"
@@ -27,8 +30,6 @@
 namespace hwstress {
 
 namespace {
-
-constexpr size_t kMemoryToTest = 32 * 1024 * 1024;  // 32 MiB.
 
 // Create a std::default_random_engine PRNG pre-seeded with a small truly random value.
 std::default_random_engine CreateRandomEngine() {
@@ -200,7 +201,7 @@ std::optional<std::string> VerifyPattern(fbl::Span<uint8_t> range, uint64_t patt
 void VerifyPatternOrDie(fbl::Span<uint8_t> range, uint64_t pattern) {
   std::optional<std::string> result = VerifyPattern(range, pattern);
   if (unlikely(result.has_value())) {
-    ZX_PANIC("Detected memory error: %s\n", result.value().c_str());
+    ZX_PANIC("Detected memory error: %s\n", result->c_str());
   }
 }
 
@@ -266,8 +267,59 @@ zx::status<> ReallocateMemoryAsRequired(CacheMode mode, size_t size,
   return zx::ok();
 }
 
-bool StressMemory(StatusLine* status, zx::duration duration,
+fitx::result<std::string, size_t> GetMemoryToTest(const CommandLineArgs& args) {
+  // Get amount of RAM and free memory in system.
+  zx::status<fuchsia::kernel::MemoryStats> maybe_stats = GetMemoryStats();
+  if (maybe_stats.is_error()) {
+    return fitx::error("Could not fetch free memory.");
+  }
+
+  // If a value was specified, and doesn't exceed total system RAM, use that.
+  if (args.ram_to_test_megabytes.has_value()) {
+    size_t requested = MiB(args.ram_to_test_megabytes.value());
+    if (requested > maybe_stats->total_bytes()) {
+      return fitx::error(fxl::StringPrintf(
+          "Specified memory size (%ld bytes) exceeds system memory size (%ld bytes).", requested,
+          maybe_stats->total_bytes()));
+    }
+    return fitx::ok(requested);
+  }
+
+  // If user asked for a percent of total memory, calculate that.
+  if (args.ram_to_test_percent.has_value()) {
+    uint64_t total_bytes = maybe_stats->total_bytes();
+    auto test_bytes =
+        static_cast<uint64_t>(total_bytes * (args.ram_to_test_percent.value() / 100.));
+    return fitx::ok(RoundUp(test_bytes, ZX_PAGE_SIZE));
+  }
+
+  // Otherwise, try and calculate a reasonable value based on free memory.
+  //
+  // The default memory stress values for Fuchsia are:
+  //   - 300MiB free => Warning
+  //   - 150MiB free => Critical
+  //   - 50MiB free => OOM
+  //
+  // We aim to hit just below the critical threshold.
+  uint64_t free_bytes = maybe_stats->free_bytes();
+  uint64_t slack = MiB(151);
+  if (free_bytes < slack + MiB(1)) {
+    // We don't have 150MiB free: just use 1MiB.
+    return zx::ok(MiB(1));
+  }
+  return zx::ok(RoundUp(free_bytes - slack, ZX_PAGE_SIZE));
+}
+
+bool StressMemory(StatusLine* status, const CommandLineArgs& args, zx::duration duration,
                   TemperatureSensor* /*temperature_sensor*/) {
+  // Parse the amount of memory to test.
+  fitx::result<std::string, size_t> bytes_to_test = GetMemoryToTest(args);
+  if (bytes_to_test.is_error()) {
+    status->Log(bytes_to_test.error_value());
+    return false;
+  }
+  status->Log("Testing %0.2fMiB of memory.", bytes_to_test.value() / static_cast<double>(MiB(1)));
+
   // Get workloads.
   size_t workload_index = 0;
   std::vector<MemoryWorkload> workloads = GenerateMemoryWorkloads();
@@ -280,7 +332,8 @@ bool StressMemory(StatusLine* status, zx::duration duration,
     const MemoryWorkload& workload = workloads[workload_index];
 
     // Allocate memory for tests.
-    zx::status<> result = ReallocateMemoryAsRequired(workload.memory_type, kMemoryToTest, &memory);
+    zx::status<> result =
+        ReallocateMemoryAsRequired(workload.memory_type, bytes_to_test.value(), &memory);
     if (result.is_error()) {
       status->Log("Failed to allocate memory: %s", result.status_string());
       return false;

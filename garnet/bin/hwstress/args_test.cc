@@ -55,5 +55,34 @@ TEST(Args, ParseFlash) {
   EXPECT_TRUE(ParseArgs({{"hwstress", "flash"}}).is_error());
 }
 
+TEST(Args, ParseMemory) {
+  // No optional arguments.
+  CommandLineArgs args = ParseArgs({{"hwstress", "memory"}}).value();
+  EXPECT_EQ(args.ram_to_test_percent, std::nullopt);
+  EXPECT_EQ(args.ram_to_test_megabytes, std::nullopt);
+
+  // Arguments given.
+  EXPECT_EQ(ParseArgs({{"hwstress", "memory", "--memory", "123"}})->ram_to_test_megabytes,
+            std::optional<uint64_t>(123));
+  EXPECT_EQ(ParseArgs({{"hwstress", "memory", "--percent-memory", "12"}})->ram_to_test_percent,
+            std::optional<uint64_t>(12));
+
+  // Errors
+  EXPECT_TRUE(ParseArgs({{"hwstress", "memory", "--memory", "0"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "memory", "--memory", "-5"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "memory", "--memory", "18446744073709551617"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "memory", "--memory", "0.5"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "memory", "--memory", "lots"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "memory", "--memory", ""}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "memory", "--percent-memory", "0"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "memory", "--percent-memory", "-5"}}).is_error());
+  EXPECT_TRUE(
+      ParseArgs({{"hwstress", "memory", "--percent-memory", "18446744073709551617"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "memory", "--percent-memory", "100"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "memory", "--percent-memory", "0.5"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "memory", "--percent-memory", "3%"}}).is_error());
+  EXPECT_TRUE(ParseArgs({{"hwstress", "memory", "--percent-memory", ""}}).is_error());
+}
+
 }  // namespace
 }  // namespace hwstress

@@ -50,5 +50,20 @@ TEST(Util, RepeatByte) {
   EXPECT_EQ(RepeatByte(0xff), 0xffffffff'fffffffful);
 }
 
+TEST(Util, RoundUp) {
+  EXPECT_EQ(RoundUp(0, 1), 0u);
+
+  EXPECT_EQ(RoundUp(1, 1), 1u);
+  EXPECT_EQ(RoundUp(1, 2), 2u);
+
+  EXPECT_EQ(RoundUp(0, 100), 0u);
+  EXPECT_EQ(RoundUp(1, 100), 100u);
+  EXPECT_EQ(RoundUp(33, 100), 100u);
+  EXPECT_EQ(RoundUp(100, 100), 100u);
+
+  EXPECT_EQ(RoundUp(UINT_MAX, 1), UINT_MAX);
+  EXPECT_EQ(RoundUp(UINT_MAX - 2, 2), UINT_MAX - 1);
+}
+
 }  // namespace
 }  // namespace hwstress

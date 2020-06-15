@@ -62,7 +62,7 @@ int Run(int argc, const char** argv) {
       fprintf(stderr, "Error: flash test not yet implemented\n");
       break;
     case StressTest::kMemory:
-      success = StressMemory(&status, duration, sensor.get());
+      success = StressMemory(&status, args, duration, sensor.get());
       break;
   }
 

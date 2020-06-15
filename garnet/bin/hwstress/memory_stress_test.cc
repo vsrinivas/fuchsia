@@ -111,9 +111,12 @@ TEST(Memory, CatchBitFlip) {
 }
 
 TEST(Memory, StressMemory) {
-  // Exercise the main StressMemory function for a tiny amount of time.
+  // Exercise the main StressMemory function for a tiny amount of time and memory.
+  CommandLineArgs args;
+  args.ram_to_test_megabytes = 1;
+
   StatusLine status;
-  EXPECT_TRUE(StressMemory(&status, zx::msec(1)));
+  EXPECT_TRUE(StressMemory(&status, args, zx::msec(1)));
 }
 
 }  // namespace

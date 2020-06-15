@@ -10,6 +10,7 @@
 #include <optional>
 #include <vector>
 
+#include "args.h"
 #include "memory_range.h"
 #include "status.h"
 #include "temperature_sensor.h"
@@ -19,7 +20,7 @@ namespace hwstress {
 // Start a memory stress test.
 //
 // Return true on success.
-bool StressMemory(StatusLine* status, zx::duration duration_seconds,
+bool StressMemory(StatusLine* status, const CommandLineArgs& args, zx::duration duration_seconds,
                   TemperatureSensor* sensor = GetNullTemperatureSensor());
 
 //

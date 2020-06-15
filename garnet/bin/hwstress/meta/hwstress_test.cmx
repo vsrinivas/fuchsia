@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
+                "fuchsia.kernel.Stats",
                 "fuchsia.scheduler.ProfileProvider"
             ]
         }
@@ -11,6 +12,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.kernel.Stats",
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.scheduler.ProfileProvider",

@@ -27,13 +27,22 @@ std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> GetParser() {
                     &CommandLineArgs::fvm_path);
   parser->AddSwitch("help", 'h', "Show this help.", &CommandLineArgs::help);
   parser->AddSwitch("verbose", 'v', "Show verbose logging.", &CommandLineArgs::verbose);
+  parser->AddSwitch("memory", 'm', "Amount of memory to test in megabytes.",
+                    &CommandLineArgs::ram_to_test_megabytes);
+  parser->AddSwitch("percent-memory", 0, "Percent of memory to test.",
+                    &CommandLineArgs::ram_to_test_percent);
   return parser;
 }
 
 }  // namespace
 
+std::istream& operator>>(std::istream& is, OptionalInt64& result) {
+  is >> result.emplace();
+  return is;
+}
+
 void PrintUsage() {
-  printf(
+  puts(
       R"(usage:
 hwstress <subcommand> [options]
 
@@ -51,7 +60,12 @@ Global options:
   -h, --help             Show this help.
 
 Flash test options:
-  -f  --fvm-path=<path>  Path to Fuchsia Volume Manager
+  -f, --fvm-path=<path>  Path to Fuchsia Volume Manager
+
+Memory test options:
+  -m, --memory=<size>    Amount of RAM to test, in megabytes.
+  --percent-memory=<percent>
+                         Percentage of total system RAM to test.
 )");
 }
 
@@ -108,6 +122,23 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
   // Ensure mandatory flash test argument is provided
   if (result.subcommand == StressTest::kFlash && result.fvm_path.empty()) {
     return fitx::error(fxl::StringPrintf("Path to Fuchsia Volume Manager must be specified"));
+  }
+
+  // Validate memory flags.
+  if (result.ram_to_test_percent.has_value()) {
+    if (result.ram_to_test_percent.value() <= 0 || result.ram_to_test_percent.value() >= 100) {
+      return fitx::error(
+          fxl::StringPrintf("Percent of RAM to test must be between 1 and 99, inclusive."));
+    }
+  }
+  if (result.ram_to_test_megabytes.has_value()) {
+    if (result.ram_to_test_megabytes.value() <= 0) {
+      return fitx::error(fxl::StringPrintf("RAM to test must be strictly positive."));
+    }
+  }
+  if (result.ram_to_test_megabytes.has_value() && result.ram_to_test_percent.has_value()) {
+    return fitx::error(
+        fxl::StringPrintf("--memory and --percent-memory cannot both be specified."));
   }
 
   // Ensure no more parameters were given.
