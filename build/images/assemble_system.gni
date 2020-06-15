@@ -60,6 +60,9 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #
 #   output_dir (optional; default: target_out_dir)
 #     [string] The output directory into which the final system ZBI is written.
+#
+#   output_name (optional; default: target_name.zbi)
+#     [string] The name of the final system ZBI file.
 template("assemble_system") {
   base_packages = invoker.base_packages
   cache_packages = []
@@ -73,6 +76,12 @@ template("assemble_system") {
 
   # Must be unique among assembled systems.
   image_name = target_name
+
+  if (defined(invoker.output_name)) {
+    zbi_name = invoker.output_name
+  } else {
+    zbi_name = "${target_name}.zbi"
+  }
 
   netboot = false
   if (defined(invoker.netboot)) {
@@ -357,6 +366,8 @@ template("assemble_system") {
     if (defined(invoker.output_dir)) {
       output_dir = invoker.output_dir
     }
+    output_name = zbi_name
+    output_extension = ""
 
     forward_variables_from(invoker,
                            [
