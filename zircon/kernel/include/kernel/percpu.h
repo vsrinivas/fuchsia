@@ -7,6 +7,7 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_PERCPU_H_
 
 #include <lib/lazy_init/lazy_init.h>
+#include <lib/load_balancer_percpu.h>
 #include <stddef.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -17,12 +18,10 @@
 #include <ffl/fixed.h>
 #include <kernel/align.h>
 #include <kernel/dpc.h>
-#include <kernel/event.h>
 #include <kernel/scheduler.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
-#include <lib/load_balancer_percpu.h>
 #include <ktl/forward.h>
 #include <lockdep/thread_lock_state.h>
 #include <vm/page_state.h>
@@ -64,15 +63,8 @@ struct percpu {
   // kernel counters arena
   int64_t* counters;
 
-  // dpc context
-  // Whether the DPC system has been initialized for this cpu.
-  bool dpc_initialized;
-  fbl::DoublyLinkedList<Dpc*> dpc_list;
-  Event dpc_event;
-  // request the dpc thread to stop by setting to true; guarded by dpc_lock
-  bool dpc_stop;
-  // each cpu has a dedicated thread for processing dpcs
-  Thread* dpc_thread;
+  // Each cpu maintains a DpcQueue.
+  DpcQueue dpc_queue;
 
   // Page state counts are percpu because they change frequently and we don't want to pay for
   // synchronization, including atomic load/add/subtract.

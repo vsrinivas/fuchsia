@@ -286,6 +286,8 @@ zx_status_t mp_hotplug_cpu_mask(cpu_mask_t cpu_mask) {
 // Unplug a single CPU.  Must be called while holding the hotplug lock
 static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t deadline,
                                                     Thread** leaked_thread) {
+  percpu& percpu_to_unplug = percpu::Get(cpu_id);
+
   Thread* thread = nullptr;
   auto cleanup_thread = fbl::MakeAutoCall([&thread, &leaked_thread, cpu_id]() {
     // TODO(fxb/34447): Work around a race in thread cleanup by leaking the thread and stack
@@ -298,16 +300,16 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t 
     }
   });
 
-  // Wait for |cpu_id| to complete any in-progress DPCs and terminate its DPC thread.  Later, once
-  // nothing is running on it, we'll migrate its queued DPCs to another CPU.
-  zx_status_t status = DpcSystem::Shutdown(cpu_id, deadline);
+  // Wait for |percpu_to_unplug| to complete any in-progress DPCs and terminate its DPC thread.
+  // Later, once nothing is running on it, we'll migrate its queued DPCs to another CPU.
+  zx_status_t status = percpu_to_unplug.dpc_queue.Shutdown(deadline);
   if (status != ZX_OK) {
     return status;
   }
 
-  // TODO(maniscalco): |cpu_id| is about to shutdown.  We should ensure it has no pinned threads
-  // (except maybe the idle thread).  Once we're confident we've terminated/migrated them all,
-  // this would be a good place to DEBUG_ASSERT.
+  // TODO(maniscalco): |cpu_to_unplug| is about to shutdown.  We should ensure it has no pinned
+  // threads (except maybe the idle thread).  Once we're confident we've terminated/migrated them
+  // all, this would be a good place to DEBUG_ASSERT.
 
   // Create a thread for the unplug.  We will cause the target CPU to
   // context switch to this thread.  After this happens, it should no
@@ -347,13 +349,11 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t 
     return status;
   }
 
-  // Now that the cpu is no longer processing tasks, migrate its TimerQueue to
-  // the current cpu's queue.
-  TimerQueue& source = percpu::Get(cpu_id).timer_queue;
-  get_local_percpu()->timer_queue.TransitionOffCpu(source);
-
-  // Move the CPU's queued DPCs to the current CPU.
-  DpcSystem::ShutdownTransitionOffCpu(cpu_id);
+  // Now that the cpu is no longer processing tasks, migrate
+  // |percpu_to_unplug|'s TimerQueue and DpcQueue to this cpu.
+  percpu& current_percpu = *get_local_percpu();
+  current_percpu.timer_queue.TransitionOffCpu(percpu_to_unplug.timer_queue);
+  current_percpu.dpc_queue.TransitionOffCpu(percpu_to_unplug.dpc_queue);
 
   return platform_mp_cpu_unplug(cpu_id);
 }

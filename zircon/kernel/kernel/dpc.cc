@@ -24,8 +24,8 @@ static SpinLock dpc_lock;
 zx_status_t Dpc::Queue(bool reschedule) {
   DEBUG_ASSERT(func_);
 
-  struct percpu* cpu;
-  // disable interrupts before finding lock
+  DpcQueue* dpc_queue;
+
   {
     AutoSpinLock lock{&dpc_lock};
 
@@ -33,13 +33,13 @@ zx_status_t Dpc::Queue(bool reschedule) {
       return ZX_ERR_ALREADY_EXISTS;
     }
 
-    cpu = get_local_percpu();
+    dpc_queue = &get_local_percpu()->dpc_queue;
 
-    // put the dpc at the tail of the list and signal the worker
-    cpu->dpc_list.push_back(this);
+    // Put this Dpc at the tail of the list. Signal the worker outside the lock.
+    dpc_queue->Enqueue(this);
   }
 
-  cpu->dpc_event.SignalEtc(reschedule);
+  dpc_queue->Signal(reschedule);
 
   return ZX_OK;
 }
@@ -47,7 +47,7 @@ zx_status_t Dpc::Queue(bool reschedule) {
 zx_status_t Dpc::QueueThreadLocked() {
   DEBUG_ASSERT(func_);
 
-  // interrupts are already disabled
+  // Interrupts are already disabled.
   {
     AutoSpinLockNoIrqSave lock{&dpc_lock};
 
@@ -55,11 +55,11 @@ zx_status_t Dpc::QueueThreadLocked() {
       return ZX_ERR_ALREADY_EXISTS;
     }
 
-    struct percpu* cpu = get_local_percpu();
+    DpcQueue& dpc_queue = get_local_percpu()->dpc_queue;
 
-    // put the dpc at the tail of the list and signal the worker
-    cpu->dpc_list.push_back(this);
-    cpu->dpc_event.SignalThreadLocked();
+    // Put this Dpc at the tail of the list and signal the worker.
+    dpc_queue.Enqueue(this);
+    dpc_queue.SignalLocked();
   }
 
   return ZX_OK;
@@ -70,137 +70,132 @@ void Dpc::Invoke() {
     func_(this);
 }
 
-zx_status_t DpcSystem::Shutdown(uint cpu_id, zx_time_t deadline) {
-  DEBUG_ASSERT(cpu_id < SMP_MAX_CPUS);
+void DpcQueue::Enqueue(Dpc* dpc) { list_.push_back(dpc); }
 
+void DpcQueue::Signal(bool reschedule) { event_.SignalEtc(reschedule); }
+
+void DpcQueue::SignalLocked() { event_.SignalThreadLocked(); }
+
+zx_status_t DpcQueue::Shutdown(zx_time_t deadline) {
   Thread* t;
-  Event* dpc_event;
+  Event* event;
   {
     AutoSpinLock lock{&dpc_lock};
 
-    auto& percpu = percpu::Get(cpu_id);
-    DEBUG_ASSERT(!percpu.dpc_stop);
+    // Ask the Dpc's thread to terminate.
+    DEBUG_ASSERT(!stop_);
+    stop_ = true;
 
-    // Ask the DPC thread to terminate.
-    percpu.dpc_stop = true;
+    // Remember this Event so we can signal it outside the spinlock.
+    event = &event_;
 
-    // Take the percpu dpc_event so we can signal it outside the spinlock.
-    dpc_event = &percpu.dpc_event;
-
-    // Take the thread pointer so we can join outside the spinlock.
-    t = percpu.dpc_thread;
-    percpu.dpc_thread = nullptr;
+    // Remember the thread so we can join outside the spinlock.
+    t = thread_;
+    thread_ = nullptr;
   }
 
   // Wake it.
-  dpc_event->SignalNoResched();
+  event->SignalNoResched();
 
   // Wait for it to terminate.
   return t->Join(nullptr, deadline);
 }
 
-void DpcSystem::ShutdownTransitionOffCpu(uint cpu_id) {
-  DEBUG_ASSERT(cpu_id < SMP_MAX_CPUS);
-
+void DpcQueue::TransitionOffCpu(DpcQueue& source) {
   AutoSpinLock lock{&dpc_lock};
 
-  uint cur_cpu = arch_curr_cpu_num();
-  DEBUG_ASSERT(cpu_id != cur_cpu);
+  // |source|'s cpu is shutting down. Assert that we are migrating to the current cpu.
+  DEBUG_ASSERT(cpu_ == arch_curr_cpu_num());
+  DEBUG_ASSERT(cpu_ != source.cpu_);
 
-  auto& percpu = percpu::Get(cpu_id);
-  // The DPC thread should already be stopped.
-  DEBUG_ASSERT(percpu.dpc_stop);
-  DEBUG_ASSERT(percpu.dpc_thread == nullptr);
+  // The Dpc's thread must already have been stopped by a call to |Shutdown|.
+  DEBUG_ASSERT(source.stop_);
+  DEBUG_ASSERT(source.thread_ == nullptr);
 
-  fbl::DoublyLinkedList<Dpc*>& src_list = percpu.dpc_list;
-  fbl::DoublyLinkedList<Dpc*>& dst_list = percpu::Get(cur_cpu).dpc_list;
+  // Move the contents of |source.list_| to the back of our |list_|.
+  auto back = list_.end();
+  list_.splice(back, source.list_);
 
-  // Move the contents of src_list to the back of dst_list.
-  auto back = dst_list.end();
-  dst_list.splice(back, src_list);
-
-  // Reset the state so we can restart DPC processing if the CPU comes back online.
-  percpu.dpc_event.Unsignal();
-  DEBUG_ASSERT(percpu.dpc_list.is_empty());
-  percpu.dpc_stop = false;
-  percpu.dpc_initialized = false;
+  // Reset |source|'s state so we can restart Dpc processing if its cpu comes back online.
+  source.event_.Unsignal();
+  DEBUG_ASSERT(source.list_.is_empty());
+  source.stop_ = false;
+  source.initialized_ = false;
+  source.cpu_ = INVALID_CPU;
 }
 
-int DpcSystem::WorkerThread(void* arg) {
-  InterruptDisableGuard irqd;
+int DpcQueue::WorkerThread(void* unused) { return get_local_percpu()->dpc_queue.Work(); }
 
-  struct percpu* cpu = get_local_percpu();
-  Event* event = &cpu->dpc_event;
-  fbl::DoublyLinkedList<Dpc*>& list = cpu->dpc_list;
-
-  irqd.Reenable();
-
+int DpcQueue::Work() {
   for (;;) {
-    // wait for a dpc to fire
-    __UNUSED zx_status_t err = event->Wait();
+    // Wait for a Dpc to fire.
+    __UNUSED zx_status_t err = event_.Wait();
     DEBUG_ASSERT(err == ZX_OK);
 
     interrupt_saved_state_t state;
     dpc_lock.AcquireIrqSave(state);
 
-    if (cpu->dpc_stop) {
+    if (stop_) {
       dpc_lock.ReleaseIrqRestore(state);
       return 0;
     }
 
-    // pop a dpc off the list, make a local copy.
-    Dpc* dpc = list.pop_front();
+    // Pop a Dpc off our list, and make a local copy.
+    Dpc* dpc = list_.pop_front();
 
-    // if the list is now empty, unsignal the event so we block until it is
+    // If our list is now empty, unsignal the event so we block until it is.
     if (!dpc) {
-      event->Unsignal();
+      event_.Unsignal();
       dpc_lock.ReleaseIrqRestore(state);
       continue;
     }
 
-    // Copy the dpc to the stack.
+    // Copy the Dpc to the stack.
     Dpc dpc_local = *dpc;
 
     dpc_lock.ReleaseIrqRestore(state);
 
-    // Call the dpc.
+    // Call the Dpc.
     dpc_local.Invoke();
   }
 
   return 0;
 }
 
-void DpcSystem::InitForCpu() {
-  struct percpu* cpu = get_local_percpu();
-  uint cpu_num = arch_curr_cpu_num();
-
-  // the cpu's dpc state was initialized on a previous hotplug event
-  if (cpu->dpc_initialized) {
+void DpcQueue::InitForCurrentCpu() {
+  // This cpu's DpcQueue was initialized on a previous hotplug event.
+  if (initialized_) {
     return;
   }
 
-  cpu->dpc_initialized = true;
-  cpu->dpc_stop = false;
+  DEBUG_ASSERT(cpu_ == INVALID_CPU);
+  DEBUG_ASSERT(!stop_);
+  DEBUG_ASSERT(thread_ == nullptr);
+
+  cpu_ = arch_curr_cpu_num();
+
+  initialized_ = true;
+  stop_ = false;
 
   char name[10];
-  snprintf(name, sizeof(name), "dpc-%u", cpu_num);
-  cpu->dpc_thread = Thread::Create(name, &DpcSystem::WorkerThread, nullptr, DPC_THREAD_PRIORITY);
-  DEBUG_ASSERT(cpu->dpc_thread != nullptr);
-  cpu->dpc_thread->SetCpuAffinity(cpu_num_to_mask(cpu_num));
+  snprintf(name, sizeof(name), "dpc-%u", cpu_);
+  thread_ = Thread::Create(name, &DpcQueue::WorkerThread, nullptr, DPC_THREAD_PRIORITY);
+  DEBUG_ASSERT(thread_ != nullptr);
+  thread_->SetCpuAffinity(cpu_num_to_mask(cpu_));
 
-  // The DPC thread may use up to 150us out of every 300us (i.e. 50% of the CPU)
+  // The Dpc thread may use up to 150us out of every 300us (i.e. 50% of the CPU)
   // in the worst case. DPCs usually take only a small fraction of this and have
   // a much lower frequency than 3.333KHz.
   // TODO(38571): Make this runtime tunable. It may be necessary to change the
-  // DPC deadline params later in boot, after configuration is loaded somehow.
-  cpu->dpc_thread->SetDeadline({ZX_USEC(150), ZX_USEC(300), ZX_USEC(300)});
+  // Dpc deadline params later in boot, after configuration is loaded somehow.
+  thread_->SetDeadline({ZX_USEC(150), ZX_USEC(300), ZX_USEC(300)});
 
-  cpu->dpc_thread->Resume();
+  thread_->Resume();
 }
 
 static void dpc_init(unsigned int level) {
-  // Initialize dpc for the main CPU.
-  DpcSystem::InitForCpu();
+  // Initialize the DpcQueue for the main cpu.
+  get_local_percpu()->dpc_queue.InitForCurrentCpu();
 }
 
 LK_INIT_HOOK(dpc, dpc_init, LK_INIT_LEVEL_THREADING)

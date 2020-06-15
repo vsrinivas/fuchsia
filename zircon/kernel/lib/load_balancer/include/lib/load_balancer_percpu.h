@@ -15,6 +15,9 @@
 #include <kernel/thread_lock.h>
 #include <ktl/array.h>
 
+struct percpu;
+class Scheduler;
+
 // TODO(edcoyne): delete this override and default these on.
 #ifndef DISABLE_PERIODIC_LOAD_BALANCER
 #define DISABLE_PERIODIC_LOAD_BALANCER 1

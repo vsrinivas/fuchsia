@@ -8,18 +8,17 @@
 
 #include <sys/types.h>
 #include <zircon/compiler.h>
-#include <zircon/listnode.h>
 #include <zircon/types.h>
 
 #include <fbl/intrusive_double_list.h>
+#include <kernel/event.h>
 #include <kernel/thread.h>
+#include <kernel/thread_lock.h>
 
-struct DpcSystem;
-
-// Deferred Procedure Calls - queue callback to invoke on the current CPU in thread context.
-// DPCs are executed with interrupts enabled; DPCs do not ever migrate CPUs while executing.
-// A DPC may not execute on the original current CPU if it is hotunplugged/offlined.
-// DPCs may block, though this may starve other queued work.
+// Deferred Procedure Calls - queue callback to invoke on the current cpu in thread context.
+// Dpcs are executed with interrupts enabled, and do not ever migrate cpus while executing.
+// A Dpc may not execute on the original current cpu if it is hotunplugged/offlined.
+// Dpcs may block, though this may starve other queued work.
 
 class Dpc : public fbl::DoublyLinkedListable<Dpc*, fbl::NodeOptions::AllowCopyMove> {
  public:
@@ -37,7 +36,7 @@ class Dpc : public fbl::DoublyLinkedListable<Dpc*, fbl::NodeOptions::AllowCopyMo
   // |Queue| will not block, but it may wait briefly for a spinlock.
   //
   // If |reschedule| is true, ask the scheduler to reschedule immediately.  The thread chosen by the
-  // scheduler to execute next may or may not be the DPC worker thread.
+  // scheduler to execute next may or may not be the Dpc worker thread.
   //
   // |Queue| may return before or after the Dpc has executed.  It is the caller's responsibilty to
   // ensure that a queued Dpc object is not destroyed prior to its execution.
@@ -57,52 +56,82 @@ class Dpc : public fbl::DoublyLinkedListable<Dpc*, fbl::NodeOptions::AllowCopyMo
   zx_status_t QueueThreadLocked() TA_REQ(thread_lock);
 
  private:
-  // The DpcSystem, or more specifically, its worker threads, are the only thing to actually call
-  // the functions queued onto Dpcs.
-  friend struct DpcSystem;
+  friend class DpcQueue;
+
+  // The DpcQueue this Dpc gets enqueued onto is the only thing to actually Invoke this Dpc,
+  // on its worker thread.
   void Invoke();
 
   Func* func_;
   void* arg_;
 };
 
-struct DpcSystem {
-  // Initializes the DPC subsystem for the current cpu.
-  static void InitForCpu();
+// Each cpu maintains a DpcQueue, in its percpu structure.
+class DpcQueue {
+ public:
+  // Initializes this DpcQueue for the current cpu.
+  void InitForCurrentCpu();
 
-  // Begins the DPC shutdown process for |cpu|.
+  // Begins the Dpc shutdown process for the owning cpu.
   //
-  // Shutting down a DPC queue is a two-phase process.  This is the first phase.  See
-  // |ShutdownTransitionOffCpu| for the second phase.
+  // Shutting down a Dpc queue is a two-phase process.  This is the first phase.  See
+  // |TransitionOffCpu| for the second phase.
   //
   // This method:
-  // - tells |cpu|'s DPC thread to stop servicing its queue then
+  // - tells the owning cpu's Dpc thread to stop servicing its queue then
   // - waits, up to |deadline|, for it to finish any in-progress DPC and join
   //
-  // Because this method blocks until the DPC thread has terminated, it is critical that the caller
+  // Because this method blocks until the Dpc thread has terminated, it is critical that the caller
   // not hold any locks that might be needed by any previously queued DPCs.  Otheriwse, deadlock may
   // occur.
   //
-  // Upon successful completion, |cpu|'s DPC queue may contain unexecuted DPCs and new ones may be
-  // added by |Queue|.  However, they will not execute (on any CPU) until |ShutdownTransitionOffCpu|
-  // is called.
+  // Upon successful completion, this DpcQueue may contain unexecuted Dpcs and new ones
+  // may be added by |Queue|.  However, they will not execute (on any cpu) until
+  // |TransitionOffCpu| is called.
   //
-  // Once |Shutdown| for |cpu| has completed successfully, finish the shutdown process by calling
-  // |ShutdownTransitionOffCpu| on some CPU other than |cpu|.
+  // Once |Shutdown| has completed successfully, finish the shutdown process by calling
+  // |TransitionOffCpu| on some cpu other than the owning cpu.
   //
-  // If |Shutdown| fails, the DPC system for |cpu| is left in an undefined state and
-  // |ShutdownTransitionOffCpu| must not be called.
-  static zx_status_t Shutdown(uint cpu, zx_time_t deadline);
+  // If |Shutdown| fails, this DpcQueue is left in an undefined state and
+  // |TransitionOffCpu| must not be called.
+  zx_status_t Shutdown(zx_time_t deadline);
 
-  // Moves queued DPCs from |cpu| to the caller's CPU.
+  // Moves queued Dpcs from |source| to this DpcQueue.
   //
-  // This is the second phase of DPC shutdown.  See |Shutdown|.
+  // This is the second phase of Dpc shutdown.  See |Shutdown|.
   //
-  // Should only be called after |Shutdown| for |cpu| has completed successfully.
-  static void ShutdownTransitionOffCpu(uint cpu);
+  // This must only be called after |Shutdown| has completed successfully.
+  //
+  // This must only be called on the current cpu.
+  void TransitionOffCpu(DpcQueue& source);
+
+  // These are called by Dpc::Queue and Dpc::QueueThreadLocked.
+  void Enqueue(Dpc* dpc);
+  void Signal(bool reschedule) TA_EXCL(thread_lock);
+  void SignalLocked() TA_REQ(thread_lock);
 
  private:
-  static int WorkerThread(void* arg);
+  static int WorkerThread(void* unused);
+  int Work();
+
+  // The cpu that owns this DpcQueue.
+  cpu_num_t cpu_ = INVALID_CPU;
+
+  // Whether the DpcQueue has been initialized for the owning cpu.
+  bool initialized_ = false;
+
+  // Request the thread_ to stop by setting to true.
+  //
+  // This guarded by the static global dpc_lock.
+  bool stop_ = false;
+
+  // This guarded by the static global dpc_lock.
+  fbl::DoublyLinkedList<Dpc*> list_;
+
+  Event event_;
+
+  // Each cpu maintains a dedicated thread for processing Dpcs.
+  Thread* thread_ = nullptr;
 };
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_DPC_H_
