@@ -250,4 +250,8 @@ class JobDispatcher final
 // Returns the job that is the ancestor of all other tasks.
 fbl::RefPtr<JobDispatcher> GetRootJobDispatcher();
 
+// Start the RootJobObserver. Must be called after the root job has at
+// least one child process or child job.
+void StartRootJobObserver();
+
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_JOB_DISPATCHER_H_

@@ -34,6 +34,8 @@ fbl::RefPtr<EventDispatcher> GetMemPressureEvent(uint32_t kind) {
   return gExecutor.GetMemPressureEvent(kind);
 }
 
+void StartRootJobObserver() { gExecutor.StartRootJobObserver(); }
+
 static void object_glue_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
   Handle::Init();
   PortDispatcher::Init();

@@ -340,6 +340,9 @@ void userboot_init(uint) {
   }
   ASSERT(thread);
 
+  // Create a root job observer, restarting the system if the root job becomes childless.
+  StartRootJobObserver();
+
   dprintf(SPEW, "userboot: %-23s @ %#" PRIxPTR "\n", "entry point", entry);
 
   // Start the process's initial thread.

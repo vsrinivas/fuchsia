@@ -61,7 +61,7 @@ RootJobObserver::RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, fbl::Closu
 RootJobObserver::~RootJobObserver() { root_job_->RemoveObserver(this); }
 
 StateObserver::Flags RootJobObserver::OnInitialize(zx_signals_t initial_state) {
-  return 0;
+  return OnStateChange(initial_state);
 }
 
 StateObserver::Flags RootJobObserver::OnStateChange(zx_signals_t new_state) {

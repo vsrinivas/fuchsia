@@ -50,8 +50,12 @@ bool TestCreateDestroy() {
   BEGIN_TEST;
 
   // Create and destroy the root job observer.
+  Event callback_fired;
   fbl::RefPtr<JobDispatcher> root_job = JobDispatcher::CreateRootJob();
-  RootJobObserver observer{root_job, []() { panic("unexpected callback."); }};
+  RootJobObserver observer{root_job, [&]() { callback_fired.Signal(); }};
+
+  // Ensure the callback fired.
+  callback_fired.Wait();
 
   END_TEST;
 }
@@ -62,8 +66,9 @@ bool TestCallbackFiresOnRootJobDeath() {
 
   Event root_job_killed;
 
-  // Create the root job, and start watching it.
+  // Create the root job with a child process, and start watching it.
   fbl::RefPtr<JobDispatcher> root_job = JobDispatcher::CreateRootJob();
+  KernelHandle<ProcessDispatcher> child_process = CreateProcess(root_job);
   RootJobObserver observer{root_job, [&root_job_killed]() { root_job_killed.Signal(); }};
 
   // Shouldn't be signalled yet.
