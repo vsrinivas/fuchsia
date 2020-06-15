@@ -184,7 +184,7 @@ common_image_contents = [
   "//src/ui/input/drivers/usb-hid",
   "//src/ui/light/drivers/aml-light",
   "//src/bringup/bin/bootsvc:bin",
-  "//zircon/system/core/console",
+  "//src/bringup/bin/console",
   "//zircon/system/core/devmgr/fragment",
   "//zircon/system/core/devmgr/fragment:fragment.proxy",
   "//zircon/system/core/miscsvc",

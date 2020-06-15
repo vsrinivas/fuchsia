@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_BOOTSVC_SVCFS_SERVICE_H_
-#define ZIRCON_SYSTEM_CORE_BOOTSVC_SVCFS_SERVICE_H_
+#ifndef SRC_BRINGUP_BIN_BOOTSVC_SVCFS_SERVICE_H_
+#define SRC_BRINGUP_BIN_BOOTSVC_SVCFS_SERVICE_H_
 
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
@@ -55,4 +55,4 @@ fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::
 
 }  // namespace bootsvc
 
-#endif  // ZIRCON_SYSTEM_CORE_BOOTSVC_SVCFS_SERVICE_H_
+#endif  // SRC_BRINGUP_BIN_BOOTSVC_SVCFS_SERVICE_H_

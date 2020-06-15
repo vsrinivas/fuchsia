@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_BOOTSVC_UTIL_H_
-#define ZIRCON_SYSTEM_CORE_BOOTSVC_UTIL_H_
+#ifndef SRC_BRINGUP_BIN_BOOTSVC_UTIL_H_
+#define SRC_BRINGUP_BIN_BOOTSVC_UTIL_H_
 
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
@@ -54,8 +54,8 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
 zx_status_t ParseBootArgs(std::string_view str, fbl::Vector<char>* buf);
 
 // Create a connection to a |vnode| in a |vfs|.
-zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
-                                  fs::Rights rights, zx::channel* out);
+zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, fs::Rights rights,
+                                  zx::channel* out);
 
 // Path relative to /boot used for crashlogs.
 extern const char* const kLastPanicFilePath;
@@ -64,4 +64,4 @@ fbl::Vector<fbl::String> SplitString(fbl::String input, char delimiter);
 
 }  // namespace bootsvc
 
-#endif  // ZIRCON_SYSTEM_CORE_BOOTSVC_UTIL_H_
+#endif  // SRC_BRINGUP_BIN_BOOTSVC_UTIL_H_

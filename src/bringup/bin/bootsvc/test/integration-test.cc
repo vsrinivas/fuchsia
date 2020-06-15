@@ -128,10 +128,8 @@ TEST(BootsvcIntegrationTest, Namespace) {
 // doesn't get us coverage because we only limit the rights that you can open the files with.
 TEST(BootsvcIntegrationTest, BootfsExecutability) {
   const char* kExecutableFiles[] = {
-      "/boot/pkg/bootsvc/bin/bootsvc",
-      "/boot/pkg/dummy_pkg/lib/dummy.so",
-      "/boot/driver/fragment.so",
-      "/boot/lib/dummy.so",
+      "/boot/pkg/bootsvc/bin/bootsvc", "/boot/pkg/dummy_pkg/lib/dummy.so",
+      "/boot/driver/fragment.so",      "/boot/lib/dummy.so",
       "/boot/kernel/vdso/full",
   };
   for (const char* file : kExecutableFiles) {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_BOOTSVC_BOOTFS_SERVICE_H_
-#define ZIRCON_SYSTEM_CORE_BOOTSVC_BOOTFS_SERVICE_H_
+#ifndef SRC_BRINGUP_BIN_BOOTSVC_BOOTFS_SERVICE_H_
+#define SRC_BRINGUP_BIN_BOOTSVC_BOOTFS_SERVICE_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/memfs/cpp/vnode.h>
@@ -65,4 +65,4 @@ class BootfsService : public fbl::RefCounted<BootfsService> {
 
 }  // namespace bootsvc
 
-#endif  // ZIRCON_SYSTEM_CORE_BOOTSVC_BOOTFS_SERVICE_H_
+#endif  // SRC_BRINGUP_BIN_BOOTSVC_BOOTFS_SERVICE_H_
