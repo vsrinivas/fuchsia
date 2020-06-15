@@ -7,12 +7,11 @@
 
 use {
     anyhow::{format_err, Context, Error},
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync, net::UdpSocket},
     helper::*,
     net_types::ip::IpVersion,
     packet::BufferView,
     std::net::Ipv4Addr,
-    std::net::UdpSocket,
     std::path::Path,
     zerocopy::{AsBytes, FromBytes, Unaligned},
 };
@@ -238,17 +237,19 @@ fn pcapng_packet_headers_test(env: &mut TestEnvironment) -> Result<(), Error> {
         .insert_pcapng_dump_to_stdout()
         .insert_write_to_dumpfile(DEFAULT_DUMPFILE);
 
-    let socket_tx = UdpSocket::bind(EndpointType::TX.default_socket_addr(IpVersion::V4))?;
-    let output = env.run_test_case(
-        args.into(),
-        send_udp_packets(
-            socket_tx,
-            EndpointType::RX.default_socket_addr(IpVersion::V4),
-            PAYLOAD_LENGTH,
-            PACKET_COUNT,
-        ),
-        DEFAULT_DUMPFILE,
-    )?;
+    let closure = || {
+        let socket_tx = UdpSocket::bind(&EndpointType::TX.default_socket_addr(IpVersion::V4))?;
+        Ok(async move {
+            send_udp_packets(
+                &socket_tx,
+                EndpointType::RX.default_socket_addr(IpVersion::V4),
+                PAYLOAD_LENGTH,
+                PACKET_COUNT,
+            )
+            .await
+        })
+    };
+    let output = env.run_test_case(args.into(), closure, DEFAULT_DUMPFILE)?;
 
     let dumpfile = read_default_dumpfile()?;
     assert_eq!(dumpfile, output.stdout);
@@ -290,11 +291,11 @@ fn pcapng_fake_packets_test(env: &mut TestEnvironment) -> Result<(), Error> {
         .insert_pcapng_dump_to_stdout()
         .insert_write_to_dumpfile(DEFAULT_DUMPFILE);
     let fake_ep = env.create_fake_endpoint()?;
-    let send_fake_packets = async move {
-        for _ in 0..(PACKET_COUNT) {
-            fake_ep.write(FAKE_DATA.as_bytes())?;
+    let send_fake_packets = || {
+        for () in std::iter::repeat(()).take(PACKET_COUNT) {
+            let () = fake_ep.write(FAKE_DATA.as_bytes())?;
         }
-        Ok(())
+        Ok(futures::future::ok(()))
     };
 
     let output = env.run_test_case(args.into(), send_fake_packets, DEFAULT_DUMPFILE)?;

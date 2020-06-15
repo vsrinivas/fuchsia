@@ -11,9 +11,8 @@ use {
     super::*,
     anyhow::Error,
     fidl_fuchsia_netemul_network::{EndpointManagerMarker, NetworkContextMarker},
-    fuchsia_async::{self as fasync, Executor},
+    fuchsia_async::{self as fasync, net::UdpSocket, DurationExt, Executor, TimeoutExt},
     net_types::ip::IpVersion,
-    std::net::UdpSocket,
 };
 
 #[fasync::run_singlethreaded(test)]
@@ -88,35 +87,43 @@ fn new_test_environment_bad_name_test() {
 
 #[fasync::run_singlethreaded(test)]
 async fn send_udp_packets_test() -> Result<(), Error> {
-    const READ_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(30);
-    let mut buf: [u8; 256] = [0; 256];
+    const READ_TIMEOUT: zx::Duration = zx::Duration::from_millis(30);
 
     let addr_tx = EndpointType::TX.default_socket_addr(IpVersion::V4);
     let addr_rx = EndpointType::RX.default_socket_addr(IpVersion::V4);
-    let socket_tx = UdpSocket::bind(addr_tx)?;
-    let socket_rx = UdpSocket::bind(addr_rx)?;
-    socket_rx.set_read_timeout(Some(READ_TIMEOUT))?;
+    let socket_tx = UdpSocket::bind(&addr_tx)?;
+    let socket_rx = UdpSocket::bind(&addr_rx)?;
+
+    let read = || async {
+        let mut buf: [u8; 256] = [0; 256];
+        socket_rx
+            .recv_from(&mut buf)
+            .on_timeout(READ_TIMEOUT.after_now(), || {
+                Err(std::io::Error::new(std::io::ErrorKind::TimedOut, "too slow!!"))
+            })
+            .await
+    };
 
     // No packets initially.
-    assert!(&socket_rx.recv_from(&mut buf).is_err());
+    assert!(read().await.is_err());
 
     let mut payload_size = 100;
     // Clone the socket as the async task takes ownership.
-    send_udp_packets(socket_tx.try_clone()?, addr_rx, payload_size, 0).await?;
-    assert!(&socket_rx.recv_from(&mut buf).is_err());
+    send_udp_packets(&socket_tx, addr_rx, payload_size, 0).await?;
+    assert!(read().await.is_err());
 
-    send_udp_packets(socket_tx.try_clone()?, addr_rx, payload_size, 1).await?;
-    let (recv_size, addr) = socket_rx.recv_from(&mut buf)?;
+    send_udp_packets(&socket_tx, addr_rx, payload_size, 1).await?;
+    let (recv_size, addr) = read().await?;
     assert_eq!(recv_size, payload_size);
     assert_eq!(addr, addr_tx);
 
     payload_size = 200;
-    send_udp_packets(socket_tx.try_clone()?, addr_rx, payload_size, 3).await?;
-    let (recv_size, _) = socket_rx.recv_from(&mut buf)?;
+    send_udp_packets(&socket_tx, addr_rx, payload_size, 3).await?;
+    let (recv_size, _) = read().await?;
     assert_eq!(recv_size, payload_size);
-    let (recv_size, _) = socket_rx.recv_from(&mut buf)?;
+    let (recv_size, _) = read().await?;
     assert_eq!(recv_size, payload_size);
-    let (recv_size, _) = socket_rx.recv_from(&mut buf)?;
+    let (recv_size, _) = read().await?;
     assert_eq!(recv_size, payload_size);
 
     // TODO(NET-2558): Add a test for the empty payload case.

@@ -4,10 +4,10 @@
 
 use {
     anyhow::{format_err, Error},
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync, net::UdpSocket},
     helper::*,
     net_types::ip::IpVersion,
-    std::net::{SocketAddr, UdpSocket},
+    std::net::SocketAddr,
 };
 
 const PACKET_COUNT: usize = 10;
@@ -77,27 +77,29 @@ fn positive_filter_test(env: &mut TestEnvironment) -> Result<(), Error> {
         .insert_write_to_dumpfile(DEFAULT_DUMPFILE)
         .insert_filter(&format!("greater {}", BIG_PAYLOAD_SIZE));
 
-    let socket_tx = UdpSocket::bind(EndpointType::TX.default_socket_addr(IpVersion::V4))?;
+    let socket_tx = UdpSocket::bind(&EndpointType::TX.default_socket_addr(IpVersion::V4))?;
 
-    let send_packets_fut = async move {
-        // Interleave sending of big and small packets.
-        for _ in 0..PACKET_COUNT {
-            send_udp_packets(
-                socket_tx.try_clone()?,
-                EndpointType::RX.default_socket_addr(IpVersion::V4),
-                PAYLOAD_SIZE,
-                1,
-            )
-            .await?;
-            send_udp_packets(
-                socket_tx.try_clone()?,
-                EndpointType::RX.default_socket_addr(IpVersion::V4),
-                BIG_PAYLOAD_SIZE,
-                1,
-            )
-            .await?;
-        }
-        Ok(())
+    let send_packets_fut = || {
+        Ok(async move {
+            // Interleave sending of big and small packets.
+            for _ in 0..PACKET_COUNT {
+                send_udp_packets(
+                    &socket_tx,
+                    EndpointType::RX.default_socket_addr(IpVersion::V4),
+                    PAYLOAD_SIZE,
+                    1,
+                )
+                .await?;
+                send_udp_packets(
+                    &socket_tx,
+                    EndpointType::RX.default_socket_addr(IpVersion::V4),
+                    BIG_PAYLOAD_SIZE,
+                    1,
+                )
+                .await?;
+            }
+            Ok(())
+        })
     };
     let output = env.run_test_case(args.into(), send_packets_fut, DEFAULT_DUMPFILE)?;
     output.ok()?;
@@ -130,30 +132,32 @@ fn negative_filter_test(env: &mut TestEnvironment) -> Result<(), Error> {
         .insert_write_to_dumpfile(DEFAULT_DUMPFILE)
         .insert_filter(&format!("not port {}", EndpointType::TX.default_port()));
 
-    let socket_tx = UdpSocket::bind(EndpointType::TX.default_socket_addr(IpVersion::V4))?;
+    let socket_tx = UdpSocket::bind(&EndpointType::TX.default_socket_addr(IpVersion::V4))?;
     let alt_socket_addr =
         SocketAddr::new(EndpointType::TX.default_ip_addr(IpVersion::V4), ALT_PORT);
-    let alt_socket_tx = UdpSocket::bind(alt_socket_addr)?;
+    let alt_socket_tx = UdpSocket::bind(&alt_socket_addr)?;
 
-    let send_packets_fut = async move {
-        // Interleave sending from different ports.
-        for _ in 0..PACKET_COUNT {
-            send_udp_packets(
-                socket_tx.try_clone()?,
-                EndpointType::RX.default_socket_addr(IpVersion::V4),
-                PAYLOAD_SIZE,
-                1,
-            )
-            .await?;
-            send_udp_packets(
-                alt_socket_tx.try_clone()?,
-                EndpointType::RX.default_socket_addr(IpVersion::V4),
-                PAYLOAD_SIZE,
-                1,
-            )
-            .await?;
-        }
-        Ok(())
+    let send_packets_fut = || {
+        Ok(async move {
+            // Interleave sending from different ports.
+            for _ in 0..PACKET_COUNT {
+                send_udp_packets(
+                    &socket_tx,
+                    EndpointType::RX.default_socket_addr(IpVersion::V4),
+                    PAYLOAD_SIZE,
+                    1,
+                )
+                .await?;
+                send_udp_packets(
+                    &alt_socket_tx,
+                    EndpointType::RX.default_socket_addr(IpVersion::V4),
+                    PAYLOAD_SIZE,
+                    1,
+                )
+                .await?;
+            }
+            Ok(())
+        })
     };
     let output = env.run_test_case(args.into(), send_packets_fut, DEFAULT_DUMPFILE)?;
     output.ok()?;
@@ -185,23 +189,25 @@ fn long_filter_string_test(env: &mut TestEnvironment) -> Result<(), Error> {
         .insert_write_to_dumpfile(DEFAULT_DUMPFILE)
         .insert_filter(FILTER_STR);
 
-    let socket_tx = UdpSocket::bind(EndpointType::TX.default_socket_addr(IpVersion::V4))?;
+    let socket_tx = UdpSocket::bind(&EndpointType::TX.default_socket_addr(IpVersion::V4))?;
     let alt_socket_addr =
         SocketAddr::new(EndpointType::RX.default_ip_addr(IpVersion::V4), ALT_PORT);
 
-    let send_packets_fut = async move {
-        // Interleave sending from different ports.
-        for _ in 0..PACKET_COUNT {
-            send_udp_packets(
-                socket_tx.try_clone()?,
-                EndpointType::RX.default_socket_addr(IpVersion::V4),
-                PAYLOAD_SIZE,
-                1,
-            )
-            .await?;
-            send_udp_packets(socket_tx.try_clone()?, alt_socket_addr, PAYLOAD_SIZE, 1).await?;
-        }
-        Ok(())
+    let send_packets_fut = || {
+        Ok(async move {
+            // Interleave sending from different ports.
+            for _ in 0..PACKET_COUNT {
+                send_udp_packets(
+                    &socket_tx,
+                    EndpointType::RX.default_socket_addr(IpVersion::V4),
+                    PAYLOAD_SIZE,
+                    1,
+                )
+                .await?;
+                send_udp_packets(&socket_tx, alt_socket_addr, PAYLOAD_SIZE, 1).await?;
+            }
+            Ok(())
+        })
     };
     let output = env.run_test_case(args.into(), send_packets_fut, DEFAULT_DUMPFILE)?;
     output.ok()?;

@@ -4,10 +4,9 @@
 
 use {
     anyhow::{format_err, Error},
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync, net::UdpSocket},
     helper::*,
     net_types::ip::IpVersion,
-    std::net::UdpSocket,
 };
 
 const PACKET_COUNT: usize = 10;
@@ -64,17 +63,19 @@ fn receive_one_of_many_test(
         .insert_packet_count(PACKET_COUNT)
         .insert_write_to_dumpfile(DEFAULT_DUMPFILE);
 
-    let socket_tx = UdpSocket::bind(EndpointType::TX.default_socket_addr(IpVersion::V4))?;
-    let output = env.run_test_case(
-        args.into(),
-        send_udp_packets(
-            socket_tx,
-            EndpointType::RX.default_socket_addr(IpVersion::V4),
-            PAYLOAD_SIZE,
-            PACKET_COUNT,
-        ),
-        DEFAULT_DUMPFILE,
-    )?;
+    let closure = || {
+        let socket_tx = UdpSocket::bind(&EndpointType::TX.default_socket_addr(IpVersion::V4))?;
+        Ok(async move {
+            send_udp_packets(
+                &socket_tx,
+                EndpointType::RX.default_socket_addr(IpVersion::V4),
+                PAYLOAD_SIZE,
+                PACKET_COUNT,
+            )
+            .await
+        })
+    };
+    let output = env.run_test_case(args.into(), closure, DEFAULT_DUMPFILE)?;
     output.ok()?;
 
     let output_stdout = output_string(&output.stdout);

@@ -5,7 +5,7 @@
 //! Helper library for integration testing netdump.
 
 use {
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Context as _, Error},
     fdio::{self, WatchEvent},
     fidl_fuchsia_netemul_environment::ManagedEnvironmentMarker,
     fidl_fuchsia_netemul_network::{
@@ -13,17 +13,17 @@ use {
         FakeEndpointProxy, NetworkContextMarker, NetworkManagerMarker, NetworkProxy,
     },
     fidl_fuchsia_sys::{LauncherMarker, LauncherProxy},
-    fuchsia_async::{Executor, Interval},
+    fuchsia_async::{net::UdpSocket, Executor, Interval},
     fuchsia_component::client,
     fuchsia_zircon as zx,
     futures::{
         future::{self, Either},
-        Future, StreamExt,
+        Future, FutureExt, StreamExt, TryFutureExt,
     },
     net_types::ip::IpVersion,
     std::boxed::Box,
     std::fs::File,
-    std::net::{IpAddr, SocketAddr, UdpSocket},
+    std::net::{IpAddr, SocketAddr},
     std::path::Path,
 };
 
@@ -208,12 +208,16 @@ impl TestEnvironment {
     /// `dumpfile`: The file path relative to `DUMPFILE_DIR` to watch for a dumpfile. If the file
     /// exists, it is removed. Packet transmission begins after the file is added by packet capture
     /// and become non-zero in size due to the output of PCAPNG header blocks.
-    pub fn run_test_case(
+    pub fn run_test_case<F, Fut>(
         &mut self,
         args: Vec<String>,
-        send_packets_fut: impl Future<Output = Result<(), Error>> + Send + 'static,
+        send_packets_fut: F,
         dumpfile: &str,
-    ) -> Result<client::Output, Error> {
+    ) -> Result<client::Output, Error>
+    where
+        F: FnOnce() -> Result<Fut, Error>,
+        Fut: Future<Output = Result<(), Error>> + Send + 'static,
+    {
         Self::remove_dumpfile(dumpfile)?;
 
         let app_fut = new_netdump_app_builder(args)?.output(&self.launcher)?;
@@ -232,7 +236,7 @@ impl TestEnvironment {
         }?;
 
         // Complete the test by running capture and packet transmission on 2 threads.
-        match self.executor.run(future::try_join(capture_fut, send_packets_fut), 2)? {
+        match self.executor.run(future::try_join(capture_fut, send_packets_fut()?), 2)? {
             (output, _) => Ok(output),
         }
     }
@@ -343,15 +347,26 @@ pub fn check_all_substrs<'a>(st: &str, substrs: &[&'a str]) -> Result<(), &'a st
 
 /// Example packet transmission task that can be used with `TestEnvironment::run_test_case`.
 /// Send UDP packets from the given socket to the receiving socket address `addr_rx`.
-pub async fn send_udp_packets(
-    socket: UdpSocket,
+pub fn send_udp_packets<'a>(
+    socket: &'a UdpSocket,
     addr_rx: SocketAddr,
     payload_size_octets: usize,
     count: usize,
-) -> Result<(), Error> {
+) -> impl Future<Output = Result<(), Error>> + 'a {
     let buf: Vec<u8> = std::iter::repeat(0).take(payload_size_octets).collect();
-    for _ in 0..count {
-        socket.send_to(&buf, addr_rx)?;
+    async move {
+        futures::future::try_join_all(
+            std::iter::repeat(())
+                .take(count)
+                .map(|()| {
+                    socket
+                        .send_to(&buf, addr_rx)
+                        .map_ok(|_: usize| ())
+                        .map(|result| result.context("socket send"))
+                })
+                .collect::<Vec<_>>(),
+        )
+        .map_ok(|_: Vec<()>| ())
+        .await
     }
-    Ok(())
 }
