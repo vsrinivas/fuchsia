@@ -59,9 +59,7 @@ mod test {
         super::*,
         fidl::endpoints::RequestStream,
         fidl::handle::AsyncChannel,
-        fidl_fuchsia_developer_remotecontrol::{
-            RemoteControlMarker, RemoteControlRequest, ServiceMatch,
-        },
+        fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlRequest},
         fidl_fuchsia_hardware_power_statecontrol::{AdminRequest, AdminRequestStream},
         futures::TryStreamExt,
         std::sync::{Arc, Mutex},
@@ -119,13 +117,7 @@ mod test {
                             ),
                             state_ptr.clone(),
                         );
-                        responder
-                            .send(&mut Ok(ServiceMatch {
-                                moniker: vec![],
-                                subdir: String::from(""),
-                                service: String::from(""),
-                            }))
-                            .unwrap();
+                        responder.send(&mut Ok(())).unwrap();
                     }
                     _ => assert!(false),
                 }

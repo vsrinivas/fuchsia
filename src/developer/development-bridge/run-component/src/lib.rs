@@ -148,9 +148,7 @@ mod test {
         super::*,
         fidl::endpoints::RequestStream,
         fidl::handle::AsyncChannel,
-        fidl_fuchsia_developer_remotecontrol::{
-            RemoteControlMarker, RemoteControlRequest, ServiceMatch,
-        },
+        fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlRequest},
         fidl_fuchsia_sys::{LauncherRequest, LauncherRequestStream},
         futures::TryStreamExt,
     };
@@ -203,13 +201,7 @@ mod test {
                         setup_fake_launcher_service(LauncherRequestStream::from_channel(
                             AsyncChannel::from_channel(service_chan).unwrap(),
                         ));
-                        responder
-                            .send(&mut Ok(ServiceMatch {
-                                moniker: vec![],
-                                subdir: String::from(""),
-                                service: String::from(""),
-                            }))
-                            .unwrap();
+                        responder.send(&mut Ok(())).unwrap();
                     }
                     _ => {
                         println!("got a unrcog thing {:?}", req);
