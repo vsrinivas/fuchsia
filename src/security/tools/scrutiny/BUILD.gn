@@ -15,8 +15,14 @@ if (!is_fuchsia) {
     edition = "2018"
     visibility = [ "//src/security/tools/scrutiny/*" ]
     deps = [
+      "//src/sys/pkg/lib/fuchsia-archive",
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:async-trait",
+      "//third_party/rust_crates:bincode",
+      "//third_party/rust_crates:futures-executor",
+      "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:log",
+      "//third_party/rust_crates:regex",
       "//third_party/rust_crates:rouille",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
@@ -52,8 +58,5 @@ group("scrutiny") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":lib_test($host_toolchain)",
-    "//src/security/tools/scrutiny/plugins/components:tests",
-  ]
+  public_deps = [ ":lib_test($host_toolchain)" ]
 }

@@ -2,31 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[macro_use]
-extern crate anyhow;
-
-#[macro_use]
-extern crate lazy_static;
-
-#[macro_use]
-extern crate log;
-
-mod http;
-mod jsons;
-mod package_reader;
-mod types;
-mod util;
-
 use {
-    crate::http::HttpGetter,
-    crate::package_reader::*,
-    crate::types::*,
-    anyhow::Result,
+    crate::{
+        engine::hook::PluginHooks,
+        engine::plugin::{Plugin, PluginDescriptor},
+        model::collector::DataCollector,
+        model::model::DataModel,
+        plugins::components::{http::HttpGetter, package_reader::*, types::*, util},
+    },
+    anyhow::{anyhow, Result},
+    futures_executor::block_on,
+    lazy_static::lazy_static,
+    log::{info, warn},
     regex::Regex,
-    simplelog::{Config, LevelFilter, TermLogger, TerminalMode},
     std::collections::HashMap,
     std::env,
     std::str,
+    std::sync::Arc,
 };
 
 // Constants/Statics
@@ -57,7 +49,9 @@ pub struct Component {
 pub struct Manifest {
     pub component_id: i32,
     pub manifest: String,
+    // Added fields below
     pub uses: Vec<String>,
+    // End added fields
 }
 
 /// Defines a link between two components. The `src_id` is the `component.id`
@@ -121,26 +115,28 @@ impl PackageDataCollector {
         Ok((packages, builtins.services))
     }
 
-    /// Collects and builds a DAG of component nodes (with manifests) and routes that
-    /// connect the nodes.
-    pub async fn collect_manifests() -> Result<()> {
-        TermLogger::init(LevelFilter::Info, Config::default(), TerminalMode::Mixed).unwrap();
-
+    fn new() -> Result<Self> {
         let fuchsia_dir = env::var("FUCHSIA_DIR")?;
         if fuchsia_dir.len() == 0 {
             return Err(anyhow!("Unable to retrieve $FUCHSIA_DIR, has it been set?"));
         }
-        let this = PackageDataCollector {
+
+        Ok(Self {
             package_reader: Box::new(PackageServerReader::new(
                 fuchsia_dir,
                 Box::new(HttpGetter::new(String::from("127.0.0.1:8083"))),
             )),
-        };
-        let served_packages = this.get_packages().await?;
+        })
+    }
 
-        let (builtin_packages, builtin_services) = this.get_builtins().await?;
+    /// Collects and builds a DAG of component nodes (with manifests) and routes that
+    /// connect the nodes.
+    async fn collect_manifests(&self) -> Result<()> {
+        let served_packages = self.get_packages().await?;
 
-        let services = this.merge_services(&served_packages, builtin_services).await?;
+        let (builtin_packages, builtin_services) = self.get_builtins().await?;
+
+        let services = self.merge_services(&served_packages, builtin_services).await?;
 
         info!(
             "Done collecting. Found {} services, {} served packages, and {} builtin packages.",
@@ -330,6 +326,18 @@ impl PackageDataCollector {
     }
 }
 
+impl DataCollector for PackageDataCollector {
+    fn collect(&self, _: Arc<DataModel>) -> Result<()> {
+        block_on(self.collect_manifests())
+    }
+}
+
+plugin!(
+    ComponentGraphPlugin,
+    PluginHooks::new(vec![Arc::new(PackageDataCollector::new().unwrap())], controller_hooks! {}),
+    vec![]
+);
+
 // It doesn't seem incredibly useful to test the json parsing or the far file
 // parsing, as those are mainly provided by dependencies.
 // The retireval from package server is defined here, but feels difficult to
@@ -339,7 +347,7 @@ impl PackageDataCollector {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::jsons::*, async_trait::async_trait, futures_executor::block_on,
+        super::*, crate::plugins::components::jsons::*, async_trait::async_trait,
         std::cell::RefCell,
     };
 

@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::http::*,
-    crate::jsons::*,
-    crate::types::*,
-    crate::util,
+    crate::plugins::components::{http::*, jsons::*, types::*, util},
     anyhow::Result,
     async_trait::async_trait,
     fuchsia_archive::Reader as FarReader,

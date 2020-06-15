@@ -7,6 +7,7 @@ use {
     scrutiny::{
         engine::{dispatcher::ControllerDispatcher, manager::PluginManager, pool::CollectorPool},
         model::model::DataModel,
+        plugins::components::graph::ComponentGraphPlugin,
         plugins::health::HealthPlugin,
         rest::service,
     },
@@ -33,6 +34,7 @@ impl App {
 
     fn setup(&mut self) -> Result<()> {
         self.manager.register_and_load(Box::new(HealthPlugin::new()))?;
+        self.manager.register_and_load(Box::new(ComponentGraphPlugin::new()))?;
         self.collector.lock().unwrap().schedule()?;
         Ok(())
     }

@@ -4,6 +4,7 @@
 
 use {
     async_trait::async_trait,
+    lazy_static::lazy_static,
     regex::Regex,
     std::io::{BufRead, BufReader, Error, ErrorKind, Read, Result, Write},
     std::net::TcpStream,
