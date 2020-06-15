@@ -61,9 +61,8 @@ import("//build/config/clang/clang.gni")
 #      If this string is specified it will be used for the file extension
 #      for a shared library, rather than default value specified in
 #      toolchain.gni
-#  - strip
-#      Location of the strip executable. When specified, strip will be run on
-#      all shared libraries and executables as they are built. The pre-stripped
+#  - use_strip
+#      Enable stripping symbols out of binaries. The pre-stripped
 #      artifacts will be put in lib.unstripped/ and exe.unstripped/.
 template("clang_toolchain") {
   declare_args() {
@@ -226,6 +225,19 @@ template("clang_toolchain") {
       extra_ldflags = ""
     }
 
+    use_strip = false
+    if (defined(invoker.use_strip)) {
+      use_strip = invoker.use_strip
+    }
+    if (use_strip) {
+      if (toolchain_args.current_os == "mac") {
+        strip = "xcrun strip -Sx"
+      } else {
+        strip = "${params.prefix}/llvm-objcopy"
+        buildidtool = rebase_path(buildidtool, root_build_dir)
+      }
+    }
+
     # These library switches can apply to all tools below.
     lib_switch = "-l"
     lib_dir_switch = "-L"
@@ -284,7 +296,7 @@ template("clang_toolchain") {
       sofile = "{{output_dir}}/$soname"  # Possibly including toolchain dir.
       rspfile = sofile + ".rsp"
 
-      if (defined(invoker.strip)) {
+      if (defined(invoker.use_strip)) {
         unstripped_sofile = "{{root_out_dir}}/lib.unstripped/$soname"
       } else {
         unstripped_sofile = sofile
@@ -298,12 +310,16 @@ template("clang_toolchain") {
 
       link_command = "$ld -shared {{ldflags}}${extra_ldflags} -o \"$unstripped_sofile\" -Wl,-soname=\"$soname\" @\"$rspfile\""
 
-      # Generate a map file to be used for binary size analysis.
-      if (defined(invoker.strip)) {
-        strip_switch = "--strip=${invoker.strip} "
-      }
-
       command = "$link_command"
+
+      if (defined(invoker.use_strip)) {
+        strip_command = "$strip --strip-all \"$unstripped_sofile\" \"$sofile\""
+        command += " && " + strip_command
+        command +=
+            " && $buildidtool -build-id-dir .build-id" +
+            " -stamp \"$sofile.build-id.stamp\"" + " -entry \"=$sofile\"" +
+            " -entry \".debug=$unstripped_sofile\""
+      }
       rspfile_content = "-Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive $solink_libs_section_prefix {{libs}} $solink_libs_section_postfix"
       description = "SOLINK $sofile"
 
@@ -346,7 +362,7 @@ template("clang_toolchain") {
       sofile = "{{output_dir}}/$soname"
       rspfile = sofile + ".rsp"
 
-      if (defined(invoker.strip)) {
+      if (defined(invoker.use_strip)) {
         unstripped_sofile = "{{root_out_dir}}/lib.unstripped/$soname"
       } else {
         unstripped_sofile = sofile
@@ -354,9 +370,14 @@ template("clang_toolchain") {
 
       command = "$ld -shared {{ldflags}}${extra_ldflags} -o \"$unstripped_sofile\" -Wl,-soname=\"$soname\" @\"$rspfile\""
 
-      if (defined(invoker.strip)) {
-        strip_command = "${invoker.strip} -o \"$sofile\" \"$unstripped_sofile\""
+      if (defined(invoker.use_strip)) {
+        strip_command =
+            "$strip --strip-sections \"$unstripped_sofile\" \"$sofile\""
         command += " && " + strip_command
+        command +=
+            " && $buildidtool -build-id-dir .build-id" +
+            " -stamp \"$sofile.build-id.stamp\"" + " -entry \"=$sofile\"" +
+            " -entry \".debug=$unstripped_sofile\""
       }
       rspfile_content = "-Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive $solink_libs_section_prefix {{libs}} $solink_libs_section_postfix"
 
@@ -398,7 +419,7 @@ template("clang_toolchain") {
 
       default_output_dir = "{{root_out_dir}}"
 
-      if (defined(invoker.strip)) {
+      if (defined(invoker.use_strip)) {
         unstripped_outfile = "{{root_out_dir}}/exe.unstripped/$exename"
       }
 
@@ -410,15 +431,21 @@ template("clang_toolchain") {
       link_command = "$ld {{ldflags}}${extra_ldflags} -o \"$unstripped_outfile\" $start_group_flag @\"$rspfile\" {{solibs}} $end_group_flag $libs_section_prefix {{libs}} $libs_section_postfix"
 
       command = "$link_command"
+
+      if (defined(invoker.use_strip)) {
+        strip_command =
+            "$strip --strip-sections \"$unstripped_outfile\" \"$outfile\""
+        command += " && " + strip_command
+        command +=
+            " && $buildidtool -build-id-dir .build-id" +
+            " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
+            " -entry \".debug=$unstripped_outfile\""
+      }
       description = "LINK $outfile"
       rspfile_content = "{{inputs}}"
       outputs = [ outfile ]
       if (outfile != unstripped_outfile) {
         outputs += [ unstripped_outfile ]
-        if (defined(invoker.use_unstripped_as_runtime_outputs) &&
-            invoker.use_unstripped_as_runtime_outputs) {
-          runtime_outputs = [ unstripped_outfile ]
-        }
       }
       if (defined(invoker.link_outputs)) {
         outputs += invoker.link_outputs

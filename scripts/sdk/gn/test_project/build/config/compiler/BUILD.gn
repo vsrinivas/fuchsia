@@ -145,7 +145,7 @@ config("default_optimization") {
 config("optimize") {
   cflags = [
     "-O2",
-    "-fno-indent",
+    "-fno-ident",
     "-fdata-sections",
     "-ffunction-sections",
   ]

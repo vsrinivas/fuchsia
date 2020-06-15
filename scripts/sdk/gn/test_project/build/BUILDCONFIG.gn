@@ -19,7 +19,10 @@ if (current_os == "") {
 
 is_fuchsia = current_os == "fuchsia"
 is_linux = current_os == "linux"
-is_debug = true
+
+declare_args() {
+  is_debug = true
+}
 
 # Set the host_toolchain
 declare_args() {

@@ -15,6 +15,14 @@ template("fuchsia_toolchain") {
     default_shlib_subdir = "/lib"
     toolchain_args = invoker.toolchain_args
     toolchain_args.current_os = "fuchsia"
+
+    #
+    # We want to build and strip binaries, but retain the unstripped binaries
+    # in runtime_deps to make them available for isolates.
+    if (host_os == "linux") {
+      use_strip = true
+      use_unstripped_as_runtime_outputs = true
+    }
   }
 }
 

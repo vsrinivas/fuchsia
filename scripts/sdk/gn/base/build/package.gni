@@ -9,16 +9,27 @@ import("pm_tool.gni")
 #
 # Parameters
 #
-#   package_name:
-#     Optional: Name of the package. Defaults to target_name
+#   package_name: [Optional]
+#     Name of the package. Defaults to target_name.
 #
-#   excluded_files
-#     Optional: List of files to exclude from the package.
+#     Type: string
 #
-#   fidl_ref_out_dir:
-#     Optional: directory for writing out $package_name_all_fidl_refs.txt
+#   excluded_files: [Optional]
+#     List of files to exclude from the package.
+#
+#     Type: list of file paths
+#
+#   fidl_ref_out_dir: [Optional]
+#     Directory for writing out $package_name_all_fidl_refs.txt
 #       that contains the paths to the internal representation (IR) of every
 #       FIDL interface referenced in the package. Defaults to $root_build_dir/fidl_refs.
+#
+#   ids_txt_output_path: [Optional]
+#     Path to write out the ids.txt file for the symbols in the binaries.
+#     Defaults to `${target_gen_dir}/${package_name}/ids.txt`
+#
+#     Type: file path
+#
 #   deps
 #     Required: List of fuchsia_component() targets that this
 #              package contains.
@@ -53,6 +64,9 @@ template("fuchsia_package") {
   _runtime_deps_file = "$_pkg_out_dir/${package_name}.runtime_deps"
   _archive_manifest = "$_pkg_out_dir/${package_name}.manifest"
   _build_ids_file = "$_pkg_out_dir/ids.txt"
+  if (defined(invoker.ids_txt_output_path)) {
+    _build_ids_file = invoker.ids_txt_output_path
+  }
   _package_file = "$_pkg_out_dir/package"
   _fidl_json_refs_file = "${fidl_ref_out_dir}/${package_name}_all_fidl_refs.txt"
 
@@ -160,6 +174,6 @@ template("fuchsia_package") {
     package_name = package_name
     command = "archive"
     archive_manifest = _archive_manifest
-    deps = [ ":$_metadata_target" ]
+    public_deps = [ ":$_metadata_target" ]
   }
 }

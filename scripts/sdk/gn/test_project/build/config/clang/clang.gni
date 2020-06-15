@@ -4,4 +4,5 @@
 
 declare_args() {
   clang_base_path = "//buildtools/linux64/clang-linux-amd64"
+  buildidtool = "//buildtools/linux64/buildidtool"
 }

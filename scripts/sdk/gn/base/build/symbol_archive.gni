@@ -1,0 +1,80 @@
+# Copyright 2019 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("config/config.gni")
+assert(is_fuchsia)
+
+# Creates a GNU GDB symbol archive
+# Creates a tarball of unstripped binaries, structured according to the
+# ".build_ids" convention used by the symbolizer and GNU GDB.
+#
+# This rule reads the ids.txt file specified and searches the build-id
+# paths for the matching binary file. If an unstripped binary is found,
+# it is added to the archive. If the matching file is not found in any
+# of the build-id direcctories, the directory of ids.txt is checked for
+# an unstripped file matching the filename.
+#
+# Parameters:
+#
+#   ids_txt:
+#       The "ids.txt" file which lists the relative paths to unstripped
+#       executables and libraries, along with their build IDs.
+#
+#      Type: file path
+#
+#   build_id_dirs: [Optional]
+#       List of paths to .build-id directories to search for the binary
+#       in addition to  $root_out_dir/.build-id and the fuchsia SDK .build-id
+#       directory.
+#
+#       Type: list of directories
+#
+#   archive_name:
+#      The path to the compressed tarball that will be generated.
+#
+#      Type: file path
+#
+#   Standard parameters:
+#     deps
+#     public_deps
+#     testonly
+#     visibility
+#
+template("fuchsia_symbol_archive") {
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    _ids_txt = invoker.ids_txt
+    _build_ids = invoker.archive_name
+    _build_id_paths = [
+      "${root_out_dir}/.build-id",
+      "${fuchsia_sdk}/.build-id",
+    ]
+    if (defined(invoker.build_id_dirs)) {
+      _build_id_paths += invoker.build_id_dirs
+    }
+
+    script = "${fuchsia_sdk}/build/build_symbol_archive.py"
+
+    inputs = [ _ids_txt ]
+
+    outputs = [ _build_ids ]
+
+    args = [
+      rebase_path(_ids_txt, root_build_dir),
+      "-o",
+      rebase_path(_build_ids, root_build_dir),
+    ]
+    foreach(dir, _build_id_paths) {
+      args += [
+        "--build-id-dir",
+        rebase_path(dir, root_build_dir),
+      ]
+    }
+  }
+}

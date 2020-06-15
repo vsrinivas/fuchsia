@@ -40,11 +40,13 @@ test_generate = imp.load_source('test_generate', TEST_GEN_PATH)
 
 # gn and ninja constants
 DEFAULT_HOST = 'linux-x64'
-THIRD_PARTY_DIR = os.path.join(FUCHSIA_ROOT, 'prebuilt', 'third_party')
+PREBUILT_DIR = os.path.join(FUCHSIA_ROOT, 'prebuilt')
+THIRD_PARTY_DIR = os.path.join(PREBUILT_DIR, 'third_party')
 DEFAULT_GN_BIN = os.path.join(THIRD_PARTY_DIR, 'gn', DEFAULT_HOST, 'gn')
 DEFAULT_NINJA_BIN = os.path.join(
     THIRD_PARTY_DIR, 'ninja', DEFAULT_HOST, 'ninja')
 DEFAULT_CLANG_DIR = os.path.join(THIRD_PARTY_DIR, 'clang', DEFAULT_HOST)
+DEFAULT_BUILDIDTOOL_BIN = os.path.join(PREBUILT_DIR, 'tools', 'buildidtool', 'linux-x64', 'buildidtool')
 
 # host test constants
 HOST_TEST_PATH = os.path.join(SCRIPT_DIR, 'tests', 'run-host-tests.sh')
@@ -53,12 +55,13 @@ HOST_TEST_PATH = os.path.join(SCRIPT_DIR, 'tests', 'run-host-tests.sh')
 class GnTester(object):
     """Class for GN SDK test setup, execution, and cleanup."""
 
-    def __init__(self, gn, ninja, clang, proj_dir, out_dir):
+    def __init__(self, gn, ninja, clang, buildidtool, proj_dir, out_dir):
         self._test_failed = False
         # Paths for building sample project
         self.gn = gn
         self.ninja = ninja
         self.clang = clang
+        self.buildidtool = buildidtool
         self.proj_dir = proj_dir
         self.out_dir = out_dir
         self.continue_on_error = True
@@ -122,9 +125,9 @@ class GnTester(object):
         invocation = [
             self.gn, "gen",
             os.path.join(self.out_dir, arch),
-            "--args=target_cpu=\"{cpu}\" target_os=\"fuchsia\" clang_base_path=\"{clang}\" {additional_args}"
+            "--args=target_cpu=\"{cpu}\" target_os=\"fuchsia\" clang_base_path=\"{clang}\" buildidtool=\"{buildidtool}\" {additional_args}"
             .format(
-                cpu=arch, clang=self.clang, additional_args=additional_args)
+                cpu=arch, clang=self.clang, buildidtool=self.buildidtool, additional_args=additional_args)
         ]
         # invoke command
         print 'Running gn gen: "%s"' % ' '.join(invocation)
@@ -319,6 +322,10 @@ def main():
         help='Path to Clang base path, defaults to %s' % DEFAULT_CLANG_DIR,
         default=os.path.join(SCRIPT_DIR, DEFAULT_CLANG_DIR))
     parser.add_argument(
+        '--buildidtool',
+        help='Path to buildidtool, defaults to %s' % DEFAULT_BUILDIDTOOL_BIN,
+        default=DEFAULT_BUILDIDTOOL_BIN)
+    parser.add_argument(
         '--proj-dir',
         help='Path to the test project directory, defaults to %s' % SCRIPT_DIR,
         default=SCRIPT_DIR)
@@ -333,6 +340,7 @@ def main():
         gn=args.gn,
         ninja=args.ninja,
         clang=args.clang,
+        buildidtool=args.buildidtool,
         proj_dir=args.proj_dir,
         out_dir=args.out_dir,
     )

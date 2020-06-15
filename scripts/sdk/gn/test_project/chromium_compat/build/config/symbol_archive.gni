@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//third_party/fuchsia-sdk/build/symbol_archive.gni")
 assert(is_fuchsia)
 
 # Creates a tarball of unstripped binaries, structured according to the
@@ -15,33 +16,13 @@ assert(is_fuchsia)
 template("symbol_archive") {
   #assert(!is_debug)
 
-  action(target_name) {
-    _ids_txt = invoker.ids_txt
-    _build_ids = invoker.archive_name
+  fuchsia_symbol_archive(target_name) {
+    # Specifying the package as a public_dep
+    # allows the id.txt file generated when the
+    # package is being built to be used as an input here.
+    public_deps = invoker.deps
+    ids_txt = invoker.ids_txt
 
-    script = "//chromium_compat/build/config/build_symbol_archive.py"
-
-    inputs = [ _ids_txt ]
-
-    outputs = [ _build_ids ]
-
-    # For each package in |deps| it is necessary to additionally depend upon
-    # the corresponding archive-manifest target, which is what creates the
-    # ids.txt file.
-    deps = []
-    foreach(package, invoker.deps) {
-      deps += [
-        package,
-        package + "__archive-manifest",
-      ]
-    }
-
-    args = [
-      rebase_path(_ids_txt),
-      "-o",
-      rebase_path(_build_ids),
-      "--fuchsia-build-id-dir",
-      rebase_path("//third_party/fuchsia-sdk/sdk/.build-id"),
-    ]
+    archive_name = invoker.archive_name
   }
 }
