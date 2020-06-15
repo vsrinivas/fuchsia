@@ -25,7 +25,7 @@ class AudioTunerImpl : public fuchsia::media::tuning::AudioTuner {
   void GetAvailableAudioEffects(GetAvailableAudioEffectsCallback callback) final;
   void GetAudioDeviceProfile(std::string device_id, GetAudioDeviceProfileCallback callback) final;
   void GetDefaultAudioDeviceProfile(std::string device_id,
-                                    GetDefaultAudioDeviceProfileCallback callback) final{};
+                                    GetDefaultAudioDeviceProfileCallback callback) final;
   void SetAudioDeviceProfile(std::string device_id,
                              fuchsia::media::tuning::AudioDeviceTuningProfile profile,
                              SetAudioDeviceProfileCallback callback) final{};

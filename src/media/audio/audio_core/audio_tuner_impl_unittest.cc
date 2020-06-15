@@ -141,5 +141,26 @@ TEST_F(AudioTunerTest, GetAudioDeviceTuningProfile) {
   ExpectEq(expected_pipeline, std::move(tuning_profile.pipeline()));
 }
 
+TEST_F(AudioTunerTest, GetDefaultAudioDeviceProfile) {
+  auto expected_process_config = kDefaultConfig;
+  auto context = CreateContext(expected_process_config);
+  AudioTunerImpl under_test(*context);
+  fuchsia::media::tuning::AudioDeviceTuningProfile tuning_profile;
+  under_test.GetDefaultAudioDeviceProfile(
+      kDeviceIdString, [&tuning_profile](fuchsia::media::tuning::AudioDeviceTuningProfile profile) {
+        tuning_profile = std::move(profile);
+      });
+
+  VolumeCurve expected_curve = expected_process_config.default_volume_curve();
+  std::vector<fuchsia::media::tuning::Volume> result_curve = tuning_profile.volume_curve();
+  ExpectEq(expected_curve, result_curve);
+
+  PipelineConfig::MixGroup expected_pipeline = expected_process_config.device_config()
+                                                   .output_device_profile(kDeviceIdUnique)
+                                                   .pipeline_config()
+                                                   .root();
+  ExpectEq(expected_pipeline, std::move(tuning_profile.pipeline()));
+}
+
 }  // namespace
 }  // namespace media::audio

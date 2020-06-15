@@ -105,4 +105,13 @@ void AudioTunerImpl::GetAudioDeviceProfile(std::string device_id,
   callback(ToAudioDeviceTuningProfile(tuning_profile, volume_curve));
 }
 
+void AudioTunerImpl::GetDefaultAudioDeviceProfile(std::string device_id,
+                                                  GetDefaultAudioDeviceProfileCallback callback) {
+  auto unique_id = AudioDevice::UniqueIdFromString(device_id).take_value();
+  DeviceConfig::OutputDeviceProfile default_profile =
+      context_.process_config().device_config().output_device_profile(unique_id);
+  VolumeCurve default_volume_curve = context_.process_config().default_volume_curve();
+  callback(ToAudioDeviceTuningProfile(default_profile, default_volume_curve));
+}
+
 }  // namespace media::audio
