@@ -1,0 +1,87 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.bredr;
+
+using fuchsia.bluetooth;
+using fuchsia.sys;
+
+/// `PeerObserver` provides the integration test client with a way to validate the
+/// behavior of a peer in the piconet.
+/// Dropping `PeerObserver` will stop any subsequent updates for the peer.
+protocol PeerObserver {
+    /// The peer discovered the services of another peer in the piconet.
+    ///
+    /// + request `peer_id` The peer the service was found on.
+    /// + request `protocol` Includes the ProtocolDescriptorList in the service record.
+    /// + request `attributes` Contains all attributes requested from the search that
+    ///                        are present on the peer record.
+    ServiceFound(fuchsia.bluetooth.PeerId peer_id, ProtocolDescriptorList? protocol,
+                 vector<Attribute>:MAX_ATTRIBUTES attributes) -> ();
+
+    /// Called when a peer has connected to a service.
+    ///
+    /// + request `peer_id` The peer that connected to the service.
+    /// + request `protocol` Contains the protocol list of the connection.
+    PeerConnected(fuchsia.bluetooth.PeerId peer_id, ProtocolDescriptorList protocol) -> ();
+
+    /// Called when a component, launched by `MockPeer.LaunchProfile`, has terminated
+    /// for any reason. `ComponentTerminated` does not provide information regarding
+    /// why a component has terminated and should not be used for debugging.
+    ///
+    /// + request `component_url` URL of the component that has terminated.
+    ComponentTerminated(fuchsia.sys.component_url component_url) -> ();
+};
+
+/// `MockPeer` provides an interface for managing the lifetime of a mock peer in the piconet.
+/// Dropping `MockPeer` will unregister the peer from the Profile Test Server database.
+///   - Any launched components associated with the mock peer will be terminated.
+///   - Any actively connected `ProfileProxy` will be disconnected and dropped.
+protocol MockPeer {
+    /// Connect a channel to the [`fuchsia.bluetooth.bredr.Profile`] protocol for
+    /// manipulation of the mock peer.
+    ///
+    /// It is valid to connect multiple proxies to a `MockPeer`.
+    ///
+    /// This parallels the current behavior of the bluetooth profile components.
+    /// Specifically, profiles internally use the [`fuchsia.bluetooth.bredr.Profile`]
+    /// service to register, search, and connect services. `ConnectProxy` provides a way
+    /// for the test client to do the same for a given mock peer.
+    ///
+    /// If the `interface` is not connectable, it will be dropped with an epitaph
+    /// signaling the failure.
+    ///
+    /// + request `interface` Interface to drive mock peer behavior.
+    ConnectProxy(request<Profile> interface) -> ();
+
+    /// Launch a profile specified by the component url.
+    ///
+    /// + request `component_url` URL of the component to be launched. The provided URL should
+    ///                           be a Bluetooth Profile component.
+    /// - response 'launched' Signal indicating whether component launching was successful or not.
+    LaunchProfile(fuchsia.sys.component_url component_url) -> (bool launched);
+};
+
+/// The `ProfileTest` interface should be used to validate behavior of Bluetooth Profiles
+/// that use the [`fuchsia.bluetooth.bredr.Profile`] service.
+///
+/// The ProfileTest interface is used to create and manage fake peers.
+/// A mock piconet is created in which registered peers can discover and interact with
+/// each other.
+[Discoverable] protocol ProfileTest {
+    /// Creates a new fake peer in the Profile Test Server database. An empty response is
+    /// sent to indicate when registration is complete.
+    ///
+    /// Use the provided [`PeerObserver`] interface to observe behavior of the registered peer.
+    /// Dropping the `observer` will cease the updates from the server for the associated peer.
+    ///
+    /// If registration is unsuccessful, the `peer` and `observer` will be closed.
+    ///
+    /// + request `peer_id` Identifier for the created peer.
+    /// + request `peer` Handle that can be used to drive peer behavior using the
+    ///                  [`fuchsia.blueooth.bredr.MockPeer`] interface.
+    /// + request `observer` Relay for communicating updates from the mock peer.
+    RegisterPeer(fuchsia.bluetooth.PeerId peer_id, request<MockPeer> peer, PeerObserver observer)
+        -> ();
+};
