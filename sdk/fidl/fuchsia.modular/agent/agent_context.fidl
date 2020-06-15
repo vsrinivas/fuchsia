@@ -14,5 +14,6 @@ protocol AgentContext {
     GetComponentContext(request<ComponentContext> request);
 
     /// The auth token manager this Agent may use for accessing external services.
+    [Transitional]
     GetTokenManager(request<fuchsia.auth.TokenManager> request);
 };
