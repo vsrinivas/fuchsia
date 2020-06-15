@@ -11,20 +11,34 @@ import 'common.dart';
 
 final _log = Logger('MemoryMetricsProcessor');
 
-List<TestCaseResults> memoryMetricsProcessor(
-    Model model, Map<String, dynamic> extraArgs) {
+class _Results {
+  List<double> totalSystemMemory;
+  List<double> vmoMemory;
+  List<double> mmuMemory;
+  List<double> ipcMemory;
+  List<double> cpuBandwidth;
+  List<double> gpuBandwidth;
+  List<double> vdecBandwidth;
+  List<double> vpuBandwidth;
+  List<double> otherBandwidth;
+  List<double> totalBandwidth;
+  List<double> bandwidthUsage;
+}
+
+_Results _memoryMetrics(Model model) {
   final duration = getTotalTraceDuration(model);
   if (duration < TimeDelta.fromMilliseconds(1100)) {
     _log.info(
         'Trace duration (${duration.toMilliseconds()} milliseconds) is too short to provide Memory information');
-    return [];
+    return null;
   }
+
   final memoryMonitorEvents =
       filterEvents(getAllEvents(model), category: 'memory_monitor');
   if (memoryMonitorEvents.isEmpty) {
     _log.warning(
         'Missing category "memory_monitor" events in trace. No memory data is extracted.');
-    return [];
+    return null;
   }
   final totalMemory =
       filterEventsTyped<CounterEvent>(memoryMonitorEvents, name: 'fixed')
@@ -33,7 +47,7 @@ List<TestCaseResults> memoryMetricsProcessor(
   if (totalMemory == null) {
     _log.warning(
         'Missing ("memory_monitor", "fixed") counter event in trace. No memory data is extracted.');
-    return [];
+    return null;
   }
   final allocatedMemoryEvents =
       filterEventsTyped<CounterEvent>(memoryMonitorEvents, name: 'allocated');
@@ -80,22 +94,6 @@ List<TestCaseResults> memoryMetricsProcessor(
         e.args['other'];
     return v.toDouble();
   });
-  final List<TestCaseResults> results = [];
-  <String, Iterable<double>>{
-    'Total System Memory': usedMemoryValues,
-    'VMO Memory': vmoMemoryValues,
-    'MMU Overhead Memory': mmuMemoryValues,
-    'IPC Memory': ipcMemoryValues,
-    'CPU Memory Bandwidth Usage': cpuBandwidthValues,
-    'GPU Memory Bandwidth Usage': gpuBandwidthValues,
-    'VDEC Memory Bandwidth Usage': vdecBandwidthValues,
-    'VPU Memory Bandwidth Usage': vpuBandwidthValues,
-    'Other Memory Bandwidth Usage': otherBandwidthValues,
-    'Total Memory Bandwidth Usage': totalBandwidthValues,
-  }.forEach((name, values) {
-    _log.info('Average $name in bytes: ${computeMean(values)}');
-    results.add(TestCaseResults(name, Unit.bytes, values.toList()));
-  });
   final bandwidthFreeEvents = filterEventsTyped<CounterEvent>(
       memoryMonitorEvents,
       name: 'bandwidth_free');
@@ -108,17 +106,115 @@ List<TestCaseResults> memoryMetricsProcessor(
       (totalBandwidthValue, freeBandwidthValue) =>
           (100.0 * totalBandwidthValue) /
           (totalBandwidthValue + freeBandwidthValue));
-  _log.info(
-      'Average Memory Bandwidth Usage in percent: ${computeMean(bandwidthUsagePercentValues)}');
-  results.add(TestCaseResults('Memory Bandwidth Usage', Unit.percent,
-      bandwidthUsagePercentValues.toList()));
-  _log.info(
-      'Total bandwidth: ${(computeMean(totalBandwidthValues) / 1024).round()} KB/s, '
-      'usage: ${computeMean(bandwidthUsagePercentValues).toStringAsFixed(2)}%, '
-      'cpu: ${(computeMean(cpuBandwidthValues) / 1024).round()} KB/s, '
-      'gpu: ${(computeMean(gpuBandwidthValues) / 1024).round()} KB/s, '
-      'vdec: ${(computeMean(vdecBandwidthValues) / 1024).round()} KB/s, '
-      'vpu: ${(computeMean(vpuBandwidthValues) / 1024).round()} KB/s, '
-      'other: ${(computeMean(otherBandwidthValues) / 1024).round()} KB/s');
-  return results;
+  return _Results()
+    ..totalSystemMemory = usedMemoryValues.toList()
+    ..vmoMemory = vmoMemoryValues.toList()
+    ..mmuMemory = mmuMemoryValues.toList()
+    ..ipcMemory = ipcMemoryValues.toList()
+    ..cpuBandwidth = cpuBandwidthValues.toList()
+    ..gpuBandwidth = gpuBandwidthValues.toList()
+    ..vdecBandwidth = vdecBandwidthValues.toList()
+    ..vpuBandwidth = vpuBandwidthValues.toList()
+    ..otherBandwidth = otherBandwidthValues.toList()
+    ..totalBandwidth = totalBandwidthValues.toList()
+    ..bandwidthUsage = bandwidthUsagePercentValues.toList();
+}
+
+List<TestCaseResults> memoryMetricsProcessor(
+    Model model, Map<String, dynamic> extraArgs) {
+  final results = _memoryMetrics(model);
+  if (results == null) {
+    return [];
+  }
+
+  _log
+    ..info(
+        'Average Total System Memory in bytes: ${computeMean(results.totalSystemMemory)}')
+    ..info('Average VMO Memory in bytes: ${computeMean(results.vmoMemory)}')
+    ..info(
+        'Average MMU Overhead Memory in bytes: ${computeMean(results.mmuMemory)}')
+    ..info('Average IPC Memory in bytes: ${computeMean(results.ipcMemory)}')
+    ..info(
+        'Average CPU Memory Bandwidth Usage in bytes: ${computeMean(results.cpuBandwidth)}')
+    ..info(
+        'Average GPU Memory Bandwidth Usage in bytes: ${computeMean(results.gpuBandwidth)}')
+    ..info(
+        'Average VDEC Memory Bandwidth Usage in bytes: ${computeMean(results.vdecBandwidth)}')
+    ..info(
+        'Average VPU Memory Bandwidth Usage in bytes: ${computeMean(results.vpuBandwidth)}')
+    ..info(
+        'Average Other Memory Bandwidth Usage in bytes: ${computeMean(results.otherBandwidth)}')
+    ..info(
+        'Average Total Memory Bandwidth Usage in bytes: ${computeMean(results.totalBandwidth)}')
+    ..info(
+        'Average Memory Bandwidth Usage in percent: ${computeMean(results.bandwidthUsage)}')
+    ..info(
+        'Total bandwidth: ${(computeMean(results.totalBandwidth) / 1024).round()} KB/s, '
+        'usage: ${computeMean(results.bandwidthUsage).toStringAsFixed(2)}%, '
+        'cpu: ${(computeMean(results.cpuBandwidth) / 1024).round()} KB/s, '
+        'gpu: ${(computeMean(results.gpuBandwidth) / 1024).round()} KB/s, '
+        'vdec: ${(computeMean(results.vdecBandwidth) / 1024).round()} KB/s, '
+        'vpu: ${(computeMean(results.vpuBandwidth) / 1024).round()} KB/s, '
+        'other: ${(computeMean(results.otherBandwidth) / 1024).round()} KB/s');
+
+  return [
+    TestCaseResults(
+        'Total System Memory', Unit.bytes, results.totalSystemMemory.toList()),
+    TestCaseResults('VMO Memory', Unit.bytes, results.vmoMemory.toList()),
+    TestCaseResults(
+        'MMU Overhead Memory', Unit.bytes, results.mmuMemory.toList()),
+    TestCaseResults('IPC Memory', Unit.bytes, results.ipcMemory.toList()),
+    TestCaseResults('CPU Memory Bandwidth Usage', Unit.bytes,
+        results.cpuBandwidth.toList()),
+    TestCaseResults('GPU Memory Bandwidth Usage', Unit.bytes,
+        results.gpuBandwidth.toList()),
+    TestCaseResults('VDEC Memory Bandwidth Usage', Unit.bytes,
+        results.vdecBandwidth.toList()),
+    TestCaseResults('VPU Memory Bandwidth Usage', Unit.bytes,
+        results.vpuBandwidth.toList()),
+    TestCaseResults('Other Memory Bandwidth Usage', Unit.bytes,
+        results.otherBandwidth.toList()),
+    TestCaseResults('Total Memory Bandwidth Usage', Unit.bytes,
+        results.totalBandwidth.toList()),
+    TestCaseResults(
+        'Memory Bandwidth Usage', Unit.percent, results.bandwidthUsage.toList())
+  ];
+}
+
+String memoryMetricsReport(Model model) {
+  final buffer = StringBuffer()..write('''
+===
+Memory
+===
+
+''');
+
+  final results = _memoryMetrics(model);
+  if (results != null) {
+    buffer
+      ..write('total_system_memory:\n')
+      ..write(describeValues(results.totalSystemMemory, indent: 2))
+      ..write('vmo_memory:\n')
+      ..write(describeValues(results.vmoMemory, indent: 2))
+      ..write('mmu_overhead_memory:\n')
+      ..write(describeValues(results.mmuMemory, indent: 2))
+      ..write('ipc_memory:\n')
+      ..write(describeValues(results.ipcMemory, indent: 2))
+      ..write('cpu_memory_bandwidth_usage:\n')
+      ..write(describeValues(results.cpuBandwidth, indent: 2))
+      ..write('gpu_memory_bandwidth_usage:\n')
+      ..write(describeValues(results.gpuBandwidth, indent: 2))
+      ..write('vdec_memory_bandwidth_usage:\n')
+      ..write(describeValues(results.vdecBandwidth, indent: 2))
+      ..write('vpu_memory_bandwidth_usage:\n')
+      ..write(describeValues(results.vpuBandwidth, indent: 2))
+      ..write('other_memory_bandwidth_usage:\n')
+      ..write(describeValues(results.otherBandwidth, indent: 2))
+      ..write('total_memory_bandwidth_usage:\n')
+      ..write(describeValues(results.totalBandwidth, indent: 2))
+      ..write('memory_bandwidth_usage:\n')
+      ..write(describeValues(results.bandwidthUsage, indent: 2))
+      ..write('\n');
+  }
+  return buffer.toString();
 }

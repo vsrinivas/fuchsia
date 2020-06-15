@@ -15,6 +15,7 @@ const _metricsReporters = {
   'system_drm_fps': systemDrmFpsMetricsReport,
   'flutter_frame_stats': flutterFrameStatsReport,
   'scenic_frame_stats': scenicFrameStatsReport,
+  'memory': memoryMetricsReport,
 };
 
 const _helpText = '''
