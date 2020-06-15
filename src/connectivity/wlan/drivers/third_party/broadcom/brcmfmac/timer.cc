@@ -19,14 +19,12 @@
 
 #include "debug.h"
 
-Timer::Timer(async_dispatcher_t* dispatcher, std::function<void()> callback, bool periodic)
-    : dispatcher_(dispatcher),
-      task_({}),
-      callback_(callback),
-      interval_(0),
-      scheduled_(false),
-      finished_({}) {
+typedef void (Timer::*timer_handler)(void);
+
+Timer::Timer(struct brcmf_pub* drvr, std::function<void()> callback, bool periodic)
+    : task_({}), callback_(callback), interval_(0), scheduled_(false), finished_({}), drvr_(drvr) {
   task_.handler = TimerHandler;
+
   if (periodic) {
     type_ = BRCMF_TIMER_PERIODIC;
   } else {
@@ -37,37 +35,57 @@ Timer::Timer(async_dispatcher_t* dispatcher, std::function<void()> callback, boo
 // Set timer with timeout @interval. If interval is 0, return without setting
 // the timer (can be used to stop a periodic timer)
 void Timer::Start(zx_duration_t interval) {
-  lock_.lock();
+  if (drvr_->bus_if && brcmf_bus_get_bus_type(drvr_->bus_if) == BRCMF_BUS_TYPE_SIM) {
+    // Go through bus to schedule event in sim-env instead of using real dispatcher, it's
+    // synchronized so no need to lock.
+    interval_ = interval;
 
-  interval_ = interval;
+    if (!interval_) {
+      return;
+    }
 
-  if (!interval_) {
-    // One way to stop periodic timer
+    auto handler = std::make_unique<std::function<void()>>();
+    timer_handler fn = &Timer::TimerHandler;
+    *handler = std::bind(fn, this);
+
+    brcmf_bus_set_sim_timer(drvr_->bus_if, std::move(handler), interval, &event_id_);
+  } else {
+    lock_.lock();
+
+    interval_ = interval;
+
+    if (!interval_) {
+      // One way to stop periodic timer
+      lock_.unlock();
+      return;
+    }
+    async_cancel_task(drvr_->dispatcher, &task_);  // Make sure it's not scheduled
+    task_.deadline = interval_ + async_now(drvr_->dispatcher);
+    scheduled_ = true;
+    sync_completion_reset(&finished_);
+    async_post_task(drvr_->dispatcher, &task_);
+
     lock_.unlock();
-    return;
   }
-  async_cancel_task(dispatcher_, &task_);  // Make sure it's not scheduled
-  task_.deadline = interval_ + async_now(dispatcher_);
-  scheduled_ = true;
-  sync_completion_reset(&finished_);
-  async_post_task(dispatcher_, &task_);
-
-  lock_.unlock();
 }
 
 void Timer::Stop() {
-  lock_.lock();
-  interval_ = 0;
-  if (!scheduled_) {
+  if (drvr_->bus_if && brcmf_bus_get_bus_type(drvr_->bus_if) == BRCMF_BUS_TYPE_SIM) {
+    brcmf_bus_cancel_sim_timer(drvr_->bus_if, event_id_);
+  } else {
+    lock_.lock();
+    interval_ = 0;
+    if (!scheduled_) {
+      lock_.unlock();
+      return;
+    }
+    zx_status_t result = async_cancel_task(drvr_->dispatcher, &task_);
     lock_.unlock();
-    return;
-  }
-  zx_status_t result = async_cancel_task(dispatcher_, &task_);
-  lock_.unlock();
-  if (result != ZX_OK) {
-    // In case the handler task could not be cancelled, wait for up to the
-    // timeout interval for the handler task to finish.
-    sync_completion_wait(&finished_, interval_);
+    if (result != ZX_OK) {
+      // In case the handler task could not be cancelled, wait for up to the
+      // timeout interval for the handler task to finish.
+      sync_completion_wait(&finished_, interval_);
+    }
   }
 }
 
@@ -101,4 +119,14 @@ void Timer::TimerHandler(async_dispatcher_t* dispatcher, async_task_t* task, zx_
   }
 
   timer->Start(timer->interval_);
+}
+
+// TimerHandler for simulation test framework.
+void Timer::TimerHandler() {
+  callback_();
+
+  if (type_ == BRCMF_TIMER_SINGLE_SHOT) {
+    return;
+  }
+  Start(interval_);
 }

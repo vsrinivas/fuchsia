@@ -49,7 +49,6 @@ class AuthTest : public SimTest {
 
   // Start the process of authentication
   void StartAuth();
-  void StopBeacon();
   void ScheduleEvent(void (AuthTest::*fn)(), zx::duration delay);
 
   void VerifyAuthFrames();
@@ -138,7 +137,6 @@ void AuthTest::Init() {
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
   sim_fw_ = device_->GetSim()->sim_fw.get();
   ap_.EnableBeacon(zx::msec(100));
-  ScheduleEvent(&AuthTest::StopBeacon, kTestDuration);
 }
 
 void AuthTest::Destroy() {
@@ -187,8 +185,6 @@ void AuthTest::StartAuth() {
   join_req.selected_bss.chan = kDefaultChannel;
   client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
-
-void AuthTest::StopBeacon() { ap_.DisableBeacon(); }
 
 void AuthTest::ScheduleEvent(void (AuthTest::*fn)(), zx::duration delay) {
   auto handler = std::make_unique<std::function<void()>>();
@@ -415,7 +411,7 @@ TEST_F(AuthTest, WEP104) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
   // The first SHARED KEY authentication request will fail, and switch to OPEN SYSTEM automatically.
   // OPEN SYSTEM authentication will succeed.
   expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SHARED_KEY, WLAN_AUTH_RESULT_SUCCESS);
@@ -432,7 +428,7 @@ TEST_F(AuthTest, WEP40) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
   // It should be a successful shared_key authentication
   expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SHARED_KEY, WLAN_AUTH_RESULT_SUCCESS);
   expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_SHARED_KEY, WLAN_AUTH_RESULT_SUCCESS);
@@ -448,7 +444,7 @@ TEST_F(AuthTest, WEPOPEN) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
   expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
@@ -464,7 +460,7 @@ TEST_F(AuthTest, AuthFail) {
   sim->sim_fw->err_inj_.AddErrInjIovar("auth", ZX_ERR_IO, client_ifc_.iface_id_);
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
   EXPECT_NE(auth_status_, WLAN_AUTH_RESULT_SUCCESS);
 }
 
@@ -477,7 +473,7 @@ TEST_F(AuthTest, IgnoreTest) {
 
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   // The auth request frames should be ignored and the auth timeout in sim-fw will be triggered,
   // AuthHandleFailure() will retry for "max_retries" times and will send an BRCMF_E_SET_SSID event
@@ -502,7 +498,7 @@ TEST_F(AuthTest, WPA1Test) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA1});
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
   expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
@@ -520,7 +516,7 @@ TEST_F(AuthTest, WPA1Fail) {
   sim->sim_fw->err_inj_.AddErrInjIovar("wpaie", ZX_ERR_IO, client_ifc_.iface_id_);
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   // Assoc should have failed
   EXPECT_NE(assoc_status_, WLAN_ASSOC_RESULT_SUCCESS);
@@ -533,7 +529,7 @@ TEST_F(AuthTest, WPA2Test) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA2});
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
   expect_auth_frames_.emplace_back(2, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
@@ -550,7 +546,7 @@ TEST_F(AuthTest, WPA2TestFail) {
   SecErrorInject();
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
   // Make sure that OnAssocConf is called, so the check inside is called.
   EXPECT_NE(assoc_status_, WLAN_AUTH_RESULT_SUCCESS);
 }
@@ -565,7 +561,7 @@ TEST_F(AuthTest, WrongSecTypeAuthFail) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WEP});
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   uint32_t max_retries = 0;
 

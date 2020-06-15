@@ -31,7 +31,6 @@ class ChannelSwitchTest : public SimTest {
   static constexpr zx::duration kTestDuration = zx::sec(100);
 
   void Init();
-  void Finish();
 
   // Run through the join => auth => assoc flow
   void StartAssoc();
@@ -133,14 +132,6 @@ void ChannelSwitchTest::StartScan() {
 void ChannelSwitchTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, &sme_protocol_), ZX_OK);
-  ScheduleCall(&ChannelSwitchTest::Finish, kTestDuration);
-}
-
-void ChannelSwitchTest::Finish() {
-  for (auto ap : aps_) {
-    ap->DisableBeacon();
-  }
-  aps_.clear();
 }
 
 void ChannelSwitchTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
@@ -202,7 +193,7 @@ TEST_F(ChannelSwitchTest, ChannelSwitch) {
 
   ScheduleCall(&ChannelSwitchTest::StartAssoc, zx::msec(10));
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
-  env_->Run();
+  env_->Run(kTestDuration);
 
   // Channel switch will only be triggered when assciated.
   EXPECT_EQ(new_channel_list_.size(), 1U);
@@ -223,7 +214,7 @@ TEST_F(ChannelSwitchTest, SwitchBackInSingleInterval) {
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
   ScheduleChannelSwitch(kDefaultChannel, zx::msec(550));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(new_channel_list_.size(), 0U);
 }
@@ -241,7 +232,7 @@ TEST_F(ChannelSwitchTest, ChangeDstAddressWhenSwitching) {
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
   ScheduleChannelSwitch(kSecondSwitchedChannel, zx::msec(550));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(new_channel_list_.size(), 1U);
   EXPECT_EQ(new_channel_list_.front(), kSecondSwitchedChannel.primary);
@@ -263,7 +254,7 @@ TEST_F(ChannelSwitchTest, SwitchBackInDiffInterval) {
   // CSA is triggered.
   ScheduleChannelSwitch(kDefaultChannel, zx::msec(700));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(new_channel_list_.size(), 2U);
   EXPECT_EQ(new_channel_list_.front(), kSwitchedChannel.primary);
@@ -295,7 +286,7 @@ TEST_F(ChannelSwitchTest, NotSwitchForDifferentAP) {
   // This will trigger SetChannel() for first AP in AP list, which is wrong_ap.
   ScheduleChannelSwitch(kSwitchedChannel, zx::msec(500));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(new_channel_list_.size(), 0U);
 }
@@ -317,7 +308,7 @@ TEST_F(ChannelSwitchTest, StopStillSwitch) {
   *callback = std::bind(&simulation::FakeAp::DisableBeacon, aps_.front());
   env_->ScheduleNotification(std::move(callback), zx::msec(600));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(new_channel_list_.size(), 1U);
   EXPECT_EQ(new_channel_list_.front(), kSwitchedChannel.primary);
@@ -340,7 +331,7 @@ TEST_F(ChannelSwitchTest, ChannelSwitchToSameChannel) {
   *callback = std::bind(&ChannelSwitchTest::SendFakeCSABeacon, this, kDefaultChannel);
   env_->ScheduleNotification(std::move(callback), zx::msec(540));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(new_channel_list_.size(), 0U);
 }
@@ -364,7 +355,7 @@ TEST_F(ChannelSwitchTest, ChannelSwitchWhileScanning) {
   *callback = std::bind(&ChannelSwitchTest::SendFakeCSABeacon, this, kSwitchedChannel);
   env_->ScheduleNotification(std::move(callback), zx::msec(100));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(new_channel_list_.size(), 0U);
 }

@@ -17,6 +17,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 
 #include <zircon/status.h>
+#include <zircon/time.h>
 
 #include <memory>
 
@@ -71,6 +72,10 @@ static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
           *actual = sizeof(wifi_config);
           return ZX_OK;
         },
+    .set_sim_timer =
+        [](brcmf_bus* bus, std::unique_ptr<std::function<void()>> fn, zx_duration_t delay,
+           uint64_t* id_out) { BUS_OP(bus)->BusSetTimer(std::move(fn), delay, id_out); },
+    .cancel_sim_timer = [](brcmf_bus* bus, uint64_t id) { BUS_OP(bus)->BusCancelTimer(id); },
 };
 #undef BUS_OP
 

@@ -62,6 +62,15 @@
 
 #define BRCMF_ND_INFO_TIMEOUT_MSEC 2000
 
+#define EXEC_TIMEOUT_WORKER(worker)                                       \
+  {                                                                       \
+    if (brcmf_bus_get_bus_type(cfg->pub->bus_if) == BRCMF_BUS_TYPE_SIM) { \
+      (*cfg->worker.handler)(&cfg->worker);                               \
+    } else {                                                              \
+      WorkQueue::ScheduleDefault(&cfg->worker);                           \
+    }                                                                     \
+  }
+
 static bool check_vif_up(struct brcmf_cfg80211_vif* vif) {
   if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_READY, &vif->sme_state)) {
     BRCMF_DBG(INFO, "device is not ready : status (%lu)\n", vif->sme_state.load());
@@ -945,7 +954,6 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
 
   /* Arm scan timeout timer */
   cfg->escan_timer->Start(ZX_MSEC(BRCMF_ESCAN_TIMER_INTERVAL_MS));
-
   return ZX_OK;
 
 scan_out:
@@ -1620,7 +1628,7 @@ static void brcmf_connect_timeout_worker(WorkItem* work) {
 static void brcmf_connect_timeout(struct brcmf_cfg80211_info* cfg) {
   cfg->pub->irq_callback_lock.lock();
   BRCMF_DBG(TRACE, "Enter");
-  WorkQueue::ScheduleDefault(&cfg->connect_timeout_work);
+  EXEC_TIMEOUT_WORKER(connect_timeout_work);
   cfg->pub->irq_callback_lock.unlock();
 }
 
@@ -1634,7 +1642,8 @@ static void brcmf_signal_report_worker(WorkItem* work) {
 static void brcmf_signal_report_timeout(struct brcmf_cfg80211_info* cfg) {
   cfg->pub->irq_callback_lock.lock();
   BRCMF_DBG(TRACE, "Enter");
-  WorkQueue::ScheduleDefault(&cfg->signal_report_work);
+  // If it's for SIM tests, won't enqueue.
+  EXEC_TIMEOUT_WORKER(signal_report_work);
   cfg->pub->irq_callback_lock.unlock();
 }
 
@@ -1647,7 +1656,10 @@ static void brcmf_disconnect_timeout_worker(WorkItem* work) {
 static void brcmf_disconnect_timeout(struct brcmf_cfg80211_info* cfg) {
   cfg->pub->irq_callback_lock.lock();
   BRCMF_DBG(TRACE, "Enter");
-  WorkQueue::ScheduleDefault(&cfg->disconnect_timeout_work);
+
+  // If it's for SIM tests, won't enqueue.
+  EXEC_TIMEOUT_WORKER(disconnect_timeout_work);
+
   cfg->pub->irq_callback_lock.unlock();
 }
 
@@ -2122,7 +2134,8 @@ static void brcmf_escan_timeout(struct brcmf_cfg80211_info* cfg) {
 
   if (cfg->int_escan_map || cfg->scan_request) {
     BRCMF_ERR("scan timer expired");
-    WorkQueue::ScheduleDefault(&cfg->escan_timeout_work);
+    // If it's for SIM tests, won't enqueue.
+    EXEC_TIMEOUT_WORKER(escan_timeout_work);
   }
   cfg->pub->irq_callback_lock.unlock();
 }
@@ -2215,7 +2228,7 @@ static void brcmf_init_escan(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_ESCAN_RESULT, brcmf_cfg80211_escan_handler);
   cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
   /* Init scan_timeout timer */
-  cfg->escan_timer = new Timer(cfg->pub->dispatcher, std::bind(brcmf_escan_timeout, cfg), false);
+  cfg->escan_timer = new Timer(cfg->pub, std::bind(brcmf_escan_timeout, cfg), false);
   cfg->escan_timeout_work = WorkItem(brcmf_cfg80211_escan_timeout_worker);
 }
 
@@ -3141,7 +3154,7 @@ static void brcmf_ap_start_timeout_worker(WorkItem* work) {
 static void brcmf_ap_start_timeout(struct brcmf_cfg80211_info* cfg) {
   cfg->pub->irq_callback_lock.lock();
   BRCMF_DBG(TRACE, "Enter");
-  WorkQueue::ScheduleDefault(&cfg->ap_start_timeout_work);
+  EXEC_TIMEOUT_WORKER(ap_start_timeout_work);
   cfg->pub->irq_callback_lock.unlock();
 }
 
@@ -4073,7 +4086,6 @@ static zx_status_t brcmf_notify_ap_started(struct brcmf_if* ifp, const struct br
 static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struct net_device* ndev,
                                           bool completed) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
-
   BRCMF_DBG(TRACE, "Enter");
 
   if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
@@ -4563,19 +4575,16 @@ static zx_status_t wl_init_priv(struct brcmf_cfg80211_info* cfg) {
   brcmf_init_escan(cfg);
   brcmf_init_conf(cfg->conf);
   // Initialize the disconnect timer
-  cfg->disconnect_timer =
-      new Timer(cfg->pub->dispatcher, std::bind(brcmf_disconnect_timeout, cfg), false);
+  cfg->disconnect_timer = new Timer(cfg->pub, std::bind(brcmf_disconnect_timeout, cfg), false);
   cfg->disconnect_timeout_work = WorkItem(brcmf_disconnect_timeout_worker);
   // Initialize the signal report timer
-  cfg->signal_report_timer =
-      new Timer(cfg->pub->dispatcher, std::bind(brcmf_signal_report_timeout, cfg), true);
+  cfg->signal_report_timer = new Timer(cfg->pub, std::bind(brcmf_signal_report_timeout, cfg), true);
   cfg->signal_report_work = WorkItem(brcmf_signal_report_worker);
   // Initialize the ap start timer
-  cfg->ap_start_timer =
-      new Timer(cfg->pub->dispatcher, std::bind(brcmf_ap_start_timeout, cfg), false);
+  cfg->ap_start_timer = new Timer(cfg->pub, std::bind(brcmf_ap_start_timeout, cfg), false);
   cfg->ap_start_timeout_work = WorkItem(brcmf_ap_start_timeout_worker);
   // Initialize the connect timer
-  cfg->connect_timer = new Timer(cfg->pub->dispatcher, std::bind(brcmf_connect_timeout, cfg), false);
+  cfg->connect_timer = new Timer(cfg->pub, std::bind(brcmf_connect_timeout, cfg), false);
   cfg->connect_timeout_work = WorkItem(brcmf_connect_timeout_worker);
 
   cfg->vif_disabled = {};

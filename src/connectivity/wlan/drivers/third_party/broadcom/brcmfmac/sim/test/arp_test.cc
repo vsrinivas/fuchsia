@@ -44,6 +44,8 @@ const std::vector<uint8_t> kDummyData = {0, 1, 2, 3, 4};
 
 class ArpTest : public SimTest {
  public:
+  static constexpr zx::duration kTestDuration = zx::sec(100);
+
   ArpTest() = default;
   void Init();
   void CleanupApInterface();
@@ -336,7 +338,7 @@ TEST_F(ArpTest, SoftApArpOffload) {
   // Stop AP and remove interface
   ScheduleCall(&ArpTest::CleanupApInterface, zx::sec(8));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   // Verify that no ARP frames were offloaded
   EXPECT_EQ(arp_frames_received_, 2U);
@@ -368,7 +370,7 @@ TEST_F(ArpTest, ClientArpOffload) {
   ScheduleArpFrameTx(zx::sec(5), false);
   ScheduleNonArpFrameTx(zx::sec(6));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   // Verify that we completed the association process
   EXPECT_EQ(assoc_complete_, true);

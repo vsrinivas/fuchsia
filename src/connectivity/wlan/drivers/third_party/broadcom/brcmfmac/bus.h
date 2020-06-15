@@ -16,7 +16,9 @@
 
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_
+#include <zircon/time.h>
 
+#include <functional>
 #include <memory>
 
 #include <ddk/device.h>
@@ -86,6 +88,9 @@ struct brcmf_bus_ops {
                             size_t* fw_name_size);
   zx_status_t (*get_bootloader_macaddr)(brcmf_bus* bus, uint8_t* mac_addr);
   zx_status_t (*get_wifi_metadata)(brcmf_bus* bus, void* config, size_t exp_size, size_t* actual);
+  void (*set_sim_timer)(brcmf_bus* bus, std::unique_ptr<std::function<void()>> fn,
+                        zx_duration_t delay, uint64_t* id_out);
+  void (*cancel_sim_timer)(brcmf_bus* bus, uint64_t id);
 };
 
 namespace wlan {
@@ -204,6 +209,17 @@ static inline zx_status_t brcmf_bus_get_bootloader_macaddr(struct brcmf_bus* bus
 static inline zx_status_t brcmf_bus_get_wifi_metadata(struct brcmf_bus* bus, void* config,
                                                       size_t exp_size, size_t* actual) {
   return bus->ops->get_wifi_metadata(bus, config, exp_size, actual);
+}
+
+// Bus operation for simulation test framework.
+static inline void brcmf_bus_set_sim_timer(struct brcmf_bus* bus,
+                                           std::unique_ptr<std::function<void()>> fn,
+                                           zx_duration_t delay, uint64_t* id_out) {
+  return bus->ops->set_sim_timer(bus, std::move(fn), delay, id_out);
+}
+
+static inline void brcmf_bus_cancel_sim_timer(struct brcmf_bus* bus, uint64_t id) {
+  return bus->ops->cancel_sim_timer(bus, id);
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_

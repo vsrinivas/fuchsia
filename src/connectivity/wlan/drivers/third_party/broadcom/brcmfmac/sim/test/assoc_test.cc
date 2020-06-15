@@ -6,6 +6,7 @@
 #include <wifi/wifi-config.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
@@ -31,7 +32,6 @@ class AssocTest : public SimTest {
   static constexpr zx::duration kTestDuration = zx::sec(100);
 
   void Init();
-  void Finish();
 
   // Run through the join => auth => assoc flow
   void StartAssoc();
@@ -240,14 +240,6 @@ void AssocTest::Init() {
   context_.signal_ind_count = 0;
   context_.signal_ind_rssi = 0;
   context_.signal_ind_snr = 0;
-  ScheduleCall(&AssocTest::Finish, kTestDuration);
-}
-
-void AssocTest::Finish() {
-  for (auto ap : aps_) {
-    ap->DisableBeacon();
-  }
-  aps_.clear();
 }
 
 void AssocTest::DisassocFromAp() {
@@ -333,9 +325,10 @@ TEST_F(AssocTest, SignalReportTest) {
 
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
-  EXPECT_EQ(context_.signal_ind_count, 1U);
+  EXPECT_EQ((int64_t)context_.signal_ind_count,
+            kTestDuration.get() / BRCMF_SIGNAL_REPORT_TIMER_DUR_MS);
   // Verify the plumbing between the firmware and the signal report.
   EXPECT_EQ(context_.signal_ind_snr, kDefaultSimFwSnr);
   EXPECT_EQ(context_.signal_ind_rssi, kDefaultSimFwRssi);
@@ -439,7 +432,7 @@ TEST_F(AssocTest, NoAps) {
 
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
 }
@@ -458,10 +451,11 @@ TEST_F(AssocTest, SimpleTest) {
 
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
-  EXPECT_EQ(context_.signal_ind_count, 1U);
+  EXPECT_EQ((int64_t)context_.signal_ind_count,
+            kTestDuration.get() / BRCMF_SIGNAL_REPORT_TIMER_DUR_MS);
 }
 
 // Verify that we can associate using only SSID, not BSSID
@@ -478,7 +472,7 @@ TEST_F(AssocTest, SsidTest) {
 
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
 }
@@ -508,7 +502,7 @@ TEST_F(AssocTest, WrongIds) {
 
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   // The APs aren't giving us a response, but the driver is telling us that the operation failed
   // because it couldn't find a matching AP.
@@ -535,7 +529,7 @@ TEST_F(AssocTest, RepeatedAssocTest) {
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(11));
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(12));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 3U);
 }
@@ -554,7 +548,7 @@ TEST_F(AssocTest, ApIgnoredRequest) {
 
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   // Make sure no responses were sent back from the fake AP
   EXPECT_EQ(assoc_responses_.size(), 0U);
@@ -577,7 +571,7 @@ TEST_F(AssocTest, ApRejectedRequest) {
 
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   uint32_t max_assoc_retries = 0;
   brcmf_simdev* sim = device_->GetSim();
@@ -604,12 +598,14 @@ TEST_F(AssocTest, SimFwIgnoreAssocReq) {
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
   aps_.push_back(&ap);
 
+  context_.expected_results.push_back(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+
   AssocErrorInject();
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(50));
-  env_->Run();
+  env_->Run(kTestDuration);
 
   // We should not have received a assoc response from SIM FW
-  EXPECT_EQ(context_.assoc_resp_count, 0U);
+  EXPECT_EQ(context_.assoc_resp_count, 1U);
 }
 
 void AssocTest::SendBadResp() {
@@ -653,7 +649,7 @@ TEST_F(AssocTest, IgnoreRespMismatch) {
 
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   // Make sure that the firmware/driver ignored bad responses and sent back its own (failure)
   EXPECT_EQ(context_.assoc_resp_count, 1U);
@@ -695,7 +691,7 @@ TEST_F(AssocTest, IgnoreExtraResp) {
 
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   // Make sure that the firmware/driver only responded to the first response
   EXPECT_EQ(context_.assoc_resp_count, 1U);
@@ -727,7 +723,7 @@ TEST_F(AssocTest, AssocWhileScanning) {
   };
   client_ifc_.if_impl_ops_->start_scan(client_ifc_.if_impl_ctx_, &scan_req);
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
 }
@@ -746,7 +742,7 @@ TEST_F(AssocTest, DisassocFromSelfTest) {
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
   start_disassoc_ = true;
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
   EXPECT_EQ(context_.disassoc_conf_count, 1U);
@@ -766,7 +762,7 @@ TEST_F(AssocTest, DisassocWithoutAssocTest) {
   ScheduleCall(&AssocTest::StartDisassoc, zx::msec(10));
   ScheduleCall(&AssocTest::TxFakeDisassocReq, zx::msec(50));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 0U);
   EXPECT_EQ(context_.disassoc_conf_count, 0U);
@@ -787,7 +783,7 @@ TEST_F(AssocTest, DisassocNotSelfTest) {
   start_disassoc_ = true;
   disassoc_self_ = false;
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
   EXPECT_EQ(context_.disassoc_conf_count, 0U);
@@ -808,7 +804,7 @@ TEST_F(AssocTest, DisassocFromAPTest) {
   disassoc_from_ap_ = true;
   start_disassoc_ = true;
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
   EXPECT_EQ(context_.deauth_ind_count, 1U);
@@ -830,7 +826,7 @@ TEST_F(AssocTest, LinkEventTest) {
   disassoc_from_ap_ = true;
   start_disassoc_ = true;
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   // Send Deauth frame after disassociation
   DeauthFromAp();
@@ -854,7 +850,7 @@ TEST_F(AssocTest, deauth_from_ap) {
   deauth_from_ap_ = true;
   start_deauth_ = true;
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
   EXPECT_EQ(context_.deauth_ind_count, 1U);
@@ -876,7 +872,7 @@ TEST_F(AssocTest, deauth_from_self) {
   deauth_from_ap_ = false;
   start_deauth_ = true;
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
   EXPECT_EQ(context_.deauth_conf_count, 1U);
@@ -900,7 +896,7 @@ TEST_F(AssocTest, AssocMaxRetries) {
                          sizeof(max_assoc_retries));
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   uint32_t assoc_retries;
   sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "assoc_retry_max", &assoc_retries,
@@ -933,7 +929,7 @@ TEST_F(AssocTest, AssocMaxRetriesWhenTimedout) {
                          sizeof(max_assoc_retries));
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   // Should have not received any responses
   EXPECT_EQ(assoc_responses_.size(), 0U);
@@ -959,7 +955,7 @@ TEST_F(AssocTest, AssocNoRetries) {
                          sizeof(max_assoc_retries));
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
-  env_->Run();
+  env_->Run(kTestDuration);
 
   uint32_t assoc_retries;
   sim->sim_fw->IovarsGet(client_ifc_.iface_id_, "assoc_retry_max", &assoc_retries,

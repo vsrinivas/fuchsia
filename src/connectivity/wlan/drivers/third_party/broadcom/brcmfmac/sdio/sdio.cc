@@ -104,9 +104,9 @@ struct rte_console {
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipcommon.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 
-#define TXQLEN 2048         /* bulk tx queue length */
+#define TXQLEN 2048 /* bulk tx queue length */
 #define TXHI (TXQLEN - 256) /* turn on flow control above TXHI */
-#define TXLOW (TXHI - 256)  /* turn off flow control below TXLOW */
+#define TXLOW (TXHI - 256) /* turn off flow control below TXLOW */
 #define PRIOMASK 7
 
 #define TXRETRIES 2 /* # of retries for tx frames */
@@ -374,7 +374,7 @@ struct sdpcm_shared {
   uint32_t assert_line;
 #if !defined(NDEBUG)
   uint32_t console_addr; /* Address of struct rte_console */
-#endif                   // !defined(NDEBUG)
+#endif  // !defined(NDEBUG)
   uint32_t msgtrace_addr;
   uint8_t tag[32];
   uint32_t brpt_addr;
@@ -388,7 +388,7 @@ struct sdpcm_shared_le {
   uint32_t assert_line;
 #if !defined(NDEBUG)
   uint32_t console_addr; /* Address of struct rte_console */
-#endif                   // !defined(NDEBUG)
+#endif  // !defined(NDEBUG)
   uint32_t msgtrace_addr;
   uint8_t tag[32];
   uint32_t brpt_addr;
@@ -494,7 +494,7 @@ struct brcmf_sdio {
   uint console_interval;
   struct brcmf_console console; /* Console output polling support */
   uint console_addr;            /* Console address from shared struct */
-#endif                          /* !defined(NDEBUG) */
+#endif /* !defined(NDEBUG) */
 
   uint clkstate;     /* State of sd and backplane clock(s) */
   int32_t idletime;  /* Control for activity timeout */
@@ -961,7 +961,7 @@ static void brcmf_sdio_get_console_addr(struct brcmf_sdio* bus) {
     bus->console_addr = sh.console_addr;
   }
 }
-#else  /* !defined(NDEBUG) */
+#else /* !defined(NDEBUG) */
 static void brcmf_sdio_get_console_addr(struct brcmf_sdio* bus) {}
 #endif /* !defined(NDEBUG) */
 
@@ -1182,10 +1182,10 @@ static void brcmf_sdio_free_glom(struct brcmf_sdio* bus) {
 #define SDPCM_CHANNEL_MASK 0x00000f00
 #define SDPCM_CHANNEL_SHIFT 8
 #define SDPCM_CONTROL_CHANNEL 0 /* Control */
-#define SDPCM_EVENT_CHANNEL 1   /* Asyc Event Indication */
-#define SDPCM_DATA_CHANNEL 2    /* Data Xmit/Recv */
-#define SDPCM_GLOM_CHANNEL 3    /* Coalesced packets */
-#define SDPCM_TEST_CHANNEL 15   /* Test/debug packets */
+#define SDPCM_EVENT_CHANNEL 1 /* Asyc Event Indication */
+#define SDPCM_DATA_CHANNEL 2 /* Data Xmit/Recv */
+#define SDPCM_GLOM_CHANNEL 3 /* Coalesced packets */
+#define SDPCM_TEST_CHANNEL 15 /* Test/debug packets */
 #define SDPCM_GLOMDESC(p) (((uint8_t*)p)[1] & 0x80)
 #define SDPCM_NEXTLEN_MASK 0x00ff0000
 #define SDPCM_NEXTLEN_SHIFT 16
@@ -2702,7 +2702,7 @@ static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
   return ZX_OK;
 }
 
-#else  /* !defined(NDEBUG) */
+#else /* !defined(NDEBUG) */
 static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
   zx_status_t error;
   struct sdpcm_shared sh;
@@ -2825,7 +2825,7 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram
 
   return ret;
 }
-#else  /* !defined(NDEBUG) */
+#else /* !defined(NDEBUG) */
 static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram_addr,
                                     const void* ram_data, size_t ram_sz) {
   return true;
@@ -3833,7 +3833,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   bus->dcmd_resp_wait = {};
 
   /* Set up the watchdog timer */
-  bus->timer = new Timer(sdiodev->drvr->dispatcher, std::bind(brcmf_sdio_watchdog, bus), false);
+  bus->timer = new Timer(sdiodev->drvr, std::bind(brcmf_sdio_watchdog, bus), false);
   /* Initialize watchdog thread */
   bus->watchdog_wait = {};
   bus->watchdog_should_stop.store(false);

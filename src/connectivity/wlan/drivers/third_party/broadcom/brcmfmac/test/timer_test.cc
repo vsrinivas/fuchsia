@@ -23,6 +23,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/workqueue.h"
 
 namespace wlan::brcmfmac {
@@ -37,7 +38,7 @@ struct TestTimerCfg {
   uint32_t timer_cnt = 0;
   bool call_timerset = false;
   bool call_timerstop = false;
-  TestTimerCfg(async_dispatcher_t* dispatcher, WorkQueue* queue, uint32_t delay, uint32_t exp_count,
+  TestTimerCfg(brcmf_pub* fake_drvr, WorkQueue* queue, uint32_t delay, uint32_t exp_count,
                bool periodic, bool call_timerset, bool call_timerstop);
   ~TestTimerCfg();
 };
@@ -47,20 +48,22 @@ class TimerTest : public testing::Test {
   TimerTest() {}
 
   void SetUp() override;
-  async_dispatcher_t* GetDispatcher() { return dispatcher_loop_->dispatcher(); }
+  brcmf_pub* GetFakeDrvr() { return fake_drvr_.get(); }
   WorkQueue* GetQueue() { return queue_.get(); }
 
  private:
   std::unique_ptr<async::Loop> dispatcher_loop_;
   std::unique_ptr<WorkQueue> queue_;
+  std::unique_ptr<brcmf_pub> fake_drvr_;
 };
 
 // Setup the dispatcher and work queue
 void TimerTest::SetUp() {
-  auto dispatcher_loop = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-  zx_status_t status = dispatcher_loop->StartThread("test-timer-worker", nullptr);
+  fake_drvr_ = std::make_unique<brcmf_pub>();
+  dispatcher_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+  zx_status_t status = dispatcher_loop_->StartThread("test-timer-worker", nullptr);
   EXPECT_EQ(status, ZX_OK);
-  dispatcher_loop_ = std::move(dispatcher_loop);
+  fake_drvr_->dispatcher = dispatcher_loop_->dispatcher();
   auto queue = std::make_unique<WorkQueue>("TimerTest Work");
   queue_ = std::move(queue);
   // The timer must be standard layout in order to use containerof
@@ -92,10 +95,9 @@ static void test_timeout_worker(WorkItem* work) {
   test_timer_process(cfg);
 }
 
-TestTimerCfg::TestTimerCfg(async_dispatcher_t* dispatcher, WorkQueue* q, uint32_t delay,
-                           uint32_t exp_count, bool periodic, bool call_timerset,
-                           bool call_timerstop)
-    : timer(Timer(dispatcher, std::bind(test_timer_handler, this), periodic)),
+TestTimerCfg::TestTimerCfg(brcmf_pub* fake_drvr, WorkQueue* q, uint32_t delay, uint32_t exp_count,
+                           bool periodic, bool call_timerset, bool call_timerstop)
+    : timer(Timer(fake_drvr, std::bind(test_timer_handler, this), periodic)),
       timeout_work(WorkItem(test_timeout_worker)),
       queue(q),
       delay(delay),
@@ -109,7 +111,7 @@ TestTimerCfg::~TestTimerCfg() { timer.Stop(); }
 
 // This test creates a one-shot timer and checks if the handler fired
 TEST_F(TimerTest, one_shot) {
-  TestTimerCfg timer(GetDispatcher(), GetQueue(), ZX_MSEC(10), 1, false, false, false);
+  TestTimerCfg timer(GetFakeDrvr(), GetQueue(), ZX_MSEC(10), 1, false, false, false);
   zx_status_t status = sync_completion_wait(&timer.wait_for_timer, ZX_TIME_INFINITE);
   timer.timer.Stop();
   // Check to make sure the timer fired
@@ -118,10 +120,10 @@ TEST_F(TimerTest, one_shot) {
 }
 
 TEST_F(TimerTest, periodic) {
-  TestTimerCfg timer(GetDispatcher(), GetQueue(), ZX_MSEC(25), 4, true, false, false);
+  TestTimerCfg timer(GetFakeDrvr(), GetQueue(), ZX_MSEC(25), 4, true, false, false);
 
   // Setup a second timer and ensure it runs ok too
-  TestTimerCfg timer2(GetDispatcher(), GetQueue(), ZX_MSEC(50), 2, true, false, false);
+  TestTimerCfg timer2(GetFakeDrvr(), GetQueue(), ZX_MSEC(50), 2, true, false, false);
 
   // Wait for the first timer to complete
   zx_status_t status = sync_completion_wait(&timer.wait_for_timer, ZX_TIME_INFINITE);
@@ -143,10 +145,10 @@ TEST_F(TimerTest, periodic) {
 // calling timer_set() from within the handler does not have any side-effects
 TEST_F(TimerTest, timerset_in_handler) {
   // A timerset will be called inside callback
-  TestTimerCfg timer(GetDispatcher(), GetQueue(), ZX_MSEC(10), 2, false, true, false);
+  TestTimerCfg timer(GetFakeDrvr(), GetQueue(), ZX_MSEC(10), 2, false, true, false);
 
   // Setup a second timer and ensure it runs ok too
-  TestTimerCfg timer2(GetDispatcher(), GetQueue(), ZX_MSEC(25), 1, false, false, false);
+  TestTimerCfg timer2(GetFakeDrvr(), GetQueue(), ZX_MSEC(25), 1, false, false, false);
 
   zx_status_t status = sync_completion_wait(&timer2.wait_for_timer, ZX_TIME_INFINITE);
   EXPECT_EQ(status, ZX_OK);
@@ -166,10 +168,10 @@ TEST_F(TimerTest, timerset_in_handler) {
 // calling timer_stop() from within the handler does not have any side-effects
 TEST_F(TimerTest, timerstop_in_handler) {
   // Setup a periodic timer meant to fire twice but a timerstop will be called inside callback
-  TestTimerCfg timer(GetDispatcher(), GetQueue(), ZX_MSEC(10), 5, true, false, true);
+  TestTimerCfg timer(GetFakeDrvr(), GetQueue(), ZX_MSEC(10), 5, true, false, true);
 
   // Setup a second timer and ensure it runs ok too
-  TestTimerCfg timer2(GetDispatcher(), GetQueue(), ZX_MSEC(10), 2, true, false, false);
+  TestTimerCfg timer2(GetFakeDrvr(), GetQueue(), ZX_MSEC(10), 2, true, false, false);
   // wait until timer2 is done (sometime after 20 msecs)
   zx_status_t status = sync_completion_wait(&timer2.wait_for_timer, ZX_TIME_INFINITE);
   EXPECT_EQ(status, ZX_OK);

@@ -359,7 +359,7 @@ zx_status_t brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg) {
   /* Set up timer for BT  */
   btci->timer_on = false;
   btci->timeout = BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC;
-  btci->timer = new Timer(cfg->pub->dispatcher, std::bind(brcmf_btcoex_timerfunc, btci), false);
+  btci->timer = new Timer(cfg->pub, std::bind(brcmf_btcoex_timerfunc, btci), false);
   btci->cfg = cfg;
   btci->saved_regs_part1 = false;
   btci->saved_regs_part2 = false;

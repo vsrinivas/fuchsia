@@ -13,16 +13,26 @@ uint64_t Environment::event_count_ = 0;
 Environment::Environment()
     : signal_loss_model_(std::unique_ptr<SignalLossModel>(new LogSignalLossModel())){};
 
-void Environment::Run() {
-  while (!events_.empty()) {
+void Environment::Run(std::optional<zx::duration> run_time_limit) {
+  // If run_time_limit is indicated, run the event queue for this time limit from CURRENT TIME
+  // POINT.
+  if (run_time_limit) {
+    auto fn = std::make_unique<std::function<void()>>();
+    *fn = std::bind(&Environment::StopRunning, this);
+    ScheduleNotification(std::move(fn), run_time_limit.value());
+  }
+
+  while (!stop_sign_ && !events_.empty()) {
     auto event = std::move(events_.front());
     events_.pop_front();
     // Make sure that time is always moving forward
     ZX_ASSERT(event->time >= time_);
+    // Increase current running time for this run.
     time_ = event->time;
     // Send event to client who requested it
     (*(event->fn))();
   }
+  stop_sign_ = false;
 }
 
 void Environment::Tx(const SimFrame& frame, const WlanTxInfo& tx_info, StationIfc* sender) {
@@ -49,7 +59,6 @@ void Environment::Tx(const SimFrame& frame, const WlanTxInfo& tx_info, StationIf
 zx_status_t Environment::ScheduleNotification(std::unique_ptr<std::function<void()>> fn,
                                               zx::duration delay, uint64_t* id_out) {
   uint64_t id = event_count_++;
-
   // Disallow past events
   if (delay < zx::usec(0)) {
     return ZX_ERR_INVALID_ARGS;
@@ -100,5 +109,7 @@ zx::duration Environment::CalcTransTime(StationIfc* staTx, StationIfc* staRx) {
   int64_t trans_time = distance / kRadioWaveVelocity;
   return zx::nsec(1) * trans_time;
 }
+
+void Environment::StopRunning() { stop_sign_ = true; }
 
 }  // namespace wlan::simulation

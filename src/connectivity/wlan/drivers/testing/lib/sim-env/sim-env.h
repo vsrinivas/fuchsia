@@ -71,8 +71,9 @@ class Environment {
     stations_.emplace(std::pair(sta, Location(x, y)));
   }
 
-  // Begin simulation. Function will return when there are no more events pending.
-  void Run();
+  // Begin simulation. Function will return when there are no more events pending if the
+  // run_time_limit is default value.
+  void Run(std::optional<zx::duration> run_time_limit = std::nullopt);
 
   // Send a frame into the simulated environment.
   void Tx(const SimFrame& frame, const WlanTxInfo& tx_info, StationIfc* sender);
@@ -94,6 +95,8 @@ class Environment {
  private:
   void HandleTxNotification(StationIfc* sta, std::shared_ptr<const SimFrame> frame,
                             std::shared_ptr<const WlanRxInfo> tx_info);
+
+  void StopRunning();
 
   static uint64_t event_count_;
 
@@ -117,6 +120,9 @@ class Environment {
 
   // Velocity of radio wave in meter/nanosecond
   static constexpr double kRadioWaveVelocity = 0.3;
+
+  // A sign to stop running the events.
+  bool stop_sign_ = false;
 };
 
 }  // namespace wlan::simulation

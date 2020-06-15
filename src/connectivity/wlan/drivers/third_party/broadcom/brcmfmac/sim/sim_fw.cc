@@ -235,14 +235,22 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       break;
     case BRCMF_C_DISASSOC: {
       if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(brcmf_scb_val_le))) == ZX_OK) {
-        // Initiate Disassoc from AP
-        auto scb_val = reinterpret_cast<brcmf_scb_val_le*>(data);
-        auto req_bssid = reinterpret_cast<common::MacAddr*>(scb_val->ea);
-        common::MacAddr bssid(assoc_state_.opts->bssid);
-        ZX_ASSERT(bssid == *req_bssid);
-        DisassocLocalClient(scb_val->val);
+        int16_t ap_ifidx = GetIfidx(true);
+        int16_t client_ifidx = GetIfidx(false);
+        if (ap_ifidx != -1 && (uint16_t)ap_ifidx == ifidx) {
+          // Initiate Disassoc from AP
+          auto scb_val = reinterpret_cast<brcmf_scb_val_le*>(data);
+          auto req_bssid = reinterpret_cast<common::MacAddr*>(scb_val->ea);
+          common::MacAddr bssid(assoc_state_.opts->bssid);
+          ZX_ASSERT(bssid == *req_bssid);
+          DisassocLocalClient(scb_val->val);
+        } else if (client_ifidx != -1 && (uint16_t)client_ifidx == ifidx) {
+          if (assoc_state_.state == AssocState::ASSOCIATED) {
+            // TODO(zhiyichen) Handle proactively deauth or disassoc from driver.
+          }
+        }
       } else {
-        // Driver indicating disassoc (no data)
+        // Triggered by link down event in driver (no data)
         if (assoc_state_.state == AssocState::ASSOCIATED) {
           assoc_state_.state = AssocState::NOT_ASSOCIATED;
         }
@@ -497,6 +505,14 @@ zx_status_t SimFirmware::BusGetBootloaderMacAddr(uint8_t* mac_addr) {
   // us to use a randomly-generated value
   return ZX_ERR_NOT_SUPPORTED;
 }
+
+void SimFirmware::BusSetTimer(std::unique_ptr<std::function<void()>> fn, zx_duration_t delay,
+                              uint64_t* id_out) {
+  zx::duration event_delay(delay);
+  hw_.RequestCallback(std::move(fn), event_delay, id_out);
+}
+
+void SimFirmware::BusCancelTimer(uint64_t id) { hw_.CancelCallback(id); }
 
 void SimFirmware::BcdcResponse::Clear() { len_ = 0; }
 
