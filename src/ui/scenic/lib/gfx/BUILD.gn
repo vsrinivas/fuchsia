@@ -207,6 +207,7 @@ source_set("gfx") {
     ":snapshot_fbs",
     ":util",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
+    "//src/ui/scenic/lib/common:common",
 
     # TODO(44143): Gfx should not depend on Input.
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",

@@ -13,6 +13,7 @@ executable("unittests") {
   testonly = true
   sources = [
     "buffer_collection_unittest.cc",
+    "display_unittest.cc",
     "gpu_mem_unittest.cc",
     "renderer_unittest.cc",
 
@@ -21,13 +22,16 @@ executable("unittests") {
   ]
 
   public_deps = [
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/async-testing",
   ]
 
   deps = [
+    "//src/lib/testing/loop_fixture:gtest",
     "//src/ui/lib/escher/test/common:gtest_escher",
+    "//src/ui/scenic/lib/common:common",
     "//src/ui/scenic/lib/flatland/renderer",
   ]
 }

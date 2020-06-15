@@ -14,6 +14,9 @@
         "binary": "test/flatland_renderer_unittests"
     },
     "sandbox": {
+        "dev": [
+            "class/display-controller"
+        ],
         "features": [
             "vulkan"
         ],

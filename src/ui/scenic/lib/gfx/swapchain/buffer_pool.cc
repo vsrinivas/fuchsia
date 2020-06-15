@@ -19,6 +19,7 @@
 #include "src/ui/lib/escher/vk/chained_semaphore_generator.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 #include "src/ui/lib/escher/vk/image_layout_updater.h"
+#include "src/ui/scenic/lib/common/display_util.h"
 
 #define VK_CHECK_RESULT(XXX) FX_CHECK(XXX.result == vk::Result::eSuccess)
 
@@ -66,36 +67,6 @@ void BufferPool::Clear(
     }
   }
   buffers_.clear();
-}
-
-static uint64_t ImportBufferCollection(
-    std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
-    const fuchsia::hardware::display::ImageConfig& image_config) {
-  static uint64_t buffer_collection_id = 0;
-  buffer_collection_id++;
-  zx_status_t status;
-
-  if ((*display_controller)
-              ->ImportBufferCollection(buffer_collection_id, std::move(token), &status) != ZX_OK ||
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "ImportBufferCollection failed - status: " << status;
-    return 0;
-  }
-
-  if ((*display_controller)
-              ->SetBufferCollectionConstraints(buffer_collection_id, image_config, &status) !=
-          ZX_OK ||
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "SetBufferCollectionConstraints failed.";
-
-    if ((*display_controller)->ReleaseBufferCollection(buffer_collection_id) != ZX_OK) {
-      FX_LOGS(ERROR) << "ReleaseBufferCollection failed.";
-    }
-    return 0;
-  }
-
-  return buffer_collection_id;
 }
 
 static vk::ImageUsageFlags GetFramebufferImageUsage() {
@@ -189,8 +160,8 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   }
 
   // Set display buffer constraints.
-  uint64_t display_collection_id =
-      ImportBufferCollection(environment->display_controller, std::move(tokens[1]), image_config_);
+  auto display_collection_id = scenic::ImportBufferCollection(
+      *environment->display_controller.get(), std::move(tokens[1]), image_config_);
   if (!display_collection_id) {
     FX_LOGS(ERROR) << "Setting buffer collection constraints failed.";
     return false;
