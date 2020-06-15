@@ -136,13 +136,21 @@ void RowHammer(StatusLine* status, MemoryRange* memory, uint32_t iterations, uin
 }
 
 MemoryWorkload MakeRowHammerWorkload(std::string_view name, uint64_t pattern) {
-  MemoryWorkload result;
-  result.name = std::string(name);
-  result.exec = [pattern](StatusLine* status, MemoryRange* memory) {
-    RowHammer(status, memory, /*iterations=*/100, pattern);
+  return MemoryWorkload{
+      .name = std::string(name),
+
+      // Execute the main RowHammer function.
+      .exec = [pattern](
+                  StatusLine* status,
+                  MemoryRange* memory) { RowHammer(status, memory, /*iterations=*/100, pattern); },
+
+      // Need to use uncached memory to ensure that each access hits main memory.
+      .memory_type = CacheMode::kUncached,
+
+      // We do not run in time proportional to the memory size, so don't
+      // attempt to report throughput numbers.
+      .report_throughput = false,
   };
-  result.memory_type = CacheMode::kUncached;
-  return result;
 }
 
 }  // namespace
@@ -343,10 +351,17 @@ bool StressMemory(StatusLine* status, const CommandLineArgs& args, zx::duration 
 
     zx::time test_start = zx::clock::get_monotonic();
     workload.exec(status, memory.get());
-    zx::time test_end = zx::clock::get_monotonic();
+    zx::duration test_duration = zx::clock::get_monotonic() - test_start;
 
-    status->Log("Test %4ld: %s: %0.3fs", num_tests, workloads[workload_index].name.c_str(),
-                DurationToSecs(test_end - test_start));
+    // Calculate test time and throughput.
+    std::string throughput;
+    if (workload.report_throughput) {
+      throughput =
+          fxl::StringPrintf(", throughput: %0.2f MiB/s",
+                            memory->size_bytes() / DurationToSecs(test_duration) / 1024. / 1024.);
+    }
+    status->Log("Test %4ld: %s: %0.3fs%s", num_tests, workloads[workload_index].name.c_str(),
+                DurationToSecs(test_duration), throughput.c_str());
 
     workload_index = (workload_index + 1) % workloads.size();
     num_tests++;

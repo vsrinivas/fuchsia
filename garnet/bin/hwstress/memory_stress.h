@@ -37,6 +37,12 @@ struct MemoryWorkload {
 
   // Memory type needed for the test.
   CacheMode memory_type;
+
+  // Should we report the throughput of the test?
+  //
+  // Some tests don't make sense for throughput reporting, so can just set this to
+  // false.
+  bool report_throughput = true;
 };
 
 // Get all memory stress workloads.
