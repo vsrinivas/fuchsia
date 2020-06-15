@@ -48,7 +48,6 @@ test_package("fs-tests") {
   deps = [
     ":fs_tests",
     "//src/storage/bin/minfs",
-    "//src/sys/test_runners/gtest",
   ]
   binaries = [
     {

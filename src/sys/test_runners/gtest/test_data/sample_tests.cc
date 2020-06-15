@@ -26,3 +26,14 @@ TEST_P(SampleParameterizedTestFixture, Test) {}
 
 INSTANTIATE_TEST_SUITE_P(Tests, SampleParameterizedTestFixture,
                          ::testing::Values(1, 711, 1989, 2013));
+
+TEST(WriteToStdout, TestPass) {
+  printf("first msg\n");
+  printf("second msg\n");
+}
+
+TEST(WriteToStdout, TestFail) {
+  printf("first msg\n");
+  EXPECT_FALSE(true);
+  printf("second msg\n");
+}

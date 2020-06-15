@@ -99,7 +99,7 @@ impl Stream for LoggerStream {
 /// It also wraps the socket into stream and returns it back.
 pub fn create_log_stream() -> Result<(LoggerStream, zx::Handle, zx::Handle), LoggerError> {
     let (client, log) =
-        zx::Socket::create(zx::SocketOpts::DATAGRAM).map_err(LoggerError::CreateSocket)?;
+        zx::Socket::create(zx::SocketOpts::STREAM).map_err(LoggerError::CreateSocket)?;
     let mut stdout_file_handle = zx::sys::ZX_HANDLE_INVALID;
     let mut stderr_file_handle = zx::sys::ZX_HANDLE_INVALID;
 

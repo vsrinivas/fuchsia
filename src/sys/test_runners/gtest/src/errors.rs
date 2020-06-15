@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    runner::component::ComponentNamespaceError, std::convert::From, test_runners_lib::LogError,
-    thiserror::Error,
+    fuchsia_zircon as zx, runner::component::ComponentNamespaceError, std::convert::From,
+    test_runners_lib::LogError, thiserror::Error,
 };
 
 /// Error encountered while running suite server
@@ -94,6 +94,9 @@ pub enum RunTestError {
 
     #[error("can't get test result: {:?}", _0)]
     JsonParse(serde_json::error::Error),
+
+    #[error("Cannot get test process info: {}", _0)]
+    ProcessInfo(zx::Status),
 
     #[error("Name in invocation cannot be null")]
     TestCaseName,

@@ -76,7 +76,7 @@ pub enum RunTestError {
     #[error("Received unexpected exit code {} from test process.", _0)]
     UnexpectedReturnCode(i64),
 
-    #[error("Cannot get test ptocess info: {}", _0)]
+    #[error("Cannot get test process info: {}", _0)]
     ProcessInfo(zx::Status),
 
     #[error("Name in invocation cannot be null")]

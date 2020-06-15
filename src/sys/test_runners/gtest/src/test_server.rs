@@ -25,7 +25,7 @@ use {
     },
     test_runners_lib::{
         elf_component::{Component, SuiteServer},
-        LogStreamReader, LogWriter,
+        LogError, LogStreamReader, LogWriter,
     },
     thiserror::Error,
 };
@@ -255,8 +255,9 @@ impl TestServer {
         info!("Running test {}", test);
 
         let names = vec![self.test_data_namespace()?];
-
-        let test_list_file = Path::new("test_result.json");
+        let my_uuid = uuid::Uuid::new_v4();
+        let file_name = format!("test_result-{}.json", my_uuid);
+        let test_list_file = Path::new(&file_name);
         let test_list_path = Path::new("/test_data").join(test_list_file);
 
         let mut args = vec![
@@ -268,7 +269,7 @@ impl TestServer {
 
         // run test.
         // Load bearing to hold job guard.
-        let (process, _job, stdlogger) =
+        let (process, _job, mut stdlogger) =
             test_runners_lib::launch_process(test_runners_lib::LaunchProcessArgs {
                 bin_path: &component.binary,
                 process_name: &component.name,
@@ -298,8 +299,33 @@ impl TestServer {
             fasync::Socket::from_socket(test_logger).map_err(KernelError::SocketToAsync).unwrap();
         let mut test_logger = LogWriter::new(test_logger);
 
-        // collect stdout in background before waiting for process termination.
-        let std_reader = LogStreamReader::new(stdlogger);
+        let newline = b'\n';
+
+        let prefixes_to_skip = [
+            "Note: Google Test filter".as_bytes(),
+            " 1 FAILED TEST".as_bytes(),
+            "  YOU HAVE 1 DISABLED TEST".as_bytes(),
+            "[==========]".as_bytes(),
+            "[----------]".as_bytes(),
+            "[ RUN      ]".as_bytes(),
+            "[  PASSED  ]".as_bytes(),
+            "[  FAILED  ]".as_bytes(),
+            "[       OK ]".as_bytes(),
+        ];
+        while let Some(bytes) = stdlogger.try_next().await.map_err(LogError::Read)? {
+            if bytes.is_empty() {
+                continue;
+            }
+
+            let mut iter = bytes.split(|&x| x == newline);
+
+            while let Some(buf) = iter.next() {
+                let skip = prefixes_to_skip.iter().any(|p| buf.starts_with(p));
+                if !skip {
+                    test_logger.write(&buf).await?;
+                }
+            }
+        }
 
         debug!("Waiting for test to finish: {}", test);
 
@@ -309,25 +335,26 @@ impl TestServer {
             .map_err(KernelError::ProcessExit)
             .unwrap();
 
-        debug!("Collecting logs for {}", test);
-        let logs = std_reader.get_logs().await?;
+        let process_info = process.info().map_err(RunTestError::ProcessInfo)?;
 
-        // TODO(4610): logs might not be utf8, fix the code.
-        let output = from_utf8(&logs)?;
+        // gtest returns 0 is test succeeds and 1 if test fails. This will test if test ended abnormally.
+        if process_info.return_code != 0 && process_info.return_code != 1 {
+            test_logger.write("Test exited abnormally".as_bytes()).await?;
+
+            case_listener_proxy
+                .finished(TestResult { status: Some(Status::Failed) })
+                .map_err(RunTestError::SendFinish)?;
+            return Ok(());
+        }
 
         debug!("Opening output file for {}", test);
-
         // read test result file.
         let result_str = match read_file(&self.output_dir_proxy, &test_list_file).await {
             Ok(b) => b,
             Err(e) => {
                 // TODO(45857): Introduce Status::InternalError.
                 test_logger
-                    .write_str(format!(
-                        "test did not complete, test output:\n{}\nError:{:?}",
-                        output,
-                        IoError::File(e)
-                    ))
+                    .write_str(format!("Error reading test result:{:?}", IoError::File(e)))
                     .await?;
 
                 case_listener_proxy
@@ -346,10 +373,9 @@ impl TestServer {
         if test_list.testsuites.len() != 1 || test_list.testsuites[0].testsuite.len() != 1 {
             // TODO(45857): Introduce Status::InternalError.
             test_logger
-                .write_str(format!(
-                    "unexpected output, should have received exactly one test result:\n{}",
-                    output
-                ))
+                .write_str(
+                    "unexpected output, should have received exactly one test result.".to_string(),
+                )
                 .await?;
 
             case_listener_proxy
@@ -361,10 +387,12 @@ impl TestServer {
         // as we only run one test per iteration result would be always at 0 index in the arrays.
         let test_suite = &test_list.testsuites[0].testsuite[0];
         match &test_suite.failures {
-            Some(failures) => {
-                for f in failures {
-                    test_logger.write_str(format!("failure: {}\n", f.failure)).await?;
-                }
+            Some(_failures) => {
+                // TODO(53955): re-enable. currently we are getting these logs from test's
+                // stdout which we are printing above.
+                //for f in failures {
+                //   test_logger.write_str(format!("failure: {}\n", f.failure)).await?;
+                // }
 
                 case_listener_proxy
                     .finished(TestResult { status: Some(Status::Failed) })
@@ -645,10 +673,12 @@ mod tests {
                 "SampleFixture.Test1",
                 "SampleFixture.Test2",
                 "SampleDisabled.DISABLED_Test1",
+                "WriteToStdout.TestPass",
+                "WriteToStdout.TestFail",
                 "Tests/SampleParameterizedTestFixture.Test/0",
                 "Tests/SampleParameterizedTestFixture.Test/1",
                 "Tests/SampleParameterizedTestFixture.Test/2",
-                "Tests/SampleParameterizedTestFixture.Test/3"
+                "Tests/SampleParameterizedTestFixture.Test/3",
             ]
             .into_iter()
             .map(|s| s.to_owned())
