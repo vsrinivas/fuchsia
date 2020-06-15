@@ -212,7 +212,9 @@ static inline zx_status_t device_add(zx_device_t* parent, device_add_args_t* arg
 }
 
 // This is used to signal completion of the device's |init| hook.
-// This does not necessarily need to be called from within the |init| hook.
+// This will make the device visible and able to be unbound.
+// This can be called from any thread - it does not necessarily need to be called before
+// the |init| hook returns.
 // If |status| is ZX_OK, the driver may provide optional power state information via |args|.
 // If |status| is not ZX_OK, the device will be scheduled to be removed.
 void device_init_reply(zx_device_t* device, zx_status_t status,

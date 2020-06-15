@@ -29,7 +29,9 @@ class InitTxn {
   }
 
   // This is used to signify the completion of the device's Init() hook.
-  // It does not necessarily need to be called from within the Init() hook.
+  // This will make the device visible and able to be unbound.
+  // This can be called from any thread - it does not necessarily need to be called before
+  // the Init() hook returns.
   void Reply(zx_status_t status, const device_power_state_info_t* power_states = nullptr,
              const uint8_t power_state_count = 0,
              const device_performance_state_info_t* perf_power_states = nullptr,
