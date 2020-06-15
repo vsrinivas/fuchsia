@@ -65,16 +65,14 @@ zx_status_t FtdiI2c::Enable() {
   }
   status = mpsse_.Write(buffer.data(), buffer.size());
 
-  DdkMakeVisible();
   return ZX_OK;
 }
 
 zx_status_t FtdiI2c::Bind() {
-  zx_status_t status = DdkAdd("ftdi-i2c", DEVICE_ADD_INVISIBLE);
-  if (status != ZX_OK) {
-    return status;
-  }
+  return DdkAdd("ftdi-i2c");
+}
 
+void FtdiI2c::DdkInit(ddk::InitTxn txn) {
   std::vector<i2c_channel_t> i2c_channels(i2c_devices_.size());
   for (size_t i = 0; i < i2c_devices_.size(); i++) {
     i2c_channel_t& chan = i2c_channels[i];
@@ -85,21 +83,32 @@ zx_status_t FtdiI2c::Bind() {
     chan.pid = dev.pid;
     chan.did = dev.did;
   }
-  status = DdkAddMetadata(DEVICE_METADATA_I2C_CHANNELS, i2c_channels.data(),
-                          i2c_channels.size() * sizeof(i2c_channel_t));
+  zx_status_t status = DdkAddMetadata(DEVICE_METADATA_I2C_CHANNELS, i2c_channels.data(),
+                                      i2c_channels.size() * sizeof(i2c_channel_t));
   if (status != ZX_OK) {
-    DdkRemoveDeprecated();
-    return status;
+    txn.Reply(status);
+    return;
   }
 
-  auto f = [](void* arg) -> int { return reinterpret_cast<FtdiI2c*>(arg)->Enable(); };
+  // We will reply to the init txn once the device is ready to become visible
+  // and able to be unbound.
+  init_txn_ = std::move(txn);
+
+  auto f = [](void* arg) -> int {
+    auto dev = reinterpret_cast<FtdiI2c*>(arg);
+    dev->enable_thread_started_ = true;
+    zx_status_t status = dev->Enable();
+    dev->init_txn_->Reply(status);  // Make the device visible and able to be unbound.
+    return status;
+  };
 
   int rc = thrd_create_with_name(&enable_thread_, f, this, "ftdi-i2c-enable-thread");
   if (rc != thrd_success) {
-    return ZX_ERR_INTERNAL;
+    init_txn_->Reply(ZX_ERR_INTERNAL);
+    return;
   }
-
-  return ZX_OK;
+  // If the thread was created successfully, it will reply to the |init_txn_| once
+  // |Enable| completes, which will make the device visible and able to be unbound.
 }
 
 // This adds the command to set SCL and SDA high into buffer. It must be called
@@ -153,7 +162,10 @@ void FtdiI2c::WriteI2CByteReadToBuf(size_t index, bool final_byte, std::vector<u
 }
 
 void FtdiI2c::DdkUnbindNew(ddk::UnbindTxn txn) {
-  thrd_join(enable_thread_, NULL);
+  if (enable_thread_started_) {
+    enable_thread_started_ = false;
+    thrd_join(enable_thread_, NULL);
+  }
   txn.Reply();
 }
 

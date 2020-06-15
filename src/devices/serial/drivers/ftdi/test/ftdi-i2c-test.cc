@@ -120,8 +120,7 @@ class FtdiI2cTest : public zxtest::Test {
     i2c_devices[0].vid = 0;
     i2c_devices[0].pid = 0;
     i2c_devices[0].did = 31;
-    FtdiI2c device(fake_ddk::kFakeParent, layout, i2c_devices);
-    return device;
+    return FtdiI2c(fake_ddk::kFakeParent, layout, i2c_devices);
   }
 
   fake_ddk::Bind ddk_;
@@ -152,7 +151,39 @@ TEST_F(FtdiI2cTest, DdkLifetimeTest) {
 
   // Check that bind works.
   ASSERT_OK(device->Bind());
+  ASSERT_OK(ddk_.WaitUntilInitComplete());
   device->DdkAsyncRemove();
+  EXPECT_TRUE(ddk_.Ok());
+
+  // This should delete the object, which means this test should not leak.
+  device->DdkRelease();
+}
+
+TEST_F(FtdiI2cTest, DdkLifetimeFailedInit) {
+  FtdiI2c::I2cLayout layout = {0, 1, 2};
+  std::vector<FtdiI2c::I2cDevice> i2c_devices(1);
+  i2c_devices[0].address = 0x3c;
+  i2c_devices[0].vid = 0;
+  i2c_devices[0].pid = 0;
+  i2c_devices[0].did = 31;
+  FtdiI2c* device(new FtdiI2c(fake_ddk::kFakeParent, layout, i2c_devices));
+
+  // These Reads and Writes are to sync the device on bind.
+  std::vector<uint8_t> first_write(1);
+  first_write[0] = 0xAB;
+  serial_.PushExpectedWrite(std::move(first_write));
+
+  // Set bad read data. This will cause the enable worker thread to fail.
+  std::vector<uint8_t> first_read(2);
+  first_read[0] = 0x00;
+  first_read[1] = 0x00;
+
+  serial_.PushExpectedRead(std::move(first_read));
+
+  // Bind should spawn the worker thread which will fail the init.
+  ASSERT_OK(device->Bind());
+  ASSERT_OK(ddk_.WaitUntilInitComplete());
+  ASSERT_OK(ddk_.WaitUntilRemove());
   EXPECT_TRUE(ddk_.Ok());
 
   // This should delete the object, which means this test should not leak.

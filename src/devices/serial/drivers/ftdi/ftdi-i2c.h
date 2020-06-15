@@ -18,7 +18,7 @@
 namespace ftdi_mpsse {
 
 class FtdiI2c;
-using DeviceType = ddk::Device<FtdiI2c, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<FtdiI2c, ddk::Initializable, ddk::UnbindableNew>;
 
 // This class represents a single I2C bus created from 3 pins of an FTDI device.
 // It implements the standard I2cImpl driver. It is created with metadata that will
@@ -47,6 +47,7 @@ class FtdiI2c : public DeviceType, public ddk::I2cImplProtocol<FtdiI2c, ddk::bas
                             const ::llcpp::fuchsia::hardware::ftdi::I2cDevice* i2c_dev);
 
   zx_status_t Bind();
+  void DdkInit(ddk::InitTxn txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
 
@@ -98,6 +99,8 @@ class FtdiI2c : public DeviceType, public ddk::I2cImplProtocol<FtdiI2c, ddk::bas
   void WriteI2CByteReadToBuf(size_t index, bool final_byte, std::vector<uint8_t>* buffer,
                              size_t* bytes_written);
 
+  std::optional<ddk::InitTxn> init_txn_;
+  std::atomic_bool enable_thread_started_;
   thrd_t enable_thread_;
 
   I2cLayout pin_layout_;
