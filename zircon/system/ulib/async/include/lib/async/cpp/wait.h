@@ -120,6 +120,52 @@ class Wait final : public WaitBase {
   Handler handler_;
 };
 
+// An asynchronous wait whose handler is bound to a |async::WaitOnce::Handler| function, but that
+// handler can only be called once, at which point the handler is destroyed.
+//
+// This type of wait is particularly useful for handlers that will delete the wait object itself
+// since the handler will be moved to the stack prior to being called.
+class WaitOnce final : public WaitBase {
+ public:
+  // Handles completion of asynchronous wait operations.
+  //
+  // The |status| is |ZX_OK| if the wait was satisfied and |signal| is non-null.
+  // The |status| is |ZX_ERR_CANCELED| if the dispatcher was shut down before
+  // the task's handler ran or the task was canceled.
+  using Handler = fit::function<void(async_dispatcher_t* dispatcher, async::WaitOnce* wait,
+                                     zx_status_t status, const zx_packet_signal_t* signal)>;
+
+  explicit WaitOnce(zx_handle_t object = ZX_HANDLE_INVALID, zx_signals_t trigger = ZX_SIGNAL_NONE,
+                    uint32_t options = 0);
+
+  ~WaitOnce();
+
+  // Begins asynchronously waiting for the object to receive one or more of
+  // the trigger signals.  Invokes the handler when the wait completes.
+  //
+  // The wait's handler will be invoked exactly once unless the wait is canceled.
+  // When the dispatcher is shutting down (being destroyed), the handlers of
+  // all remaining waits will be invoked with a status of |ZX_ERR_CANCELED|.
+  //
+  // As the handler is destroyed on each invocation, a new handler must be supplied at each call
+  // to Begin().
+  //
+  // Returns |ZX_OK| if the wait was successfully begun.
+  // Returns |ZX_ERR_ACCESS_DENIED| if the object does not have |ZX_RIGHT_WAIT|.
+  // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
+  // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
+  zx_status_t Begin(async_dispatcher_t* dispatcher, Handler handler);
+
+ private:
+  // Hide the base Begin() signature in favor of the one that requires a handler.
+  using WaitBase::Begin;
+
+  static void CallHandler(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
+                          const zx_packet_signal_t* signal);
+
+  Handler handler_;
+};
+
 // An asynchronous wait whose handler is bound to a fixed class member function.
 //
 // Usage:

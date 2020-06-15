@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/wait.h>
+#include <zircon/assert.h>
 
 #include <utility>
-
-#include <zircon/assert.h>
 
 namespace async {
 
@@ -60,6 +59,24 @@ void Wait::CallHandler(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_st
                        const zx_packet_signal_t* signal) {
   auto self = Dispatch<Wait>(wait);
   self->handler_(dispatcher, self, status, signal);
+}
+
+WaitOnce::WaitOnce(zx_handle_t object, zx_signals_t trigger, uint32_t options)
+    : WaitBase(object, trigger, options, &WaitOnce::CallHandler) {}
+
+WaitOnce::~WaitOnce() = default;
+
+zx_status_t WaitOnce::Begin(async_dispatcher_t* dispatcher, WaitOnce::Handler handler) {
+  handler_ = std::move(handler);
+  return WaitBase::Begin(dispatcher);
+}
+
+void WaitOnce::CallHandler(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
+                           const zx_packet_signal_t* signal) {
+  auto self = Dispatch<WaitOnce>(wait);
+  // Move the handler to the stack prior to calling.
+  auto handler = std::move(self->handler_);
+  handler(dispatcher, self, status, signal);
 }
 
 }  // namespace async
