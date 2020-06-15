@@ -112,9 +112,11 @@ is one of
 + **ZX_POL_ACTION_DENY**  prevent *condition*.
 + **ZX_POL_ACTION_ALLOW_EXCEPTION**  generate an exception via the debug port.
   An exception generated this way acts as a breakpoint. The thread may be
-  resumed after the exception.
+  resumed after the exception. Once resumed, the *condition* triggering the
+  exception will be allowed to complete as if no policy violation occurred.
 + **ZX_POL_ACTION_DENY_EXCEPTION**  just like **ZX_POL_ACTION_ALLOW_EXCEPTION**,
-  but after resuming *condition* is denied.
+  but after resuming, the *condition* will be denied, usually resulting in
+  **ZX_ERR_ACCESS_DENIED**.
 + **ZX_POL_ACTION_KILL**  terminate the process.
 
 Where *flags* is one of
