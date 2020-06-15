@@ -46,7 +46,7 @@ int main(int argc, const char** argv) {
 
     // Test filesystem performance.
     benchmarks_runner.AddLibPerfTestBenchmark(
-        "fs_bench", "/pkgfs/packages/garnet_benchmarks/0/test/fs/fs-bench-test",
+        "fs_bench", "/pkgfs/packages/garnet_benchmarks/0/test/fs-bench",
         {"--fs", "minfs", "--block_device", block_device, "--print_statistics"});
 
     // Test BlobFs performance.
