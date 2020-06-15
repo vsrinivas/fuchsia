@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:logging/logging.dart';
+
 import '../metrics_results.dart';
 import '../time_delta.dart';
 import '../time_point.dart';
 import '../trace_model.dart';
 import 'common.dart';
+
+final _log = Logger('FlutterFrameStatsMetricsProcessor');
 
 T _max<T extends Comparable<T>>(T a, T b) => (a.compareTo(b) >= 0) ? a : b;
 
@@ -199,6 +203,34 @@ class _Results {
   List<double> frameLatencies;
 }
 
+String _appResultToString(_Results results) {
+  final buffer = StringBuffer()
+    ..write('''
+===
+${results.appName} Flutter Frame Stats
+===
+
+''')
+    ..write('fps:\n')
+    ..write('  ${results.fpsResult.averageFps}\n')
+    ..write(
+        '    (flow adjusted) frame count: ${results.fpsResult.flowedFrameCount}\n')
+    ..write(
+        '    (work adjusted) total duration: ${results.fpsResult.totalDuration.toSecondsF()}\n')
+    ..write('\n')
+    ..write('frame_build_times:\n')
+    ..write(describeValues(results.frameBuildTimes, indent: 2))
+    ..write('\n')
+    ..write('frame_rasterizer_times:\n')
+    ..write(describeValues(results.frameRasterizerTimes, indent: 2))
+    ..write('\n')
+    ..write('frame_latencies:\n')
+    ..write(describeValues(results.frameLatencies, indent: 2))
+    ..write('\n');
+
+  return buffer.toString();
+}
+
 /// Compute frame stats metrics for all matching flutter apps in the trace. If
 /// [flutterAppName] is specified, only threads whose name starts with
 /// [flutterAppName] are considered.
@@ -309,6 +341,8 @@ List<TestCaseResults> flutterFrameStatsMetricsProcessor(
     throw ArgumentError('Computed 0 frame latency values.');
   }
 
+  _log.info(_appResultToString(results));
+
   return [
     TestCaseResults('${flutterAppName}_fps', Unit.framesPerSecond,
         [results.fpsResult.averageFps]),
@@ -327,29 +361,7 @@ String flutterFrameStatsReport(Model model) {
   final results = _flutterFrameStats(model);
 
   for (final appResult in results) {
-    buffer
-      ..write('''
-===
-${appResult.appName} Flutter Frame Stats
-===
-
-''')
-      ..write('fps:\n')
-      ..write('  ${appResult.fpsResult.averageFps}\n')
-      ..write(
-          '    (flow adjusted) frame count: ${appResult.fpsResult.flowedFrameCount}\n')
-      ..write(
-          '    (work adjusted) total duration: ${appResult.fpsResult.totalDuration.toSecondsF()}\n')
-      ..write('\n')
-      ..write('frame_build_times:\n')
-      ..write(describeValues(appResult.frameBuildTimes, indent: 2))
-      ..write('\n')
-      ..write('frame_rasterizer_times:\n')
-      ..write(describeValues(appResult.frameRasterizerTimes, indent: 2))
-      ..write('\n')
-      ..write('frame_latencies:\n')
-      ..write(describeValues(appResult.frameLatencies, indent: 2))
-      ..write('\n');
+    buffer.write(_appResultToString(appResult));
   }
 
   return buffer.toString();
