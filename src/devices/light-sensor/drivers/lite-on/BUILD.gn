@@ -65,7 +65,6 @@ test("ltr-578als-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",
-    "//zircon/system/ulib/unittest",
   ]
 }
 

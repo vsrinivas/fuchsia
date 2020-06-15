@@ -72,6 +72,5 @@ test("ram-nand-test") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",
-    "//zircon/system/ulib/unittest",
   ]
 }

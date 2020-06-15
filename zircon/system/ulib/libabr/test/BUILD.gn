@@ -29,7 +29,6 @@ test("libabr-test") {
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/libabr",
-    "//zircon/system/ulib/unittest",
   ]
   include_dirs = [ "//zircon/system/ulib/libabr" ]
 }

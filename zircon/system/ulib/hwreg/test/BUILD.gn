@@ -41,7 +41,6 @@ test("libhwreg") {
     "//zircon/public/lib/hwreg-mock",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/unittest",
   ]
 }
 
@@ -59,7 +58,6 @@ test("libhwreg-i2c") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hwreg-i2c",
-    "//zircon/system/ulib/unittest",
   ]
 }
 

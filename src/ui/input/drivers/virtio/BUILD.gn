@@ -56,7 +56,6 @@ test("virtio-input-test") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/hid-parser",
-    "//zircon/system/ulib/unittest",
   ]
 
   # TODO(47498): Fix the leaks and remove this.

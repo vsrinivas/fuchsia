@@ -29,7 +29,6 @@ test("zx-panic-libc-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zx-panic-libc",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/unittest",
   ]
 }
 

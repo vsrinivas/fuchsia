@@ -41,7 +41,6 @@ test("ftl") {
   deps = [
     ":shared",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/unittest",
   ]
 }
 
