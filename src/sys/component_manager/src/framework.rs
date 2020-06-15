@@ -13,6 +13,7 @@ use {
             model::Model,
             moniker::{AbsoluteMoniker, PartialMoniker},
             realm::{BindReason, Realm},
+            routing::error::RoutingError,
         },
     },
     anyhow::Error,
@@ -183,7 +184,7 @@ impl RealmCapabilityHost {
         };
         let mut exposed_dir = exposed_dir.into_channel();
         if let Some(child_realm) = child_realm {
-            child_realm
+            let res = child_realm
                 .bind(&BindReason::BindChild { parent: realm.abs_moniker.clone() })
                 .await
                 .map_err(|e| match e {
@@ -201,11 +202,27 @@ impl RealmCapabilityHost {
                     }
                 })?
                 .open_exposed(&mut exposed_dir)
-                .await
-                .map_err(|e| {
+                .await;
+            match res {
+                Ok(()) => (),
+                Err(ModelError::RoutingError {
+                    err: RoutingError::SourceInstanceStopped { .. },
+                }) => {
+                    // TODO(54109): The runner may have decided to not run the component. Perhaps a
+                    // security policy prevented it, or maybe there was some other issue.
+                    // Unfortunately these failed runs may or may not have occurred by this point,
+                    // but we want to be consistent about how bind_child responds to these errors.
+                    // Since this call succeeds if the runner hasn't yet decided to not run the
+                    // component, we need to also succeed if the runner has already decided to not
+                    // run the component, because otherwise the result of this call will be
+                    // inconsistent.
+                    ()
+                }
+                Err(e) => {
                     error!("open_exposed() failed: {:?}", e);
-                    fcomponent::Error::Internal
-                })?;
+                    return Err(fcomponent::Error::Internal);
+                }
+            }
         } else {
             return Err(fcomponent::Error::InstanceNotFound);
         }
