@@ -150,19 +150,8 @@ class OwnedSyncCallBase : private SyncCallBase<ResponseType> {
  public:
   OwnedSyncCallBase(const OwnedSyncCallBase&) = delete;
   OwnedSyncCallBase& operator=(const OwnedSyncCallBase&) = delete;
-
-  OwnedSyncCallBase(OwnedSyncCallBase&& other) {
-    if (this != &other) {
-      MoveImpl(std::move(other));
-    }
-  }
-
-  OwnedSyncCallBase& operator=(OwnedSyncCallBase&& other) {
-    if (this != &other) {
-      MoveImpl(std::move(other));
-    }
-    return *this;
-  }
+  OwnedSyncCallBase(OwnedSyncCallBase&& other) = delete;
+  OwnedSyncCallBase& operator=(OwnedSyncCallBase&& other) = delete;
 
   OwnedSyncCallBase(StatusAndError&& other) : SyncCallBase<ResponseType>(std::move(other)) {}
 
@@ -197,38 +186,6 @@ class OwnedSyncCallBase : private SyncCallBase<ResponseType> {
 
  private:
   ResponseStorageType response_storage_;
-
-  void MoveImpl(OwnedSyncCallBase&& other) {
-    Super::status_ = other.Super::status_;
-    Super::error_ = other.Super::error_;
-
-    Super::decoded_message().Reset(fidl::BytePart());
-    if constexpr (ResponseStorageType::kWillCopyBufferDuringMove) {
-      // Use the linearizer to update pointers and move handles, in the case of
-      // inlined response buffers.
-      if (other.Super::decoded_message().is_valid()) {
-        // If there are pointers, they need to be patched.
-        // Otherwise, we get away with a memcpy.
-        if constexpr (ResponseType::HasPointer) {
-          auto result =
-              fidl::Linearize(other.Super::decoded_message().message(), response_buffer());
-          (void)other.Super::decoded_message().Release();
-          ZX_DEBUG_ASSERT(result.status == ZX_OK);
-          Super::decoded_message() = std::move(result.message);
-        } else {
-          auto other_bytes = other.Super::decoded_message().Release();
-          response_storage_ = std::move(other.response_storage_);
-          auto our_bytes = response_buffer();
-          our_bytes.set_actual(other_bytes.actual());
-          Super::decoded_message().Reset(std::move(our_bytes));
-        }
-      }
-    } else {
-      // If the response buffer is a unique_ptr, just move the unique_ptr.
-      response_storage_ = std::move(other.response_storage_);
-      Super::decoded_message() = std::move(other.Super::decoded_message());
-    }
-  }
 };
 
 // Class representing the result of a two-way FIDL call, without ownership of the response buffers.

@@ -367,28 +367,36 @@ TEST_F(PtyTestCase, ClientClrSetFeature) {
   Connection client{zx::channel{}};
   ASSERT_OK(OpenClient(&server, 0, &client));
 
-  auto result = client.ClrSetFeature(0, 0);
-  ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
-  ASSERT_EQ(result->features, 0);
+  {
+    auto result = client.ClrSetFeature(0, 0);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+    ASSERT_EQ(result->features, 0);
+  }
 
   // Make sure we can set bits
-  result = client.ClrSetFeature(0, ::llcpp::fuchsia::hardware::pty::FEATURE_RAW);
-  ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
-  ASSERT_EQ(result->features, ::llcpp::fuchsia::hardware::pty::FEATURE_RAW);
+  {
+    auto result = client.ClrSetFeature(0, ::llcpp::fuchsia::hardware::pty::FEATURE_RAW);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+    ASSERT_EQ(result->features, ::llcpp::fuchsia::hardware::pty::FEATURE_RAW);
+  }
 
   // If we don't change any bits, we should see the new settings
-  result = client.ClrSetFeature(0, 0);
-  ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
-  ASSERT_EQ(result->features, ::llcpp::fuchsia::hardware::pty::FEATURE_RAW);
+  {
+    auto result = client.ClrSetFeature(0, 0);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+    ASSERT_EQ(result->features, ::llcpp::fuchsia::hardware::pty::FEATURE_RAW);
+  }
 
   // Make sure we can clear bits
-  result = client.ClrSetFeature(::llcpp::fuchsia::hardware::pty::FEATURE_RAW, 0);
-  ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
-  ASSERT_EQ(result->features, 0);
+  {
+    auto result = client.ClrSetFeature(::llcpp::fuchsia::hardware::pty::FEATURE_RAW, 0);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+    ASSERT_EQ(result->features, 0);
+  }
 }
 
 TEST_F(PtyTestCase, ClientClrSetFeatureInvalidBit) {
@@ -396,15 +404,19 @@ TEST_F(PtyTestCase, ClientClrSetFeatureInvalidBit) {
   Connection client{zx::channel{}};
   ASSERT_OK(OpenClient(&server, 0, &client));
 
-  auto result = client.ClrSetFeature(0, 0x2);
-  ASSERT_OK(result.status());
-  ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
-  ASSERT_EQ(result->features, 0);
+  {
+    auto result = client.ClrSetFeature(0, 0x2);
+    ASSERT_OK(result.status());
+    ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
+    ASSERT_EQ(result->features, 0);
+  }
 
-  result = client.ClrSetFeature(0x2, 0);
-  ASSERT_OK(result.status());
-  ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
-  ASSERT_EQ(result->features, 0);
+  {
+    auto result = client.ClrSetFeature(0x2, 0);
+    ASSERT_OK(result.status());
+    ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
+    ASSERT_EQ(result->features, 0);
+  }
 }
 
 TEST_F(PtyTestCase, ClientGetWindowSizeServerNeverSet) {
@@ -427,16 +439,20 @@ TEST_F(PtyTestCase, ClientIndependentFeatureFlags) {
   Connection client2{zx::channel{}};
   ASSERT_OK(OpenClient(&server, 0, &client2));
 
-  auto result = client.ClrSetFeature(0, ::llcpp::fuchsia::hardware::pty::FEATURE_RAW);
-  ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
-  ASSERT_EQ(result->features, ::llcpp::fuchsia::hardware::pty::FEATURE_RAW);
+  {
+    auto result = client.ClrSetFeature(0, ::llcpp::fuchsia::hardware::pty::FEATURE_RAW);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+    ASSERT_EQ(result->features, ::llcpp::fuchsia::hardware::pty::FEATURE_RAW);
+  }
 
-  // Client 2 shouldn't see the changes
-  result = client2.ClrSetFeature(0, 0);
-  ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
-  ASSERT_EQ(result->features, 0);
+  {
+    // Client 2 shouldn't see the changes
+    auto result = client2.ClrSetFeature(0, 0);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+    ASSERT_EQ(result->features, 0);
+  }
 }
 
 TEST_F(PtyTestCase, ClientMakeActive) {
@@ -446,31 +462,37 @@ TEST_F(PtyTestCase, ClientMakeActive) {
   Connection client2{zx::channel{}};
   ASSERT_OK(OpenClient(&server, 0, &client2));
 
-  auto result = client.MakeActive(0);
-  ASSERT_OK(result.status());
-  // This client is not the controlling client (id=0), so it cannot change the
-  // active client
-  ASSERT_STATUS(result->status, ZX_ERR_ACCESS_DENIED);
-
-  result = client2.MakeActive(1);
-  ASSERT_OK(result.status());
-  // This client is the controlling client (id=0), so it can.
-  ASSERT_OK(result->status);
-
-  // Changing the active client to the existing active client should be fine
-  result = client2.MakeActive(1);
-  ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
-
-  // Changing the active client to the control client should be fine
-  result = client2.MakeActive(0);
-  ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
-
-  // Changing the active client to a non-existent client should fail
-  result = client2.MakeActive(2);
-  ASSERT_OK(result.status());
-  ASSERT_STATUS(result->status, ZX_ERR_NOT_FOUND);
+  {
+    auto result = client.MakeActive(0);
+    ASSERT_OK(result.status());
+    // This client is not the controlling client (id=0), so it cannot change the
+    // active client
+    ASSERT_STATUS(result->status, ZX_ERR_ACCESS_DENIED);
+  }
+  {
+    auto result = client2.MakeActive(1);
+    ASSERT_OK(result.status());
+    // This client is the controlling client (id=0), so it can.
+    ASSERT_OK(result->status);
+  }
+  {
+    // Changing the active client to the existing active client should be fine
+    auto result = client2.MakeActive(1);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
+  {
+    // Changing the active client to the control client should be fine
+    auto result = client2.MakeActive(0);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
+  {
+    // Changing the active client to a non-existent client should fail
+    auto result = client2.MakeActive(2);
+    ASSERT_OK(result.status());
+    ASSERT_STATUS(result->status, ZX_ERR_NOT_FOUND);
+  }
 }
 
 TEST_F(PtyTestCase, ClientReadEvents) {
@@ -480,16 +502,20 @@ TEST_F(PtyTestCase, ClientReadEvents) {
   Connection client2{zx::channel{}};
   ASSERT_OK(OpenClient(&server, 0, &client2));
 
-  auto result = client.ReadEvents();
-  ASSERT_OK(result.status());
-  // This client is not the controlling client (id=0), so it cannot read events
-  ASSERT_STATUS(result->status, ZX_ERR_ACCESS_DENIED);
+  {
+    auto result = client.ReadEvents();
+    ASSERT_OK(result.status());
+    // This client is not the controlling client (id=0), so it cannot read events
+    ASSERT_STATUS(result->status, ZX_ERR_ACCESS_DENIED);
+  }
 
-  result = client2.ReadEvents();
-  ASSERT_OK(result.status());
-  // This client is the controlling client (id=0), so it can read events
-  ASSERT_OK(result->status);
-  ASSERT_EQ(result->events, 0);
+  {
+    auto result = client2.ReadEvents();
+    ASSERT_OK(result.status());
+    // This client is the controlling client (id=0), so it can read events
+    ASSERT_OK(result->status);
+    ASSERT_EQ(result->events, 0);
+  }
 }
 
 // Reading events should clear the event condition

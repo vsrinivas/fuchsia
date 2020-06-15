@@ -4,12 +4,12 @@
 
 #include "payload-streamer.h"
 
-#include <optional>
-
 #include <fcntl.h>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+
+#include <optional>
+
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -62,15 +62,18 @@ TEST_F(PayloadStreamerTest, RegisterVmo) {
 TEST_F(PayloadStreamerTest, RegisterMultipleVmo) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
-  auto result = client_->RegisterVmo(std::move(vmo));
-  ASSERT_OK(result.status());
-  EXPECT_OK(result.value().status);
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
-  result = client_->RegisterVmo(std::move(vmo));
-  ASSERT_OK(result.status());
-  EXPECT_EQ(result.value().status, ZX_ERR_ALREADY_BOUND);
+  {
+    auto result = client_->RegisterVmo(std::move(vmo));
+    ASSERT_OK(result.status());
+    EXPECT_OK(result.value().status);
+    ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  }
+  {
+    auto result = client_->RegisterVmo(std::move(vmo));
+    ASSERT_OK(result.status());
+    EXPECT_EQ(result.value().status, ZX_ERR_ALREADY_BOUND);
+  }
 }
-
 
 TEST_F(PayloadStreamerTest, RegisterInvalidVmo) {
   EXPECT_FALSE(client_->RegisterVmo(zx::vmo()).ok());
@@ -109,17 +112,23 @@ TEST_F(PayloadStreamerTest, ReadEof) {
   ASSERT_OK(register_result.status());
   EXPECT_OK(register_result.value().status);
 
-  ::llcpp::fuchsia::paver::PayloadStream::ResultOf::ReadData call_result = client_->ReadData();
-  ASSERT_OK(call_result.status());
-  ASSERT_TRUE(call_result->result.is_info());
+  {
+    ::llcpp::fuchsia::paver::PayloadStream::ResultOf::ReadData call_result = client_->ReadData();
+    ASSERT_OK(call_result.status());
+    ASSERT_TRUE(call_result->result.is_info());
+  }
 
-  call_result = client_->ReadData();
-  ASSERT_OK(call_result.status());
-  ASSERT_TRUE(call_result->result.is_eof());
+  {
+    auto call_result = client_->ReadData();
+    ASSERT_OK(call_result.status());
+    ASSERT_TRUE(call_result->result.is_eof());
+  }
 
-  call_result = client_->ReadData();
-  ASSERT_OK(call_result.status());
-  ASSERT_TRUE(call_result->result.is_eof());
+  {
+    auto call_result = client_->ReadData();
+    ASSERT_OK(call_result.status());
+    ASSERT_TRUE(call_result->result.is_eof());
+  }
 }
 
 }  // namespace

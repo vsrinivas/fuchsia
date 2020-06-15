@@ -121,33 +121,41 @@ TEST_F(AmlLightTest, SetValueTest1) {
   Init();
 
   ::llcpp::fuchsia::hardware::light::Light::SyncClient client(std::move(client_));
-  auto get_result = client.GetCurrentSimpleValue(0);
-  EXPECT_OK(get_result.status());
-  EXPECT_EQ(get_result->result.response().value, true);
-
-  get_result = client.GetCurrentSimpleValue(0);
-  EXPECT_OK(get_result.status());
-  EXPECT_EQ(get_result->result.response().value, true);
-
-  gpio_.ExpectWrite(ZX_OK, false);
-  auto set_result = client.SetSimpleValue(0, false);
-  EXPECT_OK(set_result.status());
-
-  get_result = client.GetCurrentSimpleValue(0);
-  EXPECT_OK(get_result.status());
-  EXPECT_EQ(get_result->result.response().value, false);
-
-  gpio_.ExpectWrite(ZX_OK, true);
-  set_result = client.SetSimpleValue(0, true);
-  EXPECT_OK(set_result.status());
-
-  gpio_.ExpectWrite(ZX_OK, true);
-  set_result = client.SetSimpleValue(0, true);
-  EXPECT_OK(set_result.status());
-
-  get_result = client.GetCurrentSimpleValue(0);
-  EXPECT_OK(get_result.status());
-  EXPECT_EQ(get_result->result.response().value, true);
+  {
+    auto get_result = client.GetCurrentSimpleValue(0);
+    EXPECT_OK(get_result.status());
+    EXPECT_EQ(get_result->result.response().value, true);
+  }
+  {
+    auto get_result = client.GetCurrentSimpleValue(0);
+    EXPECT_OK(get_result.status());
+    EXPECT_EQ(get_result->result.response().value, true);
+  }
+  {
+    gpio_.ExpectWrite(ZX_OK, false);
+    auto set_result = client.SetSimpleValue(0, false);
+    EXPECT_OK(set_result.status());
+  }
+  {
+    auto get_result = client.GetCurrentSimpleValue(0);
+    EXPECT_OK(get_result.status());
+    EXPECT_EQ(get_result->result.response().value, false);
+  }
+  {
+    gpio_.ExpectWrite(ZX_OK, true);
+    auto set_result = client.SetSimpleValue(0, true);
+    EXPECT_OK(set_result.status());
+  }
+  {
+    gpio_.ExpectWrite(ZX_OK, true);
+    auto set_result = client.SetSimpleValue(0, true);
+    EXPECT_OK(set_result.status());
+  }
+  {
+    auto get_result = client.GetCurrentSimpleValue(0);
+    EXPECT_OK(get_result.status());
+    EXPECT_EQ(get_result->result.response().value, true);
+  }
 }
 
 TEST_F(AmlLightTest, SetValueTest2) {
@@ -163,35 +171,43 @@ TEST_F(AmlLightTest, SetValueTest2) {
   Init();
 
   ::llcpp::fuchsia::hardware::light::Light::SyncClient client(std::move(client_));
-  auto get_result = client.GetCurrentBrightnessValue(0);
-  EXPECT_OK(get_result.status());
-  EXPECT_EQ(get_result->result.response().value, 255);
-
-  get_result = client.GetCurrentBrightnessValue(0);
-  EXPECT_OK(get_result.status());
-  EXPECT_EQ(get_result->result.response().value, 255);
-
-  config.duty_cycle = 0;
-  pwm_.ExpectSetConfig(ZX_OK, config);
-  auto set_result = client.SetBrightnessValue(0, 0);
-  EXPECT_OK(set_result.status());
-
-  get_result = client.GetCurrentBrightnessValue(0);
-  EXPECT_OK(get_result.status());
-  EXPECT_EQ(get_result->result.response().value, 0);
-
-  config.duty_cycle = 20.0;
-  pwm_.ExpectSetConfig(ZX_OK, config);
-  set_result = client.SetBrightnessValue(0, 51);
-  EXPECT_OK(set_result.status());
-
-  pwm_.ExpectSetConfig(ZX_OK, config);
-  set_result = client.SetBrightnessValue(0, 51);
-  EXPECT_OK(set_result.status());
-
-  get_result = client.GetCurrentBrightnessValue(0);
-  EXPECT_OK(get_result.status());
-  EXPECT_EQ(get_result->result.response().value, 51);
+  {
+    auto get_result = client.GetCurrentBrightnessValue(0);
+    EXPECT_OK(get_result.status());
+    EXPECT_EQ(get_result->result.response().value, 255);
+  }
+  {
+    auto get_result = client.GetCurrentBrightnessValue(0);
+    EXPECT_OK(get_result.status());
+    EXPECT_EQ(get_result->result.response().value, 255);
+  }
+  {
+    config.duty_cycle = 0;
+    pwm_.ExpectSetConfig(ZX_OK, config);
+    auto set_result = client.SetBrightnessValue(0, 0);
+    EXPECT_OK(set_result.status());
+  }
+  {
+    auto get_result = client.GetCurrentBrightnessValue(0);
+    EXPECT_OK(get_result.status());
+    EXPECT_EQ(get_result->result.response().value, 0);
+  }
+  {
+    config.duty_cycle = 20.0;
+    pwm_.ExpectSetConfig(ZX_OK, config);
+    auto set_result = client.SetBrightnessValue(0, 51);
+    EXPECT_OK(set_result.status());
+  }
+  {
+    pwm_.ExpectSetConfig(ZX_OK, config);
+    auto set_result = client.SetBrightnessValue(0, 51);
+    EXPECT_OK(set_result.status());
+  }
+  {
+    auto get_result = client.GetCurrentBrightnessValue(0);
+    EXPECT_OK(get_result.status());
+    EXPECT_EQ(get_result->result.response().value, 51);
+  }
 }
 
 }  // namespace aml_light

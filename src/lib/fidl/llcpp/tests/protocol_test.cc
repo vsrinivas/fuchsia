@@ -282,24 +282,6 @@ class HandleTest : public ::testing::Test {
   zx::channel client_end_;
 };
 
-TEST_F(HandleTest, HandleClosedAfterResultOfMove) {
-  auto client = TakeClient();
-  auto result = client.GetHandle();
-
-  ASSERT_TRUE(result.ok()) << result.error();
-  ASSERT_TRUE(result->value.h.is_valid());
-
-  // Dupe the event so we can get the handle count after move.
-  zx::event dupe;
-  ASSERT_EQ(result->value.h.duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe), ZX_OK);
-
-  // Moving the ResultOf::GetHandle should move the handle.
-  { auto release = std::move(result); }  // ~ResultOf::GetHandle
-
-  // Only remaining handle should be the dupe.
-  ASSERT_EQ(GetHandleCount(dupe.borrow()), 1u);
-}
-
 TEST_F(HandleTest, HandleClosedAfterHandleStructMove) {
   auto client = TakeClient();
   auto result = client.GetHandle();

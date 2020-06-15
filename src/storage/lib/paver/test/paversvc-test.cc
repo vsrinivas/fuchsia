@@ -1094,19 +1094,25 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
   CreatePayload(2 * kPagesPerBlock, &payload);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result = data_sink_->WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
-                                       ::llcpp::fuchsia::paver::Asset::KERNEL, std::move(payload));
-  ASSERT_OK(result.status());
-  ASSERT_OK(result.value().status);
-  CreatePayload(2 * kPagesPerBlock, &payload);
-  ValidateWritten(8, 2);
-  ValidateUnwritten(10, 4);
-  result = data_sink_->WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
-                                  ::llcpp::fuchsia::paver::Asset::KERNEL, std::move(payload));
-  ASSERT_OK(result.status());
-  ASSERT_OK(result.value().status);
-  ValidateWritten(8, 2);
-  ValidateUnwritten(10, 4);
+  {
+    auto result =
+        data_sink_->WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
+                               ::llcpp::fuchsia::paver::Asset::KERNEL, std::move(payload));
+    ASSERT_OK(result.status());
+    ASSERT_OK(result.value().status);
+    CreatePayload(2 * kPagesPerBlock, &payload);
+    ValidateWritten(8, 2);
+    ValidateUnwritten(10, 4);
+  }
+  {
+    auto result =
+        data_sink_->WriteAsset(::llcpp::fuchsia::paver::Configuration::A,
+                               ::llcpp::fuchsia::paver::Asset::KERNEL, std::move(payload));
+    ASSERT_OK(result.status());
+    ASSERT_OK(result.value().status);
+    ValidateWritten(8, 2);
+    ValidateUnwritten(10, 4);
+  }
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteFirmware) {

@@ -408,18 +408,22 @@ TEST_F(HidDeviceTest, ReadReportSingleReport) {
   zx_time_t time = 0xabcd;
   fake_hidbus_.SendReportWithTime(mouse_report, sizeof(mouse_report), time);
 
-  auto result = sync_client_->ReadReport();
-  ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
-  ASSERT_EQ(time, result->time);
-  ASSERT_EQ(sizeof(mouse_report), result->data.count());
-  for (size_t i = 0; i < result->data.count(); i++) {
-    EXPECT_EQ(mouse_report[i], result->data[i]);
+  {
+    auto result = sync_client_->ReadReport();
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+    ASSERT_EQ(time, result->time);
+    ASSERT_EQ(sizeof(mouse_report), result->data.count());
+    for (size_t i = 0; i < result->data.count(); i++) {
+      EXPECT_EQ(mouse_report[i], result->data[i]);
+    }
   }
 
-  result = sync_client_->ReadReport();
-  ASSERT_OK(result.status());
-  ASSERT_EQ(result->status, ZX_ERR_SHOULD_WAIT);
+  {
+    auto result = sync_client_->ReadReport();
+    ASSERT_OK(result.status());
+    ASSERT_EQ(result->status, ZX_ERR_SHOULD_WAIT);
+  }
 }
 
 TEST_F(HidDeviceTest, ReadReportDoubleReport) {
@@ -434,27 +438,33 @@ TEST_F(HidDeviceTest, ReadReportDoubleReport) {
   zx_time_t time = 0xabcd;
   fake_hidbus_.SendReportWithTime(double_mouse_report, sizeof(double_mouse_report), time);
 
-  auto result = sync_client_->ReadReport();
-  ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
-  ASSERT_EQ(time, result->time);
-  ASSERT_EQ(sizeof(hid_boot_mouse_report_t), result->data.count());
-  for (size_t i = 0; i < result->data.count(); i++) {
-    EXPECT_EQ(double_mouse_report[i], result->data[i]);
+  {
+    auto result = sync_client_->ReadReport();
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+    ASSERT_EQ(time, result->time);
+    ASSERT_EQ(sizeof(hid_boot_mouse_report_t), result->data.count());
+    for (size_t i = 0; i < result->data.count(); i++) {
+      EXPECT_EQ(double_mouse_report[i], result->data[i]);
+    }
   }
 
-  result = sync_client_->ReadReport();
-  ASSERT_OK(result.status());
-  ASSERT_OK(result->status);
-  ASSERT_EQ(time, result->time);
-  ASSERT_EQ(sizeof(hid_boot_mouse_report_t), result->data.count());
-  for (size_t i = 0; i < result->data.count(); i++) {
-    EXPECT_EQ(double_mouse_report[i + sizeof(hid_boot_mouse_report_t)], result->data[i]);
+  {
+    auto result = sync_client_->ReadReport();
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+    ASSERT_EQ(time, result->time);
+    ASSERT_EQ(sizeof(hid_boot_mouse_report_t), result->data.count());
+    for (size_t i = 0; i < result->data.count(); i++) {
+      EXPECT_EQ(double_mouse_report[i + sizeof(hid_boot_mouse_report_t)], result->data[i]);
+    }
   }
 
-  result = sync_client_->ReadReport();
-  ASSERT_OK(result.status());
-  ASSERT_EQ(result->status, ZX_ERR_SHOULD_WAIT);
+  {
+    auto result = sync_client_->ReadReport();
+    ASSERT_OK(result.status());
+    ASSERT_EQ(result->status, ZX_ERR_SHOULD_WAIT);
+  }
 }
 
 TEST_F(HidDeviceTest, ReadReportsSingleReport) {
@@ -838,8 +848,8 @@ TEST_F(HidDeviceTest, DeviceReportReaderTwoClients) {
         llcpp::fuchsia::hardware::input::DeviceReportsReader::SyncClient(std::move(token_client));
 
     ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
-    result = sync_client_->GetDeviceReportsReader(std::move(token_server));
-    ASSERT_OK(result.status());
+    auto result2 = sync_client_->GetDeviceReportsReader(std::move(token_server));
+    ASSERT_OK(result2.status());
     reader_two =
         llcpp::fuchsia::hardware::input::DeviceReportsReader::SyncClient(std::move(token_client));
   }
@@ -847,24 +857,28 @@ TEST_F(HidDeviceTest, DeviceReportReaderTwoClients) {
   // Send the report.
   fake_hidbus_.SendReport(mouse_report, sizeof(mouse_report));
 
-  auto response = reader.ReadReports();
-  ASSERT_OK(response.status());
-  ASSERT_FALSE(response->result.is_err());
-  auto result = &response->result.response();
-  ASSERT_EQ(result->reports.count(), 1);
-  ASSERT_EQ(result->reports[0].data.count(), sizeof(mouse_report));
-  for (size_t i = 0; i < result->reports[0].data.count(); i++) {
-    EXPECT_EQ(mouse_report[i], result->reports[0].data[i]);
+  {
+    auto response = reader.ReadReports();
+    ASSERT_OK(response.status());
+    ASSERT_FALSE(response->result.is_err());
+    auto result = &response->result.response();
+    ASSERT_EQ(result->reports.count(), 1);
+    ASSERT_EQ(result->reports[0].data.count(), sizeof(mouse_report));
+    for (size_t i = 0; i < result->reports[0].data.count(); i++) {
+      EXPECT_EQ(mouse_report[i], result->reports[0].data[i]);
+    }
   }
 
-  response = reader_two.ReadReports();
-  ASSERT_OK(response.status());
-  ASSERT_FALSE(response->result.is_err());
-  result = &response->result.response();
-  ASSERT_EQ(result->reports.count(), 1);
-  ASSERT_EQ(result->reports[0].data.count(), sizeof(mouse_report));
-  for (size_t i = 0; i < result->reports[0].data.count(); i++) {
-    EXPECT_EQ(mouse_report[i], result->reports[0].data[i]);
+  {
+    auto response = reader_two.ReadReports();
+    ASSERT_OK(response.status());
+    ASSERT_FALSE(response->result.is_err());
+    auto result = &response->result.response();
+    ASSERT_EQ(result->reports.count(), 1);
+    ASSERT_EQ(result->reports[0].data.count(), sizeof(mouse_report));
+    for (size_t i = 0; i < result->reports[0].data.count(); i++) {
+      EXPECT_EQ(mouse_report[i], result->reports[0].data[i]);
+    }
   }
 }
 

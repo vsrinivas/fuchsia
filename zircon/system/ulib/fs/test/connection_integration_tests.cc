@@ -103,15 +103,19 @@ TEST_F(ConnectionTest, NodeGetSetFlagsOnFile) {
   auto file_get_result = fio::Node::Call::NodeGetFlags(zx::unowned_channel(fc1));
   EXPECT_OK(file_get_result.status());
   EXPECT_EQ(fio::OPEN_RIGHT_READABLE, file_get_result.Unwrap()->flags);
-  // Make modifications to flags with NodeSetFlags: Note this only works for OPEN_FLAG_APPEND based
-  // on posix standard
-  auto file_set_result =
-      fio::Node::Call::NodeSetFlags(zx::unowned_channel(fc1), fio::OPEN_FLAG_APPEND);
-  EXPECT_OK(file_set_result.Unwrap()->s);
-  // Check that the new flag is saved
-  file_get_result = fio::Node::Call::NodeGetFlags(zx::unowned_channel(fc1));
-  EXPECT_OK(file_get_result.Unwrap()->s);
-  EXPECT_EQ(fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_APPEND, file_get_result.Unwrap()->flags);
+  {
+    // Make modifications to flags with NodeSetFlags: Note this only works for OPEN_FLAG_APPEND
+    // based on posix standard
+    auto file_set_result =
+        fio::Node::Call::NodeSetFlags(zx::unowned_channel(fc1), fio::OPEN_FLAG_APPEND);
+    EXPECT_OK(file_set_result.Unwrap()->s);
+  }
+  {
+    // Check that the new flag is saved
+    auto file_get_result = fio::Node::Call::NodeGetFlags(zx::unowned_channel(fc1));
+    EXPECT_OK(file_get_result.Unwrap()->s);
+    EXPECT_EQ(fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_APPEND, file_get_result.Unwrap()->flags);
+  }
 }
 
 TEST_F(ConnectionTest, NodeGetSetFlagsOnDirectory) {
@@ -135,10 +139,10 @@ TEST_F(ConnectionTest, NodeGetSetFlagsOnDirectory) {
       fio::Node::Call::NodeSetFlags(zx::unowned_channel(dc1), fio::OPEN_FLAG_APPEND);
   EXPECT_OK(dir_set_result.Unwrap()->s);
 
-  dir_get_result = fio::Node::Call::NodeGetFlags(zx::unowned_channel(dc1));
-  EXPECT_OK(dir_get_result.Unwrap()->s);
+  auto dir_get_result_2 = fio::Node::Call::NodeGetFlags(zx::unowned_channel(dc1));
+  EXPECT_OK(dir_get_result_2.Unwrap()->s);
   EXPECT_EQ(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_APPEND,
-            dir_get_result.Unwrap()->flags);
+            dir_get_result_2.Unwrap()->flags);
 }
 
 TEST_F(ConnectionTest, FileGetSetFlagsOnFile) {
@@ -152,18 +156,25 @@ TEST_F(ConnectionTest, FileGetSetFlagsOnFile) {
   ASSERT_OK(zx::channel::create(0u, &fc1, &fc2));
   ASSERT_OK(fdio_open_at(client_end.get(), "file", fio::OPEN_RIGHT_READABLE, fc2.release()));
 
-  // Use NodeGetFlags to get current flags and rights
-  auto file_get_result = fio::File::Call::GetFlags(zx::unowned_channel(fc1));
-  EXPECT_OK(file_get_result.status());
-  EXPECT_EQ(fio::OPEN_RIGHT_READABLE, file_get_result.Unwrap()->flags);
-  // Make modifications to flags with NodeSetFlags: Note this only works for OPEN_FLAG_APPEND based
-  // on posix standard
-  auto file_set_result = fio::File::Call::SetFlags(zx::unowned_channel(fc1), fio::OPEN_FLAG_APPEND);
-  EXPECT_OK(file_set_result.Unwrap()->s);
-  // Check that the new flag is saved
-  file_get_result = fio::File::Call::GetFlags(zx::unowned_channel(fc1));
-  EXPECT_OK(file_get_result.Unwrap()->s);
-  EXPECT_EQ(fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_APPEND, file_get_result.Unwrap()->flags);
+  {
+    // Use NodeGetFlags to get current flags and rights
+    auto file_get_result = fio::File::Call::GetFlags(zx::unowned_channel(fc1));
+    EXPECT_OK(file_get_result.status());
+    EXPECT_EQ(fio::OPEN_RIGHT_READABLE, file_get_result.Unwrap()->flags);
+  }
+  {
+    // Make modifications to flags with NodeSetFlags: Note this only works for OPEN_FLAG_APPEND
+    // based on posix standard
+    auto file_set_result =
+        fio::File::Call::SetFlags(zx::unowned_channel(fc1), fio::OPEN_FLAG_APPEND);
+    EXPECT_OK(file_set_result.Unwrap()->s);
+  }
+  {
+    // Check that the new flag is saved
+    auto file_get_result = fio::File::Call::GetFlags(zx::unowned_channel(fc1));
+    EXPECT_OK(file_get_result.Unwrap()->s);
+    EXPECT_EQ(fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_APPEND, file_get_result.Unwrap()->flags);
+  }
 }
 
 TEST_F(ConnectionTest, FileGetSetFlagsDirectory) {

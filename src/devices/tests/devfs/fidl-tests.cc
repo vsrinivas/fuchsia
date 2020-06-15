@@ -228,18 +228,22 @@ TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
   // Close our half of the watcher before devmgr gets its half.
   watcher.reset();
 
-  auto result = fio::Directory::Call::Watch(zx::unowned_channel(h), fio::WATCH_MASK_ALL, 0,
-                                            std::move(remote_watcher));
-  ASSERT_EQ(result.status(), ZX_OK);
-  ASSERT_OK(result->s);
-  // If we're here and usermode didn't crash, we didn't hit the bug.
+  {
+    auto result = fio::Directory::Call::Watch(zx::unowned_channel(h), fio::WATCH_MASK_ALL, 0,
+                                              std::move(remote_watcher));
+    ASSERT_EQ(result.status(), ZX_OK);
+    ASSERT_OK(result->s);
+    // If we're here and usermode didn't crash, we didn't hit the bug.
+  }
 
-  // Create a new watcher, and see if it's functional at all
-  ASSERT_OK(zx::channel::create(0, &watcher, &remote_watcher));
-  result = fio::Directory::Call::Watch(zx::unowned_channel(h), fio::WATCH_MASK_ALL, 0,
-                                       std::move(remote_watcher));
-  ASSERT_EQ(result.status(), ZX_OK);
-  ASSERT_OK(result->s);
+  {
+    // Create a new watcher, and see if it's functional at all
+    ASSERT_OK(zx::channel::create(0, &watcher, &remote_watcher));
+    auto result = fio::Directory::Call::Watch(zx::unowned_channel(h), fio::WATCH_MASK_ALL, 0,
+                                              std::move(remote_watcher));
+    ASSERT_EQ(result.status(), ZX_OK);
+    ASSERT_OK(result->s);
+  }
 
   watch_buffer_t wb = {};
   const char* name = nullptr;

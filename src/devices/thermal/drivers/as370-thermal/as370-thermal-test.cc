@@ -94,94 +94,126 @@ class As370ThermalTest : public zxtest::Test {
 TEST_F(As370ThermalTest, GetTemperature) {
   ThermalClient client(std::move(messenger_.local()));
 
-  reg_region_[0x14].ReadReturns(0x17ff);
-  auto result = client.GetTemperatureCelsius();
-  EXPECT_OK(result->status);
-  EXPECT_TRUE(FloatNear(result->temp, 40.314f));
+  {
+    reg_region_[0x14].ReadReturns(0x17ff);
+    auto result = client.GetTemperatureCelsius();
+    EXPECT_OK(result->status);
+    EXPECT_TRUE(FloatNear(result->temp, 40.314f));
+  }
 
-  reg_region_[0x14].ReadReturns(0x182b);
-  result = client.GetTemperatureCelsius();
-  EXPECT_OK(result->status);
-  EXPECT_TRUE(FloatNear(result->temp, 43.019f));
+  {
+    reg_region_[0x14].ReadReturns(0x182b);
+    auto result = client.GetTemperatureCelsius();
+    EXPECT_OK(result->status);
+    EXPECT_TRUE(FloatNear(result->temp, 43.019f));
+  }
 }
 
 TEST_F(As370ThermalTest, DvfsOperatingPoint) {
   ThermalClient client(std::move(messenger_.local()));
 
-  // Success, sets operating point 0.
-  power_.ExpectRequestVoltage(ZX_OK, 825'000, 825'000);
-  clock_.ExpectSetRate(ZX_OK, 400'000'000);
-  auto set_result = client.SetDvfsOperatingPoint(0, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
-  EXPECT_OK(set_result->status);
-  ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  {
+    // Success, sets operating point 0.
+    power_.ExpectRequestVoltage(ZX_OK, 825'000, 825'000);
+    clock_.ExpectSetRate(ZX_OK, 400'000'000);
+    auto set_result = client.SetDvfsOperatingPoint(0, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    EXPECT_OK(set_result->status);
+    ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  }
 
-  auto get_result = client.GetDvfsOperatingPoint(PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
-  EXPECT_OK(get_result->status);
-  EXPECT_EQ(get_result->op_idx, 0);
+  {
+    auto get_result = client.GetDvfsOperatingPoint(PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    EXPECT_OK(get_result->status);
+    EXPECT_EQ(get_result->op_idx, 0);
+  }
 
-  // Failure, unable to set exact voltage.
-  power_.ExpectRequestVoltage(ZX_OK, 825'000, 900'000);
-  set_result = client.SetDvfsOperatingPoint(2, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
-  EXPECT_NOT_OK(set_result->status);
-  ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  {
+    // Failure, unable to set exact voltage.
+    power_.ExpectRequestVoltage(ZX_OK, 825'000, 900'000);
+    auto set_result = client.SetDvfsOperatingPoint(2, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    EXPECT_NOT_OK(set_result->status);
+    ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  }
 
-  get_result = client.GetDvfsOperatingPoint(PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
-  EXPECT_OK(get_result->status);
-  EXPECT_EQ(get_result->op_idx, 0);
+  {
+    auto get_result = client.GetDvfsOperatingPoint(PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    EXPECT_OK(get_result->status);
+    EXPECT_EQ(get_result->op_idx, 0);
+  }
 
-  // Failure, unable to set frequency.
-  power_.ExpectRequestVoltage(ZX_OK, 825'000, 825'000);
-  clock_.ExpectSetRate(ZX_ERR_IO, 1'200'000'000);
-  set_result = client.SetDvfsOperatingPoint(2, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
-  EXPECT_NOT_OK(set_result->status);
-  ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  {
+    // Failure, unable to set frequency.
+    power_.ExpectRequestVoltage(ZX_OK, 825'000, 825'000);
+    clock_.ExpectSetRate(ZX_ERR_IO, 1'200'000'000);
+    auto set_result = client.SetDvfsOperatingPoint(2, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    EXPECT_NOT_OK(set_result->status);
+    ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  }
 
-  get_result = client.GetDvfsOperatingPoint(PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
-  EXPECT_OK(get_result->status);
-  EXPECT_EQ(get_result->op_idx, 0);
+  {
+    auto get_result = client.GetDvfsOperatingPoint(PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    EXPECT_OK(get_result->status);
+    EXPECT_EQ(get_result->op_idx, 0);
+  }
 
-  // Success, sets operating point 4.
-  power_.ExpectRequestVoltage(ZX_OK, 900'000, 900'000);
-  clock_.ExpectSetRate(ZX_OK, 1'500'000'000);
-  set_result = client.SetDvfsOperatingPoint(4, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
-  EXPECT_OK(set_result->status);
-  ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  {
+    // Success, sets operating point 4.
+    power_.ExpectRequestVoltage(ZX_OK, 900'000, 900'000);
+    clock_.ExpectSetRate(ZX_OK, 1'500'000'000);
+    auto set_result = client.SetDvfsOperatingPoint(4, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    EXPECT_OK(set_result->status);
+    ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  }
 
-  get_result = client.GetDvfsOperatingPoint(PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
-  EXPECT_OK(get_result->status);
-  EXPECT_EQ(get_result->op_idx, 4);
+  {
+    auto get_result = client.GetDvfsOperatingPoint(PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    EXPECT_OK(get_result->status);
+    EXPECT_EQ(get_result->op_idx, 4);
+  }
 
-  // Failure, unable to set frequency.
-  clock_.ExpectSetRate(ZX_ERR_IO, 800'000'000);
-  set_result = client.SetDvfsOperatingPoint(1, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
-  EXPECT_NOT_OK(set_result->status);
-  ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  {
+    // Failure, unable to set frequency.
+    clock_.ExpectSetRate(ZX_ERR_IO, 800'000'000);
+    auto set_result = client.SetDvfsOperatingPoint(1, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    EXPECT_NOT_OK(set_result->status);
+    ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  }
 
-  get_result = client.GetDvfsOperatingPoint(PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
-  EXPECT_OK(get_result->status);
-  EXPECT_EQ(get_result->op_idx, 4);
+  {
+    auto get_result = client.GetDvfsOperatingPoint(PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    EXPECT_OK(get_result->status);
+    EXPECT_EQ(get_result->op_idx, 4);
+  }
 
-  // Failure, unable to set voltage.
-  clock_.ExpectSetRate(ZX_OK, 800'000'000);
-  power_.ExpectRequestVoltage(ZX_ERR_IO, 825'000, 0);
-  set_result = client.SetDvfsOperatingPoint(1, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
-  EXPECT_NOT_OK(set_result->status);
-  ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  {
+    // Failure, unable to set voltage.
+    clock_.ExpectSetRate(ZX_OK, 800'000'000);
+    power_.ExpectRequestVoltage(ZX_ERR_IO, 825'000, 0);
+    auto set_result = client.SetDvfsOperatingPoint(1, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    EXPECT_NOT_OK(set_result->status);
+    ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  }
 
-  get_result = client.GetDvfsOperatingPoint(PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
-  EXPECT_OK(get_result->status);
-  EXPECT_EQ(get_result->op_idx, 4);
+  {
+    auto get_result = client.GetDvfsOperatingPoint(PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    EXPECT_OK(get_result->status);
+    EXPECT_EQ(get_result->op_idx, 4);
+  }
 
-  // Success, sets operating point 1.
-  clock_.ExpectSetRate(ZX_OK, 800'000'000);
-  power_.ExpectRequestVoltage(ZX_OK, 825'000, 825'000);
-  set_result = client.SetDvfsOperatingPoint(1, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
-  EXPECT_OK(set_result->status);
-  ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  {
+    // Success, sets operating point 1.
+    clock_.ExpectSetRate(ZX_OK, 800'000'000);
+    power_.ExpectRequestVoltage(ZX_OK, 825'000, 825'000);
+    auto set_result = client.SetDvfsOperatingPoint(1, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    EXPECT_OK(set_result->status);
+    ASSERT_NO_FATAL_FAILURES(VerifyAll());
+  }
 
-  get_result = client.GetDvfsOperatingPoint(PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
-  EXPECT_OK(get_result->status);
-  EXPECT_EQ(get_result->op_idx, 1);
+  {
+    auto get_result = client.GetDvfsOperatingPoint(PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+    EXPECT_OK(get_result->status);
+    EXPECT_EQ(get_result->op_idx, 1);
+  }
 }
 
 }  // namespace thermal

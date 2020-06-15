@@ -87,40 +87,50 @@ bool test_vmofile_basic() {
                                  fidl::StringView("greeting"), std::move(request));
   ASSERT_EQ(open_result.status(), ZX_OK);
 
-  auto get_result = fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::VMO_FLAG_READ);
-  ASSERT_EQ(get_result.status(), ZX_OK);
-  ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
-  llcpp::fuchsia::mem::Buffer* buffer = get_result.Unwrap()->buffer.get();
-  ASSERT_TRUE(buffer->vmo.is_valid());
-  // TODO(fxb/37091): This currently provides SET_PROPERTY but shouldn't.
-  ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights | ZX_RIGHT_SET_PROPERTY);
-  ASSERT_EQ(buffer->size, 13);
+  {
+    auto get_result = fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::VMO_FLAG_READ);
+    ASSERT_EQ(get_result.status(), ZX_OK);
+    ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
+    llcpp::fuchsia::mem::Buffer* buffer = get_result.Unwrap()->buffer.get();
+    ASSERT_TRUE(buffer->vmo.is_valid());
+    // TODO(fxb/37091): This currently provides SET_PROPERTY but shouldn't.
+    ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights | ZX_RIGHT_SET_PROPERTY);
+    ASSERT_EQ(buffer->size, 13);
+  }
 
-  get_result =
-      fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC);
-  ASSERT_EQ(get_result.status(), ZX_OK);
-  ASSERT_EQ(get_result.Unwrap()->s, ZX_ERR_ACCESS_DENIED);
-  ASSERT_EQ(get_result.Unwrap()->buffer.get(), nullptr);
+  {
+    auto get_result =
+        fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC);
+    ASSERT_EQ(get_result.status(), ZX_OK);
+    ASSERT_EQ(get_result.Unwrap()->s, ZX_ERR_ACCESS_DENIED);
+    ASSERT_EQ(get_result.Unwrap()->buffer.get(), nullptr);
+  }
 
-  get_result =
-      fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::VMO_FLAG_READ | fio::VMO_FLAG_WRITE);
-  ASSERT_EQ(get_result.status(), ZX_OK);
-  ASSERT_EQ(get_result.Unwrap()->s, ZX_ERR_ACCESS_DENIED);
-  ASSERT_EQ(get_result.Unwrap()->buffer.get(), nullptr);
+  {
+    auto get_result = fio::File::Call::GetBuffer(zx::unowned_channel(h),
+                                                 fio::VMO_FLAG_READ | fio::VMO_FLAG_WRITE);
+    ASSERT_EQ(get_result.status(), ZX_OK);
+    ASSERT_EQ(get_result.Unwrap()->s, ZX_ERR_ACCESS_DENIED);
+    ASSERT_EQ(get_result.Unwrap()->buffer.get(), nullptr);
+  }
 
-  auto describe_result = fio::File::Call::Describe(zx::unowned_channel(h));
-  ASSERT_EQ(describe_result.status(), ZX_OK);
-  fio::NodeInfo* info = &describe_result.Unwrap()->info;
-  ASSERT_TRUE(info->is_vmofile());
-  ASSERT_EQ(info->vmofile().offset, 0u);
-  ASSERT_EQ(info->vmofile().length, 13u);
-  ASSERT_TRUE(info->vmofile().vmo.is_valid());
-  ASSERT_EQ(get_rights(info->vmofile().vmo), kCommonExpectedRights);
+  {
+    auto describe_result = fio::File::Call::Describe(zx::unowned_channel(h));
+    ASSERT_EQ(describe_result.status(), ZX_OK);
+    fio::NodeInfo* info = &describe_result.Unwrap()->info;
+    ASSERT_TRUE(info->is_vmofile());
+    ASSERT_EQ(info->vmofile().offset, 0u);
+    ASSERT_EQ(info->vmofile().length, 13u);
+    ASSERT_TRUE(info->vmofile().vmo.is_valid());
+    ASSERT_EQ(get_rights(info->vmofile().vmo), kCommonExpectedRights);
+  }
 
-  auto seek_result = fio::File::Call::Seek(zx::unowned_channel(h), 7u, fio::SeekOrigin::START);
-  ASSERT_EQ(seek_result.status(), ZX_OK);
-  ASSERT_EQ(seek_result.Unwrap()->s, ZX_OK);
-  ASSERT_EQ(seek_result.Unwrap()->offset, 7u);
+  {
+    auto seek_result = fio::File::Call::Seek(zx::unowned_channel(h), 7u, fio::SeekOrigin::START);
+    ASSERT_EQ(seek_result.status(), ZX_OK);
+    ASSERT_EQ(seek_result.Unwrap()->s, ZX_OK);
+    ASSERT_EQ(seek_result.Unwrap()->offset, 7u);
+  }
 
   shutdown_vfs(std::move(vfs));
 
@@ -158,37 +168,43 @@ bool test_vmofile_exec() {
       fidl::StringView("read_exec"), std::move(request));
   ASSERT_EQ(open_result.status(), ZX_OK);
 
-  auto get_result = fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::VMO_FLAG_READ);
-  ASSERT_EQ(get_result.status(), ZX_OK);
-  ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
-  llcpp::fuchsia::mem::Buffer* buffer = get_result.Unwrap()->buffer.get();
-  ASSERT_TRUE(buffer->vmo.is_valid());
-  // TODO(fxb/37091): This currently provides SET_PROPERTY but shouldn't.
-  ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights | ZX_RIGHT_SET_PROPERTY);
-  ASSERT_EQ(buffer->size, 13);
+  {
+    auto get_result = fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::VMO_FLAG_READ);
+    ASSERT_EQ(get_result.status(), ZX_OK);
+    ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
+    llcpp::fuchsia::mem::Buffer* buffer = get_result.Unwrap()->buffer.get();
+    ASSERT_TRUE(buffer->vmo.is_valid());
+    // TODO(fxb/37091): This currently provides SET_PROPERTY but shouldn't.
+    ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights | ZX_RIGHT_SET_PROPERTY);
+    ASSERT_EQ(buffer->size, 13);
+  }
 
-  // Providing a backing VMO with ZX_RIGHT_EXECUTE in CreateFromVmo above should cause VMO_FLAG_EXEC
-  // to work.
-  get_result =
-      fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC);
-  ASSERT_EQ(get_result.status(), ZX_OK);
-  ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
-  buffer = get_result.Unwrap()->buffer.get();
-  ASSERT_TRUE(buffer->vmo.is_valid());
-  // TODO(fxb/37091): This currently provides SET_PROPERTY but shouldn't.
-  ASSERT_EQ(get_rights(buffer->vmo),
-            kCommonExpectedRights | ZX_RIGHT_EXECUTE | ZX_RIGHT_SET_PROPERTY);
-  ASSERT_EQ(buffer->size, 13);
+  {
+    // Providing a backing VMO with ZX_RIGHT_EXECUTE in CreateFromVmo above should cause
+    // VMO_FLAG_EXEC to work.
+    auto get_result =
+        fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC);
+    ASSERT_EQ(get_result.status(), ZX_OK);
+    ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
+    auto buffer = get_result.Unwrap()->buffer.get();
+    ASSERT_TRUE(buffer->vmo.is_valid());
+    // TODO(fxb/37091): This currently provides SET_PROPERTY but shouldn't.
+    ASSERT_EQ(get_rights(buffer->vmo),
+              kCommonExpectedRights | ZX_RIGHT_EXECUTE | ZX_RIGHT_SET_PROPERTY);
+    ASSERT_EQ(buffer->size, 13);
+  }
 
-  // Describe should also return a VMO with ZX_RIGHT_EXECUTE.
-  auto describe_result = fio::File::Call::Describe(zx::unowned_channel(h));
-  ASSERT_EQ(describe_result.status(), ZX_OK);
-  fio::NodeInfo* info = &describe_result.Unwrap()->info;
-  ASSERT_TRUE(info->is_vmofile());
-  ASSERT_EQ(info->vmofile().offset, 0u);
-  ASSERT_EQ(info->vmofile().length, 13u);
-  ASSERT_TRUE(info->vmofile().vmo.is_valid());
-  ASSERT_EQ(get_rights(info->vmofile().vmo), kCommonExpectedRights | ZX_RIGHT_EXECUTE);
+  {
+    // Describe should also return a VMO with ZX_RIGHT_EXECUTE.
+    auto describe_result = fio::File::Call::Describe(zx::unowned_channel(h));
+    ASSERT_EQ(describe_result.status(), ZX_OK);
+    fio::NodeInfo* info = &describe_result.Unwrap()->info;
+    ASSERT_TRUE(info->is_vmofile());
+    ASSERT_EQ(info->vmofile().offset, 0u);
+    ASSERT_EQ(info->vmofile().length, 13u);
+    ASSERT_TRUE(info->vmofile().vmo.is_valid());
+    ASSERT_EQ(get_rights(info->vmofile().vmo), kCommonExpectedRights | ZX_RIGHT_EXECUTE);
+  }
 
   shutdown_vfs(std::move(vfs));
 

@@ -183,9 +183,9 @@ bool TestWatcherExisting(void) {
   // see all files in the directory, but the first watcher won't see anything.
   zx::channel client2;
   ASSERT_EQ(zx::channel::create(0, &client2, &server), ZX_OK);
-  watch_result = fio::Directory::Call::Watch(caller.channel(), mask, 0, std::move(server));
-  ASSERT_EQ(watch_result.status(), ZX_OK);
-  ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
+  auto watch_result_2 = fio::Directory::Call::Watch(caller.channel(), mask, 0, std::move(server));
+  ASSERT_EQ(watch_result_2.status(), ZX_OK);
+  ASSERT_EQ(watch_result_2.Unwrap()->s, ZX_OK);
   watch_buffer_t wb2;
   memset(&wb2, 0, sizeof(wb2));
   ASSERT_TRUE(check_for_event(&wb2, client2, ".", fio::WATCH_EVENT_EXISTING));

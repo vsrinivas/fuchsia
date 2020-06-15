@@ -201,14 +201,14 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyMinfsDataRoot) {
   ASSERT_OK(data_client.Open(file_flags, 0, "test_file", std::move(test_file_server)).status());
 
   fio::File::SyncClient file_client(std::move(test_file));
-  resp = file_client.Read(4);
-  ASSERT_OK(resp.status());
-  ASSERT_OK(resp.value().s);
-  ASSERT_EQ(resp.value().data.data()[0], 1);
-
-  auto resp2 = file_client.Close();
+  auto resp2 = file_client.Read(4);
   ASSERT_OK(resp2.status());
   ASSERT_OK(resp2.value().s);
+  ASSERT_EQ(resp2.value().data.data()[0], 1);
+
+  auto resp3 = file_client.Close();
+  ASSERT_OK(resp3.status());
+  ASSERT_OK(resp3.value().s);
 }
 
 TEST_F(OutgoingDirectoryMinfs, CannotWriteToOutgoingDirectory) {

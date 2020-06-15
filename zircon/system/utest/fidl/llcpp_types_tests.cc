@@ -34,7 +34,7 @@ struct NonnullableChannelMessage {
 
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
 
-  static constexpr bool HasPointer = false;
+  [[maybe_unused]] static constexpr bool HasPointer = false;
 
   static constexpr bool IsResource = true;
 
@@ -74,7 +74,7 @@ struct InlinePODStruct {
 
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
 
-  static constexpr bool HasPointer = false;
+  [[maybe_unused]] static constexpr bool HasPointer = false;
 
   static constexpr bool IsResource = false;
 
@@ -108,7 +108,7 @@ struct OutOfLineMessage {
 
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
 
-  static constexpr bool HasPointer = true;
+  [[maybe_unused]] static constexpr bool HasPointer = true;
 
   static constexpr bool IsResource = false;
 
@@ -492,8 +492,6 @@ class MySyncCall<NonnullableChannelMessage>
     Super::SetResult(fidl::DecodeResult(ZX_OK, nullptr, std::move(decoded_message)));
   }
   ~MySyncCall() = default;
-  MySyncCall(MySyncCall&& other) = default;
-  MySyncCall& operator=(MySyncCall&& other) = default;
   using Super::error;
   using Super::status;
   using Super::Unwrap;
@@ -543,8 +541,6 @@ class MySyncCall<InlinePODStruct> : private fidl::internal::OwnedSyncCallBase<In
   }
 
   ~MySyncCall() = default;
-  MySyncCall(MySyncCall&& other) = default;
-  MySyncCall& operator=(MySyncCall&& other) = default;
   using Super::error;
   using Super::status;
   using Super::Unwrap;
@@ -597,8 +593,6 @@ class MySyncCall<OutOfLineMessage> : private fidl::internal::OwnedSyncCallBase<O
     Super::SetResult(fidl::DecodeResult(ZX_OK, nullptr, std::move(decoded_message)));
   }
   ~MySyncCall() = default;
-  MySyncCall(MySyncCall&& other) = default;
-  MySyncCall& operator=(MySyncCall&& other) = default;
   using Super::error;
   using Super::status;
   using Super::Unwrap;
@@ -645,47 +639,30 @@ class MySyncCall<LargeStruct> : private fidl::internal::OwnedSyncCallBase<LargeS
   }
 
   ~MySyncCall() = default;
-  MySyncCall(MySyncCall&& other) = default;
-  MySyncCall& operator=(MySyncCall&& other) = default;
   using Super::error;
   using Super::status;
   using Super::Unwrap;
 };
 
-// Test that in the case of stack-allocated response, handles are transferred correctly
-// when the message is moved.
+// Test that in the case of stack-allocated response, handles are correctly
+// closed.
 bool OwningSyncCallWithHandlesTest() {
   BEGIN_TEST;
 
   zx::channel peer_1;
-  zx::channel peer_2;
-
   {
     MySyncCall<NonnullableChannelMessage> sync_call_1(&peer_1);
     ASSERT_TRUE(HelperExpectPeerValid(peer_1));
     ASSERT_EQ(sync_call_1.status(), ZX_OK);
     ASSERT_EQ(sync_call_1.error(), nullptr);
-
-    MySyncCall<NonnullableChannelMessage> sync_call_2(&peer_2);
-    ASSERT_TRUE(HelperExpectPeerValid(peer_2));
-    ASSERT_EQ(sync_call_2.status(), ZX_OK);
-    ASSERT_EQ(sync_call_2.error(), nullptr);
-
-    // Moving |sync_call_2| into |sync_call_1| will destroy the message originally in |sync_call_1|.
-    sync_call_1 = std::move(sync_call_2);
-    ASSERT_TRUE(HelperExpectPeerInvalid(peer_1));
-    ASSERT_TRUE(HelperExpectPeerValid(peer_2));
   }
 
   ASSERT_TRUE(HelperExpectPeerInvalid(peer_1));
-  ASSERT_TRUE(HelperExpectPeerInvalid(peer_2));
 
   END_TEST;
 }
 
-// Test that in the case of stack-allocated response, pointers to out-of-line are correctly
-// updated when the message is moved.
-bool OwningSyncCallWithOutOfLineTest() {
+bool OwningSyncCallBasicTest() {
   BEGIN_TEST;
 
   MySyncCall<OutOfLineMessage> sync_call_1(std::nullopt);
@@ -698,59 +675,6 @@ bool OwningSyncCallWithOutOfLineTest() {
   ASSERT_EQ(sync_call_2.error(), nullptr);
   ASSERT_NONNULL(sync_call_2.Unwrap()->optional);
   ASSERT_EQ(sync_call_2.Unwrap()->optional->payload, 0xABCDABCD);
-
-  sync_call_1 = std::move(sync_call_2);
-  ASSERT_NONNULL(sync_call_1.Unwrap());
-  ASSERT_NULL(sync_call_2.Unwrap());
-  ASSERT_EQ(sync_call_1.Unwrap()->optional->payload, 0xABCDABCD);
-
-  auto pointer_to_optional = reinterpret_cast<InlinePODStruct*>(
-      reinterpret_cast<uint8_t*>(sync_call_1.Unwrap()) + FIDL_ALIGN(OutOfLineMessage::PrimarySize));
-  ASSERT_EQ(sync_call_1.Unwrap()->optional, pointer_to_optional);
-
-  END_TEST;
-}
-
-// Test that std::move on a stack-allocated POD response works correctly.
-// Internally, it should be implemented as a memcpy.
-bool OwningSyncCallWithPODTest() {
-  BEGIN_TEST;
-
-  MySyncCall<InlinePODStruct> sync_call_1(0x12345678);
-  ASSERT_EQ(sync_call_1.status(), ZX_OK);
-  ASSERT_EQ(sync_call_1.error(), nullptr);
-  ASSERT_EQ(sync_call_1.Unwrap()->payload, 0x12345678);
-
-  MySyncCall<InlinePODStruct> sync_call_2(0xABABABAB);
-  ASSERT_EQ(sync_call_2.status(), ZX_OK);
-  ASSERT_EQ(sync_call_2.error(), nullptr);
-  ASSERT_EQ(sync_call_2.Unwrap()->payload, 0xABABABAB);
-
-  ASSERT_NE(&sync_call_1.Unwrap()->payload, &sync_call_2.Unwrap()->payload);
-
-  sync_call_1 = std::move(sync_call_2);
-  ASSERT_NONNULL(sync_call_1.Unwrap());
-  ASSERT_NULL(sync_call_2.Unwrap());
-  ASSERT_EQ(sync_call_1.Unwrap()->payload, 0xABABABAB);
-
-  END_TEST;
-}
-
-// Test that in the case of heap-allocated response, moving the message moves the pointer
-// to response buffer.
-bool OwningSyncCallHeapTest() {
-  BEGIN_TEST;
-
-  MySyncCall<LargeStruct> sync_call_1(0x12345678);
-  ASSERT_EQ(sync_call_1.status(), ZX_OK);
-  ASSERT_EQ(sync_call_1.error(), nullptr);
-  ASSERT_EQ(sync_call_1.Unwrap()->payload[0], 0x12345678);
-
-  uint64_t* array_address = &sync_call_1.Unwrap()->payload[0];
-  MySyncCall<LargeStruct> sync_call_2(std::move(sync_call_1));
-  ASSERT_NE(&sync_call_1, &sync_call_2);
-  ASSERT_EQ(array_address, &sync_call_2.Unwrap()->payload[0]);
-  ASSERT_EQ(sync_call_2.Unwrap()->payload[0], 0x12345678);
 
   END_TEST;
 }
@@ -831,13 +755,8 @@ RUN_NAMED_TEST("fidl::internal::AlignedBuffer alignment on stack",
                UninitializedBufferStackAllocationAlignmentTest)
 RUN_NAMED_TEST("fidl::internal::AlignedBuffer alignment on heap",
                UninitializedBufferHeapAllocationAlignmentTest)
-RUN_NAMED_TEST("OwnedSyncCallBase std::move [inlined response, message has handles]",
-               OwningSyncCallWithHandlesTest)
-RUN_NAMED_TEST("OwnedSyncCallBase std::move [inlined response, message has out-of-line]",
-               OwningSyncCallWithOutOfLineTest)
-RUN_NAMED_TEST("OwnedSyncCallBase std::move [inlined response, message is POD]",
-               OwningSyncCallWithPODTest)
-RUN_NAMED_TEST("OwnedSyncCallBase std::move [response on heap]", OwningSyncCallHeapTest)
+RUN_NAMED_TEST("OwnedSyncCallBase handle closing test]", OwningSyncCallWithHandlesTest)
+RUN_NAMED_TEST("OwnedSyncCallBase constructor initialization test", OwningSyncCallBasicTest)
 RUN_NAMED_TEST("OwnedSyncCallBase when call failed", OwningSyncCallFailureTest)
 RUN_NAMED_TEST("Unowned OwnedSyncCallBase std::move", UnownedSyncCallTest)
 RUN_NAMED_TEST("ResponseStorage allocation strategy", ResponseStorageAllocationStrategyTest)

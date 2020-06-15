@@ -78,15 +78,21 @@ TEST_F(Vs680ThermalTest, GetTemperature) {
 
   // Rather than trying to synchronize with the polling thread, just loop until we get the value we
   // expect.
-  for (; !FloatNear(result->temp, 37.812f); result = client.GetTemperatureCelsius()) {
+  auto temp = result->temp;
+  while (!FloatNear(temp, 37.812f)) {
+    auto result = client.GetTemperatureCelsius();
     EXPECT_OK(result->status);
+    temp = result->temp;
   }
 
   registers_[0x108 / 4] = 358;
   EXPECT_OK(interrupt_.trigger(0, zx::clock::get_monotonic()));
 
-  for (; !FloatNear(result->temp, 48.576f); result = client.GetTemperatureCelsius()) {
+  temp = result->temp;
+  while (!FloatNear(temp, 48.576f)) {
+    auto result = client.GetTemperatureCelsius();
     EXPECT_OK(result->status);
+    temp = result->temp;
   }
 }
 

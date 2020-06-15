@@ -594,49 +594,57 @@ TEST_F(DeviceTest, FidlGetStringDescriptor_Empty) {
 TEST_F(DeviceTest, FidlGetStringDescriptor) {
   auto& fidl = get_fidl();
   char golden[128];
-  size_t dest_len = 128;
-  utf16_to_utf8(reinterpret_cast<const uint16_t*>(kStringDescriptors[0][0]), 7,
-                reinterpret_cast<uint8_t*>(golden), &dest_len);
-  auto expected = MakeConstant<uint16_t, 2>("EN");
-  auto result = fidl.GetStringDescriptor(1, MakeConstant<uint16_t, 2>("EN"));
-  ASSERT_TRUE(result.ok());
-  ASSERT_OK(result->s);
-  ASSERT_EQ(result->actual_lang_id, expected);
-  ASSERT_EQ(result->desc.size(), dest_len);  // this is way off for some reason
-  ASSERT_EQ(memcmp(result->desc.data(), golden, dest_len), 0);
+  {
+    size_t dest_len = 128;
+    utf16_to_utf8(reinterpret_cast<const uint16_t*>(kStringDescriptors[0][0]), 7,
+                  reinterpret_cast<uint8_t*>(golden), &dest_len);
+    auto expected = MakeConstant<uint16_t, 2>("EN");
+    auto result = fidl.GetStringDescriptor(1, MakeConstant<uint16_t, 2>("EN"));
+    ASSERT_TRUE(result.ok());
+    ASSERT_OK(result->s);
+    ASSERT_EQ(result->actual_lang_id, expected);
+    ASSERT_EQ(result->desc.size(), dest_len);  // this is way off for some reason
+    ASSERT_EQ(memcmp(result->desc.data(), golden, dest_len), 0);
+  }
 
-  dest_len = 128;
-  utf16_to_utf8(reinterpret_cast<const uint16_t*>(kStringDescriptors[0][1]), 6,
-                reinterpret_cast<uint8_t*>(golden), &dest_len);
-  expected = MakeConstant<uint16_t, 2>("ES");
-  result = fidl.GetStringDescriptor(1, MakeConstant<uint16_t, 2>("ES"));
-  ASSERT_TRUE(result.ok());
-  ASSERT_OK(result->s);
-  ASSERT_EQ(result->actual_lang_id, expected);
-  ASSERT_EQ(result->desc.size(), dest_len);
-  ASSERT_EQ(memcmp(result->desc.data(), golden, dest_len), 0);
+  {
+    size_t dest_len = 128;
+    utf16_to_utf8(reinterpret_cast<const uint16_t*>(kStringDescriptors[0][1]), 6,
+                  reinterpret_cast<uint8_t*>(golden), &dest_len);
+    auto expected = MakeConstant<uint16_t, 2>("ES");
+    auto result = fidl.GetStringDescriptor(1, MakeConstant<uint16_t, 2>("ES"));
+    ASSERT_TRUE(result.ok());
+    ASSERT_OK(result->s);
+    ASSERT_EQ(result->actual_lang_id, expected);
+    ASSERT_EQ(result->desc.size(), dest_len);
+    ASSERT_EQ(memcmp(result->desc.data(), golden, dest_len), 0);
+  }
 
-  dest_len = 128;
-  utf16_to_utf8(reinterpret_cast<const uint16_t*>(kStringDescriptors[1][0]), 6,
-                reinterpret_cast<uint8_t*>(golden), &dest_len);
-  expected = MakeConstant<uint16_t, 2>("EN");
-  result = fidl.GetStringDescriptor(2, MakeConstant<uint16_t, 2>("EN"));
-  ASSERT_TRUE(result.ok());
-  ASSERT_OK(result->s);
-  ASSERT_EQ(result->actual_lang_id, expected);
-  ASSERT_EQ(result->desc.size(), dest_len);
-  ASSERT_EQ(memcmp(result->desc.data(), golden, dest_len), 0);
+  {
+    size_t dest_len = 128;
+    utf16_to_utf8(reinterpret_cast<const uint16_t*>(kStringDescriptors[1][0]), 6,
+                  reinterpret_cast<uint8_t*>(golden), &dest_len);
+    auto expected = MakeConstant<uint16_t, 2>("EN");
+    auto result = fidl.GetStringDescriptor(2, MakeConstant<uint16_t, 2>("EN"));
+    ASSERT_TRUE(result.ok());
+    ASSERT_OK(result->s);
+    ASSERT_EQ(result->actual_lang_id, expected);
+    ASSERT_EQ(result->desc.size(), dest_len);
+    ASSERT_EQ(memcmp(result->desc.data(), golden, dest_len), 0);
+  }
 
-  dest_len = 128;
-  utf16_to_utf8(reinterpret_cast<const uint16_t*>(kStringDescriptors[1][1]), 11,
-                reinterpret_cast<uint8_t*>(golden), &dest_len);
-  expected = MakeConstant<uint16_t, 2>("ES");
-  result = fidl.GetStringDescriptor(2, MakeConstant<uint16_t, 2>("ES"));
-  ASSERT_TRUE(result.ok());
-  ASSERT_OK(result->s);
-  ASSERT_EQ(result->actual_lang_id, expected);
-  ASSERT_EQ(result->desc.size(), dest_len);
-  ASSERT_EQ(memcmp(result->desc.data(), golden, dest_len), 0);
+  {
+    size_t dest_len = 128;
+    utf16_to_utf8(reinterpret_cast<const uint16_t*>(kStringDescriptors[1][1]), 11,
+                  reinterpret_cast<uint8_t*>(golden), &dest_len);
+    auto expected = MakeConstant<uint16_t, 2>("ES");
+    auto result = fidl.GetStringDescriptor(2, MakeConstant<uint16_t, 2>("ES"));
+    ASSERT_TRUE(result.ok());
+    ASSERT_OK(result->s);
+    ASSERT_EQ(result->actual_lang_id, expected);
+    ASSERT_EQ(result->desc.size(), dest_len);
+    ASSERT_EQ(memcmp(result->desc.data(), golden, dest_len), 0);
+  }
 }
 
 TEST_F(DeviceTest, FidlSetInterface) {

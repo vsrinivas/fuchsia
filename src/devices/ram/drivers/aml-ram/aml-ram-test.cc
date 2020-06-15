@@ -128,22 +128,25 @@ TEST_F(AmlRamDeviceTest, MalformedRequests) {
   pdev_.reg(MEMBW_PORTS_CTRL).SetWriteCallback(&WriteDisallowed);
   pdev_.reg(MEMBW_TIMER).SetWriteCallback(&WriteDisallowed);
 
-  ram_metrics::BandwidthMeasurementConfig config;
   ram_metrics::Device::SyncClient client{std::move(ddk_.FidlClient())};
 
   // Invalid cycles (too low).
-  config = {(200), {1, 0, 0, 0, 0, 0}};
-  auto info = client.MeasureBandwidth(config);
-  ASSERT_TRUE(info.ok());
-  ASSERT_TRUE(info->result.is_err());
-  EXPECT_EQ(info->result.err(), ZX_ERR_INVALID_ARGS);
+  {
+    ram_metrics::BandwidthMeasurementConfig config = {(200), {1, 0, 0, 0, 0, 0}};
+    auto info = client.MeasureBandwidth(config);
+    ASSERT_TRUE(info.ok());
+    ASSERT_TRUE(info->result.is_err());
+    EXPECT_EQ(info->result.err(), ZX_ERR_INVALID_ARGS);
+  }
 
   // Invalid channel (above channel 3).
-  config = {(1024 * 1024 * 10), {0, 0, 0, 0, 1}};
-  info = client.MeasureBandwidth(config);
-  ASSERT_TRUE(info.ok());
-  ASSERT_TRUE(info->result.is_err());
-  EXPECT_EQ(info->result.err(), ZX_ERR_INVALID_ARGS);
+  {
+    ram_metrics::BandwidthMeasurementConfig config = {(1024 * 1024 * 10), {0, 0, 0, 0, 1}};
+    auto info = client.MeasureBandwidth(config);
+    ASSERT_TRUE(info.ok());
+    ASSERT_TRUE(info->result.is_err());
+    EXPECT_EQ(info->result.err(), ZX_ERR_INVALID_ARGS);
+  }
 }
 
 TEST_F(AmlRamDeviceTest, ValidRequest) {
