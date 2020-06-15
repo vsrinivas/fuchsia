@@ -8,7 +8,7 @@ use {
         model::{
             error::ModelError,
             events::{
-                dispatcher::{EventDispatcher, ScopeMetadata},
+                dispatcher::{EventDispatcher, EventDispatcherScope},
                 error::EventsError,
                 event::SyncMode,
                 filter::EventFilter,
@@ -35,13 +35,13 @@ use {
 #[derive(Debug)]
 pub struct RoutedEvent {
     pub source_name: CapabilityName,
-    pub scopes: Vec<ScopeMetadata>,
+    pub scopes: Vec<EventDispatcherScope>,
 }
 
 #[derive(Debug)]
 pub struct RouteEventsResult {
     /// Maps from source name to a set of scope monikers
-    mapping: HashMap<CapabilityName, Vec<ScopeMetadata>>,
+    mapping: HashMap<CapabilityName, Vec<EventDispatcherScope>>,
 }
 
 impl RouteEventsResult {
@@ -49,7 +49,7 @@ impl RouteEventsResult {
         Self { mapping: HashMap::new() }
     }
 
-    fn insert(&mut self, source_name: CapabilityName, scope: ScopeMetadata) {
+    fn insert(&mut self, source_name: CapabilityName, scope: EventDispatcherScope) {
         let values = self.mapping.entry(source_name).or_insert(Vec::new());
         if !values.contains(&scope) {
             values.push(scope);
@@ -153,7 +153,7 @@ impl EventRegistry {
                 .into_iter()
                 .map(|event| RoutedEvent {
                     source_name: event.clone(),
-                    scopes: vec![ScopeMetadata::new(AbsoluteMoniker::root()).for_debug()],
+                    scopes: vec![EventDispatcherScope::new(AbsoluteMoniker::root()).for_debug()],
                 })
                 .collect(),
             SubscriptionType::Normal(target_moniker) => {
@@ -288,7 +288,7 @@ impl EventRegistry {
                     }
                     let (source_name, scope_moniker) =
                         Self::route_event(event_decl, &realm).await?;
-                    let scope = ScopeMetadata::new(scope_moniker)
+                    let scope = EventDispatcherScope::new(scope_moniker)
                         .with_filter(EventFilter::new(event_decl.filter.clone()));
                     result.insert(source_name, scope);
                 }
@@ -357,6 +357,7 @@ mod tests {
             AbsoluteMoniker::root(),
             "fuchsia-pkg://root",
             Ok(EventPayload::CapabilityRequested {
+                source_moniker: AbsoluteMoniker::root(),
                 path: "/svc/foo".to_string(),
                 capability: capability_server_end,
             }),

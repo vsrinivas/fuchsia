@@ -101,7 +101,7 @@ async fn maybe_create_event_result(
         Ok(EventPayload::CapabilityReady { path, node, .. }) => {
             Ok(Some(create_capability_ready_payload(path.to_string(), node)?))
         }
-        Ok(EventPayload::CapabilityRequested { path, capability }) => Ok(Some(
+        Ok(EventPayload::CapabilityRequested { path, capability, .. }) => Ok(Some(
             create_capability_requested_payload(path.to_string(), capability.clone()).await,
         )),
         Ok(EventPayload::CapabilityRouted { source, capability_provider, .. }) => {
@@ -124,7 +124,7 @@ async fn maybe_create_event_result(
         }))),
         Err(EventError {
             source,
-            event_error_payload: EventErrorPayload::CapabilityRequested { path },
+            event_error_payload: EventErrorPayload::CapabilityRequested { path, .. },
         }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
             error_payload: Some(fsys::EventErrorPayload::CapabilityRequested(
                 fsys::CapabilityRequestedError { path: Some(path.to_string()) },

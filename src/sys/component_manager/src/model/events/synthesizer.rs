@@ -5,7 +5,7 @@
 use {
     crate::model::{
         error::ModelError,
-        events::{dispatcher::ScopeMetadata, event::Event, filter::EventFilter},
+        events::{dispatcher::EventDispatcherScope, event::Event, filter::EventFilter},
         hooks::{Event as HookEvent, EventType},
         model::Model,
         moniker::AbsoluteMoniker,
@@ -58,7 +58,7 @@ impl EventSynthesizer {
     pub fn spawn_synthesis(
         &self,
         sender: mpsc::UnboundedSender<Event>,
-        events: HashMap<CapabilityName, Vec<ScopeMetadata>>,
+        events: HashMap<CapabilityName, Vec<EventDispatcherScope>>,
     ) {
         SynthesisTask::new(&self, sender, events).spawn()
     }
@@ -70,7 +70,7 @@ struct EventSynthesisInfo {
     provider: Arc<dyn EventSynthesisProvider>,
 
     /// The scopes under which the event will be synthesized.
-    scopes: Vec<ScopeMetadata>,
+    scopes: Vec<EventDispatcherScope>,
 }
 
 struct SynthesisTask {
@@ -90,7 +90,7 @@ impl SynthesisTask {
     pub fn new(
         synthesizer: &EventSynthesizer,
         sender: mpsc::UnboundedSender<Event>,
-        mut events: HashMap<CapabilityName, Vec<ScopeMetadata>>,
+        mut events: HashMap<CapabilityName, Vec<EventDispatcherScope>>,
     ) -> Self {
         let event_infos = synthesizer
             .providers
@@ -198,7 +198,7 @@ mod tests {
     use {
         crate::model::{
             events::{
-                dispatcher::ScopeMetadata,
+                dispatcher::EventDispatcherScope,
                 filter::EventFilter,
                 registry::{EventRegistry, RoutedEvent, SubscriptionOptions},
                 stream::EventStream,
@@ -429,7 +429,7 @@ mod tests {
     ) -> EventStream {
         let scopes = scope_monikers
             .into_iter()
-            .map(|moniker| ScopeMetadata { moniker, filter: EventFilter::debug() })
+            .map(|moniker| EventDispatcherScope { moniker, filter: EventFilter::debug() })
             .collect::<Vec<_>>();
         let events = events
             .into_iter()

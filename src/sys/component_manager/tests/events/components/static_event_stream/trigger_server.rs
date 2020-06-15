@@ -12,7 +12,7 @@ use {
     futures::{channel::mpsc, SinkExt, StreamExt},
     std::sync::Arc,
     test_utils_lib::{
-        events::{CapabilityRequested, CapabilityRequestedError, EventStream},
+        events::{CapabilityRequested, CapabilityRequestedError, Event, EventStream},
         trigger_capability::{TriggerCapability, TriggerReceiver},
     },
 };
@@ -48,6 +48,10 @@ fn run_main_event_stream(
         let mut event_stream = EventStream::new(stream);
         let mut capability_request =
             event_stream.expect_type::<CapabilityRequested>().await.unwrap();
+        assert_eq!(".\\trigger_server:0/trigger_client:0", capability_request.target_moniker());
+        assert_eq!(
+            "fuchsia-pkg://fuchsia.com/events_integration_test#meta/static_event_stream_trigger_client.cm",
+            capability_request.component_url());
         assert_eq!(
             format!("/svc/{}", ftest::TriggerMarker::NAME),
             capability_request.unwrap_payload().path

@@ -339,24 +339,25 @@ async fn capability_requested_event_at_parent() {
         &"/svc/hippo".try_into().unwrap(),
     )
     .await;
+
     let event = match event_stream.next().await {
         Some(Ok(fsys::EventStreamRequest::OnEvent { event, .. })) => event,
         _ => panic!("Event not found"),
     };
 
-    // 'a' is the target and 'a' is receiving the event so the relative moniker
-    // is '.'.
+    // 'b' is the target and 'a' is receiving the event so the relative moniker
+    // is './b:0'.
     assert_matches!(&event,
         fsys::Event {
             descriptor: Some(fsys::ComponentDescriptor {
             moniker: Some(moniker), .. }), ..
-        } if *moniker == ".".to_string() );
+        } if *moniker == "./b:0".to_string() );
 
     assert_matches!(&event,
         fsys::Event {
             descriptor: Some(fsys::ComponentDescriptor {
             component_url: Some(component_url), .. }), ..
-        } if *component_url == "test:///a".to_string() );
+        } if *component_url == "test:///b".to_string() );
 
     assert_matches!(&event,
         fsys::Event {

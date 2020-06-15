@@ -5,7 +5,7 @@
 use {
     crate::model::{
         events::{
-            dispatcher::{EventDispatcher, ScopeMetadata},
+            dispatcher::{EventDispatcher, EventDispatcherScope},
             event::Event,
             registry::SubscriptionOptions,
         },
@@ -39,7 +39,10 @@ impl EventStream {
         Self { options, rx, tx, dispatchers: vec![] }
     }
 
-    pub fn create_dispatcher(&mut self, scopes: Vec<ScopeMetadata>) -> Weak<EventDispatcher> {
+    pub fn create_dispatcher(
+        &mut self,
+        scopes: Vec<EventDispatcherScope>,
+    ) -> Weak<EventDispatcher> {
         let dispatcher =
             Arc::new(EventDispatcher::new(self.options.clone(), scopes, self.tx.clone()));
         self.dispatchers.push(dispatcher.clone());

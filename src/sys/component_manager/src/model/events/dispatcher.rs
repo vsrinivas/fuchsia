@@ -46,7 +46,7 @@ pub struct EventDispatcher {
 
     /// Specifies the realms that this EventDispatcher can dispatch events from and under what
     /// conditions.
-    scopes: Vec<ScopeMetadata>,
+    scopes: Vec<EventDispatcherScope>,
 
     /// An `mpsc::Sender` used to dispatch an event. Note that this
     /// `mpsc::Sender` is wrapped in an Mutex<..> to allow it to be passed along
@@ -57,7 +57,7 @@ pub struct EventDispatcher {
 impl EventDispatcher {
     pub fn new(
         options: SubscriptionOptions,
-        scopes: Vec<ScopeMetadata>,
+        scopes: Vec<EventDispatcherScope>,
         tx: mpsc::UnboundedSender<Event>,
     ) -> Self {
         // TODO(fxb/48360): flatten scope_monikers. There might be monikers that are
@@ -109,22 +109,63 @@ impl EventDispatcher {
         Ok(maybe_responder_rx)
     }
 
-    /// Indicates whether this event can be dispatched to the realm specified by `target`.
-    fn can_send_to_target(&self, event: &ComponentEvent) -> bool {
-        match event.result {
-            Ok(EventPayload::CapabilityRequested { .. })
-            | Err(EventError {
-                event_error_payload: EventErrorPayload::CapabilityRequested { .. },
-                ..
-            }) => match &self.options.subscription_type {
-                SubscriptionType::Debug => true,
-                SubscriptionType::Normal(target) => event.target_moniker == *target,
-            },
-            _ => true,
-        }
+    fn find_scope(&self, event: &ComponentEvent) -> Option<&EventDispatcherScope> {
+        // TODO(fxb/48360): once flattening of monikers is done, we would expect to have a single
+        // moniker here. For now taking the first one and ignoring the rest.
+        // Ensure that the event is coming from a realm within the scope of this dispatcher and
+        // matching the path filter if one exists.
+        self.scopes.iter().filter(|scope| scope.contains(&self.options, &event)).next()
+    }
+}
+
+/// A scope for dispatching and filters on that scope.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct EventDispatcherScope {
+    /// The moniker of the realm
+    pub moniker: AbsoluteMoniker,
+
+    /// Filters for an event in that realm.
+    pub filter: EventFilter,
+}
+
+impl EventDispatcherScope {
+    pub fn new(moniker: AbsoluteMoniker) -> Self {
+        Self { moniker, filter: EventFilter::new(None) }
     }
 
-    fn find_scope(&self, event: &ComponentEvent) -> Option<&ScopeMetadata> {
+    pub fn with_filter(mut self, filter: EventFilter) -> Self {
+        self.filter = filter;
+        self
+    }
+
+    /// For the top-level EventStreams and event strems used in unit tests in the c_m codebase we
+    /// don't take filters into account.
+    pub fn for_debug(mut self) -> Self {
+        self.filter = EventFilter::debug();
+        self
+    }
+
+    /// Given the provided options, indicates whether or not the event is contained
+    /// in this scope.
+    pub fn contains(&self, options: &SubscriptionOptions, event: &ComponentEvent) -> bool {
+        let in_scope = match &event.result {
+            Ok(EventPayload::CapabilityRequested { source_moniker, .. })
+            | Err(EventError {
+                event_error_payload: EventErrorPayload::CapabilityRequested { source_moniker, .. },
+                ..
+            }) => match &options.subscription_type {
+                SubscriptionType::Debug => true,
+                SubscriptionType::Normal(target) => *source_moniker == *target,
+            },
+            _ => self.moniker.contains_in_realm(&event.target_moniker),
+        };
+
+        if !in_scope {
+            return false;
+        }
+
+        // TODO(fsamuel): Creating hashmaps on every lookup is not ideal, but in practice this
+        // likely doesn't happen too often.
         let filterable_fields = match &event.result {
             Ok(EventPayload::CapabilityRequested { path, .. }) => Some(hashmap! {
                 "path".to_string() => DictionaryValue::Str(path.into())
@@ -146,50 +187,7 @@ impl EventDispatcher {
             }),
             _ => None,
         };
-
-        if !self.can_send_to_target(&event) {
-            return None;
-        }
-
-        // TODO(fxb/48360): once flattening of monikers is done, we would expect to have a single
-        // moniker here. For now taking the first one and ignoring the rest.
-        // Ensure that the event is coming from a realm within the scope of this dispatcher and
-        // matching the path filter if one exists.
-        self.scopes
-            .iter()
-            .filter(|scope| {
-                let filter_matches = scope.filter.has_fields(&filterable_fields);
-                filter_matches && scope.moniker.contains_in_realm(&event.target_moniker)
-            })
-            .next()
-    }
-}
-
-/// A scope for dispatching and filters on that scope.
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct ScopeMetadata {
-    /// The moniker of the realm
-    pub moniker: AbsoluteMoniker,
-
-    /// Filters for an event in that realm.
-    pub filter: EventFilter,
-}
-
-impl ScopeMetadata {
-    pub fn new(moniker: AbsoluteMoniker) -> Self {
-        Self { moniker, filter: EventFilter::new(None) }
-    }
-
-    pub fn with_filter(mut self, filter: EventFilter) -> Self {
-        self.filter = filter;
-        self
-    }
-
-    /// For the top-level EventStreams and event strems used in unit tests in the c_m codebase we
-    /// don't take filters into account.
-    pub fn for_debug(mut self) -> Self {
-        self.filter = EventFilter::debug();
-        self
+        self.filter.has_fields(&filterable_fields)
     }
 }
 
@@ -219,21 +217,22 @@ mod tests {
         }
 
         fn create_dispatcher(&self, options: SubscriptionOptions) -> Arc<EventDispatcher> {
-            let scopes = vec![ScopeMetadata::new(AbsoluteMoniker::root()).for_debug()];
+            let scopes = vec![EventDispatcherScope::new(AbsoluteMoniker::root()).for_debug()];
             Arc::new(EventDispatcher::new(options, scopes, self.tx.clone()))
         }
     }
 
     async fn dispatch_capability_requested_event(
         dispatcher: &EventDispatcher,
-        target_moniker: &AbsoluteMoniker,
+        source_moniker: &AbsoluteMoniker,
     ) -> Option<oneshot::Receiver<()>> {
         let (_, capability_server_end) = zx::Channel::create().unwrap();
         let capability_server_end = Arc::new(Mutex::new(Some(capability_server_end)));
         let event = ComponentEvent::new_for_test(
-            target_moniker.clone(),
+            AbsoluteMoniker::root(),
             "fuchsia-pkg://root/a/b/c",
             Ok(EventPayload::CapabilityRequested {
+                source_moniker: source_moniker.clone(),
                 path: "/svc/foo".to_string(),
                 capability: capability_server_end,
             }),
@@ -241,17 +240,17 @@ mod tests {
         dispatcher.dispatch(&event).await.ok().flatten()
     }
 
-    // This test verifies that the CapabilityRequested event can only be sent to a target
-    // that matches its target moniker.
+    // This test verifies that the CapabilityRequested event can only be sent to a source
+    // that matches its source moniker.
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn can_send_capability_requested_to_target() {
-        // Verify we can dispatch to a debug target.
+    async fn can_send_capability_requested_to_source() {
+        // Verify we can dispatch to a debug source.
         // Sync events get a responder if the message was dispatched.
         let options = SubscriptionOptions::new(SubscriptionType::Debug, SyncMode::Async);
         let mut factory = EventDispatcherFactory::new();
         let dispatcher = factory.create_dispatcher(options);
-        let target_moniker = vec!["root:0", "a:0", "b:0", "c:0"].into();
-        assert!(dispatch_capability_requested_event(&dispatcher, &target_moniker).await.is_none());
+        let source_moniker = vec!["root:0", "a:0", "b:0", "c:0"].into();
+        assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_none());
         assert_matches!(
             factory.next_event().await,
             Some(ComponentEvent { result: Ok(EventPayload::CapabilityRequested { .. }), .. })
@@ -263,7 +262,7 @@ mod tests {
             SyncMode::Sync,
         );
         let dispatcher = factory.create_dispatcher(options);
-        assert!(dispatch_capability_requested_event(&dispatcher, &target_moniker).await.is_none());
+        assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_none());
 
         // Verify that we cannot dispatch the CapabilityRequested event to the root:0/a:0 component.
         let options = SubscriptionOptions::new(
@@ -271,7 +270,7 @@ mod tests {
             SyncMode::Sync,
         );
         let dispatcher = factory.create_dispatcher(options);
-        assert!(dispatch_capability_requested_event(&dispatcher, &target_moniker).await.is_none());
+        assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_none());
 
         // Verify that we cannot dispatch the CapabilityRequested event to the root:0/a:0/b:0 component.
         let options = SubscriptionOptions::new(
@@ -279,7 +278,7 @@ mod tests {
             SyncMode::Sync,
         );
         let dispatcher = factory.create_dispatcher(options);
-        assert!(dispatch_capability_requested_event(&dispatcher, &target_moniker).await.is_none());
+        assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_none());
 
         // Verify that we CAN dispatch the CapabilityRequested event to the root:0/a:0/b:0/c:0 component.
         let options = SubscriptionOptions::new(
@@ -287,7 +286,7 @@ mod tests {
             SyncMode::Sync,
         );
         let dispatcher = factory.create_dispatcher(options);
-        assert!(dispatch_capability_requested_event(&dispatcher, &target_moniker).await.is_some());
+        assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_some());
         assert_matches!(
             factory.next_event().await,
             Some(ComponentEvent { result: Ok(EventPayload::CapabilityRequested { .. }), .. })
@@ -299,6 +298,6 @@ mod tests {
             SyncMode::Sync,
         );
         let dispatcher = factory.create_dispatcher(options);
-        assert!(dispatch_capability_requested_event(&dispatcher, &target_moniker).await.is_none());
+        assert!(dispatch_capability_requested_event(&dispatcher, &source_moniker).await.is_none());
     }
 }

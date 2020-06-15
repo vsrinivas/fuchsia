@@ -171,8 +171,9 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
             .await?;
 
         let event = Event::new(
-            &source_realm,
+            &self.target_realm.upgrade()?,
             Ok(EventPayload::CapabilityRequested {
+                source_moniker: source_realm.abs_moniker.clone(),
                 path: path.as_path().display().to_string(),
                 capability: capability.clone(),
             }),
