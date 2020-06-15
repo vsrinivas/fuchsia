@@ -297,9 +297,8 @@ void MultipleDeviceTestCase::SendUnbindReply(const zx::channel& remote, zx_txid_
           fdm::DeviceController::UnbindResponse::PrimarySize)));
   resp._hdr.txid = txid;
   resp.result = std::move(result);
-  auto linearize_result = fidl::Linearize(&resp, fidl::BytePart(write_bytes, kWriteAllocSize));
-  ASSERT_OK(linearize_result.status);
-  auto encode_result = fidl::Encode(std::move(linearize_result.message));
+  auto encode_result =
+      fidl::LinearizeAndEncode(&resp, fidl::BytePart(write_bytes, kWriteAllocSize));
   ASSERT_OK(encode_result.status);
   auto msg = encode_result.message.ToAnyMessage();
   ASSERT_OK(msg.Write(remote.get(), 0));
@@ -354,9 +353,8 @@ void MultipleDeviceTestCase::SendRemoveReply(const zx::channel& remote, zx_txid_
                          fdm::DeviceController::CompleteRemovalResponse::PrimarySize)));
   resp._hdr.txid = txid;
   resp.result = std::move(result);
-  auto linearize_result = fidl::Linearize(&resp, fidl::BytePart(write_bytes, kWriteAllocSize));
-  ASSERT_OK(linearize_result.status);
-  auto encode_result = fidl::Encode(std::move(linearize_result.message));
+  auto encode_result =
+      fidl::LinearizeAndEncode(&resp, fidl::BytePart(write_bytes, kWriteAllocSize));
   ASSERT_OK(encode_result.status);
   auto msg = encode_result.message.ToAnyMessage();
   ASSERT_OK(msg.Write(remote.get(), 0));

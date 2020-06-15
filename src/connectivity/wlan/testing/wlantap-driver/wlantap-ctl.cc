@@ -59,15 +59,19 @@ struct WlantapCtl : wlantap::WlantapCtl::Interface {
       return completer.Reply(status);
     }
 
-    // Convert to HLCPP by transiting through fidl::Message.
+    // Convert to HLCPP by transiting through fidl bytes.
     auto phy_config = ::fuchsia::wlan::tap::WlantapPhyConfig::New();
     {
       fidl::Buffer<wlantap::WlantapPhyConfig> buffer;
-      auto linearize_result = fidl::Linearize(&config, buffer.view());
-      if ((status = linearize_result.status) != ZX_OK) {
+      auto encode_result = fidl::LinearizeAndEncode(&config, buffer.view());
+      if ((status = encode_result.status) != ZX_OK) {
         return completer.Reply(status);
       }
-      fidl::Decoder dec(fidl::Message(linearize_result.message.Release(), fidl::HandlePart()));
+      auto decode_result = fidl::Decode(std::move(encode_result.message));
+      if ((status = decode_result.status) != ZX_OK) {
+        return completer.Reply(status);
+      }
+      fidl::Decoder dec(fidl::Message(decode_result.message.Release(), fidl::HandlePart()));
       ::fuchsia::wlan::tap::WlantapPhyConfig::Decode(&dec, phy_config.get(), /* offset = */ 0);
     }
 

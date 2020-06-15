@@ -210,8 +210,9 @@ TEST(MagicNumberTest, EventRead) {
   // Set an incompatible magic number
   reinterpret_cast<fidl_message_header_t*>(&_response)->magic_number = 0;
   _response.value = fidl::unowned_str(s);
-  auto linearize_result = fidl::Linearize(&_response, fidl::BytePart(write_bytes, kWriteAllocSize));
-  ASSERT_EQ(fidl::Write(zx::unowned_channel(h1), std::move(linearize_result.message)), ZX_OK);
+  auto encode_result =
+      fidl::LinearizeAndEncode(&_response, fidl::BytePart(write_bytes, kWriteAllocSize));
+  ASSERT_EQ(fidl::Write(zx::unowned_channel(h1), std::move(encode_result.message)), ZX_OK);
 
   test::Frobinator::EventHandlers handlers;
   handlers.hrob = [&](fidl::StringView value) -> zx_status_t {

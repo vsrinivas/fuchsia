@@ -65,24 +65,23 @@ class LinearSnap {
  private:
   explicit LinearSnap(FidlType&& to_move_in) {
     maybe_linear_ = std::move(to_move_in);
-    fidl::LinearizeResult<FidlType> linearize_result;
+    fidl::EncodeResult<FidlType> encode_result;
     if constexpr (FidlType::HasPointer) {
       fidl::BytePart linear_part(&linear_data_[0], kMaxDataSize);
       // If this path is taken, this is the last time maybe_linear_ is really used, and there won't
       // be any more handles in maybe_linear_ from this call onward.
-      linearize_result = fidl::Linearize(&maybe_linear_, linear_part);
-      ZX_ASSERT(linearize_result.status == ZX_OK);
-      ZX_ASSERT(!linearize_result.error);
+      encode_result = fidl::LinearizeAndEncode(&maybe_linear_, linear_part);
+      ZX_ASSERT(encode_result.status == ZX_OK);
+      ZX_ASSERT(!encode_result.error);
     } else {
       // In this path, the handles end up back in maybe_linear_ after Decode() below.
-      linearize_result =
+      auto linearize_result =
           fidl::LinearizeResult(ZX_OK, nullptr,
                                 fidl::DecodedMessage<FidlType>(fidl::BytePart(
                                     reinterpret_cast<uint8_t*>(&maybe_linear_),
                                     FidlAlign(sizeof(FidlType)), FidlAlign(sizeof(FidlType)))));
+      encode_result = fidl::Encode(std::move(linearize_result.message));
     }
-    // Always in-place.  Can be a NOP if !NeedsEncodeDecode<FidlType>::value.
-    fidl::EncodeResult<FidlType> encode_result = fidl::Encode(std::move(linearize_result.message));
     ZX_ASSERT(encode_result.status == ZX_OK);
     ZX_ASSERT(!encode_result.error);
     fidl::EncodedMessage<FidlType> encoded_message = std::move(encode_result.message);

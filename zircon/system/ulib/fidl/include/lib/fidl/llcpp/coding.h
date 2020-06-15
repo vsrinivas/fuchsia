@@ -156,27 +156,6 @@ EncodeResult<FidlType> Encode(DecodedMessage<FidlType> msg) {
   return result;
 }
 
-// Linearizes the contents of the message starting at |value|, into a continuous |bytes| buffer.
-// Upon success, the handles in the source messages will be moved into |bytes|.
-// the remaining contents in the source messages are otherwise untouched.
-// In case of any failure, the handles from |value| will stay intact.
-template <typename FidlType>
-LinearizeResult<FidlType> Linearize(FidlType* value, BytePart bytes) {
-  static_assert(IsFidlType<FidlType>::value, "FIDL type required");
-  static_assert(FidlType::Type != nullptr, "FidlType should have a coding table");
-  static_assert(FidlType::HasPointer, "Only types with out-of-line members need linearization");
-  LinearizeResult<FidlType> result;
-  uint32_t num_bytes_actual;
-  result.status = fidl_linearize(FidlType::Type, value, bytes.data(), bytes.capacity(),
-                                 &num_bytes_actual, &result.error);
-  if (result.status != ZX_OK) {
-    return result;
-  }
-  bytes.set_actual(num_bytes_actual);
-  result.message = DecodedMessage<FidlType>(std::move(bytes));
-  return result;
-}
-
 template <typename FidlType>
 EncodeResult<FidlType> LinearizeAndEncode(FidlType* value, BytePart bytes) {
   static_assert(IsFidlType<FidlType>::value, "FIDL type required");

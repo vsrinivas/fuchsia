@@ -50,10 +50,7 @@ TEST(InlineXUnionInStruct, Success) {
     input.after = fidl::unowned_str(after);
     std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
     fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
-    auto linearize_result = fidl::Linearize(&input, std::move(bytes));
-    ASSERT_STREQ(linearize_result.error, nullptr);
-    ASSERT_EQ(linearize_result.status, ZX_OK);
-    auto encode_result = fidl::Encode(std::move(linearize_result.message));
+    auto encode_result = fidl::LinearizeAndEncode(&input, std::move(bytes));
     ASSERT_STREQ(encode_result.error, nullptr);
     ASSERT_EQ(encode_result.status, ZX_OK);
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encode_result.message.bytes().begin(),
@@ -108,10 +105,7 @@ TEST(PrimitiveInXUnionInStruct, Success) {
     input.after = fidl::unowned_str(after);
     std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
     fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
-    auto linearize_result = fidl::Linearize(&input, std::move(bytes));
-    ASSERT_STREQ(linearize_result.error, nullptr);
-    ASSERT_EQ(linearize_result.status, ZX_OK);
-    auto encode_result = fidl::Encode(std::move(linearize_result.message));
+    auto encode_result = fidl::LinearizeAndEncode(&input, std::move(bytes));
     ASSERT_STREQ(encode_result.error, nullptr);
     ASSERT_EQ(encode_result.status, ZX_OK);
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encode_result.message.bytes().begin(),
@@ -144,9 +138,9 @@ TEST(InlineXUnionInStruct, FailToEncodeAbsentXUnion) {
   input.after = fidl::unowned_str(empty_str);
   std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
   fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
-  auto linearize_result = fidl::Linearize(&input, std::move(bytes));
-  EXPECT_STREQ(linearize_result.error, "non-nullable xunion is absent");
-  EXPECT_EQ(linearize_result.status, ZX_ERR_INVALID_ARGS);
+  auto encode_result = fidl::LinearizeAndEncode(&input, std::move(bytes));
+  EXPECT_STREQ(encode_result.error, "non-nullable xunion is absent");
+  EXPECT_EQ(encode_result.status, ZX_ERR_INVALID_ARGS);
 }
 TEST(InlineXUnionInStruct, FailToDecodeAbsentXUnion) {
   // clang-format off
@@ -235,10 +229,7 @@ TEST(ComplexTable, SuccessEmpty) {
     auto input = builder.build();
     std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
     fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
-    auto linearize_result = fidl::Linearize(&input, std::move(bytes));
-    ASSERT_STREQ(linearize_result.error, nullptr);
-    ASSERT_EQ(linearize_result.status, ZX_OK);
-    auto encode_result = fidl::Encode(std::move(linearize_result.message));
+    auto encode_result = fidl::LinearizeAndEncode(&input, std::move(bytes));
     ASSERT_STREQ(encode_result.error, nullptr);
     ASSERT_EQ(encode_result.status, ZX_OK);
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encode_result.message.bytes().begin(),
@@ -343,10 +334,7 @@ TEST(ComplexTable, Success) {
     auto input = builder.build();
     std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
     fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
-    auto linearize_result = fidl::Linearize(&input, std::move(bytes));
-    ASSERT_STREQ(linearize_result.error, nullptr);
-    ASSERT_EQ(linearize_result.status, ZX_OK);
-    auto encode_result = fidl::Encode(std::move(linearize_result.message));
+    auto encode_result = fidl::LinearizeAndEncode(&input, std::move(bytes));
     ASSERT_STREQ(encode_result.error, nullptr);
     ASSERT_EQ(encode_result.status, ZX_OK);
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encode_result.message.bytes().begin(),

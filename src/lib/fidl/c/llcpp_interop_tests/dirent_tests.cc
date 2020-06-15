@@ -129,11 +129,15 @@ class Server {
     response._hdr.txid = decoded.message()->_hdr.txid;
     response.dirents = golden_dirents();
     fidl::Buffer<gen::DirEntTestInterface::ReadDirResponse> buffer;
-    auto result = fidl::Linearize(&response, buffer.view());
-    if (result.status != ZX_OK) {
-      return result.status;
+    auto encode_result = fidl::LinearizeAndEncode(&response, buffer.view());
+    if (encode_result.status != ZX_OK) {
+      return encode_result.status;
     }
-    return Reply(txn, std::move(result.message));
+    auto decode_result = fidl::Decode(std::move(encode_result.message));
+    if (decode_result.status != ZX_OK) {
+      return decode_result.status;
+    }
+    return Reply(txn, std::move(decode_result.message));
   }
 
   zx_status_t DoConsumeDirectories(
@@ -363,12 +367,17 @@ class InPlaceServer : public ServerBase {
     gen::DirEntTestInterface::ReadDirResponse response = {};
     response.dirents = golden_dirents();
     fidl::Buffer<gen::DirEntTestInterface::ReadDirResponse> buffer;
-    auto result = fidl::Linearize(&response, buffer.view());
-    if (result.status != ZX_OK) {
-      txn.Close(result.status);
+    auto encode_result = fidl::LinearizeAndEncode(&response, buffer.view());
+    if (encode_result.status != ZX_OK) {
+      txn.Close(encode_result.status);
       return;
     }
-    txn.Reply(std::move(result.message));
+    auto decode_result = fidl::Decode(std::move(encode_result.message));
+    if (decode_result.status != ZX_OK) {
+      txn.Close(decode_result.status);
+      return;
+    }
+    txn.Reply(std::move(decode_result.message));
   }
 
   // |ConsumeDirectories| has zero number of arguments in its return value, hence only the
@@ -784,10 +793,12 @@ TEST(DirentServerTest, InPlaceSendOnDirents) {
   auto buffer = std::make_unique<fidl::Buffer<gen::DirEntTestInterface::OnDirentsResponse>>();
   ::gen::DirEntTestInterface::OnDirentsResponse event = {};
   event.dirents = fidl::unowned_vec(dirents);
-  auto linearize_result = ::fidl::Linearize(&event, buffer->view());
-  ASSERT_OK(linearize_result.status, "%s", linearize_result.error);
+  auto encode_result = ::fidl::LinearizeAndEncode(&event, buffer->view());
+  ASSERT_OK(encode_result.status, "%s", encode_result.error);
+  auto decode_result = ::fidl::Decode(std::move(encode_result.message));
+  ASSERT_OK(decode_result.status, "%s", decode_result.error);
   auto status = gen::DirEntTestInterface::SendOnDirentsEvent(zx::unowned_channel(server_chan),
-                                                             std::move(linearize_result.message));
+                                                             std::move(decode_result.message));
   ASSERT_OK(status);
   ASSERT_NO_FATAL_FAILURES(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
 }
