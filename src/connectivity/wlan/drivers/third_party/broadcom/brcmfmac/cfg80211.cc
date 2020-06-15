@@ -1505,6 +1505,8 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
   err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, join_params_size, &fw_err);
   if (err != ZX_OK) {
     BRCMF_ERR("join failed (%d)", err);
+  } else {
+    cfg->connect_timer->Start(BRCMF_CONNECT_TIMER_DUR_MS);
   }
 
 fail:
@@ -1601,6 +1603,24 @@ static void cfg80211_signal_ind(net_device* ndev) {
     brcmf_cfg80211_info* cfg = ifp->drvr->config;
     cfg->signal_report_timer->Stop();
   }
+}
+
+static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struct net_device* ndev,
+                                          bool completed);
+
+static void brcmf_connect_timeout_worker(WorkItem* work) {
+  struct brcmf_cfg80211_info* cfg =
+      containerof(work, struct brcmf_cfg80211_info, connect_timeout_work);
+  struct net_device* ndev = cfg_to_ndev(cfg);
+
+  brcmf_bss_connect_done(cfg, ndev, false);
+}
+
+static void brcmf_connect_timeout(struct brcmf_cfg80211_info* cfg) {
+  cfg->pub->irq_callback_lock.lock();
+  BRCMF_DBG(TRACE, "Enter");
+  WorkQueue::ScheduleDefault(&cfg->connect_timeout_work);
+  cfg->pub->irq_callback_lock.unlock();
 }
 
 static void brcmf_signal_report_worker(WorkItem* work) {
@@ -4051,6 +4071,9 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
   BRCMF_DBG(TRACE, "Enter");
 
   if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
+    // Stop connect timer no matter connect success or not, this timer only timeout when nothing is
+    // heard from firmware.
+    cfg->connect_timer->Stop();
     if (completed) {
       brcmf_get_assoc_ies(cfg, ifp);
       brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
@@ -4078,6 +4101,7 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
     brcmf_return_assoc_result(
         ndev, completed ? WLAN_ASSOC_RESULT_SUCCESS : WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   }
+
   BRCMF_DBG(TRACE, "Exit");
   return ZX_OK;
 }
@@ -4544,6 +4568,10 @@ static zx_status_t wl_init_priv(struct brcmf_cfg80211_info* cfg) {
   cfg->ap_start_timer =
       new Timer(cfg->pub->dispatcher, std::bind(brcmf_ap_start_timeout, cfg), false);
   cfg->ap_start_timeout_work = WorkItem(brcmf_ap_start_timeout_worker);
+  // Initialize the connect timer
+  cfg->connect_timer = new Timer(cfg->pub->dispatcher, std::bind(brcmf_connect_timeout, cfg), false);
+  cfg->connect_timeout_work = WorkItem(brcmf_connect_timeout_worker);
+
   cfg->vif_disabled = {};
   return err;
 }
@@ -4848,7 +4876,6 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
   cfg->pub = drvr;
   init_vif_event(&cfg->vif_event);
   list_initialize(&cfg->vif_list);
-
   err = brcmf_alloc_vif(cfg, WLAN_INFO_MAC_ROLE_CLIENT, &vif);
   if (err != ZX_OK) {
     goto cfg80211_info_out;

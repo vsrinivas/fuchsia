@@ -51,6 +51,7 @@
 #define BRCMF_DISCONNECT_TIMER_DUR_MS     ZX_MSEC(50) /* disconnect timer dur */
 #define BRCMF_SIGNAL_REPORT_TIMER_DUR_MS  ZX_MSEC(1000) /* Signal report dur */
 #define BRCMF_AP_START_TIMER_DUR_MS       ZX_MSEC(1000) /* AP start timer dur */
+#define BRCMF_CONNECT_TIMER_DUR_MS        ZX_MSEC(1500) /*connect timer dur*/
 
 #define WL_ESCAN_ACTION_START      1
 #define WL_ESCAN_ACTION_CONTINUE   2
@@ -359,6 +360,8 @@ enum brcmf_disconnect_mode { BRCMF_DISCONNECT_DEAUTH, BRCMF_DISCONNECT_DISASSOC 
  * @disconnect_mode: indicates type of disconnect requested (BRCMF_DISCONNECT_*)
  * @disconnect_timer: timer for disconnection completion.
  * @disconnect_timeout_work: associated work structure for disassociation timer.
+ * @connect_timer: timer for firmware response of connect.
+ * @connect_timeout_work: associated work structure for association timer.
  * @vif_list: linked list of vif instances.
  * @vif_cnt: number of vif instances.
  * @vif_event: vif event signalling.
@@ -396,6 +399,8 @@ struct brcmf_cfg80211_info {
   uint8_t disconnect_mode;
   Timer* disconnect_timer;
   WorkItem disconnect_timeout_work;
+  Timer* connect_timer;
+  WorkItem connect_timeout_work;
   struct list_node vif_list;
   struct brcmf_cfg80211_vif_event vif_event;
   uint8_t vif_event_pending_action;
