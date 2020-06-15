@@ -169,3 +169,12 @@ package("fidl_llcpp_builder_test") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":fidl_llcpp_builder_test",
+    ":fidl_llcpp_conformance_test",
+    ":fidl_llcpp_types_test",
+  ]
+}
