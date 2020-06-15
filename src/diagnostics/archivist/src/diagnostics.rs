@@ -67,62 +67,95 @@ pub(crate) fn set_group_stats(stats: &EventFileGroupStatsMap) {
 pub struct ArchiveAccessorStats {
     /// Inspect node for tracking usage/health metrics of diagnostics platform.
     pub archive_accessor_node: fuchsia_inspect::Node,
+
+    /// Metrics aggregated across all client connections.
+    pub global_stats: Arc<ArchiveAccessorStatsGlobal>,
+}
+
+pub struct ArchiveAccessorStatsGlobal {
     /// Property tracking number of opening connections to any archive_accessor instance.
-    pub global_archive_accessor_connections_opened: fuchsia_inspect::UintProperty,
+    pub archive_accessor_connections_opened: fuchsia_inspect::UintProperty,
     /// Property tracking number of closing connections to any archive_accessor instance.
-    pub global_archive_accessor_connections_closed: fuchsia_inspect::UintProperty,
+    pub archive_accessor_connections_closed: fuchsia_inspect::UintProperty,
     /// Number of requests to a single ArchiveAccessor to StreamDiagnostics, starting a
     /// new inspect ReaderServer.
-    pub global_stream_diagnostics_requests: fuchsia_inspect::UintProperty,
+    pub stream_diagnostics_requests: fuchsia_inspect::UintProperty,
 
     /// Number of inspect ReaderServers created in response to an inspect StreamDiagnostics
     /// client request.
-    pub global_inspect_reader_servers_constructed: Arc<fuchsia_inspect::UintProperty>,
+    pub inspect_reader_servers_constructed: fuchsia_inspect::UintProperty,
     /// Number of inspect ReaderServers destroyed in response to falling out of scope.
-    pub global_inspect_reader_servers_destroyed: Arc<fuchsia_inspect::UintProperty>,
+    pub inspect_reader_servers_destroyed: fuchsia_inspect::UintProperty,
     /// Property tracking number of opening connections to any inspect batch iterator instance.
-    pub global_inspect_batch_iterator_connections_opened: Arc<fuchsia_inspect::UintProperty>,
+    pub inspect_batch_iterator_connections_opened: fuchsia_inspect::UintProperty,
     /// Property tracking number of closing connections to any inspect batch iterator instance.
-    pub global_inspect_batch_iterator_connections_closed: Arc<fuchsia_inspect::UintProperty>,
+    pub inspect_batch_iterator_connections_closed: fuchsia_inspect::UintProperty,
     /// Property tracking number of times a future to retrieve diagnostics data for a component
     /// timed out.
-    pub global_component_timeouts_count: Arc<fuchsia_inspect::UintProperty>,
+    pub component_timeouts_count: fuchsia_inspect::UintProperty,
+
+    /// Number of times "GetNext" was called
+    pub batch_iterator_get_next_requests: fuchsia_inspect::UintProperty,
+    /// Number of times a "GetNext" response was sent
+    pub batch_iterator_get_next_responses: fuchsia_inspect::UintProperty,
+    /// Number of times "GetNext" resulted in an error
+    pub batch_iterator_get_next_errors: fuchsia_inspect::UintProperty,
+    /// Number of items returned in batches from "GetNext"
+    pub batch_iterator_get_next_result_count: fuchsia_inspect::UintProperty,
+    /// Number of items returned in batches from "GetNext" that contained errors
+    pub batch_iterator_get_next_result_errors: fuchsia_inspect::UintProperty,
 }
 
 impl ArchiveAccessorStats {
     pub fn new(archive_accessor_node: fuchsia_inspect::Node) -> Self {
-        let global_archive_accessor_connections_opened =
+        let archive_accessor_connections_opened =
             archive_accessor_node.create_uint("archive_accessor_connections_opened", 0);
-        let global_archive_accessor_connections_closed =
+        let archive_accessor_connections_closed =
             archive_accessor_node.create_uint("archive_accessor_connections_closed", 0);
 
-        let global_stream_diagnostics_requests =
+        let stream_diagnostics_requests =
             archive_accessor_node.create_uint("stream_diagnostics_requests", 0);
 
-        let global_inspect_reader_servers_constructed =
-            Arc::new(archive_accessor_node.create_uint("inspect_reader_servers_constructed", 0));
-        let global_inspect_reader_servers_destroyed =
-            Arc::new(archive_accessor_node.create_uint("inspect_reader_servers_destroyed", 0));
+        let inspect_reader_servers_constructed =
+            archive_accessor_node.create_uint("inspect_reader_servers_constructed", 0);
+        let inspect_reader_servers_destroyed =
+            archive_accessor_node.create_uint("inspect_reader_servers_destroyed", 0);
 
-        let global_inspect_batch_iterator_connections_opened = Arc::new(
-            archive_accessor_node.create_uint("inspect_batch_iterator_connections_opened", 0),
-        );
-        let global_inspect_batch_iterator_connections_closed = Arc::new(
-            archive_accessor_node.create_uint("inspect_batch_iterator_connections_closed", 0),
-        );
-        let global_component_timeouts_count =
-            Arc::new(archive_accessor_node.create_uint("component_timeouts_count", 0));
+        let inspect_batch_iterator_connections_opened =
+            archive_accessor_node.create_uint("inspect_batch_iterator_connections_opened", 0);
+        let inspect_batch_iterator_connections_closed =
+            archive_accessor_node.create_uint("inspect_batch_iterator_connections_closed", 0);
+        let component_timeouts_count =
+            archive_accessor_node.create_uint("component_timeouts_count", 0);
+
+        let batch_iterator_get_next_requests =
+            archive_accessor_node.create_uint("batch_iterator_get_next_requests", 0);
+        let batch_iterator_get_next_responses =
+            archive_accessor_node.create_uint("batch_iterator_get_next_responses", 0);
+        let batch_iterator_get_next_errors =
+            archive_accessor_node.create_uint("batch_iterator_get_next_errors", 0);
+        let batch_iterator_get_next_result_count =
+            archive_accessor_node.create_uint("batch_iterator_get_next_result_count", 0);
+        let batch_iterator_get_next_result_errors =
+            archive_accessor_node.create_uint("batch_iterator_get_next_result_errors", 0);
 
         ArchiveAccessorStats {
             archive_accessor_node,
-            global_archive_accessor_connections_opened,
-            global_archive_accessor_connections_closed,
-            global_stream_diagnostics_requests,
-            global_inspect_reader_servers_constructed,
-            global_inspect_reader_servers_destroyed,
-            global_inspect_batch_iterator_connections_opened,
-            global_inspect_batch_iterator_connections_closed,
-            global_component_timeouts_count,
+            global_stats: Arc::new(ArchiveAccessorStatsGlobal {
+                archive_accessor_connections_opened,
+                archive_accessor_connections_closed,
+                stream_diagnostics_requests,
+                inspect_reader_servers_constructed,
+                inspect_reader_servers_destroyed,
+                inspect_batch_iterator_connections_opened,
+                inspect_batch_iterator_connections_closed,
+                component_timeouts_count,
+                batch_iterator_get_next_requests,
+                batch_iterator_get_next_responses,
+                batch_iterator_get_next_errors,
+                batch_iterator_get_next_result_count,
+                batch_iterator_get_next_result_errors,
+            }),
         }
     }
 }
@@ -131,19 +164,8 @@ pub struct InspectReaderServerStats {
     /// Inspect node for tracking usage/health metrics of a single connection to a batch iterator.
     _batch_iterator_connection_node: fuchsia_inspect::Node,
 
-    /// Number of inspect ReaderServers created in response to an inspect StreamDiagnostics
-    /// client request.
-    pub global_inspect_reader_servers_constructed: Arc<fuchsia_inspect::UintProperty>,
-    /// Number of inspect ReaderServers destroyed in response to falling out of scope.
-    pub global_inspect_reader_servers_destroyed: Arc<fuchsia_inspect::UintProperty>,
-
-    /// Property tracking number of opening connections to any inspect batch iterator instance.
-    pub global_inspect_batch_iterator_connections_opened: Arc<fuchsia_inspect::UintProperty>,
-    /// Property tracking number of closing connections to any inspect batch iterator instance.
-    pub global_inspect_batch_iterator_connections_closed: Arc<fuchsia_inspect::UintProperty>,
-    /// Property tracking number of times a future to retrieve diagnostics data for a component
-    /// timed out.
-    pub global_component_timeouts_count: Arc<fuchsia_inspect::UintProperty>,
+    /// Global stats for the accessor itself.
+    pub global_stats: Arc<ArchiveAccessorStatsGlobal>,
 
     /// Property tracking number of requests to the BatchIterator instance this struct is tracking.
     pub batch_iterator_get_next_requests: fuchsia_inspect::UintProperty,
@@ -168,21 +190,7 @@ impl InspectReaderServerStats {
             batch_iterator_connection_node.create_uint("batch_iterator_terminal_responses", 0);
         InspectReaderServerStats {
             _batch_iterator_connection_node: batch_iterator_connection_node,
-            global_inspect_reader_servers_constructed: archive_accessor_stats
-                .global_inspect_reader_servers_constructed
-                .clone(),
-            global_inspect_reader_servers_destroyed: archive_accessor_stats
-                .global_inspect_reader_servers_destroyed
-                .clone(),
-            global_inspect_batch_iterator_connections_opened: archive_accessor_stats
-                .global_inspect_batch_iterator_connections_opened
-                .clone(),
-            global_inspect_batch_iterator_connections_closed: archive_accessor_stats
-                .global_inspect_batch_iterator_connections_closed
-                .clone(),
-            global_component_timeouts_count: archive_accessor_stats
-                .global_component_timeouts_count
-                .clone(),
+            global_stats: archive_accessor_stats.global_stats.clone(),
             batch_iterator_get_next_requests,
             batch_iterator_get_next_responses,
             batch_iterator_terminal_responses,

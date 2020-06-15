@@ -13,7 +13,7 @@ use {
     },
     anyhow::{format_err, Error},
     fidl::endpoints::{RequestStream, ServerEnd},
-    fidl_fuchsia_diagnostics::{self, BatchIteratorMarker, BatchIteratorRequestStream, Selector},
+    fidl_fuchsia_diagnostics::{self, BatchIteratorMarker, BatchIteratorRequestStream},
     fidl_fuchsia_mem, fuchsia_async as fasync,
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_inspect::{reader::PartialNodeHierarchy, NumericProperty},
@@ -108,7 +108,7 @@ fn convert_snapshot_to_node_hierarchy(snapshot: ReadSnapshot) -> Result<NodeHier
 
 impl Drop for ReaderServer {
     fn drop(&mut self) {
-        self.inspect_reader_server_stats.global_inspect_reader_servers_destroyed.add(1);
+        self.inspect_reader_server_stats.global_stats.inspect_reader_servers_destroyed.add(1);
     }
 }
 
@@ -118,7 +118,7 @@ impl ReaderServer {
         configured_selectors: Option<Vec<fidl_fuchsia_diagnostics::Selector>>,
         inspect_reader_server_stats: Arc<diagnostics::InspectReaderServerStats>,
     ) -> Self {
-        inspect_reader_server_stats.global_inspect_reader_servers_constructed.add(1);
+        inspect_reader_server_stats.global_stats.inspect_reader_servers_constructed.add(1);
         ReaderServer {
             inspect_repo,
             configured_selectors: configured_selectors.map(|selectors| {
@@ -242,17 +242,17 @@ impl ReaderServer {
     /// diagnostics directory, individual snapshots of hierarchies can fail and the transformation
     /// to a PopulatedInspectDataContainer will still succeed.
     async fn pump_inspect_data(
+        &self,
         inspect_batch: Vec<UnpopulatedInspectDataContainer>,
-        inspect_component_timeout_property: Arc<fuchsia_inspect::UintProperty>,
     ) -> Vec<PopulatedInspectDataContainer> {
         join_all(inspect_batch.into_iter().map(move |inspect_data_packet| {
             let attempted_relative_moniker = inspect_data_packet.relative_moniker.clone();
             let attempted_inspect_matcher = inspect_data_packet.inspect_matcher.clone();
-            let cloned_property = inspect_component_timeout_property.clone();
+            let global_stats = self.inspect_reader_server_stats.global_stats.clone();
             PopulatedInspectDataContainer::from(inspect_data_packet).on_timeout(
                 PER_COMPONENT_ASYNC_TIMEOUT_SECONDS.seconds().after_now(),
                 move || {
-                    cloned_property.add(1);
+                    global_stats.component_timeouts_count.add(1);
                     let error_string = format!(
                         "Exceeded per-component time limit for fetching diagnostics data: {:?}",
                         attempted_relative_moniker
@@ -282,7 +282,7 @@ impl ReaderServer {
     // TODO(4601): Error entries should still be included, but with a custom hierarchy
     //             that makes it clear to clients that snapshotting failed.
     pub fn filter_snapshots(
-        configured_selectors: &Option<Vec<Arc<Selector>>>,
+        &self,
         pumped_inspect_data: Vec<PopulatedInspectDataContainer>,
     ) -> Vec<(Moniker, NodeHierarchyData)> {
         // In case we encounter multiple PopulatedDataContainers with the same moniker we don't
@@ -302,7 +302,7 @@ impl ReaderServer {
                 .collect::<Vec<String>>()
                 .join("/");
 
-            if let Some(configured_selectors) = configured_selectors {
+            if let Some(configured_selectors) = &self.configured_selectors {
                 let configured_matchers =
                     client_selector_matches.entry(sanitized_moniker.clone()).or_insert_with(|| {
                         let matching_selectors =
@@ -441,6 +441,14 @@ impl ReaderServer {
         while let Some(req) = stream.try_next().await? {
             match req {
                 fidl_fuchsia_diagnostics::BatchIteratorRequest::GetNext { responder } => {
+                    self.inspect_reader_server_stats
+                        .global_stats
+                        .batch_iterator_get_next_requests
+                        .add(1);
+                    self.inspect_reader_server_stats
+                        .global_stats
+                        .batch_iterator_get_next_responses
+                        .add(1);
                     self.inspect_reader_server_stats.batch_iterator_get_next_requests.add(1);
                     self.inspect_reader_server_stats.batch_iterator_get_next_responses.add(1);
                     self.inspect_reader_server_stats.batch_iterator_terminal_responses.add(1);
@@ -512,6 +520,10 @@ impl ReaderServer {
         while let Some(req) = stream.try_next().await? {
             match req {
                 fidl_fuchsia_diagnostics::BatchIteratorRequest::GetNext { responder } => {
+                    self.inspect_reader_server_stats
+                        .global_stats
+                        .batch_iterator_get_next_requests
+                        .add(1);
                     self.inspect_reader_server_stats.batch_iterator_get_next_requests.add(1);
                     loop {
                         // Only retrieve new data from the repository if the overflow bucket
@@ -524,13 +536,7 @@ impl ReaderServer {
 
                             // Asynchronously populate data containers with snapshots
                             // of relevant inspect hierarchies.
-                            ReaderServer::pump_inspect_data(
-                                snapshot_batch,
-                                self.inspect_reader_server_stats
-                                    .global_component_timeouts_count
-                                    .clone(),
-                            )
-                            .await
+                            self.pump_inspect_data(snapshot_batch).await
                         } else {
                             std::mem::take(&mut overflow_bucket)
                         };
@@ -562,16 +568,30 @@ impl ReaderServer {
                             self.inspect_reader_server_stats
                                 .batch_iterator_get_next_responses
                                 .add(1);
+                            self.inspect_reader_server_stats
+                                .global_stats
+                                .batch_iterator_get_next_responses
+                                .add(1);
                             responder.send(&mut Ok(Vec::new()))?;
                             return Ok(());
                         }
 
                         // Apply selector filtering to all snapshot inspect hierarchies in
                         // the batch
-                        let batch_hierarchy_data = ReaderServer::filter_snapshots(
-                            &self.configured_selectors,
-                            current_batch,
-                        );
+                        let batch_hierarchy_data = self.filter_snapshots(current_batch);
+
+                        batch_hierarchy_data.iter().for_each(|(_, value)| {
+                            if !value.errors.is_empty() {
+                                self.inspect_reader_server_stats
+                                    .global_stats
+                                    .batch_iterator_get_next_result_errors
+                                    .add(1);
+                            }
+                            self.inspect_reader_server_stats
+                                .global_stats
+                                .batch_iterator_get_next_result_count
+                                .add(1);
+                        });
 
                         let formatted_content: Vec<
                             Result<fidl_fuchsia_diagnostics::FormattedContent, Error>,
@@ -587,6 +607,10 @@ impl ReaderServer {
                             continue;
                         }
 
+                        self.inspect_reader_server_stats
+                            .global_stats
+                            .batch_iterator_get_next_responses
+                            .add(1);
                         self.inspect_reader_server_stats.batch_iterator_get_next_responses.add(1);
                         responder.send(&mut Ok(filtered_results))?;
                         break;
@@ -617,7 +641,8 @@ impl ReaderServer {
         fasync::spawn(
             async move {
                 self.inspect_reader_server_stats
-                    .global_inspect_batch_iterator_connections_opened
+                    .global_stats
+                    .inspect_batch_iterator_connections_opened
                     .add(1);
 
                 let mut iterator_req_stream =
@@ -639,13 +664,19 @@ impl ReaderServer {
 
                 self.serve_terminal_batch(&mut iterator_req_stream).await?;
                 self.inspect_reader_server_stats
-                    .global_inspect_batch_iterator_connections_closed
+                    .global_stats
+                    .inspect_batch_iterator_connections_closed
                     .add(1);
                 Ok(())
             }
             .unwrap_or_else(move |e: anyhow::Error| {
                 errorful_inspect_reader_server_stats
-                    .global_inspect_batch_iterator_connections_closed
+                    .global_stats
+                    .batch_iterator_get_next_errors
+                    .add(1);
+                errorful_inspect_reader_server_stats
+                    .global_stats
+                    .inspect_batch_iterator_connections_closed
                     .add(1);
                 error!("Error encountered running inspect stream: {:?}", e);
             }),
@@ -921,6 +952,42 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn reader_server_reports_errors() {
+        let path = PathBuf::from("/test-bindings-errors-01");
+
+        // Make a ServiceFs containing something that looks like an inspect file but is not.
+        let mut fs = ServiceFs::new();
+        let vmo = zx::Vmo::create(4096).unwrap();
+        fs.dir("diagnostics").add_vmo_file_at("test.inspect", vmo, 0, 4096);
+
+        // Create a connection to the ServiceFs.
+        let (h0, h1) = zx::Channel::create().unwrap();
+        fs.serve_connection(h1).unwrap();
+
+        let ns = fdio::Namespace::installed().unwrap();
+        ns.bind(path.join("out").to_str().unwrap(), h0).unwrap();
+
+        fasync::spawn(fs.collect());
+        let (done0, done1) = zx::Channel::create().unwrap();
+        let thread_path = path.join("out");
+
+        // Run the actual test in a separate thread so that it does not block on FS operations.
+        // Use signalling on a zx::Channel to indicate that the test is done.
+        std::thread::spawn(move || {
+            let path = thread_path;
+            let done = done1;
+            let mut executor = fasync::Executor::new().unwrap();
+            executor.run_singlethreaded(async {
+                verify_reader_with_mode(path, VerifyMode::ExpectComponentFailure).await;
+                done.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).expect("signalling peer");
+            });
+        });
+
+        fasync::OnSignals::new(&done0, zx::Signals::USER_0).await.unwrap();
+        ns.unbind(path.join("out").to_str().unwrap()).unwrap();
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn inspect_repo_disallows_duplicated_dirs() {
         let mut inspect_repo = DiagnosticsDataRepository::new(None);
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
@@ -1091,7 +1158,16 @@ mod tests {
         inspector
     }
 
+    enum VerifyMode {
+        ExpectSuccess,
+        ExpectComponentFailure,
+    }
+
     async fn verify_reader(path: PathBuf) {
+        verify_reader_with_mode(path, VerifyMode::ExpectSuccess).await;
+    }
+
+    async fn verify_reader_with_mode(path: PathBuf, mode: VerifyMode) {
         let child_1_1_selector = selectors::parse_selector(r#"*:root/child_1/*:some-int"#).unwrap();
         let child_2_selector =
             selectors::parse_selector(r#"test_component.cmx:root/child_2:*"#).unwrap();
@@ -1131,6 +1207,11 @@ mod tests {
         stream_diagnostics_requests: 0u64,
         inspect_batch_iterator_connections_opened: 0u64,
         inspect_batch_iterator_connections_closed: 0u64,
+        batch_iterator_get_next_requests: 0u64,
+        batch_iterator_get_next_responses: 0u64,
+        batch_iterator_get_next_errors: 0u64,
+        batch_iterator_get_next_result_count: 0u64,
+        batch_iterator_get_next_result_errors: 0u64,
         batch_iterator_connection0: {
             batch_iterator_terminal_responses: 0u64,
             batch_iterator_get_next_responses: 0u64,
@@ -1139,6 +1220,11 @@ mod tests {
 
         let inspector_arc = Arc::new(inspector);
         inspect_repo.write().add_inspect_artifacts(component_id.clone(), out_dir_proxy).unwrap();
+
+        let expected_get_next_result_errors = match mode {
+            VerifyMode::ExpectComponentFailure => 1u64,
+            _ => 0u64,
+        };
 
         {
             let reader_server =
@@ -1155,19 +1241,23 @@ mod tests {
             let result_payload =
                 result_map.get("payload").expect("diagnostics schema requires payload entry.");
 
-            let expected_payload = json!({
-                "root": {
-                    "child_1": {
-                        "child_1_1": {
-                            "some-int": 3
+            let expected_payload = match mode {
+                VerifyMode::ExpectSuccess => json!({
+                    "root": {
+                        "child_1": {
+                            "child_1_1": {
+                                "some-int": 3
+                            }
+                        },
+                        "child_2": {
+                            "some-int": 2
                         }
-                    },
-                    "child_2": {
-                        "some-int": 2
                     }
-                }
-            });
+                }),
+                VerifyMode::ExpectComponentFailure => json!(null),
+            };
             assert_eq!(*result_payload, expected_payload);
+
             // stream_diagnostics_requests is 0 since its tracked via archive_accessor server,
             // which isnt running in this unit test.
             assert_inspect_tree!(inspector_arc.clone(), root: {test_archive_accessor_node: {
@@ -1179,6 +1269,11 @@ mod tests {
                 component_timeouts_count: 0u64,
             inspect_batch_iterator_connections_opened: 1u64,
             inspect_batch_iterator_connections_closed: 0u64,
+            batch_iterator_get_next_requests: 2u64,
+            batch_iterator_get_next_responses: 2u64,
+            batch_iterator_get_next_errors: 0u64,
+            batch_iterator_get_next_result_count: 1u64,
+            batch_iterator_get_next_result_errors: expected_get_next_result_errors,
             batch_iterator_connection0: {
                 batch_iterator_terminal_responses: 1u64,
                 batch_iterator_get_next_responses: 2u64,
@@ -1202,6 +1297,11 @@ mod tests {
                             component_timeouts_count: 0u64,
         inspect_batch_iterator_connections_opened: 1u64,
         inspect_batch_iterator_connections_closed: 1u64,
+        batch_iterator_get_next_requests: 2u64,
+        batch_iterator_get_next_responses: 2u64,
+        batch_iterator_get_next_errors: 0u64,
+        batch_iterator_get_next_result_count: 1u64,
+        batch_iterator_get_next_result_errors: expected_get_next_result_errors,
         batch_iterator_connection0: {
             batch_iterator_terminal_responses: 1u64,
             batch_iterator_get_next_responses: 2u64,
@@ -1229,6 +1329,11 @@ mod tests {
                 component_timeouts_count: 0u64,
             inspect_batch_iterator_connections_opened: 2u64,
             inspect_batch_iterator_connections_closed: 1u64,
+            batch_iterator_get_next_requests: 3u64,
+            batch_iterator_get_next_responses: 3u64,
+            batch_iterator_get_next_errors: 0u64,
+            batch_iterator_get_next_result_count: 1u64,
+            batch_iterator_get_next_result_errors: expected_get_next_result_errors,
             batch_iterator_connection0: {
                 batch_iterator_terminal_responses: 1u64,
                 batch_iterator_get_next_responses: 2u64,
@@ -1256,6 +1361,11 @@ mod tests {
         inspect_batch_iterator_connections_opened: 2u64,
             inspect_batch_iterator_connections_closed: 2u64,
             component_timeouts_count: 0u64,
+        batch_iterator_get_next_requests: 3u64,
+        batch_iterator_get_next_responses: 3u64,
+        batch_iterator_get_next_errors: 0u64,
+        batch_iterator_get_next_result_count: 1u64,
+        batch_iterator_get_next_result_errors: expected_get_next_result_errors,
         batch_iterator_connection0: {
             batch_iterator_terminal_responses: 1u64,
             batch_iterator_get_next_responses: 2u64,

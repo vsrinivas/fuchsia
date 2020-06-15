@@ -154,7 +154,7 @@ impl ArchiveAccessor {
         let errorful_archive_accessor_stats = self.archive_accessor_stats.clone();
         fasync::spawn(
             async move {
-                self.archive_accessor_stats.global_archive_accessor_connections_opened.add(1);
+                self.archive_accessor_stats.global_stats.archive_accessor_connections_opened.add(1);
                 while let Some(req) = stream.try_next().await? {
                     match req {
                         ArchiveAccessorRequest::StreamDiagnostics {
@@ -162,7 +162,10 @@ impl ArchiveAccessor {
                             stream_parameters,
                             control_handle: _,
                         } => {
-                            self.archive_accessor_stats.global_stream_diagnostics_requests.add(1);
+                            self.archive_accessor_stats
+                                .global_stats
+                                .stream_diagnostics_requests
+                                .add(1);
                             match stream_parameters.data_type {
                                 Some(DataType::Inspect) => {
                                     self.handle_stream_inspect(result_stream, stream_parameters)?
@@ -183,11 +186,14 @@ impl ArchiveAccessor {
                         }
                     }
                 }
-                self.archive_accessor_stats.global_archive_accessor_connections_closed.add(1);
+                self.archive_accessor_stats.global_stats.archive_accessor_connections_closed.add(1);
                 Ok(())
             }
             .unwrap_or_else(move |e: anyhow::Error| {
-                errorful_archive_accessor_stats.global_archive_accessor_connections_closed.add(1);
+                errorful_archive_accessor_stats
+                    .global_stats
+                    .archive_accessor_connections_closed
+                    .add(1);
                 error!("couldn't run archive accessor service: {:?}", e)
             }),
         );
