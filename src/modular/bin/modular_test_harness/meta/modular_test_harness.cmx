@@ -9,7 +9,6 @@
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
-            "fuchsia.setui.SetUiService",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]
