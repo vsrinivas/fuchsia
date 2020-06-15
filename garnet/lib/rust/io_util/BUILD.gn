@@ -37,6 +37,10 @@ test_package("io_util_tests") {
       dest = "file"
     },
     {
+      path = "data/fidl_file"
+      dest = "fidl_file"
+    },
+    {
       path = "data/file"
       dest = "subdir/subdir-file"
     },

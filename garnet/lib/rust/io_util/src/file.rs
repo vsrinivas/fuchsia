@@ -6,6 +6,8 @@
 
 use {
     crate::node::{self, CloseError, OpenError},
+    anyhow::Error,
+    fidl::encoding::{decode_persistent, encode_persistent, Decodable, Encodable},
     fidl_fuchsia_io::{FileMarker, FileProxy, MAX_BUF},
     fuchsia_zircon::Status,
     thiserror::Error,
@@ -151,6 +153,20 @@ where
     Ok(())
 }
 
+/// Write the given FIDL message in a binary form into a file open for writing.
+pub async fn write_fidl<T: Encodable>(file: &FileProxy, data: &mut T) -> Result<(), Error> {
+    write(file, encode_persistent(data)?).await?;
+    Ok(())
+}
+
+/// Write the given FIDL encoded message into a file at `path`. The path must be an absolute path.
+/// * If the file already exists, replaces existing contents.
+/// * If the file does not exist, creates the file.
+pub async fn write_fidl_in_namespace<T: Encodable>(path: &str, data: &mut T) -> Result<(), Error> {
+    write_in_namespace(path, encode_persistent(data)?).await?;
+    Ok(())
+}
+
 /// Reads all data from the given file's current offset to the end of the file.
 pub async fn read(file: &FileProxy) -> Result<Vec<u8>, ReadError> {
     let mut out = Vec::new();
@@ -194,11 +210,32 @@ pub async fn read_in_namespace_to_string(path: &str) -> Result<String, ReadNamed
     Ok(string)
 }
 
+/// Read the given FIDL message from binary form from a file open for reading.
+/// FIDL structure should be provided at a read time.
+/// Incompatible data is populated as per FIDL ABI compatibility guide:
+/// https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/abi-compat
+pub async fn read_fidl<T: Decodable>(file: &FileProxy) -> Result<T, Error> {
+    let bytes = read(file).await?;
+    Ok(decode_persistent(&bytes)?)
+}
+
+/// Read the given FIDL message from binary file at `path` in the current namespace. The path
+/// must be an absolute path.
+/// FIDL structure should be provided at a read time.
+/// Incompatible data is populated as per FIDL ABI compatibility guide:
+/// https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/abi-compat
+pub async fn read_in_namespace_to_fidl<T: Decodable>(path: &str) -> Result<T, Error> {
+    let bytes = read_in_namespace(path).await?;
+    Ok(decode_persistent(&bytes)?)
+}
+
 #[cfg(test)]
 mod tests {
+
     use {
         super::*,
         crate::{directory, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+        fidl::fidl_table,
         fuchsia_async as fasync,
         matches::assert_matches,
         std::path::Path,
@@ -395,5 +432,90 @@ mod tests {
             read_in_namespace_to_string("/pkg/data/file").await.unwrap(),
             DATA_FILE_CONTENTS
         );
+    }
+
+    // write_fidl
+
+    #[fasync::run_singlethreaded(test)]
+    async fn write_fidl_writes_to_file() {
+        struct DataTable {
+            num: Option<i32>,
+            string: Option<String>,
+        }
+
+        fidl_table! {
+            name: DataTable,
+            members: {
+                num {
+                    ty: i32,
+                    ordinal: 1,
+                },
+                string {
+                    ty: String,
+                    ordinal: 2,
+                },
+            },
+        }
+
+        let tempdir = TempDir::new().unwrap();
+        let dir = directory::open_in_namespace(
+            tempdir.path().to_str().unwrap(),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .unwrap();
+
+        // Write contents.
+        let flags = fidl_fuchsia_io::OPEN_RIGHT_WRITABLE | fidl_fuchsia_io::OPEN_FLAG_CREATE;
+        let file = directory::open_file(&dir, "file", flags).await.unwrap();
+
+        let mut data = DataTable { num: Some(42), string: Some(DATA_FILE_CONTENTS.to_string()) };
+
+        // Binary encoded FIDL message, with header and padding.
+        let fidl_bytes = encode_persistent(&mut data).unwrap();
+
+        write_fidl(&file, &mut data).await.unwrap();
+
+        // Verify contents.
+        let contents = std::fs::read(tempdir.path().join(Path::new("file"))).unwrap();
+        assert_eq!(&contents, &fidl_bytes);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn read_fidl_reads_from_file() {
+        #[derive(PartialEq, Eq, Debug)]
+        struct DataTable {
+            num: Option<i32>,
+            string: Option<String>,
+            new_field: Option<String>,
+        }
+
+        fidl_table! {
+            name: DataTable,
+            members: {
+                num {
+                    ty: i32,
+                    ordinal: 1,
+                },
+                string {
+                    ty: String,
+                    ordinal: 2,
+                },
+                new_field {
+                    ty: String,
+                    ordinal: 3,
+                },
+            },
+        }
+
+        let file = open_in_namespace("/pkg/data/fidl_file", OPEN_RIGHT_READABLE).unwrap();
+
+        let contents = read_fidl::<DataTable>(&file).await.unwrap();
+
+        let data = DataTable {
+            num: Some(42),
+            string: Some(DATA_FILE_CONTENTS.to_string()),
+            new_field: None,
+        };
+        assert_eq!(&contents, &data);
     }
 }

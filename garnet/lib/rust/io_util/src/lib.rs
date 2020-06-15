@@ -15,6 +15,7 @@
 
 use {
     anyhow::{format_err, Error},
+    fidl::encoding::{Decodable, Encodable},
     fidl::endpoints::{create_proxy, Proxy, ServerEnd},
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, FileProxy, NodeProxy, MODE_TYPE_DIRECTORY,
@@ -168,6 +169,37 @@ pub async fn write_file(file: &FileProxy, data: &str) -> Result<(), Error> {
 /// * If the file does not exist, creates the file.
 pub async fn write_path_bytes(path: &str, data: &[u8]) -> Result<(), Error> {
     file::write_in_namespace(path, data).await?;
+    Ok(())
+}
+
+/// Read the given FIDL message from binary form from a file open for reading.
+/// FIDL structure should be provided at a read time.
+/// Incompatible data is populated as per FIDL ABI compatibility guide:
+/// https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/abi-compat
+pub async fn read_file_fidl<T: Decodable>(file: &FileProxy) -> Result<T, Error> {
+    Ok(file::read_fidl(file).await?)
+}
+
+/// Read the given FIDL message from binary file at `path` in the current namespace. The path
+/// must be an absolute path.
+/// FIDL structure should be provided at a read time.
+/// Incompatible data is populated as per FIDL ABI compatibility guide:
+/// https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/abi-compat
+pub async fn read_path_fidl<T: Decodable>(path: &str) -> Result<T, Error> {
+    Ok(file::read_in_namespace_to_fidl(path).await?)
+}
+
+/// Write the given FIDL message in a binary form into a file open for writing.
+pub async fn write_file_fidl<T: Encodable>(file: &FileProxy, data: &mut T) -> Result<(), Error> {
+    file::write_fidl(file, data).await?;
+    Ok(())
+}
+
+/// Write the given FIDL encoded message into a file at `path`. The path must be an absolute path.
+/// * If the file already exists, replaces existing contents.
+/// * If the file does not exist, creates the file.
+pub async fn write_path_fidl<T: Encodable>(path: &str, data: &mut T) -> Result<(), Error> {
+    file::write_fidl_in_namespace(path, data).await?;
     Ok(())
 }
 
