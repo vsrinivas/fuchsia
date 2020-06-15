@@ -366,7 +366,7 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     bool NoWSBeforeChar(char ch) { return (ch == ';' || ch == ','); }
 
     bool NoWSAfterChar(char ch) {
-      return (ch == ':' && !visitor_->blank_space_after_colon_) || (ch == '(');
+      return (ch == ':' && !visitor_->blank_space_after_colon_) || (ch == '(') || (ch == '<');
     }
 
     // As specified on the tin: erases multiple spaces from output_ at

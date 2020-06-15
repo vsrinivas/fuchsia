@@ -233,4 +233,13 @@ resource SomeRes : uint32 {
     };
 };
 
+using OldHandleAlias = handle<vmo>;
+
+struct Constraints {
+    handle:THING1 h1;
+    handle:<THING2> h2;
+};
+
+using HandleAlias = handle:<THING3>;
+
 // Comments at EOF

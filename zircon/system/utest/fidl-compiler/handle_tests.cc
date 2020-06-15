@@ -143,8 +143,8 @@ resource handle : uint32 {
 
 struct MyStruct {
   handle:THREAD a;
-  // TODO(fxbug.dev/51001): Parse with <>, e.g. handle:<PROCESS> b;
-  // TODO(fxbug.dev/51001): Parse with <> and rights, e.g. handle:<VMO, 1> c;
+  handle:<PROCESS> b;
+  handle:<VMO, 45> c;
 };
 )FIDL",
                       std::move(experimental_flags));
@@ -155,6 +155,22 @@ struct MyStruct {
   EXPECT_TRUE(a->handle_subtype_identifier.has_value());
   ASSERT_TRUE(a->handle_subtype_identifier.value().span()->data() == "THREAD");
   ASSERT_NULL(a->handle_rights);
+
+  auto b = library.LookupStruct("MyStruct")->members[1].type_ctor.get();
+  EXPECT_FALSE(b->handle_subtype.has_value());
+  EXPECT_TRUE(b->handle_subtype_identifier.has_value());
+  ASSERT_TRUE(b->handle_subtype_identifier.value().span()->data() == "PROCESS");
+  ASSERT_NULL(b->handle_rights);
+
+  auto c = library.LookupStruct("MyStruct")->members[2].type_ctor.get();
+  EXPECT_FALSE(c->handle_subtype.has_value());
+  EXPECT_TRUE(c->handle_subtype_identifier.has_value());
+  ASSERT_TRUE(c->handle_subtype_identifier.value().span()->data() == "VMO");
+  ASSERT_NOT_NULL(c->handle_rights);
+  ASSERT_EQ(static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(
+                c->handle_rights->Value())
+                .value,
+            45);
 
   END_TEST;
 }

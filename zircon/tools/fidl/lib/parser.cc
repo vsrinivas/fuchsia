@@ -537,7 +537,19 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
     if (!Ok())
       return Fail();
     if (identifier->components.back()->span().data() == "handle") {
-      handle_subtype_identifier = ParseIdentifier();
+      if (MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
+        handle_subtype_identifier = ParseIdentifier();
+        if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kEnableHandleRights)) {
+          if (MaybeConsumeToken(OfKind(Token::Kind::kComma))) {
+            handle_rights = ParseConstant();
+          }
+        }
+        ConsumeToken(OfKind(Token::Kind::kRightAngle));
+        if (!Ok())
+          return Fail();
+      } else {
+        handle_subtype_identifier = ParseIdentifier();
+      }
     } else {
       maybe_size = ParseConstant();
     }
