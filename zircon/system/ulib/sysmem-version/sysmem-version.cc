@@ -743,6 +743,21 @@ llcpp::fuchsia::sysmem::VmoBuffer V1MoveFromV2VmoBuffer(
   return v1;
 }
 
+// Intentionally just consumes vmo (but not aux_vmo).  The implied extra handle duplications from
+// this behavior go away when all participants speak V2.
+llcpp::fuchsia::sysmem::VmoBuffer V1AuxBuffersMoveFromV2VmoBuffer(
+    llcpp::fuchsia::sysmem2::VmoBuffer&& to_move_v2) {
+  // Always take ownership even on failure.
+  llcpp::fuchsia::sysmem2::VmoBuffer v2 = std::move(to_move_v2);
+  llcpp::fuchsia::sysmem::VmoBuffer v1;
+  if (v2.has_aux_vmo()) {
+    v1.vmo = std::move(v2.aux_vmo());
+  }
+  PROCESS_SCALAR_FIELD_V2(vmo_usable_start);
+  // ~v2 will ~vmo, intentionally - see function comment above.
+  return v1;
+}
+
 fit::result<llcpp::fuchsia::sysmem::BufferCollectionInfo_2> V1MoveFromV2BufferCollectionInfo(
     llcpp::fuchsia::sysmem2::BufferCollectionInfo&& to_move_v2) {
   // This move is mainly to make it very clear what's going on here, but also to ensure that we
@@ -761,6 +776,36 @@ fit::result<llcpp::fuchsia::sysmem::BufferCollectionInfo_2> V1MoveFromV2BufferCo
     v1.buffer_count = v2.buffers().count();
     for (uint32_t i = 0; i < v2.buffers().count(); ++i) {
       v1.buffers[i] = V1MoveFromV2VmoBuffer(std::move(v2.buffers()[i]));
+    }
+  }
+  auto settings_result = V1CopyFromV2SingleBufferSettings(v2.settings());
+  if (!settings_result.is_ok()) {
+    LOG(ERROR, "!settings_result.is_ok()");
+    return fit::error();
+  }
+  v1.settings = settings_result.take_value();
+  return fit::ok(std::move(v1));
+}
+
+[[nodiscard]] fit::result<llcpp::fuchsia::sysmem::BufferCollectionInfo_2>
+V1AuxBuffersMoveFromV2BufferCollectionInfo(
+    llcpp::fuchsia::sysmem2::BufferCollectionInfo&& to_move_v2) {
+  // This move is mainly to make it very clear what's going on here, but also to ensure that we
+  // don't take any dependency on incorrect/stale failure to move out any of the handles in to_move.
+  //
+  // Always take ownership of the incoming handles, even on failure.
+  llcpp::fuchsia::sysmem2::BufferCollectionInfo v2 = std::move(to_move_v2);
+  llcpp::fuchsia::sysmem::BufferCollectionInfo_2 v1;
+  if (v2.has_buffers()) {
+    if (v2.buffers().count() > llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS) {
+      LOG(ERROR,
+          "v2.buffers().count() > "
+          "llcpp::fuchsia::sysmem::MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS");
+      return fit::error();
+    }
+    v1.buffer_count = v2.buffers().count();
+    for (uint32_t i = 0; i < v2.buffers().count(); ++i) {
+      v1.buffers[i] = V1AuxBuffersMoveFromV2VmoBuffer(std::move(v2.buffers()[i]));
     }
   }
   auto settings_result = V1CopyFromV2SingleBufferSettings(v2.settings());

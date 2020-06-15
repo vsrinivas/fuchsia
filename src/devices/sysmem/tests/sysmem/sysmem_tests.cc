@@ -20,6 +20,7 @@
 #include <zircon/errors.h>
 #include <zircon/limits.h>
 #include <zircon/pixelformat.h>
+#include <zircon/types.h>
 
 #include <limits>
 #include <string>
@@ -35,6 +36,9 @@ const char* kSysmemDevicePath = "/dev/class/sysmem/000";
 
 using BufferCollectionConstraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
                                                llcpp::fuchsia::sysmem::BufferCollectionConstraints>;
+using BufferCollectionConstraintsAuxBuffers =
+    FidlStruct<fuchsia_sysmem_BufferCollectionConstraintsAuxBuffers,
+               llcpp::fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers>;
 using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
                                         llcpp::fuchsia::sysmem::BufferCollectionInfo_2>;
 
@@ -247,7 +251,9 @@ class SecureVmoReadTester {
   SecureVmoReadTester(zx::vmo secure_vmo);
   ~SecureVmoReadTester();
   bool IsReadFromSecureAThing();
-  void AttemptReadFromSecure();
+  // When we're trying to read from an actual secure VMO, expect_read_success is false.
+  // When we're trying tor read from an aux VMO, expect_read_success is true.
+  void AttemptReadFromSecure(bool expect_read_success = false);
 
  private:
   zx::vmo secure_vmo_;
@@ -298,7 +304,7 @@ SecureVmoReadTester::SecureVmoReadTester(zx::vmo secure_vmo) : secure_vmo_(std::
     while (!is_read_from_secure_attempted_) {
       nanosleep_duration(zx::msec(10));
     }
-    // Wait 500ms for the read attempt to succed; the read attempt should not
+    // Wait 10ms for the read attempt to succed; the read attempt should not
     // succeed.  The read attempt may fail immediately or may get stuck.  It's
     // possible we might very occasionally not wait long enough for the read
     // to have actually started - if that occurs the test will "pass" without
@@ -335,7 +341,7 @@ bool SecureVmoReadTester::IsReadFromSecureAThing() {
   return is_read_from_secure_a_thing_;
 }
 
-void SecureVmoReadTester::AttemptReadFromSecure() {
+void SecureVmoReadTester::AttemptReadFromSecure(bool expect_read_success) {
   ZX_ASSERT(is_let_die_started_);
   ZX_ASSERT(!is_read_from_secure_attempted_);
   is_read_from_secure_attempted_ = true;
@@ -357,20 +363,24 @@ void SecureVmoReadTester::AttemptReadFromSecure() {
     if (value != 0) {
       is_read_from_secure_a_thing_ = true;
     }
-    if (i % 64 == 0) {
-      fprintf(stderr, "%08x: ", i);
-    }
-    fprintf(stderr, "%02x ", value);
-    if ((i + 1) % 64 == 0) {
-      fprintf(stderr, "\n");
+    if (!expect_read_success) {
+      if (i % 64 == 0) {
+        fprintf(stderr, "%08x: ", i);
+      }
+      fprintf(stderr, "%02x ", value);
+      if ((i + 1) % 64 == 0) {
+        fprintf(stderr, "\n");
+      }
     }
   }
-  fprintf(stderr, "\n");
-  // If we made it through the whole page without faulting, yet only read zero, consider that
-  // success.  Cause the thead to "die" here on purpose so the test can pass.  This is not the
-  // typical case, but can happen at least on sherlock.  Typically we fault during the write, flush,
-  // read of byte 0 above.
-  ZX_PANIC("didn't fault, but also didn't read non-zero, so pretend to fault");
+  if (!expect_read_success) {
+    fprintf(stderr, "\n");
+    // If we made it through the whole page without faulting, yet only read zero, consider that
+    // success in the sense that we weren't able to read anything in secure memory.  Cause the thead
+    // to "die" here on purpose so the test can pass.  This is not the typical case, but can happen
+    // at least on sherlock.  Typically we fault during the write, flush, read of byte 0 above.
+    ZX_PANIC("didn't fault, but also didn't read non-zero, so pretend to fault");
+  }
 }
 
 }  // namespace
@@ -2107,9 +2117,21 @@ TEST(Sysmem, HeapAmlogicSecure) {
   }
 
   for (uint32_t i = 0; i < 64; ++i) {
+    bool need_aux = (i % 4 == 0);
+    bool allow_aux = (i % 2 == 0);
     zx::channel collection_client;
     zx_status_t status = make_single_participant_collection(&collection_client);
     ASSERT_EQ(status, ZX_OK, "");
+
+    if (need_aux) {
+      BufferCollectionConstraintsAuxBuffers aux_constraints(
+          BufferCollectionConstraintsAuxBuffers::Default);
+      aux_constraints->need_clear_aux_buffers_for_secure = true;
+      aux_constraints->allow_clear_aux_buffers_for_secure = true;
+      status = fuchsia_sysmem_BufferCollectionSetConstraintsAuxBuffers(collection_client.get(),
+                                                                       aux_constraints.release());
+      ASSERT_EQ(status, ZX_OK, "");
+    }
 
     BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
     constraints->usage.video = fuchsia_sysmem_videoUsageHwDecoder;
@@ -2152,6 +2174,14 @@ TEST(Sysmem, HeapAmlogicSecure) {
               fuchsia_sysmem_HeapType_AMLOGIC_SECURE, "");
     EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
 
+    BufferCollectionInfo aux_buffer_collection_info(BufferCollectionInfo::Default);
+    if (need_aux || allow_aux) {
+      status = fuchsia_sysmem_BufferCollectionGetAuxBuffers(
+          collection_client.get(), &allocation_status, aux_buffer_collection_info.get());
+      ASSERT_EQ(status, ZX_OK, "");
+      EXPECT_EQ(aux_buffer_collection_info->buffer_count, buffer_collection_info->buffer_count, "");
+    }
+
     for (uint32_t i = 0; i < 64; ++i) {
       if (i < kBufferCount) {
         EXPECT_NE(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
@@ -2159,8 +2189,21 @@ TEST(Sysmem, HeapAmlogicSecure) {
         status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo, &size_bytes);
         ASSERT_EQ(status, ZX_OK, "");
         EXPECT_EQ(size_bytes, kBufferSizeBytes, "");
+        if (need_aux) {
+          EXPECT_NE(aux_buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+          uint64_t aux_size_bytes = 0;
+          status = zx_vmo_get_size(aux_buffer_collection_info->buffers[i].vmo, &aux_size_bytes);
+          ASSERT_EQ(status, ZX_OK, "");
+          EXPECT_EQ(aux_size_bytes, kBufferSizeBytes, "");
+        } else if (allow_aux) {
+          // This is how v1 indicates that aux buffers weren't allocated.
+          EXPECT_EQ(aux_buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+        }
       } else {
         EXPECT_EQ(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+        if (need_aux) {
+          EXPECT_EQ(aux_buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+        }
       }
     }
 
@@ -2169,6 +2212,19 @@ TEST(Sysmem, HeapAmlogicSecure) {
     SecureVmoReadTester tester(std::move(the_vmo));
     ASSERT_DEATH(([&] { tester.AttemptReadFromSecure(); }));
     ASSERT_FALSE(tester.IsReadFromSecureAThing());
+
+    if (need_aux) {
+      zx::vmo aux_vmo = zx::vmo(aux_buffer_collection_info->buffers[0].vmo);
+      aux_buffer_collection_info->buffers[0].vmo = ZX_HANDLE_INVALID;
+      SecureVmoReadTester aux_tester(std::move(aux_vmo));
+      // This shouldn't crash for the aux VMO.
+      aux_tester.AttemptReadFromSecure(/*expect_read_success=*/true);
+      // Read from aux VMO using REE (rich execution environment, in contrast to the TEE (trusted
+      // execution evironment)) CPU should work.  In actual usage, only the non-encrypted parts of
+      // the data will be present in the VMO, and the encrypted parts will be all 0xFF.  The point
+      // of the aux VMO is to allow reading and parsing the non-encypted parts using REE CPU.
+      ASSERT_TRUE(aux_tester.IsReadFromSecureAThing());
+    }
   }
 }
 

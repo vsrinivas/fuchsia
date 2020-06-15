@@ -1222,6 +1222,13 @@ bool LogicalBufferCollection::AccumulateConstraintBufferCollection(
     }
   }
 
+  acc->need_clear_aux_buffers_for_secure() =
+      acc->need_clear_aux_buffers_for_secure() || c->need_clear_aux_buffers_for_secure();
+  acc->allow_clear_aux_buffers_for_secure() =
+      acc->allow_clear_aux_buffers_for_secure() && c->allow_clear_aux_buffers_for_secure();
+  // We check for consistency of these later only if we're actually attempting to allocate secure
+  // buffers.
+
   // acc->image_format_constraints().count() == 0 is allowed here, when all
   // participants had image_format_constraints().count() == 0.
   return true;
@@ -1597,6 +1604,14 @@ LogicalBufferCollection::Allocate() {
   ZX_DEBUG_ASSERT(IsSecurePermitted(buffer_constraints) || !buffer_constraints.secure_required());
   buffer_settings.set_is_secure(
       sysmem::MakeTracking(&allocator_, buffer_constraints.secure_required()));
+  if (buffer_settings.is_secure()) {
+    if (constraints_->need_clear_aux_buffers_for_secure() &&
+        !constraints_->allow_clear_aux_buffers_for_secure()) {
+      LogError(
+          "is_secure && need_clear_aux_buffers_for_secure && !allow_clear_aux_buffers_for_secure");
+      return fit::error(ZX_ERR_NOT_SUPPORTED);
+    }
+  }
   buffer_settings.set_heap(sysmem::MakeTracking(&allocator_, GetHeap(buffer_constraints)));
   // We can't fill out buffer_settings yet because that also depends on
   // ImageFormatConstraints.  We do need the min and max from here though.
@@ -1762,6 +1777,28 @@ LogicalBufferCollection::Allocate() {
   buffer_settings.set_size_bytes(
       sysmem::MakeTracking(&allocator_, static_cast<uint32_t>(min_size_bytes)));
 
+  // Get memory allocator for aux buffers, if needed.
+  MemoryAllocator* maybe_aux_allocator = nullptr;
+  std::optional<llcpp::fuchsia::sysmem2::SingleBufferSettings::Builder> maybe_aux_settings;
+  if (buffer_settings.is_secure() && constraints_->need_clear_aux_buffers_for_secure()) {
+    maybe_aux_settings.emplace(
+        allocator_.make_table_builder<llcpp::fuchsia::sysmem2::SingleBufferSettings>());
+    maybe_aux_settings->set_buffer_settings(sysmem::MakeTracking(
+        &allocator_,
+        allocator_.make_table_builder<llcpp::fuchsia::sysmem2::BufferMemorySettings>().build()));
+    auto& aux_buffer_settings = maybe_aux_settings->get_builder_buffer_settings();
+    aux_buffer_settings.set_size_bytes(
+        sysmem::MakeTracking(&allocator_, buffer_settings.size_bytes()));
+    aux_buffer_settings.set_is_physically_contiguous(sysmem::MakeTracking(&allocator_, false));
+    aux_buffer_settings.set_is_secure(sysmem::MakeTracking(&allocator_, false));
+    aux_buffer_settings.set_coherency_domain(
+        sysmem::MakeTracking(&allocator_, llcpp::fuchsia::sysmem2::CoherencyDomain::CPU));
+    aux_buffer_settings.set_heap(
+        sysmem::MakeTracking(&allocator_, llcpp::fuchsia::sysmem2::HeapType::SYSTEM_RAM));
+    maybe_aux_allocator = parent_device_->GetAllocator(aux_buffer_settings);
+    ZX_DEBUG_ASSERT(maybe_aux_allocator);
+  }
+
   for (uint32_t i = 0; i < result.buffers().count(); ++i) {
     auto allocate_result = AllocateVmo(allocator, settings, i);
     if (!allocate_result.is_ok()) {
@@ -1772,8 +1809,16 @@ LogicalBufferCollection::Allocate() {
     auto vmo_buffer = allocator_.make_table_builder<llcpp::fuchsia::sysmem2::VmoBuffer>();
     vmo_buffer.set_vmo(sysmem::MakeTracking(&allocator_, std::move(vmo)));
     vmo_buffer.set_vmo_usable_start(sysmem::MakeTracking(&allocator_, 0ul));
-    // TODO(dustingreen): fill this out:
-    // vmo_buffer->set_aux_vmo(...);
+    if (maybe_aux_allocator) {
+      ZX_DEBUG_ASSERT(maybe_aux_settings);
+      auto aux_allocate_result = AllocateVmo(maybe_aux_allocator, maybe_aux_settings.value(), i);
+      if (!aux_allocate_result.is_ok()) {
+        LogError("AllocateVmo() failed (aux)");
+        return fit::error(ZX_ERR_NO_MEMORY);
+      }
+      zx::vmo aux_vmo = aux_allocate_result.take_value();
+      vmo_buffer.set_aux_vmo(sysmem::MakeTracking(&allocator_, std::move(aux_vmo)));
+    }
     result.buffers()[i] = vmo_buffer.build();
   }
   // Make sure we have sufficient barrier after allocating/clearing/flushing any VMO newly allocated

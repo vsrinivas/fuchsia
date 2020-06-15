@@ -248,7 +248,7 @@ zx_status_t BufferCollection::WaitForBuffersAllocated(fidl_txn_t* txn_param) {
   if (is_done_) {
     FailAsync(ZX_ERR_BAD_STATE,
               "BufferCollectionToken::WaitForBuffersAllocated() when already is_done_");
-    // We're failing async - no need to try to fail sync.
+    // We're failing async - no need to fail sync.
     return ZX_OK;
   }
   // In general we're handling this async, so take ownership of the txn.
@@ -283,14 +283,38 @@ zx_status_t BufferCollection::CheckBuffersAllocated(fidl_txn_t* txn) {
 
 zx_status_t BufferCollection::GetAuxBuffers(fidl_txn_t* txn_param) {
   BindingType::Txn::RecognizeTxn(txn_param);
-  BufferCollection::V1CBufferCollectionInfo to_send(
+  LogicalBufferCollection::AllocationResult allocation_result = parent()->allocation_result();
+  if (allocation_result.status == ZX_OK && !allocation_result.buffer_collection_info) {
+    FailAsync(ZX_ERR_BAD_STATE, "GetAuxBuffers() called before allocation complete.",
+              ZX_ERR_BAD_STATE);
+    // We're failing async - no need to fail sync.
+    return ZX_OK;
+  }
+  if (allocation_result.status != ZX_OK) {
+    FailAsync(ZX_ERR_BAD_STATE, "GetAuxBuffers() called after allocation failure.",
+              ZX_ERR_BAD_STATE);
+    // We're failing async - no need to fail sync.
+    return ZX_OK;
+  }
+  BufferCollection::V1CBufferCollectionInfo v1_c(
       BufferCollection::V1CBufferCollectionInfo::Default);
+  ZX_DEBUG_ASSERT(allocation_result.buffer_collection_info);
+  auto v1_c_result = CloneAuxBuffersResultForSendingV1(*allocation_result.buffer_collection_info);
+  if (!v1_c_result.is_ok()) {
+    // FailAsync() already called.
+    //
+    // We're failing async - no need to fail sync.
+    return ZX_OK;
+  }
+  v1_c = v1_c_result.take_value();
+  // Ownership of handles in to_send are transferred to _reply().
   zx_status_t reply_status = fuchsia_sysmem_BufferCollectionGetAuxBuffers_reply(
-      txn_param, ZX_ERR_NOT_SUPPORTED, to_send.release());
+      txn_param, allocation_result.status, v1_c.release());
   if (reply_status != ZX_OK) {
     FailAsync(reply_status,
               "fuchsia_sysmem_BufferCollectionGetAuxBuffers_reply failed - status: %d",
               reply_status);
+    // We're failing async - no need to fail sync.
     return ZX_OK;
   }
   return ZX_OK;
@@ -407,6 +431,27 @@ fit::result<BufferCollection::V1CBufferCollectionInfo> BufferCollection::CloneRe
     return fit::error();
   }
   auto v1_result = sysmem::V1MoveFromV2BufferCollectionInfo(v2_builder_result.take_value().build());
+  if (!v1_result.is_ok()) {
+    FailAsync(ZX_ERR_INVALID_ARGS,
+              "CloneResultForSendingV1() V1MoveFromV2BufferCollectionInfo() failed");
+    return fit::error();
+  }
+  V1CBufferCollectionInfo v1_c(V1CBufferCollectionInfo::Default);
+  // struct move
+  v1_c.BorrowAsLlcpp() = v1_result.take_value();
+  return fit::ok(std::move(v1_c));
+}
+
+fit::result<BufferCollection::V1CBufferCollectionInfo>
+BufferCollection::CloneAuxBuffersResultForSendingV1(
+    const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info) {
+  auto v2_builder_result = CloneResultForSendingV2(buffer_collection_info);
+  if (!v2_builder_result.is_ok()) {
+    // FailAsync() already called.
+    return fit::error();
+  }
+  auto v1_result =
+      sysmem::V1AuxBuffersMoveFromV2BufferCollectionInfo(v2_builder_result.take_value().build());
   if (!v1_result.is_ok()) {
     FailAsync(ZX_ERR_INVALID_ARGS,
               "CloneResultForSendingV1() V1MoveFromV2BufferCollectionInfo() failed");

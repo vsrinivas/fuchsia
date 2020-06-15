@@ -98,6 +98,8 @@ class BufferCollection
 
   fit::result<V1CBufferCollectionInfo> CloneResultForSendingV1(
       const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info);
+  fit::result<BufferCollection::V1CBufferCollectionInfo> CloneAuxBuffersResultForSendingV1(
+      const llcpp::fuchsia::sysmem2::BufferCollectionInfo& buffer_collection_info);
 
   static const fuchsia_sysmem_BufferCollection_ops_t kOps;
 

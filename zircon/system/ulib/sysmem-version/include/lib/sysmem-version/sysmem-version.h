@@ -129,8 +129,13 @@ V1CopyFromV2ImageFormatConstraints(const llcpp::fuchsia::sysmem2::ImageFormatCon
 V1CopyFromV2SingleBufferSettings(const llcpp::fuchsia::sysmem2::SingleBufferSettings& v2);
 [[nodiscard]] llcpp::fuchsia::sysmem::VmoBuffer V1MoveFromV2VmoBuffer(
     llcpp::fuchsia::sysmem2::VmoBuffer&& to_move_v2);
+[[nodiscard]] llcpp::fuchsia::sysmem::VmoBuffer V1AuxBuffersMoveFromV2VmoBuffer(
+    llcpp::fuchsia::sysmem2::VmoBuffer&& to_move_v2);
 [[nodiscard]] fit::result<llcpp::fuchsia::sysmem::BufferCollectionInfo_2>
 V1MoveFromV2BufferCollectionInfo(llcpp::fuchsia::sysmem2::BufferCollectionInfo&& to_move_v2);
+[[nodiscard]] fit::result<llcpp::fuchsia::sysmem::BufferCollectionInfo_2>
+V1AuxBuffersMoveFromV2BufferCollectionInfo(
+    llcpp::fuchsia::sysmem2::BufferCollectionInfo&& to_move_v2);
 
 ///////////
 // V2 Clone
