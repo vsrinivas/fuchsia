@@ -2,6 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// Used because we use `futures::select!`.
+//
+// From https://docs.rs/futures/0.3.1/futures/macro.select.html:
+//   Note that select! relies on proc-macro-hack, and may require to set the compiler's
+//   recursion limit very high, e.g. #![recursion_limit="1024"].
+#![recursion_limit = "256"]
+
 extern crate network_manager_core_interface as interface;
 
 use std::collections::HashSet;
@@ -277,7 +284,7 @@ struct NetCfg<'a> {
     filter: fnet_filter::FilterProxy,
     dhcp_server: fnet_dhcp::Server_Proxy,
 
-    device_dir_path: String,
+    device_dir_path: &'a str,
     allow_virtual_devices: bool,
 
     persisted_interface_config: interface::FileBackedConfig<'a>,
@@ -314,7 +321,7 @@ fn static_source_from_ip(f: fnet::IpAddress) -> fnet_name::DnsServer_ {
 impl<'a> NetCfg<'a> {
     /// Returns a new `NetCfg`.
     fn new(
-        device_dir_path: String,
+        device_dir_path: &'a str,
         allow_virtual_devices: bool,
         default_config_rules: Vec<matchers::InterfaceSpec>,
         filter_enabled_interface_types: HashSet<InterfaceType>,
@@ -455,18 +462,15 @@ impl<'a> NetCfg<'a> {
     /// The device directory will be monitored for device events and the netstack will be
     /// configured with a new interface on new device discovery.
     async fn run(mut self) -> Result<(), anyhow::Error> {
-        let device_dir_path = self.device_dir_path.clone();
         let mut device_dir_watcher_stream = fvfs_watcher::Watcher::new(
             open_directory_in_namespace(&self.device_dir_path, OPEN_RIGHT_READABLE)
                 .context("opening device directory")?,
         )
         .await
         .with_context(|| format!("creating watcher for {}", self.device_dir_path))?
-        .map(|r| r.with_context(|| format!("watching {}", device_dir_path)))
         .fuse();
 
-        let mut netstack_stream =
-            self.netstack.take_event_stream().map(|r| r.context("Netstack event stream")).fuse();
+        let mut netstack_stream = self.netstack.take_event_stream().fuse();
 
         let (dns_server_watcher, dns_server_watcher_req) =
             fidl::endpoints::create_proxy::<fnet_name::DnsServerWatcherMarker>()
@@ -479,7 +483,6 @@ impl<'a> NetCfg<'a> {
             DnsServersUpdateSource::Netstack,
             dns_server_watcher,
         )
-        .map(|r| r.context("Netstack DNS server event stream"))
         .fuse();
 
         debug!("starting eventloop...");
@@ -487,7 +490,8 @@ impl<'a> NetCfg<'a> {
         loop {
             let () = futures::select! {
                 device_dir_watcher_res = device_dir_watcher_stream.try_next() => {
-                    let event = device_dir_watcher_res?
+                    let event = device_dir_watcher_res
+                        .with_context(|| format!("watching {}", self.device_dir_path))?
                         .ok_or(anyhow::anyhow!(
                             "device directory {} watcher stream ended unexpectedly",
                             self.device_dir_path
@@ -495,12 +499,19 @@ impl<'a> NetCfg<'a> {
                     self.handle_device_event(event).await?
                 }
                 netstack_res = netstack_stream.try_next() => {
-                    let event = netstack_res?.ok_or(anyhow::anyhow!("Netstack event stream ended unexpectedly"))?;
+                    let event = netstack_res
+                        .context("Netstack event stream")?
+                        .ok_or(
+                            anyhow::anyhow!("Netstack event stream ended unexpectedly",
+                        ))?;
                     self.handle_netstack_event(event).await?
                 }
                 netstack_dns_server_res = netstack_dns_server_stream.try_next() => {
-                    let DnsServerWatcherEvent { source, servers } = netstack_dns_server_res?
-                        .ok_or(anyhow::anyhow!("Netstack DNS Server watcher stream ended unexpectedly"))?;
+                    let DnsServerWatcherEvent { source, servers } = netstack_dns_server_res
+                        .context("Netstack DNS server event stream")?
+                        .ok_or(anyhow::anyhow!(
+                            "Netstack DNS Server watcher stream ended unexpectedly",
+                        ))?;
                     self.update_dns_servers(source, servers).await?
                 }
                 complete => break,
@@ -933,13 +944,9 @@ async fn main() -> Result<(), anyhow::Error> {
     let (path, allow_virtual) =
         if opt.netemul { (NETEMUL_ETH_DEV_PATH, true) } else { (ETH_DEV_PATH, false) };
 
-    let mut netcfg = NetCfg::new(
-        path.to_string(),
-        allow_virtual,
-        default_config_rules,
-        filter_enabled_interface_types,
-    )
-    .context("new instance")?;
+    let mut netcfg =
+        NetCfg::new(path, allow_virtual, default_config_rules, filter_enabled_interface_types)
+            .context("new instance")?;
 
     let () =
         netcfg.update_filters(filter_config).await.context("update filters based on config")?;
