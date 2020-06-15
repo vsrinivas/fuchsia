@@ -59,6 +59,7 @@ group("infratools") {
       "//tools/integration:tools($toolchain)",
       "//tools/size_checker/cmd:host",
       "//tools/testing:tools($toolchain)",
+      "//tools/testing/affectedtests($toolchain)",
       "//zircon/tools/fvm($toolchain)",
       "//zircon/tools/minfs($toolchain)",
     ]
