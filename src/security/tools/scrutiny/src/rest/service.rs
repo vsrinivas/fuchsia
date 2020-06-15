@@ -4,20 +4,45 @@
 
 use {
     crate::engine::dispatcher::{ControllerDispatcher, DispatcherError},
+    anyhow::Error,
     log::{info, warn},
     rouille::{Response, ResponseBody},
     serde_json::json,
+    std::io::Read,
     std::sync::{Arc, RwLock},
 };
 
-pub fn run(dispatcher: Arc<RwLock<ControllerDispatcher>>) {
-    info!("Server starting: http://0.0.0.0:8080");
-    rouille::start_server("0.0.0.0:8080", move |request| {
+/// Converts a rust error into a JSON error response.
+fn error_response(error: Error) -> Response {
+    let result = json!({
+        "status": "error",
+        "description": error.to_string(),
+    });
+    Response {
+        status_code: 500,
+        headers: vec![("Content-Type".into(), "application/json".into())],
+        data: ResponseBody::from_string(result.to_string()),
+        upgrade: None,
+    }
+}
+
+/// Runs the core REST service loop, parsing URLs and queries to their
+/// respective controllers via the ControllerDispatcher. This function does
+/// not exit.
+pub fn run(dispatcher: Arc<RwLock<ControllerDispatcher>>, port: u16) {
+    let addr = format!("0.0.0.0:{}", port);
+    info!("Server starting: http://{}", addr);
+    rouille::start_server(addr, move |request| {
         info!("Request: {}", request.url());
-        // Run the query.
+        let mut body = request.data().expect("RequestBody already retrieved");
+        let mut query = String::new();
+        if let Err(e) = body.read_to_string(&mut query) {
+            warn!("Failed to read request body.");
+            return error_response(Error::new(e));
+        }
+
         let dispatch = dispatcher.read().unwrap();
-        // TODO(benwright) - Pass in the request body.
-        match dispatch.query(request.url(), json!("")) {
+        match dispatch.query(request.url(), json!(query)) {
             Ok(result) => Response {
                 status_code: 200,
                 headers: vec![("Content-Type".into(), "application/json".into())],
@@ -31,16 +56,7 @@ pub fn run(dispatcher: Arc<RwLock<ControllerDispatcher>>) {
                         return Response::empty_404();
                     }
                 }
-                let result = json!({
-                    "status": "error",
-                    "description": e.to_string()
-                });
-                Response {
-                    status_code: 500,
-                    headers: vec![("Content-Type".into(), "application/json".into())],
-                    data: ResponseBody::from_string(result.to_string()),
-                    upgrade: None,
-                }
+                error_response(e)
             }
         }
     });

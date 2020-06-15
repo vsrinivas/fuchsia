@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
+    anyhow::{Error, Result},
+    clap::{App, Arg, ArgMatches},
+    log::error,
     scrutiny::{
         engine::{dispatcher::ControllerDispatcher, manager::PluginManager, pool::CollectorPool},
         model::model::DataModel,
@@ -12,42 +14,62 @@ use {
         rest::service,
     },
     simplelog::{Config, LevelFilter, TermLogger, TerminalMode},
+    std::io::{self, ErrorKind},
     std::sync::{Arc, Mutex, RwLock},
     termion::color,
 };
 
-pub struct App {
-    manager: PluginManager,
+/// Holds a reference to core objects required by the application to run.
+struct Application {
+    pub manager: PluginManager,
     dispatcher: Arc<RwLock<ControllerDispatcher>>,
     collector: Arc<Mutex<CollectorPool>>,
+    args: ArgMatches<'static>,
 }
 
-impl App {
-    pub fn new() -> Result<Self> {
-        TermLogger::init(LevelFilter::Info, Config::default(), TerminalMode::Mixed).unwrap();
+impl Application {
+    /// Creates the DataModel, ControllerDispatcher, CollectorPool and
+    /// PluginManager.
+    pub fn new(args: ArgMatches<'static>) -> Result<Self> {
         let model = Arc::new(DataModel::connect()?);
         let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(Arc::clone(&model))));
         let collector = Arc::new(Mutex::new(CollectorPool::new(Arc::clone(&model))));
         let manager = PluginManager::new(Arc::clone(&collector), Arc::clone(&dispatcher));
-        Ok(Self { manager, dispatcher, collector })
+        Ok(Self { manager, dispatcher, collector, args })
     }
 
-    fn setup(&mut self) -> Result<()> {
-        self.manager.register_and_load(Box::new(HealthPlugin::new()))?;
-        self.manager.register_and_load(Box::new(ComponentGraphPlugin::new()))?;
-        self.collector.lock().unwrap().schedule()?;
-        Ok(())
+    /// Parses all the commond line arguments passed in and returns.
+    pub fn args() -> ArgMatches<'static> {
+        App::new("scrutiny")
+            .version("0.1")
+            .author("Fuchsia Authors")
+            .about("An extendable security auditing framework")
+            .arg(
+                Arg::with_name("port")
+                    .short("p")
+                    .help("The port to run the scrutiny service on.")
+                    .default_value("8080"),
+            )
+            .get_matches()
     }
 
+    /// Schedules the DataCollectors to run and starts the REST service.
     pub fn run(&mut self) -> Result<()> {
-        service::run(self.dispatcher.clone());
-        Ok(())
-    }
-}
+        self.collector.lock().unwrap().schedule()?;
 
-fn print_logo() {
-    println!(
-        "{}
+        if let Ok(port) = self.args.value_of("port").unwrap().parse::<u16>() {
+            service::run(self.dispatcher.clone(), port);
+            Ok(())
+        } else {
+            error!("Port provided was not a valid port number.");
+            Err(Error::new(io::Error::new(ErrorKind::InvalidInput, "Invaild argument.")))
+        }
+    }
+
+    /// Prints the ASCII logo for scrutiny.
+    pub fn print_logo() {
+        println!(
+            "{}
  _____                 _   _
 /  ___|               | | (_)
 \\ `--.  ___ _ __ _   _| |_ _ _ __  _   _
@@ -58,16 +80,21 @@ fn print_logo() {
                                    |___/
 ============================================
 {}",
-        color::Fg(color::Yellow),
-        color::Fg(color::Reset)
-    )
+            color::Fg(color::Yellow),
+            color::Fg(color::Reset)
+        )
+    }
 }
 
 /// Scrutiny is still a WIP this is just a placeholder for setting up the
 /// build targets.
 fn main() -> Result<()> {
-    print_logo();
-    let mut app = App::new()?;
-    app.setup()?;
+    let args = Application::args();
+    Application::print_logo();
+    TermLogger::init(LevelFilter::Info, Config::default(), TerminalMode::Mixed).unwrap();
+
+    let mut app = Application::new(args)?;
+    app.manager.register_and_load(Box::new(HealthPlugin::new()))?;
+    app.manager.register_and_load(Box::new(ComponentGraphPlugin::new()))?;
     app.run()
 }

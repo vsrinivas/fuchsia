@@ -39,6 +39,8 @@ if (!is_fuchsia) {
     deps = [
       ":lib",
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:clap",
+      "//third_party/rust_crates:log",
       "//third_party/rust_crates:simplelog",
       "//third_party/rust_crates:termion",
     ]
