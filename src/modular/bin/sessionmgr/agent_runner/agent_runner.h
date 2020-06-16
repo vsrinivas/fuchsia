@@ -64,8 +64,7 @@ class AgentRunner {
                             component::ServiceProviderImpl* service_provider);
 
   // Connects to an agent (and starts it up if it doesn't exist) through
-  // |fuchsia::modular::Agent.Connect|. Called using
-  // fuchsia::modular::ComponentContext.
+  // |Agent.Connect|. Called using ComponentContext.
   void ConnectToAgent(
       const std::string& requestor_url, const std::string& agent_url,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,

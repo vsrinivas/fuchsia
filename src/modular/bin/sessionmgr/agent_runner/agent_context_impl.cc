@@ -130,11 +130,6 @@ class AgentContextImpl::InitializeCall : public Operation<> {
     agent_context_impl_->app_client_->SetAppErrorHandler(
         [agent_context_impl = agent_context_impl_] { agent_context_impl->StopOnAppError(); });
 
-    // When all the |fuchsia::modular::AgentController| bindings go away maybe
-    // stop the agent.
-    agent_context_impl_->agent_controller_bindings_.set_empty_set_handler(
-        [agent_context_impl = agent_context_impl_] { agent_context_impl->StopAgentIfIdle(); });
-
     agent_context_impl_->state_ = State::RUNNING;
   }
 
@@ -320,23 +315,6 @@ void AgentContextImpl::NewAgentConnection(
 void AgentContextImpl::GetComponentContext(
     fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
   component_context_impl_.Connect(std::move(request));
-}
-
-void AgentContextImpl::StopAgentIfIdle() {
-  // See if this agent is in the agent service index. If so, and to facilitate components
-  // with connections to the agent made through the environment and without associated
-  // AgentControllers, short-circuit the usual idle cleanup and leave us running.
-  if (agent_runner_->AgentInServiceIndex(url_)) {
-    return;
-  }
-
-  operation_queue_.Add(
-      std::make_unique<StopCall>(/*is_teardown=*/false, this, [this](bool stopped) {
-        if (stopped) {
-          agent_runner_->RemoveAgent(url_);
-          // |this| is no longer valid at this point.
-        }
-      }));
 }
 
 void AgentContextImpl::StopForTeardown(fit::function<void()> callback) {

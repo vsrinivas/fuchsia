@@ -414,7 +414,7 @@ TEST_F(AgentRunnerTest, NoAgentControllerInAgentServiceRequest) {
 
   ConnectToAgentServiceExpect expect;
   expect.agent_got_service_request = false;
-  expect.service_status = ZX_ERR_PEER_CLOSED;
+  expect.service_status = ZX_ERR_NOT_FOUND;
 
   execute_connect_to_agent_service_test(test_config, expect);
 }

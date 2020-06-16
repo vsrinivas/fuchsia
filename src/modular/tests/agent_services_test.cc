@@ -285,14 +285,15 @@ TEST_F(AgentServicesTest, NoChannelProvided) {
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, ExecuteConnectToAgentServiceTest(test_config));
 }
 
-// Bad request
+// Attempt to look up the agent based on the service name with no agent
+// controller, but it is not in the index.
 TEST_F(AgentServicesTest, NoAgentControllerProvided) {
   ConnectToAgentServiceTestConfig test_config;
   test_config.provide_service_name = true;
   test_config.provide_channel = true;
   // test_config.provide_agent_controller = true;
 
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED, ExecuteConnectToAgentServiceTest(test_config));
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, ExecuteConnectToAgentServiceTest(test_config));
 }
 
 // Attempt to look up the agent based on the service name, but it is not in

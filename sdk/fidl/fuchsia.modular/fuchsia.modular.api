@@ -3,7 +3,7 @@
   "fidl/fuchsia.modular/agent/agent_context.fidl": "526645850c4cabc01fb51af0b82fdc7e",
   "fidl/fuchsia.modular/agent/agent_controller/agent_controller.fidl": "d07e307041e456185a5b851c02b45e8e",
   "fidl/fuchsia.modular/annotation/annotation.fidl": "adb0f171b32971c01902c823d791cd04",
-  "fidl/fuchsia.modular/component/component_context.fidl": "d9043cd5543266ce36ff49e630d782b5",
+  "fidl/fuchsia.modular/component/component_context.fidl": "8fff509c55df1be090d73b882f506617",
   "fidl/fuchsia.modular/config/config.fidl": "030ee886d159c111ea334a90d5cbec54",
   "fidl/fuchsia.modular/intent/intent.fidl": "d1d28af491aaea44289ebb0202e98a32",
   "fidl/fuchsia.modular/lifecycle/lifecycle.fidl": "7fb5700b330eaaaa4c36b972b788e68a",

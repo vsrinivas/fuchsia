@@ -29,8 +29,6 @@ protocol ComponentContext {
     ///
     /// Connects to an agent that provides the given `request.service_name`, and
     /// then connects the given `request.channel` to that service.
-    /// `request.agent_controller` must be kept alive until the service is no
-    /// longer required.
     ///
     /// If an error is encountered, the `request.channel` will be closed with
     /// a status code, such as:
@@ -55,6 +53,7 @@ table AgentServiceRequest {
     /// find an appropriate handler.
     3: fuchsia.sys.component_url handler;
 
-    /// The AgentController that keeps the agent alive.
+    /// The AgentController handle is optional. If provided, the channel
+    /// will be kept open until the agent providing `service_name` is terminated.
     4: request<AgentController> agent_controller;
 };

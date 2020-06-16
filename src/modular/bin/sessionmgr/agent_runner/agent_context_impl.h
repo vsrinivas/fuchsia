@@ -53,8 +53,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
       fuchsia::modular::SessionRestartController* session_restart_on_crash_controller = nullptr);
   ~AgentContextImpl() override;
 
-  // Stops the running agent, irrespective of whether there are active
-  // AgentControllers. Calls into |AgentRunner::RemoveAgent()| to remove itself.
+  // Stops the running agent. Calls into |AgentRunner::RemoveAgent()| to remove itself.
   void StopForTeardown(fit::function<void()> callback);
 
   // Attempts to connect |channel| to service |service_name| published by the agent.
@@ -100,11 +99,6 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // |fuchsia::modular::AgentContext|
   void GetComponentContext(
       fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) override;
-
-  // Adds an operation on |operation_queue_|. This operation is immediately
-  // Done() if this agent is not |ready_|. Else if there are no active
-  // AgentControllers, fuchsia::modular::Agent.Stop() is called with a timeout.
-  void StopAgentIfIdle();
 
   // Adds an operation on |operation_queue_| that disconnects from agent protocols
   // and moves the state to TERMINATED.
