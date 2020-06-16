@@ -696,6 +696,10 @@ mod tests {
         }
 
         fn suggest_ap_mac(&mut self, _mac: MacAddress) {}
+
+        fn get_phy_ids(&self) -> Vec<u16> {
+            Vec::new()
+        }
     }
 
     struct FakeClient {

@@ -136,6 +136,10 @@ mod tests {
         fn suggest_ap_mac(&mut self, mac: eui48::MacAddress) {
             self.0 = Some(mac);
         }
+
+        fn get_phy_ids(&self) -> Vec<u16> {
+            unimplemented!();
+        }
     }
 
     #[test]

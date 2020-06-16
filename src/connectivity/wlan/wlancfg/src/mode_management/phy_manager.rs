@@ -82,6 +82,9 @@ pub(crate) trait PhyManagerApi {
 
     /// Sets a suggested MAC address to be used by new AP interfaces.
     fn suggest_ap_mac(&mut self, mac: MacAddress);
+
+    /// Returns the IDs for all currently known PHYs.
+    fn get_phy_ids(&self) -> Vec<u16>;
 }
 
 /// Maintains a record of all PHYs that are present and their associated interfaces.
@@ -375,6 +378,10 @@ impl PhyManagerApi for PhyManager {
 
     fn suggest_ap_mac(&mut self, mac: MacAddress) {
         self.suggested_ap_mac = Some(mac);
+    }
+
+    fn get_phy_ids(&self) -> Vec<u16> {
+        self.phys.keys().cloned().collect()
     }
 }
 
@@ -1556,5 +1563,65 @@ mod tests {
             }
         );
         assert_variant!(exec.run_until_stalled(&mut start_client_future), Poll::Ready(_));
+    }
+
+    /// Tests get_phy_ids() when no PHYs are present. The expectation is that the PhyManager will
+    /// return an empty `Vec` in this case.
+    #[run_singlethreaded(test)]
+    async fn get_phy_ids_no_phys() {
+        let test_values = test_setup();
+        let phy_manager = PhyManager::new(test_values.proxy);
+        assert_eq!(phy_manager.get_phy_ids(), Vec::<u16>::new());
+    }
+
+    /// Tests get_phy_ids() when a single PHY is present. The expectation is that the PhyManager will
+    /// return a single element `Vec`, with the appropriate ID.
+    #[test]
+    fn get_phy_ids_single_phy() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy);
+
+        {
+            let phy_info = fake_phy_info(1, vec![]);
+            let add_phy_fut = phy_manager.add_phy(phy_info.id);
+            pin_mut!(add_phy_fut);
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
+            send_query_phy_response(&mut exec, &mut test_values.stream, Some(phy_info));
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
+        }
+
+        assert_eq!(phy_manager.get_phy_ids(), vec![1]);
+    }
+
+    /// Tests get_phy_ids() when two PHYs are present. The expectation is that the PhyManager will
+    /// return a two-element `Vec`, containing the appropriate IDs. Ordering is not guaranteed.
+    #[test]
+    fn get_phy_ids_two_phys() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+        let mut phy_manager = PhyManager::new(test_values.proxy);
+
+        {
+            let phy_info = fake_phy_info(1, Vec::new());
+            let add_phy_fut = phy_manager.add_phy(phy_info.id);
+            pin_mut!(add_phy_fut);
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
+            send_query_phy_response(&mut exec, &mut test_values.stream, Some(phy_info));
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
+        }
+
+        {
+            let phy_info = fake_phy_info(2, Vec::new());
+            let add_phy_fut = phy_manager.add_phy(phy_info.id);
+            pin_mut!(add_phy_fut);
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
+            send_query_phy_response(&mut exec, &mut test_values.stream, Some(phy_info));
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
+        }
+
+        let phy_ids = phy_manager.get_phy_ids();
+        assert!(phy_ids.contains(&1), "expected phy_ids to contain `1`, but phy_ids={:?}", phy_ids);
+        assert!(phy_ids.contains(&2), "expected phy_ids to contain `2`, but phy_ids={:?}", phy_ids);
     }
 }

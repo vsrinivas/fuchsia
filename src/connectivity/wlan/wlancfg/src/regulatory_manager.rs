@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn returns_error_on_short_region_code() {
-        let mut context = TestContext::new(StubPhyManager {});
+        let mut context = TestContext::new(make_default_stub_phy_manager());
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -136,7 +136,7 @@ mod tests {
 
     #[test]
     fn returns_error_on_long_region_code() {
-        let mut context = TestContext::new(StubPhyManager {});
+        let mut context = TestContext::new(make_default_stub_phy_manager());
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -155,7 +155,7 @@ mod tests {
 
     #[test]
     fn propagates_update_to_device_service_on_region_code_with_valid_length() {
-        let mut context = TestContext::new(StubPhyManager {});
+        let mut context = TestContext::new(make_default_stub_phy_manager());
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn does_not_propagate_invalid_length_region_code_to_device_service() {
-        let mut context = TestContext::new(StubPhyManager {});
+        let mut context = TestContext::new(make_default_stub_phy_manager());
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn returns_error_when_region_code_with_valid_length_is_rejected_by_device_service() {
-        let mut context = TestContext::new(StubPhyManager {});
+        let mut context = TestContext::new(make_default_stub_phy_manager());
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
@@ -238,7 +238,7 @@ mod tests {
 
     #[test]
     fn propagates_multiple_valid_region_code_updates_to_device_service() {
-        let mut context = TestContext::new(StubPhyManager {});
+        let mut context = TestContext::new(make_default_stub_phy_manager());
         let regulatory_fut = context.regulatory_manager.run();
         pin_mut!(regulatory_fut);
 
@@ -289,7 +289,14 @@ mod tests {
         }
     }
 
-    struct StubPhyManager;
+    struct StubPhyManager {
+        phy_ids: Vec<u16>,
+    }
+
+    /// A default StubPhyManager has one Phy, with ID 0.
+    fn make_default_stub_phy_manager() -> StubPhyManager {
+        StubPhyManager { phy_ids: vec![0] }
+    }
 
     #[async_trait]
     impl PhyManagerApi for StubPhyManager {
@@ -335,6 +342,10 @@ mod tests {
 
         fn suggest_ap_mac(&mut self, _mac: MacAddress) {
             unimplemented!();
+        }
+
+        fn get_phy_ids(&self) -> Vec<u16> {
+            self.phy_ids.clone()
         }
     }
 }
