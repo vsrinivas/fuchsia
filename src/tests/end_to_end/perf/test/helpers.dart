@@ -51,6 +51,7 @@ class PerfTestHelper {
   }
 }
 
+// TODO(53025): Stop using this and remove.
 void addTspecTest(String specFile) {
   test(specFile, () async {
     final helper = await PerfTestHelper.make();

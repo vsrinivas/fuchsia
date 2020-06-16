@@ -35,13 +35,6 @@ package("netstack_benchmarks") {
     },
   ]
 
-  resources = [
-    {
-      path = rebase_path("udp_benchmark.tspec")
-      dest = "udp_benchmark.tspec"
-    },
-  ]
-
   meta = [
     {
       path = rebase_path("meta/udp_benchmark.cmx")
