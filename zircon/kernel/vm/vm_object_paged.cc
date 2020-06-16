@@ -1130,6 +1130,13 @@ void VmObjectPaged::Dump(uint depth, bool verbose) {
          this, user_id_, size_, parent_offset_, parent_limit_, count, ref_count_debug(),
          parent_.get(), parent_id);
 
+  if (page_source_) {
+    for (uint i = 0; i < depth + 1; ++i) {
+      printf("  ");
+    }
+    page_source_->Dump();
+  }
+
   if (verbose) {
     auto f = [depth](const auto& p, uint64_t offset) {
       for (uint i = 0; i < depth + 1; ++i) {
