@@ -129,6 +129,9 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry,
   // and (2) dispatch a FocusEvent to the clients that have gained and lost focus.
   void MaybeDispatchFidlFocusChainAndFocusEvents(const std::vector<zx_koid_t>& old_focus_chain);
 
+  // Dispatch current focus chain to the FocusChainListener.
+  void DispatchFocusChain();
+
   //
   // Fields
   //

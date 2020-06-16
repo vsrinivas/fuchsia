@@ -32,11 +32,13 @@ FocusChainManager::ViewRefWatcher::~ViewRefWatcher() = default;
 void FocusChainManager::OnFocusChange(fuchsia::ui::focus::FocusChain focus_chain,
                                       OnFocusChangeCallback callback) {
   focus_chain_.clear();
-  auto& new_focus_chain = *(focus_chain.mutable_focus_chain());
-  for (auto& view_ref : new_focus_chain) {
-    auto view_ref_watcher =
-        std::make_unique<ViewRefWatcher>(std::move(view_ref), [this]() { InvalidateFocusChain(); });
-    focus_chain_.push_back(std::move(view_ref_watcher));
+  if (focus_chain.has_focus_chain()) {
+    auto& new_focus_chain = *(focus_chain.mutable_focus_chain());
+    for (auto& view_ref : new_focus_chain) {
+      auto view_ref_watcher = std::make_unique<ViewRefWatcher>(
+          std::move(view_ref), [this]() { InvalidateFocusChain(); });
+      focus_chain_.push_back(std::move(view_ref_watcher));
+    }
   }
   Notify();
   callback();

@@ -107,6 +107,8 @@ ViewTree::FocusChangeStatus SceneGraph::RequestFocusChange(zx_koid_t requestor, 
 
 void SceneGraph::Register(fidl::InterfaceHandle<FocusChainListener> focus_chain_listener) {
   focus_chain_listener_.Bind(std::move(focus_chain_listener));
+  // Dispatch current chain on register.
+  DispatchFocusChain();
 }
 
 void SceneGraph::RegisterViewFocuser(SessionId session_id,
@@ -153,6 +155,13 @@ std::string FocusChainToString(const std::vector<zx_koid_t>& focus_chain) {
   return output.str();
 }
 
+void SceneGraph::DispatchFocusChain() {
+  TRACE_DURATION("gfx", "SceneGraphFocusChainDispatch", "chain_depth",
+                 view_tree_.focus_chain().size());
+  FocusChainListener::OnFocusChangeCallback callback = [] { /* No flow control yet. */ };
+  focus_chain_listener_->OnFocusChange(view_tree_.CloneFocusChain(), std::move(callback));
+}
+
 void SceneGraph::MaybeDispatchFidlFocusChainAndFocusEvents(
     const std::vector<zx_koid_t>& old_focus_chain) {
   const std::vector<zx_koid_t>& new_focus_chain = view_tree_.focus_chain();
@@ -168,9 +177,7 @@ void SceneGraph::MaybeDispatchFidlFocusChainAndFocusEvents(
               << "\t New focus chain: " << FocusChainToString(new_focus_chain);
 
   if (focus_chain_listener_) {
-    TRACE_DURATION("gfx", "SceneGraphFocusChainDispatch", "chain_depth", new_focus_chain.size());
-    FocusChainListener::OnFocusChangeCallback callback = [] { /* No flow control yet. */ };
-    focus_chain_listener_->OnFocusChange(view_tree_.CloneFocusChain(), std::move(callback));
+    DispatchFocusChain();
   }
 
   const zx_time_t focus_time = dispatcher_clock_now();

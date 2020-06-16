@@ -45,22 +45,17 @@ using ViewFocuserPtr = fuchsia::ui::views::FocuserPtr;
 using ViewFocuserRequest = fidl::InterfaceRequest<fuchsia::ui::views::Focuser>;
 
 // Class fixture for TEST_F.
-class FocusChainTest : public scenic_impl::gfx::test::GfxSystemTest, public FocusChainListener {
+class FocusChainRegisterTest : public scenic_impl::gfx::test::GfxSystemTest,
+                               public FocusChainListener {
  protected:
-  FocusChainTest() : focus_chain_listener_(this) {}
-  ~FocusChainTest() override = default;
+  FocusChainRegisterTest() : focus_chain_listener_(this) {}
+  ~FocusChainRegisterTest() override = default;
 
   void SetUp() override {
     scenic_impl::gfx::test::GfxSystemTest::SetUp();
 
     context_provider().ConnectToPublicService<FocusChainListenerRegistry>(
         focus_chain_listener_registry_.NewRequest());
-
-    fidl::InterfaceHandle<FocusChainListener> listener_handle;
-    focus_chain_listener_.Bind(listener_handle.NewRequest());
-    focus_chain_listener_registry_->Register(std::move(listener_handle));
-
-    RunLoopUntilIdle();
   }
 
   void TearDown() override {
@@ -92,9 +87,16 @@ class FocusChainTest : public scenic_impl::gfx::test::GfxSystemTest, public Focu
     return request_honored;
   }
 
+  void RegisterListener() {
+    fidl::InterfaceHandle<FocusChainListener> listener_handle;
+    focus_chain_listener_.Bind(listener_handle.NewRequest());
+    focus_chain_listener_registry_->Register(std::move(listener_handle));
+  }
+
   // |fuchsia::ui::focus::FocusChainListener|
   void OnFocusChange(FocusChain focus_chain, OnFocusChangeCallback callback) override {
     observed_focus_chains_.push_back(std::move(focus_chain));
+
     callback();  // Receipt.
   }
 
@@ -112,8 +114,25 @@ class FocusChainTest : public scenic_impl::gfx::test::GfxSystemTest, public Focu
  private:
   FocusChainListenerRegistryPtr focus_chain_listener_registry_;
   fidl::Binding<FocusChainListener> focus_chain_listener_;
-
   std::vector<FocusChain> observed_focus_chains_;
+};
+
+class FocusChainTest : public FocusChainRegisterTest {
+ protected:
+  FocusChainTest() = default;
+  ~FocusChainTest() override = default;
+
+  void SetUp() override {
+    FocusChainRegisterTest::SetUp();
+
+    EXPECT_EQ(CountReceivedFocusChains(), 0u);
+    RegisterListener();
+    RunLoopUntilIdle();
+    // Should get an empty focus chain if registering with no scene.
+    EXPECT_EQ(CountReceivedFocusChains(), 1u);
+    ASSERT_TRUE(LastFocusChain());
+    EXPECT_TRUE(LastFocusChain()->IsEmpty());
+  }
 };
 
 // Some classes use the following two-node tree topology:
@@ -433,8 +452,19 @@ struct FourNodeFocusChainTest : public FocusChainTest {
   std::unique_ptr<LeafClient> client_d;
 };
 
+TEST_F(FocusChainRegisterTest, RegisterBeforeSceneSetup_ShouldReturnEmptyFocusChain) {
+  EXPECT_EQ(CountReceivedFocusChains(), 0u);  // Before registering no focus chain received.
+
+  RegisterListener();
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(CountReceivedFocusChains(), 1u);
+  ASSERT_TRUE(LastFocusChain());
+  EXPECT_FALSE(LastFocusChain()->has_focus_chain());
+}
+
 TEST_F(FocusChainTest, EmptySceneTransitions) {
-  EXPECT_EQ(CountReceivedFocusChains(), 0u);
+  EXPECT_EQ(CountReceivedFocusChains(), 1u);  // Initial focus chain on register.
 
   struct RootClient : public SessionWrapper {
     RootClient(scenic_impl::Scenic* scenic) : SessionWrapper(scenic) {}
@@ -452,7 +482,7 @@ TEST_F(FocusChainTest, EmptySceneTransitions) {
     test->RequestToPresent(session);
   });
 
-  EXPECT_EQ(CountReceivedFocusChains(), 0u);
+  EXPECT_EQ(CountReceivedFocusChains(), 1u);
 
   root_session.RunNow([test = this, state = &root_session](
                           scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
@@ -475,6 +505,46 @@ TEST_F(FocusChainTest, EmptySceneTransitions) {
 
     test->RequestToPresent(session);
   });
+
+  EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  ASSERT_TRUE(LastFocusChain());
+  EXPECT_EQ(LastFocusChain()->focus_chain().size(), 1u);
+}
+
+// Registering after the scene has been setup should result in getting an initial focus chain.
+TEST_F(FocusChainRegisterTest, RegisterAfterSceneSetup_ShouldReturnNonEmptyFocusChain) {
+  struct RootClient : public SessionWrapper {
+    RootClient(scenic_impl::Scenic* scenic) : SessionWrapper(scenic) {}
+
+    std::unique_ptr<scenic::Scene> scene;
+  } root_session(scenic());
+
+  root_session.RunNow([test = this, state = &root_session](
+                          scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
+    // Create a scene that is hooked up to a compositor. This set of
+    // commands should trigger the creation of a focus chain, with length 1.
+    scenic::Compositor compositor(session);
+    scenic::LayerStack layer_stack(session);
+    compositor.SetLayerStack(layer_stack);
+
+    scenic::Layer layer(session);
+    layer.SetSize(9 /*px*/, 9 /*px*/);
+    layer_stack.AddLayer(layer);
+    scenic::Renderer renderer(session);
+    layer.SetRenderer(renderer);
+    state->scene = std::make_unique<scenic::Scene>(session);
+    scenic::Camera camera(*state->scene);
+    renderer.SetCamera(camera);
+
+    state->scene->AddChild(*session_anchor);
+
+    test->RequestToPresent(session);
+  });
+
+  EXPECT_EQ(CountReceivedFocusChains(), 0u);  // Before registering no focus chain received.
+
+  RegisterListener();
+  RunLoopUntilIdle();
 
   EXPECT_EQ(CountReceivedFocusChains(), 1u);
   ASSERT_TRUE(LastFocusChain());
@@ -576,7 +646,7 @@ TEST_F(FocusChainTest, LayerSwapMeansSceneSwap) {
 
   ASSERT_FALSE(RunLoopUntilIdle());  // There should be no pending tasks.
 
-  EXPECT_EQ(CountReceivedFocusChains(), 0u);
+  EXPECT_EQ(CountReceivedFocusChains(), 1u);
 
   // Add Layer B.
   client_a.RunNow([test = this, state = &client_a](scenic::Session* session,
@@ -585,7 +655,7 @@ TEST_F(FocusChainTest, LayerSwapMeansSceneSwap) {
     test->RequestToPresent(session);
   });
 
-  EXPECT_EQ(CountReceivedFocusChains(), 1u);
+  EXPECT_EQ(CountReceivedFocusChains(), 2u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 1u);
   const zx_koid_t scene_b = ExtractKoid(LastFocusChain()->focus_chain()[0]);
 
@@ -595,7 +665,7 @@ TEST_F(FocusChainTest, LayerSwapMeansSceneSwap) {
   RunLoopUntilIdle();  // Process FIDL messages.
 
   EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
-  EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  EXPECT_EQ(CountReceivedFocusChains(), 3u);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[0]), scene_b);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[1]), client_b.view_ref_koid);
 
@@ -608,7 +678,7 @@ TEST_F(FocusChainTest, LayerSwapMeansSceneSwap) {
     test->RequestToPresent(session);
   });
 
-  EXPECT_EQ(CountReceivedFocusChains(), 3u);
+  EXPECT_EQ(CountReceivedFocusChains(), 4u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 1u);
   const zx_koid_t scene_c = ExtractKoid(LastFocusChain()->focus_chain()[0]);
 
@@ -620,7 +690,7 @@ TEST_F(FocusChainTest, LayerSwapMeansSceneSwap) {
   RunLoopUntilIdle();  // Process FIDL messages.
 
   EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
-  EXPECT_EQ(CountReceivedFocusChains(), 4u);
+  EXPECT_EQ(CountReceivedFocusChains(), 5u);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[0]), scene_c);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[1]), client_c.view_ref_koid);
 
@@ -632,7 +702,7 @@ TEST_F(FocusChainTest, LayerSwapMeansSceneSwap) {
     test->RequestToPresent(session);
   });
 
-  EXPECT_EQ(CountReceivedFocusChains(), 5u);
+  EXPECT_EQ(CountReceivedFocusChains(), 6u);
   EXPECT_TRUE(LastFocusChain()->IsEmpty());
 }
 
@@ -681,7 +751,7 @@ TEST_F(FocusChainTest, OneLinkTopology) {
   });
 
   // Merely setting up a ViewHolder does not trigger a fresh focus chain, or make it longer.
-  EXPECT_EQ(CountReceivedFocusChains(), 1u);
+  EXPECT_EQ(CountReceivedFocusChains(), 2u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 1u);
 
   // Client "B" sets up its own View.
@@ -704,7 +774,7 @@ TEST_F(FocusChainTest, OneLinkTopology) {
 
   // Merely setting up a separate View, that is connected to the scene, does not trigger a fresh
   // focus chain, or make it longer.
-  EXPECT_EQ(CountReceivedFocusChains(), 1u);
+  EXPECT_EQ(CountReceivedFocusChains(), 2u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 1u);
 }
 
@@ -716,7 +786,7 @@ TEST_F(TwoNodeFocusChainTest, FocusTransferDownAllowed) {
   RunLoopUntilIdle();  // Process FIDL messages.
 
   EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
-  EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  EXPECT_EQ(CountReceivedFocusChains(), 3u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 2u);
 }
 
@@ -728,7 +798,7 @@ TEST_F(TwoNodeFocusChainTest, FocusTransferNullChangeNoFidl) {
   RunLoopUntilIdle();  // Process FIDL messages.
 
   EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
-  EXPECT_EQ(CountReceivedFocusChains(), 1u);
+  EXPECT_EQ(CountReceivedFocusChains(), 2u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 1u);
 
   // Transfer down for a similar test on Client B.
@@ -736,7 +806,7 @@ TEST_F(TwoNodeFocusChainTest, FocusTransferNullChangeNoFidl) {
   RunLoopUntilIdle();  // Process FIDL messages.
 
   EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
-  EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  EXPECT_EQ(CountReceivedFocusChains(), 3u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 2u);
 
   // Transfer focus from itself to itself. No change expected.
@@ -745,7 +815,7 @@ TEST_F(TwoNodeFocusChainTest, FocusTransferNullChangeNoFidl) {
   RunLoopUntilIdle();  // Process FIDL messages.
 
   EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
-  EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  EXPECT_EQ(CountReceivedFocusChains(), 3u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 2u);
 }
 
@@ -756,7 +826,7 @@ TEST_F(TwoNodeFocusChainTest, FocusTransferUpwardDenied) {
   RunLoopUntilIdle();  // Process FIDL messages.
 
   EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
-  EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  EXPECT_EQ(CountReceivedFocusChains(), 3u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 2u);
 
   // Upward focus request, denied. No change expected.
@@ -764,7 +834,7 @@ TEST_F(TwoNodeFocusChainTest, FocusTransferUpwardDenied) {
   RunLoopUntilIdle();  // Process FIDL messages.
 
   EXPECT_EQ(status, ViewTree::FocusChangeStatus::kErrorRequestorNotRequestAncestor);
-  EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  EXPECT_EQ(CountReceivedFocusChains(), 3u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 2u);
 }
 
@@ -777,7 +847,7 @@ TEST_F(TwoNodeFocusChainTest, FocusTransferUpwardDenied) {
 TEST_F(FourNodeFocusChainTest, LengthyFocusChain) {
   // Merely setting up four separate Views, that are connected to the scene, does not trigger a
   // fresh focus chain, or make it longer.
-  EXPECT_EQ(CountReceivedFocusChains(), 1u);
+  EXPECT_EQ(CountReceivedFocusChains(), 2u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 1u);
 
   // Emulate a focus transfer from "A" to "D".
@@ -788,7 +858,7 @@ TEST_F(FourNodeFocusChainTest, LengthyFocusChain) {
 
   // Focus chain is now [A - B - D].
   EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
-  EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  EXPECT_EQ(CountReceivedFocusChains(), 3u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 3u);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[0]), root);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[1]), client_b->view_ref_koid);
@@ -809,7 +879,7 @@ TEST_F(FourNodeFocusChainTest, SiblingTransferRequestsDenied) {
 
   // No change in focus chain.
   EXPECT_EQ(status, ViewTree::FocusChangeStatus::kErrorRequestorNotRequestAncestor);
-  EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  EXPECT_EQ(CountReceivedFocusChains(), 3u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 3u);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[0]), root);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[1]), client_b->view_ref_koid);
@@ -822,7 +892,7 @@ TEST_F(FourNodeFocusChainTest, SiblingTransferRequestsDenied) {
 
   // No change in focus chain.
   EXPECT_EQ(status, ViewTree::FocusChangeStatus::kErrorRequestorNotAuthorized);
-  EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  EXPECT_EQ(CountReceivedFocusChains(), 3u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 3u);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[0]), root);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[1]), client_b->view_ref_koid);
@@ -843,7 +913,7 @@ TEST_F(ThreeNodeFocusChainTest, ViewDestructionShortensFocusChain) {
   RunLoopUntilIdle();  // Process FIDL messages.
 
   EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
-  EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  EXPECT_EQ(CountReceivedFocusChains(), 3u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 3u);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[0]), root);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[1]), client_b->view_ref_koid);
@@ -857,7 +927,7 @@ TEST_F(ThreeNodeFocusChainTest, ViewDestructionShortensFocusChain) {
   });
 
   // Focus chain is now length 2.
-  EXPECT_EQ(CountReceivedFocusChains(), 3u);
+  EXPECT_EQ(CountReceivedFocusChains(), 4u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 2u);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[0]), root);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[1]), client_b->view_ref_koid);
@@ -870,7 +940,7 @@ TEST_F(ThreeNodeFocusChainTest, ViewDestructionShortensFocusChain) {
   });
 
   // Focus chain is now length 1.
-  EXPECT_EQ(CountReceivedFocusChains(), 4u);
+  EXPECT_EQ(CountReceivedFocusChains(), 5u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 1u);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[0]), root);
 
@@ -882,7 +952,7 @@ TEST_F(ThreeNodeFocusChainTest, ViewDestructionShortensFocusChain) {
   });
 
   // Focus chain is now empty.
-  EXPECT_EQ(CountReceivedFocusChains(), 5u);
+  EXPECT_EQ(CountReceivedFocusChains(), 6u);
   EXPECT_TRUE(LastFocusChain()->IsEmpty());
 }
 
@@ -900,7 +970,7 @@ TEST_F(ThreeNodeFocusChainTest, ViewHolderDestructionShortensFocusChain) {
   RunLoopUntilIdle();  // Process FIDL messages.
 
   EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
-  EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  EXPECT_EQ(CountReceivedFocusChains(), 3u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 3u);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[0]), root);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[1]), client_b->view_ref_koid);
@@ -915,7 +985,7 @@ TEST_F(ThreeNodeFocusChainTest, ViewHolderDestructionShortensFocusChain) {
   });
 
   // Focus chain is now length 2.
-  EXPECT_EQ(CountReceivedFocusChains(), 3u);
+  EXPECT_EQ(CountReceivedFocusChains(), 4u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 2u);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[0]), root);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[1]), client_b->view_ref_koid);
@@ -928,7 +998,7 @@ TEST_F(ThreeNodeFocusChainTest, ViewHolderDestructionShortensFocusChain) {
   });
 
   // Focus chain is now empty.
-  EXPECT_EQ(CountReceivedFocusChains(), 4u);
+  EXPECT_EQ(CountReceivedFocusChains(), 5u);
   EXPECT_TRUE(LastFocusChain()->IsEmpty());
 }
 
@@ -940,7 +1010,7 @@ TEST_F(ThreeNodeFocusChainTest, ViewHolderDisconnectShortensFocusChain) {
   RunLoopUntilIdle();  // Process FIDL messages.
 
   EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
-  EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  EXPECT_EQ(CountReceivedFocusChains(), 3u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 3u);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[0]), root);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[1]), client_b->view_ref_koid);
@@ -953,7 +1023,7 @@ TEST_F(ThreeNodeFocusChainTest, ViewHolderDisconnectShortensFocusChain) {
     test->RequestToPresent(session);
   });
 
-  EXPECT_EQ(CountReceivedFocusChains(), 3u);
+  EXPECT_EQ(CountReceivedFocusChains(), 4u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 2u);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[0]), root);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[1]), client_b->view_ref_koid);
@@ -1002,7 +1072,7 @@ TEST_F(FocusChainTest, LateViewConnectTriggersViewTreeUpdate) {
     test->RequestToPresent(session);
   });
 
-  EXPECT_EQ(CountReceivedFocusChains(), 1u);
+  EXPECT_EQ(CountReceivedFocusChains(), 2u);
 
   child_client.RunNow(
       [test = this, state = &child_client, child_token = std::move(token_pair.view_token),
@@ -1014,7 +1084,7 @@ TEST_F(FocusChainTest, LateViewConnectTriggersViewTreeUpdate) {
         test->RequestToPresent(session);
       });
 
-  EXPECT_EQ(CountReceivedFocusChains(), 1u);
+  EXPECT_EQ(CountReceivedFocusChains(), 2u);
 
   parent_client.RunNow(
       [test = this, state = &parent_client, parent_token = std::move(token_pair.view_holder_token)](
@@ -1035,7 +1105,7 @@ TEST_F(FocusChainTest, LateViewConnectTriggersViewTreeUpdate) {
   });
 
   EXPECT_TRUE(RequestFocusChange(&parent_focuser, target));
-  EXPECT_EQ(CountReceivedFocusChains(), 2u);
+  EXPECT_EQ(CountReceivedFocusChains(), 3u);
 }
 
 }  // namespace src_ui_scenic_lib_gfx_tests

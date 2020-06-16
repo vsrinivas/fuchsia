@@ -226,10 +226,11 @@ TEST_F(FocusTransferTest, RequestValidity_RequestorConnectedNoRequest) {
     test->RequestToPresent(session);
   });
 
-  EXPECT_EQ(CountReceivedFocusChains(), 1u);  // A lifecycle event tied to scene creation.
+  EXPECT_EQ(CountReceivedFocusChains(),
+            2u);  // The initial on register focus chain + a lifecycle event tied to scene creation.
 
   EXPECT_FALSE(RequestFocusChange(&parent_focuser, target));
-  EXPECT_EQ(CountReceivedFocusChains(), 1u);
+  EXPECT_EQ(CountReceivedFocusChains(), 2u);
 }
 
 TEST_F(FocusTransferTest, RequestValidity_RequestorConnectedRequestCreated) {
@@ -282,7 +283,7 @@ TEST_F(FocusTransferTest, RequestValidity_RequestorConnectedRequestCreated) {
       });
 
   EXPECT_FALSE(RequestFocusChange(&parent_focuser, target));
-  EXPECT_EQ(CountReceivedFocusChains(), 1u);
+  EXPECT_EQ(CountReceivedFocusChains(), 2u);
 }
 
 TEST_F(FocusTransferTest, RequestValidity_RequestorConnectedRequestCreatedViewholderCreated) {
@@ -346,7 +347,7 @@ TEST_F(FocusTransferTest, RequestValidity_RequestorConnectedRequestCreatedViewho
       });
 
   EXPECT_FALSE(RequestFocusChange(&parent_focuser, target));
-  EXPECT_EQ(CountReceivedFocusChains(), 1u);
+  EXPECT_EQ(CountReceivedFocusChains(), 2u);
 }
 
 TEST_F(FocusTransferTest, RequestValidity_RequestorConnectedRequestConnected) {
@@ -417,7 +418,7 @@ TEST_F(FocusTransferTest, RequestValidity_RequestorConnectedRequestConnected) {
   });
 
   EXPECT_TRUE(RequestFocusChange(&parent_focuser, target));
-  ASSERT_EQ(CountReceivedFocusChains(), 2u);
+  ASSERT_EQ(CountReceivedFocusChains(), 3u);
 
   ASSERT_TRUE(LastFocusChain()->has_focus_chain());
   ASSERT_EQ(LastFocusChain()->focus_chain().size(), 2u);
