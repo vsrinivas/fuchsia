@@ -117,11 +117,12 @@ pub mod non_fuchsia_handles {
             if self.is_invalid() {
                 FidlHdlType::Invalid
             } else {
-                with_handle(self.as_handle_ref().0, |_, obj, _, _, _| match obj {
-                    FidlHandleType::Channel(_) => FidlHdlType::Channel,
-                    FidlHandleType::StreamSocket(_) => FidlHdlType::Socket,
-                    FidlHandleType::DatagramSocket(_) => FidlHdlType::Socket,
-                })
+                let (_, ty, _) = unpack_handle(self.as_handle_ref().0);
+                match ty {
+                    FidlHandleType::Channel => FidlHdlType::Channel,
+                    FidlHandleType::StreamSocket => FidlHdlType::Socket,
+                    FidlHandleType::DatagramSocket => FidlHdlType::Socket,
+                }
             }
         }
 
@@ -139,10 +140,16 @@ pub mod non_fuchsia_handles {
             if self.is_invalid() {
                 (0, 0)
             } else {
-                with_handle(self.as_handle_ref().0, |_, _, _, side, koid_left| match side {
+                let (slot, ty, side) = unpack_handle(self.as_handle_ref().0);
+                let koid_left = match ty {
+                    FidlHandleType::Channel => CHANNELS.lock()[slot].koid_left,
+                    FidlHandleType::StreamSocket => STREAM_SOCKETS.lock()[slot].koid_left,
+                    FidlHandleType::DatagramSocket => DATAGRAM_SOCKETS.lock()[slot].koid_left,
+                };
+                match side {
                     Side::Left => (koid_left, koid_left + 1),
                     Side::Right => (koid_left + 1, koid_left),
-                })
+                }
             }
         }
     }
@@ -290,7 +297,9 @@ pub mod non_fuchsia_handles {
         /// Create a channel, resulting in a pair of `Channel` objects representing both
         /// sides of the channel. Messages written into one maybe read from the opposite.
         pub fn create() -> Result<(Channel, Channel), zx_status::Status> {
-            let (left, right) = new_handle_pair(FidlHandleType::Channel(Default::default()));
+            let slot = new_handle_slot(&CHANNELS);
+            let left = pack_handle(slot, FidlHandleType::Channel, Side::Left);
+            let right = pack_handle(slot, FidlHandleType::Channel, Side::Right);
             Ok((Channel(left), Channel(right)))
         }
 
@@ -318,21 +327,19 @@ pub mod non_fuchsia_handles {
             bytes: &mut Vec<u8>,
             handles: &mut Vec<Handle>,
         ) -> Poll<Result<(), zx_status::Status>> {
-            with_handle(self.0, |open, obj, wakers, side, _| match obj {
-                FidlHandleType::Channel(obj) => {
-                    if let Some(mut msg) = obj.side_mut(side.opposite()).pop_front() {
-                        std::mem::swap(bytes, &mut msg.bytes);
-                        std::mem::swap(handles, &mut msg.handles);
-                        Poll::Ready(Ok(()))
-                    } else if open {
-                        *wakers.side_mut(side.opposite()) = Some(cx.waker().clone());
-                        Poll::Pending
-                    } else {
-                        Poll::Ready(Err(zx_status::Status::PEER_CLOSED))
-                    }
-                }
-                _ => panic!("Non channel passed to Channel::poll_read"),
-            })
+            let (slot, ty, side) = unpack_handle(self.0);
+            assert_eq!(ty, FidlHandleType::Channel);
+            let obj = &mut CHANNELS.lock()[slot];
+            if let Some(mut msg) = obj.q.side_mut(side.opposite()).pop_front() {
+                std::mem::swap(bytes, &mut msg.bytes);
+                std::mem::swap(handles, &mut msg.handles);
+                Poll::Ready(Ok(()))
+            } else if obj.liveness.is_open() {
+                *obj.wakers.side_mut(side.opposite()) = Some(cx.waker().clone());
+                Poll::Pending
+            } else {
+                Poll::Ready(Err(zx_status::Status::PEER_CLOSED))
+            }
         }
 
         /// Write a message to a channel.
@@ -342,20 +349,18 @@ pub mod non_fuchsia_handles {
             handles: &mut Vec<Handle>,
         ) -> Result<(), zx_status::Status> {
             let bytes = bytes.to_vec();
-            with_handle(self.0, |open, obj, wakers, side, _| match obj {
-                FidlHandleType::Channel(obj) => {
-                    if !open {
-                        return Err(zx_status::Status::PEER_CLOSED);
-                    }
-                    obj.side_mut(side).push_back(ChannelMessage {
-                        bytes,
-                        handles: std::mem::replace(handles, Vec::new()),
-                    });
-                    wakers.side_mut(side).take().map(|w| w.wake());
-                    Ok(())
-                }
-                _ => panic!("Non channel passed to Channel::write"),
-            })
+            let (slot, ty, side) = unpack_handle(self.0);
+            assert_eq!(ty, FidlHandleType::Channel);
+            let obj = &mut CHANNELS.lock()[slot];
+            if !obj.liveness.is_open() {
+                return Err(zx_status::Status::PEER_CLOSED);
+            }
+            obj.q.side_mut(side).push_back(ChannelMessage {
+                bytes,
+                handles: std::mem::replace(handles, Vec::new()),
+            });
+            obj.wakers.side_mut(side).take().map(|w| w.wake());
+            Ok(())
         }
     }
 
@@ -457,13 +462,15 @@ pub mod non_fuchsia_handles {
         pub fn create(sock_opts: SocketOpts) -> Result<(Socket, Socket), zx_status::Status> {
             match sock_opts {
                 SocketOpts::STREAM => {
-                    let (left, right) =
-                        new_handle_pair(FidlHandleType::StreamSocket(Default::default()));
+                    let slot = new_handle_slot(&STREAM_SOCKETS);
+                    let left = pack_handle(slot, FidlHandleType::StreamSocket, Side::Left);
+                    let right = pack_handle(slot, FidlHandleType::StreamSocket, Side::Right);
                     Ok((Socket(left), Socket(right)))
                 }
                 SocketOpts::DATAGRAM => {
-                    let (left, right) =
-                        new_handle_pair(FidlHandleType::DatagramSocket(Default::default()));
+                    let slot = new_handle_slot(&DATAGRAM_SOCKETS);
+                    let left = pack_handle(slot, FidlHandleType::DatagramSocket, Side::Left);
+                    let right = pack_handle(slot, FidlHandleType::DatagramSocket, Side::Right);
                     Ok((Socket(left), Socket(right)))
                 }
             }
@@ -472,42 +479,53 @@ pub mod non_fuchsia_handles {
         /// Write the given bytes into the socket.
         /// Return value (on success) is number of bytes actually written.
         pub fn write(&self, bytes: &[u8]) -> Result<usize, zx_status::Status> {
-            with_handle(self.0, |open, obj, wakers, side, _| {
-                if !open {
-                    return Err(zx_status::Status::PEER_CLOSED);
-                }
-                match obj {
-                    FidlHandleType::StreamSocket(obj) => {
-                        obj.side_mut(side).extend(bytes);
+            let (slot, ty, side) = unpack_handle(self.0);
+            match ty {
+                FidlHandleType::StreamSocket => {
+                    let obj = &mut STREAM_SOCKETS.lock()[slot];
+                    if !obj.liveness.is_open() {
+                        return Err(zx_status::Status::PEER_CLOSED);
                     }
-                    FidlHandleType::DatagramSocket(obj) => {
-                        obj.side_mut(side).push_back(bytes.to_vec());
-                    }
-                    _ => panic!("Non socket passed to Socket::write"),
+                    obj.q.side_mut(side).extend(bytes);
+                    obj.wakers.side_mut(side).take().map(|w| w.wake());
                 }
-                wakers.side_mut(side).take().map(|w| w.wake());
-                Ok(bytes.len())
-            })
+                FidlHandleType::DatagramSocket => {
+                    let obj = &mut DATAGRAM_SOCKETS.lock()[slot];
+                    if !obj.liveness.is_open() {
+                        return Err(zx_status::Status::PEER_CLOSED);
+                    }
+                    obj.q.side_mut(side).push_back(bytes.to_vec());
+                    obj.wakers.side_mut(side).take().map(|w| w.wake());
+                }
+                _ => panic!("Non socket passed to Socket::write"),
+            }
+            Ok(bytes.len())
         }
 
         /// Return how many bytes are buffered in the socket
         pub fn outstanding_read_bytes(&self) -> Result<usize, zx_status::Status> {
-            with_handle(self.0, |open, obj, _, side, _| {
-                let len = match obj {
-                    FidlHandleType::StreamSocket(obj) => obj.side(side.opposite()).len(),
-                    FidlHandleType::DatagramSocket(obj) => {
-                        obj.side(side.opposite()).front().map(|frame| frame.len()).unwrap_or(0)
-                    }
-                    _ => panic!("Non socket passed to Socket::outstanding_read_bytes"),
-                };
-                if len > 0 {
-                    return Ok(len);
+            let (slot, ty, side) = unpack_handle(self.0);
+            let (len, open) = match ty {
+                FidlHandleType::StreamSocket => {
+                    let obj = &STREAM_SOCKETS.lock()[slot];
+                    (obj.q.side(side.opposite()).len(), obj.liveness.is_open())
                 }
-                if !open {
-                    return Err(zx_status::Status::PEER_CLOSED);
+                FidlHandleType::DatagramSocket => {
+                    let obj = &DATAGRAM_SOCKETS.lock()[slot];
+                    (
+                        obj.q.side(side.opposite()).front().map(|frame| frame.len()).unwrap_or(0),
+                        obj.liveness.is_open(),
+                    )
                 }
-                Ok(0)
-            })
+                _ => panic!("Non socket passed to Socket::outstanding_read_bytes"),
+            };
+            if len > 0 {
+                return Ok(len);
+            }
+            if !open {
+                return Err(zx_status::Status::PEER_CLOSED);
+            }
+            Ok(0)
         }
 
         fn poll_read(
@@ -515,20 +533,22 @@ pub mod non_fuchsia_handles {
             bytes: &mut [u8],
             ctx: &mut Context<'_>,
         ) -> Poll<Result<usize, zx_status::Status>> {
-            with_handle(self.0, |open, obj, wakers, side, _| match obj {
-                FidlHandleType::StreamSocket(obj) => {
+            let (slot, ty, side) = unpack_handle(self.0);
+            match ty {
+                FidlHandleType::StreamSocket => {
+                    let obj = &mut STREAM_SOCKETS.lock()[slot];
                     if bytes.is_empty() {
-                        if open {
+                        if obj.liveness.is_open() {
                             return Poll::Ready(Ok(0));
                         } else {
                             return Poll::Ready(Err(zx_status::Status::PEER_CLOSED));
                         }
                     }
-                    let read = obj.side_mut(side.opposite());
+                    let read = obj.q.side_mut(side.opposite());
                     let copy_bytes = std::cmp::min(bytes.len(), read.len());
                     if copy_bytes == 0 {
-                        if open {
-                            *wakers.side_mut(side.opposite()) = Some(ctx.waker().clone());
+                        if obj.liveness.is_open() {
+                            *obj.wakers.side_mut(side.opposite()) = Some(ctx.waker().clone());
                             return Poll::Pending;
                         } else {
                             return Poll::Ready(Err(zx_status::Status::PEER_CLOSED));
@@ -539,20 +559,21 @@ pub mod non_fuchsia_handles {
                     }
                     Poll::Ready(Ok(copy_bytes))
                 }
-                FidlHandleType::DatagramSocket(obj) => {
-                    if let Some(frame) = obj.side_mut(side.opposite()).pop_front() {
+                FidlHandleType::DatagramSocket => {
+                    let obj = &mut DATAGRAM_SOCKETS.lock()[slot];
+                    if let Some(frame) = obj.q.side_mut(side.opposite()).pop_front() {
                         let n = std::cmp::min(bytes.len(), frame.len());
                         bytes[..n].clone_from_slice(&frame[..n]);
                         Poll::Ready(Ok(n))
-                    } else if !open {
+                    } else if !obj.liveness.is_open() {
                         Poll::Ready(Err(zx_status::Status::PEER_CLOSED))
                     } else {
-                        *wakers.side_mut(side.opposite()) = Some(ctx.waker().clone());
+                        *obj.wakers.side_mut(side.opposite()) = Some(ctx.waker().clone());
                         Poll::Pending
                     }
                 }
                 _ => panic!("Non socket passed to Socket::read"),
-            })
+            }
         }
 
         /// Read bytes from the socket.
@@ -778,20 +799,19 @@ pub mod non_fuchsia_handles {
         }
     }
 
-    type HandleState<T> = Sided<VecDeque<T>>;
-
     struct ChannelMessage {
         bytes: Vec<u8>,
         handles: Vec<Handle>,
     }
 
+    #[derive(Debug, Clone, Copy, PartialEq)]
     enum FidlHandleType {
-        Channel(HandleState<ChannelMessage>),
-        StreamSocket(HandleState<u8>),
-        DatagramSocket(HandleState<Vec<u8>>),
+        Channel,
+        StreamSocket,
+        DatagramSocket,
     }
 
-    #[derive(Clone, Copy, Debug)]
+    #[derive(Clone, Copy, Debug, PartialEq)]
     enum Side {
         Left,
         Right,
@@ -824,53 +844,82 @@ pub mod non_fuchsia_handles {
                 (Liveness::Right, Side::Right) => None,
             }
         }
+
+        fn is_open(self) -> bool {
+            match self {
+                Liveness::Open => true,
+                _ => false,
+            }
+        }
     }
 
     type Wakers = Sided<Option<Waker>>;
 
-    struct FidlHandle {
-        ty: FidlHandleType,
+    struct FidlHandle<T> {
+        q: Sided<VecDeque<T>>,
         wakers: Wakers,
         liveness: Liveness,
         koid_left: u64,
     }
 
+    type HandleTable<T> = Mutex<Slab<FidlHandle<T>>>;
+
     lazy_static::lazy_static! {
-        static ref HANDLES: Mutex<Slab<FidlHandle>> = Mutex::new(Slab::new());
+        static ref CHANNELS: HandleTable<ChannelMessage> = Mutex::new(Slab::new());
+        static ref STREAM_SOCKETS: HandleTable<u8> = Mutex::new(Slab::new());
+        static ref DATAGRAM_SOCKETS: HandleTable<Vec<u8>> = Mutex::new(Slab::new());
     }
 
     static NEXT_KOID: AtomicU64 = AtomicU64::new(1);
 
-    fn new_handle_pair(ty: FidlHandleType) -> (u32, u32) {
-        let mut h = HANDLES.lock();
-        let idx = h.insert(FidlHandle {
-            ty,
+    fn new_handle_slot<T>(tbl: &HandleTable<T>) -> usize {
+        let mut h = tbl.lock();
+        h.insert(FidlHandle {
+            q: Default::default(),
             wakers: Default::default(),
             liveness: Liveness::Open,
             koid_left: NEXT_KOID.fetch_add(2, Ordering::Relaxed),
-        }) as u32;
-        (idx * 2, idx * 2 + 1)
+        })
     }
 
-    fn with_handle<R>(
-        hdl: u32,
-        f: impl FnOnce(bool, &mut FidlHandleType, &mut Wakers, Side, u64) -> R,
-    ) -> R {
-        let idx = hdl as usize / 2;
-        let side = if hdl & 1 == 0 { Side::Left } else { Side::Right };
-        let mut tbl = HANDLES.lock();
-        let h = &mut tbl[idx];
-        // verify openness
-        let open = match (side, h.liveness) {
-            (_, Liveness::Open) => true,
-            (Side::Left, Liveness::Left) => false,
-            (Side::Right, Liveness::Right) => false,
-            _ => panic!(
-                "with_handle called on closed handle (side={:?} liveness={:?}",
-                side, h.liveness
-            ),
+    fn pack_handle(slot: usize, ty: FidlHandleType, side: Side) -> u32 {
+        let side_bit = match side {
+            Side::Left => 0,
+            Side::Right => 1,
         };
-        f(open, &mut h.ty, &mut h.wakers, side, h.koid_left)
+        let ty_bits = match ty {
+            FidlHandleType::Channel => 0,
+            FidlHandleType::StreamSocket => 1,
+            FidlHandleType::DatagramSocket => 2,
+        };
+        let slot_bits = slot as u32;
+        (slot_bits << 3) | (ty_bits << 1) | side_bit
+    }
+
+    fn unpack_handle(handle: u32) -> (usize, FidlHandleType, Side) {
+        let side = if handle & 1 == 0 { Side::Left } else { Side::Right };
+        let ty = match (handle >> 1) & 0x3 {
+            0 => FidlHandleType::Channel,
+            1 => FidlHandleType::StreamSocket,
+            2 => FidlHandleType::DatagramSocket,
+            x => panic!("Bad handle type {}", x),
+        };
+        let slot = (handle >> 3) as usize;
+        (slot, ty, side)
+    }
+
+    fn close_in_table<T>(tbl: &HandleTable<T>, slot: usize, side: Side) {
+        let mut tbl = tbl.lock();
+        let h = &mut tbl[slot];
+        match h.liveness.close(side) {
+            None => {
+                tbl.remove(slot);
+            }
+            Some(liveness) => {
+                h.liveness = liveness;
+                h.wakers.side_mut(side).take().map(|w| w.wake());
+            }
+        }
     }
 
     /// Close the handle: no action if hdl==INVALID_HANDLE
@@ -878,18 +927,11 @@ pub mod non_fuchsia_handles {
         if hdl == INVALID_HANDLE {
             return;
         }
-        let idx = hdl as usize / 2;
-        let side = if hdl & 1 == 0 { Side::Left } else { Side::Right };
-        let mut tbl = HANDLES.lock();
-        let h = &mut tbl[idx];
-        match h.liveness.close(side) {
-            None => {
-                tbl.remove(idx);
-            }
-            Some(liveness) => {
-                h.liveness = liveness;
-                h.wakers.side_mut(side).take().map(|w| w.wake());
-            }
+        let (slot, ty, side) = unpack_handle(hdl);
+        match ty {
+            FidlHandleType::Channel => close_in_table(&CHANNELS, slot, side),
+            FidlHandleType::StreamSocket => close_in_table(&STREAM_SOCKETS, slot, side),
+            FidlHandleType::DatagramSocket => close_in_table(&DATAGRAM_SOCKETS, slot, side),
         }
     }
 }
