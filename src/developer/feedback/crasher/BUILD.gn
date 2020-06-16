@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("crasher") {
+executable("crasher_exe") {
+  output_name = "crasher"
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "cpp_specific.cc",

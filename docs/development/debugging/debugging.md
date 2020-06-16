@@ -4,14 +4,15 @@
 
 Fuchsia has a debugger for native code (C++ and Rust) called zxdb.
 
-Please see the [zxdb documentation](/docs/development/debugger/README.md) for more details.
+Please see the [zxdb documentation](/docs/development/debugger/README.md) for
+more details.
 
 ## Backtraces
 
 ### Automagic backtraces
 
-Fuchsia starts a program at boot called "crashanalyzer" that reports
-program crashes and prints a backtrace of the crashing thread.
+Fuchsia starts a program at boot called "crashanalyzer" that reports program
+crashes and prints a backtrace of the crashing thread.
 
 Example:
 
@@ -47,32 +48,30 @@ $ crasher
 [11156.653027][1107][1121][klog] INFO: bt#05: end
 ```
 
-Since debug information is currently not available on the target,
-a program (`symbolize`) must be run on the development host to
-translate the raw addresses in the backtrace to symbolic form.
-Any easy way to capture this output from the target is by running
-the `loglistener` program on your development host.
+Since debug information is currently not available on the target, a program
+(`symbolize`) must be run on the development host to translate the raw addresses
+in the backtrace to symbolic form. Any easy way to capture this output from the
+target is by running the `loglistener` program on your development host.
 
 ```
 $ fx syslog | fx symbolize
 [11156.652165][1048][1187][klog] INFO: devmgr: crash_analyzer_listener: analyzing exception type 0x108
 ... same output as "raw" backtrace ...
 start of symbolized stack:
-#01: blind_write at ../../src/developer/feedback/bin/crasher/crasher.c:21
-#02: main at ../../src/developer/feedback/bin/crasher/crasher.c:137
+#01: blind_write at ../../src/developer/feedback/crasher/crasher.c:21
+#02: main at ../../src/developer/feedback/crasher/crasher.c:137
 #03: start_main at ../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:49
 #04: unknown, can't find pc, sp or app/library in line
 end of symbolized stack
 ```
 
-
 ### Manually requesting backtraces
 
-Akin to printf debugging, one can request crashlogger print a
-backtrace at a particular point in your code.
+Akin to printf debugging, one can request crashlogger print a backtrace at a
+particular point in your code.
 
-Include this header from zircon's backtrace-request library, which you
-must depend on in your target's BUILD.gn rules:
+Include this header from zircon's backtrace-request library, which you must
+depend on in your target's BUILD.gn rules:
 
 ```
 #include <lib/backtrace-request/backtrace-request.h>
@@ -91,5 +90,5 @@ void my_function() {
 ### Inspecting FIDL messages
 
 Fuchsia has a tool for viewing FIDL messages as they are sent and received. See
-details at [the doc page for fidl inspection](/docs/development/monitor/fidlcat/README.md).
-
+details at
+[the doc page for fidl inspection](/docs/development/monitor/fidlcat/README.md).
