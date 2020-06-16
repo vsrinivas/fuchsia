@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_SYSINFO_SYSINFO_H_
-#define ZIRCON_SYSTEM_CORE_SYSINFO_SYSINFO_H_
+#ifndef SRC_BRINGUP_BIN_SYSINFO_SYSINFO_H_
+#define SRC_BRINGUP_BIN_SYSINFO_SYSINFO_H_
 
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -30,4 +30,4 @@ class SysInfo : public ::llcpp::fuchsia::sysinfo::SysInfo::Interface {
   zx_status_t ConnectToPBus(llcpp::fuchsia::sysinfo::SysInfo::SyncClient* client);
 };
 }  // namespace sysinfo
-#endif  // ZIRCON_SYSTEM_CORE_SYSINFO_SYSINFO_H_
+#endif  // SRC_BRINGUP_BIN_SYSINFO_SYSINFO_H_

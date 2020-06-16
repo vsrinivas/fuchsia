@@ -181,7 +181,7 @@ class DebugAgent : public RemoteAPI,
   //                will not have the destroy right, thus making the debugger jump through this
   //                hoop.
   //
-  //                See zircon/system/core/svchost/crashsvc.cc for more details.
+  //                See src/bringup/bin/svchost/crashsvc.cc for more details.
   //
   //                Note that if the situation changes and the svchost actually gets destroy rights
   //                on the exception channel, that situation will seamlessly work here. This is

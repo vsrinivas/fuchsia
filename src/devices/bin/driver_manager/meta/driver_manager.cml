@@ -71,9 +71,16 @@
             protocol: [
                 "/svc/console",
 
+                // Services for serial console, not used by driver_manager or
+                // drivers.
+
+                // TODO(fxb/51234) Split serial console into separate component
+                // Amber control is thought to be used by serial console (fxb/50992)
+                "/svc/fuchsia.amber.Control",
+
                 // The following are non-Zircon services that some zircon tests assume they
                 // can reach, and thus are proxied through svchost. This should mirror the
-                // list in //zircon/system/core/svchost/svchost.cc
+                // list in //src/bringup/bin/svchost/svchost.cc
 
                 // Services from bootsvc
                 "/svc/fuchsia.boot.Arguments",
@@ -98,13 +105,6 @@
                 "/svc/fuchsia.fshost.Filesystems",
                 "/svc/fuchsia.fshost.Loader",
                 "/svc/fuchsia.fshost.Registry",
-
-                // Services for serial console, not used by driver_manager or
-                // drivers.
-
-                // TODO(fxb/51234) Split serial console into separate component
-                // Amber control is thought to be used by serial console (fxb/50992)
-                "/svc/fuchsia.amber.Control",
                 "/svc/fuchsia.hardware.pty.Device",
                 "/svc/fuchsia.kernel.Stats",
                 "/svc/fuchsia.logger.Log",
@@ -117,8 +117,9 @@
                 "/svc/fuchsia.pkg.RepositoryManager",
                 "/svc/fuchsia.pkg.rewrite.Engine",
                 "/svc/fuchsia.posix.socket.Provider",
-                // Thought to be used by serial console only (fxb/50992)
-                "/svc/fuchsia.wlan.service.Wlan",
+
+                // Service from power_manager
+                "/svc/fuchsia.power.manager.DriverManagerRegistration",
 
                 // Builtin service
                 "/svc/fuchsia.process.Launcher",
@@ -133,8 +134,8 @@
                 // Service from appmgr
                 "/svc/fuchsia.tracing.provider.Registry",
 
-                // Service from power_manager
-                "/svc/fuchsia.power.manager.DriverManagerRegistration",
+                // Thought to be used by serial console only (fxb/50992)
+                "/svc/fuchsia.wlan.service.Wlan",
             ],
         },
     ],
@@ -150,8 +151,8 @@
         {
             directory: "/dev/diagnostics",
             from: "self",
-            to: "framework",
             as: "/diagnostics",
+            to: "framework",
             rights: [ "connect" ],
         },
 
