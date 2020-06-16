@@ -126,7 +126,7 @@ class HandleTable {
 
   zx::status<> Remove(zx_handle_t handle) __TA_EXCLUDES(lock_);
   zx::status<zx_handle_t> Add(fbl::RefPtr<Object> obj) __TA_EXCLUDES(lock_);
-  void Clear();
+  void Clear() __TA_EXCLUDES(lock_);
 
   // Walks the handle table and calls |cb| on each handle that matches the
   // provided |type|. Stops walking the table when |cb| returns false.
@@ -145,7 +145,7 @@ class HandleTable {
     }
   }
 
-  void Dump();
+  void Dump() __TA_EXCLUDES(lock_);
   // We use the overall size of the vector to calculate new indices
   // so to determine the occupied size we have to verify each element.
   size_t size() __TA_EXCLUDES(lock_) {

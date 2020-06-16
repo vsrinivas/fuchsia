@@ -50,14 +50,20 @@ zx::status<zx_handle_t> HandleTable::Add(fbl::RefPtr<Object> obj) {
 
 __EXPORT
 zx::status<> HandleTable::Remove(zx_handle_t handle) {
-  fbl::AutoLock guard(&lock_);
   zx::status status = HandleToIndex(handle);
   if (!status.is_ok()) {
     return status.take_error();
   }
-
   size_t idx = status.value();
-  auto& obj = handles_[idx];
+
+  // Pull the object out of the handle table so that we can release the handle
+  // table lock before running the object's dtor. This prevents issues like
+  // deadlocks if the object asserts in its dtor as a test object may do.
+  fbl::RefPtr<Object> obj;
+  {
+    fbl::AutoLock guard(&lock_);
+    obj = std::move(handles_[idx]);
+  }
   ftracef("handle = 0x%x, obj = %p, type = %u, index = %zu\n", handle, obj.get(), obj->type(), idx);
   obj.reset();
   return zx::ok();
